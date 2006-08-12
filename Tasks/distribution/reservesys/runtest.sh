@@ -34,6 +34,11 @@ MOTD()
     echo "**  **  **  **  **  **  **  **  **  **  **  **  **  **  **  **  **  **" >> $FILE
 }
 
+NOTIFY()
+{
+    mail -s "$HOSTNAME" $SUBMITTER < /etc/motd
+}
+
 if [ -z "$RESERVETIME" ]; then
     SLEEPTIME=24h
 else
@@ -43,17 +48,19 @@ fi
 if [ -z "$RESERVEBY" ]; then
     SUBMITTER=Uknown
 else
-    SUBMITTER=$$RESERVEBY
+    SUBMITTER=$RESERVEBY
 fi
 
 echo "***** Start of reservesys test *****" > $OUTPUTFILE
 
 MOTD
 
+NOTIFY
+
 sleep $SLEEPTIME
 
 echo "***** End of reservesys test *****" >> $OUTPUTFILE
 
-RprtRslt $TEST PASS $SCORE
+RprtRslt $TEST PASS 0
 
 exit 0
