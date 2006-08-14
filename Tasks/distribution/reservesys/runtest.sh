@@ -39,6 +39,11 @@ NOTIFY()
     mail -s "$HOSTNAME" $SUBMITTER < /etc/motd
 }
 
+WATCHDOG()
+{
+    rhts_test_checkin.py $LAB_SERVER $HOSTNAME $JOBID $TEST $ARCH $SLEEPTIME
+}
+
 if [ -z "$RESERVETIME" ]; then
     SLEEPTIME=24h
 else
@@ -57,7 +62,9 @@ MOTD
 
 NOTIFY
 
-sleep $SLEEPTIME
+WATCHDOG
+
+/sbin/service rhts stop
 
 echo "***** End of reservesys test *****" >> $OUTPUTFILE
 
