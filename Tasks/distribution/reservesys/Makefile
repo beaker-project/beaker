@@ -39,5 +39,5 @@ $(METADATA): Makefile
 	@echo "Path:		$(TEST_DIR)"		>> $(METADATA)
 	@echo "TestVersion:	$(TESTVERSION)"		>> $(METADATA)
 	@echo "Description:	Reserves system for specific time frame" >> $(METADATA)
-	@echo "TestTime:	1h"			>> $(METADATA)
+	@echo "TestTime:	24h"			>> $(METADATA)
 	@echo "Priority:	Manual"			>> $(METADATA)
