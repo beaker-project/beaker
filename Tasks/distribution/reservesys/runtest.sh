@@ -23,6 +23,8 @@ MOTD()
     echo "**  **  **  **  **  **  **  **  **  **  **  **  **  **  **  **  **  **" > $FILE
     echo "                 This System is reserved by $SUBMITTER.               " >> $FILE
     echo "                                                                      " >> $FILE
+    echo " To return this system early. You can run the command: return2rhts.sh " >> $FILE
+    echo "  Ensure you have your logs off the system before returning to RHTS   " >> $FILE
     echo "                                                                      " >> $FILE
     echo "      RHTS Test information:                                          " >> $FILE
     echo "                         HOSTNAME=$HOSTNAME                           " >> $FILE
@@ -32,6 +34,32 @@ MOTD()
     echo "                    RESULT_SERVER=$RESULT_SERVER                      " >> $FILE
     echo "                           DISTRO=$DISTRO                             " >> $FILE
     echo "**  **  **  **  **  **  **  **  **  **  **  **  **  **  **  **  **  **" >> $FILE
+}
+
+RETURNSCRIPT()
+{
+    SCRIPT=/usr/bin/return2rhts.sh
+
+    echo "#!/bin/sh"                           > $SCRIPT
+    echo "export JOBID=$JOBID"                 >> $SCRIPT
+    echo "export RECIPESETID=$RECIPETESTID"    >> $SCRIPT
+    echo "export RECIPETYPE=$RECIPETYPE"       >> $SCRIPT
+    echo "export RECIPEID=$RECIPEID"           >> $SCRIPT
+    echo "export HOSTNAME=$HOSTNAME"           >> $SCRIPT
+    echo "export UUID=$UUID"                   >> $SCRIPT
+    echo "export LAB_SERVER=$LAB_SERVER"       >> $SCRIPT 
+    echo "export RESULT_SERVER=$RESULT_SERVER" >> $SCRIPT
+    echo "export TEST=$TEST"                   >> $SCRIPT
+    echo "export TESTPATH=$TESTPATH"           >> $SCRIPT
+    echo "export TESTID=$TESTID"               >> $SCRIPT
+    echo "export STANDALONE=$STANDALONE"       >> $SCRIPT
+    echo "rhts_sync_set -s DONE"               >> $SCRIPT
+    echo "rhts_sync_block -s DONE $STANDALONE" >> $SCRIPT
+    echo "rhts_test_update.py $RESULT_SERVER $TESTID finish_time" >> $SCRIPT
+    echo "rhts_recipe_update.py $RESULT_SERVER $RECIPEID finish_recipe" >> $SCRIPT
+    echo "rhts_end_testing.py $LAB_SERVER $HOSTNAME $RECIPEID $UUID" >> $SCRIPT
+
+    chmod 777 $SCRIPT
 }
 
 NOTIFY()
@@ -63,6 +91,8 @@ MOTD
 NOTIFY
 
 WATCHDOG
+
+RETURNSCRIPT
 
 /sbin/service rhts stop
 
