@@ -51,6 +51,7 @@ RETURNSCRIPT()
     echo "export RESULT_SERVER=$RESULT_SERVER" >> $SCRIPT
     echo "export TEST=$TEST"                   >> $SCRIPT
     echo "export TESTPATH=$TESTPATH"           >> $SCRIPT
+    echo "export TESTORDER=$TESTORDER"         >> $SCRIPT
     echo "export TESTID=$TESTID"               >> $SCRIPT
     echo "export STANDALONE=$STANDALONE"       >> $SCRIPT
     echo "rhts_sync_set -s DONE"               >> $SCRIPT
