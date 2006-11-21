@@ -63,6 +63,29 @@ RETURNSCRIPT()
     chmod 777 $SCRIPT
 }
 
+EXTENDTESTTIME()
+{
+    SCRIPT2=/usr/bin/extendtesttime.sh
+
+    echo "#!/bin/sh"                           > $SCRIPT2
+    echo "if [ "x\$1" == "x" ] ; then"         >> $SCRIPT2
+    echo "  echo \"You must specify a time\""  >> $SCRIPT2
+    echo "  echo \" in hours.\""               >> $SCRIPT2
+    echo "  echo \"example: \$0 24h\""         >> $SCRIPT2
+    echo "  exit 1"                            >> $SCRIPT2
+    echo "fi"                                  >> $SCRIPT2
+    echo "export LAB_SERVER=$LAB_SERVER"       >> $SCRIPT2
+    echo "export HOSTNAME=$HOSTNAME"           >> $SCRIPT2
+    echo "export JOBID=$JOBID"                 >> $SCRIPT2
+    echo "export TEST=$TEST"                   >> $SCRIPT2
+    echo "export TESTID=$TESTID"               >> $SCRIPT2
+    echo "rhts_test_checkin.py $LAB_SERVER $HOSTNAME $JOBID $TEST $ARCH \$1 $TESTID" >> $SCRIPT2
+
+    sed -i 's/#ARG#/$1/g' $SCRIPT2
+
+    chmod 777 $SCRIPT2
+}
+
 NOTIFY()
 {
     mail -s "$HOSTNAME" $SUBMITTER < /etc/motd
@@ -70,7 +93,7 @@ NOTIFY()
 
 WATCHDOG()
 {
-    rhts_test_checkin.py $LAB_SERVER $HOSTNAME $JOBID $TEST $ARCH $SLEEPTIME
+    rhts_test_checkin.py $LAB_SERVER $HOSTNAME $JOBID $TEST $ARCH $SLEEPTIME $TESTID
 }
 
 if [ -z "$RESERVETIME" ]; then
@@ -92,6 +115,8 @@ MOTD
 NOTIFY
 
 WATCHDOG
+
+EXTENDTESTTIME
 
 RETURNSCRIPT
 
