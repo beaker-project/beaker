@@ -41,3 +41,4 @@ $(METADATA): Makefile
 	@echo "Description:	Reserves system for specific time frame" >> $(METADATA)
 	@echo "TestTime:	24h"			>> $(METADATA)
 	@echo "Priority:	Manual"			>> $(METADATA)
+	@echo "License:		Red Hat Internal"	>> $(METADATA)
