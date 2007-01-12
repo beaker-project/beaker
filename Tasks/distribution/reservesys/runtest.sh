@@ -33,6 +33,7 @@ MOTD()
     echo "                       LAB_SERVER=$LAB_SERVER                         " >> $FILE
     echo "                    RESULT_SERVER=$RESULT_SERVER                      " >> $FILE
     echo "                           DISTRO=$DISTRO                             " >> $FILE
+    echo "                     ARCHITECTURE=$ARCH                               " >> $FILE
     echo "**  **  **  **  **  **  **  **  **  **  **  **  **  **  **  **  **  **" >> $FILE
 }
 
