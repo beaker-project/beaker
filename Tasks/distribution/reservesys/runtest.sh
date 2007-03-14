@@ -97,6 +97,17 @@ WATCHDOG()
     rhts_test_checkin.py $LAB_SERVER $HOSTNAME $JOBID $TEST $ARCH $SLEEPTIME $TESTID
 }
 
+RUNONCE()
+{
+    # prevent a reboot from running test and re-setting clock
+    # /usr/sbin/tmpwatch will remove the /tmp/secondboot file
+    if [ -e ./runonce ]; then
+	echo "Reserve tests already ran"
+	exit 0
+    fi
+    touch ./runonce
+}
+
 if [ -z "$RESERVETIME" ]; then
     SLEEPTIME=24h
 else
@@ -110,6 +121,8 @@ else
 fi
 
 echo "***** Start of reservesys test *****" > $OUTPUTFILE
+
+RUNONCE
 
 MOTD
 
