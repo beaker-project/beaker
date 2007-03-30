@@ -122,7 +122,6 @@ fi
 
 echo "***** Start of reservesys test *****" > $OUTPUTFILE
 
-RUNONCE
 
 MOTD
 
