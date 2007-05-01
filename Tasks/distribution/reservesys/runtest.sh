@@ -26,6 +26,13 @@ MOTD()
     echo " To return this system early. You can run the command: return2rhts.sh " >> $FILE
     echo "  Ensure you have your logs off the system before returning to RHTS   " >> $FILE
     echo "                                                                      " >> $FILE
+    echo " To extend your reservation time. You can run the command:            " >> $FILE
+    echo "  extendtesttime.sh 24h                                               " >> $FILE
+    echo " You MUST specify the time in hours, followed by the h option. This   " >> $FILE
+    echo "  will extend the reservation 24 hours at the you run the command.    " >> $FILE
+    echo "                                                                      " >> $FILE
+    echo "  Please use this command responsibly, Everyone uses these machines.  " >> $FILE
+    echo "                                                                      " >> $FILE
     echo "      RHTS Test information:                                          " >> $FILE
     echo "                         HOSTNAME=$HOSTNAME                           " >> $FILE
     echo "                            JOBID=$JOBID                              " >> $FILE
@@ -81,8 +88,6 @@ EXTENDTESTTIME()
     echo "export TEST=$TEST"                   >> $SCRIPT2
     echo "export TESTID=$TESTID"               >> $SCRIPT2
     echo "rhts-test-checkin $LAB_SERVER $HOSTNAME $JOBID $TEST $ARCH \$1 $TESTID" >> $SCRIPT2
-
-    sed -i 's/#ARG#/$1/g' $SCRIPT2
 
     chmod 777 $SCRIPT2
 }
