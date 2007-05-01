@@ -57,9 +57,9 @@ RETURNSCRIPT()
     echo "export STANDALONE=$STANDALONE"       >> $SCRIPT
     echo "rhts-sync-set -s DONE"               >> $SCRIPT
     echo "rhts-sync-block -s DONE $STANDALONE" >> $SCRIPT
-    echo "rhts-test-update.py $RESULT_SERVER $TESTID finish" >> $SCRIPT
-    echo "rhts-recipe-update.py $RESULT_SERVER $RECIPEID finish" >> $SCRIPT
-    echo "rhts-end-testing.py $LAB_SERVER $HOSTNAME $RECIPEID $UUID" >> $SCRIPT
+    echo "rhts-test-update $RESULT_SERVER $TESTID finish" >> $SCRIPT
+    echo "rhts-recipe-update $RESULT_SERVER $RECIPEID finish" >> $SCRIPT
+    echo "rhts-end-testing $LAB_SERVER $HOSTNAME $RECIPEID $UUID" >> $SCRIPT
 
     chmod 777 $SCRIPT
 }
@@ -80,7 +80,7 @@ EXTENDTESTTIME()
     echo "export JOBID=$JOBID"                 >> $SCRIPT2
     echo "export TEST=$TEST"                   >> $SCRIPT2
     echo "export TESTID=$TESTID"               >> $SCRIPT2
-    echo "rhts-test-checkin.py $LAB_SERVER $HOSTNAME $JOBID $TEST $ARCH \$1 $TESTID" >> $SCRIPT2
+    echo "rhts-test-checkin $LAB_SERVER $HOSTNAME $JOBID $TEST $ARCH \$1 $TESTID" >> $SCRIPT2
 
     sed -i 's/#ARG#/$1/g' $SCRIPT2
 
