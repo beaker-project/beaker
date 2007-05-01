@@ -55,11 +55,11 @@ RETURNSCRIPT()
     echo "export TESTORDER=$TESTORDER"         >> $SCRIPT
     echo "export TESTID=$TESTID"               >> $SCRIPT
     echo "export STANDALONE=$STANDALONE"       >> $SCRIPT
-    echo "rhts_sync_set -s DONE"               >> $SCRIPT
-    echo "rhts_sync_block -s DONE $STANDALONE" >> $SCRIPT
-    echo "rhts_test_update.py $RESULT_SERVER $TESTID finish_time" >> $SCRIPT
-    echo "rhts_recipe_update.py $RESULT_SERVER $RECIPEID finish_recipe" >> $SCRIPT
-    echo "rhts_end_testing.py $LAB_SERVER $HOSTNAME $RECIPEID $UUID" >> $SCRIPT
+    echo "rhts-sync-set -s DONE"               >> $SCRIPT
+    echo "rhts-sync-block -s DONE $STANDALONE" >> $SCRIPT
+    echo "rhts-test-update.py $RESULT_SERVER $TESTID finish" >> $SCRIPT
+    echo "rhts-recipe-update.py $RESULT_SERVER $RECIPEID finish" >> $SCRIPT
+    echo "rhts-end-testing.py $LAB_SERVER $HOSTNAME $RECIPEID $UUID" >> $SCRIPT
 
     chmod 777 $SCRIPT
 }
@@ -80,7 +80,7 @@ EXTENDTESTTIME()
     echo "export JOBID=$JOBID"                 >> $SCRIPT2
     echo "export TEST=$TEST"                   >> $SCRIPT2
     echo "export TESTID=$TESTID"               >> $SCRIPT2
-    echo "rhts_test_checkin.py $LAB_SERVER $HOSTNAME $JOBID $TEST $ARCH \$1 $TESTID" >> $SCRIPT2
+    echo "rhts-test-checkin.py $LAB_SERVER $HOSTNAME $JOBID $TEST $ARCH \$1 $TESTID" >> $SCRIPT2
 
     sed -i 's/#ARG#/$1/g' $SCRIPT2
 
@@ -122,15 +122,21 @@ fi
 
 echo "***** Start of reservesys test *****" > $OUTPUTFILE
 
-
+# build the /etc/motd file
 MOTD
 
+# send email to the submitter
 NOTIFY
 
+# set the external watchdog timeout
 WATCHDOG
 
+# build /usr/bin/extendtesttime.sh script to allow user
+#  to extend the time time.
 EXTENDTESTTIME
 
+# build /usr/bin/return2rhts.sh script to allow user
+#  to return the system to RHTS early.
 RETURNSCRIPT
 
 /sbin/service rhts stop
