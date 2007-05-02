@@ -73,23 +73,70 @@ RETURNSCRIPT()
 
 EXTENDTESTTIME()
 {
-    SCRIPT2=/usr/bin/extendtesttime.sh
+SCRIPT2=/usr/bin/extendtesttime.sh
 
-    echo "#!/bin/sh"                           > $SCRIPT2
-    echo "if [ "x\$1" == "x" ] ; then"         >> $SCRIPT2
-    echo "  echo \"You must specify a time\""  >> $SCRIPT2
-    echo "  echo \" in hours.\""               >> $SCRIPT2
-    echo "  echo \"example: \$0 24h\""         >> $SCRIPT2
-    echo "  exit 1"                            >> $SCRIPT2
-    echo "fi"                                  >> $SCRIPT2
-    echo "export LAB_SERVER=$LAB_SERVER"       >> $SCRIPT2
-    echo "export HOSTNAME=$HOSTNAME"           >> $SCRIPT2
-    echo "export JOBID=$JOBID"                 >> $SCRIPT2
-    echo "export TEST=$TEST"                   >> $SCRIPT2
-    echo "export TESTID=$TESTID"               >> $SCRIPT2
-    echo "rhts-test-checkin $LAB_SERVER $HOSTNAME $JOBID $TEST $ARCH \$1 $TESTID" >> $SCRIPT2
+cat > $SCRIPT2 <<-EOF
+howmany()
+{
+echo "How many hours would you like to extend the reservation."
+echo "             Must be between 1 and 99                   "
+read RESPONSE
+validint \$RESPONSE 1 99
+echo "Extending reservation time \$RESPONSE"
+EXTRESTIME=\$(echo \$RESPONSE)h
+}
 
-    chmod 777 $SCRIPT2
+validint()
+{
+# validate first field.
+number="\$1"; min="\$2"; max="\$3"
+
+if [ -z "\$number" ] ; then
+echo "You didn't enter anything."
+exit 1
+fi
+
+if [ "\${number%\${number#?}}" = "-" ] ; then # first char '-' ?
+testvalue="\${number#?}" # all but first character
+else
+testvalue="\$number"
+fi
+  
+nodigits="\$(echo \$testvalue | sed 's/[[:digit:]]//g')"
+ 
+if [ ! -z "\$nodigits" ] ; then
+echo "Invalid number format! Only digits, no commas, spaces, etc."
+exit 1
+fi
+
+if [ ! -z "\$min" ] ; then
+if [ "\$number" -lt "\$min" ] ; then
+echo "Your value is too small: smallest acceptable value is \$min"
+exit 1
+fi
+fi
+if [ ! -z "\$max" ] ; then
+if [ "\$number" -gt "\$max" ] ; then
+echo "Your value is too big: largest acceptable value is \$max"
+exit 1
+fi
+fi
+
+return 0
+}
+
+howmany
+
+export LAB_SERVER=$LAB_SERVER
+export HOSTNAME=$HOSTNAME
+export JOBID=$JOBID
+export TEST=$TEST
+export TESTID=$TESTID
+rhts-test-checkin $LAB_SERVER $HOSTNAME $JOBID $TEST $ARCH \$EXTRESTIME $TESTID
+logger -s "rhts-test-checkin $LAB_SERVER $HOSTNAME $JOBID $TEST $ARCH \$EXTRESTIME $TESTID"
+EOF
+
+chmod 777 $SCRIPT2
 }
 
 NOTIFY()
@@ -102,15 +149,15 @@ WATCHDOG()
     rhts_test_checkin.py $LAB_SERVER $HOSTNAME $JOBID $TEST $ARCH $SLEEPTIME $TESTID
 }
 
-RUNONCE()
+DISABLERHTSONBOOT()
 {
-    # prevent a reboot from running test and re-setting clock
-    # /usr/sbin/tmpwatch will remove the /tmp/secondboot file
-    if [ -e ./runonce ]; then
-	echo "Reserve tests already ran"
-	exit 0
+    /sbin/chkconfig rhts off
+    chkconfig --list rhts | grep -q :on
+    if [ $? -eq 1 ]; then
+	logger -s "***** Disabled RHTS on reboot *****"
+    else
+	logger -s "***** Unable to disabled RHTS on reboot *****"
     fi
-    touch ./runonce
 }
 
 if [ -z "$RESERVETIME" ]; then
@@ -144,7 +191,8 @@ EXTENDTESTTIME
 #  to return the system to RHTS early.
 RETURNSCRIPT
 
-/sbin/service rhts stop
+# disable rhts, So that reserve workflow works with test reboot support.
+DISABLERHTSONBOOT
 
 echo "***** End of reservesys test *****" >> $OUTPUTFILE
 
