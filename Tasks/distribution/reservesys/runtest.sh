@@ -152,6 +152,7 @@ WATCHDOG()
 DISABLERHTSONBOOT()
 {
     /sbin/chkconfig rhts off
+    /sbin/service rhts stop
     chkconfig --list rhts | grep -q :on
     if [ $? -eq 1 ]; then
 	logger -s "***** Disabled RHTS on reboot *****"
