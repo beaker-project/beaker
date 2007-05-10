@@ -27,11 +27,14 @@ MOTD()
     echo "  Ensure you have your logs off the system before returning to RHTS   " >> $FILE
     echo "                                                                      " >> $FILE
     echo " To extend your reservation time. You can run the command:            " >> $FILE
-    echo "  extendtesttime.sh 24h                                               " >> $FILE
-    echo " You MUST specify the time in hours, followed by the h option. This   " >> $FILE
-    echo "  will extend the reservation 24 hours at the you run the command.    " >> $FILE
-    echo "                                                                      " >> $FILE
+    echo "  extendtesttime.sh                                                   " >> $FILE
+    echo " This is an interactive script. You will be prompted for how many     " >> $FILE
+    echo "  hours you would like to extend the reservation.                     " >> $FILE
     echo "  Please use this command responsibly, Everyone uses these machines.  " >> $FILE
+    echo "                                                                      " >> $FILE
+    echo " For ssh, kvm, serial and power control operations please look here:  " >> $FILE
+    echo "  http://intranet.corp.redhat.com/ic/intranet/RHTSSystemList.html     " >> $FILE
+    echo "                                                                      " >> $FILE
     echo "                                                                      " >> $FILE
     echo "      RHTS Test information:                                          " >> $FILE
     echo "                         HOSTNAME=$HOSTNAME                           " >> $FILE
