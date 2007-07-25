@@ -42,12 +42,12 @@ def push_inventory(hostname, inventory):
 def read_inventory():
     # get the data from SMOLT but modify it for how RHTS expects to see it
     # Eventually we'll switch over to SMOLT properly.
-    pciids = []
-    usbids = []
     data = {}
     data['ARCH'] = []
     data['MODULE'] = []
     data['CPUFLAGS'] = []
+    data['PCIIDS'] = []
+    data['USBIDS'] = []
 
     cpu_info = smolt.read_cpuinfo()
     memory   = smolt.read_memory()
@@ -63,21 +63,20 @@ def read_inventory():
     data['CPUVENDOR'] = cpu_info['type']
     data['CPUMODEL'] = cpu_info['model']
     data['PROCESSORS'] = cpu_info['count']
-    for cpuflag in cpu_info['other'].split(" "):
-        data['CPUFLAGS'].append(cpuflag)
-
     data['MEMORY'] = memory['ram']
-    for VendorID, DeviceID, SubsysVendorID, SubsysDeviceID, Bus, Driver, Type, Description in profile.deviceIter():
-       if VendorID and DeviceID:
-           if Bus == "pci":
-               pciids.append("%x:%x" % ( VendorID, DeviceID))
-           if Bus == "usb":
-               usbids.append("%x:%x" % ( VendorID, DeviceID))
-    data['PCIIDS'] = pciids
-    data['USBIDS'] = usbids
     data['VENDOR'] = "%s" % profile.host.systemVendor
     data['MODEL'] = "%s" % profile.host.systemModel
     data['FORMFACTOR'] = "%s" % profile.host.formfactor
+
+    for cpuflag in cpu_info['other'].split(" "):
+        data['CPUFLAGS'].append(cpuflag)
+
+    for VendorID, DeviceID, SubsysVendorID, SubsysDeviceID, Bus, Driver, Type, Description in profile.deviceIter():
+       if VendorID and DeviceID:
+           if Bus == "pci":
+               data['PCIIDS'].append("%x:%x" % ( VendorID, DeviceID))
+           if Bus == "usb":
+               data['USBIDS'].append("%x:%x" % ( VendorID, DeviceID))
 
     modules =  commands.getstatusoutput('/sbin/lsmod')[1].split('\n')[1:]
     for module in modules:
