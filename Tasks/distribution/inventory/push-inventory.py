@@ -33,7 +33,7 @@ def push_inventory(hostname, inventory):
    client = xmlrpclib.Server(lab_server)
    #test_log = xmlrpclib.Binary(log)
    try:
-      resp = client.machines.inventory(hostname, inventory)
+      resp = client.machines.update(hostname, inventory)
       if(resp != 0) :
          raise NameError, "ERROR: Pushing Inventory for host %s." % hostname
    except:
