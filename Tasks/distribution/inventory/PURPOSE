@@ -1,0 +1,3 @@
+The purpose of this "test" is not to test anything but to push inventory
+of the systems hardware to the rhts lab controller so that the scheduler
+can use that data to schedule jobs.
