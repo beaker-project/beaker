@@ -22,7 +22,7 @@ import os
 import commands
 import pprint
 
-sys.path.append('/usr/share/smolt/client')
+sys.path.append('.')
 import smolt
 
 USAGE_TEXT = """
@@ -46,8 +46,8 @@ def read_inventory():
     data['ARCH'] = []
     data['MODULE'] = []
     data['CPUFLAGS'] = []
-    data['PCIIDS'] = []
-    data['USBIDS'] = []
+    data['PCIID'] = []
+    data['USBID'] = []
 
     cpu_info = smolt.read_cpuinfo()
     memory   = smolt.read_memory()
@@ -74,9 +74,9 @@ def read_inventory():
     for VendorID, DeviceID, SubsysVendorID, SubsysDeviceID, Bus, Driver, Type, Description in profile.deviceIter():
        if VendorID and DeviceID:
            if Bus == "pci":
-               data['PCIIDS'].append("%x:%x" % ( VendorID, DeviceID))
+               data['PCIID'].append("%04x:%04x" % ( VendorID, DeviceID))
            if Bus == "usb":
-               data['USBIDS'].append("%x:%x" % ( VendorID, DeviceID))
+               data['USBID'].append("%04x:%04x" % ( VendorID, DeviceID))
 
     modules =  commands.getstatusoutput('/sbin/lsmod')[1].split('\n')[1:]
     for module in modules:
