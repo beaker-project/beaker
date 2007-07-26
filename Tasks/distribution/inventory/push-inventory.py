@@ -95,7 +95,7 @@ def main():
     hostname = ''
 
     if ('LAB_SERVER' in os.environ.keys()):
-        lab_server = "http://%s/cgi-bin/rhts/scheduler_xmlrpc.cgi" % os.environ['LAB_SERVER']
+        lab_server = "http://%s/cgi-bin/rhts/xmlrpc.cgi" % os.environ['LAB_SERVER']
     if ('HOSTNAME' in os.environ.keys()):
         hostname = os.environ['HOSTNAME']
 
