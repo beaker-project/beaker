@@ -43,7 +43,6 @@ def read_inventory():
     # get the data from SMOLT but modify it for how RHTS expects to see it
     # Eventually we'll switch over to SMOLT properly.
     data = {}
-    data['ARCH'] = []
     data['MODULE'] = []
     data['CPUFLAGS'] = []
     data['PCIID'] = []
@@ -53,20 +52,21 @@ def read_inventory():
     memory   = smolt.read_memory()
     profile  = smolt.Hardware()
 
-    data['ARCH'].append(cpu_info['platform'])
-    if cpu_info['platform'] == "x86_64":
-        data['ARCH'].append("i386")
-    if cpu_info['platform'] == "ppc64":
-        data['ARCH'].append("ppc")
-
+    data['ARCH'] = cpu_info['platform']
     data['CPUSPEED'] = cpu_info['speed']
     data['CPUVENDOR'] = cpu_info['type']
     data['CPUMODEL'] = cpu_info['model']
     data['PROCESSORS'] = cpu_info['count']
-    data['MEMORY'] = memory['ram']
     data['VENDOR'] = "%s" % profile.host.systemVendor
     data['MODEL'] = "%s" % profile.host.systemModel
     data['FORMFACTOR'] = "%s" % profile.host.formfactor
+
+    # Round memory up to the next base 2
+    n=0
+    memory = int(memory['ram'])
+    while memory > ( 2 << n):
+        n=n+1
+    data['MEMORY'] = 2 << n
 
     for cpuflag in cpu_info['other'].split(" "):
         data['CPUFLAGS'].append(cpuflag)
@@ -93,6 +93,7 @@ def main():
 
     lab_server = ''
     hostname = ''
+    debug = 0
 
     if ('LAB_SERVER' in os.environ.keys()):
         lab_server = "http://%s/cgi-bin/rhts/xmlrpc.cgi" % os.environ['LAB_SERVER']
@@ -101,10 +102,12 @@ def main():
 
     args = sys.argv[1:]
     try:
-        opts, args = getopt.getopt(args, 'h:S:', ['server='])
+        opts, args = getopt.getopt(args, 'dh:S:', ['server='])
     except:
         usage()
     for opt, val in opts:
+        if opt in ('-d', '--debug'):
+            debug = 1
         if opt in ('-h', '--hostname'):
             hostname = val
         if opt in ('-S', '--server'):
@@ -119,7 +122,10 @@ def main():
         sys.exit(1)
 
     inventory = read_inventory()
-    push_inventory(hostname, inventory)
+    if debug:
+        print inventory
+    else:
+        push_inventory(hostname, inventory)
 
 
 if __name__ == '__main__':
