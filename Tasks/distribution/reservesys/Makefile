@@ -42,4 +42,5 @@ $(METADATA): Makefile
 	@echo "TestTime:	24h"			>> $(METADATA)
 	@echo "Priority:	Manual"			>> $(METADATA)
 	@echo "Requires:	emacs"			>> $(METADATA)
+	@echo "Requires:	vim-enhanced"		>> $(METADATA)
 	@echo "License:		Red Hat Internal"	>> $(METADATA)
