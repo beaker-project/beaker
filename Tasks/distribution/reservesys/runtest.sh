@@ -66,7 +66,7 @@ RETURNSCRIPT()
     echo "export TESTID=$TESTID"               >> $SCRIPT
     echo "export STANDALONE=$STANDALONE"       >> $SCRIPT
     echo "rhts-sync-set -s DONE"               >> $SCRIPT
-    echo "rhts-sync-block -s DONE $STANDALONE" >> $SCRIPT
+    echo "rhts-sync-block -s DONE $HOSTNAME"   >> $SCRIPT
     echo "rhts-test-update $RESULT_SERVER $TESTID finish" >> $SCRIPT
     echo "rhts-recipe-update $RESULT_SERVER $RECIPEID finish" >> $SCRIPT
     echo "rhts-end-testing $LAB_SERVER $HOSTNAME $RECIPEID $UUID" >> $SCRIPT
