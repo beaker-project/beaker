@@ -52,24 +52,8 @@ RETURNSCRIPT()
     SCRIPT=/usr/bin/return2rhts.sh
 
     echo "#!/bin/sh"                           > $SCRIPT
-    echo "export JOBID=$JOBID"                 >> $SCRIPT
-    echo "export RECIPESETID=$RECIPETESTID"    >> $SCRIPT
-    echo "export RECIPETYPE=$RECIPETYPE"       >> $SCRIPT
-    echo "export RECIPEID=$RECIPEID"           >> $SCRIPT
-    echo "export HOSTNAME=$HOSTNAME"           >> $SCRIPT
-    echo "export UUID=$UUID"                   >> $SCRIPT
-    echo "export LAB_SERVER=$LAB_SERVER"       >> $SCRIPT 
-    echo "export RESULT_SERVER=$RESULT_SERVER" >> $SCRIPT
-    echo "export TEST=$TEST"                   >> $SCRIPT
-    echo "export TESTPATH=$TESTPATH"           >> $SCRIPT
-    echo "export TESTORDER=$TESTORDER"         >> $SCRIPT
-    echo "export TESTID=$TESTID"               >> $SCRIPT
-    echo "export STANDALONE=$STANDALONE"       >> $SCRIPT
-    echo "rhts-sync-set -s DONE"               >> $SCRIPT
-    echo "rhts-sync-block -s DONE $HOSTNAME"   >> $SCRIPT
-    echo "rhts-test-update $RESULT_SERVER $TESTID finish" >> $SCRIPT
-    echo "rhts-recipe-update $RESULT_SERVER $RECIPEID finish" >> $SCRIPT
-    echo "rhts-end-testing $LAB_SERVER $HOSTNAME $RECIPEID $UUID" >> $SCRIPT
+    echo "/sbin/chkconfig rhts on" >> $SCRIPT
+    echo "/sbin/service rhts start" >> $SCRIPT
 
     chmod 777 $SCRIPT
 }
