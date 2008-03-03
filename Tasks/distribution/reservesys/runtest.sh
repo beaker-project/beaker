@@ -52,6 +52,8 @@ RETURNSCRIPT()
     SCRIPT=/usr/bin/return2rhts.sh
 
     echo "#!/bin/sh"                           > $SCRIPT
+    echo "export RESULT_SERVER=$RESULT_SERVER" >> $SCRIPT
+    echo "export TESTID=$TESTID" >> $SCRIPT
     echo "/sbin/chkconfig rhts on" >> $SCRIPT
     echo "/bin/echo Hit Return to reboot the system and continue any" >> $SCRIPT
     echo "/bin/echo remaining RHTS tests. Or hit CTRL-C now if this" >> $SCRIPT
