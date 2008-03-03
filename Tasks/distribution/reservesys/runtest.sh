@@ -57,7 +57,7 @@ RETURNSCRIPT()
     echo "/bin/echo remaining RHTS tests. Or hit CTRL-C now if this" >> $SCRIPT
     echo "/bin/echo is not desired." >> $SCRIPT
     echo "read dummy" >> $SCRIPT
-    echo "/sbin/shutdown -r +0" >> $SCRIPT
+    echo "/usr/bin/rhts-reboot" >> $SCRIPT
 
     chmod 777 $SCRIPT
 }
