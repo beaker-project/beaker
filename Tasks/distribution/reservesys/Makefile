@@ -43,4 +43,5 @@ $(METADATA): Makefile
 	@echo "Priority:	Manual"			>> $(METADATA)
 	@echo "Requires:	emacs"			>> $(METADATA)
 	@echo "Requires:	vim-enhanced"		>> $(METADATA)
+	@echo "Requires:	unifdef"		>> $(METADATA)
 	@echo "License:		Red Hat Internal"	>> $(METADATA)
