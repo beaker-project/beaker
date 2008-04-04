@@ -54,8 +54,10 @@ def read_inventory():
 
     data['ARCH'] = cpu_info['platform']
     data['CPUSPEED'] = cpu_info['speed']
+    data['CPUFAMILY'] = cpu_info['model_number']
     data['CPUVENDOR'] = cpu_info['type']
     data['CPUMODEL'] = cpu_info['model']
+    data['CPUMODELNUMBER'] = cpu_info['model_ver']
     data['PROCESSORS'] = cpu_info['count']
     data['VENDOR'] = "%s" % profile.host.systemVendor
     data['MODEL'] = "%s" % profile.host.systemModel
