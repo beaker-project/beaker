@@ -64,7 +64,8 @@ RETURNSCRIPT()
     echo "#!/bin/sh"                           > $SCRIPT
     echo "export RESULT_SERVER=$RESULT_SERVER" >> $SCRIPT
     echo "export TESTID=$TESTID" >> $SCRIPT
-    echo "/sbin/chkconfig rhts on" >> $SCRIPT
+    echo "/usr/bin/rhts-test-update $RESULT_SERVER $TESTID finish" >> $SCRIPT
+    echo "touch /var/cache/rhts/$TESTID/done" >> $SCRIPT
     echo "/bin/echo Hit Return to reboot the system and continue any" >> $SCRIPT
     echo "/bin/echo remaining RHTS tests. Or hit CTRL-C now if this" >> $SCRIPT
     echo "/bin/echo is not desired." >> $SCRIPT
