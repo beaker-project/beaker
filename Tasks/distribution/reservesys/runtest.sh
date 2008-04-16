@@ -3,6 +3,16 @@
 # Source the common test script helpers
 . /usr/bin/rhts_environment.sh
 
+STOPRHTS()
+{
+    /sbin/service rhts stop
+}
+
+if [ $REBOOTCOUNT -gt 0 ]; then
+    STOPRHTS
+    exit 0
+fi
+
 # Functions
 RprtRslt()
 {
@@ -142,18 +152,6 @@ WATCHDOG()
     rhts-test-checkin $LAB_SERVER $HOSTNAME $JOBID $TEST $ARCH $SLEEPTIME $TESTID
 }
 
-DISABLERHTSONBOOT()
-{
-    /sbin/chkconfig rhts off
-    /sbin/service rhts stop
-    chkconfig --list rhts | grep -q :on
-    if [ $? -eq 1 ]; then
-	logger -s "***** Disabled RHTS on reboot *****"
-    else
-	logger -s "***** Unable to disabled RHTS on reboot *****"
-    fi
-}
-
 if [ -z "$RESERVETIME" ]; then
     SLEEPTIME=24h
 else
@@ -169,27 +167,29 @@ fi
 echo "***** Start of reservesys test *****" > $OUTPUTFILE
 
 # build the /etc/motd file
+echo "***** Building /etc/motd *****" >> $OUTPUTFILE
 MOTD
 
 # send email to the submitter
+echo "***** Sending email to $RESERVEBY *****" >> $OUTPUTFILE
 NOTIFY
 
 # set the external watchdog timeout
+echo "***** Setting the external watchdog timeout *****" >> $OUTPUTFILE
 WATCHDOG
 
 # build /usr/bin/extendtesttime.sh script to allow user
 #  to extend the time time.
+echo "***** Building /usr/bin/extendtesttime.sh *****" >> $OUTPUTFILE
 EXTENDTESTTIME
 
 # build /usr/bin/return2rhts.sh script to allow user
 #  to return the system to RHTS early.
+echo "***** Building /usr/bin/return2rhts.sh *****" >> $OUTPUTFILE
 RETURNSCRIPT
 
-# disable rhts, So that reserve workflow works with test reboot support.
-DISABLERHTSONBOOT
-
 echo "***** End of reservesys test *****" >> $OUTPUTFILE
-
 RprtRslt $TEST PASS 0
 
-exit 0
+# stop rhts service, So that reserve workflow works with test reboot support.
+STOPRHTS
