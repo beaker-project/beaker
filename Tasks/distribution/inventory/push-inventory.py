@@ -47,6 +47,7 @@ def read_inventory():
     data['CPUFLAGS'] = []
     data['PCIID'] = []
     data['USBID'] = []
+    data['HVM'] = False
 
     cpu_info = smolt.read_cpuinfo()
     memory   = smolt.read_memory()
@@ -83,6 +84,14 @@ def read_inventory():
     modules =  commands.getstatusoutput('/sbin/lsmod')[1].split('\n')[1:]
     for module in modules:
         data['MODULE'].append(module.split()[0])
+
+    # checking for whether or not the machine is hvm-enabled.
+    caps = ""
+    if os.path.exists("/sys/hypervisor/properties/capabilities"):
+        caps = open("/sys/hypervisor/properties/capabilities").read()
+    if caps.find("hvm") != -1:
+        data['HVM'] = True
+
 
     return data
 
