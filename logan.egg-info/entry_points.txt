@@ -1,0 +1,3 @@
+[console_scripts]
+start-logan = logan.commands:start
+
