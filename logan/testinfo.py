@@ -353,9 +353,6 @@ class Parser:
             if self.info.avg_test_time<60:
                 self.handle_warning("TestTime should not be less than a minute")
 
-            if self.info.avg_test_time>(60*60*6):
-                self.handle_warning("TestTime is over 6 hours")
-
         else:
             self.handle_error("Malformed %s field"%key)
 

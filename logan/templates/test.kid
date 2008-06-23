@@ -86,14 +86,28 @@ types = types.replace('&', '&amp;')
         </span>
     </tr>
 </table>
-<table width="97%" py:if="test.runs">
-    <tr>
-        <td>
+<table width="97%" class="list" py:if="test.runs">
+    <tr class="list">
+        <td colspan="7" class="list">
             <div class="show">Last 10 Test Runs for this Test</div>
         </td>
     </tr>
-    <tr py:for="testrun in test.runs[-10:]">
-      <td>${testrun}</td>
+    <tr class="list">
+     <th class="list">Run ID</th>
+     <th class="list">Family</th>
+     <th class="list">Arch</th>
+     <th class="list">Machine</th>
+     <th class="list">Status</th>
+     <th class="list">Result</th>
+     <th class="list">Duration</th>
+    </tr>
+    <tr class="list" py:for="testrun in test.runs[-10:]">
+      <td class="list">${testrun.id}</td>
+      <td class="list">${testrun.recipe.family}</td>
+      <td class="list">${testrun.recipe.arch}</td>
+      <td class="list">${testrun.recipe.machine}</td>
+      <td class="list">${testrun.status}</td>
+      <td class="list">${testrun.duration}</td>
     </tr>
 </table>
 </body>

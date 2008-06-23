@@ -28,7 +28,7 @@ class Tests(RPCRoot):
         'test',
         fields = [upload],
         action = 'save_data',
-        submit_test = _(u'Submit Data')
+        submit_text = _(u'Submit Data')
     )
 
     @expose(template='logan.templates.form')
@@ -43,6 +43,9 @@ class Tests(RPCRoot):
 
     @cherrypy.expose
     def upload(self, test_rpm_name, test_rpm_data):
+        """
+        XMLRPC method to upload test rpm package
+        """
         rpm_file = "%s/%s" % (self.test_dir, test_rpm_name)
         print "rpm_file = %s" % rpm_file
         FH = open(rpm_file, "w")
@@ -55,10 +58,13 @@ class Tests(RPCRoot):
             return (0, "Failed to import because of %s" % str(err))
         session.save_or_update(test)
         session.flush()
-        return (1, 'Success')
+        return (test.id, 'Success')
 
     @expose()
     def save(self, test_rpm, *args, **kw):
+        """
+        TurboGears method to upload test rpm package
+        """
         rpm_file = "%s/%s" % (self.test_dir, test_rpm.filename)
 
         rpm = test_rpm.file.read()
@@ -75,7 +81,7 @@ class Tests(RPCRoot):
         session.save_or_update(test)
         session.flush()
 
-        flash(_(u"OK"))
+        flash(_(u"%s Added/Updated at id:%s" % (test.name,test.id)))
         redirect(".")
 
     @expose(template='logan.templates.grid')
@@ -160,7 +166,6 @@ class Tests(RPCRoot):
         """Returns rpm information by querying a rpm"""
         ts = rpm.ts()
         fdno = os.open(rpm_file, os.O_RDONLY)
-        #fdno = rpm_file
         try:
             hdr = ts.hdrFromFdno(fdno)
         except rpm.error:
