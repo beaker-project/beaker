@@ -127,6 +127,16 @@ test_bugzilla = Table('test_bugzilla',metadata,
 		ForeignKey('test.id')),
 )
 
+status = Table('status',metadata,
+	Column('id', Integer, primary_key=True),
+	Column('status', Unicode(20))
+)
+
+result = Table('result',metadata,
+	Column('id', Integer, primary_key=True),
+	Column('result', Unicode(20))
+)
+
 job = Table('job',metadata,
 	Column('id', Integer, primary_key=True),
 	Column('owner_id', Integer, 
@@ -135,7 +145,7 @@ job = Table('job',metadata,
 	Column('result_id', Integer,
 		ForeignKey('result.id')),
 	Column('status_id', Integer,
-		ForeignKey('status.id'))
+		ForeignKey('status.id'), default=select([status.c.id], limit=1).where(status.c.status=='Queued').correlate(None))
 )
 
 recipe_set = Table('recipe_set',metadata,
@@ -159,7 +169,7 @@ recipe = Table('recipe',metadata,
 	Column('result_id', Integer,
 		ForeignKey('result.id')),
 	Column('status_id', Integer,
-		ForeignKey('status.id')),
+		ForeignKey('status.id'),default=select([status.c.id], limit=1).where(status.c.status=='Queued').correlate(None)),
 	Column('lab_server',Unicode(255)),
 	Column('start_time',DateTime),
 	Column('finish_time',DateTime),
@@ -215,14 +225,21 @@ recipe_test =Table('recipe_test',metadata,
 		ForeignKey('recipe.id')),
 	Column('test_id',Integer,
 		ForeignKey('test.id')),
-	Column('test_vars',Unicode()),
 	Column('start_time',DateTime),
 	Column('finish_time',DateTime),
 	Column('result_id', Integer,
 		ForeignKey('result.id')),
 	Column('status_id', Integer,
-		ForeignKey('status.id')),
+		ForeignKey('status.id'),default=select([status.c.id], limit=1).where(status.c.status=='Queued').correlate(None)),
 	Column('role', Unicode(255)),
+)
+
+recipe_test_param = Table('recipe_test_param', metadata,
+	Column('id', Integer, primary_key=True),
+	Column('recipe_test_id', Integer,
+		ForeignKey('recipe_test.id')),
+        Column('name',Unicode(255)),
+        Column('value',Unicode())
 )
 
 recipe_test_comment = Table('recipe_test_comment',metadata,
@@ -262,16 +279,6 @@ recipe_test_result = Table('recipe_test_result',metadata,
 		ForeignKey('result.id')),
 	Column('score', Numeric(10)),
 	Column('log', Unicode()),
-)
-
-status = Table('status',metadata,
-	Column('id', Integer, primary_key=True),
-	Column('status', Unicode(20))
-)
-
-result = Table('result',metadata,
-	Column('id', Integer, primary_key=True),
-	Column('result', Unicode(20))
 )
 
 priority = Table('priority',metadata,
@@ -465,6 +472,10 @@ class Test(MappedObject):
     """
 
     @classmethod
+    def by_name(cls, name):
+        return cls.query.filter_by(name=name).one()
+
+    @classmethod
     def by_family_arch(cls, wantedFamily, wantedArch):
         return cls.query.outerjoin('families').outerjoin('arches').\
                filter(
@@ -626,6 +637,17 @@ class RecipeTest(MappedObject):
     """
     This holds the results/status of the test being executed.
     """
+    def _get_duration(self):
+        try:
+            return self.finish_time - self.start_time
+        except:
+            return None
+    duration = property(_get_duration)
+
+class RecipeTestParam(MappedObject):
+    """
+    Parameters for test execution.
+    """
     pass
 
 class RecipeTestComment(MappedObject):
@@ -726,10 +748,12 @@ mapper(RecipeTest, recipe_test,
 	properties = {'results':relation(RecipeTestResult, backref='test'),
                       'rpms':relation(RecipeTestRpm),
 		      'comments':relation(RecipeTestComment, backref='test'),
+                      'params':relation(RecipeTestParam),
 		      'bugzillas':relation(RecipeTestBugzilla, backref='test'),
 		      'test':relation(Test, uselist=False, backref='runs'),
 		      'result':relation(Result, uselist=False),
 		      'status':relation(Status, uselist=False)})
+mapper(RecipeTestParam, recipe_test_param)
 mapper(RecipeTestComment, recipe_test_comment,
 	properties = {'user':relation(User, uselist=False, backref='comments')})
 mapper(RecipeTestBugzilla, recipe_test_bugzilla)

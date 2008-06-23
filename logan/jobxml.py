@@ -91,11 +91,11 @@ class XmlRecipe(ElementWrapper):
         for test in self.wrappedEl['test':]:
             yield XmlTest(test)
 
-    def distroRequires(self):
-        return ["%s" % distroRequire for distroRequire in self.wrappedEl['distroRequires':]]
+    def distroRequires(self, *args):
+        return self.wrappedEl['distroRequires'].__repr__(True)
 
-    def hostRequires(self):
-        return ["%s" % hostRequire for hostRequire in self.wrappedEl['hostRequires':]]
+    def hostRequires(self, *args):
+        return self.wrappedEl['hostRequires'].__repr__(True)
 
 class XmlRecipeMachine(XmlRecipe):
     def iter_guests(self):
