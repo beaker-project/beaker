@@ -77,5 +77,3 @@ $(METADATA): Makefile
 	@echo "Requires:     anaconda" >> $(METADATA)
 	@echo "Requires:     smolt" >> $(METADATA)
 
-# You may need other fields here; see the documentation
-	rhts-lint $(METADATA)
