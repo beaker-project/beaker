@@ -23,7 +23,10 @@ import commands
 import pprint
 
 sys.path.append('.')
+sys.path.append("/usr/lib/anaconda")
 import smolt
+import anaconda_log
+import partedUtils
 
 USAGE_TEXT = """
 Usage:  push-inventory.py -h <HOSTNAME>
@@ -48,6 +51,7 @@ def read_inventory():
     data['PCIID'] = []
     data['USBID'] = []
     data['HVM'] = False
+    data['DISKSPACE'] = 0.0
 
     cpu_info = smolt.read_cpuinfo()
     memory   = smolt.read_memory()
@@ -91,6 +95,13 @@ def read_inventory():
         caps = open("/sys/hypervisor/properties/capabilities").read()
     if caps.find("hvm") != -1:
         data['HVM'] = True
+
+    # calculating available diskspace 
+    diskset = partedUtils.DiskSet()
+    diskset.openDevices()
+    for diskname in diskset.disks.keys():
+      disksize = partedUtils.getDeviceSizeMB(diskset.disks[diskname].dev)
+      data['DISKSPACE'] += disksize
 
 
     return data
