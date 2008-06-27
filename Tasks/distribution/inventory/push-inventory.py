@@ -93,15 +93,15 @@ def read_inventory():
     caps = ""
     if os.path.exists("/sys/hypervisor/properties/capabilities"):
         caps = open("/sys/hypervisor/properties/capabilities").read()
-    if caps.find("hvm") != -1:
-        data['HVM'] = True
+        if caps.find("hvm") != -1:
+           data['HVM'] = True
 
     # calculating available diskspace 
     diskset = partedUtils.DiskSet()
     diskset.openDevices()
     for diskname in diskset.disks.keys():
-      disksize = partedUtils.getDeviceSizeMB(diskset.disks[diskname].dev)
-      data['DISKSPACE'] += disksize
+        disksize = partedUtils.getDeviceSizeMB(diskset.disks[diskname].dev)
+        data['DISKSPACE'] += disksize
 
 
     return data
