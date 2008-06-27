@@ -74,6 +74,8 @@ $(METADATA): Makefile
 	@echo "TestVersion:  $(TESTVERSION)"	>> $(METADATA)
 	@echo "Description:  This refreshes the database with the hardware inventory of the machine its run on">> $(METADATA)
 	@echo "TestTime:     15m" >> $(METADATA)
+	@echo "Requires:     kernel-xen" >> $(METADATA)
 	@echo "Requires:     anaconda" >> $(METADATA)
 	@echo "Requires:     smolt" >> $(METADATA)
+
 
