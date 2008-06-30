@@ -51,7 +51,9 @@ def read_inventory():
     data['PCIID'] = []
     data['USBID'] = []
     data['HVM'] = False
-    data['DISKSPACE'] = 0.0
+    data['DISK'] = []
+    data['DISKSPACE'] = 0
+    data['NR_DISKS'] = 0
 
     cpu_info = smolt.read_cpuinfo()
     memory   = smolt.read_memory()
@@ -100,8 +102,10 @@ def read_inventory():
     diskset = partedUtils.DiskSet()
     diskset.openDevices()
     for diskname in diskset.disks.keys():
-        disksize = partedUtils.getDeviceSizeMB(diskset.disks[diskname].dev)
+        disksize = int(math.ceil(partedUtils.getDeviceSizeMB(diskset.disks[diskname].dev)))
+	data['DISK'].append("%d " % (disksize))
         data['DISKSPACE'] += disksize
+        data['NR_DISKS'] += 1
 
 
     return data
