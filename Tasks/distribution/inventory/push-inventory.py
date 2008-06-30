@@ -21,6 +21,7 @@ import string
 import os
 import commands
 import pprint
+import math
 
 sys.path.append('.')
 sys.path.append("/usr/lib/anaconda")
