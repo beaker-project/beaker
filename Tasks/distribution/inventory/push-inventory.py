@@ -103,7 +103,7 @@ def read_inventory():
     diskset.openDevices()
     for diskname in diskset.disks.keys():
         disksize = int(math.ceil(partedUtils.getDeviceSizeMB(diskset.disks[diskname].dev)))
-	data['DISK'].append("%d " % (disksize))
+        data['DISK'].append("%d " % (disksize))
         data['DISKSPACE'] += disksize
         data['NR_DISKS'] += 1
 
