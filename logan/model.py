@@ -12,6 +12,8 @@ from sqlalchemy import String, Unicode, Integer, DateTime, Boolean, Numeric
 from sqlalchemy import and_, or_, not_, select
 from turbogears import identity
 from turbogears.database import session
+import xml.dom.minidom
+from xml.dom.minidom import Node
 
 
 # your data tables
@@ -154,7 +156,7 @@ recipe_set = Table('recipe_set',metadata,
 		ForeignKey('job.id')),
 	Column('priority_id', Integer,
 		ForeignKey('priority.id')),
-	Column('queue_time',DateTime)
+	Column('queue_time',DateTime, nullable=False, default=datetime.now)
 )
 
 recipe = Table('recipe',metadata,
@@ -186,7 +188,8 @@ machine_recipe = Table('machine_recipe', metadata,
 )
 
 guest_recipe = Table('guest_recipe', metadata,
-	Column('id', Integer, ForeignKey('recipe.id'), primary_key=True)
+	Column('id', Integer, ForeignKey('recipe.id'), primary_key=True),
+	Column('guestargs', Unicode())
 )
 
 #callback = Table('callback', metadata,
@@ -416,6 +419,8 @@ class Permission(object):
 
 class MappedObject(object):
 
+    doc = xml.dom.minidom.Document()
+
     @classmethod
     def lazy_create(cls, **kwargs):
         try:
@@ -425,6 +430,11 @@ class MappedObject(object):
             session.save(item)		
             session.flush([item])
         return item
+
+    def node(self, element, value):
+        node = self.doc.createElement(element)
+        node.appendChild(self.doc.createTextNode(value))
+        return node
 
     def __repr__(self):
         # pretty-print the attributes, so we can see what's getting autoloaded for us:
@@ -448,6 +458,9 @@ class Arch(MappedObject):
     Holds a list of Arches the system knows about
     """
 
+    def __init__(self, arch=None):
+        self.arch = arch
+
     @classmethod
     def by_name(cls, name):
         return cls.query.filter_by(arch=name).one()
@@ -461,6 +474,10 @@ class Family(MappedObject):
     """
     Holds a list of Families the system knows about
     """
+    def __init__(self, name=None, alias=None):
+        self.name = name
+        self.alias = alias
+
     @classmethod
     def by_name_alias(cls, name_alias):
         return cls.query.filter(or_(Family.name==name_alias,
@@ -589,7 +606,17 @@ class Job(MappedObject):
     """
     Container to hold like recipe sets.
     """
-    pass
+    def to_xml(self):
+        job = self.doc.createElement("job")
+        job.setAttribute("id", "%s" % self.id)
+        job.setAttribute("owner", "%s" % self.owner.email_address)
+        job.setAttribute("result", "%s" % self.result)
+        job.setAttribute("status", "%s" % self.status)
+        job.appendChild(self.node("Scheduler", "FIXME"))
+        job.appendChild(self.node("whiteboard", self.whiteboard))
+        for rs in self.recipesets:
+            job.appendChild(rs.to_xml())
+        return job
 
 class Priority(MappedObject):
     """
@@ -601,24 +628,48 @@ class RecipeSet(MappedObject):
     """
     A Collection of Recipes that must be executed at the same time.
     """
-    pass
+    def to_xml(self):
+        recipeSet = self.doc.createElement("recipeSet")
+        recipeSet.setAttribute("id", "%s" % self.id)
+        for r in self.recipes:
+            recipeSet.appendChild(r.to_xml())
+        return recipeSet
 
 class Recipe(MappedObject):
     """
     Contains requires for host selection and distro selection.
     Also contains what tests will be executed.
     """
-    pass
+    def to_xml(self, recipe):
+        recipe.setAttribute("id", "%s" % self.id)
+        recipe.setAttribute("result", "%s" % self.result)
+        recipe.setAttribute("status", "%s" % self.status)
+        drs = xml.dom.minidom.parseString(self.distro_requires)
+        hrs = xml.dom.minidom.parseString(self.host_requires)
+        for dr in drs.getElementsByTagName("distroRequires"):
+            recipe.appendChild(dr)
+        for hr in hrs.getElementsByTagName("hostRequires"):
+            recipe.appendChild(hr)
+        for t in self.tests:
+            recipe.appendChild(t.to_xml())
+        return recipe
 
 class GuestRecipe(Recipe):
-    pass
+    def to_xml(self):
+        recipe = self.doc.createElement("guestrecipe")
+        recipe.setAttribute("guestargs", "%s" % self.guestargs)
+        return Recipe.to_xml(self,recipe)
 
 class MachineRecipe(Recipe):
     """
     Optionally can contain guest recipes which are just other recipes
       which will be executed on this system.
     """
-    pass
+    def to_xml(self):
+        recipe = self.doc.createElement("recipe")
+        for guest in self.guests:
+            recipe.appendChild(guest.to_xml())
+        return Recipe.to_xml(self,recipe)
 
 class RecipeTag(MappedObject):
     """
@@ -637,6 +688,23 @@ class RecipeTest(MappedObject):
     """
     This holds the results/status of the test being executed.
     """
+    def to_xml(self):
+        test = self.doc.createElement("test")
+        test.setAttribute("id", "%s" % self.id)
+        test.setAttribute("name", "%s" % self.test.name)
+        test.setAttribute("role", "%s" % self.role)
+        test.setAttribute("result", "%s" % self.result)
+        test.setAttribute("status", "%s" % self.status)
+        if self.params:
+            params = self.doc.createElement("params")
+            for p in self.params:
+                params.appendChild(p.to_xml())
+            test.appendChild(params)
+        rpm = self.doc.createElement("rpm")
+        rpm.setAttribute("name", "%s" % self.test.rpm)
+        test.appendChild(rpm)
+        return test
+
     def _get_duration(self):
         try:
             return self.finish_time - self.start_time
@@ -648,7 +716,11 @@ class RecipeTestParam(MappedObject):
     """
     Parameters for test execution.
     """
-    pass
+    def to_xml(self):
+        param = self.doc.createElement("param")
+        param.setAttribute("name", "%s" % self.name)
+        param.setAttribute("value", "%s" % self.value)
+        return param
 
 class RecipeTestComment(MappedObject):
     """

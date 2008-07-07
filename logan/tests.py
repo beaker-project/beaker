@@ -85,7 +85,7 @@ class Tests(RPCRoot):
         redirect(".")
 
     @expose(template='logan.templates.grid')
-    @paginate('list',default_order='name')
+    @paginate('list',default_order='name', limit=30)
     def index(self, *args, **kw):
         tests = session.query(Test)
         tests_grid = myPaginateDataGrid(fields=[
@@ -121,12 +121,20 @@ class Tests(RPCRoot):
                 try:
                     test.families.append(Family.by_name_alias(family.lstrip('-')))
                 except exceptions.InvalidRequestError:
-                    raise ValueError('Invalid Family: %s' % family.lstrip('-'))
+                    #FIXME# I think we should import the test anyway and
+                    #       report that the scheduler doesn't include that 
+                    #       family.
+                    pass
+                    #raise ValueError('Invalid Family: %s' % family.lstrip('-'))
             else:
                 try:
                     test.families.append(Family.by_name_alias(family))
                 except exceptions.InvalidRequestError:
-                    raise ValueError('Invalid Family: %s' % family.lstrip('-'))
+                    #FIXME# I think we should import the test anyway and
+                    #       report that the scheduler doesn't include that 
+                    #       family.
+                    pass
+                    #raise ValueError('Invalid Family: %s' % family.lstrip('-'))
         for arch in tinfo.test_archs:
             test.arch_list = True
             test.arches.append(Arch.lazy_create(arch=arch))

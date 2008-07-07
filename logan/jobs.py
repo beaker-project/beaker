@@ -88,6 +88,7 @@ class Jobs(RPCRoot):
                 recipe.guests.append(guestrecipe)
         else:
             recipe = GuestRecipe()
+            recipe.guestargs = xmlrecipe.guestargs
         recipe.host_requires = xmlrecipe.hostRequires()
         recipe.distro_requires = xmlrecipe.distroRequires()
         for xmltest in xmlrecipe.iter_tests():
@@ -104,6 +105,11 @@ class Jobs(RPCRoot):
                 recipetest.params.append(param)
             recipe.tests.append(recipetest)
         return recipe
+
+    @expose()
+    def to_xml(self, job_id):
+        jobxml = Job.by_id(job_id).to_xml().toxml()
+        return dict(xml=jobxml)
 
     @expose(template='logan.templates.grid')
     @paginate('list',default_order='id')
