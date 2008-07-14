@@ -62,7 +62,10 @@ def read_inventory():
 
     data['ARCH'] = cpu_info['platform']
     data['CPUSPEED'] = cpu_info['speed']
-    data['CPUFAMILY'] = cpu_info['model_number']
+    try:
+        data['CPUFAMILY'] = cpu_info['model_number']
+    except:
+        data['CPUFAMILY'] = cpu_info['model_rev']
     data['CPUVENDOR'] = cpu_info['type']
     data['CPUMODEL'] = cpu_info['model']
     data['CPUMODELNUMBER'] = cpu_info['model_ver']
