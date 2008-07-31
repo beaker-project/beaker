@@ -1,3 +1,21 @@
+# Logan - Logan is the scheduling piece of the Beaker project
+#
+# Copyright (C) 2008 bpeck@redhat.com
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
 from turbogears.database import session
 from turbogears import controllers, expose, flash, widgets, validate, error_handler, validators, redirect, paginate
 from turbogears import identity, redirect
@@ -5,6 +23,8 @@ from cherrypy import request, response
 from kid import Element
 from logan.widgets import myPaginateDataGrid
 from logan.xmlrpccontroller import RPCRoot
+import datetime
+from turbogears.scheduler import add_interval_task
 
 import cherrypy
 
@@ -77,6 +97,9 @@ class Jobs(RPCRoot):
             for xmlrecipe in xmlrecipeSet.iter_recipes():
                 recipe = self.handleRecipe(xmlrecipe)
                 recipeSet.recipes.append(recipe)
+                # We want the guests to be part of the same recipeSet
+                for guest in recipe.guests:
+                    recipeSet.recipes.append(guest)
             job.recipesets.append(recipeSet)    
         return job
 
@@ -88,6 +111,7 @@ class Jobs(RPCRoot):
                 recipe.guests.append(guestrecipe)
         else:
             recipe = GuestRecipe()
+            recipe.guestname = xmlrecipe.guestname
             recipe.guestargs = xmlrecipe.guestargs
         recipe.host_requires = xmlrecipe.hostRequires()
         recipe.distro_requires = xmlrecipe.distroRequires()
@@ -106,15 +130,15 @@ class Jobs(RPCRoot):
             recipe.tests.append(recipetest)
         return recipe
 
-    @expose()
-    def to_xml(self, job_id):
-        jobxml = Job.by_id(job_id).to_xml().toxml()
+    @expose(format='json')
+    def to_xml(self, id):
+        jobxml = Job.by_id(id).to_xml().toxml()
         return dict(xml=jobxml)
 
     @expose(template='logan.templates.grid')
     @paginate('list',default_order='id')
     def index(self, *args, **kw):
-        jobs = session.query(Job).join('status').join('owner')
+        jobs = session.query(Job).join('status').join('owner').order_by(job.c.id.desc())
         jobs_grid = myPaginateDataGrid(fields=[
 		     widgets.PaginateDataGrid.Column(name='id', getter=lambda x:x.id, title='ID', options=dict(sortable=True)),
 		     widgets.PaginateDataGrid.Column(name='whiteboard', getter=lambda x:x.whiteboard, title='Whiteboard', options=dict(sortable=True)),
@@ -123,3 +147,16 @@ class Jobs(RPCRoot):
 		     widgets.PaginateDataGrid.Column(name='result.result', getter=lambda x:x.result, title='Result', options=dict(sortable=True)),
                     ])
         return dict(title="Jobs", grid=jobs_grid, list=jobs, search_bar=None)
+
+# This doesn't do anything usefull yet.  just experimenting.
+def schedule_recipe_sets(*args):
+    print "Entering Scheduler at %s " % args[0]()
+    for rs in RecipeSet.iter_recipeSets():
+        print rs
+    print "Exiting..."
+
+def schedule():
+    add_interval_task(action=schedule_recipe_sets, 
+                      args=[lambda:datetime.now()],
+                      interval=120)
+

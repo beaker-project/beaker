@@ -1,3 +1,21 @@
+# Logan - Logan is the scheduling piece of the Beaker project
+#
+# Copyright (C) 2008 bpeck@redhat.com
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
 from datetime import datetime
 import pkg_resources
 pkg_resources.require("SQLAlchemy>=0.3.10")
@@ -139,6 +157,11 @@ result = Table('result',metadata,
 	Column('result', Unicode(20))
 )
 
+priority = Table('priority',metadata,
+	Column('id', Integer, primary_key=True),
+	Column('priority', Unicode(20))
+)
+
 job = Table('job',metadata,
 	Column('id', Integer, primary_key=True),
 	Column('owner_id', Integer, 
@@ -155,8 +178,12 @@ recipe_set = Table('recipe_set',metadata,
 	Column('job_id',Integer,
 		ForeignKey('job.id')),
 	Column('priority_id', Integer,
-		ForeignKey('priority.id')),
-	Column('queue_time',DateTime, nullable=False, default=datetime.now)
+		ForeignKey('priority.id'), default=select([priority.c.id], limit=1).where(priority.c.priority==u'Normal').correlate(None)),
+	Column('queue_time',DateTime, nullable=False, default=datetime.now),
+	Column('result_id', Integer,
+		ForeignKey('result.id')),
+	Column('status_id', Integer,
+		ForeignKey('status.id'), default=select([status.c.id], limit=1).where(status.c.status==u'Queued').correlate(None))
 )
 
 recipe = Table('recipe',metadata,
@@ -189,6 +216,7 @@ machine_recipe = Table('machine_recipe', metadata,
 
 guest_recipe = Table('guest_recipe', metadata,
 	Column('id', Integer, ForeignKey('recipe.id'), primary_key=True),
+	Column('guestname', Unicode()),
 	Column('guestargs', Unicode())
 )
 
@@ -282,11 +310,6 @@ recipe_test_result = Table('recipe_test_result',metadata,
 		ForeignKey('result.id')),
 	Column('score', Numeric(10)),
 	Column('log', Unicode()),
-)
-
-priority = Table('priority',metadata,
-	Column('id', Integer, primary_key=True),
-	Column('priority', Unicode(20))
 )
 
 # the identity schema
@@ -622,7 +645,8 @@ class Priority(MappedObject):
     """
     Holds a list of Priorities the system knows about.
     """
-    pass
+    def __init__(self, priority=None):
+        self.priority = priority
 
 class RecipeSet(MappedObject):
     """
@@ -635,6 +659,32 @@ class RecipeSet(MappedObject):
             recipeSet.appendChild(r.to_xml())
         return recipeSet
 
+    @classmethod
+    def by_status(cls, status, query=None):
+        if not query:
+            query=cls.query
+        return query.join('status').filter(Status.status==status)
+
+    @classmethod
+    def by_datestamp(cls, datestamp, query=None):
+        if not query:
+            query=cls.query
+        return query.filter(RecipeSet.queue_time <= datestamp)
+
+    @classmethod
+    def iter_recipeSets(self, status=u'Queued'):
+        self.recipeSets = []
+        while True:
+            recipeSet = RecipeSet.by_status(status).join('priority')\
+                            .order_by(priority.c.priority)\
+                            .filter(not_(RecipeSet.id.in_(self.recipeSets)))\
+                            .first()
+            if recipeSet:
+                self.recipeSets.append(recipeSet.id)
+            else:
+                return
+            yield recipeSet
+
 class Recipe(MappedObject):
     """
     Contains requires for host selection and distro selection.
@@ -642,8 +692,22 @@ class Recipe(MappedObject):
     """
     def to_xml(self, recipe):
         recipe.setAttribute("id", "%s" % self.id)
-        recipe.setAttribute("result", "%s" % self.result)
-        recipe.setAttribute("status", "%s" % self.status)
+	recipe.setAttribute("job_id", "%s" % self.recipeset.job_id)
+	recipe.setAttribute("recipe_set_id", "%s" % self.recipe_set_id)
+	if self.result:
+            recipe.setAttribute("result", "%s" % self.result)
+	if self.status:
+            recipe.setAttribute("status", "%s" % self.status)
+	if self.arch:
+	    recipe.setAttribute("arch", "%s" % self.arch)
+	if self.distro:
+	    recipe.setAttribute("distro", "%s" % self.distro)
+	if self.family:
+	    recipe.setAttribute("family", "%s" % self.family)
+	if self.variant:
+	    recipe.setAttribute("variant", "%s" % self.variant)
+	if self.machine:
+	    recipe.setAttribute("machine", "%s" % self.machine)
         drs = xml.dom.minidom.parseString(self.distro_requires)
         hrs = xml.dom.minidom.parseString(self.host_requires)
         for dr in drs.getElementsByTagName("distroRequires"):
@@ -657,6 +721,7 @@ class Recipe(MappedObject):
 class GuestRecipe(Recipe):
     def to_xml(self):
         recipe = self.doc.createElement("guestrecipe")
+        recipe.setAttribute("guestname", "%s" % self.guestname)
         recipe.setAttribute("guestargs", "%s" % self.guestargs)
         return Recipe.to_xml(self,recipe)
 
@@ -692,6 +757,7 @@ class RecipeTest(MappedObject):
         test = self.doc.createElement("test")
         test.setAttribute("id", "%s" % self.id)
         test.setAttribute("name", "%s" % self.test.name)
+        test.setAttribute("avg_time", "%s" % self.test.avg_time)
         test.setAttribute("role", "%s" % self.role)
         test.setAttribute("result", "%s" % self.result)
         test.setAttribute("status", "%s" % self.status)
@@ -800,7 +866,9 @@ mapper(Job, job,
                       'status':relation(Status, uselist=False)})
 mapper(RecipeSet, recipe_set,
 	properties = {'recipes':relation(Recipe, backref='recipeset'),
-		      'priority':relation(Priority, uselist=False)})
+		      'priority':relation(Priority, uselist=False),
+		      'result':relation(Result, uselist=False),
+                      'status':relation(Status, uselist=False)})
 mapper(Recipe, recipe, 
 	polymorphic_on=recipe.c.type, polymorphic_identity='recipe',
 	properties = {'tests':relation(RecipeTest, backref='recipe'),
@@ -812,7 +880,7 @@ mapper(GuestRecipe, guest_recipe, inherits=Recipe,
 	polymorphic_identity='guest_recipe')
 mapper(MachineRecipe, machine_recipe, inherits=Recipe, 
 	polymorphic_identity='machine_recipe',
-	properties = {'guests':relation(Recipe,
+	properties = {'guests':relation(Recipe, backref='hostmachine',
 					secondary=machine_guest_map)})
 mapper(RecipeTag, recipe_tag)
 mapper(RecipeRpm, recipe_rpm)

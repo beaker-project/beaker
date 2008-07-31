@@ -101,7 +101,7 @@ types = types.replace('&', '&amp;')
      <th class="list">Result</th>
      <th class="list">Duration</th>
     </tr>
-    <tr class="list" py:for="testrun in test.runs[-10:]">
+    <tr class="list" py:for="testrun in reversed(test.runs[-10:])">
       <td class="list">${testrun.id}</td>
       <td class="list">${testrun.recipe.family}</td>
       <td class="list">${testrun.recipe.arch}</td>

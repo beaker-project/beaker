@@ -1,5 +1,23 @@
 #!/usr/bin/python
 
+# Logan - Logan is the scheduling piece of the Beaker project
+#
+# Copyright (C) 2008 bpeck@redhat.com
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
 import xmltramp
 import os
 import sys
@@ -97,6 +115,29 @@ class XmlRecipe(ElementWrapper):
     def hostRequires(self, *args):
         return self.wrappedEl['hostRequires'].__repr__(True)
 
+    def __getattr__(self, attrname):
+        if attrname == 'arch':
+            return self.get_xml_attr('arch', unicode, None)
+        elif attrname == 'id': 
+            return self.get_xml_attr('id', int, 0)
+        elif attrname == 'recipe_set_id': 
+            return self.get_xml_attr('recipe_set_id', int, 0)
+        elif attrname == 'job_id': 
+            return self.get_xml_attr('job_id', int, 0)
+        elif attrname == 'distro': 
+            return self.get_xml_attr('distro', unicode, None)
+        elif attrname == 'family': 
+            return self.get_xml_attr('family', unicode, None)
+        elif attrname == 'variant': 
+            return self.get_xml_attr('variant', unicode, None)
+        elif attrname == 'machine': 
+            return self.get_xml_attr('machine', unicode, None)
+        elif attrname == 'status': 
+            return self.get_xml_attr('status', unicode, None)
+        elif attrname == 'result': 
+            return self.get_xml_attr('result', unicode, None)
+        else: raise AttributeError, attrname
+
 class XmlRecipeMachine(XmlRecipe):
     def iter_guests(self):
         for guest in self.wrappedEl['guestrecipe':]:
@@ -105,8 +146,10 @@ class XmlRecipeMachine(XmlRecipe):
 class XmlRecipeGuest(XmlRecipe):
     def __getattr__(self, attrname):
         if attrname == 'guestargs':
-            return self.get_xml_attr('guestargs', unicode, 'None')
-        else: raise AttributeError, attrname
+            return self.get_xml_attr('guestargs', unicode, None)
+        elif attrname == 'guestname': 
+            return self.get_xml_attr('guestname', unicode, None)
+	else: return XmlRecipe.__getattr__(self,attrname)
 
 class XmlTest(ElementWrapper):
     def iter_params(self):
@@ -117,8 +160,18 @@ class XmlTest(ElementWrapper):
     def __getattr__(self, attrname):
         if attrname == 'role':
             return self.get_xml_attr('role', unicode, u'None')
+        elif attrname == 'id': 
+            return self.get_xml_attr('id', int, 0)
         elif attrname == 'name': 
             return self.get_xml_attr('name', unicode, u'None')
+        elif attrname == 'avg_time': 
+            return self.get_xml_attr('avg_time', int, 0)
+        elif attrname == 'status': 
+            return self.get_xml_attr('status', unicode, u'None')
+        elif attrname == 'result': 
+            return self.get_xml_attr('result', unicode, u'None')
+        elif attrname == 'rpm': 
+            return XmlRpm(self.wrappedEl['rpm'])
         else: raise AttributeError, attrname
 
 class XmlParam(ElementWrapper):
@@ -127,6 +180,12 @@ class XmlParam(ElementWrapper):
             return self.get_xml_attr('name', unicode, u'None')
         elif attrname == 'value': 
             return self.get_xml_attr('value', unicode, u'None')
+        else: raise AttributeError, attrname
+
+class XmlRpm(ElementWrapper):
+    def __getattr__(self, attrname):
+        if attrname == 'name':
+            return self.get_xml_attr('name', unicode, u'None')
         else: raise AttributeError, attrname
 
 subclassDict = {
