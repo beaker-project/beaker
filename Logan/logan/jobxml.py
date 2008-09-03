@@ -22,7 +22,7 @@ import xmltramp
 import os
 import sys
 
-class ElementWrapper:
+class ElementWrapper(object):
     @classmethod
     def get_subclass(cls, element):
         #print element
@@ -105,15 +105,25 @@ class XmlRecipeSet(ElementWrapper):
             yield XmlRecipeMachine(recipe)
 
 class XmlRecipe(ElementWrapper):
-    def iter_tests(self):
+    def iter_tests(self, filter=None):
         for test in self.wrappedEl['test':]:
-            yield XmlTest(test)
+            if filter:
+                if XmlTest(test).status in filter:
+                    yield XmlTest(test)
+            else:
+                yield XmlTest(test)
 
     def distroRequires(self, *args):
         return self.wrappedEl['distroRequires'].__repr__(True)
 
     def hostRequires(self, *args):
         return self.wrappedEl['hostRequires'].__repr__(True)
+
+    def set_recipe_status(self,value):
+        """
+        No Op.
+        """
+        pass
 
     def __getattr__(self, attrname):
         if attrname == 'arch':
@@ -138,6 +148,12 @@ class XmlRecipe(ElementWrapper):
             return self.get_xml_attr('result', unicode, None)
         else: raise AttributeError, attrname
 
+    def __setattr__(self,item,value):
+        if item == 'status':
+            return self.set_recipe_status(value)
+        else:
+            self.__dict__[item] = value
+
 class XmlRecipeMachine(XmlRecipe):
     def iter_guests(self):
         for guest in self.wrappedEl['guestrecipe':]:
@@ -157,6 +173,13 @@ class XmlTest(ElementWrapper):
             for param in params['param':]:
                 yield XmlParam(param)
 
+    def set_test_status(self,value):
+        """
+        No Op.
+        """
+        print "hello"
+        pass
+
     def __getattr__(self, attrname):
         if attrname == 'role':
             return self.get_xml_attr('role', unicode, u'None')
@@ -173,6 +196,13 @@ class XmlTest(ElementWrapper):
         elif attrname == 'rpm': 
             return XmlRpm(self.wrappedEl['rpm'])
         else: raise AttributeError, attrname
+
+    def __setattr__(self,item,value):
+        print "item = %s" % item
+        if item == 'status':
+            return self.set_test_status(value)
+        else:
+            self.__dict__[item] = value
 
 class XmlParam(ElementWrapper):
     def __getattr__(self, attrname):

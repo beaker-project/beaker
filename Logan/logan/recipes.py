@@ -39,7 +39,7 @@ class Recipes(RPCRoot):
 
     @expose(format='json')
     def to_xml(self, id):
-        recipexml = Recipe.by_id(id).to_xml().toxml()
+        recipexml = Recipe.by_id(id).to_xml().toprettyxml()
         return dict(xml=recipexml)
 
     @expose(template='logan.templates.grid')

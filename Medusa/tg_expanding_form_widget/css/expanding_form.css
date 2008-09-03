@@ -1,0 +1,6 @@
+li.appendableformfieldlist ul {
+    list-style-type: none;
+}
+li.appendableformfieldlist ul li {
+    display: inline;
+}

@@ -1,0 +1,63 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:py="http://purl.org/kid/ns#"
+    py:extends="'master.kid'">
+
+<head>
+    <meta content="text/html; charset=UTF-8" http-equiv="content-type" py:replace="''"/>
+
+    <title>Power Type Edit</title>
+<script>
+var conn = MochiKit.Signal.connect;
+
+function row_display(powertype_args) {
+    desc = powertype_args["description"]
+    key = "commandargs.key_" + powertype_args["id"]
+    input = INPUT({type: "textbox",
+                   name: key,
+                   value: powertype_args["value"]})
+    return TR(null, TH(null,desc), TD(null,input));
+}
+
+function replace_fields(req) {
+   var powertype_args = evalJSONRequest(req).keys;
+   new_contents = TABLE(null, TBODY(null, map(row_display, powertype_args)));
+   replaceChildNodes("form_commandargs", new_contents);
+}
+
+function powertype_id_changed(event) {
+    var powertype_id = event.target().value;
+    var powercontroller_id = getElement("form_id").value;
+    var def = doSimpleXMLHttpRequest('/powercontrollers/get_powertype_args', {powercontroller_id : powercontroller_id, powertype_id : powertype_id});
+    def.addCallback(replace_fields);
+}
+
+function powercontroller_id_changed(event) {
+    var powertype_id = event.target().value;
+    var powercontroller_id = getElement("form_id").value;
+    var def = doSimpleXMLHttpRequest('/powercontrollers/get_powertype_args', {powercontroller_id : powercontroller_id, powertype_id : powertype_id, type: 'Host'});
+    def.addCallback(replace_fields);
+}
+
+function init_powertype_field() {
+   conn($('form_powertype'), 'onchange', powertype_id_changed);
+};
+
+function init_powercontrol_field() {
+   conn($('form_powercontroller'), 'onchange', powercontroller_id_changed);
+};
+
+
+conn(window, 'onload', init_powertype_field);
+conn(window, 'onload', init_powercontrol_field);
+//conn(window, 'onload', powertype_id_changed);
+
+</script>
+</head>
+
+
+<body class="flora">
+    <div py:if="form">
+<p py:content="form(method='GET', action=action, value=value, options=options)">Form goes here</p>
+    </div>
+</body>
+</html>

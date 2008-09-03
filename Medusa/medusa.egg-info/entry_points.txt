@@ -1,0 +1,4 @@
+
+    [turbogears.identity.provider]
+    ldapsa = medusa.identity:LdapSqlAlchemyIdentityProvider
+    
