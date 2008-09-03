@@ -35,6 +35,7 @@ system_table = Table('system', metadata,
     Column('status_id', Integer,
            ForeignKey('system_status.id'), nullable=False),
     Column('shared', Boolean, default=False),
+    Column('private', Boolean, default=False),
     Column('deleted', Boolean, default=False),
     Column('memory', Integer),
     Column('checksum', String(32))
@@ -294,6 +295,13 @@ permissions_table = Table('permission', metadata,
 
 user_group_table = Table('user_group', metadata,
     Column('user_id', Integer, ForeignKey('tg_user.user_id',
+        onupdate='CASCADE', ondelete='CASCADE')),
+    Column('group_id', Integer, ForeignKey('tg_group.group_id',
+        onupdate='CASCADE', ondelete='CASCADE'))
+)
+
+system_group_table = Table('system_group', metadata,
+    Column('system_id', Integer, ForeignKey('system.id',
         onupdate='CASCADE', ondelete='CASCADE')),
     Column('group_id', Integer, ForeignKey('tg_group.group_id',
         onupdate='CASCADE', ondelete='CASCADE'))
