@@ -76,6 +76,5 @@ $(METADATA): Makefile
 	@echo "TestTime:     15m" >> $(METADATA)
 	@echo "Requires:     anaconda" >> $(METADATA)
 	@echo "Requires:     smolt" >> $(METADATA)
-	@echo "Requires:     kernel-xen" >> $(METADATA)
 
 

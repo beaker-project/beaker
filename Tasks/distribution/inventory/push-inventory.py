@@ -43,81 +43,85 @@ def push_inventory(hostname, inventory):
    except:
       raise
 
+# some machines just fail to boot with kernel-xen package.. but we need xen
+# kernel to determine the hvm capability of the box correctly. We'll read
+# hvm-capability in xen kernel and the rest in vanilla kernel. 
 def read_inventory():
     # get the data from SMOLT but modify it for how RHTS expects to see it
     # Eventually we'll switch over to SMOLT properly.
     data = {}
-    data['MODULE'] = []
-    data['CPUFLAGS'] = []
-    data['PCIID'] = []
-    data['USBID'] = []
-    data['HVM'] = False
-    data['DISK'] = []
-    data['DISKSPACE'] = 0
-    data['NR_DISKS'] = 0
+    if ( os.uname()[2].find("xen") == -1 ):
+       data['MODULE'] = []
+       data['CPUFLAGS'] = []
+       data['PCIID'] = []
+       data['USBID'] = []
+       data['DISK'] = []
+       data['DISKSPACE'] = 0
+       data['NR_DISKS'] = 0
 
-    cpu_info = smolt.read_cpuinfo()
-    memory   = smolt.read_memory()
-    profile  = smolt.Hardware()
+       cpu_info = smolt.read_cpuinfo()
+       memory   = smolt.read_memory()
+       profile  = smolt.Hardware()
 
-    data['ARCH'] = cpu_info['platform']
-    data['CPUSPEED'] = cpu_info['speed']
-    try:
-        data['CPUFAMILY'] = cpu_info['model_number']
-    except:
-        data['CPUFAMILY'] = cpu_info['model_rev']
-    data['CPUVENDOR'] = cpu_info['type']
-    data['CPUMODEL'] = cpu_info['model']
-    data['CPUMODELNUMBER'] = cpu_info['model_ver']
-    data['PROCESSORS'] = cpu_info['count']
-    data['VENDOR'] = "%s" % profile.host.systemVendor
-    data['MODEL'] = "%s" % profile.host.systemModel
-    data['FORMFACTOR'] = "%s" % profile.host.formfactor
+       data['ARCH'] = cpu_info['platform']
+       data['CPUSPEED'] = cpu_info['speed']
+       try:
+           data['CPUFAMILY'] = cpu_info['model_number']
+       except:
+           data['CPUFAMILY'] = cpu_info['model_rev']
+       data['CPUVENDOR'] = cpu_info['type']
+       data['CPUMODEL'] = cpu_info['model']
+       data['CPUMODELNUMBER'] = cpu_info['model_ver']
+       data['PROCESSORS'] = cpu_info['count']
+       data['VENDOR'] = "%s" % profile.host.systemVendor
+       data['MODEL'] = "%s" % profile.host.systemModel
+       data['FORMFACTOR'] = "%s" % profile.host.formfactor
 
-    # Round memory up to the next base 2
-    n=0
-    memory = int(memory['ram'])
-    while memory > ( 2 << n):
-        n=n+1
-    data['MEMORY'] = 2 << n
+       # Round memory up to the next base 2
+       n=0
+       memory = int(memory['ram'])
+       while memory > ( 2 << n):
+           n=n+1
+       data['MEMORY'] = 2 << n
 
-    for cpuflag in cpu_info['other'].split(" "):
-        data['CPUFLAGS'].append(cpuflag)
+       for cpuflag in cpu_info['other'].split(" "):
+           data['CPUFLAGS'].append(cpuflag)
 
-    for VendorID, DeviceID, SubsysVendorID, SubsysDeviceID, Bus, Driver, Type, Description in profile.deviceIter():
-       if VendorID and DeviceID:
-           if Bus == "pci":
-               data['PCIID'].append("%04x:%04x" % ( VendorID, DeviceID))
-           if Bus == "usb":
-               data['USBID'].append("%04x:%04x" % ( VendorID, DeviceID))
+       for VendorID, DeviceID, SubsysVendorID, SubsysDeviceID, Bus, Driver, Type, Description in profile.deviceIter():
+          if VendorID and DeviceID:
+              if Bus == "pci":
+                  data['PCIID'].append("%04x:%04x" % ( VendorID, DeviceID))
+              if Bus == "usb":
+                  data['USBID'].append("%04x:%04x" % ( VendorID, DeviceID))
 
-    modules =  commands.getstatusoutput('/sbin/lsmod')[1].split('\n')[1:]
-    for module in modules:
-        data['MODULE'].append(module.split()[0])
+       modules =  commands.getstatusoutput('/sbin/lsmod')[1].split('\n')[1:]
+       for module in modules:
+           data['MODULE'].append(module.split()[0])
 
-    # checking for whether or not the machine is hvm-enabled.
-    caps = ""
-    if os.path.exists("/sys/hypervisor/properties/capabilities"):
-        caps = open("/sys/hypervisor/properties/capabilities").read()
-        if caps.find("hvm") != -1:
-           data['HVM'] = True
 
-    # calculating available diskspace 
-    diskset = partedUtils.DiskSet()
-    diskset.openDevices()
-    for diskname in diskset.disks.keys():
-        disksize = int(math.ceil(partedUtils.getDeviceSizeMB(diskset.disks[diskname].dev)))
-        data['DISK'].append("%d " % (disksize))
-        data['DISKSPACE'] += disksize
-        data['NR_DISKS'] += 1
-
+       # calculating available diskspace 
+       diskset = partedUtils.DiskSet()
+       diskset.openDevices()
+       for diskname in diskset.disks.keys():
+           disksize = int(math.ceil(partedUtils.getDeviceSizeMB(diskset.disks[diskname].dev)))
+           data['DISK'].append("%d " % (disksize))
+           data['DISKSPACE'] += disksize
+           data['NR_DISKS'] += 1
+    else:
+       data['HVM'] = False
+       # checking for whether or not the machine is hvm-enabled.
+       caps = ""
+       if os.path.exists("/sys/hypervisor/properties/capabilities"):
+           caps = open("/sys/hypervisor/properties/capabilities").read()
+           if caps.find("hvm") != -1:
+              data['HVM'] = True
 
     return data
-
+   
 def usage():
     print USAGE_TEXT
     sys.exit(-1)
-
+   
 def main():
     global lab_server, hostname
 
