@@ -42,12 +42,16 @@ class LdapSqlAlchemyIdentityProvider(SqlAlchemyIdentityProvider):
         log.info("autocreate :: %s" % self.autocreate)
 
     def validate_identity(self, user_name, password, visit_key):
-        if self.validate_password(None, user_name, password):
+        objects = self.validate_password(None, user_name, password)
+        if objects:
             user = session.query(self.user_class).get_by(user_name=user_name)
+            #user = cls.query.filter_by(user_name=username).fisrt()
             if not user:
                 if self.autocreate:
                     user = self.user_class()
                     user.user_name = user_name
+                    user.display_name = objects[0][1]['cn'][0]
+                    user.email_address = objects[0][1]['mail'][0]
                     session.save(user)
                     session.flush()
                 else:
@@ -94,4 +98,20 @@ class LdapSqlAlchemyIdentityProvider(SqlAlchemyIdentityProvider):
             log.error("Invalid password supplied for %s" % user_name)
             return False
 
-	return True
+	return objects
+
+    def by_name(self, user_name):
+        """
+        Looks up user_name against an AD domain.
+        """
+
+        # Only needed for devel.  comment out for Prod.
+        ldap.set_option(ldap.OPT_X_TLS_REQUIRE_CERT, ldap.OPT_X_TLS_NEVER)
+
+        ldapcon = ldap.initialize(self.uri)
+
+        filter = "(uid=%s*)" % user_name
+        rc = ldapcon.search(self.basedn, ldap.SCOPE_SUBTREE, filter)
+                            
+        objects = ldapcon.result(rc)[1]
+        return [object[0].split(',')[0].split('=')[1] for object in objects]

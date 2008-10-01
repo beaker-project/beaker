@@ -371,6 +371,10 @@ input.button {
 /*
 ** The update list (list.kid)
 */
+table.narrowlist {
+    border-collapse: collapse;
+}
+
 table.list {
     border-collapse: collapse;
     width: 100%;

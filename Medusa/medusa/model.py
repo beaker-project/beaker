@@ -1,10 +1,13 @@
 from datetime import datetime
 from turbogears.database import metadata, mapper, session
-
+from turbogears.config import get
+import ldap
 from sqlalchemy import Table, Column, ForeignKey
 from sqlalchemy.orm import relation, backref, synonym
 from sqlalchemy import String, Unicode, Integer, DateTime, UnicodeText, Boolean, Float, VARCHAR, TEXT
+from sqlalchemy import or_, and_
 from sqlalchemy.exceptions import InvalidRequestError
+from identity import LdapSqlAlchemyIdentityProvider
 
 from turbogears import identity
 
@@ -15,7 +18,7 @@ import md5
 system_table = Table('system', metadata,
     Column('id', Integer, autoincrement=True,
            nullable=False, primary_key=True),
-    Column('name', String(255), nullable=False),
+    Column('fqdn', String(255), nullable=False),
     Column('serial', Unicode(1024)),
     Column('date_added', DateTime, 
            default=datetime.utcnow, nullable=False),
@@ -337,14 +340,36 @@ class Group(object):
     """
     An ultra-simple group definition.
     """
-    pass
+    @classmethod
+    def by_name(cls, name):
+        return cls.query.filter_by(group_name=name).one()
 
+    @classmethod
+    def by_id(cls, id):
+        return cls.query.filter_by(group_id=id).one()
+
+    def __repr__(self):
+        return self.display_name
+
+    @classmethod
+    def list_by_name(cls, name):
+        """
+        A class method that can be used to search groups
+        based on the group_name
+        """
+        return cls.query().filter(Group.group_name.like('%s%%' % name))
 
 class User(object):
     """
     Reasonably basic User definition.
     Probably would want additional attributes.
     """
+    uri = get("identity.soldapprovider.uri", "ldaps://localhost")
+    basedn  = get("identity.soldapprovider.basedn", "dc=localhost")
+    autocreate = get("identity.soldapprovider.autocreate", False)
+    # Only needed for devel.  comment out for Prod.
+    ldap.set_option(ldap.OPT_X_TLS_REQUIRE_CERT, ldap.OPT_X_TLS_NEVER)
+
     def permissions(self):
         perms = set()
         for g in self.groups:
@@ -366,9 +391,39 @@ class User(object):
         A class method that permits to search users
         based on their user_name attribute.
         """
-        return cls.query.filter_by(user_name=username).first()
+        filter = "(uid=%s)" % username
+        ldapcon = ldap.initialize(cls.uri)
+        rc = ldapcon.search(cls.basedn, ldap.SCOPE_SUBTREE, filter)
+        objects = ldapcon.result(rc)[1]
+        if(len(objects) == 0):
+            log.warning("No such LDAP user: %s" % username)
+            return False
+        elif(len(objects) > 1):
+            log.error("Too Many users: %s" % username)
+            return False
+        user = cls.query.filter_by(user_name=username).first()
+        if not user:
+            if cls.autocreate:
+                user = User()
+                user.user_name = username
+                user.display_name = objects[0][1]['cn'][0]
+		user.email_address = objects[0][1]['mail'][0]
+                session.save(user)
+                session.flush()
+            else:
+                return None
+        return user
 
     by_user_name = classmethod(by_user_name)
+
+    def list_by_name(cls, username):
+        filter = "(uid=%s*)" % username
+        ldapcon = ldap.initialize(cls.uri)
+        rc = ldapcon.search(cls.basedn, ldap.SCOPE_SUBTREE, filter)
+        objects = ldapcon.result(rc)[1]
+        return [object[0].split(',')[0].split('=')[1] for object in objects]
+        
+    list_by_name = classmethod(list_by_name)
 
     def _set_password(self, password):
         """
@@ -384,6 +439,9 @@ class User(object):
         return self._password
 
     password = property(_get_password, _set_password)
+
+    def __repr__(self):
+        return self.display_name
 
 
 class Permission(object):
@@ -442,20 +500,99 @@ class SystemObject(object):
 
 class System(SystemObject):
 
-    def __init__(self, name=None):
-        self.name = name
+    def __init__(self, fqdn=None, status=None, contact=None, location=None,
+                       model=None, type=None, serial=None, vendor=None,
+                       owner=None):
+        self.fqdn = fqdn
+        self.status_id = status
+        self.contact = contact
+        self.location = location
+        self.model = model
+        self.type_id = type
+        self.serial = serial
+        self.vendor = vendor
+        self.owner = owner
 
-    def by_name(cls, name):
+    @classmethod
+    def all(cls, user=None):
         """
-        A class method that can be used to search syatems
-        based on the name since it is unique.
+        Not Private or (Private and in Group)
+        
         """
-        print cls
-        print name
-        return cls.query.filter_by(name=name).one()
+        if user:
+            if 'admin' in [group.group_name for group in user.groups]:
+                private = None
+            else:
+                private = or_(System.private==False,
+                              and_(System.private==True,
+                                   or_(User.user_id==user.user_id,
+                                       System.owner==user,
+                                        System.user==user)))
+        else:
+            private = System.private==False
+        return cls.query.outerjoin(['groups','users']).filter(private)
 
-    by_name = classmethod(by_name)
+#                                  or_(User.user_id==user.user_id, 
+#                                      system_group_table.c.system_id==None))))
 
+    @classmethod
+    def available(cls, user):
+        """
+        A class method that can be used to search for systems that only
+        user can see
+        """
+        return System.all(user).filter(and_(System.user==None,
+                                            or_(System.owner==user,
+                                                System.shared==True),
+                                            or_(User.user_id==user.user_id,
+                                                system_group_table.c.system_id==None))
+                                      )
+
+    @classmethod
+    def mine(cls, user):
+        """
+        A class method that can be used to search for systems that only
+        user can see
+        """
+        return cls.query.filter(or_(System.user==user,
+                                    System.owner==user))
+
+    @classmethod
+    def by_fqdn(cls, fqdn, user):
+        """
+        A class method that can be used to search systems
+        based on the fqdn since it is unique.
+        """
+        return System.all(user).filter(System.fqdn == fqdn).one()
+
+    @classmethod
+    def list_by_fqdn(cls, fqdn, user):
+        """
+        A class method that can be used to search systems
+        based on the fqdn since it is unique.
+        """
+        return System.all(user).filter(System.fqdn.like('%s%%' % fqdn))
+
+    @classmethod
+    def by_id(cls, id, user):
+        return System.all(user).filter(System.id == id).one()
+
+    def can_share(self, user):
+        if user:
+            # If its the owner always allow.
+            if user == self.owner:
+                return True
+            if self.shared:
+                # If the user is in the Systems groups
+                if self.groups:
+                    for group in user.groups:
+                        if group in self.groups:
+                            return True
+                else:
+                # If the system has no groups
+                    return True
+        return False
+        
     def get_allowed_attr(self):
         attributes = ['vendor','model','memory']
         return attributes
@@ -575,12 +712,28 @@ class SystemType(SystemObject):
     def __repr__(self):
         return self.type
 
+    @classmethod
+    def get_all_types(cls):
+        """
+        Desktop, Server, Virtual
+        """
+        all_types = cls.query()
+        return [(type.id, type.type) for type in all_types]
+
 class SystemStatus(SystemObject):
     def __init__(self, status=None):
         self.status = status
 
     def __repr__(self):
         return self.status
+
+    @classmethod
+    def get_all_status(cls):
+        """
+        Available, InUse, Offline
+        """
+        all_status = cls.query()
+        return [(status.id, status.status) for status in all_status]
 
 class Arch(SystemObject):
     def __init__(self, arch=None):
@@ -782,9 +935,9 @@ System.mapper = mapper(System, system_table,
                      'cpu':relation(Cpu, uselist=False),
                      'numa':relation(Numa, uselist=False),
                      'power':relation(PowerHost, uselist=False),
-                     'user':relation(User, uselist=False, viewonly=True,
+                     'user':relation(User, uselist=False, 
                           primaryjoin=system_table.c.user_id==users_table.c.user_id,foreign_keys=system_table.c.user_id),
-                     'owner':relation(User, uselist=False, viewonly=True,
+                     'owner':relation(User, uselist=False, 
                           primaryjoin=system_table.c.owner_id==users_table.c.user_id,foreign_keys=system_table.c.owner_id)})
 Arch.mapper = mapper(Arch, arch_table)
 Cpu.mapper = mapper(Cpu, cpu_table,
@@ -832,7 +985,9 @@ mapper(User, users_table,
 
 mapper(Group, groups_table,
         properties=dict(users=relation(User,
-                secondary=user_group_table, backref='groups')))
+                secondary=user_group_table, backref='groups'),
+                        systems=relation(System,
+                secondary=system_group_table, backref='groups')))
 
 mapper(Permission, permissions_table,
         properties=dict(groups=relation(Group,

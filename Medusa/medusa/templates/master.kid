@@ -54,6 +54,7 @@ $(document).ready(function() {
                     <li><a id="administration" href="#">Administration</a></li>
                     <div id="adminlist" style="display: none">
                         <ul>
+                            <li><a href="${tg.url('/groups')}">Groups</a></li>
                             <li><a href="${tg.url('/powertypes')}">Power Types</a></li>
                             <li><a href="${tg.url('/powercontrollers')}">Power Controllers</a></li>
                         </ul>
@@ -61,9 +62,9 @@ $(document).ready(function() {
                 </ul>
             </div>
             <ul id="fedora-side-nav">
-                <li py:if="not tg.identity.anonymous"><a href="${tg.url('/')}">${tg.identity.user_name}'s Home</a></li>
-                <li py:if="not tg.identity.anonymous"><a href="${tg.url('/mine')}">My Systems (count)</a></li>
-                <li><a href="${tg.url('/')}">Systems</a></li>
+                <li py:if="not tg.identity.anonymous"><a href="${tg.url('/mine')}">${tg.identity.user_name}'s Home</a></li>
+                <li py:if="not tg.identity.anonymous"><a href="${tg.url('/available')}">Available Systems</a></li>
+                <li><a href="${tg.url('/')}">All Systems</a></li>
                 <li><a href="${tg.url('/devices')}">Devices</a>
                 <ul>
                     <li py:for="device_class in device_classes()">

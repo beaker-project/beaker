@@ -3,104 +3,12 @@
     py:extends="'master.kid'">
 <head>
 <meta content="text/html; charset=utf-8" http-equiv="Content-Type" py:replace="''"/>
-<title>${system.name}</title>
+<title>${title}</title>
 </head>
 <body>
-
-    <table class="list">
-        <tr class="list">
-            <th class="list">
-                <b>System Name</b>
-            </th>
-            <td class="list">
-                ${system.name}
-            </td>
-            <th class="list">
-                <b>Vendor</b>
-            </th>
-            <td class="list">
-                ${system.vendor}
-            </td>
-            <th class="list">
-                <b>Model</b>
-            </th>
-            <td class="list">
-                ${system.model}
-            </td>
-        </tr>
-        <tr class="list">
-            <th class="list">
-                <b>Date Created</b>
-            </th>
-            <td class="list">
-                ${system.date_added}
-            </td>
-            <th class="list">
-                <b>Last Modification</b>
-            </th>
-            <td class="list">
-                ${system.date_modified}
-            </td>
-            <th class="list">
-                <b>Last Checkin</b>
-            </th>
-            <td class="list">
-                ${system.date_lastcheckin}
-            </td>
-        </tr>
-        <tr class="list">
-            <th class="list">
-                <b>Serial Number</b>
-            </th>
-            <td class="list">
-                ${system.serial}
-            </td>
-            <th class="list">
-                <b>Location</b>
-            </th>
-            <td class="list" colspan="2">
-                ${system.location}
-            </td>
-        </tr>
-        <tr class="list">
-            <th class="list">
-                <b>Lender</b>
-            </th>
-            <td class="list">
-                ${system.lender}
-            </td>
-            <th class="list">
-                <b>User</b>
-            </th>
-            <td class="list">
-                ${system.user}
-            </td>
-            <th class="list">
-                <b>Owner</b>
-            </th>
-            <td class="list">
-                ${system.owner}
-            </td>
-        </tr>
-        <tr class="list">
-            <th class="list">
-                <b>Memory</b>
-            </th>
-            <td class="list">
-                ${system.memory}
-            </td>
-            <th class="list">
-                <b>Architecture(s)</b>
-            </th>
-            <td class="list" colspan="2">
-                <span py:for="arch in system.arch">
-                   ${arch.arch}
-                </span>
-            </td>
-        </tr>
-    </table>
-    <br/>
-    <div class="tabber">
+    <p py:content="system_form(method='GET', action=action, value=value, options=options)">
+Form goes here</p>
+    <div py:if="system" class="tabber">
      <div class="tabbertab"><h2>Details</h2>
       <span py:if="system.cpu">
        &nbsp;&nbsp;<b>Cpu</b>
@@ -240,11 +148,16 @@
         </tr>
     </table>
      </div>
+     <div class="tabbertab"><h2>Key/Values</h2>
+     </div>
+     <div class="tabbertab"><h2>Groups</h2>
+      <p py:content="system_group_form(method='GET', action=system_group_action, groups=system.groups, value=value, options=options)">System Group Form goes here</p>
+     </div>
+     <div class="tabbertab"><h2>Excluded Families</h2>
+     </div>
      <div class="tabbertab"><h2>Power</h2>
      </div>
      <div class="tabbertab"><h2>Console</h2>
-     </div>
-     <div class="tabbertab"><h2>Reservation</h2>
      </div>
      <div class="tabbertab"><h2>Notes</h2>
      </div>
