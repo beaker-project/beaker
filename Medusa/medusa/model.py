@@ -74,6 +74,16 @@ arch_table = Table('arch', metadata,
     Column('arch', String(20))
 )
 
+provision_table = Table('provision', metadata,
+    Column('id', Integer, autoincrement=True,
+           nullable=False, primary_key=True),
+    Column('system_id', Integer, ForeignKey('system.id')),
+    Column('osversion_id', Integer, ForeignKey('osversion.id')),
+    Column('ks_meta', Unicode(1024)),
+    Column('kernel_options', Unicode(1024)),
+    Column('kernel_options_post', Unicode(1024)),
+)
+
 cpu_table = Table('cpu', metadata,
     Column('id', Integer, autoincrement=True,
            nullable=False, primary_key=True),
@@ -210,55 +220,62 @@ install_table = Table('install', metadata,
            nullable=False, primary_key=True),
 )
 
+#RHEL4-U8-re20081015.nightly_http-AS-x86_64   	redhat 	x86_64
+#RHEL4-U8-re20081015.nightly_http-AS-x86_64   	redhat 	x86_64
+#RHEL4-U8-re20081015.nightly_nfs-AS-xen-x86_64 	redhat 	x86_64
+#RHEL4-U8-re20081015.nightly_nfs-AS-xen-x86_64 	redhat 	x86_64
+#RHEL5.3-Client-20081013.nightly_http-i386 	redhat 	i386
+#RHEL5.3-Client-20081013.nightly_http-x86_64 	redhat 	x86_64
+#RHEL5.3-Client-20081013.nightly_nfs-i386 	redhat 	i386
+#RHEL5.3-Client-20081013.nightly_nfs-x86_64 	redhat 	x86_64
+
 distro_table = Table('distro', metadata,
     Column('id', Integer, autoincrement=True,
            nullable=False, primary_key=True),
+    Column('install_name',Unicode(255)),
     Column('name',Unicode(255)),
-    Column('family',Unicode(255)),
-    Column('update',Unicode(255)),
+    Column('breed_id', Integer, ForeignKey('breed.id')),
+    Column('osversion_id', Integer, ForeignKey('osversion.id')),
     Column('arch',Unicode(25)),
     Column('variant',Unicode(25)),
-    Column('date',DateTime),
-    Column('discinfo_date',Unicode(25)),
+    Column('method',Unicode(25)),
+    Column('virt',Boolean),
+    Column('date_created',DateTime),
 )
 
-distro_method_table = Table('distro_method', metadata,
-    Column('id', Integer, autoincrement=True,
-           nullable=False, primary_key=True),
-    Column('distro_id', Integer, 
-           ForeignKey('distro.id'),
-           nullable=False),
-    Column('name', String(25)),
-    Column('path',Unicode(255)),
+lab_controller_distro_map = Table('distro_lab_controller_map', metadata,
+    Column('distro_id', Integer, ForeignKey('distro.id')),
+    Column('lab_controller_id', Integer, ForeignKey('lab_controller.id')),
 )
 
-distro_repo_table = Table('distro_repo', metadata,
+lab_controller_table = Table('lab_controller', metadata,
     Column('id', Integer, autoincrement=True,
            nullable=False, primary_key=True),
-    Column('distro_id', Integer, 
-           ForeignKey('distro.id'),
-           nullable=False),
-    Column('name', Unicode(255)),
-    Column('path',Unicode(255)),
+    Column('fqdn',Unicode(255)),
+    Column('distros_md5', String(40)),
+)
+
+osversion_table = Table('osversion', metadata,
+    Column('id', Integer, autoincrement=True,
+           nullable=False, primary_key=True),
+    Column('osversion',Unicode(255)),
+)
+
+breed_table = Table('breed', metadata,
+    Column('id', Integer, autoincrement=True,
+           nullable=False, primary_key=True),
+    Column('breed',Unicode(255)),
 )
 
 distro_tag_table = Table('distro_tag', metadata,
     Column('id', Integer, autoincrement=True,
            nullable=False, primary_key=True),
-    Column('distro_id', Integer, 
-           ForeignKey('distro.id'),
-           nullable=False),
     Column('tag', Unicode(255)),
 )
 
-distro_key_value_table = Table('distro_key_value', metadata,
-    Column('id', Integer, autoincrement=True,
-           nullable=False, primary_key=True),
-    Column('distro_id', Integer, 
-           ForeignKey('distro.id'),
-           nullable=False),
-    Column('key', Unicode(255)),
-    Column('value', Unicode(255)),
+distro_tag_map = Table('distro_tag_map', metadata,
+    Column('distro_id', Integer, ForeignKey('distro.id')),
+    Column('distro_tag_id', Integer, ForeignKey('distro_tag.id')),
 )
 
 # the identity schema
@@ -268,6 +285,7 @@ visits_table = Table('visit', metadata,
     Column('created', DateTime, nullable=False, default=datetime.now),
     Column('expiry', DateTime)
 )
+
 
 visit_identity_table = Table('visit_identity', metadata,
     Column('visit_key', String(40), primary_key=True),
@@ -757,6 +775,25 @@ class Arch(SystemObject):
     def __repr__(self):
         return self.arch
 
+class Provision(SystemObject):
+    def __init__(self, osversion=None, ks_meta=None, kernel_options=None,
+                       kernel_options_post=None):
+        self.osversion = osversion
+        self.ks_meta = ks_meta
+        self.kernel_options = kernel_options
+        self.kernel_options_post = kernel_option_post
+
+class Breed(SystemObject):
+    def __init__(self, breed):
+        self.breed = breed
+
+class OSVersion(SystemObject):
+    def __init__(self, osversion):
+        self.osversion = osversion
+
+class LabController(SystemObject):
+    pass
+
 class Cpu(SystemObject):
     def __init__(self, vendor=None, model=None, model_name=None, family=None, stepping=None,speed=None,processors=None,cores=None,sockets=None,flags=None):
         self.vendor = vendor
@@ -921,19 +958,7 @@ class Distro(object):
     def __init__(self, name=None):
         self.name = name
 
-class DistroMethod(object):
-    def __init__(self, name=None):
-        self.name = name
-
-class DistroRepo(object):
-    def __init__(self, name=None):
-        self.name = name
-
 class DistroTag(object):
-    def __init__(self, name=None):
-        self.name = name
-
-class DistroKeyValue(object):
     def __init__(self, name=None):
         self.name = name
 
@@ -950,11 +975,15 @@ System.mapper = mapper(System, system_table,
                      'cpu':relation(Cpu, uselist=False),
                      'numa':relation(Numa, uselist=False),
                      'power':relation(PowerHost, uselist=False),
+                     'provision':relation(Provision),
                      'user':relation(User, uselist=False, 
                           primaryjoin=system_table.c.user_id==users_table.c.user_id,foreign_keys=system_table.c.user_id),
                      'owner':relation(User, uselist=False, 
                           primaryjoin=system_table.c.owner_id==users_table.c.user_id,foreign_keys=system_table.c.owner_id)})
 Arch.mapper = mapper(Arch, arch_table)
+mapper(Provision, provision_table,
+       properties = {'osversion':relation(OSVersion, uselist=False)})
+mapper(OSVersion, osversion_table)
 Cpu.mapper = mapper(Cpu, cpu_table,
        properties = {'flags':relation(CpuFlag)})
 CpuFlag.mapper = mapper(CpuFlag, cpu_flag_table)
@@ -984,11 +1013,19 @@ mapper(HostValue, host_value_table)
 mapper(Serial, serial_table)
 mapper(SerialType, serial_type_table)
 mapper(Install, install_table)
-mapper(Distro, distro_table)
-mapper(DistroMethod, distro_method_table)
-mapper(DistroRepo, distro_repo_table)
+mapper(LabController, lab_controller_table,
+        properties = {'distros':relation(Distro, 
+                                          secondary=lab_controller_distro_map,
+                                          backref='lab_controllers'),
+    })
+mapper(Distro, distro_table,
+        properties = {'osversion':relation(OSVersion, backref='distros'),
+                      'breed':relation(Breed, backref='distros'),
+                      'tags':relation(DistroTag, 
+                                       secondary=distro_tag_map,
+                                       backref='distros'),
+    })
 mapper(DistroTag, distro_tag_table)
-mapper(DistroKeyValue, distro_key_value_table)
 
 mapper(Visit, visits_table)
 
@@ -1011,10 +1048,7 @@ mapper(Permission, permissions_table,
 
 #                     Column("comments"), MultipleJoin('Comment')
 
-#    methods       = MultipleJoin("distroMethod")
-#    repos         = MultipleJoin("distroRepo")
 #    tags          = MultipleJoin("distroTag")
-#    keyvalues     = MultipleJoin("distroKeyValue")
 
 ## Static list of device_classes -- used by master.kid
 global _device_classes
