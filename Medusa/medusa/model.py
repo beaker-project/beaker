@@ -317,6 +317,21 @@ group_permission_table = Table('group_permission', metadata,
         onupdate='CASCADE', ondelete='CASCADE'))
 )
 
+# activity schema
+
+# TODO This will require some indexes for performance.
+activity_table = Table('activity', metadata,
+    Column('id', Integer, autoincrement=True,
+           nullable=False, primary_key=True),
+    Column('user_id', Integer, ForeignKey('tg_user.user_id'), index=True),
+    Column('created', DateTime, nullable=False, default=datetime.now),
+    Column('table_name', String(40), nullable=False),
+    Column('table_id', Integer, nullable=False),
+    Column('field_name', String(40), nullable=False),
+    Column('old_value', String(40), nullable=False),
+    Column('new_value', String(40), nullable=False)
+)
+
 # the identity model
 
 
@@ -1010,4 +1025,32 @@ def device_classes():
         _device_classes = DeviceClass.query.all()
     for device_class in _device_classes:
         yield device_class
+
+# activity model
+
+class Activity(object):
+    def __init__(self, user_id=None, table_name=None, table_id=None,
+                 field_name=None, old_value=None, new_value=None):
+        self.user_id = user_id
+        self.table_name = table_name
+        self.table_id = table_id
+        self.field_name = field_name
+        self.old_value = old_value
+        self.new_value = new_value
+
+    @classmethod
+    def all(cls):
+        return cls.query()
+
+#    def update_values(self, values):
+#        """ Update values for this controllers keys"""
+#        for value in values:
+#            if value['id'] not in self.values:
+#                new_value = ControllerValue(power_control=self.id,
+#                                          key=int(value['id']),
+#                                          value=value['value'])
+#                self.values.append(new_value)
+
+mapper(Activity, activity_table)
+
 

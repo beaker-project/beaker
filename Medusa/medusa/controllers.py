@@ -77,7 +77,6 @@ class Devices:
         return dict(title="Devices", grid = devices_grid, search_bar=None,
                                      list = devices)
 
-
 class Root(RPCRoot):
     powertypes = PowerTypes()
     powercontrollers = PowerControllers()
@@ -335,13 +334,16 @@ class Root(RPCRoot):
             flash( _(u"Insufficient permissions to change owner"))
             redirect("/")
         user = User.by_user_name(kw['user']['text'])
+        activity = Activity(identity.current.user.user_id, 'system', id, 'owner', system.owner.user_id, user.user_id)
         system.owner = user
+	session.save_or_update(activity)
         flash( _(u"OK") )
         redirect("/")
 
     @expose()
     def user_change(self, id):
         status = None
+        activity = None
         try:
             system = System.by_id(id,identity.current.user)
         except InvalidRequestError:
@@ -350,12 +352,17 @@ class Root(RPCRoot):
         if system.user:
             if system.user == identity.current.user:
                 status = "Returned"
+                activity = Activity(identity.current.user.user_id, 'system', id, 'user', system.user.user_id, '')
                 system.user = None
+            else:
+                activity = Activity(identity.current.user.user_id, 'system', id, 'user', system.user.user_id, identity.current.user.user_id)
         else:
             if system.can_share(identity.current.user):
                 status = "Reserved"
+                activity = Activity(identity.current.user.user_id, 'system', id, 'user', '', identity.current.user.user_id)
                 system.user = identity.current.user
         session.save_or_update(system)
+        session.save_or_update(activity)
         flash( _(u"%s %s" % (status,system.fqdn)) )
         redirect(".")
 
@@ -374,7 +381,9 @@ class Root(RPCRoot):
                 flash( _(u"%s already exists!" % kw['fqdn']) )
                 redirect("/")
             system = System(fqdn=kw['fqdn'],owner=identity.current.user)
-
+# TODO Need to loop here to see what has changed
+# but what happens if you log changes here
+# but there is an issue and the actual change to the system fails?
         system.status_id=kw['status_id']
         system.location=kw['location']
         system.model=kw['model']
@@ -449,3 +458,10 @@ class Root(RPCRoot):
     def logout(self):
         identity.current.logout()
         raise redirect("/")
+
+    @expose(template='medusa.templates.activity')
+    def activity(self, *args, **kw):
+# TODO This is mainly for testing
+# if it hangs around it should check for admin access
+        return dict(title="Activity", search_bar=None, activity = Activity.all())
+
