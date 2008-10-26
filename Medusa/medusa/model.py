@@ -1087,4 +1087,5 @@ class Activity(object):
 
 mapper(Activity, activity_table)
 
+mapper(Breed, breed_table)
 
