@@ -15,6 +15,9 @@ from kid import Element
 import cherrypy
 import md5
 
+# for debugging
+import sys
+
 # from medusa import json
 # import logging
 # log = logging.getLogger("medusa.controllers")
@@ -381,9 +384,26 @@ class Root(RPCRoot):
                 flash( _(u"%s already exists!" % kw['fqdn']) )
                 redirect("/")
             system = System(fqdn=kw['fqdn'],owner=identity.current.user)
-# TODO Need to loop here to see what has changed
-# but what happens if you log changes here
-# but there is an issue and the actual change to the system fails?
+# TODO what happens if you log changes here but there is an issue and the actual change to the system fails?
+#      would be good to have the save wait until the system is updated
+# TODO log "condition", group +/-
+        log_fields = [ 'fqdn', 'vendor', 'lender', 'model', 'serial', 'location', 'type_id', 'checksum' ]
+        for field in log_fields:
+            if kw.get(field) and str(system.__dict__[field]) != str(kw[field]):
+#                sys.stderr.write("\nfield: " + field + ", Old: " +  str(system.__dict__[field]) + ", New: " +  str(kw[field]) + " " +  "\n")
+                activity = Activity(identity.current.user.user_id, 'system', system.id, field, system.__dict__[field], kw[field])
+                session.save_or_update(activity)
+# Bools are True if they are set and False if they aren't set
+        log_bool_fields = [ 'shared', 'private' ]
+        for field in log_bool_fields:
+            if kw.get(field):
+                if system.__dict__[field] != True:
+                    activity = Activity(identity.current.user.user_id, 'system', system.id, field, system.__dict__[field], "1")
+                    session.save_or_update(activity)
+            else:
+                if system.__dict__[field] != False:
+                    activity = Activity(identity.current.user.user_id, 'system', system.id, field, system.__dict__[field], "0")
+                    session.save_or_update(activity)
         system.status_id=kw['status_id']
         system.location=kw['location']
         system.model=kw['model']
