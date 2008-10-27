@@ -387,22 +387,32 @@ class Root(RPCRoot):
 # TODO what happens if you log changes here but there is an issue and the actual change to the system fails?
 #      would be good to have the save wait until the system is updated
 # TODO log "condition", group +/-
+        # Fields missing from kw have been set to NULL
         log_fields = [ 'fqdn', 'vendor', 'lender', 'model', 'serial', 'location', 'type_id', 'checksum' ]
         for field in log_fields:
-            if kw.get(field) and str(system.__dict__[field]) != str(kw[field]):
-#                sys.stderr.write("\nfield: " + field + ", Old: " +  str(system.__dict__[field]) + ", New: " +  str(kw[field]) + " " +  "\n")
-                activity = Activity(identity.current.user.user_id, 'system', system.id, field, system.__dict__[field], kw[field])
-                session.save_or_update(activity)
-# Bools are True if they are set and False if they aren't set
-        log_bool_fields = [ 'shared', 'private' ]
-        for field in log_bool_fields:
+            current_val = str(system.__dict__[field])
+            # catch nullable fields return None.
+            if current_val == 'None':
+                current_val = ""
             if kw.get(field):
-                if system.__dict__[field] != True:
-                    activity = Activity(identity.current.user.user_id, 'system', system.id, field, system.__dict__[field], "1")
+                if current_val != str(kw[field]):
+#                    sys.stderr.write("\nfield: " + field + ", Old: " +  current_val + ", New: " +  str(kw[field]) + " " +  "\n")
+                    activity = Activity(identity.current.user.user_id, 'system', system.id, field, current_val, kw[field])
                     session.save_or_update(activity)
             else:
-                if system.__dict__[field] != False:
-                    activity = Activity(identity.current.user.user_id, 'system', system.id, field, system.__dict__[field], "0")
+                 if current_val != "":
+                    activity = Activity(identity.current.user.user_id, 'system', system.id, field, current_val, "")
+                    session.save_or_update(activity)
+        log_bool_fields = [ 'shared', 'private' ]
+        for field in log_bool_fields:
+            current_val = system.__dict__[field]
+            if kw.get(field):
+                if current_val != True:
+                    activity = Activity(identity.current.user.user_id, 'system', system.id, field, current_val, "1")
+                    session.save_or_update(activity)
+            else:
+                if current_val != False:
+                    activity = Activity(identity.current.user.user_id, 'system', system.id, field, current_val, "0")
                     session.save_or_update(activity)
         system.status_id=kw['status_id']
         system.location=kw['location']
