@@ -54,6 +54,7 @@ $(document).ready(function() {
                     <li><a id="administration" href="#">Administration</a></li>
                     <div id="adminlist" style="display: none">
                         <ul>
+                            <li><a href="${tg.url('/labcontrollers')}">Lab Controllers</a></li>
                             <li><a href="${tg.url('/groups')}">Groups</a></li>
                             <li><a href="${tg.url('/powertypes')}">Power Types</a></li>
                             <li><a href="${tg.url('/powercontrollers')}">Power Controllers</a></li>
@@ -70,6 +71,7 @@ $(document).ready(function() {
                     <li py:for="device_class in device_classes()">
                     <a href="${tg.url('/devices/%s' % device_class)}">${device_class}</a></li>
                 </ul></li>
+                <li><a href="${tg.url('/distros')}">Distros</a></li>
                 <li><a href="${tg.url('/activity')}">Activity</a></li>
                 <li py:if="not tg.identity.anonymous"><a href="${tg.url('/logout')}">Logout</a></li>
                 <li py:if="tg.identity.anonymous"><a href="${tg.url('/login')}">Login</a></li>

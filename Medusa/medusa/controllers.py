@@ -4,6 +4,8 @@ from model import *
 from turbogears import identity, redirect
 from medusa.power import PowerTypes, PowerControllers
 from medusa.group import Groups
+from medusa.labcontroller import LabControllers
+from medusa.distro import Distros
 from medusa.widgets import myPaginateDataGrid
 from medusa.widgets import Power
 from medusa.widgets import SearchBar, SystemForm, SystemGroups
@@ -82,6 +84,8 @@ class Root(RPCRoot):
     powercontrollers = PowerControllers()
     devices = Devices()
     groups = Groups()
+    labcontrollers = LabControllers()
+    distros = Distros()
     users = Users()
 
     id         = widgets.HiddenField(name='id')
@@ -100,11 +104,12 @@ class Root(RPCRoot):
         submit_text = _(u'Change'),
     )
 
-    search_bar = SearchBar(name='systemsearch',
-                           label=_(u'System Search'),
-                           table_callback=System.get_tables,
-                           search_controller='/get_fields'
-                 )
+    search_bar = None
+    #search_bar = SearchBar(name='systemsearch',
+                           #label=_(u'System Search'),
+                           #table_callback=System.get_tables,
+                           #search_controller='/get_fields'
+                 #)
     power = Power(name='powercontrol',
                  label=_(u'Power Control'),
                  callback=powercontrollers.get_powercontrollers,

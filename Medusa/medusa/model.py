@@ -44,9 +44,7 @@ system_table = Table('system', metadata,
     Column('checksum', String(32))
 )
 
-system_device_table = Table('system_device', metadata,
-    Column('id', Integer, autoincrement=True, 
-           nullable=False, primary_key=True),
+system_device_map = Table('system_device_map', metadata,
     Column('system_id', Integer,
            ForeignKey('system.id'),
            nullable=False),
@@ -70,8 +68,16 @@ system_status_table = Table('system_status', metadata,
 arch_table = Table('arch', metadata,
     Column('id', Integer, autoincrement=True,
            nullable=False, primary_key=True),
-    Column('system_id', Integer, ForeignKey('system.id')),
-    Column('arch', String(20))
+    Column('arch', String(20), unique=True)
+)
+
+system_arch_map = Table('system_arch_map', metadata,
+    Column('system_id', Integer,
+           ForeignKey('system.id'),
+           nullable=False),
+    Column('arch_id', Integer,
+           ForeignKey('arch.id'),
+           nullable=False),
 )
 
 provision_table = Table('provision', metadata,
@@ -124,7 +130,6 @@ device_class_table = Table('device_class', metadata,
 device_table = Table('device', metadata,
     Column('id', Integer, autoincrement=True,
            nullable=False, primary_key=True),
-    Column('system_id', Integer, ForeignKey('system.id')),
     Column('vendor_id',String(255)),
     Column('device_id',String(255)),
     Column('subsys_device_id',String(255)),
@@ -232,11 +237,11 @@ install_table = Table('install', metadata,
 distro_table = Table('distro', metadata,
     Column('id', Integer, autoincrement=True,
            nullable=False, primary_key=True),
-    Column('install_name',Unicode(255)),
+    Column('install_name',Unicode(255), unique=True, nullable=False),
     Column('name',Unicode(255)),
     Column('breed_id', Integer, ForeignKey('breed.id')),
     Column('osversion_id', Integer, ForeignKey('osversion.id')),
-    Column('arch',Unicode(25)),
+    Column('arch_id', Integer, ForeignKey('arch.id')),
     Column('variant',Unicode(25)),
     Column('method',Unicode(25)),
     Column('virt',Boolean),
@@ -251,26 +256,28 @@ lab_controller_distro_map = Table('distro_lab_controller_map', metadata,
 lab_controller_table = Table('lab_controller', metadata,
     Column('id', Integer, autoincrement=True,
            nullable=False, primary_key=True),
-    Column('fqdn',Unicode(255)),
+    Column('fqdn',Unicode(255), unique=True),
+    Column('username',Unicode(255)),
+    Column('password',Unicode(255)),
     Column('distros_md5', String(40)),
 )
 
 osversion_table = Table('osversion', metadata,
     Column('id', Integer, autoincrement=True,
            nullable=False, primary_key=True),
-    Column('osversion',Unicode(255)),
+    Column('osversion',Unicode(255), unique=True),
 )
 
 breed_table = Table('breed', metadata,
     Column('id', Integer, autoincrement=True,
            nullable=False, primary_key=True),
-    Column('breed',Unicode(255)),
+    Column('breed',Unicode(255), unique=True),
 )
 
 distro_tag_table = Table('distro_tag', metadata,
     Column('id', Integer, autoincrement=True,
            nullable=False, primary_key=True),
-    Column('tag', Unicode(255)),
+    Column('tag', Unicode(255), unique=True),
 )
 
 distro_tag_map = Table('distro_tag_map', metadata,
@@ -775,6 +782,10 @@ class Arch(SystemObject):
     def __repr__(self):
         return self.arch
 
+    @classmethod
+    def by_name(cls, arch):
+        return cls.query.filter_by(arch=arch).one()
+
 class Provision(SystemObject):
     def __init__(self, osversion=None, ks_meta=None, kernel_options=None,
                        kernel_options_post=None):
@@ -787,12 +798,28 @@ class Breed(SystemObject):
     def __init__(self, breed):
         self.breed = breed
 
+    @classmethod
+    def by_name(cls, breed):
+        return cls.query.filter_by(breed=breed).one()
+
+    def __repr__(self):
+        return self.breed
+
 class OSVersion(SystemObject):
     def __init__(self, osversion):
         self.osversion = osversion
 
+    @classmethod
+    def by_name(cls, osversion):
+        return cls.query.filter_by(osversion=osversion).one()
+
+    def __repr__(self):
+        return self.osversion
+
 class LabController(SystemObject):
-    pass
+    @classmethod
+    def by_id(cls, id):
+        return cls.query.filter_by(id=id).one()
 
 class Cpu(SystemObject):
     def __init__(self, vendor=None, model=None, model_name=None, family=None, stepping=None,speed=None,processors=None,cores=None,sockets=None,flags=None):
@@ -955,8 +982,12 @@ class Install(object):
         self.name = name
 
 class Distro(object):
-    def __init__(self, name=None):
-        self.name = name
+    def __init__(self, install_name=None):
+        self.install_name = install_name
+
+    @classmethod
+    def by_install_name(cls, install_name):
+        return cls.query.filter_by(install_name=install_name).one()
 
 class DistroTag(object):
     def __init__(self, name=None):
@@ -968,10 +999,12 @@ SystemType.mapper = mapper(SystemType, system_type_table)
 SystemStatus.mapper = mapper(SystemStatus, system_status_table)
 System.mapper = mapper(System, system_table,
        properties = {'devices':relation(Device, 
-                                        secondary=system_device_table),
+                                        secondary=system_device_map),
                      'type':relation(SystemType, uselist=False),
                      'status':relation(SystemStatus, uselist=False),
-                     'arch':relation(Arch),
+                     'arch':relation(Arch,
+                                        secondary=system_arch_map,
+                                        backref='systems'),
                      'cpu':relation(Cpu, uselist=False),
                      'numa':relation(Numa, uselist=False),
                      'power':relation(PowerHost, uselist=False),
@@ -1021,10 +1054,12 @@ mapper(LabController, lab_controller_table,
 mapper(Distro, distro_table,
         properties = {'osversion':relation(OSVersion, backref='distros'),
                       'breed':relation(Breed, backref='distros'),
+                      'arch':relation(Arch, backref='distros'),
                       'tags':relation(DistroTag, 
                                        secondary=distro_tag_map,
                                        backref='distros'),
     })
+mapper(Breed, breed_table)
 mapper(DistroTag, distro_tag_table)
 
 mapper(Visit, visits_table)
