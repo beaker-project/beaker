@@ -199,6 +199,8 @@ class Root(RPCRoot):
                if group.group_id == int(kw['group_id']):
                    system.groups.remove(group)
                    removed = group
+                   activity = Activity(identity.current.user.user_id, 'system_group', kw['id'], 'group', group.group_id, "")
+	           session.save_or_update(activity)
         if removed:
             return dict( reponse = _(u"%s Removed" % removed.display_name))
         else:
@@ -219,6 +221,8 @@ class Root(RPCRoot):
           or identity.in_group("admin"):
             group = Group.by_name(kw['group']['text'])
             system.groups.append(group)
+            activity = Activity(identity.current.user.user_id, 'system_group', kw['id'], 'group', "", group.group_id)
+	    session.save_or_update(activity)
         return dict( response = _(u"%s Added" % group.display_name))
 
     @expose(format='json')
@@ -355,14 +359,14 @@ class Root(RPCRoot):
         if system.user:
             if system.user == identity.current.user:
                 status = "Returned"
-                activity = Activity(identity.current.user.user_id, 'system', id, 'user', system.user.user_id, '')
+                activity = Activity(identity.current.user.user_id, 'system', system.id, 'user', system.user.user_id, '')
                 system.user = None
             else:
-                activity = Activity(identity.current.user.user_id, 'system', id, 'user', system.user.user_id, identity.current.user.user_id)
+                activity = Activity(identity.current.user.user_id, 'system', system.id, 'user', system.user.user_id, identity.current.user.user_id)
         else:
             if system.can_share(identity.current.user):
                 status = "Reserved"
-                activity = Activity(identity.current.user.user_id, 'system', id, 'user', '', identity.current.user.user_id)
+                activity = Activity(identity.current.user.user_id, 'system', system.id, 'user', '', identity.current.user.user_id)
                 system.user = identity.current.user
         session.save_or_update(system)
         session.save_or_update(activity)
@@ -386,7 +390,7 @@ class Root(RPCRoot):
             system = System(fqdn=kw['fqdn'],owner=identity.current.user)
 # TODO what happens if you log changes here but there is an issue and the actual change to the system fails?
 #      would be good to have the save wait until the system is updated
-# TODO log "condition", group +/-
+# TODO log  group +/-
         # Fields missing from kw have been set to NULL
         log_fields = [ 'fqdn', 'vendor', 'lender', 'model', 'serial', 'location', 'type_id', 'checksum', 'status_id' ]
         for field in log_fields:
