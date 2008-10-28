@@ -388,7 +388,7 @@ class Root(RPCRoot):
 #      would be good to have the save wait until the system is updated
 # TODO log "condition", group +/-
         # Fields missing from kw have been set to NULL
-        log_fields = [ 'fqdn', 'vendor', 'lender', 'model', 'serial', 'location', 'type_id', 'checksum' ]
+        log_fields = [ 'fqdn', 'vendor', 'lender', 'model', 'serial', 'location', 'type_id', 'checksum', 'status_id' ]
         for field in log_fields:
             current_val = str(system.__dict__[field])
             # catch nullable fields return None.
