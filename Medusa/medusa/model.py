@@ -1121,6 +1121,3 @@ class Activity(object):
 #                self.values.append(new_value)
 
 mapper(Activity, activity_table)
-
-mapper(Breed, breed_table)
-
