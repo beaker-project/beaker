@@ -17,6 +17,9 @@ from kid import Element
 import cherrypy
 import md5
 
+# for debugging
+import sys
+
 # from medusa import json
 # import logging
 # log = logging.getLogger("medusa.controllers")
@@ -201,6 +204,8 @@ class Root(RPCRoot):
                if group.group_id == int(kw['group_id']):
                    system.groups.remove(group)
                    removed = group
+                   activity = Activity(identity.current.user.user_id, 'system_group', kw['id'], 'group', group.group_id, "")
+	           session.save_or_update(activity)
         if removed:
             return dict( reponse = _(u"%s Removed" % removed.display_name))
         else:
@@ -221,6 +226,8 @@ class Root(RPCRoot):
           or identity.in_group("admin"):
             group = Group.by_name(kw['group']['text'])
             system.groups.append(group)
+            activity = Activity(identity.current.user.user_id, 'system_group', kw['id'], 'group', "", group.group_id)
+	    session.save_or_update(activity)
         return dict( response = _(u"%s Added" % group.display_name))
 
     @expose(format='json')
@@ -357,14 +364,14 @@ class Root(RPCRoot):
         if system.user:
             if system.user == identity.current.user:
                 status = "Returned"
-                activity = Activity(identity.current.user.user_id, 'system', id, 'user', system.user.user_id, '')
+                activity = Activity(identity.current.user.user_id, 'system', system.id, 'user', system.user.user_id, '')
                 system.user = None
             else:
-                activity = Activity(identity.current.user.user_id, 'system', id, 'user', system.user.user_id, identity.current.user.user_id)
+                activity = Activity(identity.current.user.user_id, 'system', system.id, 'user', system.user.user_id, identity.current.user.user_id)
         else:
             if system.can_share(identity.current.user):
                 status = "Reserved"
-                activity = Activity(identity.current.user.user_id, 'system', id, 'user', '', identity.current.user.user_id)
+                activity = Activity(identity.current.user.user_id, 'system', system.id, 'user', '', identity.current.user.user_id)
                 system.user = identity.current.user
         session.save_or_update(system)
         session.save_or_update(activity)
@@ -386,9 +393,36 @@ class Root(RPCRoot):
                 flash( _(u"%s already exists!" % kw['fqdn']) )
                 redirect("/")
             system = System(fqdn=kw['fqdn'],owner=identity.current.user)
-# TODO Need to loop here to see what has changed
-# but what happens if you log changes here
-# but there is an issue and the actual change to the system fails?
+# TODO what happens if you log changes here but there is an issue and the actual change to the system fails?
+#      would be good to have the save wait until the system is updated
+# TODO log  group +/-
+        # Fields missing from kw have been set to NULL
+        log_fields = [ 'fqdn', 'vendor', 'lender', 'model', 'serial', 'location', 'type_id', 'checksum', 'status_id' ]
+        for field in log_fields:
+            current_val = str(system.__dict__[field])
+            # catch nullable fields return None.
+            if current_val == 'None':
+                current_val = ""
+            if kw.get(field):
+                if current_val != str(kw[field]):
+#                    sys.stderr.write("\nfield: " + field + ", Old: " +  current_val + ", New: " +  str(kw[field]) + " " +  "\n")
+                    activity = Activity(identity.current.user.user_id, 'system', system.id, field, current_val, kw[field])
+                    session.save_or_update(activity)
+            else:
+                 if current_val != "":
+                    activity = Activity(identity.current.user.user_id, 'system', system.id, field, current_val, "")
+                    session.save_or_update(activity)
+        log_bool_fields = [ 'shared', 'private' ]
+        for field in log_bool_fields:
+            current_val = system.__dict__[field]
+            if kw.get(field):
+                if current_val != True:
+                    activity = Activity(identity.current.user.user_id, 'system', system.id, field, current_val, "1")
+                    session.save_or_update(activity)
+            else:
+                if current_val != False:
+                    activity = Activity(identity.current.user.user_id, 'system', system.id, field, current_val, "0")
+                    session.save_or_update(activity)
         system.status_id=kw['status_id']
         system.location=kw['location']
         system.model=kw['model']
