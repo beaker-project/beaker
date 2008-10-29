@@ -121,7 +121,6 @@ class LabControllers(RPCRoot):
                             distro.virt = lc_distro['virt']
                             distro.date_created = datetime.fromtimestamp(float(lc_distro['date_created']))
                         labcontroller.distros.append(distro)
-                        print "distro :", lc_distro
                 labcontroller.distros_md5 = lc_distros_md5
         flash( _(u"%s md5 updated" % labcontroller.fqdn) )
         redirect(".")

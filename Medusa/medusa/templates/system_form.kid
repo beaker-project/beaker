@@ -115,9 +115,10 @@
         ${display_field_for("type_id")}
        </td>
        <th class="list">
-        <b></b>
+        <b>Lab Controller</b>
        </th>
        <td class="list">
+        ${display_field_for("lab_controller_id")}
        </td>
       </tr>
       <tr py:if="not readonly">

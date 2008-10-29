@@ -107,12 +107,11 @@ class Root(RPCRoot):
         submit_text = _(u'Change'),
     )
 
-    search_bar = None
-    #search_bar = SearchBar(name='systemsearch',
-                           #label=_(u'System Search'),
-                           #table_callback=System.get_tables,
-                           #search_controller='/get_fields'
-                 #)
+    search_bar = SearchBar(name='systemsearch',
+                           label=_(u'System Search'),
+                           table_callback=System.get_tables,
+                           search_controller='/get_fields'
+                 )
     power = Power(name='powercontrol',
                  label=_(u'Power Control'),
                  callback=powercontrollers.get_powercontrollers,
@@ -295,6 +294,7 @@ class Root(RPCRoot):
                  readonly          = readonly
             )
         else:
+            system_group_form = None
             title = 'New'
 
         options['readonly'] = readonly
@@ -397,7 +397,7 @@ class Root(RPCRoot):
 #      would be good to have the save wait until the system is updated
 # TODO log  group +/-
         # Fields missing from kw have been set to NULL
-        log_fields = [ 'fqdn', 'vendor', 'lender', 'model', 'serial', 'location', 'type_id', 'checksum', 'status_id' ]
+        log_fields = [ 'fqdn', 'vendor', 'lender', 'model', 'serial', 'location', 'type_id', 'checksum', 'status_id', 'lab_controller_id' ]
         for field in log_fields:
             current_val = str(system.__dict__[field])
             # catch nullable fields return None.
@@ -439,6 +439,10 @@ class Root(RPCRoot):
             system.private=kw['private']
         else:
             system.private=False
+        if kw['lab_controller_id'] == 0:
+            system.lab_controller_id = None
+        else:
+            system.lab_controller_id = kw['lab_controller_id']
 
         session.save_or_update(system)
         flash( _(u"OK") )

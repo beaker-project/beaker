@@ -30,9 +30,8 @@ class Labcontroller:
         """
 
         md5sum = md5.new()
-        shoehorn = api.BootAPI()
-        #for distro in self.shoehorn.distros():
-        for distro in shoehorn.distros():
+        self.shoehorn.deserialize()
+        for distro in self.shoehorn.distros():
             md5sum.update(distro.name)
         return md5sum.hexdigest()
 
@@ -49,6 +48,7 @@ class Labcontroller:
         valid_variants = ['AS','ES','WS','Desktop']
         valid_methods  = ['http','ftp','nfs']
         distros = {}
+        self.shoehorn.deserialize()
         for curr_distro in self.shoehorn.distros():
             # If we don't know our os_version then skip
             if not curr_distro.os_version:

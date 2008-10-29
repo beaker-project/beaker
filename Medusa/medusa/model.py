@@ -41,7 +41,8 @@ system_table = Table('system', metadata,
     Column('private', Boolean, default=False),
     Column('deleted', Boolean, default=False),
     Column('memory', Integer),
-    Column('checksum', String(32))
+    Column('checksum', String(32)),
+    Column('lab_controller_id', Integer, ForeignKey('lab_controller.id'))
 )
 
 system_device_map = Table('system_device_map', metadata,
@@ -260,6 +261,7 @@ lab_controller_table = Table('lab_controller', metadata,
     Column('username',Unicode(255)),
     Column('password',Unicode(255)),
     Column('distros_md5', String(40)),
+    Column('systems_md5', String(40)),
 )
 
 osversion_table = Table('osversion', metadata,
@@ -685,12 +687,12 @@ class System(SystemObject):
         self.date_modified = datetime.utcnow()
 
     def updateArch(self, archinfo):
-        if self.arch:
-            for old_arch in self.arch:
-                session.delete(old_arch)
-
+        self.arch = []
         for arch in archinfo:
-            new_arch = Arch(arch=arch)
+            try:
+                new_arch = Arch.by_name(arch)
+            except:
+                new_arch = Arch(arch=arch)
         self.arch.append(new_arch)
 
     def updateDevices(self, deviceinfo):
@@ -820,6 +822,15 @@ class LabController(SystemObject):
     @classmethod
     def by_id(cls, id):
         return cls.query.filter_by(id=id).one()
+
+    @classmethod
+    def get_all(cls):
+        """
+        Desktop, Server, Virtual
+        """
+        all = cls.query()
+        return [(0,"None")] + [(lc.id, lc.fqdn) for lc in all]
+        
 
 class Cpu(SystemObject):
     def __init__(self, vendor=None, model=None, model_name=None, family=None, stepping=None,speed=None,processors=None,cores=None,sockets=None,flags=None):
@@ -1012,8 +1023,10 @@ System.mapper = mapper(System, system_table,
                      'user':relation(User, uselist=False, 
                           primaryjoin=system_table.c.user_id==users_table.c.user_id,foreign_keys=system_table.c.user_id),
                      'owner':relation(User, uselist=False, 
-                          primaryjoin=system_table.c.owner_id==users_table.c.user_id,foreign_keys=system_table.c.owner_id)})
-Arch.mapper = mapper(Arch, arch_table)
+                          primaryjoin=system_table.c.owner_id==users_table.c.user_id,foreign_keys=system_table.c.owner_id),
+                     'lab_controller':relation(LabController, uselist=False,
+                                               backref='systems')})
+mapper(Arch, arch_table)
 mapper(Provision, provision_table,
        properties = {'osversion':relation(OSVersion, uselist=False)})
 mapper(OSVersion, osversion_table)
