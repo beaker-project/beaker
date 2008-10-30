@@ -42,9 +42,11 @@ MOTD()
     echo "  hours you would like to extend the reservation.                     " >> $FILE
     echo "  Please use this command responsibly, Everyone uses these machines.  " >> $FILE
     echo "                                                                      " >> $FILE
-    echo " For ssh, kvm, serial and power control operations please look here:  " >> $FILE
-    echo "  http://intranet.corp.redhat.com/ic/intranet/RHTSSystemList.html     " >> $FILE
-    echo "                                                                      " >> $FILE
+    echo " For ssh, kvm, serial and power control operations please search on   " >> $FILE
+    echo "  one of the following RHTS lab controllers:                          " >> $FILE
+    echo "  http://rhts.redhat.com/cgi-bin/rhts/systems.cgi                     " >> $FILE
+    echo "  http://lab.rhts.bos.redhat.com/cgi-bin/rhts/systems.cgi             " >> $FILE
+    echo "  http://rhts.test.redhat.com/cgi-bin/rhts/systems.cgi                " >> $FILE
     echo "                                                                      " >> $FILE
     echo "      RHTS Test information:                                          " >> $FILE
     echo "                         HOSTNAME=$HOSTNAME                           " >> $FILE
