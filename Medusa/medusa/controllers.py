@@ -203,7 +203,7 @@ class Root(RPCRoot):
                if group.group_id == int(kw['group_id']):
                    system.groups.remove(group)
                    removed = group
-                   activity = Activity(identity.current.user.user_id, 'system_group', kw['id'], 'group', group.group_id, "")
+                   activity = Activity(identity.current.user.user_id, 'system', kw['id'], 'group', group.group_id, "")
 	           session.save_or_update(activity)
         if removed:
             return dict( reponse = _(u"%s Removed" % removed.display_name))
@@ -225,7 +225,7 @@ class Root(RPCRoot):
           or identity.in_group("admin"):
             group = Group.by_name(kw['group']['text'])
             system.groups.append(group)
-            activity = Activity(identity.current.user.user_id, 'system_group', kw['id'], 'group', "", group.group_id)
+            activity = Activity(identity.current.user.user_id, 'system', kw['id'], 'group', "", group.group_id)
 	    session.save_or_update(activity)
         return dict( response = _(u"%s Added" % group.display_name))
 
@@ -308,6 +308,7 @@ class Root(RPCRoot):
             system_group_action = '/group_save',
             value = system,
             options = options,
+            activity =  Activity.system(system.id),
         )
          
     new = view    

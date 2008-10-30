@@ -1124,6 +1124,11 @@ class Activity(object):
     def all(cls):
         return cls.query()
 
+    @classmethod
+    def system(cls, id):
+        return cls.query().filter_by(table_name='system',table_id=id).all()
+
+
 #    def update_values(self, values):
 #        """ Update values for this controllers keys"""
 #        for value in values:

@@ -126,7 +126,7 @@ class Groups(RPCRoot):
         system = System.by_fqdn(kw['system']['text'],identity.current.user)
         group = Group.by_id(kw['group_id'])
         group.systems.append(system)
-        activity = Activity(identity.current.user.user_id, 'system_group', system.id, 'group', "", group.group_id)
+        activity = Activity(identity.current.user.user_id, 'system', system.id, 'group', "", group.group_id)
         session.save_or_update(activity)
         flash( _(u"OK") )
         redirect("./edit?id=%s" % kw['group_id'])
@@ -137,7 +137,7 @@ class Groups(RPCRoot):
         user = User.by_user_name(kw['user']['text'])
         group = Group.by_id(kw['group_id'])
         group.users.append(user)
-        activity = Activity(identity.current.user.user_id, 'user_group', user.user_id, 'group', "", group.group_id)
+        activity = Activity(identity.current.user.user_id, 'user', user.user_id, 'group', "", group.group_id)
         session.save_or_update(activity)
         flash( _(u"OK") )
         redirect("./edit?id=%s" % kw['group_id'])
@@ -163,7 +163,7 @@ class Groups(RPCRoot):
             if user.user_id == int(id):
                 group.users.remove(user)
                 removed = user
-                activity = Activity(identity.current.user.user_id, 'user_group', user.user_id, 'group', group.group_id, "")
+                activity = Activity(identity.current.user.user_id, 'user', user.user_id, 'group', group.group_id, "")
                 session.save_or_update(activity)
         flash( _(u"%s Removed" % removed.display_name))
         raise redirect("./edit?id=%s" % group_id)
@@ -176,7 +176,7 @@ class Groups(RPCRoot):
             if system.id == int(id):
                 group.systems.remove(system)
                 removed = system
-                activity = Activity(identity.current.user.user_id, 'system_group', system.id, 'group', group.group_id, "")
+                activity = Activity(identity.current.user.user_id, 'system', system.id, 'group', group.group_id, "")
                 session.save_or_update(activity)
         flash( _(u"%s Removed" % removed.fqdn))
         raise redirect("./edit?id=%s" % group_id)
