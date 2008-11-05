@@ -359,6 +359,16 @@ activity_table = Table('activity', metadata,
     Column('new_value', String(40), nullable=False)
 )
 
+# note schema
+note_table = Table('note', metadata,
+    Column('id', Integer, autoincrement=True,
+           nullable=False, primary_key=True),
+    Column('system_id', Integer, ForeignKey('system.id'), index=True),
+    Column('user_id', Integer, ForeignKey('tg_user.user_id'), index=True),
+    Column('created', DateTime, nullable=False, default=datetime.now),
+    Column('text',TEXT, nullable=False)
+)
+
 # the identity model
 
 
@@ -1139,3 +1149,22 @@ class Activity(object):
 #                self.values.append(new_value)
 
 mapper(Activity, activity_table)
+
+
+# note model
+class Note(object):
+    def __init__(self, system_id=None, user_id=None, text=None):
+        self.system_id = system_id
+        self.user_id = user_id
+        self.text = text
+
+    @classmethod
+    def all(cls):
+        return cls.query()
+
+    @classmethod
+    def system(cls, id):
+        return cls.query().filter_by(system_id=id).order_by(Note.c.created.desc())
+
+mapper(Note, note_table)
+

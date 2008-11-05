@@ -160,6 +160,24 @@ Form goes here</p>
      <div class="tabbertab"><h2>Console</h2>
      </div>
      <div class="tabbertab"><h2>Notes</h2>
+        <input id="new_note" class="submit" value="New Note" name="new_note" type="button"/>
+        <div id="note_input">
+             Seperate form or embedded form for new notes?
+	</div>
+    <table class="list">
+        <tr class="list">
+            <th class="list">user_id</th>
+            <th class="list">created</th>
+            <th class="list">Note</th>
+        </tr>
+        <?python row_color = "#FFFFFF" ?>
+        <tr class="list" bgcolor="${row_color}" py:for="note in notes">
+            <td class="list">${note.user_id}</td>
+            <td class="list">${note.created}</td>
+            <td class="list">${note.text}</td>
+            <?python row_color = (row_color == "#f1f1f1") and "#FFFFFF" or "#f1f1f1" ?>
+        </tr>
+    </table>
      </div>
      <div class="tabbertab"><h2>History</h2>
     <table class="list">
