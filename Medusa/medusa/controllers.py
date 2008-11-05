@@ -203,7 +203,7 @@ class Root(RPCRoot):
                if group.group_id == int(kw['group_id']):
                    system.groups.remove(group)
                    removed = group
-                   activity = Activity(identity.current.user.user_id, 'system', kw['id'], 'group', group.group_id, "")
+                   activity = Activity(identity.current.user, 'system', kw['system_id'], 'group', group.display_name, "")
 	           session.save_or_update(activity)
         if removed:
             return dict( reponse = _(u"%s Removed" % removed.display_name))
@@ -225,17 +225,33 @@ class Root(RPCRoot):
           or identity.in_group("admin"):
             group = Group.by_name(kw['group']['text'])
             system.groups.append(group)
-            activity = Activity(identity.current.user.user_id, 'system', kw['id'], 'group', "", group.group_id)
+            activity = Activity(identity.current.user, 'system', kw['id'], 'group', "", group.display_name)
 	    session.save_or_update(activity)
         return dict( response = _(u"%s Added" % group.display_name))
 
     @expose(format='json')
-    def ajax_grid_group(self, system_id):
-        system = System.query().filter(System.id == int(system_id)).one()
+    def ajax_grid_keyvalue(self, system_id):
+        system = System.by_id(system_id,identity.current.user)
         rows = []
         actions = {}
-        if system.owner == identity.current.user \
-          or identity.in_group("admin"):
+        if system.can_admin(identity.current.user):
+            actions = {'remove':{'function':'system_key_value.retrieveRemove','params':[]}}
+        headers = ["ID", "Key", "Value"]
+        for keyvalue in system.key_values:
+            row = [keyvalue.id, keyvalue.key_name,keyvalue.text]
+            rows.append(row)
+        return dict(
+            headers = headers,
+            rows = rows,
+            actions = actions,
+        )
+
+    @expose(format='json')
+    def ajax_grid_group(self, system_id):
+        system = System.by_id(system_id,identity.current.user)
+        rows = []
+        actions = {}
+        if system.can_admin(identity.current.user):
             actions = {'remove':{'function':'system_group.retrieveRemove','params':[]}}
         headers = ["ID", "Name", "Display Name"]
         for group in system.groups:
@@ -267,23 +283,15 @@ class Root(RPCRoot):
         options = {}
         readonly = False
         if system:
-            groupgrid = widgets.DataGrid(fields=[
-                                     ('Groups', lambda x:x.display_name)
-                                  ])
             title = system.fqdn
-            if (system.owner == identity.current.user \
-              or identity.in_group("admin")) \
-              and not identity.current.anonymous:
+            if system.can_admin(identity.current.user):
                 options['owner_change_text'] = ' (Change)'
-                groupgrid.fields.append((' ', lambda x: make_link('removeGroup?system_id=%s&group_id=%s' % (system.id, x.group_id))))
             else:
                 readonly = True
             if system.can_share(identity.current.user):
                 options['user_change_text'] = ' (Take)'
-            if system.user:
-                if system.user == identity.current.user \
-                  or identity.in_group("admin"):
-                    options['user_change_text'] = ' (Return)'
+            if system.current_user(identity.current.user):
+                options['user_change_text'] = ' (Return)'
             system_group_form = SystemGroups(
                  ajax_grid_url     = "/ajax_grid_group",
                  search_controller = "/groups/by_name",
@@ -295,6 +303,7 @@ class Root(RPCRoot):
             )
         else:
             system_group_form = None
+            system_key_form = None
             title = 'New'
 
         options['readonly'] = readonly
@@ -309,8 +318,6 @@ class Root(RPCRoot):
             value = system,
             options = options,
             activity =  Activity.system(system.id),
-            notes = Note.system(system.id),
-            key_values = Key_Value.system(system.id),
         )
          
     new = view    
@@ -349,7 +356,7 @@ class Root(RPCRoot):
             flash( _(u"Insufficient permissions to change owner"))
             redirect("/")
         user = User.by_user_name(kw['user']['text'])
-        activity = Activity(identity.current.user.user_id, 'system', id, 'owner', system.owner.user_id, user.user_id)
+        activity = Activity(identity.current.user, 'system', id, 'owner', '%s' % system.owner, '%s' % user)
         system.owner = user
 	session.save_or_update(activity)
         flash( _(u"OK") )
@@ -367,14 +374,14 @@ class Root(RPCRoot):
         if system.user:
             if system.user == identity.current.user:
                 status = "Returned"
-                activity = Activity(identity.current.user.user_id, 'system', system.id, 'user', system.user.user_id, '')
+                activity = Activity(identity.current.user, 'system', system.id, 'user', '%s' % system.user, '')
                 system.user = None
             else:
-                activity = Activity(identity.current.user.user_id, 'system', system.id, 'user', system.user.user_id, identity.current.user.user_id)
+                activity = Activity(identity.current.user, 'system', system.id, 'user', '%s' % system.user, '%s' % identity.current.user)
         else:
             if system.can_share(identity.current.user):
                 status = "Reserved"
-                activity = Activity(identity.current.user.user_id, 'system', system.id, 'user', '', identity.current.user.user_id)
+                activity = Activity(identity.current.user, 'system', system.id, 'user', '', '%s' % identity.current.user)
                 system.user = identity.current.user
         session.save_or_update(system)
         session.save_or_update(activity)
@@ -409,22 +416,22 @@ class Root(RPCRoot):
             if kw.get(field):
                 if current_val != str(kw[field]):
 #                    sys.stderr.write("\nfield: " + field + ", Old: " +  current_val + ", New: " +  str(kw[field]) + " " +  "\n")
-                    activity = Activity(identity.current.user.user_id, 'system', system.id, field, current_val, kw[field])
+                    activity = Activity(identity.current.user, 'system', system.id, field, current_val, kw[field])
                     session.save_or_update(activity)
             else:
                  if current_val != "":
-                    activity = Activity(identity.current.user.user_id, 'system', system.id, field, current_val, "")
+                    activity = Activity(identity.current.user, 'system', system.id, field, current_val, "")
                     session.save_or_update(activity)
         log_bool_fields = [ 'shared', 'private' ]
         for field in log_bool_fields:
             current_val = system.__dict__[field]
             if kw.get(field):
                 if current_val != True:
-                    activity = Activity(identity.current.user.user_id, 'system', system.id, field, current_val, "1")
+                    activity = Activity(identity.current.user, 'system', system.id, field, current_val, "1")
                     session.save_or_update(activity)
             else:
                 if current_val != False:
-                    activity = Activity(identity.current.user.user_id, 'system', system.id, field, current_val, "0")
+                    activity = Activity(identity.current.user, 'system', system.id, field, current_val, "0")
                     session.save_or_update(activity)
         system.status_id=kw['status_id']
         system.location=kw['location']

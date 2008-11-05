@@ -149,22 +149,6 @@ Form goes here</p>
     </table>
      </div>
      <div class="tabbertab"><h2>Key/Values</h2>
-        <input id="new_kv" class="submit" value="New Key/Value" name="new_kv" type="button"/>
-        <div id="note_input">
-             Seperate form or embedded form for new key/value pairs?
-	</div>
-    <table class="list">
-        <tr class="list">
-            <th class="list">Key</th>
-            <th class="list">Value</th>
-        </tr>
-        <?python row_color = "#FFFFFF" ?>
-        <tr class="list" bgcolor="${row_color}" py:for="key_value in key_values">
-            <td class="list">${key_value.key_name}</td>
-            <td class="list">${key_value.text}</td>
-            <?python row_color = (row_color == "#f1f1f1") and "#FFFFFF" or "#f1f1f1" ?>
-        </tr>
-    </table>
      </div>
      <div class="tabbertab"><h2>Groups</h2>
       <p py:content="system_group_form(method='GET', action=system_group_action, groups=system.groups, value=value, options=options)">System Group Form goes here</p>
@@ -181,37 +165,38 @@ Form goes here</p>
              Seperate form or embedded form for new notes?
 	</div>
     <table class="list">
-        <tr class="list">
-            <th class="list">user_id</th>
-            <th class="list">created</th>
-            <th class="list">Note</th>
-        </tr>
         <?python row_color = "#FFFFFF" ?>
-        <tr class="list" bgcolor="${row_color}" py:for="note in notes">
-            <td class="list">${note.user_id}</td>
-            <td class="list">${note.created}</td>
-            <td class="list">${note.text}</td>
+        <div py:for="note in system.notes">
+            <tr class="list" bgcolor="${row_color}">
+                <th class="list">User</th>
+                <td class="list">${note.user}</td>
+                <th class="list">Created</th>
+                <td class="list">${note.created}</td>
+            </tr>
+            <tr>
+                <th class="list">Note</th>
+                <td class="list" colspan="3">${note.text}</td>
+            </tr>
+            <tr>
+             <td>&nbsp;</td>
+            </tr>
             <?python row_color = (row_color == "#f1f1f1") and "#FFFFFF" or "#f1f1f1" ?>
-        </tr>
+        </div>
     </table>
      </div>
      <div class="tabbertab"><h2>History</h2>
     <table class="list">
         <tr class="list">
-            <th class="list">user_id</th>
+            <th class="list">user</th>
             <th class="list">created</th>
-            <th class="list">table_name</th>
-            <th class="list">table_id</th>
             <th class="list">field_name</th>
             <th class="list">old_value</th>
             <th class="list">new_value</th>
         </tr>
         <?python row_color = "#FFFFFF" ?>
         <tr class="list" bgcolor="${row_color}" py:for="act in activity">
-            <td class="list">${act.user_id}</td>
+            <td class="list">${act.user}</td>
             <td class="list">${act.created}</td>
-            <td class="list">${act.table_name}</td>
-            <td class="list">${act.table_id}</td>
             <td class="list">${act.field_name}</td>
             <td class="list">${act.old_value}</td>
             <td class="list">${act.new_value}</td>

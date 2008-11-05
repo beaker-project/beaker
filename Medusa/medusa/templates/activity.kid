@@ -9,7 +9,7 @@
     &nbsp;&nbsp;<b>${title}</b>
     <table class="list">
         <tr class="list">
-            <th class="list">user_id</th>
+            <th class="list">user</th>
             <th class="list">created</th>
             <th class="list">table_name</th>
             <th class="list">table_id</th>
@@ -19,7 +19,7 @@
         </tr>
         <?python row_color = "#FFFFFF" ?>
         <tr class="list" bgcolor="${row_color}" py:for="act in activity">
-            <td class="list">${act.user_id}</td>
+            <td class="list">${act.user}</td>
             <td class="list">${act.created}</td>
             <td class="list">${act.table_name}</td>
             <td class="list">${act.table_id}</td>

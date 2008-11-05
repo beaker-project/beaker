@@ -25,7 +25,6 @@ system_table = Table('system', metadata,
     Column('date_modified', DateTime),
     Column('date_lastcheckin', DateTime),
     Column('location', String(255)),
-    Column('notes', UnicodeText),
     Column('vendor', Unicode(255)),
     Column('model', Unicode(255)),
     Column('lender', Unicode(255)),
@@ -355,8 +354,8 @@ activity_table = Table('activity', metadata,
     Column('table_name', String(40), nullable=False),
     Column('table_id', Integer, nullable=False),
     Column('field_name', String(40), nullable=False),
-    Column('old_value', String(40), nullable=False),
-    Column('new_value', String(40), nullable=False)
+    Column('old_value', String(40)),
+    Column('new_value', String(40))
 )
 
 # note schema
@@ -504,6 +503,9 @@ class User(object):
     def __repr__(self):
         return self.display_name
 
+    def is_admin(self):
+        return u'admin' in [group.group_name for group in self.groups]
+
 
 class Permission(object):
     """
@@ -574,13 +576,6 @@ class System(SystemObject):
         self.vendor = vendor
         self.owner = owner
 
-    @classmethod
-    @identity.require(identity.not_anonymous())
-    def can_admin(cls):
-        if system.owner == identity.current.user \
-          or identity.in_group("admin"):
-              return True
-        return False
 
     @classmethod
     def all(cls, user=None):
@@ -646,7 +641,19 @@ class System(SystemObject):
     def by_id(cls, id, user):
         return System.all(user).filter(System.id == id).one()
 
-    def can_share(self, user):
+    def can_admin(self, user=None):
+        if user:
+            if user == self.owner or user.is_admin:
+                return True
+        return False
+
+    def current_user(self, user=None):
+        if user and self.user:
+            if self.user == user or user.is_admin:
+                return True
+        return False
+        
+    def can_share(self, user=None):
         if user:
             # If its the owner always allow.
             if user == self.owner:
@@ -1031,6 +1038,46 @@ class DistroTag(object):
     def __init__(self, name=None):
         self.name = name
 
+# Activity model
+class Activity(object):
+    def __init__(self, user=None, table_name=None, table_id=None,
+                 field_name=None, old_value=None, new_value=None):
+        self.user = user
+        self.table_name = table_name
+        self.table_id = table_id
+        self.field_name = field_name
+        self.old_value = old_value
+        self.new_value = new_value
+
+    @classmethod
+    def all(cls):
+        return cls.query()
+
+    @classmethod
+    def system(cls, id):
+        return cls.query().filter_by(table_name='system',table_id=id).all()
+
+# note model
+class Note(object):
+    def __init__(self, user=None, text=None):
+        self.user = user
+        self.text = text
+
+    @classmethod
+    def all(cls):
+        return cls.query()
+
+# key_value model
+class Key_Value(object):
+    def __init__(self, key_name=None, text=None):
+        self.key_name = key_name
+        self.text = value
+
+    @classmethod
+    def all(cls):
+        return cls.query()
+
+
 # set up mappers between identity tables and classes
 
 SystemType.mapper = mapper(SystemType, system_type_table)
@@ -1052,7 +1099,9 @@ System.mapper = mapper(System, system_table,
                      'owner':relation(User, uselist=False, 
                           primaryjoin=system_table.c.owner_id==users_table.c.user_id,foreign_keys=system_table.c.owner_id),
                      'lab_controller':relation(LabController, uselist=False,
-                                               backref='systems')})
+                                               backref='systems'),
+                     'notes':relation(Note, order_by=[note_table.c.created.desc()]),
+                     'key_values':relation(Key_Value)})
 mapper(Arch, arch_table)
 mapper(Provision, provision_table,
        properties = {'osversion':relation(OSVersion, uselist=False)})
@@ -1120,6 +1169,16 @@ mapper(Permission, permissions_table,
         properties=dict(groups=relation(Group,
                 secondary=group_permission_table, backref='permissions')))
 
+mapper(Activity, activity_table,
+        properties=dict(user=relation(User, uselist=False,
+                        backref='activity')))
+
+mapper(Note, note_table,
+        properties=dict(user=relation(User, uselist=False,
+                        backref='notes')))
+
+mapper(Key_Value, key_value_table)
+
 
 #                     Column("comments"), MultipleJoin('Comment')
 
@@ -1135,27 +1194,6 @@ def device_classes():
     for device_class in _device_classes:
         yield device_class
 
-# activity model
-
-class Activity(object):
-    def __init__(self, user_id=None, table_name=None, table_id=None,
-                 field_name=None, old_value=None, new_value=None):
-        self.user_id = user_id
-        self.table_name = table_name
-        self.table_id = table_id
-        self.field_name = field_name
-        self.old_value = old_value
-        self.new_value = new_value
-
-    @classmethod
-    def all(cls):
-        return cls.query()
-
-    @classmethod
-    def system(cls, id):
-        return cls.query().filter_by(table_name='system',table_id=id).all()
-
-
 #    def update_values(self, values):
 #        """ Update values for this controllers keys"""
 #        for value in values:
@@ -1165,48 +1203,5 @@ class Activity(object):
 #                                          value=value['value'])
 #                self.values.append(new_value)
 
-mapper(Activity, activity_table)
 
-
-# note model
-class Note(object):
-    def __init__(self, system_id=None, user_id=None, text=None):
-        system = System.query().filter(System.id == int(system_id)).one()
-        if not system.can_admin():
-           flash( _(u"You are not entitled to administrate this system") )
-           redirect("/")
-        self.system_id = system_id
-        self.user_id = user_id
-        self.text = text
-
-    @classmethod
-    def all(cls):
-        return cls.query()
-
-    @classmethod
-    def system(cls, id):
-        return cls.query().filter_by(system_id=id).order_by(Note.c.created.desc())
-
-mapper(Note, note_table)
-
-# key_value model
-class Key_Value(object):
-    def __init__(self, system_id=None, key_name=None, text=None):
-        system = System.query().filter(System.id == int(system_id)).one()
-        if not system.can_admin():
-           flash( _(u"You are not entitled to administrate this system") )
-           redirect("/")
-        self.system_id = system_id
-        self.key_name = key_name
-        self.text = value
-
-    @classmethod
-    def all(cls):
-        return cls.query()
-
-    @classmethod
-    def system(cls, id):
-        return cls.query().filter_by(system_id=id).order_by(Key_Value.c.key_name.desc())
-
-mapper(Key_Value, key_value_table)
 
