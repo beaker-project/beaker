@@ -149,6 +149,22 @@ Form goes here</p>
     </table>
      </div>
      <div class="tabbertab"><h2>Key/Values</h2>
+        <input id="new_kv" class="submit" value="New Key/Value" name="new_kv" type="button"/>
+        <div id="note_input">
+             Seperate form or embedded form for new key/value pairs?
+	</div>
+    <table class="list">
+        <tr class="list">
+            <th class="list">Key</th>
+            <th class="list">Value</th>
+        </tr>
+        <?python row_color = "#FFFFFF" ?>
+        <tr class="list" bgcolor="${row_color}" py:for="key_value in key_values">
+            <td class="list">${key_value.key_name}</td>
+            <td class="list">${key_value.text}</td>
+            <?python row_color = (row_color == "#f1f1f1") and "#FFFFFF" or "#f1f1f1" ?>
+        </tr>
+    </table>
      </div>
      <div class="tabbertab"><h2>Groups</h2>
       <p py:content="system_group_form(method='GET', action=system_group_action, groups=system.groups, value=value, options=options)">System Group Form goes here</p>

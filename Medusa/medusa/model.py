@@ -369,6 +369,15 @@ note_table = Table('note', metadata,
     Column('text',TEXT, nullable=False)
 )
 
+#key_value schema
+key_value_table = Table('key_value', metadata,
+    Column('id', Integer, autoincrement=True,
+           nullable=False, primary_key=True),
+    Column('system_id', Integer, ForeignKey('system.id'), index=True),
+    Column('key_name',TEXT, nullable=False),
+    Column('text',TEXT, nullable=False)
+)
+
 # the identity model
 
 
@@ -564,6 +573,14 @@ class System(SystemObject):
         self.serial = serial
         self.vendor = vendor
         self.owner = owner
+
+    @classmethod
+    @identity.require(identity.not_anonymous())
+    def can_admin(cls):
+        if system.owner == identity.current.user \
+          or identity.in_group("admin"):
+              return True
+        return False
 
     @classmethod
     def all(cls, user=None):
@@ -1154,6 +1171,10 @@ mapper(Activity, activity_table)
 # note model
 class Note(object):
     def __init__(self, system_id=None, user_id=None, text=None):
+        system = System.query().filter(System.id == int(system_id)).one()
+        if not system.can_admin():
+           flash( _(u"You are not entitled to administrate this system") )
+           redirect("/")
         self.system_id = system_id
         self.user_id = user_id
         self.text = text
@@ -1167,4 +1188,25 @@ class Note(object):
         return cls.query().filter_by(system_id=id).order_by(Note.c.created.desc())
 
 mapper(Note, note_table)
+
+# key_value model
+class Key_Value(object):
+    def __init__(self, system_id=None, key_name=None, text=None):
+        system = System.query().filter(System.id == int(system_id)).one()
+        if not system.can_admin():
+           flash( _(u"You are not entitled to administrate this system") )
+           redirect("/")
+        self.system_id = system_id
+        self.key_name = key_name
+        self.text = value
+
+    @classmethod
+    def all(cls):
+        return cls.query()
+
+    @classmethod
+    def system(cls, id):
+        return cls.query().filter_by(system_id=id).order_by(Key_Value.c.key_name.desc())
+
+mapper(Key_Value, key_value_table)
 

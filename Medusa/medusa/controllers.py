@@ -310,6 +310,7 @@ class Root(RPCRoot):
             options = options,
             activity =  Activity.system(system.id),
             notes = Note.system(system.id),
+            key_values = Key_Value.system(system.id),
         )
          
     new = view    
