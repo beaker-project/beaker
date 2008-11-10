@@ -8,7 +8,7 @@ from turbogears.widgets import (Form, TextField, SubmitButton, TextArea,
                                 HiddenField, RemoteForm, CheckBoxList, JSLink,
                                 Widget, TableForm, FormField, CompoundFormField,
                                 static, PaginateDataGrid, RepeatingFormField,
-                                CompoundWidget, AjaxGrid)
+                                CompoundWidget, AjaxGrid, Tabber)
 
 
 class LocalJSLink(JSLink):
@@ -297,7 +297,14 @@ class SystemForm(Form):
                TextField(name='contact', label=_(u'Contact')),
                CheckBox(name='shared', label=_(u'Shared')),
                CheckBox(name='private', label=_(u'Private')),
-               SubmitButton(name='submit', label=_(u'Save Changes')),
+               TextField(name='key_name', label=_(u'Key')),
+               TextField(name='key_value', label=_(u'Value')),
+               AutoCompleteField(name='group',
+                                 search_controller="/groups/by_name",
+                                 search_param="name",
+                                 result_name="groups"),
+               TextArea(name='note', label=_(u'Note')),
+               Tabber(use_cookie=True),
     ]
 
     def display_value(self, item, hidden_fields, value=None):

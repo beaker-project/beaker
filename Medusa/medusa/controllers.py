@@ -8,7 +8,7 @@ from medusa.labcontroller import LabControllers
 from medusa.distro import Distros
 from medusa.widgets import myPaginateDataGrid
 from medusa.widgets import Power
-from medusa.widgets import SearchBar, SystemForm, SystemGroups
+from medusa.widgets import SearchBar, SystemForm
 from medusa.xmlrpccontroller import RPCRoot
 from cherrypy import request, response
 from tg_expanding_form_widget.tg_expanding_form_widget import ExpandingForm
@@ -188,27 +188,55 @@ class Root(RPCRoot):
 
     @expose()
     @identity.require(identity.not_anonymous())
-    def group_remove(self, *args, **kw):
+    def key_remove(self, system_id=None, key_value_id=None):
         removed = None
-        if kw.get('system_id') and kw.get('group_id'):
+        if system_id and key_value_id:
             try:
-                system = System.by_id(kw['system_id'],identity.current.user)
+                system = System.by_id(system_id,identity.current.user)
             except:
-                return dict( reponse =_(u"Invalid Permision"))
+                flash(_(u"Invalid Permision"))
+                redirect("/")
         else:
-            return dict( reponse = _(u"system_id and group_id must be provided"))
-        if system.owner == identity.current.user \
-          or identity.in_group("admin"):
+            flash(_(u"system_id and group_id must be provided"))
+            redirect("/")
+        
+        if system.can_admin(identity.current.user):
+            for key_value in system.key_values:
+                if key_value.id == int(key_value_id):
+                    system.key_values.remove(key_value)
+                    removed = key_value
+        
+        if removed:
+            flash(_(u"removed %s" % removed))
+        else:
+            flash(_(u"Key_Value_Id not Found"))
+        redirect("./view/%s" % system.fqdn)
+
+    @expose()
+    @identity.require(identity.not_anonymous())
+    def group_remove(self, system_id=None, group_id=None):
+        removed = None
+        if system_id and group_id:
+            try:
+                system = System.by_id(system_id,identity.current.user)
+            except:
+                flash(_(u"Invalid Permision"))
+                redirect("/")
+        else:
+            flash(_(u"system_id and group_id must be provided"))
+            redirect("/")
+        if system.can_admin(identity.current.user):
            for group in system.groups:
-               if group.group_id == int(kw['group_id']):
+               if group.group_id == int(group_id):
                    system.groups.remove(group)
                    removed = group
-                   activity = Activity(identity.current.user, 'system', kw['system_id'], 'group', group.display_name, "")
+                   activity = Activity(identity.current.user, 'system', system_id, 'group', group.display_name, "")
 	           session.save_or_update(activity)
         if removed:
-            return dict( reponse = _(u"%s Removed" % removed.display_name))
+            flash(_(u"%s Removed" % removed.display_name))
         else:
-            return dict( reponse = _(u"Group ID not found"))
+            flash(_(u"Group ID not found"))
+        redirect("./view/%s" % system.fqdn)
 
     @expose()
     @identity.require(identity.not_anonymous())
@@ -221,30 +249,12 @@ class Root(RPCRoot):
                 return dict( reponse =_(u"Invalid Permision"))
         else:
             return dict( reponse = _(u"system_id and group_id must be provided"))
-        if system.owner == identity.current.user \
-          or identity.in_group("admin"):
+        if system.can_admin(identity.current.user):
             group = Group.by_name(kw['group']['text'])
             system.groups.append(group)
             activity = Activity(identity.current.user, 'system', kw['id'], 'group', "", group.display_name)
 	    session.save_or_update(activity)
         return dict( response = _(u"%s Added" % group.display_name))
-
-    @expose(format='json')
-    def ajax_grid_keyvalue(self, system_id):
-        system = System.by_id(system_id,identity.current.user)
-        rows = []
-        actions = {}
-        if system.can_admin(identity.current.user):
-            actions = {'remove':{'function':'system_key_value.retrieveRemove','params':[]}}
-        headers = ["ID", "Key", "Value"]
-        for keyvalue in system.key_values:
-            row = [keyvalue.id, keyvalue.key_name,keyvalue.text]
-            rows.append(row)
-        return dict(
-            headers = headers,
-            rows = rows,
-            actions = actions,
-        )
 
     @expose(format='json')
     def ajax_grid_group(self, system_id):
@@ -265,7 +275,6 @@ class Root(RPCRoot):
 
     @expose(template="medusa.templates.system")
     def view(self, fqdn=None, **kw):
-        widget = widgets.Tabber()
         if fqdn:
             try:
                 system = System.by_fqdn(fqdn,identity.current.user)
@@ -292,32 +301,17 @@ class Root(RPCRoot):
                 options['user_change_text'] = ' (Take)'
             if system.current_user(identity.current.user):
                 options['user_change_text'] = ' (Return)'
-            system_group_form = SystemGroups(
-                 ajax_grid_url     = "/ajax_grid_group",
-                 search_controller = "/groups/by_name",
-                 removecontroller = '/group_remove',
-                 search_param      = "name",
-                 result_name       = "groups",
-                 systemid          = system.id,
-                 readonly          = readonly
-            )
         else:
-            system_group_form = None
-            system_key_form = None
             title = 'New'
 
         options['readonly'] = readonly
         return dict(
             title   = title,
             system  = system,
-            widget  = widget,
-            system_form = self.system_form,
-            system_group_form = system_group_form,
+            form = self.system_form,
             action = '/save',
-            system_group_action = '/group_save',
             value = system,
             options = options,
-            activity =  Activity.system(system.id),
         )
          
     new = view    
@@ -330,8 +324,7 @@ class Root(RPCRoot):
         except InvalidRequestError:
             flash( _(u"Unable to find system with id of %s" % id) )
             redirect("/")
-        if system.owner != identity.current.user \
-          and not identity.in_group('admin'):
+        if not system.can_admin(identity.current.user):
             flash( _(u"Insufficient permissions to change owner"))
             redirect("/")
 
@@ -351,8 +344,7 @@ class Root(RPCRoot):
         except InvalidRequestError:
             flash( _(u"Unable to find system with id of %s" % id) )
             redirect("/")
-        if system.owner != identity.current.user \
-          and not identity.in_group('admin'):
+        if not system.can_admin(identity.current.user):
             flash( _(u"Insufficient permissions to change owner"))
             redirect("/")
         user = User.by_user_name(kw['user']['text'])
@@ -376,8 +368,6 @@ class Root(RPCRoot):
                 status = "Returned"
                 activity = Activity(identity.current.user, 'system', system.id, 'user', '%s' % system.user, '')
                 system.user = None
-            else:
-                activity = Activity(identity.current.user, 'system', system.id, 'user', '%s' % system.user, '%s' % identity.current.user)
         else:
             if system.can_share(identity.current.user):
                 status = "Reserved"
@@ -449,14 +439,31 @@ class Root(RPCRoot):
             system.private=kw['private']
         else:
             system.private=False
+
+        # Change Lab Controller
         if kw['lab_controller_id'] == 0:
             system.lab_controller_id = None
         else:
             system.lab_controller_id = kw['lab_controller_id']
 
+        # Add a Key/Value Pair
+        if kw.get('key_name') and kw.get('key_value'):
+            key_value = Key_Value(kw['key_name'],kw['key_value'])
+            system.key_values.append(key_value)
+
+        # Add a Group
+        if kw.get('group').get('text'):
+            group = Group.by_name(kw['group']['text'])
+            system.groups.append(group)
+
+        # Add a Note
+        if kw.get('note'):
+            note = Note(user=identity.current.user,text=kw['note'])
+            system.notes.append(note)
+
         session.save_or_update(system)
-        flash( _(u"OK") )
-        redirect(".")
+        flash( _(u"Updated") )
+        redirect("/view/%s" % system.fqdn)
 
     @cherrypy.expose
     def push(self, fqdn=None, inventory=None):

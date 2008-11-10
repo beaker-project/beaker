@@ -83,7 +83,7 @@ class LabControllers(RPCRoot):
             url = "http://%s/labcontroller/" % labcontroller.fqdn
             lc_xmlrpc = xmlrpclib.ServerProxy(url, BasicAuthTransport(labcontroller.username,labcontroller.password))
             lc_distros_md5 = lc_xmlrpc.distros_md5()
-            if lc_distros_md5 != labcontroller.distros_md5 or True:
+            if lc_distros_md5 != labcontroller.distros_md5:
                 labcontroller.distros = []
                 lc_distros = lc_xmlrpc.distros_list()
                 for lc_distroname in lc_distros:
@@ -122,7 +122,11 @@ class LabControllers(RPCRoot):
                             distro.date_created = datetime.fromtimestamp(float(lc_distro['date_created']))
                         labcontroller.distros.append(distro)
                 labcontroller.distros_md5 = lc_distros_md5
-        flash( _(u"%s md5 updated" % labcontroller.fqdn) )
+                flash( _(u"%s md5 updated" % labcontroller.fqdn) )
+            else:
+                flash( _(u"md5 has not changed"))
+        else:
+            flash( _(u"No Lab Controller id passed!"))
         redirect(".")
 
     @expose(template="medusa.templates.grid")

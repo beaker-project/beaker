@@ -351,11 +351,17 @@ activity_table = Table('activity', metadata,
            nullable=False, primary_key=True),
     Column('user_id', Integer, ForeignKey('tg_user.user_id'), index=True),
     Column('created', DateTime, nullable=False, default=datetime.now),
-    Column('table_name', String(40), nullable=False),
-    Column('table_id', Integer, nullable=False),
+    Column('type', String(40), nullable=False),
     Column('field_name', String(40), nullable=False),
+    Column('service', String(100), nullable=False),
+    Column('action', String(40), nullable=False),
     Column('old_value', String(40)),
     Column('new_value', String(40))
+)
+
+system_activity_table = Table('system_activity', metadata,
+    Column('id', Integer, ForeignKey('activity.id'), primary_key=True)
+    Column('system_id', Integer, ForeignKey('system.id'))
 )
 
 # note schema
@@ -374,7 +380,7 @@ key_value_table = Table('key_value', metadata,
            nullable=False, primary_key=True),
     Column('system_id', Integer, ForeignKey('system.id'), index=True),
     Column('key_name',TEXT, nullable=False),
-    Column('text',TEXT, nullable=False)
+    Column('key_value',TEXT, nullable=False)
 )
 
 # the identity model
@@ -1040,12 +1046,12 @@ class DistroTag(object):
 
 # Activity model
 class Activity(object):
-    def __init__(self, user=None, table_name=None, table_id=None,
+    def __init__(self, user=None, service=None, action=None
                  field_name=None, old_value=None, new_value=None):
         self.user = user
-        self.table_name = table_name
-        self.table_id = table_id
+        self.service = service
         self.field_name = field_name
+        self.action = action
         self.old_value = old_value
         self.new_value = new_value
 
@@ -1053,9 +1059,8 @@ class Activity(object):
     def all(cls):
         return cls.query()
 
-    @classmethod
-    def system(cls, id):
-        return cls.query().filter_by(table_name='system',table_id=id).all()
+class SystemActivity(Activity):
+    pass
 
 # note model
 class Note(object):
@@ -1069,9 +1074,12 @@ class Note(object):
 
 # key_value model
 class Key_Value(object):
-    def __init__(self, key_name=None, text=None):
+    def __init__(self, key_name=None, key_value=None):
         self.key_name = key_name
-        self.text = value
+        self.key_value = key_value
+
+    def ___repr__(self):
+        return "%s %s" % (self.key_name, self.key_value)
 
     @classmethod
     def all(cls):
@@ -1100,8 +1108,13 @@ System.mapper = mapper(System, system_table,
                           primaryjoin=system_table.c.owner_id==users_table.c.user_id,foreign_keys=system_table.c.owner_id),
                      'lab_controller':relation(LabController, uselist=False,
                                                backref='systems'),
-                     'notes':relation(Note, order_by=[note_table.c.created.desc()]),
-                     'key_values':relation(Key_Value)})
+                     'notes':relation(Note, 
+                                      order_by=[note_table.c.created.desc()],
+                                      cascade="all, delete, delete-orphan"),
+                     'key_values':relation(Key_Value,
+                                      cascade="all, delete, delete-orphan"),
+                     'activity':relation(SystemActivity,
+                                               backref='system')})
 mapper(Arch, arch_table)
 mapper(Provision, provision_table,
        properties = {'osversion':relation(OSVersion, uselist=False)})
@@ -1170,8 +1183,12 @@ mapper(Permission, permissions_table,
                 secondary=group_permission_table, backref='permissions')))
 
 mapper(Activity, activity_table,
+        polymorphic_on=activity.c.type, polymorphic_identity='activity',
         properties=dict(user=relation(User, uselist=False,
                         backref='activity')))
+
+mapper(SystemActivity, system_activity_table, inherits=Activity,
+        polymorphic_identity='system_activity')
 
 mapper(Note, note_table,
         properties=dict(user=relation(User, uselist=False,
