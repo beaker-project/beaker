@@ -6,6 +6,7 @@ from medusa.power import PowerTypes, PowerControllers
 from medusa.group import Groups
 from medusa.labcontroller import LabControllers
 from medusa.distro import Distros
+from medusa.activity import Activities
 from medusa.widgets import myPaginateDataGrid
 from medusa.widgets import Power
 from medusa.widgets import SearchBar, SystemForm
@@ -89,6 +90,7 @@ class Root(RPCRoot):
     groups = Groups()
     labcontrollers = LabControllers()
     distros = Distros()
+    activity = Activities()
     users = Users()
 
     id         = widgets.HiddenField(name='id')
@@ -205,9 +207,11 @@ class Root(RPCRoot):
                 if key_value.id == int(key_value_id):
                     system.key_values.remove(key_value)
                     removed = key_value
+                    activity = SystemActivity(identity.current.user, 'WEBUI', 'Removed', 'Key/Value', "%s/%s" % (removed.key_name, removed.key_value), "")
+                    system.activity.append(activity)
         
         if removed:
-            flash(_(u"removed %s" % removed))
+            flash(_(u"removed %s/%s" % (removed.key_name,removed.key_value)))
         else:
             flash(_(u"Key_Value_Id not Found"))
         redirect("./view/%s" % system.fqdn)
@@ -230,48 +234,15 @@ class Root(RPCRoot):
                if group.group_id == int(group_id):
                    system.groups.remove(group)
                    removed = group
-                   activity = Activity(identity.current.user, 'system', system_id, 'group', group.display_name, "")
-	           session.save_or_update(activity)
+                   activity = SystemActivity(identity.current.user, 'WEBUI', 'Removed', 'Group', group.display_name, "")
+                   gactivity = GroupActivity(identity.current.user, 'WEBUI', 'Removed', 'System', "", system.fqdn)
+                   group.activity.append(gactivity)
+                   system.activity.append(activity)
         if removed:
             flash(_(u"%s Removed" % removed.display_name))
         else:
             flash(_(u"Group ID not found"))
         redirect("./view/%s" % system.fqdn)
-
-    @expose()
-    @identity.require(identity.not_anonymous())
-    def group_add(self, *args, **kw):
-        group = None
-        if kw.get('id') and kw.get('group'):
-            try:
-                system = System.by_id(kw['id'],identity.current.user)
-            except:
-                return dict( reponse =_(u"Invalid Permision"))
-        else:
-            return dict( reponse = _(u"system_id and group_id must be provided"))
-        if system.can_admin(identity.current.user):
-            group = Group.by_name(kw['group']['text'])
-            system.groups.append(group)
-            activity = Activity(identity.current.user, 'system', kw['id'], 'group', "", group.display_name)
-	    session.save_or_update(activity)
-        return dict( response = _(u"%s Added" % group.display_name))
-
-    @expose(format='json')
-    def ajax_grid_group(self, system_id):
-        system = System.by_id(system_id,identity.current.user)
-        rows = []
-        actions = {}
-        if system.can_admin(identity.current.user):
-            actions = {'remove':{'function':'system_group.retrieveRemove','params':[]}}
-        headers = ["ID", "Name", "Display Name"]
-        for group in system.groups:
-            row = [group.group_id, group.group_name,group.display_name]
-            rows.append(row)
-        return dict(
-            headers = headers,
-            rows = rows,
-            actions = actions,
-        )
 
     @expose(template="medusa.templates.system")
     def view(self, fqdn=None, **kw):
@@ -348,9 +319,9 @@ class Root(RPCRoot):
             flash( _(u"Insufficient permissions to change owner"))
             redirect("/")
         user = User.by_user_name(kw['user']['text'])
-        activity = Activity(identity.current.user, 'system', id, 'owner', '%s' % system.owner, '%s' % user)
+        activity = SystemActivity(identity.current.user, 'WEBUI', 'Changed', 'Owner', '%s' % system.owner, '%s' % user)
+        system.activity.append(activity)
         system.owner = user
-	session.save_or_update(activity)
         flash( _(u"OK") )
         redirect("/")
 
@@ -366,15 +337,15 @@ class Root(RPCRoot):
         if system.user:
             if system.user == identity.current.user:
                 status = "Returned"
-                activity = Activity(identity.current.user, 'system', system.id, 'user', '%s' % system.user, '')
+                activity = SystemActivity(identity.current.user, 'WEBUI', status, 'User', '%s' % system.user, '')
                 system.user = None
         else:
             if system.can_share(identity.current.user):
                 status = "Reserved"
-                activity = Activity(identity.current.user, 'system', system.id, 'user', '', '%s' % identity.current.user)
+                activity = SystemActivity(identity.current.user, 'WEBUI', status, 'User', '', '%s' % system.user )
                 system.user = identity.current.user
+        system.activity.append(activity)
         session.save_or_update(system)
-        session.save_or_update(activity)
         flash( _(u"%s %s" % (status,system.fqdn)) )
         redirect(".")
 
@@ -406,23 +377,23 @@ class Root(RPCRoot):
             if kw.get(field):
                 if current_val != str(kw[field]):
 #                    sys.stderr.write("\nfield: " + field + ", Old: " +  current_val + ", New: " +  str(kw[field]) + " " +  "\n")
-                    activity = Activity(identity.current.user, 'system', system.id, field, current_val, kw[field])
-                    session.save_or_update(activity)
+                    activity = SystemActivity(identity.current.user, 'WEBUI', 'Changed', field, current_val, kw[field] )
+                    system.activity.append(activity)
             else:
                  if current_val != "":
-                    activity = Activity(identity.current.user, 'system', system.id, field, current_val, "")
-                    session.save_or_update(activity)
+                    activity = SystemActivity(identity.current.user, 'WEBUI', 'Changed', field, current_val, "" )
+                    system.activity.append(activity)
         log_bool_fields = [ 'shared', 'private' ]
         for field in log_bool_fields:
             current_val = system.__dict__[field]
             if kw.get(field):
                 if current_val != True:
-                    activity = Activity(identity.current.user, 'system', system.id, field, current_val, "1")
-                    session.save_or_update(activity)
+                    activity = SystemActivity(identity.current.user, 'WEBUI', 'Changed', field, current_val, "True" )
+                    system.activity.append(activity)
             else:
                 if current_val != False:
-                    activity = Activity(identity.current.user, 'system', system.id, field, current_val, "0")
-                    session.save_or_update(activity)
+                    activity = SystemActivity(identity.current.user, 'WEBUI', 'Changed', field, current_val, "False" )
+                    system.activity.append(activity)
         system.status_id=kw['status_id']
         system.location=kw['location']
         system.model=kw['model']
@@ -450,16 +421,24 @@ class Root(RPCRoot):
         if kw.get('key_name') and kw.get('key_value'):
             key_value = Key_Value(kw['key_name'],kw['key_value'])
             system.key_values.append(key_value)
+            activity = SystemActivity(identity.current.user, 'WEBUI', 'Added', 'Key/Value', "", "%s/%s" % (kw['key_name'],kw['key_value']) )
+            system.activity.append(activity)
 
         # Add a Group
         if kw.get('group').get('text'):
             group = Group.by_name(kw['group']['text'])
             system.groups.append(group)
+            activity = SystemActivity(identity.current.user, 'WEBUI', 'Added', 'Group', "", kw['group']['text'])
+            gactivity = GroupActivity(identity.current.user, 'WEBUI', 'Added', 'System', "", system.fqdn)
+            group.activity.append(gactivity)
+            system.activity.append(activity)
 
         # Add a Note
         if kw.get('note'):
             note = Note(user=identity.current.user,text=kw['note'])
             system.notes.append(note)
+            activity = SystemActivity(identity.current.user, 'WEBUI', 'Added', 'Note', "", kw['note'])
+            system.activity.append(activity)
 
         session.save_or_update(system)
         flash( _(u"Updated") )
@@ -519,9 +498,9 @@ class Root(RPCRoot):
         identity.current.logout()
         raise redirect("/")
 
-    @expose(template='medusa.templates.activity')
-    def activity(self, *args, **kw):
+#    @expose(template='medusa.templates.activity')
+#    def activity(self, *args, **kw):
 # TODO This is mainly for testing
 # if it hangs around it should check for admin access
-        return dict(title="Activity", search_bar=None, activity = Activity.all())
-
+#        return dict(title="Activity", search_bar=None, activity = Activity.all())
+#

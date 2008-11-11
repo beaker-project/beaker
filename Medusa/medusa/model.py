@@ -360,8 +360,13 @@ activity_table = Table('activity', metadata,
 )
 
 system_activity_table = Table('system_activity', metadata,
-    Column('id', Integer, ForeignKey('activity.id'), primary_key=True)
+    Column('id', Integer, ForeignKey('activity.id'), primary_key=True),
     Column('system_id', Integer, ForeignKey('system.id'))
+)
+
+group_activity_table = Table('group_activity', metadata,
+    Column('id', Integer, ForeignKey('activity.id'), primary_key=True),
+    Column('group_id', Integer, ForeignKey('tg_group.group_id'))
 )
 
 # note schema
@@ -1046,7 +1051,7 @@ class DistroTag(object):
 
 # Activity model
 class Activity(object):
-    def __init__(self, user=None, service=None, action=None
+    def __init__(self, user=None, service=None, action=None,
                  field_name=None, old_value=None, new_value=None):
         self.user = user
         self.service = service
@@ -1059,8 +1064,16 @@ class Activity(object):
     def all(cls):
         return cls.query()
 
+    def object_name(self):
+        return None
+
 class SystemActivity(Activity):
-    pass
+    def object_name(self):
+        return "System: %s" % self.object.fqdn
+
+class GroupActivity(Activity):
+    def object_name(self):
+        return "Group: %s" % self.object.display_name
 
 # note model
 class Note(object):
@@ -1114,7 +1127,7 @@ System.mapper = mapper(System, system_table,
                      'key_values':relation(Key_Value,
                                       cascade="all, delete, delete-orphan"),
                      'activity':relation(SystemActivity,
-                                               backref='system')})
+                                               backref='object')})
 mapper(Arch, arch_table)
 mapper(Provision, provision_table,
        properties = {'osversion':relation(OSVersion, uselist=False)})
@@ -1183,12 +1196,17 @@ mapper(Permission, permissions_table,
                 secondary=group_permission_table, backref='permissions')))
 
 mapper(Activity, activity_table,
-        polymorphic_on=activity.c.type, polymorphic_identity='activity',
+        polymorphic_on=activity_table.c.type, polymorphic_identity='activity',
         properties=dict(user=relation(User, uselist=False,
                         backref='activity')))
 
 mapper(SystemActivity, system_activity_table, inherits=Activity,
         polymorphic_identity='system_activity')
+
+mapper(GroupActivity, group_activity_table, inherits=Activity,
+        polymorphic_identity='group_activity',
+        properties=dict(object=relation(Group, uselist=False,
+                         backref='activity')))
 
 mapper(Note, note_table,
         properties=dict(user=relation(User, uselist=False,

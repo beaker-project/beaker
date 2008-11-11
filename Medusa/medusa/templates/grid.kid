@@ -9,6 +9,6 @@
 <h2>$title</h2>
 <span py:if="search_bar">${search_bar.display(method='GET', action=action, value=searchvalue, options=options)}</span>
 ${grid.display(list)}
-<a href="${tg.url('./new')}">Add ( + )</a>
+<!-- <a href="${tg.url('./new')}">Add ( + )</a> -->
 </body>
 </html>

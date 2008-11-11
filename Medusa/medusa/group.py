@@ -111,9 +111,7 @@ class Groups(RPCRoot):
             group = Group.by_id(kw['group_id'])
         else:
             group = Group()
-# TODO How to get the ID for a new group before it has been written to the DB?
-            activity = Activity(identity.current.user.user_id, 'group', kw['group_name'], 'group_name', "", kw['group_name'])
-            session.save_or_update(activity)
+            activity = Activity(identity.current.user, 'WEBUI', 'Added', 'Group', "", kw['display_name'] )
         group.display_name = kw['display_name']
         group.group_name = kw['group_name']
 
@@ -126,8 +124,10 @@ class Groups(RPCRoot):
         system = System.by_fqdn(kw['system']['text'],identity.current.user)
         group = Group.by_id(kw['group_id'])
         group.systems.append(system)
-        activity = Activity(identity.current.user.user_id, 'system', system.id, 'group', "", group.group_id)
-        session.save_or_update(activity)
+        activity = GroupActivity(identity.current.user, 'WEBUI', 'Added', 'System', "", system.fqdn)
+        sactivity = SystemActivity(identity.current.user, 'WEBUI', 'Added', 'Group', "", group.display_name)
+        group.activity.append(activity)
+        system.activity.append(sactivity)
         flash( _(u"OK") )
         redirect("./edit?id=%s" % kw['group_id'])
 
@@ -137,8 +137,8 @@ class Groups(RPCRoot):
         user = User.by_user_name(kw['user']['text'])
         group = Group.by_id(kw['group_id'])
         group.users.append(user)
-        activity = Activity(identity.current.user.user_id, 'user', user.user_id, 'group', "", group.group_id)
-        session.save_or_update(activity)
+        activity = GroupActivity(identity.current.user, 'WEBUI', 'Added', 'User', "", user.user_name)
+        group.activity.append(activity)
         flash( _(u"OK") )
         redirect("./edit?id=%s" % kw['group_id'])
 
@@ -163,8 +163,8 @@ class Groups(RPCRoot):
             if user.user_id == int(id):
                 group.users.remove(user)
                 removed = user
-                activity = Activity(identity.current.user.user_id, 'user', user.user_id, 'group', group.group_id, "")
-                session.save_or_update(activity)
+                activity = GroupActivity(identity.current.user, 'WEBUI', 'Removed', 'User', removed.user_name, "")
+                group.activity.append(activity)
         flash( _(u"%s Removed" % removed.display_name))
         raise redirect("./edit?id=%s" % group_id)
 
@@ -176,8 +176,10 @@ class Groups(RPCRoot):
             if system.id == int(id):
                 group.systems.remove(system)
                 removed = system
-                activity = Activity(identity.current.user.user_id, 'system', system.id, 'group', group.group_id, "")
-                session.save_or_update(activity)
+                activity = GroupActivity(identity.current.user, 'WEBUI', 'Removed', 'System', removed.fqdn, "")
+                sactivity = SystemActivity(identity.current.user, 'WEBUI', 'Removed', 'Group', group.display_name, "")
+                group.activity.append(activity)
+                system.activity.append(sactivity)
         flash( _(u"%s Removed" % removed.fqdn))
         raise redirect("./edit?id=%s" % group_id)
 
@@ -185,7 +187,7 @@ class Groups(RPCRoot):
     def remove(self, **kw):
         group = Group.by_id(kw['id'])
         session.delete(group)
-        activity = Activity(identity.current.user.user_id, 'group', kw['id'], 'group_id', kw['id'], "")
+        activity = Activity(identity.current.user, 'WEBUI', 'Removed', 'Group', group.display_name, "" )
         session.save_or_update(activity)
         flash( _(u"%s Deleted") % group.display_name )
         raise redirect(".")
