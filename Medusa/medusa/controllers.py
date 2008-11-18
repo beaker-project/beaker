@@ -128,7 +128,7 @@ class Root(RPCRoot):
     def get_fields(self, table_name):
         return dict( fields = System.get_fields(table_name))
 
-    @expose(template='medusa.templates.grid')
+    @expose(template='medusa.templates.grid_add')
     @paginate('list',default_order='fqdn')
     def index(self, *args, **kw):
         return self.systems(systems = System.all(identity.current.user), *args, **kw)
@@ -342,8 +342,8 @@ class Root(RPCRoot):
         else:
             if system.can_share(identity.current.user):
                 status = "Reserved"
-                activity = SystemActivity(identity.current.user, 'WEBUI', status, 'User', '', '%s' % system.user )
                 system.user = identity.current.user
+                activity = SystemActivity(identity.current.user, 'WEBUI', status, 'User', '', '%s' % system.user )
         system.activity.append(activity)
         session.save_or_update(system)
         flash( _(u"%s %s" % (status,system.fqdn)) )
