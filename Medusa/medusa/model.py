@@ -8,6 +8,7 @@ from sqlalchemy import String, Unicode, Integer, DateTime, UnicodeText, Boolean,
 from sqlalchemy import or_, and_
 from sqlalchemy.exceptions import InvalidRequestError
 from identity import LdapSqlAlchemyIdentityProvider
+from cobbler_utils import consolidate, string_to_hash
 
 from turbogears import identity
 
@@ -84,10 +85,30 @@ provision_table = Table('provision', metadata,
     Column('id', Integer, autoincrement=True,
            nullable=False, primary_key=True),
     Column('system_id', Integer, ForeignKey('system.id')),
+    Column('ks_meta', String(1024)),
+    Column('kernel_options', String(1024)),
+    Column('kernel_options_post', String(1024)),
+    Column('arch_id', Integer, ForeignKey('arch.id')),
+)
+
+provision_family_table = Table('provision_family', metadata,
+    Column('id', Integer, autoincrement=True,
+           nullable=False, primary_key=True),
+    Column('provision_id', Integer, ForeignKey('provision.id')),
+    Column('osmajor_id', Integer, ForeignKey('osmajor.id')),
+    Column('ks_meta', String(1024)),
+    Column('kernel_options', String(1024)),
+    Column('kernel_options_post', String(1024)),
+)
+
+provision_family_update_table = Table('provision_update_family', metadata,
+    Column('id', Integer, autoincrement=True,
+           nullable=False, primary_key=True),
+    Column('provision_family_id', Integer, ForeignKey('provision_family.id')),
     Column('osversion_id', Integer, ForeignKey('osversion.id')),
-    Column('ks_meta', Unicode(1024)),
-    Column('kernel_options', Unicode(1024)),
-    Column('kernel_options_post', Unicode(1024)),
+    Column('ks_meta', String(1024)),
+    Column('kernel_options', String(1024)),
+    Column('kernel_options_post', String(1024)),
 )
 
 cpu_table = Table('cpu', metadata,
@@ -263,10 +284,17 @@ lab_controller_table = Table('lab_controller', metadata,
     Column('systems_md5', String(40)),
 )
 
+osmajor_table = Table('osmajor', metadata,
+    Column('id', Integer, autoincrement=True,
+           nullable=False, primary_key=True),
+    Column('osmajor', Unicode(255), unique=True),
+)
+
 osversion_table = Table('osversion', metadata,
     Column('id', Integer, autoincrement=True,
            nullable=False, primary_key=True),
-    Column('osversion',Unicode(255), unique=True),
+    Column('osmajor_id', Integer, ForeignKey('osmajor.id')),
+    Column('osminor',Unicode(255)),
 )
 
 breed_table = Table('breed', metadata,
@@ -652,6 +680,32 @@ class System(SystemObject):
     def by_id(cls, id, user):
         return System.all(user).filter(System.id == id).one()
 
+    def install_options(self, distro):
+        """
+        Return install options based on distro selected.
+        """
+        results = {}
+        for provision in self.provisions:
+            if provision.arch == distro.arch:
+                node = self.provision_to_dict(provision)
+                consolidate(node,results)
+                for provision_family in provision.provision_families:
+                    if provision_family.osmajor == distro.osversion.osmajor:
+                        node = self.provision_to_dict(provision_family)
+                        consolidate(node,results)
+                        for provision_family_update in provision_family.provision_family_updates:
+                            if provision_family_update.osversion == distro.osversion:
+                                node = self.provision_to_dict(provision_family_update)
+                                consolidate(node,results)
+        return results
+
+    def provision_to_dict(self, provision):
+        ks_meta = string_to_hash(provision.ks_meta)
+        kernel_options = string_to_hash(provision.kernel_options)
+        kernel_options_post = string_to_hash(provision.kernel_options_post)
+        return dict(ks_meta = ks_meta, kernel_options = kernel_options,
+                            kernel_options_post = kernel_options_post)
+
     def can_admin(self, user=None):
         if user:
             if user == self.owner or user.is_admin:
@@ -834,12 +888,13 @@ class Arch(SystemObject):
         return cls.query.filter_by(arch=arch).one()
 
 class Provision(SystemObject):
-    def __init__(self, osversion=None, ks_meta=None, kernel_options=None,
-                       kernel_options_post=None):
-        self.osversion = osversion
-        self.ks_meta = ks_meta
-        self.kernel_options = kernel_options
-        self.kernel_options_post = kernel_option_post
+    pass
+
+class ProvisionFamily(SystemObject):
+    pass
+
+class ProvisionFamilyUpdate(SystemObject):
+    pass
 
 class Breed(SystemObject):
     def __init__(self, breed):
@@ -852,16 +907,27 @@ class Breed(SystemObject):
     def __repr__(self):
         return self.breed
 
+class OSMajor(SystemObject):
+    def __init__(self, osmajor):
+        self.major = osmajor
+
+    @classmethod
+    def by_name(cls, osmajor):
+        return cls.query.filter_by(osmajor=osmajor).one()
+
+    def __repr__(self):
+        return self.osmajor
+
 class OSVersion(SystemObject):
     def __init__(self, osversion):
         self.osversion = osversion
 
     @classmethod
-    def by_name(cls, osversion):
-        return cls.query.filter_by(osversion=osversion).one()
+    def by_name(cls, osmajor, osminor):
+        return cls.query.filter_by(osmajor=osmajor, osminor=osminor).one()
 
     def __repr__(self):
-        return self.osversion
+        return "%s.%s" % (self.osmajor,self.osminor)
 
 class LabController(SystemObject):
     @classmethod
@@ -1114,7 +1180,7 @@ System.mapper = mapper(System, system_table,
                      'cpu':relation(Cpu, uselist=False),
                      'numa':relation(Numa, uselist=False),
                      'power':relation(PowerHost, uselist=False),
-                     'provision':relation(Provision),
+                     'provisions':relation(Provision),
                      'user':relation(User, uselist=False, 
                           primaryjoin=system_table.c.user_id==users_table.c.user_id,foreign_keys=system_table.c.user_id),
                      'owner':relation(User, uselist=False, 
@@ -1130,8 +1196,17 @@ System.mapper = mapper(System, system_table,
                                                backref='object')})
 mapper(Arch, arch_table)
 mapper(Provision, provision_table,
-       properties = {'osversion':relation(OSVersion, uselist=False)})
-mapper(OSVersion, osversion_table)
+       properties = {'provision_families':relation(ProvisionFamily),
+                     'arch':relation(Arch)})
+mapper(ProvisionFamily, provision_family_table,
+       properties = {'provision_family_updates':relation(ProvisionFamilyUpdate),
+                     'osmajor':relation(OSMajor)})
+mapper(ProvisionFamilyUpdate, provision_family_update_table,
+       properties = {'osversion':relation(OSVersion)})
+mapper(OSVersion, osversion_table,
+       properties = {'osmajor':relation(OSMajor, uselist=False)})
+mapper(OSMajor, osmajor_table,
+       properties = {'osminor':relation(OSVersion)})
 Cpu.mapper = mapper(Cpu, cpu_table,
        properties = {'flags':relation(CpuFlag)})
 CpuFlag.mapper = mapper(CpuFlag, cpu_flag_table)

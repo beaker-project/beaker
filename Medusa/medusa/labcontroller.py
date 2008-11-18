@@ -103,7 +103,7 @@ class LabControllers(RPCRoot):
                                 session.flush([breed])
                             distro.breed = breed
                             try:
-                                osversion = OSVersion.by_name(lc_distro['os_version'])
+                                osversion = OSVersion.by_name(lc_distro['os_version'].split('.'))
                             except:
                                 osversion = OSVersion(lc_distro['os_version'])
                                 session.save(osversion)
