@@ -142,7 +142,7 @@ class Groups(RPCRoot):
         flash( _(u"OK") )
         redirect("./edit?id=%s" % kw['group_id'])
 
-    @expose(template="medusa.templates.grid")
+    @expose(template="medusa.templates.grid_add")
     @paginate('list')
     def index(self):
         groups = session.query(Group)
