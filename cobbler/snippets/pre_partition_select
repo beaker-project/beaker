@@ -1,0 +1,33 @@
+cat << EOF > /tmp/partinfo
+zerombr
+clearpart --all --initlabel
+part / --fstype ext3 --size=1024 --grow --asprimary
+part swap --size=1024 --asprimary
+EOF
+
+if [ "$arch" = "ia64" ]; then
+echo "part /boot/efi --fstype vfat --size=100" >> /tmp/partinfo
+else
+echo "part /boot --fstype ext3 --size=100" >> /tmp/partinfo
+fi
+
+#if $getVar('partitions','') != ''
+PIFS=$IFS
+IFS=";"
+set -- $partitions
+for partition in $*; do
+    IFS=:
+    set -- $partition
+    if [ "$2" = "part" ]; then
+        echo "part /$1 --fstype ext3 --size=$3" >>/tmp/partinfo
+    fi
+    if [ "$2" = "lvm" ]; then
+        is_lvm=$(($is_lvm + 1))
+        echo "part pv.00$is_lvm --size=$3" >>/tmp/partinfo
+        echo "volgroup VirtVolume00$is_lvm pv.00$is_lvm" >>/tmp/partinfo
+        echo "logvol /$1 --fstype ext3 --name=$1 --vgname=VirtVolume00$is_lvm --size=$3" >>/tmp/partinfo
+    fi
+done
+IFS=$PIPFS
+#end if
+

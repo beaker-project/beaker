@@ -1,0 +1,21 @@
+#if $getVar('kernel_options_post','') != ''
+/sbin/grubby --update-kernel=`/sbin/grubby --default-kernel` --args="$kernel_options_post"
+#end if
+#if $getVar('arch','') == 'ia64'
+BOOT=\$(/usr/sbin/efibootmgr -v | grep BootOrder | awk '{print $2}' | awk -F, '{print $1}')
+EFI=\$(/usr/sbin/efibootmgr -v | grep Boot$BOOT | awk '{print $NF}')
+PXE_SLOT=\$(/usr/sbin/efibootmgr -v | grep -i Netboot |cut -c5-8)
+#
+# If There is no Netboot Entry we can't continue
+# You have to manually setup a Netboot entry first
+# from EFI maint menu.
+#
+if [ ! -z $PXE_SLOT ]; then
+   NEWBOOT=\$(echo $BOOT| sed -e 's/$PXE_SLOT,//')
+   # its cheesy. but it works.
+   NEWBOOT=\$(echo $NEWBOOT| sed -e 's/,$PXE_SLOT,//')
+   NEWBOOT=\$(echo $NEWBOOT| sed -e 's/,$PXE_SLOT//')
+   /usr/sbin/efibootmgr -o $PXE_SLOT,$NEWBOOT
+   /usr/sbin/efibootmgr -n $BOOT
+fi
+#end if

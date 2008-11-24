@@ -1,0 +1,16 @@
+cat << EOF > /tmp/packages
+@development-tools
+@development-libs
+libxml2-python
+ntp
+expect
+pyOpenSSL
+EOF
+
+PIFS=$IFS
+IFS=:
+set -- $packages
+for package in $*; do
+    echo $package >>/tmp/packages
+done
+IFS=$PIPFS
