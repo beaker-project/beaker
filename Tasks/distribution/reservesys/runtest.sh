@@ -46,9 +46,8 @@ MOTD()
     echo "  you extend your reservation.                                        " >> $FILE
     echo "  http://$LAB_SERVER/cgi-bin/rhts/watchdog.cgi                        " >> $FILE
     echo "                                                                      " >> $FILE
-    echo " For ssh, kvm, serial and power control operations please search on   " >> $FILE
-    echo "  one of the following RHTS lab controllers:                          " >> $FILE
-    echo "  http://$LAB_SERVER/cgi-bin/rhts/systems.cgi                         " >> $FILE
+    echo " For ssh, kvm, serial and power control operations please look here:  " >> $FILE
+    echo "  http://$LAB_SERVER/cgi-bin/rhts/systems.cgi?fqdn=$HOSTNAME          " >> $FILE
     echo "                                                                      " >> $FILE
     echo "      RHTS Test information:                                          " >> $FILE
     echo "                         HOSTNAME=$HOSTNAME                           " >> $FILE
