@@ -70,7 +70,7 @@ $(METADATA): Makefile
 	@echo "Name:         $(TEST)" >> $(METADATA)
 	@echo "Path:         $(TEST_DIR)"	>> $(METADATA)
 	@echo "License:      GPL" >> $(METADATA)
-	@echo "Releases:     F9 RHELServer5" >> $(METADATA)
+	@echo "Releases:     RHELServer5" >> $(METADATA)
 	@echo "TestVersion:  $(TESTVERSION)"	>> $(METADATA)
 	@echo "Description:  This refreshes the database with the hardware inventory of the machine its run on">> $(METADATA)
 	@echo "TestTime:     15m" >> $(METADATA)
