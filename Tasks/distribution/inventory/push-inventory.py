@@ -98,7 +98,18 @@ def read_inventory():
        for module in modules:
            data['MODULE'].append(module.split()[0])
 
-
+       # Find Active Network interface
+       iface = None
+       for line in  commands.getstatusoutput('route -n')[1].split('\n'):
+           if line.find('0.0.0.0') == 0:
+               iface = line.split()[-1:][0] #eth0, eth1, etc..
+       #Look in /etc/modprobe.conf for driver info..
+       if iface and os.path.exists("/etc/modprobe.conf"):
+           modprobe = open("/etc/modprobe.conf").read()
+           for line in modprobe.split("\n"):
+               if line.find(iface) != -1:
+                   data['NETWORK'] = line.split()[-1:][0]
+ 
        # calculating available diskspace 
        diskset = partedUtils.DiskSet()
        diskset.openDevices()
