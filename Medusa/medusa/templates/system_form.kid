@@ -80,7 +80,7 @@
        </th>
        <td class="list">
         ${value_for("owner")}
-        <a py:if="owner_change_text" href="${owner_change}?id=${id}">
+        <a py:if="owner_change_text" href="${tg.url(owner_change)}?id=${id}">
          <span py:content="owner_change_text"/>
         </a>
        </td>
@@ -95,7 +95,7 @@
        </th>
        <td class="list">
         ${value_for("user")}
-        <a py:if="user_change_text" href="${user_change}?id=${id}">
+        <a py:if="user_change_text" href="${tg.url(user_change)}?id=${id}">
          <span py:content="user_change_text"/>
         </a>
        </td>

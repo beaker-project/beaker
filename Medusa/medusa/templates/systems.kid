@@ -48,7 +48,7 @@
         <?python row_color = "#FFFFFF" ?>
         <tr class="list" bgcolor="${row_color}" py:for="system in systems">
             <td class="list">
-                <a class="list" href="${tg.url('./view/%s' % system.name)}">${system.name}</a>
+                <a class="list" href="${tg.url('/view/%s' % system.name)}">${system.name}</a>
             </td>
             <td class="list">
                 ${system.status}
@@ -77,7 +77,7 @@
             <?python row_color = (row_color == "#f1f1f1") and "#FFFFFF" or "#f1f1f1" ?>
         </tr>
     </table>
-    <a href="${tg.url('./new')}">Add ( + )</a>
+    <a href="${tg.url('/new')}">Add ( + )</a>
 
 </body>
 </html>

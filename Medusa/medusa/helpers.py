@@ -1,8 +1,9 @@
 from kid import Element
+import turbogears
 
 def make_link(url, text):
     # make an <a> element
-    a = Element('a', {'class': 'list'}, href=url)
+    a = Element('a', {'class': 'list'}, href=turbogears.url(url))
     a.text = text
     return a
 

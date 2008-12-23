@@ -11,7 +11,7 @@
 
 <body class="flora">
     <div py:if="form">
-<p py:content="form(method='GET', action=action, value=value, options=options)">Form goes here</p>
+<p py:content="form(method='GET', action=tg.url(action), value=value, options=options)">Form goes here</p>
     </div>
 </body>
 </html>

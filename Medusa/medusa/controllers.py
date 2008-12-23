@@ -1,5 +1,5 @@
 from turbogears.database import session
-from turbogears import controllers, expose, flash, widgets, validate, error_handler, validators, redirect, paginate
+from turbogears import controllers, expose, flash, widgets, validate, error_handler, validators, redirect, paginate, url
 from model import *
 from turbogears import identity, redirect
 from medusa.power import PowerTypes
@@ -25,6 +25,7 @@ from medusa.cobbler_utils import hash_to_string
 from cherrypy import request, response
 from tg_expanding_form_widget.tg_expanding_form_widget import ExpandingForm
 from medusa.needpropertyxml import *
+from medusa.helpers import *
 
 from kid import Element
 import cherrypy
@@ -38,12 +39,6 @@ import sys
 # log = logging.getLogger("medusa.controllers")
 import breadcrumbs
 from datetime import datetime
-
-def make_link(url, text):
-    # make an <a> element
-    a = Element('a', {'class': 'list'}, href=url)
-    a.text = text
-    return a
 
 #def search():
 #    """Return proper join for search"""
@@ -108,7 +103,7 @@ class Root(RPCRoot):
     submit     = widgets.SubmitButton(name='submit')
 
     autoUsers  = widgets.AutoCompleteField(name='user',
-                                           search_controller="/users/by_name",
+                                           search_controller=url("/users/by_name"),
                                            search_param="input",
                                            result_name="matches")
     
@@ -123,7 +118,7 @@ class Root(RPCRoot):
     search_bar = SearchBar(name='systemsearch',
                            label=_(u'System Search'),
                            table_callback=System.get_tables,
-                           search_controller='/get_fields'
+                           search_controller=url("/get_fields")
                  )
     system_form = SystemForm()
     power_form = PowerForm(name='power')

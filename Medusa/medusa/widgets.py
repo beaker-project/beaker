@@ -319,7 +319,7 @@ class SystemGroups(Form):
         super(SystemGroups, self).__init__(*args, **kw)
 	self.id    = HiddenField(name="id")
         self.group = AutoCompleteField(name='group',
-                                      search_controller="/groups/by_name",
+                                      search_controller=url("/groups/by_name"),
                                       search_param="name",
                                       result_name="groups")
 
@@ -487,7 +487,7 @@ class SystemForm(Form):
                CheckBox(name='private', label=_(u'Secret (NDA)')),
                Tabber(use_cookie=True),
                AutoCompleteField(name='group',
-                                      search_controller="/groups/by_name",
+                                      search_controller=url("/groups/by_name"),
                                       search_param="name",
                                       result_name="groups")
     ]

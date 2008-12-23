@@ -59,6 +59,7 @@ medusa/static/images/under_the_hood_blue.png
 medusa/static/images/wait.gif
 medusa/static/javascript/jquery.js
 medusa/static/javascript/power.js
+medusa/static/javascript/provision.js
 medusa/static/javascript/searchbar.js
 medusa/static/javascript/systemgroups.js
 medusa/templates/__init__.py
@@ -70,7 +71,16 @@ medusa/templates/login.kid
 medusa/templates/master.kid
 medusa/templates/my_paginate_datagrid.kid
 medusa/templates/system.kid
+medusa/templates/system_activity.kid
+medusa/templates/system_details.kid
 medusa/templates/system_form.kid
+medusa/templates/system_groups.kid
+medusa/templates/system_installoptions.kid
+medusa/templates/system_keys.kid
+medusa/templates/system_notes.kid
+medusa/templates/system_power.kid
+medusa/templates/system_provision.kid
+medusa/templates/system_reboot.kid
 medusa/templates/systems.kid
 medusa/tests/__init__.py
 medusa/tests/test_controllers.py

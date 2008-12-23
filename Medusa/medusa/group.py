@@ -1,5 +1,5 @@
 from turbogears.database import session
-from turbogears import controllers, expose, flash, widgets, validate, error_handler, validators, redirect, paginate
+from turbogears import controllers, expose, flash, widgets, validate, error_handler, validators, redirect, paginate, url
 from turbogears.widgets import AutoCompleteField
 from turbogears import identity, redirect
 from cherrypy import request, response
@@ -31,11 +31,11 @@ class Groups(RPCRoot):
     display_name = widgets.TextField(name='display_name', label=_(u'Display Name'))
     group_name   = widgets.TextField(name='group_name', label=_(u'Group Name'))
     autoUsers    = AutoCompleteField(name='user', 
-                                     search_controller = "/users/by_name",
+                                     search_controller = url("/users/by_name"),
                                      search_param = "input",
                                      result_name = "matches")
     autoSystems  = AutoCompleteField(name='system', 
-                                     search_controller = "/by_fqdn",
+                                     search_controller = url("/by_fqdn"),
                                      search_param = "input",
                                      result_name = "matches")
 
