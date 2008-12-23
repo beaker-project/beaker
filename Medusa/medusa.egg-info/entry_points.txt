@@ -1,4 +1,8 @@
+[turbogears.identity.provider]
+ldapsa = medusa.identity:LdapSqlAlchemyIdentityProvider
 
-    [turbogears.identity.provider]
-    ldapsa = medusa.identity:LdapSqlAlchemyIdentityProvider
-    
+[console_scripts]
+medusa-init = medusa.tools.init:main
+start-medusa = medusa.commands:start
+medusa-devinit = medusa.tools.dev_init:main
+

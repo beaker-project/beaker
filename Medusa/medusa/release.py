@@ -1,14 +1,14 @@
 # Release information about medusa
 
-version = "1.0"
+version = "0.1"
 
-# description = "Your plan to rule the world"
+description = "Medusa is an Inventory program that keeps track of system attributes.  Also provides a mechanism for sharing and provisioning.  Provisioning is done via Cobbler"
 # long_description = "More description about your plan"
-# author = "Your Name Here"
-# email = "YourEmail@YourDomain"
-# copyright = "Vintage 2006 - a good year indeed"
+author = "Bill Peck"
+email = "bpeck@redhat.com"
+copyright = "2008 Red Hat, Inc."
 
 # if it's open source, you might want to specify these
-# url = "http://yourcool.site/"
+url = "https://fedorahosted.org/beaker"
 # download_url = "http://yourcool.site/download"
-# license = "MIT"
+license = "GPLv2"

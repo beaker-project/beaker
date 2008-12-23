@@ -7,6 +7,7 @@ from tg_expanding_form_widget.tg_expanding_form_widget import ExpandingForm
 from kid import Element
 from medusa.xmlrpccontroller import RPCRoot
 from medusa.helpers import *
+from medusa.needpropertyxml import *
 
 import cherrypy
 
@@ -24,7 +25,7 @@ import string
 
 class Distros(RPCRoot):
     # For XMLRPC methods in this class.
-    exposed = False
+    exposed = True
 
     @expose(template="medusa.templates.grid")
     @paginate('list',default_order='-date_created', limit=50,allow_limit_override=True)
@@ -44,3 +45,25 @@ class Distros(RPCRoot):
         return dict(title="Distros", grid = distros_grid,
                                          search_bar = None,
                                          list = distros)
+
+    @cherrypy.expose
+    def pick(self, xml):
+        """
+        Based on XML passed in filter distro selection
+        """
+        #FIXME Should validate XML before proceeding.
+        queries = []
+        joins = []
+        for child in ElementWrapper(xmltramp.parse(xml)):
+            if callable(getattr(child, 'filter')):
+                (join, query) = child.filter()
+                queries.append(query)
+                joins.extend(join)
+        distros = Distro.query()
+        if joins:
+            distros = distros.filter(and_(*joins))
+        if queries:
+            distros = distros.filter(and_(*queries))
+        return distros.first().install_name
+
+    default = index

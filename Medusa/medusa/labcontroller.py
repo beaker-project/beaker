@@ -84,34 +84,43 @@ class LabControllers(RPCRoot):
             lc_xmlrpc = xmlrpclib.ServerProxy(url, BasicAuthTransport(labcontroller.username,labcontroller.password))
             lc_distros_md5 = lc_xmlrpc.distros_md5()
             if lc_distros_md5 != labcontroller.distros_md5:
-                labcontroller.distros = []
+                distros = []
                 lc_distros = lc_xmlrpc.distros_list()
                 for lc_distroname in lc_distros:
                     for lc_distro in lc_distros[lc_distroname]:
                         try:
                             distro = Distro.by_install_name(lc_distro['install_name'])
-                        except:
+                        except: #FIXME
                             distro = Distro(lc_distro['install_name'])
                             distro.name = lc_distroname
-                            session.save(distro)
-                            session.flush([distro])
                             try:
                                 breed = Breed.by_name(lc_distro['breed'])
-                            except:
+                            except: #FIXME
                                 breed = Breed(lc_distro['breed'])
                                 session.save(breed)
                                 session.flush([breed])
                             distro.breed = breed
+                            lc_osmajor = lc_distro['os_version'].split('.')[0]
                             try:
-                                osversion = OSVersion.by_name(lc_distro['os_version'].split('.'))
+                                lc_osminor = lc_distro['os_version'].split('.')[1]
                             except:
-                                osversion = OSVersion(lc_distro['os_version'])
+                                lc_osminor = 0
+                            try:
+                                osmajor = OSMajor.by_name(lc_osmajor)
+                            except: #FIXME
+                                osmajor = OSMajor(lc_osmajor)
+                                session.save(osmajor)
+                                session.flush([osmajor])
+                            try:
+                                osversion = OSVersion.by_name(osmajor,lc_osminor)
+                            except: #FIXME
+                                osversion = OSVersion(osmajor,lc_osminor)
                                 session.save(osversion)
                                 session.flush([osversion])
                             distro.osversion = osversion
                             try:
                                 arch = Arch.by_name(lc_distro['arch'])
-                            except:
+                            except: #FIXME
                                 arch = Arch(lc_distro['arch'])
                                 session.save(arch)
                                 session.flush([arch])
@@ -120,6 +129,15 @@ class LabControllers(RPCRoot):
                             distro.method = lc_distro['method']
                             distro.virt = lc_distro['virt']
                             distro.date_created = datetime.fromtimestamp(float(lc_distro['date_created']))
+                            activity = Activity(None,'XMLRPC','Added','Distro',None, distro.install_name)
+                        distros.append(distro)
+                for i in xrange(len(labcontroller.distros)-1,-1,-1):
+                    if distro not in distros:
+                        #FIXME Distro Activity Remove
+                        del labcontroller.distros[i]
+                for distro in distros:
+                    if distro not in labcontroller.distros:
+                        #FIXME Distro Activity Add
                         labcontroller.distros.append(distro)
                 labcontroller.distros_md5 = lc_distros_md5
                 flash( _(u"%s md5 updated" % labcontroller.fqdn) )
@@ -129,7 +147,7 @@ class LabControllers(RPCRoot):
             flash( _(u"No Lab Controller id passed!"))
         redirect(".")
 
-    @expose(template="medusa.templates.grid")
+    @expose(template="medusa.templates.grid_add")
     @paginate('list')
     def index(self):
         labcontrollers = session.query(LabController)

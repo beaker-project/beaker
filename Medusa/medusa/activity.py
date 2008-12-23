@@ -32,11 +32,12 @@ class Activities(RPCRoot):
                                   widgets.PaginateDataGrid.Column(name='service', getter=lambda x: x.service, title='Via', options=dict(sortable=True)),
                                   widgets.PaginateDataGrid.Column(name='created', getter=lambda x: x.created, title='Date', options=dict(sortable=True)),
                                   widgets.PaginateDataGrid.Column(name='object_name', getter=lambda x: x.object_name(), title='Object', options=dict(sortable=True)),
-                                  widgets.PaginateDataGrid.Column(name='action', getter=lambda x: x.action, title='Action', options=dict(sortable=True)),
                                   widgets.PaginateDataGrid.Column(name='field_name', getter=lambda x: x.field_name, title='Property', options=dict(sortable=True)),
+                                  widgets.PaginateDataGrid.Column(name='action', getter=lambda x: x.action, title='Action', options=dict(sortable=True)),
                                   widgets.PaginateDataGrid.Column(name='old_value', getter=lambda x: x.old_value, title='Old Value', options=dict(sortable=True)),
                                   widgets.PaginateDataGrid.Column(name='new_value', getter=lambda x: x.new_value, title='New Value', options=dict(sortable=True)),
                               ])
         return dict(title="Activity", grid = activity_grid,
                                          search_bar = None,
                                          list = activity)
+    default = index

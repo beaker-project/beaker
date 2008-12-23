@@ -1,0 +1,20 @@
+<recipe>
+ <distro>
+  <and>
+   <distro_arch op='=' value='i386'/>
+   <distro_family op='=' value='rhel5'/>
+<!--   <distro_tag op='=' value='released'/> -->
+  </and>
+ </distro>
+ <host>
+  <or>
+   <and>
+    <key_value key='MACHINE' op='!=' value='dell-pe700-01.rhts.bos.redhat.com'/>
+    <key_value key='MACHINE' op='!=' value='hp-xw4550-02.lab.bos.redhat.com'/>
+   </and>
+   <key_value key='ARCH' op='=' value='i386'/>
+  </or>
+  <key_value key='MEMORY' op='>=' value='2048'/>
+  <power value='True'/>
+ </host>
+</recipe>

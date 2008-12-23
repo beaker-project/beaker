@@ -2,17 +2,29 @@ from turbogears.database import session
 from turbogears import controllers, expose, flash, widgets, validate, error_handler, validators, redirect, paginate
 from model import *
 from turbogears import identity, redirect
-from medusa.power import PowerTypes, PowerControllers
+from medusa.power import PowerTypes
 from medusa.group import Groups
 from medusa.labcontroller import LabControllers
 from medusa.distro import Distros
 from medusa.activity import Activities
 from medusa.widgets import myPaginateDataGrid
-from medusa.widgets import Power
+from medusa.widgets import PowerTypeForm
+from medusa.widgets import PowerForm
+from medusa.widgets import RebootForm
+from medusa.widgets import SystemDetails
+from medusa.widgets import SystemHistory
+from medusa.widgets import SystemExclude
+from medusa.widgets import SystemKeys
+from medusa.widgets import SystemNotes
+from medusa.widgets import SystemGroups
+from medusa.widgets import SystemInstallOptions
+from medusa.widgets import SystemProvision
 from medusa.widgets import SearchBar, SystemForm
 from medusa.xmlrpccontroller import RPCRoot
+from medusa.cobbler_utils import hash_to_string
 from cherrypy import request, response
 from tg_expanding_form_widget.tg_expanding_form_widget import ExpandingForm
+from medusa.needpropertyxml import *
 
 from kid import Element
 import cherrypy
@@ -85,7 +97,6 @@ class Devices:
 
 class Root(RPCRoot):
     powertypes = PowerTypes()
-    powercontrollers = PowerControllers()
     devices = Devices()
     groups = Groups()
     labcontrollers = LabControllers()
@@ -114,19 +125,39 @@ class Root(RPCRoot):
                            table_callback=System.get_tables,
                            search_controller='/get_fields'
                  )
-    power = Power(name='powercontrol',
-                 label=_(u'Power Control'),
-                 callback=powercontrollers.get_powercontrollers,
-                 search_controller='/powercontrollers/get_power_args',
-                 system_id='system_id' # This is Ugly. :(
-                 # Should be able to get rid of this 
-            )
-
     system_form = SystemForm()
+    power_form = PowerForm(name='power')
+    reboot_form = RebootForm(name='reboot')
+    system_details = SystemDetails()
+    system_activity = SystemHistory()
+    system_exclude = SystemExclude(name='excluded_families')
+    system_keys = SystemKeys(name='keys')
+    system_notes = SystemNotes(name='notes')
+    system_groups = SystemGroups(name='groups')
+    system_installoptions = SystemInstallOptions(name='installoptions')
+    system_provision = SystemProvision(name='provision')
 
     @expose(format='json')
     def get_fields(self, table_name):
         return dict( fields = System.get_fields(table_name))
+
+    @expose(format='json')
+    def get_installoptions(self, system_id=None, distro_id=None):
+        try:
+            system = System.by_id(system_id,identity.current.user)
+        except InvalidRequestError:
+            return dict(ks_meta=None)
+        try:
+            distro = Distro.by_id(distro_id)
+        except InvalidRequestError:
+            return dict(ks_meta=None)
+        install_options = system.install_options(distro)
+        ks_meta = hash_to_string(install_options['ks_meta'])
+        kernel_options = hash_to_string(install_options['kernel_options'])
+        kernel_options_post = hash_to_string(install_options['kernel_options_post'])
+        print kernel_options
+        return dict(ks_meta = ks_meta, kernel_options = kernel_options,
+                    kernel_options_post = kernel_options_post)
 
     @expose(template='medusa.templates.grid_add')
     @paginate('list',default_order='fqdn')
@@ -245,6 +276,36 @@ class Root(RPCRoot):
         redirect("./view/%s" % system.fqdn)
 
     @expose(template="medusa.templates.system")
+    def new(self):
+        options = {}
+        options['readonly'] = False
+        return dict(
+            title    = 'New System',
+            form     = self.system_form,
+            widgets  = {},
+            action   = '/save',
+            value    = None,
+            options  = options)
+
+    @expose(template="medusa.templates.form")
+    def test(self, fqdn=None, **kw):
+        try:
+            system = System.by_fqdn(fqdn,identity.current.user)
+        except InvalidRequestError:
+            flash( _(u"Unable to find %s" % fqdn) )
+            redirect("/")
+
+        return dict(
+            title   = "test",
+            system  = system,
+            form    = self.system_provision,
+            action  = '/save',
+            value   = system,
+            options = dict(readonly = False,
+                     lab_controller = system.lab_controller,
+                     prov_install = [(distro.id, distro.install_name) for distro in system.distros()]))
+
+    @expose(template="medusa.templates.system")
     def view(self, fqdn=None, **kw):
         if fqdn:
             try:
@@ -262,6 +323,7 @@ class Root(RPCRoot):
             system = None
         options = {}
         readonly = False
+        is_user = False
         if system:
             title = system.fqdn
             if system.can_admin(identity.current.user):
@@ -272,21 +334,64 @@ class Root(RPCRoot):
                 options['user_change_text'] = ' (Take)'
             if system.current_user(identity.current.user):
                 options['user_change_text'] = ' (Return)'
+                is_user = True
         else:
             title = 'New'
 
+        if readonly:
+            attrs = dict(readonly = 'True')
+        else:
+            attrs = dict()
         options['readonly'] = readonly
+
+        #Excluded Family options
+        options['excluded_families'] = []
+        for arch in system.arch:
+            options['excluded_families'].append((arch.arch, [(osmajor.id, osmajor.osmajor, [(osversion.id, '%s' % osversion, attrs) for osversion in osmajor.osversion],attrs) for osmajor in OSMajor.query()]))
+
         return dict(
-            title   = title,
-            system  = system,
-            form = self.system_form,
-            action = '/save',
-            value = system,
-            options = options,
+            title    = title,
+            readonly = readonly,
+            is_user  = is_user,
+            form     = self.system_form,
+            action   = '/save',
+            value    = system,
+            options  = options,
+            widgets         = dict( power     = self.power_form,
+                                    details   = self.system_details,
+                                    history   = self.system_activity,
+                                    exclude   = self.system_exclude,
+                                    keys      = self.system_keys,
+                                    notes     = self.system_notes,
+                                    groups    = self.system_groups,
+                                    install   = self.system_installoptions,
+                                    provision = self.system_provision,
+                                    reboot    = self.reboot_form),
+            widgets_action  = dict( power     = '/save_power',
+                                    exclude   = '/save_exclude',
+                                    keys      = '/save_keys',
+                                    notes     = '/save_note',
+                                    groups    = '/save_group',
+                                    install   = '/save_install',
+                                    provision = '/action_provision',
+                                    reboot    = '/action_reboot'),
+            widgets_options = dict(power     = options,
+                                   exclude   = options,
+                                   keys      = dict(readonly = readonly,
+                                                key_values = system.key_values),
+                                   notes     = dict(readonly = readonly,
+                                                notes = system.notes),
+                                   groups    = dict(readonly = readonly,
+                                                groups = system.groups),
+                                   install   = dict(readonly = readonly,
+                                                provisions = system.provisions,
+                                                prov_arch = [(arch.id, arch.arch) for arch in system.arch]),
+                                   provision = dict(is_user = is_user,
+                                                    lab_controller = system.lab_controller,
+                                                    prov_install = [(distro.id, distro.install_name) for distro in system.distros().order_by(distro_table.c.install_name)]),
+                                   reboot    = options)
         )
          
-    new = view    
-
     @expose(template='medusa.templates.form')
     @identity.require(identity.not_anonymous())
     def owner_change(self, id):
@@ -347,7 +452,83 @@ class Root(RPCRoot):
         system.activity.append(activity)
         session.save_or_update(system)
         flash( _(u"%s %s" % (status,system.fqdn)) )
-        redirect(".")
+        redirect("/view/%s" % system.fqdn)
+
+    @error_handler(view)
+    @expose()
+    def save_power(self, id, power_address, power_type_id, **kw):
+        try:
+            system = System.by_id(id,identity.current.user)
+        except InvalidRequestError:
+            flash( _(u"Unable to save Power for %s" % id) )
+            redirect("/")
+
+        if system.power:
+            if power_address != system.power.power_address:
+                #Power Address Changed
+                activity = SystemActivity(identity.current.user, 'WEBUI', 'Changed', 'power_address', system.power.power_address, power_address )
+                system.power.power_address = power_address
+                system.activity.append(activity)
+            if kw.get('power_user'):
+                if kw['power_user'] != system.power.power_user:
+                    #Power User Changed
+                    activity = SystemActivity(identity.current.user, 'WEBUI', 'Changed', 'power_user', '********', '********' )
+                    system.power.power_user = kw['power_user']
+                    system.activity.append(activity)
+            else:
+                activity = SystemActivity(identity.current.user, 'WEBUI', 'Removed', 'power_user', '********', '********' )
+                system.activity.append(activity)
+                system.power.power_user = None
+            if kw.get('power_passwd'):
+                if kw['power_passwd'] != system.power.power_passwd:
+                    #Power Passwd Changed
+                    activity = SystemActivity(identity.current.user, 'WEBUI', 'Changed', 'power_passwd', '********', '********' )
+                    system.power.power_passwd = kw['power_passwd']
+                    system.activity.append(activity)
+            else:
+                activity = SystemActivity(identity.current.user, 'WEBUI', 'Removed', 'power_passwd', '********', '********' )
+                system.activity.append(activity)
+                system.power.power_passwd = None
+            if kw.get('power_id'):
+                if kw['power_id'] != system.power.power_id:
+                    #Power ID Changed
+                    activity = SystemActivity(identity.current.user, 'WEBUI', 'Changed', 'power_id', system.power.power_id, kw['power_id'] )
+                    system.power.power_id = kw['power_id']
+                    system.activity.append(activity)
+            else:
+                activity = SystemActivity(identity.current.user, 'WEBUI', 'Removed', 'power_id', system.power.power_id, '' )
+                system.activity.append(activity)
+                system.power.power_id = None
+            if power_type_id != system.power.power_type_id:
+                #Power Type Changed
+                if int(power_type_id) == 0:
+                    system.power = None
+                else:
+                    try:
+                        power_type = PowerType.by_id(power_type_id)
+                    except InvalidRequestError:
+                        flash( _(u"Invalid power type %s" % power_type_id) )
+                        redirect("/view/%s" % system.fqdn)
+                    activity = SystemActivity(identity.current.user, 'WEBUI', 'Changed', 'power_type', system.power.power_type.name, power_type.name )
+                    system.power.power_type = power_type
+                    system.activity.append(activity)
+            flash( _(u"Updated Power") )
+        else:
+            try:
+                power_type = PowerType.by_id(power_type_id)
+            except InvalidRequestError:
+                flash( _(u"Invalid power type %s" % power_type_id) )
+                redirect("/view/%s" % system.fqdn)
+            power = Power(power_type=power_type, power_address=power_address)
+            if kw.get('power_user'):
+                power.power_user = kw['power_user']
+            if kw.get('power_passwd'):
+                power.power_passwd = kw['power_passwd']
+            if kw.get('power_id'):
+                power.power_id = kw['power_id']
+            system.power = power
+            flash( _(u"Saved Power") )
+        redirect("/view/%s" % system.fqdn)
 
 #    @error_handler(view)
     @expose()
@@ -416,14 +597,30 @@ class Root(RPCRoot):
             system.lab_controller_id = None
         else:
             system.lab_controller_id = kw['lab_controller_id']
+        redirect("/view/%s" % system.fqdn)
 
+    @expose()
+    def save_keys(self, id, **kw):
+        try:
+            system = System.by_id(id,identity.current.user)
+        except InvalidRequestError:
+            flash( _(u"Unable to Add Key for %s" % id) )
+            redirect("/")
         # Add a Key/Value Pair
         if kw.get('key_name') and kw.get('key_value'):
             key_value = Key_Value(kw['key_name'],kw['key_value'])
             system.key_values.append(key_value)
             activity = SystemActivity(identity.current.user, 'WEBUI', 'Added', 'Key/Value', "", "%s/%s" % (kw['key_name'],kw['key_value']) )
             system.activity.append(activity)
+        redirect("/view/%s" % system.fqdn)
 
+    @expose()
+    def save_group(self, id, **kw):
+        try:
+            system = System.by_id(id,identity.current.user)
+        except InvalidRequestError:
+            flash( _(u"Unable to Add Group for %s" % id) )
+            redirect("/")
         # Add a Group
         if kw.get('group').get('text'):
             group = Group.by_name(kw['group']['text'])
@@ -432,30 +629,280 @@ class Root(RPCRoot):
             gactivity = GroupActivity(identity.current.user, 'WEBUI', 'Added', 'System', "", system.fqdn)
             group.activity.append(gactivity)
             system.activity.append(activity)
+        redirect("/view/%s" % system.fqdn)
 
+    @expose()
+    def action_reboot(self, id):
+        try:
+            system = System.by_id(id,identity.current.user)
+        except InvalidRequestError:
+            flash( _(u"Unable to look up system id:%s via your login" % id) )
+            redirect("/")
+        if system.user != identity.current.user:
+            flash( _(u"You are not the current User for %s" % system) )
+            redirect("/")
+        (rc, result) =  system.action_power(action="reboot")
+        activity = SystemActivity(identity.current.user, 'WEBUI', 'Reboot', 'Power', "", result)
+        system.activity.append(activity)
+        if rc == 0:
+            flash(_(u"Successfully rebooted %s" % system.fqdn))
+        else:
+            flash(_(u"Failed to reboot %s, error: %s:%s" % (system.fqdn, rc, result)))
+        redirect("/view/%s" % system.fqdn)
+
+    @expose()
+    def action_provision(self, id, prov_install=None, ks_meta=None, 
+                             koptions=None, koptions_post=None, reboot=None):
+        try:
+            system = System.by_id(id,identity.current.user)
+        except InvalidRequestError:
+            flash( _(u"Unable to save Provision for %s" % id) )
+            redirect("/")
+        try:
+            distro = Distro.by_id(prov_install)
+        except InvalidRequestError:
+            flash( _(u"Unable to lookup distro for %s" % id) )
+            redirect("/")
+        (rc, result) = system.action_provision(distro = distro,
+                                               ksmeta = ks_meta,
+                                       kernel_options = koptions,
+                                  kernel_options_post = koptions_post)
+        activity = SystemActivity(identity.current.user, 'WEBUI', 'Provision', 'Distro', "", "%s: %s" % (result, distro.install_name))
+        system.activity.append(activity)
+        result = "Provision: %s" % result
+        if rc == 0:
+            if reboot:
+                (rc, result2) =  system.action_power(action="reboot")
+                result = "%s Reboot: %s" % (result, result2)
+                activity = SystemActivity(identity.current.user, 'WEBUI', 'Reboot', 'Power', "", result2)
+                system.activity.append(activity)
+        flash(_(u"%s" % result))
+        redirect("/view/%s" % system.fqdn)
+
+    @expose()
+    def save_note(self, id, **kw):
+        try:
+            system = System.by_id(id,identity.current.user)
+        except InvalidRequestError:
+            flash( _(u"Unable to save Note for %s" % id) )
+            redirect("/")
         # Add a Note
         if kw.get('note'):
             note = Note(user=identity.current.user,text=kw['note'])
             system.notes.append(note)
             activity = SystemActivity(identity.current.user, 'WEBUI', 'Added', 'Note', "", kw['note'])
             system.activity.append(activity)
-
-        session.save_or_update(system)
-        flash( _(u"Updated") )
         redirect("/view/%s" % system.fqdn)
+
+    @expose()
+    def save_exclude(self, id, **kw):
+        try:
+            system = System.by_id(id,identity.current.user)
+        except InvalidRequestError:
+            flash( _(u"Unable to save Exclude flags for %s" % id) )
+            redirect("/")
+        for arch in system.arch:
+        # Update Excluded Families
+            if kw.get('excluded_families') and \
+             kw['excluded_families'].has_key(arch.arch):
+                if isinstance(kw['excluded_families'][arch.arch], list):
+                    excluded_osmajor = [int(i) for i in kw['excluded_families'][arch.arch]]
+                else:
+                    excluded_osmajor = [int(kw['excluded_families'][arch.arch])]
+                for new_families in excluded_osmajor:
+                    if new_families not in [osmajor.osmajor.id for osmajor in system.excluded_osmajor_byarch(arch)]:
+                        new_excluded_osmajor = ExcludeOSMajor(osmajor=OSMajor.by_id(new_families),arch=arch)
+                        activity = SystemActivity(identity.current.user, 'WEBUI', 'Added', 'Excluded_families', "", "%s/%s" % (new_excluded_osmajor.osmajor, arch))
+                        system.excluded_osmajor.append(new_excluded_osmajor)
+                        system.activity.append(activity)
+            else:
+                excluded_osmajor = []
+            for old_families in system.excluded_osmajor_byarch(arch):
+                if old_families.osmajor.id not in excluded_osmajor:
+                    activity = SystemActivity(identity.current.user, 'WEBUI', 'Removed', 'Excluded_families', "%s/%s" % (old_families.osmajor, arch), "")
+                    session.delete(old_families)
+                    system.activity.append(activity)
+                    
+            if kw.get('excluded_families_subsection') and \
+             kw['excluded_families_subsection'].has_key(arch.arch):
+                if isinstance(kw['excluded_families_subsection'][arch.arch], list):
+                    excluded_osversion = [int(i) for i in kw['excluded_families_subsection'][arch.arch]]
+                else:
+                    excluded_osversion = [int(kw['excluded_families_subsection'][arch.arch])]
+                for new_osversion in excluded_osversion:
+                    if new_osversion not in [osversion.osversion.id for osversion in system.excluded_osversion_byarch(arch)]:
+                        new_excluded_osversion = ExcludeOSVersion(osversion=OSVersion.by_id(new_osversion),arch=arch)
+                        activity = SystemActivity(identity.current.user, 'WEBUI', 'Added', 'Excluded_families', "", "%s/%s" % (new_excluded_osversion.osversion, arch))
+                        system.excluded_osversion.append(new_excluded_osversion)
+                        system.activity.append(activity)
+            else:
+                excluded_osversion = []
+            for old_osversion in system.excluded_osversion_byarch(arch):
+                if old_osversion.osversion.id not in excluded_osversion:
+                    activity = SystemActivity(identity.current.user, 'WEBUI', 'Removed', 'Excluded_families', "%s/%s" % (old_osversion.osversion, arch), "")
+                    session.delete(old_osversion)
+                    system.activity.append(activity)
+        redirect("/view/%s" % system.fqdn)
+
+    @expose()
+    def remove_install(self, system_id, arch_id, **kw):
+        try:
+            system = System.by_id(system_id, identity.current.user)
+        except InvalidRequestError:
+            flash( _(u"Unable to remove Install Option for %s" % system_id) )
+            redirect("/")
+        try:
+            arch = Arch.by_id(arch_id)
+        except InvalidRequestError:
+            flash( _(u"Unable to lookup arch for %s" % arch_id) )
+            redirect("/")
+        
+        if kw.get('osversion_id'):
+            # remove osversion option
+            osversion = OSVersion.by_id(int(kw['osversion_id']))
+            system.provisions[arch].provision_families[osversion.osmajor].provision_family_updates[osversion] = None
+        elif kw.get('osmajor_id'):
+            # remove osmajor option
+            osmajor = OSMajor.by_id(int(kw['osmajor_id']))
+            system.provisions[arch].provision_families[osmajor] = None
+        else:
+            # remove arch option
+            system.provisions[arch] = None
+        redirect("/view/%s" % system.fqdn)
+
+    @expose()
+    def save_install(self, id, **kw):
+        try:
+            system = System.by_id(id,identity.current.user)
+        except InvalidRequestError:
+            flash( _(u"Unable to save Install Options for %s" % id) )
+            redirect("/")
+        # Add an install option
+        if kw.get('prov_ksmeta') or kw.get('prov_koptions') or \
+           kw.get('prov_koptionspost'):
+            arch = Arch.by_id(int(kw['prov_arch']))
+            if int(kw['prov_osversion']) != 0:
+                osversion = OSVersion.by_id(int(kw['prov_osversion']))
+                if system.provisions.has_key(arch):
+                    if system.provisions[arch].provision_families.has_key(osversion.osmajor):
+                        if system.provisions[arch].provision_families[osversion.osmajor].provision_family_updates.has_key(osversion):
+                            provision = system.provisions[arch].provision_families[osmajor].provision_family_updates[osversion]
+                            action = "Changed"
+                        else:
+                            provision = ProvisionFamilyUpdate()
+                            action = "Added"
+                        system.activity.append(SystemActivity(identity.current.user, 'WEBUI', action, 'InstallOption:ks_meta:%s/%s' % (arch, osversion), provisions.ks_meta, kw['prov_ksmeta']))
+                        system.activity.append(SystemActivity(identity.current.user, 'WEBUI', action, 'InstallOption:kernel_options:%s/%s' % (arch, osversion), provision.kernel_options, kw['prov_koptions']))
+                        system.activity.append(SystemActivity(identity.current.user, 'WEBUI', action, 'InstallOption:kernel_options_post:%s/%s' % (arch, osversion), provision.kernel_options_post, kw['prov_koptionspost']))
+                        provision.ks_meta=kw['prov_ksmeta']
+                        provision.kernel_options=kw['prov_koptions']
+                        provision.kernel_options_post=kw['prov_koptionspost']
+                        provision.osversion = osversion
+                        system.provisions[arch].provision_families[osversion.osmajor].provision_family_updates[osversion] = provision
+                
+            elif int(kw['prov_osmajor']) != 0:
+                osmajor = OSMajor.by_id(int(kw['prov_osmajor']))
+                if system.provisions.has_key(arch):
+                    if system.provisions[arch].provision_families.has_key(osmajor):
+                        provision = system.provisions[arch].provision_families[osmajor]
+                        action = "Changed"
+                    else:
+                        provision = ProvisionFamily()
+                        action = "Added"
+                    system.activity.append(SystemActivity(identity.current.user, 'WEBUI', action, 'InstallOption:ks_meta:%s/%s' % (arch, osmajor), provision.ks_meta, kw['prov_ksmeta']))
+                    system.activity.append(SystemActivity(identity.current.user, 'WEBUI', action, 'InstallOption:kernel_options:%s/%s' % (arch, osmajor), provision.kernel_options, kw['prov_koptions']))
+                    system.activity.append(SystemActivity(identity.current.user, 'WEBUI', action, 'InstallOption:kernel_options_post:%s/%s' % (arch, osmajor), provision.kernel_options_post, kw['prov_koptionspost']))
+                    provision.ks_meta=kw['prov_ksmeta']
+                    provision.kernel_options=kw['prov_koptions']
+                    provision.kernel_options_post=kw['prov_koptionspost']
+                    provision.osmajor=osmajor
+                    system.provisions[arch].provision_families[osmajor] = provision
+            else:
+                if system.provisions.has_key(arch):
+                    provision = system.provisions[arch]
+                    action = "Changed"
+                else:
+                    provision = Provision()
+                    action = "Added"
+                system.activity.append(SystemActivity(identity.current.user, 'WEBUI', action, 'InstallOption:ks_meta:%s' % arch, provision.ks_meta, kw['prov_ksmeta']))
+                system.activity.append(SystemActivity(identity.current.user, 'WEBUI', action, 'InstallOption:kernel_options:%s' % arch, provision.kernel_options, kw['prov_koptions']))
+                system.activity.append(SystemActivity(identity.current.user, 'WEBUI', action, 'InstallOption:kernel_options_post:%s' % arch, provision.kernel_options_post, kw['prov_koptionspost']))
+                provision.ks_meta=kw['prov_ksmeta']
+                provision.kernel_options=kw['prov_koptions']
+                provision.kernel_options_post=kw['prov_koptionspost']
+                provision.arch=arch
+                system.provisions[arch] = provision
+        redirect("/view/%s" % system.fqdn)
+
+    @cherrypy.expose
+    def pick(self, distro=None, user=None, xml=None):
+        if not distro:
+            return (0,"You must supply a distro")
+        if not user:
+            return (0,"You must supply a user name")
+        if not xml:
+            return (0,"No xml query provided")
+        user = User.by_user_name(user)
+        distro = Distro.by_install_name(distro)
+        systems = distro.systems(user)
+        #FIXME Should validate XML before processing.
+        queries = []
+        joins = []
+        for child in ElementWrapper(xmltramp.parse(xml)):
+            if callable(getattr(child, 'filter')):
+                (join, query) = child.filter()
+                queries.append(query)
+                joins.extend(join)
+        if joins:
+            systems = systems.filter(and_(*joins))
+        if queries:
+            systems = systems.filter(and_(*queries))
+        
+
+        hit = False
+        for system in systems:
+            if session.connection(System).execute(system_table.update(
+                     and_(system_table.c.id==system.id,
+                          system_table.c.user_id==None), 
+                           user_id=user.id)).rowcount == 1:
+                hit = True
+                break
+
+        if hit:
+            return (system, 1)
+        elif systems:
+            return (None, -1)
+        else:
+            return (None, 0)
+            
+    @cherrypy.expose
+    def legacypush(self, fqdn=None, inventory=None):
+        if not fqdn:
+            return (0,"You must supply a FQDN")
+        if not inventory:
+            return (0,"No inventory data provided")
+
+        md5sum = md5.new("%s" % inventory).hexdigest()
+        try:
+            system = System.query.filter(System.fqdn == fqdn).one()
+        except InvalidRequestError:
+            print fqdn
+            system = System(fqdn=fqdn)
+        system.update_legacy(inventory)
+        return 0
 
     @cherrypy.expose
     def push(self, fqdn=None, inventory=None):
         if not fqdn:
-            return (0,"You must supply a FQDN");
+            return (0,"You must supply a FQDN")
         if not inventory:
-            return (0,"No inventory data provided");
+            return (0,"No inventory data provided")
 
         md5sum = md5.new("%s" % inventory).hexdigest()
 
         try:
             system = System.query.filter(System.fqdn == fqdn).one()
-        except:
+        except InvalidRequestError:
             # New system, add it.
             print fqdn
             system = System(fqdn=fqdn)

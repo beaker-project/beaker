@@ -57,7 +57,6 @@ $(document).ready(function() {
                             <li><a href="${tg.url('/labcontrollers')}">Lab Controllers</a></li>
                             <li><a href="${tg.url('/groups')}">Groups</a></li>
                             <li><a href="${tg.url('/powertypes')}">Power Types</a></li>
-                            <li><a href="${tg.url('/powercontrollers')}">Power Controllers</a></li>
                         </ul>
                     </div>
                 </ul>

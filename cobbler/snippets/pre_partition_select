@@ -1,15 +1,39 @@
+# partition details calculation
+
+# Determine how many drives we have
+set \$(list-harddrives)
+let numd=\$#/2
+d1=\$1
+d2=\$3
+
+# Determine architecture-specific partitioning needs
+EFI_PART=""
+PPC_PREP_PART=""
+BOOT_PART=""
+
+case $(uname -m) in
+    ia64)
+        EFI_PART="part /boot/efi --fstype vfat --size 200 --recommended"
+        ;;
+    ppc*)
+        PPC_PREP_PART="part None --fstype 'PPC PReP Boot' --size 8"
+        BOOT_PART="part /boot --fstype ext3 --size 200 --recommended"
+        ;;
+    *)
+        BOOT_PART="part /boot --fstype ext3 --size 200 --recommended"
+        ;;
+esac
+
+
 cat << EOF > /tmp/partinfo
 zerombr
 clearpart --all --initlabel
-part / --fstype ext3 --size=1024 --grow --asprimary
-part swap --size=1024 --asprimary
+\$EFI_PART
+\$PPC_PREP_PART
+\$BOOT_PART
+part / --fstype ext3 --size=1024 --grow --ondisk=\$d1 --asprimary
+part swap --recommended --ondisk=\$d1 --asprimary
 EOF
-
-if [ "$arch" = "ia64" ]; then
-echo "part /boot/efi --fstype vfat --size=100" >> /tmp/partinfo
-else
-echo "part /boot --fstype ext3 --size=100" >> /tmp/partinfo
-fi
 
 #if $getVar('partitions','') != ''
 PIFS=$IFS

@@ -1,0 +1,4 @@
+<host>
+ <key_value key='ARCH' op='=' value='i386'/>
+ <power value='True'/>
+</host>

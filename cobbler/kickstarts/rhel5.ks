@@ -12,7 +12,7 @@ firstboot --disable
 # System keyboard
 keyboard $getVar('keyboard', 'us')
 # System language
-lang $getVar('lang','en_us')
+lang $getVar('lang','en_us.UTF-8')
 $yum_repo_stanza
 reboot
 #Root password

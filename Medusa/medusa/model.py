@@ -5,10 +5,14 @@ import ldap
 from sqlalchemy import Table, Column, ForeignKey
 from sqlalchemy.orm import relation, backref, synonym
 from sqlalchemy import String, Unicode, Integer, DateTime, UnicodeText, Boolean, Float, VARCHAR, TEXT
-from sqlalchemy import or_, and_
+from sqlalchemy import or_, and_, not_, select
 from sqlalchemy.exceptions import InvalidRequestError
 from identity import LdapSqlAlchemyIdentityProvider
 from cobbler_utils import consolidate, string_to_hash
+from sqlalchemy.orm.collections import attribute_mapped_collection
+
+from BasicAuthTransport import BasicAuthTransport
+import xmlrpclib
 
 from turbogears import identity
 
@@ -111,6 +115,22 @@ provision_family_update_table = Table('provision_update_family', metadata,
     Column('kernel_options_post', String(1024)),
 )
 
+exclude_osmajor_table = Table('exclude_osmajor', metadata,
+    Column('id', Integer, autoincrement=True,
+           nullable=False, primary_key=True),
+    Column('system_id', Integer, ForeignKey('system.id')),
+    Column('arch_id', Integer, ForeignKey('arch.id')),
+    Column('osmajor_id', Integer, ForeignKey('osmajor.id')),
+)
+
+exclude_osversion_table = Table('exclude_osversion', metadata,
+    Column('id', Integer, autoincrement=True,
+           nullable=False, primary_key=True),
+    Column('system_id', Integer, ForeignKey('system.id')),
+    Column('arch_id', Integer, ForeignKey('arch.id')),
+    Column('osversion_id', Integer, ForeignKey('osversion.id')),
+)
+
 cpu_table = Table('cpu', metadata,
     Column('id', Integer, autoincrement=True,
            nullable=False, primary_key=True),
@@ -172,63 +192,19 @@ locked_table = Table('locked', metadata,
 power_type_table = Table('power_type', metadata,
     Column('id', Integer, autoincrement=True,
            nullable=False, primary_key=True),
-    Column('name', Unicode(255), nullable=False),
-    Column('command', String(255)),
-    Column('p_reset',String(255)),
-    Column('p_off',String(255)),
-    Column('p_on',String(255)),
-    Column('p_status',String(255)),
+    Column('name', String(255), nullable=False),
 )
 
-power_type_key_table = Table('power_type_key', metadata,
-    Column('id', Integer, autoincrement=True,
-           nullable=False, primary_key=True),
-    Column('powertype_id', Integer, ForeignKey('power_type.id'),
-           nullable=False),
-    Column('key', Unicode(50), nullable=False),
-    Column('description', Unicode(1024), nullable=False),
-    Column('type', Unicode(25), nullable=False)
-)
-
-power_control_table = Table('power_control', metadata,
+power_table = Table('power', metadata,
     Column('id', Integer, autoincrement=True,
            nullable=False, primary_key=True),
     Column('power_type_id', Integer, ForeignKey('power_type.id'),
            nullable=False),
-    Column('name', Unicode(255), nullable=False)
-)
-
-controller_value_table = Table('controller_value', metadata,
-    Column('id', Integer, autoincrement=True,
-           nullable=False, primary_key=True),
-    Column('power_control_id', Integer, 
-           ForeignKey('power_control.id'),
-           nullable=False),
-    Column('key_id', Integer,
-           ForeignKey('power_type_key.id'),
-           nullable=False),
-    Column('value', Unicode(255), nullable=False)
-)
-
-power_host_table = Table('power_host', metadata,
-    Column('id', Integer, autoincrement=True,
-           nullable=False, primary_key=True),
     Column('system_id', Integer, ForeignKey('system.id')),
-    Column('power_control_id', Integer, 
-           ForeignKey('power_control.id'),
-           nullable=False),
-)
-
-host_value_table = Table('host_value', metadata,
-    Column('id', Integer, autoincrement=True,
-           nullable=False, primary_key=True),
-    Column('power_host_id', Integer, 
-           ForeignKey('power_host.id'),
-           nullable=False),
-    Column('key_id', Integer,
-           ForeignKey('power_type_key.id'),
-           nullable=False),
-    Column('value', Unicode(255), nullable=False)
+    Column('power_address', String(255), nullable=False),
+    Column('power_user', String(255)),
+    Column('power_passwd', String(255)),
+    Column('power_id', String(255)),
 )
 
 serial_table = Table('serial', metadata,
@@ -395,6 +371,11 @@ system_activity_table = Table('system_activity', metadata,
 group_activity_table = Table('group_activity', metadata,
     Column('id', Integer, ForeignKey('activity.id'), primary_key=True),
     Column('group_id', Integer, ForeignKey('tg_group.group_id'))
+)
+
+distro_activity_table = Table('distro_activity', metadata,
+    Column('id', Integer, ForeignKey('activity.id'), primary_key=True),
+    Column('distro_id', Integer, ForeignKey('distro.id'))
 )
 
 # note schema
@@ -680,23 +661,38 @@ class System(SystemObject):
     def by_id(cls, id, user):
         return System.all(user).filter(System.id == id).one()
 
+    def excluded_families(self):
+        """
+        massage excluded_osmajor for Checkbox values
+        """
+        major = {}
+        version = {}
+        for arch in self.arch:
+            major[arch.arch] = [osmajor.osmajor.id for osmajor in self.excluded_osmajor_byarch(arch)]
+            version[arch.arch] = [osversion.osversion.id for osversion in self.excluded_osversion_byarch(arch)]
+
+        return (major,version)
+    excluded_families=property(excluded_families)
+
     def install_options(self, distro):
         """
         Return install options based on distro selected.
+        Inherit options from Arch -> Family -> Update
         """
-        results = {}
-        for provision in self.provisions:
-            if provision.arch == distro.arch:
-                node = self.provision_to_dict(provision)
+        results = dict(ks_meta = '', kernel_options = '', 
+                       kernel_options_post = '')
+        if distro.arch in self.provisions:
+            pa = self.provisions[distro.arch]
+            node = self.provision_to_dict(pa)
+            consolidate(node,results)
+            if distro.osversion.osmajor in pa.provision_families:
+                pf = pa.provision_families[distro.osversion.osmajor]
+                node = self.provision_to_dict(pf)
                 consolidate(node,results)
-                for provision_family in provision.provision_families:
-                    if provision_family.osmajor == distro.osversion.osmajor:
-                        node = self.provision_to_dict(provision_family)
-                        consolidate(node,results)
-                        for provision_family_update in provision_family.provision_family_updates:
-                            if provision_family_update.osversion == distro.osversion:
-                                node = self.provision_to_dict(provision_family_update)
-                                consolidate(node,results)
+                if distro.osversion in pf.provision_family_updates:
+                    pfu = pf.provision_family_updates[distro.osversion]
+                    node = self.provision_to_dict(pfu)
+                    consolidate(node,results)
         return results
 
     def provision_to_dict(self, provision):
@@ -743,24 +739,23 @@ class System(SystemObject):
                          Devices = self.updateDevices )
         return methods[obj_str]
 
-    def update_powerKeys(self, powerKeys):
+    def update_legacy(self, inventory):
         """
-        Create any new power keys, and remove any missing ones.
+        Update Key/Value pairs for legacy RHTS
         """
-        for powerKey in self.powerKeys:
-            if powerKey.id not in powerKeys:
-                powerKey.destroySelf()
-        for powerKey in powerKeys:
-            if powerKey['id'] not in self.powerKeys:
-                new_powerKey = PowerKey(system=self.id,
-                                           key=int(powerKey['id']),
-                                         value=powerKey['value'])
-                self.powerKeys.append(new_powerKey)
+        #Remove any keys that will be added
+        for i, mykey in enumerate(self.key_values):
+            if mykey.key_name in inventory:
+                del self.key_values[i]
 
-    def remove_powerKeys(self):
-        """ Remove all power keys """
-        for powerKey in self.powerKeys:
-            powerKey.destroySelf()
+        #Add the uploaded keys
+        for key in inventory:
+            if isinstance(inventory[key], list):
+                for value in inventory[key]:
+                    self.key_values.append(Key_Value(key,value))
+            else:
+                self.key_values.append(Key_Value(key,inventory[key]))
+                    
 
     def update(self, inventory):
         """ Update Inventory """
@@ -839,6 +834,116 @@ class System(SystemObject):
 
         self.cpu = cpu
 
+    def excluded_osmajor_byarch(self, arch):
+        """
+        List excluded osmajor for system by arch
+        """
+        excluded = session.query(ExcludeOSMajor).join('systems').\
+                    join('arch').filter(and_(System.id==self.id,
+                                             Arch.id==arch.id))
+        return excluded
+
+    def excluded_osversion_byarch(self, arch):
+        """
+        List excluded osversion for system by arch
+        """
+        excluded = session.query(ExcludeOSVersion).join('systems').\
+                    join('arch').filter(and_(System.id==self.id,
+                                             Arch.id==arch.id))
+        return excluded
+
+    def distros(self):
+        """
+        List of distros that support this system
+        """
+        distros = session.query(Distro).join(['arch','systems']).filter(
+              and_(System.id==self.id,
+                not_(or_(Distro.id.in_(select([distro_table.c.id]).
+                  where(distro_table.c.arch_id==arch_table.c.id).
+                  where(arch_table.c.id==exclude_osmajor_table.c.arch_id).
+                  where(distro_table.c.osversion_id==osversion_table.c.id).
+                  where(osversion_table.c.osmajor_id==osmajor_table.c.id).
+                  where(osmajor_table.c.id==exclude_osmajor_table.c.osmajor_id).
+                  where(exclude_osmajor_table.c.system_id==system_table.c.id)
+                                      ),
+                         Distro.id.in_(select([distro_table.c.id]).
+                  where(distro_table.c.arch_id==arch_table.c.id).
+                  where(arch_table.c.id==exclude_osversion_table.c.arch_id).
+                  where(distro_table.c.osversion_id==osversion_table.c.id).
+                  where(osversion_table.c.id==
+                                        exclude_osversion_table.c.osversion_id).
+                  where(exclude_osversion_table.c.system_id==system_table.c.id)
+                                      )
+                        )
+                    )
+                  )
+        )
+        return distros
+
+    def action_auto_provision(self, distro=None,
+                             ksmeta=None,
+                             kernel_options=None,
+                             kernel_options_post=None):
+        """
+        results = install_options(ksmeta,kernel_options,kernel_options_post)
+        action_provision(distro,**results)
+        action_power()
+        """
+        pass
+
+    def action_provision(self, distro=None, 
+                        ksmeta=None,
+                        kernel_options=None,
+                        kernel_options_post=None,
+                        kickstart=None):
+        """
+        Provision the System
+        make xmlrpc call to lab controller
+        """
+        if not distro:
+            return False
+        if not self.lab_controller:
+            return False
+        data = dict(systemname          = self.fqdn,
+                    profilename         = distro.install_name,
+                    ksmeta              = ksmeta,
+                    kernel_options      = kernel_options,
+                    kernel_options_post = kernel_options_post)
+
+        if kickstart:
+            data['kickstart'] = kickstart
+        labcontroller = self.lab_controller
+        url = "http://%s/labcontroller/" % labcontroller.fqdn
+        lc_xmlrpc = xmlrpclib.ServerProxy(url, BasicAuthTransport(labcontroller.username, labcontroller.password), allow_none=True)
+        return lc_xmlrpc.provision(data)
+
+    def action_power(self, action="reboot"):
+        """
+        Power cycle the system
+        """
+        if not self.power:
+            return False
+        if not self.lab_controller:
+            return False
+
+        data = dict( systemname    = self.fqdn,
+                     power_type    = self.power.power_type.name,
+                     power_address = self.power.power_address)
+        if self.power.power_user:
+            data['power_user'] = self.power.power_user
+        if self.power.power_passwd:
+            data['power_passwd'] = self.power.power_passwd
+        if self.power.power_id:
+            data['power_id'] = self.power.power_id
+
+        labcontroller = self.lab_controller
+        url = "http://%s/labcontroller/" % labcontroller.fqdn
+        lc_xmlrpc = xmlrpclib.ServerProxy(url, BasicAuthTransport(labcontroller.username, labcontroller.password))
+        return lc_xmlrpc.power(action, data)
+
+    def __repr__(self):
+        return self.fqdn
+
 # for property in System.mapper.iterate_properties:
 #     print property.mapper.class_.__name__
 #     print property.key
@@ -881,7 +986,11 @@ class Arch(SystemObject):
         self.arch = arch
 
     def __repr__(self):
-        return self.arch
+        return '%s' % self.arch
+
+    @classmethod
+    def by_id(cls, id):
+        return cls.query.filter_by(id=id).one()
 
     @classmethod
     def by_name(cls, arch):
@@ -894,6 +1003,12 @@ class ProvisionFamily(SystemObject):
     pass
 
 class ProvisionFamilyUpdate(SystemObject):
+    pass
+
+class ExcludeOSMajor(SystemObject):
+    pass
+
+class ExcludeOSVersion(SystemObject):
     pass
 
 class Breed(SystemObject):
@@ -909,22 +1024,41 @@ class Breed(SystemObject):
 
 class OSMajor(SystemObject):
     def __init__(self, osmajor):
-        self.major = osmajor
+        self.osmajor = osmajor
+
+    @classmethod
+    def by_id(cls, id):
+        return cls.query.filter_by(id=id).one()
 
     @classmethod
     def by_name(cls, osmajor):
         return cls.query.filter_by(osmajor=osmajor).one()
 
+    @classmethod
+    def get_all(cls):
+        all = cls.query()
+        return [(0,"All")] + [(major.id, major.osmajor) for major in all]
+
     def __repr__(self):
-        return self.osmajor
+        return '%s' % self.osmajor
 
 class OSVersion(SystemObject):
-    def __init__(self, osversion):
-        self.osversion = osversion
+    def __init__(self, osmajor, osminor):
+        self.osmajor = osmajor
+        self.osminor = osminor
+
+    @classmethod
+    def by_id(cls, id):
+        return cls.query.filter_by(id=id).one()
 
     @classmethod
     def by_name(cls, osmajor, osminor):
         return cls.query.filter_by(osmajor=osmajor, osminor=osminor).one()
+
+    @classmethod
+    def get_all(cls):
+        all = cls.query()
+        return [(0,"All")] + [(version.id, version.osminor) for version in all]
 
     def __repr__(self):
         return "%s.%s" % (self.osmajor,self.osminor)
@@ -1021,75 +1155,23 @@ class Locked(object):
 
 class PowerType(object):
 
-    def __init__(self, name=None, command=None, p_reset=None, p_off=None, p_on=None, p_status=None):
-        self.name = name
-        self.command = command
-        self.p_reset = p_reset
-        self.p_off = p_off
-        self.p_on = p_on
-        self.p_status = p_ststus
-
-    def update_keys(self, keys):
-        """
-        Create any new keys, and remove any missing ones.
-        """
-        for key in self.keys:
-            if key.key not in keys:
-                key.destroySelf()
-        for key in keys:
-            if key['key'] not in self.keys:
-                new_key = PowerTypeKey(power_type=self.id,
-                                           type=key['type'], 
-                                           description=key['description'],
-                                           key=key['key'])
-                self.keys.append(new_key)
-
-class PowerTypeKey(object):
-    def __init__(self, key=None, description=None, type=None):
-        self.key = key
-        self.description = description
-        self.type = type
-
-    def ___repr__(self):
-        return "%s %s %s" % (self.key, self.description, self.type)
-
-class PowerControl(object):
     def __init__(self, name=None):
         self.name = name
 
-    def update_values(self, values):
-        """ Update values for this controllers keys"""
-        for value in values:
-            if value['id'] not in self.values:
-                new_value = ControllerValue(power_control=self.id,
-                                          key=int(value['id']),
-                                          value=value['value'])
-                self.values.append(new_value)
+    @classmethod
+    def get_all(cls):
+        """
+        Apc, wti, etc..
+        """
+        all_types = cls.query()
+        return [(0, "None")] + [(type.id, type.name) for type in all_types]
 
-class ControllerValue(object):
-    def __init__(self, key=None, value=None):
-        self.key = key
-        self.value = value
+    @classmethod
+    def by_id(cls, id):
+        return cls.query.filter_by(id=id).one()
 
-class PowerHost(SystemObject):
-    def update_values(self, values):
-        """ Update values for this hosts keys"""
-        for value in values:
-            if value['id'] not in self.values:
-                new_value = HostValue(power_control_id=self.id,
-                                          key_id=int(value['id']),
-                                          value=value['value'])
-                self.values.append(new_value)
-
-    def get_status(self):
-        """ returns the current power status """
-        cmd = "%s %s" % (self.power_control_id.power_type_id.command, self.power_control_id.power_type_id.p_status)
-        return cmd
-
-class HostValue(object):
-    def __init__(self, key=None, value=None):
-        self.key = key
-        self.value = value
+class Power(SystemObject):
+    pass
 
 class Serial(object):
     def __init__(self, name=None):
@@ -1110,6 +1192,80 @@ class Distro(object):
     @classmethod
     def by_install_name(cls, install_name):
         return cls.query.filter_by(install_name=install_name).one()
+
+    @classmethod
+    def by_id(cls, id):
+        return cls.query.filter_by(id=id).one()
+
+    @classmethod
+    def by_filter(cls, filter):
+        """
+        <distro>
+         <And>
+           <Require name='ARCH' operator='=' value='i386'/>
+           <Require name='FAMILY' operator='=' value='rhelserver5'/>
+           <Require name='TAG' operator='=' value='released'/>
+         </And>
+        </distro>
+        """
+        pass
+
+    def systems_filter(self, user, filter):
+        """
+        Return Systems that match the following filter
+        <host>
+         <And>
+           <Require name='MACHINE' operator='!=' value='dell-pe700-01.rhts.bos.redhat.com'/>
+           <Require name='ARCH' operator='=' value='i386'/>
+           <Require name='MEMORY' operator='>=' value='2048'/>
+           <Require name='POWER' operator='=' value='True'/>
+         </And>
+        </host>
+        System.query.\
+           join('key_values',aliased=True).\ 
+                filter_by(key_name='MEMORY').\
+                filter(key_value_table.c.key_value > 2048).\
+           join('key_values',aliased=True).\
+                filter_by(key_name='CPUFLAGS').\
+                filter(key_value_table.c.key_value == 'lm').\
+              all()
+        [hp-xw8600-02.rhts.bos.redhat.com]
+        """
+        pass
+
+    def systems(self, user=None):
+        """
+        List of systems that support this distro
+        Limit to what is available to user if user passed in.
+        """
+        if user:
+            systems = System.available(user)
+        else:
+            systems = session.query(System)
+
+        return systems.filter(
+             and_(System.arch.contains(self.arch),
+                not_(or_(System.id.in_(select([system_table.c.id]).
+                  where(system_table.c.id==system_arch_map.c.system_id).
+                  where(arch_table.c.id==system_arch_map.c.arch_id).
+                  where(system_table.c.id==exclude_osmajor_table.c.system_id).
+                  where(arch_table.c.id==exclude_osmajor_table.c.arch_id).
+                  where(ExcludeOSMajor.osmajor==self.osversion.osmajor)
+                                      ),
+                         System.id.in_(select([system_table.c.id]).
+                  where(system_table.c.id==system_arch_map.c.system_id).
+                  where(arch_table.c.id==system_arch_map.c.arch_id).
+                  where(system_table.c.id==exclude_osversion_table.c.system_id).
+                  where(arch_table.c.id==exclude_osversion_table.c.arch_id).
+                  where(ExcludeOSVersion.osversion==self.osversion)
+                                      )
+                        )
+                    )
+                 )
+        )
+
+    def ___repr__(self):
+        return "%s" % self.install_name
 
 class DistroTag(object):
     def __init__(self, name=None):
@@ -1141,6 +1297,10 @@ class GroupActivity(Activity):
     def object_name(self):
         return "Group: %s" % self.object.display_name
 
+class DistroActivity(Activity):
+    def object_name(self):
+        return "Distro: %s" % self.object.install_name
+
 # note model
 class Note(object):
     def __init__(self, user=None, text=None):
@@ -1170,7 +1330,7 @@ class Key_Value(object):
 SystemType.mapper = mapper(SystemType, system_type_table)
 SystemStatus.mapper = mapper(SystemStatus, system_status_table)
 System.mapper = mapper(System, system_table,
-       properties = {'devices':relation(Device, 
+       properties = {'devices':relation(Device,
                                         secondary=system_device_map),
                      'type':relation(SystemType, uselist=False),
                      'status':relation(SystemStatus, uselist=False),
@@ -1179,34 +1339,47 @@ System.mapper = mapper(System, system_table,
                                         backref='systems'),
                      'cpu':relation(Cpu, uselist=False),
                      'numa':relation(Numa, uselist=False),
-                     'power':relation(PowerHost, uselist=False),
-                     'provisions':relation(Provision),
-                     'user':relation(User, uselist=False, 
+                     'power':relation(Power, uselist=False),
+                     'excluded_osmajor':relation(ExcludeOSMajor,
+                                                 backref='systems'),
+                     'excluded_osversion':relation(ExcludeOSVersion,
+                                                 backref='systems'),
+                     'provisions':relation(Provision, collection_class=attribute_mapped_collection('arch')),
+                     'user':relation(User, uselist=False,
                           primaryjoin=system_table.c.user_id==users_table.c.user_id,foreign_keys=system_table.c.user_id),
-                     'owner':relation(User, uselist=False, 
+                     'owner':relation(User, uselist=False,
                           primaryjoin=system_table.c.owner_id==users_table.c.user_id,foreign_keys=system_table.c.owner_id),
                      'lab_controller':relation(LabController, uselist=False,
                                                backref='systems'),
-                     'notes':relation(Note, 
+                     'notes':relation(Note,
                                       order_by=[note_table.c.created.desc()],
                                       cascade="all, delete, delete-orphan"),
                      'key_values':relation(Key_Value,
                                       cascade="all, delete, delete-orphan"),
                      'activity':relation(SystemActivity,
+                                     order_by=[activity_table.c.created.desc()],
                                                backref='object')})
 mapper(Arch, arch_table)
 mapper(Provision, provision_table,
-       properties = {'provision_families':relation(ProvisionFamily),
+       properties = {'provision_families':relation(ProvisionFamily, collection_class=attribute_mapped_collection('osmajor')),
                      'arch':relation(Arch)})
 mapper(ProvisionFamily, provision_family_table,
-       properties = {'provision_family_updates':relation(ProvisionFamilyUpdate),
+       properties = {'provision_family_updates':relation(ProvisionFamilyUpdate, collection_class=attribute_mapped_collection('osversion')),
                      'osmajor':relation(OSMajor)})
 mapper(ProvisionFamilyUpdate, provision_family_update_table,
        properties = {'osversion':relation(OSVersion)})
+mapper(ExcludeOSMajor, exclude_osmajor_table,
+       properties = {'osmajor':relation(OSMajor, backref='excluded_osmajors'),
+                     'arch':relation(Arch)})
+mapper(ExcludeOSVersion, exclude_osversion_table,
+       properties = {'osversion':relation(OSVersion),
+                     'arch':relation(Arch)})
 mapper(OSVersion, osversion_table,
-       properties = {'osmajor':relation(OSMajor, uselist=False)})
+       properties = {'osmajor':relation(OSMajor, uselist=False,
+                                        backref='osversion')})
 mapper(OSMajor, osmajor_table,
-       properties = {'osminor':relation(OSVersion)})
+       properties = {'osminor':relation(OSVersion,
+                                     order_by=[osversion_table.c.osminor])})
 Cpu.mapper = mapper(Cpu, cpu_table,
        properties = {'flags':relation(CpuFlag)})
 CpuFlag.mapper = mapper(CpuFlag, cpu_flag_table)
@@ -1215,37 +1388,26 @@ Device.mapper = mapper(Device, device_table,
        properties = {'device_class': relation(DeviceClass)})
 mapper(DeviceClass, device_class_table)
 mapper(Locked, locked_table)
-mapper(PowerType, power_type_table, 
-        properties = {'keys':relation(PowerTypeKey, 
-                                      backref='power_type',
-                                      cascade="all, delete, delete-orphan")
+mapper(PowerType, power_type_table)
+mapper(Power, power_table,
+        properties = {'power_type':relation(PowerType,
+                                           backref='power_control')
     })
-mapper(PowerTypeKey, power_type_key_table)
-mapper(PowerControl, power_control_table, 
-        properties = {'controller_values':relation(ControllerValue,
-                                           backref='power_control',
-                                           cascade="all, delete, delete-orphan")
-    })
-mapper(ControllerValue, controller_value_table)
-PowerHost.mapper = mapper(PowerHost, power_host_table,
-        properties = {'host_values':relation(HostValue,
-                                           backref='power_host',
-                                           cascade="all, delete, delete-orphan")
-    })
-mapper(HostValue, host_value_table)
 mapper(Serial, serial_table)
 mapper(SerialType, serial_type_table)
 mapper(Install, install_table)
 mapper(LabController, lab_controller_table,
-        properties = {'distros':relation(Distro, 
+        properties = {'distros':relation(Distro,
                                           secondary=lab_controller_distro_map,
-                                          backref='lab_controllers'),
+                                          backref='lab_controllers',
+                                          cascade="all,delete-orphan"),
     })
 mapper(Distro, distro_table,
-        properties = {'osversion':relation(OSVersion, backref='distros'),
+        properties = {'osversion':relation(OSVersion, uselist=False,
+                                           backref='distros'),
                       'breed':relation(Breed, backref='distros'),
                       'arch':relation(Arch, backref='distros'),
-                      'tags':relation(DistroTag, 
+                      'tags':relation(DistroTag,
                                        secondary=distro_tag_map,
                                        backref='distros'),
     })
@@ -1283,6 +1445,11 @@ mapper(GroupActivity, group_activity_table, inherits=Activity,
         properties=dict(object=relation(Group, uselist=False,
                          backref='activity')))
 
+mapper(DistroActivity, distro_activity_table, inherits=Activity,
+       polymorphic_identity='distro_activity',
+       properties=dict(object=relation(Distro, uselist=False,
+                         backref='activity')))
+
 mapper(Note, note_table,
         properties=dict(user=relation(User, uselist=False,
                         backref='notes')))
@@ -1303,15 +1470,4 @@ def device_classes():
         _device_classes = DeviceClass.query.all()
     for device_class in _device_classes:
         yield device_class
-
-#    def update_values(self, values):
-#        """ Update values for this controllers keys"""
-#        for value in values:
-#            if value['id'] not in self.values:
-#                new_value = ControllerValue(power_control=self.id,
-#                                          key=int(value['id']),
-#                                          value=value['value'])
-#                self.values.append(new_value)
-
-
 

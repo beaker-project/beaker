@@ -1,0 +1,12 @@
+exclude start-medusa.py
+include apache/medusa.wsgi
+include apache/medusa.conf
+include AUTHORS README COPYING ChangeLog
+include *.cfg
+include medusa/templates/*.kid
+include medusa/config/*.cfg
+include medusa/config/*.conf
+include medusa/static/javascript/*
+include medusa/static/css/*
+include medusa/static/images/*
+include medusa.spec

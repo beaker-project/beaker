@@ -124,7 +124,7 @@ def hash_to_string(hash):
           buffer = buffer + str(key) + "=" + str(value) + " "
     return buffer
 
-def string_to_hash(options,delim=",",allow_multiples=True):
+def string_to_hash(options,delim=" ",allow_multiples=True):
     if options == "<<inherit>>":
         options = {}
 

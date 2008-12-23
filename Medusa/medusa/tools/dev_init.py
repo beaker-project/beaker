@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 # Medusa - Medusa is the Lab Contrller piece of the Beaker project
 #
 # Copyright (C) 2008 bpeck@redhat.com
@@ -29,7 +29,7 @@ from os.path import dirname, exists, join
 from os import getcwd
 import turbogears
 
-if __name__ == "__main__":
+def main():
     setupdir = dirname(dirname(__file__))
     curdir = getcwd()
 
@@ -64,17 +64,19 @@ if __name__ == "__main__":
         removed   = SystemStatus(u'Removed')
     #Setup User account
     if User.query().count() == 0:
-        user     = User(display_name=u'Test User',
-                         email_address=u'test@domain.com',
-                         password=u'password',
-                         user_name=u'tuser')
+        user     = User(display_name=u'Bill Peck',
+                         email_address=u'bpeck@redhat.com',
+                         user_name=u'bpeck')
         admin     = Group(group_name=u'admin',display_name=u'Admin')
         admin.users.append(user)
 
     #Setup SystemTypes Table
     if SystemType.query().count() == 0:
-        server    = SystemType(u'Server')
+        machine   = SystemType(u'Machine')
         virtual   = SystemType(u'Virtual')
-        desktop   = SystemType(u'Desktop')
+        resource  = SystemType(u'Resource')
 
     session.flush()
+
+if __name__ == "__main__":
+    main()

@@ -14,7 +14,9 @@ from cobbler import api
 import md5
 import string
 import pprint
-
+import re
+import socket
+import cobbler
 
 class Labcontroller:
 
@@ -77,18 +79,18 @@ class Labcontroller:
             if (curr_distro.os_version.find("rhel3") != -1 \
                 or curr_distro.os_version.find("rhel4") != -1) and not variant:
                 continue
-            os_version = curr_distro.os_version
-            date_created = 0.0
-            #Comment contains a more accurate os_version and the datestamp
-            # of when the tree was composed.
+            #Comment contains a more accurate os_version
             if curr_distro.comment:
-                if curr_distro.comment.find(":") != -1:
-                    (os_version,date_created) = curr_distro.comment.split(':')
+                release = re.compile(r'family=(\w+\d+\.\d+)')
+                if release.search(curr_distro.comment):
+                    os_version = release.search(curr_distro.comment).group(1)
+                else:
+                    continue
             distro = dict( arch=arch, variant=variant, method=method,
                            os_version=os_version, virt=virt,
                            install_name = curr_distro.name, 
                            breed=curr_distro.breed,
-                           date_created=date_created)
+                           date_created=curr_distro.tree_build_time)
             if name not in distros:
                 distros[name] = [distro]
             else:
@@ -100,8 +102,16 @@ class Labcontroller:
             return (-1, "no systemname specified")
         if not data.has_key("profilename"):
             return (-2, "no profilename specified")
+        self.shoehorn.deserialize()
         system = self.shoehorn.systems().find(data['systemname'])
+        if not system:
+            system = self.shoehorn.new_system()
+            system.set_name(data['systemname'])
+            ipaddress = socket.gethostbyname_ex(data['systemname'])[2][0]
+            system.set_ip_address(ipaddress, 'eth0')
         profile = self.shoehorn.profiles().find(data['profilename'])
+        if not profile:
+            return (-3, "%s profile not found!" % data['profilename'])
 
         if data.has_key("ksmeta"):
             system.set_ksmeta(data['ksmeta'])
@@ -122,14 +132,64 @@ class Labcontroller:
             profile.set_kickstart(filepath)
         system.set_profile(profile.name)
         system.set_netboot_enabled(True)
-        return self.shoehorn.add_system(system)
+        try:
+            self.shoehorn.add_system(system)
+        except cobbler.cexceptions.CX, e:
+            return (-1, e.value)
+        return (0, "Success")
 
-    def power(self, systemname, action):
+    def power(self, action, data):
         """
-        take a system name and power cycle/off
+        take a system name and power on/off/cycle
         """
-        return True
-
+        if "systemname" not in data:
+            return (-1, "no systemname specified")
+        if "power_type" not in data:
+            return (-1, "no power_type specified")
+        if "power_address" not in data:
+            return (-1, "no power_address specified")
+        self.shoehorn.deserialize()
+        system = self.shoehorn.systems().find(data['systemname'])
+        if not system:
+            system = self.shoehorn.new_system()
+            system.set_name(data['systemname'])
+            # We set the profile to the first profile we know about.
+            #  It doesn't really matter since we will overwrite this
+            profile = self.shoehorn.profiles().__iter__().next()
+            system.set_profile(profile.name)
+            ipaddress = socket.gethostbyname_ex(data['systemname'])[2][0]
+            system.set_ip_address(ipaddress)
+        system.set_power_type(data['power_type'])
+        system.set_power_address(data['power_address'])
+        if "power_user" in data:
+            system.set_power_user(data['power_user'])
+        if "power_passwd" in data:
+            system.set_power_pass(data['power_passwd'])
+        if "power_id" in data:
+            system.set_power_id(data['power_id'])
+        try:
+            self.shoehorn.add_system(system)
+        except cobbler.cexceptions.CX, e:
+            return (-1, e.value)
+        if action=="on":
+            try:
+                rc = self.shoehorn.power_on(system)
+            except cobbler.cexceptions.CX, e:
+                return (-1, e.value)
+        elif action=="off":
+            try:
+                rc = self.shoehorn.power_off(system)
+            except cobbler.cexceptions.CX, e:
+                return (-1, e.value)
+        elif action=="reboot":
+            try:
+                rc = self.shoehorn.reboot(system)
+            except cobbler.cexceptions.CX, e:
+                return (-1, e.value)
+        else:
+           return (-1, "Invalid power action, off,on, or reboot")
+        return (rc, "Success")
+ 
     def console_clear(self, systemname):
         """
         Clear a systems console log

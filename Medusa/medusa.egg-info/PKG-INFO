@@ -1,15 +1,17 @@
 Metadata-Version: 1.0
 Name: medusa
-Version: 1.0
-Summary: UNKNOWN
-Home-page: UNKNOWN
-Author: UNKNOWN
-Author-email: UNKNOWN
-License: UNKNOWN
+Version: 0.1
+Summary: Medusa is an Inventory program that keeps track of system attributes.  Also provides a mechanism for sharing and provisioning.  Provisioning is done via Cobbler
+Home-page: https://fedorahosted.org/beaker
+Author: Bill Peck
+Author-email: bpeck@redhat.com
+License: GPLv2
 Description: UNKNOWN
+Keywords: turbogears.app
 Platform: UNKNOWN
 Classifier: Development Status :: 3 - Alpha
 Classifier: Operating System :: OS Independent
 Classifier: Programming Language :: Python
 Classifier: Topic :: Software Development :: Libraries :: Python Modules
 Classifier: Framework :: TurboGears
+Classifier: Framework :: TurboGears :: Applications
