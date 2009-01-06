@@ -310,6 +310,26 @@ class SystemKeys(Form):
         if 'key_values' in d['options']:
             d['key_values'] = d['options']['key_values']
 
+class SystemArches(Form):
+    template = "medusa.templates.system_arches"
+    member_widgets = ["id", "arch"]
+    params = ['options', 'readonly', 'arches']
+
+    def __init__(self, *args, **kw):
+        super(SystemArches, self).__init__(*args, **kw)
+	self.id    = HiddenField(name="id")
+        self.arch  = AutoCompleteField(name='arch',
+                                      search_controller=url("/arches/by_name"),
+                                      search_param="name",
+                                      result_name="arches")
+
+    def update_params(self, d):
+        super(SystemArches, self).update_params(d)
+        if 'readonly' in d['options']:
+            d['readonly'] = d['options']['readonly']
+        if 'arches' in d['options']:
+            d['arches'] = d['options']['arches']
+        
 class SystemGroups(Form):
     template = "medusa.templates.system_groups"
     member_widgets = ["id", "group"]
@@ -426,17 +446,22 @@ class SystemExclude(Form):
           method="${method}" width="100%">
      ${display_field_for("id")}
      ${display_field_for("excluded_families")}
-     <a class="button" href="javascript:document.${name}.submit();">Save Exclude Changes</a>
+     <a py:if="not readonly" class="button" href="javascript:document.${name}.submit();">Save Exclude Changes</a>
     </form>
     """
     member_widgets = ["id", "excluded_families"]
-    params = []
+    params = ['options', 'readonly']
     params_doc = {}
 
     def __init__(self, *args, **kw):
         super(SystemExclude, self).__init__(*args, **kw)
 	self.id = HiddenField(name="id")
         self.excluded_families = ExcludedFamilies(name="excluded_families")
+
+    def update_params(self, d):
+        super(SystemExclude, self).update_params(d)
+        if 'readonly' in d['options']:
+            d['readonly'] = d['options']['readonly']
 
 class SystemDetails(Widget):
     template = "medusa.templates.system_details"
@@ -496,21 +521,6 @@ class SystemForm(Form):
         if item not in [hfield.name for hfield in hidden_fields]:
             return value
 
-#    def params_for(self, item, **params):
-#        pparams = super(SystemForm, self).params_for(item, **params)
-#        print "item=",item
-#        print "params=",params
-#        print "pparams=",pparams
-#        attrs = {}
-#        options = {}
-#        if params['options'].has_key(item):
-#            options = params['options'][item]
-#        if params['options'].has_key('readonly'):
-#            if params['options']['readonly']:
-#                attrs = dict(readonly = 'True')
-#        return {'attrs': attrs,
-#                'options': options}
-
     def update_params(self, d):
         super(SystemForm, self).update_params(d)
         if d["options"].has_key("owner_change"):
@@ -522,14 +532,10 @@ class SystemForm(Form):
         if d["options"].has_key("user_change_text"):
             d["user_change_text"] = d["options"]["user_change_text"]
         d["id"] = d["value_for"]("id")
-#        print "d.keys=", d.keys()
-#        for value in d["value"].keys():
-#            print value, "=", d["value"][value]
-#        for option in d["options"].keys():
-#            print "option=",option
-        if d["options"]["readonly"]:
-            d["readonly"] = True
-#            d["display_field_for"] = lambda f: self.display_field_for(f,
-#                                                            d["value_for"](f),
-#                                                          **d["params_for"](f))
 
+        if d["options"]["readonly"]:
+	    d["readonly"] = True
+ 	    attrs = {'attrs':{'readonly':'True'}}
+ 	    d["display_field_for"] = lambda f: self.display_field_for(f,
+                                                          d["value_for"](f),
+                                                                  **attrs)

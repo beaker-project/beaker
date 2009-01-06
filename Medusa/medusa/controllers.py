@@ -20,12 +20,14 @@ from medusa.widgets import SystemGroups
 from medusa.widgets import SystemInstallOptions
 from medusa.widgets import SystemProvision
 from medusa.widgets import SearchBar, SystemForm
+from medusa.widgets import SystemArches
 from medusa.xmlrpccontroller import RPCRoot
 from medusa.cobbler_utils import hash_to_string
 from cherrypy import request, response
 from tg_expanding_form_widget.tg_expanding_form_widget import ExpandingForm
 from medusa.needpropertyxml import *
 from medusa.helpers import *
+from medusa.tools.init import dummy
 
 from kid import Element
 import cherrypy
@@ -53,6 +55,14 @@ class Users:
     def by_name(self, input):
         input = input.lower()
         return dict(matches=User.list_by_name(input))
+
+class Arches:
+    @expose(format='json')
+    def by_name(self,name):
+        name = name.lower()
+        search = Arch.list_by_name(name)
+        arches = [match.arch for match in search]
+        return dict(arches=arches)
 
 class Devices:
 
@@ -90,7 +100,7 @@ class Devices:
         return dict(title="Devices", grid = devices_grid, search_bar=None,
                                      list = devices)
 
-class Root(RPCRoot):
+class Root(controllers.Controller):
     powertypes = PowerTypes()
     devices = Devices()
     groups = Groups()
@@ -98,6 +108,7 @@ class Root(RPCRoot):
     distros = Distros()
     activity = Activities()
     users = Users()
+    arches = Arches()
 
     id         = widgets.HiddenField(name='id')
     submit     = widgets.SubmitButton(name='submit')
@@ -131,6 +142,7 @@ class Root(RPCRoot):
     system_groups = SystemGroups(name='groups')
     system_installoptions = SystemInstallOptions(name='installoptions')
     system_provision = SystemProvision(name='provision')
+    arches_form = SystemArches(name='arches')
 
     @expose(format='json')
     def get_fields(self, table_name):
@@ -240,6 +252,32 @@ class Root(RPCRoot):
             flash(_(u"removed %s/%s" % (removed.key_name,removed.key_value)))
         else:
             flash(_(u"Key_Value_Id not Found"))
+        redirect("./view/%s" % system.fqdn)
+
+    @expose()
+    @identity.require(identity.not_anonymous())
+    def arch_remove(self, system_id=None, arch_id=None):
+        removed = None
+        if system_id and arch_id:
+            try:
+                system = System.by_id(system_id,identity.current.user)
+            except:
+                flash(_(u"Invalid Permision"))
+                redirect("/")
+        else:
+            flash(_(u"system_id and arch_id must be provided"))
+            redirect("/")
+        if system.can_admin(identity.current.user):
+           for arch in system.arch:
+               if arch.id == int(arch_id):
+                   system.arch.remove(arch)
+                   removed = arch
+                   activity = SystemActivity(identity.current.user, 'WEBUI', 'Removed', 'Arch', arch.arch, "")
+                   system.activity.append(activity)
+        if removed:
+            flash(_(u"%s Removed" % removed.arch))
+        else:
+            flash(_(u"Arch ID not found"))
         redirect("./view/%s" % system.fqdn)
 
     @expose()
@@ -361,7 +399,8 @@ class Root(RPCRoot):
                                     groups    = self.system_groups,
                                     install   = self.system_installoptions,
                                     provision = self.system_provision,
-                                    reboot    = self.reboot_form),
+                                    reboot    = self.reboot_form, 
+                                    arches    = self.arches_form),
             widgets_action  = dict( power     = '/save_power',
                                     exclude   = '/save_exclude',
                                     keys      = '/save_keys',
@@ -369,7 +408,8 @@ class Root(RPCRoot):
                                     groups    = '/save_group',
                                     install   = '/save_install',
                                     provision = '/action_provision',
-                                    reboot    = '/action_reboot'),
+                                    reboot    = '/action_reboot',
+                                    arches    = '/save_arch'),
             widgets_options = dict(power     = options,
                                    exclude   = options,
                                    keys      = dict(readonly = readonly,
@@ -384,7 +424,9 @@ class Root(RPCRoot):
                                    provision = dict(is_user = is_user,
                                                     lab_controller = system.lab_controller,
                                                     prov_install = [(distro.id, distro.install_name) for distro in system.distros().order_by(distro_table.c.install_name)]),
-                                   reboot    = options)
+                                   reboot    = options,
+                                   arches    = dict(readonly = readonly,
+                                                    arches = system.arch)),
         )
          
     @expose(template='medusa.templates.form')
@@ -525,8 +567,9 @@ class Root(RPCRoot):
             flash( _(u"Saved Power") )
         redirect("/view/%s" % system.fqdn)
 
-#    @error_handler(view)
     @expose()
+    @validate(form=system_form)
+    @error_handler(new)
     def save(self, **kw):
         if kw.get('id'):
             try:
@@ -546,7 +589,10 @@ class Root(RPCRoot):
         # Fields missing from kw have been set to NULL
         log_fields = [ 'fqdn', 'vendor', 'lender', 'model', 'serial', 'location', 'type_id', 'checksum', 'status_id', 'lab_controller_id' ]
         for field in log_fields:
-            current_val = str(system.__dict__[field])
+            try:
+                current_val = str(system.__dict__[field])
+            except KeyError:
+                current_val = ""
             # catch nullable fields return None.
             if current_val == 'None':
                 current_val = ""
@@ -561,7 +607,10 @@ class Root(RPCRoot):
                     system.activity.append(activity)
         log_bool_fields = [ 'shared', 'private' ]
         for field in log_bool_fields:
-            current_val = system.__dict__[field]
+            try:
+                current_val = str(system.__dict__[field])
+            except KeyError:
+                current_val = ""
             if kw.get(field):
                 if current_val != True:
                     activity = SystemActivity(identity.current.user, 'WEBUI', 'Changed', field, current_val, "True" )
@@ -606,6 +655,21 @@ class Root(RPCRoot):
             key_value = Key_Value(kw['key_name'],kw['key_value'])
             system.key_values.append(key_value)
             activity = SystemActivity(identity.current.user, 'WEBUI', 'Added', 'Key/Value', "", "%s/%s" % (kw['key_name'],kw['key_value']) )
+            system.activity.append(activity)
+        redirect("/view/%s" % system.fqdn)
+
+    @expose()
+    def save_arch(self, id, **kw):
+        try:
+            system = System.by_id(id,identity.current.user)
+        except InvalidRequestError:
+            flash( _(u"Unable to Add arch for %s" % id) )
+            redirect("/")
+        # Add an Arch
+        if kw.get('arch').get('text'):
+            arch = Arch.by_name(kw['arch']['text'])
+            system.arch.append(arch)
+            activity = SystemActivity(identity.current.user, 'WEBUI', 'Added', 'Arch', "", kw['arch']['text'])
             system.activity.append(activity)
         redirect("/view/%s" % system.fqdn)
 

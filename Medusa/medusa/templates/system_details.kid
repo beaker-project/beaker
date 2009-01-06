@@ -76,6 +76,16 @@
         </span>
       </td>
   </tr>
+  <tr class="list">
+      <th class="list">
+          <b>Arch(s)</b>
+      </th>
+      <td class="list" colspan="9" BGCOLOR="#ffffff">
+         <span py:for="arch in system.arch">
+            ${arch.arch}
+         </span>
+      </td>
+  </tr>
  </table>
 </span>
 <br/>

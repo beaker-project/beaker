@@ -3,7 +3,7 @@
 
 Name:           medusa
 Version:        0.1
-Release:        1%{?dist}
+Release:        3%{?dist}
 Summary:        Inventory System
 Group:          Applications/Internet
 License:        GPLv2+
@@ -33,6 +33,7 @@ Requires: python-decorator
 Requires: python-xmltramp
 Requires: mod_wsgi
 Requires: python-tgexpandingformwidget
+Requires: httpd
 
 
 %description server
@@ -55,6 +56,7 @@ rm -rf medusa/tests medusa/tools/test-medusa.py
 %{__mkdir_p} %{buildroot}%{_sysconfdir}/medusa
 %{__mkdir_p} %{buildroot}%{_datadir}/%{name}
 %{__mkdir_p} -m 0755 %{buildroot}/%{_localstatedir}/log/medusa
+touch %{buildroot}/%{_localstatedir}/log/medusa/server.log
 
 %{__install} -m 640 apache/%{name}.conf %{buildroot}%{_sysconfdir}/httpd/conf.d/%{name}.conf
 %{__install} -m 640 %{name}.cfg %{buildroot}%{_sysconfdir}/%{name}/

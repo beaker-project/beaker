@@ -5,6 +5,7 @@
  <div xmlns:py="http://purl.org/kid/ns#" id="field_id">
      ${id.display(value_for(id), **params_for(id))}
      <a py:if="enabled" class="button" href="javascript:document.${name}.submit();">Reboot System</a>
+     <span py:if="not enabled">System is not configured for reboot support</span>
  </div>
 </form>
 

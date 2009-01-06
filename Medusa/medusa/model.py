@@ -996,6 +996,14 @@ class Arch(SystemObject):
     def by_name(cls, arch):
         return cls.query.filter_by(arch=arch).one()
 
+    @classmethod
+    def list_by_name(cls, name):
+        """
+        A class method that can be used to search arches
+        based on the name
+        """
+        return cls.query().filter(Arch.arch.like('%s%%' % name))
+
 class Provision(SystemObject):
     pass
 

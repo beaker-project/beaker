@@ -14,6 +14,9 @@
    <div py:if="widgets.has_key('details')" class="tabbertab"><h2>Details</h2>
     ${widgets['details'].display(system=value)} 
    </div>
+   <div py:if="widgets.has_key('arches')" class="tabbertab"><h2>Arch(s)</h2>
+    ${widgets['arches'].display(method='get', action=widgets_action['arches'], value=value, options=widgets_options['arches'])} 
+   </div>
    <div py:if="widgets.has_key('keys')" class="tabbertab"><h2>Key/Values</h2>
     ${widgets['keys'].display(method='get', action=widgets_action['keys'], value=value, options=widgets_options['keys'])} 
    </div>
@@ -21,12 +24,22 @@
     ${widgets['groups'].display(method='get', action=widgets_action['groups'], value=value, options=widgets_options['groups'])}
    </div>
    <div py:if="widgets.has_key('exclude')" class="tabbertab"><h2>Excluded Families</h2>
-    ${widgets['exclude'].display(method='get', action=widgets_action['exclude'], value=value, options=widgets_options['exclude'])} 
+    <span py:if="value.lab_controller and value.arch">
+     ${widgets['exclude'].display(method='get', action=widgets_action['exclude'], value=value, options=widgets_options['exclude'])} 
+    </span>
+    <span py:if="not value.lab_controller or not value.arch">
+     System must be associated to a lab controller and have at least one architecture specified to edit exclude families.
+    </span>
    </div>
    <div py:if="widgets.has_key('power')" class="tabbertab"><h2>Power</h2>
     <fieldset py:if="not readonly">
      <legend>Power Config</legend>
-     ${widgets['power'].display(method='get', action=widgets_action['power'], value=value, options=widgets_options['power'])}
+     <span py:if="value.lab_controller">
+      ${widgets['power'].display(method='get', action=widgets_action['power'], value=value, options=widgets_options['power'])}
+     </span>
+     <span py:if="not value.lab_controller">
+      System must be associated to a lab controller to edit power.
+     </span>
     </fieldset>
     <fieldset py:if="is_user">
      <legend>Power Action</legend>
@@ -39,10 +52,20 @@
     ${widgets['notes'].display(method='get', action=widgets_action['notes'], value=value, options=widgets_options['notes'])} 
    </div>
    <div py:if="widgets.has_key('install')" class="tabbertab"><h2>Install Options</h2>
-    ${widgets['install'].display(method='get', action=widgets_action['install'], value=value, options=widgets_options['install'])} 
+    <span py:if="value.lab_controller and value.arch">
+     ${widgets['install'].display(method='get', action=widgets_action['install'], value=value, options=widgets_options['install'])} 
+    </span>
+    <span py:if="not value.lab_controller or not value.arch">
+     System must be associated to a lab controller and have at least one architecture specified to edit install options.
+    </span>
    </div>
    <div py:if="widgets.has_key('provision')" class="tabbertab"><h2>Provision</h2>
-    ${widgets['provision'].display(method='get', action=widgets_action['provision'], value=value, options=widgets_options['provision'])} 
+    <span py:if="value.lab_controller and value.arch">
+     ${widgets['provision'].display(method='get', action=widgets_action['provision'], value=value, options=widgets_options['provision'])} 
+    </span>
+    <span py:if="not value.lab_controller or not value.arch">
+     System must be associated to a lab controller and have at least one architecture specified in order to provision.
+    </span>
    </div>
    <div py:if="widgets.has_key('history')" class="tabbertab"><h2>History</h2>
     ${widgets['history'].display(system=value)} 

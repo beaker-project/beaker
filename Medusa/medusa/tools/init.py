@@ -28,6 +28,10 @@ from turbogears.database import session
 from os.path import dirname, exists, join
 from os import getcwd
 import turbogears
+from turbogears.database import metadata, get_engine
+
+def dummy():
+    pass
 
 def main():
     setupdir = dirname(dirname(__file__))
@@ -44,8 +48,8 @@ def main():
         configfile = sys.argv[1]
     elif exists(join(setupdir, "setup.py")):
         configfile = join(setupdir, "dev.cfg")
-    elif exists(join(curdir, "prod.cfg")):
-        configfile = join(curdir, "prod.cfg")
+    elif exists("/etc/medusa/medusa.cfg"):
+        configfile = "/etc/medusa/medusa.cfg"
     else:
         try:
             configfile = pkg_resources.resource_filename(
@@ -56,6 +60,9 @@ def main():
 
     turbogears.update_config(configfile=configfile,
         modulename="medusa.config")
+
+    get_engine()
+    metadata.create_all()
 
     #Setup SystemStatus Table
     if SystemStatus.query().count() == 0:
