@@ -44,7 +44,7 @@ source $RHTSLIB/testing.sh
 __INTERNAL_CheckMount(){
 	local SERVER=$1
 	local MNTPATH=$2	
-	[ -d $MNTPATH ] && df $MNTPATH | grep $SERVER > /dev/null
+	[ -d "$MNTPATH" ] && df "$MNTPATH" | grep "$SERVER" > /dev/null
 	return $?
 }
 
@@ -53,17 +53,17 @@ __INTERNAL_Mount(){
 	local MNTPATH=$2
 	local WHO=$3
 	
-	if __INTERNAL_CheckMount $SERVER $MNTPATH
+	if __INTERNAL_CheckMount "$SERVER" "$MNTPATH"
 	then
 		rlLogInfo "$WHO already mounted: success"
 		return 0
-	elif [ ! -d $MNTPATH ]
+	elif [ ! -d "$MNTPATH" ]
 	then
 		rlLogInfo "$WHO creating directory $MNTPATH"
-		mkdir -p $MNTPATH
+		mkdir -p "$MNTPATH"
 	fi	
 	rlLogInfo "$WHO mounting $SERVER on $MNTPATH"
-	mount $SERVER $MNTPATH
+	mount "$SERVER" "$MNTPATH"
 	if [ $? -eq 0 ]
 	then
 		rlLogInfo "$WHO success"
@@ -112,7 +112,7 @@ rlMount() {
 	local SERVER=$1
 	local REMDIR=$2
 	local LOCDIR=$3	
-	__INTERNAL_Mount $SERVER:$REMDIR $LOCDIR \
+	__INTERNAL_Mount "$SERVER:$REMDIR" "$LOCDIR" \
 					 "[MOUNT $LOCDIR]"
 	return $?
 }
@@ -160,7 +160,7 @@ rlCheckMount() {
 	local SERVER=$1
 	local REMDIR=$2
 	local LOCDIR=$3
-	if __INTERNAL_CheckMount $SERVER:$REMDIR $LOCDIR; then
+	if __INTERNAL_CheckMount "$SERVER:$REMDIR" "$LOCDIR"; then
         rlLogDebug "rlCheckMount: Share $SERVER:$REMDIR is mounted on $LOCDIR"
         return 0
     else
@@ -212,7 +212,7 @@ rlAssertMount() {
 	local SERVER=$1
 	local REMDIR=$2
 	local LOCDIR=$3
-	__INTERNAL_CheckMount $SERVER:$REMDIR $LOCDIR
+	__INTERNAL_CheckMount "$SERVER:$REMDIR" "$LOCDIR"
     __INTERNAL_ConditionalAssert "Mount assert: $LOCDIR" $?
 	return $?
 }
