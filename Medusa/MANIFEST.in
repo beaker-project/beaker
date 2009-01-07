@@ -10,3 +10,11 @@ include medusa/static/javascript/*
 include medusa/static/css/*
 include medusa/static/images/*
 include medusa.spec
+include lab-controller/*
+include lab-controller/conf.d/*
+include lab-controller/cron.daily/*
+include lab-controller/kickstarts/*
+include lab-controller/lib/*
+include lab-controller/snippets/*
+include lab-controller/triggers/*
+include lab-controller/www/*

@@ -35,9 +35,19 @@ Requires: mod_wsgi
 Requires: python-tgexpandingformwidget
 Requires: httpd
 
+%package lab-controller
+Summary: Lab Controller xmlrpc server
+Group: Applications/Internet
+Requires: python
+Requires: mod_python
+Requires: httpd
+Requires: cobbler
 
 %description server
 To Be Filled in - Server Side..
+
+%description lab-controller
+This is the interface to link Medusa and Cobbler together.
 
 %prep
 %setup -q
@@ -62,10 +72,26 @@ touch %{buildroot}/%{_localstatedir}/log/medusa/server.log
 %{__install} -m 640 %{name}.cfg %{buildroot}%{_sysconfdir}/%{name}/
 %{__install} apache/%{name}.wsgi %{buildroot}%{_datadir}/%{name}/%{name}.wsgi
 
+#lab-controller files
+%{__mkdir_p} %{buildroot}/%{_sysconfdir}/cron.daily
+%{__mkdir_p} %{buildroot}/var/lib/cobbler/triggers/sync/post
+%{__mkdir_p} %{buildroot}/var/lib/cobbler/snippets
+%{__mkdir_p} %{buildroot}/var/lib/cobbler/kickstarts
+%{__mkdir_p} %{buildroot}/var/www/labcontroller
+
+%{__install} -m 640 lab-controller/conf.d/labcontroller.conf %{buildroot}%{_sysconfdir}/httpd/conf.d/
+%{__install} -m 640 lab-controller/cron.daily/expire_distros %{buildroot}%{_sysconfdir}/cron.daily/
+%{__install} lab-controller/www/labcontroller.py %{buildroot}/var/www/labcontroller/
+%{__install} lab-controller/www/xmlrpc.py %{buildroot}/var/www/labcontroller/
+%{__install} lab-controller/triggers/osversion.trigger %{buildroot}/var/lib/cobbler/triggers/sync/post/
+%{__install} lab-controller/snippets/rhts_recipe %{buildroot}/var/lib/cobbler/snippets
+%{__install} lab-controller/kickstarts/rhel4.ks %{buildroot}/var/lib/cobbler/kickstarts
+%{__install} lab-controller/kickstarts/rhel5.ks %{buildroot}/var/lib/cobbler/kickstarts
+%{__install} -m 640 lab-controller/lib/cpioarchive.py %{buildroot}%{python_sitelib}/cpioarchive.py
+
 
 %clean
 %{__rm} -rf %{buildroot}
-
 
 %files server
 %defattr(-,root,root,-)
@@ -79,7 +105,20 @@ touch %{buildroot}/%{_localstatedir}/log/medusa/server.log
 %attr(-,apache,root) %{_localstatedir}/log/medusa
 %{python_sitelib}/%{name}-%{version}-py%{pyver}.egg-info/
 
+%files lab-controller
+%defattr(-,root,root,-)
+%doc lab-controller/README
+%attr(-,apache,root) /var/www/labcontroller/*
+%{_sysconfdir}/httpd/conf.d/labcontroller.conf
+%{_sysconfdir}/cron.daily/expire_distros
+%{python_sitelib}/cpioarchive.py*
+/var/lib/cobbler/triggers/sync/post/osversion.trigger
+/var/lib/cobbler/snippets/*
+/var/lib/cobbler/kickstarts/*
 
 %changelog
+* Wed Jan 07 2009 Bill Peck <bpeck@redhat.com> - 0.2-1
+- Added lab-controller sub package
+
 * Mon Dec 08 2008 Bill Peck <bpeck@redhat.com> - 0.1-1
 - Initial Spec file Created.

@@ -100,7 +100,7 @@ class Devices:
         return dict(title="Devices", grid = devices_grid, search_bar=None,
                                      list = devices)
 
-class Root(controllers.Controller):
+class Root(RPCRoot):
     powertypes = PowerTypes()
     devices = Devices()
     groups = Groups()
@@ -850,7 +850,7 @@ class Root(controllers.Controller):
                         else:
                             provision = ProvisionFamilyUpdate()
                             action = "Added"
-                        system.activity.append(SystemActivity(identity.current.user, 'WEBUI', action, 'InstallOption:ks_meta:%s/%s' % (arch, osversion), provisions.ks_meta, kw['prov_ksmeta']))
+                        system.activity.append(SystemActivity(identity.current.user, 'WEBUI', action, 'InstallOption:ks_meta:%s/%s' % (arch, osversion), provision.ks_meta, kw['prov_ksmeta']))
                         system.activity.append(SystemActivity(identity.current.user, 'WEBUI', action, 'InstallOption:kernel_options:%s/%s' % (arch, osversion), provision.kernel_options, kw['prov_koptions']))
                         system.activity.append(SystemActivity(identity.current.user, 'WEBUI', action, 'InstallOption:kernel_options_post:%s/%s' % (arch, osversion), provision.kernel_options_post, kw['prov_koptionspost']))
                         provision.ks_meta=kw['prov_ksmeta']
