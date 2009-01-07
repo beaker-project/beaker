@@ -9,7 +9,6 @@ import glob
 from cobbler import api
 from cobbler import action_import
 import cobbler
-sys.path.append("/var/www/labcontroller")
 import cpioarchive
 
 
