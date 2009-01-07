@@ -32,11 +32,11 @@ $SNIPPET("main_packages_select")
 
 %pre
 $kickstart_start
-$SNIPPET("pre_partition_select")
+$SNIPPET("rhts_pre_partition_select")
 $SNIPPET("pre_packages_select")
 
 %post
 $yum_config_stanza
-$SNIPPET("post_install_kernel_options")
+$SNIPPET("rhts_post_install_kernel_options")
 $SNIPPET("rhts_recipe")
 $kickstart_done
