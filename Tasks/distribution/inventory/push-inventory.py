@@ -22,6 +22,7 @@ import os
 import commands
 import pprint
 import math
+import re
 
 sys.path.append('.')
 sys.path.append("/usr/lib/anaconda")
@@ -56,6 +57,7 @@ def read_inventory():
        data['PCIID'] = []
        data['USBID'] = []
        data['DISK'] = []
+       data['BOOTDISK'] = []
        data['DISKSPACE'] = 0
        data['NR_DISKS'] = 0
 
@@ -98,6 +100,19 @@ def read_inventory():
        for module in modules:
            data['MODULE'].append(module.split()[0])
 
+       # Find Active Storage Driver(s)
+       bootdisk = None
+       bootregex = re.compile(r'/dev/([^ ]+) on /boot')
+       disks = commands.getstatusoutput('/bin/mount')[1].split('\n')[1:]
+       for disk in disks:
+           if bootregex.search(disk):
+               bootdisk = bootregex.search(disk).group(1)
+
+       if bootdisk:
+           drivers = commands.getstatusoutput('./getdriver.sh %s' % bootdisk)[1].split('\n')[1:]
+           for driver in drivers:
+               data['BOOTDISK'].append(driver)
+       
        # Find Active Network interface
        iface = None
        for line in  commands.getstatusoutput('route -n')[1].split('\n'):
