@@ -620,13 +620,25 @@ class System(SystemObject):
 #                                      system_group_table.c.system_id==None))))
 
     @classmethod
-    def available(cls, user):
+    def free(cls, user):
         """
         A class method that can be used to search for systems that only
         user can see
         """
         return System.all(user).filter(and_(System.user==None,
                                             or_(System.owner==user,
+                                                System.shared==True),
+                                            or_(User.user_id==user.user_id,
+                                                system_group_table.c.system_id==None))
+                                      )
+
+    @classmethod
+    def available(cls, user):
+        """
+        A class method that can be used to search for systems that only
+        user can see
+        """
+        return System.all(user).filter(and_(or_(System.owner==user,
                                                 System.shared==True),
                                             or_(User.user_id==user.user_id,
                                                 system_group_table.c.system_id==None))
