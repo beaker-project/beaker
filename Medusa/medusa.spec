@@ -2,8 +2,8 @@
 %{!?pyver: %define pyver %(%{__python} -c "import sys ; print sys.version[:3]")}
 
 Name:           medusa
-Version:        0.1
-Release:        3%{?dist}
+Version:        0.2
+Release:        1%{?dist}
 Summary:        Inventory System
 Group:          Applications/Internet
 License:        GPLv2+
