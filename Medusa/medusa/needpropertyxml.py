@@ -223,18 +223,25 @@ class XmlOr(ElementWrapper):
             joins.extend(join)
         return (joins, or_(*queries))
 
-class XmlPower(ElementWrapper):
+class XmlAutoProv(ElementWrapper):
     """
-    Verify that a system has the ability to power cycle
+    Verify that a system has the ability to power cycle and is connected to a 
+    lab controller
     """
     def filter(self):
-        return ([],None)
+        value = self.get_xml_attr('value', unicode, False)
+        joins = []
+        query = None
+        if value:
+            joins = [power_table.c.system_id == system_table.c.id]
+            query = system_table.c.lab_controller_id != None
+        return (joins, query)
 
 subclassDict = {
     'host'           : XmlHost,
     'distro'         : XmlDistro,
     'key_value'      : XmlKeyValue,
-    'power'          : XmlPower,
+    'auto_prov'      : XmlAutoProv,
     'and'            : XmlAnd,
     'or'             : XmlOr,
     'distro_arch'    : XmlDistroArch,
