@@ -64,6 +64,10 @@ class Distros(RPCRoot):
             distros = distros.filter(and_(*joins))
         if queries:
             distros = distros.filter(and_(*queries))
-        return distros.first().install_name
+        distro = distros.first()
+        return dict(distro    = distro.install_name,
+                    family    = '%s' % distro.osversion,
+                    variant   = distro.variant,
+                    tree_path = distro.install_name)
 
     default = index
