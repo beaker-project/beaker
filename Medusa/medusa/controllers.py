@@ -56,6 +56,21 @@ class Users:
         input = input.lower()
         return dict(matches=User.list_by_name(input))
 
+class Netboot:
+    # For XMLRPC methods in this class.
+    exposed = True
+
+    @cherrypy.expose
+    def commandBoot(self, commands):
+        """
+        NetBoot Compat layer for old RHTS Scheduler
+        """
+        print "commands = " , commands
+        # InstallMachine $install_name
+        # Call action_auto_provision(ksmeta, bootArgs, bootArgsPost)
+        # XMLRPC call to lab_controller for watchdog.
+        return 1
+
 class Arches:
     @expose(format='json')
     def by_name(self,name):
@@ -109,6 +124,7 @@ class Root(RPCRoot):
     activity = Activities()
     users = Users()
     arches = Arches()
+    netboot = Netboot()
 
     id         = widgets.HiddenField(name='id')
     submit     = widgets.SubmitButton(name='submit')
@@ -894,6 +910,10 @@ class Root(RPCRoot):
         redirect("/view/%s" % system.fqdn)
 
     @cherrypy.expose
+    def lab_controllers(self):
+        return [lc.fqdn for lc in LabController.query()]
+    
+    @cherrypy.expose
     def pick(self, distro=None, user=None, xml=None):
         if not distro:
             return (0,"You must supply a distro")
@@ -920,18 +940,23 @@ class Root(RPCRoot):
 
         hit = False
         for system in systems:
+            # If the system doesn't have a current user then take it
             if session.connection(System).execute(system_table.update(
                      and_(system_table.c.id==system.id,
-                          system_table.c.user_id==None), 
-                           user_id=user.id)).rowcount == 1:
+                          system_table.c.user_id==None)), 
+                           user_id=user.user_id).rowcount == 1:
                 hit = True
                 break
 
         if hit:
-            return (system, 1)
-        elif systems:
+            # We have a match and its available!
+            return (dict(fqdn    = system.fqdn,
+                         type = '%s' % system.type), 1)
+        elif systems.count():
+            # We have matches but none are available right now
             return (None, -1)
         else:
+            # Nothing matches what the user requested.
             return (None, 0)
             
     @cherrypy.expose
