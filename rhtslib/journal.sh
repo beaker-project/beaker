@@ -90,6 +90,14 @@ generate OUTPUTFILE and include journal in RHTS logs.
 rlJournalEnd(){
     [ -z "$TESTID" ] && rlLog "OUTPUTFILE: $OUTPUTFILE"
     rlJournalPrintText > $OUTPUTFILE
+
+    local TID=${TESTID:-"debugging"}
+    local JOURNAL=`mktemp -d`/journal.xml
+    rlJournalPrint > $JOURNAL
+    rhts_submit_log -S $RESULT_SERVER -T $TESTID -l $JOURNAL \
+    || rlLogError "rlJournalEnd: Submit wasn't successful"
+    rm -f "$JOURNAL" && rmdir "`dirname $JOURNAL`"
+
 }
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
