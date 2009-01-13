@@ -137,7 +137,7 @@ if os.path.isdir('locales'):
 
 setup(
     name="medusa",
-    version=version,
+    version='0.2',
 
     # uncomment the following lines if you fill them out in release.py
     description=description,
