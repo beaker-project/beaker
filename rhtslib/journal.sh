@@ -68,6 +68,28 @@ rlStartJournal() {
     rlLogWarning "rlStartJournal is obsoleted by rlJournalStart"
 }
 
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# rlJournalEnd
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+: <<=cut
+=pod
+
+=head2 Journalling
+
+=head3 rlJournalEnd
+
+Summarizes the test run and uploads the journal file
+
+    rlJournalEnd
+
+Run on the very end of your script to print summary of the whole test run,
+generate OUTPUTFILE and include journal in RHTS logs.
+
+=cut
+
+rlJournalEnd(){
+    rlJournalPrintText > $OUTPUTFILE
+}
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # rlJournalPrint
