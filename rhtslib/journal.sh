@@ -88,6 +88,7 @@ generate OUTPUTFILE and include journal in RHTS logs.
 =cut
 
 rlJournalEnd(){
+    [ -z "$TESTID" ] && rlLog "OUTPUTFILE: $OUTPUTFILE"
     rlJournalPrintText > $OUTPUTFILE
 }
 
