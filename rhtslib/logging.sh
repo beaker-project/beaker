@@ -161,7 +161,7 @@ rlDie()
   local rlTEST=${3:-$TEST};  shift
   local rlRESULT=${4:-WARN}; shift
   local rlSCORE=${5:-0};     shift
-  [ -z "$@" ] && rlBundleLogs $@
+  [ -z "$@" ] && rlBundleLogs "rhtslib-rlDie" $@
   rlLogFatal "$rlMSG" "$rlLOG";
   rlReport "$rlTEST" "$rlRESULT" "$rlSCORE"
   exit 0
