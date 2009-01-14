@@ -69,7 +69,7 @@ __INTERNAL_Mount(){
 		rlLogInfo "$WHO success"
 		return 0
 	else
-		rlLogInfo "$WHO failure"
+		rlLogWarning "$WHO failure"
 		return 1
 	fi
 }
