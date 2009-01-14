@@ -65,7 +65,7 @@ test_rlDie(){
 }
 
 test_rlPhaseStartEnd(){
-  rlStartJournal ; rlPhaseStart FAIL
+  rlJournalStart ; rlPhaseStart FAIL
   #counting passes and failures
   rlAssert0 "failed assert #1" 1
   rlAssert0 "successfull assert #1" 0
@@ -85,21 +85,21 @@ test_rlPhaseStartEnd(){
 }
 
 test_rlPhaseStartShortcuts(){
-  rlStartJournal
+  rlJournalStart
   rlPhaseStartSetup
   assertTrue "setup phase with ABORT type found in journal" "rlPrintJournal |grep -q '<phase.*type=\"ABORT\"'"
 
-  rlStartJournal
+  rlJournalStart
   rlPhaseStartTest
   assertTrue "test phase with FAIL type found in journal" "rlPrintJournal |grep -q '<phase.*type=\"FAIL\"'"
 
-  rlStartJournal
+  rlJournalStart
   rlPhaseStartCleanup
   assertTrue "clean-up phase with WARN type found in journal" "rlPrintJournal |grep -q '<phase.*type=\"WARN\"'"
 }
 
 test_LogLowHighMetric(){
-  rlStartJournal ; rlPhaseStart FAIL
+  rlJournalStart ; rlPhaseStart FAIL
   assertTrue "low metric inserted to journal" "rlLogLowMetric metrone 123 "
   assertTrue "high metric inserted to journal" "rlLogHighMetric metrtwo 567"
   assertTrue "low metric found in journal" "rlPrintJournal |grep -q '<metric.*name=\"metrone\".*type=\"low\"'"
@@ -107,7 +107,7 @@ test_LogLowHighMetric(){
 }
 
 test_rlShowRunningKernel(){
-	rlStartJournal; rlPhaseStart FAIL
+	rlJournalStart; rlPhaseStart FAIL
 	rlShowRunningKernel
 	assertTrue "kernel version is logged" "rlCreateLogFromJournal |grep -q `uname -r`"
 }
