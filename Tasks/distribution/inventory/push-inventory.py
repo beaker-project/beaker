@@ -17,18 +17,18 @@
 
 import sys, getopt
 import xmlrpclib
-import string
+import re
 import os
 import commands
 import pprint
 import math
-import re
 
 sys.path.append('.')
 sys.path.append("/usr/lib/anaconda")
 import smolt
 import anaconda_log
 import partedUtils
+import network
 
 USAGE_TEXT = """
 Usage:  push-inventory.py -h <HOSTNAME>
@@ -56,10 +56,11 @@ def read_inventory():
        data['CPUFLAGS'] = []
        data['PCIID'] = []
        data['USBID'] = []
-       data['DISK'] = []
-       data['BOOTDISK'] = []
-       data['DISKSPACE'] = 0
-       data['NR_DISKS'] = 0
+       data['DISK'] = []        # disk space for each disk
+       data['DISKSPACE'] = 0    # total combined diskspace
+       data['NR_DISKS'] = 0     # number of spindles
+       data['NR_ETH'] = 0       # number of ethX interfaces
+       data['NR_IB'] = 0        # number of ibX interfaces
 
        cpu_info = smolt.read_cpuinfo()
        memory   = smolt.read_memory()
@@ -100,19 +101,6 @@ def read_inventory():
        for module in modules:
            data['MODULE'].append(module.split()[0])
 
-       # Find Active Storage Driver(s)
-       bootdisk = None
-       bootregex = re.compile(r'/dev/([^ ]+) on /boot')
-       disks = commands.getstatusoutput('/bin/mount')[1].split('\n')[1:]
-       for disk in disks:
-           if bootregex.search(disk):
-               bootdisk = bootregex.search(disk).group(1)
-
-       if bootdisk:
-           drivers = commands.getstatusoutput('./getdriver.sh %s' % bootdisk)[1].split('\n')[1:]
-           for driver in drivers:
-               data['BOOTDISK'].append(driver)
-       
        # Find Active Network interface
        iface = None
        for line in  commands.getstatusoutput('route -n')[1].split('\n'):
@@ -133,6 +121,19 @@ def read_inventory():
            data['DISK'].append("%d " % (disksize))
            data['DISKSPACE'] += disksize
            data['NR_DISKS'] += 1
+
+       # finding out eth and ib interfaces...
+       # TODO: this doesn't check whether or not the interfaces can be brought up on a network.
+       #   it should probably check that too.
+       eth_pat = re.compile ('^eth\d+$')
+       ib_pat  = re.compile ('^ib\d+$')
+       net = network.Network()
+       for intname in net.available().keys():
+           if eth_pat.match(intname):
+              data['NR_ETH'] += 1
+           elif ib_pat.match(intname):
+              data['NR_IB'] += 1
+
     else:
        data['HVM'] = False
        # checking for whether or not the machine is hvm-enabled.
@@ -162,7 +163,7 @@ def main():
 
     args = sys.argv[1:]
     try:
-        opts, args = getopt.getopt(args, 'dh:S:', ['server='])
+        opts, args = getopt.getopt(args, 'dh:S:', ['server=', 'debug', 'hostname='])
     except:
         usage()
     for opt, val in opts:
@@ -173,18 +174,18 @@ def main():
         if opt in ('-S', '--server'):
             lab_server = "http://%s/cgi-bin/rhts/xmlrpc.cgi" % val
 
-    if not hostname:
-        print "You must sepcify a hostname with the -h switch"
-        sys.exit(1)
-
-    if not lab_server:
-        print "You must sepcify a lab_server with the -S switch"
-        sys.exit(1)
-
     inventory = read_inventory()
     if debug:
         print inventory
     else:
+        if not hostname:
+            print "You must specify a hostname with the -h switch"
+            sys.exit(1)
+
+        if not lab_server:
+            print "You must sepcify a lab_server with the -S switch"
+            sys.exit(1)
+
         push_inventory(hostname, inventory)
 
 
