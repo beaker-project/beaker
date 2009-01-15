@@ -23,9 +23,11 @@ import xml.dom.minidom
 from optparse import OptionParser
 import sys
 import os
-import datetime
+import time
 import rpm
 import socket
+
+timeFormat="%Y-%m-%d %H:%M:%S"
 
 def wrap(text, width):    
     return reduce(lambda line, word, width=width: '%s%s%s' %
@@ -59,6 +61,9 @@ def getAllowedSeverities(treshhold):
 def printPhaseLog(phase,severity):
   phaseName = phase.getAttribute("name")
   phaseResult = phase.getAttribute("result")
+  starttime = phase.getAttribute("starttime")
+  endtime = phase.getAttribute("endtime")
+  duration = time.mktime(time.strptime(endtime,timeFormat)) - time.mktime(time.strptime(starttime,timeFormat))
   printHeadLog(phaseName)
   passed = 0
   failed = 0
@@ -79,7 +84,17 @@ def printPhaseLog(phase,severity):
         printLog("%s" % node.getAttribute("message"), "PASS")
         passed += 1
 
+  formatedDuration = ''
+  if (duration // 3600 > 0):
+      formatedDuration = "%ih " % (duration // 3600)
+      duration = duration % 3600
+  if (duration // 60 > 0):
+      formatedDuration += "%im " % (duration // 60)
+      duration = duration % 60
+  formatedDuration += "%is" % duration
+  printLog("Duration: %s" % formatedDuration)
   printLog("Assertions: %s good, %s bad" % (passed, failed))
+
   printLog("RESULT: %s" % phaseName, phaseResult)
 
 def createLog(id,severity):
@@ -147,10 +162,10 @@ def initializeJournal(id, test, package):
     pkgdetails.append((pkgDetailsEl, pkgDetailsCon))
 
   startedEl   = newdoc.createElement("starttime")
-  startedCon  = newdoc.createTextNode(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+  startedCon  = newdoc.createTextNode(time.strftime(timeFormat))
 
   endedEl     = newdoc.createElement("endtime")
-  endedCon    = newdoc.createTextNode(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+  endedCon    = newdoc.createTextNode(time.strftime(timeFormat))
 
   hostnameEl     = newdoc.createElement("hostname")
   hostnameCon   = newdoc.createTextNode(socket.gethostbyaddr(socket.gethostname())[0])
@@ -238,6 +253,8 @@ def addPhase(id, name, type):
   phase.setAttribute("name", name)
   phase.setAttribute("result", 'unfinished')
   phase.setAttribute("type", type)
+  phase.setAttribute("starttime",time.strftime(timeFormat))
+  phase.setAttribute("endtime","")
   log.appendChild(phase)
   saveJournal(jrnl, id)
 
@@ -247,7 +264,9 @@ def finPhase(id):
   type  = phase.getAttribute('type')
   name  = phase.getAttribute('name')
   end   = jrnl.getElementsByTagName('endtime')[0]
-  end.childNodes[0].nodeValue = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+  timeNow = time.strftime(timeFormat)
+  end.childNodes[0].nodeValue = timeNow
+  phase.setAttribute("endtime",timeNow)
   passed = failed = 0
   for node in phase.childNodes:
     if node.nodeName == "test":
