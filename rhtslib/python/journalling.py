@@ -26,6 +26,7 @@ import os
 import datetime
 import rpm
 import socket
+import types
 
 def wrap(text, width):    
     return reduce(lambda line, word, width=width: '%s%s%s' %
@@ -37,12 +38,20 @@ def wrap(text, width):
                   text.split(' ')
                  )
 
+#for output redirected to file, we must not rely on python's
+#automagic encoding detection - enforcing utf8 on unicode
+def _print(message):
+  if isinstance(message,types.UnicodeType):
+    print message.encode('utf-8','replace')
+  else:
+    print message
+
 def printPurpose(message):
   printHeadLog("Test description")
-  print wrap(message, 80)
+  _print(wrap(message, 80))
 
 def printLog(message, prefix="LOG"):
-  print ":: [%s] :: %s" % (prefix.center(10), message)
+  _print(":: [%s] :: %s" % (prefix.center(10),message))
 
 def printHeadLog(message):
   print "\n::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::"
@@ -172,7 +181,7 @@ def initializeJournal(id, test, package):
   except IOError:
     purpose = "Cannot find the PURPOSE file of this test. Could be a missing, or rlInitializeJournal wasn't called from appropriate location"
 
-  purposeCon  = newdoc.createTextNode(purpose)
+  purposeCon  = newdoc.createTextNode(unicode(purpose,'utf-8'))
 
   testidEl.appendChild(testidCon)
   packageEl.appendChild(packageCon)
@@ -203,7 +212,7 @@ def initializeJournal(id, test, package):
 
 def saveJournal(newdoc, id):
   output = open('/tmp/rhts_journal.%s' % id, 'wb')
-  output.write(newdoc.toxml())
+  output.write(newdoc.toxml().encode('utf-8'))
   output.close()
 
 def _openJournal(id):
@@ -235,9 +244,9 @@ def addPhase(id, name, type):
   jrnl = openJournal(id)  
   log = getLogEl(jrnl)  
   phase = jrnl.createElement("phase")
-  phase.setAttribute("name", name)
+  phase.setAttribute("name", unicode(name,'utf-8'))
   phase.setAttribute("result", 'unfinished')
-  phase.setAttribute("type", type)
+  phase.setAttribute("type", unicode(type,'utf-8'))
   log.appendChild(phase)
   saveJournal(jrnl, id)
 
@@ -280,7 +289,7 @@ def addMessage(id, message, severity):
   msg = jrnl.createElement("message")
   msg.setAttribute("severity", severity)  
   
-  msgText = jrnl.createTextNode(message)
+  msgText = jrnl.createTextNode(unicode(message,"utf-8"))
   msg.appendChild(msgText)
   add_to.appendChild(msg)
   saveJournal(jrnl, id)
@@ -291,7 +300,7 @@ def addTest(id, message, result="FAIL"):
   add_to = getLastUnfinishedPhase(log)
   
   msg = jrnl.createElement("test")
-  msg.setAttribute("message", message)
+  msg.setAttribute("message", unicode(message,'utf-8'))
   
   msgText = jrnl.createTextNode(result)
   msg.appendChild(msgText)
@@ -379,7 +388,7 @@ elif command == "metric":
 elif command == "finphase":
   need((options.testid,))
   result, score, type, name = finPhase(options.testid)
-  print "%s:%s:%s" % (type,result,name)
+  _print("%s:%s:%s" % (type,result,name))
   print >> sys.stderr, score
   sys.exit(int(score))
 
