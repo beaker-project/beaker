@@ -40,7 +40,7 @@ Group: Applications/Internet
 Requires: python
 Requires: mod_python
 Requires: httpd
-Requires: cobbler
+Requires: cobbler >= 1.4
 Requires: yum-utils 
 Requires: /sbin/fenced
 
