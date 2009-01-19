@@ -9,6 +9,8 @@ class RPCRoot(controllers.Controller):
     @turbogears.expose()
     def RPC2(self):
         params, method = xmlrpclib.loads(cherrypy.request.body.read())
+        # Add Machine Account to params
+        params = (cherrypy.request.login,) + params
         try:
             if method == "RPC2":
                 # prevent recursion
