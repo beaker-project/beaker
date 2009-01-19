@@ -320,6 +320,14 @@ users_table = Table('tg_user', metadata,
     Column('created', DateTime, default=datetime.now)
 )
 
+users_systems_table = Table('tg_system', metadata,
+    Column('id', Integer, primary_key=True),
+    Column('system_name', Unicode(16), unique=True),
+    Column('display_name', Unicode(255)),
+    Column('password', Unicode(40)),
+    Column('created', DateTime, default=datetime.now)
+)
+
 permissions_table = Table('permission', metadata,
     Column('permission_id', Integer, primary_key=True),
     Column('permission_name', Unicode(16), unique=True),
@@ -438,6 +446,30 @@ class Group(object):
         based on the group_name
         """
         return cls.query().filter(Group.group_name.like('%s%%' % name))
+
+class UserSystem(object):
+    """
+    System Logins (RHTS, other schedulers...)
+    """
+
+    def _set_password(self, password):
+        """
+        encrypts password on the fly using the encryption
+        algo defined in the configuration
+        """
+        self._password = identity.encrypt_password(password)
+
+    def _get_password(self):
+        """
+        returns password
+        """
+        return self._password
+
+    password = property(_get_password, _set_password)
+
+    @classmethod
+    def by_id(cls, id):
+        return UserSystem.query.filter(UserSystem.id == id).one()
 
 class User(object):
     """
@@ -1433,6 +1465,9 @@ mapper(Distro, distro_table,
     })
 mapper(Breed, breed_table)
 mapper(DistroTag, distro_tag_table)
+
+mapper(UserSystem, users_systems_table,
+    properties=dict(_password=users_systems_table.c.password))
 
 mapper(Visit, visits_table)
 
