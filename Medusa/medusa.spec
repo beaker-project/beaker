@@ -42,6 +42,7 @@ Requires: mod_python
 Requires: httpd
 Requires: cobbler
 Requires: yum-utils 
+Requires: /sbin/fenced
 
 %description server
 To Be Filled in - Server Side..
