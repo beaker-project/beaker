@@ -5,6 +5,7 @@ from turbogears import identity, redirect
 from medusa.power import PowerTypes
 from medusa.group import Groups
 from medusa.labcontroller import LabControllers
+from medusa.user_system import UserSystems
 from medusa.distro import Distros
 from medusa.activity import Activities
 from medusa.widgets import myPaginateDataGrid
@@ -61,7 +62,7 @@ class Netboot:
     exposed = True
 
     @cherrypy.expose
-    def commandBoot(self, commands):
+    def commandBoot(self, machine_account, commands):
         """
         NetBoot Compat layer for old RHTS Scheduler
         """
@@ -120,6 +121,7 @@ class Root(RPCRoot):
     devices = Devices()
     groups = Groups()
     labcontrollers = LabControllers()
+    usersystems = UserSystems()
     distros = Distros()
     activity = Activities()
     users = Users()
@@ -910,11 +912,11 @@ class Root(RPCRoot):
         redirect("/view/%s" % system.fqdn)
 
     @cherrypy.expose
-    def lab_controllers(self):
+    def lab_controllers(self, machine_account):
         return [lc.fqdn for lc in LabController.query()]
     
     @cherrypy.expose
-    def pick(self, distro=None, user=None, xml=None):
+    def pick(self, machine_account, distro=None, user=None, xml=None):
         if not distro:
             return (0,"You must supply a distro")
         if not user:
@@ -960,7 +962,7 @@ class Root(RPCRoot):
             return (None, 0)
             
     @cherrypy.expose
-    def legacypush(self, fqdn=None, inventory=None):
+    def legacypush(self, machine_account, fqdn=None, inventory=None):
         if not fqdn:
             return (0,"You must supply a FQDN")
         if not inventory:
@@ -976,7 +978,7 @@ class Root(RPCRoot):
         return 0
 
     @cherrypy.expose
-    def push(self, fqdn=None, inventory=None):
+    def push(self, machine_account, fqdn=None, inventory=None):
         if not fqdn:
             return (0,"You must supply a FQDN")
         if not inventory:
