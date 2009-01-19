@@ -123,6 +123,3 @@ class PowerTypes(RPCRoot):
         flash( _(u"%s Deleted") % remove.name )
         raise redirect(".")
 
-    @cherrypy.expose
-    def add(self, a, b):
-        return (a+b,"Success")
