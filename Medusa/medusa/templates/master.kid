@@ -55,6 +55,7 @@ $(document).ready(function() {
                     <div id="adminlist" style="display: none">
                         <ul>
                             <li><a href="${tg.url('/labcontrollers')}">Lab Controllers</a></li>
+                            <li><a href="${tg.url('/usersystems')}">Machine Accounts</a></li>
                             <li><a href="${tg.url('/groups')}">Groups</a></li>
                             <li><a href="${tg.url('/powertypes')}">Power Types</a></li>
                         </ul>
