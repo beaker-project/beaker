@@ -13,6 +13,5 @@
     <div py:if="form">
 <p py:content="form(method='GET', action=tg.url(action), value=value, options=options)">Form goes here</p>
     </div>
-    <span>${tg.widgets}</span>
 </body>
 </html>
