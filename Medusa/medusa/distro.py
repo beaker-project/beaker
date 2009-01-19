@@ -30,15 +30,16 @@ class Distros(RPCRoot):
     @expose(template="medusa.templates.grid")
     @paginate('list',default_order='-date_created', limit=50,allow_limit_override=True)
     def index(self):
-        distros = session.query(Distro)
+        distros = session.query(Distro).join('breed').join('arch').join(['osversion','osmajor'])
         distros_grid = widgets.PaginateDataGrid(fields=[
                                   widgets.PaginateDataGrid.Column(name='install_name', getter=lambda x: x.install_name, title='Install Name', options=dict(sortable=True)),
                                   widgets.PaginateDataGrid.Column(name='name', getter=lambda x: x.name, title='Name', options=dict(sortable=True)),
-                                  widgets.PaginateDataGrid.Column(name='breed', getter=lambda x: x.breed, title='Breed', options=dict(sortable=True)),
-                                  widgets.PaginateDataGrid.Column(name='osversion', getter=lambda x: x.osversion, title='OS Version', options=dict(sortable=True)),
+                                  widgets.PaginateDataGrid.Column(name='breed.breed', getter=lambda x: x.breed, title='Breed', options=dict(sortable=True)),
+                                  widgets.PaginateDataGrid.Column(name='osversion.osmajor.osmajor', getter=lambda x: x.osversion.osmajor, title='OS Major Version', options=dict(sortable=True)),
+                                  widgets.PaginateDataGrid.Column(name='osversion.osminor', getter=lambda x: x.osversion.osminor, title='OS Minor Version', options=dict(sortable=True)),
                                   widgets.PaginateDataGrid.Column(name='variant', getter=lambda x: x.variant, title='Variant', options=dict(sortable=True)),
                                   widgets.PaginateDataGrid.Column(name='virt', getter=lambda x: x.virt, title='Virt', options=dict(sortable=True)),
-                                  widgets.PaginateDataGrid.Column(name='arch', getter=lambda x: x.arch, title='Arch', options=dict(sortable=True)),
+                                  widgets.PaginateDataGrid.Column(name='arch.arch', getter=lambda x: x.arch, title='Arch', options=dict(sortable=True)),
                                   widgets.PaginateDataGrid.Column(name='method', getter=lambda x: x.method, title='Method', options=dict(sortable=True)),
                                   widgets.PaginateDataGrid.Column(name='date_created', getter=lambda x: x.date_created, title='Date Created', options=dict(sortable=True)),
                               ])
@@ -47,7 +48,7 @@ class Distros(RPCRoot):
                                          list = distros)
 
     @cherrypy.expose
-    def pick(self, xml):
+    def pick(self, machine_account, xml):
         """
         Based on XML passed in filter distro selection
         """
@@ -64,10 +65,13 @@ class Distros(RPCRoot):
             distros = distros.filter(and_(*joins))
         if queries:
             distros = distros.filter(and_(*queries))
-        distro = distros.first()
-        return dict(distro    = distro.install_name,
-                    family    = '%s' % distro.osversion,
-                    variant   = distro.variant,
-                    tree_path = distro.install_name)
+        distro = distros.order_by('-date_created').first()
+        if distro:
+            return dict(distro    = distro.install_name,
+                        family    = '%s' % distro.osversion,
+                        variant   = distro.variant,
+                        tree_path = distro.install_name)
+        else:
+            return None
 
     default = index
