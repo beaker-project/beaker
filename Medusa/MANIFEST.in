@@ -1,5 +1,6 @@
 exclude start-medusa.py
 include apache/medusa.wsgi
+include apache/xmlrpc_auth.wsgi
 include apache/medusa.conf
 include AUTHORS README COPYING ChangeLog
 include *.cfg

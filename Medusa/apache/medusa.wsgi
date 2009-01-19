@@ -26,4 +26,3 @@ if cherrypy.server.state == 0:
     cherrypy.server.start(init_only=True, server_class=None)
 
 application = cherrypy._cpwsgi.wsgiApp
-

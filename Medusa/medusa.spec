@@ -26,11 +26,10 @@ To Be Filled in
 Summary: Server component of Medusa
 Group: Applications/Internet
 Requires: TurboGears
-Requires: python-TurboMail
 Requires: intltool
-Requires: python-fedora
 Requires: python-decorator
 Requires: python-xmltramp
+Requires: python-ldap
 Requires: mod_wsgi
 Requires: python-tgexpandingformwidget
 Requires: httpd
@@ -42,6 +41,7 @@ Requires: python
 Requires: mod_python
 Requires: httpd
 Requires: cobbler
+Requires: yum-utils 
 
 %description server
 To Be Filled in - Server Side..
@@ -71,6 +71,7 @@ touch %{buildroot}/%{_localstatedir}/log/medusa/server.log
 %{__install} -m 640 apache/%{name}.conf %{buildroot}%{_sysconfdir}/httpd/conf.d/%{name}.conf
 %{__install} -m 640 %{name}.cfg %{buildroot}%{_sysconfdir}/%{name}/
 %{__install} apache/%{name}.wsgi %{buildroot}%{_datadir}/%{name}/%{name}.wsgi
+%{__install} apache/xmlrpc_auth.wsgi %{buildroot}%{_datadir}/%{name}/xmlrpc_auth.wsgi
 
 #lab-controller files
 %{__mkdir_p} %{buildroot}/%{_sysconfdir}/cron.daily
