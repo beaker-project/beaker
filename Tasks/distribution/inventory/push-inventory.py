@@ -17,21 +17,22 @@
 
 import sys, getopt
 import xmlrpclib
+import string
 import re
 import os
 import commands
 import pprint
 import math
+import re
 
 sys.path.append('.')
 sys.path.append("/usr/lib/anaconda")
 import smolt
 import anaconda_log
 import partedUtils
-import network
 
 USAGE_TEXT = """
-Usage:  push-inventory.py -h <HOSTNAME>
+Usage:  push-inventory.py [-d] [-h <HOSTNAME>]
 """
 
 def push_inventory(hostname, inventory):
@@ -56,9 +57,10 @@ def read_inventory():
        data['CPUFLAGS'] = []
        data['PCIID'] = []
        data['USBID'] = []
-       data['DISK'] = []        # disk space for each disk
-       data['DISKSPACE'] = 0    # total combined diskspace
-       data['NR_DISKS'] = 0     # number of spindles
+       data['DISK'] = []      # disk space for each disk
+       data['BOOTDISK'] = []
+       data['DISKSPACE'] = 0  # total combined diskspace
+       data['NR_DISKS'] = 0   # number of spindles
        data['NR_ETH'] = 0       # number of ethX interfaces
        data['NR_IB'] = 0        # number of ibX interfaces
 
@@ -101,6 +103,19 @@ def read_inventory():
        for module in modules:
            data['MODULE'].append(module.split()[0])
 
+       # Find Active Storage Driver(s)
+       bootdisk = None
+       bootregex = re.compile(r'/dev/([^ ]+) on /boot')
+       disks = commands.getstatusoutput('/bin/mount')[1].split('\n')[1:]
+       for disk in disks:
+           if bootregex.search(disk):
+               bootdisk = bootregex.search(disk).group(1)
+
+       if bootdisk:
+           drivers = commands.getstatusoutput('./getdriver.sh %s' % bootdisk)[1].split('\n')[1:]
+           for driver in drivers:
+               data['BOOTDISK'].append(driver)
+       
        # Find Active Network interface
        iface = None
        for line in  commands.getstatusoutput('route -n')[1].split('\n'):
@@ -163,7 +178,7 @@ def main():
 
     args = sys.argv[1:]
     try:
-        opts, args = getopt.getopt(args, 'dh:S:', ['server=', 'debug', 'hostname='])
+        opts, args = getopt.getopt(args, 'dh:S:', ['server='])
     except:
         usage()
     for opt, val in opts:
@@ -174,18 +189,18 @@ def main():
         if opt in ('-S', '--server'):
             lab_server = "http://%s/cgi-bin/rhts/xmlrpc.cgi" % val
 
+    if not hostname:
+        print "You must sepcify a hostname with the -h switch"
+        sys.exit(1)
+
+    if not lab_server:
+        print "You must sepcify a lab_server with the -S switch"
+        sys.exit(1)
+
     inventory = read_inventory()
     if debug:
         print inventory
     else:
-        if not hostname:
-            print "You must specify a hostname with the -h switch"
-            sys.exit(1)
-
-        if not lab_server:
-            print "You must sepcify a lab_server with the -S switch"
-            sys.exit(1)
-
         push_inventory(hostname, inventory)
 
 
