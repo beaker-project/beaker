@@ -18,7 +18,6 @@
 import sys, getopt
 import xmlrpclib
 import string
-import re
 import os
 import commands
 import pprint
@@ -30,9 +29,10 @@ sys.path.append("/usr/lib/anaconda")
 import smolt
 import anaconda_log
 import partedUtils
+import network
 
 USAGE_TEXT = """
-Usage:  push-inventory.py [-d] [-h <HOSTNAME>]
+Usage:  push-inventory.py [-d] [[-h <HOSTNAME>] [-S server]]
 """
 
 def push_inventory(hostname, inventory):
@@ -178,7 +178,7 @@ def main():
 
     args = sys.argv[1:]
     try:
-        opts, args = getopt.getopt(args, 'dh:S:', ['server='])
+        opts, args = getopt.getopt(args, 'dh:S:', ['server=', 'debug', 'hostname='])
     except:
         usage()
     for opt, val in opts:
@@ -189,18 +189,18 @@ def main():
         if opt in ('-S', '--server'):
             lab_server = "http://%s/cgi-bin/rhts/xmlrpc.cgi" % val
 
-    if not hostname:
-        print "You must sepcify a hostname with the -h switch"
-        sys.exit(1)
-
-    if not lab_server:
-        print "You must sepcify a lab_server with the -S switch"
-        sys.exit(1)
-
     inventory = read_inventory()
     if debug:
         print inventory
     else:
+        if not hostname:
+            print "You must specify a hostname with the -h switch"
+            sys.exit(1)
+
+        if not lab_server:
+            print "You must specify a lab_server with the -S switch"
+            sys.exit(1)
+
         push_inventory(hostname, inventory)
 
 
