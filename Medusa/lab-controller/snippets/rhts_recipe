@@ -13,7 +13,7 @@
 #if $yum != ""
 # Install Yum
 pushd /root
-/usr/bin/wget -N http://@@server@@/rpms/$yum
+/usr/bin/wget -N http://$rhts_server/rpms/$yum
 /bin/rpm -Uvh $yum
 popd
 #end if
@@ -26,18 +26,29 @@ baseurl=http://$rhts_server/rpms/rhts/noarch/noarch
 enabled=1
 gpgcheck=0
 
-[rhts-tests-development]
-name=rhts tests development
-baseurl=http://$rhts_server/rpms/development/noarch/noarch
+[rhts-tests]
+name=rhts tests $testrepo
+baseurl=http://$rhts_server/rpms/$testrepo/noarch/noarch
 enabled=0
 gpgcheck=0
 
-[rhts-tests-production]
-name=rhts tests production
-baseurl=http://$rhts_server/rpms/production/noarch/noarch
-enabled=0
+EOF
+
+PIFS=$IFS
+IFS=;
+set -- $repos
+count=1
+for repo in $*; do
+    echo << EOF >>/etc/yum.repos.d/rhts-custom.repo
+[rhts-custom$count]
+name=rhts-custom$count
+baseurl=$repo
+enabled=1
 gpgcheck=0
 EOF
+count=$(expr $count + 1)
+done
+IFS=$PIPFS
 
 # Install RHTS RPMS
 yum -y install rhts-test-env-lab rhts-legacy
