@@ -158,7 +158,7 @@ class Labcontroller:
             profile = self.shoehorn.profiles().__iter__().next()
             system.set_profile(profile.name)
             ipaddress = socket.gethostbyname_ex(data['systemname'])[2][0]
-            system.set_ip_address(ipaddress)
+            system.set_ip_address(ipaddress, 'eth0')
         system.set_power_type(data['power_type'])
         system.set_power_address(data['power_address'])
         if "power_user" in data:
