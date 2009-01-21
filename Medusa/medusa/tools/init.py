@@ -83,6 +83,32 @@ def main():
         virtual   = SystemType(u'Virtual')
         resource  = SystemType(u'Resource')
 
+    #Setup base Architectures
+    if Arch.query().count() == 0:
+        i386   = Arch(u'i386')
+        x86_64 = Arch(u'x86_64')
+        ia64   = Arch(u'ia64')
+        ppc    = Arch(u'ppc')
+        ppc64  = Arch(u'ppc64')
+        s390   = Arch(u's390')
+        s390x  = Arch(u's390x')
+
+    #Setup base power types
+    if PowerType.query().count() == 0:
+        apc_snmp    = PowerType(u'apc_snmp')
+        bladecenter = PowerType(u'bladecenter')
+        bullpap     = PowerType(u'bladepap')
+        drac        = PowerType(u'drac')
+        ether_wake  = PowerType(u'ether_wake')
+        ilo         = PowerType(u'ilo')
+        integrity   = PowerType(u'integrity')
+        ipmilan     = PowerType(u'ipmilan')
+        ipmitool    = PowerType(u'ipmitool')
+        lpar        = PowerType(u'lpar')
+        rsa         = PowerType(u'rsa')
+        virsh       = PowerType(u'virsh')
+        wti         = PowerType(u'wti')
+
     session.flush()
 
 if __name__ == "__main__":
