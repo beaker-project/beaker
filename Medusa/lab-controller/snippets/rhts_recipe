@@ -35,16 +35,17 @@ gpgcheck=0
 EOF
 
 PIFS=$IFS
-IFS=;
+IFS="|"
 set -- $repos
 count=1
 for repo in $*; do
-    echo << EOF >>/etc/yum.repos.d/rhts-custom.repo
+    cat << EOF >>/etc/yum.repos.d/rhts-custom.repo
 [rhts-custom$count]
 name=rhts-custom$count
 baseurl=$repo
 enabled=1
 gpgcheck=0
+
 EOF
 count=$(expr $count + 1)
 done
