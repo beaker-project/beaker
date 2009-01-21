@@ -33,6 +33,8 @@ from medusa.tools.init import dummy
 from kid import Element
 import cherrypy
 import md5
+import re
+import string
 
 # for debugging
 import sys
@@ -66,11 +68,61 @@ class Netboot:
         """
         NetBoot Compat layer for old RHTS Scheduler
         """
-        print "commands = " , commands
-        # InstallMachine $install_name
-        # Call action_auto_provision(ksmeta, bootArgs, bootArgsPost)
-        # XMLRPC call to lab_controller for watchdog.
-        return 1
+        repos = []
+        bootargs = None
+        kickstart = []
+        testrepo = None
+        hostname = None
+        distro_name = None
+        SETENV = re.compile(r'SetEnvironmentVar\s+([^\s]+)\s+"*([^"]+)')
+        INSTALLMACHINE = re.compile(r'InstallMachine\s+([^\s]+)')
+        BOOTARGS = re.compile(r'BootArgs\s+(.*)')
+        KICKSTART = re.compile(r'Kickstart\s+(.*)')
+        ADDREPO = re.compile(r'AddRepo\s+([^\s]+)')
+        TESTREPO = re.compile(r'TestRepo\s+([^\s]+)')
+
+        for command in commands.split('\n'):
+            if SETENV.match(command):
+                if SETENV.match(command).group(1) == "RESULT_SERVER":
+                    rhts_server = SETENV.match(command).group(2)
+                if SETENV.match(command).group(1) == "RECIPEID":
+                    recipeid = SETENV.match(command).group(2)
+                if SETENV.match(command).group(1) == "HOSTNAME":
+                    hostname = SETENV.match(command).group(2)
+            if INSTALLMACHINE.match(command):
+                distro_name = INSTALLMACHINE.match(command).group(1)
+            if BOOTARGS.match(command):
+                bootargs = bootArgs.match(command).group(1)
+            if KICKSTART.match(command):
+                kickstart = KICKSTART.match(command).group(1).split("RHTSNEWLINE")
+            if ADDREPO.match(command):
+                repos.append(ADDREPO.match(command).group(1))
+            if TESTREPO.match(command):
+                testrepo = TESTREPO.match(command).group(1)
+            
+        ks_meta = "rhts_server=%s testrepo=%s recipeid=%s" % (rhts_server, testrepo, recipeid)
+        if repos:
+            ks_meta = "%s repos=%s" % (ks_meta, string.join(repos,"|"))
+        if distro_name:
+            try:
+                distro = Distro.by_install_name(distro_name)
+            except InvalidRequestError:
+                return (-2, "Invalid Distro %s!" % distro_name)
+        else:
+            rc = -4
+            result = "distro not defined"
+        if hostname:
+            try:
+                system = System.query().filter(System.fqdn == hostname).one()
+            except InvalidRequestError:
+                return (-1, "Invalid Hostname %s!" % hostname)
+            rc, result = system.action_auto_provision(distro, ks_meta, bootargs)
+            activity = SystemActivity(system.user, 'VIA %s' % machine_account, 'Provision', 'Distro', "", "%s: %s" % (result, distro.install_name))
+            system.activity.append(activity)
+        else:
+            rc = -3
+            result = "hostname not defined"
+        return rc, result
 
 class Arches:
     @expose(format='json')
@@ -741,7 +793,7 @@ class Root(RPCRoot):
             flash( _(u"Unable to lookup distro for %s" % id) )
             redirect("/")
         (rc, result) = system.action_provision(distro = distro,
-                                               ksmeta = ks_meta,
+                                               ks_meta = ks_meta,
                                        kernel_options = koptions,
                                   kernel_options_post = koptions_post)
         activity = SystemActivity(identity.current.user, 'WEBUI', 'Provision', 'Distro', "", "%s: %s" % (result, distro.install_name))

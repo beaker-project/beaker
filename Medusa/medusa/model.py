@@ -718,13 +718,15 @@ class System(SystemObject):
         return (major,version)
     excluded_families=property(excluded_families)
 
-    def install_options(self, distro):
+    def install_options(self, distro, ks_meta = '', kernel_options = '',
+                           kernel_options_post = ''):
         """
         Return install options based on distro selected.
         Inherit options from Arch -> Family -> Update
         """
-        results = dict(ks_meta = '', kernel_options = '', 
-                       kernel_options_post = '')
+        results = dict(ks_meta = string_to_hash(ks_meta), 
+                       kernel_options = string_to_hash(kernel_options), 
+                       kernel_options_post = string_to_hash(kernel_options_post))
         if distro.arch in self.provisions:
             pa = self.provisions[distro.arch]
             node = self.provision_to_dict(pa)
@@ -925,18 +927,20 @@ class System(SystemObject):
         return distros
 
     def action_auto_provision(self, distro=None,
-                             ksmeta=None,
+                             ks_meta=None,
                              kernel_options=None,
                              kernel_options_post=None):
-        """
-        results = install_options(ksmeta,kernel_options,kernel_options_post)
-        action_provision(distro,**results)
-        action_power()
-        """
-        pass
+        print "ks_meta=",ks_meta
+        results = self.install_options(distro, ks_meta,
+                                               kernel_options,
+                                               kernel_options_post)
+        rc, result = self.action_provision(distro, **results)
+        if rc == 0:
+            rc, result = self.action_power(action="reboot")
+        return rc, result
 
     def action_provision(self, distro=None, 
-                        ksmeta=None,
+                        ks_meta=None,
                         kernel_options=None,
                         kernel_options_post=None,
                         kickstart=None):
@@ -948,9 +952,10 @@ class System(SystemObject):
             return False
         if not self.lab_controller:
             return False
+        print "ksmeta=",ks_meta
         data = dict(systemname          = self.fqdn,
                     profilename         = distro.install_name,
-                    ksmeta              = ksmeta,
+                    ksmeta              = ks_meta,
                     kernel_options      = kernel_options,
                     kernel_options_post = kernel_options_post)
 
