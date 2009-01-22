@@ -5,7 +5,7 @@
  <span py:if="lab_controller">
   <span py:if="is_user">
    <script language="JavaScript" type="text/JavaScript">
-    ${name}_0 = new Provision('${id.field_id}', '${prov_install.field_id}', '${ks_meta.field_id}','${koptions.field_id}','${koptions_post.field_id}','/get_installoptions');
+    ${name}_0 = new Provision('${id.field_id}', '${prov_install.field_id}', '${ks_meta.field_id}','${koptions.field_id}','${koptions_post.field_id}','${tg.url('/get_installoptions')}');
     addLoadEvent(${name}_0.initialize);
    </script>
    <table>
