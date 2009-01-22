@@ -315,7 +315,7 @@ rljAddMetric(){
 	fi
 	rlLogDebug "rljAddMetric: Storing metric $MID with value $VALUE and tolerance $TOLERANCE"
 	$__INTERNAL_JOURNALIST metric --id $TID --type $1 --name "$MID" --value "$VALUE" --tolerance "$TOLERANCE"
-	return 0
+	return $?
 }
 
 rljAddMessage(){

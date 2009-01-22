@@ -331,6 +331,10 @@ def addMetric(id, type, name, value, tolerance):
   log = getLogEl(jrnl)
   add_to = getLastUnfinishedPhase(log)
 
+  for node in add_to.getElementsByTagName('metric'):
+    if node.getAttribute('name') == name:
+        raise Exception("Metric name not unique!")
+
   metric = jrnl.createElement("metric")
   metric.setAttribute("type", type)
   metric.setAttribute("name", name)
@@ -402,7 +406,7 @@ elif command == "metric":
   need((options.testid, options.name, options.type, options.value, options.tolerance))
   try:
     addMetric(options.testid, options.type, options.name, float(options.value), float(options.tolerance))
-  except ValueError:
+  except:
     sys.exit(1)
 elif command == "finphase":
   need((options.testid,))
