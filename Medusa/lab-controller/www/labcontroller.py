@@ -57,9 +57,9 @@ class Labcontroller:
                 continue
             name = curr_distro.name.split('_')[0]
             meta = string.join(curr_distro.name.split('_')[1:],'_').split('-')
-            arch = '~'
-            variant = '~'
-            method = '~'
+            arch = None
+            variant = None
+            method = None
             virt = False
             for curr_arch in valid_arches:
                 if curr_arch in meta:
