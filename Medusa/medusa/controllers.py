@@ -798,7 +798,7 @@ class Root(RPCRoot):
                                   kernel_options_post = koptions_post)
         activity = SystemActivity(identity.current.user, 'WEBUI', 'Provision', 'Distro', "", "%s: %s" % (result, distro.install_name))
         system.activity.append(activity)
-        result = "Provision: %s" % result
+        result = "Provision: %s,%s" % (rc, result)
         if rc == 0:
             if reboot:
                 (rc, result2) =  system.action_power(action="reboot")

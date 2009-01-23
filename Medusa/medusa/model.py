@@ -10,6 +10,7 @@ from sqlalchemy.exceptions import InvalidRequestError
 from identity import LdapSqlAlchemyIdentityProvider
 from cobbler_utils import consolidate, string_to_hash
 from sqlalchemy.orm.collections import attribute_mapped_collection
+import socket
 
 from BasicAuthTransport import BasicAuthTransport
 import xmlrpclib
@@ -952,19 +953,47 @@ class System(SystemObject):
             return False
         if not self.lab_controller:
             return False
-        print "ksmeta=",ks_meta
-        data = dict(systemname          = self.fqdn,
-                    profilename         = distro.install_name,
-                    ksmeta              = ks_meta,
-                    kernel_options      = kernel_options,
-                    kernel_options_post = kernel_options_post)
 
-        if kickstart:
-            data['kickstart'] = kickstart
         labcontroller = self.lab_controller
-        url = "http://%s/labcontroller/" % labcontroller.fqdn
-        lc_xmlrpc = xmlrpclib.ServerProxy(url, BasicAuthTransport(labcontroller.username, labcontroller.password), allow_none=True)
-        return lc_xmlrpc.provision(data)
+        url = "http://%s/cobbler_api_rw/" % labcontroller.fqdn
+        remote = xmlrpclib.ServerProxy(url, allow_none=True)
+        token = remote.login(labcontroller.username, labcontroller.password)
+        try:
+            system_id = remote.get_system_handle(self.fqdn, token)
+        except:
+            # System doesn't exist.  Create it.
+            system_id = remote.new_system(token)
+            ipaddress = socket.gethostbyname_ex(self.fqdn)[2][0]
+            remote.modify_system(system_id,'name',self.fqdn, token)
+            remote.modify_system(system_id,'modify_interface',{'ipaddress-eth0':ipaddress}, token)
+        profile = distro.install_name
+        profile_id = remote.get_profile_handle(profile, token)
+        if not profile_id:
+            return (-3, "%s profile not found on %s" % (profile, labcontroller.fqdn))
+        if ks_meta:
+            remote.modify_system(system_id, 'ksmeta', ks_meta, token)
+        if kernel_options:
+            remote.modify_system(system_id, 'kopts', kernel_options, token)
+        if kernel_options_post:
+            remote.modify_system(system_id, 'kopts_post', kernel_options_post, token)
+        if kickstart:
+            kickfile = '/var/lib/cobbler/kickstarts/%s.ks' % self.fqdn
+            if remote.copy_profile(profile_id, self.fqdn, token):
+                if remote.read_or_write_kickstart_template(kickfile, False, kickstart, token):
+                    profile = self.fqdn
+                    profile_id = remote.get_profile_handle(profile, token)
+                    remote.modify_profile(profile_id, 'kickstart', kickfile, token)
+                    remote.save_profile(profile_id, token)
+                else:
+                    return (-6, "Failed to save kickstart")
+            else:
+                return (-5, "Failed to copy profile")
+        remote.modify_system(system_id, 'profile', profile, token)
+        remote.modify_system(system_id, 'netboot-enabled', True, token)
+        if remote.save_system(system_id, token):
+            return (0, "Success")
+        else:
+            return (-0, "Fail")
 
     def action_power(self, action="reboot"):
         """
@@ -975,20 +1004,37 @@ class System(SystemObject):
         if not self.lab_controller:
             return False
 
-        data = dict( systemname    = self.fqdn,
-                     power_type    = self.power.power_type.name,
-                     power_address = self.power.power_address)
-        if self.power.power_user:
-            data['power_user'] = self.power.power_user
-        if self.power.power_passwd:
-            data['power_passwd'] = self.power.power_passwd
-        if self.power.power_id:
-            data['power_id'] = self.power.power_id
-
         labcontroller = self.lab_controller
-        url = "http://%s/labcontroller/" % labcontroller.fqdn
-        lc_xmlrpc = xmlrpclib.ServerProxy(url, BasicAuthTransport(labcontroller.username, labcontroller.password))
-        return lc_xmlrpc.power(action, data)
+        url = "http://%s/cobbler_api_rw/" % labcontroller.fqdn
+        remote = xmlrpclib.ServerProxy(url, allow_none=True)
+        token = remote.login(labcontroller.username, labcontroller.password)
+        try:
+            system_id = remote.get_system_handle(self.fqdn, token)
+        except:
+            # System doesn't exist.  Create it.
+            system_id = remote.new_system(token)
+            ipaddress = socket.gethostbyname_ex(self.fqdn)[2][0]
+            remote.modify_system(system_id,'name',self.fqdn, token)
+            remote.modify_system(system_id,'modify_interface',{'ipaddress-eth0':ipaddress}, token)
+            profile = remote.get_profiles(0,1,token)[0]['name']
+            remote.modify_system(system_id,'profile',profile, token)
+            remote.modify_system(system_id, 'netboot-enabled', False, token)
+
+        remote.modify_system(system_id, 'power_type', self.power.power_type.name, token)
+        remote.modify_system(system_id, 'power_address', self.power.power_address, token)
+        if self.power.power_user:
+            remote.modify_system(system_id, 'power_user', self.power.power_user, token)
+        if self.power.power_passwd:
+            remote.modify_system(system_id, 'power_pass', self.power.power_passwd, token)
+        if self.power.power_id:
+            remote.modify_system(system_id, 'power_id', self.power.power_id, token)
+        remote.save_system(system_id, token)
+        rc = remote.power_system(system_id, action, token)
+        if rc == 0:
+            return (0, "Success")
+        else:
+            return (-1, "Fail")
+
 
     def __repr__(self):
         return self.fqdn
