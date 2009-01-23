@@ -970,12 +970,9 @@ class System(SystemObject):
         profile_id = remote.get_profile_handle(profile, token)
         if not profile_id:
             return (-3, "%s profile not found on %s" % (profile, labcontroller.fqdn))
-        if ks_meta:
-            remote.modify_system(system_id, 'ksmeta', ks_meta, token)
-        if kernel_options:
-            remote.modify_system(system_id, 'kopts', kernel_options, token)
-        if kernel_options_post:
-            remote.modify_system(system_id, 'kopts_post', kernel_options_post, token)
+        remote.modify_system(system_id, 'ksmeta', ks_meta, token)
+        remote.modify_system(system_id, 'kopts', kernel_options, token)
+        remote.modify_system(system_id, 'kopts_post', kernel_options_post, token)
         if kickstart:
             kickfile = '/var/lib/cobbler/kickstarts/%s.ks' % self.fqdn
             if remote.copy_profile(profile_id, self.fqdn, token):
