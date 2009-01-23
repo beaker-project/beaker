@@ -3,7 +3,7 @@
 
 Name:           medusa
 Version:        0.2
-Release:        2%{?dist}
+Release:        4%{?dist}
 Summary:        Inventory System
 Group:          Applications/Internet
 License:        GPLv2+
@@ -43,6 +43,7 @@ Requires: httpd
 Requires: cobbler >= 1.4
 Requires: yum-utils 
 Requires: /sbin/fenced
+Requires: telnet
 
 %description server
 To Be Filled in - Server Side..
@@ -81,7 +82,6 @@ touch %{buildroot}/%{_localstatedir}/log/medusa/server.log
 %{__mkdir_p} %{buildroot}/var/lib/cobbler/kickstarts
 %{__mkdir_p} %{buildroot}/var/www/labcontroller
 
-%{__install} -m 640 lab-controller/conf.d/labcontroller.conf %{buildroot}%{_sysconfdir}/httpd/conf.d/
 %{__install} -m 640 lab-controller/cron.daily/expire_distros %{buildroot}%{_sysconfdir}/cron.daily/
 %{__install} lab-controller/www/labcontroller.py %{buildroot}/var/www/labcontroller/
 %{__install} lab-controller/www/xmlrpc.py %{buildroot}/var/www/labcontroller/
