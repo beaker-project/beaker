@@ -3,7 +3,7 @@
 
 Name:           medusa
 Version:        0.2
-Release:        4%{?dist}
+Release:        7%{?dist}
 Summary:        Inventory System
 Group:          Applications/Internet
 License:        GPLv2+
@@ -49,7 +49,8 @@ Requires: telnet
 To Be Filled in - Server Side..
 
 %description lab-controller
-This is the interface to link Medusa and Cobbler together.
+This is the interface to link Medusa and Cobbler together. Mostly provides
+snippets and kickstarts.
 
 %prep
 %setup -q
@@ -83,8 +84,6 @@ touch %{buildroot}/%{_localstatedir}/log/medusa/server.log
 %{__mkdir_p} %{buildroot}/var/www/labcontroller
 
 %{__install} -m 640 lab-controller/cron.daily/expire_distros %{buildroot}%{_sysconfdir}/cron.daily/
-%{__install} lab-controller/www/labcontroller.py %{buildroot}/var/www/labcontroller/
-%{__install} lab-controller/www/xmlrpc.py %{buildroot}/var/www/labcontroller/
 %{__install} lab-controller/triggers/osversion.trigger %{buildroot}/var/lib/cobbler/triggers/sync/post/
 %{__install} lab-controller/snippets/rhts_recipe %{buildroot}/var/lib/cobbler/snippets
 %{__install} lab-controller/snippets/main_packages_select %{buildroot}/var/lib/cobbler/snippets
@@ -105,7 +104,7 @@ touch %{buildroot}/%{_localstatedir}/log/medusa/server.log
 %{python_sitelib}/%{name}/
 %{_bindir}/start-%{name}
 %{_bindir}/%{name}-*
-%{_sysconfdir}/httpd/conf.d/medusa.conf
+%config(noreplace) %{_sysconfdir}/httpd/conf.d/medusa.conf
 %attr(-,apache,root) %{_datadir}/%{name}
 %attr(-,apache,root) %config(noreplace) %{_sysconfdir}/medusa/*
 %attr(-,apache,root) %{_localstatedir}/log/medusa
@@ -115,7 +114,6 @@ touch %{buildroot}/%{_localstatedir}/log/medusa/server.log
 %defattr(-,root,root,-)
 %doc lab-controller/README
 %attr(-,apache,root) /var/www/labcontroller/*
-%{_sysconfdir}/httpd/conf.d/labcontroller.conf
 %{_sysconfdir}/cron.daily/expire_distros
 %{python_sitelib}/cpioarchive.py*
 /var/lib/cobbler/triggers/sync/post/osversion.trigger
