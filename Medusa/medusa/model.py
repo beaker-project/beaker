@@ -637,7 +637,7 @@ class System(SystemObject):
         
         """
         if user:
-            if 'admin' in [group.group_name for group in user.groups]:
+            if user.is_admin():
                 private = None
             else:
                 private = or_(System.private==False,
@@ -676,14 +676,6 @@ class System(SystemObject):
                                             or_(User.user_id==user.user_id,
                                                 system_group_table.c.system_id==None))
                                       )
-
-    @classmethod
-    def free(cls, user):
-        """
-        A class method that can be used to search for systems that only
-        user can see
-        """
-        return System.available(user).filter(System.user==None)
 
     @classmethod
     def mine(cls, user):
