@@ -232,7 +232,6 @@ class Root(RPCRoot):
         ks_meta = hash_to_string(install_options['ks_meta'])
         kernel_options = hash_to_string(install_options['kernel_options'])
         kernel_options_post = hash_to_string(install_options['kernel_options_post'])
-        print kernel_options
         return dict(ks_meta = ks_meta, kernel_options = kernel_options,
                     kernel_options_post = kernel_options_post)
 
@@ -379,6 +378,7 @@ class Root(RPCRoot):
         redirect("./view/%s" % system.fqdn)
 
     @expose(template="medusa.templates.system")
+    @identity.require(identity.not_anonymous())
     def new(self):
         options = {}
         options['readonly'] = False
@@ -563,6 +563,7 @@ class Root(RPCRoot):
 
     @error_handler(view)
     @expose()
+    @identity.require(identity.not_anonymous())
     def save_power(self, id, power_address, power_type_id, **kw):
         try:
             system = System.by_id(id,identity.current.user)
@@ -639,6 +640,7 @@ class Root(RPCRoot):
 
     @expose()
     @validate(form=system_form)
+    @identity.require(identity.not_anonymous())
     @error_handler(new)
     def save(self, **kw):
         if kw.get('id'):
@@ -714,6 +716,7 @@ class Root(RPCRoot):
         redirect("/view/%s" % system.fqdn)
 
     @expose()
+    @identity.require(identity.not_anonymous())
     def save_keys(self, id, **kw):
         try:
             system = System.by_id(id,identity.current.user)
@@ -729,6 +732,7 @@ class Root(RPCRoot):
         redirect("/view/%s" % system.fqdn)
 
     @expose()
+    @identity.require(identity.not_anonymous())
     def save_arch(self, id, **kw):
         try:
             system = System.by_id(id,identity.current.user)
@@ -744,6 +748,7 @@ class Root(RPCRoot):
         redirect("/view/%s" % system.fqdn)
 
     @expose()
+    @identity.require(identity.not_anonymous())
     def save_group(self, id, **kw):
         try:
             system = System.by_id(id,identity.current.user)
@@ -809,6 +814,7 @@ class Root(RPCRoot):
         redirect("/view/%s" % system.fqdn)
 
     @expose()
+    @identity.require(identity.not_anonymous())
     def save_note(self, id, **kw):
         try:
             system = System.by_id(id,identity.current.user)
@@ -824,6 +830,7 @@ class Root(RPCRoot):
         redirect("/view/%s" % system.fqdn)
 
     @expose()
+    @identity.require(identity.not_anonymous())
     def save_exclude(self, id, **kw):
         try:
             system = System.by_id(id,identity.current.user)
@@ -900,6 +907,7 @@ class Root(RPCRoot):
         redirect("/view/%s" % system.fqdn)
 
     @expose()
+    @identity.require(identity.not_anonymous())
     def save_install(self, id, **kw):
         try:
             system = System.by_id(id,identity.current.user)

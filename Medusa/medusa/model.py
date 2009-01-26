@@ -751,13 +751,13 @@ class System(SystemObject):
 
     def can_admin(self, user=None):
         if user:
-            if user == self.owner or user.is_admin:
+            if user == self.owner or user.is_admin():
                 return True
         return False
 
     def current_user(self, user=None):
         if user and self.user:
-            if self.user == user or user.is_admin:
+            if self.user == user or user.is_admin():
                 return True
         return False
         
@@ -931,7 +931,6 @@ class System(SystemObject):
                              ks_meta=None,
                              kernel_options=None,
                              kernel_options_post=None):
-        print "ks_meta=",ks_meta
         results = self.install_options(distro, ks_meta,
                                                kernel_options,
                                                kernel_options_post)
@@ -987,10 +986,14 @@ class System(SystemObject):
                 return (-5, "Failed to copy profile")
         remote.modify_system(system_id, 'profile', profile, token)
         remote.modify_system(system_id, 'netboot-enabled', True, token)
-        if remote.save_system(system_id, token):
-            return (0, "Success")
-        else:
-            return (-0, "Fail")
+        msg = "Fail"
+        try:
+            rc = remote.save_system(system_id, token)
+            if rc == 0:
+                msg = "Sucess"
+        except:
+            rc=-1
+        return (rc, msg)
 
     def action_power(self, action="reboot"):
         """
@@ -1010,7 +1013,10 @@ class System(SystemObject):
         except:
             # System doesn't exist.  Create it.
             system_id = remote.new_system(token)
-            ipaddress = socket.gethostbyname_ex(self.fqdn)[2][0]
+            try:
+                ipaddress = socket.gethostbyname_ex(self.fqdn)[2][0]
+            except:
+                return False
             remote.modify_system(system_id,'name',self.fqdn, token)
             remote.modify_system(system_id,'modify_interface',{'ipaddress-eth0':ipaddress}, token)
             profile = remote.get_profiles(0,1,token)[0]['name']
@@ -1026,11 +1032,14 @@ class System(SystemObject):
         if self.power.power_id:
             remote.modify_system(system_id, 'power_id', self.power.power_id, token)
         remote.save_system(system_id, token)
-        rc = remote.power_system(system_id, action, token)
-        if rc == 0:
-            return (0, "Success")
-        else:
-            return (-1, "Fail")
+        msg = "Fail"
+        try:
+            rc = remote.power_system(system_id, action, token)
+            if rc == 0:
+                msg = "Sucess"
+        except:
+            rc=-1
+        return (rc, msg)
 
 
     def __repr__(self):

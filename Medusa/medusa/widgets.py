@@ -383,9 +383,7 @@ class SystemProvision(Form):
         if 'lab_controller' in d['options']:
             d['lab_controller'] = d['options']['lab_controller']
         if 'power' in d['value']:
-            print "power in value"
             if d['value']['power']:
-                print "power enabled"
                 d['power_enabled'] = True
 
 class SystemInstallOptions(Form):
