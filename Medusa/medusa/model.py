@@ -678,13 +678,20 @@ class System(SystemObject):
                                       )
 
     @classmethod
+    def free(cls, user):
+        """
+        A class method that can be used to search for systems that only
+        user can see
+        """
+        return System.available(user).filter(System.user==None)
+
+    @classmethod
     def mine(cls, user):
         """
         A class method that can be used to search for systems that only
         user can see
         """
-        return cls.query.filter(or_(System.user==user,
-                                    System.owner==user))
+        return cls.query.filter(System.user==user)
 
     @classmethod
     def by_fqdn(cls, fqdn, user):

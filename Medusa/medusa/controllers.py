@@ -247,6 +247,11 @@ class Root(RPCRoot):
 
     @expose(template='medusa.templates.grid')
     @paginate('list',default_order='fqdn')
+    def free(self, *args, **kw):
+        return self.systems(systems = System.free(identity.current.user), *args, **kw)
+
+    @expose(template='medusa.templates.grid')
+    @paginate('list',default_order='fqdn')
     def mine(self, *args, **kw):
         return self.systems(systems = System.mine(identity.current.user), *args, **kw)
 
