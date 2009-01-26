@@ -81,7 +81,6 @@ touch %{buildroot}/%{_localstatedir}/log/medusa/server.log
 %{__mkdir_p} %{buildroot}/var/lib/cobbler/triggers/sync/post
 %{__mkdir_p} %{buildroot}/var/lib/cobbler/snippets
 %{__mkdir_p} %{buildroot}/var/lib/cobbler/kickstarts
-%{__mkdir_p} %{buildroot}/var/www/labcontroller
 
 %{__install} -m 640 lab-controller/cron.daily/expire_distros %{buildroot}%{_sysconfdir}/cron.daily/
 %{__install} lab-controller/triggers/osversion.trigger %{buildroot}/var/lib/cobbler/triggers/sync/post/
@@ -113,7 +112,6 @@ touch %{buildroot}/%{_localstatedir}/log/medusa/server.log
 %files lab-controller
 %defattr(-,root,root,-)
 %doc lab-controller/README
-%attr(-,apache,root) /var/www/labcontroller/*
 %{_sysconfdir}/cron.daily/expire_distros
 %{python_sitelib}/cpioarchive.py*
 /var/lib/cobbler/triggers/sync/post/osversion.trigger
