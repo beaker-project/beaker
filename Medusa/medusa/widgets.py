@@ -87,6 +87,8 @@ class SearchBar(RepeatingFormField):
       class="searchbar_form"
       py:attrs="form_attrs"
     >
+    <fieldset>
+     <legend>Search</legend>
      <table id="${field_id}">
       <thead>
        <tr>
@@ -122,6 +124,7 @@ class SearchBar(RepeatingFormField):
      </table>
      <a id="doclink" href="javascript:SearchBarForm.addItem('${field_id}');">Add ( + )</a>
      <input type="submit" name="Search" value="Search"/>
+     </fieldset>
     </form>
     """
 
