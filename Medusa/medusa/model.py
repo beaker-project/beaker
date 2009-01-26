@@ -638,21 +638,16 @@ class System(SystemObject):
         """
         if user:
             if user.is_admin():
-                private = or_(User.user_id==user.user_id,
-                              User.user_id==None)
+                private = None
             else:
-                private = or_(and_(System.private==False,
-                                   or_(User.user_id==user.user_id,
-                                       User.user_id==None)),
+                private = or_(System.private==False,
                               and_(System.private==True,
                                    or_(User.user_id==user.user_id,
                                        System.owner==user,
                                         System.user==user)))
         else:
-            private = and_(System.private==False,
-                           or_(User.user_id==user.user_id,
-                               User.user_id==None))
-        return cls.query.outerjoin(['groups','users']).filter(private)
+            private = System.private==False
+        return cls.query.outerjoin(['groups','users']).filter(private).distinct()
 
 #                                  or_(User.user_id==user.user_id, 
 #                                      system_group_table.c.system_id==None))))
