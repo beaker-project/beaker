@@ -366,11 +366,12 @@ class SystemProvision(Form):
                                              options=[],
                                              attrs=dict(size=10),
                                              validator=validators.NotEmpty())
-        self.ks_meta       = TextField(name='ks_meta',
+        self.ks_meta       = TextField(name='ks_meta', attrs=dict(size=50),
                                        label=_(u'KickStart MetaData'))
-        self.koptions      = TextField(name='koptions',
+        self.koptions      = TextField(name='koptions', attrs=dict(size=50),
                                        label=_(u'Kernel Options (Install)'))
-        self.koptions_post = TextField(name='koptions_post',
+        self.koptions_post = TextField(name='koptions_post', 
+                                       attrs=dict(size=50),
                                        label=_(u'Kernel Options (Post)'))
         self.reboot        = CheckBox(name='reboot',
                                        label=_(u'Reboot System?'),
