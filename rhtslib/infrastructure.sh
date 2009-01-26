@@ -268,6 +268,9 @@ rlFileBackup() {
 
     # run rhts-backup
     RHTS_BACKUP_DIR="$__INTERNAL_BACKUP_DIR" rhts-backup "$@"
+    rc=$?
+    [ $rc -ne 0 ] && rlLogError "rlFileBackup: Backup creation failed"
+    return $rc
 }
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
