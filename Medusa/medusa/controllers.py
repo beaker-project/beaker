@@ -236,22 +236,22 @@ class Root(RPCRoot):
                     kernel_options_post = kernel_options_post)
 
     @expose(template='medusa.templates.grid_add')
-    @paginate('list',default_order='fqdn',limit=50,allow_limit_override=True)
+    @paginate('list',default_order='fqdn',limit=20,allow_limit_override=True)
     def index(self, *args, **kw):
         return self.systems(systems = System.all(identity.current.user), *args, **kw)
 
     @expose(template='medusa.templates.grid')
-    @paginate('list',default_order='fqdn',limit=50,allow_limit_override=True)
+    @paginate('list',default_order='fqdn',limit=20,allow_limit_override=True)
     def available(self, *args, **kw):
         return self.systems(systems = System.available(identity.current.user), *args, **kw)
 
     @expose(template='medusa.templates.grid')
-    @paginate('list',default_order='fqdn',limit=50,allow_limit_override=True)
+    @paginate('list',default_order='fqdn',limit=20,allow_limit_override=True)
     def free(self, *args, **kw):
         return self.systems(systems = System.free(identity.current.user), *args, **kw)
 
     @expose(template='medusa.templates.grid')
-    @paginate('list',default_order='fqdn',limit=50,allow_limit_override=True)
+    @paginate('list',default_order='fqdn',limit=20,allow_limit_override=True)
     def mine(self, *args, **kw):
         return self.systems(systems = System.mine(identity.current.user), *args, **kw)
 
