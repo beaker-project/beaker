@@ -988,8 +988,8 @@ class System(SystemObject):
         remote.modify_system(system_id, 'netboot-enabled', True, token)
         msg = "Fail"
         try:
-            rc = remote.save_system(system_id, token)
-            if rc == 0:
+            if remote.save_system(system_id, token):
+                rc = 0
                 msg = "Sucess"
         except:
             rc=-1
