@@ -945,7 +945,8 @@ class System(SystemObject):
         self.user = None
         if self.lab_controller:
             labcontroller = self.lab_controller
-            remote = xmlrpclib.ServerProxy(labcontroller.url)
+            url = "http://%s/cobbler_api_rw/" % labcontroller.fqdn
+            remote = xmlrpclib.ServerProxy(url, allow_none=True)
             token = remote.login(labcontroller.username,
                                  labcontroller.password)
             system_id = remote.get_system_handle(system.fqdn, token)
