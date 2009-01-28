@@ -1,2 +1,0 @@
-db_module=medusa.model
-history_dir=$base/medusa/sqlobject-history

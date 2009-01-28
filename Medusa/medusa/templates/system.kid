@@ -43,7 +43,7 @@
     </fieldset>
     <fieldset py:if="is_user">
      <legend>Power Action</legend>
-      ${widgets['reboot'].display(method='get', action=widgets_action['reboot'], value=value, options=widgets_options['reboot'])}
+      ${widgets['power_action'].display(method='get', action=widgets_action['power_action'], value=value, options=widgets_options['power_action'])}
     </fieldset>
    </div>
    <div py:if="widgets.has_key('console')" class="tabbertab"><h2>Console</h2>

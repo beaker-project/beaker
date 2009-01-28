@@ -150,19 +150,20 @@ class SearchBar(RepeatingFormField):
 class ProvisionForm(RepeatingFormField):
     pass
 
-class RebootForm(Form):
-    template = "medusa.templates.system_reboot"
-    member_widgets = ["id", "power"]
-    params = ['enabled']
+class PowerActionForm(Form):
+    template = "medusa.templates.system_power_action"
+    member_widgets = ["id", "power", "lab_controller"]
+    params = ['options', 'action', 'enabled']
     
     def __init__(self, *args, **kw):
-        super(RebootForm, self).__init__(*args, **kw)
+        super(PowerActionForm, self).__init__(*args, **kw)
 	self.id = HiddenField(name="id")
         self.power = HiddenField(name="power")
+        self.lab_controller = HiddenField(name="lab_controller")
 
     def update_params(self, d):
-        super(RebootForm, self).update_params(d)
-        if 'power' in d['value']:
+        super(PowerActionForm, self).update_params(d)
+        if 'power' in d['value'] and 'lab_controller' in d['value']:
             if d['value']['power']:
                 d['enabled'] = True
 

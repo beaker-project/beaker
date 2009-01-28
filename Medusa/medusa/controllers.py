@@ -11,7 +11,7 @@ from medusa.activity import Activities
 from medusa.widgets import myPaginateDataGrid
 from medusa.widgets import PowerTypeForm
 from medusa.widgets import PowerForm
-from medusa.widgets import RebootForm
+from medusa.widgets import PowerActionForm
 from medusa.widgets import SystemDetails
 from medusa.widgets import SystemHistory
 from medusa.widgets import SystemExclude
@@ -203,7 +203,7 @@ class Root(RPCRoot):
                  )
     system_form = SystemForm()
     power_form = PowerForm(name='power')
-    reboot_form = RebootForm(name='reboot')
+    power_action_form = PowerActionForm(name='power_action')
     system_details = SystemDetails()
     system_activity = SystemHistory()
     system_exclude = SystemExclude(name='excluded_families')
@@ -474,7 +474,7 @@ class Root(RPCRoot):
                                     groups    = self.system_groups,
                                     install   = self.system_installoptions,
                                     provision = self.system_provision,
-                                    reboot    = self.reboot_form, 
+                                    power_action = self.power_action_form, 
                                     arches    = self.arches_form),
             widgets_action  = dict( power     = '/save_power',
                                     exclude   = '/save_exclude',
@@ -483,7 +483,7 @@ class Root(RPCRoot):
                                     groups    = '/save_group',
                                     install   = '/save_install',
                                     provision = '/action_provision',
-                                    reboot    = '/action_reboot',
+                                    power_action = '/action_power',
                                     arches    = '/save_arch'),
             widgets_options = dict(power     = options,
                                    exclude   = options,
@@ -499,7 +499,7 @@ class Root(RPCRoot):
                                    provision = dict(is_user = is_user,
                                                     lab_controller = system.lab_controller,
                                                     prov_install = [(distro.id, distro.install_name) for distro in system.distros().order_by(distro_table.c.install_name)]),
-                                   reboot    = options,
+                                   power_action   = options,
                                    arches    = dict(readonly = readonly,
                                                     arches = system.arch)),
         )
@@ -555,7 +555,7 @@ class Root(RPCRoot):
             if system.user == identity.current.user:
                 status = "Returned"
                 activity = SystemActivity(identity.current.user, 'WEBUI', status, 'User', '%s' % system.user, '')
-                system.user = None
+                system.action_return()
         else:
             if system.can_share(identity.current.user):
                 status = "Reserved"
@@ -771,7 +771,7 @@ class Root(RPCRoot):
         redirect("/view/%s" % system.fqdn)
 
     @expose()
-    def action_reboot(self, id):
+    def action_power(self, id, action, **kw):
         try:
             system = System.by_id(id,identity.current.user)
         except InvalidRequestError:
@@ -780,13 +780,13 @@ class Root(RPCRoot):
         if system.user != identity.current.user:
             flash( _(u"You are not the current User for %s" % system) )
             redirect("/")
-        (rc, result) =  system.action_power(action="reboot")
-        activity = SystemActivity(identity.current.user, 'WEBUI', 'Reboot', 'Power', "", result)
+        (rc, result) =  system.action_power(action)
+        activity = SystemActivity(identity.current.user, 'WEBUI', action, 'Power', "", result)
         system.activity.append(activity)
         if rc == 0:
-            flash(_(u"Successfully rebooted %s" % system.fqdn))
+            flash(_(u"Successfully %s %s" % (action, system.fqdn)))
         else:
-            flash(_(u"Failed to reboot %s, error: %s:%s" % (system.fqdn, rc, result)))
+            flash(_(u"Failed to %s %s, error: %s:%s" % (action, system.fqdn, rc, result)))
         redirect("/view/%s" % system.fqdn)
 
     @expose()
@@ -1033,14 +1033,11 @@ class Root(RPCRoot):
         if not inventory:
             return (0,"No inventory data provided")
 
-        md5sum = md5.new("%s" % inventory).hexdigest()
         try:
             system = System.query.filter(System.fqdn == fqdn).one()
         except InvalidRequestError:
-            print fqdn
             system = System(fqdn=fqdn)
-        system.update_legacy(inventory)
-        return 0
+        return system.update_legacy(inventory)
 
     @cherrypy.expose
     def push(self, machine_account, fqdn=None, inventory=None):
@@ -1049,21 +1046,12 @@ class Root(RPCRoot):
         if not inventory:
             return (0,"No inventory data provided")
 
-        md5sum = md5.new("%s" % inventory).hexdigest()
-
         try:
             system = System.query.filter(System.fqdn == fqdn).one()
         except InvalidRequestError:
             # New system, add it.
-            print fqdn
             system = System(fqdn=fqdn)
-            # Default to first user
-                                 # , model=inventory['model'],
-                                 # date_modified=datetime.utcnow(),
-                                 # vendor=inventory['vendor'])
-            pass
-        system.update(inventory)
-        return 0
+        return system.update(inventory)
 
     @expose(template="medusa.templates.login")
     def login(self, forward_url=None, previous_url=None, *args, **kw):

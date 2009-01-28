@@ -801,6 +801,7 @@ class System(SystemObject):
                     self.key_values.append(Key_Value(key,value))
             else:
                 self.key_values.append(Key_Value(key,inventory[key]))
+        return 0
                     
 
     def update(self, inventory):
@@ -811,13 +812,14 @@ class System(SystemObject):
 
         md5sum = md5.new("%s" % inventory).hexdigest()
         if self.checksum == md5sum:
-            print "No Change"
             return 0
+        self.checksum = md5sum
         self.type_id = 1
         self.status_id = 1
         for key in inventory:
             if key in self.get_allowed_attr():
-                setattr(self, key, inventory[key])
+                if not getattr(self, key, None):
+                    setattr(self, key, inventory[key])
             else:
                 try:
                     method = self.get_update_method(key)
@@ -825,15 +827,16 @@ class System(SystemObject):
                 except:
                    raise
         self.date_modified = datetime.utcnow()
+        return 0
 
     def updateArch(self, archinfo):
-        self.arch = []
         for arch in archinfo:
             try:
                 new_arch = Arch.by_name(arch)
             except:
                 new_arch = Arch(arch=arch)
-        self.arch.append(new_arch)
+            if new_arch not in self.arch:
+                self.arch.append(new_arch)
 
     def updateDevices(self, deviceinfo):
         for device in deviceinfo:
@@ -937,6 +940,18 @@ class System(SystemObject):
         if rc == 0:
             rc, result = self.action_power(action="reboot")
         return rc, result
+
+    def action_return(self):
+        self.user = None
+        if self.lab_controller:
+            labcontroller = self.lab_controller
+            remote = xmlrpclib.ServerProxy(labcontroller.url)
+            token = remote.login(labcontroller.username,
+                                 labcontroller.password)
+            system_id = remote.get_system_handle(system.fqdn, token)
+            remote.modify_system(system_id, 'netboot-enabled', False, token)
+            if self.power:
+                self.action_power(action='off')
 
     def action_provision(self, distro=None, 
                         ks_meta=None,
