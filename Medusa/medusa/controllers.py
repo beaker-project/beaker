@@ -552,7 +552,8 @@ class Root(RPCRoot):
             flash( _(u"Unable to find system with id of %s" % id) )
             redirect("/")
         if system.user:
-            if system.user == identity.current.user:
+            if system.user == identity.current.user or \
+              identity.current.user.is_admin():
                 status = "Returned"
                 activity = SystemActivity(identity.current.user, 'WEBUI', status, 'User', '%s' % system.user, '')
                 system.action_return()
