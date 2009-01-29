@@ -927,6 +927,8 @@ class System(SystemObject):
                     )
                   )
         )
+        if self.type.type == 'Machine':
+            distros = distros.filter(distro_table.c.virt==False)
         return distros
 
     def action_auto_provision(self, distro=None,
@@ -949,7 +951,7 @@ class System(SystemObject):
             remote = xmlrpclib.ServerProxy(url, allow_none=True)
             token = remote.login(labcontroller.username,
                                  labcontroller.password)
-            system_id = remote.get_system_handle(system.fqdn, token)
+            system_id = remote.get_system_handle(self.fqdn, token)
             remote.modify_system(system_id, 'netboot-enabled', False, token)
             if self.power:
                 self.action_power(action='off')
