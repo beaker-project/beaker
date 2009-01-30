@@ -1,5 +1,3 @@
-#if $getVar('rhts_server','') != ''
-
 #set $yum = $getVar("yum","")
 #if $yum == ""
     #if $os_version == "rhel3"
@@ -13,14 +11,14 @@
 #if $yum != ""
 # Install Yum
 pushd /root
-/usr/bin/wget -N http://$rhts_server/rpms/$yum
+/usr/bin/wget -N http://$server/rpms/$yum
 /bin/rpm -Uvh $yum
 popd
 #end if
 
 # Add Distro Repos
 PIFS=$IFS
-IFS="|"
+IFS=":"
 set -- $tree_repos
 count=1
 for repo in $*; do
@@ -32,10 +30,11 @@ enabled=1
 gpgcheck=0
 
 EOF
-count=$(expr $count + 1)
+count=`expr $count + 1`
 done
 IFS=$PIPFS
 
+#if $getVar('rhts_server','') != ''
 # Add RHTS Test Repo
 cat << EOF > /etc/yum.repos.d/rhts-tests.repo
 [rhts]
@@ -65,7 +64,7 @@ enabled=1
 gpgcheck=0
 
 EOF
-count=$(expr $count + 1)
+count=`expr $count + 1`
 done
 IFS=$PIPFS
 
