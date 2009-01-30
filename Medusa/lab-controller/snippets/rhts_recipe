@@ -18,6 +18,24 @@ pushd /root
 popd
 #end if
 
+# Add Distro Repos
+PIFS=$IFS
+IFS="|"
+set -- $tree_repos
+count=1
+for repo in $*; do
+    cat << EOF >>/etc/yum.repos.d/distro.repo
+[distro$count]
+name=distro$count
+baseurl=http://$server/distros/$repo
+enabled=1
+gpgcheck=0
+
+EOF
+count=$(expr $count + 1)
+done
+IFS=$PIPFS
+
 # Add RHTS Test Repo
 cat << EOF > /etc/yum.repos.d/rhts-tests.repo
 [rhts]
