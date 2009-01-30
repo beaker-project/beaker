@@ -953,6 +953,7 @@ class System(SystemObject):
                                  labcontroller.password)
             system_id = remote.get_system_handle(self.fqdn, token)
             remote.modify_system(system_id, 'netboot-enabled', False, token)
+            remote.save_system(system_id, token):
             if self.power:
                 self.action_power(action='off')
 
