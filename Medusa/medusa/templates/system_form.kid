@@ -10,7 +10,7 @@
        <th class="list">
         <b>System Name</b>
        </th>
-       <td class="list" colspan="5">
+       <td class="list" colspan="3">
         ${display_field_for("fqdn")}
        </td>
       </tr>
@@ -27,20 +27,22 @@
        <td class="list">
         ${value_for("date_modified")}
        </td>
+      </tr>
+      <tr class="list">
        <th class="list">
         <b>Last Checkin</b>
        </th>
        <td class="list">
         ${value_for("date_lastcheckin")}
        </td>
-      </tr>
-      <tr class="list">
        <th class="list">
         <b>Vendor</b>
        </th>
        <td class="list">
         ${display_field_for("vendor")}
        </td>
+      </tr>
+      <tr class="list">
        <th class="list">
         <b>Lender</b>
        </th>
@@ -67,14 +69,14 @@
        <td class="list">
         ${display_field_for("location")}
        </td>
+      </tr>
+      <tr class="list">
        <th class="list">
         <b>Condition</b>
        </th>
        <td class="list">
         ${display_field_for("status_id")}
        </td>
-      </tr>
-      <tr class="list">
        <th class="list">
         <b>Owner</b>
        </th>
@@ -84,6 +86,8 @@
          <span py:content="owner_change_text"/>
         </a>
        </td>
+      </tr>
+      <tr class="list">
        <th class="list">
         <b>Shared</b>
        </th>
@@ -100,7 +104,7 @@
         </a>
        </td>
       </tr>
-      <tr>
+      <tr class="list">
        <th class="list">
         <b>Secret (NDA)</b>
        </th>
@@ -113,15 +117,17 @@
        <td class="list">
         ${display_field_for("type_id")}
        </td>
+      </tr>
+      <tr class="list">
        <th class="list">
         <b>Lab Controller</b>
        </th>
-       <td class="list">
+       <td class="list" colspan="3">
         ${display_field_for("lab_controller_id")}
        </td>
       </tr>
       <tr py:if="not readonly">
-       <td colspan="6">
+       <td colspan="4">
         <a class="button" href="javascript:document.${name}.submit();">Save Changes</a>
        </td>
       </tr>

@@ -488,7 +488,7 @@ class SystemForm(Form):
                          label=_(u'FQDN'), 
                          validator=validators.NotEmpty(),
                          attrs={'maxlength':'255',
-                                'size':'100'}),
+                                'size':'60'}),
                SingleSelectField(name='status_id',
                                  label=_(u'Status'),
                                  options=model.SystemStatus.get_all_status,
