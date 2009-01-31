@@ -543,6 +543,7 @@ class Root(RPCRoot):
         redirect("/")
 
     @expose()
+    @identity.require(identity.not_anonymous())
     def user_change(self, id):
         status = None
         activity = None
