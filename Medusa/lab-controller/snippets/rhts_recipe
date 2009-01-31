@@ -20,17 +20,17 @@ popd
 PIFS=$IFS
 IFS=":"
 set -- $tree_repos
-count=1
+let count=1
 for repo in $*; do
     cat << EOF >>/etc/yum.repos.d/distro.repo
 [distro$count]
 name=distro$count
-baseurl=http://$server/distros/$repo
+baseurl=http://$server/distros$repo
 enabled=1
 gpgcheck=0
 
 EOF
-count=`expr $count + 1`
+let count+=1
 done
 IFS=$PIPFS
 
@@ -54,7 +54,7 @@ EOF
 PIFS=$IFS
 IFS="|"
 set -- $repos
-count=1
+let count=1
 for repo in $*; do
     cat << EOF >>/etc/yum.repos.d/rhts-custom.repo
 [rhts-custom$count]
@@ -64,7 +64,7 @@ enabled=1
 gpgcheck=0
 
 EOF
-count=`expr $count + 1`
+let count+=1
 done
 IFS=$PIPFS
 
