@@ -425,29 +425,6 @@ class VisitIdentity(object):
     pass
 
 
-class Group(object):
-    """
-    An ultra-simple group definition.
-    """
-    @classmethod
-    def by_name(cls, name):
-        return cls.query.filter_by(group_name=name).one()
-
-    @classmethod
-    def by_id(cls, id):
-        return cls.query.filter_by(group_id=id).one()
-
-    def __repr__(self):
-        return self.display_name
-
-    @classmethod
-    def list_by_name(cls, name):
-        """
-        A class method that can be used to search groups
-        based on the group_name
-        """
-        return cls.query().filter(Group.group_name.like('%s%%' % name))
-
 class UserSystem(object):
     """
     System Logins (RHTS, other schedulers...)
@@ -613,6 +590,29 @@ class SystemObject(object):
             return dict_lookup[lookup]['cls'].get_fields()
         return cls.mapper.c.keys()
     get_fields = classmethod(get_fields)
+
+class Group(object):
+    """
+    An ultra-simple group definition.
+    """
+    @classmethod
+    def by_name(cls, name):
+        return cls.query.filter_by(group_name=name).one()
+
+    @classmethod
+    def by_id(cls, id):
+        return cls.query.filter_by(group_id=id).one()
+
+    def __repr__(self):
+        return self.display_name
+
+    @classmethod
+    def list_by_name(cls, name):
+        """
+        A class method that can be used to search groups
+        based on the group_name
+        """
+        return cls.query().filter(Group.group_name.like('%s%%' % name))
 
 class System(SystemObject):
 
@@ -907,6 +907,9 @@ class System(SystemObject):
         """
         distros = session.query(Distro).join(['arch','systems']).filter(
               and_(System.id==self.id,
+                   System.lab_controller_id==LabController.id,
+                   lab_controller_distro_map.c.distro_id==Distro.id,
+                   lab_controller_distro_map.c.lab_controller_id==LabController.id,
                 not_(or_(Distro.id.in_(select([distro_table.c.id]).
                   where(distro_table.c.arch_id==arch_table.c.id).
                   where(arch_table.c.id==exclude_osmajor_table.c.arch_id).
@@ -955,7 +958,7 @@ class System(SystemObject):
             remote.modify_system(system_id, 'netboot-enabled', False, token)
             remote.save_system(system_id, token)
             if self.power:
-                self.action_power(action='off')
+                self.action_power(action="off")
 
     def action_provision(self, distro=None, 
                         ks_meta=None,
@@ -1552,7 +1555,7 @@ mapper(VisitIdentity, visit_identity_table,
 mapper(User, users_table,
         properties=dict(_password=users_table.c.password))
 
-mapper(Group, groups_table,
+Group.mapper = mapper(Group, groups_table,
         properties=dict(users=relation(User,
                 secondary=user_group_table, backref='groups'),
                         systems=relation(System,
