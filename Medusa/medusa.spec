@@ -3,7 +3,7 @@
 
 Name:           medusa
 Version:        0.2
-Release:        7%{?dist}
+Release:        27%{?dist}
 Summary:        Inventory System
 Group:          Applications/Internet
 License:        GPLv2+
@@ -84,11 +84,10 @@ touch %{buildroot}/%{_localstatedir}/log/medusa/server.log
 
 %{__install} -m 640 lab-controller/cron.daily/expire_distros %{buildroot}%{_sysconfdir}/cron.daily/
 %{__install} lab-controller/triggers/osversion.trigger %{buildroot}/var/lib/cobbler/triggers/sync/post/
-%{__install} lab-controller/snippets/rhts_recipe %{buildroot}/var/lib/cobbler/snippets
-%{__install} lab-controller/snippets/main_packages_select %{buildroot}/var/lib/cobbler/snippets
-%{__install} lab-controller/snippets/pre_packages_select %{buildroot}/var/lib/cobbler/snippets
-%{__install} lab-controller/snippets/rhts_pre_partition_select %{buildroot}/var/lib/cobbler/snippets
-%{__install} lab-controller/snippets/rhts_post_install_kernel_options %{buildroot}/var/lib/cobbler/snippets
+%{__install} lab-controller/snippets/rhts_partitions %{buildroot}/var/lib/cobbler/snippets
+%{__install} lab-controller/snippets/rhts_packages %{buildroot}/var/lib/cobbler/snippets
+%{__install} lab-controller/snippets/rhts_pre %{buildroot}/var/lib/cobbler/snippets
+%{__install} lab-controller/snippets/rhts_post %{buildroot}/var/lib/cobbler/snippets
 %{__install} lab-controller/kickstarts/rhel4.ks %{buildroot}/var/lib/cobbler/kickstarts
 %{__install} lab-controller/kickstarts/rhel5.ks %{buildroot}/var/lib/cobbler/kickstarts
 %{__install} -m 640 lab-controller/lib/cpioarchive.py %{buildroot}%{python_sitelib}/cpioarchive.py

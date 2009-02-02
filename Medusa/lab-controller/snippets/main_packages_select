@@ -1,3 +1,0 @@
-%packages --resolvedeps --ignoremissing
-%include /tmp/packages
-

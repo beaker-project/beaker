@@ -26,16 +26,13 @@ timezone  $getVar('timezone', 'America/New_York')
 install
 network --bootproto=dhcp
 
-$SNIPPET("main_partition_select")
-$SNIPPET("main_packages_select")
+$SNIPPET("rhts_partitions")
+
+%packages --resolvedeps --ignoremissing
+$SNIPPET("rhts_packages")
 
 %pre
-$kickstart_start
-$SNIPPET("pre_partition_select")
-$SNIPPET("pre_packages_select")
+$SNIPPET("rhts_pre")
 
 %post
-$yum_config_stanza
-$SNIPPET("post_install_kernel_options")
-$SNIPPET("rhts_recipe")
-$kickstart_done
+$SNIPPET("rhts_post")

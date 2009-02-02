@@ -1,3 +1,37 @@
+$yum_config_stanza
+# End yum configuration
+$SNIPPET('post_install_kernel_options')
+$SNIPPET('post_install_network_config')
+$SNIPPET('func_register_if_enabled')
+$SNIPPET('download_config_files')
+$SNIPPET('koan_environment')
+$SNIPPET('redhat_register')
+# Enable post-install boot notification
+$SNIPPET('post_anamon')
+
+#if $getVar('grubport','') != ''
+/bin/sed -i 's/^serial.*/serial --port=$grubport --speed=115200/' /boot/grub/grub.conf
+#end if
+
+#if $getVar('arch','') == 'ia64'
+BOOT=\$(/usr/sbin/efibootmgr -v | grep BootOrder | awk '{print $2}' | awk -F, '{print $1}')
+EFI=\$(/usr/sbin/efibootmgr -v | grep Boot$BOOT | awk '{print $NF}')
+PXE_SLOT=\$(/usr/sbin/efibootmgr -v | grep -i Netboot |cut -c5-8)
+#
+# If There is no Netboot Entry we can't continue
+# You have to manually setup a Netboot entry first
+# from EFI maint menu.
+#
+if [ ! -z $PXE_SLOT ]; then
+   NEWBOOT=\$(echo $BOOT| sed -e 's/$PXE_SLOT,//')
+   # its cheesy. but it works.
+   NEWBOOT=\$(echo $NEWBOOT| sed -e 's/,$PXE_SLOT,//')
+   NEWBOOT=\$(echo $NEWBOOT| sed -e 's/,$PXE_SLOT//')
+   /usr/sbin/efibootmgr -o $PXE_SLOT,$NEWBOOT
+   /usr/sbin/efibootmgr -n $BOOT
+fi
+#end if
+
 #set $yum = $getVar("yum","")
 #if $yum == ""
     #if $os_version == "rhel3"
@@ -76,3 +110,4 @@ yum -y install yum-utils
 mkdir -p /var/cache/rhts
 echo $rhts_server:$recipeid > /var/cache/rhts/recipe.txt
 #end if
+$kickstart_done

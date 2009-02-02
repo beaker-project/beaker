@@ -1,5 +1,11 @@
+# Enable installation monitoring
+$kickstart_start
+$SNIPPET('pre_install_network_config')
+$SNIPPET('pre_anamon')
+
 # partition details calculation
 
+#if $getVar('partitions','') != ''
 # Determine how many drives we have
 set \$(list-harddrives)
 let numd=\$#/2
@@ -26,8 +32,6 @@ esac
 
 
 cat << EOF > /tmp/partinfo
-zerombr
-clearpart --all --initlabel
 \$EFI_PART
 \$PPC_PREP_PART
 \$BOOT_PART
@@ -35,7 +39,6 @@ part / --fstype ext3 --size=1024 --grow --ondisk=\$d1 --asprimary
 part swap --recommended --ondisk=\$d1 --asprimary
 EOF
 
-#if $getVar('partitions','') != ''
 PIFS=$IFS
 IFS=";"
 set -- $partitions
@@ -55,3 +58,17 @@ done
 IFS=$PIPFS
 #end if
 
+#if $getVar('partitions','') == ''
+cat << EOF > /tmp/partinfo
+autopart
+EOF
+#end if
+
+PIFS=$IFS
+IFS=:
+set -- $packages
+>/tmp/packages
+for package in $*; do
+    echo $package >>/tmp/packages
+done
+IFS=$PIPFS

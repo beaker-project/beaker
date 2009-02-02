@@ -170,6 +170,8 @@ if __name__ == '__main__':
 
     token = remote.login("testing","testing")
 
+    remote.update(token)
+
     distros = remote.get_distros_since(0.0)
 
     for distro in distros:
