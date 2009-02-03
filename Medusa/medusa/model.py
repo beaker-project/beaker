@@ -954,11 +954,17 @@ class System(SystemObject):
             remote = xmlrpclib.ServerProxy(url, allow_none=True)
             token = remote.login(labcontroller.username,
                                  labcontroller.password)
-            system_id = remote.get_system_handle(self.fqdn, token)
-            remote.modify_system(system_id, 'netboot-enabled', False, token)
-            remote.save_system(system_id, token)
-            if self.power:
-                self.action_power(action="off")
+            system_id = None
+            try:
+                # Try and look up the system in cobbler
+                system_id = remote.get_system_handle(self.fqdn, token)
+            except:
+                pass
+            if system_id:
+                remote.modify_system(system_id, 'netboot-enabled', False, token)
+                remote.save_system(system_id, token)
+                if self.power:
+                    self.action_power(action="off")
 
     def action_provision(self, distro=None, 
                         ks_meta=None,
