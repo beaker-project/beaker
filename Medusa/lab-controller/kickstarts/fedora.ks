@@ -28,7 +28,7 @@ network --bootproto=dhcp
 
 $SNIPPET("rhts_partitions")
 
-%packages --resolvedeps --ignoremissing
+%packages --ignoremissing
 $SNIPPET("rhts_packages")
 
 %pre
