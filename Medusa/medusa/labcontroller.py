@@ -169,7 +169,7 @@ class LabControllers(RPCRoot):
             for i in xrange(len(labcontroller.distros)-1,-1,-1):
                 distro_name = labcontroller.distros[i].install_name
                 if distro_name in deleted:
-                    #FIXME Distro Activity Remove
+                    activity = Activity(None,'XMLRPC','Removed','Distro',lc_distro['name'],None)
                     del labcontroller.distros[i]
                     remote.remove_distro(distro_name,token)
             for distro in distros:

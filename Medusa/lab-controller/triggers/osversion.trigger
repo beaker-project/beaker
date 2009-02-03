@@ -151,6 +151,16 @@ def update_comment(distro):
     cpio_object.seek(0)
     cpio = cpioarchive.CpioArchive(fileobj=cpio_object)
     for entry in cpio:
+        if entry.name == './etc/fedora-release':
+            release = entry.read().split('\n')[0]
+            releaseregex = re.compile(r'(.*)\srelease\s(\d+).(\d*)')
+            if releaseregex.search(release):
+                family = "%s%s" % (releaseregex.search(release).group(1),
+                                   releaseregex.search(release).group(2))
+                if releaseregex.search(release).group(3):
+                    update = releaseregex.search(release).group(3)
+                else:
+                    update = 0
         if entry.name == './etc/redhat-release':
             release = entry.read().split('\n')[0]
             updateregex = re.compile(r'Update\s(\d+)')

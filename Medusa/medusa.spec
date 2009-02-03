@@ -3,7 +3,7 @@
 
 Name:           medusa
 Version:        0.2
-Release:        27%{?dist}
+Release:        30%{?dist}
 Summary:        Inventory System
 Group:          Applications/Internet
 License:        GPLv2+
@@ -88,8 +88,10 @@ touch %{buildroot}/%{_localstatedir}/log/medusa/server.log
 %{__install} lab-controller/snippets/rhts_packages %{buildroot}/var/lib/cobbler/snippets
 %{__install} lab-controller/snippets/rhts_pre %{buildroot}/var/lib/cobbler/snippets
 %{__install} lab-controller/snippets/rhts_post %{buildroot}/var/lib/cobbler/snippets
+%{__install} lab-controller/kickstarts/rhel3.ks %{buildroot}/var/lib/cobbler/kickstarts
 %{__install} lab-controller/kickstarts/rhel4.ks %{buildroot}/var/lib/cobbler/kickstarts
 %{__install} lab-controller/kickstarts/rhel5.ks %{buildroot}/var/lib/cobbler/kickstarts
+%{__install} lab-controller/kickstarts/fedora.ks %{buildroot}/var/lib/cobbler/kickstarts
 %{__install} -m 640 lab-controller/lib/cpioarchive.py %{buildroot}%{python_sitelib}/cpioarchive.py
 
 
@@ -118,6 +120,9 @@ touch %{buildroot}/%{_localstatedir}/log/medusa/server.log
 /var/lib/cobbler/kickstarts/*
 
 %changelog
+* Tue Feb 03 2009 Bill Peck <bpeck@redhat.com> - 0.2-30
+- Fixes for importing rawhide
+
 * Wed Jan 07 2009 Bill Peck <bpeck@redhat.com> - 0.2-1
 - Added lab-controller sub package
 
