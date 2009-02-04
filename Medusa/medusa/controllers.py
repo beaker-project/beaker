@@ -1068,6 +1068,7 @@ class Root(RPCRoot):
         except InvalidRequestError:
             return (0, "Invalid system")
         if system.user == user:
+            activity = SystemActivity(system.user, 'VIA %s' % machine_account, "Returned", 'User', '%s' % system.user, '')
             system.action_return()
         return
         
