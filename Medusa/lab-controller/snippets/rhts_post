@@ -100,8 +100,8 @@ IFS=$PIPFS
 yum -y install rhts-test-env-lab rhts-legacy
 yum -y install yum-utils
 
-# Tell the system what recipe id it should be working on
-mkdir -p /var/cache/rhts
-echo $rhts_server:$recipeid > /var/cache/rhts/recipe.txt
+# Get the RHTS job
+wget -O /mnt/tests/runtests.sh http://$rhts_server/testlogs/recipes/$recipeid/runtests.sh
+chmod 755 /mnt/tests/runtests.sh
 #end if
 $kickstart_done
