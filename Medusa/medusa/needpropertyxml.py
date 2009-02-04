@@ -174,6 +174,21 @@ class XmlDistroName(ElementWrapper):
             query = getattr(distro_table.c.name, op)(value)
         return ([], query)
 
+class XmlSystem(ElementWrapper):
+    """
+    Filter 
+    """
+    def filter(self):
+        key = self.get_xml_attr('key', unicode, None)
+        op = self.op_table[self.get_xml_attr('op', unicode, '==')]
+        value = self.get_xml_attr('value', unicode, None)
+        joins = []
+        query = None
+        if key and op and value:
+            # Filter using the operator we looked up
+            query = getattr(getattr(system_table.c,key), op)(value)
+        return (joins, query)
+
 class XmlKeyValue(ElementWrapper):
     """
     Filter based on key_value
@@ -237,18 +252,62 @@ class XmlAutoProv(ElementWrapper):
             query = system_table.c.lab_controller_id != None
         return (joins, query)
 
+class XmlHostLabController(ElementWrapper):
+    """
+    Pick a system from this lab controller
+    """
+    def filter(self):
+        value = self.get_xml_attr('value', unicode, None)
+        joins = []
+        query = None
+        if value:
+            joins = [system_table.c.lab_controller_id == lab_controller_table.c.id]
+            query = lab_controller_table.c.fqdn == value
+        return (joins, query)
+
+class XmlDistroLabController(ElementWrapper):
+    """
+    Pick a system from this lab controller
+    """
+    def filter(self):
+        value = self.get_xml_attr('value', unicode, None)
+        joins = []
+        query = None
+        if value:
+            joins = [distro_table.c.id == lab_controller_distro_map.c.distro_id,
+                     lab_controller_table.c.id == lab_controller_distro_map.c.lab_controller_id]
+            query = lab_controller_table.c.fqdn == value
+        return (joins, query)
+
+class XmlSystemType(ElementWrapper):
+    """
+    Pick a system with the correct system type.
+    """
+    def filter(self):
+        value = self.get_xml_attr('value', unicode, None)
+        joins = []
+        query = None
+        if value:
+            joins = [system_table.c.type_id == system_type_table.c.id]
+            query = system_type_table.c.type == value
+        return (joins, query)
+
 subclassDict = {
-    'host'           : XmlHost,
-    'distro'         : XmlDistro,
-    'key_value'      : XmlKeyValue,
-    'auto_prov'      : XmlAutoProv,
-    'and'            : XmlAnd,
-    'or'             : XmlOr,
-    'distro_arch'    : XmlDistroArch,
-    'distro_family'  : XmlDistroFamily,
-    'distro_variant' : XmlDistroVariant,
-    'distro_name'    : XmlDistroName,
-    'distro_tag'     : XmlDistroTag
+    'host'                : XmlHost,
+    'distro'              : XmlDistro,
+    'key_value'           : XmlKeyValue,
+    'auto_prov'           : XmlAutoProv,
+    'and'                 : XmlAnd,
+    'or'                  : XmlOr,
+    'distro_arch'         : XmlDistroArch,
+    'distro_family'       : XmlDistroFamily,
+    'distro_variant'      : XmlDistroVariant,
+    'distro_name'         : XmlDistroName,
+    'distro_tag'          : XmlDistroTag,
+    'hostlabcontroller'   : XmlHostLabController,
+    'distrolabcontroller' : XmlDistroLabController,
+    'system_type'         : XmlSystemType,
+    'system'              : XmlSystem,
     }
 
 if __name__=='__main__':

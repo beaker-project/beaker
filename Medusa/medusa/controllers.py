@@ -102,7 +102,7 @@ class Netboot:
             
         ks_meta = "rhts_server=%s testrepo=%s recipeid=%s" % (rhts_server, testrepo, recipeid)
         if repos:
-            ks_meta = "%s repos=%s" % (ks_meta, string.join(repos,"|"))
+            ks_meta = "%s customrepos=%s" % (ks_meta, string.join(repos,"|"))
         if distro_name:
             try:
                 distro = Distro.by_install_name(distro_name)
@@ -122,7 +122,7 @@ class Netboot:
         else:
             rc = -3
             result = "hostname not defined"
-        return rc, result
+        return rc
 
 class Arches:
     @expose(format='json')
@@ -982,15 +982,7 @@ class Root(RPCRoot):
     def lab_controllers(self, machine_account):
         return [lc.fqdn for lc in LabController.query()]
     
-    @cherrypy.expose
-    def pick(self, machine_account, distro=None, user=None, xml=None):
-        if not distro:
-            return (0,"You must supply a distro")
-        if not user:
-            return (0,"You must supply a user name")
-        if not xml:
-            return (0,"No xml query provided")
-        user = User.by_user_name(user)
+    def pick_common(self, distro=None, user=None, xml=None):
         distro = Distro.by_install_name(distro)
         systems = distro.systems(user)
         #FIXME Should validate XML before processing.
@@ -1005,7 +997,19 @@ class Root(RPCRoot):
             systems = systems.filter(and_(*joins))
         if queries:
             systems = systems.filter(and_(*queries))
+        return systems
         
+    @cherrypy.expose
+    def system_pick(self, machine_account, distro=None, user=None, xml=None):
+        if not distro:
+            return (0,"You must supply a distro")
+        if not user:
+            return (0,"You must supply a user name")
+        if not xml:
+            return (0,"No xml query provided")
+
+        user = User.by_user_name(user)
+        systems = self.pick_common(distro, user, xml)
 
         hit = False
         for system in systems:
@@ -1023,11 +1027,51 @@ class Root(RPCRoot):
                          type = '%s' % system.type), 1)
         elif systems.count():
             # We have matches but none are available right now
-            return (None, -1)
+            system = systems.first()
+            return (dict(fqdn    = system.fqdn,
+                         type = '%s' % system.type), 0)
         else:
             # Nothing matches what the user requested.
-            return (None, 0)
+            return (None, -1)
+
+    @cherrypy.expose
+    def system_validate(self, machine_account, distro=None, user=None, xml=None):
+        if not distro:
+            return (0,"You must supply a distro")
+        if not user:
+            return (0,"You must supply a user name")
+        if not xml:
+            return (0,"No xml query provided")
+
+        user = User.by_user_name(user)
+        systems = self.pick_common(distro, user, xml)
+
+        if systems.count():
+            # We have matches 
+            system = systems.first()
+            return (dict(fqdn    = system.fqdn,
+                         type = '%s' % system.type), 0)
+        else:
+            # Nothing matches what the user requested.
+            return (None, -1)
             
+    @cherrypy.expose
+    def system_return(self, machine_account, fqdn=None, full_name=None):
+        if not fqdn:
+            return (0,"You must supply a system")
+        if not full_name:
+            return (0,"You must supply a user name")
+
+        user = User.by_user_name(full_name)
+        try:
+            system = System.by_fqdn(fqdn,identity.current.user)
+        except InvalidRequestError:
+            return (0, "Invalid system")
+        if system.user == user:
+            system.action_return()
+        return
+        
+
     @cherrypy.expose
     def legacypush(self, machine_account, fqdn=None, inventory=None):
         if not fqdn:

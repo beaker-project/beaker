@@ -3,7 +3,7 @@
 
 Name:           medusa
 Version:        0.2
-Release:        30%{?dist}
+Release:        38%{?dist}
 Summary:        Inventory System
 Group:          Applications/Internet
 License:        GPLv2+
@@ -120,6 +120,31 @@ touch %{buildroot}/%{_localstatedir}/log/medusa/server.log
 /var/lib/cobbler/kickstarts/*
 
 %changelog
+* Wed Feb 04 2009 Bill Peck <bpeck@redhat.com> - 0.2-38
+- Added system_return method
+
+* Tue Feb 03 2009 Bill Peck <bpeck@redhat.com> - 0.2-37
+- Fixed bogus repo in rhts_post snippet
+
+* Tue Feb 03 2009 Bill Peck <bpeck@redhat.com> - 0.2-36
+- Fixed netboot return code to match what legacy rhts expects
+
+* Tue Feb 03 2009 Bill Peck <bpeck@redhat.com> - 0.2-35
+- Fixed system_pick and system_validate to return a host even when its busy.
+
+* Tue Feb 03 2009 Bill Peck <bpeck@redhat.com> - 0.2-34
+- Added system filter method
+- fixed user object in method system_pick
+
+* Tue Feb 03 2009 Bill Peck <bpeck@redhat.com> - 0.2-33
+- Added system type filter method
+
+* Tue Feb 03 2009 Bill Peck <bpeck@redhat.com> - 0.2-32
+- Added system_validate method 
+
+* Tue Feb 03 2009 Bill Peck <bpeck@redhat.com> - 0.2-31
+- Updates for RHTS integration, lab controller selection.
+
 * Tue Feb 03 2009 Bill Peck <bpeck@redhat.com> - 0.2-30
 - Fixes for importing rawhide
 

@@ -71,23 +71,17 @@ IFS=$PIPFS
 #if $getVar('rhts_server','') != ''
 # Add RHTS Test Repo
 cat << EOF > /etc/yum.repos.d/rhts-tests.repo
-[rhts]
-name=rhts
-baseurl=http://$rhts_server/rpms/rhts/noarch/noarch
-enabled=1
-gpgcheck=0
-
 [rhts-tests]
 name=rhts tests $testrepo
 baseurl=http://$rhts_server/rpms/$testrepo/noarch/noarch
-enabled=0
+enabled=1
 gpgcheck=0
 
 EOF
 
 PIFS=$IFS
 IFS="|"
-set -- $repos
+set -- $customrepos
 let count=1
 for repo in $*; do
     cat << EOF >>/etc/yum.repos.d/rhts-custom.repo
