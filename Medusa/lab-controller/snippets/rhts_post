@@ -71,7 +71,7 @@ IFS=$PIPFS
 #if $getVar('rhts_server','') != ''
 # Add RHTS Test Repo
 cat << EOF > /etc/yum.repos.d/rhts-tests.repo
-[rhts-tests]
+[rhts-noarch]
 name=rhts tests $testrepo
 baseurl=http://$rhts_server/rpms/$testrepo/noarch/noarch
 enabled=1
