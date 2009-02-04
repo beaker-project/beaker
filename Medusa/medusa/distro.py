@@ -68,6 +68,7 @@ class Distros(RPCRoot):
         distro = distros.order_by('-date_created').first()
         if distro:
             return dict(distro    = distro.install_name,
+                        arch      = '%s' % distro.arch,
                         family    = '%s' % distro.osversion,
                         variant   = distro.variant,
                         tree_path = distro.install_name)
