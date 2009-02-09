@@ -120,7 +120,7 @@ rlLogFatal()   { rlLog "$1" "$2" "[ FATAL   ] ::"; rljAddMessage "$1" "FATAL" ; 
 =head3 rlDie
 
 Creates a time-labelled message in the log, reports test result,
-uploads logs, closes not closed phase and terminates test.
+uploads logs, closes unfinished phase and terminates test.
 
     rlDie message [logfile] [testname] [result] [score] [file...]
 
