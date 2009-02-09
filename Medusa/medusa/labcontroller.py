@@ -166,12 +166,13 @@ class LabControllers(RPCRoot):
                         distro.date_created = datetime.fromtimestamp(float(lc_distro['tree_build_time']))
                         activity = Activity(None,'XMLRPC','Added','Distro',None, lc_distro['name'])
                     distros.append(distro)
-            for i in xrange(len(labcontroller.distros)-1,-1,-1):
-                distro_name = labcontroller.distros[i].install_name
-                if distro_name in deleted:
-                    activity = Activity(None,'XMLRPC','Removed','Distro',lc_distro['name'],None)
-                    del labcontroller.distros[i]
-                    remote.remove_distro(distro_name,token)
+            print "deleted array = ", deleted
+#            for i in xrange(len(labcontroller.distros)-1,-1,-1):
+#                distro_name = labcontroller.distros[i].install_name
+#                if distro_name in deleted:
+#                    activity = Activity(None,'XMLRPC','Removed','Distro',distro_name,None)
+#                    del labcontroller.distros[i]
+#                    remote.remove_distro(distro_name,token)
             for distro in distros:
                 if distro not in labcontroller.distros:
                     #FIXME Distro Activity Add

@@ -63,6 +63,11 @@ class Netboot:
     # For XMLRPC methods in this class.
     exposed = True
 
+    # path for Legacy RHTS
+    @cherrypy.expose
+    def system_return(self, *args):
+        return Root().system_return(*args)
+
     @cherrypy.expose
     def commandBoot(self, machine_account, commands):
         """
@@ -71,6 +76,7 @@ class Netboot:
         repos = []
         bootargs = None
         kickstart = []
+        packages = []
         testrepo = None
         hostname = None
         distro_name = None
@@ -80,6 +86,7 @@ class Netboot:
         KICKSTART = re.compile(r'Kickstart\s+(.*)')
         ADDREPO = re.compile(r'AddRepo\s+([^\s]+)')
         TESTREPO = re.compile(r'TestRepo\s+([^\s]+)')
+        INSTALLPACKAGE = re.compile(r'InstallPackage\s+([^\s]+)')
 
         for command in commands.split('\n'):
             if SETENV.match(command):
@@ -89,10 +96,12 @@ class Netboot:
                     recipeid = SETENV.match(command).group(2)
                 if SETENV.match(command).group(1) == "HOSTNAME":
                     hostname = SETENV.match(command).group(2)
+            if INSTALLPACKAGE.match(command):
+                packages.append(INSTALLPACKAGE.match(command).group(1))
             if INSTALLMACHINE.match(command):
                 distro_name = INSTALLMACHINE.match(command).group(1)
             if BOOTARGS.match(command):
-                bootargs = bootArgs.match(command).group(1)
+                bootargs = BOOTARGS.match(command).group(1)
             if KICKSTART.match(command):
                 kickstart = KICKSTART.match(command).group(1).split("RHTSNEWLINE")
             if ADDREPO.match(command):
@@ -100,7 +109,7 @@ class Netboot:
             if TESTREPO.match(command):
                 testrepo = TESTREPO.match(command).group(1)
             
-        ks_meta = "rhts_server=%s testrepo=%s recipeid=%s" % (rhts_server, testrepo, recipeid)
+        ks_meta = "rhts_server=%s testrepo=%s recipeid=%s packages=%s" % (rhts_server, testrepo, recipeid, string.join(packages,":"))
         if repos:
             ks_meta = "%s customrepos=%s" % (ks_meta, string.join(repos,"|"))
         if distro_name:
@@ -241,16 +250,19 @@ class Root(RPCRoot):
         return self.systems(systems = System.all(identity.current.user), *args, **kw)
 
     @expose(template='medusa.templates.grid')
+    @identity.require(identity.not_anonymous())
     @paginate('list',default_order='fqdn',limit=20,allow_limit_override=True)
     def available(self, *args, **kw):
         return self.systems(systems = System.available(identity.current.user), *args, **kw)
 
     @expose(template='medusa.templates.grid')
+    @identity.require(identity.not_anonymous())
     @paginate('list',default_order='fqdn',limit=20,allow_limit_override=True)
     def free(self, *args, **kw):
         return self.systems(systems = System.free(identity.current.user), *args, **kw)
 
     @expose(template='medusa.templates.grid')
+    @identity.require(identity.not_anonymous())
     @paginate('list',default_order='fqdn',limit=20,allow_limit_override=True)
     def mine(self, *args, **kw):
         return self.systems(systems = System.mine(identity.current.user), *args, **kw)
@@ -1069,6 +1081,7 @@ class Root(RPCRoot):
             return (0, "Invalid system")
         if system.user == user:
             activity = SystemActivity(system.user, 'VIA %s' % machine_account, "Returned", 'User', '%s' % system.user, '')
+            system.activity.append(activity)
             system.action_return()
         return
         

@@ -19,3 +19,4 @@ include lab-controller/lib/*
 include lab-controller/snippets/*
 include lab-controller/triggers/*
 include lab-controller/www/*
+include lab-controller/aux/*

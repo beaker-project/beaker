@@ -1,11 +1,11 @@
 #!/usr/bin/python
 
-import sys, os
-from cobbler import api
+#import sys, os
+#from cobbler import api
 
-if __name__ == '__main__':
-    cobbler_api = api.BootAPI()
-    distros = cobbler_api.distros()
-    for distro in distros:
-        if not os.path.exists(distro.kernel):
-            distros.remove(distro.name, recursive=True)
+#if __name__ == '__main__':
+#    cobbler_api = api.BootAPI()
+#    distros = cobbler_api.distros()
+#    for distro in distros:
+#        if not os.path.exists(distro.kernel):
+#            distros.remove(distro.name, recursive=True)

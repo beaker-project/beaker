@@ -3,7 +3,7 @@
 
 Name:           medusa
 Version:        0.2
-Release:        38%{?dist}
+Release:        49%{?dist}
 Summary:        Inventory System
 Group:          Applications/Internet
 License:        GPLv2+
@@ -65,6 +65,7 @@ rm -rf medusa/tests medusa/tools/test-medusa.py
     --install-data=%{_datadir} --root %{buildroot}
 
 %{__mkdir_p} %{buildroot}/var/lib/medusa
+%{__mkdir_p} %{buildroot}/var/www/cobbler/aux
 %{__mkdir_p} %{buildroot}%{_sysconfdir}/httpd/conf.d
 %{__mkdir_p} %{buildroot}%{_sysconfdir}/medusa
 %{__mkdir_p} %{buildroot}%{_datadir}/%{name}
@@ -92,6 +93,7 @@ touch %{buildroot}/%{_localstatedir}/log/medusa/server.log
 %{__install} lab-controller/kickstarts/rhel4.ks %{buildroot}/var/lib/cobbler/kickstarts
 %{__install} lab-controller/kickstarts/rhel5.ks %{buildroot}/var/lib/cobbler/kickstarts
 %{__install} lab-controller/kickstarts/fedora.ks %{buildroot}/var/lib/cobbler/kickstarts
+%{__install} lab-controller/aux/rhts-checkin  %{buildroot}/var/www/cobbler/aux/
 %{__install} -m 640 lab-controller/lib/cpioarchive.py %{buildroot}%{python_sitelib}/cpioarchive.py
 
 
@@ -118,8 +120,38 @@ touch %{buildroot}/%{_localstatedir}/log/medusa/server.log
 /var/lib/cobbler/triggers/sync/post/osversion.trigger
 /var/lib/cobbler/snippets/*
 /var/lib/cobbler/kickstarts/*
+/var/www/cobbler/aux/rhts-checkin
 
 %changelog
+* Thu Feb 05 2009 Bill Peck <bpeck@redhat.com> - 0.2-49
+- added rhts watchdog notification to rhts_pre snippet.
+
+* Thu Feb 05 2009 Bill Peck <bpeck@redhat.com> - 0.2-48
+- Fix mispelling on BOOTARGS regex
+
+* Thu Feb 05 2009 Bill Peck <bpeck@redhat.com> - 0.2-47
+- Paper bag fix
+
+* Thu Feb 05 2009 Bill Peck <bpeck@redhat.com> - 0.2-44
+- Parse InstallPackage commands
+
+* Thu Feb 05 2009 Bill Peck <bpeck@redhat.com> - 0.2-43
+- system activity for system_return was not being attached to system logs
+
+* Thu Feb 05 2009 Bill Peck <bpeck@redhat.com> - 0.2-42
+- Disable expire code in labcontroller
+
+* Thu Feb 05 2009 Bill Peck <bpeck@redhat.com> - 0.2-41
+- Disable expire distros script for now.
+
+* Wed Feb 04 2009 Bill Peck <bpeck@redhat.com> - 0.2-40
+- Match existing rhts legacy repo name
+
+* Wed Feb 04 2009 Bill Peck <bpeck@redhat.com> - 0.2-39
+- Logging of returned systems
+- return arch for distro pick
+- pull runtests.sh for legacy rhts
+
 * Wed Feb 04 2009 Bill Peck <bpeck@redhat.com> - 0.2-38
 - Added system_return method
 
