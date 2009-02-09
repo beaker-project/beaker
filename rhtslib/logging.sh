@@ -120,7 +120,7 @@ rlLogFatal()   { rlLog "$1" "$2" "[ FATAL   ] ::"; rljAddMessage "$1" "FATAL" ; 
 =head3 rlDie
 
 Creates a time-labelled message in the log, reports test result,
-uploads logs and terminates test
+uploads logs, closes not closed phase and terminates test.
 
     rlDie message [logfile] [testname] [result] [score] [file...]
 
@@ -136,19 +136,19 @@ Log file. If not supplied, OUTPUTFILE is assumed.
 
 =item testname
 
-TEST name - for result reporting.
+Test name - for result reporting. Default is content of RHTS's \$TEST variable.
 
 =item result
 
-Test RESULT - for result reporting.
+Test RESULT - for result reporting. Default is WARN.
 
 =item score
 
-Test SCORE - for result reporting.
+Test SCORE - for result reporting. Default is 0.
 
 =item file
 
-List of files (logs) you want to upload as well.
+Files (logs) you want to upload as well. C<rlBundleLogs> will be used for it.
 
 =back
 
@@ -156,14 +156,15 @@ List of files (logs) you want to upload as well.
 
 rlDie()
 {
-  local rlMSG="$1";          shift
-  local rlLOG="$2";          shift
-  local rlTEST=${3:-$TEST};  shift
-  local rlRESULT=${4:-WARN}; shift
-  local rlSCORE=${5:-0};     shift
-  [ -z "$@" ] && rlBundleLogs $@
-  rlLogFatal "$rlMSG" "$rlLOG";
+  local rlMSG="$1"
+  local rlLOG="$2"
+  local rlTEST=${3:-$TEST}
+  local rlRESULT=${4:-WARN}
+  local rlSCORE=${5:-0}
+  [ -z "$@" ] && rlBundleLogs rlDieBundling $@
+  rlLogFatal "$rlMSG" "$rlLOG"
   rlReport "$rlTEST" "$rlRESULT" "$rlSCORE"
+  rlPhaseEnd
   exit 0
 }
 
