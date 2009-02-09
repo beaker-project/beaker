@@ -989,7 +989,10 @@ class System(SystemObject):
         except:
             # System doesn't exist.  Create it.
             system_id = remote.new_system(token)
-            ipaddress = socket.gethostbyname_ex(self.fqdn)[2][0]
+            try:
+                ipaddress = socket.gethostbyname_ex(self.fqdn)[2][0]
+            except socket.gaierror:
+                return (-4, "%s does not resolve to an ip address" % self.fqdn)
             remote.modify_system(system_id,'name',self.fqdn, token)
             remote.modify_system(system_id,'modify_interface',{'ipaddress-eth0':ipaddress}, token)
         profile = distro.install_name
@@ -1042,8 +1045,8 @@ class System(SystemObject):
             system_id = remote.new_system(token)
             try:
                 ipaddress = socket.gethostbyname_ex(self.fqdn)[2][0]
-            except:
-                return False
+            except socket.gaierror:
+                return (-4, "%s does not resolve to an ip address" % self.fqdn)
             remote.modify_system(system_id,'name',self.fqdn, token)
             remote.modify_system(system_id,'modify_interface',{'ipaddress-eth0':ipaddress}, token)
             profile = remote.get_profiles(0,1,token)[0]['name']
