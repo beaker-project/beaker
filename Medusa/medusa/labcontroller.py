@@ -112,9 +112,8 @@ class LabControllers(RPCRoot):
 
                 if 'comment' in lc_distro:
                     # Distro has been marked for deletion from lab controller
-                    if lc_distro['comment'].find("DELETED") != "-1":
+                    if lc_distro['comment'].find("DELETED") != -1:
                         deleted.append(lc_distro['name'])
-                    else:
                         continue
 
                     release = re.compile(r'family=(\w+\d+.\d+)')
