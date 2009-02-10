@@ -72,6 +72,8 @@ def printPhaseLog(phase,severity):
   phaseResult = phase.getAttribute("result")
   starttime = phase.getAttribute("starttime")
   endtime = phase.getAttribute("endtime")
+  if endtime == "":
+     endtime = time.strftime(timeFormat)
   duration = time.mktime(time.strptime(endtime,timeFormat)) - time.mktime(time.strptime(starttime,timeFormat))
   printHeadLog(phaseName)
   passed = 0
@@ -346,7 +348,7 @@ def addMetric(id, type, name, value, tolerance):
   saveJournal(jrnl, id)
 
 def dumpJournal(id):  
-  print openJournal(id).toprettyxml()
+  print openJournal(id).toprettyxml().encode("utf-8")
   
 def need(args):
   if None in args:
