@@ -296,7 +296,7 @@ class Root(RPCRoot):
                         widgets.PaginateDataGrid.Column(name='model', getter=lambda x: x.model, title='Model', options=dict(sortable=True)),
                         widgets.PaginateDataGrid.Column(name='location', getter=lambda x: x.location, title='Location', options=dict(sortable=True)),
                         widgets.PaginateDataGrid.Column(name='type.type', getter=lambda x: x.type, title='Type', options=dict(sortable=True)),
-                        widgets.PaginateDataGrid.Column(name='user.user_name', getter=lambda x: x.user, title='User', options=dict(sortable=True)),
+                        widgets.PaginateDataGrid.Column(name='user.display_name', getter=lambda x: x.user, title='User', options=dict(sortable=True)),
                         widgets.PaginateDataGrid.Column(name='date_lastcheckin', getter=lambda x: x.date_lastcheckin, title='Last Checkin', options=dict(sortable=True)),
                        ])
         return dict(title="Systems", grid = systems_grid,

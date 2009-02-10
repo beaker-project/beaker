@@ -647,7 +647,7 @@ class System(SystemObject):
                                         System.user==user)))
         else:
             private = System.private==False
-        return cls.query.outerjoin(['groups','users']).filter(private).distinct()
+        return cls.query.outerjoin('user', aliased=True).outerjoin(['groups','users']).filter(private).distinct()
 
 #                                  or_(User.user_id==user.user_id, 
 #                                      system_group_table.c.system_id==None))))
