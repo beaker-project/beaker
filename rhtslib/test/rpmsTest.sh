@@ -19,7 +19,7 @@ test_rlAssertRpm() {
   local first_v=$( rpm -q $first --qf "%{VERSION}\n" )
   local first_r=$( rpm -q $first --qf "%{RELEASE}\n" )
   local first_a=$( rpm -q $first --qf "%{ARCH}\n" )
-  rlStartJournal
+  rlJournalStart
 
   assertTrue "rlAssertRpm returns 0 on installed 'N' package" \
     "rlAssertRpm $first_n"
@@ -84,7 +84,7 @@ test_rlAssertNotRpm() {
 	 tail -3| head -1 | grep -q '1 bad' "
 }
 
-test_rlRpmPresent() {
+test_rlCheckRpm() {
   local first=$( rpm -qa --qf "%{NAME}.%{ARCH}\n" | tail -n 1 )
   local first_n=$( rpm -q $first --qf "%{NAME}\n" )
   local first_v=$( rpm -q $first --qf "%{VERSION}\n" )
@@ -119,6 +119,10 @@ test_rlRpmPresent() {
   assertTrue "rlRpmPresent doesn't increase SCORE when package is not found" \
     "rlPhaseStart FAIL rpm-present; rlRpmPresent ahsgqyrg ; rlPhaseEnd ;rlJournalPrintText |
 	 tail -2| head -n 1 | grep -q '0 bad' "
+}
+
+test_rlRpmPresent(){
+    assertTrue "rlrpmPresent is reported to be obsoleted" "rlRpmPresent abcdefg |grep -q obsolete"
 }
 
 

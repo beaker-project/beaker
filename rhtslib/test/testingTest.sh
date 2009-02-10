@@ -19,29 +19,38 @@ test_rlAssertExists() {
 	touch $FILE
     assertTrue "rlAssertExists returns 0 on existing file" \
     "rlAssertExists $FILE"
-	__one_fail_one_pass 'rlAssertExists $FILE' PASS
+	__one_fail_one_pass "rlAssertExists $FILE" PASS
 
 	rm -f $FILE
     assertFalse "rlAssertExists returns 1 on non-existant file" \
     "rlAssertExists $FILE"
-	__one_fail_one_pass 'rlAssertExists $FILE' FAIL
+	__one_fail_one_pass "rlAssertExists $FILE" FAIL
     assertFalse "rlAssertExists returns 1 when called without arguments" \
     "rlAssertExists"
+
+    local FILE="/tmp/test rlAssertExists filename with spaces"
+	touch "$FILE"
+    assertTrue "rlAssertExists returns 0 on existing file with spaces in its name" \
+    "rlAssertExists \"$FILE\""
+    rm -f "$FILE"
 }
 test_rlAssertNotExists() {
-	local FILE="/tmp/test_rlAssertNotExists"
-
-	touch $FILE
+    local FILE="/tmp/test_rlAssertNotExists filename with spaces"
+    local FILE2="/tmp/test_rlAssertNotExists"
+	touch "$FILE"
     assertFalse "rlAssertNotExists returns 1 on existing file" \
-    "rlAssertNotExists $FILE"
-	__one_fail_one_pass 'rlAssertNotExists $FILE' FAIL
+    "rlAssertNotExists \"$FILE\""
+	__one_fail_one_pass "rlAssertNotExists \"$FILE\"" FAIL
     assertFalse "rlAssertNotExists returns 1 when called without arguments" \
     "rlAssertNotExists"
 
-	rm -f $FILE
+	rm -f "$FILE"
+	touch "$FILE2"
     assertTrue "rlAssertNotExists returns 0 on non-existing file" \
-    "rlAssertNotExists $FILE"
-	__one_fail_one_pass 'rlAssertNotExists $FILE' PASS
+    "rlAssertNotExists \"$FILE\""
+	__one_fail_one_pass "rlAssertNotExists \"$FILE\"" PASS
+	rm -f "$FILE2"
+
 }
 
 test_rlAssertGrep() {
