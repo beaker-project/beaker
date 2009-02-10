@@ -10,7 +10,7 @@
    <th class="list">New Value</th>
   </tr>
   <?python row_color = "#FFFFFF" ?>
-  <tr class="list" bgcolor="${row_color}" py:for="act in system.activity">
+  <tr class="list" bgcolor="${row_color}" py:for="act in system.activity[-30:]">
    <td class="list">${act.user}</td>
    <td class="list">${act.service}</td>
    <td class="list">${act.created}</td>
