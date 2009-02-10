@@ -130,7 +130,9 @@ docswiki: $(SCRIPTS) docsjoin
 	rm RhtslibManual
 
 gendict:
-	RHTSLIB=. bash -c ". rhtslib.sh ; declare -f |grep '^rl.* ()' |cut -d ' ' -f 1 > dictionary.vim"
+	RHTSLIB=. bash -c ". rhtslib.sh ; declare -f | \
+		perl -e 'map { s/.*(obsolete|deprecate|^rlj).*//s; s/ .*/\n/s; print } \
+		(join \"\", <>) =~ m/^rl.*?^}/msg;' > dictionary.vim"
 
 wiki: $(SCRIPTS) docswiki
 	scp -r $(WIKIDIR)/* $(WIKILOCATION)
