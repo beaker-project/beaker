@@ -42,6 +42,7 @@ tarball: $(FILES) docsman gendict
 	rm -rf rhtslib-$(VERSION)/
 	mkdir rhtslib-$(VERSION)/
 	cp -pr $(FILES) Makefile dictionary.vim test/ rhtslib-$(VERSION)/
+	rm -rf rhtslib-$(VERSION)/test/remotedir rhtslib-$(VERSION)/test/rhtslib-test-mount-point
 	mkdir rhtslib-$(VERSION)/python/
 	cp -pr $(PYTFILES) rhtslib-$(VERSION)/python/
 	mkdir rhtslib-$(VERSION)/perl/
