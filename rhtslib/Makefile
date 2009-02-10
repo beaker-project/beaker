@@ -69,6 +69,7 @@ install: $(FILES)
 	rm $(DESTDIR)/usr/share/rhts-library/rhtslib.spec
 
 clean:
+	rm -rf test/remotedir test/rhtslib-test-mount-point
 	rm -f *.tar.gz
 	rm -f test/runtests-worker.sh
 	rm -rf docs/{man,wiki,html,pod}
