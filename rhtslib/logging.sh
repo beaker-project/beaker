@@ -300,6 +300,86 @@ rlShowPkgVersion() {
     rlShowPackageVersion $@;
 }
 
+
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# rlGetArch
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+: <<=cut
+=pod
+
+=head3 rlGetArch
+
+Returns base arch for the current system (good when you need
+base arch on a multilib system).
+
+    rlGetArch
+
+On an i686 system you will get i386, on a ppc64 you will get ppc.
+
+=cut
+
+
+function rlGetArch() {
+  local archi=$( uname -i 2>/dev/null || uname -m )
+  case "$archi" in
+    i486,i586,i686)
+      archi='i386'
+    ;;
+    ppc64)
+      archi='ppc'
+    ;;
+    '')
+      rlLogWarning "rlGetArch: Do not know what the arch is ('$(uname -a)'), guessing 'i386'"
+      archi='i386'
+    ;;
+  esac
+  rlLogDebug "rlGetArch: This is architecture '$archi'"
+  echo "$archi"
+}
+
+
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# rlGetDistroRelease, rlGetDistroVariant
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+: <<=cut
+=pod
+
+=head3 rlGetDistroRelease
+=head3 rlGetDistroVariant
+
+Returns release or variant of the distribution on the system
+
+    rlGetDistroRelease
+    rlGetDistroVariant
+
+For example on the RHEL-4-AS you will get release 4 and variant AS,
+on the RHEL-5-Client you will get release 5 and variant Client.
+
+=cut
+
+function __rlGetDistroVersion() {
+  local version=0
+  if rpm -q redhat-release &>/dev/null; then
+    version=$( rpm -q --qf="%{VERSION}" redhat-release )
+  elif rpm -q fedora-release &>/dev/null; then
+    version=$( rpm -q --qf="%{VERSION}" fedora-release )
+  elif rpm -q centos-release &>/dev/null; then
+    version=$( rpm -q --qf="%{VERSION}" centos-release )
+  fi
+  rlLogDebug "__rlGetDistroVersion: This is distribution version '$version'"
+  echo "$version"
+}
+function rlGetDistroRelease() {
+  __rlGetDistroVersion | sed "s/^\([0-9]\+\)[^0-9]\+.*$/\1/"
+}
+function rlGetDistroVariant() {
+  __rlGetDistroVersion | sed "s/^[0-9]\+\(.*\)$/\1/"
+}
+
+
+
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # rlShowRunningKernel
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
