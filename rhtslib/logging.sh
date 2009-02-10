@@ -122,33 +122,22 @@ rlLogFatal()   { rlLog "$1" "$2" "[ FATAL   ] ::"; rljAddMessage "$1" "FATAL" ; 
 Creates a time-labelled message in the log, reports test result,
 uploads logs, closes unfinished phase and terminates test.
 
-    rlDie message [logfile] [testname] [result] [score] [file...]
+    rlDie message [file...]
 
 =over
 
 =item message
 
-Message you want to show (use quotes when invoking).
-
-=item logfile
-
-Log file. If not supplied, OUTPUTFILE is assumed.
-
-=item testname
-
-Test name - for result reporting. Default is content of RHTS's \$TEST variable.
-
-=item result
-
-Test RESULT - for result reporting. Default is WARN.
-
-=item score
-
-Test SCORE - for result reporting. Default is 0.
+Message you want to show (use quotes when invoking) - this
+option is mandatory.
 
 =item file
 
-Files (logs) you want to upload as well. C<rlBundleLogs> will be used for it.
+Files (logs) you want to upload as well. C<rlBundleLogs>
+will be used for it. Files which are not readable will be
+excluded before calling C<rlBundleLogs>, so it is safe to
+call even with possibly not existent logs and it will
+succeed.
 
 =back
 
@@ -156,14 +145,20 @@ Files (logs) you want to upload as well. C<rlBundleLogs> will be used for it.
 
 rlDie()
 {
+  # handle mandatory comment
   local rlMSG="$1"
-  local rlLOG="$2"
-  local rlTEST=${3:-$TEST}
-  local rlRESULT=${4:-WARN}
-  local rlSCORE=${5:-0}
-  [ -z "$@" ] && rlBundleLogs rlDieBundling $@
-  rlLogFatal "$rlMSG" "$rlLOG"
-  rlReport "$rlTEST" "$rlRESULT" "$rlSCORE"
+  shift
+  # handle optional list of logs
+  if [ -n "$*" ]; then
+    local logs=''
+    for log in "$@"; do
+      [ -r "$log" ] && logs="$logs $log"
+    done
+    [ -n "$logs" ] && rlBundleLogs rlDieLogsBundling $logs
+  fi
+  # do the work
+  rlLogFatal "$rlMSG"
+  rlAssert0 "$rlMSG" 1
   rlPhaseEnd
   exit 0
 }

@@ -572,7 +572,8 @@ Name of the test result.
 
 =item result
 
-Result (one of PASS, WARN, FAIL).
+Result (one of PASS, WARN, FAIL). If called with something
+else, will use WARN.
 
 =item score
 
@@ -583,8 +584,19 @@ Test score (optional).
 =cut
 
 rlReport(){
-	rlLogInfo "Reporting results: [$2] $1 (score $3)"
-	report_result $1 $2 $3
+	# only PASS/WARN/FAIL is allowed
+	local result="$(echo $2 | tr '[:lower:]' '[:upper:]')"
+	case "$result" in
+          'PASS' | 'PASSED' | 'PASSING' ) result='PASS'; ;;
+          'FAIL' | 'FAILED' | 'FAILING') result='FAIL'; ;;
+          'WARN' | 'WARNED' | 'WARNING') result='WARN'; ;;
+          *)
+            rlLogWarning "rlReport: Only PASS/WARN/FAIL results are possible."
+            result='WARN'
+          ;;
+        esac
+	rlLogInfo "rlReport: Reporting: [$result] $1 (score $3, outputfile $OUTPUTFILE)"
+	report_result $1 $result $3
 }
 
 
