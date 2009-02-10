@@ -30,7 +30,7 @@ __testLogFce() {
   assertTrue "rlHeadLog only adds to the log (do not overwrite it)" "grep -q 'MessageGHI' $log"
   assertTrue "rlHeadLog adds to the log" "grep -q 'MessageJKL' $log"
   assertTrue "$myfce logs to STDOUT" "$myfce $myfce-MNO |grep -q '$myfce-MNO'"
-  assertTrue "$myfce creates journal entry" "rlPrintJournal |grep -q '$myfce-MNO'"
+  assertTrue "$myfce creates journal entry" "rlJournalPrint |grep -q '$myfce-MNO'"
 }
 
 test_rlHeadLog() {
@@ -79,31 +79,55 @@ test_rlPhaseStartEnd(){
   assertTrue "failed asserts were reseted" "rlCreateLogFromJournal |grep '0 bad'"
 
   assertTrue "creating phase without type doesn't succeed" "rlPhaseEnd ; rlPhaseStart"
-  assertFalse "phase without type is not inserted into journal" "rlPrintJournal |grep -q '<phase.*type=\"\"'"
+  assertFalse "phase without type is not inserted into journal" "rlJournalPrint |grep -q '<phase.*type=\"\"'"
   assertTrue "creating phase with unknown type doesn't succeed" "rlPhaseEnd ; rlPhaseStart ZBRDLENI"
-  assertFalse "phase with unknown type is not inserted into journal" "rlPrintJournal |grep -q '<phase.*type=\"ZBRDLENI\"'"
+  assertFalse "phase with unknown type is not inserted into journal" "rlJournalPrint |grep -q '<phase.*type=\"ZBRDLENI\"'"
 }
 
 test_rlPhaseStartShortcuts(){
   rlJournalStart
   rlPhaseStartSetup
-  assertTrue "setup phase with ABORT type found in journal" "rlPrintJournal |grep -q '<phase.*type=\"ABORT\"'"
+  assertTrue "setup phase with ABORT type found in journal" "rlJournalPrint |grep -q '<phase.*type=\"ABORT\"'"
 
   rlJournalStart
   rlPhaseStartTest
-  assertTrue "test phase with FAIL type found in journal" "rlPrintJournal |grep -q '<phase.*type=\"FAIL\"'"
+  assertTrue "test phase with FAIL type found in journal" "rlJournalPrint |grep -q '<phase.*type=\"FAIL\"'"
 
   rlJournalStart
   rlPhaseStartCleanup
-  assertTrue "clean-up phase with WARN type found in journal" "rlPrintJournal |grep -q '<phase.*type=\"WARN\"'"
+  assertTrue "clean-up phase with WARN type found in journal" "rlJournalPrint |grep -q '<phase.*type=\"WARN\"'"
 }
 
-test_LogLowHighMetric(){
+test_oldMetrics(){
+    assertTrue "rlLogHighMetric is marked as deprecated" \
+        "rlLogHighMetric MTR-HIGH-OLD 1 |grep -q deprecated"
+    assertTrue "rlLogLowMetric is marked as deprecated" \
+        "rlLogLowMetric MTR-LOW-OLD 1 |grep -q deprecated"
+}
+test_rlShowPkgVersion(){
+    assertTrue "rlShowPkgVersion is marked as deprecated" \
+        "rlShowPkgVersion |grep -q obsoleted"
+}
+
+
+test_LogMetricLowHigh(){
   rlJournalStart ; rlPhaseStart FAIL
-  assertTrue "low metric inserted to journal" "rlLogLowMetric metrone 123 "
-  assertTrue "high metric inserted to journal" "rlLogHighMetric metrtwo 567"
-  assertTrue "low metric found in journal" "rlPrintJournal |grep -q '<metric.*name=\"metrone\".*type=\"low\"'"
-  assertTrue "high metric found in journal" "rlPrintJournal |grep -q '<metric.*name=\"metrtwo\".*type=\"high\"'"
+  assertTrue "low metric inserted to journal" "rlLogMetricLow metrone 123 "
+  assertTrue "high metric inserted to journal" "rlLogMetricHigh metrtwo 567"
+  assertTrue "low metric found in journal" "rlJournalPrint |grep -q '<metric.*name=\"metrone\".*type=\"low\"'"
+  assertTrue "high metric found in journal" "rlJournalPrint |grep -q '<metric.*name=\"metrtwo\".*type=\"high\"'"
+
+  #second matric called metrone - must not be inserted to journal
+  rlLogMetricLow metrone 345
+  assertTrue "metric insertion fails when name's not unique inside one phase" \
+  "[ `rlJournalPrint | grep -c '<metric.*name=.metrone.*type=.low.'` -eq 1 ]"
+  #same name of metric but in different phases - must work
+  rlJournalStart ; rlPhaseStartTest phase-1
+  rlLogMetricLow metrone 345
+  rlPhaseEnd ; rlPhaseStartTest phase-2
+  rlLogMetricLow metrone 345
+  assertTrue "metric insertion succeeds when name's not unique but phases differ" \
+  "[ `rlJournalPrint | grep -c '<metric.*name=.metrone.*type=.low.'` -eq 2 ]"
 }
 
 test_rlShowRunningKernel(){
@@ -119,18 +143,18 @@ __checkLoggedPkgInfo() {
   local version=$4
   local release=$5
   local arch=$6
-  assertTrue "rlShowPkgVersion logs name $msg" "grep -q '$name' $log"
-  assertTrue "rlShowPkgVersion logs version $msg" "grep -q '$version' $log"
-  assertTrue "rlShowPkgVersion logs release $msg" "grep -q '$release' $log"
-  assertTrue "rlShowPkgVersion logs arch $msg" "grep -q '$arch' $log"
+  assertTrue "rlShowPackageVersion logs name $msg" "grep -q '$name' $log"
+  assertTrue "rlShowPackageVersion logs version $msg" "grep -q '$version' $log"
+  assertTrue "rlShowPackageVersion logs release $msg" "grep -q '$release' $log"
+  assertTrue "rlShowPackageVersion logs arch $msg" "grep -q '$arch' $log"
 }
 
-test_rlShowPkgVersion() {
+test_rlShowPackageVersion() {
   local log=$( mktemp )
   local list=$( mktemp )
 
   # Exit value shoud be defined
-  assertFalse "rlShowPkgVersion calling without options" "rlShowPkgVersion"
+  assertFalse "rlShowPackageVersion calling without options" "rlShowPackageVersion"
   : >$OUTPUTFILE
 
   rpm -qa --qf "%{NAME}\n" > $list
@@ -141,18 +165,18 @@ test_rlShowPkgVersion() {
   local first_a=$( rpm -q $first --qf "%{ARCH}\n" | tail -n 1 )
 
   # Test with 1 package
-  rlShowPkgVersion $first &>/dev/null
+  rlShowPackageVersion $first &>/dev/null
   __checkLoggedPkgInfo $OUTPUTFILE "of 1 pkg" $first_n $first_v $first_r $first_a
   : >$OUTPUTFILE
 
   # Test with package this_package_do_not_exist
-  assertTrue 'rlShowPkgVersion returns 1 when package do not exists' 'rlShowPkgVersion this_package_do_not_exist; [ $? -eq 1 ]'   # please use "'" - we do not want "$?" to be expanded too early
-  assertTrue 'rlShowPkgVersion logs warning about this_package_do_not_exist' "grep -q 'this_package_do_not_exist' $OUTPUTFILE"
+  assertTrue 'rlShowPackageVersion returns 1 when package do not exists' 'rlShowPackageVersion this_package_do_not_exist; [ $? -eq 1 ]'   # please use "'" - we do not want "$?" to be expanded too early
+  assertTrue 'rlShowPackageVersion logs warning about this_package_do_not_exist' "grep -q 'this_package_do_not_exist' $OUTPUTFILE"
   : >$OUTPUTFILE
 
   # Test with few packages
   local few=$( tail -n 10 $list )
-  rlShowPkgVersion $few &>/dev/null
+  rlShowPackageVersion $few &>/dev/null
   for one in $few; do
     local one_n=$( rpm -q $one --qf "%{NAME}\n" | tail -n 1 )
     local one_v=$( rpm -q $one --qf "%{VERSION}\n" | tail -n 1 )
@@ -163,7 +187,7 @@ test_rlShowPkgVersion() {
   : >$OUTPUTFILE
 
   # Test with package this_package_do_not_exist
-  assertTrue 'rlShowPkgVersion returns 1 when some packages do not exists' "rlShowPkgVersion this_package_do_not_exist $few this_package_do_not_exist_too; [ \$? -eq 1 ]"
+  assertTrue 'rlShowPackageVersion returns 1 when some packages do not exists' "rlShowPackageVersion this_package_do_not_exist $few this_package_do_not_exist_too; [ \$? -eq 1 ]"
   : >$OUTPUTFILE
 
   rm -f $list
