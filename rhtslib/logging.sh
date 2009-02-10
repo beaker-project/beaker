@@ -128,11 +128,16 @@ uploads logs, closes unfinished phase and terminates test.
 
 =item message
 
-Message you want to show (use quotes when invoking).
+Message you want to show (use quotes when invoking) - this
+option is mandatory.
 
 =item file
 
-Files (logs) you want to upload as well. C<rlBundleLogs> will be used for it.
+Files (logs) you want to upload as well. C<rlBundleLogs>
+will be used for it. Files which are not readable will be
+excluded before calling C<rlBundleLogs>, so it is safe to
+call even with possibly not existent logs and it will
+succeed.
 
 =back
 
@@ -140,9 +145,18 @@ Files (logs) you want to upload as well. C<rlBundleLogs> will be used for it.
 
 rlDie()
 {
+  # handle mandatory comment
   local rlMSG="$1"
   shift
-  [ -z "$@" ] && rlBundleLogs rlDieBundling $@
+  # handle optional list of logs
+  if [ -n "$*" ]; then
+    local logs=''
+    for log in "$@"; do
+      [ -r "$log" ] && logs="$logs $log"
+    done
+    [ -n "$logs" ] && rlBundleLogs rlDieLogsBundling $logs
+  fi
+  # do the work
   rlLogFatal "$rlMSG"
   rlAssert0 "$rlMSG" 1
   rlPhaseEnd
