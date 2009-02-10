@@ -123,6 +123,9 @@ touch %{buildroot}/%{_localstatedir}/log/medusa/server.log
 /var/www/cobbler/aux/rhts-checkin
 
 %changelog
+* Thu Feb 10 2009 Bill Peck <bpeck@redhat.com> - 0.2-54
+- fix logic in system.can_share()
+
 * Thu Feb 10 2009 Bill Peck <bpeck@redhat.com> - 0.2-53
 - rescan now pulls all distros, will look into caching later.
 

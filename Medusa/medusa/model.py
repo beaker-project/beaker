@@ -761,7 +761,7 @@ class System(SystemObject):
         return False
         
     def can_share(self, user=None):
-        if user:
+        if user and not self.user:
             # If its the owner always allow.
             if user == self.owner:
                 return True
