@@ -16,3 +16,8 @@ def make_remove_link(id):
     # make a remove link
     return make_link(url  = 'remove?id=%s' % id,
                      text = 'Remove (-)')
+
+def make_scan_link(id):
+    # make a rescan link
+    return make_link(url  = 'rescan?id=%s' % id,
+                     text = 'Rescan (*)')

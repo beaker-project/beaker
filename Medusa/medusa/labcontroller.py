@@ -80,8 +80,22 @@ class LabControllers(RPCRoot):
         redirect(".")
 
     @expose()
+    def rescan(self, **kw):
+        if kw.get('id'):
+            labcontroller = LabController.by_id(kw['id'])
+            for i in xrange(len(labcontroller.distros)-1,-1,-1):
+                del labcontroller.distros[i]
+            labcontroller.distros_md5 = '0.0'
+            self.update(id=kw['id'])
+            flash( _(u"Rescan complete"))
+        else:
+            flash( _(u"No Lab Controller id passed!"))
+        redirect(".")
+
+    @expose()
     def update(self, **kw):
         if kw.get('id'):
+            now = time.time()
             valid_variants = ['AS','ES','WS','Desktop']
             valid_methods  = ['http','ftp','nfs']
 
@@ -189,6 +203,7 @@ class LabControllers(RPCRoot):
                                   ('FQDN', lambda x: make_edit_link(x.fqdn,x.id)),
                                   ('Timestamp', lambda x: x.distros_md5),
                                   (' ', lambda x: make_remove_link(x.id)),
+                                  (' ', lambda x: make_scan_link(x.id)),
                               ])
         return dict(title="Lab Controllers", grid = labcontrollers_grid,
                                          search_bar = None,
