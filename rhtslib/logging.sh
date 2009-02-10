@@ -122,33 +122,22 @@ rlLogFatal()   { rlLog "$1" "$2" "[ FATAL   ] ::"; rljAddMessage "$1" "FATAL" ; 
 Creates a time-labelled message in the log, reports test result,
 uploads logs, closes unfinished phase and terminates test.
 
-    rlDie message [logfile] [testname] [result] [score] [file...]
+    rlDie message [file...]
 
 =over
 
 =item message
 
-Message you want to show (use quotes when invoking).
-
-=item logfile
-
-Log file. If not supplied, OUTPUTFILE is assumed.
-
-=item testname
-
-Test name - for result reporting. Default is content of RHTS's \$TEST variable.
-
-=item result
-
-Test RESULT - for result reporting. Default is WARN.
-
-=item score
-
-Test SCORE - for result reporting. Default is 0.
+Message you want to show (use quotes when invoking) - this
+option is mandatory.
 
 =item file
 
-Files (logs) you want to upload as well. C<rlBundleLogs> will be used for it.
+Files (logs) you want to upload as well. C<rlBundleLogs>
+will be used for it. Files which are not readable will be
+excluded before calling C<rlBundleLogs>, so it is safe to
+call even with possibly not existent logs and it will
+succeed.
 
 =back
 
@@ -156,14 +145,20 @@ Files (logs) you want to upload as well. C<rlBundleLogs> will be used for it.
 
 rlDie()
 {
+  # handle mandatory comment
   local rlMSG="$1"
-  local rlLOG="$2"
-  local rlTEST=${3:-$TEST}
-  local rlRESULT=${4:-WARN}
-  local rlSCORE=${5:-0}
-  [ -z "$@" ] && rlBundleLogs rlDieBundling $@
-  rlLogFatal "$rlMSG" "$rlLOG"
-  rlReport "$rlTEST" "$rlRESULT" "$rlSCORE"
+  shift
+  # handle optional list of logs
+  if [ -n "$*" ]; then
+    local logs=''
+    for log in "$@"; do
+      [ -r "$log" ] && logs="$logs $log"
+    done
+    [ -n "$logs" ] && rlBundleLogs rlDieLogsBundling $logs
+  fi
+  # do the work
+  rlLogFatal "$rlMSG"
+  rlAssert0 "$rlMSG" 1
   rlPhaseEnd
   exit 0
 }
@@ -304,6 +299,86 @@ rlShowPkgVersion() {
     rlLogWarning "rlShowPkgVersion is obsoleted by rlShowPackageVersion"
     rlShowPackageVersion $@;
 }
+
+
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# rlGetArch
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+: <<=cut
+=pod
+
+=head3 rlGetArch
+
+Returns base arch for the current system (good when you need
+base arch on a multilib system).
+
+    rlGetArch
+
+On an i686 system you will get i386, on a ppc64 you will get ppc.
+
+=cut
+
+
+function rlGetArch() {
+  local archi=$( uname -i 2>/dev/null || uname -m )
+  case "$archi" in
+    i486,i586,i686)
+      archi='i386'
+    ;;
+    ppc64)
+      archi='ppc'
+    ;;
+    '')
+      rlLogWarning "rlGetArch: Do not know what the arch is ('$(uname -a)'), guessing 'i386'"
+      archi='i386'
+    ;;
+  esac
+  rlLogDebug "rlGetArch: This is architecture '$archi'"
+  echo "$archi"
+}
+
+
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# rlGetDistroRelease, rlGetDistroVariant
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+: <<=cut
+=pod
+
+=head3 rlGetDistroRelease
+=head3 rlGetDistroVariant
+
+Returns release or variant of the distribution on the system
+
+    rlGetDistroRelease
+    rlGetDistroVariant
+
+For example on the RHEL-4-AS you will get release 4 and variant AS,
+on the RHEL-5-Client you will get release 5 and variant Client.
+
+=cut
+
+function __rlGetDistroVersion() {
+  local version=0
+  if rpm -q redhat-release &>/dev/null; then
+    version=$( rpm -q --qf="%{VERSION}" redhat-release )
+  elif rpm -q fedora-release &>/dev/null; then
+    version=$( rpm -q --qf="%{VERSION}" fedora-release )
+  elif rpm -q centos-release &>/dev/null; then
+    version=$( rpm -q --qf="%{VERSION}" centos-release )
+  fi
+  rlLogDebug "__rlGetDistroVersion: This is distribution version '$version'"
+  echo "$version"
+}
+function rlGetDistroRelease() {
+  __rlGetDistroVersion | sed "s/^\([0-9]\+\)[^0-9]\+.*$/\1/"
+}
+function rlGetDistroVariant() {
+  __rlGetDistroVersion | sed "s/^[0-9]\+\(.*\)$/\1/"
+}
+
+
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # rlShowRunningKernel

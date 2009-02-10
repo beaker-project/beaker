@@ -171,6 +171,30 @@ test_rlShowPkgVersion() {
 
 
 
+test_rlGetArch() {
+  local out=$(rlGetArch)
+  assertTrue 'rlGetArch returns 0' "[ $? -eq 0 ]"
+  [ "$out" = 'i386' ] && out='i.8.'   # funny reg exp here
+  uname -a | grep -q "$out"
+  assertTrue 'rlGetArch returns correct arch' "[ $? -eq 0 ]"
+}
+
+test_rlGetDistroRelease() {
+  local out=$(rlGetDistroRelease)
+  assertTrue 'rlGetDistroRelease returns 0' "[ $? -eq 0 ]"
+  grep -q -i "$out" /etc/redhat-release
+  assertTrue 'rlGetDistroRelease returns release which is in the /etc/redhat-release' "[ $? -eq 0 ]"
+}
+
+test_rlGetDistroVariant() {
+  local out=$(rlGetDistroVariant)
+  assertTrue 'rlGetDistroVariant returns 0' "[ $? -eq 0 ]"
+  grep -q -i "$out" /etc/redhat-release
+  assertTrue 'rlGetDistroRelease returns variant which is in the /etc/redhat-release' "[ $? -eq 0 ]"
+}
+
+
+
 test_rlBundleLogs() {
   # TODO: how to test this one?
   return 0
