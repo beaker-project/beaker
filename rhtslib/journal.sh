@@ -59,7 +59,7 @@ functionality.
 rlJournalStart(){
 	local TID=${TESTID:-"debugging"}
 	local PKG=${PACKAGE:-"debugging"}
-	$__INTERNAL_JOURNALIST init --id $TID --test $TEST --package $PKG
+	$__INTERNAL_JOURNALIST init --id "$TID" --test "$TEST" --package "$PKG"
 }
 
 # backward compatibility
@@ -230,7 +230,7 @@ Example:
 =cut
 
 rlJournalPrintText(){
-	local TID=${TESTID:-"debugging"}
+  local TID=${TESTID:-"debugging"}
   local SEVERITY=${LOG_LEVEL:-"WARNING"}
   [ "$DEBUG" == 'true' -o "$DEBUG" == '1' ] && SEVERITY="DEBUG"
   $__INTERNAL_JOURNALIST printlog --id $TID --severity $SEVERITY

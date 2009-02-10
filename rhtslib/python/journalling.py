@@ -65,13 +65,10 @@ def printPhaseLog(phase,severity):
   for node in phase.childNodes:
     if node.nodeName == "message":
       if node.getAttribute("severity") in getAllowedSeverities(severity):
-        if (len(node.childNodes) > 0):
-          text = node.childNodes[0].nodeValue
-        else:
-          text = ""
+        text = __childNodeValue(node, 0)
         printLog(text, node.getAttribute("severity"))
     elif node.nodeName == "test":
-      result = node.childNodes[0].nodeValue
+      result = __childNodeValue(node, 0)
       if result == "FAIL":
         printLog("%s" % node.getAttribute("message"), "FAIL")
         failed += 1
@@ -82,49 +79,59 @@ def printPhaseLog(phase,severity):
   printLog("Assertions: %s good, %s bad" % (passed, failed))
   printLog("RESULT: %s" % phaseName, phaseResult)
 
+def __childNodeValue(node, id=0):
+  """Safe variant for node.childNodes[id].nodeValue()"""
+  if node.hasChildNodes:
+    try:
+      return node.childNodes[id].nodeValue
+    except IndexError:
+      return ''
+  else:
+    return ''
+
 def createLog(id,severity):
   jrnl = openJournal(id)
   printHeadLog("TEST PROTOCOL")
 
   for node in jrnl.childNodes[0].childNodes:
     if node.nodeName == "test_id":
-      printLog("Test run ID   : %s" % node.childNodes[0].nodeValue)
+      printLog("Test run ID   : %s" % __childNodeValue(node, 0))
     elif node.nodeName == "package":
-      printLog("Package       : %s" % node.childNodes[0].nodeValue)
+      printLog("Package       : %s" % __childNodeValue(node, 0))
     elif node.nodeName == "testname":
-      printLog("Test name     : %s" % node.childNodes[0].nodeValue)
+      printLog("Test name     : %s" % __childNodeValue(node, 0))
     elif node.nodeName == "pkgdetails":
-      printLog("Installed:    : %s" % node.childNodes[0].nodeValue)
+      printLog("Installed:    : %s" % __childNodeValue(node, 0))
     elif node.nodeName == "release":
-      printLog("Distro:       : %s" % node.childNodes[0].nodeValue)
+      printLog("Distro:       : %s" % __childNodeValue(node, 0))
     elif node.nodeName == "starttime":
-      printLog("Test started  : %s" % node.childNodes[0].nodeValue)
+      printLog("Test started  : %s" % __childNodeValue(node, 0))
     elif node.nodeName == "endtime":
-      printLog("Test finished : %s" % node.childNodes[0].nodeValue)
+      printLog("Test finished : %s" % __childNodeValue(node, 0))
     elif node.nodeName == "arch":
-      printLog("Architecture  : %s" % node.childNodes[0].nodeValue)
+      printLog("Architecture  : %s" % __childNodeValue(node, 0))
     elif node.nodeName == "hostname":
-      printLog("Hostname      : %s" % node.childNodes[0].nodeValue)
+      printLog("Hostname      : %s" % __childNodeValue(node, 0))
     elif node.nodeName == "purpose":
-      printPurpose(node.childNodes[0].nodeValue)
+      printPurpose(__childNodeValue(node, 0))
     elif node.nodeName == "log":
       for nod in node.childNodes:
         if nod.nodeName == "message":
           if nod.getAttribute("severity") in getAllowedSeverities(severity):
             if (len(nod.childNodes) > 0):
-              text = nod.childNodes[0].nodeValue
+              text = __childNodeValue(nod, 0)
             else:
               text = ""
             printLog(text, nod.getAttribute("severity"))
         elif nod.nodeName == "test":
           printLog("TEST BUG: Assertion not in phase", "WARNING")
-          result = nod.childNodes[0].nodeValue
+          result = __childNodeValue(nod, 0)
           if result == "FAIL":
             printLog("%s" % nod.getAttribute("message"), "FAIL")
           else:
             printLog("%s" % nod.getAttribute("message"), "PASS")
         elif nod.nodeName == "metric":
-          printLog("%s: %s" % (nod.getAttribute("name"), nod.childNodes[0].nodeValue), "METRIC")
+          printLog("%s: %s" % (nod.getAttribute("name"), __childNodeValue(nod, 0)), "METRIC")
         elif nod.nodeName == "phase":
           printPhaseLog(nod,severity)
 
@@ -251,7 +258,7 @@ def finPhase(id):
   passed = failed = 0
   for node in phase.childNodes:
     if node.nodeName == "test":
-      result = node.childNodes[0].nodeValue
+      result = __childNodeValue(node, 0)
       if result == "FAIL":
         failed += 1
       else:

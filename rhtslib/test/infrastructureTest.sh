@@ -48,6 +48,8 @@ BackupSanityTest() {
     mkdir directory
     pushd directory >/dev/null
     mkdir -p sub/sub/dir
+    mkdir 'dir with spaces'
+    mkdir 'another dir with spaces'
     touch file permissions ownership times context
     echo "hello" >content
     ln file hardlink
@@ -72,7 +74,7 @@ BackupSanityTest() {
 
     # remove some, change content
     mess "Testing restore after partial removal"
-    rm -rf directory/sub/sub directory/hardlink directory/permissions
+    rm -rf directory/sub/sub directory/hardlink directory/permissions 'dir with spaces'
     echo "hi" >directory/content
     rlFileRestore || fail "Restore after partial removal"
     list >partial
