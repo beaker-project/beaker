@@ -19,29 +19,38 @@ test_rlAssertExists() {
 	touch $FILE
     assertTrue "rlAssertExists returns 0 on existing file" \
     "rlAssertExists $FILE"
-	__one_fail_one_pass 'rlAssertExists $FILE' PASS
+	__one_fail_one_pass "rlAssertExists $FILE" PASS
 
 	rm -f $FILE
     assertFalse "rlAssertExists returns 1 on non-existant file" \
     "rlAssertExists $FILE"
-	__one_fail_one_pass 'rlAssertExists $FILE' FAIL
+	__one_fail_one_pass "rlAssertExists $FILE" FAIL
     assertFalse "rlAssertExists returns 1 when called without arguments" \
     "rlAssertExists"
+
+    local FILE="/tmp/test rlAssertExists filename with spaces"
+	touch "$FILE"
+    assertTrue "rlAssertExists returns 0 on existing file with spaces in its name" \
+    "rlAssertExists \"$FILE\""
+    rm -f "$FILE"
 }
 test_rlAssertNotExists() {
-	local FILE="/tmp/test_rlAssertNotExists"
-
-	touch $FILE
+    local FILE="/tmp/test_rlAssertNotExists filename with spaces"
+    local FILE2="/tmp/test_rlAssertNotExists"
+	touch "$FILE"
     assertFalse "rlAssertNotExists returns 1 on existing file" \
-    "rlAssertNotExists $FILE"
-	__one_fail_one_pass 'rlAssertNotExists $FILE' FAIL
+    "rlAssertNotExists \"$FILE\""
+	__one_fail_one_pass "rlAssertNotExists \"$FILE\"" FAIL
     assertFalse "rlAssertNotExists returns 1 when called without arguments" \
     "rlAssertNotExists"
 
-	rm -f $FILE
+	rm -f "$FILE"
+	touch "$FILE2"
     assertTrue "rlAssertNotExists returns 0 on non-existing file" \
-    "rlAssertNotExists $FILE"
-	__one_fail_one_pass 'rlAssertNotExists $FILE' PASS
+    "rlAssertNotExists \"$FILE\""
+	__one_fail_one_pass "rlAssertNotExists \"$FILE\"" PASS
+	rm -f "$FILE2"
+
 }
 
 test_rlAssertGrep() {
@@ -56,6 +65,20 @@ test_rlAssertGrep() {
     assertTrue "rlAssertGrep should return 2 when file does not exist" \
         'rlAssertGrep no badfile; [ $? == 2 ]'
 	__one_fail_one_pass 'rlAssertGrep yes badfile' FAIL
+    # without optional parameter
+    assertTrue "rlAssertGrep without optional arg should not ignore case" \
+        'rlAssertGrep YES grepfile; [ $? == 1 ]'
+    assertTrue "rlAssertGrep without optional arg should ignore extended regexp" \
+        'rlAssertGrep "e{1,3}" grepfile; [ $? == 1 ]'
+    assertTrue "rlAssertGrep without optional arg should ignore perl regexp" \
+        'rlAssertGrep "\w+" grepfile; [ $? == 1 ]'
+    # with optional parameter
+    assertTrue "rlAssertGrep with -i should ignore case" \
+        'rlAssertGrep YES grepfile -i; [ $? == 0 ]'
+    assertTrue "rlAssertGrep with -E should use extended regexp" \
+        'rlAssertGrep "e{1,3}" grepfile -E; [ $? == 0 ]'
+    assertTrue "rlAssertGrep with -P should use perl regexp" \
+        'rlAssertGrep "\w+" grepfile -P; [ $? == 0 ]'
     rm -f grepfile
 }
 
@@ -71,6 +94,20 @@ test_rlAssertNotGrep() {
     assertTrue "rlAssertNotGrep should return 2 when file does not exist" \
         'rlAssertNotGrep no badfile; [ $? == 2 ]'
 	__one_fail_one_pass 'rlAssertNotGrep yes badfile' FAIL
+    # without optional parameter
+    assertTrue "rlAssertNotGrep without optional arg should not ignore case" \
+        'rlAssertNotGrep YES grepfile; [ $? == 0 ]'
+    assertTrue "rlAssertNotGrep without optional arg should ignore extended regexp" \
+        'rlAssertNotGrep "e{1,3}" grepfile; [ $? == 0 ]'
+    assertTrue "rlAssertNotGrep without optional arg should ignore perl regexp" \
+        'rlAssertNotGrep "\w+" grepfile; [ $? == 0 ]'
+    # with optional parameter
+    assertTrue "rlAssertNotGrep with -i should ignore case" \
+        'rlAssertNotGrep YES grepfile -i; [ $? == 1 ]'
+    assertTrue "rlAssertNotGrep with -E should use extended regexp" \
+        'rlAssertNotGrep "e{1,3}" grepfile -E; [ $? == 1 ]'
+    assertTrue "rlAssertNotGrep with -P should use perl regexp" \
+        'rlAssertNotGrep "\w+" grepfile -P; [ $? == 1 ]'
     rm -f grepfile
 }
 
