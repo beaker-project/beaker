@@ -3,7 +3,7 @@
 
 Name:           medusa
 Version:        0.2
-Release:        53%{?dist}
+Release:        54%{?dist}
 Summary:        Inventory System
 Group:          Applications/Internet
 License:        GPLv2+
@@ -125,6 +125,8 @@ touch %{buildroot}/%{_localstatedir}/log/medusa/server.log
 %changelog
 * Thu Feb 10 2009 Bill Peck <bpeck@redhat.com> - 0.2-54
 - fix logic in system.can_share()
+- fix user sorting on main page
+- allow searchbar to work for mine/available/free pages
 
 * Thu Feb 10 2009 Bill Peck <bpeck@redhat.com> - 0.2-53
 - rescan now pulls all distros, will look into caching later.
