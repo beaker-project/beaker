@@ -47,5 +47,12 @@ test_rlCreateLogFromJournal(){
 	#inside-phase log
 	rlLog ""
 	assertFalse "no traceback during log creation" "rlJournalPrintText 2>&1 |grep Traceback"
+
+    #no traceback on non-ascii characters (bz471257)
+	rlJournalStart
+	rlPhaseStart FAIL
+    rlLog "ščřžýáíéーれっどはっと"
+	assertFalse "no traceback on non-ascii chars (unicode support)" "rlJournalPrintText 2>&1 |grep Traceback"
+
   rlPhaseEnd
 }
