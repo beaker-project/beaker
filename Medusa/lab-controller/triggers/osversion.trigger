@@ -65,7 +65,7 @@ def get_paths(distro):
         tree_path = tree_path_re.search(kerneldir).group(1)
 
     found = None
-    while kerneldir != os.path.dirname(path):
+    while kerneldir != os.path.dirname(tree_path):
         for x in signatures:
             d = os.path.join( kerneldir, x)
             if os.path.exists( d ):
@@ -132,6 +132,8 @@ def update_repos(distro):
 def update_comment(distro):
     paths = get_paths(distro)
 
+    if not paths:
+        return False
     family = ""
     update = 0
     if os.path.exists("%s/.discinfo" % paths['tree_path']):
