@@ -122,8 +122,14 @@
        <th class="list">
         <b>Lab Controller</b>
        </th>
-       <td class="list" colspan="3">
+       <td class="list">
         ${display_field_for("lab_controller_id")}
+       </td>
+       <th class="list">
+        <b>Mac Address</b>
+       </th>
+       <td class="list">
+        ${display_field_for("mac_address")}
        </td>
       </tr>
       <tr py:if="not readonly">
