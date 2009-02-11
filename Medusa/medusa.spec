@@ -3,7 +3,7 @@
 
 Name:           medusa
 Version:        0.2
-Release:        56%{?dist}
+Release:        57%{?dist}
 Summary:        Inventory System
 Group:          Applications/Internet
 License:        GPLv2+
@@ -123,6 +123,10 @@ touch %{buildroot}/%{_localstatedir}/log/medusa/server.log
 /var/www/cobbler/aux/rhts-checkin
 
 %changelog
+* Thu Feb 10 2009 Bill Peck <bpeck@redhat.com> - 0.2-57
+- added mac_address tracking for virt machines
+- also track tree_path with distros
+
 * Thu Feb 10 2009 Bill Peck <bpeck@redhat.com> - 0.2-56
 - fix permissions on expire_distros
 
