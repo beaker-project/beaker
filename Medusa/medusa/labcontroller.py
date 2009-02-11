@@ -80,8 +80,9 @@ class LabControllers(RPCRoot):
         redirect(".")
 
     @expose()
-    def update(self, **kw):
+    def rescan(self, **kw):
         if kw.get('id'):
+            now = time.time()
             valid_variants = ['AS','ES','WS','Desktop']
             valid_methods  = ['http','ftp','nfs']
 
@@ -90,9 +91,9 @@ class LabControllers(RPCRoot):
             now = time.time()
             remote = xmlrpclib.ServerProxy(url)
             token = remote.login(labcontroller.username,labcontroller.password)
-            deleted = []
             distros = []
-            for lc_distro in remote.get_distros_since(float(labcontroller.distros_md5)):
+            release = re.compile(r'family=(\w+\d+.\d+)')
+            for lc_distro in remote.get_distros():
                 name = lc_distro['name'].split('_')[0]
                 meta = string.join(lc_distro['name'].split('_')[1:],'_').split('-')
                 variant = None
@@ -111,13 +112,6 @@ class LabControllers(RPCRoot):
                     virt = True
 
                 if 'comment' in lc_distro:
-                    # Distro has been marked for deletion from lab controller
-                    if lc_distro['comment'].find("DELETED") != "-1":
-                        deleted.append(lc_distro['name'])
-                    else:
-                        continue
-
-                    release = re.compile(r'family=(\w+\d+.\d+)')
                     if release.search(lc_distro['comment']):
                         lc_os_version = release.search(lc_distro['comment']).group(1)
                     else:
@@ -166,13 +160,12 @@ class LabControllers(RPCRoot):
                         distro.date_created = datetime.fromtimestamp(float(lc_distro['tree_build_time']))
                         activity = Activity(None,'XMLRPC','Added','Distro',None, lc_distro['name'])
                     distros.append(distro)
-            print "deleted array = ", deleted
-#            for i in xrange(len(labcontroller.distros)-1,-1,-1):
-#                distro_name = labcontroller.distros[i].install_name
-#                if distro_name in deleted:
-#                    activity = Activity(None,'XMLRPC','Removed','Distro',distro_name,None)
+            for i in xrange(len(labcontroller.distros)-1,-1,-1):
+                distro = labcontroller.distros[i]
+                if distro not in distros:
+                    activity = Activity(None,'XMLRPC','Removed','Distro',distro.install_name,None)
 #                    del labcontroller.distros[i]
-#                    remote.remove_distro(distro_name,token)
+                    
             for distro in distros:
                 if distro not in labcontroller.distros:
                     #FIXME Distro Activity Add
@@ -190,6 +183,7 @@ class LabControllers(RPCRoot):
                                   ('FQDN', lambda x: make_edit_link(x.fqdn,x.id)),
                                   ('Timestamp', lambda x: x.distros_md5),
                                   (' ', lambda x: make_remove_link(x.id)),
+                                  (' ', lambda x: make_scan_link(x.id)),
                               ])
         return dict(title="Lab Controllers", grid = labcontrollers_grid,
                                          search_bar = None,

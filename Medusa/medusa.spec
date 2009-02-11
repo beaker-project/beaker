@@ -3,7 +3,7 @@
 
 Name:           medusa
 Version:        0.2
-Release:        49%{?dist}
+Release:        53%{?dist}
 Summary:        Inventory System
 Group:          Applications/Internet
 License:        GPLv2+
@@ -123,6 +123,23 @@ touch %{buildroot}/%{_localstatedir}/log/medusa/server.log
 /var/www/cobbler/aux/rhts-checkin
 
 %changelog
+* Thu Feb 10 2009 Bill Peck <bpeck@redhat.com> - 0.2-54
+- fix logic in system.can_share()
+
+* Thu Feb 10 2009 Bill Peck <bpeck@redhat.com> - 0.2-53
+- rescan now pulls all distros, will look into caching later.
+
+* Thu Feb 10 2009 Bill Peck <bpeck@redhat.com> - 0.2-52
+- fixed delete logic, still haven't enabled delete by default
+- added rescan method for lab controllers
+- attempt to fix sorting by username
+
+* Thu Feb 05 2009 Bill Peck <bpeck@redhat.com> - 0.2-51
+- fix scanning for deleted distros
+
+* Thu Feb 05 2009 Bill Peck <bpeck@redhat.com> - 0.2-50
+- catch bad hostnames before trying to provision
+
 * Thu Feb 05 2009 Bill Peck <bpeck@redhat.com> - 0.2-49
 - added rhts watchdog notification to rhts_pre snippet.
 

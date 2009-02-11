@@ -63,9 +63,9 @@ $(document).ready(function() {
                 </ul>
             </div>
             <ul id="fedora-side-nav">
-                <li py:if="not tg.identity.anonymous"><a href="${tg.url('/mine')}">${tg.identity.user_name}'s Home</a></li>
-                <li py:if="not tg.identity.anonymous"><a href="${tg.url('/available')}">Available Systems</a></li>
-                <li py:if="not tg.identity.anonymous"><a href="${tg.url('/free')}">Free Systems</a></li>
+                <li py:if="not tg.identity.anonymous"><a href="${tg.url('/mine/')}">${tg.identity.user_name}'s Home</a></li>
+                <li py:if="not tg.identity.anonymous"><a href="${tg.url('/available/')}">Available Systems</a></li>
+                <li py:if="not tg.identity.anonymous"><a href="${tg.url('/free/')}">Free Systems</a></li>
                 <li><a href="${tg.url('/')}">All Systems</a></li>
                 <li><a href="${tg.url('/devices')}">Devices</a>
                 <ul>
