@@ -132,6 +132,8 @@ rlRpmPresent(){
 # rlAssertRpm
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 : <<=cut
+=pod
+
 =head3 rlAssertRpm
 
 Assertion making sure that a package is installed.
@@ -170,6 +172,8 @@ rlAssertRpm(){
 # rlAssertNotRpm
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 : <<=cut
+=pod
+
 =head3 rlAssertNotRpm
 
 Assertion making sure that a package is not installed. This is

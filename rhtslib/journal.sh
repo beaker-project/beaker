@@ -59,7 +59,7 @@ functionality.
 rlJournalStart(){
 	local TID=${TESTID:-"debugging"}
 	local PKG=${PACKAGE:-"debugging"}
-	$__INTERNAL_JOURNALIST init --id $TID --test $TEST --package $PKG
+	$__INTERNAL_JOURNALIST init --id "$TID" --test "$TEST" --package "$PKG"
 }
 
 # backward compatibility
@@ -68,6 +68,39 @@ rlStartJournal() {
     rlLogWarning "rlStartJournal is obsoleted by rlJournalStart"
 }
 
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# rlJournalEnd
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+: <<=cut
+=pod
+
+=head2 Journalling
+
+=head3 rlJournalEnd
+
+Summarizes the test run and uploads the journal file
+
+    rlJournalEnd
+
+Run on the very end of your script to print summary of the whole test run,
+generate OUTPUTFILE and include journal in RHTS logs.
+
+=cut
+
+rlJournalEnd(){
+    rlJournalPrintText > $OUTPUTFILE
+    local JOURNAL=`mktemp -d`/journal.xml
+    rlJournalPrint > $JOURNAL
+
+    if [ -n "$TESTID" ] ; then
+        rhts_submit_log -S $RESULT_SERVER -T $TESTID -l $JOURNAL \
+        || rlLogError "rlJournalEnd: Submit wasn't successful"
+    else
+        rlLog "JOURNAL: $JOURNAL"
+        rlLog "OUTPUTFILE: $OUTPUTFILE"
+    fi
+
+}
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # rlJournalPrint
@@ -230,7 +263,7 @@ Example:
 =cut
 
 rlJournalPrintText(){
-	local TID=${TESTID:-"debugging"}
+  local TID=${TESTID:-"debugging"}
   local SEVERITY=${LOG_LEVEL:-"WARNING"}
   [ "$DEBUG" == 'true' -o "$DEBUG" == '1' ] && SEVERITY="DEBUG"
   $__INTERNAL_JOURNALIST printlog --id $TID --severity $SEVERITY
@@ -283,7 +316,7 @@ rljAddMetric(){
 	fi
 	rlLogDebug "rljAddMetric: Storing metric $MID with value $VALUE and tolerance $TOLERANCE"
 	$__INTERNAL_JOURNALIST metric --id $TID --type $1 --name "$MID" --value "$VALUE" --tolerance "$TOLERANCE"
-	return 0
+	return $?
 }
 
 rljAddMessage(){

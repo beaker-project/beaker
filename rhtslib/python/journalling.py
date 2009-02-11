@@ -23,9 +23,12 @@ import xml.dom.minidom
 from optparse import OptionParser
 import sys
 import os
-import datetime
+import time
 import rpm
 import socket
+import types
+
+timeFormat="%Y-%m-%d %H:%M:%S"
 
 def wrap(text, width):    
     return reduce(lambda line, word, width=width: '%s%s%s' %
@@ -37,12 +40,20 @@ def wrap(text, width):
                   text.split(' ')
                  )
 
+#for output redirected to file, we must not rely on python's
+#automagic encoding detection - enforcing utf8 on unicode
+def _print(message):
+  if isinstance(message,types.UnicodeType):
+    print message.encode('utf-8','replace')
+  else:
+    print message
+
 def printPurpose(message):
   printHeadLog("Test description")
-  print wrap(message, 80)
+  _print(wrap(message, 80))
 
 def printLog(message, prefix="LOG"):
-  print ":: [%s] :: %s" % (prefix.center(10), message)
+  _print(":: [%s] :: %s" % (prefix.center(10),message))
 
 def printHeadLog(message):
   print "\n::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::"
@@ -59,19 +70,21 @@ def getAllowedSeverities(treshhold):
 def printPhaseLog(phase,severity):
   phaseName = phase.getAttribute("name")
   phaseResult = phase.getAttribute("result")
+  starttime = phase.getAttribute("starttime")
+  endtime = phase.getAttribute("endtime")
+  if endtime == "":
+     endtime = time.strftime(timeFormat)
+  duration = time.mktime(time.strptime(endtime,timeFormat)) - time.mktime(time.strptime(starttime,timeFormat))
   printHeadLog(phaseName)
   passed = 0
   failed = 0
   for node in phase.childNodes:
     if node.nodeName == "message":
       if node.getAttribute("severity") in getAllowedSeverities(severity):
-        if (len(node.childNodes) > 0):
-          text = node.childNodes[0].nodeValue
-        else:
-          text = ""
+        text = __childNodeValue(node, 0)
         printLog(text, node.getAttribute("severity"))
     elif node.nodeName == "test":
-      result = node.childNodes[0].nodeValue
+      result = __childNodeValue(node, 0)
       if result == "FAIL":
         printLog("%s" % node.getAttribute("message"), "FAIL")
         failed += 1
@@ -79,8 +92,28 @@ def printPhaseLog(phase,severity):
         printLog("%s" % node.getAttribute("message"), "PASS")
         passed += 1
 
+  formatedDuration = ''
+  if (duration // 3600 > 0):
+      formatedDuration = "%ih " % (duration // 3600)
+      duration = duration % 3600
+  if (duration // 60 > 0):
+      formatedDuration += "%im " % (duration // 60)
+      duration = duration % 60
+  formatedDuration += "%is" % duration
+  printLog("Duration: %s" % formatedDuration)
   printLog("Assertions: %s good, %s bad" % (passed, failed))
+
   printLog("RESULT: %s" % phaseName, phaseResult)
+
+def __childNodeValue(node, id=0):
+  """Safe variant for node.childNodes[id].nodeValue()"""
+  if node.hasChildNodes:
+    try:
+      return node.childNodes[id].nodeValue
+    except IndexError:
+      return ''
+  else:
+    return ''
 
 def createLog(id,severity):
   jrnl = openJournal(id)
@@ -88,43 +121,43 @@ def createLog(id,severity):
 
   for node in jrnl.childNodes[0].childNodes:
     if node.nodeName == "test_id":
-      printLog("Test run ID   : %s" % node.childNodes[0].nodeValue)
+      printLog("Test run ID   : %s" % __childNodeValue(node, 0))
     elif node.nodeName == "package":
-      printLog("Package       : %s" % node.childNodes[0].nodeValue)
+      printLog("Package       : %s" % __childNodeValue(node, 0))
     elif node.nodeName == "testname":
-      printLog("Test name     : %s" % node.childNodes[0].nodeValue)
+      printLog("Test name     : %s" % __childNodeValue(node, 0))
     elif node.nodeName == "pkgdetails":
-      printLog("Installed:    : %s" % node.childNodes[0].nodeValue)
+      printLog("Installed:    : %s" % __childNodeValue(node, 0))
     elif node.nodeName == "release":
-      printLog("Distro:       : %s" % node.childNodes[0].nodeValue)
+      printLog("Distro:       : %s" % __childNodeValue(node, 0))
     elif node.nodeName == "starttime":
-      printLog("Test started  : %s" % node.childNodes[0].nodeValue)
+      printLog("Test started  : %s" % __childNodeValue(node, 0))
     elif node.nodeName == "endtime":
-      printLog("Test finished : %s" % node.childNodes[0].nodeValue)
+      printLog("Test finished : %s" % __childNodeValue(node, 0))
     elif node.nodeName == "arch":
-      printLog("Architecture  : %s" % node.childNodes[0].nodeValue)
+      printLog("Architecture  : %s" % __childNodeValue(node, 0))
     elif node.nodeName == "hostname":
-      printLog("Hostname      : %s" % node.childNodes[0].nodeValue)
+      printLog("Hostname      : %s" % __childNodeValue(node, 0))
     elif node.nodeName == "purpose":
-      printPurpose(node.childNodes[0].nodeValue)
+      printPurpose(__childNodeValue(node, 0))
     elif node.nodeName == "log":
       for nod in node.childNodes:
         if nod.nodeName == "message":
           if nod.getAttribute("severity") in getAllowedSeverities(severity):
             if (len(nod.childNodes) > 0):
-              text = nod.childNodes[0].nodeValue
+              text = __childNodeValue(nod, 0)
             else:
               text = ""
             printLog(text, nod.getAttribute("severity"))
         elif nod.nodeName == "test":
           printLog("TEST BUG: Assertion not in phase", "WARNING")
-          result = nod.childNodes[0].nodeValue
+          result = __childNodeValue(nod, 0)
           if result == "FAIL":
             printLog("%s" % nod.getAttribute("message"), "FAIL")
           else:
             printLog("%s" % nod.getAttribute("message"), "PASS")
         elif nod.nodeName == "metric":
-          printLog("%s: %s" % (nod.getAttribute("name"), nod.childNodes[0].nodeValue), "METRIC")
+          printLog("%s: %s" % (nod.getAttribute("name"), __childNodeValue(nod, 0)), "METRIC")
         elif nod.nodeName == "phase":
           printPhaseLog(nod,severity)
 
@@ -147,10 +180,10 @@ def initializeJournal(id, test, package):
     pkgdetails.append((pkgDetailsEl, pkgDetailsCon))
 
   startedEl   = newdoc.createElement("starttime")
-  startedCon  = newdoc.createTextNode(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+  startedCon  = newdoc.createTextNode(time.strftime(timeFormat))
 
   endedEl     = newdoc.createElement("endtime")
-  endedCon    = newdoc.createTextNode(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+  endedCon    = newdoc.createTextNode(time.strftime(timeFormat))
 
   hostnameEl     = newdoc.createElement("hostname")
   hostnameCon   = newdoc.createTextNode(socket.gethostbyaddr(socket.gethostname())[0])
@@ -172,7 +205,7 @@ def initializeJournal(id, test, package):
   except IOError:
     purpose = "Cannot find the PURPOSE file of this test. Could be a missing, or rlInitializeJournal wasn't called from appropriate location"
 
-  purposeCon  = newdoc.createTextNode(purpose)
+  purposeCon  = newdoc.createTextNode(unicode(purpose,'utf-8'))
 
   testidEl.appendChild(testidCon)
   packageEl.appendChild(packageCon)
@@ -203,7 +236,7 @@ def initializeJournal(id, test, package):
 
 def saveJournal(newdoc, id):
   output = open('/tmp/rhts_journal.%s' % id, 'wb')
-  output.write(newdoc.toxml())
+  output.write(newdoc.toxml().encode('utf-8'))
   output.close()
 
 def _openJournal(id):
@@ -235,9 +268,11 @@ def addPhase(id, name, type):
   jrnl = openJournal(id)  
   log = getLogEl(jrnl)  
   phase = jrnl.createElement("phase")
-  phase.setAttribute("name", name)
+  phase.setAttribute("name", unicode(name,'utf-8'))
   phase.setAttribute("result", 'unfinished')
-  phase.setAttribute("type", type)
+  phase.setAttribute("type", unicode(type,'utf-8'))
+  phase.setAttribute("starttime",time.strftime(timeFormat))
+  phase.setAttribute("endtime","")
   log.appendChild(phase)
   saveJournal(jrnl, id)
 
@@ -247,11 +282,13 @@ def finPhase(id):
   type  = phase.getAttribute('type')
   name  = phase.getAttribute('name')
   end   = jrnl.getElementsByTagName('endtime')[0]
-  end.childNodes[0].nodeValue = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+  timeNow = time.strftime(timeFormat)
+  end.childNodes[0].nodeValue = timeNow
+  phase.setAttribute("endtime",timeNow)
   passed = failed = 0
   for node in phase.childNodes:
     if node.nodeName == "test":
-      result = node.childNodes[0].nodeValue
+      result = __childNodeValue(node, 0)
       if result == "FAIL":
         failed += 1
       else:
@@ -280,7 +317,7 @@ def addMessage(id, message, severity):
   msg = jrnl.createElement("message")
   msg.setAttribute("severity", severity)  
   
-  msgText = jrnl.createTextNode(message)
+  msgText = jrnl.createTextNode(unicode(message,"utf-8"))
   msg.appendChild(msgText)
   add_to.appendChild(msg)
   saveJournal(jrnl, id)
@@ -291,7 +328,7 @@ def addTest(id, message, result="FAIL"):
   add_to = getLastUnfinishedPhase(log)
   
   msg = jrnl.createElement("test")
-  msg.setAttribute("message", message)
+  msg.setAttribute("message", unicode(message,'utf-8'))
   
   msgText = jrnl.createTextNode(result)
   msg.appendChild(msgText)
@@ -302,6 +339,10 @@ def addMetric(id, type, name, value, tolerance):
   jrnl = openJournal(id)
   log = getLogEl(jrnl)
   add_to = getLastUnfinishedPhase(log)
+
+  for node in add_to.getElementsByTagName('metric'):
+    if node.getAttribute('name') == name:
+        raise Exception("Metric name not unique!")
 
   metric = jrnl.createElement("metric")
   metric.setAttribute("type", type)
@@ -314,7 +355,7 @@ def addMetric(id, type, name, value, tolerance):
   saveJournal(jrnl, id)
 
 def dumpJournal(id):  
-  print openJournal(id).toprettyxml()
+  print openJournal(id).toprettyxml().encode("utf-8")
   
 def need(args):
   if None in args:
@@ -374,12 +415,12 @@ elif command == "metric":
   need((options.testid, options.name, options.type, options.value, options.tolerance))
   try:
     addMetric(options.testid, options.type, options.name, float(options.value), float(options.tolerance))
-  except ValueError:
+  except:
     sys.exit(1)
 elif command == "finphase":
   need((options.testid,))
   result, score, type, name = finPhase(options.testid)
-  print "%s:%s:%s" % (type,result,name)
+  _print("%s:%s:%s" % (type,result,name))
   print >> sys.stderr, score
   sys.exit(int(score))
 

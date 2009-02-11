@@ -288,7 +288,7 @@ rlAssertExists(){
         __INTERNAL_LogAndJournalFail "rlAssertExists called without parameter" ""
         return 1
     fi
-  __INTERNAL_ConditionalAssert "File $1 exists" `[ -e "$1" ]; echo $?`
+  __INTERNAL_ConditionalAssert "File $1 should exist" `[ -e "$1" ]; echo $?`
   return $?
 }
 
@@ -322,7 +322,7 @@ rlAssertNotExists(){
         __INTERNAL_LogAndJournalFail "rlAssertNotExists called without parameter" ""
         return 1
     fi
-  __INTERNAL_ConditionalAssert "File $1 doesn't exist" `[ ! -e "$1" ]; echo $?`
+  __INTERNAL_ConditionalAssert "File $1 should not exist" `[ ! -e "$1" ]; echo $?`
   return $?
 }
 
@@ -336,7 +336,7 @@ rlAssertNotExists(){
 
 Assertion checking if the file contains a pattern.
 
-    rlAssertGrep pattern file
+    rlAssertGrep pattern file [options]
 
 =over
 
@@ -347,6 +347,12 @@ Regular expression to be searched for.
 =item file
 
 Path to the file.
+
+=item options
+
+Optional parameters to be passed to grep, default is C<-q>. Can be
+used to perform case insensitive matches (-i), or using
+extended (-E) or perl (-P) regular expressions.
 
 =back
 
@@ -360,9 +366,9 @@ rlAssertGrep(){
         __INTERNAL_LogAndJournalFail "rlAssertGrep: failed to find file $2"
         return 2
     fi
-    __INTERNAL_ConditionalAssert \
-        "File '$2' should contain '$1'" \
-        `grep -q "$1" "$2"; echo $?`
+    local options=${3:--q}
+    grep $options "$1" "$2"
+    __INTERNAL_ConditionalAssert "File '$2' should contain '$1'" $?
 }
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -375,7 +381,7 @@ rlAssertGrep(){
 
 Assertion checking that the file does not contain a pattern.
 
-    rlAssertNotGrep pattern file
+    rlAssertNotGrep pattern file [options]
 
 =over
 
@@ -386,6 +392,12 @@ Regular expression to be searched for.
 =item file
 
 Path to the file.
+
+=item options
+
+Optional parameters to be passed to grep, default is C<-q>. Can be
+used to perform case insensitive matches (-i), or using
+extended (-E) or perl (-P) regular expressions.
 
 =back
 
@@ -399,10 +411,9 @@ rlAssertNotGrep(){
         __INTERNAL_LogAndJournalFail "rlAssertNotGrep: failed to find file $2"
         return 2
     fi
-    __INTERNAL_ConditionalAssert \
-        "File '$2' should not contain '$1'" \
-        `grep -q "$1" "$2" && echo 1 || echo 0`
-    return $?
+    local options=${3:--q}
+    ! grep $options "$1" "$2"
+    __INTERNAL_ConditionalAssert "File '$2' should not contain '$1'" $?
 }
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

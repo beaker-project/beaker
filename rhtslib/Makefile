@@ -42,6 +42,7 @@ tarball: $(FILES) docsman gendict
 	rm -rf rhtslib-$(VERSION)/
 	mkdir rhtslib-$(VERSION)/
 	cp -pr $(FILES) Makefile dictionary.vim test/ rhtslib-$(VERSION)/
+	rm -rf rhtslib-$(VERSION)/test/remotedir rhtslib-$(VERSION)/test/rhtslib-test-mount-point
 	mkdir rhtslib-$(VERSION)/python/
 	cp -pr $(PYTFILES) rhtslib-$(VERSION)/python/
 	mkdir rhtslib-$(VERSION)/perl/
@@ -69,6 +70,7 @@ install: $(FILES)
 	rm $(DESTDIR)/usr/share/rhts-library/rhtslib.spec
 
 clean:
+	rm -rf test/remotedir test/rhtslib-test-mount-point
 	rm -f *.tar.gz
 	rm -f test/runtests-worker.sh
 	rm -rf docs/{man,wiki,html,pod}
@@ -128,7 +130,9 @@ docswiki: $(SCRIPTS) docsjoin
 	rm RhtslibManual
 
 gendict:
-	RHTSLIB=. bash -c ". rhtslib.sh ; declare -f |grep '^rl.* ()' |cut -d ' ' -f 1 > dictionary.vim"
+	RHTSLIB=. bash -c ". rhtslib.sh ; declare -f | \
+		perl -e 'map { s/.*(obsolete|deprecate|^rlj).*//s; s/ .*/\n/s; print } \
+		(join \"\", <>) =~ m/^rl.*?^}/msg;' > dictionary.vim"
 
 wiki: $(SCRIPTS) docswiki
 	scp -r $(WIKIDIR)/* $(WIKILOCATION)
