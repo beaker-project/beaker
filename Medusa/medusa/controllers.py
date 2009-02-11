@@ -678,7 +678,7 @@ class Root(RPCRoot):
 #      would be good to have the save wait until the system is updated
 # TODO log  group +/-
         # Fields missing from kw have been set to NULL
-        log_fields = [ 'fqdn', 'vendor', 'lender', 'model', 'serial', 'location', 'type_id', 'checksum', 'status_id', 'lab_controller_id' ]
+        log_fields = [ 'fqdn', 'vendor', 'lender', 'model', 'serial', 'location', 'type_id', 'checksum', 'status_id', 'lab_controller_id' , 'mac_address']
         for field in log_fields:
             try:
                 current_val = str(system.__dict__[field])
@@ -732,6 +732,7 @@ class Root(RPCRoot):
             system.lab_controller_id = None
         else:
             system.lab_controller_id = kw['lab_controller_id']
+        system.mac_address=kw['mac_address']
         redirect("/view/%s" % system.fqdn)
 
     @expose()
@@ -1036,12 +1037,12 @@ class Root(RPCRoot):
         if hit:
             # We have a match and its available!
             return (dict(fqdn    = system.fqdn,
-                         type = '%s' % system.type), 1)
+                         mac_address = '%s' % system.mac_address), 1)
         elif systems.count():
             # We have matches but none are available right now
             system = systems.first()
             return (dict(fqdn    = system.fqdn,
-                         type = '%s' % system.type), 0)
+                         mac_address = '%s' % system.mac_address), 0)
         else:
             # Nothing matches what the user requested.
             return (None, -1)
@@ -1062,7 +1063,7 @@ class Root(RPCRoot):
             # We have matches 
             system = systems.first()
             return (dict(fqdn    = system.fqdn,
-                         type = '%s' % system.type), 0)
+                         mac_address = '%s' % system.mac_address), 0)
         else:
             # Nothing matches what the user requested.
             return (None, -1)

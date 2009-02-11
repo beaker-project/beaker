@@ -65,13 +65,16 @@ class Distros(RPCRoot):
             distros = distros.filter(and_(*joins))
         if queries:
             distros = distros.filter(and_(*queries))
-        distro = distros.order_by('-date_created').first()
+        distros = distros.add_column('tree_path').join('lab_controller_assocs')
+        distros = distros.add_column('fqdn').join(['lab_controller_assocs','lab_controller'])
+        distro, tree_path, fqdn = distros.order_by('-date_created').first()
         if distro:
-            return dict(distro    = distro.install_name,
-                        arch      = '%s' % distro.arch,
-                        family    = '%s' % distro.osversion,
-                        variant   = distro.variant,
-                        tree_path = distro.install_name)
+            return dict(distro         = distro.install_name,
+                        arch           = '%s' % distro.arch,
+                        family         = '%s' % distro.osversion,
+                        variant        = distro.variant,
+                        lab_controller = fqdn,
+                        tree_path      = tree_path)
         else:
             return None
 

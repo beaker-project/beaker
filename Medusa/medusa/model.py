@@ -10,6 +10,7 @@ from sqlalchemy.exceptions import InvalidRequestError
 from identity import LdapSqlAlchemyIdentityProvider
 from cobbler_utils import consolidate, string_to_hash
 from sqlalchemy.orm.collections import attribute_mapped_collection
+from sqlalchemy.ext.associationproxy import association_proxy
 import socket
 
 from BasicAuthTransport import BasicAuthTransport
@@ -47,7 +48,8 @@ system_table = Table('system', metadata,
     Column('deleted', Boolean, default=False),
     Column('memory', Integer),
     Column('checksum', String(32)),
-    Column('lab_controller_id', Integer, ForeignKey('lab_controller.id'))
+    Column('lab_controller_id', Integer, ForeignKey('lab_controller.id')),
+    Column('mac_address',String(18)),
 )
 
 system_device_map = Table('system_device_map', metadata,
@@ -247,8 +249,9 @@ distro_table = Table('distro', metadata,
 )
 
 lab_controller_distro_map = Table('distro_lab_controller_map', metadata,
-    Column('distro_id', Integer, ForeignKey('distro.id')),
-    Column('lab_controller_id', Integer, ForeignKey('lab_controller.id')),
+    Column('distro_id', Integer, ForeignKey('distro.id'), primary_key=True),
+    Column('lab_controller_id', Integer, ForeignKey('lab_controller.id'), primary_key=True),
+    Column('tree_path', String(1024)),
 )
 
 lab_controller_table = Table('lab_controller', metadata,
@@ -1206,6 +1209,9 @@ class OSVersion(SystemObject):
     def __repr__(self):
         return "%s.%s" % (self.osmajor,self.osminor)
 
+class LabControllerDistro(SystemObject):
+    pass
+
 class LabController(SystemObject):
     @classmethod
     def by_id(cls, id):
@@ -1218,7 +1224,8 @@ class LabController(SystemObject):
         """
         all = cls.query()
         return [(0,"None")] + [(lc.id, lc.fqdn) for lc in all]
-        
+
+    distros = association_proxy('_distros', 'distro')
 
 class Cpu(SystemObject):
     def __init__(self, vendor=None, model=None, model_name=None, family=None, stepping=None,speed=None,processors=None,cores=None,sockets=None,flags=None):
@@ -1410,6 +1417,8 @@ class Distro(object):
     def ___repr__(self):
         return "%s" % self.install_name
 
+    lab_controllers = association_proxy('lab_controller_assocs', 'lab_controller')
+
 class DistroTag(object):
     def __init__(self, name=None):
         self.name = name
@@ -1539,11 +1548,14 @@ mapper(Power, power_table,
 mapper(Serial, serial_table)
 mapper(SerialType, serial_type_table)
 mapper(Install, install_table)
+mapper(LabControllerDistro, lab_controller_distro_map , properties={
+    'distro':relation(Distro, backref='lab_controller_assocs',
+                              cascade='all,delete-orphan')
+})
 mapper(LabController, lab_controller_table,
-        properties = {'distros':relation(Distro,
-                                          secondary=lab_controller_distro_map,
-                                          backref='lab_controllers',
-                                          cascade="all,delete-orphan"),
+        properties = {'_distros':relation(LabControllerDistro,
+                                          backref='lab_controller',
+                                          cascade='all,delete-orphan'),
     })
 mapper(Distro, distro_table,
         properties = {'osversion':relation(OSVersion, uselist=False,

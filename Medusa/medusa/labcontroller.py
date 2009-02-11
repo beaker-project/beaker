@@ -93,7 +93,8 @@ class LabControllers(RPCRoot):
             token = remote.login(labcontroller.username,labcontroller.password)
             distros = []
             release = re.compile(r'family=(\w+\d+.\d+)')
-            for lc_distro in remote.get_distros():
+            lc_distros = remote.get_distros()
+            for lc_distro in lc_distros:
                 name = lc_distro['name'].split('_')[0]
                 meta = string.join(lc_distro['name'].split('_')[1:],'_').split('-')
                 variant = None
@@ -111,6 +112,9 @@ class LabControllers(RPCRoot):
                 if 'xen' in meta:
                     virt = True
 
+                if 'tree' not in lc_distro['ks_meta']:
+                    print "tree missing from ",lc_distro['name']
+                    continue
                 if 'comment' in lc_distro:
                     if release.search(lc_distro['comment']):
                         lc_os_version = release.search(lc_distro['comment']).group(1)
@@ -159,17 +163,20 @@ class LabControllers(RPCRoot):
                         distro.virt = virt
                         distro.date_created = datetime.fromtimestamp(float(lc_distro['tree_build_time']))
                         activity = Activity(None,'XMLRPC','Added','Distro',None, lc_distro['name'])
+                    if distro not in labcontroller.distros:
+                        #FIXME Distro Activity Add
+                        lcd = LabControllerDistro()
+                        lcd.distro = distro
+                        lcd.tree_path = lc_distro['ks_meta']['tree']
+                        labcontroller._distros.append(lcd)
                     distros.append(distro)
-            for i in xrange(len(labcontroller.distros)-1,-1,-1):
-                distro = labcontroller.distros[i]
+            for i in xrange(len(labcontroller._distros)-1,-1,-1):
+                distro = labcontroller._distros[i].distro
                 if distro not in distros:
                     activity = Activity(None,'XMLRPC','Removed','Distro',distro.install_name,None)
-#                    del labcontroller.distros[i]
+                    print "i=",i,"distro =", labcontroller._distros[i].distro.install_name
+                    del labcontroller._distros[i]
                     
-            for distro in distros:
-                if distro not in labcontroller.distros:
-                    #FIXME Distro Activity Add
-                    labcontroller.distros.append(distro)
             labcontroller.distros_md5 = now
         else:
             flash( _(u"No Lab Controller id passed!"))
