@@ -3,7 +3,7 @@
 
 Name:           medusa
 Version:        0.2
-Release:        55%{?dist}
+Release:        56%{?dist}
 Summary:        Inventory System
 Group:          Applications/Internet
 License:        GPLv2+
@@ -83,7 +83,7 @@ touch %{buildroot}/%{_localstatedir}/log/medusa/server.log
 %{__mkdir_p} %{buildroot}/var/lib/cobbler/snippets
 %{__mkdir_p} %{buildroot}/var/lib/cobbler/kickstarts
 
-%{__install} -m 640 lab-controller/cron.daily/expire_distros %{buildroot}%{_sysconfdir}/cron.daily/
+%{__install} -m 740 lab-controller/cron.daily/expire_distros %{buildroot}%{_sysconfdir}/cron.daily/
 %{__install} lab-controller/triggers/osversion.trigger %{buildroot}/var/lib/cobbler/triggers/sync/post/
 %{__install} lab-controller/snippets/rhts_partitions %{buildroot}/var/lib/cobbler/snippets
 %{__install} lab-controller/snippets/rhts_packages %{buildroot}/var/lib/cobbler/snippets
@@ -123,6 +123,9 @@ touch %{buildroot}/%{_localstatedir}/log/medusa/server.log
 /var/www/cobbler/aux/rhts-checkin
 
 %changelog
+* Thu Feb 10 2009 Bill Peck <bpeck@redhat.com> - 0.2-56
+- fix permissions on expire_distros
+
 * Thu Feb 10 2009 Bill Peck <bpeck@redhat.com> - 0.2-55
 - fix system query
 
