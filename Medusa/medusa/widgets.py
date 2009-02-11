@@ -517,7 +517,8 @@ class SystemForm(Form):
                AutoCompleteField(name='group',
                                       search_controller=url("/groups/by_name"),
                                       search_param="name",
-                                      result_name="groups")
+                                      result_name="groups"),
+               TextField(name='mac_address', label=_(u'Mac Address')),
     ]
 
     def display_value(self, item, hidden_fields, value=None):
