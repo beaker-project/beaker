@@ -14,7 +14,7 @@
 # Author: Petr Muller <pmuller@redhat.com>
 
 VERSION=0.6
-RELEASE=1
+RELEASE=2
 SCRIPTS=rhtslib.sh\
 		journal.sh\
 		logging.sh\
