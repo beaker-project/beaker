@@ -950,7 +950,8 @@ class System(SystemObject):
                                                kernel_options_post)
         rc, result = self.action_provision(distro, **results)
         if rc == 0:
-            rc, result = self.action_power(action="reboot")
+            if self.power:
+                rc, result = self.action_power(action="reboot")
         return rc, result
 
     def action_return(self):
