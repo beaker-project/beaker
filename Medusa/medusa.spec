@@ -3,7 +3,7 @@
 
 Name:           medusa
 Version:        0.2
-Release:        57%{?dist}
+Release:        60%{?dist}
 Summary:        Inventory System
 Group:          Applications/Internet
 License:        GPLv2+
@@ -123,25 +123,34 @@ touch %{buildroot}/%{_localstatedir}/log/medusa/server.log
 /var/www/cobbler/aux/rhts-checkin
 
 %changelog
-* Thu Feb 10 2009 Bill Peck <bpeck@redhat.com> - 0.2-57
+* Thu Feb 12 2009 Bill Peck <bpeck@redhat.com> - 0.2-60
+- added robots.txt 
+
+* Thu Feb 12 2009 Bill Peck <bpeck@redhat.com> - 0.2-59
+- fix for importing tree info
+
+* Wed Feb 11 2009 Bill Peck <bpeck@redhat.com> - 0.2-58
+- fix for system history
+
+* Wed Feb 11 2009 Bill Peck <bpeck@redhat.com> - 0.2-57
 - added mac_address tracking for virt machines
 - also track tree_path with distros
 
-* Thu Feb 10 2009 Bill Peck <bpeck@redhat.com> - 0.2-56
+* Wed Feb 11 2009 Bill Peck <bpeck@redhat.com> - 0.2-56
 - fix permissions on expire_distros
 
-* Thu Feb 10 2009 Bill Peck <bpeck@redhat.com> - 0.2-55
+* Tue Feb 10 2009 Bill Peck <bpeck@redhat.com> - 0.2-55
 - fix system query
 
-* Thu Feb 10 2009 Bill Peck <bpeck@redhat.com> - 0.2-54
+* Tue Feb 10 2009 Bill Peck <bpeck@redhat.com> - 0.2-54
 - fix logic in system.can_share()
 - fix user sorting on main page
 - allow searchbar to work for mine/available/free pages
 
-* Thu Feb 10 2009 Bill Peck <bpeck@redhat.com> - 0.2-53
+* Tue Feb 10 2009 Bill Peck <bpeck@redhat.com> - 0.2-53
 - rescan now pulls all distros, will look into caching later.
 
-* Thu Feb 10 2009 Bill Peck <bpeck@redhat.com> - 0.2-52
+* Tue Feb 10 2009 Bill Peck <bpeck@redhat.com> - 0.2-52
 - fixed delete logic, still haven't enabled delete by default
 - added rescan method for lab controllers
 - attempt to fix sorting by username
