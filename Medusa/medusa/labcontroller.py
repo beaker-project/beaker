@@ -112,9 +112,6 @@ class LabControllers(RPCRoot):
                 if 'xen' in meta:
                     virt = True
 
-                if 'tree' not in lc_distro['ks_meta']:
-                    print "tree missing from ",lc_distro['name']
-                    continue
                 if 'comment' in lc_distro:
                     if release.search(lc_distro['comment']):
                         lc_os_version = release.search(lc_distro['comment']).group(1)
@@ -167,7 +164,8 @@ class LabControllers(RPCRoot):
                         #FIXME Distro Activity Add
                         lcd = LabControllerDistro()
                         lcd.distro = distro
-                        lcd.tree_path = lc_distro['ks_meta']['tree']
+                        if 'tree' in lc_distro['ks_meta']:
+                            lcd.tree_path = lc_distro['ks_meta']['tree']
                         labcontroller._distros.append(lcd)
                     distros.append(distro)
             for i in xrange(len(labcontroller._distros)-1,-1,-1):
