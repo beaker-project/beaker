@@ -1,7 +1,7 @@
 from turbogears.database import session
 from turbogears import controllers, expose, flash, widgets, validate, error_handler, validators, redirect, paginate, url
 from model import *
-from turbogears import identity, redirect
+from turbogears import identity, redirect, config
 from medusa.power import PowerTypes
 from medusa.group import Groups
 from medusa.labcontroller import LabControllers
@@ -25,6 +25,7 @@ from medusa.widgets import SystemArches
 from medusa.xmlrpccontroller import RPCRoot
 from medusa.cobbler_utils import hash_to_string
 from cherrypy import request, response
+from cherrypy.lib.cptools import serve_file
 from tg_expanding_form_widget.tg_expanding_form_widget import ExpandingForm
 from medusa.needpropertyxml import *
 from medusa.helpers import *
@@ -1149,7 +1150,7 @@ class Root(RPCRoot):
     @expose()
     def favicon_ico(self):
         static_dir = config.get('static_filter.dir', path="/static")
-        filename = join(normpath(static_dir), 'images', 'favicon.ico')
+        filename = join(os.path.normpath(static_dir), 'images', 'favicon.ico')
         return serve_file(filename)
 
 #    @expose(template='medusa.templates.activity')

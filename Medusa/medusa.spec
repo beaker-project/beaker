@@ -3,7 +3,7 @@
 
 Name:           medusa
 Version:        0.2
-Release:        61%{?dist}
+Release:        62%{?dist}
 Summary:        Inventory System
 Group:          Applications/Internet
 License:        GPLv2+
@@ -123,8 +123,11 @@ touch %{buildroot}/%{_localstatedir}/log/medusa/server.log
 /var/www/cobbler/aux/rhts-checkin
 
 %changelog
-* Thu Feb 12 2009 Bill Peck <bpeck@redhat.com> - 0.2-61
-- added favico.ico and fixed group lookup.
+* Fri Feb 13 2009 Bill Peck <bpeck@redhat.com> - 0.2-62
+- try number 2 on favicon.ico
+
+* Fri Feb 13 2009 Bill Peck <bpeck@redhat.com> - 0.2-61
+- added favicon.ico and fixed group lookup.
 
 * Thu Feb 12 2009 Bill Peck <bpeck@redhat.com> - 0.2-60
 - added robots.txt 
