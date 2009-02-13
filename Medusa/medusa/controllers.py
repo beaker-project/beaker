@@ -81,7 +81,6 @@ class Netboot:
         hostname = None
         distro_name = None
         SETENV = re.compile(r'SetEnvironmentVar\s+([^\s]+)\s+"*([^"]+)')
-        INSTALLMACHINE = re.compile(r'InstallMachine\s+([^\s]+)')
         BOOTARGS = re.compile(r'BootArgs\s+(.*)')
         KICKSTART = re.compile(r'Kickstart\s+(.*)')
         ADDREPO = re.compile(r'AddRepo\s+([^\s]+)')
@@ -96,10 +95,10 @@ class Netboot:
                     recipeid = SETENV.match(command).group(2)
                 if SETENV.match(command).group(1) == "HOSTNAME":
                     hostname = SETENV.match(command).group(2)
+                if SETENV.match(command).group(1) == "DISTRO":
+                    distro_name = SETENV.match(command).group(2)
             if INSTALLPACKAGE.match(command):
                 packages.append(INSTALLPACKAGE.match(command).group(1))
-            if INSTALLMACHINE.match(command):
-                distro_name = INSTALLMACHINE.match(command).group(1)
             if BOOTARGS.match(command):
                 bootargs = BOOTARGS.match(command).group(1)
             if KICKSTART.match(command):
@@ -113,18 +112,12 @@ class Netboot:
         if repos:
             ks_meta = "%s customrepos=%s" % (ks_meta, string.join(repos,"|"))
         if distro_name:
-            try:
-                distro = Distro.by_install_name(distro_name)
-            except InvalidRequestError:
-                return (-2, "Invalid Distro %s!" % distro_name)
+            distro = Distro.by_install_name(distro_name)
         else:
             rc = -4
             result = "distro not defined"
         if hostname:
-            try:
-                system = System.query().filter(System.fqdn == hostname).one()
-            except InvalidRequestError:
-                return (-1, "Invalid Hostname %s!" % hostname)
+            system = System.query().filter(System.fqdn == hostname).one()
             rc, result = system.action_auto_provision(distro, ks_meta, bootargs)
             activity = SystemActivity(system.user, 'VIA %s' % machine_account, 'Provision', 'Distro', "", "%s: %s" % (result, distro.install_name))
             system.activity.append(activity)
@@ -777,7 +770,11 @@ class Root(RPCRoot):
             redirect("/")
         # Add a Group
         if kw.get('group').get('text'):
-            group = Group.by_name(kw['group']['text'])
+            try:
+                group = Group.by_name(kw['group']['text'])
+            except InvalidRequestError:
+                flash(_(u"%s is an Invalid Group" % kw['group']['text']))
+                redirect("/view/%s" % system.fqdn)
             system.groups.append(group)
             activity = SystemActivity(identity.current.user, 'WEBUI', 'Added', 'Group', "", kw['group']['text'])
             gactivity = GroupActivity(identity.current.user, 'WEBUI', 'Added', 'System', "", system.fqdn)
@@ -1144,6 +1141,16 @@ class Root(RPCRoot):
     def logout(self):
         identity.current.logout()
         raise redirect("/")
+
+    @expose()
+    def robots_txt(self):
+        return "User-agent: *\nDisallow: /\n"
+
+    @expose()
+    def favicon_ico(self):
+        static_dir = config.get('static_filter.dir', path="/static")
+        filename = join(normpath(static_dir), 'images', 'favicon.ico')
+        return serve_file(filename)
 
 #    @expose(template='medusa.templates.activity')
 #    def activity(self, *args, **kw):
