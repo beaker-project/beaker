@@ -1,9 +1,10 @@
 Name: rhtslib
 Summary: RHTS test library
 Version: 	0.6
-Release: 	1
+Release: 	3
 License: 	GPLv2
 Group: 		QA
+BuildRoot:  %{_tmppath}/%{name}-%{version}-root
 Source0:	%{name}-%{version}.tar.gz
 BuildArch:	noarch
 URL:            https://fedorahosted.org/beaker/RhtsLibrary
