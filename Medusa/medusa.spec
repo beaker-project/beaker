@@ -3,7 +3,7 @@
 
 Name:           medusa
 Version:        0.2
-Release:        62%{?dist}
+Release:        63%{?dist}
 Summary:        Inventory System
 Group:          Applications/Internet
 License:        GPLv2+
@@ -123,6 +123,10 @@ touch %{buildroot}/%{_localstatedir}/log/medusa/server.log
 /var/www/cobbler/aux/rhts-checkin
 
 %changelog
+* Mon Feb 16 2009 Bill Peck <bpeck@redhat.com> - 0.2-63
+- broke key_values into separate int and string tables.
+- hopefully fixed available/free queries 
+
 * Fri Feb 13 2009 Bill Peck <bpeck@redhat.com> - 0.2-62
 - try number 2 on favicon.ico
 
