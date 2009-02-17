@@ -573,7 +573,7 @@ rlWatchdog(){
 
 Report test result using RHTS C<report_result> function.
 
-    rlReport name result [score]
+    rlReport name result [score] [log]
 
 =over
 
@@ -590,14 +590,21 @@ else, will use WARN.
 
 Test score (optional).
 
+=item log
+
+Optional log file to be submitted instead of default C<OUTPUTFILE>.
+
 =back
 
 =cut
 
 rlReport(){
-	# only PASS/WARN/FAIL is allowed
-	local result="$(echo $2 | tr '[:lower:]' '[:upper:]')"
-	case "$result" in
+    # only PASS/WARN/FAIL is allowed
+    local testname="$1"
+    local result="$(echo $2 | tr '[:lower:]' '[:upper:]')"
+    local score="$3"
+    local logfile=${4:-$OUTPUTFILE}
+    case "$result" in
           'PASS' | 'PASSED' | 'PASSING' ) result='PASS'; ;;
           'FAIL' | 'FAILED' | 'FAILING') result='FAIL'; ;;
           'WARN' | 'WARNED' | 'WARNING') result='WARN'; ;;
@@ -606,8 +613,8 @@ rlReport(){
             result='WARN'
           ;;
         esac
-	rlLogInfo "rlReport: Reporting: [$result] $1 (score $3, outputfile $OUTPUTFILE)"
-	report_result $1 $result $3
+    rlLogDebug "rlReport: result: $result, score: $score, log: $logfile"
+    rhts-report-result $testname $result $logfile $score
 }
 
 
