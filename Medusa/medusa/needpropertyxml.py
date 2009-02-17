@@ -199,16 +199,24 @@ class XmlKeyValue(ElementWrapper):
         value = self.get_xml_attr('value', unicode, None)
         joins = []
         query = None
+        try:
+            _key = Key.by_name(key)
+        except InvalidRequestError:
+            return (joins, False)
         if key and op and value:
             # Alias since we may join on ourselves
-            alias = key_value_table.alias('key%i' % self.alias['key_value'])
+            if _key.numeric:
+                table = key_value_int_table
+            else:
+                table = key_value_string_table
+            alias = table.alias('key%i' % self.alias['key_value'])
             self.alias['key_value'] += 1
 
             # Setup the joins
             joins = [alias.c.system_id==system_table.c.id]
 
             # Filter using the operator we looked up
-            query = and_(alias.c.key_name==key,
+            query = and_(alias.c.key_id==_key.id,
                          getattr(alias.c.key_value, op)(value))
         return (joins, query)
 

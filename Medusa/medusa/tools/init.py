@@ -109,6 +109,35 @@ def main():
         virsh       = PowerType(u'virsh')
         wti         = PowerType(u'wti')
 
+    #Setup key types
+    if Key.query().count() == 0:
+        DISKSPACE       = Key('DISKSPACE',True)
+        COMMENT         = Key('COMMENT')
+        CPUFAMILY	= Key('CPUFAMILY',True)
+        CPUFLAGS	= Key('CPUFLAGS')
+        CPUMODEL	= Key('CPUMODEL')
+        CPUMODELNUMBER 	= Key('CPUMODELNUMBER', True)
+        CPUSPEED	= Key('CPUSPEED',True)
+        CPUVENDOR	= Key('CPUVENDOR')
+        DISK		= Key('DISK',True)
+        FORMFACTOR 	= Key('FORMFACTOR')
+        HVM		= Key('HVM')
+        MEMORY		= Key('MEMORY',True)
+        MODEL		= Key('MODEL')
+        MODULE		= Key('MODULE')
+        NETWORK		= Key('NETWORK')
+        NR_DISKS	= Key('NR_DISKS',True)
+        NR_ETH		= Key('NR_ETH',True)
+        NR_IB		= Key('NR_IB',True)
+        PCIID		= Key('PCIID')
+        PROCESSORS	= Key('PROCESSORS',True)
+        RTCERT		= Key('RTCERT')
+        SCRATCH		= Key('SCRATCH')
+        STORAGE		= Key('STORAGE')
+        USBID		= Key('USBID')
+        VENDOR		= Key('VENDOR')
+        XENCERT		= Key('XENCERT')
+
     session.flush()
 
 if __name__ == "__main__":

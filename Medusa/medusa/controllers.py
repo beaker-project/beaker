@@ -3,6 +3,7 @@ from turbogears import controllers, expose, flash, widgets, validate, error_hand
 from model import *
 from turbogears import identity, redirect, config
 from medusa.power import PowerTypes
+from medusa.keytypes import KeyTypes
 from medusa.group import Groups
 from medusa.labcontroller import LabControllers
 from medusa.user_system import UserSystems
@@ -173,6 +174,7 @@ class Devices:
 
 class Root(RPCRoot):
     powertypes = PowerTypes()
+    keytypes = KeyTypes()
     devices = Devices()
     groups = Groups()
     labcontrollers = LabControllers()
@@ -263,6 +265,10 @@ class Root(RPCRoot):
 
     # @identity.require(identity.in_group("admin"))
     def systems(self, systems, *args, **kw):
+        # Reset joinpoint and then outerjoin on user.  This is so the sort 
+        # column works in paginate/datagrid.
+        # Also need to do distinct or paginate gets confused by the joins
+        systems = systems.reset_joinpoint().outerjoin('user').distinct()
         if kw.get("systemsearch"):
             searchvalue = kw['systemsearch']
             for search in kw['systemsearch']:
@@ -308,28 +314,35 @@ class Root(RPCRoot):
 
     @expose()
     @identity.require(identity.not_anonymous())
-    def key_remove(self, system_id=None, key_value_id=None):
+    def key_remove(self, system_id=None, key_type=None, key_value_id=None):
         removed = None
-        if system_id and key_value_id:
+        if system_id and key_value_id and key_type:
             try:
                 system = System.by_id(system_id,identity.current.user)
             except:
                 flash(_(u"Invalid Permision"))
                 redirect("/")
         else:
-            flash(_(u"system_id and group_id must be provided"))
+            flash(_(u"system_id, key_value_id and key_type must be provided"))
             redirect("/")
         
         if system.can_admin(identity.current.user):
-            for key_value in system.key_values:
+            if key_type == 'int':
+                key_values = system.key_values_int
+            else:
+                key_values = system.key_values_string
+            for key_value in key_values:
                 if key_value.id == int(key_value_id):
-                    system.key_values.remove(key_value)
+                    if key_type == 'int':
+                        system.key_values_int.remove(key_value)
+                    else:
+                        system.key_values_string.remove(key_value)
                     removed = key_value
-                    activity = SystemActivity(identity.current.user, 'WEBUI', 'Removed', 'Key/Value', "%s/%s" % (removed.key_name, removed.key_value), "")
+                    activity = SystemActivity(identity.current.user, 'WEBUI', 'Removed', 'Key/Value', "%s/%s" % (removed.key.key_name, removed.key_value), "")
                     system.activity.append(activity)
         
         if removed:
-            flash(_(u"removed %s/%s" % (removed.key_name,removed.key_value)))
+            flash(_(u"removed %s/%s" % (removed.key.key_name,removed.key_value)))
         else:
             flash(_(u"Key_Value_Id not Found"))
         redirect("./view/%s" % system.fqdn)
@@ -494,7 +507,8 @@ class Root(RPCRoot):
             widgets_options = dict(power     = options,
                                    exclude   = options,
                                    keys      = dict(readonly = readonly,
-                                                key_values = system.key_values),
+                                                key_values_int = system.key_values_int,
+                                                key_values_string = system.key_values_string),
                                    notes     = dict(readonly = readonly,
                                                 notes = system.notes),
                                    groups    = dict(readonly = readonly,
@@ -739,8 +753,18 @@ class Root(RPCRoot):
             redirect("/")
         # Add a Key/Value Pair
         if kw.get('key_name') and kw.get('key_value'):
-            key_value = Key_Value(kw['key_name'],kw['key_value'])
-            system.key_values.append(key_value)
+            try:
+                key = Key.by_name(kw['key_name'])
+            except InvalidRequestError:
+                #FIXME allow user to create new keys
+                flash(_(u"Invalid key %s" % kw['key_name']))
+                redirect("/view/%s" % system.fqdn)
+            if key.numeric:
+                key_value = Key_Value_Int(key,kw['key_value'])
+                system.key_values_int.append(key_value)
+            else:
+                key_value = Key_Value_String(key,kw['key_value'])
+                system.key_values_string.append(key_value)
             activity = SystemActivity(identity.current.user, 'WEBUI', 'Added', 'Key/Value', "", "%s/%s" % (kw['key_name'],kw['key_value']) )
             system.activity.append(activity)
         redirect("/view/%s" % system.fqdn)

@@ -400,13 +400,27 @@ note_table = Table('note', metadata,
     Column('text',TEXT, nullable=False)
 )
 
-#key_value schema
-key_value_table = Table('key_value', metadata,
+key_table = Table('key', metadata,
+    Column('id', Integer, autoincrement=True,
+           nullable=False, primary_key=True),
+    Column('key_name', String(256), nullable=False, unique=True),
+    Column('numeric', Boolean, default=False),
+)
+
+key_value_string_table = Table('key_value_string', metadata,
     Column('id', Integer, autoincrement=True,
            nullable=False, primary_key=True),
     Column('system_id', Integer, ForeignKey('system.id'), index=True),
-    Column('key_name',TEXT, nullable=False),
+    Column('key_id', Integer, ForeignKey('key.id'), index=True),
     Column('key_value',TEXT, nullable=False)
+)
+
+key_value_int_table = Table('key_value_int', metadata,
+    Column('id', Integer, autoincrement=True,
+           nullable=False, primary_key=True),
+    Column('system_id', Integer, ForeignKey('system.id'), index=True),
+    Column('key_id', Integer, ForeignKey('key.id'), index=True),
+    Column('key_value',Integer, nullable=False)
 )
 
 # the identity model
@@ -636,24 +650,20 @@ class System(SystemObject):
     @classmethod
     def all(cls, user=None):
         """
-        Not Private or (Private and in Group)
+        Only systems that the current user has permission to see
         
         """
+        query = cls.query().outerjoin(['groups','users'], aliased=True)
         if user:
-            if user.is_admin():
-                private = None
-            else:
-                private = or_(System.private==False,
+            if not user.is_admin():
+                query = query.filter(
+                            or_(System.private==False,
                               and_(System.private==True,
                                    or_(User.user_id==user.user_id,
                                        System.owner==user,
-                                        System.user==user)))
+                                        System.user==user))))
         else:
-            private = System.private==False
-        query = cls.query.outerjoin('user', aliased=True).outerjoin(['groups','users'])
-        if private:
-            query = query.filter(private)
-        query = query.distinct()
+            query = query.filter(System.private==False)
         return query
 
 #                                  or_(User.user_id==user.user_id, 
@@ -662,26 +672,24 @@ class System(SystemObject):
     @classmethod
     def free(cls, user):
         """
-        A class method that can be used to search for systems that only
-        user can see
+        Builds on available.  Only systems with no users.
         """
-        return System.all(user).filter(and_(System.user==None,
-                                            or_(System.owner==user,
-                                                System.shared==True),
-                                            or_(User.user_id==user.user_id,
-                                                system_group_table.c.system_id==None))
-                                      )
+        return System.available(user).filter(System.user==None)
 
     @classmethod
     def available(cls, user):
         """
-        A class method that can be used to search for systems that only
-        user can see
+        Builds on all.  Only systems which this user has permission to reserve.
         """
-        return System.all(user).filter(and_(or_(System.owner==user,
-                                                System.shared==True),
-                                            or_(User.user_id==user.user_id,
-                                                system_group_table.c.system_id==None))
+        return System.all(user).filter(
+                                    or_(System.owner==user,
+                                      and_(System.shared==True,
+                                           Group.systems==None
+                                          ),
+                                      and_(System.shared==True,
+                                            User.user_id==user.user_id
+                                          )
+                                       )
                                       )
 
     @classmethod
@@ -797,17 +805,30 @@ class System(SystemObject):
         Update Key/Value pairs for legacy RHTS
         """
         #Remove any keys that will be added
-        for i, mykey in enumerate(self.key_values):
+        for i, mykey in enumerate(self.key_values_int):
             if mykey.key_name in inventory:
-                del self.key_values[i]
+                del self.key_values_int[i]
+        for i, mykey in enumerate(self.key_values_string):
+            if mykey.key_name in inventory:
+                del self.key_values_string[i]
 
         #Add the uploaded keys
         for key in inventory:
+            try:
+                _key = Key.by_name(key)
+            except InvalidRequestError:
+                continue
             if isinstance(inventory[key], list):
                 for value in inventory[key]:
-                    self.key_values.append(Key_Value(key,value))
+                    if _key.numeric:
+                        self.key_values_int.append(Key_Value_Int(_key,value))
+                    else:
+                        self.key_values_string.append(Key_Value_String(_key,value))
             else:
-                self.key_values.append(Key_Value(key,inventory[key]))
+                if _key.numeric:
+                    self.key_values_int.append(Key_Value_Int(_key,inventory[key]))
+                else:
+                    self.key_values_string.append(Key_Value_String(_key,inventory[key]))
         return 0
                     
 
@@ -1464,18 +1485,38 @@ class Note(object):
     def all(cls):
         return cls.query()
 
-# key_value model
-class Key_Value(object):
-    def __init__(self, key_name=None, key_value=None):
+class Key(object):
+    def __init__(self, key_name=None, numeric=False):
         self.key_name = key_name
+        self.numeric = numeric
+
+    def __repr__(self):
+        return "%s" % self.key_name
+
+    @classmethod
+    def by_name(cls, key_name):
+        return cls.query().filter_by(key_name=key_name).one()
+
+    @classmethod
+    def by_id(cls, id):
+        return cls.query().filter_by(id=id).one()
+
+# key_value model
+class Key_Value_String(object):
+    def __init__(self, key=None, key_value=None):
+        self.key = key
         self.key_value = key_value
 
     def ___repr__(self):
-        return "%s %s" % (self.key_name, self.key_value)
+        return "%s %s" % (self.key.key, self.key_value)
 
-    @classmethod
-    def all(cls):
-        return cls.query()
+class Key_Value_Int(object):
+    def __init__(self, key=None, key_value=None):
+        self.key = key
+        self.key_value = key_value
+
+    def ___repr__(self):
+        return "%s %s" % (self.key.key, self.key_value)
 
 
 # set up mappers between identity tables and classes
@@ -1507,7 +1548,9 @@ System.mapper = mapper(System, system_table,
                      'notes':relation(Note,
                                       order_by=[note_table.c.created.desc()],
                                       cascade="all, delete, delete-orphan"),
-                     'key_values':relation(Key_Value,
+                     'key_values_int':relation(Key_Value_Int,
+                                      cascade="all, delete, delete-orphan"),
+                     'key_values_string':relation(Key_Value_String,
                                       cascade="all, delete, delete-orphan"),
                      'activity':relation(SystemActivity,
                                      order_by=[activity_table.c.created.desc()],
@@ -1613,7 +1656,13 @@ mapper(Note, note_table,
         properties=dict(user=relation(User, uselist=False,
                         backref='notes')))
 
-mapper(Key_Value, key_value_table)
+mapper(Key, key_table)
+mapper(Key_Value_Int, key_value_int_table,
+        properties=dict(key=relation(Key, uselist=False,
+                        backref='key_value_int')))
+mapper(Key_Value_String, key_value_string_table,
+        properties=dict(key=relation(Key, uselist=False,
+                        backref='key_value_string')))
 
 
 #                     Column("comments"), MultipleJoin('Comment')

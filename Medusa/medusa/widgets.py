@@ -299,7 +299,7 @@ class ExcludedFamilies(FormField):
 class SystemKeys(Form):
     template = "medusa.templates.system_keys"
     member_widgets = ["id", "key_name", "key_value"]
-    params = ['options', 'readonly', 'key_values']
+    params = ['options', 'readonly', 'key_values_int', 'key_values_string']
 
     def __init__(self, *args, **kw):
         super(SystemKeys, self).__init__(*args, **kw)
@@ -311,8 +311,10 @@ class SystemKeys(Form):
         super(SystemKeys, self).update_params(d)
         if 'readonly' in d['options']:
             d['readonly'] = d['options']['readonly']
-        if 'key_values' in d['options']:
-            d['key_values'] = d['options']['key_values']
+        if 'key_values_int' in d['options']:
+            d['key_values_int'] = d['options']['key_values_int']
+        if 'key_values_string' in d['options']:
+            d['key_values_string'] = d['options']['key_values_string']
 
 class SystemArches(Form):
     template = "medusa.templates.system_arches"
