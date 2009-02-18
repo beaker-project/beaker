@@ -3,7 +3,7 @@
 
 Name:           medusa
 Version:        0.2
-Release:        66%{?dist}
+Release:        67%{?dist}
 Summary:        Inventory System
 Group:          Applications/Internet
 License:        GPLv2+
