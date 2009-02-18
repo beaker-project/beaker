@@ -1091,7 +1091,7 @@ class Root(RPCRoot):
             return (None, -1)
             
     @cherrypy.expose
-    def system_return(self, machine_account, fqdn=None, full_name=None):
+    def system_return(self, machine_account, fqdn=None, full_name=None, log=True):
         if not fqdn:
             return (0,"You must supply a system")
         if not full_name:
@@ -1103,8 +1103,9 @@ class Root(RPCRoot):
         except InvalidRequestError:
             return (0, "Invalid system")
         if system.user == user:
-            activity = SystemActivity(system.user, 'VIA %s' % machine_account, "Returned", 'User', '%s' % system.user, '')
-            system.activity.append(activity)
+            if log:
+                activity = SystemActivity(system.user, 'VIA %s' % machine_account, "Returned", 'User', '%s' % system.user, '')
+                system.activity.append(activity)
             system.action_return()
         return
         

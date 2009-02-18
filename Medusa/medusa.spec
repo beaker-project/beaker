@@ -3,7 +3,7 @@
 
 Name:           medusa
 Version:        0.2
-Release:        63%{?dist}
+Release:        66%{?dist}
 Summary:        Inventory System
 Group:          Applications/Internet
 License:        GPLv2+
@@ -123,6 +123,15 @@ touch %{buildroot}/%{_localstatedir}/log/medusa/server.log
 /var/www/cobbler/aux/rhts-checkin
 
 %changelog
+* Wed Feb 18 2009 Bill Peck <bpeck@redhat.com> - 0.2-67
+- fix traceback in system_return activity
+* Wed Feb 18 2009 Bill Peck <bpeck@redhat.com> - 0.2-66
+- Check for error in distro pick
+* Wed Feb 18 2009 Bill Peck <bpeck@redhat.com> - 0.2-65
+- Fix virt filter to work with False
+* Wed Feb 18 2009 Bill Peck <bpeck@redhat.com> - 0.2-64
+- Allow logging to be turned off for system_return
+- filter distros by virt.
 * Mon Feb 16 2009 Bill Peck <bpeck@redhat.com> - 0.2-63
 - broke key_values into separate int and string tables.
 - hopefully fixed available/free queries 
