@@ -3,7 +3,7 @@
 
 Name:           medusa
 Version:        0.2
-Release:        67%{?dist}
+Release:        69%{?dist}
 Summary:        Inventory System
 Group:          Applications/Internet
 License:        GPLv2+
@@ -123,6 +123,8 @@ touch %{buildroot}/%{_localstatedir}/log/medusa/server.log
 /var/www/cobbler/aux/rhts-checkin
 
 %changelog
+* Wed Feb 18 2009 Bill Peck <bpeck@redhat.com> - 0.2-68
+- pass kickstart file through if given one
 * Wed Feb 18 2009 Bill Peck <bpeck@redhat.com> - 0.2-67
 - fix traceback in system_return activity
 * Wed Feb 18 2009 Bill Peck <bpeck@redhat.com> - 0.2-66

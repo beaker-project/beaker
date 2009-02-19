@@ -965,11 +965,12 @@ class System(SystemObject):
     def action_auto_provision(self, distro=None,
                              ks_meta=None,
                              kernel_options=None,
-                             kernel_options_post=None):
+                             kernel_options_post=None,
+                             kickstart=None):
         results = self.install_options(distro, ks_meta,
                                                kernel_options,
                                                kernel_options_post)
-        rc, result = self.action_provision(distro, **results)
+        rc, result = self.action_provision(distro, kickstart, **results)
         if rc == 0:
             if self.power:
                 rc, result = self.action_power(action="reboot")
@@ -995,11 +996,10 @@ class System(SystemObject):
                 if self.power:
                     self.action_power(action="off")
 
-    def action_provision(self, distro=None, 
+    def action_provision(self, distro=None, kickstart=None,
                         ks_meta=None,
                         kernel_options=None,
-                        kernel_options_post=None,
-                        kickstart=None):
+                        kernel_options_post=None):
         """
         Provision the System
         make xmlrpc call to lab controller
@@ -1033,6 +1033,10 @@ class System(SystemObject):
         remote.modify_system(system_id, 'kopts_post', kernel_options_post, token)
         if kickstart:
             kickfile = '/var/lib/cobbler/kickstarts/%s.ks' % self.fqdn
+            try:
+                remote.remove_profile(self.fqdn, token)
+            except:
+                pass
             if remote.copy_profile(profile_id, self.fqdn, token):
                 if remote.read_or_write_kickstart_template(kickfile, False, kickstart, token):
                     profile = self.fqdn

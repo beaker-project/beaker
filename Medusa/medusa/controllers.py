@@ -77,7 +77,7 @@ class Netboot:
         """
         repos = []
         bootargs = None
-        kickstart = []
+        kickstart = None
         packages = []
         testrepo = None
         hostname = None
@@ -104,7 +104,7 @@ class Netboot:
             if BOOTARGS.match(command):
                 bootargs = BOOTARGS.match(command).group(1)
             if KICKSTART.match(command):
-                kickstart = KICKSTART.match(command).group(1).split("RHTSNEWLINE")
+                kickstart = string.join(KICKSTART.match(command).group(1).split("RHTSNEWLINE"), "\n")
             if ADDREPO.match(command):
                 repos.append(ADDREPO.match(command).group(1))
             if TESTREPO.match(command):
@@ -120,7 +120,7 @@ class Netboot:
             result = "distro not defined"
         if hostname:
             system = System.query().filter(System.fqdn == hostname).one()
-            rc, result = system.action_auto_provision(distro, ks_meta, bootargs)
+            rc, result = system.action_auto_provision(distro, ks_meta, bootargs, None, kickstart)
             activity = SystemActivity(system.user, 'VIA %s' % machine_account, 'Provision', 'Distro', "", "%s: %s" % (result, distro.install_name))
             system.activity.append(activity)
         else:
