@@ -5,6 +5,7 @@ from turbogears import identity, redirect, config
 from medusa.power import PowerTypes
 from medusa.keytypes import KeyTypes
 from medusa.group import Groups
+from medusa.tag import Tags
 from medusa.labcontroller import LabControllers
 from medusa.user_system import UserSystems
 from medusa.distro import Distros
@@ -177,6 +178,7 @@ class Root(RPCRoot):
     keytypes = KeyTypes()
     devices = Devices()
     groups = Groups()
+    tags = Tags()
     labcontrollers = LabControllers()
     usersystems = UserSystems()
     distros = Distros()

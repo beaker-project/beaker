@@ -290,8 +290,10 @@ distro_tag_table = Table('distro_tag', metadata,
 )
 
 distro_tag_map = Table('distro_tag_map', metadata,
-    Column('distro_id', Integer, ForeignKey('distro.id')),
-    Column('distro_tag_id', Integer, ForeignKey('distro_tag.id')),
+    Column('distro_id', Integer, ForeignKey('distro.id'), 
+                                         primary_key=True),
+    Column('distro_tag_id', Integer, ForeignKey('distro_tag.id'), 
+                                         primary_key=True),
 )
 
 # the identity schema
@@ -806,10 +808,10 @@ class System(SystemObject):
         """
         #Remove any keys that will be added
         for i, mykey in enumerate(self.key_values_int):
-            if mykey.key_name in inventory:
+            if mykey.key.key_name in inventory:
                 del self.key_values_int[i]
         for i, mykey in enumerate(self.key_values_string):
-            if mykey.key_name in inventory:
+            if mykey.key.key_name in inventory:
                 del self.key_values_string[i]
 
         #Add the uploaded keys
@@ -1071,6 +1073,8 @@ class System(SystemObject):
         url = "http://%s/cobbler_api_rw/" % labcontroller.fqdn
         remote = xmlrpclib.ServerProxy(url, allow_none=True)
         token = remote.login(labcontroller.username, labcontroller.password)
+        # version 1.4.x of cobbler needs this to keep things in sync.
+        remote.update(token)
         try:
             system_id = remote.get_system_handle(self.fqdn, token)
         except:
@@ -1361,6 +1365,14 @@ class Install(object):
     def __init__(self, name=None):
         self.name = name
 
+def _create_tag(tag):
+    """A creator function."""
+    try:
+        tag = DistroTag.by_tag(tag)
+    except InvalidRequestError:
+        tag = DistroTag(tag=tag)
+    return tag
+
 class Distro(object):
     def __init__(self, install_name=None):
         self.install_name = install_name
@@ -1372,6 +1384,8 @@ class Distro(object):
     @classmethod
     def by_id(cls, id):
         return cls.query.filter_by(id=id).one()
+
+    tags = association_proxy('_tags', 'tag', creator=_create_tag)
 
     @classmethod
     def by_filter(cls, filter):
@@ -1446,8 +1460,25 @@ class Distro(object):
     lab_controllers = association_proxy('lab_controller_assocs', 'lab_controller')
 
 class DistroTag(object):
-    def __init__(self, name=None):
-        self.name = name
+    def __init__(self, tag=None):
+        self.tag = tag
+
+    def __repr__(self):
+        return "%s" % self.tag
+
+    @classmethod
+    def by_tag(cls, tag):
+        """
+        A class method to lookup tags
+        """
+        return cls.query().filter(DistroTag.tag == tag).one()
+
+    @classmethod
+    def list_by_tag(cls, tag):
+        """
+        A class method that can be used to search tags
+        """
+        return cls.query().filter(DistroTag.tag.like('%s%%' % tag))
 
 # Activity model
 class Activity(object):
@@ -1610,7 +1641,7 @@ mapper(Distro, distro_table,
                                            backref='distros'),
                       'breed':relation(Breed, backref='distros'),
                       'arch':relation(Arch, backref='distros'),
-                      'tags':relation(DistroTag,
+                      '_tags':relation(DistroTag,
                                        secondary=distro_tag_map,
                                        backref='distros'),
     })

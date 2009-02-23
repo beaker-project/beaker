@@ -6,6 +6,7 @@ from cherrypy import request, response
 from tg_expanding_form_widget.tg_expanding_form_widget import ExpandingForm
 from kid import Element
 from medusa.xmlrpccontroller import RPCRoot
+from medusa.widgets import DistroTags
 from medusa.helpers import *
 from medusa.needpropertyxml import *
 
@@ -27,12 +28,56 @@ class Distros(RPCRoot):
     # For XMLRPC methods in this class.
     exposed = True
 
+    tag_form = DistroTags(name='tags')
+
+    @expose(template="medusa.templates.distro")
+    def view(self, id=None, *args, **kw):
+        try:
+            distro = Distro.by_id(id)
+        except InvalidRequestError:
+            flash(_(u"Invalid distro id %s" % id))
+            redirect(".")
+        return dict(title   = 'Distro',
+                    value   = distro,
+                    form    = self.tag_form,
+                    action  = './save_tag',
+                    options = dict(tags = distro.tags))
+
+    @expose()
+    def save_tag(self, id=None, tag=None, *args, **kw):
+        try:
+            distro = Distro.by_id(id)
+        except InvalidRequestError:
+            flash(_(u"Invalid distro id %s" % id))
+            redirect(".")
+        if tag['text']:
+            distro.tags.append(tag['text'])
+        flash(_(u"Added Tag %s" % tag['text']))
+        redirect("./view?id=%s" % id)
+
+    @expose()
+    def tag_remove(self, id=None, tag=None, *args, **kw):
+        try:
+            distro = Distro.by_id(id)
+        except InvalidRequestError:
+            flash(_(u"Invalid distro id %s" % id))
+            redirect(".")
+        if tag:
+            for dtag in distro.tags:
+                if dtag == tag:
+                    distro.tags.remove(dtag)
+                    flash(_(u"Removed Tag %s" % tag))
+        redirect("./view?id=%s" % id)
+
     @expose(template="medusa.templates.grid")
     @paginate('list',default_order='-date_created', limit=50,allow_limit_override=True)
-    def index(self):
+    def index(self, *args, **kw):
         distros = session.query(Distro).join('breed').join('arch').join(['osversion','osmajor'])
+        if 'tag' in kw:
+            distros = distros.join('_tags').filter(DistroTag.c.tag==kw['tag'])
         distros_grid = widgets.PaginateDataGrid(fields=[
-                                  widgets.PaginateDataGrid.Column(name='install_name', getter=lambda x: x.install_name, title='Install Name', options=dict(sortable=True)),
+                                  widgets.PaginateDataGrid.Column(name='install_name', getter=lambda x: make_link(url  = 'view?id=%s' % x.id,
+                                  text = x.install_name), title='Install Name', options=dict(sortable=True)),
                                   widgets.PaginateDataGrid.Column(name='name', getter=lambda x: x.name, title='Name', options=dict(sortable=True)),
                                   widgets.PaginateDataGrid.Column(name='breed.breed', getter=lambda x: x.breed, title='Breed', options=dict(sortable=True)),
                                   widgets.PaginateDataGrid.Column(name='osversion.osmajor.osmajor', getter=lambda x: x.osversion.osmajor, title='OS Major Version', options=dict(sortable=True)),

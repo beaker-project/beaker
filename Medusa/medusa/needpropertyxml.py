@@ -312,6 +312,33 @@ class XmlSystemType(ElementWrapper):
             query = system_type_table.c.type == value
         return (joins, query)
 
+class XmlMemory(ElementWrapper):
+    """
+    Pick a system wth the correct amount of memory.
+    """
+    def filter(self):
+        op = self.op_table[self.get_xml_attr('op', unicode, '==')]
+        value = self.get_xml_attr('value', int, None)
+        joins = []
+        query = None
+        if value:
+            query = getattr(system_table.c.memory, op)(value)
+        return (joins, query)
+
+class XmlCpuCount(ElementWrapper):
+    """
+    Pick a system with the correct amount of processors.
+    """
+    def filter(self):
+        op = self.op_table[self.get_xml_attr('op', unicode, '==')]
+        value = self.get_xml_attr('value', int, None)
+        joins = []
+        query = None
+        if value:
+            joins = [system_table.c.id == cpu_table.c.system_id]
+            query = getattr(cpu_table.c.processors, op)(value)
+        return (joins, query)
+
 subclassDict = {
     'host'                : XmlHost,
     'distro'              : XmlDistro,
@@ -329,6 +356,8 @@ subclassDict = {
     'distrolabcontroller' : XmlDistroLabController,
     'system_type'         : XmlSystemType,
     'system'              : XmlSystem,
+    'memory'              : XmlMemory,
+    'cpu_count'           : XmlCpuCount,
     }
 
 if __name__=='__main__':

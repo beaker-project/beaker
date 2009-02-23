@@ -3,7 +3,7 @@
 
 Name:           medusa
 Version:        0.2
-Release:        69%{?dist}
+Release:        73%{?dist}
 Summary:        Inventory System
 Group:          Applications/Internet
 License:        GPLv2+
@@ -80,11 +80,13 @@ touch %{buildroot}/%{_localstatedir}/log/medusa/server.log
 #lab-controller files
 %{__mkdir_p} %{buildroot}/%{_sysconfdir}/cron.daily
 %{__mkdir_p} %{buildroot}/var/lib/cobbler/triggers/sync/post
+%{__mkdir_p} %{buildroot}/var/lib/cobbler/triggers/install/pre
 %{__mkdir_p} %{buildroot}/var/lib/cobbler/snippets
 %{__mkdir_p} %{buildroot}/var/lib/cobbler/kickstarts
 
 %{__install} -m 740 lab-controller/cron.daily/expire_distros %{buildroot}%{_sysconfdir}/cron.daily/
-%{__install} lab-controller/triggers/osversion.trigger %{buildroot}/var/lib/cobbler/triggers/sync/post/
+%{__install} lab-controller/triggers/sync/post/osversion.trigger %{buildroot}/var/lib/cobbler/triggers/sync/post/
+%{__install} lab-controller/triggers/install/pre/clear_console_log.trigger %{buildroot}/var/lib/cobbler/triggers/install/pre/
 %{__install} lab-controller/snippets/rhts_partitions %{buildroot}/var/lib/cobbler/snippets
 %{__install} lab-controller/snippets/rhts_packages %{buildroot}/var/lib/cobbler/snippets
 %{__install} lab-controller/snippets/rhts_pre %{buildroot}/var/lib/cobbler/snippets
@@ -118,12 +120,21 @@ touch %{buildroot}/%{_localstatedir}/log/medusa/server.log
 %{_sysconfdir}/cron.daily/expire_distros
 %{python_sitelib}/cpioarchive.py*
 /var/lib/cobbler/triggers/sync/post/osversion.trigger
+/var/lib/cobbler/triggers/install/pre/clear_console_log.trigger
 /var/lib/cobbler/snippets/*
 /var/lib/cobbler/kickstarts/*
 /var/www/cobbler/aux/rhts-checkin
 
 %changelog
-* Wed Feb 18 2009 Bill Peck <bpeck@redhat.com> - 0.2-68
+* Mon Feb 23 2009 Bill Peck <bpeck@redhat.com> - 0.2-73
+- Added clear console log trigger
+* Sun Feb 22 2009 Bill Peck <bpeck@redhat.com> - 0.2-72
+- Added <cpu_count/> and <memory/> to XMl querying to speed up
+  legacy access.  Two many self joins on key_table causes performance
+  problems with mysql.
+* Thu Feb 19 2009 Bill Peck <bpeck@redhat.com> - 0.2-71
+- minor update for legacy push
+* Wed Feb 18 2009 Bill Peck <bpeck@redhat.com> - 0.2-70
 - pass kickstart file through if given one
 * Wed Feb 18 2009 Bill Peck <bpeck@redhat.com> - 0.2-67
 - fix traceback in system_return activity

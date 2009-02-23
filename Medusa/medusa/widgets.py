@@ -336,6 +336,26 @@ class SystemArches(Form):
         if 'arches' in d['options']:
             d['arches'] = d['options']['arches']
         
+class DistroTags(Form):
+    template = "medusa.templates.distro_tags"
+    member_widgets = ["id", "tag"]
+    params = ['options', 'readonly', 'tags']
+
+    def __init__(self, *args, **kw):
+        super(DistroTags, self).__init__(*args, **kw)
+	self.id    = HiddenField(name="id")
+        self.tag = AutoCompleteField(name='tag',
+                                      search_controller=url("/tags/by_tag"),
+                                      search_param="tag",
+                                      result_name="tags")
+
+    def update_params(self, d):
+        super(DistroTags, self).update_params(d)
+        if 'readonly' in d['options']:
+            d['readonly'] = d['options']['readonly']
+        if 'tags' in d['options']:
+            d['tags'] = d['options']['tags']
+
 class SystemGroups(Form):
     template = "medusa.templates.system_groups"
     member_widgets = ["id", "group"]

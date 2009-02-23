@@ -74,6 +74,7 @@ $(document).ready(function() {
                     <a href="${tg.url('/devices/%s' % device_class)}">${device_class}</a></li>
                 </ul></li>
                 <li><a href="${tg.url('/distros')}">Distros</a></li>
+                <li><a href="${tg.url('/tags')}">Distro Tags</a></li>
                 <li><a href="${tg.url('/activity')}">Activity</a></li>
                 <li py:if="not tg.identity.anonymous"><a href="${tg.url('/logout')}">Logout</a></li>
                 <li py:if="tg.identity.anonymous"><a href="${tg.url('/login')}">Login</a></li>
