@@ -13,6 +13,87 @@
 #
 # Author: Ales Zelinka <azelinka@redhat.com>
 
+test_rlAssertDiffer() {
+  local FILE1="/tmp/test_rlAssertDiffer1"
+  local FILE2="/tmp/test_rlAssertDiffer2"
+  local FILE3="/tmp/test rlAssertDiffer3"
+
+  echo "AAA" > "$FILE1"
+  echo "AAA" > "$FILE2"
+  echo "AAA" > "$FILE3"
+
+  assertFalse "rlAssertDiffer does not return 0 for the identical files"\
+  "rlAssertDiffer $FILE1 $FILE2"
+  __one_fail_one_pass "rlAssertDiffer $FILE1 $FILE2" FAIL
+
+  assertFalse "rlAssertDiffer does not return 0 for the identical files with spaces in name"\
+  "rlAssertDiffer \"$FILE1\" \"$FILE3\""
+  __one_fail_one_pass "rlAssertDiffer \"$FILE1\" \"$FILE3\"" FAIL
+
+  assertFalse "rlAssertDiffer does not return 0 for the same file"\
+  "rlAssertDiffer $FILE1 $FILE1"
+  __one_fail_one_pass "rlAssertDiffer $FILE1 $FILE1" FAIL
+
+  assertFalse "rlAssertDiffer does not return 0 when called without parameters"\
+  "rlAssertDiffer"
+
+  assertFalse "rlAssertDiffer does not return 0 when called with only one parameter"\
+  "rlAssertDiffer $FILE1"
+
+  echo "BBB" > "$FILE3"
+  echo "BBB" > "$FILE2"
+
+  assertTrue "rlAssertDiffer returns 0 for different files"\
+  "rlAssertDiffer $FILE1 $FILE2"
+  __one_fail_one_pass "rlAssertDiffer $FILE1 $FILE2" PASS
+
+  assertTrue "rlAssertDiffer returns 0 for different files with space in name"\
+  "rlAssertDiffer \"$FILE1\" \"$FILE3\""
+  __one_fail_one_pass "rlAssertDiffer \"$FILE1\" \"$FILE3\"" PASS
+  rm -f "$FILE1" "$FILE2" "$FILE3"
+}
+
+test_rlAssertNotDiffer() {
+  local FILE1="/tmp/test_rlAssertNotDiffer1"
+  local FILE2="/tmp/test_rlAssertNotDiffer2"
+  local FILE3="/tmp/test rlAssertNotDiffer3"
+
+  echo "AAA" > "$FILE1"
+  echo "AAA" > "$FILE2"
+  echo "AAA" > "$FILE3"
+
+  assertTrue "rlAssertNotDiffer returns 0 for the identical files"\
+  "rlAssertNotDiffer $FILE1 $FILE2"
+  __one_fail_one_pass "rlAssertNotDiffer $FILE1 $FILE2" PASS
+
+  assertTrue "rlAssertNotDiffer returns 0 for the identical files with spaces in name"\
+  "rlAssertNotDiffer \"$FILE1\" \"$FILE3\""
+  __one_fail_one_pass "rlAssertNotDiffer \"$FILE1\" \"$FILE3\"" PASS
+
+  assertTrue "rlAssertNotDiffer returns 0 for the same file"\
+  "rlAssertNotDiffer $FILE1 $FILE1"
+  __one_fail_one_pass "rlAssertNotDiffer $FILE1 $FILE1" PASS
+
+  assertFalse "rlAssertNotDiffer does not return 0 when called without parameters"\
+  "rlAssertNotDiffer"
+
+  assertFalse "rlAssertNotDiffer does not return 0 when called with only one parameter"\
+  "rlAssertNotDiffer $FILE1"
+
+  echo "BBB" > "$FILE3"
+  echo "BBB" > "$FILE2"
+
+  assertFalse "rlAssertNotDiffer does not return 0 for different files"\
+  "rlAssertNotDiffer $FILE1 $FILE2"
+  __one_fail_one_pass "rlAssertNotDiffer $FILE1 $FILE2" FAIL
+
+  assertFalse "rlAssertNotDiffer does not return 0 for different files with space in name"\
+  "rlAssertNotDiffer \"$FILE1\" \"$FILE3\""
+  __one_fail_one_pass "rlAssertNotDiffer \"$FILE1\" \"$FILE3\"" FAIL
+  rm -f "$FILE1" "$FILE2" "$FILE3"
+}
+
+
 test_rlAssertExists() {
 	local FILE="/tmp/test_rlAssertExists"
 

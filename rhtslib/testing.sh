@@ -405,7 +405,6 @@ Returns 0 and asserts PASS when C<file> exists and does not
 contain given C<pattern>.
 
 =cut
-
 rlAssertNotGrep(){
     if [ ! -e "$2" ] ; then
         __INTERNAL_LogAndJournalFail "rlAssertNotGrep: failed to find file $2"
@@ -415,6 +414,88 @@ rlAssertNotGrep(){
     ! grep $options "$1" "$2"
     __INTERNAL_ConditionalAssert "File '$2' should not contain '$1'" $?
 }
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# rlAssertDiffer
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+: <<=cut
+=pod
+
+=head3 rlAssertDiffer
+
+Assertion checking that two files differ (are not identical)
+
+    rlAssertDiffer file1 file2
+
+=over
+=item file1
+
+Path to first file1
+
+=item file2
+
+Path to second file
+
+=back
+
+Returns 0 and asserts PASS when C<file1> and C<file2> differs.
+
+=cut
+
+rlAssertDiffer(){ 
+  for file in "$1" "$2"
+  do
+    if [ ! -e "$file" ]
+    then
+      __INTERNAL_LogAndJournalFail "rlAssertDiffer: file $file was not found"
+      return 2
+    fi
+  done
+  ! cmp -s "$1" "$2"
+  __INTERNAL_ConditionalAssert "Files $1 and $2 should not be identical" $?
+}
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# rlAssertNotDiffer
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+: <<=cut
+=pod
+
+=head3 rlAssertNotDiffer
+
+Assertion checking that two files are identical
+
+    rlAssertNotDiffer file1 file2
+
+=over
+=item file1
+
+Path to first file1
+
+=item file2
+
+Path to second file
+
+=back
+
+Returns 0 and asserts PASS when C<file1> and C<file2> do not differ.
+
+=cut
+
+rlAssertNotDiffer(){
+  for file in "$1" "$2"
+  do
+    if [ ! -e "$file" ]
+    then
+      __INTERNAL_LogAndJournalFail "rlAssertNotDiffer: file $file was not found"
+      return 2
+    fi
+  done
+
+  cmp -s "$1" "$2"
+  __INTERNAL_ConditionalAssert "Files $1 and $2 should  be identical" $?
+}
+
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # rlRun
