@@ -1,9 +1,13 @@
 from turbogears.identity.saprovider import SqlAlchemyIdentityProvider, SqlAlchemyIdentity
+from turbogears.identity import set_login_attempted
 from turbogears.config import get
 from turbogears.database import session
 from turbogears.util import load_class
 import ldap
 import logging
+import krbV
+import cherrypy
+import os
 log = logging.getLogger("medusa.controllers")
 
 class LdapSqlAlchemyIdentityProvider(SqlAlchemyIdentityProvider):
@@ -12,7 +16,6 @@ class LdapSqlAlchemyIdentityProvider(SqlAlchemyIdentityProvider):
     """
 
     def __init__(self):
-        #SqlAlchemyIdentityProvider.__init__(self)
         super(LdapSqlAlchemyIdentityProvider, self).__init__()
 
         self.uri = get("identity.soldapprovider.uri", "ldaps://localhost")
@@ -41,11 +44,10 @@ class LdapSqlAlchemyIdentityProvider(SqlAlchemyIdentityProvider):
         log.info("basedn :: %s" % self.basedn)
         log.info("autocreate :: %s" % self.autocreate)
 
-    def validate_identity(self, user_name, password, visit_key):
-        objects = self.validate_password(None, user_name, password)
+    def validate_identity(self, user_name, password, visit_key, krb=None):
+        objects = self.validate_password(None, user_name, password, krb)
         if objects:
             user = session.query(self.user_class).get_by(user_name=user_name)
-            #user = cls.query.filter_by(user_name=username).fisrt()
             if not user:
                 if self.autocreate:
                     user = self.user_class()
@@ -66,7 +68,7 @@ class LdapSqlAlchemyIdentityProvider(SqlAlchemyIdentityProvider):
             return SqlAlchemyIdentity(visit_key, user)
         return None
 
-    def validate_password( self, user, user_name, password ):
+    def validate_password( self, user, user_name, password, krb=None ):
         '''
         Validates user_name and password against an AD domain.
         
@@ -91,14 +93,34 @@ class LdapSqlAlchemyIdentityProvider(SqlAlchemyIdentityProvider):
         dn = objects[0][0]
         print dn
 
-        try:
-            rc = ldapcon.simple_bind(dn, password)
-            ldapcon.result(rc)
-        except ldap.INVALID_CREDENTIALS:
-            log.error("Invalid password supplied for %s" % user_name)
-            return False
+        if not krb:
+            try:
+                rc = ldapcon.simple_bind(dn, password)
+                ldapcon.result(rc)
+            except ldap.INVALID_CREDENTIALS:
+                log.error("Invalid password supplied for %s" % user_name)
+                return False
 
 	return objects
+
+    def load_identity(self, visit_key):
+        user = super(LdapSqlAlchemyIdentityProvider, self).load_identity(visit_key)
+        if not user.anonymous:
+            return user
+
+        try:
+            print cherrypy.request.headers['X-FORWARDED-KEYTAB']
+            os.environ["KRB5CCNAME"] = cherrypy.request.headers['X-FORWARDED-KEYTAB']
+            ccache = krbV.CCache(cherrypy.request.headers['X-FORWARDED-KEYTAB'])
+            (user_name, realm) = ccache.principal().name.split('@')
+        except KeyError:
+            return None
+        except AttributeError:
+            return None
+        except krbV.Krb5Error:
+            return None
+        set_login_attempted( True )
+        return self.validate_identity( user_name, None, visit_key, True )
 
     def by_name(self, user_name):
         """

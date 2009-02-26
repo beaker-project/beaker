@@ -1140,7 +1140,7 @@ class Root(RPCRoot):
         return system.update(inventory)
 
     @expose(template="medusa.templates.login")
-    def login(self, forward_url=None, previous_url=None, *args, **kw):
+    def login(self, forward_url='/', previous_url=None, *args, **kw):
 
         if not identity.current.anonymous \
             and identity.was_login_attempted() \
