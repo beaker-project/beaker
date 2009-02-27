@@ -44,6 +44,7 @@ class LabControllers(RPCRoot):
         validator = LabControllerFormSchema()
     )
 
+    @identity.require(identity.in_group("admin"))
     @expose(template='medusa.templates.form')
     def new(self, **kw):
         return dict(
@@ -53,6 +54,7 @@ class LabControllers(RPCRoot):
             value = kw,
         )
 
+    @identity.require(identity.in_group("admin"))
     @expose(template='medusa.templates.form')
     def edit(self, id, **kw):
         labcontroller = LabController.by_id(id)
@@ -63,6 +65,7 @@ class LabControllers(RPCRoot):
             value = labcontroller,
         )
 
+    @identity.require(identity.in_group("admin"))
     @expose()
     @validate(form=labcontroller_form)
     @error_handler(edit)
@@ -79,6 +82,7 @@ class LabControllers(RPCRoot):
         flash( _(u"%s saved" % labcontroller.fqdn) )
         redirect(".")
 
+    @identity.require(identity.in_group("admin"))
     @expose()
     def rescan(self, **kw):
         if kw.get('id'):
@@ -173,13 +177,14 @@ class LabControllers(RPCRoot):
                 if distro not in distros:
                     activity = Activity(None,'XMLRPC','Removed','Distro',distro.install_name,None)
                     print "i=",i,"distro =", labcontroller._distros[i].distro.install_name
-                    del labcontroller._distros[i]
+                    session.delete(labcontroller._distros[i])
                     
             labcontroller.distros_md5 = now
         else:
             flash( _(u"No Lab Controller id passed!"))
         redirect(".")
 
+    @identity.require(identity.in_group("admin"))
     @expose(template="medusa.templates.grid_add")
     @paginate('list')
     def index(self):
@@ -194,6 +199,7 @@ class LabControllers(RPCRoot):
                                          search_bar = None,
                                          list = labcontrollers)
 
+    @identity.require(identity.in_group("admin"))
     @expose()
     def remove(self, **kw):
         labcontroller = LabController.by_id(kw['id'])

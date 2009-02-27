@@ -1,4 +1,5 @@
 url --url=$tree
+#if $getVar('system_name', '') != ''
 authconfig  --enableshadow  --enablemd5
 # System bootloader configuration
 bootloader --location=mbr
@@ -32,6 +33,7 @@ $SNIPPET("rhts_partitions")
 %packages --resolvedeps --ignoremissing
 $SNIPPET("rhts_packages")
 
+#end if
 %pre
 $SNIPPET("rhts_pre")
 

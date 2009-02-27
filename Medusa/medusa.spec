@@ -3,7 +3,7 @@
 
 Name:           medusa
 Version:        0.2
-Release:        73%{?dist}
+Release:        75%{?dist}
 Summary:        Inventory System
 Group:          Applications/Internet
 License:        GPLv2+
@@ -126,6 +126,10 @@ touch %{buildroot}/%{_localstatedir}/log/medusa/server.log
 /var/www/cobbler/aux/rhts-checkin
 
 %changelog
+* Fri Feb 27 2009 Bill Peck <bpeck@redhat.com> - 0.2-74
+- Require admin permissions on lab controller methods
+- update default kickstarts to be closer to default installs
+- update default kickstarts to be interactive if issued through pxe menu.
 * Mon Feb 23 2009 Bill Peck <bpeck@redhat.com> - 0.2-73
 - Added clear console log trigger
 * Sun Feb 22 2009 Bill Peck <bpeck@redhat.com> - 0.2-72
