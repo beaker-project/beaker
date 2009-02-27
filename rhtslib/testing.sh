@@ -608,6 +608,7 @@ rlReport(){
           'PASS' | 'PASSED' | 'PASSING' ) result='PASS'; ;;
           'FAIL' | 'FAILED' | 'FAILING') result='FAIL'; ;;
           'WARN' | 'WARNED' | 'WARNING') result='WARN'; ;;
+          'ABORT') result='WARN';;
           *)
             rlLogWarning "rlReport: Only PASS/WARN/FAIL results are possible."
             result='WARN'
