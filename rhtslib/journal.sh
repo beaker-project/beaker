@@ -289,14 +289,14 @@ rljAddPhase(){
 
 rljClosePhase(){
 	local TID=${TESTID:-"debugging"}
-	out=`$__INTERNAL_JOURNALIST finphase --id $TID`
+	local out=`$__INTERNAL_JOURNALIST finphase --id $TID`
 	local score=$?
-	local OUTPUTFILE=`mktemp`
-        local result="`echo $out | cut -d ':' -f 2`"
+	local logfile=`mktemp`
+	local result="`echo $out | cut -d ':' -f 2`"
 	local name=`echo $out | cut -d ':' -f 3 | sed 's/[^[:alnum:]]\+/-/g'`
 	rlLogDebug "rljClosePhase: Phase $name closed"
-	rlJournalPrintText > $OUTPUTFILE
-	OUTPUTFILE=$OUTPUTFILE rlReport "$TEST/$name" "$result" "$score"
+	rlJournalPrintText > $logfile
+	rlReport "$TEST/$name" "$result" "$score" "$logfile"
 }
 
 rljAddTest(){
