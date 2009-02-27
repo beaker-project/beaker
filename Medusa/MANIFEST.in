@@ -17,6 +17,7 @@ include lab-controller/cron.daily/*
 include lab-controller/kickstarts/*
 include lab-controller/lib/*
 include lab-controller/snippets/*
-include lab-controller/triggers/*
+include lab-controller/triggers/sync/post/*
+include lab-controller/triggers/install/pre/*
 include lab-controller/www/*
 include lab-controller/aux/*

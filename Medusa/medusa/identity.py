@@ -91,7 +91,6 @@ class LdapSqlAlchemyIdentityProvider(SqlAlchemyIdentityProvider):
             return False
 
         dn = objects[0][0]
-        print dn
 
         if not krb:
             try:
@@ -109,7 +108,6 @@ class LdapSqlAlchemyIdentityProvider(SqlAlchemyIdentityProvider):
             return user
 
         try:
-            print cherrypy.request.headers['X-FORWARDED-KEYTAB']
             os.environ["KRB5CCNAME"] = cherrypy.request.headers['X-FORWARDED-KEYTAB']
             ccache = krbV.CCache(cherrypy.request.headers['X-FORWARDED-KEYTAB'])
             (user_name, realm) = ccache.principal().name.split('@')
