@@ -452,7 +452,7 @@ rlAssertDiffer(){
     fi
   done
   ! cmp -s "$1" "$2"
-  __INTERNAL_ConditionalAssert "Files $1 and $2 should not be identical" $?
+  __INTERNAL_ConditionalAssert "Files $1 and $2 should differ" $?
 }
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -493,7 +493,7 @@ rlAssertNotDiffer(){
   done
 
   cmp -s "$1" "$2"
-  __INTERNAL_ConditionalAssert "Files $1 and $2 should  be identical" $?
+  __INTERNAL_ConditionalAssert "Files $1 and $2 should not differ" $?
 }
 
 

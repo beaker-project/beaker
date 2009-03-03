@@ -14,9 +14,9 @@
 # Author: Ales Zelinka <azelinka@redhat.com>
 
 test_rlAssertDiffer() {
-  local FILE1="/tmp/test_rlAssertDiffer1"
-  local FILE2="/tmp/test_rlAssertDiffer2"
-  local FILE3="/tmp/test rlAssertDiffer3"
+  local FILE1="`mktemp`"
+  local FILE2="`mktemp`"
+  local FILE3="`mktemp '/tmp/test rlAssertDiffer3-XXXXXX'`"
 
   echo "AAA" > "$FILE1"
   echo "AAA" > "$FILE2"
@@ -54,9 +54,9 @@ test_rlAssertDiffer() {
 }
 
 test_rlAssertNotDiffer() {
-  local FILE1="/tmp/test_rlAssertNotDiffer1"
-  local FILE2="/tmp/test_rlAssertNotDiffer2"
-  local FILE3="/tmp/test rlAssertNotDiffer3"
+  local FILE1="`mktemp`"
+  local FILE2="`mktemp`"
+  local FILE3="`mktemp '/tmp/test rlAssertNotDiffer3-XXXXXX'`"
 
   echo "AAA" > "$FILE1"
   echo "AAA" > "$FILE2"
