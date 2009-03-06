@@ -1,5 +1,12 @@
 url --url=$tree
-key $getVar('key', '49af89414d147589')
+#if $getVar('key', '') != ''
+key $getVar('key', '')
+#end if
+#if $getVar('key', '') == ''
+key --skip
+%include /tmp/distro.repo
+#end if
+
 #if $getVar('system_name', '') != ''
 auth  --useshadow  --enablemd5
 # System bootloader configuration
