@@ -1248,6 +1248,10 @@ class LabController(SystemObject):
         return cls.query.filter_by(id=id).one()
 
     @classmethod
+    def by_name(cls, name):
+        return cls.query.filter_by(fqdn=name).one()
+
+    @classmethod
     def get_all(cls):
         """
         Desktop, Server, Virtual
@@ -1628,13 +1632,11 @@ mapper(Serial, serial_table)
 mapper(SerialType, serial_type_table)
 mapper(Install, install_table)
 mapper(LabControllerDistro, lab_controller_distro_map , properties={
-    'distro':relation(Distro, backref='lab_controller_assocs',
-                              cascade='all,delete-orphan')
+    'distro':relation(Distro, backref='lab_controller_assocs')
 })
 mapper(LabController, lab_controller_table,
         properties = {'_distros':relation(LabControllerDistro,
-                                          backref='lab_controller',
-                                          cascade='all,delete-orphan'),
+                                          backref='lab_controller'),
     })
 mapper(Distro, distro_table,
         properties = {'osversion':relation(OSVersion, uselist=False,

@@ -10,7 +10,6 @@ import xmlrpclib
 import cpioarchive
 import string
 
-
 def rpm2cpio(rpm_file, out=sys.stdout, bufsize=2048):
     """Performs roughly the equivalent of rpm2cpio(8).
        Reads the package from fdno, and dumps the cpio payload to out,
@@ -126,8 +125,10 @@ def update_repos(distro):
     distro_id = remote.get_distro_handle(distro['name'],token)
     ks_meta = distro['ks_meta']
     ks_meta['tree_repos'] = tree_repos
+    distro['ks_meta'] = ks_meta
     remote.modify_distro(distro_id,'ksmeta', ks_meta, token)
-    return remote.save_distro(distro_id, token)
+    remote.save_distro(distro_id, token)
+    return distro
 
 def update_comment(distro):
     paths = get_paths(distro)
@@ -173,29 +174,45 @@ def update_comment(distro):
                 update = releaseregex.search(release).group(1)
     distro_id = remote.get_distro_handle(distro['name'],token)
     comment = "%s\nfamily=%s.%s" % (distro['comment'], family, update)
+    distro['comment'] = comment
     remote.modify_distro(distro_id,'comment', comment, token)
-    return remote.save_distro(distro_id, token)
+    remote.save_distro(distro_id, token)
+    return distro
 
 if __name__ == '__main__':
-    url = "http://localhost:25152"
-    remote = xmlrpclib.ServerProxy(url,allow_none=True)
-
-    token = remote.login("testing","testing")
+    url = "http://localhost"
+    try:
+        remote = xmlrpclib.ServerProxy('%s:25152' % url,allow_none=True)
+        token = remote.login("testing","testing")
+    except:
+        remote = xmlrpclib.ServerProxy('%s:25151' % url,allow_none=True)
+        token = remote.login("testing","testing")
 
     remote.update(token)
+    settings = remote.get_settings(token)
+    if '_attributes' in settings:
+        settings = settings['_attributes']
 
-    distros = remote.get_distros_since(0.0)
+    distros = remote.get_distros()
+    push_distros = []
 
     for distro in distros:
+        update = False
         if 'tree_repos' not in distro['ks_meta']:
             print "Update TreeRepos for %s" % distro['name']
-            if update_repos(distro):
-                print "Sucess"
-            else:
-                print "Fail"
+            tmpdistro = update_repos(distro)
+            if tmpdistro:
+                distro = tmpdistro
+                update = True
         if distro['comment'].find("family=") == -1:
             print "Update Family for %s" % distro['name']
-            if update_comment(distro):
-                print "Success"
-            else:
-                print "Fail"
+            tmpdistro = update_comment(distro)
+            if tmpdistro:
+                distro = tmpdistro
+                update = True
+        if update:
+            push_distros.append(distro)
+    if push_distros:
+        inventory = xmlrpclib.ServerProxy('https://%s/RPC2' % settings['redhat_management_server'], allow_none=True)
+        distros = inventory.labcontrollers.addDistros(settings['server'], 
+                                                             push_distros)

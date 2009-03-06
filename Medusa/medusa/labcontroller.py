@@ -29,7 +29,7 @@ class LabControllerFormSchema(validators.Schema):
 
 class LabControllers(RPCRoot):
     # For XMLRPC methods in this class.
-    exposed = False
+    exposed = True
 
     id     = widgets.HiddenField(name='id')
     fqdn   = widgets.TextField(name='fqdn', label=_(u'FQDN'))
@@ -82,101 +82,148 @@ class LabControllers(RPCRoot):
         flash( _(u"%s saved" % labcontroller.fqdn) )
         redirect(".")
 
+    @cherrypy.expose
+    def addDistros(self, machine_account, lc_name, lc_distros):
+        """
+        XMLRPC Push method for adding distros
+        """
+        distros = self._addDistros(lc_name, lc_distros)
+        return [distro.install_name for distro in distros]
+
+    def _addDistros(self, lc_name, lc_distros):
+        """
+        Internal Push method for adding distros
+        """
+        try:
+            labcontroller = LabController.by_name(lc_name)
+        except InvalidRequestError:
+            raise "Invalid Lab Controller"
+        distros = []
+        valid_variants = ['AS','ES','WS','Desktop']
+        valid_methods  = ['http','ftp','nfs']
+        release = re.compile(r'family=(\w+\d+.\d+)')
+        for lc_distro in lc_distros:
+            name = lc_distro['name'].split('_')[0]
+            meta = string.join(lc_distro['name'].split('_')[1:],'_').split('-')
+            variant = None
+            method = None
+            virt = False
+            
+            for curr_variant in valid_variants:
+                if curr_variant in meta:
+                    variant = curr_variant
+                    break
+            for curr_method in valid_methods:
+                if curr_method in meta:
+                    method = curr_method
+                    break
+            if 'xen' in meta:
+                virt = True
+
+            if 'comment' in lc_distro:
+                if release.search(lc_distro['comment']):
+                    lc_os_version = release.search(lc_distro['comment']).group(1)
+                else:
+                    continue
+
+                try:
+                    distro = Distro.by_install_name(lc_distro['name'])
+                except: #FIXME
+                    distro = Distro(lc_distro['name'])
+                    distro.name = name
+                    try:
+                        breed = Breed.by_name(lc_distro['breed'])
+                    except: #FIXME
+                        breed = Breed(lc_distro['breed'])
+                        session.save(breed)
+                        session.flush([breed])
+                    distro.breed = breed
+                    lc_osmajor = lc_os_version.split('.')[0]
+                    try:
+                        lc_osminor = lc_os_version.split('.')[1]
+                    except:
+                        lc_osminor = 0
+                    try:
+                        osmajor = OSMajor.by_name(lc_osmajor)
+                    except: #FIXME
+                        osmajor = OSMajor(lc_osmajor)
+                        session.save(osmajor)
+                        session.flush([osmajor])
+                    try:
+                        osversion = OSVersion.by_name(osmajor,lc_osminor)
+                    except: #FIXME
+                        osversion = OSVersion(osmajor,lc_osminor)
+                        session.save(osversion)
+                        session.flush([osversion])
+                    distro.osversion = osversion
+                    try:
+                        arch = Arch.by_name(lc_distro['arch'])
+                    except: #FIXME
+                        arch = Arch(lc_distro['arch'])
+                        session.save(arch)
+                        session.flush([arch])
+                    distro.arch = arch
+                    distro.variant = variant
+                    distro.method = method
+                    distro.virt = virt
+                    distro.date_created = datetime.fromtimestamp(float(lc_distro['tree_build_time']))
+                    activity = Activity(None,'XMLRPC','Added','Distro',None, lc_distro['name'])
+                if distro not in labcontroller.distros:
+                    #FIXME Distro Activity Add
+                    lcd = LabControllerDistro()
+                    lcd.distro = distro
+                    if 'tree' in lc_distro['ks_meta']:
+                        lcd.tree_path = lc_distro['ks_meta']['tree']
+                    labcontroller._distros.append(lcd)
+                distros.append(distro)
+        return distros
+
+    @cherrypy.expose
+    def removeDistros(self, machine_account, labcontroller, distro_names):
+        """
+        Push method for removing distros
+        """
+        distros = []
+        deleteddistros = []
+        for distro_name in distro_names:
+            try:
+                distro = Distro.by_install_name(distro_name)
+            except InvalidRequestError:
+                continue
+            distros.append(distro)
+
+        for i in xrange(len(labcontroller._distros)-1,-1,-1):
+            distro = labcontroller._distros[i].distro
+            if distro in distros:
+                deleteddistros.append(distro.install_name)
+                activity = Activity(None,'XMLRPC','Removed','Distro',distro.install_name,None)
+                session.delete(labcontroller._distros[i])
+        return None
+
     @identity.require(identity.in_group("admin"))
     @expose()
     def rescan(self, **kw):
         if kw.get('id'):
-            now = time.time()
-            valid_variants = ['AS','ES','WS','Desktop']
-            valid_methods  = ['http','ftp','nfs']
-
             labcontroller = LabController.by_id(kw['id'])
-            url = "http://%s/cobbler_api_rw/" % labcontroller.fqdn
+            url = "http://%s/cobbler_api/" % labcontroller.fqdn
             now = time.time()
-            remote = xmlrpclib.ServerProxy(url)
-            token = remote.login(labcontroller.username,labcontroller.password)
-            distros = []
-            release = re.compile(r'family=(\w+\d+.\d+)')
+            # Cobbler old uri is _rw
+            try:
+                remote = xmlrpclib.ServerProxy('%s_rw' % url)
+                token = remote.login(labcontroller.username,
+                                     labcontroller.password)
+            except:
+                remote = xmlrpclib.ServerProxy(url)
+                token = remote.login(labcontroller.username,
+                                     labcontroller.password)
             lc_distros = remote.get_distros()
-            for lc_distro in lc_distros:
-                name = lc_distro['name'].split('_')[0]
-                meta = string.join(lc_distro['name'].split('_')[1:],'_').split('-')
-                variant = None
-                method = None
-                virt = False
-                
-                for curr_variant in valid_variants:
-                    if curr_variant in meta:
-                        variant = curr_variant
-                        break
-                for curr_method in valid_methods:
-                    if curr_method in meta:
-                        method = curr_method
-                        break
-                if 'xen' in meta:
-                    virt = True
 
-                if 'comment' in lc_distro:
-                    if release.search(lc_distro['comment']):
-                        lc_os_version = release.search(lc_distro['comment']).group(1)
-                    else:
-                        continue
+            distros = self._addDistros(labcontroller.fqdn, lc_distros)
 
-                    try:
-                        distro = Distro.by_install_name(lc_distro['name'])
-                    except: #FIXME
-                        distro = Distro(lc_distro['name'])
-                        distro.name = name
-                        try:
-                            breed = Breed.by_name(lc_distro['breed'])
-                        except: #FIXME
-                            breed = Breed(lc_distro['breed'])
-                            session.save(breed)
-                            session.flush([breed])
-                        distro.breed = breed
-                        lc_osmajor = lc_os_version.split('.')[0]
-                        try:
-                            lc_osminor = lc_os_version.split('.')[1]
-                        except:
-                            lc_osminor = 0
-                        try:
-                            osmajor = OSMajor.by_name(lc_osmajor)
-                        except: #FIXME
-                            osmajor = OSMajor(lc_osmajor)
-                            session.save(osmajor)
-                            session.flush([osmajor])
-                        try:
-                            osversion = OSVersion.by_name(osmajor,lc_osminor)
-                        except: #FIXME
-                            osversion = OSVersion(osmajor,lc_osminor)
-                            session.save(osversion)
-                            session.flush([osversion])
-                        distro.osversion = osversion
-                        try:
-                            arch = Arch.by_name(lc_distro['arch'])
-                        except: #FIXME
-                            arch = Arch(lc_distro['arch'])
-                            session.save(arch)
-                            session.flush([arch])
-                        distro.arch = arch
-                        distro.variant = variant
-                        distro.method = method
-                        distro.virt = virt
-                        distro.date_created = datetime.fromtimestamp(float(lc_distro['tree_build_time']))
-                        activity = Activity(None,'XMLRPC','Added','Distro',None, lc_distro['name'])
-                    if distro not in labcontroller.distros:
-                        #FIXME Distro Activity Add
-                        lcd = LabControllerDistro()
-                        lcd.distro = distro
-                        if 'tree' in lc_distro['ks_meta']:
-                            lcd.tree_path = lc_distro['ks_meta']['tree']
-                        labcontroller._distros.append(lcd)
-                    distros.append(distro)
             for i in xrange(len(labcontroller._distros)-1,-1,-1):
                 distro = labcontroller._distros[i].distro
                 if distro not in distros:
                     activity = Activity(None,'XMLRPC','Removed','Distro',distro.install_name,None)
-                    print "i=",i,"distro =", labcontroller._distros[i].distro.install_name
                     session.delete(labcontroller._distros[i])
                     
             labcontroller.distros_md5 = now
