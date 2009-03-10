@@ -9,15 +9,17 @@ if __name__ == '__main__':
     expiredelta = datetime.now() + timedelta(weeks=-1)
     url = "localhost"
     try:
-        remote = xmlrpclib.ServerProxy('https://%s:25152' % url,allow_none=True)
+        remote = xmlrpclib.ServerProxy('http://%s:25152' % url,allow_none=True)
         token = remote.login("testing","testing")
     except:
-        remote = xmlrpclib.ServerProxy('https://%s:25151' % url,allow_none=True)
+        remote = xmlrpclib.ServerProxy('http://%s:25151' % url,allow_none=True)
         token = remote.login("testing","testing")
     
     remote.update(token)
     settings = remote.get_settings(token)
-    inventory = xmlrpclib.ServerProxy('http://%s/RPC2' % settings['redhat_management_server'], allow_none=True)
+    if '_attributes' in settings:
+        settings = settings['_attributes']
+    inventory = xmlrpclib.ServerProxy('https://%s/RPC2' % settings['redhat_management_server'], allow_none=True)
     distros = remote.get_distros()
     rdistros = []
     for distro in distros:
@@ -28,8 +30,7 @@ if __name__ == '__main__':
         if 'tree' in distro['ks_meta']:
             if distro['ks_meta']['tree'].find('nightly') == -1:
                 continue
-            distro_timestamp = datetime.fromtimestamp(float(distro['tree_build_t
-ime']))
+            distro_timestamp = datetime.fromtimestamp(float(distro['tree_build_time']))
             if distro_timestamp < expiredelta:
                 remote.remove_distro(distro['name'], token)
                 rdistros.append(distro['name'])

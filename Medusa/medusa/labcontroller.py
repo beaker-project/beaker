@@ -7,6 +7,7 @@ from tg_expanding_form_widget.tg_expanding_form_widget import ExpandingForm
 from kid import Element
 from medusa.xmlrpccontroller import RPCRoot
 from medusa.helpers import *
+from xmlrpclib import ProtocolError
 
 import cherrypy
 import time
@@ -212,7 +213,7 @@ class LabControllers(RPCRoot):
                 remote = xmlrpclib.ServerProxy('%s_rw' % url)
                 token = remote.login(labcontroller.username,
                                      labcontroller.password)
-            except:
+            except ProtocolError:
                 remote = xmlrpclib.ServerProxy(url)
                 token = remote.login(labcontroller.username,
                                      labcontroller.password)

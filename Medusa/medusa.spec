@@ -3,7 +3,7 @@
 
 Name:           medusa
 Version:        0.2
-Release:        75%{?dist}
+Release:        78%{?dist}
 Summary:        Inventory System
 Group:          Applications/Internet
 License:        GPLv2+
@@ -33,6 +33,7 @@ Requires: python-ldap
 Requires: mod_wsgi
 Requires: python-tgexpandingformwidget
 Requires: httpd
+Requires: python-krbV
 
 %package lab-controller
 Summary: Lab Controller xmlrpc server
@@ -65,7 +66,7 @@ rm -rf medusa/tests medusa/tools/test-medusa.py
     --install-data=%{_datadir} --root %{buildroot}
 
 %{__mkdir_p} %{buildroot}/var/lib/medusa
-%{__mkdir_p} %{buildroot}/var/www/cobbler/aux
+%{__mkdir_p} %{buildroot}/var/www/beaker
 %{__mkdir_p} %{buildroot}%{_sysconfdir}/httpd/conf.d
 %{__mkdir_p} %{buildroot}%{_sysconfdir}/medusa
 %{__mkdir_p} %{buildroot}%{_datadir}/%{name}
@@ -95,7 +96,7 @@ touch %{buildroot}/%{_localstatedir}/log/medusa/server.log
 %{__install} lab-controller/kickstarts/rhel4.ks %{buildroot}/var/lib/cobbler/kickstarts
 %{__install} lab-controller/kickstarts/rhel5.ks %{buildroot}/var/lib/cobbler/kickstarts
 %{__install} lab-controller/kickstarts/fedora.ks %{buildroot}/var/lib/cobbler/kickstarts
-%{__install} lab-controller/aux/rhts-checkin  %{buildroot}/var/www/cobbler/aux/
+%{__install} lab-controller/aux/rhts-checkin  %{buildroot}/var/www/beaker/
 %{__install} -m 640 lab-controller/lib/cpioarchive.py %{buildroot}%{python_sitelib}/cpioarchive.py
 
 
@@ -123,9 +124,17 @@ touch %{buildroot}/%{_localstatedir}/log/medusa/server.log
 /var/lib/cobbler/triggers/install/pre/clear_console_log.trigger
 /var/lib/cobbler/snippets/*
 /var/lib/cobbler/kickstarts/*
-/var/www/cobbler/aux/rhts-checkin
+/var/www/beaker/rhts-checkin
 
 %changelog
+* Tue Mar 10 2009 Bill Peck <bpeck@redhat.com> - 0.2-78
+- try both api paths to cobbler
+* Mon Mar 09 2009 Bill Peck <bpeck@redhat.com> - 0.2-77
+- use http for local socket connection
+- use beaker path under www instead of cobbler
+* Fri Mar 06 2009 Bill Peck <bpeck@redhat.com> - 0.2-76
+- xmlrpc methods for adding/removing distros
+- don't use key in rhel5 installs unless passed one.
 * Fri Feb 27 2009 Bill Peck <bpeck@redhat.com> - 0.2-74
 - Require admin permissions on lab controller methods
 - update default kickstarts to be closer to default installs

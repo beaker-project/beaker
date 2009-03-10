@@ -15,7 +15,7 @@ IFS=$PIPFS
 $SNIPPET('pre_install_network_config')
 # Enable rhts watchdog checkin
 #if $getVar('rhts_server','') != ''
-wget -O /tmp/rhts-checkin "http://$server/cobbler/aux/rhts-checkin"
+wget -O /tmp/rhts-checkin "http://$server/beaker/rhts-checkin"
 python /tmp/rhts-checkin --name "$name" --server "$rhts_server" --recipeid "$recipeid"
 #end if
 # Enable installation monitoring

@@ -12,6 +12,7 @@ from cobbler_utils import consolidate, string_to_hash
 from sqlalchemy.orm.collections import attribute_mapped_collection
 from sqlalchemy.ext.associationproxy import association_proxy
 import socket
+from xmlrpclib import ProtocolError
 
 from BasicAuthTransport import BasicAuthTransport
 import xmlrpclib
@@ -982,10 +983,16 @@ class System(SystemObject):
         self.user = None
         if self.lab_controller:
             labcontroller = self.lab_controller
-            url = "http://%s/cobbler_api_rw/" % labcontroller.fqdn
-            remote = xmlrpclib.ServerProxy(url, allow_none=True)
-            token = remote.login(labcontroller.username,
-                                 labcontroller.password)
+            try:
+                url = "http://%s/cobbler_api_rw/" % labcontroller.fqdn
+                remote = xmlrpclib.ServerProxy(url, allow_none=True)
+                token = remote.login(labcontroller.username,
+                                     labcontroller.password)
+            except ProtocolError:
+                url = "http://%s/cobbler_api/" % labcontroller.fqdn
+                remote = xmlrpclib.ServerProxy(url, allow_none=True)
+                token = remote.login(labcontroller.username,
+                                     labcontroller.password)
             system_id = None
             try:
                 # Try and look up the system in cobbler
@@ -1012,9 +1019,16 @@ class System(SystemObject):
             return False
 
         labcontroller = self.lab_controller
-        url = "http://%s/cobbler_api_rw/" % labcontroller.fqdn
-        remote = xmlrpclib.ServerProxy(url, allow_none=True)
-        token = remote.login(labcontroller.username, labcontroller.password)
+        try:
+            url = "http://%s/cobbler_api_rw/" % labcontroller.fqdn
+            remote = xmlrpclib.ServerProxy(url, allow_none=True)
+            token = remote.login(labcontroller.username,
+                                 labcontroller.password)
+        except ProtocolError:
+            url = "http://%s/cobbler_api/" % labcontroller.fqdn
+            remote = xmlrpclib.ServerProxy(url, allow_none=True)
+            token = remote.login(labcontroller.username,
+                                 labcontroller.password)
         try:
             system_id = remote.get_system_handle(self.fqdn, token)
         except:
@@ -1070,9 +1084,16 @@ class System(SystemObject):
             return False
 
         labcontroller = self.lab_controller
-        url = "http://%s/cobbler_api_rw/" % labcontroller.fqdn
-        remote = xmlrpclib.ServerProxy(url, allow_none=True)
-        token = remote.login(labcontroller.username, labcontroller.password)
+        try:
+            url = "http://%s/cobbler_api_rw/" % labcontroller.fqdn
+            remote = xmlrpclib.ServerProxy(url, allow_none=True)
+            token = remote.login(labcontroller.username,
+                                 labcontroller.password)
+        except ProtocolError:
+            url = "http://%s/cobbler_api/" % labcontroller.fqdn
+            remote = xmlrpclib.ServerProxy(url, allow_none=True)
+            token = remote.login(labcontroller.username,
+                                 labcontroller.password)
         # version 1.4.x of cobbler needs this to keep things in sync.
         remote.update(token)
         try:
