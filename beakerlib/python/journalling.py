@@ -30,6 +30,9 @@ import socket
 import types
 
 timeFormat="%Y-%m-%d %H:%M:%S"
+xmlForbidden = (0,1,2,3,4,5,6,7,8,11,12,14,15,16,17,18,19,20,\
+                21,22,23,24,25,26,27,28,29,30,31,0xFFFE,0xFFFF)
+xmlTrans = dict([(x,None) for x in xmlForbidden])
 
 def wrap(text, width):    
     return reduce(lambda line, word, width=width: '%s%s%s' %
@@ -208,7 +211,7 @@ def initializeJournal(id, test, package):
   except IOError:
     purpose = "Cannot find the PURPOSE file of this test. Could be a missing, or rlInitializeJournal wasn't called from appropriate location"
 
-  purposeCon  = newdoc.createTextNode(unicode(purpose,'utf-8'))
+  purposeCon  = newdoc.createTextNode(unicode(purpose,'utf-8').translate(xmlTrans))
 
   shre = re.compile(".+\.sh$")
   bpath = os.environ["BEAKERLIB"]
@@ -288,7 +291,7 @@ def addPhase(id, name, type):
   jrnl = openJournal(id)  
   log = getLogEl(jrnl)  
   phase = jrnl.createElement("phase")
-  phase.setAttribute("name", unicode(name,'utf-8'))
+  phase.setAttribute("name", unicode(name,'utf-8').translate(xmlTrans))
   phase.setAttribute("result", 'unfinished')
   phase.setAttribute("type", unicode(type,'utf-8'))
   phase.setAttribute("starttime",time.strftime(timeFormat))
@@ -337,7 +340,7 @@ def addMessage(id, message, severity):
   msg = jrnl.createElement("message")
   msg.setAttribute("severity", severity)  
   
-  msgText = jrnl.createTextNode(unicode(message,"utf-8"))
+  msgText = jrnl.createTextNode(unicode(message,"utf-8").translate(xmlTrans))
   msg.appendChild(msgText)
   add_to.appendChild(msg)
   saveJournal(jrnl, id)
@@ -348,7 +351,7 @@ def addTest(id, message, result="FAIL"):
   add_to = getLastUnfinishedPhase(log)
   
   msg = jrnl.createElement("test")
-  msg.setAttribute("message", unicode(message,'utf-8'))
+  msg.setAttribute("message", unicode(message,'utf-8').translate(xmlTrans))
   
   msgText = jrnl.createTextNode(result)
   msg.appendChild(msgText)
