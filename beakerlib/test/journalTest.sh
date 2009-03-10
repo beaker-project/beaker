@@ -42,7 +42,7 @@ test_rlCreateLogFromJournal(){
 	#must not tracedump on an empty log message
 	rlJournalStart
 	#outside-of-phase log
-  rlLog "`echo $'\x0c'`"
+  rlLog ""
 	rlPhaseStart FAIL
 	#inside-phase log
 	rlLog ""
