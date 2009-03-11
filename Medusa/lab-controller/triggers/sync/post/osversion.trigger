@@ -144,7 +144,10 @@ def update_comment(distro):
     data = glob.glob(os.path.join(paths['package_path'], "*release-*"))
     data2 = []
     for x in data:
-        if x.find("generic") == -1:
+        b = os.path.basename(x)
+        if b.find("fedora") != -1 or \
+           b.find("redhat") != -1 or \
+           b.find("centos") != -1:
             data2.append(x)
     if not data2:
         return False
