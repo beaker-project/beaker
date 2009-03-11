@@ -206,14 +206,15 @@ class LabControllers(RPCRoot):
     def rescan(self, **kw):
         if kw.get('id'):
             labcontroller = LabController.by_id(kw['id'])
-            url = "http://%s/cobbler_api/" % labcontroller.fqdn
             now = time.time()
             # Cobbler old uri is _rw
             try:
-                remote = xmlrpclib.ServerProxy('%s_rw' % url)
+                url = "http://%s/cobbler_api_rw/" % labcontroller.fqdn
+                remote = xmlrpclib.ServerProxy(url)
                 token = remote.login(labcontroller.username,
                                      labcontroller.password)
             except ProtocolError:
+                url = "http://%s/cobbler_api/" % labcontroller.fqdn
                 remote = xmlrpclib.ServerProxy(url)
                 token = remote.login(labcontroller.username,
                                      labcontroller.password)

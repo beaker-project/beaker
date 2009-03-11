@@ -3,7 +3,7 @@
 
 Name:           medusa
 Version:        0.2
-Release:        78%{?dist}
+Release:        80%{?dist}
 Summary:        Inventory System
 Group:          Applications/Internet
 License:        GPLv2+
@@ -127,6 +127,10 @@ touch %{buildroot}/%{_localstatedir}/log/medusa/server.log
 /var/www/beaker/rhts-checkin
 
 %changelog
+* Wed Mar 11 2009 Bill Peck <bpeck@redhat.com> - 0.2-80
+- Fix osversion trigger to look in correct release file.
+* Tue Mar 10 2009 Bill Peck <bpeck@redhat.com> - 0.2-79
+- fix lab controller api path.
 * Tue Mar 10 2009 Bill Peck <bpeck@redhat.com> - 0.2-78
 - try both api paths to cobbler
 * Mon Mar 09 2009 Bill Peck <bpeck@redhat.com> - 0.2-77
