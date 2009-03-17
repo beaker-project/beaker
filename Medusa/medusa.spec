@@ -3,7 +3,7 @@
 
 Name:           medusa
 Version:        0.2
-Release:        80%{?dist}
+Release:        81%{?dist}
 Summary:        Inventory System
 Group:          Applications/Internet
 License:        GPLv2+
@@ -127,6 +127,9 @@ touch %{buildroot}/%{_localstatedir}/log/medusa/server.log
 /var/www/beaker/rhts-checkin
 
 %changelog
+* Tue Mar 17 2009 Bill Peck <bpeck@redhat.com> - 0.2-81
+- Fix kerberos auth to be more generic.  any apache auth is possible now.
+- added laptop system type.
 * Wed Mar 11 2009 Bill Peck <bpeck@redhat.com> - 0.2-80
 - Fix osversion trigger to look in correct release file.
 * Tue Mar 10 2009 Bill Peck <bpeck@redhat.com> - 0.2-79
