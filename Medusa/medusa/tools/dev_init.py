@@ -75,6 +75,7 @@ def main():
         machine   = SystemType(u'Machine')
         virtual   = SystemType(u'Virtual')
         resource  = SystemType(u'Resource')
+        laptop    = SystemType(u'Laptop')
 
     session.flush()
 

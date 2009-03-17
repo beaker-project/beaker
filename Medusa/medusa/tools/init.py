@@ -82,6 +82,7 @@ def main():
         machine   = SystemType(u'Machine')
         virtual   = SystemType(u'Virtual')
         resource  = SystemType(u'Resource')
+        laptop  = SystemType(u'Laptop')
 
     #Setup base Architectures
     if Arch.query().count() == 0:
