@@ -5,7 +5,6 @@ from turbogears.database import session
 from turbogears.util import load_class
 import ldap
 import logging
-import krbV
 import cherrypy
 import os
 log = logging.getLogger("medusa.controllers")
@@ -107,15 +106,12 @@ class LdapSqlAlchemyIdentityProvider(SqlAlchemyIdentityProvider):
         if not user.anonymous:
             return user
 
-        try:
-            os.environ["KRB5CCNAME"] = cherrypy.request.headers['X-FORWARDED-KEYTAB']
-            ccache = krbV.CCache(cherrypy.request.headers['X-FORWARDED-KEYTAB'])
-            (user_name, realm) = ccache.principal().name.split('@')
-        except KeyError:
-            return None
-        except AttributeError:
-            return None
-        except krbV.Krb5Error:
+        if cherrypy.request.login:
+            if cherrypy.request.login.find("@") != -1:
+                (user_name, realm) = cherrypy.request.login.split('@')
+            else:
+                user_name = cherrypy.request.login
+        else:
             return None
         set_login_attempted( True )
         return self.validate_identity( user_name, None, visit_key, True )
