@@ -103,6 +103,7 @@ BackupSanityTest() {
 
 
 test_rlFileBackupAndRestore() {
+    unset __INTERNAL_BACKUP_DIR
     assertFalse "rlFileRestore should fail when no backup was done" \
         'rlFileRestore'
     assertTrue "rlFileBackup should fail and return 2 when no file/dir given" \
@@ -115,7 +116,64 @@ test_rlFileBackupAndRestore() {
     else
         BackupSanityTest >/dev/null 2>&1
     fi
-    assertTrue "rlFileBackup & rlFileRestore sanity test" $?
+    assertTrue "rlFileBackup & rlFileRestore sanity test (needs to be root to run this)" $?
+}
+
+test_rlFileBackupCleanAndRestore() {
+    unset __INTERNAL_BACKUP_DIR
+    test_dir=$(mktemp -d /tmp/rhtslib-test-XXXXXX)
+    date > "$test_dir/date1"
+    date > "$test_dir/date2"
+    if [ "$DEBUG" == "1" ]; then
+        rlFileBackup --clean "$test_dir"
+    else
+        rlFileBackup --clean "$test_dir" >/dev/null 2>&1
+    fi
+    rm -f "$test_dir/date1"   # should be restored
+    date > "$test_dir/date3"   # should be removed
+    ###tree "$test_dir"
+    if [ "$DEBUG" == "1" ]; then
+        rlFileRestore
+    else
+        rlFileRestore >/dev/null 2>&1
+    fi
+    ###tree "$test_dir"
+    assertTrue "rlFileBackup with '--clean' option adds" \
+        "ls '$test_dir/date1'"
+    assertFalse "rlFileBackup with '--clean' option removes" \
+        "ls '$test_dir/date3'"
+}
+
+test_rlFileBackupCleanAndRestoreWhitespace() {
+    unset __INTERNAL_BACKUP_DIR
+    test_dir=$(mktemp -d '/tmp/rhtslib-test-XXXXXX')
+    mkdir "$test_dir/noclean"
+    mkdir "$test_dir/noclean clean"
+    mkdir "$test_dir/aaa"
+    date > "$test_dir/noclean/date1"
+    date > "$test_dir/noclean clean/date2"
+    if [ "$DEBUG" == "1" ]; then
+        rlFileBackup "$test_dir/noclean"
+        rlFileBackup --clean "$test_dir/noclean clean"
+        rlFileBackup --clean "$test_dir/aaa"
+    else
+        rlFileBackup "$test_dir/noclean" >/dev/null 2>&1
+        rlFileBackup --clean "$test_dir/noclean clean" >/dev/null 2>&1
+    fi
+    ###tree "$test_dir"
+    date > "$test_dir/noclean/date3"   # this should remain
+    date > "$test_dir/noclean clean/date4"   # this should be removed
+    ###tree "$test_dir"
+    if [ "$DEBUG" == "1" ]; then
+        rlFileRestore
+    else
+        rlFileRestore >/dev/null 2>&1
+    fi
+    ###tree "$test_dir"
+    assertTrue "rlFileBackup without '--clean' do not remove in dir with spaces" \
+        "ls '$test_dir/noclean/date3'"
+    assertFalse "rlFileBackup with '--clean' remove in dir with spaces" \
+        "ls '$test_dir/noclean clean/date4'"
 }
 
 
