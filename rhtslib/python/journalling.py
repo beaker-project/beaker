@@ -360,7 +360,7 @@ def dumpJournal(id, type):
   elif type == "pretty":    
     print openJournal(id).toprettyxml().encode("utf-8")
   else:
-    print "Journal dump error: bad type spectification"
+    print "Journal dump error: bad type specification"
   
 def need(args):
   if None in args:

@@ -112,7 +112,12 @@ rlJournalEnd(){
 
 Prints the content of the journal in pretty xml format.
 
-    rlJournalPrint
+    rlJournalPrint [type]
+
+=item type
+Can be either 'raw' or 'pretty', with the latter as a default.
+Raw: xml is in raw form, no indentation etc
+Pretty: xml is pretty printed, indented, with one record per line
 
 Example:
 
