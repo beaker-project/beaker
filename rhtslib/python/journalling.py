@@ -354,8 +354,13 @@ def addMetric(id, type, name, value, tolerance):
   add_to.appendChild(metric)
   saveJournal(jrnl, id)
 
-def dumpJournal(id):  
-  print openJournal(id).toprettyxml().encode("utf-8")
+def dumpJournal(id, type):
+  if type == "raw":
+    print openJournal(id).toxml().encode("utf-8")
+  elif type == "pretty":    
+    print openJournal(id).toprettyxml().encode("utf-8")
+  else:
+    print "Journal dump error: bad type specification"
   
 def need(args):
   if None in args:
@@ -389,8 +394,8 @@ if command == "init":
   need((options.testid, options.test, options.package))  
   initializeJournal(options.testid, options.test, options.package) 
 elif command == "dump":
-  need((options.testid,))
-  dumpJournal(options.testid)
+  need((options.testid, options.type))
+  dumpJournal(options.testid, options.type)
 elif command == "printlog":
   need((options.testid,options.severity))
   createLog(options.testid, options.severity)
