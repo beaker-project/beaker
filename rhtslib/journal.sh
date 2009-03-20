@@ -90,7 +90,7 @@ generate OUTPUTFILE and include journal in RHTS logs.
 rlJournalEnd(){
     rlJournalPrintText > $OUTPUTFILE
     local JOURNAL=`mktemp -d`/journal.xml
-    rlJournalPrint > $JOURNAL
+    rlJournalPrint raw > $JOURNAL
 
     if [ -n "$TESTID" ] ; then
         rhts_submit_log -S $RESULT_SERVER -T $TESTID -l $JOURNAL \
@@ -184,7 +184,8 @@ Example:
 
 rlJournalPrint(){
 	local TID=${TESTID:-"debugging"}
-	$__INTERNAL_JOURNALIST dump --id $TID
+  local TYPE=${1:-"pretty"}
+	$__INTERNAL_JOURNALIST dump --id $TID --type "$TYPE"
 }
 
 # backward compatibility
