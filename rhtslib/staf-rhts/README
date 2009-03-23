@@ -1,0 +1,19 @@
+            STAF RHTS SERVICE
+
+1. Description
+This RHTSLIB.pm is a STAF service written by Perl.
+
+2. Confiure & Run
+Step:
+    1) Add the following lines into STAF.cfg
+"SERVICE RHTS LIBRARY PLSTAF EXECUTE RHTSLIB \
+            OPTION USELIB=/path/to/STAF/services"
+
+    2) Copy RHTSLIB.pm to the USELIB(/path/to/STAF/services)
+    3) Run STAFProc
+    4) Run "staf local rhts help" to test 
+
+3. Other Info
+N/A.
+
+
