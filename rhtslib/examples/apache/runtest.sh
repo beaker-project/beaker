@@ -97,3 +97,4 @@ rlJournalStart
         rlRun "rlServiceRestore httpd"
     rlPhaseEnd
 rlJournalPrintText
+rlJournalEnd

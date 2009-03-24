@@ -41,3 +41,4 @@ rlJournalStart
     rlPhaseEnd
 
 rlJournalPrintText
+rlJournalEnd
