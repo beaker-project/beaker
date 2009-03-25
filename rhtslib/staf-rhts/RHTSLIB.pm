@@ -19,17 +19,47 @@ use strict;
 use warnings;
 
 use constant kRHTSLIBInvalidNumber => scalar 4001;
-use constant kVersion => scalar "0.0.1";
+use constant kVersion => scalar "0.0.2";
 
 # In this queue the master threads queue jobs for the slave worker
 my $work_queue = new Thread::Queue;
 my $free_workers : shared = 0;
 
-our $fServiceName;         # passed in part of parms
-our $fHandle;               # staf handle for service
-our $fAddParser ;          # .
+# passed in part of parms
+our $fServiceName;
+# staf handle for service
+our $fHandle;
+our $fAddParser; 
+our $fListParser;
 our $fLineSep;
 our $fLogHandle;
+
+# Lists of RHTSLIB funtions
+our %RHTSLIB = (
+    "Journalling"   => ["rlJournalStart", "rlJournalEnd",
+                        "rlJournalPrint", "rlJournalPrintText"],
+    "Logging"       => ["rlLog", "rlLogDebug", "rlLogInfo",
+                        "rlLogWarning", "rlLogError", "rlLogFatal",
+                        "rlDie", "rlBundleLogs"],
+    "Info"          => ["rlShowPackageVersion", "rlShowRunningKernel"], 
+    "Phases"        => ["rlPhaseStart", "rlPhaseEnd", "rlPhaseStartSetup",
+                        "rlPhaseStartTest", "rlPhaseStartCleanup"],
+    "Metric"        => ["rlLogMetricLow", "rlLogMetricHigh"],
+    "Rpm Handling"  => ["rlCheckRpm"],
+    "Mounting"      => ["rlMount", "rlCheckMount", "rlAssertMount"],
+    "Services"      => ["rlServiceStart", "rlServiceStop", "rlServiceRestore"],
+    "Analyze"       => ["rlDejaSum"],
+    "Time_Performance"  => ["rlPerfTime_RunsInTime", "rlPerfTime_AvgFromRuns"],
+    "Backup_Restore"    => ["rlFileBackup", "rlFileRestore"],
+    "Run_Watch_Report"  => ["rlRun", "rlWatchdog", "rlReport"],
+    "Arithmetic_Asserts"=> ["rlAssert0", "lAssertEquals", 
+                            "lAssertNotEquals", "rlAssertGreater",
+                            "rlAssertGreaterOrEqual"],
+    "File_Asserts"      => ["rlAssertExists", "rlAssertNotExists",
+                            "rlAssertGrep", "rlAssertNotGrep"],
+    "Virtual_XServer"   => ["rlVirtualXStart", "rlVirtualXStop",
+                            "rlVirtualXGetDisplay"],
+);
 
 #sub Construct
 #{
@@ -46,13 +76,14 @@ sub new
         worker_created => 0,
         max_workers => 5, # do not create more than 5 workers
     };
-    # Here, %info = ( ServiceType  => "the type of service", 
-    #                        ServiceName => "name",
-    #                        Params         => "parameters that have been passed to the 
-    #                                                  service (via the PARMS option)",
-    #                       WriteLocation => "The name of the root directory where the service 
-    #                                                   should write all service-related data (if it has any)",
-   #              )
+
+    # Here, %info = ( ServiceTyp  => "the type of service", 
+    #                 ServiceName => "name",
+    #                 Params      => "parameters that have been passed to the 
+    #                                 service (via the PARMS option)",
+    #               WriteLocation => "The name of the root directory where the service 
+    #                                 should write all service-related data (if it has any)",
+    #              )
 
     $fServiceName = $info->{ServiceName};
 
@@ -63,7 +94,11 @@ sub new
     $fLogHandle->log("DEBUG", "Enter new function");
 
     # Add Parser
-    $fAddParser = STAFCommandParser->new();
+    #$fAddParser = STAFCommandParser->new();
+
+    # LIST parser
+    $fListParser = STAFCommandParser->new();
+    $fListParser->addOption("LIST", 1, STAFCommandParser::VALUENOTALLOWED);
 
     my $lineSepResult = $fHandle->submit2($STAF::STAFHandle::kReqSync,
         "local", "var", "resolve string {STAF/Config/Sep/Line}");
@@ -100,6 +135,7 @@ sub AcceptRequest
     return $STAF::DelayedAnswer;
 }
 
+# service worker to do staff actually.
 sub Worker
 {
     my $loop_flag = 1;
@@ -132,7 +168,7 @@ sub Worker
     return 1;
 }
 
-
+# Handle request from commands.
 sub handleRequest
 {
     my $info = shift;
@@ -155,7 +191,7 @@ sub handleRequest
 
     if ($requestType eq "list")
     {
-        #return handleList($info);
+        return handleList($info);
     }
     elsif ($requestType eq "query")
     {
@@ -178,6 +214,49 @@ sub handleRequest
     return (0, "");
 }
 
+sub handleList
+{
+    my $info = shift;
+
+    if($info->{trustLevel} < 2)
+    {
+        return (STAFResult::kAccessDenied,
+                "Trust level 2 required for LIST request. Requesting " .
+                "machine's trust level: " .  $info->{trustLevel});
+    }
+
+    my $result = (STAFResult::kOk, "");
+    my $resultString = "";    
+
+    # parse request
+    my $parsedRequest = $fListParser->parse($info->{request});
+
+    # check result of parse
+    if ($parsedRequest->{rc} != STAFResult::kOk)
+    {
+        return (STAFResult::kInvalidRequestString,
+            $parsedRequest->{errorBuffer});
+    }
+
+    # create a marshalling context with testList and one map class definition
+
+    #print_dump($fLogHandle, "parsedRequest", $parsedRequest);
+
+    $resultString = "List RHTSLIB Function" . $fLineSep;
+    foreach my $key ( keys %RHTSLIB ) {
+        my $group = $RHTSLIB{$key};
+
+        $resultString .= "$key\t\t";
+        foreach my $function ( @$group ) {
+            $resultString .= "$function ";
+        }
+
+        $resultString .= "$fLineSep";
+    }
+
+    return (STAFResult::kOk, $resultString);
+}
+
 sub handleVersion
 {
     return (STAFResult::kOk, kVersion);
@@ -186,8 +265,9 @@ sub handleVersion
 sub handleHelp
 {
     return (STAFResult::kOk,
-          "RHTSLIB Service Help" . $fLineSep
-          . $fLineSep . "VERSION" . $fLineSep . "HELP");
+          "RHTSLIB Service Help" . $fLineSep. 
+           $fLineSep . "LIST" . $fLineSep . 
+           "VERSION" . $fLineSep . "HELP");
 
 }
 

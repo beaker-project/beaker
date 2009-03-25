@@ -13,7 +13,14 @@ Step:
     3) Run STAFProc
     4) Run "staf local rhts help" to test 
 
-3. Other Info
-N/A.
+3. Usage
+# Print help
+staf local rhts help
+# Print version
+staf local rhts version
+# List all rhtslib functions
+staf local rhts list
+# List some group of rhtslib functions
+staf local rhts list "Logging" "Info"
 
 
