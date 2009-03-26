@@ -696,7 +696,7 @@ rlReport(){
           ;;
         esac
     rlLogDebug "rlReport: result: $result, score: $score, log: $logfile"
-    rhts-report-result $testname $result $logfile $score
+    rhts-report-result "$testname" "$result" "$logfile" "$score"
 }
 
 
