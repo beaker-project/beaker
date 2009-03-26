@@ -53,3 +53,7 @@ __low_on_parameters(){
 	    "rlPhaseStart FAIL; $CMD ; rlPhaseEnd ;  rlJournalPrintText |grep '1 *good'"
 	done
 }
+
+rhts-report-result(){
+  echo "ANCHOR NAME: $1\nRESULT: $2\n LOGFILE: $3\nSCORE: $4"
+}
