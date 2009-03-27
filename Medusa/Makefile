@@ -1,5 +1,6 @@
 # $Id: $
-PKGNAME=medusa
+PKGNAME=$(shell python setup.py --name)
+VERSION=$(shell python setup.py --version)
 PKGRPMFLAGS=--define "_topdir ${PWD}" --define "_specdir ${PWD}" --define "_sourcedir ${PWD}/dist" --define "_srcrpmdir ${PWD}" --define "_rpmdir ${PWD}" --define "_builddir ${PWD}"
 
 default: all
@@ -34,7 +35,7 @@ shell:
 	tg-admin --config=medusa.cfg shell
 
 srpm: dist
-	@rpmbuild -bs ${PKGRPMFLAGS} ${PKGNAME}.spec
+	rpmbuild -ts dist/${PKGNAME}-${VERSION}.tar.bz2
 
 pyflakes:
 	find . -name '*.py' | xargs pyflakes
@@ -49,8 +50,7 @@ install-deps:
 	su -c "yum install TurboGears python-TurboMail python-fedora python-sqlalchemy koji mash yum-utils git intltool python-bugzilla python-genshi \
 python-crypto python-imaging python-turboflot python-tgcaptcha python-nose.noarch"
 
-rpm: srpm
-	@rpm -i medusa*src.rpm
-	@rpmbuild -ba ~/rpmbuild/SPECS/medusa.spec
+rpm: dist
+	rpmbuild $(RPMBUILDOPTS) -tb dist/${PKGNAME}-${VERSION}.tar.bz2
 
 .PHONY: docs test todo clean dist build install srpm pyflakes shell init run install-deps
