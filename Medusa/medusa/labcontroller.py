@@ -209,12 +209,12 @@ class LabControllers(RPCRoot):
             now = time.time()
             # Cobbler old uri is _rw
             try:
-                url = "http://%s/cobbler_api_rw/" % labcontroller.fqdn
+                url = "http://%s/cobbler_api_rw" % labcontroller.fqdn
                 remote = xmlrpclib.ServerProxy(url)
                 token = remote.login(labcontroller.username,
                                      labcontroller.password)
             except ProtocolError:
-                url = "http://%s/cobbler_api/" % labcontroller.fqdn
+                url = "http://%s/cobbler_api" % labcontroller.fqdn
                 remote = xmlrpclib.ServerProxy(url)
                 token = remote.login(labcontroller.username,
                                      labcontroller.password)
