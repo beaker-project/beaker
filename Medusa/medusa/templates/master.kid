@@ -32,7 +32,7 @@ $(document).ready(function() {
 </script>
     <div id="fedora-header">
         <div id="fedora-header-logo">
-            <a href="${tg.url('/')}"><img src="${tg.url('/static/images/header-fedora_logo.png')}" /></a>
+            <a href="${tg.url('/')}"><img src="${tg.url('/static/images/header-beaker_logo.png')}" /></a>
         </div>
 
         <div id="fedora-header-items">
