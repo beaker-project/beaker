@@ -233,9 +233,15 @@ Create a backup of files or directories (recursive). Can be used
 multiple times to add more files to backup. Backing up an already
 backed up file overwrites the original backup.
 
-    rlFileBackup file [file...]
+    rlFileBackup [--clean] file [file...]
 
 =over
+
+=item --clean
+
+If this option is provided (have to be first option of the command),
+then file/dir backuped using this command (provided in next
+options) will be (resursively) removed before we will restore it.
 
 =item file
 
@@ -245,9 +251,34 @@ Files and/or directories to be backed up.
 
 Returns 0 if the backup was successful.
 
+=head4 Example with --clean:
+
+    touch cleandir/aaa
+    rlFileBackup --clean cleandir/
+    touch cleandir/bbb
+    ls cleandir/
+    aaa   bbb
+    rlFileRestore
+    ls cleandir/
+    aaa
+
 =cut
 
 rlFileBackup() {
+    # check if we have '--clean' option and save items if we have
+    if [ "$1" = '--clean' ]; then
+        shift
+        rlLogDebug "rlFileBackup: Adding '$@' to the clean list"
+        for i in "$@"; do
+            ###rlLogDebug "rlFileBackup: ... '$@'"
+            if [ -z "$__INTERNAL_BACKUP_CLEAN" ]; then
+                __INTERNAL_BACKUP_CLEAN="$i"
+            else
+                __INTERNAL_BACKUP_CLEAN="$__INTERNAL_BACKUP_CLEAN\n$i"
+            fi
+        done
+    fi
+
     # parameter sanity
     if [ -z "$1" ]; then
         rlLogError "rlFileBackup: Nothing to backup... supply a file or dir"
@@ -284,7 +315,8 @@ rlFileBackup() {
 Restore backed up files to their original location.
 C<rlFileRestore> does not remove new files appearing after backup
 has been made.  If you don't want to leave anything behind just
-remove the whole original tree before running C<rlFileRestore>.
+remove the whole original tree before running C<rlFileRestore>,
+or see C<--clean> option of C<rlFileBackup>.
 
     rlFileRestore
 
@@ -293,6 +325,16 @@ Returns 0 if backup dir is found and files are restored successfully.
 =cut
 
 rlFileRestore() {
+    if [ ! -z "$__INTERNAL_BACKUP_CLEAN" ]; then
+        rlLogDebug "rlFileRestore: Cleaning clean list '$__INTERNAL_BACKUP_CLEAN'"
+        local oldIFS="$IFS"
+        IFS=$'\x0A'
+        for i in $(echo -e $__INTERNAL_BACKUP_CLEAN); do
+            ###rlLogDebug "rlFileRestore: ... '$i'"
+            rm -rf "$i"
+        done
+        IFS="$oldIFS"
+    fi
     if [ -z "$__INTERNAL_BACKUP_DIR" ]; then
         rlLogError "rlFileRestore: Cannot find any backup"
         return 1
