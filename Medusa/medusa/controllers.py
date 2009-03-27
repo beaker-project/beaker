@@ -697,29 +697,21 @@ class Root(RPCRoot):
             # catch nullable fields return None.
             if current_val == 'None':
                 current_val = ""
-            if kw.get(field):
-                if current_val != str(kw[field]):
-#                    sys.stderr.write("\nfield: " + field + ", Old: " +  current_val + ", New: " +  str(kw[field]) + " " +  "\n")
-                    activity = SystemActivity(identity.current.user, 'WEBUI', 'Changed', field, current_val, kw[field] )
-                    system.activity.append(activity)
-            else:
-                 if current_val != "":
-                    activity = SystemActivity(identity.current.user, 'WEBUI', 'Changed', field, current_val, "" )
-                    system.activity.append(activity)
+            new_val = str(kw.get(field) or "")
+            if current_val != new_val:
+#                sys.stderr.write("\nfield: " + field + ", Old: " +  current_val + ", New: " +  str(kw[field]) + " " +  "\n")
+                activity = SystemActivity(identity.current.user, 'WEBUI', 'Changed', field, current_val, new_val )
+                system.activity.append(activity)
         log_bool_fields = [ 'shared', 'private' ]
         for field in log_bool_fields:
             try:
                 current_val = str(system.__dict__[field])
             except KeyError:
                 current_val = ""
-            if kw.get(field):
-                if current_val != True:
-                    activity = SystemActivity(identity.current.user, 'WEBUI', 'Changed', field, current_val, "True" )
-                    system.activity.append(activity)
-            else:
-                if current_val != False:
-                    activity = SystemActivity(identity.current.user, 'WEBUI', 'Changed', field, current_val, "False" )
-                    system.activity.append(activity)
+            new_val = str(kw.get(field) or False)
+            if current_val != new_val:
+                activity = SystemActivity(identity.current.user, 'WEBUI', 'Changed', field, current_val, new_val )
+                system.activity.append(activity)
         system.status_id=kw['status_id']
         system.location=kw['location']
         system.model=kw['model']
