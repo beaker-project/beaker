@@ -162,9 +162,7 @@ else
     SLEEPTIME=$RESERVETIME
 fi
 
-if [ -z "$RESERVEBY" ]; then
-    SUBMITTER=Uknown
-else
+if [ -n "$RESERVEBY" ]; then
     SUBMITTER=$RESERVEBY
 fi
 
