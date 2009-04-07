@@ -3,7 +3,7 @@
 
 Name:           medusa
 Version:        0.2
-Release:        86%{?dist}
+Release:        87%{?dist}
 Summary:        Inventory System
 Group:          Applications/Internet
 License:        GPLv2+
@@ -109,6 +109,8 @@ ln -s Fedora.ks %{buildroot}/var/lib/cobbler/kickstarts/fedora.ks
 
 
 %changelog
+* Tue Apr 07 2009 Bill Peck <bpeck@redhat.com> - 0.2-87
+- Patches from jlaska to cleanup spec file.
 * Mon Apr 06 2009 Bill Peck <bpeck@redhat.com> - 0.2-86
 - Use .discinfo if present for family/update.
 * Thu Apr 02 2009 Bill Peck <bpeck@redhat.com> - 0.2-85
