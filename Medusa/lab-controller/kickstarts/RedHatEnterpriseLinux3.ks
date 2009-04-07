@@ -26,7 +26,9 @@ timezone  America/New_York
 # Install OS instead of upgrade
 install
 
+#if not $getVar('arch', '').startswith('s390')
 network --bootproto=dhcp
+#end if
 
 $SNIPPET("rhts_partitions")
 

@@ -1,11 +1,5 @@
 url --url=$tree
-#if $getVar('key', '') != ''
-key $getVar('key', '')
-#end if
-#if $getVar('key', '') == ''
-key --skip
-%include /tmp/distro.repo
-#end if
+key $getVar('key', '49af89414d147589')
 
 #if $getVar('system_name', '') != ''
 auth  --useshadow  --enablemd5
@@ -46,7 +40,7 @@ selinux $getVar('selinux','--enforcing')
 #if $getVar('rhts_server', '') != ''
 skipx
 #end if
-#if $getVar('rhts_server', '') == ''
+#if $getVar('rhts_server', '') == '' and not $getVar('arch','').startswith('s390')
 xconfig --startxonboot
 #end if
 
@@ -54,8 +48,9 @@ xconfig --startxonboot
 timezone  $getVar('timezone', 'America/New_York')
 # Install OS instead of upgrade
 install
+#if not $getVar('arch', '').startswith('s390')
 network --bootproto=dhcp
-
+#end if
 $SNIPPET("rhts_partitions")
 
 %packages --resolvedeps --ignoremissing

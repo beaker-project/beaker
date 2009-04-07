@@ -9,6 +9,7 @@ import glob
 import xmlrpclib
 import cpioarchive
 import string
+import cobbler.api as capi
 
 def rpm2cpio(rpm_file, out=sys.stdout, bufsize=2048):
     """Performs roughly the equivalent of rpm2cpio(8).
@@ -48,9 +49,9 @@ def get_paths(distro):
        'Client'     ,
     ]
 
-    kerneldir = distro['kernel']
-    if 'tree' in distro['ks_meta']:
-        tree   = distro['ks_meta']['tree']
+    kerneldir = distro.kernel
+    if 'tree' in distro.ks_meta:
+        tree   = distro.ks_meta['tree']
     else:
         return None
     path = tree
@@ -122,12 +123,10 @@ def update_repos(distro):
 
     if not tree_repos:
         return False
-    distro_id = remote.get_distro_handle(distro['name'],token)
-    ks_meta = distro['ks_meta']
+    ks_meta = distro.ks_meta
     ks_meta['tree_repos'] = tree_repos
-    distro['ks_meta'] = ks_meta
-    remote.modify_distro(distro_id,'ksmeta', ks_meta, token)
-    remote.save_distro(distro_id, token)
+    distro.set_ksmeta(ks_meta)
+    bootapi.add_distro(distro)
     return distro
 
 def update_comment(distro):
@@ -137,10 +136,6 @@ def update_comment(distro):
         return False
     family = ""
     update = 0
-    if os.path.exists("%s/.discinfo" % paths['tree_path']):
-        discinfo = open("%s/.discinfo" % paths['tree_path'], "r")
-        family = discinfo.read().split("\n")[1].split(".")[0].replace(" ","")
-        discinfo.close()
     data = glob.glob(os.path.join(paths['package_path'], "*release-*"))
     data2 = []
     for x in data:
@@ -175,47 +170,64 @@ def update_comment(distro):
                 update = updateregex.search(release).group(1)
             if releaseregex.search(release):
                 update = releaseregex.search(release).group(1)
-    distro_id = remote.get_distro_handle(distro['name'],token)
-    comment = "%s\nfamily=%s.%s" % (distro['comment'], family, update)
-    distro['comment'] = comment
-    remote.modify_distro(distro_id,'comment', comment, token)
-    remote.save_distro(distro_id, token)
+    if os.path.exists("%s/.discinfo" % paths['tree_path']):
+        discinfo = open("%s/.discinfo" % paths['tree_path'], "r")
+        familyupdate = discinfo.read().split("\n")[1]
+        family = familyupdate.split(".")[0].replace(" ","")
+        update = familyupdate.split(".")[1].replace(" ","")
+        discinfo.close()
+    comment = "%s\nfamily=%s.%s" % (distro.comment, family, update)
+    distro.set_comment(comment)
+    bootapi.add_distro(distro)
+    kickstart = findKickstart(distro.arch, family, update)
+    if kickstart:
+        profile = bootapi.find_profile(distro.name)
+        profile.set_kickstart(kickstart)
+        bootapi.add_profile(profile)
     return distro
 
+def findKickstart(arch, family, update):
+    kickbase = "/var/lib/cobbler/kickstarts"
+    flavor = family.strip('0123456789')
+    kickstarts = [
+           "%s/%s/%s.%s.ks" % (kickbase,arch,family,update),
+           "%s/%s/%s.ks" % (kickbase,arch,family),
+           "%s/%s/%s.ks" % (kickbase,arch,flavor),
+           "%s/%s.%s.ks" % (kickbase,family,update),
+           "%s/%s.ks" % (kickbase,family),
+           "%s/%s.ks" % (kickbase,flavor),
+           "%s/%s/default.ks" % (kickbase,arch),
+           "%s/%s.ks" % (kickbase,family),
+    ]
+    for kickstart in kickstarts:
+        if os.path.exists(kickstart):
+            return kickstart
+    return None
+
 if __name__ == '__main__':
-    url = "http://localhost"
-    try:
-        remote = xmlrpclib.ServerProxy('%s:25152' % url,allow_none=True)
-        token = remote.login("testing","testing")
-    except:
-        remote = xmlrpclib.ServerProxy('%s:25151' % url,allow_none=True)
-        token = remote.login("testing","testing")
+    bootapi = capi.BootAPI()
+    settings = bootapi.settings()
 
-    remote.update(token)
-    settings = remote.get_settings(token)
-    if '_attributes' in settings:
-        settings = settings['_attributes']
-
-    distros = remote.get_distros()
+    distros = bootapi.distros()
     push_distros = []
 
     for distro in distros:
         update = False
-        if 'tree_repos' not in distro['ks_meta']:
-            print "Update TreeRepos for %s" % distro['name']
+        if 'tree_repos' not in distro.ks_meta:
+            print "Update TreeRepos for %s" % distro.name
             tmpdistro = update_repos(distro)
             if tmpdistro:
                 distro = tmpdistro
                 update = True
-        if distro['comment'].find("family=") == -1:
-            print "Update Family for %s" % distro['name']
+        if distro.comment.find("family=") == -1:
+            print "Update Family for %s" % distro.name
             tmpdistro = update_comment(distro)
             if tmpdistro:
                 distro = tmpdistro
                 update = True
         if update:
-            push_distros.append(distro)
+            push_distros.append(distro.to_datastruct())
     if push_distros:
-        inventory = xmlrpclib.ServerProxy('https://%s/RPC2' % settings['redhat_management_server'], allow_none=True)
-        distros = inventory.labcontrollers.addDistros(settings['server'], 
-                                                             push_distros)
+        inventory = xmlrpclib.ServerProxy('%s/RPC2' % settings.redhat_management_server, allow_none=True)
+        distros = inventory.labcontrollers.addDistros(settings.server, 
+                                                         push_distros)

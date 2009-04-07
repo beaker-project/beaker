@@ -1,7 +1,7 @@
 # $Id: $
 PKGNAME=$(shell python setup.py --name)
 VERSION=$(shell python setup.py --version)
-PKGRPMFLAGS=--define "_topdir ${PWD}" --define "_specdir ${PWD}" --define "_sourcedir ${PWD}/dist" --define "_srcrpmdir ${PWD}" --define "_rpmdir ${PWD}" --define "_builddir ${PWD}"
+RPMBUILDOPTS=--define "_topdir ${PWD}/dist" --define "_specdir %{_topdir}" --define "_sourcedir %{_topdir}" --define "_srcrpmdir %{_topdir}" --define "_rpmdir %{_topdir}" --define "_builddir %{_topdir}" --define "_rpmfilename %%{NAME}-%%{VERSION}-%%{RELEASE}.%%{ARCH}.rpm"
 
 default: all
 
@@ -21,6 +21,8 @@ todo:
 
 clean:
 	find . -name '*.pyc' | xargs rm -f
+	rm -rf medusa-* medusa.egg-info
+	rm -rf dist build rpm-build
 
 dist:
 	python setup.py sdist --formats=bztar
@@ -29,13 +31,13 @@ build:
 	python setup.py build
 
 install:
-	python setup.py install -O1 --skip-build --root $(DESTDIR)
+	python setup.py install -f -O1 --skip-build
 
 shell:
 	tg-admin --config=medusa.cfg shell
 
 srpm: dist
-	rpmbuild -ts dist/${PKGNAME}-${VERSION}.tar.bz2
+	rpmbuild $(RPMBUILDOPTS) -ts dist/${PKGNAME}-${VERSION}.tar.bz2
 
 pyflakes:
 	find . -name '*.py' | xargs pyflakes
@@ -49,6 +51,8 @@ run:
 install-deps:
 	su -c "yum install TurboGears python-TurboMail python-fedora python-sqlalchemy koji mash yum-utils git intltool python-bugzilla python-genshi \
 python-crypto python-imaging python-turboflot python-tgcaptcha python-nose.noarch"
+
+rpms: rpm
 
 rpm: dist
 	rpmbuild $(RPMBUILDOPTS) -tb dist/${PKGNAME}-${VERSION}.tar.bz2

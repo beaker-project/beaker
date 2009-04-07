@@ -4,7 +4,7 @@ from turbogears.config import get
 import ldap
 from sqlalchemy import Table, Column, ForeignKey
 from sqlalchemy.orm import relation, backref, synonym
-from sqlalchemy import String, Unicode, Integer, DateTime, UnicodeText, Boolean, Float, VARCHAR, TEXT
+from sqlalchemy import String, Unicode, Integer, DateTime, UnicodeText, Boolean, Float, VARCHAR, TEXT, Numeric
 from sqlalchemy import or_, and_, not_, select
 from sqlalchemy.exceptions import InvalidRequestError
 from identity import LdapSqlAlchemyIdentityProvider
@@ -51,6 +51,8 @@ system_table = Table('system', metadata,
     Column('checksum', String(32)),
     Column('lab_controller_id', Integer, ForeignKey('lab_controller.id')),
     Column('mac_address',String(18)),
+    Column('loan_id', Integer,
+           ForeignKey('tg_user.user_id')),
 )
 
 system_device_map = Table('system_device_map', metadata,
@@ -133,6 +135,18 @@ exclude_osversion_table = Table('exclude_osversion', metadata,
     Column('system_id', Integer, ForeignKey('system.id')),
     Column('arch_id', Integer, ForeignKey('arch.id')),
     Column('osversion_id', Integer, ForeignKey('osversion.id')),
+)
+
+labinfo_table = Table('labinfo', metadata,
+    Column('id', Integer, autoincrement=True,
+           nullable=False, primary_key=True),
+    Column('system_id', Integer, ForeignKey('system.id')),
+    Column('orig_cost', Numeric(precision=16,length=2,asdecimal=True)),
+    Column('curr_cost', Numeric(precision=16,length=2,asdecimal=True)),
+    Column('dimensions', String(255)),
+    Column('weight', Numeric(asdecimal=False)),
+    Column('wattage', Numeric(asdecimal=False)),
+    Column('cooling', Numeric(asdecimal=False)),
 )
 
 cpu_table = Table('cpu', metadata,
@@ -683,14 +697,19 @@ class System(SystemObject):
     def available(cls, user):
         """
         Builds on all.  Only systems which this user has permission to reserve.
+          If a system is loaned then its only available for that person.
         """
         return System.all(user).filter(
-                                    or_(System.owner==user,
+                                    or_(and_(System.owner==user,
+                                             System.loaned==None),
+                                      System.loaned==user,
                                       and_(System.shared==True,
-                                           Group.systems==None
+                                           Group.systems==None,
+                                           System.loaned==None
                                           ),
                                       and_(System.shared==True,
-                                            User.user_id==user.user_id
+                                           System.loaned==None,
+                                           User.user_id==user.user_id
                                           )
                                        )
                                       )
@@ -772,6 +791,18 @@ class System(SystemObject):
                 return True
         return False
 
+    def can_loan(self, user=None):
+        if user and not self.loaned and not self.user:
+            if user == self.owner or user.is_admin():
+                return True
+        return False
+
+    def current_loan(self, user=None):
+        if user and self.loaned:
+            if self.loaned == user or user.is_admin():
+                return True
+        return False
+
     def current_user(self, user=None):
         if user and self.user:
             if self.user == user or user.is_admin():
@@ -780,6 +811,12 @@ class System(SystemObject):
         
     def can_share(self, user=None):
         if user and not self.user:
+            # If the system is loaned its exclusive!
+            if self.loaned:
+                if user == self.loaned:
+                    return True
+                else:
+                    return False
             # If its the owner always allow.
             if user == self.owner:
                 return True
@@ -1069,7 +1106,7 @@ class System(SystemObject):
         try:
             if remote.save_system(system_id, token):
                 rc = 0
-                msg = "Sucess"
+                msg = "Success"
         except:
             rc=-1
         return (rc, msg)
@@ -1124,7 +1161,7 @@ class System(SystemObject):
         try:
             rc = remote.power_system(system_id, action, token)
             if rc == 0:
-                msg = "Sucess"
+                msg = "Success"
         except:
             rc=-1
         return (rc, msg)
@@ -1281,6 +1318,9 @@ class LabController(SystemObject):
         return [(0,"None")] + [(lc.id, lc.fqdn) for lc in all]
 
     distros = association_proxy('_distros', 'distro')
+
+class LabInfo(SystemObject):
+    fields = ['orig_cost', 'curr_cost', 'dimensions', 'weight', 'wattage', 'cooling']
 
 class Cpu(SystemObject):
     def __init__(self, vendor=None, model=None, model_name=None, family=None, stepping=None,speed=None,processors=None,cores=None,sockets=None,flags=None):
@@ -1591,6 +1631,7 @@ System.mapper = mapper(System, system_table,
                      'arch':relation(Arch,
                                         secondary=system_arch_map,
                                         backref='systems'),
+                     'labinfo':relation(LabInfo, uselist=False),
                      'cpu':relation(Cpu, uselist=False),
                      'numa':relation(Numa, uselist=False),
                      'power':relation(Power, uselist=False),
@@ -1599,6 +1640,8 @@ System.mapper = mapper(System, system_table,
                      'excluded_osversion':relation(ExcludeOSVersion,
                                                  backref='systems'),
                      'provisions':relation(Provision, collection_class=attribute_mapped_collection('arch')),
+                     'loaned':relation(User, uselist=False,
+                          primaryjoin=system_table.c.loan_id==users_table.c.user_id,foreign_keys=system_table.c.loan_id),
                      'user':relation(User, uselist=False,
                           primaryjoin=system_table.c.user_id==users_table.c.user_id,foreign_keys=system_table.c.user_id),
                      'owner':relation(User, uselist=False,
@@ -1638,6 +1681,7 @@ mapper(OSMajor, osmajor_table,
                                      order_by=[osversion_table.c.osminor])})
 Cpu.mapper = mapper(Cpu, cpu_table,
        properties = {'flags':relation(CpuFlag)})
+mapper(LabInfo, labinfo_table)
 CpuFlag.mapper = mapper(CpuFlag, cpu_flag_table)
 Numa.mapper = mapper(Numa, numa_table)
 Device.mapper = mapper(Device, device_table,

@@ -3,6 +3,7 @@ import turbogears as tg
 from turbojson import jsonify
 from turbogears.widgets.rpc import RPC
 import model
+from decimal import Decimal
 from turbogears.widgets import (Form, TextField, SubmitButton, TextArea,
                                 AutoCompleteField, SingleSelectField, CheckBox,
                                 HiddenField, RemoteForm, CheckBoxList, JSLink,
@@ -166,6 +167,40 @@ class PowerActionForm(Form):
         if 'power' in d['value'] and 'lab_controller' in d['value']:
             if d['value']['power']:
                 d['enabled'] = True
+
+class LabInfoForm(Form):
+    template = "medusa.templates.system_labinfo"
+    member_widgets = ["id", "labinfo", "orig_cost", "curr_cost", "dimensions",
+                      "weight", "wattage", "cooling"]
+    params = ['options']
+
+    def __init__(self, *args, **kw):
+        super(LabInfoForm, self).__init__(*args, **kw)
+	self.id = HiddenField(name="id")
+        self.labinfo = HiddenField(name="labinfo")
+        self.orig_cost = TextField(name='orig_cost', label=_(u'Original Cost'),
+                                   validator=validators.Money())
+        self.curr_cost = TextField(name='curr_cost', label=_(u'Current Cost'),
+                                   validator=validators.Money())
+        self.dimensions = TextField(name='dimensions', label=_(u'Dimensions'))
+        self.weight = TextField(name='weight', label=_(u'Weight'),
+                                   validator=validators.Int())
+        self.wattage = TextField(name='wattage', label=_(u'Wattage'),
+                                   validator=validators.Int())
+        self.cooling = TextField(name='cooling', label=_(u'Cooling'),
+                                   validator=validators.Int())
+
+    def update_params(self, d):
+        super(LabInfoForm, self).update_params(d)
+        if 'labinfo' in d['value']:
+            if d['value']['labinfo']:
+                labinfo = d['value']['labinfo']
+                d['value']['orig_cost'] = labinfo.orig_cost
+                d['value']['curr_cost'] = labinfo.curr_cost
+                d['value']['dimensions'] = labinfo.dimensions
+                d['value']['weight'] = labinfo.weight
+                d['value']['wattage'] = labinfo.wattage
+                d['value']['cooling'] = labinfo.cooling
 
 class PowerForm(Form):
     template = "medusa.templates.system_power"
@@ -501,9 +536,11 @@ class SystemForm(Form):
     template = "medusa.templates.system_form"
     params = ['id','readonly',
               'user_change','user_change_text',
+              'loan_change', 'loan_text',
               'owner_change', 'owner_change_text']
     user_change = '/user_change'
     owner_change = '/owner_change'
+    loan_change = '/loan_change'
     fields = [
                HiddenField(name='id'),
                TextField(name='fqdn', 
@@ -532,6 +569,7 @@ class SystemForm(Form):
                TextField(name='lender', label=_(u'Lender')),
                TextField(name='user', label=_(u'User')),
                TextField(name='owner', label=_(u'Owner')),
+               TextField(name='loaned', label=_(u'Loaned To')),
                TextField(name='contact', label=_(u'Contact')),
                CheckBox(name='shared', label=_(u'Shared')),
                CheckBox(name='private', label=_(u'Secret (NDA)')),
@@ -557,6 +595,10 @@ class SystemForm(Form):
             d["owner_change_text"] = d["options"]["owner_change_text"]
         if d["options"].has_key("user_change_text"):
             d["user_change_text"] = d["options"]["user_change_text"]
+        if d["options"].has_key("loan_change"):
+            d["loan_change"] = d["options"]["loan_change"]
+        if d["options"].has_key("loan_text"):
+            d["loan_text"] = d["options"]["loan_text"]
         d["id"] = d["value_for"]("id")
 
         if d["options"]["readonly"]:

@@ -112,10 +112,13 @@
         ${display_field_for("private")}
        </td>
        <th class="list">
-        <b>Type</b>
+        <b>Loaned To</b>
        </th>
        <td class="list">
-        ${display_field_for("type_id")}
+        ${value_for("loaned")}
+        <a py:if="loan_text" href="${tg.url(loan_change)}?id=${id}">
+         <span py:content="loan_text"/>
+        </a>
        </td>
       </tr>
       <tr class="list">
@@ -130,6 +133,14 @@
        </th>
        <td class="list">
         ${display_field_for("mac_address")}
+       </td>
+      </tr>
+      <tr class="list">
+       <th class="list">
+        <b>Type</b>
+       </th>
+       <td class="list">
+        ${display_field_for("type_id")}
        </td>
       </tr>
       <tr py:if="not readonly">
