@@ -312,6 +312,19 @@ class XmlSystemType(ElementWrapper):
             query = system_type_table.c.type == value
         return (joins, query)
 
+class XmlHostName(ElementWrapper):
+    """
+    Pick a system wth the correct hostname.
+    """
+    def filter(self):
+        op = self.op_table[self.get_xml_attr('op', unicode, '==')]
+        value = self.get_xml_attr('value', unicode, None)
+        joins = []
+        query = None
+        if value:
+            query = getattr(system_table.c.fqdn, op)(value)
+        return (joins, query)
+
 class XmlMemory(ElementWrapper):
     """
     Pick a system wth the correct amount of memory.
@@ -358,6 +371,7 @@ subclassDict = {
     'system'              : XmlSystem,
     'memory'              : XmlMemory,
     'cpu_count'           : XmlCpuCount,
+    'hostname'            : XmlHostName,
     }
 
 if __name__=='__main__':

@@ -121,6 +121,17 @@ data_files = [
                                  glob.glob('medusa/static/javascript/*'))),
     ('medusa/static/images', filter(os.path.isfile,
                                  glob.glob('medusa/static/images/*'))),
+    ("/etc/medusa", ["medusa.cfg"]),
+    ("/etc/cron.daily", ["lab-controller/cron.daily/expire_distros"]),
+    ("/etc/httpd/conf.d", ["apache/medusa.conf", "lab-controller/conf.d/beaker.conf"]),
+    ("/var/lib/cobbler/triggers/sync/post", filter(os.path.isfile, glob.glob("lab-controller/triggers/sync/post/*"))),
+    ("/var/lib/cobbler/triggers/install/pre", filter(os.path.isfile, glob.glob("lab-controller/triggers/install/pre/*"))),
+    ("/var/lib/cobbler/kickstarts", filter(os.path.isfile, glob.glob("lab-controller/kickstarts/*"))),
+    ("/var/lib/cobbler/snippets", filter(os.path.isfile, glob.glob("lab-controller/snippets/*"))),
+    ("/usr/share/medusa", filter(os.path.isfile, glob.glob("apache/*.wsgi"))),
+    ("/var/www/beaker", ["lab-controller/aux/rhts-checkin"]),
+    ("/var/log/medusa", []),
+    ("/var/lib/medusa", []),
 ]
 
 packages=find_packages()
@@ -156,8 +167,8 @@ setup(
     scripts=[],
     zip_safe=False,
     data_files = data_files,
-    packages=find_packages(),
-    package_data=package_data,
+    packages = find_packages(),
+    package_data = package_data,
     keywords=[
         'turbogears.app',
     ],

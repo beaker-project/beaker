@@ -180,12 +180,16 @@ class LabControllers(RPCRoot):
         return distros
 
     @cherrypy.expose
-    def removeDistros(self, machine_account, labcontroller, distro_names):
+    def removeDistros(self, machine_account, lc_name, distro_names):
         """
         Push method for removing distros
         """
         distros = []
         deleteddistros = []
+        try:
+            labcontroller = LabController.by_name(lc_name)
+        except InvalidRequestError:
+            raise "Invalid Lab Controller"
         for distro_name in distro_names:
             try:
                 distro = Distro.by_install_name(distro_name)
@@ -209,12 +213,12 @@ class LabControllers(RPCRoot):
             now = time.time()
             # Cobbler old uri is _rw
             try:
-                url = "http://%s/cobbler_api_rw/" % labcontroller.fqdn
+                url = "http://%s/cobbler_api_rw" % labcontroller.fqdn
                 remote = xmlrpclib.ServerProxy(url)
                 token = remote.login(labcontroller.username,
                                      labcontroller.password)
             except ProtocolError:
-                url = "http://%s/cobbler_api/" % labcontroller.fqdn
+                url = "http://%s/cobbler_api" % labcontroller.fqdn
                 remote = xmlrpclib.ServerProxy(url)
                 token = remote.login(labcontroller.username,
                                      labcontroller.password)

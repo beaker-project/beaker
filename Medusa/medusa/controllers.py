@@ -13,6 +13,7 @@ from medusa.activity import Activities
 from medusa.widgets import myPaginateDataGrid
 from medusa.widgets import PowerTypeForm
 from medusa.widgets import PowerForm
+from medusa.widgets import LabInfoForm
 from medusa.widgets import PowerActionForm
 from medusa.widgets import SystemDetails
 from medusa.widgets import SystemHistory
@@ -32,6 +33,7 @@ from tg_expanding_form_widget.tg_expanding_form_widget import ExpandingForm
 from medusa.needpropertyxml import *
 from medusa.helpers import *
 from medusa.tools.init import dummy
+from decimal import Decimal
 
 from kid import Element
 import cherrypy
@@ -196,6 +198,13 @@ class Root(RPCRoot):
                                            result_name="matches")
     
 
+    loan_form     = widgets.TableForm(
+        'Loan',
+        fields = [id, autoUsers,],
+        action = 'save_data',
+        submit_text = _(u'Change'),
+    )
+
     owner_form    = widgets.TableForm(
         'Owner',
         fields = [id, autoUsers,],
@@ -210,6 +219,7 @@ class Root(RPCRoot):
                  )
     system_form = SystemForm()
     power_form = PowerForm(name='power')
+    labinfo_form = LabInfoForm(name='labinfo')
     power_action_form = PowerActionForm(name='power_action')
     system_details = SystemDetails()
     system_activity = SystemHistory()
@@ -459,6 +469,10 @@ class Root(RPCRoot):
                 options['owner_change_text'] = ' (Change)'
             else:
                 readonly = True
+            if system.can_loan(identity.current.user):
+                options['loan_text'] = ' (Loan)'
+            if system.current_loan(identity.current.user):
+                options['loan_text'] = ' (Return)'
             if system.can_share(identity.current.user):
                 options['user_change_text'] = ' (Take)'
             if system.current_user(identity.current.user):
@@ -487,6 +501,7 @@ class Root(RPCRoot):
             value    = system,
             options  = options,
             widgets         = dict( power     = self.power_form,
+                                    labinfo   = self.labinfo_form,
                                     details   = self.system_details,
                                     history   = self.system_activity,
                                     exclude   = self.system_exclude,
@@ -498,6 +513,7 @@ class Root(RPCRoot):
                                     power_action = self.power_action_form, 
                                     arches    = self.arches_form),
             widgets_action  = dict( power     = '/save_power',
+                                    labinfo   = '/save_labinfo',
                                     exclude   = '/save_exclude',
                                     keys      = '/save_keys',
                                     notes     = '/save_note',
@@ -507,6 +523,7 @@ class Root(RPCRoot):
                                     power_action = '/action_power',
                                     arches    = '/save_arch'),
             widgets_options = dict(power     = options,
+                                   labinfo   = options,
                                    exclude   = options,
                                    keys      = dict(readonly = readonly,
                                                 key_values_int = system.key_values_int,
@@ -528,6 +545,36 @@ class Root(RPCRoot):
          
     @expose(template='medusa.templates.form')
     @identity.require(identity.not_anonymous())
+    def loan_change(self, id):
+        try:
+            system = System.by_id(id,identity.current.user)
+        except InvalidRequestError:
+            flash( _(u"Unable to find system with id of %s" % id) )
+            redirect("/")
+        if system.loaned:
+            if system.current_loan(identity.current.user):
+                activity = SystemActivity(identity.current.user, 'WEBUI', 'Changed', 'Loaned To', '%s' % system.loaned, 'None')
+                system.activity.append(activity)
+                system.loaned = None
+                flash( _(u"Loan Returned for %s" % system.fqdn) )
+                redirect("/view/%s" % system.fqdn)
+            else:
+                flash( _(u"Insufficient permissions to return loan"))
+                redirect("/")
+        else:
+            if not system.can_loan(identity.current.user):
+                flash( _(u"Insufficient permissions to loan system"))
+                redirect("/")
+        return dict(
+            title   = "Loan system %s" % system.fqdn,
+            form = self.loan_form,
+            action = '/save_loan',
+            options = None,
+            value = {'id': system.id},
+        )
+
+    @expose(template='medusa.templates.form')
+    @identity.require(identity.not_anonymous())
     def owner_change(self, id):
         try:
             system = System.by_id(id,identity.current.user)
@@ -546,6 +593,25 @@ class Root(RPCRoot):
             value = {'id': system.id},
         )
             
+    @expose()
+    @identity.require(identity.not_anonymous())
+    def save_loan(self, id, *args, **kw):
+        try:
+            system = System.by_id(id,identity.current.user)
+        except InvalidRequestError:
+            flash( _(u"Unable to find system with id of %s" % id) )
+            redirect("/")
+
+        if not system.can_loan(identity.current.user):
+            flash( _(u"Insufficient permissions to loan system"))
+            redirect("/")
+        user = User.by_user_name(kw['user']['text'])
+        activity = SystemActivity(identity.current.user, 'WEBUI', 'Changed', 'Loaned To', 'None' , '%s' % user)
+        system.activity.append(activity)
+        system.loaned = user
+        flash( _(u"%s Loaned to %s" % (system.fqdn, user) ))
+        redirect("/view/%s" % system.fqdn)
+    
     @expose()
     @identity.require(identity.not_anonymous())
     def save_owner(self, id, *args, **kw):
@@ -588,6 +654,37 @@ class Root(RPCRoot):
         system.activity.append(activity)
         session.save_or_update(system)
         flash( _(u"%s %s" % (status,system.fqdn)) )
+        redirect("/view/%s" % system.fqdn)
+
+    @error_handler(view)
+    @expose()
+    @identity.require(identity.not_anonymous())
+    @validate(form=labinfo_form)
+    def save_labinfo(self, **kw):
+        try:
+            system = System.by_id(kw['id'],identity.current.user)
+        except InvalidRequestError:
+            flash( _(u"Unable to save Lab Info for %s" % kw['id']) )
+            redirect("/")
+        if system.labinfo:
+            labinfo = system.labinfo
+        else:
+            labinfo = LabInfo()
+
+        for field in LabInfo.fields:
+            if kw.get(field):
+                orig_value = getattr(labinfo, field)
+                # Convert to Decimal for Comparisons.
+                if type(orig_value) == Decimal:
+                    new_value = Decimal('%s' % kw[field])
+                else:
+                    new_value = kw[field]
+                if new_value != orig_value:
+                    activity = SystemActivity(identity.current.user, 'WEBUI', 'Changed', field, '%s' % orig_value, kw[field] )
+                    setattr(labinfo, field, kw[field])
+                    system.activity.append(activity)
+        system.labinfo = labinfo
+        flash( _(u"Saved Lab Info") )
         redirect("/view/%s" % system.fqdn)
 
     @error_handler(view)
@@ -697,29 +794,21 @@ class Root(RPCRoot):
             # catch nullable fields return None.
             if current_val == 'None':
                 current_val = ""
-            if kw.get(field):
-                if current_val != str(kw[field]):
-#                    sys.stderr.write("\nfield: " + field + ", Old: " +  current_val + ", New: " +  str(kw[field]) + " " +  "\n")
-                    activity = SystemActivity(identity.current.user, 'WEBUI', 'Changed', field, current_val, kw[field] )
-                    system.activity.append(activity)
-            else:
-                 if current_val != "":
-                    activity = SystemActivity(identity.current.user, 'WEBUI', 'Changed', field, current_val, "" )
-                    system.activity.append(activity)
+            new_val = str(kw.get(field) or "")
+            if current_val != new_val:
+#                sys.stderr.write("\nfield: " + field + ", Old: " +  current_val + ", New: " +  str(kw[field]) + " " +  "\n")
+                activity = SystemActivity(identity.current.user, 'WEBUI', 'Changed', field, current_val, new_val )
+                system.activity.append(activity)
         log_bool_fields = [ 'shared', 'private' ]
         for field in log_bool_fields:
             try:
                 current_val = str(system.__dict__[field])
             except KeyError:
                 current_val = ""
-            if kw.get(field):
-                if current_val != True:
-                    activity = SystemActivity(identity.current.user, 'WEBUI', 'Changed', field, current_val, "True" )
-                    system.activity.append(activity)
-            else:
-                if current_val != False:
-                    activity = SystemActivity(identity.current.user, 'WEBUI', 'Changed', field, current_val, "False" )
-                    system.activity.append(activity)
+            new_val = str(kw.get(field) or False)
+            if current_val != new_val:
+                activity = SystemActivity(identity.current.user, 'WEBUI', 'Changed', field, current_val, new_val )
+                system.activity.append(activity)
         system.status_id=kw['status_id']
         system.location=kw['location']
         system.model=kw['model']

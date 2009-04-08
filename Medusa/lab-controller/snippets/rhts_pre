@@ -1,16 +1,4 @@
 $kickstart_start
-# Add Distro Repos
-PIFS=$IFS
-IFS=":"
-set -- $tree_repos
-let count=1
-for repo in $*; do
-   cat << EOF >>/tmp/distro.repo
-repo --name=distro$count --baseurl=http://$server/distros$repo
-EOF
-let count+=1
-done
-IFS=$PIPFS
 
 $SNIPPET('pre_install_network_config')
 # Enable rhts watchdog checkin
