@@ -15,10 +15,10 @@
 
 test_rlAssertRpm() {
   local first=$( rpm -qa --qf "%{NAME}.%{ARCH}\n" | tail -n 1 )
-  local first_n=$( rpm -q $first --qf "%{NAME}\n" )
-  local first_v=$( rpm -q $first --qf "%{VERSION}\n" )
-  local first_r=$( rpm -q $first --qf "%{RELEASE}\n" )
-  local first_a=$( rpm -q $first --qf "%{ARCH}\n" )
+  local first_n=$( rpm -q $first --qf "%{NAME}\n" | tail -n 1 )
+  local first_v=$( rpm -q $first --qf "%{VERSION}\n" | tail -n 1 )
+  local first_r=$( rpm -q $first --qf "%{RELEASE}\n" | tail -n 1 )
+  local first_a=$( rpm -q $first --qf "%{ARCH}\n" | tail -n 1 )
   rlJournalStart
 
   assertTrue "rlAssertRpm returns 0 on installed 'N' package" \
@@ -49,10 +49,10 @@ test_rlAssertRpm() {
 
 test_rlAssertNotRpm() {
   local first=$( rpm -qa --qf "%{NAME}.%{ARCH}\n" | tail -n 1 )
-  local first_n=$( rpm -q $first --qf "%{NAME}\n" )
-  local first_v=$( rpm -q $first --qf "%{VERSION}\n" )
-  local first_r=$( rpm -q $first --qf "%{RELEASE}\n" )
-  local first_a=$( rpm -q $first --qf "%{ARCH}\n" )
+  local first_n=$( rpm -q $first --qf "%{NAME}\n" | tail -n 1 )
+  local first_v=$( rpm -q $first --qf "%{VERSION}\n" | tail -n 1 )
+  local first_r=$( rpm -q $first --qf "%{RELEASE}\n" | tail -n 1 )
+  local first_a=$( rpm -q $first --qf "%{ARCH}\n" | tail -n 1 )
 
   assertFalse "rlAssertNotRpm returns non-0 on installed 'N' package" \
     "rlAssertNotRpm $first_n"
@@ -86,10 +86,10 @@ test_rlAssertNotRpm() {
 
 test_rlCheckRpm() {
   local first=$( rpm -qa --qf "%{NAME}.%{ARCH}\n" | tail -n 1 )
-  local first_n=$( rpm -q $first --qf "%{NAME}\n" )
-  local first_v=$( rpm -q $first --qf "%{VERSION}\n" )
-  local first_r=$( rpm -q $first --qf "%{RELEASE}\n" )
-  local first_a=$( rpm -q $first --qf "%{ARCH}\n" )
+  local first_n=$( rpm -q $first --qf "%{NAME}\n" | tail -n 1 )
+  local first_v=$( rpm -q $first --qf "%{VERSION}\n" | tail -n 1 )
+  local first_r=$( rpm -q $first --qf "%{RELEASE}\n" | tail -n 1 )
+  local first_a=$( rpm -q $first --qf "%{ARCH}\n" | tail -n 1 )
 
   : > $OUTPUTFILE
   assertTrue "rlRpmPresent returns 0 on installed 'N' package" \
