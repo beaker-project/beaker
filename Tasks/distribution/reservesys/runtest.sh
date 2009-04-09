@@ -44,16 +44,19 @@ MOTD()
     echo "                                                                      " >> $FILE
     echo " You should verify the watchdog was update succesfully after          " >> $FILE
     echo "  you extend your reservation.                                        " >> $FILE
-    echo "  http://$LAB_SERVER/cgi-bin/rhts/watchdog.cgi                        " >> $FILE
+    echo "  http://$RESULT_SERVER/cgi-bin/rhts/watchdog.cgi                     " >> $FILE
     echo "                                                                      " >> $FILE
     echo " For ssh, kvm, serial and power control operations please look here:  " >> $FILE
-    echo "  http://$LAB_SERVER/cgi-bin/rhts/systems.cgi?fqdn=$HOSTNAME          " >> $FILE
+    if [ -z "$LAB_SERVER" ]; then
+	echo "  https://inventory.engineering.redhat.com/view/$HOSTNAME          " >> $FILE
+    else
+	echo "  http://$LAB_SERVER/cgi-bin/rhts/systems.cgi?fqdn=$HOSTNAME          " >> $FILE
+    fi
     echo "                                                                      " >> $FILE
     echo "      RHTS Test information:                                          " >> $FILE
     echo "                         HOSTNAME=$HOSTNAME                           " >> $FILE
     echo "                            JOBID=$JOBID                              " >> $FILE
     echo "                         RECIPEID=$RECIPEID                           " >> $FILE
-    echo "                       LAB_SERVER=$LAB_SERVER                         " >> $FILE
     echo "                    RESULT_SERVER=$RESULT_SERVER                      " >> $FILE
     echo "                           DISTRO=$DISTRO                             " >> $FILE
     echo "                     ARCHITECTURE=$ARCH                               " >> $FILE
@@ -153,7 +156,7 @@ NOTIFY()
 
 WATCHDOG()
 {
-    rhts-test-checkin $LAB_SERVER $HOSTNAME $JOBID $TEST $ARCH $SLEEPTIME $TESTID
+    rhts-test-checkin $RESULT_SERVER $HOSTNAME $JOBID $TEST $SLEEPTIME $TESTID
 }
 
 if [ -z "$RESERVETIME" ]; then
