@@ -255,5 +255,18 @@ test_rlWatchdog(){
 
 test_rlReport(){
 	#placeholder for making  testCoverage ignore this helper
-	echo "no idea how to test rlReport"
+  rlJournalStart
+  rlPhaseStartSetup
+  for res in PASS FAIL WARN
+  do
+    OUT="`rlReport TEST $res | grep ANCHOR`"
+    assertTrue "testing basic rlReport functionality" "[ \"$OUT\" == \"ANCHOR NAME: TEST\nRESULT: $res\n LOGFILE: $OUTPUTFILE\nSCORE: \" ]"
+    OUT="`rlReport \"TEST TEST\" $res | grep ANCHOR`"
+    assertTrue "testing if rlReport can handle spaces in test name" "[ \"$OUT\" == \"ANCHOR NAME: TEST TEST\nRESULT: $res\n LOGFILE: $OUTPUTFILE\nSCORE: \" ]"
+    OUT="`rlReport \"TEST\" $res 5 \"/tmp/logname\" | grep ANCHOR`"
+    assertTrue "testing if rlReport can handle all arguments" "[ \"$OUT\" == \"ANCHOR NAME: TEST\nRESULT: $res\n LOGFILE: /tmp/logname\nSCORE: 5\" ]"
+    OUT="`rlReport \"TEST TEST\" $res 8 \"/tmp/log name\" | grep ANCHOR`"
+    assertTrue "testing if rlReport can handle spaces in test name and log file" "[ \"$OUT\" == \"ANCHOR NAME: TEST TEST\nRESULT: $res\n LOGFILE: /tmp/log name\nSCORE: 8\" ]"
+  done
+  rlPhaseEnd
 }
