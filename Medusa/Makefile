@@ -57,4 +57,4 @@ rpms: rpm
 rpm: dist
 	rpmbuild $(RPMBUILDOPTS) -tb dist/${PKGNAME}-${VERSION}.tar.bz2
 
-.PHONY: docs test todo clean dist build install srpm pyflakes shell init run install-deps
+.PHONY: docs test todo clean dist build install srpm rpm rpms pyflakes shell init run install-deps
