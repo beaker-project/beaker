@@ -4,6 +4,7 @@ import sys, os
 import xmlrpclib
 from datetime import datetime
 from datetime import timedelta
+import cobbler.api as capi
 
 if __name__ == '__main__':
     expiredelta = datetime.now() + timedelta(weeks=-1)
@@ -14,7 +15,7 @@ if __name__ == '__main__':
     rdistros = []
     for distro in distros:
         if not os.path.exists(distro.kernel):
-            remote.remove_distro(distro.name, token)
+            bootapi.remove_distro(distro, recursive=True)
             rdistros.append(distro.name)
             continue
         if 'tree' in distro.ks_meta:
