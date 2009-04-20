@@ -10,6 +10,7 @@ import xmlrpclib
 import cpioarchive
 import string
 import cobbler.api as capi
+from ConfigParser import ConfigParser
 
 def rpm2cpio(rpm_file, out=sys.stdout, bufsize=2048):
     """Performs roughly the equivalent of rpm2cpio(8).
@@ -170,12 +171,30 @@ def update_comment(distro):
                 update = updateregex.search(release).group(1)
             if releaseregex.search(release):
                 update = releaseregex.search(release).group(1)
-    if os.path.exists("%s/.discinfo" % paths['tree_path']):
+    if os.path.exists("%s/.treeinfo" % paths['tree_path']):
+        update = 0
+        parser = ConfigParser()
+        parser.read("%s/.treeinfo" % paths['tree_path'])
+        try:
+            family  = parser.get('general','family').replace(" ","")
+        except ConfigParser.NoSectionError:
+            pass
+        try:
+            version = parser.get('general', 'version').replace("-",".")
+        except ConfigParser.NoSectionError:
+            pass
+        family = "%s%s" % ( family, version.split('.')[0] )
+        if version.find('.') != -1:
+            update = version.split('.')[1]
+    elif os.path.exists("%s/.discinfo" % paths['tree_path']):
+        update = 0
         discinfo = open("%s/.discinfo" % paths['tree_path'], "r")
         familyupdate = discinfo.read().split("\n")[1]
         family = familyupdate.split(".")[0].replace(" ","")
-        update = familyupdate.split(".")[1].replace(" ","")
+        if familyupdate.find('.') != -1:
+            update = familyupdate.split(".")[1].replace(" ","")
         discinfo.close()
+        
     comment = "%s\nfamily=%s.%s" % (distro.comment, family, update)
     distro.set_comment(comment)
     bootapi.add_distro(distro)
