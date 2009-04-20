@@ -1,4 +1,42 @@
 zerombr
 clearpart --all --initlabel
-%include /tmp/partinfo
 
+#if $getVar('partitions', '') != ''
+
+## Arch Specific Boot requirements
+#if $arch == 'ia64'
+part /boot/efi --fstype vfat --size 200 --recommended
+#elif $arch.startswith('ppc')
+part None --fstype 'PPC PReP Boot' --size 8
+part /boot --fstype ext3 --size 200 --recommended
+#else
+part /boot --fstype ext3 --size 200 --recommended
+#end if
+
+## Basic root Filesystem plus Swap
+part / --fstype ext3 --size 1024 --grow --asprimary
+part swap --recommended --asprimary
+
+## Loop through partitions variable and create appropriate part commands
+## partitions=partitions=rhel5_pv_guest.img:lvm:10;rhel5_hvm_guest.img:lvm:10
+#set is_lvm = 0
+#set _partitions = $getVar('partitions','').split(';')
+#for $_partition in $_partitions:
+#set partition = $_partition.split(':')
+#if len($partition) == 3
+#if $partition[1] == 'part'
+part /$partition[0] --fstype ext3 --size=$partition[2]
+#end if
+#if $partition[1] == 'lvm'
+#set is_lvm = $is_lvm + 1
+part pv.00$is_lvm --size=$partition[2]
+volgroup TestVolume00$is_lvm pv.00$is_lvm
+logvol /$partition[0] --fstype ext3 --name=$partition[0] --vgname=TestVolume00$is_lvm --size=$partition[2]
+#end if
+#end if
+#end for
+
+#else
+## No special partitions requested. Let Anaconda do what it thinks is right.
+autopart
+#end if

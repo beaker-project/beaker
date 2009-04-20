@@ -1,0 +1,11 @@
+## Only load the following devices if $devices is set
+## scsidevices=qla2xxx,megaraid_mbox
+## ethdevices=tg3,e1000
+#if $getVar('scsidevices', '') != ''
+#set $scsidevices = $getVar('scsidevices','').split(',')
+device scsi #echo ':'.join($scsidevices)
+#end if
+#if $getVar('ethdevices', '') != ''
+#set $ethdevices = $getVar('ethdevices','').split(',')
+device eth #echo ':'.join($ethdevices)
+#end if

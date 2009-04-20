@@ -48,9 +48,9 @@ xconfig --startxonboot
 timezone  $getVar('timezone', 'America/New_York')
 # Install OS instead of upgrade
 install
-#if not $getVar('arch', '').startswith('s390')
-network --bootproto=dhcp
-#end if
+
+$SNIPPET("RedHatEnterpriseLinuxServer5")
+$SNIPPET("rhts_scsi_ethdevices")
 $SNIPPET("rhts_partitions")
 
 %packages --resolvedeps --ignoremissing
@@ -85,7 +85,9 @@ $SNIPPET("rhts_packages")
 
 #end if
 %pre
+$SNIPPET("RedHatEnterpriseLinuxServer5_pre")
 $SNIPPET("rhts_pre")
 
 %post
+$SNIPPET("RedHatEnterpriseLinuxServer5_post")
 $SNIPPET("rhts_post")

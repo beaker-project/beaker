@@ -25,8 +25,9 @@ skipx
 timezone  $getVar('timezone', 'America/New_York')
 # Install OS instead of upgrade
 install
-network --bootproto=dhcp
 
+$SNIPPET("Fedora")
+$SNIPPET("rhts_devices")
 $SNIPPET("rhts_partitions")
 
 %packages --ignoremissing
@@ -34,7 +35,9 @@ $SNIPPET("rhts_packages")
 
 #end if
 %pre
+$SNIPPET("Fedora_pre")
 $SNIPPET("rhts_pre")
 
 %post
+$SNIPPET("Fedora_post")
 $SNIPPET("rhts_post")

@@ -50,22 +50,19 @@ popd
 #end if
 
 # Add Distro Repos
-PIFS=$IFS
-IFS=":"
-set -- $tree_repos
-let count=1
-for repo in $*; do
-    cat << EOF >>/etc/yum.repos.d/distro.repo
-[distro$count]
-name=distro$count
+#if $getVar('tree_repos','') != ''
+cat << EOF >> /etc/yum.repos.d/distro.repo
+#set $i = 0
+#for $repo in $getVar('tree_repos','').split(':')
+#set $i = $i + 1
+[distro$i]
+name=distro$i
 baseurl=http://$server/distros$repo
 enabled=1
 gpgcheck=0
-
+#end for
 EOF
-let count+=1
-done
-IFS=$PIPFS
+#end if
 
 #if $getVar('rhts_server','') != ''
 # Add RHTS Test Repo
@@ -78,22 +75,20 @@ gpgcheck=0
 
 EOF
 
-PIFS=$IFS
-IFS="|"
-set -- $customrepos
-let count=1
-for repo in $*; do
-    cat << EOF >>/etc/yum.repos.d/rhts-custom.repo
-[rhts-custom$count]
-name=rhts-custom$count
+# Add Custom Repos
+#if $getVar('customrepos','') != ''
+cat << EOF >>/etc/yum.repos.d/rhts-custom.repo
+#set $i = 0
+#for $repo in $getVar('customrepos','').split('|')
+#set $i = $i + 1
+[customrepo$i]
+name=customrepo$i
 baseurl=$repo
 enabled=1
 gpgcheck=0
-
+#end for
 EOF
-let count+=1
-done
-IFS=$PIPFS
+#end if
 
 # Install RHTS RPMS
 yum -y install rhts-test-env-lab rhts-legacy
@@ -106,3 +101,4 @@ chmod 755 /mnt/tests/runtests.sh
 #Add test user account
 useradd --password '$6$oIW3o2Mr$XbWZKaM7nA.cQqudfDJScupXOia5h1u517t6Htx/Q/MgXm82Pc/OcytatTeI4ULNWOMJzvpCigWiL4xKP9PX4.' test
 $kickstart_done
+$SNIPPET('post_s390_reboot')

@@ -26,10 +26,8 @@ timezone  America/New_York
 # Install OS instead of upgrade
 install
 
-#if not $getVar('arch', '').startswith('s390')
-network --bootproto=dhcp
-#end if
-
+$SNIPPET("RedHatEnterpriseLinux3")
+$SNIPPET("rhts_scsi_ethdevices")
 $SNIPPET("rhts_partitions")
 
 %packages --resolvedeps --ignoremissing
@@ -37,7 +35,9 @@ $SNIPPET("rhts_packages")
 
 #end if
 %pre
+$SNIPPET("RedHatEnterpriseLinux3_pre")
 $SNIPPET("rhts_pre")
 
 %post
+$SNIPPET("RedHatEnterpriseLinux3_post")
 $SNIPPET("rhts_post")

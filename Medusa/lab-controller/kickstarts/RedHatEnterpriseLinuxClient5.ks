@@ -48,8 +48,9 @@ xconfig --startxonboot
 timezone  $getVar('timezone', 'America/New_York')
 # Install OS instead of upgrade
 install
-network --bootproto=dhcp
 
+$SNIPPET("RedHatEnterpriseLinuxClient5")
+$SNIPPET("rhts_scsi_ethdevices")
 $SNIPPET("rhts_partitions")
 
 %packages --resolvedeps --ignoremissing
@@ -84,7 +85,9 @@ $SNIPPET("rhts_packages")
 
 #end if
 %pre
+$SNIPPET("RedHatEnterpriseLinuxClient5_pre")
 $SNIPPET("rhts_pre")
 
 %post
+$SNIPPET("RedHatEnterpriseLinuxClient5_post")
 $SNIPPET("rhts_post")

@@ -43,10 +43,9 @@ skipx
 timezone  $getVar('timezone', 'America/New_York')
 # Install OS instead of upgrade
 install
-#if not $getVar('arch', '').startswith('s390')
-network --bootproto=dhcp
-#end if
 
+$SNIPPET("RedHatEnterpriseLinux4")
+$SNIPPET("rhts_scsi_ethdevices")
 $SNIPPET("rhts_partitions")
 
 %packages --resolvedeps --ignoremissing
@@ -71,7 +70,9 @@ $SNIPPET("rhts_packages")
 
 #end if
 %pre
+$SNIPPET("RedHatEnterpriseLinux4_pre")
 $SNIPPET("rhts_pre")
 
 %post
+$SNIPPET("RedHatEnterpriseLinux4_post")
 $SNIPPET("rhts_post")

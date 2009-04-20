@@ -4,5 +4,12 @@ libxml2-python
 ntp
 expect
 pyOpenSSL
-%include /tmp/packages
+## If packages variable is set add additional packages to this install
+## packages=httpd:selinux:kernel
+#if $getVar('packages', '') != ''
+#set _packages = $getVar('packages','').split(':')
+#for $package in $_packages:
+$package
+#end for
+#end if
 $SNIPPET('func_install_if_enabled')

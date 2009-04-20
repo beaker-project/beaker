@@ -1,80 +1,12 @@
 $kickstart_start
 
 $SNIPPET('pre_install_network_config')
-# Enable rhts watchdog checkin
+
+## Enable rhts watchdog checkin
 #if $getVar('rhts_server','') != ''
 wget -O /tmp/rhts-checkin "http://$server/beaker/rhts-checkin"
 python /tmp/rhts-checkin --name "$name" --server "$rhts_server" --recipeid "$recipeid"
 #end if
-# Enable installation monitoring
+
+## Enable installation monitoring
 $SNIPPET('pre_anamon')
-
-# partition details calculation
-
-#if $getVar('partitions','') != ''
-# Determine how many drives we have
-set \$(list-harddrives)
-let numd=\$#/2
-d1=\$1
-d2=\$3
-
-# Determine architecture-specific partitioning needs
-EFI_PART=""
-PPC_PREP_PART=""
-BOOT_PART=""
-
-case $(uname -m) in
-    ia64)
-        EFI_PART="part /boot/efi --fstype vfat --size 200 --recommended"
-        ;;
-    ppc*)
-        PPC_PREP_PART="part None --fstype 'PPC PReP Boot' --size 8"
-        BOOT_PART="part /boot --fstype ext3 --size 200 --recommended"
-        ;;
-    *)
-        BOOT_PART="part /boot --fstype ext3 --size 200 --recommended"
-        ;;
-esac
-
-
-cat << EOF > /tmp/partinfo
-\$EFI_PART
-\$PPC_PREP_PART
-\$BOOT_PART
-part / --fstype ext3 --size=1024 --grow --ondisk=\$d1 --asprimary
-part swap --recommended --ondisk=\$d1 --asprimary
-EOF
-
-PIFS=$IFS
-IFS=";"
-set -- $partitions
-for partition in $*; do
-    IFS=:
-    set -- $partition
-    if [ "$2" = "part" ]; then
-        echo "part /$1 --fstype ext3 --size=$3" >>/tmp/partinfo
-    fi
-    if [ "$2" = "lvm" ]; then
-        is_lvm=$(($is_lvm + 1))
-        echo "part pv.00$is_lvm --size=$3" >>/tmp/partinfo
-        echo "volgroup VirtVolume00$is_lvm pv.00$is_lvm" >>/tmp/partinfo
-        echo "logvol /$1 --fstype ext3 --name=$1 --vgname=VirtVolume00$is_lvm --size=$3" >>/tmp/partinfo
-    fi
-done
-IFS=$PIPFS
-#end if
-
-#if $getVar('partitions','') == ''
-cat << EOF > /tmp/partinfo
-autopart
-EOF
-#end if
-
-PIFS=$IFS
-IFS=:
-set -- $packages
->/tmp/packages
-for package in $*; do
-    echo $package >>/tmp/packages
-done
-IFS=$PIPFS
