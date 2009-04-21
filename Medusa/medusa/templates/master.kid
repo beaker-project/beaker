@@ -24,6 +24,7 @@
 
 <?python
 from medusa.model import device_classes
+from medusa.model import system_types
 ?>
 <script type="text/javascript" py:if="'admin' in tg.identity.groups">
 $(document).ready(function() {
@@ -59,6 +60,8 @@ $(document).ready(function() {
                             <li><a href="${tg.url('/groups')}">Groups</a></li>
                             <li><a href="${tg.url('/powertypes')}">Power Types</a></li>
                             <li><a href="${tg.url('/keytypes')}">Key Types</a></li>
+                            <li><a href="${tg.url('/csv/csv_import')}">Import</a></li>
+                            <li><a href="${tg.url('/csv')}">Export</a></li>
                         </ul>
                     </div>
                 </ul>
@@ -68,6 +71,11 @@ $(document).ready(function() {
                 <li py:if="not tg.identity.anonymous"><a href="${tg.url('/available/')}">Available Systems</a></li>
                 <li py:if="not tg.identity.anonymous"><a href="${tg.url('/free/')}">Free Systems</a></li>
                 <li><a href="${tg.url('/')}">All Systems</a></li>
+                <ul>
+                    <li py:for="type in system_types()">
+                      <a href="${tg.url('.', type = type.type)}">${type.type}</a>
+                    </li>
+                </ul>
                 <li><a href="${tg.url('/devices')}">Devices</a>
                 <ul>
                     <li py:for="device_class in device_classes()">

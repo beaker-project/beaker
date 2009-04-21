@@ -15,16 +15,28 @@ from model import *
 import string
 import csv
 
+def smart_bool(s):
+    if s is True or s is False:
+        return s
+    t = str(s).strip().lower()
+    if t == 'true':
+        return True
+    if t == 'false':
+        return False
+    return s
+
 class CSV(RPCRoot):
     # For XMLRPC methods in this class.
     exposed = False
 
     upload     = widgets.FileField(name='csv_file', label='Import CSV')
     download   = widgets.RadioButtonList(name='csv_type', label='CSV Type',
-                               options=[('system', 'System'), 
-                                        ('labinfo', 'LabInfo'), 
-                                        ('exclude', 'Excluded Families'), 
-                                        ('install', 'Install Options')], 
+                               options=[('system', 'Systems'), 
+                                        ('labinfo', 'System LabInfo'), 
+                                        ('exclude', 'System Excluded Families'), 
+                                        ('install', 'System Install Options'),
+                                        ('keyvalue', 'System Key/Values'),
+                                        ('system_groups', 'System Groups')], 
                                                            default='system')
 
     importform = widgets.TableForm(
@@ -130,9 +142,31 @@ class CSV(RPCRoot):
             csv_type = data['csv_type']
             # Remove csv_type now that we know what we want to do.
             data.pop('csv_type')
-            log = csv_types[csv_type]._from_csv(system,data)
+            log = csv_types[csv_type]._from_csv(system,data,csv_type)
         else:
             log.append("Invalid csv_type %s" % data['csv_type'])
+        return log
+
+    @classmethod
+    def _from_csv(cls,system,data,csv_type=None):
+        """
+        Import data from CSV file into LabInfo Objects
+        """
+        log = []
+        csv_object = getattr(system, csv_type, None)
+        for key in data.keys():
+            if key in cls.csv_keys:
+                current_data = getattr(csv_object, key, None)
+                if data[key]:
+                    newdata = smart_bool(data[key])
+                else:
+                    newdata = None
+                if str(newdata) != str(current_data):
+                    activity = SystemActivity(identity.current.user, 'CSV', 'Changed', key, '%s' % current_data, '%s' % newdata)
+                    system.activity.append(activity)
+                    log.append("%s: %s Changed from %s to %s" % (system.fqdn, key, current_data, newdata))
+                    setattr(csv_object,key,newdata)
+
         return log
 
     def to_datastruct(self):
@@ -143,10 +177,14 @@ class CSV(RPCRoot):
 
 class CSV_System(CSV):
     csv_type = 'system'
-    csv_keys = ['fqdn', 'arch', 'deleted', 'lab_controller',
-                'lender', 'location', 'mac_address', 'memory', 'model',
-                'owner', 'secret', 'serial', 'shared', 'status',
-                'type', 'vendor']
+    reg_keys = ['fqdn', 'deleted', 'lender', 'location', 
+                'mac_address', 'memory', 'model',
+                'serial', 'shared', 'vendor']
+
+    spec_keys = ['arch', 'lab_controller', 'owner', 
+                 'secret', 'status','type']
+
+    csv_keys = reg_keys + spec_keys
 
     @classmethod
     def query(cls):
@@ -154,11 +192,108 @@ class CSV_System(CSV):
             yield CSV_System(system)
 
     @classmethod
-    def _from_csv(cls,system,data):
+    def _from_csv(cls,system,data,csv_type=None):
         """
-        Import data from CSV file into System Objects
+        Import data from CSV file into LabInfo Objects
         """
         log = []
+        for key in data.keys():
+            if key in cls.reg_keys:
+                if data[key]:
+                    newdata = smart_bool(data[key])
+                else:
+                    newdata = None
+                current_data = getattr(system, key, None)
+                if str(newdata) != str(current_data):
+                    activity = SystemActivity(identity.current.user, 'CSV', 'Changed', key, '%s' % current_data, '%s' % newdata)
+                    system.activity.append(activity)
+                    log.append("%s: %s Changed from %s to %s" % (system.fqdn, key, current_data, newdata))
+                    setattr(system,key,newdata)
+
+        # import arch
+        if 'arch' in data:
+            arch_objs = []
+            if data['arch']:
+                arches = data['arch'].split(',')
+                for arch in arches:
+                    arch_objs.append(Arch.by_name(arch))
+            if system.arch != arch_objs:
+                activity = SystemActivity(identity.current.user, 'CSV', 'Changed', 'arch', '%s' % system.arch, '%s' % arch_objs)
+                system.activity.append(activity)
+                log.append("%s: %s Changed from %s to %s" % (system.fqdn, 'lab_controller', system.arch, arch_objs))
+                system.arch = arch_objs
+
+        # import labController
+        if 'lab_controller' in data:
+            if data['lab_controller']:
+                try:
+                    lab_controller = LabController.by_name(data['lab_controller'])
+                except InvalidRequestError:
+                    log.append("Invalid lab controller %s" % data['lab_controller'])
+                    return log
+            else:
+                lab_controller = None
+            if system.lab_controller != lab_controller:
+                activity = SystemActivity(identity.current.user, 'CSV', 'Changed', 'lab_controller', '%s' % system.lab_controller, '%s' % lab_controller)
+                system.activity.append(activity)
+                log.append("%s: %s Changed from %s to %s" % (system.fqdn, 'lab_controller', system.lab_controller, lab_controller))
+                system.lab_controller = lab_controller
+            
+        # import owner
+        if 'owner' in data:
+            if data['owner']:
+                owner = User.by_user_name(data['owner'])
+                if not owner:
+                    log.append("Invalid User %s" % data['owner'])
+                    return log
+            else:
+                owner = None
+            if system.owner != owner:
+                activity = SystemActivity(identity.current.user, 'CSV', 'Changed', 'owner', '%s' % system.owner, '%s' % owner)
+                system.activity.append(activity)
+                log.append("%s: %s Changed from %s to %s" % (system.fqdn, 'owner', system.owner, owner))
+                system.owner = owner
+        # import status
+        if 'status' in data:
+            if not data['status']:
+                log.append("Invalid Status None")
+                return log
+            try:
+                systemstatus = SystemStatus.by_name(data['status'])
+            except InvalidRequestError:
+                log.append("Invalid Status %s" % data['status'])
+                return log
+            if system.status != systemstatus:
+                activity = SystemActivity(identity.current.user, 'CSV', 'Changed', 'status', '%s' % system.status, '%s' % systemstatus)
+                system.activity.append(activity)
+                log.append("%s: %s Changed from %s to %s" % (system.fqdn, 'status', system.status, systemstatus))
+                system.status = systemstatus
+        # import type
+        if 'type' in data:
+            if not data['type']:
+                log.append("Invalid Type None")
+                return log
+            try:
+                systemtype = SystemType.by_name(data['type'])
+            except InvalidRequestError:
+                log.append("Invalid Type %s" % data['type'])
+                return log
+            if system.type != systemtype:
+                activity = SystemActivity(identity.current.user, 'CSV', 'Changed', 'type', '%s' % system.type, '%s' % systemtype)
+                system.activity.append(activity)
+                log.append("%s: %s Changed from %s to %s" % (system.fqdn, 'type', system.type, systemtype))
+                system.type = systemtype
+        # import secret
+        if 'secret' in data:
+            if not data['secret']:
+                log.append("Invalid secret None")
+                return log
+            newdata = smart_bool(data['secret'])
+            if system.private != newdata:
+                activity = SystemActivity(identity.current.user, 'CSV', 'Changed', 'secret', '%s' % system.private, '%s' % newdata)
+                system.activity.append(activity)
+                log.append("%s: %s Changed from %s to %s" % (system.fqdn, 'secret', system.private, newdata))
+                system.private = newdata
 
         return log
 
@@ -190,15 +325,6 @@ class CSV_LabInfo(CSV):
         for labinfo in LabInfo.query():
             yield CSV_LabInfo(labinfo)
 
-    @classmethod
-    def _from_csv(cls,system,data):
-        """
-        Import data from CSV file into LabInfo Objects
-        """
-        log = []
-
-        return log
-
     def __init__(self, labinfo):
         self.labinfo = labinfo
         self.fqdn = labinfo.system.fqdn
@@ -221,7 +347,7 @@ class CSV_Exclude(CSV):
             yield CSV_Exclude(exclude)
 
     @classmethod
-    def _from_csv(cls,system,data):
+    def _from_csv(cls,system,data,csv_type=None):
         """
         Import data from CSV file into System Objects
         """
@@ -239,10 +365,10 @@ class CSV_Exclude(CSV):
                     system.excluded_osversion.append(exclude_osversion)
                     activity = SystemActivity(identity.current.user, 'CSV', 'Added', 'Excluded_families', '', '%s/%s' % (osversion, arch))
                     system.activity.append(activity)
-                    log.append("Adding %s.%s exclude to host %s" % (
+                    log.append("%s: Added %s.%s exclude%s" % (
+                                                                system.fqdn,
                                                                 data['family'],
                                                                 data['update'],
-                                                                system.fqdn
                                                                    )
                               )
             else:
@@ -252,10 +378,10 @@ class CSV_Exclude(CSV):
                             activity = SystemActivity(identity.current.user, 'CSV', 'Removed', 'Excluded_families', '%s/%s' % (old_osversion.osversion, arch),'')
                             system.activity.append(activity)
                             session.delete(old_osversion)
-                            log.append("Removing %s.%s exclude from host %s" % (
+                            log.append("%s: Removed %s.%s exclude" % (
+                                                                system.fqdn,
                                                                 data['family'],
                                                                 data['update'],
-                                                                system.fqdn
                                                                        )
                                       )
 
@@ -267,9 +393,9 @@ class CSV_Exclude(CSV):
                     system.excluded_osmajor.append(exclude_osmajor)
                     activity = SystemActivity(identity.current.user, 'CSV', 'Added', 'Excluded_families', '', '%s/%s' % (osmajor, arch))
                     system.activity.append(activity)
-                    log.append("Adding %s exclude to host %s" % (
+                    log.append("%s: Added %s exclude" % (
+                                                                system.fqdn,
                                                                 data['family'],
-                                                                system.fqdn
                                                                    )
                               )
             else:
@@ -279,9 +405,9 @@ class CSV_Exclude(CSV):
                             activity = SystemActivity(identity.current.user, 'CSV', 'Removed', 'Excluded_families', '%s/%s' % (old_osmajor.osmajor, arch),'')
                             system.activity.append(activity)
                             session.delete(old_osmajor)
-                            log.append("Removing %s exclude from host %s" % (
+                            log.append("%s: Removed %s exclude" % (
+                                                                system.fqdn,
                                                                 data['family'],
-                                                                system.fqdn
                                                                        )
                                       )
 
@@ -308,11 +434,99 @@ class CSV_Install(CSV):
             yield CSV_Install(install)
 
     @classmethod
-    def _from_csv(cls,system,data):
+    def _from_csv(cls,system,data,csv_type=None):
         """
         Import data from CSV file into System Objects
         """
         log = []
+        family = None
+        update = None
+
+        # Arch is required
+        if 'arch' in data:
+            arch = Arch.by_name(data['arch'])
+        else:
+            log.append("Error! Missing arch")
+            return log
+
+        # pull in update and family if present
+        if 'family' in data:
+            family = data['family']
+            if family:
+                try:
+                    family = OSMajor.by_name(family)
+                except InvalidRequestError:
+                    log.append("Error! Invalid family %s" % data['family'])
+                    return log
+        if 'update' in data:
+            update = data['update']
+            if update:
+                if not family:
+                    log.append("Error! You must specify Family along with Update")
+                    return log
+                try:
+                    update = OSVersion.by_name(family, update)
+                except InvalidRequestError:
+                    log.append("Error! Invalid update %s" % data['update'])
+                    return log
+
+        #Import Update specific
+        if update and family:
+            if system.provisions.has_key(arch):
+                system_arch = system.provisions[arch]
+            else:
+                system_arch = Provision(arch=arch)
+                system.provisions[arch] = system_arch
+
+            if system_arch.provision_families.has_key(family):
+                system_provfam = system_arch.provision_families[family]
+            else:
+                system_provfam = ProvisionFamily(osmajor=family)
+                system_arch.provision_families[family] = system_provfam
+
+            if system_provfam.provision_family_updates.has_key(update):
+                prov = system_provfam.provision_family_updates[update]
+            else:
+                prov = ProvisionFamilyUpdate(osversion=update)
+                system_provfam.provision_family_updates[update] = prov
+                       
+        #Import Family specific
+        if family and not update:
+            if system.provisions.has_key(arch):
+                system_arch = system.provisions[arch]
+            else:
+                system_arch = Provision(arch=arch)
+                system.provisions[arch] = system_arch
+
+            if system_arch.provision_families.has_key(family):
+                prov = system_arch.provision_families[family]
+            else:
+                prov = ProvisionFamily(osmajor=family)
+                system_arch.provision_families[family] = prov
+                       
+        #Import Arch specific
+        if not family and not update:
+            if system.provisions.has_key(arch):
+                prov = system.provisions[arch]
+            else:
+                prov = Provision(arch=arch)
+                system.provisions[arch] = prov
+
+        if 'ks_meta' in data and prov.ks_meta != data['ks_meta']:
+            log.append("%s: ks_meta changed from %s to %s" % (system.fqdn,
+                                                              prov.ks_meta,
+                                                              data['ks_meta']))
+            prov.ks_meta = data['ks_meta']
+        if 'kernel_options' in data and prov.kernel_options != data['kernel_options']:
+            log.append("%s: kernel_options changed from %s to %s" % (system.fqdn,
+                                                              prov.kernel_options,
+                                                              data['kernel_options']))
+            prov.kernel_options = data['kernel_options']
+        if 'kernel_options_post' in data and prov.kernel_options_post != data['kernel_options_post']:
+            log.append("%s: kernel_options_post changed from %s to %s" % (system.fqdn,
+                                                              prov.kernel_options_post,
+                                                              data['kernel_options_post']))
+            prov.kernel_options_post = data['kernel_options_post']
 
         return log
 
@@ -351,7 +565,15 @@ class CSV_Install(CSV):
                         yield datastruct
                     datastruct['update'] = None
         
+class CSV_KeyValue(CSV):
+    pass
+
+class CSV_SystemGroups(CSV):
+    pass
+
 csv_types = dict( system = CSV_System,
                   labinfo = CSV_LabInfo,
                   exclude = CSV_Exclude,
-                  install = CSV_Install)
+                  install = CSV_Install,
+                  keyvalue = CSV_KeyValue,
+                  system_groups = CSV_SystemGroups)

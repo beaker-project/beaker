@@ -4,6 +4,7 @@ from model import *
 from turbogears import identity, redirect, config
 from medusa.power import PowerTypes
 from medusa.keytypes import KeyTypes
+from medusa.CSV_import_export import CSV
 from medusa.group import Groups
 from medusa.tag import Tags
 from medusa.labcontroller import LabControllers
@@ -188,6 +189,7 @@ class Root(RPCRoot):
     users = Users()
     arches = Arches()
     netboot = Netboot()
+    csv = CSV()
 
     id         = widgets.HiddenField(name='id')
     submit     = widgets.SubmitButton(name='submit')
@@ -280,6 +282,23 @@ class Root(RPCRoot):
         # Reset joinpoint and then outerjoin on user.  This is so the sort 
         # column works in paginate/datagrid.
         # Also need to do distinct or paginate gets confused by the joins
+
+        # Short cut search by hostname
+        if 'simplesearch' in kw:
+            simplesearch = kw['simplesearch']
+            kw['systemsearch'] = [{'table' : 'system',
+                                   'column' : 'fqdn',
+                                   'operation' : 'like',
+                                   'value' : kw['simplesearch']}]
+        else:
+            simplesearch = None
+
+        # Short cut search by type
+        if 'type' in kw:
+            kw['systemsearch'] = [{'table' : 'system/type',
+                                   'column' : 'type',
+                                   'operation' : 'equal',
+                                   'value' : kw['type']}]
         systems = systems.reset_joinpoint().outerjoin('user').distinct()
         if kw.get("systemsearch"):
             searchvalue = kw['systemsearch']
@@ -307,14 +326,15 @@ class Root(RPCRoot):
                         widgets.PaginateDataGrid.Column(name='vendor', getter=lambda x: x.vendor, title='Vendor', options=dict(sortable=True)),
                         widgets.PaginateDataGrid.Column(name='model', getter=lambda x: x.model, title='Model', options=dict(sortable=True)),
                         widgets.PaginateDataGrid.Column(name='location', getter=lambda x: x.location, title='Location', options=dict(sortable=True)),
-                        widgets.PaginateDataGrid.Column(name='type.type', getter=lambda x: x.type, title='Type', options=dict(sortable=True)),
+                        widgets.PaginateDataGrid.Column(name='arch', getter=lambda x: ', '.join([arch.arch for arch in x.arch]), title='Arch', options=dict(sortable=True)),
                         widgets.PaginateDataGrid.Column(name='user.display_name', getter=lambda x: x.user, title='User', options=dict(sortable=True)),
-                        widgets.PaginateDataGrid.Column(name='date_lastcheckin', getter=lambda x: x.date_lastcheckin, title='Last Checkin', options=dict(sortable=True)),
+                        widgets.PaginateDataGrid.Column(name='type.type', getter=lambda x: x.type, title='Type', options=dict(sortable=True)),
                        ])
         return dict(title="Systems", grid = systems_grid,
-                                     list = systems, searchvalue = searchvalue,
+                                     list = systems, 
+                                     searchvalue = searchvalue,
                                      action = '.',
-                                     options = {},
+                                     options = {'simplesearch' : simplesearch},
                                      search_bar = self.search_bar)
 
     @expose(format='json')
