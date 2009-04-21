@@ -102,7 +102,7 @@ class LabControllers(RPCRoot):
         distros = []
         valid_variants = ['AS','ES','WS','Desktop']
         valid_methods  = ['http','ftp','nfs']
-        release = re.compile(r'family=(\w+\d+.\d+)')
+        release = re.compile(r'family=([^\s]+)')
         for lc_distro in lc_distros:
             name = lc_distro['name'].split('_')[0]
             meta = string.join(lc_distro['name'].split('_')[1:],'_').split('-')

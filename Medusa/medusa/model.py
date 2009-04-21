@@ -520,10 +520,8 @@ class User(object):
         rc = ldapcon.search(cls.basedn, ldap.SCOPE_SUBTREE, filter)
         objects = ldapcon.result(rc)[1]
         if(len(objects) == 0):
-            log.warning("No such LDAP user: %s" % username)
             return False
         elif(len(objects) > 1):
-            log.error("Too Many users: %s" % username)
             return False
         user = cls.query.filter_by(user_name=username).first()
         if not user:
@@ -565,7 +563,7 @@ class User(object):
     password = property(_get_password, _set_password)
 
     def __repr__(self):
-        return self.display_name
+        return self.user_name
 
     def is_admin(self):
         return u'admin' in [group.group_name for group in self.groups]
@@ -662,7 +660,6 @@ class System(SystemObject):
         self.serial = serial
         self.vendor = vendor
         self.owner = owner
-
 
     @classmethod
     def all(cls, user=None):
@@ -845,12 +842,12 @@ class System(SystemObject):
         Update Key/Value pairs for legacy RHTS
         """
         #Remove any keys that will be added
-        for i, mykey in enumerate(self.key_values_int):
+        for mykey in self.key_values_int[:]:
             if mykey.key.key_name in inventory:
-                del self.key_values_int[i]
-        for i, mykey in enumerate(self.key_values_string):
+                self.key_values_int.remove(i)
+        for mykey in self.key_values_string[:]:
             if mykey.key.key_name in inventory:
-                del self.key_values_string[i]
+                self.key_values_string.remove(i)
 
         #Add the uploaded keys
         for key in inventory:
@@ -955,7 +952,7 @@ class System(SystemObject):
         """
         List excluded osmajor for system by arch
         """
-        excluded = session.query(ExcludeOSMajor).join('systems').\
+        excluded = session.query(ExcludeOSMajor).join('system').\
                     join('arch').filter(and_(System.id==self.id,
                                              Arch.id==arch.id))
         return excluded
@@ -964,7 +961,7 @@ class System(SystemObject):
         """
         List excluded osversion for system by arch
         """
-        excluded = session.query(ExcludeOSVersion).join('systems').\
+        excluded = session.query(ExcludeOSVersion).join('system').\
                     join('arch').filter(and_(System.id==self.id,
                                              Arch.id==arch.id))
         return excluded
@@ -1192,6 +1189,10 @@ class SystemType(SystemObject):
         all_types = cls.query()
         return [(type.id, type.type) for type in all_types]
 
+    @classmethod
+    def by_name(cls, systemtype):
+        return cls.query.filter_by(type=systemtype).one()
+
 class SystemStatus(SystemObject):
     def __init__(self, status=None):
         self.status = status
@@ -1206,6 +1207,10 @@ class SystemStatus(SystemObject):
         """
         all_status = cls.query()
         return [(status.id, status.status) for status in all_status]
+
+    @classmethod
+    def by_name(cls, systemstatus):
+        return cls.query.filter_by(status=systemstatus).one()
 
 class Arch(SystemObject):
     def __init__(self, arch=None):
@@ -1301,6 +1306,10 @@ class LabControllerDistro(SystemObject):
     pass
 
 class LabController(SystemObject):
+
+    def __repr__(self):
+        return "%s" % (self.fqdn)
+
     @classmethod
     def by_id(cls, id):
         return cls.query.filter_by(id=id).one()
@@ -1629,17 +1638,20 @@ System.mapper = mapper(System, system_table,
                      'type':relation(SystemType, uselist=False),
                      'status':relation(SystemStatus, uselist=False),
                      'arch':relation(Arch,
+                                     order_by=[arch_table.c.arch],
                                         secondary=system_arch_map,
                                         backref='systems'),
-                     'labinfo':relation(LabInfo, uselist=False),
+                     'labinfo':relation(LabInfo, uselist=False,
+                                        backref='system'),
                      'cpu':relation(Cpu, uselist=False),
                      'numa':relation(Numa, uselist=False),
                      'power':relation(Power, uselist=False),
                      'excluded_osmajor':relation(ExcludeOSMajor,
-                                                 backref='systems'),
+                                                 backref='system'),
                      'excluded_osversion':relation(ExcludeOSVersion,
-                                                 backref='systems'),
-                     'provisions':relation(Provision, collection_class=attribute_mapped_collection('arch')),
+                                                 backref='system'),
+                     'provisions':relation(Provision, collection_class=attribute_mapped_collection('arch'),
+                                                 backref='system'),
                      'loaned':relation(User, uselist=False,
                           primaryjoin=system_table.c.loan_id==users_table.c.user_id,foreign_keys=system_table.c.loan_id),
                      'user':relation(User, uselist=False,
@@ -1652,9 +1664,11 @@ System.mapper = mapper(System, system_table,
                                       order_by=[note_table.c.created.desc()],
                                       cascade="all, delete, delete-orphan"),
                      'key_values_int':relation(Key_Value_Int,
-                                      cascade="all, delete, delete-orphan"),
+                                      cascade="all, delete, delete-orphan",
+                                                backref='system'),
                      'key_values_string':relation(Key_Value_String,
-                                      cascade="all, delete, delete-orphan"),
+                                      cascade="all, delete, delete-orphan",
+                                                backref='system'),
                      'activity':relation(SystemActivity,
                                      order_by=[activity_table.c.created.desc()],
                                                backref='object')})
@@ -1781,3 +1795,11 @@ def device_classes():
     for device_class in _device_classes:
         yield device_class
 
+global _system_types
+_system_types = None
+def system_types():
+    global _system_types
+    if not _system_types:
+        _system_types = SystemType.query.all()
+    for system_type in _system_types:
+        yield system_type

@@ -81,15 +81,40 @@ class SearchBar(RepeatingFormField):
 
     javascript = [LocalJSLink('medusa', '/static/javascript/searchbar.js')]
     template = """
-    <form xmlns:py="http://purl.org/kid/ns#"
+    <div xmlns:py="http://purl.org/kid/ns#">
+    <a id="advancedsearch" href="#">Toggle Search</a>
+    <form
+      id="simpleform"
+      name="${name}_simple"
+      action="${action}"
+      method="${method}"
+      class="searchbar_form"
+      py:attrs="form_attrs"
+      style="display:${simple}"
+    >
+    <table>
+     <tr>
+      <td><input type="text" name="simplesearch" value="${simplesearch}" class="textfield"/>
+      </td>
+      <td><input type="submit" name="search" value="Search"/>
+      </td>
+     </tr>
+    </table>
+    </form>
+    <form 
+      id="searchform"
       name="${name}"
       action="${action}"
       method="${method}"
       class="searchbar_form"
       py:attrs="form_attrs"
+      style="display:${advanced}"
     >
     <fieldset>
      <legend>Search</legend>
+     <table>
+     <tr>
+     <td>
      <table id="${field_id}">
       <thead>
        <tr>
@@ -123,14 +148,31 @@ class SearchBar(RepeatingFormField):
        </tr>
       </tbody>
      </table>
-     <a id="doclink" href="javascript:SearchBarForm.addItem('${field_id}');">Add ( + )</a>
+     </td><td>
      <input type="submit" name="Search" value="Search"/>
+     </td>
+     </tr>
+     <tr>
+     <td colspan="2">
+     <a id="doclink" href="javascript:SearchBarForm.addItem('${field_id}');">Add ( + )</a>
+     </td>
+     </tr>
+     </table>
      </fieldset>
     </form>
+    <script type="text/javascript">
+    $(document).ready(function() {
+        $('#advancedsearch').click( function() { $('#searchform').toggle('slow');
+                                                 $('#simpleform').toggle('slow');});
+    });
+    </script>
+    </div>
     """
 
-    params = ['repetitions', 'form_attrs', 'search_controller']
+    params = ['repetitions', 'form_attrs', 'search_controller', 'simplesearch',
+              'advanced', 'simple']
     form_attrs = {}
+    simplesearch = None
 
     def __init__(self, table_callback, search_controller, *args, **kw):
         super(SearchBar,self).__init__(*args, **kw)
@@ -143,9 +185,16 @@ class SearchBar(RepeatingFormField):
         self.fields = [ table_field, column_field, operation_field, value_field]
 
     def display(self, value=None, **params):
+        if 'options' in params and 'simplesearch' in params['options']:
+            params['simplesearch'] = params['options']['simplesearch']
+        if value and not params['simplesearch']:
+            params['advanced'] = 'True'
+            params['simple'] = 'none'
+        else:
+            params['advanced'] = 'none'
+            params['simple'] = 'True'
         if value and isinstance(value, list) and len(value) > 1:
             params['repetitions'] = len(value)
-        #params['repetitions'] = 3
         return super(SearchBar, self).display(value, **params)
 
 class ProvisionForm(RepeatingFormField):

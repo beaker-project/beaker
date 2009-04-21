@@ -3,7 +3,7 @@
 
 Name:           medusa
 Version:        0.2
-Release:        87%{?dist}
+Release:        91%{?dist}
 Summary:        Inventory System
 Group:          Applications/Internet
 License:        GPLv2+
@@ -34,7 +34,6 @@ Requires:       mod_wsgi
 Requires:       python-tgexpandingformwidget
 Requires:       httpd
 Requires:       python-krbV
-Requires:       python-cpio
 
 
 %package lab-controller
@@ -47,6 +46,7 @@ Requires:       cobbler >= 1.4
 Requires:       yum-utils
 Requires:       /sbin/fenced
 Requires:       telnet
+Requires:       python-cpio
 
 
 %description server
@@ -76,6 +76,7 @@ ln -s RedHatEnterpriseLinux3.ks %{buildroot}/var/lib/cobbler/kickstarts/rhel3.ks
 ln -s RedHatEnterpriseLinux4.ks %{buildroot}/var/lib/cobbler/kickstarts/rhel4.ks
 ln -s RedHatEnterpriseLinuxServer5.ks %{buildroot}/var/lib/cobbler/kickstarts/rhel5.ks
 ln -s Fedora.ks %{buildroot}/var/lib/cobbler/kickstarts/fedora.ks
+ln -s Fedora.ks %{buildroot}/var/lib/cobbler/kickstarts/Fedoradevelopment.ks
 
 
 %clean
@@ -109,6 +110,15 @@ ln -s Fedora.ks %{buildroot}/var/lib/cobbler/kickstarts/fedora.ks
 
 
 %changelog
+* Tue Apr 21 2009 Bill Peck <bpeck@redhat.com> - 0.2-91
+- Supports csv export/import now.
+- Shows arch on main page now
+- simple search added
+- shortcuts for filtering by Machine types
+- allow alpha chars in osversion
+* Wed Apr 08 2009 Bill Peck <bpeck@redhat.com> - 0.2-88
+- Updated kickstarts/snippets to be more robust and easier to read.
+- included custom snippets directories for per_system.
 * Tue Apr 07 2009 Bill Peck <bpeck@redhat.com> - 0.2-87
 - Patches from jlaska to cleanup spec file.
 * Mon Apr 06 2009 Bill Peck <bpeck@redhat.com> - 0.2-86

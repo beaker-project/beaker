@@ -132,6 +132,21 @@ data_files = [
     ("/var/www/beaker", ["lab-controller/aux/rhts-checkin"]),
     ("/var/log/medusa", []),
     ("/var/lib/medusa", []),
+    ("/var/lib/cobbler/snippets/per_system/Fedora", []),
+    ("/var/lib/cobbler/snippets/per_system/Fedora_pre", []),
+    ("/var/lib/cobbler/snippets/per_system/Fedora_post", []),
+    ("/var/lib/cobbler/snippets/per_system/RedHatEnterpriseLinux3", []),
+    ("/var/lib/cobbler/snippets/per_system/RedHatEnterpriseLinux3_pre", []),
+    ("/var/lib/cobbler/snippets/per_system/RedHatEnterpriseLinux3_post", []),
+    ("/var/lib/cobbler/snippets/per_system/RedHatEnterpriseLinux4", []),
+    ("/var/lib/cobbler/snippets/per_system/RedHatEnterpriseLinux4_pre", []),
+    ("/var/lib/cobbler/snippets/per_system/RedHatEnterpriseLinux4_post", []),
+    ("/var/lib/cobbler/snippets/per_system/RedHatEnterpriseLinuxClient5", []),
+    ("/var/lib/cobbler/snippets/per_system/RedHatEnterpriseLinuxClient5_pre", []),
+    ("/var/lib/cobbler/snippets/per_system/RedHatEnterpriseLinuxClient5_post", []),
+    ("/var/lib/cobbler/snippets/per_system/RedHatEnterpriseLinuxServer5", []),
+    ("/var/lib/cobbler/snippets/per_system/RedHatEnterpriseLinuxServer5_pre", []),
+    ("/var/lib/cobbler/snippets/per_system/RedHatEnterpriseLinuxServer5_post", []),
 ]
 
 packages=find_packages()

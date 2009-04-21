@@ -75,6 +75,8 @@ class Distros(RPCRoot):
         distros = session.query(Distro).join('breed').join('arch').join(['osversion','osmajor'])
         if 'tag' in kw:
             distros = distros.join('_tags').filter(DistroTag.c.tag==kw['tag'])
+        if 'name' in kw:
+            distros = distros.filter(Distro.c.install_name.like('%%%s%%' % kw['name']))
         distros_grid = widgets.PaginateDataGrid(fields=[
                                   widgets.PaginateDataGrid.Column(name='install_name', getter=lambda x: make_link(url  = 'view?id=%s' % x.id,
                                   text = x.install_name), title='Install Name', options=dict(sortable=True)),
