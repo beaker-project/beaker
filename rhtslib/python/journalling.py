@@ -259,10 +259,11 @@ def getLogEl(jrnl):
     return node
   
 def getLastUnfinishedPhase(tree):
+  candidate = tree
   for node in tree.getElementsByTagName('phase'):
     if node.getAttribute('result') == 'unfinished':
-      return node
-  return tree 
+      candidate = node
+  return candidate
 
 def addPhase(id, name, type):
   jrnl = openJournal(id)  
