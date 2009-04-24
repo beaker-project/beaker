@@ -102,7 +102,16 @@ class CSV(RPCRoot):
                 if system.can_admin(identity.current.user):
                     # Remove fqdn, can't change that via csv.
                     data.pop('fqdn')
-                    log.extend(self.from_csv(system, data))
+                    if not self.from_csv(system, data, log):
+                        if system.id:
+                            # System already existed but some or all of the
+                            #  import data was invalid.
+                            session.expire(system)
+                        else:
+                            # System didn't exist before import but some
+                            #  or all of the import data was invalid.
+                            session.expunge(system)
+                            del(system)
                 else:
                     log.append("You are not the owner of %s" % system.fqdn)
             else:
@@ -133,26 +142,24 @@ class CSV(RPCRoot):
                 writer.writerow(data)
 
     @classmethod
-    def from_csv(cls, system, data):
+    def from_csv(cls, system, data, log):
         """
         Process data file
         """
-        log = []
         if data['csv_type'] in csv_types:
             csv_type = data['csv_type']
             # Remove csv_type now that we know what we want to do.
             data.pop('csv_type')
-            log = csv_types[csv_type]._from_csv(system,data,csv_type)
+            return csv_types[csv_type]._from_csv(system,data,csv_type,log)
         else:
             log.append("Invalid csv_type %s" % data['csv_type'])
-        return log
+        return False
 
     @classmethod
-    def _from_csv(cls,system,data,csv_type=None):
+    def _from_csv(cls,system,data,csv_type,log):
         """
         Import data from CSV file into LabInfo Objects
         """
-        log = []
         csv_object = getattr(system, csv_type, None)
         for key in data.keys():
             if key in cls.csv_keys:
@@ -167,7 +174,7 @@ class CSV(RPCRoot):
                     log.append("%s: %s Changed from %s to %s" % (system.fqdn, key, current_data, newdata))
                     setattr(csv_object,key,newdata)
 
-        return log
+        return True
 
     def to_datastruct(self):
         datastruct = dict()
@@ -192,11 +199,10 @@ class CSV_System(CSV):
             yield CSV_System(system)
 
     @classmethod
-    def _from_csv(cls,system,data,csv_type=None):
+    def _from_csv(cls,system,data,csv_type,log):
         """
         Import data from CSV file into LabInfo Objects
         """
-        log = []
         for key in data.keys():
             if key in cls.reg_keys:
                 if data[key]:
@@ -216,7 +222,13 @@ class CSV_System(CSV):
             if data['arch']:
                 arches = data['arch'].split(',')
                 for arch in arches:
-                    arch_objs.append(Arch.by_name(arch))
+                    try:
+                        arch_obj = Arch.by_name(arch)
+                    except InvalidRequestError:
+                        log.append("%s: Invalid arch %s" % (system.fqdn,
+                                                                   arch))
+                        return False
+                    arch_objs.append(arch_obj)
             if system.arch != arch_objs:
                 activity = SystemActivity(identity.current.user, 'CSV', 'Changed', 'arch', '%s' % system.arch, '%s' % arch_objs)
                 system.activity.append(activity)
@@ -229,8 +241,9 @@ class CSV_System(CSV):
                 try:
                     lab_controller = LabController.by_name(data['lab_controller'])
                 except InvalidRequestError:
-                    log.append("Invalid lab controller %s" % data['lab_controller'])
-                    return log
+                    log.append("%s: Invalid lab controller %s" % (system.fqdn,
+                                                        data['lab_controller']))
+                    return False
             else:
                 lab_controller = None
             if system.lab_controller != lab_controller:
@@ -244,8 +257,9 @@ class CSV_System(CSV):
             if data['owner']:
                 owner = User.by_user_name(data['owner'])
                 if not owner:
-                    log.append("Invalid User %s" % data['owner'])
-                    return log
+                    log.append("%s: Invalid User %s" % (system.fqdn,
+                                                        data['owner']))
+                    return False
             else:
                 owner = None
             if system.owner != owner:
@@ -256,13 +270,14 @@ class CSV_System(CSV):
         # import status
         if 'status' in data:
             if not data['status']:
-                log.append("Invalid Status None")
-                return log
+                log.append("%s: Invalid Status None" % system.fqdn)
+                return False
             try:
                 systemstatus = SystemStatus.by_name(data['status'])
             except InvalidRequestError:
-                log.append("Invalid Status %s" % data['status'])
-                return log
+                log.append("%s: Invalid Status %s" % (system.fqdn,
+                                                      data['status']))
+                return False
             if system.status != systemstatus:
                 activity = SystemActivity(identity.current.user, 'CSV', 'Changed', 'status', '%s' % system.status, '%s' % systemstatus)
                 system.activity.append(activity)
@@ -271,13 +286,14 @@ class CSV_System(CSV):
         # import type
         if 'type' in data:
             if not data['type']:
-                log.append("Invalid Type None")
-                return log
+                log.append("%s: Invalid Type None" % system.fqdn)
+                return False
             try:
                 systemtype = SystemType.by_name(data['type'])
             except InvalidRequestError:
-                log.append("Invalid Type %s" % data['type'])
-                return log
+                log.append("%s: Invalid Type %s" % (system.fqdn,
+                                                     data['type']))
+                return False
             if system.type != systemtype:
                 activity = SystemActivity(identity.current.user, 'CSV', 'Changed', 'type', '%s' % system.type, '%s' % systemtype)
                 system.activity.append(activity)
@@ -286,16 +302,15 @@ class CSV_System(CSV):
         # import secret
         if 'secret' in data:
             if not data['secret']:
-                log.append("Invalid secret None")
-                return log
+                log.append("%s: Invalid secret None" % system.fqdn)
+                return False
             newdata = smart_bool(data['secret'])
             if system.private != newdata:
                 activity = SystemActivity(identity.current.user, 'CSV', 'Changed', 'secret', '%s' % system.private, '%s' % newdata)
                 system.activity.append(activity)
                 log.append("%s: %s Changed from %s to %s" % (system.fqdn, 'secret', system.private, newdata))
                 system.private = newdata
-
-        return log
+        return True
 
     def __init__(self, system):
         self.system = system
@@ -347,17 +362,26 @@ class CSV_Exclude(CSV):
             yield CSV_Exclude(exclude)
 
     @classmethod
-    def _from_csv(cls,system,data,csv_type=None):
+    def _from_csv(cls,system,data,csv_type,log):
         """
         Import data from CSV file into System Objects
         """
-        log = []
         
-        arch = Arch.by_name(data['arch'])
+        try:
+            arch = Arch.by_name(data['arch'])
+        except InvalidRequestError:
+            log.append("%s: Invalid Arch %s" % (system.fqdn, data['arch']))
+            return False
 
         if data['update'] and data['family']:
-            osversion = OSVersion.by_name(OSMajor.by_name(data['family']),
+            try:
+                osversion = OSVersion.by_name(OSMajor.by_name(data['family']),
                                                             data['update'])
+            except InvalidRequestError:
+                log.append("%s: Invalid Family %s Update %s" % (system.fqdn,
+                                                        data['family'],
+                                                        data['update']))
+                return False
             if osversion not in [oldosversion.osversion for oldosversion in system.excluded_osversion_byarch(arch)]:
                 if data['excluded'] == 'True':
                     exclude_osversion = ExcludeOSVersion(osversion=osversion,
@@ -386,7 +410,12 @@ class CSV_Exclude(CSV):
                                       )
 
         if not data['update'] and data['family']:
-            osmajor = OSMajor.by_name(data['family'])
+            try:
+                osmajor = OSMajor.by_name(data['family'])
+            except InvaldRequestError:
+                log.append("%s: Invalid family %s " % (system.fqdn,
+                                                       data['family']))
+                return False
             if osmajor not in [oldosmajor.osmajor for oldosmajor in system.excluded_osmajor_byarch(arch)]:
                 if data['excluded'] == 'True':
                     exclude_osmajor = ExcludeOSMajor(osmajor=osmajor, arch=arch)
@@ -411,7 +440,7 @@ class CSV_Exclude(CSV):
                                                                        )
                                       )
 
-        return log
+        return True
 
     def __init__(self, exclude):
         self.fqdn = exclude.system.fqdn
@@ -434,20 +463,23 @@ class CSV_Install(CSV):
             yield CSV_Install(install)
 
     @classmethod
-    def _from_csv(cls,system,data,csv_type=None):
+    def _from_csv(cls,system,data,csv_type,log):
         """
         Import data from CSV file into System Objects
         """
-        log = []
         family = None
         update = None
 
         # Arch is required
         if 'arch' in data:
-            arch = Arch.by_name(data['arch'])
+            try:
+                arch = Arch.by_name(data['arch'])
+            except InvalidRequestError:
+                log.append("%s: Invalid arch %s" % (system.fqdn, data['arch']))
+                return False
         else:
-            log.append("Error! Missing arch")
-            return log
+            log.append("%s: Error! Missing arch" % system.fqdn)
+            return False
 
         # pull in update and family if present
         if 'family' in data:
@@ -456,19 +488,21 @@ class CSV_Install(CSV):
                 try:
                     family = OSMajor.by_name(family)
                 except InvalidRequestError:
-                    log.append("Error! Invalid family %s" % data['family'])
-                    return log
+                    log.append("%s: Error! Invalid family %s" % (system.fqdn,
+                                                              data['family']))
+                    return False
         if 'update' in data:
             update = data['update']
             if update:
                 if not family:
-                    log.append("Error! You must specify Family along with Update")
-                    return log
+                    log.append("%s: Error! You must specify Family along with Update" % system.fqdn)
+                    return False
                 try:
                     update = OSVersion.by_name(family, update)
                 except InvalidRequestError:
-                    log.append("Error! Invalid update %s" % data['update'])
-                    return log
+                    log.append("%s: Error! Invalid update %s" % (system.fqdn,
+                                                             data['update']))
+                    return False
 
         #Import Update specific
         if update and family:
@@ -528,7 +562,7 @@ class CSV_Install(CSV):
                                                               data['kernel_options_post']))
             prov.kernel_options_post = data['kernel_options_post']
 
-        return log
+        return True
 
     def __init__(self, install):
         self.install = install
