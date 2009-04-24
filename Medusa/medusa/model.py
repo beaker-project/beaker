@@ -13,6 +13,7 @@ from sqlalchemy.orm.collections import attribute_mapped_collection
 from sqlalchemy.ext.associationproxy import association_proxy
 import socket
 from xmlrpclib import ProtocolError
+from sqlalchemy import case
 
 from BasicAuthTransport import BasicAuthTransport
 import xmlrpclib
@@ -712,12 +713,19 @@ class System(SystemObject):
                                       )
 
     @classmethod
+    def available_order(cls, user):
+        return cls.available(user).order_by(case([(System.owner==user, 1),
+                          (System.owner!=user and Group.systems==None, 2)],
+                              else_=3))
+
+    @classmethod
     def mine(cls, user):
         """
         A class method that can be used to search for systems that only
         user can see
         """
-        return cls.query.filter(System.user==user)
+        return cls.query.filter(or_(System.user==user,
+                                    System.loaned==user))
 
     @classmethod
     def by_fqdn(cls, fqdn, user):
@@ -1503,7 +1511,7 @@ class Distro(object):
         Limit to what is available to user if user passed in.
         """
         if user:
-            systems = System.available(user)
+            systems = System.available_order(user)
         else:
             systems = session.query(System)
 
