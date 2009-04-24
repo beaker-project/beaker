@@ -73,7 +73,7 @@ $(document).ready(function() {
                 <li><a href="${tg.url('/')}">All Systems</a></li>
                 <ul>
                     <li py:for="type in system_types()">
-                      <a href="${tg.url('.', type = type.type)}">${type.type}</a>
+                      <a href="${tg.url('/', type = type.type)}">${type.type}</a>
                     </li>
                 </ul>
                 <li><a href="${tg.url('/devices')}">Devices</a>
