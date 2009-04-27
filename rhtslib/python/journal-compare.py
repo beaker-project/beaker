@@ -146,7 +146,10 @@ class TestSet:
 	def compare(self, other):
 		result_list = []
 		for key in self.results.keys():
-			result_list.append(self.results[key].compare(other.results[key]))
+			try:
+				result_list.append(self.results[key].compare(other.results[key]))
+			except KeyError:
+				print "[WARN] Could not find corresponding test for: %s" % key
 		return result_list
 
 journal_old = xml.dom.minidom.parse("old/rcw-journal")
