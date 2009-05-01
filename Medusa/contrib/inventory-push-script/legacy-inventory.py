@@ -169,7 +169,7 @@ def main():
         print "You must sepcify a password with the -p switch"
         sys.exit(1)
 
-    lab_server = "http://%s:%s@%s/RPC2" % (user,password,server)
+    lab_server = "https://%s:%s@%s/RPC2" % (user,password,server)
     inventory = read_inventory()
     if debug:
         print inventory
