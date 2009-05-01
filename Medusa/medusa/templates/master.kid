@@ -56,7 +56,7 @@ $(document).ready(function() {
                     <div id="adminlist" style="display: none">
                         <ul>
                             <li><a href="${tg.url('/labcontrollers')}">Lab Controllers</a></li>
-                            <li><a href="${tg.url('/usersystems')}">Machine Accounts</a></li>
+                            <li><a href="${tg.url('/users')}">Accounts</a></li>
                             <li><a href="${tg.url('/groups')}">Groups</a></li>
                             <li><a href="${tg.url('/powertypes')}">Power Types</a></li>
                             <li><a href="${tg.url('/keytypes')}">Key Types</a></li>
@@ -67,6 +67,7 @@ $(document).ready(function() {
                 </ul>
             </div>
             <ul id="fedora-side-nav">
+                <li py:if="not tg.identity.anonymous"><a href="${tg.url('/prefs/')}">${tg.identity.user_name}'s Prefs</a></li>
                 <li py:if="not tg.identity.anonymous"><a href="${tg.url('/mine/')}">${tg.identity.user_name}'s Home</a></li>
                 <li py:if="not tg.identity.anonymous"><a href="${tg.url('/available/')}">Available Systems</a></li>
                 <li py:if="not tg.identity.anonymous"><a href="${tg.url('/free/')}">Free Systems</a></li>
@@ -94,6 +95,7 @@ $(document).ready(function() {
         <div class="fedora-corner-tr">&nbsp;</div>
         <div class="fedora-corner-tl">&nbsp;</div>
         <div id="fedora-content">
+            <center>Warning! This is a Pilot instance that will be going away on May 5th.  All systems will be moved to the production instance. Change History will not be kept, but most data should be preserved.  If you have any questions please contact <a href="mailto:bpeck@redhat.com">Bill Peck</a></center>
             <center>
                 <div id="status_block" class="flash" py:if="value_of('tg_flash', None)" py:content="tg_flash"></div>
            </center>
