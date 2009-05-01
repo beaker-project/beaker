@@ -8,7 +8,7 @@ from medusa.CSV_import_export import CSV
 from medusa.group import Groups
 from medusa.tag import Tags
 from medusa.labcontroller import LabControllers
-from medusa.user_system import UserSystems
+from medusa.user import Users
 from medusa.distro import Distros
 from medusa.activity import Activities
 from medusa.widgets import myPaginateDataGrid
@@ -57,13 +57,6 @@ from datetime import datetime
 #    tables = dict ( Cpu = (Cpu.q.system == System.q.id))
 
 #    systems = System.select(AND(*your_dict.iter_values()))  ?
-
-class Users:
-
-    @expose(format='json')
-    def by_name(self, input):
-        input = input.lower()
-        return dict(matches=User.list_by_name(input))
 
 class Netboot:
     # For XMLRPC methods in this class.
@@ -183,7 +176,6 @@ class Root(RPCRoot):
     groups = Groups()
     tags = Tags()
     labcontrollers = LabControllers()
-    usersystems = UserSystems()
     distros = Distros()
     activity = Activities()
     users = Users()
@@ -194,11 +186,18 @@ class Root(RPCRoot):
     id         = widgets.HiddenField(name='id')
     submit     = widgets.SubmitButton(name='submit')
 
+    email      = widgets.TextField(name='email_address', label='Email Address')
     autoUsers  = widgets.AutoCompleteField(name='user',
                                            search_controller=url("/users/by_name"),
                                            search_param="input",
                                            result_name="matches")
     
+    prefs_form   = widgets.TableForm(
+        'UserPrefs',
+        fields = [email],
+        action = 'save_data',
+        submit_text = _(u'Change'),
+    )
 
     loan_form     = widgets.TableForm(
         'Loan',
@@ -258,6 +257,28 @@ class Root(RPCRoot):
     @paginate('list',default_order='fqdn',limit=20,allow_limit_override=True)
     def index(self, *args, **kw):
         return self.systems(systems = System.all(identity.current.user), *args, **kw)
+
+    @expose(template='medusa.templates.form')
+    @identity.require(identity.not_anonymous())
+    def prefs(self, *args, **kw):
+        user = identity.current.user
+        return dict(
+            title    = 'User Prefs',
+            form     = self.prefs_form,
+            widgets  = {},
+            action   = '/save_prefs',
+            value    = user,
+            options  = None)
+
+    @expose()
+    @identity.require(identity.not_anonymous())
+    def save_prefs(self, *args, **kw):
+        email = kw.get('email_address',None)
+        
+        if email and email != identity.current.user.email_address:
+            flash(_(u"Email Address Changed"))
+            identity.current.user.email_address = email
+        redirect('/')
 
     @expose(template='medusa.templates.grid')
     @identity.require(identity.not_anonymous())
@@ -418,6 +439,10 @@ class Root(RPCRoot):
         else:
             flash(_(u"system_id and group_id must be provided"))
             redirect("/")
+        if not identity.in_group("admin") and \
+          system.shared and len(system.groups) == 1:
+            flash(_(u"You don't have permission to remove the last group if the system is shared"))
+            redirect("./view/%s" % system.fqdn)
         if system.can_admin(identity.current.user):
            for group in system.groups:
                if group.group_id == int(group_id):
@@ -819,7 +844,19 @@ class Root(RPCRoot):
 #                sys.stderr.write("\nfield: " + field + ", Old: " +  current_val + ", New: " +  str(kw[field]) + " " +  "\n")
                 activity = SystemActivity(identity.current.user, 'WEBUI', 'Changed', field, current_val, new_val )
                 system.activity.append(activity)
-        log_bool_fields = [ 'shared', 'private' ]
+
+        # We only want admins to be able to share systems to everyone.
+        shared = kw.get('shared',False)
+        if shared != system.shared:
+            if not identity.in_group("admin") and \
+              shared and len(system.groups) == 0:
+                flash( _(u"You don't have permission to share without the system being in a group first " ) )
+                redirect("/view/%s" % system.fqdn)
+            activity = SystemActivity(identity.current.user, 'WEBUI', 'Changed', 'shared', system.shared, shared )
+            system.activity.append(activity)
+            system.shared = shared
+                
+        log_bool_fields = [ 'private' ]
         for field in log_bool_fields:
             try:
                 current_val = str(system.__dict__[field])
@@ -837,10 +874,6 @@ class Root(RPCRoot):
         system.vendor=kw['vendor']
         system.lender=kw['lender']
         system.date_modified = datetime.utcnow()
-        if kw.get('shared'):
-            system.shared=kw['shared']
-        else:
-            system.shared=False
         if kw.get('private'):
             system.private=kw['private']
         else:
@@ -1146,15 +1179,24 @@ class Root(RPCRoot):
         return systems
         
     @cherrypy.expose
-    def system_pick(self, machine_account, distro=None, user=None, xml=None):
+    def system_pick(self, machine_account, distro=None, username=None, xml=None):
         if not distro:
             return (0,"You must supply a distro")
-        if not user:
+        if not username:
             return (0,"You must supply a user name")
         if not xml:
             return (0,"No xml query provided")
 
-        user = User.by_user_name(user)
+        user = None
+        try:
+            # some systems use Bugzilla as auth.
+            # This is only temporary and will go away.
+            user = User.by_email_address(username)
+        except InvalidRequestError:
+            username = username.split('@')[0]
+            user = User.by_user_name(username)
+        if not user:
+            return (None, -1)
         systems = self.pick_common(distro, user, xml)
 
         hit = False
@@ -1181,15 +1223,24 @@ class Root(RPCRoot):
             return (None, -1)
 
     @cherrypy.expose
-    def system_validate(self, machine_account, distro=None, user=None, xml=None):
+    def system_validate(self, machine_account, distro=None, username=None, xml=None):
         if not distro:
             return (0,"You must supply a distro")
-        if not user:
+        if not username:
             return (0,"You must supply a user name")
         if not xml:
             return (0,"No xml query provided")
 
-        user = User.by_user_name(user)
+        user = None
+        try:
+            # some systems use Bugzilla as auth.
+            # This is only temporary and will go away.
+            user = User.by_email_address(username)
+        except InvalidRequestError:
+            username = username.split('@')[0]
+            user = User.by_user_name(username)
+        if not user:
+            return (None, -1)
         systems = self.pick_common(distro, user, xml)
 
         if systems.count():
@@ -1208,7 +1259,14 @@ class Root(RPCRoot):
         if not full_name:
             return (0,"You must supply a user name")
 
-        user = User.by_user_name(full_name)
+        user = None
+        try:
+            # some systems use Bugzilla as auth.
+            # This is only temporary and will go away.
+            user = User.by_email_address(full_name)
+        except InvalidRequestError:
+            full_name = full_name.split('@')[0]
+            user = User.by_user_name(full_name)
         try:
             system = System.by_fqdn(fqdn,identity.current.user)
         except InvalidRequestError:

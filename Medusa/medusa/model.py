@@ -342,14 +342,6 @@ users_table = Table('tg_user', metadata,
     Column('created', DateTime, default=datetime.now)
 )
 
-users_systems_table = Table('tg_system', metadata,
-    Column('id', Integer, primary_key=True),
-    Column('system_name', Unicode(16), unique=True),
-    Column('display_name', Unicode(255)),
-    Column('password', Unicode(40)),
-    Column('created', DateTime, default=datetime.now)
-)
-
 permissions_table = Table('permission', metadata,
     Column('permission_id', Integer, primary_key=True),
     Column('permission_name', Unicode(16), unique=True),
@@ -460,40 +452,18 @@ class VisitIdentity(object):
     pass
 
 
-class UserSystem(object):
-    """
-    System Logins (RHTS, other schedulers...)
-    """
-
-    def _set_password(self, password):
-        """
-        encrypts password on the fly using the encryption
-        algo defined in the configuration
-        """
-        self._password = identity.encrypt_password(password)
-
-    def _get_password(self):
-        """
-        returns password
-        """
-        return self._password
-
-    password = property(_get_password, _set_password)
-
-    @classmethod
-    def by_id(cls, id):
-        return UserSystem.query.filter(UserSystem.id == id).one()
-
 class User(object):
     """
     Reasonably basic User definition.
     Probably would want additional attributes.
     """
-    uri = get("identity.soldapprovider.uri", "ldaps://localhost")
-    basedn  = get("identity.soldapprovider.basedn", "dc=localhost")
-    autocreate = get("identity.soldapprovider.autocreate", False)
-    # Only needed for devel.  comment out for Prod.
-    ldap.set_option(ldap.OPT_X_TLS_REQUIRE_CERT, ldap.OPT_X_TLS_NEVER)
+    provider = get("identity.provider","")
+    if provider == 'ldapsa':
+        uri = get("identity.soldapprovider.uri", "ldaps://localhost")
+        basedn  = get("identity.soldapprovider.basedn", "dc=localhost")
+        autocreate = get("identity.soldapprovider.autocreate", False)
+        # Only needed for devel.  comment out for Prod.
+        ldap.set_option(ldap.OPT_X_TLS_REQUIRE_CERT, ldap.OPT_X_TLS_NEVER)
 
     def permissions(self):
         perms = set()
@@ -507,47 +477,63 @@ class User(object):
         A class method that can be used to search users
         based on their email addresses since it is unique.
         """
-        return cls.query.filter_by(email_address=email).first()
+        return cls.query.filter_by(email_address=email).one()
 
     by_email_address = classmethod(by_email_address)
 
-    def by_user_name(cls, username):
+    @classmethod
+    def by_id(cls, user_id):
+        """
+        A class method that permits to search users
+        based on their user_id attribute.
+        """
+        return cls.query.filter_by(user_id=user_id).first()
+    
+    @classmethod
+    def by_user_name(cls, user_name):
         """
         A class method that permits to search users
         based on their user_name attribute.
         """
-        filter = "(uid=%s)" % username
-        ldapcon = ldap.initialize(cls.uri)
-        rc = ldapcon.search(cls.basedn, ldap.SCOPE_SUBTREE, filter)
-        objects = ldapcon.result(rc)[1]
-        if(len(objects) == 0):
-            return False
-        elif(len(objects) > 1):
-            return False
-        user = cls.query.filter_by(user_name=username).first()
-        if not user:
-            if cls.autocreate:
-                user = User()
-                user.user_name = username
-                user.display_name = objects[0][1]['cn'][0]
-		user.email_address = objects[0][1]['mail'][0]
-                session.save(user)
-                session.flush()
-            else:
+        # Try to look up the user via local DB first.
+        user = cls.query.filter_by(user_name=user_name).first()
+        if user:
+            return user
+        # If user doesn't exist in DB check ldap if enabled.
+        if cls.provider == 'ldapsa':
+            filter = "(uid=%s)" % username
+            ldapcon = ldap.initialize(cls.uri)
+            rc = ldapcon.search(cls.basedn, ldap.SCOPE_SUBTREE, filter)
+            objects = ldapcon.result(rc)[1]
+            if(len(objects) == 0):
                 return None
+            elif(len(objects) > 1):
+                return None
+                if cls.autocreate:
+                    user = User()
+                    user.user_name = user_name
+                    user.display_name = objects[0][1]['cn'][0]
+		    user.email_address = objects[0][1]['mail'][0]
+                    session.save(user)
+                    session.flush([user])
+                else:
+                    return None
+        else:
+            return None
         return user
 
-    by_user_name = classmethod(by_user_name)
-
+    @classmethod
     def list_by_name(cls, username):
-        filter = "(uid=%s*)" % username
-        ldapcon = ldap.initialize(cls.uri)
-        rc = ldapcon.search(cls.basedn, ldap.SCOPE_SUBTREE, filter)
-        objects = ldapcon.result(rc)[1]
-        return [object[0].split(',')[0].split('=')[1] for object in objects]
+        ldap_users = []
+        if cls.provider == 'ldapsa':
+            filter = "(uid=%s*)" % username
+            ldapcon = ldap.initialize(cls.uri)
+            rc = ldapcon.search(cls.basedn, ldap.SCOPE_SUBTREE, filter)
+            objects = ldapcon.result(rc)[1]
+            ldap_users = [object[0].split(',')[0].split('=')[1] for object in objects]
+        db_users = [user.user_name for user in cls.query().filter(User.user_name.like('%s%%' % username))]
+        return list(set(db_users + ldap_users))
         
-    list_by_name = classmethod(list_by_name)
-
     def _set_password(self, password):
         """
         encrypts password on the fly using the encryption
@@ -653,11 +639,11 @@ class System(SystemObject):
                        model=None, type=None, serial=None, vendor=None,
                        owner=None):
         self.fqdn = fqdn
-        self.status_id = status
+        self.status = status
         self.contact = contact
         self.location = location
         self.model = model
-        self.type_id = type
+        self.type = type
         self.serial = serial
         self.vendor = vendor
         self.owner = owner
@@ -852,10 +838,10 @@ class System(SystemObject):
         #Remove any keys that will be added
         for mykey in self.key_values_int[:]:
             if mykey.key.key_name in inventory:
-                self.key_values_int.remove(i)
+                self.key_values_int.remove(mykey)
         for mykey in self.key_values_string[:]:
             if mykey.key.key_name in inventory:
-                self.key_values_string.remove(i)
+                self.key_values_string.remove(mykey)
 
         #Add the uploaded keys
         for key in inventory:
@@ -1620,20 +1606,34 @@ class Key(object):
 
 # key_value model
 class Key_Value_String(object):
-    def __init__(self, key=None, key_value=None):
+    def __init__(self, key, key_value, system=None):
+        self.system = system
         self.key = key
         self.key_value = key_value
 
-    def ___repr__(self):
-        return "%s %s" % (self.key.key, self.key_value)
+    def __repr__(self):
+        return "%s %s" % (self.key, self.key_value)
+
+    @classmethod
+    def by_key_value(cls, system, key, value):
+        return cls.query().filter(and_(Key_Value_String.key==key, 
+                                  Key_Value_String.key_value==value,
+                                  Key_Value_String.system==system)).one()
 
 class Key_Value_Int(object):
-    def __init__(self, key=None, key_value=None):
+    def __init__(self, key, key_value, system=None):
+        self.system = system
         self.key = key
         self.key_value = key_value
 
-    def ___repr__(self):
-        return "%s %s" % (self.key.key, self.key_value)
+    def __repr__(self):
+        return "%s %s" % (self.key, self.key_value)
+
+    @classmethod
+    def by_key_value(cls, system, key, value):
+        return cls.query().filter(and_(Key_Value_Int.key==key, 
+                                  Key_Value_Int.key_value==value,
+                                  Key_Value_Int.system==system)).one()
 
 
 # set up mappers between identity tables and classes
@@ -1736,9 +1736,6 @@ mapper(Distro, distro_table,
     })
 mapper(Breed, breed_table)
 mapper(DistroTag, distro_tag_table)
-
-mapper(UserSystem, users_systems_table,
-    properties=dict(_password=users_systems_table.c.password))
 
 mapper(Visit, visits_table)
 
