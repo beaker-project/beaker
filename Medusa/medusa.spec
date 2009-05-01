@@ -3,7 +3,7 @@
 
 Name:           medusa
 Version:        0.2
-Release:        91%{?dist}
+Release:        100%{?dist}
 Summary:        Inventory System
 Group:          Applications/Internet
 License:        GPLv2+
@@ -110,6 +110,13 @@ ln -s Fedora.ks %{buildroot}/var/lib/cobbler/kickstarts/Fedoradevelopment.ks
 
 
 %changelog
+* Thu Apr 30 2009 Bill Peck <bpeck@redhat.com> - 0.2-100
+- Begining user prefs.  Only email update right now
+- Remote jobs will look up via email address as well.
+* Mon Apr 27 2009 Bill Peck <bpeck@redhat.com> - 0.2-96
+- Implement more csv export/import. key values, groups.
+- Only admins can share a system for the general pool
+- fixed legacy push
 * Tue Apr 21 2009 Bill Peck <bpeck@redhat.com> - 0.2-91
 - Supports csv export/import now.
 - Shows arch on main page now
