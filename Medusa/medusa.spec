@@ -3,7 +3,7 @@
 
 Name:           medusa
 Version:        0.2
-Release:        100%{?dist}
+Release:        101%{?dist}
 Summary:        Inventory System
 Group:          Applications/Internet
 License:        GPLv2+
@@ -110,6 +110,10 @@ ln -s Fedora.ks %{buildroot}/var/lib/cobbler/kickstarts/Fedoradevelopment.ks
 
 
 %changelog
+* Fri May 01 2009 Bill Peck <bpeck@redhat.com> - 0.2-101
+- Updated medusa-init to allow for admin user to be created based on 
+  command line options
+- removed medusa-devinit.  Doesn't seem needed, pass --config to medusa-init
 * Thu Apr 30 2009 Bill Peck <bpeck@redhat.com> - 0.2-100
 - Begining user prefs.  Only email update right now
 - Remote jobs will look up via email address as well.
