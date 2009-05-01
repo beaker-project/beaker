@@ -203,7 +203,6 @@ setup(
         'console_scripts': (
             'start-medusa = medusa.commands:start',
             'medusa-init = medusa.tools.init:main',
-            'medusa-devinit = medusa.tools.dev_init:main',
         ),
     }
     )

@@ -24,16 +24,24 @@ import pkg_resources
 pkg_resources.require("SQLAlchemy>=0.3.10")
 from medusa.model import *
 from medusa.commands import ConfigurationError
+from medusa.util import load_config
 from turbogears.database import session
 from os.path import dirname, exists, join
 from os import getcwd
 import turbogears
 from turbogears.database import metadata, get_engine
 
+from optparse import OptionParser
+
+__version__ = '0.1'
+__description__ = 'Command line tool for initializing Beaker DB'
+
 def dummy():
     pass
 
 def main():
+    parser = get_parser()
+    opts, args = parser.parse_args()
     setupdir = dirname(dirname(__file__))
     curdir = getcwd()
 
@@ -44,22 +52,7 @@ def main():
     # is probably installed and we'll look first for a file called
     # 'prod.cfg' in the current directory and then for a default
     # config file called 'default.cfg' packaged in the egg.
-    if len(sys.argv) > 1:
-        configfile = sys.argv[1]
-    elif exists(join(setupdir, "setup.py")):
-        configfile = join(setupdir, "dev.cfg")
-    elif exists("/etc/medusa/medusa.cfg"):
-        configfile = "/etc/medusa/medusa.cfg"
-    else:
-        try:
-            configfile = pkg_resources.resource_filename(
-              pkg_resources.Requirement.parse("medusa"),
-                "config/default.cfg")
-        except pkg_resources.DistributionNotFound:
-            raise ConfigurationError("Could not find default configuration.")
-
-    turbogears.update_config(configfile=configfile,
-        modulename="medusa.config")
+    load_config(opts.configfile)
 
     get_engine()
     metadata.create_all()
@@ -69,13 +62,23 @@ def main():
         working   = SystemStatus(u'Working')
         broken    = SystemStatus(u'Broken')
         removed   = SystemStatus(u'Removed')
-    #Setup User account
-    if User.query().count() == 0:
-        user     = User(display_name=u'Bill Peck',
-                         email_address=u'bpeck@redhat.com',
-                         user_name=u'bpeck')
+    try:
+        admin = Group.by_name(u'admin')
+    except InvalidRequestError:
         admin     = Group(group_name=u'admin',display_name=u'Admin')
-        admin.users.append(user)
+    
+    #Setup User account
+    if opts.user_name:
+        if opts.password:
+            user = User(user_name=opts.user_name,
+                        password=opts.password)
+            if opts.display_name:
+                user.display_name = opts.display_name
+            if opts.email_address:
+                user.email_address = opts.email_address
+            admin.users.append(user)
+        else:
+            print "Password must be provided with username"
 
     #Setup SystemTypes Table
     if SystemType.query().count() == 0:
@@ -140,6 +143,26 @@ def main():
         XENCERT		= Key('XENCERT')
 
     session.flush()
+
+def get_parser():
+    usage = "usage: %prog [options]"
+    parser = OptionParser(usage, description=__description__,
+                          version=__version__)
+
+    ## Actions
+    parser.add_option("-c", "--config", action="store", type="string",
+                      dest="configfile", help="location of config file.")
+    parser.add_option("-u", "--user", action="store", type="string",
+                      dest="user_name", help="username of Admin account")
+    parser.add_option("-p", "--password", action="store", type="string",
+                      dest="password", help="password of Admin account")
+    parser.add_option("-e", "--email", action="store", type="string",
+                      dest="email_address", 
+                      help="email address of Admin account")
+    parser.add_option("-n", "--fullname", action="store", type="string",
+                      dest="display_name", help="Full name of Admin account")
+
+    return parser
 
 if __name__ == "__main__":
     main()
