@@ -36,8 +36,9 @@ class CSV(RPCRoot):
                                         ('exclude', 'System Excluded Families'), 
                                         ('install', 'System Install Options'),
                                         ('keyvalue', 'System Key/Values'),
-                                        ('system_groups', 'System Groups')], 
-                                                           default='system')
+                                        ('system_group', 'System Groups'),
+                                        ('user_group', 'User Groups')], 
+                                                          default='system')
 
     importform = widgets.TableForm(
         'import',
@@ -93,29 +94,50 @@ class CSV(RPCRoot):
         # ... process CSV file contents here ...
         reader = csv.DictReader(csv_data, dialect=dialect)
         for data in reader:
-            if 'fqdn' in data and 'csv_type' in data:
-                try:
-                    system = System.query.filter(System.fqdn == data['fqdn']).one()
-                except InvalidRequestError:
-                    system = System(fqdn=data['fqdn'],
-                                    owner=identity.current.user)
-                if system.can_admin(identity.current.user):
-                    # Remove fqdn, can't change that via csv.
-                    data.pop('fqdn')
-                    if not self.from_csv(system, data, log):
-                        if system.id:
-                            # System already existed but some or all of the
-                            #  import data was invalid.
-                            session.expire(system)
+            if 'csv_type' in data:
+                if data['csv_type'] in system_types and \
+                  'fqdn' in data:
+                    try:
+                        system = System.query.filter(System.fqdn == data['fqdn']).one()
+                    except InvalidRequestError:
+                        # Create new system with some defaults
+                        # Assume the system is broken until proven otherwise.
+                        # Also assumes its a machine.  we have to pick something
+                        system = System(fqdn=data['fqdn'],
+                                        owner=identity.current.user,
+                                        type=SystemType.by_name('Machine'),
+                                        status=SystemStatus.by_name('Broken'))
+                    if system.can_admin(identity.current.user):
+                        # Remove fqdn, can't change that via csv.
+                        data.pop('fqdn')
+                        if not self.from_csv(system, data, log):
+                            if system.id:
+                                # System already existed but some or all of the
+                                #  import data was invalid.
+                                session.expire(system)
+                            else:
+                                # System didn't exist before import but some
+                                #  or all of the import data was invalid.
+                                session.expunge(system)
+                                del(system)
                         else:
-                            # System didn't exist before import but some
-                            #  or all of the import data was invalid.
-                            session.expunge(system)
-                            del(system)
+                            # Save out our system.  If we created it above we
+                            # want to make sure its found on subsequent lookups
+                            session.save_or_update(system)
+                            session.flush([system])
+                    else:
+                        log.append("You are not the owner of %s" % system.fqdn)
+                elif data['csv_type'] == 'user_group' and \
+                  'user' in data:
+                    user = User.by_user_name(data['user'])
+                    if user:
+                        CSV_GroupUser.from_csv(user, data, log)
+                    else:
+                        log.append('%s is not a valid user' % data['user'])
                 else:
-                    log.append("You are not the owner of %s" % system.fqdn)
+                    log.append("Invalid csv_type %s or missing required fields" % csv_type)
             else:
-                log.append("Missing fqdn and csv_type from record")
+                log.append("Missing csv_type from record")
 
         return dict(log = log)
 
@@ -171,7 +193,6 @@ class CSV(RPCRoot):
                 if str(newdata) != str(current_data):
                     activity = SystemActivity(identity.current.user, 'CSV', 'Changed', key, '%s' % current_data, '%s' % newdata)
                     system.activity.append(activity)
-                    log.append("%s: %s Changed from %s to %s" % (system.fqdn, key, current_data, newdata))
                     setattr(csv_object,key,newdata)
 
         return True
@@ -213,7 +234,6 @@ class CSV_System(CSV):
                 if str(newdata) != str(current_data):
                     activity = SystemActivity(identity.current.user, 'CSV', 'Changed', key, '%s' % current_data, '%s' % newdata)
                     system.activity.append(activity)
-                    log.append("%s: %s Changed from %s to %s" % (system.fqdn, key, current_data, newdata))
                     setattr(system,key,newdata)
 
         # import arch
@@ -232,7 +252,6 @@ class CSV_System(CSV):
             if system.arch != arch_objs:
                 activity = SystemActivity(identity.current.user, 'CSV', 'Changed', 'arch', '%s' % system.arch, '%s' % arch_objs)
                 system.activity.append(activity)
-                log.append("%s: %s Changed from %s to %s" % (system.fqdn, 'lab_controller', system.arch, arch_objs))
                 system.arch = arch_objs
 
         # import labController
@@ -249,7 +268,6 @@ class CSV_System(CSV):
             if system.lab_controller != lab_controller:
                 activity = SystemActivity(identity.current.user, 'CSV', 'Changed', 'lab_controller', '%s' % system.lab_controller, '%s' % lab_controller)
                 system.activity.append(activity)
-                log.append("%s: %s Changed from %s to %s" % (system.fqdn, 'lab_controller', system.lab_controller, lab_controller))
                 system.lab_controller = lab_controller
             
         # import owner
@@ -265,7 +283,6 @@ class CSV_System(CSV):
             if system.owner != owner:
                 activity = SystemActivity(identity.current.user, 'CSV', 'Changed', 'owner', '%s' % system.owner, '%s' % owner)
                 system.activity.append(activity)
-                log.append("%s: %s Changed from %s to %s" % (system.fqdn, 'owner', system.owner, owner))
                 system.owner = owner
         # import status
         if 'status' in data:
@@ -281,7 +298,6 @@ class CSV_System(CSV):
             if system.status != systemstatus:
                 activity = SystemActivity(identity.current.user, 'CSV', 'Changed', 'status', '%s' % system.status, '%s' % systemstatus)
                 system.activity.append(activity)
-                log.append("%s: %s Changed from %s to %s" % (system.fqdn, 'status', system.status, systemstatus))
                 system.status = systemstatus
         # import type
         if 'type' in data:
@@ -297,7 +313,6 @@ class CSV_System(CSV):
             if system.type != systemtype:
                 activity = SystemActivity(identity.current.user, 'CSV', 'Changed', 'type', '%s' % system.type, '%s' % systemtype)
                 system.activity.append(activity)
-                log.append("%s: %s Changed from %s to %s" % (system.fqdn, 'type', system.type, systemtype))
                 system.type = systemtype
         # import secret
         if 'secret' in data:
@@ -308,7 +323,6 @@ class CSV_System(CSV):
             if system.private != newdata:
                 activity = SystemActivity(identity.current.user, 'CSV', 'Changed', 'secret', '%s' % system.private, '%s' % newdata)
                 system.activity.append(activity)
-                log.append("%s: %s Changed from %s to %s" % (system.fqdn, 'secret', system.private, newdata))
                 system.private = newdata
         return True
 
@@ -389,12 +403,6 @@ class CSV_Exclude(CSV):
                     system.excluded_osversion.append(exclude_osversion)
                     activity = SystemActivity(identity.current.user, 'CSV', 'Added', 'Excluded_families', '', '%s/%s' % (osversion, arch))
                     system.activity.append(activity)
-                    log.append("%s: Added %s.%s exclude%s" % (
-                                                                system.fqdn,
-                                                                data['family'],
-                                                                data['update'],
-                                                                   )
-                              )
             else:
                 if data['excluded'] == 'False':
                     for old_osversion in system.excluded_osversion_byarch(arch):
@@ -402,13 +410,6 @@ class CSV_Exclude(CSV):
                             activity = SystemActivity(identity.current.user, 'CSV', 'Removed', 'Excluded_families', '%s/%s' % (old_osversion.osversion, arch),'')
                             system.activity.append(activity)
                             session.delete(old_osversion)
-                            log.append("%s: Removed %s.%s exclude" % (
-                                                                system.fqdn,
-                                                                data['family'],
-                                                                data['update'],
-                                                                       )
-                                      )
-
         if not data['update'] and data['family']:
             try:
                 osmajor = OSMajor.by_name(data['family'])
@@ -422,11 +423,6 @@ class CSV_Exclude(CSV):
                     system.excluded_osmajor.append(exclude_osmajor)
                     activity = SystemActivity(identity.current.user, 'CSV', 'Added', 'Excluded_families', '', '%s/%s' % (osmajor, arch))
                     system.activity.append(activity)
-                    log.append("%s: Added %s exclude" % (
-                                                                system.fqdn,
-                                                                data['family'],
-                                                                   )
-                              )
             else:
                 if data['excluded'] == 'False':
                     for old_osmajor in system.excluded_osmajor_byarch(arch):
@@ -434,12 +430,6 @@ class CSV_Exclude(CSV):
                             activity = SystemActivity(identity.current.user, 'CSV', 'Removed', 'Excluded_families', '%s/%s' % (old_osmajor.osmajor, arch),'')
                             system.activity.append(activity)
                             session.delete(old_osmajor)
-                            log.append("%s: Removed %s exclude" % (
-                                                                system.fqdn,
-                                                                data['family'],
-                                                                       )
-                                      )
-
         return True
 
     def __init__(self, exclude):
@@ -523,6 +513,7 @@ class CSV_Install(CSV):
             else:
                 prov = ProvisionFamilyUpdate(osversion=update)
                 system_provfam.provision_family_updates[update] = prov
+            installlog = '%s/%s' % (arch,update)
                        
         #Import Family specific
         if family and not update:
@@ -537,6 +528,7 @@ class CSV_Install(CSV):
             else:
                 prov = ProvisionFamily(osmajor=family)
                 system_arch.provision_families[family] = prov
+            installlog = '%s/%s' % (arch,family)
                        
         #Import Arch specific
         if not family and not update:
@@ -545,21 +537,16 @@ class CSV_Install(CSV):
             else:
                 prov = Provision(arch=arch)
                 system.provisions[arch] = prov
+            installlog = '%s' % arch
 
         if 'ks_meta' in data and prov.ks_meta != data['ks_meta']:
-            log.append("%s: ks_meta changed from %s to %s" % (system.fqdn,
-                                                              prov.ks_meta,
-                                                              data['ks_meta']))
+            system.activity.append(SystemActivity(identity.current.user,'CSV','Changed', 'InstallOption:ks_meta:%s' % installlog, prov.ks_meta, data['ks_meta']))
             prov.ks_meta = data['ks_meta']
         if 'kernel_options' in data and prov.kernel_options != data['kernel_options']:
-            log.append("%s: kernel_options changed from %s to %s" % (system.fqdn,
-                                                              prov.kernel_options,
-                                                              data['kernel_options']))
+            system.activity.append(SystemActivity(identity.current.user,'CSV','Changed', 'InstallOption:kernel_options:%s' % installlog, prov.kernel_options, data['kernel_options']))
             prov.kernel_options = data['kernel_options']
         if 'kernel_options_post' in data and prov.kernel_options_post != data['kernel_options_post']:
-            log.append("%s: kernel_options_post changed from %s to %s" % (system.fqdn,
-                                                              prov.kernel_options_post,
-                                                              data['kernel_options_post']))
+            system.activity.append(SystemActivity(identity.current.user,'CSV','Changed', 'InstallOption:kernel_options_post:%s' % installlog, prov.kernel_options_post, data['kernel_options_post']))
             prov.kernel_options_post = data['kernel_options_post']
 
         return True
@@ -600,14 +587,174 @@ class CSV_Install(CSV):
                     datastruct['update'] = None
         
 class CSV_KeyValue(CSV):
-    pass
+    csv_type = 'keyvalue'
+    csv_keys = ['fqdn', 'key', 'key_value', 'deleted' ]
 
-class CSV_SystemGroups(CSV):
-    pass
+    @classmethod
+    def query(cls):
+        for key_int in Key_Value_Int.query():
+            yield CSV_KeyValue(key_int)
+        for key_string in Key_Value_String.query():
+            yield CSV_KeyValue(key_string)
 
+    @classmethod
+    def _from_csv(cls,system,data,csv_type,log):
+        """
+        Import data from CSV file into System Objects
+        """
+        if 'key' in data and data['key']:
+            try:
+                key = Key.by_name(data['key'])
+            except InvalidRequestError:
+                log.append('%s: Invalid Key %s ' % data['key'])
+                return False
+        else:
+            log.append('%s: Key must not be blank!' % system.fqdn)
+            return False
+        if 'key_value' in data and data['key_value']:
+            if key.numeric:
+                system_key_values = system.key_values_int
+                try:
+                    key_value = Key_Value_Int.by_key_value(system,
+                                                           key,
+                                                           data['key_value'])
+                except InvalidRequestError:
+                    key_value = Key_Value_Int(key=key,
+                                              key_value=data['key_value'])
+            else:
+                system_key_values = system.key_values_string
+                try:
+                    key_value = Key_Value_String.by_key_value(system,
+                                                           key,
+                                                           data['key_value'])
+                except InvalidRequestError:
+                    key_value = Key_Value_String(key=key,
+                                                 key_value=data['key_value'])
+        else:
+            log.append('%s: Key Value must not be blank!' % system.fqdn)
+            return False
+        deleted = False
+        if 'deleted' in data:
+            deleted = smart_bool(data['deleted'])
+        if deleted:
+            if key_value in system_key_values:
+                activity = SystemActivity(identity.current.user, 'CSV', 'Removed', 'Key/Value', '%s/%s' % (data['key'],data['key_value']), '')
+                system.activity.append(activity)
+                system_key_values.remove(key_value)
+                if not key_value.id:
+                    session.expunge(key_value)
+        else:
+            if key_value not in system_key_values:
+                activity = SystemActivity(identity.current.user, 'CSV', 'Added', 'Key/Value', '', '%s/%s' % (data['key'],data['key_value']))
+                system.activity.append(activity)
+                system_key_values.append(key_value)
+        session.save_or_update(key_value)
+        session.flush([key_value])
+        return True
+
+    def __init__(self, key):
+        self.fqdn = key.system.fqdn
+        self.key = key.key
+        self.key_value = key.key_value
+        self.deleted = False
+
+class CSV_GroupUser(CSV):
+    csv_type = 'user_group'
+    csv_keys = ['user', 'group', 'deleted']
+
+    @classmethod
+    def query(cls):
+        for user in User.query():
+            for group in user.groups:
+                yield CSV_GroupUser(user, group)
+
+    @classmethod
+    def from_csv(cls,user,data,log):
+        """
+        Import data from CSV file into user.groups
+        """
+        if 'group' in data and data['group']:
+            try:
+               group = Group.by_name(data['group'])
+            except InvalidRequestError:
+               group = Group(group_name=data['group'],
+                             display_name=data['group'])
+               session.save(group)
+               session.flush([group])
+            deleted = False
+            if 'deleted' in data:
+                deleted = smart_bool(data['deleted'])
+            if deleted:
+                if group in user.groups:
+                    activity = Activity(identity.current.user, 'CSV', 'Removed', 'group', '%s' % group, '')
+                    user.groups.remove(group)
+            else:
+                if group not in user.groups:
+                    user.groups.append(group)
+                    activity = Activity(identity.current.user, 'CSV', 'Added', 'group', '', '%s' % group)
+        else:
+            log.append("%s: group can't be empty!" % user)
+            return False
+        return True
+
+    def __init__(self, user, group):
+        self.group = group.group_name
+        self.user = user.user_name
+        self.deleted = False
+
+class CSV_GroupSystem(CSV):
+    csv_type = 'system_group'
+    csv_keys = ['fqdn', 'group', 'deleted']
+
+    @classmethod
+    def query(cls):
+        for system in System.query():
+            for group in system.groups:
+                yield CSV_GroupSystem(system, group)
+
+    @classmethod
+    def _from_csv(cls,system,data,csv_type,log):
+        """
+        Import data from CSV file into system.groups
+        """
+        if 'group' in data and data['group']:
+            try:
+               group = Group.by_name(data['group'])
+            except InvalidRequestError:
+               group = Group(group_name=data['group'],
+                             display_name=data['group'])
+               session.save(group)
+               session.flush([group])
+            deleted = False
+            if 'deleted' in data:
+                deleted = smart_bool(data['deleted'])
+            if deleted:
+                if group in system.groups:
+                    activity = SystemActivity(identity.current.user, 'CSV', 'Removed', 'group', '%s' % group, '')
+                    system.activity.append(activity)
+                    system.groups.remove(group)
+            else:
+                if group not in system.groups:
+                    system.groups.append(group)
+                    activity = SystemActivity(identity.current.user, 'CSV', 'Added', 'group', '', '%s' % group)
+                    system.activity.append(activity)
+        else:
+            log.append("%s: group can't be empty!" % system.fqdn)
+            return False
+        return True
+
+    def __init__(self, system, group):
+        self.group = group.group_name
+        self.fqdn = system.fqdn
+        self.deleted = False
+
+system_types = ['system', 'labinfo', 'exclude','install','keyvalue',
+                'system_group']
+user_types   = ['user_group']
 csv_types = dict( system = CSV_System,
                   labinfo = CSV_LabInfo,
                   exclude = CSV_Exclude,
                   install = CSV_Install,
                   keyvalue = CSV_KeyValue,
-                  system_groups = CSV_SystemGroups)
+                  system_group = CSV_GroupSystem,
+                  user_group = CSV_GroupUser)
