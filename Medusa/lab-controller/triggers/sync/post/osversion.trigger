@@ -172,7 +172,6 @@ def update_comment(distro):
             if releaseregex.search(release):
                 update = releaseregex.search(release).group(1)
     if os.path.exists("%s/.treeinfo" % paths['tree_path']):
-        update = 0
         parser = ConfigParser()
         parser.read("%s/.treeinfo" % paths['tree_path'])
         try:
