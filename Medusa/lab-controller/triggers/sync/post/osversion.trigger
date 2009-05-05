@@ -186,7 +186,6 @@ def update_comment(distro):
         if version.find('.') != -1:
             update = version.split('.')[1]
     elif os.path.exists("%s/.discinfo" % paths['tree_path']):
-        update = 0
         discinfo = open("%s/.discinfo" % paths['tree_path'], "r")
         familyupdate = discinfo.read().split("\n")[1]
         family = familyupdate.split(".")[0].replace(" ","")
