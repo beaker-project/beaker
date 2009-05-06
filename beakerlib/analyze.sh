@@ -72,19 +72,6 @@ rlDejaSum(){
 	$RHTSLIB/perl/deja-summarize $1 $2 >> $OUTPUTFILE
 }
 
-rlCompareJournalWithRCW(){
-	if [ -x /usr/bin/rcw-copy-log ]
-	then
-		jrnl=/tmp/rcw-journal
-		rlJournalPrint > $jrnl
-		rcw-copy-log $jrnl
-		cp "/usr/share/rhts-library/python/journal-compare.py" compare.sh
-		echo "compare.sh" > COMPARE-LIST
-	else
-		rlLogWarning "RCW files were not found on this system, doing nothing"
-	fi
-}
-
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # AUTHORS
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
