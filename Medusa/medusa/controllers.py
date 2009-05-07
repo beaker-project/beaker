@@ -26,6 +26,7 @@ from medusa.widgets import SystemInstallOptions
 from medusa.widgets import SystemProvision
 from medusa.widgets import SearchBar, SystemForm
 from medusa.widgets import SystemArches
+from medusa.authentication import Auth
 from medusa.xmlrpccontroller import RPCRoot
 from medusa.cobbler_utils import hash_to_string
 from cherrypy import request, response
@@ -181,6 +182,7 @@ class Root(RPCRoot):
     users = Users()
     arches = Arches()
     netboot = Netboot()
+    auth = Auth()
     csv = CSV()
 
     id         = widgets.HiddenField(name='id')
@@ -1158,7 +1160,9 @@ class Root(RPCRoot):
         redirect("/view/%s" % system.fqdn)
 
     @cherrypy.expose
-    def lab_controllers(self, machine_account):
+    # Testing auth via xmlrpc
+    #@identity.require(identity.in_group("admin"))
+    def lab_controllers(self, *args):
         return [lc.fqdn for lc in LabController.query()]
     
     def pick_common(self, distro=None, user=None, xml=None):
