@@ -151,7 +151,7 @@ identity.provider='sqlalchemy'
 #identity.soldapprovider.uri="ldaps://ldap.domain.com"
 #identity.soldapprovider.basedn="dc=domain,dc=com"
 #identity.soldapprovider.autocreate=True
-identity.krb_auth_principal='host@RHTS.COM'
+identity.krb_auth_principal='host/$HOSTNAME@REDHAT.COM'
 identity.krb_auth_keytab='/etc/krb5.keytab'
 
 # SERVER
