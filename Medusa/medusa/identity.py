@@ -19,8 +19,8 @@ class LdapSqlAlchemyIdentityProvider(SqlAlchemyIdentityProvider):
 
         global user_class, group_class, permission_class, visit_class
 
-        self.provider = get("identity.provider", "")
-        if self.provider == 'ldapsa':
+        self.ldap = get("identity.ldap.enabled", False)
+        if self.ldap:
             self.uri = get("identity.soldapprovider.uri", "ldaps://localhost")
             self.basedn  = get("identity.soldapprovider.basedn", "dc=localhost")
             self.autocreate = get("identity.soldapprovider.autocreate", False)
@@ -64,7 +64,7 @@ class LdapSqlAlchemyIdentityProvider(SqlAlchemyIdentityProvider):
         '''
         if user.password == self.encrypt_password(password):
             return True
-        if self.provider == 'ldapsa':
+        if self.ldap:
             ldapcon = ldap.initialize(self.uri)
             filter = "(uid=%s)" % user_name
             rc = ldapcon.search(self.basedn, ldap.SCOPE_SUBTREE, filter)

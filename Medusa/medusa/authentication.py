@@ -69,6 +69,7 @@ class Auth(RPCRoot):
         # remove @REALM
         username = cprinc.name.split("@")[0]
         print "username=", username
+        visit_key = turbogears.visit.current().key
         identity.current_provider.validate_identity(username, 
                                                     None, visit_key, True)
         return identity.current.visit_key
