@@ -47,9 +47,11 @@ class Auth(RPCRoot):
         return identity.current.visit_key
 
     # TODO: proxy_user
-    def login_krbv(request, krb_request, proxy_user=None):
-        """login_krbv(krb_request, proxy_user=None): session_key"""
+    @cherrypy.expose
+    def login_krbV(self, request, krb_request, proxy_user=None):
+        """login_krbV(krb_request, proxy_user=None): session_key"""
         import krbV
+        import base64
 
         context = krbV.default_context()
         server_principal = krbV.Principal(name=self.KRB_AUTH_PRINCIPAL, context=context)
