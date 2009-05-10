@@ -146,13 +146,13 @@ sqlalchemy.pool_recycle = 3600
 
 # Authentication
 
-identity.provider='sqlalchemy'
-#identity.provider='ldapsa'
+identity.provider='ldapsa'
+identity.ldap.enabled=False
 #identity.soldapprovider.uri="ldaps://ldap.domain.com"
 #identity.soldapprovider.basedn="dc=domain,dc=com"
 #identity.soldapprovider.autocreate=True
 identity.krb_auth_principal='HTTP/$HOSTNAME@REDHAT.COM'
-identity.krb_auth_keytab='/etc/krb5.keytab'
+identity.krb_auth_keytab='/etc/httpd/conf/httpd.keytab'
 
 # SERVER
 
