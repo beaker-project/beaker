@@ -457,7 +457,7 @@ class User(object):
     Reasonably basic User definition.
     Probably would want additional attributes.
     """
-    ldapenabled = get("identity.ldap.enabled",False
+    ldapenabled = get("identity.ldap.enabled",False)
     if ldapenabled:
         uri = get("identity.soldapprovider.uri", "ldaps://localhost")
         basedn  = get("identity.soldapprovider.basedn", "dc=localhost")
