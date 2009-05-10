@@ -26,6 +26,9 @@ class LdapSqlAlchemyIdentityProvider(SqlAlchemyIdentityProvider):
             self.autocreate = get("identity.soldapprovider.autocreate", False)
             # Only needed for devel. comment out for Prod.
             ldap.set_option(ldap.OPT_X_TLS_REQUIRE_CERT, ldap.OPT_X_TLS_NEVER)
+            log.info("uri :: %s" % self.uri)
+            log.info("basedn :: %s" % self.basedn)
+            log.info("autocreate :: %s" % self.autocreate)
 
         user_class_path = get("identity.saprovider.model.user",
                               None)
@@ -41,9 +44,6 @@ class LdapSqlAlchemyIdentityProvider(SqlAlchemyIdentityProvider):
         log.info("Loading: %s", visit_class_path)
         visit_class = load_class(visit_class_path)
 
-        log.info("uri :: %s" % self.uri)
-        log.info("basedn :: %s" % self.basedn)
-        log.info("autocreate :: %s" % self.autocreate)
 
     def validate_identity(self, user_name, password, visit_key, krb=None):
         user = user_class.by_user_name(user_name)
