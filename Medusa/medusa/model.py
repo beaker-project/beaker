@@ -457,8 +457,8 @@ class User(object):
     Reasonably basic User definition.
     Probably would want additional attributes.
     """
-    provider = get("identity.provider","")
-    if provider == 'ldapsa':
+    ldapenabled = get("identity.ldap.enabled",False
+    if ldapenabled:
         uri = get("identity.soldapprovider.uri", "ldaps://localhost")
         basedn  = get("identity.soldapprovider.basedn", "dc=localhost")
         autocreate = get("identity.soldapprovider.autocreate", False)
@@ -500,7 +500,7 @@ class User(object):
         if user:
             return user
         # If user doesn't exist in DB check ldap if enabled.
-        if cls.provider == 'ldapsa':
+        if cls.ldapenabled:
             filter = "(uid=%s)" % username
             ldapcon = ldap.initialize(cls.uri)
             rc = ldapcon.search(cls.basedn, ldap.SCOPE_SUBTREE, filter)
@@ -525,7 +525,7 @@ class User(object):
     @classmethod
     def list_by_name(cls, username):
         ldap_users = []
-        if cls.provider == 'ldapsa':
+        if cls.ldapenabled:
             filter = "(uid=%s*)" % username
             ldapcon = ldap.initialize(cls.uri)
             rc = ldapcon.search(cls.basedn, ldap.SCOPE_SUBTREE, filter)
