@@ -1,9 +1,9 @@
 #!/bin/sh
 
-# journal.sh - part of RHTS library
+# journal.sh - part of BeakerLib
 # Authors: 	Petr Muller     <pmuller@redhat.com> 
 #
-# Description: RHTSlib journalling functions
+# Description: BeakerLib journalling functions
 #
 # Copyright (c) 2008 Red Hat, Inc. All rights reserved. This copyrighted material 
 # is made available to anyone wishing to use, modify, copy, or
@@ -23,7 +23,7 @@
 
 =head1 NAME
 
-journal.sh - RHTSlib journalling functions
+journal.sh - BeakerLib journalling functions
 
 =head1 DESCRIPTION
 
@@ -83,7 +83,7 @@ Summarizes the test run and uploads the journal file
     rlJournalEnd
 
 Run on the very end of your script to print summary of the whole test run,
-generate OUTPUTFILE and include journal in RHTS logs.
+generate OUTPUTFILE and include journal in Beaker logs.
 
 =cut
 

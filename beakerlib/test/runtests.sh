@@ -25,7 +25,7 @@ echo "#!/bin/bash" >runtests-worker.sh
 cat >>runtests-worker.sh <<EOF
 # We need to export the variables out of the oneTimeSetUp function
 export BEAKERLIB=$PWD/'..'
-export TEST='/CoreOS/distribution/rhtslib/unit-tests'
+export TEST='/CoreOS/distribution/beakerlib/unit-tests'
 export OUTPUTFILE="$( mktemp )"
 export RECIPEID='123'
 export TESTID='123456'

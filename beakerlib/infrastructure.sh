@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# infrastructure.sh - part of RHTS library
+# infrastructure.sh - part of BeakerLib
 # Authors: 	Petr Muller     <pmuller@redhat.com> 
 #
 # Description: Contains helpers for checking and mounting NFS exports
@@ -27,7 +27,7 @@ infrastructure.sh - mounting, backup and services
 
 =head1 DESCRIPTION
 
-RHTSlib functions providing checking and mounting NFS shares, backing up and
+BeakerLib functions providing checking and mounting NFS shares, backing up and
 restoring files and controlling running services.
 
 =head1 FUNCTIONS

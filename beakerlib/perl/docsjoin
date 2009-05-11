@@ -17,12 +17,12 @@
 
 # This perl script takes all supplied files or stdin and extracts
 # every =pod section that does not include =head1 headings except
-# those which contain rhtslib-manual-{header,footer} directives.
+# those which contain beakerlib-manual-{header,footer} directives.
 #
 # Finally it spits out parsed =pod sections in the following order:
-# rhtslib-manual-header
-# rhtslib-manual-include (all non-=head1 sections included here)
-# rhtslib-manual-footer
+# beakerlib-manual-header
+# beakerlib-manual-include (all non-=head1 sections included here)
+# beakerlib-manual-footer
 
 my $pod = 0;
 my $type = '';
@@ -35,8 +35,8 @@ while (<>) {
     }
 
     # recognize header/footer and trash =head1's
-    $type = 'header' if m/rhtslib-manual-header/;
-    $type = 'footer' if /rhtslib-manual-footer/;
+    $type = 'header' if m/beakerlib-manual-header/;
+    $type = 'footer' if /beakerlib-manual-footer/;
     $type = 'trash'  if /^=head1/ && ! ($type =~ m/header|footer/);
 
     # add to corresponding place

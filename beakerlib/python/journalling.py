@@ -2,7 +2,7 @@
 
 # Authors:  Petr Muller     <pmuller@redhat.com>
 #
-# Description: Provides journalling capabilities for RHTS tests
+# Description: Provides journalling capabilities for BeakerLib
 #
 # Copyright (c) 2008 Red Hat, Inc. All rights reserved. This copyrighted
 # material is made available to anyone wishing to use, modify, copy, or
@@ -235,19 +235,19 @@ def initializeJournal(id, test, package):
   saveJournal(newdoc, id)
 
 def saveJournal(newdoc, id):
-  output = open('/tmp/rhts_journal.%s' % id, 'wb')
+  output = open('/tmp/beakerlib_journal.%s' % id, 'wb')
   output.write(newdoc.toxml().encode('utf-8'))
   output.close()
 
 def _openJournal(id):
-  jrnl = xml.dom.minidom.parse("/tmp/rhts_journal.%s" % id )
+  jrnl = xml.dom.minidom.parse("/tmp/beakerlib_journal.%s" % id )
   return jrnl
 
 def openJournal(id):
   try:
     jrnl = _openJournal(id)
   except (IOError, EOFError):
-    printLog('Journal not initialised? Trying it now.', 'RHTSlib_WARNING')
+    printLog('Journal not initialised? Trying it now.', 'BEAKERLIB_WARNING')
     initializeJournal(id,
                       os.environ.get("TEST", "some test"),
                       os.environ.get("PACKAGE", "some package"))
@@ -368,7 +368,7 @@ def need(args):
     print "need Blargh!"
     sys.exit(1)  
 
-DESCRIPTION = "Wrapper for operations above rhtslib journal"
+DESCRIPTION = "Wrapper for operations above BeakerLib journal"
 optparser = OptionParser(description=DESCRIPTION)
 
 optparser.add_option("-i", "--id", default=None, dest="testid", metavar="TEST-ID")

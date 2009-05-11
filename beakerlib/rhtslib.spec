@@ -1,5 +1,5 @@
 Name: rhtslib
-Summary: RHTS test library
+Summary: Beaker test library
 Version: 	0.6
 Release: 	3
 License: 	GPLv2
@@ -10,8 +10,8 @@ BuildArch:	noarch
 URL:            https://fedorahosted.org/beaker/RhtsLibrary
 
 %description
-The rhtslib project means to provide a library of various helpers,
-which could be used when writing RHTS tests.
+The BeakerLib project means to provide a library of various helpers,
+which could be used when writing Beaker tests.
 
 %prep
 %setup -q
@@ -56,19 +56,19 @@ rm perl/docsjoin
 /usr/lib/beakerlib/test/journalTest.sh
 /usr/lib/beakerlib/test/library.sh
 /usr/lib/beakerlib/test/loggingTest.sh
-/usr/lib/beakerlib/test/rhtslibTest.sh
+/usr/lib/beakerlib/test/beakerlibTest.sh
 /usr/lib/beakerlib/test/rpmsTest.sh
 /usr/lib/beakerlib/test/runtests.sh
 /usr/lib/beakerlib/test/shunit2
 /usr/lib/beakerlib/test/testingTest.sh
-/usr/share/man/man1/rhtslib-rpms.1.gz
-/usr/share/man/man1/rhtslib.1.gz
-/usr/share/man/man1/rhtslib-virtualX.1.gz
-/usr/share/man/man1/rhtslib-infrastructure.1.gz
-/usr/share/man/man1/rhtslib-analyze.1.gz
-/usr/share/man/man1/rhtslib-rhtslib.1.gz
-/usr/share/man/man1/rhtslib-performance.1.gz
-/usr/share/man/man1/rhtslib-testing.1.gz
-/usr/share/man/man1/rhtslib-journal.1.gz
-/usr/share/man/man1/rhtslib-logging.1.gz
+/usr/share/man/man1/beakerlib-rpms.1.gz
+/usr/share/man/man1/beakerlib.1.gz
+/usr/share/man/man1/beakerlib-virtualX.1.gz
+/usr/share/man/man1/beakerlib-infrastructure.1.gz
+/usr/share/man/man1/beakerlib-analyze.1.gz
+/usr/share/man/man1/beakerlib-beakerlib.1.gz
+/usr/share/man/man1/beakerlib-performance.1.gz
+/usr/share/man/man1/beakerlib-testing.1.gz
+/usr/share/man/man1/beakerlib-journal.1.gz
+/usr/share/man/man1/beakerlib-logging.1.gz
 

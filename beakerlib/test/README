@@ -1,4 +1,4 @@
-= RHTSLib unit-tests =
+= BeakerLib unit-tests =
 
 == How to run tests ==
 
@@ -6,7 +6,7 @@ Just execute `runtests.sh` if you want all the tests to run
    OR
 Execute this script with a list of files you want execute tests from
 
-E.g.:   $ ./runtests.sh rhtslibTest.sh   # run only tests from "rhtslibTest.sh"
+E.g.:   $ ./runtests.sh beakerlibTest.sh   # run only tests from "beakerlibTest.sh"
 
 
 

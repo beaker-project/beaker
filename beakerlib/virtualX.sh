@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# virtualX.sh - part of RHTS library
+# virtualX.sh - part of BeakerLib
 # Authors:      Jan Hutar <jhutar@redhat.com>
 #
 # Description: Contains helpers for starting/stopping virtual X server
@@ -23,7 +23,7 @@
 
 =head1 NAME
 
-virtualX.sh - RHTSlib functions for manipulating with virtual X server
+virtualX.sh - BeakerLib functions for manipulating with virtual X server
 
 =head1 DESCRIPTION
 
@@ -134,7 +134,7 @@ function rlVirtXStartDisplay() {
 Functions providing simple way how to start and stop virtual X
 server.
 
-WARNING: This rhtslib component is still in development, use
+WARNING: This BeakerLib component is still in development, use
 carefully. If you encounter any problems contact jhutar@redhat.com.
 
 =cut

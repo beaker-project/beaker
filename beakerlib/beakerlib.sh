@@ -23,7 +23,7 @@ beakerlib.sh - BeakerLib Library main script
 
 =head1 DESCRIPTION
 
-The purpose of RHTS Library is to create a set of functions which would
+The purpose of BeakerLib is to create a set of functions which would
 make our life easier when writing tests and also to make our tests more
 beautiful. Most important features which help to reach these goals are:
 
@@ -45,7 +45,7 @@ asserts contained inside the phase).
 
 =back
 
-Main script sets C<RHTSLIB> variable and sources other scripts
+Main script sets C<BEAKERLIB> variable and sources other scripts
 where the actual functions are defined. You should source it at
 the beginning of your test with:
 
@@ -56,21 +56,20 @@ See the EXAMPLES section below for quick start.
 =cut
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# rhtslib-manual-include
+# beakerlib-manual-include
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 :<<'=cut'
 
 =pod
 
-=for comment rhtslib-manual-footer
+=for comment beakerlib-manual-footer
 
 =head1 EXAMPLES
 
-This is a minimal example of an RHTSlib test.
+This is a minimal example of an BeakerLib test.
 
- # Include rhts and rhtslib environment
- rpm -Uvh https://fedorahosted.org/releases/b/e/beaker/rhtslib.rpm
+ # Include rhts and BeakerLib environment
  . /usr/bin/rhts-environment.sh
  . /usr/lib/beakerlib/beakerlib.sh
 
@@ -84,8 +83,7 @@ Then next example is a bit more interesting real-life test which makes use of
 journalling and phases to create the usual three-phase test structure: Setup,
 Testing and Cleanup.
 
- # Include rhts and rhtslib environment
- rpm -q --quiet rhtslib || rpm -Uvh https://fedorahosted.org/releases/b/e/beaker/rhtslib.rpm
+ # Include rhts and BeajerLib environment
  . /usr/bin/rhts-environment.sh
  . /usr/lib/beakerlib/beakerlib.sh
 

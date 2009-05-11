@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# rpms.sh - part of RHTS library
+# rpms.sh - part of BeakerLib
 # Authors: 	Petr Muller     <pmuller@redhat.com> 
 #
 # Description: Contains helpers for RPM manipulation
@@ -23,11 +23,11 @@
 
 =head1 NAME
 
-rpms.sh - RHTS lib functions for RPM manipulation
+rpms.sh - BeakerLib functions for RPM manipulation
 
 =head1 DESCRIPTION
 
-Functions in this RHTS lib script are used for RPM manipulation.
+Functions in this BeakerLib script are used for RPM manipulation.
 
 =head1 FUNCTIONS
 

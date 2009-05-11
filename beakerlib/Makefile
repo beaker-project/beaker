@@ -90,16 +90,16 @@ unit-test:
 docsjoin:
 	rm -rf docs/pod
 	mkdir -p docs/pod
-	./perl/docsjoin $(SCRIPTS) >docs/pod/rhtslib.pod
+	./perl/docsjoin $(SCRIPTS) >docs/pod/beakerlib.pod
 
 docsman: $(SCRIPTS) docsjoin
 	rm -rf docs/man
 	mkdir -p docs/man/man1
 	for i in $(SCRIPTS); do \
 		name=`echo $$i | sed 's/\.sh//'`; \
-	    pod2man $$i > docs/man/man1/rhtslib-$$name.1; \
+	    pod2man $$i > docs/man/man1/beakerlib-$$name.1; \
 	done
-	pod2man docs/pod/rhtslib.pod > docs/man/man1/rhtslib.1
+	pod2man docs/pod/beakerlib.pod > docs/man/man1/beakerlib.1
 	gzip docs/man/man1/*.1
 
 docshtml: $(SCRIPTS) docsjoin
@@ -107,9 +107,9 @@ docshtml: $(SCRIPTS) docsjoin
 	mkdir -p docs/html
 	for i in $(SCRIPTS); do \
 		name=`echo $$i | sed 's/\.sh//'`; \
-	    pod2html $$i > docs/html/rhtslib-$$name.html; \
+	    pod2html $$i > docs/html/beakerlib-$$name.html; \
 	done
-	pod2html docs/pod/rhtslib.pod > docs/html/rhtslib.html
+	pod2html docs/pod/beakerlib.pod > docs/html/beakerlib.html
 
 docswiki: $(SCRIPTS) docsjoin
 	rm -rf $(WIKIDIR)
@@ -122,8 +122,8 @@ docswiki: $(SCRIPTS) docsjoin
 	    echo "Try: yum install perl-CPAN && perl -MCPAN -e 'install \"Pod::Simple::Wiki\"'"; \
 	    false; \
 	fi
-	cp docs/pod/rhtslib.pod RhtslibManual
-	for i in $(SCRIPTS) RhtslibManual; do \
+	cp docs/pod/beakerlib.pod BeakerLibManual
+	for i in $(SCRIPTS) BeakerLibManual; do \
 	    MODULE=`echo $$i | sed 's/^\(.*\).sh$$/\u\1/' | sed 's/-\([^-]\)/\u\1/g'`; \
 	    MODULEDIR=$(WIKIDIR)/$(WIKIPREFIX)$$MODULE; \
 	    mkdir -p $$MODULEDIR/revisions; \
@@ -131,7 +131,7 @@ docswiki: $(SCRIPTS) docsjoin
 		 echo '<<TableOfContents(4)>>' > $$MODULEDIR/revisions/00000001; \
 	    pod2wiki --style moinmoin $$i >> $$MODULEDIR/revisions/00000001; \
 	done
-	rm RhtslibManual
+	rm BeakerLibManual
 
 gendict:
 	BEAKERLIB=. bash -c ". beakerlib.sh ; declare -f | \

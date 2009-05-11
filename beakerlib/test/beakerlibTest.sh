@@ -14,7 +14,7 @@
 # Author: Jan Hutar <jhutar@redhat.com>
 
 test_BEAKERLIBVariableNotNull() {
-  assertNotNull "BEAKERIB variable is empty" "$BEAKERLIB"
+  assertNotNull "BEAKERLIB variable is empty" "$BEAKERLIB"
 }
 
 test_BEAKERLIBVariableSane() {

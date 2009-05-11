@@ -1,5 +1,5 @@
 #!/bin/sh
-# performance.sh - part of RHTS library
+# performance.sh - part of BeakerLib
 # Authors: 	Petr Muller     <pmuller@redhat.com> 
 #
 # Description: Contains performance measuring routines
@@ -22,7 +22,7 @@
 
 =head1 NAME
 
-performance.sh - RHTS lib functions for performance measuring
+performance.sh - BeakerLib functions for performance measuring
 
 =head1 DESCRIPTION
 

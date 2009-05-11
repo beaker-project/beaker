@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# testing.sh - part of RHTS library
+# testing.sh - part of BeakerLib
 # Authors:  Petr Muller     <pmuller@redhat.com> 
 #
 # Description: Contains helpers for various testing tasks
@@ -23,7 +23,7 @@
 
 =head1 NAME
 
-analyze.sh - RHTS lib functions for various testing tasks
+analyze.sh - BeakerLib functions for various testing tasks
 
 =head1 DESCRIPTION
 

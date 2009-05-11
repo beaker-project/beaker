@@ -121,7 +121,7 @@ test_rlFileBackupAndRestore() {
 
 test_rlFileBackupCleanAndRestore() {
     unset __INTERNAL_BACKUP_DIR
-    test_dir=$(mktemp -d /tmp/rhtslib-test-XXXXXX)
+    test_dir=$(mktemp -d /tmp/beakerlib-test-XXXXXX)
     date > "$test_dir/date1"
     date > "$test_dir/date2"
     if [ "$DEBUG" == "1" ]; then
@@ -146,7 +146,7 @@ test_rlFileBackupCleanAndRestore() {
 
 test_rlFileBackupCleanAndRestoreWhitespace() {
     unset __INTERNAL_BACKUP_DIR
-    test_dir=$(mktemp -d '/tmp/rhtslib-test-XXXXXX')
+    test_dir=$(mktemp -d '/tmp/beakerlib-test-XXXXXX')
     mkdir "$test_dir/noclean"
     mkdir "$test_dir/noclean clean"
     mkdir "$test_dir/aaa"
@@ -289,7 +289,7 @@ test_rlServiceRestore() {
 
 
 #FIXME: no idea how to really test these mount function
-MP="rhtslib-test-mount-point"
+MP="beakerlib-test-mount-point"
 [ -d "$MP" ] && rmdir "$MP"
 
 test_rlMount(){

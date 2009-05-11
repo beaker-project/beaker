@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# testing.sh - part of RHTS library
+# testing.sh - part of BeakerLib
 # Authors:  Ondrej Hudlicky <ohudlick@redhat.com>
 #           Petr Muller     <pmuller@redhat.com> 
 #
@@ -24,7 +24,7 @@
 
 =head1 NAME
 
-testing.sh - RHTS lib functions for various testing tasks
+testing.sh - BeakerLib functions for various testing tasks
 
 =head1 DESCRIPTION
 

@@ -15,7 +15,7 @@
 
 test_rlJournalStart(){
 	local TID=${TESTID:-"debugging"}
-	local JFILE="/tmp/rhts_journal.$TID"
+	local JFILE="/tmp/beakerlib_journal.$TID"
 	rm -f $JFILE
 	assertTrue "journal started" "rlJournalStart"
 	assertTrue "journal file created" "[ -f $JFILE ]"

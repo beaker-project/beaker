@@ -1,11 +1,11 @@
 #!/bin/bash
 
-# logging.sh - part of RHTS library
+# logging.sh - part of BeakerLib
 # Authors:  Chris Ward      <cward@redhat.com>
 #           Ondrej Hudlicky <ohudlick@redhat.com>
 #           Petr Muller     <pmuller@redhat.com> 
 #
-# Description: Contains routines for various logging inside RHTS tests
+# Description: Contains routines for various logging inside Beaker tests
 #
 # Copyright (c) 2008 Red Hat, Inc. All rights reserved. This copyrighted material 
 # is made available to anyone wishing to use, modify, copy, or
@@ -25,11 +25,11 @@
 
 =head1 NAME
 
-logging.sh - RHTSlib logging functions and support for phases
+logging.sh - BeakerLib logging functions and support for phases
 
 =head1 DESCRIPTION
 
-Routines for creating various types of logs inside RHTS tests.
+Routines for creating various types of logs inside BeakerLib tests.
 Implements also phase support with automatic assert evaluation.
 
 =head1 FUNCTIONS
@@ -42,7 +42,7 @@ Implements also phase support with automatic assert evaluation.
 
 __INTERNAL_LogText()
 {
-  local MESSAGE=${1:-"***BAD RHTSLIB_HLOG CALL***"}
+  local MESSAGE=${1:-"***BAD BEAKERLIB_HLOG CALL***"}
   local LOGFILE=${2:-$OUTPUTFILE}
   [ -z "$LOGFILE" ] && LOGFILE=$( mktemp )
   [ ! -e "$LOGFILE" ] && touch "$LOGFILE"
@@ -476,6 +476,7 @@ rlPhaseEnd(){
 	rljClosePhase
 
 	#this is for rcw integration
+  #and is broken!
 	if [ -x /usr/bin/rcw-copy-log ]
 	then
 		rlJournalPrint > /tmp/rhtslib-rcw-journal
