@@ -2,8 +2,8 @@
 # vim: dict=/usr/share/beaker-library/dictionary.vim cpt=.,w,b,u,t,i,k
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #
-#   runtest.sh of /examples/rhtslib/Sanity/simple
-#   Description: Minimal rhtslib sanity test
+#   runtest.sh of /examples/beakerlib/Sanity/simple
+#   Description: Minimal BeakerLib sanity test
 #   Author: Petr Splichal <psplicha@redhat.com>
 #
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -30,12 +30,12 @@
 . /usr/bin/rhts-environment.sh
 . /usr/lib/beakerlib/beakerlib.sh
 
-PACKAGE="rhtslib"
+PACKAGE="beakerlib"
 
 rlJournalStart
 
     rlPhaseStartTest
-        rlAssertRpm "rhtslib"
+        rlAssertRpm "beakerlib"
         rlRun "ls -l /etc/passwd"
         rlAssertGrep "root" "/etc/passwd"
     rlPhaseEnd

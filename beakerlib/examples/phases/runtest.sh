@@ -1,9 +1,9 @@
 #!/bin/bash
-# vim: dict=/usr/share/beaker-library/dictionary.vim cpt=.,w,b,u,t,i,k
+# vim: dict=/usr/share/beakerlib/dictionary.vim cpt=.,w,b,u,t,i,k
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #
-#   runtest.sh of /examples/rhtslib/Sanity/phases
-#   Description: Testing rhtslib phases
+#   runtest.sh of /examples/beakerlib/Sanity/phases
+#   Description: Testing BeakerLib phases
 #   Author: Petr Splichal <psplicha@redhat.com>
 #
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -30,7 +30,7 @@
 . /usr/bin/rhts-environment.sh
 . /usr/beaker/beakerlib/beakerlib.sh
 
-PACKAGE="rhtslib"
+PACKAGE="beakerlib"
 
 rlJournalStart
 

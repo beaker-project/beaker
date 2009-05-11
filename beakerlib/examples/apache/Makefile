@@ -1,6 +1,6 @@
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #
-#   Makefile of /examples/rhtslib/Sanity/apache
+#   Makefile of /examples/beakerlib/Sanity/apache
 #   Description: Apache example test
 #   Author: Petr Splichal <psplicha@redhat.com>
 #
@@ -24,7 +24,7 @@
 #
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-export TEST=/examples/rhtslib/Sanity/apache
+export TEST=/examples/beakerlib/Sanity/apache
 export TESTVERSION=1.0
 
 BUILT_FILES=
@@ -53,7 +53,7 @@ $(METADATA): Makefile
 	@echo "Description:     Apache example test" >> $(METADATA)
 	@echo "Type:            Sanity" >> $(METADATA)
 	@echo "TestTime:        10m" >> $(METADATA)
-	@echo "RunFor:          rhtslib" >> $(METADATA)
+	@echo "RunFor:          beakerlib" >> $(METADATA)
 	@echo "Requires:        httpd" >> $(METADATA)
 	@echo "Priority:        Normal" >> $(METADATA)
 	@echo "License:         GPLv2" >> $(METADATA)

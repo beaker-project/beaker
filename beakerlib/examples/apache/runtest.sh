@@ -2,7 +2,7 @@
 # vim: dict=/usr/share/beakerlib/dictionary.vim cpt=.,w,b,u,t,i,k
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #
-#   runtest.sh of /examples/rhtslib/Sanity/apache
+#   runtest.sh of /examples/beakerlib/Sanity/apache
 #   Description: Apache example test
 #   Author: Petr Splichal <psplicha@redhat.com>
 #

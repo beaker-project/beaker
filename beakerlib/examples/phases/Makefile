@@ -1,7 +1,7 @@
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #
-#   Makefile of /examples/rhtslib/Sanity/phases
-#   Description: Testing rhtslib phases
+#   Makefile of /examples/beakerlib/Sanity/phases
+#   Description: Testing BeakerLib phases
 #   Author: Petr Splichal <psplicha@redhat.com>
 #
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -24,7 +24,7 @@
 #
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-export TEST=/examples/rhtslib/Sanity/phases
+export TEST=/examples/beakerlib/Sanity/phases
 export TESTVERSION=1.0
 
 BUILT_FILES=
@@ -50,11 +50,11 @@ $(METADATA): Makefile
 	@echo "Name:            $(TEST)" >> $(METADATA)
 	@echo "TestVersion:     $(TESTVERSION)" >> $(METADATA)
 	@echo "Path:            $(TEST_DIR)" >> $(METADATA)
-	@echo "Description:     Minimal rhtslib sanity test" >> $(METADATA)
+	@echo "Description:     Minimal BeakerLib sanity test" >> $(METADATA)
 	@echo "Type:            Sanity" >> $(METADATA)
 	@echo "TestTime:        5m" >> $(METADATA)
-	@echo "RunFor:          rhtslib" >> $(METADATA)
-	@echo "Requires:        rhtslib" >> $(METADATA)
+	@echo "RunFor:          beakerlib" >> $(METADATA)
+	@echo "Requires:        beakerlib" >> $(METADATA)
 	@echo "Priority:        Normal" >> $(METADATA)
 	@echo "License:         GPLv2" >> $(METADATA)
 	@echo "Confidential:    no" >> $(METADATA)
