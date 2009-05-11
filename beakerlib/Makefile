@@ -39,21 +39,21 @@ WIKILOCATION="wikiadmin@docs.example.com:/var/www/moin/wiki/data/pages"
 .PHONY: tarball install release check clean unit-test relstall
 
 tarball: $(FILES) docsman gendict
-	rm -rf rhtslib-$(VERSION)/
-	mkdir rhtslib-$(VERSION)/
-	cp -pr $(FILES) Makefile dictionary.vim test/ rhtslib-$(VERSION)/
-	rm -rf rhtslib-$(VERSION)/test/remotedir rhtslib-$(VERSION)/test/rhtslib-test-mount-point
-	mkdir rhtslib-$(VERSION)/python/
-	cp -pr $(PYTFILES) rhtslib-$(VERSION)/python/
-	mkdir rhtslib-$(VERSION)/perl/
-	cp -pr $(PERLFILES) rhtslib-$(VERSION)/perl/
-	cp -p perl/docsjoin rhtslib-$(VERSION)/perl/
-	mkdir -p rhtslib-$(VERSION)/$(MANDIR)/
-	cp -pr $(MANDIR)/man1 rhtslib-$(VERSION)/$(MANDIR)/
-	tar -czf rhtslib-$(VERSION).tar.gz rhtslib-$(VERSION)/
-	rm -rf rhtslib-$(VERSION)/
+	rm -rf beakerlib-$(VERSION)/
+	mkdir beakerlib-$(VERSION)/
+	cp -pr $(FILES) Makefile dictionary.vim test/ beakerlib-$(VERSION)/
+	rm -rf beakerlib-$(VERSION)/test/remotedir beakerlib-$(VERSION)/test/beakerlib-test-mount-point
+	mkdir beakerlib-$(VERSION)/python/
+	cp -pr $(PYTFILES) beakerlib-$(VERSION)/python/
+	mkdir beakerlib-$(VERSION)/perl/
+	cp -pr $(PERLFILES) beakerlib-$(VERSION)/perl/
+	cp -p perl/docsjoin beakerlib-$(VERSION)/perl/
+	mkdir -p beakerlib-$(VERSION)/$(MANDIR)/
+	cp -pr $(MANDIR)/man1 beakerlib-$(VERSION)/$(MANDIR)/
+	tar -czf beakerlib-$(VERSION).tar.gz beakerlib-$(VERSION)/
+	rm -rf beakerlib-$(VERSION)/
 
-rhtslib-$(VERSION).tar.gz: tarball
+beakerlib-$(VERSION).tar.gz: tarball
 
 install: $(FILES)
 	mkdir -p $(DESTDIR)/usr/lib/beakerlib
@@ -74,7 +74,7 @@ install: $(FILES)
 	rm $(DESTDIR)/usr/lib/beakerlib/beakerlib.spec
 
 clean:
-	rm -rf test/remotedir test/rhtslib-test-mount-point
+	rm -rf test/remotedir test/beakerlib-test-mount-point
 	rm -f *.tar.gz
 	rm -f test/runtests-worker.sh
 	rm -rf docs/{man,wiki,html,pod}
@@ -143,21 +143,21 @@ wiki: $(SCRIPTS) docswiki
 
 docs: docshtml docsman wiki
 
-srpm: rhtslib-$(VERSION).tar.gz
+srpm: beakerlib-$(VERSION).tar.gz
 	rpmbuild -ts $<
 
 release: clean check tarball
 	mkdir -p ~/rpmbuild/SOURCES
-	cp rhtslib-$(VERSION).tar.gz ~/rpmbuild/SOURCES/
+	cp beakerlib-$(VERSION).tar.gz ~/rpmbuild/SOURCES/
 	rpmbuild -ba beakerlib.spec
 
 relstall: release
-	sudo rpm -Uhv --force ~/rpmbuild/RPMS/noarch/rhtslib-$(VERSION)-$(RELEASE)*rpm
+	sudo rpm -Uhv --force ~/rpmbuild/RPMS/noarch/beakerlib-$(VERSION)-$(RELEASE)*rpm
 
 publish: release
-	cp ~/rpmbuild/RPMS/noarch/rhtslib-$(VERSION)-$(RELEASE)*rpm /var/www/html/
-	rm -f /var/www/html/rhtslib.rpm /var/www/html/rhtslib.noarch.rpm
-	ln -s rhtslib-$(VERSION)-$(RELEASE).noarch.rpm /var/www/html/rhtslib.rpm
-	ln -s rhtslib-$(VERSION)-$(RELEASE).noarch.rpm /var/www/html/rhtslib.noarch.rpm
-	file /var/www/html/rhtslib.rpm
-	file /var/www/html/rhtslib.noarch.rpm
+	cp ~/rpmbuild/RPMS/noarch/beakerlib-$(VERSION)-$(RELEASE)*rpm /var/www/html/
+	rm -f /var/www/html/beakerlib.rpm /var/www/html/beakerlib.noarch.rpm
+	ln -s beakerlib-$(VERSION)-$(RELEASE).noarch.rpm /var/www/html/beakerlib.rpm
+	ln -s beakerlib-$(VERSION)-$(RELEASE).noarch.rpm /var/www/html/beakerlib.noarch.rpm
+	file /var/www/html/beakerlib.rpm
+	file /var/www/html/beakerlib.noarch.rpm

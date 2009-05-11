@@ -1,7 +1,7 @@
-Name: rhtslib
+Name: beakerlib
 Summary: Beaker test library
-Version: 	0.6
-Release: 	3
+Version: 	1
+Release: 	1
 License: 	GPLv2
 Group: 		QA
 BuildRoot:  %{_tmppath}/%{name}-%{version}-root

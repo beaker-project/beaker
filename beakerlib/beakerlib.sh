@@ -15,7 +15,7 @@
 
 =pod
 
-=for comment rhtslib-manual-header
+=for comment beakerlib-manual-header
 
 =head1 NAME
 
@@ -83,7 +83,7 @@ Then next example is a bit more interesting real-life test which makes use of
 journalling and phases to create the usual three-phase test structure: Setup,
 Testing and Cleanup.
 
- # Include rhts and BeajerLib environment
+ # Include rhts and BeakerLib environment
  . /usr/bin/rhts-environment.sh
  . /usr/lib/beakerlib/beakerlib.sh
 
