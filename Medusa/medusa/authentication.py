@@ -8,6 +8,7 @@ from kid import Element
 from medusa.xmlrpccontroller import RPCRoot
 from medusa.helpers import *
 from xmlrpclib import ProtocolError
+from turbogears.identity import IdentityException
 
 import cherrypy
 import time
@@ -30,11 +31,8 @@ class Auth(RPCRoot):
     @cherrypy.expose
     def renew_session(self, *args, **kw):
         """
-        Renew session
+        Renew session, here to support kobo.
         """
-        print "debug: renew session"
-        print "args=", args
-        print "kw=", kw
         return True
 
     @cherrypy.expose
@@ -43,7 +41,9 @@ class Auth(RPCRoot):
         Login via password
         """
         visit_key = turbogears.visit.current().key
-        identity.current_provider.validate_identity(args[1], args[2], visit_key)
+        user = identity.current_provider.validate_identity(args[1], args[2], visit_key)
+        if user is None:
+            raise IdentityException("Invalid username or password")
         return identity.current.visit_key
 
     # TODO: proxy_user
@@ -70,8 +70,10 @@ class Auth(RPCRoot):
         username = cprinc.name.split("@")[0]
         print "username=", username
         visit_key = turbogears.visit.current().key
-        identity.current_provider.validate_identity(username, 
+        user = identity.current_provider.validate_identity(username, 
                                                     None, visit_key, True)
+        if user is None:
+            raise IdentityException()
         return identity.current.visit_key
 
     @cherrypy.expose
