@@ -34,7 +34,7 @@ printing journal contents.
 
 =cut
 
-__INTERNAL_JOURNALIST=$RHTSLIB/python/journalling.py
+__INTERNAL_JOURNALIST=$BEAKERLIB/python/journalling.py
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

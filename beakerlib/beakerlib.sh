@@ -19,7 +19,7 @@
 
 =head1 NAME
 
-rhtslib.sh - RHTS Library main script
+beakerlib.sh - BeakerLib Library main script
 
 =head1 DESCRIPTION
 
@@ -49,7 +49,7 @@ Main script sets C<RHTSLIB> variable and sources other scripts
 where the actual functions are defined. You should source it at
 the beginning of your test with:
 
-    . /usr/share/rhts-library/rhtslib.sh
+    . /usr/lib/beakerlib/beakerlib.sh
 
 See the EXAMPLES section below for quick start.
 
@@ -72,7 +72,7 @@ This is a minimal example of an RHTSlib test.
  # Include rhts and rhtslib environment
  rpm -Uvh https://fedorahosted.org/releases/b/e/beaker/rhtslib.rpm
  . /usr/bin/rhts-environment.sh
- . /usr/share/rhts-library/rhtslib.sh
+ . /usr/lib/beakerlib/beakerlib.sh
 
  rlJournalStart
      rlPhaseStartTest "Just making sure root hasn't run away"
@@ -87,7 +87,7 @@ Testing and Cleanup.
  # Include rhts and rhtslib environment
  rpm -q --quiet rhtslib || rpm -Uvh https://fedorahosted.org/releases/b/e/beaker/rhtslib.rpm
  . /usr/bin/rhts-environment.sh
- . /usr/share/rhts-library/rhtslib.sh
+ . /usr/lib/beakerlib/beakerlib.sh
 
  PACKAGE=file
 
@@ -165,13 +165,13 @@ Ales Zelinka <azelinka@redhat.com>
 =cut
 
 set -e
-RHTSLIB=${RHTSLIB:-"/usr/share/rhts-library/"}
-. $RHTSLIB/infrastructure.sh
-. $RHTSLIB/journal.sh
-. $RHTSLIB/logging.sh
-. $RHTSLIB/rpms.sh
-. $RHTSLIB/testing.sh
-. $RHTSLIB/analyze.sh
-. $RHTSLIB/performance.sh
-. $RHTSLIB/virtualX.sh
+BEAKERLIB=${BEAKERLIB:-"/usr/lib/beakerlib/"}
+. $BEAKERLIB/infrastructure.sh
+. $BEAKERLIB/journal.sh
+. $BEAKERLIB/logging.sh
+. $BEAKERLIB/rpms.sh
+. $BEAKERLIB/testing.sh
+. $BEAKERLIB/analyze.sh
+. $BEAKERLIB/performance.sh
+. $BEAKERLIB/virtualX.sh
 set +e

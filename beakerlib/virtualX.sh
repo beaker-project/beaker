@@ -43,8 +43,8 @@ stop virtual X server (framebuffer).
 # /tmp/$Xid-pid - contains PID for X server we are running
 # /tmp/$Xid-display - contains DISPLAY of our X server
 
-. $RHTSLIB/testing.sh
-. $RHTSLIB/infrastructure.sh
+. $BEAKERLIB/testing.sh
+. $BEAKERLIB/infrastructure.sh
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # rlVirtXGetCorrectID

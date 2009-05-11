@@ -39,8 +39,8 @@ non-specialized asserts, as well as several other functions related to testing.
 #   Internal Stuff
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-. $RHTSLIB/logging.sh
-. $RHTSLIB/journal.sh
+. $BEAKERLIB/logging.sh
+. $BEAKERLIB/journal.sh
 
 __INTERNAL_LogAndJournalPass(){
   rljAddTest "$1" "PASS"

@@ -1,5 +1,5 @@
 #!/bin/bash
-# vim: dict=/usr/share/rhts-library/dictionary.vim cpt=.,w,b,u,t,i,k
+# vim: dict=/usr/share/beaker-library/dictionary.vim cpt=.,w,b,u,t,i,k
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #
 #   runtest.sh of /examples/rhtslib/Sanity/phases
@@ -28,7 +28,7 @@
 
 # Include rhts environment
 . /usr/bin/rhts-environment.sh
-. /usr/share/rhts-library/rhtslib.sh
+. /usr/beaker/beakerlib/beakerlib.sh
 
 PACKAGE="rhtslib"
 

@@ -15,7 +15,7 @@
 
 VERSION=0.6
 RELEASE=3
-SCRIPTS=rhtslib.sh\
+SCRIPTS=beakerlib.sh\
 		journal.sh\
 		logging.sh\
 		testing.sh\
@@ -24,7 +24,7 @@ SCRIPTS=rhtslib.sh\
 		performance.sh\
 		analyze.sh\
 		virtualX.sh
-FILES=rhtslib.spec $(SCRIPTS)
+FILES=beakerlib.spec $(SCRIPTS)
 PYTFILES=python/rlMemAvg.py\
 	python/rlMemPeak.py\
 	python/journalling.py\
@@ -56,18 +56,22 @@ tarball: $(FILES) docsman gendict
 rhtslib-$(VERSION).tar.gz: tarball
 
 install: $(FILES)
-	mkdir -p $(DESTDIR)/usr/share/rhts-library
-	mkdir -p $(DESTDIR)/usr/share/rhts-library/python	
-	mkdir -p $(DESTDIR)/usr/share/rhts-library/perl
-	mkdir -p $(DESTDIR)/usr/share/rhts-library/test
+	mkdir -p $(DESTDIR)/usr/lib/beakerlib
+	mkdir -p $(DESTDIR)/usr/share/beakerlib
+	mkdir -p $(DESTDIR)/usr/share/rhts-library/
+	mkdir -p $(DESTDIR)/usr/lib/beakerlib/python
+	mkdir -p $(DESTDIR)/usr/lib/beakerlib/perl
+	mkdir -p $(DESTDIR)/usr/lib/beakerlib/test
 	mkdir -p $(DESTDIR)/usr/share/man/man1
 
-	cp $(FILES) dictionary.vim $(DESTDIR)/usr/share/rhts-library
-	cp $(PYTFILES) $(DESTDIR)/usr/share/rhts-library/python
-	cp $(PERLFILES) $(DESTDIR)/usr/share/rhts-library/perl
-	cp test/* $(DESTDIR)/usr/share/rhts-library/test
+	cp $(FILES) $(DESTDIR)/usr/lib/beakerlib
+	cp dictionary.vim $(DESTDIR)/usr/share/beakerlib
+	ln -s /usr/lib/beakerlib/beakerlib.sh $(DESTDIR)/usr/share/rhts-library/rhtslib.sh
+	cp $(PYTFILES) $(DESTDIR)/usr/lib/beakerlib/python
+	cp $(PERLFILES) $(DESTDIR)/usr/lib/beakerlib/perl
+	cp test/* $(DESTDIR)/usr/lib/beakerlib/test
 	cp $(MANDIR)/man1/* $(DESTDIR)/usr/share/man/man1
-	rm $(DESTDIR)/usr/share/rhts-library/rhtslib.spec
+	rm $(DESTDIR)/usr/lib/beakerlib/beakerlib.spec
 
 clean:
 	rm -rf test/remotedir test/rhtslib-test-mount-point
@@ -78,7 +82,7 @@ clean:
 	rm -f dictionary.vim
 	
 check:
-	RHTSLIB=. sh rhtslib.sh	
+	BEAKERLIB=. sh beakerlib.sh	
 
 unit-test:
 	cd test/; ./runtests.sh
@@ -130,7 +134,7 @@ docswiki: $(SCRIPTS) docsjoin
 	rm RhtslibManual
 
 gendict:
-	RHTSLIB=. bash -c ". rhtslib.sh ; declare -f | \
+	BEAKERLIB=. bash -c ". beakerlib.sh ; declare -f | \
 		perl -e 'map { s/.*(obsolete|deprecate|^rlj).*//s; s/ .*/\n/s; print } \
 		(join \"\", <>) =~ m/^rl.*?^}/msg;' > dictionary.vim"
 
@@ -145,7 +149,7 @@ srpm: rhtslib-$(VERSION).tar.gz
 release: clean check tarball
 	mkdir -p ~/rpmbuild/SOURCES
 	cp rhtslib-$(VERSION).tar.gz ~/rpmbuild/SOURCES/
-	rpmbuild -ba rhtslib.spec
+	rpmbuild -ba beakerlib.spec
 
 relstall: release
 	sudo rpm -Uhv --force ~/rpmbuild/RPMS/noarch/rhtslib-$(VERSION)-$(RELEASE)*rpm

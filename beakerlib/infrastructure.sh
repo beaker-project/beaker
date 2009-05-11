@@ -34,8 +34,8 @@ restoring files and controlling running services.
 
 =cut
 
-source $RHTSLIB/logging.sh
-source $RHTSLIB/testing.sh
+source $BEAKERLIB/logging.sh
+source $BEAKERLIB/testing.sh
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #   Internal Stuff

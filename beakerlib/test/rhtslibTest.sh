@@ -13,10 +13,10 @@
 #
 # Author: Jan Hutar <jhutar@redhat.com>
 
-test_RHTSLIBVariableNotNull() {
-  assertNotNull "RHTSLIB variable is empty" "$RHTSLIB"
+test_BEAKERLIBVariableNotNull() {
+  assertNotNull "BEAKERIB variable is empty" "$BEAKERLIB"
 }
 
-test_RHTSLIBVariableSane() {
-  assertTrue "RHTSLIB points to the non existing directory" "[ -d '$RHTSLIB' ]"
+test_BEAKERLIBVariableSane() {
+  assertTrue "BEAKERLIB points to the non existing directory" "[ -d '$BEAKERLIB' ]"
 }

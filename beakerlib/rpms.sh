@@ -33,8 +33,8 @@ Functions in this RHTS lib script are used for RPM manipulation.
 
 =cut
 
-. $RHTSLIB/testing.sh
-. $RHTSLIB/infrastructure.sh
+. $BEAKERLIB/testing.sh
+. $BEAKERLIB/infrastructure.sh
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Internal Stuff
