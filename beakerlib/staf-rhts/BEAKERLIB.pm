@@ -4,7 +4,7 @@
 # This software is licensed under the Eclipse Public License (EPL) V1.0.    #
 #############################################################################
 
-package RHTSLIB;
+package BEAKERLIB;
 
 use PLSTAFService;
 use PLSTAF;
@@ -18,7 +18,7 @@ use Data::Dumper;
 use strict;
 use warnings;
 
-use constant kRHTSLIBInvalidNumber => scalar 4001;
+use constant kBEAKERLIBInvalidNumber => scalar 4001;
 use constant kVersion => scalar "0.0.2";
 
 # In this queue the master threads queue jobs for the slave worker
@@ -34,8 +34,8 @@ our $fListParser;
 our $fLineSep;
 our $fLogHandle;
 
-# Lists of RHTSLIB funtions
-our %RHTSLIB = (
+# Lists of BEAKERLIB funtions
+our %BEAKERLIB = (
     "Journalling"   => ["rlJournalStart", "rlJournalEnd",
                         "rlJournalPrint", "rlJournalPrintText"],
     "Logging"       => ["rlLog", "rlLogDebug", "rlLogInfo",
@@ -90,7 +90,7 @@ sub new
     $fHandle = STAF::STAFHandle->new("STAF/Service/" . $fServiceName);
 
     # Load Log service
-    $fLogHandle = STAF::STAFLog->new($fHandle, "rhts","GLOBAL", "INFO");
+    $fLogHandle = STAF::STAFLog->new($fHandle, "beakerlib","GLOBAL", "INFO");
     $fLogHandle->log("DEBUG", "Enter new function");
 
     # Add Parser
@@ -242,9 +242,9 @@ sub handleList
 
     #print_dump($fLogHandle, "parsedRequest", $parsedRequest);
 
-    $resultString = "List RHTSLIB Function" . $fLineSep;
-    foreach my $key ( keys %RHTSLIB ) {
-        my $group = $RHTSLIB{$key};
+    $resultString = "List BEAKERLIB Function" . $fLineSep;
+    foreach my $key ( keys %BEAKERLIB ) {
+        my $group = $BEAKERLIB{$key};
 
         $resultString .= "$key\t\t";
         foreach my $function ( @$group ) {
@@ -265,7 +265,7 @@ sub handleVersion
 sub handleHelp
 {
     return (STAFResult::kOk,
-          "RHTSLIB Service Help" . $fLineSep. 
+          "BEAKERLIB Service Help" . $fLineSep. 
            $fLineSep . "LIST" . $fLineSep . 
            "VERSION" . $fLineSep . "HELP");
 
@@ -286,7 +286,7 @@ sub DESTROY
 
     # perform any cleanup for the service here
 
-    #unregisterHelpData(kRHTSLIBInvalidNumber);
+    #unregisterHelpData(kBEAKERLIBInvalidNumber);
 
     #Un-register the service handle
     $fHandle->unRegister();
