@@ -480,8 +480,8 @@ rlPhaseEnd(){
   #and is broken!
 	if [ -x /usr/bin/rcw-copy-log ]
 	then
-		rlJournalPrint > /tmp/rhtslib-rcw-journal
-		/usr/bin/rcw-copy-log /tmp/rhtslib-rcw-journal
+		rlJournalPrint > /tmp/beakerlib-rcw-journal
+		/usr/bin/rcw-copy-log /tmp/beakerlib-rcw-journal
 	fi
 }
 

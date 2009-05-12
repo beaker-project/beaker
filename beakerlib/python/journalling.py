@@ -163,7 +163,7 @@ def createLog(id,severity):
 
 def initializeJournal(id, test, package):
   impl = getDOMImplementation()  
-  newdoc = impl.createDocument(None, "RHTS_TEST", None)
+  newdoc = impl.createDocument(None, "BEAKER_TEST", None)
   top_element = newdoc.documentElement
   testidEl    = newdoc.createElement("test_id")
   testidCon   = newdoc.createTextNode(str(id))  

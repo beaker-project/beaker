@@ -126,7 +126,7 @@ Pretty: xml is pretty printed, indented, with one record per line
 Example:
 
  <?xml version="1.0" ?>
- <RHTS_TEST>
+ <BEAKER_TEST>
      <test_id>
          debugging
      </test_id>
@@ -187,7 +187,7 @@ Example:
              </test>
          </phase>
      </log>
- </RHTS_TEST>
+ </BEAKER_TEST>
 
 =cut
 

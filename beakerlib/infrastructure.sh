@@ -287,7 +287,7 @@ rlFileBackup() {
 
     # create backup dir (unless it already exists)
     if [ -z "$__INTERNAL_BACKUP_DIR" ]; then
-        if __INTERNAL_BACKUP_DIR=`mktemp -d /tmp/rhtslib-backup-XXXXXXXX`; then
+        if __INTERNAL_BACKUP_DIR=`mktemp -d /tmp/beakerlib-backup-XXXXXXXX`; then
             rlLog "Backup dir created: $__INTERNAL_BACKUP_DIR"
         else
             rlLogError "rlFileBackup: Creating backup dir failed"
