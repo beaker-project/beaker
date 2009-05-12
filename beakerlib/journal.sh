@@ -114,10 +114,14 @@ Prints the content of the journal in pretty xml format.
 
     rlJournalPrint [type]
 
+=over
+
 =item type
 Can be either 'raw' or 'pretty', with the latter as a default.
 Raw: xml is in raw form, no indentation etc
 Pretty: xml is pretty printed, indented, with one record per line
+
+=back
 
 Example:
 

@@ -347,6 +347,7 @@ function rlGetArch() {
 =pod
 
 =head3 rlGetDistroRelease
+
 =head3 rlGetDistroVariant
 
 Returns release or variant of the distribution on the system

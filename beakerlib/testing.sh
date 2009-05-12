@@ -428,6 +428,7 @@ Assertion checking that two files differ (are not identical)
     rlAssertDiffer file1 file2
 
 =over
+
 =item file1
 
 Path to first file1
@@ -468,6 +469,7 @@ Assertion checking that two files are identical
     rlAssertNotDiffer file1 file2
 
 =over
+
 =item file1
 
 Path to first file1

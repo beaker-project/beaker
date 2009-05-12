@@ -1,13 +1,13 @@
 Name: beakerlib
 Summary: Beaker test library
-Version: 	1
+Version: 	0.7
 Release: 	1
 License: 	GPLv2
 Group: 		QA
 BuildRoot:  %{_tmppath}/%{name}-%{version}-root
 Source0:	%{name}-%{version}.tar.gz
 BuildArch:	noarch
-URL:            https://fedorahosted.org/beaker/RhtsLibrary
+URL:            https://fedorahosted.org/beaker/BeakerLib
 
 %description
 The BeakerLib project means to provide a library of various helpers,
@@ -35,7 +35,7 @@ rm perl/docsjoin
 /usr/lib/beakerlib/beakerlib.sh
 /usr/lib/beakerlib/analyze.sh
 /usr/lib/beakerlib/performance.sh
-/usr/lib/beakerlib/dictionary.vim
+/usr/share/beakerlib/dictionary.vim
 /usr/lib/beakerlib/virtualX.sh
 /usr/lib/beakerlib/python/rlMemAvg.py
 /usr/lib/beakerlib/python/rlMemPeak.py

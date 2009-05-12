@@ -13,8 +13,8 @@
 #
 # Author: Petr Muller <pmuller@redhat.com>
 
-VERSION=0.6
-RELEASE=3
+VERSION=0.7
+RELEASE=1
 SCRIPTS=beakerlib.sh\
 		journal.sh\
 		logging.sh\
@@ -33,7 +33,7 @@ PERLFILES=perl/deja-summarize
 
 MANDIR=docs/man
 WIKIDIR=docs/wiki
-WIKIPREFIX="Docs(2f)RhtsLibrary(2f)Manual(2f)"
+WIKIPREFIX="Docs(2f)BeakerLibrary(2f)Manual(2f)"
 WIKILOCATION="wikiadmin@docs.example.com:/var/www/moin/wiki/data/pages"
 
 .PHONY: tarball install release check clean unit-test relstall
