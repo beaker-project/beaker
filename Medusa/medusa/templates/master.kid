@@ -95,7 +95,6 @@ $(document).ready(function() {
         <div class="fedora-corner-tr">&nbsp;</div>
         <div class="fedora-corner-tl">&nbsp;</div>
         <div id="fedora-content">
-            <center>Warning! This is a Pilot instance that will be going away on May 5th.  All systems will be moved to the production instance. Change History will not be kept, but most data should be preserved.  If you have any questions please contact <a href="mailto:bpeck@redhat.com">Bill Peck</a></center>
             <center>
                 <div id="status_block" class="flash" py:if="value_of('tg_flash', None)" py:content="tg_flash"></div>
            </center>

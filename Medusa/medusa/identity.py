@@ -62,8 +62,10 @@ class LdapSqlAlchemyIdentityProvider(SqlAlchemyIdentityProvider):
         Validates user_name and password against an AD domain.
         
         '''
+        # Always try and authenticate against local DB first.
         if user.password == self.encrypt_password(password):
             return True
+        # If ldap is enabled then try against that
         if self.ldap:
             ldapcon = ldap.initialize(self.uri)
             filter = "(uid=%s)" % user_name
@@ -83,11 +85,12 @@ class LdapSqlAlchemyIdentityProvider(SqlAlchemyIdentityProvider):
             try:
                 rc = ldapcon.simple_bind(dn, password)
                 ldapcon.result(rc)
+                return True
             except ldap.INVALID_CREDENTIALS:
                 log.error("Invalid password supplied for %s" % user_name)
                 return False
-
-	return True
+        # Nothing autheticated. 
+	return False
 
     def load_identity(self, visit_key):
         user = super(LdapSqlAlchemyIdentityProvider, self).load_identity(visit_key)

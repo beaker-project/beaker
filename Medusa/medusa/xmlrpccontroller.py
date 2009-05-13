@@ -51,3 +51,6 @@ class RPCRoot(controllers.Controller):
 
         cherrypy.response.headers["Content-Type"] = "text/xml"
         return response
+
+    # Compat with kobo client
+    client = RPC2

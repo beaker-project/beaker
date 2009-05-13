@@ -2,8 +2,8 @@
 %{!?pyver: %define pyver %(%{__python} -c "import sys ; print sys.version[:3]")}
 
 Name:           medusa
-Version:        0.2
-Release:        101%{?dist}
+Version:        0.3
+Release:        1%{?dist}
 Summary:        Inventory System
 Group:          Applications/Internet
 License:        GPLv2+
@@ -88,7 +88,7 @@ ln -s Fedora.ks %{buildroot}/var/lib/cobbler/kickstarts/Fedoradevelopment.ks
 %doc README COPYING
 %{python_sitelib}/%{name}/
 %{_bindir}/start-%{name}
-%{_bindir}/%{name}-*
+%{_bindir}/%{name}-init
 %config(noreplace) %{_sysconfdir}/httpd/conf.d/medusa.conf
 %attr(-,apache,root) %{_datadir}/%{name}
 %attr(-,apache,root) %config(noreplace) %{_sysconfdir}/medusa/*
@@ -108,9 +108,10 @@ ln -s Fedora.ks %{buildroot}/var/lib/cobbler/kickstarts/Fedoradevelopment.ks
 /var/lib/cobbler/kickstarts/*
 /var/www/beaker/rhts-checkin
 
-
 %changelog
-* Fri May 01 2009 Bill Peck <bpeck@redhat.com> - 0.2-101
+* Wed May 13 2009 Bill Peck <bpeck@redhat.com> - 0.3-1
+- Implemented authentication methods for xmlrpc login using kobo
+* Fri May 01 2009 Bill Peck <bpeck@redhat.com> - 0.2-103
 - Updated medusa-init to allow for admin user to be created based on 
   command line options
 - removed medusa-devinit.  Doesn't seem needed, pass --config to medusa-init

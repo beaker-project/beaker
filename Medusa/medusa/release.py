@@ -1,6 +1,6 @@
 # Release information about medusa
 
-version = "0.1"
+version = "0.3"
 
 description = "Medusa is an Inventory program that keeps track of system attributes.  Also provides a mechanism for sharing and provisioning.  Provisioning is done via Cobbler"
 # long_description = "More description about your plan"
