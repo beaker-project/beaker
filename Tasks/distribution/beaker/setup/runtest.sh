@@ -295,7 +295,7 @@ function LabController()
             mount ${NFSSERVER}:${NFSDIR} /fakenet/${NFSSERVER}${NFSDIR}
         fi
         cobbler import --path=/fakenet/${NFSSERVER}${NFSPATH} \
-                       --name=$DISTRONAME \
+                       --name=$DISTRONAME_nfs \
                        --available-as=nfs://${NFSSERVER}:${NFSPATH}
         report_result $TEST/ADD_DISTRO/$DISTRONAME PASS $?
     done
