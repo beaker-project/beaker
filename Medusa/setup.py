@@ -1,5 +1,4 @@
 from setuptools import setup, find_packages
-from turbogears.finddata import find_package_data
 import glob
 import re
 import os
@@ -149,21 +148,15 @@ data_files = [
     ("/var/lib/cobbler/snippets/per_system/RedHatEnterpriseLinuxServer5_post", []),
 ]
 
-packages=find_packages()
 package_data = find_package_data(where='medusa',
                                  package='medusa',
                                  exclude=excludeFiles,
                                  exclude_directories=excludeDataDirs)
 package_data['medusa.config'].append('app.cfg')
 
-if os.path.isdir('locales'):
-    packages.append('locales')
-    package_data.update(find_package_data(where='locales',
-        exclude=('*.po',), only_in_packages=False))
-
 setup(
     name="medusa",
-    version='0.2',
+    version=version,
 
     # uncomment the following lines if you fill them out in release.py
     description=description,
