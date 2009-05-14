@@ -24,7 +24,7 @@ class Activities(RPCRoot):
     exposed = False
 
     @expose(template="medusa.templates.grid")
-    @paginate('list',default_order='-created', limit=50,allow_limit_override=True)
+    @paginate('list',default_order='-created', max_limit=50, limit=50,allow_limit_override=True)
     def index(self):
         activity = Activity.all().outerjoin('user')
         activity_grid = widgets.PaginateDataGrid(fields=[

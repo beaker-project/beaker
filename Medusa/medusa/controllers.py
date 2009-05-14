@@ -149,7 +149,7 @@ class Devices:
                                               list = systems)
 
     @expose(template='medusa.templates.grid')
-    @paginate('list',default_order='description',limit=50,allow_limit_override=True)
+    @paginate('list',default_order='description',limit=50,max_limit=50,allow_limit_override=True)
     def default(self, *args, **kw):
         args = list(args)
         if len(args) == 1:
@@ -256,7 +256,7 @@ class Root(RPCRoot):
                     kernel_options_post = kernel_options_post)
 
     @expose(template='medusa.templates.grid_add')
-    @paginate('list',default_order='fqdn',limit=20,allow_limit_override=True)
+    @paginate('list',default_order='fqdn',limit=20,max_limit=20,allow_limit_override=True)
     def index(self, *args, **kw):
         return self.systems(systems = System.all(identity.current.user), *args, **kw)
 
@@ -284,19 +284,19 @@ class Root(RPCRoot):
 
     @expose(template='medusa.templates.grid')
     @identity.require(identity.not_anonymous())
-    @paginate('list',default_order='fqdn',limit=20,allow_limit_override=True)
+    @paginate('list',default_order='fqdn',limit=20,max_limit=20,allow_limit_override=True)
     def available(self, *args, **kw):
         return self.systems(systems = System.available(identity.current.user), *args, **kw)
 
     @expose(template='medusa.templates.grid')
     @identity.require(identity.not_anonymous())
-    @paginate('list',default_order='fqdn',limit=20,allow_limit_override=True)
+    @paginate('list',default_order='fqdn',limit=20,max_limit=20,allow_limit_override=True)
     def free(self, *args, **kw):
         return self.systems(systems = System.free(identity.current.user), *args, **kw)
 
     @expose(template='medusa.templates.grid')
     @identity.require(identity.not_anonymous())
-    @paginate('list',default_order='fqdn',limit=20,allow_limit_override=True)
+    @paginate('list',default_order='fqdn',limit=20,max_limit=20,allow_limit_override=True)
     def mine(self, *args, **kw):
         return self.systems(systems = System.mine(identity.current.user), *args, **kw)
 
