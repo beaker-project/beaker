@@ -133,7 +133,7 @@ package_data = find_package_data(where='beaker',
 setup(
     name="beaker.server",
     namespace_packages = ['beaker'],
-    version=version,
+    version='@VERSION@',
 
     # uncomment the following lines if you fill them out in release.py
     description=description,
