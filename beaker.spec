@@ -14,6 +14,7 @@ BuildArch:      noarch
 BuildRequires:  python-setuptools
 BuildRequires:  python-setuptools-devel
 BuildRequires:  python-devel
+BuildRequires:  TurboGears
 
 
 %package client
