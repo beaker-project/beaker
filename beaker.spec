@@ -81,7 +81,7 @@ DESTDIR=$RPM_BUILD_ROOT make install
 
 %files server
 %defattr(-,root,root,-)
-%doc README COPYING
+%doc Server/README COPYING
 %{python_sitelib}/%{name}/server/
 %{python_sitelib}/%{name}.server-%{version}-py%{pyver}.egg-info/
 %{_bindir}/start-%{name}
