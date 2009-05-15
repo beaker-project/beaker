@@ -71,6 +71,7 @@ snippets and kickstarts.
 %setup -q
 
 %build
+[ "$RPM_BUILD_ROOT" != "/" ] && [ -d $RPM_BUILD_ROOT ] && rm -rf $RPM_BUILD_ROOT;
 DESTDIR=$RPM_BUILD_ROOT make
 
 %install
