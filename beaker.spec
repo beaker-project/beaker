@@ -8,7 +8,7 @@ Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
 URL:            http://fedorahosted.org/beaker
-Source0:        http://fedorahosted.org/releases/$(echo %{name} | %{__sed} 's@\(\(.\)\(.\).*\)@\2/\3/\1@')/%{name}-%{version}.tar.bz2
+Source0:        http://fedorahosted.org/releases/b/e/%{name}-%{version}.tar.bz2
 BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 BuildArch:      noarch
 BuildRequires:  python-setuptools
