@@ -1,3 +1,6 @@
-*.py[oc]
-devdata.sqlite
-gitpush
+*.pyc
+*.swp
+*.tmp
+dist
+rpm-build
+*.egg-info

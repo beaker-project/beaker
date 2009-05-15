@@ -1,4 +1,0 @@
-<host>
- <key_value key='MACHINE' op='!=' value='dell-pe700-01.rhts.bos.redhat.com'/>
- <power value='True'/>
-</host>

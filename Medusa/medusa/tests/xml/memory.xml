@@ -1,4 +1,0 @@
-<host>
- <key_value key='MEMORY' op='>=' value='2048'/>
- <power value='True'/>
-</host>

@@ -1,0 +1,21 @@
+from setuptools import setup, find_packages
+setup(
+    name = "beaker.client",
+    version = "@VERSION@",
+
+    packages=find_packages('src'),
+    package_dir = {'':'src'},
+
+    namespace_packages = ['beaker'],
+
+    data_files = [('/etc/beaker/', ['client.conf']),],
+    package_data = {
+        '/etc/beaker': ['client.conf'],
+    },
+
+    entry_points = {
+        'console_scripts': (
+            'beaker-client = beaker.client.main:main',
+        ),
+    }
+)
