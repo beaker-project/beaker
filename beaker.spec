@@ -100,7 +100,7 @@ DESTDIR=$RPM_BUILD_ROOT make install
 
 %files lab-controller
 %defattr(-,root,root,-)
-%doc lab-controller/README
+%doc LabController/README
 %config(noreplace) %{_sysconfdir}/httpd/conf.d/%{name}-lab-controller.conf
 %{_sysconfdir}/cron.daily/expire_distros
 /var/lib/cobbler/triggers/sync/post/osversion.trigger
