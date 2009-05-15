@@ -84,6 +84,7 @@ DESTDIR=$RPM_BUILD_ROOT make install
 %defattr(-,root,root,-)
 %doc Server/README COPYING
 %{python_sitelib}/%{name}/server/
+%{python_sitelib}/%{name}.server-%{version}-*
 %{python_sitelib}/%{name}.server-%{version}-py%{pyver}.egg-info/
 %{_bindir}/start-%{name}
 %{_bindir}/%{name}-init
@@ -96,6 +97,7 @@ DESTDIR=$RPM_BUILD_ROOT make install
 %defattr(-,root,root,-)
 %config(noreplace) %{_sysconfdir}/beaker/client.conf
 %{python_sitelib}/%{name}/client/
+%{python_sitelib}/%{name}.client-%{version}-*
 %{python_sitelib}/%{name}.client-%{version}-py%{pyver}.egg-info/
 %{_bindir}/beaker-client
 
