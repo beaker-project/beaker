@@ -113,13 +113,13 @@ class InstallData(_install_data, object):
                 self.install_dir = self.temp_data
 
 data_files = [
-    ('server/static', filter(os.path.isfile, glob.glob('server/static/*'))),
-    ('server/static/css', filter(os.path.isfile,
-                                 glob.glob('server/static/css/*'))),
-    ('server/static/javascript', filter(os.path.isfile,
-                                 glob.glob('server/static/javascript/*'))),
-    ('server/static/images', filter(os.path.isfile,
-                                 glob.glob('server/static/images/*'))),
+    ('beaker/server/static', filter(os.path.isfile, glob.glob('beaker/server/static/*'))),
+    ('beaker/server/static/css', filter(os.path.isfile,
+                                 glob.glob('beaker/server/static/css/*'))),
+    ('beaker/server/static/javascript', filter(os.path.isfile,
+                                 glob.glob('beaker/server/static/javascript/*'))),
+    ('beaker/server/static/images', filter(os.path.isfile,
+                                 glob.glob('beaker/server/static/images/*'))),
     ("/etc/beaker", ["server.cfg"]),
     ("/etc/httpd/conf.d", ["apache/beaker-server.conf"]),
     ("/usr/share/beaker", filter(os.path.isfile, glob.glob("apache/*.wsgi"))),
