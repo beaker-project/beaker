@@ -86,13 +86,13 @@ function BuildBeaker ()
 function InstallInventory()
 {
     BuildBeaker
-    yum install --nogpg -y  beaker/Medusa/dist/beaker-server-*.rpm
+    yum install --nogpg -y  /rpmbuild/RPMS/noarch/beaker-server-*.rpm
 }
 
 function InstallLabController()
 {
     BuildBeaker
-    yum install --nogpg -y beaker/Medusa/dist/beaker-lab-controller-*.rpm
+    yum install --nogpg -y /rpmbuild/RPMS/noarch/beaker-lab-controller-*.rpm
 }
 
 function CleanUp ()
@@ -111,7 +111,7 @@ function estatus_fail()
     fi
 }
 
-function generate_beaker()
+function generate_beaker_cfg()
 {
     cat << __EOF__ > /etc/beaker/server.cfg
 [global]
