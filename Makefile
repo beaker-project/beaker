@@ -26,3 +26,5 @@ srpm: $(PKGNAME)-$(PKGVERSION).tar.bz2
 
 rpm: $(PKGNAME)-$(PKGVERSION).tar.bz2
 	rpmbuild $(RPMBUILDOPTS) -tb $<
+
+rpms: rpm
