@@ -70,7 +70,7 @@ class Distros(RPCRoot):
         redirect("./view?id=%s" % id)
 
     @expose(template="beaker.server.templates.grid")
-    @paginate('list',default_order='-date_created', max_limit=50, limit=50,allow_limit_override=True)
+    @paginate('list',default_order='-date_created', limit=50,allow_limit_override=True)
     def index(self, *args, **kw):
         distros = session.query(Distro).join('breed').join('arch').join(['osversion','osmajor'])
         if 'tag' in kw:

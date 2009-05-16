@@ -35,7 +35,7 @@ class Tags(RPCRoot):
         return dict(tags=tags)
 
     @expose(template="beaker.server.templates.grid")
-    @paginate('list',default_order='tag', max_limit=50,limit=50,allow_limit_override=True)
+    @paginate('list',default_order='tag',limit=50,allow_limit_override=True)
     def index(self):
         tags = session.query(DistroTag)
         tags_grid = widgets.PaginateDataGrid(fields=[
