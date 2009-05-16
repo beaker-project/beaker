@@ -77,21 +77,22 @@ function BuildBeaker ()
 {
     yum install -y TurboGears python-setuptools-devel python-devel
     git clone git://git.fedorahosted.org/beaker
-    pushd beaker/Medusa
-    make rpms
+    pushd beaker
+    make snaparchive
+    make rpm
     popd
 }
 
 function InstallInventory()
 {
     BuildBeaker
-    yum install --nogpg -y  beaker/Medusa/dist/medusa-server-*.rpm
+    yum install --nogpg -y  beaker/Medusa/dist/beaker-server-*.rpm
 }
 
 function InstallLabController()
 {
     BuildBeaker
-    yum install --nogpg -y beaker/Medusa/dist/medusa-lab-controller-*.rpm
+    yum install --nogpg -y beaker/Medusa/dist/beaker-lab-controller-*.rpm
 }
 
 function CleanUp ()
@@ -110,16 +111,16 @@ function estatus_fail()
     fi
 }
 
-function generate_medusa_cfg()
+function generate_beaker()
 {
-    cat << __EOF__ > /etc/medusa/medusa.cfg
+    cat << __EOF__ > /etc/beaker/server.cfg
 [global]
 # This is where all of your settings go for your production environment.
 # You'll copy this file over to your production server and provide it
 # as a command-line option to your start script.
 # Settings that are the same for both development and production
 # (such as template engine, encodings, etc.) all go in 
-# medusa/config/app.cfg
+# beaker/server/config/app.cfg
 
 # DATABASE
 
@@ -131,7 +132,7 @@ function generate_medusa_cfg()
 # If you have sqlite, here's a simple default to get you started
 # in development
 #sqlalchemy.dburi="sqlite:///devdata.sqlite"
-sqlalchemy.dburi="mysql://medusa:medusa@localhost/medusa"
+sqlalchemy.dburi="mysql://beaker:beaker@localhost/beaker"
 sqlalchemy.pool_recycle = 3600
 
 
@@ -159,10 +160,10 @@ identity.krb_auth_keytab='/etc/httpd/conf/httpd.keytab'
 server.socket_port=8084
 server.environment="development"
 server.webpath=""
-server.log_file = "/var/log/medusa/server.log"
+server.log_file = "/var/log/beaker/server.log"
 server.log_to_screen = True
 
-autoreload.package="medusa"
+autoreload.package="beaker.server"
 tg.strict_parameters = True
 
 # Sets the number of threads the server uses
@@ -187,22 +188,22 @@ tg.include_widgets = ['turbogears.mochikit']
 # Logging configuration generally follows the style of the standard
 # Python logging module configuration. Note that when specifying
 # log format messages, you need to use *() for formatting variables.
-# Deployment independent log configuration is in medusa/config/log.cfg
+# Deployment independent log configuration is in beaker/server/config/log.cfg
 [logging]
 
 [[handlers]]
 
 [[[access_out]]]
 # set the filename as the first argument below
-args="('/var/log/medusa/server.log',)"
+args="('/var/log/beaker/server.log',)"
 class='FileHandler'
 level='INFO'
 formatter='message_only'
 
 [[loggers]]
-[[[medusa]]]
+[[[server]]]
 level='ERROR'
-qualname='medusa'
+qualname='beaker.server'
 handlers=['error_out']
 
 [[[access]]]
@@ -224,17 +225,17 @@ function Inventory()
     service mysqld start
     estatus_fail "**** Failed to start mysqld ****"
 
-    echo "create database medusa;" | mysql || result_fail
-    echo "grant all on medusa.* to 'medusa'@'localhost' IDENTIFIED BY 'medusa';" | mysql || result_fail
+    echo "create database beaker;" | mysql || result_fail
+    echo "grant all on beaker.* to 'beaker'@'localhost' IDENTIFIED BY 'beaker';" | mysql || result_fail
 
     # Add in Kerberos config
-    generate_medusa_cfg
+    generate_beaker_cfg
 
-    medusa-init -u admin -p testing -e $SUBMITTER
-    estatus_fail "**** Failed to initialize medusa DB ****"
-    # medusa-init creates the server.log as root.  this prevents apache from 
+    beaker-init -u admin -p testing -e $SUBMITTER
+    estatus_fail "**** Failed to initialize beaker DB ****"
+    # beaker-init creates the server.log as root.  this prevents apache from 
     #  working since it can't write to it.
-    /bin/rm -f /var/log/medusa/server.log
+    /bin/rm -f /var/log/beaker/server.log
     service iptables stop
     service httpd start
     estatus_fail "**** Failed to start httpd ****"
