@@ -184,6 +184,14 @@ tg.strict_parameters = True
 
 tg.include_widgets = ['turbogears.mochikit']
 
+[/static]
+static_filter.on = True
+static_filter.dir = "/usr/share/beaker/server/static"
+
+[/favicon.ico]
+static_filter.on = True
+static_filter.file = "/usr/share/beaker/server/static/images/favicon.ico"
+
 # LOGGING
 # Logging configuration generally follows the style of the standard
 # Python logging module configuration. Note that when specifying
