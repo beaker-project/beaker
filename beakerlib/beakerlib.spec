@@ -8,6 +8,8 @@ BuildRoot:  %{_tmppath}/%{name}-%{version}-root
 Source0:	%{name}-%{version}.tar.gz
 BuildArch:	noarch
 URL:            https://fedorahosted.org/beaker/BeakerLib
+Obsoletes: rhtslib
+Provides: rhtslib
 
 %description
 The BeakerLib project means to provide a library of various helpers,
