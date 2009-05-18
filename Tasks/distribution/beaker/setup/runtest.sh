@@ -148,10 +148,10 @@ sqlalchemy.pool_recycle = 3600
 # Authentication
 
 identity.provider='ldapsa'
-identity.ldap.enabled=False
-#identity.soldapprovider.uri="ldaps://ldap.domain.com"
-#identity.soldapprovider.basedn="dc=domain,dc=com"
-#identity.soldapprovider.autocreate=True
+identity.ldap.enabled=$LDAPENABLED
+identity.soldapprovider.uri="ldaps://ldap.bos.redhat.com"
+identity.soldapprovider.basedn="dc=redhat,dc=com"
+identity.soldapprovider.autocreate=True
 identity.krb_auth_principal='HTTP/$HOSTNAME@REDHAT.COM'
 identity.krb_auth_keytab='/etc/httpd/conf/httpd.keytab'
 
@@ -228,6 +228,9 @@ function Inventory()
     echo "create database beaker;" | mysql || result_fail
     echo "grant all on beaker.* to 'beaker'@'localhost' IDENTIFIED BY 'beaker';" | mysql || result_fail
 
+    if [ -z "$LDAPENABLED" ]; then
+        LDAPENABLED="False"
+    fi
     # Add in Kerberos config
     generate_beaker_cfg
 
