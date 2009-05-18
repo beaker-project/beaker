@@ -501,7 +501,7 @@ class User(object):
             return user
         # If user doesn't exist in DB check ldap if enabled.
         if cls.ldapenabled:
-            filter = "(uid=%s)" % username
+            filter = "(uid=%s)" % user_name
             ldapcon = ldap.initialize(cls.uri)
             rc = ldapcon.search(cls.basedn, ldap.SCOPE_SUBTREE, filter)
             objects = ldapcon.result(rc)[1]
