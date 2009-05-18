@@ -521,7 +521,7 @@ rlPhaseStartTest(){
 	rljAddPhase "FAIL" "${1:-Test}"
 }
 rlPhaseStartCleanup(){
-	rljAddPhase "WARN" "${1:-Cleannup}"
+	rljAddPhase "WARN" "${1:-Cleanup}"
 }
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
