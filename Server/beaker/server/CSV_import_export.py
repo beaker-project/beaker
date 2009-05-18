@@ -413,7 +413,7 @@ class CSV_Exclude(CSV):
         if not data['update'] and data['family']:
             try:
                 osmajor = OSMajor.by_name(data['family'])
-            except InvaldRequestError:
+            except InvalidRequestError:
                 log.append("%s: Invalid family %s " % (system.fqdn,
                                                        data['family']))
                 return False
