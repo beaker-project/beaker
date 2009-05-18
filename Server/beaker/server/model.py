@@ -509,15 +509,15 @@ class User(object):
                 return None
             elif(len(objects) > 1):
                 return None
-                if cls.autocreate:
-                    user = User()
-                    user.user_name = user_name
-                    user.display_name = objects[0][1]['cn'][0]
-		    user.email_address = objects[0][1]['mail'][0]
-                    session.save(user)
-                    session.flush([user])
-                else:
-                    return None
+            if cls.autocreate:
+                user = User()
+                user.user_name = user_name
+                user.display_name = objects[0][1]['cn'][0]
+	        user.email_address = objects[0][1]['mail'][0]
+                session.save(user)
+                session.flush([user])
+            else:
+                return None
         else:
             return None
         return user
