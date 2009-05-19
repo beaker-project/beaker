@@ -44,7 +44,7 @@ fi
 #if $yum != ""
 # Install Yum
 pushd /root
-/usr/bin/wget -N http://$server/rpms/$yum
+/usr/bin/wget -N http://$server/beaker/$yum
 /bin/rpm -Uvh $yum
 popd
 #end if
