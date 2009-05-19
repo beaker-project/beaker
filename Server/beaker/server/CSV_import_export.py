@@ -33,6 +33,7 @@ class CSV(RPCRoot):
     download   = widgets.RadioButtonList(name='csv_type', label='CSV Type',
                                options=[('system', 'Systems'), 
                                         ('labinfo', 'System LabInfo'), 
+                                        ('power', 'System Power'),
                                         ('exclude', 'System Excluded Families'), 
                                         ('install', 'System Install Options'),
                                         ('keyvalue', 'System Key/Values'),
@@ -180,7 +181,7 @@ class CSV(RPCRoot):
     @classmethod
     def _from_csv(cls,system,data,csv_type,log):
         """
-        Import data from CSV file into LabInfo Objects
+        Import data from CSV file into Objects
         """
         csv_object = getattr(system, csv_type, None)
         for key in data.keys():
@@ -345,6 +346,62 @@ class CSV_System(CSV):
         self.type = system.type
         self.vendor = system.vendor
 
+class CSV_Power(CSV):
+    csv_type = 'power'
+    reg_keys = ['fqdn', 'power_address', 'power_user', 'power_passwd']
+    spec_keys = ['power_type']
+    csv_keys = reg_keys + spec_keys
+
+    @classmethod
+    def _from_csv(cls,system,data,csv_type,log):
+        """
+        Import data from CSV file into Power Objects
+        """
+        csv_object = getattr(system, csv_type, None)
+        for key in data.keys():
+            if key in cls.reg_keys:
+                if data[key]:
+                    newdata = smart_bool(data[key])
+                else:
+                    newdata = None
+                current_data = getattr(csv_object, key, None)
+                if str(newdata) != str(current_data):
+                    activity = SystemActivity(identity.current.user, 'CSV', 'Changed', key, '***', '***')
+                    system.activity.append(activity)
+                    setattr(csv_object,key,newdata)
+
+        # import power_type
+        if 'power_type' in data:
+            if not data['power_type']:
+                log.append("%s: Invalid power_type None" % system.fqdn)
+                return False
+            try:
+                power_type = PowerType.by_name(data['power_type'])
+            except InvalidRequestError:
+                log.append("%s: Invalid Power Type %s" % (system.fqdn,
+                                                         data['power_type']))
+                return False
+            if csv_object.power_type != power_type:
+                activity = SystemActivity(identity.current.user, 'CSV', 'Changed', 'power_type', '%s' % csv_object.power_type, '%s' % power_type)
+                system.activity.append(activity)
+                csv_object.power_type = power_type
+
+        return True
+
+    @classmethod
+    def query(cls):
+        for power in Power.query():
+            if power.system:
+                yield CSV_Power(power)
+
+    def __init__(self, power):
+        self.power = power
+        self.fqdn = power.system.fqdn
+        self.power_address = power.power_address
+        self.power_user = power.power_user
+        self.power_passwd = power.power_passwd
+        self.power_type = power.power_type.name
+
 class CSV_LabInfo(CSV):
     csv_type = 'labinfo'
     csv_keys = ['fqdn', 'orig_cost', 'curr_cost', 'dimensions', 'weight', 'wattage', 'cooling']
@@ -352,7 +409,8 @@ class CSV_LabInfo(CSV):
     @classmethod
     def query(cls):
         for labinfo in LabInfo.query():
-            yield CSV_LabInfo(labinfo)
+            if labinfo.system:
+                yield CSV_LabInfo(labinfo)
 
     def __init__(self, labinfo):
         self.labinfo = labinfo
@@ -371,9 +429,11 @@ class CSV_Exclude(CSV):
     @classmethod
     def query(cls):
         for exclude in ExcludeOSMajor.query():
-            yield CSV_Exclude(exclude)
+            if exclude.system:
+                yield CSV_Exclude(exclude)
         for exclude in ExcludeOSVersion.query():
-            yield CSV_Exclude(exclude)
+            if exclude.system:
+                yield CSV_Exclude(exclude)
 
     @classmethod
     def _from_csv(cls,system,data,csv_type,log):
@@ -450,7 +510,8 @@ class CSV_Install(CSV):
     @classmethod
     def query(cls):
         for install in Provision.query():
-            yield CSV_Install(install)
+            if install.system:
+                yield CSV_Install(install)
 
     @classmethod
     def _from_csv(cls,system,data,csv_type,log):
@@ -553,10 +614,7 @@ class CSV_Install(CSV):
 
     def __init__(self, install):
         self.install = install
-        if install.system:
-            self.fqdn = install.system.fqdn
-        else:
-            self.fqdn = None
+        self.fqdn = install.system.fqdn
         self.arch = install.arch
 
     def to_datastruct(self):
@@ -593,9 +651,11 @@ class CSV_KeyValue(CSV):
     @classmethod
     def query(cls):
         for key_int in Key_Value_Int.query():
-            yield CSV_KeyValue(key_int)
+            if key_int.system:
+                yield CSV_KeyValue(key_int)
         for key_string in Key_Value_String.query():
-            yield CSV_KeyValue(key_string)
+            if key_string.system:
+                yield CSV_KeyValue(key_string)
 
     @classmethod
     def _from_csv(cls,system,data,csv_type,log):
@@ -749,7 +809,7 @@ class CSV_GroupSystem(CSV):
         self.deleted = False
 
 system_types = ['system', 'labinfo', 'exclude','install','keyvalue',
-                'system_group']
+                'system_group', 'power']
 user_types   = ['user_group']
 csv_types = dict( system = CSV_System,
                   labinfo = CSV_LabInfo,
@@ -757,4 +817,5 @@ csv_types = dict( system = CSV_System,
                   install = CSV_Install,
                   keyvalue = CSV_KeyValue,
                   system_group = CSV_GroupSystem,
-                  user_group = CSV_GroupUser)
+                  user_group = CSV_GroupUser,
+                  power      = CSV_Power)

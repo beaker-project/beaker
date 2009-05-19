@@ -1415,6 +1415,10 @@ class PowerType(object):
         return [(0, "None")] + [(type.id, type.name) for type in all_types]
 
     @classmethod
+    def by_name(cls, name):
+        return cls.query.filter_by(name=name).one()
+
+    @classmethod
     def by_id(cls, id):
         return cls.query.filter_by(id=id).one()
 
@@ -1653,7 +1657,8 @@ System.mapper = mapper(System, system_table,
                                         backref='system'),
                      'cpu':relation(Cpu, uselist=False),
                      'numa':relation(Numa, uselist=False),
-                     'power':relation(Power, uselist=False),
+                     'power':relation(Power, uselist=False,
+                                         backref='system'),
                      'excluded_osmajor':relation(ExcludeOSMajor,
                                                  backref='system'),
                      'excluded_osversion':relation(ExcludeOSVersion,

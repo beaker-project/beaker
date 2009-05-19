@@ -11,11 +11,11 @@
  <body class="flora">
    <table class="list">
     <tr class="list">
-     <th class="list">Log</th>
+     <th class="list">Error Log</th>
     </tr>
     <?python row_color = "#FFFFFF" ?>
     <tr class="list" bgcolor="${row_color}" py:if="not log">
-     <td class="list">No Changes</td>
+     <td class="list">No Errors</td>
     </tr>
     <tr class="list" bgcolor="${row_color}" py:for="line in log">
      <td class="list">${line}</td>
