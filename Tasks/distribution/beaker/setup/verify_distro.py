@@ -40,4 +40,4 @@ submit('login')
 # Verify Added Distros
 go("/distros/?name=%s" % distro)
 code(200)
-find("%s.*</td><td>redhat</td><td>%s</td><td>%s" % (distro, family, update))
+find("%s.*</td>.*<td>.*redhat.*</td>.*<td>.*%s.*</td>.*<td>.*%s" % (distro, family, update))
