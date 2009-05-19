@@ -83,16 +83,26 @@ function BuildBeaker ()
     popd
 }
 
-function InstallInventory()
+function InstallInventory_git()
 {
     BuildBeaker
     yum install --nogpg -y  /rpmbuild/RPMS/noarch/beaker-server-*.rpm
 }
 
-function InstallLabController()
+function InstallInventory_repo()
+{
+    yum install -y beaker-server
+}
+
+function InstallLabController_git()
 {
     BuildBeaker
     yum install --nogpg -y /rpmbuild/RPMS/noarch/beaker-lab-controller-*.rpm
+}
+
+function InstallLabController_repo()
+{
+    yum install -y beaker-lab-controller
 }
 
 function CleanUp ()
@@ -229,7 +239,7 @@ function Inventory()
     PACKAGES="mysql-server MySQL-python python-twill"
     yum install -y $PACKAGES
     estatus_fail "**** Yum Install of $PACKAGES Failed ****"
-    InstallInventory
+    InstallInventory$SOURCE
     service mysqld start
     estatus_fail "**** Failed to start mysqld ****"
 
@@ -264,7 +274,7 @@ function LabController()
     SERVER=$(echo $SERVERS| awk '{print $1}')
     ipaddress=$(host $HOSTNAME | awk '{print $NF}')
     yum install -y python-twill
-    InstallLabController
+    InstallLabController$SOURCE
     chkconfig httpd on
     chkconfig xinetd on
     chkconfig tftp on
