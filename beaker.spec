@@ -2,8 +2,8 @@
 %{!?pyver: %define pyver %(%{__python} -c "import sys ; print sys.version[:3]")}
 
 Name:           beaker
-Version:        0.3
-Release:        6%{?dist}
+Version:        0.4
+Release:        0%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -114,5 +114,7 @@ DESTDIR=$RPM_BUILD_ROOT make install
 /var/www/beaker/rhts-checkin
 
 %changelog
+* Tue May 19 2009 Bill Peck <bpeck@redhat.com> - 0.4-1
+- Major reworking of directory layout.
 * Tue May 12 2009 Bill Peck <bpeck@redhat.com> - 0.3-1
 - First stab at client interface
