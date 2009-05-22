@@ -36,6 +36,9 @@ WIKILOCATION="wikiadmin@docs.example.com:/var/www/moin/wiki/data/pages"
 
 .PHONY: install clean unit-test 
 
+build:
+	@echo "Nothing to build"
+
 install: $(FILES) docsman gendict
 	mkdir -p $(DESTDIR)/usr/lib/beakerlib
 	mkdir -p $(DESTDIR)/usr/share/beakerlib
