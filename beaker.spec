@@ -3,7 +3,7 @@
 
 Name:           beaker
 Version:        0.4
-Release:        2%{?dist}
+Release:        3%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -114,6 +114,8 @@ DESTDIR=$RPM_BUILD_ROOT make install
 /var/www/beaker/rhts-checkin
 
 %changelog
+* Thu May 21 2009 Bill Peck <bpeck@redhat.com> - 0.4-3
+- fix power import
 * Tue May 19 2009 Bill Peck <bpeck@redhat.com> - 0.4-1
 - Major reworking of directory layout.
 * Tue May 12 2009 Bill Peck <bpeck@redhat.com> - 0.3-1

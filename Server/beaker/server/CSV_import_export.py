@@ -360,7 +360,7 @@ class CSV_Power(CSV):
         csv_object = getattr(system, csv_type, None)
         if not csv_object:
             csv_object = Power()
-            system.power = csv_power
+            system.power = csv_object
         for key in data.keys():
             if key in cls.reg_keys:
                 if data[key]:
