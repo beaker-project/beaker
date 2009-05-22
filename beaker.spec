@@ -123,8 +123,9 @@ DESTDIR=$RPM_BUILD_ROOT make install
 /var/www/beaker/rhts-checkin
 
 %files lib
-/usr/share/rhts-library/*
-/usr/share/man/man1/rhtslib*
+/usr/share/beakerlibrary/*
+/usr/share/rhts-library
+/usr/share/man/man1/beakerlib*
 
 %changelog
 * Fri May 22 2009 Bill Peck <bpeck@redhat.com> - 0.4.1-0
