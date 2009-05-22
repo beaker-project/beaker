@@ -120,19 +120,19 @@ Testing and Cleanup.
 
 =item Quick Reference Guide
 
-https://fedorahosted.org/beaker/BeakerLib/QuickReferenceGuide
+https://fedorahosted.org/beaker/wiki/BeakerLib/QuickReferenceGuide
 
 =item Manual
 
-https://fedorahosted.org/beaker/BeakerLib/Manual
+https://fedorahosted.org/beaker/wiki/BeakerLib/Manual
 
 =item Project Page
 
-https://fedorahosted.org/beaker/BeakerLib
+https://fedorahosted.org/beaker/wiki/BeakerLib
 
 =item Bugs reporting
 
-https://fedorahosted.org/beaker/newticket?component=rhtslib
+https://fedorahosted.org/beaker/newticket?keywords=BeakerLib&summary=BeakerLib:
 
 =back
 

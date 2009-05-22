@@ -13,7 +13,7 @@ E.g.:   $ ./runtests.sh beakerlibTest.sh   # run only tests from "beakerlibTest.
 Just create "*Test.sh" file here, which contains functions named
 "test*" which uses ShUnit2 asserts. See ShUnit2 documentation:
 
- * https://fedorahosted.org/beaker/BeakerLib/wiki/CodingStyle#Unittests
+ * https://fedorahosted.org/beaker/wiki/BeakerLib/CodingStyle#Unittests
  * http://www.forestent.com/wiki/ShUnit2:Main_Page
  * http://shunit2.svn.sourceforge.net/svnroot/shunit2/trunk/source/2.0/doc/shunit2.html
 

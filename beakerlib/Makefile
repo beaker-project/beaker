@@ -33,7 +33,7 @@ PERLFILES=perl/deja-summarize
 
 MANDIR=docs/man
 WIKIDIR=docs/wiki
-WIKIPREFIX="Docs(2f)BeakerLibrary(2f)Manual(2f)"
+WIKIPREFIX="Docs(2f)BeakerLib(2f)Manual(2f)"
 WIKILOCATION="wikiadmin@docs.example.com:/var/www/moin/wiki/data/pages"
 
 .PHONY: tarball install release check clean unit-test relstall
