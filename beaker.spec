@@ -124,6 +124,7 @@ DESTDIR=$RPM_BUILD_ROOT make install
 
 %files lib
 /usr/lib/beakerlib/*
+/usr/share/beakerlib/*
 /usr/share/rhts-library/*
 /usr/share/man/man1/beakerlib*
 
