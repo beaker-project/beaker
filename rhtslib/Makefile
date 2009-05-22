@@ -13,8 +13,6 @@
 #
 # Author: Petr Muller <pmuller@redhat.com>
 
-VERSION=0.6
-RELEASE=3
 SCRIPTS=rhtslib.sh\
 		journal.sh\
 		logging.sh\
@@ -24,7 +22,7 @@ SCRIPTS=rhtslib.sh\
 		performance.sh\
 		analyze.sh\
 		virtualX.sh
-FILES=rhtslib.spec $(SCRIPTS)
+FILES=$(SCRIPTS)
 PYTFILES=python/rlMemAvg.py\
 	python/rlMemPeak.py\
 	python/journalling.py\
@@ -36,24 +34,7 @@ WIKIDIR=docs/wiki
 WIKIPREFIX="Docs(2f)RhtsLibrary(2f)Manual(2f)"
 WIKILOCATION="wikiadmin@docs.example.com:/var/www/moin/wiki/data/pages"
 
-.PHONY: tarball install release check clean unit-test relstall
-
-tarball: $(FILES) docsman gendict
-	rm -rf rhtslib-$(VERSION)/
-	mkdir rhtslib-$(VERSION)/
-	cp -pr $(FILES) Makefile dictionary.vim test/ rhtslib-$(VERSION)/
-	rm -rf rhtslib-$(VERSION)/test/remotedir rhtslib-$(VERSION)/test/rhtslib-test-mount-point
-	mkdir rhtslib-$(VERSION)/python/
-	cp -pr $(PYTFILES) rhtslib-$(VERSION)/python/
-	mkdir rhtslib-$(VERSION)/perl/
-	cp -pr $(PERLFILES) rhtslib-$(VERSION)/perl/
-	cp -p perl/docsjoin rhtslib-$(VERSION)/perl/
-	mkdir -p rhtslib-$(VERSION)/$(MANDIR)/
-	cp -pr $(MANDIR)/man1 rhtslib-$(VERSION)/$(MANDIR)/
-	tar -czf rhtslib-$(VERSION).tar.gz rhtslib-$(VERSION)/
-	rm -rf rhtslib-$(VERSION)/
-
-rhtslib-$(VERSION).tar.gz: tarball
+.PHONY: install clean unit-test 
 
 install: $(FILES)
 	mkdir -p $(DESTDIR)/usr/share/rhts-library
@@ -67,7 +48,6 @@ install: $(FILES)
 	cp $(PERLFILES) $(DESTDIR)/usr/share/rhts-library/perl
 	cp test/* $(DESTDIR)/usr/share/rhts-library/test
 	cp $(MANDIR)/man1/* $(DESTDIR)/usr/share/man/man1
-	rm $(DESTDIR)/usr/share/rhts-library/rhtslib.spec
 
 clean:
 	rm -rf test/remotedir test/rhtslib-test-mount-point
@@ -138,22 +118,3 @@ wiki: $(SCRIPTS) docswiki
 	scp -r $(WIKIDIR)/* $(WIKILOCATION)
 
 docs: docshtml docsman wiki
-
-srpm: rhtslib-$(VERSION).tar.gz
-	rpmbuild -ts $<
-
-release: clean check tarball
-	mkdir -p ~/rpmbuild/SOURCES
-	cp rhtslib-$(VERSION).tar.gz ~/rpmbuild/SOURCES/
-	rpmbuild -ba rhtslib.spec
-
-relstall: release
-	sudo rpm -Uhv --force ~/rpmbuild/RPMS/noarch/rhtslib-$(VERSION)-$(RELEASE)*rpm
-
-publish: release
-	cp ~/rpmbuild/RPMS/noarch/rhtslib-$(VERSION)-$(RELEASE)*rpm /var/www/html/
-	rm -f /var/www/html/rhtslib.rpm /var/www/html/rhtslib.noarch.rpm
-	ln -s rhtslib-$(VERSION)-$(RELEASE).noarch.rpm /var/www/html/rhtslib.rpm
-	ln -s rhtslib-$(VERSION)-$(RELEASE).noarch.rpm /var/www/html/rhtslib.noarch.rpm
-	file /var/www/html/rhtslib.rpm
-	file /var/www/html/rhtslib.noarch.rpm
