@@ -123,7 +123,7 @@ DESTDIR=$RPM_BUILD_ROOT make install
 /var/www/beaker/rhts-checkin
 
 %files lib
-/usr/share/beakerlib/*
+/usr/lib/beakerlib/*
 /usr/share/rhts-library/*
 /usr/share/man/man1/beakerlib*
 
