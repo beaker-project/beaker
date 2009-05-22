@@ -1,0 +1,29 @@
+= BeakerLib unit-tests =
+
+== How to run tests ==
+
+Just execute `runtests.sh` if you want all the tests to run
+   OR
+Execute this script with a list of files you want execute tests from
+
+E.g.:   $ ./runtests.sh beakerlibTest.sh   # run only tests from "beakerlibTest.sh"
+
+== How to add a test ==
+
+Just create "*Test.sh" file here, which contains functions named
+"test*" which uses ShUnit2 asserts. See ShUnit2 documentation:
+
+ * https://fedorahosted.org/beaker/wiki/BeakerLib/CodingStyle#Unittests
+ * http://www.forestent.com/wiki/ShUnit2:Main_Page
+ * http://shunit2.svn.sourceforge.net/svnroot/shunit2/trunk/source/2.0/doc/shunit2.html
+
+== How runtests.sh works? ==
+
+It just generates `runtests-worker.sh` script and then it executes it.
+
+Why are we calling tests like this? I mean why are we creating new
+script in this funny way, then executing it and parsing its output
+for result?
+
+Well, because I do not know how to do that better. I'm open to
+improvements :-)

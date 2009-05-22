@@ -1,0 +1,6 @@
+PURPOSE of /examples/beakerlib/Sanity/simple
+Description: Minimal BeakerLib sanity test
+Author: Petr Splichal <psplicha@redhat.com>
+
+This is a minimal sanity test for BeakerLib.
+It contains a single phase with a couple of asserts.
