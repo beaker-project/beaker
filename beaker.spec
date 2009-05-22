@@ -124,7 +124,7 @@ DESTDIR=$RPM_BUILD_ROOT make install
 
 %files lib
 /usr/share/rhts-library/*
-/usr/share/man/man1/rhtslib-*
+/usr/share/man/man1/rhtslib*
 
 %changelog
 * Fri May 22 2009 Bill Peck <bpeck@redhat.com> - 0.4.1-0
