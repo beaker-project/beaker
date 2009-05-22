@@ -51,6 +51,11 @@ Requires:       telnet
 Requires:       python-cpio
 
 
+%package lib
+Summary:        Test Library
+Group:          QA
+
+
 %description
 Filesystem layout for beaker
 
@@ -67,6 +72,10 @@ To Be Filled in - Server Side..
 This is the interface to link Medusa and Cobbler together. Mostly provides
 snippets and kickstarts.
 
+
+%description lib
+The beakerlib project means to provide a library of various helpers,
+which could be used when writing RHTS tests.
 
 %prep
 %setup -q
@@ -113,7 +122,13 @@ DESTDIR=$RPM_BUILD_ROOT make install
 /var/lib/cobbler/kickstarts/*
 /var/www/beaker/rhts-checkin
 
+%files lib
+/usr/share/rhts-library/*
+/usr/share/man/man1/rhtslib-*
+
 %changelog
+* Fri May 22 2009 Bill Peck <bpeck@redhat.com> - 0.4.1-3
+- Added in beakerlib sub package
 * Thu May 21 2009 Bill Peck <bpeck@redhat.com> - 0.4-3
 - fix power import
 * Tue May 19 2009 Bill Peck <bpeck@redhat.com> - 0.4-1
