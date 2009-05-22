@@ -2,8 +2,8 @@
 %{!?pyver: %define pyver %(%{__python} -c "import sys ; print sys.version[:3]")}
 
 Name:           beaker
-Version:        0.4
-Release:        3%{?dist}
+Version:        0.4.1
+Release:        0%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -127,7 +127,7 @@ DESTDIR=$RPM_BUILD_ROOT make install
 /usr/share/man/man1/rhtslib-*
 
 %changelog
-* Fri May 22 2009 Bill Peck <bpeck@redhat.com> - 0.4.1-3
+* Fri May 22 2009 Bill Peck <bpeck@redhat.com> - 0.4.1-0
 - Added in beakerlib sub package
 * Thu May 21 2009 Bill Peck <bpeck@redhat.com> - 0.4-3
 - fix power import
