@@ -50,11 +50,13 @@ Requires:       /sbin/fenced
 Requires:       telnet
 Requires:       python-cpio
 
-
 %package lib
 Summary:        Test Library
 Group:          QA
-
+Obsoletes:      rhtslib
+Provides:       rhtslib
+Obsoletes:      beakerlib
+Provides:       beakerlib
 
 %description
 Filesystem layout for beaker
