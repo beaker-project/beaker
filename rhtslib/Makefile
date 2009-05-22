@@ -36,7 +36,7 @@ WIKILOCATION="wikiadmin@docs.example.com:/var/www/moin/wiki/data/pages"
 
 .PHONY: install clean unit-test 
 
-install: $(FILES)
+install: $(FILES) gendict
 	mkdir -p $(DESTDIR)/usr/share/rhts-library
 	mkdir -p $(DESTDIR)/usr/share/rhts-library/python	
 	mkdir -p $(DESTDIR)/usr/share/rhts-library/perl
