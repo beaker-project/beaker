@@ -77,7 +77,7 @@ snippets and kickstarts.
 
 %description lib
 The beakerlib project means to provide a library of various helpers,
-which could be used when writing RHTS tests.
+which could be used when writing Beaker tests.
 
 %prep
 %setup -q
