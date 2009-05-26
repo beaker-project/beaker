@@ -2,7 +2,7 @@
 %{!?pyver: %define pyver %(%{__python} -c "import sys ; print sys.version[:3]")}
 
 Name:           beaker
-Version:        0.4.3
+Version:        0.4.4
 Release:        0%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
@@ -131,8 +131,10 @@ DESTDIR=$RPM_BUILD_ROOT make install
 /usr/share/man/man1/beakerlib*
 
 %changelog
-* Tue May 26 2009 Bill Peck <bpeck@redhat.com> - 0.4.3-0
+* Tue May 26 2009 Bill Peck <bpeck@redhat.com> - 0.4.4-0
 - Fixed missing power_id from CSV import/export
+- Use $default_password_crypted from /etc/cobbler/settings unless $password 
+  is set.
 * Fri May 22 2009 Bill Peck <bpeck@redhat.com> - 0.4.2-0
 - Added in beakerlib sub package
 - Fixed tempfile close in osversion.trigger
