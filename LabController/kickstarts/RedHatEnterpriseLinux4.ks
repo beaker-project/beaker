@@ -30,7 +30,7 @@ langsupport --default $getVar('lang', 'en_US.UTF-8') $getVar('lang','en_US.UTF-8
 $yum_repo_stanza
 reboot
 #Root password
-rootpw --iscrypted \$1\$mF86/UHC\$WvcIcX2t6crBz2onWxyac.
+rootpw --iscrypted $getVar('password', $default_password_crypted)
 # SELinux configuration
 selinux --$getVar('selinux', 'enforcing')
 

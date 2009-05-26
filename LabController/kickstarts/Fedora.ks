@@ -16,7 +16,7 @@ lang $getVar('lang','en_us.UTF-8')
 $yum_repo_stanza
 reboot
 #Root password
-rootpw --iscrypted $getVar('password', '\$1\$mF86/UHC\$WvcIcX2t6crBz2onWxyac.')
+rootpw --iscrypted $getVar('password', $default_password_crypted)
 # SELinux configuration
 selinux $getVar('selinux','--enforcing')
 # Do not configure the X Window System
