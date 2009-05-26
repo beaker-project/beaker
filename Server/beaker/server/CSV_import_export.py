@@ -348,7 +348,8 @@ class CSV_System(CSV):
 
 class CSV_Power(CSV):
     csv_type = 'power'
-    reg_keys = ['fqdn', 'power_address', 'power_user', 'power_passwd']
+    reg_keys = ['fqdn', 'power_address', 'power_user', 'power_passwd', 
+                'power_id']
     spec_keys = ['power_type']
     csv_keys = reg_keys + spec_keys
 
@@ -404,6 +405,7 @@ class CSV_Power(CSV):
         self.power_user = power.power_user
         self.power_passwd = power.power_passwd
         self.power_type = power.power_type.name
+        self.power_id = power.power_id
 
 class CSV_LabInfo(CSV):
     csv_type = 'labinfo'
