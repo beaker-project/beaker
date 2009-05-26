@@ -1012,12 +1012,12 @@ class System(SystemObject):
         if self.lab_controller:
             labcontroller = self.lab_controller
             try:
-                url = "http://%s/cobbler_api_rw/" % labcontroller.fqdn
+                url = "http://%s/cobbler_api_rw" % labcontroller.fqdn
                 remote = xmlrpclib.ServerProxy(url, allow_none=True)
                 token = remote.login(labcontroller.username,
                                      labcontroller.password)
             except ProtocolError:
-                url = "http://%s/cobbler_api/" % labcontroller.fqdn
+                url = "http://%s/cobbler_api" % labcontroller.fqdn
                 remote = xmlrpclib.ServerProxy(url, allow_none=True)
                 token = remote.login(labcontroller.username,
                                      labcontroller.password)
@@ -1048,12 +1048,12 @@ class System(SystemObject):
 
         labcontroller = self.lab_controller
         try:
-            url = "http://%s/cobbler_api_rw/" % labcontroller.fqdn
+            url = "http://%s/cobbler_api_rw" % labcontroller.fqdn
             remote = xmlrpclib.ServerProxy(url, allow_none=True)
             token = remote.login(labcontroller.username,
                                  labcontroller.password)
         except ProtocolError:
-            url = "http://%s/cobbler_api/" % labcontroller.fqdn
+            url = "http://%s/cobbler_api" % labcontroller.fqdn
             remote = xmlrpclib.ServerProxy(url, allow_none=True)
             token = remote.login(labcontroller.username,
                                  labcontroller.password)
@@ -1113,12 +1113,12 @@ class System(SystemObject):
 
         labcontroller = self.lab_controller
         try:
-            url = "http://%s/cobbler_api_rw/" % labcontroller.fqdn
+            url = "http://%s/cobbler_api_rw" % labcontroller.fqdn
             remote = xmlrpclib.ServerProxy(url, allow_none=True)
             token = remote.login(labcontroller.username,
                                  labcontroller.password)
         except ProtocolError:
-            url = "http://%s/cobbler_api/" % labcontroller.fqdn
+            url = "http://%s/cobbler_api" % labcontroller.fqdn
             remote = xmlrpclib.ServerProxy(url, allow_none=True)
             token = remote.login(labcontroller.username,
                                  labcontroller.password)
