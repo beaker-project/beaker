@@ -476,13 +476,6 @@ Final phase result is based on included asserts and phase type.
 rlPhaseEnd(){
 	rljClosePhase
 
-	#this is for rcw integration
-  #and is broken!
-	if [ -x /usr/bin/rcw-copy-log ]
-	then
-		rlJournalPrint > /tmp/beakerlib-rcw-journal
-		/usr/bin/rcw-copy-log /tmp/beakerlib-rcw-journal
-	fi
 }
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
