@@ -683,7 +683,8 @@ class System(SystemObject):
         Builds on all.  Only systems which this user has permission to reserve.
           If a system is loaned then its only available for that person.
         """
-        return System.all(user).filter(
+        return System.all(user).filter(and_(
+                                System.status==SystemStatus.by_name(u'Working'),
                                     or_(and_(System.owner==user,
                                              System.loaned==None),
                                       System.loaned==user,
@@ -696,6 +697,7 @@ class System(SystemObject):
                                            User.user_id==user.user_id
                                           )
                                        )
+                                           )
                                       )
 
     @classmethod
