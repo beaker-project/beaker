@@ -1102,6 +1102,8 @@ class System(SystemObject):
                 msg = "Success"
         except:
             rc=-1
+        if rc == 0:
+            rc = remote.clear_system_logs(system_id, token)
         return (rc, msg)
 
     def action_power(self, action="reboot"):
