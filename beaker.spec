@@ -119,7 +119,6 @@ DESTDIR=$RPM_BUILD_ROOT make install
 %config(noreplace) %{_sysconfdir}/httpd/conf.d/%{name}-lab-controller.conf
 %{_sysconfdir}/cron.daily/expire_distros
 /var/lib/cobbler/triggers/sync/post/osversion.trigger
-/var/lib/cobbler/triggers/install/pre/clear_console_log.trigger
 /var/lib/cobbler/snippets/*
 /var/lib/cobbler/kickstarts/*
 /var/www/beaker/rhts-checkin
