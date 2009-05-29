@@ -2,7 +2,7 @@
 %{!?pyver: %define pyver %(%{__python} -c "import sys ; print sys.version[:3]")}
 
 Name:           beaker
-Version:        0.4.5
+Version:        0.4.6
 Release:        0%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
@@ -131,6 +131,8 @@ DESTDIR=$RPM_BUILD_ROOT make install
 /usr/share/man/man1/beakerlib*
 
 %changelog
+* Thu May 28 2009 Bill Peck <bpeck@redhat.com> - 0.4.6
+- Clear systems console log via xmlrpc
 * Thu May 28 2009 Bill Peck <bpeck@redhat.com> - 0.4.5
 - free and available views will only show working systems now.
 * Tue May 26 2009 Bill Peck <bpeck@redhat.com> - 0.4.4
