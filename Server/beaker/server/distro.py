@@ -76,7 +76,7 @@ class Distros(RPCRoot):
         if 'tag' in kw:
             distros = distros.join('_tags').filter(DistroTag.c.tag==kw['tag'])
         if 'name' in kw:
-            distros = distros.filter(Distro.c.install_name.like('%%%s%%' % kw['name']))
+            distros = distros.filter(Distro.c.install_name.like('%s' % kw['name']))
         distros_grid = widgets.PaginateDataGrid(fields=[
                                   widgets.PaginateDataGrid.Column(name='install_name', getter=lambda x: make_link(url  = 'view?id=%s' % x.id,
                                   text = x.install_name), title='Install Name', options=dict(sortable=True)),
@@ -94,8 +94,65 @@ class Distros(RPCRoot):
                                          search_bar = None,
                                          list = distros)
 
+    #XMLRPC method for listing distros
     @cherrypy.expose
-    def pick(self, machine_account, xml):
+    def list(self, name, family, arch, tags):
+        distros = session.query(Distro)
+        if tags:
+            sqltags = []
+            distros = distros.join('_tags')
+            for tag in tags:
+                sqltags.append(DistroTag.c.tag==tag)
+            distros = distros.filter(and_(*sqltags))
+        if name:
+            distros = distros.filter(Distro.c.name.like('%s' % name))
+        if family:
+            distros = distros.join(['osversion','osmajor'])
+            distros = distros.filter(osmajor_table.c.osmajor=='%s' % family)
+        if arch:
+            distros = distros.join('arch')
+            distros = distros.filter(arch_table.c.arch=='%s' % arch)
+        distros = distros.order_by(distro_table.c.date_created.desc())
+        return [(distro.name, '%s' % distro.arch, '%s' % distro.osversion, distro.variant, distro.method, distro.virt) for distro in distros]
+
+    #XMLRPC method for listing distros
+    @cherrypy.expose
+    @identity.require(identity.not_anonymous())
+    def tag(self, name, arch, tag):
+        added = []
+        distros = session.query(Distro)
+        if name:
+            distros = distros.filter(Distro.c.name.like('%s' % name))
+        if arch:
+            distros = distros.join('arch')
+            distros = distros.filter(arch_table.c.arch=='%s' % arch)
+        for distro in distros:
+            if tag not in distro.tags:
+                added.append('%s' % distro.install_name)
+                Activity(identity.current.user,'XMLRPC','Tagged',distro.install_name,None,tag)
+                distro.tags.append(tag)
+        return added
+
+    #XMLRPC method for listing distros
+    @cherrypy.expose
+    @identity.require(identity.not_anonymous())
+    def untag(self, name, arch, tag):
+        removed = []
+        distros = session.query(Distro)
+        if name:
+            distros = distros.filter(Distro.c.name.like('%s' % name))
+        if arch:
+            distros = distros.join('arch')
+            distros = distros.filter(arch_table.c.arch=='%s' % arch)
+        for distro in distros:
+            if tag in distro.tags:
+                removed.append('%s' % distro.install_name)
+                Activity(identity.current.user,'XMLRPC','UnTagged',distro.install_name,tag,None)
+                distro.tags.remove(tag)
+        return removed
+
+    @cherrypy.expose
+    def pick(self, xml):
         """
         Based on XML passed in filter distro selection
         """
