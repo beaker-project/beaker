@@ -21,7 +21,7 @@ BuildRequires:  TurboGears
 Summary:        Client component for talking to Beaker server
 Group:          Applications/Internet
 Requires:       python
-Requires:       python-kobo
+Requires:       kobo-client
 
 
 %package server
