@@ -2,7 +2,7 @@
 %{!?pyver: %define pyver %(%{__python} -c "import sys ; print sys.version[:3]")}
 
 Name:           beaker
-Version:        0.4.6
+Version:        0.4.7
 Release:        0%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
@@ -130,6 +130,9 @@ DESTDIR=$RPM_BUILD_ROOT make install
 /usr/share/man/man1/beakerlib*
 
 %changelog
+* Mon Jun 01 2009 Bill Peck <bpeck@redhat.com> - 0.4.7
+- added distros list,tag,untag to beaker-client
+- fixed some minor issues with the xmlrpc interface.
 * Thu May 28 2009 Bill Peck <bpeck@redhat.com> - 0.4.6
 - Clear systems console log via xmlrpc
 * Thu May 28 2009 Bill Peck <bpeck@redhat.com> - 0.4.5
