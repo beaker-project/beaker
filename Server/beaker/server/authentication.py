@@ -36,19 +36,19 @@ class Auth(RPCRoot):
         return True
 
     @cherrypy.expose
-    def login_password(self, *args, **kw):
+    def login_password(self, username, password):
         """
         Login via password
         """
         visit_key = turbogears.visit.current().key
-        user = identity.current_provider.validate_identity(args[1], args[2], visit_key)
+        user = identity.current_provider.validate_identity(username, password, visit_key)
         if user is None:
             raise IdentityException("Invalid username or password")
         return identity.current.visit_key
 
     # TODO: proxy_user
     @cherrypy.expose
-    def login_krbV(self, request, krb_request, proxy_user=None):
+    def login_krbV(self, krb_request, proxy_user=None):
         """login_krbV(krb_request, proxy_user=None): session_key"""
         import krbV
         import base64
@@ -76,7 +76,7 @@ class Auth(RPCRoot):
         return identity.current.visit_key
 
     @cherrypy.expose
-    def logout(self, *args, **kw):
+    def logout(self, *args):
         """
         Logout session
         """
