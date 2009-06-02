@@ -119,11 +119,11 @@ Short test summary, e.g. "Test if all 3 packages have been downloaded".
 
 =item value1
 
-Integer value.
+First parameter to compare, can be a number or a string
 
 =item value2
 
-Integer value.
+Second parameter to compare, can be a number or a string
 
 =back
 
@@ -160,11 +160,11 @@ Short test summary, e.g. "Test if return code is not 139".
 
 =item value1
 
-Integer value.
+First parameter to compare, can be a number or a string
 
 =item value2
 
-Integer value.
+Second parameter to compare, can be a number or a string
 
 =back
 
