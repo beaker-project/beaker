@@ -84,7 +84,7 @@ class LabControllers(RPCRoot):
         redirect(".")
 
     @cherrypy.expose
-    def addDistros(self, machine_account, lc_name, lc_distros):
+    def addDistros(self, lc_name, lc_distros):
         """
         XMLRPC Push method for adding distros
         """
@@ -180,7 +180,7 @@ class LabControllers(RPCRoot):
         return distros
 
     @cherrypy.expose
-    def removeDistros(self, machine_account, lc_name, distro_names):
+    def removeDistros(self, lc_name, distro_names):
         """
         Push method for removing distros
         """

@@ -2,7 +2,7 @@
 %{!?pyver: %define pyver %(%{__python} -c "import sys ; print sys.version[:3]")}
 
 Name:           beaker
-Version:        0.4.4
+Version:        0.4.7
 Release:        0%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
@@ -21,7 +21,7 @@ BuildRequires:  TurboGears
 Summary:        Client component for talking to Beaker server
 Group:          Applications/Internet
 Requires:       python
-Requires:       python-kobo
+Requires:       kobo-client
 
 
 %package server
@@ -119,7 +119,6 @@ DESTDIR=$RPM_BUILD_ROOT make install
 %config(noreplace) %{_sysconfdir}/httpd/conf.d/%{name}-lab-controller.conf
 %{_sysconfdir}/cron.daily/expire_distros
 /var/lib/cobbler/triggers/sync/post/osversion.trigger
-/var/lib/cobbler/triggers/install/pre/clear_console_log.trigger
 /var/lib/cobbler/snippets/*
 /var/lib/cobbler/kickstarts/*
 /var/www/beaker/rhts-checkin
@@ -131,11 +130,18 @@ DESTDIR=$RPM_BUILD_ROOT make install
 /usr/share/man/man1/beakerlib*
 
 %changelog
-* Tue May 26 2009 Bill Peck <bpeck@redhat.com> - 0.4.4-0
+* Mon Jun 01 2009 Bill Peck <bpeck@redhat.com> - 0.4.7
+- added distros list,tag,untag to beaker-client
+- fixed some minor issues with the xmlrpc interface.
+* Thu May 28 2009 Bill Peck <bpeck@redhat.com> - 0.4.6
+- Clear systems console log via xmlrpc
+* Thu May 28 2009 Bill Peck <bpeck@redhat.com> - 0.4.5
+- free and available views will only show working systems now.
+* Tue May 26 2009 Bill Peck <bpeck@redhat.com> - 0.4.4
 - Fixed missing power_id from CSV import/export
 - Use $default_password_crypted from /etc/cobbler/settings unless $password 
   is set.
-* Fri May 22 2009 Bill Peck <bpeck@redhat.com> - 0.4.2-0
+* Fri May 22 2009 Bill Peck <bpeck@redhat.com> - 0.4.2
 - Added in beakerlib sub package
 - Fixed tempfile close in osversion.trigger
 * Thu May 21 2009 Bill Peck <bpeck@redhat.com> - 0.4-3
