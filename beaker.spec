@@ -3,7 +3,7 @@
 
 Name:           beaker
 Version:        0.4.7
-Release:        0%{?dist}
+Release:        1%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -22,6 +22,7 @@ Summary:        Client component for talking to Beaker server
 Group:          Applications/Internet
 Requires:       python
 Requires:       kobo-client
+Requires:	python-setuptools
 
 
 %package server
