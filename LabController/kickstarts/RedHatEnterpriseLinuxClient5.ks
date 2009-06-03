@@ -1,5 +1,4 @@
 url --url=$tree
-key $getVar('key', '7fcc43557e9bbc42')
 
 #if $getVar('system_name', '') != ''
 auth  --useshadow  --enablemd5
@@ -7,6 +6,7 @@ auth  --useshadow  --enablemd5
 bootloader --location=mbr
 
 #if $getVar('rhts_server', '') != ''
+key $getVar('key', '7fcc43557e9bbc42')
 # Use text mode install
 text
 #end if
