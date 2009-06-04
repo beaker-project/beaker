@@ -321,6 +321,20 @@ function LabController()
                        --available-as=nfs://${NFSSERVER}:${NFSPATH}
         report_result $TEST/ADD_DISTRO/$DISTRONAME PASS $?
     done
+    # Import Rawhide
+    if [ -n "$RAWHIDE_NFS" ]; then
+        NFSSERVER=$(echo $RAWHIDE_NFS| awk -F: '{print $1}')
+        NFSDIR=$(echo $RAWHIDE_NFS| awk -F: '{print $2}')
+        mkdir -p /fakenet/${NFSSERVER}${NFSDIR}
+        for distro in $(find /fakenet/${NFSSERVER}${NFSDIR} -maxdepth 1 -name rawhide\* -type d); do 
+            DISTRO=$(basename $distro)
+            DISTRONAME=Fedora-$(basename $distro)
+            cobbler import --path=/fakenet/${NFSSERVER}${NFSDIR}/${DISTRO} \
+                           --name=${DISTRONAME}_nfs \
+                           --available-as=nfs://${NFSSERVER}:${NFSDIR}/${DISTRO}
+            report_result $TEST/ADD_DISTRO/$DISTRONAME PASS $?
+        done
+    fi
     /var/lib/cobbler/triggers/sync/post/osversion.trigger | tee -a $OUTPUTFILE
     estatus_fail "**** Failed to run osversion.trigger ****"
     for distro in $NFSDISTROS; do
