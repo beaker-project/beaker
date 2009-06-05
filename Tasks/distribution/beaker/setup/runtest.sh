@@ -326,6 +326,7 @@ function LabController()
         NFSSERVER=$(echo $RAWHIDE_NFS| awk -F: '{print $1}')
         NFSDIR=$(echo $RAWHIDE_NFS| awk -F: '{print $2}')
         mkdir -p /fakenet/${NFSSERVER}${NFSDIR}
+        mount ${NFSSERVER}:${NFSDIR} /fakenet/${NFSSERVER}${NFSDIR}
         for distro in $(find /fakenet/${NFSSERVER}${NFSDIR} -maxdepth 1 -name rawhide\* -type d); do 
             DISTRO=$(basename $distro)
             DISTRONAME=Fedora-$(basename $distro)
