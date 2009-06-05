@@ -771,7 +771,8 @@ class System(SystemObject):
         Builds on all.  Only systems which this user has permission to reserve.
           If a system is loaned then its only available for that person.
         """
-        return System.all(user).filter(
+        return System.all(user).filter(and_(
+                                System.status==SystemStatus.by_name(u'Working'),
                                     or_(and_(System.owner==user,
                                              System.loaned==None),
                                       System.loaned==user,
@@ -784,6 +785,7 @@ class System(SystemObject):
                                            User.user_id==user.user_id
                                           )
                                        )
+                                           )
                                       )
 
     @classmethod
@@ -1099,16 +1101,10 @@ class System(SystemObject):
         self.user = None
         if self.lab_controller:
             labcontroller = self.lab_controller
-            try:
-                url = "http://%s/cobbler_api_rw" % labcontroller.fqdn
-                remote = xmlrpclib.ServerProxy(url, allow_none=True)
-                token = remote.login(labcontroller.username,
-                                     labcontroller.password)
-            except ProtocolError:
-                url = "http://%s/cobbler_api" % labcontroller.fqdn
-                remote = xmlrpclib.ServerProxy(url, allow_none=True)
-                token = remote.login(labcontroller.username,
-                                     labcontroller.password)
+            url = "http://%s/cobbler_api" % labcontroller.fqdn
+            remote = xmlrpclib.ServerProxy(url, allow_none=True)
+            token = remote.login(labcontroller.username,
+                                 labcontroller.password)
             system_id = None
             try:
                 # Try and look up the system in cobbler
@@ -1135,16 +1131,10 @@ class System(SystemObject):
             return False
 
         labcontroller = self.lab_controller
-        try:
-            url = "http://%s/cobbler_api_rw" % labcontroller.fqdn
-            remote = xmlrpclib.ServerProxy(url, allow_none=True)
-            token = remote.login(labcontroller.username,
-                                 labcontroller.password)
-        except ProtocolError:
-            url = "http://%s/cobbler_api" % labcontroller.fqdn
-            remote = xmlrpclib.ServerProxy(url, allow_none=True)
-            token = remote.login(labcontroller.username,
-                                 labcontroller.password)
+        url = "http://%s/cobbler_api" % labcontroller.fqdn
+        remote = xmlrpclib.ServerProxy(url, allow_none=True)
+        token = remote.login(labcontroller.username,
+                             labcontroller.password)
         try:
             system_id = remote.get_system_handle(self.fqdn, token)
         except:
@@ -1181,13 +1171,16 @@ class System(SystemObject):
                 return (-5, "Failed to copy profile")
         remote.modify_system(system_id, 'profile', profile, token)
         remote.modify_system(system_id, 'netboot-enabled', True, token)
-        msg = "Fail"
+        msg = None
+        rc=-1
         try:
             if remote.save_system(system_id, token):
                 rc = 0
                 msg = "Success"
-        except:
-            rc=-1
+        except xmlrpclib.Fault, msg:
+            pass
+        if rc == 0:
+            rc = remote.clear_system_logs(system_id, token)
         return (rc, msg)
 
     def action_power(self, action="reboot"):
@@ -1200,16 +1193,10 @@ class System(SystemObject):
             return False
 
         labcontroller = self.lab_controller
-        try:
-            url = "http://%s/cobbler_api_rw" % labcontroller.fqdn
-            remote = xmlrpclib.ServerProxy(url, allow_none=True)
-            token = remote.login(labcontroller.username,
-                                 labcontroller.password)
-        except ProtocolError:
-            url = "http://%s/cobbler_api" % labcontroller.fqdn
-            remote = xmlrpclib.ServerProxy(url, allow_none=True)
-            token = remote.login(labcontroller.username,
-                                 labcontroller.password)
+        url = "http://%s/cobbler_api" % labcontroller.fqdn
+        remote = xmlrpclib.ServerProxy(url, allow_none=True)
+        token = remote.login(labcontroller.username,
+                             labcontroller.password)
         # version 1.4.x of cobbler needs this to keep things in sync.
         remote.update(token)
         try:
@@ -1236,13 +1223,14 @@ class System(SystemObject):
         if self.power.power_id:
             remote.modify_system(system_id, 'power_id', self.power.power_id, token)
         remote.save_system(system_id, token)
-        msg = "Fail"
+        msg = None
+        rc = -1
         try:
             rc = remote.power_system(system_id, action, token)
             if rc == 0:
                 msg = "Success"
-        except:
-            rc=-1
+        except xmlrpclib.Fault, msg:
+            pass
         return (rc, msg)
 
 
@@ -1531,6 +1519,8 @@ def _create_tag(tag):
         tag = DistroTag.by_tag(tag)
     except InvalidRequestError:
         tag = DistroTag(tag=tag)
+        session.save(tag)
+        session.flush([tag])
     return tag
 
 class Distro(object):

@@ -69,7 +69,7 @@ class Netboot:
         return Root().system_return(*args)
 
     @cherrypy.expose
-    def commandBoot(self, machine_account, commands):
+    def commandBoot(self, commands):
         """
         NetBoot Compat layer for old RHTS Scheduler
         """
@@ -119,7 +119,7 @@ class Netboot:
         if hostname:
             system = System.query().filter(System.fqdn == hostname).one()
             rc, result = system.action_auto_provision(distro, ks_meta, bootargs, None, kickstart)
-            activity = SystemActivity(system.user, 'VIA %s' % machine_account, 'Provision', 'Distro', "", "%s: %s" % (result, distro.install_name))
+            activity = SystemActivity(system.user, 'VIA %s' % None, 'Provision', 'Distro', "", "%s: %s" % (result, distro.install_name))
             system.activity.append(activity)
         else:
             rc = -3
@@ -1183,7 +1183,7 @@ class Root(RPCRoot):
         return systems
         
     @cherrypy.expose
-    def system_pick(self, machine_account, distro=None, username=None, xml=None):
+    def system_pick(self, distro=None, username=None, xml=None):
         if not distro:
             return (0,"You must supply a distro")
         if not username:
@@ -1227,7 +1227,7 @@ class Root(RPCRoot):
             return (None, -1)
 
     @cherrypy.expose
-    def system_validate(self, machine_account, distro=None, username=None, xml=None):
+    def system_validate(self, distro=None, username=None, xml=None):
         if not distro:
             return (0,"You must supply a distro")
         if not username:
@@ -1257,7 +1257,7 @@ class Root(RPCRoot):
             return (None, -1)
             
     @cherrypy.expose
-    def system_return(self, machine_account, fqdn=None, full_name=None, log=True):
+    def system_return(self, fqdn=None, full_name=None, log=True):
         if not fqdn:
             return (0,"You must supply a system")
         if not full_name:
@@ -1277,14 +1277,14 @@ class Root(RPCRoot):
             return (0, "Invalid system")
         if system.user == user:
             if log:
-                activity = SystemActivity(system.user, 'VIA %s' % machine_account, "Returned", 'User', '%s' % system.user, '')
+                activity = SystemActivity(system.user, 'VIA %s' % None, "Returned", 'User', '%s' % system.user, '')
                 system.activity.append(activity)
             system.action_return()
         return
         
 
     @cherrypy.expose
-    def legacypush(self, machine_account, fqdn=None, inventory=None):
+    def legacypush(self, fqdn=None, inventory=None):
         if not fqdn:
             return (0,"You must supply a FQDN")
         if not inventory:
@@ -1297,7 +1297,7 @@ class Root(RPCRoot):
         return system.update_legacy(inventory)
 
     @cherrypy.expose
-    def push(self, machine_account, fqdn=None, inventory=None):
+    def push(self, fqdn=None, inventory=None):
         if not fqdn:
             return (0,"You must supply a FQDN")
         if not inventory:

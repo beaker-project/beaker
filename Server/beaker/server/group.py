@@ -68,6 +68,7 @@ class Groups(RPCRoot):
         groups =  [match.group_name for match in search]
         return dict(groups=groups)
     
+    @identity.require(identity.in_group("admin"))
     @expose(template='beaker.server.templates.form')
     def new(self, **kw):
         return dict(
@@ -103,6 +104,7 @@ class Groups(RPCRoot):
             disabled_fields = []
         )
     
+    @identity.require(identity.in_group("admin"))
     @expose()
     @validate(form=group_form)
     @error_handler(edit)
@@ -118,6 +120,7 @@ class Groups(RPCRoot):
         flash( _(u"OK") )
         redirect(".")
 
+    @identity.require(identity.in_group("admin"))
     @expose()
     @error_handler(edit)
     def save_system(self, **kw):
@@ -131,6 +134,7 @@ class Groups(RPCRoot):
         flash( _(u"OK") )
         redirect("./edit?id=%s" % kw['group_id'])
 
+    @identity.require(identity.in_group("admin"))
     @expose()
     @error_handler(edit)
     def save_user(self, **kw):
@@ -155,6 +159,7 @@ class Groups(RPCRoot):
                                          search_bar = None,
                                          list = groups)
 
+    @identity.require(identity.in_group("admin"))
     @expose()
     def removeUser(self, group_id=None, id=None, **kw):
         group = Group.by_id(group_id)
@@ -168,6 +173,7 @@ class Groups(RPCRoot):
         flash( _(u"%s Removed" % removed.display_name))
         raise redirect("./edit?id=%s" % group_id)
 
+    @identity.require(identity.in_group("admin"))
     @expose()
     def removeSystem(self, group_id=None, id=None, **kw):
         group = Group.by_id(group_id)
@@ -183,6 +189,7 @@ class Groups(RPCRoot):
         flash( _(u"%s Removed" % removed.fqdn))
         raise redirect("./edit?id=%s" % group_id)
 
+    @identity.require(identity.in_group("admin"))
     @expose()
     def remove(self, **kw):
         group = Group.by_id(kw['id'])
