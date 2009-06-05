@@ -3,7 +3,7 @@ from turbogears.database import metadata, mapper, session
 from turbogears.config import get
 import ldap
 from sqlalchemy import Table, Column, ForeignKey
-from sqlalchemy.orm import relation, backref, synonym
+from sqlalchemy.orm import relation, backref, synonym, dynamic_loader
 from sqlalchemy import String, Unicode, Integer, DateTime, UnicodeText, Boolean, Float, VARCHAR, TEXT, Numeric
 from sqlalchemy import or_, and_, not_, select
 from sqlalchemy.exceptions import InvalidRequestError
@@ -431,6 +431,94 @@ key_value_int_table = Table('key_value_int', metadata,
     Column('system_id', Integer, ForeignKey('system.id'), index=True),
     Column('key_id', Integer, ForeignKey('key.id'), index=True),
     Column('key_value',Integer, nullable=False)
+)
+
+test_status_table = Table('test_status',metadata,
+        Column('id', Integer, primary_key=True),
+        Column('status', Unicode(20))
+)
+
+test_result_table = Table('test_result',metadata,
+        Column('id', Integer, primary_key=True),
+        Column('result', Unicode(20))
+)
+
+test_priority_table = Table('test_priority',metadata,
+        Column('id', Integer, primary_key=True),
+        Column('priority', Unicode(20))
+)
+
+job_table = Table('job',metadata,
+        Column('id', Integer, primary_key=True),
+        Column('owner_id', Integer,
+                ForeignKey('tg_user.user_id'), index=True),
+        Column('whiteboard',Unicode(2000)),
+        Column('result_id', Integer,
+                ForeignKey('test_result.id')),
+        Column('status_id', Integer,
+                ForeignKey('test_status.id'), default=select([test_status_table.c.id], limit=1).where(test_status_table.c.status=='Queued').correlate(None))
+)
+
+recipe_set_table = Table('recipe_set',metadata,
+        Column('id', Integer, primary_key=True),
+        Column('job_id',Integer,
+                ForeignKey('job.id')),
+        Column('priority_id', Integer,
+                ForeignKey('test_priority.id'), default=select([test_priority_table.c.id], limit=1).where(test_priority_table.c.priority==u'Normal').correlate(None)),
+        Column('queue_time',DateTime, nullable=False, default=datetime.now),
+        Column('result_id', Integer,
+                ForeignKey('test_result.id')),
+        Column('status_id', Integer,
+                ForeignKey('test_status.id'), default=select([test_status_table.c.id], limit=1).where(test_status_table.c.status==u'Queued').correlate(None))
+)
+
+recipe_table = Table('recipe',metadata,
+        Column('id', Integer, primary_key=True),
+        Column('recipe_set_id', Integer,
+                ForeignKey('recipe_set.id')),
+        Column('distro_id', Integer,
+                ForeignKey('distro.id')),
+        Column('system_id', Integer,
+                ForeignKey('system.id')),
+        Column('result_id', Integer,
+                ForeignKey('test_result.id')),
+        Column('status_id', Integer,
+                ForeignKey('test_status.id'),default=select([test_status_table.c.id], limit=1).where(test_status_table.c.status=='Queued').correlate(None)),
+        Column('start_time',DateTime),
+        Column('finish_time',DateTime),
+        Column('host_requires',Unicode()),
+        Column('distro_requires',Unicode()),
+        Column('kickstart',Unicode()),
+        # type = recipe, machine_recipe or guest_recipe
+        Column('type', String(30), nullable=False)
+)
+
+machine_recipe_table = Table('machine_recipe', metadata,
+        Column('id', Integer, ForeignKey('recipe.id'), primary_key=True)
+)
+
+guest_recipe_table = Table('guest_recipe', metadata,
+        Column('id', Integer, ForeignKey('recipe.id'), primary_key=True),
+        Column('guestname', Unicode()),
+        Column('guestargs', Unicode())
+)
+
+machine_guest_map =Table('machine_guest_map',metadata,
+        Column('machine_recipe_id', Integer,
+                ForeignKey('machine_recipe.id'),
+                nullable=False),
+        Column('guest_recipe_id', Integer,
+                ForeignKey('recipe.id'),
+                nullable=False)
+)
+
+system_recipe_map = Table('system_recipe_map', metadata,
+        Column('system_id', Integer,
+                ForeignKey('system.id'),
+                nullable=False),
+        Column('recipe_id', Integer,
+                ForeignKey('recipe.id'),
+                nullable=False),
 )
 
 # the identity model
@@ -1640,6 +1728,32 @@ class Key_Value_Int(object):
                                   Key_Value_Int.system==system)).one()
 
 
+class TestPriority(object):
+    pass
+
+class TestStatus(object):
+    @classmethod
+    def by_name(cls, status_name):
+        return cls.query().filter_by(status=status_name).one()
+
+class TestResult(object):
+    pass
+
+class Job(object):
+    pass
+
+class RecipeSet(object):
+    pass
+
+class Recipe(object):
+    pass
+
+class MachineRecipe(Recipe):
+    pass
+
+class GuestRecipe(Recipe):
+    pass
+
 # set up mappers between identity tables and classes
 
 SystemType.mapper = mapper(SystemType, system_type_table)
@@ -1790,6 +1904,46 @@ mapper(Key_Value_String, key_value_string_table,
         properties=dict(key=relation(Key, uselist=False,
                         backref='key_value_string')))
 
+mapper(Job, job_table,
+        properties = {'recipesets':relation(RecipeSet, backref='job'),
+                      'owner':relation(User, uselist=False, backref='jobs'),
+                      'result':relation(TestResult, uselist=False),
+                      'status':relation(TestStatus, uselist=False)})
+mapper(RecipeSet, recipe_set_table,
+        properties = {'recipes':relation(Recipe, backref='recipeset'),
+                      'priority':relation(TestPriority, uselist=False),
+                      'result':relation(TestResult, uselist=False),
+                      'status':relation(TestStatus, uselist=False)})
+
+mapper(Recipe, recipe_table,
+        polymorphic_on=recipe_table.c.type, polymorphic_identity='recipe',
+        properties = {'distro':relation(Distro, uselist=False,
+                                        backref='recipes'),
+                      'system':relation(System, uselist=False,
+                                        backref='recipes'),
+                      'possible_systems':relation(System, 
+                                         secondary=system_recipe_map,
+                                         backref='queued_recipes'),
+                      'free_systems':dynamic_loader(System,
+                                         secondary=system_recipe_map,
+                                         primaryjoin=recipe_table.c.id==system_recipe_map.c.recipe_id,
+                                         secondaryjoin=and_(
+                                           system_table.c.id==system_recipe_map.c.system_id,
+                                           system_table.c.user_id==None,
+                                         ),
+                      ),
+                      'result':relation(TestResult, uselist=False),
+                      'status':relation(TestStatus, uselist=False)})
+mapper(GuestRecipe, guest_recipe_table, inherits=Recipe,
+        polymorphic_identity='guest_recipe')
+mapper(MachineRecipe, machine_recipe_table, inherits=Recipe,
+        polymorphic_identity='machine_recipe',
+        properties = {'guests':relation(Recipe, backref='hostmachine',
+                                        secondary=machine_guest_map)})
+
+mapper(TestPriority, test_priority_table)
+mapper(TestStatus, test_status_table)
+mapper(TestResult, test_result_table)
 
 #                     Column("comments"), MultipleJoin('Comment')
 
