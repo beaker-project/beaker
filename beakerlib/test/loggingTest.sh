@@ -220,8 +220,42 @@ test_rlGetDistroVariant() {
 
 
 test_rlBundleLogs() {
-  # TODO: how to test this one?
-  return 0
+  local prefix=rlBundleLogs-unittest
+  rm -rf $prefix* CP-$prefix*.tar.gz
+  # Prepare files which will be backed up
+  mkdir $prefix
+  mkdir $prefix/first
+  echo "hello" > $prefix/first/greet
+  echo "world" > $prefix/first_greet
+  # Prepare fake rhts_submit_log utility
+  cat <<EOF >$prefix/rhts_submit_log
+#!/bin/sh
+while [ \$# -gt 0 ]; do
+  case "\$1" in
+    -S|-T) shift; ;;
+    -l) shift; cp "\$1" "CP-\$1";;
+  esac
+  shift
+done
+EOF
+  chmod +x $prefix/rhts_submit_log
+  PATH_orig="$PATH"
+  export PATH="$( pwd )/$prefix:$PATH"
+  # Run the rlBundleLogs function
+  rlBundleLogs $prefix $prefix/first/greet $prefix/first_greet
+  assertTrue 'rlBundleLogs <some files> returns 0' "[ $? -eq 0 ]"
+  export PATH="$PATH_orig"
+  # Check if it did everithing it should
+  ls CP-$prefix*.tar.gz
+  assertTrue 'rlBundleLogs creates *.tar.gz file' "[ $? -eq 0 ]"
+  mkdir $prefix-extracted
+  tar -xzf CP-$prefix*.tar.gz -C $prefix-extracted
+  grep -r "hello" $prefix-extracted/*
+  assertTrue 'rlBundleLogs included first/greet file' "[ $? -eq 0 ]"
+  grep -r "world" $prefix-extracted/*
+  assertTrue 'rlBundleLogs included first_greet file' "[ $? -eq 0 ]"
+  # Cleanup
+  rm -rf $prefix* CP-$prefix*.tar.gz
 }
 
 test_LOG_LEVEL(){
