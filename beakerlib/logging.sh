@@ -229,14 +229,18 @@ rlBundleLogs(){
 
   for i in $@
   do
-    rlLogInfo "rlBundleLogs: Adding $i"
-    cp $i $BASE_NAME
-    [ $? -eq 0 ] || rlLogError "rlBundleLogs: $i can't be packed"
+    local i_new="$( echo $i | sed 's|[/ ]|_|g' )"
+    while [ -e "$BASE_NAME/$i_new" ]; do
+      i_new="${i_new}_next"
+    done
+    rlLogInfo "rlBundleLogs: Adding '$i' as '$i_new'"
+    cp "$i" "$BASE_NAME/$i_new"
+    [ $? -eq 0 ] || rlLogError "rlBundleLogs: '$i' can't be packed"
   done
     
   tar zcvf $BASE_NAME.tar.gz $BASE_NAME &> /dev/null
   [ $? -eq 0 ] || rlLogError "rlBundleLogs: Packing wasn't successful"
-  rhts_submit_log -S $RESULT_SERVER -T $TESTID -l $BASE_NAME.tar.gz
+  rhts_submit_log -S "$RESULT_SERVER" -T "$TESTID" -l "$BASE_NAME.tar.gz"
   local SUBMITECODE=$?
   [ $SUBMITECODE -eq 0 ] || rlLogError "rlBundleLog: Submit wasn't  successful"
   rlLogDebug "rlBundleLogs: Removing tmps: $BASE_NAME, $BASE_NAME.tar.gz"
