@@ -119,6 +119,9 @@ class Distros(RPCRoot):
     @cherrypy.expose
     @identity.require(identity.not_anonymous())
     def tag(self, name, arch, tag):
+        return _tag(name, arch, tag)
+
+    def _tag(self, name, arch, tag):
         added = []
         distros = session.query(Distro)
         if name:
@@ -131,6 +134,8 @@ class Distros(RPCRoot):
                 added.append('%s' % distro.install_name)
                 Activity(identity.current.user,'XMLRPC','Tagged',distro.install_name,None,tag)
                 distro.tags.append(tag)
+                session.save_or_update(distro)
+                session.flush([distro])
         return added
 
     #XMLRPC method for listing distros

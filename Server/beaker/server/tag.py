@@ -8,6 +8,7 @@ from kid import Element
 from beaker.server.xmlrpccontroller import RPCRoot
 from beaker.server.widgets import DistroTags
 from beaker.server.helpers import *
+from distro import Distros
 
 import cherrypy
 
@@ -27,6 +28,18 @@ class Tags(RPCRoot):
     # For XMLRPC methods in this class.
     exposed = True
 
+    @expose(format='json')
+    def install_tag(self, distro, arch, *args, **kw):
+        tagged_stable = []
+        tagged_installs = Distros()._tag(distro, arch, 'INSTALLS')
+        if arch == 'ppc':
+            tagged_installs.extend(Distros()._tag(distro, 'ppc64', 'INSTALLS'))
+        distros  = Distros().list(distro, None, None, None)
+        installs = Distros().list(distro, None, None, ['INSTALLS'])
+        if distros == installs:
+            tagged_stable = Distros()._tag(distro, None, 'STABLE')
+        return dict(installs=tagged_installs, stable=tagged_stable)
+        
     @expose(format='json')
     def by_tag(self, tag, *args, **kw):
         tag = tag.lower()
