@@ -89,7 +89,7 @@ DESTDIR=$RPM_BUILD_ROOT make
 
 %install
 DESTDIR=$RPM_BUILD_ROOT make install
-ln -s redhat6.ks $RPM_BUILD_ROOT/var/lib/cobbler/kickstarts/RedHatEnterpriseLinux6.ks
+ln -s RedHatEnterpriseLinux6.ks $RPM_BUILD_ROOT/var/lib/cobbler/kickstarts/redhat6.ks
 
 %clean
 %{__rm} -rf %{buildroot}
