@@ -3,7 +3,7 @@
 
 Name:           beaker
 Version:        0.4.9
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -89,6 +89,7 @@ DESTDIR=$RPM_BUILD_ROOT make
 
 %install
 DESTDIR=$RPM_BUILD_ROOT make install
+ln -s RedHatEnterpriseLinux6.ks $RPM_BUILD_ROOT/var/lib/cobbler/kickstarts/redhat6.ks
 
 %clean
 %{__rm} -rf %{buildroot}
@@ -131,6 +132,8 @@ DESTDIR=$RPM_BUILD_ROOT make install
 /usr/share/man/man1/beakerlib*
 
 %changelog
+* Fri Jun 12 2009 Bill Peck <bpeck@redhat.com> - 0.4.9-1
+- releng fixed the name of rhel6 to RedHatEnterpriseLinux6 in .treeinfo
 * Wed Jun 10 2009 Bill Peck <bpeck@redhat.com> - 0.4.9
 - Added simple json method for tagging distros as Installable.
 - Added RHEL6 kickstart file.
