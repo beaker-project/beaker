@@ -182,6 +182,7 @@ class Distros(RPCRoot):
             return None
         if distro:
             return dict(distro         = distro.install_name,
+                        install_name   = distro.install_name,
                         arch           = '%s' % distro.arch,
                         family         = '%s' % distro.osversion,
                         variant        = distro.variant,
