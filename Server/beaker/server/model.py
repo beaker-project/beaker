@@ -1787,19 +1787,19 @@ class Distro(object):
         tests = session.query(Test)
         return tests.filter(
                 not_(or_(Test.id.in_(select([test_table.c.id]).
-                  where(test_table.c.id==test_exclude_table.c.test_id).
-                  where(test_exclude_table.c.arch_id==arch_table.c.id).
-                  where(arch_table.c.id==self.arch_id)
+                 where(test_table.c.id==test_exclude_table.c.test_id).
+                 where(test_exclude_table.c.arch_id==arch_table.c.id).
+                 where(arch_table.c.id==self.arch_id)
                                       ),
                          Test.id.in_(select([test_table.c.id]).
-                  where(test_table.c.id==test_exclude_table.c.test_id).
-                  where(test_exclude_table.osmajor_id==osmajor_table.c.id).
-                  where(osmajor_table.c.id==self.osversion.osmajor.id)
+                 where(test_table.c.id==test_exclude_table.c.test_id).
+                 where(test_exclude_table.c.osmajor_id==osmajor_table.c.id).
+                 where(osmajor_table.c.id==self.osversion.osmajor.id)
                                       ),
                          Test.id.in_(select([test_table.c.id]).
-                  where(test_table.c.id==test_exclude_table.c.test_id).
-                  where(test_exclude_table.osversion_id==osversion_table.c.id).
-                  where(osversion_table.c.id==self.osversion.id)
+                 where(test_table.c.id==test_exclude_table.c.test_id).
+                 where(test_exclude_table.c.osversion_id==osversion_table.c.id).
+                 where(osversion_table.c.id==self.osversion.id)
                                       ),
                         )
                     )
@@ -2006,8 +2006,13 @@ class TestStatus(object):
         return cls.query().filter_by(status=status_name).one()
 
 
+    def __repr__(self):
+        return "%s" % (self.status)
+
 class TestResult(object):
-    pass
+    def __repr__(self):
+        return "%s" % (self.result)
+
 
 
 class Job(MappedObject):
@@ -2078,16 +2083,13 @@ class Recipe(MappedObject):
             recipe.setAttribute("result", "%s" % self.result)
         if self.status:
             recipe.setAttribute("status", "%s" % self.status)
-        if self.arch:
-            recipe.setAttribute("arch", "%s" % self.arch)
         if self.distro:
-            recipe.setAttribute("distro", "%s" % self.distro)
-        if self.family:
-            recipe.setAttribute("family", "%s" % self.family)
-        if self.variant:
-            recipe.setAttribute("variant", "%s" % self.variant)
-        if self.machine:
-            recipe.setAttribute("machine", "%s" % self.machine)
+            recipe.setAttribute("distro", "%s" % self.distro.name)
+            recipe.setAttribute("arch", "%s" % self.distro.arch)
+            recipe.setAttribute("family", "%s" % self.distro.osversion.osmajor)
+            recipe.setAttribute("variant", "%s" % self.distro.variant)
+        if self.system:
+            recipe.setAttribute("system", "%s" % self.system)
         drs = xml.dom.minidom.parseString(self.distro_requires)
         hrs = xml.dom.minidom.parseString(self.host_requires)
         for dr in drs.getElementsByTagName("distroRequires"):

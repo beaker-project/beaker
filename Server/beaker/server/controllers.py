@@ -29,6 +29,9 @@ from beaker.server.widgets import SystemArches
 from beaker.server.authentication import Auth
 from beaker.server.xmlrpccontroller import RPCRoot
 from beaker.server.cobbler_utils import hash_to_string
+from beaker.server.jobs import Jobs
+from beaker.server.recipes import Recipes
+from beaker.server.tests import Tests
 from cherrypy import request, response
 from cherrypy.lib.cptools import serve_file
 from tg_expanding_form_widget.tg_expanding_form_widget import ExpandingForm
@@ -184,6 +187,9 @@ class Root(RPCRoot):
     netboot = Netboot()
     auth = Auth()
     csv = CSV()
+    jobs = Jobs()
+    recipes = Recipes()
+    tests = Tests()
 
     id         = widgets.HiddenField(name='id')
     submit     = widgets.SubmitButton(name='submit')

@@ -48,7 +48,7 @@ class Tests(RPCRoot):
         submit_text = _(u'Submit Data')
     )
 
-    @expose(template='beaker.server.templates.form')
+    @expose(template='beaker.server.templates.form-post')
     def new(self, **kw):
         return dict(
             title = 'New Test',
