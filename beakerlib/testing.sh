@@ -654,7 +654,7 @@ rlWatchdog(){
 
 =head3 rlReport
 
-Report test result using RHTS C<report_result> function.
+Report test result using RHTS C<rhts-report-result> function.
 
     rlReport name result [score] [log]
 
