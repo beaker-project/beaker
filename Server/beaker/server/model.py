@@ -24,6 +24,9 @@ from datetime import timedelta, date, datetime
 
 import md5
 
+import xml.dom.minidom
+from xml.dom.minidom import Node
+
 system_table = Table('system', metadata,
     Column('id', Integer, autoincrement=True,
            nullable=False, primary_key=True),
@@ -135,6 +138,15 @@ exclude_osversion_table = Table('exclude_osversion', metadata,
            nullable=False, primary_key=True),
     Column('system_id', Integer, ForeignKey('system.id')),
     Column('arch_id', Integer, ForeignKey('arch.id')),
+    Column('osversion_id', Integer, ForeignKey('osversion.id')),
+)
+
+test_exclude_table = Table('test_exclude', metadata,
+    Column('id', Integer, autoincrement=True,
+           nullable=False, primary_key=True),
+    Column('test_id', Integer, ForeignKey('test.id')),
+    Column('arch_id', Integer, ForeignKey('arch.id')),
+    Column('osmajor_id', Integer, ForeignKey('osmajor.id')),
     Column('osversion_id', Integer, ForeignKey('osversion.id')),
 )
 
@@ -284,6 +296,7 @@ osmajor_table = Table('osmajor', metadata,
     Column('id', Integer, autoincrement=True,
            nullable=False, primary_key=True),
     Column('osmajor', Unicode(255), unique=True),
+    Column('alias', Unicode(25), unique=True),
 )
 
 osversion_table = Table('osversion', metadata,
@@ -521,6 +534,166 @@ system_recipe_map = Table('system_recipe_map', metadata,
                 nullable=False),
 )
 
+recipe_tag_table = Table('recipe_tag',metadata,
+        Column('id', Integer, primary_key=True),
+        Column('tag', Unicode(255))
+)
+
+recipe_tag_map = Table('recipe_tag_map', metadata,
+        Column('tag_id', Integer,
+               ForeignKey('recipe_tag.id'),
+               nullable=False),
+        Column('recipe_id', Integer, 
+               ForeignKey('recipe.id'),
+               nullable=False),
+)
+
+recipe_rpm_table =Table('recipe_rpm',metadata,
+        Column('recipe_id', Integer,
+                ForeignKey('recipe.id'), primary_key=True),
+        Column('package',Unicode(255)),
+        Column('version',Unicode(255)),
+        Column('release',Unicode(255)),
+        Column('epoch',Integer),
+        Column('arch',Unicode(255)),
+        Column('running_kernel', Boolean)
+)
+
+recipe_test_table =Table('recipe_test',metadata,
+        Column('id', Integer, primary_key=True),
+        Column('recipe_id',Integer,
+                ForeignKey('recipe.id')),
+        Column('test_id',Integer,
+                ForeignKey('test.id')),
+        Column('start_time',DateTime),
+        Column('finish_time',DateTime),
+        Column('result_id', Integer,
+                ForeignKey('test_result.id')),
+        Column('status_id', Integer,
+                ForeignKey('test_status.id'),default=select([test_status_table.c.id], limit=1).where(test_status_table.c.status=='Queued').correlate(None)),
+        Column('role', Unicode(255)),
+)
+
+recipe_test_param_table = Table('recipe_test_param', metadata,
+        Column('id', Integer, primary_key=True),
+        Column('recipe_test_id', Integer,
+                ForeignKey('recipe_test.id')),
+        Column('name',Unicode(255)),
+        Column('value',Unicode())
+)
+
+recipe_test_comment_table = Table('recipe_test_comment',metadata,
+        Column('id', Integer, primary_key=True),
+        Column('recipe_test_id', Integer,
+                ForeignKey('recipe_test.id')),
+        Column('comment', Unicode()),
+        Column('created', DateTime),
+        Column('user_id', Integer,
+                ForeignKey('tg_user.user_id'), index=True)
+)
+
+recipe_test_bugzilla_table = Table('recipe_test_bugzilla',metadata,
+        Column('id', Integer, primary_key=True),
+        Column('recipe_test_id', Integer,
+                ForeignKey('recipe_test.id')),
+        Column('bugzilla_id', Integer)
+)
+
+recipe_test_rpm_table =Table('recipe_test_rpm',metadata,
+        Column('recipe_test_id', Integer,
+                ForeignKey('recipe_test.id'), primary_key=True),
+        Column('package',Unicode(255)),
+        Column('version',Unicode(255)),
+        Column('release',Unicode(255)),
+        Column('epoch',Integer),
+        Column('arch',Unicode(255)),
+        Column('running_kernel', Boolean)
+)
+
+recipe_test_result_table = Table('recipe_test_result',metadata,
+        Column('id', Integer, primary_key=True),
+        Column('recipe_test_id', Integer,
+                ForeignKey('recipe_test.id')),
+        Column('path', Unicode(2048)),
+        Column('result_id', Integer,
+                ForeignKey('test_result.id')),
+        Column('score', Numeric(10)),
+        Column('log', Unicode()),
+)
+
+test_table = Table('test',metadata,
+        Column('id', Integer, primary_key=True),
+        Column('name', Unicode(2048)),
+        Column('rpm', Unicode(2048)),
+        Column('path', Unicode(4096)),
+        Column('description', Unicode(2048)),
+        Column('repo', Unicode(256)),
+        Column('avg_time', Integer),
+        Column('destructive', Boolean),
+        Column('nda', Boolean),
+        # This should be a map table
+        #Column('notify', Unicode(2048)),
+
+        Column('creation_date', DateTime, default=datetime.now),
+        Column('update_date', DateTime, onupdate=datetime.now),
+        Column('owner_id', Integer,
+                ForeignKey('tg_user.user_id')),
+        Column('version', Unicode(256)),
+        Column('license', Unicode(256)),
+        Column('valid', Boolean)
+)
+
+test_bugzilla_table = Table('test_bugzilla',metadata,
+        Column('id', Integer, primary_key=True),
+        Column('bugzilla_id', Integer),
+        Column('test_id', Integer,
+                ForeignKey('test.id')),
+)
+
+test_packages_runfor_map = Table('test_packages_runfor_map', metadata,
+        Column('test_id', Integer,
+                ForeignKey('test.id', onupdate='CASCADE',
+                                      ondelete='CASCADE')),
+        Column('package_id', Integer,
+                ForeignKey('test_package.id',onupdate='CASCADE',
+                                             ondelete='CASCADE')),
+)
+
+test_packages_required_map = Table('test_packages_required_map', metadata,
+        Column('test_id', Integer,
+                ForeignKey('test.id', onupdate='CASCADE',
+                                      ondelete='CASCADE')),
+        Column('package_id', Integer,
+                ForeignKey('test_package.id',onupdate='CASCADE',
+                                             ondelete='CASCADE')),
+)
+
+test_property_needed_table = Table('test_property_needed', metadata,
+        Column('id', Integer, primary_key=True),
+        Column('test_id', Integer,
+                ForeignKey('test.id')),
+        Column('property', Unicode(2048))
+)
+
+test_package_table = Table('test_package',metadata,
+        Column('id', Integer, primary_key=True),
+        Column('package', Unicode(2048))
+)
+
+test_type_table = Table('test_type',metadata,
+        Column('id', Integer, primary_key=True),
+        Column('type', Unicode(256))
+)
+
+test_type_map = Table('test_type_map',metadata,
+        Column('test_id', Integer,
+                ForeignKey('test.id',onupdate='CASCADE',
+                                     ondelete='CASCADE')),
+        Column('test_type_id', Integer,
+                ForeignKey('test_type.id', onupdate='CASCADE',
+                                           ondelete='CASCADE')),
+)
+
 # the identity model
 
 
@@ -650,6 +823,7 @@ class Permission(object):
     """
     pass
 
+
 class SystemObject(object):
     def get_tables(cls):
         tables = cls.get_dict().keys()
@@ -698,6 +872,7 @@ class SystemObject(object):
         return cls.mapper.c.keys()
     get_fields = classmethod(get_fields)
 
+
 class Group(object):
     """
     An ultra-simple group definition.
@@ -720,6 +895,7 @@ class Group(object):
         based on the group_name
         """
         return cls.query().filter(Group.group_name.like('%s%%' % name))
+
 
 class System(SystemObject):
 
@@ -1263,6 +1439,7 @@ class SystemType(SystemObject):
     def by_name(cls, systemtype):
         return cls.query.filter_by(type=systemtype).one()
 
+
 class SystemStatus(SystemObject):
     def __init__(self, status=None):
         self.status = status
@@ -1281,6 +1458,7 @@ class SystemStatus(SystemObject):
     @classmethod
     def by_name(cls, systemstatus):
         return cls.query.filter_by(status=systemstatus).one()
+
 
 class Arch(SystemObject):
     def __init__(self, arch=None):
@@ -1305,20 +1483,26 @@ class Arch(SystemObject):
         """
         return cls.query().filter(Arch.arch.like('%s%%' % name))
 
+
 class Provision(SystemObject):
     pass
+
 
 class ProvisionFamily(SystemObject):
     pass
 
+
 class ProvisionFamilyUpdate(SystemObject):
     pass
+
 
 class ExcludeOSMajor(SystemObject):
     pass
 
+
 class ExcludeOSVersion(SystemObject):
     pass
+
 
 class Breed(SystemObject):
     def __init__(self, breed):
@@ -1330,6 +1514,7 @@ class Breed(SystemObject):
 
     def __repr__(self):
         return self.breed
+
 
 class OSMajor(SystemObject):
     def __init__(self, osmajor):
@@ -1344,12 +1529,18 @@ class OSMajor(SystemObject):
         return cls.query.filter_by(osmajor=osmajor).one()
 
     @classmethod
+    def by_name_alias(cls, name_alias):
+        return cls.query.filter(or_(OSMajor.osmajor==name_alias,
+                                    OSMajor.alias==name_alias)).one()
+
+    @classmethod
     def get_all(cls):
         all = cls.query()
         return [(0,"All")] + [(major.id, major.osmajor) for major in all]
 
     def __repr__(self):
         return '%s' % self.osmajor
+
 
 class OSVersion(SystemObject):
     def __init__(self, osmajor, osminor):
@@ -1372,8 +1563,10 @@ class OSVersion(SystemObject):
     def __repr__(self):
         return "%s.%s" % (self.osmajor,self.osminor)
 
+
 class LabControllerDistro(SystemObject):
     pass
+
 
 class LabController(SystemObject):
 
@@ -1398,8 +1591,10 @@ class LabController(SystemObject):
 
     distros = association_proxy('_distros', 'distro')
 
+
 class LabInfo(SystemObject):
     fields = ['orig_cost', 'curr_cost', 'dimensions', 'weight', 'wattage', 'cooling']
+
 
 class Cpu(SystemObject):
     def __init__(self, vendor=None, model=None, model_name=None, family=None, stepping=None,speed=None,processors=None,cores=None,sockets=None,flags=None):
@@ -1425,6 +1620,7 @@ class Cpu(SystemObject):
 
 # systems = session.query(System).join('status').join('type').join(['cpu','flags']).filter(CpuFlag.c.flag=='lm')
 
+
 class CpuFlag(SystemObject):
     def __init__(self, flag=None):
         self.flag = flag
@@ -1437,12 +1633,14 @@ class CpuFlag(SystemObject):
 
     by_flag = classmethod(by_flag)
 
+
 class Numa(SystemObject):
     def __init__(self, nodes=None):
         self.nodes = nodes
 
     def __repr__(self):
         return self.nodes
+
 
 class DeviceClass(SystemObject):
     def __init__(self, device_class=None, description=None):
@@ -1453,6 +1651,7 @@ class DeviceClass(SystemObject):
 
     def __repr__(self):
         return self.device_class
+
 
 class Device(SystemObject):
     def __init__(self, vendor_id=None, device_id=None, subsys_device_id=None, subsys_vendor_id=None, bus=None, driver=None, device_class=None, description=None):
@@ -1473,9 +1672,11 @@ class Device(SystemObject):
         self.description = description
         self.device_class = dc
 
+
 class Locked(object):
     def __init__(self, name=None):
         self.name = name
+
 
 class PowerType(object):
 
@@ -1498,20 +1699,25 @@ class PowerType(object):
     def by_id(cls, id):
         return cls.query.filter_by(id=id).one()
 
+
 class Power(SystemObject):
     pass
+
 
 class Serial(object):
     def __init__(self, name=None):
         self.name = name
 
+
 class SerialType(object):
     def __init__(self, name=None):
         self.name = name
 
+
 class Install(object):
     def __init__(self, name=None):
         self.name = name
+
 
 def _create_tag(tag):
     """A creator function."""
@@ -1522,6 +1728,7 @@ def _create_tag(tag):
         session.save(tag)
         session.flush([tag])
     return tag
+
 
 class Distro(object):
     def __init__(self, install_name=None):
@@ -1573,6 +1780,31 @@ class Distro(object):
         """
         pass
 
+    def tests(self):
+        """
+        List of tests that support this distro
+        """
+        tests = session.query(Test)
+        return tests.filter(
+                not_(or_(Test.id.in_(select([test_table.c.id]).
+                  where(test_table.c.id==test_exclude_table.c.test_id).
+                  where(test_exclude_table.c.arch_id==arch_table.c.id).
+                  where(arch_table.c.id==self.arch_id)
+                                      ),
+                         Test.id.in_(select([test_table.c.id]).
+                  where(test_table.c.id==test_exclude_table.c.test_id).
+                  where(test_exclude_table.osmajor_id==osmajor_table.c.id).
+                  where(osmajor_table.c.id==self.osversion.osmajor.id)
+                                      ),
+                         Test.id.in_(select([test_table.c.id]).
+                  where(test_table.c.id==test_exclude_table.c.test_id).
+                  where(test_exclude_table.osversion_id==osversion_table.c.id).
+                  where(osversion_table.c.id==self.osversion.id)
+                                      ),
+                        )
+                    )
+        )
+
     def systems(self, user=None):
         """
         List of systems that support this distro
@@ -1609,6 +1841,7 @@ class Distro(object):
 
     lab_controllers = association_proxy('lab_controller_assocs', 'lab_controller')
 
+
 class DistroTag(object):
     def __init__(self, tag=None):
         self.tag = tag
@@ -1630,6 +1863,7 @@ class DistroTag(object):
         """
         return cls.query().filter(DistroTag.tag.like('%s%%' % tag))
 
+
 # Activity model
 class Activity(object):
     def __init__(self, user=None, service=None, action=None,
@@ -1648,17 +1882,21 @@ class Activity(object):
     def object_name(self):
         return None
 
+
 class SystemActivity(Activity):
     def object_name(self):
         return "System: %s" % self.object.fqdn
+
 
 class GroupActivity(Activity):
     def object_name(self):
         return "Group: %s" % self.object.display_name
 
+
 class DistroActivity(Activity):
     def object_name(self):
         return "Distro: %s" % self.object.install_name
+
 
 # note model
 class Note(object):
@@ -1669,6 +1907,7 @@ class Note(object):
     @classmethod
     def all(cls):
         return cls.query()
+
 
 class Key(object):
     def __init__(self, key_name=None, numeric=False):
@@ -1686,6 +1925,7 @@ class Key(object):
     def by_id(cls, id):
         return cls.query().filter_by(id=id).one()
 
+
 # key_value model
 class Key_Value_String(object):
     def __init__(self, key, key_value, system=None):
@@ -1701,6 +1941,7 @@ class Key_Value_String(object):
         return cls.query().filter(and_(Key_Value_String.key==key, 
                                   Key_Value_String.key_value==value,
                                   Key_Value_String.system==system)).one()
+
 
 class Key_Value_Int(object):
     def __init__(self, key, key_value, system=None):
@@ -1718,31 +1959,349 @@ class Key_Value_Int(object):
                                   Key_Value_Int.system==system)).one()
 
 
+class MappedObject(object):
+
+    doc = xml.dom.minidom.Document()
+
+    @classmethod
+    def lazy_create(cls, **kwargs):
+        try:
+            item = cls.query.filter_by(**kwargs).one()
+        except:
+            item = cls(**kwargs)
+            session.save(item)
+            session.flush([item])
+        return item
+
+    def node(self, element, value):
+        node = self.doc.createElement(element)
+        node.appendChild(self.doc.createTextNode(value))
+        return node
+
+    def __repr__(self):
+        # pretty-print the attributes, so we can see what's getting autoloaded for us:
+        attrStr = ""
+        numAttrs = 0
+        for attr in self.__dict__:
+            if attr[0] != '_':
+                if numAttrs>0:
+                    attrStr += ', '
+                attrStr += '%s=%s' % (attr, repr(self.__dict__[attr]))
+                numAttrs += 1
+        return "%s(%s)" % (self.__class__.__name__, attrStr)
+        #return "%s()" % (self.__class__.__name__)
+
+    @classmethod
+    def by_id(cls, id):
+        return cls.query.filter_by(id=id).one()
+
+
 class TestPriority(object):
     pass
+
 
 class TestStatus(object):
     @classmethod
     def by_name(cls, status_name):
         return cls.query().filter_by(status=status_name).one()
 
+
 class TestResult(object):
     pass
 
-class Job(object):
-    pass
 
-class RecipeSet(object):
-    pass
+class Job(MappedObject):
+    """
+    Container to hold like recipe sets.
+    """
+    def to_xml(self):
+        job = self.doc.createElement("job")
+        job.setAttribute("id", "%s" % self.id)
+        job.setAttribute("owner", "%s" % self.owner.email_address)
+        job.setAttribute("result", "%s" % self.result)
+        job.setAttribute("status", "%s" % self.status)
+        job.appendChild(self.node("Scheduler", "FIXME"))
+        job.appendChild(self.node("whiteboard", self.whiteboard))
+        for rs in self.recipesets:
+            job.appendChild(rs.to_xml())
+        return job
 
-class Recipe(object):
-    pass
 
-class MachineRecipe(Recipe):
-    pass
+class RecipeSet(MappedObject):
+    """
+    A Collection of Recipes that must be executed at the same time.
+    """
+    def to_xml(self):
+        recipeSet = self.doc.createElement("recipeSet")
+        recipeSet.setAttribute("id", "%s" % self.id)
+        for r in self.recipes:
+            recipeSet.appendChild(r.to_xml())
+        return recipeSet
+
+    @classmethod
+    def by_status(cls, status, query=None):
+        if not query:
+            query=cls.query
+        return query.join('status').filter(Status.status==status)
+
+    @classmethod
+    def by_datestamp(cls, datestamp, query=None):
+        if not query:
+            query=cls.query
+        return query.filter(RecipeSet.queue_time <= datestamp)
+
+    @classmethod
+    def iter_recipeSets(self, status=u'Assigned'):
+        self.recipeSets = []
+        while True:
+            recipeSet = RecipeSet.by_status(status).join('priority')\
+                            .order_by(priority.c.priority)\
+                            .filter(not_(RecipeSet.id.in_(self.recipeSets)))\
+                            .first()
+            if recipeSet:
+                self.recipeSets.append(recipeSet.id)
+            else:
+                return
+            yield recipeSet
+
+
+class Recipe(MappedObject):
+    """
+    Contains requires for host selection and distro selection.
+    Also contains what tests will be executed.
+    """
+    def to_xml(self, recipe):
+        recipe.setAttribute("id", "%s" % self.id)
+        recipe.setAttribute("job_id", "%s" % self.recipeset.job_id)
+        recipe.setAttribute("recipe_set_id", "%s" % self.recipe_set_id)
+        if self.result:
+            recipe.setAttribute("result", "%s" % self.result)
+        if self.status:
+            recipe.setAttribute("status", "%s" % self.status)
+        if self.arch:
+            recipe.setAttribute("arch", "%s" % self.arch)
+        if self.distro:
+            recipe.setAttribute("distro", "%s" % self.distro)
+        if self.family:
+            recipe.setAttribute("family", "%s" % self.family)
+        if self.variant:
+            recipe.setAttribute("variant", "%s" % self.variant)
+        if self.machine:
+            recipe.setAttribute("machine", "%s" % self.machine)
+        drs = xml.dom.minidom.parseString(self.distro_requires)
+        hrs = xml.dom.minidom.parseString(self.host_requires)
+        for dr in drs.getElementsByTagName("distroRequires"):
+            recipe.appendChild(dr)
+        hostRequires = self.doc.createElement("hostRequires")
+        for hr in hrs.getElementsByTagName("hostRequires"):
+            for child in hr.childNodes:
+                hostRequires.appendChild(child)
+        system_type = self.doc.createElement("system_type")
+        system_type.setAttribute("value", "%s" % self.systemtype)
+        hostRequires.appendChild(system_type)
+        recipe.appendChild(hostRequires)
+        for t in self.tests:
+            recipe.appendChild(t.to_xml())
+        return recipe
+
 
 class GuestRecipe(Recipe):
+    systemtype = 'Virtual'
+    def to_xml(self):
+        recipe = self.doc.createElement("guestrecipe")
+        recipe.setAttribute("guestname", "%s" % self.guestname)
+        recipe.setAttribute("guestargs", "%s" % self.guestargs)
+        return Recipe.to_xml(self,recipe)
+
+
+class MachineRecipe(Recipe):
+    """
+    Optionally can contain guest recipes which are just other recipes
+      which will be executed on this system.
+    """
+    systemtype = 'Machine'
+    def to_xml(self):
+        recipe = self.doc.createElement("recipe")
+        for guest in self.guests:
+            recipe.appendChild(guest.to_xml())
+        return Recipe.to_xml(self,recipe)
+
+
+class RecipeTag(MappedObject):
+    """
+    Each recipe can be tagged with information that identifies what is being
+    tested.  This is helpful when generating reports.
+    """
     pass
+
+
+class RecipeTest(MappedObject):
+    """
+    This holds the results/status of the test being executed.
+    """
+    def to_xml(self):
+        test = self.doc.createElement("test")
+        test.setAttribute("id", "%s" % self.id)
+        test.setAttribute("name", "%s" % self.test.name)
+        test.setAttribute("avg_time", "%s" % self.test.avg_time)
+        test.setAttribute("role", "%s" % self.role)
+        test.setAttribute("result", "%s" % self.result)
+        test.setAttribute("status", "%s" % self.status)
+        if self.params:
+            params = self.doc.createElement("params")
+            for p in self.params:
+                params.appendChild(p.to_xml())
+            test.appendChild(params)
+        rpm = self.doc.createElement("rpm")
+        rpm.setAttribute("name", "%s" % self.test.rpm)
+        test.appendChild(rpm)
+        return test
+
+    def _get_duration(self):
+        try:
+            return self.finish_time - self.start_time
+        except:
+            return None
+    duration = property(_get_duration)
+
+
+class RecipeTestParam(MappedObject):
+    """
+    Parameters for test execution.
+    """
+    def to_xml(self):
+        param = self.doc.createElement("param")
+        param.setAttribute("name", "%s" % self.name)
+        param.setAttribute("value", "%s" % self.value)
+        return param
+
+
+class RecipeTestComment(MappedObject):
+    """
+    User comments about the test execution.
+    """
+    pass
+
+
+class RecipeTestBugzilla(MappedObject):
+    """
+    Any bugzillas filed/found due to this test execution.
+    """
+    pass
+
+
+class RecipeRpm(MappedObject):
+    """
+    A list of rpms that were installed at the time of testing.
+    """
+    pass
+
+
+class RecipeTestRpm(MappedObject):
+    """
+    the versions of the RPMS listed in the tests runfor list.
+    """
+    pass
+
+
+class RecipeTestResult(MappedObject):
+    """
+    Each test can report multiple results
+    """
+    pass
+
+
+class Test(MappedObject):
+    """
+    Tests that are available to schedule
+    """
+
+    @classmethod
+    def by_name(cls, name):
+        return cls.query.filter_by(name=name).one()
+
+    @classmethod
+    def by_type(cls, type, query=None):
+        if not query:
+            query=cls.query
+        return query.join('types').filter(TestType.type==type)
+
+    @classmethod
+    def by_package(cls, package, query=None):
+        if not query:
+            query=cls.query
+        return query.join('runfor').filter(TestPackage.package==package)
+
+    def elapsed_time(self, suffixes=[' year',' week',' day',' hour',' minute',' second'], add_s=True, separator=', '):
+        """
+        Takes an amount of seconds and turns it into a human-readable amount of 
+        time.
+        """
+        seconds = self.avg_time
+        # the formatted time string to be returned
+        time = []
+
+        # the pieces of time to iterate over (days, hours, minutes, etc)
+        # - the first piece in each tuple is the suffix (d, h, w)
+        # - the second piece is the length in seconds (a day is 60s * 60m * 24h)
+        parts = [(suffixes[0], 60 * 60 * 24 * 7 * 52),
+                (suffixes[1], 60 * 60 * 24 * 7),
+                (suffixes[2], 60 * 60 * 24),
+                (suffixes[3], 60 * 60),
+                (suffixes[4], 60),
+                (suffixes[5], 1)]
+
+        # for each time piece, grab the value and remaining seconds, 
+        # and add it to the time string
+        for suffix, length in parts:
+            value = seconds / length
+            if value > 0:
+                seconds = seconds % length
+                time.append('%s%s' % (str(value),
+                            (suffix, (suffix, suffix + 's')[value > 1])[add_s]))
+            if seconds < 1:
+                break
+
+        return separator.join(time)
+
+
+class TestExclude(MappedObject):
+    """
+    A test can be excluded by arch, osmajor, or osversion
+                        i386, RedHatEnterpriseLinux3, RedHatEnterpriseLinux3.0
+    """
+    pass
+
+class TestType(MappedObject):
+    """
+    A test can be classified into serveral test types which can be used to
+    select tests for batch runs
+    """
+    pass
+
+
+class TestPackage(MappedObject):
+    """
+    A list of packages that a test should be run for.
+    """
+    def __repr__(self):
+        return self.package
+
+
+class TestPropertyNeeded(MappedObject):
+    """
+    Tests can have requirements on the systems that they run on.
+         *not currently implemented*
+    """
+    pass
+
+
+class TestBugzilla(MappedObject):
+    """
+    Bugzillas that apply to this Test.
+    """
+    pass
+
 
 # set up mappers between identity tables and classes
 
@@ -1894,6 +2453,36 @@ mapper(Key_Value_String, key_value_string_table,
         properties=dict(key=relation(Key, uselist=False,
                         backref='key_value_string')))
 
+mapper(Test, test_table,
+        properties = {'types':relation(TestType,
+                                        secondary=test_type_map,
+                                        backref='tests'),
+                      'excluded':relation(TestExclude,
+                                        backref='test'),
+                      'runfor':relation(TestPackage,
+                                        secondary=test_packages_runfor_map,
+                                        backref='tests'),
+                      'required':relation(TestPackage,
+                                        secondary=test_packages_required_map),
+                      'needs':relation(TestPropertyNeeded),
+                      'bugzillas':relation(TestBugzilla, backref='test',
+                                            cascade='all, delete-orphan'),
+                      'owner':relation(User, uselist=False, backref='tests'),
+                     }
+      )
+
+mapper(TestExclude, test_exclude_table,
+       properties = {'arch':relation(Arch),
+                     'osmajor':relation(OSMajor),
+                     'osversion':relation(OSVersion),
+                    }
+      )
+
+mapper(TestPackage, test_package_table)
+mapper(TestPropertyNeeded, test_property_needed_table)
+mapper(TestType, test_type_table)
+mapper(TestBugzilla, test_bugzilla_table)
+
 mapper(Job, job_table,
         properties = {'recipesets':relation(RecipeSet, backref='job'),
                       'owner':relation(User, uselist=False, backref='jobs'),
@@ -1922,6 +2511,11 @@ mapper(Recipe, recipe_table,
                                            system_table.c.user_id==None,
                                          ),
                       ),
+                      'tests':relation(RecipeTest, backref='recipe'),
+                      'tags':relation(RecipeTag, 
+                                      secondary=recipe_tag_map,
+                                      backref='recipes'),
+                      'rpms':relation(RecipeRpm, backref='recipe'),
                       'result':relation(TestResult, uselist=False),
                       'status':relation(TestStatus, uselist=False)})
 mapper(GuestRecipe, guest_recipe_table, inherits=Recipe,
@@ -1930,6 +2524,27 @@ mapper(MachineRecipe, machine_recipe_table, inherits=Recipe,
         polymorphic_identity='machine_recipe',
         properties = {'guests':relation(Recipe, backref='hostmachine',
                                         secondary=machine_guest_map)})
+
+mapper(RecipeTag, recipe_tag_table)
+mapper(RecipeRpm, recipe_rpm_table)
+
+mapper(RecipeTest, recipe_test_table,
+        properties = {'results':relation(RecipeTestResult, backref='test'),
+                      'rpms':relation(RecipeTestRpm),
+                      'comments':relation(RecipeTestComment, backref='test'),
+                      'params':relation(RecipeTestParam),
+                      'bugzillas':relation(RecipeTestBugzilla, backref='test'),
+                      'test':relation(Test, uselist=False, backref='runs'),
+                      'result':relation(TestResult, uselist=False),
+                      'status':relation(TestStatus, uselist=False)})
+
+mapper(RecipeTestParam, recipe_test_param_table)
+mapper(RecipeTestComment, recipe_test_comment_table,
+        properties = {'user':relation(User, uselist=False, backref='comments')})
+mapper(RecipeTestBugzilla, recipe_test_bugzilla_table)
+mapper(RecipeTestRpm, recipe_test_rpm_table)
+mapper(RecipeTestResult, recipe_test_result_table,
+        properties = {'result':relation(TestResult, uselist=False)})
 
 mapper(TestPriority, test_priority_table)
 mapper(TestStatus, test_status_table)
