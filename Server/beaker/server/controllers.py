@@ -36,6 +36,7 @@ from beaker.server.needpropertyxml import *
 from beaker.server.helpers import *
 from beaker.server.tools.init import dummy
 from decimal import Decimal
+from bexceptions import *
 
 from kid import Element
 import cherrypy
@@ -114,16 +115,16 @@ class Netboot:
         if distro_name:
             distro = Distro.by_install_name(distro_name)
         else:
-            rc = -4
-            result = "distro not defined"
+            raise BX(_("distro not defined"))
         if hostname:
             system = System.query().filter(System.fqdn == hostname).one()
             rc, result = system.action_auto_provision(distro, ks_meta, bootargs, None, kickstart)
             activity = SystemActivity(system.user, 'VIA %s' % None, 'Provision', 'Distro', "", "%s: %s" % (result, distro.install_name))
             system.activity.append(activity)
         else:
-            rc = -3
-            result = "hostname not defined"
+            raise BX(_("hostname not defined"))
+        if rc:
+            raise BX(_("Failed to auto_provision: %s" % result))
         return rc
 
 class Arches:
