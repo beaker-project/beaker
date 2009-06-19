@@ -2,8 +2,8 @@
 %{!?pyver: %define pyver %(%{__python} -c "import sys ; print sys.version[:3]")}
 
 Name:           beaker
-Version:        0.4.9
-Release:        2%{?dist}
+Version:        0.4.12
+Release:        0%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -132,6 +132,11 @@ ln -s RedHatEnterpriseLinux6.ks $RPM_BUILD_ROOT/var/lib/cobbler/kickstarts/redha
 /usr/share/man/man1/beakerlib*
 
 %changelog
+* Fri Jun 19 2009 Bill Peck <bpeck@redhat.com> - 0.4.12-0
+- Raise BeakerExceptions if we run into trouble
+* Thu Jun 18 2009 Bill Peck <bpeck@redhat.com> - 0.4.11-0
+- added install_name to distro pick method
+- fixed 500 error when non-admin adds a new system with shared set.
 * Fri Jun 12 2009 Bill Peck <bpeck@redhat.com> - 0.4.9-1
 - releng fixed the name of rhel6 to RedHatEnterpriseLinux6 in .treeinfo
 * Wed Jun 10 2009 Bill Peck <bpeck@redhat.com> - 0.4.9

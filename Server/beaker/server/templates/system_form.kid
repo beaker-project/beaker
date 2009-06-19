@@ -92,7 +92,9 @@
         <b>Shared</b>
        </th>
        <td class="list">
-        ${display_field_for("shared")}
+        <span py:if="value_for('fqdn')">
+         ${display_field_for("shared")}
+        </span>
        </td>
        <th class="list">
         <b>Current User</b>
