@@ -61,6 +61,8 @@ def get_paths(distro):
             break
         else:
             path = path[1:]
+    # This removes everything before the first slash.
+    path = path[path.find('/'):]
     tree_path_re = re.compile(r'(.*%s)' % path)
     if tree_path_re.search(kerneldir):
         tree_path = tree_path_re.search(kerneldir).group(1)
