@@ -24,12 +24,13 @@ from kid import Element
 from beaker.server.widgets import myPaginateDataGrid
 from beaker.server.xmlrpccontroller import RPCRoot
 import datetime
-from turbogears.scheduler import add_interval_task
 
 import cherrypy
 
 from model import *
 import string
+
+from bexceptions import *
 
 class Jobs(RPCRoot):
     # For XMLRPC methods in this class.
@@ -73,6 +74,10 @@ class Jobs(RPCRoot):
         xmljob = XmlJob(xml)
         try:
             job = self.process_xmljob(xmljob,identity.current.user_id)
+        except BeakerException, err:
+            session.rollback()
+            flash(_(u'Failed to import job because of %s' % err ))
+            redirect(".")
         except ValueError, err:
             session.rollback()
             flash(_(u'Failed to import job because of %s' % err ))
@@ -92,10 +97,20 @@ class Jobs(RPCRoot):
             recipeSet = RecipeSet()
             for xmlrecipe in xmlrecipeSet.iter_recipes():
                 recipe = self.handleRecipe(xmlrecipe)
+                try:
+                    recipe.distro = Distro.by_filter("%s" % 
+                                                   recipe.distro_requires)[0]
+                except IndexError:
+                    raise BX(_('No Distro matches Machine Recipe: %s' % recipe.distro_requires))
                 recipeSet.recipes.append(recipe)
                 # We want the guests to be part of the same recipeSet
                 for guest in recipe.guests:
                     recipeSet.recipes.append(guest)
+                    try:
+                        guest.distro = Distro.by_filter("%s" % 
+                                                   guest.distro_requires)[0]
+                    except IndexError:
+                        raise BX(_('No Distro matches Guest Recipe: %s' % guest.distro_requires))
             job.recipesets.append(recipeSet)    
         return job
 
@@ -116,7 +131,7 @@ class Jobs(RPCRoot):
             try:
                 test = Test.by_name(xmltest.name)
             except:
-                raise ValueError('Invalid Test: %s' % xmltest.name)
+                raise BX(_('Invalid Test: %s' % xmltest.name))
             recipetest.test = test
             recipetest.role = xmltest.role
             for xmlparam in xmltest.iter_params():
@@ -143,16 +158,4 @@ class Jobs(RPCRoot):
 		     widgets.PaginateDataGrid.Column(name='result.result', getter=lambda x:x.result, title='Result', options=dict(sortable=True)),
                     ])
         return dict(title="Jobs", grid=jobs_grid, list=jobs, search_bar=None)
-
-# This doesn't do anything usefull yet.  just experimenting.
-def schedule_recipe_sets(*args):
-    print "Entering Scheduler at %s " % args[0]()
-    for rs in RecipeSet.iter_recipeSets():
-        print rs
-    print "Exiting..."
-
-def schedule():
-    add_interval_task(action=schedule_recipe_sets, 
-                      args=[lambda:datetime.now()],
-                      interval=120)
 

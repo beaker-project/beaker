@@ -142,6 +142,24 @@ def main():
         VENDOR		= Key('VENDOR')
         XENCERT		= Key('XENCERT')
 
+    #Setup Test Status
+    if TestStatus.query().count() == 0:
+        NEW       = TestStatus(status=u'New', severity=0)
+        QUEUED    = TestStatus(status=u'Queued', severity=1)
+        SCHEDULED = TestStatus(status=u'Scheduled', severity=2)
+        RUNNING   = TestStatus(status=u'Running', severity=3)
+        COMPLETED = TestStatus(status=u'Completed', severity=4)
+        CANCELLED = TestStatus(status=u'Cancelled', severity=5)
+        ABORTED   = TestStatus(status=u'Aborted', severity=6)
+
+    #Setup Test Result
+    if TestResult.query().count() == 0:
+        NEW       = TestResult(result=u'New', severity=0)
+        PASS      = TestResult(result=u'Pass', severity=1)
+        WARN      = TestResult(result=u'Warn', severity=2)
+        FAIL      = TestResult(result=u'Fail', severity=3)
+        PANIC     = TestResult(result=u'Panic', severity=4)
+
     session.flush()
 
 def get_parser():

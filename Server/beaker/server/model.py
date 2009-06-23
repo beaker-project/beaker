@@ -448,12 +448,14 @@ key_value_int_table = Table('key_value_int', metadata,
 
 test_status_table = Table('test_status',metadata,
         Column('id', Integer, primary_key=True),
-        Column('status', Unicode(20))
+        Column('status', Unicode(20)),
+        Column('severity', Integer)
 )
 
 test_result_table = Table('test_result',metadata,
         Column('id', Integer, primary_key=True),
-        Column('result', Unicode(20))
+        Column('result', Unicode(20)),
+        Column('severity', Integer)
 )
 
 test_priority_table = Table('test_priority',metadata,
@@ -469,7 +471,7 @@ job_table = Table('job',metadata,
         Column('result_id', Integer,
                 ForeignKey('test_result.id')),
         Column('status_id', Integer,
-                ForeignKey('test_status.id'), default=select([test_status_table.c.id], limit=1).where(test_status_table.c.status=='Queued').correlate(None))
+                ForeignKey('test_status.id'), default=select([test_status_table.c.id], limit=1).where(test_status_table.c.status==u'New').correlate(None))
 )
 
 recipe_set_table = Table('recipe_set',metadata,
@@ -482,7 +484,18 @@ recipe_set_table = Table('recipe_set',metadata,
         Column('result_id', Integer,
                 ForeignKey('test_result.id')),
         Column('status_id', Integer,
-                ForeignKey('test_status.id'), default=select([test_status_table.c.id], limit=1).where(test_status_table.c.status==u'Queued').correlate(None))
+                ForeignKey('test_status.id'), default=select([test_status_table.c.id], limit=1).where(test_status_table.c.status==u'New').correlate(None)),
+        Column('lab_controller_id', Integer,
+                ForeignKey('lab_controller.id')),
+)
+
+recipeset_labcontroller_map = Table('recipeset_labcontroller_map', metadata,
+        Column('recipe_set_id', Integer,
+                ForeignKey('recipe_set.id'),
+                nullable=False),
+        Column('lab_controller_id', Integer,
+                ForeignKey('lab_controller.id'),
+                nullable=False),
 )
 
 recipe_table = Table('recipe',metadata,
@@ -496,7 +509,7 @@ recipe_table = Table('recipe',metadata,
         Column('result_id', Integer,
                 ForeignKey('test_result.id')),
         Column('status_id', Integer,
-                ForeignKey('test_status.id'),default=select([test_status_table.c.id], limit=1).where(test_status_table.c.status=='Queued').correlate(None)),
+                ForeignKey('test_status.id'),default=select([test_status_table.c.id], limit=1).where(test_status_table.c.status==u'New').correlate(None)),
         Column('start_time',DateTime),
         Column('finish_time',DateTime),
         Column('host_requires',Unicode()),
@@ -570,7 +583,7 @@ recipe_test_table =Table('recipe_test',metadata,
         Column('result_id', Integer,
                 ForeignKey('test_result.id')),
         Column('status_id', Integer,
-                ForeignKey('test_status.id'),default=select([test_status_table.c.id], limit=1).where(test_status_table.c.status=='Queued').correlate(None)),
+                ForeignKey('test_status.id'),default=select([test_status_table.c.id], limit=1).where(test_status_table.c.status==u'New').correlate(None)),
         Column('role', Unicode(255)),
 )
 
@@ -1755,7 +1768,21 @@ class Distro(object):
          </And>
         </distro>
         """
-        pass
+        from beaker.server.needpropertyxml import *
+        #FIXME Should validate XML before proceeding.
+        queries = []
+        joins = []
+        for child in ElementWrapper(xmltramp.parse(filter)):
+            if callable(getattr(child, 'filter')):
+                (join, query) = child.filter()
+                queries.append(query)
+                joins.extend(join)
+        distros = Distro.query()
+        if joins:
+            distros = distros.filter(and_(*joins))
+        if queries:
+            distros = distros.filter(and_(*queries))
+        return distros.order_by('-date_created')
 
     def systems_filter(self, user, filter):
         """
@@ -1778,7 +1805,21 @@ class Distro(object):
               all()
         [hp-xw8600-02.rhts.bos.redhat.com]
         """
-        pass
+        from beaker.server.needpropertyxml import *
+        systems = self.systems(user)
+        #FIXME Should validate XML before processing.
+        queries = []
+        joins = []
+        for child in ElementWrapper(xmltramp.parse(filter)):
+            if callable(getattr(child, 'filter')):
+                (join, query) = child.filter()
+                queries.append(query)
+                joins.extend(join)
+        if joins:
+            systems = systems.filter(and_(*joins))
+        if queries:
+            systems = systems.filter(and_(*queries))
+        return systems
 
     def tests(self):
         """
@@ -1836,8 +1877,8 @@ class Distro(object):
                  )
         )
 
-    def ___repr__(self):
-        return "%s" % self.install_name
+    def __repr__(self):
+        return "%s" % self.name
 
     lab_controllers = association_proxy('lab_controller_assocs', 'lab_controller')
 
@@ -2105,6 +2146,11 @@ class Recipe(MappedObject):
         for t in self.tests:
             recipe.appendChild(t.to_xml())
         return recipe
+
+    def _get_arch(self):
+        if self.distro:
+            return self.distro.arch
+    arch = property(_get_arch)
 
 
 class GuestRecipe(Recipe):
@@ -2494,7 +2540,11 @@ mapper(RecipeSet, recipe_set_table,
         properties = {'recipes':relation(Recipe, backref='recipeset'),
                       'priority':relation(TestPriority, uselist=False),
                       'result':relation(TestResult, uselist=False),
-                      'status':relation(TestStatus, uselist=False)})
+                      'status':relation(TestStatus, uselist=False),
+                      'lab_controller':relation(LabController, uselist=False),
+                      'lab_controllers':relation(LabController,
+                                        secondary=recipeset_labcontroller_map,),
+                     })
 
 mapper(Recipe, recipe_table,
         polymorphic_on=recipe_table.c.type, polymorphic_identity='recipe',

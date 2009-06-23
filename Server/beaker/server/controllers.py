@@ -40,6 +40,8 @@ from beaker.server.helpers import *
 from beaker.server.tools.init import dummy
 from decimal import Decimal
 from bexceptions import *
+import beaker.server.recipes
+from turbogears import scheduler
 
 from kid import Element
 import cherrypy
@@ -173,6 +175,8 @@ class Devices:
                        ])
         return dict(title="Devices", grid = devices_grid, search_bar=None,
                                      list = devices)
+
+turbogears.startup.call_on_startup.append(beaker.server.recipes.schedule)
 
 class Root(RPCRoot):
     powertypes = PowerTypes()
