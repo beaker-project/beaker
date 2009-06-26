@@ -145,12 +145,13 @@ def main():
     #Setup Test Status
     if TestStatus.query().count() == 0:
         NEW       = TestStatus(status=u'New', severity=0)
-        QUEUED    = TestStatus(status=u'Queued', severity=1)
-        SCHEDULED = TestStatus(status=u'Scheduled', severity=2)
-        RUNNING   = TestStatus(status=u'Running', severity=3)
-        COMPLETED = TestStatus(status=u'Completed', severity=4)
-        CANCELLED = TestStatus(status=u'Cancelled', severity=5)
-        ABORTED   = TestStatus(status=u'Aborted', severity=6)
+        PROCESSED = TestStatus(status=u'Processed', severity=1)
+        QUEUEUD   = TestStatus(status=u'Queued', severity=2)
+        SCHEDULED = TestStatus(status=u'Scheduled', severity=3)
+        RUNNING   = TestStatus(status=u'Running', severity=4)
+        COMPLETED = TestStatus(status=u'Completed', severity=5)
+        CANCELLED = TestStatus(status=u'Cancelled', severity=6)
+        ABORTED   = TestStatus(status=u'Aborted', severity=7)
 
     #Setup Test Result
     if TestResult.query().count() == 0:

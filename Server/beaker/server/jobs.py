@@ -23,6 +23,7 @@ from cherrypy import request, response
 from kid import Element
 from beaker.server.widgets import myPaginateDataGrid
 from beaker.server.xmlrpccontroller import RPCRoot
+from beaker.server.helpers import *
 import datetime
 
 import cherrypy
@@ -91,10 +92,10 @@ class Jobs(RPCRoot):
     def process_xmljob(self, xmljob, userid):
         print xmljob.workflow
         print xmljob.whiteboard
-        job = Job(whiteboard='%s' % xmljob.whiteboard,
+        job = Job(whiteboard='%s' % xmljob.whiteboard, ttests=0,
                   owner_id=userid)
         for xmlrecipeSet in xmljob.iter_recipeSets():
-            recipeSet = RecipeSet()
+            recipeSet = RecipeSet(ttests=0)
             for xmlrecipe in xmlrecipeSet.iter_recipes():
                 recipe = self.handleRecipe(xmlrecipe)
                 try:
@@ -102,6 +103,8 @@ class Jobs(RPCRoot):
                                                    recipe.distro_requires)[0]
                 except IndexError:
                     raise BX(_('No Distro matches Machine Recipe: %s' % recipe.distro_requires))
+                recipe.ttests = len(recipe.tests)
+                recipeSet.ttests += recipe.ttests
                 recipeSet.recipes.append(recipe)
                 # We want the guests to be part of the same recipeSet
                 for guest in recipe.guests:
@@ -111,17 +114,20 @@ class Jobs(RPCRoot):
                                                    guest.distro_requires)[0]
                     except IndexError:
                         raise BX(_('No Distro matches Guest Recipe: %s' % guest.distro_requires))
+                    guest.ttests = len(guest.tests)
+                    recipeSet.ttests += guest.ttests
             job.recipesets.append(recipeSet)    
+            job.ttests += recipeSet.ttests
         return job
 
     def handleRecipe(self, xmlrecipe, guest=False):
         if not guest:
-            recipe = MachineRecipe()
+            recipe = MachineRecipe(ttests=0)
             for xmlguest in xmlrecipe.iter_guests():
                 guestrecipe = self.handleRecipe(xmlguest, guest=True)
                 recipe.guests.append(guestrecipe)
         else:
-            recipe = GuestRecipe()
+            recipe = GuestRecipe(ttests=0)
             recipe.guestname = xmlrecipe.guestname
             recipe.guestargs = xmlrecipe.guestargs
         recipe.host_requires = xmlrecipe.hostRequires()
@@ -154,6 +160,7 @@ class Jobs(RPCRoot):
 		     widgets.PaginateDataGrid.Column(name='id', getter=lambda x:x.id, title='ID', options=dict(sortable=True)),
 		     widgets.PaginateDataGrid.Column(name='whiteboard', getter=lambda x:x.whiteboard, title='Whiteboard', options=dict(sortable=True)),
 		     widgets.PaginateDataGrid.Column(name='owner.email_address', getter=lambda x:x.owner.email_address, title='Owner', options=dict(sortable=True)),
+                     widgets.PaginateDataGrid.Column(name='progress', getter=lambda x: make_progress_bar(x), title='Progress', options=dict(sortable=False)),
 		     widgets.PaginateDataGrid.Column(name='status.status', getter=lambda x:x.status, title='Status', options=dict(sortable=True)),
 		     widgets.PaginateDataGrid.Column(name='result.result', getter=lambda x:x.result, title='Result', options=dict(sortable=True)),
                     ])

@@ -471,7 +471,17 @@ job_table = Table('job',metadata,
         Column('result_id', Integer,
                 ForeignKey('test_result.id')),
         Column('status_id', Integer,
-                ForeignKey('test_status.id'), default=select([test_status_table.c.id], limit=1).where(test_status_table.c.status==u'New').correlate(None))
+                ForeignKey('test_status.id'), default=select([test_status_table.c.id], limit=1).where(test_status_table.c.status==u'New').correlate(None)),
+        # Total tests
+	Column('ttests', Integer, default=0),
+        # Total Passing tests
+        Column('ptests', Integer, default=0),
+        # Total Warning tests
+        Column('wtests', Integer, default=0),
+        # Total Failing tests
+        Column('ftests', Integer, default=0),
+        # Total Panic tests
+        Column('ktests', Integer, default=0),
 )
 
 recipe_set_table = Table('recipe_set',metadata,
@@ -487,15 +497,16 @@ recipe_set_table = Table('recipe_set',metadata,
                 ForeignKey('test_status.id'), default=select([test_status_table.c.id], limit=1).where(test_status_table.c.status==u'New').correlate(None)),
         Column('lab_controller_id', Integer,
                 ForeignKey('lab_controller.id')),
-)
-
-recipeset_labcontroller_map = Table('recipeset_labcontroller_map', metadata,
-        Column('recipe_set_id', Integer,
-                ForeignKey('recipe_set.id'),
-                nullable=False),
-        Column('lab_controller_id', Integer,
-                ForeignKey('lab_controller.id'),
-                nullable=False),
+        # Total tests
+	Column('ttests', Integer, default=0),
+        # Total Passing tests
+        Column('ptests', Integer, default=0),
+        # Total Warning tests
+        Column('wtests', Integer, default=0),
+        # Total Failing tests
+        Column('ftests', Integer, default=0),
+        # Total Panic tests
+        Column('ktests', Integer, default=0),
 )
 
 recipe_table = Table('recipe',metadata,
@@ -512,11 +523,22 @@ recipe_table = Table('recipe',metadata,
                 ForeignKey('test_status.id'),default=select([test_status_table.c.id], limit=1).where(test_status_table.c.status==u'New').correlate(None)),
         Column('start_time',DateTime),
         Column('finish_time',DateTime),
-        Column('host_requires',Unicode()),
+        Column('_host_requires',Unicode()),
         Column('distro_requires',Unicode()),
         Column('kickstart',Unicode()),
         # type = recipe, machine_recipe or guest_recipe
-        Column('type', String(30), nullable=False)
+        Column('type', String(30), nullable=False),
+        # Total tests
+	Column('ttests', Integer, default=0),
+        # Total Passing tests
+        Column('ptests', Integer, default=0),
+        # Total Warning tests
+        Column('wtests', Integer, default=0),
+        # Total Failing tests
+        Column('ftests', Integer, default=0),
+        # Total Panic tests
+        Column('ktests', Integer, default=0),
+        Column('whiteboard',Unicode(2000)),
 )
 
 machine_recipe_table = Table('machine_recipe', metadata,
@@ -1856,8 +1878,9 @@ class Distro(object):
         else:
             systems = session.query(System)
 
-        return systems.filter(
-             and_(System.arch.contains(self.arch),
+        return systems.join(['lab_controller','_distros','distro']).filter(
+             and_(Distro.install_name==self.install_name,
+                  System.arch.contains(self.arch),
                 not_(or_(System.id.in_(select([system_table.c.id]).
                   where(system_table.c.id==system_arch_map.c.system_id).
                   where(arch_table.c.id==system_arch_map.c.arch_id).
@@ -2046,11 +2069,15 @@ class TestStatus(object):
     def by_name(cls, status_name):
         return cls.query().filter_by(status=status_name).one()
 
-
     def __repr__(self):
         return "%s" % (self.status)
 
+
 class TestResult(object):
+    @classmethod
+    def by_name(cls, result_name):
+        return cls.query().filter_by(result=result_name).one()
+
     def __repr__(self):
         return "%s" % (self.result)
 
@@ -2071,6 +2098,20 @@ class Job(MappedObject):
         for rs in self.recipesets:
             job.appendChild(rs.to_xml())
         return job
+
+    def update_counts(self):
+        """
+        Update number of passes, failures, warns, panics..
+        """
+        self.ptests = 0
+        self.wtests = 0
+        self.ftests = 0
+        self.ktests = 0
+        for recipeset in self.recipesets:
+            self.ptests += recipeset.ptests
+            self.wtests += recipeset.wtests
+            self.ftests += recipeset.ftests
+            self.ktests += recipeset.ktests
 
 
 class RecipeSet(MappedObject):
@@ -2110,6 +2151,31 @@ class RecipeSet(MappedObject):
                 return
             yield recipeSet
 
+    def abort(self, msg=None):
+        """
+        Method to abort all recipes in this recipe set.
+        """
+        for recipe in self.recipes:
+            recipe.abort(msg)
+        # Should we have a log at the recipeset level?
+        #self.log.append(msg)
+        self.status = TestStatus.by_name(u'Aborted')
+
+    def update_counts(self):
+        """
+        Update number of passes, failures, warns, panics..
+        """
+        self.ptests = 0
+        self.wtests = 0
+        self.ftests = 0
+        self.ktests = 0
+        for recipe in self.recipes:
+            self.ptests += recipe.ptests
+            self.wtests += recipe.wtests
+            self.ftests += recipe.ftests
+            self.ktests += recipe.ktests
+        self.job.update_counts()
+
 
 class Recipe(MappedObject):
     """
@@ -2139,9 +2205,6 @@ class Recipe(MappedObject):
         for hr in hrs.getElementsByTagName("hostRequires"):
             for child in hr.childNodes:
                 hostRequires.appendChild(child)
-        system_type = self.doc.createElement("system_type")
-        system_type.setAttribute("value", "%s" % self.systemtype)
-        hostRequires.appendChild(system_type)
         recipe.appendChild(hostRequires)
         for t in self.tests:
             recipe.appendChild(t.to_xml())
@@ -2152,6 +2215,53 @@ class Recipe(MappedObject):
             return self.distro.arch
     arch = property(_get_arch)
 
+    def _get_host_requires(self):
+        hrs = xml.dom.minidom.parseString(self._host_requires)
+        hostRequires = self.doc.createElement("hostRequires")
+        for hr in hrs.getElementsByTagName("hostRequires"):
+            for child in hr.childNodes:
+                hostRequires.appendChild(child)
+        system_type = self.doc.createElement("system_type")
+        system_type.setAttribute("value", "%s" % self.systemtype)
+        hostRequires.appendChild(system_type)
+        return hostRequires.toxml()
+    def _set_host_requires(self, value):
+        self._host_requires = value
+    host_requires = property(_get_host_requires, _set_host_requires)
+
+    def abort(self, msg=None):
+        """
+        Method to abort all tests in this recipe.
+        """
+        for test in self.tests:
+            test.abort(msg)
+        # Should we have a log at the recipe level?
+        #self.log.append(msg)
+        self.update_counts()
+        self.status = TestStatus.by_name(u'Aborted')
+
+    def update_counts(self):
+        """
+        Update number of passes, failures, warns, panics..
+        """
+        self.ptests = 0
+        test_pass = TestResult.by_name(u'Pass')
+        self.wtests = 0
+        test_warn = TestResult.by_name(u'Warn')
+        self.ftests = 0
+        test_fail = TestResult.by_name(u'Fail')
+        self.ktests = 0
+        test_panic = TestResult.by_name(u'Panic')
+        for test in self.tests:
+            if test.result == test_pass:
+                self.ptests += 1
+            if test.result == test_warn:
+                self.wtests += 1
+            if test.result == test_fail:
+                self.ftests += 1
+            if test.result == test_panic:
+                self.ktests += 1
+        self.recipeset.update_counts()
 
 class GuestRecipe(Recipe):
     systemtype = 'Virtual'
@@ -2211,6 +2321,18 @@ class RecipeTest(MappedObject):
         except:
             return None
     duration = property(_get_duration)
+
+    def abort(self, msg=None):
+        """
+        Method to abort test.
+        """
+        self.results.append(RecipeTestResult(recipe_test=self.test,
+                                       path='/',
+                                       result=TestResult.by_name('Warn'),
+                                       score=0,
+                                       log=msg))
+        self.result = TestResult.by_name(u'Warn')
+        self.status = TestStatus.by_name(u'Aborted')
 
 
 class RecipeTestParam(MappedObject):
@@ -2542,8 +2664,6 @@ mapper(RecipeSet, recipe_set_table,
                       'result':relation(TestResult, uselist=False),
                       'status':relation(TestStatus, uselist=False),
                       'lab_controller':relation(LabController, uselist=False),
-                      'lab_controllers':relation(LabController,
-                                        secondary=recipeset_labcontroller_map,),
                      })
 
 mapper(Recipe, recipe_table,
@@ -2552,16 +2672,13 @@ mapper(Recipe, recipe_table,
                                         backref='recipes'),
                       'system':relation(System, uselist=False,
                                         backref='recipes'),
-                      'possible_systems':relation(System, 
+                      'systems':relation(System, 
                                          secondary=system_recipe_map,
                                          backref='queued_recipes'),
-                      'free_systems':dynamic_loader(System,
+                      'dyn_systems':dynamic_loader(System,
                                          secondary=system_recipe_map,
                                          primaryjoin=recipe_table.c.id==system_recipe_map.c.recipe_id,
-                                         secondaryjoin=and_(
-                                           system_table.c.id==system_recipe_map.c.system_id,
-                                           system_table.c.user_id==None,
-                                         ),
+                                         secondaryjoin=system_table.c.id==system_recipe_map.c.system_id,
                       ),
                       'tests':relation(RecipeTest, backref='recipe'),
                       'tags':relation(RecipeTag, 
