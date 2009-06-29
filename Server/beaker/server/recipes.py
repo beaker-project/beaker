@@ -170,7 +170,7 @@ def processed_recipesets(*args):
                 print "recipe ID %s moved from Processed to Queued" % recipe.id
                 recipe.status = TestStatus.by_name(u'Queued')
             else:
-                # Set status to Queued 
+                # Set status to Aborted 
                 print "recipe ID %s moved from Processed to Aborted" % recipe.id
                 recipe.recipeset.abort('Recipe ID %s does not match any systems' % recipe.id)
                     
