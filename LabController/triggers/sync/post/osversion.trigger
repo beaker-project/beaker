@@ -245,9 +245,42 @@ if __name__ == '__main__':
             if tmpdistro:
                 distro = tmpdistro
                 update = True
-        if update:
-            push_distros.append(distro.to_datastruct())
+        if update or distro.comment.find("PUSHED") == -1:
+            push_distros.append(distro)
     if push_distros:
         inventory = xmlrpclib.ServerProxy('%s/RPC2' % settings.redhat_management_server, allow_none=True)
         distros = inventory.labcontrollers.addDistros(settings.server, 
-                                                         push_distros)
+                           [distro.to_datastruct() for distro in push_distros])
+        # Needed for legacy RHTS
+        addDistroCmd = '/var/lib/beaker/addDistro.sh'
+        if os.path.exists(addDistroCmd):
+            valid_variants = ['AS', 'ES', 'WS', 'Desktop']
+            release = re.compile(r'family=([^\s]+)')
+            for distro in push_distros:
+                # Only process nfs distros
+                if distro.name.find('_nfs-') == -1:
+                    continue
+                VARIANT='Default'
+                DISTPATH='nightly'
+                if distro.ks_meta['tree'].find('/rel-eng/') != -1:
+                    DISTPATH='rel-eng'
+                if distro.ks_meta['tree'].find('/released/') != -1:
+                    DISTPATH='released'
+                DIST=distro.name.split('_')[0]
+                meta = string.join(distro.name.split('_')[1:],'_').split('-')
+                for curr_variant in valid_variants:
+                    if curr_variant in meta:
+                        VARIANT = curr_variant
+                        break
+                TPATH = DISTPATH + distro.ks_meta['tree'].split(DISTPATH)[1:][0]
+                FAMILYUPDATE=release.search(distro.comment).group(1)
+                #addDistro.sh rel-eng RHEL6.0-20090626.2 RedHatEnterpriseLinux6.0 x86_64 Default rel-eng/RHEL6.0-20090626.2/6/x86_64/os
+                cmd = '%s %s %s %s %s %s %s' % (addDistroCmd, DISTPATH, DIST,
+                                                FAMILYUPDATE, distro.arch,
+                                                VARIANT, TPATH)
+                print os.system(cmd)
+
+        for distro in push_distros:
+            comment = "%s\nPUSHED" % distro.comment
+            distro.set_comment(comment)
+            bootapi.add_distro(distro)
