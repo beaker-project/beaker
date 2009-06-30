@@ -2,7 +2,7 @@
 %{!?pyver: %define pyver %(%{__python} -c "import sys ; print sys.version[:3]")}
 
 Name:           beaker
-Version:        0.4.14
+Version:        0.4.15
 Release:        0%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
@@ -132,6 +132,8 @@ ln -s RedHatEnterpriseLinux6.ks $RPM_BUILD_ROOT/var/lib/cobbler/kickstarts/redha
 /usr/share/man/man1/beakerlib*
 
 %changelog
+* Tue Jun 30 2009 Bill Peck <bpeck@redhat.com> - 0.4.15-0
+- Call addDistros.sh from osversion.trigger if it exists.
 * Mon Jun 29 2009 Bill Peck <bpeck@redhat.com> - 0.4.14-0
 - Allow searching by treepath for command line client
 - return distro name for legacy rhts.
