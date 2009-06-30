@@ -96,7 +96,7 @@ class Distros(RPCRoot):
 
     #XMLRPC method for listing distros
     @cherrypy.expose
-    def list(self, name, family, arch, tags):
+    def list(self, name, family, arch, tags, treepath):
         distros = session.query(Distro)
         if tags:
             sqltags = []
@@ -112,6 +112,9 @@ class Distros(RPCRoot):
         if arch:
             distros = distros.join('arch')
             distros = distros.filter(arch_table.c.arch=='%s' % arch)
+        if treepath:
+            distros = distros.join('lab_controller_assocs')
+            distros = distros.filter(lab_controller_distro_map.c.tree_path.like('%s' % treepath))
         distros = distros.order_by(distro_table.c.date_created.desc())
         return [(distro.name, '%s' % distro.arch, '%s' % distro.osversion, distro.variant, distro.method, distro.virt) for distro in distros]
 
