@@ -96,7 +96,7 @@ class Netboot:
                     recipeid = SETENV.match(command).group(2)
                 if SETENV.match(command).group(1) == "HOSTNAME":
                     hostname = SETENV.match(command).group(2)
-                if SETENV.match(command).group(1) == "DISTRO":
+                if SETENV.match(command).group(1) == "INSTALL_NAME":
                     distro_name = SETENV.match(command).group(2)
             if INSTALLPACKAGE.match(command):
                 packages.append(INSTALLPACKAGE.match(command).group(1))
