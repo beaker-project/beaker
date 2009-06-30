@@ -122,7 +122,7 @@ class Distros(RPCRoot):
     @cherrypy.expose
     @identity.require(identity.not_anonymous())
     def tag(self, name, arch, tag):
-        return _tag(name, arch, tag)
+        return self._tag(name, arch, tag)
 
     def _tag(self, name, arch, tag):
         added = []
