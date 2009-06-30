@@ -14,6 +14,7 @@ from sqlalchemy.ext.associationproxy import association_proxy
 import socket
 from xmlrpclib import ProtocolError
 from sqlalchemy import case
+from sqlalchemy import func
 
 from BasicAuthTransport import BasicAuthTransport
 import xmlrpclib
@@ -2175,6 +2176,25 @@ class RecipeSet(MappedObject):
             self.ftests += recipe.ftests
             self.ktests += recipe.ktests
         self.job.update_counts()
+
+    def recipes_orderby(self, labcontroller):
+        query = select([recipe_table.c.id, 
+                        func.count(System.id).label('count')],
+                        from_obj=[recipe_table, 
+                                  system_recipe_map,
+                                  system_table,
+                                  recipe_set_table,
+                                  lab_controller_table],
+                        whereclause="recipe.id = system_recipe_map.recipe_id \
+                             AND  system.id = system_recipe_map.system_id \
+                             AND  system.lab_controller_id = lab_controller.id \
+                             AND  recipe_set.id = recipe.recipe_set_id \
+                             AND  recipe_set.id = %s \
+                             AND  lab_controller.id = %s" % (self.id, 
+                                                            labcontroller.id),
+                        group_by=[Recipe.id],
+                        order_by='count')
+        return map(lambda x: session.query(Recipe).filter_by(id=x[0]).first(), session.connection(RecipeSet).execute(query).fetchall())
 
 
 class Recipe(MappedObject):

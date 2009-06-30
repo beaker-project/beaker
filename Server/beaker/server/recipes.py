@@ -121,7 +121,7 @@ def processed_recipesets(*args):
                 enough_systems = True
             if not enough_systems:
                 # Eliminate bad choices.
-                for recipe in recipeset.recipes:
+                for recipe in recipeset.recipes_orderby(l_controller)[:]:
                     for tmprecipe in recipeset.recipes:
                         systemsa = set(recipe.dyn_systems.filter(
                                           System.lab_controller==l_controller
