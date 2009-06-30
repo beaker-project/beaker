@@ -184,7 +184,7 @@ class Distros(RPCRoot):
         except TypeError:
             return None
         if distro:
-            return dict(distro         = distro.install_name,
+            return dict(distro         = distro.name,
                         install_name   = distro.install_name,
                         arch           = '%s' % distro.arch,
                         family         = '%s' % distro.osversion,
