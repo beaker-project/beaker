@@ -75,6 +75,9 @@ class Auth(RPCRoot):
             raise IdentityException()
         return identity.current.visit_key
 
+    # Alias kerberos login
+    login_krbv = login_krbV
+
     @cherrypy.expose
     def logout(self, *args):
         """
