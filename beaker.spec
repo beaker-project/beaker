@@ -2,7 +2,7 @@
 %{!?pyver: %define pyver %(%{__python} -c "import sys ; print sys.version[:3]")}
 
 Name:           beaker
-Version:        0.4.12
+Version:        0.4.16
 Release:        0%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
@@ -132,6 +132,15 @@ ln -s RedHatEnterpriseLinux6.ks $RPM_BUILD_ROOT/var/lib/cobbler/kickstarts/redha
 /usr/share/man/man1/beakerlib*
 
 %changelog
+* Tue Jun 30 2009 Bill Peck <bpeck@redhat.com> - 0.4.16-0
+- update login_krbv method for newer kobo package
+* Tue Jun 30 2009 Bill Peck <bpeck@redhat.com> - 0.4.15-0
+- Call addDistros.sh from osversion.trigger if it exists.
+* Mon Jun 29 2009 Bill Peck <bpeck@redhat.com> - 0.4.14-0
+- Allow searching by treepath for command line client
+- return distro name for legacy rhts.
+* Mon Jun 22 2009 Bill Peck <bpeck@redhat.com> - 0.4.13-0
+- Fixed osversion.trigger to work with methods other than nfs
 * Fri Jun 19 2009 Bill Peck <bpeck@redhat.com> - 0.4.12-0
 - Raise BeakerExceptions if we run into trouble
 * Thu Jun 18 2009 Bill Peck <bpeck@redhat.com> - 0.4.11-0

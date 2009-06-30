@@ -23,6 +23,11 @@ class Distros_List(BeakerCommand):
             help="filter by name, use % for wildcard",
         )
         self.parser.add_option(
+            "--treepath",
+            default=None,
+            help="filter by treepath, use % for wildcard",
+        )
+        self.parser.add_option(
             "--family",
             default=None,
             help="filter by family",
@@ -38,11 +43,12 @@ class Distros_List(BeakerCommand):
         username = kwargs.pop("username", None)
         password = kwargs.pop("password", None)
         name = kwargs.pop("name", None)
+        treepath = kwargs.pop("treepath", None)
         family = kwargs.pop("family", None)
         arch = kwargs.pop("arch", None)
         tags = kwargs.pop("tag", [])
 
         self.set_hub(username, password)
         print "Name,Arch,OSVersion,Variant,Method,Virt"
-        for distro in self.hub.distros.list(name, family, arch, tags):
+        for distro in self.hub.distros.list(name, family, arch, tags, treepath):
             print ','.join([str(d) for d in distro])
