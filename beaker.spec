@@ -3,7 +3,7 @@
 
 Name:           beaker
 Version:        0.4.18
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -90,6 +90,7 @@ DESTDIR=$RPM_BUILD_ROOT make
 %install
 DESTDIR=$RPM_BUILD_ROOT make install
 ln -s RedHatEnterpriseLinux6.ks $RPM_BUILD_ROOT/var/lib/cobbler/kickstarts/redhat6.ks
+ln -s Fedora.ks $RPM_BUILD_ROOT/var/lib/cobbler/kickstarts/Fedoradevelopment.ks
 
 %clean
 %{__rm} -rf %{buildroot}
@@ -132,8 +133,9 @@ ln -s RedHatEnterpriseLinux6.ks $RPM_BUILD_ROOT/var/lib/cobbler/kickstarts/redha
 /usr/share/man/man1/beakerlib*
 
 %changelog
-* Wed Jul 01 2009 Bill Peck <bpeck@redhat.com> - 0.4.18-1
+* Wed Jul 01 2009 Bill Peck <bpeck@redhat.com> - 0.4.18-2
 - Use RUNTEST_URL from rhts if passed.
+- Include Fedoradevelopment.ks for rawhide
 * Tue Jun 30 2009 Bill Peck <bpeck@redhat.com> - 0.4.17-0
 - Call the correct method for _tag
 * Tue Jun 30 2009 Bill Peck <bpeck@redhat.com> - 0.4.16-0
