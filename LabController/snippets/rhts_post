@@ -95,7 +95,11 @@ yum -y install rhts-test-env-lab rhts-legacy
 yum -y install yum-utils
 
 # Get the RHTS job
+#if $get_var('runtest_url','') != ''
+wget -O /mnt/tests/runtests.sh http://$rhts_server/testlogs/$runtest_url
+#else
 wget -O /mnt/tests/runtests.sh http://$rhts_server/testlogs/recipes/$recipeid/runtests.sh
+#end if
 chmod 755 /mnt/tests/runtests.sh
 #end if
 #Add test user account
