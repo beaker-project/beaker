@@ -3,7 +3,7 @@
 
 Name:           beaker
 Version:        0.4.18
-Release:        0%{?dist}
+Release:        1%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -132,7 +132,7 @@ ln -s RedHatEnterpriseLinux6.ks $RPM_BUILD_ROOT/var/lib/cobbler/kickstarts/redha
 /usr/share/man/man1/beakerlib*
 
 %changelog
-* Wed Jul 01 2009 Bill Peck <bpeck@redhat.com> - 0.4.18-0
+* Wed Jul 01 2009 Bill Peck <bpeck@redhat.com> - 0.4.18-1
 - Use RUNTEST_URL from rhts if passed.
 * Tue Jun 30 2009 Bill Peck <bpeck@redhat.com> - 0.4.17-0
 - Call the correct method for _tag
