@@ -105,13 +105,13 @@ class XmlRecipeSet(ElementWrapper):
             yield XmlRecipeMachine(recipe)
 
 class XmlRecipe(ElementWrapper):
-    def iter_tests(self, filter=None):
-        for test in self.wrappedEl['test':]:
+    def iter_tasks(self, filter=None):
+        for task in self.wrappedEl['task':]:
             if filter:
-                if XmlTest(test).status in filter:
-                    yield XmlTest(test)
+                if XmlTask(task).status in filter:
+                    yield XmlTask(task)
             else:
-                yield XmlTest(test)
+                yield XmlTask(task)
 
     def distroRequires(self, *args):
         return self.wrappedEl['distroRequires'].__repr__(True)
@@ -167,13 +167,13 @@ class XmlRecipeGuest(XmlRecipe):
             return self.get_xml_attr('guestname', unicode, None)
 	else: return XmlRecipe.__getattr__(self,attrname)
 
-class XmlTest(ElementWrapper):
+class XmlTask(ElementWrapper):
     def iter_params(self):
         for params in self.wrappedEl['params':]:
             for param in params['param':]:
                 yield XmlParam(param)
 
-    def set_test_status(self,value):
+    def set_task_status(self,value):
         """
         No Op.
         """
@@ -200,7 +200,7 @@ class XmlTest(ElementWrapper):
     def __setattr__(self,item,value):
         print "item = %s" % item
         if item == 'status':
-            return self.set_test_status(value)
+            return self.set_task_status(value)
         else:
             self.__dict__[item] = value
 
@@ -223,7 +223,7 @@ subclassDict = {
     'recipeSet'   : XmlRecipeSet,
     'recipe'      : XmlRecipe,
     'guestrecipe' : XmlRecipe,
-    'test'        : XmlTest,
+    'task'        : XmlTask,
     }
 
 if __name__=='__main__':
@@ -243,11 +243,11 @@ if __name__=='__main__':
             print recipe.hostRequires()
             for guest in recipe.iter_guests():
                 print guest.guestargs
-                for test in guest.iter_tests():
-                    for params in test.iter_params():
+                for task in guest.iter_tasks():
+                    for params in task.iter_params():
                         print "%s = %s" % (params.name, params.value)
-                    print "%s %s" % (test.role, test.name)
-            for test in recipe.iter_tests():
-                for params in test.iter_params():
+                    print "%s %s" % (task.role, task.name)
+            for task in recipe.iter_tasks():
+                for params in task.iter_params():
                     print "%s = %s" % (params.name, params.value)
-                print "%s %s" % (test.role, test.name)
+                print "%s %s" % (task.role, task.name)

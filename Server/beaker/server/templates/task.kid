@@ -5,7 +5,7 @@
 <head>
     <meta content="text/html; charset=UTF-8" http-equiv="content-type" py:replace="''"/>
 
-    <title>Test ${test.name}</title>
+    <title>Test ${task.name}</title>
 </head>
 
 <?python
@@ -17,23 +17,23 @@ needs = ''
 bugzillas = ''
 types = ''
 
-for need in test.needs:
+for need in task.needs:
     needs += '%s<br/>' % need.property
 needs = needs.replace('&', '&amp;')
 
-for package in test.runfor:
+for package in task.runfor:
     runfor += '<a href="/package/%s">%s</a><br/>' % (package,package)
 runfor = runfor.replace('&', '&amp;')
 
-for bug in test.bugzillas:
+for bug in task.bugzillas:
     bugzillas += '<a href="http://bugzilla.redhat.com/show_bug.cgi?id=%s">%s</a><br/>' % (bug.bugzilla_id,bug.bugzilla_id)
 bugzillas = bugzillas.replace('&', '&amp;')
 
-for package in test.required:
+for package in task.required:
     required += '%s<br/>' % package
 required = required.replace('&', '&amp;')
 
-for type in test.types:
+for type in task.types:
     types += '%s<br/>' % type.type
 types = types.replace('&', '&amp;')
 ?>
@@ -42,20 +42,20 @@ types = types.replace('&', '&amp;')
 <table width="97%">
     <tr>
         <td>
-            <div class="show"><a href="${tg.url('/tests')}">Tests</a> - ${test.name}</div>
+            <div class="show"><a href="${tg.url('/tasks')}">Tests</a> - ${task.name}</div>
         </td>
     </tr>
 </table>
 <table class="show">
     <tr py:for="field in (
-        ['Description',       test.description],
-        ['Path',              test.path],
-        ['Expected Time',     test.elapsed_time()],
-        ['Creation Date',     test.creation_date],
-        ['Updated Date',      test.update_date],
-        ['Version',           test.version],
-        ['License',           test.license],
-        ['RPM',               test.rpm],
+        ['Description',       task.description],
+        ['Path',              task.path],
+        ['Expected Time',     task.elapsed_time()],
+        ['Creation Date',     task.creation_date],
+        ['Updated Date',      task.update_date],
+        ['Version',           task.version],
+        ['License',           task.license],
+        ['RPM',               task.rpm],
         ['Needs',             (needs) and XML(needs) or ''],
         ['Bugzillas',         (bugzillas) and XML(bugzillas) or ''],
         ['Types',             (types) and XML(types) or ''],
@@ -68,7 +68,7 @@ types = types.replace('&', '&amp;')
         </span>
     </tr>
 </table>
-<table width="97%" class="list" py:if="test.runs">
+<table width="97%" class="list" py:if="task.runs">
     <tr class="list">
         <td colspan="7" class="list">
             <div class="show">Last 10 Test Runs for this Test</div>
@@ -84,14 +84,14 @@ types = types.replace('&', '&amp;')
      <th class="list">Result</th>
      <th class="list">Duration</th>
     </tr>
-    <tr class="list" py:for="testrun in reversed(test.runs[-10:])">
-      <td class="list">${testrun.id}</td>
-      <td class="list"><span py:if="testrun.recipe.distro">${testrun.recipe.distro.name}</span></td>
-      <td class="list"><span py:if="testrun.recipe.distro">${testrun.recipe.distro.osversion}</span></td>
-      <td class="list"><span py:if="testrun.recipe.distro">${testrun.recipe.distro.arch}</span></td>
-      <td class="list">${testrun.recipe.system}</td>
-      <td class="list">${testrun.status}</td>
-      <td class="list">${testrun.duration}</td>
+    <tr class="list" py:for="taskrun in reversed(task.runs[-10:])">
+      <td class="list">${taskrun.id}</td>
+      <td class="list"><span py:if="taskrun.recipe.distro">${taskrun.recipe.distro.name}</span></td>
+      <td class="list"><span py:if="taskrun.recipe.distro">${taskrun.recipe.distro.osversion}</span></td>
+      <td class="list"><span py:if="taskrun.recipe.distro">${taskrun.recipe.distro.arch}</span></td>
+      <td class="list">${taskrun.recipe.system}</td>
+      <td class="list">${taskrun.status}</td>
+      <td class="list">${taskrun.duration}</td>
     </tr>
 </table>
 </body>

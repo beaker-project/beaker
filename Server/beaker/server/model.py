@@ -142,10 +142,10 @@ exclude_osversion_table = Table('exclude_osversion', metadata,
     Column('osversion_id', Integer, ForeignKey('osversion.id')),
 )
 
-test_exclude_table = Table('test_exclude', metadata,
+task_exclude_table = Table('task_exclude', metadata,
     Column('id', Integer, autoincrement=True,
            nullable=False, primary_key=True),
-    Column('test_id', Integer, ForeignKey('test.id')),
+    Column('task_id', Integer, ForeignKey('task.id')),
     Column('arch_id', Integer, ForeignKey('arch.id')),
     Column('osmajor_id', Integer, ForeignKey('osmajor.id')),
     Column('osversion_id', Integer, ForeignKey('osversion.id')),
@@ -447,19 +447,19 @@ key_value_int_table = Table('key_value_int', metadata,
     Column('key_value',Integer, nullable=False)
 )
 
-test_status_table = Table('test_status',metadata,
+task_status_table = Table('task_status',metadata,
         Column('id', Integer, primary_key=True),
         Column('status', Unicode(20)),
         Column('severity', Integer)
 )
 
-test_result_table = Table('test_result',metadata,
+task_result_table = Table('task_result',metadata,
         Column('id', Integer, primary_key=True),
         Column('result', Unicode(20)),
         Column('severity', Integer)
 )
 
-test_priority_table = Table('test_priority',metadata,
+task_priority_table = Table('task_priority',metadata,
         Column('id', Integer, primary_key=True),
         Column('priority', Unicode(20))
 )
@@ -470,19 +470,19 @@ job_table = Table('job',metadata,
                 ForeignKey('tg_user.user_id'), index=True),
         Column('whiteboard',Unicode(2000)),
         Column('result_id', Integer,
-                ForeignKey('test_result.id')),
+                ForeignKey('task_result.id')),
         Column('status_id', Integer,
-                ForeignKey('test_status.id'), default=select([test_status_table.c.id], limit=1).where(test_status_table.c.status==u'New').correlate(None)),
-        # Total tests
-	Column('ttests', Integer, default=0),
-        # Total Passing tests
-        Column('ptests', Integer, default=0),
-        # Total Warning tests
-        Column('wtests', Integer, default=0),
-        # Total Failing tests
-        Column('ftests', Integer, default=0),
-        # Total Panic tests
-        Column('ktests', Integer, default=0),
+                ForeignKey('task_status.id'), default=select([task_status_table.c.id], limit=1).where(task_status_table.c.status==u'New').correlate(None)),
+        # Total tasks
+	Column('ttasks', Integer, default=0),
+        # Total Passing tasks
+        Column('ptasks', Integer, default=0),
+        # Total Warning tasks
+        Column('wtasks', Integer, default=0),
+        # Total Failing tasks
+        Column('ftasks', Integer, default=0),
+        # Total Panic tasks
+        Column('ktasks', Integer, default=0),
 )
 
 recipe_set_table = Table('recipe_set',metadata,
@@ -490,24 +490,24 @@ recipe_set_table = Table('recipe_set',metadata,
         Column('job_id',Integer,
                 ForeignKey('job.id')),
         Column('priority_id', Integer,
-                ForeignKey('test_priority.id'), default=select([test_priority_table.c.id], limit=1).where(test_priority_table.c.priority==u'Normal').correlate(None)),
+                ForeignKey('task_priority.id'), default=select([task_priority_table.c.id], limit=1).where(task_priority_table.c.priority==u'Normal').correlate(None)),
         Column('queue_time',DateTime, nullable=False, default=datetime.now),
         Column('result_id', Integer,
-                ForeignKey('test_result.id')),
+                ForeignKey('task_result.id')),
         Column('status_id', Integer,
-                ForeignKey('test_status.id'), default=select([test_status_table.c.id], limit=1).where(test_status_table.c.status==u'New').correlate(None)),
+                ForeignKey('task_status.id'), default=select([task_status_table.c.id], limit=1).where(task_status_table.c.status==u'New').correlate(None)),
         Column('lab_controller_id', Integer,
                 ForeignKey('lab_controller.id')),
-        # Total tests
-	Column('ttests', Integer, default=0),
-        # Total Passing tests
-        Column('ptests', Integer, default=0),
-        # Total Warning tests
-        Column('wtests', Integer, default=0),
-        # Total Failing tests
-        Column('ftests', Integer, default=0),
-        # Total Panic tests
-        Column('ktests', Integer, default=0),
+        # Total tasks
+	Column('ttasks', Integer, default=0),
+        # Total Passing tasks
+        Column('ptasks', Integer, default=0),
+        # Total Warning tasks
+        Column('wtasks', Integer, default=0),
+        # Total Failing tasks
+        Column('ftasks', Integer, default=0),
+        # Total Panic tasks
+        Column('ktasks', Integer, default=0),
 )
 
 recipe_table = Table('recipe',metadata,
@@ -519,9 +519,9 @@ recipe_table = Table('recipe',metadata,
         Column('system_id', Integer,
                 ForeignKey('system.id')),
         Column('result_id', Integer,
-                ForeignKey('test_result.id')),
+                ForeignKey('task_result.id')),
         Column('status_id', Integer,
-                ForeignKey('test_status.id'),default=select([test_status_table.c.id], limit=1).where(test_status_table.c.status==u'New').correlate(None)),
+                ForeignKey('task_status.id'),default=select([task_status_table.c.id], limit=1).where(task_status_table.c.status==u'New').correlate(None)),
         Column('start_time',DateTime),
         Column('finish_time',DateTime),
         Column('_host_requires',Unicode()),
@@ -529,16 +529,16 @@ recipe_table = Table('recipe',metadata,
         Column('kickstart',Unicode()),
         # type = recipe, machine_recipe or guest_recipe
         Column('type', String(30), nullable=False),
-        # Total tests
-	Column('ttests', Integer, default=0),
-        # Total Passing tests
-        Column('ptests', Integer, default=0),
-        # Total Warning tests
-        Column('wtests', Integer, default=0),
-        # Total Failing tests
-        Column('ftests', Integer, default=0),
-        # Total Panic tests
-        Column('ktests', Integer, default=0),
+        # Total tasks
+	Column('ttasks', Integer, default=0),
+        # Total Passing tasks
+        Column('ptasks', Integer, default=0),
+        # Total Warning tasks
+        Column('wtasks', Integer, default=0),
+        # Total Failing tasks
+        Column('ftasks', Integer, default=0),
+        # Total Panic tasks
+        Column('ktasks', Integer, default=0),
         Column('whiteboard',Unicode(2000)),
 )
 
@@ -595,49 +595,49 @@ recipe_rpm_table =Table('recipe_rpm',metadata,
         Column('running_kernel', Boolean)
 )
 
-recipe_test_table =Table('recipe_test',metadata,
+recipe_task_table =Table('recipe_task',metadata,
         Column('id', Integer, primary_key=True),
         Column('recipe_id',Integer,
                 ForeignKey('recipe.id')),
-        Column('test_id',Integer,
-                ForeignKey('test.id')),
+        Column('task_id',Integer,
+                ForeignKey('task.id')),
         Column('start_time',DateTime),
         Column('finish_time',DateTime),
         Column('result_id', Integer,
-                ForeignKey('test_result.id')),
+                ForeignKey('task_result.id')),
         Column('status_id', Integer,
-                ForeignKey('test_status.id'),default=select([test_status_table.c.id], limit=1).where(test_status_table.c.status==u'New').correlate(None)),
+                ForeignKey('task_status.id'),default=select([task_status_table.c.id], limit=1).where(task_status_table.c.status==u'New').correlate(None)),
         Column('role', Unicode(255)),
 )
 
-recipe_test_param_table = Table('recipe_test_param', metadata,
+recipe_task_param_table = Table('recipe_task_param', metadata,
         Column('id', Integer, primary_key=True),
-        Column('recipe_test_id', Integer,
-                ForeignKey('recipe_test.id')),
+        Column('recipe_task_id', Integer,
+                ForeignKey('recipe_task.id')),
         Column('name',Unicode(255)),
         Column('value',Unicode())
 )
 
-recipe_test_comment_table = Table('recipe_test_comment',metadata,
+recipe_task_comment_table = Table('recipe_task_comment',metadata,
         Column('id', Integer, primary_key=True),
-        Column('recipe_test_id', Integer,
-                ForeignKey('recipe_test.id')),
+        Column('recipe_task_id', Integer,
+                ForeignKey('recipe_task.id')),
         Column('comment', Unicode()),
         Column('created', DateTime),
         Column('user_id', Integer,
                 ForeignKey('tg_user.user_id'), index=True)
 )
 
-recipe_test_bugzilla_table = Table('recipe_test_bugzilla',metadata,
+recipe_task_bugzilla_table = Table('recipe_task_bugzilla',metadata,
         Column('id', Integer, primary_key=True),
-        Column('recipe_test_id', Integer,
-                ForeignKey('recipe_test.id')),
+        Column('recipe_task_id', Integer,
+                ForeignKey('recipe_task.id')),
         Column('bugzilla_id', Integer)
 )
 
-recipe_test_rpm_table =Table('recipe_test_rpm',metadata,
-        Column('recipe_test_id', Integer,
-                ForeignKey('recipe_test.id'), primary_key=True),
+recipe_task_rpm_table =Table('recipe_task_rpm',metadata,
+        Column('recipe_task_id', Integer,
+                ForeignKey('recipe_task.id'), primary_key=True),
         Column('package',Unicode(255)),
         Column('version',Unicode(255)),
         Column('release',Unicode(255)),
@@ -646,18 +646,18 @@ recipe_test_rpm_table =Table('recipe_test_rpm',metadata,
         Column('running_kernel', Boolean)
 )
 
-recipe_test_result_table = Table('recipe_test_result',metadata,
+recipe_task_result_table = Table('recipe_task_result',metadata,
         Column('id', Integer, primary_key=True),
-        Column('recipe_test_id', Integer,
-                ForeignKey('recipe_test.id')),
+        Column('recipe_task_id', Integer,
+                ForeignKey('recipe_task.id')),
         Column('path', Unicode(2048)),
         Column('result_id', Integer,
-                ForeignKey('test_result.id')),
+                ForeignKey('task_result.id')),
         Column('score', Numeric(10)),
         Column('log', Unicode()),
 )
 
-test_table = Table('test',metadata,
+task_table = Table('task',metadata,
         Column('id', Integer, primary_key=True),
         Column('name', Unicode(2048)),
         Column('rpm', Unicode(2048)),
@@ -679,54 +679,54 @@ test_table = Table('test',metadata,
         Column('valid', Boolean)
 )
 
-test_bugzilla_table = Table('test_bugzilla',metadata,
+task_bugzilla_table = Table('task_bugzilla',metadata,
         Column('id', Integer, primary_key=True),
         Column('bugzilla_id', Integer),
-        Column('test_id', Integer,
-                ForeignKey('test.id')),
+        Column('task_id', Integer,
+                ForeignKey('task.id')),
 )
 
-test_packages_runfor_map = Table('test_packages_runfor_map', metadata,
-        Column('test_id', Integer,
-                ForeignKey('test.id', onupdate='CASCADE',
+task_packages_runfor_map = Table('task_packages_runfor_map', metadata,
+        Column('task_id', Integer,
+                ForeignKey('task.id', onupdate='CASCADE',
                                       ondelete='CASCADE')),
         Column('package_id', Integer,
-                ForeignKey('test_package.id',onupdate='CASCADE',
+                ForeignKey('task_package.id',onupdate='CASCADE',
                                              ondelete='CASCADE')),
 )
 
-test_packages_required_map = Table('test_packages_required_map', metadata,
-        Column('test_id', Integer,
-                ForeignKey('test.id', onupdate='CASCADE',
+task_packages_required_map = Table('task_packages_required_map', metadata,
+        Column('task_id', Integer,
+                ForeignKey('task.id', onupdate='CASCADE',
                                       ondelete='CASCADE')),
         Column('package_id', Integer,
-                ForeignKey('test_package.id',onupdate='CASCADE',
+                ForeignKey('task_package.id',onupdate='CASCADE',
                                              ondelete='CASCADE')),
 )
 
-test_property_needed_table = Table('test_property_needed', metadata,
+task_property_needed_table = Table('task_property_needed', metadata,
         Column('id', Integer, primary_key=True),
-        Column('test_id', Integer,
-                ForeignKey('test.id')),
+        Column('task_id', Integer,
+                ForeignKey('task.id')),
         Column('property', Unicode(2048))
 )
 
-test_package_table = Table('test_package',metadata,
+task_package_table = Table('task_package',metadata,
         Column('id', Integer, primary_key=True),
         Column('package', Unicode(2048))
 )
 
-test_type_table = Table('test_type',metadata,
+task_type_table = Table('task_type',metadata,
         Column('id', Integer, primary_key=True),
         Column('type', Unicode(256))
 )
 
-test_type_map = Table('test_type_map',metadata,
-        Column('test_id', Integer,
-                ForeignKey('test.id',onupdate='CASCADE',
+task_type_map = Table('task_type_map',metadata,
+        Column('task_id', Integer,
+                ForeignKey('task.id',onupdate='CASCADE',
                                      ondelete='CASCADE')),
-        Column('test_type_id', Integer,
-                ForeignKey('test_type.id', onupdate='CASCADE',
+        Column('task_type_id', Integer,
+                ForeignKey('task_type.id', onupdate='CASCADE',
                                            ondelete='CASCADE')),
 )
 
@@ -1844,25 +1844,25 @@ class Distro(object):
             systems = systems.filter(and_(*queries))
         return systems
 
-    def tests(self):
+    def tasks(self):
         """
-        List of tests that support this distro
+        List of tasks that support this distro
         """
-        tests = session.query(Test)
-        return tests.filter(
-                not_(or_(Test.id.in_(select([test_table.c.id]).
-                 where(test_table.c.id==test_exclude_table.c.test_id).
-                 where(test_exclude_table.c.arch_id==arch_table.c.id).
+        tasks = session.query(Task)
+        return tasks.filter(
+                not_(or_(Task.id.in_(select([task_table.c.id]).
+                 where(task_table.c.id==task_exclude_table.c.task_id).
+                 where(task_exclude_table.c.arch_id==arch_table.c.id).
                  where(arch_table.c.id==self.arch_id)
                                       ),
-                         Test.id.in_(select([test_table.c.id]).
-                 where(test_table.c.id==test_exclude_table.c.test_id).
-                 where(test_exclude_table.c.osmajor_id==osmajor_table.c.id).
+                         Task.id.in_(select([task_table.c.id]).
+                 where(task_table.c.id==task_exclude_table.c.task_id).
+                 where(task_exclude_table.c.osmajor_id==osmajor_table.c.id).
                  where(osmajor_table.c.id==self.osversion.osmajor.id)
                                       ),
-                         Test.id.in_(select([test_table.c.id]).
-                 where(test_table.c.id==test_exclude_table.c.test_id).
-                 where(test_exclude_table.c.osversion_id==osversion_table.c.id).
+                         Task.id.in_(select([task_table.c.id]).
+                 where(task_table.c.id==task_exclude_table.c.task_id).
+                 where(task_exclude_table.c.osversion_id==osversion_table.c.id).
                  where(osversion_table.c.id==self.osversion.id)
                                       ),
                         )
@@ -2061,11 +2061,11 @@ class MappedObject(object):
         return cls.query.filter_by(id=id).one()
 
 
-class TestPriority(object):
+class TaskPriority(object):
     pass
 
 
-class TestStatus(object):
+class TaskStatus(object):
     @classmethod
     def by_name(cls, status_name):
         return cls.query().filter_by(status=status_name).one()
@@ -2074,7 +2074,7 @@ class TestStatus(object):
         return "%s" % (self.status)
 
 
-class TestResult(object):
+class TaskResult(object):
     @classmethod
     def by_name(cls, result_name):
         return cls.query().filter_by(result=result_name).one()
@@ -2100,19 +2100,23 @@ class Job(MappedObject):
             job.appendChild(rs.to_xml())
         return job
 
+    def set_status(self, value):
+        self.status = value
+        self.update_counts()
+
     def update_counts(self):
         """
         Update number of passes, failures, warns, panics..
         """
-        self.ptests = 0
-        self.wtests = 0
-        self.ftests = 0
-        self.ktests = 0
+        self.ptasks = 0
+        self.wtasks = 0
+        self.ftasks = 0
+        self.ktasks = 0
         for recipeset in self.recipesets:
-            self.ptests += recipeset.ptests
-            self.wtests += recipeset.wtests
-            self.ftests += recipeset.ftests
-            self.ktests += recipeset.ktests
+            self.ptasks += recipeset.ptasks
+            self.wtasks += recipeset.wtasks
+            self.ftasks += recipeset.ftasks
+            self.ktasks += recipeset.ktasks
 
 
 class RecipeSet(MappedObject):
@@ -2152,6 +2156,10 @@ class RecipeSet(MappedObject):
                 return
             yield recipeSet
 
+    def set_status(self, value):
+        self.status = value
+        self.job.update_counts()
+
     def abort(self, msg=None):
         """
         Method to abort all recipes in this recipe set.
@@ -2160,22 +2168,21 @@ class RecipeSet(MappedObject):
             recipe.abort(msg)
         # Should we have a log at the recipeset level?
         #self.log.append(msg)
-        self.status = TestStatus.by_name(u'Aborted')
+        self.status = TaskStatus.by_name(u'Aborted')
 
     def update_counts(self):
         """
         Update number of passes, failures, warns, panics..
         """
-        self.ptests = 0
-        self.wtests = 0
-        self.ftests = 0
-        self.ktests = 0
+        self.ptasks = 0
+        self.wtasks = 0
+        self.ftasks = 0
+        self.ktasks = 0
         for recipe in self.recipes:
-            self.ptests += recipe.ptests
-            self.wtests += recipe.wtests
-            self.ftests += recipe.ftests
-            self.ktests += recipe.ktests
-        self.job.update_counts()
+            self.ptasks += recipe.ptasks
+            self.wtasks += recipe.wtasks
+            self.ftasks += recipe.ftasks
+            self.ktasks += recipe.ktasks
 
     def recipes_orderby(self, labcontroller):
         query = select([recipe_table.c.id, 
@@ -2200,7 +2207,7 @@ class RecipeSet(MappedObject):
 class Recipe(MappedObject):
     """
     Contains requires for host selection and distro selection.
-    Also contains what tests will be executed.
+    Also contains what tasks will be executed.
     """
     def to_xml(self, recipe):
         recipe.setAttribute("id", "%s" % self.id)
@@ -2226,7 +2233,7 @@ class Recipe(MappedObject):
             for child in hr.childNodes:
                 hostRequires.appendChild(child)
         recipe.appendChild(hostRequires)
-        for t in self.tests:
+        for t in self.tasks:
             recipe.appendChild(t.to_xml())
         return recipe
 
@@ -2249,38 +2256,42 @@ class Recipe(MappedObject):
         self._host_requires = value
     host_requires = property(_get_host_requires, _set_host_requires)
 
+    def set_status(self, value):
+        #print session.query(TaskStatus).from_statement(select([TaskStatus.id, func.max(TaskStatus.severity)], from_obj=[task_status_table, recipe_set_table],whereclause="recipe_set.status_id = task_status.id AND recipe_set.job_id = 27"))[0]
+        self.status = value
+
     def abort(self, msg=None):
         """
-        Method to abort all tests in this recipe.
+        Method to abort all tasks in this recipe.
         """
-        for test in self.tests:
-            test.abort(msg)
+        for task in self.tasks:
+            task.abort(msg)
         # Should we have a log at the recipe level?
         #self.log.append(msg)
         self.update_counts()
-        self.status = TestStatus.by_name(u'Aborted')
+        self.status = TaskStatus.by_name(u'Aborted')
 
     def update_counts(self):
         """
         Update number of passes, failures, warns, panics..
         """
-        self.ptests = 0
-        test_pass = TestResult.by_name(u'Pass')
-        self.wtests = 0
-        test_warn = TestResult.by_name(u'Warn')
-        self.ftests = 0
-        test_fail = TestResult.by_name(u'Fail')
-        self.ktests = 0
-        test_panic = TestResult.by_name(u'Panic')
-        for test in self.tests:
-            if test.result == test_pass:
-                self.ptests += 1
-            if test.result == test_warn:
-                self.wtests += 1
-            if test.result == test_fail:
-                self.ftests += 1
-            if test.result == test_panic:
-                self.ktests += 1
+        self.ptasks = 0
+        task_pass = TaskResult.by_name(u'Pass')
+        self.wtasks = 0
+        task_warn = TaskResult.by_name(u'Warn')
+        self.ftasks = 0
+        task_fail = TaskResult.by_name(u'Fail')
+        self.ktasks = 0
+        task_panic = TaskResult.by_name(u'Panic')
+        for task in self.tasks:
+            if task.result == task_pass:
+                self.ptasks += 1
+            if task.result == task_warn:
+                task.wtasks += 1
+            if task.result == task_fail:
+                self.ftasks += 1
+            if task.result == task_panic:
+                self.ktasks += 1
         self.recipeset.update_counts()
 
 class GuestRecipe(Recipe):
@@ -2308,32 +2319,32 @@ class MachineRecipe(Recipe):
 class RecipeTag(MappedObject):
     """
     Each recipe can be tagged with information that identifies what is being
-    tested.  This is helpful when generating reports.
+    executed.  This is helpful when generating reports.
     """
     pass
 
 
-class RecipeTest(MappedObject):
+class RecipeTask(MappedObject):
     """
-    This holds the results/status of the test being executed.
+    This holds the results/status of the task being executed.
     """
     def to_xml(self):
-        test = self.doc.createElement("test")
-        test.setAttribute("id", "%s" % self.id)
-        test.setAttribute("name", "%s" % self.test.name)
-        test.setAttribute("avg_time", "%s" % self.test.avg_time)
-        test.setAttribute("role", "%s" % self.role)
-        test.setAttribute("result", "%s" % self.result)
-        test.setAttribute("status", "%s" % self.status)
+        task = self.doc.createElement("task")
+        task.setAttribute("id", "%s" % self.id)
+        task.setAttribute("name", "%s" % self.task.name)
+        task.setAttribute("avg_time", "%s" % self.task.avg_time)
+        task.setAttribute("role", "%s" % self.role)
+        task.setAttribute("result", "%s" % self.result)
+        task.setAttribute("status", "%s" % self.status)
         if self.params:
             params = self.doc.createElement("params")
             for p in self.params:
                 params.appendChild(p.to_xml())
-            test.appendChild(params)
+            task.appendChild(params)
         rpm = self.doc.createElement("rpm")
-        rpm.setAttribute("name", "%s" % self.test.rpm)
-        test.appendChild(rpm)
-        return test
+        rpm.setAttribute("name", "%s" % self.task.rpm)
+        task.appendChild(rpm)
+        return task
 
     def _get_duration(self):
         try:
@@ -2342,22 +2353,25 @@ class RecipeTest(MappedObject):
             return None
     duration = property(_get_duration)
 
+    def set_status(self, value):
+        self._status = value
+
     def abort(self, msg=None):
         """
-        Method to abort test.
+        Method to abort task.
         """
-        self.results.append(RecipeTestResult(recipe_test=self.test,
+        self.results.append(RecipeTask(recipe_task=self.task,
                                        path='/',
-                                       result=TestResult.by_name('Warn'),
+                                       result=TaskResult.by_name('Warn'),
                                        score=0,
                                        log=msg))
-        self.result = TestResult.by_name(u'Warn')
-        self.status = TestStatus.by_name(u'Aborted')
+        self.result = TaskResult.by_name(u'Warn')
+        self.status = TaskStatus.by_name(u'Aborted')
 
 
-class RecipeTestParam(MappedObject):
+class RecipeTaskParam(MappedObject):
     """
-    Parameters for test execution.
+    Parameters for task execution.
     """
     def to_xml(self):
         param = self.doc.createElement("param")
@@ -2366,44 +2380,44 @@ class RecipeTestParam(MappedObject):
         return param
 
 
-class RecipeTestComment(MappedObject):
+class RecipeTaskComment(MappedObject):
     """
-    User comments about the test execution.
+    User comments about the task execution.
     """
     pass
 
 
-class RecipeTestBugzilla(MappedObject):
+class RecipeTaskBugzilla(MappedObject):
     """
-    Any bugzillas filed/found due to this test execution.
+    Any bugzillas filed/found due to this task execution.
     """
     pass
 
 
 class RecipeRpm(MappedObject):
     """
-    A list of rpms that were installed at the time of testing.
+    A list of rpms that were installed at the time.
     """
     pass
 
 
-class RecipeTestRpm(MappedObject):
+class RecipeTaskRpm(MappedObject):
     """
-    the versions of the RPMS listed in the tests runfor list.
-    """
-    pass
-
-
-class RecipeTestResult(MappedObject):
-    """
-    Each test can report multiple results
+    the versions of the RPMS listed in the tasks runfor list.
     """
     pass
 
 
-class Test(MappedObject):
+class RecipeTaskResult(MappedObject):
     """
-    Tests that are available to schedule
+    Each task can report multiple results
+    """
+    pass
+
+
+class Task(MappedObject):
+    """
+    Tasks that are available to schedule
     """
 
     @classmethod
@@ -2414,13 +2428,13 @@ class Test(MappedObject):
     def by_type(cls, type, query=None):
         if not query:
             query=cls.query
-        return query.join('types').filter(TestType.type==type)
+        return query.join('types').filter(TaskType.type==type)
 
     @classmethod
     def by_package(cls, package, query=None):
         if not query:
             query=cls.query
-        return query.join('runfor').filter(TestPackage.package==package)
+        return query.join('runfor').filter(TaskPackage.package==package)
 
     def elapsed_time(self, suffixes=[' year',' week',' day',' hour',' minute',' second'], add_s=True, separator=', '):
         """
@@ -2455,40 +2469,40 @@ class Test(MappedObject):
         return separator.join(time)
 
 
-class TestExclude(MappedObject):
+class TaskExclude(MappedObject):
     """
-    A test can be excluded by arch, osmajor, or osversion
+    A task can be excluded by arch, osmajor, or osversion
                         i386, RedHatEnterpriseLinux3, RedHatEnterpriseLinux3.0
     """
     pass
 
-class TestType(MappedObject):
+class TaskType(MappedObject):
     """
-    A test can be classified into serveral test types which can be used to
-    select tests for batch runs
+    A task can be classified into serveral task types which can be used to
+    select tasks for batch runs
     """
     pass
 
 
-class TestPackage(MappedObject):
+class TaskPackage(MappedObject):
     """
-    A list of packages that a test should be run for.
+    A list of packages that a tasks should be run for.
     """
     def __repr__(self):
         return self.package
 
 
-class TestPropertyNeeded(MappedObject):
+class TaskPropertyNeeded(MappedObject):
     """
-    Tests can have requirements on the systems that they run on.
+    Tasks can have requirements on the systems that they run on.
          *not currently implemented*
     """
     pass
 
 
-class TestBugzilla(MappedObject):
+class TaskBugzilla(MappedObject):
     """
-    Bugzillas that apply to this Test.
+    Bugzillas that apply to this Task.
     """
     pass
 
@@ -2643,46 +2657,46 @@ mapper(Key_Value_String, key_value_string_table,
         properties=dict(key=relation(Key, uselist=False,
                         backref='key_value_string')))
 
-mapper(Test, test_table,
-        properties = {'types':relation(TestType,
-                                        secondary=test_type_map,
-                                        backref='tests'),
-                      'excluded':relation(TestExclude,
-                                        backref='test'),
-                      'runfor':relation(TestPackage,
-                                        secondary=test_packages_runfor_map,
-                                        backref='tests'),
-                      'required':relation(TestPackage,
-                                        secondary=test_packages_required_map),
-                      'needs':relation(TestPropertyNeeded),
-                      'bugzillas':relation(TestBugzilla, backref='test',
+mapper(Task, task_table,
+        properties = {'types':relation(TaskType,
+                                        secondary=task_type_map,
+                                        backref='tasks'),
+                      'excluded':relation(TaskExclude,
+                                        backref='task'),
+                      'runfor':relation(TaskPackage,
+                                        secondary=task_packages_runfor_map,
+                                        backref='tasks'),
+                      'required':relation(TaskPackage,
+                                        secondary=task_packages_required_map),
+                      'needs':relation(TaskPropertyNeeded),
+                      'bugzillas':relation(TaskBugzilla, backref='task',
                                             cascade='all, delete-orphan'),
-                      'owner':relation(User, uselist=False, backref='tests'),
+                      'owner':relation(User, uselist=False, backref='tasks'),
                      }
       )
 
-mapper(TestExclude, test_exclude_table,
+mapper(TaskExclude, task_exclude_table,
        properties = {'arch':relation(Arch),
                      'osmajor':relation(OSMajor),
                      'osversion':relation(OSVersion),
                     }
       )
 
-mapper(TestPackage, test_package_table)
-mapper(TestPropertyNeeded, test_property_needed_table)
-mapper(TestType, test_type_table)
-mapper(TestBugzilla, test_bugzilla_table)
+mapper(TaskPackage, task_package_table)
+mapper(TaskPropertyNeeded, task_property_needed_table)
+mapper(TaskType, task_type_table)
+mapper(TaskBugzilla, task_bugzilla_table)
 
 mapper(Job, job_table,
         properties = {'recipesets':relation(RecipeSet, backref='job'),
                       'owner':relation(User, uselist=False, backref='jobs'),
-                      'result':relation(TestResult, uselist=False),
-                      'status':relation(TestStatus, uselist=False)})
+                      'result':relation(TaskResult, uselist=False),
+                      'status':relation(TaskStatus, uselist=False)})
 mapper(RecipeSet, recipe_set_table,
         properties = {'recipes':relation(Recipe, backref='recipeset'),
-                      'priority':relation(TestPriority, uselist=False),
-                      'result':relation(TestResult, uselist=False),
-                      'status':relation(TestStatus, uselist=False),
+                      'priority':relation(TaskPriority, uselist=False),
+                      'result':relation(TaskResult, uselist=False),
+                      'status':relation(TaskStatus, uselist=False),
                       'lab_controller':relation(LabController, uselist=False),
                      })
 
@@ -2700,13 +2714,13 @@ mapper(Recipe, recipe_table,
                                          primaryjoin=recipe_table.c.id==system_recipe_map.c.recipe_id,
                                          secondaryjoin=system_table.c.id==system_recipe_map.c.system_id,
                       ),
-                      'tests':relation(RecipeTest, backref='recipe'),
+                      'tasks':relation(RecipeTask, backref='recipe'),
                       'tags':relation(RecipeTag, 
                                       secondary=recipe_tag_map,
                                       backref='recipes'),
                       'rpms':relation(RecipeRpm, backref='recipe'),
-                      'result':relation(TestResult, uselist=False),
-                      'status':relation(TestStatus, uselist=False)})
+                      'result':relation(TaskResult, uselist=False),
+                      'status':relation(TaskStatus, uselist=False)})
 mapper(GuestRecipe, guest_recipe_table, inherits=Recipe,
         polymorphic_identity='guest_recipe')
 mapper(MachineRecipe, machine_recipe_table, inherits=Recipe,
@@ -2717,27 +2731,27 @@ mapper(MachineRecipe, machine_recipe_table, inherits=Recipe,
 mapper(RecipeTag, recipe_tag_table)
 mapper(RecipeRpm, recipe_rpm_table)
 
-mapper(RecipeTest, recipe_test_table,
-        properties = {'results':relation(RecipeTestResult, backref='test'),
-                      'rpms':relation(RecipeTestRpm),
-                      'comments':relation(RecipeTestComment, backref='test'),
-                      'params':relation(RecipeTestParam),
-                      'bugzillas':relation(RecipeTestBugzilla, backref='test'),
-                      'test':relation(Test, uselist=False, backref='runs'),
-                      'result':relation(TestResult, uselist=False),
-                      'status':relation(TestStatus, uselist=False)})
+mapper(RecipeTask, recipe_task_table,
+        properties = {'results':relation(RecipeTaskResult, backref='task'),
+                      'rpms':relation(RecipeTaskRpm),
+                      'comments':relation(RecipeTaskComment, backref='task'),
+                      'params':relation(RecipeTaskParam),
+                      'bugzillas':relation(RecipeTaskBugzilla, backref='task'),
+                      'task':relation(Task, uselist=False, backref='runs'),
+                      'result':relation(TaskResult, uselist=False),
+                      'status':relation(TaskStatus, uselist=False)})
 
-mapper(RecipeTestParam, recipe_test_param_table)
-mapper(RecipeTestComment, recipe_test_comment_table,
+mapper(RecipeTaskParam, recipe_task_param_table)
+mapper(RecipeTaskComment, recipe_task_comment_table,
         properties = {'user':relation(User, uselist=False, backref='comments')})
-mapper(RecipeTestBugzilla, recipe_test_bugzilla_table)
-mapper(RecipeTestRpm, recipe_test_rpm_table)
-mapper(RecipeTestResult, recipe_test_result_table,
-        properties = {'result':relation(TestResult, uselist=False)})
+mapper(RecipeTaskBugzilla, recipe_task_bugzilla_table)
+mapper(RecipeTaskRpm, recipe_task_rpm_table)
+mapper(RecipeTaskResult, recipe_task_result_table,
+        properties = {'result':relation(TaskResult, uselist=False)})
 
-mapper(TestPriority, test_priority_table)
-mapper(TestStatus, test_status_table)
-mapper(TestResult, test_result_table)
+mapper(TaskPriority, task_priority_table)
+mapper(TaskStatus, task_status_table)
+mapper(TaskResult, task_result_table)
 
 #                     Column("comments"), MultipleJoin('Comment')
 

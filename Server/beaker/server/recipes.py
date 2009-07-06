@@ -23,6 +23,7 @@ from kid import Element
 from beaker.server.widgets import myPaginateDataGrid
 from beaker.server.xmlrpccontroller import RPCRoot
 from beaker.server.helpers import *
+from beaker.server.recipetasks import RecipeTasks
 from turbogears.scheduler import add_interval_task
 
 import cherrypy
@@ -33,6 +34,58 @@ import string
 class Recipes(RPCRoot):
     # For XMLRPC methods in this class.
     exposed = True
+
+    tasks = RecipeTasks()
+
+    @cherrypy.expose
+    @identity.require(identity.not_anonymous())
+    def upload_console(self, recipe_id, data):
+        """
+        upload the console log in pieces 
+        """
+
+    def set_status(self, recipe_id, status):
+        """
+        Set Recipe Status
+        """
+        try:
+            recipe = Recipe.by_id(recipe_id)
+        except InvalidRequestError:
+            raise BX(_('Invalid recipe ID: %s' % recipe_id))
+        recipe.status = TaskStatus.by_name(status)
+        return
+
+    @cherrypy.expose
+    @identity.require(identity.not_anonymous())
+    def start(self, recipe_id):
+        """
+        Set recipe status to Running
+        """
+        return self.set_status(recipe_id, u'Running')
+
+    @cherrypy.expose
+    @identity.require(identity.not_anonymous())
+    def abort(self, recipe_id):
+        """
+        Set recipe status to Aborted
+        """
+        return self.set_status(recipe_id, u'Aborted')
+
+    @cherrypy.expose
+    @identity.require(identity.not_anonymous())
+    def cancel(self, recipe_id):
+        """
+        Set recipe status to Cancelled
+        """
+        return self.set_status(recipe_id, u'Cancelled')
+
+    @cherrypy.expose
+    @identity.require(identity.not_anonymous())
+    def finish(self, recipe_id):
+        """
+        Set recipe status to Finished
+        """
+        return self.set_status(recipe_id, u'Completed')
 
     @expose(format='json')
     def to_xml(self, id):
@@ -57,7 +110,7 @@ class Recipes(RPCRoot):
 
 def new_recipes(*args):
     for recipe in Recipe.query().filter(
-            Recipe.status==TestStatus.by_name(u'New')):
+            Recipe.status==TaskStatus.by_name(u'New')):
         if recipe.distro:
             systems = recipe.distro.systems_filter(
                                         recipe.recipeset.job.owner,
@@ -68,7 +121,7 @@ def new_recipes(*args):
                 # Add matched systems to recipe.
                 recipe.systems.append(system)
             if recipe.systems:
-                recipe.status = TestStatus.by_name(u'Processed')
+                recipe.status = TaskStatus.by_name(u'Processed')
                 print "recipe ID %s moved from New to Processed" % recipe.id
             else:
                 print "recipe ID %s moved from New to Aborted" % recipe.id
@@ -80,13 +133,13 @@ def new_recipes(*args):
 def processed_recipesets(*args):
     recipesets = RecipeSet.query()\
                        .join(['recipes','status'])\
-                       .filter(Recipe.status==TestStatus.by_name(u'Processed'))
+                       .filter(Recipe.status==TaskStatus.by_name(u'Processed'))
     for recipeset in recipesets:
         bad_l_controllers = set()
         # We only need to do this processing on multi-host recipes
         if len(recipeset.recipes) == 1:
             print "recipe ID %s moved from Processed to Queued" % recipeset.recipes[0].id
-            recipeset.recipes[0].status = TestStatus.by_name(u'Queued')
+            recipeset.recipes[0].status = TaskStatus.by_name(u'Queued')
             continue
 
         # Find all the lab controllers that this recipeset may run.
@@ -168,7 +221,7 @@ def processed_recipesets(*args):
             if recipe.systems:
                 # Set status to Queued 
                 print "recipe ID %s moved from Processed to Queued" % recipe.id
-                recipe.status = TestStatus.by_name(u'Queued')
+                recipe.status = TaskStatus.by_name(u'Queued')
             else:
                 # Set status to Aborted 
                 print "recipe ID %s moved from Processed to Aborted" % recipe.id
@@ -181,7 +234,7 @@ def queued_recipes(*args):
                     .join('status')\
                     .join('systems')\
                     .filter(
-                        and_(Recipe.status==TestStatus.by_name(u'Queued'),
+                        and_(Recipe.status==TaskStatus.by_name(u'Queued'),
                              System.user==None
                             )
                            )
@@ -197,8 +250,8 @@ def queued_recipes(*args):
             # Atomic operation to put recipe in Scheduled state
             if session.connection(Recipe).execute(recipe_table.update(
                  and_(recipe_table.c.id==recipe.id,
-                   recipe_table.c.status_id==TestStatus.by_name(u'Queued').id)),
-                   status_id=TestStatus.by_name(u'Scheduled').id).rowcount == 1:
+                   recipe_table.c.status_id==TaskStatus.by_name(u'Queued').id)),
+                   status_id=TaskStatus.by_name(u'Scheduled').id).rowcount == 1:
                 # Atomic operation to reserve the system
                 if session.connection(System).execute(system_table.update(
                      and_(system_table.c.id==system.id,
@@ -211,7 +264,7 @@ def queued_recipes(*args):
                 else:
                     # The system was taken from underneath us.  Put recipe
                     # back into queued state and try again.
-                    recipe.status = TestStatus.by_name(u'Queued')
+                    recipe.status = TaskStatus.by_name(u'Queued')
             else:
                 #Some other thread beat us. Skip this recipe now.
                 # Depending on scheduler load it should be safe to run multiple

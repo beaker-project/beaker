@@ -92,10 +92,10 @@ class Jobs(RPCRoot):
     def process_xmljob(self, xmljob, userid):
         print xmljob.workflow
         print xmljob.whiteboard
-        job = Job(whiteboard='%s' % xmljob.whiteboard, ttests=0,
+        job = Job(whiteboard='%s' % xmljob.whiteboard, ttasks=0,
                   owner_id=userid)
         for xmlrecipeSet in xmljob.iter_recipeSets():
-            recipeSet = RecipeSet(ttests=0)
+            recipeSet = RecipeSet(ttasks=0)
             for xmlrecipe in xmlrecipeSet.iter_recipes():
                 recipe = self.handleRecipe(xmlrecipe)
                 try:
@@ -103,8 +103,8 @@ class Jobs(RPCRoot):
                                                    recipe.distro_requires)[0]
                 except IndexError:
                     raise BX(_('No Distro matches Machine Recipe: %s' % recipe.distro_requires))
-                recipe.ttests = len(recipe.tests)
-                recipeSet.ttests += recipe.ttests
+                recipe.ttasks = len(recipe.tasks)
+                recipeSet.ttasks += recipe.ttasks
                 recipeSet.recipes.append(recipe)
                 # We want the guests to be part of the same recipeSet
                 for guest in recipe.guests:
@@ -114,37 +114,37 @@ class Jobs(RPCRoot):
                                                    guest.distro_requires)[0]
                     except IndexError:
                         raise BX(_('No Distro matches Guest Recipe: %s' % guest.distro_requires))
-                    guest.ttests = len(guest.tests)
-                    recipeSet.ttests += guest.ttests
+                    guest.ttasks = len(guest.tasks)
+                    recipeSet.ttasks += guest.ttasks
             job.recipesets.append(recipeSet)    
-            job.ttests += recipeSet.ttests
+            job.ttasks += recipeSet.ttasks
         return job
 
     def handleRecipe(self, xmlrecipe, guest=False):
         if not guest:
-            recipe = MachineRecipe(ttests=0)
+            recipe = MachineRecipe(ttasks=0)
             for xmlguest in xmlrecipe.iter_guests():
                 guestrecipe = self.handleRecipe(xmlguest, guest=True)
                 recipe.guests.append(guestrecipe)
         else:
-            recipe = GuestRecipe(ttests=0)
+            recipe = GuestRecipe(ttasks=0)
             recipe.guestname = xmlrecipe.guestname
             recipe.guestargs = xmlrecipe.guestargs
         recipe.host_requires = xmlrecipe.hostRequires()
         recipe.distro_requires = xmlrecipe.distroRequires()
-        for xmltest in xmlrecipe.iter_tests():
-            recipetest = RecipeTest()
+        for xmltask in xmlrecipe.iter_tasks():
+            recipetask = RecipeTask()
             try:
-                test = Test.by_name(xmltest.name)
+                task = Task.by_name(xmltask.name)
             except:
-                raise BX(_('Invalid Test: %s' % xmltest.name))
-            recipetest.test = test
-            recipetest.role = xmltest.role
-            for xmlparam in xmltest.iter_params():
-                param = RecipeTestParam( name=xmlparam.name, 
+                raise BX(_('Invalid Task: %s' % xmltask.name))
+            recipetask.task = task
+            recipetask.role = xmltask.role
+            for xmlparam in xmltask.iter_params():
+                param = RecipeTaskParam( name=xmlparam.name, 
                                         value=xmlparam.value)
-                recipetest.params.append(param)
-            recipe.tests.append(recipetest)
+                recipetask.params.append(param)
+            recipe.tasks.append(recipetask)
         return recipe
 
     @expose(format='json')

@@ -44,21 +44,21 @@ def make_progress_bar(item):
     fwidth=0
     kwidth=0
     completed=0
-    if not getattr(item, 'ttests', None):
+    if not getattr(item, 'ttasks', None):
         return None
-    if getattr(item, 'ptests', None):
-        completed += item.ptests
-        pwidth = int(float(item.ptests)/float(item.ttests)*100)
-    if getattr(item, 'wtests', None):
-        completed += item.wtests
-        wwidth = int(float(item.wtests)/float(item.ttests)*100)
-    if getattr(item, 'ftests', None):
-        completed += item.ftests
-        fwidth = int(float(item.ftests)/float(item.ttests)*100)
-    if getattr(item, 'ktests', None):
-        completed += item.ktests
-        kwidth = int(float(item.ktests)/float(item.ttests)*100)
-    percentCompleted = int(float(completed)/float(item.ttests)*100)
+    if getattr(item, 'ptasks', None):
+        completed += item.ptasks
+        pwidth = int(float(item.ptasks)/float(item.ttasks)*100)
+    if getattr(item, 'wtasks', None):
+        completed += item.wtasks
+        wwidth = int(float(item.wtasks)/float(item.ttasks)*100)
+    if getattr(item, 'ftasks', None):
+        completed += item.ftasks
+        fwidth = int(float(item.ftasks)/float(item.ttasks)*100)
+    if getattr(item, 'ktasks', None):
+        completed += item.ktasks
+        kwidth = int(float(item.ktasks)/float(item.ttasks)*100)
+    percentCompleted = int(float(completed)/float(item.ttasks)*100)
     div   = Element('div', {'class': 'dd'})
     div.append(Element('div', {'class': 'green', 'style': 'width:%s%%' % pwidth}))
     div.append(Element('div', {'class': 'orange', 'style': 'width:%s%%' % wwidth}))

@@ -34,15 +34,15 @@ import cherrypy
 from model import *
 import string
 
-class Tests(RPCRoot):
+class Tasks(RPCRoot):
     # For XMLRPC methods in this class.
     exposed = True
 
-    test_dir = '/tmp'
+    task_dir = '/tmp'
 
-    upload = widgets.FileField(name='test_rpm', label='Test rpm')
+    upload = widgets.FileField(name='task_rpm', label='Task rpm')
     form = widgets.TableForm(
-        'test',
+        'task',
         fields = [upload],
         action = 'save_data',
         submit_text = _(u'Submit Data')
@@ -51,7 +51,7 @@ class Tests(RPCRoot):
     @expose(template='beaker.server.templates.form-post')
     def new(self, **kw):
         return dict(
-            title = 'New Test',
+            title = 'New Task',
             form = self.form,
             action = './save',
             options = {},
@@ -59,116 +59,116 @@ class Tests(RPCRoot):
         )
 
     @cherrypy.expose
-    def upload(self, test_rpm_name, test_rpm_data):
+    def upload(self, task_rpm_name, task_rpm_data):
         """
-        XMLRPC method to upload test rpm package
+        XMLRPC method to upload task rpm package
         """
-        rpm_file = "%s/%s" % (self.test_dir, test_rpm_name)
+        rpm_file = "%s/%s" % (self.task_dir, task_rpm_name)
         print "rpm_file = %s" % rpm_file
         FH = open(rpm_file, "w")
-        FH.write(test_rpm_data.data)
+        FH.write(task_rpm_data.data)
         FH.close()
         try:
-            test = self.process_testinfo(self.read_testinfo(rpm_file))
+            task = self.process_taskinfo(self.read_taskinfo(rpm_file))
         except ValueError, err:
             session.rollback()
             return (0, "Failed to import because of %s" % str(err))
-        session.save_or_update(test)
+        session.save_or_update(task)
         session.flush()
-        return (test.id, 'Success')
+        return (task.id, 'Success')
 
     @expose()
-    def save(self, test_rpm, *args, **kw):
+    def save(self, task_rpm, *args, **kw):
         """
-        TurboGears method to upload test rpm package
+        TurboGears method to upload task rpm package
         """
-        rpm_file = "%s/%s" % (self.test_dir, test_rpm.filename)
+        rpm_file = "%s/%s" % (self.task_dir, task_rpm.filename)
 
-        rpm = test_rpm.file.read()
+        rpm = task_rpm.file.read()
         FH = open(rpm_file, "w")
         FH.write(rpm)
         FH.close()
 
         try:
-            test = self.process_testinfo(self.read_testinfo(rpm_file))
+            task = self.process_taskinfo(self.read_taskinfo(rpm_file))
         except ValueError, err:
             session.rollback()
             flash(_(u'Failed to import because of %s' % err ))
             redirect(".")
-        session.save_or_update(test)
+        session.save_or_update(task)
         session.flush()
 
-        flash(_(u"%s Added/Updated at id:%s" % (test.name,test.id)))
+        flash(_(u"%s Added/Updated at id:%s" % (task.name,task.id)))
         redirect(".")
 
     @expose(template='beaker.server.templates.grid')
     @paginate('list',default_order='name', limit=30)
     def index(self, *args, **kw):
-        tests = session.query(Test)
-        tests_grid = myPaginateDataGrid(fields=[
+        tasks = session.query(Task)
+        tasks_grid = myPaginateDataGrid(fields=[
 		     widgets.PaginateDataGrid.Column(name='name', getter=lambda x: make_link("./%s" % x.id, x.name), title='Name', options=dict(sortable=True)),
 		     widgets.PaginateDataGrid.Column(name='description', getter=lambda x:x.description, title='Description', options=dict(sortable=True)),
 		     widgets.PaginateDataGrid.Column(name='version', getter=lambda x:x.version, title='Version', options=dict(sortable=True)),
                     ])
-        return dict(title="Tests", grid=tests_grid, list=tests, search_bar=None)
+        return dict(title="Tasks", grid=tasks_grid, list=tasks, search_bar=None)
 
-    @expose(template='beaker.server.templates.test')
+    @expose(template='beaker.server.templates.task')
     def default(self, *args, **kw):
-        test = Test.by_id(args[0])
-        return dict(test=test)
+        task = Task.by_id(args[0])
+        return dict(task=task)
 
-    def process_testinfo(self, raw_testinfo):
+    def process_taskinfo(self, raw_taskinfo):
         import testinfo
-        tinfo = testinfo.parse_string(raw_testinfo['desc'])
+        tinfo = testinfo.parse_string(raw_taskinfo['desc'])
 
-        test = Test.lazy_create(name=tinfo.test_name)
-        test.rpm = raw_testinfo['hdr']['rpm']
-        test.version = raw_testinfo['hdr']['ver']
-        test.description = tinfo.test_description
-        test.bugzillas = []
-        test.required = []
-        test.runfor = []
-        test.needs = []
+        task = Task.lazy_create(name=tinfo.test_name)
+        task.rpm = raw_taskinfo['hdr']['rpm']
+        task.version = raw_taskinfo['hdr']['ver']
+        task.description = tinfo.test_description
+        task.bugzillas = []
+        task.required = []
+        task.runfor = []
+        task.needs = []
         for family in tinfo.releases:
             if family.startswith('-'):
                 try:
-                    if TestExclude(test=test,osmajor=osmajor.by_name(family.lstrip('-'))) not in test.excluded:
-                        test.excluded.append(TestExclude(osmajor=osmajor.by_name(family.lstrip('-'))))
+                    if TaskExclude(task=task,osmajor=osmajor.by_name(family.lstrip('-'))) not in task.excluded:
+                        task.excluded.append(TaskExclude(osmajor=osmajor.by_name(family.lstrip('-'))))
                 except exceptions.InvalidRequestError:
                     pass
         if tinfo.test_archs:
             arches = set([ '%s' % arch.arch for arch in Arch.query()])
             for arch in arches.difference(set(tinfo.test_archs)):
-                test.excluded.append(TestExclude(arch=Arch.by_name(arch)))
-        test.avg_time = tinfo.avg_test_time
+                task.excluded.append(TaskExclude(arch=Arch.by_name(arch)))
+        task.avg_time = tinfo.avg_test_time
         for type in tinfo.types:
-            test.types.append(TestType.lazy_create(type=type))
+            task.types.append(TaskType.lazy_create(type=type))
         for bug in tinfo.bugs:
-            test.bugzillas.append(TestBugzilla(bugzilla_id=bug))
-        test.path = tinfo.test_path
+            task.bugzillas.append(TaskBugzilla(bugzilla_id=bug))
+        task.path = tinfo.test_path
         for runfor in tinfo.runfor:
-            test.runfor.append(TestPackage.lazy_create(package=runfor))
+            task.runfor.append(TaskPackage.lazy_create(package=runfor))
         for require in tinfo.requires:
-            test.required.append(TestPackage.lazy_create(package=require))
+            task.required.append(TaskPackage.lazy_create(package=require))
         for need in tinfo.needs:
-            test.needs.append(TestPropertyNeeded(property=need))
-        test.license = tinfo.license
+            task.needs.append(TaskPropertyNeeded(property=need))
+        task.license = tinfo.license
 
-        return test
+        return task
 
-    def read_testinfo(self, rpm_file):
+    def read_taskinfo(self, rpm_file):
         from subprocess import *
-        testinfo = {}
-        testinfo['hdr'] = self.get_rpm_info(rpm_file)
-        testinfo_file = None
-	for file in testinfo['hdr']['files']:
+        taskinfo = {}
+        taskinfo['hdr'] = self.get_rpm_info(rpm_file)
+        taskinfo_file = None
+	for file in taskinfo['hdr']['files']:
             if file.endswith('testinfo.desc'):
-                testinfo_file = file
-        if testinfo_file:
+                taskinfo_file = file
+        if taskinfo_file:
             p1 = Popen(["rpm2cpio", rpm_file], stdout=PIPE)
-            p2 = Popen(["cpio", "--extract" , "--to-stdout", ".%s" % testinfo_file], stdin=p1.stdout, stdout=PIPE)
-            testinfo['desc'] = p2.communicate()[0]
-        return testinfo
+            p2 = Popen(["cpio", "--extract" , "--to-stdout", ".%s" % taskinfo_file], stdin=p1.stdout, stdout=PIPE)
+            taskinfo['desc'] = p2.communicate()[0]
+        return taskinfo
 
     def get_rpm_info(self, rpm_file):
         import rpm
