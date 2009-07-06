@@ -112,7 +112,9 @@ class Netboot:
             if TESTREPO.match(command):
                 testrepo = TESTREPO.match(command).group(1)
             
-        ks_meta = "rhts_server=%s testrepo=%s recipeid=%s packages=%s runtest_url=%s" % (rhts_server, testrepo, recipeid, string.join(packages,":"), runtest_url)
+        ks_meta = "rhts_server=%s testrepo=%s recipeid=%s packages=%s" % (rhts_server, testrepo, recipeid, string.join(packages,":"))
+        if runtest_url:
+            ks_meta = "%s runtest_url=%s" % (ks_meta, runtest_url)
         if repos:
             ks_meta = "%s customrepos=%s" % (ks_meta, string.join(repos,"|"))
         if distro_name:
