@@ -40,67 +40,105 @@ class RecipeTasks(RPCRoot):
         """
         upload the task output in pieces
         """
+        raise NotImplementedError
 
-    def set_status(self, task_id, status):
+    @cherrypy.expose
+    @identity.require(identity.not_anonymous())
+    def Start(self, recipe_id):
         """
-        Set Task Status
+        Set task status to Running
         """
         try:
             task = RecipeTask.by_id(task_id)
         except InvalidRequestError:
             raise BX(_('Invalid recipe ID: %s' % recipe_id))
-        recipe.status = TaskStatus.by_name(status)
-        return
+        return task.Start()
 
     @cherrypy.expose
     @identity.require(identity.not_anonymous())
-    def start(self, recipe_id):
+    def Stop(self, recipe_id):
         """
-        Set recipe status to Running
+        Set task status to Completed
         """
-        return self.set_status(recipe_id, u'Running')
+        try:
+            task = RecipeTask.by_id(task_id)
+        except InvalidRequestError:
+            raise BX(_('Invalid recipe ID: %s' % recipe_id))
+        return task.Stop()
 
     @cherrypy.expose
     @identity.require(identity.not_anonymous())
-    def abort(self, recipe_id):
+    def Pass(self, recipe_id, path, score, summary):
         """
-        Set recipe status to Aborted
+        Record a Pass
         """
-        return self.set_status(recipe_id, u'Aborted')
+        try:
+            task = RecipeTask.by_id(task_id)
+        except InvalidRequestError:
+            raise BX(_('Invalid recipe ID: %s' % recipe_id))
+        return task.Pass(path, score, summary)
 
     @cherrypy.expose
     @identity.require(identity.not_anonymous())
-    def cancel(self, recipe_id):
+    def Warn(self, recipe_id, path, score, summary):
         """
-        Set recipe status to Cancelled
+        Record a Warn
         """
-        return self.set_status(recipe_id, u'Cancelled')
+        try:
+            task = RecipeTask.by_id(task_id)
+        except InvalidRequestError:
+            raise BX(_('Invalid recipe ID: %s' % recipe_id))
+        return task.Warn(path, score, summary)
 
     @cherrypy.expose
     @identity.require(identity.not_anonymous())
-    def finish(self, recipe_id):
+    def Fail(self, recipe_id, path, score, summary):
         """
-        Set recipe status to Finished
+        Record a Fail
         """
-        return self.set_status(recipe_id, u'Completed')
+        try:
+            task = RecipeTask.by_id(task_id)
+        except InvalidRequestError:
+            raise BX(_('Invalid recipe ID: %s' % recipe_id))
+        return task.Fail(path, score, summary)
+
+    @cherrypy.expose
+    @identity.require(identity.not_anonymous())
+    def Panic(self, recipe_id, path, score, summary):
+        """
+        Record a Panic
+        """
+        try:
+            task = RecipeTask.by_id(task_id)
+        except InvalidRequestError:
+            raise BX(_('Invalid recipe ID: %s' % recipe_id))
+        return task.Panic(path, score, summary)
+
+    @cherrypy.expose
+    @identity.require(identity.not_anonymous())
+    def Abort(self, recipe_id, msg):
+        """
+        Set task status to Aborted
+        """
+        try:
+            task = RecipeTask.by_id(task_id)
+        except InvalidRequestError:
+            raise BX(_('Invalid recipe ID: %s' % recipe_id))
+        return task.Abort(msg)
+
+    @cherrypy.expose
+    @identity.require(identity.not_anonymous())
+    def Cancel(self, recipe_id, msg):
+        """
+        Set task status to Cancelled
+        """
+        try:
+            task = RecipeTask.by_id(task_id)
+        except InvalidRequestError:
+            raise BX(_('Invalid recipe ID: %s' % recipe_id))
+        return task.Cancel(msg)
 
     @expose(format='json')
     def to_xml(self, id):
-        recipexml = Recipe.by_id(id).to_xml().toprettyxml()
-        return dict(xml=recipexml)
-
-    @expose(template='beaker.server.templates.grid')
-    @paginate('list',default_order='id')
-    def index(self, *args, **kw):
-        recipes = session.query(MachineRecipe).order_by(recipe_table.c.id.desc())
-        recipes_grid = myPaginateDataGrid(fields=[
-		     widgets.PaginateDataGrid.Column(name='id', getter=lambda x:x.id, title='ID', options=dict(sortable=True)),
-		     widgets.PaginateDataGrid.Column(name='whiteboard', getter=lambda x:x.whiteboard, title='Whiteboard', options=dict(sortable=True)),
-		     widgets.PaginateDataGrid.Column(name='arch', getter=lambda x:x.arch, title='Arch', options=dict(sortable=True)),
-		     widgets.PaginateDataGrid.Column(name='system', getter=lambda x: make_system_link(x.system), title='System', options=dict(sortable=True)),
-		     widgets.PaginateDataGrid.Column(name='distro', getter=lambda x: make_distro_link(x.distro), title='Distro', options=dict(sortable=True)),
-		     widgets.PaginateDataGrid.Column(name='progress', getter=lambda x: make_progress_bar(x), title='Progress', options=dict(sortable=False)),
-		     widgets.PaginateDataGrid.Column(name='status.status', getter=lambda x:x.status, title='Status', options=dict(sortable=True)),
-		     widgets.PaginateDataGrid.Column(name='result.result', getter=lambda x:x.result, title='Result', options=dict(sortable=True)),
-                    ])
-        return dict(title="Recipes", grid=recipes_grid, list=recipes, search_bar=None)
+        taskxml = RecipeTask.by_id(id).to_xml().toprettyxml()
+        return dict(xml=taskxml)

@@ -2100,12 +2100,19 @@ class Job(MappedObject):
             job.appendChild(rs.to_xml())
         return job
 
-    def abort(self, msg=None):
+    def Cancel(self, msg=None):
+        """
+        Method to cancel all recipesets for this job.
+        """
+        for recipeset in self.recipesets:
+            recipeset.Cancel(msg)
+
+    def Abort(self, msg=None):
         """
         Method to abort all recipesets for this job.
         """
         for recipeset in self.recipesets:
-            recipeset.abort(msg)
+            recipeset.Abort(msg)
 
     def update_status(self):
         """
@@ -2177,12 +2184,19 @@ class RecipeSet(MappedObject):
                 return
             yield recipeSet
 
-    def abort(self, msg=None):
+    def Cancel(self, msg=None):
+        """
+        Method to cancel all recipes in this recipe set.
+        """
+        for recipe in self.recipes:
+            recipe.Cancel(msg)
+
+    def Abort(self, msg=None):
         """
         Method to abort all recipes in this recipe set.
         """
         for recipe in self.recipes:
-            recipe.abort(msg)
+            recipe.Abort(msg)
 
     def update_status(self):
         """
@@ -2293,12 +2307,40 @@ class Recipe(MappedObject):
 
     host_requires = property(_get_host_requires, _set_host_requires)
 
-    def abort(self, msg=None):
+    def Queue(self):
+        """
+        Move from New -> Queued
+        """
+        for task in self.tasks:
+            task.Queue()
+
+    def Process(self):
+        """
+        Move from Queued -> Processed
+        """
+        for task in self.tasks:
+            task.Process()
+
+    def Schedule(self):
+        """
+        Move from Processed -> Scheduled
+        """
+        for task in self.tasks:
+            task.Schedule()
+
+    def Cancel(self, msg=None):
+        """
+        Method to cancel all tasks in this recipe.
+        """
+        for task in self.tasks:
+            task.Cancel(msg)
+
+    def Abort(self, msg=None):
         """
         Method to abort all tasks in this recipe.
         """
         for task in self.tasks:
-            task.abort(msg)
+            task.Abort(msg)
 
     def update_status(self):
         """
@@ -2321,6 +2363,18 @@ class Recipe(MappedObject):
                                   AND recipe_task.recipe_id = %s" % self.id,
                      group_by=[TaskStatus.id],
                      order_by='count desc')).first()
+
+        # Record the start of this Recipe.
+        if not self.start_time \
+           and self.status == TaskStatus.by_name(u'Running'):
+            self.start_time = datetime.utcnow()
+
+        # Record the completion of this Recipe.
+        if not self.finish_time \
+           and self.status != TaskStatus.by_name(u'Running') \
+           and self.status.severity >= TaskStatus.by_name(u'Completed').severity:
+            self.finish_time = datetime.utcnow()
+
         self.result = session.query(TaskResult).from_statement(
                              select([TaskResult.id, 
                                   func.max(TaskResult.severity).label('count')],
@@ -2397,7 +2451,7 @@ class RecipeTask(MappedObject):
     def _get_duration(self):
         try:
             return self.finish_time - self.start_time
-        except:
+        except TypeError:
             return None
     duration = property(_get_duration)
 
@@ -2421,20 +2475,113 @@ class RecipeTask(MappedObject):
         session.flush([self])
         self.recipe.update_status()
 
-    def abort(self, msg=None):
+    def Queue(self):
         """
-        Method to abort task.
+        Moved from New -> Queued
         """
-        # Only record an abort on tasks that are New, Queued, Scheduled or 
-        # Running
+        self.status = TaskStatus.by_name(u'Queued')
+        session.flush([self])
+        self.update_status()
+
+    def Process(self):
+        """
+        Moved from Queued -> Processed
+        """
+        self.status = TaskStatus.by_name(u'Processed')
+        session.flush([self])
+        self.update_status()
+
+    def Schedule(self):
+        """
+        Moved from Processed -> Scheduled
+        """
+        self.status = TaskStatus.by_name(u'Scheduled')
+        session.flush([self])
+        self.update_status()
+
+    def Start(self):
+        """
+        Record the start of this task
+        """
+        if not self.start_time:
+            self.start_time = datetime.utcnow()
+        self.status = TaskStatus.by_name(u'Running')
+        session.flush([self])
+        self.update_status()
+
+    def Stop(self):
+        """
+        Record the completion of this task
+        """
+        if not self.finish_time:
+            self.finish_time = datetime.utcnow()
+        self.status = TaskStatus.by_name(u'Completed')
+        session.flush([self])
+        self.update_status()
+
+    def Cancel(self, msg=None):
+        """
+        Cancel this task
+        """
+        self._abort_cancel(u'Cancelled', msg)
+
+    def Abort(self, msg=None):
+        """
+        Abort this task
+        """
+        self._abort_cancel(u'Aborted', msg)
+    
+    def _abort_cancel(self, status, msg=None):
+        """
+        Cancel = User instigated
+        Abort  = Auto instigated
+        """
+        # Only record an abort/cancel on tasks that are New, Queued, Scheduled 
+        # or Running
         if self.status.severity < TaskStatus.by_name(u'Completed').severity \
            or self.status == TaskStatus.by_name(u'Running'):
-            self.status = TaskStatus.by_name('Aborted')
+            self.status = TaskStatus.by_name(status)
             self.results.append(RecipeTaskResult(recipetask=self,
                                        path=u'/',
                                        result=TaskResult.by_name(u'Warn'),
                                        score=0,
                                        log=msg))
+        session.flush([self])
+        self.update_status()
+
+    def Pass(self, path, score, summary):
+        """
+        Record a pass result 
+        """
+        self._result(u'Pass', path, score, summary)
+
+    def Fail(self, path, score, summary):
+        """
+        Record a fail result 
+        """
+        self._result(u'Fail', path, score, summary)
+
+    def Warn(self, path, score, summary):
+        """
+        Record a warn result 
+        """
+        self._result(u'Warn', path, score, summary)
+
+    def Panic(self, path, score, summary):
+        """
+        Record a panic result 
+        """
+        self._result(u'Panic', path, score, summary)
+
+    def _result(self, result, path, score, summary):
+        """
+        Record a result 
+        """
+        self.results.append(RecipeTaskResult(recipetask=self,
+                                   path=path,
+                                   result=TaskResult.by_name(result),
+                                   score=score,
+                                   log=summary))
         session.flush([self])
         self.update_status()
 
