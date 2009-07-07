@@ -2,7 +2,7 @@
 %{!?pyver: %define pyver %(%{__python} -c "import sys ; print sys.version[:3]")}
 
 Name:           beaker
-Version:        0.4.19
+Version:        0.4.20
 Release:        0%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
@@ -133,7 +133,9 @@ ln -s Fedora.ks $RPM_BUILD_ROOT/var/lib/cobbler/kickstarts/Fedoradevelopment.ks
 /usr/share/man/man1/beakerlib*
 
 %changelog
-* Wed Jul 06 2009 Bill Peck <bpeck@redhat.com> - 0.4.19-0
+* Tue Jul 07 2009 Bill Peck <bpeck@redhat.com> - 0.4.20-0
+- Include Workstation key for RedHatEnterpriseLinuxClient5
+* Mon Jul 06 2009 Bill Peck <bpeck@redhat.com> - 0.4.19-0
 - Don't populate runtest_url in ks_meta if its not defined.
 * Wed Jul 01 2009 Bill Peck <bpeck@redhat.com> - 0.4.18-2
 - Use RUNTEST_URL from rhts if passed.
