@@ -144,22 +144,26 @@ def main():
 
     #Setup Test Status
     if TestStatus.query().count() == 0:
-        NEW       = TestStatus(status=u'New', severity=0)
-        PROCESSED = TestStatus(status=u'Processed', severity=1)
-        QUEUEUD   = TestStatus(status=u'Queued', severity=2)
-        SCHEDULED = TestStatus(status=u'Scheduled', severity=3)
-        RUNNING   = TestStatus(status=u'Running', severity=4)
-        COMPLETED = TestStatus(status=u'Completed', severity=5)
-        CANCELLED = TestStatus(status=u'Cancelled', severity=6)
-        ABORTED   = TestStatus(status=u'Aborted', severity=7)
+        NEW       = TestStatus(status=u'New', severity=10)
+        PROCESSED = TestStatus(status=u'Processed', severity=20)
+        QUEUEUD   = TestStatus(status=u'Queued', severity=30)
+        SCHEDULED = TestStatus(status=u'Scheduled', severity=40)
+        # RUNNING is a transient state.  It will never be final.
+        #  But having it the highest Severity will show a job as 
+        #  Running until it finishes with either Completed, Cancelled or 
+        #  Aborted.
+        RUNNING   = TestStatus(status=u'Running', severity=80)
+        COMPLETED = TestStatus(status=u'Completed', severity=50)
+        CANCELLED = TestStatus(status=u'Cancelled', severity=60)
+        ABORTED   = TestStatus(status=u'Aborted', severity=70)
 
     #Setup Test Result
     if TestResult.query().count() == 0:
-        NEW       = TestResult(result=u'New', severity=0)
-        PASS      = TestResult(result=u'Pass', severity=1)
-        WARN      = TestResult(result=u'Warn', severity=2)
-        FAIL      = TestResult(result=u'Fail', severity=3)
-        PANIC     = TestResult(result=u'Panic', severity=4)
+        NEW       = TestResult(result=u'New', severity=10)
+        PASS      = TestResult(result=u'Pass', severity=20)
+        WARN      = TestResult(result=u'Warn', severity=30)
+        FAIL      = TestResult(result=u'Fail', severity=40)
+        PANIC     = TestResult(result=u'Panic', severity=50)
 
     session.flush()
 

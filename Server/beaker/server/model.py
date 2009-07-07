@@ -2100,11 +2100,14 @@ class Job(MappedObject):
             job.appendChild(rs.to_xml())
         return job
 
-    def set_status(self, value):
-        self.status = value
-        self.update_counts()
+    def abort(self, msg=None):
+        """
+        Method to abort all recipesets for this job.
+        """
+        for recipeset in self.recipesets:
+            recipeset.abort(msg)
 
-    def update_counts(self):
+    def update_status(self):
         """
         Update number of passes, failures, warns, panics..
         """
@@ -2117,6 +2120,24 @@ class Job(MappedObject):
             self.wtasks += recipeset.wtasks
             self.ftasks += recipeset.ftasks
             self.ktasks += recipeset.ktasks
+        self.status = session.query(TaskStatus).from_statement(
+                             select([TaskStatus.id, 
+                                  func.max(TaskStatus.severity).label('count')],
+                                        from_obj=[task_status_table,
+                                                  recipe_set_table],
+                      whereclause="recipe_set.status_id = task_status.id\
+                                   AND recipe_set.job_id = %s" % self.id,
+                      group_by=[TaskStatus.id],
+                      order_by='count desc')).first()
+        self.result = session.query(TaskResult).from_statement(
+                             select([TaskResult.id, 
+                                  func.max(TaskResult.severity).label('count')],
+                                        from_obj=[task_result_table,
+                                                  recipe_set_table],
+                      whereclause="recipe_set.result_id = task_result.id\
+                                   AND recipe_set.job_id = %s" % self.id,
+                      group_by=[TaskResult.id],
+                      order_by='count desc')).first()
 
 
 class RecipeSet(MappedObject):
@@ -2156,21 +2177,14 @@ class RecipeSet(MappedObject):
                 return
             yield recipeSet
 
-    def set_status(self, value):
-        self.status = value
-        self.job.update_counts()
-
     def abort(self, msg=None):
         """
         Method to abort all recipes in this recipe set.
         """
         for recipe in self.recipes:
             recipe.abort(msg)
-        # Should we have a log at the recipeset level?
-        #self.log.append(msg)
-        self.status = TaskStatus.by_name(u'Aborted')
 
-    def update_counts(self):
+    def update_status(self):
         """
         Update number of passes, failures, warns, panics..
         """
@@ -2183,6 +2197,26 @@ class RecipeSet(MappedObject):
             self.wtasks += recipe.wtasks
             self.ftasks += recipe.ftasks
             self.ktasks += recipe.ktasks
+        self.status = session.query(TaskStatus).from_statement(
+                             select([TaskStatus.id, 
+                                  func.max(TaskStatus.severity).label('count')],
+                                        from_obj=[task_status_table,
+                                                  recipe_table],
+                      whereclause="recipe.status_id = task_status.id\
+                                   AND recipe.recipe_set_id = %s" % self.id,
+                      group_by=[TaskStatus.id],
+                      order_by='count desc')).first()
+        self.result = session.query(TaskResult).from_statement(
+                             select([TaskResult.id, 
+                                  func.max(TaskResult.severity).label('count')],
+                                        from_obj=[task_result_table,
+                                                  recipe_table],
+                      whereclause="recipe.result_id = task_result.id\
+                                   AND recipe.recipe_set_id = %s" % self.id,
+                      group_by=[TaskResult.id],
+                      order_by='count desc')).first()
+        session.flush([self])
+        self.job.update_status()
 
     def recipes_orderby(self, labcontroller):
         query = select([recipe_table.c.id, 
@@ -2240,6 +2274,7 @@ class Recipe(MappedObject):
     def _get_arch(self):
         if self.distro:
             return self.distro.arch
+
     arch = property(_get_arch)
 
     def _get_host_requires(self):
@@ -2252,13 +2287,11 @@ class Recipe(MappedObject):
         system_type.setAttribute("value", "%s" % self.systemtype)
         hostRequires.appendChild(system_type)
         return hostRequires.toxml()
+
     def _set_host_requires(self, value):
         self._host_requires = value
-    host_requires = property(_get_host_requires, _set_host_requires)
 
-    def set_status(self, value):
-        #print session.query(TaskStatus).from_statement(select([TaskStatus.id, func.max(TaskStatus.severity)], from_obj=[task_status_table, recipe_set_table],whereclause="recipe_set.status_id = task_status.id AND recipe_set.job_id = 27"))[0]
-        self.status = value
+    host_requires = property(_get_host_requires, _set_host_requires)
 
     def abort(self, msg=None):
         """
@@ -2266,12 +2299,8 @@ class Recipe(MappedObject):
         """
         for task in self.tasks:
             task.abort(msg)
-        # Should we have a log at the recipe level?
-        #self.log.append(msg)
-        self.update_counts()
-        self.status = TaskStatus.by_name(u'Aborted')
 
-    def update_counts(self):
+    def update_status(self):
         """
         Update number of passes, failures, warns, panics..
         """
@@ -2283,16 +2312,35 @@ class Recipe(MappedObject):
         task_fail = TaskResult.by_name(u'Fail')
         self.ktasks = 0
         task_panic = TaskResult.by_name(u'Panic')
+        self.status = session.query(TaskStatus).from_statement(
+                             select([TaskStatus.id, 
+                                  func.max(TaskStatus.severity).label('count')],
+                                        from_obj=[task_status_table,
+                                                  recipe_task_table],
+                     whereclause="recipe_task.status_id = task_status.id\
+                                  AND recipe_task.recipe_id = %s" % self.id,
+                     group_by=[TaskStatus.id],
+                     order_by='count desc')).first()
+        self.result = session.query(TaskResult).from_statement(
+                             select([TaskResult.id, 
+                                  func.max(TaskResult.severity).label('count')],
+                                        from_obj=[task_result_table,
+                                                  recipe_task_table],
+                     whereclause="recipe_task.result_id = task_result.id\
+                                  AND recipe_task.recipe_id = %s" % self.id,
+                     group_by=[TaskResult.id],
+                     order_by='count desc')).first()
         for task in self.tasks:
             if task.result == task_pass:
                 self.ptasks += 1
             if task.result == task_warn:
-                task.wtasks += 1
+                self.wtasks += 1
             if task.result == task_fail:
                 self.ftasks += 1
             if task.result == task_panic:
                 self.ktasks += 1
-        self.recipeset.update_counts()
+        session.flush([self])
+        self.recipeset.update_status()
 
 class GuestRecipe(Recipe):
     systemtype = 'Virtual'
@@ -2356,17 +2404,39 @@ class RecipeTask(MappedObject):
     def set_status(self, value):
         self._status = value
 
+
+    def update_status(self):
+        """
+        Update number of passes, failures, warns, panics..
+        """
+        self.result = session.query(TaskResult).from_statement(
+                             select([TaskResult.id, 
+                                  func.max(TaskResult.severity).label('count')],
+                                        from_obj=[task_result_table,
+                                                  recipe_task_result_table],
+                     whereclause="recipe_task_result.result_id = task_result.id\
+                      AND recipe_task_result.recipe_task_id = %s" % self.id,
+                     group_by=[TaskResult.id],
+                     order_by='count desc')).first()
+        session.flush([self])
+        self.recipe.update_status()
+
     def abort(self, msg=None):
         """
         Method to abort task.
         """
-        self.results.append(RecipeTask(recipe_task=self.task,
-                                       path='/',
-                                       result=TaskResult.by_name('Warn'),
+        # Only record an abort on tasks that are New, Queued, Scheduled or 
+        # Running
+        if self.status.severity < TaskStatus.by_name(u'Completed').severity \
+           or self.status == TaskStatus.by_name(u'Running'):
+            self.status = TaskStatus.by_name('Aborted')
+            self.results.append(RecipeTaskResult(recipetask=self,
+                                       path=u'/',
+                                       result=TaskResult.by_name(u'Warn'),
                                        score=0,
                                        log=msg))
-        self.result = TaskResult.by_name(u'Warn')
-        self.status = TaskStatus.by_name(u'Aborted')
+        session.flush([self])
+        self.update_status()
 
 
 class RecipeTaskParam(MappedObject):
@@ -2732,11 +2802,14 @@ mapper(RecipeTag, recipe_tag_table)
 mapper(RecipeRpm, recipe_rpm_table)
 
 mapper(RecipeTask, recipe_task_table,
-        properties = {'results':relation(RecipeTaskResult, backref='task'),
+        properties = {'results':relation(RecipeTaskResult, 
+                                         backref='recipetask'),
                       'rpms':relation(RecipeTaskRpm),
-                      'comments':relation(RecipeTaskComment, backref='task'),
+                      'comments':relation(RecipeTaskComment, 
+                                          backref='recipetask'),
                       'params':relation(RecipeTaskParam),
-                      'bugzillas':relation(RecipeTaskBugzilla, backref='task'),
+                      'bugzillas':relation(RecipeTaskBugzilla, 
+                                           backref='recipetask'),
                       'task':relation(Task, uselist=False, backref='runs'),
                       'result':relation(TaskResult, uselist=False),
                       'status':relation(TaskStatus, uselist=False)})
