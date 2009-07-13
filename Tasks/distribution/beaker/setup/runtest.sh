@@ -307,6 +307,7 @@ function LabController()
         report_result $TEST Warn
         exit 1
     fi
+    ln -s /fakenet /var/www/html/fakenet
     for distro in $NFSDISTROS; do
         NFSSERVER=$(echo $distro| awk -F: '{print $1}')
         DISTRONAME=$(echo $distro| awk -F: '{print $2}')
@@ -319,6 +320,9 @@ function LabController()
         cobbler import --path=/fakenet/${NFSSERVER}${NFSPATH} \
                        --name=${DISTRONAME}_nfs \
                        --available-as=nfs://${NFSSERVER}:${NFSPATH}
+        cobbler import --path=/fakenet/${NFSSERVER}${NFSPATH} \
+                       --name=${DISTRONAME}_http \
+                       --available-as=http://${HOSTNAME}/fakenet/${NFSPATH}
         report_result $TEST/ADD_DISTRO/$DISTRONAME PASS $?
     done
     # Import Rawhide
@@ -333,6 +337,9 @@ function LabController()
             cobbler import --path=/fakenet/${NFSSERVER}${NFSDIR}/${DISTRO} \
                            --name=${DISTRONAME}_nfs \
                            --available-as=nfs://${NFSSERVER}:${NFSDIR}/${DISTRO}
+            cobbler import --path=/fakenet/${NFSSERVER}${NFSDIR}/${DISTRO} \
+                           --name=${DISTRONAME}_http \
+                           --available-as=http://${HOSTNAME}/fakenet/${NFSDIR}/${DISTRO}
             report_result $TEST/ADD_DISTRO/$DISTRONAME PASS $?
         done
     fi
