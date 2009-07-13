@@ -2,7 +2,7 @@
 %{!?pyver: %define pyver %(%{__python} -c "import sys ; print sys.version[:3]")}
 
 Name:           beaker
-Version:        0.4.20
+Version:        0.4.21
 Release:        0%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
@@ -133,6 +133,8 @@ ln -s Fedora.ks $RPM_BUILD_ROOT/var/lib/cobbler/kickstarts/Fedoradevelopment.ks
 /usr/share/man/man1/beakerlib*
 
 %changelog
+* Mon Jul 13 2009 Bill Peck <bpeck@redhat.com> - 0.4.21-0
+- Allow legacy RHTS to ask for distros based on install method
 * Tue Jul 07 2009 Bill Peck <bpeck@redhat.com> - 0.4.20-0
 - Include Workstation key for RedHatEnterpriseLinuxClient5
 * Mon Jul 06 2009 Bill Peck <bpeck@redhat.com> - 0.4.19-0

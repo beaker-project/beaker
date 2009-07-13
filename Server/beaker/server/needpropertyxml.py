@@ -186,6 +186,18 @@ class XmlDistroVirt(ElementWrapper):
             query = getattr(distro_table.c.virt, op)(value)
         return ([], query)
 
+class XmlDistroMethod(ElementWrapper):
+    """
+    Filter Distro based on Install Method
+    """
+    def filter(self):
+        op = self.op_table[self.get_xml_attr('op', unicode, '==')]
+        value = self.get_xml_attr('value', bool, False)
+        query = None
+        if op:
+	    query = getattr(distro_table.c.method, op)(value)
+        return ([], query)
+
 class XmlSystem(ElementWrapper):
     """
     Filter 
@@ -365,6 +377,7 @@ subclassDict = {
     'distro_name'         : XmlDistroName,
     'distro_tag'          : XmlDistroTag,
     'distro_virt'         : XmlDistroVirt,
+    'distro_method'       : XmlDistroMethod,
     'hostlabcontroller'   : XmlHostLabController,
     'distrolabcontroller' : XmlDistroLabController,
     'system_type'         : XmlSystemType,
