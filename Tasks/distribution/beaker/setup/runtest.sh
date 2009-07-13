@@ -322,7 +322,7 @@ function LabController()
                        --available-as=nfs://${NFSSERVER}:${NFSPATH}
         cobbler import --path=/fakenet/${NFSSERVER}${NFSPATH} \
                        --name=${DISTRONAME}_http \
-                       --available-as=http://${HOSTNAME}/fakenet/${NFSPATH}
+                       --available-as=http://${HOSTNAME}/fakenet/${NFSSERVER}${NFSPATH}
         report_result $TEST/ADD_DISTRO/$DISTRONAME PASS $?
     done
     # Import Rawhide
@@ -339,7 +339,7 @@ function LabController()
                            --available-as=nfs://${NFSSERVER}:${NFSDIR}/${DISTRO}
             cobbler import --path=/fakenet/${NFSSERVER}${NFSDIR}/${DISTRO} \
                            --name=${DISTRONAME}_http \
-                           --available-as=http://${HOSTNAME}/fakenet/${NFSDIR}/${DISTRO}
+                           --available-as=http://${HOSTNAME}/fakenet/${NFSSERVER}${NFSDIR}/${DISTRO}
             report_result $TEST/ADD_DISTRO/$DISTRONAME PASS $?
         done
     fi
