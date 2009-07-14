@@ -192,7 +192,7 @@ class XmlDistroMethod(ElementWrapper):
     """
     def filter(self):
         op = self.op_table[self.get_xml_attr('op', unicode, '==')]
-        value = self.get_xml_attr('value', bool, False)
+        value = self.get_xml_attr('value', unicode, None)
         query = None
         if op:
 	    query = getattr(distro_table.c.method, op)(value)
