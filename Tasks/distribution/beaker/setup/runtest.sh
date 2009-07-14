@@ -345,18 +345,6 @@ function LabController()
     fi
     /var/lib/cobbler/triggers/sync/post/osversion.trigger | tee -a $OUTPUTFILE
     estatus_fail "**** Failed to run osversion.trigger ****"
-    for distro in $NFSDISTROS; do
-        DISTRONAME=$(echo $distro| awk -F: '{print $2}')
-        FAMILY=$(echo $distro| awk -F: '{print $4}')
-        UPDATE=$(echo $distro| awk -F: '{print $5}')
-        ./verify_distro.py -d $DISTRONAME -f $FAMILY -u $UPDATE -s $SERVER
-        rc=$?
-        if [ $rc -ne 0 ]; then
-            report_result $TEST/VERIFY_DISTRO/$DISTRONAME FAIL $rc
-        else
-            report_result $TEST/VERIFY_DISTRO/$DISTRONAME PASS $rc
-        fi
-    done
     rhts-sync-set -s DONE
     result_pass 
 }
