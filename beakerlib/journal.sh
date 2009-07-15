@@ -306,7 +306,7 @@ rljClosePhase(){
 	local name=`echo $out | cut -d ':' -f 3 | sed 's/[^[:alnum:]]\+/-/g'`
 	rlLogDebug "rljClosePhase: Phase $name closed"
 	rlJournalPrintText > $logfile
-	rlReport "$TEST/$name" "$result" "$score" "$logfile"
+	rlReport "$name" "$result" "$score" "$logfile"
 }
 
 rljAddTest(){
