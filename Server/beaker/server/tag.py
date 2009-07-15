@@ -34,8 +34,8 @@ class Tags(RPCRoot):
         tagged_installs = Distros()._tag(distro, arch, 'INSTALLS')
         if arch == 'ppc':
             tagged_installs.extend(Distros()._tag(distro, 'ppc64', 'INSTALLS'))
-        distros  = Distros().list(distro, None, None, None)
-        installs = Distros().list(distro, None, None, ['INSTALLS'])
+        distros  = Distros().list(distro, None, None, None, None)
+        installs = Distros().list(distro, None, None, ['INSTALLS'], None)
         if distros == installs:
             tagged_stable = Distros()._tag(distro, None, 'STABLE')
         return dict(installs=tagged_installs, stable=tagged_stable)

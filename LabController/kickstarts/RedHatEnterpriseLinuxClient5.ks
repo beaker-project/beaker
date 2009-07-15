@@ -6,10 +6,14 @@ auth  --useshadow  --enablemd5
 bootloader --location=mbr
 
 #if $getVar('rhts_server', '') != ''
-key $getVar('key', '7fcc43557e9bbc42')
-# Use text mode install
+## Use text mode install
 text
+key $getVar('key', '7fcc43557e9bbc42')
+#else
+## For normal provisioning use Workstation key
+key $getVar('key', 'da3122afdb7edd23')
 #end if
+
 $getVar('mode', '')
 
 # Firewall configuration

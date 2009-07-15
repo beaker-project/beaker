@@ -83,6 +83,7 @@ class Netboot:
         bootargs = None
         kickstart = None
         packages = []
+        runtest_url = None
         testrepo = None
         hostname = None
         distro_name = None
@@ -99,9 +100,11 @@ class Netboot:
                     rhts_server = SETENV.match(command).group(2)
                 if SETENV.match(command).group(1) == "RECIPEID":
                     recipeid = SETENV.match(command).group(2)
+                if SETENV.match(command).group(1) == "RUNTEST_URL":
+                    runtest_url = SETENV.match(command).group(2)
                 if SETENV.match(command).group(1) == "HOSTNAME":
                     hostname = SETENV.match(command).group(2)
-                if SETENV.match(command).group(1) == "DISTRO":
+                if SETENV.match(command).group(1) == "INSTALL_NAME":
                     distro_name = SETENV.match(command).group(2)
             if INSTALLPACKAGE.match(command):
                 packages.append(INSTALLPACKAGE.match(command).group(1))
@@ -115,6 +118,8 @@ class Netboot:
                 testrepo = TESTREPO.match(command).group(1)
             
         ks_meta = "rhts_server=%s testrepo=%s recipeid=%s packages=%s" % (rhts_server, testrepo, recipeid, string.join(packages,":"))
+        if runtest_url:
+            ks_meta = "%s runtest_url=%s" % (ks_meta, runtest_url)
         if repos:
             ks_meta = "%s customrepos=%s" % (ks_meta, string.join(repos,"|"))
         if distro_name:

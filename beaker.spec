@@ -2,7 +2,7 @@
 %{!?pyver: %define pyver %(%{__python} -c "import sys ; print sys.version[:3]")}
 
 Name:           beaker
-Version:        0.4.16
+Version:        0.4.22
 Release:        0%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
@@ -90,6 +90,7 @@ DESTDIR=$RPM_BUILD_ROOT make
 %install
 DESTDIR=$RPM_BUILD_ROOT make install
 ln -s RedHatEnterpriseLinux6.ks $RPM_BUILD_ROOT/var/lib/cobbler/kickstarts/redhat6.ks
+ln -s Fedora.ks $RPM_BUILD_ROOT/var/lib/cobbler/kickstarts/Fedoradevelopment.ks
 
 %clean
 %{__rm} -rf %{buildroot}
@@ -132,6 +133,19 @@ ln -s RedHatEnterpriseLinux6.ks $RPM_BUILD_ROOT/var/lib/cobbler/kickstarts/redha
 /usr/share/man/man1/beakerlib*
 
 %changelog
+* Tue Jul 14 2009 Bill Peck <bpeck@redhat.com> - 0.4.22-0
+- Fix distro_method value to be unicode instead of boolean.
+* Mon Jul 13 2009 Bill Peck <bpeck@redhat.com> - 0.4.21-0
+- Allow legacy RHTS to ask for distros based on install method
+* Tue Jul 07 2009 Bill Peck <bpeck@redhat.com> - 0.4.20-0
+- Include Workstation key for RedHatEnterpriseLinuxClient5
+* Mon Jul 06 2009 Bill Peck <bpeck@redhat.com> - 0.4.19-0
+- Don't populate runtest_url in ks_meta if its not defined.
+* Wed Jul 01 2009 Bill Peck <bpeck@redhat.com> - 0.4.18-2
+- Use RUNTEST_URL from rhts if passed.
+- Include Fedoradevelopment.ks for rawhide
+* Tue Jun 30 2009 Bill Peck <bpeck@redhat.com> - 0.4.17-0
+- Call the correct method for _tag
 * Tue Jun 30 2009 Bill Peck <bpeck@redhat.com> - 0.4.16-0
 - update login_krbv method for newer kobo package
 * Tue Jun 30 2009 Bill Peck <bpeck@redhat.com> - 0.4.15-0
