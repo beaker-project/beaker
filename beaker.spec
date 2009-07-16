@@ -137,6 +137,9 @@ ln -s Fedora.ks $RPM_BUILD_ROOT/var/lib/cobbler/kickstarts/Fedoradevelopment.ks
 - Allow systems to query on arch even though we are already starting
   from a distro.  This allows you to ask for systems that are not x86_64
   for example.
+- Don't fail if we can't power off a system when returning it.
+- Use correct username when returning a system to the pool.
+- Remove --resolvedeps from RHEL6 kickstart file.
 * Tue Jul 14 2009 Bill Peck <bpeck@redhat.com> - 0.4.22-0
 - Fix distro_method value to be unicode instead of boolean.
 * Mon Jul 13 2009 Bill Peck <bpeck@redhat.com> - 0.4.21-0
