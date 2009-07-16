@@ -686,6 +686,7 @@ class Root(RPCRoot):
     @expose()
     @identity.require(identity.not_anonymous())
     def user_change(self, id):
+        msg = ""
         status = None
         activity = None
         try:
@@ -697,8 +698,19 @@ class Root(RPCRoot):
             if system.user == identity.current.user or \
               identity.current.user.is_admin():
                 status = "Returned"
-                activity = SystemActivity(identity.current.user, 'WEBUI', status, 'User', '%s' % system.user, '')
-                system.action_return()
+                activity = SystemActivity(identity.current.user, "WEBUI", status, "User", '%s' % system.user, "")
+                # Try to power off system but don't fail if lab controller
+                # is not accessable.
+                try:
+                    system.action_return()
+                except socket.gaierror, error:
+                    msg = " Failed to power off system: %s" % error
+                    eactivity = SystemActivity(identity.current.user, "WEBUI", "Off", "Power", "", msg)
+                    system.activity.append(eactivity)
+                except xmlrpclib.Fault, error:
+                    msg = " Failed to power off system: %s" % error
+                    eactivity = SystemActivity(identity.current.user, "WEBUI", "Off", "Power", "", msg)
+                    system.activity.append(eactivity)
         else:
             if system.can_share(identity.current.user):
                 status = "Reserved"
@@ -706,7 +718,7 @@ class Root(RPCRoot):
                 activity = SystemActivity(identity.current.user, 'WEBUI', status, 'User', '', '%s' % system.user )
         system.activity.append(activity)
         session.save_or_update(system)
-        flash( _(u"%s %s" % (status,system.fqdn)) )
+        flash( _(u"%s %s%s" % (status,system.fqdn,msg)) )
         redirect("/view/%s" % system.fqdn)
 
     @error_handler(view)
@@ -1263,7 +1275,7 @@ class Root(RPCRoot):
             return (None, -1)
             
     @cherrypy.expose
-    def system_return(self, fqdn=None, full_name=None, log=True):
+    def system_return(self, fqdn=None, full_name=None, mylog=True):
         if not fqdn:
             return (0,"You must supply a system")
         if not full_name:
@@ -1278,14 +1290,23 @@ class Root(RPCRoot):
             full_name = full_name.split('@')[0]
             user = User.by_user_name(full_name)
         try:
-            system = System.by_fqdn(fqdn,identity.current.user)
+            system = System.by_fqdn(fqdn,user)
         except InvalidRequestError:
             return (0, "Invalid system")
         if system.user == user:
-            if log:
-                activity = SystemActivity(system.user, 'VIA %s' % None, "Returned", 'User', '%s' % system.user, '')
+            if mylog:
+                activity = SystemActivity(system.user, "VIA %s" % identity.current.user, "Returned", "User", "%s" % system.user, '')
                 system.activity.append(activity)
-            system.action_return()
+            try:
+                system.action_return()
+            except socket.gaierror, error:
+                msg = "Failed to power off system: %s" % error
+                activity = SystemActivity(systen.user, "VIA %s" % identity.current.user, "Off", "Power", "", msg)
+                system.activity.append(activity)
+            except xmlrpclib.Fault, error:
+                msg = " Failed to power off system: %s" % error
+                activity = SystemActivity(system.user, "VIA %s" % identity.current.user, "Off", "Power", "", msg)
+                system.activity.append(activity)
         return
         
 
