@@ -53,7 +53,7 @@ $SNIPPET("RedHatEnterpriseLinux6")
 $SNIPPET("rhts_scsi_ethdevices")
 $SNIPPET("rhts_partitions")
 
-%packages --resolvedeps --ignoremissing
+%packages --ignoremissing
 #if $getVar('rhts_server', '') == ''
 @admin-tools
 @base

@@ -364,6 +364,21 @@ class XmlCpuCount(ElementWrapper):
             query = getattr(cpu_table.c.processors, op)(value)
         return (joins, query)
 
+class XmlArch(ElementWrapper):
+    """
+    Pick a system with the correct arch
+    """
+    def filter(self):
+        op = self.op_table[self.get_xml_attr('op', unicode, '==')]
+        value = self.get_xml_attr('value', int, None)
+        joins = []
+        query = None
+        if value:
+            joins = [system_table.c.id == system_arch_map.c.system_id,
+                     arch_table.c.id   == system_arch_map.c.arch_id]
+            query = getattr(arch_table.c.arch, op)(value)
+        return (joins, query)
+
 subclassDict = {
     'host'                : XmlHost,
     'distro'              : XmlDistro,
@@ -385,6 +400,7 @@ subclassDict = {
     'memory'              : XmlMemory,
     'cpu_count'           : XmlCpuCount,
     'hostname'            : XmlHostName,
+    'arch'                : XmlArch,
     }
 
 if __name__=='__main__':
