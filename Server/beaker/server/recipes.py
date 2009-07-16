@@ -31,6 +31,9 @@ import cherrypy
 from model import *
 import string
 
+import logging
+log = logging.getLogger(__name__)
+
 class Recipes(RPCRoot):
     # For XMLRPC methods in this class.
     exposed = True
@@ -91,8 +94,11 @@ class Recipes(RPCRoot):
         return dict(title="Recipes", grid=recipes_grid, list=recipes, search_bar=None)
 
 def new_recipes(*args):
-    for recipe in Recipe.query().filter(
-            Recipe.status==TaskStatus.by_name(u'New')):
+    recipes = Recipe.query().filter(
+            Recipe.status==TaskStatus.by_name(u'New'))
+    if recipes.count():
+        log.debug("Entering new_recipes routine")
+    for recipe in recipes:
         if recipe.distro:
             systems = recipe.distro.systems_filter(
                                         recipe.recipeset.job.owner,
@@ -104,23 +110,27 @@ def new_recipes(*args):
                 recipe.systems.append(system)
             if recipe.systems:
                 recipe.Process()
-                print "recipe ID %s moved from New to Processed" % recipe.id
+                log.info("recipe ID %s moved from New to Processed" % recipe.id)
             else:
-                print "recipe ID %s moved from New to Aborted" % recipe.id
+                log.info("recipe ID %s moved from New to Aborted" % recipe.id)
                 recipe.recipeset.Abort('Recipe ID %s does not match any systems' % recipe.id)
         else:
             recipe.recipeset.Abort('Recipe ID %s does not have a distro' % recipe.id)
     session.flush()
+    if recipes.count():
+        log.debug("Exiting new_recipes routine")
 
 def processed_recipesets(*args):
     recipesets = RecipeSet.query()\
                        .join(['recipes','status'])\
                        .filter(Recipe.status==TaskStatus.by_name(u'Processed'))
+    if recipesets.count():
+        log.debug("Entering processed_recipes routine")
     for recipeset in recipesets:
         bad_l_controllers = set()
         # We only need to do this processing on multi-host recipes
         if len(recipeset.recipes) == 1:
-            print "recipe ID %s moved from Processed to Queued" % recipeset.recipes[0].id
+            log.info("recipe ID %s moved from Processed to Queued" % recipeset.recipes[0].id)
             recipeset.recipes[0].Queue()
             continue
 
@@ -167,7 +177,7 @@ def processed_recipesets(*args):
 
                         if systemsa.difference(systemsb):
                             for rem_system in systemsa.intersection(systemsb):
-                                print "Removing %s from recipe id %s" % (rem_system, recipe.id)
+                                log.debug("Removing %s from recipe id %s" % (rem_system, recipe.id))
                                 recipe.systems.remove(rem_system)
                 for recipe in recipeset.recipes:
                     count = 0
@@ -198,28 +208,40 @@ def processed_recipesets(*args):
                                                 ).all()
                               )
                 for system in systems:
-                    print "Removing %s from recipe id %s" % (system, recipe.id)
+                    log.debug("Removing %s from recipe id %s" % (system, recipe.id))
                     recipe.systems.remove(system)
             if recipe.systems:
                 # Set status to Queued 
-                print "recipe ID %s moved from Processed to Queued" % recipe.id
+                log.info("recipe ID %s moved from Processed to Queued" % recipe.id)
                 recipe.Queue()
             else:
                 # Set status to Aborted 
-                print "recipe ID %s moved from Processed to Aborted" % recipe.id
+                log.info("recipe ID %s moved from Processed to Aborted" % recipe.id)
                 recipe.recipeset.Abort('Recipe ID %s does not match any systems' % recipe.id)
                     
     session.flush()
+    if recipesets.count():
+        log.debug("Exiting processed_recipes routine")
 
 def queued_recipes(*args):
     recipes = Recipe.query()\
                     .join('status')\
                     .join('systems')\
+                    .join('recipeset')\
                     .filter(
-                        and_(Recipe.status==TaskStatus.by_name(u'Queued'),
-                             System.user==None
+                         or_(
+                         and_(Recipe.status==TaskStatus.by_name(u'Queued'),
+                              System.user==None,
+                              RecipeSet.lab_controller==None
+                             ),
+                         and_(Recipe.status==TaskStatus.by_name(u'Queued'),
+                              System.user==None,
+                              RecipeSet.lab_controller_id==System.lab_controller_id
+                             )
                             )
                            )
+    if recipes.count():
+        log.debug("Entering queued_recipes routine")
     for recipe in recipes:
         system = recipe.dyn_systems.filter(System.user==None)
         if recipe.recipeset.lab_controller:
@@ -229,6 +251,7 @@ def queued_recipes(*args):
                                   )
         system = system.first()
         if system:
+            log.debug("System : %s is available for Recipe %s" % (system, recipe.id))
             # Atomic operation to put recipe in Scheduled state
             if session.connection(Recipe).execute(recipe_table.update(
                  and_(recipe_table.c.id==recipe.id,
@@ -245,7 +268,9 @@ def queued_recipes(*args):
                     recipe.system = system
                     recipe.recipeset.lab_controller = system.lab_controller
                     recipe.systems = []
-                    print "recipe ID %s moved from Queued to Scheduled" % recipe.id
+                    activity = SystemActivity(recipe.recipeset.job.owner, "Scheduler", "Reserved", "User", "", "%s" % recipe.recipeset.job.owner )
+                    system.activity.append(activity)
+                    log.info("recipe ID %s moved from Queued to Scheduled" % recipe.id)
                 else:
                     # The system was taken from underneath us.  Put recipe
                     # back into queued state and try again.
@@ -261,6 +286,17 @@ def queued_recipes(*args):
                 # enforce single recipes for remote execution.
                 pass
     session.flush()
+    if recipes.count():
+        log.debug("Exiting queued_recipes routine")
+
+def scheduled_recipes(*args):
+    """
+    if All recipes in a recipeSet are in Scheduled state then move them to
+     Running.
+    """
+    #log.debug("Entering scheduled_recipes routine")
+    pass
+    #log.debug("Exiting scheduled_recipes routine")
 
 def schedule():
     add_interval_task(action=new_recipes,
@@ -274,4 +310,8 @@ def schedule():
                       args=[lambda:datetime.now()],
                       interval=20,
                       initialdelay=10)
+    add_interval_task(action=scheduled_recipes,
+                      args=[lambda:datetime.now()],
+                      interval=20,
+                      initialdelay=15)
 
