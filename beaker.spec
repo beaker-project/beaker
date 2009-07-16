@@ -2,7 +2,7 @@
 %{!?pyver: %define pyver %(%{__python} -c "import sys ; print sys.version[:3]")}
 
 Name:           beaker
-Version:        0.4.23
+Version:        0.4.24
 Release:        0%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
@@ -133,7 +133,7 @@ ln -s Fedora.ks $RPM_BUILD_ROOT/var/lib/cobbler/kickstarts/Fedoradevelopment.ks
 /usr/share/man/man1/beakerlib*
 
 %changelog
-* Thu Jul 16 2009 Bill Peck <bpeck@redhat.com> - 0.4.23-0
+* Thu Jul 16 2009 Bill Peck <bpeck@redhat.com> - 0.4.24-0
 - Allow systems to query on arch even though we are already starting
   from a distro.  This allows you to ask for systems that are not x86_64
   for example.
