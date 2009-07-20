@@ -8,6 +8,11 @@ $SNIPPET('redhat_register')
 # Enable post-install boot notification
 $SNIPPET('post_anamon')
 
+## Turn on ntpd
+/sbin/chkconfig ntpdate on
+/sbin/chkconfig ntpd on
+echo 'OPTIONS="$OPTIONS -x"' >>/etc/sysconfig/ntpd
+
 #if $getVar('grubport','') != ''
 /bin/sed -i 's/^serial.*/serial --port=$grubport --speed=115200/' /boot/grub/grub.conf
 #end if
