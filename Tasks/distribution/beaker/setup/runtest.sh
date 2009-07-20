@@ -262,6 +262,7 @@ function Inventory()
     estatus_fail "**** Failed to start httpd ****"
     # Add the lab controller
     ./add_labcontroller.py -l $CLIENT
+    ./add_user.py -u host/$CLIENT
     estatus_fail "**** Failed to add lab controller ****"
     rhts-sync-set -s READY
     rhts-sync-block -s DONE -s ABORT $CLIENT
