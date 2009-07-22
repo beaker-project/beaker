@@ -370,7 +370,7 @@ class XmlArch(ElementWrapper):
     """
     def filter(self):
         op = self.op_table[self.get_xml_attr('op', unicode, '==')]
-        value = self.get_xml_attr('value', int, None)
+        value = self.get_xml_attr('value', unicode, None)
         joins = []
         query = None
         if value:

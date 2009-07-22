@@ -2,7 +2,7 @@
 %{!?pyver: %define pyver %(%{__python} -c "import sys ; print sys.version[:3]")}
 
 Name:           beaker
-Version:        0.4.23
+Version:        0.4.27
 Release:        0%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
@@ -133,10 +133,19 @@ ln -s Fedora.ks $RPM_BUILD_ROOT/var/lib/cobbler/kickstarts/Fedoradevelopment.ks
 /usr/share/man/man1/beakerlib*
 
 %changelog
-* Thu Jul 16 2009 Bill Peck <bpeck@redhat.com> - 0.4.23-0
+* Mon Jul 20 2009 Bill Peck <bpeck@redhat.com> - 0.4.27-0
+- Expanded user_name field to 255 chars.
+* Mon Jul 20 2009 Bill Peck <bpeck@redhat.com> - 0.4.26-0
+- Enable ntp in cobbler snippets
+* Fri Jul 17 2009 Bill Peck <bpeck@redhat.com> - 0.4.25-0
+- Fixed system arch filtering to be unicode not int.
+* Thu Jul 16 2009 Bill Peck <bpeck@redhat.com> - 0.4.24-0
 - Allow systems to query on arch even though we are already starting
   from a distro.  This allows you to ask for systems that are not x86_64
   for example.
+- Don't fail if we can't power off a system when returning it.
+- Use correct username when returning a system to the pool.
+- Remove --resolvedeps from RHEL6 kickstart file.
 * Tue Jul 14 2009 Bill Peck <bpeck@redhat.com> - 0.4.22-0
 - Fix distro_method value to be unicode instead of boolean.
 * Mon Jul 13 2009 Bill Peck <bpeck@redhat.com> - 0.4.21-0

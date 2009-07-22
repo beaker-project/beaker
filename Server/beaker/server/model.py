@@ -349,7 +349,7 @@ groups_table = Table('tg_group', metadata,
 
 users_table = Table('tg_user', metadata,
     Column('user_id', Integer, primary_key=True),
-    Column('user_name', Unicode(16), unique=True),
+    Column('user_name', Unicode(255), unique=True),
     Column('email_address', Unicode(255), unique=True),
     Column('display_name', Unicode(255)),
     Column('password', Unicode(40)),
