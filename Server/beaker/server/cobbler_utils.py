@@ -138,7 +138,7 @@ def string_to_hash(options,delim=" ",allow_multiples=True):
             # this is a singleton option, no value
             tokens2.append(None)
         elif tokens2[0] == '':
-            return {}
+            continue
 
         # if we're allowing multiple values for the same key,
         # check to see if this token has already been
