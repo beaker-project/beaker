@@ -78,7 +78,7 @@ rlStartJournal() {
 
 =head3 rlJournalEnd
 
-Summarizes the test run and uploads the journal file
+Summarize the test run and upload the journal file.
 
     rlJournalEnd
 
@@ -110,7 +110,7 @@ rlJournalEnd(){
 
 =head3 rlJournalPrint
 
-Prints the content of the journal in pretty xml format.
+Print the content of the journal in pretty xml format.
 
     rlJournalPrint [type]
 
@@ -212,7 +212,7 @@ rlPrintJournal() {
 
 =head3 rlJournalPrintText
 
-Prints the content of the journal in pretty text format.
+Print the content of the journal in pretty text format.
 
     rlJournalPrintText
 

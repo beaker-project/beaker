@@ -228,7 +228,7 @@ rlAssertGreater() {
 
 Assertion checking whether first parameter is greater or equal to the second one.
 
-    rlAssertGreater comment value1 value2
+    rlAssertGreaterOrEqual comment value1 value2
 
 =over
 
@@ -423,7 +423,7 @@ rlAssertNotGrep(){
 
 =head3 rlAssertDiffer
 
-Assertion checking that two files differ (are not identical)
+Assertion checking that two files differ (are not identical).
 
     rlAssertDiffer file1 file2
 
@@ -464,7 +464,7 @@ rlAssertDiffer(){
 
 =head3 rlAssertNotDiffer
 
-Assertion checking that two files are identical
+Assertion checking that two files do not differ (are identical).
 
     rlAssertNotDiffer file1 file2
 
