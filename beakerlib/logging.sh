@@ -72,7 +72,7 @@ __INTERNAL_LogText()
 
 =head3 rlLogFatal
 
-Creates a time-labelled message in the log. There is a bunch of aliases which
+Create a time-labelled message in the log. There is a bunch of aliases which
 can create messages formated as DEBUG/INFO/WARNING/ERROR or FATAL (but you
 would probably want to use rlDie instead of the last one).
 
@@ -119,8 +119,8 @@ rlLogFatal()   { rlLog "$1" "$2" "[ FATAL   ] ::"; rljAddMessage "$1" "FATAL" ; 
 
 =head3 rlDie
 
-Creates a time-labelled message in the log, reports test result,
-uploads logs, closes unfinished phase and terminates test.
+Create a time-labelled message in the log, report test result,
+upload logs, close unfinished phase and terminate the test.
 
     rlDie message [file...]
 
@@ -196,7 +196,7 @@ rlHeadLog()
 
 =head3 rlBundleLogs
 
-Create a tarball of files (e.g. logs) and attache them to the test result.
+Create a tarball of files (e.g. logs) and attach them to the test result.
 
     rlBundleLogs package file [file...]
 
@@ -314,7 +314,7 @@ rlShowPkgVersion() {
 
 =head3 rlGetArch
 
-Returns base arch for the current system (good when you need
+Return base arch for the current system (good when you need
 base arch on a multilib system).
 
     rlGetArch
@@ -354,7 +354,7 @@ function rlGetArch() {
 
 =head3 rlGetDistroVariant
 
-Returns release or variant of the distribution on the system
+Return release or variant of the distribution on the system.
 
     rlGetDistroRelease
     rlGetDistroVariant
@@ -393,7 +393,7 @@ function rlGetDistroVariant() {
 
 =head3 rlShowRunningKernel
 
-Logs a message with version of the currently running kernel.
+Log a message with version of the currently running kernel.
 
     rlShowRunningKernel
 
@@ -469,7 +469,7 @@ rlPhaseStart(){
 
 =head3 rlPhaseEnd
 
-Ends current phase.
+End current phase, summarize asserts included and report phase result.
 
     rlPhaseEnd
 
@@ -494,8 +494,7 @@ rlPhaseEnd(){
 
 =head3 rlPhaseStartCleanup
 
-Starts a phase of a specific type: Setup -> ABORT, Test -> FAIL, Cleanup -> WARN.
-Also provides some default phase names.
+Start a phase of the specified type: Setup -> ABORT, Test -> FAIL, Cleanup -> WARN.
 
     rlPhaseStartSetup [name]
     rlPhaseStartTest [name]
@@ -505,7 +504,8 @@ Also provides some default phase names.
 
 =item name
 
-Optional name of the phase.
+Optional name of the phase. If not specified, default Setup/Test/Cleanup are
+used.
 
 =back
 
@@ -533,8 +533,8 @@ rlPhaseStartCleanup(){
 
 =head3 rlLogMetricLow
 
-Logs a metric, which should be as low as possible (example: memory
-consumption, run time) to the journal.
+Log a metric, which should be as low as possible to the journal.
+(Example: memory consumption, run time)
 
     rlLogMetricLow name value [tolerance]
 
@@ -587,8 +587,8 @@ rlLogLowMetric(){
 
 =head3 rlLogMetricHigh
 
-Logs a metric, which should be as high as possible (example:
-number of executions per second) to the journal
+Log a metric, which should be as high as possible to the journal.
+(Example: number of executions per second)
 
     rlLogMetricHigh name value [tolerance]
 
