@@ -542,6 +542,7 @@ command's exit status is in the list of expected exit codes.
 rlRun(){
   
   local command=$1
+  local expected_orig=${2:-0}
   local expected=${2:-0}
   local comment=${3:-"Running '$command'"}
 
@@ -574,9 +575,9 @@ rlRun(){
   rlLogDebug "rlRun: Running command: $command"
   eval "$command"
   local exitcode=$?
-  rlLogDebug "rlRun: Command finished with exit code: $exitcode, expected: $expected"
+  rlLogDebug "rlRun: Command finished with exit code: $exitcode, expected: $expected_orig"
   echo "$expected" | grep -q "\<$exitcode\>"   # symbols \< and \> match the empty string at the beginning and end of a word
-  __INTERNAL_ConditionalAssert "$comment" $? "(Expected $expected, got $exitcode)"
+  __INTERNAL_ConditionalAssert "$comment" $? "(Expected $expected_orig, got $exitcode)"
   
   return $exitcode
 }
