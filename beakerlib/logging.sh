@@ -248,6 +248,72 @@ rlBundleLogs(){
   return $SUBMITECODE
 }
 
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# rlSendFile
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+: <<=cut
+=pod
+
+=head3 rlSendFile
+
+Resolves absolute path to the file, replaces / for - and uploads this renamed
+file using rhts_submit_log.
+It also allows you to specify your custom name for the uploaded file.
+
+    rlSendFile path_to_file [required_name]
+
+=over
+
+=item path_to_file
+
+Either absolute or relative path to file. Relative path is converted
+to absolute.
+
+=item required_name
+
+Default behavior renames file to full_path_to_file with / replaced for -,
+if this does not suit your needs, you can specify the name using this
+option.
+
+Examples:
+
+rlSendFile logfile.txt -> logfile.txt
+cd /etc; rlSendFile ./passwd -> etc_passwd
+rlSendFile /etc/passwd -> etc_passwd
+rlSendFile /etc/passwd my_top_secret_file -> my_top_secret_file
+
+=back
+
+=cut
+
+function rlSendFile()
+{
+    local RETVAL=-1
+    local FILE=$1
+    local ALIAS
+    local TMPDIR=`mktemp -d`
+    if [ -f $FILE ]; then
+        if [ -n "$2" ]; then
+            ALIAS="$2"
+        else
+            if echo "$FILE" | egrep -q "^\.(\.)?/"; then
+                # ^ if the path is specified as relative ~ begins with ./ or ../
+                local POM=`dirname "$FILE"`
+                ALIAS=`cd "$POM"; pwd`
+                ALIAS="$ALIAS/`basename $FILE`"
+            else
+                ALIAS=$1
+            fi
+            ALIAS=`echo $ALIAS | tr '/' '-' | sed 's/^-*//'`
+        fi
+        rlLogInfo "Sending $FILE as $ALIAS"
+        ln -s $FILE $TMPDIR/$ALIAS
+        rhts-submit-log -T $TESTID -l $TMPDIR/$ALIAS
+        RETVAL=$?
+    fi
+    rm -rf $TMPDIR
+    return $RETVAL
+}
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # rlShowPkgVersion
