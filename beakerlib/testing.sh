@@ -572,9 +572,19 @@ rlAssertNotDiffer(){
 Run command with optional comment and make sure its exit code
 matches expectations.
 
-    rlRun command [status[,status...]] [comment]
+    rlRun [-t] [-l] command [status[,status...]] [comment]
 
 =over
+
+=item -t
+
+If specified, stdout and stderr of the command output will be tagged
+with strigs 'stdout: ' and 'stderr: '.
+
+=item -l
+
+If specified, output of the command (tagged, if -t was specified) is
+logged using rlLog function.
 
 =item command
 
@@ -600,7 +610,33 @@ command's exit status is in the list of expected exit codes.
 =cut
 
 rlRun(){
+
+  GETOPT=`getopt -q -o lt -- "$@"`
+  eval set -- "$GETOPT"
   
+  local DO_LOG=false
+  local DO_TAG=false
+  local TAG_OUT=''
+  local TAG_ERR=''
+  local LOG_FILE='/dev/null'
+  
+  while true ; do
+    case "$1" in
+      -l)
+            DO_LOG=true;
+            LOG_FILE=`mktemp`
+            shift;;
+      -t)
+            DO_TAG=true;
+            TAG_OUT='STDOUT: '
+            TAG_ERR='STDERR: '
+            shift
+            ;;
+      --)  shift; break;;
+      *)   shift;;
+    esac
+  done
+
   local command=$1
   local expected_orig=${2:-0}
   local expected=${2:-0}
@@ -633,8 +669,15 @@ rlRun(){
   done
 
   rlLogDebug "rlRun: Running command: $command"
-  eval "$command"
+  
+  eval "$command" 2> >(sed -e "s/^/$TAG_ERR/g" | tee -a $LOG_FILE) 1> >(sed -e "s/^/$TAG_OUT/g" | tee -a $LOG_FILE)
   local exitcode=$?
+  sync
+  if $DO_LOG; then
+    rlLog "$command\n`cat $LOG_FILE`"
+    rm $LOG_FILE
+  fi
+  
   rlLogDebug "rlRun: Command finished with exit code: $exitcode, expected: $expected_orig"
   echo "$expected" | grep -q "\<$exitcode\>"   # symbols \< and \> match the empty string at the beginning and end of a word
   __INTERNAL_ConditionalAssert "$comment" $? "(Expected $expected_orig, got $exitcode)"
