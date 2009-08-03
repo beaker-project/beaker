@@ -24,6 +24,7 @@ from optparse import OptionParser
 import sys
 import os
 import time
+import re
 import rpm
 import socket
 import types
@@ -138,6 +139,8 @@ def createLog(id,severity):
       printLog("Architecture  : %s" % __childNodeValue(node, 0))
     elif node.nodeName == "hostname":
       printLog("Hostname      : %s" % __childNodeValue(node, 0))
+    elif node.nodeName == "plugins":
+      printLog("Plugin        : %s" % __childNodeValue(node, 0))
     elif node.nodeName == "purpose":
       printPurpose(__childNodeValue(node, 0))
     elif node.nodeName == "log":
@@ -207,6 +210,18 @@ def initializeJournal(id, test, package):
 
   purposeCon  = newdoc.createTextNode(unicode(purpose,'utf-8'))
 
+  shre = re.compile(".+\.sh$")
+  bpath = os.environ["BEAKERLIB"]
+  plugpath = os.path.join(bpath, "plugins")
+  plugins = []
+
+  if os.path.exists(plugpath):
+    for file in os.listdir(plugpath):
+      if shre.match(file):
+        plugEl = newdoc.createElement("plugins")
+        plugCon = newdoc.createTextNode(file)
+        plugins.append((plugEl, plugCon))
+
   testidEl.appendChild(testidCon)
   packageEl.appendChild(packageCon)
   for installed_pkg in pkgdetails:
@@ -218,6 +233,8 @@ def initializeJournal(id, test, package):
   purposeEl.appendChild(purposeCon)
   hostnameEl.appendChild(hostnameCon)
   archEl.appendChild(archCon)
+  for plug in plugins:
+    plug[0].appendChild(plug[1])
 
   top_element.appendChild(testidEl)
   top_element.appendChild(packageEl)
@@ -229,6 +246,8 @@ def initializeJournal(id, test, package):
   top_element.appendChild(releaseEl)
   top_element.appendChild(hostnameEl)
   top_element.appendChild(archEl)
+  for plug in plugins:
+    top_element.appendChild(plug[0])
   top_element.appendChild(purposeEl)
   top_element.appendChild(logEl)
   
