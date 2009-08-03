@@ -163,7 +163,7 @@ Ales Zelinka <azelinka@redhat.com>
 =cut
 
 set -e
-BEAKERLIB=${BEAKERLIB:-"/usr/lib/beakerlib/"}
+export BEAKERLIB=${BEAKERLIB:-"/usr/lib/beakerlib/"}
 . $BEAKERLIB/infrastructure.sh
 . $BEAKERLIB/journal.sh
 . $BEAKERLIB/logging.sh
