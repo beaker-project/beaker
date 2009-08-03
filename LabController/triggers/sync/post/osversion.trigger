@@ -149,29 +149,32 @@ def update_comment(distro):
         return False
     filename = data2[0]
     cpio_object = tempfile.TemporaryFile()
-    rpm2cpio(filename,cpio_object)
-    cpio_object.seek(0)
-    cpio = cpioarchive.CpioArchive(fileobj=cpio_object)
-    for entry in cpio:
-        if entry.name == './etc/fedora-release':
-            release = entry.read().split('\n')[0]
-            releaseregex = re.compile(r'(.*)\srelease\s(\d+).(\d*)')
-            if releaseregex.search(release):
-                family = "%s%s" % (releaseregex.search(release).group(1),
-                                   releaseregex.search(release).group(2))
-                if releaseregex.search(release).group(3):
-                    update = releaseregex.search(release).group(3)
-                else:
-                    update = 0
-        if entry.name == './etc/redhat-release':
-            release = entry.read().split('\n')[0]
-            updateregex = re.compile(r'Update\s(\d+)')
-            releaseregex = re.compile(r'release\s\d+.(\d+)')
-            if updateregex.search(release):
-                update = updateregex.search(release).group(1)
-            if releaseregex.search(release):
-                update = releaseregex.search(release).group(1)
-    cpio_object.close()
+    try:
+        rpm2cpio(filename,cpio_object)
+        cpio_object.seek(0)
+        cpio = cpioarchive.CpioArchive(fileobj=cpio_object)
+        for entry in cpio:
+            if entry.name == './etc/fedora-release':
+                release = entry.read().split('\n')[0]
+                releaseregex = re.compile(r'(.*)\srelease\s(\d+).(\d*)')
+                if releaseregex.search(release):
+                    family = "%s%s" % (releaseregex.search(release).group(1),
+                                       releaseregex.search(release).group(2))
+                    if releaseregex.search(release).group(3):
+                        update = releaseregex.search(release).group(3)
+                    else:
+                        update = 0
+            if entry.name == './etc/redhat-release':
+                release = entry.read().split('\n')[0]
+                updateregex = re.compile(r'Update\s(\d+)')
+                releaseregex = re.compile(r'release\s\d+.(\d+)')
+                if updateregex.search(release):
+                    update = updateregex.search(release).group(1)
+                if releaseregex.search(release):
+                    update = releaseregex.search(release).group(1)
+        cpio_object.close()
+    except rpmUtils.RpmUtilsError, e:
+        print "Warning, %s" % e
     if os.path.exists("%s/.treeinfo" % paths['tree_path']):
         parser = ConfigParser()
         parser.read("%s/.treeinfo" % paths['tree_path'])
