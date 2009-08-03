@@ -172,8 +172,11 @@ export BEAKERLIB=${BEAKERLIB:-"/usr/lib/beakerlib/"}
 . $BEAKERLIB/analyze.sh
 . $BEAKERLIB/performance.sh
 . $BEAKERLIB/virtualX.sh
-for source in $BEAKERLIB/plugins/*.sh
-do
-. $source
-done
+if [ -d $BEAKERLIB/plugins/ ]
+then
+  for source in $BEAKERLIB/plugins/*.sh
+  do
+  . $source
+  done
+fi
 set +e
