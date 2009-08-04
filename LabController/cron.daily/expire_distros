@@ -26,6 +26,6 @@ if __name__ == '__main__':
             distro_timestamp = datetime.fromtimestamp(float(distro['tree_build_time']))
             if distro_timestamp < expiredelta:
                 print "Removing distro %s" % distro['name']
-                bootapi.remove_distro(distro['name'], token,True)
+                cobbler.remove_distro(distro['name'], token,True)
                 rdistros.append(distro['name'])
     inventory.labcontrollers.removeDistros(settings['server'], rdistros)
