@@ -2,7 +2,7 @@
 %{!?pyver: %define pyver %(%{__python} -c "import sys ; print sys.version[:3]")}
 
 Name:           beaker
-Version:        0.4.30
+Version:        0.4.31
 Release:        0%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
@@ -133,6 +133,8 @@ ln -s Fedora.ks $RPM_BUILD_ROOT/var/lib/cobbler/kickstarts/Fedoradevelopment.ks
 /usr/share/man/man1/beakerlib*
 
 %changelog
+* Tue Aug 04 2009 Bill Peck <bpeck@redhat.com> - 0.4.31-0
+- fixed remove_distro call in expire distros
 * Mon Aug 03 2009 Bill Peck <bpeck@redhat.com> - 0.4.30-0
 - Updated osversion.trigger to not traceback when encountering an 
   unknown compressor.
