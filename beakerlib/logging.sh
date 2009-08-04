@@ -260,9 +260,13 @@ Resolves absolute path to the file, replaces / for - and uploads this renamed
 file using rhts_submit_log.
 It also allows you to specify your custom name for the uploaded file.
 
-    rlSendFile path_to_file [required_name]
+    rlSendFile [-s sep] path_to_file [required_name]
 
 =over
+
+=item -s sep
+
+Sets separator (i.e. the replacement of the /) to sep.
 
 =item path_to_file
 
@@ -288,6 +292,21 @@ rlSendFile /etc/passwd my_top_secret_file -> my_top_secret_file
 
 function rlSendFile()
 {
+    GETOPT=`getopt -q -o s: -- "$@"`
+    eval set -- "$GETOPT"
+    
+    SEPARATOR='-'
+    while true ; do
+        case "$1" in
+            -s)  
+                SEPARATOR=$2; 
+                shift 2
+                ;;
+            --)  shift; break;;
+            *)   shift;;
+        esac
+    done
+
     local RETVAL=-1
     local FILE=$1
     local ALIAS
@@ -304,7 +323,7 @@ function rlSendFile()
             else
                 ALIAS=$1
             fi
-            ALIAS=`echo $ALIAS | tr '/' '-' | sed 's/^-*//'`
+            ALIAS=`echo $ALIAS | tr '/' "$SEPARATOR" | sed "s/^${SEPARATOR}*//"`
         fi
         rlLogInfo "Sending $FILE as $ALIAS"
         ln -s $FILE $TMPDIR/$ALIAS
