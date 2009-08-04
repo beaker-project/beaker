@@ -318,9 +318,15 @@ function LabController()
             mkdir -p /fakenet/${NFSSERVER}${NFSDIR}
             mount ${NFSSERVER}:${NFSDIR} /fakenet/${NFSSERVER}${NFSDIR}
         fi
+        echo cobbler import --path=/fakenet/${NFSSERVER}${NFSPATH} \
+                       --name=${DISTRONAME}_nfs \
+                       --available-as=nfs://${NFSSERVER}:${NFSPATH}
         cobbler import --path=/fakenet/${NFSSERVER}${NFSPATH} \
                        --name=${DISTRONAME}_nfs \
                        --available-as=nfs://${NFSSERVER}:${NFSPATH}
+        echo cobbler import --path=/fakenet/${NFSSERVER}${NFSPATH} \
+                       --name=${DISTRONAME}_http \
+                       --available-as=http://${HOSTNAME}/fakenet/${NFSSERVER}${NFSPATH}
         cobbler import --path=/fakenet/${NFSSERVER}${NFSPATH} \
                        --name=${DISTRONAME}_http \
                        --available-as=http://${HOSTNAME}/fakenet/${NFSSERVER}${NFSPATH}
@@ -335,16 +341,24 @@ function LabController()
         for distro in $(find /fakenet/${NFSSERVER}${NFSDIR} -maxdepth 1 -name rawhide\* -type d); do 
             DISTRO=$(basename $distro)
             DISTRONAME=Fedora-$(basename $distro)
+            echo cobbler import \
+                           --path=/fakenet/${NFSSERVER}${NFSDIR}/${DISTRO} \
+                           --name=${DISTRONAME}_nfs \
+                           --available-as=nfs://${NFSSERVER}:${NFSDIR}/${DISTRO}
             cobbler import --path=/fakenet/${NFSSERVER}${NFSDIR}/${DISTRO} \
                            --name=${DISTRONAME}_nfs \
                            --available-as=nfs://${NFSSERVER}:${NFSDIR}/${DISTRO}
+            echo cobbler import \
+                            --path=/fakenet/${NFSSERVER}${NFSDIR}/${DISTRO} \
+                           --name=${DISTRONAME}_http \
+                           --available-as=http://${HOSTNAME}/fakenet/${NFSSERVER}${NFSDIR}/${DISTRO}
             cobbler import --path=/fakenet/${NFSSERVER}${NFSDIR}/${DISTRO} \
                            --name=${DISTRONAME}_http \
                            --available-as=http://${HOSTNAME}/fakenet/${NFSSERVER}${NFSDIR}/${DISTRO}
             report_result $TEST/ADD_DISTRO/$DISTRONAME PASS $?
         done
     fi
-    cobbler distro report | tee -a $OUTPUTFILE
+    cobbler distro report 
     /var/lib/cobbler/triggers/sync/post/osversion.trigger | tee -a $OUTPUTFILE
     estatus_fail "**** Failed to run osversion.trigger ****"
     rhts-sync-set -s DONE
