@@ -298,8 +298,8 @@ function rlSendFile()
     SEPARATOR='-'
     while true ; do
         case "$1" in
-            -s)  
-                SEPARATOR=$2; 
+            -s)
+                SEPARATOR=$2;
                 shift 2
                 ;;
             --)  shift; break;;
