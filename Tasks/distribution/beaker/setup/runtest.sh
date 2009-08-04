@@ -344,6 +344,7 @@ function LabController()
             report_result $TEST/ADD_DISTRO/$DISTRONAME PASS $?
         done
     fi
+    cobbler distro report | tee -a $OUTPUTFILE
     /var/lib/cobbler/triggers/sync/post/osversion.trigger | tee -a $OUTPUTFILE
     estatus_fail "**** Failed to run osversion.trigger ****"
     rhts-sync-set -s DONE
