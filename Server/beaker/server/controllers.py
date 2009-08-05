@@ -972,6 +972,7 @@ class Root(RPCRoot):
         redirect("/view/%s" % system.fqdn)
 
     @expose()
+    @identity.require(identity.not_anonymous())
     def action_power(self, id, action, **kw):
         try:
             system = System.by_id(id,identity.current.user)
@@ -991,6 +992,7 @@ class Root(RPCRoot):
         redirect("/view/%s" % system.fqdn)
 
     @expose()
+    @identity.require(identity.not_anonymous())
     def action_provision(self, id, prov_install=None, ks_meta=None, 
                              koptions=None, koptions_post=None, reboot=None):
         try:
@@ -1087,6 +1089,7 @@ class Root(RPCRoot):
         redirect("/view/%s" % system.fqdn)
 
     @expose()
+    @identity.require(identity.not_anonymous())
     def remove_install(self, system_id, arch_id, **kw):
         try:
             system = System.by_id(system_id, identity.current.user)
