@@ -153,9 +153,9 @@ class Jobs(RPCRoot):
         return dict(xml=jobxml)
 
     @expose(template='beaker.server.templates.grid')
-    @paginate('list',default_order='id')
+    @paginate('list',default_order='-id')
     def index(self, *args, **kw):
-        jobs = session.query(Job).join('status').join('owner').order_by(job_table.c.id.desc())
+        jobs = session.query(Job).join('status').join('owner').outerjoin('result')
         jobs_grid = myPaginateDataGrid(fields=[
 		     widgets.PaginateDataGrid.Column(name='id', getter=lambda x:x.id, title='ID', options=dict(sortable=True)),
 		     widgets.PaginateDataGrid.Column(name='whiteboard', getter=lambda x:x.whiteboard, title='Whiteboard', options=dict(sortable=True)),
