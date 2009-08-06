@@ -65,6 +65,66 @@ __INTERNAL_ConditionalAssert(){
 }
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# rlPass                                                                 
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+: <<=cut                                                                       
+=pod                                                                           
+
+=head2 Manual Asserts
+
+=head3 rlPass
+
+Manual assertion, asserts and logs PASS.
+
+    rlPass comment
+
+=over
+
+=item comment
+
+Short test summary.
+
+=back
+
+Returns 0 and asserts PASS.
+
+=cut
+
+rlPass(){
+    __INTERNAL_LogAndJournalPass "$1"
+    return 0
+}
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# rlFail                                                                 
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+: <<=cut                                                                       
+=pod                                                                           
+
+=head3 rlFail
+
+Manual assertion, asserts and logs FAIL.
+
+    rlFail comment
+
+=over
+
+=item comment
+
+Short test summary.
+
+=back
+
+Returns 1 and asserts FAIL.
+
+=cut
+
+rlFail(){
+    __INTERNAL_LogAndJournalFail "$1"
+    return 1
+}
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # rlAssert0
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 : <<=cut
