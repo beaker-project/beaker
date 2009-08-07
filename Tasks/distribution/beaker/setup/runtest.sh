@@ -314,23 +314,32 @@ function LabController()
         DISTRONAME=$(echo $distro| awk -F: '{print $2}')
         NFSPATH=$(echo $distro| awk -F: '{print $3}')
         NFSDIR=$(dirname $NFSPATH)
-        if [ ! -e "/fakenet/${NFSSERVER}${NFSDIR}" ]; then
-            mkdir -p /fakenet/${NFSSERVER}${NFSDIR}
-            mount ${NFSSERVER}:${NFSDIR} /fakenet/${NFSSERVER}${NFSDIR}
+        mkdir -p /fakenet/${NFSSERVER}${NFSDIR}
+        mount ${NFSSERVER}:${NFSDIR} /fakenet/${NFSSERVER}${NFSDIR}
+        result="FAIL"
+        echo cobbler import --path=/fakenet/${NFSSERVER}${NFSPATH} \
+                       --name=${DISTRONAME}_nfs \
+                       --available-as=nfs://${NFSSERVER}:${NFSPATH}
+        cobbler import --path=/fakenet/${NFSSERVER}${NFSPATH} \
+                       --name=${DISTRONAME}_nfs \
+                       --available-as=nfs://${NFSSERVER}:${NFSPATH}
+        score=$?
+        if [ "$score" -eq "0" ]; then
+            result="PASS"
         fi
-        echo cobbler import --path=/fakenet/${NFSSERVER}${NFSPATH} \
-                       --name=${DISTRONAME}_nfs \
-                       --available-as=nfs://${NFSSERVER}:${NFSPATH}
-        cobbler import --path=/fakenet/${NFSSERVER}${NFSPATH} \
-                       --name=${DISTRONAME}_nfs \
-                       --available-as=nfs://${NFSSERVER}:${NFSPATH}
+        report_result $TEST/ADD_DISTRO/${DISTRONAME}_NFS $result $score
+        result="FAIL"
         echo cobbler import --path=/fakenet/${NFSSERVER}${NFSPATH} \
                        --name=${DISTRONAME}_http \
                        --available-as=http://${HOSTNAME}/fakenet/${NFSSERVER}${NFSPATH}
         cobbler import --path=/fakenet/${NFSSERVER}${NFSPATH} \
                        --name=${DISTRONAME}_http \
                        --available-as=http://${HOSTNAME}/fakenet/${NFSSERVER}${NFSPATH}
-        report_result $TEST/ADD_DISTRO/$DISTRONAME PASS $?
+        score=$?
+        if [ "$score" -eq "0" ]; then
+            result="PASS"
+        fi
+        report_result $TEST/ADD_DISTRO/${DISTRONAME}_HTTP $result $score
     done
     # Import Rawhide
     if [ -n "$RAWHIDE_NFS" ]; then
@@ -341,6 +350,7 @@ function LabController()
         for distro in $(find /fakenet/${NFSSERVER}${NFSDIR} -maxdepth 1 -name rawhide\* -type d); do 
             DISTRO=$(basename $distro)
             DISTRONAME=Fedora-$(basename $distro)
+            result="FAIL"
             echo cobbler import \
                            --path=/fakenet/${NFSSERVER}${NFSDIR}/${DISTRO} \
                            --name=${DISTRONAME}_nfs \
@@ -348,6 +358,11 @@ function LabController()
             cobbler import --path=/fakenet/${NFSSERVER}${NFSDIR}/${DISTRO} \
                            --name=${DISTRONAME}_nfs \
                            --available-as=nfs://${NFSSERVER}:${NFSDIR}/${DISTRO}
+            score=$?
+            if [ "$score" -eq "0" ]; then
+                result="PASS"
+            fi
+            report_result $TEST/ADD_DISTRO/${DISTRONAME}_NFS $result $score
             echo cobbler import \
                             --path=/fakenet/${NFSSERVER}${NFSDIR}/${DISTRO} \
                            --name=${DISTRONAME}_http \
@@ -355,10 +370,14 @@ function LabController()
             cobbler import --path=/fakenet/${NFSSERVER}${NFSDIR}/${DISTRO} \
                            --name=${DISTRONAME}_http \
                            --available-as=http://${HOSTNAME}/fakenet/${NFSSERVER}${NFSDIR}/${DISTRO}
-            report_result $TEST/ADD_DISTRO/$DISTRONAME PASS $?
+            score=$?
+            if [ "$score" -eq "0" ]; then
+                result="PASS"
+            fi
+            report_result $TEST/ADD_DISTRO/${DISTRONAME}_NFS $result $score
         done
     fi
-    cobbler distro report 
+    cobbler distro report
     /var/lib/cobbler/triggers/sync/post/osversion.trigger | tee -a $OUTPUTFILE
     estatus_fail "**** Failed to run osversion.trigger ****"
     rhts-sync-set -s DONE
