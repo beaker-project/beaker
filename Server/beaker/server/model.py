@@ -792,13 +792,16 @@ class System(SystemObject):
 
     def current_loan(self, user=None):
         if user and self.loaned:
-            if self.loaned == user or user.is_admin():
+            if self.loaned == user or \
+               self.owner  == user or \
+               user.is_admin():
                 return True
         return False
 
     def current_user(self, user=None):
         if user and self.user:
-            if self.user == user or user.is_admin():
+            if self.user  == user \
+               or user.is_admin():
                 return True
         return False
         
