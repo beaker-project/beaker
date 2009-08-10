@@ -1062,6 +1062,7 @@ class System(SystemObject):
             remote.modify_system(system_id,'name',self.fqdn, token)
             remote.modify_system(system_id,'modify_interface',{'ipaddress-eth0':ipaddress}, token)
         profile = distro.install_name
+        systemprofile = profile
         profile_id = remote.get_profile_handle(profile, token)
         if not profile_id:
             return (-3, "%s profile not found on %s" % (profile, labcontroller.fqdn))
@@ -1069,22 +1070,34 @@ class System(SystemObject):
         remote.modify_system(system_id, 'kopts', kernel_options, token)
         remote.modify_system(system_id, 'kopts_post', kernel_options_post, token)
         if kickstart:
+            # Fill in basic requirements for RHTS
+            kicktemplate = """
+url --url=$tree
+%(kickstart)s
+
+%%pre
+$SNIPPET("rhts_pre")
+
+%%post
+$SNIPPET("rhts_post")
+            """
+            kickstart = kicktemplate % dict(kickstart = kickstart)
+
             kickfile = '/var/lib/cobbler/kickstarts/%s.ks' % self.fqdn
+
+            systemprofile = self.fqdn
             try:
-                remote.remove_profile(self.fqdn, token)
+                pid = remote.get_profile_handle(self.fqdn, token)
             except:
-                pass
-            if remote.copy_profile(profile_id, self.fqdn, token):
-                if remote.read_or_write_kickstart_template(kickfile, False, kickstart, token):
-                    profile = self.fqdn
-                    profile_id = remote.get_profile_handle(profile, token)
-                    remote.modify_profile(profile_id, 'kickstart', kickfile, token)
-                    remote.save_profile(profile_id, token)
-                else:
-                    return (-6, "Failed to save kickstart")
+                pid = remote.new_profile(token)
+                remote.modify_profile(pid, "name", self.fqdn, token)
+            if remote.read_or_write_kickstart_template(kickfile, False, kickstart, token):
+                remote.modify_profile(pid, 'kickstart', kickfile, token)
+                remote.modify_profile(pid, 'parent', profile, token)
+                remote.save_profile(pid, token)
             else:
-                return (-5, "Failed to copy profile")
-        remote.modify_system(system_id, 'profile', profile, token)
+                return (-6, "Failed to save kickstart")
+        remote.modify_system(system_id, 'profile', systemprofile, token)
         remote.modify_system(system_id, 'netboot-enabled', True, token)
         msg = None
         rc=-1

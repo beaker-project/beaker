@@ -2,7 +2,7 @@
 %{!?pyver: %define pyver %(%{__python} -c "import sys ; print sys.version[:3]")}
 
 Name:           beaker
-Version:        0.4.33
+Version:        0.4.34
 Release:        0%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
@@ -133,6 +133,10 @@ ln -s Fedora.ks $RPM_BUILD_ROOT/var/lib/cobbler/kickstarts/Fedoradevelopment.ks
 /usr/share/man/man1/beakerlib*
 
 %changelog
+* Mon Aug 10 2009 Bill Peck <bpeck@redhat.com> - 0.4.34-0
+- Change how custom kickstarts are handled. Don't copy
+  cobbler profiles anymore, just use system profile and set
+  parent if needed.
 * Fri Aug 07 2009 Bill Peck <bpeck@redhat.com> - 0.4.33-0
 - Allow the owner of a system to force a loan return.
 * Wed Aug 05 2009 Bill Peck <bpeck@redhat.com> - 0.4.32-0
