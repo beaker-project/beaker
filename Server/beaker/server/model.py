@@ -1089,12 +1089,11 @@ $SNIPPET("rhts_post")
             try:
                 pid = remote.get_profile_handle(self.fqdn, token)
             except:
-                pid = remote.new_profile(token)
+                pid = remote.new_subprofile(token)
                 remote.modify_profile(pid, "name", self.fqdn, token)
             if remote.read_or_write_kickstart_template(kickfile, False, kickstart, token):
                 remote.modify_profile(pid, 'kickstart', kickfile, token)
                 remote.modify_profile(pid, 'parent', profile, token)
-                remote.modify_profile(pid, 'distro', '<<inherit>>', token)
                 remote.save_profile(pid, token)
             else:
                 return (-6, "Failed to save kickstart")
