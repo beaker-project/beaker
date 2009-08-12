@@ -1070,6 +1070,8 @@ class System(SystemObject):
         remote.modify_system(system_id, 'kopts', kernel_options, token)
         remote.modify_system(system_id, 'kopts_post', kernel_options_post, token)
         if kickstart:
+            # Escape any $ signs or cobbler will barf
+            kickstart = kickstart.replace('$','\$')
             # Fill in basic requirements for RHTS
             kicktemplate = """
 url --url=$tree
