@@ -139,7 +139,7 @@ def createLog(id,severity):
       printLog("Architecture  : %s" % __childNodeValue(node, 0))
     elif node.nodeName == "hostname":
       printLog("Hostname      : %s" % __childNodeValue(node, 0))
-    elif node.nodeName == "plugins":
+    elif node.nodeName == "plugin":
       printLog("Plugin        : %s" % __childNodeValue(node, 0))
     elif node.nodeName == "purpose":
       printPurpose(__childNodeValue(node, 0))
@@ -212,13 +212,13 @@ def initializeJournal(id, test, package):
 
   shre = re.compile(".+\.sh$")
   bpath = os.environ["BEAKERLIB"]
-  plugpath = os.path.join(bpath, "plugins")
+  plugpath = os.path.join(bpath, "plugin")
   plugins = []
 
   if os.path.exists(plugpath):
     for file in os.listdir(plugpath):
       if shre.match(file):
-        plugEl = newdoc.createElement("plugins")
+        plugEl = newdoc.createElement("plugin")
         plugCon = newdoc.createTextNode(file)
         plugins.append((plugEl, plugCon))
 
