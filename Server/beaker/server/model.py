@@ -10,11 +10,15 @@ from sqlalchemy.exceptions import InvalidRequestError
 from identity import LdapSqlAlchemyIdentityProvider
 from cobbler_utils import consolidate, string_to_hash
 from sqlalchemy.orm.collections import attribute_mapped_collection
+from sqlalchemy.util import OrderedDict
+from sqlalchemy.orm.collections import MappedCollection
 from sqlalchemy.ext.associationproxy import association_proxy
 import socket
 from xmlrpclib import ProtocolError
 from sqlalchemy import case
 from sqlalchemy import func
+from sqlalchemy.orm.collections import collection
+from bexceptions import *
 
 from BasicAuthTransport import BasicAuthTransport
 import xmlrpclib
@@ -161,6 +165,16 @@ labinfo_table = Table('labinfo', metadata,
     Column('weight', Numeric(asdecimal=False)),
     Column('wattage', Numeric(asdecimal=False)),
     Column('cooling', Numeric(asdecimal=False)),
+)
+
+watchdog_table = Table('watchdog', metadata,
+    Column('id', Integer, autoincrement=True,
+           nullable=False, primary_key=True),
+    Column('system_id', Integer, ForeignKey('system.id')),
+    Column('recipe_id', Integer, ForeignKey('recipe.id')),
+    Column('recipetask_id', Integer, ForeignKey('recipe_task.id')),
+    Column('subtask', Unicode(255)),
+    Column('kill_time', DateTime),
 )
 
 cpu_table = Table('cpu', metadata,
@@ -540,6 +554,8 @@ recipe_table = Table('recipe',metadata,
         # Total Panic tasks
         Column('ktasks', Integer, default=0),
         Column('whiteboard',Unicode(2000)),
+        Column('kernel_options', String(1024)),
+        Column('kernel_options_post', String(1024)),
 )
 
 machine_recipe_table = Table('machine_recipe', metadata,
@@ -610,6 +626,15 @@ recipe_task_table =Table('recipe_task',metadata,
         Column('role', Unicode(255)),
 )
 
+recipe_task_role_table = Table('recipe_task_role', metadata,
+        Column('id', Integer, primary_key=True),
+        Column('recipe_task_id', Integer,
+                ForeignKey('recipe_task.id')),
+        Column('role',Unicode(255)),
+        Column('system_id', Integer,
+                ForeignKey('system.id')),
+)
+        
 recipe_task_param_table = Table('recipe_task_param', metadata,
         Column('id', Integer, primary_key=True),
         Column('recipe_task_id', Integer,
@@ -858,6 +883,43 @@ class Permission(object):
     A relationship that determines what each Group can do
     """
     pass
+
+
+class MappedObject(object):
+
+    doc = xml.dom.minidom.Document()
+
+    @classmethod
+    def lazy_create(cls, **kwargs):
+        try:
+            item = cls.query.filter_by(**kwargs).one()
+        except:
+            item = cls(**kwargs)
+            session.save(item)
+            session.flush([item])
+        return item
+
+    def node(self, element, value):
+        node = self.doc.createElement(element)
+        node.appendChild(self.doc.createTextNode(value))
+        return node
+
+    def __repr__(self):
+        # pretty-print the attributes, so we can see what's getting autoloaded for us:
+        attrStr = ""
+        numAttrs = 0
+        for attr in self.__dict__:
+            if attr[0] != '_':
+                if numAttrs>0:
+                    attrStr += ', '
+                attrStr += '%s=%s' % (attr, repr(self.__dict__[attr]))
+                numAttrs += 1
+        return "%s(%s)" % (self.__class__.__name__, attrStr)
+        #return "%s()" % (self.__class__.__name__)
+
+    @classmethod
+    def by_id(cls, id):
+        return cls.query.filter_by(id=id).one()
 
 
 class SystemObject(object):
@@ -1628,6 +1690,27 @@ class LabController(SystemObject):
     distros = association_proxy('_distros', 'distro')
 
 
+class Watchdog(MappedObject):
+    """ Every running task has a corresponding watchdog which will
+        Return the system if it runs too long
+    """
+    @classmethod
+    def by_system(cls, system):
+        """ Find a watchdog based on the system name
+        """
+        return cls.query.filter_by(system=system).one()
+
+    @classmethod
+    def expired(cls, labcontroller):
+        """ return a list of all watchdog entries that have expired
+            for this lab controller
+        """
+        return cls.query.join(['system']).filter(
+                                      and_(System.lab_controller==labcontroller,
+                                           Watchdog.kill_time < datetime.now()
+                                          )
+                                                )
+
 class LabInfo(SystemObject):
     fields = ['orig_cost', 'curr_cost', 'dimensions', 'weight', 'wattage', 'cooling']
 
@@ -1791,7 +1874,8 @@ class Distro(object):
          </And>
         </distro>
         """
-        from beaker.server.needpropertyxml import *
+        from needpropertyxml import ElementWrapper
+        import xmltramp
         #FIXME Should validate XML before proceeding.
         queries = []
         joins = []
@@ -1828,7 +1912,8 @@ class Distro(object):
               all()
         [hp-xw8600-02.rhts.bos.redhat.com]
         """
-        from beaker.server.needpropertyxml import *
+        from needpropertyxml import ElementWrapper
+        import xmltramp
         systems = self.systems(user)
         #FIXME Should validate XML before processing.
         queries = []
@@ -2024,41 +2109,6 @@ class Key_Value_Int(object):
                                   Key_Value_Int.system==system)).one()
 
 
-class MappedObject(object):
-
-    doc = xml.dom.minidom.Document()
-
-    @classmethod
-    def lazy_create(cls, **kwargs):
-        try:
-            item = cls.query.filter_by(**kwargs).one()
-        except:
-            item = cls(**kwargs)
-            session.save(item)
-            session.flush([item])
-        return item
-
-    def node(self, element, value):
-        node = self.doc.createElement(element)
-        node.appendChild(self.doc.createTextNode(value))
-        return node
-
-    def __repr__(self):
-        # pretty-print the attributes, so we can see what's getting autoloaded for us:
-        attrStr = ""
-        numAttrs = 0
-        for attr in self.__dict__:
-            if attr[0] != '_':
-                if numAttrs>0:
-                    attrStr += ', '
-                attrStr += '%s=%s' % (attr, repr(self.__dict__[attr]))
-                numAttrs += 1
-        return "%s(%s)" % (self.__class__.__name__, attrStr)
-        #return "%s()" % (self.__class__.__name__)
-
-    @classmethod
-    def by_id(cls, id):
-        return cls.query.filter_by(id=id).one()
 
 
 class TaskPriority(object):
@@ -2081,7 +2131,6 @@ class TaskResult(object):
 
     def __repr__(self):
         return "%s" % (self.result)
-
 
 
 class Job(MappedObject):
@@ -2285,6 +2334,16 @@ class Recipe(MappedObject):
             recipe.appendChild(t.to_xml())
         return recipe
 
+    def _get_packages(self):
+        """ return all packages for all tests
+        """
+        packages = []
+        for task in self.tasks:
+            packages.extend(task.task.required)
+        return packages
+
+    packages = property(_get_packages)
+
     def _get_arch(self):
         if self.distro:
             return self.distro.arch
@@ -2369,11 +2428,18 @@ class Recipe(MappedObject):
            and self.status == TaskStatus.by_name(u'Running'):
             self.start_time = datetime.utcnow()
 
-        # Record the completion of this Recipe.
         if not self.finish_time \
            and self.status != TaskStatus.by_name(u'Running') \
            and self.status.severity >= TaskStatus.by_name(u'Completed').severity:
+            # Record the completion of this Recipe.
             self.finish_time = datetime.utcnow()
+
+            # Remove this recipes watchdog
+            del(self.watchdog)
+
+            # Return system if reserved
+            if self.system:
+                self.system.user = None
 
         self.result = session.query(TaskResult).from_statement(
                              select([TaskResult.id, 
@@ -2438,6 +2504,11 @@ class RecipeTask(MappedObject):
         task.setAttribute("role", "%s" % self.role)
         task.setAttribute("result", "%s" % self.result)
         task.setAttribute("status", "%s" % self.status)
+        if self.roles:
+            roles = self.doc.createElement("roles")
+            for role in self.roles.to_xml():
+                roles.appendChild(role)
+            task.appendChild(roles)
         if self.params:
             params = self.doc.createElement("params")
             for p in self.params:
@@ -2495,17 +2566,35 @@ class RecipeTask(MappedObject):
         """
         Moved from Processed -> Scheduled
         """
+        if not self.recipe.watchdog:
+            raise BX(_('No watchdog exists for task %' % self.recipe.id))
         self.status = TaskStatus.by_name(u'Scheduled')
         session.flush([self])
         self.update_status()
 
-    def Start(self):
+    def Start(self, watchdog_override=None):
         """
         Record the start of this task
+         If watchdog_override is defined we will use that time instead
+         of what the tasks default time is.  This should be defined in number
+         of seconds
         """
+        if not self.recipe.watchdog:
+            raise BX(_('No watchdog exists for task %' % self.recipe.id))
         if not self.start_time:
             self.start_time = datetime.utcnow()
         self.status = TaskStatus.by_name(u'Running')
+
+# Watchdog should be created when the recipe moves to Scheduled
+#        if not self.recipe.watchdog:
+#            self.recipe.watchdog = Watchdog(system=self.recipe.system)
+
+        self.recipe.watchdog.recipetask = self
+        if watchdog_override:
+            self.recipe.watchdog.kill_time = watchdog_override
+        else:
+            self.recipe.watchdog.kill_time = datetime.now() + timedelta(
+                                                    seconds=self.task.avg_time)
         session.flush([self])
         self.update_status()
 
@@ -2513,6 +2602,8 @@ class RecipeTask(MappedObject):
         """
         Record the completion of this task
         """
+        if not self.recipe.watchdog:
+            raise BX(_('No watchdog exists for task %' % self.recipe.id))
         if not self.finish_time:
             self.finish_time = datetime.utcnow()
         self.status = TaskStatus.by_name(u'Completed')
@@ -2577,6 +2668,8 @@ class RecipeTask(MappedObject):
         """
         Record a result 
         """
+        if not self.recipe.watchdog:
+            raise BX(_('No watchdog exists for task %' % self.recipe.id))
         self.results.append(RecipeTaskResult(recipetask=self,
                                    path=path,
                                    result=TaskResult.by_name(result),
@@ -2585,6 +2678,93 @@ class RecipeTask(MappedObject):
         session.flush([self])
         self.update_status()
 
+
+class RecipeTaskRoleListAdapter(object):
+    def __init__(self, parent, role):
+        self.__parent = parent
+        self.__role = role
+
+    def __cached(self):
+        try:
+            return self.__cached_systems
+        except AttributeError:
+            self.__cached_systems = [item.system for item in self.__parent._roles if item.role == self.__role]
+            return self.__cached_systems
+    __cached = property(__cached)
+
+    def __delcached(self):
+        try:
+            del self.__cached_systems
+        except AttributeError:
+            pass
+
+    def __iter__(self):
+        return iter(self.__cached)
+
+    def __eq__(self, other):
+        return list(self) == list(other)
+
+    def __repr__(self):
+        return repr(list(self))
+
+    def append(self, item):
+        self.__delcached()
+        self.__parent._roles.append(RecipeTaskRole(self.__role, item))
+
+    def __getitem__(self, index):
+        return self.__cached[index]
+
+    def __setitem__(self, index, value):
+        self.__delcached()
+        [item for item in self.__parent._roles if item.role == self.__role][index].roles = value
+        self.__cached[index] = value
+
+
+class RecipeTaskRoleDictAdapterAttribute(object):
+    def __get__(self, instance, owner):
+        if instance is None:
+            return self
+        class RecipeTaskRoleDictAdapter(MappedObject):
+            def __getitem__(self, role):
+                return RecipeTaskRoleListAdapter(instance, role)
+            def keys(self):
+                return iter(set([item.role for item in instance._roles]))
+            def __eq__(self, other):
+                return dict(self) == dict(other)
+            def __repr__(self):
+                return repr(dict(self))
+            def to_xml(self):
+                """ For each key return an xml dom
+                """
+                for key in self.keys():
+                    role = self.doc.createElement("role")
+                    role.setAttribute("value", "%s" % key)
+                    for s in RecipeTaskRoleListAdapter(instance, key):
+                        system = self.doc.createElement("system")
+                        system.setAttribute("value", "%s" % s)
+                        role.appendChild(system)
+                    yield(role)
+
+            # other dict like methods
+
+        return RecipeTaskRoleDictAdapter()
+
+    def __set__(self, instance, somedict):
+        l =[]
+        for key, somelist in somedict.items():
+            for item in somelist:
+                l.append(RecipeTaskRole(key, item))
+                instance._roles = l
+
+
+RecipeTask.roles = RecipeTaskRoleDictAdapterAttribute()
+
+class RecipeTaskRole(MappedObject):
+    """ Holds the roles for every task
+    """
+    def __init__(self, role, system):
+        self.role = role
+        self.system = system
 
 class RecipeTaskParam(MappedObject):
     """
@@ -2723,7 +2903,6 @@ class TaskBugzilla(MappedObject):
     """
     pass
 
-
 # set up mappers between identity tables and classes
 
 SystemType.mapper = mapper(SystemType, system_type_table)
@@ -2737,6 +2916,8 @@ System.mapper = mapper(System, system_table,
                                      order_by=[arch_table.c.arch],
                                         secondary=system_arch_map,
                                         backref='systems'),
+                     'watchdog':relation(Watchdog, uselist=False,
+                                        backref='system'),
                      'labinfo':relation(LabInfo, uselist=False,
                                         backref='system'),
                      'cpu':relation(Cpu, uselist=False),
@@ -2793,6 +2974,11 @@ mapper(OSMajor, osmajor_table,
 Cpu.mapper = mapper(Cpu, cpu_table,
        properties = {'flags':relation(CpuFlag)})
 mapper(LabInfo, labinfo_table)
+mapper(Watchdog, watchdog_table,
+       properties = {'recipetask':relation(RecipeTask, uselist=False,
+                                           backref='watchdog'),
+                     'recipe':relation(Recipe, uselist=False,
+                                      )})
 CpuFlag.mapper = mapper(CpuFlag, cpu_flag_table)
 Numa.mapper = mapper(Numa, numa_table)
 Device.mapper = mapper(Device, device_table,
@@ -2923,6 +3109,8 @@ mapper(Recipe, recipe_table,
                                         backref='recipes'),
                       'system':relation(System, uselist=False,
                                         backref='recipes'),
+                      'watchdog':relation(Watchdog, uselist=False,
+                                         cascade="all, delete, delete-orphan"),
                       'systems':relation(System, 
                                          secondary=system_recipe_map,
                                          backref='queued_recipes'),
@@ -2959,8 +3147,15 @@ mapper(RecipeTask, recipe_task_table,
                                            backref='recipetask'),
                       'task':relation(Task, uselist=False, backref='runs'),
                       'result':relation(TaskResult, uselist=False),
-                      'status':relation(TaskStatus, uselist=False)})
+                      'status':relation(TaskStatus, uselist=False),
+                      '_roles':relation(RecipeTaskRole),
+                     }
+      )
 
+mapper(RecipeTaskRole, recipe_task_role_table,
+        properties = {'system':relation(System, uselist=False),
+                     }
+      )
 mapper(RecipeTaskParam, recipe_task_param_table)
 mapper(RecipeTaskComment, recipe_task_comment_table,
         properties = {'user':relation(User, uselist=False, backref='comments')})

@@ -119,12 +119,6 @@ class XmlRecipe(ElementWrapper):
     def hostRequires(self, *args):
         return self.wrappedEl['hostRequires'].__repr__(True)
 
-    def set_recipe_status(self,value):
-        """
-        No Op.
-        """
-        pass
-
     def __getattr__(self, attrname):
         if attrname == 'arch':
             return self.get_xml_attr('arch', unicode, None)
@@ -146,13 +140,14 @@ class XmlRecipe(ElementWrapper):
             return self.get_xml_attr('status', unicode, None)
         elif attrname == 'result': 
             return self.get_xml_attr('result', unicode, None)
+        elif attrname == 'kernel_options':
+            return self.get_xml_attr('kernel_options', unicode, None)
+        elif attrname == 'kernel_options_post':
+            return self.get_xml_attr('kernel_options_post', unicode, None)
         else: raise AttributeError, attrname
 
     def __setattr__(self,item,value):
-        if item == 'status':
-            return self.set_recipe_status(value)
-        else:
-            self.__dict__[item] = value
+        self.__dict__[item] = value
 
 class XmlRecipeMachine(XmlRecipe):
     def iter_guests(self):
@@ -173,13 +168,6 @@ class XmlTask(ElementWrapper):
             for param in params['param':]:
                 yield XmlParam(param)
 
-    def set_task_status(self,value):
-        """
-        No Op.
-        """
-        print "hello"
-        pass
-
     def __getattr__(self, attrname):
         if attrname == 'role':
             return self.get_xml_attr('role', unicode, u'None')
@@ -198,11 +186,7 @@ class XmlTask(ElementWrapper):
         else: raise AttributeError, attrname
 
     def __setattr__(self,item,value):
-        print "item = %s" % item
-        if item == 'status':
-            return self.set_task_status(value)
-        else:
-            self.__dict__[item] = value
+        self.__dict__[item] = value
 
 class XmlParam(ElementWrapper):
     def __getattr__(self, attrname):

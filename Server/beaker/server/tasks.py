@@ -24,6 +24,10 @@ from beaker.server.widgets import myPaginateDataGrid
 from beaker.server.xmlrpccontroller import RPCRoot
 from beaker.server.helpers import make_link
 from sqlalchemy import exceptions
+from subprocess import *
+import testinfo
+import rpm
+import os
 
 import cherrypy
 
@@ -118,7 +122,6 @@ class Tasks(RPCRoot):
         return dict(task=task)
 
     def process_taskinfo(self, raw_taskinfo):
-        import testinfo
         tinfo = testinfo.parse_string(raw_taskinfo['desc'])
 
         task = Task.lazy_create(name=tinfo.test_name)
@@ -157,7 +160,6 @@ class Tasks(RPCRoot):
         return task
 
     def read_taskinfo(self, rpm_file):
-        from subprocess import *
         taskinfo = {}
         taskinfo['hdr'] = self.get_rpm_info(rpm_file)
         taskinfo_file = None
@@ -171,8 +173,6 @@ class Tasks(RPCRoot):
         return taskinfo
 
     def get_rpm_info(self, rpm_file):
-        import rpm
-        import os
         """Returns rpm information by querying a rpm"""
         ts = rpm.ts()
         fdno = os.open(rpm_file, os.O_RDONLY)

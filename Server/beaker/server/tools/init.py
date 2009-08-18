@@ -143,27 +143,27 @@ def main():
         XENCERT		= Key('XENCERT')
 
     #Setup Test Status
-    if TestStatus.query().count() == 0:
-        NEW       = TestStatus(status=u'New', severity=10)
-        PROCESSED = TestStatus(status=u'Processed', severity=20)
-        QUEUEUD   = TestStatus(status=u'Queued', severity=30)
-        SCHEDULED = TestStatus(status=u'Scheduled', severity=40)
+    if TaskStatus.query().count() == 0:
+        NEW       = TaskStatus(status=u'New', severity=10)
+        PROCESSED = TaskStatus(status=u'Processed', severity=20)
+        QUEUEUD   = TaskStatus(status=u'Queued', severity=30)
+        SCHEDULED = TaskStatus(status=u'Scheduled', severity=40)
         # RUNNING is a transient state.  It will never be final.
         #  But having it the highest Severity will show a job as 
         #  Running until it finishes with either Completed, Cancelled or 
         #  Aborted.
-        RUNNING   = TestStatus(status=u'Running', severity=80)
-        COMPLETED = TestStatus(status=u'Completed', severity=50)
-        CANCELLED = TestStatus(status=u'Cancelled', severity=60)
-        ABORTED   = TestStatus(status=u'Aborted', severity=70)
+        RUNNING   = TaskStatus(status=u'Running', severity=80)
+        COMPLETED = TaskStatus(status=u'Completed', severity=50)
+        CANCELLED = TaskStatus(status=u'Cancelled', severity=60)
+        ABORTED   = TaskStatus(status=u'Aborted', severity=70)
 
     #Setup Test Result
-    if TestResult.query().count() == 0:
-        NEW       = TestResult(result=u'New', severity=10)
-        PASS      = TestResult(result=u'Pass', severity=20)
-        WARN      = TestResult(result=u'Warn', severity=30)
-        FAIL      = TestResult(result=u'Fail', severity=40)
-        PANIC     = TestResult(result=u'Panic', severity=50)
+    if TaskResult.query().count() == 0:
+        NEW       = TaskResult(result=u'New', severity=10)
+        PASS      = TaskResult(result=u'Pass', severity=20)
+        WARN      = TaskResult(result=u'Warn', severity=30)
+        FAIL      = TaskResult(result=u'Fail', severity=40)
+        PANIC     = TaskResult(result=u'Panic', severity=50)
 
     session.flush()
 

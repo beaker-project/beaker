@@ -23,7 +23,8 @@ from kid import Element
 from beaker.server.widgets import myPaginateDataGrid
 from beaker.server.xmlrpccontroller import RPCRoot
 from beaker.server.helpers import *
-from turbogears.scheduler import add_interval_task
+from bexceptions import *
+#from turbogears.scheduler import add_interval_task
 
 import cherrypy
 
@@ -44,7 +45,23 @@ class RecipeTasks(RPCRoot):
 
     @cherrypy.expose
     @identity.require(identity.not_anonymous())
-    def Start(self, task_id):
+    def expired(self):
+        """ Return all expired tasks for this lab controller
+            The lab controllers login with host/fqdn
+        """
+        try:
+            lab_controller = identity.current.user.user_name.split('/')[1]
+        except IndexError:
+            raise BX(_('Invalid login: %s, must log in as lab controller' % identity.current.user))
+        try:
+            labcontroller = LabController.by_name(lab_controller)
+        except InvalidRequestError:
+            raise BX(_('Invalid lab_controller: %s' % lab_controller))
+        return [('%s' % w.recipetask, '%s' % w.system) for w in Watchdog.expired(labcontroller)]
+
+    @cherrypy.expose
+    @identity.require(identity.not_anonymous())
+    def Start(self, task_id, watchdog_override):
         """
         Set task status to Running
         """
@@ -52,7 +69,7 @@ class RecipeTasks(RPCRoot):
             task = RecipeTask.by_id(task_id)
         except InvalidRequestError:
             raise BX(_('Invalid task ID: %s' % task_id))
-        return task.Start()
+        return task.Start(watchdog_override)
 
     @cherrypy.expose
     @identity.require(identity.not_anonymous())
