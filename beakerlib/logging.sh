@@ -282,9 +282,10 @@ option.
 Examples:
 
 rlSendFile logfile.txt -> logfile.txt
-cd /etc; rlSendFile ./passwd -> etc_passwd
-rlSendFile /etc/passwd -> etc_passwd
-rlSendFile /etc/passwd my_top_secret_file -> my_top_secret_file
+cd /etc; rlSendFile ./passwd -> etc-passwd
+rlSendFile /etc/passwd -> etc-passwd
+rlSendFile /etc/passwd my-top-secret_file -> my-top-secret-file
+rlSendFile -s '_' /etc/passwd -> etc_passwd
 
 =back
 
@@ -326,8 +327,8 @@ function rlSendFile()
             ALIAS=`echo $ALIAS | tr '/' "$SEPARATOR" | sed "s/^${SEPARATOR}*//"`
         fi
         rlLogInfo "Sending $FILE as $ALIAS"
-        ln -s $FILE $TMPDIR/$ALIAS
-        rhts-submit-log -T $TESTID -l $TMPDIR/$ALIAS
+        ln -s "`readlink -f $FILE`" "$TMPDIR/$ALIAS"
+        rhts-submit-log -T $TESTID -l "$TMPDIR/$ALIAS"
         RETVAL=$?
     fi
     rm -rf $TMPDIR
