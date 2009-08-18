@@ -579,7 +579,7 @@ matches expectations.
 =item -t
 
 If specified, stdout and stderr of the command output will be tagged
-with strigs 'stdout: ' and 'stderr: '.
+with strigs 'STDOUT: ' and 'STDERR: '.
 
 =item -l
 
