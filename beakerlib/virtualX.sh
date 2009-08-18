@@ -189,7 +189,7 @@ function rlVirtualXStart() {
 
 =head3 rlVirtualXGetDisplay
 
-Get DISPLAY for specified virtual X server.
+Get the DISPLAY variable for specified virtual X server.
 
     rlVirtualXGetDisplay name
 
@@ -226,7 +226,7 @@ function rlVirtualXGetDisplay() {
 
 =head3 rlVirtualXStop
 
-Kill specified X server.
+Kill the specified X server.
 
     rlVirtualXStop name
 

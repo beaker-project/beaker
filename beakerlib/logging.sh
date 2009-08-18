@@ -72,7 +72,7 @@ __INTERNAL_LogText()
 
 =head3 rlLogFatal
 
-Creates a time-labelled message in the log. There is a bunch of aliases which
+Create a time-labelled message in the log. There is a bunch of aliases which
 can create messages formated as DEBUG/INFO/WARNING/ERROR or FATAL (but you
 would probably want to use rlDie instead of the last one).
 
@@ -119,8 +119,8 @@ rlLogFatal()   { rlLog "$1" "$2" "[ FATAL   ] ::"; rljAddMessage "$1" "FATAL" ; 
 
 =head3 rlDie
 
-Creates a time-labelled message in the log, reports test result,
-uploads logs, closes unfinished phase and terminates test.
+Create a time-labelled message in the log, report test result,
+upload logs, close unfinished phase and terminate the test.
 
     rlDie message [file...]
 
@@ -196,7 +196,7 @@ rlHeadLog()
 
 =head3 rlBundleLogs
 
-Create a tarball of files (e.g. logs) and attache them to the test result.
+Create a tarball of files (e.g. logs) and attach them to the test result.
 
     rlBundleLogs package file [file...]
 
@@ -248,6 +248,92 @@ rlBundleLogs(){
   return $SUBMITECODE
 }
 
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# rlSendFile
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+: <<=cut
+=pod
+
+=head3 rlSendFile
+
+Resolves absolute path to the file, replaces / for - and uploads this renamed
+file using rhts_submit_log.
+It also allows you to specify your custom name for the uploaded file.
+
+    rlSendFile [-s sep] path_to_file [required_name]
+
+=over
+
+=item -s sep
+
+Sets separator (i.e. the replacement of the /) to sep.
+
+=item path_to_file
+
+Either absolute or relative path to file. Relative path is converted
+to absolute.
+
+=item required_name
+
+Default behavior renames file to full_path_to_file with / replaced for -,
+if this does not suit your needs, you can specify the name using this
+option.
+
+Examples:
+
+rlSendFile logfile.txt -> logfile.txt
+cd /etc; rlSendFile ./passwd -> etc-passwd
+rlSendFile /etc/passwd -> etc-passwd
+rlSendFile /etc/passwd my-top-secret_file -> my-top-secret-file
+rlSendFile -s '_' /etc/passwd -> etc_passwd
+
+=back
+
+=cut
+
+function rlSendFile()
+{
+    GETOPT=`getopt -q -o s: -- "$@"`
+    eval set -- "$GETOPT"
+    
+    SEPARATOR='-'
+    while true ; do
+        case "$1" in
+            -s)
+                SEPARATOR=$2;
+                shift 2
+                ;;
+            --)  shift; break;;
+            *)   shift;;
+        esac
+    done
+
+    local RETVAL=-1
+    local FILE=$1
+    local ALIAS
+    local TMPDIR=`mktemp -d`
+    if [ -f $FILE ]; then
+        if [ -n "$2" ]; then
+            ALIAS="$2"
+        else
+            if echo "$FILE" | egrep -q "^\.(\.)?/"; then
+                # ^ if the path is specified as relative ~ begins with ./ or ../
+                local POM=`dirname "$FILE"`
+                ALIAS=`cd "$POM"; pwd`
+                ALIAS="$ALIAS/`basename $FILE`"
+            else
+                ALIAS=$1
+            fi
+            ALIAS=`echo $ALIAS | tr '/' "$SEPARATOR" | sed "s/^${SEPARATOR}*//"`
+        fi
+        rlLogInfo "Sending $FILE as $ALIAS"
+        ln -s "`readlink -f $FILE`" "$TMPDIR/$ALIAS"
+        rhts-submit-log -T $TESTID -l "$TMPDIR/$ALIAS"
+        RETVAL=$?
+    fi
+    rm -rf $TMPDIR
+    return $RETVAL
+}
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # rlShowPkgVersion
@@ -314,7 +400,7 @@ rlShowPkgVersion() {
 
 =head3 rlGetArch
 
-Returns base arch for the current system (good when you need
+Return base arch for the current system (good when you need
 base arch on a multilib system).
 
     rlGetArch
@@ -354,7 +440,7 @@ function rlGetArch() {
 
 =head3 rlGetDistroVariant
 
-Returns release or variant of the distribution on the system
+Return release or variant of the distribution on the system.
 
     rlGetDistroRelease
     rlGetDistroVariant
@@ -393,7 +479,7 @@ function rlGetDistroVariant() {
 
 =head3 rlShowRunningKernel
 
-Logs a message with version of the currently running kernel.
+Log a message with version of the currently running kernel.
 
     rlShowRunningKernel
 
@@ -469,7 +555,7 @@ rlPhaseStart(){
 
 =head3 rlPhaseEnd
 
-Ends current phase.
+End current phase, summarize asserts included and report phase result.
 
     rlPhaseEnd
 
@@ -494,8 +580,7 @@ rlPhaseEnd(){
 
 =head3 rlPhaseStartCleanup
 
-Starts a phase of a specific type: Setup -> ABORT, Test -> FAIL, Cleanup -> WARN.
-Also provides some default phase names.
+Start a phase of the specified type: Setup -> ABORT, Test -> FAIL, Cleanup -> WARN.
 
     rlPhaseStartSetup [name]
     rlPhaseStartTest [name]
@@ -505,7 +590,8 @@ Also provides some default phase names.
 
 =item name
 
-Optional name of the phase.
+Optional name of the phase. If not specified, default Setup/Test/Cleanup are
+used.
 
 =back
 
@@ -533,8 +619,8 @@ rlPhaseStartCleanup(){
 
 =head3 rlLogMetricLow
 
-Logs a metric, which should be as low as possible (example: memory
-consumption, run time) to the journal.
+Log a metric, which should be as low as possible to the journal.
+(Example: memory consumption, run time)
 
     rlLogMetricLow name value [tolerance]
 
@@ -587,8 +673,8 @@ rlLogLowMetric(){
 
 =head3 rlLogMetricHigh
 
-Logs a metric, which should be as high as possible (example:
-number of executions per second) to the journal
+Log a metric, which should be as high as possible to the journal.
+(Example: number of executions per second)
 
     rlLogMetricHigh name value [tolerance]
 

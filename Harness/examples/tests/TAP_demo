@@ -1,0 +1,56 @@
+#!/bin/sh
+
+# Beah - Test harness. Part of Beaker project.
+#
+# Copyright (C) 2009 Marian Csontos <mcsontos@redhat.com>
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+function sleepy_echo() { sleep $1; echo "$2"; }
+
+sleepy_echo 1 '# Description: Data for sanity-testing TAP Task'
+sleepy_echo 1 '# Author: mcsontos'
+sleepy_echo 1 ''
+sleepy_echo 1 '1..10 # More comment'
+sleepy_echo 1 'ok'
+sleepy_echo 1 'ok 2'
+sleepy_echo 0 'not ok'
+sleepy_echo 0 'not ok 4'
+sleepy_echo 1 ''
+sleepy_echo 1 'incorrect format'
+sleepy_echo 1 'incorrect format again # TODO: fix this please!'
+sleepy_echo 0 '#5 is missing here'
+sleepy_echo 0 '#TODO something is missing there'
+sleepy_echo 0 'ok # SKIPping #6'
+sleepy_echo 1 'ok 7 # TODO add something here'
+sleepy_echo 1 'ok 8 Yeah!'
+sleepy_echo 1 'not ok 9 It\'s my end!'
+sleepy_echo 0 'not ok 10 not implemented # TODO: implement this!'
+sleepy_echo 0 '# Previous test failed...'
+sleepy_echo 0 ''
+sleepy_echo 1 '# Expect more (and only) broken things ahead!'
+sleepy_echo 1 'not ok # A test out of plan!'
+sleepy_echo 1 'ok 1 # I have seen this already!'
+sleepy_echo 1 'not ok # So this, but with different result!'
+sleepy_echo 0 '# I would like to see results like this: 1?00_11100'
+sleepy_echo 0 'Bail out! I have seen enough, this test is completely broken! # No, not really.'
+sleepy_echo 0 'ok 5 # This should be ignored! Was it?'
+sleepy_echo 1 'not ok 5 # This should be ignored! Really!'
+sleepy_echo 1 'And once more - Ignore this, please.'
+sleepy_echo 1 'Bail out! Bail out! I asked you, to ignore this!'
+sleepy_echo 1 'And I was not joking! I am over with you.'
+sleep 1
+
+exit 1

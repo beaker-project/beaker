@@ -1,0 +1,50 @@
+== TODO ==
+
+ !  rhts task adaptor
+    - Either capture XML-RPC (could be done easily) or replace binaries.
+    - Try XML-RPC first - looks easier.
+ !  go on with refactoring - identify duplicates, useless stuff, patterns.
+ 9  twisted scaffolding for controller, backend and task.
+    - I/O - sockets, stdio, named-pipes
+    - spawn process
+ 9  library of common methods for download, install, check and uninstall tasks
+ 9  beaker backend - communication with remote server - JSON / XML-RPC
+    - is beackend expected to do some set-up? Environment variables?
+    - is task standalone?
+ 9  backends should end cleanly when "bye" is received.
+ 9  check compatibility with older distributions and ms windows
+ 9  proper configuration files (host,port), default backend, using timestamps
+ 9  command line options for server
+ 9  make it a service (service beacon start...)
+ 9  fedora packaging
+ 8  add support for other programming languages - convenience directory.
+    - interfaces should be generated from metadata
+    - interfaces should use keyword/value (or --option=value) for all obscure
+      choices, so it is easy to extend, backward compatible.
+      Use positional arguments only for obvious always present arguments.
+      Provide wrappers for most common tasks - e.g. simple logging,...
+ 8  more documentation
+ 8  support for reboot - after rebooting:
+    - set-up environment, start the controller, initialise backends, and start
+      tasks.
+ 7  identify common formats (e.g. cppunit) and create filters
+ 4  create filter taking stdin and sending to Controller via socket
+    - tee for sockets
+ 4  output backend w/ colorful output.
+
+=== Legend ===
+
+Priority classification: (Thanks to Vim)
+
+|| ! || things to fix immediately ||
+|| 9 || next point release ||
+|| 8 || next release ||
+|| 7 || as soon as possible ||
+|| 6 || soon ||
+|| 5 || should be included ||
+|| 4 || nice to have ||
+|| 3 || consider including ||
+|| 2 || maybe not ||
+|| 1 || probably not ||
+|| - || unclassified ||
+

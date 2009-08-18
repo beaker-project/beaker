@@ -1,0 +1,82 @@
+#!/bin/bash
+
+# Beah - Test harness. Part of Beaker project.
+#
+# Copyright (C) 2009 Marian Csontos <mcsontos@redhat.com>
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+if [[ -r setup.sh ]]; then
+	. setup.sh
+else
+	echo "launcher has to be started from directory where setup.sh resides." >&2
+	exit 1
+fi
+
+function xt()
+{
+	local geo=$1
+	shift
+	xterm -geometry $geo -e "$@" &
+	# -title $1 -n $1
+}
+
+function main()
+{
+	for i in "$@"; do
+		if [[ $i == 's' || $i == 'S' ]]; then
+			if [[ -z $running_s ]]; then
+				local running_s=1
+				xt 80x35-0-0 srv &
+			fi
+			continue
+		fi
+		if [[ $i == 'c' || $i == 'C' ]]; then
+			if [[ -z $running_c ]]; then
+				local running_c=1
+				xt 80x20+0+0 cmd_backend &
+			fi
+			continue
+		fi
+		if [[ $i == 'o' || $i == 'O' ]]; then
+			if [[ -z $running_o ]]; then
+				local running_o=1
+				xt 80x35-0+0 out_backend &
+			fi
+			continue
+		fi
+	done
+}
+
+if [[ -z $@ ]]; then
+	main c o
+elif [[ $1 == 'a' || $1 == 'A' ]]; then
+	main s c o
+elif [[ $1 == 'so' || $1 == 'os' || $1 == 'SO' || $1 == 'OS' ]]; then
+	main s o
+elif [[ $1 == '-h' || $1 == '--help' ]]; then
+	cat <<END
+USAGE: launcher [ (a|s|o|c) ... ]
+  s - start the controller - srv
+  c - start the command backend - cmd_backend
+  o - start the output backend - out_backend
+  a - start all three programs
+    - if no arguments are provided, start server and output backend
+NOTE: programs are started in separate xterm windows
+
+END
+else
+	main "$@"
+fi

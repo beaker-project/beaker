@@ -16,6 +16,7 @@
 # Author: Petr Muller <pmuller@redhat.com>
 
 import xml.dom.minidom
+import sys
 
 class Result:
 	def __init__(self):
@@ -152,8 +153,15 @@ class TestSet:
 				print "[WARN] Could not find corresponding test for: %s" % key
 		return result_list
 
-journal_old = xml.dom.minidom.parse("old/rcw-journal")
-journal_new = xml.dom.minidom.parse("new/rcw-journal")
+try:
+  old = sys.argv[1]
+  new = sys.argv[2]
+except IndexError:
+  old = "old/rcw-journal"
+  new = "new/rcw-journal"
+
+journal_old = xml.dom.minidom.parse(old)
+journal_new = xml.dom.minidom.parse(new)
 
 old_log = journal_old.getElementsByTagName("log")[0]
 new_log = journal_new.getElementsByTagName("log")[0]

@@ -65,6 +65,66 @@ __INTERNAL_ConditionalAssert(){
 }
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# rlPass                                                                 
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+: <<=cut                                                                       
+=pod                                                                           
+
+=head2 Manual Asserts
+
+=head3 rlPass
+
+Manual assertion, asserts and logs PASS.
+
+    rlPass comment
+
+=over
+
+=item comment
+
+Short test summary.
+
+=back
+
+Returns 0 and asserts PASS.
+
+=cut
+
+rlPass(){
+    __INTERNAL_LogAndJournalPass "$1"
+    return 0
+}
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# rlFail                                                                 
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+: <<=cut                                                                       
+=pod                                                                           
+
+=head3 rlFail
+
+Manual assertion, asserts and logs FAIL.
+
+    rlFail comment
+
+=over
+
+=item comment
+
+Short test summary.
+
+=back
+
+Returns 1 and asserts FAIL.
+
+=cut
+
+rlFail(){
+    __INTERNAL_LogAndJournalFail "$1"
+    return 1
+}
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # rlAssert0
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 : <<=cut
@@ -228,7 +288,7 @@ rlAssertGreater() {
 
 Assertion checking whether first parameter is greater or equal to the second one.
 
-    rlAssertGreater comment value1 value2
+    rlAssertGreaterOrEqual comment value1 value2
 
 =over
 
@@ -423,7 +483,7 @@ rlAssertNotGrep(){
 
 =head3 rlAssertDiffer
 
-Assertion checking that two files differ (are not identical)
+Assertion checking that two files differ (are not identical).
 
     rlAssertDiffer file1 file2
 
@@ -464,7 +524,7 @@ rlAssertDiffer(){
 
 =head3 rlAssertNotDiffer
 
-Assertion checking that two files are identical
+Assertion checking that two files do not differ (are identical).
 
     rlAssertNotDiffer file1 file2
 
@@ -512,9 +572,19 @@ rlAssertNotDiffer(){
 Run command with optional comment and make sure its exit code
 matches expectations.
 
-    rlRun command [status[,status...]] [comment]
+    rlRun [-t] [-l] command [status[,status...]] [comment]
 
 =over
+
+=item -t
+
+If specified, stdout and stderr of the command output will be tagged
+with strigs 'STDOUT: ' and 'STDERR: '.
+
+=item -l
+
+If specified, output of the command (tagged, if -t was specified) is
+logged using rlLog function.
 
 =item command
 
@@ -540,8 +610,35 @@ command's exit status is in the list of expected exit codes.
 =cut
 
 rlRun(){
+
+  GETOPT=`getopt -q -o lt -- "$@"`
+  eval set -- "$GETOPT"
   
+  local DO_LOG=false
+  local DO_TAG=false
+  local TAG_OUT=''
+  local TAG_ERR=''
+  local LOG_FILE='/dev/null'
+  
+  while true ; do
+    case "$1" in
+      -l)
+            DO_LOG=true;
+            LOG_FILE=`mktemp`
+            shift;;
+      -t)
+            DO_TAG=true;
+            TAG_OUT='STDOUT: '
+            TAG_ERR='STDERR: '
+            shift
+            ;;
+      --)  shift; break;;
+      *)   shift;;
+    esac
+  done
+
   local command=$1
+  local expected_orig=${2:-0}
   local expected=${2:-0}
   local comment=${3:-"Running '$command'"}
 
@@ -572,11 +669,18 @@ rlRun(){
   done
 
   rlLogDebug "rlRun: Running command: $command"
-  eval "$command"
+  
+  eval "$command" 2> >(sed -e "s/^/$TAG_ERR/g" | tee -a $LOG_FILE) 1> >(sed -e "s/^/$TAG_OUT/g" | tee -a $LOG_FILE)
   local exitcode=$?
-  rlLogDebug "rlRun: Command finished with exit code: $exitcode, expected: $expected"
+  sync
+  if $DO_LOG; then
+    rlLog "$command\n`cat $LOG_FILE`"
+    rm $LOG_FILE
+  fi
+  
+  rlLogDebug "rlRun: Command finished with exit code: $exitcode, expected: $expected_orig"
   echo "$expected" | grep -q "\<$exitcode\>"   # symbols \< and \> match the empty string at the beginning and end of a word
-  __INTERNAL_ConditionalAssert "$comment" $? "(Expected $expected, got $exitcode)"
+  __INTERNAL_ConditionalAssert "$comment" $? "(Expected $expected_orig, got $exitcode)"
   
   return $exitcode
 }

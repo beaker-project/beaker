@@ -1,0 +1,40 @@
+== Beah - Beaker Harness ==
+
+Harness is using TCP/IP sockets for IPC. In case of failures it is easy to
+reconnect. (At least easier than simple capturing stdout.)
+
+Events and Commands are JSON-serialized new-line separated messages sent over
+TCP/IP socket. Easy to extend, easy to ignore parts of message which are not
+understood. Well supported in many programming languages. Rather effective
+enconding/decoding.
+
+Single JSON object on a line, is quite robust: in case of message corruption
+only that message (and eventually next one) will be affected. In case of
+events, these will not be lost - the lose_item event containing raw data is
+generated.
+
+Twisted framework is used for handling non-blocking I/O operations.
+
+=== Modules ===
+
+(Beware: things are not in place.)
+
+beah.config     Default configuration. Update this module from outside
+beah.core       Independent components - constants, controller, interfaces,
+                basic backends and tasks...
+beah.backends, beah.tasks
+                Additional backend and task adaptors
+beah.wires      Wiring to glue things together
+beah.wires.twisted
+                Twisted wiring (mostly metadata - use this protocol, this
+                implementation, JSON over TCP/IP socket, default cfg,...
+beah.wires.internals
+                Internal implementation for wirings
+beah.misc       Things which do not fit elsewhere
+beah.filters    I/O filters. LineReceiver, ObjReceiver,...
+beah.tests      Testing harness
+
+beahlib		Library to be used from python tasks/tests.
+
+--------------------------------------------------------------------------------
+# vim:et:sw=8:ts=8
