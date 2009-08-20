@@ -2,7 +2,7 @@
 %{!?pyver: %define pyver %(%{__python} -c "import sys ; print sys.version[:3]")}
 
 Name:           beaker
-Version:        0.4.37
+Version:        0.4.38
 Release:        0%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
@@ -133,6 +133,9 @@ ln -s Fedora.ks $RPM_BUILD_ROOT/var/lib/cobbler/kickstarts/Fedoradevelopment.ks
 /usr/share/man/man1/beakerlib*
 
 %changelog
+* Thu Aug 20 2009 Bill Peck <bpeck@redhat.com> - 0.4.38-0
+- Allow skipx in kickstarts to be passed in from metadata.
+- Added xmlrpc method for editing distro Update.
 * Wed Aug 12 2009 Bill Peck <bpeck@redhat.com> - 0.4.37-0
 - Escape $ in custom kickstarts sent to cobbler
 * Tue Aug 11 2009 Bill Peck <bpeck@redhat.com> - 0.4.36-0
