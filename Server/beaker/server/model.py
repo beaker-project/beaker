@@ -32,6 +32,9 @@ import md5
 import xml.dom.minidom
 from xml.dom.minidom import Node
 
+import logging
+log = logging.getLogger(__name__)
+
 system_table = Table('system', metadata,
     Column('id', Integer, autoincrement=True,
            nullable=False, primary_key=True),
@@ -2387,6 +2390,13 @@ class Recipe(MappedObject):
         for task in self.tasks:
             task.Schedule()
 
+    def Waiting(self):
+        """
+        Move from Scheduled to Waiting
+        """
+        for task in self.tasks:
+            task.Waiting()
+
     def Cancel(self, msg=None):
         """
         Method to cancel all tasks in this recipe.
@@ -2430,16 +2440,36 @@ class Recipe(MappedObject):
 
         if not self.finish_time \
            and self.status != TaskStatus.by_name(u'Running') \
+           and self.status != TaskStatus.by_name(u'Waiting') \
            and self.status.severity >= TaskStatus.by_name(u'Completed').severity:
             # Record the completion of this Recipe.
             self.finish_time = datetime.utcnow()
 
+            ## FIXME Should we actually remove the watchdog?
+            ##       Maybe we should set the status of the watchdog to reclaim
+            ##       so that the lab controller returns the system instead.
             # Remove this recipes watchdog
+            log.debug("Remove watchdog for recipe %s" % self.id)
             del(self.watchdog)
 
             # Return system if reserved
             if self.system:
-                self.system.user = None
+                try:
+                    self.system.action_return()
+                    log.debug("Return system %s for recipe %s" % (self.system, self.id))
+                    self.system.activity.append(
+                        SystemActivity(self.recipeset.job.owner, 
+                                       'Scheduler', 
+                                       'Returned', 
+                                       'User', 
+                                       '%s' % self.recipeset.job.owner, 
+                                       ''))
+                except socket.gaierror, error:
+                    #FIXME
+                    pass
+                except xmlrpclib.Fault, error:
+                    #FIXME
+                    pass
 
         self.result = session.query(TaskResult).from_statement(
                              select([TaskResult.id, 
@@ -2496,6 +2526,9 @@ class RecipeTask(MappedObject):
     """
     This holds the results/status of the task being executed.
     """
+    result_types = ['Pass','Warn','Fail','Panic']
+    stop_types = ['Stop','Abort','Cancel']
+
     def to_xml(self):
         task = self.doc.createElement("task")
         task.setAttribute("id", "%s" % self.id)
@@ -2566,9 +2599,15 @@ class RecipeTask(MappedObject):
         """
         Moved from Processed -> Scheduled
         """
-        if not self.recipe.watchdog:
-            raise BX(_('No watchdog exists for task %' % self.recipe.id))
         self.status = TaskStatus.by_name(u'Scheduled')
+        session.flush([self])
+        self.update_status()
+
+    def Waiting(self):
+        """
+        Moved from Scheduled -> Waiting
+        """
+        self.status = TaskStatus.by_name(u'Waiting')
         session.flush([self])
         self.update_status()
 
@@ -2580,7 +2619,7 @@ class RecipeTask(MappedObject):
          of seconds
         """
         if not self.recipe.watchdog:
-            raise BX(_('No watchdog exists for task %' % self.recipe.id))
+            raise BX(_('No watchdog exists for recipe %s' % self.recipe.id))
         if not self.start_time:
             self.start_time = datetime.utcnow()
         self.status = TaskStatus.by_name(u'Running')
@@ -2598,12 +2637,12 @@ class RecipeTask(MappedObject):
         session.flush([self])
         self.update_status()
 
-    def Stop(self):
+    def Stop(self, *args, **kwargs):
         """
         Record the completion of this task
         """
         if not self.recipe.watchdog:
-            raise BX(_('No watchdog exists for task %' % self.recipe.id))
+            raise BX(_('No watchdog exists for recipe %s' % self.recipe.id))
         if not self.finish_time:
             self.finish_time = datetime.utcnow()
         self.status = TaskStatus.by_name(u'Completed')
@@ -2630,7 +2669,8 @@ class RecipeTask(MappedObject):
         # Only record an abort/cancel on tasks that are New, Queued, Scheduled 
         # or Running
         if self.status.severity < TaskStatus.by_name(u'Completed').severity \
-           or self.status == TaskStatus.by_name(u'Running'):
+           or self.status == TaskStatus.by_name(u'Running') \
+           or self.status == TaskStatus.by_name(u'Waiting'):
             self.status = TaskStatus.by_name(status)
             self.results.append(RecipeTaskResult(recipetask=self,
                                        path=u'/',
@@ -2669,7 +2709,7 @@ class RecipeTask(MappedObject):
         Record a result 
         """
         if not self.recipe.watchdog:
-            raise BX(_('No watchdog exists for task %' % self.recipe.id))
+            raise BX(_('No watchdog exists for recipe %s' % self.recipe.id))
         self.results.append(RecipeTaskResult(recipetask=self,
                                    path=path,
                                    result=TaskResult.by_name(result),
