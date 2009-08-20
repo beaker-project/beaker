@@ -76,7 +76,7 @@ class Recipes(RPCRoot):
             raise BX(_('Invalid recipe ID: %s' % recipe_id))
         return recipe.Cancel(msg)
 
-    @expose(format='json')
+    @cherrypy.expose
     def to_xml(self, id):
         recipexml = Recipe.by_id(id).to_xml().toprettyxml()
         return dict(xml=recipexml)
@@ -251,7 +251,8 @@ def queued_recipes(*args):
                                  )
                                 )
                                )
-        if recipes.count():
+        count = recipes.count()
+        if count:
             log.debug("Entering queued_recipes routine")
         for recipe in recipes:
             system = recipe.dyn_systems.filter(System.user==None)
@@ -280,6 +281,7 @@ def queued_recipes(*args):
                         recipe.recipeset.lab_controller = system.lab_controller
                         recipe.systems = []
                         # Create the watchdog without an Expire time.
+                        log.debug("Created watchdog for recipe id: %s and system: %s" % (recipe.id, system))
                         recipe.watchdog = Watchdog(system=recipe.system)
                         activity = SystemActivity(recipe.recipeset.job.owner, "Scheduler", "Reserved", "User", "", "%s" % recipe.recipeset.job.owner )
                         system.activity.append(activity)
@@ -299,7 +301,7 @@ def queued_recipes(*args):
                     # enforce single recipes for remote execution.
                     pass
         session.flush()
-        if recipes.count():
+        if count:
             log.debug("Exiting queued_recipes routine")
         else:
             time.sleep(20)
@@ -325,6 +327,7 @@ def scheduled_recipes(*args):
                 # If one of the recipes gets aborted then don't try and run
                 if recipe.status != TaskStatus.by_name(u'Scheduled'):
                     continue
+                recipe.Waiting()
                 # Go Through each task and find out the roles of everyone else
                 for i, task in enumerate(recipe.tasks):
                     for peer in recipe.recipeset.recipes:
@@ -334,8 +337,14 @@ def scheduled_recipes(*args):
                             task.roles[key].append(peer.system)
     
                 # Start the first task in the recipe
-                # FIXME Create watchdog entry, should this be part of Start()?
-                recipe.tasks[0].Start()
+                try:
+                    recipe.tasks[0].Start()
+                except exceptions.Exception, e:
+                    log.error("Failed to Start recipe %s, due to %s" % (recipe.id,e))
+                    recipe.recipeset.Abort(u"Failed to provision recipeid %s, %s" % 
+                                                                             (
+                                                                         recipe.id,
+                                                                            e))
                 # FIXME add customrepos if present
                 ks_meta = "beaker=%s recipeid=%s packages=%s" % (
                                                           gethostname(),
@@ -348,6 +357,13 @@ def scheduled_recipes(*args):
                                                      recipe.kernel_options,
                                                      recipe.kernel_options_post,
                                                      recipe.kickstart)
+                    recipe.system.activity.append(
+                         SystemActivity(recipe.recipeset.job.owner, 
+                                        'Scheduler', 
+                                        'Provision', 
+                                        'Distro',
+                                        '',
+                                        '%s' % recipe.distro))
                 except exceptions.Exception, e:
                     log.error(u"Failed to provision recipeid %s, %s" % (
                                                                          recipe.id,
@@ -357,6 +373,7 @@ def scheduled_recipes(*args):
                                                                          recipe.id,
                                                                             e))
        
+        session.flush()
         if recipesets:
             log.debug("Exiting scheduled_recipes routine")
         else:
