@@ -73,7 +73,7 @@ class RecipeTasks(RPCRoot):
 
     @cherrypy.expose
     @identity.require(identity.not_anonymous())
-    def Stop(self, task_id):
+    def Stop(self, task_id, stop_type, msg):
         """
         Set task status to Completed
         """
@@ -81,79 +81,27 @@ class RecipeTasks(RPCRoot):
             task = RecipeTask.by_id(task_id)
         except InvalidRequestError:
             raise BX(_('Invalid task ID: %s' % task_id))
-        return task.Stop()
+        if stop_type not in task.stop_types:
+            raise BX(_('Invalid stop_type: %s, must be one of %s' %
+                             (stop_type, task.stop_types)))
+        kwargs = dict(msg = msg)
+        return getattr(task,stop_type)(**kwargs)
 
     @cherrypy.expose
     @identity.require(identity.not_anonymous())
-    def Pass(self, task_id, path, score, summary):
+    def Result(self, task_id, result_type, path, score, summary):
         """
-        Record a Pass
+        Record a Result
         """
         try:
             task = RecipeTask.by_id(task_id)
         except InvalidRequestError:
             raise BX(_('Invalid task ID: %s' % task_id))
-        return task.Pass(path, score, summary)
-
-    @cherrypy.expose
-    @identity.require(identity.not_anonymous())
-    def Warn(self, task_id, path, score, summary):
-        """
-        Record a Warn
-        """
-        try:
-            task = RecipeTask.by_id(task_id)
-        except InvalidRequestError:
-            raise BX(_('Invalid task ID: %s' % task_id))
-        return task.Warn(path, score, summary)
-
-    @cherrypy.expose
-    @identity.require(identity.not_anonymous())
-    def Fail(self, task_id, path, score, summary):
-        """
-        Record a Fail
-        """
-        try:
-            task = RecipeTask.by_id(task_id)
-        except InvalidRequestError:
-            raise BX(_('Invalid task ID: %s' % task_id))
-        return task.Fail(path, score, summary)
-
-    @cherrypy.expose
-    @identity.require(identity.not_anonymous())
-    def Panic(self, task_id, path, score, summary):
-        """
-        Record a Panic
-        """
-        try:
-            task = RecipeTask.by_id(task_id)
-        except InvalidRequestError:
-            raise BX(_('Invalid task ID: %s' % task_id))
-        return task.Panic(path, score, summary)
-
-    @cherrypy.expose
-    @identity.require(identity.not_anonymous())
-    def Abort(self, task_id, msg):
-        """
-        Set task status to Aborted
-        """
-        try:
-            task = RecipeTask.by_id(task_id)
-        except InvalidRequestError:
-            raise BX(_('Invalid task ID: %s' % task_id))
-        return task.Abort(msg)
-
-    @cherrypy.expose
-    @identity.require(identity.not_anonymous())
-    def Cancel(self, task_id, msg):
-        """
-        Set task status to Cancelled
-        """
-        try:
-            task = RecipeTask.by_id(task_id)
-        except InvalidRequestError:
-            raise BX(_('Invalid task ID: %s' % task_id))
-        return task.Cancel(msg)
+        if result_type not in task.result_types:
+            raise BX(_('Invalid result_type: %s, must be one of %s' %
+                             (result_type, task.result_types)))
+        kwargs = dict(path=path, score=score, summary=summary)
+        return getattr(task,result_type)(**kwargs)
 
     @expose(format='json')
     def to_xml(self, id):
