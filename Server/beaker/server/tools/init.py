@@ -148,10 +148,11 @@ def main():
         PROCESSED = TaskStatus(status=u'Processed', severity=20)
         QUEUEUD   = TaskStatus(status=u'Queued', severity=30)
         SCHEDULED = TaskStatus(status=u'Scheduled', severity=40)
-        # RUNNING is a transient state.  It will never be final.
+        # RUNNING and WAITING are transient states.  It will never be final.
         #  But having it the highest Severity will show a job as 
         #  Running until it finishes with either Completed, Cancelled or 
         #  Aborted.
+        WAITING   = TaskStatus(status=u'Waiting', severity=75)
         RUNNING   = TaskStatus(status=u'Running', severity=80)
         COMPLETED = TaskStatus(status=u'Completed', severity=50)
         CANCELLED = TaskStatus(status=u'Cancelled', severity=60)
