@@ -215,6 +215,7 @@ def processed_recipesets(*args):
                                               System.lab_controller==l_controller
                                                     ).all()
                                   )
+                    log.debug("Removing lab %s from recipe id %s" % (l_controller, recipe.id))
                     for system in systems:
                         log.debug("Removing %s from recipe id %s" % (system, recipe.id))
                         recipe.systems.remove(system)
