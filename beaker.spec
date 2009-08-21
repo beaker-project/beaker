@@ -2,7 +2,7 @@
 %{!?pyver: %define pyver %(%{__python} -c "import sys ; print sys.version[:3]")}
 
 Name:           beaker
-Version:        0.4.38
+Version:        0.4.39
 Release:        0%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
@@ -133,6 +133,17 @@ ln -s Fedora.ks $RPM_BUILD_ROOT/var/lib/cobbler/kickstarts/Fedoradevelopment.ks
 /usr/share/man/man1/beakerlib*
 
 %changelog
+* Fri Aug 21 2009 Petr Muller <pmuller@redhat.com> - 0.4.39-0
+- cherry picked fixes from master branch for beakerlib:
+- various doc fixes
+- tweaked phase reporting 
+- new options & functionality for rlRun
+- enabling manual use of journal comparator
+- new rlPass and rlFail functions
+- new rlSendFile function
+- plugin mechanism
+- xml character breakage fix
+
 * Thu Aug 20 2009 Bill Peck <bpeck@redhat.com> - 0.4.38-0
 - Allow skipx in kickstarts to be passed in from metadata.
 - Added xmlrpc method for editing distro Update.
