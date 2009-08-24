@@ -77,8 +77,34 @@ class Recipes(RPCRoot):
         return recipe.Cancel(msg)
 
     @cherrypy.expose
-    def to_xml(self, id):
-        recipexml = Recipe.by_id(id).to_xml().toprettyxml()
+    def system_xml(self, system_name=None):
+        """ 
+            Pass in system name and you'll get the active recipe
+               for that system.
+        """
+        if not system_name:
+            raise BX(_("Missing system name!"))
+        try:
+            system = System.by_fqdn(system_name,identity.current.user)
+        except InvalidRequestError:
+            raise BX(_("Invalid system %s" % system_name))
+        try:
+            recipexml = Watchdog.by_system(system).recipe.to_xml().toprettyxml()
+        except InvalidRequestError:
+            raise BX(_("No active recipe for %s" % system_name))
+        return dict(xml=recipexml)
+
+    @cherrypy.expose
+    def to_xml(self, recipe_id=None):
+        """ 
+            Pass in recipe id and you'll get that recipe's xml
+        """
+        if not recipe_id:
+            raise BX(_("No recipe id provided!"))
+        try:
+           recipexml = Recipe.by_id(recipe_id).to_xml().toprettyxml()
+        except InvalidRequestError:
+            raise BX(_("Invalid Recipe ID %s" % recipe_id))
         return dict(xml=recipexml)
 
     @expose(template='beaker.server.templates.grid')
