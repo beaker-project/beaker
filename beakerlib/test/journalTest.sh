@@ -42,7 +42,7 @@ test_rlCreateLogFromJournal(){
 	#must not tracedump on an empty log message
 	rlJournalStart
 	#outside-of-phase log
-	rlLog ""
+  rlLog ""
 	rlPhaseStart FAIL
 	#inside-phase log
 	rlLog ""
@@ -54,5 +54,14 @@ test_rlCreateLogFromJournal(){
     rlLog "ščřžýáíéーれっどはっと"
 	assertFalse "no traceback on non-ascii chars (unicode support)" "rlJournalPrintText 2>&1 |grep Traceback"
 
+  # no traceback on non-xml garbage
+  rlJournalStart
+  rlPhaseStart FAIL
+  rlLog "`echo $'\x00'`"
+  rlLog "`echo $'\x0c'`"
+  rlLog "`echo $'\x1F'`"
+	assertFalse "no traceback on non-xml characters" "rlJournalPrintText 2>&1 |grep Traceback"
+
   rlPhaseEnd
+  rlJournalStart
 }
