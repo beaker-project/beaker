@@ -651,7 +651,7 @@ class System(SystemObject):
         self.owner = owner
 
     def remote(self):
-        class CobblerAPI():
+        class CobblerAPI:
             def __init__(self, system):
                 self.system = system
                 url = "http://%s/cobbler_api" % system.lab_controller.fqdn
