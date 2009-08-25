@@ -133,6 +133,9 @@ ln -s Fedora.ks $RPM_BUILD_ROOT/var/lib/cobbler/kickstarts/Fedoradevelopment.ks
 /usr/share/man/man1/beakerlib*
 
 %changelog
+* Tue Aug 25 2009 Petr Muller <bpeck@redhat.com> - 0.4.39-0
+- re-worked remote calls to cobbler to be in their own sub-class.
+  This was needed to support the latest version of cobbler.
 * Fri Aug 21 2009 Petr Muller <pmuller@redhat.com> - 0.4.39-0
 - cherry picked fixes from master branch for beakerlib:
 - various doc fixes
@@ -143,7 +146,6 @@ ln -s Fedora.ks $RPM_BUILD_ROOT/var/lib/cobbler/kickstarts/Fedoradevelopment.ks
 - new rlSendFile function
 - plugin mechanism
 - xml character breakage fix
-
 * Thu Aug 20 2009 Bill Peck <bpeck@redhat.com> - 0.4.38-0
 - Allow skipx in kickstarts to be passed in from metadata.
 - Added xmlrpc method for editing distro Update.
