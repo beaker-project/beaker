@@ -44,6 +44,7 @@ class Distros(RPCRoot):
                     options = dict(tags = distro.tags))
 
     @expose()
+    @identity.require(identity.not_anonymous())
     def save_tag(self, id=None, tag=None, *args, **kw):
         try:
             distro = Distro.by_id(id)
@@ -52,10 +53,12 @@ class Distros(RPCRoot):
             redirect(".")
         if tag['text']:
             distro.tags.append(tag['text'])
+            Activity(identity.current.user,'WEBUI','Tagged',distro.install_name,,None,tag)
         flash(_(u"Added Tag %s" % tag['text']))
         redirect("./view?id=%s" % id)
 
     @expose()
+    @identity.require(identity.not_anonymous())
     def tag_remove(self, id=None, tag=None, *args, **kw):
         try:
             distro = Distro.by_id(id)
@@ -66,6 +69,7 @@ class Distros(RPCRoot):
             for dtag in distro.tags:
                 if dtag == tag:
                     distro.tags.remove(dtag)
+                    Activity(identity.current.user,'WEBUI','UnTagged',distro.install_name,tag,None)
                     flash(_(u"Removed Tag %s" % tag))
         redirect("./view?id=%s" % id)
 

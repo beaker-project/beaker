@@ -3,7 +3,7 @@
 
 Name:           beaker
 Version:        0.4.39
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -136,6 +136,7 @@ ln -s Fedora.ks $RPM_BUILD_ROOT/var/lib/cobbler/kickstarts/Fedoradevelopment.ks
 * Tue Aug 25 2009 Petr Muller <bpeck@redhat.com> - 0.4.39-1
 - re-worked remote calls to cobbler to be in their own sub-class.
   This was needed to support the latest version of cobbler.
+- added not_anonymous tags around distro tagi add/remove methods.
 * Fri Aug 21 2009 Petr Muller <pmuller@redhat.com> - 0.4.39-0
 - cherry picked fixes from master branch for beakerlib:
 - various doc fixes

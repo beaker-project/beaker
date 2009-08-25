@@ -667,22 +667,31 @@ class System(SystemObject):
                     system_id = self.remote.get_system_handle(self.system.fqdn, 
                                                                 self.token)
                 except xmlrpclib.Fault, msg:
-                    system_id = self.remote.new_system(token)
+                    system_id = self.remote.new_system(self.token)
                     try:
                         ipaddress = socket.gethostbyname_ex(self.system.fqdn)[2][0]
                     except socket.gaierror:
                         raise BX(_('%s does not resolve to an ip address' %
                                                               self.system.fqdn))
-                    self.remote.modify_system(system_id, 'name', 
-                                                    self.system.fqdn, token)
-                    self.remote.modify_system(system_id, 'modify_interface',
-                                           {'ipaddress-eth0': ipaddress}, token)
-                    profile = remote.get_profiles(0,1,token)[0]['name']
-                    self.remote.modify_system(system_id, 'profile', profile,
-                                                                          token)
-                    self.remote.modify_system(system_id, 'netboot-enabled', 
-                                                                   False, token)
-                    self.remote.save_system(system_id, token)
+                    self.remote.modify_system(system_id, 
+                                              'name', 
+                                              self.system.fqdn, 
+                                              self.token)
+                    self.remote.modify_system(system_id, 
+                                              'modify_interface',
+                                              {'ipaddress-eth0': ipaddress}, 
+                                              self.token)
+                    profile = remote.get_profiles(0,1,self.token)[0]['name']
+                    self.remote.modify_system(system_id, 
+                                              'profile', 
+                                              profile,
+                                              self.token)
+                    self.remote.modify_system(system_id, 
+                                              'netboot-enabled', 
+                                              False, 
+                                              self.token)
+                    self.remote.save_system(system_id, 
+                                            self.token)
                 return system_id
 
             def get_event_log(self, task_id):
