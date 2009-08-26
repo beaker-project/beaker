@@ -128,7 +128,7 @@ class Netboot:
                                          bootargs, 
                                          None, 
                                          kickstart)
-            activity = SystemActivity(system.user, 'VIA %s' % None, 'Provision', 'Distro', "", "%s: %s" % (result, distro.install_name))
+            activity = SystemActivity(system.user, 'VIA %s' % None, 'Provision', 'Distro', "", "Success: %s" % distro.install_name)
             system.activity.append(activity)
         else:
             raise BX(_("hostname not defined"))
