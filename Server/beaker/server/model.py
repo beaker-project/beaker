@@ -806,7 +806,7 @@ $SNIPPET("rhts_post")
                         pid = self.remote.new_subprofile(self.token)
                         self.remote.modify_profile(pid, 
                                               "name",
-                                              self.systemfqdn,
+                                              self.system.fqdn,
                                               self.token)
                     if self.remote.read_or_write_kickstart_template(kickfile,
                                                                False,
