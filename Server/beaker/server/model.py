@@ -734,7 +734,7 @@ class System(SystemObject):
                                                    self.system.power.power_id,
                                                    self.token)
                 self.remote.save_system(system_id, self.token)
-                if '%f' % self.version() > '%f' % 1.6:
+                if '%f' % self.version() >= '%f' % 1.7:
                     try:
                         task_id = self.remote.background_power_system(
                                   dict(systems=[self.system.fqdn],power=action),

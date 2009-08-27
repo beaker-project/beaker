@@ -975,6 +975,11 @@ class Root(RPCRoot):
             redirect("/")
         try:
             system.action_power(action)
+        except xmlrpclib.Fault, msg:
+            flash(_(u"Failed to %s %s, XMLRPC error: %s" % (action, system.fqdn, msg)))
+            activity = SystemActivity(identity.current.user, 'WEBUI', action, 'Power', "", "%s" % msg)
+            system.activity.append(activity)
+            redirect("/view/%s" % system.fqdn)
         except BX, msg:
             flash(_(u"Failed to %s %s, error: %s" % (action, system.fqdn, msg)))
             activity = SystemActivity(identity.current.user, 'WEBUI', action, 'Power', "", "%s" % msg)
