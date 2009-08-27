@@ -41,10 +41,9 @@ rootpw --iscrypted $getVar('password', $default_password_crypted)
 selinux $getVar('selinux','--enforcing')
 
 # Configure the X Window System
-#if $getVar('rhts_server', '') != ''
+#if $getVar('rhts_server','') != '' or $getVar('skipx','') != ''
 skipx
-#end if
-#if $getVar('rhts_server', '') == ''
+#else
 xconfig --startxonboot
 #end if
 

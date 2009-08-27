@@ -9,7 +9,7 @@ import glob
 import xmlrpclib
 import cpioarchive
 import string
-import cobbler.api as capi
+from cobbler import utils
 from ConfigParser import ConfigParser
 
 def rpm2cpio(rpm_file, out=sys.stdout, bufsize=2048):
@@ -50,9 +50,9 @@ def get_paths(distro):
        'Client'     ,
     ]
 
-    kerneldir = distro.kernel
-    if 'tree' in distro.ks_meta:
-        tree   = distro.ks_meta['tree']
+    kerneldir = distro['kernel']
+    if 'tree' in distro['ks_meta']:
+        tree   = distro['ks_meta']['tree']
     else:
         return None
     path = tree
@@ -126,10 +126,8 @@ def update_repos(distro):
 
     if not tree_repos:
         return False
-    ks_meta = distro.ks_meta
-    ks_meta['tree_repos'] = tree_repos
-    distro.set_ksmeta(ks_meta)
-    bootapi.add_distro(distro)
+    distro['ks_meta']['tree_repos'] = tree_repos
+    cobbler.modify_distro(distro['id'],'ksmeta',distro['ks_meta'],token)
     return distro
 
 def update_comment(distro):
@@ -151,29 +149,32 @@ def update_comment(distro):
         return False
     filename = data2[0]
     cpio_object = tempfile.TemporaryFile()
-    rpm2cpio(filename,cpio_object)
-    cpio_object.seek(0)
-    cpio = cpioarchive.CpioArchive(fileobj=cpio_object)
-    for entry in cpio:
-        if entry.name == './etc/fedora-release':
-            release = entry.read().split('\n')[0]
-            releaseregex = re.compile(r'(.*)\srelease\s(\d+).(\d*)')
-            if releaseregex.search(release):
-                family = "%s%s" % (releaseregex.search(release).group(1),
-                                   releaseregex.search(release).group(2))
-                if releaseregex.search(release).group(3):
-                    update = releaseregex.search(release).group(3)
-                else:
-                    update = 0
-        if entry.name == './etc/redhat-release':
-            release = entry.read().split('\n')[0]
-            updateregex = re.compile(r'Update\s(\d+)')
-            releaseregex = re.compile(r'release\s\d+.(\d+)')
-            if updateregex.search(release):
-                update = updateregex.search(release).group(1)
-            if releaseregex.search(release):
-                update = releaseregex.search(release).group(1)
-    cpio_object.close()
+    try:
+        rpm2cpio(filename,cpio_object)
+        cpio_object.seek(0)
+        cpio = cpioarchive.CpioArchive(fileobj=cpio_object)
+        for entry in cpio:
+            if entry.name == './etc/fedora-release':
+                release = entry.read().split('\n')[0]
+                releaseregex = re.compile(r'(.*)\srelease\s(\d+).(\d*)')
+                if releaseregex.search(release):
+                    family = "%s%s" % (releaseregex.search(release).group(1),
+                                       releaseregex.search(release).group(2))
+                    if releaseregex.search(release).group(3):
+                        update = releaseregex.search(release).group(3)
+                    else:
+                        update = 0
+            if entry.name == './etc/redhat-release':
+                release = entry.read().split('\n')[0]
+                updateregex = re.compile(r'Update\s(\d+)')
+                releaseregex = re.compile(r'release\s\d+.(\d+)')
+                if updateregex.search(release):
+                    update = updateregex.search(release).group(1)
+                if releaseregex.search(release):
+                    update = releaseregex.search(release).group(1)
+        cpio_object.close()
+    except rpmUtils.RpmUtilsError, e:
+        print "Warning, %s" % e
     if os.path.exists("%s/.treeinfo" % paths['tree_path']):
         parser = ConfigParser()
         parser.read("%s/.treeinfo" % paths['tree_path'])
@@ -196,14 +197,13 @@ def update_comment(distro):
             update = familyupdate.split(".")[1].replace(" ","")
         discinfo.close()
         
-    comment = "%s\nfamily=%s.%s" % (distro.comment, family, update)
-    distro.set_comment(comment)
-    bootapi.add_distro(distro)
-    kickstart = findKickstart(distro.arch, family, update)
+    distro['comment'] = "%s\nfamily=%s.%s" % (distro['comment'], family, update)
+    cobbler.modify_distro(distro['id'],'comment',distro['comment'],token)
+    kickstart = findKickstart(distro['arch'], family, update)
     if kickstart:
-        profile = bootapi.find_profile(distro.name)
-        profile.set_kickstart(kickstart)
-        bootapi.add_profile(profile)
+        profile_id = cobbler.get_profile_handle(distro['name'],token)
+        cobbler.modify_profile(profile_id,'kickstart',kickstart,token)
+        cobbler.save_profile(profile_id,token)
     return distro
 
 def findKickstart(arch, family, update):
@@ -225,32 +225,33 @@ def findKickstart(arch, family, update):
     return None
 
 if __name__ == '__main__':
-    bootapi = capi.BootAPI()
-    settings = bootapi.settings()
+    cobbler = xmlrpclib.ServerProxy('http://127.0.0.1/cobbler_api')
+    token = cobbler.login("", utils.get_shared_secret())
+    settings = cobbler.get_settings(token)
 
-    distros = bootapi.distros()
+    distros = cobbler.get_distros()
     push_distros = []
 
     for distro in distros:
+        distro['id'] = cobbler.get_distro_handle(distro['name'],token)
         update = False
-        if 'tree_repos' not in distro.ks_meta:
-            print "Update TreeRepos for %s" % distro.name
+        if 'tree_repos' not in distro['ks_meta']:
+            print "Update TreeRepos for %s" % distro['name']
             tmpdistro = update_repos(distro)
             if tmpdistro:
                 distro = tmpdistro
                 update = True
-        if distro.comment.find("family=") == -1:
-            print "Update Family for %s" % distro.name
+        if distro['comment'].find("family=") == -1:
+            print "Update Family for %s" % distro['name']
             tmpdistro = update_comment(distro)
             if tmpdistro:
                 distro = tmpdistro
                 update = True
-        if update or distro.comment.find("PUSHED") == -1:
+        if update or distro['comment'].find("PUSHED") == -1:
             push_distros.append(distro)
     if push_distros:
-        inventory = xmlrpclib.ServerProxy('%s/RPC2' % settings.redhat_management_server, allow_none=True)
-        distros = inventory.labcontrollers.addDistros(settings.server, 
-                           [distro.to_datastruct() for distro in push_distros])
+        inventory = xmlrpclib.ServerProxy('%s/RPC2' % settings['redhat_management_server'], allow_none=True)
+        distros = inventory.labcontrollers.addDistros(settings['server'], push_distros)
         # Needed for legacy RHTS
         addDistroCmd = '/var/lib/beaker/addDistro.sh'
         if os.path.exists(addDistroCmd):
@@ -258,29 +259,29 @@ if __name__ == '__main__':
             release = re.compile(r'family=([^\s]+)')
             for distro in push_distros:
                 # Only process nfs distros
-                if distro.name.find('_nfs-') == -1:
+                if distro['name'].find('_nfs-') == -1:
                     continue
                 VARIANT='Default'
                 DISTPATH='nightly'
-                if distro.ks_meta['tree'].find('/rel-eng/') != -1:
+                if distro['ks_meta']['tree'].find('/rel-eng/') != -1:
                     DISTPATH='rel-eng'
-                if distro.ks_meta['tree'].find('/released/') != -1:
+                if distro['ks_meta']['tree'].find('/released/') != -1:
                     DISTPATH='released'
-                DIST=distro.name.split('_')[0]
-                meta = string.join(distro.name.split('_')[1:],'_').split('-')
+                DIST=distro['name'].split('_')[0]
+                meta = string.join(distro['name'].split('_')[1:],'_').split('-')
                 for curr_variant in valid_variants:
                     if curr_variant in meta:
                         VARIANT = curr_variant
                         break
-                TPATH = DISTPATH + distro.ks_meta['tree'].split(DISTPATH)[1:][0]
-                FAMILYUPDATE=release.search(distro.comment).group(1)
+                TPATH = DISTPATH + distro['ks_meta']['tree'].split(DISTPATH)[1:][0]
+                FAMILYUPDATE=release.search(distro['comment']).group(1)
                 #addDistro.sh rel-eng RHEL6.0-20090626.2 RedHatEnterpriseLinux6.0 x86_64 Default rel-eng/RHEL6.0-20090626.2/6/x86_64/os
                 cmd = '%s %s %s %s %s %s %s' % (addDistroCmd, DISTPATH, DIST,
-                                                FAMILYUPDATE, distro.arch,
+                                                FAMILYUPDATE, distro['arch'],
                                                 VARIANT, TPATH)
                 print os.system(cmd)
 
         for distro in push_distros:
-            comment = "%s\nPUSHED" % distro.comment
-            distro.set_comment(comment)
-            bootapi.add_distro(distro)
+            comment = "%s\nPUSHED" % distro['comment']
+            cobbler.modify_distro(distro['id'],'comment',comment,token)
+            cobbler.save_distro(distro['id'],token)

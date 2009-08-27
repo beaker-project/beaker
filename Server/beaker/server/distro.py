@@ -43,6 +43,7 @@ class Distros(RPCRoot):
                     options = dict(tags = distro.tags))
 
     @expose()
+    @identity.require(identity.not_anonymous())
     def save_tag(self, id=None, tag=None, *args, **kw):
         try:
             distro = Distro.by_id(id)
@@ -51,10 +52,12 @@ class Distros(RPCRoot):
             redirect(".")
         if tag['text']:
             distro.tags.append(tag['text'])
+            Activity(identity.current.user,'WEBUI','Tagged',distro.install_name,None,tag)
         flash(_(u"Added Tag %s" % tag['text']))
         redirect("./view?id=%s" % id)
 
     @expose()
+    @identity.require(identity.not_anonymous())
     def tag_remove(self, id=None, tag=None, *args, **kw):
         try:
             distro = Distro.by_id(id)
@@ -65,6 +68,7 @@ class Distros(RPCRoot):
             for dtag in distro.tags:
                 if dtag == tag:
                     distro.tags.remove(dtag)
+                    Activity(identity.current.user,'WEBUI','UnTagged',distro.install_name,tag,None)
                     flash(_(u"Removed Tag %s" % tag))
         redirect("./view?id=%s" % id)
 
@@ -117,7 +121,45 @@ class Distros(RPCRoot):
         distros = distros.order_by(distro_table.c.date_created.desc())
         return [(distro.name, '%s' % distro.arch, '%s' % distro.osversion, distro.variant, distro.method, distro.virt) for distro in distros]
 
-    #XMLRPC method for listing distros
+    @cherrypy.expose
+    @identity.require(identity.not_anonymous())
+    def edit_version(self, name, version):
+        """ quick and dirty to allow editing the Version.
+            This is the one thing that needs editing at times
+        """
+        distros = session.query(Distro).filter(Distro.c.name.like('%s' % name))
+        edited = []
+
+        os_major = version.split('.')[0]
+
+        # Try and split OSMinor
+        try:
+            os_minor = version.split('.')[1]
+        except IndexError:
+            os_minor = 0
+
+        # Try and find OSMajor
+        try:
+            osmajor = OSMajor.by_name(os_major)
+        except InvalidRequestError: 
+            osmajor = OSMajor(os_major)
+
+        # Try and find OSVersion
+        try:
+            osversion = OSVersion.by_name(osmajor,os_minor)
+        except InvalidRequestError: 
+            osversion = OSVersion(osmajor,os_minor)
+
+        # Check each Distro
+        for distro in distros:
+            print distro
+            if osversion != distro.osversion:
+                edited.append('%s' % distro.install_name)
+                Activity(identity.current.user,'XMLRPC','OSVersion',distro.install_name,'%s' % distro.osversion,'%s' % osversion)
+                distro.osversion = osversion
+        return edited
+
+
     @cherrypy.expose
     @identity.require(identity.not_anonymous())
     def tag(self, name, arch, tag):
@@ -140,7 +182,6 @@ class Distros(RPCRoot):
                 session.flush([distro])
         return added
 
-    #XMLRPC method for listing distros
     @cherrypy.expose
     @identity.require(identity.not_anonymous())
     def untag(self, name, arch, tag):

@@ -129,14 +129,16 @@ class Netboot:
             raise BX(_("distro not defined"))
         if hostname:
             system = System.query().filter(System.fqdn == hostname).one()
-            rc, result = system.action_auto_provision(distro, ks_meta, bootargs, None, kickstart)
-            activity = SystemActivity(system.user, 'VIA %s' % None, 'Provision', 'Distro', "", "%s: %s" % (result, distro.install_name))
+            system.action_auto_provision(distro, 
+                                         ks_meta, 
+                                         bootargs, 
+                                         None, 
+                                         kickstart)
+            activity = SystemActivity(system.user, 'VIA %s' % None, 'Provision', 'Distro', "", "Success: %s" % distro.install_name)
             system.activity.append(activity)
         else:
             raise BX(_("hostname not defined"))
-        if rc:
-            raise BX(_("Failed to auto_provision: %s" % result))
-        return rc
+        return 0
 
 class Arches:
     @expose(format='json')
@@ -712,18 +714,7 @@ class Root(RPCRoot):
               identity.current.user.is_admin():
                 status = "Returned"
                 activity = SystemActivity(identity.current.user, "WEBUI", status, "User", '%s' % system.user, "")
-                # Try to power off system but don't fail if lab controller
-                # is not accessable.
-                try:
-                    system.action_return()
-                except socket.gaierror, error:
-                    msg = " Failed to power off system: %s" % error
-                    eactivity = SystemActivity(identity.current.user, "WEBUI", "Off", "Power", "", msg)
-                    system.activity.append(eactivity)
-                except xmlrpclib.Fault, error:
-                    msg = " Failed to power off system: %s" % error
-                    eactivity = SystemActivity(identity.current.user, "WEBUI", "Off", "Power", "", msg)
-                    system.activity.append(eactivity)
+                system.action_release()
         else:
             if system.can_share(identity.current.user):
                 status = "Reserved"
@@ -985,6 +976,7 @@ class Root(RPCRoot):
         redirect("/view/%s" % system.fqdn)
 
     @expose()
+    @identity.require(identity.not_anonymous())
     def action_power(self, id, action, **kw):
         try:
             system = System.by_id(id,identity.current.user)
@@ -994,16 +986,26 @@ class Root(RPCRoot):
         if system.user != identity.current.user:
             flash( _(u"You are not the current User for %s" % system) )
             redirect("/")
-        (rc, result) =  system.action_power(action)
-        activity = SystemActivity(identity.current.user, 'WEBUI', action, 'Power', "", result)
+        try:
+            system.action_power(action)
+        except xmlrpclib.Fault, msg:
+            flash(_(u"Failed to %s %s, XMLRPC error: %s" % (action, system.fqdn, msg)))
+            activity = SystemActivity(identity.current.user, 'WEBUI', action, 'Power', "", "%s" % msg)
+            system.activity.append(activity)
+            redirect("/view/%s" % system.fqdn)
+        except BX, msg:
+            flash(_(u"Failed to %s %s, error: %s" % (action, system.fqdn, msg)))
+            activity = SystemActivity(identity.current.user, 'WEBUI', action, 'Power', "", "%s" % msg)
+            system.activity.append(activity)
+            redirect("/view/%s" % system.fqdn)
+
+        activity = SystemActivity(identity.current.user, 'WEBUI', action, 'Power', "", "Success")
         system.activity.append(activity)
-        if rc == 0:
-            flash(_(u"Successfully %s %s" % (action, system.fqdn)))
-        else:
-            flash(_(u"Failed to %s %s, error: %s:%s" % (action, system.fqdn, rc, result)))
+        flash(_(u"%s %s" % (system.fqdn, action)))
         redirect("/view/%s" % system.fqdn)
 
     @expose()
+    @identity.require(identity.not_anonymous())
     def action_provision(self, id, prov_install=None, ks_meta=None, 
                              koptions=None, koptions_post=None, reboot=None):
         try:
@@ -1016,20 +1018,32 @@ class Root(RPCRoot):
         except InvalidRequestError:
             flash( _(u"Unable to lookup distro for %s" % id) )
             redirect("/")
-        (rc, result) = system.action_provision(distro = distro,
-                                               ks_meta = ks_meta,
-                                       kernel_options = koptions,
-                                  kernel_options_post = koptions_post)
-        activity = SystemActivity(identity.current.user, 'WEBUI', 'Provision', 'Distro', "", "%s: %s" % (result, distro.install_name))
+        try:
+            system.action_provision(distro = distro,
+                                    ks_meta = ks_meta,
+                                    kernel_options = koptions,
+                                    kernel_options_post = koptions_post)
+        except BX, msg:
+            activity = SystemActivity(identity.current.user, 'WEBUI', 'Provision', 'Distro', "", "%s: %s" % (msg, distro.install_name))
+            system.activity.append(activity)
+            flash(_(u"%s" % msg))
+            redirect("/view/%s" % system.fqdn)
+
+        activity = SystemActivity(identity.current.user, 'WEBUI', 'Provision', 'Distro', "", "Success: %s" % distro.install_name)
         system.activity.append(activity)
-        result = "Provision: %s,%s" % (rc, result)
-        if rc == 0:
-            if reboot:
-                (rc, result2) =  system.action_power(action="reboot")
-                result = "%s Reboot: %s" % (result, result2)
-                activity = SystemActivity(identity.current.user, 'WEBUI', 'Reboot', 'Power', "", result2)
+
+        if reboot:
+            try:
+                system.remote.power(action="reboot")
+            except BX, msg:
+                activity = SystemActivity(identity.current.user, 'WEBUI', 'Reboot', 'Power', "", "%s" % msg)
                 system.activity.append(activity)
-        flash(_(u"%s" % result))
+                flash(_(u"%s" % msg))
+                redirect("/view/%s" % system.fqdn)
+
+        activity = SystemActivity(identity.current.user, 'WEBUI', 'Reboot', 'Power', "", "Success")
+        system.activity.append(activity)
+        flash(_(u"Successfully Provisioned %s with %s" % (system.fqdn,distro.install_name)))
         redirect("/view/%s" % system.fqdn)
 
     @expose()
@@ -1100,6 +1114,7 @@ class Root(RPCRoot):
         redirect("/view/%s" % system.fqdn)
 
     @expose()
+    @identity.require(identity.not_anonymous())
     def remove_install(self, system_id, arch_id, **kw):
         try:
             system = System.by_id(system_id, identity.current.user)
@@ -1311,14 +1326,10 @@ class Root(RPCRoot):
                 activity = SystemActivity(system.user, "VIA %s" % identity.current.user, "Returned", "User", "%s" % system.user, '')
                 system.activity.append(activity)
             try:
-                system.action_return()
-            except socket.gaierror, error:
+                system.remote.release()
+            except BX, error:
                 msg = "Failed to power off system: %s" % error
                 activity = SystemActivity(systen.user, "VIA %s" % identity.current.user, "Off", "Power", "", msg)
-                system.activity.append(activity)
-            except xmlrpclib.Fault, error:
-                msg = " Failed to power off system: %s" % error
-                activity = SystemActivity(system.user, "VIA %s" % identity.current.user, "Off", "Power", "", msg)
                 system.activity.append(activity)
         return
         

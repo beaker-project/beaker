@@ -37,11 +37,15 @@ rootpw --iscrypted $getVar('password', $default_password_crypted)
 selinux $getVar('selinux','--enforcing')
 
 # Configure the X Window System
+#if $getVar('skipx','') != ''
+skipx
+#else
 #if $getVar('rhts_server', '') != ''
 skipx
 #end if
 #if $getVar('rhts_server', '') == '' and not $getVar('arch','').startswith('s390')
 xconfig --startxonboot
+#end if
 #end if
 
 # System timezone

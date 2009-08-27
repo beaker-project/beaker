@@ -16,6 +16,7 @@ from sqlalchemy.ext.associationproxy import association_proxy
 import socket
 from xmlrpclib import ProtocolError
 from sqlalchemy import case
+import time
 from sqlalchemy import func
 from sqlalchemy.orm.collections import collection
 from bexceptions import *
@@ -1013,6 +1014,220 @@ class System(SystemObject):
         self.vendor = vendor
         self.owner = owner
 
+    def remote(self):
+        class CobblerAPI:
+            def __init__(self, system):
+                self.system = system
+                url = "http://%s/cobbler_api" % system.lab_controller.fqdn
+                self.remote = xmlrpclib.ServerProxy(url, allow_none=True)
+                self.token = self.remote.login(system.lab_controller.username,
+                                               system.lab_controller.password)
+
+            def version(self):
+                return self.remote.version()
+
+            def get_system(self):
+                try:
+                    system_id = self.remote.get_system_handle(self.system.fqdn, 
+                                                                self.token)
+                except xmlrpclib.Fault, msg:
+                    system_id = self.remote.new_system(self.token)
+                    try:
+                        ipaddress = socket.gethostbyname_ex(self.system.fqdn)[2][0]
+                    except socket.gaierror:
+                        raise BX(_('%s does not resolve to an ip address' %
+                                                              self.system.fqdn))
+                    self.remote.modify_system(system_id, 
+                                              'name', 
+                                              self.system.fqdn, 
+                                              self.token)
+                    self.remote.modify_system(system_id, 
+                                              'modify_interface',
+                                              {'ipaddress-eth0': ipaddress}, 
+                                              self.token)
+                    profile = self.remote.get_profiles(0,
+                                                       1,
+                                                       self.token)[0]['name']
+                    self.remote.modify_system(system_id, 
+                                              'profile', 
+                                              profile,
+                                              self.token)
+                    self.remote.modify_system(system_id, 
+                                              'netboot-enabled', 
+                                              False, 
+                                              self.token)
+                    self.remote.save_system(system_id, 
+                                            self.token)
+                return system_id
+
+            def get_event_log(self, task_id):
+                return self.remote.get_event_log(task_id)
+
+            def wait_for_event(self, task_id):
+                """ Wait for cobbler task to finish, return True on success
+                    raise an exception if it fails.
+                    raise an exception if it takes more then 5 minutes
+                """
+                expiredelta = datetime.now() + timedelta(minutes=5)
+                while(True):
+                    for line in self.get_event_log(task_id).split('\n'):
+                        if line.find("### TASK COMPLETE ###") != -1:
+                            return True
+                        if line.find("### TASK FAILED ###") != -1:
+                            raise BX(_("Cobbler Task:%s Failed" % task_id))
+                    if datetime.now() > expiredelta:
+                        raise BX(_('Cobbler Task:%s Timed out' % task_id))
+                    time.sleep(5)
+
+                        
+            def power(self,action='reboot', wait=True):
+                system_id = self.get_system()
+                self.remote.modify_system(system_id, 'power_type', 
+                                              self.system.power.power_type.name,
+                                                   self.token)
+                self.remote.modify_system(system_id, 'power_address', 
+                                                self.system.power.power_address,
+                                                   self.token)
+                self.remote.modify_system(system_id, 'power_user', 
+                                                   self.system.power.power_user,
+                                                   self.token)
+                self.remote.modify_system(system_id, 'power_pass', 
+                                                 self.system.power.power_passwd,
+                                                   self.token)
+                self.remote.modify_system(system_id, 'power_id', 
+                                                   self.system.power.power_id,
+                                                   self.token)
+                self.remote.save_system(system_id, self.token)
+                if '%f' % self.version() >= '%f' % 1.7:
+                    try:
+                        task_id = self.remote.background_power_system(
+                                  dict(systems=[self.system.fqdn],power=action),
+                                                                     self.token)
+                        if wait:
+                            return self.wait_for_event(task_id)
+                        else:
+                            return True
+                    except xmlrpclib.Fault, msg:
+                        raise BX(_('Failed to %s system %s' % (action,self.system.fqdn)))
+                else:
+                    try:
+                        return self.remote.power_system(system_id, action, self.token)
+                    except xmlrpclib.Fault, msg:
+                        raise BX(_('Failed to %s system %s' % (action,self.system.fqdn)))
+                return False
+
+            def provision(self, 
+                          distro=None, 
+                          kickstart=None,
+                          ks_meta=None,
+                          kernel_options=None,
+                          kernel_options_post=None):
+                """
+                Provision the System
+                make xmlrpc call to lab controller
+                """
+                if not distro:
+                    return False
+
+                system_id = self.get_system()
+                profile = distro.install_name
+                systemprofile = profile
+                profile_id = self.remote.get_profile_handle(profile, self.token)
+                if not profile_id:
+                    raise BX(_("%s profile not found on %s" % (profile, self.system.labcontroller.fqdn)))
+                self.remote.modify_system(system_id, 
+                                          'ksmeta',
+                                           ks_meta,
+                                           self.token)
+                self.remote.modify_system(system_id,
+                                           'kopts',
+                                           kernel_options,
+                                           self.token)
+                self.remote.modify_system(system_id,
+                                           'kopts_post',
+                                           kernel_options_post,
+                                           self.token)
+                if kickstart:
+                    # Escape any $ signs or cobbler will barf
+                    kickstart = kickstart.replace('$','\$')
+                    # Fill in basic requirements for RHTS
+                    kicktemplate = """
+url --url=$tree
+%(kickstart)s
+
+%%pre
+$SNIPPET("rhts_pre")
+
+%%post
+$SNIPPET("rhts_post")
+                    """
+                    kickstart = kicktemplate % dict(kickstart = kickstart)
+
+                    kickfile = '/var/lib/cobbler/kickstarts/%s.ks' % self.system.fqdn
+        
+                    systemprofile = self.system.fqdn
+                    try:
+                        pid = self.remote.get_profile_handle(self.system.fqdn, 
+                                                             self.token)
+                    except:
+                        pid = self.remote.new_subprofile(self.token)
+                        self.remote.modify_profile(pid, 
+                                              "name",
+                                              self.system.fqdn,
+                                              self.token)
+                    if self.remote.read_or_write_kickstart_template(kickfile,
+                                                               False,
+                                                               kickstart,
+                                                               self.token):
+                        self.remote.modify_profile(pid, 
+                                              'kickstart', 
+                                              kickfile, 
+                                              self.token)
+                        self.remote.modify_profile(pid, 
+                                              'parent', 
+                                              profile, 
+                                              self.token)
+                        self.remote.save_profile(pid, 
+                                              self.token)
+                    else:
+                        raise BX(_("Failed to save kickstart"))
+                self.remote.modify_system(system_id, 
+                                     'profile', 
+                                     systemprofile, 
+                                     self.token)
+                self.remote.modify_system(system_id, 
+                                     'netboot-enabled', 
+                                     True, 
+                                     self.token)
+                try:
+                    self.remote.save_system(system_id, self.token)
+                except xmlrpclib.Fault, msg:
+                    raise BX(_("Failed to provision system %s" % self.system.fqdn))
+                try:
+                    self.remote.clear_system_logs(system_id, self.token)
+                except xmlrpclib.Fault, msg:
+                    raise BX(_("Failed to clear %s logs" % self.system.fqdn))
+
+            def release(self, power=True):
+                """ Turn off netboot and turn off system by default
+                """
+                system_id = self.get_system()
+                self.remote.modify_system(system_id, 
+                                          'netboot-enabled', 
+                                          False, 
+                                          self.token)
+                self.remote.save_system(system_id, 
+                                        self.token)
+                if self.system.power and power:
+                    self.power(action="off", wait=False)
+
+        # remote methods are only available if we have a lab controller
+        #  Here is where we would add other types of lab controllers
+        #  right now we only support cobbler
+        if self.lab_controller:
+            return CobblerAPI(self)
+
+    remote = property(remote)
     @classmethod
     def all(cls, user=None):
         """
@@ -1157,13 +1372,16 @@ class System(SystemObject):
 
     def current_loan(self, user=None):
         if user and self.loaned:
-            if self.loaned == user or user.is_admin():
+            if self.loaned == user or \
+               self.owner  == user or \
+               user.is_admin():
                 return True
         return False
 
     def current_user(self, user=None):
         if user and self.user:
-            if self.user == user or user.is_admin():
+            if self.user  == user \
+               or user.is_admin():
                 return True
         return False
         
@@ -1360,156 +1578,51 @@ class System(SystemObject):
             distros = distros.filter(distro_table.c.virt==False)
         return distros
 
-    def action_auto_provision(self, distro=None,
+    def action_release(self):
+        self.user = None
+        # Attempt to remove Netboot entry
+        # and turn off machine, but don't fail if we can't
+        try:
+            self.remote.release()
+        except:
+            pass
+
+    def action_provision(self, 
+                         distro=None,
+                         ks_meta=None,
+                         kernel_options=None,
+                         kernel_options_post=None,
+                         kickstart=None):
+        if not self.remote:
+            return False
+        self.remote.provision(distro=distro, 
+                              ks_meta=ks_meta,
+                              kernel_options=kernel_options,
+                              kernel_options_post=kernel_options_post,
+                              kickstart=kickstart)
+
+    def action_auto_provision(self, 
+                             distro=None,
                              ks_meta=None,
                              kernel_options=None,
                              kernel_options_post=None,
                              kickstart=None):
+        if not self.remote:
+            return False
+
         results = self.install_options(distro, ks_meta,
                                                kernel_options,
                                                kernel_options_post)
-        rc, result = self.action_provision(distro, kickstart, **results)
-        if rc == 0:
-            if self.power:
-                rc, result = self.action_power(action="reboot")
-        return rc, result
+        self.remote.provision(distro, kickstart, **results)
+        if self.power:
+            self.remote.power(action="reboot")
 
-    def action_return(self):
-        self.user = None
-        if self.lab_controller:
-            labcontroller = self.lab_controller
-            url = "http://%s/cobbler_api" % labcontroller.fqdn
-            remote = xmlrpclib.ServerProxy(url, allow_none=True)
-            token = remote.login(labcontroller.username,
-                                 labcontroller.password)
-            system_id = None
-            try:
-                # Try and look up the system in cobbler
-                system_id = remote.get_system_handle(self.fqdn, token)
-            except:
-                pass
-            if system_id:
-                remote.modify_system(system_id, 'netboot-enabled', False, token)
-                remote.save_system(system_id, token)
-                if self.power:
-                    self.action_power(action="off")
-
-    def action_provision(self, distro=None, kickstart=None,
-                        ks_meta=None,
-                        kernel_options=None,
-                        kernel_options_post=None):
-        """
-        Provision the System
-        make xmlrpc call to lab controller
-        """
-        if not distro:
+    def action_power(self,
+                     action='reboot'):
+        if self.remote and self.power:
+            self.remote.power(action)
+        else:
             return False
-        if not self.lab_controller:
-            return False
-
-        labcontroller = self.lab_controller
-        url = "http://%s/cobbler_api" % labcontroller.fqdn
-        remote = xmlrpclib.ServerProxy(url, allow_none=True)
-        token = remote.login(labcontroller.username,
-                             labcontroller.password)
-        try:
-            system_id = remote.get_system_handle(self.fqdn, token)
-        except:
-            # System doesn't exist.  Create it.
-            system_id = remote.new_system(token)
-            try:
-                ipaddress = socket.gethostbyname_ex(self.fqdn)[2][0]
-            except socket.gaierror:
-                return (-4, "%s does not resolve to an ip address" % self.fqdn)
-            remote.modify_system(system_id,'name',self.fqdn, token)
-            remote.modify_system(system_id,'modify_interface',{'ipaddress-eth0':ipaddress}, token)
-        profile = distro.install_name
-        profile_id = remote.get_profile_handle(profile, token)
-        if not profile_id:
-            return (-3, "%s profile not found on %s" % (profile, labcontroller.fqdn))
-        remote.modify_system(system_id, 'ksmeta', ks_meta, token)
-        remote.modify_system(system_id, 'kopts', kernel_options, token)
-        remote.modify_system(system_id, 'kopts_post', kernel_options_post, token)
-        if kickstart:
-            kickfile = '/var/lib/cobbler/kickstarts/%s.ks' % self.fqdn
-            try:
-                remote.remove_profile(self.fqdn, token)
-            except:
-                pass
-            if remote.copy_profile(profile_id, self.fqdn, token):
-                if remote.read_or_write_kickstart_template(kickfile, False, kickstart, token):
-                    profile = self.fqdn
-                    profile_id = remote.get_profile_handle(profile, token)
-                    remote.modify_profile(profile_id, 'kickstart', kickfile, token)
-                    remote.save_profile(profile_id, token)
-                else:
-                    return (-6, "Failed to save kickstart")
-            else:
-                return (-5, "Failed to copy profile")
-        remote.modify_system(system_id, 'profile', profile, token)
-        remote.modify_system(system_id, 'netboot-enabled', True, token)
-        msg = None
-        rc=-1
-        try:
-            if remote.save_system(system_id, token):
-                rc = 0
-                msg = "Success"
-        except xmlrpclib.Fault, msg:
-            pass
-        if rc == 0:
-            rc = remote.clear_system_logs(system_id, token)
-        return (rc, msg)
-
-    def action_power(self, action="reboot"):
-        """
-        Power cycle the system
-        """
-        if not self.power:
-            return False
-        if not self.lab_controller:
-            return False
-
-        labcontroller = self.lab_controller
-        url = "http://%s/cobbler_api" % labcontroller.fqdn
-        remote = xmlrpclib.ServerProxy(url, allow_none=True)
-        token = remote.login(labcontroller.username,
-                             labcontroller.password)
-        # version 1.4.x of cobbler needs this to keep things in sync.
-        remote.update(token)
-        try:
-            system_id = remote.get_system_handle(self.fqdn, token)
-        except:
-            # System doesn't exist.  Create it.
-            system_id = remote.new_system(token)
-            try:
-                ipaddress = socket.gethostbyname_ex(self.fqdn)[2][0]
-            except socket.gaierror:
-                return (-4, "%s does not resolve to an ip address" % self.fqdn)
-            remote.modify_system(system_id,'name',self.fqdn, token)
-            remote.modify_system(system_id,'modify_interface',{'ipaddress-eth0':ipaddress}, token)
-            profile = remote.get_profiles(0,1,token)[0]['name']
-            remote.modify_system(system_id,'profile',profile, token)
-            remote.modify_system(system_id, 'netboot-enabled', False, token)
-
-        remote.modify_system(system_id, 'power_type', self.power.power_type.name, token)
-        remote.modify_system(system_id, 'power_address', self.power.power_address, token)
-        if self.power.power_user:
-            remote.modify_system(system_id, 'power_user', self.power.power_user, token)
-        if self.power.power_passwd:
-            remote.modify_system(system_id, 'power_pass', self.power.power_passwd, token)
-        if self.power.power_id:
-            remote.modify_system(system_id, 'power_id', self.power.power_id, token)
-        remote.save_system(system_id, token)
-        msg = None
-        rc = -1
-        try:
-            rc = remote.power_system(system_id, action, token)
-            if rc == 0:
-                msg = "Success"
-        except xmlrpclib.Fault, msg:
-            pass
-        return (rc, msg)
-
 
     def __repr__(self):
         return self.fqdn

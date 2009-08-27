@@ -19,8 +19,10 @@ $yum_repo_stanza
 reboot
 #Root password
 rootpw --iscrypted $getVar('password', $default_password_crypted)
+#if $getVar('skipx','') != ''
 # Do not configure the X Window System
 skipx
+#end if
 # System timezone
 timezone  America/New_York
 # Install OS instead of upgrade

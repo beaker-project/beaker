@@ -4,27 +4,28 @@ import sys, os
 import xmlrpclib
 from datetime import datetime
 from datetime import timedelta
-import cobbler.api as capi
+from cobbler import utils
 
 if __name__ == '__main__':
     expiredelta = datetime.now() + timedelta(weeks=-1)
-    bootapi = capi.BootAPI()
-    settings = bootapi.settings()
-    inventory = xmlrpclib.ServerProxy('%s/RPC2' % settings.redhat_management_server, allow_none=True)
-    distros = bootapi.distros()
+    cobbler = xmlrpclib.ServerProxy('http://127.0.0.1/cobbler_api')
+    token = cobbler.login("", utils.get_shared_secret())
+    settings = cobbler.get_settings(token)
+    inventory = xmlrpclib.ServerProxy('%s/RPC2' % settings['redhat_management_server'], allow_none=True)
+    distros = cobbler.get_distros()
     rdistros = []
     for distro in distros:
-        if not os.path.exists(distro.kernel):
-            print "Removing distro %s" % distro.name
-            bootapi.remove_distro(distro, recursive=True)
-            rdistros.append(distro.name)
+        if not os.path.exists(distro['kernel']):
+            print "Removing distro %s" % distro['name']
+            cobbler.remove_distro(distro['name'], token, True)
+            rdistros.append(distro['name'])
             continue
-        if 'tree' in distro.ks_meta:
-            if distro.ks_meta['tree'].find('nightly') == -1:
+        if 'tree' in distro['ks_meta']:
+            if distro['ks_meta']['tree'].find('nightly') == -1:
                 continue
-            distro_timestamp = datetime.fromtimestamp(float(distro.tree_build_time))
+            distro_timestamp = datetime.fromtimestamp(float(distro['tree_build_time']))
             if distro_timestamp < expiredelta:
-                print "Removing distro %s" % distro.name
-                bootapi.remove_distro(distro, recursive=True)
-                rdistros.append(distro.name)
-    inventory.labcontrollers.removeDistros(settings.server, rdistros)
+                print "Removing distro %s" % distro['name']
+                cobbler.remove_distro(distro['name'], token,True)
+                rdistros.append(distro['name'])
+    inventory.labcontrollers.removeDistros(settings['server'], rdistros)

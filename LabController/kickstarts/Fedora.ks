@@ -19,8 +19,10 @@ reboot
 rootpw --iscrypted $getVar('password', $default_password_crypted)
 # SELinux configuration
 selinux $getVar('selinux','--enforcing')
+#if $getVar('skipx','') != ''
 # Do not configure the X Window System
 skipx
+#end if
 # System timezone
 timezone  $getVar('timezone', 'America/New_York')
 # Install OS instead of upgrade

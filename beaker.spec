@@ -133,6 +133,48 @@ ln -s Fedora.ks $RPM_BUILD_ROOT/var/lib/cobbler/kickstarts/Fedoradevelopment.ks
 /usr/share/man/man1/beakerlib*
 
 %changelog
+* Thu Aug 27 2009 Bill Peck <bpeck@redhat.com> - 0.4.40-0
+- option to not wait for power commands if talking to cobbler 1.7 or newer
+* Tue Aug 25 2009 Bill Peck <bpeck@redhat.com> - 0.4.39-7
+- re-worked remote calls to cobbler to be in their own sub-class.
+  This was needed to support the latest version of cobbler.
+- added not_anonymous tags around distro tagi add/remove methods.
+* Fri Aug 21 2009 Petr Muller <pmuller@redhat.com> - 0.4.39-0
+- cherry picked fixes from master branch for beakerlib:
+- various doc fixes
+- tweaked phase reporting 
+- new options & functionality for rlRun
+- enabling manual use of journal comparator
+- new rlPass and rlFail functions
+- new rlSendFile function
+- plugin mechanism
+- xml character breakage fix
+* Thu Aug 20 2009 Bill Peck <bpeck@redhat.com> - 0.4.38-0
+- Allow skipx in kickstarts to be passed in from metadata.
+- Added xmlrpc method for editing distro Update.
+* Wed Aug 12 2009 Bill Peck <bpeck@redhat.com> - 0.4.37-0
+- Escape $ in custom kickstarts sent to cobbler
+* Tue Aug 11 2009 Bill Peck <bpeck@redhat.com> - 0.4.36-0
+- create subprofile
+* Mon Aug 10 2009 Bill Peck <bpeck@redhat.com> - 0.4.34-0
+- Change how custom kickstarts are handled. Don't copy
+  cobbler profiles anymore, just use system profile and set
+  parent if needed.
+* Fri Aug 07 2009 Bill Peck <bpeck@redhat.com> - 0.4.33-0
+- Allow the owner of a system to force a loan return.
+* Wed Aug 05 2009 Bill Peck <bpeck@redhat.com> - 0.4.32-0
+- Require users to be logged in to do actions and saves.
+  This forces an automatic relogin if using kerberos.
+* Tue Aug 04 2009 Bill Peck <bpeck@redhat.com> - 0.4.31-0
+- fixed remove_distro call in expire distros
+* Mon Aug 03 2009 Bill Peck <bpeck@redhat.com> - 0.4.30-0
+- Updated osversion.trigger to not traceback when encountering an 
+  unknown compressor.
+* Tue Jul 28 2009 Bill Peck <bpeck@redhat.com> - 0.4.29-0
+- Changes cobbler scripts to do everything through xmlrpc.
+  cobbler gets confused otherwiese.
+* Fri Jul 24 2009 Bill Peck <bpeck@redhat.com> - 0.4.28-0
+- Fixed string_to_hash to not barf on extra spaces
 * Mon Jul 20 2009 Bill Peck <bpeck@redhat.com> - 0.4.27-0
 - Expanded user_name field to 255 chars.
 * Mon Jul 20 2009 Bill Peck <bpeck@redhat.com> - 0.4.26-0
