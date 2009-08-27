@@ -285,9 +285,9 @@ test_LOG_LEVEL(){
 	unset DEBUG
 }
 
-test_rlSendFile() {
+test_rlFileSubmit() {
   local main_dir=`pwd`
-  local prefix=rlSendFile-unittest
+  local prefix=rlFileSubmit-unittest
   local upload_to=$prefix/uploaded
   local hlp_files=$prefix/hlp_files
   mkdir -p $upload_to
@@ -310,15 +310,15 @@ EOF
   export PATH="$( pwd )/$prefix:$PATH"
   
   # TEST 1: No relative or absolute path specified
-  local orig_file="$hlp_files/rlSendFile_test1.file"
-  local alias="rlSendFile_test1.file"
+  local orig_file="$hlp_files/rlFileSubmit_test1.file"
+  local alias="rlFileSubmit_test1.file"
   local expected_file="$upload_to/$alias"
   
-  echo "rlSendFile_test1" > $orig_file
+  echo "rlFileSubmit_test1" > $orig_file
   
   cd $hlp_files
   pwd
-  rlSendFile rlSendFile_test1.file
+  rlFileSubmit rlFileSubmit_test1.file
   
   cd $main_dir
   local sum1=`md5sum $orig_file | cut -d " " -f 1`
@@ -328,14 +328,14 @@ EOF
   assertTrue 'rlBundleLogs file without relative or absolute path specified' "[ $? -eq 0 ]"
    
   # TEST 2: Relative path ./
-  local orig_file="$hlp_files/rlSendFile_test2.file"
+  local orig_file="$hlp_files/rlFileSubmit_test2.file"
   local alias=`echo "$main_dir/$orig_file" | tr '/' "-" | sed "s/^-*//"`
   local expected_file="$upload_to/$alias"
   
-  echo "rlSendFile_test2" > $orig_file
+  echo "rlFileSubmit_test2" > $orig_file
   
   cd $hlp_files
-  rlSendFile ./rlSendFile_test2.file
+  rlFileSubmit ./rlFileSubmit_test2.file
   
   cd $main_dir
   local sum1=`md5sum $orig_file | cut -d " " -f 1`
@@ -346,14 +346,14 @@ EOF
   
   # TEST 3: Relative path ../
   mkdir $hlp_files/directory/
-  local orig_file="$hlp_files/rlSendFile_test3.file"
+  local orig_file="$hlp_files/rlFileSubmit_test3.file"
   local alias=`echo "$main_dir/$orig_file" | tr '/' "-" | sed "s/^-*//"`
   local expected_file="$upload_to/$alias"
   
-  echo "rlSendFile_test3" > $orig_file
+  echo "rlFileSubmit_test3" > $orig_file
   
   cd $hlp_files/directory
-  rlSendFile ../rlSendFile_test3.file
+  rlFileSubmit ../rlFileSubmit_test3.file
   
   cd $main_dir
   local sum1=`md5sum $orig_file | cut -d " " -f 1`
@@ -363,13 +363,13 @@ EOF
   assertTrue 'rlBundleLogs relative path ../' "[ $? -eq 0 ]"
 
   # TEST 4: Absolute path
-  local orig_file="$hlp_files/rlSendFile_test4.file"
+  local orig_file="$hlp_files/rlFileSubmit_test4.file"
   local alias=`echo "$main_dir/$orig_file" | tr '/' "-" | sed "s/^-*//"`
   local expected_file="$upload_to/$alias"
   
-  echo "rlSendFile_test4" > $orig_file
+  echo "rlFileSubmit_test4" > $orig_file
   
-  rlSendFile $main_dir/$orig_file
+  rlFileSubmit $main_dir/$orig_file
   
   cd $main_dir
   local sum1=`md5sum $orig_file | cut -d " " -f 1`
@@ -379,13 +379,13 @@ EOF
   assertTrue 'rlBundleLogs absolute path' "[ $? -eq 0 ]"
   
   # TEST 5: Custom alias
-  local orig_file="$hlp_files/rlSendFile_test5file"
-  local alias="alias_rlSendFile_test5.file"
+  local orig_file="$hlp_files/rlFileSubmit_test5file"
+  local alias="alias_rlFileSubmit_test5.file"
   local expected_file="$upload_to/$alias"
   
-  echo "rlSendFile_test5" > $orig_file
+  echo "rlFileSubmit_test5" > $orig_file
   
-  rlSendFile $orig_file $alias
+  rlFileSubmit $orig_file $alias
   
   cd $main_dir
   local sum1=`md5sum $orig_file | cut -d " " -f 1`
@@ -395,13 +395,13 @@ EOF
   assertTrue 'rlBundleLogs custom alias' "[ $? -eq 0 ]"
 
   # TEST 6: Custom separator
-  local orig_file="$hlp_files/rlSendFile_test6.file"
+  local orig_file="$hlp_files/rlFileSubmit_test6.file"
   local alias=`echo "$main_dir/$orig_file" | tr '/' "_" | sed "s/^_*//"`
   local expected_file="$upload_to/$alias"
   
-  echo "rlSendFile_test6" > $orig_file
+  echo "rlFileSubmit_test6" > $orig_file
   
-  rlSendFile -s '_' $main_dir/$orig_file
+  rlFileSubmit -s '_' $main_dir/$orig_file
   
   cd $main_dir
   local sum1=`md5sum $orig_file | cut -d " " -f 1`
