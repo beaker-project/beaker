@@ -2,8 +2,8 @@
 %{!?pyver: %define pyver %(%{__python} -c "import sys ; print sys.version[:3]")}
 
 Name:           beaker
-Version:        0.4.39
-Release:        7%{?dist}
+Version:        0.4.40
+Release:        0%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -133,6 +133,8 @@ ln -s Fedora.ks $RPM_BUILD_ROOT/var/lib/cobbler/kickstarts/Fedoradevelopment.ks
 /usr/share/man/man1/beakerlib*
 
 %changelog
+* Thu Aug 27 2009 Bill Peck <bpeck@redhat.com> - 0.4.40-0
+- option to not wait for power commands if talking to cobbler 1.7 or newer
 * Tue Aug 25 2009 Bill Peck <bpeck@redhat.com> - 0.4.39-7
 - re-worked remote calls to cobbler to be in their own sub-class.
   This was needed to support the latest version of cobbler.

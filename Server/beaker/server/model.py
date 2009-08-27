@@ -716,7 +716,7 @@ class System(SystemObject):
                     time.sleep(5)
 
                         
-            def power(self,action='reboot'):
+            def power(self,action='reboot', wait=True):
                 system_id = self.get_system()
                 self.remote.modify_system(system_id, 'power_type', 
                                               self.system.power.power_type.name,
@@ -739,7 +739,10 @@ class System(SystemObject):
                         task_id = self.remote.background_power_system(
                                   dict(systems=[self.system.fqdn],power=action),
                                                                      self.token)
-                        return self.wait_for_event(task_id)
+                        if wait:
+                            return self.wait_for_event(task_id)
+                        else:
+                            return True
                     except xmlrpclib.Fault, msg:
                         raise BX(_('Failed to %s system %s' % (action,self.system.fqdn)))
                 else:
@@ -852,7 +855,7 @@ $SNIPPET("rhts_post")
                 self.remote.save_system(system_id, 
                                         self.token)
                 if self.system.power and power:
-                    self.power(action="off")
+                    self.power(action="off", wait=False)
 
         # remote methods are only available if we have a lab controller
         #  Here is where we would add other types of lab controllers
