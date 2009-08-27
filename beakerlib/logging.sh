@@ -249,18 +249,18 @@ rlBundleLogs(){
 }
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# rlSendFile
+# rlFileSubmit
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 : <<=cut
 =pod
 
-=head3 rlSendFile
+=head3 rlFileSubmit
 
 Resolves absolute path to the file, replaces / for - and uploads this renamed
-file using rhts_submit_log.
+file using rhts-submit-log.
 It also allows you to specify your custom name for the uploaded file.
 
-    rlSendFile [-s sep] path_to_file [required_name]
+    rlFileSubmit [-s sep] path_to_file [required_name]
 
 =over
 
@@ -281,17 +281,17 @@ option.
 
 Examples:
 
-rlSendFile logfile.txt -> logfile.txt
-cd /etc; rlSendFile ./passwd -> etc-passwd
-rlSendFile /etc/passwd -> etc-passwd
-rlSendFile /etc/passwd my-top-secret_file -> my-top-secret-file
-rlSendFile -s '_' /etc/passwd -> etc_passwd
+rlFileSubmit logfile.txt -> logfile.txt
+cd /etc; rlFileSubmit ./passwd -> etc-passwd
+rlFileSubmit /etc/passwd -> etc-passwd
+rlFileSubmit /etc/passwd my-top-secret_file -> my-top-secret-file
+rlFileSubmit -s '_' /etc/passwd -> etc_passwd
 
 =back
 
 =cut
 
-function rlSendFile()
+function rlFileSubmit()
 {
     GETOPT=`getopt -q -o s: -- "$@"`
     eval set -- "$GETOPT"
