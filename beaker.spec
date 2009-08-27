@@ -2,7 +2,7 @@
 %{!?pyver: %define pyver %(%{__python} -c "import sys ; print sys.version[:3]")}
 
 Name:           beaker
-Version:        0.4.40
+Version:        0.4.41
 Release:        0%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
@@ -133,6 +133,8 @@ ln -s Fedora.ks $RPM_BUILD_ROOT/var/lib/cobbler/kickstarts/Fedoradevelopment.ks
 /usr/share/man/man1/beakerlib*
 
 %changelog
+* Thu Aug 27 2009 Bill Peck <bpeck@redhat.com> - 0.4.41-0
+- use action_release() in controllers
 * Thu Aug 27 2009 Bill Peck <bpeck@redhat.com> - 0.4.40-0
 - option to not wait for power commands if talking to cobbler 1.7 or newer
 * Tue Aug 25 2009 Bill Peck <bpeck@redhat.com> - 0.4.39-7
