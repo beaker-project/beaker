@@ -1326,7 +1326,7 @@ class Root(RPCRoot):
                 activity = SystemActivity(system.user, "VIA %s" % identity.current.user, "Returned", "User", "%s" % system.user, '')
                 system.activity.append(activity)
             try:
-                system.remote.release()
+                system.action_release()
             except BX, error:
                 msg = "Failed to power off system: %s" % error
                 activity = SystemActivity(systen.user, "VIA %s" % identity.current.user, "Off", "Power", "", msg)
