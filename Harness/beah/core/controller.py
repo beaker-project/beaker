@@ -186,7 +186,9 @@ class Controller(object):
         task_info = dict(cmd.arg('task_info'))
         task_info['id'] = self.__tid
         self.__tid += 1
-        self.spawn_task(self, backend, task_info)
+        task_env = dict(cmd.arg('env') or {})
+        task_args = list(cmd.arg('args') or [])
+        self.spawn_task(self, backend, task_info, task_env, task_args)
 
     def proc_cmd_kill(self, backend, cmd):
         # FIXME: are there any running tasks? - expects kill --force

@@ -52,16 +52,18 @@ class TaskStdoutProtocol(protocol.ProcessProtocol):
 
 def Spawn(host, port, proto=None):
     import os
-    def spawn(controller, backend, task_info):
+    def spawn(controller, backend, task_info, env, args):
+        task_env = dict(env)
         # 1. set env.variables
         # BEACON_THOST - host name
         # BEACON_TPORT - port
         # BEACON_TID - id of task - used to introduce itself when opening socket
-        task_env = { 'BEACON_THOST': str(host),
-                'BEACON_TPORT': str(port),
-                'BEACON_TID'  : str(task_info['id']),
-                'BEAHLIB_ROOT' : os.getenv('BEAHLIB_ROOT')
-                }
+        task_env.update(
+                BEACON_THOST = str(host),
+                BEACON_TPORT = str(port),
+                BEACON_TID   = str(task_info['id']),
+                BEAHLIB_ROOT = os.getenv('BEAHLIB_ROOT'),
+                )
         val = os.getenv('PYTHONPATH')
         if val:
             task_env.update(PYTHONPATH=val)
@@ -69,7 +71,7 @@ def Spawn(host, port, proto=None):
         protocol = (proto or TaskStdoutProtocol)(task_info)
         protocol.controller = controller
         reactor.spawnProcess(protocol, task_info['file'],
-                args=[task_info['file']], env=task_env)
+                args=[task_info['file']]+(args or []), env=task_env)
         # FIXME: send an answer to backend(?)
         return protocol.task_protocol
     return spawn

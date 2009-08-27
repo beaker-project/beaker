@@ -37,14 +37,14 @@ def PING(message=None):
         return command('PING', message=message)
     return command('PING')
 
-def run(file, id=None, name=None):
+def run(file, id=None, name=None, env=None, args=None):
     # FIXME: Should I set the id globally - i.e. in Controller?
     if name is None:
         name = file
     if id is None:
         run.id += 1
         id = run.id
-    return command('run', task_info={'file':file, 'backend_id':id, 'name':name})
+    return command('run', task_info={'file':file, 'backend_id':id, 'name':name}, env=env, args=args)
 run.id = 0
 
 def kill():
@@ -71,7 +71,7 @@ def mkcommand(cmd, __doc__="", **kwargs):
 
 class Command(list):
     def __init__(self, cmd, **kwargs):
-        list.__init__(self, ['Command',None,None]) # is this backwards compatible? Even with Python 2.3?
+        list.__init__(self, ['Command', None, None]) # is this backwards compatible? Even with Python 2.3?
         if isinstance(cmd, list):
             if cmd[0] != 'Command' or not isinstance(cmd[1], str) or not isinstance(cmd[2], dict):
                 raise exceptions.TypeError('%r not permitted. Has to be [\'Command\', str, dict]' % cmd)
