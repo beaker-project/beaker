@@ -24,6 +24,11 @@ class RC:
     CRITICAL = 70
     FATAL    = 80
 
+    @staticmethod
+    def cmp(rc1, rc2):
+        """\"Less serious\" RC is less than more serious."""
+        return cmp(rc1, rc2)
+
 class LOG_LEVEL:
     DEBUG3   = 10
     DEBUG2   = 20
@@ -34,6 +39,11 @@ class LOG_LEVEL:
     CRITICAL = 70
     FATAL    = 80
     DEBUG    = DEBUG1
+
+    @staticmethod
+    def cmp(level1, level2):
+        """\"Less serious\" level is less than more serious."""
+        return cmp(level1, level2)
 
 class ECHO:
     OK              = 0

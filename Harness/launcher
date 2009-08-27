@@ -18,65 +18,95 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-if [[ -r setup.sh ]]; then
-	. setup.sh
-else
-	echo "launcher has to be started from directory where setup.sh resides." >&2
-	exit 1
-fi
+(
+default="s o l"
+all="s o c"
+
+function view_logs()
+{
+	local server=log_list
+	if ! { gvim --serverlist | grep -i $server; }; then
+		gvim --servername $server --remote /tmp/logs
+		gvim --servername $server --remote-send ":set readonly nomodifiable<CR>gh"
+	fi
+}
 
 function xt()
 {
+	a1=$1
+	eval "temp=\$running_$a1"
+	if [[ -n $temp ]]; then
+		return 1
+	fi
+	eval "running_$a1=1"
+	shift
+
 	local geo=$1
 	shift
-	xterm -geometry $geo -e "$@" &
-	# -title $1 -n $1
+
+	if [[ -z "$redir" ]]; then
+		xterm -geometry $geo -title "$*" -n "$*" -e "$@" &
+	else
+		# FIXME: this does not work properly! I would like to see
+		# output in runtime...
+		xterm -geometry $geo -title "$*" -n "$*" -e redir "beah_${a1}_$(date +%Y%m%d_%H%M%S)" "$@" &
+	fi
+}
+
+function runner()
+{
+	if [[ -n "$redir" ]]; then
+		view_logs
+	fi
+	for i in $@; do
+		case $i in
+			a|A) runner $all ;;
+			s|S) xt s 80x35-0-0 srv & ;;
+			c|C) xt c 80x20+0+0 cmd_backend & ;;
+			o|O) xt o 80x35-0+0 out_backend & ;;
+			l|L) xt l 80x20+0-0 python tools/fakelc.py & ;;
+			b|B) sleep 2 && # beaker backend has to wait for fakelc - FIXME:
+			     xt b 80x20+0+0 python beah/backends/beakerlc.py & ;;
+		esac
+	done
 }
 
 function main()
 {
-	for i in "$@"; do
-		if [[ $i == 's' || $i == 'S' ]]; then
-			if [[ -z $running_s ]]; then
-				local running_s=1
-				xt 80x35-0-0 srv &
-			fi
-			continue
-		fi
-		if [[ $i == 'c' || $i == 'C' ]]; then
-			if [[ -z $running_c ]]; then
-				local running_c=1
-				xt 80x20+0+0 cmd_backend &
-			fi
-			continue
-		fi
-		if [[ $i == 'o' || $i == 'O' ]]; then
-			if [[ -z $running_o ]]; then
-				local running_o=1
-				xt 80x35-0+0 out_backend &
-			fi
-			continue
-		fi
-	done
-}
+	if [[ -r setup.sh ]]; then
+		. setup.sh
+	else
+		echo "launcher has to be started from directory where setup.sh resides." >&2
+		exit 1
+	fi
 
-if [[ -z $@ ]]; then
-	main c o
-elif [[ $1 == 'a' || $1 == 'A' ]]; then
-	main s c o
-elif [[ $1 == 'so' || $1 == 'os' || $1 == 'SO' || $1 == 'OS' ]]; then
-	main s o
-elif [[ $1 == '-h' || $1 == '--help' ]]; then
-	cat <<END
-USAGE: launcher [ (a|s|o|c) ... ]
+	if [[ "$1" == "-r" || "$1" == "--redir" ]]; then
+		redir=1
+		shift
+	fi
+	if [[ -z "$@" ]]; then
+		runner $default
+	elif [[ "$1" == '-h' || "$1" == '--help' ]]; then
+		cat <<END
+USAGE: launcher [-r|--redir] [-h|--help] [ (a|s|o|c|l|b) ... ]
+OPTIONS:
+  -r --redir - redirect all output to files
+  -h --help  - display this message
+COMMANDS:
   s - start the controller - srv
   c - start the command backend - cmd_backend
   o - start the output backend - out_backend
   a - start all three programs
     - if no arguments are provided, start server and output backend
+  l - start fake lab controller
+  b - start beaker backend
 NOTE: programs are started in separate xterm windows
 
 END
-else
-	main "$@"
-fi
+	else
+		runner $@
+	fi
+}
+
+main $@
+)

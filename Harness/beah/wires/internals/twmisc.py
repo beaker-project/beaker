@@ -21,6 +21,8 @@ import simplejson as json
 from twisted.protocols import basic
 from exceptions import NotImplementedError
 
+USE_DEFAULT = object()
+
 class JSONProtocol(basic.LineReceiver):
     """Protocol to send and receive new-line delimited JSON objects"""
     delimiter = "\n"
@@ -83,4 +85,27 @@ class OsFifo(abstract.FileDescriptor):
 
     def fileno(self):
         return self.fd
+
+def serveAnyChild(cls):
+    def getChild(self, path, request):
+        """Will return self for any child request."""
+        return self
+    cls.getChild = getChild
+
+def serveAnyRequest(cls, by, base=USE_DEFAULT):
+    if base is USE_DEFAULT:
+        base = cls.__base__
+
+    if base is None:
+        def _getFunction(self, functionPath):
+            """Will return handler for all requests."""
+            return getattr(self, by)
+    else:
+        def _getFunction(self, functionPath):
+            """Will return handler for all unhandled requests."""
+            try:
+                return base._getFunction(self, functionPath)
+            except:
+                return getattr(self, by)
+    cls._getFunction = _getFunction
 
