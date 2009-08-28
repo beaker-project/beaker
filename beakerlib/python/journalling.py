@@ -57,7 +57,8 @@ def printPurpose(message):
   _print(wrap(message, 80))
 
 def printLog(message, prefix="LOG"):
-  _print(":: [%s] :: %s" % (prefix.center(10),message))
+  for line in message.split("\n"):
+    _print(":: [%s] :: %s" % (prefix.center(10), line))
 
 def printHeadLog(message):
   print "\n::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::"
