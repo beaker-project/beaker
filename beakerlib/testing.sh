@@ -670,7 +670,7 @@ rlRun(){
 
   rlLogDebug "rlRun: Running command: $command"
   
-  if $DO_LOG || $_DO_TAG; then
+  if $DO_LOG || $DO_TAG; then
     eval "$command" 2> >(sed -e "s/^/$TAG_ERR/g" | tee -a $LOG_FILE) 1> >(sed -e "s/^/$TAG_OUT/g" | tee -a $LOG_FILE)
   else
     eval "$command"
