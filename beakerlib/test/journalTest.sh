@@ -70,6 +70,6 @@ test_rlPrintJournalText()
 {
     rlJournalStart
     rlLog "`echo -e 'line1\nline2'`"
-    rlJournalPrintText | grep -q "LOG.*line1" && rlJournalPrintText | grep -q "LOG.*line2"
+    rlJournalPrintText | grep -v "line2" | grep -q "LOG.*line1" && rlJournalPrintText | grep -v "line1" |grep -q "LOG.*line2"
     assertTrue "multiline logs tagged on each line" "[ $? -eq 0 ]"
 }
