@@ -3,7 +3,7 @@
 
 Name:           beaker
 Version:        0.5.0
-Release:        0%{?dist}
+Release:        1%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -103,6 +103,7 @@ ln -s Fedora.ks $RPM_BUILD_ROOT/var/lib/cobbler/kickstarts/Fedoradevelopment.ks
 %{python_sitelib}/%{name}.server-%{version}-py%{pyver}.egg-info/
 %{_bindir}/start-%{name}
 %{_bindir}/%{name}-init
+%{_bindir}/%{name}d
 %config(noreplace) %{_sysconfdir}/httpd/conf.d/%{name}-server.conf
 %attr(-,apache,root) %{_datadir}/%{name}
 %attr(-,apache,root) %config(noreplace) %{_sysconfdir}/%{name}/server.cfg
