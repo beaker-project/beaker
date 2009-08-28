@@ -173,6 +173,7 @@ setup(
         'console_scripts': (
             'start-beaker = beaker.server.commands:start',
             'beaker-init = beaker.server.tools.init:main',
+            'beakerd = beaker.server.tools.beakerd:main',
         ),
     }
     )
