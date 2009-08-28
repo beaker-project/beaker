@@ -2568,7 +2568,7 @@ class Recipe(MappedObject):
             # Return system if reserved
             if self.system:
                 try:
-                    self.system.action_return()
+                    self.system.action_release()
                     log.debug("Return system %s for recipe %s" % (self.system, self.id))
                     self.system.activity.append(
                         SystemActivity(self.recipeset.job.owner, 
