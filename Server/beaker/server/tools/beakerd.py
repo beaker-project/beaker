@@ -23,27 +23,28 @@ import sys
 import pkg_resources
 pkg_resources.require("SQLAlchemy>=0.3.10")
 from beaker.server.model import *
-from beaker.server.commands import ConfigurationError
 from beaker.server.util import load_config
 from turbogears.database import session
+
 from os.path import dirname, exists, join
 from os import getcwd
-import turbogears
 import beaker.server.scheduler
 from beaker.server.scheduler import add_onetime_task
 from socket import gethostname
 import exceptions
 import time
 
-
 import logging
+#logging.basicConfig()
+#logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
+#logging.getLogger('sqlalchemy.orm.unitofwork').setLevel(logging.DEBUG)
+
 log = logging.getLogger(__name__)
 
 from optparse import OptionParser
 
 __version__ = '0.1'
 __description__ = 'Beaker Scheduler'
-
 
 
 def get_parser():
@@ -70,6 +71,7 @@ def get_parser():
 
 def new_recipes(*args):
     while True:
+        session.begin()
         recipes = Recipe.query().filter(
                 Recipe.status==TaskStatus.by_name(u'New'))
         if recipes.count():
@@ -93,7 +95,7 @@ def new_recipes(*args):
                     recipe.recipeset.Abort('Recipe ID %s does not match any systems' % recipe.id)
             else:
                 recipe.recipeset.Abort('Recipe ID %s does not have a distro' % recipe.id)
-        session.flush()
+        session.commit()
         if recipes.count():
             log.debug("Exiting new_recipes routine")
         else:
@@ -101,6 +103,7 @@ def new_recipes(*args):
 
 def processed_recipesets(*args):
     while True:
+        session.begin()
         recipesets = RecipeSet.query()\
                            .join(['recipes','status'])\
                            .filter(Recipe.status==TaskStatus.by_name(u'Processed'))
@@ -201,7 +204,7 @@ def processed_recipesets(*args):
                     log.info("recipe ID %s moved from Processed to Aborted" % recipe.id)
                     recipe.recipeset.Abort('Recipe ID %s does not match any systems' % recipe.id)
                         
-        session.flush()
+        session.commit()
         if recipesets.count():
             log.debug("Exiting processed_recipes routine")
         else:
@@ -209,6 +212,7 @@ def processed_recipesets(*args):
 
 def queued_recipes(*args):
     while True:
+        session.begin()
         recipes = Recipe.query()\
                         .join('status')\
                         .join('systems')\
@@ -274,7 +278,7 @@ def queued_recipes(*args):
                     # to deal with multi-host jobs at remote locations.  May need to
                     # enforce single recipes for remote execution.
                     pass
-        session.flush()
+        session.commit()
         if count:
             log.debug("Exiting queued_recipes routine")
         else:
@@ -285,6 +289,7 @@ def scheduled_recipes(*args):
     if All recipes in a recipeSet are in Scheduled state then move them to
      Running.
     """
+    session.begin()
     recipesets = RecipeSet.query().from_statement(
                         select([recipe_set_table.c.id, 
                                 func.min(recipe_table.c.status_id)],
@@ -346,7 +351,7 @@ def scheduled_recipes(*args):
                                                                          recipe.id,
                                                                         e))
    
-    session.flush()
+    session.commit()
     if recipesets:
         log.debug("Exiting scheduled_recipes routine")
 
