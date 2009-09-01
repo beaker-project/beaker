@@ -21,9 +21,22 @@
 import exceptions
 from beah.core.constants import RC, LOG_LEVEL
 
-"""\
+"""
 Events are used to communicate events from Task to Controller and finally back
 to Backend.
+
+Classes:
+    Event
+
+Module contains many functions (e.g. idle, pong, start, end, etc.) to
+instantiate Event of particular type.
+
+Event is basically a list ['Event', evt, origin, timestamp, args] where:
+    isinstance(evt, string)
+    isinstance(origin, dict)
+    isinstance(timestamp,float) or timestamp is None
+    isinstance(args,dict)
+
 """
 
 ################################################################################
@@ -31,38 +44,45 @@ to Backend.
 ################################################################################
 def idle():
     """Event sent to newly registerred backend when Controller is idle"""
-    return event('idle')
+    return Event('idle')
 
 def pong(origin={}, timestamp=None, message=None):
     """Event generated as a reposne to ping command"""
     if message:
-        return event('pong', origin={}, timestamp=None, message=message)
-    return event('pong', origin, timestamp)
+        return Event('pong', origin={}, timestamp=None, message=message)
+    return Event('pong', origin, timestamp)
 
 def start(task_info, origin={}, timestamp=None):
     """Event generated when task is started"""
-    return event('start', origin, timestamp, task_info=task_info)
+    return Event('start', origin, timestamp, task_info=task_info)
 
 def end(task_info, rc, origin={}, timestamp=None):
     """Event generated when task finished"""
-    return event('end', origin, timestamp, task_info=task_info, rc=rc)
+    return Event('end', origin, timestamp, task_info=task_info, rc=rc)
 
 def echo(cmd, rc, message="", origin={}, timestamp=None, **kwargs):
     """Event generated as a response to a command"""
-    return event('echo', origin, timestamp, cmd=cmd, rc=rc, message=message, **kwargs)
+    return Event('echo', origin, timestamp, cmd=cmd, rc=rc, message=message, **kwargs)
 
 def lose_item(data, origin={}, timestamp=None):
     """Event generated when unformatted data are received."""
-    return event('lose_item', origin, timestamp, data=data)
+    return Event('lose_item', origin, timestamp, data=data)
+
+def output(data, out_handle="", origin={}, timestamp=None):
+    return Event('output', origin, timestamp, out_handle=out_handle, data=data)
+def stdout(data, origin={}, timestamp=None):
+    return output(data, "stdout", origin, timestamp)
+def stderr(data, origin={}, timestamp=None):
+    return output(data, "stderr", origin, timestamp)
 
 def log(message="", log_level=LOG_LEVEL.INFO, log_handle="", origin={},
         timestamp=None, **kwargs):
-    return event('log', origin, timestamp, log_level=log_level,
+    return Event('log', origin, timestamp, log_level=log_level,
             log_handle=log_handle, message=message, **kwargs)
 
 def mk_log_level(log_level):
     def logf(message="", log_handle="", origin={}, timestamp=None, **kwargs):
-        return event('log', origin, timestamp, log_level=log_level,
+        return Event('log', origin, timestamp, log_level=log_level,
                 log_handle=log_handle, message=message, **kwargs)
     logf.__name__ = "log_level_%s" % log_level
     logf.__doc__ = "Create log event with log_level = %s" % log_level
@@ -79,7 +99,7 @@ ldebug3 = mk_log_level(LOG_LEVEL.DEBUG3)
 ldebug = ldebug1
 
 def result(rc, origin={}, timestamp=None, **kwargs):
-    return event('result', origin, timestamp, rc=rc, **kwargs)
+    return Event('result', origin, timestamp, rc=rc, **kwargs)
 
 def passed(origin={}, timestamp=None, **kwargs):
     return result(RC.PASS, origin=origin, timestamp=timestamp, **kwargs)
