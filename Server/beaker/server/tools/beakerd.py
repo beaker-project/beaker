@@ -20,6 +20,7 @@
 # -*- coding: utf-8 -*-
 
 import sys
+import os
 import pkg_resources
 pkg_resources.require("SQLAlchemy>=0.3.10")
 from beaker.server.model import *
@@ -52,6 +53,8 @@ def get_parser():
     parser = OptionParser(usage, description=__description__,
                           version=__version__)
 
+    ## Defaults
+    parser.set_defaults(daemonize=True, log_level=None)
     ## Actions
     parser.add_option('-B', '--daemonize', dest='daemonize', 
                       action='store_true',
