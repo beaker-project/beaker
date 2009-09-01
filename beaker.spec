@@ -95,6 +95,20 @@ ln -s Fedora.ks $RPM_BUILD_ROOT/var/lib/cobbler/kickstarts/Fedoradevelopment.ks
 %clean
 %{__rm} -rf %{buildroot}
 
+%post server
+/sbin/chkconfig --add beakerd
+
+%postun server
+if [ "$1" -ge "1" ]; then
+        /sbin/service beakerd condrestart >/dev/null 2>&1 || :
+fi
+
+%preun server
+if [ "$1" -eq "0" ]; then
+        /sbin/service beakerd stop >/dev/null 2>&1 || :
+        /sbin/chkconfig --del beakerd || :
+fi
+
 %files server
 %defattr(-,root,root,-)
 %doc Server/README COPYING
