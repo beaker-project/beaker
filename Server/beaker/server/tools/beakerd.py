@@ -70,13 +70,13 @@ def get_parser():
 
 
 def new_recipes(*args):
-    while True:
-        session.begin()
-        recipes = Recipe.query().filter(
-                Recipe.status==TaskStatus.by_name(u'New'))
-        if recipes.count():
-            print "Entering new_recipes routine"
-            log.debug("Entering new_recipes routine")
+    recipes = Recipe.query().filter(
+            Recipe.status==TaskStatus.by_name(u'New'))
+    if not recipes.count():
+        return False
+    log.debug("Entering new_recipes routine")
+    session.begin()
+    try:
         for recipe in recipes:
             if recipe.distro:
                 systems = recipe.distro.systems_filter(
@@ -96,19 +96,21 @@ def new_recipes(*args):
             else:
                 recipe.recipeset.Abort('Recipe ID %s does not have a distro' % recipe.id)
         session.commit()
-        if recipes.count():
-            log.debug("Exiting new_recipes routine")
-        else:
-            time.sleep(20)
+    except exceptions.Exception, e:
+        session.rollback()
+        log.error("Failed to commit due to :%s" % e)
+    log.debug("Exiting new_recipes routine")
+    return True
 
 def processed_recipesets(*args):
-    while True:
-        session.begin()
-        recipesets = RecipeSet.query()\
-                           .join(['recipes','status'])\
-                           .filter(Recipe.status==TaskStatus.by_name(u'Processed'))
-        if recipesets.count():
-            log.debug("Entering processed_recipes routine")
+    recipesets = RecipeSet.query()\
+                       .join(['recipes','status'])\
+                       .filter(Recipe.status==TaskStatus.by_name(u'Processed'))
+    if not recipesets.count():
+        return False
+    log.debug("Entering processed_recipes routine")
+    session.begin()
+    try:
         for recipeset in recipesets:
             bad_l_controllers = set()
             # We only need to do this processing on multi-host recipes
@@ -116,7 +118,7 @@ def processed_recipesets(*args):
                 log.info("recipe ID %s moved from Processed to Queued" % recipeset.recipes[0].id)
                 recipeset.recipes[0].Queue()
                 continue
-    
+   
             # Find all the lab controllers that this recipeset may run.
             rsl_controllers = set(LabController.query()\
                                           .join(['systems',
@@ -205,33 +207,34 @@ def processed_recipesets(*args):
                     recipe.recipeset.Abort('Recipe ID %s does not match any systems' % recipe.id)
                         
         session.commit()
-        if recipesets.count():
-            log.debug("Exiting processed_recipes routine")
-        else:
-            time.sleep(20)
+    except exceptions.Exception, e:
+        session.rollback()
+        log.error("Failed to commit due to :%s" % e)
+    log.debug("Exiting processed_recipes routine")
+    return True
 
 def queued_recipes(*args):
-    while True:
-        session.begin()
-        recipes = Recipe.query()\
-                        .join('status')\
-                        .join('systems')\
-                        .join('recipeset')\
-                        .filter(
-                             or_(
-                             and_(Recipe.status==TaskStatus.by_name(u'Queued'),
-                                  System.user==None,
-                                  RecipeSet.lab_controller==None
-                                 ),
-                             and_(Recipe.status==TaskStatus.by_name(u'Queued'),
-                                  System.user==None,
-                                  RecipeSet.lab_controller_id==System.lab_controller_id
-                                 )
-                                )
-                               )
-        count = recipes.count()
-        if count:
-            log.debug("Entering queued_recipes routine")
+    recipes = Recipe.query()\
+                    .join('status')\
+                    .join('systems')\
+                    .join('recipeset')\
+                    .filter(
+                         or_(
+                         and_(Recipe.status==TaskStatus.by_name(u'Queued'),
+                              System.user==None,
+                              RecipeSet.lab_controller==None
+                             ),
+                         and_(Recipe.status==TaskStatus.by_name(u'Queued'),
+                              System.user==None,
+                              RecipeSet.lab_controller_id==System.lab_controller_id
+                             )
+                            )
+                           )
+    if not recipes.count():
+        return False
+    log.debug("Entering queued_recipes routine")
+    session.begin()
+    try:
         for recipe in recipes:
             system = recipe.dyn_systems.filter(System.user==None)
             if recipe.recipeset.lab_controller:
@@ -279,17 +282,17 @@ def queued_recipes(*args):
                     # enforce single recipes for remote execution.
                     pass
         session.commit()
-        if count:
-            log.debug("Exiting queued_recipes routine")
-        else:
-            time.sleep(20)
+    except exceptions.Exception, e:
+        session.rollback()
+        log.error("Failed to commit due to :%s" % e)
+    log.debug("Exiting queued_recipes routine")
+    return True
 
 def scheduled_recipes(*args):
     """
     if All recipes in a recipeSet are in Scheduled state then move them to
      Running.
     """
-    session.begin()
     recipesets = RecipeSet.query().from_statement(
                         select([recipe_set_table.c.id, 
                                 func.min(recipe_table.c.status_id)],
@@ -297,85 +300,106 @@ def scheduled_recipes(*args):
                                .group_by(RecipeSet.id)\
                                .having(func.min(recipe_table.c.status_id) == TaskStatus.by_name(u'Scheduled').id)).all()
    
-    if recipesets:
-        log.debug("Entering scheduled_recipes routine")
-    for recipeset in recipesets:
-        # Go through each recipe in the recipeSet
-        for recipe in recipeset.recipes:
-            # If one of the recipes gets aborted then don't try and run
-            if recipe.status != TaskStatus.by_name(u'Scheduled'):
-                continue
-            recipe.Waiting()
-            # Go Through each task and find out the roles of everyone else
-            for i, task in enumerate(recipe.tasks):
-                for peer in recipe.recipeset.recipes:
-                    # Roles are only shared amongst like recipe types
-                    if type(recipe) == type(peer):
-                        key = peer.tasks[i].role
-                        task.roles[key].append(peer.system)
-  
-            # Start the first task in the recipe
-            try:
-                recipe.tasks[0].Start()
-            except exceptions.Exception, e:
-                log.error("Failed to Start recipe %s, due to %s" % (recipe.id,e))
-                recipe.recipeset.Abort(u"Failed to provision recipeid %s, %s" % 
-                                                                         (
-                                                                     recipe.id,
-                                                                        e))
-            # FIXME add customrepos if present
-            ks_meta = "beaker=%s recipeid=%s packages=%s" % (
-                                                      gethostname(),
-                                                      recipe.id,
-                                                      recipe.packages,
-                                                             )
-            try:
-                recipe.system.action_auto_provision(recipe.distro,
-                                                 ks_meta,
-                                                 recipe.kernel_options,
-                                                 recipe.kernel_options_post,
-                                                 recipe.kickstart)
-                recipe.system.activity.append(
-                     SystemActivity(recipe.recipeset.job.owner, 
-                                    'Scheduler', 
-                                    'Provision', 
-                                    'Distro',
-                                    '',
-                                    '%s' % recipe.distro))
-            except exceptions.Exception, e:
-                log.error(u"Failed to provision recipeid %s, %s" % (
-                                                                     recipe.id,
-                                                                        e))
-                recipe.recipeset.Abort(u"Failed to provision recipeid %s, %s" % 
-                                                                         (
+    if not recipesets:
+        return False
+    log.debug("Entering scheduled_recipes routine")
+    session.begin()
+    try:
+        for recipeset in recipesets:
+            # Go through each recipe in the recipeSet
+            for recipe in recipeset.recipes:
+                # If one of the recipes gets aborted then don't try and run
+                if recipe.status != TaskStatus.by_name(u'Scheduled'):
+                    continue
+                recipe.Waiting()
+                # Go Through each task and find out the roles of everyone else
+                for i, task in enumerate(recipe.tasks):
+                    for peer in recipe.recipeset.recipes:
+                        # Roles are only shared amongst like recipe types
+                        if type(recipe) == type(peer):
+                            key = peer.tasks[i].role
+                            task.roles[key].append(peer.system)
+      
+                # Start the first task in the recipe
+                try:
+                    recipe.tasks[0].Start()
+                except exceptions.Exception, e:
+                    log.error("Failed to Start recipe %s, due to %s" % (recipe.id,e))
+                    recipe.recipeset.Abort(u"Failed to provision recipeid %s, %s" % 
+                                                                             (
                                                                          recipe.id,
-                                                                        e))
-   
-    session.commit()
-    if recipesets:
-        log.debug("Exiting scheduled_recipes routine")
+                                                                            e))
+                # FIXME add customrepos if present
+                ks_meta = "beaker=%s recipeid=%s packages=%s" % (
+                                                          gethostname(),
+                                                          recipe.id,
+                                                          recipe.packages,
+                                                                 )
+                try:
+                    recipe.system.action_auto_provision(recipe.distro,
+                                                     ks_meta,
+                                                     recipe.kernel_options,
+                                                     recipe.kernel_options_post,
+                                                     recipe.kickstart)
+                    recipe.system.activity.append(
+                         SystemActivity(recipe.recipeset.job.owner, 
+                                        'Scheduler', 
+                                        'Provision', 
+                                        'Distro',
+                                        '',
+                                        '%s' % recipe.distro))
+                except exceptions.Exception, e:
+                    log.error(u"Failed to provision recipeid %s, %s" % (
+                                                                         recipe.id,
+                                                                            e))
+                    recipe.recipeset.Abort(u"Failed to provision recipeid %s, %s" % 
+                                                                             (
+                                                                             recipe.id,
+                                                                            e))
+       
+        session.commit()
+    except exceptions.Exception, e:
+        session.rollback()
+        log.error("Failed to commit due to :%s" % e)
+    log.debug("Exiting scheduled_recipes routine")
+    return True
+
+def new_recipes_loop(*args, **kwargs):
+    while True:
+        if not new_recipes():
+            time.sleep(20)
+
+def processed_recipesets_loop(*args, **kwargs):
+    while True:
+        if not processed_recipesets():
+            time.sleep(20)
+
+def queued_recipes_loop(*args, **kwargs):
+    while True:
+        if not queued_recipes():
+            time.sleep(20)
 
 def schedule():
     beaker.server.scheduler._start_scheduler()
     log.debug("starting new recipes Thread")
     # Create new_recipes Thread
-    add_onetime_task(action=new_recipes,
+    add_onetime_task(action=new_recipes_loop,
                       args=[lambda:datetime.now()])
     log.debug("starting processed recipes Thread")
     # Create processed_recipes Thread
-    add_onetime_task(action=processed_recipesets,
+    add_onetime_task(action=processed_recipesets_loop,
                       args=[lambda:datetime.now()],
                       initialdelay=5)
     log.debug("starting queued recipes Thread")
     # Create queued_recipes Thread
-    add_onetime_task(action=queued_recipes,
+    add_onetime_task(action=queued_recipes_loop,
                       args=[lambda:datetime.now()],
                       initialdelay=10)
     log.debug("starting scheduled recipes Thread")
     # Run scheduled_recipes in this process
     while True:
-        scheduled_recipes()
-        time.sleep(20)
+        if not scheduled_recipes():
+            time.sleep(20)
 
 def daemonize_self():
     # daemonizing code:  http://aspn.activestate.com/ASPN/Cookbook/Python/Recipe/66012

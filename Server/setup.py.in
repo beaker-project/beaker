@@ -122,6 +122,7 @@ data_files = [
                                  glob.glob('beaker/server/static/images/*'))),
     ("/etc/beaker", ["server.cfg"]),
     ("/etc/httpd/conf.d", ["apache/beaker-server.conf"]),
+    ("/etc/init.d", ["init.d/beakerd"]),
     ("/usr/share/beaker", filter(os.path.isfile, glob.glob("apache/*.wsgi"))),
     ("/var/log/beaker", []),
 ]
