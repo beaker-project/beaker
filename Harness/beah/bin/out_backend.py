@@ -18,18 +18,23 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-from beah.wires.internals.twserver import start_server
-def main():
-    """\
-This is a Controller server.
-
-Type <Ctrl-C> to exit. Alternatively issue a kill command from cmd_backend.
-"""
-    start_server()
-
+from beah.core.backends import PprintBackend
+from beah.wires.internals.twbackend import start_backend
 from twisted.internet import reactor
-if __name__ == '__main__':
-    print main.__doc__
-    main()
+
+def out_backend():
+    """\
+This is a Backend to issue commands to Controller.
+
+Type <Ctrl-C> to exit.
+"""
+    start_backend(PprintBackend(), byef=lambda evt: reactor.stop())
+
+def main():
+    print out_backend.__doc__
+    out_backend()
     reactor.run()
+
+if __name__ == '__main__':
+    main()
 

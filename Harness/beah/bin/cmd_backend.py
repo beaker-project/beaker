@@ -22,6 +22,7 @@ from beah.wires.internals.twbackend import start_backend
 from beah.core.backends import CmdOnlyBackend
 from twisted.internet import stdio
 from twisted.protocols.basic import LineReceiver
+from twisted.internet import reactor
 from exceptions import StopIteration
 
 class TwistedCmdBackend(LineReceiver):
@@ -54,7 +55,7 @@ class TwistedCmdBackend(LineReceiver):
         except StopIteration:
             reactor.stop()
 
-def main():
+def cmd_backend():
     """\
 This is a Backend to issue commands to Controller.
 
@@ -75,9 +76,10 @@ Known issues:
     # Start a default TCP client:
     start_backend(backend.backend, byef=lambda evt: reactor.callLater(1, reactor.stop))
 
-if __name__ == '__main__':
-    from twisted.internet import reactor
-    print main.__doc__
-    main()
+def main():
+    print cmd_backend.__doc__
+    cmd_backend()
     reactor.run()
 
+if __name__ == '__main__':
+    main()

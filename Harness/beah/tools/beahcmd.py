@@ -101,7 +101,7 @@ class BeahRunner(ExtBackend):
                 return
 
 
-def main(coro):
+def beah_run(coro):
     """\
 This is a Backend to issue script to Controller.
 
@@ -113,7 +113,7 @@ Known issues:
 
  * Type <Ctrl-C> to finish.
 
-   I do not want to stop reactor directly, but would like if it stopped if
+   I do not want to stop reactor directly, but would like if it stopped when
    there are no more protocols.
 """
     backend = BeahRunner(coro)
@@ -132,11 +132,13 @@ if __name__ == '__main__':
         yield command.command('dump')
         return
 
-    main(coro())
+    beah_run(coro())
     print "\n********************\n%s\n********************" % "Starting reactor."
     try:
-        reactor.run()
-    finally:
-        print "\n********************\n%s\n********************" % "Reactor stopped!"
+        try:
+            reactor.run()
+        finally:
+            print "\n********************\n%s\n********************" % "Reactor stopped!"
+    except:
         raise
 

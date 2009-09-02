@@ -61,9 +61,9 @@ function runner()
 	for i in $@; do
 		case $i in
 			a|A) runner $all ;;
-			s|S) xt s 80x35-0-0 srv & ;;
-			c|C) xt c 80x20+0+0 cmd_backend & ;;
-			o|O) xt o 80x35-0+0 out_backend & ;;
+			s|S) xt s 80x35-0-0 beah/bin/srv.py & ;;
+			c|C) xt c 80x20+0+0 beah/bin/cmd_backend.py & ;;
+			o|O) xt o 80x35-0+0 beah/bin/out_backend.py & ;;
 			l|L) xt l 80x20+0-0 python tools/fakelc.py & ;;
 			b|B) sleep 2 && # beaker backend has to wait for fakelc - FIXME:
 			     xt b 80x20+0+0 python beah/backends/beakerlc.py & ;;

@@ -162,6 +162,7 @@ pushd simplejson
 wget http://pypi.python.org/packages/2.6/s/setuptools/setuptools-0.6c9-py2.6.egg && \
 chmod 700 setuptools-0.6c9-py2.6.egg && \
 ./setuptools-0.6c9-py2.6.egg && \
+\
 wget http://pypi.python.org/packages/source/s/simplejson/simplejson-2.0.9.tar.gz && \
 tar xvzf simplejson-${SJ_VER}.tar.gz && \
 cd simplejson-${SJ_VER} && \
@@ -184,31 +185,31 @@ fi
 ################################################################################
 # SUMMARY:
 ################################################################################
-if [[ -z "$PY_OK" ]]; then
+if [[ "$PY_OK" -eq 0 ]]; then
 	echo "Python installed OK"
 else
 	echo "Python not installed"
 fi
 
-if [[ -z "$ZI_OK" ]]; then
+if [[ "$ZI_OK" -eq 0 ]]; then
 	echo "zope.interface installed OK"
 else
 	echo "zope.interface not installed"
 fi
 
-if [[ -z "$TW_OK" ]]; then
+if [[ "$TW_OK" -eq 0 ]]; then
 	echo "Twisted installed OK"
 else
 	echo "Twisted not installed"
 fi
 
-if [[ -z "$SJ_OK" ]]; then
+if [[ "$SJ_OK" -eq 0 ]]; then
 	echo "simplejson installed OK"
 else
 	echo "simplejson not installed"
 fi
 
-if [[ -z "$GIT_OK" ]]; then
+if [[ "$GIT_OK" -eq 0 ]]; then
 	echo "Git installed OK"
 else
 	echo "Git not installed"
