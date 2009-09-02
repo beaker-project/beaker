@@ -75,6 +75,13 @@ def stdout(data, origin={}, timestamp=None):
 def stderr(data, origin={}, timestamp=None):
     return output(data, "stderr", origin, timestamp)
 
+def output(data, out_handle="", origin={}, timestamp=None):
+    return event('output', origin, timestamp, out_handle=out_handle, data=data)
+def stdout(data, origin={}, timestamp=None):
+    return output(data, "stdout", origin, timestamp)
+def stderr(data, origin={}, timestamp=None):
+    return output(data, "stderr", origin, timestamp)
+
 def log(message="", log_level=LOG_LEVEL.INFO, log_handle="", origin={},
         timestamp=None, **kwargs):
     return Event('log', origin, timestamp, log_level=log_level,

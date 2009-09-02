@@ -21,10 +21,11 @@ from twisted.internet import reactor
 
 import os, exceptions, tempfile, pprint
 from xml.etree import ElementTree
+import simplejson as json
+
 from beah.core.backends import ExtBackend
 from beah.core import command
 from beah.core.constants import ECHO, RC
-import simplejson as json
 
 #HOST='beaker-01.app.eng.bos.redhat.com'
 HOST='localhost:5222'
