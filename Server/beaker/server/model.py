@@ -543,7 +543,7 @@ recipe_table = Table('recipe',metadata,
         Column('start_time',DateTime),
         Column('finish_time',DateTime),
         Column('_host_requires',Unicode()),
-        Column('distro_requires',Unicode()),
+        Column('_distro_requires',Unicode()),
         Column('kickstart',Unicode()),
         # type = recipe, machine_recipe or guest_recipe
         Column('type', String(30), nullable=False),
@@ -2467,15 +2467,19 @@ class Recipe(MappedObject):
     arch = property(_get_arch)
 
     def _get_host_requires(self):
+        # If no system_type is specified then add defaults
         hrs = xml.dom.minidom.parseString(self._host_requires)
-        hostRequires = self.doc.createElement("hostRequires")
-        for hr in hrs.getElementsByTagName("hostRequires"):
-            for child in hr.childNodes:
-                hostRequires.appendChild(child)
-        system_type = self.doc.createElement("system_type")
-        system_type.setAttribute("value", "%s" % self.systemtype)
-        hostRequires.appendChild(system_type)
-        return hostRequires.toxml()
+        if not hrs.getElementsByTagName("system_type"):
+            hostRequires = self.doc.createElement("hostRequires")
+            for hr in hrs.getElementsByTagName("hostRequires"):
+                for child in hr.childNodes[:]:
+                    hostRequires.appendChild(child)
+            system_type = self.doc.createElement("system_type")
+            system_type.setAttribute("value", "%s" % self.systemtype)
+            hostRequires.appendChild(system_type)
+            return hostRequires.toxml()
+        else:
+            return self._host_requires
 
     def _set_host_requires(self, value):
         self._host_requires = value
@@ -2617,6 +2621,26 @@ class MachineRecipe(Recipe):
             recipe.appendChild(guest.to_xml())
         return Recipe.to_xml(self,recipe)
 
+    def _get_distro_requires(self):
+        drs = xml.dom.minidom.parseString(self._distro_requires)
+        # If no distro_virt is asked for default to No Virt
+        if not drs.getElementsByTagName("distro_virt"):
+            distroRequires = self.doc.createElement("distroRequires")
+            for dr in drs.getElementsByTagName("distroRequires"):
+                for child in dr.childNodes[:]:
+                    distroRequires.appendChild(child)
+            distro_virt = self.doc.createElement("distro_virt")
+            distro_virt.setAttribute("op", "=")
+            distro_virt.setAttribute("value", "")
+            distroRequires.appendChild(distro_virt)
+            return distroRequires.toxml()
+        else:
+            return self._distro_requires
+
+    def _set_distro_requires(self, value):
+        self._distro_requires = value
+
+    distro_requires = property(_get_distro_requires, _set_distro_requires)
 
 class RecipeTag(MappedObject):
     """
