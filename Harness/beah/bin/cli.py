@@ -18,6 +18,7 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
+from twisted.internet import reactor
 from beah.wires.internals.twbackend import start_backend
 from beah.core.backends import ExtBackend
 from beah.core import command
@@ -41,6 +42,9 @@ class CmdLineBackend(ExtBackend):
             controller.proc_cmd(self, self.cmd)
             self.wait = True
 
+    def proc_evt_bye(self, evt):
+        reactor.callLater(1,reactor.stop)
+
     def proc_evt_echo(self, evt):
         if evt.arg('cmd', ['Command','',{}]) == self.cmd:
             global rc
@@ -60,14 +64,14 @@ class CmdLineBackend(ExtBackend):
                     return
                 return
             finally:
-                reactor.stop()
+                reactor.callLater(1,reactor.stop)
 
     def post_proc(self, evt, answ):
         if self.wait:
             pprint.pprint(evt)
         return answ
 
-def main(cmdline):
+def main_beah(cmdline):
     """\
 This is a Backend to issue commands to Controller.
 
@@ -86,13 +90,15 @@ Known issues:
     # Start a default TCP client:
     start_backend(backend)
 
-if __name__ == '__main__':
-    from twisted.internet import reactor
+def main():
     import sys
     rc = 0
     try:
-        main(' '.join(sys.argv[1:]))
+        main_beah(' '.join(sys.argv[1:]))
     except:
         sys.exit(1)
     reactor.run()
     sys.exit(rc)
+
+if __name__ == '__main__':
+    main()

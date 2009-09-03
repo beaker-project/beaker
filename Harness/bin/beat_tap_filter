@@ -23,8 +23,7 @@ from beah.filters.tapfilter import TestHarnessTAP2EventList
 
 import sys
 
-if __name__ == '__main__':
-
+def main():
     ld = ListDeserializer(deserializer=TestHarnessTAP2EventList())
     ld.redir(JSONSerializer().proc_obj)
     while True:
@@ -32,4 +31,7 @@ if __name__ == '__main__':
         if not line:
             break
         ld.proc_line(line)
+
+if __name__ == '__main__':
+    main()
 

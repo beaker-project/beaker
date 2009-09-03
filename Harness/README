@@ -2,6 +2,10 @@
 
 WARNING: This is a (mostly working) prototype. Things may be broken.
 
+To install, simply run:
+
+  python setup.py install
+
 === Usage ===
 
 bin directory contains few executables:

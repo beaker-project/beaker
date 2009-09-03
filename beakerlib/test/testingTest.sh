@@ -242,7 +242,31 @@ test_rlRun(){
 	__one_fail_one_pass 'rlRun /bin/false 5,0-2,7 comment' PASS
 	__one_fail_one_pass 'rlRun /bin/false 5-10,0-2 comment' PASS
 	__one_fail_one_pass 'rlRun /bin/false 0-2,5-10 comment' PASS
+    
+    rlRun -t 'echo "foobar1"' | grep "^STDOUT: foobar1" 1>/dev/null
+    assertTrue "rlRun tagging (stdout)" "[ $? -eq 0 ]"
 
+    rlRun -t 'echo "foobar2" 1>&2' | grep "^STDERR: foobar2"  1>/dev/null
+    assertTrue "rlRun tagging (stderr)" "[ $? -eq 0 ]"
+ 
+    OUTPUTFILE_orig="$OUTPUTFILE"
+    export OUTPUTFILE="`mktemp`"
+    
+    rlRun -l 'echo "foobar3"' 2>&1 1>/dev/null
+    grep 'echo "foobar3"' $OUTPUTFILE 1>/dev/null && egrep '^foobar3' $OUTPUTFILE 1>/dev/null
+    assertTrue "rlRun logging plain" "[ $? -eq 0 ]"
+
+    rlRun -l -t 'echo "foobar4"' 2>&1 1>/dev/null
+    grep 'echo "foobar4"' $OUTPUTFILE 1>/dev/null && egrep '^STDOUT: foobar4' $OUTPUTFILE 1>/dev/null
+    assertTrue "rlRun logging with tagging (stdout)" "[ $? -eq 0 ]"
+
+    rlRun -l -t 'echo "foobar5" 1>&2' 2>&1 1>/dev/null
+    grep 'echo "foobar5" 1>&2' $OUTPUTFILE 1>/dev/null && egrep '^STDERR: foobar5' $OUTPUTFILE 1>/dev/null
+    assertTrue "rlRun logging with tagging (stderr)" "[ $? -eq 0 ]"
+
+    #cleanup
+    rm -rf $OUTPUTFILE
+    export OUTPUTFILE="$OUTPUTFILE_orig"
 }
 
 

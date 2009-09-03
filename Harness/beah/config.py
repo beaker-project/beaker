@@ -16,11 +16,12 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-#DEVEL    = lambda: False
-#ROOT     = lambda: ''
-#LOG_PATH = lambda: ROOT() + '/var/log'
+# FIXME: change this to singleton class(?)
+DEVEL    = lambda: False
+ROOT     = lambda: ''
+LOG_PATH = lambda: ROOT() + '/var/log'
 
-__def = dict(
+__DEF = dict(
         # Devel flag. Will activate some debug features:
         DEVEL          = lambda: False,
         # Logging on:
@@ -50,61 +51,71 @@ __def = dict(
         SRV_LOG        = lambda: False
 )
 
-__args = {}
-        #HOST=socket.gethostname()
+__ARGS = {}
+__OPTS = {}
+__CFG = {}
 
 def config(**opts):
-    global __opts
-    __opts = dict(opts)
+    """
+    Configure harness for the first time.
+
+    opts -- parsed options (e.g. from command line)
+    """
+    global __OPTS
+    __OPTS = dict(opts)
     reconf(True)
-    pass
 
 def reconf(full=False):
-    """\
-Reconfigure Harness.
-Uses several sources of data.
-    1. Default configuration - __def
-    2. Configuration file - __cfg
-    3. Environment
-    4. Command line options - __opts
-    5. Arguments set at runtime - __args
-Location of configuration file is not affected by __args.
-"""
-    global __cfg
+    """
+    Reread configuration.
+
+    Uses several sources of data.
+        1. Default configuration - __DEF
+        2. Configuration file - __CFG
+        3. Environment
+        4. Command line options - __OPTS
+        5. Arguments set at runtime - __ARGS
+    Location of configuration file is not affected by __ARGS.
+    """
+    global __CFG
     if full:
         # FIXME: read configuration - options, environment, config.file
-        __cfg = {}
+        __CFG = {}
     # FIXME: define things which not be set at runtime
     # FIXME: do a reconfiguration
     temp = {}
-    temp.update(__def)
-    temp.update(__cfg)
-    temp.update(__opts)
-    temp.update(__args)
+    temp.update(__DEF)
+    temp.update(__CFG)
+    temp.update(__OPTS)
+    temp.update(__ARGS)
     for key in temp.keys():
         val = temp[key]
         if globals().has_key('set_'+key):
             globals()['set_'+key](key, val)
         else:
             globals()[key] = val
-    pass
 
 def update(**kwargs):
+    """Change Harness configuration at the runtime."""
     if kwargs:
-        __args.update(kwargs)
+        __ARGS.update(kwargs)
     reconf()
 
 if __name__ == '__main__':
+    LOG = lambda: False
+    HOST = lambda: "localhost"
     config(
             DEVEL = lambda: True,
             )
     assert DEVEL() == True
     assert LOG()   == False
     assert HOST()  == "localhost"
+    assert ROOT()  == "/tmp"
     update(
             LOG   = lambda: True,
             )
     assert DEVEL() == True
     assert LOG()   == True
     assert HOST()  == "localhost"
+    assert ROOT()  == "/tmp"
 

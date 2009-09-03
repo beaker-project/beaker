@@ -25,7 +25,7 @@ fi
 
 export BEAHLIB_ROOT=$PWD
 
-export PATH=$PATH:$PWD/bin
+export PATH=$PATH:$PWD/bin:$PWD/beah/bin
 export PYTHONPATH=$PYTHONPATH:$PWD
 
 echo "Environment is set. Run srv, out_backend or cmd_backend"
