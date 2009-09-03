@@ -52,7 +52,7 @@ class Distros(RPCRoot):
             redirect(".")
         if tag['text']:
             distro.tags.append(tag['text'])
-            Activity(identity.current.user,'WEBUI','Tagged',distro.install_name,None,tag)
+            Activity(identity.current.user,'WEBUI','Tagged',distro.install_name,None,tag['text'])
         flash(_(u"Added Tag %s" % tag['text']))
         redirect("./view?id=%s" % id)
 
