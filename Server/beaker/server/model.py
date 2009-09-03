@@ -1485,7 +1485,7 @@ $SNIPPET("rhts_post")
     def updateDevices(self, deviceinfo):
         for device in deviceinfo:
             try:
-                device = session.query(Device).filter_by(vendor_id = device['vendorID'],
+                device = Device.query().filter_by(vendor_id = device['vendorID'],
                                    device_id = device['deviceID'],
                                    subsys_vendor_id = device['subsysVendorID'],
                                    subsys_device_id = device['subsysDeviceID'],
@@ -1531,7 +1531,7 @@ $SNIPPET("rhts_post")
         """
         List excluded osmajor for system by arch
         """
-        excluded = session.query(ExcludeOSMajor).join('system').\
+        excluded = ExcludeOSMajor.query().join('system').\
                     join('arch').filter(and_(System.id==self.id,
                                              Arch.id==arch.id))
         return excluded
@@ -1540,7 +1540,7 @@ $SNIPPET("rhts_post")
         """
         List excluded osversion for system by arch
         """
-        excluded = session.query(ExcludeOSVersion).join('system').\
+        excluded = ExcludeOSVersion.query().join('system').\
                     join('arch').filter(and_(System.id==self.id,
                                              Arch.id==arch.id))
         return excluded
@@ -1549,7 +1549,7 @@ $SNIPPET("rhts_post")
         """
         List of distros that support this system
         """
-        distros = session.query(Distro).join(['arch','systems']).filter(
+        distros = Distro.query().join(['arch','systems']).filter(
               and_(System.id==self.id,
                    System.lab_controller_id==LabController.id,
                    lab_controller_distro_map.c.distro_id==Distro.id,
@@ -2049,8 +2049,7 @@ class Distro(object):
         """
         List of tasks that support this distro
         """
-        tasks = session.query(Task)
-        return tasks.filter(
+        return Task.query().filter(
                 not_(or_(Task.id.in_(select([task_table.c.id]).
                  where(task_table.c.id==task_exclude_table.c.task_id).
                  where(task_exclude_table.c.arch_id==arch_table.c.id).
@@ -2078,7 +2077,7 @@ class Distro(object):
         if user:
             systems = System.available_order(user)
         else:
-            systems = session.query(System)
+            systems = System.query()
 
         return systems.join(['lab_controller','_distros','distro']).filter(
              and_(Distro.install_name==self.install_name,
@@ -2236,6 +2235,16 @@ class TaskStatus(object):
     def by_name(cls, status_name):
         return cls.query().filter_by(status=status_name).one()
 
+    def __cmp__(self, other):
+        if hasattr(other,'severity'):
+            other = other.severity
+        if self.severity < other:
+            return -1
+        if self.severity == other:
+            return 0
+        if self.severity > other:
+            return 1
+
     def __repr__(self):
         return "%s" % (self.status)
 
@@ -2244,6 +2253,16 @@ class TaskResult(object):
     @classmethod
     def by_name(cls, result_name):
         return cls.query().filter_by(result=result_name).one()
+
+    def __cmp__(self, other):
+        if hasattr(other,'severity'):
+            other = other.severity
+        if self.severity < other:
+            return -1
+        if self.severity == other:
+            return 0
+        if self.severity > other:
+            return 1
 
     def __repr__(self):
         return "%s" % (self.result)
@@ -2287,29 +2306,19 @@ class Job(MappedObject):
         self.wtasks = 0
         self.ftasks = 0
         self.ktasks = 0
+        max_result = None
+        max_status = None
         for recipeset in self.recipesets:
             self.ptasks += recipeset.ptasks
             self.wtasks += recipeset.wtasks
             self.ftasks += recipeset.ftasks
             self.ktasks += recipeset.ktasks
-        self.status = session.query(TaskStatus).from_statement(
-                             select([TaskStatus.id, 
-                                  func.max(TaskStatus.severity).label('count')],
-                                        from_obj=[task_status_table,
-                                                  recipe_set_table],
-                      whereclause="recipe_set.status_id = task_status.id\
-                                   AND recipe_set.job_id = %s" % self.id,
-                      group_by=[TaskStatus.id],
-                      order_by='count desc')).first()
-        self.result = session.query(TaskResult).from_statement(
-                             select([TaskResult.id, 
-                                  func.max(TaskResult.severity).label('count')],
-                                        from_obj=[task_result_table,
-                                                  recipe_set_table],
-                      whereclause="recipe_set.result_id = task_result.id\
-                                   AND recipe_set.job_id = %s" % self.id,
-                      group_by=[TaskResult.id],
-                      order_by='count desc')).first()
+            if recipeset.status > max_status:
+                max_status = recipeset.status
+            if recipeset.result > max_result:
+                max_result = recipeset.result
+        self.status = max_status
+        self.result = max_result
 
 
 class RecipeSet(MappedObject):
@@ -2353,6 +2362,7 @@ class RecipeSet(MappedObject):
         """
         Method to cancel all recipes in this recipe set.
         """
+        self.status = TaskStatus.by_name(u'Cancelled')
         for recipe in self.recipes:
             recipe.Cancel(msg)
 
@@ -2360,6 +2370,7 @@ class RecipeSet(MappedObject):
         """
         Method to abort all recipes in this recipe set.
         """
+        self.status = TaskStatus.by_name(u'Aborted')
         for recipe in self.recipes:
             recipe.Abort(msg)
 
@@ -2371,30 +2382,19 @@ class RecipeSet(MappedObject):
         self.wtasks = 0
         self.ftasks = 0
         self.ktasks = 0
+        max_result = None
+        max_status = None
         for recipe in self.recipes:
             self.ptasks += recipe.ptasks
             self.wtasks += recipe.wtasks
             self.ftasks += recipe.ftasks
             self.ktasks += recipe.ktasks
-        self.status = session.query(TaskStatus).from_statement(
-                             select([TaskStatus.id, 
-                                  func.max(TaskStatus.severity).label('count')],
-                                        from_obj=[task_status_table,
-                                                  recipe_table],
-                      whereclause="recipe.status_id = task_status.id\
-                                   AND recipe.recipe_set_id = %s" % self.id,
-                      group_by=[TaskStatus.id],
-                      order_by='count desc')).first()
-        self.result = session.query(TaskResult).from_statement(
-                             select([TaskResult.id, 
-                                  func.max(TaskResult.severity).label('count')],
-                                        from_obj=[task_result_table,
-                                                  recipe_table],
-                      whereclause="recipe.result_id = task_result.id\
-                                   AND recipe.recipe_set_id = %s" % self.id,
-                      group_by=[TaskResult.id],
-                      order_by='count desc')).first()
-        session.flush([self])
+            if recipe.status > max_status:
+                max_status = recipe.status
+            if recipe.result > max_result:
+                max_result = recipe.result
+        self.status = max_status
+        self.result = max_result
         self.job.update_status()
 
     def recipes_orderby(self, labcontroller):
@@ -2414,7 +2414,7 @@ class RecipeSet(MappedObject):
                                                             labcontroller.id),
                         group_by=[Recipe.id],
                         order_by='count')
-        return map(lambda x: session.query(Recipe).filter_by(id=x[0]).first(), session.connection(RecipeSet).execute(query).fetchall())
+        return map(lambda x: Recipe.query().filter_by(id=x[0]).first(), session.connection(RecipeSet).execute(query).fetchall())
 
 
 class Recipe(MappedObject):
@@ -2514,6 +2514,7 @@ class Recipe(MappedObject):
         """
         Method to cancel all tasks in this recipe.
         """
+        self.status = TaskStatus.by_name(u'Cancelled')
         for task in self.tasks:
             task.Cancel(msg)
 
@@ -2521,6 +2522,7 @@ class Recipe(MappedObject):
         """
         Method to abort all tasks in this recipe.
         """
+        self.status = TaskStatus.by_name(u'Aborted')
         for task in self.tasks:
             task.Abort(msg)
 
@@ -2536,15 +2538,6 @@ class Recipe(MappedObject):
         task_fail = TaskResult.by_name(u'Fail')
         self.ktasks = 0
         task_panic = TaskResult.by_name(u'Panic')
-        self.status = session.query(TaskStatus).from_statement(
-                             select([TaskStatus.id, 
-                                  func.max(TaskStatus.severity).label('count')],
-                                        from_obj=[task_status_table,
-                                                  recipe_task_table],
-                     whereclause="recipe_task.status_id = task_status.id\
-                                  AND recipe_task.recipe_id = %s" % self.id,
-                     group_by=[TaskStatus.id],
-                     order_by='count desc')).first()
 
         # Record the start of this Recipe.
         if not self.start_time \
@@ -2584,15 +2577,8 @@ class Recipe(MappedObject):
                     #FIXME
                     pass
 
-        self.result = session.query(TaskResult).from_statement(
-                             select([TaskResult.id, 
-                                  func.max(TaskResult.severity).label('count')],
-                                        from_obj=[task_result_table,
-                                                  recipe_task_table],
-                     whereclause="recipe_task.result_id = task_result.id\
-                                  AND recipe_task.recipe_id = %s" % self.id,
-                     group_by=[TaskResult.id],
-                     order_by='count desc')).first()
+        max_result = None
+        max_status = None
         for task in self.tasks:
             if task.result == task_pass:
                 self.ptasks += 1
@@ -2602,7 +2588,12 @@ class Recipe(MappedObject):
                 self.ftasks += 1
             if task.result == task_panic:
                 self.ktasks += 1
-        session.flush([self])
+            if task.status > max_status:
+                    max_status = task.status
+            if task.result > max_result:
+                    max_result = task.result
+        self.status = max_status
+        self.result = max_result
         self.recipeset.update_status()
 
 class GuestRecipe(Recipe):
@@ -2680,16 +2671,11 @@ class RecipeTask(MappedObject):
         """
         Update number of passes, failures, warns, panics..
         """
-        self.result = session.query(TaskResult).from_statement(
-                             select([TaskResult.id, 
-                                  func.max(TaskResult.severity).label('count')],
-                                        from_obj=[task_result_table,
-                                                  recipe_task_result_table],
-                     whereclause="recipe_task_result.result_id = task_result.id\
-                      AND recipe_task_result.recipe_task_id = %s" % self.id,
-                     group_by=[TaskResult.id],
-                     order_by='count desc')).first()
-        session.flush([self])
+        max_result = None
+        for result in self.results:
+            if result.result > max_result:
+                max_result = result.result
+        self.result = max_result
         self.recipe.update_status()
 
     def Queue(self):
@@ -2697,7 +2683,6 @@ class RecipeTask(MappedObject):
         Moved from New -> Queued
         """
         self.status = TaskStatus.by_name(u'Queued')
-        session.flush([self])
         self.update_status()
 
     def Process(self):
@@ -2705,7 +2690,6 @@ class RecipeTask(MappedObject):
         Moved from Queued -> Processed
         """
         self.status = TaskStatus.by_name(u'Processed')
-        session.flush([self])
         self.update_status()
 
     def Schedule(self):
@@ -2713,7 +2697,6 @@ class RecipeTask(MappedObject):
         Moved from Processed -> Scheduled
         """
         self.status = TaskStatus.by_name(u'Scheduled')
-        session.flush([self])
         self.update_status()
 
     def Waiting(self):
@@ -2721,7 +2704,6 @@ class RecipeTask(MappedObject):
         Moved from Scheduled -> Waiting
         """
         self.status = TaskStatus.by_name(u'Waiting')
-        session.flush([self])
         self.update_status()
 
     def Start(self, watchdog_override=None):
@@ -2747,7 +2729,6 @@ class RecipeTask(MappedObject):
         else:
             self.recipe.watchdog.kill_time = datetime.now() + timedelta(
                                                     seconds=self.task.avg_time)
-        session.flush([self])
         self.update_status()
 
     def Stop(self, *args, **kwargs):
@@ -2759,7 +2740,6 @@ class RecipeTask(MappedObject):
         if not self.finish_time:
             self.finish_time = datetime.utcnow()
         self.status = TaskStatus.by_name(u'Completed')
-        session.flush([self])
         self.update_status()
 
     def Cancel(self, msg=None):
@@ -2790,7 +2770,6 @@ class RecipeTask(MappedObject):
                                        result=TaskResult.by_name(u'Warn'),
                                        score=0,
                                        log=msg))
-        session.flush([self])
         self.update_status()
 
     def Pass(self, path, score, summary):
@@ -2828,7 +2807,6 @@ class RecipeTask(MappedObject):
                                    result=TaskResult.by_name(result),
                                    score=score,
                                    log=summary))
-        session.flush([self])
         self.update_status()
 
 

@@ -64,7 +64,7 @@ class Recipes(RPCRoot):
 
     @cherrypy.expose
     @identity.require(identity.not_anonymous())
-    def Cancel(self, recipe_id):
+    def Cancel(self, recipe_id, msg):
         """
         Set recipe status to Cancelled
         """

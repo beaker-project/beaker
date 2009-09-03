@@ -102,6 +102,7 @@ def new_recipes(*args):
     except exceptions.Exception, e:
         session.rollback()
         log.error("Failed to commit due to :%s" % e)
+    session.close()
     log.debug("Exiting new_recipes routine")
     return True
 
@@ -213,6 +214,7 @@ def processed_recipesets(*args):
     except exceptions.Exception, e:
         session.rollback()
         log.error("Failed to commit due to :%s" % e)
+    session.close()
     log.debug("Exiting processed_recipes routine")
     return True
 
@@ -239,13 +241,13 @@ def queued_recipes(*args):
     session.begin()
     try:
         for recipe in recipes:
-            system = recipe.dyn_systems.filter(System.user==None)
+            systems = recipe.dyn_systems.filter(System.user==None)
             if recipe.recipeset.lab_controller:
                 # First recipe of a recipeSet determines the lab_controller
-                system = system.filter(
+                systems = systems.filter(
                              System.lab_controller==recipe.recipeset.lab_controller
                                       )
-            system = system.first()
+            system = systems.first()
             if system:
                 log.debug("System : %s is available for Recipe %s" % (system, recipe.id))
                 # Atomic operation to put recipe in Scheduled state
@@ -288,6 +290,7 @@ def queued_recipes(*args):
     except exceptions.Exception, e:
         session.rollback()
         log.error("Failed to commit due to :%s" % e)
+    session.close()
     log.debug("Exiting queued_recipes routine")
     return True
 
@@ -364,6 +367,7 @@ def scheduled_recipes(*args):
     except exceptions.Exception, e:
         session.rollback()
         log.error("Failed to commit due to :%s" % e)
+    session.close()
     log.debug("Exiting scheduled_recipes routine")
     return True
 
@@ -393,15 +397,15 @@ def schedule():
     add_onetime_task(action=processed_recipesets_loop,
                       args=[lambda:datetime.now()],
                       initialdelay=5)
-    log.debug("starting queued recipes Thread")
+    #log.debug("starting queued recipes Thread")
     # Create queued_recipes Thread
-    add_onetime_task(action=queued_recipes_loop,
-                      args=[lambda:datetime.now()],
-                      initialdelay=10)
+    #add_onetime_task(action=queued_recipes_loop,
+    #                  args=[lambda:datetime.now()],
+    #                  initialdelay=10)
     log.debug("starting scheduled recipes Thread")
     # Run scheduled_recipes in this process
     while True:
-        if not scheduled_recipes():
+        if not queued_recipes() and not scheduled_recipes():
             time.sleep(20)
 
 def daemonize_self():
