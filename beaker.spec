@@ -134,6 +134,7 @@ fi
 
 %files lab-controller
 %defattr(-,root,root,-)
+%config(noreplace) %{_sysconfdir}/beaker/proxy.conf
 %{python_sitelib}/%{name}/labcontroller/
 %{python_sitelib}/%{name}.labcontroller-%{version}-*
 %{python_sitelib}/%{name}.labcontroller-%{version}-py%{pyver}.egg-info/
