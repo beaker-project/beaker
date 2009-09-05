@@ -1817,15 +1817,22 @@ class Watchdog(MappedObject):
         return cls.query.filter_by(system=system).one()
 
     @classmethod
-    def expired(cls, labcontroller):
-        """ return a list of all watchdog entries that have expired
-            for this lab controller
+    def by_status(cls, labcontroller, status="active"):
+        """ return a list of all watchdog entries that are either active 
+            or expired for this lab controller
         """
-        return cls.query.join(['system']).filter(
+
+        REMAP_STATUS = {
+            "active"  : "__gt__",
+            "expired" : "__le__",
+        }
+        op = REMAP_STATUS.get(status, None)
+        if op:
+            return cls.query.join(['system']).filter(
                                       and_(System.lab_controller==labcontroller,
-                                           Watchdog.kill_time < datetime.now()
+                                 getattr(Watchdog.kill_time, op)(datetime.now())
                                           )
-                                                )
+                                                    )
 
 class LabInfo(SystemObject):
     fields = ['orig_cost', 'curr_cost', 'dimensions', 'weight', 'wattage', 'cooling']

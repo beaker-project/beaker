@@ -1,0 +1,21 @@
+from setuptools import setup, find_packages
+setup(
+    name = "beaker.proxy",
+    version = "@VERSION@",
+
+    packages=find_packages('src'),
+    package_dir = {'':'src'},
+
+    namespace_packages = ['beaker'],
+
+    data_files = [('/etc/beaker/', ['proxy.conf']),],
+    package_data = {
+        '/etc/beaker': ['proxy.conf'],
+    },
+
+    entry_points = {
+        'console_scripts': (
+            'beaker-proxy = beaker.labcontroller.main:main',
+        ),
+    }
+)

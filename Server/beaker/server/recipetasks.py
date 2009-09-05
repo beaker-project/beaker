@@ -45,8 +45,8 @@ class RecipeTasks(RPCRoot):
 
     @cherrypy.expose
     @identity.require(identity.not_anonymous())
-    def expired(self):
-        """ Return all expired tasks for this lab controller
+    def watchdogs(self, status='active'):
+        """ Return all active/expired tasks for this lab controller
             The lab controllers login with host/fqdn
         """
         try:
@@ -57,7 +57,7 @@ class RecipeTasks(RPCRoot):
             labcontroller = LabController.by_name(lab_controller)
         except InvalidRequestError:
             raise BX(_('Invalid lab_controller: %s' % lab_controller))
-        return [('%s' % w.recipetask, '%s' % w.system) for w in Watchdog.expired(labcontroller)]
+        return [('%s' % w.kill_time, '%s' % w.recipetask, '%s' % w.system) for w in Watchdog.by_status(labcontroller, status)]
 
     @cherrypy.expose
     @identity.require(identity.not_anonymous())
