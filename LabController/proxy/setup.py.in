@@ -1,6 +1,6 @@
 from setuptools import setup, find_packages
 setup(
-    name = "beaker.proxy",
+    name = "beaker.labcontroller",
     version = "@VERSION@",
 
     packages=find_packages('src'),

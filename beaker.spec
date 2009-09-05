@@ -3,7 +3,7 @@
 
 Name:           beaker
 Version:        0.5.0
-Release:        6%{?dist}
+Release:        7%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -134,6 +134,10 @@ fi
 
 %files lab-controller
 %defattr(-,root,root,-)
+%{python_sitelib}/%{name}/labcontroller/
+%{python_sitelib}/%{name}.labcontroller-%{version}-*
+%{python_sitelib}/%{name}.labcontroller-%{version}-py%{pyver}.egg-info/
+%{_bindir}/beaker-proxy
 %doc LabController/README
 %config(noreplace) %{_sysconfdir}/httpd/conf.d/%{name}-lab-controller.conf
 %{_sysconfdir}/cron.daily/expire_distros
