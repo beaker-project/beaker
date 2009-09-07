@@ -19,6 +19,9 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 from twisted.internet.protocol import ReconnectingClientFactory
+from twisted.internet import reactor
+from beah.wires.internals.twadaptors import ControllerAdaptor_Backend_JSON
+from beah import config
 
 ################################################################################
 # FACTORY:
@@ -54,15 +57,12 @@ class BackendFactory(ReconnectingClientFactory):
         self.backend.set_controller()
         ReconnectingClientFactory.clientConnectionFailed(self, connector, reason)
 
-from twisted.internet import reactor
-from beah.wires.internals.twadaptors import ControllerAdaptor_Backend_JSON
-from beah import config
-config.config()
 def start_backend(backend, host=None, port=None,
         adaptor=ControllerAdaptor_Backend_JSON,
         byef=None):
-    host = host or config.HOST()
-    port = port or config.PORT()
+    conf = config.config()
+    host = host or conf.get('BACKEND', 'INTERFACE')
+    port = port or int(conf.get('BACKEND', 'PORT'))
     reactor.connectTCP(host, port, BackendFactory(backend, adaptor, byef))
 
 ################################################################################

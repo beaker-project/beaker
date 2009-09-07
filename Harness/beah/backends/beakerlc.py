@@ -26,23 +26,28 @@ import simplejson as json
 from beah.core.backends import ExtBackend
 from beah.core import command
 from beah.core.constants import ECHO, RC
+from beah import config
 
-#HOST='beaker-01.app.eng.bos.redhat.com'
-HOST='localhost:5222'
-PATH='client'
-#XMLRPC_URL='https://%s/%s' % (HOST, PATH)
-XMLRPC_URL='http://%s/%s' % (HOST, PATH)
+import beah.system
+# FIXME: using rpm's, yum - too much Fedora centric(?)
+from beah.system.dist_fedora import RPMInstaller
 
-#  recipes.to_xml(recipe_id)
-#  recipes.system_xml(fqdn)
-#  parse XML :-(
-#  recipes.tasks.Start(task_id, kill_time)
-#  recipes.tasks.Result(task_id, result_type, path, score, summary)
-#  - result_type: Pass|Warn|Fail|Panic
-#  recipes.tasks.Stop(task_id, stop_type, msg)
-#  - stop_type: Stop|Abort|Cancel
+"""
+Beaker Backend.
+
+Beaker Backend should invoke these XML-RPC:
+ 1. recipes.to_xml(recipe_id)
+    recipes.system_xml(fqdn)
+ 2. parse XML
+ 3. recipes.tasks.Start(task_id, kill_time)
+ *. recipes.tasks.Result(task_id, result_type, path, score, summary)
+    - result_type: Pass|Warn|Fail|Panic
+ 4. recipes.tasks.Stop(task_id, stop_type, msg)
+    - stop_type: Stop|Abort|Cancel
+"""
 
 def parse_recipe_xml(input_xml):
+
     er = ElementTree.fromstring(input_xml)
     task_env = {}
 
@@ -59,6 +64,7 @@ def parse_recipe_xml(input_xml):
             HOSTNAME=er.get('system'))
 
     for task in er.findall('task'):
+
         ts = task.get('status')
 
         # FIXME: is this condition correct?
@@ -94,9 +100,6 @@ def parse_recipe_xml(input_xml):
 
     return None
 
-import beah.system
-# FIXME: using rpm's, yum - too much Fedora centric(?)
-from beah.system.dist_fedora import RPMInstaller
 def mk_beaker_task(rpm):
     # FIXME: see rhts-test-runner for ideas:
     # /home/mcsontos/rhts/rhts/test-env-lab/bin/rhts-test-runner.sh
@@ -119,13 +122,17 @@ class BeakerLCBackend(ExtBackend):
         #self.recipe_id = int(os.getenv('RECIPEID'))
         #self.proxy.callRemote('recipes.to_xml',
         #        self.recipe_id).addCallback(self.handle_new_task)
+        hostname = self.conf.get('DEFAULT', 'HOSTNAME')
         self.proxy.callRemote('recipes.system_xml',
-                os.getenv('HOSTNAME')).addCallback(self.handle_new_task)
+                hostname).addCallback(self.handle_new_task)
 
     def set_controller(self, controller=None):
         ExtBackend.set_controller(self, controller)
         if controller:
-            self.proxy = Proxy(XMLRPC_URL)
+            self.conf = config.config('BEAH_BEAKER_CONF', 'beah_beaker.conf',
+                    {'HOSTNAME':os.getenv('HOSTNAME')})
+            url = self.conf.get('DEFAULT', 'LAB_CONTROLLER')
+            self.proxy = Proxy(url)
             self.on_idle()
 
     def handle_new_task(self, result):
@@ -202,7 +209,6 @@ def main():
     start_backend(backend, byef=lambda evt: reactor.callLater(1, reactor.stop))
 
 if __name__ == '__main__':
-    from twisted.internet import reactor
     print main.__doc__
     #os.environ['RECIPEID'] = '21'
     main()

@@ -107,9 +107,9 @@ class TaskFactory(ReconnectingClientFactory):
         ReconnectingClientFactory.clientConnectionFailed(self, connector, reason)
 
 from beah.wires.internals.twadaptors import ControllerAdaptor_Task_JSON
-def start_task(config, task, host=None, port=None,
+def start_task(conf, task, host=None, port=None,
         adaptor=ControllerAdaptor_Task_JSON,
         ):
-    host = host or config.THOST()
-    port = port or config.TPORT()
+    host = host or conf.get('TASK', 'INTERFACE')
+    port = port or int(conf.get('TASK', 'PORT'))
     reactor.connectTCP(host, int(port), TaskFactory(task, adaptor))

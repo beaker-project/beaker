@@ -28,7 +28,6 @@ from twisted.internet import reactor
 from beah.wires.internals.twadaptors import ControllerAdaptor_Task_JSON
 from beah.wires.internals.twtask import TaskFactory, start_task
 from beah import config
-config.config()
 ################################################################################
 # TEST:
 ################################################################################
@@ -71,7 +70,7 @@ if __name__=='__main__':
                 self.controller.proc_evt(self, ['Object',{'what':'something else', 'where':'nowhere'}])
                 reactor.callLater(2, reactor.stop)
 
-    start_task(config, DemoTask(os.getenv('BEACON_TID')),
+    start_task(config.config(), DemoTask(os.getenv('BEACON_TID')),
             host=os.getenv('BEACON_THOST'), port=os.getenv('BEACON_TPORT'),
             adaptor=LoggingAdaptor)
     reactor.run()

@@ -16,19 +16,24 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-import traceback, exceptions
+import traceback
+import exceptions
+import logging
 from beah.core import event, command
 from beah.core.constants import ECHO
 from beah.misc import Raiser
 from beah import config
+from beah.misc.log_this import log_this
 
 ################################################################################
 # Logging:
 ################################################################################
-import logging
 log = logging.getLogger('beacon')
 
-if config.SRV_LOG():
+# FIXME: !!!
+conf = config.main_config()
+
+if config.parse_bool(conf.get('CONTROLLER', 'CONSOLE_LOG')):
     def log_print(level, args, kwargs):
         print level, args[0] % args[1:]
 else:
@@ -47,8 +52,7 @@ log_warning = mklog("--- WARNING: ", log.warning)
 log_error   = mklog("--- ERROR:   ", log.error)
 
 # INFO: This is for debugging purposes only - allows tracing functional calls
-from beah.misc.log_this import log_this
-fcall_log = log_this(log_debug, config.LOG())
+fcall_log = log_this(log_debug, config.parse_bool(conf.get('CONTROLLER', 'DEVEL')))
 
 ################################################################################
 # Controller class:
@@ -67,7 +71,7 @@ class Controller(object):
         self.tasks = []
         self.backends = []
         self.out_backends = []
-        self.config = {}
+        self.conf = {}
         self.killed = False
         self.on_killed = on_killed or self.__ON_KILLED
 
@@ -179,7 +183,7 @@ class Controller(object):
         self.send_evt(event.event('PONG', message=cmd.arg('message', None)))
 
     def proc_cmd_config(self, backend, cmd):
-        self.config.update(cmd.args())
+        self.conf.update(cmd.args())
 
     def proc_cmd_run(self, backend, cmd):
         # FIXME: assign unique id:
@@ -217,8 +221,8 @@ class Controller(object):
         else:
             answ += "None\n"
 
-        if self.config:
-            answ += "\n== Config ==\n%s\n" % (self.config,)
+        if self.conf:
+            answ += "\n== Config ==\n%s\n" % (self.conf,)
 
         if self.killed:
             answ += "\n== Killed ==\nTrue\n"
