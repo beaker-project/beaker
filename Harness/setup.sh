@@ -31,4 +31,13 @@ export PYTHONPATH=$PYTHONPATH:$PWD
 # Path to search for config files:
 export BEAH_ROOT=$PWD
 
+# If present use developmental .tmp conf files (``.tmp'' is used to match
+# .gitignore)
+if [[ -f $PWD/beah.conf.tmp ]]; then
+        export BEAH_CONF=$PWD/beah.conf.tmp
+fi
+if [[ -f $PWD/beah_beaker.conf.tmp ]]; then
+        export BEAH_BEAKER_CONF=$PWD/beah_beaker.conf.tmp
+fi
+
 echo "Environment is set. Run srv, out_backend or cmd_backend"

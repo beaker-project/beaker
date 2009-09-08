@@ -59,10 +59,11 @@ def Spawn(host, port, proto=None):
         # BEACON_TPORT - port
         # BEACON_TID - id of task - used to introduce itself when opening socket
         task_env.update(
-                BEACON_THOST = str(host),
-                BEACON_TPORT = str(port),
-                BEACON_TID   = str(task_info['id']),
-                BEAHLIB_ROOT = os.getenv('BEAHLIB_ROOT'),
+                BEAH_ROOT=os.getenv('BEAH_ROOT'),
+                BEACON_THOST=str(host),
+                BEACON_TPORT=str(port),
+                BEACON_TID=str(task_info['id']),
+                BEAHLIB_ROOT=os.getenv('BEAHLIB_ROOT'),
                 )
         val = os.getenv('PYTHONPATH')
         if val:
@@ -89,7 +90,7 @@ class TaskFactory(ReconnectingClientFactory):
         print self.__class__.__name__, ': Started to connect.'
 
     def buildProtocol(self, addr):
-        print self.__class__.__name__, ': Connected.  Address: %r' % addr
+        print self.__class__.__name__, ': Connected.  Address: %s' % addr
         print self.__class__.__name__, ': Resetting reconnection delay'
         self.resetDelay()
         controller = self.controller_protocol()

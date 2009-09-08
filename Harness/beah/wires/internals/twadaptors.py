@@ -75,6 +75,7 @@ class TaskAdaptor_JSON(JSONProtocol):
         if self.controller:
             try:
                 evt = event.event(cmd)
+                evt.origin().update(self.origin)
             except:
                 evt = event.lose_item(data=cmd, origin=self.origin)
             self.controller.proc_evt(self, evt)

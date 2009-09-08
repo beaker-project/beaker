@@ -26,6 +26,7 @@ from twisted.internet import reactor
 import logging
 import logging.handlers
 import os
+import sys
 
 log = logging.getLogger('beacon')
 
@@ -35,7 +36,7 @@ class BackendListener(protocol.ServerFactory):
         self.controller = controller
 
     def buildProtocol(self, addr):
-        print self.__class__.__name__, ': Connected.  Address: %r' % addr
+        log.info('%s: Connected.  Address: %s', self.__class__.__name__, addr)
         backend = self.protocol()
         backend.set_controller(self.controller)
         return backend
@@ -46,7 +47,7 @@ class TaskListener(protocol.ServerFactory):
         self.controller = controller
 
     def buildProtocol(self, addr):
-        print self.__class__.__name__, ': Connected.  Address: %r' % addr
+        log.info('%s: Connected.  Address: %s', self.__class__.__name__, addr)
         task = self.protocol()
         task.set_controller(self.controller)
         return task
@@ -55,10 +56,10 @@ def start_server(conf=None, backend_host=None, backend_port=None,
         backend_adaptor=BackendAdaptor_JSON,
         task_host=None, task_port=None,
         task_adaptor=TaskAdaptor_JSON, spawn=None):
+
     # CONFIG:
     if not conf:
         conf = config.main_config()
-        #print dir(conf)
 
     # LOGGING:
     log.setLevel(logging.WARNING if not config.parse_bool(conf.get('CONTROLLER', 'DEVEL')) else logging.DEBUG)
@@ -69,16 +70,16 @@ def start_server(conf=None, backend_host=None, backend_port=None,
         try:
             os.makedirs(lp, mode=0755)
         except:
-            print "WARNING: Could not create %s." % lp
+            print >> sys.stderr, "ERROR: Could not create %s." % lp
             # FIXME: should create a temp file
             raise
     elif not os.access(lp, os.X_OK | os.W_OK):
-        print "WARNING: Wrong access rights to %s." % lp
+        print >> sys.stderr, "ERROR: Wrong access rights to %s." % lp
         # FIXME: should create a temp file
         raise
 
     lhandler = logging.handlers.RotatingFileHandler(conf.get('CONTROLLER', 'LOG_FILE_NAME'),
-            maxBytes=100000, backupCount=5)
+            maxBytes=1000000, backupCount=5)
     log.addHandler(lhandler)
 
     # RUN:
@@ -94,9 +95,16 @@ def start_server(conf=None, backend_host=None, backend_port=None,
             return
         reactor.callLater(2, reactor.stop)
     controller.on_killed = on_killed
+    log.info("################################")
+    log.info("#   Starting a Controller...   #")
+    log.info("################################")
+    log.info("Controller: BackendListener listening on %s:%s", backend_host,
+            backend_port)
     reactor.listenTCP(backend_port,
             BackendListener(controller, backend_adaptor),
             interface=backend_host)
+    log.info("Controller: TaskListener listening on %s:%s", task_host,
+            task_port)
     reactor.listenTCP(task_port, TaskListener(controller, task_adaptor),
             interface=task_host)
 
