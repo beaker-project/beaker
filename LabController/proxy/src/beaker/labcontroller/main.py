@@ -70,20 +70,10 @@ def main():
 
     conf.load_from_file(config)
     
-    pid_file = opts.pid_file
-    if pid_file is None:
-        pid_file = conf.get("PID_FILE", "/var/run/beaker-proxy.pid")
-
-    if opts.kill:
-        pid = open(pid_file, "r").read()
-        os.kill(int(pid), 15)
-        sys.exit(0)
-
     if opts.foreground:
         main_loop(conf=conf, foreground=True)
     else:
         daemonize(main_loop, 
-                  daemon_pid_file=pid_file, 
                   conf=conf, 
                   foreground=False)
 
