@@ -8,7 +8,8 @@ setup(
 
     namespace_packages = ['beaker'],
 
-    data_files = [('/etc/beaker/', ['proxy.conf']),],
+    data_files = [('/etc/beaker/', ['proxy.conf']),
+                  ('/etc/init.d', ['init.d/beaker-proxy'])],
     package_data = {
         'beaker.labcontroller': [
             'default.conf',
