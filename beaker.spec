@@ -3,7 +3,7 @@
 
 Name:           beaker
 Version:        0.5.0
-Release:        8%{?dist}
+Release:        9%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -50,6 +50,7 @@ Requires:       yum-utils
 Requires:       /sbin/fenced
 Requires:       telnet
 Requires:       python-cpio
+Requires:       kobo-client
 
 %package lib
 Summary:        Test Library
