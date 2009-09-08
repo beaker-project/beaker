@@ -3,7 +3,7 @@
 
 Name:           beaker
 Version:        0.5.0
-Release:        9%{?dist}
+Release:        10%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -148,6 +148,7 @@ fi
 /var/lib/cobbler/snippets/*
 /var/lib/cobbler/kickstarts/*
 /var/www/beaker/rhts-checkin
+%attr(-,apache,root) %dir %{_localstatedir}/log/%{name}
 
 %files lib
 /usr/lib/beakerlib/*
