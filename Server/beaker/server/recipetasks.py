@@ -61,7 +61,7 @@ class RecipeTasks(RPCRoot):
 
     @cherrypy.expose
     @identity.require(identity.not_anonymous())
-    def Start(self, task_id, watchdog_override):
+    def Start(self, task_id, watchdog_override=None):
         """
         Set task status to Running
         """
@@ -73,7 +73,7 @@ class RecipeTasks(RPCRoot):
 
     @cherrypy.expose
     @identity.require(identity.not_anonymous())
-    def Stop(self, task_id, stop_type, msg):
+    def Stop(self, task_id, stop_type, msg=None):
         """
         Set task status to Completed
         """
@@ -89,7 +89,7 @@ class RecipeTasks(RPCRoot):
 
     @cherrypy.expose
     @identity.require(identity.not_anonymous())
-    def Result(self, task_id, result_type, path, score, summary):
+    def Result(self, task_id, result_type, path=None, score=None, summary=None):
         """
         Record a Result
         """

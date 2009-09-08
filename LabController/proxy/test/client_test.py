@@ -4,8 +4,7 @@
 import xmlrpclib
 
 # Connect to lab controller via unauth xmlrpc
-#server = xmlrpclib.Server('http://localhost:8000', allow_none=True)
-server = xmlrpclib.Server('http://lab-devel.rhts.eng.bos.redhat.com:8000', allow_none=True)
+server = xmlrpclib.Server('http://localhost:8000')
 
 # Ask for host hp-lp1.example.com xml file..
 print server.get_recipe('hp-lp1.example.com')
@@ -14,7 +13,7 @@ print server.get_recipe('hp-lp1.example.com')
 print server.get_recipe()
 
 # Start task_id 127 with no kill_time override
-print server.task_start(127, None)
+print server.task_start(127)
 
 # Stop task id 127 
-print server.task_stop(127,'Stop',None)
+print server.task_stop(127,'Stop')

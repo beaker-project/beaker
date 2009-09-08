@@ -77,7 +77,7 @@ class Proxy(object):
 
     def task_start(self,
                    task_id,
-                   kill_time):
+                   kill_time=None):
         """ tell the scheduler that we are starting a task
             default watchdog time can be overridden with kill_time seconds """
         return self.hub.recipes.tasks.Start(task_id, kill_time)
@@ -85,9 +85,9 @@ class Proxy(object):
     def task_result(self, 
                     task_id, 
                     result_type, 
-                    result_path, 
-                    result_score,
-                    result_summary):
+                    result_path=None, 
+                    result_score=None,
+                    result_summary=None):
         """ report a result to the scheduler """
         return self.hub.recipes.tasks.Result(task_id,
                                              result_type,
@@ -98,7 +98,7 @@ class Proxy(object):
     def task_stop(self,
                   task_id,
                   stop_type,
-                  msg):
+                  msg=None):
         """ tell the scheduler that we are stoping a task
             stop_type = ['Stop', 'Abort', 'Cancel']
             msg to record if issuing Abort or Cancel """
