@@ -9,6 +9,7 @@ import SimpleXMLRPCServer
 
 from beaker.labcontroller.proxy import Proxy
 
+import kobo.conf
 from kobo.exceptions import ShutdownException
 from kobo.process import daemonize
 from kobo.tback import Traceback, set_except_hook
@@ -31,7 +32,7 @@ class ForkingXMLRPCServer (SocketServer.ForkingMixIn,
 def daemon_shutdown(*args, **kwargs):
     raise ShutdownException()
 
-def main_loop(foreground=False):
+def main_loop(conf=None, foreground=False):
     """infinite daemon loop"""
 
     global proxy
@@ -41,17 +42,19 @@ def main_loop(foreground=False):
 
     # initialize Proxy
     try:
-        proxy = Proxy(conf='/etc/beaker/proxy.conf')
+        proxy = Proxy(conf=conf)
     except Exception, ex:
         sys.stderr.write("Error initializing Proxy: %s\n" % ex)
         sys.exit(1)
 
-    server = ForkingXMLRPCServer(("localhost", 8000),myHandler, allow_none=True)
+    server = ForkingXMLRPCServer(("localhost", 8000),myHandler)
     server.register_instance(proxy)
     server.serve_forever()
 
 def main():
     parser = OptionParser()
+    parser.add_option("-c", "--config", 
+                      help="Full path to config file to use")
     parser.add_option("-f", "--foreground", default=False, action="store_true",
                       help="run in foreground (do not spawn a daemon)")
     parser.add_option("-k", "--kill", default=False, action="store_true",
@@ -60,9 +63,16 @@ def main():
                       help="specify a pid file")
     (opts, args) = parser.parse_args()
 
+    conf = kobo.conf.PyConfigParser()
+    config = opts.config
+    if config is None:
+        config = "/etc/beaker/proxy.conf"
+
+    conf.load_from_file(config)
+    
     pid_file = opts.pid_file
     if pid_file is None:
-        pid_file = "/var/run/beaker-proxy.pid"
+        pid_file = conf.get("PID_FILE", "/var/run/beaker-proxy.pid")
 
     if opts.kill:
         pid = open(pid_file, "r").read()
@@ -70,9 +80,12 @@ def main():
         sys.exit(0)
 
     if opts.foreground:
-        main_loop(foreground=True)
+        main_loop(conf=conf, foreground=True)
     else:
-        daemonize(main_loop, daemon_pid_file=pid_file, foreground=False)
+        daemonize(main_loop, 
+                  daemon_pid_file=pid_file, 
+                  conf=conf, 
+                  foreground=False)
 
 if __name__ == '__main__':
     main()

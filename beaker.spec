@@ -3,7 +3,7 @@
 
 Name:           beaker
 Version:        0.5.0
-Release:        10%{?dist}
+Release:        11%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -100,15 +100,29 @@ ln -s Fedora.ks $RPM_BUILD_ROOT/var/lib/cobbler/kickstarts/Fedoradevelopment.ks
 %post server
 /sbin/chkconfig --add beakerd
 
+%post lab-controller
+/sbin/chkconfig --add beaker-proxy
+
 %postun server
 if [ "$1" -ge "1" ]; then
         /sbin/service beakerd condrestart >/dev/null 2>&1 || :
+fi
+
+%postun lab-controller
+if [ "$1" -ge "1" ]; then
+        /sbin/service beaker-proxy condrestart >/dev/null 2>&1 || :
 fi
 
 %preun server
 if [ "$1" -eq "0" ]; then
         /sbin/service beakerd stop >/dev/null 2>&1 || :
         /sbin/chkconfig --del beakerd || :
+fi
+
+%preun lab-controller
+if [ "$1" -eq "0" ]; then
+        /sbin/service beaker-proxy stop >/dev/null 2>&1 || :
+        /sbin/chkconfig --del beaker-proxy || :
 fi
 
 %files server
@@ -149,6 +163,7 @@ fi
 /var/lib/cobbler/kickstarts/*
 /var/www/beaker/rhts-checkin
 %attr(-,apache,root) %dir %{_localstatedir}/log/%{name}
+%{_sysconfdir}/init.d/%{name}-proxy
 
 %files lib
 /usr/lib/beakerlib/*

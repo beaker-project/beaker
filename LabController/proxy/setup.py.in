@@ -14,6 +14,7 @@ setup(
             'default.conf',
         ],
         '/etc/beaker': ['proxy.conf'],
+        '/etc/init.d': ['init.d/beaker-proxy'],
     },
 
     entry_points = {
