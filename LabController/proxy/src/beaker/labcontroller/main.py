@@ -5,7 +5,7 @@ import signal
 from optparse import OptionParser
 
 import SocketServer
-import SimpleXMLRPCServer
+import DocXMLRPCServer
 
 from beaker.labcontroller.proxy import Proxy
 
@@ -18,14 +18,14 @@ set_except_hook()
 
 proxy = None
 
-class myHandler(SimpleXMLRPCServer.SimpleXMLRPCRequestHandler):
+class myHandler(DocXMLRPCServer.DocXMLRPCRequestHandler):
     def do_POST(self):
         global proxy
         proxy.clientIP, proxy.clientPort = self.client_address
-        SimpleXMLRPCServer.SimpleXMLRPCRequestHandler.do_POST(self)
+        DocXMLRPCServer.DocXMLRPCRequestHandler.do_POST(self)
 
 class ForkingXMLRPCServer (SocketServer.ForkingMixIn,
-                           SimpleXMLRPCServer.SimpleXMLRPCServer):
+                           DocXMLRPCServer.DocXMLRPCServer):
     pass
 
 
