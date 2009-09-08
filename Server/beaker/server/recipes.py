@@ -90,7 +90,7 @@ class Recipes(RPCRoot):
             recipexml = Watchdog.by_system(system).recipe.to_xml().toprettyxml()
         except InvalidRequestError:
             raise BX(_("No active recipe for %s" % system_name))
-        return dict(xml=recipexml)
+        return recipexml
 
     @cherrypy.expose
     def to_xml(self, recipe_id=None):
