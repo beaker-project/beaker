@@ -51,6 +51,7 @@ Requires:       /sbin/fenced
 Requires:       telnet
 Requires:       python-cpio
 Requires:       kobo-client
+Requires:	python-setuptools
 
 %package lib
 Summary:        Test Library

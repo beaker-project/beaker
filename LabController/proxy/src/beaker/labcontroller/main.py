@@ -60,6 +60,15 @@ def main():
                       help="specify a pid file")
     (opts, args) = parser.parse_args()
 
+    pid_file = opts.pid_file
+    if pid_file is None:
+        pid_file = "/var/run/beaker-proxy.pid"
+
+    if opts.kill:
+        pid = open(pid_file, "r").read()
+        os.kill(int(pid), 15)
+        sys.exit(0)
+
     if opts.foreground:
         main_loop(foreground=True)
     else:
