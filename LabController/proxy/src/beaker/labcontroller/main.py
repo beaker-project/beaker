@@ -41,7 +41,7 @@ def main_loop(foreground=False):
 
     # initialize Proxy
     try:
-        proxy = Proxy()
+        proxy = Proxy(conf='/etc/beaker/proxy.conf')
     except Exception, ex:
         sys.stderr.write("Error initializing Proxy: %s\n" % ex)
         sys.exit(1)
