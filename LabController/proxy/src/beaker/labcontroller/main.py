@@ -47,7 +47,7 @@ def main_loop(conf=None, foreground=False):
         sys.stderr.write("Error initializing Proxy: %s\n" % ex)
         sys.exit(1)
 
-    server = ForkingXMLRPCServer(("localhost", 8000),myHandler)
+    server = ForkingXMLRPCServer(("", 8000),myHandler)
     server.register_instance(proxy)
     server.serve_forever()
 

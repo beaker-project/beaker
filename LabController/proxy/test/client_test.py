@@ -4,7 +4,8 @@
 import xmlrpclib
 
 # Connect to lab controller via unauth xmlrpc
-server = xmlrpclib.Server('http://localhost:8000', allow_none=True)
+#server = xmlrpclib.Server('http://localhost:8000', allow_none=True)
+server = xmlrpclib.Server('http://lab-devel.rhts.eng.bos.redhat.com:8000', allow_none=True)
 
 # Ask for host hp-lp1.example.com xml file..
 print server.get_recipe('hp-lp1.example.com')
