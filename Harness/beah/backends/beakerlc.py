@@ -118,12 +118,14 @@ def mk_beaker_task(rpm):
 
 class BeakerLCBackend(ExtBackend):
 
+    GET_RECIPE = 'get_recipe'
+    TASK_START = 'task_start'
+    TASK_STOP = 'task_stop'
+    TASK_RESULT = 'task_result'
+
     def on_idle(self):
-        #self.recipe_id = int(os.getenv('RECIPEID'))
-        #self.proxy.callRemote('recipes.to_xml',
-        #        self.recipe_id).addCallback(self.handle_new_task)
         hostname = self.conf.get('DEFAULT', 'HOSTNAME')
-        self.proxy.callRemote('recipes.system_xml',
+        self.proxy.callRemote(self.GET_RECIPE,
                 hostname).addCallback(self.handle_new_task)
 
     def set_controller(self, controller=None):
@@ -137,12 +139,8 @@ class BeakerLCBackend(ExtBackend):
 
     def handle_new_task(self, result):
         pprint.pprint(result)
-        if not result or not result.has_key('xml') or not result['xml']:
-            print "* Nothing to do..."
-            reactor.callLater(60, self.on_idle)
-            return
 
-        self.recipe_xml = result['xml']
+        self.recipe_xml = result
 
         self.task_data = parse_recipe_xml(self.recipe_xml)
         pprint.pprint(self.task_data)
@@ -178,19 +176,19 @@ class BeakerLCBackend(ExtBackend):
             rc = echo.arg('rc')
             if rc!=ECHO.OK:
                 # FIXME: Start was not issued. Is it OK?
-                self.proxy.callRemote('recipes.tasks.Stop',
+                self.proxy.callRemote(self.TASK_STOP,
                         int(self.task_data['task_env']['TASKID']),
                         self.stop_type("Cancel"),
                         self.mk_msg(reason="Harness could not run the task.", event=evt)).addCallback(self.handle_Stop)
 
     def proc_evt_start(self, evt):
-        self.proxy.callRemote('recipes.tasks.Start',
+        self.proxy.callRemote(self.TASK_START,
                 int(self.task_data['task_env']['TASKID']),
                 0)
         # FIXME: start local watchdog
 
     def proc_evt_end(self, evt):
-        self.proxy.callRemote('recipes.tasks.Stop',
+        self.proxy.callRemote(self.TASK_STOP,
                 int(self.task_data['task_env']['TASKID']),
                 self.stop_type(evt.arg("rc",None)),
                 self.mk_msg(event=evt)).addCallback(self.handle_Stop)

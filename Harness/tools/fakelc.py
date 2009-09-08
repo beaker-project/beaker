@@ -20,13 +20,14 @@ from twisted.web import xmlrpc
 from twisted.internet import reactor
 from beah.wires.internals.twmisc import serveAnyChild, serveAnyRequest
 import os
+import exceptions
 
 recipes = {}
 fqdn_recipes = {}
 task_recipe = {}
 
-def get_recipe(fqdn=None, id=None, task_id=None):
-    print "get_recipe(fqdn=%s, id=%s)" % (fqdn, id)
+def get_recipe_(fqdn=None, id=None, task_id=None):
+    print "get_recipe_(fqdn=%s, id=%s)" % (fqdn, id)
     if fqdn is not None:
         if not fqdn_recipes.has_key(fqdn):
             return None
@@ -44,16 +45,62 @@ def get_recipe(fqdn=None, id=None, task_id=None):
     return None
 
 def get_recipe_xml(**kwargs):
-    rec = get_recipe(**kwargs)
+    rec = get_recipe_(**kwargs)
     if not rec:
         return None
     return rec[0] % rec[1]
 
 def get_recipe_args(**kwargs):
-    rec = get_recipe(**kwargs)
+    rec = get_recipe_(**kwargs)
     if not rec:
         return None
     return rec[1]
+
+RESULT_TYPE_ = ["Pass", "Warn", "Fail", "Panic"]
+
+def do_get_recipe(fqdn):
+    return get_recipe_xml(fqdn=fqdn)
+
+def do_task_start(task_id, kill_time):
+    print "tasks.Start(task_id=%r, kill_time=%r)" % (task_id, kill_time)
+    rec_args = get_recipe_args(task_id=task_id)
+    if not rec_args:
+        return "ERROR: no task %s" % task_id
+    rec_args['task%s_stat' % task_id]='Running'
+    return 0
+
+def do_task_stop(task_id, stop_type, msg):
+    """
+    Stop a task
+
+    stop_type -- 'Stop'|'Abort'|'Cancel'
+
+    return 0 on success, error message otherwise
+    """
+    print "tasks.Start(task_id=%r, stop_type=%r, msg=%r)" % (task_id, stop_type, msg)
+    rec_args = get_recipe_args(task_id=task_id)
+    if not rec_args:
+        return "ERROR: no task %s" % task_id
+    rec_args['task%s_stat' % task_id]=stop_type
+    return 0
+
+def do_task_result(task_id, result_type, path, score, summary):
+    """
+    Report task result
+
+    result_type -- 'Pass'|'Warn'|'Fail'|'Panic'
+
+    return 0 on success, error message otherwise
+    """
+    print "tasks.Result(task_id=%r, result_type=%r, path=%r, score=%r, summary=%r)" % (task_id, result_type, path, score, summary)
+    rec_args = get_recipe_args(task_id=task_id)
+    if not rec_args:
+        return "ERROR: no task %s" % task_id
+    ix = 'task%s_res' % task_id
+    result = rec_args[ix]
+    if RESULT_TYPE_.find(result) < RESULT_TYPE_.find(result_type):
+        rec_args[ix]=result_type
+    return 0
 
 ################################################################################
 # XML-RPC HANDLERS:
@@ -61,54 +108,51 @@ def get_recipe_args(**kwargs):
 class LCRecipes(xmlrpc.XMLRPC):
     @staticmethod
     def return_recipe(**kwargs):
-        rec_xml = get_recipe_xml(**kwargs)
-        if not rec_xml:
-            return None
-        return dict(xml = rec_xml)
+        return get_recipe_xml(**kwargs)
+        #rec_xml = get_recipe_xml(**kwargs)
+        #if not rec_xml:
+        #    return None
+        #return dict(xml = rec_xml)
 
     def xmlrpc_to_xml(self, recipe_id):
         return self.return_recipe(id=recipe_id)
 
     def xmlrpc_system_xml(self, fqdn):
-        return self.return_recipe(fqdn=fqdn)
+        #return self.return_recipe(fqdn=fqdn)
+        return do_get_recipe(fqdn)
 
 class LCRecipeTasks(xmlrpc.XMLRPC):
-    result_type_ = ["Pass", "Warn", "Fail", "Panic"]
+
     def xmlrpc_Start(self, task_id, kill_time):
-        print "tasks.Start(task_id=%r, kill_time=%r)" % (task_id, kill_time)
-        rec_args = get_recipe_args(task_id=task_id)
-        if not rec_args:
-            return "ERROR: no task %s" % task_id
-        rec_args['task%s_stat' % task_id]='Running'
-        return 0
+        return do_task_start(task_id, kill_time)
+
     def xmlrpc_Stop(self, task_id, stop_type, msg):
-        # stop_type: Stop|Abort|Cancel
-        print "tasks.Start(task_id=%r, stop_type=%r, msg=%r)" % (task_id, stop_type, msg)
-        rec_args = get_recipe_args(task_id=task_id)
-        if not rec_args:
-            return "ERROR: no task %s" % task_id
-        rec_args['task%s_stat' % task_id]=stop_type
-        return 0
+        return do_task_stop(task_id, stop_type, msg)
+
     def xmlrpc_Result(self, task_id, result_type, path, score, summary):
-        # result_type: Pass|Warn|Fail|Panic
-        print "tasks.Result(task_id=%r, result_type=%r, path=%r, score=%r, summary=%r)" % (task_id, result_type, path, score, summary)
-        rec_args = get_recipe_args(task_id=task_id)
-        if not rec_args:
-            return "ERROR: no task %s" % task_id
-        ix = 'task%s_res' % task_id
-        result = rec_args[ix]
-        if self.result_type_.find(result) < self.result_type_.find(result_type):
-            rec_args[ix]=result_type
-        return 0
+        return do_task_result(task_id, result_type, path, score, summary)
 
 class LCHandler(xmlrpc.XMLRPC):
-    """An example object to be published."""
+
+    """XMLRPC handler to handle requests to LC."""
 
     def __init__(self, *args, **kwargs):
         xmlrpc.XMLRPC.__init__(self, *args, **kwargs)
         recipes = LCRecipes()
         recipes.putSubHandler('tasks', LCRecipeTasks())
         self.putSubHandler('recipes', recipes)
+
+    def xmlrpc_get_recipe(self, fqdn):
+        return do_get_recipe(fqdn)
+
+    def xmlrpc_task_start(self, task_id, kill_time):
+        return do_task_start(task_id, kill_time)
+
+    def xmlrpc_task_stop(self, task_id, stop_type, msg):
+        return do_task_stop(task_id, stop_type, msg)
+
+    def xmlrpc_task_result(self, task_id, result_type, path, score, summary):
+        return do_task_result(task_id, result_type, path, score, summary)
 
     def catch_xmlrpc(self, method, *args):
         """Handler for unhandled requests."""
