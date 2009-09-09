@@ -57,7 +57,9 @@ class RecipeTasks(RPCRoot):
             labcontroller = LabController.by_name(lab_controller)
         except InvalidRequestError:
             raise BX(_('Invalid lab_controller: %s' % lab_controller))
-        return [('%s' % w.kill_time, '%s' % w.recipetask, '%s' % w.system) for w in Watchdog.by_status(labcontroller, status)]
+        return [dict(  task_id = w.recipetask.id, 
+                     recipe_id = w.recipe.id,
+                        system = w.system.fqdn) for w in Watchdog.by_status(labcontroller, status)]
 
     @cherrypy.expose
     @identity.require(identity.not_anonymous())

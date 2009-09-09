@@ -139,6 +139,7 @@ class Watchdog(ProxyHelper):
                 # proc file doesn't exist -> process was already killed
                 pass
             del self.watchdogs[watchdog['system']]
+        self.logger.info("External Watchdog Expired for %s" % watchdog['system'])
         self.recipe_stop(watchdog['recipe_id'], 'External Watchdog Expired')
 
     def monitor(self, watchdog):
