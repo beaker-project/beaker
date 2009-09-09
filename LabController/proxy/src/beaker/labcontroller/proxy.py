@@ -140,7 +140,9 @@ class Watchdog(ProxyHelper):
                 pass
             del self.watchdogs[watchdog['system']]
         self.logger.info("External Watchdog Expired for %s" % watchdog['system'])
-        self.recipe_stop(watchdog['recipe_id'], 'External Watchdog Expired')
+        self.recipe_stop(watchdog['recipe_id'],
+                         'abort', 
+                         'External Watchdog Expired')
 
     def monitor(self, watchdog):
         """ Upload console log if present to Scheduler
