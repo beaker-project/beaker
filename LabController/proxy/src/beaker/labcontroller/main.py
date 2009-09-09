@@ -40,12 +40,23 @@ def main_loop(conf=None, foreground=False):
     # define custom signal handlers
     signal.signal(signal.SIGTERM, daemon_shutdown)
 
+    # fork watchdog process
+    pid = os.fork()
+    if not pid:
+        try:
+            watchdog = Watchdog(conf=conf)
+        except Exception, ex:
+            sys.stderr.write("Error initializing Watchdog: %s\n" % ex)
+            sys.exit(1)
+        watchdog.monitor_forever()
+
     # initialize Proxy
     try:
         proxy = Proxy(conf=conf)
     except Exception, ex:
         sys.stderr.write("Error initializing Proxy: %s\n" % ex)
         sys.exit(1)
+
 
     server = ForkingXMLRPCServer(("", 8000),myHandler)
     server.register_instance(proxy)
