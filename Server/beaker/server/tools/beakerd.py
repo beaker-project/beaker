@@ -91,13 +91,13 @@ def new_recipes(*args):
                     # Add matched systems to recipe.
                     recipe.systems.append(system)
                 if recipe.systems:
-                    recipe.Process()
+                    recipe.process()
                     log.info("recipe ID %s moved from New to Processed" % recipe.id)
                 else:
                     log.info("recipe ID %s moved from New to Aborted" % recipe.id)
-                    recipe.recipeset.Abort('Recipe ID %s does not match any systems' % recipe.id)
+                    recipe.recipeset.abort('Recipe ID %s does not match any systems' % recipe.id)
             else:
-                recipe.recipeset.Abort('Recipe ID %s does not have a distro' % recipe.id)
+                recipe.recipeset.abort('Recipe ID %s does not have a distro' % recipe.id)
         session.commit()
     except exceptions.Exception, e:
         session.rollback()
@@ -120,7 +120,7 @@ def processed_recipesets(*args):
             # We only need to do this processing on multi-host recipes
             if len(recipeset.recipes) == 1:
                 log.info("recipe ID %s moved from Processed to Queued" % recipeset.recipes[0].id)
-                recipeset.recipes[0].Queue()
+                recipeset.recipes[0].queue()
                 continue
    
             # Find all the lab controllers that this recipeset may run.
@@ -204,11 +204,11 @@ def processed_recipesets(*args):
                 if recipe.systems:
                     # Set status to Queued 
                     log.info("recipe ID %s moved from Processed to Queued" % recipe.id)
-                    recipe.Queue()
+                    recipe.queue()
                 else:
                     # Set status to Aborted 
                     log.info("recipe ID %s moved from Processed to Aborted" % recipe.id)
-                    recipe.recipeset.Abort('Recipe ID %s does not match any systems' % recipe.id)
+                    recipe.recipeset.abort('Recipe ID %s does not match any systems' % recipe.id)
                         
         session.commit()
     except exceptions.Exception, e:
@@ -275,7 +275,7 @@ def queued_recipes(*args):
                     else:
                         # The system was taken from underneath us.  Put recipe
                         # back into queued state and try again.
-                        recipe.Queue()
+                        recipe.queue()
                 else:
                     #Some other thread beat us. Skip this recipe now.
                     # Depending on scheduler load it should be safe to run multiple
@@ -317,7 +317,7 @@ def scheduled_recipes(*args):
                 # If one of the recipes gets aborted then don't try and run
                 if recipe.status != TaskStatus.by_name(u'Scheduled'):
                     continue
-                recipe.Waiting()
+                recipe.waiting()
                 # Go Through each task and find out the roles of everyone else
                 for i, task in enumerate(recipe.tasks):
                     for peer in recipe.recipeset.recipes:
@@ -328,10 +328,10 @@ def scheduled_recipes(*args):
       
                 # Start the first task in the recipe
                 try:
-                    recipe.tasks[0].Start()
+                    recipe.tasks[0].start()
                 except exceptions.Exception, e:
                     log.error("Failed to Start recipe %s, due to %s" % (recipe.id,e))
-                    recipe.recipeset.Abort(u"Failed to provision recipeid %s, %s" % 
+                    recipe.recipeset.abort(u"Failed to provision recipeid %s, %s" % 
                                                                              (
                                                                          recipe.id,
                                                                             e))
@@ -358,7 +358,7 @@ def scheduled_recipes(*args):
                     log.error(u"Failed to provision recipeid %s, %s" % (
                                                                          recipe.id,
                                                                             e))
-                    recipe.recipeset.Abort(u"Failed to provision recipeid %s, %s" % 
+                    recipe.recipeset.abort(u"Failed to provision recipeid %s, %s" % 
                                                                              (
                                                                              recipe.id,
                                                                             e))

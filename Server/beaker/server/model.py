@@ -2279,31 +2279,33 @@ class Job(MappedObject):
     """
     Container to hold like recipe sets.
     """
+
+    stop_types = ['abort','cancel']
+
     def to_xml(self):
         job = self.doc.createElement("job")
         job.setAttribute("id", "%s" % self.id)
         job.setAttribute("owner", "%s" % self.owner.email_address)
         job.setAttribute("result", "%s" % self.result)
         job.setAttribute("status", "%s" % self.status)
-        job.appendChild(self.node("Scheduler", "FIXME"))
         job.appendChild(self.node("whiteboard", self.whiteboard))
         for rs in self.recipesets:
             job.appendChild(rs.to_xml())
         return job
 
-    def Cancel(self, msg=None):
+    def cancel(self, msg=None):
         """
         Method to cancel all recipesets for this job.
         """
         for recipeset in self.recipesets:
-            recipeset.Cancel(msg)
+            recipeset.cancel(msg)
 
-    def Abort(self, msg=None):
+    def abort(self, msg=None):
         """
         Method to abort all recipesets for this job.
         """
         for recipeset in self.recipesets:
-            recipeset.Abort(msg)
+            recipeset.abort(msg)
 
     def update_status(self):
         """
@@ -2365,21 +2367,21 @@ class RecipeSet(MappedObject):
                 return
             yield recipeSet
 
-    def Cancel(self, msg=None):
+    def cancel(self, msg=None):
         """
         Method to cancel all recipes in this recipe set.
         """
         self.status = TaskStatus.by_name(u'Cancelled')
         for recipe in self.recipes:
-            recipe.Cancel(msg)
+            recipe.cancel(msg)
 
-    def Abort(self, msg=None):
+    def abort(self, msg=None):
         """
         Method to abort all recipes in this recipe set.
         """
         self.status = TaskStatus.by_name(u'Aborted')
         for recipe in self.recipes:
-            recipe.Abort(msg)
+            recipe.abort(msg)
 
     def update_status(self):
         """
@@ -2429,6 +2431,8 @@ class Recipe(MappedObject):
     Contains requires for host selection and distro selection.
     Also contains what tasks will be executed.
     """
+    stop_types = ['abort','cancel']
+
     def to_xml(self, recipe):
         recipe.setAttribute("id", "%s" % self.id)
         recipe.setAttribute("job_id", "%s" % self.recipeset.job_id)
@@ -2493,49 +2497,49 @@ class Recipe(MappedObject):
 
     host_requires = property(_get_host_requires, _set_host_requires)
 
-    def Queue(self):
+    def queue(self):
         """
         Move from New -> Queued
         """
         for task in self.tasks:
-            task.Queue()
+            task.queue()
 
-    def Process(self):
+    def process(self):
         """
         Move from Queued -> Processed
         """
         for task in self.tasks:
-            task.Process()
+            task.process()
 
-    def Schedule(self):
+    def schedule(self):
         """
         Move from Processed -> Scheduled
         """
         for task in self.tasks:
-            task.Schedule()
+            task.schedule()
 
-    def Waiting(self):
+    def waiting(self):
         """
         Move from Scheduled to Waiting
         """
         for task in self.tasks:
-            task.Waiting()
+            task.waiting()
 
-    def Cancel(self, msg=None):
+    def cancel(self, msg=None):
         """
         Method to cancel all tasks in this recipe.
         """
         self.status = TaskStatus.by_name(u'Cancelled')
         for task in self.tasks:
-            task.Cancel(msg)
+            task.cancel(msg)
 
-    def Abort(self, msg=None):
+    def abort(self, msg=None):
         """
         Method to abort all tasks in this recipe.
         """
         self.status = TaskStatus.by_name(u'Aborted')
         for task in self.tasks:
-            task.Abort(msg)
+            task.abort(msg)
 
     def update_status(self):
         """
@@ -2661,8 +2665,8 @@ class RecipeTask(MappedObject):
     """
     This holds the results/status of the task being executed.
     """
-    result_types = ['Pass','Warn','Fail','Panic']
-    stop_types = ['Stop','Abort','Cancel']
+    result_types = ['pass_','warn','fail','panic']
+    stop_types = ['stop','abort','cancel']
 
     def to_xml(self):
         task = self.doc.createElement("task")
@@ -2709,35 +2713,35 @@ class RecipeTask(MappedObject):
         self.result = max_result
         self.recipe.update_status()
 
-    def Queue(self):
+    def queue(self):
         """
         Moved from New -> Queued
         """
         self.status = TaskStatus.by_name(u'Queued')
         self.update_status()
 
-    def Process(self):
+    def process(self):
         """
         Moved from Queued -> Processed
         """
         self.status = TaskStatus.by_name(u'Processed')
         self.update_status()
 
-    def Schedule(self):
+    def schedule(self):
         """
         Moved from Processed -> Scheduled
         """
         self.status = TaskStatus.by_name(u'Scheduled')
         self.update_status()
 
-    def Waiting(self):
+    def waiting(self):
         """
         Moved from Scheduled -> Waiting
         """
         self.status = TaskStatus.by_name(u'Waiting')
         self.update_status()
 
-    def Start(self, watchdog_override=None):
+    def start(self, watchdog_override=None):
         """
         Record the start of this task
          If watchdog_override is defined we will use that time instead
@@ -2762,7 +2766,7 @@ class RecipeTask(MappedObject):
                                                     seconds=self.task.avg_time)
         self.update_status()
 
-    def Stop(self, *args, **kwargs):
+    def stop(self, *args, **kwargs):
         """
         Record the completion of this task
         """
@@ -2773,13 +2777,13 @@ class RecipeTask(MappedObject):
         self.status = TaskStatus.by_name(u'Completed')
         self.update_status()
 
-    def Cancel(self, msg=None):
+    def cancel(self, msg=None):
         """
         Cancel this task
         """
         self._abort_cancel(u'Cancelled', msg)
 
-    def Abort(self, msg=None):
+    def abort(self, msg=None):
         """
         Abort this task
         """
@@ -2787,8 +2791,8 @@ class RecipeTask(MappedObject):
     
     def _abort_cancel(self, status, msg=None):
         """
-        Cancel = User instigated
-        Abort  = Auto instigated
+        cancel = User instigated
+        abort  = Auto instigated
         """
         # Only record an abort/cancel on tasks that are New, Queued, Scheduled 
         # or Running
@@ -2803,25 +2807,25 @@ class RecipeTask(MappedObject):
                                        log=msg))
         self.update_status()
 
-    def Pass(self, path, score, summary):
+    def pass_(self, path, score, summary):
         """
         Record a pass result 
         """
         self._result(u'Pass', path, score, summary)
 
-    def Fail(self, path, score, summary):
+    def fail(self, path, score, summary):
         """
         Record a fail result 
         """
         self._result(u'Fail', path, score, summary)
 
-    def Warn(self, path, score, summary):
+    def warn(self, path, score, summary):
         """
         Record a warn result 
         """
         self._result(u'Warn', path, score, summary)
 
-    def Panic(self, path, score, summary):
+    def panic(self, path, score, summary):
         """
         Record a panic result 
         """

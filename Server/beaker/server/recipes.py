@@ -44,35 +44,27 @@ class Recipes(RPCRoot):
 
     @cherrypy.expose
     @identity.require(identity.not_anonymous())
-    def upload_console(self, recipe_id, data):
+    def upload_file(self, recipe_id, path, name, size, md5sum, offset, data):
         """
-        upload the console log in pieces 
+        upload to recipe in pieces 
         """
         raise NotImplementedError
 
     @cherrypy.expose
     @identity.require(identity.not_anonymous())
-    def Abort(self, recipe_id, msg):
+    def stop(self, recipe_id, stop_type, msg=None):
         """
-        Set recipe status to Aborted
-        """
-        try:
-            recipe = Recipe.by_id(recipe_id)
-        except InvalidRequestError:
-            raise BX(_('Invalid recipe ID: %s' % recipe_id))
-        return recipe.Abort(msg)
-
-    @cherrypy.expose
-    @identity.require(identity.not_anonymous())
-    def Cancel(self, recipe_id, msg):
-        """
-        Set recipe status to Cancelled
+        Set recipe status to Completed
         """
         try:
             recipe = Recipe.by_id(recipe_id)
         except InvalidRequestError:
             raise BX(_('Invalid recipe ID: %s' % recipe_id))
-        return recipe.Cancel(msg)
+        if stop_type not in recipe.stop_types:
+            raise BX(_('Invalid stop_type: %s, must be one of %s' %
+                             (stop_type, recipe.stop_types)))
+        kwargs = dict(msg = msg)
+        return getattr(recipe,stop_type)(**kwargs)
 
     @cherrypy.expose
     def system_xml(self, system_name=None):

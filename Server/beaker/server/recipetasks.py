@@ -37,9 +37,9 @@ class RecipeTasks(RPCRoot):
 
     @cherrypy.expose
     @identity.require(identity.not_anonymous())
-    def upload_task_output(self, task_id, data):
+    def upload_file(self, task_id, path, name, size, md5sum, offset, data):
         """
-        upload the task output in pieces
+        upload to task in pieces
         """
         raise NotImplementedError
 
@@ -61,7 +61,7 @@ class RecipeTasks(RPCRoot):
 
     @cherrypy.expose
     @identity.require(identity.not_anonymous())
-    def Start(self, task_id, watchdog_override=None):
+    def start(self, task_id, watchdog_override=None):
         """
         Set task status to Running
         """
@@ -73,7 +73,7 @@ class RecipeTasks(RPCRoot):
 
     @cherrypy.expose
     @identity.require(identity.not_anonymous())
-    def Stop(self, task_id, stop_type, msg=None):
+    def stop(self, task_id, stop_type, msg=None):
         """
         Set task status to Completed
         """
@@ -89,7 +89,7 @@ class RecipeTasks(RPCRoot):
 
     @cherrypy.expose
     @identity.require(identity.not_anonymous())
-    def Result(self, task_id, result_type, path=None, score=None, summary=None):
+    def result(self, task_id, result_type, path=None, score=None, summary=None):
         """
         Record a Result
         """

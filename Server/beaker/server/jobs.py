@@ -147,6 +147,22 @@ class Jobs(RPCRoot):
             recipe.tasks.append(recipetask)
         return recipe
 
+    @cherrypy.expose
+    @identity.require(identity.not_anonymous())
+    def stop(self, job_id, stop_type, msg=None):
+        """
+        Set job status to Completed
+        """
+        try:
+            job = Job.by_id(job_id)
+        except InvalidRequestError:
+            raise BX(_('Invalid job ID: %s' % job_id))
+        if stop_type not in recipe.stop_types:
+            raise BX(_('Invalid stop_type: %s, must be one of %s' %
+                             (stop_type, job.stop_types)))
+        kwargs = dict(msg = msg)
+        return getattr(job,stop_type)(**kwargs)
+
     @expose(format='json')
     def to_xml(self, id):
         jobxml = Job.by_id(id).to_xml().toxml()
