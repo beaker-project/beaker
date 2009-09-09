@@ -55,7 +55,14 @@ class Proxy(object):
             system_name = gethostbyaddr(self.clientIP)[0]
         return self.hub.recipes.system_xml(system_name)
 
-    def upload_file(self, path, name, size, md5sum, offset, data):
+    def task_upload_file(self, 
+                         task_id, 
+                         path, 
+                         name, 
+                         size, 
+                         md5sum, 
+                         offset, 
+                         data):
         """ Upload a file in chunks
              path: the relative path to upload to
              name: the name of the file
@@ -68,7 +75,8 @@ class Proxy(object):
             indicates where the chunk belongs
             the special offset -1 is used to indicate the final chunk
         """
-        return self.hub.recipes.tasks.upload_file(path, 
+        return self.hub.recipes.tasks.upload_file(task_id, 
+                                                  path, 
                                                   name, 
                                                   size, 
                                                   md5sum, 
@@ -80,7 +88,7 @@ class Proxy(object):
                    kill_time=None):
         """ tell the scheduler that we are starting a task
             default watchdog time can be overridden with kill_time seconds """
-        return self.hub.recipes.tasks.Start(task_id, kill_time)
+        return self.hub.recipes.tasks.start(task_id, kill_time)
 
     def task_result(self, 
                     task_id, 
@@ -89,7 +97,7 @@ class Proxy(object):
                     result_score=None,
                     result_summary=None):
         """ report a result to the scheduler """
-        return self.hub.recipes.tasks.Result(task_id,
+        return self.hub.recipes.tasks.result(task_id,
                                              result_type,
                                              result_path,
                                              result_score,
@@ -100,6 +108,26 @@ class Proxy(object):
                   stop_type,
                   msg=None):
         """ tell the scheduler that we are stoping a task
-            stop_type = ['Stop', 'Abort', 'Cancel']
+            stop_type = ['stop', 'abort', 'cancel']
             msg to record if issuing Abort or Cancel """
-        return self.hub.recipes.tasks.Stop(task_id, stop_type, msg)
+        return self.hub.recipes.tasks.stop(task_id, stop_type, msg)
+
+    def recipe_stop(self,
+                    recipe_id,
+                    stop_type,
+                    msg=None):
+        """ tell the scheduler that we are stopping this recipe
+            stop_type = ['abort', 'cancel']
+            msg to record
+        """
+        return self.hub.recipes.stop(recipe_id, stop_type, msg)
+
+    def job_stop(self,
+                    job_id,
+                    stop_type,
+                    msg=None):
+        """ tell the scheduler that we are stopping this job
+            stop_type = ['abort', 'cancel']
+            msg to record 
+        """
+        return self.hub.jobs.stop(job_id, stop_type, msg)
