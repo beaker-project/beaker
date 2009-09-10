@@ -14,7 +14,8 @@ $SNIPPET('post_anamon')
 echo 'OPTIONS="$OPTIONS -x"' >>/etc/sysconfig/ntpd
 
 #if $getVar('grubport','') != ''
-/bin/sed -i 's/^serial.*/serial --port=$grubport --speed=115200/' /boot/grub/grub.conf
+#/bin/sed -i 's/^serial.*/serial --port=$grubport --speed=115200/' /boot/grub/grub.conf
+/bin/sed -i 's/^\(serial.*\)--unit=\S\+\(.*\)$/\1--port=$grubport\2/' /boot/grub/grub.conf
 #end if
 
 #if $getVar('arch','') == 'ia64'
