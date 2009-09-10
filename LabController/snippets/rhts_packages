@@ -1,5 +1,9 @@
 @development-tools
 @development-libs
+#RHEL6 and Fedora12
+@development
+@desktop-platform-devel
+@server-platform-devel
 libxml2-python
 ntp
 expect
