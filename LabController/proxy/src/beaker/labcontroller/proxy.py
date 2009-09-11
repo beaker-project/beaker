@@ -149,6 +149,7 @@ class Watchdog(ProxyHelper):
                                        logger=self.logger)
                     self.logger.info("Removed Monitor for %s" % watchdog)
                     
+            # Check status of monitor processes..  
             
             # Sleep between polling
             time.sleep(self.conf["SLEEP_TIME"])
@@ -196,7 +197,7 @@ class Watchdog(ProxyHelper):
                 file = open(log, "r")
                 while True:
                     where = file.tell()
-                    line = file.readline()
+                    line = file.read(65536)
                     #FIXME make this work on a list of search items
                     # Also, allow it to be disabled
                     if line.find("Kernel panic") != -1:
@@ -211,11 +212,7 @@ class Watchdog(ProxyHelper):
                     else:
                         size = len(line)
                         data = base64.encodestring(line)
-                        md5sum = md5_constructor.new(line).hexdigest()
-                        # FIXME This could probably be more efficient.
-                        # Were doing a call for every line,  would make sense
-                        # to buffer up some data to a minimum block size
-                        # and then send it.
+                        md5sum = md5_constructor(line).hexdigest()
                         self.recipe_upload_file(watchdog['recipe_id'],
                                                 "/",
                                                 "console.log",

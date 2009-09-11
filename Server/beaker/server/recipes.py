@@ -55,7 +55,8 @@ class Recipes(RPCRoot):
             recipe = Recipe.by_id(recipe_id)
         except InvalidRequestError:
             raise BX(_('Invalid recipe ID: %s' % recipe_id))
-        recipe_path = "%02d/%s/%s/%s" % (int(str(recipe.recipeset.job.id)[-2:]),
+        job_id = recipe.recipeset.job.id
+        recipe_path = "%02d/%s/%s/%s" % (int(str(job_id)[-2:]),
                                          job_id, 
                                          recipe_id,
                                          path)

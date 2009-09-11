@@ -2,6 +2,7 @@ import base64
 import os
 import stat
 import errno
+import fcntl
 
 try:
     from hashlib import md5 as md5_constructor
