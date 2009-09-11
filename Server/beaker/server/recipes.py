@@ -43,7 +43,7 @@ class Recipes(RPCRoot):
 
     tasks = RecipeTasks()
 
-    upload = Uploader(config.get("basepath.logs", "/var/www/html/beaker/logs"))
+    upload = Uploader(config.get("basepath.logs", "/var/www/beaker/logs"))
 
     @cherrypy.expose
     @identity.require(identity.not_anonymous())
