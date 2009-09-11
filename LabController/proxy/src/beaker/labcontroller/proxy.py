@@ -139,7 +139,7 @@ class Watchdog(ProxyHelper):
             # Monitor active watchdog entries
             active_watchdogs = []
             for watchdog in self.hub.recipes.tasks.watchdogs('active'):
-                active_watchdogs.append(watchdog['system']
+                active_watchdogs.append(watchdog['system'])
                 if watchdog['system'] not in self.watchdogs:
                     self.watchdogs[watchdog['system']] = self.monitor(watchdog)
             # Kill Monitor if watchdog does not exist.
