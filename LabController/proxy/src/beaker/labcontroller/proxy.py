@@ -118,11 +118,11 @@ class Watchdog(ProxyHelper):
     def monitor_forever(self):
         while True:
             # Clear out expired watchdog entries
-            for watchdog in self.hub.recipes.tasks.watchdogs(status='expired'):
+            for watchdog in self.hub.recipes.tasks.watchdogs('expired'):
                 self.abort(watchdog)
 
             # Monitor active watchdog entries
-            for watchdog in self.hub.recipes.tasks.watchdogs(status='active'):
+            for watchdog in self.hub.recipes.tasks.watchdogs('active'):
                 self.monitor(watchdog)
             # Sleep 20 seconds between polling
             time.sleep(20)
