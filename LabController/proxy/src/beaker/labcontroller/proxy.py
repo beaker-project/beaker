@@ -5,6 +5,7 @@ import logging
 import signal
 import time
 import datetime
+import base64
 from xmlrpclib import Fault, ProtocolError
 from cStringIO import StringIO
 from socket import gethostbyaddr
@@ -15,6 +16,13 @@ from kobo.exceptions import ShutdownException
 
 from kobo.process import kill_process_group
 from kobo.log import add_rotating_file_logger
+
+try:
+    from hashlib import md5 as md5_constructor
+except ImportError:
+    from md5 import new as md5_constructor
+
+VERBOSE_LOG_FORMAT = "%(asctime)s [%(levelname)-8s] {%(process)5d} %(name)s.%(module)s:%(lineno)4d %(message)s"
 
 class ProxyHelper(object):
 
@@ -44,7 +52,10 @@ class ProxyHelper(object):
             self.logger.setLevel(logging.DEBUG)
             log_level = logging._levelNames.get(self.conf["LOG_LEVEL"].upper())
             log_file = self.conf["LOG_FILE"]
-            add_rotating_file_logger(self.logger, log_file, log_level=log_level)
+            add_rotating_file_logger(self.logger, 
+                                     log_file, 
+                                     log_level=log_level,
+                                     format=VERBOSE_LOG_FORMAT)
 
         # self.hub is created here
         self.hub = HubProxy(logger=self.logger, conf=self.conf, **kwargs)
@@ -56,6 +67,7 @@ class ProxyHelper(object):
                     result_score=None,
                     result_summary=None):
         """ report a result to the scheduler """
+        self.logger.info("task_result %s" % task_id)
         return self.hub.recipes.tasks.result(task_id,
                                              result_type,
                                              result_path,
@@ -70,6 +82,7 @@ class ProxyHelper(object):
             stop_type = ['abort', 'cancel']
             msg to record
         """
+        self.logger.info("recipe_stop %s" % recipe_id)
         return self.hub.recipes.stop(recipe_id, stop_type, msg)
 
     def job_stop(self,
@@ -80,6 +93,7 @@ class ProxyHelper(object):
             stop_type = ['abort', 'cancel']
             msg to record 
         """
+        self.logger.info("job_stop %s" % job_id)
         return self.hub.jobs.stop(job_id, stop_type, msg)
 
 
@@ -107,6 +121,7 @@ class Watchdog(ProxyHelper):
             indicates where the chunk belongs
             the special offset -1 is used to indicate the final chunk
         """
+        self.logger.info("recipe_upload_file %s" % recipe_id)
         return self.hub.recipes.upload_file(recipe_id, 
                                             path, 
                                             name, 
@@ -122,10 +137,21 @@ class Watchdog(ProxyHelper):
                 self.abort(watchdog)
 
             # Monitor active watchdog entries
+            active_watchdogs = []
             for watchdog in self.hub.recipes.tasks.watchdogs('active'):
-                self.monitor(watchdog)
-            # Sleep 20 seconds between polling
-            time.sleep(20)
+                active_watchdogs.append(watchdog['system']
+                if watchdog['system'] not in self.watchdogs:
+                    self.watchdogs[watchdog['system']] = self.monitor(watchdog)
+            # Kill Monitor if watchdog does not exist.
+            for watchdog in self.watchdogs:
+                if watchdog not in active_watchdogs:
+                    kill_process_group(self.watchdogs[watchdog],
+                                       logger=self.logger)
+                    self.logger.info("Removed Monitor for %s" % watchdog)
+                    
+            
+            # Sleep between polling
+            time.sleep(self.conf["SLEEP_TIME"])
 
     def abort(self, watchdog):
         """ Abort expired watchdog entry
@@ -148,18 +174,68 @@ class Watchdog(ProxyHelper):
         """ Upload console log if present to Scheduler
              and look for panic/bug/etc..
         """
-        if watchdog['system'] not in self.watchdogs:
-            self.logger.info("Create monitor for %s" % watchdog['system'])
-            #pid = #FIXME Create Monitor(conf=conf, watchdog['system'])
-            #self.watchdogs[watchdog['system']] = pid
+        self.logger.debug("Forking monitor for system: %s" % watchdog['system'])
+        pid = os.fork()
+        if pid:
+            self.logger.info("Monitor forked %s: pid=%s" % (watchdog['system'],
+                                                            pid))
+            return pid
+        try:
+            # set process group
+            os.setpgrp()
 
+            # set a do-nothing handler for sigusr2
+            # do not use signal.signal(signal.SIGUSR2, signal.SIG_IGN) - it completely masks interrups !!!
+            signal.signal(signal.SIGUSR2, lambda *args: None)
+            # set a default handler for SIGTERM
+            signal.signal(signal.SIGTERM, signal.SIG_DFL)
 
+            # watch the console log
+            log = "%s/%s" % (self.conf["CONSOLE_LOGS"], watchdog["system"])
+            if os.path.exists(log):
+                file = open(log, "r")
+                while True:
+                    where = file.tell()
+                    line = file.readline()
+                    #FIXME make this work on a list of search items
+                    # Also, allow it to be disabled
+                    if line.find("Kernel panic") != -1:
+                        self.logger.info("Panic detected for system: %s" % watchdog['system'])
+                        # Report the panic
+                        #self.task_result(watchdog['task_id'])
+                        # Abort the recipe
+                        #self.recipe_abort(watchdog['recipe_id'])
+                    if not line:
+                        time.sleep(1)
+                        file.seek(where)
+                    else:
+                        size = len(line)
+                        data = base64.encodestring(line)
+                        md5sum = md5_constructor.new(line).hexdigest()
+                        # FIXME This could probably be more efficient.
+                        # Were doing a call for every line,  would make sense
+                        # to buffer up some data to a minimum block size
+                        # and then send it.
+                        self.recipe_upload_file(watchdog['recipe_id'],
+                                                "/",
+                                                "console.log",
+                                                size,
+                                                md5sum,
+                                                where,
+                                                data)
+                        self.logger.info("Upload line")
+        finally:
+            # die
+            os._exit(os.EX_OK)
+
+        
 class Proxy(ProxyHelper):
     def get_recipe(self, system_name=None):
         """ return the active recipe for this system 
             If system_name is not provided look up via client_ip"""
         if not system_name:
             system_name = gethostbyaddr(self.clientIP)[0]
+        self.logger.info("get_recipe %s" % system_name)
         return self.hub.recipes.system_xml(system_name)
 
     def task_upload_file(self, 
@@ -182,6 +258,7 @@ class Proxy(ProxyHelper):
             indicates where the chunk belongs
             the special offset -1 is used to indicate the final chunk
         """
+        self.logger.info("task_upload_file %s" % task_id)
         return self.hub.recipes.tasks.upload_file(task_id, 
                                                   path, 
                                                   name, 
@@ -195,6 +272,7 @@ class Proxy(ProxyHelper):
                    kill_time=None):
         """ tell the scheduler that we are starting a task
             default watchdog time can be overridden with kill_time seconds """
+        self.logger.info("task_start %s" % task_id)
         return self.hub.recipes.tasks.start(task_id, kill_time)
 
 
@@ -205,4 +283,5 @@ class Proxy(ProxyHelper):
         """ tell the scheduler that we are stoping a task
             stop_type = ['stop', 'abort', 'cancel']
             msg to record if issuing Abort or Cancel """
+        self.logger.info("task_stop %s" % task_id)
         return self.hub.recipes.tasks.stop(task_id, stop_type, msg)

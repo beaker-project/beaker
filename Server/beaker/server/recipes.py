@@ -16,7 +16,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 from turbogears.database import session
-from turbogears import controllers, expose, flash, widgets, validate, error_handler, validators, redirect, paginate
+from turbogears import controllers, expose, flash, widgets, validate, error_handler, validators, redirect, paginate, config
 from turbogears import identity, redirect
 from cherrypy import request, response
 from kid import Element
@@ -25,6 +25,7 @@ from beaker.server.xmlrpccontroller import RPCRoot
 from beaker.server.helpers import *
 from beaker.server.recipetasks import RecipeTasks
 from socket import gethostname
+from upload import Uploader
 import exceptions
 import time
 
@@ -42,13 +43,28 @@ class Recipes(RPCRoot):
 
     tasks = RecipeTasks()
 
+    upload = Uploader(config.get("basepath.logs", "/var/www/html/beaker/logs"))
+
     @cherrypy.expose
     @identity.require(identity.not_anonymous())
     def upload_file(self, recipe_id, path, name, size, md5sum, offset, data):
         """
         upload to recipe in pieces 
         """
-        raise NotImplementedError
+        try:
+            recipe = Recipe.by_id(recipe_id)
+        except InvalidRequestError:
+            raise BX(_('Invalid recipe ID: %s' % recipe_id))
+        recipe_path = "%02d/%s/%s/%s" % (int(str(recipe.recipeset.job.id)[-2:]),
+                                         job_id, 
+                                         recipe_id,
+                                         path)
+        return self.upload.uploadFile(recipe_path, 
+                                      name, 
+                                      size, 
+                                      md5sum, 
+                                      offset, 
+                                      data)
 
     @cherrypy.expose
     @identity.require(identity.not_anonymous())

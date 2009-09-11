@@ -143,6 +143,8 @@ fi
 %attr(-,apache,root) %{_datadir}/%{name}
 %attr(-,apache,root) %config(noreplace) %{_sysconfdir}/%{name}/server.cfg
 %attr(-,apache,root) %dir %{_localstatedir}/log/%{name}
+%attr(-,apache,root) %dir %{_localstatedir}/www/%{name}/logs
+%attr(-,apache,root) %dir %{_localstatedir}/www/%{name}/rpms
 
 %files client
 %defattr(-,root,root,-)
