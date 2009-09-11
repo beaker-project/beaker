@@ -7,7 +7,7 @@ from optparse import OptionParser
 import SocketServer
 import DocXMLRPCServer
 
-from beaker.labcontroller.proxy import Proxy, Watchdog
+from beaker.labcontroller.proxy import Proxy
 
 import kobo.conf
 from kobo.exceptions import ShutdownException
@@ -40,16 +40,6 @@ def main_loop(conf=None, foreground=False):
     # define custom signal handlers
     signal.signal(signal.SIGTERM, daemon_shutdown)
 
-    # fork watchdog process
-    pid = os.fork()
-    if not pid:
-        try:
-            watchdog = Watchdog(conf=conf)
-        except Exception, ex:
-            sys.stderr.write("Error initializing Watchdog: %s\n" % ex)
-            sys.exit(1)
-        watchdog.monitor_forever()
-
     # initialize Proxy
     try:
         proxy = Proxy(conf=conf)
@@ -68,10 +58,6 @@ def main():
                       help="Full path to config file to use")
     parser.add_option("-f", "--foreground", default=False, action="store_true",
                       help="run in foreground (do not spawn a daemon)")
-    parser.add_option("-k", "--kill", default=False, action="store_true",
-                      help="kill the daemon")
-    parser.add_option("-p", "--pid-file",
-                      help="specify a pid file")
     (opts, args) = parser.parse_args()
 
     conf = kobo.conf.PyConfigParser()

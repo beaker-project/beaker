@@ -15,12 +15,14 @@ setup(
             'default.conf',
         ],
         '/etc/beaker': ['proxy.conf'],
-        '/etc/init.d': ['init.d/beaker-proxy'],
+        '/etc/init.d': ['init.d/beaker-proxy',
+                        'init.d/beaker-watchdog'],
     },
 
     entry_points = {
         'console_scripts': (
-            'beaker-proxy = beaker.labcontroller.main:main',
+            'beaker-proxy    = beaker.labcontroller.main:main',
+            'beaker-watchdog = beaker.labcontroller.watchdog:main',
         ),
     }
 )

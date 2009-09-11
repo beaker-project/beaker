@@ -3,7 +3,7 @@
 
 Name:           beaker
 Version:        0.5.0
-Release:        18%{?dist}
+Release:        19%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -102,6 +102,7 @@ ln -s Fedora.ks $RPM_BUILD_ROOT/var/lib/cobbler/kickstarts/Fedoradevelopment.ks
 
 %post lab-controller
 /sbin/chkconfig --add beaker-proxy
+/sbin/chkconfig --add beaker-watchdog
 
 %postun server
 if [ "$1" -ge "1" ]; then
@@ -111,6 +112,7 @@ fi
 %postun lab-controller
 if [ "$1" -ge "1" ]; then
         /sbin/service beaker-proxy condrestart >/dev/null 2>&1 || :
+        /sbin/service beaker-watchdog condrestart >/dev/null 2>&1 || :
 fi
 
 %preun server
@@ -122,7 +124,9 @@ fi
 %preun lab-controller
 if [ "$1" -eq "0" ]; then
         /sbin/service beaker-proxy stop >/dev/null 2>&1 || :
+        /sbin/service beaker-watchdog stop >/dev/null 2>&1 || :
         /sbin/chkconfig --del beaker-proxy || :
+        /sbin/chkconfig --del beaker-watchdog || :
 fi
 
 %files server
@@ -154,7 +158,8 @@ fi
 %{python_sitelib}/%{name}/labcontroller/
 %{python_sitelib}/%{name}.labcontroller-%{version}-*
 %{python_sitelib}/%{name}.labcontroller-%{version}-py%{pyver}.egg-info/
-%{_bindir}/beaker-proxy
+%{_bindir}/%{name}-proxy
+%{_bindir}/%{name}-watchdog
 %doc LabController/README
 %config(noreplace) %{_sysconfdir}/httpd/conf.d/%{name}-lab-controller.conf
 %{_sysconfdir}/cron.daily/expire_distros
@@ -164,6 +169,7 @@ fi
 /var/www/beaker/rhts-checkin
 %attr(-,apache,root) %dir %{_localstatedir}/log/%{name}
 %{_sysconfdir}/init.d/%{name}-proxy
+%{_sysconfdir}/init.d/%{name}-watchdog
 
 %files lib
 /usr/lib/beakerlib/*
