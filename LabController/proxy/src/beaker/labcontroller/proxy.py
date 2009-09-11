@@ -121,7 +121,7 @@ class Watchdog(ProxyHelper):
             indicates where the chunk belongs
             the special offset -1 is used to indicate the final chunk
         """
-        self.logger.info("recipe_upload_file %s" % recipe_id)
+        self.logger.info("recipe_upload_file recipe_id:%s" % recipe_id)
         return self.hub.recipes.upload_file(recipe_id, 
                                             path, 
                                             name, 
@@ -220,7 +220,6 @@ class Watchdog(ProxyHelper):
                                                 md5sum,
                                                 where,
                                                 data)
-                        self.logger.info("Upload line")
         finally:
             # die
             os._exit(os.EX_OK)
