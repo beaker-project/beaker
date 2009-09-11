@@ -257,7 +257,7 @@ def queued_recipes(*args):
                        status_id=TaskStatus.by_name(u'Scheduled').id).rowcount == 1:
                     # Even though the above put the recipe in the "Scheduled" state
                     # it did not execute the update_status method.
-                    recipe.Schedule()
+                    recipe.schedule()
                     # Atomic operation to reserve the system
                     if session.connection(System).execute(system_table.update(
                          and_(system_table.c.id==system.id,
