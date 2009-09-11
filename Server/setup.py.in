@@ -125,6 +125,8 @@ data_files = [
     ("/etc/init.d", ["init.d/beakerd"]),
     ("/usr/share/beaker", filter(os.path.isfile, glob.glob("apache/*.wsgi"))),
     ("/var/log/beaker", []),
+    ("/var/www/beaker/logs", []),
+    ("/var/www/beaker/rpms", []),
 ]
 
 package_data = find_package_data(where='beaker',
