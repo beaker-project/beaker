@@ -612,10 +612,15 @@ class SystemObject(object):
         return cls.mapper.c.keys()
     get_fields = classmethod(get_fields)
 
-class Group(object):
+class Group(SystemObject):
     """
     An ultra-simple group definition.
     """
+
+    @classmethod
+    def get_fields(cls, *args, **kwargs):
+        return ['group_name', 'display_name']
+
     @classmethod
     def by_name(cls, name):
         return cls.query.filter_by(group_name=name).one()
@@ -623,6 +628,10 @@ class Group(object):
     @classmethod
     def by_id(cls, id):
         return cls.query.filter_by(group_id=id).one()
+
+    @classmethod
+    def _get_dict():
+        return dict()
 
     def __repr__(self):
         return self.display_name
@@ -1316,6 +1325,10 @@ class Arch(SystemObject):
         return '%s' % self.arch
 
     @classmethod
+    def _get_dict(cls):
+        return dict()
+
+    @classmethod
     def by_id(cls, id):
         return cls.query.filter_by(id=id).one()
 
@@ -1405,6 +1418,14 @@ class LabController(SystemObject):
 
     def __repr__(self):
         return "%s" % (self.fqdn)
+
+    @classmethod
+    def _get_dict(cls):
+        return dict()
+
+    @classmethod
+    def get_fields(cls, *args, **kwargs):
+        return ['fqdn']
 
     @classmethod
     def by_id(cls, id):
@@ -1696,13 +1717,21 @@ class Note(object):
     def all(cls):
         return cls.query()
 
-class Key(object):
+class Key(SystemObject):
     def __init__(self, key_name=None, numeric=False):
         self.key_name = key_name
         self.numeric = numeric
 
     def __repr__(self):
         return "%s" % self.key_name
+
+    @classmethod
+    def _get_dict(cls):
+        return dict()
+
+    @classmethod
+    def get_fields(cls, *args, **kwargs):
+        return ['key_name']
 
     @classmethod
     def by_name(cls, key_name):
@@ -1713,11 +1742,19 @@ class Key(object):
         return cls.query().filter_by(id=id).one()
 
 # key_value model
-class Key_Value_String(object):
+class Key_Value_String(SystemObject):
     def __init__(self, key, key_value, system=None):
         self.system = system
         self.key = key
         self.key_value = key_value
+
+    @classmethod
+    def _get_dict(cls):
+        return dict(key = dict(joins=['key'], cls = Key))
+
+    @classmethod
+    def get_fields(cls, *args, **kwargs):
+        return ['key_value']
 
     def __repr__(self):
         return "%s %s" % (self.key, self.key_value)
@@ -1728,7 +1765,7 @@ class Key_Value_String(object):
                                   Key_Value_String.key_value==value,
                                   Key_Value_String.system==system)).one()
 
-class Key_Value_Int(object):
+class Key_Value_Int(SystemObject):
     def __init__(self, key, key_value, system=None):
         self.system = system
         self.key = key
@@ -1736,6 +1773,14 @@ class Key_Value_Int(object):
 
     def __repr__(self):
         return "%s %s" % (self.key, self.key_value)
+
+    @classmethod
+    def _get_dict(cls):
+        return dict(key = dict(joins=['key'], cls = Key))
+
+    @classmethod
+    def get_fields(cls, *args, **kwargs):
+        return ['key_value']
 
     @classmethod
     def by_key_value(cls, system, key, value):
@@ -1789,7 +1834,7 @@ System.mapper = mapper(System, system_table,
                      'activity':relation(SystemActivity,
                                      order_by=[activity_table.c.created.desc()],
                                                backref='object')})
-mapper(Arch, arch_table)
+Arch.mapper = mapper(Arch, arch_table)
 mapper(Provision, provision_table,
        properties = {'provision_families':relation(ProvisionFamily, collection_class=attribute_mapped_collection('osmajor')),
                      'arch':relation(Arch)})
@@ -1830,7 +1875,7 @@ mapper(Install, install_table)
 mapper(LabControllerDistro, lab_controller_distro_map , properties={
     'distro':relation(Distro, backref='lab_controller_assocs')
 })
-mapper(LabController, lab_controller_table,
+LabController.mapper = mapper(LabController, lab_controller_table,
         properties = {'_distros':relation(LabControllerDistro,
                                           backref='lab_controller'),
     })
@@ -1886,11 +1931,11 @@ mapper(Note, note_table,
         properties=dict(user=relation(User, uselist=False,
                         backref='notes')))
 
-mapper(Key, key_table)
-mapper(Key_Value_Int, key_value_int_table,
+Key.mapper = mapper(Key, key_table)
+Key_Value_Int.mapper = mapper(Key_Value_Int, key_value_int_table,
         properties=dict(key=relation(Key, uselist=False,
                         backref='key_value_int')))
-mapper(Key_Value_String, key_value_string_table,
+Key_Value_String.mapper = mapper(Key_Value_String, key_value_string_table,
         properties=dict(key=relation(Key, uselist=False,
                         backref='key_value_string')))
 
