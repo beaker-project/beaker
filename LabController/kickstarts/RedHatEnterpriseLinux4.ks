@@ -6,10 +6,10 @@ bootloader --location=mbr
 #if $getVar('rhts_server', '') != ''
 # Use text mode install
 text
-$SNIPPET("network")
 #end if
 $getVar('mode', '')
 
+$SNIPPET("network")
 # Firewall configuration
 #if $getVar('rhts_server', '') != ''
 firewall --disabled

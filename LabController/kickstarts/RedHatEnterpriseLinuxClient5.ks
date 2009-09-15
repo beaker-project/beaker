@@ -8,7 +8,6 @@ bootloader --location=mbr
 #if $getVar('rhts_server', '') != ''
 ## Use text mode install
 text
-$SNIPPET("network")
 key $getVar('key', '7fcc43557e9bbc42')
 #else
 ## For normal provisioning use Workstation key
@@ -17,6 +16,7 @@ key $getVar('key', 'da3122afdb7edd23')
 
 $getVar('mode', '')
 
+$SNIPPET("network")
 # Firewall configuration
 #if $getVar('rhts_server', '') != ''
 firewall --disabled
