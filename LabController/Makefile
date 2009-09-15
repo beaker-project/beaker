@@ -14,6 +14,7 @@ install:
 	for snippet in $(SNIPPETS); do \
 		$(INSTALL) $$snippet $(DESTDIR)/var/lib/cobbler/$$snippet;\
 	done
+	mkdir $(DESTDIR)/var/lib/cobbler/snippets/per_system
 	for kickstart in $(KICKSTARTS); do \
 		$(INSTALL) $$kickstart $(DESTDIR)/var/lib/cobbler/$$kickstart;\
 	done

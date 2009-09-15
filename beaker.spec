@@ -2,7 +2,7 @@
 %{!?pyver: %define pyver %(%{__python} -c "import sys ; print sys.version[:3]")}
 
 Name:           beaker
-Version:        0.4.44
+Version:        0.4.45
 Release:        0%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
