@@ -8,6 +8,7 @@ bootloader --location=mbr
 #if $getVar('rhts_server', '') != ''
 ## Use text mode install
 text
+$SNIPPET("network")
 key $getVar('key', '7fcc43557e9bbc42')
 #else
 ## For normal provisioning use Workstation key

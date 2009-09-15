@@ -5,6 +5,7 @@ authconfig  --enableshadow  --enablemd5
 bootloader --location=mbr
 # Use text mode install
 text
+$SNIPPET("network")
 # Firewall configuration
 firewall --disabled
 # Run the Setup Agent on first boot
