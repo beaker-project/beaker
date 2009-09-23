@@ -1,20 +1,17 @@
-# Copyright (c) 2009 Red Hat, Inc. All rights reserved.
+# Copyright (c) 2006 Red Hat, Inc. All rights reserved. This copyrighted material 
+# is made available to anyone wishing to use, modify, copy, or
+# redistribute it subject to the terms and conditions of the GNU General
+# Public License v.2.
 #
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 2 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
+# This program is distributed in the hope that it will be useful, but WITHOUT ANY
+# WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+# PARTICULAR PURPOSE. See the GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
-# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
-# Author: Marian Csontos <mcsontos@redhat.com>
+# Author: Alexander Todorov <atodorov@redhat.com>
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 # Example Makefile for RHTS                                          #
@@ -23,14 +20,16 @@
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 
 # The toplevel namespace within which the test lives.
-TOPLEVEL_NAMESPACE=beah
+# FIXME: You will need to change this:
+TOPLEVEL_NAMESPACE=examples
 
 # The name of the package under test:
 # FIXME: you wil need to change this:
 PACKAGE_NAME=bash
 
 # The path of the test below the package:
-RELATIVE_PATH=examples/tests/rhtsex
+# FIXME: you wil need to change this:
+RELATIVE_PATH=testargs
 
 # Version of the Test. Used with make tag.
 export TESTVERSION=1.1
@@ -72,13 +71,13 @@ include /usr/share/rhts/lib/rhts-make.include
 $(METADATA): Makefile
 	@touch $(METADATA)
 # Change to the test owner's name
-	@echo "Owner:        Marian Csontos <mcsontos@redhat.com>" > $(METADATA) # FIXME: customize this
+	@echo "Owner:        Alexander Todorov <atodorov@redhat.com>" > $(METADATA) # FIXME: customize this
 	@echo "Name:         $(TEST)" >> $(METADATA)
 	@echo "Path:         $(TEST_DIR)"	>> $(METADATA)
 	@echo "License:      GPL" >> $(METADATA)
 	@echo "TestVersion:  $(TESTVERSION)"	>> $(METADATA)
-	@echo "Description:  Demonstrates rhts executables usage.">> $(METADATA)
-	@echo "TestTime:     15m" >> $(METADATA)
+	@echo "Description:  Shows how to read arguments passed from scheduler">> $(METADATA)
+	@echo "TestTime:     1m" >> $(METADATA)
 	@echo "RunFor:       $(PACKAGE_NAME)" >> $(METADATA)  
 # add any other packages for which your test ought to run here
 	@echo "Requires:     $(PACKAGE_NAME)" >> $(METADATA)  

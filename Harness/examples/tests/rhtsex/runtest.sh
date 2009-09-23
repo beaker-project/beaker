@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash -x
 
 # Copyright (c) 2009 Red Hat, Inc. All rights reserved.
 #
@@ -47,9 +47,12 @@ rhts-abort -t job -s 65432
 
 echo "rhts-client [-u SUBMITTER] [-S SERVER] RECIPE_ID COMMENT"
 rhts-client
-rhts-client 1 "a comment"
-rhts-client -u mcsontos@redhat.com $RECIPEID "a comment"
-rhts-client -S $RESULT_SERVER 1 "a comment"
+rhts-client usage
+rhts-client add-comment
+rhts-client add-comment -h
+rhts-client add-comment 1 "a comment"
+rhts-client add-comment -u mcsontos@redhat.com $RECIPEID "a comment"
+rhts-client add-comment -S $RESULT_SERVER 1 "a comment"
 
 # FIXME: 
 cat <<EOF
@@ -62,7 +65,7 @@ rhts-db-submit-result
 rhts-db-submit-result -S $RESULT_SERVER
 rhts-db-submit-result -t $TEST
 rhts-db-submit-result -S $RESULT_SERVER -t $TEST
-rhts-db-submit-result -S $RESULT_SERVER -t $TEST -r Pass
+rpdb2 -d `which rhts-db-submit-result` rhts-db-submit-result -S $RESULT_SERVER -t $TEST -r Pass
 rhts-db-submit-result -S $RESULT_SERVER -t $TEST -v 12.34
 rhts-db-submit-result -S $RESULT_SERVER -t $TEST -l `mktemp`
 rhts-db-submit-result -S $RESULT_SERVER -t $TEST -D `mktemp`
@@ -77,11 +80,14 @@ rhts-recipe-sync-block -R $RESULT_SERVER -r $RECIPESETID -s STAT1 -s STAT2 host1
 echo "rhts-recipe-sync-set [-R|--result_server SERVER] [-r|--recipesetid RECIPESETID] [-m MACHINE] (-s|--state STATE)"
 rhts-recipe-sync-set
 rhts-recipe-sync-set -s WAIT
+sleep 2
 rhts-recipe-sync-set -s DONE
 rhts-recipe-sync-set -m $HOSTNAME -s DONE
 rhts-recipe-sync-set -r $RECIPESETID -s DONE
+sleep 2
 rhts-recipe-sync-set -R $RESULT_SERVER -m host1 -s STAT1
 rhts-recipe-sync-set -m host2 -r $RECIPESETID -R $RESULT_SERVER -s STAT2
+wait
 
 echo "rhts-reboot"
 # I have not intentions running this...
@@ -109,11 +115,14 @@ rhts-sync-block -r $RECIPESETID -s STAT3 -s STAT4 host3 host4 &
 echo "rhts-sync-set [-R|--result_server SERVER] [-r|--recipesetid RECIPESETID] [-t|--testorder TESTORDER] [-m MACHINE] (-s|--state STATE)"
 rhts-sync-set
 rhts-sync-set -s WAIT2
+sleep 2
 rhts-sync-set -t $TESTORDER -s DONE2
 rhts-sync-set -m $HOSTNAME -s DONE2
 rhts-sync-set -t $TESTORDER -r $RECIPESETID -s DONE2
+sleep 2
 rhts-sync-set -R $RESULT_SERVER -m host3 -s STAT3
 rhts-sync-set -t $TESTORDER -m host4 -r $RECIPESETID -R $RESULT_SERVER -s STAT4
+wait
 
 echo "report_result TEST RESULT"
 report_result

@@ -18,10 +18,7 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-from twisted.internet import reactor
-from beah.tasks.rhts_xmlrpc import run_rhts_task
+from beah.tasks.rhts_xmlrpc import main
 
-#run_rhts_task('/home/mcsontos/rhts/tests/examples/testargs')
-run_rhts_task('examples/tests/rhtsex')
-reactor.run()
+main('examples/tests/rhtsex')
 
