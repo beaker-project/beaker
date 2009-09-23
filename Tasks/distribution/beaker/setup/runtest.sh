@@ -296,6 +296,7 @@ function LabController()
     service httpd start
     service xinetd start
     service cobblerd start
+    cobbler get-loaders
     #service autofs start
     service iptables stop
     rhts-sync-set -s READY
