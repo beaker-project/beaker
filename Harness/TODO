@@ -1,39 +1,28 @@
 == TODO ==
 
- !! drop fakelc completely, start using the real thing
  !! rhts task runner
     - improve XML-RPC to event conversion
  !! beaker backend
     - improve event to XML-RPC conversion
+    - check harness->beakerLC
+      - run few simple tests
  !! rhts-test-runner.sh
     - check environment 
     - create /tmp/TESTOUT.log - it is required by rhts-abort
     - run the test and capture outputs
     - check all outputs
- !  command line options:
-    - scripts using command line options
- !  test 'python setup.py install'
-    - almost works :-)
-    - does not install dependencies (it does (only) when using egg's)
-      - is it supposed to do so?
-      - yum install python python-{simplejson,zope-interface,twisted-{core,web}}
-    - there is no Twisted egg when doing "yum install python-twisted"
-      - there are Twisted_Web and Twisted_Core egg's :-/
-      - setuptools install_requires does not work
-    - could not get packages from pypi :-(
-      - 1. try building a package on LM and saving somewhere on intranet
-      - 2. installing (and running) beah
-    - check setup.py in twisted!
- !  fedora packaging
+ !! add self-test suite
+ !! pass absolute pathnames - processes' pwd may differ!
+ !! fedora/rhel packaging
     - check if original Fedora spec's could be used. Download:
         CVSROOT=:pserver:anonymous@cvs.fedora.redhat.com:/cvs/pkgs \
         PKGS={python,python-zope-interface,python-simplejson,python-twisted-{core,web}} \
         cvs co rpms/$PKGS/{F-10,devel}
     - create brew/koji builds
-    - installation:
-      - download python src, build and install
-      - download dependencies and install
-      - download beah and install
+ !  properly daemonize controller
+ !  logging backend
+ !  command line options:
+    - server and backends using command line options and configuration
  !  add a command_id to command and use it to identify echo-events.
     - some events (espacially those expecting results) should have event_id as
       well - e.g. sync-block when done.

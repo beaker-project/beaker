@@ -260,15 +260,16 @@ class BeakerLCBackend(ExtBackend):
         # FIXME: send a bye to server? (Should this be considerred an abort?)
         reactor.callLater(1, reactor.stop)
 
-def main():
+def start_beaker_backend():
     from beah.wires.internals.twbackend import start_backend
     backend = BeakerLCBackend()
     # Start a default TCP client:
     start_backend(backend, byef=lambda evt: reactor.callLater(1, reactor.stop))
 
-if __name__ == '__main__':
-    print main.__doc__
-    #os.environ['RECIPEID'] = '21'
-    main()
+def main():
+    start_beaker_backend()
     reactor.run()
+
+if __name__ == '__main__':
+    main()
 

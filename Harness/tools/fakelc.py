@@ -222,6 +222,8 @@ if __name__ == '__main__':
                     </params>
                     <rpm name="rh-tests-examples-testargs.noarch"/>
                 </task>
+                -->
+
                 <task avg_time="1200" id="43"
                         name="/beah/examples/tasks/a_task" role="STANDALONE"
                         result="%(task43_res)s"
@@ -261,6 +263,8 @@ if __name__ == '__main__':
                     </roles>
                     <executable url="examples/tasks/rhts" />
                 </task>
+
+                <!--
                 <task avg_time="1200" id="46"
                         name="/beah/examples/tests/rhtsex" role="STANDALONE"
                         result="%(task46_res)s"

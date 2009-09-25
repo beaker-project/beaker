@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # Beah - Test harness. Part of Beaker project.
 #
 # Copyright (C) 2009 Marian Csontos <mcsontos@redhat.com>
