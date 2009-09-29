@@ -133,6 +133,8 @@ ln -s Fedora.ks $RPM_BUILD_ROOT/var/lib/cobbler/kickstarts/Fedoradevelopment.ks
 /usr/share/man/man1/beakerlib*
 
 %changelog
+* Wed Sep 29 2009 Bill Peck <bpeck@redhat.com> - 0.4.45-0
+- updated rhts-checkin to report anaconda logs to legacy rhts.
 * Tue Sep 15 2009 Bill Peck <bpeck@redhat.com> - 0.4.44-0
 - fixed wrong default language for Fedora kickstarts
 - attempted to make broken search a little better.
