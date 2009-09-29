@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env python
 
 # Beah - Test harness. Part of Beaker project.
 #
@@ -18,14 +18,7 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-if [[ "$0" == "setup.sh" ]]; then
-	echo "*** This script should be sourced \". $0\" not executed." >&2
-	exit 1
-fi
+from beah.tasks.rhts_xmlrpc import main
 
-export BEAHLIB_ROOT=$PWD
+main('examples/tests/rhtsex')
 
-export PATH=$PATH:$PWD/bin:$PWD/beah/bin
-export PYTHONPATH=$PYTHONPATH:$PWD
-
-echo "Environment is set. Run srv, out_backend or cmd_backend"

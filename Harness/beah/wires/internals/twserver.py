@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # Beah - Test harness. Part of Beaker project.
 #
 # Copyright (C) 2009 Marian Csontos <mcsontos@redhat.com>
@@ -18,10 +17,16 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 from beah.wires.internals.twadaptors import BackendAdaptor_JSON, TaskAdaptor_JSON
-
+from beah.wires.internals.twtask import Spawn
+from beah.core.controller import Controller
+from beah import config
 from twisted.internet import protocol
-
+from twisted.internet import reactor
 import logging
+import logging.handlers
+import os
+import sys
+
 log = logging.getLogger('beacon')
 
 class BackendListener(protocol.ServerFactory):
@@ -30,7 +35,7 @@ class BackendListener(protocol.ServerFactory):
         self.controller = controller
 
     def buildProtocol(self, addr):
-        print self.__class__.__name__, ': Connected.  Address: %r' % addr
+        log.info('%s: Connected.  Address: %s', self.__class__.__name__, addr)
         backend = self.protocol()
         backend.set_controller(self.controller)
         return backend
@@ -41,56 +46,47 @@ class TaskListener(protocol.ServerFactory):
         self.controller = controller
 
     def buildProtocol(self, addr):
-        print self.__class__.__name__, ': Connected.  Address: %r' % addr
+        log.info('%s: Connected.  Address: %s', self.__class__.__name__, addr)
         task = self.protocol()
         task.set_controller(self.controller)
         return task
 
-from twisted.internet import reactor
-def start_server(config=None, backend_host=None, backend_port=None,
+def start_server(conf=None, backend_host=None, backend_port=None,
         backend_adaptor=BackendAdaptor_JSON,
         task_host=None, task_port=None,
         task_adaptor=TaskAdaptor_JSON, spawn=None):
+
     # CONFIG:
-    if not config:
-        from beah import config
-        config.config(DEVEL=lambda: True, SRV_LOG=lambda: True)
-        #print dir(config)
+    if not conf:
+        conf = config.main_config()
 
     # LOGGING:
-    import logging
-    log.setLevel(logging.WARNING if not config.DEVEL() else logging.DEBUG)
+    log.setLevel(logging.WARNING if not config.parse_bool(conf.get('CONTROLLER', 'DEVEL')) else logging.DEBUG)
 
     # Create a directory for logging and check permissions
-    import os
-    try:
-        if not os.access(config.LOG_PATH(), os.F_OK):
-            try:
-                os.makedirs(config.LOG_PATH(), mode=0755)
-            except:
-                print "WARNING: Could not create %s." % config.LOG_PATH()
-                # FIXME: should create a temp file
-                raise
-        elif not os.access(config.LOG_PATH(), os.X_OK | os.W_OK):
-            print "WARNING: Wrong access rights to %s." % config.LOG_PATH()
+    lp = conf.get('CONTROLLER', 'LOG_PATH')
+    if not os.access(lp, os.F_OK):
+        try:
+            os.makedirs(lp, mode=0755)
+        except:
+            print >> sys.stderr, "ERROR: Could not create %s." % lp
             # FIXME: should create a temp file
             raise
-    finally:
-        del os
+    elif not os.access(lp, os.X_OK | os.W_OK):
+        print >> sys.stderr, "ERROR: Wrong access rights to %s." % lp
+        # FIXME: should create a temp file
+        raise
 
-    import logging.handlers
-    lhandler = logging.handlers.RotatingFileHandler(config.LOG_FILE_NAME(),
-            maxBytes=100000, backupCount=5)
+    lhandler = logging.handlers.RotatingFileHandler(conf.get('CONTROLLER', 'LOG_FILE_NAME'),
+            maxBytes=1000000, backupCount=5)
     log.addHandler(lhandler)
 
     # RUN:
-    backend_host = backend_host or config.HOST()
-    backend_port = backend_port or config.PORT()
-    task_host = task_host or config.THOST()
-    task_port = task_port or config.TPORT()
-    from beah.wires.internals.twtask import Spawn
+    backend_host = backend_host or conf.get('BACKEND', 'INTERFACE')
+    backend_port = backend_port or int(conf.get('BACKEND', 'PORT'))
+    task_host = task_host or conf.get('TASK', 'INTERFACE')
+    task_port = task_port or int(conf.get('TASK', 'PORT'))
     spawn = spawn or Spawn(task_host, task_port)
-    from beah.core.controller import Controller
     controller = Controller(spawn, on_killed=lambda: reactor.stop())
     def on_killed():
         if not controller.backends:
@@ -98,9 +94,16 @@ def start_server(config=None, backend_host=None, backend_port=None,
             return
         reactor.callLater(2, reactor.stop)
     controller.on_killed = on_killed
+    log.info("################################")
+    log.info("#   Starting a Controller...   #")
+    log.info("################################")
+    log.info("Controller: BackendListener listening on %s:%s", backend_host,
+            backend_port)
     reactor.listenTCP(backend_port,
             BackendListener(controller, backend_adaptor),
             interface=backend_host)
+    log.info("Controller: TaskListener listening on %s:%s", task_host,
+            task_port)
     reactor.listenTCP(task_port, TaskListener(controller, task_adaptor),
             interface=task_host)
 

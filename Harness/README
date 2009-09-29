@@ -2,40 +2,76 @@
 
 WARNING: This is a (mostly working) prototype. Things may be broken.
 
+=== Installation ===
+
 To install, simply run:
 
   python setup.py install
 
+NOTE: This does not handle requirements! Use egg or rpm.
+
+Build/installation requires setuptools package.
+
+These python packages are required:
+ * twisted.core and twisted.web
+ * zope.interface
+ * simplejson
+
+NOTE: When using Python eggs, there is no Twisted egg on PyPI, one has to use
+Twisted_Web and Twisted_Core eggs.
+
+==== Obvious (or not?) ====
+
+If installing for non-default python instance simple use that interpreter e.g.:
+
+  /usr/local/bin/python26 setup.py install
+
+For installing into non-standard directory use --prefix option e.g.:
+
+  python setup.py install --prefix=/usr/local/share/beah
+
+To build RPMs, use
+
+  python setup.py bdist_rpm
+
 === Usage ===
 
-bin directory contains few executables:
+==== Set-up ====
 
- * srv - controller server
- * cmd_backend - backend to issue commands to controller. Enter `help' when
-   "beacon>" prompt is displayed.
- * out_backend - backend to display messages from controller
+To set-up development environment source dev-env.sh. Type
+
+        . dev-env.sh
+
+in shell, which will set required environment variables (PATH and PYTHONPATH).
+This is not required when package is installed.
+
+==== Run ====
+
+After set-up, run
+
+        launcher a
+
+in the same shell, which will start server and backends in separate terminals.
+Or launch components yourself.
+
+Development environment provides these shell functions:
+
+ * beah-srv - controller server
+ * beah-cmd-backend - backend to issue commands to controller. Enter `help'
+   when "beacon>" prompt is displayed.
+ * beah-out-backend - backend to display messages from controller
  * beah - command line tool. Use `beah help' to display help. This uses the
-   same command set as cmd_backend.
+   same command set as beah-cmd-backend
+ * launcher - wrapper to start these programms in new terminal windows.
 
- * mtail_srv - run srv and out_backend in single window (using multitail tool.)
+beah-out-backend, beah-cmd-backend and beah will wait for controller.
+
+Few auxiliary binaries are provided in bin directory:
+
+ * mtail_srv - run srv and beah-out-backend in single window (using multitail
+   tool.)
  * beat_tap_filter - a filter taking a Perl's Test::Harness::TAP format on
    stdin and producing stream of Events on stdout.
-
-out_backend, cmd_backend and beah will wait for controller.
-
-I recomend to use three terminal windows to run srv, out_backend and
-cmd_backend (or beah) them separately.
-
-Some environment settings are required (PATH and PYTHONPATH). Source setup.sh
-first before running any of these programs:
-
-        . setup.sh
-
-or simply run
-
-        ./launcher a
-
-which will setup environment and run all three programs in new terminals.
 
 There are few test tasks in examples/tasks directory:
 
@@ -45,19 +81,16 @@ There are few test tasks in examples/tasks directory:
  * flood - flooding Controller with messges. This task will not finish and has
    to be killed (in a `pkill flood' manner.)
  * socket - a task using socket to talk to Controller.
- * sock_pipe - a task using socket to talk to Controller and named-pipe
-   to collect data from test(s). (WORK IN PROGRESS. NOT WORKING ATM.)
 
 Actually a_task and a_task.sh are a simple demonstration of how the test might
 look like, though it is not definite and more comfortable API will be
 provided.
 
-In default configuration (not that there is anything else at the moment)
-server is listenning on localhost:12432 for backends and localhost:12434 for
-tasks.
+In default configuration server is listenning on localhost:12432 for backends
+and localhost:12434 for tasks.
 
-cmd_backend does not offer history or command line editing features (it is on
-TODO list) and it is better to use beah command line tool.
+beah-cmd-backend does not offer history or command line editing features (it
+is on TODO list) thus it is more convenient to use beah command line tool.
 
 The commands supported are:
 
@@ -68,7 +101,7 @@ PING [MESSAGE]
         ping a controller, response is broadcasted to all backends.
 
 run TASK
-r TASK  run a task. TASK is an executable.
+r TASK  run a task. TASK must be an executable file.
 
 kill    kill a controller.
 
@@ -80,8 +113,8 @@ q       close this backend.
 help
 h       print this help message.
 
-With default configuration a Controller's log is written to
-/tmp/var/log/beacon.log
+Controller's log is written to:
+[/tmp]/var/log/beah.log
 
 === Glossary ===
 

@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 # Beah - Test harness. Part of Beaker project.
 #
 # Copyright (C) 2009 Marian Csontos <mcsontos@redhat.com>
@@ -70,6 +68,13 @@ def lose_item(data, origin={}, timestamp=None):
 
 def output(data, out_handle="", origin={}, timestamp=None):
     return Event('output', origin, timestamp, out_handle=out_handle, data=data)
+def stdout(data, origin={}, timestamp=None):
+    return output(data, "stdout", origin, timestamp)
+def stderr(data, origin={}, timestamp=None):
+    return output(data, "stderr", origin, timestamp)
+
+def output(data, out_handle="", origin={}, timestamp=None):
+    return event('output', origin, timestamp, out_handle=out_handle, data=data)
 def stdout(data, origin={}, timestamp=None):
     return output(data, "stdout", origin, timestamp)
 def stderr(data, origin={}, timestamp=None):

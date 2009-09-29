@@ -23,8 +23,6 @@ from beah.wires.internals.twadaptors import ControllerAdaptor_Task_JSON
 from beah.wires.internals.twtask import start_task
 from beah.wires.internals.twmisc import OsFifo
 from beah.misc import mktemppipe
-from beah import config
-config.config()
 
 class DummyTestProtocol(protocol.ProcessProtocol):
 

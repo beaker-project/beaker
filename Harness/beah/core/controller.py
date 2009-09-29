@@ -16,27 +16,36 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-import traceback, exceptions
+import traceback
+import exceptions
+import logging
 from beah.core import event, command
 from beah.core.constants import ECHO
 from beah.misc import Raiser
 from beah import config
+from beah.misc.log_this import log_this
 
 ################################################################################
 # Logging:
 ################################################################################
-import logging
 log = logging.getLogger('beacon')
 
-if config.SRV_LOG():
+# FIXME: !!!
+conf = config.main_config()
+
+if config.parse_bool(conf.get('CONTROLLER', 'CONSOLE_LOG')):
     def log_print(level, args, kwargs):
+        """Redirect log messages - to stdout"""
         print level, args[0] % args[1:]
 else:
     def log_print(level, args, kwargs):
+        """Redirect log messages - to /dev/null"""
         pass
 
 def mklog(level, logf):
+    """Create a wrapper for logging."""
     def log_w_level(*args, **kwargs):
+        """Log wrapper - redirect log message and log it."""
         log_print(level, args, kwargs)
         return logf(*args, **kwargs)
     return log_w_level
@@ -47,8 +56,8 @@ log_warning = mklog("--- WARNING: ", log.warning)
 log_error   = mklog("--- ERROR:   ", log.error)
 
 # INFO: This is for debugging purposes only - allows tracing functional calls
-from beah.misc.log_this import log_this
-fcall_log = log_this(log_debug, config.LOG())
+fcall_log = log_this(log_debug,
+        config.parse_bool(conf.get('CONTROLLER', 'DEVEL')))
 
 ################################################################################
 # Controller class:
@@ -67,7 +76,7 @@ class Controller(object):
         self.tasks = []
         self.backends = []
         self.out_backends = []
-        self.config = {}
+        self.conf = {}
         self.killed = False
         self.on_killed = on_killed or self.__ON_KILLED
 
@@ -90,6 +99,13 @@ class Controller(object):
 
     def add_task(self, task):
         if task and not (task in self.tasks):
+            if 'task_info' not in dir(task):
+                task.task_info = {}
+            if 'origin' not in dir(task):
+                task.origin = {}
+            if not task.origin.has_key('task_info'):
+                task.origin['task_info'] = task.task_info
+
             self.tasks.append(task)
             return True
 
@@ -97,6 +113,14 @@ class Controller(object):
         if task and task in self.tasks:
             self.tasks.remove(task)
             return True
+
+    def find_task(self, task_id):
+        for task in self.tasks:
+            if ('task_info' in dir(task) and
+                    task.task_info.has_key('id') and
+                    task.task_info['id'] == task_id):
+                return task
+        return None
 
     def proc_evt(self, task, evt):
         """Process Event received from task.
@@ -106,13 +130,28 @@ class Controller(object):
         
         This is the only method mandatory for Task side Controller-Adaptor."""
         log_debug("Controller: proc_evt(..., %r)", evt)
-        # FIXME: should any processing go here - e.g. task talking to
+        if evt.event() == 'introduce':
+            # FIXME: find a task by id and set task.task_info
+            task_id = evt.arg('id')
+            task.origin['source'] = "socket"
+            a_task = self.find_task(task_id)
+            if a_task:
+                task.task_info = a_task.task_info
+            else:
+                log_error("Controller: No task %s", task_id)
+                task.task_info = dict(id=-1, claimed_id=task_id)
+            task.origin['task_info'] = task.task_info
+            return
         # controller - spawn_task
+        orig = evt.origin()
+        if not orig.has_key('task_info'):
+            orig['task_info'] = dict(task.origin)
+        orig['task_info'].update(task.task_info)
         self.send_evt(evt)
 
-    def send_evt(self, evt, all=False):
+    def send_evt(self, evt, to_all=False):
         #cmd_str = "%s\n" % json.dumps(evt)
-        backends = self.out_backends if not all else self.backends
+        backends = self.out_backends if not to_all else self.backends
         for backend in backends:
             try:
                 backend.proc_evt(evt)
@@ -121,10 +160,10 @@ class Controller(object):
 
     def task_started(self, task):
         self.add_task(task)
-        self.send_evt(event.start(task.task_info))
+        self.generate_evt(event.start(task.task_info))
 
     def task_finished(self, task, rc):
-        self.send_evt(event.end(task.task_info, rc))
+        self.generate_evt(event.end(task.task_info, rc))
         self.remove_task(task)
 
     def handle_exception(self, message="Exception raised."):
@@ -136,70 +175,69 @@ class Controller(object):
         @backend is the backend, which issued the command.
         @cmd is a command. Should be an instance of Command class.
         
-        This is the only method mandatory for Backend side Controller-Adaptor."""
+        This is the only method mandatory for Backend side
+        Controller-Adaptor."""
         log_debug("Controller: proc_cmd(..., %r)", cmd)
-        try:
-            handler = self.__getattribute__("proc_cmd_"+cmd.command())
-        except:
-            backend.proc_evt(event.echo(cmd, ECHO.NOT_IMPLEMENTED,
-                origin=self.__origin))
-            return
-        try:
-            handler(backend, cmd)
-            backend.proc_evt(event.echo(cmd, ECHO.OK, origin=self.__origin))
-        except:
-            self.handle_exception("Command %s raised an exception." %
-                    cmd.command())
-            backend.proc_evt(event.echo(cmd, rc=ECHO.EXCEPTION,
-                origin=self.__origin, exception=traceback.format_exc()))
-        # FIXME: Test: will __getattribute__ work correctly on old python's?
-        # Use following old code if not:
-        #try:
-        #    handler = self.__dict__["proc_cmd_"+cmd.command()]
-        #except:
-        #    try:
-        #        handler = self.__class__.__dict__["proc_cmd_"+cmd.command()]
-        #    except:
-        #        backend.proc_evt(event.echo(cmd, ECHO.NOT_IMPLEMENTED,
-        #            origin=self.__origin))
-        #        return
-        #try:
-        #    handler(self, backend, cmd)
-        #    backend.proc_evt(event.echo(cmd, ECHO.OK, origin=self.__origin))
-        #except:
-        #    self.handle_exception("Command %s raised an exception." %
-        #            cmd.command())
-        #    backend.proc_evt(event.echo(cmd, rc=ECHO.EXCEPTION,
-        #        origin=self.__origin, exception=traceback.format_exc()))
+        handler = None
+        hana = "proc_cmd_"+cmd.command()
+        if hana in dir(self):
+            handler = self.__getattribute__(hana)
+        if not handler:
+            evt = event.echo(cmd, ECHO.NOT_IMPLEMENTED, origin=self.__origin)
+        else:
+            evt = event.echo(cmd, ECHO.OK, origin=self.__origin)
+            try:
+                handler(backend, cmd, evt)
+            except:
+                self.handle_exception("Handling %s raised an exception." %
+                        cmd.command())
+                evt.args().update(rc=ECHO.EXCEPTION,
+                        exception=traceback.format_exc())
+        log_debug("Controller: echo(%r)", evt)
+        backend.proc_evt(evt)
 
-    def proc_cmd_ping(self, backend, cmd):
-        backend.proc_evt(event.event('pong', message=cmd.arg('message', None)))
+    def generate_evt(self, evt, to_all=False):
+        """Send a new generated event.
 
-    def proc_cmd_PING(self, backend, cmd):
-        self.send_evt(event.event('PONG', message=cmd.arg('message', None)))
+        Use this method for sending newly generated events, i.e. not an echo,
+        and not when forwarding events from tasks.
+        
+        to_all - if True, send to all backends, including no_output BE's
+        """
+        log_debug("Controller: generate_evt(..., %r, %r)", evt, to_all)
+        self.send_evt(evt, to_all)
 
-    def proc_cmd_config(self, backend, cmd):
-        self.config.update(cmd.args())
+    def proc_cmd_ping(self, backend, cmd, echo_evt):
+        evt = event.event('pong', message=cmd.arg('message', None))
+        log_debug("Controller: backend.proc_evt(%r)", evt)
+        backend.proc_evt(evt)
 
-    def proc_cmd_run(self, backend, cmd):
+    def proc_cmd_PING(self, backend, cmd, echo_evt):
+        self.generate_evt(event.event('PONG', message=cmd.arg('message', None)))
+
+    def proc_cmd_config(self, backend, cmd, echo_evt):
+        self.conf.update(cmd.args())
+
+    def proc_cmd_run(self, backend, cmd, echo_evt):
         # FIXME: assign unique id:
         task_info = dict(cmd.arg('task_info'))
         task_info['id'] = self.__tid
+        echo_evt.args()['task_id'] = self.__tid
         self.__tid += 1
         task_env = dict(cmd.arg('env') or {})
         task_args = list(cmd.arg('args') or [])
         self.spawn_task(self, backend, task_info, task_env, task_args)
 
-    def proc_cmd_kill(self, backend, cmd):
+    def proc_cmd_kill(self, backend, cmd, echo_evt):
         # FIXME: are there any running tasks? - expects kill --force
         # FIXME: [optional] broadcast SIGINT to children
-        # FIXME: [optional] add timeout - if there are still some backends running, close
-        # anyway...
+        # FIXME: [optional] add timeout - if there are still some backends
+        # running, close anyway...
         self.killed = True
-        self.send_evt(event.event('bye', message='killed'), all=True)
+        self.generate_evt(event.event('bye', message='killed'), to_all=True)
         self.on_killed()
 
-    def proc_cmd_dump(self, backend, cmd):
+    def proc_cmd_dump(self, backend, cmd, echo_evt):
         answ = ""
 
         answ += "\n== Backends ==\n"
@@ -217,20 +255,22 @@ class Controller(object):
         else:
             answ += "None\n"
 
-        if self.config:
-            answ += "\n== Config ==\n%s\n" % (self.config,)
+        if self.conf:
+            answ += "\n== Config ==\n%s\n" % (self.conf,)
 
         if self.killed:
             answ += "\n== Killed ==\nTrue\n"
 
-        backend.proc_evt(event.event('dump', message=answ))
+        evt = event.event(event.event('dump', message=answ))
+        log_debug("Controller: backend.proc_evt(%r)", evt)
+        backend.proc_evt(evt)
 
-        print answ
+        log_info('%s', answ)
 
-    def proc_cmd_no_input(self, backend, cmd):
+    def proc_cmd_no_input(self, backend, cmd, echo_evt):
         pass
 
-    def proc_cmd_no_output(self, backend, cmd):
+    def proc_cmd_no_output(self, backend, cmd, echo_evt):
         # FIXME: Do not delete from backends. There should be a list of all
         # backends, for broadcast - e.g. bye event.
         if backend in self.out_backends:

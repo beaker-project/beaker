@@ -20,13 +20,14 @@ from twisted.web import xmlrpc
 from twisted.internet import reactor
 from beah.wires.internals.twmisc import serveAnyChild, serveAnyRequest
 import os
+import exceptions
 
 recipes = {}
 fqdn_recipes = {}
 task_recipe = {}
 
-def get_recipe(fqdn=None, id=None, task_id=None):
-    print "get_recipe(fqdn=%s, id=%s)" % (fqdn, id)
+def get_recipe_(fqdn=None, id=None, task_id=None):
+    print "get_recipe_(fqdn=%s, id=%s)" % (fqdn, id)
     if fqdn is not None:
         if not fqdn_recipes.has_key(fqdn):
             return None
@@ -44,16 +45,65 @@ def get_recipe(fqdn=None, id=None, task_id=None):
     return None
 
 def get_recipe_xml(**kwargs):
-    rec = get_recipe(**kwargs)
+    rec = get_recipe_(**kwargs)
     if not rec:
         return None
     return rec[0] % rec[1]
 
 def get_recipe_args(**kwargs):
-    rec = get_recipe(**kwargs)
+    rec = get_recipe_(**kwargs)
     if not rec:
         return None
     return rec[1]
+
+RESULT_TYPE_ = ["Pass", "Warn", "Fail", "Panic"]
+
+def do_get_recipe(fname, fqdn):
+    print "%s(fqdn=%r)" % (fname, fqdn)
+    return get_recipe_xml(fqdn=fqdn)
+
+def do_task_start(fname, task_id, kill_time):
+    print "%s(task_id=%r, kill_time=%r)" % (fname, task_id, kill_time)
+    rec_args = get_recipe_args(task_id=task_id)
+    if not rec_args:
+        return "ERROR: no task %s" % task_id
+    rec_args['task%s_stat' % task_id]='Running'
+    return 0
+
+def do_task_stop(fname, task_id, stop_type, msg):
+    """
+    Stop a task
+
+    stop_type -- 'Stop'|'Abort'|'Cancel'
+
+    return 0 on success, error message otherwise
+    """
+    print "%s(task_id=%r, stop_type=%r, msg=%r)" % (fname, task_id, stop_type,
+            msg)
+    rec_args = get_recipe_args(task_id=task_id)
+    if not rec_args:
+        return "ERROR: no task %s" % task_id
+    rec_args['task%s_stat' % task_id]=stop_type
+    return 0
+
+def do_task_result(task_id, result_type, path, score, summary):
+    """
+    Report task result
+
+    result_type -- 'Pass'|'Warn'|'Fail'|'Panic'
+
+    return 0 on success, error message otherwise
+    """
+    print "%s(task_id=%r, result_type=%r, path=%r, score=%r, summary=%r)" % \
+            (fname, task_id, result_type, path, score, summary)
+    rec_args = get_recipe_args(task_id=task_id)
+    if not rec_args:
+        return "ERROR: no task %s" % task_id
+    ix = 'task%s_res' % task_id
+    result = rec_args[ix]
+    if RESULT_TYPE_.find(result) < RESULT_TYPE_.find(result_type):
+        rec_args[ix]=result_type
+    return 0
 
 ################################################################################
 # XML-RPC HANDLERS:
@@ -61,54 +111,50 @@ def get_recipe_args(**kwargs):
 class LCRecipes(xmlrpc.XMLRPC):
     @staticmethod
     def return_recipe(**kwargs):
-        rec_xml = get_recipe_xml(**kwargs)
-        if not rec_xml:
-            return None
-        return dict(xml = rec_xml)
+        return get_recipe_xml(**kwargs)
 
     def xmlrpc_to_xml(self, recipe_id):
+        print "recipes.to_xml(%r)" % recipe_id
         return self.return_recipe(id=recipe_id)
 
     def xmlrpc_system_xml(self, fqdn):
-        return self.return_recipe(fqdn=fqdn)
+        #return self.return_recipe(fqdn=fqdn)
+        return do_get_recipe("recipes.system_xml", fqdn)
 
 class LCRecipeTasks(xmlrpc.XMLRPC):
-    result_type_ = ["Pass", "Warn", "Fail", "Panic"]
+
     def xmlrpc_Start(self, task_id, kill_time):
-        print "tasks.Start(task_id=%r, kill_time=%r)" % (task_id, kill_time)
-        rec_args = get_recipe_args(task_id=task_id)
-        if not rec_args:
-            return "ERROR: no task %s" % task_id
-        rec_args['task%s_stat' % task_id]='Running'
-        return 0
+        return do_task_start("recipes.tasks.Start", task_id, kill_time)
+
     def xmlrpc_Stop(self, task_id, stop_type, msg):
-        # stop_type: Stop|Abort|Cancel
-        print "tasks.Start(task_id=%r, stop_type=%r, msg=%r)" % (task_id, stop_type, msg)
-        rec_args = get_recipe_args(task_id=task_id)
-        if not rec_args:
-            return "ERROR: no task %s" % task_id
-        rec_args['task%s_stat' % task_id]=stop_type
-        return 0
+        return do_task_stop("recipes.tasks.Stop", task_id, stop_type, msg)
+
     def xmlrpc_Result(self, task_id, result_type, path, score, summary):
-        # result_type: Pass|Warn|Fail|Panic
-        print "tasks.Result(task_id=%r, result_type=%r, path=%r, score=%r, summary=%r)" % (task_id, result_type, path, score, summary)
-        rec_args = get_recipe_args(task_id=task_id)
-        if not rec_args:
-            return "ERROR: no task %s" % task_id
-        ix = 'task%s_res' % task_id
-        result = rec_args[ix]
-        if self.result_type_.find(result) < self.result_type_.find(result_type):
-            rec_args[ix]=result_type
-        return 0
+        return do_task_result("recipes.tasks.Result", task_id, result_type,
+                path, score, summary)
 
 class LCHandler(xmlrpc.XMLRPC):
-    """An example object to be published."""
+
+    """XMLRPC handler to handle requests to LC."""
 
     def __init__(self, *args, **kwargs):
         xmlrpc.XMLRPC.__init__(self, *args, **kwargs)
         recipes = LCRecipes()
         recipes.putSubHandler('tasks', LCRecipeTasks())
         self.putSubHandler('recipes', recipes)
+
+    def xmlrpc_get_recipe(self, fqdn):
+        return do_get_recipe("get_recipe", fqdn)
+
+    def xmlrpc_task_start(self, task_id, kill_time):
+        return do_task_start("task_start", task_id, kill_time)
+
+    def xmlrpc_task_stop(self, task_id, stop_type, msg):
+        return do_task_stop("task_stop", task_id, stop_type, msg)
+
+    def xmlrpc_task_result(self, task_id, result_type, path, score, summary):
+        return do_task_result("task_result", task_id, result_type, path, score,
+                summary)
 
     def catch_xmlrpc(self, method, *args):
         """Handler for unhandled requests."""
@@ -141,6 +187,7 @@ if __name__ == '__main__':
                 <hostRequires>
                     <system_type value="Machine"/>
                 </hostRequires>
+                <!--
                 <task avg_time="1200" id="41"
                         name="/distribution/install" role="STANDALONE"
                         result="%(task41_res)s"
@@ -170,10 +217,91 @@ if __name__ == '__main__':
                     <params>
                         <param name="KERNELARGNAME" value="kernel"/>
                         <param name="KERNELARGVARIANT" value="up"/>
-                        <param name="KERNELARGVERSION" value="2.6.18-153.el5testabort"/>
+                        <param name="KERNELARGVERSION"
+                            value="2.6.18-153.el5testabort"/>
                     </params>
                     <rpm name="rh-tests-examples-testargs.noarch"/>
                 </task>
+                -->
+
+                <task avg_time="1200" id="43"
+                        name="/beah/examples/tasks/a_task" role="STANDALONE"
+                        result="%(task43_res)s"
+                        status="%(task43_stat)s"
+                        >
+                    <roles>
+                        <role value="STANDALONE">
+                            <system value="%(machine0)s"/>
+                            <system value="%(machine1)s"/>
+                        </role>
+                    </roles>
+                    <executable url="examples/tasks/a_task"/>
+                </task>
+                <task avg_time="1200" id="44"
+                        name="/beah/examples/tasks/socket" role="STANDALONE"
+                        result="%(task44_res)s"
+                        status="%(task44_stat)s"
+                        >
+                    <roles>
+                        <role value="STANDALONE">
+                            <system value="%(machine0)s"/>
+                            <system value="%(machine1)s"/>
+                        </role>
+                    </roles>
+                    <executable url="examples/tasks/socket"/>
+                </task>
+                <task avg_time="1200" id="45"
+                        name="/beah/examples/tasks/rhts" role="STANDALONE"
+                        result="%(task45_res)s"
+                        status="%(task45_stat)s"
+                        >
+                    <roles>
+                        <role value="STANDALONE">
+                            <system value="%(machine0)s"/>
+                            <system value="%(machine1)s"/>
+                        </role>
+                    </roles>
+                    <executable url="examples/tasks/rhts" />
+                </task>
+
+                <!--
+                <task avg_time="1200" id="46"
+                        name="/beah/examples/tests/rhtsex" role="STANDALONE"
+                        result="%(task46_res)s"
+                        status="%(task46_stat)s"
+                        >
+                    <roles>
+                        <role value="STANDALONE">
+                            <system value="%(machine0)s"/>
+                            <system value="%(machine1)s"/>
+                        </role>
+                    </roles>
+                    <executable url="python">
+                        <arg value="beah/tasks/rhts_xmlrpc.py" />
+                        <arg value="examples/tests/rhtsex" />
+                    </executable>
+                </task>
+                -->
+
+                <task avg_time="1200" id="47"
+                        name="/beah/examples/tests/testargs" role="STANDALONE"
+                        result="%(task47_res)s"
+                        status="%(task47_stat)s"
+                        >
+                    <roles>
+                        <role value="STANDALONE">
+                            <system value="%(machine0)s"/>
+                            <system value="%(machine1)s"/>
+                        </role>
+                    </roles>
+                    <executable url="python">
+                        <arg value="beah/tasks/rhts_xmlrpc.py" />
+                        <arg value="examples/tests/testargs" />
+                    </executable>
+                </task>
+
+                <!--
+                -->
             </recipe>
         """
 
@@ -191,11 +319,17 @@ if __name__ == '__main__':
             task42_stat="Waiting",
             task43_stat="Waiting",
             task44_stat="Waiting",
+            task45_stat="Waiting",
+            task46_stat="Waiting",
+            task47_stat="Waiting",
 
             task41_res="None",
             task42_res="None",
             task43_res="None",
             task44_res="None",
+            task45_res="None",
+            task46_res="None",
+            task47_res="None",
             )
 
     recipes[21] =(recipe21, args21)
@@ -203,6 +337,9 @@ if __name__ == '__main__':
     task_recipe[42] = 21
     task_recipe[43] = 21
     task_recipe[44] = 21
+    task_recipe[45] = 21
+    task_recipe[46] = 21
+    task_recipe[47] = 21
     fqdn_recipes["glen-mhor.englab.brq.redhat.com"           ] = 21
     fqdn_recipes["localhost"                                 ] = 21
     fqdn_recipes["dell-pe1850-01.rhts.eng.bos.redhat.com"    ] = 21
