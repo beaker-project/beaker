@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 # infrastructure.sh - part of BeakerLib
 # Authors: 	Petr Muller     <pmuller@redhat.com> 
