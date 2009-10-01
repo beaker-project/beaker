@@ -127,13 +127,13 @@ class Netboot:
             raise BX(_("distro not defined"))
         if hostname:
             system = System.query().filter(System.fqdn == hostname).one()
+            system.activity.append(SystemActivity(system.user, 'VIA %s' % None, 'Reserved', 'User', "", "%s" % system.user))
             system.action_auto_provision(distro, 
                                          ks_meta, 
                                          bootargs, 
                                          None, 
                                          kickstart)
-            activity = SystemActivity(system.user, 'VIA %s' % None, 'Provision', 'Distro', "", "Success: %s" % distro.install_name)
-            system.activity.append(activity)
+            system.activity.append(SystemActivity(system.user, 'VIA %s' % None, 'Provision', 'Distro', "", "Success: %s" % distro.install_name))
         else:
             raise BX(_("hostname not defined"))
         return 0
