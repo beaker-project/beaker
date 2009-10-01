@@ -1637,14 +1637,16 @@ class Distro(object):
                   where(arch_table.c.id==system_arch_map.c.arch_id).
                   where(system_table.c.id==exclude_osmajor_table.c.system_id).
                   where(arch_table.c.id==exclude_osmajor_table.c.arch_id).
-                  where(ExcludeOSMajor.osmajor==self.osversion.osmajor)
+                  where(ExcludeOSMajor.osmajor==self.osversion.osmajor).
+                  where(ExcludeOSMajor.arch==self.arch)
                                       ),
                          System.id.in_(select([system_table.c.id]).
                   where(system_table.c.id==system_arch_map.c.system_id).
                   where(arch_table.c.id==system_arch_map.c.arch_id).
                   where(system_table.c.id==exclude_osversion_table.c.system_id).
                   where(arch_table.c.id==exclude_osversion_table.c.arch_id).
-                  where(ExcludeOSVersion.osversion==self.osversion)
+                  where(ExcludeOSVersion.osversion==self.osversion).
+                  where(ExcludeOSVersion.arch==self.arch)
                                       )
                         )
                     )

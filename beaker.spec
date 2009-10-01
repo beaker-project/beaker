@@ -2,7 +2,7 @@
 %{!?pyver: %define pyver %(%{__python} -c "import sys ; print sys.version[:3]")}
 
 Name:           beaker
-Version:        0.4.46
+Version:        0.4.47
 Release:        0%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
@@ -133,6 +133,9 @@ ln -s Fedora.ks $RPM_BUILD_ROOT/var/lib/cobbler/kickstarts/Fedoradevelopment.ks
 /usr/share/man/man1/beakerlib*
 
 %changelog
+* Thu Oct 01 2009 Bill Peck <bpeck@redhat.com> - 0.4.47-0
+- Fixed system exclude to work properly from Distro.systems()
+  previously excluding one arch would exclude all.
 * Wed Sep 29 2009 Bill Peck <bpeck@redhat.com> - 0.4.46-0
 - updated rhts-checkin to report anaconda logs to legacy rhts.
 * Tue Sep 15 2009 Bill Peck <bpeck@redhat.com> - 0.4.44-0
