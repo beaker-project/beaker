@@ -2,7 +2,7 @@
  name="${name}"
  action="${tg.url(action)}"
  method="${method}" width="100%">
- <p>All options should be seperated by a comma.</p>
+ <p>All options should be separated by a comma.</p>
  <p>Kickstart meta are variables passed to cobblers kickstart template engine.  You should check with cobbler for what variables are avialble</p>
  <p>Kernel options are passed at the command line for installations.  ksdevice=bootif is an example along with console=ttyS0.</p>
  <p>Kernel options Post are also command line options but they are for after the installtion has completed.</p>
