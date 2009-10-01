@@ -180,6 +180,21 @@ fi
 /usr/share/man/man1/beakerlib*
 
 %changelog
+* Thu Oct 01 2009 Bill Peck <bpeck@redhat.com> - 0.4.48-0
+- Fixed system exclude to work properly from Distro.systems()
+  previously excluding one arch would exclude all.
+- added first report. reserve, shows length of currently reserved systems
+* Wed Sep 29 2009 Bill Peck <bpeck@redhat.com> - 0.4.46-0
+- updated rhts-checkin to report anaconda logs to legacy rhts.
+* Tue Sep 15 2009 Bill Peck <bpeck@redhat.com> - 0.4.44-0
+- fixed wrong default language for Fedora kickstarts
+- attempted to make broken search a little better.
+* Thu Sep 10 2009 Bill Peck <bpeck@redhat.com> - 0.4.43-0
+- added RHEL6/F12 package groups for development
+* Thu Sep 03 2009 Bill Peck <bpeck@redhat.com> - 0.4.42-0
+- fixed saving tag Activity on Distro.
+* Thu Aug 27 2009 Bill Peck <bpeck@redhat.com> - 0.4.41-0
+- use action_release() in controllers
 * Thu Aug 27 2009 Bill Peck <bpeck@redhat.com> - 0.4.40-0
 - option to not wait for power commands if talking to cobbler 1.7 or newer
 * Tue Aug 25 2009 Bill Peck <bpeck@redhat.com> - 0.4.39-7
