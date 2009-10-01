@@ -11,6 +11,7 @@ from beaker.server.labcontroller import LabControllers
 from beaker.server.user import Users
 from beaker.server.distro import Distros
 from beaker.server.activity import Activities
+from beaker.server.reports import Reports
 from beaker.server.widgets import myPaginateDataGrid
 from beaker.server.widgets import PowerTypeForm
 from beaker.server.widgets import PowerForm
@@ -192,6 +193,7 @@ class Root(RPCRoot):
     netboot = Netboot()
     auth = Auth()
     csv = CSV()
+    reports = Reports()
 
     id         = widgets.HiddenField(name='id')
     submit     = widgets.SubmitButton(name='submit')
