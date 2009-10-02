@@ -113,6 +113,11 @@ class XmlRecipe(ElementWrapper):
             else:
                 yield XmlTask(task)
 
+    def iter_repos(self):
+        for repos in self.wrappedEl['repos':]:
+            for repo in repos['repo':]:
+                yield XmlRepo(repo)
+
     def distroRequires(self, *args):
         return self.wrappedEl['distroRequires'].__repr__(True)
 
@@ -145,9 +150,6 @@ class XmlRecipe(ElementWrapper):
         elif attrname == 'kernel_options_post':
             return self.get_xml_attr('kernel_options_post', unicode, None)
         else: raise AttributeError, attrname
-
-    def __setattr__(self,item,value):
-        self.__dict__[item] = value
 
 class XmlRecipeMachine(XmlRecipe):
     def iter_guests(self):
@@ -185,8 +187,14 @@ class XmlTask(ElementWrapper):
             return XmlRpm(self.wrappedEl['rpm'])
         else: raise AttributeError, attrname
 
-    def __setattr__(self,item,value):
-        self.__dict__[item] = value
+
+class XmlRepo(ElementWrapper):
+    def __getattr__(self, attrname):
+        if attrname == 'name':
+            return self.get_xml_attr('name', unicode, u'None')
+        elif attrname == 'url': 
+            return self.get_xml_attr('url', unicode, u'None')
+        else: raise AttributeError, attrname
 
 class XmlParam(ElementWrapper):
     def __getattr__(self, attrname):

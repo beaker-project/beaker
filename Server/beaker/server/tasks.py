@@ -16,7 +16,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 from turbogears.database import session
-from turbogears import controllers, expose, flash, widgets, validate, error_handler, validators, redirect, paginate
+from turbogears import controllers, expose, flash, widgets, validate, error_handler, validators, redirect, paginate, config
 from turbogears import identity, redirect
 from cherrypy import request, response
 from kid import Element
@@ -42,7 +42,7 @@ class Tasks(RPCRoot):
     # For XMLRPC methods in this class.
     exposed = True
 
-    task_dir = '/tmp'
+    task_dir = config.get("basepath.rpms", "/tmp")
 
     upload = widgets.FileField(name='task_rpm', label='Task rpm')
     form = widgets.TableForm(

@@ -605,14 +605,23 @@ recipe_tag_map = Table('recipe_tag_map', metadata,
 )
 
 recipe_rpm_table =Table('recipe_rpm',metadata,
+        Column('id', Integer, primary_key=True),
         Column('recipe_id', Integer,
-                ForeignKey('recipe.id'), primary_key=True),
+                ForeignKey('recipe.id'), nullable=False),
         Column('package',Unicode(255)),
         Column('version',Unicode(255)),
         Column('release',Unicode(255)),
         Column('epoch',Integer),
         Column('arch',Unicode(255)),
         Column('running_kernel', Boolean)
+)
+
+recipe_repo_table =Table('recipe_repo',metadata,
+        Column('id', Integer, primary_key=True),
+        Column('recipe_id', Integer,
+                ForeignKey('recipe.id'), nullable=False),
+        Column('name',Unicode(255)),
+        Column('url',Unicode(1024))
 )
 
 recipe_task_table =Table('recipe_task',metadata,
@@ -2450,6 +2459,14 @@ class Recipe(MappedObject):
             recipe.setAttribute("variant", "%s" % self.distro.variant)
         if self.system:
             recipe.setAttribute("system", "%s" % self.system)
+        repos = self.doc.createElement("repos")
+        repo = self.doc.createElement("repo")
+        repo.setAttribute("name", "beaker-tasks")
+        repo.setAttribute("url", "http://%s/rpms" % get("servername", socket.gethostname()))
+        repos.appendChild(repo)
+        for repo in self.repos:
+            repos.appendChild(repo.to_xml())
+        recipe.appendChild(repos)
         drs = xml.dom.minidom.parseString(self.distro_requires)
         hrs = xml.dom.minidom.parseString(self.host_requires)
         for dr in drs.getElementsByTagName("distroRequires"):
@@ -2945,6 +2962,17 @@ class RecipeTaskParam(MappedObject):
         return param
 
 
+class RecipeRepo(MappedObject):
+    """
+    Custom repos 
+    """
+    def to_xml(self):
+        repo = self.doc.createElement("repo")
+        repo.setAttribute("name", "%s" % self.name)
+        repo.setAttribute("url", "%s" % self.url)
+        return repo
+
+
 class RecipeTaskComment(MappedObject):
     """
     User comments about the task execution.
@@ -3291,6 +3319,7 @@ mapper(Recipe, recipe_table,
                       'tags':relation(RecipeTag, 
                                       secondary=recipe_tag_map,
                                       backref='recipes'),
+                      'repos':relation(RecipeRepo),
                       'rpms':relation(RecipeRpm, backref='recipe'),
                       'result':relation(TaskResult, uselist=False),
                       'status':relation(TaskStatus, uselist=False)})
@@ -3303,6 +3332,7 @@ mapper(MachineRecipe, machine_recipe_table, inherits=Recipe,
 
 mapper(RecipeTag, recipe_tag_table)
 mapper(RecipeRpm, recipe_rpm_table)
+mapper(RecipeRepo, recipe_repo_table)
 
 mapper(RecipeTask, recipe_task_table,
         properties = {'results':relation(RecipeTaskResult, 

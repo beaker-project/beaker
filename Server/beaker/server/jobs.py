@@ -132,6 +132,8 @@ class Jobs(RPCRoot):
             recipe.guestargs = xmlrecipe.guestargs
         recipe.host_requires = xmlrecipe.hostRequires()
         recipe.distro_requires = xmlrecipe.distroRequires()
+        for xmlrepo in xmlrecipe.iter_repos():
+            recipe.repos.append(RecipeRepo(name=xmlrepo.name, url=xmlrepo.url))
         for xmltask in xmlrecipe.iter_tasks():
             recipetask = RecipeTask()
             try:
