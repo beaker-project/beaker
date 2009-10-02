@@ -607,6 +607,12 @@ explain what are you doing here).
 Returns the exit code of the command run. Asserts PASS when
 command's exit status is in the list of expected exit codes.
 
+Note: The output of rlRun is buffered when using C<-t> or C<-l>
+option (they use unix pipes, which are buffered by nature). If you
+need an unbuffered output just make sure that C<expect> package is
+installed on your system (its "unbuffer" tool will automatically
+be used to produce unbuffered output).
+
 =cut
 
 rlRun(){
@@ -670,7 +676,15 @@ rlRun(){
 
   rlLogDebug "rlRun: Running command: $command"
   
-  eval "$command" 2> >(sed -e "s/^/$TAG_ERR/g" | tee -a $LOG_FILE) 1> >(sed -e "s/^/$TAG_OUT/g" | tee -a $LOG_FILE)
+  if $DO_LOG || $DO_TAG; then
+    local UNBUFFER=''
+    if which unbuffer 1>/dev/null 2>&1; then
+        UNBUFFER='unbuffer '
+    fi
+    eval "$UNBUFFER$command" 2> >(sed -u -e "s/^/$TAG_ERR/g" | tee -a $LOG_FILE) 1> >(sed -u -e "s/^/$TAG_OUT/g" | tee -a $LOG_FILE)
+  else
+    eval "$command"
+  fi
   local exitcode=$?
   sync
   if $DO_LOG; then
