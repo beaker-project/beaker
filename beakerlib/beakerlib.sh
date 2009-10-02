@@ -1,3 +1,4 @@
+#!/bin/bash
 # Copyright (c) 2006 Red Hat, Inc. All rights reserved. This copyrighted material 
 # is made available to anyone wishing to use, modify, copy, or
 # redistribute it subject to the terms and conditions of the GNU General
@@ -161,6 +162,14 @@ Petr Splichal <psplicha@redhat.com>
 Ales Zelinka <azelinka@redhat.com>
 
 =cut
+
+if set -o | grep posix | grep on 
+then
+  set +o posix
+  export POSIXFIXED="YES"
+else
+  export POSIXFIXED="NO"
+fi
 
 set -e
 export BEAKERLIB=${BEAKERLIB:-"/usr/lib/beakerlib/"}

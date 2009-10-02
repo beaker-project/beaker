@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 # journal.sh - part of BeakerLib
 # Authors: 	Petr Muller     <pmuller@redhat.com> 
@@ -60,6 +60,11 @@ rlJournalStart(){
 	local TID=${TESTID:-"debugging"}
 	local PKG=${PACKAGE:-"debugging"}
 	$__INTERNAL_JOURNALIST init --id "$TID" --test "$TEST" --package "$PKG"
+  if [ $POSIXFIXED == "YES" ]
+  then
+    rlLogWarning "POSIX mode detected and switched off"
+    rlLogWarning "Please fix your test to have /bin/bash shebang"
+  fi
 }
 
 # backward compatibility

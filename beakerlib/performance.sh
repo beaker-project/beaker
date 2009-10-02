@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 # performance.sh - part of BeakerLib
 # Authors: 	Petr Muller     <pmuller@redhat.com> 
 #

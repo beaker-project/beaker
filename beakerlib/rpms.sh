@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 # rpms.sh - part of BeakerLib
 # Authors: 	Petr Muller     <pmuller@redhat.com> 
