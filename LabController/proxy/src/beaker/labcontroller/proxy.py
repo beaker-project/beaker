@@ -272,6 +272,32 @@ class Proxy(ProxyHelper):
         return self.hub.recipes.tasks.start(task_id, kill_time)
 
 
+    def install_start(self):
+    """ Called from %pre of the test machine.  We record a start
+        result on the scheduler and extend the watchdog
+        This is a little ugly.. but better than putting this logic in
+        kickstart
+    """
+        # extend watchdog by 3 hours 60 * 60 * 3
+        kill_time = 10800
+        # look up system recipe based on hostname...
+        # get first task
+        task = xmltramp.parse(self.get_recipe()).job.recipeSet.recipe.task()
+        # Only do this if first task is Running
+        if task['status'] == 'Running':
+            self.hub.recipes.tasks.result(task['id'],
+                                          'Pass',
+                                          'start',
+                                          0,
+                                          'Install Started')
+            return self.hub.recipes.tasks.extend(task['id'], kill_time)
+        return False
+
+    def extend_watchdog(self, task_id, kill_time):
+    """ tell the scheduler to extend the watchdog by kill_time seconds
+    """
+        return self.hub.recipes.tasks.extend(task_id, kill_time)
+
     def task_stop(self,
                   task_id,
                   stop_type,

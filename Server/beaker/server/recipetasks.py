@@ -75,6 +75,18 @@ class RecipeTasks(RPCRoot):
 
     @cherrypy.expose
     @identity.require(identity.not_anonymous())
+    def extend(self, task_id, kill_time):
+        """
+        Extend tasks watchdog by kill_time seconds
+        """
+        try:
+            task = RecipeTask.by_id(task_id)
+        except InvalidRequestError:
+            raise BX(_('Invalid task ID: %s' % task_id))
+        return task.extend(kill_time)
+
+    @cherrypy.expose
+    @identity.require(identity.not_anonymous())
     def stop(self, task_id, stop_type, msg=None):
         """
         Set task status to Completed

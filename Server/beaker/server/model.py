@@ -2785,6 +2785,13 @@ class RecipeTask(MappedObject):
                                                     seconds=self.task.avg_time)
         self.update_status()
 
+    def extend(self, kill_time):
+        """
+        Extend the watchdog by kill_time seconds
+        """
+        return self.recipe.watchdog.kill_time = datetime.now() + timedelta(
+                                                              seconds=kill_time)
+
     def stop(self, *args, **kwargs):
         """
         Record the completion of this task
