@@ -3,7 +3,7 @@
 
 Name:           beaker
 Version:        0.5.0
-Release:        31%{?dist}
+Release:        32%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -52,6 +52,7 @@ Requires:       telnet
 Requires:       python-cpio
 Requires:       kobo-client
 Requires:	python-setuptools
+Requires:       python-xmltramp
 
 %package lib
 Summary:        Test Library
