@@ -6,6 +6,7 @@ import signal
 import time
 import datetime
 import base64
+import xmltramp
 from xmlrpclib import Fault, ProtocolError
 from cStringIO import StringIO
 from socket import gethostbyaddr
@@ -278,11 +279,13 @@ class Proxy(ProxyHelper):
         This is a little ugly.. but better than putting this logic in
         kickstart
         """
+        self.logger.info("install_start")
         # extend watchdog by 3 hours 60 * 60 * 3
         kill_time = 10800
         # look up system recipe based on hostname...
         # get first task
         task = xmltramp.parse(self.get_recipe()).job.recipeSet.recipe.task()
+        self.logger.info("task = %s" % task)
         # Only do this if first task is Running
         if task['status'] == 'Running':
             self.hub.recipes.tasks.result(task['id'],
