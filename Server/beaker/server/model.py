@@ -2789,7 +2789,7 @@ class RecipeTask(MappedObject):
         """
         Extend the watchdog by kill_time seconds
         """
-        return self.recipe.watchdog.kill_time = datetime.now() + timedelta(
+        self.recipe.watchdog.kill_time = datetime.now() + timedelta(
                                                               seconds=kill_time)
 
     def stop(self, *args, **kwargs):
