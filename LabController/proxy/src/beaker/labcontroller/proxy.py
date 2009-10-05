@@ -273,11 +273,11 @@ class Proxy(ProxyHelper):
 
 
     def install_start(self):
-    """ Called from %pre of the test machine.  We record a start
+        """ Called from %pre of the test machine.  We record a start
         result on the scheduler and extend the watchdog
         This is a little ugly.. but better than putting this logic in
         kickstart
-    """
+        """
         # extend watchdog by 3 hours 60 * 60 * 3
         kill_time = 10800
         # look up system recipe based on hostname...
@@ -294,8 +294,8 @@ class Proxy(ProxyHelper):
         return False
 
     def extend_watchdog(self, task_id, kill_time):
-    """ tell the scheduler to extend the watchdog by kill_time seconds
-    """
+        """ tell the scheduler to extend the watchdog by kill_time seconds
+        """
         return self.hub.recipes.tasks.extend(task_id, kill_time)
 
     def task_stop(self,
