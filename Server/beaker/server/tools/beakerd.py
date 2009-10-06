@@ -335,12 +335,7 @@ def scheduled_recipes(*args):
                                                                              (
                                                                          recipe.id,
                                                                             e))
-                # FIXME add customrepos if present
-                ks_meta = "beaker=%s recipeid=%s packages=%s" % (
-                                                          gethostname(),
-                                                          recipe.id,
-                                                          recipe.packages,
-                                                                 )
+                ks_meta = "packages=%s" % ":".join(recipe.packages)
                 try:
                     recipe.system.action_auto_provision(recipe.distro,
                                                      ks_meta,
