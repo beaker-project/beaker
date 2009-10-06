@@ -33,11 +33,15 @@ class Reports(RPCRoot):
         activity = []
         for system in System.all(identity.current.user).filter(System.user!=None):
             # Build a list of the last Reserve entry for each system
-            activity.append(SystemActivity.query().filter(
-                 and_(SystemActivity.object==system,
-                      SystemActivity.field_name=='User',
-                      SystemActivity.action=='Reserved'
-                     )).order_by(SystemActivity.created.desc())[0])
+            try:
+                activity.append(SystemActivity.query().filter(
+                     and_(SystemActivity.object==system,
+                          SystemActivity.field_name=='User',
+                          SystemActivity.action=='Reserved'
+                         )).order_by(SystemActivity.created.desc())[0])
+            except IndexError:
+                # due to an old bug, we may not have a Reserved action
+                pass  
 
         reserve_grid = widgets.PaginateDataGrid(fields=[
                                   widgets.PaginateDataGrid.Column(name='object.fqdn', getter=lambda x: make_link(url  = '/view/%s' % x.object,
