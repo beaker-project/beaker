@@ -335,7 +335,7 @@ def scheduled_recipes(*args):
                                                                              (
                                                                          recipe.id,
                                                                             e))
-                ks_meta = "packages=%s" % ":".join(recipe.packages)
+                ks_meta = "packages=%s" % ":".join([p.package for p in recipe.packages])
                 try:
                     recipe.system.action_auto_provision(recipe.distro,
                                                      ks_meta,
