@@ -284,12 +284,12 @@ class Proxy(ProxyHelper):
         kill_time = 10800
         # look up system recipe based on hostname...
         # get first task
-        task = xmltramp.parse(self.get_recipe()).job.recipeSet.recipe.task()
+        task = xmltramp.parse(self.get_recipe()).task()
         self.logger.info("task = %s" % task)
         # Only do this if first task is Running
         if task['status'] == 'Running':
             self.hub.recipes.tasks.result(task['id'],
-                                          'Pass',
+                                          'pass_',
                                           'start',
                                           0,
                                           'Install Started')
