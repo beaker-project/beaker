@@ -99,7 +99,6 @@ def hash_removals(results,subkey):
            remove_me = k[1:]
            if results[subkey].has_key(remove_me):
                del results[subkey][remove_me]
-           del results[subkey][k]
 
 def hash_to_string(hash):
     """
