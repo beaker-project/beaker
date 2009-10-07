@@ -2784,6 +2784,7 @@ class RecipeTask(MappedObject):
             self.recipe.watchdog.kill_time = datetime.now() + timedelta(
                                                     seconds=self.task.avg_time)
         self.update_status()
+        return True
 
     def extend(self, kill_time):
         """
@@ -2802,6 +2803,7 @@ class RecipeTask(MappedObject):
             self.finish_time = datetime.utcnow()
         self.status = TaskStatus.by_name(u'Completed')
         self.update_status()
+        return True
 
     def cancel(self, msg=None):
         """
@@ -2832,6 +2834,7 @@ class RecipeTask(MappedObject):
                                        score=0,
                                        log=msg))
         self.update_status()
+        return True
 
     def pass_(self, path, score, summary):
         """
@@ -2869,6 +2872,7 @@ class RecipeTask(MappedObject):
                                    score=score,
                                    log=summary))
         self.update_status()
+        return True
 
 
 class RecipeTaskRoleListAdapter(object):
