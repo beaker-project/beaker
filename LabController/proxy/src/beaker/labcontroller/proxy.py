@@ -285,15 +285,17 @@ class Proxy(ProxyHelper):
         # look up system recipe based on hostname...
         # get first task
         task = xmltramp.parse(self.get_recipe()).task()
-        self.logger.info("task = %s" % task)
         # Only do this if first task is Running
         if task['status'] == 'Running':
+            self.logger.info("Extending watchdog for task %s" % task['id'])
+            self.hub.recipes.tasks.extend(task['id'], kill_time)
+            self.logger.info("Recording /start for task %s" % task['id'])
             self.hub.recipes.tasks.result(task['id'],
                                           'pass_',
-                                          'start',
+                                          '/start',
                                           0,
                                           'Install Started')
-            return self.hub.recipes.tasks.extend(task['id'], kill_time)
+            return True
         return False
 
     def extend_watchdog(self, task_id, kill_time):
