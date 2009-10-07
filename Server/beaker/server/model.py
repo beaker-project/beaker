@@ -2573,6 +2573,24 @@ class Recipe(MappedObject):
         self.ktasks = 0
         task_panic = TaskResult.by_name(u'Panic')
 
+        max_result = None
+        max_status = None
+        for task in self.tasks:
+            if task.result == task_pass:
+                self.ptasks += 1
+            if task.result == task_warn:
+                self.wtasks += 1
+            if task.result == task_fail:
+                self.ftasks += 1
+            if task.result == task_panic:
+                self.ktasks += 1
+            if task.status > max_status:
+                    max_status = task.status
+            if task.result > max_result:
+                    max_result = task.result
+        self.status = max_status
+        self.result = max_result
+
         # Record the start of this Recipe.
         if not self.start_time \
            and self.status == TaskStatus.by_name(u'Running'):
@@ -2611,23 +2629,6 @@ class Recipe(MappedObject):
                     #FIXME
                     pass
 
-        max_result = None
-        max_status = None
-        for task in self.tasks:
-            if task.result == task_pass:
-                self.ptasks += 1
-            if task.result == task_warn:
-                self.wtasks += 1
-            if task.result == task_fail:
-                self.ftasks += 1
-            if task.result == task_panic:
-                self.ktasks += 1
-            if task.status > max_status:
-                    max_status = task.status
-            if task.result > max_result:
-                    max_result = task.result
-        self.status = max_status
-        self.result = max_result
         self.recipeset.update_status()
 
 class GuestRecipe(Recipe):
@@ -2772,10 +2773,6 @@ class RecipeTask(MappedObject):
         if not self.start_time:
             self.start_time = datetime.utcnow()
         self.status = TaskStatus.by_name(u'Running')
-
-# Watchdog should be created when the recipe moves to Scheduled
-#        if not self.recipe.watchdog:
-#            self.recipe.watchdog = Watchdog(system=self.recipe.system)
 
         self.recipe.watchdog.recipetask = self
         if watchdog_override:
