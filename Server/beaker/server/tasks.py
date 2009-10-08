@@ -68,7 +68,6 @@ class Tasks(RPCRoot):
         XMLRPC method to upload task rpm package
         """
         rpm_file = "%s/%s" % (self.task_dir, task_rpm_name)
-        print "rpm_file = %s" % rpm_file
         FH = open(rpm_file, "w")
         FH.write(task_rpm_data.data)
         FH.close()
@@ -77,8 +76,8 @@ class Tasks(RPCRoot):
         except ValueError, err:
             session.rollback()
             return (0, "Failed to import because of %s" % str(err))
-        session.save_or_update(task)
-        session.flush()
+        os.chdir(self.task_dir)
+        os.system("createrepo .")
         return (task.id, 'Success')
 
     @expose()
@@ -99,8 +98,8 @@ class Tasks(RPCRoot):
             session.rollback()
             flash(_(u'Failed to import because of %s' % err ))
             redirect(".")
-        session.save_or_update(task)
-        session.flush()
+        os.chdir(self.task_dir)
+        os.system("createrepo .")
 
         flash(_(u"%s Added/Updated at id:%s" % (task.name,task.id)))
         redirect(".")
@@ -125,6 +124,12 @@ class Tasks(RPCRoot):
         tinfo = testinfo.parse_string(raw_taskinfo['desc'])
 
         task = Task.lazy_create(name=tinfo.test_name)
+        # Remove old RPM
+        if task.rpm:
+            try:
+                os.unlink("%s/%s" % (self.task_dir, task.rpm))
+            except OSError, err:
+                raise BX(_(err))   
         task.rpm = raw_taskinfo['hdr']['rpm']
         task.version = raw_taskinfo['hdr']['ver']
         task.description = tinfo.test_description
