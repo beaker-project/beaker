@@ -125,7 +125,7 @@ class Tasks(RPCRoot):
 
         task = Task.lazy_create(name=tinfo.test_name)
         # Remove old RPM
-        if task.rpm:
+        if task.rpm and task.rpm != raw_taskinfo['hdr']['rpm']:
             try:
                 os.unlink("%s/%s" % (self.task_dir, task.rpm))
             except OSError, err:
