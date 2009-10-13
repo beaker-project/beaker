@@ -2708,6 +2708,7 @@ class RecipeTask(MappedObject):
             task.appendChild(params)
         rpm = self.doc.createElement("rpm")
         rpm.setAttribute("name", "%s" % self.task.rpm)
+        rpm.setAttribute("path", "%s" % self.task.rpm.path)
         task.appendChild(rpm)
         return task
 
