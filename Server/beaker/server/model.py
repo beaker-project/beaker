@@ -2838,25 +2838,25 @@ class RecipeTask(MappedObject):
         """
         Record a pass result 
         """
-        self._result(u'Pass', path, score, summary)
+        return self._result(u'Pass', path, score, summary)
 
     def fail(self, path, score, summary):
         """
         Record a fail result 
         """
-        self._result(u'Fail', path, score, summary)
+        return self._result(u'Fail', path, score, summary)
 
     def warn(self, path, score, summary):
         """
         Record a warn result 
         """
-        self._result(u'Warn', path, score, summary)
+        return self._result(u'Warn', path, score, summary)
 
     def panic(self, path, score, summary):
         """
         Record a panic result 
         """
-        self._result(u'Panic', path, score, summary)
+        return self._result(u'Panic', path, score, summary)
 
     def _result(self, result, path, score, summary):
         """
