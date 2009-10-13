@@ -148,6 +148,7 @@ class Watchdog(ProxyHelper):
                 if watchdog not in active_watchdogs:
                     kill_process_group(self.watchdogs[watchdog],
                                        logger=self.logger)
+                    del self.watchdogs[watchdog]
                     self.logger.info("Removed Monitor for %s" % watchdog)
                     
             # Check status of monitor processes..  
