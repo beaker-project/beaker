@@ -24,9 +24,20 @@ class myHandler(DocXMLRPCServer.DocXMLRPCRequestHandler):
         proxy.clientIP, proxy.clientPort = self.client_address
         DocXMLRPCServer.DocXMLRPCRequestHandler.do_POST(self)
 
+
 class ForkingXMLRPCServer (SocketServer.ForkingMixIn,
                            DocXMLRPCServer.DocXMLRPCServer):
-    pass
+    def process_request(self, request, client_address):
+        # try and log back in if needed
+        try:
+            self.instance.hub._login(verbose=self.instance.hub._conf.get("DEBUG_XMLRPC"))
+        except KeyboardInterrupt:
+            raise
+        except Exception, e:
+            raise
+        DocXMLRPCServer.DocXMLRPCServer.process_request(self,
+                                                        request,
+                                                        client_address)
 
 
 def daemon_shutdown(*args, **kwargs):

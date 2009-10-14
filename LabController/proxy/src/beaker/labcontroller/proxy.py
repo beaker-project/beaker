@@ -133,6 +133,15 @@ class Watchdog(ProxyHelper):
 
     def monitor_forever(self):
         while True:
+            # try and log back in if needed
+            try:
+                self.hub._login(verbose=self.hub._conf.get("DEBUG_XMLRPC"))
+            except KeyboardInterrupt:
+                raise
+            except Exception, e:
+                self._logger and self._logger.warn("Authentication failed")
+                raise
+
             # Clear out expired watchdog entries
             for watchdog in self.hub.recipes.tasks.watchdogs('expired'):
                 self.abort(watchdog)
@@ -144,12 +153,12 @@ class Watchdog(ProxyHelper):
                 if watchdog['system'] not in self.watchdogs:
                     self.watchdogs[watchdog['system']] = self.monitor(watchdog)
             # Kill Monitor if watchdog does not exist.
-            for watchdog in self.watchdogs:
-                if watchdog not in active_watchdogs:
-                    kill_process_group(self.watchdogs[watchdog],
+            for watchdog_system in self.watchdogs:
+                if watchdog_system not in active_watchdogs:
+                    kill_process_group(self.watchdogs[watchdog_system],
                                        logger=self.logger)
-                    del self.watchdogs[watchdog]
-                    self.logger.info("Removed Monitor for %s" % watchdog)
+                    del self.watchdogs[watchdog_system]
+                    self.logger.info("Removed Monitor for %s" % watchdog_system)
                     
             # Check status of monitor processes..  
             
