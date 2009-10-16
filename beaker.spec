@@ -2,7 +2,7 @@
 %{!?pyver: %define pyver %(%{__python} -c "import sys ; print sys.version[:3]")}
 
 Name:           beaker
-Version:        0.4.52
+Version:        0.4.53
 Release:        0%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
@@ -133,6 +133,8 @@ ln -s Fedora.ks $RPM_BUILD_ROOT/var/lib/cobbler/kickstarts/Fedoradevelopment.ks
 /usr/share/man/man1/beakerlib*
 
 %changelog
+* Fri Oct 16 2009 Bill Peck <bpeck@redhat.com> - 0.4.53-0
+- fix allows custom kickstarts to still append packages
 * Tue Oct 06 2009 Bill Peck <bpeck@redhat.com> - 0.4.52-0
 - pass !key along to cobbler for further processing.
 * Mon Oct 05 2009 Bill Peck <bpeck@redhat.com> - 0.4.51-0
