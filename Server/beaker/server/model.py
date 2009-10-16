@@ -1168,9 +1168,9 @@ class System(SystemObject):
                     # Fill in basic requirements for RHTS
                     kicktemplate = """
 url --url=$tree
-%(beforepackages)
+%(beforepackages)s
 $SNIPPET("rhts_packages")
-%(afterpackages)
+%(afterpackages)s
 
 %%pre
 $SNIPPET("rhts_pre")
