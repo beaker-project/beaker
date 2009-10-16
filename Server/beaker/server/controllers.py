@@ -1220,11 +1220,11 @@ class Root(RPCRoot):
     @cherrypy.expose
     def system_pick(self, distro=None, username=None, xml=None):
         if not distro:
-            return (0,"You must supply a distro")
+            return (None,"You must supply a distro")
         if not username:
-            return (0,"You must supply a user name")
+            return (None,"You must supply a user name")
         if not xml:
-            return (0,"No xml query provided")
+            return (None,"No xml query provided")
 
         user = None
         try:
@@ -1264,11 +1264,11 @@ class Root(RPCRoot):
     @cherrypy.expose
     def system_validate(self, distro=None, username=None, xml=None):
         if not distro:
-            return (0,"You must supply a distro")
+            return (None,"You must supply a distro")
         if not username:
-            return (0,"You must supply a user name")
+            return (None,"You must supply a user name")
         if not xml:
-            return (0,"No xml query provided")
+            return (None,"No xml query provided")
 
         user = None
         try:
