@@ -25,24 +25,20 @@ import exceptions
 recipes = {}
 fqdn_recipes = {}
 task_recipe = {}
+fqdn_def_recipe = None
+task_def_recipe = None
 
 def get_recipe_(fqdn=None, id=None, task_id=None):
     print "get_recipe_(fqdn=%s, id=%s)" % (fqdn, id)
     if fqdn is not None:
-        if not fqdn_recipes.has_key(fqdn):
-            return None
-        id = fqdn_recipes[fqdn]
+        id = fqdn_recipes[fqdn] if fqdn_recipes.has_key(fqdn) else fqdn_def_recipe
     if task_id is not None:
         task_id = int(task_id)
-        if not task_recipe.has_key(task_id):
-            return None
-        id = task_recipe[task_id]
-    if id is not None:
-        id = int(id)
-        if not recipes.has_key(id):
-            return None
-        return recipes[id]
-    return None
+        id = task_recipe[task_id] if task_recipe.has_key(task_id) else task_def_recipe
+    if id is None:
+        return None
+    id = int(id)
+    return recipes[id] if recipes.has_key(id) else None
 
 def get_recipe_xml(**kwargs):
     rec = get_recipe_(**kwargs)
@@ -165,11 +161,7 @@ class LCHandler(xmlrpc.XMLRPC):
 serveAnyChild(LCHandler)
 serveAnyRequest(LCHandler, 'catch_xmlrpc', xmlrpc.XMLRPC)
 
-################################################################################
-# RUN:
-################################################################################
-if __name__ == '__main__':
-
+def main():
 ################################################################################
 # RECIPE DEFINITIONS:
 ################################################################################
@@ -307,9 +299,8 @@ if __name__ == '__main__':
 
     args21 = dict(
             machine0=os.environ['HOSTNAME'],
-            #machine0="glen-mhor.englab.brq.redhat.com",
-            machine1="dell-pe1850-01.rhts.eng.bos.redhat.com",
-            machine2="hp-lp1.rhts.eng.bos.redhat.com",
+            machine1="test1.example.com",
+            machine2="lab-machine2.example.com",
 
             machine0_stat="None",
             machine1_stat="None",
@@ -332,18 +323,17 @@ if __name__ == '__main__':
             task47_res="None",
             )
 
+    global recipes, task_recipe, fqdn_recipes
     recipes[21] =(recipe21, args21)
-    task_recipe[41] = 21
-    task_recipe[42] = 21
-    task_recipe[43] = 21
-    task_recipe[44] = 21
-    task_recipe[45] = 21
-    task_recipe[46] = 21
-    task_recipe[47] = 21
-    fqdn_recipes["glen-mhor.englab.brq.redhat.com"           ] = 21
-    fqdn_recipes["localhost"                                 ] = 21
-    fqdn_recipes["dell-pe1850-01.rhts.eng.bos.redhat.com"    ] = 21
-    fqdn_recipes["hp-lp1.rhts.eng.bos.redhat.com"            ] = 21
+    for task in [41,42,43,44,45,46,47]:
+        task_recipe[task] = 21
+    for fqdn in [
+            "localhost",
+            os.environ["HOSTNAME"],
+            "test1.example.com",
+            "lab-machine2.example.com",
+            ]:
+        fqdn_recipes[fqdn] = 21
 
 ################################################################################
 # EXECUTE:
@@ -353,4 +343,10 @@ if __name__ == '__main__':
     s = server.Site(LCHandler(), None, 60*60*12)
     reactor.listenTCP(5222, s, interface='localhost')
     reactor.run()
+
+################################################################################
+# RUN:
+################################################################################
+if __name__ == '__main__':
+    main()
 

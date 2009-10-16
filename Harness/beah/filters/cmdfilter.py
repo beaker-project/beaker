@@ -18,6 +18,7 @@
 
 import exceptions
 import re
+import os.path
 from sys import stderr
 from beah.core import command
 
@@ -69,7 +70,7 @@ class CmdFilter(object):
     def proc_cmd_run(self, cmd, line):
         # FIXME: add a proper option parser: -i --id=ID, -n --name=NAME
         m_run = self.__run_re.match(line)
-        return command.run(m_run.group(1))
+        return command.run(os.path.abspath(m_run.group(1)))
     proc_cmd_r = proc_cmd_run
 
     def proc_line(self, data):

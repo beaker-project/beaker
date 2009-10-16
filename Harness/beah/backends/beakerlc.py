@@ -19,7 +19,9 @@
 from twisted.web.xmlrpc import Proxy
 from twisted.internet import reactor
 
-import os, exceptions, tempfile, pprint
+import os
+import os.path
+import pprint
 from xml.etree import ElementTree
 import simplejson as json
 
@@ -47,17 +49,9 @@ Beaker Backend should invoke these XML-RPC:
 """
 
 def mk_beaker_task(rpm_name):
-    # FIXME: see rhts-test-runner for ideas:
-    # /home/mcsontos/rhts/rhts/test-env-lab/bin/rhts-test-runner.sh
-
+    # FIXME: proper RHTS launcher shold go here.
     # create a script to: check, install and run a test
     # should task have an "envelope" - e.g. binary to run...
-
-    # repositories: http://rhts.redhat.com/rpms/{development,production}/noarch/
-    # see scratch.tmp/rhts-tests.repo
-
-    # have a look at:
-    # http://intranet.corp.redhat.com/ic/intranet/RHTSMainPage.html#devel
     e = RPMInstaller(rpm_name)
     e.make()
     return e.executable
@@ -147,6 +141,8 @@ def parse_recipe_xml(input_xml):
                 # FIXME: retrieve a file and set an executable bit.
                 print "Feature not implemented yet."
                 continue
+        else:
+            executable = os.path.abspath(executable)
 
         if not executable:
             print "Task %s(%s) does not have an executable associated!" % \

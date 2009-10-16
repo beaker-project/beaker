@@ -1,24 +1,27 @@
 == TODO ==
 
- !! rhts task runner
+ !! rhts task adaptor
     - improve XML-RPC to event conversion
  !! beaker backend
     - improve event to XML-RPC conversion
     - check harness->beakerLC
       - run few simple tests
  !! rhts-test-runner.sh
+    - get and store repository info in /etc/yum.repos.d/
     - check environment 
     - create /tmp/TESTOUT.log - it is required by rhts-abort
+    - get the test
+    - set environment
     - run the test and capture outputs
     - check all outputs
  !! add self-test suite
- !! pass absolute pathnames - processes' pwd may differ!
  !! fedora/rhel packaging
     - check if original Fedora spec's could be used. Download:
         CVSROOT=:pserver:anonymous@cvs.fedora.redhat.com:/cvs/pkgs \
         PKGS={python,python-zope-interface,python-simplejson,python-twisted-{core,web}} \
         cvs co rpms/$PKGS/{F-10,devel}
     - create brew/koji builds
+ !  integrate into /distribution/beaker/* tests
  !  properly daemonize controller
  !  logging backend
  !  command line options:
@@ -52,8 +55,8 @@
  9  check compatibility with older distributions and ms windows
     - one can simply download and build newer python, even on RHEL 3.
     - test AS2.1 and MS W32
-      - W32 - see https://winland.englab.brq.redhat.com/shepherd/list.cgi
  9  make it a service (service beacon start...)
+ 9  account for slow network - submit in a batch as a signed archive
  8  beah-tcp-sink
     - reading stdin and forwarding to beah-controller by socket
       - not necessary now
@@ -64,7 +67,7 @@
       Use positional arguments only for obvious always present arguments.
       Provide wrappers for most common tasks - e.g. simple logging,...
  8  support for reboot - after rebooting:
-    - set-up environment, start the controller, initialise backends, and start
+    - set-up environment, start the controller and backends, and re-start
       tasks.
  7  identify common formats (e.g. cppunit) and create filters
  4  create filter taking stdin and sending to Controller via socket

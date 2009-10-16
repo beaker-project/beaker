@@ -18,14 +18,10 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-## console -M console.lab.bos.redhat.com ...
-# console -M conserver.englab.brq.redhat.com ibm-js22-vios-01-lp1.rhts.bos.redhat.com
-# !scp % root@ibm-js22-vios-01-lp1.rhts.bos.redhat.com:/root/
-## !scp % root@ibm-ls42-01.lab.bos.redhat.com:/root/
-
 # FIXME:
 # - change "/usr/bin/env python" to "$PYBIN" (full path)
 #   - "/usr/bin/env python2.5" does not work in a_task :-(
+#   - This should be done by setup.py!
 
 (
 

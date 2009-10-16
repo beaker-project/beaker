@@ -328,15 +328,15 @@ class RHTSMain(object):
             self.on_exit()
 
 
-def main(executable=None):
+def main(task_path=None):
     from sys import argv
-    if executable is None:
+    if task_path is None:
         if len(argv) > 1:
-            executable = argv[1]
+            task_path = argv[1]
         else:
             logging.error("Test directory not provided.", reason)
             raise exceptions.RuntimeError("Test directory not provided.")
-    RHTSMain(executable, USE_DEFAULT)
+    RHTSMain(task_path, USE_DEFAULT)
     reactor.run()
 
 
