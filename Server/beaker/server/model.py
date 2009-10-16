@@ -795,10 +795,18 @@ class System(SystemObject):
                 if kickstart:
                     # Escape any $ signs or cobbler will barf
                     kickstart = kickstart.replace('$','\$')
+                    # add in cobbler packages snippet...
+                    # Find next line after %packages
+                    packages_slot = kickstart.find("\n",kickstart.find("%packages"))
+                    beforepackages = kickstart[:packages_slot]
+                    afterpackages = kickstart[packages_slot:]
+
                     # Fill in basic requirements for RHTS
                     kicktemplate = """
 url --url=$tree
-%(kickstart)s
+%(beforepackages)
+$SNIPPET("rhts_packages")
+%(afterpackages)
 
 %%pre
 $SNIPPET("rhts_pre")
@@ -806,7 +814,9 @@ $SNIPPET("rhts_pre")
 %%post
 $SNIPPET("rhts_post")
                     """
-                    kickstart = kicktemplate % dict(kickstart = kickstart)
+                    kickstart = kicktemplate % dict(
+                                                beforepackages = beforepackages,
+                                                afterpackages = afterpackages)
 
                     kickfile = '/var/lib/cobbler/kickstarts/%s.ks' % self.system.fqdn
         
