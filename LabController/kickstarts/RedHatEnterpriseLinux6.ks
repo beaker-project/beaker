@@ -55,7 +55,7 @@ timezone  $getVar('timezone', 'America/New_York')
 install
 
 $SNIPPET("RedHatEnterpriseLinux6")
-$SNIPPET("rhts_scsi_ethdevices")
+$SNIPPET("rhts_devices")
 $SNIPPET("rhts_partitions")
 
 %packages --ignoremissing
