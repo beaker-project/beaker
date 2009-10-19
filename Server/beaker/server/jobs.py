@@ -33,6 +33,9 @@ import string
 
 from bexceptions import *
 
+import xmltramp
+from jobxml import *
+
 class Jobs(RPCRoot):
     # For XMLRPC methods in this class.
     exposed = True
@@ -61,7 +64,19 @@ class Jobs(RPCRoot):
         """
         XMLRPC method to upload job
         """
-        return (1,'Success')
+        xml = xmltramp.parse(job_xml)
+        xmljob = XmlJob(xml)
+        try:
+            job = self.process_xmljob(xmljob,identity.current.user_id)
+        except BeakerException, err:
+            session.rollback()
+            raise
+        except ValueError, err:
+            session.rollback()
+            raise
+        session.save(job)
+        session.flush()
+        return job.id
 
     @expose()
     @identity.require(identity.not_anonymous())
@@ -69,8 +84,6 @@ class Jobs(RPCRoot):
         """
         TurboGears method to upload job xml
         """
-        import xmltramp
-        from jobxml import *
         xml = xmltramp.parse(job_xml.file.read())
         xmljob = XmlJob(xml)
         try:
@@ -84,9 +97,9 @@ class Jobs(RPCRoot):
             flash(_(u'Failed to import job because of %s' % err ))
             redirect(".")
 
-        session.save_or_update(job)
+        session.save(job)
         session.flush()
-        flash(_(u'Success!'))
+        flash(_(u'Success! job id: %s' % job.id))
         redirect(".")
 
     def process_xmljob(self, xmljob, userid):
