@@ -28,7 +28,8 @@ class TaskStdoutProtocol(protocol.ProcessProtocol):
         self.controller = None
 
     def connectionMade(self):
-        self.transport.closeStdin()
+        print self.__class__.__name__, ":connectionMade"
+        #self.transport.closeStdin()
         self.task = self.task_protocol()
         self.task.task_info = self.task_info
         self.task.set_controller(self.controller)
@@ -42,11 +43,13 @@ class TaskStdoutProtocol(protocol.ProcessProtocol):
         #print "stderr: %r" % data
         self.task.lose_item(data)
 
-    def processExited(self, reason):
-        self.controller.task_finished(self.task, rc=reason.value.exitCode)
-        self.task.set_controller()
+    #def processExited(self, reason):
+    #    print self.__class__.__name__, ":processExited(%s)" % reason
+    #    self.controller.task_finished(self.task, rc=reason.value.exitCode)
+    #    self.task.set_controller()
 
     def processEnded(self, reason):
+        print self.__class__.__name__, ":processEnded(%s)" % reason
         self.controller.task_finished(self.task, rc=reason.value.exitCode)
         self.task.set_controller()
 
@@ -59,18 +62,22 @@ def Spawn(host, port, proto=None):
         # BEACON_TPORT - port
         # BEACON_TID - id of task - used to introduce itself when opening socket
         task_env.update(
-                BEAH_ROOT=os.getenv('BEAH_ROOT'),
                 BEACON_THOST=str(host),
                 BEACON_TPORT=str(port),
                 BEACON_TID=str(task_info['id']),
-                BEAHLIB_ROOT=os.getenv('BEAHLIB_ROOT'),
                 )
+        # FIXME: This is neccessary for some tasks!
+        if os.getenv('BEAH_ROOT') is not None:
+            task_env['BEAH_ROOT'] = os.getenv('BEAH_ROOT')
+        if os.getenv('BEAHLIB_ROOT') is not None:
+            task_env['BEAHLIB_ROOT'] = os.getenv('BEAHLIB_ROOT')
         val = os.getenv('PYTHONPATH')
         if val:
             task_env.update(PYTHONPATH=val)
         # 2. spawn a task
         protocol = (proto or TaskStdoutProtocol)(task_info)
         protocol.controller = controller
+        print 'spawn: Environment: %r.' % (task_env)
         reactor.spawnProcess(protocol, task_info['file'],
                 args=[task_info['file']]+(args or []), env=task_env)
         # FIXME: send an answer to backend(?)

@@ -61,11 +61,12 @@ rhts-db-submit-result (-S|--server) SERVER (-t|--testname) TESTNAME
     [(-v|--resultvalue) RESULT_VALUE]
     [(-D|--dmesg) DMESG_FILE] [(-L|--log) LOG_FILE] [-d|--debug]
 EOF
-rhts-db-submit-result
-rhts-db-submit-result -S $RESULT_SERVER
-rhts-db-submit-result -t $TEST
+#rhts-db-submit-result
+#rhts-db-submit-result -S $RESULT_SERVER
+#rhts-db-submit-result -t $TEST
 rhts-db-submit-result -S $RESULT_SERVER -t $TEST
-rpdb2 -d `which rhts-db-submit-result` rhts-db-submit-result -S $RESULT_SERVER -t $TEST -r Pass
+rhts-db-submit-result -S $RESULT_SERVER -t $TEST -r Pass
+#rpdb2 -d `which rhts-db-submit-result` rhts-db-submit-result -S $RESULT_SERVER -t $TEST -r Pass
 rhts-db-submit-result -S $RESULT_SERVER -t $TEST -v 12.34
 rhts-db-submit-result -S $RESULT_SERVER -t $TEST -l `mktemp`
 rhts-db-submit-result -S $RESULT_SERVER -t $TEST -D `mktemp`

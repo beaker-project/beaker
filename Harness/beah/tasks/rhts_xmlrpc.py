@@ -21,6 +21,7 @@ from twisted.internet import reactor, protocol, stdio
 from twisted.protocols import basic
 import simplejson as json
 import os
+import os.path
 import tempfile
 import exceptions
 from beah.core import event
@@ -28,8 +29,12 @@ from beah.wires.internals.twmisc import (serveAnyChild, serveAnyRequest,
         JSONProtocol)
 
 # FIXME: change log level to WARNING, use tempfile and upload log when process
-# end.
+# ends.
 import logging
+if not os.path.isdir('/tmp/var/log'):
+    if not os.path.isdir('/tmp/var'):
+        os.mkdir('/tmp/var')
+    os.mkdir('/tmp/var/log')
 logging.basicConfig(filename='/tmp/var/log/rhts_task.log', level=logging.DEBUG)
 
 USE_DEFAULT = object()
@@ -288,6 +293,8 @@ class RHTSMain(object):
 
 
     def server_started(self):
+        # FIXME: launcher should take care of this!
+        open('/tmp/TESTOUT.log','a').close()
         self.process = reactor.callLater(2, reactor.spawnProcess, self.task,
                 'make', args=['make', 'run'], env=self.env, path=self.task_path)
 

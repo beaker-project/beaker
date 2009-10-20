@@ -5,7 +5,7 @@
  !! beaker backend
     - improve event to XML-RPC conversion
     - check harness->beakerLC
-      - run few simple tests
+      - run few simple tests (why simple?)
  !! rhts-test-runner.sh
     - get and store repository info in /etc/yum.repos.d/
     - check environment 

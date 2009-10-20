@@ -18,9 +18,12 @@
 
 from twisted.web import xmlrpc
 from twisted.internet import reactor
+import beah
 from beah.wires.internals.twmisc import serveAnyChild, serveAnyRequest
+import sys
 import os
 import exceptions
+import pprint
 
 recipes = {}
 fqdn_recipes = {}
@@ -54,9 +57,13 @@ def get_recipe_args(**kwargs):
 
 RESULT_TYPE_ = ["Pass", "Warn", "Fail", "Panic"]
 
+def print_(obj):
+    print obj
+    return obj
+
 def do_get_recipe(fname, fqdn):
     print "%s(fqdn=%r)" % (fname, fqdn)
-    return get_recipe_xml(fqdn=fqdn)
+    return print_(get_recipe_xml(fqdn=fqdn))
 
 def do_task_start(fname, task_id, kill_time):
     print "%s(task_id=%r, kill_time=%r)" % (fname, task_id, kill_time)
@@ -179,6 +186,7 @@ def main():
                 <hostRequires>
                     <system_type value="Machine"/>
                 </hostRequires>
+
                 <!--
                 <task avg_time="1200" id="41"
                         name="/distribution/install" role="STANDALONE"
@@ -193,6 +201,7 @@ def main():
                     </roles>
                     <rpm name="rh-tests-examples-testargs-1.1-1.noarch.rpm"/>
                 </task>
+
                 <task avg_time="1200" id="42"
                         name="/distribution/kernelinstall" role="CLIENTS"
                         result="%(task42_res)s"
@@ -214,7 +223,6 @@ def main():
                     </params>
                     <rpm name="rh-tests-examples-testargs.noarch"/>
                 </task>
-                -->
 
                 <task avg_time="1200" id="43"
                         name="/beah/examples/tasks/a_task" role="STANDALONE"
@@ -227,8 +235,9 @@ def main():
                             <system value="%(machine1)s"/>
                         </role>
                     </roles>
-                    <executable url="examples/tasks/a_task"/>
+                    <executable url="%(beah_root)s/examples/tasks/a_task"/>
                 </task>
+
                 <task avg_time="1200" id="44"
                         name="/beah/examples/tasks/socket" role="STANDALONE"
                         result="%(task44_res)s"
@@ -240,8 +249,9 @@ def main():
                             <system value="%(machine1)s"/>
                         </role>
                     </roles>
-                    <executable url="examples/tasks/socket"/>
+                    <executable url="%(beah_root)s/examples/tasks/socket"/>
                 </task>
+
                 <task avg_time="1200" id="45"
                         name="/beah/examples/tasks/rhts" role="STANDALONE"
                         result="%(task45_res)s"
@@ -253,10 +263,10 @@ def main():
                             <system value="%(machine1)s"/>
                         </role>
                     </roles>
-                    <executable url="examples/tasks/rhts" />
+                    <executable url="%(beah_root)s/examples/tasks/rhts" />
                 </task>
+                -->
 
-                <!--
                 <task avg_time="1200" id="46"
                         name="/beah/examples/tests/rhtsex" role="STANDALONE"
                         result="%(task46_res)s"
@@ -268,13 +278,13 @@ def main():
                             <system value="%(machine1)s"/>
                         </role>
                     </roles>
-                    <executable url="python">
-                        <arg value="beah/tasks/rhts_xmlrpc.py" />
-                        <arg value="examples/tests/rhtsex" />
+                    <executable url="/usr/bin/python">
+                        <arg value="%(beah_py_root)s/tasks/rhts_xmlrpc.py" />
+                        <arg value="%(beah_root)s/examples/tests/rhtsex" />
                     </executable>
                 </task>
-                -->
 
+                <!--
                 <task avg_time="1200" id="47"
                         name="/beah/examples/tests/testargs" role="STANDALONE"
                         result="%(task47_res)s"
@@ -286,54 +296,41 @@ def main():
                             <system value="%(machine1)s"/>
                         </role>
                     </roles>
-                    <executable url="python">
-                        <arg value="beah/tasks/rhts_xmlrpc.py" />
-                        <arg value="examples/tests/testargs" />
+                    <executable url="/usr/bin/python">
+                        <arg value="%(beah_py_root)s/tasks/rhts_xmlrpc.py" />
+                        <arg value="%(beah_root)s/examples/tests/testargs" />
                     </executable>
                 </task>
-
-                <!--
                 -->
             </recipe>
         """
 
     args21 = dict(
-            machine0=os.environ['HOSTNAME'],
-            machine1="test1.example.com",
-            machine2="lab-machine2.example.com",
-
-            machine0_stat="None",
-            machine1_stat="None",
-            machine2_stat="None",
-
-            task41_stat="Waiting",
-            task42_stat="Waiting",
-            task43_stat="Waiting",
-            task44_stat="Waiting",
-            task45_stat="Waiting",
-            task46_stat="Waiting",
-            task47_stat="Waiting",
-
-            task41_res="None",
-            task42_res="None",
-            task43_res="None",
-            task44_res="None",
-            task45_res="None",
-            task46_res="None",
-            task47_res="None",
+            beah_root=os.environ.get("BEAH_ROOT", None) or sys.prefix + "/share/beah",
+            beah_py_root=beah.__path__[0],
             )
 
     global recipes, task_recipe, fqdn_recipes
-    recipes[21] =(recipe21, args21)
-    for task in [41,42,43,44,45,46,47]:
-        task_recipe[task] = 21
-    for fqdn in [
-            "localhost",
+    recipes[21] = (recipe21, args21)
+    args = args21
+    tasks = [41,42,43,44,45,46,47]
+    machines = [
             os.environ["HOSTNAME"],
             "test1.example.com",
             "lab-machine2.example.com",
-            ]:
+            "localhost",
+            ]
+    for task in tasks:
+        task_recipe[task] = 21
+        args['task%d_stat' % task] = 'Waiting'
+        args['task%d_res' % task] = 'None'
+    for machine in range(len(machines)):
+        fqdn = machines[machine]
         fqdn_recipes[fqdn] = 21
+        args['machine%d' % machine] = fqdn
+        args['machine%d_stat' % machine] = 'None'
+
+    pprint.pprint(recipes)
 
 ################################################################################
 # EXECUTE:

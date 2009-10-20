@@ -68,9 +68,9 @@ def parse_recipe_xml(input_xml):
         return None
 
     task_env.update(
-            RECIPEID=er.get('id'),
-            JOBID=er.get('job_id'),
-            RECIPESETID=er.get('recipe_set_id'),
+            RECIPEID=str(er.get('id')),
+            JOBID=str(er.get('job_id')),
+            RECIPESETID=str(er.get('recipe_set_id')),
             HOSTNAME=er.get('system'))
 
     for task in er.findall('task'):
@@ -90,7 +90,7 @@ def parse_recipe_xml(input_xml):
         task_id = task.get('id')
         task_name = task.get('name')
         task_env.update(
-                TASKID=task_id,
+                TASKID=str(task_id),
                 TASKNAME=task_name,
                 ROLE=task.get('role'))
 
@@ -160,10 +160,18 @@ class BeakerLCBackend(ExtBackend):
     TASK_STOP = 'task_stop'
     TASK_RESULT = 'task_result'
 
+    def __init__(self):
+        self.waiting_for_lc = False
+
     def on_idle(self):
+        if self.waiting_for_lc:
+            # FIXME: Write debugging info - this should be avoided!
+            return
+
         hostname = self.conf.get('DEFAULT', 'HOSTNAME')
         self.proxy.callRemote(self.GET_RECIPE,
                 hostname).addCallback(self.handle_new_task)
+        self.waiting_for_lc = True
 
     def set_controller(self, controller=None):
         ExtBackend.set_controller(self, controller)
@@ -175,6 +183,9 @@ class BeakerLCBackend(ExtBackend):
             self.on_idle()
 
     def handle_new_task(self, result):
+
+        self.waiting_for_lc = False
+
         pprint.pprint(result)
 
         self.recipe_xml = result
