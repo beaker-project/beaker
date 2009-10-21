@@ -251,6 +251,30 @@ class Root(RPCRoot):
     system_provision = SystemProvision(name='provision')
     arches_form = SystemArches(name='arches')
 
+    @cherrypy.expose
+    def task_info(self, taskid, flat=True):
+        """
+        XMLRPC method to get task status
+        """
+        task_types = dict(JOB       = Job,
+                          RECIPESET = RecipeSet,
+                          RECIPE    = Recipe)
+        task_type, task_id = taskid.split(":")
+        if task_type.upper() in task_types.keys():
+            try:
+                task = task_types[task_type.upper()].by_id(task_id)
+            except InvalidRequestError, e:
+                raise BX(_("Invalid %s %s" % (task_type, task_id)))
+        return dict(id          = task.id,
+                    worker      = None,
+                    state_label = "%s" % task.status,
+                    state       = task.status.id,
+                    method      = None,
+                    result      = "%s" % task.result,
+                    is_finished = task.is_finished(),
+                    is_failed   = task.is_failed()
+                   )
+
     @expose(format='json')
     def get_fields(self, table_name):
         return dict( fields = System.get_fields(table_name))
@@ -288,6 +312,7 @@ class Root(RPCRoot):
             action   = '/save_prefs',
             value    = user,
             options  = None)
+
 
     @expose()
     @identity.require(identity.not_anonymous())

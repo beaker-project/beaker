@@ -2328,6 +2328,27 @@ class Job(MappedObject):
         for recipeset in self.recipesets:
             recipeset.abort(msg)
 
+    def is_finished(self):
+        """
+        Simply state if the task is finished or not
+        """
+        if self.status in [TaskStatus.by_name(u'Completed'),
+                           TaskStatus.by_name(u'Cancelled'),
+                           TaskStatus.by_name(u'Aborted')]:
+            return True
+        else:
+            return False
+
+    def is_failed(self):
+        """ 
+        Return True if the task has failed
+        """
+        if self.status in [TaskStatus.by_name(u'Cancelled'),
+                           TaskStatus.by_name(u'Aborted')]:
+            return True
+        else:
+            return False
+
     def update_status(self):
         """
         Update number of passes, failures, warns, panics..
