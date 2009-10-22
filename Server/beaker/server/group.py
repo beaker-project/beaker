@@ -78,6 +78,7 @@ class Groups(RPCRoot):
             value = kw,
         )
 
+    @identity.require(identity.in_group("admin"))
     @expose(template='beaker.server.templates.group_form')
     def edit(self, id, **kw):
         group = Group.by_id(id)
@@ -150,15 +151,29 @@ class Groups(RPCRoot):
     @paginate('list')
     def index(self):
         groups = session.query(Group)
-        groups_grid = widgets.PaginateDataGrid(fields=[
-                                  ('Group Name', lambda x: make_edit_link(x.group_name,x.group_id)),
-                                  ('Display Name', lambda x: x.display_name),
-                                  (' ', lambda x: make_remove_link(x.group_id)),
-                              ])
-        return dict(title="Groups", grid = groups_grid,
+        if not 'admin' in identity.current.groups:
+            group_name =('Group Name', lambda x: x.group_name)
+            remove_link = None 
+            template = "beaker.server.templates.grid"
+        else:
+            group_name =('Group Name', lambda x: make_edit_link(x.group_name,x.group_id))
+            remove_link = (' ', lambda x: make_remove_link(x.group_id))  
+          
+      
+        display_name = ('Display Name', lambda x: x.display_name)
+        
+        potential_grid = (group_name,display_name,remove_link)     
+        actual_grid = [elem for elem in potential_grid if elem is not None]
+   
+        groups_grid = widgets.PaginateDataGrid(fields=actual_grid)
+        return_dict = dict(title="Groups", grid = groups_grid,
                                          search_bar = None,
                                          list = groups)
+        if 'template' in locals():
+            return_dict['tg_template'] = template
 
+        return return_dict
+  
     @identity.require(identity.in_group("admin"))
     @expose()
     def removeUser(self, group_id=None, id=None, **kw):
