@@ -1,24 +1,48 @@
-SearchBar = function (tableid, columnid, searchController, columnvalue) {
+SearchBar = function (tableid, operationid,valueid, searchController, operationvalue,searchvalue) {
 	this.tableid = tableid;
 	this.tableField = null;
-        this.columnid = columnid;
-	this.columnField = null;
-        this.columnvalue = columnvalue;
+        this.operationvalue = operationvalue;
+        this.operationid = operationid;
+        this.operationField = null;
+        this.valueField = null;
+        this.searchvalue = searchvalue
+        this.valueid = valueid;
 	this.searchController = searchController;
 	bindMethods(this);
 };
 
 SearchBar.prototype.initialize = function() {
 	this.tableField = getElement(this.tableid);
-	this.columnField = getElement(this.columnid);
+	this.operationField = getElement(this.operationid);
+        this.valueField = getElement(this.valueid);
 	updateNodeAttributes(this.tableField, {
             "onchange": this.theOnChange
         });
         this.theOnChange()
 }
 
+SearchBar.prototype.replaceValOptions = function(arg) { 
+    val = arg;
+    text = arg
+    //vals can be an object if we are to specify a particular value for the text of the option field 
+    if (isArray(arg)) {
+        for(elem in arg) { 
+            val = arg[0];
+            text = arg[1]; 
+        }
+    }
+   
+    if ( val == this.searchvalue ) {
+        option = OPTION({"value": val,
+                       "selected": true}, text);
+    } else {
+        option = OPTION({"value": val}, text);
+    }
+    return option;
+}
+
 SearchBar.prototype.replaceOptions = function(arg) {
-    if ( arg == this.columnvalue ) {
+    if ( arg == this.operationvalue ) {
         option = OPTION({"value": arg,
                        "selected": true}, arg);
     } else {
@@ -27,14 +51,61 @@ SearchBar.prototype.replaceOptions = function(arg) {
     return option;
 }
 
+
 SearchBar.prototype.replaceFields = function(result) {
-   replaceChildNodes(this.columnid, map(this.replaceOptions, result.fields));
+   this.updateSearchVals(result.search_vals) 
+   replaceChildNodes(this.operationid, map(this.replaceOptions, result.search_by));
+}
+
+SearchBar.prototype.updateSearchVals = function(vals) {
+  current = getElement(this.valueid)
+  current_attrs = current.attributes
+  par = current.parentNode 
+
+  clone_attrs = {}
+  current_attrs_length = current_attrs.length
+  for (index = 0;index < current_attrs_length ;index++) {
+      node_name = current_attrs[index].nodeName
+      node_val = current_attrs[index].nodeValue
+      if ( node_name != 'type' &&  node_name != 'class') 
+          clone_attrs[node_name] =node_val
+  }
+  
+  if(vals) {//set up drop down menu
+      //Do we need to convert this to an array ?
+      if (!isArray(vals)) {
+          vals = convertObjToArray(vals)
+      }
+      if (current.nodeName == 'SELECT') {
+          //update options and get out of here
+          replaceChildNodes(current,map(this.replaceValOptions,vals))
+          return
+      }
+      new_dom = SELECT(null,map(this.replaceValOptions, vals)) 
+      extra_attrs = {}
+     
+  } else {
+     //We don't want to put the value from out drop down box into our input field
+     delete(clone_attrs['value'])
+     //set up text field
+     if (current.nodeName == 'INPUT')
+         return //leave and walk away, we are already a text field 
+     new_dom = INPUT(clone_attrs)
+     extra_attrs = {'type': 'text','class':'textfield'}
+     
+  }
+ 
+  //JS nor MochiKit have a hash.merge() function ?? 
+  updateNodeAttributes(new_dom,clone_attrs)
+  updateNodeAttributes(new_dom,extra_attrs)
+ 
+  replaceChildNodes(par,new_dom)
 }
 
 SearchBar.prototype.theOnChange = function(event) {
     var params = {"tg_format"          : "json",
                   "tg_random"          : new Date().getTime(),
-                  "table_name"         : this.tableField.value};
+                  "table_field"         : this.tableField.value};
 
     var d = loadJSONDoc(this.searchController + "?" + queryString(params));
     d.addCallback(this.replaceFields);
@@ -143,10 +214,14 @@ var SearchBarForm = {
         tbody = SearchBarForm.getChildNodesByAttribute(parent_node, 'tagname', 'TBODY')[0];
         tbody.appendChild(li_clone);
         // This is evil.  I need to figure out these values from the dom.
-        searchbar = li_clone.id + " = new SearchBar('" + li_clone.id + "_table', '" + li_clone.id + "_column', '/get_fields', '');" + li_clone.id + ".initialize();";
+        searchbar = li_clone.id + " = new SearchBar('" + li_clone.id + "_table','" + li_clone.id + "_operation','" + li_clone.id + "_value', '/get_search_options', '','');" + li_clone.id + ".initialize();";
         eval(searchbar);
         // Focus
-        li_clone.getElementsByTagName('INPUT')[0].focus()
+        if(li_clone.getElementsByTagName('input')[0])
+            li_clone.getElementsByTagName('INPUT')[0].focus()
+        else
+            li_clone.getElementsByTagName('select')[0].focus()
+
         SearchBarForm['li_count'] = SearchBarForm.li_count + 1;
     }
 }
@@ -163,3 +238,31 @@ function typeChanged(obj) {
         preference.style.visibility = "hidden";
     }
 }
+
+
+function convertObjToArray(obj) {
+    var size = Object.size(obj);
+    var new_array = new Array(size);
+    var i = 0;
+    for(elem in obj){
+        new_array[i] = [elem,obj[elem]];
+        i++
+    }    
+    return new_array;
+}
+
+function isArray(obj) {
+if (obj.constructor.toString().indexOf('Array') == -1)
+    return false;
+else
+    return true;
+}
+
+Object.size = function(obj) {
+    var size =0, key;
+    for (key in obj) {
+        if (obj.hasOwnProperty(key)) size++;
+    }
+    return size;
+};
+

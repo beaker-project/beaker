@@ -49,8 +49,8 @@ import string
 import sys
 
 # from beaker.server import json
-# import logging
-# log = logging.getLogger("beaker.server.controllers")
+import logging
+log = logging.getLogger("beaker.server.controllers")
 import breadcrumbs
 from datetime import datetime
 
@@ -223,12 +223,12 @@ class Root(RPCRoot):
         fields = [id, autoUsers,],
         action = 'save_data',
         submit_text = _(u'Change'),
-    )
-
+    ) 
+ 
     search_bar = SearchBar(name='systemsearch',
                            label=_(u'System Search'),
-                           table_callback=System.get_tables,
-                           search_controller=url("/get_fields")
+                           table_callback=SystemSearch.create_search_table([System,Cpu,Device]),
+                           search_controller=url("/get_search_options")
                  )
     system_form = SystemForm()
     power_form = PowerForm(name='power')
@@ -243,6 +243,27 @@ class Root(RPCRoot):
     system_installoptions = SystemInstallOptions(name='installoptions')
     system_provision = SystemProvision(name='provision')
     arches_form = SystemArches(name='arches')
+
+      
+ 
+
+    @expose(format='json')
+    def get_search_options(self,table_field): 
+        search =  SystemSearch.search_on(table_field)  
+      
+        #Determine what field type we are dealing with. If it is Boolean, convert our values to 0 for False
+        # and 1 for True
+        type = SystemSearch.field_type(table_field)
+        log.debug('type is %s' % type)
+        if type == 'sqlalchemy.types.Boolean':
+            search['values'] = { 0:'False', 1:'True'}
+        #Determine if we have search values. If we do, then we should only have the operators
+        # 'is' and 'is not'.
+        if search['values']:
+            search['operators'] = filter(lambda x: x == 'is' or x == 'is not', search['operators'])         
+      
+        search['operators'].sort()
+        return dict(search_by = search['operators'], search_vals = search['values'] )
 
     @expose(format='json')
     def get_fields(self, table_name):
@@ -267,7 +288,7 @@ class Root(RPCRoot):
 
     @expose(template='beaker.server.templates.grid_add')
     @paginate('list',default_order='fqdn',limit=20,allow_limit_override=True)
-    def index(self, *args, **kw):
+    def index(self, *args, **kw): 
         return self.systems(systems = System.all(identity.current.user), *args, **kw)
 
     @expose(template='beaker.server.templates.form')
@@ -310,49 +331,51 @@ class Root(RPCRoot):
     def mine(self, *args, **kw):
         return self.systems(systems = System.mine(identity.current.user), *args, **kw)
 
+
+    def _system_search(self,kw): 
+        sys_search = SystemSearch() 
+	for search in kw['systemsearch']:
+            #log.debug('About to log in system_search')
+            #log.debug(search)
+	    #clsinfo = System.get_dict()[search['table']] #Need to change this
+            class_field_list = search['table'].split('/')
+            cls_ref = SystemSearch.translate_name(class_field_list[0])
+            col = class_field_list[1]              
+            #If value id False or True, let's convert them to
+            sys_search.append_results(cls_ref,search['value'],col,search['operation']) 
+         
+        systems = sys_search.return_results()
+        new_systems = System.all(identity.current.user,system = systems)    
+        return new_systems
+
     # @identity.require(identity.in_group("admin"))
     def systems(self, systems, *args, **kw):
         # Reset joinpoint and then outerjoin on user.  This is so the sort 
         # column works in paginate/datagrid.
         # Also need to do distinct or paginate gets confused by the joins
-
-        # Short cut search by hostname
+      
         if 'simplesearch' in kw:
             simplesearch = kw['simplesearch']
-            kw['systemsearch'] = [{'table' : 'system',
-                                   'column' : 'fqdn',
-                                   'operation' : 'like',
+            kw['systemsearch'] = [{'table' : 'System/Name',   
+                                   'operation' : 'contains',
                                    'value' : kw['simplesearch']}]
         else:
             simplesearch = None
 
         # Short cut search by type
         if 'type' in kw:
-            kw['systemsearch'] = [{'table' : 'system/type',
-                                   'column' : 'type',
-                                   'operation' : 'equal',
-                                   'value' : kw['type']}]
-        systems = systems.reset_joinpoint().outerjoin('user').distinct()
+            kw['systemsearch'] = [{'table' : 'System/Type',
+                                   'operation' : 'equals',
+                                   'value' : kw['type']}] 
+       
         if kw.get("systemsearch"):
-            searchvalue = kw['systemsearch']
-            for search in kw['systemsearch']:
-                clsinfo = System.get_dict()[search['table']]
-                cls = clsinfo['cls']
-                col = getattr(cls,search['column'], None)
-                systems = systems.join(clsinfo['joins'])
-                if search['operation'] == 'greater than':
-                    systems = systems.filter(col>search['value'])
-                if search['operation'] == 'less than':
-                    systems = systems.filter(col<search['value'])
-                if search['operation'] == 'not equal':
-                    systems = systems.filter(col!=search['value'])
-                if search['operation'] == 'equal':
-                    systems = systems.filter(col==search['value'])
-                if search['operation'] == 'like':
-                    value = '%%%s%%' % search['value']
-                    systems = systems.filter(col.like(value))
+            searchvalue = kw['systemsearch']  
+            systems = self._system_search(kw)
+            systems = systems.reset_joinpoint().outerjoin('user').distinct() 
         else:
+            systems = systems.reset_joinpoint().outerjoin('user').distinct() 
             searchvalue = None
+       
         systems_grid = myPaginateDataGrid(fields=[
                         widgets.PaginateDataGrid.Column(name='fqdn', getter=lambda x: make_link("/view/%s" % x.fqdn, x.fqdn), title='System', options=dict(sortable=True)),
                         widgets.PaginateDataGrid.Column(name='status.status', getter=lambda x: x.status, title='Status', options=dict(sortable=True)),
@@ -363,6 +386,7 @@ class Root(RPCRoot):
                         widgets.PaginateDataGrid.Column(name='user.display_name', getter=lambda x: x.user, title='User', options=dict(sortable=True)),
                         widgets.PaginateDataGrid.Column(name='type.type', getter=lambda x: x.type, title='Type', options=dict(sortable=True)),
                        ])
+       
         return dict(title="Systems", grid = systems_grid,
                                      list = systems, 
                                      searchvalue = searchvalue,

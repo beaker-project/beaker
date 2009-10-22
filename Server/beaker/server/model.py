@@ -1,9 +1,11 @@
+import sys
+import re
 from datetime import datetime
 from turbogears.database import metadata, mapper, session
 from turbogears.config import get
 import ldap
 from sqlalchemy import Table, Column, ForeignKey
-from sqlalchemy.orm import relation, backref, synonym
+from sqlalchemy.orm import relation, backref, synonym, column_property
 from sqlalchemy import String, Unicode, Integer, DateTime, UnicodeText, Boolean, Float, VARCHAR, TEXT, Numeric
 from sqlalchemy import or_, and_, not_, select
 from sqlalchemy.exceptions import InvalidRequestError
@@ -16,7 +18,10 @@ from xmlrpclib import ProtocolError
 from bexceptions import *
 from sqlalchemy import case
 import time
-
+from sqlalchemy import func
+from sqlalchemy.orm.collections import collection
+from bexceptions import *
+import traceback
 from BasicAuthTransport import BasicAuthTransport
 import xmlrpclib
 
@@ -564,29 +569,194 @@ class Permission(object):
     """
     pass
 
-class SystemObject(object):
-    def get_tables(cls):
+
+class Modeller(object):
+    def __init__(self):
+        self.structure ={ 'sqlalchemy.types.String'  : { 'is' : lambda x,y: self.equals(x,y) ,
+                                                         'is not' : lambda x,y: self.not_equal(x,y),
+                                                         'contains' : lambda x,y: self.contains(x,y), },
+                                               
+                                              
+ 
+                          'sqlalchemy.types.Integer'  : { 'is' : lambda x,y: self.equals(x,y), 
+                                                          'is not' : lambda x,y: self.not_equal(x,y),
+                                                          'less than' : lambda x,y: self.less_than(x,y),
+                                                          'greater than' : lambda x,y: self.greater_than(x,y), },
+                                                         
+
+                         
+                             
+                          'sqlalchemy.types.Unicode'  : { 'is' : lambda x,y: self.equals(x,y),
+                                                          'is not' : lambda x,y: self.not_equal(x,y),
+                                                          'contains' : lambda x,y: self.contains(x,y), },
+                          
+                          'sqlalchemy.types.Boolean'  : { 'is' : lambda x,y: self.bool_equals(x,y),
+                                                          'is not' : lambda x,y: self.bool_not_equal(x,y), },  
+
+                          'generic'                   : { 'is' : lambda x,y: self.equals(x,y) ,
+                                                          'is not': lambda x,y:  self.not_equals(x,y), },
+                                                          
+                         } 
+ 
+    def less_than(self,x,y):
+        return x < y
+
+    def greater_than(self,x,y):
+        return x > y
+ 
+    def bool_not_equal(self,x,y):
+        bool_y = int(y)
+        return x != bool_y
+
+    def bool_equals(self,x,y): 
+        bool_y = int(y) 
+        return x == bool_y
+
+    def not_equal(self,x,y):
+        return x != y
+
+    def equals(self,x,y):
+        return x == y
+
+    def contains(self,x,y):
+        return x.like('%%%s%%' % y )
+
+ 
+    def return_function(self,type,operator):
+        """
+        return_function will return the particular python function to be applied to a type/operator combination 
+        (i.e sqlalchemy.types.Integer and 'greater than')
+        """
+        try:
+            op_dict = self.structure[type]   
+        except KeyError, (error):
+            log.debug('Could not access specific type operator functions for %s in return_function, will use generic' % error)
+            op_dict = self.structure['generic']
+       
+        return op_dict[operator]        
+
+    def return_operators(self,type): 
+        try:
+            operators = self.structure[type] 
+        except KeyError, (error):
+             log.debug('Could not access specific type operators for %s, will use generic' % error)
+             operators = self.structure['generic']
+        return operators.keys() 
+          
+
+class SystemObject(object):    
+    @classmethod
+    def get_field_type(cls,field):
+        mapper = getattr(cls,'mapper') 
+        column = getattr(mapper,'c')
+        column_name = getattr(column,field)
+        field_type = getattr(column_name,'type')
+        return field_type
+    
+    @classmethod
+    def search_values(cls,col):  
+       if cls.search_values_dict.has_key(col):
+           return cls.search_values_dict[col] 
+
+    @classmethod
+    def search_operators(cls,field):
+        """
+        search_operators returns a list of the different types of searches that can be done on a given field.
+        It uses the Modeller class to store these relationships. Currently it's only set up for sqlalchemy types.
+        Anything that is not an sqlalchemy type is given a 'generic' set of oeprations
+        """    
+        class_field_type = '%s' % type(field)
+        match_obj = SystemSearch.strip_field_type(class_field_type)
+        index_type = match_obj.group(1) 
+        m = Modeller() 
+    
+        try:                  
+            return m.return_operators(index_type)
+        except KeyError, (e): 
+            log.error('Failed to find search_type by index %s, got error: %s' % (index_type,e))
+
+    def __init__(self,search_filter = None):  
+        self.__search_description = self._create_search_description(search_filter)             
+
+       
+    def get_searchable(self):
+        """
+        get_searchable will return the description of how this object can be searched by returning a dict
+        with the derived Class' name (or display name) as the key, and a list of fields that can be searched after any field filtering has
+        been applied
+        """
+        return self.__search_description    
+             
+    def _create_search_description(self, search_field_filter = None): 
+        """
+        Creates a list of fields available to search after applying a filter (if applicable).
+        The filter is a dict in the form of 
+        {'includes': <list of fields to include>} or 
+        {'excludes': <list of fields to exclude> }
+          
+        If a dict is passed in that contains an includes and an excludes element, the excludes is ignored
+        """
+        fields = self.mapper.c.keys()    
+        if search_field_filter == None: 
+            return fields 
+    
+        if search_field_filter.has_key('includes'): 
+            includes = search_field_filter['includes']
+            return  [elem for elem in fields if includes.count(elem) > 0]
+        
+        if search_field_filter.has_key('excludes'):
+            excludes = search_field_filter["excludes"] 
+            return  [elem for elem in fields if excludes.count(elem) < 1] 
+
+
+    def get_tables(cls): 
         tables = cls.get_dict().keys()
         tables.sort()
         return tables
     get_tables = classmethod(get_tables)
+  
+ 
+    @classmethod
+    def get_allowable_dict(cls, allowable_properties):
+        tables = dict( system = dict( joins=[], cls=cls)) 
+        for property in allowable_properties:      
+            try:
+
+                property_got = cls.mapper.get_property(property)
+	    except InvalidRequestError: pass 
+            try:
+                remoteTables = property_got.mapper.class_._get_dict()          
+            except: pass
+             
+            for key in remoteTables.keys():             
+                joins=[property_got.key]
+                joins.extend(remoteTables[key]['joins'])     
+                tables['%s/%s' % (property_got.key,key)] = dict( joins=joins, cls=remoteTables[key]['cls'])
+            
+            tables['system/%s' % property_got.key] = dict(joins=[property_got.key], cls=property_got.mapper.class_)
+        
+        return tables 
+    
 
     def get_dict(cls):
         tables = dict( system = dict(joins=[], cls=cls))
         for property in cls.mapper.iterate_properties:
             mapper = getattr(property, 'mapper', None)
-            if mapper:
+            if mapper: 
                 remoteTables = {}
-                try:
+                try: 
                     remoteTables = property.mapper.class_._get_dict()
                 except: pass
-                for key in remoteTables.keys():
+                for key in remoteTables.keys(): 
                     joins = [property.key]
-                    joins.extend(remoteTables[key]['joins'])
+                    joins.extend(remoteTables[key]['joins']) 
                     tables['system/%s/%s' % (property.key, key)] = dict(joins=joins, cls=remoteTables[key]['cls'])
-                tables['system/%s' % property.key] = dict(joins=[property.key], cls=property.mapper.class_)
+               
+                tables['system/%s' % property.key] = dict(joins=[property.key], cls=property.mapper.class_) 
         return tables
     get_dict = classmethod(get_dict)
+
+
 
     def _get_dict(cls):
         tables = {}
@@ -605,6 +775,7 @@ class SystemObject(object):
         return tables
     _get_dict = classmethod(_get_dict)
 
+   
     def get_fields(cls, lookup=None):
         if lookup:
             dict_lookup = cls.get_dict()
@@ -612,15 +783,11 @@ class SystemObject(object):
         return cls.mapper.c.keys()
     get_fields = classmethod(get_fields)
 
-class Group(SystemObject):
+
+class Group(object):
     """
     An ultra-simple group definition.
     """
-
-    @classmethod
-    def get_fields(cls, *args, **kwargs):
-        return ['group_name', 'display_name']
-
     @classmethod
     def by_name(cls, name):
         return cls.query.filter_by(group_name=name).one()
@@ -628,10 +795,6 @@ class Group(SystemObject):
     @classmethod
     def by_id(cls, id):
         return cls.query.filter_by(group_id=id).one()
-
-    @classmethod
-    def _get_dict():
-        return dict()
 
     def __repr__(self):
         return self.display_name
@@ -644,11 +807,181 @@ class Group(SystemObject):
         """
         return cls.query().filter(Group.group_name.like('%s%%' % name))
 
+class Search: 
+    @classmethod
+    def translate_name(cls,display_name):
+        """ translate_name() get's a reference to the class from it's display name """
+        try:
+            class_ref = cls.class_external_mapping[display_name]
+        except KeyError:
+            log.error('Class %s does not have a mapping to display_name %s' % (cls.__name__,display_name))  
+        else:
+           return class_ref
+
+    @classmethod
+    def __split_class_field(cls,class_field):
+        class_field_list = class_field.split('/')     
+        display_name = class_field_list[0]
+        field      = class_field_list[1] 
+        return (display_name,field)
+
+    @classmethod 
+    def field_type(cls,class_field): 
+       """ Takes a class/field string (ie'CPU/Processor') and returns the sqlalchemy type of the field"""
+       returned_class_field = cls.__split_class_field(class_field) 
+       display_name = returned_class_field[0]
+       field      = returned_class_field[1]        
+      
+       class_ref = cls.translate_name(display_name)
+       field_type = class_ref.get_field_type(field)  
+       class_field_type = "%s" % type(field_type)
+       match_obj = cls.strip_field_type(class_field_type)
+       return match_obj.group(1)
+
+    @classmethod 
+    def search_on(cls,class_field): 
+        """
+        search_on takes a combination of class name and field name (i.e 'Cpu/vendor') and
+        will return what kind of searches can be done on the field. 
+        """ 
+        returned_class_field = cls.__split_class_field(class_field) 
+        display_name = returned_class_field[0]
+        field      = returned_class_field[1]        
+        class_ref = cls.translate_name(display_name)
+        
+        try:
+            field_type = class_ref.get_field_type(field) 
+            vals = None
+            try:
+                vals = class_ref.search_values(field)
+            except AttributeError:
+                log.debug('Not using predefined search values for %s->%s' % (class_ref.__name__,field))  
+        except AttributeError, (error):
+            log.error('Error accessing attribute within search_on: %s' % (error))
+        else:
+            return dict(operators = class_ref.search_operators(field_type), values = vals)
+       
+    @classmethod
+    def strip_field_type(cls,field_type):
+        return re.match('^<class\s+\'(.+?)\'>$',field_type)  
+
+    @classmethod
+    def create_search_table(cls,searchable_objs):  
+        """
+        create_search_table will set and return the class' search_table class attribute with
+        a list of searchable 'combinations'.
+        These 'combinations' merely represent a table and a column.
+        An example of search_table entry may be 'Cpu/Vendor' or 'System/Name'
+        """
+        #Clear the table if it's already been created
+        if cls.search_table != None:
+            cls.search_table = []
+        
+        for obj in searchable_objs:  
+            obj_instance = obj()
+            #Check if we have a specialised display name
+            display_name = getattr(obj_instance,'display_name',None)
+            if display_name != None:
+                display_name = obj.display_name
+                  
+                #If the display name is already being used by some class.
+                if cls.class_external_mapping.has_key(display_name): 
+                    log.debug("Display name %s cannot be set for %s display name will be set to class name" % (display_name, obj_instance.__class__.__name__))
+                    display_name = obj.__name__                    
+            else:
+                display_name = obj.__name__
+              
+            #We have our final display name, if it still exists in the mapping
+            #there isn't much we can do, and we don't want to overwrite it.
+            if cls.class_external_mapping.has_key(display_name): 
+                log.error("Display name %s cannot be set for %s" % (display_name,obj_instance.__class__.__name__))               
+            else: 
+                cls.class_external_mapping[display_name] = obj
+
+            #Now let's actually build the search table
+            searchable =  obj_instance.get_searchable() 
+            for item in searchable: 
+                 cls.search_table.append('%s/%s' % (display_name,item))  
+               
+        cls.search_table.sort()
+        return cls.search_table
+   
+
+
+class SystemSearch(Search): 
+    class_external_mapping = {}
+    search_table = []
+    
+    def __init__(self):
+        self.j = system_table
+        self.filter_funcs = [] 
+        self.already_joined = []
+  
+    def __getitem__(self,key):
+        pass
+
+    def append_results(self,cls_ref,value,column,operation):  
+        """ 
+        append_results() will take a value, column and operation from the search field,
+        as well as the class of which the search pertains to, and will append the join
+        and the filter needed to return the correct results.   
+
+        """
+        try:
+            _c = cls_ref.mapper.c
+            col = getattr(_c, column)
+            col_type = col.type
+        except AttributeError, (error):     
+            log.error('Error accessing attribute within append_results: %s' % (error))
+
+      
+        class_field_type = '%s' % type(col_type)
+        match_obj = self.strip_field_type(class_field_type)
+        #This should get the type i.e 'sqlalchemy.types.String'  
+        index_type = match_obj.group(1)  
+        modeller = Modeller()
+        filter_func = modeller.return_function(index_type,operation)     
+
+        #append a filter function which is to be called later
+        self.filter_funcs.append(lambda: filter_func(col,value))
+        join_dict = getattr(cls_ref,'join_system',None) 
+        #We may not have a join with System 
+        if join_dict != None:
+            for k,v in join_dict.items(): 
+                if (self.already_joined.count(k) < 1):
+                    self.j = self.j.join(k,onclause=v)
+		    self.already_joined.append(k) 
+        else:
+            pass
+
+    def return_results(self):   
+        #Do our joins
+        queri = session.query(System).select_from(self.j)     
+      
+        #Execute filter on query object  
+        for filter_func in self.filter_funcs:           
+            queri = queri.filter(filter_func())  
+        return queri        
+
 class System(SystemObject):
+    table = system_table
+    search_table = [] 
+    join_system = { arch_table: arch_table.c.id == system_arch_map.c.arch_id,
+                   system_arch_map: system_table.c.id == system_arch_map.c.system_id }
+    #If we have a set of predefined values that a column can be searched on, put them in the 
+    # search_values_dict of the corresponding class
+    search_values_dict =     { 'Status' : lambda: SystemStatus.get_all_status_name(),
+                               'Type' : lambda: SystemType.get_all_type_names() }    
+   
+    @classmethod
+    def search_values(cls,col):  
+       if cls.search_values_dict.has_key(col):
+           return cls.search_values_dict[col]() 
 
     def __init__(self, fqdn=None, status=None, contact=None, location=None,
                        model=None, type=None, serial=None, vendor=None,
                        owner=None):
+        SystemObject.__init__(self,{'includes':['Arch','Name','Status','Type','Vendor','Lender','Model','Memory','Serial','Owner','User','LabController']}) 
         self.fqdn = fqdn
         self.status = status
         self.contact = contact
@@ -658,6 +991,8 @@ class System(SystemObject):
         self.serial = serial
         self.vendor = vendor
         self.owner = owner
+    
+
 
     def remote(self):
         class CobblerAPI:
@@ -884,12 +1219,20 @@ $SNIPPET("rhts_post")
 
     remote = property(remote)
     @classmethod
-    def all(cls, user=None):
+    def all(cls, user=None,system = None): 
         """
         Only systems that the current user has permission to see
         
         """
-        query = cls.query().outerjoin(['groups','users'], aliased=True)
+        if system is None:
+            query = cls.query().outerjoin(['groups','users'], aliased=True)
+        else:
+            try: 
+                query = system.outerjoin(['groups','users'], aliased=True)
+            except AttributeError, (e):
+                log.error('A non Query object has been passed into the all method, using default query instead: %s' % e)        
+                query = cls.query().outerjoin(['groups','users'], aliased=True)
+                
         if user:
             if not user.is_admin():
                 query = query.filter(
@@ -900,6 +1243,8 @@ $SNIPPET("rhts_post")
                                         System.user==user))))
         else:
             query = query.filter(System.private==False)
+        
+        
         return query
 
 #                                  or_(User.user_id==user.user_id, 
@@ -1140,7 +1485,7 @@ $SNIPPET("rhts_post")
     def updateDevices(self, deviceinfo):
         for device in deviceinfo:
             try:
-                device = session.query(Device).filter_by(vendor_id = device['vendorID'],
+                device = Device.query().filter_by(vendor_id = device['vendorID'],
                                    device_id = device['deviceID'],
                                    subsys_vendor_id = device['subsysVendorID'],
                                    subsys_device_id = device['subsysDeviceID'],
@@ -1186,7 +1531,7 @@ $SNIPPET("rhts_post")
         """
         List excluded osmajor for system by arch
         """
-        excluded = session.query(ExcludeOSMajor).join('system').\
+        excluded = ExcludeOSMajor.query().join('system').\
                     join('arch').filter(and_(System.id==self.id,
                                              Arch.id==arch.id))
         return excluded
@@ -1195,7 +1540,7 @@ $SNIPPET("rhts_post")
         """
         List excluded osversion for system by arch
         """
-        excluded = session.query(ExcludeOSVersion).join('system').\
+        excluded = ExcludeOSVersion.query().join('system').\
                     join('arch').filter(and_(System.id==self.id,
                                              Arch.id==arch.id))
         return excluded
@@ -1204,7 +1549,7 @@ $SNIPPET("rhts_post")
         """
         List of distros that support this system
         """
-        distros = session.query(Distro).join(['arch','systems']).filter(
+        distros = Distro.query().join(['arch','systems']).filter(
               and_(System.id==self.id,
                    System.lab_controller_id==LabController.id,
                    lab_controller_distro_map.c.distro_id==Distro.id,
@@ -1303,12 +1648,20 @@ class SystemType(SystemObject):
         """
         all_types = cls.query()
         return [(type.id, type.type) for type in all_types]
+    @classmethod
+    def get_all_type_names(cls):
+        all_types = cls.query()
+        return [type.type for type in all_types]
 
     @classmethod
     def by_name(cls, systemtype):
         return cls.query.filter_by(type=systemtype).one()
 
+
+
+
 class SystemStatus(SystemObject):
+
     def __init__(self, status=None):
         self.status = status
 
@@ -1324,8 +1677,15 @@ class SystemStatus(SystemObject):
         return [(status.id, status.status) for status in all_status]
 
     @classmethod
+    def get_all_status_name(cls):
+       all_status_name = cls.query()
+       return [status_name.status for status_name in all_status_name]      
+
+
+    @classmethod
     def by_name(cls, systemstatus):
         return cls.query.filter_by(status=systemstatus).one()
+
 
 class Arch(SystemObject):
     def __init__(self, arch=None):
@@ -1333,10 +1693,6 @@ class Arch(SystemObject):
 
     def __repr__(self):
         return '%s' % self.arch
-
-    @classmethod
-    def _get_dict(cls):
-        return dict()
 
     @classmethod
     def by_id(cls, id):
@@ -1354,20 +1710,26 @@ class Arch(SystemObject):
         """
         return cls.query().filter(Arch.arch.like('%s%%' % name))
 
+
 class Provision(SystemObject):
     pass
+
 
 class ProvisionFamily(SystemObject):
     pass
 
+
 class ProvisionFamilyUpdate(SystemObject):
     pass
+
 
 class ExcludeOSMajor(SystemObject):
     pass
 
+
 class ExcludeOSVersion(SystemObject):
     pass
+
 
 class Breed(SystemObject):
     def __init__(self, breed):
@@ -1379,6 +1741,7 @@ class Breed(SystemObject):
 
     def __repr__(self):
         return self.breed
+
 
 class OSMajor(SystemObject):
     def __init__(self, osmajor):
@@ -1399,6 +1762,7 @@ class OSMajor(SystemObject):
 
     def __repr__(self):
         return '%s' % self.osmajor
+
 
 class OSVersion(SystemObject):
     def __init__(self, osmajor, osminor):
@@ -1421,21 +1785,15 @@ class OSVersion(SystemObject):
     def __repr__(self):
         return "%s.%s" % (self.osmajor,self.osminor)
 
+
 class LabControllerDistro(SystemObject):
     pass
+
 
 class LabController(SystemObject):
 
     def __repr__(self):
         return "%s" % (self.fqdn)
-
-    @classmethod
-    def _get_dict(cls):
-        return dict()
-
-    @classmethod
-    def get_fields(cls, *args, **kwargs):
-        return ['fqdn']
 
     @classmethod
     def by_id(cls, id):
@@ -1455,11 +1813,19 @@ class LabController(SystemObject):
 
     distros = association_proxy('_distros', 'distro')
 
+
 class LabInfo(SystemObject):
     fields = ['orig_cost', 'curr_cost', 'dimensions', 'weight', 'wattage', 'cooling']
 
-class Cpu(SystemObject):
+
+class Cpu(SystemObject): 
+    table = cpu_table      
+    display_name = 'CPU'
+    join_system = { cpu_table : system_table.c.id == cpu_table.c.system_id }
+    search_values_dict = { 'Hyper' : ['True','False'] }
+
     def __init__(self, vendor=None, model=None, model_name=None, family=None, stepping=None,speed=None,processors=None,cores=None,sockets=None,flags=None):
+        SystemObject.__init__(self,{'includes':['Processors','Hyper','Vendor','Flags','Cores','Sockets','Model','Stepping','Speed','Family']})
         self.vendor = vendor
         self.model = model
         self.model_name = model_name
@@ -1476,11 +1842,13 @@ class Cpu(SystemObject):
         self.updateFlags(flags)
 
     def updateFlags(self,flags):
-        for cpuflag in flags:
-            new_flag = CpuFlag(flag=cpuflag)
-            self.flags.append(new_flag)
+        if flags != None:
+	    for cpuflag in flags:
+                new_flag = CpuFlag(flag=cpuflag)
+                self.flags.append(new_flag)
 
 # systems = session.query(System).join('status').join('type').join(['cpu','flags']).filter(CpuFlag.c.flag=='lm')
+
 
 class CpuFlag(SystemObject):
     def __init__(self, flag=None):
@@ -1494,12 +1862,14 @@ class CpuFlag(SystemObject):
 
     by_flag = classmethod(by_flag)
 
+
 class Numa(SystemObject):
     def __init__(self, nodes=None):
         self.nodes = nodes
 
     def __repr__(self):
         return self.nodes
+
 
 class DeviceClass(SystemObject):
     def __init__(self, device_class=None, description=None):
@@ -1511,7 +1881,15 @@ class DeviceClass(SystemObject):
     def __repr__(self):
         return self.device_class
 
+
 class Device(SystemObject):
+    table = device_table
+    display_name = 'Devices' 
+    join_system = { device_table : system_device_map.c.device_id 
+                                   == device_table.c.id, 
+                    system_device_map : system_table.c.id 
+                                       == system_device_map.c.system_id,} 
+ 
     def __init__(self, vendor_id=None, device_id=None, subsys_device_id=None, subsys_vendor_id=None, bus=None, driver=None, device_class=None, description=None):
         if not device_class:
             device_class = "NONE"
@@ -1521,6 +1899,7 @@ class Device(SystemObject):
             dc = DeviceClass(device_class = device_class)
             session.save(dc)
             session.flush([dc])
+        SystemObject.__init__(self,{'includes' : ['description']})
         self.vendor_id = vendor_id
         self.device_id = device_id
         self.subsys_vendor_id = subsys_vendor_id
@@ -1530,9 +1909,11 @@ class Device(SystemObject):
         self.description = description
         self.device_class = dc
 
+
 class Locked(object):
     def __init__(self, name=None):
         self.name = name
+
 
 class PowerType(object):
 
@@ -1555,20 +1936,25 @@ class PowerType(object):
     def by_id(cls, id):
         return cls.query.filter_by(id=id).one()
 
+
 class Power(SystemObject):
     pass
+
 
 class Serial(object):
     def __init__(self, name=None):
         self.name = name
 
+
 class SerialType(object):
     def __init__(self, name=None):
         self.name = name
 
+
 class Install(object):
     def __init__(self, name=None):
         self.name = name
+
 
 def _create_tag(tag):
     """A creator function."""
@@ -1579,6 +1965,7 @@ def _create_tag(tag):
         session.save(tag)
         session.flush([tag])
     return tag
+
 
 class Distro(object):
     def __init__(self, install_name=None):
@@ -1689,6 +2076,7 @@ class DistroTag(object):
         """
         return cls.query().filter(DistroTag.tag.like('%s%%' % tag))
 
+
 # Activity model
 class Activity(object):
     def __init__(self, user=None, service=None, action=None,
@@ -1707,17 +2095,21 @@ class Activity(object):
     def object_name(self):
         return None
 
+
 class SystemActivity(Activity):
     def object_name(self):
         return "System: %s" % self.object.fqdn
+
 
 class GroupActivity(Activity):
     def object_name(self):
         return "Group: %s" % self.object.display_name
 
+
 class DistroActivity(Activity):
     def object_name(self):
         return "Distro: %s" % self.object.install_name
+
 
 # note model
 class Note(object):
@@ -1729,21 +2121,14 @@ class Note(object):
     def all(cls):
         return cls.query()
 
-class Key(SystemObject):
+
+class Key(object):
     def __init__(self, key_name=None, numeric=False):
         self.key_name = key_name
         self.numeric = numeric
 
     def __repr__(self):
         return "%s" % self.key_name
-
-    @classmethod
-    def _get_dict(cls):
-        return dict()
-
-    @classmethod
-    def get_fields(cls, *args, **kwargs):
-        return ['key_name']
 
     @classmethod
     def by_name(cls, key_name):
@@ -1753,20 +2138,13 @@ class Key(SystemObject):
     def by_id(cls, id):
         return cls.query().filter_by(id=id).one()
 
+
 # key_value model
-class Key_Value_String(SystemObject):
+class Key_Value_String(object):
     def __init__(self, key, key_value, system=None):
         self.system = system
         self.key = key
         self.key_value = key_value
-
-    @classmethod
-    def _get_dict(cls):
-        return dict(key = dict(joins=['key'], cls = Key))
-
-    @classmethod
-    def get_fields(cls, *args, **kwargs):
-        return ['key_value']
 
     def __repr__(self):
         return "%s %s" % (self.key, self.key_value)
@@ -1777,7 +2155,8 @@ class Key_Value_String(SystemObject):
                                   Key_Value_String.key_value==value,
                                   Key_Value_String.system==system)).one()
 
-class Key_Value_Int(SystemObject):
+
+class Key_Value_Int(object):
     def __init__(self, key, key_value, system=None):
         self.system = system
         self.key = key
@@ -1787,36 +2166,47 @@ class Key_Value_Int(SystemObject):
         return "%s %s" % (self.key, self.key_value)
 
     @classmethod
-    def _get_dict(cls):
-        return dict(key = dict(joins=['key'], cls = Key))
-
-    @classmethod
-    def get_fields(cls, *args, **kwargs):
-        return ['key_value']
-
-    @classmethod
     def by_key_value(cls, system, key, value):
         return cls.query().filter(and_(Key_Value_Int.key==key, 
                                   Key_Value_Int.key_value==value,
                                   Key_Value_Int.system==system)).one()
 
 
-# set up mappers between identity tables and classes
 
+
+# set up mappers between identity tables and classes
 SystemType.mapper = mapper(SystemType, system_type_table)
 SystemStatus.mapper = mapper(SystemStatus, system_status_table)
 System.mapper = mapper(System, system_table,
-       properties = {'devices':relation(Device,
-                                        secondary=system_device_map),
+       properties = {'fqdn':synonym('Name',map_column=True),
+                     'vendor':synonym('Vendor',map_column=True),
+                     'lender':synonym('Lender',map_column=True),
+                     'model':synonym('Model',map_column=True),
+                     'memory':synonym('Memory',map_column=True),
+                     'serial':synonym('Serial',map_column=True),
+                     'date_added':synonym('Date Added',map_column=True),
+                     'date_modified':synonym('Date Modified',map_column=True),
+                     'shared':synonym('Shared',map_column=True),
+                     'private':synonym('Private',map_column=True),
+                     'LabController':column_property(select([lab_controller_table.c.fqdn], lab_controller_table.c.id == system_table.c.lab_controller_id).correlate(system_table).label('LabController'),deferred=True),
+                     'Owner':column_property(select([users_table.c.user_name], users_table.c.user_id == system_table.c.owner_id).correlate(system_table).label('Owner'),deferred=True),
+                     'User':column_property(select([users_table.c.user_name],system_table.c.user_id == users_table.c.user_id).correlate(system_table).label('User'),deferred=True),                      
+                     'Status':column_property(select([system_status_table.c.status],system_status_table.c.id == system_table.c.status_id).correlate(system_table).label('Status'),deferred=True),
+                     'Type':column_property(select([system_type_table.c.type],system_type_table.c.id == system_table.c.type_id).label('Type'),deferred=True),
+                     'Arch':column_property(select([arch_table.c.arch]).correlate(arch_table).label('Arch'),deferred = True), 
+                   
+                     'status':relation(SystemStatus,uselist=False),
+                     'devices':relation(Device,
+                                        secondary=system_device_map,backref='systems'),
                      'type':relation(SystemType, uselist=False),
-                     'status':relation(SystemStatus, uselist=False),
+                    
                      'arch':relation(Arch,
                                      order_by=[arch_table.c.arch],
                                         secondary=system_arch_map,
                                         backref='systems'),
                      'labinfo':relation(LabInfo, uselist=False,
                                         backref='system'),
-                     'cpu':relation(Cpu, uselist=False),
+                     'cpu':relation(Cpu, uselist=False,backref='systems'),
                      'numa':relation(Numa, uselist=False),
                      'power':relation(Power, uselist=False,
                                          backref='system'),
@@ -1846,7 +2236,21 @@ System.mapper = mapper(System, system_table,
                      'activity':relation(SystemActivity,
                                      order_by=[activity_table.c.created.desc()],
                                                backref='object')})
-Arch.mapper = mapper(Arch, arch_table)
+
+Cpu.mapper = mapper(Cpu,cpu_table,properties = {
+                                                 'vendor':synonym('Vendor',map_column=True),
+                                                 'processors':synonym('Processors',map_column=True),
+                                                 'hyper':synonym('Hyper',map_column=True),
+                                                 'cores':synonym('Cores',map_column=True),
+                                                 'sockets':synonym('Sockets',map_column=True), 
+                                                 'model':synonym('Model',map_column=True),
+                                                 'stepping':synonym('Stepping',map_column=True),
+                                                 'speed':synonym('Speed',map_column=True),
+                                                 'family':synonym('Family',map_column=True), 
+                                                 'Flags':column_property(select([cpu_flag_table.c.flag],cpu_flag_table.c.cpu_id == cpu_table.c.id).correlate(cpu_table).label('Flags'),deferred = True),  
+                                                 'flags':relation(CpuFlag), 
+                                                 'system':relation(System) } )
+mapper(Arch, arch_table)
 mapper(Provision, provision_table,
        properties = {'provision_families':relation(ProvisionFamily, collection_class=attribute_mapped_collection('osmajor')),
                      'arch':relation(Arch)})
@@ -1867,8 +2271,6 @@ mapper(OSVersion, osversion_table,
 mapper(OSMajor, osmajor_table,
        properties = {'osminor':relation(OSVersion,
                                      order_by=[osversion_table.c.osminor])})
-Cpu.mapper = mapper(Cpu, cpu_table,
-       properties = {'flags':relation(CpuFlag)})
 mapper(LabInfo, labinfo_table)
 CpuFlag.mapper = mapper(CpuFlag, cpu_flag_table)
 Numa.mapper = mapper(Numa, numa_table)
@@ -1887,7 +2289,7 @@ mapper(Install, install_table)
 mapper(LabControllerDistro, lab_controller_distro_map , properties={
     'distro':relation(Distro, backref='lab_controller_assocs')
 })
-LabController.mapper = mapper(LabController, lab_controller_table,
+mapper(LabController, lab_controller_table,
         properties = {'_distros':relation(LabControllerDistro,
                                           backref='lab_controller'),
     })
@@ -1943,18 +2345,14 @@ mapper(Note, note_table,
         properties=dict(user=relation(User, uselist=False,
                         backref='notes')))
 
-Key.mapper = mapper(Key, key_table)
-Key_Value_Int.mapper = mapper(Key_Value_Int, key_value_int_table,
+mapper(Key, key_table)
+mapper(Key_Value_Int, key_value_int_table,
         properties=dict(key=relation(Key, uselist=False,
                         backref='key_value_int')))
-Key_Value_String.mapper = mapper(Key_Value_String, key_value_string_table,
+mapper(Key_Value_String, key_value_string_table,
         properties=dict(key=relation(Key, uselist=False,
                         backref='key_value_string')))
 
-
-#                     Column("comments"), MultipleJoin('Comment')
-
-#    tags          = MultipleJoin("distroTag")
 
 ## Static list of device_classes -- used by master.kid
 global _device_classes

@@ -129,8 +129,8 @@ class SearchBar(RepeatingFormField):
            id="${field_id}_${repetition}">
         <script language="JavaScript" type="text/JavaScript">
             ${field_id}_${repetition} = new SearchBar(
-            '${fields[0].field_id}', '${fields[1].field_id}',
-            '${search_controller}', '${value_for(fields[1])}');
+            '${fields[0].field_id}', '${fields[1].field_id}','${fields[2].field_id}',
+            '${search_controller}', '${value_for(fields[1])}','${value_for(fields[2])}');
             addLoadEvent(${field_id}_${repetition}.initialize);
         </script>
         <td py:for="field in fields">
@@ -179,10 +179,10 @@ class SearchBar(RepeatingFormField):
         self.search_controller=search_controller
         self.repetitions = 1
         table_field = SingleSelectField(name="table", options=table_callback, validator=validators.NotEmpty())
-        column_field = SingleSelectField(name="column", options=[None], validator=validators.NotEmpty())
-        operation_field = SingleSelectField(name="operation", options=['equal','like','less than', 'greater than','not equal'], validator=validators.NotEmpty())
+      
+        operation_field = SingleSelectField(name="operation", options=[None], validator=validators.NotEmpty())
         value_field = TextField(name="value")
-        self.fields = [ table_field, column_field, operation_field, value_field]
+        self.fields = [ table_field, operation_field, value_field]
 
     def display(self, value=None, **params):
         if 'options' in params and 'simplesearch' in params['options']:
