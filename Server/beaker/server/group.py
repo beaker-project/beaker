@@ -78,15 +78,31 @@ class Groups(RPCRoot):
             value = kw,
         )
 
+    
+    def show_members(self,id): 
+        user_member = ('User Members', lambda x: x.display_name)
+        
+        if identity.in_group('admin'):
+            remove_link = (' ', lambda x: make_link('removeUser?group_id=%s&id=%s' % (id, x.user_id), 'Remove (-)'))
+        
+        user_fields = [user_member]
+        if 'remove_link' in locals(): 
+            user_fields.append(remove_link)
+
+        return widgets.DataGrid(fields=user_fields)
+    
+    @expose(template='beaker.server.templates.group_users')
+    def group_members(self,id, **kw):
+        group = Group.by_id(id)
+        usergrid = self.show_members(id)
+        return dict(value = group,grid = usergrid)
+
+
     @identity.require(identity.in_group("admin"))
     @expose(template='beaker.server.templates.group_form')
     def edit(self, id, **kw):
         group = Group.by_id(id)
-        
-        usergrid = widgets.DataGrid(fields=[
-                                  ('User Members', lambda x: x.display_name),
-                                  (' ', lambda x: make_link('removeUser?group_id=%s&id=%s' % (id, x.user_id), 'Remove (-)')),
-                              ])
+        usergrid = self.show_members(id) 
         systemgrid = widgets.DataGrid(fields=[
                                   ('System Members', lambda x: x.fqdn),
                                   (' ', lambda x: make_link('removeSystem?group_id=%s&id=%s' % (id, x.id), 'Remove (-)')),
@@ -102,7 +118,7 @@ class Groups(RPCRoot):
             value = group,
             usergrid = usergrid,
             systemgrid = systemgrid,
-            disabled_fields = []
+            disabled_fields = ['System Members']
         )
     
     @identity.require(identity.in_group("admin"))
@@ -117,7 +133,6 @@ class Groups(RPCRoot):
             activity = Activity(identity.current.user, 'WEBUI', 'Added', 'Group', "", kw['display_name'] )
         group.display_name = kw['display_name']
         group.group_name = kw['group_name']
-
         flash( _(u"OK") )
         redirect(".")
 
@@ -152,7 +167,7 @@ class Groups(RPCRoot):
     def index(self):
         groups = session.query(Group)
         if not 'admin' in identity.current.groups:
-            group_name =('Group Name', lambda x: x.group_name)
+            group_name =('Group Name', lambda x: make_link('group_members?id=%s' % x.group_id,x.group_name))
             remove_link = None 
             template = "beaker.server.templates.grid"
         else:
