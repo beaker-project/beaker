@@ -365,7 +365,7 @@ class Root(RPCRoot):
         # Short cut search by type
         if 'type' in kw:
             kw['systemsearch'] = [{'table' : 'System/Type',
-                                   'operation' : 'equals',
+                                   'operation' : 'is',
                                    'value' : kw['type']}] 
        
         if kw.get("systemsearch"):
