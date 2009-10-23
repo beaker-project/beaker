@@ -87,7 +87,7 @@ class BeahRunner(ExtBackend):
         return False
 
     def proc_evt_echo(self, evt):
-        if evt.arg('cmd', ['Command','',{}]) == self.__cmd:
+        if evt.arg('cmd_id', '') == self.__cmd.id():
             if evt.args()['rc'] == ECHO.OK:
                 self.do_beah_cmd()
                 return

@@ -18,6 +18,7 @@
 
 import exceptions
 from beah.core.constants import RC, LOG_LEVEL
+from beah.core import new_id
 
 """
 Events are used to communicate events from Task to Controller and finally back
@@ -60,7 +61,8 @@ def end(task_info, rc, origin={}, timestamp=None):
 
 def echo(cmd, rc, message="", origin={}, timestamp=None, **kwargs):
     """Event generated as a response to a command"""
-    return Event('echo', origin, timestamp, cmd=cmd, rc=rc, message=message, **kwargs)
+    cmd_id = cmd if isinstance(cmd, str) else cmd.id()
+    return Event('echo', origin, timestamp, cmd_id=cmd_id, rc=rc, message=message, **kwargs)
 
 def lose_item(data, origin={}, timestamp=None):
     """Event generated when unformatted data are received."""
@@ -129,31 +131,37 @@ def event(evt, origin={}, timestamp=None, **kwargs):
 
 import time
 class Event(list):
-    def __init__(self, evt, origin={}, timestamp=None, **kwargs):
-        list.__init__(self, ['Event', None, None, None, None]) # is this backwards compatible? Even with Python 2.3?
+    # FIXME: Clean-up! All the indices are ugly!!!
+    def __init__(self, evt, origin={}, timestamp=None, id=None, **kwargs):
+        list.__init__(self, ['Event', None, None, None, None, None]) # is this backwards compatible? Even with Python 2.3?
         if isinstance(evt, list):
             if evt[0] != 'Event':
                 raise exceptions.TypeError('%r\'s first element has to be \'Event\'' % evt)
             self[1] = evt[1]
             self[2] = evt[2]
-            self[3] = evt[3]
+            self[3] = dict(evt[3])
             self[4] = evt[4]
+            self[5] = dict(evt[5])
         else:
             self[1] = evt
-            self[2] = origin
-            self[3] = timestamp
-            self[4] = kwargs
+            self[2] = id
+            self[3] = origin
+            self[4] = timestamp
+            self[5] = kwargs
 
-        for i in range(1,5):
+        for i in range(1,6):
             if callable(self[i]):
                 self[i] = self[i](self)
 
-        if self[3] is True:
-            self[3] = time.time()
+        if self[4] is True:
+            self[4] = time.time()
 
-        for key in self[4].keys():
-            if callable(self[4][key]):
-                self[4][key] = self[4][key](self)
+        if self[2] is None:
+            self[2] = new_id()
+
+        for key in self[5].keys():
+            if callable(self[5][key]):
+                self[5][key] = self[5][key](self)
 
         if not isinstance(self.event(), str):
             raise exceptions.TypeError('%r not permitted as event. Has to be str.' % self.event())
@@ -165,9 +173,10 @@ class Event(list):
             raise exceptions.TypeError('%r not permitted as timestamp. Has to be float.' % self.timestamp())
 
     def event(self): return self[1]
-    def origin(self): return self[2]
-    def timestamp(self): return self[3]
-    def args(self): return self[4]
+    def id(self): return self[2]
+    def origin(self): return self[3]
+    def timestamp(self): return self[4]
+    def args(self): return self[5]
     def arg(self, name, val=None):
         return self.args().get(name, val)
 
@@ -189,14 +198,14 @@ if __name__=='__main__':
                         kwargs, answ, expected)
                 traceback.print_exc()
 
-    test(['Event', 'ping', {}, None, {}], 'ping')
+    test(['Event', 'ping', '99', {}, None, {}], 'ping', id='99')
     test('TypeError', 1)
-    test(['Event', 'ping', {}, None, {}], evt='ping')
+    test(['Event', 'ping', '99', {}, None, {}], evt='ping', id='99')
     test('TypeError', evt=1)
     test('TypeError', evt='ping', origin='')
     test('TypeError', evt='ping', origin={}, timestamp='')
-    test(['Event', 'ping', {}, None, {'value':1}], evt='ping', value=1)
-    test(['Event', 'ping', {}, None, {'value':1}], **{'evt':'ping', 'value':1})
-    test(['Event', 'ping', {}, None, {'value':1}], value=1, evt='ping')
-    test(['Event', 'ping', {}, None, {'value':1}], **{'value':1, 'evt':'ping'})
+    test(['Event', 'ping', '99', {}, None, {'value':1}], evt='ping', value=1, id='99')
+    test(['Event', 'ping', '99', {}, None, {'value':1}], **{'evt':'ping', 'value':1, 'id':'99'})
+    test(['Event', 'ping', '99', {}, None, {'value':1}], value=1, evt='ping', id='99')
+    test(['Event', 'ping', '99', {}, None, {'value':1}], **{'value':1, 'evt':'ping', 'id':'99'})
 

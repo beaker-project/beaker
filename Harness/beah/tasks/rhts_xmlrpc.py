@@ -24,6 +24,7 @@ import os
 import os.path
 import tempfile
 import exceptions
+import uuid
 from beah.core import event
 from beah.wires.internals.twmisc import (serveAnyChild, serveAnyRequest,
         JSONProtocol)
@@ -324,8 +325,8 @@ class RHTSMain(object):
 
     def task_exited(self, reason):
         if not self.__done:
-            logging.error("task_exited(%s)", reason)
-            self.send_evt(event.lerror("task_exited", reason=str(reason)))
+            logging.info("task_exited(%s)", reason)
+            self.send_evt(event.linfo("task_exited", reason=str(reason)))
             self.on_exit()
 
     def task_ended(self, reason):

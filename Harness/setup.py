@@ -28,7 +28,6 @@ def glob_(*patterns):
     for pattern in patterns:
         answ += glob.glob(pattern)
     answ = list([file for file in answ if not os.path.isdir(file)])
-    print "glob_(%r) -> %r" % (patterns, answ)
     return answ
 
 def glob_to(prefix, dirs):

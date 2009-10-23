@@ -64,13 +64,13 @@ EOF
 #rhts-db-submit-result
 #rhts-db-submit-result -S $RESULT_SERVER
 #rhts-db-submit-result -t $TEST
-rhts-db-submit-result -S $RESULT_SERVER -t $TEST
-rhts-db-submit-result -S $RESULT_SERVER -t $TEST -r Pass
+#rhts-db-submit-result -S $RESULT_SERVER -t $TEST
+#rhts-db-submit-result -S $RESULT_SERVER -t $TEST -r Pass -v 1
 #rpdb2 -d `which rhts-db-submit-result` rhts-db-submit-result -S $RESULT_SERVER -t $TEST -r Pass
-rhts-db-submit-result -S $RESULT_SERVER -t $TEST -v 12.34
-rhts-db-submit-result -S $RESULT_SERVER -t $TEST -l `mktemp`
-rhts-db-submit-result -S $RESULT_SERVER -t $TEST -D `mktemp`
-rhts-db-submit-result -S $RESULT_SERVER -t $TEST -d
+#rhts-db-submit-result -S $RESULT_SERVER -t $TEST -v 12.34
+#rhts-db-submit-result -S $RESULT_SERVER -t $TEST -l `mktemp`
+#rhts-db-submit-result -S $RESULT_SERVER -t $TEST -D `mktemp`
+#rhts-db-submit-result -S $RESULT_SERVER -t $TEST -d
 
 echo "rhts-recipe-sync-block [-R|--result_server SERVER] [-r|--recipesetid RECIPESETID] (-s|--state STATE)+ MACHINE+"
 rhts-recipe-sync-block
@@ -97,14 +97,24 @@ echo "rhts-reboot"
 
 echo "rhts-report-result TEST RESULT LOGFILE [METRIC]"
 rhts-report-result
-rhts-report-result $TEST Pass `mktemp`
-rhts-report-result $TEST Warn `mktemp`
-rhts-report-result $TEST Fail `mktemp` 12.34
+LOGF=`mktemp`
+echo "A message going to log-file..." > $LOGF
+rhts-report-result $TEST Pass $LOGF
+LOGF=`mktemp`
+echo "Warning message going to log-file..." > $LOGF
+rhts-report-result $TEST Warn $LOGF
+LOGF=`mktemp`
+echo "Something went terribly wrong, and we got an error..." > $LOGF
+rhts-report-result $TEST Fail $LOGF 12.34
 
 echo "rhts-submit-log [-S SERVER] [-T RECIPETESTID] -l LOGFILE"
 rhts-submit-log
-rhts-submit-log -l `mktemp`
-rhts-submit-log -S $RESULT_SERVER -T $RECIPETESTID -l `mktemp`
+LOGF=`mktemp`
+echo "Some data, we want to keep..." > $LOGF
+rhts-submit-log -l $LOGF
+LOGF=`mktemp`
+echo "Some more data, we want to keep..." > $LOGF
+rhts-submit-log -S $RESULT_SERVER -T $RECIPETESTID -l $LOGF
 
 echo "rhts-sync-block [-R|--result_server SERVER] [-r|--recipesetid RECIPESETID] [-t|--testorder TESTORDER] (-s|--state STATE) MACHINE+"
 rhts-sync-block

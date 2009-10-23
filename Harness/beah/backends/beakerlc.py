@@ -162,6 +162,7 @@ class BeakerLCBackend(ExtBackend):
 
     def __init__(self):
         self.waiting_for_lc = False
+        self.__commands = {}
 
     def on_idle(self):
         if self.waiting_for_lc:
@@ -198,10 +199,11 @@ class BeakerLCBackend(ExtBackend):
             reactor.callLater(60, self.on_idle)
             return
 
-        self.controller.proc_cmd(self,
-                command.run(self.task_data['executable'],
-                    env=self.task_data['task_env'],
-                    args=self.task_data['args']))
+        run_cmd = command.run(self.task_data['executable'],
+                env=self.task_data['task_env'],
+                args=self.task_data['args'])
+        self.controller.proc_cmd(self, run_cmd)
+        self.save_command(run_cmd)
 
         # Persistent env (handled by Controller?) - env to run task under,
         # task can change it, and when restarted will continue with same
@@ -229,9 +231,16 @@ class BeakerLCBackend(ExtBackend):
     def mk_msg(self, **kwargs):
         return json.dumps(kwargs)
 
+    def save_command(self, cmd):
+        self.__commands[cmd.id()] = cmd
+
+    def get_command(self, cmd_id):
+        return self.__commands.get(cmd_id, None)
+
     def proc_evt_echo(self, evt):
-        if (evt.arg('cmd').command()=='run'):
-            rc = echo.arg('rc')
+        cmd = self.get_command(evt.arg('cmd_id'))
+        if (cmd is not None and cmd.command()=='run'):
+            rc = evt.arg('rc')
             if rc!=ECHO.OK:
                 # FIXME: Start was not issued. Is it OK?
                 self.proxy.callRemote(self.TASK_STOP,

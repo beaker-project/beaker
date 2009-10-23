@@ -17,6 +17,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 import exceptions
+from beah.core import new_id
 
 """\
 Commands are used to send instructions from Backend to Controller (and
@@ -68,23 +69,33 @@ def mkcommand(cmd, __doc__="", **kwargs):
     return cmdf
 
 class Command(list):
-    def __init__(self, cmd, **kwargs):
-        list.__init__(self, ['Command', None, None]) # is this backwards compatible? Even with Python 2.3?
+    # FIXME: Clean-up! All the indices are ugly!!!
+    def __init__(self, cmd, id=None, **kwargs):
+        list.__init__(self, ['Command', None, None, None]) # is this backwards compatible? Even with Python 2.3?
         if isinstance(cmd, list):
-            if cmd[0] != 'Command' or not isinstance(cmd[1], str) or not isinstance(cmd[2], dict):
-                raise exceptions.TypeError('%r not permitted. Has to be [\'Command\', str, dict]' % cmd)
+            if cmd[0] != 'Command' or not isinstance(cmd[1], str) or not isinstance(cmd[3], dict):
+                raise exceptions.TypeError('%r not permitted. Has to be [\'Command\', str, str, dict]' % cmd)
             self[1] = str(cmd[1])
-            self[2] = dict(cmd[2])
+            self[2] = cmd[2]
+            self[3] = dict(cmd[3])
         elif isinstance(cmd, str):
             self[1] = str(cmd)
-            self[2] = dict(kwargs)
+            self[2] = id
+            self[3] = dict(kwargs)
         else:
             raise exceptions.TypeError('%s not permitted as command, it has to be an instance of list or str' % cmd.__class__.__name__)
 
+        if self[2] is None:
+            self[2] = new_id()
+        if not isinstance(self.id(), str):
+            raise exceptions.TypeError('%r not permitted as id. Has to be str.' % self.id())
+
     def command(self):
         return self[1]
-    def args(self):
+    def id(self):
         return self[2]
+    def args(self):
+        return self[3]
     def arg(self, name, val=None):
         return self.args().get(name, val)
 
@@ -104,12 +115,12 @@ if __name__=='__main__':
             if answ != expected:
                 print >> sys.stderr, "--- ERROR: Command(%r, %r) raised %r != %r" % (cmd,
                         kwargs, answ, expected)
-    test(['Command', 'ping', {}], 'ping')
+    test(['Command', 'ping', '99', {}], 'ping', id='99')
     test('TypeError', 1)
-    test(['Command', 'ping', {}], cmd='ping')
+    test(['Command', 'ping', '99', {}], cmd='ping', id='99')
     test('TypeError', cmd=1)
-    test(['Command', 'ping', {'value':1}], cmd='ping', value=1)
-    test(['Command', 'ping', {'value':1}], **{'cmd':'ping', 'value':1})
-    test(['Command', 'ping', {'value':1}], value=1, cmd='ping')
-    test(['Command', 'ping', {'value':1}], **{'value':1, 'cmd':'ping'})
+    test(['Command', 'ping', '99', {'value':1}], cmd='ping', value=1, id='99')
+    test(['Command', 'ping', '99', {'value':1}], **{'cmd':'ping', 'value':1, 'id':'99'})
+    test(['Command', 'ping', '99', {'value':1}], value=1, cmd='ping', id='99')
+    test(['Command', 'ping', '99', {'value':1}], **{'value':1, 'cmd':'ping', 'id':'99'})
 

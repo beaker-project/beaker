@@ -16,3 +16,13 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
+import uuid
+
+def new_id():
+    """
+    Function generating unique id's.
+    
+    Return: a string representation of id.
+    """
+    return str(uuid.uuid1())
+
