@@ -31,6 +31,9 @@ from datetime import timedelta, date, datetime
 
 import md5
 
+import logging
+log = logging.getLogger(__name__)
+
 system_table = Table('system', metadata,
     Column('id', Integer, autoincrement=True,
            nullable=False, primary_key=True),
@@ -927,23 +930,41 @@ class SystemSearch(Search):
         and the filter needed to return the correct results.   
 
         """
+        #First let's see if we have a column X operation specific filter
+        #We will only need to use these filter by table column if the ones from Modeller are 
+        #inadequate. 
+        #If we are looking at the System class and column 'arch' with the 'is not' operation, it will try and get
+        # System.arch_is_not_filter
+        underscored_operation = re.sub(' ','_',operation)
+        log.debug("%s:%s" % (column,underscored_operation))
+        col_op_filter = getattr(cls_ref,'%s_%s_filter' % (column.lower(),underscored_operation),None)
+        
         try:
             _c = cls_ref.mapper.c
             col = getattr(_c, column)
-            col_type = col.type
         except AttributeError, (error):     
-            log.error('Error accessing attribute within append_results: %s' % (error))
+                log.error('Error accessing attribute within append_results: %s' % (error))
+        else:
+            if col_op_filter:
+                filter_func = col_op_filter   
+            else:
+                #using just the regular filter operations from Modeller
+                try: 
+                    col_type = col.type
+                except AttributeError, (error):     
+                    log.error('Error accessing attribute within append_results: %s' % (error))
 
       
-        class_field_type = '%s' % type(col_type)
-        match_obj = self.strip_field_type(class_field_type)
-        #This should get the type i.e 'sqlalchemy.types.String'  
-        index_type = match_obj.group(1)  
-        modeller = Modeller()
-        filter_func = modeller.return_function(index_type,operation)     
+                class_field_type = '%s' % type(col_type)
+                match_obj = self.strip_field_type(class_field_type)
+                #This should get the type i.e 'sqlalchemy.types.String'  
+                index_type = match_obj.group(1)  
+                modeller = Modeller()
+                filter_func = modeller.return_function(index_type,operation)     
 
         #append a filter function which is to be called later
         self.filter_funcs.append(lambda: filter_func(col,value))
+
         join_dict = getattr(cls_ref,'join_system',None) 
         #We may not have a join with System 
         if join_dict != None:
@@ -972,6 +993,17 @@ class System(SystemObject):
     # search_values_dict of the corresponding class
     search_values_dict =     { 'Status' : lambda: SystemStatus.get_all_status_name(),
                                'Type' : lambda: SystemType.get_all_type_names() }    
+    @classmethod
+    def arch_is_not_filter(cls,col,val):
+        """arch_is_not_filter is a function dynamically called from append_results.
+           It serves to provide a table column operation specific method of filtering results of System/Arch
+        """       
+        #If anyone knows of a better way to do this, by all means...
+        query = System.query().filter(System.arch.any(Arch.arch == val))       
+        ids = [r.id for r in query]
+        return not_(system_table.c.id.in_(ids)) 
+           
+      
    
     @classmethod
     def search_values(cls,col):  
