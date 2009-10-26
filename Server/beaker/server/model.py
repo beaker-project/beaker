@@ -678,18 +678,16 @@ class SystemObject(object):
         except KeyError, (e): 
             log.error('Failed to find search_type by index %s, got error: %s' % (index_type,e))
 
-    def __init__(self,search_filter = None):  
-        self.__search_description = self._create_search_description(search_filter)             
-
-       
+    @classmethod
     def get_searchable(self):
         """
         get_searchable will return the description of how this object can be searched by returning a dict
         with the derived Class' name (or display name) as the key, and a list of fields that can be searched after any field filtering has
         been applied
         """
-        return self.__search_description    
+        return []
              
+    @classmethod
     def _create_search_description(self, search_field_filter = None): 
         """
         Creates a list of fields available to search after applying a filter (if applicable).
@@ -712,11 +710,11 @@ class SystemObject(object):
             return  [elem for elem in fields if excludes.count(elem) < 1] 
 
 
+    @classmethod
     def get_tables(cls): 
         tables = cls.get_dict().keys()
         tables.sort()
         return tables
-    get_tables = classmethod(get_tables)
   
  
     @classmethod
@@ -740,7 +738,7 @@ class SystemObject(object):
         
         return tables 
     
-
+    @classmethod
     def get_dict(cls):
         tables = dict( system = dict(joins=[], cls=cls))
         for property in cls.mapper.iterate_properties:
@@ -757,7 +755,6 @@ class SystemObject(object):
                
                 tables['system/%s' % property.key] = dict(joins=[property.key], cls=property.mapper.class_) 
         return tables
-    get_dict = classmethod(get_dict)
 
 
 
@@ -881,7 +878,7 @@ class Search:
             cls.search_table = []
         
         for obj in searchable_objs:  
-            obj_instance = obj()
+            obj_instance = obj
             #Check if we have a specialised display name
             display_name = getattr(obj_instance,'display_name',None)
             if display_name != None:
@@ -987,8 +984,11 @@ class SystemSearch(Search):
 class System(SystemObject):
     table = system_table
     search_table = [] 
-    join_system = { arch_table: arch_table.c.id == system_arch_map.c.arch_id,
-                   system_arch_map: system_table.c.id == system_arch_map.c.system_id }
+    #  The order of the joins is very important
+    join_system = { 
+                   system_arch_map: system_table.c.id == system_arch_map.c.system_id, 
+                   arch_table: arch_table.c.id == system_arch_map.c.arch_id
+                  }
     #If we have a set of predefined values that a column can be searched on, put them in the 
     # search_values_dict of the corresponding class
     search_values_dict =     { 'Status' : lambda: SystemStatus.get_all_status_name(),
@@ -1003,7 +1003,19 @@ class System(SystemObject):
         ids = [r.id for r in query]
         return not_(system_table.c.id.in_(ids)) 
            
-      
+    @classmethod
+    def get_searchable(cls):
+        """
+        get_searchable will return the description of how this object can be 
+        searched by returning a dict with the derived Class' name 
+        (or display name) as the key, and a list of fields that can be 
+        searched after any field filtering has been applied
+        """
+        return cls._create_search_description(
+                   dict(includes = ['Arch','Name','Status','Type',
+                                    'Vendor','Lender','Model','Memory',
+                                    'Serial','Owner','User','LabController'])
+                                              )
    
     @classmethod
     def search_values(cls,col):  
@@ -1013,7 +1025,6 @@ class System(SystemObject):
     def __init__(self, fqdn=None, status=None, contact=None, location=None,
                        model=None, type=None, serial=None, vendor=None,
                        owner=None):
-        SystemObject.__init__(self,{'includes':['Arch','Name','Status','Type','Vendor','Lender','Model','Memory','Serial','Owner','User','LabController']}) 
         self.fqdn = fqdn
         self.status = status
         self.contact = contact
@@ -1857,7 +1868,6 @@ class Cpu(SystemObject):
     search_values_dict = { 'Hyper' : ['True','False'] }
 
     def __init__(self, vendor=None, model=None, model_name=None, family=None, stepping=None,speed=None,processors=None,cores=None,sockets=None,flags=None):
-        SystemObject.__init__(self,{'includes':['Processors','Hyper','Vendor','Flags','Cores','Sockets','Model','Stepping','Speed','Family']})
         self.vendor = vendor
         self.model = model
         self.model_name = model_name
@@ -1878,6 +1888,20 @@ class Cpu(SystemObject):
 	    for cpuflag in flags:
                 new_flag = CpuFlag(flag=cpuflag)
                 self.flags.append(new_flag)
+
+    @classmethod
+    def get_searchable(cls):
+        """
+        get_searchable will return the description of how this object can be 
+        searched by returning a dict with the derived Class' name 
+        (or display name) as the key, and a list of fields that can be 
+        searched after any field filtering has been applied
+        """
+        return cls._create_search_description(
+                   dict(includes = ['Processors','Hyper','Vendor','Flags',
+                                    'Cores','Sockets','Model','Stepping',
+                                    'Speed','Family'])
+                                              )
 
 # systems = session.query(System).join('status').join('type').join(['cpu','flags']).filter(CpuFlag.c.flag=='lm')
 
@@ -1917,10 +1941,13 @@ class DeviceClass(SystemObject):
 class Device(SystemObject):
     table = device_table
     display_name = 'Devices' 
-    join_system = { device_table : system_device_map.c.device_id 
-                                   == device_table.c.id, 
+    #  The order of the joins is very important
+    join_system = { 
                     system_device_map : system_table.c.id 
-                                       == system_device_map.c.system_id,} 
+                                       == system_device_map.c.system_id,
+                    device_table : system_device_map.c.device_id 
+                                   == device_table.c.id
+                  }
  
     def __init__(self, vendor_id=None, device_id=None, subsys_device_id=None, subsys_vendor_id=None, bus=None, driver=None, device_class=None, description=None):
         if not device_class:
@@ -1931,7 +1958,6 @@ class Device(SystemObject):
             dc = DeviceClass(device_class = device_class)
             session.save(dc)
             session.flush([dc])
-        SystemObject.__init__(self,{'includes' : ['description']})
         self.vendor_id = vendor_id
         self.device_id = device_id
         self.subsys_vendor_id = subsys_vendor_id
@@ -1941,6 +1967,17 @@ class Device(SystemObject):
         self.description = description
         self.device_class = dc
 
+    @classmethod
+    def get_searchable(cls):
+        """
+        get_searchable will return the description of how this object can be 
+        searched by returning a dict with the derived Class' name 
+        (or display name) as the key, and a list of fields that can be 
+        searched after any field filtering has been applied
+        """
+        return cls._create_search_description(
+                   dict(includes = ['description'])
+                                              )
 
 class Locked(object):
     def __init__(self, name=None):
