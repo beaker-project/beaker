@@ -963,9 +963,12 @@ class SystemSearch(Search):
         self.filter_funcs.append(lambda: filter_func(col,value))
 
         join_dict = getattr(cls_ref,'join_system',None) 
+        join_keys = getattr(cls_ref,'join_system_keys',None)
         #We may not have a join with System 
-        if join_dict != None:
-            for k,v in join_dict.items(): 
+        if join_keys != None and join_dict != None:
+            for elem in join_keys: 
+                k = elem
+                v = join_dict[k]
                 if (self.already_joined.count(k) < 1):
                     self.j = self.j.join(k,onclause=v)
 		    self.already_joined.append(k) 
@@ -984,7 +987,8 @@ class SystemSearch(Search):
 class System(SystemObject):
     table = system_table
     search_table = [] 
-    #  The order of the joins is very important
+    # join_system_keys enforces order over join_system 
+    join_system_keys = [system_arch_map,arch_table]
     join_system = { 
                    system_arch_map: system_table.c.id == system_arch_map.c.system_id, 
                    arch_table: arch_table.c.id == system_arch_map.c.arch_id
@@ -1864,6 +1868,7 @@ class LabInfo(SystemObject):
 class Cpu(SystemObject): 
     table = cpu_table      
     display_name = 'CPU'
+    join_system_keys = [cpu_table]
     join_system = { cpu_table : system_table.c.id == cpu_table.c.system_id }
     search_values_dict = { 'Hyper' : ['True','False'] }
 
@@ -1941,7 +1946,8 @@ class DeviceClass(SystemObject):
 class Device(SystemObject):
     table = device_table
     display_name = 'Devices' 
-    #  The order of the joins is very important
+    #  join_system_keys enforces order over join_system 
+    join_system_keys = [system_device_map,device_table]
     join_system = { 
                     system_device_map : system_table.c.id 
                                        == system_device_map.c.system_id,
