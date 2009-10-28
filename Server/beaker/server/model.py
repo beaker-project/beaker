@@ -2296,7 +2296,29 @@ class TaskResult(object):
         return "%s" % (self.result)
 
 
-class Job(MappedObject):
+class TaskBase(MappedObject):
+    def is_finished(self):
+        """
+        Simply state if the task is finished or not
+        """
+        if self.status in [TaskStatus.by_name(u'Completed'),
+                           TaskStatus.by_name(u'Cancelled'),
+                           TaskStatus.by_name(u'Aborted')]:
+            return True
+        else:
+            return False
+
+    def is_failed(self):
+        """ 
+        Return True if the task has failed
+        """
+        if self.status in [TaskStatus.by_name(u'Cancelled'),
+                           TaskStatus.by_name(u'Aborted')]:
+            return True
+        else:
+            return False
+
+class Job(TaskBase):
     """
     Container to hold like recipe sets.
     """
@@ -2328,26 +2350,21 @@ class Job(MappedObject):
         for recipeset in self.recipesets:
             recipeset.abort(msg)
 
-    def is_finished(self):
+    def task_info(self):
         """
-        Simply state if the task is finished or not
+        Method for exporting job status for TaskWatcher
         """
-        if self.status in [TaskStatus.by_name(u'Completed'),
-                           TaskStatus.by_name(u'Cancelled'),
-                           TaskStatus.by_name(u'Aborted')]:
-            return True
-        else:
-            return False
-
-    def is_failed(self):
-        """ 
-        Return True if the task has failed
-        """
-        if self.status in [TaskStatus.by_name(u'Cancelled'),
-                           TaskStatus.by_name(u'Aborted')]:
-            return True
-        else:
-            return False
+        return dict(
+                    id              = "J:%s" % self.id,
+                    worker          = None,
+                    state_label     = "%s" % self.status,
+                    state           = self.status.id,
+                    method          = None,
+                    result          = "%s" % self.result,
+                    is_finished     = self.is_finished(),
+                    is_failed       = self.is_failed(),
+                    subtask_id_list = ["RS:%s" % rs.id for rs in self.recipesets]
+                   )
 
     def update_status(self):
         """
@@ -2372,7 +2389,7 @@ class Job(MappedObject):
         self.result = max_result
 
 
-class RecipeSet(MappedObject):
+class RecipeSet(TaskBase):
     """
     A Collection of Recipes that must be executed at the same time.
     """
@@ -2467,8 +2484,24 @@ class RecipeSet(MappedObject):
                         order_by='count')
         return map(lambda x: Recipe.query().filter_by(id=x[0]).first(), session.connection(RecipeSet).execute(query).fetchall())
 
+    def task_info(self):
+        """
+        Method for exporting RecipeSet status for TaskWatcher
+        """
+        return dict(
+                    id              = "RS:%s" % self.id,
+                    worker          = None,
+                    state_label     = "%s" % self.status,
+                    state           = self.status.id,
+                    method          = None,
+                    result          = "%s" % self.result,
+                    is_finished     = self.is_finished(),
+                    is_failed       = self.is_failed(),
+                    subtask_id_list = ["R:%s" % r.id for r in self.recipes]
+                   )
 
-class Recipe(MappedObject):
+
+class Recipe(TaskBase):
     """
     Contains requires for host selection and distro selection.
     Also contains what tasks will be executed.
@@ -2662,6 +2695,23 @@ class Recipe(MappedObject):
 
         self.recipeset.update_status()
 
+    def task_info(self):
+        """
+        Method for exporting Recipe status for TaskWatcher
+        """
+        return dict(
+                    id              = "R:%s" % self.id,
+                    worker          = dict(name = "%s" % self.system),
+                    state_label     = "%s" % self.status,
+                    state           = self.status.id,
+                    method          = None,
+                    result          = "%s" % self.result,
+                    is_finished     = self.is_finished(),
+                    is_failed       = self.is_failed(),
+                    subtask_id_list = ["T:%s" % t.id for t in self.tasks]
+                   )
+
+
 class GuestRecipe(Recipe):
     systemtype = 'Virtual'
     def to_xml(self):
@@ -2712,7 +2762,7 @@ class RecipeTag(MappedObject):
     pass
 
 
-class RecipeTask(MappedObject):
+class RecipeTask(TaskBase):
     """
     This holds the results/status of the task being executed.
     """
@@ -2902,6 +2952,21 @@ class RecipeTask(MappedObject):
                                    log=summary))
         self.update_status()
         return True
+
+    def task_info(self):
+        """
+        Method for exporting Task status for TaskWatcher
+        """
+        return dict(
+                    id              = "T:%s" % self.id,
+                    worker          = dict(name = "%s" % self.recipe.system),
+                    state_label     = "%s" % self.status,
+                    state           = self.status.id,
+                    method          = None,
+                    result          = "%s" % self.result,
+                    is_finished     = self.is_finished(),
+                    is_failed       = self.is_failed()
+                   )
 
 
 class RecipeTaskRoleListAdapter(object):

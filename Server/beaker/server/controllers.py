@@ -256,24 +256,17 @@ class Root(RPCRoot):
         """
         XMLRPC method to get task status
         """
-        task_types = dict(JOB       = Job,
-                          RECIPESET = RecipeSet,
-                          RECIPE    = Recipe)
+        task_types = dict(J  = Job,
+                          RS = RecipeSet,
+                          R  = Recipe,
+                          T  = RecipeTask)
         task_type, task_id = taskid.split(":")
         if task_type.upper() in task_types.keys():
             try:
                 task = task_types[task_type.upper()].by_id(task_id)
             except InvalidRequestError, e:
                 raise BX(_("Invalid %s %s" % (task_type, task_id)))
-        return dict(id          = task.id,
-                    worker      = None,
-                    state_label = "%s" % task.status,
-                    state       = task.status.id,
-                    method      = None,
-                    result      = "%s" % task.result,
-                    is_finished = task.is_finished(),
-                    is_failed   = task.is_failed()
-                   )
+        return task.task_info()
 
     @expose(format='json')
     def get_fields(self, table_name):
