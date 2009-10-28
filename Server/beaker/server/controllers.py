@@ -1336,14 +1336,14 @@ class Root(RPCRoot):
             return (0, "Invalid system")
         if system.user == user:
             if mylog:
-                activity = SystemActivity(system.user, "VIA %s" % identity.current.user, "Returned", "User", "%s" % system.user, '')
-                system.activity.append(activity)
-            try:
-                system.action_release()
-            except BX, error:
-                msg = "Failed to power off system: %s" % error
-                activity = SystemActivity(systen.user, "VIA %s" % identity.current.user, "Off", "Power", "", msg)
-                system.activity.append(activity)
+                system.activity.append(SystemActivity(system.user, "VIA %s" % identity.current.user, "Returned", "User", "%s" % system.user, ''))
+                try:
+                    system.action_release()
+                except BX, error:
+                    msg = "Failed to power off system: %s" % error
+                    system.activity.append(SystemActivity(systen.user, "VIA %s" % identity.current.user, "Off", "Power", "", msg))
+            else:
+                system.user = None
         return
         
 

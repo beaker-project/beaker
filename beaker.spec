@@ -2,7 +2,7 @@
 %{!?pyver: %define pyver %(%{__python} -c "import sys ; print sys.version[:3]")}
 
 Name:           beaker
-Version:        0.4.56
+Version:        0.4.57
 Release:        0%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
@@ -133,6 +133,10 @@ ln -s Fedora.ks $RPM_BUILD_ROOT/var/lib/cobbler/kickstarts/Fedoradevelopment.ks
 /usr/share/man/man1/beakerlib*
 
 %changelog
+* Wed Oct 28 2009 Bill Peck <bpeck@redhat.com> - 0.4.57-0
+- New search implemented by Raymond Mancy
+- don't try and power off machines that were temporarily reserved by legacy rhts
+- view groups for non admin users
 * Fri Oct 16 2009 Bill Peck <bpeck@redhat.com> - 0.4.53-0
 - fix allows custom kickstarts to still append packages
 * Tue Oct 06 2009 Bill Peck <bpeck@redhat.com> - 0.4.52-0
