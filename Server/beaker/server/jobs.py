@@ -172,7 +172,7 @@ class Jobs(RPCRoot):
             job = Job.by_id(job_id)
         except InvalidRequestError:
             raise BX(_('Invalid job ID: %s' % job_id))
-        if stop_type not in recipe.stop_types:
+        if stop_type not in job.stop_types:
             raise BX(_('Invalid stop_type: %s, must be one of %s' %
                              (stop_type, job.stop_types)))
         kwargs = dict(msg = msg)
