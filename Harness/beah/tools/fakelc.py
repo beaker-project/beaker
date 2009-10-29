@@ -24,6 +24,7 @@ import sys
 import os
 import exceptions
 import pprint
+from random import randint
 
 recipes = {}
 fqdn_recipes = {}
@@ -32,7 +33,7 @@ fqdn_def_recipe = None
 task_def_recipe = None
 
 def get_recipe_(fqdn=None, id=None, task_id=None):
-    print "get_recipe_(fqdn=%s, id=%s)" % (fqdn, id)
+    print "get_recipe_(fqdn=%s, id=%s, task_id=%s)" % (fqdn, id, task_id)
     if fqdn is not None:
         id = fqdn_recipes[fqdn] if fqdn_recipes.has_key(fqdn) else fqdn_def_recipe
     if task_id is not None:
@@ -89,7 +90,7 @@ def do_task_stop(fname, task_id, stop_type, msg):
     rec_args['task%s_stat' % task_id]=stop_type
     return 0
 
-def do_task_result(task_id, result_type, path, score, summary):
+def do_task_result(fname, task_id, result_type, path, score, summary):
     """
     Report task result
 
@@ -97,16 +98,24 @@ def do_task_result(task_id, result_type, path, score, summary):
 
     return 0 on success, error message otherwise
     """
-    print "%s(task_id=%r, result_type=%r, path=%r, score=%r, summary=%r)" % \
-            (fname, task_id, result_type, path, score, summary)
-    rec_args = get_recipe_args(task_id=task_id)
-    if not rec_args:
-        return "ERROR: no task %s" % task_id
-    ix = 'task%s_res' % task_id
-    result = rec_args[ix]
-    if RESULT_TYPE_.find(result) < RESULT_TYPE_.find(result_type):
-        rec_args[ix]=result_type
-    return 0
+    try:
+        print "%s(task_id=%r, result_type=%r, path=%r, score=%r, summary=%r)" % \
+                (fname, task_id, result_type, path, score, summary)
+        rec_args = get_recipe_args(task_id=task_id)
+        if not rec_args:
+            return "ERROR: no task %s" % task_id
+        ix = 'task%s_res' % task_id
+        result = rec_args.get(ix, "Pass")
+        if RESULT_TYPE_.count(result) == 0 \
+            or (RESULT_TYPE_.count(result_type) > 0 \
+                    and RESULT_TYPE_.find(result) < RESULT_TYPE_.find(result_type)):
+            rec_args[ix]=result_type
+        answ = randint(1,9999999)
+        print "%s.RETURN: %s" % (fname, answ)
+        return answ
+    except:
+        print traceback.format_exc()
+        raise
 
 ################################################################################
 # XML-RPC HANDLERS:
@@ -189,7 +198,7 @@ def main():
 
                 <!--
                 <task avg_time="1200" id="41"
-                        name="/distribution/install" role="STANDALONE"
+                        name="/examples/testargs" role="STANDALONE"
                         result="%(task41_res)s"
                         status="%(task41_stat)s"
                         >
@@ -201,9 +210,10 @@ def main():
                     </roles>
                     <rpm name="rh-tests-examples-testargs-1.1-1.noarch.rpm"/>
                 </task>
+                -->
 
                 <task avg_time="1200" id="42"
-                        name="/distribution/kernelinstall" role="CLIENTS"
+                        name="/examples/testargs" role="CLIENTS"
                         result="%(task42_res)s"
                         status="%(task42_stat)s"
                         >
@@ -224,6 +234,7 @@ def main():
                     <rpm name="rh-tests-examples-testargs.noarch"/>
                 </task>
 
+                <!--
                 <task avg_time="1200" id="43"
                         name="/beah/examples/tasks/a_task" role="STANDALONE"
                         result="%(task43_res)s"
@@ -265,8 +276,6 @@ def main():
                     </roles>
                     <executable url="%(beah_root)s/examples/tasks/rhts" />
                 </task>
-                -->
-
                 <task avg_time="1200" id="46"
                         name="/beah/examples/tests/rhtsex" role="STANDALONE"
                         result="%(task46_res)s"
@@ -284,7 +293,6 @@ def main():
                     </executable>
                 </task>
 
-                <!--
                 <task avg_time="1200" id="47"
                         name="/beah/examples/tests/testargs" role="STANDALONE"
                         result="%(task47_res)s"
@@ -302,6 +310,12 @@ def main():
                     </executable>
                 </task>
                 -->
+
+                <!--
+                        name="/distribution/install" role="STANDALONE"
+                        name="/distribution/kernelinstall" role="CLIENTS"
+                -->
+
             </recipe>
         """
 

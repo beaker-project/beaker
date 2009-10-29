@@ -28,6 +28,7 @@ import uuid
 from beah.core import event
 from beah.wires.internals.twmisc import (serveAnyChild, serveAnyRequest,
         JSONProtocol)
+from beah.core.constants import RC
 
 # FIXME: change log level to WARNING, use tempfile and upload log when process
 # ends.
@@ -39,6 +40,29 @@ if not os.path.isdir('/tmp/var/log'):
 logging.basicConfig(filename='/tmp/var/log/rhts_task.log', level=logging.DEBUG)
 
 USE_DEFAULT = object()
+TEST_ENV = dict(
+        JOBID='321',
+        RECIPESETID='4321',
+        RECIPEID='54321',
+        RECIPETESTID='654321',
+        TESTID='321321',
+        OUTPUTFILE=tempfile.mkstemp()[1],
+        AVC_ERROR=tempfile.mkstemp()[1])
+
+################################################################################
+# AUXILIARY:
+################################################################################
+__RESULT_RHTS_TO_BEAH = {
+        "pass": RC.PASS,
+        "warn": RC.WARNING,
+        "fail": RC.FAIL,
+        "crit": RC.CRITICAL,
+        "fata": RC.FATAL,
+        "pani": RC.FATAL,
+        }
+def result_rhts_to_beah(result):
+    """Translate result codes from RHTS to beah."""
+    return __RESULT_RHTS_TO_BEAH.get(result.lower()[:4], RC.WARNING)
 
 ################################################################################
 # CONTROLLER LINK:
@@ -86,8 +110,6 @@ class RHTSTask(protocol.ProcessProtocol):
 ################################################################################
 class RHTSResults(xmlrpc.XMLRPC):
 
-    __res_id = 0 # result_id - used by further resultLog calls
-
     def __init__(self, main):
         self.main = main
 
@@ -96,30 +118,76 @@ class RHTSResults(xmlrpc.XMLRPC):
         logging.debug("XMLRPC: results.result(%r, %r, %r, %r, %r, %r)",
                 test_name, parent_string, result, result_value, test_version,
                 recipe_test_id)
-        # FIXME! implement this!!!
-        #self.main.send_evt(event.result())
-        self.__res_id += 1
-        return self.__res_id
+        evt = event.result_ex(
+                result_rhts_to_beah(result),
+                handle=test_name,
+                message='(%s)' % result,
+                statistics={'score':result_value},
+                test_version=test_version,
+                recipe_test_id=recipe_test_id)
+        self.main.send_evt(evt)
+        return evt.id()
     xmlrpc_result.signature = [
-            ['int', 'string', 'string', 'string', 'string', 'string', 'int'],
+            ['string', 'string', 'string', 'string', 'string', 'string', 'int'],
             ]
 
-    def xmlrpc_resultLog(self, log_type, result_id, pretty_name):
-        logging.debug("XMLRPC: results.resultLog(%r, %r, %r)", log_type,
-            result_id, pretty_name)
-        # FIXME! implement this!!!
-        return 0 # or "Failure reason"
-    xmlrpc_resultLog.signature = [
-            ['int', 'string', 'int', 'string'],
-            ]
+    def get_file(self, pretty_name, size=None, digest=None):
+        file_id = self.main.get_file(pretty_name)
+        if file_id is None:
+            evt = event.file(name=pretty_name)
+            file_id = evt.id()
+            self.main.set_file(file_id, pretty_name)
+            self.main.send_evt(evt)
+            evt = event.file_meta(file_id, size=size, digest=("md5", digest),
+                    codec="base64")
+        return file_id
 
     def xmlrpc_uploadFile(self, recipe_test_id, name, size, digest, offset,
             data):
         logging.debug("XMLRPC: results.uploadFile(%r, %r, %r, %r, %r, %r)",
                 recipe_test_id, name, size, digest, offset, data)
-        # FIXME! implement this!!!
+        file_id = self.get_file(name, size=size, digest=digest)
+        if file_id is None:
+            msg = "%s:xmlrpc_uploadFile: " % self.__class__.__name__ + \
+                    "Can not create file '%s'." % name
+            self.main.error(msg)
+            return msg
+        if offset < 0:
+            evt = event.file_close(file_id)
+            self.main.send_evt(evt)
+            return 0
+        if data:
+            evt = event.file_write(file_id, data, offset=offset)
+            self.main.send_evt(evt)
         return 0 # or "Failure reason"
     xmlrpc_uploadFile.signature = [
+            ['int', 'int', 'string', 'int', 'int', 'int', 'string'],
+            ]
+
+    def xmlrpc_resultLog(self, log_type, result_id, pretty_name):
+        logging.debug("XMLRPC: results.resultLog(%r, %r, %r)", log_type,
+            result_id, pretty_name)
+        file_id = self.main.get_file(pretty_name)
+        if file_id is None:
+            msg = "%s:xmlrpc_resultLog: " % self.__class__.__name__ + \
+                    "File '%s' does not exist!" % pretty_name + \
+                    " uploadFile is required before resultLog can be used."
+            self.main.error(msg)
+            return msg
+        # FIXME! implement this!!!
+        #evt = event.file_meta(file_id, log_type)
+        #self.main.send_evt(evt)
+        return 0 # or "Failure reason"
+    xmlrpc_resultLog.signature = [
+            ['int', 'string', 'int', 'string'],
+            ]
+
+    def xmlrpc_recipeTestRpms(self, test_id, pkg_list):
+        logging.debug("XMLRPC: results.recipeTestRpms(%r, %r)",
+                test_id, pkg_list)
+        # FIXME! implement this!!!
+        return 0 # or "Failure reason"
+    xmlrpc_recipeTestRpms.signature = [
             ['int', 'int', 'string', 'int', 'int', 'int', 'string'],
             ]
 
@@ -147,6 +215,13 @@ class RHTSWatchdog(xmlrpc.XMLRPC):
         return 0 # or "Failure reason"
     xmlrpc_abortRecipe.signature = [['int', 'int']]
 
+    def xmlrpc_testCheckin(self, hostname, job_id, test, kill_time, test_id):
+        logging.debug("XMLRPC: watchdog.testCheckin(%r, %r, %r, %r, %r)", hostname, job_id, test, kill_time, test_id)
+        # FIXME: implement this
+        return 1 # or "Failure reason"
+    xmlrpc_testCheckin.signature = [['int', 'string', 'int', 'string', 'int', 'int']]
+
+
 
 class RHTSWorkflows(xmlrpc.XMLRPC):
 
@@ -158,6 +233,18 @@ class RHTSWorkflows(xmlrpc.XMLRPC):
                 submitter, recipe_id, comment)
         # FIXME: implement this...
         return 0 # or "Failure reason"
+
+
+class RHTSTest(xmlrpc.XMLRPC):
+
+    def __init__(self, main):
+        self.main = main
+
+    def xmlrpc_testCheckin(self, test_id, call_type):
+        logging.debug("XMLRPC: test.testCheckin(%r, %r)", test_id, call_type)
+        # FIXME: implement this!!!
+        return 0 # or "Failure reason"
+    xmlrpc_testCheckin.signature = [['int', 'int', 'string']]
 
 
 class RHTSSync(xmlrpc.XMLRPC):
@@ -191,7 +278,7 @@ class RHTSSync(xmlrpc.XMLRPC):
 class RHTSHandler(xmlrpc.XMLRPC):
 
     """A root XML-RPC handler.
-    
+
     It does handle only unhandled calls. Other calls should be handled by
     subhandlers."""
 
@@ -202,6 +289,7 @@ class RHTSHandler(xmlrpc.XMLRPC):
         self.putSubHandler('workflows', RHTSWorkflows(main))
         self.putSubHandler('watchdog', RHTSWatchdog(main))
         self.putSubHandler('results', RHTSResults(main))
+        self.putSubHandler('test', RHTSTest(main))
         xmlrpc.addIntrospection(self)
 
     def catch_xmlrpc(self, method, *args):
@@ -242,6 +330,7 @@ class RHTSMain(object):
         self.listener = None
         self.task_path = task_path
         self.__done = False
+        self.__files = {}
 
         # FIXME: is return value of any use?
         stdio.StandardIO(self.controller)
@@ -253,7 +342,7 @@ class RHTSMain(object):
         self.env = dict(env if env is not USE_DEFAULT else os.environ)
 
         # FIXME: Any other env.variables to set?
-        # FIXME: What values should be used here? 
+        # FIXME: What values should be used here?
         # - some values could be received from LC when task is scheduled, but
         #   it would create a dependency!
         #   - let's use fake values, and let the Backend translate it (if
@@ -264,13 +353,8 @@ class RHTSMain(object):
         self.env.update(
                 # RESULT_SERVER - host:port[/prefixpath]
                 RESULT_SERVER="%s:%s%s" % ("localhost", port, ""),
-                JOBID='1',
-                RECIPESETID='1',
-                RECIPEID='1',
-                RECIPETESTID='1',
-                TESTORDER='1',
-                OUTPUTFILE=tempfile.mkstemp()[1],
-                AVC_ERROR=tempfile.mkstemp()[1])
+                TESTORDER='123', # FIXME: What should go here???
+                )
 
         # FIXME: should any checks go here?
         # e.g. does Makefile PURPOSE exist? try running `make testinfo.desc`? ...
@@ -292,12 +376,13 @@ class RHTSMain(object):
         logging.debug("sending evt: %r", evt)
         self.__controller_output(json.dumps(evt))
 
-
+    TEST_RUNNER = 'rhts-test-runner.sh'
     def server_started(self):
-        # FIXME: launcher should take care of this!
-        open('/tmp/TESTOUT.log','a').close()
+        # FIXME: Install rhts-test-runner.sh somewhere!
         self.process = reactor.callLater(2, reactor.spawnProcess, self.task,
-                'make', args=['make', 'run'], env=self.env, path=self.task_path)
+                self.TEST_RUNNER,
+                args=[self.TEST_RUNNER],
+                env=self.env, path=self.env.get('TESTPATH','/tmp'))
 
 
     def controller_input(self, cmd):
@@ -335,15 +420,35 @@ class RHTSMain(object):
             self.send_evt(event.linfo("task_ended", reason=str(reason)))
             self.on_exit()
 
+    def set_file(self, id, name):
+        if id is None or name is None:
+            return False
+        tmp_id = self.get_file(name)
+        if tmp_id is not None:
+            if tmp_id != id:
+                msg = "File '%s' already exists!" % name
+                self.error(msg)
+            return False
+        self.__files[name] = id
+        return id
+
+    def get_file(self, name):
+        return self.__files.get(name, None)
+
+    def error(msg):
+        logging.error(msg)
+        evt = event.error(message=msg)
+        self.send_evt(evt)
+
 
 def main(task_path=None):
     from sys import argv
     if task_path is None:
         if len(argv) > 1:
             task_path = argv[1]
-        else:
-            logging.error("Test directory not provided.", reason)
-            raise exceptions.RuntimeError("Test directory not provided.")
+        #else:
+        #    logging.error("Test directory not provided.", reason)
+        #    raise exceptions.RuntimeError("Test directory not provided.")
     RHTSMain(task_path, USE_DEFAULT)
     reactor.run()
 

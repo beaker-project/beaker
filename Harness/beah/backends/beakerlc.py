@@ -22,6 +22,9 @@ from twisted.internet import reactor
 import os
 import os.path
 import pprint
+import traceback
+import base64
+import hashlib
 from xml.etree import ElementTree
 import simplejson as json
 
@@ -33,6 +36,8 @@ from beah import config
 import beah.system
 # FIXME: using rpm's, yum - too much Fedora centric(?)
 from beah.system.dist_fedora import RPMInstaller
+from beah.system.os_linux import ShExecutable
+from beah.wires.internals.twbackend import start_backend
 
 """
 Beaker Backend.
@@ -56,18 +61,41 @@ def mk_beaker_task(rpm_name):
     e.make()
     return e.executable
 
+class RHTSTask(ShExecutable):
+
+    def __init__(self, env_):
+        self.__env = env_
+        ShExecutable.__init__(self)
+
+    def content(self):
+        self.write_line("""
+TESTPATH="%s%s"
+KILLTIME="%s"
+export TESTPATH KILLTIME
+
+mkdir -p $TESTPATH
+
+python -m beah.tasks.rhts_xmlrpc
+""" % ('/mnt/tests', self.__env['TASKNAME'], self.__env['KILLTIME']))
+
+
+def mk_rhts_task(env_):
+    e = RHTSTask(env_)
+    e.make()
+    return e.executable
+
 def parse_recipe_xml(input_xml):
 
     er = ElementTree.fromstring(input_xml)
     task_env = {}
 
     rs = er.get('status')
-    # FIXME: is this condition correct?
-    if rs != 'Running' and True:
+    if rs != 'Running':
         print "This recipe has finished."
         return None
 
     task_env.update(
+            ARCH=er.get('arch'),
             RECIPEID=str(er.get('id')),
             JOBID=str(er.get('job_id')),
             RECIPESETID=str(er.get('recipe_set_id')),
@@ -77,20 +105,15 @@ def parse_recipe_xml(input_xml):
 
         ts = task.get('status')
 
-        # FIXME: is this condition correct?
-        #if ts == 'Running':
-        #    break
         if ts != 'Waiting' and ts != 'Running':
             continue
-
-        if ts == 'Running':
-            # FIXME: A task SHOULD BE already running.
-            return None
 
         task_id = task.get('id')
         task_name = task.get('name')
         task_env.update(
                 TASKID=str(task_id),
+                RECIPETESTID=str(task_id),
+                TESTID=str(task_id),
                 TASKNAME=task_name,
                 ROLE=task.get('role'))
 
@@ -106,6 +129,7 @@ def parse_recipe_xml(input_xml):
             task_env[r.get('value')]=' '.join(role)
 
         ewd = task.get('avg_time')
+        task_env.update(KILLTIME=ewd)
 
         executable = ''
         args = []
@@ -115,8 +139,12 @@ def parse_recipe_xml(input_xml):
             print "rpm tag: %s" % rpm_tag
             if rpm_tag is not None:
                 rpm_name = rpm_tag.get('name')
-                task_env.update(RPMNAME=rpm_name)
-                executable = mk_beaker_task(rpm_name)
+                task_env.update(
+                        TEST=task_name,
+                        TESTRPMNAME=rpm_name,
+                        TESTPATH="/mnt/tests"+task_name ,
+                        KILLTIME=str(ewd))
+                executable = mk_rhts_task(task_env)
                 args = [rpm_name]
                 print "RPMTest %s - %s %s" % (rpm_name, executable, args)
                 break
@@ -153,6 +181,10 @@ def parse_recipe_xml(input_xml):
 
     return None
 
+def handle_error(result, *args, **kwargs):
+    print "Deferred Failed(%r, *%r, **%r)" % (result, args, kwargs)
+    return result
+
 class BeakerLCBackend(ExtBackend):
 
     GET_RECIPE = 'get_recipe'
@@ -163,6 +195,7 @@ class BeakerLCBackend(ExtBackend):
     def __init__(self):
         self.waiting_for_lc = False
         self.__commands = {}
+        self.__results_by_uuid = {}
 
     def on_idle(self):
         if self.waiting_for_lc:
@@ -224,9 +257,10 @@ class BeakerLCBackend(ExtBackend):
             RC.CRITICAL:("Panic", "Critical"),
             RC.FATAL:("Panic", "Fatal"),
             }
+
     @staticmethod
     def result_type(rc):
-        return self.RESULT_TYPE.get(rc, ("Warn","Unknown Code"))
+        return BeakerLCBackend.RESULT_TYPE.get(rc, ("Warn","Unknown Code (%s)" % rc))
 
     def mk_msg(self, **kwargs):
         return json.dumps(kwargs)
@@ -261,23 +295,52 @@ class BeakerLCBackend(ExtBackend):
                 self.mk_msg(event=evt)).addCallback(self.handle_Stop)
 
     def proc_evt_result(self, evt):
-        res = self.result_type(evt.arg("rc",None))
-        self.proxy.callRemote(self.TASK_RESULT,
-                int(self.task_data['task_env']['TASKID']),
-                res[0],
-                "", # FIXME: path?
-                0, # FIXME:score?
-                self.mk_msg(event=evt))
+        try:
+            self.proxy.callRemote(self.TASK_RESULT,
+                    int(self.task_data['task_env']['TASKID']),
+                    self.result_type(evt.arg("rc",None))[0],
+                    evt.arg("handle","%s/%s" % \
+                            (self.task_data['task_env']['TASKNAME'], evt.id())),
+                    evt.arg("statistics", {}).get("score", 0),
+                    self.mk_msg(event=evt)) \
+                            .addCallback(self.handle_Result, event_id=evt.id())\
+                            .addErrback(handle_error)
+        except:
+            print traceback.format_exc()
+            raise
+        # FIXME: add caching events here! While waiting for result, we do not
+        # want to submit events, not to change their order.
+
+    def proc_evt_file_write(self, evt):
+        fid = evt.arg('file_id')
+        # FIXME: implement this!
+        # find file's details (...)
+        # update details by data from evt
+        digest = evt.arg('digest', (None, None))
+        if digest[0] != 'md5':
+            # decode data
+            data = base64.b64decode(evt.arg('data'))
+            # calculate md5 digest of the chunk
+            d = hashlib.md5()
+            d.update(data)
+            digest = ('md5', d.hexdigest())
+        #self.proxy.callRemote(...)
 
     def handle_Stop(self, result):
         self.on_idle()
+
+    def get_result_id(self, event_id):
+        self.__results_by_uuid.get(event_id, None)
+
+    def handle_Result(self, result_id, event_id=None):
+        print "%s.RETURN: %s (original event_id %s)" % (self.TASK_RESULT, result_id, event_id)
+        self.__results_by_uuid[event_id] = result_id
 
     def close(self):
         # FIXME: send a bye to server? (Should this be considerred an abort?)
         reactor.callLater(1, reactor.stop)
 
 def start_beaker_backend():
-    from beah.wires.internals.twbackend import start_backend
     backend = BeakerLCBackend()
     # Start a default TCP client:
     start_backend(backend, byef=lambda evt: reactor.callLater(1, reactor.stop))

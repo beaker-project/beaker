@@ -18,14 +18,15 @@
 
 import exceptions
 from beah.core.constants import RC, LOG_LEVEL
-from beah.core import new_id
+from beah.core import new_id, check_type
 
 """
 Events are used to communicate events from Task to Controller and finally back
 to Backend.
 
 Classes:
-    Event
+    Event(list)
+    RelObj(list)
 
 Module contains many functions (e.g. idle, pong, start, end, etc.) to
 instantiate Event of particular type.
@@ -33,9 +34,10 @@ instantiate Event of particular type.
 Event is basically a list ['Event', evt, origin, timestamp, args] where:
     isinstance(evt, string)
     isinstance(origin, dict)
-    isinstance(timestamp,float) or timestamp is None
-    isinstance(args,dict)
+    isinstance(timestamp, float) or timestamp is None
+    isinstance(args, dict)
 
+RelObj is a list subclass, used to define endpoint of relations.
 """
 
 ################################################################################
@@ -105,23 +107,121 @@ ldebug2 = mk_log_level(LOG_LEVEL.DEBUG2)
 ldebug3 = mk_log_level(LOG_LEVEL.DEBUG3)
 ldebug = ldebug1
 
-def result(rc, origin={}, timestamp=None, **kwargs):
-    return Event('result', origin, timestamp, rc=rc, **kwargs)
+def result_ex(rc, handle='', message='', statistics={}, origin={},
+        timestamp=None, **kwargs):
+    """Create a result event.
 
-def passed(origin={}, timestamp=None, **kwargs):
-    return result(RC.PASS, origin=origin, timestamp=timestamp, **kwargs)
+    rc - a return code. See beah.core.constants.RC for definition.
+    handle - a human readable id of the result. Not necessarily an unique
+    identifier.
+    message - description/explanation of result.
+    statistics - a numerical metric used for statistics.
+    """
+    return Event('result', origin, timestamp, rc=rc, handle=handle,
+            message=message, statistics=statistics, **kwargs)
 
-def warning(origin={}, timestamp=None, **kwargs):
-    return result(RC.WARNING, origin=origin, timestamp=timestamp, **kwargs)
+def result(rc, message=None, origin={}, timestamp=None, **kwargs):
+    return result_ex(rc, origin=origin, timestamp=timestamp, message=message,
+            **kwargs)
 
-def failed(origin={}, timestamp=None, **kwargs):
-    return result(RC.FAIL, origin=origin, timestamp=timestamp, **kwargs)
+def mk_result(rc, message):
+    def resf(message=message, origin={}, timestamp=None, **kwargs):
+        return result(rc, message=message, origin=origin, timestamp=timestamp,
+                **kwargs)
+    resf.__name__ = "result_%s" % rc
+    resf.__doc__ = "Create result with rc = %s and default message = %s" % (rc, message)
+    return resf
 
-def critical(origin={}, timestamp=None, **kwargs):
-    return result(RC.CRITICAL, origin=origin, timestamp=timestamp, **kwargs)
+passed = mk_result(RC.PASS, 'PASS')
+warning = mk_result(RC.WARNING, 'WARNING')
+failed = mk_result(RC.FAIL, 'FAIL')
+critical = mk_result(RC.CRITICAL, 'CRITICAL')
+fatal = mk_result(RC.FATAL, 'FATAL')
+aborted = mk_result(RC.FATAL, 'FATAL - ABORTED')
 
-def fatal(origin={}, timestamp=None, **kwargs):
-    return result(RC.FATAL, origin=origin, timestamp=timestamp, **kwargs)
+def result_stats(result_id, statistics, origin={}, timestamp=None,
+        **kwargs):
+    """
+    Attach additional metrics to already submitted result.
+
+    Parameters:
+    - result_id - an identifier of result event this event is related to.
+    - statistics - a dictionary containing metrics. These have individual
+      meaning from test to test.
+    """
+    return Event('result_stats', origin=origin, timestamp=timestamp,
+            result_id=result_id, statistics=statistics, **kwargs)
+
+def file(name=None, digest=None, size=None, codec=None, content_handler=None,
+        origin={}, timestamp=None, **kwargs):
+    """
+    Create a new file.
+
+    This event will define header of a new file to be submitted. For any such a
+    file only one file event is allowed.
+
+    Parameters:
+    - name - a human readable file name. Should be unique within a test.
+    - digest - a pair of (method, checksum), where method is "md5" or "sha256"
+      and checksum is a checksum of the decoded file created using given
+      method.
+    - size - the size of the file.
+    - codec - transformations applied to single chunks of data. E.g. "base64", "gz",
+      "bz2". These can be concatenated using "|". Example: "base64|gz".
+      - if whole file is compressed, use content_handler please.
+    - content_handler - class of file (like mime type, but allowing more levels).
+      These are useful e.g. for filtering and displaying file. E.g. in some
+      files we want to delete timestamps, before applying diff.
+      Example: "T|ls -l", "B|gz|T|dmesg", "B|core" {'T':text, 'B':binary}
+    """
+    return Event('file', origin=origin, timestamp=timestamp,
+            name=name, digest=digest, size=size, codec=codec,
+            content_handler=content_handler,
+            **kwargs)
+
+def file_meta(file_id, name=None, digest=None, size=None, content_handler=None,
+        codec=None, origin={}, timestamp=None, **kwargs):
+    """
+    Attach metadata to already created file.
+
+    Parameters:
+    - file_id - an id of file event used to create a file,
+    - see file for the rest.
+    """
+    return Event('file_meta', origin=origin, timestamp=timestamp,
+            file_id=file_id, name=name, digest=digest, size=size, codec=codec,
+            content_handler=content_handler,
+            **kwargs)
+
+def file_write(file_id, data, digest=None, codec=None, offset=None, origin={},
+        timestamp=None, **kwargs):
+    """
+    Write a chunk of data to already created file.
+
+    Parameters:
+    - file_id - an id of file event used to create a file,
+    - data - chunk of data encoded by codec to be written to the file at
+      offset,
+    - size - size of decoded data,
+    - digest - digest of decoded data,
+    - offset - position of data in the file. If None, data are to be appended
+      at the end of file. Messages are expected to arrive in correct order.
+    - codec - codec(s) applied to the chunk of data before transfer. Examples:
+      "", "base64", "gz|base64".
+    """
+    return Event('file_write', origin=origin, timestamp=timestamp,
+            file_id=file_id, data=data, offset=offset, digest=digest,
+            **kwargs)
+
+def file_close(file_id, origin={}, timestamp=None, **kwargs):
+    """
+    Marks the end of the file.
+
+    This is for information only. No more chunks to be written to the file.
+    Backend might use this to keep the file open for writing.
+    """
+    return Event('file_close', origin=origin, timestamp=timestamp,
+            file_id=file_id, **kwargs)
 
 ################################################################################
 # IMPLEMENTATION:
@@ -149,7 +249,7 @@ class Event(list):
             self[4] = timestamp
             self[5] = kwargs
 
-        for i in range(1,6):
+        for i in range(1, 6):
             if callable(self[i]):
                 self[i] = self[i](self)
 
@@ -163,14 +263,10 @@ class Event(list):
             if callable(self[5][key]):
                 self[5][key] = self[5][key](self)
 
-        if not isinstance(self.event(), str):
-            raise exceptions.TypeError('%r not permitted as event. Has to be str.' % self.event())
-        if not isinstance(self.origin(), dict):
-            raise exceptions.TypeError('%r not permitted as origin. Has to be dict.' % self.origin())
-        if not isinstance(self.args(), dict):
-            raise exceptions.TypeError('%r not permitted as args. Has to be dict.' % self.args())
-        if not isinstance(self.timestamp(), float) and not (self.timestamp() is None):
-            raise exceptions.TypeError('%r not permitted as timestamp. Has to be float.' % self.timestamp())
+        check_type("event", self.event(), str)
+        check_type("origin", self.origin(), dict)
+        check_type("args", self.args(), dict)
+        check_type("timestamp", self.timestamp(), float, True)
 
     def event(self): return self[1]
     def id(self): return self[2]
@@ -179,6 +275,25 @@ class Event(list):
     def args(self): return self[5]
     def arg(self, name, val=None):
         return self.args().get(name, val)
+
+def RelObj(list):
+
+    """Create a object used to define endpoints of relations."""
+
+    def __init__(self, evt_type, evt_id='', handle='', handle_type=''):
+        if isinstance(evt_type, list):
+            list.__init__(self, evt_type)
+        else:
+            list.__init__(self, [evt_type, evt_id, handle, handle_type])
+        check_type("evt_type", self.evt_type(), str)
+        check_type("evt_id", self.evt_id(), str)
+        check_type("handle", self.handle(), str)
+        check_type("handle_type", self.handle_type(), str)
+
+    def evt_type(self): return self[0]
+    def evt_id(self): return self[1]
+    def handle(self): return self[2]
+    def handle_type(self): return self[3]
 
 ################################################################################
 # TESTING:

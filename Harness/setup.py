@@ -42,6 +42,13 @@ more_data_files = glob_to('share/beah', [
     'doc',
     ])
 
+if os.environ.get('BEAH_DEV', ''):
+    # Add some RHTS tests to /mnt/tests
+    more_data_files += glob_to('/mnt/tests', [
+        'examples/tests/rhtsex',
+        'examples/tests/testargs',
+        ])
+
 setup(
 
     name="beah",
@@ -88,7 +95,8 @@ setup(
             'beah-cmd-backend = beah.bin.cmd_backend:main',
             'beah-out-backend = beah.bin.out_backend:main',
             'beah-beaker-backend = beah.backends.beakerlc:main',
-            'beah-fakelc = beah.tools.fakelc:main'
+            'beah-fakelc = beah.tools.fakelc:main',
+            'beah-rhts-task = beah.tasks.rhts_xmlrpc:main',
         ),
     },
 
