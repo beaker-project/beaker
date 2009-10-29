@@ -139,7 +139,7 @@ class Watchdog(ProxyHelper):
             except KeyboardInterrupt:
                 raise
             except Exception, e:
-                self._logger and self._logger.warn("Authentication failed")
+                self.logger and self.logger.warn("Authentication failed: %s" % e)
                 raise
 
             # Clear out expired watchdog entries
