@@ -54,12 +54,83 @@ log = logging.getLogger("beaker.server.controllers")
 import breadcrumbs
 from datetime import datetime
 
-#def search():
-#    """Return proper join for search"""
-#    tables = dict ( Cpu = 'Cpu.q.system == System.q.id' 
-#    tables = dict ( Cpu = (Cpu.q.system == System.q.id))
+class Utility:
+    @classmethod
+    def result_columns(cls,values_checked = None):  
+      #Call function which will return list of columns that can be searched on 
+      # Ticket 51 
+      #value = request.simpleCookie['result_column'].value
+      #log.debug(value)
+      column_names = SystemSearch.create_search_table([System,Cpu]) 
+      send = [(elem,elem) for elem in column_names]  
+     
+      if values_checked is not None:
+         vals_to_set = values_checked
+         response.simple_cookie['column_values'] = ','.join(values_checked)
+      elif request.simple_cookie.has_key('column_values'): 
+         text = request.simple_cookie['column_values'].value
+         vals_to_set = text.split(',') 
+         log.debug('Found these in cookie %s' % text)
+      else:
+         vals_to_set = [] 
 
-#    systems = System.select(AND(*your_dict.iter_values()))  ?
+      checkboxlist_widget = widgets.CheckBoxList(name='checkboxsearch',options=send,default=vals_to_set)
+
+      return checkboxlist_widget
+
+    @classmethod
+    def get_correct_system_column(cls,x):
+        if type(x) == type(()):
+            return x[0] 
+        else:
+            return x
+
+    @classmethod
+    def get_attr(cls,c):
+        return lambda x:  getattr(cls.get_correct_system_column(x),c)
+
+    @classmethod
+    def system_arch_getter(cls):
+        return lambda x: ', '.join([arch.arch for arch in cls.get_correct_system_column(x).arch])  
+
+    @classmethod
+    def system_name_getter(cls):
+        return lambda x: make_link("/view/%s" % cls.get_correct_system_column(x).Name, cls.get_correct_system_column(x).Name)
+
+    @classmethod
+    def get_attr_other(cls,index):
+        return lambda x: x[index]
+
+    @classmethod 
+    def custom_systems_grid(cls,systems,others):
+      fields = []
+      for column_desc in systems:
+          log.debug('In systems loop')
+          table,column = column_desc.split('/')
+          function_name = '%s_%s_getter' % (table.lower(), column.lower())
+          custom_getter = getattr(Utility,function_name,None)
+          if custom_getter:
+              my_getter = custom_getter()
+          else:          
+              my_getter = Utility.get_attr(column)
+
+          new_widget = widgets.PaginateDataGrid.Column(name='%s.%s' % (table.lower(),column.lower()) , getter = my_getter, title='%s-%s' % (table,column), options=dict(sortable=True)) 
+          fields.append(new_widget)
+
+      for index,column_desc in enumerate(others):  
+          table,column = column_desc.split('/')
+          log.debug('In others loop, table is %s and column is %s' % (table,column))
+          function_name = '%s_%s_getter' % (table.lower(), column.lower())
+          custom_getter = getattr(Utility,function_name,None)
+          index_in_queri = index + 1
+          if custom_getter:
+              my_getter = custom_getter()
+          else:          
+              my_getter = Utility.get_attr_other(index_in_queri)
+
+          new_widget = widgets.PaginateDataGrid.Column(name='%s.%s' % (table.lower(),column.lower()) , getter = my_getter, title='%s-%s' % (table,column), options=dict(sortable=True)) 
+          fields.append(new_widget)
+      return fields
 
 class Netboot:
     # For XMLRPC methods in this class.
@@ -179,7 +250,7 @@ class Devices:
         return dict(title="Devices", grid = devices_grid, search_bar=None,
                                      list = devices)
 
-class Root(RPCRoot):
+class Root(RPCRoot): 
     powertypes = PowerTypes()
     keytypes = KeyTypes()
     devices = Devices()
@@ -242,19 +313,17 @@ class Root(RPCRoot):
     system_groups = SystemGroups(name='groups')
     system_installoptions = SystemInstallOptions(name='installoptions')
     system_provision = SystemProvision(name='provision')
-    arches_form = SystemArches(name='arches')
+    arches_form = SystemArches(name='arches') 
 
-      
- 
 
     @expose(format='json')
     def get_search_options(self,table_field): 
-        search =  SystemSearch.search_on(table_field)  
+        sys_search = SystemSearch() 
+        search =  sys_search.search_on(table_field)  
       
         #Determine what field type we are dealing with. If it is Boolean, convert our values to 0 for False
         # and 1 for True
-        type = SystemSearch.field_type(table_field)
-        log.debug('type is %s' % type)
+        type = sys_search.field_type(table_field) 
         if type == 'sqlalchemy.types.Boolean':
             search['values'] = { 0:'False', 1:'True'}
         #Determine if we have search values. If we do, then we should only have the operators
@@ -287,9 +356,10 @@ class Root(RPCRoot):
                     kernel_options_post = kernel_options_post)
 
     @expose(template='beaker.server.templates.grid_add')
-    @paginate('list',default_order='fqdn',limit=20,allow_limit_override=True)
-    def index(self, *args, **kw): 
-        return self.systems(systems = System.all(identity.current.user), *args, **kw)
+    @paginate('list',limit=20,allow_limit_override=True)
+    def index(self, *args, **kw):   
+        return_dict =  self.systems(systems = System.all(identity.current.user), *args, **kw) 
+        return return_dict
 
     @expose(template='beaker.server.templates.form')
     @identity.require(identity.not_anonymous())
@@ -332,8 +402,16 @@ class Root(RPCRoot):
         return self.systems(systems = System.mine(identity.current.user), *args, **kw)
 
 
-    def _system_search(self,kw): 
-        sys_search = SystemSearch() 
+    def _system_search(self,kw,sys_search,result_columns = None):  
+        #We are no longer dleaing with just the search bar input. We are also dealing
+        #with the checkbox lists
+        # The next for loop is for the search bar input, so let's make sure we are only processing data from it
+        
+        #The problem here is that the checkbox input coming from the template
+        #Does not have a key to identify the data. the name systemsearch.checkboxlist does
+        #not get passed through to the data,  however if I change the name in the template to 
+        #systemsearch-0.checkboxlist, then it does....
+      
 	for search in kw['systemsearch']:
             #log.debug('About to log in system_search')
             #log.debug(search)
@@ -343,17 +421,25 @@ class Root(RPCRoot):
             col = class_field_list[1]              
             #If value id False or True, let's convert them to
             sys_search.append_results(cls_ref,search['value'],col,search['operation']) 
-         
+
+        #Append to the sys_search what particular columns we will be looking at this time around.
+      
+        sys_search.set_columns(result_columns)
         systems = sys_search.return_results()
+        for elem in systems:
+            log.debug(elem) 
+      
         new_systems = System.all(identity.current.user,system = systems)    
-        return new_systems
+        
+       
+        return systems
 
     # @identity.require(identity.in_group("admin"))
     def systems(self, systems, *args, **kw):
         # Reset joinpoint and then outerjoin on user.  This is so the sort 
         # column works in paginate/datagrid.
         # Also need to do distinct or paginate gets confused by the joins
-      
+        #log.debug(kw) 
         if 'simplesearch' in kw:
             simplesearch = kw['simplesearch']
             kw['systemsearch'] = [{'table' : 'System/Name',   
@@ -370,29 +456,50 @@ class Root(RPCRoot):
        
         if kw.get("systemsearch"):
             searchvalue = kw['systemsearch']  
-            systems = self._system_search(kw)
+            sys_search = SystemSearch()
+             
+            columns = kw['systemsearch'].pop() 
+            if type(columns) is not type([]): columns = [columns]
+
+            systems = self._system_search(kw,sys_search,columns)
+            (system_columns_desc,extra_columns_desc) = sys_search.get_column_descriptions() 
+            
+            my_fields = Utility.custom_systems_grid(system_columns_desc,extra_columns_desc)
             systems = systems.reset_joinpoint().outerjoin('user').distinct() 
-        else:
+        else: 
             systems = systems.reset_joinpoint().outerjoin('user').distinct() 
+            columns = None
             searchvalue = None
+            my_fields = [
+                widgets.PaginateDataGrid.Column(name='fqdn', getter=lambda x: make_link("/view/%s" % x.fqdn, x.fqdn), title='System', options=dict(sortable=True)),
+                widgets.PaginateDataGrid.Column(name='status.status', getter=lambda x: x.status, title='Status', options=dict(sortable=True)),
+                widgets.PaginateDataGrid.Column(name='vendor', getter=lambda x: x.vendor, title='Vendor', options=dict(sortable=True)),
+                widgets.PaginateDataGrid.Column(name='model', getter=lambda x: x.model, title='Model', options=dict(sortable=True)),
+                widgets.PaginateDataGrid.Column(name='location', getter=lambda x: x.location, title='Location', options=dict(sortable=True)),
+                widgets.PaginateDataGrid.Column(name='arch', getter=lambda x: ', '.join([arch.arch for arch in x.arch]), title='Arch', options=dict(sortable=True)),
+                widgets.PaginateDataGrid.Column(name='user.display_name', getter=lambda x: x.user, title='User', options=dict(sortable=True)),
+                widgets.PaginateDataGrid.Column(name='type.type', getter=lambda x: x.type, title='Type', options=dict(sortable=True)),]
+
+      
+          
+ 
+        systems_grid = myPaginateDataGrid(fields=my_fields)
        
-        systems_grid = myPaginateDataGrid(fields=[
-                        widgets.PaginateDataGrid.Column(name='fqdn', getter=lambda x: make_link("/view/%s" % x.fqdn, x.fqdn), title='System', options=dict(sortable=True)),
-                        widgets.PaginateDataGrid.Column(name='status.status', getter=lambda x: x.status, title='Status', options=dict(sortable=True)),
-                        widgets.PaginateDataGrid.Column(name='vendor', getter=lambda x: x.vendor, title='Vendor', options=dict(sortable=True)),
-                        widgets.PaginateDataGrid.Column(name='model', getter=lambda x: x.model, title='Model', options=dict(sortable=True)),
-                        widgets.PaginateDataGrid.Column(name='location', getter=lambda x: x.location, title='Location', options=dict(sortable=True)),
-                        widgets.PaginateDataGrid.Column(name='arch', getter=lambda x: ', '.join([arch.arch for arch in x.arch]), title='Arch', options=dict(sortable=True)),
-                        widgets.PaginateDataGrid.Column(name='user.display_name', getter=lambda x: x.user, title='User', options=dict(sortable=True)),
-                        widgets.PaginateDataGrid.Column(name='type.type', getter=lambda x: x.type, title='Type', options=dict(sortable=True)),
-                       ])
+        if 'columns' in locals():
+            log.debug('Going to set cookie values to %s' % columns) 
+         
+        else: pass
+          
+
+        cols = Utility.result_columns(columns)   
        
         return dict(title="Systems", grid = systems_grid,
                                      list = systems, 
                                      searchvalue = searchvalue,
+                                    
                                      action = '.',
-                                     options = {'simplesearch' : simplesearch},
-                                     search_bar = self.search_bar)
+                                     options = {'simplesearch' : simplesearch, 'columns': cols},                              
+                                     search_bar = self.search_bar )
 
     @expose(format='json')
     def by_fqdn(self, input):
@@ -1337,6 +1444,7 @@ class Root(RPCRoot):
         if system.user == user:
             if mylog:
                 activity = SystemActivity(system.user, "VIA %s" % identity.current.user, "Returned", "User", "%s" % system.user, '')
+                system.activity.append(activity)
                 system.activity.append(activity)
             try:
                 system.action_release()

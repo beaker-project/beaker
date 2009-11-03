@@ -11,7 +11,8 @@ from turbogears.widgets import (Form, TextField, SubmitButton, TextArea,
                                 static, PaginateDataGrid, RepeatingFormField,
                                 CompoundWidget, AjaxGrid, Tabber, 
                                 RepeatingFieldSet, SelectionField)
-
+import logging
+log = logging.getLogger(__name__)
 
 class LocalJSLink(JSLink):
     """
@@ -157,6 +158,10 @@ class SearchBar(RepeatingFormField):
      <a id="doclink" href="javascript:SearchBarForm.addItem('${field_id}');">Add ( + )</a>
      </td>
      </tr>
+     <tr><td>
+          ${result_columns}
+         </td>
+     </tr>
      </table>
      </fieldset>
     </form>
@@ -170,21 +175,22 @@ class SearchBar(RepeatingFormField):
     """
 
     params = ['repetitions', 'form_attrs', 'search_controller', 'simplesearch',
-              'advanced', 'simple']
+              'advanced', 'simple','result_columns']
     form_attrs = {}
     simplesearch = None
 
-    def __init__(self, table_callback, search_controller, *args, **kw):
+    def __init__(self, table_callback,search_controller, *args, **kw):
         super(SearchBar,self).__init__(*args, **kw)
         self.search_controller=search_controller
         self.repetitions = 1
-        table_field = SingleSelectField(name="table", options=table_callback, validator=validators.NotEmpty())
-      
+
+        table_field = SingleSelectField(name="table", options=table_callback, validator=validators.NotEmpty()) 
         operation_field = SingleSelectField(name="operation", options=[None], validator=validators.NotEmpty())
         value_field = TextField(name="value")
         self.fields = [ table_field, operation_field, value_field]
 
-    def display(self, value=None, **params):
+    def display(self, value=None, **params):   
+        params['result_columns'] = params['options']['columns']
         if 'options' in params and 'simplesearch' in params['options']:
             params['simplesearch'] = params['options']['simplesearch']
         if value and not params['simplesearch']:
@@ -196,6 +202,9 @@ class SearchBar(RepeatingFormField):
         if value and isinstance(value, list) and len(value) > 1:
             params['repetitions'] = len(value)
         return super(SearchBar, self).display(value, **params)
+ 
+        
+     
 
 class ProvisionForm(RepeatingFormField):
     pass
