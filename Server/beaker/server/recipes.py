@@ -112,7 +112,7 @@ class Recipes(RPCRoot):
            recipexml = Recipe.by_id(recipe_id).to_xml().toprettyxml()
         except InvalidRequestError:
             raise BX(_("Invalid Recipe ID %s" % recipe_id))
-        return xml
+        return recipexml
 
     @expose(template='beaker.server.templates.grid')
     @paginate('list',default_order='-id')
