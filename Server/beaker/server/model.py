@@ -2920,10 +2920,9 @@ class RecipeTask(TaskBase):
         abort  = Auto instigated
         """
         # Only record an abort/cancel on tasks that are New, Queued, Scheduled 
-        # or Running
-        if self.status.severity < TaskStatus.by_name(u'Completed').severity \
-           or self.status == TaskStatus.by_name(u'Running') \
-           or self.status == TaskStatus.by_name(u'Waiting'):
+        # or Running.
+        if not self.finish_time:
+            self.finish_time = datetime.utcnow()
             self.status = TaskStatus.by_name(status)
             self.results.append(RecipeTaskResult(recipetask=self,
                                        path=u'/',
