@@ -2512,6 +2512,8 @@ class Recipe(TaskBase):
         recipe.setAttribute("id", "%s" % self.id)
         recipe.setAttribute("job_id", "%s" % self.recipeset.job_id)
         recipe.setAttribute("recipe_set_id", "%s" % self.recipe_set_id)
+        if self.duration:
+            recipe.setAttribute("duration", "%s" % self.duration)
         if self.result:
             recipe.setAttribute("result", "%s" % self.result)
         if self.status:
@@ -2543,6 +2545,13 @@ class Recipe(TaskBase):
         for t in self.tasks:
             recipe.appendChild(t.to_xml())
         return recipe
+
+    def _get_duration(self):
+        try:
+            return self.finish_time - self.start_time
+        except TypeError:
+            return None
+    duration = property(_get_duration)
 
     def _get_packages(self):
         """ return all packages for all tests
@@ -2777,6 +2786,8 @@ class RecipeTask(TaskBase):
         task.setAttribute("role", "%s" % self.role)
         task.setAttribute("result", "%s" % self.result)
         task.setAttribute("status", "%s" % self.status)
+        if self.duration:
+            task.setAttribute("duration", "%s" % self.duration)
         if self.roles:
             roles = self.doc.createElement("roles")
             for role in self.roles.to_xml():
@@ -2791,6 +2802,11 @@ class RecipeTask(TaskBase):
         rpm.setAttribute("name", "%s" % self.task.rpm)
         rpm.setAttribute("path", "%s" % self.task.path)
         task.appendChild(rpm)
+        if self.results:
+            results = self.doc.createElement("results")
+            for result in self.results:
+                results.appendChild(result.to_xml())
+            task.appendChild(results)
         return task
 
     def _get_duration(self):
@@ -2878,6 +2894,8 @@ class RecipeTask(TaskBase):
         """
         if not self.recipe.watchdog:
             raise BX(_('No watchdog exists for recipe %s' % self.recipe.id))
+        if not self.start_time:
+            raise BX(_('recipe task %s was never started' % self.id))
         if not self.finish_time:
             self.finish_time = datetime.utcnow()
         self.status = TaskStatus.by_name(u'Completed')
@@ -3110,7 +3128,18 @@ class RecipeTaskResult(MappedObject):
     """
     Each task can report multiple results
     """
-    pass
+    def to_xml(self):
+        """
+        Return result in xml
+        """
+        result = self.doc.createElement("result")
+        result.setAttribute("id", "%s" % self.id)
+        result.setAttribute("path", "%s" % self.path)
+        result.setAttribute("result", "%s" % self.result)
+        result.setAttribute("score", "%s" % self.score)
+        result.appendChild(self.doc.createTextNode("%s" % self.log))
+        #FIXME Append any binary logs as URI's
+        return result
 
 
 class Task(MappedObject):
