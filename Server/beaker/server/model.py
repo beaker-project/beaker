@@ -5,7 +5,7 @@ from turbogears.database import metadata, mapper, session
 from turbogears.config import get
 import ldap
 from sqlalchemy import Table, Column, ForeignKey
-from sqlalchemy.orm import relation, backref, synonym, column_property,composite
+from sqlalchemy.orm import relation, backref, synonym, column_property,query
 from sqlalchemy import String, Unicode, Integer, DateTime, UnicodeText, Boolean, Float, VARCHAR, TEXT, Numeric
 from sqlalchemy import or_, and_, not_, select
 from sqlalchemy.exceptions import InvalidRequestError
@@ -902,34 +902,42 @@ class KeyJoinContainer(JoinContainer):
  
 
 class Search: 
+    
     @classmethod
     def translate_name(cls,display_name):
-        """ translate_name() get's a reference to the class from it's display name """
+        """ translate_name() get's a reference to the class from it's display name"""
         try:
             class_ref = cls.class_external_mapping[display_name]
         except KeyError:
             log.error('Class %s does not have a mapping to display_name %s' % (cls.__name__,display_name))  
         else:
            return class_ref
+ 
+    @classmethod
+    def translate_class(cls,cls_ref):
+        """translate_class() takes a class ref and returns the display name it uses """
+        for (display_name,ref) in cls.class_external_mapping.iteritems():
+            if ref is cls_ref:
+                return display_name
+        return
 
     @classmethod
-    def __split_class_field(cls,class_field):
+    def split_class_field(cls,class_field):
         class_field_list = class_field.split('/')     
         display_name = class_field_list[0]
         field      = class_field_list[1] 
-        return (display_name,field)
-
-    @classmethod 
-    def field_type(cls,class_field): 
+        return (display_name,field) 
+ 
+    def field_type(self,class_field): 
        """ Takes a class/field string (ie'CPU/Processor') and returns the sqlalchemy type of the field"""
-       returned_class_field = cls.__split_class_field(class_field) 
+       returned_class_field = self.split_class_field(class_field) 
        display_name = returned_class_field[0]
        field      = returned_class_field[1]        
       
-       class_ref = cls.translate_name(display_name)
+       class_ref = self.translate_name(display_name)
        field_type = class_ref.get_field_type(field)  
        class_field_type = "%s" % type(field_type)
-       match_obj = cls.strip_field_type(class_field_type)
+       match_obj = self.strip_field_type(class_field_type)
        return match_obj.group(1)
 
     @classmethod
@@ -956,10 +964,10 @@ class Search:
         search_on() takes a combination of class name and field name (i.e 'Cpu/vendor') and
         returns the oeprations suitable for the field type it represents
         """ 
-        returned_class_field = cls.__split_class_field(class_field) 
+        returned_class_field = self.split_class_field(class_field) 
         display_name = returned_class_field[0]
         field      = returned_class_field[1]        
-        class_ref = cls.translate_name(display_name)
+        class_ref = self.translate_name(display_name)
         
         try:
             field_type = class_ref.get_field_type(field) 
@@ -978,66 +986,104 @@ class Search:
         return re.match('^<class\s+\'(.+?)\'>$',field_type)  
 
     @classmethod
-    def create_search_table(cls,searchable_objs):  
+    def __build_mapping(cls,class_ref):
+        #Check if we have a specialised display name 
+        if hasattr(class_ref,'display_name'):
+            display_name = class_ref.display_name
+        else:
+            display_name = class_ref.__name__    
+
+        #If the display name is already being used  
+        if cls.class_external_mapping.has_key(display_name) and cls.class_external_mapping[display_name] is class_ref:
+            log.debug('Already have display name %s for %s' % (display_name,class_ref.__name__ ))
+            #We're already mapped, nothing to see here...
+            pass  
+        elif cls.class_external_mapping.has_key(display_name): 
+            log.error("Display name %s cannot be set for %s" % (display_name,class_ref.__name__))               
+        else: 
+            log.debug('Adding to class_external_mapping with %s %s' % (display_name,class_ref))
+            cls.class_external_mapping[display_name] = class_ref
+
+    @classmethod
+    def create_search_table(cls,searchable_classes,force = False):  
         """
-        create_search_table will set and return the class' search_table class attribute with
+        create_search_table will set and/or return the search_table for each searchable_objs containing
         a list of searchable 'combinations'.
         These 'combinations' merely represent a table and a column.
         An example of search_table entry may be 'Cpu/Vendor' or 'System/Name'
-        """
-        #Clear the table if it's already been created
-        if cls.search_table != None:
-            cls.search_table = []
-        
-        for obj in searchable_objs:  
-            obj_instance = obj
-            #Check if we have a specialised display name
-            display_name = getattr(obj_instance,'display_name',None)
-            if display_name != None:
-                display_name = obj.display_name
-                  
-                #If the display name is already being used by some class.
-                if cls.class_external_mapping.has_key(display_name): 
-                    log.debug("Display name %s cannot be set for %s display name will be set to class name" % (display_name, obj_instance.__class__.__name__))
-                    display_name = obj.__name__                    
+        """ 
+ 
+        return_table = []
+        #force = True
+        for class_ref in searchable_classes:            
+            # Don't recreate the table unless you are forced to... 
+            # search_table = getattr(obj,'search_table')
+            got_search_table = hasattr(class_ref,'search_table')
+            log.debug('Do we have search_table %s' % got_search_table)
+            if got_search_table:
+                search_table_has_items = len(class_ref.search_table) and True
             else:
-                display_name = obj.__name__
-              
-            #We have our final display name, if it still exists in the mapping
-            #there isn't much we can do, and we don't want to overwrite it.
-            if cls.class_external_mapping.has_key(display_name): 
-                log.error("Display name %s cannot be set for %s" % (display_name,obj_instance.__class__.__name__))               
-            else: 
-                cls.class_external_mapping[display_name] = obj
+                search_table_has_items = False
 
-            #Now let's actually build the search table
-            searchable =  obj_instance.get_searchable() 
+            if search_table_has_items and not force: 
+                log.debug('Getting cached values')
+                return_table.extend(class_ref.search_table)
+                continue
+            #Lets build a mapping from display name to class_ref.
+            cls.__build_mapping(class_ref) 
+            display_name = cls.translate_class(class_ref)
+
+            if search_table_has_items and force: 
+               #Delete search_table so we can rebuild it 
+               del class_ref.search_table[:] 
+               working_table = class_ref.search_table 
+            elif got_search_table:
+               working_table = class_ref.search_table
+            elif not got_search_table:    
+               log.error('%s is missing attribute search_table, will continue but cannot cache search_table for later use.' % (class_ref.__name__) )
+               working_table = []
+
+            #Now let's actually build the obj specific return_table
+            searchable =  class_ref.get_searchable() 
             for item in searchable: 
-                 cls.search_table.append('%s/%s' % (display_name,item))  
+                working_table.append('%s/%s' % (display_name,item))  
+
+            #add it to our local table that will be returned
+            return_table.extend(working_table)
                
-        cls.search_table.sort()
-        return cls.search_table
+        return_table.sort()
+        return return_table
    
 
 
 class SystemSearch(Search): 
-    class_external_mapping = {}
-    search_table = []
-    
+    class_external_mapping = {} 
     def __init__(self):
         self.j = system_table
         self.filter_funcs = [] 
-        self.already_joined = []
+        #Because the FROM clause is 'FROM system', we won't have to join to system again,
+        #so we mark it as already being joined
+        self.already_joined = [system_table]
+        self.result_columns = [] 
+        self.extra_columns_desc = []
+        self.system_columns_desc = []
+     
+        search_tables = {} 
   
     def __getitem__(self,key):
         pass
+     
+    def set_columns(self,cols):
+        self.result_columns = cols
+
+    def get_column_descriptions(self):
+        return [self.system_columns_desc,self.extra_columns_desc]
 
     def append_results(self,cls_ref,value,column,operation,**kw):  
         """ 
         append_results() will take a value, column and operation from the search field,
         as well as the class of which the search pertains to, and will append the join
         and the filter needed to return the correct results.   
-
         """
         #First let's see if we have a column X operation specific filter
         #We will only need to use these filter by table column if the ones from Modeller are 
@@ -1109,10 +1155,41 @@ class SystemSearch(Search):
         else:
             pass
 
-    def return_results(self):   
+    def __add_columns(self,queri): 
+        if self.result_columns is not None:
+            for elem in self.result_columns: 
+                (display_name,col) = self.split_class_field(elem)  
+                cls_ref = SystemSearch.translate_name(display_name) 
+                col_ref = getattr(cls_ref.mapper.c,col,None) 
+
+                #If they are System columns we won't need to explicitly add them to the query, as they are already returned in the System query  
+                if cls_ref is System:     
+                    self.system_columns_desc.append(elem)
+                    continue
+                elif col_ref is not None: 
+                    log.debug('Adding columns %s' % col_ref)   
+                    self.extra_columns_desc.append(elem)
+                    self.adding_columns = True
+                    queri = queri.add_column(col_ref)         
+
+            return queri 
+
+
+    def return_results(self):
+        """
+        return_results() will take the joins and the filters which have been assembled by append_results
+        and return the final query object from these.
+        Also if we are want to customise what we return, we will add the columns onto the query object. For this to work 
+        the result_columns attribute must already be set 
+        """
         #Do our joins
-        queri = session.query(System).select_from(self.j)     
+        queri = session.query(System).select_from(self.j)  
       
+        #Add columns which were specified in the search page
+        queri = self.__add_columns(queri)
+        for row in queri:
+            print row 
+           
         #Execute filter on query object  
         for filter_func in self.filter_funcs:           
             queri = queri.filter(filter_func()) 
@@ -1129,9 +1206,10 @@ class System(SystemObject):
     # search_values_dict of the corresponding class
     search_values_dict =     { 'Status' : lambda: SystemStatus.get_all_status_name(),
                                'Type' : lambda: SystemType.get_all_type_names() }    
+
     @classmethod
     def arch_is_not_filter(cls,col,val):
-        """arch_is_not_filter is a function dynamically called from append_results.
+        """arch_is_not_filter() is a function dynamically called from append_results.
            It serves to provide a table column operation specific method of filtering results of System/Arch
         """       
         if not val: 
@@ -1399,8 +1477,8 @@ $SNIPPET("rhts_post")
         #  right now we only support cobbler
         if self.lab_controller:
             return CobblerAPI(self)
-
     remote = property(remote)
+
     @classmethod
     def all(cls, user=None,system = None): 
         """
@@ -1426,8 +1504,7 @@ $SNIPPET("rhts_post")
                                         System.user==user))))
         else:
             query = query.filter(System.private==False)
-        
-        
+     
         return query
 
 #                                  or_(User.user_id==user.user_id, 

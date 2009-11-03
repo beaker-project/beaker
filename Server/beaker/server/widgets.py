@@ -12,7 +12,8 @@ from turbogears.widgets import (Form, TextField, SubmitButton, TextArea,
                                 CompoundWidget, AjaxGrid, Tabber, 
                                 RadioButtonList,
                                 RepeatingFieldSet, SelectionField)
-
+import logging
+log = logging.getLogger(__name__)
 
 import logging
 log = logging.getLogger('beaker.server')
@@ -198,6 +199,10 @@ class SearchBar(RepeatingFormField):
      <a id="doclink" href="javascript:SearchBarForm.addItem('${field_id}');">Add ( + )</a>
      </td>
      </tr>
+     <tr><td>
+          ${result_columns}
+         </td>
+     </tr>
      </table>
      </fieldset>
     </form>
@@ -211,7 +216,7 @@ class SearchBar(RepeatingFormField):
     """
 
     params = ['repetitions', 'form_attrs', 'search_controller', 'simplesearch',
-              'advanced', 'simple','to_json','this_operations_field','this_searchvalue_field','extra_callbacks_stringified','table_search_controllers_stringified','keyvaluevalue']
+              'advanced', 'simple','to_json','this_operations_field','this_searchvalue_field','extra_callbacks_stringified','table_search_controllers_stringified','keyvaluevalue','result_columns']
     form_attrs = {}
     simplesearch = None
 
@@ -266,6 +271,7 @@ class SearchBar(RepeatingFormField):
  
 
     def display(self, value=None, **params):   
+	params['result_columns'] = params['options']['columns']
         if 'options' in params and 'simplesearch' in params['options']:
             params['simplesearch'] = params['options']['simplesearch']
 
@@ -282,6 +288,9 @@ class SearchBar(RepeatingFormField):
         if value and isinstance(value, list) and len(value) > 1:
             params['repetitions'] = len(value)
         return super(SearchBar, self).display(value, **params)
+ 
+        
+     
 
 class ProvisionForm(RepeatingFormField):
     pass
