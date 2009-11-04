@@ -76,7 +76,7 @@ class Jobs(RPCRoot):
             raise
         session.save(job)
         session.flush()
-        return job.id
+        return "j:%s" % job.id
 
     @expose()
     @identity.require(identity.not_anonymous())

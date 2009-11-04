@@ -33,6 +33,7 @@ from beaker.server.cobbler_utils import hash_to_string
 from beaker.server.jobs import Jobs
 from beaker.server.recipes import Recipes
 from beaker.server.tasks import Tasks
+from beaker.server.task_actions import TaskActions
 from cherrypy import request, response
 from cherrypy.lib.cptools import serve_file
 from tg_expanding_form_widget.tg_expanding_form_widget import ExpandingForm
@@ -200,6 +201,7 @@ class Root(RPCRoot):
     jobs = Jobs()
     recipes = Recipes()
     tasks = Tasks()
+    taskactions = TaskActions()
     reports = Reports()
 
     id         = widgets.HiddenField(name='id')
@@ -250,23 +252,6 @@ class Root(RPCRoot):
     system_installoptions = SystemInstallOptions(name='installoptions')
     system_provision = SystemProvision(name='provision')
     arches_form = SystemArches(name='arches')
-
-    @cherrypy.expose
-    def task_info(self, taskid, flat=True):
-        """
-        XMLRPC method to get task status
-        """
-        task_types = dict(J  = Job,
-                          RS = RecipeSet,
-                          R  = Recipe,
-                          T  = RecipeTask)
-        task_type, task_id = taskid.split(":")
-        if task_type.upper() in task_types.keys():
-            try:
-                task = task_types[task_type.upper()].by_id(task_id)
-            except InvalidRequestError, e:
-                raise BX(_("Invalid %s %s" % (task_type, task_id)))
-        return task.task_info()
 
     @expose(format='json')
     def get_fields(self, table_name):

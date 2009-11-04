@@ -2982,7 +2982,8 @@ class RecipeTask(TaskBase):
                     method          = "%s" % self.task.name,
                     result          = "%s" % self.result,
                     is_finished     = self.is_finished(),
-                    is_failed       = self.is_failed()
+                    is_failed       = self.is_failed(),
+                    subtask_id_list = ["TR:%s" % tr.id for tr in self.results]
                    )
 
 
@@ -3139,6 +3140,21 @@ class RecipeTaskResult(MappedObject):
         result.appendChild(self.doc.createTextNode("%s" % self.log))
         #FIXME Append any binary logs as URI's
         return result
+
+    def task_info(self):
+        """
+        Method for exporting RecipeTaskResult status for TaskWatcher
+        """
+        return dict(
+                    id              = "TR:%s" % self.id,
+                    worker          = dict(name = "%s" % None),
+                    state_label     = "%s" % self.result,
+                    state           = self.result.id,
+                    method          = "%s" % self.path,
+                    result          = "%s" % self.result,
+                    is_finished     = True,
+                    is_failed       = False
+                   )
 
 
 class Task(MappedObject):

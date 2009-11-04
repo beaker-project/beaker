@@ -28,10 +28,11 @@ class Job_Submit(BeakerCommand):
         for job in jobs:
             try:
                 submitted_jobid = self.hub.jobs.upload(open(job, "r").read())
-                submitted_jobs.append("j:%s" % submitted_jobid)
             except Exception, ex:
                 failed = True
                 print ex
         TaskWatcher.watch_tasks(self.hub, submitted_jobs)
+        for submitted_job in submitted_jobs:
+            print self.hub.taskactions.to_xml(submitted_job)
         if failed:
             sys.exit(1)
