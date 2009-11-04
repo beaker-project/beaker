@@ -963,15 +963,15 @@ class SystemSearch(Search):
         self.filter_funcs.append(lambda: filter_func(col,value))
 
         join_dict = getattr(cls_ref,'join_system',None) 
-        join_keys = getattr(cls_ref,'join_system_keys',None)
+      
         #We may not have a join with System 
-        if join_keys != None and join_dict != None:
-            for elem in join_keys: 
-                k = elem
-                v = join_dict[k]
-                if (self.already_joined.count(k) < 1):
-                    self.j = self.j.join(k,onclause=v)
-		    self.already_joined.append(k) 
+        #I really want to make these joins potentially conditional based on what columns we are searching for/retrieving. 
+        if join_dict != None:
+            for elem in join_dict: 
+                for k,v in elem.iteritems():   
+                    if (self.already_joined.count(k) < 1):
+                        self.j = self.j.join(k,onclause=v)
+		        self.already_joined.append(k) 
         else:
             pass
 
@@ -987,12 +987,9 @@ class SystemSearch(Search):
 class System(SystemObject):
     table = system_table
     search_table = [] 
-    # join_system_keys enforces order over join_system 
-    join_system_keys = [system_arch_map,arch_table]
-    join_system = { 
-                   system_arch_map: system_table.c.id == system_arch_map.c.system_id, 
-                   arch_table: arch_table.c.id == system_arch_map.c.arch_id
-                  }
+    # join_system_keys enforces order over join_system  
+    join_system = [{system_arch_map: system_table.c.id == system_arch_map.c.system_id}, 
+                   {arch_table: arch_table.c.id == system_arch_map.c.arch_id}]
     #If we have a set of predefined values that a column can be searched on, put them in the 
     # search_values_dict of the corresponding class
     search_values_dict =     { 'Status' : lambda: SystemStatus.get_all_status_name(),
@@ -1868,8 +1865,7 @@ class LabInfo(SystemObject):
 class Cpu(SystemObject): 
     table = cpu_table      
     display_name = 'CPU'
-    join_system_keys = [cpu_table]
-    join_system = { cpu_table : system_table.c.id == cpu_table.c.system_id }
+    join_system = [{cpu_table : system_table.c.id == cpu_table.c.system_id}]
     search_values_dict = { 'Hyper' : ['True','False'] }
 
     def __init__(self, vendor=None, model=None, model_name=None, family=None, stepping=None,speed=None,processors=None,cores=None,sockets=None,flags=None):
@@ -1945,15 +1941,9 @@ class DeviceClass(SystemObject):
 
 class Device(SystemObject):
     table = device_table
-    display_name = 'Devices' 
-    #  join_system_keys enforces order over join_system 
-    join_system_keys = [system_device_map,device_table]
-    join_system = { 
-                    system_device_map : system_table.c.id 
-                                       == system_device_map.c.system_id,
-                    device_table : system_device_map.c.device_id 
-                                   == device_table.c.id
-                  }
+    display_name = 'Devices'  
+    join_system = [{system_device_map : system_table.c.id == system_device_map.c.system_id},
+                   {device_table : system_device_map.c.device_id == device_table.c.id}]
  
     def __init__(self, vendor_id=None, device_id=None, subsys_device_id=None, subsys_vendor_id=None, bus=None, driver=None, device_class=None, description=None):
         if not device_class:
@@ -2269,7 +2259,7 @@ System.mapper = mapper(System, system_table,
                      'Status':column_property(select([system_status_table.c.status],system_status_table.c.id == system_table.c.status_id).correlate(system_table).label('Status'),deferred=True),
                      'Type':column_property(select([system_type_table.c.type],system_type_table.c.id == system_table.c.type_id).label('Type'),deferred=True),
                      'Arch':column_property(select([arch_table.c.arch]).correlate(arch_table).label('Arch'),deferred = True), 
-                   
+         
                      'status':relation(SystemStatus,uselist=False),
                      'devices':relation(Device,
                                         secondary=system_device_map,backref='systems'),
