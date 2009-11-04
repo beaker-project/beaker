@@ -989,6 +989,7 @@ class SystemSearch(Search):
         #append a filter function which is to be called later 
         self.filter_funcs.append(lambda: filter_func(col,value))
 
+
         joins = getattr(cls_ref,'joins',None)  
         #Let's do the joins 
         if joins != None:
@@ -1021,7 +1022,7 @@ class SystemSearch(Search):
 
 class System(SystemObject):
     table = system_table
-    search_table = []
+    search_table = []  
     joins = JoinContainer()
     joins.add_conditional('arch', [{system_arch_map: system_table.c.id == system_arch_map.c.system_id}, 
                                    {arch_table: arch_table.c.id == system_arch_map.c.arch_id}]) 
@@ -1905,6 +1906,7 @@ class LabInfo(SystemObject):
 class Cpu(SystemObject): 
     table = cpu_table      
     display_name = 'CPU'
+
     joins = JoinContainer()
     joins.add_unconditional({ cpu_table : system_table.c.id == cpu_table.c.system_id })
     joins.add_conditional('flags',  { cpu_flag_table : cpu_flag_table.c.cpu_id == cpu_table.c.id})   
@@ -1995,6 +1997,7 @@ class DeviceClass(SystemObject):
 
 class Device(SystemObject):
     table = device_table
+
     display_name = 'Devices' 
     joins = JoinContainer()
     joins.add_unconditional([{system_device_map : system_table.c.id  == system_device_map.c.system_id},
