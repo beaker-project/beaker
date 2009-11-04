@@ -79,7 +79,7 @@ class myPaginateDataGrid(PaginateDataGrid):
 class SearchBar(RepeatingFormField):
     """Search Bar"""
 
-    javascript = [LocalJSLink('beaker', '/static/javascript/searchbar.js')]
+    javascript = [LocalJSLink('beaker', '/static/javascript/searchbar_v2.js')]
     template = """
     <div xmlns:py="http://purl.org/kid/ns#">
     <a id="advancedsearch" href="#">Toggle Search</a>
