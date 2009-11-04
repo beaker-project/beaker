@@ -61,6 +61,35 @@ class ProxyHelper(object):
         # self.hub is created here
         self.hub = HubProxy(logger=self.logger, conf=self.conf, **kwargs)
 
+    def recipe_upload_file(self, 
+                         recipe_id, 
+                         path, 
+                         name, 
+                         size, 
+                         md5sum, 
+                         offset, 
+                         data):
+        """ Upload a file in chunks
+             path: the relative path to upload to
+             name: the name of the file
+             size: size of the contents (bytes)
+             md5: md5sum (hex digest) of contents
+             data: base64 encoded file contents
+             offset: the offset of the chunk
+            Files can be uploaded in chunks, if so the md5 and the size 
+            describe the chunk rather than the whole file.  The offset
+            indicates where the chunk belongs
+            the special offset -1 is used to indicate the final chunk
+        """
+        self.logger.info("recipe_upload_file recipe_id:%s" % recipe_id)
+        return self.hub.recipes.upload_file(recipe_id, 
+                                            path, 
+                                            name, 
+                                            size, 
+                                            md5sum, 
+                                            offset, 
+                                            data)
+
     def task_result(self, 
                     task_id, 
                     result_type, 
@@ -102,68 +131,31 @@ class Watchdog(ProxyHelper):
 
     watchdogs = dict()
 
-    def recipe_upload_file(self, 
-                         recipe_id, 
-                         path, 
-                         name, 
-                         size, 
-                         md5sum, 
-                         offset, 
-                         data):
-        """ Upload a file in chunks
-             path: the relative path to upload to
-             name: the name of the file
-             size: size of the contents (bytes)
-             md5: md5sum (hex digest) of contents
-             data: base64 encoded file contents
-             offset: the offset of the chunk
-            Files can be uploaded in chunks, if so the md5 and the size 
-            describe the chunk rather than the whole file.  The offset
-            indicates where the chunk belongs
-            the special offset -1 is used to indicate the final chunk
-        """
-        self.logger.info("recipe_upload_file recipe_id:%s" % recipe_id)
-        return self.hub.recipes.upload_file(recipe_id, 
-                                            path, 
-                                            name, 
-                                            size, 
-                                            md5sum, 
-                                            offset, 
-                                            data)
+    def expire_watchdogs(self):
+        """Clear out expired watchdog entries"""
 
-    def monitor_forever(self):
-        while True:
-            # try and log back in if needed
-            try:
-                self.hub._login(verbose=self.hub._conf.get("DEBUG_XMLRPC"))
-            except KeyboardInterrupt:
-                raise
-            except Exception, e:
-                self.logger and self.logger.warn("Authentication failed: %s" % e)
-                raise
+        for watchdog in self.hub.recipes.tasks.watchdogs('expired'):
+            self.abort(watchdog)
 
-            # Clear out expired watchdog entries
-            for watchdog in self.hub.recipes.tasks.watchdogs('expired'):
-                self.abort(watchdog)
+    def active_watchdogs(self):
+        """Monitor active watchdog entries"""
 
-            # Monitor active watchdog entries
-            active_watchdogs = []
-            for watchdog in self.hub.recipes.tasks.watchdogs('active'):
-                active_watchdogs.append(watchdog['system'])
-                if watchdog['system'] not in self.watchdogs:
-                    self.watchdogs[watchdog['system']] = self.monitor(watchdog)
-            # Kill Monitor if watchdog does not exist.
-            for watchdog_system in self.watchdogs:
-                if watchdog_system not in active_watchdogs:
-                    kill_process_group(self.watchdogs[watchdog_system],
-                                       logger=self.logger)
-                    del self.watchdogs[watchdog_system]
-                    self.logger.info("Removed Monitor for %s" % watchdog_system)
-                    
-            # Check status of monitor processes..  
-            
-            # Sleep between polling
-            time.sleep(self.conf["SLEEP_TIME"])
+        active_watchdogs = []
+        for watchdog in self.hub.recipes.tasks.watchdogs('active'):
+            active_watchdogs.append(watchdog['system'])
+            if watchdog['system'] not in self.watchdogs:
+                self.watchdogs[watchdog['system']] = self.monitor(watchdog)
+        # Kill Monitor if watchdog does not exist.
+        for watchdog_system in self.watchdogs:
+            if watchdog_system not in active_watchdogs:
+                kill_process_group(self.watchdogs[watchdog_system],
+                                   logger=self.logger)
+                del self.watchdogs[watchdog_system]
+                self.logger.info("Removed Monitor for %s" % watchdog_system)
+
+    def sleep(self):
+        # Sleep between polling
+        time.sleep(self.conf.get("SLEEP_TIME", 20))
 
     def abort(self, watchdog):
         """ Abort expired watchdog entry

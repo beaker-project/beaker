@@ -28,7 +28,44 @@ def main_loop(conf=None, foreground=False):
     except Exception, ex:
         sys.stderr.write("Error initializing Watchdog: %s\n" % ex)
         sys.exit(1)
-    watchdog.monitor_forever()
+
+    if foreground:
+        add_stderr_logger(watchdog.logger)
+
+    while True:
+        try:
+            watchdog.logger.debug(80 * '-')
+            # Poll the scheduler for watchdogs
+            watchdog.hub._login()
+            watchdog.expire_watchdogs()
+            watchdog.active_watchdogs()
+
+            # FIXME: Check for recipes that match systems under
+            #        this lab controller, if so take recipe and provision
+            #        system.
+
+            # write to stdout / stderr
+            sys.stdout.flush()
+            sys.stderr.flush()
+
+            # sleep for some time
+            watchdog.sleep()
+
+        except (ShutdownException, KeyboardInterrupt):
+            # ignore keyboard interrupts and sigterm
+            signal.signal(signal.SIGINT, signal.SIG_IGN)
+            signal.signal(signal.SIGTERM, signal.SIG_IGN)
+
+            watchdog.logger.info('Exiting...')
+            break
+
+        except:
+            # this is a little extreme: log the exception and continue
+            traceback = Traceback()
+            watchdog.logger.error(traceback.get_traceback())
+            watchdog.sleep()
+
+
 
 def main():
     parser = OptionParser()
