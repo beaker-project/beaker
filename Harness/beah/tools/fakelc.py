@@ -117,6 +117,11 @@ def do_task_result(fname, task_id, result_type, path, score, summary):
         print traceback.format_exc()
         raise
 
+def do_task_upload_file(fname, task_id, path, name, size, digest, offset, data):
+    print "%s(task_id=%r, path=%r, name=%r, size=%r, digest=%r, offset=%r, data='...')" % \
+            (fname, task_id, path, name, size, digest, offset)
+    return 0
+
 ################################################################################
 # XML-RPC HANDLERS:
 ################################################################################
@@ -167,6 +172,11 @@ class LCHandler(xmlrpc.XMLRPC):
     def xmlrpc_task_result(self, task_id, result_type, path, score, summary):
         return do_task_result("task_result", task_id, result_type, path, score,
                 summary)
+
+    def xmlrpc_task_upload_file(self, task_id, path, name, size, digest,
+            offset, data):
+        return do_task_upload_file("task_upload_file", task_id, path, name,
+                size, digest, offset, data)
 
     def catch_xmlrpc(self, method, *args):
         """Handler for unhandled requests."""

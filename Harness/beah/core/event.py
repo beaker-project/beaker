@@ -17,6 +17,9 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 import exceptions
+import base64
+import zlib
+import bz2
 from beah.core.constants import RC, LOG_LEVEL
 from beah.core import new_id, check_type
 
@@ -207,7 +210,7 @@ def file_write(file_id, data, digest=None, codec=None, offset=None, origin={},
     - offset - position of data in the file. If None, data are to be appended
       at the end of file. Messages are expected to arrive in correct order.
     - codec - codec(s) applied to the chunk of data before transfer. Examples:
-      "", "base64", "gz|base64".
+      "", "base64", "gz", "bz2" or combinations "gz|base64", "bz2|base64".
     """
     return Event('file_write', origin=origin, timestamp=timestamp,
             file_id=file_id, data=data, offset=offset, digest=digest,
@@ -222,6 +225,57 @@ def file_close(file_id, origin={}, timestamp=None, **kwargs):
     """
     return Event('file_close', origin=origin, timestamp=timestamp,
             file_id=file_id, **kwargs)
+
+################################################################################
+# AUXILIARY:
+################################################################################
+def encode(codec, data):
+    """
+    Function to code chunk of data.
+
+    Data to be sent in event file_write, using codec defined in file, file_meta
+    or file_write.
+    """
+    if codec is None:
+        cs = [""]
+    else:
+        cs = codec.split("|")
+    for c in cs:
+        if c=="base64":
+            data = base64.b64encode(data)
+        elif c=="bz2":
+            data = bz2.compress(data)
+        elif c=="gz":
+            data = zlib.compress(data)
+        elif c=="":
+            continue
+        else:
+            raise exceptions.NotImplementedError("unknow codec '%s'" % codec)
+    return data
+
+def decode(codec, data):
+    """
+    Function to decode chunk of data.
+
+    Data received in event file_write, using codec defined in file, file_meta
+    or file_write.
+    """
+    if codec is None:
+        cs = [""]
+    else:
+        cs = codec.split("|")
+    for c in reversed(cs):
+        if c=="base64":
+            data = base64.b64decode(data)
+        elif c=="bz2":
+            data = bz2.decompress(data)
+        elif c=="gz":
+            data = zlib.decompress(data)
+        elif c=="":
+            continue
+        else:
+            raise exceptions.NotImplementedError("unknow codec '%s'" % codec)
+    return data
 
 ################################################################################
 # IMPLEMENTATION:
@@ -323,4 +377,18 @@ if __name__=='__main__':
     test(['Event', 'ping', '99', {}, None, {'value':1}], **{'evt':'ping', 'value':1, 'id':'99'})
     test(['Event', 'ping', '99', {}, None, {'value':1}], value=1, evt='ping', id='99')
     test(['Event', 'ping', '99', {}, None, {'value':1}], **{'value':1, 'evt':'ping', 'id':'99'})
+
+    def test(codec, f):
+        for s in ["Hello World!"]:
+            assert decode(codec, f(s)) == s
+            assert decode(codec, encode(codec, s)) == s
+    test('', lambda x: x)
+    test(None, lambda x: x)
+    test('|||', lambda x: x)
+    test('base64', lambda x: base64.b64encode(x))
+    test('gz', lambda x: zlib.compress(x))
+    test('bz2', lambda x: bz2.compress(x))
+    test('bz2|base64', lambda x: base64.b64encode(bz2.compress(x)))
+    test('|bz2||base64|', lambda x: base64.b64encode(bz2.compress(x)))
+    #test('utf8', lambda x: x) # THIS WILL FAIL!
 

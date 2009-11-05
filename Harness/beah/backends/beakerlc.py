@@ -28,8 +28,10 @@ import hashlib
 from xml.etree import ElementTree
 import simplejson as json
 
+from beah.misc.log_this import print_this
+
 from beah.core.backends import ExtBackend
-from beah.core import command
+from beah.core import command, event, addict
 from beah.core.constants import ECHO, RC
 from beah import config
 
@@ -48,9 +50,9 @@ Beaker Backend should invoke these XML-RPC:
  2. parse XML
  3. recipes.tasks.Start(task_id, kill_time)
  *. recipes.tasks.Result(task_id, result_type, path, score, summary)
-    - result_type: Pass|Warn|Fail|Panic
+    - result_type: pass|warn|fail|panic
  4. recipes.tasks.Stop(task_id, stop_type, msg)
-    - stop_type: Stop|Abort|Cancel
+    - stop_type: stop|abort|cancel
 """
 
 def mk_beaker_task(rpm_name):
@@ -90,7 +92,7 @@ def parse_recipe_xml(input_xml):
     task_env = {}
 
     rs = er.get('status')
-    if rs != 'Running':
+    if rs not in ['Running', 'Waiting']:
         print "This recipe has finished."
         return None
 
@@ -105,7 +107,7 @@ def parse_recipe_xml(input_xml):
 
         ts = task.get('status')
 
-        if ts != 'Waiting' and ts != 'Running':
+        if ts not in ['Waiting', 'Running']:
             continue
 
         task_id = task.get('id')
@@ -196,6 +198,7 @@ class BeakerLCBackend(ExtBackend):
         self.waiting_for_lc = False
         self.__commands = {}
         self.__results_by_uuid = {}
+        self.__file_info = {}
 
     def on_idle(self):
         if self.waiting_for_lc:
@@ -248,19 +251,19 @@ class BeakerLCBackend(ExtBackend):
 
     @staticmethod
     def stop_type(rc):
-        return "Stop" if rc==0 else "Cancel"
+        return "stop" if rc==0 else "cancel"
 
     RESULT_TYPE = {
-            RC.PASS:("Pass", "Pass"),
-            RC.WARNING:("Warn", "Warning"),
-            RC.FAIL:("Fail", "Fail"),
-            RC.CRITICAL:("Panic", "Critical"),
-            RC.FATAL:("Panic", "Fatal"),
+            RC.PASS:("pass", "Pass"),
+            RC.WARNING:("warn", "Warning"),
+            RC.FAIL:("fail", "Fail"),
+            RC.CRITICAL:("panic", "Panic - Critical"),
+            RC.FATAL:("panic", "Panic - Fatal"),
             }
 
     @staticmethod
     def result_type(rc):
-        return BeakerLCBackend.RESULT_TYPE.get(rc, ("Warn","Unknown Code (%s)" % rc))
+        return BeakerLCBackend.RESULT_TYPE.get(rc, ("warn", "Warning: Unknown Code (%s)" % rc))
 
     def mk_msg(self, **kwargs):
         return json.dumps(kwargs)
@@ -279,6 +282,7 @@ class BeakerLCBackend(ExtBackend):
                 # FIXME: Start was not issued. Is it OK?
                 self.proxy.callRemote(self.TASK_STOP,
                         int(self.task_data['task_env']['TASKID']),
+                        # FIXME:
                         self.stop_type("Cancel"),
                         self.mk_msg(reason="Harness could not run the task.", event=evt)).addCallback(self.handle_Stop)
 
@@ -291,15 +295,15 @@ class BeakerLCBackend(ExtBackend):
     def proc_evt_end(self, evt):
         self.proxy.callRemote(self.TASK_STOP,
                 int(self.task_data['task_env']['TASKID']),
-                self.stop_type(evt.arg("rc",None)),
+                self.stop_type(evt.arg("rc", None)),
                 self.mk_msg(event=evt)).addCallback(self.handle_Stop)
 
     def proc_evt_result(self, evt):
         try:
             self.proxy.callRemote(self.TASK_RESULT,
                     int(self.task_data['task_env']['TASKID']),
-                    self.result_type(evt.arg("rc",None))[0],
-                    evt.arg("handle","%s/%s" % \
+                    self.result_type(evt.arg("rc", None))[0],
+                    evt.arg("handle", "%s/%s" % \
                             (self.task_data['task_env']['TASKNAME'], evt.id())),
                     evt.arg("statistics", {}).get("score", 0),
                     self.mk_msg(event=evt)) \
@@ -311,23 +315,94 @@ class BeakerLCBackend(ExtBackend):
         # FIXME: add caching events here! While waiting for result, we do not
         # want to submit events, not to change their order.
 
+    def __on_error(self, level, msg, tb, *args, **kwargs):
+        if args: msg += '; *args=%r' % (args,)
+        if kwargs: msg += '; **kwargs=%r' % (kwargs,)
+        print "--- %s: %s at %s" % (level, msg, tb)
+
+    def on_exception(self, msg, *args, **kwargs):
+        self.__on_error("EXCEPTION", msg, traceback.format_exc(), *args, **kwargs)
+
+    def on_error(self, msg, *args, **kwargs):
+        self.__on_error("ERROR", msg, traceback.format_stack(), *args, **kwargs)
+
+    def on_warning(self, msg, *args, **kwargs):
+        self.__on_error("WARNING", msg, traceback.format_stack(), *args, **kwargs)
+
+    @print_this
+    def proc_evt_file(self, evt):
+        fid = evt.id()
+        if self.get_file_info(fid) is not None:
+            self.on_error("File with given id (%s) already exists." % fid)
+            return
+        # FIXME: Check what's submitted:
+        self.set_file_info(fid, **evt.args())
+
+    @print_this
+    def proc_evt_file_meta(self, evt):
+        fid = evt.arg('file_id')
+        # FIXME: Check what's submitted:
+        self.set_file_info(fid, **evt.args())
+
+    @print_this
+    def proc_evt_file_close(self, evt):
+        fid = evt.arg('file_id')
+        finfo = addict(self.get_file_info(fid))
+        task_id = int(self.task_data['task_env']['TASKID']),
+        filename = finfo.get('name', self.task_data['task_env']['TASKNAME'] + '/' + fid)
+        (path, filename) = ('/' + filename).rsplit('/', 1)
+        self.proxy.callRemote('task_upload_file', task_id,
+                path[1:], filename,
+                0, '', -1, '')
+
+    @print_this
     def proc_evt_file_write(self, evt):
         fid = evt.arg('file_id')
-        # FIXME: implement this!
-        # find file's details (...)
-        # update details by data from evt
-        digest = evt.arg('digest', (None, None))
-        if digest[0] != 'md5':
-            # decode data
-            data = base64.b64decode(evt.arg('data'))
-            # calculate md5 digest of the chunk
+        finfo = addict(self.get_file_info(fid))
+        finfo.update(codec=evt.arg('codec', None))
+        codec = finfo.get('codec', None)
+        offset = evt.arg('offset', None)
+        seqoff = finfo.get('offset', 0)
+        if offset is None:
+            offset = seqoff
+        elif offset != seqoff:
+            on_error(self, "Given offset (%s) does not match calculated (%s)."
+                    % (offset, seqoff))
+        data = evt.arg('data')
+        try:
+            cdata = event.decode(codec, data)
+        except:
+            self.on_exception("Unable to decode data.")
+            return
+        if cdata is None:
+            on_error("No data found.")
+            return
+        size = len(cdata)
+        self.set_file_info(fid, offset=offset+size)
+        digest = evt.arg('digest', None)
+        if digest is None or digest[0] != 'md5':
             d = hashlib.md5()
-            d.update(data)
+            d.update(cdata)
             digest = ('md5', d.hexdigest())
-        #self.proxy.callRemote(...)
+        if codec != "base64":
+            data = event.encode("base64", cdata)
+        task_id = int(self.task_data['task_env']['TASKID']),
+        filename = finfo.get('name', self.task_data['task_env']['TASKNAME'] + '/' + fid)
+        (path, filename) = ('/' + filename).rsplit('/', 1)
+        self.proxy.callRemote('task_upload_file', task_id,
+                path[1:], filename,
+                size, digest[1], offset, data)
 
     def handle_Stop(self, result):
         self.on_idle()
+
+    def get_file_info(self, id):
+        return self.__file_info.get(id, None)
+
+    def set_file_info(self, id, **kwargs):
+        finfo = self.__file_info.setdefault(id, addict())
+        finfo.update(kwargs)
+        pass
 
     def get_result_id(self, event_id):
         self.__results_by_uuid.get(event_id, None)
