@@ -16,3 +16,32 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
+import uuid
+import exceptions
+
+def new_id():
+    """
+    Function generating unique id's.
+
+    Return: a string representation of id.
+    """
+    return str(uuid.uuid1())
+
+def esc_name(name):
+    """
+    Escape name to be suitable as an identifier.
+    """
+    if name.isalnum():
+        return name
+    return ''.join([c if c.isalnum() else '__' if c=='_' else '_%x' % ord(c)
+            for c in name])
+
+def check_type(name, value, type_, allows_none=False):
+    if isinstance(value, type_):
+        return
+    if allows_none and value is None:
+        return
+    raise exceptions.TypeError('%r not permitted as %s. Has to be %s%s.' \
+            % (value, name, type_.__name__,
+                " or None" if allows_none else ""))
+

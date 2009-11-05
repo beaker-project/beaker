@@ -18,31 +18,31 @@
 
 from twisted.web import xmlrpc
 from twisted.internet import reactor
+import beah
 from beah.wires.internals.twmisc import serveAnyChild, serveAnyRequest
+import sys
 import os
 import exceptions
+import pprint
+from random import randint
 
 recipes = {}
 fqdn_recipes = {}
 task_recipe = {}
+fqdn_def_recipe = None
+task_def_recipe = None
 
 def get_recipe_(fqdn=None, id=None, task_id=None):
-    print "get_recipe_(fqdn=%s, id=%s)" % (fqdn, id)
+    print "get_recipe_(fqdn=%s, id=%s, task_id=%s)" % (fqdn, id, task_id)
     if fqdn is not None:
-        if not fqdn_recipes.has_key(fqdn):
-            return None
-        id = fqdn_recipes[fqdn]
+        id = fqdn_recipes[fqdn] if fqdn_recipes.has_key(fqdn) else fqdn_def_recipe
     if task_id is not None:
         task_id = int(task_id)
-        if not task_recipe.has_key(task_id):
-            return None
-        id = task_recipe[task_id]
-    if id is not None:
-        id = int(id)
-        if not recipes.has_key(id):
-            return None
-        return recipes[id]
-    return None
+        id = task_recipe[task_id] if task_recipe.has_key(task_id) else task_def_recipe
+    if id is None:
+        return None
+    id = int(id)
+    return recipes[id] if recipes.has_key(id) else None
 
 def get_recipe_xml(**kwargs):
     rec = get_recipe_(**kwargs)
@@ -58,9 +58,13 @@ def get_recipe_args(**kwargs):
 
 RESULT_TYPE_ = ["Pass", "Warn", "Fail", "Panic"]
 
+def print_(obj):
+    print obj
+    return obj
+
 def do_get_recipe(fname, fqdn):
     print "%s(fqdn=%r)" % (fname, fqdn)
-    return get_recipe_xml(fqdn=fqdn)
+    return print_(get_recipe_xml(fqdn=fqdn))
 
 def do_task_start(fname, task_id, kill_time):
     print "%s(task_id=%r, kill_time=%r)" % (fname, task_id, kill_time)
@@ -86,7 +90,7 @@ def do_task_stop(fname, task_id, stop_type, msg):
     rec_args['task%s_stat' % task_id]=stop_type
     return 0
 
-def do_task_result(task_id, result_type, path, score, summary):
+def do_task_result(fname, task_id, result_type, path, score, summary):
     """
     Report task result
 
@@ -94,16 +98,24 @@ def do_task_result(task_id, result_type, path, score, summary):
 
     return 0 on success, error message otherwise
     """
-    print "%s(task_id=%r, result_type=%r, path=%r, score=%r, summary=%r)" % \
-            (fname, task_id, result_type, path, score, summary)
-    rec_args = get_recipe_args(task_id=task_id)
-    if not rec_args:
-        return "ERROR: no task %s" % task_id
-    ix = 'task%s_res' % task_id
-    result = rec_args[ix]
-    if RESULT_TYPE_.find(result) < RESULT_TYPE_.find(result_type):
-        rec_args[ix]=result_type
-    return 0
+    try:
+        print "%s(task_id=%r, result_type=%r, path=%r, score=%r, summary=%r)" % \
+                (fname, task_id, result_type, path, score, summary)
+        rec_args = get_recipe_args(task_id=task_id)
+        if not rec_args:
+            return "ERROR: no task %s" % task_id
+        ix = 'task%s_res' % task_id
+        result = rec_args.get(ix, "Pass")
+        if RESULT_TYPE_.count(result) == 0 \
+            or (RESULT_TYPE_.count(result_type) > 0 \
+                    and RESULT_TYPE_.find(result) < RESULT_TYPE_.find(result_type)):
+            rec_args[ix]=result_type
+        answ = randint(1,9999999)
+        print "%s.RETURN: %s" % (fname, answ)
+        return answ
+    except:
+        print traceback.format_exc()
+        raise
 
 ################################################################################
 # XML-RPC HANDLERS:
@@ -165,11 +177,7 @@ class LCHandler(xmlrpc.XMLRPC):
 serveAnyChild(LCHandler)
 serveAnyRequest(LCHandler, 'catch_xmlrpc', xmlrpc.XMLRPC)
 
-################################################################################
-# RUN:
-################################################################################
-if __name__ == '__main__':
-
+def main():
 ################################################################################
 # RECIPE DEFINITIONS:
 ################################################################################
@@ -187,9 +195,10 @@ if __name__ == '__main__':
                 <hostRequires>
                     <system_type value="Machine"/>
                 </hostRequires>
+
                 <!--
                 <task avg_time="1200" id="41"
-                        name="/distribution/install" role="STANDALONE"
+                        name="/examples/testargs" role="STANDALONE"
                         result="%(task41_res)s"
                         status="%(task41_stat)s"
                         >
@@ -201,8 +210,10 @@ if __name__ == '__main__':
                     </roles>
                     <rpm name="rh-tests-examples-testargs-1.1-1.noarch.rpm"/>
                 </task>
+                -->
+
                 <task avg_time="1200" id="42"
-                        name="/distribution/kernelinstall" role="CLIENTS"
+                        name="/examples/testargs" role="CLIENTS"
                         result="%(task42_res)s"
                         status="%(task42_stat)s"
                         >
@@ -222,8 +233,8 @@ if __name__ == '__main__':
                     </params>
                     <rpm name="rh-tests-examples-testargs.noarch"/>
                 </task>
-                -->
 
+                <!--
                 <task avg_time="1200" id="43"
                         name="/beah/examples/tasks/a_task" role="STANDALONE"
                         result="%(task43_res)s"
@@ -235,8 +246,9 @@ if __name__ == '__main__':
                             <system value="%(machine1)s"/>
                         </role>
                     </roles>
-                    <executable url="examples/tasks/a_task"/>
+                    <executable url="%(beah_root)s/examples/tasks/a_task"/>
                 </task>
+
                 <task avg_time="1200" id="44"
                         name="/beah/examples/tasks/socket" role="STANDALONE"
                         result="%(task44_res)s"
@@ -248,8 +260,9 @@ if __name__ == '__main__':
                             <system value="%(machine1)s"/>
                         </role>
                     </roles>
-                    <executable url="examples/tasks/socket"/>
+                    <executable url="%(beah_root)s/examples/tasks/socket"/>
                 </task>
+
                 <task avg_time="1200" id="45"
                         name="/beah/examples/tasks/rhts" role="STANDALONE"
                         result="%(task45_res)s"
@@ -261,10 +274,8 @@ if __name__ == '__main__':
                             <system value="%(machine1)s"/>
                         </role>
                     </roles>
-                    <executable url="examples/tasks/rhts" />
+                    <executable url="%(beah_root)s/examples/tasks/rhts" />
                 </task>
-
-                <!--
                 <task avg_time="1200" id="46"
                         name="/beah/examples/tests/rhtsex" role="STANDALONE"
                         result="%(task46_res)s"
@@ -276,12 +287,11 @@ if __name__ == '__main__':
                             <system value="%(machine1)s"/>
                         </role>
                     </roles>
-                    <executable url="python">
-                        <arg value="beah/tasks/rhts_xmlrpc.py" />
-                        <arg value="examples/tests/rhtsex" />
+                    <executable url="/usr/bin/python">
+                        <arg value="%(beah_py_root)s/tasks/rhts_xmlrpc.py" />
+                        <arg value="%(beah_root)s/examples/tests/rhtsex" />
                     </executable>
                 </task>
-                -->
 
                 <task avg_time="1200" id="47"
                         name="/beah/examples/tests/testargs" role="STANDALONE"
@@ -294,56 +304,47 @@ if __name__ == '__main__':
                             <system value="%(machine1)s"/>
                         </role>
                     </roles>
-                    <executable url="python">
-                        <arg value="beah/tasks/rhts_xmlrpc.py" />
-                        <arg value="examples/tests/testargs" />
+                    <executable url="/usr/bin/python">
+                        <arg value="%(beah_py_root)s/tasks/rhts_xmlrpc.py" />
+                        <arg value="%(beah_root)s/examples/tests/testargs" />
                     </executable>
                 </task>
+                -->
 
                 <!--
+                        name="/distribution/install" role="STANDALONE"
+                        name="/distribution/kernelinstall" role="CLIENTS"
                 -->
+
             </recipe>
         """
 
     args21 = dict(
-            machine0=os.environ['HOSTNAME'],
-            #machine0="glen-mhor.englab.brq.redhat.com",
-            machine1="dell-pe1850-01.rhts.eng.bos.redhat.com",
-            machine2="hp-lp1.rhts.eng.bos.redhat.com",
-
-            machine0_stat="None",
-            machine1_stat="None",
-            machine2_stat="None",
-
-            task41_stat="Waiting",
-            task42_stat="Waiting",
-            task43_stat="Waiting",
-            task44_stat="Waiting",
-            task45_stat="Waiting",
-            task46_stat="Waiting",
-            task47_stat="Waiting",
-
-            task41_res="None",
-            task42_res="None",
-            task43_res="None",
-            task44_res="None",
-            task45_res="None",
-            task46_res="None",
-            task47_res="None",
+            beah_root=os.environ.get("BEAH_ROOT", None) or sys.prefix + "/share/beah",
+            beah_py_root=beah.__path__[0],
             )
 
-    recipes[21] =(recipe21, args21)
-    task_recipe[41] = 21
-    task_recipe[42] = 21
-    task_recipe[43] = 21
-    task_recipe[44] = 21
-    task_recipe[45] = 21
-    task_recipe[46] = 21
-    task_recipe[47] = 21
-    fqdn_recipes["glen-mhor.englab.brq.redhat.com"           ] = 21
-    fqdn_recipes["localhost"                                 ] = 21
-    fqdn_recipes["dell-pe1850-01.rhts.eng.bos.redhat.com"    ] = 21
-    fqdn_recipes["hp-lp1.rhts.eng.bos.redhat.com"            ] = 21
+    global recipes, task_recipe, fqdn_recipes
+    recipes[21] = (recipe21, args21)
+    args = args21
+    tasks = [41,42,43,44,45,46,47]
+    machines = [
+            os.environ["HOSTNAME"],
+            "test1.example.com",
+            "lab-machine2.example.com",
+            "localhost",
+            ]
+    for task in tasks:
+        task_recipe[task] = 21
+        args['task%d_stat' % task] = 'Waiting'
+        args['task%d_res' % task] = 'None'
+    for machine in range(len(machines)):
+        fqdn = machines[machine]
+        fqdn_recipes[fqdn] = 21
+        args['machine%d' % machine] = fqdn
+        args['machine%d_stat' % machine] = 'None'
+
+    pprint.pprint(recipes)
 
 ################################################################################
 # EXECUTE:
@@ -353,4 +354,10 @@ if __name__ == '__main__':
     s = server.Site(LCHandler(), None, 60*60*12)
     reactor.listenTCP(5222, s, interface='localhost')
     reactor.run()
+
+################################################################################
+# RUN:
+################################################################################
+if __name__ == '__main__':
+    main()
 

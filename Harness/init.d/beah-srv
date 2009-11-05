@@ -9,6 +9,11 @@
 . /etc/rc.d/init.d/functions
 
 prog="beah-srv"
+# FIXME: path should use the prefix used during installation, not the const
+# /usr
+BEAH_INSTALL_ROOT=/usr
+export BEAH_ROOT=${BEAH_INSTALL_ROOT}/share/beah
+export BEAHLIB_ROOT=$BEAH_ROOT
 path="/usr/bin/beah-srv"
 
 [ -f $path ] || exit 0
@@ -21,7 +26,7 @@ RUN_AS=root
 
 start() {
     echo -n $"Starting $prog: "
-    daemon --user $RUN_AS $path "&"
+    daemon --user $RUN_AS $path ">> /tmp/$prog.out 2>&1 &"
     RETVAL=$?
     echo 
     if test $RETVAL = 0; then

@@ -65,6 +65,8 @@ function beah() { python $BEAH_ROOT/beah/bin/cli.py "$@"; }
 function beah-srv() { python $BEAH_ROOT/beah/bin/srv.py "$@"; }
 function beah-out-backend() { $BEAH_ROOT; python $BEAH_ROOT/beah/bin/out_backend.py "$@"; }
 function beah-cmd-backend() { python $BEAH_ROOT/beah/bin/cmd_backend.py "$@"; }
+function fakelc() { python $BEAH_ROOT/beah/tools/fakelc.py; }
+function beah-beaker-backend() { python $BEAH_ROOT/beah/backends/beakerlc.py; }
 function launcher()
 (
   default="s o l"
@@ -112,9 +114,9 @@ function launcher()
         s|S) xt s 80x35-0-0 beah-srv & ;;
         c|C) xt c 80x20+0+0 beah-cmd-backend & ;;
         o|O) xt o 80x35-0+0 beah-out-backend & ;;
-        l|L) xt l 80x20+0-0 python tools/fakelc.py & ;;
+        l|L) xt l 80x20+0-0 fakelc & ;;
         b|B) sleep 2 && # beaker backend should wait for fakelc.
-             xt b 80x20+0+0 python beah/backends/beakerlc.py & ;;
+             xt b 80x20+0+0 beah-beaker-backend & ;;
       esac
     done
   }
@@ -149,7 +151,11 @@ END
   fi
 )
 
-export -f beah beah-srv beah-out-backend launcher
+FUNCTIONS="$(echo "beah"{,-srv,-{out,cmd,beaker}-backend}) launcher fakelc"
+export -f $FUNCTIONS
 
-echo "Environment is set. Run beah-srv, beah, beah-out-backend, beah-cmd-backend"
+cat <<END
+** Environment is set. **
+Run ${FUNCTIONS/ /, }
+END
 

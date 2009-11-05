@@ -44,7 +44,7 @@ class CmdLineBackend(ExtBackend):
         reactor.callLater(1,reactor.stop)
 
     def proc_evt_echo(self, evt):
-        if evt.arg('cmd', ['Command','',{}]) == self.cmd:
+        if evt.arg('cmd_id', '') == self.cmd.id():
             global rc
             try:
                 self.wait = False

@@ -84,6 +84,7 @@ def _get_conf_file(conf_env_var, fname, opt=None):
     conf_list = []
     conf_list.append(opt)
     conf_list.append(os.environ.get(conf_env_var))
+    # used in devel.environment only:
     if os.environ.has_key('BEAH_ROOT'):
         conf_list.append(os.environ.get('BEAH_ROOT')+'/'+fname)
         conf_list.append(os.environ.get('BEAH_ROOT')+'/etc/'+fname)

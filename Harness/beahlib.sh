@@ -22,13 +22,13 @@
 
 function event()
 {
-        echo "[\"Event\",\"$1\",$2,$3,$4]"
+        echo "[\"Event\",\"$1\",\"$(uuid)\",$2,$3,$4]"
 }
 
 function log()
 {
 	event log {} null "{\"log_handle\":\"\",\"message\":\"$2\",\"log_level\":$1}"
-        echo "[\"Event\",\"log\",{},null,]"
+        echo "[\"Event\",\"log\",\"$(uuid)\",{},null,]"
 }
 
 function linfo()

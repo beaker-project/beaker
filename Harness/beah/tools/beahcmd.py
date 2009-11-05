@@ -3,7 +3,8 @@ from beah.core import command
 from beah.core.backends import ExtBackend
 from beah.core.constants import ECHO
 from twisted.internet import reactor
-import pprint, exceptions
+import pprint
+import exceptions
 
 class Wait(object): pass
 WAIT = Wait()
@@ -86,7 +87,7 @@ class BeahRunner(ExtBackend):
         return False
 
     def proc_evt_echo(self, evt):
-        if evt.arg('cmd', ['Command','',{}]) == self.__cmd:
+        if evt.arg('cmd_id', '') == self.__cmd.id():
             if evt.args()['rc'] == ECHO.OK:
                 self.do_beah_cmd()
                 return
@@ -125,7 +126,7 @@ if __name__ == '__main__':
         yield command.ping('Are you there?')
         yield command.PING('Hello World!')
         yield command.command('dump')
-        yield command.run('bash', args=['-c','echo $ZZ1; echo $ZZ2'], env=dict(ZZ1='Zzzz...', ZZ2='__ZZZZ__'))
+        yield command.run('/usr/bin/bash', args=['-c','echo $ZZ1; echo $ZZ2'], env=dict(ZZ1='Zzzz...', ZZ2='__ZZZZ__'))
         yield 'end' # start monitoring 'end'
         yield command.command('dump')
         yield WAIT

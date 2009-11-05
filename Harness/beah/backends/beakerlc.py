@@ -19,7 +19,12 @@
 from twisted.web.xmlrpc import Proxy
 from twisted.internet import reactor
 
-import os, exceptions, tempfile, pprint
+import os
+import os.path
+import pprint
+import traceback
+import base64
+import hashlib
 from xml.etree import ElementTree
 import simplejson as json
 
@@ -31,6 +36,8 @@ from beah import config
 import beah.system
 # FIXME: using rpm's, yum - too much Fedora centric(?)
 from beah.system.dist_fedora import RPMInstaller
+from beah.system.os_linux import ShExecutable
+from beah.wires.internals.twbackend import start_backend
 
 """
 Beaker Backend.
@@ -47,18 +54,33 @@ Beaker Backend should invoke these XML-RPC:
 """
 
 def mk_beaker_task(rpm_name):
-    # FIXME: see rhts-test-runner for ideas:
-    # /home/mcsontos/rhts/rhts/test-env-lab/bin/rhts-test-runner.sh
-
+    # FIXME: proper RHTS launcher shold go here.
     # create a script to: check, install and run a test
     # should task have an "envelope" - e.g. binary to run...
-
-    # repositories: http://rhts.redhat.com/rpms/{development,production}/noarch/
-    # see scratch.tmp/rhts-tests.repo
-
-    # have a look at:
-    # http://intranet.corp.redhat.com/ic/intranet/RHTSMainPage.html#devel
     e = RPMInstaller(rpm_name)
+    e.make()
+    return e.executable
+
+class RHTSTask(ShExecutable):
+
+    def __init__(self, env_):
+        self.__env = env_
+        ShExecutable.__init__(self)
+
+    def content(self):
+        self.write_line("""
+TESTPATH="%s%s"
+KILLTIME="%s"
+export TESTPATH KILLTIME
+
+mkdir -p $TESTPATH
+
+python -m beah.tasks.rhts_xmlrpc
+""" % ('/mnt/tests', self.__env['TASKNAME'], self.__env['KILLTIME']))
+
+
+def mk_rhts_task(env_):
+    e = RHTSTask(env_)
     e.make()
     return e.executable
 
@@ -68,35 +90,30 @@ def parse_recipe_xml(input_xml):
     task_env = {}
 
     rs = er.get('status')
-    # FIXME: is this condition correct?
-    if rs != 'Running' and True:
+    if rs != 'Running':
         print "This recipe has finished."
         return None
 
     task_env.update(
-            RECIPEID=er.get('id'),
-            JOBID=er.get('job_id'),
-            RECIPESETID=er.get('recipe_set_id'),
+            ARCH=er.get('arch'),
+            RECIPEID=str(er.get('id')),
+            JOBID=str(er.get('job_id')),
+            RECIPESETID=str(er.get('recipe_set_id')),
             HOSTNAME=er.get('system'))
 
     for task in er.findall('task'):
 
         ts = task.get('status')
 
-        # FIXME: is this condition correct?
-        #if ts == 'Running':
-        #    break
         if ts != 'Waiting' and ts != 'Running':
             continue
-
-        if ts == 'Running':
-            # FIXME: A task SHOULD BE already running.
-            return None
 
         task_id = task.get('id')
         task_name = task.get('name')
         task_env.update(
-                TASKID=task_id,
+                TASKID=str(task_id),
+                RECIPETESTID=str(task_id),
+                TESTID=str(task_id),
                 TASKNAME=task_name,
                 ROLE=task.get('role'))
 
@@ -112,6 +129,7 @@ def parse_recipe_xml(input_xml):
             task_env[r.get('value')]=' '.join(role)
 
         ewd = task.get('avg_time')
+        task_env.update(KILLTIME=ewd)
 
         executable = ''
         args = []
@@ -121,8 +139,12 @@ def parse_recipe_xml(input_xml):
             print "rpm tag: %s" % rpm_tag
             if rpm_tag is not None:
                 rpm_name = rpm_tag.get('name')
-                task_env.update(RPMNAME=rpm_name)
-                executable = mk_beaker_task(rpm_name)
+                task_env.update(
+                        TEST=task_name,
+                        TESTRPMNAME=rpm_name,
+                        TESTPATH="/mnt/tests"+task_name ,
+                        KILLTIME=str(ewd))
+                executable = mk_rhts_task(task_env)
                 args = [rpm_name]
                 print "RPMTest %s - %s %s" % (rpm_name, executable, args)
                 break
@@ -147,6 +169,8 @@ def parse_recipe_xml(input_xml):
                 # FIXME: retrieve a file and set an executable bit.
                 print "Feature not implemented yet."
                 continue
+        else:
+            executable = os.path.abspath(executable)
 
         if not executable:
             print "Task %s(%s) does not have an executable associated!" % \
@@ -157,6 +181,10 @@ def parse_recipe_xml(input_xml):
 
     return None
 
+def handle_error(result, *args, **kwargs):
+    print "Deferred Failed(%r, *%r, **%r)" % (result, args, kwargs)
+    return result
+
 class BeakerLCBackend(ExtBackend):
 
     GET_RECIPE = 'get_recipe'
@@ -164,10 +192,20 @@ class BeakerLCBackend(ExtBackend):
     TASK_STOP = 'task_stop'
     TASK_RESULT = 'task_result'
 
+    def __init__(self):
+        self.waiting_for_lc = False
+        self.__commands = {}
+        self.__results_by_uuid = {}
+
     def on_idle(self):
+        if self.waiting_for_lc:
+            # FIXME: Write debugging info - this should be avoided!
+            return
+
         hostname = self.conf.get('DEFAULT', 'HOSTNAME')
         self.proxy.callRemote(self.GET_RECIPE,
                 hostname).addCallback(self.handle_new_task)
+        self.waiting_for_lc = True
 
     def set_controller(self, controller=None):
         ExtBackend.set_controller(self, controller)
@@ -179,6 +217,9 @@ class BeakerLCBackend(ExtBackend):
             self.on_idle()
 
     def handle_new_task(self, result):
+
+        self.waiting_for_lc = False
+
         pprint.pprint(result)
 
         self.recipe_xml = result
@@ -191,10 +232,11 @@ class BeakerLCBackend(ExtBackend):
             reactor.callLater(60, self.on_idle)
             return
 
-        self.controller.proc_cmd(self,
-                command.run(self.task_data['executable'],
-                    env=self.task_data['task_env'],
-                    args=self.task_data['args']))
+        run_cmd = command.run(self.task_data['executable'],
+                env=self.task_data['task_env'],
+                args=self.task_data['args'])
+        self.controller.proc_cmd(self, run_cmd)
+        self.save_command(run_cmd)
 
         # Persistent env (handled by Controller?) - env to run task under,
         # task can change it, and when restarted will continue with same
@@ -215,16 +257,24 @@ class BeakerLCBackend(ExtBackend):
             RC.CRITICAL:("Panic", "Critical"),
             RC.FATAL:("Panic", "Fatal"),
             }
+
     @staticmethod
     def result_type(rc):
-        return self.RESULT_TYPE.get(rc, ("Warn","Unknown Code"))
+        return BeakerLCBackend.RESULT_TYPE.get(rc, ("Warn","Unknown Code (%s)" % rc))
 
     def mk_msg(self, **kwargs):
         return json.dumps(kwargs)
 
+    def save_command(self, cmd):
+        self.__commands[cmd.id()] = cmd
+
+    def get_command(self, cmd_id):
+        return self.__commands.get(cmd_id, None)
+
     def proc_evt_echo(self, evt):
-        if (evt.arg('cmd').command()=='run'):
-            rc = echo.arg('rc')
+        cmd = self.get_command(evt.arg('cmd_id'))
+        if (cmd is not None and cmd.command()=='run'):
+            rc = evt.arg('rc')
             if rc!=ECHO.OK:
                 # FIXME: Start was not issued. Is it OK?
                 self.proxy.callRemote(self.TASK_STOP,
@@ -245,23 +295,52 @@ class BeakerLCBackend(ExtBackend):
                 self.mk_msg(event=evt)).addCallback(self.handle_Stop)
 
     def proc_evt_result(self, evt):
-        res = self.result_type(evt.arg("rc",None))
-        self.proxy.callRemote(self.TASK_RESULT,
-                int(self.task_data['task_env']['TASKID']),
-                res[0],
-                "", # FIXME: path?
-                0, # FIXME:score?
-                self.mk_msg(event=evt))
+        try:
+            self.proxy.callRemote(self.TASK_RESULT,
+                    int(self.task_data['task_env']['TASKID']),
+                    self.result_type(evt.arg("rc",None))[0],
+                    evt.arg("handle","%s/%s" % \
+                            (self.task_data['task_env']['TASKNAME'], evt.id())),
+                    evt.arg("statistics", {}).get("score", 0),
+                    self.mk_msg(event=evt)) \
+                            .addCallback(self.handle_Result, event_id=evt.id())\
+                            .addErrback(handle_error)
+        except:
+            print traceback.format_exc()
+            raise
+        # FIXME: add caching events here! While waiting for result, we do not
+        # want to submit events, not to change their order.
+
+    def proc_evt_file_write(self, evt):
+        fid = evt.arg('file_id')
+        # FIXME: implement this!
+        # find file's details (...)
+        # update details by data from evt
+        digest = evt.arg('digest', (None, None))
+        if digest[0] != 'md5':
+            # decode data
+            data = base64.b64decode(evt.arg('data'))
+            # calculate md5 digest of the chunk
+            d = hashlib.md5()
+            d.update(data)
+            digest = ('md5', d.hexdigest())
+        #self.proxy.callRemote(...)
 
     def handle_Stop(self, result):
         self.on_idle()
+
+    def get_result_id(self, event_id):
+        self.__results_by_uuid.get(event_id, None)
+
+    def handle_Result(self, result_id, event_id=None):
+        print "%s.RETURN: %s (original event_id %s)" % (self.TASK_RESULT, result_id, event_id)
+        self.__results_by_uuid[event_id] = result_id
 
     def close(self):
         # FIXME: send a bye to server? (Should this be considerred an abort?)
         reactor.callLater(1, reactor.stop)
 
 def start_beaker_backend():
-    from beah.wires.internals.twbackend import start_backend
     backend = BeakerLCBackend()
     # Start a default TCP client:
     start_backend(backend, byef=lambda evt: reactor.callLater(1, reactor.stop))

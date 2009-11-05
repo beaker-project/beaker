@@ -28,7 +28,6 @@ def glob_(*patterns):
     for pattern in patterns:
         answ += glob.glob(pattern)
     answ = list([file for file in answ if not os.path.isdir(file)])
-    print "glob_(%r) -> %r" % (patterns, answ)
     return answ
 
 def glob_to(prefix, dirs):
@@ -42,6 +41,13 @@ more_data_files = glob_to('share/beah', [
     #'tests', # FIXME: add some tests here!
     'doc',
     ])
+
+if os.environ.get('BEAH_DEV', ''):
+    # Add some RHTS tests to /mnt/tests
+    more_data_files += glob_to('/mnt/tests', [
+        'examples/tests/rhtsex',
+        'examples/tests/testargs',
+        ])
 
 setup(
 
@@ -66,7 +72,10 @@ setup(
     #package_dir={'':'.'},
 
     # FIXME: move this to beah.bin(?)
-    scripts=['bin/beat_tap_filter'], # + ['tests/*'],
+    scripts=['bin/beat_tap_filter'],
+    #scripts+=['tests/*'],
+    # FIXME: use `grep -R '#!.*python' examples` to find python scripts
+    # - this would not work on the well known non-POSIX platform :-/
 
     namespace_packages=['beah'],
 
@@ -86,6 +95,8 @@ setup(
             'beah-cmd-backend = beah.bin.cmd_backend:main',
             'beah-out-backend = beah.bin.out_backend:main',
             'beah-beaker-backend = beah.backends.beakerlc:main',
+            'beah-fakelc = beah.tools.fakelc:main',
+            'beah-rhts-task = beah.tasks.rhts_xmlrpc:main',
         ),
     },
 
