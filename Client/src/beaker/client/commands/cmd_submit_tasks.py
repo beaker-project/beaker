@@ -4,7 +4,7 @@
 from beaker.client.task_watcher import *
 from beaker.client import BeakerCommand
 from optparse import OptionValueError
-
+import sys
 
 class Job_Submit(BeakerCommand):
     """ Submit job to scheduler """
