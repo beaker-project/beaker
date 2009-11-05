@@ -6,8 +6,8 @@ from beaker.client import BeakerCommand
 from optparse import OptionValueError
 import sys
 
-class Job_Submit(BeakerCommand):
-    """ Submit job to scheduler """
+class Submit_Tasks(BeakerCommand):
+    """ Submit job(s) to scheduler """
     enabled = True
 
     def options(self):
@@ -27,7 +27,7 @@ class Job_Submit(BeakerCommand):
         failed = False
         for job in jobs:
             try:
-                submitted_jobid = self.hub.jobs.upload(open(job, "r").read())
+                submitted_jobs.append(self.hub.jobs.upload(open(job, "r").read()))
             except Exception, ex:
                 failed = True
                 print ex
