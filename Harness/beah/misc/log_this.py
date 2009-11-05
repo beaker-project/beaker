@@ -37,11 +37,13 @@ def log_this(logf, log_on=True):
                     except: pass
                     return answ
                 except exceptions.Exception, e:
-                    try: logf("} %s raised %s\n" % (fstr, repr(e)))
+                    tb = traceback.format_exc()
+                    try: logf("} %s raised %s (%r)\n" % (fstr, repr(e), tb))
                     except: pass
                     raise
                 except object, e:
-                    try: logf("} %s raised %s\n" % (fstr, repr(e)))
+                    tb = traceback.format_exc()
+                    try: logf("} %s raised %s (%r)\n" % (fstr, repr(e), tb))
                     except: pass
                     raise
             tempf.__doc__ = f.__doc__
@@ -52,4 +54,14 @@ def log_this(logf, log_on=True):
             """No logging decorator"""
             return f
     return __call__
+
+def __print_func(s):
+    print(s)
+
+print_this = log_this(__print_func)
+
+def __print_stderr_func(s):
+    print >> stderr, s
+
+print_stderr_this = log_this(__print_stderr_func)
 

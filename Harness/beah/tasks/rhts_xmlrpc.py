@@ -134,12 +134,12 @@ class RHTSResults(xmlrpc.XMLRPC):
     def get_file(self, pretty_name, size=None, digest=None):
         file_id = self.main.get_file(pretty_name)
         if file_id is None:
-            evt = event.file(name=pretty_name)
-            file_id = evt.id()
-            self.main.set_file(file_id, pretty_name)
-            self.main.send_evt(evt)
+            file_id = self.main.set_file(pretty_name)
+            if file_id is None:
+                return None
             evt = event.file_meta(file_id, size=size, digest=("md5", digest),
                     codec="base64")
+            self.main.send_evt(evt)
         return file_id
 
     def xmlrpc_uploadFile(self, recipe_test_id, name, size, digest, offset,
@@ -157,6 +157,7 @@ class RHTSResults(xmlrpc.XMLRPC):
             self.main.send_evt(evt)
             return 0
         if data:
+            # FIXME: is chunk's digest necessary?
             evt = event.file_write(file_id, data, offset=offset)
             self.main.send_evt(evt)
         return 0 # or "Failure reason"
@@ -174,7 +175,7 @@ class RHTSResults(xmlrpc.XMLRPC):
                     " uploadFile is required before resultLog can be used."
             self.main.error(msg)
             return msg
-        # FIXME! implement this!!!
+        # FIXME!!!
         #evt = event.file_meta(file_id, log_type)
         #self.main.send_evt(evt)
         return 0 # or "Failure reason"
@@ -420,16 +421,16 @@ class RHTSMain(object):
             self.send_evt(event.linfo("task_ended", reason=str(reason)))
             self.on_exit()
 
-    def set_file(self, id, name):
-        if id is None or name is None:
-            return False
-        tmp_id = self.get_file(name)
-        if tmp_id is not None:
-            if tmp_id != id:
-                msg = "File '%s' already exists!" % name
-                self.error(msg)
-            return False
+    def set_file(self, name):
+        if name is None:
+            return None
+        if self.get_file(name) is not None:
+            self.error("File '%s' already exists!" % name)
+            return None
+        evt = event.file(name=name)
+        id = evt.id()
         self.__files[name] = id
+        self.send_evt(evt)
         return id
 
     def get_file(self, name):

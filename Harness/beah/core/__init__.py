@@ -36,6 +36,15 @@ def esc_name(name):
     return ''.join([c if c.isalnum() else '__' if c=='_' else '_%x' % ord(c)
             for c in name])
 
+def test_esc_name():
+    assert esc_name('') == ''
+    assert esc_name('a') == 'a'
+    assert esc_name('1') == '1'
+    assert esc_name('_') == '__'
+    assert esc_name('-') == '_%x' % ord('-')
+    assert esc_name('a_b') == 'a__b'
+    assert esc_name('a-b') == 'a_%xb' % ord('-')
+
 def check_type(name, value, type_, allows_none=False):
     if isinstance(value, type_):
         return
@@ -45,3 +54,33 @@ def check_type(name, value, type_, allows_none=False):
             % (value, name, type_.__name__,
                 " or None" if allows_none else ""))
 
+class addict(dict):
+    """
+    Dictionary extension, which filters input.
+    """
+
+    def filter(self, k, v):
+        """
+        Filter function.
+
+        Returning True, if (k,v) pair is to be included in dictionary.
+        """
+        return k is not None and v is not None
+
+    def update(self, *args, **kwargs):
+        # FIXME: a in args should be:
+        # - a dictionary
+        # - an iterable of key/value pairs (as a tuple or another iterable of
+        # length 2.)
+        for a in args:
+            check_type('an argument', a, dict)
+            self.update(**a)
+        for k, v in kwargs.items():
+            self[k] = v
+
+    def __setitem__(self, k, v):
+        if self.filter(k, v):
+            dict.__setitem__(self, k, v)
+
+if __name__ == '__main__':
+    test_esc_name()
