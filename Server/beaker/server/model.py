@@ -595,7 +595,7 @@ class Modeller(object):
                                                           'is not' : lambda x,y: self.bool_not_equal(x,y), },  
 
                           'generic'                   : { 'is' : lambda x,y: self.equals(x,y) ,
-                                                          'is not': lambda x,y:  self.not_equals(x,y), },
+                                                          'is not': lambda x,y:  self.not_equal(x,y), },
                                                           
                          } 
  
@@ -1022,7 +1022,7 @@ class SystemSearch(Search):
 
 class System(SystemObject):
     table = system_table
-    search_table = []  
+    search_table = []
     joins = JoinContainer()
     joins.add_conditional('arch', [{system_arch_map: system_table.c.id == system_arch_map.c.system_id}, 
                                    {arch_table: arch_table.c.id == system_arch_map.c.arch_id}]) 
