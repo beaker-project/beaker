@@ -146,7 +146,7 @@ class Watchdog(ProxyHelper):
             if watchdog['system'] not in self.watchdogs:
                 self.watchdogs[watchdog['system']] = self.monitor(watchdog)
         # Kill Monitor if watchdog does not exist.
-        for watchdog_system in self.watchdogs:
+        for watchdog_system in self.watchdogs[:]:
             if watchdog_system not in active_watchdogs:
                 kill_process_group(self.watchdogs[watchdog_system],
                                    logger=self.logger)
