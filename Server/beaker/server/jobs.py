@@ -103,8 +103,6 @@ class Jobs(RPCRoot):
         redirect(".")
 
     def process_xmljob(self, xmljob, userid):
-        print xmljob.workflow
-        print xmljob.whiteboard
         job = Job(whiteboard='%s' % xmljob.whiteboard, ttasks=0,
                   owner_id=userid)
         for xmlrecipeSet in xmljob.iter_recipeSets():
