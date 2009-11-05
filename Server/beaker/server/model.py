@@ -597,7 +597,7 @@ class Modeller(object):
                                                           'is not' : lambda x,y: self.bool_not_equal(x,y), },  
 
                           'generic'                   : { 'is' : lambda x,y: self.equals(x,y) ,
-                                                          'is not': lambda x,y:  self.not_equals(x,y), },
+                                                          'is not': lambda x,y:  self.not_equal(x,y), },
                                                           
                          } 
  
@@ -962,16 +962,20 @@ class SystemSearch(Search):
         #append a filter function which is to be called later
         self.filter_funcs.append(lambda: filter_func(col,value))
 
-        join_dict = getattr(cls_ref,'join_system',None) 
-        join_keys = getattr(cls_ref,'join_system_keys',None)
+        join_dict = getattr(cls_ref,'join_system',None)  
         #We may not have a join with System 
-        if join_keys != None and join_dict != None:
-            for elem in join_keys: 
-                k = elem
-                v = join_dict[k]
-                if (self.already_joined.count(k) < 1):
-                    self.j = self.j.join(k,onclause=v)
-		    self.already_joined.append(k) 
+        if join_dict != None:
+            for elem in join_dict: 
+                for k,v in elem.iteritems():  
+                    if (self.already_joined.count(k) < 1):
+                        #check the column_conditional_join var
+                        if hasattr(cls_ref,'column_conditional_join'):  
+                            columns = cls_ref.column_conditional_join
+                            if columns.count(column.lower()) < 1:
+                                continue
+   
+                        self.j = self.j.outerjoin(k,onclause=v)
+		        self.already_joined.append(k) 
         else:
             pass
 
@@ -986,13 +990,13 @@ class SystemSearch(Search):
 
 class System(SystemObject):
     table = system_table
-    search_table = [] 
-    # join_system_keys enforces order over join_system 
-    join_system_keys = [system_arch_map,arch_table]
-    join_system = { 
-                   system_arch_map: system_table.c.id == system_arch_map.c.system_id, 
-                   arch_table: arch_table.c.id == system_arch_map.c.arch_id
-                  }
+    search_table = []  
+    #column_conditional_join specifies what columns we need to be searching on
+    #if we are to use the join_system
+    column_conditional_join = ('arch')
+    join_system = [{system_arch_map: system_table.c.id == system_arch_map.c.system_id}, 
+                   {arch_table: arch_table.c.id == system_arch_map.c.arch_id}]
+                  
     #If we have a set of predefined values that a column can be searched on, put them in the 
     # search_values_dict of the corresponding class
     search_values_dict =     { 'Status' : lambda: SystemStatus.get_all_status_name(),
@@ -1868,8 +1872,7 @@ class LabInfo(SystemObject):
 class Cpu(SystemObject): 
     table = cpu_table      
     display_name = 'CPU'
-    join_system_keys = [cpu_table]
-    join_system = { cpu_table : system_table.c.id == cpu_table.c.system_id }
+    join_system = [{ cpu_table : system_table.c.id == cpu_table.c.system_id }]
     search_values_dict = { 'Hyper' : ['True','False'] }
 
     def __init__(self, vendor=None, model=None, model_name=None, family=None, stepping=None,speed=None,processors=None,cores=None,sockets=None,flags=None):
@@ -1946,14 +1949,9 @@ class DeviceClass(SystemObject):
 class Device(SystemObject):
     table = device_table
     display_name = 'Devices' 
-    #  join_system_keys enforces order over join_system 
-    join_system_keys = [system_device_map,device_table]
-    join_system = { 
-                    system_device_map : system_table.c.id 
-                                       == system_device_map.c.system_id,
-                    device_table : system_device_map.c.device_id 
-                                   == device_table.c.id
-                  }
+    join_system = [{system_device_map : system_table.c.id  == system_device_map.c.system_id},
+                   {device_table : system_device_map.c.device_id == device_table.c.id}]
+                  
  
     def __init__(self, vendor_id=None, device_id=None, subsys_device_id=None, subsys_vendor_id=None, bus=None, driver=None, device_class=None, description=None):
         if not device_class:
