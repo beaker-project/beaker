@@ -16,7 +16,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 from turbogears.database import session
-from turbogears import controllers, expose, flash, widgets, validate, error_handler, validators, redirect, paginate
+from turbogears import controllers, expose, flash, widgets, validate, error_handler, validators, redirect, paginate, config
 from turbogears import identity, redirect
 from cherrypy import request, response
 from kid import Element
@@ -24,6 +24,7 @@ from beaker.server.widgets import myPaginateDataGrid
 from beaker.server.xmlrpccontroller import RPCRoot
 from beaker.server.helpers import *
 from bexceptions import *
+from upload import Uploader
 #from turbogears.scheduler import add_interval_task
 
 import cherrypy
@@ -35,13 +36,33 @@ class RecipeTasks(RPCRoot):
     # For XMLRPC methods in this class.
     exposed = True
 
+    upload = Uploader(config.get("basepath.logs", "/var/www/beaker/logs"))
+
     @cherrypy.expose
     @identity.require(identity.not_anonymous())
     def upload_file(self, task_id, path, name, size, md5sum, offset, data):
         """
         upload to task in pieces
         """
-        raise NotImplementedError
+        try:
+            recipetask = RecipeTask.by_id(task_id)
+        except InvalidRequestError:
+            raise BX(_('Invalid task ID: %s' % task_id))
+
+        recipe_id = recipetask.recipe.id
+        job_id = recipetask.recipe.recipeset.job.id
+        recipetask_path = "%02d/%s/%s/%s/%s" % (int(str(job_id)[-2:]),
+                                         job_id,
+                                         recipe_id,
+                                         task_id,
+                                         path)
+        return self.upload.uploadFile(recipetask_path,
+                                      name,
+                                      size,
+                                      md5sum,
+                                      offset,
+                                      data)
+
 
     @cherrypy.expose
     @identity.require(identity.not_anonymous())
