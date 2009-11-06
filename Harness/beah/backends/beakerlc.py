@@ -50,7 +50,7 @@ Beaker Backend should invoke these XML-RPC:
  2. parse XML
  3. recipes.tasks.Start(task_id, kill_time)
  *. recipes.tasks.Result(task_id, result_type, path, score, summary)
-    - result_type: pass|warn|fail|panic
+    - result_type: pass_|warn|fail|panic
  4. recipes.tasks.Stop(task_id, stop_type, msg)
     - stop_type: stop|abort|cancel
 """
@@ -179,13 +179,27 @@ def parse_recipe_xml(input_xml):
                     (task_name, task_id)
             continue
 
-        return dict(task_env=task_env, executable=executable, args=args, ewd=ewd)
+        return dict(task_env=task_env, executable=executable, args=args,
+                ewd=ewd)
 
     return None
 
 def handle_error(result, *args, **kwargs):
     print "Deferred Failed(%r, *%r, **%r)" % (result, args, kwargs)
     return result
+
+class LoggingProxy(Proxy):
+
+    def log(self, result, message, method, args, kwargs):
+        print "XML-RPC call %s %s: %s" % (method, message, result)
+        print "original call: %s(*%r, **%r)" % (method, args, kwargs)
+        return result
+
+    @print_this
+    def callRemote(self, method, *args, **kwargs):
+        return Proxy.callRemote(self, method, *args, **kwargs) \
+                .addCallback(self.log, "returned", method, args, kwargs) \
+                .addErrback(self.log, "failed", method, args, kwargs)
 
 class BeakerLCBackend(ExtBackend):
 
@@ -206,8 +220,8 @@ class BeakerLCBackend(ExtBackend):
             return
 
         hostname = self.conf.get('DEFAULT', 'HOSTNAME')
-        self.proxy.callRemote(self.GET_RECIPE,
-                hostname).addCallback(self.handle_new_task)
+        self.proxy.callRemote(self.GET_RECIPE, hostname) \
+                .addCallback(self.handle_new_task)
         self.waiting_for_lc = True
 
     def set_controller(self, controller=None):
@@ -216,7 +230,7 @@ class BeakerLCBackend(ExtBackend):
             self.conf = config.config('BEAH_BEAKER_CONF', 'beah_beaker.conf',
                     {'HOSTNAME':os.getenv('HOSTNAME')})
             url = self.conf.get('DEFAULT', 'LAB_CONTROLLER')
-            self.proxy = Proxy(url)
+            self.proxy = LoggingProxy(url)
             self.on_idle()
 
     def handle_new_task(self, result):
@@ -254,7 +268,7 @@ class BeakerLCBackend(ExtBackend):
         return "stop" if rc==0 else "cancel"
 
     RESULT_TYPE = {
-            RC.PASS:("pass", "Pass"),
+            RC.PASS:("pass_", "Pass"),
             RC.WARNING:("warn", "Warning"),
             RC.FAIL:("fail", "Fail"),
             RC.CRITICAL:("panic", "Panic - Critical"),
@@ -263,10 +277,14 @@ class BeakerLCBackend(ExtBackend):
 
     @staticmethod
     def result_type(rc):
-        return BeakerLCBackend.RESULT_TYPE.get(rc, ("warn", "Warning: Unknown Code (%s)" % rc))
+        return BeakerLCBackend.RESULT_TYPE.get(rc,
+                ("warn", "Warning: Unknown Code (%s)" % rc))
 
     def mk_msg(self, **kwargs):
         return json.dumps(kwargs)
+
+    def get_task_id(self, evt):
+        return str(self.task_data['task_env']['TASKID'])
 
     def save_command(self, cmd):
         self.__commands[cmd.id()] = cmd
@@ -281,34 +299,34 @@ class BeakerLCBackend(ExtBackend):
             if rc!=ECHO.OK:
                 # FIXME: Start was not issued. Is it OK?
                 self.proxy.callRemote(self.TASK_STOP,
-                        int(self.task_data['task_env']['TASKID']),
-                        # FIXME:
+                        self.get_task_id(evt),
+                        # FIXME: This is not correct, is it?
                         self.stop_type("Cancel"),
-                        self.mk_msg(reason="Harness could not run the task.", event=evt)).addCallback(self.handle_Stop)
+                        self.mk_msg(reason="Harness could not run the task.",
+                            event=evt)) \
+                                    .addCallback(self.handle_Stop)
 
     def proc_evt_start(self, evt):
-        self.proxy.callRemote(self.TASK_START,
-                int(self.task_data['task_env']['TASKID']),
-                0)
+        self.proxy.callRemote(self.TASK_START, self.get_task_id(evt), 0)
         # FIXME: start local watchdog
 
     def proc_evt_end(self, evt):
         self.proxy.callRemote(self.TASK_STOP,
-                int(self.task_data['task_env']['TASKID']),
+                self.get_task_id(evt),
                 self.stop_type(evt.arg("rc", None)),
-                self.mk_msg(event=evt)).addCallback(self.handle_Stop)
+                self.mk_msg(event=evt)) \
+                        .addCallback(self.handle_Stop)
 
     def proc_evt_result(self, evt):
         try:
             self.proxy.callRemote(self.TASK_RESULT,
-                    int(self.task_data['task_env']['TASKID']),
+                    self.get_task_id(evt),
                     self.result_type(evt.arg("rc", None))[0],
                     evt.arg("handle", "%s/%s" % \
                             (self.task_data['task_env']['TASKNAME'], evt.id())),
                     evt.arg("statistics", {}).get("score", 0),
                     self.mk_msg(event=evt)) \
-                            .addCallback(self.handle_Result, event_id=evt.id())\
-                            .addErrback(handle_error)
+                            .addCallback(self.handle_Result, event_id=evt.id())
         except:
             print traceback.format_exc()
             raise
@@ -321,13 +339,15 @@ class BeakerLCBackend(ExtBackend):
         print "--- %s: %s at %s" % (level, msg, tb)
 
     def on_exception(self, msg, *args, **kwargs):
-        self.__on_error("EXCEPTION", msg, traceback.format_exc(), *args, **kwargs)
+        self.__on_error("EXCEPTION", msg, traceback.format_exc(),
+                *args, **kwargs)
 
     def on_error(self, msg, *args, **kwargs):
         self.__on_error("ERROR", msg, traceback.format_stack(), *args, **kwargs)
 
     def on_warning(self, msg, *args, **kwargs):
-        self.__on_error("WARNING", msg, traceback.format_stack(), *args, **kwargs)
+        self.__on_error("WARNING", msg, traceback.format_stack(),
+                *args, **kwargs)
 
     @print_this
     def proc_evt_file(self, evt):
@@ -347,13 +367,15 @@ class BeakerLCBackend(ExtBackend):
     @print_this
     def proc_evt_file_close(self, evt):
         fid = evt.arg('file_id')
-        finfo = addict(self.get_file_info(fid))
-        task_id = int(self.task_data['task_env']['TASKID']),
-        filename = finfo.get('name', self.task_data['task_env']['TASKNAME'] + '/' + fid)
-        (path, filename) = ('/' + filename).rsplit('/', 1)
-        self.proxy.callRemote('task_upload_file', task_id,
-                path[1:], filename,
-                0, '', -1, '')
+        #finfo = addict(self.get_file_info(fid))
+        #filename = finfo.get('name',
+        #        self.task_data['task_env']['TASKNAME'] + '/' + fid)
+        #(path, filename) = ('/' + filename).rsplit('/', 1)
+        #d = hashlib.md5()
+        #d.update('')
+        #self.proxy.callRemote('task_upload_file', self.get_task_id(evt),
+        #        path[1:] or '/', filename,
+        #        '0', d.hexdigest(), '-1', '')
 
     @print_this
     def proc_evt_file_write(self, evt):
@@ -386,12 +408,12 @@ class BeakerLCBackend(ExtBackend):
             digest = ('md5', d.hexdigest())
         if codec != "base64":
             data = event.encode("base64", cdata)
-        task_id = int(self.task_data['task_env']['TASKID']),
-        filename = finfo.get('name', self.task_data['task_env']['TASKNAME'] + '/' + fid)
+        filename = finfo.get('name',
+                self.task_data['task_env']['TASKNAME'] + '/' + fid)
         (path, filename) = ('/' + filename).rsplit('/', 1)
-        self.proxy.callRemote('task_upload_file', task_id,
-                path[1:], filename,
-                size, digest[1], offset, data)
+        self.proxy.callRemote('task_upload_file', self.get_task_id(evt),
+                path[1:] or '/', filename,
+                str(size), digest[1], str(offset), data)
 
     def handle_Stop(self, result):
         self.on_idle()
@@ -402,13 +424,13 @@ class BeakerLCBackend(ExtBackend):
     def set_file_info(self, id, **kwargs):
         finfo = self.__file_info.setdefault(id, addict())
         finfo.update(kwargs)
-        pass
 
     def get_result_id(self, event_id):
         self.__results_by_uuid.get(event_id, None)
 
     def handle_Result(self, result_id, event_id=None):
-        print "%s.RETURN: %s (original event_id %s)" % (self.TASK_RESULT, result_id, event_id)
+        print "%s.RETURN: %s (original event_id %s)" % \
+                (self.TASK_RESULT, result_id, event_id)
         self.__results_by_uuid[event_id] = result_id
 
     def close(self):

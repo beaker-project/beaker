@@ -17,6 +17,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 import exceptions
+import traceback
 
 def log_this(logf, log_on=True):
     """Factory returning decorator for logging calls using logf.

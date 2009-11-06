@@ -23,6 +23,7 @@ from beah.wires.internals.twmisc import serveAnyChild, serveAnyRequest
 import sys
 import os
 import exceptions
+import traceback
 import pprint
 from random import randint
 
