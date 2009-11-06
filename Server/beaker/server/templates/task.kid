@@ -91,6 +91,7 @@ types = types.replace('&', '&amp;')
       <td class="list"><span py:if="taskrun.recipe.distro">${taskrun.recipe.distro.arch}</span></td>
       <td class="list">${taskrun.recipe.system}</td>
       <td class="list">${taskrun.status}</td>
+      <td class="list">${taskrun.result}</td>
       <td class="list">${taskrun.duration}</td>
     </tr>
 </table>

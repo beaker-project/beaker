@@ -6,8 +6,8 @@ from beaker.client import BeakerCommand
 from optparse import OptionValueError
 import sys
 
-class Submit_Tasks(BeakerCommand):
-    """ Submit job(s) to scheduler """
+class Tasks_Submit(BeakerCommand):
+    """Submit job(s) to scheduler"""
     enabled = True
 
     def options(self):
@@ -19,8 +19,6 @@ class Submit_Tasks(BeakerCommand):
         password = kwargs.pop("password", None)
 
         jobs = args
-        if len(args) > 0:
-            job = open(args[0], "r").read()
 
         self.set_hub(username, password)
         submitted_jobs = []

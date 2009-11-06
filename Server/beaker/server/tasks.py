@@ -75,10 +75,10 @@ class Tasks(RPCRoot):
             task = self.process_taskinfo(self.read_taskinfo(rpm_file))
         except ValueError, err:
             session.rollback()
-            return (0, "Failed to import because of %s" % str(err))
+            return "Failed to import because of %s" % str(err)
         os.chdir(self.task_dir)
         os.system("createrepo .")
-        return (task.id, 'Success')
+        return "Success"
 
     @expose()
     def save(self, task_rpm, *args, **kw):
