@@ -42,7 +42,7 @@ types = types.replace('&', '&amp;')
 <table width="97%">
     <tr>
         <td>
-            <div class="show"><a href="${tg.url('/tasks')}">Tests</a> - ${task.name}</div>
+            <div class="show"><a href="${tg.url('/tasks')}">Tasks</a> - ${task.name}</div>
         </td>
     </tr>
 </table>
