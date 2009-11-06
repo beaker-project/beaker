@@ -57,7 +57,7 @@ class TaskActions(RPCRoot):
         return task.to_xml().toprettyxml()
 
     @cherrypy.expose
-    def stop(self, taskid, type, msg):
+    def stop(self, taskid, stop_type, msg):
         """
         XMLRPC method to cancel/abort a Job/RecipeSet/Recipe/etc..
         """
@@ -67,5 +67,9 @@ class TaskActions(RPCRoot):
                 task = self.task_types[task_type.upper()].by_id(task_id)
             except InvalidRequestError, e:
                 raise BX(_("Invalid %s %s" % (task_type, task_id)))
-        return task.stop(type, msg)
+        if stop_type not in task.stop_types:
+            raise BX(_('Invalid stop_type: %s, must be one of %s' %
+                             (stop_type, task.stop_types)))
+        kwargs = dict(msg = msg)
+        return getattr(task,stop_type)(**kwargs)
 
