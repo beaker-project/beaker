@@ -44,7 +44,8 @@ BUILT_FILES=
 
 # data files, .c files, scripts anything needed to either compile the test and/or run it.
 FILES=$(METADATA) runtest.sh Makefile PURPOSE push-inventory.py \
-      smolt.py software.py i18n.py disks.py pushInventory.py
+      smolt.py software.py i18n.py disks.py pushInventory.py procfs.py \
+      utilist.py
 
 run: $(FILES) build
 	./runtest.sh
