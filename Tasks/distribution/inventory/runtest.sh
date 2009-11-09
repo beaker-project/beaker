@@ -19,7 +19,7 @@ hostname=$HOSTNAME
 if [ -z "$LAB_SERVER" ]; then
     # Push to Inventory server
     server="https://inventory.engineering.redhat.com"
-    rhts-run-simple-test $TEST "/push-inventory.py --server $server -h $hostname"
+    rhts-run-simple-test $TEST "./push-inventory.py --server $server -h $hostname"
     rhts-run-simple-test $TEST "./pushInventory.py --server $server -h $hostname"
 else
     # Push to Legacy Lab Controller
