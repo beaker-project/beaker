@@ -1,25 +1,115 @@
-SearchBar = function (tableid, operationid,valueid, searchController, operationvalue,searchvalue) {
-	this.tableid = tableid;
-	this.tableField = null;
+SearchBar = function (fields, searchController,operationvalue) {
+	//this.tableid = tableid;
+	//this.tableField = null;
         this.operationvalue = operationvalue;
-        this.operationid = operationid;
-        this.operationField = null;
-        this.valueField = null;
-        this.searchvalue = searchvalue
-        this.valueid = valueid;
+        // this.operationid = operationid;
+        //this.operationField = null;
+        //this.valueField = null;
+        //this.searchvalue = searchvalue
+        //this.valueid = valueid;
+        this.last_table_value = ''
+        this.fields = []  
+        for (index in fields) {
+            field_actual = fields[index].field_id  
+            this.my_regex = /(.+?_\d{1,})_(.+)/
+            field_complete = field_actual 
+            field_name_mod = field_actual.replace(this.my_regex, "$2") 
+            field_name = field_name_mod + 'id'
+            this[field_name] = field_actual  
+            this.fields.push(field_name_mod)
+
+            // this sets a relationship between table/column, and the field that is switched on and off
+            // when we select, deselect it
+            if (fields[index].column) {
+                SearchBarForm.tracking_columns[fields[index].column] = field_name_mod
+            } 
+        }
+         
 	this.searchController = searchController;
 	bindMethods(this);
 };
 
-SearchBar.prototype.initialize = function() {
-	this.tableField = getElement(this.tableid);
-	this.operationField = getElement(this.operationid);
-        this.valueField = getElement(this.valueid);
+SearchBar.prototype.initialize = function() { 
+        SearchBarForm.searchbar_instances.push(this)
+        for (index in this.fields) { 
+            field = this.fields[index]
+            this[field+'Field'] = getElement(this[field+'id'])
+           
+            /* Basically what this does is checks whether or not a field of the searchbar
+               has been marked to be hidden. If it has, we find the relavent parts of the DOM 
+               that need to be hidden (i.e the <td> of the field, and the <th> of it's label).
+               We will need to keep track of the number of instances of it
+               exist, so as to know whether to hide of display the header
+             */
+            if ($('#'+this[field+'id']).is('.hide_parent')) { 
+               //initialise column_ count to 1 (as at the moment it hasn't been hidden) or ++ it
+               if (SearchBarForm.column_count[field]) {
+                   SearchBarForm.column_count[field] = ++SearchBarForm.column_count[field]
+               } else {
+                   SearchBarForm.column_count[field] = 1
+               }
+
+               this.hide(field)
+            } 
+              
+        }
+
+        //We will fail right here if we don't set a tableField....
 	updateNodeAttributes(this.tableField, {
             "onchange": this.theOnChange
         });
         this.theOnChange()
 }
+
+SearchBar.prototype.show = function(field) {
+       column_name = field.replace(this.my_regex,"$2")
+       count = SearchBarForm.column_count[column_name]
+       //If we don't have any other instances of this column already, let's display the header for it
+       if (count < 1) { 
+           label_text = column_name.replace(/^./, column_name.match(/^./)[0].toUpperCase());       
+           label = $("span:contains('"+label_text+"')") 
+           th_to_show = label[1].parentNode
+           removeElementClass(th_to_show,'hidden')                
+
+
+            /*Now we need to go through each SearchBar and unhide the td for this column,
+             for sake of formatting and appearance
+             A few things could be done to make this thing more efficent. First of all we really don't need to be caching the whole SearchBar
+             instance, all we really need is the ids and/or elements of the fields.  
+            */
+            for (index in SearchBarForm.searchbar_instances) {
+                searchbar = SearchBarForm.searchbar_instances[index]
+                field_element = searchbar[column_name+'Field']      
+                to_show = field_element.parentNode.parentNode
+                removeElementClass(to_show,'hidden')
+            }
+       }
+         
+       //let's show the span.
+       span_to_show = getElement(field).parentNode
+       removeElementClass(span_to_show,'hidden')
+
+       //and now show the actual field
+       td_to_show = getElement(field).parentNode.parentNode
+       removeElementClass(td_to_show,'hidden')
+       SearchBarForm.column_count[column_name] = ++count
+}
+
+SearchBar.prototype.hide = function(field) {
+        //this part is to hide the field
+        span_to_hide = this[field+'Field'].parentNode
+        addElementClass(span_to_hide,'hidden')
+        count = SearchBarForm.column_count[field]  
+        count-- 
+ 
+        //If we no longer have any of these columns displayed, let's hide the label and td
+        if (count < 1) {
+            SearchBarForm.hide_others(field)
+        }
+       
+        SearchBarForm.column_count[field] = count
+}
+
 
 SearchBar.prototype.replaceValOptions = function(arg) { 
     val = arg;
@@ -55,6 +145,9 @@ SearchBar.prototype.replaceOptions = function(arg) {
 SearchBar.prototype.replaceFields = function(result) {
    this.updateSearchVals(result.search_vals) 
    replaceChildNodes(this.operationid, map(this.replaceOptions, result.search_by));
+   if (result.keyvals) {
+       replaceChildNodes(this.keyvalueid, map(this.replaceOptions,result.keyvals))
+   }
 }
 
 SearchBar.prototype.updateSearchVals = function(vals) {
@@ -73,14 +166,17 @@ SearchBar.prototype.updateSearchVals = function(vals) {
   
   if(vals) {//set up drop down menu
       //Do we need to convert this to an array ?
+      //Yep, map needs an array
       if (!isArray(vals)) {
           vals = convertObjToArray(vals)
       }
+
       if (current.nodeName == 'SELECT') {
           //update options and get out of here
           replaceChildNodes(current,map(this.replaceValOptions,vals))
           return
       }
+
       new_dom = SELECT(null,map(this.replaceValOptions, vals)) 
       extra_attrs = {}
      
@@ -95,10 +191,8 @@ SearchBar.prototype.updateSearchVals = function(vals) {
      
   }
  
-  //JS nor MochiKit have a hash.merge() function ?? 
-  updateNodeAttributes(new_dom,clone_attrs)
-  updateNodeAttributes(new_dom,extra_attrs)
- 
+  merge(clone_attrs,extra_attrs)
+  updateNodeAttributes(new_dom,clone_attrs) 
   replaceChildNodes(par,new_dom)
 }
 
@@ -106,7 +200,33 @@ SearchBar.prototype.theOnChange = function(event) {
     var params = {"tg_format"          : "json",
                   "tg_random"          : new Date().getTime(),
                   "table_field"         : this.tableField.value};
+    
+    /*let's switch off any columns the new value isn't using.
+      We do this by having a look at the last column that was used, and basically hiding all the columns
+      it was explicitly showing by way of the SearchBarForm.tracking_columns variable
+    */
+    if (SearchBarForm.tracking_columns[this.last_table_value]) {
+        field_to_hide = SearchBarForm.tracking_columns[this.last_table_value]
+        this.hide(field_to_hide)
+    }
+     
+    //table_field. Now what we need to do here is have a look at the 
+    //tracking_column to see if this table_field needs to switch any columns on
+    table_value_lower = this.tableField.value.toLowerCase()
+    tracked_column = SearchBarForm.tracking_columns[table_value_lower]
+    if (tracked_column) {
+        table_field_id = this.tableField.id 
+        parent_tr_id  = table_field_id.replace(this.my_regex,"$1")
+        field_to_show = parent_tr_id+'_'+SearchBarForm.tracking_columns[table_value_lower]
+        this.show(field_to_show) 
+        
+        if (tracked_column == 'keyvalue') {
+            params['keyvalue'] = 1
 
+        }
+    } 
+ 
+    this.last_table_value = table_value_lower
     var d = loadJSONDoc(this.searchController + "?" + queryString(params));
     d.addCallback(this.replaceFields);
 }
@@ -115,6 +235,10 @@ var SearchBarForm = {
 
     li_count: null,
     li_template: null,
+
+    searchbar_instances : [],
+    tracking_columns : [],
+    column_count : [],
 
     removeItem: function(node_id) {
         this_node = document.getElementById(node_id);
@@ -125,10 +249,39 @@ var SearchBarForm = {
             alert('This item cannot be removed.')
         }
         else {
+            // Before we remove the node we need to manage any hidden columns call a hide on it
+             
+            table_node = document.getElementById(node_id + '_table')
+            table_value_lower = table_node.value.toLowerCase()
+            field =  SearchBarForm.tracking_columns[table_value_lower]
+            if (field) { 
+                for (index in SearchBarForm.searchbar_instances) {
+                    if (SearchBarForm.searchbar_instances[index][field +'id'] == node_id +'_'+field) {
+                        SearchBarForm.searchbar_instances[index].hide(field)
+                        delete(SearchBarForm.searchbar_instances[index])
+                    } 
+                }    
+            } else { } 
             parent_node.removeChild(this_node);
         }
     },
 
+    hide_others : function(field) {
+            label_text = field
+            label_text = label_text.replace(/^./, label_text.match(/^./)[0].toUpperCase());       
+            label = $("span:contains('"+label_text+"')")
+            th_to_hide = label[1].parentNode
+            addElementClass(th_to_hide,'hidden')                
+
+	    /*Now we need to go through each SearchBar and hide the td for this column,
+	      for sake of formatting and appearance
+	    */
+	    for (index in SearchBarForm.searchbar_instances) {
+		    searchbar = SearchBarForm.searchbar_instances[index]
+	            to_hide = searchbar[field+'Field'].parentNode.parentNode      
+                    addElementClass(to_hide,'hidden')
+	    }
+    },
     getChildNodesByAttribute: function(pnode, identifier, value) {
         new_nodes = new Array;
         nodes = pnode.childNodes;
@@ -175,12 +328,13 @@ var SearchBarForm = {
             input = inputs[node_id];
             if (input.nodeType == 1) {
                 input.setAttribute('id', input.getAttribute('id').replace(
-                    '_0_', '_' + SearchBarForm.li_count + '_'));
+                    /_\d{1,}_/, '_' + SearchBarForm.li_count + '_'));
                 if (input.getAttribute('name'))
                 {
                     input.setAttribute('name', input.getAttribute('name').replace(
-                        '-0', '-' + SearchBarForm.li_count));
+                        /\-\d{1,}/, '-' + SearchBarForm.li_count));
                 }
+
                 if (input.getAttribute('type') == 'button')
                 {
                     input.setAttribute('value', input.getAttribute('value'))
@@ -191,14 +345,15 @@ var SearchBarForm = {
                 }
             }
         }
+
         inputs = li_clone.getElementsByTagName('SELECT')
         for (node_id=0, len=inputs.length; node_id<len; node_id++) {
             input = inputs[node_id];
             if (input.nodeType == 1) {
                 input.setAttribute('id', input.getAttribute('id').replace(
-                    '_0_', '_' + SearchBarForm.li_count + '_'));
+                    /_\d{1,}_/, '_' + SearchBarForm.li_count + '_'));
                 input.setAttribute('name', input.getAttribute('name').replace(
-                    '-0', '-' + SearchBarForm.li_count));
+                    /\-\d{1,}/, '-' + SearchBarForm.li_count));
                 input.value = '';
             }
         }
@@ -213,9 +368,23 @@ var SearchBarForm = {
         // Finally.
         tbody = SearchBarForm.getChildNodesByAttribute(parent_node, 'tagname', 'TBODY')[0];
         tbody.appendChild(li_clone);
-        // This is evil.  I need to figure out these values from the dom.
-        searchbar = li_clone.id + " = new SearchBar('" + li_clone.id + "_table','" + li_clone.id + "_operation','" + li_clone.id + "_value', '/get_search_options', '','');" + li_clone.id + ".initialize();";
-        eval(searchbar);
+
+        objs_for_newsearchbar = []
+        $('#'+li_clone.id+' span').each( function() { 
+            children = $(this).children().each( function() {
+                objs_for_newsearchbar.push({'field_id': $(this).attr('id'), 'name': $(this).attr('name').replace(/.+?\-\d{1,}\.(.+)?/, "$1") }) 
+            });
+        });
+
+        json_stringified = '' 
+        for (index in objs_for_newsearchbar) {
+            json_stringified = json_stringified + JSONStringify(objs_for_newsearchbar[index])
+            json_stringified = json_stringified + ','
+        }
+        json_stringified_length = json_stringified.length
+        json_stringified = json_stringified.slice(0,json_stringified_length -1 )
+        searchbar = li_clone.id + " = new SearchBar(["+json_stringified+"], '/get_search_options','');" + li_clone.id + ".initialize();";
+        eval(searchbar); 
         // Focus
         if(li_clone.getElementsByTagName('input')[0])
             li_clone.getElementsByTagName('INPUT')[0].focus()
@@ -250,6 +419,19 @@ function convertObjToArray(obj) {
     }    
     return new_array;
 }
+
+function JSONStringify(obj) {
+   var json_text = ''
+   for (elem in obj) {
+       json_text = json_text + "'"+elem+"':'"+obj[elem]+"',"
+   }
+   json_length = json_text.length
+   json_text = json_text.slice(0,json_length-1)
+   json_text = '{'+json_text
+   json_text = json_text +'}'
+   return json_text
+}
+
 
 function isArray(obj) {
 if (obj.constructor.toString().indexOf('Array') == -1)

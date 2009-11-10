@@ -226,10 +226,12 @@ class Root(RPCRoot):
     ) 
  
     search_bar = SearchBar(name='systemsearch',
-                           label=_(u'System Search'),
-                           table_callback=SystemSearch.create_search_table([System,Cpu,Device]),
+                           label=_(u'System Search'), 
+                           extra_selects = [ { 'name': 'keyvalue', 'column':'key/value','display':'none' , 'pos' : 2}], 
+                           table_callback=SystemSearch.create_search_table([System,Cpu,Device,Key]),
                            search_controller=url("/get_search_options")
                  )
+  
     system_form = SystemForm()
     power_form = PowerForm(name='power')
     labinfo_form = LabInfoForm(name='labinfo')
@@ -244,31 +246,36 @@ class Root(RPCRoot):
     system_provision = SystemProvision(name='provision')
     arches_form = SystemArches(name='arches')
 
-      
- 
 
     @expose(format='json')
-    def get_search_options(self,table_field): 
+    def get_search_options(self,table_field,**kw): 
+        return_dict = {}
+        if kw.has_key('keyvalue'): 
+            return_dict['keyvals'] =  Key.get_all_keys() 
         search =  SystemSearch.search_on(table_field)  
       
         #Determine what field type we are dealing with. If it is Boolean, convert our values to 0 for False
         # and 1 for True
         type = SystemSearch.field_type(table_field)
-        log.debug('type is %s' % type)
+       
         if type == 'sqlalchemy.types.Boolean':
             search['values'] = { 0:'False', 1:'True'}
+            
         #Determine if we have search values. If we do, then we should only have the operators
         # 'is' and 'is not'.
         if search['values']:
             search['operators'] = filter(lambda x: x == 'is' or x == 'is not', search['operators'])         
-      
+
         search['operators'].sort()
-        return dict(search_by = search['operators'], search_vals = search['values'] )
+        return_dict['search_by'] = search['operators'] 
+        return_dict['search_vals'] = search['values'] 
+     
+        return return_dict
 
     @expose(format='json')
     def get_fields(self, table_name):
         return dict( fields = System.get_fields(table_name))
-
+  
     @expose(format='json')
     def get_installoptions(self, system_id=None, distro_id=None):
         try:
@@ -334,9 +341,7 @@ class Root(RPCRoot):
 
     def _system_search(self,kw): 
         sys_search = SystemSearch() 
-	for search in kw['systemsearch']:
-            #log.debug('About to log in system_search')
-            #log.debug(search)
+	for search in kw['systemsearch']: 
 	    #clsinfo = System.get_dict()[search['table']] #Need to change this
             class_field_list = search['table'].split('/')
             cls_ref = SystemSearch.translate_name(class_field_list[0])

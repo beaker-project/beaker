@@ -5,7 +5,7 @@ from turbogears.database import metadata, mapper, session
 from turbogears.config import get
 import ldap
 from sqlalchemy import Table, Column, ForeignKey
-from sqlalchemy.orm import relation, backref, synonym, column_property
+from sqlalchemy.orm import relation, backref, synonym, column_property,composite
 from sqlalchemy import String, Unicode, Integer, DateTime, UnicodeText, Boolean, Float, VARCHAR, TEXT, Numeric
 from sqlalchemy import or_, and_, not_, select
 from sqlalchemy.exceptions import InvalidRequestError
@@ -932,8 +932,7 @@ class SystemSearch(Search):
         #inadequate. 
         #If we are looking at the System class and column 'arch' with the 'is not' operation, it will try and get
         # System.arch_is_not_filter
-        underscored_operation = re.sub(' ','_',operation)
-        log.debug("%s:%s" % (column,underscored_operation))
+        underscored_operation = re.sub(' ','_',operation) 
         col_op_filter = getattr(cls_ref,'%s_%s_filter' % (column.lower(),underscored_operation),None)
         
         try:
@@ -963,13 +962,19 @@ class SystemSearch(Search):
         self.filter_funcs.append(lambda: filter_func(col,value))
 
         join_dict = getattr(cls_ref,'join_system',None) 
-      
+        
         #We may not have a join with System 
         #I really want to make these joins potentially conditional based on what columns we are searching for/retrieving. 
         if join_dict != None:
             for elem in join_dict: 
                 for k,v in elem.iteritems():   
                     if (self.already_joined.count(k) < 1):
+                        #check the column_conditional_join var
+                        if hasattr(cls_ref,'column_conditional_join'):  
+                            columns = cls_ref.column_conditional_join
+                            if columns.count(column.lower()) < 1:
+                                continue
+
                         self.j = self.j.join(k,onclause=v)
 		        self.already_joined.append(k) 
         else:
@@ -986,8 +991,10 @@ class SystemSearch(Search):
 
 class System(SystemObject):
     table = system_table
-    search_table = [] 
-    # join_system_keys enforces order over join_system  
+    search_table = []  
+    #column_conditional_join specifies what columns we need to be searching on
+    #if we are to use the join_system
+    column_conditional_join = ('arch')
     join_system = [{system_arch_map: system_table.c.id == system_arch_map.c.system_id}, 
                    {arch_table: arch_table.c.id == system_arch_map.c.arch_id}]
     #If we have a set of predefined values that a column can be searched on, put them in the 
@@ -2186,8 +2193,31 @@ class Note(object):
     def all(cls):
         return cls.query()
 
+class KeyValue(object):
+    def __init__(self,x,y):
+        self.x = x
+        self.y = y
+   
+    def __composite_values__(self):
+        return [self.x,self.y]
+   
+    def __set_composite_values__(self,x,y):
+        self.x = x
+        self.y = y
 
-class Key(object):
+class Key(SystemObject):
+    join_system = [{key_value_string_table: key_value_string_table.c.system_id == system_table.c.id }, 
+                   {key_table: key_table.c.id == key_value_string_table.c.key_id}]
+
+    @classmethod
+    def get_all_keys(cls):
+       all_keys = cls.query()     
+       return [key.key_name for key in all_keys]
+
+    @classmethod
+    def get_searchable(cls): 
+        return cls._create_search_description(dict(includes = ['Value']))
+
     def __init__(self, key_name=None, numeric=False):
         self.key_name = key_name
         self.numeric = numeric
@@ -2410,7 +2440,8 @@ mapper(Note, note_table,
         properties=dict(user=relation(User, uselist=False,
                         backref='notes')))
 
-mapper(Key, key_table)
+Key.mapper = mapper(Key, key_table, properties = { 'Value' : composite(KeyValue,key_value_int_table.c.key_value,key_value_string_table.c.key_value)})                              
+           
 mapper(Key_Value_Int, key_value_int_table,
         properties=dict(key=relation(Key, uselist=False,
                         backref='key_value_int')))

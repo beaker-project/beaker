@@ -12,6 +12,19 @@ from turbogears.widgets import (Form, TextField, SubmitButton, TextArea,
                                 CompoundWidget, AjaxGrid, Tabber, 
                                 RepeatingFieldSet, SelectionField)
 
+import logging
+log = logging.getLogger('beaker.server')
+
+class UtilJSON:
+     @classmethod
+     def dynamic_json(cls):
+         return lambda fields: cls.__return_array_of_json(fields)
+
+     @classmethod
+     def __return_array_of_json(cls,x):
+         jsonified_fields = [jsonify.encode(elem) for elem in x]
+         return ','.join(jsonified_fields) 
+                   
 
 class LocalJSLink(JSLink):
     """
@@ -76,6 +89,32 @@ class PowerTypeForm(CompoundFormField):
 class myPaginateDataGrid(PaginateDataGrid):
     template = "beaker.server.templates.my_paginate_datagrid"
 
+class SingleSelectFieldJSON(SingleSelectField):
+    def __init__(self,*args,**kw):  
+        super(SingleSelectField,self).__init__(*args,**kw)
+
+        if kw.has_key('for_column'):
+            self.for_column = kw['for_column']
+       
+    def __json__(self):
+        return_dict = {}
+        return_dict['field_id'] = self.field_id
+        return_dict['name'] = self.name
+        if hasattr(self,'for_column'):
+            return_dict['column'] = self.for_column
+      
+        return return_dict   
+    
+   
+class TextFieldJSON(TextField):
+    def __init__(self,*args,**kw):
+        super(TextField,self).__init__(*args,**kw)
+    def __json__(self):
+        return {
+                'field_id' : self.field_id,
+             
+               } 
+
 class SearchBar(RepeatingFormField):
     """Search Bar"""
 
@@ -117,8 +156,8 @@ class SearchBar(RepeatingFormField):
      <td>
      <table id="${field_id}">
       <thead>
-       <tr>
-        <th py:for="field in fields">
+       <tr> 
+        <th  py:for="field in fields"> 
          <span class="fieldlabel" py:content="field.label" />
         </th>
        </tr>
@@ -128,9 +167,8 @@ class SearchBar(RepeatingFormField):
            class="${field_class}"
            id="${field_id}_${repetition}">
         <script language="JavaScript" type="text/JavaScript">
-            ${field_id}_${repetition} = new SearchBar(
-            '${fields[0].field_id}', '${fields[1].field_id}','${fields[2].field_id}',
-            '${search_controller}', '${value_for(fields[1])}','${value_for(fields[2])}');
+             
+            ${field_id}_${repetition} = new SearchBar([${the_fields(fields)}],'${search_controller}','${value_for(this_operations_field)}');
             addLoadEvent(${field_id}_${repetition}.initialize);
         </script>
         <td py:for="field in fields">
@@ -170,19 +208,49 @@ class SearchBar(RepeatingFormField):
     """
 
     params = ['repetitions', 'form_attrs', 'search_controller', 'simplesearch',
-              'advanced', 'simple']
+              'advanced', 'simple','the_fields','this_operations_field']
     form_attrs = {}
     simplesearch = None
 
-    def __init__(self, table_callback, search_controller, *args, **kw):
+    def __init__(self, table_callback, search_controller,extra_selects = None,extra_inputs = None, *args, **kw):
         super(SearchBar,self).__init__(*args, **kw)
         self.search_controller=search_controller
         self.repetitions = 1
-        table_field = SingleSelectField(name="table", options=table_callback, validator=validators.NotEmpty())
       
-        operation_field = SingleSelectField(name="operation", options=[None], validator=validators.NotEmpty())
-        value_field = TextField(name="value")
-        self.fields = [ table_field, operation_field, value_field]
+        table_field = SingleSelectFieldJSON(name="table", options=table_callback, validator=validators.NotEmpty()) 
+        operation_field = SingleSelectFieldJSON(name="operation", options=[None], validator=validators.NotEmpty())
+        value_field = TextFieldJSON(name="value")
+        
+        #We don't know where in the fields array the operation array will be, so we will put it here
+        # to access in the template
+        self.this_operations_field = operation_field
+        self.fields = [table_field,operation_field,value_field] 
+       
+        new_selects = []
+        if extra_selects is not None: 
+            new_class = [] 
+            for elem in extra_selects:
+                if elem.has_key('display'):
+                    if elem['display'] == 'none':
+                        new_class.append('hide_parent') 
+                new_select = SingleSelectFieldJSON(name=elem['name'],options=[None], css_classes = new_class, validator=validators.NotEmpty(),for_column=elem['column'] )
+               
+                if elem.has_key('pos'):
+                    self.fields.insert(elem['pos'] - 1,new_select)
+                else:
+                    self.fields.append(new_select) 
+
+        new_inputs = []
+        if extra_inputs is not None:
+            for the_name in extra_inputs:
+                new_input = TextField(name=the_name,display='none')
+                new_inputs.append(new_input)   
+ 
+        self.the_fields = UtilJSON.dynamic_json()
+
+        self.fields.extend(new_inputs)
+        self.fields.extend(new_selects)
+ 
 
     def display(self, value=None, **params):
         if 'options' in params and 'simplesearch' in params['options']:
