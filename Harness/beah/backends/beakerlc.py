@@ -198,8 +198,9 @@ class LoggingProxy(Proxy):
     @print_this
     def callRemote(self, method, *args, **kwargs):
         return Proxy.callRemote(self, method, *args, **kwargs) \
-                .addCallback(self.log, "returned", method, args, kwargs) \
-                .addErrback(self.log, "failed", method, args, kwargs)
+                .addCallbacks(self.log, self.log,
+                        callbackArgs=["returned", method, args, kwargs],
+                        errbackArgs=["failed", method, args, kwargs])
 
 class BeakerLCBackend(ExtBackend):
 
@@ -214,21 +215,31 @@ class BeakerLCBackend(ExtBackend):
         self.__results_by_uuid = {}
         self.__file_info = {}
 
+    def on_lc_failure(self, result):
+        self.waiting_for_lc = False
+        reactor.callLater(120, self.on_idle)
+        return None
+
     def on_idle(self):
         if self.waiting_for_lc:
-            # FIXME: Write debugging info - this should be avoided!
+            self.on_error("on_idle called with waiting_for_lc already set.")
             return
 
         hostname = self.conf.get('DEFAULT', 'HOSTNAME')
         self.proxy.callRemote(self.GET_RECIPE, hostname) \
-                .addCallback(self.handle_new_task)
+                .addCallback(self.handle_new_task) \
+                .addErrback(self.on_lc_failure)
         self.waiting_for_lc = True
 
     def set_controller(self, controller=None):
         ExtBackend.set_controller(self, controller)
         if controller:
             self.conf = config.config('BEAH_BEAKER_CONF', 'beah_beaker.conf',
-                    {'HOSTNAME':os.getenv('HOSTNAME')})
+                    {
+                        'HOSTNAME': os.getenv('HOSTNAME'),
+                        'LAB_CONTROLLER': os.getenv('LAB_CONTROLLER',
+                            'http://%s:8000/server' %
+                            os.getenv('COBBLER_SERVER', 'localhost'))})
             url = self.conf.get('DEFAULT', 'LAB_CONTROLLER')
             self.proxy = LoggingProxy(url)
             self.on_idle()
@@ -261,7 +272,8 @@ class BeakerLCBackend(ExtBackend):
 
     def pre_proc(self, evt):
         # FIXME: remove
-        pprint.pprint(evt)
+        #pprint.pprint(evt)
+        pass
 
     @staticmethod
     def stop_type(rc):
@@ -305,6 +317,7 @@ class BeakerLCBackend(ExtBackend):
                         self.mk_msg(reason="Harness could not run the task.",
                             event=evt)) \
                                     .addCallback(self.handle_Stop)
+                                    # FIXME: addErrback(...) needed!
 
     def proc_evt_start(self, evt):
         self.proxy.callRemote(self.TASK_START, self.get_task_id(evt), 0)
@@ -316,6 +329,7 @@ class BeakerLCBackend(ExtBackend):
                 self.stop_type(evt.arg("rc", None)),
                 self.mk_msg(event=evt)) \
                         .addCallback(self.handle_Stop)
+                        # FIXME: addErrback(...) needed!
 
     def proc_evt_result(self, evt):
         try:
@@ -365,19 +379,6 @@ class BeakerLCBackend(ExtBackend):
         self.set_file_info(fid, **evt.args())
 
     @print_this
-    def proc_evt_file_close(self, evt):
-        fid = evt.arg('file_id')
-        #finfo = addict(self.get_file_info(fid))
-        #filename = finfo.get('name',
-        #        self.task_data['task_env']['TASKNAME'] + '/' + fid)
-        #(path, filename) = ('/' + filename).rsplit('/', 1)
-        #d = hashlib.md5()
-        #d.update('')
-        #self.proxy.callRemote('task_upload_file', self.get_task_id(evt),
-        #        path[1:] or '/', filename,
-        #        '0', d.hexdigest(), '-1', '')
-
-    @print_this
     def proc_evt_file_write(self, evt):
         fid = evt.arg('file_id')
         finfo = addict(self.get_file_info(fid))
@@ -416,19 +417,24 @@ class BeakerLCBackend(ExtBackend):
                 str(size), digest[1], str(offset), data)
 
     def handle_Stop(self, result):
+        """Handler for task_stop XML-RPC return."""
         self.on_idle()
 
     def get_file_info(self, id):
+        """Get a data associated with file. Find file by UUID."""
         return self.__file_info.get(id, None)
 
     def set_file_info(self, id, **kwargs):
+        """Attach a data to file. Find file by UUID."""
         finfo = self.__file_info.setdefault(id, addict())
         finfo.update(kwargs)
 
     def get_result_id(self, event_id):
+        """Get a data associated with result. Find result by UUID."""
         self.__results_by_uuid.get(event_id, None)
 
     def handle_Result(self, result_id, event_id=None):
+        """Attach a data to a result. Find result by UUID."""
         print "%s.RETURN: %s (original event_id %s)" % \
                 (self.TASK_RESULT, result_id, event_id)
         self.__results_by_uuid[event_id] = result_id
