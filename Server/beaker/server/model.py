@@ -989,7 +989,6 @@ class SystemSearch(Search):
         #append a filter function which is to be called later 
         self.filter_funcs.append(lambda: filter_func(col,value))
 
-
         joins = getattr(cls_ref,'joins',None)  
         #Let's do the joins 
         if joins != None:
