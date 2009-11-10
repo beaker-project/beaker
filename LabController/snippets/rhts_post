@@ -107,8 +107,31 @@ wget -O /mnt/tests/runtests.sh http://$rhts_server/testlogs/$runtest_url
 wget -O /mnt/tests/runtests.sh http://$rhts_server/testlogs/recipes/$recipeid/runtests.sh
 #end if
 chmod 755 /mnt/tests/runtests.sh
+#else
+
+# If not rhts then 
+# install beaker harness
+cat << EOF > /etc/yum.repos.d/beaker-harness.repo
+[beaker-harness]
+name=Beaker Harness
+baseurl=http://$server/harness/$os_version
+enabled=1
+gpgcheck=0
+EOF
+
+yum -y install beah
+cat << EOF > /etc/beah_beaker.conf
+[DEFAULT]
+# LAB_CONTROLLER: URI of Beaker's XML-RPC handler
+LAB_CONTROLLER=http://$server:8000/server
+#
+# # HOSTNAME: Pretend to be machine with given name:
+# #HOSTNAME=fake.hostname.com
+EOF
+chkconfig --add beah-srv
+chkconfig --add beah-beaker-backend
 #end if
-yum -y install beaker-simple
+
 #Add test user account
 useradd --password '$6$oIW3o2Mr$XbWZKaM7nA.cQqudfDJScupXOia5h1u517t6Htx/Q/MgXm82Pc/OcytatTeI4ULNWOMJzvpCigWiL4xKP9PX4.' test
 $kickstart_done
