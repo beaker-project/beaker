@@ -609,12 +609,18 @@ class Modeller(object):
         return x == bool_y
 
     def not_equal(self,x,y): 
-        return x != y
+        if not y:
+            return x != None
+        return or_(x != y,x == None)
 
     def equals(self,x,y):    
+        if not y:
+            return x == None
         return x == y
 
     def contains(self,x,y):
+        if not y:
+            return  x == None 
         return x.like('%%%s%%' % y )
 
  
@@ -1031,6 +1037,9 @@ class System(SystemObject):
         """arch_is_not_filter is a function dynamically called from append_results.
            It serves to provide a table column operation specific method of filtering results of System/Arch
         """       
+        if not val:
+            return col != None
+
         #If anyone knows of a better way to do this, by all means...
         query = System.query().filter(System.arch.any(Arch.arch == val))       
         ids = [r.id for r in query]
