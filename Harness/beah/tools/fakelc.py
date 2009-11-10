@@ -199,6 +199,10 @@ def main():
                     id="21" job_id="11" recipe_set_id="11"
                     system="%(machine0)s"
                     >
+                <repos>
+                    <repo name="beaker-task"
+                            url="http://beaker-devel.app.eng.bos.redhat.com/rpms" />
+                </repos>
                 <distroRequires>
                     <distro_arch op="=" value="i386"/>
                     <distro_family op="=" value="RedHatEnterpriseLinuxServer5"/>

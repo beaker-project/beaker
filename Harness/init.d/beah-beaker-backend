@@ -25,6 +25,10 @@ LOCKFILE=/var/lock/subsys/$prog
 RUN_AS=root
 
 start() {
+    echo "Waiting for network..."
+    if [[ -x "/usr/bin/nm-online" ]]; then
+      /usr/bin/nm-online
+    fi
     echo -n $"Starting $prog: "
     daemon --user $RUN_AS $path ">> /tmp/$prog.out 2>&1 &"
     RETVAL=$?
