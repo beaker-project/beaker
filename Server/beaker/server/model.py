@@ -611,12 +611,18 @@ class Modeller(object):
         return x == bool_y
 
     def not_equal(self,x,y): 
-        return x != y
+        if not y:
+            return x != None
+        return or_(x != y,x == None)
 
     def equals(self,x,y):    
+        if not y:
+            return x == None
         return x == y
 
     def contains(self,x,y):
+        if not y:
+            return  x == None 
         return x.like('%%%s%%' % y )
 
  
@@ -980,7 +986,7 @@ class SystemSearch(Search):
       
         #Execute filter on query object  
         for filter_func in self.filter_funcs:           
-            queri = queri.filter(filter_func())   
+            queri = queri.filter(filter_func()) 
         return queri        
 
 class System(SystemObject):
@@ -988,7 +994,7 @@ class System(SystemObject):
     search_table = []  
     #column_conditional_join specifies what columns we need to be searching on
     #if we are to use the join_system
-    column_conditional_join = ('arch')
+    #column_conditional_join = ('arch')
     join_system = [{system_arch_map: system_table.c.id == system_arch_map.c.system_id}, 
                    {arch_table: arch_table.c.id == system_arch_map.c.arch_id}]
                   
@@ -1001,6 +1007,9 @@ class System(SystemObject):
         """arch_is_not_filter is a function dynamically called from append_results.
            It serves to provide a table column operation specific method of filtering results of System/Arch
         """       
+        if not val:
+            return col != None
+
         #If anyone knows of a better way to do this, by all means...
         query = System.query().filter(System.arch.any(Arch.arch == val))       
         ids = [r.id for r in query]
