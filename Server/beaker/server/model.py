@@ -579,15 +579,10 @@ class Modeller(object):
                                                          'is not' : lambda x,y: self.not_equal(x,y),
                                                          'contains' : lambda x,y: self.contains(x,y), },
                                                
-                                              
- 
                           'sqlalchemy.types.Integer'  : { 'is' : lambda x,y: self.equals(x,y), 
                                                           'is not' : lambda x,y: self.not_equal(x,y),
                                                           'less than' : lambda x,y: self.less_than(x,y),
                                                           'greater than' : lambda x,y: self.greater_than(x,y), },
-                                                         
-
-                         
                              
                           'sqlalchemy.types.Unicode'  : { 'is' : lambda x,y: self.equals(x,y),
                                                           'is not' : lambda x,y: self.not_equal(x,y),
@@ -615,10 +610,10 @@ class Modeller(object):
         bool_y = int(y) 
         return x == bool_y
 
-    def not_equal(self,x,y):
+    def not_equal(self,x,y): 
         return x != y
 
-    def equals(self,x,y):
+    def equals(self,x,y):    
         return x == y
 
     def contains(self,x,y):
@@ -933,7 +928,7 @@ class SystemSearch(Search):
         #If we are looking at the System class and column 'arch' with the 'is not' operation, it will try and get
         # System.arch_is_not_filter
         underscored_operation = re.sub(' ','_',operation)
-        log.debug("%s:%s" % (column,underscored_operation))
+        
         col_op_filter = getattr(cls_ref,'%s_%s_filter' % (column.lower(),underscored_operation),None)
         
         try:
@@ -959,7 +954,7 @@ class SystemSearch(Search):
                 modeller = Modeller()
                 filter_func = modeller.return_function(index_type,operation)     
 
-        #append a filter function which is to be called later
+        #append a filter function which is to be called later 
         self.filter_funcs.append(lambda: filter_func(col,value))
 
         join_dict = getattr(cls_ref,'join_system',None)  
@@ -985,7 +980,7 @@ class SystemSearch(Search):
       
         #Execute filter on query object  
         for filter_func in self.filter_funcs:           
-            queri = queri.filter(filter_func())  
+            queri = queri.filter(filter_func())   
         return queri        
 
 class System(SystemObject):
@@ -1979,9 +1974,7 @@ class Device(SystemObject):
         (or display name) as the key, and a list of fields that can be 
         searched after any field filtering has been applied
         """
-        return cls._create_search_description(
-                   dict(includes = ['description'])
-                                              )
+        return cls._create_search_description(dict(includes = ['Description','Driver','Vendor_id','Device_id']))
 
 class Locked(object):
     def __init__(self, name=None):
@@ -2348,7 +2341,12 @@ mapper(LabInfo, labinfo_table)
 CpuFlag.mapper = mapper(CpuFlag, cpu_flag_table)
 Numa.mapper = mapper(Numa, numa_table)
 Device.mapper = mapper(Device, device_table,
-       properties = {'device_class': relation(DeviceClass)})
+       properties = {'device_class': relation(DeviceClass),
+                     'description':synonym('Description',map_column=True),
+                     'vendor_id':synonym('Vendor_id',map_column=True),
+                     'device_id':synonym('Device_id',map_column=True),
+                     'driver':synonym('Driver',map_column=True)  })
+
 mapper(DeviceClass, device_class_table)
 mapper(Locked, locked_table)
 mapper(PowerType, power_type_table)
