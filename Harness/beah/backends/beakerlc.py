@@ -103,6 +103,19 @@ def parse_recipe_xml(input_xml):
             RECIPESETID=str(er.get('recipe_set_id')),
             HOSTNAME=er.get('system'))
 
+    # FIXME: This will eventually need to be replaced by sth RPM independent...
+    repos = []
+    repof = ''
+    for r in er.getiterator('repo'):
+        name = r.get('name')
+        repos.append(name)
+        repof += "[%s]\nname=beaker provided '%s' repo\nbaseurl=%s\nenabled=0\ngpgcheck=0\n\n" \
+                % (name, name, r.get('url'))
+    f = open('/etc/yum.repos.d/beaker-tests.repo', 'w+')
+    f.write(repof)
+    f.close()
+    task_env['BEAKER_REPOS']=':'.join(repos)
+
     for task in er.findall('task'):
 
         ts = task.get('status')
