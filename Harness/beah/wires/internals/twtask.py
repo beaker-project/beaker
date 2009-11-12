@@ -32,8 +32,9 @@ class TaskStdoutProtocol(protocol.ProcessProtocol):
 
     def connectionMade(self):
         log.info("%s:connectionMade", self.__class__.__name__)
-        #self.transport.closeStdin()
         self.task = self.task_protocol()
+        # FIXME: this is not very nice...
+        self.task.send_cmd = lambda obj: self.transport.write(self.task.format(obj))
         self.task.task_info = self.task_info
         self.task.set_controller(self.controller)
         self.controller.task_started(self.task)

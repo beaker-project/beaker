@@ -79,6 +79,8 @@ class Controller(object):
         self.conf = {}
         self.killed = False
         self.on_killed = on_killed or self.__ON_KILLED
+        # FIXME!!! read from permanent storage!
+        self.__vars = {}
 
     def add_backend(self, backend):
         if backend and not (backend in self.backends):
@@ -122,15 +124,31 @@ class Controller(object):
                 return task
         return None
 
+    def setdefault_var(self, key, defvalue):
+        if self.__vars.has_key(key):
+            return self.__vars['key']
+        self.set_var(key, defvalue)
+        return defvalue
+
+    def set_var(self, key, value):
+        # FIXME!!! write to permanent storage!
+        self.__vars[key] = value
+
+    def get_var(self, key, default=None):
+        return self.__vars.get(key, default)
+
     def proc_evt(self, task, evt):
-        """Process Event received from task.
-        
+        """
+        Process Event received from task.
+
         @task is the Task, which sent the event.
         @evt is an event. Should be an instance of Event class.
-        
-        This is the only method mandatory for Task side Controller-Adaptor."""
+
+        This is the only method mandatory for Task side Controller-Adaptor.
+        """
         log_debug("Controller: proc_evt(..., %r)", evt)
-        if evt.event() == 'introduce':
+        evev = evt.event()
+        if evev == 'introduce':
             # FIXME: find a task by id and set task.task_info
             task_id = evt.arg('id')
             task.origin['source'] = "socket"
@@ -142,6 +160,18 @@ class Controller(object):
                 task.task_info = dict(id=-1, claimed_id=task_id)
             task.origin['task_info'] = task.task_info
             return
+        elif evev in ['variable_set', 'variable_get']:
+            handle = evt.arg('handle', '')
+            dest = evt.arg('dest', '')
+            key = evt.arg('key')
+            if handle == ''  and dest in [None, '', 'localhost']:
+                # handle only certain kind of variables here.
+                if evev == 'variable_set':
+                    self.set_var(key, evt.arg('value'))
+                else:
+                    value = self.get_var(key)
+                    task.proc_cmd(command.variable_value(key, value))
+                return
         # controller - spawn_task
         orig = evt.origin()
         if not orig.has_key('task_info'):
@@ -174,7 +204,7 @@ class Controller(object):
 
         @backend is the backend, which issued the command.
         @cmd is a command. Should be an instance of Command class.
-        
+
         This is the only method mandatory for Backend side
         Controller-Adaptor."""
         log_debug("Controller: proc_cmd(..., %r)", cmd)
@@ -201,7 +231,7 @@ class Controller(object):
 
         Use this method for sending newly generated events, i.e. not an echo,
         and not when forwarding events from tasks.
-        
+
         to_all - if True, send to all backends, including no_output BE's
         """
         log_debug("Controller: generate_evt(..., %r, %r)", evt, to_all)
@@ -257,6 +287,11 @@ class Controller(object):
 
         if self.conf:
             answ += "\n== Config ==\n%s\n" % (self.conf,)
+
+        if self.__vars:
+            answ += "\n== Variables ==\n"
+            for k in sorted(self.__vars.keys()):
+                answ += "%r=%r\n" % (k, self.__vars[k])
 
         if self.killed:
             answ += "\n== Killed ==\nTrue\n"

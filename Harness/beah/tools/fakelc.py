@@ -220,11 +220,11 @@ def main():
                     <roles>
                         <role value="STANDALONE">
                             <system value="%(machine0)s"/>
-                            <system value="%(machine1)s"/>
                         </role>
                     </roles>
                     <rpm name="rh-tests-examples-testargs-1.1-1.noarch.rpm"/>
                 </task>
+                            <system value="%(machine1)s"/>
                 -->
 
                 <task avg_time="1200" id="42"
@@ -236,9 +236,6 @@ def main():
                         <role value="CLIENTS">
                             <system value="%(machine0)s"/>
                         </role>
-                        <role value="SERVERS">
-                            <system value="%(machine1)s"/>
-                        </role>
                     </roles>
                     <params>
                         <param name="KERNELARGNAME" value="kernel"/>
@@ -248,6 +245,9 @@ def main():
                     </params>
                     <rpm name="rh-tests-examples-testargs.noarch"/>
                 </task>
+                        <role value="SERVERS">
+                            <system value="%(machine1)s"/>
+                        </role>
 
                 <!--
                 <task avg_time="1200" id="43"
@@ -258,11 +258,11 @@ def main():
                     <roles>
                         <role value="STANDALONE">
                             <system value="%(machine0)s"/>
-                            <system value="%(machine1)s"/>
                         </role>
                     </roles>
                     <executable url="%(beah_root)s/examples/tasks/a_task"/>
                 </task>
+                            <system value="%(machine1)s"/>
 
                 <task avg_time="1200" id="44"
                         name="/beah/examples/tasks/socket" role="STANDALONE"
@@ -272,11 +272,11 @@ def main():
                     <roles>
                         <role value="STANDALONE">
                             <system value="%(machine0)s"/>
-                            <system value="%(machine1)s"/>
                         </role>
                     </roles>
                     <executable url="%(beah_root)s/examples/tasks/socket"/>
                 </task>
+                            <system value="%(machine1)s"/>
 
                 <task avg_time="1200" id="45"
                         name="/beah/examples/tasks/rhts" role="STANDALONE"
@@ -286,11 +286,12 @@ def main():
                     <roles>
                         <role value="STANDALONE">
                             <system value="%(machine0)s"/>
-                            <system value="%(machine1)s"/>
                         </role>
                     </roles>
                     <executable url="%(beah_root)s/examples/tasks/rhts" />
                 </task>
+                            <system value="%(machine1)s"/>
+
                 <task avg_time="1200" id="46"
                         name="/beah/examples/tests/rhtsex" role="STANDALONE"
                         result="%(task46_res)s"
@@ -299,7 +300,6 @@ def main():
                     <roles>
                         <role value="STANDALONE">
                             <system value="%(machine0)s"/>
-                            <system value="%(machine1)s"/>
                         </role>
                     </roles>
                     <executable url="/usr/bin/python">
@@ -307,6 +307,7 @@ def main():
                         <arg value="%(beah_root)s/examples/tests/rhtsex" />
                     </executable>
                 </task>
+                            <system value="%(machine1)s"/>
 
                 <task avg_time="1200" id="47"
                         name="/beah/examples/tests/testargs" role="STANDALONE"
@@ -316,7 +317,6 @@ def main():
                     <roles>
                         <role value="STANDALONE">
                             <system value="%(machine0)s"/>
-                            <system value="%(machine1)s"/>
                         </role>
                     </roles>
                     <executable url="/usr/bin/python">
@@ -324,6 +324,7 @@ def main():
                         <arg value="%(beah_root)s/examples/tests/testargs" />
                     </executable>
                 </task>
+                            <system value="%(machine1)s"/>
                 -->
 
                 <!--

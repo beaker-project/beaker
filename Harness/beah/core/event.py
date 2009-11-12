@@ -226,6 +226,36 @@ def file_close(file_id, origin={}, timestamp=None, **kwargs):
     return Event('file_close', origin=origin, timestamp=timestamp,
             file_id=file_id, **kwargs)
 
+def variable_set(key, value, handle='', origin={}, timestamp=None,
+        **kwargs):
+    """
+    Set a "variable's" value.
+
+    Variable is identified by tuple (handle, key, REST), where REST is
+    dependent on handle and kwargs. See e.g. dest.
+
+    Parameters:
+    - key - variable's name. A string.
+    - value - a value to store in the variable. No type restrictions - anything
+      allowed by JSON.
+    - handle - "pool" to look for the variable. A string. The default ('')
+      means to store in Controller's default pool.
+      Other values are to be handled by backends.
+    Other recognized parameters (as keyword arguments):
+    - dest - used with handle == '': the FQDN of remote machine.
+    """
+    return Event('variable_set', origin=origin, timestamp=timestamp,
+            key=key, value=value, handle=handle, **kwargs)
+
+def variable_get(key, handle='', origin={}, timestamp=None, **kwargs):
+    """
+    Get a "variable's" value.
+
+    Parameters: see variable_set for meaning of parameters.
+    """
+    return Event('variable_get', origin=origin, timestamp=timestamp,
+            key=key, handle=handle, **kwargs)
+
 ################################################################################
 # AUXILIARY:
 ################################################################################
