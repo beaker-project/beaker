@@ -14,7 +14,7 @@
  </tr>
  <tr class="list" py:for="recipe_task in recipe_tasks">
    <td class="list">${recipe_task.t_id}</td>
-   <td class="list">${recipe_task.path}</td>
+   <td class="list">${recipe_task.link}</td>
    <td class="list">${recipe_task.start_time}</td>
    <td class="list">${recipe_task.finish_time}</td>
    <td class="list">${recipe_task.duration}</td>

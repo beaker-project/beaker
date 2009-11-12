@@ -10,7 +10,7 @@
 
 
 <body class="flora">
- <table width="97%">
+ <table width="97%" class="show">
   <tr>
    <td class="title"><b>Job ID</b></td>
    <td class="value"><a class="list" href="${tg.url('/jobs/view?id=%s' % job.id)}">${job.t_id}</a></td>
@@ -38,7 +38,7 @@
     </tr>
    </table>
    <div py:for="recipe in recipeset.recipes" class="recipe">
-    <div py:content="recipe_widget(recipe=recipe, recipe_tasks_widget=recipe_tasks_widget)">Recipe goes here</div>
+    <div py:content="recipe_widget(recipe=recipe)">Recipe goes here</div>
    </div>
   </div>
 </body>

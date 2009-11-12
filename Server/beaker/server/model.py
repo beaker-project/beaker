@@ -21,6 +21,7 @@ from sqlalchemy import func
 from sqlalchemy.orm.collections import collection
 from bexceptions import *
 from kid import Element
+from beaker.server.helpers import *
 
 from BasicAuthTransport import BasicAuthTransport
 import xmlrpclib
@@ -1647,6 +1648,14 @@ $SNIPPET("rhts_post")
     def __repr__(self):
         return self.fqdn
 
+    def link(self):
+        """ Return a link to this system
+        """
+        return make_link(url = '/view/%s' % self.fqdn,
+                         text = self.fqdn)
+
+    link = property(link)
+
 # for property in System.mapper.iterate_properties:
 #     print property.mapper.class_.__name__
 #     print property.key
@@ -2129,6 +2138,14 @@ class Distro(object):
                     )
                  )
         )
+
+    def link(self):
+        """ Returns a hyper link to this distro
+        """ 
+        return make_link(url = '/distros/view?id=%s' % self.id,
+                         text = self.name)
+
+    link = property(link)
 
     def __repr__(self):
         return "%s" % self.name
@@ -2874,6 +2891,14 @@ class RecipeTask(TaskBase):
         return self.task.name
     path = property(path)
 
+    def link(self):
+        """ Return a link to this Task
+        """
+        return make_link(url = '/tasks/%s' % self.task.id,
+                         text = self.task.name)
+
+    link = property(link)
+
     def set_status(self, value):
         self._status = value
 
@@ -3221,6 +3246,13 @@ class RecipeTaskResult(MappedObject):
     def t_id(self):
         return "TR:%s" % self.id
     t_id = property(t_id)
+
+    def link(self):
+        """ Just return the path
+        """
+        return self.path
+
+    link = property(link)
 
     def no_value(self):
         return None

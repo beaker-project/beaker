@@ -18,7 +18,7 @@
   </tr>
  </table>
  <div py:if="recipe_widget">
-<p py:content="recipe_widget(recipe=recipe, recipe_tasks_widget=recipe_tasks_widget)">Recipe goes here</p>
+<p py:content="recipe_widget(recipe=recipe)">Recipe goes here</p>
  </div>
 </body>
 </html>
