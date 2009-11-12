@@ -20,6 +20,7 @@ import time
 from sqlalchemy import func
 from sqlalchemy.orm.collections import collection
 from bexceptions import *
+from kid import Element
 
 from BasicAuthTransport import BasicAuthTransport
 import xmlrpclib
@@ -2318,6 +2319,37 @@ class TaskBase(MappedObject):
         else:
             return False
 
+    def progress_bar(self):
+        pwidth=0
+        wwidth=0
+        fwidth=0
+        kwidth=0
+        completed=0
+        if not getattr(self, 'ttasks', None):
+            return None
+        if getattr(self, 'ptasks', None):
+            completed += self.ptasks
+            pwidth = int(float(self.ptasks)/float(self.ttasks)*100)
+        if getattr(self, 'wtasks', None):
+            completed += self.wtasks
+            wwidth = int(float(self.wtasks)/float(self.ttasks)*100)
+        if getattr(self, 'ftasks', None):
+            completed += self.ftasks
+            fwidth = int(float(self.ftasks)/float(self.ttasks)*100)
+        if getattr(self, 'ktasks', None):
+            completed += self.ktasks
+            kwidth = int(float(self.ktasks)/float(self.ttasks)*100)
+        percentCompleted = int(float(completed)/float(self.ttasks)*100)
+        div   = Element('div', {'class': 'dd'})
+        div.append(Element('div', {'class': 'green', 'style': 'width:%s%%' % pwidth}))
+        div.append(Element('div', {'class': 'orange', 'style': 'width:%s%%' % wwidth}))
+        div.append(Element('div', {'class': 'red', 'style': 'width:%s%%' % fwidth}))
+        div.append(Element('div', {'class': 'blue', 'style': 'width:%s%%' % kwidth}))
+        div.tail = "%s%%" % percentCompleted
+        return div
+    progress_bar = property(progress_bar)
+
+
 class Job(TaskBase):
     """
     Container to hold like recipe sets.
@@ -2387,6 +2419,10 @@ class Job(TaskBase):
                 max_result = recipeset.result
         self.status = max_status
         self.result = max_result
+
+    def t_id(self):
+        return "J:%s" % self.id
+    t_id = property(t_id)
 
 
 class RecipeSet(TaskBase):
@@ -2499,6 +2535,10 @@ class RecipeSet(TaskBase):
                     is_failed       = self.is_failed(),
                     subtask_id_list = ["R:%s" % r.id for r in self.recipes]
                    )
+
+    def t_id(self):
+        return "RS:%s" % self.id
+    t_id = property(t_id)
 
 
 class Recipe(TaskBase):
@@ -2720,6 +2760,20 @@ class Recipe(TaskBase):
                     subtask_id_list = ["T:%s" % t.id for t in self.tasks]
                    )
 
+    def t_id(self):
+        return "R:%s" % self.id
+    t_id = property(t_id)
+
+    def all_tasks(self):
+        """
+        Return all tasks and task-results
+        """
+        for task in self.tasks:
+            yield task
+            for task_result in task.results:
+                yield task_result
+    all_tasks = property(all_tasks)
+
 
 class GuestRecipe(Recipe):
     systemtype = 'Virtual'
@@ -2815,6 +2869,10 @@ class RecipeTask(TaskBase):
         except TypeError:
             return None
     duration = property(_get_duration)
+
+    def path(self):
+        return self.task.name
+    path = property(path)
 
     def set_status(self, value):
         self._status = value
@@ -2986,6 +3044,10 @@ class RecipeTask(TaskBase):
                     subtask_id_list = ["TR:%s" % tr.id for tr in self.results]
                    )
 
+    def t_id(self):
+        return "T:%s" % self.id
+    t_id = property(t_id)
+
 
 class RecipeTaskRoleListAdapter(object):
     def __init__(self, parent, role):
@@ -3155,6 +3217,18 @@ class RecipeTaskResult(MappedObject):
                     is_finished     = True,
                     is_failed       = False
                    )
+
+    def t_id(self):
+        return "TR:%s" % self.id
+    t_id = property(t_id)
+
+    def no_value(self):
+        return None
+   
+    start_time = property(no_value)
+    finish_time = property(no_value)
+    duration = property(no_value)
+    status = property(no_value)
 
 
 class Task(MappedObject):

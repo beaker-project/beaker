@@ -425,6 +425,24 @@ div.list {
 }
 
 /*
+ * CSS for displaying a recipeset
+ */
+
+div.recipeset {
+    border-style: outset;
+    margin: 2px;
+}
+
+/*
+ * CSS for displaying a recipe
+ */
+
+div.recipe {
+    border-style: outset;
+    margin: 5px;
+}
+
+/*
  * CSS for displaying a progress bar
  */
 
@@ -506,6 +524,7 @@ td.value {
     text-align: left;
     padding-top: 5px;
     padding-left: 5px;
+    white-space: nowrap;
 }
 
 div.show {
@@ -547,6 +566,7 @@ td.title {
     padding-right: 5px;
     font-weight: bold;
     padding: 5px;
+    white-space: nowrap;
 }
 
 td.value {
@@ -554,6 +574,7 @@ td.value {
     padding-top: 5px;
     padding-left: 5px;
     padding: 5px;
+    white-space: nowrap;
 }
 
 h1.padded {

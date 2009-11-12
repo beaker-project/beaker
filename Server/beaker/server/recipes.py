@@ -21,6 +21,8 @@ from turbogears import identity, redirect
 from cherrypy import request, response
 from kid import Element
 from beaker.server.widgets import myPaginateDataGrid
+from beaker.server.widgets import RecipeWidget
+from beaker.server.widgets import RecipeTasksWidget
 from beaker.server.xmlrpccontroller import RPCRoot
 from beaker.server.helpers import *
 from beaker.server.recipetasks import RecipeTasks
@@ -42,6 +44,9 @@ class Recipes(RPCRoot):
     exposed = True
 
     tasks = RecipeTasks()
+
+    recipe_widget = RecipeWidget()
+    recipe_tasks_widget = RecipeTasksWidget()
 
     upload = Uploader(config.get("basepath.logs", "/var/www/beaker/logs"))
 
@@ -119,13 +124,25 @@ class Recipes(RPCRoot):
     def index(self, *args, **kw):
         recipes = session.query(MachineRecipe)
         recipes_grid = myPaginateDataGrid(fields=[
-		     widgets.PaginateDataGrid.Column(name='id', getter=lambda x:x.id, title='ID', options=dict(sortable=True)),
+		     widgets.PaginateDataGrid.Column(name='id', getter=lambda x:make_link(url='view?id=%s' % x.id, text=x.t_id), title='ID', options=dict(sortable=True)),
 		     widgets.PaginateDataGrid.Column(name='whiteboard', getter=lambda x:x.whiteboard, title='Whiteboard', options=dict(sortable=True)),
 		     widgets.PaginateDataGrid.Column(name='arch', getter=lambda x:x.arch, title='Arch', options=dict(sortable=True)),
 		     widgets.PaginateDataGrid.Column(name='system', getter=lambda x: make_system_link(x.system), title='System', options=dict(sortable=True)),
 		     widgets.PaginateDataGrid.Column(name='distro', getter=lambda x: make_distro_link(x.distro), title='Distro', options=dict(sortable=True)),
-		     widgets.PaginateDataGrid.Column(name='progress', getter=lambda x: make_progress_bar(x), title='Progress', options=dict(sortable=False)),
+		     widgets.PaginateDataGrid.Column(name='progress', getter=lambda x: x.progress_bar, title='Progress', options=dict(sortable=False)),
 		     widgets.PaginateDataGrid.Column(name='status.status', getter=lambda x:x.status, title='Status', options=dict(sortable=True)),
 		     widgets.PaginateDataGrid.Column(name='result.result', getter=lambda x:x.result, title='Result', options=dict(sortable=True)),
                     ])
         return dict(title="Recipes", grid=recipes_grid, list=recipes, search_bar=None)
+
+    @expose(template="beaker.server.templates.recipe")
+    def view(self, id):
+        try:
+            recipe = Recipe.by_id(id)
+        except InvalidRequestError:
+            flash(_(u"Invalid recipe id %s" % id))
+            redirect(".")
+        return dict(title   = 'Recipe',
+                    recipe_widget        = self.recipe_widget,
+                    recipe_tasks_widget  = self.recipe_tasks_widget,
+                    recipe               = recipe)

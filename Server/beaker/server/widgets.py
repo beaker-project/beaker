@@ -656,3 +656,11 @@ class SystemForm(Form):
  	    d["display_field_for"] = lambda f: self.display_field_for(f,
                                                           d["value_for"](f),
                                                                   **attrs)
+
+class RecipeWidget(Widget):
+    template = "beaker.server.templates.recipe_widget"
+    params = ['recipe']
+
+class RecipeTasksWidget(Widget):
+    template = "beaker.server.templates.recipe_tasks_widget"
+    params = ['recipe_tasks']

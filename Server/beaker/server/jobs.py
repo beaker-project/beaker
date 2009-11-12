@@ -24,6 +24,8 @@ from kid import Element
 from beaker.server.widgets import myPaginateDataGrid
 from beaker.server.xmlrpccontroller import RPCRoot
 from beaker.server.helpers import *
+from beaker.server.widgets import RecipeWidget
+from beaker.server.widgets import RecipeTasksWidget
 import datetime
 
 import cherrypy
@@ -39,6 +41,9 @@ from jobxml import *
 class Jobs(RPCRoot):
     # For XMLRPC methods in this class.
     exposed = True
+
+    recipe_widget = RecipeWidget()
+    recipe_tasks_widget = RecipeTasksWidget()
 
     upload = widgets.FileField(name='job_xml', label='Job XML')
     form = widgets.TableForm(
@@ -186,12 +191,24 @@ class Jobs(RPCRoot):
     def index(self, *args, **kw):
         jobs = session.query(Job).join('status').join('owner').outerjoin('result')
         jobs_grid = myPaginateDataGrid(fields=[
-		     widgets.PaginateDataGrid.Column(name='id', getter=lambda x:x.id, title='ID', options=dict(sortable=True)),
+		     widgets.PaginateDataGrid.Column(name='id', getter=lambda x:make_link(url = 'view?id=%s' % x.id, text = x.t_id), title='ID', options=dict(sortable=True)),
 		     widgets.PaginateDataGrid.Column(name='whiteboard', getter=lambda x:x.whiteboard, title='Whiteboard', options=dict(sortable=True)),
 		     widgets.PaginateDataGrid.Column(name='owner.email_address', getter=lambda x:x.owner.email_address, title='Owner', options=dict(sortable=True)),
-                     widgets.PaginateDataGrid.Column(name='progress', getter=lambda x: make_progress_bar(x), title='Progress', options=dict(sortable=False)),
+                     widgets.PaginateDataGrid.Column(name='progress', getter=lambda x: x.progress_bar, title='Progress', options=dict(sortable=False)),
 		     widgets.PaginateDataGrid.Column(name='status.status', getter=lambda x:x.status, title='Status', options=dict(sortable=True)),
 		     widgets.PaginateDataGrid.Column(name='result.result', getter=lambda x:x.result, title='Result', options=dict(sortable=True)),
                     ])
         return dict(title="Jobs", grid=jobs_grid, list=jobs, search_bar=None)
+
+    @expose(template="beaker.server.templates.job")
+    def view(self, id):
+        try:
+            job = Job.by_id(id)
+        except InvalidRequestError:
+            flash(_(u"Invalid job id %s" % id))
+            redirect(".")
+        return dict(title   = 'Job',
+                    recipe_widget        = self.recipe_widget,
+                    recipe_tasks_widget  = self.recipe_tasks_widget,
+                    job                  = job)
 
