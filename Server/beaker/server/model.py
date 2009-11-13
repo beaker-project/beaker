@@ -2891,6 +2891,9 @@ class RecipeTask(TaskBase):
         return self.task.name
     path = property(path)
 
+    def is_task(self):
+        return True
+
     def link(self):
         """ Return a link to this Task
         """
@@ -3247,12 +3250,21 @@ class RecipeTaskResult(MappedObject):
         return "TR:%s" % self.id
     t_id = property(t_id)
 
-    def link(self):
-        """ Just return the path
+    def short_path(self):
         """
-        return self.path
+        Remove the parent from the begining of the path if present
+        """
+        short_path = self.path
+        if self.path and self.path.startswith(self.recipetask.task.name):
+            short_path = self.path.replace(self.recipetask.task.name,'')
+        if not short_path:
+            short_path = '/'
+        return short_path
 
-    link = property(link)
+    short_path = property(short_path)
+
+    def is_task(self):
+        return False
 
     def no_value(self):
         return None
