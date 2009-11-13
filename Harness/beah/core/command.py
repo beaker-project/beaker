@@ -19,9 +19,10 @@
 import exceptions
 from beah.core import new_id
 
-"""\
+"""
 Commands are used to send instructions from Backend to Controller (and
-eventually Task.)"""
+eventually Task.)
+"""
 
 ################################################################################
 # PUBLIC INTERFACE:
@@ -60,7 +61,7 @@ def variable_get(key, handle='', **kwargs):
     return command('variable_get', key=key, handle=handle, **kwargs)
 
 def variable_value(key, value, handle='', **kwargs):
-    """Used by remote machine to return a "variable's" value."""
+    """Used to return a "variable's" value."""
     return command('variable_value', key=key, value=value, handle=handle,
             **kwargs)
 
@@ -78,33 +79,37 @@ def mkcommand(cmd, __doc__="", **kwargs):
     return cmdf
 
 class Command(list):
-    # FIXME: Clean-up! All the indices are ugly!!!
+
+    COMMAND=1
+    ID=2
+    ARGS=3
+
     def __init__(self, cmd, id=None, **kwargs):
         list.__init__(self, ['Command', None, None, None]) # is this backwards compatible? Even with Python 2.3?
         if isinstance(cmd, list):
-            if cmd[0] != 'Command' or not isinstance(cmd[1], str) or not isinstance(cmd[3], dict):
+            if cmd[0] != 'Command' or not isinstance(cmd[self.COMMAND], str) or not isinstance(cmd[self.ARGS], dict):
                 raise exceptions.TypeError('%r not permitted. Has to be [\'Command\', str, str, dict]' % cmd)
-            self[1] = str(cmd[1])
-            self[2] = cmd[2]
-            self[3] = dict(cmd[3])
+            self[self.COMMAND] = str(cmd[self.COMMAND])
+            self[self.ID] = cmd[self.ID]
+            self[self.ARGS] = dict(cmd[self.ARGS])
         elif isinstance(cmd, str):
-            self[1] = str(cmd)
-            self[2] = id
-            self[3] = dict(kwargs)
+            self[self.COMMAND] = str(cmd)
+            self[self.ID] = id
+            self[self.ARGS] = dict(kwargs)
         else:
             raise exceptions.TypeError('%s not permitted as command, it has to be an instance of list or str' % cmd.__class__.__name__)
 
-        if self[2] is None:
-            self[2] = new_id()
+        if self[self.ID] is None:
+            self[self.ID] = new_id()
         if not isinstance(self.id(), str):
             raise exceptions.TypeError('%r not permitted as id. Has to be str.' % self.id())
 
     def command(self):
-        return self[1]
+        return self[self.COMMAND]
     def id(self):
-        return self[2]
+        return self[self.ID]
     def args(self):
-        return self[3]
+        return self[self.ARGS]
     def arg(self, name, val=None):
         return self.args().get(name, val)
 

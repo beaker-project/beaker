@@ -315,48 +315,76 @@ def event(evt, origin={}, timestamp=None, **kwargs):
 
 import time
 class Event(list):
+
+    """
+    Events are used to communicate events from Task to Controller and finally back
+    to Backend.
+
+    Classes:
+        Event(list)
+        RelObj(list)
+
+    Module contains many functions (e.g. idle, pong, start, end, etc.) to
+    instantiate Event of particular type.
+
+    Event is basically a list ['Event', evt, origin, timestamp, args] where:
+        isinstance(evt, string)
+        isinstance(origin, dict)
+        isinstance(timestamp, float) or timestamp is None
+        isinstance(args, dict)
+
+    The list inheritance is important to be able to serialize to JSON object,
+    and it is (hopefully) faster than objects.
+    """
+
+    EVENT=1
+    ID=2
+    ORIGIN=3
+    TIMESTAMP=4
+    ARGS=5
+
     # FIXME: Clean-up! All the indices are ugly!!!
     def __init__(self, evt, origin={}, timestamp=None, id=None, **kwargs):
         list.__init__(self, ['Event', None, None, None, None, None]) # is this backwards compatible? Even with Python 2.3?
         if isinstance(evt, list):
             if evt[0] != 'Event':
                 raise exceptions.TypeError('%r\'s first element has to be \'Event\'' % evt)
-            self[1] = evt[1]
-            self[2] = evt[2]
-            self[3] = dict(evt[3])
-            self[4] = evt[4]
-            self[5] = dict(evt[5])
+            self[self.EVENT] = evt[self.EVENT]
+            self[self.ID] = evt[self.ID]
+            self[self.ORIGIN] = dict(evt[self.ORIGIN])
+            self[self.TIMESTAMP] = evt[self.TIMESTAMP]
+            self[self.ARGS] = dict(evt[self.ARGS])
         else:
-            self[1] = evt
-            self[2] = id
-            self[3] = origin
-            self[4] = timestamp
-            self[5] = kwargs
+            self[self.EVENT] = evt
+            self[self.ID] = id
+            self[self.ORIGIN] = origin
+            self[self.TIMESTAMP] = timestamp
+            self[self.ARGS] = kwargs
 
         for i in range(1, 6):
             if callable(self[i]):
                 self[i] = self[i](self)
 
-        if self[4] is True:
-            self[4] = time.time()
+        if self[self.TIMESTAMP] is True:
+            self[self.TIMESTAMP] = time.time()
 
-        if self[2] is None:
-            self[2] = new_id()
+        if self[self.ID] is None:
+            self[self.ID] = new_id()
 
-        for key in self[5].keys():
-            if callable(self[5][key]):
-                self[5][key] = self[5][key](self)
+        for key in self[self.ARGS].keys():
+            if callable(self[self.ARGS][key]):
+                self[self.ARGS][key] = self[self.ARGS][key](self)
 
         check_type("event", self.event(), str)
         check_type("origin", self.origin(), dict)
         check_type("args", self.args(), dict)
         check_type("timestamp", self.timestamp(), float, True)
 
-    def event(self): return self[1]
-    def id(self): return self[2]
-    def origin(self): return self[3]
-    def timestamp(self): return self[4]
-    def args(self): return self[5]
+    def event(self): return self[self.EVENT]
+    def id(self): return self[self.ID]
+    def origin(self): return self[self.ORIGIN]
+    def timestamp(self): return self[self.TIMESTAMP]
+    def args(self): return self[self.ARGS]
     def arg(self, name, val=None):
         return self.args().get(name, val)
 
