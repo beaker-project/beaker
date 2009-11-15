@@ -1016,7 +1016,7 @@ class SystemSearch(Search):
       
         #Execute filter on query object  
         for filter_func in self.filter_funcs:           
-            queri = queri.filter(filter_func())
+            queri = queri.filter(filter_func()) 
         return queri        
 
 class System(SystemObject):
