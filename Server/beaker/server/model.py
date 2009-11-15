@@ -444,8 +444,6 @@ key_value_int_table = Table('key_value_int', metadata,
 )
 
 # the identity model
-
-
 class Visit(object):
     """
     A visit to your site
@@ -807,6 +805,36 @@ class Group(object):
         """
         return cls.query().filter(Group.group_name.like('%s%%' % name))
 
+class JoinContainer:
+    def __init__(self): 
+        self.conditional_joins = {} 
+        self.unconditional_joins = []
+
+    def add_conditional(self,col_string,join):   
+        if type(join) == type({}):
+            join = [join]        
+        for elem in join:
+            if type(elem) != type({}):
+                raise TypeError, 'Incorrect type, expecting contents of join array to be of type dict'
+        rule_to_add = {col_string : join }
+        self.conditional_joins.update(rule_to_add)
+
+    def add_unconditional(self,join):
+        #join should be an array
+        if type(join) == type({}):
+            self.unconditional_joins.append(join)
+        elif type(join) == type([]):   
+            self.unconditional_joins.extend(join)
+        else:
+            raise TypeError, "Expecting array of or single clause element"
+     
+    def get_conditional_joins(self,col_string):
+        return self.conditional_joins.get(col_string,[])
+   
+    def get_unconditional_joins(self):
+        return self.unconditional_joins
+        
+ 
 class Search: 
     @classmethod
     def translate_name(cls,display_name):
@@ -961,42 +989,54 @@ class SystemSearch(Search):
         #append a filter function which is to be called later
         self.filter_funcs.append(lambda: filter_func(col,value))
 
-        join_dict = getattr(cls_ref,'join_system',None) 
-        
-        #We may not have a join with System 
-        #I really want to make these joins potentially conditional based on what columns we are searching for/retrieving. 
-        if join_dict != None:
-            for elem in join_dict: 
-                for k,v in elem.iteritems():   
-                    if (self.already_joined.count(k) < 1):
-                        #check the column_conditional_join var
-                        if hasattr(cls_ref,'column_conditional_join'):  
-                            columns = cls_ref.column_conditional_join
-                            if columns.count(column.lower()) < 1:
-                                continue
-
-                        self.j = self.j.join(k,onclause=v)
+        joins = getattr(cls_ref,'joins',None)  
+        #Let's do the joins 
+        if joins != None:
+            unconditional_joins = joins.get_unconditional_joins()
+            for elem in unconditional_joins: 
+                for k,v in elem.iteritems():  
+                    if (self.already_joined.count(k) < 1): 
+                        self.j = self.j.outerjoin(k,onclause=v)
 		        self.already_joined.append(k) 
+              
+            conditional_joins = joins.get_conditional_joins(column.lower())
+            for elem in conditional_joins:
+                for k,v in elem.iteritems():
+                    if (self.already_joined.count(k) < 1):
+                        log.debug('not already joined %s' % k)
+                        self.j = self.j.outerjoin(k,onclause=v)
+                        self.already_joined.append(k)  
         else:
             pass
 
+        
     def return_results(self):   
         #Do our joins
         queri = session.query(System).select_from(self.j)     
       
         #Execute filter on query object  
         for filter_func in self.filter_funcs:           
+<<<<<<< HEAD:Server/beaker/server/model.py
             queri = queri.filter(filter_func())  
+=======
+            queri = queri.filter(filter_func()) 
+>>>>>>> 499b3e2... 537291 - Fixes 500 error when search on cpu/flags.:Server/beaker/server/model.py
         return queri        
 
 class System(SystemObject):
     table = system_table
     search_table = []  
+<<<<<<< HEAD:Server/beaker/server/model.py
     #column_conditional_join specifies what columns we need to be searching on
     #if we are to use the join_system
     column_conditional_join = ('arch')
     join_system = [{system_arch_map: system_table.c.id == system_arch_map.c.system_id}, 
                    {arch_table: arch_table.c.id == system_arch_map.c.arch_id}]
+=======
+    joins = JoinContainer()
+    joins.add_conditional('arch', [{system_arch_map: system_table.c.id == system_arch_map.c.system_id}, 
+                                   {arch_table: arch_table.c.id == system_arch_map.c.arch_id}]) 
+>>>>>>> 499b3e2... 537291 - Fixes 500 error when search on cpu/flags.:Server/beaker/server/model.py
     #If we have a set of predefined values that a column can be searched on, put them in the 
     # search_values_dict of the corresponding class
     search_values_dict =     { 'Status' : lambda: SystemStatus.get_all_status_name(),
@@ -1872,7 +1912,13 @@ class LabInfo(SystemObject):
 class Cpu(SystemObject): 
     table = cpu_table      
     display_name = 'CPU'
+<<<<<<< HEAD:Server/beaker/server/model.py
     join_system = [{cpu_table : system_table.c.id == cpu_table.c.system_id}]
+=======
+    joins = JoinContainer()
+    joins.add_unconditional({ cpu_table : system_table.c.id == cpu_table.c.system_id })
+    joins.add_conditional('flags',  { cpu_flag_table : cpu_flag_table.c.cpu_id == cpu_table.c.id})   
+>>>>>>> 499b3e2... 537291 - Fixes 500 error when search on cpu/flags.:Server/beaker/server/model.py
     search_values_dict = { 'Hyper' : ['True','False'] }
 
     def __init__(self, vendor=None, model=None, model_name=None, family=None, stepping=None,speed=None,processors=None,cores=None,sockets=None,flags=None):
@@ -1896,6 +1942,18 @@ class Cpu(SystemObject):
 	    for cpuflag in flags:
                 new_flag = CpuFlag(flag=cpuflag)
                 self.flags.append(new_flag)
+
+    @classmethod
+    def flags_is_not_filter(cls,col,val):
+        """flags_is_not_filter is a function dynamically called from append_results.
+           It serves to provide a table column operation specific method of filtering results of CPU/Flags
+        """       
+        if not val:
+            return col != val
+        else:
+            query = Cpu.query().filter(Cpu.flags.any(CpuFlag.flag == val))
+            ids = [r.id for r in query]
+            return or_(not_(cpu_table.c.id.in_(ids)), col == None) 
 
     @classmethod
     def get_searchable(cls):
@@ -2342,7 +2400,7 @@ Cpu.mapper = mapper(Cpu,cpu_table,properties = {
                                                  'stepping':synonym('Stepping',map_column=True),
                                                  'speed':synonym('Speed',map_column=True),
                                                  'family':synonym('Family',map_column=True), 
-                                                 'Flags':column_property(select([cpu_flag_table.c.flag],cpu_flag_table.c.cpu_id == cpu_table.c.id).correlate(cpu_table).label('Flags'),deferred = True),  
+                                                 'Flags':column_property(select([cpu_flag_table.c.flag]).correlate(cpu_flag_table).label('Flags'),deferred = True),  
                                                  'flags':relation(CpuFlag), 
                                                  'system':relation(System) } )
 mapper(Arch, arch_table)
