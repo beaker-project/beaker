@@ -224,13 +224,14 @@ class Root(RPCRoot):
         action = 'save_data',
         submit_text = _(u'Change'),
     ) 
- 
+   
     search_bar = SearchBar(name='systemsearch',
                            label=_(u'System Search'), 
-                           extra_selects = [ { 'name': 'keyvalue', 'column':'key/value','display':'none' , 'pos' : 2}], 
-                           table_callback=SystemSearch.create_search_table([System,Cpu,Device,Key]),
-                           search_controller=url("/get_search_options")
-                 )
+                           extra_selects = [ { 'name': 'keyvalue', 'column':'key/value','display':'none' , 'pos' : 2,'callback':url('/get_operators_keyvalue') }], 
+                           table=SystemSearch.create_search_table([System,Cpu,Device,Key]),
+                           search_controller=url("/get_search_options"),
+                           table_search_controllers = {'key/value':url('/get_keyvalue_search_options')} )
+                 
   
     system_form = SystemForm()
     power_form = PowerForm(name='power')
@@ -246,12 +247,23 @@ class Root(RPCRoot):
     system_provision = SystemProvision(name='provision')
     arches_form = SystemArches(name='arches')
 
+    @expose(format='json')
+    def get_keyvalue_search_options(self,**kw):
+        return_dict = {}
+        return_dict['keyvals'] = Key.get_all_keys()
+        return return_dict
 
+    @expose(format='json')
+    def get_operators_keyvalue(self,keyvalue_field,*args,**kw): 
+        return_dict = {}
+        search = SystemSearch.search_on_keyvalue(keyvalue_field)
+        search.sort()
+        return_dict['search_by'] = search
+        return return_dict
+         
     @expose(format='json')
     def get_search_options(self,table_field,**kw): 
         return_dict = {}
-        if kw.has_key('keyvalue'): 
-            return_dict['keyvals'] =  Key.get_all_keys() 
         search =  SystemSearch.search_on(table_field)  
       
         #Determine what field type we are dealing with. If it is Boolean, convert our values to 0 for False
@@ -347,7 +359,7 @@ class Root(RPCRoot):
             cls_ref = SystemSearch.translate_name(class_field_list[0])
             col = class_field_list[1]              
             #If value id False or True, let's convert them to
-            sys_search.append_results(cls_ref,search['value'],col,search['operation']) 
+            sys_search.append_results(cls_ref,search['value'],col,search['operation'],keyvalue = search['keyvalue']) 
          
         systems = sys_search.return_results()
         new_systems = System.all(identity.current.user,system = systems)    

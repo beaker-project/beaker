@@ -1,12 +1,7 @@
-SearchBar = function (fields, searchController,operationvalue) {
-	//this.tableid = tableid;
-	//this.tableField = null;
+SearchBar = function (fields, searchController,operationvalue,column_based_controllers,table_search_controllers) {
         this.operationvalue = operationvalue;
-        // this.operationid = operationid;
-        //this.operationField = null;
-        //this.valueField = null;
-        //this.searchvalue = searchvalue
-        //this.valueid = valueid;
+        this.table_controllers = []
+        this.column_controller = column_based_controllers
         this.last_table_value = ''
         this.fields = []  
         for (index in fields) {
@@ -24,6 +19,10 @@ SearchBar = function (fields, searchController,operationvalue) {
                 SearchBarForm.tracking_columns[fields[index].column] = field_name_mod
             } 
         }
+     
+        for (index in table_search_controllers) {   
+             this.table_controllers[index] = table_search_controllers[index]
+        }
          
 	this.searchController = searchController;
 	bindMethods(this);
@@ -33,8 +32,16 @@ SearchBar.prototype.initialize = function() {
         SearchBarForm.searchbar_instances.push(this)
         for (index in this.fields) { 
             field = this.fields[index]
-            this[field+'Field'] = getElement(this[field+'id'])
+            field_id = this[field+'id']
+            this[field+'Field'] = getElement(field_id)
            
+            bare_name = field_id.replace(this.my_regex,"$2")
+            column_controller = this.column_controller[bare_name]
+            
+            if (column_controller) {
+                if (bare_name == 'keyvalue')  
+	            updateNodeAttributes(this[field+'Field'], {"onchange": this.keyValueOnChange });
+            }
             /* Basically what this does is checks whether or not a field of the searchbar
                has been marked to be hidden. If it has, we find the relavent parts of the DOM 
                that need to be hidden (i.e the <td> of the field, and the <th> of it's label).
@@ -141,13 +148,14 @@ SearchBar.prototype.replaceOptions = function(arg) {
     return option;
 }
 
+SearchBar.prototype.replaceKeyValueFields = function(result) {
+   replaceChildNodes(this.keyvalueid, map(this.replaceOptions,result.keyvals))
+
+}
 
 SearchBar.prototype.replaceFields = function(result) {
    this.updateSearchVals(result.search_vals) 
    replaceChildNodes(this.operationid, map(this.replaceOptions, result.search_by));
-   if (result.keyvals) {
-       replaceChildNodes(this.keyvalueid, map(this.replaceOptions,result.keyvals))
-   }
 }
 
 SearchBar.prototype.updateSearchVals = function(vals) {
@@ -196,11 +204,26 @@ SearchBar.prototype.updateSearchVals = function(vals) {
   replaceChildNodes(par,new_dom)
 }
 
+SearchBar.prototype.keyValueOnChange = function(event) { 
+    var params = {"tg_format"          : "json",
+                  "tg_random"          : new Date().getTime(),
+                  "keyvalue_field"     : this.keyvalueField.value};
+
+    controller = this.column_controller['keyvalue'] 
+     
+    var d = loadJSONDoc(controller + "?" + queryString(params));
+    d.addCallback(this.replaceFields);
+
+}
+
 SearchBar.prototype.theOnChange = function(event) {
     var params = {"tg_format"          : "json",
                   "tg_random"          : new Date().getTime(),
                   "table_field"         : this.tableField.value};
-    
+
+    callback = this.replaceFields //default callback
+    controller = this.searchController //default controller
+
     /*let's switch off any columns the new value isn't using.
       We do this by having a look at the last column that was used, and basically hiding all the columns
       it was explicitly showing by way of the SearchBarForm.tracking_columns variable
@@ -211,24 +234,35 @@ SearchBar.prototype.theOnChange = function(event) {
     }
      
     //table_field. Now what we need to do here is have a look at the 
-    //tracking_column to see if this table_field needs to switch any columns on
+    //tracking_column to see if this new table_field needs to switch any columns on
     table_value_lower = this.tableField.value.toLowerCase()
     tracked_column = SearchBarForm.tracking_columns[table_value_lower]
     if (tracked_column) {
         table_field_id = this.tableField.id 
         parent_tr_id  = table_field_id.replace(this.my_regex,"$1")
         field_to_show = parent_tr_id+'_'+SearchBarForm.tracking_columns[table_value_lower]
-        this.show(field_to_show) 
-        
-        if (tracked_column == 'keyvalue') {
-            params['keyvalue'] = 1
+        this.show(field_to_show)    
+    }
+     
+  
+    special_controller = this.table_controllers[table_value_lower]
+    if (special_controller) {
+        controller = special_controller
 
+        /* If you want to specify a particular function to deal with the returned
+         * results of the ajax call, do so here..
+         */  
+        if (table_value_lower == 'key/value') {
+            params = {}
+            callback = this.replaceKeyValueFields
+            
         }
     } 
  
     this.last_table_value = table_value_lower
-    var d = loadJSONDoc(this.searchController + "?" + queryString(params));
-    d.addCallback(this.replaceFields);
+    var d = loadJSONDoc(controller + "?" + queryString(params));
+    
+    d.addCallback(callback);
 }
 
 var SearchBarForm = {
@@ -239,6 +273,7 @@ var SearchBarForm = {
     searchbar_instances : [],
     tracking_columns : [],
     column_count : [],
+    operation_defer : ['key/value'],
 
     removeItem: function(node_id) {
         this_node = document.getElementById(node_id);
