@@ -1016,27 +1016,17 @@ class SystemSearch(Search):
       
         #Execute filter on query object  
         for filter_func in self.filter_funcs:           
-<<<<<<< HEAD:Server/beaker/server/model.py
-            queri = queri.filter(filter_func())  
-=======
             queri = queri.filter(filter_func()) 
->>>>>>> 499b3e2... 537291 - Fixes 500 error when search on cpu/flags.:Server/beaker/server/model.py
+
         return queri        
 
 class System(SystemObject):
     table = system_table
     search_table = []  
-<<<<<<< HEAD:Server/beaker/server/model.py
-    #column_conditional_join specifies what columns we need to be searching on
-    #if we are to use the join_system
-    column_conditional_join = ('arch')
-    join_system = [{system_arch_map: system_table.c.id == system_arch_map.c.system_id}, 
-                   {arch_table: arch_table.c.id == system_arch_map.c.arch_id}]
-=======
     joins = JoinContainer()
     joins.add_conditional('arch', [{system_arch_map: system_table.c.id == system_arch_map.c.system_id}, 
                                    {arch_table: arch_table.c.id == system_arch_map.c.arch_id}]) 
->>>>>>> 499b3e2... 537291 - Fixes 500 error when search on cpu/flags.:Server/beaker/server/model.py
+
     #If we have a set of predefined values that a column can be searched on, put them in the 
     # search_values_dict of the corresponding class
     search_values_dict =     { 'Status' : lambda: SystemStatus.get_all_status_name(),
@@ -1912,13 +1902,9 @@ class LabInfo(SystemObject):
 class Cpu(SystemObject): 
     table = cpu_table      
     display_name = 'CPU'
-<<<<<<< HEAD:Server/beaker/server/model.py
-    join_system = [{cpu_table : system_table.c.id == cpu_table.c.system_id}]
-=======
     joins = JoinContainer()
     joins.add_unconditional({ cpu_table : system_table.c.id == cpu_table.c.system_id })
     joins.add_conditional('flags',  { cpu_flag_table : cpu_flag_table.c.cpu_id == cpu_table.c.id})   
->>>>>>> 499b3e2... 537291 - Fixes 500 error when search on cpu/flags.:Server/beaker/server/model.py
     search_values_dict = { 'Hyper' : ['True','False'] }
 
     def __init__(self, vendor=None, model=None, model_name=None, family=None, stepping=None,speed=None,processors=None,cores=None,sockets=None,flags=None):
