@@ -1995,9 +1995,11 @@ class DeviceClass(SystemObject):
 
 class Device(SystemObject):
     table = device_table
-    display_name = 'Devices'  
-    join_system = [{system_device_map : system_table.c.id == system_device_map.c.system_id},
-                   {device_table : system_device_map.c.device_id == device_table.c.id}]
+    display_name = 'Devices' 
+    joins = JoinContainer()
+    joins.add_unconditional([{system_device_map : system_table.c.id  == system_device_map.c.system_id},
+                             {device_table : system_device_map.c.device_id == device_table.c.id}])
+                  
  
     def __init__(self, vendor_id=None, device_id=None, subsys_device_id=None, subsys_vendor_id=None, bus=None, driver=None, device_class=None, description=None):
         if not device_class:
