@@ -133,7 +133,7 @@ ln -s Fedora.ks $RPM_BUILD_ROOT/var/lib/cobbler/kickstarts/Fedoradevelopment.ks
 /usr/share/man/man1/beakerlib*
 
 %changelog
-* Wed Nov 17 2009 Bill Peck <bpeck@redhat.com> - 0.4.61-0
+* Tue Nov 17 2009 Bill Peck <bpeck@redhat.com> - 0.4.61-0
 - Fixes for searching on cpuflags
 - new manual kickstart keyword allows interactive installs
 * Wed Oct 28 2009 Bill Peck <bpeck@redhat.com> - 0.4.57-0
