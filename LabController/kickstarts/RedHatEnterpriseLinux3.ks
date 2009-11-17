@@ -1,5 +1,5 @@
 url --url=$tree
-#if $getVar('system_name', '') != ''
+#if $getVar('system_name', '') != '' and $getVar('manual', 'False') == 'False'
 authconfig  --enableshadow  --enablemd5
 # System bootloader configuration
 bootloader --location=mbr
