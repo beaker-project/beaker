@@ -19,13 +19,14 @@
 from twisted.web import xmlrpc, server
 from twisted.internet import reactor, protocol, stdio
 from twisted.protocols import basic
+from twisted.internet.defer import Deferred
 import simplejson as json
 import os
 import os.path
 import tempfile
 import exceptions
 import uuid
-from beah.core import event
+from beah.core import event, command
 from beah.wires.internals.twmisc import (serveAnyChild, serveAnyRequest,
         JSONProtocol)
 from beah.core.constants import RC
@@ -253,12 +254,20 @@ class RHTSSync(xmlrpc.XMLRPC):
     def __init__(self, main):
         self.main = main
 
+    def trhostname(hostname):
+        if hostname == os.environ['HOSTNAME']:
+            return ''
+        return hostname
+    trhostname = staticmethod(trhostname)
+
     def xmlrpc_set(self, recipe_set_id, test_order, result_server, hostname,
             state):
         logging.debug("XMLRPC: sync.set(%r, %r, %r, %r, %r)", recipe_set_id,
                 test_order, result_server, hostname, state)
-        # FIXME: implement this!!!
-        # Requires async communication with LC - should return Deferred object
+        evt = event.variable_set('sync/recipe_set_%s/test_order_%s' \
+                % (recipe_set_id, test_order),
+                state, dest=self.trhostname(hostname))
+        self.main.send_evt(evt)
         return 0 # or "Failure reason"
     xmlrpc_set.signature = [['int', 'int', 'int', 'string', 'string', 'string']]
 
@@ -267,12 +276,15 @@ class RHTSSync(xmlrpc.XMLRPC):
         logging.debug("XMLRPC: sync.block(%r, %r, %r, %r, %r)", recipe_set_id,
                 test_order, result_server, states, hostnames)
         answ = []
-        # FIXME: implement this!!!
-        for name in hostnames:
-            # Requires async communication with LC - should return Deferred
-            # object
-            answ.append(states[0])
-        return answ
+        wait_for = []
+        for hostname in hostnames:
+            name = 'sync/recipe_set_%s/test_order_%s' \
+                    % (recipe_set_id, test_order)
+            dest = self.trhostname(hostname)
+            evt = event.variable_get(name, dest=dest)
+            self.main.send_evt(evt)
+            wait_for.append((name, '', dest))
+        return self.main.wait_for_variables(wait_for, states)
     xmlrpc_block.signature = [['list', 'int', 'int', 'string', 'list', 'list']]
 
 
@@ -332,6 +344,7 @@ class RHTSMain(object):
         self.task_path = task_path
         self.__done = False
         self.__files = {}
+        self.__waits_for = []
 
         # FIXME: is return value of any use?
         stdio.StandardIO(self.controller)
@@ -390,7 +403,10 @@ class RHTSMain(object):
         # FIXME: process commands on input
         # - allowed commands: sync-set, sync-block, kill
         # - anything else?
-        pass
+        cmd = command.command(cmd)
+        logging.debug("received cmd: %r", cmd)
+        if cmd.command() == 'variable_value':
+            self.handle_variable_value(cmd)
 
     def controller_connected(self):
         pass
@@ -399,7 +415,6 @@ class RHTSMain(object):
         if not self.__done:
             logging.error("Connection to controller was lost! reason=%s", reason)
             self.on_exit()
-
 
     def task_stdout(self, data):
         # FIXME: RHTS Task can send an event! Handle it!
@@ -420,6 +435,43 @@ class RHTSMain(object):
             logging.info("task_ended(%s)", reason)
             self.send_evt(event.linfo("task_ended", reason=str(reason)))
             self.on_exit()
+
+    def handle_variable_value(self, cmd):
+        logging.debug("handling variable_value.")
+        logging.debug("...waiting for: %r", self.__waits_for)
+        cmd_name = cmd.arg('key')
+        cmd_handle = cmd.arg('handle')
+        cmd_dest = cmd.arg('dest')
+        cmd_value = cmd.arg('value')
+        for waits in self.__waits_for:
+            (d, states, variables) = waits
+            answ = []
+            for var in variables:
+                (name, handle, dest, val) = var
+                # FIXME!!! compare: dest=='localhost'
+                if name==cmd_name and handle==cmd_handle and dest==cmd_dest:
+                    var[3] = cmd_value
+                    logging.debug("variable match: %r", var)
+                if answ is not None:
+                    if cmd_value in states:
+                        logging.debug("value match: %r", cmd_value)
+                        answ.append(cmd_value)
+                    else:
+                        answ = None
+            if answ is not None:
+                logging.debug("all values match: %r", answ)
+                d.callback(answ)
+                while waits:
+                    waits.pop()
+        self.__waits_for = [waits for wait in self.__waits_for if wait]
+        logging.debug("variable_value handled.")
+        logging.debug("...waiting for: %r", self.__waits_for)
+
+    def wait_for_variables(self, variables, states):
+        d = Deferred()
+        vs = [[name, handle, dest, None] for (name, handle, dest) in variables]
+        self.__waits_for.append([d, states, list(vs)])
+        return d
 
     def set_file(self, name):
         if name is None:

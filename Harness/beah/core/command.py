@@ -55,6 +55,15 @@ def no_input():
 def no_output():
     return command('no_output')
 
+def variable_get(key, handle='', **kwargs):
+    """Request a "variable's" value on a remote machine."""
+    return command('variable_get', key=key, handle=handle, **kwargs)
+
+def variable_value(key, value, handle='', **kwargs):
+    """Used by remote machine to return a "variable's" value."""
+    return command('variable_value', key=key, value=value, handle=handle,
+            **kwargs)
+
 ################################################################################
 # IMPLEMENTATION:
 ################################################################################
