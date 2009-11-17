@@ -241,8 +241,7 @@ class SearchBar(RepeatingFormField):
                 new_select = SingleSelectFieldJSON(name=elem['name'],options=[None], css_classes = new_class, validator=validators.NotEmpty(),for_column=elem['column'] )
                 if elem['name'] == 'keyvalue':
                     self.keyvaluevalue = new_select
-
-                self.send_values[elem['name']] = new_select
+ 
                 if elem.has_key('pos'):
                     self.fields.insert(elem['pos'] - 1,new_select)
                 else:

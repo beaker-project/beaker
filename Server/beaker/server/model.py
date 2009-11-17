@@ -1029,8 +1029,8 @@ class SystemSearch(Search):
         #At this point we can also call a custom function before we try to append our results
         try:
             col_op_pre = getattr(cls_ref,'%s_%s_pre' % (column.lower(),underscored_operation),None) 
-        except, e:
-            log.error('Unable to call call pre function: %s' % e)
+        except Exception, (error):
+            log.error('Unable to call call pre function: %s' % error)
     
         if col_op_pre is not None:
             results_from_pre = col_op_pre(value,col=column,op = operation, **kw)
@@ -1092,8 +1092,8 @@ class SystemSearch(Search):
         queri = session.query(System).select_from(self.j)     
       
         #Execute filter on query object  
-        for filter_func in self.filter_funcs:
-            queri = queri.filter(filter_func()) 
+        for filter_func in self.filter_funcs:           
+            queri = queri.filter(filter_func())
         return queri        
 
 class System(SystemObject):
@@ -2378,6 +2378,14 @@ class Key(SystemObject):
     @classmethod
     def value_greater_than_pre(cls,value,**kw):
         cls.value_pre(value,**kw)
+    
+    @classmethod
+    def value_greater_than_filter(cls,col,val,key_name):
+        result = cls.by_name(key_name) 
+        int_table = result.numeric
+        key_id = result.id
+        return and_(Key_Value_Int.key_value > val, Key_Value_Int.key_id == key_id)
+  
 
     @classmethod
     def value_is_filter(cls,col,val,key_name):
