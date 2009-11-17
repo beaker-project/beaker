@@ -3253,12 +3253,17 @@ class RecipeTaskResult(MappedObject):
     def short_path(self):
         """
         Remove the parent from the begining of the path if present
+        Try really hard to start path with ./
         """
         short_path = self.path
         if self.path and self.path.startswith(self.recipetask.task.name):
             short_path = self.path.replace(self.recipetask.task.name,'')
         if not short_path:
-            short_path = '/'
+            short_path = './'
+        if short_path.startswith('/'):
+            short_path = '.%s' % short_path
+        elif not short_path.startswith('.'):
+            short_path = './%s' % short_path
         return short_path
 
     short_path = property(short_path)

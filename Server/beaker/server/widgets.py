@@ -9,7 +9,7 @@ from turbogears.widgets import (Form, TextField, SubmitButton, TextArea,
                                 HiddenField, RemoteForm, CheckBoxList, JSLink,
                                 Widget, TableForm, FormField, CompoundFormField,
                                 static, PaginateDataGrid, RepeatingFormField,
-                                CompoundWidget, AjaxGrid, Tabber, 
+                                CompoundWidget, AjaxGrid, Tabber, CSSLink,
                                 RepeatingFieldSet, SelectionField)
 
 
@@ -20,6 +20,16 @@ class LocalJSLink(JSLink):
     def update_params(self, d):
         super(JSLink, self).update_params(d)
         d["link"] = url(self.name)
+
+
+class LocalCSSLink(CSSLink):
+    """
+    Link to local CSS files
+    """
+    def update_params(self, d):
+        super(CSSLink, self).update_params(d)
+        d["link"] = url(self.name)
+
 
 class PowerTypeForm(CompoundFormField):
     """Dynmaically modifies power arguments based on Power Type Selection"""
@@ -662,6 +672,8 @@ class RecipeTasksWidget(Widget):
     params = ['recipe_tasks']
 
 class RecipeWidget(CompoundWidget):
+    javascript = []
+    css = []
     template = "beaker.server.templates.recipe_widget"
     params = ['recipe']
     member_widgets = ['recipe_tasks_widget']

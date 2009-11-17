@@ -54,4 +54,3 @@
   <p py:content="recipe_tasks_widget(recipe_tasks=recipe.all_tasks)">Recipe Tasks goes here</p>
  </div>
 </div>
-
