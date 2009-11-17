@@ -576,6 +576,10 @@ class Modeller(object):
         self.structure ={ 'sqlalchemy.types.String'  : { 'is' : lambda x,y: self.equals(x,y) ,
                                                          'is not' : lambda x,y: self.not_equal(x,y),
                                                          'contains' : lambda x,y: self.contains(x,y), },
+
+                          'sqlalchemy.types.Text'    : { 'is' : lambda x,y: self.equals(x,y) ,
+                                                         'is not' : lambda x,y: self.not_equal(x,y),
+                                                         'contains' : lambda x,y: self.contains(x,y), },
                                                
                           'sqlalchemy.types.Integer'  : { 'is' : lambda x,y: self.equals(x,y), 
                                                           'is not' : lambda x,y: self.not_equal(x,y),
@@ -640,7 +644,7 @@ class Modeller(object):
         # int,integer,num,number,numeric will match for an sqlalchemy.types.Integer.
         # string, word match for sqlalchemy.types.String
         # bool,boolean will match for sqlalchemy.types.Boolean
-        
+        operators = None 
         try:
             operators = self.structure[type] 
         except KeyError, (error):
@@ -829,6 +833,7 @@ class Group(object):
         """
         return cls.query().filter(Group.group_name.like('%s%%' % name))
 
+
 class JoinContainer:
     def __init__(self): 
         self.conditional_joins = {} 
@@ -852,12 +857,27 @@ class JoinContainer:
         else:
             raise TypeError, "Expecting array of or single clause element"
      
-    def get_conditional_joins(self,col_string):
+    def get_conditional_joins(self,col_string,**kw):
         return self.conditional_joins.get(col_string,[])
    
     def get_unconditional_joins(self):
         return self.unconditional_joins
         
+class KeyJoinContainer(JoinContainer):
+     def __init__(self):
+         JoinContainer.__init__(self)
+     
+     def get_conditional_joins(self,col_string,**kw):
+        log.debug('kw is %s' % kw)
+        if not kw.get('keyvalue'):
+            raise Exception, 'This is temporary, but we should have found keyvalue %s' % kw   
+        result = Key.by_name(kw['keyvalue']) 
+        int_table = result.numeric
+        if int_table == 1:
+           
+            return self.conditional_joins.get(col_string + '_int',None) 
+        elif int_table == 0:
+            return self.conditional_joins.get(col_string + '_string',None) 
  
 class Search: 
     @classmethod
@@ -1006,12 +1026,14 @@ class SystemSearch(Search):
 
         col_op_filter = getattr(cls_ref,'%s_%s_filter' % (column.lower(),underscored_operation),None)
        
-
         #At this point we can also call a custom function before we try to append our results
-        col_op_pre = getattr(cls_ref,'%s_%s_pre' % (column.lower(),underscored_operation),None) 
+        try:
+            col_op_pre = getattr(cls_ref,'%s_%s_pre' % (column.lower(),underscored_operation),None) 
+        except, e:
+            log.error('Unable to call call pre function: %s' % e)
+    
         if col_op_pre is not None:
             results_from_pre = col_op_pre(value,col=column,op = operation, **kw)
-
 
         try:
             _c = cls_ref.mapper.c
@@ -1024,8 +1046,8 @@ class SystemSearch(Search):
                 filter_func = col_op_filter   
                 filter_final = lambda: filter_func(col,value)
                 #If you want to pass custom args to your custom filter, here is where you do it
-                if kw.has_key('keyvalue'):
-                    filter_final = lambda: filter_func(col,value,kw['keyvalue'])   
+                if kw.has_key('keyvalue'): 
+                    filter_final = lambda: filter_func(col,value,key_name = kw['keyvalue'])   
             else:
                 #using just the regular filter operations from Modeller
                 try: 
@@ -1055,7 +1077,7 @@ class SystemSearch(Search):
                         self.j = self.j.outerjoin(k,onclause=v)
 		        self.already_joined.append(k) 
               
-            conditional_joins = joins.get_conditional_joins(column.lower())
+            conditional_joins = joins.get_conditional_joins(column.lower(),**kw)
             for elem in conditional_joins:
                 for k,v in elem.iteritems():
                     if (self.already_joined.count(k) < 1):
@@ -1064,7 +1086,6 @@ class SystemSearch(Search):
                         self.already_joined.append(k)  
         else:
             pass
-
         
     def return_results(self):   
         #Do our joins
@@ -1990,7 +2011,7 @@ class Cpu(SystemObject):
                 self.flags.append(new_flag)
 
     @classmethod
-    def flags_is_not_filter(cls,col,val):
+    def flags_is_not_filter(cls,col,val,**kw):
         """flags_is_not_filter is a function dynamically called from append_results.
            It serves to provide a table column operation specific method of filtering results of CPU/Flags
         """       
@@ -2311,18 +2332,23 @@ class KeyValue(object):
         self.y = y
 
 class Key(SystemObject):
-    join_system = [{key_value_int_table: key_value_int_table.c.system_id == system_table.c.id }, 
-                   {key_table: key_table.c.id == key_value_int_table.c.key_id}]
+    joins = KeyJoinContainer()
+    joins.add_conditional('value_int',[{key_value_int_table: key_value_int_table.c.system_id == system_table.c.id }, 
+                                       {key_table: key_table.c.id == key_value_int_table.c.key_id}])
+    
+    joins.add_conditional('value_string',[{key_value_string_table: key_value_string_table.c.system_id == system_table.c.id }, 
+                                          {key_table: key_table.c.id == key_value_string_table.c.key_id}])
+
     @classmethod
     def search_operators(cls,type,loose_match = None):
         m = Modeller()
         operators = m.return_operators(type,loose_match)    
         return operators 
-   
+
     @classmethod
-    def value_is_pre(cls,value,**kw): 
+    def value_pre(cls,value,**kw): 
         if not kw.get('keyvalue'):
-            raise Exception, 'This is temporary, but we should have found keyvalueiL %s' % kw   
+            raise Exception, 'value_pre needs a keyvalue. keyvalue not found' 
         result = cls.by_name(kw['keyvalue']) 
         int_table = result.numeric
         key_id = result.id
@@ -2332,6 +2358,26 @@ class Key(SystemObject):
         elif int_table == 0:
             log.debug('In string for value_is_pre')
             cls.mapper.add_property('Value',column_property(select([key_value_string_table.c.key_value],key_value_string_table.c.system_id == system_table.c.id).correlate(system_table).label('Value'), deferred = True ))    
+
+    @classmethod   
+    def value_contains_pre(cls,value,**kw):
+       cls.value_pre(value,**kw)
+
+    @classmethod
+    def value_is_pre(cls,value,**kw): 
+       cls.value_pre(value,**kw)
+
+    @classmethod
+    def value_is_not_pre(cls,value,**kw):
+        cls.value_pre(value,**kw)
+ 
+    @classmethod
+    def value_less_than_pre(cls,value,**kw):
+        cls.value_pre(value,**kw)
+
+    @classmethod
+    def value_greater_than_pre(cls,value,**kw):
+        cls.value_pre(value,**kw)
 
     @classmethod
     def value_is_filter(cls,col,val,key_name):
@@ -2345,10 +2391,19 @@ class Key(SystemObject):
         elif int_table == 0: 
             log.debug('Returning value is string for value_is_filter')
             return and_(key_value_string_table.c.key_value == val,key_value_string_table.c.key_id == key_id) 
+
  
-      
+    @classmethod
+    def value_is_not_filter(cls,col,val,key_name):
+        result =cls.by_name(key_name)
+        int_table = result.numeric
+        key_id = result.id
+       
+        if int_table == 1:
+            return and_(or_(Key_Value_Int.key_value != val,Key_Value_Int.key_value == None), or_(Key_Value_Int.key_id == key_id,Key_Value_Int.key_id == None))         
+        elif int_table == 0:
+            return and_(or_(Key_Value_String.key_value != val,Key_Value_String.key_value == None), or_(Key_Value_String.key_id == key_id, Key_Value_String.key_id == None))         
          
-        
 
     @classmethod
     def get_all_keys(cls):
@@ -2359,13 +2414,6 @@ class Key(SystemObject):
     def get_searchable(cls): 
         return cls._create_search_description(dict(includes = ['Value']))
 
-    def __init__(self, key_name=None, numeric=False):
-        self.key_name = key_name
-        self.numeric = numeric
-
-    def __repr__(self):
-        return "%s" % self.key_name
-
     @classmethod
     def by_name(cls, key_name):
         return cls.query().filter_by(key_name=key_name).one()
@@ -2373,6 +2421,14 @@ class Key(SystemObject):
     @classmethod
     def by_id(cls, id):
         return cls.query().filter_by(id=id).one()
+
+    def __init__(self, key_name=None, numeric=False):
+        self.key_name = key_name
+        self.numeric = numeric
+
+    def __repr__(self):
+        return "%s" % self.key_name
+
 
 
 # key_value model

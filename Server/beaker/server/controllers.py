@@ -402,8 +402,8 @@ class Root(RPCRoot):
                         widgets.PaginateDataGrid.Column(name='arch', getter=lambda x: ', '.join([arch.arch for arch in x.arch]), title='Arch', options=dict(sortable=True)),
                         widgets.PaginateDataGrid.Column(name='user.display_name', getter=lambda x: x.user, title='User', options=dict(sortable=True)),
                         widgets.PaginateDataGrid.Column(name='type.type', getter=lambda x: x.type, title='Type', options=dict(sortable=True)),
-                       ])
-       
+                       ]) 
+
         return dict(title="Systems", grid = systems_grid,
                                      list = systems, 
                                      searchvalue = searchvalue,

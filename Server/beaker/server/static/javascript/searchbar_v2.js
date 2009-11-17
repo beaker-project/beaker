@@ -1,14 +1,19 @@
-SearchBar = function (fields, searchController,operationvalue,column_based_controllers,table_search_controllers) {
-        this.operationvalue = operationvalue;
+SearchBar = function (fields, searchController,operationvalue,column_based_controllers,table_search_controllers,keyvaluevalue) {
+        this.operationvalue = operationvalue; 
+        this.keyvaluevalue = keyvaluevalue
         this.table_controllers = []
         this.column_controller = column_based_controllers
         this.last_table_value = ''
+        this.row_identifier = ''
         this.fields = []  
         for (index in fields) {
             field_actual = fields[index].field_id  
             this.my_regex = /(.+?_\d{1,})_(.+)/
             field_complete = field_actual 
             field_name_mod = field_actual.replace(this.my_regex, "$2") 
+            if (!this.row_identifier) {
+                this.row_identifier = field_actual.replace(this.my_regex, "$1") 
+            }
             field_name = field_name_mod + 'id'
             this[field_name] = field_actual  
             this.fields.push(field_name_mod)
@@ -40,7 +45,7 @@ SearchBar.prototype.initialize = function() {
             
             if (column_controller) {
                 if (bare_name == 'keyvalue')  
-	            updateNodeAttributes(this[field+'Field'], {"onchange": this.keyValueOnChange });
+	            updateNodeAttributes(this[field+'Field'], {"onchange": this.keyValueOnChange }); 
             }
             /* Basically what this does is checks whether or not a field of the searchbar
                has been marked to be hidden. If it has, we find the relavent parts of the DOM 
@@ -138,8 +143,8 @@ SearchBar.prototype.replaceValOptions = function(arg) {
     return option;
 }
 
-SearchBar.prototype.replaceOptions = function(arg) {
-    if ( arg == this.operationvalue ) {
+SearchBar.prototype.replaceKeyValues = function(arg) {    
+    if (arg == this.keyvaluevalue) {
         option = OPTION({"value": arg,
                        "selected": true}, arg);
     } else {
@@ -148,14 +153,26 @@ SearchBar.prototype.replaceOptions = function(arg) {
     return option;
 }
 
+SearchBar.prototype.replaceOperations = function(arg) {    
+    if ( arg == this.operationvalue ) {
+        option = OPTION({"value": arg,
+                         "selected": true}, arg);
+    } else {
+        option = OPTION({"value": arg}, arg);
+    }
+    return option;
+}
+
+
 SearchBar.prototype.replaceKeyValueFields = function(result) {
-   replaceChildNodes(this.keyvalueid, map(this.replaceOptions,result.keyvals))
+   replaceChildNodes(this.keyvalueid, map(this.replaceKeyValues,result.keyvals))
+   this.keyValueOnChange()
 
 }
 
 SearchBar.prototype.replaceFields = function(result) {
    this.updateSearchVals(result.search_vals) 
-   replaceChildNodes(this.operationid, map(this.replaceOptions, result.search_by));
+   replaceChildNodes(this.operationid, map(this.replaceOperations, result.search_by));
 }
 
 SearchBar.prototype.updateSearchVals = function(vals) {
@@ -208,7 +225,7 @@ SearchBar.prototype.keyValueOnChange = function(event) {
     var params = {"tg_format"          : "json",
                   "tg_random"          : new Date().getTime(),
                   "keyvalue_field"     : this.keyvalueField.value};
-
+    
     controller = this.column_controller['keyvalue'] 
      
     var d = loadJSONDoc(controller + "?" + queryString(params));
@@ -223,7 +240,7 @@ SearchBar.prototype.theOnChange = function(event) {
 
     callback = this.replaceFields //default callback
     controller = this.searchController //default controller
-
+   
     /*let's switch off any columns the new value isn't using.
       We do this by having a look at the last column that was used, and basically hiding all the columns
       it was explicitly showing by way of the SearchBarForm.tracking_columns variable
@@ -253,7 +270,7 @@ SearchBar.prototype.theOnChange = function(event) {
          * results of the ajax call, do so here..
          */  
         if (table_value_lower == 'key/value') {
-            params = {}
+            params = {}  
             callback = this.replaceKeyValueFields
             
         }
@@ -288,15 +305,23 @@ var SearchBarForm = {
              
             table_node = document.getElementById(node_id + '_table')
             table_value_lower = table_node.value.toLowerCase()
-            field =  SearchBarForm.tracking_columns[table_value_lower]
-            if (field) { 
-                for (index in SearchBarForm.searchbar_instances) {
-                    if (SearchBarForm.searchbar_instances[index][field +'id'] == node_id +'_'+field) {
-                        SearchBarForm.searchbar_instances[index].hide(field)
-                        delete(SearchBarForm.searchbar_instances[index])
-                    } 
-                }    
-            } else { } 
+           
+	        indexes_to_delete = []
+			for (index in SearchBarForm.searchbar_instances) {
+			    row_identifier = SearchBarForm.searchbar_instances[index].row_identifier
+				if (row_identifier == node_id) {
+				    tracking_field =  SearchBarForm.tracking_columns[table_value_lower]
+					if (tracking_field) {
+					    SearchBarForm.searchbar_instances[index].hide(tracking_field)
+					}
+					indexes_to_delete.push(index)          
+				}
+			}  
+
+			for (index in indexes_to_delete) {
+					SearchBarForm.searchbar_instances.splice(indexes_to_delete[index],1) 	
+			}                       
+
             parent_node.removeChild(this_node);
         }
     },
@@ -317,6 +342,7 @@ var SearchBarForm = {
                     addElementClass(to_hide,'hidden')
 	    }
     },
+
     getChildNodesByAttribute: function(pnode, identifier, value) {
         new_nodes = new Array;
         nodes = pnode.childNodes;
@@ -404,22 +430,20 @@ var SearchBarForm = {
         tbody = SearchBarForm.getChildNodesByAttribute(parent_node, 'tagname', 'TBODY')[0];
         tbody.appendChild(li_clone);
 
-        objs_for_newsearchbar = []
+        fields_for_newsearchbar = []
         $('#'+li_clone.id+' span').each( function() { 
             children = $(this).children().each( function() {
-                objs_for_newsearchbar.push({'field_id': $(this).attr('id'), 'name': $(this).attr('name').replace(/.+?\-\d{1,}\.(.+)?/, "$1") }) 
+                fields_for_newsearchbar.push({'field_id': $(this).attr('id'), 'name': $(this).attr('name').replace(/.+?\-\d{1,}\.(.+)?/, "$1") }) 
             });
         });
+       
+        searchbar_instance = SearchBarForm.searchbar_instances.pop()
+        SearchBarForm.searchbar_instances.push(searchbar_instance)  
 
-        json_stringified = '' 
-        for (index in objs_for_newsearchbar) {
-            json_stringified = json_stringified + JSONStringify(objs_for_newsearchbar[index])
-            json_stringified = json_stringified + ','
-        }
-        json_stringified_length = json_stringified.length
-        json_stringified = json_stringified.slice(0,json_stringified_length -1 )
-        searchbar = li_clone.id + " = new SearchBar(["+json_stringified+"], '/get_search_options','');" + li_clone.id + ".initialize();";
-        eval(searchbar); 
+        new_search = new SearchBar(fields_for_newsearchbar, searchbar_instance.searchController,'', searchbar_instance.column_controller,searchbar_instance.table_controllers);
+ 
+        new_search.initialize() 
+  
         // Focus
         if(li_clone.getElementsByTagName('input')[0])
             li_clone.getElementsByTagName('INPUT')[0].focus()
@@ -455,7 +479,19 @@ function convertObjToArray(obj) {
     return new_array;
 }
 
-function JSONStringify(obj) {
+
+function JSONStringifyObj(obj) {
+    for (index in obj) {
+            json_stringified = json_stringified + JSONStringifyElem(obj[index])
+            json_stringified = json_stringified + ','
+        }
+        json_stringified_length = json_stringified.length
+        result = json_stringified.slice(0,json_stringified_length -1 )
+        return result
+}
+
+
+function JSONStringifyElem(obj) {
    var json_text = ''
    for (elem in obj) {
        json_text = json_text + "'"+elem+"':'"+obj[elem]+"',"

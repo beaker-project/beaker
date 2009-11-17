@@ -12,6 +12,7 @@ from turbogears.widgets import (Form, TextField, SubmitButton, TextArea,
                                 CompoundWidget, AjaxGrid, Tabber, 
                                 RepeatingFieldSet, SelectionField)
 
+
 import logging
 log = logging.getLogger('beaker.server')
 
@@ -168,8 +169,8 @@ class SearchBar(RepeatingFormField):
            class="${field_class}"
            id="${field_id}_${repetition}">
         <script language="JavaScript" type="text/JavaScript">
-             
-            ${field_id}_${repetition} = new SearchBar([${to_json(fields)}],'${search_controller}','${value_for(this_operations_field)}',${extra_callbacks_stringified},${table_search_controllers_stringified});
+            
+            ${field_id}_${repetition} = new SearchBar([${to_json(fields)}],'${search_controller}','${value_for(this_operations_field)}',${extra_callbacks_stringified},${table_search_controllers_stringified},'${value_for(keyvaluevalue)}');
             addLoadEvent(${field_id}_${repetition}.initialize);
         </script>
         <td py:for="field in fields">
@@ -209,7 +210,7 @@ class SearchBar(RepeatingFormField):
     """
 
     params = ['repetitions', 'form_attrs', 'search_controller', 'simplesearch',
-              'advanced', 'simple','to_json','this_operations_field','extra_callbacks_stringified','table_search_controllers_stringified']
+              'advanced', 'simple','to_json','this_operations_field','extra_callbacks_stringified','table_search_controllers_stringified','keyvaluevalue']
     form_attrs = {}
     simplesearch = None
 
@@ -217,16 +218,15 @@ class SearchBar(RepeatingFormField):
         super(SearchBar,self).__init__(*args, **kw)
         self.search_controller=search_controller
         self.repetitions = 1 
-      
+       
         table_field = SingleSelectFieldJSON(name="table", options=table, validator=validators.NotEmpty()) 
         operation_field = SingleSelectFieldJSON(name="operation", options=[None], validator=validators.NotEmpty())
-        value_field = TextFieldJSON(name="value")
-        
+        value_field = TextFieldJSON(name="value") 
         # We don't know where in the fields array the operation array will be, so we will put it here
         # to access in the template
         self.this_operations_field = operation_field
         self.fields = [table_field,operation_field,value_field] 
-       
+         
         new_selects = []
         self.extra_callbacks = {}
         if extra_selects is not None: 
@@ -238,8 +238,11 @@ class SearchBar(RepeatingFormField):
                 callback = elem.get('callback',None)
                 if callback:
                     self.extra_callbacks[elem['name']] = callback    
-                new_select = SingleSelectFieldJSON(name=elem['name'],options=callback, css_classes = new_class, validator=validators.NotEmpty(),for_column=elem['column'] )
-               
+                new_select = SingleSelectFieldJSON(name=elem['name'],options=[None], css_classes = new_class, validator=validators.NotEmpty(),for_column=elem['column'] )
+                if elem['name'] == 'keyvalue':
+                    self.keyvaluevalue = new_select
+
+                self.send_values[elem['name']] = new_select
                 if elem.has_key('pos'):
                     self.fields.insert(elem['pos'] - 1,new_select)
                 else:
@@ -252,8 +255,10 @@ class SearchBar(RepeatingFormField):
                 new_inputs.append(new_input)   
 
         controllers = kw.get('table_search_controllers','') 
+        
         self.table_search_controllers_stringified = str(controllers)
         self.to_json = UtilJSON.dynamic_json() 
+        
         self.extra_callbacks_stringified = str(self.extra_callbacks)
         self.fields.extend(new_inputs)
         self.fields.extend(new_selects)
