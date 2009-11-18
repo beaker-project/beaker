@@ -724,11 +724,12 @@ class SystemObject(object):
         fields = self.mapper.c.keys()    
         if search_field_filter == None: 
             return fields 
-    
+         
+        if search_field_filter.has_key('force'):
+            return search_field_filter['force']    
+
         if search_field_filter.has_key('includes'):  
             includes = search_field_filter['includes']
-            #This is only for testing for key_value
-            return includes
             return  [elem for elem in fields if includes.count(elem) > 0]
         
         if search_field_filter.has_key('excludes'):
@@ -2319,17 +2320,6 @@ class Note(object):
     def all(cls):
         return cls.query()
 
-class KeyValue(object):
-    def __init__(self,x,y):
-        self.x = x
-        self.y = y
-   
-    def __composite_values__(self):
-        return [self.x,self.y]
-   
-    def __set_composite_values__(self,x,y):
-        self.x = x
-        self.y = y
 
 class Key(SystemObject):
     joins = KeyJoinContainer()
@@ -2394,10 +2384,8 @@ class Key(SystemObject):
         key_id = result.id
  
         if int_table == 1:
-            log.debug('Returning value is int for value_is_filter')
             return and_(Key_Value_Int.key_value == val,Key_Value_Int.key_id == key_id) 
         elif int_table == 0: 
-            log.debug('Returning value is string for value_is_filter')
             return and_(key_value_string_table.c.key_value == val,key_value_string_table.c.key_id == key_id) 
 
  
@@ -2420,7 +2408,7 @@ class Key(SystemObject):
 
     @classmethod
     def get_searchable(cls): 
-        return cls._create_search_description(dict(includes = ['Value']))
+        return cls._create_search_description(dict(force = ['Value']))
 
     @classmethod
     def by_name(cls, key_name):
