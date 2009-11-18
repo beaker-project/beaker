@@ -1999,7 +1999,25 @@ class Device(SystemObject):
     joins.add_unconditional([{system_device_map : system_table.c.id  == system_device_map.c.system_id},
                              {device_table : system_device_map.c.device_id == device_table.c.id}])
                   
+    @classmethod
+    def driver_is_not_filter(cls,col,val):
+        if not val:
+            return or_(col != None, col != val)
+        else:
+            query = System.query().filter(System.devices.any(Device.driver == val))
+    
+        ids = [r.id for r in query]  
+        return not_(system_table.c.id.in_(ids))    
  
+    @classmethod
+    def get_searchable(cls):
+        """
+        get_searchable will return the description of how this object can be 
+        searched by returning a dict with the derived Class' name 
+        (or display name) as the key, and a list of fields that can be 
+        searched after any field filtering has been applied
+        """
+        return cls._create_search_description(dict(includes = ['Description','Driver','Vendor_id','Device_id']))
     def __init__(self, vendor_id=None, device_id=None, subsys_device_id=None, subsys_vendor_id=None, bus=None, driver=None, device_class=None, description=None):
         if not device_class:
             device_class = "NONE"
@@ -2018,15 +2036,6 @@ class Device(SystemObject):
         self.description = description
         self.device_class = dc
 
-    @classmethod
-    def get_searchable(cls):
-        """
-        get_searchable will return the description of how this object can be 
-        searched by returning a dict with the derived Class' name 
-        (or display name) as the key, and a list of fields that can be 
-        searched after any field filtering has been applied
-        """
-        return cls._create_search_description(dict(includes = ['Description','Driver','Vendor_id','Device_id']))
 
 class Locked(object):
     def __init__(self, name=None):
