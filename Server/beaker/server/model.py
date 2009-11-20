@@ -5,7 +5,7 @@ from turbogears.database import metadata, mapper, session
 from turbogears.config import get
 import ldap
 from sqlalchemy import Table, Column, ForeignKey
-from sqlalchemy.orm import relation, backref, synonym, column_property
+from sqlalchemy.orm import relation, backref, synonym, column_property,composite
 from sqlalchemy import String, Unicode, Integer, DateTime, UnicodeText, Boolean, Float, VARCHAR, TEXT, Numeric
 from sqlalchemy import or_, and_, not_, select
 from sqlalchemy.exceptions import InvalidRequestError
@@ -576,6 +576,10 @@ class Modeller(object):
         self.structure ={ 'sqlalchemy.types.String'  : { 'is' : lambda x,y: self.equals(x,y) ,
                                                          'is not' : lambda x,y: self.not_equal(x,y),
                                                          'contains' : lambda x,y: self.contains(x,y), },
+
+                          'sqlalchemy.types.Text'    : { 'is' : lambda x,y: self.equals(x,y) ,
+                                                         'is not' : lambda x,y: self.not_equal(x,y),
+                                                         'contains' : lambda x,y: self.contains(x,y), },
                                                
                           'sqlalchemy.types.Integer'  : { 'is' : lambda x,y: self.equals(x,y), 
                                                           'is not' : lambda x,y: self.not_equal(x,y),
@@ -635,16 +639,38 @@ class Modeller(object):
        
         return op_dict[operator]        
 
-    def return_operators(self,type): 
+    def return_operators(self,type,loose_match = None): 
+        # loose_match flag will specify if we should try and 'guess' what data type it is 
+        # int,integer,num,number,numeric will match for an sqlalchemy.types.Integer.
+        # string, word match for sqlalchemy.types.String
+        # bool,boolean will match for sqlalchemy.types.Boolean
+        operators = None 
         try:
             operators = self.structure[type] 
         except KeyError, (error):
-             log.debug('Could not access specific type operators for %s, will use generic' % error)
-             operators = self.structure['generic']
+            if loose_match: 
+                type_lower = type.lower()
+                int_pattern = '^int(?:eger)?$|^num(?:ber|eric)?$'  
+                string_pattern = '^string$|^word$'          
+                bool_pattern = '^bool(?:ean)?$'
+                patterns = [int_pattern,string_pattern,loose_match]
+                operators = None
+                if re.match(int_pattern,type_lower):
+                    operators = self.structure['sqlalchemy.types.Integer']
+                elif re.match(string_pattern,type_lower):
+                    operators = self.structure['sqlalchemy.types.String']
+                elif re.match(bool_pattern,type_lower):
+                    operators = self.structure['sqlalchemy.types.Boolean']
+                     
+            if operators is None:
+                operators = self.structure['generic']
+                log.debug('Could not access specific type operators for %s, will use generic' % error)
+           
         return operators.keys() 
           
 
 class SystemObject(object):    
+
     @classmethod
     def get_field_type(cls,field):
         mapper = getattr(cls,'mapper') 
@@ -664,8 +690,9 @@ class SystemObject(object):
         search_operators returns a list of the different types of searches that can be done on a given field.
         It uses the Modeller class to store these relationships. Currently it's only set up for sqlalchemy types.
         Anything that is not an sqlalchemy type is given a 'generic' set of oeprations
-        """    
+        """     
         class_field_type = '%s' % type(field)
+       
         match_obj = SystemSearch.strip_field_type(class_field_type)
         index_type = match_obj.group(1) 
         m = Modeller() 
@@ -693,12 +720,15 @@ class SystemObject(object):
         {'excludes': <list of fields to exclude> }
           
         If a dict is passed in that contains an includes and an excludes element, the excludes is ignored
-        """
+        """ 
         fields = self.mapper.c.keys()    
         if search_field_filter == None: 
             return fields 
-    
-        if search_field_filter.has_key('includes'): 
+         
+        if search_field_filter.has_key('force'):
+            return search_field_filter['force']    
+
+        if search_field_filter.has_key('includes'):  
             includes = search_field_filter['includes']
             return  [elem for elem in fields if includes.count(elem) > 0]
         
@@ -804,6 +834,7 @@ class Group(object):
         """
         return cls.query().filter(Group.group_name.like('%s%%' % name))
 
+
 class JoinContainer:
     def __init__(self): 
         self.conditional_joins = {} 
@@ -827,13 +858,30 @@ class JoinContainer:
         else:
             raise TypeError, "Expecting array of or single clause element"
      
-    def get_conditional_joins(self,col_string):
+    def get_conditional_joins(self,col_string,**kw):
         return self.conditional_joins.get(col_string,[])
    
     def get_unconditional_joins(self):
         return self.unconditional_joins
-        
  
+       
+class KeyJoinContainer(JoinContainer):
+     def __init__(self):
+         JoinContainer.__init__(self)
+     
+     def get_conditional_joins(self,col_string,**kw):
+        log.debug('kw is %s' % kw)
+        if not kw.get('keyvalue'):
+            raise Exception, 'This is temporary, but we should have found keyvalue %s' % kw   
+        result = Key.by_name(kw['keyvalue']) 
+        int_table = result.numeric
+        if int_table == 1:
+           
+            return self.conditional_joins.get(col_string + '_int',None) 
+        elif int_table == 0:
+            return self.conditional_joins.get(col_string + '_string',None) 
+ 
+
 class Search: 
     @classmethod
     def translate_name(cls,display_name):
@@ -865,11 +913,29 @@ class Search:
        match_obj = cls.strip_field_type(class_field_type)
        return match_obj.group(1)
 
+    @classmethod
+    def search_on_keyvalue(cls,key_name):
+        """
+        search_on_keyvalue() takes a key_name and returns the operations suitable for the 
+        field type it represents
+        """
+        row = Key.by_name(key_name) 
+        if row.numeric == 1:
+            field_type = 'Numeric'
+        elif row.numeric == 0:
+            field_type = 'String'        
+        else:
+            log.error('Cannot determine type for %s, defaulting to generic' % key_name)
+            field_type = 'generic'
+
+        return Key.search_operators(field_type,loose_match = True)
+        
+             
     @classmethod 
     def search_on(cls,class_field): 
         """
-        search_on takes a combination of class name and field name (i.e 'Cpu/vendor') and
-        will return what kind of searches can be done on the field. 
+        search_on() takes a combination of class name and field name (i.e 'Cpu/vendor') and
+        returns the oeprations suitable for the field type it represents
         """ 
         returned_class_field = cls.__split_class_field(class_field) 
         display_name = returned_class_field[0]
@@ -947,7 +1013,7 @@ class SystemSearch(Search):
     def __getitem__(self,key):
         pass
 
-    def append_results(self,cls_ref,value,column,operation):  
+    def append_results(self,cls_ref,value,column,operation,**kw):  
         """ 
         append_results() will take a value, column and operation from the search field,
         as well as the class of which the search pertains to, and will append the join
@@ -962,15 +1028,29 @@ class SystemSearch(Search):
         underscored_operation = re.sub(' ','_',operation)
         
         col_op_filter = getattr(cls_ref,'%s_%s_filter' % (column.lower(),underscored_operation),None)
-        
+       
+        #At this point we can also call a custom function before we try to append our results
+        try:
+            col_op_pre = getattr(cls_ref,'%s_%s_pre' % (column.lower(),underscored_operation),None) 
+        except Exception, (error):
+            log.error('Unable to call call pre function: %s' % error)
+    
+        if col_op_pre is not None:
+            results_from_pre = col_op_pre(value,col=column,op = operation, **kw)
+
         try:
             _c = cls_ref.mapper.c
             col = getattr(_c, column)
         except AttributeError, (error):     
                 log.error('Error accessing attribute within append_results: %s' % (error))
         else:
+            filter_args = dict(column=col,value=value)            
             if col_op_filter:
                 filter_func = col_op_filter   
+                filter_final = lambda: filter_func(col,value)
+                #If you want to pass custom args to your custom filter, here is where you do it
+                if kw.has_key('keyvalue'): 
+                    filter_final = lambda: filter_func(col,value,key_name = kw['keyvalue'])   
             else:
                 #using just the regular filter operations from Modeller
                 try: 
@@ -985,9 +1065,10 @@ class SystemSearch(Search):
                 index_type = match_obj.group(1)  
                 modeller = Modeller()
                 filter_func = modeller.return_function(index_type,operation)     
+                filter_final = lambda: filter_func(col,value)
 
-        #append a filter function which is to be called later 
-        self.filter_funcs.append(lambda: filter_func(col,value))
+        #append a filter function which is to be called later
+        self.filter_funcs.append(filter_final)
 
         joins = getattr(cls_ref,'joins',None)  
         #Let's do the joins 
@@ -999,7 +1080,7 @@ class SystemSearch(Search):
                         self.j = self.j.outerjoin(k,onclause=v)
 		        self.already_joined.append(k) 
               
-            conditional_joins = joins.get_conditional_joins(column.lower())
+            conditional_joins = joins.get_conditional_joins(column.lower(),**kw)
             for elem in conditional_joins:
                 for k,v in elem.iteritems():
                     if (self.already_joined.count(k) < 1):
@@ -1009,7 +1090,6 @@ class SystemSearch(Search):
         else:
             pass
 
-        
     def return_results(self):   
         #Do our joins
         queri = session.query(System).select_from(self.j)     
@@ -1025,6 +1105,7 @@ class System(SystemObject):
     joins = JoinContainer()
     joins.add_conditional('arch', [{system_arch_map: system_table.c.id == system_arch_map.c.system_id}, 
                                    {arch_table: arch_table.c.id == system_arch_map.c.arch_id}]) 
+
     #If we have a set of predefined values that a column can be searched on, put them in the 
     # search_values_dict of the corresponding class
     search_values_dict =     { 'Status' : lambda: SystemStatus.get_all_status_name(),
@@ -1904,6 +1985,7 @@ class LabInfo(SystemObject):
 class Cpu(SystemObject): 
     table = cpu_table      
     display_name = 'CPU'
+
     joins = JoinContainer()
     joins.add_unconditional({ cpu_table : system_table.c.id == cpu_table.c.system_id })
     joins.add_conditional('flags',  { cpu_flag_table : cpu_flag_table.c.cpu_id == cpu_table.c.id})   
@@ -1932,7 +2014,7 @@ class Cpu(SystemObject):
                 self.flags.append(new_flag)
 
     @classmethod
-    def flags_is_not_filter(cls,col,val):
+    def flags_is_not_filter(cls,col,val,**kw):
         """flags_is_not_filter is a function dynamically called from append_results.
            It serves to provide a table column operation specific method of filtering results of CPU/Flags
         """       
@@ -1994,6 +2076,7 @@ class DeviceClass(SystemObject):
 
 class Device(SystemObject):
     table = device_table
+
     display_name = 'Devices' 
     joins = JoinContainer()
     joins.add_unconditional([{system_device_map : system_table.c.id  == system_device_map.c.system_id},
@@ -2036,6 +2119,15 @@ class Device(SystemObject):
         self.description = description
         self.device_class = dc
 
+    @classmethod
+    def get_searchable(cls):
+        """
+        get_searchable will return the description of how this object can be 
+        searched by returning a dict with the derived Class' name 
+        (or display name) as the key, and a list of fields that can be 
+        searched after any field filtering has been applied
+        """
+        return cls._create_search_description(dict(includes = ['Description','Driver','Vendor_id','Device_id']))
 
 class Locked(object):
     def __init__(self, name=None):
@@ -2249,13 +2341,100 @@ class Note(object):
         return cls.query()
 
 
-class Key(object):
-    def __init__(self, key_name=None, numeric=False):
-        self.key_name = key_name
-        self.numeric = numeric
+class Key(SystemObject):
+    joins = KeyJoinContainer()
+    joins.add_conditional('value_int',[{key_value_int_table: key_value_int_table.c.system_id == system_table.c.id }, 
+                                       {key_table: key_table.c.id == key_value_int_table.c.key_id}])
+    
+    joins.add_conditional('value_string',[{key_value_string_table: key_value_string_table.c.system_id == system_table.c.id }, 
+                                          {key_table: key_table.c.id == key_value_string_table.c.key_id}])
 
-    def __repr__(self):
-        return "%s" % self.key_name
+    @classmethod
+    def search_operators(cls,type,loose_match = None):
+        m = Modeller()
+        operators = m.return_operators(type,loose_match)    
+        return operators 
+
+    @classmethod
+    def value_pre(cls,value,**kw): 
+        if not kw.get('keyvalue'):
+            raise Exception, 'value_pre needs a keyvalue. keyvalue not found' 
+        result = cls.by_name(kw['keyvalue']) 
+        int_table = result.numeric
+        key_id = result.id
+        if int_table == 1:
+            log.debug('In int for value_is_pre')
+            cls.mapper.add_property('Value',column_property(select([key_value_int_table.c.key_value],key_value_int_table.c.system_id == system_table.c.id).correlate(system_table).label('Value'), deferred = True ))    
+        elif int_table == 0:
+            log.debug('In string for value_is_pre')
+            cls.mapper.add_property('Value',column_property(select([key_value_string_table.c.key_value],key_value_string_table.c.system_id == system_table.c.id).correlate(system_table).label('Value'), deferred = True ))    
+
+    @classmethod   
+    def value_contains_pre(cls,value,**kw):
+       cls.value_pre(value,**kw)
+
+    @classmethod
+    def value_is_pre(cls,value,**kw): 
+       cls.value_pre(value,**kw)
+
+    @classmethod
+    def value_is_not_pre(cls,value,**kw):
+        cls.value_pre(value,**kw)
+ 
+    @classmethod
+    def value_less_than_pre(cls,value,**kw):
+        cls.value_pre(value,**kw)
+
+    @classmethod
+    def value_greater_than_pre(cls,value,**kw):
+        cls.value_pre(value,**kw)
+    
+    @classmethod
+    def value_greater_than_filter(cls,col,val,key_name):
+        result = cls.by_name(key_name) 
+        int_table = result.numeric
+        key_id = result.id
+        return and_(Key_Value_Int.key_value > val, Key_Value_Int.key_id == key_id)
+
+    @classmethod
+    def value_contains_filter(cls, col, val, key_name):
+        result = cls.by_name(key_name) 
+        key_id = result.id
+ 
+        return and_(Key_Value_String.key_value.like('%%%s%%' % val),Key_Value_String.key_id == key_id) 
+        
+    @classmethod
+    def value_is_filter(cls,col,val,key_name):
+        result = cls.by_name(key_name) 
+        int_table = result.numeric
+        key_id = result.id
+ 
+        if int_table == 1:
+            return and_(Key_Value_Int.key_value == val,Key_Value_Int.key_id == key_id) 
+        elif int_table == 0: 
+            return and_(key_value_string_table.c.key_value == val,key_value_string_table.c.key_id == key_id) 
+
+ 
+    @classmethod
+    def value_is_not_filter(cls,col,val,key_name):
+        result =cls.by_name(key_name)
+        int_table = result.numeric
+        key_id = result.id
+       
+        if int_table == 1:
+            return and_(or_(Key_Value_Int.key_value != val,Key_Value_Int.key_value == None), or_(Key_Value_Int.key_id == key_id,Key_Value_Int.key_id == None))         
+        elif int_table == 0:
+            return and_(or_(Key_Value_String.key_value != val,Key_Value_String.key_value == None), or_(Key_Value_String.key_id == key_id, Key_Value_String.key_id == None))         
+         
+
+    @classmethod
+    def get_all_keys(cls):
+       all_keys = cls.query()     
+       return [key.key_name for key in all_keys]
+
+    @classmethod
+    def get_searchable(cls): 
+        return cls._create_search_description(dict(force = ['Value']))
 
     @classmethod
     def by_name(cls, key_name):
@@ -2264,6 +2443,14 @@ class Key(object):
     @classmethod
     def by_id(cls, id):
         return cls.query().filter_by(id=id).one()
+
+    def __init__(self, key_name=None, numeric=False):
+        self.key_name = key_name
+        self.numeric = numeric
+
+    def __repr__(self):
+        return "%s" % self.key_name
+
 
 
 # key_value model
@@ -2321,7 +2508,7 @@ System.mapper = mapper(System, system_table,
                      'Status':column_property(select([system_status_table.c.status],system_status_table.c.id == system_table.c.status_id).correlate(system_table).label('Status'),deferred=True),
                      'Type':column_property(select([system_type_table.c.type],system_type_table.c.id == system_table.c.type_id).label('Type'),deferred=True),
                      'Arch':column_property(select([arch_table.c.arch]).correlate(arch_table).label('Arch'),deferred = True), 
-                   
+         
                      'status':relation(SystemStatus,uselist=False),
                      'devices':relation(Device,
                                         secondary=system_device_map,backref='systems'),
@@ -2477,7 +2664,8 @@ mapper(Note, note_table,
         properties=dict(user=relation(User, uselist=False,
                         backref='notes')))
 
-mapper(Key, key_table)
+Key.mapper = mapper(Key, key_table)
+           
 mapper(Key_Value_Int, key_value_int_table,
         properties=dict(key=relation(Key, uselist=False,
                         backref='key_value_int')))

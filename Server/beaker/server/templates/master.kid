@@ -14,6 +14,11 @@
             font-family: verdana;
             text-align: right;
         }
+        
+        .hidden
+         {
+             display:none
+         }
     </style>
     <style type="text/css" media="screen">
 @import "${tg.url('/static/css/layout-uncompressed.css')}";
