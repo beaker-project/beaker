@@ -1264,7 +1264,7 @@ class Root(RPCRoot):
         systems = self.pick_common(distro, user, xml)
 
         hit = False
-        systems_list = systems.all():
+        systems_list = systems.all()
         size = len(systems_list)
         while size:
             size = size - 1

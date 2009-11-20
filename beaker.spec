@@ -3,7 +3,7 @@
 
 Name:           beaker
 Version:        0.4.62
-Release:        0%{?dist}
+Release:        1%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -133,7 +133,7 @@ ln -s Fedora.ks $RPM_BUILD_ROOT/var/lib/cobbler/kickstarts/Fedoradevelopment.ks
 /usr/share/man/man1/beakerlib*
 
 %changelog
-* Fri Nov 20 2009 Bill Peck <bpeck@redhat.com> - 0.4.62-0
+* Fri Nov 20 2009 Bill Peck <bpeck@redhat.com> - 0.4.62-1
 - Fixes for searching drivers
 - Random selection when more than one host available.
 * Tue Nov 17 2009 Bill Peck <bpeck@redhat.com> - 0.4.61-0
