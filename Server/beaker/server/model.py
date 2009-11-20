@@ -2375,8 +2375,14 @@ class Key(SystemObject):
         int_table = result.numeric
         key_id = result.id
         return and_(Key_Value_Int.key_value > val, Key_Value_Int.key_id == key_id)
-  
 
+    @classmethod
+    def value_contains_filter(cls, col, val, key_name):
+        result = cls.by_name(key_name) 
+        key_id = result.id
+ 
+        return and_(Key_Value_String.key_value.like('%%%s%%' % val),Key_Value_String.key_id == key_id) 
+        
     @classmethod
     def value_is_filter(cls,col,val,key_name):
         result = cls.by_name(key_name) 
