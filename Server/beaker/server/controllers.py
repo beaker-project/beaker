@@ -38,6 +38,7 @@ from beaker.server.helpers import *
 from beaker.server.tools.init import dummy
 from decimal import Decimal
 from bexceptions import *
+import random
 
 from kid import Element
 import cherrypy
@@ -1263,7 +1264,14 @@ class Root(RPCRoot):
         systems = self.pick_common(distro, user, xml)
 
         hit = False
-        for system in systems:
+        systems_list = systems.all():
+        size = len(systems_list)
+        while size:
+            size = size - 1
+            index = random.randint(0, size)
+            system = systems_list[index]
+            systems_list[index] = systems_list[size]
+   
             # If the system doesn't have a current user then take it
             if session.connection(System).execute(system_table.update(
                      and_(system_table.c.id==system.id,
