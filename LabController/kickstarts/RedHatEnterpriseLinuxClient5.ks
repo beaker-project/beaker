@@ -94,4 +94,14 @@ $SNIPPET("rhts_pre")
 
 %post
 $SNIPPET("RedHatEnterpriseLinuxClient5_post")
+#if $getVar('rhts_server', '') == ''
+# install beaker harness
+cat << EOF > /etc/yum.repos.d/beaker-support.repo
+[beaker-support]
+name=Beaker Support
+baseurl=http://$server/harness/rhel5/$arch
+enabled=1
+gpgcheck=0
+EOF
+#end if
 $SNIPPET("rhts_post")

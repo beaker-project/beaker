@@ -114,7 +114,7 @@ chmod 755 /mnt/tests/runtests.sh
 cat << EOF > /etc/yum.repos.d/beaker-harness.repo
 [beaker-harness]
 name=Beaker Harness
-baseurl=http://$server/harness/$os_version
+baseurl=http://$server/harness/noarch
 enabled=1
 gpgcheck=0
 EOF
