@@ -11,8 +11,11 @@ class Disks(object):
         """
         self.disks = []
         for disk in isys.hardDriveDict().keys():
-            self.disks.append(int("%d" % self.disksize(
-                                     parted.device_get("/dev/%s" % disk))))
+            try:
+                self.disks.append(int("%d" % self.disksize(
+                                     parted.PedDevice.get("/dev/%s" % disk))))
+            except parted.error:
+                pass
 
     def disksize(self, disk):
         return (float(disk.heads * disk.cylinders * disk.sectors) 

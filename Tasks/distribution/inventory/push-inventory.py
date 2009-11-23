@@ -81,13 +81,6 @@ def read_inventory():
     data['MODEL'] = "%s" % profile.host.systemModel
     data['FORMFACTOR'] = "%s" % profile.host.formfactor
 
-    # Round memory up to the next base 2
-    n=0
-    memory = int(memory['ram'])
-    while memory > ( 2 << n):
-        n=n+1
-    data['MEMORY'] = 2 << n
-
     try:
         for cpuflag in cpu_info['other'].split(" "):
             data['CPUFLAGS'].append(cpuflag)
