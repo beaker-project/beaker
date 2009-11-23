@@ -120,7 +120,7 @@ gpgcheck=0
 EOF
 
 # Install old rhts commands
-yum -y install rhts-test-env
+yum -y install rhts-test-env-lab
 # Install new harness
 yum -y install beah
 cat << EOF > /etc/beah_beaker.conf

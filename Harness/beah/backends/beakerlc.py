@@ -77,7 +77,7 @@ export TESTPATH KILLTIME
 
 mkdir -p $TESTPATH
 
-python -m beah.tasks.rhts_xmlrpc
+python2.6 -m beah.tasks.rhts_xmlrpc
 """ % ('/mnt/tests', self.__env['TASKNAME'], self.__env['KILLTIME']))
 
 
@@ -109,7 +109,7 @@ def parse_recipe_xml(input_xml):
     for r in er.getiterator('repo'):
         name = r.get('name')
         repos.append(name)
-        repof += "[%s]\nname=beaker provided '%s' repo\nbaseurl=%s\nenabled=0\ngpgcheck=0\n\n" \
+        repof += "[%s]\nname=beaker provided '%s' repo\nbaseurl=%s\nenabled=1\ngpgcheck=0\n\n" \
                 % (name, name, r.get('url'))
     f = open('/etc/yum.repos.d/beaker-tests.repo', 'w+')
     f.write(repof)

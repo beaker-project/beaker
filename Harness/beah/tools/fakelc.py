@@ -302,7 +302,7 @@ def main():
                             <system value="%(machine0)s"/>
                         </role>
                     </roles>
-                    <executable url="/usr/bin/python">
+                    <executable url="/usr/bin/python2.6">
                         <arg value="%(beah_py_root)s/tasks/rhts_xmlrpc.py" />
                         <arg value="%(beah_root)s/examples/tests/rhtsex" />
                     </executable>
@@ -319,7 +319,7 @@ def main():
                             <system value="%(machine0)s"/>
                         </role>
                     </roles>
-                    <executable url="/usr/bin/python">
+                    <executable url="/usr/bin/python2.6">
                         <arg value="%(beah_py_root)s/tasks/rhts_xmlrpc.py" />
                         <arg value="%(beah_root)s/examples/tests/testargs" />
                     </executable>

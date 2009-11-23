@@ -53,7 +53,7 @@ class PyExecutable(Executable):
         Executable.__init__(self, executable=executable, suffix=suffix)
 
     def header(self, fd):
-        self.write_line("#!/usr/bin/env python")
+        self.write_line("#!/usr/bin/env python2.6")
 
 
 ARCH = platform.machine()

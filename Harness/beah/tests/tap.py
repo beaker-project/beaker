@@ -123,7 +123,7 @@ END
 """
 
 __RUN_TAP_TASK="""\
-#!/usr/bin/env python
+#!/usr/bin/env python2.6
 import sys
 sys.path.append(%s)
 # FIXME: there is not task module!
