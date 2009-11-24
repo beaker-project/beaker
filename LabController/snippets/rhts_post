@@ -119,6 +119,17 @@ enabled=1
 gpgcheck=0
 EOF
 
+# RHEL3 - RHEL5 need additional packages
+#if $os_version in ['rhel3','rhel4','rhel5']
+cat << EOF > /etc/yum.repos.d/beaker-harness.repo
+[beaker-support]
+name=Beaker Support
+baseurl=http://$server/harness/$os_version/$arch
+enabled=1
+gpgcheck=0
+EOF
+#end if
+
 # Install old rhts commands
 yum -y install rhts-test-env-lab
 # Install new harness
