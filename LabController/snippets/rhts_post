@@ -131,7 +131,7 @@ EOF
 #end if
 
 # Install old rhts commands
-yum -y install rhts-test-env-lab
+yum -y install rhts-test-env-lab rhts-legacy
 # Install new harness
 yum -y install beah
 cat << EOF > /etc/beah_beaker.conf
