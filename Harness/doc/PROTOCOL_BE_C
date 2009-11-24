@@ -99,6 +99,6 @@ OR
 === Task finished ===
 Each task has to send a finish message to C, which will forward it to BE
 
-<- end(task_info, rc)   # rc is either OK, or failure 
+<- end(task_info, rc)   # rc is either OK, or failure
 
 # vim:et:sw=4:ts=4

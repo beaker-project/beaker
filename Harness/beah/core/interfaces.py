@@ -27,16 +27,16 @@ class ControllerInterface(object):
 
         @backend is the backend, which issued the command.
         @cmd is a command. Should be an instance of Command class.
-        
+
         This is the only method mandatory for Backend side Controller-Adaptor."""
         raise exceptions.NotImplementedError
 
     def proc_evt(self, task, evt):
         """Process Event received from task.
-        
+
         @task is the Task, which sent the event.
         @evt is an event. Should be an instance of Event class.
-        
+
         This is the only method mandatory for Task side Controller-Adaptor."""
         raise exceptions.NotImplementedError
 

@@ -32,7 +32,7 @@ start() {
     echo -n $"Starting $prog: "
     daemon --user $RUN_AS $path ">> /tmp/$prog.out 2>&1 &"
     RETVAL=$?
-    echo 
+    echo
     if test $RETVAL = 0; then
         touch $LOCKFILE
     fi
@@ -43,7 +43,7 @@ stop() {
     echo -n $"Stopping $prog: "
     killproc $path
     RETVAL=$?
-    echo 
+    echo
     rm -f $LOCKFILE
     return $RETVAL
 }

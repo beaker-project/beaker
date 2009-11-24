@@ -90,10 +90,10 @@ function launcher()
     fi
     eval "running_$a1=1"
     shift
-    
+
     local geo=$1
     shift
-    
+
     if [[ -z "$redir" ]]; then
       xterm -geometry $geo -title "$*" -n "$*" -e "$@" &
     else
@@ -102,7 +102,7 @@ function launcher()
       xterm -geometry $geo -title "$*" -n "$*" -e redir "beah_${a1}_$(date +%Y%m%d_%H%M%S)" "$@" &
     fi
   }
-    
+
   function runner()
   {
     if [[ -n "$redir" ]]; then

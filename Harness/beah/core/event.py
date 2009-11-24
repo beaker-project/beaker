@@ -65,8 +65,9 @@ def end(task_info, rc, origin={}, timestamp=None):
     return Event('end', origin, timestamp, task_info=task_info, rc=rc)
 
 def echo(cmd, rc, message="", origin={}, timestamp=None, **kwargs):
-    """Event generated as a response to a command.
-    
+    """
+    Event generated as a response to a command.
+
     Parameters:
     - cmd - a command-tuple or command id
     - rc - response as defined by beah.core.constants.ECHO

@@ -1,4 +1,4 @@
-# Copyright (c) 2006 Red Hat, Inc. All rights reserved. This copyrighted material 
+# Copyright (c) 2006 Red Hat, Inc. All rights reserved. This copyrighted material
 # is made available to anyone wishing to use, modify, copy, or
 # redistribute it subject to the terms and conditions of the GNU General
 # Public License v.2.
@@ -46,10 +46,10 @@ export TEST=/$(TOPLEVEL_NAMESPACE)/$(RELATIVE_PATH)
 .PHONY: all install download clean
 
 # executables to be built should be added here, they will be generated on the system under test.
-BUILT_FILES= 
+BUILT_FILES=
 
 # data files, .c files, scripts anything needed to either compile the test and/or run it.
-FILES=$(METADATA) runtest.sh Makefile PURPOSE 
+FILES=$(METADATA) runtest.sh Makefile PURPOSE
 
 run: $(FILES) build
 	./runtest.sh
@@ -78,9 +78,9 @@ $(METADATA): Makefile
 	@echo "TestVersion:  $(TESTVERSION)"	>> $(METADATA)
 	@echo "Description:  Shows how to read arguments passed from scheduler">> $(METADATA)
 	@echo "TestTime:     1m" >> $(METADATA)
-	@echo "RunFor:       $(PACKAGE_NAME)" >> $(METADATA)  
+	@echo "RunFor:       $(PACKAGE_NAME)" >> $(METADATA)
 # add any other packages for which your test ought to run here
-	@echo "Requires:     $(PACKAGE_NAME)" >> $(METADATA)  
+	@echo "Requires:     $(PACKAGE_NAME)" >> $(METADATA)
 # add any other requirements for the script to run here
 
 # You may need other fields here; see the documentation

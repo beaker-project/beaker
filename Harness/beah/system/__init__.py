@@ -7,7 +7,6 @@ import os, tempfile, exceptions, stat, platform
 # - downloading a file (wget)
 # - installing an rpm (rpm)
 # - yum/up2date (linux only)
-# 
 
 
 class Executable(object):

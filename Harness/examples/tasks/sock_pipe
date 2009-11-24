@@ -48,12 +48,14 @@ class PipeTask(object):
     Controller side Task-Adaptor"""
 
     def __init__(self, id, test_file, test_args=[], proto=None):
-        """Spawn a test, capture output (of named pipe) and forward to
+        """
+        Spawn a test, capture output (of named pipe) and forward to
         controller.
-        
+
         @param id        task id
         @param test_file test executable
-        @param test_args arguments to pass to test_file"""
+        @param test_args arguments to pass to test_file
+        """
         self.id         = id
         self.controller = None
         self.test_file  = test_file

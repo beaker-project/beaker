@@ -18,7 +18,7 @@
 #
 # Author: Marian Csontos <mcsontos@redhat.com>
 
-# source the test script helpers 
+# source the test script helpers
 
 # FIXME: See also
 # ${BEAKER_ROOT}/beakerlib/examples/phases/runtest.sh
@@ -54,7 +54,7 @@ rhts-client add-comment 1 "a comment"
 rhts-client add-comment -u mcsontos@redhat.com $RECIPEID "a comment"
 rhts-client add-comment -S $RESULT_SERVER 1 "a comment"
 
-# FIXME: 
+# FIXME:
 cat <<EOF
 rhts-db-submit-result (-S|--server) SERVER (-t|--testname) TESTNAME
     [(-T|--testid) RECIPETESTID] [(-r|--result) RESULT]

@@ -54,10 +54,10 @@ from optparse import OptionParser
 def conf_opt(args):
     """
     Parses command line for common options.
-    
+
     This seeks only the few most common options. For other options use your own
     parser.
-    
+
     Returns tuple (options, args). For descritpin see
     optparse.OptionParser.parse_args and optparse.Values
     """

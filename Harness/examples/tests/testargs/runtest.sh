@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# Copyright (c) 2006 Red Hat, Inc. All rights reserved. This copyrighted material 
+# Copyright (c) 2006 Red Hat, Inc. All rights reserved. This copyrighted material
 # is made available to anyone wishing to use, modify, copy, or
 # redistribute it subject to the terms and conditions of the GNU General
 # Public License v.2.
@@ -15,7 +15,7 @@
 #
 # Author: Alexander Todorov <atodorov@redhat.com>
 
-# source the test script helpers 
+# source the test script helpers
 . /usr/bin/rhts-environment.sh
 
 

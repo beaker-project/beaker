@@ -341,7 +341,7 @@ lm_main_beah
     Install harness.
 lm_install_beah [OPTION]
     Install beah package.
-    Options: 
+    Options:
       rpm -r --rpm   Install from built RPM file.
       yum -y --yum   Install from built RPM file using yum.
       egg -e --egg   Install from egg file.

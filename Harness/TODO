@@ -1,14 +1,8 @@
 == TODO ==
 
- !! rhts task adaptor
-    - improve XML-RPC to event conversion
- !! beaker backend
-    - improve event to XML-RPC conversion
-    - check harness->beakerLC
-      - run few simple tests (why simple?)
  !! rhts-test-runner.sh
     - get and store repository info in /etc/yum.repos.d/
-    - check environment 
+    - check environment
     - create /tmp/TESTOUT.log - it is required by rhts-abort
     - get the test
     - set environment

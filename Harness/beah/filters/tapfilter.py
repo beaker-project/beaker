@@ -156,7 +156,7 @@ def Stdin2Task(filter=None, serializer=None):
 ################################################################################
 
 if __name__ == '__main__':
-    from pprint import pprint 
+    from pprint import pprint
     def ltest(a_list):
         print '================================================================================'
         pprint(a_list)
