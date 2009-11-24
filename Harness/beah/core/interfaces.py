@@ -18,7 +18,7 @@
 
 import exceptions
 
-class BeaconInterface(object):
+class ControllerInterface(object):
     """Classes used as a Controller should implement this interface. This
     includes Task and Backend side Controller-Adaptor"""
 

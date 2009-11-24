@@ -25,24 +25,38 @@
 
 (
 
+## BEAH_ROOT - directory used to store downloaded files and for building
+## components.
 BEAH_ROOT=/root/beah
 
 ## PYTHON:
-#PY_VER=2.6.2
-
+## PY_VER - version of python to build. Uncomment to include python in
+## installation.
 #PY_VER=2.5 # This is known to work on RHEL4.8
+PY_VER=2.6.2
+
+## PYBIN_NAME - python interpreter binary to install harness to.
 PYBIN_NAME=python2.6
 
 ## ZOPE INTERFACE:
-#ZI_VER=3.3.0
+## ZI_VER - version of zope-interface to download and build. Uncomment to
+## include zope-interface in installation.
+ZI_VER=3.3.0
 
 ## TWISTED:
-#TW_VER=8.2.0
+## TW_VER - version of Twisted framework to download and build. Uncomment to
+## include Twisted in installation.
+TW_VER=8.2.0
 
 ## SIMPLEJSON:
-#SJ_VER=2.0.9
+## TW_VER - version of simplejson module to download and build. Uncomment to
+## include simplejson in installation.
+SJ_VER=2.0.9
 
 ## GIT:
+## GIT_VER - version of git to download and build. Uncomment to include git in
+## installation.
+## this did not work on 4.8
 #GIT_VER=1.6.4.1
 
 ## BEAKER:
@@ -50,7 +64,7 @@ PYBIN_NAME=python2.6
 
 ################################################################################
 
-mkdir $BEAH_ROOT
+mkdir -p $BEAH_ROOT
 pushd $BEAH_ROOT
 
 ################################################################################
@@ -77,6 +91,7 @@ else
 PY_OK=0
 fi
 
+## PYBIN - full name of python binary. See PYBIN_NAME.
 PYBIN=`which $PYBIN_NAME`
 
 ################################################################################

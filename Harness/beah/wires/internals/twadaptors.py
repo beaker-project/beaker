@@ -21,6 +21,9 @@ from beah.core.errors import KilledException
 from beah.wires.internals.twmisc import JSONProtocol
 
 class ControllerAdaptor_Backend_JSON(JSONProtocol):
+    """
+    Class implementing ControllerInterface used by Twisted backends.
+    """
     def add_backend(self, backend):
         self.backend = backend
         self.backend.set_controller(None) # Wait for connectionMade
@@ -47,6 +50,9 @@ class ControllerAdaptor_Backend_JSON(JSONProtocol):
             self.backend.set_controller(None)
 
 class BackendAdaptor_JSON(JSONProtocol):
+    """
+    Class implementing BackendInterface used by Twisted Controller.
+    """
     def set_controller(self, controller=None):
         self.controller = controller
     def proc_input(self, cmd):
@@ -64,6 +70,9 @@ class BackendAdaptor_JSON(JSONProtocol):
             self.controller.remove_backend(self)
 
 class TaskAdaptor_JSON(JSONProtocol):
+    """
+    Class implementing TaskInterface used by Twisted Controller.
+    """
     def __init__(self):
         self.origin = {}
     def set_controller(self, controller=None):
@@ -94,6 +103,9 @@ class TaskAdaptor_JSON(JSONProtocol):
             self.controller.remove_task(self)
 
 class ControllerAdaptor_Task_JSON(JSONProtocol):
+    """
+    Class implementing ControllerInterface used by Twisted tasks.
+    """
     def add_task(self, task):
         self.task = task
         self.task.set_controller(None) # wait for connectionMade

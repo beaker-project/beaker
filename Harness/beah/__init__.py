@@ -16,10 +16,14 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
+"""
+BEAker Harness. Part of Beaker project [http://fedorahosted.org/beaker/wiki].
+"""
+
 __import__('pkg_resources').declare_namespace(__name__)
 
 # FIXME:
-# see /home/mcsontos/projects/beaker/main/beaker/Client/src/beaker/__init__.py:
+# see beaker/Client/src/beaker/__init__.py:
 #-------------------------------------------------------------------------------
 # See http://peak.telecommunity.com/DevCenter/setuptools#namespace-packages
 #try:
