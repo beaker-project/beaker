@@ -1,5 +1,7 @@
 #!/bin/bash
 
+FAKELC_SERVICE=1
+
 function warning() { echo "--- WARNING: $*" >&2; }
 function soft_error() { echo "--- ERROR: $*" >&2; return 1; }
 function error() { echo "--- ERROR: $*" >&2; exit 1; }
@@ -222,9 +224,13 @@ function lm_mon()
 function lm_stop()
 {
   service beah-beaker-backend stop
-  sleep 2
-  if [[ -n "$LM_FAKELC" ]]; then
-    kill -2 $(cat /tmp/beah-fakelc.pid)
+  if [[ -n "$FAKELC_SERVICE" ]]; then
+    service beah-fakelc stop
+  else
+    sleep 2
+    if [[ -n "$LM_FAKELC" ]]; then
+      kill -2 $(cat /tmp/beah-fakelc.pid)
+    fi
   fi
   service beah-srv stop
 }
@@ -233,10 +239,14 @@ function lm_restart()
 {
   rm -rf /var/cache/rhts
   service beah-srv restart
-  if [[ -n "$LM_FAKELC" ]]; then
-    beah-fakelc &> /tmp/beah-fakelc.out &
-    echo "$!" > /tmp/beah-fakelc.pid
-    sleep 2
+  if [[ -n "$FAKELC_SERVICE" ]]; then
+    service beah-fakelc restart
+  else
+    if [[ -n "$LM_FAKELC" ]]; then
+      beah-fakelc &> /tmp/beah-fakelc.out &
+      echo "$!" > /tmp/beah-fakelc.pid
+      sleep 2
+    fi
   fi
   service beah-beaker-backend restart
   lm_mon
@@ -245,8 +255,12 @@ function lm_restart()
 function lm_kill()
 {
   beah kill
-  if [[ -n "$LM_FAKELC" ]]; then
-    kill -2 $(cat /tmp/beah-fakelc.pid)
+  if [[ -n "$FAKELC_SERVICE" ]]; then
+    service beah-fakelc stop
+  else
+    if [[ -n "$LM_FAKELC" ]]; then
+      kill -2 $(cat /tmp/beah-fakelc.pid)
+    fi
   fi
 }
 
@@ -259,6 +273,9 @@ function lm_main_beah()
   fi
   if ! chkconfig beah-beaker-backend; then
     chkconfig --add beah-beaker-backend
+  fi
+  if ! chkconfig beah-fakelc; then
+    chkconfig --add beah-fakelc
   fi
 }
 
