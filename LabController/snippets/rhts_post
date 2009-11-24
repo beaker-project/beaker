@@ -121,7 +121,7 @@ EOF
 
 # RHEL3 - RHEL5 need additional packages
 #if $os_version in ['rhel3','rhel4','rhel5']
-cat << EOF > /etc/yum.repos.d/beaker-harness.repo
+cat << EOF > /etc/yum.repos.d/beaker-support.repo
 [beaker-support]
 name=Beaker Support
 baseurl=http://$server/harness/$os_version/$arch
