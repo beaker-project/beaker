@@ -23,8 +23,11 @@ from exceptions import NotImplementedError
 USE_DEFAULT = object()
 
 class JSONProtocol(basic.LineReceiver):
+
     """Protocol to send and receive new-line delimited JSON objects"""
+
     delimiter = "\n"
+    MAX_LENGTH = 0x100000 # 1 MiB
 
     ########################################
     # METHODS TO REIMPLEMENT:

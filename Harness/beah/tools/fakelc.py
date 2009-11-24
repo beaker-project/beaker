@@ -111,7 +111,7 @@ def do_task_result(fname, task_id, result_type, path, score, summary):
             or (RESULT_TYPE_.count(result_type) > 0 \
                     and RESULT_TYPE_.find(result) < RESULT_TYPE_.find(result_type)):
             rec_args[ix]=result_type
-        answ = randint(1,9999999)
+        answ = randint(1, 9999999)
         print "%s.RETURN: %s" % (fname, answ)
         return answ
     except:
@@ -332,6 +332,32 @@ def main():
                         name="/distribution/kernelinstall" role="CLIENTS"
                 -->
 
+                <task avg_time="120" id="95"
+                        name="/examples/rhts_tutorial/mcsontos/beah_logs" role="CLIENTS"
+                        result="%(task95_res)s"
+                        status="%(task95_stat)s"
+                        >
+                    <roles>
+                        <role value="CLIENTS">
+                            <system value="%(machine0)s"/>
+                        </role>
+                    </roles>
+                    <rpm name="tmp-examples-rhts_tutorial-mcsontos-beah_logs.noarch"/>
+                </task>
+
+                <task avg_time="84400" id="99"
+                        name="/examples/rhts_tutorial/mcsontos/beah_reserve" role="CLIENTS"
+                        result="%(task99_res)s"
+                        status="%(task99_stat)s"
+                        >
+                    <roles>
+                        <role value="CLIENTS">
+                            <system value="%(machine0)s"/>
+                        </role>
+                    </roles>
+                    <rpm name="rh-tests-examples-rhts_tutorial-mcsontos-beah_reserve.noarch"/>
+                </task>
+
             </recipe>
         """
 
@@ -343,7 +369,7 @@ def main():
     global recipes, task_recipe, fqdn_recipes
     recipes[21] = (recipe21, args21)
     args = args21
-    tasks = [41,42,43,44,45,46,47]
+    tasks = [41, 42, 43, 44, 45, 46, 47, 95, 99]
     machines = [
             os.environ["HOSTNAME"],
             "test1.example.com",

@@ -19,6 +19,7 @@
 from twisted.web.xmlrpc import Proxy
 from twisted.internet import reactor
 
+import sys
 import os
 import os.path
 import pprint
@@ -65,26 +66,29 @@ def mk_beaker_task(rpm_name):
 
 class RHTSTask(ShExecutable):
 
-    def __init__(self, env_):
+    def __init__(self, env_, repos):
         self.__env = env_
+        self.__repos = repos
         ShExecutable.__init__(self)
 
     def content(self):
         self.write_line("""
-TESTPATH="%s%s"
-KILLTIME="%s"
-export TESTPATH KILLTIME
+# THIS SHOULD PREVENT rhts-test-runner.sh to install rpm from default rhts
+# repository and use repositories defined in recipe
+#mkdir -p $TESTPATH
+yum -y --disablerepo=* %s install $TESTRPMNAME
+%s -m beah.tasks.rhts_xmlrpc
+""" % (' '.join(['--enablerepo=%s' % repo for repo in self.__repos]),
+                sys.executable))
 
-mkdir -p $TESTPATH
 
-python2.6 -m beah.tasks.rhts_xmlrpc
-""" % ('/mnt/tests', self.__env['TASKNAME'], self.__env['KILLTIME']))
-
-
-def mk_rhts_task(env_):
-    e = RHTSTask(env_)
+def mk_rhts_task(env_, repos):
+    e = RHTSTask(env_, repos)
     e.make()
     return e.executable
+
+def normalize_rpm_name(rpm_name):
+    return rpm_name if rpm_name[-4:] != '.rpm' else rpm_name[:-4]
 
 def parse_recipe_xml(input_xml):
 
@@ -156,10 +160,10 @@ def parse_recipe_xml(input_xml):
                 rpm_name = rpm_tag.get('name')
                 task_env.update(
                         TEST=task_name,
-                        TESTRPMNAME=rpm_name,
+                        TESTRPMNAME=normalize_rpm_name(rpm_name),
                         TESTPATH="/mnt/tests"+task_name ,
                         KILLTIME=str(ewd))
-                executable = mk_rhts_task(task_env)
+                executable = mk_rhts_task(task_env, repos)
                 args = [rpm_name]
                 print "RPMTest %s - %s %s" % (rpm_name, executable, args)
                 break
@@ -402,7 +406,7 @@ class BeakerLCBackend(ExtBackend):
         if offset is None:
             offset = seqoff
         elif offset != seqoff:
-            on_error(self, "Given offset (%s) does not match calculated (%s)."
+            self.on_error(self, "Given offset (%s) does not match calculated (%s)."
                     % (offset, seqoff))
         data = evt.arg('data')
         try:
@@ -411,7 +415,7 @@ class BeakerLCBackend(ExtBackend):
             self.on_exception("Unable to decode data.")
             return
         if cdata is None:
-            on_error("No data found.")
+            self.on_error("No data found.")
             return
         size = len(cdata)
         self.set_file_info(fid, offset=offset+size)
