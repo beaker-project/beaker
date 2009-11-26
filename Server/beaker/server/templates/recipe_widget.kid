@@ -1,5 +1,12 @@
 <div xmlns:py="http://purl.org/kid/ns#">
- <table class="show">
+ <?python
+    if recipe.result:
+        result = recipe.result.result == 'Pass' and 'pass' or 'fail'
+    else:
+        result = 'fail'
+ ?>
+
+ <table class="show ${result}">
   <tr>
    <td class="title"><b>Recipe ID</b></td>
    <td class="value"><a class="list" href="${tg.url('/recipes/view?id=%s' % recipe.id)}">${recipe.t_id}</a></td>
@@ -49,6 +56,7 @@
    <td class="value" colspan="6">Not Implemented yet..</td>
   </tr>
  </table>
+
  <div py:if="recipe_tasks_widget" class="recipe-tasks">
   <h2>Task Runs</h2>
   <p py:content="recipe_tasks_widget(recipe_tasks=recipe.all_tasks)">Recipe Tasks goes here</p>

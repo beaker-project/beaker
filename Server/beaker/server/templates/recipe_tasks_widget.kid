@@ -14,12 +14,18 @@
    <!-- Depending on if its a RecipeTask or a RecipeTaskResult we 
         display a different row 
    -->
-   <td py:if="recipe_task.is_task()" class="list">${recipe_task.link}</td>
-   <td py:if="not recipe_task.is_task()" class="list">&nbsp;&nbsp;${recipe_task.short_path}</td>
-   <td class="list">${recipe_task.start_time}</td>
-   <td class="list">${recipe_task.finish_time}</td>
-   <td class="list">${recipe_task.duration}</td>
-   <td class="list">${recipe_task.status}</td>
-   <td class="list">${recipe_task.result}</td>
+   <?python
+       if recipe_task.result:
+           result = recipe_task.result.result == 'Pass' and 'pass' or 'fail'
+       else:
+           result = 'fail'
+   ?>
+   <td py:if="recipe_task.is_task()" class="list ${result}">${recipe_task.link}</td>
+   <td py:if="not recipe_task.is_task()" class="list ${result}">&nbsp;&nbsp;${recipe_task.short_path}</td>
+   <td class="list ${result}">${recipe_task.start_time}</td>
+   <td class="list ${result}">${recipe_task.finish_time}</td>
+   <td class="list ${result}">${recipe_task.duration}</td>
+   <td class="list ${result}">${recipe_task.status}</td>
+   <td class="list ${result}">${recipe_task.result}</td>
  </tr>
 </table>
