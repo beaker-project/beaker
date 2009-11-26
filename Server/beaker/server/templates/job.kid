@@ -5,29 +5,45 @@
 <head>
     <meta content="text/html; charset=UTF-8" http-equiv="content-type" py:replace="''"/>
 
-    <title>Recipe</title>
+    <title>Job</title>
 </head>
+
+ <?python
+    if job.result:
+        default = job.result.result == 'Pass' and 'ShowAll' or 'ShowFail'
+    else:
+        default = 'ShowFail'
+ ?>
 
 <script type="text/javascript">
  $(document).ready(function() {
-   $('.pass').hide();
+   ${default}();
    $('#results_all').click(function() {
-    $('.fail').show();
-    $('.pass').show();
+    ShowAll();
    });
    $('#results_fail').click(function() {
-    $('.fail').show();
-    $('.pass').hide();
+    ShowFail();
    });
   });
+
+ function ShowAll() {
+    $('.fail').show();
+    $('.pass').show();
+ }
+
+ function ShowFail() {
+    $('.fail').show();
+    $('.pass').hide();
+ }
+
 </script>
 
 
 <body class="flora">
  <form>
-  <input id="results_all" type="radio" name="results" value="all" />
+  <input id="results_all" type="radio" name="results" value="all" checked="${(None, '')[default == 'ShowAll']}" />
   <label for="results_all">All results</label>
-  <input id="results_fail" type="radio" name="results" value="fail" checked="" />
+  <input id="results_fail" type="radio" name="results" value="fail" checked="${(None, '')[default == 'ShowFail']}" />
   <label for="results_fail">Only failed items</label>
   <input id="results_ackneeded" type="radio" name="results" value="ackneeded" />
   <label for="results_ackneeded">Failed items needing review</label>

@@ -57,7 +57,7 @@
   </tr>
  </table>
 
- <div py:if="recipe_tasks_widget" class="recipe-tasks">
+ <div py:if="recipe_tasks_widget" class="recipe-tasks ${result}">
   <h2>Task Runs</h2>
   <p py:content="recipe_tasks_widget(recipe_tasks=recipe.all_tasks)">Recipe Tasks goes here</p>
  </div>
