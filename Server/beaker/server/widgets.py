@@ -77,6 +77,7 @@ class PowerTypeForm(CompoundFormField):
 class myPaginateDataGrid(PaginateDataGrid):
     template = "beaker.server.templates.my_paginate_datagrid"
 
+  
 class SearchBar(RepeatingFormField):
     """Search Bar"""
 
@@ -90,15 +91,17 @@ class SearchBar(RepeatingFormField):
       action="${action}"
       method="${method}"
       class="searchbar_form"
-      py:attrs="form_attrs"
+      py:attrs="form_attrs" 
       style="display:${simple}"
     >
     <table>
      <tr>
       <td><input type="text" name="simplesearch" value="${simplesearch}" class="textfield"/>
       </td>
-      <td><input type="submit" name="search" value="Search"/>
+    <td><input type="submit" name="search" value="Search"/>
       </td>
+
+   
      </tr>
     </table>
     </form>
@@ -148,34 +151,53 @@ class SearchBar(RepeatingFormField):
         </td>
        </tr>
       </tbody>
-     </table>
-     </td><td>
+     </table></td><td>
      <input type="submit" name="Search" value="Search"/>
      </td>
+    
+   
      </tr>
      <tr>
      <td colspan="2">
      <a id="doclink" href="javascript:SearchBarForm.addItem('${field_id}');">Add ( + )</a>
      </td>
      </tr>
-     <tr><td>
-          ${result_columns}
-         </td>
-     </tr>
      </table>
+    
+    <a id="customcolumns" href="#">Toggle Result Columns</a>
+    <a style='margin-left:10px' id="clearcolumns" href="#">Clear Result Columns</a>
+    <input py:if="custom_column_checked is False" style='checkbox' id='disable_customcolumns' name='disable_customcolumns' type='checkbox' checked='checked' />
+    <input py:if="custom_column_checked is True" style='checkbox' id='disable_customcolumns' name='disable_customcolumns' type='checkbox'  />
+    <label for='disable_customcolumns'>Disable Custom Result Columns</label>
+    <div style='display:none'  id='selectablecolumns'>
+      <ul class="${field_class}" id="${field_id}">
+        <li py:for="value,desc in col_options">
+          <input py:if="col_defaults.get(value)" type="checkbox" name = "${field_id}_column_${value}" id="${field_id}_column_${value}" value="${value}" checked='checked' />
+          <input py:if="not col_defaults.get(value)" type="checkbox" name = "${field_id}_column_${value}" id="${field_id}_column_${value}" value="${value}" />
+          <label for="${field_id}_${value}" py:content="desc" />
+        </li>  
+      </ul>
+    </div>
+ 
      </fieldset>
     </form>
     <script type="text/javascript">
     $(document).ready(function() {
         $('#advancedsearch').click( function() { $('#searchform').toggle('slow');
                                                  $('#simpleform').toggle('slow');});
-    });
+   
+
+  
+        $('#customcolumns').click( function() { $('#selectablecolumns').toggle('slow'); });
+        
+        $('#clearcolumns').click( function() { $("input[name *= 'systemsearch_column_']").removeAttr('checked'); }); 
+     });
     </script>
     </div>
     """
 
     params = ['repetitions', 'form_attrs', 'search_controller', 'simplesearch',
-              'advanced', 'simple','result_columns']
+              'advanced', 'simple','col_options','col_defaults','custom_column_checked']
     form_attrs = {}
     simplesearch = None
 
@@ -189,8 +211,7 @@ class SearchBar(RepeatingFormField):
         value_field = TextField(name="value")
         self.fields = [ table_field, operation_field, value_field]
 
-    def display(self, value=None, **params):   
-        params['result_columns'] = params['options']['columns']
+    def display(self, value=None, **params): 
         if 'options' in params and 'simplesearch' in params['options']:
             params['simplesearch'] = params['options']['simplesearch']
         if value and not params['simplesearch']:
@@ -202,8 +223,7 @@ class SearchBar(RepeatingFormField):
         if value and isinstance(value, list) and len(value) > 1:
             params['repetitions'] = len(value)
         return super(SearchBar, self).display(value, **params)
- 
-        
+      
      
 
 class ProvisionForm(RepeatingFormField):
