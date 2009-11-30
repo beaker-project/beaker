@@ -61,8 +61,7 @@ class Utility:
     def result_columns(cls,values_checked = None):  
       #Call function which will return list of columns that can be searched on 
       # Ticket 51 
-      #value = request.simpleCookie['result_column'].value
-      #log.debug(value)
+      #value = request.simpleCookie['result_column'].value 
       column_names = SystemSearch.create_search_table([System,Cpu]) 
       send = [(elem,elem) for elem in column_names]  
      
@@ -107,14 +106,14 @@ class Utility:
     @classmethod
     def systems_grid(cls): 
         my_fields = [
-            widgets.PaginateDataGrid.Column(name='fqdn', getter=lambda x: make_link("/view/%s" % x.fqdn, x.fqdn), title='System', options=dict(sortable=True)),
-            widgets.PaginateDataGrid.Column(name='status.status', getter=lambda x: x.status, title='Status', options=dict(sortable=True)),
-            widgets.PaginateDataGrid.Column(name='vendor', getter=lambda x: x.vendor, title='Vendor', options=dict(sortable=True)),
-            widgets.PaginateDataGrid.Column(name='model', getter=lambda x: x.model, title='Model', options=dict(sortable=True)),
-            widgets.PaginateDataGrid.Column(name='location', getter=lambda x: x.location, title='Location', options=dict(sortable=True)),
-            widgets.PaginateDataGrid.Column(name='arch', getter=lambda x: ', '.join([arch.arch for arch in x.arch]), title='Arch', options=dict(sortable=True)),
-            widgets.PaginateDataGrid.Column(name='user.display_name', getter=lambda x: x.user, title='User', options=dict(sortable=True)),
-            widgets.PaginateDataGrid.Column(name='type.type', getter=lambda x: x.type, title='Type', options=dict(sortable=True)),]
+            widgets.PaginateDataGrid.Column(name='fqdn', getter=cls.system_name_getter(), title='System', options=dict(sortable=True)),
+            widgets.PaginateDataGrid.Column(name='status.status', getter=cls.get_attr('status'), title='Status', options=dict(sortable=True)),
+            widgets.PaginateDataGrid.Column(name='vendor', getter=cls.get_attr('vendor'), title='Vendor', options=dict(sortable=True)),
+            widgets.PaginateDataGrid.Column(name='model', getter=cls.get_attr('model'), title='Model', options=dict(sortable=True)),
+            widgets.PaginateDataGrid.Column(name='location', getter=cls.get_attr('location'), title='Location', options=dict(sortable=True)),
+            widgets.PaginateDataGrid.Column(name='arch', getter=cls.system_arch_getter(), title='Arch', options=dict(sortable=True)),
+            widgets.PaginateDataGrid.Column(name='user.display_name', getter=cls.get_attr('User'), title='User', options=dict(sortable=True)),
+            widgets.PaginateDataGrid.Column(name='type.type', getter=cls.get_attr('type'), title='Type', options=dict(sortable=True)),]
 
         return my_fields
 
@@ -434,10 +433,9 @@ class Root(RPCRoot):
 
     @expose(template='beaker.server.templates.grid')
     @identity.require(identity.not_anonymous())
-    @paginate('list',default_order='fqdn',limit=20,allow_limit_override=True)
+    @paginate('list',limit=20,allow_limit_override=True)
     def mine(self, *args, **kw):
         return self.systems(systems = System.mine(identity.current.user), *args, **kw)
-
 
     def _system_search(self,kw,sys_search,result_columns = None,use_custom_columns = False):   
 	for search in kw['systemsearch']:	
@@ -473,6 +471,7 @@ class Root(RPCRoot):
                                    'operation' : 'contains',
                                    'keyvalue' : None,
                                    'value' : kw['simplesearch']}]
+            kw['disable_customcolumns'] = 'on'
         else:
             simplesearch = None
 
@@ -495,8 +494,14 @@ class Root(RPCRoot):
                 use_custom_columns = False
             else:
                 use_custom_columns = True 
+ 
+            if use_custom_columns is True:
+                #Need to flag this as a custom search here, so when _system_search is
+                #called it knows whether to add columns to the result or not 
+                sys_search.custom_search = True;
+                sys_search.set_columns(columns) 
 
-            systems = self._system_search(kw,sys_search,columns,use_custom_columns)
+            systems = self._system_search(kw,sys_search,use_custom_columns)
           
             if use_custom_columns is True:
                 (system_columns_desc,extra_columns_desc) = sys_search.get_column_descriptions() 
