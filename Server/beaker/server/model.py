@@ -1167,7 +1167,6 @@ class SystemSearch(Search):
                     self.system_columns_desc.append(elem)
                     continue
                 elif col_ref is not None: 
-                    log.debug('Adding columns %s' % col_ref)   
                     self.extra_columns_desc.append(elem)
                     self.adding_columns = True
                     queri = queri.add_column(col_ref)         
