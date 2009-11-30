@@ -7,7 +7,8 @@
 </head>
 <body>
 <h2>$title</h2>
-<span py:if="search_bar">${search_bar.display(method='GET', action=action, value=searchvalue, options=options)}</span>
+<span py:if="search_bar">${search_bar.display(method='GET', action=action, value=searchvalue, options=options,
+                                              col_options = col_options, col_defaults = col_defaults, custom_column_checked=enable_custom_column)}</span>
 ${grid.display(list)}
 </body>
 </html>
