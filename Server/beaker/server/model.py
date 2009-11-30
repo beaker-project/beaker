@@ -1067,7 +1067,7 @@ class SystemSearch(Search):
         self.result_columns = [] 
         self.extra_columns_desc = []
         self.system_columns_desc = []
-     
+        self.custom_search = False 
         search_tables = {} 
   
     def __getitem__(self,key):
@@ -1186,10 +1186,9 @@ class SystemSearch(Search):
         queri = session.query(System).select_from(self.j)  
       
         #Add columns which were specified in the search page
-        queri = self.__add_columns(queri)
-        for row in queri:
-            print row 
-           
+        if self.custom_search:
+            queri = self.__add_columns(queri)
+            
         #Execute filter on query object  
         for filter_func in self.filter_funcs:           
             queri = queri.filter(filter_func()) 
@@ -1229,11 +1228,7 @@ class System(SystemObject):
         (or display name) as the key, and a list of fields that can be 
         searched after any field filtering has been applied
         """
-        return cls._create_search_description(
-                   dict(includes = ['Arch','Name','Status','Type',
-                                    'Vendor','Lender','Model','Memory',
-                                    'Serial','Owner','User','LabController'])
-                                              )
+        return cls._create_search_description(cls.search_by)
    
     @classmethod
     def search_values(cls,col):  
