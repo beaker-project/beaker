@@ -376,6 +376,7 @@ class Root(RPCRoot):
             simplesearch = kw['simplesearch']
             kw['systemsearch'] = [{'table' : 'System/Name',   
                                    'operation' : 'contains',
+                                   'keyvalue' : None,
                                    'value' : kw['simplesearch']}]
         else:
             simplesearch = None
