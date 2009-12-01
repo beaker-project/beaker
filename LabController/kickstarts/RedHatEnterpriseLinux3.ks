@@ -38,9 +38,11 @@ $SNIPPET("rhts_packages")
 
 #end if
 %pre
+PATH=/usr/bin:$PATH
 $SNIPPET("RedHatEnterpriseLinux3_pre")
 $SNIPPET("rhts_pre")
 
 %post
+PATH=/usr/bin:$PATH
 $SNIPPET("RedHatEnterpriseLinux3_post")
 $SNIPPET("rhts_post")
