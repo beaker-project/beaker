@@ -576,9 +576,14 @@ class SystemDetails(Widget):
     template = "beaker.server.templates.system_details"
     params = ['system']
 
-class SystemHistory(Widget):
-    template = "beaker.server.templates.system_activity"
-    params = ['system']
+class SystemHistory(myPaginateDataGrid): 
+    fields = [PaginateDataGrid.Column(name='user',title='User',getter=lambda x: x.user,options=dict(sortable=True)),
+              PaginateDataGrid.Column(name='service', title='Service', getter=lambda x: x.service, options=dict(sortable=True)),
+              PaginateDataGrid.Column(name='created', title='Created', getter=lambda x: x.created, options = dict(sortable=True)),
+              PaginateDataGrid.Column(name='field_name', title='Field Name', getter=lambda x: x.field_name, options=dict(sortable=True)),
+              PaginateDataGrid.Column(name='action', title='Action', getter=lambda x: x.action, options=dict(sortable=True)),
+              PaginateDataGrid.Column(name='old_value',title='Old Value', getter=lambda x: x.old_value,options=dict(sortable=True)), 
+              PaginateDataGrid.Column(name='new_value',title='New Value',getter=lambda x: x.new_value, options=dict(sortable=True))] 
 
 class SystemForm(Form):
     javascript = [LocalJSLink('beaker', '/static/javascript/provision.js')]
