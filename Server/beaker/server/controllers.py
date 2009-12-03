@@ -871,6 +871,11 @@ class Root(RPCRoot):
     def save(self, **kw):
         if kw.get('id'):
             try:
+                query = System.query().filter(System.fqdn ==kw['fqdn'])
+                for sys_object in query:
+                    if str(sys_object.id) != str(kw['id']):
+                        flash( _(u"%s already exists!" % kw['fqdn']))
+                        redirect("/") 
                 system = System.by_id(kw['id'],identity.current.user)
             except InvalidRequestError:
                 flash( _(u"Unable to save %s" % kw['id']) )
