@@ -875,7 +875,7 @@ class Root(RPCRoot):
             except InvalidRequestError:
                 flash( _(u"Unable to save %s" % kw['id']) )
                 redirect("/")
-            system.fqdn = kw['fqdn']
+           
         else:
             if System.query().filter(System.fqdn == kw['fqdn']).count() != 0:   
                 flash( _(u"%s already exists!" % kw['fqdn']) )
@@ -888,14 +888,14 @@ class Root(RPCRoot):
         log_fields = [ 'fqdn', 'vendor', 'lender', 'model', 'serial', 'location', 'type_id', 'checksum', 'status_id', 'lab_controller_id' , 'mac_address']
         for field in log_fields:
             try:
-                current_val = str(system.__dict__[field])
+                current_val = getattr(system,field)
             except KeyError:
                 current_val = ""
             # catch nullable fields return None.
-            if current_val == 'None':
+            if current_val is None:
                 current_val = ""
             new_val = str(kw.get(field) or "")
-            if current_val != new_val:
+            if str(current_val) != new_val:
 #                sys.stderr.write("\nfield: " + field + ", Old: " +  current_val + ", New: " +  str(kw[field]) + " " +  "\n")
                 activity = SystemActivity(identity.current.user, 'WEBUI', 'Changed', field, current_val, new_val )
                 system.activity.append(activity)
@@ -914,11 +914,11 @@ class Root(RPCRoot):
         log_bool_fields = [ 'private' ]
         for field in log_bool_fields:
             try:
-                current_val = str(system.__dict__[field])
+                current_val = getattr(system,field)
             except KeyError:
                 current_val = ""
             new_val = str(kw.get(field) or False)
-            if current_val != new_val:
+            if str(current_val) != new_val:
                 activity = SystemActivity(identity.current.user, 'WEBUI', 'Changed', field, current_val, new_val )
                 system.activity.append(activity)
         system.status_id=kw['status_id']
@@ -928,6 +928,7 @@ class Root(RPCRoot):
         system.serial=kw['serial']
         system.vendor=kw['vendor']
         system.lender=kw['lender']
+        system.fqdn=kw['fqdn']
         system.date_modified = datetime.utcnow()
         if kw.get('private'):
             system.private=kw['private']
