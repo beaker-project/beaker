@@ -360,8 +360,11 @@ class Root(RPCRoot):
             cls_ref = SystemSearch.translate_name(class_field_list[0])
             col = class_field_list[1]              
             #If value id False or True, let's convert them to
-            sys_search.append_results(cls_ref,search['value'],col,search['operation'],keyvalue = search['keyvalue']) 
-         
+            if class_field_list[0] != 'Key':
+               sys_search.append_results(cls_ref,search['value'],col,search['operation']) 
+            else:
+               sys_search.append_results(cls_ref,search['value'],col,search['operation'],keyvalue=search['keyvalue']) 
+               
         systems = sys_search.return_results()
         new_systems = System.all(identity.current.user,system = systems)    
         return new_systems
