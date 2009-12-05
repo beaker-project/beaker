@@ -64,6 +64,10 @@ system_table = Table('system', metadata,
     Column('mac_address',String(18)),
     Column('loan_id', Integer,
            ForeignKey('tg_user.user_id')),
+    Column('release_action_id', Integer,
+           ForeignKey('release_action.id')),
+    Column('distro_id', Integer,
+           ForeignKey('distro.id')),
 )
 
 system_device_map = Table('system_device_map', metadata,
@@ -79,6 +83,12 @@ system_type_table = Table('system_type', metadata,
     Column('id', Integer, autoincrement=True,
            nullable=False, primary_key=True),
     Column('type', Unicode(100), nullable=False),
+)
+
+release_action_table = Table('release_action', metadata,
+    Column('id', Integer, autoincrement=True,
+           nullable=False, primary_key=True),
+    Column('action', Unicode(100), nullable=False),
 )
 
 system_status_table = Table('system_status', metadata,
@@ -1746,10 +1756,13 @@ $SNIPPET("rhts_post")
         self.user = None
         # Attempt to remove Netboot entry
         # and turn off machine, but don't fail if we can't
-        try:
-            self.remote.release()
-        except:
-            pass
+        if self.release_action:
+            self.release_action.do(self)
+        else:
+            try:
+                self.remote.release()
+            except:
+                pass
 
     def action_provision(self, 
                          distro=None,
@@ -1822,6 +1835,35 @@ class SystemType(SystemObject):
         return cls.query.filter_by(type=systemtype).one()
 
 
+class ReleaseAction(SystemObject):
+
+    def __init__(self, action=None):
+        self.action = action
+
+    def __repr__(self):
+        return self.action
+
+    def do(self, *args, **kwargs):
+        return getattr(self, self.action)(*args, **kwargs)
+
+    def PowerOff(self, system):
+        """ Turn off system
+        """
+        try:
+            system.remote.power(action='Off')
+        except:
+            pass
+
+    def LeaveOn(self, system):
+        """ Leave system running
+        """
+        pass
+
+    def ReProvision(self, system):
+        """ re-provision the system 
+        """
+        if system.distro:
+            system.action_auto_provision(distro=system.distro)
 
 
 class SystemStatus(SystemObject):
@@ -2491,6 +2533,7 @@ class Key_Value_Int(object):
 # set up mappers between identity tables and classes
 SystemType.mapper = mapper(SystemType, system_type_table)
 SystemStatus.mapper = mapper(SystemStatus, system_status_table)
+mapper(ReleaseAction, release_action_table)
 System.mapper = mapper(System, system_table,
        properties = {'fqdn':synonym('Name',map_column=True),
                      'vendor':synonym('Vendor',map_column=True),
@@ -2549,7 +2592,10 @@ System.mapper = mapper(System, system_table,
                                                 backref='system'),
                      'activity':relation(SystemActivity,
                                      order_by=[activity_table.c.created.desc()],
-                                               backref='object')})
+                                               backref='object'),
+                     'release_action':relation(ReleaseAction, uselist=False),
+                     'distro':relation(Distro, uselist=False),
+                     })
 
 Cpu.mapper = mapper(Cpu,cpu_table,properties = {
                                                  'vendor':synonym('Vendor',map_column=True),
