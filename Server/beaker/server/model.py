@@ -66,7 +66,7 @@ system_table = Table('system', metadata,
            ForeignKey('tg_user.user_id')),
     Column('release_action_id', Integer,
            ForeignKey('release_action.id')),
-    Column('distro_id', Integer,
+    Column('reprovision_distro_id', Integer,
            ForeignKey('distro.id')),
 )
 
@@ -1843,28 +1843,42 @@ class ReleaseAction(SystemObject):
     def __repr__(self):
         return self.action
 
+    @classmethod
+    def get_all(cls):
+        """
+        PowerOff, LeaveOn or ReProvision
+        """
+        all_actions = cls.query()
+        return [(raction.id, raction.action) for raction in all_actions]
+
+    @classmethod
+    def by_id(cls, id):
+        """ 
+        Look up ReleaseAction by id.
+        """
+        return cls.query.filter_by(id=id).one()
+
     def do(self, *args, **kwargs):
-        return getattr(self, self.action)(*args, **kwargs)
+        try:
+            getattr(self, self.action)(*args, **kwargs)
+        except Exception ,msg:
+            raise BX(_('%s' % msg))
 
     def PowerOff(self, system):
         """ Turn off system
         """
-        try:
-            system.remote.power(action='Off')
-        except:
-            pass
+        system.remote.power(action='Off')
 
     def LeaveOn(self, system):
         """ Leave system running
         """
-        pass
+        system.remote.power(action='On')
 
     def ReProvision(self, system):
         """ re-provision the system 
         """
-        if system.distro:
-            system.action_auto_provision(distro=system.distro)
-
+        if system.reprovision_distro:
+            system.action_auto_provision(distro=system.reprovision_distro)
 
 class SystemStatus(SystemObject):
 
@@ -2594,7 +2608,7 @@ System.mapper = mapper(System, system_table,
                                      order_by=[activity_table.c.created.desc()],
                                                backref='object'),
                      'release_action':relation(ReleaseAction, uselist=False),
-                     'distro':relation(Distro, uselist=False),
+                     'reprovision_distro':relation(Distro, uselist=False),
                      })
 
 Cpu.mapper = mapper(Cpu,cpu_table,properties = {

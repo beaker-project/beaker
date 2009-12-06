@@ -10,6 +10,7 @@ from turbogears.widgets import (Form, TextField, SubmitButton, TextArea,
                                 Widget, TableForm, FormField, CompoundFormField,
                                 static, PaginateDataGrid, RepeatingFormField,
                                 CompoundWidget, AjaxGrid, Tabber, 
+                                RadioButtonList,
                                 RepeatingFieldSet, SelectionField)
 
 
@@ -333,7 +334,8 @@ class LabInfoForm(Form):
 class PowerForm(Form):
     template = "beaker.server.templates.system_power"
     member_widgets = ["id", "power", "power_type_id", "power_address", 
-                      "power_user", "power_passwd", "power_id"]
+                      "power_user", "power_passwd", "power_id",
+                       "release_action_id", "reprovision_distro_id"]
     params = []
     params_doc = {}
 
@@ -348,9 +350,22 @@ class PowerForm(Form):
         self.power_user = TextField(name='power_user', label=_(u'Power Login'))
         self.power_passwd = TextField(name='power_passwd', label=_(u'Power Password'))
         self.power_id = TextField(name='power_id', label=_(u'Power Port/Plug/etc'))
+        self.release_action_id = RadioButtonList(name='release_action_id',
+                                             label=_(u'Release Action'),
+                                           options=model.ReleaseAction.get_all)
+        self.reprovision_distro_id = SingleSelectField(name='reprovision_distro_id',
+                                                label=_(u'Reprovision Distro'),
+                                                options=[],
+                                             validator=validators.NotEmpty())
 
     def update_params(self, d):
         super(PowerForm, self).update_params(d)
+        if 'release_action' in d['value']:
+            release_action = d['value']['release_action']
+            d['value']['release_action_id'] = release_action.id
+        if 'reprovision_distro' in d['value']:
+            reprovision_distro = d['value']['reprovision_distro']
+            d['value']['reprovision_distro_id'] = reprovision_distro.id
         if 'power' in d['value']:
             if d['value']['power']:
                 power = d['value']['power']

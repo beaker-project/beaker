@@ -2,7 +2,7 @@
 %{!?pyver: %define pyver %(%{__python} -c "import sys ; print sys.version[:3]")}
 
 Name:           beaker
-Version:        0.4.64
+Version:        0.4.65
 Release:        0%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
@@ -133,6 +133,9 @@ ln -s Fedora.ks $RPM_BUILD_ROOT/var/lib/cobbler/kickstarts/Fedoradevelopment.ks
 /usr/share/man/man1/beakerlib*
 
 %changelog
+* Sun Dec 06 2009 Bill Peck <bpeck@redhat.com> - 0.4.65-0
+- New ReleaseAction code, allows systems to stay on or
+  reprovision at time of return.
 * Tue Dec 01 2009 Bill Peck <bpeck@redhat.com> - 0.4.64-0
 - Fix ISE in simplesearch
 - added PATH=/usr/bin:$PATH to rhel3 kickstart
