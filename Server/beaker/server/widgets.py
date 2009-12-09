@@ -352,7 +352,8 @@ class PowerForm(Form):
         self.power_id = TextField(name='power_id', label=_(u'Power Port/Plug/etc'))
         self.release_action_id = RadioButtonList(name='release_action_id',
                                              label=_(u'Release Action'),
-                                           options=model.ReleaseAction.get_all)
+                                           options=model.ReleaseAction.get_all,
+                                             validator=validators.NotEmpty())
         self.reprovision_distro_id = SingleSelectField(name='reprovision_distro_id',
                                                 label=_(u'Reprovision Distro'),
                                                 options=[],
