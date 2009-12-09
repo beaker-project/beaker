@@ -1058,8 +1058,8 @@ class SystemSearch(Search):
             if col_op_filter:
                 filter_func = col_op_filter   
                 filter_final = lambda: filter_func(col,value)
-                #If you want to pass custom args to your custom filter, here is where you do it
-                if kw.has_key('keyvalue'): 
+                #If you want to pass custom args to your custom filter, here is where you do it 
+                if kw.get('keyvalue'): 
                     filter_final = lambda: filter_func(col,value,key_name = kw['keyvalue'])   
             else:
                 #using just the regular filter operations from Modeller
