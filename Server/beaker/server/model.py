@@ -112,6 +112,15 @@ system_arch_map = Table('system_arch_map', metadata,
            nullable=False),
 )
 
+osversion_arch_map = Table('osversion_arch_map', metadata,
+    Column('osversion_id', Integer,
+           ForeignKey('osversion.id'),
+           nullable=False),
+    Column('arch_id', Integer,
+           ForeignKey('arch.id'),
+           nullable=False),
+)
+
 provision_table = Table('provision', metadata,
     Column('id', Integer, autoincrement=True,
            nullable=False, primary_key=True),
@@ -1985,9 +1994,10 @@ class OSMajor(SystemObject):
 
 
 class OSVersion(SystemObject):
-    def __init__(self, osmajor, osminor):
+    def __init__(self, osmajor, osminor, arches=None):
         self.osmajor = osmajor
         self.osminor = osminor
+        self.arches = arches
 
     @classmethod
     def by_id(cls, id):
@@ -2641,7 +2651,10 @@ mapper(ExcludeOSVersion, exclude_osversion_table,
                      'arch':relation(Arch)})
 mapper(OSVersion, osversion_table,
        properties = {'osmajor':relation(OSMajor, uselist=False,
-                                        backref='osversion')})
+                                        backref='osversion'),
+                     'arches':relation(Arch,secondary=osversion_arch_map),
+                    }
+      )
 mapper(OSMajor, osmajor_table,
        properties = {'osminor':relation(OSVersion,
                                      order_by=[osversion_table.c.osminor])})

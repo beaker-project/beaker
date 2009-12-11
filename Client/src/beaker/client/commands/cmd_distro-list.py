@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 
+import sys
 from beaker.client import BeakerCommand
 
 
@@ -12,6 +13,12 @@ class Distros_List(BeakerCommand):
     def options(self):
         self.parser.usage = "%%prog %s" % self.normalized_name
 
+        self.parser.add_option(
+            "--details",
+            default=False,
+            action="store_true",
+            help="show details",
+        )
         self.parser.add_option(
             "--tag",
             action="append",
@@ -49,6 +56,14 @@ class Distros_List(BeakerCommand):
         tags = kwargs.pop("tag", [])
 
         self.set_hub(username, password)
-        print "Name,Arch,OSVersion,Variant,Method,Virt"
-        for distro in self.hub.distros.list(name, family, arch, tags, treepath):
-            print ','.join([str(d) for d in distro])
+        distros = self.hub.distros.list(name, family, arch, tags, treepath)
+        if distros:
+            if kwargs.pop("details"):
+                print "Name,Arch,OSVersion,Variant,Method,Virt"
+                for distro in distros:
+                    print ','.join([str(d) for d in distro])
+            else:
+                print distros[0][0]
+        else:
+            sys.stderr.write("Nothing Matches\n")
+            sys.exit(1)
