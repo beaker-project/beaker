@@ -277,6 +277,16 @@ test_rlWatchdog(){
 	assertFalse "running rlWatchdog without any parameters must not succeed" 'rlWatchDog '
 }
 
+test_rlFail(){
+    assertFalse "This should always fail" "rlFail 'sometext'"
+    __one_fail_one_pass "rlFail 'sometext'" FAIL
+}
+
+test_rlPass(){
+    assertTrue "This should always pass" "rlPass 'sometext'"
+    __one_fail_one_pass "rlPass 'sometext'" PASS
+}
+
 test_rlReport(){
 	#placeholder for making  testCoverage ignore this helper
   rlJournalStart
