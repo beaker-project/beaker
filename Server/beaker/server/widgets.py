@@ -263,10 +263,14 @@ class SearchBar(RepeatingFormField):
         self.fields.extend(new_selects)
  
 
-    def display(self, value=None, **params):
+    def display(self, value=None, **params):   
         if 'options' in params and 'simplesearch' in params['options']:
             params['simplesearch'] = params['options']['simplesearch']
-        if value and not params['simplesearch']:
+             
+        if value and not 'simplesearch' in params:
+            params['advanced'] = 'True'
+            params['simple'] = 'none'
+        elif value and params['simplesearch'] is None:
             params['advanced'] = 'True'
             params['simple'] = 'none'
         else:
