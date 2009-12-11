@@ -34,10 +34,18 @@ class Tags(RPCRoot):
         tagged_installs = Distros()._tag(distro, arch, 'INSTALLS')
         if arch == 'ppc':
             tagged_installs.extend(Distros()._tag(distro, 'ppc64', 'INSTALLS'))
-        distros  = Distros().list(distro, None, None, None, None)
-        installs = Distros().list(distro, None, None, ['INSTALLS'], None)
-        if distros == installs:
-            tagged_stable = Distros()._tag(distro, None, 'STABLE')
+
+        # Tag Stable if we have all expected arches and they are all tagged INSTALLS
+        distro_obj = Distro.query().filter(distro_table.c.name.like(distro)).first()
+        if distro_obj:
+            for arch in distro_obj.osversion.arches:
+                if not Distro.query().filter(distro_table.c.name.like(distro)).join('arch').filter(arch_table.c.arch==arch.arch).count():
+                    break
+            else:
+                distros  = set(Distros().list(distro, None, None, None, None))
+                installs = set(Distros().list(distro, None, None, ['INSTALLS'], None))
+                if distros == installs:
+                    tagged_stable = Distros()._tag(distro, None, 'STABLE')
         return dict(installs=tagged_installs, stable=tagged_stable)
         
     @expose(format='json')

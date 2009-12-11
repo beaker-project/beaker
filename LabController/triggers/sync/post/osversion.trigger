@@ -175,6 +175,13 @@ def update_comment(distro):
         cpio_object.close()
     except rpmUtils.RpmUtilsError, e:
         print "Warning, %s" % e
+    if os.path.exists("%s/../../.composeinfo" % paths['tree_path']):
+        parser = ConfigParser()
+        parser.read("%s/../../.composeinfo" % paths['tree_path'])
+        try:
+            distro['comment'] = "%s\narches=%s" % (distro['comment'], parser.get('tree','arches'))
+        except ConfigParser.NoSectionError:
+            pass
     if os.path.exists("%s/.treeinfo" % paths['tree_path']):
         parser = ConfigParser()
         parser.read("%s/.treeinfo" % paths['tree_path'])
