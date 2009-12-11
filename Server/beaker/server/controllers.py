@@ -7,6 +7,7 @@ from beaker.server.keytypes import KeyTypes
 from beaker.server.CSV_import_export import CSV
 from beaker.server.group import Groups
 from beaker.server.tag import Tags
+from beaker.server.osversion import OSVersions
 from beaker.server.labcontroller import LabControllers
 from beaker.server.user import Users
 from beaker.server.distro import Distros
@@ -190,6 +191,7 @@ class Root(RPCRoot):
     devices = Devices()
     groups = Groups()
     tags = Tags()
+    osversions = OSVersions()
     labcontrollers = LabControllers()
     distros = Distros()
     activity = Activities()
