@@ -2,7 +2,7 @@
 %{!?pyver: %define pyver %(%{__python} -c "import sys ; print sys.version[:3]")}
 
 Name:           beaker
-Version:        0.4.63
+Version:        0.4.68
 Release:        0%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
@@ -133,6 +133,20 @@ ln -s Fedora.ks $RPM_BUILD_ROOT/var/lib/cobbler/kickstarts/Fedoradevelopment.ks
 /usr/share/man/man1/beakerlib*
 
 %changelog
+* Fri Dec 11 2009 Bill Peck <bpeck@redhat.com> - 0.4.68-0
+- osversion now knows what arches are expected for that update.
+  This allows us to only tag distros as STABLE if all arches are imported and tagged as INSTALLS
+- update distro-list command to show the distro name, suitable for feeding into workflows.
+* Wed Dec 09 2009 Bill Peck <bpeck@redhat.com> - 0.4.67-0
+- Raymonds fix for is_not in arch search
+- additional fixes from Raymond
+- fix for beaker-init to create ReleaseAction Table
+* Sun Dec 06 2009 Bill Peck <bpeck@redhat.com> - 0.4.65-0
+- New ReleaseAction code, allows systems to stay on or
+  reprovision at time of return.
+* Tue Dec 01 2009 Bill Peck <bpeck@redhat.com> - 0.4.64-0
+- Fix ISE in simplesearch
+- added PATH=/usr/bin:$PATH to rhel3 kickstart
 * Fri Nov 20 2009 Bill Peck <bpeck@redhat.com> - 0.4.63-0
 - merged Raymond's Key/Value search ability
 * Fri Nov 20 2009 Bill Peck <bpeck@redhat.com> - 0.4.62-1

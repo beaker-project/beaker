@@ -90,6 +90,40 @@
     </td>
    </tr>
    <tr>
+    <td><label class="fieldlabel"
+               for="${release_action_id.field_id}"
+               py:content="release_action_id.label"/>
+    </td>
+    <td>
+     <font color="red">
+      <span py:if="error_for(release_action_id)"
+            class="fielderror"
+            py:content="error_for(release_action_id)" />
+     </font>
+     ${release_action_id.display(value_for(release_action_id), **params_for(release_action_id))}
+     <span py:if="release_action_id.help_text"
+           class="fieldhelp"
+           py:content="release_action_id.help_text" />
+    </td>
+   </tr>
+   <tr>
+    <td><label class="fieldlabel"
+               for="${reprovision_distro_id.field_id}"
+               py:content="reprovision_distro_id.label"/>
+    </td>
+    <td>
+     <font color="red">
+      <span py:if="error_for(reprovision_distro_id)"
+            class="fielderror"
+            py:content="error_for(reprovision_distro_id)" />
+     </font>
+     ${reprovision_distro_id.display(value_for(reprovision_distro_id), **params_for(reprovision_distro_id))}
+     <span py:if="reprovision_distro_id.help_text"
+           class="fieldhelp"
+           py:content="reprovision_distro_id.help_text" />
+    </td>
+   </tr>
+   <tr>
     <td>
      ${id.display(value_for(id), **params_for(id))}
     </td>

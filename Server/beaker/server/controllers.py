@@ -7,6 +7,7 @@ from beaker.server.keytypes import KeyTypes
 from beaker.server.CSV_import_export import CSV
 from beaker.server.group import Groups
 from beaker.server.tag import Tags
+from beaker.server.osversion import OSVersions
 from beaker.server.labcontroller import LabControllers
 from beaker.server.user import Users
 from beaker.server.distro import Distros
@@ -186,6 +187,7 @@ class Root(RPCRoot):
     devices = Devices()
     groups = Groups()
     tags = Tags()
+    osversions = OSVersions()
     labcontrollers = LabControllers()
     distros = Distros()
     activity = Activities()
@@ -379,6 +381,7 @@ class Root(RPCRoot):
             simplesearch = kw['simplesearch']
             kw['systemsearch'] = [{'table' : 'System/Name',   
                                    'operation' : 'contains',
+                                   'keyvalue' : None,
                                    'value' : kw['simplesearch']}]
         else:
             simplesearch = None
@@ -589,6 +592,7 @@ class Root(RPCRoot):
             attrs = dict()
         options['readonly'] = readonly
 
+        options['reprovision_distro_id'] = [(distro.id, distro.install_name) for distro in system.distros()]
         #Excluded Family options
         options['excluded_families'] = []
         for arch in system.arch:
@@ -748,7 +752,11 @@ class Root(RPCRoot):
               identity.current.user.is_admin():
                 status = "Returned"
                 activity = SystemActivity(identity.current.user, "WEBUI", status, "User", '%s' % system.user, "")
-                system.action_release()
+                try:
+                    system.action_release()
+                except BX, error_msg:
+                    msg = "Error: %s Action: %s" % (error_msg,system.release_action)
+                    system.activity.append(SystemActivity(identity.current.user, "WEBUI", "%s" % system.release_action, "Return", "", msg))
         else:
             if system.can_share(identity.current.user):
                 status = "Reserved"
@@ -756,7 +764,7 @@ class Root(RPCRoot):
                 activity = SystemActivity(identity.current.user, 'WEBUI', status, 'User', '', '%s' % system.user )
         system.activity.append(activity)
         session.save_or_update(system)
-        flash( _(u"%s %s%s" % (status,system.fqdn,msg)) )
+        flash( _(u"%s %s %s" % (status,system.fqdn,msg)) )
         redirect("/view/%s" % system.fqdn)
 
     @error_handler(view)
@@ -793,13 +801,42 @@ class Root(RPCRoot):
     @error_handler(view)
     @expose()
     @identity.require(identity.not_anonymous())
-    def save_power(self, id, power_address, power_type_id, **kw):
+    def save_power(self, 
+                   id,
+                   power_address,
+                   power_type_id,
+                   release_action_id,
+                   **kw):
         try:
             system = System.by_id(id,identity.current.user)
         except InvalidRequestError:
             flash( _(u"Unable to save Power for %s" % id) )
             redirect("/")
 
+        if kw.get('reprovision_distro_id'):
+            try:
+                reprovision_distro = Distro.by_id(kw['reprovision_distro_id'])
+            except InvalidRequestError:
+                reprovision_distro = None
+            if system.reprovision_distro and \
+              system.reprovision_distro != reprovision_distro:
+                system.activity.append(SystemActivity(identity.current.user, 'WEBUI', 'Changed', 'reprovision_distro', '%s' % system.reprovision_distro, '%s' % reprovision_distro ))
+                system.reprovision_distro = reprovision_distro
+            else:
+                system.activity.append(SystemActivity(identity.current.user, 'WEBUI', 'Changed', 'reprovision_distro', '%s' % system.reprovision_distro, '%s' % reprovision_distro ))
+                system.reprovision_distro = reprovision_distro
+
+        try:
+            release_action = ReleaseAction.by_id(release_action_id)
+        except InvalidRequestError:
+            release_action = None
+        if system.release_action and system.release_action != release_action:
+            system.activity.append(SystemActivity(identity.current.user, 'WEBUI', 'Changed', 'release_action', '%s' % system.release_action, '%s' % release_action ))
+            system.release_action = release_action
+        else:
+            system.activity.append(SystemActivity(identity.current.user, 'WEBUI', 'Changed', 'release_action', '%s' % system.release_action, '%s' % release_action ))
+            system.release_action = release_action
+            
         if system.power:
             if power_address != system.power.power_address:
                 #Power Address Changed

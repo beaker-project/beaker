@@ -64,6 +64,10 @@ system_table = Table('system', metadata,
     Column('mac_address',String(18)),
     Column('loan_id', Integer,
            ForeignKey('tg_user.user_id')),
+    Column('release_action_id', Integer,
+           ForeignKey('release_action.id')),
+    Column('reprovision_distro_id', Integer,
+           ForeignKey('distro.id')),
 )
 
 system_device_map = Table('system_device_map', metadata,
@@ -81,6 +85,12 @@ system_type_table = Table('system_type', metadata,
     Column('type', Unicode(100), nullable=False),
 )
 
+release_action_table = Table('release_action', metadata,
+    Column('id', Integer, autoincrement=True,
+           nullable=False, primary_key=True),
+    Column('action', Unicode(100), nullable=False),
+)
+
 system_status_table = Table('system_status', metadata,
     Column('id', Integer, autoincrement=True,
            nullable=False, primary_key=True),
@@ -96,6 +106,15 @@ arch_table = Table('arch', metadata,
 system_arch_map = Table('system_arch_map', metadata,
     Column('system_id', Integer,
            ForeignKey('system.id'),
+           nullable=False),
+    Column('arch_id', Integer,
+           ForeignKey('arch.id'),
+           nullable=False),
+)
+
+osversion_arch_map = Table('osversion_arch_map', metadata,
+    Column('osversion_id', Integer,
+           ForeignKey('osversion.id'),
            nullable=False),
     Column('arch_id', Integer,
            ForeignKey('arch.id'),
@@ -1746,10 +1765,13 @@ $SNIPPET("rhts_post")
         self.user = None
         # Attempt to remove Netboot entry
         # and turn off machine, but don't fail if we can't
-        try:
-            self.remote.release()
-        except:
-            pass
+        if self.release_action:
+            self.release_action.do(self)
+        else:
+            try:
+                self.remote.release()
+            except:
+                pass
 
     def action_provision(self, 
                          distro=None,
@@ -1822,7 +1844,50 @@ class SystemType(SystemObject):
         return cls.query.filter_by(type=systemtype).one()
 
 
+class ReleaseAction(SystemObject):
 
+    def __init__(self, action=None):
+        self.action = action
+
+    def __repr__(self):
+        return self.action
+
+    @classmethod
+    def get_all(cls):
+        """
+        PowerOff, LeaveOn or ReProvision
+        """
+        all_actions = cls.query()
+        return [(raction.id, raction.action) for raction in all_actions]
+
+    @classmethod
+    def by_id(cls, id):
+        """ 
+        Look up ReleaseAction by id.
+        """
+        return cls.query.filter_by(id=id).one()
+
+    def do(self, *args, **kwargs):
+        try:
+            getattr(self, self.action)(*args, **kwargs)
+        except Exception ,msg:
+            raise BX(_('%s' % msg))
+
+    def PowerOff(self, system):
+        """ Turn off system
+        """
+        system.remote.power(action='Off')
+
+    def LeaveOn(self, system):
+        """ Leave system running
+        """
+        system.remote.power(action='On')
+
+    def ReProvision(self, system):
+        """ re-provision the system 
+        """
+        if system.reprovision_distro:
+            system.action_auto_provision(distro=system.reprovision_distro)
 
 class SystemStatus(SystemObject):
 
@@ -1929,9 +1994,10 @@ class OSMajor(SystemObject):
 
 
 class OSVersion(SystemObject):
-    def __init__(self, osmajor, osminor):
+    def __init__(self, osmajor, osminor, arches=None):
         self.osmajor = osmajor
         self.osminor = osminor
+        self.arches = arches
 
     @classmethod
     def by_id(cls, id):
@@ -2491,6 +2557,7 @@ class Key_Value_Int(object):
 # set up mappers between identity tables and classes
 SystemType.mapper = mapper(SystemType, system_type_table)
 SystemStatus.mapper = mapper(SystemStatus, system_status_table)
+mapper(ReleaseAction, release_action_table)
 System.mapper = mapper(System, system_table,
        properties = {'fqdn':synonym('Name',map_column=True),
                      'vendor':synonym('Vendor',map_column=True),
@@ -2549,7 +2616,10 @@ System.mapper = mapper(System, system_table,
                                                 backref='system'),
                      'activity':relation(SystemActivity,
                                      order_by=[activity_table.c.created.desc()],
-                                               backref='object')})
+                                               backref='object'),
+                     'release_action':relation(ReleaseAction, uselist=False),
+                     'reprovision_distro':relation(Distro, uselist=False),
+                     })
 
 Cpu.mapper = mapper(Cpu,cpu_table,properties = {
                                                  'vendor':synonym('Vendor',map_column=True),
@@ -2581,7 +2651,10 @@ mapper(ExcludeOSVersion, exclude_osversion_table,
                      'arch':relation(Arch)})
 mapper(OSVersion, osversion_table,
        properties = {'osmajor':relation(OSMajor, uselist=False,
-                                        backref='osversion')})
+                                        backref='osversion'),
+                     'arches':relation(Arch,secondary=osversion_arch_map),
+                    }
+      )
 mapper(OSMajor, osmajor_table,
        properties = {'osminor':relation(OSVersion,
                                      order_by=[osversion_table.c.osminor])})
