@@ -576,7 +576,8 @@ class SystemDetails(Widget):
     template = "beaker.server.templates.system_details"
     params = ['system']
 
-class SystemHistory(myPaginateDataGrid): 
+class SystemHistory(myPaginateDataGrid):
+    # template = "beaker.server.templates.system_activity"
     fields = [PaginateDataGrid.Column(name='user',title='User',getter=lambda x: x.user,options=dict(sortable=True)),
               PaginateDataGrid.Column(name='service', title='Service', getter=lambda x: x.service, options=dict(sortable=True)),
               PaginateDataGrid.Column(name='created', title='Created', getter=lambda x: x.created, options = dict(sortable=True)),
@@ -591,7 +592,7 @@ class SystemForm(Form):
     params = ['id','readonly',
               'user_change','user_change_text',
               'loan_change', 'loan_text',
-              'owner_change', 'owner_change_text']
+              'owner_change', 'owner_change_text','show_creator_field']
     user_change = '/user_change'
     owner_change = '/owner_change'
     loan_change = '/loan_change'
@@ -615,6 +616,7 @@ class SystemForm(Form):
                TextField(name='date_modified', label=_(u'Date Modified')),
                TextField(name='date_lastcheckin', label=_(u'Last Checkin')),
                TextField(name='serial', label=_(u'Serial Number')),
+               TextField(name='creator', label=_(u'Creator')),
                SingleSelectField(name='type_id',
                                  label=_(u'Type'),
                                  options=model.SystemType.get_all_types,
@@ -653,6 +655,9 @@ class SystemForm(Form):
             d["loan_change"] = d["options"]["loan_change"]
         if d["options"].has_key("loan_text"):
             d["loan_text"] = d["options"]["loan_text"]
+        if d["options"].has_key("show_creator_field"):
+            d["show_creator_field"] = d["options"]["show_creator_field"]
+            
         d["id"] = d["value_for"]("id")
 
         if d["options"]["readonly"]:

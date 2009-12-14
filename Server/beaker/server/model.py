@@ -49,6 +49,7 @@ system_table = Table('system', metadata,
     Column('lender', Unicode(255)),
     Column('owner_id', Integer,
            ForeignKey('tg_user.user_id')),
+    Column('creator_id',Integer, ForeignKey('tg_user.user_id')),
     Column('user_id', Integer,
            ForeignKey('tg_user.user_id')),
     Column('type_id', Integer,
@@ -1064,7 +1065,7 @@ class System(SystemObject):
 
     def __init__(self, fqdn=None, status=None, contact=None, location=None,
                        model=None, type=None, serial=None, vendor=None,
-                       owner=None):
+                       owner=None,creator=None):
         self.fqdn = fqdn
         self.status = status
         self.contact = contact
@@ -1074,6 +1075,7 @@ class System(SystemObject):
         self.serial = serial
         self.vendor = vendor
         self.owner = owner
+        self.creator = creator
     
 
 
@@ -2349,6 +2351,8 @@ System.mapper = mapper(System, system_table,
                           primaryjoin=system_table.c.user_id==users_table.c.user_id,foreign_keys=system_table.c.user_id),
                      'owner':relation(User, uselist=False,
                           primaryjoin=system_table.c.owner_id==users_table.c.user_id,foreign_keys=system_table.c.owner_id),
+                     'creator':relation(User,uselist=False,
+                                        primaryjoin=system_table.c.creator_id==users_table.c.user_id,foreign_keys=system_table.c.creator_id),
                      'lab_controller':relation(LabController, uselist=False,
                                                backref='systems'),
                      'notes':relation(Note,
