@@ -81,7 +81,7 @@ setup(
 
     data_files=[
         ('/etc', ['beah.conf', 'beah_beaker.conf']),
-        ('/etc/init.d', ['init.d/beah-srv', 'init.d/beah-fakelc', 'init.d/beah-beaker-backend']),
+        ('/etc/init.d', ['init.d/beah-srv', 'init.d/beah-fakelc', 'init.d/beah-beaker-backend', 'init.d/beah-fwd-backend']),
         ] + more_data_files,
     #package_data={
     #    '': ['beah.conf', 'beah_beaker.conf'],
@@ -95,6 +95,7 @@ setup(
             'beah-cmd-backend = beah.bin.cmd_backend:main',
             'beah-out-backend = beah.bin.out_backend:main',
             'beah-beaker-backend = beah.backends.beakerlc:main',
+            'beah-fwd-backend = beah.backends.forwarder:main',
             'beah-fakelc = beah.tools.fakelc:main',
             'beah-rhts-task = beah.tasks.rhts_xmlrpc:main',
         ),

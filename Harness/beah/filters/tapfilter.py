@@ -73,7 +73,10 @@ http://search.cpan.org/~petdance/Test-Harness-2.64/lib/Test/Harness/TAP.pod
         if m_testcase:
             if not self.plan:
                 self.plan = (-1, -1)
-            result = RC.PASS if not m_testcase.group(1) else RC.FAIL
+            if not m_testcase.group(1):
+                result = RC.PASS
+            else:
+                result = RC.FAIL
             self.test_case = int(m_testcase.group(2) or '0') or self.test_case+1
             description = m_testcase.group(3)
             if self.plan[0] >= 0:

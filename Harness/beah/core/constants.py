@@ -24,10 +24,14 @@ class RC:
     CRITICAL = 70
     FATAL    = 80
 
-    @staticmethod
     def cmp(rc1, rc2):
-        """\"Less serious\" RC is less than more serious."""
+        """
+        Compare the severity of RC.
+
+        Less serious RC will compare as lower then more serious one.
+        """
         return cmp(rc1, rc2)
+    cmp = staticmethod(cmp)
 
 class LOG_LEVEL:
     DEBUG3   = 10
@@ -40,10 +44,14 @@ class LOG_LEVEL:
     FATAL    = 80
     DEBUG    = DEBUG1
 
-    @staticmethod
     def cmp(level1, level2):
-        """\"Less serious\" level is less than more serious."""
+        """
+        Compare the severity of log levels.
+
+        Less serious level will compare as lower then more serious one.
+        """
         return cmp(level1, level2)
+    cmp = staticmethod(cmp)
 
 class ECHO:
     OK              = 0

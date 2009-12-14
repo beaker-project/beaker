@@ -353,7 +353,10 @@ class RHTSMain(object):
         port = 7080
 
         # FIXME: is inheriting the whole environment desirable?
-        self.env = dict(env if env is not USE_DEFAULT else os.environ)
+        if env is not USE_DEFAULT:
+            self.env = dict(env)
+        else:
+            self.env = dict(os.environ)
 
         # FIXME: Any other env.variables to set?
         # FIXME: What values should be used here?

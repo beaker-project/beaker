@@ -17,7 +17,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 from beah.core.backends import PprintBackend
-from beah.wires.internals.twbackend import start_backend
+from beah.wires.internals.twbackend import start_backend, log_handler
 from twisted.internet import reactor
 
 def out_backend():
@@ -26,6 +26,7 @@ This is a Backend to issue commands to Controller.
 
 Type <Ctrl-C> to exit.
 """
+    log_handler('beah_out_backend.log')
     start_backend(PprintBackend(), byef=lambda evt: reactor.stop())
 
 def main():

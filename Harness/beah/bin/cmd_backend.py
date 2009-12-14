@@ -54,20 +54,20 @@ class TwistedCmdBackend(LineReceiver):
             reactor.stop()
 
 def cmd_backend():
-    """\
-This is a Backend to issue commands to Controller.
+    """
+    This is a Backend to issue commands to Controller.
 
-Type help on the prompt for help o commands.
+    Type help on the prompt for help o commands.
 
-You might not see any output here - run out_backend.
+    You might not see any output here - run out_backend.
 
-Known issues:
+    Known issues:
 
- * Type <Ctrl-C> to finish.
+    * Type <Ctrl-C> to finish.
 
-   I do not want to stop reactor directly, but would like if it stopped if
-   there are no more protocols.
-"""
+    I do not want to stop reactor directly, but would like if it stopped if
+    there are no more protocols.
+    """
     backend = TwistedCmdBackend()
     # Start a LineReceiver on stdio:
     stdio.StandardIO(backend)

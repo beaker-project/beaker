@@ -22,14 +22,14 @@ from twisted.internet import reactor
 import sys
 import os
 import os.path
-import pprint
 import traceback
 import base64
 import hashlib
 from xml.etree import ElementTree
 import simplejson as json
+import logging
 
-from beah.misc.log_this import print_this
+from beah.misc.log_this import log_this
 
 from beah.core.backends import ExtBackend
 from beah.core import command, event, addict
@@ -40,7 +40,7 @@ import beah.system
 # FIXME: using rpm's, yum - too much Fedora centric(?)
 from beah.system.dist_fedora import RPMInstaller
 from beah.system.os_linux import ShExecutable
-from beah.wires.internals.twbackend import start_backend
+from beah.wires.internals.twbackend import start_backend, log_handler
 
 """
 Beaker Backend.
@@ -55,6 +55,12 @@ Beaker Backend should invoke these XML-RPC:
  4. recipes.tasks.Stop(task_id, stop_type, msg)
     - stop_type: stop|abort|cancel
 """
+
+log_handler('beah_beaker_backend.log')
+log = logging.getLogger('backend')
+
+# FIXME: Use config option for log_on:
+print_this = log_this(lambda s: log.debug(s), log_on=True)
 
 def mk_beaker_task(rpm_name):
     # FIXME: proper RHTS launcher shold go here.
@@ -88,7 +94,9 @@ def mk_rhts_task(env_, repos):
     return e.executable
 
 def normalize_rpm_name(rpm_name):
-    return rpm_name if rpm_name[-4:] != '.rpm' else rpm_name[:-4]
+    if rpm_name[-4:] != '.rpm':
+        return rpm_name
+    return rpm_name[:-4]
 
 def parse_recipe_xml(input_xml):
 
@@ -97,7 +105,7 @@ def parse_recipe_xml(input_xml):
 
     rs = er.get('status')
     if rs not in ['Running', 'Waiting']:
-        print "This recipe has finished."
+        log.info("parse_recipe_xml: This recipe has finished.")
         return None
 
     task_env.update(
@@ -155,7 +163,7 @@ def parse_recipe_xml(input_xml):
         while not executable:
 
             rpm_tag = task.find('rpm')
-            print "rpm tag: %s" % rpm_tag
+            log.debug("parse_recipe_xml: rpm tag: %s", rpm_tag)
             if rpm_tag is not None:
                 rpm_name = rpm_tag.get('name')
                 task_env.update(
@@ -165,16 +173,16 @@ def parse_recipe_xml(input_xml):
                         KILLTIME=str(ewd))
                 executable = mk_rhts_task(task_env, repos)
                 args = [rpm_name]
-                print "RPMTest %s - %s %s" % (rpm_name, executable, args)
+                log.info("parse_recipe_xml: RPMTest %s - %s %s", rpm_name, executable, args)
                 break
 
             exec_tag = task.find('executable')
-            print "executable tag: %s" % exec_tag
+            log.debug("parse_recipe_xml: executable tag: %s", exec_tag)
             if exec_tag is not None:
                 executable = exec_tag.get('url')
                 for arg in exec_tag.findall('arg'):
                     args.append(arg.get('value'))
-                print "ExecutableTest %s %s" % (executable, args)
+                log.info("parse_recipe_xml: ExecutableTest %s %s", executable, args)
                 break
 
             break
@@ -186,14 +194,15 @@ def parse_recipe_xml(input_xml):
                 executable = executable[proto_len+3:]
             else:
                 # FIXME: retrieve a file and set an executable bit.
-                print "Feature not implemented yet."
+                log.warning("parse_recipe_xml: Feature not implemented yet. proto=%s",
+                        proto)
                 continue
         else:
             executable = os.path.abspath(executable)
 
         if not executable:
-            print "Task %s(%s) does not have an executable associated!" % \
-                    (task_name, task_id)
+            log.warning("parse_recipe_xml: Task %s(%s) does not have an executable associated!",
+                    task_name, task_id)
             continue
 
         return dict(task_env=task_env, executable=executable, args=args,
@@ -202,22 +211,28 @@ def parse_recipe_xml(input_xml):
     return None
 
 def handle_error(result, *args, **kwargs):
-    print "Deferred Failed(%r, *%r, **%r)" % (result, args, kwargs)
+    log.warning("Deferred Failed(%r, *%r, **%r)", result, args, kwargs)
     return result
 
+# FIXME: Extract this to twmisc!
 class LoggingProxy(Proxy):
 
+    def print_(fmt, *args, **kwargs):
+        print fmt % args, kwargs
+
     def log(self, result, message, method, args, kwargs):
-        print "XML-RPC call %s %s: %s" % (method, message, result)
-        print "original call: %s(*%r, **%r)" % (method, args, kwargs)
+        self.print_("XML-RPC call %s %s: %s", method, message, result)
+        self.print_("original call: %s(*%r, **%r)", method, args, kwargs)
         return result
 
-    @print_this
+    log_err = log
+
     def callRemote(self, method, *args, **kwargs):
         return Proxy.callRemote(self, method, *args, **kwargs) \
-                .addCallbacks(self.log, self.log,
+                .addCallbacks(self.log, self.log_err,
                         callbackArgs=["returned", method, args, kwargs],
                         errbackArgs=["failed", method, args, kwargs])
+    #callRemote = print_this(callRemote)
 
 class BeakerLCBackend(ExtBackend):
 
@@ -259,21 +274,27 @@ class BeakerLCBackend(ExtBackend):
                             os.getenv('COBBLER_SERVER', 'localhost'))})
             url = self.conf.get('DEFAULT', 'LAB_CONTROLLER')
             self.proxy = LoggingProxy(url)
+            self.proxy.print_ = log.info
             self.on_idle()
 
     def handle_new_task(self, result):
 
         self.waiting_for_lc = False
 
-        pprint.pprint(result)
+        log.debug("handle_new_task(%s)", result)
 
         self.recipe_xml = result
 
-        self.task_data = parse_recipe_xml(self.recipe_xml)
-        pprint.pprint(self.task_data)
+        try:
+            self.task_data = parse_recipe_xml(self.recipe_xml)
+        except:
+            self.on_exception("parse_recipe_xml Failed: %s", traceback.format_exc())
+            raise
+
+        log.debug("handle_new_task: task_data = %r", self.task_data)
 
         if self.task_data is None:
-            print "* Recipe done. Nothing to do..."
+            log.info("* Recipe done. Nothing to do...")
             reactor.callLater(60, self.on_idle)
             return
 
@@ -287,14 +308,11 @@ class BeakerLCBackend(ExtBackend):
         # task can change it, and when restarted will continue with same
         # env(?) Task is able to handle this itself. Provide a library...
 
-    def pre_proc(self, evt):
-        # FIXME: remove
-        #pprint.pprint(evt)
-        pass
-
-    @staticmethod
     def stop_type(rc):
-        return "stop" if rc==0 else "cancel"
+        if rc==0:
+            return "stop"
+        return "cancel"
+    stop_type = staticmethod(stop_type)
 
     RESULT_TYPE = {
             RC.PASS:("pass_", "Pass"),
@@ -304,10 +322,10 @@ class BeakerLCBackend(ExtBackend):
             RC.FATAL:("panic", "Panic - Fatal"),
             }
 
-    @staticmethod
     def result_type(rc):
         return BeakerLCBackend.RESULT_TYPE.get(rc,
                 ("warn", "Warning: Unknown Code (%s)" % rc))
+    result_type = staticmethod(result_type)
 
     def mk_msg(self, **kwargs):
         return json.dumps(kwargs)
@@ -359,7 +377,9 @@ class BeakerLCBackend(ExtBackend):
                     self.mk_msg(event=evt)) \
                             .addCallback(self.handle_Result, event_id=evt.id())
         except:
-            print traceback.format_exc()
+            s = traceback.format_exc()
+            log.error("Exception in proc_evt_result: %s", s)
+            print s
             raise
         # FIXME: add caching events here! While waiting for result, we do not
         # want to submit events, not to change their order.
@@ -367,7 +387,7 @@ class BeakerLCBackend(ExtBackend):
     def __on_error(self, level, msg, tb, *args, **kwargs):
         if args: msg += '; *args=%r' % (args,)
         if kwargs: msg += '; **kwargs=%r' % (kwargs,)
-        print "--- %s: %s at %s" % (level, msg, tb)
+        log.error("--- %s: %s at %s", level, msg, tb)
 
     def on_exception(self, msg, *args, **kwargs):
         self.__on_error("EXCEPTION", msg, traceback.format_exc(),
@@ -380,7 +400,6 @@ class BeakerLCBackend(ExtBackend):
         self.__on_error("WARNING", msg, traceback.format_stack(),
                 *args, **kwargs)
 
-    @print_this
     def proc_evt_file(self, evt):
         fid = evt.id()
         if self.get_file_info(fid) is not None:
@@ -388,14 +407,14 @@ class BeakerLCBackend(ExtBackend):
             return
         # FIXME: Check what's submitted:
         self.set_file_info(fid, **evt.args())
+    #proc_evt_file = print_this(proc_evt_file)
 
-    @print_this
     def proc_evt_file_meta(self, evt):
         fid = evt.arg('file_id')
         # FIXME: Check what's submitted:
         self.set_file_info(fid, **evt.args())
+    #proc_evt_file_meta = print_this(proc_evt_file_meta)
 
-    @print_this
     def proc_evt_file_write(self, evt):
         fid = evt.arg('file_id')
         finfo = addict(self.get_file_info(fid))
@@ -432,9 +451,15 @@ class BeakerLCBackend(ExtBackend):
         self.proxy.callRemote('task_upload_file', self.get_task_id(evt),
                 path[1:] or '/', filename,
                 str(size), digest[1], str(offset), data)
+    #proc_evt_file_write = print_this(proc_evt_file_write)
 
     def handle_Stop(self, result):
         """Handler for task_stop XML-RPC return."""
+        for h in log.handlers:
+            try:
+                h.flush()
+            except:
+                pass
         self.on_idle()
 
     def get_file_info(self, id):
@@ -452,8 +477,8 @@ class BeakerLCBackend(ExtBackend):
 
     def handle_Result(self, result_id, event_id=None):
         """Attach a data to a result. Find result by UUID."""
-        print "%s.RETURN: %s (original event_id %s)" % \
-                (self.TASK_RESULT, result_id, event_id)
+        log.debug("%s.RETURN: %s (original event_id %s)",
+                self.TASK_RESULT, result_id, event_id)
         self.__results_by_uuid[event_id] = result_id
 
     def close(self):

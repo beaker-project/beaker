@@ -59,7 +59,7 @@ class BackendAdaptor_JSON(JSONProtocol):
         """Process data(Command) received from Backend - forward to Controller"""
         if self.controller:
             self.controller.proc_cmd(self, command.command(cmd))
-    def proc_evt(self, evt):
+    def proc_evt(self, evt, **flags):
         """Process Event received from Controller - forward to Backed"""
         self.send_cmd(evt)
     def connectionMade(self):

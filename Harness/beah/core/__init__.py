@@ -33,7 +33,9 @@ def esc_name(name):
     """
     if name.isalnum():
         return name
-    return ''.join([c if c.isalnum() else '__' if c=='_' else '_%x' % ord(c)
+    # using and/or to simulate if/else
+    # FIXME: is there a built-in?
+    return ''.join([(c.isalnum() and c) or (c=='_' and '__') or '_%x' % ord(c)
             for c in name])
 
 def test_esc_name():
@@ -51,8 +53,7 @@ def check_type(name, value, type_, allows_none=False):
     if allows_none and value is None:
         return
     raise exceptions.TypeError('%r not permitted as %s. Has to be %s%s.' \
-            % (value, name, type_.__name__,
-                " or None" if allows_none else ""))
+            % (value, name, type_.__name__, allows_none and " or None" or ""))
 
 class addict(dict):
     """

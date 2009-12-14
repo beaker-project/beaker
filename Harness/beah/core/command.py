@@ -37,15 +37,13 @@ def PING(message=None):
         return command('PING', message=message)
     return command('PING')
 
-def run(file, id=None, name=None, env=None, args=None):
-    # FIXME: Should I set the id globally - i.e. in Controller?
+def run(file, name=None, env=None, args=None):
     if name is None:
         name = file
-    if id is None:
-        run.id += 1
-        id = run.id
-    return command('run', task_info={'file':file, 'backend_id':id, 'name':name}, env=env, args=args)
-run.id = 0
+    return command('run', task_info={'file':file, 'name':name}, env=env, args=args)
+
+def run_this(script, name=None, env=None, args=None):
+    return command('run_this', script=script, task_info={'name':name}, env=env, args=args)
 
 def kill():
     return command('kill')
@@ -56,14 +54,23 @@ def no_input():
 def no_output():
     return command('no_output')
 
-def variable_get(key, handle='', **kwargs):
-    """Request a "variable's" value on a remote machine."""
-    return command('variable_get', key=key, handle=handle, **kwargs)
-
 def variable_value(key, value, handle='', **kwargs):
-    """Used to return a "variable's" value."""
+    """Used to return a "variable's" value to task."""
     return command('variable_value', key=key, value=value, handle=handle,
             **kwargs)
+
+def forward(event, host, port=None):
+    """
+    Used to forward an event to another controller.
+
+    @event - the original event.
+    @host, @port - host and port where remote controller is listening.
+
+    event.forward_response could be used in answer. Sending answer is required
+    before sending event.echo. command.forward is recommended afterwards, as
+    connection could be closed.
+    """
+    return command('forward', event=event, destination=(host, port))
 
 ################################################################################
 # IMPLEMENTATION:

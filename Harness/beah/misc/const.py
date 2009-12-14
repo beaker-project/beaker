@@ -42,13 +42,13 @@ class EConst(Const):
         return str(self.__name)
 
 class Eval(object):
-    @staticmethod
     def get_incf(o):
         if isinstance(o, int) or isinstance(o, float):
             return lambda x: x+1
         if isinstance(o, str):
             return lambda x: x+"_"
         raise TypeError("o is supposed to be a number or string")
+    get_incf = staticmethod(get_incf)
 
     def __init__(self, aName, start=0, nextf=None):
         self.__name = aName

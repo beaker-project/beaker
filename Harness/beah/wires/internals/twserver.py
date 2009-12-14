@@ -19,6 +19,7 @@
 from beah.wires.internals.twadaptors import BackendAdaptor_JSON, TaskAdaptor_JSON
 from beah.wires.internals.twtask import Spawn
 from beah.core.controller import Controller
+from beah.misc.runtimes import PickleRuntime
 from beah import config
 from twisted.internet import protocol
 from twisted.internet import reactor
@@ -37,7 +38,14 @@ class BackendListener(protocol.ServerFactory):
     def buildProtocol(self, addr):
         log.info('%s: Connected.  Address: %s', self.__class__.__name__, addr)
         backend = self.protocol()
+        backend.client_addr = addr
+        # FIXME: filterring requests for remote backends
+        # - configuration, filterring,...
+        #backend.set_cmd_filter()
+        #if backend.client_addr != (127,0,0,1):
+        #    pass
         backend.set_controller(self.controller)
+        log.debug('%s: Connected [Done]', self.__class__.__name__)
         return backend
 
 class TaskListener(protocol.ServerFactory):
@@ -49,6 +57,7 @@ class TaskListener(protocol.ServerFactory):
         log.info('%s: Connected.  Address: %s', self.__class__.__name__, addr)
         task = self.protocol()
         task.set_controller(self.controller)
+        log.debug('%s: Connected [Done]', self.__class__.__name__)
         return task
 
 def start_server(conf=None, backend_host=None, backend_port=None,
@@ -61,7 +70,11 @@ def start_server(conf=None, backend_host=None, backend_port=None,
         conf = config.main_config()
 
     # LOGGING:
-    log.setLevel(logging.WARNING if not config.parse_bool(conf.get('CONTROLLER', 'DEVEL')) else logging.DEBUG)
+    if not config.parse_bool(conf.get('CONTROLLER', 'DEVEL')):
+        ll = logging.WARNING
+    else:
+        ll = logging.DEBUG
+    log.setLevel(ll)
 
     # Create a directory for logging and check permissions
     lp = conf.get('CONTROLLER', 'LOG_PATH')
@@ -77,8 +90,29 @@ def start_server(conf=None, backend_host=None, backend_port=None,
         # FIXME: should create a temp file
         raise
 
-    lhandler = logging.handlers.RotatingFileHandler(conf.get('CONTROLLER', 'LOG_FILE_NAME'),
-            maxBytes=1000000, backupCount=5)
+    # Create a directory for runtime
+    vp = conf.get('CONTROLLER', 'VAR_ROOT')
+    if not os.access(vp, os.F_OK):
+        try:
+            os.makedirs(vp, mode=0755)
+        except:
+            print >> sys.stderr, "ERROR: Could not create %s." % vp
+            # FIXME: should create a temp file
+            raise
+    elif not os.access(vp, os.X_OK | os.W_OK):
+        print >> sys.stderr, "ERROR: Wrong access rights to %s." % ep
+        # FIXME: should create a temp file
+        raise
+
+    #lhandler = logging.handlers.RotatingFileHandler(conf.get('CONTROLLER', 'LOG_FILE_NAME'),
+    #        maxBytes=1000000, backupCount=5)
+    lhandler = logging.FileHandler(conf.get('CONTROLLER', 'LOG_FILE_NAME'))
+    lhandler.setFormatter(logging.Formatter('%(asctime)s %(funcName)s: %(levelname)s %(message)s'))
+    log.addHandler(lhandler)
+
+    lhandler = logging.handlers.SysLogHandler()
+    lhandler.setFormatter(logging.Formatter('%(asctime)s %(name)s %(funcName)s: %(levelname)s %(message)s'))
+    lhandler.setLevel(logging.ERROR)
     log.addHandler(lhandler)
 
     # RUN:
@@ -86,8 +120,8 @@ def start_server(conf=None, backend_host=None, backend_port=None,
     backend_port = backend_port or int(conf.get('BACKEND', 'PORT'))
     task_host = task_host or conf.get('TASK', 'INTERFACE')
     task_port = task_port or int(conf.get('TASK', 'PORT'))
-    spawn = spawn or Spawn(task_host, task_port)
-    controller = Controller(spawn, on_killed=lambda: reactor.stop())
+    controller = Controller(spawn or Spawn(task_host, task_port))
+    controller.runtime = PickleRuntime(conf.get('CONTROLLER', 'RUNTIME_FILE_NAME'))
     def on_killed():
         if not controller.backends:
             reactor.stop()
@@ -106,6 +140,7 @@ def start_server(conf=None, backend_host=None, backend_port=None,
             task_port)
     reactor.listenTCP(task_port, TaskListener(controller, task_adaptor),
             interface=task_host)
+    return controller
 
 if __name__ == '__main__':
     start_server()

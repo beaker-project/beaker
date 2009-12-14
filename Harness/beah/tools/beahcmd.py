@@ -6,6 +6,8 @@ from twisted.internet import reactor
 import pprint
 import exceptions
 
+# FIXME: This could be much nicer...
+
 class Wait(object): pass
 WAIT = Wait()
 
@@ -103,25 +105,26 @@ class BeahRunner(ExtBackend):
 
 
 def beah_run(coro):
-    """\
-This is a Backend to issue script to Controller.
+    """
+    This is a Backend to issue script to Controller.
 
-Type help on the prompt for help o commands.
+    Type help on the prompt for help o commands.
 
-You might not see any output here - run out_backend.
+    You might not see any output here - run out_backend.
 
-Known issues:
+    Known issues:
 
- * Type <Ctrl-C> to finish.
+    * Type <Ctrl-C> to finish.
 
-   I do not want to stop reactor directly, but would like if it stopped when
-   there are no more protocols.
-"""
+    I do not want to stop reactor directly, but would like if it stopped when
+    there are no more protocols.
+    """
     backend = BeahRunner(coro)
     # Start a default TCP client:
     start_backend(backend)
 
 if __name__ == '__main__':
+    # FIXME: in python2.2: from __future__ import generators
     def coro():
         yield command.ping('Are you there?')
         yield command.PING('Hello World!')

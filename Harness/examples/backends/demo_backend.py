@@ -33,12 +33,8 @@ class DemoBackendSeq(backend.BasicOutputBackend):
     def __init__(self, tasks, host=BEACON_HOST, port=BEACON_PORT,
             on_exit=ON_EXIT_DO_NOTHING):
         self.tasks = tasks(self)
-        self.task_id = 0
         self.on_exit = on_exit
         backend.BasicOutputBackend.__init__(self, host, port)
-    def next_id(self):
-        self.task_id += 1
-        return self.task_id
     def connect(self):
         backend.BasicOutputBackend.connect(self)
         self.tasks.next()
@@ -60,12 +56,8 @@ class DemoBackendPPSeq(backend.PprintBackend):
     def __init__(self, tasks, host=BEACON_HOST, port=BEACON_PORT,
             on_exit=ON_EXIT_DO_NOTHING):
         self.tasks = tasks(self)
-        self.task_id = 0
         self.on_exit = on_exit
         backend.PprintBackend.__init__(self, backend.FileBackend.FILE_STDOUT, host, port)
-    def next_id(self):
-        self.task_id += 1
-        return self.task_id
     def connect(self):
         backend.PprintBackend.connect(self)
         self.tasks.next()
@@ -86,13 +78,9 @@ class DemoBackendPar(backend.BasicOutputBackend):
     def __init__(self, tasks, host=BEACON_HOST, port=BEACON_PORT,
             on_exit=ON_EXIT_DO_NOTHING):
         self.tasks = tasks(self)
-        self.task_id = 0
         self.running = 0
         self.on_exit = on_exit
         backend.BasicOutputBackend.__init__(self, host, port)
-    def next_id(self):
-        self.task_id += 1
-        return self.task_id
     def connect(self):
         backend.BasicOutputBackend.connect(self)
         for filename in self.tasks:

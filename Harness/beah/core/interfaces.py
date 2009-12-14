@@ -56,7 +56,7 @@ class BackendInterface(object):
     """Class used as a Backend should implement this interface. This includes
     Controller side Backend-Adaptor"""
 
-    def proc_evt(self, evt):
+    def proc_evt(self, evt, **flags):
         """Process event received from task"""
         raise exceptions.NotImplementedError
 

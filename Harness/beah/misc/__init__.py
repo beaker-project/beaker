@@ -17,6 +17,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 import exceptions
+import socket
 
 def raiser(exc=exceptions.Exception, *args, **kwargs):
     raise exc(*args, **kwargs)
@@ -40,4 +41,17 @@ def mktemppipe():
             retries -= 1
             if retries <= 0:
                 raise
+
+def localhost(host):
+    if host in [None, '', 'localhost']:
+        return True
+    if host in ['test.loop']:
+        return False
+    fqdn, aliaslist, ipaddrs = socket.gethostbyname_ex(socket.gethostname())
+    if host == fqdn or host in aliaslist or host in ipaddrs:
+        return True
+    hfqdn, haliaslist, hipaddrs = socket.gethostbyname_ex(host)
+    if hfqdn == fqdn:
+        return True
+    return False
 

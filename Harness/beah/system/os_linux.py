@@ -10,7 +10,7 @@ class ShExecutable(system.Executable):
 
     def set_var(self, name, value):
         # FIXME: escape name and value!
-        self.write_line("export %s=%s" % (name, value))
+        self.write_line("export %s=\"%s\"" % (name, value))
 
 import platform
 

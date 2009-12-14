@@ -21,6 +21,11 @@ from twisted.internet import reactor
 from beah.wires.internals.twadaptors import ControllerAdaptor_Backend_JSON
 from beah import config
 
+import os
+import logging
+import logging.handlers
+log = logging.getLogger('backend')
+
 ################################################################################
 # FACTORY:
 ################################################################################
@@ -31,29 +36,61 @@ class BackendFactory(ReconnectingClientFactory):
             self.backend.proc_evt_bye = byef
         self.controller_protocol = controller_protocol
 
+    def linfo(self, fmt, *args, **kwargs):
+        l = [self.__class__.__name__]
+        l.extend(args)
+        log.info('%s: '+fmt, *l, **kwargs)
+
     ########################################
     # INHERITED METHODS:
     ########################################
     def startedConnecting(self, connector):
-        print self.__class__.__name__, ': Started to connect.'
+        self.linfo('Started to connect.')
 
     def buildProtocol(self, addr):
-        print self.__class__.__name__, ': Connected.  Address: %r' % addr
-        print self.__class__.__name__, ': Resetting reconnection delay'
+        self.linfo('Connected.  Address: %r', addr)
+        self.linfo('Resetting reconnection delay')
         self.resetDelay()
         controller = self.controller_protocol()
         controller.add_backend(self.backend)
         return controller
 
     def clientConnectionLost(self, connector, reason):
-        print self.__class__.__name__, ': Lost connection.  Reason:', reason
+        self.linfo('Lost connection.  Reason: %s', reason)
         self.backend.set_controller()
         ReconnectingClientFactory.clientConnectionLost(self, connector, reason)
 
     def clientConnectionFailed(self, connector, reason):
-        print self.__class__.__name__, ': Connection failed. Reason:', reason
+        self.linfo('Connection failed. Reason: %s', reason)
         self.backend.set_controller()
         ReconnectingClientFactory.clientConnectionFailed(self, connector, reason)
+
+def log_handler(log_file_name):
+    conf = config.config()
+    # Create a directory for logging and check permissions
+    lp = conf.get('DEFAULT', 'LOG_PATH') or "/var/log"
+    if not os.access(lp, os.F_OK):
+        try:
+            os.makedirs(lp, mode=0755)
+        except:
+            print >> sys.stderr, "ERROR: Could not create %s." % lp
+            # FIXME: should create a temp file
+            raise
+    elif not os.access(lp, os.X_OK | os.W_OK):
+        print >> sys.stderr, "ERROR: Wrong access rights to %s." % lp
+        # FIXME: should create a temp file
+        raise
+
+    #lhandler = logging.handlers.RotatingFileHandler(lp + "/" + log_file_name,
+    #        maxBytes=1000000, backupCount=5)
+    lhandler = logging.FileHandler(lp + "/" + log_file_name)
+    lhandler.setFormatter(logging.Formatter('%(asctime)s %(funcName)s: %(levelname)s %(message)s'))
+    log.addHandler(lhandler)
+
+    lhandler = logging.handlers.SysLogHandler()
+    lhandler.setFormatter(logging.Formatter('%(asctime)s %(name)s %(funcName)s: %(levelname)s %(message)s'))
+    lhandler.setLevel(logging.ERROR)
+    log.addHandler(lhandler)
 
 def start_backend(backend, host=None, port=None,
         adaptor=ControllerAdaptor_Backend_JSON,
@@ -61,6 +98,11 @@ def start_backend(backend, host=None, port=None,
     conf = config.config()
     host = host or conf.get('BACKEND', 'INTERFACE')
     port = port or int(conf.get('BACKEND', 'PORT'))
+    if not config.parse_bool(conf.get('BACKEND', 'DEVEL')):
+        ll = logging.WARNING
+    else:
+        ll = logging.DEBUG
+    log.setLevel(ll)
     reactor.connectTCP(host, port, BackendFactory(backend, adaptor, byef))
 
 ################################################################################
@@ -71,16 +113,22 @@ if __name__=='__main__':
     from beah.core import command
 
     class DemoOutAdaptor(ControllerAdaptor_Backend_JSON):
+
+        def linfo(self, fmt, *args, **kwargs):
+            l = [self.__class__.__name__]
+            l.extend(args)
+            log.info('%s: '+fmt, *l, **kwargs)
+
         def connectionMade(self):
-            print "%s: I am connected!" % self.__class__.__name__
+            self.linfo("I am connected!")
             ControllerAdaptor_Backend_JSON.connectionMade(self)
             self.proc_cmd(self.backend, command.PING("Hello everybody!"))
 
         def connectionLost(self, reason):
-            print "%s: I was lost!" % self.__class__.__name__
+            self.linfo("I was lost!")
 
         def lineReceived(self, data):
-            print 'Data received.  Data: %r' % data
+            self.linfo('Data received.  Data: %r', data)
             ControllerAdaptor_Backend_JSON.lineReceived(self, data)
 
     class DemoPprintBackend(PprintBackend):
@@ -89,6 +137,7 @@ if __name__=='__main__':
             if controller:
                 self.controller.proc_cmd(self, command.ping("Are you there?"))
 
+    log_handler('beah_demo_backend.log')
     start_backend(DemoPprintBackend(), adaptor=DemoOutAdaptor, byef=lambda evt: reactor.stop())
     reactor.run()
 

@@ -23,13 +23,18 @@ class Executable(object):
             (self.fd, self.executable) = tempfile.mkstemp(suffix=self.suffix)
 
     def write_line(self, line):
-        os.write(self.fd, line+self.line_end)
+        self.__content += line+self.line_end
 
-    def make(self):
-        self.create()
+    def make_content(self):
+        self.__content = ""
         self.header()
         self.content()
         self.footer()
+        return self.__content
+
+    def make(self):
+        self.create()
+        os.write(self.fd, self.make_content())
         self.close()
 
     def close(self):

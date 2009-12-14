@@ -21,9 +21,11 @@ import exceptions
 import logging
 from beah.core import event, command
 from beah.core.constants import ECHO
-from beah.misc import Raiser
+from beah.misc import Raiser, localhost
 from beah import config
 from beah.misc.log_this import log_this
+
+from beah.system import Executable
 
 ################################################################################
 # Logging:
@@ -33,29 +35,26 @@ log = logging.getLogger('beacon')
 # FIXME: !!!
 conf = config.main_config()
 
-if config.parse_bool(conf.get('CONTROLLER', 'CONSOLE_LOG')):
-    def log_print(level, args, kwargs):
-        """Redirect log messages - to stdout"""
-        print level, args[0] % args[1:]
-else:
-    def log_print(level, args, kwargs):
-        """Redirect log messages - to /dev/null"""
-        pass
+def log_print(level, args, kwargs):
+    """Redirect log messages - to stdout"""
+    print level, args[0] % args[1:]
 
 def mklog(level, logf):
     """Create a wrapper for logging."""
-    def log_w_level(*args, **kwargs):
-        """Log wrapper - redirect log message and log it."""
-        log_print(level, args, kwargs)
-        return logf(*args, **kwargs)
-    return log_w_level
+    if config.parse_bool(conf.get('CONTROLLER', 'CONSOLE_LOG')):
+        def log_w_level(*args, **kwargs):
+            """Log wrapper - redirect log message and log it."""
+            log_print(level, args, kwargs)
+            return logf(*args, **kwargs)
+        return log_w_level
+    return logf
 
 log_debug   = mklog("--- DEBUG:   ", log.debug)
 log_info    = mklog("--- INFO:    ", log.info)
 log_warning = mklog("--- WARNING: ", log.warning)
 log_error   = mklog("--- ERROR:   ", log.error)
 
-# INFO: This is for debugging purposes only - allows tracing functional calls
+# INFO: This is for debugging purposes only - allows tracing function calls
 fcall_log = log_this(log_debug,
         config.parse_bool(conf.get('CONTROLLER', 'DEVEL')))
 
@@ -67,7 +66,6 @@ class Controller(object):
     """Controller class. Processing commands and events. Creating tasks."""
 
     __origin = {'class':'controller'}
-    __tid = 0
 
     __ON_KILLED = staticmethod(Raiser(ServerKilled, "Aaargh, I was killed!"))
 
@@ -79,8 +77,7 @@ class Controller(object):
         self.conf = {}
         self.killed = False
         self.on_killed = on_killed or self.__ON_KILLED
-        # FIXME!!! read from permanent storage!
-        self.__vars = {}
+        self.__waiting_tasks = {}
 
     def add_backend(self, backend):
         if backend and not (backend in self.backends):
@@ -124,19 +121,6 @@ class Controller(object):
                 return task
         return None
 
-    def setdefault_var(self, key, defvalue):
-        if self.__vars.has_key(key):
-            return self.__vars['key']
-        self.set_var(key, defvalue)
-        return defvalue
-
-    def set_var(self, key, value):
-        # FIXME!!! write to permanent storage!
-        self.__vars[key] = value
-
-    def get_var(self, key, default=None):
-        return self.__vars.get(key, default)
-
     def proc_evt(self, task, evt):
         """
         Process Event received from task.
@@ -149,7 +133,6 @@ class Controller(object):
         log_debug("Controller: proc_evt(..., %r)", evt)
         evev = evt.event()
         if evev == 'introduce':
-            # FIXME: find a task by id and set task.task_info
             task_id = evt.arg('id')
             task.origin['source'] = "socket"
             a_task = self.find_task(task_id)
@@ -164,14 +147,23 @@ class Controller(object):
             handle = evt.arg('handle', '')
             dest = evt.arg('dest', '')
             key = evt.arg('key')
-            if handle == ''  and dest in [None, '', 'localhost']:
-                # handle only certain kind of variables here.
+            if handle == '' and localhost(dest):
                 if evev == 'variable_set':
-                    self.set_var(key, evt.arg('value'))
+                    self.runtime.set_var(key, evt.arg('value'))
                 else:
-                    value = self.get_var(key)
-                    task.proc_cmd(command.variable_value(key, value))
+                    value = self.runtime.get_var(key)
+                    task.proc_cmd(command.variable_value(key, value,
+                        handle=handle, dest=dest))
                 return
+            else:
+                if dest == 'test.loop':
+                    dest = ''
+                s = repr(("command.variable_value", key, handle, dest))
+                l = self.__waiting_tasks.setdefault(s, [])
+                if task not in l:
+                    l.append(task)
+                log_debug("Controller.__waiting_tasks=%r", self.__waiting_tasks)
+                log_debug("Controller.__waiting_tasks[%r]=%r", s, l)
         # controller - spawn_task
         orig = evt.origin()
         if not orig.has_key('task_info'):
@@ -181,10 +173,13 @@ class Controller(object):
 
     def send_evt(self, evt, to_all=False):
         #cmd_str = "%s\n" % json.dumps(evt)
-        backends = self.out_backends if not to_all else self.backends
+        if not to_all:
+            (backends, flags) = (self.out_backends, {})
+        else:
+            (backends, flags) = (self.backends, {'broadcast': True})
         for backend in backends:
             try:
-                backend.proc_evt(evt)
+                backend.proc_evt(evt, **flags)
             except:
                 self.handle_exception("Writing to backend %r failed." % backend)
 
@@ -195,6 +190,11 @@ class Controller(object):
     def task_finished(self, task, rc):
         self.generate_evt(event.end(task.task_info, rc))
         self.remove_task(task)
+        for h in log.handlers:
+            try:
+                h.flush()
+            except:
+                pass
 
     def handle_exception(self, message="Exception raised."):
         log_error("Controller: %s %s", message, traceback.format_exc())
@@ -224,7 +224,7 @@ class Controller(object):
                 evt.args().update(rc=ECHO.EXCEPTION,
                         exception=traceback.format_exc())
         log_debug("Controller: echo(%r)", evt)
-        backend.proc_evt(evt)
+        backend.proc_evt(evt, explicit=True)
 
     def generate_evt(self, evt, to_all=False):
         """Send a new generated event.
@@ -237,10 +237,42 @@ class Controller(object):
         log_debug("Controller: generate_evt(..., %r, %r)", evt, to_all)
         self.send_evt(evt, to_all)
 
+    class BackendFakeTask(object):
+        def __init__(self, controller, backend, forward_id):
+            self.controller = controller
+            self.backend = backend
+            self.forward_id = forward_id
+            self.origin = {'signature':'BackendFakeTask'}
+            self.task_info = {'task':'fake', 'id':'no_id'}
+
+        def proc_cmd(self, cmd):
+            evt = event.forward_response(cmd, self.forward_id)
+            self.backend.proc_evt(evt, explicit=True)
+
+    def proc_cmd_forward(self, backend, cmd, echo_evt):
+        evt = event.event(cmd.arg('event'))
+        evev = evt.event()
+        # FIXME: incomming events filter - CHECK
+        if evev not in ['variable_get', 'variable_set']:
+            return
+        fake_task = self.BackendFakeTask(self, backend, cmd.id())
+        self.proc_evt(fake_task, evt)
+
+    def proc_cmd_variable_value(self, backend, cmd, echo_evt):
+        s = repr(("command.variable_value", cmd.arg("key"), cmd.arg("handle"), cmd.arg("dest")))
+        l = self.__waiting_tasks.get(s, None)
+        log_debug("Controller.__waiting_tasks=%r", self.__waiting_tasks)
+        log_debug("Controller.__waiting_tasks[%r]=%r", s, l)
+        if l is not None:
+            for task in l:
+                log_debug("Controller: %s.proc_cmd(%r)", task, cmd)
+                task.proc_cmd(cmd)
+            del self.__waiting_tasks[s]
+
     def proc_cmd_ping(self, backend, cmd, echo_evt):
         evt = event.event('pong', message=cmd.arg('message', None))
         log_debug("Controller: backend.proc_evt(%r)", evt)
-        backend.proc_evt(evt)
+        backend.proc_evt(evt, explicit=True)
 
     def proc_cmd_PING(self, backend, cmd, echo_evt):
         self.generate_evt(event.event('PONG', message=cmd.arg('message', None)))
@@ -249,11 +281,21 @@ class Controller(object):
         self.conf.update(cmd.args())
 
     def proc_cmd_run(self, backend, cmd, echo_evt):
-        # FIXME: assign unique id:
         task_info = dict(cmd.arg('task_info'))
-        task_info['id'] = self.__tid
-        echo_evt.args()['task_id'] = self.__tid
-        self.__tid += 1
+        task_info['id'] = cmd.id()
+        task_env = dict(cmd.arg('env') or {})
+        task_args = list(cmd.arg('args') or [])
+        self.spawn_task(self, backend, task_info, task_env, task_args)
+
+    def proc_cmd_run_this(self, backend, cmd, echo_evt):
+        # FIXME: This looks dangerous! Is future BE filter enough? Disable!
+        se = Executable()
+        # FIXME: windows? need different ext and different default.
+        se.content = lambda se: se.write_line(cmd.arg('script', "#!/bin/sh\nexit 1"))
+        se.make()
+        task_info = dict(cmd.arg('task_info'))
+        task_info['id'] = cmd.id()
+        task_info['file'] = se.executable
         task_env = dict(cmd.arg('env') or {})
         task_args = list(cmd.arg('args') or [])
         self.spawn_task(self, backend, task_info, task_env, task_args)
@@ -273,7 +315,10 @@ class Controller(object):
         answ += "\n== Backends ==\n"
         if self.backends:
             for be in self.backends:
-                str = " " if be in self.out_backends else "-"
+                if be:
+                    str = " "
+                else:
+                    str = "-"
                 answ += "%s %s\n" % (str, be)
         else:
             answ += "None\n"
@@ -288,17 +333,18 @@ class Controller(object):
         if self.conf:
             answ += "\n== Config ==\n%s\n" % (self.conf,)
 
-        if self.__vars:
+        vars = self.runtime.get_vars()
+        if vars:
             answ += "\n== Variables ==\n"
-            for k in sorted(self.__vars.keys()):
-                answ += "%r=%r\n" % (k, self.__vars[k])
+            for k in sorted(vars.keys()):
+                answ += "%r=%r\n" % (k, vars[k])
 
         if self.killed:
             answ += "\n== Killed ==\nTrue\n"
 
         evt = event.event(event.event('dump', message=answ))
         log_debug("Controller: backend.proc_evt(%r)", evt)
-        backend.proc_evt(evt)
+        backend.proc_evt(evt, explicit=True)
 
         log_info('%s', answ)
 
@@ -310,4 +356,27 @@ class Controller(object):
         # backends, for broadcast - e.g. bye event.
         if backend in self.out_backends:
             self.out_backends.remove(backend)
+
+class RuntimeBase(object):
+
+    def __init__(self, variables=()):
+        self.__vars = dict(variables)
+
+    def has_var(self, key):
+        return self.__vars.has_key(key)
+
+    def get_var(self, key, default=None):
+        return self.__vars.get(key, default)
+
+    def get_vars(self):
+        return dict(self.__vars)
+
+    def set_var(self, key, value):
+        self.__vars[key] = value
+
+    def setdefault_var(self, key, defvalue):
+        if self.has_var(key):
+            return self.get_var('key')
+        self.set_var(key, defvalue)
+        return defvalue
 

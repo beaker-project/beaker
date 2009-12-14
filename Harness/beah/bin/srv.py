@@ -18,13 +18,14 @@
 
 from twisted.internet import reactor
 from beah.wires.internals.twserver import start_server
+
 def main_srv():
     """\
 This is a Controller server.
 
 Type <Ctrl-C> to exit. Alternatively issue a kill command from cmd_backend.
 """
-    start_server()
+    return start_server()
 
 def main():
     print main_srv.__doc__

@@ -25,7 +25,7 @@ class BasicBackend(object):
         self.controller = None
     def set_controller(self, controller=None):
         self.controller = controller
-    def proc_evt(self, evt):
+    def proc_evt(self, evt, **flags):
         if "proc_evt_"+evt.event() in dir(self):
             try:
                 self.__getattribute__("proc_evt_"+evt.event())(evt)
@@ -44,10 +44,10 @@ class ExtBackend(BasicBackend):
         return False
     def post_proc(self, evt, answ):
         return answ
-    def proc_evt(self, evt):
+    def proc_evt(self, evt, **flags):
         if self.pre_proc(evt):
             return True
-        answ = BasicBackend.proc_evt(self, evt)
+        answ = BasicBackend.proc_evt(self, evt, **flags)
         return self.post_proc(evt, answ)
 
 import pprint

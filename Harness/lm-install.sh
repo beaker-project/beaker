@@ -48,7 +48,7 @@ fi
 
 TEMPLATE_DIR=lm-install
 echo "Pre-check of environment variables:"
-( ${TEMPLATE_DIR}/install/lm-install.sh --env-check; )
+( . ${TEMPLATE_DIR}/install/lm-install.sh --env-check; )
 
 LM_INSTALL_ROOT="${LM_INSTALL_ROOT:-"/tmp/lm-install"}"
 DISTRO_ROOT="${DISTRO_ROOT:-"/tmp/lm-install"}"
@@ -75,7 +75,9 @@ cat >$DISTRO_ROOT/install/env.sh <<END
 LM_INSTALL_ROOT="${LM_INSTALL_ROOT}"
 LAB_CONTROLLER="${LAB_CONTROLLER:-http://localhost:5222/}"
 BEAKER_HOSTNAME="${BEAKER_HOSTNAME:-$LABM}"
+LM_NO_RHTS="${LM_NO_RHTS}"
 LM_RHTS_REPO="${LM_RHTS_REPO}"
+LM_RHTS_DEVEL_REPO="${LM_RHTS_DEVEL_REPO}"
 LM_YUM_FILE="${LM_YUM_FILE}"
 LM_YUM_PATH="${LM_YUM_PATH}"
 LM_FAKELC="${LM_FAKELC}"
@@ -87,7 +89,7 @@ END
 (
 . $DISTRO_ROOT/install/env.sh
 echo "Check of environment variables:"
-${TEMPLATE_DIR}/install/lm-install.sh --env-check
+. ${TEMPLATE_DIR}/install/lm-install.sh --env-check
 )
 
 cat >$DISTRO_ROOT/main.sh <<END

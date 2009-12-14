@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -x
 
 FAKELC_SERVICE=1
 
@@ -18,28 +18,34 @@ function psgrep()
 
 function lm_env_check()
 {
-  ANSW=0
+  local _answ=0
   if [[ -z "$BEAH_DEV" ]]; then
     soft_error "env.variable BEAH_DEV is not defined."
-    ANSW=1
+    _answ=1
   fi
   if [[ -z "$LM_INSTALL_ROOT" ]]; then
     soft_error "env.variable LM_INSTALL_ROOT is not defined."
-    ANSW=1
+    _answ=1
   fi
   if [[ -z "$LM_YUM_PATH" ]]; then
     warning "env.variable LM_YUM_PATH is not defined."
-    ANSW=0
+    _answ=0
   fi
   if [[ -z "$LM_YUM_FILE" ]]; then
     warning "env.variable LM_YUM_FILE is not defined."
-    ANSW=0
+    _answ=0
   fi
-  if [[ -z "$LM_RHTS_REPO" ]]; then
-    warning "env.variable LM_RHTS_REPO is not defined."
-    ANSW=0
+  if [[ -z "$LM_NO_RHTS" ]]; then
+    if [[ -z "$LM_RHTS_DEVEL_REPO" ]]; then
+      warning "env.variable LM_RHTS_DEVEL_REPO is not defined."
+      _answ=0
+    fi
+    if [[ -z "$LM_RHTS_REPO" ]]; then
+      warning "env.variable LM_RHTS_REPO is not defined."
+      _answ=0
+    fi
   fi
-  return $ANSW
+  return $_answ
 }
 function lm_check()
 {
@@ -81,6 +87,7 @@ function lm_install_yum()
   /usr/bin/wget -N $LM_YUM_PATH/$LM_YUM_FILE
   /bin/rpm -Uvh $LM_YUM_FILE
   popd
+  rpm -q yum
 }
 
 function yumi()
@@ -97,7 +104,7 @@ function yummie()
 
 function lm_install_additional_packages()
 {
-  yummie vim-enhanced python
+  yummie vim-enhanced python python-devel rpm-build
 }
 
 function lm_install_setuptools()
@@ -129,7 +136,7 @@ function lm_install_setuptools()
 
 function lm_install_beah()
 {
-  lm_pushd
+  lm_pushd || return 1
     export BEAH_DEV
 
     if [[ -d "beah-0.1.a1${BEAH_DEV}" ]]; then
@@ -138,9 +145,9 @@ function lm_install_beah()
       tar xvzf ${LM_INSTALL_ROOT}/install/beah-0.1.a1${BEAH_DEV}.tar.gz
     fi
 
-    pushd beah-0.1.a1${BEAH_DEV}
+    pushd beah-0.1.a1${BEAH_DEV} || { popd; return 1; }
       BEAH_RPM="dist/beah-0.1.a1${BEAH_DEV}-1.noarch.rpm"
-      if [[ -f "$BEAH_RPM" ]]; then
+      if [[ -e "$BEAH_RPM" ]]; then
         echo "RPM file \"$BEAH_RPM\" exists."
       else
         python setup.py bdist_rpm
@@ -148,7 +155,7 @@ function lm_install_beah()
 
       EGG_VER="$(python -V 2>&1 | cut -d " " -f 2 -s)"
       BEAH_EGG="dist/beah-0.1.a1${BEAH_DEV}-py$EGG_VER.egg"
-      if [[ -f "$BEAH_EGG" ]]; then
+      if [[ -e "$BEAH_EGG" ]]; then
         echo "Egg file \"$BEAH_EGG\" exists."
       else
         python setup.py bdist_egg
@@ -156,20 +163,34 @@ function lm_install_beah()
 
       case "${1:-"src"}" in
         rpm|-r|--rpm)
-          yum -y install python-{zope-interface,twisted-{core,web},simplejson}
-          rpm -iF "$BEAH_RPM"
+          if [[ -r "$BEAH_RPM" ]]; then
+            yum -y install python-{zope-interface,twisted-{core,web},simplejson}
+            rpm -iF "$BEAH_RPM"
+          else
+            false
+          fi
           ;;
         yum|-y|--yum)
-          yum -y install --nogpgcheck "$BEAH_RPM"
+          if [[ -r "$BEAH_RPM" ]]; then
+            yum -y install --nogpgcheck "$BEAH_RPM"
+          else
+            false
+          fi
           ;;
         egg|-e|--egg)
-          easy_install "$BEAH_EGG"
+          if [[ -r "$BEAH_EGG" ]]; then
+            easy_install "$BEAH_EGG"
+          else
+            false
+          fi
           ;;
         src|-s|--src)
-          yum -y install python-{zope-interface,twisted-{core,web},simplejson}
+          yum -y install python-{zope-interface,twisted-{core,web},simplejson} && \
           python setup.py install
           ;;
         build|-b|--build)
+          echo "Build: Not implemented." >&2
+          false
           ;;
         help|-h|-?|--help)
           echo "USAGE: $0 [src|egg|rpm|build|help]"
@@ -177,10 +198,14 @@ function lm_install_beah()
         *)
           soft-error "lm_install_beah does not understand '$1'"
           echo "USAGE: $0 [src|egg|rpm|build|help]" >&2
+          false
           ;;
       esac
+      local _answ=$?
     popd
   popd
+  echo "lm_install_beah: return $_answ"
+  return $_answ
 }
 
 function lm_config_beah()
@@ -195,7 +220,7 @@ END
 
   rm -f /etc/beah.conf.orig
   mv /etc/beah.conf /etc/beah.conf.orig
-  sed -e 's/^DEVEL=.*$/DEVEL=True/' /etc/beah.conf.orig > /etc/beah.conf
+  sed -e 's/^DEVEL=.*$/DEVEL=True/' /etc/beah.conf.orig > /etc/beah.conf || true
 }
 
 function lm_tar_logs()
@@ -216,14 +241,23 @@ function lm_view_logs()
 function lm_mon()
 {
   while true; do
-    ps -efH
-    sleep 1
+    #ps -efH
+    lm_ps
+    sleep ${1:-2}
+  done
+}
+
+function lm_ps()
+{
+  for pid in $(pgrep beah) $(pgrep rhts-test-runner.sh); do
+    pstree -lacpnu $pid
   done
 }
 
 function lm_stop()
 {
   service beah-beaker-backend stop
+  service beah-fwd-backend stop
   if [[ -n "$FAKELC_SERVICE" ]]; then
     service beah-fakelc stop
   else
@@ -249,6 +283,7 @@ function lm_restart()
     fi
   fi
   service beah-beaker-backend restart
+  service beah-fwd-backend restart
   lm_mon
 }
 
@@ -264,15 +299,26 @@ function lm_kill()
   fi
 }
 
+function lm_iptables()
+{
+  iptables -D INPUT -p tcp -m state --state NEW -m tcp --dport 12432 -j ACCEPT &>/dev/null
+  iptables -I INPUT -p tcp -m state --state NEW -m tcp --dport 12432 -j ACCEPT
+  service iptables save
+}
+
 function lm_main_beah()
 {
-  lm_install_beah yum
-  lm_config_beah
+  lm_install_beah yum && \
+  lm_config_beah || return 1
+  lm_iptables
   if ! chkconfig beah-srv; then
     chkconfig --add beah-srv
   fi
   if ! chkconfig beah-beaker-backend; then
     chkconfig --add beah-beaker-backend
+  fi
+  if ! chkconfig beah-fwd-backend; then
+    chkconfig --add beah-fwd-backend
   fi
   if ! chkconfig beah-fakelc; then
     chkconfig --add beah-fakelc
@@ -281,34 +327,54 @@ function lm_main_beah()
 
 function lm_install_rhts_repo()
 {
-  # Add yum repository containing RHTS tests:
-  cat > /etc/yum.repos.d/rhts-tests.repo << REPO_END
-[rhts-noarch]
-name=rhts tests development
-baseurl=$LM_RHTS_REPO
-enabled=1
-gpgcheck=0
-REPO_END
+## THIS IS DEFINED IN XML RECIPE
+#  # Add yum repository containing RHTS tests:
+#  if [[ -z "LM_NO_RHTS" ]]; then
+#  cat > /etc/yum.repos.d/rhts-tests.repo << REPO_END
+#[rhts-noarch]
+#name=rhts tests development
+#baseurl=$LM_RHTS_REPO
+#enabled=0
+#gpgcheck=0
+#REPO_END
+# fi
+  true
 }
 
 function lm_install_rhts_deps()
 {
+  yummie yum-utils
+  if [[ -z "$LM_NO_RHTS" ]]; then
+  cat > /etc/yum.repos.d/rhts.repo << REPO_END
+[rhts]
+name=rhts scripts
+baseurl=$LM_RHTS_DEVEL_REPO
+enabled=0
+gpgcheck=0
+REPO_END
+  yum -y --enablerepo=rhts install rhts-test-env-lab rhts-legacy
   lm_install_rhts_repo
-  yummie rhts-test-env-lab rhts-legacy yum-utils
+  else
+    true
+  fi
 }
 
 function lm_main_install()
 {
-  lm_install_yum
-  lm_install_additional_packages
-  lm_install_setuptools yum
-  lm_main_beah
-  lm_install_rhts_deps
+  lm_install_yum && \
+  lm_install_additional_packages && \
+  lm_install_setuptools yum && \
+  lm_main_beah && \
+  if [[ -z "$LM_NO_RHTS" ]]; then
+    lm_install_rhts_deps
+  else
+    true
+  fi
 }
 
 function lm_main_run()
 {
-  lm_main_install
+  lm_main_install && \
   lm_restart
   echo "Now you can run e.g. 'lm_kill', 'lm_restart' or 'lm_view_logs'."
   echo "Call 'lm_help' to display a help for these functions."

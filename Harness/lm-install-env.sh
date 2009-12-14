@@ -10,13 +10,24 @@
 # setting with this option.)
 #LM_FAKELC=1
 
+# FAKELC_SERVICE - if set, use beah-fakelc as a service.
+#FAKELC_SERVICE=1
+
 # BEAKER_HOSTNAME - the name used by LM to introduce iteslf to LC.
 # Optional. Defaults to $HOSTNAME
 #BEAKER_HOSTNAME="pure-virtual"
 
-# LM_RHTS_REPO - path to yum repository containing RHTS tests.
+# LM_NO_RHTS - do not use RHTS repos if set. (Useful during offline testing.)
+#LM_NO_RHTS=1
+
+# LM_RHTS_DEVEL_REPO - path to yum repository containing RHTS scripts.
 # Conditionally mandatory. Required for using RHTS test.
-#LM_RHTS_REPO="http://examples.com/rhts/repo/noarch"
+#LM_RHTS_DEVEL_REPO="http://examples.com/rhts/devel"
+
+# OBSOLETE: Repository containing tests should be provided by recipe.
+## LM_RHTS_REPO - path to yum repository containing RHTS tests.
+## Conditionally mandatory. Required for using RHTS test.
+##LM_RHTS_REPO="http://examples.com/rhts/repo/noarch"
 
 # LM_YUM_PATH and LM_YUM_FILE - path and filename of yum rpm.
 # Conditionally mandatory. This is not necessary on fedora, but is required on

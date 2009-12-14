@@ -36,14 +36,19 @@ task_def_recipe = None
 def get_recipe_(fqdn=None, id=None, task_id=None):
     print "get_recipe_(fqdn=%s, id=%s, task_id=%s)" % (fqdn, id, task_id)
     if fqdn is not None:
-        id = fqdn_recipes[fqdn] if fqdn_recipes.has_key(fqdn) else fqdn_def_recipe
+        id = build_recipe(fqdn)
     if task_id is not None:
         task_id = int(task_id)
-        id = task_recipe[task_id] if task_recipe.has_key(task_id) else task_def_recipe
+        if task_recipe.has_key(task_id):
+            id = task_recipe[task_id]
+        else:
+            id = task_def_recipe
     if id is None:
         return None
     id = int(id)
-    return recipes[id] if recipes.has_key(id) else None
+    if recipes.has_key(id):
+        return recipes[id]
+    return None
 
 def get_recipe_xml(**kwargs):
     rec = get_recipe_(**kwargs)
@@ -127,9 +132,9 @@ def do_task_upload_file(fname, task_id, path, name, size, digest, offset, data):
 # XML-RPC HANDLERS:
 ################################################################################
 class LCRecipes(xmlrpc.XMLRPC):
-    @staticmethod
     def return_recipe(**kwargs):
         return get_recipe_xml(**kwargs)
+    return_recipe = staticmethod(return_recipe)
 
     def xmlrpc_to_xml(self, recipe_id):
         print "recipes.to_xml(%r)" % recipe_id
@@ -188,10 +193,17 @@ class LCHandler(xmlrpc.XMLRPC):
 serveAnyChild(LCHandler)
 serveAnyRequest(LCHandler, 'catch_xmlrpc', xmlrpc.XMLRPC)
 
-def main():
 ################################################################################
 # RECIPE DEFINITIONS:
 ################################################################################
+def build_recipe(fqdn):
+    if fqdn is None:
+        return None
+    if fqdn_recipes.has_key(fqdn):
+        return fqdn_recipes[fqdn]
+    return build_recipe_21(fqdn)
+
+def build_recipe_21(fqdn):
     recipe21 = """\
             <recipe arch="i386" distro="RHEL5-Server-U3"
                     family="RedHatEnterpriseLinuxServer5"
@@ -371,30 +383,33 @@ def main():
     args = args21
     tasks = [41, 42, 43, 44, 45, 46, 47, 95, 99]
     machines = [
-            os.environ["HOSTNAME"],
+            fqdn or os.environ["HOSTNAME"],
             "test1.example.com",
             "lab-machine2.example.com",
-            "localhost",
             ]
     for task in tasks:
         task_recipe[task] = 21
         args['task%d_stat' % task] = 'Waiting'
         args['task%d_res' % task] = 'None'
-    for machine in range(len(machines)):
-        fqdn = machines[machine]
-        fqdn_recipes[fqdn] = 21
-        args['machine%d' % machine] = fqdn
-        args['machine%d_stat' % machine] = 'None'
+    for machine_ix in range(len(machines)):
+        machine = machines[machine_ix]
+        fqdn_recipes[machine] = 21
+        args['machine%d' % machine_ix] = machine
+        args['machine%d_stat' % machine_ix] = 'None'
 
     pprint.pprint(recipes)
 
+    return 21
+
+def main():
 ################################################################################
 # EXECUTE:
 ################################################################################
     from twisted.web import server
     lc = LCHandler()
     s = server.Site(LCHandler(), None, 60*60*12)
-    reactor.listenTCP(5222, s, interface='localhost')
+    #reactor.listenTCP(5222, s, interface='localhost')
+    reactor.listenTCP(5222, s)
     reactor.run()
 
 ################################################################################

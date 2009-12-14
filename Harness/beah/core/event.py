@@ -73,7 +73,10 @@ def echo(cmd, rc, message="", origin={}, timestamp=None, **kwargs):
     - rc - response as defined by beah.core.constants.ECHO
     - message - explanatory message
     """
-    cmd_id = cmd if isinstance(cmd, str) else cmd.id()
+    if isinstance(cmd, str):
+        cmd_id = cmd
+    else:
+        cmd_id = cmd.id()
     return Event('echo', origin, timestamp, cmd_id=cmd_id, rc=rc, message=message, **kwargs)
 
 def lose_item(data, origin={}, timestamp=None):
@@ -262,6 +265,20 @@ def variable_get(key, handle='', origin={}, timestamp=None, **kwargs):
     """
     return Event('variable_get', origin=origin, timestamp=timestamp,
             key=key, handle=handle, **kwargs)
+
+def forward_response(command, forward_id, origin={}, timestamp=None,
+        **kwargs):
+    """
+    Used internally by Controller, in response to incomming command.forward.
+
+    @command - command generated in response to forwarded event
+    @forward_id - id of incomming command.forward
+
+    There could be multiple responses.
+    It is required all these response is sent before event.echo.
+    """
+    return Event('forward_response', origin=origin, timestamp=timestamp,
+            command=command, **kwargs)
 
 ################################################################################
 # AUXILIARY:
