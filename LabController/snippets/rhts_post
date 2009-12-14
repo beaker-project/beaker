@@ -142,6 +142,11 @@ LAB_CONTROLLER=http://$server:8000/server
 # # HOSTNAME: Pretend to be machine with given name:
 # #HOSTNAME=fake.hostname.com
 EOF
+# Turn on Debug logging
+/bin/sed -i 's/DEVEL=False/DEVEL=True/' /etc/beah.conf
+/bin/sed -i 's/INTERFACE=localhost/INTERFACE=/' /etc/beah.conf
+/bin/sed -i 's/CONSOLE_LOG=.*/CONSOLE_LOG=True/' /etc/beah.conf
+
 chkconfig --add beah-srv
 chkconfig --add beah-beaker-backend
 chkconfig --add beah-fwd-backend
