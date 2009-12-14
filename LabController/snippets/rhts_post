@@ -144,6 +144,7 @@ LAB_CONTROLLER=http://$server:8000/server
 EOF
 chkconfig --add beah-srv
 chkconfig --add beah-beaker-backend
+chkconfig --add beah-fwd-backend
 #end if
 
 #Add test user account
