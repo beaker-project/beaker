@@ -2,6 +2,7 @@ from turbogears import validators, url, config
 import turbogears as tg
 from turbojson import jsonify
 from turbogears.widgets.rpc import RPC
+from sqlalchemy import distinct
 import model
 from decimal import Decimal
 from turbogears.widgets import (Form, TextField, SubmitButton, TextArea,
@@ -11,6 +12,10 @@ from turbogears.widgets import (Form, TextField, SubmitButton, TextArea,
                                 static, PaginateDataGrid, RepeatingFormField,
                                 CompoundWidget, AjaxGrid, Tabber, 
                                 RepeatingFieldSet, SelectionField)
+
+import logging
+log = logging.getLogger("beaker.server.widgets")
+
 
 
 class LocalJSLink(JSLink):
@@ -576,15 +581,29 @@ class SystemDetails(Widget):
     template = "beaker.server.templates.system_details"
     params = ['system']
 
-class SystemHistory(myPaginateDataGrid):
-    # template = "beaker.server.templates.system_activity"
-    fields = [PaginateDataGrid.Column(name='user',title='User',getter=lambda x: x.user,options=dict(sortable=True)),
-              PaginateDataGrid.Column(name='service', title='Service', getter=lambda x: x.service, options=dict(sortable=True)),
-              PaginateDataGrid.Column(name='created', title='Created', getter=lambda x: x.created, options = dict(sortable=True)),
-              PaginateDataGrid.Column(name='field_name', title='Field Name', getter=lambda x: x.field_name, options=dict(sortable=True)),
-              PaginateDataGrid.Column(name='action', title='Action', getter=lambda x: x.action, options=dict(sortable=True)),
-              PaginateDataGrid.Column(name='old_value',title='Old Value', getter=lambda x: x.old_value,options=dict(sortable=True)), 
-              PaginateDataGrid.Column(name='new_value',title='New Value',getter=lambda x: x.new_value, options=dict(sortable=True))] 
+class SystemHistory(Form):
+    template = "beaker.server.templates.system_activity"
+    params = ['list','grid','search_bar']
+    
+    def __init__(self):
+        #filter_column_options = model.Activity.distinct_field_names()
+        
+        self.grid  = myPaginateDataGrid(fields = [PaginateDataGrid.Column(name='user',title='PUser',getter=lambda x: x.user,options=dict(sortable=True)),
+                                                  PaginateDataGrid.Column(name='service', title='Service', getter=lambda x: x.service, options=dict(sortable=True)),
+                                                  PaginateDataGrid.Column(name='created', title='Created', getter=lambda x: x.created, options = dict(sortable=True)),
+                                                  PaginateDataGrid.Column(name='field_name', title='Field Name', getter=lambda x: x.field_name, options=dict(sortable=True)),
+                                                  PaginateDataGrid.Column(name='action', title='Action', getter=lambda x: x.action, options=dict(sortable=True)),
+                                                  PaginateDataGrid.Column(name='old_value',title='Old Value', getter=lambda x: x.old_value,options=dict(sortable=True)), 
+                                                  PaginateDataGrid.Column(name='new_value',title='New Value',getter=lambda x: x.new_value, options=dict(sortable=True))])
+     
+    def display(self,**params):
+        if 'options' in params:
+            if 'list' in params['options']:
+                params['list'] = params['options']['list'] 
+                    
+        return super(SystemHistory, self).display(**params)
+                
+    
 
 class SystemForm(Form):
     javascript = [LocalJSLink('beaker', '/static/javascript/provision.js')]

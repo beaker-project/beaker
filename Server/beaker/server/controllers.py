@@ -526,7 +526,7 @@ class Root(RPCRoot):
                      prov_install = [(distro.id, distro.install_name) for distro in system.distros()]))
 
     @expose(template="beaker.server.templates.system")
-    @paginate("history_data",limit=30)
+    @paginate('history_data',limit=30)
     def view(self, fqdn=None, **kw):
         if fqdn:
             try:
@@ -607,6 +607,7 @@ class Root(RPCRoot):
                                     install   = '/save_install',
                                     provision = '/action_provision',
                                     power_action = '/action_power',
+                                    history   = '',
                                     arches    = '/save_arch'),
             widgets_options = dict(power     = options,
                                    labinfo   = options,

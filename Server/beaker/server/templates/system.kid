@@ -71,7 +71,7 @@
     ${widgets['labinfo'].display(method='get', action=widgets_action['labinfo'], value=value, options=widgets_options['labinfo'])}
    </div>
    <div py:if="widgets.has_key('history')" class="tabbertab"><h2>History</h2>
-    ${widgets['history'].display(history_data)} 
+    ${widgets['history'].display(method='get', action=widgets_action['history'], value=value, options=dict(list=history_data)) } 
    </div>
   </div>
  </body>
