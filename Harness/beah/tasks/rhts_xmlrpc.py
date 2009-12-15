@@ -309,7 +309,7 @@ class RHTSHandler(xmlrpc.XMLRPC):
         """Handler for unhandled requests."""
         logging.error("ERROR: Missing method: %s%r", method, args)
         #raise xmlrpc.Fault(123, "Undefined procedure %s." % method)
-        self.main.send_evt(event.output(("ERROR: UNHANDLED RPC" ,method, args),
+        self.main.send_evt(event.output(("ERROR: UNHANDLED RPC" , method, args),
             out_handle='xmlrpc'))
         return "Error: Server can not handle command %s" % method
 
@@ -367,11 +367,9 @@ class RHTSMain(object):
         #     - e.g. JOBID, RECIPESETID, RECIPEID are not interesting at all
         #     - use task_id for RECIPESETID, and BE (or LC eventually) should
         #       be able to find about the rest...
-        self.env.update(
-                # RESULT_SERVER - host:port[/prefixpath]
-                RESULT_SERVER="%s:%s%s" % ("localhost", port, ""),
-                TESTORDER='123', # FIXME: What should go here???
-                )
+        # RESULT_SERVER - host:port[/prefixpath]
+        self.env['RESULT_SERVER'] = "%s:%s%s" % ("localhost", port, "")
+        self.env.setdefault('TESTORDER', '123') # FIXME: What should go here???
 
         # FIXME: should any checks go here?
         # e.g. does Makefile PURPOSE exist? try running `make testinfo.desc`? ...
@@ -399,7 +397,7 @@ class RHTSMain(object):
         self.process = reactor.callLater(2, reactor.spawnProcess, self.task,
                 self.TEST_RUNNER,
                 args=[self.TEST_RUNNER],
-                env=self.env, path=self.env.get('TESTPATH','/tmp'))
+                env=self.env, path=self.env.get('TESTPATH', '/tmp'))
 
 
     def controller_input(self, cmd):
