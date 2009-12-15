@@ -121,7 +121,7 @@ class TextFieldJSON(TextField):
 class SearchBar(RepeatingFormField):
     """Search Bar"""
 
-    javascript = [LocalJSLink('beaker', '/static/javascript/searchbar_v3.js')]
+    javascript = [LocalJSLink('beaker', '/static/javascript/searchbar_v4.js')]
     template = """
     <div xmlns:py="http://purl.org/kid/ns#">
     <a id="advancedsearch" href="#">Toggle Search</a>
@@ -171,7 +171,7 @@ class SearchBar(RepeatingFormField):
            id="${field_id}_${repetition}">
         <script language="JavaScript" type="text/JavaScript">
             
-            ${field_id}_${repetition} = new SearchBar([${to_json(fields)}],'${search_controller}','${value_for(this_operations_field)}',${extra_callbacks_stringified},${table_search_controllers_stringified},'${value_for(keyvaluevalue)}');
+            ${field_id}_${repetition} = new SearchBar([${to_json(fields)}],'${search_controller}','${value_for(this_operations_field)}',${extra_callbacks_stringified},${table_search_controllers_stringified},'${value_for(this_searchvalue_field)}','${value_for(keyvaluevalue)}');
             addLoadEvent(${field_id}_${repetition}.initialize);
         </script>
         <td py:for="field in fields">
@@ -211,7 +211,7 @@ class SearchBar(RepeatingFormField):
     """
 
     params = ['repetitions', 'form_attrs', 'search_controller', 'simplesearch',
-              'advanced', 'simple','to_json','this_operations_field','extra_callbacks_stringified','table_search_controllers_stringified','keyvaluevalue']
+              'advanced', 'simple','to_json','this_operations_field','this_searchvalue_field','extra_callbacks_stringified','table_search_controllers_stringified','keyvaluevalue']
     form_attrs = {}
     simplesearch = None
 
@@ -226,6 +226,7 @@ class SearchBar(RepeatingFormField):
         # We don't know where in the fields array the operation array will be, so we will put it here
         # to access in the template
         self.this_operations_field = operation_field
+        self.this_searchvalue_field = value_field
         self.fields = [table_field,operation_field,value_field] 
          
         new_selects = []

@@ -1,5 +1,6 @@
-SearchBar = function (fields, searchController,operationvalue,column_based_controllers,table_search_controllers,keyvaluevalue) {
-        this.operationvalue = operationvalue; 
+SearchBar = function (fields, searchController,operationvalue,column_based_controllers,table_search_controllers,searchvalue,keyvaluevalue) {
+	this.operationvalue = operationvalue
+	this.searchvalue = searchvalue 
         this.keyvaluevalue = keyvaluevalue
         this.table_controllers = []
         this.column_controller = column_based_controllers
