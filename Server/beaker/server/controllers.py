@@ -129,7 +129,7 @@ class Utility:
           else:          
               my_getter = Utility.get_attr(column)
 
-          new_widget = widgets.PaginateDataGrid.Column(name='%s.%s' % (table.lower(),column.lower()) , getter = my_getter, title='%s-%s' % (table,column), options=dict(sortable=True)) 
+          new_widget = widgets.PaginateDataGrid.Column(name='%s.%s' % (table.lower(),column.lower()) , getter = my_getter, title='%s-%s' % (table,column), options=dict(sortable=False)) 
           fields.append(new_widget)
 
       for index,column_desc in enumerate(others):  
@@ -142,7 +142,7 @@ class Utility:
           else:          
               my_getter = Utility.get_attr_other(index_in_queri)
 
-          new_widget = widgets.PaginateDataGrid.Column(name='%s.%s' % (table.lower(),column.lower()) , getter = my_getter, title='%s-%s' % (table,column), options=dict(sortable=True)) 
+          new_widget = widgets.PaginateDataGrid.Column(name='%s.%s' % (table.lower(),column.lower()) , getter = my_getter, title='%s-%s' % (table,column), options=dict(sortable=False)) 
           fields.append(new_widget)
       return fields
 
