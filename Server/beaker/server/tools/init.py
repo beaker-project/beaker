@@ -57,6 +57,12 @@ def main():
     get_engine()
     metadata.create_all()
 
+    #Setup ReleaseAction Table
+    if ReleaseAction.query().count() == 0:
+        poweroff    = ReleaseAction(u'PowerOff')
+        leaveon     = ReleaseAction(u'LeaveOn')
+        reprovision = ReleaseAction(u'ReProvision')
+
     #Setup SystemStatus Table
     if SystemStatus.query().count() == 0:
         working   = SystemStatus(u'Working')

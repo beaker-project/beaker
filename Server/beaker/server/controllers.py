@@ -43,7 +43,8 @@ from beaker.server.helpers import *
 from beaker.server.tools.init import dummy
 from decimal import Decimal
 from bexceptions import *
-import beaker.server.recipes
+#import beaker.server.recipes
+import random
 
 from kid import Element
 import cherrypy
@@ -55,8 +56,8 @@ import string
 import sys
 
 # from beaker.server import json
-# import logging
-# log = logging.getLogger("beaker.server.controllers")
+import logging
+log = logging.getLogger("beaker.server.controllers")
 import breadcrumbs
 from datetime import datetime
 
@@ -200,10 +201,10 @@ class Root(RPCRoot):
     netboot = Netboot()
     auth = Auth()
     csv = CSV()
-    jobs = Jobs()
-    recipes = Recipes()
-    tasks = Tasks()
-    taskactions = TaskActions()
+#    jobs = Jobs()
+#    recipes = Recipes()
+#    tasks = Tasks()
+#    taskactions = TaskActions()
     reports = Reports()
 
     id         = widgets.HiddenField(name='id')
@@ -234,13 +235,16 @@ class Root(RPCRoot):
         fields = [id, autoUsers,],
         action = 'save_data',
         submit_text = _(u'Change'),
-    )
-
+    ) 
+   
     search_bar = SearchBar(name='systemsearch',
-                           label=_(u'System Search'),
-                           table_callback=System.get_tables,
-                           search_controller=url("/get_fields")
-                 )
+                           label=_(u'System Search'), 
+                           extra_selects = [ { 'name': 'keyvalue', 'column':'key/value','display':'none' , 'pos' : 2,'callback':url('/get_operators_keyvalue') }], 
+                           table=SystemSearch.create_search_table([System,Cpu,Device,Key]),
+                           search_controller=url("/get_search_options"),
+                           table_search_controllers = {'key/value':url('/get_keyvalue_search_options')} )
+                 
+  
     system_form = SystemForm()
     power_form = PowerForm(name='power')
     labinfo_form = LabInfoForm(name='labinfo')
@@ -256,9 +260,46 @@ class Root(RPCRoot):
     arches_form = SystemArches(name='arches')
 
     @expose(format='json')
+    def get_keyvalue_search_options(self,**kw):
+        return_dict = {}
+        return_dict['keyvals'] = Key.get_all_keys()
+        return return_dict
+
+    @expose(format='json')
+    def get_operators_keyvalue(self,keyvalue_field,*args,**kw): 
+        return_dict = {}
+        search = SystemSearch.search_on_keyvalue(keyvalue_field)
+        search.sort()
+        return_dict['search_by'] = search
+        return return_dict
+         
+    @expose(format='json')
+    def get_search_options(self,table_field,**kw): 
+        return_dict = {}
+        search =  SystemSearch.search_on(table_field)  
+      
+        #Determine what field type we are dealing with. If it is Boolean, convert our values to 0 for False
+        # and 1 for True
+        type = SystemSearch.field_type(table_field)
+       
+        if type == 'sqlalchemy.types.Boolean':
+            search['values'] = { 0:'False', 1:'True'}
+            
+        #Determine if we have search values. If we do, then we should only have the operators
+        # 'is' and 'is not'.
+        if search['values']:
+            search['operators'] = filter(lambda x: x == 'is' or x == 'is not', search['operators'])         
+
+        search['operators'].sort()
+        return_dict['search_by'] = search['operators'] 
+        return_dict['search_vals'] = search['values'] 
+     
+        return return_dict
+
+    @expose(format='json')
     def get_fields(self, table_name):
         return dict( fields = System.get_fields(table_name))
-
+  
     @expose(format='json')
     def get_installoptions(self, system_id=None, distro_id=None):
         try:
@@ -278,7 +319,7 @@ class Root(RPCRoot):
 
     @expose(template='beaker.server.templates.grid_add')
     @paginate('list',default_order='fqdn',limit=20,allow_limit_override=True)
-    def index(self, *args, **kw):
+    def index(self, *args, **kw): 
         return self.systems(systems = System.all(identity.current.user), *args, **kw)
 
     @expose(template='beaker.server.templates.form')
@@ -322,49 +363,53 @@ class Root(RPCRoot):
     def mine(self, *args, **kw):
         return self.systems(systems = System.mine(identity.current.user), *args, **kw)
 
+
+    def _system_search(self,kw): 
+        sys_search = SystemSearch() 
+	for search in kw['systemsearch']: 
+	    #clsinfo = System.get_dict()[search['table']] #Need to change this
+            class_field_list = search['table'].split('/')
+            cls_ref = SystemSearch.translate_name(class_field_list[0])
+            col = class_field_list[1]              
+            #If value id False or True, let's convert them to
+            if class_field_list[0] != 'Key':
+               sys_search.append_results(cls_ref,search['value'],col,search['operation']) 
+            else:
+               sys_search.append_results(cls_ref,search['value'],col,search['operation'],keyvalue=search['keyvalue']) 
+               
+        systems = sys_search.return_results()
+        new_systems = System.all(identity.current.user,system = systems)    
+        return new_systems
+
     # @identity.require(identity.in_group("admin"))
     def systems(self, systems, *args, **kw):
         # Reset joinpoint and then outerjoin on user.  This is so the sort 
         # column works in paginate/datagrid.
         # Also need to do distinct or paginate gets confused by the joins
-
-        # Short cut search by hostname
+      
         if 'simplesearch' in kw:
             simplesearch = kw['simplesearch']
-            kw['systemsearch'] = [{'table' : 'system',
-                                   'column' : 'fqdn',
-                                   'operation' : 'like',
+            kw['systemsearch'] = [{'table' : 'System/Name',   
+                                   'operation' : 'contains',
+                                   'keyvalue' : None,
                                    'value' : kw['simplesearch']}]
         else:
             simplesearch = None
 
         # Short cut search by type
         if 'type' in kw:
-            kw['systemsearch'] = [{'table' : 'system/type',
-                                   'column' : 'type',
-                                   'operation' : 'equal',
-                                   'value' : kw['type']}]
-        systems = systems.reset_joinpoint().outerjoin('user').distinct()
+            kw['systemsearch'] = [{'table' : 'System/Type',
+                                   'operation' : 'is',
+                                   'value' : kw['type']}] 
+       
         if kw.get("systemsearch"):
-            searchvalue = kw['systemsearch']
-            for search in kw['systemsearch']:
-                clsinfo = System.get_dict()[search['table']]
-                cls = clsinfo['cls']
-                col = getattr(cls,search['column'], None)
-                systems = systems.join(clsinfo['joins'])
-                if search['operation'] == 'greater than':
-                    systems = systems.filter(col>search['value'])
-                if search['operation'] == 'less than':
-                    systems = systems.filter(col<search['value'])
-                if search['operation'] == 'not equal':
-                    systems = systems.filter(col!=search['value'])
-                if search['operation'] == 'equal':
-                    systems = systems.filter(col==search['value'])
-                if search['operation'] == 'like':
-                    value = '%%%s%%' % search['value']
-                    systems = systems.filter(col.like(value))
+            searchvalue = kw['systemsearch']  
+            systems = self._system_search(kw)
+            systems = systems.reset_joinpoint().outerjoin('user').distinct() 
         else:
+            systems = systems.reset_joinpoint().outerjoin('user').distinct() 
             searchvalue = None
+       
         systems_grid = myPaginateDataGrid(fields=[
                         widgets.PaginateDataGrid.Column(name='fqdn', getter=lambda x: make_link("/view/%s" % x.fqdn, x.fqdn), title='System', options=dict(sortable=True)),
                         widgets.PaginateDataGrid.Column(name='status.status', getter=lambda x: x.status, title='Status', options=dict(sortable=True)),
@@ -374,7 +419,8 @@ class Root(RPCRoot):
                         widgets.PaginateDataGrid.Column(name='arch', getter=lambda x: ', '.join([arch.arch for arch in x.arch]), title='Arch', options=dict(sortable=True)),
                         widgets.PaginateDataGrid.Column(name='user.display_name', getter=lambda x: x.user, title='User', options=dict(sortable=True)),
                         widgets.PaginateDataGrid.Column(name='type.type', getter=lambda x: x.type, title='Type', options=dict(sortable=True)),
-                       ])
+                       ]) 
+
         return dict(title="Systems", grid = systems_grid,
                                      list = systems, 
                                      searchvalue = searchvalue,
@@ -556,6 +602,7 @@ class Root(RPCRoot):
             attrs = dict()
         options['readonly'] = readonly
 
+        options['reprovision_distro_id'] = [(distro.id, distro.install_name) for distro in system.distros()]
         #Excluded Family options
         options['excluded_families'] = []
         for arch in system.arch:
@@ -715,7 +762,11 @@ class Root(RPCRoot):
               identity.current.user.is_admin():
                 status = "Returned"
                 activity = SystemActivity(identity.current.user, "WEBUI", status, "User", '%s' % system.user, "")
-                system.action_release()
+                try:
+                    system.action_release()
+                except BX, error_msg:
+                    msg = "Error: %s Action: %s" % (error_msg,system.release_action)
+                    system.activity.append(SystemActivity(identity.current.user, "WEBUI", "%s" % system.release_action, "Return", "", msg))
         else:
             if system.can_share(identity.current.user):
                 status = "Reserved"
@@ -723,7 +774,7 @@ class Root(RPCRoot):
                 activity = SystemActivity(identity.current.user, 'WEBUI', status, 'User', '', '%s' % system.user )
         system.activity.append(activity)
         session.save_or_update(system)
-        flash( _(u"%s %s%s" % (status,system.fqdn,msg)) )
+        flash( _(u"%s %s %s" % (status,system.fqdn,msg)) )
         redirect("/view/%s" % system.fqdn)
 
     @error_handler(view)
@@ -760,13 +811,42 @@ class Root(RPCRoot):
     @error_handler(view)
     @expose()
     @identity.require(identity.not_anonymous())
-    def save_power(self, id, power_address, power_type_id, **kw):
+    def save_power(self, 
+                   id,
+                   power_address,
+                   power_type_id,
+                   release_action_id,
+                   **kw):
         try:
             system = System.by_id(id,identity.current.user)
         except InvalidRequestError:
             flash( _(u"Unable to save Power for %s" % id) )
             redirect("/")
 
+        if kw.get('reprovision_distro_id'):
+            try:
+                reprovision_distro = Distro.by_id(kw['reprovision_distro_id'])
+            except InvalidRequestError:
+                reprovision_distro = None
+            if system.reprovision_distro and \
+              system.reprovision_distro != reprovision_distro:
+                system.activity.append(SystemActivity(identity.current.user, 'WEBUI', 'Changed', 'reprovision_distro', '%s' % system.reprovision_distro, '%s' % reprovision_distro ))
+                system.reprovision_distro = reprovision_distro
+            else:
+                system.activity.append(SystemActivity(identity.current.user, 'WEBUI', 'Changed', 'reprovision_distro', '%s' % system.reprovision_distro, '%s' % reprovision_distro ))
+                system.reprovision_distro = reprovision_distro
+
+        try:
+            release_action = ReleaseAction.by_id(release_action_id)
+        except InvalidRequestError:
+            release_action = None
+        if system.release_action and system.release_action != release_action:
+            system.activity.append(SystemActivity(identity.current.user, 'WEBUI', 'Changed', 'release_action', '%s' % system.release_action, '%s' % release_action ))
+            system.release_action = release_action
+        else:
+            system.activity.append(SystemActivity(identity.current.user, 'WEBUI', 'Changed', 'release_action', '%s' % system.release_action, '%s' % release_action ))
+            system.release_action = release_action
+            
         if system.power:
             if power_address != system.power.power_address:
                 #Power Address Changed
@@ -841,11 +921,16 @@ class Root(RPCRoot):
     def save(self, **kw):
         if kw.get('id'):
             try:
+                query = System.query().filter(System.fqdn ==kw['fqdn'])
+                for sys_object in query:
+                    if str(sys_object.id) != str(kw['id']):
+                        flash( _(u"%s already exists!" % kw['fqdn']))
+                        redirect("/") 
                 system = System.by_id(kw['id'],identity.current.user)
             except InvalidRequestError:
                 flash( _(u"Unable to save %s" % kw['id']) )
                 redirect("/")
-            system.fqdn = kw['fqdn']
+           
         else:
             if System.query().filter(System.fqdn == kw['fqdn']).count() != 0:   
                 flash( _(u"%s already exists!" % kw['fqdn']) )
@@ -858,14 +943,14 @@ class Root(RPCRoot):
         log_fields = [ 'fqdn', 'vendor', 'lender', 'model', 'serial', 'location', 'type_id', 'checksum', 'status_id', 'lab_controller_id' , 'mac_address']
         for field in log_fields:
             try:
-                current_val = str(system.__dict__[field])
+                current_val = getattr(system,field)
             except KeyError:
                 current_val = ""
             # catch nullable fields return None.
-            if current_val == 'None':
+            if current_val is None:
                 current_val = ""
             new_val = str(kw.get(field) or "")
-            if current_val != new_val:
+            if str(current_val) != new_val:
 #                sys.stderr.write("\nfield: " + field + ", Old: " +  current_val + ", New: " +  str(kw[field]) + " " +  "\n")
                 activity = SystemActivity(identity.current.user, 'WEBUI', 'Changed', field, current_val, new_val )
                 system.activity.append(activity)
@@ -884,11 +969,11 @@ class Root(RPCRoot):
         log_bool_fields = [ 'private' ]
         for field in log_bool_fields:
             try:
-                current_val = str(system.__dict__[field])
+                current_val = getattr(system,field)
             except KeyError:
                 current_val = ""
             new_val = str(kw.get(field) or False)
-            if current_val != new_val:
+            if str(current_val) != new_val:
                 activity = SystemActivity(identity.current.user, 'WEBUI', 'Changed', field, current_val, new_val )
                 system.activity.append(activity)
         system.status_id=kw['status_id']
@@ -898,6 +983,7 @@ class Root(RPCRoot):
         system.serial=kw['serial']
         system.vendor=kw['vendor']
         system.lender=kw['lender']
+        system.fqdn=kw['fqdn']
         system.date_modified = datetime.utcnow()
         if kw.get('private'):
             system.private=kw['private']
@@ -1251,7 +1337,14 @@ class Root(RPCRoot):
         systems = self.pick_common(distro, user, xml)
 
         hit = False
-        for system in systems:
+        systems_list = systems.all()
+        size = len(systems_list)
+        while size:
+            size = size - 1
+            index = random.randint(0, size)
+            system = systems_list[index]
+            systems_list[index] = systems_list[size]
+   
             # If the system doesn't have a current user then take it
             if session.connection(System).execute(system_table.update(
                      and_(system_table.c.id==system.id,
@@ -1324,14 +1417,14 @@ class Root(RPCRoot):
             return (0, "Invalid system")
         if system.user == user:
             if mylog:
-                activity = SystemActivity(system.user, "VIA %s" % identity.current.user, "Returned", "User", "%s" % system.user, '')
-                system.activity.append(activity)
-            try:
-                system.action_release()
-            except BX, error:
-                msg = "Failed to power off system: %s" % error
-                activity = SystemActivity(systen.user, "VIA %s" % identity.current.user, "Off", "Power", "", msg)
-                system.activity.append(activity)
+                system.activity.append(SystemActivity(system.user, "VIA %s" % identity.current.user, "Returned", "User", "%s" % system.user, ''))
+                try:
+                    system.action_release()
+                except BX, error:
+                    msg = "Failed to power off system: %s" % error
+                    system.activity.append(SystemActivity(systen.user, "VIA %s" % identity.current.user, "Off", "Power", "", msg))
+            else:
+                system.user = None
         return
         
 

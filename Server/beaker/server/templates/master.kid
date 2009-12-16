@@ -14,6 +14,11 @@
             font-family: verdana;
             text-align: right;
         }
+        
+        .hidden
+         {
+             display:none
+         }
     </style>
     <style type="text/css" media="screen">
 @import "${tg.url('/static/css/layout-uncompressed.css')}";
@@ -67,11 +72,12 @@ $(document).ready(function() {
                     </div>
                 </ul>
             </div>
-            <ul id="fedora-side-nav">
+            <ul id="fedora-side-nav"> 
                 <li py:if="not tg.identity.anonymous"><a href="${tg.url('/prefs/')}">${tg.identity.user_name}'s Prefs</a></li>
                 <li py:if="not tg.identity.anonymous"><a href="${tg.url('/mine/')}">${tg.identity.user_name}'s Home</a></li>
-                <li py:if="not tg.identity.anonymous"><a href="${tg.url('/available/')}">My Systems</a></li>
-                <li py:if="not tg.identity.anonymous"><a href="${tg.url('/free/')}">Not in Use</a></li>
+                <li py:if="not tg.identity.anonymous and not 'admin' in tg.identity.groups"><a href="${tg.url('/groups')}">Groups</a></li>
+                <li py:if="not tg.identity.anonymous"><a href="${tg.url('/available/')}">Available Systems</a></li>
+                <li py:if="not tg.identity.anonymous"><a href="${tg.url('/free/')}">Free Systems</a></li>
                 <li><a href="${tg.url('/')}">All Systems</a></li>
                 <ul>
                     <li py:for="type in system_types()">
