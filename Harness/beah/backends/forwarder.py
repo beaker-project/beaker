@@ -134,7 +134,7 @@ class _RemoteBackend(ExtBackend):
             self.__status = self._IDLE
             reactor.callLater(10, self.__caller.reconnect, self)
 
-    def clone(self, remote_be):
+    def clone(self):
         return _RemoteBackend(self.__caller, self.__dest, self.__queue)
 
     def proc_evt_forward_response(self, evt):

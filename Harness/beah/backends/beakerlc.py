@@ -128,7 +128,15 @@ def parse_recipe_xml(input_xml):
     f.close()
     task_env['BEAKER_REPOS']=':'.join(repos)
 
+    test_order = 0
+
     for task in er.findall('task'):
+
+        to = task.get('testorder', None)
+        if to is not None:
+            test_order = int(to)
+        else:
+            test_order += 1
 
         ts = task.get('status')
 
@@ -205,6 +213,10 @@ def parse_recipe_xml(input_xml):
                     task_name, task_id)
             continue
 
+        if task_env.has_key('TESTORDER'):
+            task_env['TESTORDER'] = 'TSK_' + task_env['TESTORDER']
+        else:
+            task_env['TESTORDER'] = 'RCP_' + str(test_order)
         return dict(task_env=task_env, executable=executable, args=args,
                 ewd=ewd)
 
