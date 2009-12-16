@@ -1,5 +1,6 @@
 from beah.wires.internals.twbackend import start_backend, log_handler
 from beah.core.backends import ExtBackend
+from beah.core import command
 from beah.misc.log_this import log_this
 from beah.misc import localhost
 from beah import config
@@ -17,8 +18,19 @@ print_this = log_this(lambda s: log.debug(s), log_on=True)
 
 class ForwarderBackend(ExtBackend):
 
+    verbose_cls = False
+
     def __init__(self):
         self.__remotes = {}
+
+    def make_verbose(cls):
+        if not cls.verbose_cls:
+            cls.remote_backend = print_this(cls.remote_backend)
+            cls.reconnect = print_this(cls.reconnect)
+            cls.remote_call = print_this(cls.remote_call)
+            cls.proc_evt_variable_get = print_this(cls.proc_evt_variable_get)
+            cls.verbose_cls = True
+    make_verbose = classmethod(make_verbose)
 
     def remote_backend(self, dest):
         dest_s = '%s:%s' % dest
@@ -81,6 +93,19 @@ class _RemoteBackend(ExtBackend):
         self.__queue = queue or []
         self.__status = self._NEW
 
+    verbose_cls = False
+
+    def make_verbose(cls):
+        if not cls.verbose_cls:
+            cls.send_cmd = print_this(cls.send_cmd)
+            cls.done = print_this(cls.done)
+            cls.set_controller = print_this(cls.set_controller)
+            cls.clone = print_this(cls.clone)
+            cls.proc_evt_forward_response = print_this(cls.proc_evt_forward_response)
+            cls.proc_evt_echo = print_this(cls.proc_evt_echo)
+            cls.verbose_cls = True
+    make_verbose = classmethod(make_verbose)
+
     def dest(self):
         return self.__dest
 
@@ -124,6 +149,9 @@ class _RemoteBackend(ExtBackend):
         self.done(self, evt.arg('cmd_id'), evt)
 
 def start_forwarder_backend():
+    if config.parse_bool(conf.get('BACKEND', 'DEVEL')):
+        ForwarderBackend.make_verbose()
+        _RemoteBackend.make_verbose()
     backend = ForwarderBackend()
     # Start a default TCP client:
     start_backend(backend, byef=lambda evt: reactor.callLater(1, reactor.stop))
@@ -135,7 +163,7 @@ def main():
 
 if __name__ == '__main__':
     from beah.bin.srv import main_srv
-    from beah.core import event, command
+    from beah.core import event
     srv = main_srv()
 
     class FakeTask(object):
