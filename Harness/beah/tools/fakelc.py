@@ -344,7 +344,7 @@ def build_recipe_21(fqdn):
                         name="/distribution/kernelinstall" role="CLIENTS"
                 -->
 
-                <task avg_time="120" id="95"
+                <task avg_time="120" id="95" testorder="95"
                         name="/examples/rhts_tutorial/mcsontos/beah_logs" role="CLIENTS"
                         result="%(task95_res)s"
                         status="%(task95_stat)s"
@@ -367,6 +367,9 @@ def build_recipe_21(fqdn):
                             <system value="%(machine0)s"/>
                         </role>
                     </roles>
+                    <params>
+                        <param name="TESTORDER" value="99"/>
+                    </params>
                     <rpm name="rh-tests-examples-rhts_tutorial-mcsontos-beah_reserve.noarch"/>
                 </task>
 
