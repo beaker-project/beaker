@@ -1,0 +1,3 @@
+#!/bin/sh
+
+python -m beah.tasks.rhts_xmlrpc $BEAH_ROOT/examples/tests/testargs

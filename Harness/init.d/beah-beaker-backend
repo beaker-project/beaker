@@ -1,0 +1,85 @@
+#!/bin/sh
+#
+# beah-beaker-backend:	Start the Beaker backend.
+#
+# chkconfig:	345 99 99
+# description:	Daemon linking Beaker Harness with Lab Controller.
+
+# Source function library.
+. /etc/rc.d/init.d/functions
+
+prog="beah-beaker-backend"
+# FIXME: path should use the prefix used during installation, not the const
+# /usr
+BEAH_INSTALL_ROOT=/usr
+export BEAH_ROOT=${BEAH_INSTALL_ROOT}/share/beah
+export BEAHLIB_ROOT=$BEAH_ROOT
+path="/usr/bin/beah-beaker-backend"
+
+[ -f $path ] || exit 0
+
+# FIXME: check this!
+PIDFILE=/var/run/${prog}.pid
+LOCKFILE=/var/lock/subsys/$prog
+# FIXME: will need to fix this(?)
+RUN_AS=root
+
+start() {
+    echo "Waiting for network..."
+    if [[ -x "/usr/bin/nm-online" ]]; then
+      /usr/bin/nm-online
+    fi
+    echo -n $"Starting $prog: "
+    daemon --user $RUN_AS $path ">> /tmp/$prog.out 2>&1 &"
+    RETVAL=$?
+    echo
+    if test $RETVAL = 0; then
+        touch $LOCKFILE
+    fi
+    return $RETVAL
+}
+
+stop() {
+    echo -n $"Stopping $prog: "
+    killproc $path
+    RETVAL=$?
+    echo
+    rm -f $LOCKFILE
+    return $RETVAL
+}
+
+restart() {
+    stop
+    start
+}
+
+condrestart(){
+	[ -e $LOCKFILE ] && restart
+	return 0
+}
+
+# See how we were called.
+case "$1" in
+    start)
+	start
+	;;
+    stop)
+	stop
+	;;
+    status)
+	status -p $PIDFILE $prog
+	RETVAL=$?
+        ;;
+    restart)
+	restart
+	;;
+    condrestart)
+	condrestart
+	;;
+    reload)
+        ;;
+    *)
+	echo $"Usage: $0 {start|stop|status|restart|condrestart|reload}"
+	;;
+esac
+exit $RETVAL

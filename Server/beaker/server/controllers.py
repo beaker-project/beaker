@@ -31,6 +31,10 @@ from beaker.server.widgets import SystemArches
 from beaker.server.authentication import Auth
 from beaker.server.xmlrpccontroller import RPCRoot
 from beaker.server.cobbler_utils import hash_to_string
+from beaker.server.jobs import Jobs
+from beaker.server.recipes import Recipes
+from beaker.server.tasks import Tasks
+from beaker.server.task_actions import TaskActions
 from cherrypy import request, response
 from cherrypy.lib.cptools import serve_file
 from tg_expanding_form_widget.tg_expanding_form_widget import ExpandingForm
@@ -39,6 +43,7 @@ from beaker.server.helpers import *
 from beaker.server.tools.init import dummy
 from decimal import Decimal
 from bexceptions import *
+import beaker.server.recipes
 import random
 
 from kid import Element
@@ -196,6 +201,10 @@ class Root(RPCRoot):
     netboot = Netboot()
     auth = Auth()
     csv = CSV()
+    jobs = Jobs()
+    recipes = Recipes()
+    tasks = Tasks()
+    taskactions = TaskActions()
     reports = Reports()
 
     id         = widgets.HiddenField(name='id')
