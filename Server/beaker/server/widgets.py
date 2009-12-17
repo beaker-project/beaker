@@ -369,6 +369,7 @@ class PowerForm(Form):
         self.release_action_id = RadioButtonList(name='release_action_id',
                                              label=_(u'Release Action'),
                                            options=model.ReleaseAction.get_all,
+                                            default=1,
                                              validator=validators.NotEmpty())
         self.reprovision_distro_id = SingleSelectField(name='reprovision_distro_id',
                                                 label=_(u'Reprovision Distro'),
