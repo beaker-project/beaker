@@ -2,7 +2,7 @@
 %{!?pyver: %define pyver %(%{__python} -c "import sys ; print sys.version[:3]")}
 
 Name:           beaker
-Version:        0.4.68
+Version:        0.4.69
 Release:        0%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
@@ -181,6 +181,8 @@ fi
 /usr/share/man/man1/beakerlib*
 
 %changelog
+* Thu Dec 17 2009 Bill Peck <bpeck@redhat.com> - 0.4.69-0
+- small fix for release action, default to power off.
 * Fri Dec 11 2009 Bill Peck <bpeck@redhat.com> - 0.4.68-0
 - osversion now knows what arches are expected for that update.
   This allows us to only tag distros as STABLE if all arches are imported and tagged as INSTALLS

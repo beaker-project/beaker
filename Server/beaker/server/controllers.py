@@ -1,6 +1,7 @@
 from turbogears.database import session
 from turbogears import controllers, expose, flash, widgets, validate, error_handler, validators, redirect, paginate, url
 from model import *
+import search_utility
 from turbogears import identity, redirect, config
 from beaker.server.power import PowerTypes
 from beaker.server.keytypes import KeyTypes
@@ -240,7 +241,7 @@ class Root(RPCRoot):
     search_bar = SearchBar(name='systemsearch',
                            label=_(u'System Search'), 
                            extra_selects = [ { 'name': 'keyvalue', 'column':'key/value','display':'none' , 'pos' : 2,'callback':url('/get_operators_keyvalue') }], 
-                           table=SystemSearch.create_search_table([System,Cpu,Device,Key]),
+                           table=search_utility.SystemSearch.create_search_table([search_utility.System,search_utility.Cpu,search_utility.Device,search_utility.Key]),
                            search_controller=url("/get_search_options"),
                            table_search_controllers = {'key/value':url('/get_keyvalue_search_options')} )
                  
@@ -268,7 +269,7 @@ class Root(RPCRoot):
     @expose(format='json')
     def get_operators_keyvalue(self,keyvalue_field,*args,**kw): 
         return_dict = {}
-        search = SystemSearch.search_on_keyvalue(keyvalue_field)
+        search = search_utility.SystemSearch.search_on_keyvalue(keyvalue_field)
         search.sort()
         return_dict['search_by'] = search
         return return_dict
@@ -276,13 +277,13 @@ class Root(RPCRoot):
     @expose(format='json')
     def get_search_options(self,table_field,**kw): 
         return_dict = {}
-        search =  SystemSearch.search_on(table_field)  
+        search =  search_utility.SystemSearch.search_on(table_field)  
       
         #Determine what field type we are dealing with. If it is Boolean, convert our values to 0 for False
         # and 1 for True
-        type = SystemSearch.field_type(table_field)
+        col_type = search_utility.SystemSearch.field_type(table_field)
        
-        if type == 'sqlalchemy.types.Boolean':
+        if col_type.lower() == 'boolean':
             search['values'] = { 0:'False', 1:'True'}
             
         #Determine if we have search values. If we do, then we should only have the operators
@@ -365,11 +366,11 @@ class Root(RPCRoot):
 
 
     def _system_search(self,kw): 
-        sys_search = SystemSearch() 
-	for search in kw['systemsearch']: 
-	    #clsinfo = System.get_dict()[search['table']] #Need to change this
+        sys_search = search_utility.SystemSearch() 
+        for search in kw['systemsearch']: 
+	        #clsinfo = System.get_dict()[search['table']] #Need to change this
             class_field_list = search['table'].split('/')
-            cls_ref = SystemSearch.translate_name(class_field_list[0])
+            cls_ref = search_utility.SystemSearch.translate_name(class_field_list[0])
             col = class_field_list[1]              
             #If value id False or True, let's convert them to
             if class_field_list[0] != 'Key':
@@ -420,7 +421,7 @@ class Root(RPCRoot):
                         widgets.PaginateDataGrid.Column(name='user.display_name', getter=lambda x: x.user, title='User', options=dict(sortable=True)),
                         widgets.PaginateDataGrid.Column(name='type.type', getter=lambda x: x.type, title='Type', options=dict(sortable=True)),
                        ]) 
-
+ 
         return dict(title="Systems", grid = systems_grid,
                                      list = systems, 
                                      searchvalue = searchvalue,
