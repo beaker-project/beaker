@@ -2209,10 +2209,7 @@ class LabInfo(SystemObject):
     fields = ['orig_cost', 'curr_cost', 'dimensions', 'weight', 'wattage', 'cooling']
 
 
-class Cpu(SystemObject): 
-    table = cpu_table      
-    display_name = 'CPU'
-
+class Cpu(SystemObject):
     def __init__(self, vendor=None, model=None, model_name=None, family=None, stepping=None,speed=None,processors=None,cores=None,sockets=None,flags=None):
         self.vendor = vendor
         self.model = model
