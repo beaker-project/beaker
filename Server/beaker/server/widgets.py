@@ -115,8 +115,7 @@ class TextFieldJSON(TextField):
         super(TextField,self).__init__(*args,**kw)
     def __json__(self):
         return {
-                'field_id' : self.field_id,
-             
+                'field_id' : self.field_id,             
                } 
 
 class SearchBar(RepeatingFormField):
@@ -295,9 +294,7 @@ class SearchBar(RepeatingFormField):
         if 'options' in params and 'columns' in params['options']:
 	    params['columns'] = params['options']['columns']
         if 'options' in params and 'simplesearch' in params['options']:
-            params['simplesearch'] = params['options']['simplesearch']
-
-             
+            params['simplesearch'] = params['options']['simplesearch']     
         if value and not 'simplesearch' in params:
             params['advanced'] = 'True'
             params['simple'] = 'none'

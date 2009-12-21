@@ -61,7 +61,6 @@ class Utility:
     def result_columns(cls,values_checked = None):  
       #Call function which will return list of columns that can be searched on 
       # Ticket 51 
-      #value = request.simpleCookie['result_column'].value 
       column_names = SystemSearch.create_search_table([System,Cpu]) 
       send = [(elem,elem) for elem in column_names]  
      

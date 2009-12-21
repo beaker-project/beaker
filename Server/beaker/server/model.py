@@ -935,10 +935,10 @@ class Search:
        display_name = returned_class_field[0]
        field      = returned_class_field[1]        
       
-       class_ref = cls.translate_name(display_name)
+       class_ref = self.translate_name(display_name)
        field_type = class_ref.get_field_type(field)  
        class_field_type = "%s" % type(field_type)
-       match_obj = cls.strip_field_type(class_field_type)
+       match_obj = self.strip_field_type(class_field_type)
        return match_obj.group(1)
 
     @classmethod
@@ -968,7 +968,7 @@ class Search:
         returned_class_field = cls.split_class_field(class_field) 
         display_name = returned_class_field[0]
         field      = returned_class_field[1]        
-        class_ref = cls.translate_name(display_name)
+        class_ref = self.translate_name(display_name)
         
         try:
             field_type = class_ref.get_field_type(field) 
@@ -1091,8 +1091,8 @@ class SystemSearch(Search):
         #inadequate. 
         #If we are looking at the System class and column 'arch' with the 'is not' operation, it will try and get
         # System.arch_is_not_filter
-        log.debug('column is %s' % column)
-        underscored_operation = re.sub(' ','_',operation)
+        underscored_operation = re.sub(' ','_',operation) 
+        col_op_filter = getattr(cls_ref,'%s_%s_filter' % (column.lower(),underscored_operation),None)
         
         col_op_filter = getattr(cls_ref,'%s_%s_filter' % (column.lower(),underscored_operation),None)
        
@@ -1161,7 +1161,6 @@ class SystemSearch(Search):
         else:
             pass
 
-
     def __add_columns(self,queri): 
         if self.result_columns is not None:
             for elem in self.result_columns: 
@@ -1198,7 +1197,6 @@ class SystemSearch(Search):
         #Execute filter on query object  
         for filter_func in self.filter_funcs:           
             queri = queri.filter(filter_func()) 
-        log.debug(queri.statement)
         return queri        
 
 class System(SystemObject):
@@ -1235,11 +1233,7 @@ class System(SystemObject):
         (or display name) as the key, and a list of fields that can be 
         searched after any field filtering has been applied
         """
-        return cls._create_search_description(
-                   dict(includes = ['Arch','Name','Status','Type',
-                                    'Vendor','Lender','Model','Memory',
-                                    'Serial','Owner','User','LabController'])
-                                              )
+        return cls._create_search_description(cls.search_by)
    
     @classmethod
     def search_values(cls,col):  
@@ -2134,7 +2128,6 @@ class LabInfo(SystemObject):
 class Cpu(SystemObject): 
     table = cpu_table      
     display_name = 'CPU'
-
     joins = JoinContainer()
     joins.add_unconditional({ cpu_table : system_table.c.id == cpu_table.c.system_id })
     joins.add_conditional('flags',  { cpu_flag_table : cpu_flag_table.c.cpu_id == cpu_table.c.id})   
@@ -2227,7 +2220,7 @@ class DeviceClass(SystemObject):
 
 class Device(SystemObject):
     table = device_table
-
+    search_table = []
     display_name = 'Devices' 
     joins = JoinContainer()
     joins.add_unconditional([{system_device_map : system_table.c.id  == system_device_map.c.system_id},
