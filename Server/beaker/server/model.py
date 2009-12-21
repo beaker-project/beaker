@@ -927,17 +927,18 @@ class Search:
         display_name = class_field_list[0]
         field      = class_field_list[1] 
         return (display_name,field) 
- 
-    def field_type(self,class_field): 
+
+    @classmethod 
+    def field_type(cls,class_field): 
        """ Takes a class/field string (ie'CPU/Processor') and returns the sqlalchemy type of the field"""
-       returned_class_field = self.split_class_field(class_field) 
+       returned_class_field = cls.split_class_field(class_field) 
        display_name = returned_class_field[0]
        field      = returned_class_field[1]        
       
-       class_ref = self.translate_name(display_name)
+       class_ref = cls.translate_name(display_name)
        field_type = class_ref.get_field_type(field)  
        class_field_type = "%s" % type(field_type)
-       match_obj = self.strip_field_type(class_field_type)
+       match_obj = cls.strip_field_type(class_field_type)
        return match_obj.group(1)
 
     @classmethod
@@ -964,10 +965,10 @@ class Search:
         search_on() takes a combination of class name and field name (i.e 'Cpu/vendor') and
         returns the oeprations suitable for the field type it represents
         """ 
-        returned_class_field = self.split_class_field(class_field) 
+        returned_class_field = cls.split_class_field(class_field) 
         display_name = returned_class_field[0]
         field      = returned_class_field[1]        
-        class_ref = self.translate_name(display_name)
+        class_ref = cls.translate_name(display_name)
         
         try:
             field_type = class_ref.get_field_type(field) 
@@ -1090,6 +1091,7 @@ class SystemSearch(Search):
         #inadequate. 
         #If we are looking at the System class and column 'arch' with the 'is not' operation, it will try and get
         # System.arch_is_not_filter
+        log.debug('column is %s' % column)
         underscored_operation = re.sub(' ','_',operation)
         
         col_op_filter = getattr(cls_ref,'%s_%s_filter' % (column.lower(),underscored_operation),None)
@@ -1105,6 +1107,7 @@ class SystemSearch(Search):
 
         try:
             _c = cls_ref.mapper.c
+            log.debug('_c is %s' % _c)
             col = getattr(_c, column)
         except AttributeError, (error):     
                 log.error('Error accessing attribute within append_results: %s' % (error))
@@ -1134,7 +1137,10 @@ class SystemSearch(Search):
 
         #append a filter function which is to be called later
         self.filter_funcs.append(filter_final)
+       
+        self.__do_joins(cls_ref,column,**kw);
 
+    def __do_joins(self,cls_ref,column,**kw):
         joins = getattr(cls_ref,'joins',None)  
         #Let's do the joins 
         if joins != None:
@@ -1154,6 +1160,7 @@ class SystemSearch(Search):
                         self.already_joined.append(k)  
         else:
             pass
+
 
     def __add_columns(self,queri): 
         if self.result_columns is not None:
@@ -1191,6 +1198,7 @@ class SystemSearch(Search):
         #Execute filter on query object  
         for filter_func in self.filter_funcs:           
             queri = queri.filter(filter_func()) 
+        log.debug(queri.statement)
         return queri        
 
 class System(SystemObject):
@@ -1227,7 +1235,11 @@ class System(SystemObject):
         (or display name) as the key, and a list of fields that can be 
         searched after any field filtering has been applied
         """
-        return cls._create_search_description(cls.search_by)
+        return cls._create_search_description(
+                   dict(includes = ['Arch','Name','Status','Type',
+                                    'Vendor','Lender','Model','Memory',
+                                    'Serial','Owner','User','LabController'])
+                                              )
    
     @classmethod
     def search_values(cls,col):  
@@ -2156,7 +2168,9 @@ class Cpu(SystemObject):
            It serves to provide a table column operation specific method of filtering results of CPU/Flags
         """       
         if not val:
-            return col != val
+            query = Cpu.query().filter(Cpu.flags.any(and_(CpuFlag.flag != None,CpuFlag.flag != val)))
+            ids = [r.id for r in query] 
+            return cpu_table.c.id.in_(ids)
         else:
             query = Cpu.query().filter(Cpu.flags.any(CpuFlag.flag == val))
             ids = [r.id for r in query]

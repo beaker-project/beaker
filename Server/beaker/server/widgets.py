@@ -292,7 +292,8 @@ class SearchBar(RepeatingFormField):
  
 
     def display(self, value=None, **params):   
-	params['result_columns'] = params['options']['columns']
+        if 'options' in params and 'columns' in params['options']:
+	    params['columns'] = params['options']['columns']
         if 'options' in params and 'simplesearch' in params['options']:
             params['simplesearch'] = params['options']['simplesearch']
 

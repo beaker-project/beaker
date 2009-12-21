@@ -527,7 +527,7 @@ class Root(RPCRoot):
                                      col_defaults = col_data['default'],
                                      col_options = col_data['options'], 
                                      enable_custom_column = use_custom_columns,
-                                     options =  {'simplesearch':simplesearch}, 
+                                     options =  {'simplesearch':simplesearch,'columns':col_data}, 
                                      action = '.', 
                                      search_bar = self.search_bar )
                                                                         
