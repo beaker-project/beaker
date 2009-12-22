@@ -1459,12 +1459,12 @@ class ReleaseAction(SystemObject):
     def PowerOff(self, system):
         """ Turn off system
         """
-        system.remote.power(action='Off')
+        system.remote.power(action='off')
 
     def LeaveOn(self, system):
         """ Leave system running
         """
-        system.remote.power(action='On')
+        system.remote.power(action='on')
 
     def ReProvision(self, system):
         """ re-provision the system 
