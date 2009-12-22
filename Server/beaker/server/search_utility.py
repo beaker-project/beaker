@@ -337,8 +337,12 @@ class SystemSearch(Search):
     class_external_mapping = {}
     search_table = []
     column_table = [] 
-    def __init__(self):
-        self.queri = session.query(model.System)
+    def __init__(self,systems=None):
+        if systems:
+            self.queri = systems
+        else:
+            self.queri = session.query(model.System)
+       
         self.system_columns_desc = []
         self.extra_columns_desc = []
   
@@ -380,7 +384,6 @@ class SystemSearch(Search):
         else:       
             log.error('Error accessing attribute within append_results')
         
-
         modeller = Modeller()          
         if col_op_filter:
             filter_func = col_op_filter   

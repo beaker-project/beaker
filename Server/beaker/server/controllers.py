@@ -442,7 +442,6 @@ class Root(RPCRoot):
     def mine(self, *args, **kw):
         return self.systems(systems = System.mine(identity.current.user), *args, **kw)
 
-
     def _system_search(self,kw,sys_search,use_custom_columns = False): 
         for search in kw['systemsearch']: 
 	        #clsinfo = System.get_dict()[search['table']] #Need to change this
@@ -483,8 +482,8 @@ class Root(RPCRoot):
             kw['disable_customcolumns'] = 'on' 
     
         if kw.get("systemsearch"):
-            searchvalue = kw['systemsearch']  
-            sys_search = search_utility.SystemSearch()
+            searchvalue = kw['systemsearch']
+            sys_search = search_utility.SystemSearch(systems)
             columns = []
             for elem in kw:
                 if re.match('systemsearch_column_',elem):
