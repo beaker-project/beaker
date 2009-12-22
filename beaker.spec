@@ -2,7 +2,7 @@
 %{!?pyver: %define pyver %(%{__python} -c "import sys ; print sys.version[:3]")}
 
 Name:           beaker
-Version:        0.4.69
+Version:        0.4.70
 Release:        0%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
@@ -181,6 +181,9 @@ fi
 /usr/share/man/man1/beakerlib*
 
 %changelog
+* Tue Dec 22 2009 Bill Peck <bpeck@redhat.com> - 0.4.70-0
+- another fix to the release_action code. send proper action methods
+  to cobbler, Off->off On->on.
 * Thu Dec 17 2009 Bill Peck <bpeck@redhat.com> - 0.4.69-0
 - small fix for release action, default to power off.
 * Fri Dec 11 2009 Bill Peck <bpeck@redhat.com> - 0.4.68-0
