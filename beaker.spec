@@ -98,38 +98,6 @@ ln -s Fedora.ks $RPM_BUILD_ROOT/var/lib/cobbler/kickstarts/Fedoradevelopment.ks
 %clean
 %{__rm} -rf %{buildroot}
 
-%post server
-/sbin/chkconfig --add beakerd
-
-%post lab-controller
-/sbin/chkconfig --add beaker-proxy
-/sbin/chkconfig --add beaker-watchdog
-
-%postun server
-if [ "$1" -ge "1" ]; then
-        /sbin/service beakerd condrestart >/dev/null 2>&1 || :
-fi
-
-%postun lab-controller
-if [ "$1" -ge "1" ]; then
-        /sbin/service beaker-proxy condrestart >/dev/null 2>&1 || :
-        /sbin/service beaker-watchdog condrestart >/dev/null 2>&1 || :
-fi
-
-%preun server
-if [ "$1" -eq "0" ]; then
-        /sbin/service beakerd stop >/dev/null 2>&1 || :
-        /sbin/chkconfig --del beakerd || :
-fi
-
-%preun lab-controller
-if [ "$1" -eq "0" ]; then
-        /sbin/service beaker-proxy stop >/dev/null 2>&1 || :
-        /sbin/service beaker-watchdog stop >/dev/null 2>&1 || :
-        /sbin/chkconfig --del beaker-proxy || :
-        /sbin/chkconfig --del beaker-watchdog || :
-fi
-
 %files server
 %defattr(-,root,root,-)
 %doc Server/README COPYING
@@ -138,14 +106,10 @@ fi
 %{python_sitelib}/%{name}.server-%{version}-py%{pyver}.egg-info/
 %{_bindir}/start-%{name}
 %{_bindir}/%{name}-init
-%{_sysconfdir}/init.d/%{name}d
-%attr(0755,root,root)%{_bindir}/%{name}d
 %config(noreplace) %{_sysconfdir}/httpd/conf.d/%{name}-server.conf
 %attr(-,apache,root) %{_datadir}/%{name}
 %attr(-,apache,root) %config(noreplace) %{_sysconfdir}/%{name}/server.cfg
 %attr(-,apache,root) %dir %{_localstatedir}/log/%{name}
-%attr(-,apache,root) %dir %{_localstatedir}/www/%{name}/logs
-%attr(-,apache,root) %dir %{_localstatedir}/www/%{name}/rpms
 
 %files client
 %defattr(-,root,root,-)
@@ -157,12 +121,6 @@ fi
 
 %files lab-controller
 %defattr(-,root,root,-)
-%config(noreplace) %{_sysconfdir}/beaker/proxy.conf
-%{python_sitelib}/%{name}/labcontroller/
-%{python_sitelib}/%{name}.labcontroller-%{version}-*
-%{python_sitelib}/%{name}.labcontroller-%{version}-py%{pyver}.egg-info/
-%{_bindir}/%{name}-proxy
-%{_bindir}/%{name}-watchdog
 %doc LabController/README
 %config(noreplace) %{_sysconfdir}/httpd/conf.d/%{name}-lab-controller.conf
 %{_sysconfdir}/cron.daily/expire_distros
@@ -170,9 +128,6 @@ fi
 /var/lib/cobbler/snippets/*
 /var/lib/cobbler/kickstarts/*
 /var/www/beaker/rhts-checkin
-%attr(-,apache,root) %dir %{_localstatedir}/log/%{name}
-%{_sysconfdir}/init.d/%{name}-proxy
-%{_sysconfdir}/init.d/%{name}-watchdog
 
 %files lib
 /usr/lib/beakerlib/*

@@ -122,11 +122,8 @@ data_files = [
                                  glob.glob('beaker/server/static/images/*'))),
     ("/etc/beaker", ["server.cfg"]),
     ("/etc/httpd/conf.d", ["apache/beaker-server.conf"]),
-    ("/etc/init.d", ["init.d/beakerd"]),
     ("/usr/share/beaker", filter(os.path.isfile, glob.glob("apache/*.wsgi"))),
     ("/var/log/beaker", []),
-    ("/var/www/beaker/logs", []),
-    ("/var/www/beaker/rpms", []),
 ]
 
 package_data = find_package_data(where='beaker',
@@ -176,7 +173,6 @@ setup(
         'console_scripts': (
             'start-beaker = beaker.server.commands:start',
             'beaker-init = beaker.server.tools.init:main',
-            'beakerd = beaker.server.tools.beakerd:main',
         ),
     }
     )
