@@ -356,8 +356,8 @@ class Root(RPCRoot):
         return self.systems(systems = System.mine(identity.current.user), *args, **kw)
 
 
-    def _system_search(self,kw): 
-        sys_search = search_utility.SystemSearch() 
+    def _system_search(self,kw, systems): 
+        sys_search = search_utility.SystemSearch(systems) 
         for search in kw['systemsearch']: 
 	        #clsinfo = System.get_dict()[search['table']] #Need to change this
             class_field_list = search['table'].split('/')
@@ -369,9 +369,7 @@ class Root(RPCRoot):
             else:
                sys_search.append_results(cls_ref,search['value'],col,search['operation'],keyvalue=search['keyvalue']) 
                
-        systems = sys_search.return_results()
-        new_systems = System.all(identity.current.user,system = systems)    
-        return new_systems
+        return sys_search.return_results()
 
     # @identity.require(identity.in_group("admin"))
     def systems(self, systems, *args, **kw):
@@ -396,7 +394,7 @@ class Root(RPCRoot):
        
         if kw.get("systemsearch"):
             searchvalue = kw['systemsearch']  
-            systems = self._system_search(kw)
+            systems = self._system_search(kw, systems)
             systems = systems.reset_joinpoint().outerjoin('user').distinct() 
         else:
             systems = systems.reset_joinpoint().outerjoin('user').distinct() 
