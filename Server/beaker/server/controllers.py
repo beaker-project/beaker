@@ -396,7 +396,7 @@ class Root(RPCRoot):
                     kernel_options_post = kernel_options_post)
 
     @expose(template='beaker.server.templates.grid_add')
-    @paginate('list',limit=20,allow_limit_override=True)
+    @paginate('list',default_order='fqdn',limit=20,allow_limit_override=True)
     def index(self, *args, **kw):   
         return_dict =  self.systems(systems = System.all(identity.current.user), *args, **kw) 
         return return_dict
