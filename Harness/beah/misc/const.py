@@ -18,7 +18,7 @@
 
 from exceptions import TypeError
 
-class Const():
+class Const(object):
     def __init__(self, aName, value=None):
         self.__name = aName
         self.__value = value

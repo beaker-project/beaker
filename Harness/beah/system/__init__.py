@@ -62,7 +62,7 @@ class PyExecutable(Executable):
 
 ARCH = platform.machine()
 try:
-    __import__('beah.system.arch_'+ARCH, fromlist=['*'])
+    __import__('beah.system.arch_'+ARCH, {}, {}, ['*'])
 except exceptions.ImportError:
     pass
 
@@ -70,7 +70,7 @@ except exceptions.ImportError:
 OS = platform.system().lower()
 systemos = None
 try:
-    systemos = __import__('beah.system.os_'+OS, fromlist=['*'])
+    systemos = __import__('beah.system.os_'+OS, {}, {}, ['*'])
 except exceptions.ImportError:
     pass
 

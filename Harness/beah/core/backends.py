@@ -140,7 +140,7 @@ class CmdOnlyBackend(CmdBackend):
 if __name__ == '__main__':
     import exceptions
     be = CmdOnlyBackend()
-    class FakeController():
+    class FakeController(object):
         def __init__(self, expected=None):
             self.expected = expected
         def proc_cmd(self, backend, cmd):

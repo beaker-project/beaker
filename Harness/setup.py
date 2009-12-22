@@ -49,16 +49,21 @@ if os.environ.get('BEAH_DEV', ''):
         'examples/tests/testargs',
         ])
 
+# FIXME: Find out about real requirements - packages, versions.
+if os.environ.get('BEAH_NODEP', ''):
+    requirements = []
+else:
+    requirements = ['Twisted_Core >= 0',
+            'Twisted_Web >= 0',
+            'zope.interface >= 0',
+            'simplejson >= 0']
+
 setup(
 
     name="beah",
     version="0.1.a1%s" % os.environ.get('BEAH_DEV', strftime(".dev%Y%m%d%H%M")),
 
-    # FIXME: Find out about real requirements - packages, versions.
-    install_requires=['Twisted_Core >= 0',
-                      'Twisted_Web >= 0',
-                      'zope.interface >= 0',
-                      'simplejson >= 0'],
+    install_requires=requirements,
     # NOTE: these can be downloaded from pypi:
     #dependency_links=['http://twistedmatrix.com/trac/wiki/Downloads',
     #                      'http://pypi.python.org/pypi/Twisted',

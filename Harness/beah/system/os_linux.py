@@ -18,12 +18,12 @@ import platform
 
 systemdist = None
 try:
-    systemdist = __import__('beah.system.dist_'+DISTNAME, fromlist=['*'])
+    systemdist = __import__('beah.system.dist_'+DISTNAME, {}, {}, ['*'])
 except exceptions.ImportError:
     pass
 
 try:
-    systemdist = __import__('beah.system.dist_'+DISTNAME+DISTVER, fromlist=['*'])
+    systemdist = __import__('beah.system.dist_'+DISTNAME+DISTVER, {}, {}, ['*'])
 except exceptions.ImportError:
     pass
 

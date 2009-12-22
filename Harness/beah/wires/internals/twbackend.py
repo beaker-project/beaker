@@ -22,6 +22,7 @@ from beah.wires.internals.twadaptors import ControllerAdaptor_Backend_JSON
 from beah import config
 
 import os
+import sys
 import logging
 import logging.handlers
 log = logging.getLogger('backend')
@@ -84,11 +85,16 @@ def log_handler(log_file_name):
     #lhandler = logging.handlers.RotatingFileHandler(lp + "/" + log_file_name,
     #        maxBytes=1000000, backupCount=5)
     lhandler = logging.FileHandler(lp + "/" + log_file_name)
-    lhandler.setFormatter(logging.Formatter('%(asctime)s %(funcName)s: %(levelname)s %(message)s'))
+    # FIXME: add config.option?
+    if sys.version_info[0] == 2 and sys.version_info[1] <= 4:
+        fmt = ': %(levelname)s %(message)s'
+    else:
+        fmt = ' %(funcName)s: %(levelname)s %(message)s'
+    lhandler.setFormatter(logging.Formatter('%(asctime)s'+fmt))
     log.addHandler(lhandler)
 
     lhandler = logging.handlers.SysLogHandler()
-    lhandler.setFormatter(logging.Formatter('%(asctime)s %(name)s %(funcName)s: %(levelname)s %(message)s'))
+    lhandler.setFormatter(logging.Formatter('%(asctime)s %(name)s'+fmt))
     lhandler.setLevel(logging.ERROR)
     log.addHandler(lhandler)
 

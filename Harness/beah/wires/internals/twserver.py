@@ -107,11 +107,16 @@ def start_server(conf=None, backend_host=None, backend_port=None,
     #lhandler = logging.handlers.RotatingFileHandler(conf.get('CONTROLLER', 'LOG_FILE_NAME'),
     #        maxBytes=1000000, backupCount=5)
     lhandler = logging.FileHandler(conf.get('CONTROLLER', 'LOG_FILE_NAME'))
-    lhandler.setFormatter(logging.Formatter('%(asctime)s %(funcName)s: %(levelname)s %(message)s'))
+    # FIXME: add config.option?
+    if sys.version_info[0] == 2 and sys.version_info[1] <= 4:
+        fmt = ': %(levelname)s %(message)s'
+    else:
+        fmt = ' %(funcName)s: %(levelname)s %(message)s'
+    lhandler.setFormatter(logging.Formatter('%(asctime)s'+fmt))
     log.addHandler(lhandler)
 
     lhandler = logging.handlers.SysLogHandler()
-    lhandler.setFormatter(logging.Formatter('%(asctime)s %(name)s %(funcName)s: %(levelname)s %(message)s'))
+    lhandler.setFormatter(logging.Formatter('%(asctime)s %(name)s'+fmt))
     lhandler.setLevel(logging.ERROR)
     log.addHandler(lhandler)
 

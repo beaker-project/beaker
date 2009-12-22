@@ -25,9 +25,9 @@ import os.path
 import traceback
 import base64
 import hashlib
-from xml.etree import ElementTree
 import simplejson as json
 import logging
+from xml.dom import minidom
 
 from beah.misc.log_this import log_this
 
@@ -83,7 +83,8 @@ class RHTSTask(ShExecutable):
 # repository and use repositories defined in recipe
 #mkdir -p $TESTPATH
 yum -y --disablerepo=* %s install $TESTRPMNAME
-%s -m beah.tasks.rhts_xmlrpc
+beah-rhts-task
+#%s -m beah.tasks.rhts_xmlrpc
 """ % (' '.join(['--enablerepo=%s' % repo for repo in self.__repos]),
                 sys.executable))
 
@@ -98,82 +99,91 @@ def normalize_rpm_name(rpm_name):
         return rpm_name
     return rpm_name[:-4]
 
+def xml_attr(node, key, default=None):
+    try:
+        return str(node.attributes[key].value)
+    except:
+        return default
+
 def parse_recipe_xml(input_xml):
 
-    er = ElementTree.fromstring(input_xml)
+    root = minidom.parseString(input_xml)
+    er = root.firstChild
     task_env = {}
 
-    rs = er.get('status')
+    rs = xml_attr(er, 'status')
     if rs not in ['Running', 'Waiting']:
         log.info("parse_recipe_xml: This recipe has finished.")
         return None
 
     task_env.update(
-            ARCH=er.get('arch'),
-            RECIPEID=str(er.get('id')),
-            JOBID=str(er.get('job_id')),
-            RECIPESETID=str(er.get('recipe_set_id')),
-            HOSTNAME=er.get('system'))
+            ARCH=xml_attr(er, 'arch'),
+            RECIPEID=xml_attr(er, 'id'),
+            JOBID=xml_attr(er, 'job_id'),
+            RECIPESETID=xml_attr(er, 'recipe_set_id'),
+            HOSTNAME=xml_attr(er, 'system'))
 
     # FIXME: This will eventually need to be replaced by sth RPM independent...
     repos = []
     repof = ''
-    for r in er.getiterator('repo'):
-        name = r.get('name')
+    for r in er.getElementsByTagName('repo'):
+        name = xml_attr(r, 'name')
         repos.append(name)
         repof += "[%s]\nname=beaker provided '%s' repo\nbaseurl=%s\nenabled=1\ngpgcheck=0\n\n" \
-                % (name, name, r.get('url'))
-    f = open('/etc/yum.repos.d/beaker-tests.repo', 'w+')
-    f.write(repof)
-    f.close()
+                % (name, name, xml_attr(r, 'url'))
+    if repof:
+        f = open('/etc/yum.repos.d/beaker-tests.repo', 'w+')
+        f.write(repof)
+        f.close()
     task_env['BEAKER_REPOS']=':'.join(repos)
 
     test_order = 0
 
-    for task in er.findall('task'):
+    for task in er.getElementsByTagName('task'):
 
-        to = task.get('testorder', None)
+        to = xml_attr(task, 'testorder')
         if to is not None:
             test_order = int(to)
         else:
             test_order += 1
 
-        ts = task.get('status')
+        ts = xml_attr(task, 'status')
 
         if ts not in ['Waiting', 'Running']:
+            log.debug("task id: %r status: %r", xml_attr(task, 'id'), ts)
             continue
 
-        task_id = task.get('id')
-        task_name = task.get('name')
+        task_id = xml_attr(task, 'id')
+        task_name = xml_attr(task, 'name')
         task_env.update(
                 TASKID=str(task_id),
                 RECIPETESTID=str(task_id),
                 TESTID=str(task_id),
                 TASKNAME=task_name,
-                ROLE=task.get('role'))
+                ROLE=xml_attr(task, 'role'))
 
         # FIXME: Anything else to save?
 
-        for p in task.getiterator('param'):
-            task_env[p.get('name')]=p.get('value')
+        for p in task.getElementsByTagName('param'):
+            task_env[xml_attr(p, 'name')]=xml_attr(p, 'value')
 
-        for r in task.getiterator('role'):
+        for r in task.getElementsByTagName('role'):
             role = []
-            for s in r.findall('system'):
-                role.append(s.get('value'))
-            task_env[r.get('value')]=' '.join(role)
+            for s in r.getElementsByTagName('system'):
+                role.append(xml_attr(s, 'value'))
+            task_env[xml_attr(r, 'value')]=' '.join(role)
 
-        ewd = task.get('avg_time')
+        ewd = xml_attr(task, 'avg_time')
         task_env.update(KILLTIME=ewd)
 
         executable = ''
         args = []
         while not executable:
 
-            rpm_tag = task.find('rpm')
-            log.debug("parse_recipe_xml: rpm tag: %s", rpm_tag)
-            if rpm_tag is not None:
-                rpm_name = rpm_tag.get('name')
+            rpm_tags = task.getElementsByTagName('rpm')
+            log.debug("parse_recipe_xml: rpm tag: %s", rpm_tags)
+            if rpm_tags:
+                rpm_name = xml_attr(rpm_tags[0], 'name')
                 task_env.update(
                         TEST=task_name,
                         TESTRPMNAME=normalize_rpm_name(rpm_name),
@@ -184,12 +194,12 @@ def parse_recipe_xml(input_xml):
                 log.info("parse_recipe_xml: RPMTest %s - %s %s", rpm_name, executable, args)
                 break
 
-            exec_tag = task.find('executable')
-            log.debug("parse_recipe_xml: executable tag: %s", exec_tag)
-            if exec_tag is not None:
-                executable = exec_tag.get('url')
-                for arg in exec_tag.findall('arg'):
-                    args.append(arg.get('value'))
+            exec_tags = task.getElementsByTagName('executable')
+            log.debug("parse_recipe_xml: executable tag: %s", exec_tags)
+            if exec_tags:
+                executable = xml_attr(exec_tag[0], 'url')
+                for arg in exec_tag[0].getElementsByTagName('arg'):
+                    args.append(xml_attr(arg, 'value'))
                 log.info("parse_recipe_xml: ExecutableTest %s %s", executable, args)
                 break
 
