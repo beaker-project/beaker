@@ -62,7 +62,8 @@ class Utility:
     def result_columns(cls,values_checked = None):  
       #Call function which will return list of columns that can be searched on 
       # Ticket 51 
-      column_names = search_utility.SystemSearch.create_search_table([search_utility.System,search_utility.Cpu]) 
+      column_names = search_utility.SystemSearch.create_column_table([{search_utility.Cpu :{'exclude': ['Flags']} },
+                                                                      {search_utility.System: {'all':[]} }] ) 
       send = [(elem,elem) for elem in column_names]  
      
       if values_checked is not None:
@@ -314,7 +315,10 @@ class Root(RPCRoot):
     search_bar = SearchBar(name='systemsearch',
                            label=_(u'System Search'), 
                            extra_selects = [ { 'name': 'keyvalue', 'column':'key/value','display':'none' , 'pos' : 2,'callback':url('/get_operators_keyvalue') }], 
-                           table=search_utility.SystemSearch.create_search_table([search_utility.System,search_utility.Cpu,search_utility.Device,search_utility.Key]),
+                           table=search_utility.SystemSearch.create_search_table([{search_utility.System:{'all':[]}},
+										  {search_utility.Cpu:{'all':[]}},
+                                                                                  {search_utility.Device:{'all':[]}},
+                                                                                  {search_utility.Key:{'all':[]}} ] ),
                            search_controller=url("/get_search_options"),
                            table_search_controllers = {'key/value':url('/get_keyvalue_search_options')} )
                  
@@ -476,7 +480,7 @@ class Root(RPCRoot):
             kw['systemsearch'] = [{'table' : 'System/Type',
                                    'operation' : 'is',
                                    'value' : kw['type']}] 
-       
+            kw['disable_customcolumns'] = 'on' 
     
         if kw.get("systemsearch"):
             searchvalue = kw['systemsearch']  

@@ -10,10 +10,7 @@ import logging
 log = logging.getLogger(__name__)
 
 class myColumn(object):
-    def __init__(self,system_relation=None,col_type=None,column = None,has_alias = False):
-        if type(col_type) != type(''):
-            raise TypeError('col_type var passed to %s must be string' % self.__class__.__name__)
-        
+    def __init__(self,system_relation=None,col_type=None,column = None,has_alias = False): 
         if system_relation is not None:
             if type(system_relation) != type([]) and type(system_relation) != type(''):
                 raise TypeError('system_relation var passed to %s must be of type list of string' % self.__class__.__name__)
@@ -67,7 +64,7 @@ class KeyColumn(myColumn):
                 
             self._type = None
             self._system_relation = kw['system_relation']
-            
+            super(KeyColumn,self).__init__(**kw)    
     @property
     def int_column(self):
         return self._int_column
@@ -259,56 +256,87 @@ class Search:
             log.error('Error accessing attribute within search_on: %s' % (error))
         else:
             return dict(operators = class_ref.search_operators(field_type), values = vals)
-       
+      
+    @classmethod
+    def create_mapping(cls,obj):
+        display_name = getattr(obj,'display_name',None)
+        if display_name != None:
+            display_name = obj.display_name
+                  
+            #If the display name is already mapped to this class
+            if cls.class_external_mapping.has_key(display_name) and cls.class_external_mapping.get(display_name) is obj: 
+                #this class is already mapped, all good
+                pass 
+            elif cls.class_external_mapping.has_key(display_name) and cls.class_external_mapping.get(display_name) is not obj:                   
+                log.debug("Display name %s is already in use. Will try and use %s as display name for class %s" % (display_name, obj.__name__,obj.__name__))
+                display_name = obj.__name__             
+        else:
+            display_name = obj.__name__
+              
+        #We have our final display name, if it still exists in the mapping
+        #there isn't much we can do, and we don't want to overwrite it. 
+        if cls.class_external_mapping.has_key(display_name) and cls.class_external_mapping.get(display_name) is not obj: 
+            log.error("Display name %s cannot be set for %s" % (display_name,obj.__name__))               
+        else: 
+            cls.class_external_mapping[display_name] = obj
+        return display_name
 
     @classmethod
-    def create_search_table(cls,searchable_objs):  
+    def create_column_table(cls,options):
+        return cls.__create_table(options,cls.column_table)        
+
+    @classmethod
+    def create_search_table(cls,options):
+        return cls.__create_table(options,cls.search_table) 
+   
+
+    @classmethod
+    def __create_table(cls,options,lookup_table):  
         """
-        create_search_table will set and return the class' search_table class attribute with
+        create_table will set and return the class' attribute with
         a list of searchable 'combinations'.
         These 'combinations' merely represent a table and a column.
-        An example of search_table entry may be 'CPU/Vendor' or 'System/Name'
+        An example of a table entry may be 'CPU/Vendor' or 'System/Name'
         """
         #Clear the table if it's already been created
-        if cls.search_table != None:
-            cls.search_table = []
-        
-        for obj in searchable_objs:  
-            #Check if we have a specialised display name
-            display_name = getattr(obj,'display_name',None)
-            if display_name != None:
-                display_name = obj.display_name
-                  
-                #If the display name is already mapped to this class
-                if cls.class_external_mapping.has_key(display_name) and cls.class_external_mapping.get(display_name) is obj: 
-                    #this class is already mapped, all good
-                    pass 
-                elif cls.class_external_mapping.has_key(display_name) and cls.class_external_mapping.get(display_name) is not obj:                   
-                    log.debug("Display name %s is already in use. Will try and use %s as display name for class %s" % (display_name, obj.__name__,obj.__name__))
-                    display_name = obj.__name__  
-                   
-            else:
-                display_name = obj.__name__
-              
-            #We have our final display name, if it still exists in the mapping
-            #there isn't much we can do, and we don't want to overwrite it. 
-            if cls.class_external_mapping.has_key(display_name) and cls.class_external_mapping.get(display_name) is not obj: 
-                log.error("Display name %s cannot be set for %s" % (display_name,obj.__name__))               
-            else: 
-                cls.class_external_mapping[display_name] = obj
+        if lookup_table != None:
+           lookup_table = []       
+        for i in options:
+            for obj,v in i.iteritems():
+                display_name = cls.create_mapping(obj)
+                for rule,v1 in v.iteritems():  
+                    searchable = obj.get_searchable()
+                    if rule == 'all':
+                        for item in searchable: 
+                            lookup_table.append('%s/%s' % (display_name,item))  
+                    if rule == 'exclude': 
+                        for item in searchable: 
+                            if v1.count(item) < 1:
+                                lookup_table.append('%s/%s' % (display_name,item))  
+                    if rule == 'include':
+                        for item in searchable:
+                            if v1.count(item) > 1:
+                                 lookup_table.append('%s/%s' % (display_name,item))  
 
+        lookup_table.sort()
+        return lookup_table
+
+        for obj in searchable_objs: 
+
+            display_name = cls.create_mapping(obj)
             #Now let's actually build the search table
             searchable =  obj.get_searchable() 
-            for item in searchable: 
+            
+            for item in searchable:
+                
+                  
                  cls.search_table.append('%s/%s' % (display_name,item))  
                
-        cls.search_table.sort()
-        return cls.search_table
    
 class SystemSearch(Search): 
     class_external_mapping = {}
     search_table = []
-    
+    column_table = [] 
     def __init__(self):
         self.queri = session.query(model.System)
         self.system_columns_desc = []
