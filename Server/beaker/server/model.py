@@ -5,13 +5,15 @@ from turbogears.database import metadata, mapper, session
 from turbogears.config import get
 import ldap
 from sqlalchemy import Table, Column, ForeignKey
-from sqlalchemy.orm import relation, backref, synonym, column_property,query
+from sqlalchemy.orm import relation, backref, synonym, dynamic_loader,query
 from sqlalchemy import String, Unicode, Integer, DateTime, UnicodeText, Boolean, Float, VARCHAR, TEXT, Numeric
 from sqlalchemy import or_, and_, not_, select
 from sqlalchemy.exceptions import InvalidRequestError
 from identity import LdapSqlAlchemyIdentityProvider
 from cobbler_utils import consolidate, string_to_hash
 from sqlalchemy.orm.collections import attribute_mapped_collection
+from sqlalchemy.util import OrderedDict
+from sqlalchemy.orm.collections import MappedCollection
 from sqlalchemy.ext.associationproxy import association_proxy
 import socket
 from xmlrpclib import ProtocolError
@@ -21,6 +23,8 @@ import time
 from sqlalchemy import func
 from sqlalchemy.orm.collections import collection
 from bexceptions import *
+from kid import Element
+from beaker.server.helpers import *
 import traceback
 from BasicAuthTransport import BasicAuthTransport
 import xmlrpclib
@@ -30,6 +34,9 @@ from turbogears import identity
 from datetime import timedelta, date, datetime
 
 import md5
+
+import xml.dom.minidom
+from xml.dom.minidom import Node
 
 import logging
 log = logging.getLogger(__name__)
@@ -313,6 +320,7 @@ osmajor_table = Table('osmajor', metadata,
     Column('id', Integer, autoincrement=True,
            nullable=False, primary_key=True),
     Column('osmajor', Unicode(255), unique=True),
+    Column('alias', Unicode(25), unique=True),
 )
 
 osversion_table = Table('osversion', metadata,
@@ -462,6 +470,7 @@ key_value_int_table = Table('key_value_int', metadata,
     Column('key_value',Integer, nullable=False)
 )
 
+
 # the identity model
 class Visit(object):
     """
@@ -590,179 +599,50 @@ class Permission(object):
     pass
 
 
-class Modeller(object):
-    def __init__(self):
-        self.structure ={ 'sqlalchemy.types.String'  : { 'is' : lambda x,y: self.equals(x,y) ,
-                                                         'is not' : lambda x,y: self.not_equal(x,y),
-                                                         'contains' : lambda x,y: self.contains(x,y), },
+class MappedObject(object):
 
-                          'sqlalchemy.types.Text'    : { 'is' : lambda x,y: self.equals(x,y) ,
-                                                         'is not' : lambda x,y: self.not_equal(x,y),
-                                                         'contains' : lambda x,y: self.contains(x,y), },
-                                               
-                          'sqlalchemy.types.Integer'  : { 'is' : lambda x,y: self.equals(x,y), 
-                                                          'is not' : lambda x,y: self.not_equal(x,y),
-                                                          'less than' : lambda x,y: self.less_than(x,y),
-                                                          'greater than' : lambda x,y: self.greater_than(x,y), },
-                             
-                          'sqlalchemy.types.Unicode'  : { 'is' : lambda x,y: self.equals(x,y),
-                                                          'is not' : lambda x,y: self.not_equal(x,y),
-                                                          'contains' : lambda x,y: self.contains(x,y), },
-                          
-                          'sqlalchemy.types.Boolean'  : { 'is' : lambda x,y: self.bool_equals(x,y),
-                                                          'is not' : lambda x,y: self.bool_not_equal(x,y), },  
+    doc = xml.dom.minidom.Document()
 
-                          'generic'                   : { 'is' : lambda x,y: self.equals(x,y) ,
-                                                          'is not': lambda x,y:  self.not_equal(x,y), },
-                                                          
-                         } 
- 
-    def less_than(self,x,y):
-        return x < y
-
-    def greater_than(self,x,y):
-        return x > y
- 
-    def bool_not_equal(self,x,y):
-        bool_y = int(y)
-        return x != bool_y
-
-    def bool_equals(self,x,y): 
-        bool_y = int(y) 
-        return x == bool_y
-
-    def not_equal(self,x,y): 
-        if not y:
-            return or_(x != None,x != y)
-        return or_(x != y,x == None)
-
-    def equals(self,x,y):    
-        if not y:
-            return or_(x == None,x==y)
-        return x == y
-
-    def contains(self,x,y): 
-        return x.like('%%%s%%' % y )
-
- 
-    def return_function(self,type,operator):
-        """
-        return_function will return the particular python function to be applied to a type/operator combination 
-        (i.e sqlalchemy.types.Integer and 'greater than')
-        """
+    @classmethod
+    def lazy_create(cls, **kwargs):
         try:
-            op_dict = self.structure[type]   
-        except KeyError, (error):
-            log.debug('Could not access specific type operator functions for %s in return_function, will use generic' % error)
-            op_dict = self.structure['generic']
-       
-        return op_dict[operator]        
+            item = cls.query.filter_by(**kwargs).one()
+        except:
+            item = cls(**kwargs)
+            session.save(item)
+            session.flush([item])
+        return item
 
-    def return_operators(self,type,loose_match = None): 
-        # loose_match flag will specify if we should try and 'guess' what data type it is 
-        # int,integer,num,number,numeric will match for an sqlalchemy.types.Integer.
-        # string, word match for sqlalchemy.types.String
-        # bool,boolean will match for sqlalchemy.types.Boolean
-        operators = None 
-        try:
-            operators = self.structure[type] 
-        except KeyError, (error):
-            if loose_match: 
-                type_lower = type.lower()
-                int_pattern = '^int(?:eger)?$|^num(?:ber|eric)?$'  
-                string_pattern = '^string$|^word$'          
-                bool_pattern = '^bool(?:ean)?$'
-                patterns = [int_pattern,string_pattern,loose_match]
-                operators = None
-                if re.match(int_pattern,type_lower):
-                    operators = self.structure['sqlalchemy.types.Integer']
-                elif re.match(string_pattern,type_lower):
-                    operators = self.structure['sqlalchemy.types.String']
-                elif re.match(bool_pattern,type_lower):
-                    operators = self.structure['sqlalchemy.types.Boolean']
-                     
-            if operators is None:
-                operators = self.structure['generic']
-                log.debug('Could not access specific type operators for %s, will use generic' % error)
-           
-        return operators.keys() 
-          
+    def node(self, element, value):
+        node = self.doc.createElement(element)
+        node.appendChild(self.doc.createTextNode(value))
+        return node
 
-class SystemObject(object):    
+    def __repr__(self):
+        # pretty-print the attributes, so we can see what's getting autoloaded for us:
+        attrStr = ""
+        numAttrs = 0
+        for attr in self.__dict__:
+            if attr[0] != '_':
+                if numAttrs>0:
+                    attrStr += ', '
+                attrStr += '%s=%s' % (attr, repr(self.__dict__[attr]))
+                numAttrs += 1
+        return "%s(%s)" % (self.__class__.__name__, attrStr)
+        #return "%s()" % (self.__class__.__name__)
 
     @classmethod
-    def get_field_type(cls,field):
-        mapper = getattr(cls,'mapper') 
-        column = getattr(mapper,'c')
-        column_name = getattr(column,field)
-        field_type = getattr(column_name,'type')
-        return field_type
-    
-    @classmethod
-    def search_values(cls,col):  
-       if cls.search_values_dict.has_key(col):
-           return cls.search_values_dict[col] 
-
-    @classmethod
-    def search_operators(cls,field):
-        """
-        search_operators returns a list of the different types of searches that can be done on a given field.
-        It uses the Modeller class to store these relationships. Currently it's only set up for sqlalchemy types.
-        Anything that is not an sqlalchemy type is given a 'generic' set of oeprations
-        """     
-        class_field_type = '%s' % type(field)
-       
-        match_obj = SystemSearch.strip_field_type(class_field_type)
-        index_type = match_obj.group(1) 
-        m = Modeller() 
-    
-        try:                  
-            return m.return_operators(index_type)
-        except KeyError, (e): 
-            log.error('Failed to find search_type by index %s, got error: %s' % (index_type,e))
-
-    @classmethod
-    def get_searchable(self):
-        """
-        get_searchable will return the description of how this object can be searched by returning a dict
-        with the derived Class' name (or display name) as the key, and a list of fields that can be searched after any field filtering has
-        been applied
-        """
-        return []
-             
-    @classmethod
-    def _create_search_description(self, search_field_filter = None): 
-        """
-        Creates a list of fields available to search after applying a filter (if applicable).
-        The filter is a dict in the form of 
-        {'includes': <list of fields to include>} or 
-        {'excludes': <list of fields to exclude> }
-          
-        If a dict is passed in that contains an includes and an excludes element, the excludes is ignored
-        """ 
-        fields = self.mapper.c.keys()    
-        if search_field_filter == None: 
-            return fields 
-         
-        if search_field_filter.has_key('force'):
-            return search_field_filter['force']    
-
-        if search_field_filter.has_key('includes'):  
-            includes = search_field_filter['includes']
-            return  [elem for elem in fields if includes.count(elem) > 0]
-        
-        if search_field_filter.has_key('excludes'):
-            excludes = search_field_filter["excludes"] 
-            return  [elem for elem in fields if excludes.count(elem) < 1] 
+    def by_id(cls, id):
+        return cls.query.filter_by(id=id).one()
 
 
+class SystemObject(object):
     @classmethod
-    def get_tables(cls): 
+    def get_tables(cls):
         tables = cls.get_dict().keys()
         tables.sort()
         return tables
-  
- 
+   
     @classmethod
     def get_allowable_dict(cls, allowable_properties):
         tables = dict( system = dict( joins=[], cls=cls)) 
@@ -854,391 +734,7 @@ class Group(object):
         return cls.query().filter(Group.group_name.like('%s%%' % name))
 
 
-class JoinContainer:
-    def __init__(self): 
-        self.conditional_joins = {} 
-        self.unconditional_joins = []
-
-    def add_conditional(self,col_string,join):   
-        if type(join) == type({}):
-            join = [join]        
-        for elem in join:
-            if type(elem) != type({}):
-                raise TypeError, 'Incorrect type, expecting contents of join array to be of type dict'
-        rule_to_add = {col_string : join }
-        self.conditional_joins.update(rule_to_add)
-
-    def add_unconditional(self,join):
-        #join should be an array
-        if type(join) == type({}):
-            self.unconditional_joins.append(join)
-        elif type(join) == type([]):   
-            self.unconditional_joins.extend(join)
-        else:
-            raise TypeError, "Expecting array of or single clause element"
-     
-    def get_conditional_joins(self,col_string,**kw):
-        return self.conditional_joins.get(col_string,[])
-   
-    def get_unconditional_joins(self):
-        return self.unconditional_joins
- 
-       
-class KeyJoinContainer(JoinContainer):
-     def __init__(self):
-         JoinContainer.__init__(self)
-     
-     def get_conditional_joins(self,col_string,**kw):
-        log.debug('kw is %s' % kw)
-        if not kw.get('keyvalue'):
-            raise Exception, 'This is temporary, but we should have found keyvalue %s' % kw   
-        result = Key.by_name(kw['keyvalue']) 
-        int_table = result.numeric
-        if int_table == 1:
-           
-            return self.conditional_joins.get(col_string + '_int',None) 
-        elif int_table == 0:
-            return self.conditional_joins.get(col_string + '_string',None) 
- 
-
-class Search: 
-    
-    @classmethod
-    def translate_name(cls,display_name):
-        """ translate_name() get's a reference to the class from it's display name"""
-        try:
-            class_ref = cls.class_external_mapping[display_name]
-        except KeyError:
-            log.error('Class %s does not have a mapping to display_name %s' % (cls.__name__,display_name))  
-        else:
-           return class_ref
- 
-    @classmethod
-    def translate_class(cls,cls_ref):
-        """translate_class() takes a class ref and returns the display name it uses """
-        for (display_name,ref) in cls.class_external_mapping.iteritems():
-            if ref is cls_ref:
-                return display_name
-        return
-
-    @classmethod
-    def split_class_field(cls,class_field):
-        class_field_list = class_field.split('/')     
-        display_name = class_field_list[0]
-        field      = class_field_list[1] 
-        return (display_name,field) 
-
-    @classmethod 
-    def field_type(cls,class_field): 
-       """ Takes a class/field string (ie'CPU/Processor') and returns the sqlalchemy type of the field"""
-       returned_class_field = cls.split_class_field(class_field) 
-       display_name = returned_class_field[0]
-       field      = returned_class_field[1]        
-      
-       class_ref = self.translate_name(display_name)
-       field_type = class_ref.get_field_type(field)  
-       class_field_type = "%s" % type(field_type)
-       match_obj = self.strip_field_type(class_field_type)
-       return match_obj.group(1)
-
-    @classmethod
-    def search_on_keyvalue(cls,key_name):
-        """
-        search_on_keyvalue() takes a key_name and returns the operations suitable for the 
-        field type it represents
-        """
-        row = Key.by_name(key_name) 
-        if row.numeric == 1:
-            field_type = 'Numeric'
-        elif row.numeric == 0:
-            field_type = 'String'        
-        else:
-            log.error('Cannot determine type for %s, defaulting to generic' % key_name)
-            field_type = 'generic'
-
-        return Key.search_operators(field_type,loose_match = True)
-        
-             
-    @classmethod 
-    def search_on(cls,class_field): 
-        """
-        search_on() takes a combination of class name and field name (i.e 'Cpu/vendor') and
-        returns the oeprations suitable for the field type it represents
-        """ 
-        returned_class_field = cls.split_class_field(class_field) 
-        display_name = returned_class_field[0]
-        field      = returned_class_field[1]        
-        class_ref = self.translate_name(display_name)
-        
-        try:
-            field_type = class_ref.get_field_type(field) 
-            vals = None
-            try:
-                vals = class_ref.search_values(field)
-            except AttributeError:
-                log.debug('Not using predefined search values for %s->%s' % (class_ref.__name__,field))  
-        except AttributeError, (error):
-            log.error('Error accessing attribute within search_on: %s' % (error))
-        else:
-            return dict(operators = class_ref.search_operators(field_type), values = vals)
-       
-    @classmethod
-    def strip_field_type(cls,field_type):
-        return re.match('^<class\s+\'(.+?)\'>$',field_type)  
-
-    @classmethod
-    def __build_mapping(cls,class_ref):
-        #Check if we have a specialised display name 
-        if hasattr(class_ref,'display_name'):
-            display_name = class_ref.display_name
-        else:
-            display_name = class_ref.__name__    
-
-        #If the display name is already being used  
-        if cls.class_external_mapping.has_key(display_name) and cls.class_external_mapping[display_name] is class_ref:
-            log.debug('Already have display name %s for %s' % (display_name,class_ref.__name__ ))
-            #We're already mapped, nothing to see here...
-            pass  
-        elif cls.class_external_mapping.has_key(display_name): 
-            log.error("Display name %s cannot be set for %s" % (display_name,class_ref.__name__))               
-        else: 
-            log.debug('Adding to class_external_mapping with %s %s' % (display_name,class_ref))
-            cls.class_external_mapping[display_name] = class_ref
-
-    @classmethod
-    def create_search_table(cls,searchable_classes,force = False):  
-        """
-        create_search_table will set and/or return the search_table for each searchable_objs containing
-        a list of searchable 'combinations'.
-        These 'combinations' merely represent a table and a column.
-        An example of search_table entry may be 'Cpu/Vendor' or 'System/Name'
-        """ 
- 
-        return_table = []
-        #force = True
-        for class_ref in searchable_classes:            
-            # Don't recreate the table unless you are forced to... 
-            # search_table = getattr(obj,'search_table')
-            got_search_table = hasattr(class_ref,'search_table')
-            log.debug('Do we have search_table %s' % got_search_table)
-            if got_search_table:
-                search_table_has_items = len(class_ref.search_table) and True
-            else:
-                search_table_has_items = False
-
-            if search_table_has_items and not force: 
-                log.debug('Getting cached values')
-                return_table.extend(class_ref.search_table)
-                continue
-            #Lets build a mapping from display name to class_ref.
-            cls.__build_mapping(class_ref) 
-            display_name = cls.translate_class(class_ref)
-
-            if search_table_has_items and force: 
-               #Delete search_table so we can rebuild it 
-               del class_ref.search_table[:] 
-               working_table = class_ref.search_table 
-            elif got_search_table:
-               working_table = class_ref.search_table
-            elif not got_search_table:    
-               log.error('%s is missing attribute search_table, will continue but cannot cache search_table for later use.' % (class_ref.__name__) )
-               working_table = []
-
-            #Now let's actually build the obj specific return_table
-            searchable =  class_ref.get_searchable() 
-            for item in searchable: 
-                working_table.append('%s/%s' % (display_name,item))  
-
-            #add it to our local table that will be returned
-            return_table.extend(working_table)
-               
-        return_table.sort()
-        return return_table
-   
-
-
-class SystemSearch(Search): 
-    class_external_mapping = {} 
-    def __init__(self):
-        self.j = system_table
-        self.filter_funcs = [] 
-        #Because the FROM clause is 'FROM system', we won't have to join to system again,
-        #so we mark it as already being joined
-        self.already_joined = [system_table]
-        self.result_columns = [] 
-        self.extra_columns_desc = []
-        self.system_columns_desc = []
-        self.custom_search = False 
-        search_tables = {} 
-  
-    def __getitem__(self,key):
-        pass
-     
-    def set_columns(self,cols):
-        self.result_columns = cols
-
-    def get_column_descriptions(self):
-        return [self.system_columns_desc,self.extra_columns_desc]
-
-    def append_results(self,cls_ref,value,column,operation,**kw):  
-        """ 
-        append_results() will take a value, column and operation from the search field,
-        as well as the class of which the search pertains to, and will append the join
-        and the filter needed to return the correct results.   
-        """
-        #First let's see if we have a column X operation specific filter
-        #We will only need to use these filter by table column if the ones from Modeller are 
-        #inadequate. 
-        #If we are looking at the System class and column 'arch' with the 'is not' operation, it will try and get
-        # System.arch_is_not_filter
-        underscored_operation = re.sub(' ','_',operation) 
-        col_op_filter = getattr(cls_ref,'%s_%s_filter' % (column.lower(),underscored_operation),None)
-        
-        col_op_filter = getattr(cls_ref,'%s_%s_filter' % (column.lower(),underscored_operation),None)
-       
-        #At this point we can also call a custom function before we try to append our results
-        try:
-            col_op_pre = getattr(cls_ref,'%s_%s_pre' % (column.lower(),underscored_operation),None) 
-        except Exception, (error):
-            log.error('Unable to call call pre function: %s' % error)
-    
-        if col_op_pre is not None:
-            results_from_pre = col_op_pre(value,col=column,op = operation, **kw)
-
-        try:
-            _c = cls_ref.mapper.c
-            log.debug('_c is %s' % _c)
-            col = getattr(_c, column)
-        except AttributeError, (error):     
-                log.error('Error accessing attribute within append_results: %s' % (error))
-        else:
-            filter_args = dict(column=col,value=value)            
-            if col_op_filter:
-                filter_func = col_op_filter   
-                filter_final = lambda: filter_func(col,value)
-                #If you want to pass custom args to your custom filter, here is where you do it 
-                if kw.get('keyvalue'): 
-                    filter_final = lambda: filter_func(col,value,key_name = kw['keyvalue'])   
-            else:
-                #using just the regular filter operations from Modeller
-                try: 
-                    col_type = col.type
-                except AttributeError, (error):     
-                    log.error('Error accessing attribute within append_results: %s' % (error))
-
-      
-                class_field_type = '%s' % type(col_type)
-                match_obj = self.strip_field_type(class_field_type)
-                #This should get the type i.e 'sqlalchemy.types.String'  
-                index_type = match_obj.group(1)  
-                modeller = Modeller()
-                filter_func = modeller.return_function(index_type,operation)     
-                filter_final = lambda: filter_func(col,value)
-
-        #append a filter function which is to be called later
-        self.filter_funcs.append(filter_final)
-       
-        self.__do_joins(cls_ref,column,**kw);
-
-    def __do_joins(self,cls_ref,column,**kw):
-        joins = getattr(cls_ref,'joins',None)  
-        #Let's do the joins 
-        if joins != None:
-            unconditional_joins = joins.get_unconditional_joins()
-            for elem in unconditional_joins: 
-                for k,v in elem.iteritems():  
-                    if (self.already_joined.count(k) < 1): 
-                        self.j = self.j.outerjoin(k,onclause=v)
-		        self.already_joined.append(k) 
-              
-            conditional_joins = joins.get_conditional_joins(column.lower(),**kw)
-            for elem in conditional_joins:
-                for k,v in elem.iteritems():
-                    if (self.already_joined.count(k) < 1):
-                        log.debug('not already joined %s' % k)
-                        self.j = self.j.outerjoin(k,onclause=v)
-                        self.already_joined.append(k)  
-        else:
-            pass
-
-    def __add_columns(self,queri): 
-        if self.result_columns is not None:
-            for elem in self.result_columns: 
-                (display_name,col) = self.split_class_field(elem)  
-                cls_ref = SystemSearch.translate_name(display_name) 
-                col_ref = getattr(cls_ref.mapper.c,col,None) 
-
-                #If they are System columns we won't need to explicitly add them to the query, as they are already returned in the System query  
-                if cls_ref is System:     
-                    self.system_columns_desc.append(elem)
-                    continue
-                elif col_ref is not None: 
-                    self.extra_columns_desc.append(elem)
-                    self.adding_columns = True
-                    queri = queri.add_column(col_ref)         
-
-            return queri 
-
-
-    def return_results(self):
-        """
-        return_results() will take the joins and the filters which have been assembled by append_results
-        and return the final query object from these.
-        Also if we are want to customise what we return, we will add the columns onto the query object. For this to work 
-        the result_columns attribute must already be set 
-        """
-        #Do our joins
-        queri = session.query(System).select_from(self.j)  
-      
-        #Add columns which were specified in the search page
-        if self.custom_search:
-            queri = self.__add_columns(queri)
-            
-        #Execute filter on query object  
-        for filter_func in self.filter_funcs:           
-            queri = queri.filter(filter_func()) 
-        return queri        
-
 class System(SystemObject):
-    table = system_table
-    search_table = []  
-    joins = JoinContainer()
-    joins.add_conditional('arch', [{system_arch_map: system_table.c.id == system_arch_map.c.system_id}, 
-                                   {arch_table: arch_table.c.id == system_arch_map.c.arch_id}]) 
-
-    #If we have a set of predefined values that a column can be searched on, put them in the 
-    # search_values_dict of the corresponding class
-    search_values_dict =     { 'Status' : lambda: SystemStatus.get_all_status_name(),
-                               'Type' : lambda: SystemType.get_all_type_names() }    
-
-    @classmethod
-    def arch_is_not_filter(cls,col,val):
-        """arch_is_not_filter() is a function dynamically called from append_results.
-           It serves to provide a table column operation specific method of filtering results of System/Arch
-        """       
-        if not val: 
-           return or_(col != None, col != val) 
-        else:
-            #If anyone knows of a better way to do this, by all means...
-            query = System.query().filter(System.arch.any(Arch.arch == val))       
-          
-        ids = [r.id for r in query]  
-        return not_(system_table.c.id.in_(ids)) 
-           
-    @classmethod
-    def get_searchable(cls):
-        """
-        get_searchable will return the description of how this object can be 
-        searched by returning a dict with the derived Class' name 
-        (or display name) as the key, and a list of fields that can be 
-        searched after any field filtering has been applied
-        """
-        return cls._create_search_description(cls.search_by)
-   
-    @classmethod
-    def search_values(cls,col):  
-       if cls.search_values_dict.has_key(col):
-           return cls.search_values_dict[col]() 
 
     def __init__(self, fqdn=None, status=None, contact=None, location=None,
                        model=None, type=None, serial=None, vendor=None,
@@ -1477,6 +973,230 @@ $SNIPPET("rhts_post")
         #  right now we only support cobbler
         if self.lab_controller:
             return CobblerAPI(self)
+
+    def remote(self):
+        class CobblerAPI:
+            def __init__(self, system):
+                self.system = system
+                url = "http://%s/cobbler_api" % system.lab_controller.fqdn
+                self.remote = xmlrpclib.ServerProxy(url, allow_none=True)
+                self.token = self.remote.login(system.lab_controller.username,
+                                               system.lab_controller.password)
+
+            def version(self):
+                return self.remote.version()
+
+            def get_system(self):
+                try:
+                    system_id = self.remote.get_system_handle(self.system.fqdn, 
+                                                                self.token)
+                except xmlrpclib.Fault, msg:
+                    system_id = self.remote.new_system(self.token)
+                    try:
+                        ipaddress = socket.gethostbyname_ex(self.system.fqdn)[2][0]
+                    except socket.gaierror:
+                        raise BX(_('%s does not resolve to an ip address' %
+                                                              self.system.fqdn))
+                    self.remote.modify_system(system_id, 
+                                              'name', 
+                                              self.system.fqdn, 
+                                              self.token)
+                    self.remote.modify_system(system_id, 
+                                              'modify_interface',
+                                              {'ipaddress-eth0': ipaddress}, 
+                                              self.token)
+                    profile = self.remote.get_profiles(0,
+                                                       1,
+                                                       self.token)[0]['name']
+                    self.remote.modify_system(system_id, 
+                                              'profile', 
+                                              profile,
+                                              self.token)
+                    self.remote.modify_system(system_id, 
+                                              'netboot-enabled', 
+                                              False, 
+                                              self.token)
+                    self.remote.save_system(system_id, 
+                                            self.token)
+                return system_id
+
+            def get_event_log(self, task_id):
+                return self.remote.get_event_log(task_id)
+
+            def wait_for_event(self, task_id):
+                """ Wait for cobbler task to finish, return True on success
+                    raise an exception if it fails.
+                    raise an exception if it takes more then 5 minutes
+                """
+                expiredelta = datetime.now() + timedelta(minutes=5)
+                while(True):
+                    for line in self.get_event_log(task_id).split('\n'):
+                        if line.find("### TASK COMPLETE ###") != -1:
+                            return True
+                        if line.find("### TASK FAILED ###") != -1:
+                            raise BX(_("Cobbler Task:%s Failed" % task_id))
+                    if datetime.now() > expiredelta:
+                        raise BX(_('Cobbler Task:%s Timed out' % task_id))
+                    time.sleep(5)
+
+                        
+            def power(self,action='reboot', wait=True):
+                system_id = self.get_system()
+                self.remote.modify_system(system_id, 'power_type', 
+                                              self.system.power.power_type.name,
+                                                   self.token)
+                self.remote.modify_system(system_id, 'power_address', 
+                                                self.system.power.power_address,
+                                                   self.token)
+                self.remote.modify_system(system_id, 'power_user', 
+                                                   self.system.power.power_user,
+                                                   self.token)
+                self.remote.modify_system(system_id, 'power_pass', 
+                                                 self.system.power.power_passwd,
+                                                   self.token)
+                self.remote.modify_system(system_id, 'power_id', 
+                                                   self.system.power.power_id,
+                                                   self.token)
+                self.remote.save_system(system_id, self.token)
+                if '%f' % self.version() >= '%f' % 1.7:
+                    try:
+                        task_id = self.remote.background_power_system(
+                                  dict(systems=[self.system.fqdn],power=action),
+                                                                     self.token)
+                        if wait:
+                            return self.wait_for_event(task_id)
+                        else:
+                            return True
+                    except xmlrpclib.Fault, msg:
+                        raise BX(_('Failed to %s system %s' % (action,self.system.fqdn)))
+                else:
+                    try:
+                        return self.remote.power_system(system_id, action, self.token)
+                    except xmlrpclib.Fault, msg:
+                        raise BX(_('Failed to %s system %s' % (action,self.system.fqdn)))
+                return False
+
+            def provision(self, 
+                          distro=None, 
+                          kickstart=None,
+                          ks_meta=None,
+                          kernel_options=None,
+                          kernel_options_post=None):
+                """
+                Provision the System
+                make xmlrpc call to lab controller
+                """
+                if not distro:
+                    return False
+
+                system_id = self.get_system()
+                profile = distro.install_name
+                systemprofile = profile
+                profile_id = self.remote.get_profile_handle(profile, self.token)
+                if not profile_id:
+                    raise BX(_("%s profile not found on %s" % (profile, self.system.labcontroller.fqdn)))
+                self.remote.modify_system(system_id, 
+                                          'ksmeta',
+                                           ks_meta,
+                                           self.token)
+                self.remote.modify_system(system_id,
+                                           'kopts',
+                                           kernel_options,
+                                           self.token)
+                self.remote.modify_system(system_id,
+                                           'kopts_post',
+                                           kernel_options_post,
+                                           self.token)
+                if kickstart:
+                    # Escape any $ signs or cobbler will barf
+                    kickstart = kickstart.replace('$','\$')
+                    # add in cobbler packages snippet...
+                    # Find next line after %packages
+                    packages_slot = kickstart.find("\n",kickstart.find("%packages"))
+                    beforepackages = kickstart[:packages_slot]
+                    afterpackages = kickstart[packages_slot:]
+
+                    # Fill in basic requirements for RHTS
+                    kicktemplate = """
+url --url=$tree
+%(beforepackages)s
+$SNIPPET("rhts_packages")
+%(afterpackages)s
+
+%%pre
+$SNIPPET("rhts_pre")
+
+%%post
+$SNIPPET("rhts_post")
+                    """
+                    kickstart = kicktemplate % dict(
+                                                beforepackages = beforepackages,
+                                                afterpackages = afterpackages)
+
+                    kickfile = '/var/lib/cobbler/kickstarts/%s.ks' % self.system.fqdn
+        
+                    systemprofile = self.system.fqdn
+                    try:
+                        pid = self.remote.get_profile_handle(self.system.fqdn, 
+                                                             self.token)
+                    except:
+                        pid = self.remote.new_subprofile(self.token)
+                        self.remote.modify_profile(pid, 
+                                              "name",
+                                              self.system.fqdn,
+                                              self.token)
+                    if self.remote.read_or_write_kickstart_template(kickfile,
+                                                               False,
+                                                               kickstart,
+                                                               self.token):
+                        self.remote.modify_profile(pid, 
+                                              'kickstart', 
+                                              kickfile, 
+                                              self.token)
+                        self.remote.modify_profile(pid, 
+                                              'parent', 
+                                              profile, 
+                                              self.token)
+                        self.remote.save_profile(pid, 
+                                              self.token)
+                    else:
+                        raise BX(_("Failed to save kickstart"))
+                self.remote.modify_system(system_id, 
+                                     'profile', 
+                                     systemprofile, 
+                                     self.token)
+                self.remote.modify_system(system_id, 
+                                     'netboot-enabled', 
+                                     True, 
+                                     self.token)
+                try:
+                    self.remote.save_system(system_id, self.token)
+                except xmlrpclib.Fault, msg:
+                    raise BX(_("Failed to provision system %s" % self.system.fqdn))
+                try:
+                    self.remote.clear_system_logs(system_id, self.token)
+                except xmlrpclib.Fault, msg:
+                    raise BX(_("Failed to clear %s logs" % self.system.fqdn))
+
+            def release(self, power=True):
+                """ Turn off netboot and turn off system by default
+                """
+                system_id = self.get_system()
+                self.remote.modify_system(system_id, 
+                                          'netboot-enabled', 
+                                          False, 
+                                          self.token)
+                self.remote.save_system(system_id, 
+                                        self.token)
+                if self.system.power and power:
+                    self.power(action="off", wait=False)
+
+        # remote methods are only available if we have a lab controller
+        #  Here is where we would add other types of lab controllers
+        #  right now we only support cobbler
+        if self.lab_controller:
+            return CobblerAPI(self)
+
     remote = property(remote)
 
     @classmethod
@@ -1890,6 +1610,14 @@ $SNIPPET("rhts_post")
     def __repr__(self):
         return self.fqdn
 
+    def link(self):
+        """ Return a link to this system
+        """
+        return make_link(url = '/view/%s' % self.fqdn,
+                         text = self.fqdn)
+
+    link = property(link)
+
 # for property in System.mapper.iterate_properties:
 #     print property.mapper.class_.__name__
 #     print property.key
@@ -1965,6 +1693,7 @@ class ReleaseAction(SystemObject):
         """
         if system.reprovision_distro:
             system.action_auto_provision(distro=system.reprovision_distro)
+
 
 class SystemStatus(SystemObject):
 
@@ -2062,6 +1791,11 @@ class OSMajor(SystemObject):
         return cls.query.filter_by(osmajor=osmajor).one()
 
     @classmethod
+    def by_name_alias(cls, name_alias):
+        return cls.query.filter(or_(OSMajor.osmajor==name_alias,
+                                    OSMajor.alias==name_alias)).one()
+
+    @classmethod
     def get_all(cls):
         all = cls.query()
         return [(0,"All")] + [(major.id, major.osmajor) for major in all]
@@ -2125,14 +1859,7 @@ class LabInfo(SystemObject):
     fields = ['orig_cost', 'curr_cost', 'dimensions', 'weight', 'wattage', 'cooling']
 
 
-class Cpu(SystemObject): 
-    table = cpu_table      
-    display_name = 'CPU'
-    joins = JoinContainer()
-    joins.add_unconditional({ cpu_table : system_table.c.id == cpu_table.c.system_id })
-    joins.add_conditional('flags',  { cpu_flag_table : cpu_flag_table.c.cpu_id == cpu_table.c.id})   
-    search_values_dict = { 'Hyper' : ['True','False'] }
-
+class Cpu(SystemObject):
     def __init__(self, vendor=None, model=None, model_name=None, family=None, stepping=None,speed=None,processors=None,cores=None,sockets=None,flags=None):
         self.vendor = vendor
         self.model = model
@@ -2154,37 +1881,6 @@ class Cpu(SystemObject):
 	    for cpuflag in flags:
                 new_flag = CpuFlag(flag=cpuflag)
                 self.flags.append(new_flag)
-
-    @classmethod
-    def flags_is_not_filter(cls,col,val,**kw):
-        """flags_is_not_filter is a function dynamically called from append_results.
-           It serves to provide a table column operation specific method of filtering results of CPU/Flags
-        """       
-        if not val:
-            query = Cpu.query().filter(Cpu.flags.any(and_(CpuFlag.flag != None,CpuFlag.flag != val)))
-            ids = [r.id for r in query] 
-            return cpu_table.c.id.in_(ids)
-        else:
-            query = Cpu.query().filter(Cpu.flags.any(CpuFlag.flag == val))
-            ids = [r.id for r in query]
-            return or_(not_(cpu_table.c.id.in_(ids)), col == None) 
-
-    @classmethod
-    def get_searchable(cls):
-        """
-        get_searchable will return the description of how this object can be 
-        searched by returning a dict with the derived Class' name 
-        (or display name) as the key, and a list of fields that can be 
-        searched after any field filtering has been applied
-        """
-        return cls._create_search_description(
-                   dict(includes = ['Processors','Hyper','Vendor','Flags',
-                                    'Cores','Sockets','Model','Stepping',
-                                    'Speed','Family'])
-                                              )
-
-# systems = session.query(System).join('status').join('type').join(['cpu','flags']).filter(CpuFlag.c.flag=='lm')
-
 
 class CpuFlag(SystemObject):
     def __init__(self, flag=None):
@@ -2219,32 +1915,6 @@ class DeviceClass(SystemObject):
 
 
 class Device(SystemObject):
-    table = device_table
-    search_table = []
-    display_name = 'Devices' 
-    joins = JoinContainer()
-    joins.add_unconditional([{system_device_map : system_table.c.id  == system_device_map.c.system_id},
-                             {device_table : system_device_map.c.device_id == device_table.c.id}])
-                  
-    @classmethod
-    def driver_is_not_filter(cls,col,val):
-        if not val:
-            return or_(col != None, col != val)
-        else:
-            query = System.query().filter(System.devices.any(Device.driver == val))
-    
-        ids = [r.id for r in query]  
-        return not_(system_table.c.id.in_(ids))    
- 
-    @classmethod
-    def get_searchable(cls):
-        """
-        get_searchable will return the description of how this object can be 
-        searched by returning a dict with the derived Class' name 
-        (or display name) as the key, and a list of fields that can be 
-        searched after any field filtering has been applied
-        """
-        return cls._create_search_description(dict(includes = ['Description','Driver','Vendor_id','Device_id']))
     def __init__(self, vendor_id=None, device_id=None, subsys_device_id=None, subsys_vendor_id=None, bus=None, driver=None, device_class=None, description=None):
         if not device_class:
             device_class = "NONE"
@@ -2263,15 +1933,6 @@ class Device(SystemObject):
         self.description = description
         self.device_class = dc
 
-    @classmethod
-    def get_searchable(cls):
-        """
-        get_searchable will return the description of how this object can be 
-        searched by returning a dict with the derived Class' name 
-        (or display name) as the key, and a list of fields that can be 
-        searched after any field filtering has been applied
-        """
-        return cls._create_search_description(dict(includes = ['Description','Driver','Vendor_id','Device_id']))
 
 class Locked(object):
     def __init__(self, name=None):
@@ -2355,7 +2016,22 @@ class Distro(object):
          </And>
         </distro>
         """
-        pass
+        from needpropertyxml import ElementWrapper
+        import xmltramp
+        #FIXME Should validate XML before proceeding.
+        queries = []
+        joins = []
+        for child in ElementWrapper(xmltramp.parse(filter)):
+            if callable(getattr(child, 'filter')):
+                (join, query) = child.filter()
+                queries.append(query)
+                joins.extend(join)
+        distros = Distro.query()
+        if joins:
+            distros = distros.filter(and_(*joins))
+        if queries:
+            distros = distros.filter(and_(*queries))
+        return distros.order_by('-date_created')
 
     def systems_filter(self, user, filter):
         """
@@ -2378,7 +2054,46 @@ class Distro(object):
               all()
         [hp-xw8600-02.rhts.bos.redhat.com]
         """
-        pass
+        from needpropertyxml import ElementWrapper
+        import xmltramp
+        systems = self.systems(user)
+        #FIXME Should validate XML before processing.
+        queries = []
+        joins = []
+        for child in ElementWrapper(xmltramp.parse(filter)):
+            if callable(getattr(child, 'filter')):
+                (join, query) = child.filter()
+                queries.append(query)
+                joins.extend(join)
+        if joins:
+            systems = systems.filter(and_(*joins))
+        if queries:
+            systems = systems.filter(and_(*queries))
+        return systems
+
+    def tasks(self):
+        """
+        List of tasks that support this distro
+        """
+        return Task.query().filter(
+                not_(or_(Task.id.in_(select([task_table.c.id]).
+                 where(task_table.c.id==task_exclude_table.c.task_id).
+                 where(task_exclude_table.c.arch_id==arch_table.c.id).
+                 where(arch_table.c.id==self.arch_id)
+                                      ),
+                         Task.id.in_(select([task_table.c.id]).
+                 where(task_table.c.id==task_exclude_table.c.task_id).
+                 where(task_exclude_table.c.osmajor_id==osmajor_table.c.id).
+                 where(osmajor_table.c.id==self.osversion.osmajor.id)
+                                      ),
+                         Task.id.in_(select([task_table.c.id]).
+                 where(task_table.c.id==task_exclude_table.c.task_id).
+                 where(task_exclude_table.c.osversion_id==osversion_table.c.id).
+                 where(osversion_table.c.id==self.osversion.id)
+                                      ),
+                        )
+                    )
+        )
 
     def systems(self, user=None):
         """
@@ -2388,10 +2103,11 @@ class Distro(object):
         if user:
             systems = System.available_order(user)
         else:
-            systems = session.query(System)
+            systems = System.query()
 
-        return systems.filter(
-             and_(System.arch.contains(self.arch),
+        return systems.join(['lab_controller','_distros','distro']).filter(
+             and_(Distro.install_name==self.install_name,
+                  System.arch.contains(self.arch),
                 not_(or_(System.id.in_(select([system_table.c.id]).
                   where(system_table.c.id==system_arch_map.c.system_id).
                   where(arch_table.c.id==system_arch_map.c.arch_id).
@@ -2413,10 +2129,19 @@ class Distro(object):
                  )
         )
 
-    def ___repr__(self):
-        return "%s" % self.install_name
+    def link(self):
+        """ Returns a hyper link to this distro
+        """ 
+        return make_link(url = '/distros/view?id=%s' % self.id,
+                         text = self.name)
+
+    link = property(link)
+
+    def __repr__(self):
+        return "%s" % self.name
 
     lab_controllers = association_proxy('lab_controller_assocs', 'lab_controller')
+
 
 class DistroTag(object):
     def __init__(self, tag=None):
@@ -2486,99 +2211,10 @@ class Note(object):
 
 
 class Key(SystemObject):
-    joins = KeyJoinContainer()
-    joins.add_conditional('value_int',[{key_value_int_table: key_value_int_table.c.system_id == system_table.c.id }, 
-                                       {key_table: key_table.c.id == key_value_int_table.c.key_id}])
-    
-    joins.add_conditional('value_string',[{key_value_string_table: key_value_string_table.c.system_id == system_table.c.id }, 
-                                          {key_table: key_table.c.id == key_value_string_table.c.key_id}])
-
-    @classmethod
-    def search_operators(cls,type,loose_match = None):
-        m = Modeller()
-        operators = m.return_operators(type,loose_match)    
-        return operators 
-
-    @classmethod
-    def value_pre(cls,value,**kw): 
-        if not kw.get('keyvalue'):
-            raise Exception, 'value_pre needs a keyvalue. keyvalue not found' 
-        result = cls.by_name(kw['keyvalue']) 
-        int_table = result.numeric
-        key_id = result.id
-        if int_table == 1:
-            log.debug('In int for value_is_pre')
-            cls.mapper.add_property('Value',column_property(select([key_value_int_table.c.key_value],key_value_int_table.c.system_id == system_table.c.id).correlate(system_table).label('Value'), deferred = True ))    
-        elif int_table == 0:
-            log.debug('In string for value_is_pre')
-            cls.mapper.add_property('Value',column_property(select([key_value_string_table.c.key_value],key_value_string_table.c.system_id == system_table.c.id).correlate(system_table).label('Value'), deferred = True ))    
-
-    @classmethod   
-    def value_contains_pre(cls,value,**kw):
-       cls.value_pre(value,**kw)
-
-    @classmethod
-    def value_is_pre(cls,value,**kw): 
-       cls.value_pre(value,**kw)
-
-    @classmethod
-    def value_is_not_pre(cls,value,**kw):
-        cls.value_pre(value,**kw)
- 
-    @classmethod
-    def value_less_than_pre(cls,value,**kw):
-        cls.value_pre(value,**kw)
-
-    @classmethod
-    def value_greater_than_pre(cls,value,**kw):
-        cls.value_pre(value,**kw)
-    
-    @classmethod
-    def value_greater_than_filter(cls,col,val,key_name):
-        result = cls.by_name(key_name) 
-        int_table = result.numeric
-        key_id = result.id
-        return and_(Key_Value_Int.key_value > val, Key_Value_Int.key_id == key_id)
-
-    @classmethod
-    def value_contains_filter(cls, col, val, key_name):
-        result = cls.by_name(key_name) 
-        key_id = result.id
- 
-        return and_(Key_Value_String.key_value.like('%%%s%%' % val),Key_Value_String.key_id == key_id) 
-        
-    @classmethod
-    def value_is_filter(cls,col,val,key_name):
-        result = cls.by_name(key_name) 
-        int_table = result.numeric
-        key_id = result.id
- 
-        if int_table == 1:
-            return and_(Key_Value_Int.key_value == val,Key_Value_Int.key_id == key_id) 
-        elif int_table == 0: 
-            return and_(key_value_string_table.c.key_value == val,key_value_string_table.c.key_id == key_id) 
-
- 
-    @classmethod
-    def value_is_not_filter(cls,col,val,key_name):
-        result =cls.by_name(key_name)
-        int_table = result.numeric
-        key_id = result.id
-       
-        if int_table == 1:
-            return and_(or_(Key_Value_Int.key_value != val,Key_Value_Int.key_value == None), or_(Key_Value_Int.key_id == key_id,Key_Value_Int.key_id == None))         
-        elif int_table == 0:
-            return and_(or_(Key_Value_String.key_value != val,Key_Value_String.key_value == None), or_(Key_Value_String.key_id == key_id, Key_Value_String.key_id == None))         
-         
-
     @classmethod
     def get_all_keys(cls):
        all_keys = cls.query()     
        return [key.key_name for key in all_keys]
-
-    @classmethod
-    def get_searchable(cls): 
-        return cls._create_search_description(dict(force = ['Value']))
 
     @classmethod
     def by_name(cls, key_name):
@@ -2594,7 +2230,6 @@ class Key(SystemObject):
 
     def __repr__(self):
         return "%s" % self.key_name
-
 
 
 # key_value model
@@ -2631,29 +2266,12 @@ class Key_Value_Int(object):
 
 
 
-
 # set up mappers between identity tables and classes
 SystemType.mapper = mapper(SystemType, system_type_table)
 SystemStatus.mapper = mapper(SystemStatus, system_status_table)
 mapper(ReleaseAction, release_action_table)
 System.mapper = mapper(System, system_table,
-       properties = {'fqdn':synonym('Name',map_column=True),
-                     'vendor':synonym('Vendor',map_column=True),
-                     'lender':synonym('Lender',map_column=True),
-                     'model':synonym('Model',map_column=True),
-                     'memory':synonym('Memory',map_column=True),
-                     'serial':synonym('Serial',map_column=True),
-                     'date_added':synonym('Date Added',map_column=True),
-                     'date_modified':synonym('Date Modified',map_column=True),
-                     'shared':synonym('Shared',map_column=True),
-                     'private':synonym('Private',map_column=True),
-                     'LabController':column_property(select([lab_controller_table.c.fqdn], lab_controller_table.c.id == system_table.c.lab_controller_id).correlate(system_table).label('LabController'),deferred=True),
-                     'Owner':column_property(select([users_table.c.user_name], users_table.c.user_id == system_table.c.owner_id).correlate(system_table).label('Owner'),deferred=True),
-                     'User':column_property(select([users_table.c.user_name],system_table.c.user_id == users_table.c.user_id).correlate(system_table).label('User'),deferred=True),                      
-                     'Status':column_property(select([system_status_table.c.status],system_status_table.c.id == system_table.c.status_id).correlate(system_table).label('Status'),deferred=True),
-                     'Type':column_property(select([system_type_table.c.type],system_type_table.c.id == system_table.c.type_id).label('Type'),deferred=True),
-                     'Arch':column_property(select([arch_table.c.arch]).correlate(arch_table).label('Arch'),deferred = True), 
-         
+                   properties = {
                      'status':relation(SystemStatus,uselist=False),
                      'devices':relation(Device,
                                         secondary=system_device_map,backref='systems'),
@@ -2700,16 +2318,7 @@ System.mapper = mapper(System, system_table,
                      })
 
 Cpu.mapper = mapper(Cpu,cpu_table,properties = {
-                                                 'vendor':synonym('Vendor',map_column=True),
-                                                 'processors':synonym('Processors',map_column=True),
-                                                 'hyper':synonym('Hyper',map_column=True),
-                                                 'cores':synonym('Cores',map_column=True),
-                                                 'sockets':synonym('Sockets',map_column=True), 
-                                                 'model':synonym('Model',map_column=True),
-                                                 'stepping':synonym('Stepping',map_column=True),
-                                                 'speed':synonym('Speed',map_column=True),
-                                                 'family':synonym('Family',map_column=True), 
-                                                 'Flags':column_property(select([cpu_flag_table.c.flag]).correlate(cpu_flag_table).label('Flags'),deferred = True),  
+                                                
                                                  'flags':relation(CpuFlag), 
                                                  'system':relation(System) } )
 mapper(Arch, arch_table)
@@ -2740,11 +2349,7 @@ mapper(LabInfo, labinfo_table)
 CpuFlag.mapper = mapper(CpuFlag, cpu_flag_table)
 Numa.mapper = mapper(Numa, numa_table)
 Device.mapper = mapper(Device, device_table,
-       properties = {'device_class': relation(DeviceClass),
-                     'description':synonym('Description',map_column=True),
-                     'vendor_id':synonym('Vendor_id',map_column=True),
-                     'device_id':synonym('Device_id',map_column=True),
-                     'driver':synonym('Driver',map_column=True)  })
+       properties = {'device_class': relation(DeviceClass)})
 
 mapper(DeviceClass, device_class_table)
 mapper(Locked, locked_table)
@@ -2823,7 +2428,6 @@ mapper(Key_Value_Int, key_value_int_table,
 mapper(Key_Value_String, key_value_string_table,
         properties=dict(key=relation(Key, uselist=False,
                         backref='key_value_string')))
-
 
 ## Static list of device_classes -- used by master.kid
 global _device_classes

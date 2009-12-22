@@ -33,7 +33,9 @@ class Auth(RPCRoot):
         """
         Renew session, here to support kobo.
         """
-        return True
+        if identity.current.anonymous:
+            return True
+        return False
 
     @cherrypy.expose
     def login_password(self, username, password):

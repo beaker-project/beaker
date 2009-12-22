@@ -8,7 +8,6 @@ from kid import Element
 from beaker.server.xmlrpccontroller import RPCRoot
 from beaker.server.widgets import DistroTags
 from beaker.server.helpers import *
-from beaker.server.needpropertyxml import *
 
 import cherrypy
 
@@ -205,23 +204,11 @@ class Distros(RPCRoot):
         """
         Based on XML passed in filter distro selection
         """
-        #FIXME Should validate XML before proceeding.
-        queries = []
-        joins = []
-        for child in ElementWrapper(xmltramp.parse(xml)):
-            if callable(getattr(child, 'filter')):
-                (join, query) = child.filter()
-                queries.append(query)
-                joins.extend(join)
-        distros = Distro.query()
-        if joins:
-            distros = distros.filter(and_(*joins))
-        if queries:
-            distros = distros.filter(and_(*queries))
+        distros = Distro.by_filter(xml)
         distros = distros.add_column('tree_path').join('lab_controller_assocs')
         distros = distros.add_column('fqdn').join(['lab_controller_assocs','lab_controller'])
         try:
-            distro, tree_path, fqdn = distros.order_by('-date_created').first()
+            distro, tree_path, fqdn = distros.first()
         except TypeError:
             return None
         if distro:

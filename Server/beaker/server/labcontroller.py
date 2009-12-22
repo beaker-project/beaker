@@ -221,17 +221,10 @@ class LabControllers(RPCRoot):
         if kw.get('id'):
             labcontroller = LabController.by_id(kw['id'])
             now = time.time()
-            # Cobbler old uri is _rw
-            try:
-                url = "http://%s/cobbler_api_rw" % labcontroller.fqdn
-                remote = xmlrpclib.ServerProxy(url)
-                token = remote.login(labcontroller.username,
-                                     labcontroller.password)
-            except ProtocolError:
-                url = "http://%s/cobbler_api" % labcontroller.fqdn
-                remote = xmlrpclib.ServerProxy(url)
-                token = remote.login(labcontroller.username,
-                                     labcontroller.password)
+            url = "http://%s/cobbler_api" % labcontroller.fqdn
+            remote = xmlrpclib.ServerProxy(url)
+            token = remote.login(labcontroller.username,
+                                 labcontroller.password)
             lc_distros = remote.get_distros()
 
             distros = self._addDistros(labcontroller.fqdn, lc_distros)

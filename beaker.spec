@@ -2,7 +2,7 @@
 %{!?pyver: %define pyver %(%{__python} -c "import sys ; print sys.version[:3]")}
 
 Name:           beaker
-Version:        0.4.68
+Version:        0.4.69
 Release:        0%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
@@ -50,6 +50,9 @@ Requires:       yum-utils
 Requires:       /sbin/fenced
 Requires:       telnet
 Requires:       python-cpio
+Requires:       kobo-client
+Requires:	python-setuptools
+Requires:       python-xmltramp
 
 %package lib
 Summary:        Test Library
@@ -95,6 +98,38 @@ ln -s Fedora.ks $RPM_BUILD_ROOT/var/lib/cobbler/kickstarts/Fedoradevelopment.ks
 %clean
 %{__rm} -rf %{buildroot}
 
+%post server
+/sbin/chkconfig --add beakerd
+
+%post lab-controller
+/sbin/chkconfig --add beaker-proxy
+/sbin/chkconfig --add beaker-watchdog
+
+%postun server
+if [ "$1" -ge "1" ]; then
+        /sbin/service beakerd condrestart >/dev/null 2>&1 || :
+fi
+
+%postun lab-controller
+if [ "$1" -ge "1" ]; then
+        /sbin/service beaker-proxy condrestart >/dev/null 2>&1 || :
+        /sbin/service beaker-watchdog condrestart >/dev/null 2>&1 || :
+fi
+
+%preun server
+if [ "$1" -eq "0" ]; then
+        /sbin/service beakerd stop >/dev/null 2>&1 || :
+        /sbin/chkconfig --del beakerd || :
+fi
+
+%preun lab-controller
+if [ "$1" -eq "0" ]; then
+        /sbin/service beaker-proxy stop >/dev/null 2>&1 || :
+        /sbin/service beaker-watchdog stop >/dev/null 2>&1 || :
+        /sbin/chkconfig --del beaker-proxy || :
+        /sbin/chkconfig --del beaker-watchdog || :
+fi
+
 %files server
 %defattr(-,root,root,-)
 %doc Server/README COPYING
@@ -103,10 +138,14 @@ ln -s Fedora.ks $RPM_BUILD_ROOT/var/lib/cobbler/kickstarts/Fedoradevelopment.ks
 %{python_sitelib}/%{name}.server-%{version}-py%{pyver}.egg-info/
 %{_bindir}/start-%{name}
 %{_bindir}/%{name}-init
+%{_sysconfdir}/init.d/%{name}d
+%attr(0755,root,root)%{_bindir}/%{name}d
 %config(noreplace) %{_sysconfdir}/httpd/conf.d/%{name}-server.conf
 %attr(-,apache,root) %{_datadir}/%{name}
 %attr(-,apache,root) %config(noreplace) %{_sysconfdir}/%{name}/server.cfg
 %attr(-,apache,root) %dir %{_localstatedir}/log/%{name}
+%attr(-,apache,root) %dir %{_localstatedir}/www/%{name}/logs
+%attr(-,apache,root) %dir %{_localstatedir}/www/%{name}/rpms
 
 %files client
 %defattr(-,root,root,-)
@@ -118,6 +157,12 @@ ln -s Fedora.ks $RPM_BUILD_ROOT/var/lib/cobbler/kickstarts/Fedoradevelopment.ks
 
 %files lab-controller
 %defattr(-,root,root,-)
+%config(noreplace) %{_sysconfdir}/beaker/proxy.conf
+%{python_sitelib}/%{name}/labcontroller/
+%{python_sitelib}/%{name}.labcontroller-%{version}-*
+%{python_sitelib}/%{name}.labcontroller-%{version}-py%{pyver}.egg-info/
+%{_bindir}/%{name}-proxy
+%{_bindir}/%{name}-watchdog
 %doc LabController/README
 %config(noreplace) %{_sysconfdir}/httpd/conf.d/%{name}-lab-controller.conf
 %{_sysconfdir}/cron.daily/expire_distros
@@ -125,6 +170,9 @@ ln -s Fedora.ks $RPM_BUILD_ROOT/var/lib/cobbler/kickstarts/Fedoradevelopment.ks
 /var/lib/cobbler/snippets/*
 /var/lib/cobbler/kickstarts/*
 /var/www/beaker/rhts-checkin
+%attr(-,apache,root) %dir %{_localstatedir}/log/%{name}
+%{_sysconfdir}/init.d/%{name}-proxy
+%{_sysconfdir}/init.d/%{name}-watchdog
 
 %files lib
 /usr/lib/beakerlib/*
@@ -133,6 +181,8 @@ ln -s Fedora.ks $RPM_BUILD_ROOT/var/lib/cobbler/kickstarts/Fedoradevelopment.ks
 /usr/share/man/man1/beakerlib*
 
 %changelog
+* Thu Dec 17 2009 Bill Peck <bpeck@redhat.com> - 0.4.69-0
+- small fix for release action, default to power off.
 * Fri Dec 11 2009 Bill Peck <bpeck@redhat.com> - 0.4.68-0
 - osversion now knows what arches are expected for that update.
   This allows us to only tag distros as STABLE if all arches are imported and tagged as INSTALLS

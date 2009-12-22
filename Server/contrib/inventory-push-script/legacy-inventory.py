@@ -122,15 +122,9 @@ def main():
 
     lab_server = None
     server = None
-    user = None
-    password = None
     hostname = None
     debug = 0
 
-    if ('PASSWORD' in os.environ.keys()):
-        password = os.environ['PASSWORD']
-    if ('USER' in os.environ.keys()):
-        user = os.environ['USER']
     if ('LAB_SERVER' in os.environ.keys()):
         server = os.environ['LAB_SERVER']
     if ('HOSTNAME' in os.environ.keys()):
@@ -138,7 +132,7 @@ def main():
 
     args = sys.argv[1:]
     try:
-        opts, args = getopt.getopt(args, 'dh:S:u:p:', ['server=','user=','password='])
+        opts, args = getopt.getopt(args, 'dh:S:', ['server='])
     except:
         usage()
     for opt, val in opts:
@@ -148,10 +142,6 @@ def main():
             hostname = val
         if opt in ('-S', '--server'):
             server = val
-        if opt in ('-u', '--user'):
-            user = val
-        if opt in ('-p', '--password'):
-            password = val
 
     if not hostname:
         print "You must sepcify a hostname with the -h switch"
@@ -161,15 +151,7 @@ def main():
         print "You must sepcify a lab_server with the -S switch"
         sys.exit(1)
 
-    if not user:
-        print "You must sepcify a user with the -u switch"
-        sys.exit(1)
-
-    if not password:
-        print "You must sepcify a password with the -p switch"
-        sys.exit(1)
-
-    lab_server = "https://%s:%s@%s/RPC2" % (user,password,server)
+    lab_server = "%s/RPC2" % (server)
     inventory = read_inventory()
     if debug:
         print inventory

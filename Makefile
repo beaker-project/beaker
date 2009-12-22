@@ -19,12 +19,27 @@ install:
 	for i in $(SUBDIRS); do $(MAKE) -C $$i install; done
 
 clean:
+	-rm -rf rpm-build
 	for i in $(SUBDIRS); do $(MAKE) -C $$i clean; done
 
-srpm: $(PKGNAME)-$(PKGVERSION).tar.bz2
-	rpmbuild $(RPMBUILDOPTS) -ts $<
+srpm: clean $(PKGNAME)-$(PKGVERSION).tar.bz2
+	mkdir -p rpm-build
+	rpmbuild --define "_topdir %(pwd)/rpm-build" \
+	--define "_builddir %{_topdir}" \
+	--define "_rpmdir %{_topdir}" \
+	--define "_srcrpmdir %{_topdir}" \
+	--define "_specdir %{_topdir}" \
+	--define "_sourcedir  %{_topdir}" \
+	$(RPMBUILDOPTS) -ts $(PKGNAME)-$(PKGVERSION).tar.bz2
 
-rpm: $(PKGNAME)-$(PKGVERSION).tar.bz2
-	rpmbuild $(RPMBUILDOPTS) -tb $<
+rpm: clean $(PKGNAME)-$(PKGVERSION).tar.bz2
+	mkdir -p rpm-build
+	rpmbuild --define "_topdir %(pwd)/rpm-build" \
+	--define "_builddir %{_topdir}" \
+	--define "_rpmdir %{_topdir}" \
+	--define "_srcrpmdir %{_topdir}" \
+	--define "_specdir %{_topdir}" \
+	--define "_sourcedir  %{_topdir}" \
+	$(RPMBUILDOPTS) -tb $(PKGNAME)-$(PKGVERSION).tar.bz2
 
 rpms: rpm

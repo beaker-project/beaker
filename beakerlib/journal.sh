@@ -254,8 +254,8 @@ Example:
 
  :: [   PASS   ] :: Checking for the presence of file rpm
  :: [   LOG    ] :: file RPM version: 4.17-15
- :: [   PASS   ] :: Running \'XmlFile=`mktemp`\' and expecting 0
- :: [   PASS   ] :: Running \'XmlFileUtf16=`mktemp`\' and expecting 0
+ :: [   PASS   ] :: Running \'XmlFile=\`mktemp\`\' and expecting 0
+ :: [   PASS   ] :: Running \'XmlFileUtf16=\`mktemp\`\' and expecting 0
  :: [   PASS   ] :: Creating xml file
  :: [   PASS   ] :: Converting to UTF-16 encoding
  :: [   LOG    ] :: ASSERTIONS: 5 PASS, 0 FAIL

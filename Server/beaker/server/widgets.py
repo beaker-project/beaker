@@ -9,7 +9,7 @@ from turbogears.widgets import (Form, TextField, SubmitButton, TextArea,
                                 HiddenField, RemoteForm, CheckBoxList, JSLink,
                                 Widget, TableForm, FormField, CompoundFormField,
                                 static, PaginateDataGrid, RepeatingFormField,
-                                CompoundWidget, AjaxGrid, Tabber, 
+                                CompoundWidget, AjaxGrid, Tabber, CSSLink,
                                 RadioButtonList,
                                 RepeatingFieldSet, SelectionField)
 import logging
@@ -37,6 +37,16 @@ class LocalJSLink(JSLink):
     def update_params(self, d):
         super(JSLink, self).update_params(d)
         d["link"] = url(self.name)
+
+
+class LocalCSSLink(CSSLink):
+    """
+    Link to local CSS files
+    """
+    def update_params(self, d):
+        super(CSSLink, self).update_params(d)
+        d["link"] = url(self.name)
+
 
 class PowerTypeForm(CompoundFormField):
     """Dynmaically modifies power arguments based on Power Type Selection"""
@@ -386,6 +396,7 @@ class PowerForm(Form):
         self.release_action_id = RadioButtonList(name='release_action_id',
                                              label=_(u'Release Action'),
                                            options=model.ReleaseAction.get_all,
+                                            default=1,
                                              validator=validators.NotEmpty())
         self.reprovision_distro_id = SingleSelectField(name='reprovision_distro_id',
                                                 label=_(u'Reprovision Distro'),
@@ -784,3 +795,15 @@ class SystemForm(Form):
  	    d["display_field_for"] = lambda f: self.display_field_for(f,
                                                           d["value_for"](f),
                                                                   **attrs)
+
+class RecipeTasksWidget(Widget):
+    template = "beaker.server.templates.recipe_tasks_widget"
+    params = ['recipe_tasks']
+
+class RecipeWidget(CompoundWidget):
+    javascript = []
+    css = []
+    template = "beaker.server.templates.recipe_widget"
+    params = ['recipe']
+    member_widgets = ['recipe_tasks_widget']
+    recipe_tasks_widget = RecipeTasksWidget()
