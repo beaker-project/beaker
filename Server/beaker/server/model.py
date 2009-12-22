@@ -1459,12 +1459,12 @@ class ReleaseAction(SystemObject):
     def PowerOff(self, system):
         """ Turn off system
         """
-        system.remote.power(action='Off')
+        system.remote.power(action='off')
 
     def LeaveOn(self, system):
         """ Leave system running
         """
-        system.remote.power(action='On')
+        system.remote.power(action='on')
 
     def ReProvision(self, system):
         """ re-provision the system 
@@ -1850,30 +1850,6 @@ class Distro(object):
         if queries:
             systems = systems.filter(and_(*queries))
         return systems
-
-    def tasks(self):
-        """
-        List of tasks that support this distro
-        """
-        return Task.query().filter(
-                not_(or_(Task.id.in_(select([task_table.c.id]).
-                 where(task_table.c.id==task_exclude_table.c.task_id).
-                 where(task_exclude_table.c.arch_id==arch_table.c.id).
-                 where(arch_table.c.id==self.arch_id)
-                                      ),
-                         Task.id.in_(select([task_table.c.id]).
-                 where(task_table.c.id==task_exclude_table.c.task_id).
-                 where(task_exclude_table.c.osmajor_id==osmajor_table.c.id).
-                 where(osmajor_table.c.id==self.osversion.osmajor.id)
-                                      ),
-                         Task.id.in_(select([task_table.c.id]).
-                 where(task_table.c.id==task_exclude_table.c.task_id).
-                 where(task_exclude_table.c.osversion_id==osversion_table.c.id).
-                 where(osversion_table.c.id==self.osversion.id)
-                                      ),
-                        )
-                    )
-        )
 
     def systems(self, user=None):
         """
