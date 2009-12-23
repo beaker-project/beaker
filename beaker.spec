@@ -1,10 +1,9 @@
 %{!?python_sitelib: %define python_sitelib %(%{__python} -c "from distutils.sysconfig import get_python_lib; print get_python_lib()")}
 %{!?pyver: %define pyver %(%{__python} -c "import sys ; print sys.version[:3]")}
-%{!?timestamp: %define timestamp %(%{__python} -c 'from time import strftime; print strftime("%Y%m%d%H%M")')}
 
 Name:           beaker
 Version:        0.4.70
-Release:        %{timestamp}%{?dist}
+Release:        %{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
