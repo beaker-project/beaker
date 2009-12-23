@@ -15,4 +15,4 @@ install: $(_SETUP_PY)
 	python $(SETUP_PY) install -O1 --skip-build \
             --install-data=/usr/share --root $(DESTDIR)
 
-clean:	py-clean
+clean:

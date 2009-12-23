@@ -103,12 +103,14 @@ class LabControllers(RPCRoot):
         valid_variants = ['AS','ES','WS','Desktop']
         valid_methods  = ['http','ftp','nfs']
         release = re.compile(r'family=([^\s]+)')
+        arches_search = re.compile(r'arches=([^\s]+)')
         for lc_distro in lc_distros:
             name = lc_distro['name'].split('_')[0]
             meta = string.join(lc_distro['name'].split('_')[1:],'_').split('-')
             variant = None
             method = None
             virt = False
+            arches = []
             
             for curr_variant in valid_variants:
                 if curr_variant in meta:
@@ -126,6 +128,14 @@ class LabControllers(RPCRoot):
                     lc_os_version = release.search(lc_distro['comment']).group(1)
                 else:
                     continue
+
+                if arches_search.search(lc_distro['comment']):
+                    arch_names = arches_search.search(lc_distro['comment']).group(1).split(',')
+                    for arch_name in arch_names:
+                        try:
+                           arches.append(Arch.by_name(arch_name))
+                        except InvalidRequestError:
+                           pass
 
                 try:
                     distro = Distro.by_install_name(lc_distro['name'])
@@ -153,7 +163,7 @@ class LabControllers(RPCRoot):
                     try:
                         osversion = OSVersion.by_name(osmajor,lc_osminor)
                     except: #FIXME
-                        osversion = OSVersion(osmajor,lc_osminor)
+                        osversion = OSVersion(osmajor,lc_osminor,arches)
                         session.save(osversion)
                         session.flush([osversion])
                     distro.osversion = osversion
@@ -211,17 +221,10 @@ class LabControllers(RPCRoot):
         if kw.get('id'):
             labcontroller = LabController.by_id(kw['id'])
             now = time.time()
-            # Cobbler old uri is _rw
-            try:
-                url = "http://%s/cobbler_api_rw" % labcontroller.fqdn
-                remote = xmlrpclib.ServerProxy(url)
-                token = remote.login(labcontroller.username,
-                                     labcontroller.password)
-            except ProtocolError:
-                url = "http://%s/cobbler_api" % labcontroller.fqdn
-                remote = xmlrpclib.ServerProxy(url)
-                token = remote.login(labcontroller.username,
-                                     labcontroller.password)
+            url = "http://%s/cobbler_api" % labcontroller.fqdn
+            remote = xmlrpclib.ServerProxy(url)
+            token = remote.login(labcontroller.username,
+                                 labcontroller.password)
             lc_distros = remote.get_distros()
 
             distros = self._addDistros(labcontroller.fqdn, lc_distros)

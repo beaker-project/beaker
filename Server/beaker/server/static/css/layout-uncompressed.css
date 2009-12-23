@@ -425,6 +425,79 @@ div.list {
 }
 
 /*
+ * CSS for displaying a recipeset
+ */
+
+div.recipeset {
+    /*border-style: outset;*/
+    margin: 2px;
+}
+
+/*
+ * CSS for displaying a recipe
+ */
+
+div.recipe {
+    border-style: outset;
+    margin: 5px;
+}
+
+/*
+ * CSS for displaying a progress bar
+ */
+
+div.dd { 
+   /*position: relative; /* IE is dumb */
+    display: block;                 
+    float: left;     
+    width: 100px; 
+    height: 16px; 
+    margin: 0 0 2px; 
+    background: #fff; 
+    border: 1px solid #333;
+}
+
+div.dd div.green { 
+    /*position: relative; */
+    background: #0f0; 
+    height: 16px; 
+    width: 75%; 
+    text-align:right; 
+    display:block;
+    float: left;
+}
+
+div.dd div.orange { 
+    /*position: relative; */
+    background: #F88017; 
+    height: 16px; 
+    width: 75%; 
+    text-align:right; 
+    display:block;
+    float: left;
+}
+
+div.dd div.red { 
+    /*position: relative; */
+    background: #f00; 
+    height: 16px; 
+    width: 75%; 
+    text-align:right; 
+    display:block;
+    float: left;
+}
+
+div.dd div.blue { 
+    /*position: relative; */
+    background: #00f; 
+    height: 16px; 
+    width: 75%; 
+    text-align:right; 
+    display:block;
+    float: left;
+}
+
+/*
 ** CSS for displaying package updates (show.kid)
 */
 
@@ -451,6 +524,7 @@ td.value {
     text-align: left;
     padding-top: 5px;
     padding-left: 5px;
+    white-space: nowrap;
 }
 
 div.show {
@@ -492,6 +566,7 @@ td.title {
     padding-right: 5px;
     font-weight: bold;
     padding: 5px;
+    white-space: nowrap;
 }
 
 td.value {
@@ -499,6 +574,7 @@ td.value {
     padding-top: 5px;
     padding-left: 5px;
     padding: 5px;
+    white-space: nowrap;
 }
 
 h1.padded {

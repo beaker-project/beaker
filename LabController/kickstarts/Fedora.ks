@@ -1,10 +1,10 @@
 url --url=$tree
-#if $getVar('system_name', '') != ''
+#if $getVar('system_name', '') != '' and $getVar('manual', 'False') == 'False'
 auth  --useshadow  --enablemd5
 # System bootloader configuration
 bootloader --location=mbr
 # Use text mode install
-text
+$getVar('mode', 'text')
 $SNIPPET("network")
 # Firewall configuration
 firewall --enabled

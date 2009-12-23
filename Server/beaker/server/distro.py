@@ -8,7 +8,6 @@ from kid import Element
 from beaker.server.xmlrpccontroller import RPCRoot
 from beaker.server.widgets import DistroTags
 from beaker.server.helpers import *
-from beaker.server.needpropertyxml import *
 
 import cherrypy
 
@@ -78,9 +77,9 @@ class Distros(RPCRoot):
     def index(self, *args, **kw):
         distros = session.query(Distro).join('breed').join('arch').join(['osversion','osmajor'])
         if 'tag' in kw:
-            distros = distros.join('_tags').filter(DistroTag.c.tag==kw['tag'])
+            distros = distros.join('_tags').filter(distro_tag_table.c.tag==kw['tag'])
         if 'name' in kw:
-            distros = distros.filter(Distro.c.install_name.like('%s' % kw['name']))
+            distros = distros.filter(distro_table.c.install_name.like('%s' % kw['name']))
         distros_grid = widgets.PaginateDataGrid(fields=[
                                   widgets.PaginateDataGrid.Column(name='install_name', getter=lambda x: make_link(url  = 'view?id=%s' % x.id,
                                   text = x.install_name), title='Install Name', options=dict(sortable=True)),
@@ -106,10 +105,10 @@ class Distros(RPCRoot):
             sqltags = []
             distros = distros.join('_tags')
             for tag in tags:
-                sqltags.append(DistroTag.c.tag==tag)
+                sqltags.append(distro_tag_table.c.tag==tag)
             distros = distros.filter(and_(*sqltags))
         if name:
-            distros = distros.filter(Distro.c.name.like('%s' % name))
+            distros = distros.filter(distro_table.c.name.like('%s' % name))
         if family:
             distros = distros.join(['osversion','osmajor'])
             distros = distros.filter(osmajor_table.c.osmajor=='%s' % family)
@@ -128,7 +127,7 @@ class Distros(RPCRoot):
         """ quick and dirty to allow editing the Version.
             This is the one thing that needs editing at times
         """
-        distros = session.query(Distro).filter(Distro.c.name.like('%s' % name))
+        distros = session.query(Distro).filter(distro_table.c.name.like('%s' % name))
         edited = []
 
         os_major = version.split('.')[0]
@@ -170,7 +169,7 @@ class Distros(RPCRoot):
         added = []
         distros = session.query(Distro)
         if name:
-            distros = distros.filter(Distro.c.name.like('%s' % name))
+            distros = distros.filter(distro_table.c.name.like('%s' % name))
         if arch:
             distros = distros.join('arch')
             distros = distros.filter(arch_table.c.arch=='%s' % arch)
@@ -189,7 +188,7 @@ class Distros(RPCRoot):
         removed = []
         distros = session.query(Distro)
         if name:
-            distros = distros.filter(Distro.c.name.like('%s' % name))
+            distros = distros.filter(distro_table.c.name.like('%s' % name))
         if arch:
             distros = distros.join('arch')
             distros = distros.filter(arch_table.c.arch=='%s' % arch)
@@ -205,23 +204,11 @@ class Distros(RPCRoot):
         """
         Based on XML passed in filter distro selection
         """
-        #FIXME Should validate XML before proceeding.
-        queries = []
-        joins = []
-        for child in ElementWrapper(xmltramp.parse(xml)):
-            if callable(getattr(child, 'filter')):
-                (join, query) = child.filter()
-                queries.append(query)
-                joins.extend(join)
-        distros = Distro.query()
-        if joins:
-            distros = distros.filter(and_(*joins))
-        if queries:
-            distros = distros.filter(and_(*queries))
+        distros = Distro.by_filter(xml)
         distros = distros.add_column('tree_path').join('lab_controller_assocs')
         distros = distros.add_column('fqdn').join(['lab_controller_assocs','lab_controller'])
         try:
-            distro, tree_path, fqdn = distros.order_by('-date_created').first()
+            distro, tree_path, fqdn = distros.first()
         except TypeError:
             return None
         if distro:

@@ -2,8 +2,8 @@
 %{!?pyver: %define pyver %(%{__python} -c "import sys ; print sys.version[:3]")}
 
 Name:           beaker
-Version:        0.4.59
-Release:        0%{?dist}
+Version:        0.4.70
+Release:        1%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -50,6 +50,9 @@ Requires:       yum-utils
 Requires:       /sbin/fenced
 Requires:       telnet
 Requires:       python-cpio
+Requires:       kobo-client
+Requires:	python-setuptools
+Requires:       python-xmltramp
 
 %package lib
 Summary:        Test Library
@@ -133,6 +136,33 @@ ln -s Fedora.ks $RPM_BUILD_ROOT/var/lib/cobbler/kickstarts/Fedoradevelopment.ks
 /usr/share/man/man1/beakerlib*
 
 %changelog
+* Tue Dec 22 2009 Bill Peck <bpeck@redhat.com> - 0.4.70-0
+- another fix to the release_action code. send proper action methods
+  to cobbler, Off->off On->on.
+* Thu Dec 17 2009 Bill Peck <bpeck@redhat.com> - 0.4.69-0
+- small fix for release action, default to power off.
+* Fri Dec 11 2009 Bill Peck <bpeck@redhat.com> - 0.4.68-0
+- osversion now knows what arches are expected for that update.
+  This allows us to only tag distros as STABLE if all arches are imported and tagged as INSTALLS
+- update distro-list command to show the distro name, suitable for feeding into workflows.
+* Wed Dec 09 2009 Bill Peck <bpeck@redhat.com> - 0.4.67-0
+- Raymonds fix for is_not in arch search
+- additional fixes from Raymond
+- fix for beaker-init to create ReleaseAction Table
+* Sun Dec 06 2009 Bill Peck <bpeck@redhat.com> - 0.4.65-0
+- New ReleaseAction code, allows systems to stay on or
+  reprovision at time of return.
+* Tue Dec 01 2009 Bill Peck <bpeck@redhat.com> - 0.4.64-0
+- Fix ISE in simplesearch
+- added PATH=/usr/bin:$PATH to rhel3 kickstart
+* Fri Nov 20 2009 Bill Peck <bpeck@redhat.com> - 0.4.63-0
+- merged Raymond's Key/Value search ability
+* Fri Nov 20 2009 Bill Peck <bpeck@redhat.com> - 0.4.62-1
+- Fixes for searching drivers
+- Random selection when more than one host available.
+* Tue Nov 17 2009 Bill Peck <bpeck@redhat.com> - 0.4.61-0
+- Fixes for searching on cpuflags
+- new manual kickstart keyword allows interactive installs
 * Wed Oct 28 2009 Bill Peck <bpeck@redhat.com> - 0.4.57-0
 - New search implemented by Raymond Mancy
 - don't try and power off machines that were temporarily reserved by legacy rhts

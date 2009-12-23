@@ -24,11 +24,12 @@ import sys
 import pkg_resources
 pkg_resources.require("SQLAlchemy>=0.3.10")
 from beaker.server.model import *
-from beaker.server.commands import ConfigurationError
+from commands import ConfigurationError
 from turbogears.database import session
 from os.path import dirname, exists, join
 from os import getcwd
 import turbogears
+from sqlalchemy import or_, and_
 
 class ElementWrapper(object):
     # Operator translation table

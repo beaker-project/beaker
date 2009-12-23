@@ -1,10 +1,10 @@
 url --url=$tree
-#if $getVar('system_name', '') != ''
+#if $getVar('system_name', '') != '' and $getVar('manual', 'False') == 'False'
 authconfig  --enableshadow  --enablemd5
 # System bootloader configuration
 bootloader --location=mbr
 # Use text mode install
-text
+$getVar('mode','text')
 $SNIPPET("network")
 # Firewall configuration
 firewall --disabled
@@ -38,9 +38,11 @@ $SNIPPET("rhts_packages")
 
 #end if
 %pre
+PATH=/usr/bin:$PATH
 $SNIPPET("RedHatEnterpriseLinux3_pre")
 $SNIPPET("rhts_pre")
 
 %post
+PATH=/usr/bin:$PATH
 $SNIPPET("RedHatEnterpriseLinux3_post")
 $SNIPPET("rhts_post")

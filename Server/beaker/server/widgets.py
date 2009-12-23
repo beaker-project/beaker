@@ -10,13 +10,29 @@ from turbogears.widgets import (Form, TextField, SubmitButton, TextArea,
                                 HiddenField, RemoteForm, CheckBoxList, JSLink,
                                 Widget, TableForm, FormField, CompoundFormField,
                                 static, PaginateDataGrid, RepeatingFormField,
-                                CompoundWidget, AjaxGrid, Tabber, 
+                                CompoundWidget, AjaxGrid, Tabber, CSSLink,
+                                RadioButtonList,
                                 RepeatingFieldSet, SelectionField)
 
 import logging
 log = logging.getLogger("beaker.server.widgets")
 
 
+
+import logging
+log = logging.getLogger('beaker.server')
+
+class UtilJSON:
+     @classmethod
+     def dynamic_json(cls):
+         return lambda param: cls.__return_array_of_json(param)
+
+     @classmethod
+     def __return_array_of_json(cls,x):
+         if x:
+             jsonified_fields = [jsonify.encode(elem) for elem in x]
+             return ','.join(jsonified_fields) 
+                   
 
 class LocalJSLink(JSLink):
     """
@@ -25,6 +41,16 @@ class LocalJSLink(JSLink):
     def update_params(self, d):
         super(JSLink, self).update_params(d)
         d["link"] = url(self.name)
+
+
+class LocalCSSLink(CSSLink):
+    """
+    Link to local CSS files
+    """
+    def update_params(self, d):
+        super(CSSLink, self).update_params(d)
+        d["link"] = url(self.name)
+
 
 class PowerTypeForm(CompoundFormField):
     """Dynmaically modifies power arguments based on Power Type Selection"""
@@ -81,10 +107,36 @@ class PowerTypeForm(CompoundFormField):
 class myPaginateDataGrid(PaginateDataGrid):
     template = "beaker.server.templates.my_paginate_datagrid"
 
+class SingleSelectFieldJSON(SingleSelectField):
+    def __init__(self,*args,**kw):  
+        super(SingleSelectField,self).__init__(*args,**kw)
+
+        if kw.has_key('for_column'):
+            self.for_column = kw['for_column']
+       
+    def __json__(self):
+        return_dict = {}
+        return_dict['field_id'] = self.field_id
+        return_dict['name'] = self.name
+        if hasattr(self,'for_column'):
+            return_dict['column'] = self.for_column
+      
+        return return_dict   
+    
+   
+class TextFieldJSON(TextField):
+    def __init__(self,*args,**kw):
+        super(TextField,self).__init__(*args,**kw)
+    def __json__(self):
+        return {
+                'field_id' : self.field_id,
+             
+               } 
+
 class SearchBar(RepeatingFormField):
     """Search Bar"""
 
-    javascript = [LocalJSLink('beaker', '/static/javascript/searchbar_v2.js')]
+    javascript = [LocalJSLink('beaker', '/static/javascript/searchbar_v4.js')]
     template = """
     <div xmlns:py="http://purl.org/kid/ns#">
     <a id="advancedsearch" href="#">Toggle Search</a>
@@ -122,8 +174,8 @@ class SearchBar(RepeatingFormField):
      <td>
      <table id="${field_id}">
       <thead>
-       <tr>
-        <th py:for="field in fields">
+       <tr> 
+        <th  py:for="field in fields"> 
          <span class="fieldlabel" py:content="field.label" />
         </th>
        </tr>
@@ -133,9 +185,8 @@ class SearchBar(RepeatingFormField):
            class="${field_class}"
            id="${field_id}_${repetition}">
         <script language="JavaScript" type="text/JavaScript">
-            ${field_id}_${repetition} = new SearchBar(
-            '${fields[0].field_id}', '${fields[1].field_id}','${fields[2].field_id}',
-            '${search_controller}', '${value_for(fields[1])}','${value_for(fields[2])}');
+            
+            ${field_id}_${repetition} = new SearchBar([${to_json(fields)}],'${search_controller}','${value_for(this_operations_field)}',${extra_callbacks_stringified},${table_search_controllers_stringified},'${value_for(this_searchvalue_field)}','${value_for(keyvaluevalue)}');
             addLoadEvent(${field_id}_${repetition}.initialize);
         </script>
         <td py:for="field in fields">
@@ -175,24 +226,69 @@ class SearchBar(RepeatingFormField):
     """
 
     params = ['repetitions', 'form_attrs', 'search_controller', 'simplesearch',
-              'advanced', 'simple']
+              'advanced', 'simple','to_json','this_operations_field','this_searchvalue_field','extra_callbacks_stringified','table_search_controllers_stringified','keyvaluevalue']
     form_attrs = {}
     simplesearch = None
 
-    def __init__(self, table_callback, search_controller, *args, **kw):
+    def __init__(self, table,search_controller,extra_selects = None,extra_inputs = None, *args, **kw):
         super(SearchBar,self).__init__(*args, **kw)
         self.search_controller=search_controller
-        self.repetitions = 1
-        table_field = SingleSelectField(name="table", options=table_callback, validator=validators.NotEmpty())
-      
-        operation_field = SingleSelectField(name="operation", options=[None], validator=validators.NotEmpty())
-        value_field = TextField(name="value")
-        self.fields = [ table_field, operation_field, value_field]
+        self.repetitions = 1 
+       
+        table_field = SingleSelectFieldJSON(name="table", options=table, validator=validators.NotEmpty()) 
+        operation_field = SingleSelectFieldJSON(name="operation", options=[None], validator=validators.NotEmpty())
+        value_field = TextFieldJSON(name="value") 
+        # We don't know where in the fields array the operation array will be, so we will put it here
+        # to access in the template
+        self.this_operations_field = operation_field
+        self.this_searchvalue_field = value_field
+        self.fields = [table_field,operation_field,value_field] 
+         
+        new_selects = []
+        self.extra_callbacks = {}
+        if extra_selects is not None: 
+            new_class = [] 
+            for elem in extra_selects:
+                if elem.has_key('display'):
+                    if elem['display'] == 'none':
+                        new_class.append('hide_parent') 
+                callback = elem.get('callback',None)
+                if callback:
+                    self.extra_callbacks[elem['name']] = callback    
+                new_select = SingleSelectFieldJSON(name=elem['name'],options=[None], css_classes = new_class, validator=validators.NotEmpty(),for_column=elem['column'] )
+                if elem['name'] == 'keyvalue':
+                    self.keyvaluevalue = new_select
+ 
+                if elem.has_key('pos'):
+                    self.fields.insert(elem['pos'] - 1,new_select)
+                else:
+                    self.fields.append(new_select) 
 
-    def display(self, value=None, **params):
+        new_inputs = []
+        if extra_inputs is not None:
+            for the_name in extra_inputs:
+                new_input = TextField(name=the_name,display='none')
+                new_inputs.append(new_input)   
+
+        controllers = kw.get('table_search_controllers','') 
+        
+        self.table_search_controllers_stringified = str(controllers)
+        self.to_json = UtilJSON.dynamic_json() 
+        
+        self.extra_callbacks_stringified = str(self.extra_callbacks)
+        self.fields.extend(new_inputs)
+        self.fields.extend(new_selects)
+ 
+
+    def display(self, value=None, **params):   
         if 'options' in params and 'simplesearch' in params['options']:
             params['simplesearch'] = params['options']['simplesearch']
-        if value and not params['simplesearch']:
+
+             
+        if value and not 'simplesearch' in params:
+            params['advanced'] = 'True'
+            params['simple'] = 'none'
+        elif value and params['simplesearch'] is None:
             params['advanced'] = 'True'
             params['simple'] = 'none'
         else:
@@ -259,7 +355,8 @@ class LabInfoForm(Form):
 class PowerForm(Form):
     template = "beaker.server.templates.system_power"
     member_widgets = ["id", "power", "power_type_id", "power_address", 
-                      "power_user", "power_passwd", "power_id"]
+                      "power_user", "power_passwd", "power_id",
+                       "release_action_id", "reprovision_distro_id"]
     params = []
     params_doc = {}
 
@@ -274,9 +371,24 @@ class PowerForm(Form):
         self.power_user = TextField(name='power_user', label=_(u'Power Login'))
         self.power_passwd = TextField(name='power_passwd', label=_(u'Power Password'))
         self.power_id = TextField(name='power_id', label=_(u'Power Port/Plug/etc'))
+        self.release_action_id = RadioButtonList(name='release_action_id',
+                                             label=_(u'Release Action'),
+                                           options=model.ReleaseAction.get_all,
+                                            default=1,
+                                             validator=validators.NotEmpty())
+        self.reprovision_distro_id = SingleSelectField(name='reprovision_distro_id',
+                                                label=_(u'Reprovision Distro'),
+                                                options=[],
+                                             validator=validators.NotEmpty())
 
     def update_params(self, d):
         super(PowerForm, self).update_params(d)
+        if 'release_action' in d['value']:
+            release_action = d['value']['release_action']
+            d['value']['release_action_id'] = release_action.id
+        if 'reprovision_distro' in d['value']:
+            reprovision_distro = d['value']['reprovision_distro']
+            d['value']['reprovision_distro_id'] = reprovision_distro.id
         if 'power' in d['value']:
             if d['value']['power']:
                 power = d['value']['power']
@@ -685,3 +797,15 @@ class SystemForm(Form):
  	    d["display_field_for"] = lambda f: self.display_field_for(f,
                                                           d["value_for"](f),
                                                                   **attrs)
+
+class RecipeTasksWidget(Widget):
+    template = "beaker.server.templates.recipe_tasks_widget"
+    params = ['recipe_tasks']
+
+class RecipeWidget(CompoundWidget):
+    javascript = []
+    css = []
+    template = "beaker.server.templates.recipe_widget"
+    params = ['recipe']
+    member_widgets = ['recipe_tasks_widget']
+    recipe_tasks_widget = RecipeTasksWidget()
