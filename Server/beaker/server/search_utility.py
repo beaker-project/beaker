@@ -298,8 +298,11 @@ class SystemSearch(Search):
     class_external_mapping = {}
     search_table = []
     
-    def __init__(self):
-        self.queri = session.query(model.System)
+    def __init__(self, systems=None):
+        if systems:
+            self.queri = systems
+        else:
+            self.queri = session.query(model.System)
   
     def __getitem__(self,key):
         pass
