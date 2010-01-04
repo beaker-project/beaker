@@ -81,7 +81,7 @@ test_rlAssertNotRpm() {
 
   assertTrue "rlAssertNotRpm increases SCORE when package is found" \
   "rlPhaseStart FAIL rpm-not-asserts; rlAssertNotRpm $first_n ; rlPhaseEnd ;rlCreateLogFromJournal |
-	 tail -3| head -1 | grep -q '1 bad' "
+	 tail -2| head -1 | grep -q '1 bad' "
 }
 
 test_rlCheckRpm() {

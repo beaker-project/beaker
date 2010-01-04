@@ -68,6 +68,8 @@ rlJournalStart(){
         export BEAKERLIB_DIR=`mktemp -d /tmp/beakerlib-XXXXXXX`
         export BEAKERLIB_RUN=`echo $BEAKERLIB_DIR | sed 's|.*-||'`
     fi
+    # set global BeakerLib journal variable for future use
+    export BEAKERLIB_JOURNAL="$BEAKERLIB_DIR/journal.xml"
 
     # make sure the directory is ready, otherwise we cannot continue
     if [ ! -d $BEAKERLIB_DIR ] ; then
@@ -118,7 +120,7 @@ generate OUTPUTFILE and include journal in Beaker logs.
 =cut
 
 rlJournalEnd(){
-    local journal="$BEAKERLIB_DIR/journal.xml"
+    local journal="$BEAKERLIB_JOURNAL"
     local journaltext="$BEAKERLIB_DIR/journal.txt"
     rlJournalPrintText > $journaltext
 
