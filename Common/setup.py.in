@@ -5,6 +5,4 @@ setup(
 
     packages=find_packages('.'),
     package_dir = {'':'.'},
-
-    namespace_packages = ['beaker'],
 )
