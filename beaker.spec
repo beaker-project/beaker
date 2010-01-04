@@ -100,7 +100,9 @@ ln -s Fedora.ks $RPM_BUILD_ROOT/var/lib/cobbler/kickstarts/Fedoradevelopment.ks
 
 %files
 %defattr(-,root,root,-)
-%{python_sitelib}/%{name}/__init__.py
+%{python_sitelib}/%{name}/__init__.py*
+%{python_sitelib}/%{name}-%{version}-*
+%{python_sitelib}/%{name}-%{version}-py%{pyver}.egg-info/
 
 %files server
 %defattr(-,root,root,-)
