@@ -1,10 +1,10 @@
 %{!?python_sitelib: %define python_sitelib %(%{__python} -c "from distutils.sysconfig import get_python_lib; print get_python_lib()")}
 %{!?pyver: %define pyver %(%{__python} -c "import sys ; print sys.version[:3]")}
-%{!?branch: %define branch %(echo "$Format:%d$."| sed -e 's/[()$]//g' | awk '{print $NF}' | grep -v master)}
+%{!?branch: %define branch %(echo "$Format: .%at.%d$"| sed -e 's/[()$]//g' | awk '{print $(NF-1) $NF}' | grep -v master)}
 
 Name:           beaker
-Version:        0.4.70
-Release:        %{?branch}0%{?dist}
+Version:        0.4.72
+Release:        0%{?branch}%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -65,7 +65,6 @@ Provides:       beakerlib
 
 %description
 Filesystem layout for beaker
-
 
 %description client
 This is the command line interface used to interact with the Beaker Server.
@@ -130,6 +129,12 @@ if [ "$1" -eq "0" ]; then
         /sbin/chkconfig --del beaker-proxy || :
         /sbin/chkconfig --del beaker-watchdog || :
 fi
+
+%files
+%defattr(-,root,root,-)
+%{python_sitelib}/%{name}/__init__.py*
+%{python_sitelib}/%{name}-%{version}-*
+%{python_sitelib}/%{name}-%{version}-py%{pyver}.egg-info/
 
 %files server
 %defattr(-,root,root,-)
