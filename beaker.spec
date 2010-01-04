@@ -3,7 +3,7 @@
 %{!?branch: %define branch %(echo "$Format: .%at.%d$"| sed -e 's/[()$]//g' | awk '{print $(NF-1) $NF}' | grep -v master)}
 
 Name:           beaker
-Version:        0.4.71
+Version:        0.4.72
 Release:        0%{?branch}%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
