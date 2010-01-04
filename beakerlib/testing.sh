@@ -816,7 +816,11 @@ rlReport(){
           ;;
         esac
     rlLogDebug "rlReport: result: $result, score: $score, log: $logfile"
-    rhts-report-result "$testname" "$result" "$logfile" "$score"
+    # report the result only if TESTID is set
+    if [ -n "$TESTID" ] ; then
+        rhts-report-result "$testname" "$result" "$logfile" "$score" \
+            || rlLogError "rlReport: Failed to report the result"
+    fi
 }
 
 
