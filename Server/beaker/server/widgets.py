@@ -4,6 +4,7 @@ from turbojson import jsonify
 from turbogears.widgets.rpc import RPC
 from sqlalchemy import distinct
 import model
+import search_utility
 from decimal import Decimal
 from turbogears.widgets import (Form, TextField, SubmitButton, TextArea,
                                 AutoCompleteField, SingleSelectField, CheckBox,
@@ -16,11 +17,6 @@ from turbogears.widgets import (Form, TextField, SubmitButton, TextArea,
 
 import logging
 log = logging.getLogger("beaker.server.widgets")
-
-
-
-import logging
-log = logging.getLogger('beaker.server')
 
 class UtilJSON:
      @classmethod
@@ -38,7 +34,7 @@ class LocalJSLink(JSLink):
     """
     Link to local Javascript files
     """
-    def update_params(self, d):
+    def update_params(self, d): 
         super(JSLink, self).update_params(d)
         d["link"] = url(self.name)
 
@@ -54,7 +50,6 @@ class LocalCSSLink(CSSLink):
 
 class PowerTypeForm(CompoundFormField):
     """Dynmaically modifies power arguments based on Power Type Selection"""
-
     javascript = [LocalJSLink('beaker', '/static/javascript/power.js')]
     template = """
     <div xmlns:py="http://purl.org/kid/ns#" id="${field_id}">
@@ -107,6 +102,7 @@ class PowerTypeForm(CompoundFormField):
 class myPaginateDataGrid(PaginateDataGrid):
     template = "beaker.server.templates.my_paginate_datagrid"
 
+
 class SingleSelectFieldJSON(SingleSelectField):
     def __init__(self,*args,**kw):  
         super(SingleSelectField,self).__init__(*args,**kw)
@@ -134,8 +130,7 @@ class TextFieldJSON(TextField):
                } 
 
 class SearchBar(RepeatingFormField):
-    """Search Bar"""
-
+    """Search Bar""" 
     javascript = [LocalJSLink('beaker', '/static/javascript/searchbar_v4.js')]
     template = """
     <div xmlns:py="http://purl.org/kid/ns#">
@@ -243,7 +238,7 @@ class SearchBar(RepeatingFormField):
         self.this_operations_field = operation_field
         self.this_searchvalue_field = value_field
         self.fields = [table_field,operation_field,value_field] 
-         
+                     
         new_selects = []
         self.extra_callbacks = {}
         if extra_selects is not None: 
@@ -270,32 +265,27 @@ class SearchBar(RepeatingFormField):
                 new_input = TextField(name=the_name,display='none')
                 new_inputs.append(new_input)   
 
-        controllers = kw.get('table_search_controllers','') 
-        
+        controllers = kw.get('table_search_controllers',dict()) 
+         
         self.table_search_controllers_stringified = str(controllers)
         self.to_json = UtilJSON.dynamic_json() 
         
         self.extra_callbacks_stringified = str(self.extra_callbacks)
-        self.fields.extend(new_inputs)
-        self.fields.extend(new_selects)
- 
-
-    def display(self, value=None, **params):   
+        
+    def display(self, value=None, **params): 
         if 'options' in params and 'simplesearch' in params['options']:
-            params['simplesearch'] = params['options']['simplesearch']
-
-             
-        if value and not 'simplesearch' in params:
+            params['simplesearch'] = params['options']['simplesearch'] 
+        if value and not 'simplesearch' in params: 
             params['advanced'] = 'True'
             params['simple'] = 'none'
-        elif value and params['simplesearch'] is None:
+        elif value and params['simplesearch'] is None: 
             params['advanced'] = 'True'
             params['simple'] = 'none'
-        else:
+        else:  
             params['advanced'] = 'none'
             params['simple'] = 'True'
         if value and isinstance(value, list) and len(value) > 1:
-            params['repetitions'] = len(value)
+            params['repetitions'] = len(value) 
         return super(SearchBar, self).display(value, **params)
 
 class ProvisionForm(RepeatingFormField):
@@ -693,13 +683,12 @@ class SystemDetails(Widget):
     template = "beaker.server.templates.system_details"
     params = ['system']
 
-class SystemHistory(Form):
+class SystemHistory(Widget): 
     template = "beaker.server.templates.system_activity"
-    params = ['list','grid','search_bar']
+    params = ['list','grid','search_bar','searchvalue','all_history'] 
     
     def __init__(self):
-        #filter_column_options = model.Activity.distinct_field_names()
-        
+        #filter_column_options = model.Activity.distinct_field_names() 
         self.grid  = myPaginateDataGrid(fields = [PaginateDataGrid.Column(name='user',title='PUser',getter=lambda x: x.user,options=dict(sortable=True)),
                                                   PaginateDataGrid.Column(name='service', title='Service', getter=lambda x: x.service, options=dict(sortable=True)),
                                                   PaginateDataGrid.Column(name='created', title='Created', getter=lambda x: x.created, options = dict(sortable=True)),
@@ -707,18 +696,25 @@ class SystemHistory(Form):
                                                   PaginateDataGrid.Column(name='action', title='Action', getter=lambda x: x.action, options=dict(sortable=True)),
                                                   PaginateDataGrid.Column(name='old_value',title='Old Value', getter=lambda x: x.old_value,options=dict(sortable=True)), 
                                                   PaginateDataGrid.Column(name='new_value',title='New Value',getter=lambda x: x.new_value, options=dict(sortable=True))])
-     
-    def display(self,**params):
+       
+        self.search_bar = SearchBar(name='historysearch',
+                           label=_(u'History Search'),    
+                           table = search_utility.HistorySearch.create_search_table(search_utility.History),
+                           search_controller=url("/get_search_options_history"), 
+                           )
+
+    def display(self,value=None,**params): 
         if 'options' in params:
-            if 'list' in params['options']:
-                params['list'] = params['options']['list'] 
-                    
-        return super(SystemHistory, self).display(**params)
+            if 'searchvalue' in params['options']:
+                params['searchvalue'] = params['options']['searchvalue'] 
+        if 'action' in params:
+            params['all_history'] = params['action']
+        return super(SystemHistory, self).display(value,**params)
                 
     
 
 class SystemForm(Form):
-    javascript = [LocalJSLink('beaker', '/static/javascript/provision.js')]
+    javascript = [LocalJSLink('beaker', '/static/javascript/provision.js'),LocalJSLink('beaker', '/static/javascript/searchbar_v4.js')]
     template = "beaker.server.templates.system_form"
     params = ['id','readonly',
               'user_change','user_change_text',

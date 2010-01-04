@@ -1945,8 +1945,8 @@ class Activity(object):
 class SystemActivity(Activity):
     def object_name(self):
         return "System: %s" % self.object.fqdn
-
-
+     
+         
 class GroupActivity(Activity):
     def object_name(self):
         return "Group: %s" % self.object.display_name

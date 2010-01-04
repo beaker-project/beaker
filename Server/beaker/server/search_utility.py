@@ -6,51 +6,68 @@ from turbogears.database import session
 import logging
 log = logging.getLogger(__name__)
 
-class myColumn(object):
-    def __init__(self,system_relation=None,col_type=None,column = None):
-        
+class MyColumn(object):
+    """
+    MyColumn is a class to hold information about a mapped column, 
+    such as the actual mapped column, the type, and a relation it may
+    have to another mapped object
+
+    It should be overridden by classes that will consistently use a 
+    relation to another mapped object.
+    """
+    def __init__(self,relations=None,col_type=None,column = None):        
         if type(col_type) != type(''):
             raise TypeError('col_type var passed to %s must be string' % self.__class__.__name__)
         
-        if system_relation is not None:
-            if type(system_relation) != type([]) and type(system_relation) != type(''):
-                raise TypeError('system_relation var passed to %s must be of type list of string' % self.__class__.__name__)
+        if relations is not None:
+            if type(relations) != type([]) and type(relations) != type(''):
+                raise TypeError('relation var passed to %s must be of type list of string' % self.__class__.__name__)
         
         self._column = column
         self._type = col_type
-        self._system_relation = system_relation
+        self._relations = relations
         
     @property    
     def type(self):
         return self._type   
     
     @property
-    def system_relation(self):
-        return self._system_relation
+    def relations(self):
+        return self._relations
     
     @property
     def column(self):
         return self._column
     
-class CpuColumn(myColumn):
+class CpuColumn(MyColumn):
+    """
+    CpuColumn defines a relationship to system
+    """
     def __init__(self,**kw):
-        if not kw.has_key('system_relation'):
-            kw['system_relation'] = 'cpu'
+        if not kw.has_key('relations'):
+            kw['relations'] = 'cpu'
         super(CpuColumn,self).__init__(**kw)
         
-class DeviceColumn(myColumn):
+class DeviceColumn(MyColumn):
+    """
+    DeviceColumn defines a relationship to system
+    """
     def __init__(self,**kw):
-        if not kw.has_key('system_relation'):
-            kw['system_relation'] = 'devices'
+        if not kw.has_key('relations'):
+            kw['relations'] = 'devices'
         super(DeviceColumn,self).__init__(**kw)        
     
-class KeyColumn(myColumn):
+class KeyColumn(MyColumn):
+    """
+    KeyColumn defines a relationship to system for either a string or int 
+    type key
+    """
     def __init__(self,**kw):
         try:
-            if type(kw['system_relation']) != type([]):
-                raise TypeError('system_relation var passed to myColumn must be a list')
+            if type(kw['relations']) != type([]):
+                raise TypeError('relations var passed to MyColumn must be a list')
         except KeyError, (error):
-            log.error('No system_relation passed to KeyColumn')
+            log.error('No relations passed to KeyColumn')
         else:  
             self._column = None 
             if not kw.get('int_column'):      
@@ -59,7 +76,7 @@ class KeyColumn(myColumn):
                 self._string_column = model.key_value_string_table.c.key_value
                 
             self._type = None
-            self._system_relation = kw['system_relation']
+            self._relations = kw['relations']
             
     @property
     def int_column(self):
@@ -76,30 +93,36 @@ class KeyColumn(myColumn):
         self._type = val
         
 class Modeller(object):
+    """ 
+    Modeller class provides methods relating to different datatypes and 
+    operations available to those datatypes
+    """ 
     def __init__(self):
-        self.structure ={ 'string'  : {'is' : lambda x,y: self.equals(x,y) ,
+        self.structure = {'string' : {'is' : lambda x,y: self.equals(x,y),
                                        'is not' : lambda x,y: self.not_equal(x,y),
                                        'contains' : lambda x,y: self.contains(x,y), },
 
-                          'text'    : { 'is' : lambda x,y: self.equals(x,y) ,
+                          'text' : {'is' : lambda x,y: self.equals(x,y),
                                         'is not' : lambda x,y: self.not_equal(x,y),
                                         'contains' : lambda x,y: self.contains(x,y), },
                                                
-                          'integer'  : {'is' : lambda x,y: self.equals(x,y), 
-                                        'is not' : lambda x,y: self.not_equal(x,y),
-                                        'less than' : lambda x,y: self.less_than(x,y),
-                                        'greater than' : lambda x,y: self.greater_than(x,y), },
+                          'integer' : {'is' : lambda x,y: self.equals(x,y), 
+                                       'is not' : lambda x,y: self.not_equal(x,y),
+                                       'less than' : lambda x,y: self.less_than(x,y),
+                                       'greater than' : lambda x,y: self.greater_than(x,y), },
                              
-                          'unicode'  : {'is' : lambda x,y: self.equals(x,y),
-                                        'is not' : lambda x,y: self.not_equal(x,y),
-                                        'contains' : lambda x,y: self.contains(x,y), },
+                          'unicode' : {'is' : lambda x,y: self.equals(x,y),
+                                       'is not' : lambda x,y: self.not_equal(x,y),
+                                       'contains' : lambda x,y: self.contains(x,y), },
                           
-                          'boolean'  : {'is' : lambda x,y: self.bool_equals(x,y),
-                                        'is not' : lambda x,y: self.bool_not_equal(x,y), },  
+                          'boolean' : {'is' : lambda x,y: self.bool_equals(x,y),
+                                       'is not' : lambda x,y: self.bool_not_equal(x,y), },  
+                          
+                          'datetime' : {'before' : lambda x,y: self.less_than(x,y),
+                                        'after'  : lambda x,y: self.greater_than(x,y),},
 
-                          'generic'  : {'is' : lambda x,y: self.equals(x,y) ,
-                                        'is not': lambda x,y:  self.not_equal(x,y), },
-                                                          
+                          'generic' : {'is' : lambda x,y: self.equals(x,y) ,
+                                       'is not': lambda x,y:  self.not_equal(x,y), },
                          } 
  
     def less_than(self,x,y):
@@ -129,7 +152,7 @@ class Modeller(object):
     def contains(self,x,y): 
         return x.like('%%%s%%' % y )
  
-    def return_function(self,type,operator,loose_match = True):
+    def return_function(self,type,operator,loose_match=True):
         """
         return_function will return the particular python function to be applied to a type/operator combination 
         (i.e sqlalchemy.types.Integer and 'greater than')
@@ -146,7 +169,7 @@ class Modeller(object):
        
         return op_dict[operator]        
 
-    def return_operators(self,field_type,loose_match = True): 
+    def return_operators(self,field_type,loose_match=True): 
         # loose_match flag will specify if we should try and 'guess' what data type it is 
         # int,integer,num,number,numeric will match for an integer.
         # string, word match for sqlalchemy.types.string
@@ -178,30 +201,229 @@ class Modeller(object):
             operators = self.structure['boolean']
         return operators
         
-class Search: 
+class Search:
+    def return_results(self): 
+        return self.queri        
+
+    def do_joins(self,mycolumn):
+        if mycolumn.relations:
+            try:    
+                #This column has specified it needs a join, so let's add it to the all the joins
+                #that are pertinent to this class. We do this so there is only one point where we add joins 
+                #to the query
+                #cls_ref.joins.add_join(col_string = str(column),join=mycolumn.join)
+                relations = mycolumn.relations
+                if type(relations) == type(''):
+                    self.queri = self.queri.outerjoin(relations,aliased=True)    
+		else:    
+		    for relation in relations:
+			if type(relation) == type([]):
+                            self.queri = self.queri.outerjoin(relation,aliased=True)    
+                        else:
+                            self.queri = self.queri.outerjoin(relations,aliased=True)
+                            break     
+                        
+            except TypeError, (error):
+                log.error('Column %s has not specified joins validly:%s' % (column, error))                                                               
+
+    def return_standard_filter(self,mycolumn,operation,value,loose_match=True): 
+        col_type = mycolumn.type
+        modeller = Modeller() 
+        filter_func = modeller.return_function(col_type,operation,loose_match=True)   
+        return lambda: filter_func(mycolumn.column,value)
+
+    def pre_operations(self,column,operation,value,cls_ref=None,**kw):
+        #First let's see if we have a column X operation specific filter
+        #We will only need to use these filter by table column if the ones from Modeller are 
+        #inadequate. 
+        #If we are looking at the System class and column 'arch' with the 'is not' operation, it will try and get
+        # System.arch_is_not_filter
+        if cls_ref is None:          
+            match_obj = re.search('^(.+)?Search$',self.__class__.__name__) 
+            cls_ref = globals()[match_obj.group(1)]
+            if cls_ref is None:
+                raise BeakerException('No cls_ref passed in and class naming convetion did give valid class')
+        results_dict = {}
+        underscored_operation = re.sub(' ','_',operation) 
+        column_match = re.match('^(.+)?/(.+)?$',column)
+        try:
+            if column_match.group():
+                #if We are searchong on a searchable_column that is something like 'System/Name' 
+                #and the 'is not' operation, it will look for the SystemName_is_not_filter method
+                column_mod = '%s%s' % (column_match.group(1).capitalize(),column_match.group(2).capitalize()) 
+        except AttributeError, (error):
+            column_mod = column.lower()
+         
+        col_op_filter = getattr(cls_ref,'%s_%s_filter' % (column_mod,underscored_operation),None)
+        results_dict.update({'col_op_filter':col_op_filter})         
+        #At this point we can also call a custom function before we try to append our results
+        
+        col_op_pre = getattr(cls_ref,'%s_%s_pre' % (column_mod,underscored_operation),None)           
+        if col_op_pre is not None:
+            results_dict.update({'results_from_pre': col_op_pre(value,col=column,op = operation, **kw)})  
+        return results_dict 
+         
+    @classmethod 
+    def search_on(cls,field,cls_ref=None): 
+        """
+        search_on() takes the field name we will search by, and
+        returns the operations suitable for the field type it represents
+        """
+        if cls_ref is None:          
+            match_obj = re.search('^(.+)?Search$',cls.__name__) 
+            cls_ref = globals()[match_obj.group(1)]
+            if cls_ref is None:
+                raise BeakerException('No cls_ref passed in and class naming convetion did give valid class')          
+        try:
+            field_type = cls_ref.get_field_type(field) 
+            vals = None
+            try:
+                vals = cls_ref.search_values(field)
+            except AttributeError:
+                log.debug('Not using predefined search values for %s->%s' % (cls_ref.__name__,field))  
+        except AttributeError, (error):
+            log.error('Error accessing attribute within search_on: %s' % (error))
+        else:
+            return dict(operators = cls_ref.search_operators(field_type), values=vals)
+
+    @classmethod 
+    def field_type(cls,field): 
+       """ 
+       Takes a field string (ie'Processor') and returns the type of the field
+       """  
+       match_obj = re.search('^(.+)?Search$',cls.__name__) 
+       cls_ref = globals()[match_obj.group(1)]  
+  
+       field_type = cls_ref.get_field_type(field)  
+       if field_type:
+           return field_type
+       else:
+           log.debug('There was a problem in retrieving the field_type for the column %s' % field)
+           return
+
     @classmethod
     def translate_name(cls,display_name):
-        """ translate_name() get's a reference to the class from it's display name """
+        """ 
+        translate_name() get's a reference to the class from it's display name 
+        """
         try:
             class_ref = cls.class_external_mapping[display_name]
         except KeyError:
-            log.error('Class %s does not have a mapping to display_name %s' % (cls.__name__,display_name))  
+            log.error('Class %s does not have a mapping to display_name %s' % (cls.__name__,display_name))
+            raise
         else:
            return class_ref
 
     @classmethod
-    def __split_class_field(cls,class_field):
+    def split_class_field(cls,class_field):
         class_field_list = class_field.split('/')     
         display_name = class_field_list[0]
-        field      = class_field_list[1] 
+        field = class_field_list[1] 
         return (display_name,field)
+
+    @classmethod
+    def create_search_table(cls,cls_to_search): 
+        searchable = cls_to_search.get_searchable()
+        searchable.sort()
+        return searchable    
+
+class ActivitySearch(Search):
+    search_table = [] 
+    def __init__(self,activity):
+        self.queri = activity
+   
+    def append_results(self,value,column,operation,**kw):
+        pre = self.pre_operations(column,operation,value,**kw)
+        mycolumn = Activity.searchable_columns.get(column) 
+        if mycolumn:
+            self.do_joins(mycolumn)
+        else:
+            log.error('Error accessing attribute within %s.append_results' % self.__class__.__name__)
+       
+        if pre['col_op_filter']:
+            filter_func = pre['col_op_filter']
+            filter_final = lambda: filter_func(mycolumn.column,value)
+        else: 
+            filter_final = self.return_standard_filter(mycolumn,operation,value)
+        self.queri = self.queri.filter(filter_final())   
+      
+class HistorySearch(Search):
+    search_table = []
+     
+    def __init__(self,activity):
+        self.queri = activity 
+ 
+    def append_results(self,value,column,operation,**kw):
+        pre = self.pre_operations(column,operation,value,**kw)
+        mycolumn = History.searchable_columns.get(column) 
+        if mycolumn:
+            self.do_joins(mycolumn)
+        else:
+            log.error('Error accessing attribute within %s.append_results' % self.__class__.__name__)
+       
+        if pre['col_op_filter']:
+            filter_func = pre['col_op_filter']
+            filter_final = lambda: filter_func(mycolumn.column,value)
+        else: 
+            filter_final = self.return_standard_filter(mycolumn,operation,value)
+        self.queri = self.queri.filter(filter_final())   
+
+class SystemSearch(Search): 
+    class_external_mapping = {}
+    search_table = []
+    
+    def __init__(self, systems=None):
+        if systems:
+            self.queri = systems
+        else:
+            self.queri = session.query(model.System)
+ 
+    def __getitem__(self,key):
+        pass
+
+    def append_results(self,cls_ref,value,column,operation,**kw):  
+        """ 
+        append_results() will take a value, column and operation from the search field,
+        as well as the class of which the search pertains to, and will append the join
+        and the filter needed to return the correct results.   
+        """     
+        pre = self.pre_operations(column,operation,value,cls_ref,**kw)
+        mycolumn = cls_ref.searchable_columns.get(column)
+        if mycolumn:
+            if cls_ref is Key:    
+                if pre['results_from_pre'] == 'string':
+                    mycolumn.set_column(mycolumn.string_column)
+                    mycolumn.set_type('string')
+                elif pre['results_from_pre'] == 'int':
+                    mycolumn.set_column(mycolumn.int_column)
+                    mycolumn.set_type('int')
+                else:
+                    log.error('Expecting the string value \'string\' or \'int\' to be returned from col_op_pre function when searching on Key/Value');       
+            self.do_joins(mycolumn)
+        else:       
+            log.error('Error accessing attribute within append_results')
+                   
+        if pre['col_op_filter']:
+            filter_func = pre['col_op_filter']   
+            filter_final = lambda: filter_func(mycolumn.column,value)
+            #If you want to pass custom args to your custom filter, here is where you do it
+            if kw.get('keyvalue'): 
+                filter_final = lambda: filter_func(mycolumn.column,value,key_name=kw['keyvalue'])   
+        else:
+            #using just the regular filter operations from Modeller 
+            filter_final = self.return_standard_filter(mycolumn,operation,value) 
+                                   
+        self.queri = self.queri.filter(filter_final())
+       
 
     @classmethod 
     def field_type(cls,class_field): 
-       """ Takes a class/field string (ie'CPU/Processor') and returns the type of the field"""
-       returned_class_field = cls.__split_class_field(class_field) 
+       """ 
+       Takes a class/field string (ie'CPU/Processor') and returns the type of the field
+       """
+       returned_class_field = cls.split_class_field(class_field) 
        display_name = returned_class_field[0]
-       field      = returned_class_field[1]        
+       field = returned_class_field[1]        
       
        class_ref = cls.translate_name(display_name)
        field_type = class_ref.get_field_type(field)  
@@ -227,7 +449,7 @@ class Search:
             log.error('Cannot determine type for %s, defaulting to generic' % key_name)
             field_type = 'generic'
 
-        return Key.search_operators(field_type,loose_match = True)
+        return Key.search_operators(field_type,loose_match=True)
         
              
     @classmethod 
@@ -236,9 +458,9 @@ class Search:
         search_on() takes a combination of class name and field name (i.e 'Cpu/vendor') and
         returns the operations suitable for the field type it represents
         """ 
-        returned_class_field = cls.__split_class_field(class_field) 
+        returned_class_field = cls.split_class_field(class_field) 
         display_name = returned_class_field[0]
-        field      = returned_class_field[1]        
+        field = returned_class_field[1]        
         class_ref = cls.translate_name(display_name)
         
         try:
@@ -251,9 +473,8 @@ class Search:
         except AttributeError, (error):
             log.error('Error accessing attribute within search_on: %s' % (error))
         else:
-            return dict(operators = class_ref.search_operators(field_type), values = vals)
+            return dict(operators=class_ref.search_operators(field_type), values=vals)
        
-
     @classmethod
     def create_search_table(cls,searchable_objs):  
         """
@@ -261,7 +482,7 @@ class Search:
         a list of searchable 'combinations'.
         These 'combinations' merely represent a table and a column.
         An example of search_table entry may be 'CPU/Vendor' or 'System/Name'
-        """
+        """ 
         #Clear the table if it's already been created
         if cls.search_table != None:
             cls.search_table = []
@@ -293,96 +514,6 @@ class Search:
                
         cls.search_table.sort()
         return cls.search_table
-   
-class SystemSearch(Search): 
-    class_external_mapping = {}
-    search_table = []
-    
-    def __init__(self, systems=None):
-        if systems:
-            self.queri = systems
-        else:
-            self.queri = session.query(model.System)
-  
-    def __getitem__(self,key):
-        pass
-
-    def append_results(self,cls_ref,value,column,operation,**kw):  
-        """ 
-        append_results() will take a value, column and operation from the search field,
-        as well as the class of which the search pertains to, and will append the join
-        and the filter needed to return the correct results.   
-        """     
-        #First let's see if we have a column X operation specific filter
-        #We will only need to use these filter by table column if the ones from Modeller are 
-        #inadequate. 
-        #If we are looking at the System class and column 'arch' with the 'is not' operation, it will try and get
-        # System.arch_is_not_filter
-        underscored_operation = re.sub(' ','_',operation)
-        col_op_filter = getattr(cls_ref,'%s_%s_filter' % (column.lower(),underscored_operation),None)
-         
-        #At this point we can also call a custom function before we try to append our results
-        
-        col_op_pre = getattr(cls_ref,'%s_%s_pre' % (column.lower(),underscored_operation),None) 
-                   
-        if col_op_pre is not None:
-            results_from_pre = col_op_pre(value,col=column,op = operation, **kw)
-           
-        mycolumn = cls_ref.searchable_columns.get(column)
-        if mycolumn:
-            if cls_ref is Key:    
-                if results_from_pre == 'string':
-                    mycolumn.set_column(mycolumn.string_column)
-                    mycolumn.set_type('string')
-                elif results_from_pre == 'int':
-                    mycolumn.set_column(mycolumn.int_column)
-                    mycolumn.set_type('int')
-                else:
-                    log.error('Expecting the string value \'string\' or \'int\' to be returned from col_op_pre function when searching on Key/Value');       
-            if mycolumn.system_relation:
-                try:    
-                    #This column has specified it needs a join, so let's add it to the all the joins
-                    #that are pertinent to this class. We do this so there is only one point where we add joins 
-                    #to the query
-                    #cls_ref.joins.add_join(col_string = str(column),join=mycolumn.join)
-                    system_relations = mycolumn.system_relation
-                    if type(system_relations) == type(''):
-                        self.queri = self.queri.outerjoin(system_relations,aliased=True)    
-                    else:    
-                        for relations in system_relations:
-                            if type(relations) == type([]):
-                                self.queri = self.queri.outerjoin(relations,aliased=True)    
-                            else:
-                                self.queri = self.queri.outerjoin(system_relations,aliased=True)
-                                break     
-                        
-                except TypeError, (error):
-                    log.error('Column %s has not specified joins validly:%s' % (column, error))                                                               
-        else:       
-            log.error('Error accessing attribute within append_results')
-                  
-        modeller = Modeller()          
-        if col_op_filter:
-            filter_func = col_op_filter   
-            filter_final = lambda: filter_func(mycolumn.column,value)
-            #If you want to pass custom args to your custom filter, here is where you do it
-            if kw.get('keyvalue'): 
-                filter_final = lambda: filter_func(mycolumn.column,value,key_name = kw['keyvalue'])   
-        else:
-            #using just the regular filter operations from Modeller
-            try: 
-                col_type = mycolumn.type
-            except AttributeError, (error):     
-                log.error('Error accessing attribute type within append_results: %s' % (error))
-                   
-            modeller = Modeller() 
-            filter_func = modeller.return_function(col_type,operation,loose_match=True)   
-            filter_final = lambda: filter_func(mycolumn.column,value)
-
-        self.queri = self.queri.filter(filter_final())
-       
-    def return_results(self): 
-        return self.queri        
 
 class SystemObject:
     @classmethod
@@ -428,31 +559,27 @@ class SystemObject:
         except KeyError, (e): 
             log.error('Failed to find search_type by index %s, got error: %s' % (index_type,e))
             
-
-            
-class System(SystemObject):
-    table = model.system_table
+class System(SystemObject): 
     search_table = []
-
-    searchable_columns = {'Vendor' : myColumn(column=model.System.vendor,col_type='string'),
-                          'Name'   : myColumn(column=model.System.fqdn,col_type='string'),
-                          'Lender' : myColumn(column=model.System.lender,col_type='string'),
-                          'Model'  : myColumn(column=model.System.model,col_type='string'),
-                          'Memory' : myColumn(column=model.System.memory,col_type='numeric'),
-                          'User'   : myColumn(column=model.User.user_name, col_type='string', system_relation='user'),
-                          'Owner'  : myColumn(column=model.User.user_name, col_type='string', system_relation='owner'),
-                          'Status' : myColumn(column=model.SystemStatus.status, col_type='string', system_relation='status'),
-                          'Arch'   : myColumn(column=model.Arch.arch, col_type='string', system_relation='arch'),
-                          'Type'   : myColumn(column=model.SystemType.type, col_type='string', system_relation='type')
+    searchable_columns = {'Vendor' : MyColumn(column=model.System.vendor,col_type='string'),
+                          'Name' : MyColumn(column=model.System.fqdn,col_type='string'),
+                          'Lender' : MyColumn(column=model.System.lender,col_type='string'),
+                          'Model' : MyColumn(column=model.System.model,col_type='string'),
+                          'Memory' : MyColumn(column=model.System.memory,col_type='numeric'),
+                          'User' : MyColumn(column=model.User.user_name, col_type='string', relations='user'),
+                          'Owner' : MyColumn(column=model.User.user_name, col_type='string', relations='owner'),
+                          'Status' : MyColumn(column=model.SystemStatus.status, col_type='string', relations='status'),
+                          'Arch' : MyColumn(column=model.Arch.arch, col_type='string', relations='arch'),
+                          'Type' : MyColumn(column=model.SystemType.type, col_type='string', relations='type')
                          }  
-    
-    search_values_dict = { 'Status' : lambda: model.SystemStatus.get_all_status_name(),
-                           'Type' : lambda: model.SystemType.get_all_type_names() }   
+    search_values_dict = {'Status' : lambda: model.SystemStatus.get_all_status_name(),
+                          'Type' : lambda: model.SystemType.get_all_type_names() }   
     
     @classmethod
     def arch_is_not_filter(cls,col,val):
-        """arch_is_not_filter is a function dynamically called from append_results.
-           It serves to provide a table column operation specific method of filtering results of System/Arch
+        """
+        arch_is_not_filter is a function dynamically called from append_results.
+        It serves to provide a table column operation specific method of filtering results of System/Arch
         """       
         if not val: 
            return or_(col != None, col != val) 
@@ -463,17 +590,53 @@ class System(SystemObject):
         ids = [r.id for r in query]  
         return not_(model.system_table.c.id.in_(ids)) 
            
-         
     @classmethod
     def search_values(cls,col):  
        if cls.search_values_dict.has_key(col):
            return cls.search_values_dict[col]() 
        
+class Activity(SystemObject):
+    search = ActivitySearch    
+    searchable_columns = { 
+                           'User' : MyColumn(col_type='string', column=model.User.user_name, relations='user'),
+                           'Via' : MyColumn(col_type='string', column=model.Activity.service),
+                           'System/Name' : MyColumn(col_type='string', column=model.System.fqdn, relations='object'),
+                           'System/Arch' : MyColumn(col_type='string', column=model.Arch.arch, relations=['object','arch']),
+                           'Property': MyColumn(col_type='string', column=model.Activity.field_name),
+                           'Action' : MyColumn(col_type='string', column=model.Activity.action),
+                           'Old Value' : MyColumn(col_type='string', column=model.Activity.old_value),
+                           'New Value' : MyColumn(col_type='string', column=model.Activity.new_value),
+                         }  
+
+    @classmethod
+    def SystemArch_is_not_filter(cls,col,val):
+        """
+        SystemArch_is_not_filter provides a custom filter for the System/Arch search.
+        """
+        if not val: 
+           return or_(col != None, col != val) 
+        else: 
+            query = model.SystemActivity.query().join(['object','arch']).filter(model.Arch.arch == val)          
+        ids = [r.id for r in query]  
+        return not_(model.activity_table.c.id.in_(ids)) 
+        
+
+class History(SystemObject): 
+    search = HistorySearch
+    searchable_columns = {
+                          'PUser' : MyColumn(col_type='string', column=model.User.user_name,relations='user'),
+                          'Service' : MyColumn(col_type='string', column=model.Activity.service),
+                          'Field Name' : MyColumn(col_type='string', column=model.Activity.field_name),
+                          'Action' : MyColumn(col_type='string', column=model.Activity.action),
+                          'Old Value' : MyColumn(col_type='string', column=model.Activity.old_value),
+                          'New Value' : MyColumn(col_type='string', column=model.Activity.new_value) 
+                         }  
+       
 class Key(SystemObject):
-    searchable_columns = {'Value': KeyColumn(system_relation=[['key_values_int','key'],['key_values_string','key']])}
+    searchable_columns = {'Value': KeyColumn(relations=[['key_values_int','key'],['key_values_string','key']])}
     
     @classmethod
-    def search_operators(cls,type,loose_match = None):
+    def search_operators(cls,type,loose_match=None):
         m = Modeller()
         operators = m.return_operators(type,loose_match)    
         return operators
@@ -491,8 +654,7 @@ class Key(SystemObject):
             return 'string'
         else:
             log.error('Unexpected result %s from value_pre in class %s' % (int_table,cls.__name__))
-            
-    
+             
     @classmethod
     def value_is_pre(cls,value,**kw): 
        return cls.value_pre(value,**kw)
@@ -545,7 +707,7 @@ class Key(SystemObject):
 
     @classmethod
     def value_is_not_filter(cls,col,val,key_name):
-        result =model.Key.by_name(key_name)
+        result = model.Key.by_name(key_name)
         int_table = result.numeric
         key_id = result.id
        
@@ -560,24 +722,24 @@ class Key(SystemObject):
             else:
                 return and_(model.Key_Value_String.key_value != val, model.Key_Value_String.key_id == key_id)
             
-            
 class Cpu(SystemObject):      
     display_name = 'CPU'   
     search_values_dict = { 'Hyper' : ['True','False'] }
     searchable_columns = {
-                          'Vendor'      : CpuColumn(col_type='string', column = model.Cpu.vendor),
-                          'Processors'  : CpuColumn(col_type='numeric',column = model.Cpu.processors),
-                          'Hyper'       : CpuColumn(col_type='boolean',column = model.Cpu.hyper),
-                          'Cores'       : CpuColumn(col_type='numeric',column = model.Cpu.cores),
-                          'Sockets'     : CpuColumn(col_type='numeric',column = model.Cpu.sockets),
-                          'Model'       : CpuColumn(col_type='numeric',column = model.Cpu.model),
-                          'Flags'       : CpuColumn(col_type='string',column = model.CpuFlag.flag, system_relation=['cpu','flags']) 
+                          'Vendor' : CpuColumn(col_type='string', column=model.Cpu.vendor),
+                          'Processors' : CpuColumn(col_type='numeric',column=model.Cpu.processors),
+                          'Hyper' : CpuColumn(col_type='boolean',column=model.Cpu.hyper),
+                          'Cores' : CpuColumn(col_type='numeric',column=model.Cpu.cores),
+                          'Sockets' : CpuColumn(col_type='numeric',column=model.Cpu.sockets),
+                          'Model' : CpuColumn(col_type='numeric',column=model.Cpu.model),
+                          'Flags' : CpuColumn(col_type='string',column=model.CpuFlag.flag, relations=['cpu','flags']) 
                          }  
 
     @classmethod
     def flags_is_not_filter(cls,col,val,**kw):
-        """flags_is_not_filter is a function dynamically called from append_results.
-           It serves to provide a table column operation specific method of filtering results of CPU/Flags
+        """
+        flags_is_not_filter is a function dynamically called from append_results.
+        It serves to provide a table column operation specific method of filtering results of CPU/Flags
         """       
         if not val:
             return col != val
@@ -585,17 +747,14 @@ class Cpu(SystemObject):
             query = model.Cpu.query().filter(model.Cpu.flags.any(model.CpuFlag.flag == val))
             ids = [r.id for r in query]
             return or_(not_(model.cpu_table.c.id.in_(ids)), col == None) 
-        
-    
-    
+         
 class Device(SystemObject):
     display_name = 'Devices'
     searchable_columns = {'Description' : DeviceColumn(col_type='string', column=model.Device.description),
-                          'Vendor_id'   : DeviceColumn(col_type='string', column=model.Device.vendor_id),
-                          'Device_id'   : DeviceColumn(col_type='string', column=model.Device.device_id),
-                          'Driver'      : DeviceColumn(col_type='string', column=model.Device.driver)  } 
+                          'Vendor_id' : DeviceColumn(col_type='string', column=model.Device.vendor_id),
+                          'Device_id' : DeviceColumn(col_type='string', column=model.Device.device_id),
+                          'Driver' : DeviceColumn(col_type='string', column=model.Device.driver)  } 
       
-     
     @classmethod
     def driver_is_not_filter(cls,col,val):
         if not val:
