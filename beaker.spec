@@ -66,7 +66,6 @@ Provides:       beakerlib
 %description
 Filesystem layout for beaker
 
-
 %description client
 This is the command line interface used to interact with the Beaker Server.
 
@@ -98,6 +97,10 @@ ln -s Fedora.ks $RPM_BUILD_ROOT/var/lib/cobbler/kickstarts/Fedoradevelopment.ks
 
 %clean
 %{__rm} -rf %{buildroot}
+
+%files
+%defattr(-,root,root,-)
+%{python_sitelib}/%{name}/__init__.py
 
 %files server
 %defattr(-,root,root,-)
