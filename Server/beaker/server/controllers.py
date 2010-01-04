@@ -1522,7 +1522,7 @@ class Root(RPCRoot):
                     system.action_release()
                 except BX, error:
                     msg = "Failed to power off system: %s" % error
-                    system.activity.append(SystemActivity(systen.user, "VIA %s" % identity.current.user, "Off", "Power", "", msg))
+                    system.activity.append(SystemActivity(system.user, "VIA %s" % identity.current.user, "Off", "Power", "", msg))
             else:
                 system.user = None
         return
