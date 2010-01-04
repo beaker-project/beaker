@@ -19,28 +19,28 @@ __one_fail_one_pass(){
 	local CMD=$1
 	local RESULT=$2
 	if [ "x$RESULT" == "xPASS" ] ; then
-		rlJournalStart
+		rm $BEAKERLIB_JOURNAL; rlJournalStart
 		assertTrue "successfull '$CMD' adds exactly 1 passed test to journal" \
 			"rlPhaseStart FAIL; $CMD ; rlPhaseEnd ; rlJournalPrintText |grep '1 *good'"
-		rlJournalStart
+		rm $BEAKERLIB_JOURNAL; rlJournalStart
 		assertTrue "successfull '$CMD' adds no failed test to journal" \
 			"rlPhaseStart FAIL; $CMD ; rlPhaseEnd ;  rlJournalPrintText |grep '0 *bad'"
-		rlJournalStart
+		rm $BEAKERLIB_JOURNAL; rlJournalStart
 	else
-		rlJournalStart
+		rm $BEAKERLIB_JOURNAL; rlJournalStart
 		assertTrue "failed '$CMD' adds exactly 1 failed test to journal" \
 			"rlPhaseStart FAIL; $CMD ; rlPhaseEnd ;  rlJournalPrintText |grep '1 *bad'"
-		rlJournalStart
+		rm $BEAKERLIB_JOURNAL; rlJournalStart
 		assertTrue "failed '$CMD' adds no passed test to journal" \
 			"rlPhaseStart FAIL; $CMD ; rlPhaseEnd ;  rlJournalPrintText |grep '0 *good'"
-		rlJournalStart
+		rm $BEAKERLIB_JOURNAL; rlJournalStart
 	fi
 }
 
 #removes parameters from working assert call - must not pass
 #only works for assert because it checks journal, not the exit code!
 __low_on_parameters(){
-	rlJournalStart
+	rm $BEAKERLIB_JOURNAL; rlJournalStart
 	assertTrue "running '$1' (all parameters) must succeed" \
 	"rlPhaseStart FAIL; $1 ; rlPhaseEnd ;  rlJournalPrintText |grep '1 *good'"
 	local CMD=""
@@ -48,7 +48,7 @@ __low_on_parameters(){
 		CMD="${CMD}${i} "
 		if [ "x$CMD" == "x$1 " ] ; then break ; fi
 		#echo "--$1-- --$CMD--"
-		rlJournalStart
+		rm $BEAKERLIB_JOURNAL; rlJournalStart
 		assertFalse "running just '$CMD' (missing parameters) must not succeed" \
 	    "rlPhaseStart FAIL; $CMD ; rlPhaseEnd ;  rlJournalPrintText |grep '1 *good'"
 	done
