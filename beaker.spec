@@ -57,6 +57,9 @@ Requires:       /sbin/fenced
 Requires:       telnet
 Requires:       python-cpio
 Requires:	beaker
+Requires:	kobo-client
+Requires:	python-setuptools
+Requires:	python-xmltramp
 
 %package lib
 Summary:        Test Library
