@@ -930,7 +930,7 @@ class Root(RPCRoot):
 #      would be good to have the save wait until the system is updated
 # TODO log  group +/-
         # Fields missing from kw have been set to NULL
-        log_fields = [ 'fqdn', 'vendor', 'lender', 'model', 'serial', 'location', 'type_id', 'checksum', 'status_id', 'lab_controller_id' , 'mac_address']
+        log_fields = [ 'fqdn', 'vendor', 'lender', 'model', 'serial', 'location', 'type_id', 'checksum', 'status_id', 'lab_controller_id' , 'mac_address', 'status_reason']
         for field in log_fields:
             try:
                 current_val = getattr(system,field)
@@ -974,6 +974,7 @@ class Root(RPCRoot):
         system.vendor=kw['vendor']
         system.lender=kw['lender']
         system.fqdn=kw['fqdn']
+        system.status_reason = kw['status_reason']
         system.date_modified = datetime.utcnow()
         if kw.get('private'):
             system.private=kw['private']

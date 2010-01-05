@@ -89,12 +89,10 @@
       </tr>
       <tr class="list">
        <th class="list">
-        <b>Shared</b>
+        <b>Condition Report</b>
        </th>
-       <td class="list">
-        <span py:if="value_for('fqdn')">
-         ${display_field_for("shared")}
-        </span>
+       <td class="list"> 
+        ${display_field_for("status_reason")}
        </td>
        <th class="list">
         <b>Current User</b>
@@ -108,10 +106,12 @@
       </tr>
       <tr class="list">
        <th class="list">
-        <b>Secret (NDA)</b>
+        <b>Shared</b>
        </th>
        <td class="list">
-        ${display_field_for("private")}
+        <span py:if="value_for('fqdn')">
+         ${display_field_for("shared")}
+        </span>
        </td>
        <th class="list">
         <b>Loaned To</b>
@@ -125,16 +125,24 @@
       </tr>
       <tr class="list">
        <th class="list">
-        <b>Lab Controller</b>
+        <b>Secret (NDA)</b>
        </th>
        <td class="list">
-        ${display_field_for("lab_controller_id")}
+        ${display_field_for("private")}
        </td>
        <th class="list">
         <b>Mac Address</b>
        </th>
        <td class="list">
         ${display_field_for("mac_address")}
+       </td>
+      </tr>
+      <tr class="list">
+       <th class="list">
+        <b>Lab Controller</b>
+       </th>
+       <td class="list">
+        ${display_field_for("lab_controller_id")}
        </td>
       </tr>
       <tr class="list">
