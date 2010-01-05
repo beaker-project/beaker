@@ -1,9 +1,12 @@
 from turbogears.database import session
 from turbogears import controllers, expose, flash, widgets, validate, error_handler, validators, redirect, paginate, url
 from model import *
+
+
+from turbogears import identity, redirect, config
 import search_utility
 import beaker
-from turbogears import identity, redirect, config
+import beaker.server.stdvars
 from beaker.server.power import PowerTypes
 from beaker.server.keytypes import KeyTypes
 from beaker.server.CSV_import_export import CSV
@@ -64,10 +67,6 @@ from datetime import datetime
 #    tables = dict ( Cpu = (Cpu.q.system == System.q.id))
 
 #    systems = System.select(AND(*your_dict.iter_values()))  ?
-
-def get_beaker_version():
-    return beaker. __version__
-turbogears.view.variable_providers.append({"beaker_version" : get_beaker_version()})
 
 class Netboot:
     # For XMLRPC methods in this class.

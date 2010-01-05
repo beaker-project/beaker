@@ -46,7 +46,12 @@ $(document).ready(function() {
                 <div id="wait" style="display: none">
                     <img src="${tg.url('/static/images/wait.gif')}" height="48" width="48"/> 
                 </div>
-                <span style="margin-right:2em">Version - ${tg.beaker_version}</span>
+                <span style="margin-right:2em">
+                    <p>Version - ${tg.beaker_version()}<br />
+                       <a href="${tg.config('beaker.bz_create_link')}">Report Bug</a>
+                    </p>                                         
+                </span>
+                
             </td></tr></table>
         </div>
     </div>
