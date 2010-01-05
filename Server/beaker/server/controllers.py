@@ -131,7 +131,10 @@ class Utility:
               my_getter = Utility.get_attr(column)
 
           new_widget = widgets.PaginateDataGrid.Column(name='%s.%s' % (table.lower(),column.lower()) , getter = my_getter, title='%s-%s' % (table,column), options=dict(sortable=False)) 
-          fields.append(new_widget)
+          if column == 'Name':
+              fields.insert(0,new_widget)
+          else:
+              fields.append(new_widget)
 
       for index,column_desc in enumerate(others):  
           table,column = column_desc.split('/') 

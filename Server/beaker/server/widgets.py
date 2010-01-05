@@ -215,6 +215,7 @@ class SearchBar(RepeatingFormField):
     
     <a id="customcolumns" href="#">Toggle Result Columns</a>
     <a style='margin-left:10px' id="clearcolumns" href="#">Clear Result Columns</a>
+    <a style='margin-left:10px' id="populatecolumns" href="#">Select all Columns</a>
     <input py:if="custom_column_checked is False" style='checkbox' id='disable_customcolumns' name='disable_customcolumns' type='checkbox' checked='checked' />
     <input py:if="custom_column_checked is True" style='checkbox' id='disable_customcolumns' name='disable_customcolumns' type='checkbox'  />
     <label for='disable_customcolumns'>Disable Custom Result Columns</label>
@@ -240,6 +241,7 @@ class SearchBar(RepeatingFormField):
         $('#customcolumns').click( function() { $('#selectablecolumns').toggle('slow'); });
         
         $('#clearcolumns').click( function() { $("input[name *= 'systemsearch_column_']").removeAttr('checked'); }); 
+        $('#populatecolumns').click( function() { $("input[name *= 'systemsearch_column_']").attr('checked',1); });
      });
     </script>
     </div>
