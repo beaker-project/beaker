@@ -27,6 +27,7 @@ Group:          Applications/Internet
 Requires:       python
 Requires:       kobo-client
 Requires:	python-setuptools
+Requires:	beaker
 
 
 %package server
@@ -41,6 +42,7 @@ Requires:       mod_wsgi
 Requires:       python-tgexpandingformwidget
 Requires:       httpd
 Requires:       python-krbV
+Requires:       beaker
 
 
 %package lab-controller
@@ -57,6 +59,7 @@ Requires:       python-cpio
 Requires:       kobo-client
 Requires:	python-setuptools
 Requires:       python-xmltramp
+Requires:	beaker
 
 %package lib
 Summary:        Test Library
