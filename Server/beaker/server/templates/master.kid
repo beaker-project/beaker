@@ -44,8 +44,9 @@ $(document).ready(function() {
         <div id="fedora-header-items">
             <table><tr><td> &nbsp; </td><td>
                 <div id="wait" style="display: none">
-                    <img src="${tg.url('/static/images/wait.gif')}" height="48" width="48"/>
+                    <img src="${tg.url('/static/images/wait.gif')}" height="48" width="48"/> 
                 </div>
+                <span style="margin-right:2em">Version - ${tg.beaker_version}</span>
             </td></tr></table>
         </div>
     </div>
