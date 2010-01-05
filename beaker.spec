@@ -7,7 +7,7 @@
 
 Name:           beaker
 Version:        0.4.75
-Release:        0%{?timestamp}%{?branch}%{?dist}
+Release:        1%{?timestamp}%{?branch}%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -148,7 +148,7 @@ ln -s Fedora.ks $RPM_BUILD_ROOT/var/lib/cobbler/kickstarts/Fedoradevelopment.ks
 /usr/share/man/man1/beakerlib*
 
 %changelog
-* Tue Jan 05 2010 Bill Peck <bpeck@redhat.com> - 0.4.75-0
+* Tue Jan 05 2010 Bill Peck <bpeck@redhat.com> - 0.4.75-1
 - Server/Client/LabController require beaker.
 * Tue Jan 05 2010 Bill Peck <bpeck@redhat.com> - 0.4.74-0
 - Merged Raymond's bz549912
