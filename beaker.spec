@@ -7,7 +7,7 @@
 
 Name:           beaker
 Version:        0.4.75
-Release:        1%{?timestamp}%{?branch}%{?dist}
+Release:        2%{?timestamp}%{?branch}%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -56,9 +56,6 @@ Requires:       yum-utils
 Requires:       /sbin/fenced
 Requires:       telnet
 Requires:       python-cpio
-Requires:       kobo-client
-Requires:	python-setuptools
-Requires:       python-xmltramp
 Requires:	beaker
 
 %package lib
