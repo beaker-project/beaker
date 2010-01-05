@@ -57,14 +57,41 @@ functionality.
 =cut
 
 rlJournalStart(){
-	local TID=${TESTID:-"debugging"}
-	local PKG=${PACKAGE:-"debugging"}
-	$__INTERNAL_JOURNALIST init --id "$TID" --test "$TEST" --package "$PKG"
-  if [ $POSIXFIXED == "YES" ]
-  then
-    rlLogWarning "POSIX mode detected and switched off"
-    rlLogWarning "Please fix your test to have /bin/bash shebang"
-  fi
+    # if available, use TESTID for identifying the test run
+    if [ -n "$TESTID" ] ; then
+        export BEAKERLIB_RUN="$TESTID"
+        export BEAKERLIB_DIR="/tmp/beakerlib-$TESTID"
+        # create the dir only if it does not exist
+        [ -d $BEAKERLIB_DIR ] || mkdir $BEAKERLIB_DIR
+    # otherwise we generate a random run id using mktemp
+    else
+        export BEAKERLIB_DIR=`mktemp -d /tmp/beakerlib-XXXXXXX`
+        export BEAKERLIB_RUN=`echo $BEAKERLIB_DIR | sed 's|.*-||'`
+    fi
+    # set global BeakerLib journal variable for future use
+    export BEAKERLIB_JOURNAL="$BEAKERLIB_DIR/journal.xml"
+
+    # make sure the directory is ready, otherwise we cannot continue
+    if [ ! -d $BEAKERLIB_DIR ] ; then
+        echo "rlJournalStart: Failed to create $BEAKERLIB_DIR directory."
+        echo "rlJournalStart: Cannot continue, exiting..."
+        exit 1
+    fi
+
+    # finally intialize the journal
+    if $__INTERNAL_JOURNALIST init --id "$BEAKERLIB_RUN" --test "$TEST" \
+            --package "${PACKAGE:-"unknown"}" ; then
+        rlLogDebug "rlJournalStart: Journal successfully initilized in $BEAKERLIB_DIR"
+    else
+        echo "rlJournalStart: Failed to initialize the journal. Bailing out..."
+        exit 1
+    fi
+
+    # display a warning message if run in POSIX mode
+    if [ $POSIXFIXED == "YES" ] ; then
+        rlLogWarning "POSIX mode detected and switched off"
+        rlLogWarning "Please fix your test to have /bin/bash shebang"
+    fi
 }
 
 # backward compatibility
@@ -93,16 +120,16 @@ generate OUTPUTFILE and include journal in Beaker logs.
 =cut
 
 rlJournalEnd(){
-    rlJournalPrintText > $OUTPUTFILE
-    local JOURNAL=`mktemp -d`/journal.xml
-    rlJournalPrint raw > $JOURNAL
+    local journal="$BEAKERLIB_JOURNAL"
+    local journaltext="$BEAKERLIB_DIR/journal.txt"
+    rlJournalPrintText > $journaltext
 
     if [ -n "$TESTID" ] ; then
-        rhts_submit_log -S $RESULT_SERVER -T $TESTID -l $JOURNAL \
+        rhts_submit_log -S $RESULT_SERVER -T $TESTID -l $journal \
         || rlLogError "rlJournalEnd: Submit wasn't successful"
     else
-        rlLog "JOURNAL: $JOURNAL"
-        rlLog "OUTPUTFILE: $OUTPUTFILE"
+        rlLog "JOURNAL XML: $journal"
+        rlLog "JOURNAL TXT: $journaltext"
     fi
 
 }
@@ -197,9 +224,8 @@ Example:
 =cut
 
 rlJournalPrint(){
-	local TID=${TESTID:-"debugging"}
-  local TYPE=${1:-"pretty"}
-	$__INTERNAL_JOURNALIST dump --id $TID --type "$TYPE"
+    local TYPE=${1:-"pretty"}
+    $__INTERNAL_JOURNALIST dump --id $BEAKERLIB_RUN --type "$TYPE"
 }
 
 # backward compatibility
@@ -278,10 +304,9 @@ Example:
 =cut
 
 rlJournalPrintText(){
-  local TID=${TESTID:-"debugging"}
   local SEVERITY=${LOG_LEVEL:-"WARNING"}
   [ "$DEBUG" == 'true' -o "$DEBUG" == '1' ] && SEVERITY="DEBUG"
-  $__INTERNAL_JOURNALIST printlog --id $TID --severity $SEVERITY
+  $__INTERNAL_JOURNALIST printlog --id $BEAKERLIB_RUN --severity $SEVERITY
 }
 
 # backward compatibility
@@ -296,17 +321,16 @@ rlCreateLogFromJournal(){
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 rljAddPhase(){
-	local TID=${TESTID:-"debugging"}
 	local MSG=${2:-"Phase of $1 type"}
 	rlLogDebug "rljAddPhase: Phase $MSG started"
-	$__INTERNAL_JOURNALIST addphase --id $TID --name "$MSG" --type "$1"
+	$__INTERNAL_JOURNALIST addphase --id $BEAKERLIB_RUN --name "$MSG" --type "$1"
 } 
 
 rljClosePhase(){
-	local TID=${TESTID:-"debugging"}
-	local out=`$__INTERNAL_JOURNALIST finphase --id $TID`
+	local out
+	out=`$__INTERNAL_JOURNALIST finphase --id $BEAKERLIB_RUN`
 	local score=$?
-	local logfile=`mktemp`
+	local logfile="$BEAKERLIB_DIR/journal.txt"
 	local result="`echo $out | cut -d ':' -f 2`"
 	local name=`echo $out | cut -d ':' -f 3 | sed 's/[^[:alnum:]]\+/-/g'`
 	rlLogDebug "rljClosePhase: Phase $name closed"
@@ -315,12 +339,10 @@ rljClosePhase(){
 }
 
 rljAddTest(){
-	local TID=${TESTID:-"debugging"}
-	$__INTERNAL_JOURNALIST test --id $TID --message "$1" --result "$2"
+	$__INTERNAL_JOURNALIST test --id $BEAKERLIB_RUN --message "$1" --result "$2"
 }
 
 rljAddMetric(){
-	local TID=${TESTID:-"debugging"}
 	local MID="$2"
 	local VALUE="$3"
 	local TOLERANCE=${4:-"0.2"}
@@ -330,13 +352,14 @@ rljAddMetric(){
 		return 1
 	fi
 	rlLogDebug "rljAddMetric: Storing metric $MID with value $VALUE and tolerance $TOLERANCE"
-	$__INTERNAL_JOURNALIST metric --id $TID --type $1 --name "$MID" --value "$VALUE" --tolerance "$TOLERANCE"
+	$__INTERNAL_JOURNALIST metric --id $BEAKERLIB_RUN --type $1 --name "$MID" \
+		--value "$VALUE" --tolerance "$TOLERANCE"
 	return $?
 }
 
 rljAddMessage(){
 	local TID=${TESTID:-"debugging"}
-	$__INTERNAL_JOURNALIST log --id $TID --message "$1" --severity "$2"
+	$__INTERNAL_JOURNALIST log --id $BEAKERLIB_RUN --message "$1" --severity "$2"
 }
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

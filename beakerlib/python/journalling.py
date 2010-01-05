@@ -169,6 +169,11 @@ def createLog(id,severity):
           printPhaseLog(nod,severity)
 
 def initializeJournal(id, test, package):
+  # if the journal already exists, do not overwrite it
+  try: jrnl = _openJournal(id)
+  except: pass
+  else: return
+
   impl = getDOMImplementation()  
   newdoc = impl.createDocument(None, "BEAKER_TEST", None)
   top_element = newdoc.documentElement
@@ -258,12 +263,17 @@ def initializeJournal(id, test, package):
   saveJournal(newdoc, id)
 
 def saveJournal(newdoc, id):
-  output = open('/tmp/beakerlib_journal.%s' % id, 'wb')
-  output.write(newdoc.toxml().encode('utf-8'))
-  output.close()
+  journal = '/tmp/beakerlib-%s/journal.xml' % id
+  try:
+    output = open(journal, 'wb')
+    output.write(newdoc.toxml().encode('utf-8'))
+    output.close()
+  except IOError:
+    printLog('Failed to save journal to %s' % journal, 'BEAKERLIB_WARNING')
+    sys.exit(1)
 
 def _openJournal(id):
-  jrnl = xml.dom.minidom.parse("/tmp/beakerlib_journal.%s" % id )
+  jrnl = xml.dom.minidom.parse("/tmp/beakerlib-%s/journal.xml" % id )
   return jrnl
 
 def openJournal(id):
@@ -450,7 +460,6 @@ elif command == "finphase":
   need((options.testid,))
   result, score, type, name = finPhase(options.testid)
   _print("%s:%s:%s" % (type,result,name))
-  print >> sys.stderr, score
   sys.exit(int(score))
 
 sys.exit(0)

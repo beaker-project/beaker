@@ -1,0 +1,8 @@
+from setuptools import setup, find_packages
+setup(
+    name = "beaker",
+    version = "@VERSION@",
+
+    packages=find_packages('.'),
+    package_dir = {'':'.'},
+)
