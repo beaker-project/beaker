@@ -10,3 +10,4 @@ Server/build
 Server/devdata.sqlite
 Server/setup.py
 Common/beaker/__init__.py
+*.diff
