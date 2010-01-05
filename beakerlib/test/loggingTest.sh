@@ -16,6 +16,7 @@
 __testLogFce() {
   # This should help us to test various logging functions
   # which takes <message> and optional <logfile> parameters
+  rlJournalStart
   local log=$( mktemp )
   local myfce=$1
   $myfce "MessageABC" &>/dev/null
@@ -65,37 +66,41 @@ test_rlDie(){
 }
 
 test_rlPhaseStartEnd(){
-  rlJournalStart ; rlPhaseStart FAIL
+  rlJournalStart ; rlPhaseStart FAIL    &> /dev/null
   #counting passes and failures
-  rlAssert0 "failed assert #1" 1
-  rlAssert0 "successfull assert #1" 0
-  rlAssert0 "failed assert #2" 1
-  rlAssert0 "successfull assert #2" 0
-  assertTrue "passed asserts were stored" "rlCreateLogFromJournal |grep '2 good'"
-  assertTrue "failed asserts were stored" "rlCreateLogFromJournal |grep '2 bad'"
+  rlAssert0 "failed assert #1" 1        &> /dev/null
+  rlAssert0 "successfull assert #1" 0   &> /dev/null
+  rlAssert0 "failed assert #2" 1        &> /dev/null
+  rlAssert0 "successfull assert #2" 0   &> /dev/null
+  assertTrue "passed asserts were stored" "rlJournalPrintText |grep '2 good'"
+  assertTrue "failed asserts were stored" "rlJournalPrintText |grep '2 bad'"
   #new phase resets score
-  rlPhaseEnd ; rlPhaseStart FAIL
-  assertTrue "passed asserts were reseted" "rlCreateLogFromJournal |grep '0 good'"
-  assertTrue "failed asserts were reseted" "rlCreateLogFromJournal |grep '0 bad'"
+  rlPhaseEnd &> /dev/null ; rlPhaseStart FAIL &> /dev/null
+  assertTrue "passed asserts were reseted" "rlJournalPrintText |grep '0 good'"
+  assertTrue "failed asserts were reseted" "rlJournalPrintText |grep '0 bad'"
 
-  assertTrue "creating phase without type doesn't succeed" "rlPhaseEnd ; rlPhaseStart"
+  assertFalse "creating phase without type doesn't succeed" "rlPhaseEnd ; rlPhaseStart &> /dev/null"
   assertFalse "phase without type is not inserted into journal" "rlJournalPrint |grep -q '<phase.*type=\"\"'"
-  assertTrue "creating phase with unknown type doesn't succeed" "rlPhaseEnd ; rlPhaseStart ZBRDLENI"
+  assertFalse "creating phase with unknown type doesn't succeed" "rlPhaseEnd ; rlPhaseStart ZBRDLENI &> /dev/null"
   assertFalse "phase with unknown type is not inserted into journal" "rlJournalPrint |grep -q '<phase.*type=\"ZBRDLENI\"'"
+  rm -rf $BEAKERLIB_DIR
 }
 
 test_rlPhaseStartShortcuts(){
   rlJournalStart
-  rlPhaseStartSetup
+  rlPhaseStartSetup &> /dev/null
   assertTrue "setup phase with ABORT type found in journal" "rlJournalPrint |grep -q '<phase.*type=\"ABORT\"'"
+  rm -rf $BEAKERLIB_DIR
 
   rlJournalStart
-  rlPhaseStartTest
+  rlPhaseStartTest &> /dev/null
   assertTrue "test phase with FAIL type found in journal" "rlJournalPrint |grep -q '<phase.*type=\"FAIL\"'"
+  rm -rf $BEAKERLIB_DIR
 
   rlJournalStart
-  rlPhaseStartCleanup
+  rlPhaseStartCleanup &> /dev/null
   assertTrue "clean-up phase with WARN type found in journal" "rlJournalPrint |grep -q '<phase.*type=\"WARN\"'"
+  rm -rf $BEAKERLIB_DIR
 }
 
 test_oldMetrics(){
@@ -111,29 +116,31 @@ test_rlShowPkgVersion(){
 
 
 test_LogMetricLowHigh(){
-  rlJournalStart ; rlPhaseStart FAIL
-  assertTrue "low metric inserted to journal" "rlLogMetricLow metrone 123 "
-  assertTrue "high metric inserted to journal" "rlLogMetricHigh metrtwo 567"
-  assertTrue "low metric found in journal" "rlJournalPrint |grep -q '<metric.*name=\"metrone\".*type=\"low\"'"
-  assertTrue "high metric found in journal" "rlJournalPrint |grep -q '<metric.*name=\"metrtwo\".*type=\"high\"'"
+    rlJournalStart ; rlPhaseStart FAIL &> /dev/null
+    assertTrue "low metric inserted to journal" "rlLogMetricLow metrone 123 "
+    assertTrue "high metric inserted to journal" "rlLogMetricHigh metrtwo 567"
+    assertTrue "low metric found in journal" "rlJournalPrint |grep -q '<metric.*name=\"metrone\".*type=\"low\"'"
+    assertTrue "high metric found in journal" "rlJournalPrint |grep -q '<metric.*name=\"metrtwo\".*type=\"high\"'"
 
-  #second matric called metrone - must not be inserted to journal
-  rlLogMetricLow metrone 345
-  assertTrue "metric insertion fails when name's not unique inside one phase" \
-  "[ `rlJournalPrint | grep -c '<metric.*name=.metrone.*type=.low.'` -eq 1 ]"
-  #same name of metric but in different phases - must work
-  rlJournalStart ; rlPhaseStartTest phase-1
-  rlLogMetricLow metrone 345
-  rlPhaseEnd ; rlPhaseStartTest phase-2
-  rlLogMetricLow metrone 345
-  assertTrue "metric insertion succeeds when name's not unique but phases differ" \
-  "[ `rlJournalPrint | grep -c '<metric.*name=.metrone.*type=.low.'` -eq 2 ]"
+    #second metric called metrone - must not be inserted to journal
+    rlLogMetricLow metrone 345
+    assertTrue "metric insertion fails when name's not unique inside one phase" \
+            "[ `rlJournalPrint | grep -c '<metric.*name=.metrone.*type=.low.'` -eq 1 ]"
+    rm -rf $BEAKERLIB_DIR
+
+    #same name of metric but in different phases - must work
+    rlJournalStart ; rlPhaseStartTest phase-1 &> /dev/null
+    rlLogMetricLow metrone 345
+    rlPhaseEnd &> /dev/null ; rlPhaseStartTest phase-2 &> /dev/null
+    rlLogMetricLow metrone 345
+    assertTrue "metric insertion succeeds when name's not unique but phases differ" \
+            "[ `rlJournalPrint | grep -c '<metric.*name=.metrone.*type=.low.'` -eq 2 ]"
 }
 
 test_rlShowRunningKernel(){
-	rlJournalStart; rlPhaseStart FAIL
-	rlShowRunningKernel
-	assertTrue "kernel version is logged" "rlCreateLogFromJournal |grep -q `uname -r`"
+	rlJournalStart; rlPhaseStart FAIL &> /dev/null
+	rlShowRunningKernel &> /dev/null
+	assertTrue "kernel version is logged" "rlJournalPrintText |grep -q `uname -r`"
 }
 
 __checkLoggedPkgInfo() {
@@ -242,18 +249,18 @@ EOF
   PATH_orig="$PATH"
   export PATH="$( pwd )/$prefix:$PATH"
   # Run the rlBundleLogs function
-  rlBundleLogs $prefix $prefix/first/greet $prefix/first_greet
+  rlBundleLogs $prefix $prefix/first/greet $prefix/first_greet &> /dev/null
   assertTrue 'rlBundleLogs <some files> returns 0' "[ $? -eq 0 ]"
   export PATH="$PATH_orig"
   # Check if it did everithing it should
-  ls CP-$prefix*.tar.gz
-  assertTrue 'rlBundleLogs creates *.tar.gz file' "[ $? -eq 0 ]"
+  assertTrue 'rlBundleLogs creates *.tar.gz file' \
+        "ls CP-$prefix*.tar.gz &> /dev/null"
   mkdir $prefix-extracted
   tar -xzf CP-$prefix*.tar.gz -C $prefix-extracted
-  grep -r "hello" $prefix-extracted/*
-  assertTrue 'rlBundleLogs included first/greet file' "[ $? -eq 0 ]"
-  grep -r "world" $prefix-extracted/*
-  assertTrue 'rlBundleLogs included first_greet file' "[ $? -eq 0 ]"
+  assertTrue 'rlBundleLogs included first/greet file' \
+        "grep -qr 'hello' $prefix-extracted/*"
+  assertTrue 'rlBundleLogs included first_greet file' \
+        "grep -qr 'world' $prefix-extracted/*"
   # Cleanup
   rm -rf $prefix* CP-$prefix*.tar.gz
 }
@@ -263,23 +270,23 @@ test_LOG_LEVEL(){
 	unset DEBUG
 
 	assertFalse "rlLogInfo msg not in journal dump with default LOG_LEVEL" \
-	"rlLogInfo 'lllll' ; rlCreateLogFromJournal |grep 'lllll'"
+	"rlLogInfo 'lllll' ; rlJournalPrintText |grep 'lllll'"
 
 	assertTrue "rlLogWarning msg in journal dump with default LOG_LEVEL" \
-	"rlLogWarning 'wwwwww' ; rlCreateLogFromJournal |grep 'wwwww'"
+	"rlLogWarning 'wwwwww' ; rlJournalPrintText |grep 'wwwww'"
 
 	DEBUG=1
 	assertTrue "rlLogInfo msg  in journal dump with default LOG_LEVEL but DEBUG turned on" \
-	"rlLogInfo 'lllll' ; rlCreateLogFromJournal |grep 'lllll'"
+	"rlLogInfo 'lllll' ; rlJournalPrintText |grep 'lllll'"
 	unset DEBUG
 
 	local LOG_LEVEL="INFO"
 	assertTrue "rlLogInfo msg in journal dump with LOG_LEVEL=INFO" \
-	"rlLogInfo 'lllll' ; rlCreateLogFromJournal |grep 'lllll'"
+	"rlLogInfo 'lllll' ; rlJournalPrintText |grep 'lllll'"
 
 	local LOG_LEVEL="WARNING"
 	assertFalse "rlLogInfo msg not in journal dump with LOG_LEVEL higher than INFO" \
-	"rlLogInfo 'lllll' ; rlCreateLogFromJournal |grep 'lllll'"
+	"rlLogInfo 'lllll' ; rlJournalPrintText |grep 'lllll'"
 
 	unset LOG_LEVEL
 	unset DEBUG
@@ -317,8 +324,7 @@ EOF
   echo "rlFileSubmit_test1" > $orig_file
   
   cd $hlp_files
-  pwd
-  rlFileSubmit rlFileSubmit_test1.file
+  rlFileSubmit rlFileSubmit_test1.file &> /dev/null
   
   cd $main_dir
   local sum1=`md5sum $orig_file | cut -d " " -f 1`
@@ -335,7 +341,7 @@ EOF
   echo "rlFileSubmit_test2" > $orig_file
   
   cd $hlp_files
-  rlFileSubmit ./rlFileSubmit_test2.file
+  rlFileSubmit ./rlFileSubmit_test2.file &> /dev/null
   
   cd $main_dir
   local sum1=`md5sum $orig_file | cut -d " " -f 1`
@@ -353,7 +359,7 @@ EOF
   echo "rlFileSubmit_test3" > $orig_file
   
   cd $hlp_files/directory
-  rlFileSubmit ../rlFileSubmit_test3.file
+  rlFileSubmit ../rlFileSubmit_test3.file &> /dev/null
   
   cd $main_dir
   local sum1=`md5sum $orig_file | cut -d " " -f 1`
@@ -369,7 +375,7 @@ EOF
   
   echo "rlFileSubmit_test4" > $orig_file
   
-  rlFileSubmit $main_dir/$orig_file
+  rlFileSubmit $main_dir/$orig_file &> /dev/null
   
   cd $main_dir
   local sum1=`md5sum $orig_file | cut -d " " -f 1`
@@ -385,7 +391,7 @@ EOF
   
   echo "rlFileSubmit_test5" > $orig_file
   
-  rlFileSubmit $orig_file $alias
+  rlFileSubmit $orig_file $alias &> /dev/null
   
   cd $main_dir
   local sum1=`md5sum $orig_file | cut -d " " -f 1`
@@ -401,7 +407,7 @@ EOF
   
   echo "rlFileSubmit_test6" > $orig_file
   
-  rlFileSubmit -s '_' $main_dir/$orig_file
+  rlFileSubmit -s '_' $main_dir/$orig_file &> /dev/null
   
   cd $main_dir
   local sum1=`md5sum $orig_file | cut -d " " -f 1`
@@ -414,4 +420,3 @@ EOF
   export PATH="$PATH_orig"
   rm -rf $prefix*
 }
-

@@ -542,8 +542,10 @@ If all asserts included in the phase pass, phase reports PASS.
 rlPhaseStart(){
   if [ "x$1" = "xABORT" -o "x$1" = "xFAIL" -o "x$1" = "xWARN" ] ; then
     rljAddPhase "$1" "$2"
+    return $?
   else
     rlLogError "rlPhaseStart: Unknown phase type: $1"
+    return 1
   fi
 }
 
