@@ -1,7 +1,7 @@
 %{!?python_sitelib: %define python_sitelib %(%{__python} -c "from distutils.sysconfig import get_python_lib; print get_python_lib()")}
 %{!?pyver: %define pyver %(%{__python} -c "import sys ; print sys.version[:3]")}
 %{!?branch: %define branch %(echo "$Format:.%d$"| sed -e 's/[()$]//g' | awk '{print $(NF-1) $NF}' | grep -v master)}
-%if 0%{?branch}
+%if "0%{branch}" != "0"
 %{!?timestamp: %define timestamp $Format:.%at$}
 %endif
 
