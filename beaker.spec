@@ -1,10 +1,13 @@
 %{!?python_sitelib: %define python_sitelib %(%{__python} -c "from distutils.sysconfig import get_python_lib; print get_python_lib()")}
 %{!?pyver: %define pyver %(%{__python} -c "import sys ; print sys.version[:3]")}
-%{!?branch: %define branch %(echo "$Format: .%at.%d$"| sed -e 's/[()$]//g' | awk '{print $(NF-1) $NF}' | grep -v master)}
+%{!?branch: %define branch %(echo "$Format:%d$"| awk -F/ '{print $NF}'| sed -e 's/[()$]//g' | awk '{print "." $NF}' | grep -v master)}
+%if "0%{branch}" != "0"
+%{!?timestamp: %define timestamp $Format:.%at$}
+%endif
 
 Name:           beaker
-Version:        0.4.72
-Release:        0%{?branch}%{?dist}
+Version:        0.4.73
+Release:        0%{?timestamp}%{?branch}%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
