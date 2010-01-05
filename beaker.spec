@@ -6,7 +6,7 @@
 %endif
 
 Name:           beaker
-Version:        0.4.73
+Version:        0.4.74
 Release:        0%{?timestamp}%{?branch}%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
@@ -145,6 +145,9 @@ ln -s Fedora.ks $RPM_BUILD_ROOT/var/lib/cobbler/kickstarts/Fedoradevelopment.ks
 /usr/share/man/man1/beakerlib*
 
 %changelog
+* Tue Jan 05 2010 Bill Peck <bpeck@redhat.com> - 0.4.74-0
+- Merged Raymond's bz549912
+- updated spec file to include branch name and timestamp
 * Tue Dec 22 2009 Bill Peck <bpeck@redhat.com> - 0.4.70-0
 - another fix to the release_action code. send proper action methods
   to cobbler, Off->off On->on.
