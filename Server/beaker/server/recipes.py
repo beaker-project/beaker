@@ -60,12 +60,12 @@ class Recipes(RPCRoot):
             recipe = Recipe.by_id(recipe_id)
         except InvalidRequestError:
             raise BX(_('Invalid recipe ID: %s' % recipe_id))
-        job_id = recipe.recipeset.job.id
-        recipe_path = "%02d/%s/%s/%s" % (int(str(job_id)[-2:]),
-                                         job_id, 
-                                         recipe_id,
-                                         path)
-        return self.upload.uploadFile(recipe_path, 
+
+       # Add the log to the DB if it hasn't been recorded yet.
+        if LogRecipe(path,name) not in recipe.logs:
+            recipe.logs.append(LogRecipe(path, name))
+
+        return self.upload.uploadFile("%s/%s" % (recipe.filepath, path), 
                                       name, 
                                       size, 
                                       md5sum, 

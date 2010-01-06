@@ -552,6 +552,30 @@ recipe_set_table = Table('recipe_set',metadata,
         Column('ktasks', Integer, default=0),
 )
 
+log_recipe_table = Table('log_recipe', metadata,
+        Column('id', Integer, primary_key=True),
+        Column('recipe_id', Integer,
+                ForeignKey('recipe.id')),
+        Column('path', Unicode()),
+        Column('filename', Unicode(), nullable=False),
+)
+
+log_recipe_task_table = Table('log_recipe_task', metadata,
+        Column('id', Integer, primary_key=True),
+        Column('recipe_task_id', Integer,
+                ForeignKey('recipe_task.id')),
+        Column('path', Unicode()),
+        Column('filename', Unicode(), nullable=False),
+)
+
+log_recipe_task_result_table = Table('log_recipe_task_result', metadata,
+        Column('id', Integer, primary_key=True),
+        Column('recipe_task_result_id', Integer,
+                ForeignKey('recipe_task_result.id')),
+        Column('path', Unicode()),
+        Column('filename', Unicode(), nullable=False),
+)
+
 recipe_table = Table('recipe',metadata,
         Column('id', Integer, primary_key=True),
         Column('recipe_set_id', Integer,
@@ -2436,6 +2460,27 @@ class TaskResult(object):
     def __repr__(self):
         return "%s" % (self.result)
 
+class Log(MappedObject):
+    def __cmp__(self, other):
+        """ Used to compare logs that are already stored. Log(path,filename) in Recipe.logs  == True
+        """
+        if hasattr(other,'path'):
+            path = other.path
+        if hasattr(other,'filename'):
+            filename = other.filename
+        if "%s/%s" % (self.path,self.filename) == "%s/%s" % (path,filename):
+            return 0
+        else:
+            return 1
+
+class LogRecipe(Log):
+    pass
+
+class LogRecipeTask(Log):
+    pass
+
+class LogRecipeTaskResult(Log):
+    pass
 
 class TaskBase(MappedObject):
     def is_finished(self):
@@ -2687,6 +2732,15 @@ class Recipe(TaskBase):
     Also contains what tasks will be executed.
     """
     stop_types = ['abort','cancel']
+
+    def filepath(self):
+        """
+        Return file path for this recipe
+        """
+        job_id    = self.recipeset.job.id
+        return "%02d/%s/%s" % (int(str(job_id)[-2:]),
+                                         job_id,
+                                         self.id)
 
     def to_xml(self, recipe):
         recipe.setAttribute("id", "%s" % self.id)
@@ -2972,6 +3026,17 @@ class RecipeTask(TaskBase):
     result_types = ['pass_','warn','fail','panic']
     stop_types = ['stop','abort','cancel']
 
+    def filepath(self):
+        """
+        Return file path for this task
+        """
+        job_id    = self.recipe.recipeset.job.id
+        recipe_id = self.recipe.id
+        return "%02d/%s/%s/%s" % (int(str(job_id)[-2:]),
+                                         job_id,
+                                         recipe_id,
+                                         self.id)
+
     def to_xml(self):
         task = self.doc.createElement("task")
         task.setAttribute("id", "%s" % self.id)
@@ -3171,13 +3236,17 @@ class RecipeTask(TaskBase):
         """
         if not self.recipe.watchdog:
             raise BX(_('No watchdog exists for recipe %s' % self.recipe.id))
-        self.results.append(RecipeTaskResult(recipetask=self,
+        recipeTaskResult = RecipeTaskResult(recipetask=self,
                                    path=path,
                                    result=TaskResult.by_name(result),
                                    score=score,
-                                   log=summary))
+                                   log=summary)
+        self.results.append(recipeTaskResult)
+        # Flush the result to the DB so we can return the id.
+        session.save(recipeTaskResult)
+        session.flush([recipeTaskResult])
         self.update_status()
-        return True
+        return recipeTaskResult.id
 
     def task_info(self):
         """
@@ -3341,6 +3410,19 @@ class RecipeTaskResult(MappedObject):
     """
     Each task can report multiple results
     """
+    def filepath(self):
+        """
+        Return file path for this result
+        """
+        job_id    = self.recipetask.recipe.recipeset.job.id
+        recipe_id = self.recipetask.recipe.id
+        task_id   = self.recipetask.id
+        return "%02d/%s/%s/%s/%s" % (int(str(job_id)[-2:]),
+                                         job_id,
+                                         recipe_id,
+                                         task_id,
+                                         self.id)
+
     def to_xml(self):
         """
         Return result in xml
@@ -3707,6 +3789,12 @@ mapper(RecipeSet, recipe_set_table,
                       'lab_controller':relation(LabController, uselist=False),
                      })
 
+mapper(LogRecipe, log_recipe_table)
+
+mapper(LogRecipeTask, log_recipe_task_table)
+
+mapper(LogRecipeTaskResult, log_recipe_task_result_table)
+
 mapper(Recipe, recipe_table,
         polymorphic_on=recipe_table.c.type, polymorphic_identity='recipe',
         properties = {'distro':relation(Distro, uselist=False,
@@ -3730,7 +3818,10 @@ mapper(Recipe, recipe_table,
                       'repos':relation(RecipeRepo),
                       'rpms':relation(RecipeRpm, backref='recipe'),
                       'result':relation(TaskResult, uselist=False),
-                      'status':relation(TaskStatus, uselist=False)})
+                      'status':relation(TaskStatus, uselist=False),
+                      'logs':relation(LogRecipe),
+                     }
+      )
 mapper(GuestRecipe, guest_recipe_table, inherits=Recipe,
         polymorphic_identity='guest_recipe')
 mapper(MachineRecipe, machine_recipe_table, inherits=Recipe,
@@ -3755,6 +3846,7 @@ mapper(RecipeTask, recipe_task_table,
                       'result':relation(TaskResult, uselist=False),
                       'status':relation(TaskStatus, uselist=False),
                       '_roles':relation(RecipeTaskRole),
+                      'logs':relation(LogRecipeTask),
                      }
       )
 
@@ -3768,7 +3860,10 @@ mapper(RecipeTaskComment, recipe_task_comment_table,
 mapper(RecipeTaskBugzilla, recipe_task_bugzilla_table)
 mapper(RecipeTaskRpm, recipe_task_rpm_table)
 mapper(RecipeTaskResult, recipe_task_result_table,
-        properties = {'result':relation(TaskResult, uselist=False)})
+        properties = {'result':relation(TaskResult, uselist=False),
+                      'logs':relation(LogRecipeTaskResult),
+                     }
+      )
 
 mapper(TaskPriority, task_priority_table)
 mapper(TaskStatus, task_status_table)

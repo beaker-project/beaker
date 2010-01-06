@@ -49,20 +49,38 @@ class RecipeTasks(RPCRoot):
         except InvalidRequestError:
             raise BX(_('Invalid task ID: %s' % task_id))
 
-        recipe_id = recipetask.recipe.id
-        job_id = recipetask.recipe.recipeset.job.id
-        recipetask_path = "%02d/%s/%s/%s/%s" % (int(str(job_id)[-2:]),
-                                         job_id,
-                                         recipe_id,
-                                         task_id,
-                                         path)
-        return self.upload.uploadFile(recipetask_path,
+        # Add the log to the DB if it hasn't been recorded yet.
+        if LogRecipeTask(path,name) not in recipetask.logs:
+            recipetask.logs.append(LogRecipeTask(path, name))
+
+        return self.upload.uploadFile("%s/%s" % (recipetask.filepath,path),
                                       name,
                                       size,
                                       md5sum,
                                       offset,
                                       data)
 
+    @cherrypy.expose
+    @identity.require(identity.not_anonymous())
+    def result_upload_file(self, result_id, path, name, size, md5sum, offset, data):
+        """
+        upload to result in pieces
+        """
+        try:
+            result = RecipeTaskResult.by_id(result_id)
+        except InvalidRequestError:
+            raise BX(_('Invalid result ID: %s' % result_id))
+
+        # Add the log to the DB if it hasn't been recorded yet.
+        if LogRecipeTaskResult(path,name) not in result.logs:
+            result.logs.append(LogRecipeTaskResult(path, name))
+
+        return self.upload.uploadFile("%s/%s" % (result.filepath,path),
+                                      name,
+                                      size,
+                                      md5sum,
+                                      offset,
+                                      data)
 
     @cherrypy.expose
     @identity.require(identity.not_anonymous())

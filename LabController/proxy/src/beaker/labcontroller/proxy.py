@@ -314,3 +314,32 @@ class Proxy(ProxyHelper):
             msg to record if issuing Abort or Cancel """
         self.logger.info("task_stop %s" % task_id)
         return self.hub.recipes.tasks.stop(task_id, stop_type, msg)
+
+    def result_upload_file(self, 
+                         result_id, 
+                         path, 
+                         name, 
+                         size, 
+                         md5sum, 
+                         offset, 
+                         data):
+        """ Upload a file in chunks
+             path: the relative path to upload to
+             name: the name of the file
+             size: size of the contents (bytes)
+             md5: md5sum (hex digest) of contents
+             data: base64 encoded file contents
+             offset: the offset of the chunk
+            Files can be uploaded in chunks, if so the md5 and the size 
+            describe the chunk rather than the whole file.  The offset
+            indicates where the chunk belongs
+            the special offset -1 is used to indicate the final chunk
+        """
+        self.logger.info("result_upload_file %s" % result_id)
+        return self.hub.recipes.tasks.result_upload_file(result_id, 
+                                                  path, 
+                                                  name, 
+                                                  size, 
+                                                  md5sum, 
+                                                  offset, 
+                                                  data)
