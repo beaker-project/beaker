@@ -6,7 +6,7 @@
 %endif
 
 Name:           beaker
-Version:        0.4.74
+Version:        0.4.76
 Release:        0%{?timestamp}%{?branch}%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
@@ -27,6 +27,7 @@ Group:          Applications/Internet
 Requires:       python
 Requires:       kobo-client
 Requires:	python-setuptools
+Requires:	beaker
 
 
 %package server
@@ -41,6 +42,7 @@ Requires:       mod_wsgi
 Requires:       python-tgexpandingformwidget
 Requires:       httpd
 Requires:       python-krbV
+Requires:       beaker
 
 
 %package lab-controller
@@ -54,9 +56,7 @@ Requires:       yum-utils
 Requires:       /sbin/fenced
 Requires:       telnet
 Requires:       python-cpio
-Requires:       kobo-client
-Requires:	python-setuptools
-Requires:       python-xmltramp
+Requires:	beaker
 
 %package lib
 Summary:        Test Library
@@ -145,6 +145,10 @@ ln -s Fedora.ks $RPM_BUILD_ROOT/var/lib/cobbler/kickstarts/Fedoradevelopment.ks
 /usr/share/man/man1/beakerlib*
 
 %changelog
+* Thu Jan 07 2010 Bill Peck <bpeck@redhat.com> - 0.4.76-0
+- merged bz537414 - show version on beaker pages and have a link for reporting bugs.
+* Tue Jan 05 2010 Bill Peck <bpeck@redhat.com> - 0.4.75-1
+- Server/Client/LabController require beaker.
 * Tue Jan 05 2010 Bill Peck <bpeck@redhat.com> - 0.4.74-0
 - Merged Raymond's bz549912
 - updated spec file to include branch name and timestamp
