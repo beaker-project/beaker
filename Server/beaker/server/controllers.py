@@ -566,7 +566,7 @@ class Root(RPCRoot):
             use_custom_columns = False
             columns = None
             searchvalue = None
-            my_fields = Utility.systems_grid()
+            my_fields = Utility.custom_systems_grid(default_result_columns)
                 
         display_grid = myPaginateDataGrid(fields=my_fields)
 
