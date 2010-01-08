@@ -97,6 +97,10 @@ class Utility:
         return 'fqdn'
 
     @classmethod
+    def system_powertype_name(cls):
+        return 'power'
+
+    @classmethod
     def get_attr(cls,c):        
         return lambda x:getattr(cls.get_correct_system_column(x),c.lower())           
           
@@ -108,6 +112,7 @@ class Utility:
             except Exception,(e): 
                 return ''   
         return my_f
+
     @classmethod
     def system_arch_getter(cls):
         return lambda x: ', '.join([arch.arch for arch in cls.get_correct_system_column(x).arch])  
@@ -523,11 +528,17 @@ class Root(RPCRoot):
         if 'type' in kw:
             kw['systemsearch'] = [{'table' : 'System/Type',
                                    'operation' : 'is',
-                                   'value' : kw['type']}]           
+                                   'value' : kw['type']}]      
+            #when we do a short cut type search, result column args are not passed
+            #we need to recreate them here from our cookies
+            text = request.simple_cookie['column_values'].value
+            vals_to_set = text.split(',')
+            for elem in vals_to_set:
+                kw['systemsearch_column_%s' % elem] = elem 
+      
     
         default_result_columns = ('System/Name', 'System/Status', 'System/Vendor',
-                                  'System/Model','System/Arch', 
-                                  'System/User', 'System/Type') 
+                                  'System/Model','System/Arch', 'System/User', 'System/Type') 
 
         if kw.get("systemsearch"):
             searchvalue = kw['systemsearch']
