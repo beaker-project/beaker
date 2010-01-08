@@ -1,3 +1,18 @@
+<div xmlns:py="http://purl.org/kid/ns#">
+<script type='text/javascript'>
+$(document).ready(function(){ 
+    $("#form_status_id").change(function() 
+    { 
+        if ($('#form_status_id :selected').text() == 'Broken' || $('#form_status_id :selected').text() == 'Removed') {
+             $('#form_status_reason').removeAttr('readonly')
+        }   
+    });
+
+    if ($('#form_status_id :selected').text() == 'Working') {
+         $('#form_status_reason').attr('readonly',1)
+     } 
+});
+</script>
 <form xmlns:py="http://purl.org/kid/ns#"
   name="${name}"
   action="${tg.url(action)}"
@@ -161,3 +176,4 @@
      </table>
     </div>
 </form>
+</div>

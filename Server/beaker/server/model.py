@@ -1499,6 +1499,11 @@ class SystemStatus(SystemObject):
     @classmethod
     def by_name(cls, systemstatus):
         return cls.query.filter_by(status=systemstatus).one()
+ 
+    @classmethod
+    def by_id(cls,status_id):
+        return cls.query.filter_by(id=status_id).one()
+
 
 
 class Arch(SystemObject):
