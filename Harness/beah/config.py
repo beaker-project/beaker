@@ -90,7 +90,7 @@ def _get_conf_file(conf_env_var, fname, opt=None):
         conf_list.append(os.environ.get('BEAH_ROOT')+'/etc/'+fname)
     if os.environ.has_key('HOME'):
         conf_list.append(os.environ.get('HOME')+'/.'+fname)
-    if sys.prefix not in ['', '/']:
+    if sys.prefix not in ['', '/', '/usr']:
         conf_list.append(sys.prefix + '/etc/'+fname)
     conf_list.append('/etc/'+fname)
     for conf_file in conf_list:
