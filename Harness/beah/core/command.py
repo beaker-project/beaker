@@ -132,6 +132,28 @@ class Command(list):
         return self[self.ARGS]
     def arg(self, name, val=None):
         return self.args().get(name, val)
+    def same_as(self, cmd):
+        """
+        Compare commands.
+
+        This ignores id, which will be (usually) different.
+        """
+        if not isinstance(cmd, Command):
+            cmd = Command(cmd)
+        if self.command() != cmd.command():
+            return False
+        if self.command() == 'forward':
+            a = self.args()
+            ca = cmd.args()
+            for k in a.keys():
+                if k == 'event':
+                    if not event.Event(a['event']).same_as(event.Event(ca.get('event', None))):
+                        return False
+                else:
+                    if a[k] != ca.get(k, None):
+                        return False
+            return True
+        return self.args() == cmd.args()
 
 ################################################################################
 # TESTING:

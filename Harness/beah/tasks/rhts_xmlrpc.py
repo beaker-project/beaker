@@ -344,6 +344,8 @@ class RHTSServer(server.Site):
 ################################################################################
 class RHTSMain(object):
 
+    VARIABLE_VALUE_TIMEOUT=2
+
     def __init__(self, task_path, env):
         self.controller = ControllerLink(self)
         self.task = RHTSTask(self)
@@ -454,11 +456,12 @@ class RHTSMain(object):
         cmd_dest = cmd.arg('dest')
         cmd_value = cmd.arg('value')
         for ix, waits in enumerate(self.__waits_for):
-            (d, states, variables) = waits
+            if not waits:
+                continue
+            (d, states, variables, dc) = waits
             answ = []
             for var in variables:
                 (name, handle, dest, val) = var
-                # FIXME!!! compare: dest=='localhost'
                 if name==cmd_name and handle==cmd_handle and dest==cmd_dest:
                     var[3] = cmd_value
                     log.debug("variable match: %r", var)
@@ -470,6 +473,7 @@ class RHTSMain(object):
                         answ = None
             if answ is not None:
                 log.debug("all values match: %r", answ)
+                dc.cancel()
                 d.callback(answ)
                 self.__waits_for[ix] = None
         log.debug("variable_value handled.")
@@ -480,9 +484,25 @@ class RHTSMain(object):
 
     def wait_for_variables(self, variables, states):
         d = Deferred()
+        dc = reactor.callLater(self.VARIABLE_VALUE_TIMEOUT, self.cancel_waiting, d)
         vs = [[name, handle, dest, None] for (name, handle, dest) in variables]
-        self.__waits_for.append([d, states, list(vs)])
+        self.__waits_for.append([d, states, list(vs), dc])
         return d
+
+    def cancel_waiting(self, d):
+        cancel = False
+        for ix, waits in enumerate(self.__waits_for):
+            if not waits:
+                continue
+            (dd, states, variables, dc) = waits
+            if dd is d:
+                self.__waits_for[ix] = None
+                cancel = True
+        if cancel:
+            self.__waits_for = list([waits for waits in self.__waits_for if waits])
+            d.errback("Timeout")
+            return True
+        return False
 
     def set_file(self, name):
         if name is None:

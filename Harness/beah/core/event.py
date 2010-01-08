@@ -444,6 +444,17 @@ class Event(list):
     def args(self): return self[self.ARGS]
     def arg(self, name, val=None):
         return self.args().get(name, val)
+    def same_as(self, evt):
+        if not isinstance(evt, Event):
+            evt = Event(evt)
+        if self.event() != evt.event():
+            return False
+        if self.origin() != evt.origin():
+            return False
+        if self.args() == evt.args():
+            return True
+        # FIXME: are there any exceptions?
+        return False
 
 ################################################################################
 # TESTING:
