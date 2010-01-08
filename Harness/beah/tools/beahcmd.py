@@ -17,6 +17,7 @@ class BeahRunner(ExtBackend):
         self.__monitor = None
         self.__wait = None
         self.__cmd = None
+        self.__done = False
 
     def dbg(self, msg=None):
         if msg:
@@ -26,8 +27,16 @@ class BeahRunner(ExtBackend):
         if self.__wait or self.__monitor:
             print "*** Wait:", self.__wait, " for:", self.__monitor
 
+    def done(self):
+        if not self.__done:
+            reactor.callLater(reactor.stop)
+            self.__done = True
+
     def do_beah_cmd(self):
         #self.dbg("do_beah_cmd called")
+
+        if self.__done:
+            return
 
         if self.__wait:
             return
@@ -39,7 +48,7 @@ class BeahRunner(ExtBackend):
                     #self.dbg("coro.next() -> %r" % next_cmd)
                 except exceptions.StopIteration:
                     print "\n========================================\nDone!\n========================================"
-                    reactor.stop()
+                    self.done()
                     break
 
                 if next_cmd is WAIT:
@@ -60,7 +69,7 @@ class BeahRunner(ExtBackend):
                 print "----------------------------------------"
                 self.controller.proc_cmd(self, next_cmd)
             except:
-                reactor.stop()
+                self.done()
                 raise
 
     def set_controller(self, controller=None):
@@ -95,16 +104,16 @@ class BeahRunner(ExtBackend):
                 return
             if evt.args()['rc'] == ECHO.NOT_IMPLEMENTED:
                 print "--- ERROR: Command is not implemented."
-                reactor.stop()
+                self.done()
                 return
             if evt.args()['rc'] == ECHO.EXCEPTION:
                 print "--- ERROR: Command raised an exception."
                 print evt.args()['exception']
-                reactor.stop()
+                self.done()
                 return
 
 
-def beah_run(coro):
+def beah_run(coro, **kwargs):
     """
     This is a Backend to issue script to Controller.
 
@@ -121,7 +130,7 @@ def beah_run(coro):
     """
     backend = BeahRunner(coro)
     # Start a default TCP client:
-    start_backend(backend)
+    start_backend(backend, **kwargs)
 
 if __name__ == '__main__':
     # FIXME: in python2.2: from __future__ import generators
