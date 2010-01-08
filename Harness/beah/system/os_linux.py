@@ -16,14 +16,15 @@ import platform
 
 (DISTNAME,DISTVER,DISTCODENAME) = platform.dist()
 
-systemdist = None
-try:
-    systemdist = __import__('beah.system.dist_'+DISTNAME, {}, {}, ['*'])
-except exceptions.ImportError:
-    pass
-
-try:
-    systemdist = __import__('beah.system.dist_'+DISTNAME+DISTVER, {}, {}, ['*'])
-except exceptions.ImportError:
-    pass
-
+def systemdist():
+    try:
+        sd = __import__('beah.system.dist_'+DISTNAME, {}, {}, ['*'])
+    except exceptions.ImportError:
+        sd = None
+    try:
+        sdv = __import__('beah.system.dist_'+DISTNAME+DISTVER, {}, {}, ['*'])
+    except exceptions.ImportError:
+        sdv = None
+    if sdv:
+        return sdv
+    return sd

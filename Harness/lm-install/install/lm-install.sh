@@ -134,6 +134,37 @@ function lm_install_setuptools()
   popd
 }
 
+function lm_build_rpm()
+{
+  if [[ -e "$BEAH_RPM" ]]; then
+    echo "RPM file \"$BEAH_RPM\" exists."
+  else
+    python setup.py bdist_rpm
+  fi
+}
+function lm_build_egg()
+{
+  if [[ -e "$BEAH_EGG" ]]; then
+    echo "Egg file \"$BEAH_EGG\" exists."
+  else
+    python setup.py bdist_egg
+  fi
+}
+
+# Other Dependencies:
+
+# uuid - http://zesty.ca/python/uuid.py - http://zesty.ca/python/uuid.html
+# http://pypi.python.org/pypi/uuid/1.30
+# http://pypi.python.org/packages/source/u/uuid/uuid-1.30.tar.gz#md5=639b310f1fe6800e4bf8aa1dd9333117
+# - only on Py 2.4 and older
+
+# newer uuid (from 2.5) requires ctype
+# http://pypi.python.org/pypi/ctypes/1.0.2
+
+# hashlib - http://code.krypto.org/python/hashlib/hashlib-20081119.tar.gz
+# http://pypi.python.org/pypi/hashlib/20081119
+# - only on Py 2.4 and older
+
 function lm_install_beah()
 {
   lm_pushd || return 1
@@ -147,22 +178,13 @@ function lm_install_beah()
 
     pushd beah-0.1.a1${BEAH_DEV} || { popd; return 1; }
       BEAH_RPM="dist/beah-0.1.a1${BEAH_DEV}-1.noarch.rpm"
-      if [[ -e "$BEAH_RPM" ]]; then
-        echo "RPM file \"$BEAH_RPM\" exists."
-      else
-        python setup.py bdist_rpm
-      fi
 
       EGG_VER="$(python -V 2>&1 | cut -d " " -f 2 -s)"
       BEAH_EGG="dist/beah-0.1.a1${BEAH_DEV}-py$EGG_VER.egg"
-      if [[ -e "$BEAH_EGG" ]]; then
-        echo "Egg file \"$BEAH_EGG\" exists."
-      else
-        python setup.py bdist_egg
-      fi
 
       case "${1:-"src"}" in
         rpm|-r|--rpm)
+          lm_build_rpm
           if [[ -r "$BEAH_RPM" ]]; then
             yum -y install python-{zope-interface,twisted-{core,web},simplejson}
             rpm -iF "$BEAH_RPM"
@@ -171,6 +193,7 @@ function lm_install_beah()
           fi
           ;;
         yum|-y|--yum)
+          lm_build_rpm
           if [[ -r "$BEAH_RPM" ]]; then
             yum -y install --nogpgcheck "$BEAH_RPM"
           else
@@ -178,19 +201,23 @@ function lm_install_beah()
           fi
           ;;
         egg|-e|--egg)
+          lm_build_egg
           if [[ -r "$BEAH_EGG" ]]; then
             easy_install "$BEAH_EGG"
           else
             false
           fi
           ;;
+        src-nodep|-n|--src-nodep)
+          python setup.py install
+          ;;
         src|-s|--src)
           yum -y install python-{zope-interface,twisted-{core,web},simplejson} && \
           python setup.py install
           ;;
         build|-b|--build)
-          echo "Build: Not implemented." >&2
-          false
+          lm_build_rpm && \
+          lm_build_egg
           ;;
         help|-h|-?|--help)
           echo "USAGE: $0 [src|egg|rpm|build|help]"
@@ -223,19 +250,52 @@ END
   sed -e 's/^DEVEL=.*$/DEVEL=True/' /etc/beah.conf.orig > /etc/beah.conf || true
 }
 
+LM_LOGS="/tmp/beah-*.out /var/log/beah*.log /tmp/var/log/rhts_task.log"
 function lm_tar_logs()
 {
-  tar cf $LM_INSTALL_ROOT/lm-logs.tar.gz /tmp/beah-*.out /var/log/beah*.log /tmp/var/log/rhts_task.log
+  tar cf $LM_INSTALL_ROOT/lm-logs.tar.gz $LM_LOGS
 }
 
 function lm_logs()
 {
-  vim -o /tmp/beah-*.out /var/log/beah*.log /tmp/var/log/rhts_task.log
+  vim -o $LM_LOGS
+}
+
+function lm_rm_logs()
+{
+  rm -f $LM_LOGS
+}
+
+function ls_egg()
+{
+  if [[ -z "$1" ]]; then
+    soft_error "ls_egg PKG"
+    return 1
+  fi
+  for lib_dir in /usr/lib*; do
+    for py_dir in $lib_dir/python*; do
+      for egg_file in $py_dir/site-packages/$1-*.egg; do
+        if [[ -d "$egg_file" ]]; then
+          echo $egg_file
+        fi
+      done
+    done
+  done
+}
+
+function rm_egg()
+{
+  rm -rf $(ls_egg $1)
+}
+
+function lm_rm_beah_eggs()
+{
+  rm_egg beah
 }
 
 function lm_view_logs()
 {
-  view -o /tmp/beah-*.out /var/log/beah*.log /tmp/var/log/rhts_task.log
+  view -o $LM_LOGS
 }
 
 function lm_mon()
@@ -308,7 +368,7 @@ function lm_iptables()
 
 function lm_main_beah()
 {
-  lm_install_beah yum && \
+  lm_install_beah ${1:-yum} && \
   lm_config_beah || return 1
   lm_iptables
   if ! chkconfig beah-srv; then
@@ -364,7 +424,7 @@ function lm_main_install()
   lm_install_yum && \
   lm_install_additional_packages && \
   lm_install_setuptools yum && \
-  lm_main_beah && \
+  lm_main_beah "$@" && \
   if [[ -z "$LM_NO_RHTS" ]]; then
     lm_install_rhts_deps
   else
@@ -374,7 +434,7 @@ function lm_main_install()
 
 function lm_main_run()
 {
-  lm_main_install && \
+  lm_main_install "$@" && \
   lm_restart
   echo "Now you can run e.g. 'lm_kill', 'lm_restart' or 'lm_view_logs'."
   echo "Call 'lm_help' to display a help for these functions."
@@ -401,10 +461,12 @@ lm_env_check
     Check environment variables.
 lm_check
     Check environment including existence of $LM_INSTALL_ROOT/main.sh
-lm_main_install
+lm_main_install [OPTION]
     Install dependencies, harness and rhts dependencies.
-lm_main_beah
-    Install harness.
+    Options: see lm_install_beah
+lm_main_beah [OPTION]
+    Install and configure harness.
+    Options: see lm_install_beah
 lm_install_beah [OPTION]
     Install beah package.
     Options:

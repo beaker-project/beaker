@@ -19,6 +19,7 @@
 from twisted.internet import reactor
 from twisted.internet import protocol
 from beah.wires.internals.twadaptors import TaskAdaptor_JSON
+from beah.misc import dict_update
 import logging
 
 log = logging.getLogger('beacon')
@@ -63,7 +64,7 @@ def Spawn(host, port, proto=None):
         # BEACON_THOST - host name
         # BEACON_TPORT - port
         # BEACON_TID - id of task - used to introduce itself when opening socket
-        task_env.update(
+        dict_update(task_env,
                 BEACON_THOST=str(host),
                 BEACON_TPORT=str(port),
                 BEACON_TID=str(task_info['id']),
@@ -75,7 +76,7 @@ def Spawn(host, port, proto=None):
             task_env['BEAHLIB_ROOT'] = os.getenv('BEAHLIB_ROOT')
         val = os.getenv('PYTHONPATH')
         if val:
-            task_env.update(PYTHONPATH=val)
+            task_env['PYTHONPATH'] = val
         # 2. spawn a task
         protocol = (proto or TaskStdoutProtocol)(task_info)
         protocol.controller = controller

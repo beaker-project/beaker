@@ -13,6 +13,12 @@
 # FAKELC_SERVICE - if set, use beah-fakelc as a service.
 #FAKELC_SERVICE=1
 
+# BEAH_NODEP - tweak in setup.py to avoid checking dependencies.
+#BEAH_NODEP=1
+
+# LM_EXPORT - format of package to create. bin or bz2. Default: bin.
+# base64 on RHEL5.4 does not understand files created with base64 on F11
+#LM_EXPORT=bz2
 # BEAKER_HOSTNAME - the name used by LM to introduce iteslf to LC.
 # Optional. Defaults to $HOSTNAME
 #BEAKER_HOSTNAME="pure-virtual"

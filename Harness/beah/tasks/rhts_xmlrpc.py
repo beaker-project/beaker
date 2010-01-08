@@ -25,10 +25,11 @@ import os
 import os.path
 import tempfile
 import exceptions
+import traceback
 import uuid
 from beah.core import event, command
-from beah.wires.internals.twmisc import (serveAnyChild, serveAnyRequest,
-        JSONProtocol)
+from beah.misc import format_exc
+from beah.wires.internals.twmisc import serveAnyChild, serveAnyRequest, JSONProtocol
 from beah.core.constants import RC
 
 # FIXME: change log level to WARNING, use tempfile and upload log when process
@@ -79,7 +80,10 @@ class ControllerLink(JSONProtocol):
         self.main.controller_connected()
 
     def proc_input(self, obj):
-        self.main.controller_input(obj)
+        try:
+            self.main.controller_input(obj)
+        except:
+            self.main.send_evt(event.lose_item(format_exc()))
 
     def connectionLost(self, reason):
         self.main.controller_disconnected(reason)
@@ -444,7 +448,7 @@ class RHTSMain(object):
         cmd_handle = cmd.arg('handle')
         cmd_dest = cmd.arg('dest')
         cmd_value = cmd.arg('value')
-        for waits in self.__waits_for:
+        for ix, waits in enumerate(self.__waits_for):
             (d, states, variables) = waits
             answ = []
             for var in variables:
@@ -462,11 +466,10 @@ class RHTSMain(object):
             if answ is not None:
                 logging.debug("all values match: %r", answ)
                 d.callback(answ)
-                while waits:
-                    waits.pop()
-        self.__waits_for = [waits for wait in self.__waits_for if wait]
         logging.debug("variable_value handled.")
         logging.debug("...waiting for: %r", self.__waits_for)
+                self.__waits_for[ix] = None
+        self.__waits_for = list([waits for waits in self.__waits_for if waits])
 
     def wait_for_variables(self, variables, states):
         d = Deferred()

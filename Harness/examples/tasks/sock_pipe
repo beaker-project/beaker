@@ -67,7 +67,7 @@ class PipeTask(object):
         reactor.addReader(fifo)
         # SET ENVIRONMENT
         task_env = dict(os.getenv())
-        task_env.update(BEACON_PNAME=self.pname)
+        task_env['BEACON_PNAME'] = self.pname
         # SPAWN A TEST
         self.protocol = (proto or DefaultTestProtocol)()
         self.protocol.controller = self.controller

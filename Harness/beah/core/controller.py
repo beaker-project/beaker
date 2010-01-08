@@ -21,7 +21,7 @@ import exceptions
 import logging
 from beah.core import event, command
 from beah.core.constants import ECHO
-from beah.misc import Raiser, localhost
+from beah.misc import Raiser, localhost, format_exc, dict_update, log_flush
 from beah import config
 from beah.misc.log_this import log_this
 
@@ -190,14 +190,10 @@ class Controller(object):
     def task_finished(self, task, rc):
         self.generate_evt(event.end(task.task_info, rc))
         self.remove_task(task)
-        for h in log.handlers:
-            try:
-                h.flush()
-            except:
-                pass
+        log_flush(log)
 
     def handle_exception(self, message="Exception raised."):
-        log_error("Controller: %s %s", message, traceback.format_exc())
+        log_error("Controller: %s %s", message, format_exc())
 
     def proc_cmd(self, backend, cmd):
         """Process Command received from backend.
@@ -221,8 +217,9 @@ class Controller(object):
             except:
                 self.handle_exception("Handling %s raised an exception." %
                         cmd.command())
-                evt.args().update(rc=ECHO.EXCEPTION,
-                        exception=traceback.format_exc())
+                dict_update(evt.args(),
+                        rc=ECHO.EXCEPTION,
+                        exception=format_exc())
         log_debug("Controller: echo(%r)", evt)
         backend.proc_evt(evt, explicit=True)
 

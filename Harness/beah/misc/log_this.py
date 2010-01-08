@@ -16,6 +16,7 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
+from beah.misc import setfname, format_exc
 import exceptions
 import traceback
 
@@ -38,17 +39,22 @@ def log_this(logf, log_on=True):
                     except: pass
                     return answ
                 except exceptions.Exception, e:
-                    tb = traceback.format_exc()
+                    tb = format_exc()
                     try: logf("} %s raised %s (%r)\n" % (fstr, repr(e), tb))
                     except: pass
                     raise
                 except object, e:
-                    tb = traceback.format_exc()
+                    tb = format_exc()
                     try: logf("} %s raised %s (%r)\n" % (fstr, repr(e), tb))
                     except: pass
                     raise
+                except:
+                    tb = format_exc()
+                    try: logf("} %s raised an exception (%r)\n" % (fstr, tb))
+                    except: pass
+                    raise
             tempf.__doc__ = f.__doc__
-            tempf.__name__ = tempf.__name__
+            setfname(tempf, f.__name__)
             return tempf
     else:
         def __call__(f):

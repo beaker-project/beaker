@@ -20,8 +20,10 @@ import exceptions
 import base64
 import zlib
 import bz2
+import sys
 from beah.core.constants import RC, LOG_LEVEL
 from beah.core import new_id, check_type
+from beah.misc import setfname
 
 """
 Events are used to communicate events from Task to Controller and finally back
@@ -73,7 +75,7 @@ def echo(cmd, rc, message="", origin={}, timestamp=None, **kwargs):
     - rc - response as defined by beah.core.constants.ECHO
     - message - explanatory message
     """
-    if isinstance(cmd, str):
+    if isinstance(cmd, Event.TESTTYPE):
         cmd_id = cmd
     else:
         cmd_id = cmd.id()
@@ -106,7 +108,7 @@ def mk_log_level(log_level):
     def logf(message="", log_handle="", origin={}, timestamp=None, **kwargs):
         return Event('log', origin, timestamp, log_level=log_level,
                 log_handle=log_handle, message=message, **kwargs)
-    logf.__name__ = "log_level_%s" % log_level
+    setfname(logf, "log_level_%s" % log_level)
     logf.__doc__ = "Create log event with log_level = %s" % log_level
     return logf
 
@@ -141,7 +143,7 @@ def mk_result(rc, message):
     def resf(message=message, origin={}, timestamp=None, **kwargs):
         return result(rc, message=message, origin=origin, timestamp=timestamp,
                 **kwargs)
-    resf.__name__ = "result_%s" % rc
+    setfname(resf, "result_%s" % rc)
     resf.__doc__ = "Create result with rc = %s and default message = %s" % (rc, message)
     return resf
 
@@ -296,7 +298,7 @@ def encode(codec, data):
         cs = codec.split("|")
     for c in cs:
         if c=="base64":
-            data = base64.b64encode(data)
+            data = base64.encodestring(data)
         elif c=="bz2":
             data = bz2.compress(data)
         elif c=="gz":
@@ -318,9 +320,10 @@ def decode(codec, data):
         cs = [""]
     else:
         cs = codec.split("|")
-    for c in reversed(cs):
+        cs.reverse()
+    for c in cs:
         if c=="base64":
-            data = base64.b64decode(data)
+            data = base64.decodestring(data)
         elif c=="bz2":
             data = bz2.decompress(data)
         elif c=="gz":
@@ -361,14 +364,23 @@ class Event(list):
     and it is (hopefully) faster than objects.
     """
 
-    EVENT=1
-    ID=2
-    ORIGIN=3
-    TIMESTAMP=4
-    ARGS=5
+    EVENT = 1
+    ID = 2
+    ORIGIN = 3
+    TIMESTAMP = 4
+    ARGS = 5
+
+    if sys.version_info[1] < 4:
+        # FIXME: Tweak to make it Python 2.3 compatible
+        TESTTYPE = (str, unicode)
+    else:
+        TESTTYPE = str
 
     # FIXME: Clean-up! All the indices are ugly!!!
     def __init__(self, evt, origin={}, timestamp=None, id=None, **kwargs):
+        if isinstance(evt, Event):
+            list.__init__(self, evt)
+            return
         list.__init__(self, ['Event', None, None, None, None, None]) # is this backwards compatible? Even with Python 2.3?
         if isinstance(evt, list):
             if evt[0] != 'Event':
@@ -399,7 +411,7 @@ class Event(list):
             if callable(self[self.ARGS][key]):
                 self[self.ARGS][key] = self[self.ARGS][key](self)
 
-        check_type("event", self.event(), str)
+        check_type("event", self.event(), self.TESTTYPE)
         check_type("origin", self.origin(), dict)
         check_type("args", self.args(), dict)
         check_type("timestamp", self.timestamp(), float, True)
@@ -421,10 +433,10 @@ def RelObj(list):
             list.__init__(self, evt_type)
         else:
             list.__init__(self, [evt_type, evt_id, handle, handle_type])
-        check_type("evt_type", self.evt_type(), str)
-        check_type("evt_id", self.evt_id(), str)
-        check_type("handle", self.handle(), str)
-        check_type("handle_type", self.handle_type(), str)
+        check_type("evt_type", self.evt_type(), Event.TESTTYPE)
+        check_type("evt_id", self.evt_id(), Event.TESTTYPE)
+        check_type("handle", self.handle(), Event.TESTTYPE)
+        check_type("handle_type", self.handle_type(), Event.TESTTYPE)
 
     def evt_type(self): return self[0]
     def evt_id(self): return self[1]
@@ -467,10 +479,13 @@ if __name__=='__main__':
     test('', lambda x: x)
     test(None, lambda x: x)
     test('|||', lambda x: x)
-    test('base64', lambda x: base64.b64encode(x))
+    test('base64', lambda x: base64.encodestring(x))
+    #test('base64', lambda x: base64.b64encode(x))
     test('gz', lambda x: zlib.compress(x))
     test('bz2', lambda x: bz2.compress(x))
-    test('bz2|base64', lambda x: base64.b64encode(bz2.compress(x)))
-    test('|bz2||base64|', lambda x: base64.b64encode(bz2.compress(x)))
+    test('bz2|base64', lambda x: base64.encodestring(bz2.compress(x)))
+    test('|bz2||base64|', lambda x: base64.encodestring(bz2.compress(x)))
+    #test('bz2|base64', lambda x: base64.b64encode(bz2.compress(x)))
+    #test('|bz2||base64|', lambda x: base64.b64encode(bz2.compress(x)))
     #test('utf8', lambda x: x) # THIS WILL FAIL!
 

@@ -71,6 +71,8 @@ cp dist/beah-0.1.a1${BEAH_DEV}.tar.gz $DISTRO_ROOT/install/
 cp -R -t $DISTRO_ROOT/ ${TEMPLATE_DIR}/*
 chmod 755 $DISTRO_ROOT/install/lm-install.sh
 
+cp install.sh $DISTRO_ROOT/install
+
 cat >$DISTRO_ROOT/install/env.sh <<END
 LM_INSTALL_ROOT="${LM_INSTALL_ROOT}"
 LAB_CONTROLLER="${LAB_CONTROLLER:-http://localhost:5222/}"
@@ -82,6 +84,7 @@ LM_YUM_FILE="${LM_YUM_FILE}"
 LM_YUM_PATH="${LM_YUM_PATH}"
 LM_FAKELC="${LM_FAKELC}"
 FAKELC_SERVICE="${FAKELC_SERVICE}"
+export BEAH_NODEP="${BEAH_NODEP}"
 
 BEAH_DEV="${BEAH_DEV}"
 END
@@ -100,16 +103,25 @@ popd
 lm_main "\${1:-"help"}"
 END
 
+case "${LM_EXPORT:-bin}" in
+  "bz2")
+LM_PACKAGE_FILE=lm-package${BEAH_DEV}.tar.bz2
+LM_PACKAGE=/tmp/$LM_PACKAGE_FILE
+tar cjC $DISTRO_ROOT . > $LM_PACKAGE
+  ;;
+  *)
 LM_PACKAGE_FILE=lm-package${BEAH_DEV}.sh
 LM_PACKAGE=/tmp/$LM_PACKAGE_FILE
 cat >${LM_PACKAGE} <<END
 #!/bin/sh
-base64 -d <<FILE_END | tar xjC ${LM_INSTALL_ROOT}
+base64 -d <<DATA_END | tar xjC ${LM_INSTALL_ROOT}
 $(tar cjC ${DISTRO_ROOT} . | base64)
-FILE_END
+DATA_END
 . ${LM_INSTALL_ROOT}/main.sh "\$@"
 END
 chmod 755 ${LM_PACKAGE}
+  ;;
+esac
 scp ${LM_PACKAGE} root@${LABM}:${LM_INSTALL_ROOT}
 rm ${LM_PACKAGE}
 

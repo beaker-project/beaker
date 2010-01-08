@@ -19,6 +19,7 @@
 import re
 from beah.core import event
 from beah.core.constants import RC
+from beah.misc import dict_update
 
 class TestHarnessTAP2EventList(object):
     """\
@@ -115,7 +116,8 @@ http://search.cpan.org/~petdance/Test-Harness-2.64/lib/Test/Harness/TAP.pod
         if self.error_re.match(line):
             # FIXME: using ${var} in strings. This is both well understood and
             # easy to process on server
-            result_dict.update(origin=self.origin,
+            dict_update(result_dict,
+                    origin=self.origin,
                     message="${line} does not match Test::Harness::TAP format",
                     line=line)
             # we update result_dict in this case, not to lose information

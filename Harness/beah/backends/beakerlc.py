@@ -30,6 +30,7 @@ import logging
 from xml.dom import minidom
 
 from beah.misc.log_this import log_this
+from beah.misc import format_exc, dict_update, log_flush
 
 from beah.core.backends import ExtBackend
 from beah.core import command, event, addict
@@ -55,6 +56,8 @@ Beaker Backend should invoke these XML-RPC:
  4. recipes.tasks.Stop(task_id, stop_type, msg)
     - stop_type: stop|abort|cancel
 """
+
+conf = config.config()
 
 log_handler('beah_beaker_backend.log')
 log = logging.getLogger('backend')
@@ -116,7 +119,7 @@ def parse_recipe_xml(input_xml):
         log.info("parse_recipe_xml: This recipe has finished.")
         return None
 
-    task_env.update(
+    dict_update(task_env, 
             ARCH=xml_attr(er, 'arch'),
             RECIPEID=xml_attr(er, 'id'),
             JOBID=xml_attr(er, 'job_id'),
@@ -155,7 +158,7 @@ def parse_recipe_xml(input_xml):
 
         task_id = xml_attr(task, 'id')
         task_name = xml_attr(task, 'name')
-        task_env.update(
+        dict_update(task_env,
                 TASKID=str(task_id),
                 RECIPETESTID=str(task_id),
                 TESTID=str(task_id),
@@ -174,7 +177,7 @@ def parse_recipe_xml(input_xml):
             task_env[xml_attr(r, 'value')]=' '.join(role)
 
         ewd = xml_attr(task, 'avg_time')
-        task_env.update(KILLTIME=ewd)
+        task_env['KILLTIME'] = ewd
 
         executable = ''
         args = []
@@ -184,7 +187,7 @@ def parse_recipe_xml(input_xml):
             log.debug("parse_recipe_xml: rpm tag: %s", rpm_tags)
             if rpm_tags:
                 rpm_name = xml_attr(rpm_tags[0], 'name')
-                task_env.update(
+                dict_update(task_env,
                         TEST=task_name,
                         TESTRPMNAME=normalize_rpm_name(rpm_name),
                         TESTPATH="/mnt/tests"+task_name ,
@@ -239,6 +242,13 @@ def handle_error(result, *args, **kwargs):
 # FIXME: Extract this to twmisc!
 class LoggingProxy(Proxy):
 
+    verbose_cls = False
+
+    def make_verbose(cls):
+        cls.callRemote = print_this(cls.callRemote)
+        cls.verbose_cls = True
+    make_verbose = classmethod(make_verbose)
+
     def print_(fmt, *args, **kwargs):
         print fmt % args, kwargs
 
@@ -254,7 +264,6 @@ class LoggingProxy(Proxy):
                 .addCallbacks(self.log, self.log_err,
                         callbackArgs=["returned", method, args, kwargs],
                         errbackArgs=["failed", method, args, kwargs])
-    #callRemote = print_this(callRemote)
 
 class BeakerLCBackend(ExtBackend):
 
@@ -269,8 +278,33 @@ class BeakerLCBackend(ExtBackend):
         self.__results_by_uuid = {}
         self.__file_info = {}
 
+    verbose_cls = False
+
+    def make_verbose(cls):
+        cls.on_idle = print_this(cls.on_idle)
+        cls.on_lc_failure = print_this(cls.on_lc_failure)
+        cls.set_controller = print_this(cls.set_controller)
+        cls.handle_new_task = print_this(cls.handle_new_task)
+        cls.save_command = print_this(cls.save_command)
+        cls.get_command = print_this(cls.get_command)
+        cls.proc_evt_echo = print_this(cls.proc_evt_echo)
+        cls.proc_evt_start = print_this(cls.proc_evt_start)
+        cls.proc_evt_end = print_this(cls.proc_evt_end)
+        cls.proc_evt_result = print_this(cls.proc_evt_result)
+        cls.proc_evt_file = print_this(cls.proc_evt_file)
+        cls.proc_evt_file_meta = print_this(cls.proc_evt_file_meta)
+        cls.proc_evt_file_write = print_this(cls.proc_evt_file_write)
+        cls.handle_Stop = print_this(cls.handle_Stop)
+        cls.get_file_info = print_this(cls.get_file_info)
+        cls.set_file_info = print_this(cls.set_file_info)
+        cls.get_result_id = print_this(cls.get_result_id)
+        cls.handle_Result = print_this(cls.handle_Result)
+        cls.verbose_cls = True
+    make_verbose = classmethod(make_verbose)
+
     def on_lc_failure(self, result):
         self.waiting_for_lc = False
+        log.error(traceback.format_tb(result.getTracebackObject()))
         reactor.callLater(120, self.on_idle)
         return None
 
@@ -296,6 +330,8 @@ class BeakerLCBackend(ExtBackend):
                             os.getenv('COBBLER_SERVER', 'localhost'))})
             url = self.conf.get('DEFAULT', 'LAB_CONTROLLER')
             self.proxy = LoggingProxy(url)
+            if self.verbose_cls:
+                self.proxy.make_verbose()
             self.proxy.print_ = log.info
             self.on_idle()
 
@@ -310,7 +346,7 @@ class BeakerLCBackend(ExtBackend):
         try:
             self.task_data = parse_recipe_xml(self.recipe_xml)
         except:
-            self.on_exception("parse_recipe_xml Failed: %s", traceback.format_exc())
+            self.on_exception("parse_recipe_xml Failed: %s", format_exc())
             raise
 
         log.debug("handle_new_task: task_data = %r", self.task_data)
@@ -399,7 +435,7 @@ class BeakerLCBackend(ExtBackend):
                     self.mk_msg(event=evt)) \
                             .addCallback(self.handle_Result, event_id=evt.id())
         except:
-            s = traceback.format_exc()
+            s = format_exc()
             log.error("Exception in proc_evt_result: %s", s)
             print s
             raise
@@ -412,7 +448,7 @@ class BeakerLCBackend(ExtBackend):
         log.error("--- %s: %s at %s", level, msg, tb)
 
     def on_exception(self, msg, *args, **kwargs):
-        self.__on_error("EXCEPTION", msg, traceback.format_exc(),
+        self.__on_error("EXCEPTION", msg, format_exc(),
                 *args, **kwargs)
 
     def on_error(self, msg, *args, **kwargs):
@@ -428,19 +464,17 @@ class BeakerLCBackend(ExtBackend):
             self.on_error("File with given id (%s) already exists." % fid)
             return
         # FIXME: Check what's submitted:
-        self.set_file_info(fid, **evt.args())
-    #proc_evt_file = print_this(proc_evt_file)
+        self.set_file_info(fid, evt.args())
 
     def proc_evt_file_meta(self, evt):
         fid = evt.arg('file_id')
         # FIXME: Check what's submitted:
-        self.set_file_info(fid, **evt.args())
-    #proc_evt_file_meta = print_this(proc_evt_file_meta)
+        self.set_file_info(fid, evt.args())
 
     def proc_evt_file_write(self, evt):
         fid = evt.arg('file_id')
         finfo = addict(self.get_file_info(fid))
-        finfo.update(codec=evt.arg('codec', None))
+        finfo['codec'] = evt.arg('codec', None)
         codec = finfo.get('codec', None)
         offset = evt.arg('offset', None)
         seqoff = finfo.get('offset', 0)
@@ -469,28 +503,28 @@ class BeakerLCBackend(ExtBackend):
             data = event.encode("base64", cdata)
         filename = finfo.get('name',
                 self.task_data['task_env']['TASKNAME'] + '/' + fid)
-        (path, filename) = ('/' + filename).rsplit('/', 1)
+        #(path, filename) = ('/' + filename).rsplit('/', 1)
+        filename = '/' + filename
+        sep_ix = filename.rfind('/')
+        (path, filename) = (filename[:sep_ix], filename[sep_ix+1:])
         self.proxy.callRemote('task_upload_file', self.get_task_id(evt),
                 path[1:] or '/', filename,
                 str(size), digest[1], str(offset), data)
-    #proc_evt_file_write = print_this(proc_evt_file_write)
 
     def handle_Stop(self, result):
         """Handler for task_stop XML-RPC return."""
-        for h in log.handlers:
-            try:
-                h.flush()
-            except:
-                pass
+        log_flush(log)
         self.on_idle()
 
     def get_file_info(self, id):
         """Get a data associated with file. Find file by UUID."""
         return self.__file_info.get(id, None)
 
-    def set_file_info(self, id, **kwargs):
+    def set_file_info(self, id, *args, **kwargs):
         """Attach a data to file. Find file by UUID."""
         finfo = self.__file_info.setdefault(id, addict())
+        for d in args:
+            finfo.update(d)
         finfo.update(kwargs)
 
     def get_result_id(self, event_id):
@@ -508,6 +542,8 @@ class BeakerLCBackend(ExtBackend):
         reactor.callLater(1, reactor.stop)
 
 def start_beaker_backend():
+    if config.parse_bool(conf.get('BACKEND', 'DEVEL')):
+        BeakerLCBackend.make_verbose()
     backend = BeakerLCBackend()
     # Start a default TCP client:
     start_backend(backend, byef=lambda evt: reactor.callLater(1, reactor.stop))

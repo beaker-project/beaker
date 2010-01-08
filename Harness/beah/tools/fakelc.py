@@ -20,6 +20,7 @@ from twisted.web import xmlrpc
 from twisted.internet import reactor
 import beah
 from beah.wires.internals.twmisc import serveAnyChild, serveAnyRequest
+from beah.misc import format_exc
 import sys
 import os
 import exceptions
@@ -120,7 +121,7 @@ def do_task_result(fname, task_id, result_type, path, score, summary):
         print "%s.RETURN: %s" % (fname, answ)
         return answ
     except:
-        print traceback.format_exc()
+        print format_exc()
         raise
 
 def do_task_upload_file(fname, task_id, path, name, size, digest, offset, data):

@@ -2,6 +2,7 @@ import pickle
 import exceptions
 import traceback
 from beah.core.controller import RuntimeBase
+from beah.misc import format_exc
 
 class PickleRuntime(RuntimeBase):
 
@@ -29,7 +30,7 @@ class PickleRuntime(RuntimeBase):
             # FIXME: Handle this: move affected file to other place. Fresh
             # start. Report.
             print "Corrupted runtime file containing %r" % rt
-            print traceback.format_exc()
+            print format_exc()
             rt = self.def_rt()
         RuntimeBase.__init__(self, variables=rt['variables'])
 

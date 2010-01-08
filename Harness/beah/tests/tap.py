@@ -158,10 +158,14 @@ def run_on_backend(backend):
                 print "Backend: Data written"
                 yield task_filename
                 print "Backend: Task %s completed" % task_filename
-            finally:
+            except:
                 os.unlink(task_filename)
-        finally:
+                raise
+            os.unlink(task_filename)
+        except:
             os.unlink(test_filename)
+            raise
+        os.unlink(test_filename)
 
 # FIXME: there is not task module!
 #import task

@@ -17,7 +17,9 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 import exceptions
-from beah.core import new_id
+import sys
+from beah.core import event, new_id
+from beah.misc import setfname
 
 """
 Commands are used to send instructions from Backend to Controller (and
@@ -81,25 +83,34 @@ def command(cmd, **kwargs):
 def mkcommand(cmd, __doc__="", **kwargs):
     def cmdf(**kwargs):
         return command(cmd)
-    cmdf.__name__ = cmd
+    setfname(cmdf, cmd)
     cmdf.__doc__ = __doc__ or "Command %s" % cmd
     return cmdf
 
 class Command(list):
 
-    COMMAND=1
-    ID=2
-    ARGS=3
+    COMMAND = 1
+    ID = 2
+    ARGS = 3
+
+    if sys.version_info[1] < 4:
+        # FIXME: Tweak to make it Python 2.3 compatible
+        TESTTYPE = (str, unicode)
+    else:
+        TESTTYPE = str
 
     def __init__(self, cmd, id=None, **kwargs):
+        if isinstance(cmd, Command):
+            list.__init__(self, cmd)
+            return
         list.__init__(self, ['Command', None, None, None]) # is this backwards compatible? Even with Python 2.3?
         if isinstance(cmd, list):
-            if cmd[0] != 'Command' or not isinstance(cmd[self.COMMAND], str) or not isinstance(cmd[self.ARGS], dict):
+            if cmd[0] != 'Command' or not isinstance(cmd[self.COMMAND], self.TESTTYPE) or not isinstance(cmd[self.ARGS], dict):
                 raise exceptions.TypeError('%r not permitted. Has to be [\'Command\', str, str, dict]' % cmd)
             self[self.COMMAND] = str(cmd[self.COMMAND])
             self[self.ID] = cmd[self.ID]
             self[self.ARGS] = dict(cmd[self.ARGS])
-        elif isinstance(cmd, str):
+        elif isinstance(cmd, self.TESTTYPE):
             self[self.COMMAND] = str(cmd)
             self[self.ID] = id
             self[self.ARGS] = dict(kwargs)
@@ -108,7 +119,7 @@ class Command(list):
 
         if self[self.ID] is None:
             self[self.ID] = new_id()
-        if not isinstance(self.id(), str):
+        if not isinstance(self.id(), self.TESTTYPE):
             raise exceptions.TypeError('%r not permitted as id. Has to be str.' % self.id())
 
     def command(self):

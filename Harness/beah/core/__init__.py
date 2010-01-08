@@ -75,7 +75,8 @@ class addict(dict):
         # length 2.)
         for a in args:
             check_type('an argument', a, dict)
-            self.update(**a)
+            for k, v in a.items():
+                self[k] = v
         for k, v in kwargs.items():
             self[k] = v
 

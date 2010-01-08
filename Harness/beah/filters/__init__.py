@@ -145,14 +145,14 @@ class ObjectWriter(object):
 def Pprinter(**kwargs):
     from pprint import pformat
     ka = dict(kwargs)
-    ka.update(serializer=pformat)
+    ka['serializer'] = pformat
     return ObjectWriter(**ka)
 # FIXME: it is much easier to use pprint.pprint instead of Pprinter().proc_obj
 
 def JSONSerializer(**kwargs):
     from simplejson import dumps
     ka = dict(kwargs)
-    ka.update(serializer=dumps)
+    ka['serializer'] = dumps
     return ObjectWriter(**ka)
 # FIXME: it is easier to use lambda obj: stdout.write(json.dumps(obj)+"\n")
 

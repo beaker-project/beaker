@@ -68,6 +68,7 @@ function beah-cmd-backend() { python $BEAH_ROOT/beah/bin/cmd_backend.py "$@"; }
 function fakelc() { python $BEAH_ROOT/beah/tools/fakelc.py; }
 function beah-beaker-backend() { python $BEAH_ROOT/beah/backends/beakerlc.py; }
 function beah-fwd-backend() { python -c "from beah.backends.forwarder import main; main()"; }
+function beah-rhts-task() { python -c "from beah.tasks.rhts_xmlrpc import main; main()"; }
 function launcher()
 (
   default="s o l"

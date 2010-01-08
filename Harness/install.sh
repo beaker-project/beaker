@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 # Beah - Test harness. Part of Beaker project.
 #
@@ -27,31 +27,47 @@
 
 ## BEAH_ROOT - directory used to store downloaded files and for building
 ## components.
-BEAH_ROOT=/root/beah
+echo "BEAH_ROOT=${BEAH_ROOT:="/root/beah"}"
 
 ## PYTHON:
 ## PY_VER - version of python to build. Uncomment to include python in
 ## installation.
 #PY_VER=2.5 # This is known to work on RHEL4.8
-PY_VER=2.6.2
+#PY_VER=2.6.2
 
 ## PYBIN_NAME - python interpreter binary to install harness to.
-PYBIN_NAME=python2.6
+#PYBIN_NAME=python2.6
+echo "PYBIN_NAME=${PYBIN_NAME:="python"}"
 
 ## ZOPE INTERFACE:
 ## ZI_VER - version of zope-interface to download and build. Uncomment to
 ## include zope-interface in installation.
-ZI_VER=3.3.0
+echo "ZI_VER=${ZI_VER:="3.3.0"}"
 
 ## TWISTED:
 ## TW_VER - version of Twisted framework to download and build. Uncomment to
 ## include Twisted in installation.
-TW_VER=8.2.0
+echo "TW_VER=${TW_VER:="8.2.0"}"
+
+## SETUPTOOLS:
+## ST_VER - version of setuptools module to download and build. Uncomment to
+## include setuptools in installation.
+echo "ST_VER=${ST_VER:="0.6c11"}"
 
 ## SIMPLEJSON:
-## TW_VER - version of simplejson module to download and build. Uncomment to
+## SJ_VER - version of simplejson module to download and build. Uncomment to
 ## include simplejson in installation.
-SJ_VER=2.0.9
+echo "SJ_VER=${SJ_VER:="2.0.9"}"
+
+## UUID:
+## UUID_VER - version of uuid module to download and build. Uncomment to
+## include uuid in installation. No necessary on python2.5 and newer.
+echo "UUID_VER=${UUID_VER:="1.30"}"
+
+## HASHLIB:
+## HL_VER - version of hashlib module to download and build. Uncomment to
+## include uuid in installation. No necessary on python2.5 and newer.
+echo "HL_VER=${HL_VER:="20081119"}"
 
 ## GIT:
 ## GIT_VER - version of git to download and build. Uncomment to include git in
@@ -70,7 +86,7 @@ pushd $BEAH_ROOT
 ################################################################################
 # BUILD AND INSTALL NEWER PYTHON (E.G. 2.5):
 ################################################################################
-if [[ -n "$PY_VER" ]]; then
+if [[ -n "$PY_VER" && "$PY_VER" != "-" ]]; then
 mkdir python
 pushd python
 
@@ -82,9 +98,10 @@ cd Python-${PY_VER} && \
 make && \
 { make test || true; } && \
 make altinstall
+echo $? > ${BEAH_ROOT}/python.rc
 ) | tee ${BEAH_ROOT}/python.out 2> ${BEAH_ROOT}/python.err
 
-PY_OK=$?
+PY_OK=`cat ${BEAH_ROOT}/python.rc`
 
 popd
 else
@@ -97,7 +114,7 @@ PYBIN=`which $PYBIN_NAME`
 ################################################################################
 # BUILD AND INSTALL ZOPE.INTERFACE:
 ################################################################################
-if [[ "$PY_OK" && -n "$ZI_VER" ]]; then
+if [[ -n "$ZI_VER" && "$ZI_VER" != "-" ]]; then
 mkdir zope
 pushd zope
 
@@ -107,9 +124,10 @@ tar xvzf zope.interface-${ZI_VER}.tar.gz && \
 cd zope.interface-${ZI_VER} && \
 $PYBIN setup.py build && \
 $PYBIN setup.py install
+echo $? > ${BEAH_ROOT}/zope-interface.rc
 ) | tee ${BEAH_ROOT}/zope-interface.out 2> ${BEAH_ROOT}/zope-interface.err
 
-ZI_OK=$?
+ZI_OK=`cat ${BEAH_ROOT}/zope-interface.rc`
 
 popd
 else
@@ -119,7 +137,7 @@ fi
 ################################################################################
 # BUILD AND INSTALL TWISTED:
 ################################################################################
-if [[ "$ZI_OK" && -n "$TW_VER" ]]; then
+if [[ -n "$TW_VER" && "$TW_VER" != "-" ]]; then
 mkdir twisted
 pushd twisted
 
@@ -128,9 +146,10 @@ wget http://tmrc.mit.edu/mirror/twisted/Twisted/8.2/Twisted-${TW_VER}.tar.bz2 &&
 tar xvjf Twisted-${TW_VER}.tar.bz2 && \
 cd Twisted-${TW_VER} && \
 $PYBIN setup.py install
+echo $? > ${BEAH_ROOT}/twisted.rc
 ) | tee ${BEAH_ROOT}/twisted.out 2> ${BEAH_ROOT}/twisted.err
 
-TW_OK=$?
+TW_OK=`cat ${BEAH_ROOT}/twisted.rc`
 
 popd
 else
@@ -140,7 +159,7 @@ fi
 ################################################################################
 # BUILD AND INSTALL GIT:
 ################################################################################
-if [[ -n "$GIT_VER" ]]; then
+if [[ -n "$GIT_VER" && "$GIT_VER" != "-" ]]; then
 mkdir git
 pushd git
 
@@ -153,9 +172,10 @@ make configure && \
 make all doc && \
 make check && \
 make install
+echo $? > ${BEAH_ROOT}/git.rc
 ) | tee ${BEAH_ROOT}/git.out 2> ${BEAH_ROOT}/git.err
 
-GIT_OK=$?
+GIT_OK=`cat ${BEAH_ROOT}/git.rc`
 
 popd
 else
@@ -163,31 +183,100 @@ GIT_OK=0
 fi
 
 ################################################################################
+# BUILD AND INSTALL SETUPTOOLS:
+################################################################################
+if [[ -n "$ST_VER" && "$ST_VER" != "-" ]]; then
+mkdir setuptools
+pushd setuptools
+
+(
+wget http://pypi.python.org/packages/source/s/setuptools/setuptools-${ST_VER}.tar.gz && \
+tar xvzf setuptools-${ST_VER}.tar.gz && \
+cd setuptools-${ST_VER} && \
+$PYBIN setup.py build && \
+$PYBIN setup.py install
+echo $? > ${BEAH_ROOT}/setuptools.rc
+) | tee ${BEAH_ROOT}/setuptools.out 2> ${BEAH_ROOT}/setuptools.err
+
+ST_OK=`cat ${BEAH_ROOT}/setuptools.rc`
+
+popd
+else
+ST_OK=0
+fi
+
+################################################################################
 # BUILD AND INSTALL SIMPLEJSON:
 ################################################################################
-if [[ -n "$SJ_VER" ]]; then
+if [[ -n "$SJ_VER" && "$SJ_VER" != "-" ]]; then
 mkdir simplejson
 pushd simplejson
 
 (
-wget http://pypi.python.org/packages/2.6/s/setuptools/setuptools-0.6c9-py2.6.egg && \
-chmod 700 setuptools-0.6c9-py2.6.egg && \
-./setuptools-0.6c9-py2.6.egg && \
-\
 wget http://pypi.python.org/packages/source/s/simplejson/simplejson-2.0.9.tar.gz && \
 tar xvzf simplejson-${SJ_VER}.tar.gz && \
 cd simplejson-${SJ_VER} && \
 $PYBIN setup.py build && \
 $PYBIN setup.py install
+echo $? > ${BEAH_ROOT}/simplejson.rc
 ) | tee ${BEAH_ROOT}/simplejson.out 2> ${BEAH_ROOT}/simplejson.err
 
-SJ_OK=$?
+SJ_OK=`cat ${BEAH_ROOT}/simplejson.rc`
 
 popd
 else
 SJ_OK=0
 fi
 
+################################################################################
+# BUILD AND INSTALL UUID:
+################################################################################
+if [[ -n "$UUID_VER" && "$UUID_VER" != "-" && "`python -V 2>&1`" < "Python 2.5" ]]; then
+mkdir uuid
+pushd uuid
+
+(
+wget http://pypi.python.org/packages/source/u/uuid/uuid-${UUID_VER}.tar.gz && \
+tar xvzf uuid-${UUID_VER}.tar.gz && \
+cd uuid-${UUID_VER} && \
+$PYBIN setup.py build && \
+$PYBIN setup.py install
+echo $? > ${BEAH_ROOT}/uuid.rc
+) | tee ${BEAH_ROOT}/uuid.out 2> ${BEAH_ROOT}/uuid.err
+
+UUID_OK=`cat ${BEAH_ROOT}/uuid.rc`
+
+popd
+else
+UUID_OK=0
+fi
+
+################################################################################
+# BUILD AND INSTALL HASHLIB:
+################################################################################
+if [[ -n "$HL_VER" && "$HL_VER" != "-" && "`python -V 2>&1`" < "Python 2.5" ]]; then
+mkdir hashlib
+pushd hashlib
+
+(
+wget http://code.krypto.org/python/hashlib/hashlib-${HL_VER}.tar.gz && \
+tar xvzf hashlib-${HL_VER}.tar.gz && \
+cd hashlib-${HL_VER} && \
+$PYBIN setup.py build && \
+$PYBIN setup.py install
+echo $? > ${BEAH_ROOT}/hashlib.rc
+) | tee ${BEAH_ROOT}/hashlib.out 2> ${BEAH_ROOT}/hashlib.err
+
+HL_OK=`cat ${BEAH_ROOT}/hashlib.rc`
+
+popd
+else
+HL_OK=0
+fi
+
+################################################################################
+# GET BEAKER FROM GIT:
+################################################################################
 if [[ -n "$BKR" ]]; then
 git clone --depth 1 http://git.fedorahosted.org/git/beaker.git
 fi
@@ -199,31 +288,49 @@ fi
 if [[ "$PY_OK" -eq 0 ]]; then
 	echo "Python installed OK"
 else
-	echo "Python not installed"
+	echo "--- ERROR: Python not installed"
 fi
 
 if [[ "$ZI_OK" -eq 0 ]]; then
 	echo "zope.interface installed OK"
 else
-	echo "zope.interface not installed"
+	echo "--- ERROR: zope.interface not installed"
 fi
 
 if [[ "$TW_OK" -eq 0 ]]; then
 	echo "Twisted installed OK"
 else
-	echo "Twisted not installed"
+	echo "--- ERROR: Twisted not installed"
+fi
+
+if [[ "$ST_OK" -eq 0 ]]; then
+	echo "setuptools installed OK"
+else
+	echo "--- ERROR: setuptools not installed"
 fi
 
 if [[ "$SJ_OK" -eq 0 ]]; then
 	echo "simplejson installed OK"
 else
-	echo "simplejson not installed"
+	echo "--- ERROR: simplejson not installed"
+fi
+
+if [[ "$UUID_OK" -eq 0 ]]; then
+	echo "uuid installed OK"
+else
+	echo "--- ERROR: uuid not installed"
+fi
+
+if [[ "$HL_OK" -eq 0 ]]; then
+	echo "hashlib installed OK"
+else
+	echo "--- ERROR: hashlib not installed"
 fi
 
 if [[ "$GIT_OK" -eq 0 ]]; then
 	echo "Git installed OK"
 else
-	echo "Git not installed"
+	echo "--- ERROR: Git not installed"
 fi
 
 ################################################################################

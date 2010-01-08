@@ -1,4 +1,5 @@
 import os, tempfile, exceptions, stat, platform
+import sys
 
 # FIXME: There should be an OS independent way to create
 # executables!
@@ -57,20 +58,20 @@ class PyExecutable(Executable):
         Executable.__init__(self, executable=executable, suffix=suffix)
 
     def header(self, fd):
-        self.write_line("#!/usr/bin/env python2.6")
+        self.write_line("#!"+sys.executable)
 
 
 ARCH = platform.machine()
-try:
-    __import__('beah.system.arch_'+ARCH, {}, {}, ['*'])
-except exceptions.ImportError:
-    pass
-
+def systemarch():
+    try:
+        return __import__('beah.system.arch_'+ARCH, {}, {}, ['*'])
+    except exceptions.ImportError:
+        return None
 
 OS = platform.system().lower()
-systemos = None
-try:
-    systemos = __import__('beah.system.os_'+OS, {}, {}, ['*'])
-except exceptions.ImportError:
-    pass
+def systemos():
+    try:
+        return __import__('beah.system.os_'+OS, {}, {}, ['*'])
+    except exceptions.ImportError:
+        return None
 

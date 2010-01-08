@@ -18,14 +18,23 @@
 
 import exceptions
 import socket
+import traceback
+import sys
 
 def raiser(exc=exceptions.Exception, *args, **kwargs):
     raise exc(*args, **kwargs)
 
+if sys.version_info[1] >= 4:
+    def setfname(f, name):
+        f.__name__= name
+else:
+    def setfname(f, name):
+        pass
+
 def Raiser(exc=exceptions.Exception, *args, **kwargs):
     def raiser():
         raise exc(*args, **kwargs)
-    raiser.__name__ = "raiser_"+exc.__name__
+    setfname(raiser, "raiser_"+exc.__name__)
     return raiser
 
 def mktemppipe():
@@ -54,4 +63,26 @@ def localhost(host):
     if hfqdn == fqdn:
         return True
     return False
+
+if sys.version_info[1] < 4:
+    def format_exc():
+        """Compatibility wrapper - in python 2.3 can not use traceback.format_exc()."""
+        return traceback.format_exception(sys.exc_type, sys.exc_value,
+                sys.exc_traceback)
+else:
+    format_exc = traceback.format_exc
+
+if sys.version_info[1] < 4:
+    def dict_update(d, *args, **kwargs):
+        """Compatibility wrapper - in python 2.3 dict.update does not accept keyword arguments."""
+        return d.update(dict(*args, **kwargs))
+else:
+    dict_update = dict.update
+
+def log_flush(logger):
+    for h in logger.handlers:
+        try:
+            h.flush()
+        except:
+            pass
 
