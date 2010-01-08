@@ -301,6 +301,7 @@ function lm_view_logs()
 function lm_mon()
 {
   while true; do
+    echo "-------------------"
     #ps -efH
     lm_ps
     sleep ${1:-2}

@@ -481,7 +481,7 @@ class BeakerLCBackend(ExtBackend):
         if offset is None:
             offset = seqoff
         elif offset != seqoff:
-            self.on_error(self, "Given offset (%s) does not match calculated (%s)."
+            self.on_error("Given offset (%s) does not match calculated (%s)."
                     % (offset, seqoff))
         data = evt.arg('data')
         try:

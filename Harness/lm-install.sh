@@ -72,6 +72,8 @@ cp -R -t $DISTRO_ROOT/ ${TEMPLATE_DIR}/*
 chmod 755 $DISTRO_ROOT/install/lm-install.sh
 
 cp install.sh $DISTRO_ROOT/install
+cp install-el4.sh $DISTRO_ROOT/install
+cp install-el5.sh $DISTRO_ROOT/install
 
 cat >$DISTRO_ROOT/install/env.sh <<END
 LM_INSTALL_ROOT="${LM_INSTALL_ROOT}"
