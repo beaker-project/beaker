@@ -1,8 +1,12 @@
 from turbogears.database import session
 from turbogears import controllers, expose, flash, widgets, validate, error_handler, validators, redirect, paginate, url
 from model import *
-import search_utility
+
+
 from turbogears import identity, redirect, config
+import search_utility
+import beaker
+import beaker.server.stdvars
 from beaker.server.power import PowerTypes
 from beaker.server.keytypes import KeyTypes
 from beaker.server.CSV_import_export import CSV

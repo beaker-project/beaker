@@ -6,8 +6,8 @@
 %endif
 
 Name:           beaker
-Version:        0.4.75
-Release:        2%{?timestamp}%{?branch}%{?dist}
+Version:        0.4.76
+Release:        0%{?timestamp}%{?branch}%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -193,6 +193,10 @@ fi
 /usr/share/man/man1/beakerlib*
 
 %changelog
+* Fri Jan 08 2010 Bill Peck <bpeck@redhat.com> - 0.4.76-0
+- Fixed regression, remove pxe entries when returning a system.
+* Thu Jan 07 2010 Bill Peck <bpeck@redhat.com> - 0.4.76-0
+- merged bz537414 - show version on beaker pages and have a link for reporting bugs.
 * Tue Jan 05 2010 Bill Peck <bpeck@redhat.com> - 0.4.75-1
 - Server/Client/LabController require beaker.
 * Tue Jan 05 2010 Bill Peck <bpeck@redhat.com> - 0.4.74-0
