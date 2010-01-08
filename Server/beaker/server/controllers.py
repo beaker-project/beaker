@@ -1,8 +1,12 @@
 from turbogears.database import session
 from turbogears import controllers, expose, flash, widgets, validate, error_handler, validators, redirect, paginate, url
 from model import *
-import search_utility
+
+
 from turbogears import identity, redirect, config
+import search_utility
+import beaker
+import beaker.server.stdvars
 from beaker.server.power import PowerTypes
 from beaker.server.keytypes import KeyTypes
 from beaker.server.CSV_import_export import CSV
@@ -89,9 +93,21 @@ class Utility:
             return x
 
     @classmethod
-    def get_attr(cls,c):
-        return lambda x:  getattr(cls.get_correct_system_column(x),c.lower())
+    def system_name_name(cls):
+        return 'fqdn'
 
+    @classmethod
+    def get_attr(cls,c):        
+        return lambda x:getattr(cls.get_correct_system_column(x),c.lower())           
+          
+    @classmethod
+    def system_powertype_getter(cls):
+        def my_f(x):
+            try:
+                return cls.get_correct_system_column(x).power.power_type.name  
+            except Exception,(e): 
+                return ''   
+        return my_f
     @classmethod
     def system_arch_getter(cls):
         return lambda x: ', '.join([arch.arch for arch in cls.get_correct_system_column(x).arch])  
@@ -103,52 +119,78 @@ class Utility:
     @classmethod
     def get_attr_other(cls,index):
         return lambda x: x[index]
-    
-    @classmethod
-    def systems_grid(cls): 
-        my_fields = [
-            widgets.PaginateDataGrid.Column(name='fqdn', getter=cls.system_name_getter(), title='System', options=dict(sortable=True)),
-            widgets.PaginateDataGrid.Column(name='status.status', getter = lambda x: x.status, title='Status', options=dict(sortable=True)),
-            widgets.PaginateDataGrid.Column(name='vendor', getter= lambda x: x.vendor, title='Vendor', options=dict(sortable=True)),
-            widgets.PaginateDataGrid.Column(name='model', getter= lambda x: x.model, title='Model', options=dict(sortable=True)),
-            widgets.PaginateDataGrid.Column(name='location', getter= lambda x: x.location, title='Location', options=dict(sortable=True)),
-            widgets.PaginateDataGrid.Column(name='arch', getter=cls.system_arch_getter(), title='Arch', options=dict(sortable=True)),
-            widgets.PaginateDataGrid.Column(name='user.display_name', getter = lambda x: x.user, title='User', options=dict(sortable=True)),
-            widgets.PaginateDataGrid.Column(name='type.type', getter=lambda x: x.type, title='Type', options=dict(sortable=True)),]
-
-        return my_fields
 
     @classmethod 
-    def custom_systems_grid(cls,systems,others):
-      fields = []
-      for column_desc in systems: 
-          table,column = column_desc.split('/')
-          function_name = '%s_%s_getter' % (table.lower(), column.lower())
-          custom_getter = getattr(Utility,function_name,None)
-          if custom_getter:
-              my_getter = custom_getter()
-          else:          
-              my_getter = Utility.get_attr(column)
+    def custom_systems_grid(cls,systems,others=None):
+   
+        def get_widget_attrs(table,column,with_desc=True,sortable=False,index=None): 
+            options = {}
+            lower_column = column.lower()
+            lower_table = table.lower()
 
-          new_widget = widgets.PaginateDataGrid.Column(name='%s.%s' % (table.lower(),column.lower()) , getter = my_getter, title='%s-%s' % (table,column), options=dict(sortable=False)) 
-          if column == 'Name':
-              fields.insert(0,new_widget)
-          else:
-              fields.append(new_widget)
+            name_function_name = '%s_%s_name' % (lower_table, lower_column)
+            custom_name = getattr(Utility,name_function_name,None)
 
-      for index,column_desc in enumerate(others):  
-          table,column = column_desc.split('/') 
-          function_name = '%s_%s_getter' % (table.lower(), column.lower())
-          custom_getter = getattr(Utility,function_name,None)
-          index_in_queri = index + 1
-          if custom_getter:
-              my_getter = custom_getter()
-          else:          
-              my_getter = Utility.get_attr_other(index_in_queri)
+            getter_function_name = '%s_%s_getter' % (table.lower(), column.lower())
+            custom_getter = getattr(Utility, getter_function_name,None)
 
-          new_widget = widgets.PaginateDataGrid.Column(name='%s.%s' % (table.lower(),column.lower()) , getter = my_getter, title='%s-%s' % (table,column), options=dict(sortable=False)) 
-          fields.append(new_widget)
-      return fields
+            if custom_name:
+                lower_column = custom_name()
+
+            if custom_getter: 
+                my_getter = custom_getter()
+            elif index is not None:         
+                my_getter = Utility.get_attr_other(index_in_queri)
+            else:
+                my_getter = Utility.get_attr(column)
+
+            if with_desc: 
+                title_string = '%s-%s' % (table,column)
+            else: 
+                title_string = '%s' % column
+             
+            if sortable:
+                options['sortable'] = True
+                name_string = '%s' % lower_column  #sortable columns need a real name
+            else:
+                options['sortable'] = False 
+                name_string = '%s.%s' % (lower_table,lower_column)
+         
+            return name_string,title_string,options,my_getter
+
+        fields = []
+        if systems:
+            options = {} 
+            for column_desc in systems: 
+                table,column = column_desc.split('/')
+                if column.lower() in ('name','vendor','memory','model'):
+                    sort_me = True
+                else:
+                    sort_me = False
+
+                if others:
+                    (name_string, title_string, options, my_getter) = get_widget_attrs(table, column, with_desc=True, sortable=sort_me)
+                else:
+                    (name_string, title_string, options, my_getter) = get_widget_attrs(table, column, with_desc=False, sortable=True)
+
+                new_widget = widgets.PaginateDataGrid.Column(name=name_string, getter=my_getter, title=title_string, options=options) 
+                if column == 'Name':
+                    fields.insert(0,new_widget)
+                else:
+                    fields.append(new_widget)
+
+        if others:
+            for index,column_desc in enumerate(others):  
+                table,column = column_desc.split('/') 
+                index_in_queri = index + 1
+                (name_string, title_string, options, my_getter) = get_widget_attrs(table, column, with_desc=True, 
+                                                                                   sortable=False, index=index_in_queri)
+                new_widget = widgets.PaginateDataGrid.Column(name=name_string , 
+                                                             getter = my_getter, 
+                                                             title=title_string, 
+                                                             options=options) 
+                fields.append(new_widget)
+        return fields
 
 class Netboot:
     # For XMLRPC methods in this class.
@@ -323,7 +365,7 @@ class Root(RPCRoot):
                                                                                   {search_utility.Device:{'all':[]}},
                                                                                   {search_utility.Key:{'all':[]}} ] ),
                            search_controller=url("/get_search_options"),
-                           table_search_controllers = {'key/value':url('/get_keyvalue_search_options')} )
+                           table_search_controllers = {'key/value':url('/get_keyvalue_search_options')},)
                  
   
     system_form = SystemForm()
@@ -466,14 +508,14 @@ class Root(RPCRoot):
         # Reset joinpoint and then outerjoin on user.  This is so the sort 
         # column works in paginate/datagrid.
         # Also need to do distinct or paginate gets confused by the joins
-        #log.debug(kw) 
+        #log.debug(kw)        
+
         if 'simplesearch' in kw:
             simplesearch = kw['simplesearch']
             kw['systemsearch'] = [{'table' : 'System/Name',   
                                    'operation' : 'contains',
                                    'keyvalue' : None,
                                    'value' : kw['simplesearch']}]
-            kw['disable_customcolumns'] = 'on'
         else:
             simplesearch = None
 
@@ -481,9 +523,12 @@ class Root(RPCRoot):
         if 'type' in kw:
             kw['systemsearch'] = [{'table' : 'System/Type',
                                    'operation' : 'is',
-                                   'value' : kw['type']}] 
-            kw['disable_customcolumns'] = 'on' 
+                                   'value' : kw['type']}]           
     
+        default_result_columns = ('System/Name', 'System/Status', 'System/Vendor',
+                                  'System/Model','System/Arch', 
+                                  'System/User', 'System/Type') 
+
         if kw.get("systemsearch"):
             searchvalue = kw['systemsearch']
             sys_search = search_utility.SystemSearch(systems)
@@ -492,21 +537,28 @@ class Root(RPCRoot):
                 if re.match('systemsearch_column_',elem):
                     columns.append(kw[elem])
 
-            if kw.get('disable_customcolumns') == 'on':
-                use_custom_columns = False
-            else:
-                use_custom_columns = True 
- 
-            if use_custom_columns is True: 
-                sys_search.add_custom_columns(columns) 
+            #If nothing is selected, let's give them the default    
+            if columns.__len__() == 0:
+                for elem in default_result_columns:
+                    key = 'systemsearch_column_',elem
+                    kw[key] = elem
+                    columns.append(elem)
 
+            use_custom_columns = False
+            for column in columns:
+                table,col = column.split('/')
+                if sys_search.translate_name(table) is not search_utility.System:
+                    use_custom_columns = True     
+                    break     
+
+            sys_search.add_columns_desc(columns) 
             systems = self._system_search(kw,sys_search)
-          
+
+            (system_columns_desc,extra_columns_desc) = sys_search.get_column_descriptions()  
             if use_custom_columns is True:
-                (system_columns_desc,extra_columns_desc) = sys_search.get_column_descriptions() 
                 my_fields = Utility.custom_systems_grid(system_columns_desc,extra_columns_desc)
-            else:
-                my_fields = Utility.systems_grid()
+            else: 
+                my_fields = Utility.custom_systems_grid(system_columns_desc)
 
             systems = systems.reset_joinpoint().outerjoin('user').distinct() 
         else: 
@@ -525,8 +577,9 @@ class Root(RPCRoot):
                                      searchvalue = searchvalue,
                                      col_defaults = col_data['default'],
                                      col_options = col_data['options'], 
-                                     enable_custom_column = use_custom_columns,
-                                     options =  {'simplesearch':simplesearch,'columns':col_data}, 
+                                     enable_custom_column = use_custom_columns, 
+                                     options =  {'simplesearch':simplesearch,'columns':col_data,
+                                                 'result_columns':default_result_columns}, 
                                      action = '.', 
                                      search_bar = self.search_bar )
                                                                         

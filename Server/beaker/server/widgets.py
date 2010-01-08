@@ -213,12 +213,7 @@ class SearchBar(RepeatingFormField):
      </tr>
      </table>
     
-    <a id="customcolumns" href="#">Toggle Result Columns</a>
-    <a style='margin-left:10px' id="clearcolumns" href="#">Clear Result Columns</a>
-    <a style='margin-left:10px' id="populatecolumns" href="#">Select all Columns</a>
-    <input py:if="custom_column_checked is False" style='checkbox' id='disable_customcolumns' name='disable_customcolumns' type='checkbox' checked='checked' />
-    <input py:if="custom_column_checked is True" style='checkbox' id='disable_customcolumns' name='disable_customcolumns' type='checkbox'  />
-    <label for='disable_customcolumns'>Disable Custom Result Columns</label>
+    <a id="customcolumns" href="#">Toggle Result Columns</a> 
     <div style='display:none'  id='selectablecolumns'>
       <ul class="${field_class}" id="${field_id}">
         <li py:for="value,desc in col_options">
@@ -227,8 +222,10 @@ class SearchBar(RepeatingFormField):
           <label for="${field_id}_${value}" py:content="desc" />
         </li>  
       </ul>
-    </div>
- 
+    <a style='margin-left:10px' id="selectnone" href="#">Select None</a>
+    <a style='margin-left:10px' id="selectall" href="#">Select All</a>
+    <a style='margin-left:10px' id="selectdefault" href="#">Select Default</a>
+    </div> 
      </fieldset>
     </form>
     <script type="text/javascript">
@@ -240,23 +237,39 @@ class SearchBar(RepeatingFormField):
   
         $('#customcolumns').click( function() { $('#selectablecolumns').toggle('slow'); });
         
-        $('#clearcolumns').click( function() { $("input[name *= 'systemsearch_column_']").removeAttr('checked'); }); 
-        $('#populatecolumns').click( function() { $("input[name *= 'systemsearch_column_']").attr('checked',1); });
+        $('#selectnone').click( function() { $("input[name *= 'systemsearch_column_']").removeAttr('checked'); }); 
+        $('#selectall').click( function() { $("input[name *= 'systemsearch_column_']").attr('checked',1); });
+        $('#selectdefault').click( function() { $("input[name *= 'systemsearch_column_']").each( function() { select_only_default($(this))}) });
+
+        function select_only_default(obj) {
+            var defaults = ${default_result_columns}
+            var current_item = obj.val()
+            var the_name = 'systemsearch_column_'+current_item
+             if (defaults[current_item] == 1) {
+                 $("input[name = '"+the_name+"']").attr('checked',1); 
+             } else {
+                 $("input[name = '"+the_name+"']").removeAttr('checked');  
+             }
+         }
      });
+
+
     </script>
     </div>
     """
 
     params = ['repetitions', 'form_attrs', 'search_controller', 'simplesearch',
-              'advanced', 'simple','to_json','this_operations_field','this_searchvalue_field','extra_callbacks_stringified','table_search_controllers_stringified','keyvaluevalue','result_columns','col_options','col_defaults','custom_column_checked']
+              'advanced', 'simple','to_json','this_operations_field','this_searchvalue_field',
+              'extra_callbacks_stringified','table_search_controllers_stringified','keyvaluevalue',
+              'result_columns','col_options','col_defaults','custom_column_checked','default_result_columns']
     form_attrs = {}
     simplesearch = None
 
     def __init__(self, table,search_controller,extra_selects = None,extra_inputs = None, *args, **kw):
         super(SearchBar,self).__init__(*args, **kw)
         self.search_controller=search_controller
-        self.repetitions = 1 
-       
+        self.repetitions = 1            
+        self.default_result_columns = {}
         table_field = SingleSelectFieldJSON(name="table", options=table, validator=validators.NotEmpty()) 
         operation_field = SingleSelectFieldJSON(name="operation", options=[None], validator=validators.NotEmpty())
         value_field = TextFieldJSON(name="value") 
@@ -265,6 +278,7 @@ class SearchBar(RepeatingFormField):
         self.this_operations_field = operation_field
         self.this_searchvalue_field = value_field
         self.fields = [table_field,operation_field,value_field] 
+
          
         new_selects = []
         self.extra_callbacks = {}
@@ -303,10 +317,17 @@ class SearchBar(RepeatingFormField):
  
 
     def display(self, value=None, **params):   
-        if 'options' in params and 'columns' in params['options']:
-	    params['columns'] = params['options']['columns']
-        if 'options' in params and 'simplesearch' in params['options']:
-            params['simplesearch'] = params['options']['simplesearch']     
+        if 'options' in params: 
+            if 'columns' in params['options']:
+	        params['columns'] = params['options']['columns']
+            if 'simplesearch' in params['options']:
+                params['simplesearch'] = params['options']['simplesearch']     
+            if 'result_columns' in params['options']:
+                json_this = {}
+                log.debug(params['options']['result_columns'])
+                for elem in params['options']['result_columns']: 
+                    json_this.update({elem : 1})
+                params['default_result_columns'] = jsonify.encode(json_this)     
         if value and not 'simplesearch' in params:
             params['advanced'] = 'True'
             params['simple'] = 'none'
@@ -318,6 +339,8 @@ class SearchBar(RepeatingFormField):
             params['simple'] = 'True'
         if value and isinstance(value, list) and len(value) > 1:
             params['repetitions'] = len(value)
+
+
         return super(SearchBar, self).display(value, **params)
       
      
