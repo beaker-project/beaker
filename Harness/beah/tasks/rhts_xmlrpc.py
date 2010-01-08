@@ -34,12 +34,18 @@ from beah.core.constants import RC
 
 # FIXME: change log level to WARNING, use tempfile and upload log when process
 # ends.
-import logging
-if not os.path.isdir('/tmp/var/log'):
-    if not os.path.isdir('/tmp/var'):
-        os.mkdir('/tmp/var')
-    os.mkdir('/tmp/var/log')
-logging.basicConfig(filename='/tmp/var/log/rhts_task.log', level=logging.DEBUG)
+def __logger():
+    import logging
+    if not os.path.isdir('/tmp/var/log'):
+        if not os.path.isdir('/tmp/var'):
+            os.mkdir('/tmp/var')
+        os.mkdir('/tmp/var/log')
+    log = logging.getLogger()
+    fh = logging.FileHandler('/tmp/var/log/rhts_task.log')
+    fh.setLevel(logging.DEBUG)
+    log.addHandler(fh)
+    return log
+log = __logger()
 
 USE_DEFAULT = object()
 TEST_ENV = dict(
@@ -120,7 +126,7 @@ class RHTSResults(xmlrpc.XMLRPC):
 
     def xmlrpc_result(self, test_name, parent_string, result, result_value,
             test_version, recipe_test_id):
-        logging.debug("XMLRPC: results.result(%r, %r, %r, %r, %r, %r)",
+        log.debug("XMLRPC: results.result(%r, %r, %r, %r, %r, %r)",
                 test_name, parent_string, result, result_value, test_version,
                 recipe_test_id)
         evt = event.result_ex(
@@ -149,7 +155,7 @@ class RHTSResults(xmlrpc.XMLRPC):
 
     def xmlrpc_uploadFile(self, recipe_test_id, name, size, digest, offset,
             data):
-        logging.debug("XMLRPC: results.uploadFile(%r, %r, %r, %r, %r, %r)",
+        log.debug("XMLRPC: results.uploadFile(%r, %r, %r, %r, %r, %r)",
                 recipe_test_id, name, size, digest, offset, data)
         file_id = self.get_file(name, size=size, digest=digest)
         if file_id is None:
@@ -171,7 +177,7 @@ class RHTSResults(xmlrpc.XMLRPC):
             ]
 
     def xmlrpc_resultLog(self, log_type, result_id, pretty_name):
-        logging.debug("XMLRPC: results.resultLog(%r, %r, %r)", log_type,
+        log.debug("XMLRPC: results.resultLog(%r, %r, %r)", log_type,
             result_id, pretty_name)
         file_id = self.main.get_file(pretty_name)
         if file_id is None:
@@ -189,7 +195,7 @@ class RHTSResults(xmlrpc.XMLRPC):
             ]
 
     def xmlrpc_recipeTestRpms(self, test_id, pkg_list):
-        logging.debug("XMLRPC: results.recipeTestRpms(%r, %r)",
+        log.debug("XMLRPC: results.recipeTestRpms(%r, %r)",
                 test_id, pkg_list)
         # FIXME! implement this!!!
         return 0 # or "Failure reason"
@@ -204,25 +210,25 @@ class RHTSWatchdog(xmlrpc.XMLRPC):
         self.main = main
 
     def xmlrpc_abortJob(self, job_id):
-        logging.debug("XMLRPC: watchdog.abortJob(%r)", job_id)
+        log.debug("XMLRPC: watchdog.abortJob(%r)", job_id)
         # FIXME: implement this
         return 0 # or "Failure reason"
     xmlrpc_abortJob.signature = [['int', 'int']]
 
     def xmlrpc_abortRecipeSet(self, recipe_set_id):
-        logging.debug("XMLRPC: watchdog.abortRecipeSet(%r)", recipe_set_id)
+        log.debug("XMLRPC: watchdog.abortRecipeSet(%r)", recipe_set_id)
         # FIXME: implement this
         return 0 # or "Failure reason"
     xmlrpc_abortRecipeSet.signature = [['int', 'int']]
 
     def xmlrpc_abortRecipe(self, recipe_id):
-        logging.debug("XMLRPC: watchdog.abortRecipe(%r)", recipe_id)
+        log.debug("XMLRPC: watchdog.abortRecipe(%r)", recipe_id)
         # FIXME: implement this
         return 0 # or "Failure reason"
     xmlrpc_abortRecipe.signature = [['int', 'int']]
 
     def xmlrpc_testCheckin(self, hostname, job_id, test, kill_time, test_id):
-        logging.debug("XMLRPC: watchdog.testCheckin(%r, %r, %r, %r, %r)", hostname, job_id, test, kill_time, test_id)
+        log.debug("XMLRPC: watchdog.testCheckin(%r, %r, %r, %r, %r)", hostname, job_id, test, kill_time, test_id)
         # FIXME: implement this
         return 1 # or "Failure reason"
     xmlrpc_testCheckin.signature = [['int', 'string', 'int', 'string', 'int', 'int']]
@@ -235,7 +241,7 @@ class RHTSWorkflows(xmlrpc.XMLRPC):
         self.main = main
 
     def xmlrpc_add_comment_to_recipe(self, submitter, recipe_id, comment):
-        logging.debug("XMLRPC: workflows.add_comment_to_recipe(%r, %r, %r)",
+        log.debug("XMLRPC: workflows.add_comment_to_recipe(%r, %r, %r)",
                 submitter, recipe_id, comment)
         # FIXME: implement this...
         return 0 # or "Failure reason"
@@ -247,7 +253,7 @@ class RHTSTest(xmlrpc.XMLRPC):
         self.main = main
 
     def xmlrpc_testCheckin(self, test_id, call_type):
-        logging.debug("XMLRPC: test.testCheckin(%r, %r)", test_id, call_type)
+        log.debug("XMLRPC: test.testCheckin(%r, %r)", test_id, call_type)
         # FIXME: implement this!!!
         return 0 # or "Failure reason"
     xmlrpc_testCheckin.signature = [['int', 'int', 'string']]
@@ -266,7 +272,7 @@ class RHTSSync(xmlrpc.XMLRPC):
 
     def xmlrpc_set(self, recipe_set_id, test_order, result_server, hostname,
             state):
-        logging.debug("XMLRPC: sync.set(%r, %r, %r, %r, %r)", recipe_set_id,
+        log.debug("XMLRPC: sync.set(%r, %r, %r, %r, %r)", recipe_set_id,
                 test_order, result_server, hostname, state)
         evt = event.variable_set('sync/recipe_set_%s/test_order_%s' \
                 % (recipe_set_id, test_order),
@@ -277,7 +283,7 @@ class RHTSSync(xmlrpc.XMLRPC):
 
     def xmlrpc_block(self, recipe_set_id, test_order, result_server, states,
             hostnames):
-        logging.debug("XMLRPC: sync.block(%r, %r, %r, %r, %r)", recipe_set_id,
+        log.debug("XMLRPC: sync.block(%r, %r, %r, %r, %r)", recipe_set_id,
                 test_order, result_server, states, hostnames)
         answ = []
         wait_for = []
@@ -311,7 +317,7 @@ class RHTSHandler(xmlrpc.XMLRPC):
 
     def catch_xmlrpc(self, method, *args):
         """Handler for unhandled requests."""
-        logging.error("ERROR: Missing method: %s%r", method, args)
+        log.error("ERROR: Missing method: %s%r", method, args)
         #raise xmlrpc.Fault(123, "Undefined procedure %s." % method)
         self.main.send_evt(event.output(("ERROR: UNHANDLED RPC" , method, args),
             out_handle='xmlrpc'))
@@ -384,7 +390,7 @@ class RHTSMain(object):
     def on_exit(self):
         # FIXME! handling!
         # should submit captured files (AVC_ERROR, OUTPUTFILE)
-        logging.info("quitting...")
+        log.info("quitting...")
         reactor.callLater(2, reactor.stop)
         self.__done = True
 
@@ -392,7 +398,7 @@ class RHTSMain(object):
         self.controller.sendLine(data)
 
     def send_evt(self, evt):
-        logging.debug("sending evt: %r", evt)
+        log.debug("sending evt: %r", evt)
         self.__controller_output(json.dumps(evt))
 
     TEST_RUNNER = 'rhts-test-runner.sh'
@@ -409,7 +415,7 @@ class RHTSMain(object):
         # - allowed commands: sync-set, sync-block, kill
         # - anything else?
         cmd = command.command(cmd)
-        logging.debug("received cmd: %r", cmd)
+        log.debug("received cmd: %r", cmd)
         if cmd.command() == 'variable_value':
             self.handle_variable_value(cmd)
 
@@ -418,7 +424,7 @@ class RHTSMain(object):
 
     def controller_disconnected(self, reason):
         if not self.__done:
-            logging.error("Connection to controller was lost! reason=%s", reason)
+            log.error("Connection to controller was lost! reason=%s", reason)
             self.on_exit()
 
     def task_stdout(self, data):
@@ -431,19 +437,19 @@ class RHTSMain(object):
 
     def task_exited(self, reason):
         if not self.__done:
-            logging.info("task_exited(%s)", reason)
+            log.info("task_exited(%s)", reason)
             self.send_evt(event.linfo("task_exited", reason=str(reason)))
             self.on_exit()
 
     def task_ended(self, reason):
         if not self.__done:
-            logging.info("task_ended(%s)", reason)
+            log.info("task_ended(%s)", reason)
             self.send_evt(event.linfo("task_ended", reason=str(reason)))
             self.on_exit()
 
     def handle_variable_value(self, cmd):
-        logging.debug("handling variable_value.")
-        logging.debug("...waiting for: %r", self.__waits_for)
+        log.debug("handling variable_value.")
+        log.debug("...waiting for: %r", self.__waits_for)
         cmd_name = cmd.arg('key')
         cmd_handle = cmd.arg('handle')
         cmd_dest = cmd.arg('dest')
@@ -456,20 +462,22 @@ class RHTSMain(object):
                 # FIXME!!! compare: dest=='localhost'
                 if name==cmd_name and handle==cmd_handle and dest==cmd_dest:
                     var[3] = cmd_value
-                    logging.debug("variable match: %r", var)
+                    log.debug("variable match: %r", var)
                 if answ is not None:
                     if cmd_value in states:
-                        logging.debug("value match: %r", cmd_value)
+                        log.debug("value match: %r", cmd_value)
                         answ.append(cmd_value)
                     else:
                         answ = None
             if answ is not None:
-                logging.debug("all values match: %r", answ)
+                log.debug("all values match: %r", answ)
                 d.callback(answ)
-        logging.debug("variable_value handled.")
-        logging.debug("...waiting for: %r", self.__waits_for)
                 self.__waits_for[ix] = None
+        log.debug("variable_value handled.")
+        log.debug("...waiting for: %r", self.__waits_for)
         self.__waits_for = list([waits for waits in self.__waits_for if waits])
+        log.debug("list cleaned.")
+        log.debug("...waiting for: %r", self.__waits_for)
 
     def wait_for_variables(self, variables, states):
         d = Deferred()
@@ -493,7 +501,7 @@ class RHTSMain(object):
         return self.__files.get(name, None)
 
     def error(msg):
-        logging.error(msg)
+        log.error(msg)
         evt = event.error(message=msg)
         self.send_evt(evt)
 
@@ -504,7 +512,7 @@ def main(task_path=None):
         if len(argv) > 1:
             task_path = argv[1]
         #else:
-        #    logging.error("Test directory not provided.", reason)
+        #    log.error("Test directory not provided.", reason)
         #    raise exceptions.RuntimeError("Test directory not provided.")
     RHTSMain(task_path, USE_DEFAULT)
     reactor.run()

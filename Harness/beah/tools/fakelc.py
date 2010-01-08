@@ -20,13 +20,26 @@ from twisted.web import xmlrpc
 from twisted.internet import reactor
 import beah
 from beah.wires.internals.twmisc import serveAnyChild, serveAnyRequest
-from beah.misc import format_exc
+from beah.misc import format_exc, log_this, log_flush
 import sys
 import os
 import exceptions
 import traceback
 import pprint
 from random import randint
+import logging
+
+def logger():
+    log = logging.getLogger('fakelc')
+    lh = logging.FileHandler('/var/log/beah_fakelc.log')
+    #lh.setLevel(logging.DEBUG)
+    log.addHandler(lh)
+    log.setLevel(logging.DEBUG)
+    return log
+log = logger()
+
+# FIXME: Use config option for log_on:
+print_this = log_this.log_this(lambda s: log.debug(s), log_on=True)
 
 recipes = {}
 fqdn_recipes = {}
@@ -35,7 +48,7 @@ fqdn_def_recipe = None
 task_def_recipe = None
 
 def get_recipe_(fqdn=None, id=None, task_id=None):
-    print "get_recipe_(fqdn=%s, id=%s, task_id=%s)" % (fqdn, id, task_id)
+    log.info("get_recipe_(fqdn=%s, id=%s, task_id=%s)", fqdn, id, task_id)
     if fqdn is not None:
         id = build_recipe(fqdn)
     if task_id is not None:
@@ -66,19 +79,20 @@ def get_recipe_args(**kwargs):
 RESULT_TYPE_ = ["Pass", "Warn", "Fail", "Panic"]
 
 def print_(obj):
-    print obj
+    log.info("%s", obj)
     return obj
 
 def do_get_recipe(fname, fqdn):
-    print "%s(fqdn=%r)" % (fname, fqdn)
+    log.info("%s(fqdn=%r)", fname, fqdn)
     return print_(get_recipe_xml(fqdn=fqdn))
 
 def do_task_start(fname, task_id, kill_time):
-    print "%s(task_id=%r, kill_time=%r)" % (fname, task_id, kill_time)
+    log.info("%s(task_id=%r, kill_time=%r)", fname, task_id, kill_time)
     rec_args = get_recipe_args(task_id=task_id)
     if not rec_args:
         return "ERROR: no task %s" % task_id
     rec_args['task%s_stat' % task_id]='Running'
+    log_flush(log)
     return 0
 
 def do_task_stop(fname, task_id, stop_type, msg):
@@ -89,12 +103,13 @@ def do_task_stop(fname, task_id, stop_type, msg):
 
     return 0 on success, error message otherwise
     """
-    print "%s(task_id=%r, stop_type=%r, msg=%r)" % (fname, task_id, stop_type,
+    log.info("%s(task_id=%r, stop_type=%r, msg=%r)", fname, task_id, stop_type,
             msg)
     rec_args = get_recipe_args(task_id=task_id)
     if not rec_args:
         return "ERROR: no task %s" % task_id
     rec_args['task%s_stat' % task_id]=stop_type
+    log_flush(log)
     return 0
 
 def do_task_result(fname, task_id, result_type, path, score, summary):
@@ -106,8 +121,9 @@ def do_task_result(fname, task_id, result_type, path, score, summary):
     return 0 on success, error message otherwise
     """
     try:
-        print "%s(task_id=%r, result_type=%r, path=%r, score=%r, summary=%r)" % \
-                (fname, task_id, result_type, path, score, summary)
+        log.info(
+                "%s(task_id=%r, result_type=%r, path=%r, score=%r, summary=%r)",
+                fname, task_id, result_type, path, score, summary)
         rec_args = get_recipe_args(task_id=task_id)
         if not rec_args:
             return "ERROR: no task %s" % task_id
@@ -118,15 +134,16 @@ def do_task_result(fname, task_id, result_type, path, score, summary):
                     and RESULT_TYPE_.find(result) < RESULT_TYPE_.find(result_type)):
             rec_args[ix]=result_type
         answ = randint(1, 9999999)
-        print "%s.RETURN: %s" % (fname, answ)
+        log.info("%s.RETURN: %s", fname, answ)
+        log_flush(log)
         return answ
     except:
-        print format_exc()
+        log.error("%s", format_exc())
         raise
 
 def do_task_upload_file(fname, task_id, path, name, size, digest, offset, data):
-    print "%s(task_id=%r, path=%r, name=%r, size=%r, digest=%r, offset=%r, data='...')" % \
-            (fname, task_id, path, name, size, digest, offset)
+    log.info("%s(task_id=%r, path=%r, name=%r, size=%r, digest=%r, offset=%r, data='...')",
+            fname, task_id, path, name, size, digest, offset)
     return 0
 
 ################################################################################
@@ -138,7 +155,7 @@ class LCRecipes(xmlrpc.XMLRPC):
     return_recipe = staticmethod(return_recipe)
 
     def xmlrpc_to_xml(self, recipe_id):
-        print "recipes.to_xml(%r)" % recipe_id
+        log.info("recipes.to_xml(%r)", recipe_id)
         return self.return_recipe(id=recipe_id)
 
     def xmlrpc_system_xml(self, fqdn):
@@ -187,7 +204,7 @@ class LCHandler(xmlrpc.XMLRPC):
 
     def catch_xmlrpc(self, method, *args):
         """Handler for unhandled requests."""
-        print >> sys.stderr, "ERROR: Missing method:", [method] + list(args)
+        log.error("Missing method: %r", [method] + list(args))
         # This is likely to break the test, but it does not matter now...
         return "--- ERROR: Server can not handle command %s" % method
 
@@ -401,7 +418,7 @@ def build_recipe_21(fqdn):
         args['machine%d' % machine_ix] = machine
         args['machine%d_stat' % machine_ix] = 'None'
 
-    pprint.pprint(recipes)
+    log.info("%s", pprint.pformat(recipes))
 
     return 21
 
