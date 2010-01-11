@@ -62,6 +62,10 @@ import breadcrumbs
 from datetime import datetime
 
 class Utility:
+    #I this I will move this Utility class out into another module and then
+    #perhaps break it down into further classes. Work from other tickets
+    #is making it quite large.
+
     @classmethod
     def result_columns(cls,values_checked = None):  
       #Call function which will return list of columns that can be searched on 
@@ -196,11 +200,6 @@ class Utility:
                                                              options=options) 
                 fields.append(new_widget)
         return fields
-
-#I this I will move this Utility class out into another module and then
-#perhaps break it down into further classes. Work from other tickets
-#is making it quite large.
-class Utility:
 
     @classmethod
     def status_id_change_handler(cls,current_val,new_val,**kw): 
@@ -519,9 +518,7 @@ class Root(RPCRoot):
             else:
                sys_search.append_results(cls_ref,search['value'],col,search['operation'],keyvalue=search['keyvalue']) 
 
-        systems = sys_search.return_results()
-        new_systems = System.all(identity.current.user,system = systems)
-        return new_systems
+        return sys_search.return_results()
 
     # @identity.require(identity.in_group("admin"))
     def systems(self, systems, *args, **kw):
