@@ -61,17 +61,145 @@ log = logging.getLogger("beaker.server.controllers")
 import breadcrumbs
 from datetime import datetime
 
-#def search():
-#    """Return proper join for search"""
-#    tables = dict ( Cpu = 'Cpu.q.system == System.q.id' 
-#    tables = dict ( Cpu = (Cpu.q.system == System.q.id))
-
-#    systems = System.select(AND(*your_dict.iter_values()))  ?
-
-#I this I will move this Utility class out into another module and then
-#perhaps break it down into further classes. Work from other tickets
-#is making it quite large.
 class Utility:
+    #I this I will move this Utility class out into another module and then
+    #perhaps break it down into further classes. Work from other tickets
+    #is making it quite large.
+
+    @classmethod
+    def result_columns(cls,values_checked = None):  
+      #Call function which will return list of columns that can be searched on 
+      # Ticket 51 
+      column_names = search_utility.SystemSearch.create_column_table([{search_utility.Cpu :{'exclude': ['Flags']} },
+                                                                      {search_utility.System: {'all':[]} }] ) 
+      send = [(elem,elem) for elem in column_names]  
+     
+      if values_checked is not None:
+         vals_to_set = values_checked
+         response.simple_cookie['column_values'] = ','.join(values_checked)
+      elif request.simple_cookie.has_key('column_values'): 
+         text = request.simple_cookie['column_values'].value
+         vals_to_set = text.split(',') 
+      else:
+         vals_to_set = [] 
+
+      default = {}
+      for elem in vals_to_set:
+          default[elem] = 1;
+
+      return {'options' : send, 'default':default}; 
+      
+    @classmethod
+    def get_correct_system_column(cls,x):
+        if type(x) == type(()):
+            return x[0] 
+        else:
+            return x
+
+    @classmethod
+    def system_name_name(cls):
+        return 'fqdn'
+
+    @classmethod
+    def system_powertype_name(cls):
+        return 'power'
+
+    @classmethod
+    def get_attr(cls,c):        
+        return lambda x:getattr(cls.get_correct_system_column(x),c.lower())           
+          
+    @classmethod
+    def system_powertype_getter(cls):
+        def my_f(x):
+            try:
+                return cls.get_correct_system_column(x).power.power_type.name  
+            except Exception,(e): 
+                return ''   
+        return my_f
+
+    @classmethod
+    def system_arch_getter(cls):
+        return lambda x: ', '.join([arch.arch for arch in cls.get_correct_system_column(x).arch])  
+
+    @classmethod
+    def system_name_getter(cls):
+        return lambda x: make_link("/view/%s" % cls.get_correct_system_column(x).fqdn, cls.get_correct_system_column(x).fqdn)
+
+    @classmethod
+    def get_attr_other(cls,index):
+        return lambda x: x[index]
+
+    @classmethod 
+    def custom_systems_grid(cls,systems,others=None):
+   
+        def get_widget_attrs(table,column,with_desc=True,sortable=False,index=None): 
+            options = {}
+            lower_column = column.lower()
+            lower_table = table.lower()
+
+            name_function_name = '%s_%s_name' % (lower_table, lower_column)
+            custom_name = getattr(Utility,name_function_name,None)
+
+            getter_function_name = '%s_%s_getter' % (table.lower(), column.lower())
+            custom_getter = getattr(Utility, getter_function_name,None)
+
+            if custom_name:
+                lower_column = custom_name()
+
+            if custom_getter: 
+                my_getter = custom_getter()
+            elif index is not None:         
+                my_getter = Utility.get_attr_other(index_in_queri)
+            else:
+                my_getter = Utility.get_attr(column)
+
+            if with_desc: 
+                title_string = '%s-%s' % (table,column)
+            else: 
+                title_string = '%s' % column
+             
+            if sortable:
+                options['sortable'] = True
+                name_string = '%s' % lower_column  #sortable columns need a real name
+            else:
+                options['sortable'] = False 
+                name_string = '%s.%s' % (lower_table,lower_column)
+         
+            return name_string,title_string,options,my_getter
+
+        fields = []
+        if systems:
+            options = {} 
+            for column_desc in systems: 
+                table,column = column_desc.split('/')
+                if column.lower() in ('name','vendor','memory','model'):
+                    sort_me = True
+                else:
+                    sort_me = False
+
+                if others:
+                    (name_string, title_string, options, my_getter) = get_widget_attrs(table, column, with_desc=True, sortable=sort_me)
+                else:
+                    (name_string, title_string, options, my_getter) = get_widget_attrs(table, column, with_desc=False, sortable=True)
+
+                new_widget = widgets.PaginateDataGrid.Column(name=name_string, getter=my_getter, title=title_string, options=options) 
+                if column == 'Name':
+                    fields.insert(0,new_widget)
+                else:
+                    fields.append(new_widget)
+
+        if others:
+            for index,column_desc in enumerate(others):  
+                table,column = column_desc.split('/') 
+                index_in_queri = index + 1
+                (name_string, title_string, options, my_getter) = get_widget_attrs(table, column, with_desc=True, 
+                                                                                   sortable=False, index=index_in_queri)
+                new_widget = widgets.PaginateDataGrid.Column(name=name_string , 
+                                                             getter = my_getter, 
+                                                             title=title_string, 
+                                                             options=options) 
+                fields.append(new_widget)
+        return fields
 
     @classmethod
     def status_id_change_handler(cls,current_val,new_val,**kw): 
@@ -201,7 +329,7 @@ class Devices:
         return dict(title="Devices", grid = devices_grid, search_bar=None,
                                      list = devices)
 
-class Root(RPCRoot):
+class Root(RPCRoot): 
     powertypes = PowerTypes()
     keytypes = KeyTypes()
     devices = Devices()
@@ -251,9 +379,12 @@ class Root(RPCRoot):
     search_bar = SearchBar(name='systemsearch',
                            label=_(u'System Search'), 
                            extra_selects = [ { 'name': 'keyvalue', 'column':'key/value','display':'none' , 'pos' : 2,'callback':url('/get_operators_keyvalue') }], 
-                           table=search_utility.SystemSearch.create_search_table([search_utility.System,search_utility.Cpu,search_utility.Device,search_utility.Key]),
+                           table=search_utility.SystemSearch.create_search_table([{search_utility.System:{'all':[]}},
+										  {search_utility.Cpu:{'all':[]}},
+                                                                                  {search_utility.Device:{'all':[]}},
+                                                                                  {search_utility.Key:{'all':[]}} ] ),
                            search_controller=url("/get_search_options"),
-                           table_search_controllers = {'key/value':url('/get_keyvalue_search_options')} )
+                           table_search_controllers = {'key/value':url('/get_keyvalue_search_options')},)
                  
   
     system_form = SystemForm()
@@ -268,7 +399,7 @@ class Root(RPCRoot):
     system_groups = SystemGroups(name='groups')
     system_installoptions = SystemInstallOptions(name='installoptions')
     system_provision = SystemProvision(name='provision')
-    arches_form = SystemArches(name='arches')
+    arches_form = SystemArches(name='arches') 
 
     @expose(format='json')
     def get_keyvalue_search_options(self,**kw):
@@ -330,8 +461,9 @@ class Root(RPCRoot):
 
     @expose(template='beaker.server.templates.grid_add')
     @paginate('list',default_order='fqdn',limit=20,allow_limit_override=True)
-    def index(self, *args, **kw): 
-        return self.systems(systems = System.all(identity.current.user), *args, **kw)
+    def index(self, *args, **kw):   
+        return_dict =  self.systems(systems = System.all(identity.current.user), *args, **kw) 
+        return return_dict
 
     @expose(template='beaker.server.templates.form')
     @identity.require(identity.not_anonymous())
@@ -370,13 +502,11 @@ class Root(RPCRoot):
 
     @expose(template='beaker.server.templates.grid')
     @identity.require(identity.not_anonymous())
-    @paginate('list',default_order='fqdn',limit=20,allow_limit_override=True)
+    @paginate('list',limit=20,allow_limit_override=True)
     def mine(self, *args, **kw):
         return self.systems(systems = System.mine(identity.current.user), *args, **kw)
 
-
-    def _system_search(self,kw, systems): 
-        sys_search = search_utility.SystemSearch(systems) 
+    def _system_search(self,kw,sys_search,use_custom_columns = False): 
         for search in kw['systemsearch']: 
 	        #clsinfo = System.get_dict()[search['table']] #Need to change this
             class_field_list = search['table'].split('/')
@@ -387,7 +517,7 @@ class Root(RPCRoot):
                sys_search.append_results(cls_ref,search['value'],col,search['operation']) 
             else:
                sys_search.append_results(cls_ref,search['value'],col,search['operation'],keyvalue=search['keyvalue']) 
-               
+
         return sys_search.return_results()
 
     # @identity.require(identity.in_group("admin"))
@@ -395,7 +525,8 @@ class Root(RPCRoot):
         # Reset joinpoint and then outerjoin on user.  This is so the sort 
         # column works in paginate/datagrid.
         # Also need to do distinct or paginate gets confused by the joins
-      
+        #log.debug(kw)        
+
         if 'simplesearch' in kw:
             simplesearch = kw['simplesearch']
             kw['systemsearch'] = [{'table' : 'System/Name',   
@@ -409,33 +540,72 @@ class Root(RPCRoot):
         if 'type' in kw:
             kw['systemsearch'] = [{'table' : 'System/Type',
                                    'operation' : 'is',
-                                   'value' : kw['type']}] 
-       
+                                   'value' : kw['type']}]      
+            #when we do a short cut type search, result column args are not passed
+            #we need to recreate them here from our cookies
+            text = request.simple_cookie['column_values'].value
+            vals_to_set = text.split(',')
+            for elem in vals_to_set:
+                kw['systemsearch_column_%s' % elem] = elem 
+      
+    
+        default_result_columns = ('System/Name', 'System/Status', 'System/Vendor',
+                                  'System/Model','System/Arch', 'System/User', 'System/Type') 
+
         if kw.get("systemsearch"):
-            searchvalue = kw['systemsearch']  
-            systems = self._system_search(kw, systems)
+            searchvalue = kw['systemsearch']
+            sys_search = search_utility.SystemSearch(systems)
+            columns = []
+            for elem in kw:
+                if re.match('systemsearch_column_',elem):
+                    columns.append(kw[elem])
+
+            #If nothing is selected, let's give them the default    
+            if columns.__len__() == 0:
+                for elem in default_result_columns:
+                    key = 'systemsearch_column_',elem
+                    kw[key] = elem
+                    columns.append(elem)
+
+            use_custom_columns = False
+            for column in columns:
+                table,col = column.split('/')
+                if sys_search.translate_name(table) is not search_utility.System:
+                    use_custom_columns = True     
+                    break     
+
+            sys_search.add_columns_desc(columns) 
+            systems = self._system_search(kw,sys_search)
+
+            (system_columns_desc,extra_columns_desc) = sys_search.get_column_descriptions()  
+            if use_custom_columns is True:
+                my_fields = Utility.custom_systems_grid(system_columns_desc,extra_columns_desc)
+            else: 
+                my_fields = Utility.custom_systems_grid(system_columns_desc)
+
             systems = systems.reset_joinpoint().outerjoin('user').distinct() 
-        else:
+        else: 
             systems = systems.reset_joinpoint().outerjoin('user').distinct() 
+            use_custom_columns = False
+            columns = None
             searchvalue = None
-       
-        systems_grid = myPaginateDataGrid(fields=[
-                        widgets.PaginateDataGrid.Column(name='fqdn', getter=lambda x: make_link("/view/%s" % x.fqdn, x.fqdn), title='System', options=dict(sortable=True)),
-                        widgets.PaginateDataGrid.Column(name='status.status', getter=lambda x: x.status, title='Status', options=dict(sortable=True)),
-                        widgets.PaginateDataGrid.Column(name='vendor', getter=lambda x: x.vendor, title='Vendor', options=dict(sortable=True)),
-                        widgets.PaginateDataGrid.Column(name='model', getter=lambda x: x.model, title='Model', options=dict(sortable=True)),
-                        widgets.PaginateDataGrid.Column(name='location', getter=lambda x: x.location, title='Location', options=dict(sortable=True)),
-                        widgets.PaginateDataGrid.Column(name='arch', getter=lambda x: ', '.join([arch.arch for arch in x.arch]), title='Arch', options=dict(sortable=True)),
-                        widgets.PaginateDataGrid.Column(name='user.display_name', getter=lambda x: x.user, title='User', options=dict(sortable=True)),
-                        widgets.PaginateDataGrid.Column(name='type.type', getter=lambda x: x.type, title='Type', options=dict(sortable=True)),
-                       ]) 
- 
-        return dict(title="Systems", grid = systems_grid,
+            my_fields = Utility.custom_systems_grid(default_result_columns)
+                
+        display_grid = myPaginateDataGrid(fields=my_fields)
+
+        col_data = Utility.result_columns(columns)   
+             
+        return dict(title="Systems", grid = display_grid,
                                      list = systems, 
                                      searchvalue = searchvalue,
-                                     action = '.',
-                                     options = {'simplesearch' : simplesearch},
-                                     search_bar = self.search_bar)
+                                     col_defaults = col_data['default'],
+                                     col_options = col_data['options'], 
+                                     enable_custom_column = use_custom_columns, 
+                                     options =  {'simplesearch':simplesearch,'columns':col_data,
+                                                 'result_columns':default_result_columns}, 
+                                     action = '.', 
+                                     search_bar = self.search_bar )
+                                                                        
 
     @expose(format='json')
     def by_fqdn(self, input):

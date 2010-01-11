@@ -12,7 +12,8 @@ from turbogears.widgets import (Form, TextField, SubmitButton, TextArea,
                                 CompoundWidget, AjaxGrid, Tabber, CSSLink,
                                 RadioButtonList,
                                 RepeatingFieldSet, SelectionField)
-
+import logging
+log = logging.getLogger(__name__)
 
 import logging
 log = logging.getLogger('beaker.server')
@@ -124,8 +125,7 @@ class TextFieldJSON(TextField):
         super(TextField,self).__init__(*args,**kw)
     def __json__(self):
         return {
-                'field_id' : self.field_id,
-             
+                'field_id' : self.field_id,             
                } 
 
 class SearchBar(RepeatingFormField):
@@ -141,15 +141,17 @@ class SearchBar(RepeatingFormField):
       action="${action}"
       method="${method}"
       class="searchbar_form"
-      py:attrs="form_attrs"
+      py:attrs="form_attrs" 
       style="display:${simple}"
     >
     <table>
      <tr>
       <td><input type="text" name="simplesearch" value="${simplesearch}" class="textfield"/>
       </td>
-      <td><input type="submit" name="search" value="Search"/>
+    <td><input type="submit" name="search" value="Search"/>
       </td>
+
+   
      </tr>
     </table>
     </form>
@@ -198,10 +200,11 @@ class SearchBar(RepeatingFormField):
         </td>
        </tr>
       </tbody>
-     </table>
-     </td><td>
+     </table></td><td>
      <input type="submit" name="Search" value="Search"/>
      </td>
+    
+   
      </tr>
      <tr>
      <td colspan="2">
@@ -209,27 +212,64 @@ class SearchBar(RepeatingFormField):
      </td>
      </tr>
      </table>
+    
+    <a id="customcolumns" href="#">Toggle Result Columns</a> 
+    <div style='display:none'  id='selectablecolumns'>
+      <ul class="${field_class}" id="${field_id}">
+        <li py:for="value,desc in col_options">
+          <input py:if="col_defaults.get(value)" type="checkbox" name = "${field_id}_column_${value}" id="${field_id}_column_${value}" value="${value}" checked='checked' />
+          <input py:if="not col_defaults.get(value)" type="checkbox" name = "${field_id}_column_${value}" id="${field_id}_column_${value}" value="${value}" />
+          <label for="${field_id}_${value}" py:content="desc" />
+        </li>  
+      </ul>
+    <a style='margin-left:10px' id="selectnone" href="#">Select None</a>
+    <a style='margin-left:10px' id="selectall" href="#">Select All</a>
+    <a style='margin-left:10px' id="selectdefault" href="#">Select Default</a>
+    </div> 
      </fieldset>
     </form>
     <script type="text/javascript">
     $(document).ready(function() {
         $('#advancedsearch').click( function() { $('#searchform').toggle('slow');
                                                  $('#simpleform').toggle('slow');});
-    });
+   
+
+  
+        $('#customcolumns').click( function() { $('#selectablecolumns').toggle('slow'); });
+        
+        $('#selectnone').click( function() { $("input[name *= 'systemsearch_column_']").removeAttr('checked'); }); 
+        $('#selectall').click( function() { $("input[name *= 'systemsearch_column_']").attr('checked',1); });
+        $('#selectdefault').click( function() { $("input[name *= 'systemsearch_column_']").each( function() { select_only_default($(this))}) });
+
+        function select_only_default(obj) {
+            var defaults = ${default_result_columns}
+            var current_item = obj.val()
+            var the_name = 'systemsearch_column_'+current_item
+             if (defaults[current_item] == 1) {
+                 $("input[name = '"+the_name+"']").attr('checked',1); 
+             } else {
+                 $("input[name = '"+the_name+"']").removeAttr('checked');  
+             }
+         }
+     });
+
+
     </script>
     </div>
     """
 
     params = ['repetitions', 'form_attrs', 'search_controller', 'simplesearch',
-              'advanced', 'simple','to_json','this_operations_field','this_searchvalue_field','extra_callbacks_stringified','table_search_controllers_stringified','keyvaluevalue']
+              'advanced', 'simple','to_json','this_operations_field','this_searchvalue_field',
+              'extra_callbacks_stringified','table_search_controllers_stringified','keyvaluevalue',
+              'result_columns','col_options','col_defaults','custom_column_checked','default_result_columns']
     form_attrs = {}
     simplesearch = None
 
     def __init__(self, table,search_controller,extra_selects = None,extra_inputs = None, *args, **kw):
         super(SearchBar,self).__init__(*args, **kw)
         self.search_controller=search_controller
-        self.repetitions = 1 
-       
+        self.repetitions = 1            
+        self.default_result_columns = {}
         table_field = SingleSelectFieldJSON(name="table", options=table, validator=validators.NotEmpty()) 
         operation_field = SingleSelectFieldJSON(name="operation", options=[None], validator=validators.NotEmpty())
         value_field = TextFieldJSON(name="value") 
@@ -238,6 +278,7 @@ class SearchBar(RepeatingFormField):
         self.this_operations_field = operation_field
         self.this_searchvalue_field = value_field
         self.fields = [table_field,operation_field,value_field] 
+
          
         new_selects = []
         self.extra_callbacks = {}
@@ -276,10 +317,16 @@ class SearchBar(RepeatingFormField):
  
 
     def display(self, value=None, **params):   
-        if 'options' in params and 'simplesearch' in params['options']:
-            params['simplesearch'] = params['options']['simplesearch']
-
-             
+        if 'options' in params: 
+            if 'columns' in params['options']:
+	        params['columns'] = params['options']['columns']
+            if 'simplesearch' in params['options']:
+                params['simplesearch'] = params['options']['simplesearch']     
+            if 'result_columns' in params['options']:
+                json_this = {} 
+                for elem in params['options']['result_columns']: 
+                    json_this.update({elem : 1})
+                params['default_result_columns'] = jsonify.encode(json_this)     
         if value and not 'simplesearch' in params:
             params['advanced'] = 'True'
             params['simple'] = 'none'
@@ -291,7 +338,11 @@ class SearchBar(RepeatingFormField):
             params['simple'] = 'True'
         if value and isinstance(value, list) and len(value) > 1:
             params['repetitions'] = len(value)
+
+
         return super(SearchBar, self).display(value, **params)
+      
+     
 
 class ProvisionForm(RepeatingFormField):
     pass
