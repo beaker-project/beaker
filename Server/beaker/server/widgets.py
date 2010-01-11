@@ -323,8 +323,7 @@ class SearchBar(RepeatingFormField):
             if 'simplesearch' in params['options']:
                 params['simplesearch'] = params['options']['simplesearch']     
             if 'result_columns' in params['options']:
-                json_this = {}
-                log.debug(params['options']['result_columns'])
+                json_this = {} 
                 for elem in params['options']['result_columns']: 
                     json_this.update({elem : 1})
                 params['default_result_columns'] = jsonify.encode(json_this)     

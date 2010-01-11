@@ -436,11 +436,11 @@ class SystemSearch(Search):
                 else:    
                     for relations in system_relations:
                         if type(relations) == type([]):
-                            if id is not None:
+                            if id is not None: 
   				self.queri = self.queri.outerjoin(relations,aliased=is_alias,id=id)    
                             self.queri = self.queri.outerjoin(relations,aliased=False)    
                         else:
-                            if id is not None:
+                            if id is not None: 
                                 self.queri = self.queri.outerjoin(system_relations,aliased=is_alias,id=id)
                             self.queri = self.queri.outerjoin(system_relations,aliased=is_alias)
                             break     
@@ -520,8 +520,8 @@ class System(SystemObject):
                           'Lender'    : myColumn(column=model.System.lender,col_type='string'),
                           'Model'     : myColumn(column=model.System.model,col_type='string'),
                           'Memory'    : myColumn(column=model.System.memory,col_type='numeric'),
-                          'User'      : myColumn(column=model.User.user_name, col_type='string', system_relation='user'),
-                          'Owner'     : myColumn(column=model.User.user_name, col_type='string', system_relation='owner'),
+                          'User'      : myColumn(column=model.User.user_name, col_type='string', has_alias=True, system_relation='user'),
+                          'Owner'     : myColumn(column=model.User.user_name, col_type='string', has_alias=True, system_relation='owner'),
                           'Status'    : myColumn(column=model.SystemStatus.status, col_type='string', system_relation='status'),
                           'Arch'      : myColumn(column=model.Arch.arch, col_type='string', system_relation='arch'),
                           'Type'      : myColumn(column=model.SystemType.type, col_type='string', system_relation='type'),
