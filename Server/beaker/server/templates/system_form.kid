@@ -4,12 +4,12 @@ $(document).ready(function(){
     $("#form_status_id").change(function() 
     { 
         if ($('#form_status_id :selected').text() == 'Broken' || $('#form_status_id :selected').text() == 'Removed') {
-             $('#form_status_reason').removeAttr('readonly')
+             $('#condition_report_row').removeClass('hidden')
         }   
     });
 
     if ($('#form_status_id :selected').text() == 'Working') {
-         $('#form_status_reason').attr('readonly',1)
+         $('#condition_report_row').addClass('hidden')
      } 
 });
 </script>
@@ -102,12 +102,22 @@ $(document).ready(function(){
         </a>
        </td>
       </tr>
-      <tr class="list">
-       <th class="list">
+      <tr class="list" id="condition_report_row">
+       <th class="list" >
         <b>Condition Report</b>
        </th>
        <td class="list"> 
         ${display_field_for("status_reason")}
+       </td>
+      </tr>
+      <tr class="list"> 
+       <th class="list">
+        <b>Shared</b>
+       </th>
+       <td class="list">
+        <span py:if="value_for('fqdn')">
+         ${display_field_for("shared")}
+        </span>
        </td>
        <th class="list">
         <b>Current User</b>
@@ -121,12 +131,10 @@ $(document).ready(function(){
       </tr>
       <tr class="list">
        <th class="list">
-        <b>Shared</b>
+        <b>Secret (NDA)</b>
        </th>
        <td class="list">
-        <span py:if="value_for('fqdn')">
-         ${display_field_for("shared")}
-        </span>
+        ${display_field_for("private")}
        </td>
        <th class="list">
         <b>Loaned To</b>
@@ -140,10 +148,10 @@ $(document).ready(function(){
       </tr>
       <tr class="list">
        <th class="list">
-        <b>Secret (NDA)</b>
+        <b>Lab Controller</b>
        </th>
        <td class="list">
-        ${display_field_for("private")}
+        ${display_field_for("lab_controller_id")}
        </td>
        <th class="list">
         <b>Mac Address</b>
@@ -151,15 +159,7 @@ $(document).ready(function(){
        <td class="list">
         ${display_field_for("mac_address")}
        </td>
-      </tr>
-      <tr class="list">
-       <th class="list">
-        <b>Lab Controller</b>
-       </th>
-       <td class="list">
-        ${display_field_for("lab_controller_id")}
-       </td>
-      </tr>
+      </tr> 
       <tr class="list">
        <th class="list">
         <b>Type</b>
