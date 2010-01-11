@@ -148,6 +148,7 @@ ln -s Fedora.ks $RPM_BUILD_ROOT/var/lib/cobbler/kickstarts/Fedoradevelopment.ks
 * Mon Jan 11 2010 Bill Peck <bpeck@redhat.com> - 0.4.76-0
 - merged bz544347 - add condition field when system status set to broken or removed.
 - merged ticket51 - custom columns.
+- merged bz553421 - fixed requesting a system with arch=i386 and arch=x86_64 would fail.
 * Fri Jan 08 2010 Bill Peck <bpeck@redhat.com> - 0.4.76-0
 - Fixed regression, remove pxe entries when returning a system.
 * Thu Jan 07 2010 Bill Peck <bpeck@redhat.com> - 0.4.76-0
