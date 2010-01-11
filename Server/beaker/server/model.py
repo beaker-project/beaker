@@ -1342,6 +1342,7 @@ $SNIPPET("rhts_post")
         # Attempt to remove Netboot entry
         # and turn off machine, but don't fail if we can't
         if self.release_action:
+            self.remote.release(power=False)
             self.release_action.do(self)
         else:
             try:

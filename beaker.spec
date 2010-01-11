@@ -145,6 +145,8 @@ ln -s Fedora.ks $RPM_BUILD_ROOT/var/lib/cobbler/kickstarts/Fedoradevelopment.ks
 /usr/share/man/man1/beakerlib*
 
 %changelog
+* Fri Jan 08 2010 Bill Peck <bpeck@redhat.com> - 0.4.76-0
+- Fixed regression, remove pxe entries when returning a system.
 * Thu Jan 07 2010 Bill Peck <bpeck@redhat.com> - 0.4.76-0
 - merged bz537414 - show version on beaker pages and have a link for reporting bugs.
 * Tue Jan 05 2010 Bill Peck <bpeck@redhat.com> - 0.4.75-1
