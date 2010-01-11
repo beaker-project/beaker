@@ -74,12 +74,10 @@ from datetime import datetime
 class Utility:
 
     @classmethod
-    def status_id_change_handler(cls,current_val,new_val,**kw):
-        log.debug('currentval %s newval %s' % (current_val,new_val))
+    def status_id_change_handler(cls,current_val,new_val,**kw): 
         bad_status = ['broken','removed']
         new_status = SystemStatus.by_id(new_val)
-        if new_status.status.lower() == 'working':
-            log.debug('New one is working')
+        if new_status.status.lower() == 'working': 
             old_status = SystemStatus.by_id(current_val)
             if old_status.status.lower() in bad_status:
                 kw['status_reason'] = None  #remove the status notes
