@@ -5,7 +5,7 @@ from turbogears.database import metadata, mapper, session
 from turbogears.config import get
 import ldap
 from sqlalchemy import Table, Column, ForeignKey
-from sqlalchemy.orm import relation, backref, synonym, dynamic_loader
+from sqlalchemy.orm import relation, backref, synonym, dynamic_loader,query
 from sqlalchemy import String, Unicode, Integer, DateTime, UnicodeText, Boolean, Float, VARCHAR, TEXT, Numeric
 from sqlalchemy import or_, and_, not_, select
 from sqlalchemy.exceptions import InvalidRequestError
@@ -1081,7 +1081,6 @@ class Group(object):
 
 
 class System(SystemObject):
-     
 
     def __init__(self, fqdn=None, status=None, contact=None, location=None,
                        model=None, type=None, serial=None, vendor=None,
@@ -1322,6 +1321,7 @@ $SNIPPET("rhts_post")
             return CobblerAPI(self)
 
     remote = property(remote)
+
     @classmethod
     def all(cls, user=None,system = None): 
         """
@@ -1347,8 +1347,7 @@ $SNIPPET("rhts_post")
                                         System.user==user))))
         else:
             query = query.filter(System.private==False)
-        
-        
+     
         return query
 
 #                                  or_(User.user_id==user.user_id, 
@@ -2039,8 +2038,6 @@ class Cpu(SystemObject):
 	    for cpuflag in flags:
                 new_flag = CpuFlag(flag=cpuflag)
                 self.flags.append(new_flag)
-
-
 
 class CpuFlag(SystemObject):
     def __init__(self, flag=None):

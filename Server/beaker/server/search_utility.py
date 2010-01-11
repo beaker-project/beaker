@@ -1,17 +1,16 @@
 import model
 import re
+import random
+import sqlalchemy
 from sqlalchemy import or_, and_, not_
+from sqlalchemy.sql import visitors
 from turbogears.database import session
 
 import logging
 log = logging.getLogger(__name__)
 
 class myColumn(object):
-    def __init__(self,system_relation=None,col_type=None,column = None):
-        
-        if type(col_type) != type(''):
-            raise TypeError('col_type var passed to %s must be string' % self.__class__.__name__)
-        
+    def __init__(self,system_relation=None,col_type=None,column = None,has_alias = False): 
         if system_relation is not None:
             if type(system_relation) != type([]) and type(system_relation) != type(''):
                 raise TypeError('system_relation var passed to %s must be of type list of string' % self.__class__.__name__)
@@ -19,6 +18,7 @@ class myColumn(object):
         self._column = column
         self._type = col_type
         self._system_relation = system_relation
+        self._has_alias = has_alias
         
     @property    
     def type(self):
@@ -32,6 +32,10 @@ class myColumn(object):
     def column(self):
         return self._column
     
+    @property
+    def has_alias(self):
+        return self._has_alias    
+
 class CpuColumn(myColumn):
     def __init__(self,**kw):
         if not kw.has_key('system_relation'):
@@ -60,7 +64,7 @@ class KeyColumn(myColumn):
                 
             self._type = None
             self._system_relation = kw['system_relation']
-            
+            super(KeyColumn,self).__init__(**kw)    
     @property
     def int_column(self):
         return self._int_column
@@ -190,7 +194,7 @@ class Search:
            return class_ref
 
     @classmethod
-    def __split_class_field(cls,class_field):
+    def split_class_field(cls,class_field):
         class_field_list = class_field.split('/')     
         display_name = class_field_list[0]
         field      = class_field_list[1] 
@@ -199,7 +203,7 @@ class Search:
     @classmethod 
     def field_type(cls,class_field): 
        """ Takes a class/field string (ie'CPU/Processor') and returns the type of the field"""
-       returned_class_field = cls.__split_class_field(class_field) 
+       returned_class_field = cls.split_class_field(class_field) 
        display_name = returned_class_field[0]
        field      = returned_class_field[1]        
       
@@ -236,7 +240,7 @@ class Search:
         search_on() takes a combination of class name and field name (i.e 'Cpu/vendor') and
         returns the operations suitable for the field type it represents
         """ 
-        returned_class_field = cls.__split_class_field(class_field) 
+        returned_class_field = cls.split_class_field(class_field) 
         display_name = returned_class_field[0]
         field      = returned_class_field[1]        
         class_ref = cls.translate_name(display_name)
@@ -252,60 +256,101 @@ class Search:
             log.error('Error accessing attribute within search_on: %s' % (error))
         else:
             return dict(operators = class_ref.search_operators(field_type), values = vals)
-       
+      
+    @classmethod
+    def create_mapping(cls,obj):
+        display_name = getattr(obj,'display_name',None)
+        if display_name != None:
+            display_name = obj.display_name
+                  
+            #If the display name is already mapped to this class
+            if cls.class_external_mapping.has_key(display_name) and cls.class_external_mapping.get(display_name) is obj: 
+                #this class is already mapped, all good
+                pass 
+            elif cls.class_external_mapping.has_key(display_name) and cls.class_external_mapping.get(display_name) is not obj:                   
+                log.debug("Display name %s is already in use. Will try and use %s as display name for class %s" % (display_name, obj.__name__,obj.__name__))
+                display_name = obj.__name__             
+        else:
+            display_name = obj.__name__
+              
+        #We have our final display name, if it still exists in the mapping
+        #there isn't much we can do, and we don't want to overwrite it. 
+        if cls.class_external_mapping.has_key(display_name) and cls.class_external_mapping.get(display_name) is not obj: 
+            log.error("Display name %s cannot be set for %s" % (display_name,obj.__name__))               
+        else: 
+            cls.class_external_mapping[display_name] = obj
+        return display_name
 
     @classmethod
-    def create_search_table(cls,searchable_objs):  
+    def create_column_table(cls,options):
+        return cls.__create_table(options,cls.column_table)        
+
+    @classmethod
+    def create_search_table(cls,options):
+        return cls.__create_table(options,cls.search_table) 
+   
+
+    @classmethod
+    def __create_table(cls,options,lookup_table):  
         """
-        create_search_table will set and return the class' search_table class attribute with
+        create_table will set and return the class' attribute with
         a list of searchable 'combinations'.
         These 'combinations' merely represent a table and a column.
-        An example of search_table entry may be 'CPU/Vendor' or 'System/Name'
+        An example of a table entry may be 'CPU/Vendor' or 'System/Name'
         """
         #Clear the table if it's already been created
-        if cls.search_table != None:
-            cls.search_table = []
-        
-        for obj in searchable_objs:  
-            #Check if we have a specialised display name
-            display_name = getattr(obj,'display_name',None)
-            if display_name != None:
-                display_name = obj.display_name
-                  
-                #If the display name is already being used by some class.
-                if cls.class_external_mapping.has_key(display_name): 
-                    log.debug("Display name %s cannot be set for %s display name will be set to class name" % (display_name, obj.__name__))
-                    display_name = obj.__name__                    
-            else:
-                display_name = obj.__name__
-              
-            #We have our final display name, if it still exists in the mapping
-            #there isn't much we can do, and we don't want to overwrite it.
-            if cls.class_external_mapping.has_key(display_name): 
-                log.error("Display name %s cannot be set for %s" % (display_name,obj.__name__))               
-            else: 
-                cls.class_external_mapping[display_name] = obj
+        if lookup_table != None:
+           lookup_table = []       
+        for i in options:
+            for obj,v in i.iteritems():
+                display_name = cls.create_mapping(obj)
+                for rule,v1 in v.iteritems():  
+                    searchable = obj.get_searchable()
+                    if rule == 'all':
+                        for item in searchable: 
+                            lookup_table.append('%s/%s' % (display_name,item))  
+                    if rule == 'exclude': 
+                        for item in searchable: 
+                            if v1.count(item) < 1:
+                                lookup_table.append('%s/%s' % (display_name,item))  
+                    if rule == 'include':
+                        for item in searchable:
+                            if v1.count(item) > 1:
+                                 lookup_table.append('%s/%s' % (display_name,item))  
 
+        lookup_table.sort()
+        return lookup_table
+
+        for obj in searchable_objs: 
+
+            display_name = cls.create_mapping(obj)
             #Now let's actually build the search table
             searchable =  obj.get_searchable() 
-            for item in searchable: 
+            
+            for item in searchable:
+                
+                  
                  cls.search_table.append('%s/%s' % (display_name,item))  
                
-        cls.search_table.sort()
-        return cls.search_table
    
 class SystemSearch(Search): 
     class_external_mapping = {}
     search_table = []
-    
-    def __init__(self, systems=None):
+    column_table = [] 
+    def __init__(self,systems=None):
         if systems:
             self.queri = systems
         else:
             self.queri = session.query(model.System)
+       
+        self.system_columns_desc = []
+        self.extra_columns_desc = []
   
     def __getitem__(self,key):
         pass
+ 
+    def get_column_descriptions(self):
+        return [self.system_columns_desc,self.extra_columns_desc]
 
     def append_results(self,cls_ref,value,column,operation,**kw):  
         """ 
@@ -327,40 +372,18 @@ class SystemSearch(Search):
                    
         if col_op_pre is not None:
             results_from_pre = col_op_pre(value,col=column,op = operation, **kw)
-           
-        mycolumn = cls_ref.searchable_columns.get(column)
-        if mycolumn:
-            if cls_ref is Key:    
-                if results_from_pre == 'string':
-                    mycolumn.set_column(mycolumn.string_column)
-                    mycolumn.set_type('string')
-                elif results_from_pre == 'int':
-                    mycolumn.set_column(mycolumn.int_column)
-                    mycolumn.set_type('int')
-                else:
-                    log.error('Expecting the string value \'string\' or \'int\' to be returned from col_op_pre function when searching on Key/Value');       
-            if mycolumn.system_relation:
-                try:    
-                    #This column has specified it needs a join, so let's add it to the all the joins
-                    #that are pertinent to this class. We do this so there is only one point where we add joins 
-                    #to the query
-                    #cls_ref.joins.add_join(col_string = str(column),join=mycolumn.join)
-                    system_relations = mycolumn.system_relation
-                    if type(system_relations) == type(''):
-                        self.queri = self.queri.outerjoin(system_relations,aliased=True)    
-                    else:    
-                        for relations in system_relations:
-                            if type(relations) == type([]):
-                                self.queri = self.queri.outerjoin(relations,aliased=True)    
-                            else:
-                                self.queri = self.queri.outerjoin(system_relations,aliased=True)
-                                break     
-                        
-                except TypeError, (error):
-                    log.error('Column %s has not specified joins validly:%s' % (column, error))                                                               
+        else:
+            results_from_pre = None
+        
+        mycolumn = cls_ref.searchable_columns.get(column)  
+	if mycolumn:
+            try: 
+                self.__do_join(cls_ref,mycolumn=mycolumn,results_from_pre = results_from_pre)             
+            except TypeError, (error):
+                log.error(error)
         else:       
             log.error('Error accessing attribute within append_results')
-                  
+        
         modeller = Modeller()          
         if col_op_filter:
             filter_func = col_op_filter   
@@ -380,7 +403,65 @@ class SystemSearch(Search):
             filter_final = lambda: filter_func(mycolumn.column,value)
 
         self.queri = self.queri.filter(filter_final())
-       
+
+
+    def __do_join(self,cls_ref,col_name=None,mycolumn=None,results_from_pre=None,id=None): 
+            if not mycolumn and not col_name:
+                raise ValueError('Need to specify either a myColumn type or column name') 
+            if not mycolumn:
+                 mycolumn = cls_ref.searchable_columns.get(col_name)   
+                 if not mycolumn:
+                     log.error('Error accessing column %s in class %s' % (col_name,cls_ref.__name__))  
+             
+            if cls_ref is Key:    
+                if results_from_pre == 'string':
+                    mycolumn.set_column(mycolumn.string_column)
+                    mycolumn.set_type('string')
+                elif results_from_pre == 'int':
+                    mycolumn.set_column(mycolumn.int_column)
+                    mycolumn.set_type('int')
+                else:
+                    log.error('Expecting the string value \'string\' or \'int\' to be returned from col_op_pre function when searching on Key/Value');       
+            if mycolumn.system_relation: 
+                #This column has specified it needs a join, so let's add it to the all the joins
+                #that are pertinent to this class. We do this so there is only one point where we add joins 
+                #to the query
+                #cls_ref.joins.add_join(col_string = str(column),join=mycolumn.join)
+                system_relations = mycolumn.system_relation
+                is_alias = mycolumn.has_alias
+                if type(system_relations) == type(''):
+                    if id is not None:
+                        self.queri = self.queri.outerjoin(system_relations,aliased=is_alias,id=id)    
+                    self.queri = self.queri.outerjoin(system_relations,aliased=is_alias)    
+                else:    
+                    for relations in system_relations:
+                        if type(relations) == type([]):
+                            if id is not None: 
+  				self.queri = self.queri.outerjoin(relations,aliased=is_alias,id=id)    
+                            self.queri = self.queri.outerjoin(relations,aliased=False)    
+                        else:
+                            if id is not None: 
+                                self.queri = self.queri.outerjoin(system_relations,aliased=is_alias,id=id)
+                            self.queri = self.queri.outerjoin(system_relations,aliased=is_alias)
+                            break     
+                         
+    def add_columns_desc(self,result_columns): 
+        if result_columns is not None:
+            for elem in result_columns: 
+                (display_name,col) = self.split_class_field(elem) 
+                cls_ref = self.translate_name(display_name)  
+                col_ref = cls_ref.searchable_columns[col].column
+                #If they are System columns we won't need to explicitly add them to the query, as they are already returned in the System query  
+                if cls_ref is System:     
+                    self.system_columns_desc.append(elem)
+                    continue
+                elif col_ref is not None: 
+                    self.extra_columns_desc.append(elem)
+                    self.adding_columns = True 
+                    rand_id = random.random()
+                    self.__do_join(cls_ref,col_name=col,id=rand_id)
+                    self.queri = self.queri.add_column(col_ref,id=rand_id)         
+ 
     def return_results(self): 
         return self.queri        
 
@@ -439,8 +520,8 @@ class System(SystemObject):
                           'Lender'    : myColumn(column=model.System.lender,col_type='string'),
                           'Model'     : myColumn(column=model.System.model,col_type='string'),
                           'Memory'    : myColumn(column=model.System.memory,col_type='numeric'),
-                          'User'      : myColumn(column=model.User.user_name, col_type='string', system_relation='user'),
-                          'Owner'     : myColumn(column=model.User.user_name, col_type='string', system_relation='owner'),
+                          'User'      : myColumn(column=model.User.user_name, col_type='string', has_alias=True, system_relation='user'),
+                          'Owner'     : myColumn(column=model.User.user_name, col_type='string', has_alias=True, system_relation='owner'),
                           'Status'    : myColumn(column=model.SystemStatus.status, col_type='string', system_relation='status'),
                           'Arch'      : myColumn(column=model.Arch.arch, col_type='string', system_relation='arch'),
                           'Type'      : myColumn(column=model.SystemType.type, col_type='string', system_relation='type'),
