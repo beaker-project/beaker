@@ -44,8 +44,13 @@ $(document).ready(function() {
         <div id="fedora-header-items">
             <table><tr><td> &nbsp; </td><td>
                 <div id="wait" style="display: none">
-                    <img src="${tg.url('/static/images/wait.gif')}" height="48" width="48"/>
+                    <img src="${tg.url('/static/images/wait.gif')}" height="48" width="48"/> 
                 </div>
+                <span style="margin-right:2em">
+                    <p>Version - ${tg.beaker_version()} 
+                    </p>                                         
+                </span>
+                
             </td></tr></table>
         </div>
     </div>
@@ -110,6 +115,11 @@ $(document).ready(function() {
         </div>
         <div class="fedora-corner-br">&nbsp;</div>
         <div class="fedora-corner-bl">&nbsp;</div>
+    </div>
+    <div id="fedora-footer">
+     <p>
+     <a href="${tg.config('beaker.bz_create_link')}">Report Bug</a>
+     </p>
     </div>
     <!-- End of main_content -->
 </body>

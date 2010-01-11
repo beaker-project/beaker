@@ -63,6 +63,7 @@ system_table = Table('system', metadata,
            ForeignKey('system_type.id'), nullable=False),
     Column('status_id', Integer,
            ForeignKey('system_status.id'), nullable=False),
+    Column('status_reason',Unicode(255)),
     Column('shared', Boolean, default=False),
     Column('private', Boolean, default=False),
     Column('deleted', Boolean, default=False),
@@ -1343,6 +1344,7 @@ $SNIPPET("rhts_post")
         # Attempt to remove Netboot entry
         # and turn off machine, but don't fail if we can't
         if self.release_action:
+            self.remote.release(power=False)
             self.release_action.do(self)
         else:
             try:
@@ -1500,6 +1502,11 @@ class SystemStatus(SystemObject):
     @classmethod
     def by_name(cls, systemstatus):
         return cls.query.filter_by(status=systemstatus).one()
+ 
+    @classmethod
+    def by_id(cls,status_id):
+        return cls.query.filter_by(id=status_id).one()
+
 
 
 class Arch(SystemObject):

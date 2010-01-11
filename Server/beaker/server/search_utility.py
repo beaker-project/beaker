@@ -561,16 +561,17 @@ class SystemObject:
             
 class System(SystemObject): 
     search_table = []
-    searchable_columns = {'Vendor' : MyColumn(column=model.System.vendor,col_type='string'),
-                          'Name' : MyColumn(column=model.System.fqdn,col_type='string'),
-                          'Lender' : MyColumn(column=model.System.lender,col_type='string'),
-                          'Model' : MyColumn(column=model.System.model,col_type='string'),
-                          'Memory' : MyColumn(column=model.System.memory,col_type='numeric'),
-                          'User' : MyColumn(column=model.User.user_name, col_type='string', relations='user'),
-                          'Owner' : MyColumn(column=model.User.user_name, col_type='string', relations='owner'),
-                          'Status' : MyColumn(column=model.SystemStatus.status, col_type='string', relations='status'),
-                          'Arch' : MyColumn(column=model.Arch.arch, col_type='string', relations='arch'),
-                          'Type' : MyColumn(column=model.SystemType.type, col_type='string', relations='type')
+    searchable_columns = {'Vendor'    : myColumn(column=model.System.vendor,col_type='string'),
+                          'Name'      : myColumn(column=model.System.fqdn,col_type='string'),
+                          'Lender'    : myColumn(column=model.System.lender,col_type='string'),
+                          'Model'     : myColumn(column=model.System.model,col_type='string'),
+                          'Memory'    : myColumn(column=model.System.memory,col_type='numeric'),
+                          'User'      : myColumn(column=model.User.user_name, col_type='string', system_relation='user'),
+                          'Owner'     : myColumn(column=model.User.user_name, col_type='string', system_relation='owner'),
+                          'Status'    : myColumn(column=model.SystemStatus.status, col_type='string', system_relation='status'),
+                          'Arch'      : myColumn(column=model.Arch.arch, col_type='string', system_relation='arch'),
+                          'Type'      : myColumn(column=model.SystemType.type, col_type='string', system_relation='type'),
+                          'PowerType' : myColumn(column=model.PowerType.name, col_type='string', system_relation=['power','power_type'])
                          }  
     search_values_dict = {'Status' : lambda: model.SystemStatus.get_all_status_name(),
                           'Type' : lambda: model.SystemType.get_all_type_names() }   

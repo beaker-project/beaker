@@ -1,9 +1,13 @@
 %{!?python_sitelib: %define python_sitelib %(%{__python} -c "from distutils.sysconfig import get_python_lib; print get_python_lib()")}
 %{!?pyver: %define pyver %(%{__python} -c "import sys ; print sys.version[:3]")}
+%{!?branch: %define branch %(echo "$Format:%d$"| awk -F/ '{print $NF}'| sed -e 's/[()$]//g' | awk '{print "." $NF}' | grep -v master)}
+%if "0%{branch}" != "0"
+%{!?timestamp: %define timestamp $Format:.%at$}
+%endif
 
 Name:           beaker
-Version:        0.4.70
-Release:        1%{?dist}
+Version:        0.4.76
+Release:        0%{?timestamp}%{?branch}%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -23,6 +27,7 @@ Group:          Applications/Internet
 Requires:       python
 Requires:       kobo-client
 Requires:	python-setuptools
+Requires:	beaker
 
 
 %package server
@@ -37,6 +42,7 @@ Requires:       mod_wsgi
 Requires:       python-tgexpandingformwidget
 Requires:       httpd
 Requires:       python-krbV
+Requires:       beaker
 
 
 %package lab-controller
@@ -50,9 +56,7 @@ Requires:       yum-utils
 Requires:       /sbin/fenced
 Requires:       telnet
 Requires:       python-cpio
-Requires:       kobo-client
-Requires:	python-setuptools
-Requires:       python-xmltramp
+Requires:	beaker
 
 %package lib
 Summary:        Test Library
@@ -64,7 +68,6 @@ Provides:       beakerlib
 
 %description
 Filesystem layout for beaker
-
 
 %description client
 This is the command line interface used to interact with the Beaker Server.
@@ -97,6 +100,12 @@ ln -s Fedora.ks $RPM_BUILD_ROOT/var/lib/cobbler/kickstarts/Fedoradevelopment.ks
 
 %clean
 %{__rm} -rf %{buildroot}
+
+%files
+%defattr(-,root,root,-)
+%{python_sitelib}/%{name}/__init__.py*
+%{python_sitelib}/%{name}-%{version}-*
+%{python_sitelib}/%{name}-%{version}-py%{pyver}.egg-info/
 
 %files server
 %defattr(-,root,root,-)
@@ -136,6 +145,17 @@ ln -s Fedora.ks $RPM_BUILD_ROOT/var/lib/cobbler/kickstarts/Fedoradevelopment.ks
 /usr/share/man/man1/beakerlib*
 
 %changelog
+* Mon Jan 11 2010 Bill Peck <bpeck@redhat.com> - 0.4.76-0
+- merged bz544347 - add condition field when system status set to broken or removed.
+* Fri Jan 08 2010 Bill Peck <bpeck@redhat.com> - 0.4.76-0
+- Fixed regression, remove pxe entries when returning a system.
+* Thu Jan 07 2010 Bill Peck <bpeck@redhat.com> - 0.4.76-0
+- merged bz537414 - show version on beaker pages and have a link for reporting bugs.
+* Tue Jan 05 2010 Bill Peck <bpeck@redhat.com> - 0.4.75-1
+- Server/Client/LabController require beaker.
+* Tue Jan 05 2010 Bill Peck <bpeck@redhat.com> - 0.4.74-0
+- Merged Raymond's bz549912
+- updated spec file to include branch name and timestamp
 * Tue Dec 22 2009 Bill Peck <bpeck@redhat.com> - 0.4.70-0
 - another fix to the release_action code. send proper action methods
   to cobbler, Off->off On->on.

@@ -734,6 +734,7 @@ class SystemForm(Form):
                                  label=_(u'Status'),
                                  options=model.SystemStatus.get_all_status,
                                  validator=validators.NotEmpty()),
+               TextArea(name='status_reason', label=_(u'Condition Report'),attrs={'rows':3,'cols':27},validator=validators.MaxLength(255)),
                SingleSelectField(name='lab_controller_id',
                                  label=_(u'Lab Controller'),
                                  options=model.LabController.get_all),
