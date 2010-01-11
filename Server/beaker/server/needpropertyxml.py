@@ -376,12 +376,13 @@ class XmlArch(ElementWrapper):
         value = self.get_xml_attr('value', unicode, None)
         joins = []
         query = None
-        alias = arch_table.alias('arch%i' % self.alias['arch'])
+        arch_alias = arch_table.alias('arch%i' % self.alias['arch'])
+        system_arch_alias = system_arch_map.alias('system_arch%i' % self.alias['arch'])
         self.alias['arch'] += 1
         if value:
-            joins = [system_table.c.id == system_arch_map.c.system_id,
-                     alias.c.id   == system_arch_map.c.arch_id]
-            query = getattr(alias.c.arch, op)(value)
+            query = and_(system_table.c.id == system_arch_alias.c.system_id,
+                         arch_alias.c.id   == system_arch_alias.c.arch_id,
+                         getattr(arch_alias.c.arch, op)(value))
         return (joins, query)
 
 subclassDict = {
