@@ -1,2 +1,2 @@
-alter table osmajor add column alias varchar(25);
+USE beaker;
 ALTER TABLE system ADD COLUMN status_reason varchar(255) NULL;

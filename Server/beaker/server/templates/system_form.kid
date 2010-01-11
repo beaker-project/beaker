@@ -1,3 +1,20 @@
+<div xmlns:py="http://purl.org/kid/ns#">
+<script type='text/javascript'>
+$(document).ready(function(){ 
+    $("#form_status_id").change(function() 
+    { 
+        if ($('#form_status_id :selected').text() == 'Broken' || $('#form_status_id :selected').text() == 'Removed') {
+             $('#condition_report_row').removeClass('hidden')
+        };
+        if ($('#form_status_id :selected').text() == 'Working') {
+             $('#condition_report_row').addClass('hidden')
+        } 
+    });
+    if ($('#form_status_id :selected').text() == 'Working') {
+         $('#condition_report_row').addClass('hidden')
+    } 
+});
+</script>
 <form xmlns:py="http://purl.org/kid/ns#"
   name="${name}"
   action="${tg.url(action)}"
@@ -87,7 +104,15 @@
         </a>
        </td>
       </tr>
-      <tr class="list">
+      <tr class="list" id="condition_report_row">
+       <th class="list" >
+        <b>Condition Report</b>
+       </th>
+       <td class="list"> 
+        ${display_field_for("status_reason")}
+       </td>
+      </tr>
+      <tr class="list"> 
        <th class="list">
         <b>Shared</b>
        </th>
@@ -136,7 +161,7 @@
        <td class="list">
         ${display_field_for("mac_address")}
        </td>
-      </tr>
+      </tr> 
       <tr class="list">
        <th class="list">
         <b>Type</b>
@@ -153,3 +178,4 @@
      </table>
     </div>
 </form>
+</div>

@@ -197,6 +197,21 @@ class Utility:
                 fields.append(new_widget)
         return fields
 
+#I this I will move this Utility class out into another module and then
+#perhaps break it down into further classes. Work from other tickets
+#is making it quite large.
+class Utility:
+
+    @classmethod
+    def status_id_change_handler(cls,current_val,new_val,**kw): 
+        bad_status = ['broken','removed']
+        new_status = SystemStatus.by_id(new_val)
+        if new_status.status.lower() == 'working': 
+            old_status = SystemStatus.by_id(current_val)
+            if old_status.status.lower() in bad_status:
+                kw['status_reason'] = None  #remove the status notes
+        return kw           
+
 class Netboot:
     # For XMLRPC methods in this class.
     exposed = True
@@ -1107,7 +1122,8 @@ class Root(RPCRoot):
 #      would be good to have the save wait until the system is updated
 # TODO log  group +/-
         # Fields missing from kw have been set to NULL
-        log_fields = [ 'fqdn', 'vendor', 'lender', 'model', 'serial', 'location', 'type_id', 'checksum', 'status_id', 'lab_controller_id' , 'mac_address']
+        log_fields = [ 'fqdn', 'vendor', 'lender', 'model', 'serial', 'location', 'type_id', 
+                       'checksum', 'status_id', 'lab_controller_id' , 'mac_address', 'status_reason']
         for field in log_fields:
             try:
                 current_val = getattr(system,field)
@@ -1118,7 +1134,10 @@ class Root(RPCRoot):
                 current_val = ""
             new_val = str(kw.get(field) or "")
             if str(current_val) != new_val:
-#                sys.stderr.write("\nfield: " + field + ", Old: " +  current_val + ", New: " +  str(kw[field]) + " " +  "\n")
+                function_name = '%s_change_handler' % field
+                field_change_handler = getattr(Utility,function_name,None)
+                if field_change_handler is not None:
+                    kw = field_change_handler(current_val,new_val,**kw)
                 activity = SystemActivity(identity.current.user, 'WEBUI', 'Changed', field, current_val, new_val )
                 system.activity.append(activity)
 
@@ -1151,6 +1170,7 @@ class Root(RPCRoot):
         system.vendor=kw['vendor']
         system.lender=kw['lender']
         system.fqdn=kw['fqdn']
+        system.status_reason = kw['status_reason']
         system.date_modified = datetime.utcnow()
         if kw.get('private'):
             system.private=kw['private']
