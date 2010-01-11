@@ -43,7 +43,9 @@ class ElementWrapper(object):
 
     # Alias counter for each sub table
     alias = { 'key_value'  : 0,
-              'distro_tag' : 0 }
+              'arch'       : 0,
+              'distro_tag' : 0,
+            }
 
     @classmethod
     def get_subclass(cls, element):
@@ -374,10 +376,12 @@ class XmlArch(ElementWrapper):
         value = self.get_xml_attr('value', unicode, None)
         joins = []
         query = None
+        alias = arch_table.alias('arch%i' % self.alias['arch'])
+        self.alias['arch'] += 1
         if value:
             joins = [system_table.c.id == system_arch_map.c.system_id,
-                     arch_table.c.id   == system_arch_map.c.arch_id]
-            query = getattr(arch_table.c.arch, op)(value)
+                     alias.c.id   == system_arch_map.c.arch_id]
+            query = getattr(alias.c.arch, op)(value)
         return (joins, query)
 
 subclassDict = {
