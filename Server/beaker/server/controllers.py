@@ -542,11 +542,12 @@ class Root(RPCRoot):
                                    'operation' : 'is',
                                    'value' : kw['type']}]      
             #when we do a short cut type search, result column args are not passed
-            #we need to recreate them here from our cookies
-            text = request.simple_cookie['column_values'].value
-            vals_to_set = text.split(',')
-            for elem in vals_to_set:
-                kw['systemsearch_column_%s' % elem] = elem 
+            #we need to recreate them here from our cookies 
+            if 'column_values' in request.simple_cookie: 
+                text = request.simple_cookie['column_values'].value
+                vals_to_set = text.split(',')
+                for elem in vals_to_set:
+                    kw['systemsearch_column_%s' % elem] = elem 
       
     
         default_result_columns = ('System/Name', 'System/Status', 'System/Vendor',
