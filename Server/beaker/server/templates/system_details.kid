@@ -10,10 +10,10 @@
           <b>Model Name</b>
       </th>
       <th class="list">
-          <b>Model</b>
+          <b>Family</b>
       </th>
       <th class="list">
-          <b>Family</b>
+          <b>Model</b>
       </th>
       <th class="list">
           <b>Stepping</b>
@@ -42,10 +42,10 @@
           ${system.cpu.model_name}
       </td>
       <td class="list">
-          ${system.cpu.model}
+          ${system.cpu.family}
       </td>
       <td class="list">
-          ${system.cpu.family}
+          ${system.cpu.model}
       </td>
       <td class="list">
           ${system.cpu.stepping}

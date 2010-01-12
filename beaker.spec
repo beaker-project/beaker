@@ -193,6 +193,8 @@ fi
 /usr/share/man/man1/beakerlib*
 
 %changelog
+* Tue Jan 12 2010 Bill Peck <bpeck@redhat.com> - 0.4.76-0
+- merged bz554775 - added missing search columns and changed the order of Family/Model.
 * Mon Jan 11 2010 Bill Peck <bpeck@redhat.com> - 0.4.76-0
 - merged bz544347 - add condition field when system status set to broken or removed.
 - merged ticket51 - custom columns.

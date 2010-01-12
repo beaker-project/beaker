@@ -653,6 +653,9 @@ class Cpu(SystemObject):
                           'Cores'       : CpuColumn(col_type='numeric',column = model.Cpu.cores),
                           'Sockets'     : CpuColumn(col_type='numeric',column = model.Cpu.sockets),
                           'Model'       : CpuColumn(col_type='numeric',column = model.Cpu.model),
+                          'Family'      : CpuColumn(col_type='numeric',column = model.Cpu.family),
+                          'Stepping'    : CpuColumn(col_type='numeric',column = model.Cpu.stepping),
+                          'Speed'       : CpuColumn(col_type='numeric',column = model.Cpu.speed),
                           'Flags'       : CpuColumn(col_type='string',column = model.CpuFlag.flag, system_relation=['cpu','flags']) 
                          }  
 
