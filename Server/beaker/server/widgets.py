@@ -10,8 +10,8 @@ from turbogears.widgets import (Form, TextField, SubmitButton, TextArea,
                                 Widget, TableForm, FormField, CompoundFormField,
                                 static, PaginateDataGrid, RepeatingFormField,
                                 CompoundWidget, AjaxGrid, Tabber, CSSLink,
-                                RadioButtonList,
-                                RepeatingFieldSet, SelectionField)
+                                RadioButtonList, MultipleSelectField, Button,
+                                RepeatingFieldSet, SelectionField,WidgetsList)
 import logging
 log = logging.getLogger(__name__)
 
@@ -126,7 +126,47 @@ class TextFieldJSON(TextField):
     def __json__(self):
         return {
                 'field_id' : self.field_id,             
-               } 
+               }
+ 
+class JobMatrixWidgets(WidgetsList): 
+    default_validator = validators.NotEmpty()
+    whiteboard = MultipleSelectField('whiteboard', validator=default_validator)
+    projects = MultipleSelectField('projects', validator=default_validator)
+    job_ids = TextArea('job_ids',rows=20,cols=7, validator=default_validator)
+
+
+class JobMatrixReport(RemoteForm):     
+    template = 'beaker.server.templates.job_matrix' 
+    member_widgets = ['whiteboard','projects','job_ids','projects_filter',
+                      'whiteboard_filter','generate_button'] 
+    default_validator = validators.NotEmpty() 
+    def __init__(self,*args,**kw): 
+        super(JobMatrixReport,self).__init__(*args, **kw)       
+        self.class_name = self.__class__.__name__
+        if 'whiteboard_options' in kw:
+            whiteboard_options = kw['whiteboard_options']
+        else:
+            whiteboard_options = []
+
+        if 'project_options' in kw:
+            project_options = kw['project_options']
+        else:
+            project_options = []
+        
+        self.whiteboard = MultipleSelectField('whiteboard',label='Whiteboard', options=whiteboard_options, validator=self.default_validator)
+        self.projects = MultipleSelectField('projects', label='Projects', options=project_options, validator=self.default_validator)
+        self.job_ids = TextArea('job_ids',label='Job ID', rows=7,cols=7, validator=self.default_validator) 
+        self.fields = [self.whiteboard,self.projects,self.job_ids]
+
+        self.generate_button = Button(default='Generate')
+        self.whiteboard_filter = TextField('whiteboard_filter', label='Filter Whiteboard')       
+        self.projects_filter = TextField('projects_filter', label='Filter Project') 
+
+        self.generate = "."
+        self.name = 'remote_form'
+        self.submit_text = 'Search'
+   
+  
 
 class SearchBar(RepeatingFormField):
     """Search Bar"""
