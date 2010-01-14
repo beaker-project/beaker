@@ -2602,14 +2602,15 @@ class Job(TaskBase):
         max_result = None
         max_status = None
         for recipeset in self.recipesets:
-            self.ptasks += recipeset.ptasks
-            self.wtasks += recipeset.wtasks
-            self.ftasks += recipeset.ftasks
-            self.ktasks += recipeset.ktasks
-            if recipeset.status > max_status:
-                max_status = recipeset.status
-            if recipeset.result > max_result:
-                max_result = recipeset.result
+            if recipeset.is_finished():
+                self.ptasks += recipeset.ptasks
+                self.wtasks += recipeset.wtasks
+                self.ftasks += recipeset.ftasks
+                self.ktasks += recipeset.ktasks
+                if recipeset.status > max_status:
+                    max_status = recipeset.status
+                if recipeset.result > max_result:
+                    max_result = recipeset.result
         self.status = max_status
         self.result = max_result
 
@@ -2682,14 +2683,15 @@ class RecipeSet(TaskBase):
         max_result = None
         max_status = None
         for recipe in self.recipes:
-            self.ptasks += recipe.ptasks
-            self.wtasks += recipe.wtasks
-            self.ftasks += recipe.ftasks
-            self.ktasks += recipe.ktasks
-            if recipe.status > max_status:
-                max_status = recipe.status
-            if recipe.result > max_result:
-                max_result = recipe.result
+            if recipe.is_finished():
+                self.ptasks += recipe.ptasks
+                self.wtasks += recipe.wtasks
+                self.ftasks += recipe.ftasks
+                self.ktasks += recipe.ktasks
+                if recipe.status > max_status:
+                    max_status = recipe.status
+                if recipe.result > max_result:
+                    max_result = recipe.result
         self.status = max_status
         self.result = max_result
         self.job.update_status()
@@ -2892,17 +2894,18 @@ class Recipe(TaskBase):
         max_result = None
         max_status = None
         for task in self.tasks:
-            if task.result == task_pass:
-                self.ptasks += 1
-            if task.result == task_warn:
-                self.wtasks += 1
-            if task.result == task_fail:
-                self.ftasks += 1
-            if task.result == task_panic:
-                self.ktasks += 1
-            if task.status > max_status:
+            if task.is_finished():
+                if task.result == task_pass:
+                    self.ptasks += 1
+                if task.result == task_warn:
+                    self.wtasks += 1
+                if task.result == task_fail:
+                    self.ftasks += 1
+                if task.result == task_panic:
+                    self.ktasks += 1
+                if task.status > max_status:
                     max_status = task.status
-            if task.result > max_result:
+                if task.result > max_result:
                     max_result = task.result
         self.status = max_status
         self.result = max_result
@@ -3109,9 +3112,10 @@ class RecipeTask(TaskBase):
         Update number of passes, failures, warns, panics..
         """
         max_result = None
-        for result in self.results:
-            if result.result > max_result:
-                max_result = result.result
+        if self.is_finished():
+            for result in self.results:
+                if result.result > max_result:
+                    max_result = result.result
         self.result = max_result
         self.recipe.update_status()
 
