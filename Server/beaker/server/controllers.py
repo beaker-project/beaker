@@ -531,6 +531,19 @@ class Root(RPCRoot):
 
         return sys_search.return_results()
 
+    def generate(self,**kw):
+        log.debug('Here in generate')
+        if 'job_ids' in kw:
+            jobs = job_ids.split("\n")
+            recipes = Recipe.query().join(['recipeset']).any(RecipeSet.job_id.in_(jobs))
+            log.debug(recipes.statement)
+        elif 'whiteboard' in kw:
+            pass
+        elif 'project' in kw:
+           pass
+        else:
+           raise BeakerException('Incorrect or no filter passed to job matrix report generator')
+
     # @identity.require(identity.in_group("admin"))
     def systems(self, systems, *args, **kw):
         # Reset joinpoint and then outerjoin on user.  This is so the sort 

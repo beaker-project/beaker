@@ -152,19 +152,21 @@ class JobMatrixReport(RemoteForm):
             project_options = kw['project_options']
         else:
             project_options = []
-        
+      
+     
+        self.submit_text = "Generate"
         self.whiteboard = MultipleSelectField('whiteboard',label='Whiteboard', options=whiteboard_options, validator=self.default_validator)
         self.projects = MultipleSelectField('projects', label='Projects', options=project_options, validator=self.default_validator)
         self.job_ids = TextArea('job_ids',label='Job ID', rows=7,cols=7, validator=self.default_validator) 
         self.fields = [self.whiteboard,self.projects,self.job_ids]
 
-        self.generate_button = Button(default='Generate')
+        self.generate_button = Button(default='Generate',action='generate')
         self.whiteboard_filter = TextField('whiteboard_filter', label='Filter Whiteboard')       
         self.projects_filter = TextField('projects_filter', label='Filter Project') 
-
-        self.generate = "."
+ 
         self.name = 'remote_form'
-        self.submit_text = 'Search'
+        self.action = 'generate'  
+
    
   
 
