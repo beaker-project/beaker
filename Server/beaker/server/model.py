@@ -2749,6 +2749,7 @@ class Recipe(TaskBase):
         return "%02d/%s/%s" % (int(str(job_id)[-2:]),
                                          job_id,
                                          self.id)
+    filepath = property(filepath)
 
     def to_xml(self, recipe):
         recipe.setAttribute("id", "%s" % self.id)
@@ -3044,6 +3045,7 @@ class RecipeTask(TaskBase):
                                          job_id,
                                          recipe_id,
                                          self.id)
+    filepath = property(filepath)
 
     def to_xml(self):
         task = self.doc.createElement("task")
@@ -3430,6 +3432,7 @@ class RecipeTaskResult(MappedObject):
                                          recipe_id,
                                          task_id,
                                          self.id)
+    filepath = property(filepath)
 
     def to_xml(self):
         """
