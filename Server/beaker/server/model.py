@@ -2694,6 +2694,12 @@ class RecipeSet(TaskBase):
                     max_result = recipe.result
         self.status = max_status
         self.result = max_result
+
+        # Return systems if recipeSet finished
+        if self.is_finished():
+            for recipe in self.recipes:
+                recipe.release_system()
+
         self.job.update_status()
 
     def recipes_orderby(self, labcontroller):
@@ -2922,33 +2928,34 @@ class Recipe(TaskBase):
             # Record the completion of this Recipe.
             self.finish_time = datetime.utcnow()
 
+        self.recipeset.update_status()
+    
+    def release_system(self):
+        """ Release the system and remove the watchdog
+        """
+        if self.system:
+            try:
+                self.system.action_release()
+                log.debug("Return system %s for recipe %s" % (self.system, self.id))
+                self.system.activity.append(
+                    SystemActivity(self.recipeset.job.owner, 
+                                   'Scheduler', 
+                                   'Returned', 
+                                   'User', 
+                                   '%s' % self.recipeset.job.owner, 
+                                   ''))
+            except socket.gaierror, error:
+                #FIXME
+                pass
+            except xmlrpclib.Fault, error:
+                #FIXME
+                pass
             ## FIXME Should we actually remove the watchdog?
             ##       Maybe we should set the status of the watchdog to reclaim
             ##       so that the lab controller returns the system instead.
             # Remove this recipes watchdog
             log.debug("Remove watchdog for recipe %s" % self.id)
             del(self.watchdog)
-
-            # Return system if reserved
-            if self.system:
-                try:
-                    self.system.action_release()
-                    log.debug("Return system %s for recipe %s" % (self.system, self.id))
-                    self.system.activity.append(
-                        SystemActivity(self.recipeset.job.owner, 
-                                       'Scheduler', 
-                                       'Returned', 
-                                       'User', 
-                                       '%s' % self.recipeset.job.owner, 
-                                       ''))
-                except socket.gaierror, error:
-                    #FIXME
-                    pass
-                except xmlrpclib.Fault, error:
-                    #FIXME
-                    pass
-
-        self.recipeset.update_status()
 
     def task_info(self):
         """
