@@ -6,8 +6,8 @@
 %endif
 
 Name:           beaker
-Version:        0.4.76
-Release:        1%{?timestamp}%{?branch}%{?dist}
+Version:        0.4.77
+Release:        2%{?timestamp}%{?branch}%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -145,6 +145,8 @@ ln -s Fedora.ks $RPM_BUILD_ROOT/var/lib/cobbler/kickstarts/Fedoradevelopment.ks
 /usr/share/man/man1/beakerlib*
 
 %changelog
+* Wed Jan 13 2010 Bill Peck <bpeck@redhat.com> - 0.4.77-0
+- fix ISE 500 when adding new system
 * Tue Jan 12 2010 Bill Peck <bpeck@redhat.com> - 0.4.76-1
 - fix for cookies not being set.
 * Tue Jan 12 2010 Bill Peck <bpeck@redhat.com> - 0.4.76-0
