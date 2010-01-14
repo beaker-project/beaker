@@ -2465,6 +2465,10 @@ class TaskResult(object):
         return "%s" % (self.result)
 
 class Log(MappedObject):
+    def __init__(self, path=None, filename=None):
+        self.path = path
+        self.filename = filename
+
     def __cmp__(self, other):
         """ Used to compare logs that are already stored. Log(path,filename) in Recipe.logs  == True
         """
