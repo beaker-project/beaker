@@ -211,9 +211,10 @@ class Utility:
         bad_status = ['broken','removed']
         new_status = SystemStatus.by_id(new_val)
         if new_status.status.lower() == 'working': 
-            old_status = SystemStatus.by_id(current_val)
-            if old_status.status.lower() in bad_status:
-                kw['status_reason'] = None  #remove the status notes
+            if current_val:
+                old_status = SystemStatus.by_id(current_val)
+                if old_status.status.lower() in bad_status:
+                    kw['status_reason'] = None  #remove the status notes
         return kw           
 
 class Netboot:
