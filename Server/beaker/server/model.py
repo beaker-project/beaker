@@ -3505,8 +3505,11 @@ class RecipeTaskResult(MappedObject):
     def no_value(self):
         return None
    
-    start_time = report_time
-    finish_time = report_time
+    def time(self):
+        return self.report_time
+
+    start_time = property(time)
+    finish_time = property(time)
     duration = property(no_value)
     status = property(no_value)
 
