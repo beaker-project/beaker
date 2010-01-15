@@ -9,6 +9,7 @@
   <th class="list">Duration</th>
   <th class="list">Status</th>
   <th class="list">Result</th>
+  <th class="list">Score</th>
  </tr>
  <tr py:for="i, recipe_task in enumerate(recipe_tasks)" class="${i%2 and 'odd' or 'even'}">
    <!-- Depending on if its a RecipeTask or a RecipeTaskResult we 
@@ -27,5 +28,6 @@
    <td class="list ${result}">${recipe_task.duration}</td>
    <td class="list ${result}">${recipe_task.status}</td>
    <td class="list ${result}">${recipe_task.result}</td>
+   <td class="list ${result}">${recipe_task.score}</td>
  </tr>
 </table>

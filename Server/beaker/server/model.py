@@ -742,6 +742,7 @@ recipe_task_result_table = Table('recipe_task_result',metadata,
                 ForeignKey('task_result.id')),
         Column('score', Numeric(10)),
         Column('log', Unicode()),
+        Column('report_time',DateTime, default=datetime.now),
 )
 
 task_table = Table('task',metadata,
@@ -3288,6 +3289,10 @@ class RecipeTask(TaskBase):
         return "T:%s" % self.id
     t_id = property(t_id)
 
+    def no_value(self):
+        return None
+   
+    score = property(no_value)
 
 class RecipeTaskRoleListAdapter(object):
     def __init__(self, parent, role):
@@ -3500,8 +3505,8 @@ class RecipeTaskResult(MappedObject):
     def no_value(self):
         return None
    
-    start_time = property(no_value)
-    finish_time = property(no_value)
+    start_time = report_time
+    finish_time = report_time
     duration = property(no_value)
     status = property(no_value)
 
