@@ -2607,10 +2607,10 @@ class Job(TaskBase):
                 self.wtasks += recipeset.wtasks
                 self.ftasks += recipeset.ftasks
                 self.ktasks += recipeset.ktasks
-                if recipeset.status > max_status:
-                    max_status = recipeset.status
-                if recipeset.result > max_result:
-                    max_result = recipeset.result
+            if recipeset.status > max_status:
+                max_status = recipeset.status
+            if recipeset.result > max_result:
+                max_result = recipeset.result
         self.status = max_status
         self.result = max_result
 
@@ -2688,10 +2688,10 @@ class RecipeSet(TaskBase):
                 self.wtasks += recipe.wtasks
                 self.ftasks += recipe.ftasks
                 self.ktasks += recipe.ktasks
-                if recipe.status > max_status:
-                    max_status = recipe.status
-                if recipe.result > max_result:
-                    max_result = recipe.result
+            if recipe.status > max_status:
+                max_status = recipe.status
+            if recipe.result > max_result:
+                max_result = recipe.result
         self.status = max_status
         self.result = max_result
 
@@ -2909,10 +2909,10 @@ class Recipe(TaskBase):
                     self.ftasks += 1
                 if task.result == task_panic:
                     self.ktasks += 1
-                if task.status > max_status:
-                    max_status = task.status
-                if task.result > max_result:
-                    max_result = task.result
+            if task.status > max_status:
+                max_status = task.status
+            if task.result > max_result:
+                max_result = task.result
         self.status = max_status
         self.result = max_result
 
@@ -3119,10 +3119,9 @@ class RecipeTask(TaskBase):
         Update number of passes, failures, warns, panics..
         """
         max_result = None
-        if self.is_finished():
-            for result in self.results:
-                if result.result > max_result:
-                    max_result = result.result
+        for result in self.results:
+            if result.result > max_result:
+                max_result = result.result
         self.result = max_result
         self.recipe.update_status()
 
