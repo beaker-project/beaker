@@ -1,32 +1,15 @@
 == TODO ==
 
- !! rhts-test-runner.sh
-    - get and store repository info in /etc/yum.repos.d/
-    - check environment
-    - create /tmp/TESTOUT.log - it is required by rhts-abort
-    - get the test
-    - set environment
-    - run the test and capture outputs
-    - check all outputs
  !! add self-test suite
- !! fedora/rhel packaging
-    - check if original Fedora spec's could be used. Download:
-        CVSROOT=:pserver:anonymous@cvs.fedora.redhat.com:/cvs/pkgs \
-        PKGS={python,python-zope-interface,python-simplejson,python-twisted-{core,web}} \
-        cvs co rpms/$PKGS/{F-10,devel}
-    - create brew/koji builds
  !  integrate into /distribution/beaker/* tests
  !  properly daemonize controller
- !  logging backend
  !  command line options:
     - server and backends using command line options and configuration
- !  add a command_id to command and use it to identify echo-events.
-    - some events (espacially those expecting results) should have event_id as
-      well - e.g. sync-block when done.
  !  communication backend/controller->task
     - stdin/socket?
     - check twisted deferred(?)
  !  clean up backends/server output
+    - filter messages
     - use logging for all messages
       - configuration option for forwarding to stdout
  !  run pylint and clean up the code!
@@ -46,11 +29,16 @@
     - I/O - sockets, stdio, named-pipes
     - spawn process
  9  backends should end cleanly when "bye" is received.
- 9  check compatibility with older distributions and ms windows
-    - one can simply download and build newer python, even on RHEL 3.
-    - test AS2.1 and MS W32
- 9  make it a service (service beacon start...)
+ 9  check compatibility with ms windows
  9  account for slow network - submit in a batch as a signed archive
+ 8 rhts-test-runner.sh
+    - get and store repository info in /etc/yum.repos.d/
+    - check environment
+    - create /tmp/TESTOUT.log - it is required by rhts-abort
+    - get the test
+    - set environment
+    - run the test and capture outputs
+    - check all outputs
  8  beah-tcp-sink
     - reading stdin and forwarding to beah-controller by socket
       - not necessary now
