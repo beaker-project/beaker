@@ -17,17 +17,18 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 from twisted.internet import reactor
-from twisted.internet import protocol
-from beah.wires.internals.twadaptors import TaskAdaptor_JSON
+from twisted.internet.protocol import ProcessProtocol, ReconnectingClientFactory
+from beah.wires.internals import twadaptors
 from beah.misc import dict_update
 import logging
+import os
 
 log = logging.getLogger('beacon')
 
-class TaskStdoutProtocol(protocol.ProcessProtocol):
-    def __init__(self, task_info, task_protocol=TaskAdaptor_JSON):
+class TaskStdoutProtocol(ProcessProtocol):
+    def __init__(self, task_info, task_protocol=twadaptors.TaskAdaptor_JSON):
         self.task_info = task_info
-        self.task_protocol = task_protocol or TaskAdaptor_JSON
+        self.task_protocol = task_protocol or twadaptors.TaskAdaptor_JSON
         self.task = None
         self.controller = None
 
@@ -57,7 +58,6 @@ class TaskStdoutProtocol(protocol.ProcessProtocol):
         self.task.set_controller()
 
 def Spawn(host, port, proto=None):
-    import os
     def spawn(controller, backend, task_info, env, args):
         task_env = dict(env)
         # 1. set env.variables
@@ -65,6 +65,7 @@ def Spawn(host, port, proto=None):
         # BEACON_TPORT - port
         # BEACON_TID - id of task - used to introduce itself when opening socket
         dict_update(task_env,
+                CALLED_BY_BEAH="1",
                 BEACON_THOST=str(host),
                 BEACON_TPORT=str(port),
                 BEACON_TID=str(task_info['id']),
@@ -87,7 +88,6 @@ def Spawn(host, port, proto=None):
         return protocol.task_protocol
     return spawn
 
-from twisted.internet.protocol import ReconnectingClientFactory
 class TaskFactory(ReconnectingClientFactory):
     def __init__(self, task, controller_protocol):
         self.task = task
@@ -119,9 +119,8 @@ class TaskFactory(ReconnectingClientFactory):
         self.task.set_controller()
         ReconnectingClientFactory.clientConnectionFailed(self, connector, reason)
 
-from beah.wires.internals.twadaptors import ControllerAdaptor_Task_JSON
 def start_task(conf, task, host=None, port=None,
-        adaptor=ControllerAdaptor_Task_JSON,
+        adaptor=twadaptors.ControllerAdaptor_Task_JSON,
         ):
     host = host or conf.get('TASK', 'INTERFACE')
     port = port or int(conf.get('TASK', 'PORT'))

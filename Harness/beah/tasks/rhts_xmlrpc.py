@@ -42,8 +42,8 @@ def __logger():
         os.mkdir('/tmp/var/log')
     log = logging.getLogger()
     fh = logging.FileHandler('/tmp/var/log/rhts_task.log')
-    fh.setLevel(logging.DEBUG)
     log.addHandler(fh)
+    log.setLevel(logging.DEBUG)
     return log
 log = __logger()
 
@@ -179,16 +179,16 @@ class RHTSResults(xmlrpc.XMLRPC):
     def xmlrpc_resultLog(self, log_type, result_id, pretty_name):
         log.debug("XMLRPC: results.resultLog(%r, %r, %r)", log_type,
             result_id, pretty_name)
-        file_id = self.main.get_file(pretty_name)
+        file_id = self.get_file(pretty_name)
         if file_id is None:
             msg = "%s:xmlrpc_resultLog: " % self.__class__.__name__ + \
-                    "File '%s' does not exist!" % pretty_name + \
-                    " uploadFile is required before resultLog can be used."
+                    "Can not create file '%s'." % pretty_name
             self.main.error(msg)
             return msg
-        # FIXME!!!
-        #evt = event.file_meta(file_id, log_type)
-        #self.main.send_evt(evt)
+        evt = event.file_meta(file_id, handle=log_type)
+        self.main.send_evt(evt)
+        evt = event.relation('result_file', result_id, file_id)
+        self.main.send_evt(evt)
         return 0 # or "Failure reason"
     xmlrpc_resultLog.signature = [
             ['int', 'string', 'int', 'string'],
@@ -200,7 +200,7 @@ class RHTSResults(xmlrpc.XMLRPC):
         # FIXME! implement this!!!
         return 0 # or "Failure reason"
     xmlrpc_recipeTestRpms.signature = [
-            ['int', 'int', 'string', 'int', 'int', 'int', 'string'],
+            ['int', 'int', 'list'],
             ]
 
 

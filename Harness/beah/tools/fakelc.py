@@ -32,7 +32,6 @@ import logging
 def logger():
     log = logging.getLogger('fakelc')
     lh = logging.FileHandler('/var/log/beah_fakelc.log')
-    #lh.setLevel(logging.DEBUG)
     log.addHandler(lh)
     log.setLevel(logging.DEBUG)
     return log
@@ -146,6 +145,11 @@ def do_task_upload_file(fname, task_id, path, name, size, digest, offset, data):
             fname, task_id, path, name, size, digest, offset)
     return 0
 
+def do_result_upload_file(fname, result_id, path, name, size, digest, offset, data):
+    log.info("%s(result_id=%r, path=%r, name=%r, size=%r, digest=%r, offset=%r, data='...')",
+            fname, result_id, path, name, size, digest, offset)
+    return 0
+
 ################################################################################
 # XML-RPC HANDLERS:
 ################################################################################
@@ -200,6 +204,11 @@ class LCHandler(xmlrpc.XMLRPC):
     def xmlrpc_task_upload_file(self, task_id, path, name, size, digest,
             offset, data):
         return do_task_upload_file("task_upload_file", task_id, path, name,
+                size, digest, offset, data)
+
+    def xmlrpc_result_upload_file(self, result_id, path, name, size, digest,
+            offset, data):
+        return do_result_upload_file("result_upload_file", result_id, path, name,
                 size, digest, offset, data)
 
     def catch_xmlrpc(self, method, *args):
@@ -360,7 +369,6 @@ def build_recipe_21(fqdn):
                 <!--
                         name="/distribution/install" role="STANDALONE"
                         name="/distribution/kernelinstall" role="CLIENTS"
-                -->
 
                 <task avg_time="120" id="95" testorder="95"
                         name="/examples/rhts_tutorial/mcsontos/beah_logs" role="CLIENTS"
@@ -374,6 +382,7 @@ def build_recipe_21(fqdn):
                     </roles>
                     <rpm name="tmp-examples-rhts_tutorial-mcsontos-beah_logs.noarch"/>
                 </task>
+                -->
 
                 <task avg_time="84400" id="99"
                         name="/examples/rhts_tutorial/mcsontos/beah_reserve" role="CLIENTS"

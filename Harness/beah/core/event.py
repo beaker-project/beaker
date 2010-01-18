@@ -31,7 +31,6 @@ to Backend.
 
 Classes:
     Event(list)
-    RelObj(list)
 
 Module contains many functions (e.g. idle, pong, start, end, etc.) to
 instantiate Event of particular type.
@@ -41,8 +40,6 @@ Event is basically a list ['Event', evt, origin, timestamp, args] where:
     isinstance(origin, dict)
     isinstance(timestamp, float) or timestamp is None
     isinstance(args, dict)
-
-RelObj is a list subclass, used to define endpoint of relations.
 """
 
 ################################################################################
@@ -199,6 +196,8 @@ def file_meta(file_id, name=None, digest=None, size=None, content_handler=None,
     """
     Attach metadata to already created file.
 
+    FIXME: change to use metadata.
+
     Parameters:
     - file_id - an id of file event used to create a file,
     - see file for the rest.
@@ -207,6 +206,14 @@ def file_meta(file_id, name=None, digest=None, size=None, content_handler=None,
             file_id=file_id, name=name, digest=digest, size=size, codec=codec,
             content_handler=content_handler,
             **kwargs)
+
+def metadata(obj_id, origin={}, timestamp=None, **kwargs):
+    """
+    Attach metadata to the object with given id.
+
+    - kwargs - free form metadata. FIXME: add at least some specification
+    """
+    return Event('metadata', origin=origin, timestamp=timestamp, **kwargs)
 
 def file_write(file_id, data, digest=None, codec=None, offset=None, origin={},
         timestamp=None, **kwargs):
@@ -282,6 +289,23 @@ def forward_response(command, forward_id, origin={}, timestamp=None,
     return Event('forward_response', origin=origin, timestamp=timestamp,
             command=command, **kwargs)
 
+def relation(handle, id1, id2, title=None, n2m=False, title1=None, origin={},
+        timestamp=None, **kwargs):
+    """
+    Define a relation between two objects .
+
+    Parameters:
+    - handle - a "table" name - identifier of type of relation.
+    - id1, id2 - identifiers of the objects. UUID used by event defining the
+      object (e.g. task, section, result, file, stream, ...)
+    - title1, title - names of objects intended for human consumption.
+      Generated from objects' metadata if None. title is name for id2. title1
+      is name for id1, and used only by many-to-many relations.
+    - n2m - if True the relation is defining many-to-many relation.
+    """
+    return Event('relation', origin=origin, timestamp=timestamp, handle=handle,
+            id1=id1, id2=id2, title=title, n2m=n2m, title1=title1, **kwargs)
+
 ################################################################################
 # AUXILIARY:
 ################################################################################
@@ -347,21 +371,13 @@ class Event(list):
     Events are used to communicate events from Task to Controller and finally back
     to Backend.
 
-    Classes:
-        Event(list)
-        RelObj(list)
-
-    Module contains many functions (e.g. idle, pong, start, end, etc.) to
-    instantiate Event of particular type.
-
     Event is basically a list ['Event', evt, origin, timestamp, args] where:
         isinstance(evt, string)
         isinstance(origin, dict)
         isinstance(timestamp, float) or timestamp is None
         isinstance(args, dict)
 
-    The list inheritance is important to be able to serialize to JSON object,
-    and it is (hopefully) faster than objects.
+    The list inheritance is important to be able to serialize to JSON object.
     """
 
     EVENT = 1
@@ -423,25 +439,6 @@ class Event(list):
     def args(self): return self[self.ARGS]
     def arg(self, name, val=None):
         return self.args().get(name, val)
-
-def RelObj(list):
-
-    """Create a object used to define endpoints of relations."""
-
-    def __init__(self, evt_type, evt_id='', handle='', handle_type=''):
-        if isinstance(evt_type, list):
-            list.__init__(self, evt_type)
-        else:
-            list.__init__(self, [evt_type, evt_id, handle, handle_type])
-        check_type("evt_type", self.evt_type(), Event.TESTTYPE)
-        check_type("evt_id", self.evt_id(), Event.TESTTYPE)
-        check_type("handle", self.handle(), Event.TESTTYPE)
-        check_type("handle_type", self.handle_type(), Event.TESTTYPE)
-
-    def evt_type(self): return self[0]
-    def evt_id(self): return self[1]
-    def handle(self): return self[2]
-    def handle_type(self): return self[3]
 
 ################################################################################
 # TESTING:
