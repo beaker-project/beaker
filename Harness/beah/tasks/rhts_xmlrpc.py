@@ -181,7 +181,10 @@ class RHTSResults(xmlrpc.XMLRPC):
                     "Can not create file '%s'." % pretty_name
             self.main.error(msg)
             return msg
-        evt = event.file_meta(file_id, handle=log_type)
+        id_len = len(result_id)
+        if pretty_name[:id_len] == result_id:
+            pretty_name = pretty_name[id_len+1:]
+        evt = event.file_meta(file_id, name=pretty_name, handle=log_type)
         self.main.send_evt(evt)
         evt = event.relation('result_file', result_id, file_id)
         self.main.send_evt(evt)
