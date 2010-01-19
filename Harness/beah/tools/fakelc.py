@@ -20,7 +20,7 @@ from twisted.web import xmlrpc
 from twisted.internet import reactor
 import beah
 from beah.wires.internals.twmisc import serveAnyChild, serveAnyRequest
-from beah.misc import format_exc, log_this, log_flush
+from beah.misc import format_exc, log_this, log_flush, make_log_handler
 import sys
 import os
 import exceptions
@@ -31,8 +31,7 @@ import logging
 
 def logger():
     log = logging.getLogger('fakelc')
-    lh = logging.FileHandler('/var/log/beah_fakelc.log')
-    log.addHandler(lh)
+    make_log_handler(log, "/var/log", "beah_fakelc.log")
     log.setLevel(logging.DEBUG)
     return log
 log = logger()

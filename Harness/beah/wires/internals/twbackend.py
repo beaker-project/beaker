@@ -20,6 +20,7 @@ from twisted.internet.protocol import ReconnectingClientFactory
 from twisted.internet import reactor
 from beah.wires.internals.twadaptors import ControllerAdaptor_Backend_JSON
 from beah import config
+from beah.misc import make_log_handler
 
 import os
 import sys
@@ -68,35 +69,8 @@ class BackendFactory(ReconnectingClientFactory):
 
 def log_handler(log_file_name):
     conf = config.config()
-    # Create a directory for logging and check permissions
     lp = conf.get('DEFAULT', 'LOG_PATH') or "/var/log"
-    if not os.access(lp, os.F_OK):
-        try:
-            os.makedirs(lp, mode=0755)
-        except:
-            print >> sys.stderr, "ERROR: Could not create %s." % lp
-            # FIXME: should create a temp file
-            raise
-    elif not os.access(lp, os.X_OK | os.W_OK):
-        print >> sys.stderr, "ERROR: Wrong access rights to %s." % lp
-        # FIXME: should create a temp file
-        raise
-
-    #lhandler = logging.handlers.RotatingFileHandler(lp + "/" + log_file_name,
-    #        maxBytes=1000000, backupCount=5)
-    lhandler = logging.FileHandler(lp + "/" + log_file_name)
-    # FIXME: add config.option?
-    if sys.version_info[0] == 2 and sys.version_info[1] <= 4:
-        fmt = ': %(levelname)s %(message)s'
-    else:
-        fmt = ' %(funcName)s: %(levelname)s %(message)s'
-    lhandler.setFormatter(logging.Formatter('%(asctime)s'+fmt))
-    log.addHandler(lhandler)
-
-    lhandler = logging.handlers.SysLogHandler()
-    lhandler.setFormatter(logging.Formatter('%(asctime)s %(name)s'+fmt))
-    lhandler.setLevel(logging.ERROR)
-    log.addHandler(lhandler)
+    make_log_handler(log, lp, log_file_name, syslog=True)
 
 def start_backend(backend, host=None, port=None,
         adaptor=ControllerAdaptor_Backend_JSON,

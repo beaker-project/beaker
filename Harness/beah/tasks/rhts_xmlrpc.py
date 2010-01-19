@@ -27,24 +27,20 @@ import tempfile
 import exceptions
 import traceback
 import uuid
+import logging
 from beah.core import event, command
-from beah.misc import format_exc
+from beah.misc import format_exc, make_log_handler
 from beah.wires.internals.twmisc import serveAnyChild, serveAnyRequest, JSONProtocol
 from beah.core.constants import RC
 
 # FIXME: change log level to WARNING, use tempfile and upload log when process
 # ends.
 def __logger():
-    import logging
-    if not os.path.isdir('/tmp/var/log'):
-        if not os.path.isdir('/tmp/var'):
-            os.mkdir('/tmp/var')
-        os.mkdir('/tmp/var/log')
-    log = logging.getLogger()
-    fh = logging.FileHandler('/tmp/var/log/rhts_task.log')
-    log.addHandler(fh)
+    log = logging.getLogger('rhts_task')
+    make_log_handler(log, "/tmp/var/log", "rhts_task.log")
     log.setLevel(logging.DEBUG)
     return log
+
 log = __logger()
 
 USE_DEFAULT = object()

@@ -5,13 +5,9 @@
  !  properly daemonize controller
  !  command line options:
     - server and backends using command line options and configuration
- !  communication backend/controller->task
-    - stdin/socket?
-    - check twisted deferred(?)
  !  clean up backends/server output
     - filter messages
-    - use logging for all messages
-      - configuration option for forwarding to stdout
+    - logging: add configuration option for forwarding to stdout
  !  run pylint and clean up the code!
     - this covers documentation strings too
  !  write examples, HOWTOs

@@ -19,7 +19,7 @@
 from beah.wires.internals.twadaptors import BackendAdaptor_JSON, TaskAdaptor_JSON
 from beah.wires.internals.twtask import Spawn
 from beah.core.controller import Controller
-from beah.misc.runtimes import PickleRuntime
+from beah.misc import runtimes, make_log_handler
 from beah import config
 from twisted.internet import protocol
 from twisted.internet import reactor
@@ -76,20 +76,6 @@ def start_server(conf=None, backend_host=None, backend_port=None,
         ll = logging.DEBUG
     log.setLevel(ll)
 
-    # Create a directory for logging and check permissions
-    lp = conf.get('CONTROLLER', 'LOG_PATH')
-    if not os.access(lp, os.F_OK):
-        try:
-            os.makedirs(lp, mode=0755)
-        except:
-            print >> sys.stderr, "ERROR: Could not create %s." % lp
-            # FIXME: should create a temp file
-            raise
-    elif not os.access(lp, os.X_OK | os.W_OK):
-        print >> sys.stderr, "ERROR: Wrong access rights to %s." % lp
-        # FIXME: should create a temp file
-        raise
-
     # Create a directory for runtime
     vp = conf.get('CONTROLLER', 'VAR_ROOT')
     if not os.access(vp, os.F_OK):
@@ -104,21 +90,9 @@ def start_server(conf=None, backend_host=None, backend_port=None,
         # FIXME: should create a temp file
         raise
 
-    #lhandler = logging.handlers.RotatingFileHandler(conf.get('CONTROLLER', 'LOG_FILE_NAME'),
-    #        maxBytes=1000000, backupCount=5)
-    lhandler = logging.FileHandler(conf.get('CONTROLLER', 'LOG_FILE_NAME'))
-    # FIXME: add config.option?
-    if sys.version_info[0] == 2 and sys.version_info[1] <= 4:
-        fmt = ': %(levelname)s %(message)s'
-    else:
-        fmt = ' %(funcName)s: %(levelname)s %(message)s'
-    lhandler.setFormatter(logging.Formatter('%(asctime)s'+fmt))
-    log.addHandler(lhandler)
-
-    lhandler = logging.handlers.SysLogHandler()
-    lhandler.setFormatter(logging.Formatter('%(asctime)s %(name)s'+fmt))
-    lhandler.setLevel(logging.ERROR)
-    log.addHandler(lhandler)
+    # Create a directory for logging and check permissions
+    lp = conf.get('CONTROLLER', 'LOG_PATH')
+    make_log_handler(log, lp, conf.get('CONTROLLER', 'LOG_FILE_NAME'), True)
 
     # RUN:
     backend_host = backend_host or conf.get('BACKEND', 'INTERFACE')
@@ -126,7 +100,7 @@ def start_server(conf=None, backend_host=None, backend_port=None,
     task_host = task_host or conf.get('TASK', 'INTERFACE')
     task_port = task_port or int(conf.get('TASK', 'PORT'))
     controller = Controller(spawn or Spawn(task_host, task_port))
-    controller.runtime = PickleRuntime(conf.get('CONTROLLER', 'RUNTIME_FILE_NAME'))
+    controller.runtime = runtimes.PickleRuntime(conf.get('CONTROLLER', 'RUNTIME_FILE_NAME'))
     def on_killed():
         if not controller.backends:
             reactor.stop()
