@@ -240,6 +240,10 @@ function Inventory()
     yum install -y $PACKAGES
     estatus_fail "**** Yum Install of $PACKAGES Failed ****"
     InstallInventory$SOURCE
+    # Backup /etc/my.cnf and make INNODB the default engine.
+    cp /etc/my.cnf /etc/my.cnf-orig
+    cat /etc/my.cnf-orig | awk '{print $1}; /\[mysqld\]/ {print "default-storage-engine=INNODB"}' > /etc/my.cnf
+    #
     service mysqld start
     estatus_fail "**** Failed to start mysqld ****"
 
