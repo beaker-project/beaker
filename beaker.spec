@@ -6,7 +6,7 @@
 %endif
 
 Name:           beaker
-Version:        0.4.77
+Version:        0.4.78
 Release:        0%{?timestamp}%{?branch}%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
@@ -193,6 +193,8 @@ fi
 /usr/share/man/man1/beakerlib*
 
 %changelog
+* Wed Jan 20 2010 Bill Peck <bpeck@redhat.com> - 0.4.78-0
+- Remove redundant arch aliases
 * Wed Jan 13 2010 Bill Peck <bpeck@redhat.com> - 0.4.77-0
 - fix ISE 500 when adding new system
 * Tue Jan 12 2010 Bill Peck <bpeck@redhat.com> - 0.4.76-1

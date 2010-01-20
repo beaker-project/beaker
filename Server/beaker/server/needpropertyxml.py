@@ -41,12 +41,6 @@ class ElementWrapper(object):
                  '<'  : '__lt__',
                  '<=' : '__le__'}
 
-    # Alias counter for each sub table
-    alias = { 'key_value'  : 0,
-              'arch'       : 0,
-              'distro_tag' : 0,
-            }
-
     @classmethod
     def get_subclass(cls, element):
         name = element._name
@@ -55,8 +49,17 @@ class ElementWrapper(object):
             return subclassDict[name]
         return UnknownElement
     
-    def __init__(self, wrappedEl):
+    def __init__(self, wrappedEl, alias=None):
         self.wrappedEl = wrappedEl
+        if alias:
+            self.alias = alias
+        else:
+            ## Alias counter for each sub table
+            self.alias = { 'key_value'  : 0,
+                           'arch'       : {},
+                           'distro_tag' : 0,
+                         }
+
 
     def __repr__(self):
         return '%s("%s")' % (self.__class__, repr(self.wrappedEl))
@@ -64,14 +67,14 @@ class ElementWrapper(object):
     def __iter__(self):
         for child in self.wrappedEl:
             if isinstance(child, xmltramp.Element):
-                yield ElementWrapper.get_subclass(child)(child)
+                yield ElementWrapper.get_subclass(child)(child,self.alias)
             else:
                 yield child
 
     def __getitem__(self, n):
         child = self.wrappedEl[n]
         if isinstance(child, xmltramp.Element):
-            return ElementWrapper.get_subclass(child)(child)
+            return ElementWrapper.get_subclass(child)(child,self.alias)
         else:
             return child
 
@@ -376,13 +379,16 @@ class XmlArch(ElementWrapper):
         value = self.get_xml_attr('value', unicode, None)
         joins = []
         query = None
-        arch_alias = arch_table.alias('arch%i' % self.alias['arch'])
-        system_arch_alias = system_arch_map.alias('system_arch%i' % self.alias['arch'])
-        self.alias['arch'] += 1
-        if value:
-            query = and_(system_table.c.id == system_arch_alias.c.system_id,
-                         arch_alias.c.id   == system_arch_alias.c.arch_id,
-                         getattr(arch_alias.c.arch, op)(value))
+        # Only do one combination of Arch+Op
+        arch_op = 'arch%s%s' % (value,op)
+        if not self.alias['arch'].get(arch_op):
+            arch_alias = arch_table.alias(arch_op)
+            system_arch_alias = system_arch_map.alias('system_%s' % arch_op)
+            self.alias['arch'][arch_op] = True
+            if value:
+                query = and_(system_table.c.id == system_arch_alias.c.system_id,
+                             arch_alias.c.id   == system_arch_alias.c.arch_id,
+                             getattr(arch_alias.c.arch, op)(value))
         return (joins, query)
 
 subclassDict = {
