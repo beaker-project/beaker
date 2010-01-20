@@ -559,6 +559,7 @@ log_recipe_table = Table('log_recipe', metadata,
                 ForeignKey('recipe.id')),
         Column('path', Unicode()),
         Column('filename', Unicode(), nullable=False),
+        Column('start_time',DateTime, default=datetime.now),
 )
 
 log_recipe_task_table = Table('log_recipe_task', metadata,
@@ -567,6 +568,7 @@ log_recipe_task_table = Table('log_recipe_task', metadata,
                 ForeignKey('recipe_task.id')),
         Column('path', Unicode()),
         Column('filename', Unicode(), nullable=False),
+        Column('start_time',DateTime, default=datetime.now),
 )
 
 log_recipe_task_result_table = Table('log_recipe_task_result', metadata,
@@ -575,6 +577,7 @@ log_recipe_task_result_table = Table('log_recipe_task_result', metadata,
                 ForeignKey('recipe_task_result.id')),
         Column('path', Unicode()),
         Column('filename', Unicode(), nullable=False),
+        Column('start_time',DateTime, default=datetime.now),
 )
 
 recipe_table = Table('recipe',metadata,
@@ -742,7 +745,7 @@ recipe_task_result_table = Table('recipe_task_result',metadata,
                 ForeignKey('task_result.id')),
         Column('score', Numeric(10)),
         Column('log', Unicode()),
-        Column('report_time',DateTime, default=datetime.now),
+        Column('start_time',DateTime, default=datetime.now),
 )
 
 task_table = Table('task',metadata,
@@ -2470,6 +2473,29 @@ class Log(MappedObject):
         self.path = path
         self.filename = filename
 
+    def is_result(self):
+        return False
+   
+    def is_log(self):
+        return True
+   
+    def is_task(self):
+        return False
+
+    def result(self):
+        return self.recipe.result
+
+    result = property(result)
+
+    def link(self):
+        """ Return a link to this Log
+        """
+        return make_link(url = '/logs/%s/%s/%s' % (self.recipe.filepath,
+                                                   self.path, 
+                                                   self.filename),
+                         text = '%s/%s' % (self.path, self.filename))
+    link = property(link)
+
     def __cmp__(self, other):
         """ Used to compare logs that are already stored. Log(path,filename) in Recipe.logs  == True
         """
@@ -2980,12 +3006,16 @@ class Recipe(TaskBase):
 
     def all_tasks(self):
         """
-        Return all tasks and task-results
+        Return all tasks and task-results, along with associated logs
         """
         for task in self.tasks:
             yield task
+            for log in task.logs:
+                yield log
             for task_result in task.results:
                 yield task_result
+                for log in task_result.logs:
+                    yield log
     all_tasks = property(all_tasks)
 
 
@@ -3100,6 +3130,12 @@ class RecipeTask(TaskBase):
         return self.task.name
     path = property(path)
 
+    def is_result(self):
+        return False
+   
+    def is_log(self):
+        return False
+   
     def is_task(self):
         return True
 
@@ -3502,17 +3538,12 @@ class RecipeTaskResult(MappedObject):
     def is_task(self):
         return False
 
-    def no_value(self):
-        return None
+    def is_result(self):
+        return True
    
-    def time(self):
-        return self.report_time
-
-    start_time = property(time)
-    finish_time = property(time)
-    duration = property(no_value)
-    status = property(no_value)
-
+    def is_log(self):
+        return False
+   
 
 class Task(MappedObject):
     """
@@ -3848,7 +3879,7 @@ mapper(Recipe, recipe_table,
                       'rpms':relation(RecipeRpm, backref='recipe'),
                       'result':relation(TaskResult, uselist=False),
                       'status':relation(TaskStatus, uselist=False),
-                      'logs':relation(LogRecipe),
+                      'logs':relation(LogRecipe, backref='recipe'),
                      }
       )
 mapper(GuestRecipe, guest_recipe_table, inherits=Recipe,
@@ -3875,7 +3906,7 @@ mapper(RecipeTask, recipe_task_table,
                       'result':relation(TaskResult, uselist=False),
                       'status':relation(TaskStatus, uselist=False),
                       '_roles':relation(RecipeTaskRole),
-                      'logs':relation(LogRecipeTask),
+                      'logs':relation(LogRecipeTask, backref='recipe'),
                      }
       )
 
@@ -3890,7 +3921,7 @@ mapper(RecipeTaskBugzilla, recipe_task_bugzilla_table)
 mapper(RecipeTaskRpm, recipe_task_rpm_table)
 mapper(RecipeTaskResult, recipe_task_result_table,
         properties = {'result':relation(TaskResult, uselist=False),
-                      'logs':relation(LogRecipeTaskResult),
+                      'logs':relation(LogRecipeTaskResult, backref='recipe'),
                      }
       )
 
