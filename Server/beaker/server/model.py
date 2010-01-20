@@ -36,7 +36,7 @@ from datetime import timedelta, date, datetime
 import md5
 
 import xml.dom.minidom
-from xml.dom.minidom import Node
+from xml.dom.minidom import Node, parseString
 
 import logging
 log = logging.getLogger(__name__)
@@ -2546,6 +2546,11 @@ class Job(TaskBase):
 
     stop_types = ['abort','cancel']
 
+    @classmethod
+    def by_whiteboard(cls,desc):
+        res = Job.query().filter_by(whiteboard = desc)
+        return res
+
     def to_xml(self):
         job = self.doc.createElement("job")
         job.setAttribute("id", "%s" % self.id)
@@ -2612,7 +2617,7 @@ class Job(TaskBase):
     def t_id(self):
         return "J:%s" % self.id
     t_id = property(t_id)
-
+    
 
 class RecipeSet(TaskBase):
     """

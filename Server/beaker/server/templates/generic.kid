@@ -6,7 +6,7 @@
 <title>${title}</title>
 </head>
 <body>
-<div py:if="widget">${widget.display()} </div>
+<div py:if="widget">${widget.display(options=widget_options)} </div>
 
 
 </body>

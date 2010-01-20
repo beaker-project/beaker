@@ -130,15 +130,16 @@ class TextFieldJSON(TextField):
  
 class JobMatrixWidgets(WidgetsList): 
     default_validator = validators.NotEmpty()
-    whiteboard = MultipleSelectField('whiteboard', validator=default_validator)
-    projects = MultipleSelectField('projects', validator=default_validator)
+    whiteboard = MultipleSelectField('whiteboard', validator=default_validator) 
     job_ids = TextArea('job_ids',rows=20,cols=7, validator=default_validator)
+   
 
 
-class JobMatrixReport(RemoteForm):     
+class JobMatrixReport(Form):     
+    javascript = [LocalJSLink('beaker', '/static/javascript/job_matrix.js')]
     template = 'beaker.server.templates.job_matrix' 
-    member_widgets = ['whiteboard','projects','job_ids','projects_filter',
-                      'whiteboard_filter','generate_button'] 
+    member_widgets = ['whiteboard','job_ids','generate_button'] 
+    params = ['list','whiteboard_filter','whiteboard_options','job_ids_options']
     default_validator = validators.NotEmpty() 
     def __init__(self,*args,**kw): 
         super(JobMatrixReport,self).__init__(*args, **kw)       
@@ -148,28 +149,33 @@ class JobMatrixReport(RemoteForm):
         else:
             whiteboard_options = []
 
-        if 'project_options' in kw:
-            project_options = kw['project_options']
-        else:
-            project_options = []
+        self.whiteboard_options = whiteboard_options or []
       
-     
-        self.submit_text = "Generate"
-        self.whiteboard = MultipleSelectField('whiteboard',label='Whiteboard', options=whiteboard_options, validator=self.default_validator)
-        self.projects = MultipleSelectField('projects', label='Projects', options=project_options, validator=self.default_validator)
+        self.whiteboard = SingleSelectField('whiteboard',label='Whiteboard',attrs={'size':5}, options=whiteboard_options, validator=self.default_validator) 
         self.job_ids = TextArea('job_ids',label='Job ID', rows=7,cols=7, validator=self.default_validator) 
-        self.fields = [self.whiteboard,self.projects,self.job_ids]
-
-        self.generate_button = Button(default='Generate',action='generate')
-        self.whiteboard_filter = TextField('whiteboard_filter', label='Filter Whiteboard')       
-        self.projects_filter = TextField('projects_filter', label='Filter Project') 
+        #self.job_grid = AjaxGrid(refresh_url=url('generate'))
+      
  
-        self.name = 'remote_form'
-        self.action = 'generate'  
+        self.whiteboard_filter = TextField('whiteboard_filter', label='Filter Whiteboard') 
 
-   
-  
-
+        self.name='remote_form' 
+        self.action = '.'   
+    
+    def display(self,**params): 
+        log.debug('here in display') 
+           
+        if 'options' in params:
+            if 'whiteboard_options' in params['options']:
+                params['whiteboard_options'] = params['options']['whiteboard_options'] 
+            if 'job_id_options' in params['options']:
+                params['job_id_options'] = "\n".join(params['options']['job_id_options'])
+            if 'grid' in params['options']:           
+                if params['options']['grid'] is not None:
+                    params['grid'] = params['options']['grid']
+            if 'list' in params['options']: 
+                params['list'] = params['options']['list']
+        return super(JobMatrixReport,self).display(value=None,**params)
+    
 class SearchBar(RepeatingFormField):
     """Search Bar"""
 
