@@ -168,7 +168,7 @@ if __name__ == '__main__':
 
     class FakeTask(object):
         origin = {'signature':'FakeTask'}
-        task_info = {'task':'fake', 'id':'no_id'}
+        task_id = 'no-id'
         def proc_cmd(self, cmd):
             log.debug("FakeTask.proc_cmd(%r)", cmd)
     t = FakeTask()

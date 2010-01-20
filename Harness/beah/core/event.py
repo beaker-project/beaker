@@ -55,13 +55,13 @@ def pong(origin={}, timestamp=None, message=None):
         return Event('pong', origin={}, timestamp=None, message=message)
     return Event('pong', origin, timestamp)
 
-def start(task_info, origin={}, timestamp=None):
+def start(task_id, origin={}, timestamp=None):
     """Event generated when task is started"""
-    return Event('start', origin, timestamp, task_info=task_info)
+    return Event('start', origin, timestamp, task_id=task_id)
 
-def end(task_info, rc, origin={}, timestamp=None):
+def end(task_id, rc, origin={}, timestamp=None):
     """Event generated when task finished"""
-    return Event('end', origin, timestamp, task_info=task_info, rc=rc)
+    return Event('end', origin, timestamp, task_id=task_id, rc=rc)
 
 def echo(cmd, rc, message="", origin={}, timestamp=None, **kwargs):
     """

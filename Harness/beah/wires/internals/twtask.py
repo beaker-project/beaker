@@ -26,8 +26,8 @@ import os
 log = logging.getLogger('beacon')
 
 class TaskStdoutProtocol(ProcessProtocol):
-    def __init__(self, task_info, task_protocol=twadaptors.TaskAdaptor_JSON):
-        self.task_info = task_info
+    def __init__(self, task_id, task_protocol=twadaptors.TaskAdaptor_JSON):
+        self.task_id = task_id
         self.task_protocol = task_protocol or twadaptors.TaskAdaptor_JSON
         self.task = None
         self.controller = None
@@ -37,7 +37,7 @@ class TaskStdoutProtocol(ProcessProtocol):
         self.task = self.task_protocol()
         # FIXME: this is not very nice...
         self.task.send_cmd = lambda obj: self.transport.write(self.task.format(obj))
-        self.task.task_info = self.task_info
+        self.task.task_id = self.task_id
         self.task.set_controller(self.controller)
         self.controller.task_started(self.task)
 
@@ -64,11 +64,12 @@ def Spawn(host, port, proto=None):
         # BEACON_THOST - host name
         # BEACON_TPORT - port
         # BEACON_TID - id of task - used to introduce itself when opening socket
+        task_id = task_info['id']
         dict_update(task_env,
                 CALLED_BY_BEAH="1",
                 BEACON_THOST=str(host),
                 BEACON_TPORT=str(port),
-                BEACON_TID=str(task_info['id']),
+                BEACON_TID=str(task_id),
                 )
         # FIXME: This is neccessary for some tasks!
         if os.getenv('BEAH_ROOT') is not None:
@@ -79,7 +80,7 @@ def Spawn(host, port, proto=None):
         if val:
             task_env['PYTHONPATH'] = val
         # 2. spawn a task
-        protocol = (proto or TaskStdoutProtocol)(task_info)
+        protocol = (proto or TaskStdoutProtocol)(task_id)
         protocol.controller = controller
         log.debug('spawn: Environment: %r.', task_env)
         reactor.spawnProcess(protocol, task_info['file'],
