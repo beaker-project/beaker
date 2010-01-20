@@ -74,6 +74,7 @@ chmod 755 $DISTRO_ROOT/install/lm-install.sh
 cp install.sh $DISTRO_ROOT/install
 cp install-el4.sh $DISTRO_ROOT/install
 cp install-el5.sh $DISTRO_ROOT/install
+#cp /usr/bin/rhts-db-submit-result $DISTRO_ROOT/install
 
 cat >$DISTRO_ROOT/install/env.sh <<END
 LM_INSTALL_ROOT="${LM_INSTALL_ROOT}"
@@ -102,6 +103,7 @@ pushd ${LM_INSTALL_ROOT}
 . ./install/env.sh
 . ./install/lm-install.sh check
 popd
+#cp $LM_INSTALL_ROOT/install/rhts-db-submit-result /usr/bin/
 lm_main "\${1:-"help"}"
 END
 

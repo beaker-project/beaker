@@ -19,7 +19,9 @@
 import exceptions
 import socket
 import traceback
+import os
 import sys
+import logging
 
 def raiser(exc=exceptions.Exception, *args, **kwargs):
     raise exc(*args, **kwargs)
@@ -85,4 +87,42 @@ def log_flush(logger):
             h.flush()
         except:
             pass
+
+def make_log_handler(log, log_path, log_file_name=None, syslog=None):
+
+    # FIXME: add config.option?
+    if sys.version_info[0] == 2 and sys.version_info[1] <= 4:
+        fmt = ': %(levelname)s %(message)s'
+    else:
+        fmt = ' %(funcName)s: %(levelname)s %(message)s'
+
+    if log_file_name:
+        if log_file_name[0] == '/':
+            sep_ix = log_file_name.rfind('/')
+            (log_path, log_file_name) = (log_file_name[:sep_ix], log_file_name[sep_ix+1:])
+
+        # Create a directory for logging and check permissions
+        if not os.access(log_path, os.F_OK):
+            try:
+                os.makedirs(log_path, mode=0755)
+            except:
+                print >> sys.stderr, "ERROR: Could not create %s." % log_path
+                # FIXME: should attempt to create a temp file
+                raise
+        elif not os.access(log_path, os.X_OK | os.W_OK):
+            print >> sys.stderr, "ERROR: Wrong access rights to %s." % log_path
+            # FIXME: should attempt to create a temp file
+            raise
+
+        #lhandler = logging.handlers.RotatingFileHandler(log_path + "/" + log_file_name,
+        #        maxBytes=1000000, backupCount=5)
+        lhandler = logging.FileHandler(log_path + "/" + log_file_name)
+        lhandler.setFormatter(logging.Formatter('%(asctime)s'+fmt))
+        log.addHandler(lhandler)
+
+    if syslog:
+        lhandler = logging.handlers.SysLogHandler()
+        lhandler.setFormatter(logging.Formatter('%(asctime)s %(name)s'+fmt))
+        lhandler.setLevel(logging.WARNING)
+        log.addHandler(lhandler)
 

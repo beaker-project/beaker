@@ -291,6 +291,7 @@ class BeakerLCBackend(ExtBackend):
         cls.proc_evt_start = print_this(cls.proc_evt_start)
         cls.proc_evt_end = print_this(cls.proc_evt_end)
         cls.proc_evt_result = print_this(cls.proc_evt_result)
+        cls.proc_evt_relation = print_this(cls.proc_evt_relation)
         cls.proc_evt_file = print_this(cls.proc_evt_file)
         cls.proc_evt_file_meta = print_this(cls.proc_evt_file_meta)
         cls.proc_evt_file_write = print_this(cls.proc_evt_file_write)
@@ -458,6 +459,21 @@ class BeakerLCBackend(ExtBackend):
         self.__on_error("WARNING", msg, traceback.format_stack(),
                 *args, **kwargs)
 
+    def proc_evt_relation(self, evt):
+        if evt.arg('handle') == 'result_file':
+            rid = evt.arg('id1')
+            result_id = self.get_result_id(rid)
+            if result_id is None:
+                self.on_error("Result with given id (%s) does not exist." % rid)
+                return
+            fid = evt.arg('id2')
+            finfo = self.get_file_info(fid)
+            if finfo is None:
+                self.on_error("File with given id (%s) does not exist." % fid)
+                return
+            finfo['be:upload_as'] = ('result_file', result_id, evt.arg('title2'))
+            log.debug("relation result_file processed. finfo updated: %r", finfo)
+
     def proc_evt_file(self, evt):
         fid = evt.id()
         if self.get_file_info(fid) is not None:
@@ -501,13 +517,29 @@ class BeakerLCBackend(ExtBackend):
             digest = ('md5', d.hexdigest())
         if codec != "base64":
             data = event.encode("base64", cdata)
-        filename = finfo.get('name',
-                self.task_data['task_env']['TASKNAME'] + '/' + fid)
-        #(path, filename) = ('/' + filename).rsplit('/', 1)
-        filename = '/' + filename
-        sep_ix = filename.rfind('/')
-        (path, filename) = (filename[:sep_ix], filename[sep_ix+1:])
-        self.proxy.callRemote('task_upload_file', self.get_task_id(evt),
+        if finfo.has_key('be:uploading_as'):
+            method, id, path, filename = finfo['be:uploading_as']
+        else:
+            filename = finfo.get('name',
+                    self.task_data['task_env']['TASKNAME'] + '/' + fid)
+            method = 'task_upload_file'
+            id = self.get_task_id(evt)
+            if finfo.has_key('be:upload_as'):
+                upload_as = finfo['be:upload_as']
+                if upload_as[0] == 'result_file':
+                    if upload_as[2]:
+                        filename = upload_as[2]
+                    # FIXME!!! this is UUID! has to convert it!
+                    id = upload_as[1]
+                    method = 'result_upload_file'
+            # I would prefer following, but rsplit is not in python2.3:
+            #   (path, filename) = ('/' + filename).rsplit('/', 1)
+            filename = '/' + filename
+            sep_ix = filename.rfind('/')
+            (path, filename) = (filename[:sep_ix], filename[sep_ix+1:])
+            finfo['be:uploading_as'] = (method, id, path, filename)
+
+        self.proxy.callRemote(method, id,
                 path[1:] or '/', filename,
                 str(size), digest[1], str(offset), data)
 
@@ -529,7 +561,7 @@ class BeakerLCBackend(ExtBackend):
 
     def get_result_id(self, event_id):
         """Get a data associated with result. Find result by UUID."""
-        self.__results_by_uuid.get(event_id, None)
+        return self.__results_by_uuid.get(event_id, None)
 
     def handle_Result(self, result_id, event_id=None):
         """Attach a data to a result. Find result by UUID."""

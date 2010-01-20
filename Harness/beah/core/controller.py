@@ -98,12 +98,10 @@ class Controller(object):
 
     def add_task(self, task):
         if task and not (task in self.tasks):
-            if 'task_info' not in dir(task):
-                task.task_info = {}
             if 'origin' not in dir(task):
                 task.origin = {}
-            if not task.origin.has_key('task_info'):
-                task.origin['task_info'] = task.task_info
+            if not task.origin.has_key('id'):
+                task.origin['id'] = task.task_id
 
             self.tasks.append(task)
             return True
@@ -115,9 +113,7 @@ class Controller(object):
 
     def find_task(self, task_id):
         for task in self.tasks:
-            if ('task_info' in dir(task) and
-                    task.task_info.has_key('id') and
-                    task.task_info['id'] == task_id):
+            if (task.task_id == task_id):
                 return task
         return None
 
@@ -134,14 +130,11 @@ class Controller(object):
         evev = evt.event()
         if evev == 'introduce':
             task_id = evt.arg('id')
+            task.task_id = task_id
             task.origin['source'] = "socket"
-            a_task = self.find_task(task_id)
-            if a_task:
-                task.task_info = a_task.task_info
-            else:
+            task.origin['id'] = task_id
+            if not self.find_task(task_id):
                 log_error("Controller: No task %s", task_id)
-                task.task_info = dict(id=-1, claimed_id=task_id)
-            task.origin['task_info'] = task.task_info
             return
         elif evev in ['variable_set', 'variable_get']:
             handle = evt.arg('handle', '')
@@ -166,9 +159,8 @@ class Controller(object):
                 log_debug("Controller.__waiting_tasks[%r]=%r", s, l)
         # controller - spawn_task
         orig = evt.origin()
-        if not orig.has_key('task_info'):
-            orig['task_info'] = dict(task.origin)
-        orig['task_info'].update(task.task_info)
+        if not orig.has_key('id'):
+            orig['id'] = task.task_id
         self.send_evt(evt)
 
     def send_evt(self, evt, to_all=False):
@@ -185,10 +177,10 @@ class Controller(object):
 
     def task_started(self, task):
         self.add_task(task)
-        self.generate_evt(event.start(task.task_info))
+        self.generate_evt(event.start(task.task_id))
 
     def task_finished(self, task, rc):
-        self.generate_evt(event.end(task.task_info, rc))
+        self.generate_evt(event.end(task.task_id, rc))
         self.remove_task(task)
         log_flush(log)
 
@@ -240,7 +232,7 @@ class Controller(object):
             self.backend = backend
             self.forward_id = forward_id
             self.origin = {'signature':'BackendFakeTask'}
-            self.task_info = {'task':'fake', 'id':'no_id'}
+            self.task_id = 'no-id'
 
         def proc_cmd(self, cmd):
             evt = event.forward_response(cmd, self.forward_id)
@@ -280,6 +272,7 @@ class Controller(object):
     def proc_cmd_run(self, backend, cmd, echo_evt):
         task_info = dict(cmd.arg('task_info'))
         task_info['id'] = cmd.id()
+        # FIXME!!! save task_info
         task_env = dict(cmd.arg('env') or {})
         task_args = list(cmd.arg('args') or [])
         self.spawn_task(self, backend, task_info, task_env, task_args)
@@ -293,6 +286,7 @@ class Controller(object):
         task_info = dict(cmd.arg('task_info'))
         task_info['id'] = cmd.id()
         task_info['file'] = se.executable
+        # FIXME!!! save task_info
         task_env = dict(cmd.arg('env') or {})
         task_args = list(cmd.arg('args') or [])
         self.spawn_task(self, backend, task_info, task_env, task_args)

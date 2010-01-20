@@ -27,24 +27,20 @@ import tempfile
 import exceptions
 import traceback
 import uuid
+import logging
 from beah.core import event, command
-from beah.misc import format_exc
+from beah.misc import format_exc, make_log_handler
 from beah.wires.internals.twmisc import serveAnyChild, serveAnyRequest, JSONProtocol
 from beah.core.constants import RC
 
 # FIXME: change log level to WARNING, use tempfile and upload log when process
 # ends.
 def __logger():
-    import logging
-    if not os.path.isdir('/tmp/var/log'):
-        if not os.path.isdir('/tmp/var'):
-            os.mkdir('/tmp/var')
-        os.mkdir('/tmp/var/log')
-    log = logging.getLogger()
-    fh = logging.FileHandler('/tmp/var/log/rhts_task.log')
-    fh.setLevel(logging.DEBUG)
-    log.addHandler(fh)
+    log = logging.getLogger('rhts_task')
+    make_log_handler(log, "/tmp/var/log", "rhts_task.log")
+    log.setLevel(logging.DEBUG)
     return log
+
 log = __logger()
 
 USE_DEFAULT = object()
@@ -179,16 +175,19 @@ class RHTSResults(xmlrpc.XMLRPC):
     def xmlrpc_resultLog(self, log_type, result_id, pretty_name):
         log.debug("XMLRPC: results.resultLog(%r, %r, %r)", log_type,
             result_id, pretty_name)
-        file_id = self.main.get_file(pretty_name)
+        file_id = self.get_file(pretty_name)
         if file_id is None:
             msg = "%s:xmlrpc_resultLog: " % self.__class__.__name__ + \
-                    "File '%s' does not exist!" % pretty_name + \
-                    " uploadFile is required before resultLog can be used."
+                    "Can not create file '%s'." % pretty_name
             self.main.error(msg)
             return msg
-        # FIXME!!!
-        #evt = event.file_meta(file_id, log_type)
-        #self.main.send_evt(evt)
+        id_len = len(result_id)
+        if pretty_name[:id_len] == result_id:
+            pretty_name = pretty_name[id_len+1:]
+        evt = event.file_meta(file_id, name=pretty_name, handle=log_type)
+        self.main.send_evt(evt)
+        evt = event.relation('result_file', result_id, file_id)
+        self.main.send_evt(evt)
         return 0 # or "Failure reason"
     xmlrpc_resultLog.signature = [
             ['int', 'string', 'int', 'string'],
@@ -200,7 +199,7 @@ class RHTSResults(xmlrpc.XMLRPC):
         # FIXME! implement this!!!
         return 0 # or "Failure reason"
     xmlrpc_recipeTestRpms.signature = [
-            ['int', 'int', 'string', 'int', 'int', 'int', 'string'],
+            ['int', 'int', 'list'],
             ]
 
 

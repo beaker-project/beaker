@@ -86,12 +86,12 @@ class TaskAdaptor_JSON(JSONProtocol):
                 evt = event.event(cmd)
                 evt.origin().update(self.origin)
             except:
-                evt = event.lose_item(data=cmd, origin=self.origin)
+                evt = event.lose_item(data=cmd, origin=dict(self.origin))
             self.controller.proc_evt(self, evt)
     def lose_item(self, data):
         if self.controller:
             self.controller.proc_evt(self, event.lose_item(data=data,
-                origin=self.origin))
+                origin=dict(self.origin)))
     def proc_cmd(self, cmd):
         """Process Command received from Controller - forward to Task"""
         self.send_cmd(cmd)
