@@ -11,7 +11,8 @@ import logging
 log = logging.getLogger(__name__)
 
 class JobMatrix: 
-    job_matrix_widget = JobMatrixWidget()
+    job_matrix_widget = JobMatrixWidget() 
+    arches_used = {} 
     @expose(template='beaker.server.templates.generic')
     def index(self,**kw):    
         matrix_options = {} 
@@ -31,23 +32,34 @@ class JobMatrix:
         log.debug('Matrix options is %s ' % matrix_options)
         return dict(widget = self.job_matrix_widget,widget_options=matrix_options, title="Job Matrix Report")
      
-    #def _build_grid(self,data,**kw):
-    #    all_arch = model.Arch.query()
-    #    for arch in all_arch:
     @classmethod
-    def arch_stat_getter(cls,x):
-      s = 'Pass:%s Fail:%s Warn:%s' % (x.Pass,x.Fail,x.Warn) 
-      return s
- 
-    def _job_grid_fields(self,**kw):
-        fields = [DataGrid.Column(name='task', getter=lambda x: x.task_name, title='Task'),
-                  DataGrid.Column(name='i386', getter=lambda x: JobMatrix.arch_stat_getter(x), title='i386') ]
+    def arch_stat_getter(cls,this_arch):
+      #ahh nice little closure...
+      def f(x):
+          try:
+              if x.arch == this_arch:    
+                  return 'Pass:%s Fail:%s Warn:%s' % (x.Pass,x.Fail,x.Warn) 
+              #return '%s' % x[0].Pass
+          except Exception,(e):
+             return 'opps exception %s' % e
+      return f      
+
+    @classmethod
+    def _job_grid_fields(self,arches_used,**kw):
+        fields = [] 
+        fields.append(DataGrid.Column(name='task', getter=lambda x: x.task_name, title='Task')) 
+        
+        for arch in arches_used:
+            fields.append(DataGrid.Column(name=arch, getter=JobMatrix.arch_stat_getter(arch), title=arch))
         return fields 
  
     
     def generate(self,**kw):
         grid_data = self.generate_data(**kw)
-        grid = DataGrid(fields = self._job_grid_fields())
+        arches_used = {}
+        for grid in grid_data:
+            arches_used[grid.arch] = 1
+        grid = DataGrid(fields = self._job_grid_fields(arches_used.keys()))
         return {'grid' : grid, 'data' : grid_data }     
       
    
@@ -67,6 +79,8 @@ class JobMatrix:
         #recipes = model.MachineRecipe.query().join(['distro','arch']).join(['recipeset','job']).filter(model.RecipeSet.job_id.in_(jobs)).add_column(model.Arch.arch) 
         #log.debug(recipes)
         for recipe,arch in recipes:     
+            if arch != 'i386':
+                log.debug('Found nont i386 arch %s' % arch)
             whiteboard_data[arch] = recipe.whiteboard 
 
         case0 = case([(model.task_result_table.c.result == 'New',1)],else_=0)
@@ -74,93 +88,106 @@ class JobMatrix:
         case2 = case([(model.task_result_table.c.result == 'Warn',1)],else_=0)
         case3 = case([(model.task_result_table.c.result == 'Fail',1)],else_=0)
         case4 = case([(model.task_result_table.c.result == 'Panic',1)],else_=0) 
-        #need to test for jobs array before adding where clause
+    
         arch_alias = model.arch_table.alias()
         recipe_table_alias = model.recipe_table.alias()
         s2 = select([model.task_table.c.id.label('task_id'),
                      model.task_result_table.c.id.label('result'),
-                     recipe_table_alias.c.whiteboard.label('recipe_whiteboard'),
-                     arch_alias.c.arch.label('arch_arch'),
+                     recipe_table_alias.c.whiteboard,
+                     arch_alias.c.arch,
                      case0.label('rc0'),
                      case1.label('rc1'),
                      case2.label('rc2'),
                      case3.label('rc3'),
                      case4.label('rc4')],
                    
-                     and_(model.recipe_set_table.c.job_id.in_(jobs),
-                          model.task_result_table.c.id == recipe_table_alias.c.result_id,
-                          recipe_table_alias.c.id == model.recipe_task_table.c.recipe_id,
-                          recipe_table_alias.c.distro_id == model.distro_table.c.id), 
-                          #arch_alias.c.arch == bindparam('arch'), 
-                          #recipe_table_alias.c.whiteboard == bindparam('whiteboard')),
-                          
-                        
-                     from_obj=[model.task_result_table,
-                               model.distro_table.join(arch_alias),
-                               model.recipe_set_table.join(recipe_table_alias),
-                               model.task_table.join(model.recipe_task_table)]).alias('foo')
-
-        #If this query starts to bog down and slow up, we really should create a view for the inner select (s2)
-        #SQLAlchemy Select object does not really support this, you would have to use SQLAlchemy text for s2, and then
-        #build a specific table for it.
-
+                     and_( model.recipe_set_table.c.job_id.in_(jobs),
+                           arch_alias.c.arch == bindparam('arch'), 
+                           recipe_table_alias.c.whiteboard == bindparam('recipe_whiteboard')),
+                         
+                     from_obj = [model.recipe_set_table.join(recipe_table_alias).
+                                 join(model.task_result_table,model.task_result_table.c.id == recipe_table_alias.c.result_id).
+                                 join(model.distro_table, model.distro_table.c.id == recipe_table_alias.c.distro_id).
+                                 join(arch_alias, arch_alias.c.id == model.distro_table.c.arch_id).
+                                 join(model.recipe_task_table, model.recipe_task_table.c.recipe_id == recipe_table_alias.c.id).
+                                 join(model.task_table, model.task_table.c.id == model.recipe_task_table.c.task_id)]).alias('foo')
+                   
+        #If this query starts to bog down and slow up, we could create a view for the inner select (s2)
+        #SQLAlchemy Select object does not really support this,I think you would have to use SQLAlchemy text for s2, and then
+        #build a specific table for it
         #eng = database.get_engine()
         #c = s2.compile(eng) 
-        #eng.execute("CREATE VIEW foobar AS %s" % s2.compile(eng)) 
-       
+        #eng.execute("CREATE VIEW foobar AS %s" % c) 
       
+        class OuterDynamo(object):
+            pass
+
+        result_data = []    
+        my_hash = {}
        
-      
-        s1 = select([func.count(s2.c.result),
-                     func.sum(s2.c.rc0).label('New'),
-                     func.sum(s2.c.rc1).label('Pass'),
-                     func.sum(s2.c.rc2).label('Warn'),
-                     func.sum(s2.c.rc3).label('Fail'),
-                     func.sum(s2.c.rc4).label('Panic'),
-                     model.task_table.c.name.label('task_name'),
-                     s2.c.arch_arch,
-                     s2.c.recipe_whiteboard,
-                     s2.c.task_id.label('task_id_pk')],
-                     s2.c.task_id == model.task_table.c.id,
+        from_objs = []
+        select_container = {}
+        for arch_val,whiteboard_val in whiteboard_data.iteritems():
+            s2 = s2.params(arch=arch_val)
+            s2 = s2.params(recipe_whiteboard=whiteboard_val)
+            #s1 = 's1_%s' % arch_val
+            s1  = select([func.count(s2.c.result),
+                                  func.sum(s2.c.rc0).label('New'),
+                                  func.sum(s2.c.rc1).label('Pass'),
+                                  func.sum(s2.c.rc2).label('Warn'),
+                                  func.sum(s2.c.rc3).label('Fail'),
+                                  func.sum(s2.c.rc4).label('Panic'),
+                                  s2.c.arch,
+                                  model.task_table.c.name.label('task_name'),  
+                                  s2.c.task_id.label('task_id_pk')],
+                                  s2.c.task_id == model.task_table.c.id,
                      
-                     from_obj=[model.task_table,s2]).group_by(model.task_table.c.name).order_by(model.task_table.c.name)
-       
-       
-
-        class InnerDynamo(object):
-            
-            def __init__(self, new=None, pass_=None, warn=None, fail=None,
-                         panic=None, task_name=None, arch_arch=None, recipe_whiteboard=None,
-                         task_id_pk=None):
-                self.New = new
-                self.Pass = pass_
-		self.Warn = warn
-		self.Fail = fail
-		self.Panic = panic
-		self.task_name = task_name
-		self.arch_arch = arch_arch
-	        self.recipe_whiteboard = recipe_whiteboard
-	        self.task_id_pk = task_id_pk
-
-        mapper(InnerDynamo,s1)
+                                  from_obj=[model.task_table,s2]).group_by(model.task_table.c.name).order_by(model.task_table.c.name).alias()
           
-        #mapper(OuterDynamo,
-        #log.debug(s1)
-        #log.debug(whiteboard_data)
-        result_data = []
-       
-        for arch_val,whiteboard_val in whiteboard_data.iteritems():  
-            log.debug('Arch is %s and whiteboard is %s' % (arch_val,whiteboard_val))
-            dyn = InnerDynamo.query().filter_by(recipe_whiteboard=whiteboard_val)
-            dyn = dyn.filter_by(arch_arch=arch_val)   
+            class InnerDynamo(object):
+                pass
+            mapper(InnerDynamo,s1)
+
+            #from_objs.append(vars()['s1_%s' % arch_val])
+            dyn = InnerDynamo.query()
             for d in dyn:
-                log.debug('d is %s %s %s %s %s' % (d.arch_arch,d.New, d.Pass, d.Fail, d.task_name) )
-                
                 result_data.append(d)
-         
-            #dyn = InnerDynamo.query()
-            #log.debug('type is %s' % type(InnerDynamo.query()))
-            #result_data.append(InnerDynamo.query())
         return result_data
+                #self.arches_used[d.arch] = 1 
+                #if d.task_name not in my_hash:
+                #    my_hash[d.task_name] = [d]
+                #else:  
+                #    my_hash[d.task_name].append(d)
+                #log.debug('d is %s %s %s %s %s' % (d.arch,d.New, d.Pass, d.Fail, d.task_name) )                
+           
+            #dyn = InnerDynamo.query()
+            #outer_from_fields = []
+           
+            #log.debug('my_data is %s' % result_data)
+            #result_data.append(InnerDynamo.query())
+
+       
+        #for k,v in my_hash.items():
+        #     my_tuple = (k,)# + (elem for elem in v) 
+        #   
+        #  #  select_fields = []
+        #    #pk_arch = ''
+        #   # for elem in v:
+        #    #    table_pointer = vars()['s1_%s' % elem.arch]
+        #        if len(select_fields) == 0:
+        #            pk_arch = elem.arch
+        #            select_fields.append(table_pointer.c.task_name.label('outer_task_name'))
+        #         
+        #        select_fields.append(table_pointer.c.New.label('New_%s' % elem.arch))
+        #        my_tuple += (elem,)
+            #s3 = select(select_fields,from_obj=[
+        #    s3 = select(select_fields,from_obj=from_objs) 
+        #    #log.debug('vars are %s' % s3)
+        #    res = s3.execute()
+        #    for r in res:
+        #        log.debug('Result row is %s' % r)
+        #    mapper(OuterDynamo,s3,primary_key=[s3.c.outer_task_name])
+        #    result_data.append(outer_dynamo)
+        
       
        
