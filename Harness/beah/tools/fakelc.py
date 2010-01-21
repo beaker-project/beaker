@@ -131,22 +131,170 @@ def do_task_result(fname, task_id, result_type, path, score, summary):
             or (RESULT_TYPE_.count(result_type) > 0 \
                     and RESULT_TYPE_.find(result) < RESULT_TYPE_.find(result_type)):
             rec_args[ix]=result_type
-        answ = randint(1, 9999999)
-        log.info("%s.RETURN: %s", fname, answ)
+        result_id = randint(1, 9999999)
+        add_result(task_id, result_id)
+        log.info("%s.RETURN: %s", fname, result_id)
         log_flush(log)
-        return answ
+        return result_id
     except:
         log.error("%s", format_exc())
         raise
 
+tasks_by_results = {}
+
+def add_result(task_id, result_id):
+    tasks_by_results[result_id] = task_id
+
+def get_task_by_result(result_id):
+    return tasks_by_results.get(result_id)
+
+### <STOLEN from="Beaker/Server">
+import base64
+import os.path
+import fcntl
+import stat
+import errno
+try:
+    from hashlib import md5 as md5_constructor
+except ImportError:
+    from md5 import new as md5_constructor
+
+def decode_int(n):
+    """If n is not an integer, attempt to convert it"""
+    if isinstance(n, (int, long)):
+        return n
+    return int(n)
+
+def ensuredir(directory):
+    """Create directory, if necessary."""
+    if os.path.isdir(directory):
+        return
+    try:
+        os.makedirs(directory)
+    except OSError:
+        #thrown when dir already exists (could happen in a race)
+        if not os.path.isdir(directory):
+            #something else must have gone wrong
+            raise
+
+class Uploader:
+    def __init__(self, basepath):
+        self.basepath = basepath
+
+    def uploadFile(self, path, name, size, md5sum, offset, data):
+        #path: the relative path to upload to
+        #name: the name of the file
+        #size: size of contents (bytes)
+        #md5: md5sum (hex digest) of contents
+        #data: base64 encoded file contents
+        #offset: the offset of the chunk
+        # files can be uploaded in chunks, if so the md5 and size describe
+        # the chunk rather than the whole file. the offset indicates where
+        # the chunk belongs
+        # the special offset -1 is used to indicate the final chunk
+        contents = base64.decodestring(data)
+        del data
+        # we will accept offset and size as strings to work around xmlrpc limits
+        offset = decode_int(offset)
+        size = decode_int(size)
+        if offset != -1:
+            if size is not None:
+                if size != len(contents): return False
+            if md5sum is not None:
+                if md5sum != md5_constructor(contents).hexdigest():
+                    return False
+        uploadpath = self.basepath
+        #XXX - have an incoming dir and move after upload complete
+        # SECURITY - ensure path remains under uploadpath
+        path = os.path.normpath(path)
+        if path.startswith('..'):
+            raise BX(_("Upload path not allowed: %s" % path))
+        udir = "%s/%s" % (uploadpath,path)
+        ensuredir(udir)
+        fn = "%s/%s" % (udir,name)
+        try:
+            st = os.lstat(fn)
+        except OSError, e:
+            if e.errno == errno.ENOENT:
+                pass
+            else:
+                raise
+        else:
+            if not stat.S_ISREG(st.st_mode):
+                raise BX(_("destination not a file: %s" % fn))
+        fd = os.open(fn, os.O_RDWR | os.O_CREAT, 0666)
+        # log_error("fd=%r" %fd)
+        try:
+            if offset == 0 or (offset == -1 and size == len(contents)):
+                #truncate file
+                fcntl.lockf(fd, fcntl.LOCK_EX|fcntl.LOCK_NB)
+                try:
+                    os.ftruncate(fd, 0)
+                    # log_error("truncating fd %r to 0" %fd)
+                finally:
+                    fcntl.lockf(fd, fcntl.LOCK_UN)
+            if offset == -1:
+                os.lseek(fd,0,2)
+            else:
+                os.lseek(fd,offset,0)
+            #write contents
+            fcntl.lockf(fd, fcntl.LOCK_EX|fcntl.LOCK_NB, len(contents), 0, 2)
+            try:
+                os.write(fd, contents)
+                # log_error("wrote contents")
+            finally:
+                fcntl.lockf(fd, fcntl.LOCK_UN, len(contents), 0, 2)
+            if offset == -1:
+                if size is not None:
+                    #truncate file
+                    fcntl.lockf(fd, fcntl.LOCK_EX|fcntl.LOCK_NB)
+                    try:
+                        os.ftruncate(fd, size)
+                        # log_error("truncating fd %r to size %r" % (fd,size))
+                    finally:
+                        fcntl.lockf(fd, fcntl.LOCK_UN)
+                if md5sum is not None:
+                    #check final md5sum
+                    sum = md5_constructor()
+                    fcntl.lockf(fd, fcntl.LOCK_SH|fcntl.LOCK_NB)
+                    try:
+                        # log_error("checking md5sum")
+                        os.lseek(fd,0,0)
+                        while True:
+                            block = os.read(fd, 819200)
+                            if not block: break
+                            sum.update(block)
+                        if md5sum != sum.hexdigest():
+                            # log_error("md5sum did not match")
+                            #os.close(fd)
+                            return False
+                    finally:
+                        fcntl.lockf(fd, fcntl.LOCK_UN)
+        finally:
+            os.close(fd)
+        return True
+### </STOLEN>
+
+uploader = Uploader("/tmp/beah-fakelc-logs/")
+
+def do_upload_file(path, name, size, digest, offset, data):
+    log.info("do_upload_file(path=%r, name=%r, size=%r, digest=%r, offset=%r, data='...')",
+            path, name, size, digest, offset)
+    uploader.uploadFile(path, name, size, digest, offset, data)
+
 def do_task_upload_file(fname, task_id, path, name, size, digest, offset, data):
     log.info("%s(task_id=%r, path=%r, name=%r, size=%r, digest=%r, offset=%r, data='...')",
             fname, task_id, path, name, size, digest, offset)
+    do_upload_file("task_%s/%s" % (task_id, path), name, size, digest, offset,
+            data)
     return 0
 
 def do_result_upload_file(fname, result_id, path, name, size, digest, offset, data):
     log.info("%s(result_id=%r, path=%r, name=%r, size=%r, digest=%r, offset=%r, data='...')",
             fname, result_id, path, name, size, digest, offset)
+    task_id = get_task_by_result(result_id)
+    do_upload_file("task_%s/result_%s/%s" % (task_id, result_id, path), name, size, digest, offset,
+            data)
     return 0
 
 ################################################################################

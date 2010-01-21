@@ -264,6 +264,7 @@ function lm_logs()
 function lm_rm_logs()
 {
   rm -f $LM_LOGS
+  rm -rf /tmp/beah-fakelc-logs
 }
 
 function ls_egg()

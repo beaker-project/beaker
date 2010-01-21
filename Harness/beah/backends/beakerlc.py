@@ -23,6 +23,7 @@ import sys
 import os
 import os.path
 import traceback
+import exceptions
 import base64
 import hashlib
 import simplejson as json
@@ -30,7 +31,7 @@ import logging
 from xml.dom import minidom
 
 from beah.misc.log_this import log_this
-from beah.misc import format_exc, dict_update, log_flush
+from beah.misc import format_exc, dict_update, log_flush, writers
 
 from beah.core.backends import ExtBackend
 from beah.core import command, event, addict
@@ -240,30 +241,94 @@ def handle_error(result, *args, **kwargs):
     return result
 
 # FIXME: Extract this to twmisc!
-class LoggingProxy(Proxy):
+class VerboseProxy(Proxy):
 
     verbose_cls = False
 
     def make_verbose(cls):
+        if cls.verbose_cls:
+            return
         cls.callRemote = print_this(cls.callRemote)
         cls.verbose_cls = True
     make_verbose = classmethod(make_verbose)
 
-    def print_(fmt, *args, **kwargs):
+# FIXME: Extract this to twmisc!
+def make_logging_proxy(proxy):
+    """
+    Override proxy's callRemote method to log results.
+
+    Parameters:
+    - proxy is an instance of Proxy class to be "decorated".
+
+    Return:
+    - will return proxy
+
+    Customize by overriding proxy's logging_print, logging_log or
+    logging_log_err.
+
+    Function will refuse to add logging trait twice.
+    """
+
+    if 'trait_logging_proxy' in dir(proxy) and proxy.trait_logging_proxy:
+        return proxy
+
+    proxy.trait_logging_proxy = True
+
+    def logging_print(fmt, *args, **kwargs):
         print fmt % args, kwargs
+    proxy.logging_print = logging_print
 
-    def log(self, result, message, method, args, kwargs):
-        self.print_("XML-RPC call %s %s: %s", method, message, result)
-        self.print_("original call: %s(*%r, **%r)", method, args, kwargs)
+    def logging_log(result, message, method, args, kwargs):
+        proxy.logging_print("XML-RPC call %s %s: %s", method, message, result)
+        proxy.logging_print("original call: %s(*%r, **%r)", method, args, kwargs)
         return result
+    proxy.logging_log = logging_log
+    proxy.logging_log_err = logging_log
 
-    log_err = log
-
-    def callRemote(self, method, *args, **kwargs):
-        return Proxy.callRemote(self, method, *args, **kwargs) \
-                .addCallbacks(self.log, self.log_err,
+    proxy_callRemote = proxy.callRemote
+    def callRemote(method, *args, **kwargs):
+        return proxy_callRemote(method, *args, **kwargs) \
+                .addCallbacks(proxy.logging_log, proxy.logging_log_err,
                         callbackArgs=["returned", method, args, kwargs],
                         errbackArgs=["failed", method, args, kwargs])
+    proxy.callRemote = callRemote
+
+    return proxy
+
+def jsonln(obj):
+    return "%s\n" % json.dumps(obj)
+
+class BeakerWriter(writers.CachingWriter):
+
+    def __init__(self, proxy=None, method=None, id=None, path=None,
+            filename=None, repr=None):
+        if not proxy:
+            raise exceptions.RuntimeError("empty proxy passed!")
+        self.proxy = proxy
+        self.method = method or 'task_upload_file'
+        if not id:
+            raise exceptions.RuntimeError("empty id passed!")
+        self.id = id
+        self.path = path or '/'
+        if not filename:
+            raise exceptions.RuntimeError("empty filename passed!")
+        self.filename = filename
+        if repr:
+            self.repr = repr
+        writers.CachingWriter.__init__(self, 4096)
+
+    def send(self, cdata):
+        """
+        Calculate necessary fields and send.
+        """
+        size = len(cdata)
+        d = hashlib.md5()
+        d.update(cdata)
+        digest = d.hexdigest()
+        data = event.encode("base64", cdata)
+        return self.proxy.callRemote(self.method, self.id, self.path,
+                self.filename, str(size), digest, "-1", data)
+
 
 class BeakerLCBackend(ExtBackend):
 
@@ -277,6 +342,9 @@ class BeakerLCBackend(ExtBackend):
         self.__commands = {}
         self.__results_by_uuid = {}
         self.__file_info = {}
+        self.__writers = {}
+        self.__tasks_by_id = {}
+        self.__tasks_by_uuid = {}
 
     verbose_cls = False
 
@@ -287,6 +355,12 @@ class BeakerLCBackend(ExtBackend):
         cls.handle_new_task = print_this(cls.handle_new_task)
         cls.save_command = print_this(cls.save_command)
         cls.get_command = print_this(cls.get_command)
+        cls.get_writer = print_this(cls.get_writer)
+        cls.close_writers = print_this(cls.close_writers)
+        cls.pre_proc = print_this(cls.pre_proc)
+        cls.proc_evt_output = print_this(cls.proc_evt_output)
+        cls.proc_evt_lose_item = print_this(cls.proc_evt_lose_item)
+        cls.proc_evt_log = print_this(cls.proc_evt_log)
         cls.proc_evt_echo = print_this(cls.proc_evt_echo)
         cls.proc_evt_start = print_this(cls.proc_evt_start)
         cls.proc_evt_end = print_this(cls.proc_evt_end)
@@ -330,10 +404,11 @@ class BeakerLCBackend(ExtBackend):
                             'http://%s:8000/server' %
                             os.getenv('COBBLER_SERVER', 'localhost'))})
             url = self.conf.get('DEFAULT', 'LAB_CONTROLLER')
-            self.proxy = LoggingProxy(url)
+            self.proxy = VerboseProxy(url)
             if self.verbose_cls:
                 self.proxy.make_verbose()
-            self.proxy.print_ = log.info
+                make_logging_proxy(self.proxy)
+            self.proxy.logging_print = log.info
             self.on_idle()
 
     def handle_new_task(self, result):
@@ -357,11 +432,15 @@ class BeakerLCBackend(ExtBackend):
             reactor.callLater(60, self.on_idle)
             return
 
+        task_id = self.task_data['task_env']['TASKID']
+        task_name = self.task_data['task_env']['TASKNAME'] or None
         run_cmd = command.run(self.task_data['executable'],
+                name=task_name,
                 env=self.task_data['task_env'],
                 args=self.task_data['args'])
         self.controller.proc_cmd(self, run_cmd)
         self.save_command(run_cmd)
+        self.save_task(run_cmd, task_id)
 
         # Persistent env (handled by Controller?) - env to run task under,
         # task can change it, and when restarted will continue with same
@@ -389,14 +468,77 @@ class BeakerLCBackend(ExtBackend):
     def mk_msg(self, **kwargs):
         return json.dumps(kwargs)
 
-    def get_task_id(self, evt):
-        return str(self.task_data['task_env']['TASKID'])
+    def save_task(self, run_cmd, tid):
+        tuuid = run_cmd.id()
+        self.__tasks_by_uuid[tuuid] = (run_cmd, tid)
+        self.__tasks_by_id[tid] = (run_cmd, tuuid)
+
+    def get_evt_task_id(self, evt):
+        tuuid = self.get_evt_task_uuid(evt)
+        if tuuid is None:
+            return None
+        return self.__tasks_by_uuid.get(tuuid, (None, None))[1]
+
+    def get_evt_task_uuid(self, evt):
+        evev = evt.event()
+        if evev in ('start', 'end'):
+            return evt.arg('task_id')
+        if evev == 'echo':
+            cid = evt.arg('cmd_id')
+            cmd = self.get_command(cid)
+            if (cmd is not None and cmd.command()=='run'):
+                return cid
+            else:
+                return None
+        return evt.origin().get('id',None)
 
     def save_command(self, cmd):
         self.__commands[cmd.id()] = cmd
 
     def get_command(self, cmd_id):
         return self.__commands.get(cmd_id, None)
+
+    def get_writer(self, id, name, constructor, constructor_args=(), constructor_kwargs={}):
+        writer = self.__writers.setdefault(id, {}).get(name, None)
+        if writer is None:
+            writer = constructor(filename=name, id=id, proxy=self.proxy,
+                    *constructor_args, **constructor_kwargs)
+            self.__writers[id][name] = writer
+        return writer
+
+    def close_writers(self, id):
+        writers = self.__writers.get(id, None)
+        if writers:
+            for name, writer in writers.items():
+                writer.close()
+            del self.__writers[id]
+
+    def pre_proc(self, evt):
+        id = self.get_evt_task_id(evt)
+        if id is None:
+            return False
+        if evt.event() == 'file_write':
+            d = dict(evt.args())
+            d['data'] = '...hidden...'
+            evt = event.Event('file_write', id=evt.id(), origin=evt.origin(),
+                    timestamp=evt.timestamp(), **d)
+        self.get_writer(id, '.task_beah_raw', BeakerWriter).write(jsonln(evt))
+        return False
+
+    def proc_evt_output(self, evt):
+        id = self.get_evt_task_id(evt)
+        self.get_writer(id, 'task_output_%s' % evt.arg('out_handle'),
+                BeakerWriter).write(evt.arg('data'))
+
+    def proc_evt_lose_item(self, evt):
+        id = self.get_evt_task_id(evt)
+        self.get_writer(id, 'task_beah_unexpected',
+                BeakerWriter).write(str(evt.arg('data')))
+
+    def proc_evt_log(self, evt):
+        # FIXME!!!
+        # args: log_handle, log_level, message. opt: reason
+        pass
 
     def proc_evt_echo(self, evt):
         cmd = self.get_command(evt.arg('cmd_id'))
@@ -405,7 +547,7 @@ class BeakerLCBackend(ExtBackend):
             if rc!=ECHO.OK:
                 # FIXME: Start was not issued. Is it OK?
                 self.proxy.callRemote(self.TASK_STOP,
-                        self.get_task_id(evt),
+                        self.get_evt_task_id(evt),
                         # FIXME: This is not correct, is it?
                         self.stop_type("Cancel"),
                         self.mk_msg(reason="Harness could not run the task.",
@@ -414,12 +556,13 @@ class BeakerLCBackend(ExtBackend):
                                     # FIXME: addErrback(...) needed!
 
     def proc_evt_start(self, evt):
-        self.proxy.callRemote(self.TASK_START, self.get_task_id(evt), 0)
+        self.proxy.callRemote(self.TASK_START, self.get_evt_task_id(evt), 0)
         # FIXME: start local watchdog
 
     def proc_evt_end(self, evt):
+        self.close_writers(evt.arg('task_id'))
         self.proxy.callRemote(self.TASK_STOP,
-                self.get_task_id(evt),
+                self.get_evt_task_id(evt),
                 self.stop_type(evt.arg("rc", None)),
                 self.mk_msg(event=evt)) \
                         .addCallback(self.handle_Stop)
@@ -428,20 +571,22 @@ class BeakerLCBackend(ExtBackend):
     def proc_evt_result(self, evt):
         try:
             self.proxy.callRemote(self.TASK_RESULT,
-                    self.get_task_id(evt),
+                    self.get_evt_task_id(evt),
                     self.result_type(evt.arg("rc", None))[0],
                     evt.arg("handle", "%s/%s" % \
                             (self.task_data['task_env']['TASKNAME'], evt.id())),
                     evt.arg("statistics", {}).get("score", 0),
                     self.mk_msg(event=evt)) \
                             .addCallback(self.handle_Result, event_id=evt.id())
+            self.__results_by_uuid[evt.id()] = ""
         except:
             s = format_exc()
             log.error("Exception in proc_evt_result: %s", s)
             print s
             raise
-        # FIXME: add caching events here! While waiting for result, we do not
-        # want to submit events, not to change their order.
+        # FIXME!!! add caching events here! While waiting for result, we do not
+        # want to submit other events, not to change their order.
+        # This is required for result_upload_file. We might lose data!
 
     def __on_error(self, level, msg, tb, *args, **kwargs):
         if args: msg += '; *args=%r' % (args,)
@@ -466,6 +611,10 @@ class BeakerLCBackend(ExtBackend):
             if result_id is None:
                 self.on_error("Result with given id (%s) does not exist." % rid)
                 return
+            if result_id == '':
+                # FIXME!!! this might be undefined! cache data, until id is
+                # known.
+                raise exceptions.NotImplementedError
             fid = evt.arg('id2')
             finfo = self.get_file_info(fid)
             if finfo is None:
@@ -523,13 +672,13 @@ class BeakerLCBackend(ExtBackend):
             filename = finfo.get('name',
                     self.task_data['task_env']['TASKNAME'] + '/' + fid)
             method = 'task_upload_file'
-            id = self.get_task_id(evt)
+            id = self.get_evt_task_id(evt)
             if finfo.has_key('be:upload_as'):
                 upload_as = finfo['be:upload_as']
                 if upload_as[0] == 'result_file':
                     if upload_as[2]:
                         filename = upload_as[2]
-                    # FIXME!!! this is UUID! has to convert it!
+                    # FIXME!!! this might be undefined!
                     id = upload_as[1]
                     method = 'result_upload_file'
             # I would prefer following, but rsplit is not in python2.3:
@@ -537,10 +686,10 @@ class BeakerLCBackend(ExtBackend):
             filename = '/' + filename
             sep_ix = filename.rfind('/')
             (path, filename) = (filename[:sep_ix], filename[sep_ix+1:])
+            path = path[1:] or '/'
             finfo['be:uploading_as'] = (method, id, path, filename)
 
-        self.proxy.callRemote(method, id,
-                path[1:] or '/', filename,
+        self.proxy.callRemote(method, id, path, filename,
                 str(size), digest[1], str(offset), data)
 
     def handle_Stop(self, result):
