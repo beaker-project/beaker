@@ -110,9 +110,10 @@ def make_log_handler(log, log_path, log_file_name=None, syslog=None):
                 # FIXME: should attempt to create a temp file
                 raise
         elif not os.access(log_path, os.X_OK | os.W_OK):
-            print >> sys.stderr, "ERROR: Wrong access rights to %s." % log_path
+            msg = "ERROR: Wrong access rights to %s." % log_path
+            print >> sys.stderr, msg
             # FIXME: should attempt to create a temp file
-            raise
+            raise exceptions.RuntimeError(msg)
 
         #lhandler = logging.handlers.RotatingFileHandler(log_path + "/" + log_file_name,
         #        maxBytes=1000000, backupCount=5)
