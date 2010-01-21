@@ -17,23 +17,23 @@
 
 <script type="text/javascript">
  $(document).ready(function() {
-  ${default}();
-  $('#results_all').click(function() {
-      ShowAll();
-  });
-  $('#results_fail').click(function() {
-      ShowFail();
-  });
+    ShowResults();
+    $("input[@name='results']").change(ShowResults);
  });
 
- function ShowAll() {
-   $('.fail').show();
-   $('.pass').show();
- }
-
- function ShowFail() {
-   $('.fail').show();
-   $('.pass').hide();
+ function ShowResults()
+ {
+    switch ($("input[@name='results']:checked").val())
+    {
+        case 'all':
+            $('.fail').show();
+            $('.pass').show();
+        break;
+        case 'fail':
+            $('.fail').show();
+            $('.pass').hide();
+        break;
+    }
  }
 </script>
 <body class="flora">
