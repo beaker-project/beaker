@@ -114,7 +114,7 @@ class JobMatrix:
     
         arch_alias = model.arch_table.alias()
         recipe_table_alias = model.recipe_table.alias()
-        s2 = select([model.task_table.c.id.label('task_id'),
+        my_select = [model.task_table.c.id.label('task_id'),
                      model.task_result_table.c.id.label('result'),
                      recipe_table_alias.c.whiteboard,
                      arch_alias.c.arch,
@@ -122,18 +122,15 @@ class JobMatrix:
                      case1.label('rc1'),
                      case2.label('rc2'),
                      case3.label('rc3'),
-                     case4.label('rc4')],
+                     case4.label('rc4')]
                    
-                     and_( model.recipe_set_table.c.job_id.in_(jobs),
-                           arch_alias.c.arch == bindparam('arch'), 
-                           recipe_table_alias.c.whiteboard == bindparam('recipe_whiteboard')),
                          
-                     from_obj = [model.recipe_set_table.join(recipe_table_alias).
-                                 join(model.task_result_table,model.task_result_table.c.id == recipe_table_alias.c.result_id).
-                                 join(model.distro_table, model.distro_table.c.id == recipe_table_alias.c.distro_id).
-                                 join(arch_alias, arch_alias.c.id == model.distro_table.c.arch_id).
-                                 join(model.recipe_task_table, model.recipe_task_table.c.recipe_id == recipe_table_alias.c.id).
-                                 join(model.task_table, model.task_table.c.id == model.recipe_task_table.c.task_id)]).alias('foo')
+        my_from = [model.recipe_set_table.join(recipe_table_alias).
+                              join(model.task_result_table,model.task_result_table.c.id == recipe_table_alias.c.result_id).
+                              join(model.distro_table, model.distro_table.c.id == recipe_table_alias.c.distro_id).
+                              join(arch_alias, arch_alias.c.id == model.distro_table.c.arch_id).
+                              join(model.recipe_task_table, model.recipe_task_table.c.recipe_id == recipe_table_alias.c.id).
+                              join(model.task_table, model.task_table.c.id == model.recipe_task_table.c.task_id)]
                    
         #If this query starts to bog down and slow up, we could create a view for the inner select (s2)
         #SQLAlchemy Select object does not really support this,I think you would have to use SQLAlchemy text for s2, and then
@@ -145,8 +142,23 @@ class JobMatrix:
         result_data = []    
         my_hash = {} 
         for arch_val,whiteboard_val in whiteboard_data.iteritems():
+           
+            if whiteboard_val is not None:
+                my_and = and_( model.recipe_set_table.c.job_id.in_(jobs),
+                               arch_alias.c.arch == bindparam('arch'), 
+                               recipe_table_alias.c.whiteboard == bindparam('recipe_whiteboard'))
+              
+              
+            else: 
+                my_and = and_( model.recipe_set_table.c.job_id.in_(jobs),
+                               arch_alias.c.arch == bindparam('arch'), 
+                               recipe_table_alias.c.whiteboard==None)
+            s2 = select(my_select,from_obj=my_from,whereclause=my_and).alias('foo')
             s2 = s2.params(arch=arch_val)
-            s2 = s2.params(recipe_whiteboard=whiteboard_val) 
+            if whiteboard_val is not None:
+                 s2 = s2.params(recipe_whiteboard=whiteboard_val) 
+               
+           
             s1  = select([func.count(s2.c.result),
                                   func.sum(s2.c.rc0).label('New'),
                                   func.sum(s2.c.rc1).label('Pass'),
