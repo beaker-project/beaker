@@ -306,10 +306,13 @@ rlFileBackup() {
 
     # do the actual backup
     status=0
+    # detect selinux & acl support
     [ -d "/selinux" ] && local selinux=true || local selinux=false
+    setfacl -m u:root:rwx $BEAKERLIB_DIR &>/dev/null \
+            && local acl=true || local acl=false
     for file in "$@"; do
         # convert relative path to absolute, remove trailing slash
-        file=$(echo "$file" | sed "s|^\([^/]\)|$PWD/\1|" | sed "s|/$||")
+        file=$(readlink -f "$file")
         path=$(dirname "$file")
 
         # create path
@@ -330,10 +333,11 @@ rlFileBackup() {
         dir="$path"
         failed=false
         while true; do
-            $selinux && { chcon --reference $dir ${backup}${dir} || failed=true; }
-            chown --reference $dir ${backup}${dir} || failed=true
-            chmod --reference $dir ${backup}${dir} || failed=true
-            touch --reference $dir ${backup}${dir} || failed=true
+            $acl && { getfacl "$dir" | setfacl --set-file=- "${backup}${dir}" || failed=true; }
+            $selinux && { chcon --reference "$dir" "${backup}${dir}" || failed=true; }
+            chown --reference "$dir" "${backup}${dir}" || failed=true
+            chmod --reference "$dir" "${backup}${dir}" || failed=true
+            touch --reference "$dir" "${backup}${dir}" || failed=true
             [ "$dir" == "/" ] && break
             dir=$(dirname "$dir")
         done
