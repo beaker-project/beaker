@@ -69,6 +69,43 @@ function fakelc() { python $BEAH_ROOT/beah/tools/fakelc.py; }
 function beah-beaker-backend() { python $BEAH_ROOT/beah/backends/beakerlc.py; }
 function beah-fwd-backend() { python -c "from beah.backends.forwarder import main; main()"; }
 function beah-rhts-task() { python -c "from beah.tasks.rhts_xmlrpc import main; main()"; }
+function inst1() { if [[ ! -z "$LABM1" ]]; then inst_all $LABM1; fi }
+function inst2() { if [[ ! -z "$LABM2" ]]; then inst_all $LABM2; fi }
+function inst3() { if [[ ! -z "$LABM3" ]]; then inst_all $LABM3; fi }
+function inst4() { if [[ ! -z "$LABM4" ]]; then inst_all $LABM4; fi }
+function inst5() { if [[ ! -z "$LABM5" ]]; then inst_all $LABM5; fi }
+function labms_()
+{
+  if [[ ! -z "$1" ]]; then
+    echo -n "$1 "
+  fi
+}
+function labms()
+{
+  for i in $*; do
+    eval "labms_ \"\$LABM$i\""
+  done
+  echo
+}
+function inst_all()
+{
+  pushd $BEAH_ROOT
+  local append=
+  if [[ "$1" == "-a" ]]; then
+    shift
+    append=$@
+  fi
+  if [[ -z "$*" ]]; then
+    for labm in $LABMS $append; do
+      LABM=$labm ./lm-install.sh
+    done
+  else
+    for labm in $@; do
+      LABM=$labm ./lm-install.sh
+    done
+  fi
+  popd
+}
 function launcher()
 (
   default="s o l"
@@ -153,7 +190,7 @@ END
   fi
 )
 
-FUNCTIONS="$(echo "beah"{,-srv,-{out,cmd,beaker}-backend}) launcher fakelc"
+FUNCTIONS="$(echo "beah"{,-srv,-{out,cmd,beaker}-backend}) launcher fakelc inst_all"
 export -f $FUNCTIONS
 
 cat <<END
