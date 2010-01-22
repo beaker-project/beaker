@@ -2,8 +2,7 @@ from sqlalchemy import select, distinct, Table, Column, Integer, String
 from sqlalchemy.sql.expression import case, func, and_, bindparam
 from turbogears import controllers, identity, expose, url, database
 from turbogears.database import session, metadata, mapper
-from turbogears.widgets import DataGrid, AjaxGrid
-from beaker.server.widgets import JobMatrixReport as JobMatrixWidget
+from beaker.server.widgets import JobMatrixReport as JobMatrixWidget, myDataGrid
 
 import model
 
@@ -12,59 +11,85 @@ log = logging.getLogger(__name__)
 
 class JobMatrix: 
     job_matrix_widget = JobMatrixWidget() 
-    arches_used = {} 
+    arches_used = {}
+
     @expose(template='beaker.server.templates.generic')
     def index(self,**kw):    
         matrix_options = {} 
-        jobs = model.Job.query().group_by([model.Job.whiteboard])
-        new_whiteboard_options = [(job.whiteboard,job.whiteboard) for job in jobs]  
-        matrix_options['whiteboard_options'] = new_whiteboard_options 
-        #log.debug(kw)
+        if 'whiteboard_filter' in kw:
+            filter = kw['whiteboard_filter']
+        else:
+            filter = None 
+
+        whiteboard_options =  self.get_whiteboard_options(filter)
+        # This is silly, I can't call get_whiteboard_options from here because it's always
+        # returning JSON. Even though I only have the allow_json=True on, it should otherwise
+        # give me regular returns if I'm not sending tg_format='json'. I've had to create
+        # get_whiteboard_options_json 
+        
+        whiteboard_options = [(w[0],w[0]) for w in whiteboard_options]  # I want tuples
+        matrix_options['whiteboard_options'] = self.get_whiteboard_options(filter)
+
         if ('job_ids' in kw) or ('whiteboard' in kw): 
-            #log.debug('in if clause')
             gen_results = self.generate(**kw) 
             matrix_options['grid'] = gen_results['grid']
             matrix_options['list'] = gen_results['data'] 
             if 'whiteboard' in kw:
-                matrix_options['job_ids_options'] = model.Job.by_whiteboard(kw['whiteboard'])  
+                jobs = model.Job.by_whiteboard(kw['whiteboard'])  
+                job_ids = [str(j.id) for j in jobs]
+                matrix_options['job_ids_vals'] = "\n".join(job_ids)
+            if 'job_ids' in kw:
+                matrix_options['job_ids_vals'] = kw['job_ids']
         else: 
-            pass         
-        log.debug('Matrix options is %s ' % matrix_options)
-        return dict(widget = self.job_matrix_widget,widget_options=matrix_options, title="Job Matrix Report")
-     
+            matrix_options['grid'] = None 
+       
+        return dict(widget = self.job_matrix_widget,widget_options=matrix_options, title="Job Matrix Report") 
+
+    @expose(format='json')
+    def get_whiteboard_options_json(self,filter):
+        return_dict = {}
+        return_dict['options'] =  self.get_whiteboard_options(filter)
+        return return_dict
+
+    def get_whiteboard_options(self,filter):
+        if filter: 
+            where = model.job_table.c.whiteboard.like('%%%s%%' % filter)   
+        else:
+            where = None
+        s1 = select([model.job_table.c.whiteboard],whereclause=where,group_by=[model.job_table.c.whiteboard,model.job_table.c.id],order_by=[model.job_table.c.id],distinct=True,limit=50)  
+        res = s1.execute()  
+        a = [r[0] for r in res]
+        return a 
+        
     @classmethod
     def arch_stat_getter(cls,this_arch):
       #ahh nice little closure...
       def f(x):
-          try:
-              if x.arch == this_arch:    
-                  return 'Pass:%s Fail:%s Warn:%s' % (x.Pass,x.Fail,x.Warn) 
-              #return '%s' % x[0].Pass
-          except Exception,(e):
-             return 'opps exception %s' % e
+          for elem in x:
+              val = getattr(elem,'arch',None)
+              if val is not None:
+                  if val == this_arch: 
+                      return 'Pass:%s Fail:%s Warn:%s' % (elem.Pass,elem.Fail,elem.Warn) 
+                 
       return f      
 
     @classmethod
     def _job_grid_fields(self,arches_used,**kw):
         fields = [] 
-        fields.append(DataGrid.Column(name='task', getter=lambda x: x.task_name, title='Task')) 
-        
+        fields.append(myDataGrid.Column(name='task', getter=lambda x: x[0], title='Task')) 
+         
         for arch in arches_used:
-            fields.append(DataGrid.Column(name=arch, getter=JobMatrix.arch_stat_getter(arch), title=arch))
+            fields.append(myDataGrid.Column(name=arch, getter=JobMatrix.arch_stat_getter(arch), title=arch))
         return fields 
  
-    
     def generate(self,**kw):
-        grid_data = self.generate_data(**kw)
-        arches_used = {}
-        for grid in grid_data:
-            arches_used[grid.arch] = 1
-        grid = DataGrid(fields = self._job_grid_fields(arches_used.keys()))
+        grid_data = self.generate_data(**kw)  
+        grid = myDataGrid(fields = self._job_grid_fields(self.arches_used.keys()))
         return {'grid' : grid, 'data' : grid_data }     
-      
-   
+       
     def generate_data(self,**kw): 
         jobs = []
+        self.arches_used = {}
         whiteboard_data = {} 
         if 'job_ids' in kw:
             jobs = kw['job_ids'].split() 
@@ -75,12 +100,10 @@ class JobMatrix:
         else:
            pass
            #raise AssertionError('Incorrect or no filter passed to job matrix report generator')
-        recipes = model.MachineRecipe.query().join(['distro','arch']).join(['recipeset','job']).add_column(model.Arch.arch) 
-        #recipes = model.MachineRecipe.query().join(['distro','arch']).join(['recipeset','job']).filter(model.RecipeSet.job_id.in_(jobs)).add_column(model.Arch.arch) 
+        #recipes = model.MachineRecipe.query().join(['distro','arch']).join(['recipeset','job']).add_column(model.Arch.arch) 
+        recipes = model.MachineRecipe.query().join(['distro','arch']).join(['recipeset','job']).filter(model.RecipeSet.job_id.in_(jobs)).add_column(model.Arch.arch) 
         #log.debug(recipes)
         for recipe,arch in recipes:     
-            if arch != 'i386':
-                log.debug('Found nont i386 arch %s' % arch)
             whiteboard_data[arch] = recipe.whiteboard 
 
         case0 = case([(model.task_result_table.c.result == 'New',1)],else_=0)
@@ -118,19 +141,12 @@ class JobMatrix:
         #eng = database.get_engine()
         #c = s2.compile(eng) 
         #eng.execute("CREATE VIEW foobar AS %s" % c) 
-      
-        class OuterDynamo(object):
-            pass
 
         result_data = []    
-        my_hash = {}
-       
-        from_objs = []
-        select_container = {}
+        my_hash = {} 
         for arch_val,whiteboard_val in whiteboard_data.iteritems():
             s2 = s2.params(arch=arch_val)
-            s2 = s2.params(recipe_whiteboard=whiteboard_val)
-            #s1 = 's1_%s' % arch_val
+            s2 = s2.params(recipe_whiteboard=whiteboard_val) 
             s1  = select([func.count(s2.c.result),
                                   func.sum(s2.c.rc0).label('New'),
                                   func.sum(s2.c.rc1).label('Pass'),
@@ -147,47 +163,19 @@ class JobMatrix:
             class InnerDynamo(object):
                 pass
             mapper(InnerDynamo,s1)
-
-            #from_objs.append(vars()['s1_%s' % arch_val])
-            dyn = InnerDynamo.query()
-            for d in dyn:
-                result_data.append(d)
-        return result_data
-                #self.arches_used[d.arch] = 1 
-                #if d.task_name not in my_hash:
-                #    my_hash[d.task_name] = [d]
-                #else:  
-                #    my_hash[d.task_name].append(d)
-                #log.debug('d is %s %s %s %s %s' % (d.arch,d.New, d.Pass, d.Fail, d.task_name) )                
-           
-            #dyn = InnerDynamo.query()
-            #outer_from_fields = []
-           
-            #log.debug('my_data is %s' % result_data)
-            #result_data.append(InnerDynamo.query())
-
-       
-        #for k,v in my_hash.items():
-        #     my_tuple = (k,)# + (elem for elem in v) 
-        #   
-        #  #  select_fields = []
-        #    #pk_arch = ''
-        #   # for elem in v:
-        #    #    table_pointer = vars()['s1_%s' % elem.arch]
-        #        if len(select_fields) == 0:
-        #            pk_arch = elem.arch
-        #            select_fields.append(table_pointer.c.task_name.label('outer_task_name'))
-        #         
-        #        select_fields.append(table_pointer.c.New.label('New_%s' % elem.arch))
-        #        my_tuple += (elem,)
-            #s3 = select(select_fields,from_obj=[
-        #    s3 = select(select_fields,from_obj=from_objs) 
-        #    #log.debug('vars are %s' % s3)
-        #    res = s3.execute()
-        #    for r in res:
-        #        log.debug('Result row is %s' % r)
-        #    mapper(OuterDynamo,s3,primary_key=[s3.c.outer_task_name])
-        #    result_data.append(outer_dynamo)
-        
+ 
+            dyn = InnerDynamo.query() 
+            for d in dyn: 
+                self.arches_used[d.arch] = 1 
+                if d.task_name not in my_hash:
+                    my_hash[d.task_name] = [d]
+                else:  
+                    my_hash[d.task_name].append(d) 
       
-       
+        for k,v in my_hash.items():
+            my_tuple = (k,)
+            for elem in v: 
+                my_tuple += (elem,) 
+            result_data.append(my_tuple)
+ 
+        return result_data 

@@ -1,5 +1,12 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xmlns:py="http://purl.org/kid/ns#">
 <body>
+<head>
+<script type='text/javascript'>
+$(document).ready( function() {
+    $('#remote_form_whiteboard_filter').blur(function () { filter_on_whiteboard()  } )
+})
+</script>
+</head>
 <div style='padding-left:2em'>
 <form action='${action}' name="${name}">  
 
@@ -13,12 +20,13 @@
    
      <div> 
         <h3 style="display:inline">${job_ids.label}</h3><br />
-        <div onclick="javascript:clicked_jobs()" py:content="job_ids.display()" /> 
+        <div onclick="javascript:clicked_jobs()" py:content="job_ids.display(value=job_ids_vals)" /> 
      </div>
-
-    <input type='submit' value='Generate' />  
+   
+    <div style='padding:2em 0 2em 0'> 
+      <input type='submit' value='Generate' />
+    </div>  
     <div py:if="grid"> 
-      testing here
       ${grid.display(list)} 
     </div>
 </form>

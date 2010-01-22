@@ -72,6 +72,7 @@ $(document).ready(function() {
                             <li><a href="${tg.url('/keytypes')}">Key Types</a></li>
                             <li><a href="${tg.url('/csv/csv_import')}">Import</a></li>
                             <li><a href="${tg.url('/csv')}">Export</a></li>
+                            <li><a href="${tg.url('/matrix')}">Job Matrix</a></li>
                             <li><a href="${tg.url('/osversions')}">OS Versions</a></li>
                         </ul>
                     </div>
