@@ -8,10 +8,10 @@ from turbogears.widgets import (Form, TextField, SubmitButton, TextArea,
                                 AutoCompleteField, SingleSelectField, CheckBox,
                                 HiddenField, RemoteForm, CheckBoxList, JSLink,
                                 Widget, TableForm, FormField, CompoundFormField,
-                                static, PaginateDataGrid, RepeatingFormField,
+                                static, PaginateDataGrid, DataGrid, RepeatingFormField,
                                 CompoundWidget, AjaxGrid, Tabber, CSSLink,
-                                RadioButtonList,
-                                RepeatingFieldSet, SelectionField)
+                                RadioButtonList, MultipleSelectField, Button,
+                                RepeatingFieldSet, SelectionField,WidgetsList)
 import logging
 log = logging.getLogger(__name__)
 
@@ -95,10 +95,12 @@ class PowerTypeForm(CompoundFormField):
 
     def __init__(self, callback, search_controller, *args, **kw):
         super(PowerTypeForm,self).__init__(*args, **kw)
-
         self.search_controller=search_controller
         self.powercontroller_field = SingleSelectField(name="powercontroller", options=callback)
 	self.key_field = HiddenField(name="key")
+
+class myDataGrid(DataGrid):
+    template = "beaker.server.templates.my_datagrid" 
 
 class myPaginateDataGrid(PaginateDataGrid):
     template = "beaker.server.templates.my_paginate_datagrid"
@@ -126,8 +128,50 @@ class TextFieldJSON(TextField):
     def __json__(self):
         return {
                 'field_id' : self.field_id,             
-               } 
+               }
+ 
+class JobMatrixWidgets(WidgetsList): 
+    default_validator = validators.NotEmpty()
+    whiteboard = MultipleSelectField('whiteboard', validator=default_validator) 
+    job_ids = TextArea('job_ids',rows=20,cols=7, validator=default_validator)
+   
 
+
+class JobMatrixReport(Form):     
+    javascript = [LocalJSLink('beaker', '/static/javascript/job_matrix.js')]
+    template = 'beaker.server.templates.job_matrix' 
+    member_widgets = ['whiteboard','job_ids','generate_button'] 
+    params = ['list','whiteboard_filter','whiteboard_options','job_ids_vals']
+    default_validator = validators.NotEmpty() 
+    def __init__(self,*args,**kw): 
+        super(JobMatrixReport,self).__init__(*args, **kw)       
+        self.class_name = self.__class__.__name__
+        if 'whiteboard_options' in kw:
+            whiteboard_options = kw['whiteboard_options']
+        else:
+            whiteboard_options = []
+
+        self.whiteboard_options = whiteboard_options or []
+      
+        self.whiteboard = SingleSelectField('whiteboard',label='Whiteboard',attrs={'size':5}, options=whiteboard_options, validator=self.default_validator) 
+        self.job_ids = TextArea('job_ids',label='Job ID', rows=7,cols=7, validator=self.default_validator) 
+        self.whiteboard_filter = TextField('whiteboard_filter', label='Filter Whiteboard') 
+
+        self.name='remote_form' 
+        self.action = '.'   
+    
+    def display(self,**params):     
+        if 'options' in params:
+            if 'whiteboard_options' in params['options']:
+                params['whiteboard_options'] = params['options']['whiteboard_options'] 
+            if 'job_ids_vals' in params['options']:
+                params['job_ids_vals'] = params['options']['job_ids_vals']
+            if 'grid' in params['options']:              
+                params['grid'] = params['options']['grid'] 
+            if 'list' in params['options']: 
+                params['list'] = params['options']['list']
+        return super(JobMatrixReport,self).display(value=None,**params)
+    
 class SearchBar(RepeatingFormField):
     """Search Bar"""
 

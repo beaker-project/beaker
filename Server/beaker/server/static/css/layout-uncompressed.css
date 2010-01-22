@@ -275,6 +275,7 @@ html>body .fedora-corner-br { background: #d9d9d9 url("/static/images/corner-br.
 
 .content { margin: 0 1em }
 
+.smallfont { font-size: x-small }
 #fedora-sidelist {
 	position: relative;
 	bottom: 3px;
