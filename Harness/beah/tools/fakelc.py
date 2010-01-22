@@ -397,6 +397,19 @@ def build_recipe_21(fqdn):
                     <system_type value="Machine"/>
                 </hostRequires>
 
+                <task avg_time="1200" id="40"
+                        name="/beah-tests/beah_iptables" role="STANDALONE"
+                        result="%(task40_res)s"
+                        status="%(task40_stat)s"
+                        >
+                    <roles>
+                        <role value="STANDALONE">
+                            <system value="%(machine0)s"/>
+                        </role>
+                    </roles>
+                    <rpm name="tmp-beah-tests-beah_iptables.noarch"/>
+                </task>
+
                 <!--
                 <task avg_time="1200" id="41"
                         name="/examples/testargs" role="STANDALONE"
@@ -558,7 +571,7 @@ def build_recipe_21(fqdn):
     global recipes, task_recipe, fqdn_recipes
     recipes[21] = (recipe21, args21)
     args = args21
-    tasks = [41, 42, 43, 44, 45, 46, 47, 95, 99]
+    tasks = [40, 41, 42, 43, 44, 45, 46, 47, 95, 99]
     machines = [
             fqdn or os.environ["HOSTNAME"],
             "test1.example.com",

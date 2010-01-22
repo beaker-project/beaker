@@ -33,11 +33,13 @@ def glob_(*patterns):
 def glob_to(prefix, dirs):
     return list([(prefix+'/'+dir, glob_(dir+'/*')) for dir in dirs])
 
+# FIXME: add all recursively
 more_data_files = glob_to('share/beah', [
     'examples/tasks',
     'examples/tests',
     'examples/tests/rhtsex',
     'examples/tests/testargs',
+    'beah-tests/beah_iptables',
     #'tests', # FIXME: add some tests here!
     'doc',
     ])
@@ -47,6 +49,7 @@ if os.environ.get('BEAH_DEV', ''):
     more_data_files += glob_to('/mnt/tests', [
         'examples/tests/rhtsex',
         'examples/tests/testargs',
+        'beah-tests/beah_iptables',
         ])
 
 # FIXME: Find out about real requirements - packages, versions.
