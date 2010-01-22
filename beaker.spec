@@ -110,6 +110,7 @@ ln -s Fedora.ks $RPM_BUILD_ROOT/var/lib/cobbler/kickstarts/Fedoradevelopment.ks
 %files server
 %defattr(-,root,root,-)
 %doc Server/README COPYING
+%doc SchemaUpgrades/*
 %{python_sitelib}/%{name}/server/
 %{python_sitelib}/%{name}.server-%{version}-*
 %{python_sitelib}/%{name}.server-%{version}-py%{pyver}.egg-info/
