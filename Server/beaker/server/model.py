@@ -373,7 +373,7 @@ distro_tag_map = Table('distro_tag_map', metadata,
 
 visits_table = Table('visit', metadata,
     Column('visit_key', String(40), primary_key=True),
-    Column('created', DateTime, nullable=False, default=datetime.now),
+    Column('created', DateTime, nullable=False, default=datetime.utcnow),
     Column('expiry', DateTime)
 )
 
@@ -387,7 +387,7 @@ groups_table = Table('tg_group', metadata,
     Column('group_id', Integer, primary_key=True),
     Column('group_name', Unicode(16), unique=True),
     Column('display_name', Unicode(255)),
-    Column('created', DateTime, default=datetime.now)
+    Column('created', DateTime, default=datetime.utcnow)
 )
 
 users_table = Table('tg_user', metadata,
@@ -396,7 +396,7 @@ users_table = Table('tg_user', metadata,
     Column('email_address', Unicode(255), unique=True),
     Column('display_name', Unicode(255)),
     Column('password', Unicode(40)),
-    Column('created', DateTime, default=datetime.now)
+    Column('created', DateTime, default=datetime.utcnow)
 )
 
 permissions_table = Table('permission', metadata,
@@ -433,7 +433,7 @@ activity_table = Table('activity', metadata,
     Column('id', Integer, autoincrement=True,
            nullable=False, primary_key=True),
     Column('user_id', Integer, ForeignKey('tg_user.user_id'), index=True),
-    Column('created', DateTime, nullable=False, default=datetime.now),
+    Column('created', DateTime, nullable=False, default=datetime.utcnow),
     Column('type', String(40), nullable=False),
     Column('field_name', String(40), nullable=False),
     Column('service', String(100), nullable=False),
@@ -463,7 +463,7 @@ note_table = Table('note', metadata,
            nullable=False, primary_key=True),
     Column('system_id', Integer, ForeignKey('system.id'), index=True),
     Column('user_id', Integer, ForeignKey('tg_user.user_id'), index=True),
-    Column('created', DateTime, nullable=False, default=datetime.now),
+    Column('created', DateTime, nullable=False, default=datetime.utcnow),
     Column('text',TEXT, nullable=False)
 )
 
@@ -534,7 +534,7 @@ recipe_set_table = Table('recipe_set',metadata,
                 ForeignKey('job.id')),
         Column('priority_id', Integer,
                 ForeignKey('task_priority.id'), default=select([task_priority_table.c.id], limit=1).where(task_priority_table.c.priority==u'Normal').correlate(None)),
-        Column('queue_time',DateTime, nullable=False, default=datetime.now),
+        Column('queue_time',DateTime, nullable=False, default=datetime.utcnow),
         Column('result_id', Integer,
                 ForeignKey('task_result.id')),
         Column('status_id', Integer,
@@ -559,7 +559,7 @@ log_recipe_table = Table('log_recipe', metadata,
                 ForeignKey('recipe.id')),
         Column('path', Unicode()),
         Column('filename', Unicode(), nullable=False),
-        Column('start_time',DateTime, default=datetime.now),
+        Column('start_time',DateTime, default=datetime.utcnow),
 )
 
 log_recipe_task_table = Table('log_recipe_task', metadata,
@@ -568,7 +568,7 @@ log_recipe_task_table = Table('log_recipe_task', metadata,
                 ForeignKey('recipe_task.id')),
         Column('path', Unicode()),
         Column('filename', Unicode(), nullable=False),
-        Column('start_time',DateTime, default=datetime.now),
+        Column('start_time',DateTime, default=datetime.utcnow),
 )
 
 log_recipe_task_result_table = Table('log_recipe_task_result', metadata,
@@ -577,7 +577,7 @@ log_recipe_task_result_table = Table('log_recipe_task_result', metadata,
                 ForeignKey('recipe_task_result.id')),
         Column('path', Unicode()),
         Column('filename', Unicode(), nullable=False),
-        Column('start_time',DateTime, default=datetime.now),
+        Column('start_time',DateTime, default=datetime.utcnow),
 )
 
 recipe_table = Table('recipe',metadata,
@@ -745,7 +745,7 @@ recipe_task_result_table = Table('recipe_task_result',metadata,
                 ForeignKey('task_result.id')),
         Column('score', Numeric(10)),
         Column('log', Unicode()),
-        Column('start_time',DateTime, default=datetime.now),
+        Column('start_time',DateTime, default=datetime.utcnow),
 )
 
 task_table = Table('task',metadata,
@@ -761,8 +761,8 @@ task_table = Table('task',metadata,
         # This should be a map table
         #Column('notify', Unicode(2048)),
 
-        Column('creation_date', DateTime, default=datetime.now),
-        Column('update_date', DateTime, onupdate=datetime.now),
+        Column('creation_date', DateTime, default=datetime.utcnow),
+        Column('update_date', DateTime, onupdate=datetime.utcnow),
         Column('owner_id', Integer,
                 ForeignKey('tg_user.user_id')),
         Column('version', Unicode(256)),
@@ -1155,14 +1155,14 @@ class System(SystemObject):
                     raise an exception if it fails.
                     raise an exception if it takes more then 5 minutes
                 """
-                expiredelta = datetime.now() + timedelta(minutes=5)
+                expiredelta = datetime.utcnow() + timedelta(minutes=5)
                 while(True):
                     for line in self.get_event_log(task_id).split('\n'):
                         if line.find("### TASK COMPLETE ###") != -1:
                             return True
                         if line.find("### TASK FAILED ###") != -1:
                             raise BX(_("Cobbler Task:%s Failed" % task_id))
-                    if datetime.now() > expiredelta:
+                    if datetime.utcnow() > expiredelta:
                         raise BX(_('Cobbler Task:%s Timed out' % task_id))
                     time.sleep(5)
 
@@ -2012,7 +2012,7 @@ class Watchdog(MappedObject):
         if op:
             return cls.query.join(['system']).filter(
                                       and_(System.lab_controller==labcontroller,
-                                 getattr(Watchdog.kill_time, op)(datetime.now())
+                                 getattr(Watchdog.kill_time, op)(datetime.utcnow())
                                           )
                                                     )
 
@@ -2490,10 +2490,12 @@ class Log(MappedObject):
     def link(self):
         """ Return a link to this Log
         """
-        return make_link(url = '/logs/%s/%s/%s' % (self.recipe.filepath,
+        text = "%s/%s" % (self.path != '/' and self.path or '', self.filename)
+        text = text[-50:]
+        return make_link(url = '/logs/%s/%s/%s' % (self.parent.filepath,
                                                    self.path, 
                                                    self.filename),
-                         text = '%s/%s' % (self.path, self.filename))
+                         text = text)
     link = property(link)
 
     def __cmp__(self, other):
@@ -3212,7 +3214,7 @@ class RecipeTask(TaskBase):
         if watchdog_override:
             self.recipe.watchdog.kill_time = watchdog_override
         else:
-            self.recipe.watchdog.kill_time = datetime.now() + timedelta(
+            self.recipe.watchdog.kill_time = datetime.utcnow() + timedelta(
                                                     seconds=self.task.avg_time)
         self.update_status()
         return True
@@ -3221,7 +3223,7 @@ class RecipeTask(TaskBase):
         """
         Extend the watchdog by kill_time seconds
         """
-        self.recipe.watchdog.kill_time = datetime.now() + timedelta(
+        self.recipe.watchdog.kill_time = datetime.utcnow() + timedelta(
                                                               seconds=kill_time)
 
     def stop(self, *args, **kwargs):
@@ -3884,7 +3886,7 @@ mapper(Recipe, recipe_table,
                       'rpms':relation(RecipeRpm, backref='recipe'),
                       'result':relation(TaskResult, uselist=False),
                       'status':relation(TaskStatus, uselist=False),
-                      'logs':relation(LogRecipe, backref='recipe'),
+                      'logs':relation(LogRecipe, backref='parent'),
                      }
       )
 mapper(GuestRecipe, guest_recipe_table, inherits=Recipe,
@@ -3911,7 +3913,7 @@ mapper(RecipeTask, recipe_task_table,
                       'result':relation(TaskResult, uselist=False),
                       'status':relation(TaskStatus, uselist=False),
                       '_roles':relation(RecipeTaskRole),
-                      'logs':relation(LogRecipeTask, backref='recipe'),
+                      'logs':relation(LogRecipeTask, backref='parent'),
                      }
       )
 
@@ -3926,7 +3928,7 @@ mapper(RecipeTaskBugzilla, recipe_task_bugzilla_table)
 mapper(RecipeTaskRpm, recipe_task_rpm_table)
 mapper(RecipeTaskResult, recipe_task_result_table,
         properties = {'result':relation(TaskResult, uselist=False),
-                      'logs':relation(LogRecipeTaskResult, backref='recipe'),
+                      'logs':relation(LogRecipeTaskResult, backref='parent'),
                      }
       )
 

@@ -4,6 +4,7 @@
        py:if="recipe_tasks">
  <tr class="list">
   <th class="list">Name</th>
+  <th class="list">Logs</th>
   <th class="list">Start</th>
   <th class="list">Finish</th>
   <th class="list">Duration</th>
@@ -23,6 +24,7 @@
    ?>
    <span py:if="recipe_task.is_task()">
    <td class="list ${result}">${recipe_task.link}</td>
+   <td class="list ${result}"><br py:for="log in recipe_task.logs">${log.link}</br></td>
    <td class="list ${result}">${recipe_task.start_time}</td>
    <td class="list ${result}">${recipe_task.finish_time}</td>
    <td class="list ${result}">${recipe_task.duration}</td>
@@ -32,21 +34,13 @@
    </span>
    <span py:if="recipe_task.is_result()">
    <td class="list ${result}">&nbsp;&nbsp;${recipe_task.short_path}</td>
+   <td class="list ${result}"><br py:for="log in recipe_task.logs">${log.link}</br></td>
    <td class="list ${result}">${recipe_task.start_time}</td>
    <td class="list ${result}">&nbsp;</td>
    <td class="list ${result}">&nbsp;</td>
    <td class="list ${result}">&nbsp;</td>
    <td class="list ${result}">${recipe_task.result}</td>
    <td class="list ${result}">${recipe_task.score}</td>
-   </span>
-   <span py:if="recipe_task.is_log()">
-   <td class="list ${result}">&nbsp;&nbsp;${recipe_task.link}</td>
-   <td class="list ${result}">${recipe_task.start_time}</td>
-   <td class="list ${result}">&nbsp;</td>
-   <td class="list ${result}">&nbsp;</td>
-   <td class="list ${result}">&nbsp;</td>
-   <td class="list ${result}">&nbsp;</td>
-   <td class="list ${result}">&nbsp;</td>
    </span>
  </tr>
 </table>

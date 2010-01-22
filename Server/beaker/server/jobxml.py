@@ -149,6 +149,10 @@ class XmlRecipe(ElementWrapper):
             return self.get_xml_attr('kernel_options', unicode, None)
         elif attrname == 'kernel_options_post':
             return self.get_xml_attr('kernel_options_post', unicode, None)
+        elif attrname == 'whiteboard':
+            return self.get_xml_attr('whiteboard', unicode, None)
+        elif attrname == 'kickstart':
+            return self.get_xml_attr('kickstart', unicode, None)
         else: raise AttributeError, attrname
 
 class XmlRecipeMachine(XmlRecipe):

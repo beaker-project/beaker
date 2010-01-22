@@ -25,7 +25,7 @@
   </tr>
   <tr>
    <td class="title"><b>Queued</b></td>
-   <td class="value"></td>
+   <td class="value">${recipe.recipeset.queue_time}</td>
    <td class="title"><b>Started</b></td>
    <td class="value">${recipe.start_time}</td>
   </tr>
@@ -47,7 +47,7 @@
   </tr>
   <tr>
    <td class="title"><b>Logs</b></td>
-   <td class="value">Not Implemented Yet</td>
+   <td class="value logs"><br py:for="log in recipe.logs">${log.link}</br></td>
   </tr>
   <tr py:if="recipe.systems">
    <td class="title"><b>Possible Systems</b></td>
