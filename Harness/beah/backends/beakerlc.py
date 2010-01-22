@@ -313,6 +313,9 @@ class BeakerWriter(writers.CachingWriter):
         if not filename:
             raise exceptions.RuntimeError("empty filename passed!")
         self.filename = filename
+        # FIXME? I want to use file size for offset, but the file is remote, we
+        # do not know the size!
+        self.offset = 0
         if repr:
             self.repr = repr
         writers.CachingWriter.__init__(self, 4096)
@@ -322,13 +325,24 @@ class BeakerWriter(writers.CachingWriter):
         Calculate necessary fields and send.
         """
         size = len(cdata)
+        offs = self.offset
+        self.offset += size
         d = hashlib.md5()
         d.update(cdata)
         digest = d.hexdigest()
         data = event.encode("base64", cdata)
         return self.proxy.callRemote(self.method, self.id, self.path,
-                self.filename, str(size), digest, "-1", data)
+                self.filename, str(size), digest, offs, data)
 
+def make_writer_verbose(writer):
+    if not isinstance(writer, writers.Writer):
+        return
+    if 'trait_verbose' in dir(writer) and writer.trait_verbose:
+        return
+    writer.trait_verbose = True
+    writer.write = print_this(writer.write)
+    writer.send = print_this(writer.send)
+    return
 
 class BeakerLCBackend(ExtBackend):
 
@@ -503,6 +517,8 @@ class BeakerLCBackend(ExtBackend):
         if writer is None:
             writer = constructor(filename=name, id=id, proxy=self.proxy,
                     *constructor_args, **constructor_kwargs)
+            if self.verbose_cls:
+                make_writer_verbose(writer)
             self.__writers[id][name] = writer
         return writer
 
@@ -514,7 +530,7 @@ class BeakerLCBackend(ExtBackend):
             del self.__writers[id]
 
     def pre_proc(self, evt):
-        id = self.get_evt_task_id(evt)
+        id = evt.task_id = self.get_evt_task_id(evt)
         if id is None:
             return False
         if evt.event() == 'file_write':
@@ -526,13 +542,11 @@ class BeakerLCBackend(ExtBackend):
         return False
 
     def proc_evt_output(self, evt):
-        id = self.get_evt_task_id(evt)
-        self.get_writer(id, 'task_output_%s' % evt.arg('out_handle'),
-                BeakerWriter).write(evt.arg('data'))
+        self.get_writer(evt.task_id, 'task_output_%s' % evt.arg('out_handle'),
+                BeakerWriter).write(str(evt.arg('data')))
 
     def proc_evt_lose_item(self, evt):
-        id = self.get_evt_task_id(evt)
-        self.get_writer(id, 'task_beah_unexpected',
+        self.get_writer(evt.task_id, 'task_beah_unexpected',
                 BeakerWriter).write(str(evt.arg('data')))
 
     def proc_evt_log(self, evt):
@@ -547,7 +561,7 @@ class BeakerLCBackend(ExtBackend):
             if rc!=ECHO.OK:
                 # FIXME: Start was not issued. Is it OK?
                 self.proxy.callRemote(self.TASK_STOP,
-                        self.get_evt_task_id(evt),
+                        evt.task_id,
                         # FIXME: This is not correct, is it?
                         self.stop_type("Cancel"),
                         self.mk_msg(reason="Harness could not run the task.",
@@ -556,13 +570,14 @@ class BeakerLCBackend(ExtBackend):
                                     # FIXME: addErrback(...) needed!
 
     def proc_evt_start(self, evt):
-        self.proxy.callRemote(self.TASK_START, self.get_evt_task_id(evt), 0)
+        self.proxy.callRemote(self.TASK_START, evt.task_id, 0)
         # FIXME: start local watchdog
 
     def proc_evt_end(self, evt):
-        self.close_writers(evt.arg('task_id'))
+        id = evt.task_id
+        self.close_writers(id)
         self.proxy.callRemote(self.TASK_STOP,
-                self.get_evt_task_id(evt),
+                id,
                 self.stop_type(evt.arg("rc", None)),
                 self.mk_msg(event=evt)) \
                         .addCallback(self.handle_Stop)
@@ -571,7 +586,7 @@ class BeakerLCBackend(ExtBackend):
     def proc_evt_result(self, evt):
         try:
             self.proxy.callRemote(self.TASK_RESULT,
-                    self.get_evt_task_id(evt),
+                    evt.task_id,
                     self.result_type(evt.arg("rc", None))[0],
                     evt.arg("handle", "%s/%s" % \
                             (self.task_data['task_env']['TASKNAME'], evt.id())),
@@ -672,7 +687,7 @@ class BeakerLCBackend(ExtBackend):
             filename = finfo.get('name',
                     self.task_data['task_env']['TASKNAME'] + '/' + fid)
             method = 'task_upload_file'
-            id = self.get_evt_task_id(evt)
+            id = evt.task_id
             if finfo.has_key('be:upload_as'):
                 upload_as = finfo['be:upload_as']
                 if upload_as[0] == 'result_file':
