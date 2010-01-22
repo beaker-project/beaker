@@ -6,7 +6,7 @@
 %endif
 
 Name:           beaker
-Version:        0.4.78
+Version:        0.4.79
 Release:        0%{?timestamp}%{?branch}%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
@@ -193,6 +193,9 @@ fi
 /usr/share/man/man1/beakerlib*
 
 %changelog
+* Fri Jan 22 2010 Bill Peck <bpeck@redhat.com> - 0.4.79-0
+- rename table key to key_, key is a reserved word.
+- shorten key_name value to varchar(50) to support mysql Unique column limitation.
 * Wed Jan 20 2010 Bill Peck <bpeck@redhat.com> - 0.4.78-0
 - Remove redundant arch aliases
 * Wed Jan 13 2010 Bill Peck <bpeck@redhat.com> - 0.4.77-0

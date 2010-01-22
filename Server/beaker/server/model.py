@@ -467,10 +467,10 @@ note_table = Table('note', metadata,
     Column('text',TEXT, nullable=False)
 )
 
-key_table = Table('key', metadata,
+key_table = Table('key_', metadata,
     Column('id', Integer, autoincrement=True,
            nullable=False, primary_key=True),
-    Column('key_name', String(256), nullable=False, unique=True),
+    Column('key_name', String(50), nullable=False, unique=True),
     Column('numeric', Boolean, default=False),
 )
 
@@ -478,7 +478,7 @@ key_value_string_table = Table('key_value_string', metadata,
     Column('id', Integer, autoincrement=True,
            nullable=False, primary_key=True),
     Column('system_id', Integer, ForeignKey('system.id'), index=True),
-    Column('key_id', Integer, ForeignKey('key.id'), index=True),
+    Column('key_id', Integer, ForeignKey('key_.id'), index=True),
     Column('key_value',TEXT, nullable=False)
 )
 
@@ -486,7 +486,7 @@ key_value_int_table = Table('key_value_int', metadata,
     Column('id', Integer, autoincrement=True,
            nullable=False, primary_key=True),
     Column('system_id', Integer, ForeignKey('system.id'), index=True),
-    Column('key_id', Integer, ForeignKey('key.id'), index=True),
+    Column('key_id', Integer, ForeignKey('key_.id'), index=True),
     Column('key_value',Integer, nullable=False)
 )
 
