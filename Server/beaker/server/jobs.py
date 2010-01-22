@@ -148,6 +148,10 @@ class Jobs(RPCRoot):
             recipe.guestargs = xmlrecipe.guestargs
         recipe.host_requires = xmlrecipe.hostRequires()
         recipe.distro_requires = xmlrecipe.distroRequires()
+        recipe.whiteboard = xmlrecipe.whiteboard
+        recipe.kickstart = xmlrecipe.kickstart
+        recipe.kernel_options = xmlrecipe.kernel_options
+        recipe.kernel_options_post = xmlrecipe.kernel_options_post
         for xmlrepo in xmlrecipe.iter_repos():
             recipe.repos.append(RecipeRepo(name=xmlrepo.name, url=xmlrepo.url))
         for xmltask in xmlrecipe.iter_tasks():
