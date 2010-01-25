@@ -60,7 +60,9 @@ mkdir -p /tmp/beah-new
 pushd /tmp/beah-new
 git clone "${BEAH_GIT_REPO:-"git://git.fedorahosted.org/git/beaker.git"}"
 cd beaker
+git reset --hard
 git checkout "${BEAH_GIT_BRANCH:-"origin/Scheduler"}"
+git pull origin Scheduler
 cd Harness
 rm -f bin/beah_python # FIXME: get rid of this relict... It must come from master branch.
 BEAH_DEV=".dev$(date "+%Y%m%d%H%M")" python setup.py install
