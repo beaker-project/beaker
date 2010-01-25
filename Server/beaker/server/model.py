@@ -2571,6 +2571,17 @@ class TaskBase(MappedObject):
         return div
     progress_bar = property(progress_bar)
 
+    def action_link(self):
+        """
+        Return action links depending on status
+        """
+        if self.is_finished():
+            return make_link(url = self.clone_link(),
+                            text = "Clone")
+        else:
+            return make_link(url = self.cancel_link(),
+                            text = "Cancel")
+
 
 class Job(TaskBase):
     """
@@ -2583,6 +2594,16 @@ class Job(TaskBase):
     def by_whiteboard(cls,desc):
         res = Job.query().filter_by(whiteboard = desc)
         return res
+
+    def clone_link(self):
+        """ return link to clone this job
+        """
+        return "/jobs/clone?id=%s" % self.id
+
+    def cancel_link(self):
+        """ return link to cancel this job
+        """
+        return "/jobs/cancel?id=%s" % self.id
 
     def to_xml(self):
         job = self.doc.createElement("job")
@@ -2782,6 +2803,16 @@ class Recipe(TaskBase):
     Also contains what tasks will be executed.
     """
     stop_types = ['abort','cancel']
+
+    def clone_link(self):
+        """ return link to clone this recipe
+        """
+        return "/recipes/clone?id=%s" % self.id
+
+    def cancel_link(self):
+        """ return link to cancel this recipe
+        """
+        return "/recipes/cancel?id=%s" % self.id
 
     def filepath(self):
         """
