@@ -7,7 +7,7 @@
 
 Name:           beaker
 Version:        0.4.79
-Release:        0%{?timestamp}%{?branch}%{?dist}
+Release:        1%{?timestamp}%{?branch}%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -146,6 +146,8 @@ ln -s Fedora.ks $RPM_BUILD_ROOT/var/lib/cobbler/kickstarts/Fedoradevelopment.ks
 /usr/share/man/man1/beakerlib*
 
 %changelog
+* Mon Jan 25 2010 Bill Peck <bpeck@redhat.com> - 0.4.79-1
+- add missing admin decorators to user methods
 * Fri Jan 22 2010 Bill Peck <bpeck@redhat.com> - 0.4.79-0
 - rename table key to key_, key is a reserved word.
 - shorten key_name value to varchar(50) to support mysql Unique column limitation.
