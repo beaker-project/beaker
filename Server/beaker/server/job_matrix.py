@@ -204,6 +204,7 @@ class JobMatrix:
                 result = item.lower()
                 sub_span = SubElement(elem,'span', {'class':'rounded-side-pad %s' % result}) 
                 SubElement(elem,'br')
-                sub_link = SubElement(sub_span,'a', {'style':'color:inherit;text-decoration:none'}, href=url('/matrix/test_report?id=')) 
-                sub_link.text = '%s: %s' % (item,how_many)
+                #sub_link = SubElement(sub_span,'a', {'style':'color:inherit;text-decoration:none'}, href=url('/matrix/test_report?id=')) 
+                #sub_link.text = '%s: %s' % (item,how_many)
+                sub_span.text = '%s: %s' % (item,how_many)
         return elem
