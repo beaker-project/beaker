@@ -40,6 +40,7 @@ more_data_files = glob_to('share/beah', [
     'examples/tests/rhtsex',
     'examples/tests/testargs',
     'beah-tests/beah_iptables',
+    'beah-tests/beah_update',
     #'tests', # FIXME: add some tests here!
     'doc',
     ])
