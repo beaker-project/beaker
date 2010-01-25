@@ -2483,7 +2483,7 @@ class Log(MappedObject):
         return False
 
     def result(self):
-        return self.recipe.result
+        return self.parent.result
 
     result = property(result)
 
@@ -2581,6 +2581,7 @@ class TaskBase(MappedObject):
         else:
             return make_link(url = self.cancel_link(),
                             text = "Cancel")
+    action_link = property(action_link)
 
 
 class Job(TaskBase):
