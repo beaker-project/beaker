@@ -33,6 +33,7 @@ class Users(RPCRoot):
         submit_text = _(u'Save'),
     )
 
+    @identity.require(identity.in_group("admin"))
     @expose(template='beaker.server.templates.form')
     def new(self, **kw):
         return dict(
@@ -42,6 +43,7 @@ class Users(RPCRoot):
             value = kw,
         )
 
+    @identity.require(identity.in_group("admin"))
     @expose(template='beaker.server.templates.form')
     def edit(self, id, **kw):
         user = User.by_id(id)
@@ -52,6 +54,7 @@ class Users(RPCRoot):
             value = user,
         )
 
+    @identity.require(identity.in_group("admin"))
     @expose()
     @error_handler(edit)
     def save(self, **kw):
@@ -81,6 +84,7 @@ class Users(RPCRoot):
                                          search_bar = None,
                                          list = users)
 
+    @identity.require(identity.in_group("admin"))
     @expose()
     def remove(self, id, **kw):
         user = User.by_id(id)

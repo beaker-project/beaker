@@ -279,29 +279,79 @@ rlFileBackup() {
         done
     fi
 
-    # parameter sanity
+    # check parameter sanity
     if [ -z "$1" ]; then
         rlLogError "rlFileBackup: Nothing to backup... supply a file or dir"
         return 2
     fi
 
+    # set the backup dir
+    if [ -z "$BEAKERLIB_DIR" ]; then
+        rlLogError "rlFileBackup: BEAKERLIB_DIR not set, run rlJournalStart first"
+        return 3
+    fi
+    local backup="$BEAKERLIB_DIR/backup"
+
     # create backup dir (unless it already exists)
-    if [ -z "$__INTERNAL_BACKUP_DIR" ]; then
-        if __INTERNAL_BACKUP_DIR=`mktemp -d /tmp/beakerlib-backup-XXXXXXXX`; then
-            rlLog "Backup dir created: $__INTERNAL_BACKUP_DIR"
+    if [ -d "$backup" ]; then
+        rlLogDebug "rlFileBackup: Backup dir ready: $backup"
+    else
+        if mkdir $backup; then
+            rlLogDebug "rlFileBackup: Backup dir created: $backup"
         else
             rlLogError "rlFileBackup: Creating backup dir failed"
-            return 3
+            return 4
         fi
-    else
-        rlLogDebug "rlFileBackup: Backup dir found: $__INTERNAL_BACKUP_DIR"
     fi
 
-    # run rhts-backup
-    RHTS_BACKUP_DIR="$__INTERNAL_BACKUP_DIR" rhts-backup "$@"
-    rc=$?
-    [ $rc -ne 0 ] && rlLogError "rlFileBackup: Backup creation failed"
-    return $rc
+    # do the actual backup
+    status=0
+    # detect selinux & acl support
+    [ -d "/selinux" ] && local selinux=true || local selinux=false
+    setfacl -m u:root:rwx $BEAKERLIB_DIR &>/dev/null \
+            && local acl=true || local acl=false
+    for file in "$@"; do
+        # convert relative path to absolute, remove trailing slash
+        file=$(readlink -f "$file")
+        path=$(dirname "$file")
+
+        # create path
+        if ! mkdir -p "${backup}${path}"; then
+            rlLogError "rlFileBackup: Cannot create ${backup}${path} directory."
+            status=5
+            continue
+        fi
+
+        # copy files
+        if ! cp -fa "$file" "${backup}${path}"; then
+            rlLogError "rlFileBackup: Failed to copy $file to ${backup}${path}."
+            status=6
+            continue
+        fi
+
+        # preserve path attributes
+        dir="$path"
+        failed=false
+        while true; do
+            $acl && { getfacl "$dir" | setfacl --set-file=- "${backup}${dir}" || failed=true; }
+            $selinux && { chcon --reference "$dir" "${backup}${dir}" || failed=true; }
+            chown --reference "$dir" "${backup}${dir}" || failed=true
+            chmod --reference "$dir" "${backup}${dir}" || failed=true
+            touch --reference "$dir" "${backup}${dir}" || failed=true
+            [ "$dir" == "/" ] && break
+            dir=$(dirname "$dir")
+        done
+        if $failed; then
+            rlLogError "rlFileBackup: Failed to preserve all attributes for backup path ${backup}${path}."
+            status=7
+            continue
+        fi
+
+        # everything ok
+        rlLogDebug "rlFileBackup: $file successfully backed up to $backup"
+    done
+
+    return $status
 }
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -325,24 +375,38 @@ Returns 0 if backup dir is found and files are restored successfully.
 =cut
 
 rlFileRestore() {
-    if [ ! -z "$__INTERNAL_BACKUP_CLEAN" ]; then
-        rlLogDebug "rlFileRestore: Cleaning clean list '$__INTERNAL_BACKUP_CLEAN'"
+    # check for backup dir first
+    backup="$BEAKERLIB_DIR/backup"
+    if [ -d "$backup" ]; then
+        rlLogDebug "rlFileRestore: Backup dir ready: $backup"
+    else
+        rlLogError "rlFileRestore: Cannot find backup in $backup"
+        return 1
+    fi
+
+    # clean up if required
+    if [ -n "$__INTERNAL_BACKUP_CLEAN" ]; then
         local oldIFS="$IFS"
         IFS=$'\x0A'
-        for i in $(echo -e $__INTERNAL_BACKUP_CLEAN); do
-            ###rlLogDebug "rlFileRestore: ... '$i'"
-            rm -rf "$i"
+        for path in $(echo -e $__INTERNAL_BACKUP_CLEAN); do
+            if rm -rf "$path"; then
+                rlLogDebug "rlFileRestore: Cleaning $path successful"
+            else
+                rlLogError "rlFileRestore: Failed to clean $path"
+            fi
         done
         IFS="$oldIFS"
     fi
-    if [ -z "$__INTERNAL_BACKUP_DIR" ]; then
-        rlLogError "rlFileRestore: Cannot find any backup"
-        return 1
+
+    # restore the files
+    if cp -fa "$backup"/* /; then
+        rlLogDebug "rlFileRestore: Restoring files from $backup successful"
     else
-        rlLogDebug "rlFileRestore: Backup dir found: $__INTERNAL_BACKUP_DIR"
+        rlLogError "rlFileRestore: Failed to restore files from $backup"
+        return 2
     fi
 
-    RHTS_BACKUP_DIR="$__INTERNAL_BACKUP_DIR" rhts-restore
+    return 0
 }
 
 

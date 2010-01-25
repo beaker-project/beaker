@@ -21,12 +21,18 @@
 # run with DEBUG=1 to get more details about progress
 
 BackupSanityTest() {
-    [ -d "/selinux" ] && selinux=true || selinux=false
+    # detect selinux & acl support
+    [ -d "/selinux" ] && local selinux=true || local selinux=false
+    setfacl -m u:root:rwx $BEAKERLIB_DIR &>/dev/null \
+            && local acl=true || local acl=false
+    [ -d "$BEAKERLIB_DIR" ] && chmod -R 777 "$BEAKERLIB_DIR" \
+            && rm -rf "$BEAKERLIB_DIR" && rlJournalStart
     score=0
 
     list() {
         ls -ld --full-time directory
         ls -lL --full-time directory
+        $acl && getfacl -R directory
         $selinux && ls -Z directory
         cat directory/content
     }
@@ -50,13 +56,14 @@ BackupSanityTest() {
     mkdir -p sub/sub/dir
     mkdir 'dir with spaces'
     mkdir 'another dir with spaces'
-    touch file permissions ownership times context
+    touch file permissions ownership times context acl
     echo "hello" >content
     ln file hardlink
     ln -s file softlink
     chmod 750 permissions
     chown nobody.nobody ownership
     touch --reference /var/www times
+    $acl && setfacl -m u:root:rwx acl
     $selinux && chcon --reference /var/www context
     popd >/dev/null
 
@@ -87,11 +94,31 @@ BackupSanityTest() {
     chown nobody file
     touch times
     chmod 777 permissions
+    $acl && setfacl -m u:root:---
     $selinux && chcon --reference /home context
     popd >/dev/null
     rlFileRestore || fail "Restore attributes"
     list >attributes
     diff original attributes || fail "Restore attributes not ok, differences found"
+
+    # acl check for correct path restore
+    if $acl; then
+        mess "Checking that path ACL is correctly restored"
+        # create acldir with modified ACL
+        pushd directory >/dev/null
+        mkdir acldir
+        touch acldir/content
+        setfacl -m u:root:--- acldir
+        popd >/dev/null
+        list >original
+        # backup it's contents (not acldir itself)
+        rlFileBackup directory/acldir/content
+        rm -rf directory/acldir
+        # restore & check for differences
+        rlFileRestore || fail "Restore path ACL"
+        list >acl
+        diff original acl || fail "Restoring correct path ACL not ok"
+    fi
 
     # clean up
     popd >/dev/null
@@ -103,7 +130,6 @@ BackupSanityTest() {
 
 
 test_rlFileBackupAndRestore() {
-    unset __INTERNAL_BACKUP_DIR
     assertFalse "rlFileRestore should fail when no backup was done" \
         'rlFileRestore'
     assertTrue "rlFileBackup should fail and return 2 when no file/dir given" \
@@ -117,10 +143,10 @@ test_rlFileBackupAndRestore() {
         BackupSanityTest >/dev/null 2>&1
     fi
     assertTrue "rlFileBackup & rlFileRestore sanity test (needs to be root to run this)" $?
+    chmod -R 777 "$BEAKERLIB_DIR/backup" && rm -rf "$BEAKERLIB_DIR/backup"
 }
 
 test_rlFileBackupCleanAndRestore() {
-    unset __INTERNAL_BACKUP_DIR
     test_dir=$(mktemp -d /tmp/beakerlib-test-XXXXXX)
     date > "$test_dir/date1"
     date > "$test_dir/date2"
@@ -142,10 +168,10 @@ test_rlFileBackupCleanAndRestore() {
         "ls '$test_dir/date1'"
     assertFalse "rlFileBackup with '--clean' option removes" \
         "ls '$test_dir/date3'"
+    chmod -R 777 "$BEAKERLIB_DIR/backup" && rm -rf "$BEAKERLIB_DIR/backup"
 }
 
 test_rlFileBackupCleanAndRestoreWhitespace() {
-    unset __INTERNAL_BACKUP_DIR
     test_dir=$(mktemp -d '/tmp/beakerlib-test-XXXXXX')
     mkdir "$test_dir/noclean"
     mkdir "$test_dir/noclean clean"
@@ -174,6 +200,7 @@ test_rlFileBackupCleanAndRestoreWhitespace() {
         "ls '$test_dir/noclean/date3'"
     assertFalse "rlFileBackup with '--clean' remove in dir with spaces" \
         "ls '$test_dir/noclean clean/date4'"
+    chmod -R 777 "$BEAKERLIB_DIR/backup" && rm -rf "$BEAKERLIB_DIR/backup"
 }
 
 
