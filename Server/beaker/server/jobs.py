@@ -46,11 +46,22 @@ class Jobs(RPCRoot):
     recipe_tasks_widget = RecipeTasksWidget()
 
     upload = widgets.FileField(name='job_xml', label='Job XML')
+    hidden_id = widgets.HiddenField(name='id')
+    confirm = widgets.Label(name='confirm', default="Are you sure you want to cancel?")
+    message = widgets.TextArea(name='msg', label=_(u'Reason?'), help=_(u'Optional'))
+
     form = widgets.TableForm(
         'jobs',
         fields = [upload],
         action = 'save_data',
         submit_text = _(u'Submit Data')
+    )
+
+    cancel_form = widgets.TableForm(
+        'cancel_job',
+        fields = [hidden_id, message, confirm],
+        action = 'really_cancel',
+        submit_text = _(u'Yes')
     )
 
     @expose(template='beaker.server.templates.form-post')
@@ -204,6 +215,45 @@ class Jobs(RPCRoot):
 		     widgets.PaginateDataGrid.Column(name='action', getter=lambda x:x.action_link, title='Action', options=dict(sortable=False)),
                     ])
         return dict(title="Jobs", grid=jobs_grid, list=jobs, search_bar=None)
+
+    @identity.require(identity.not_anonymous())
+    @expose()
+    def really_cancel(self, id, msg=None):
+        """
+        Confirm cancel job
+        """
+        try:
+            job = Job.by_id(id)
+        except InvalidRequestError:
+            flash(_(u"Invalid job id %s" % id))
+            redirect(".")
+        if not identity.current.user.is_admin() and job.owner != identity.current.user:
+            flash(_(u"You don't have permission to cancel job id %s" % id))
+        job.cancel(msg)
+        flash(_(u"Successfully cancelled job %s" % id))
+        redirect(".")
+
+    @identity.require(identity.not_anonymous())
+    @expose(template="beaker.server.templates.form")
+    def cancel(self, id):
+        """
+        Confirm cancel job
+        """
+        try:
+            job = Job.by_id(id)
+        except InvalidRequestError:
+            flash(_(u"Invalid job id %s" % id))
+            redirect(".")
+        if not identity.current.user.is_admin() and job.owner != identity.current.user:
+            flash(_(u"You don't have permission to cancel job id %s" % id))
+        return dict(
+            title = 'Cancel Job %s' % id,
+            form = self.cancel_form,
+            action = './really_cancel',
+            options = {},
+            value = dict(id = job.id,
+                         confirm = 'really cancel job %s?' % id),
+        )
 
     @expose(template="beaker.server.templates.job")
     def view(self, id):

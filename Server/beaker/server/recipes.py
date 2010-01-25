@@ -43,6 +43,17 @@ class Recipes(RPCRoot):
     # For XMLRPC methods in this class.
     exposed = True
 
+    hidden_id = widgets.HiddenField(name='id')
+    confirm = widgets.Label(name='confirm', default="Are you sure you want to cancel?")
+    message = widgets.TextArea(name='msg', label=_(u'Reason?'), help=_(u'Optional'))
+
+    cancel_form = widgets.TableForm(
+        'cancel_recipe',
+        fields = [hidden_id, message, confirm],
+        action = 'really_cancel',
+        submit_text = _(u'Yes')
+    )
+
     tasks = RecipeTasks()
 
     recipe_widget = RecipeWidget()
@@ -132,8 +143,48 @@ class Recipes(RPCRoot):
 		     widgets.PaginateDataGrid.Column(name='progress', getter=lambda x: x.progress_bar, title='Progress', options=dict(sortable=False)),
 		     widgets.PaginateDataGrid.Column(name='status.status', getter=lambda x:x.status, title='Status', options=dict(sortable=True)),
 		     widgets.PaginateDataGrid.Column(name='result.result', getter=lambda x:x.result, title='Result', options=dict(sortable=True)),
+                     widgets.PaginateDataGrid.Column(name='action', getter=lambda x:x.action_link, title='Action', options=dict(sortable=False)),
                     ])
         return dict(title="Recipes", grid=recipes_grid, list=recipes, search_bar=None)
+
+    @identity.require(identity.not_anonymous())
+    @expose()
+    def really_cancel(self, id, msg=None):
+        """
+        Confirm cancel recipe
+        """
+        try:
+            recipe = Recipe.by_id(id)
+        except InvalidRequestError:
+            flash(_(u"Invalid recipe id %s" % id))
+            redirect(".")
+        if not identity.current.user.is_admin() and recipe.recipeset.job.owner != identity.current.user:
+            flash(_(u"You don't have permission to cancel recipe id %s" % id))
+        recipe.cancel(msg)
+        flash(_(u"Successfully cancelled recipe %s" % id))
+        redirect(".")
+
+    @identity.require(identity.not_anonymous())
+    @expose(template="beaker.server.templates.form")
+    def cancel(self, id):
+        """
+        Confirm cancel recipe
+        """
+        try:
+            recipe = Recipe.by_id(id)
+        except InvalidRequestError:
+            flash(_(u"Invalid recipe id %s" % id))
+            redirect(".")
+        if not identity.current.user.is_admin() and recipe.recipeset.job.owner != identity.current.user:
+            flash(_(u"You don't have permission to cancel recipe id %s" % id))
+        return dict(
+            title = 'Cancel Recipe %s' % id,
+            form = self.cancel_form,
+            action = './really_cancel',
+            options = {},
+            value = dict(id = recipe.id,
+                         confirm = 'really cancel recipe %s?' % id),
+        )
 
     @expose(template="beaker.server.templates.recipe")
     def view(self, id):
