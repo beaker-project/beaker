@@ -80,7 +80,7 @@ $(document).ready(function() {
                 <li py:if="not tg.identity.anonymous"><a href="${tg.url('/prefs/')}">${tg.identity.user_name}'s Prefs</a></li>
                 <li py:if="not tg.identity.anonymous"><a href="${tg.url('/mine/')}">${tg.identity.user_name}'s Home</a></li>
                 <li py:if="not tg.identity.anonymous"><a href="${tg.url('/')}">Reporting</a></li>
-                <ul>
+                <ul py:if="not tg.identity.anonymous">
                   <li><a href="${tg.url('/matrix')}">Job Matrix</a></li>  
                 </ul>
                 <li py:if="not tg.identity.anonymous and not 'admin' in tg.identity.groups"><a href="${tg.url('/groups')}">Groups</a></li>
