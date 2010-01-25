@@ -83,7 +83,7 @@ class Jobs(RPCRoot):
         xml = xmltramp.parse(job_xml)
         xmljob = XmlJob(xml)
         try:
-            job = self.process_xmljob(xmljob,identity.current.user_id)
+            job = self.process_xmljob(xmljob,identity.current.user)
         except BeakerException, err:
             session.rollback()
             raise
@@ -103,7 +103,7 @@ class Jobs(RPCRoot):
         xml = xmltramp.parse(job_xml.file.read())
         xmljob = XmlJob(xml)
         try:
-            job = self.process_xmljob(xmljob,identity.current.user_id)
+            job = self.process_xmljob(xmljob,identity.current.user)
         except BeakerException, err:
             session.rollback()
             flash(_(u'Failed to import job because of %s' % err ))
@@ -118,9 +118,9 @@ class Jobs(RPCRoot):
         flash(_(u'Success! job id: %s' % job.id))
         redirect(".")
 
-    def process_xmljob(self, xmljob, userid):
+    def process_xmljob(self, xmljob, user):
         job = Job(whiteboard='%s' % xmljob.whiteboard, ttasks=0,
-                  owner_id=userid)
+                  owner=user)
         for xmlrecipeSet in xmljob.iter_recipeSets():
             recipeSet = RecipeSet(ttasks=0)
             for xmlrecipe in xmlrecipeSet.iter_recipes():
