@@ -1,0 +1,48 @@
+.margined {
+  margin:1.25em 1.25em 1.25em 0; 
+}
+
+input.submit-button {
+  margin-left:20em;
+  margin-top:2em;
+  margin-bottom:2em;
+}
+
+.result-box { 
+  color: white;
+  font-size: 1.5em;
+  margin-top: 0.25em;
+  margin-bottom:0.25em
+} 
+
+.rounded-side-pad {
+  -moz-border-radius: 0.35em;
+  -webkit-border-radius: 0.35em;
+  border-radius: 0.25em;
+  padding-left:0.25em;
+  padding-right:0.25em
+}
+
+.inline {
+display:inline
+}
+
+.pass {
+  background-color: green;
+}
+
+.fail {
+  background-color:red;
+}
+
+.warn {
+  background-color:orange;
+}
+
+.new {
+  background-color:blue
+}
+
+.panic {
+  background-color:black
+}

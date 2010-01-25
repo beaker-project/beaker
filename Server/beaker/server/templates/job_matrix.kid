@@ -5,27 +5,29 @@
 $(document).ready( function() {
     $('#remote_form_whiteboard_filter').blur(function () { filter_on_whiteboard()  } )
 })
+
 </script>
 </head>
 <div style='padding-left:2em'>
 <form action='${action}' name="${name}">  
 
-     <div style='float:left;padding-right:5em'> 
+     <div style='float:left'> 
          <h3 style="display:inline"> ${whiteboard.label}</h3><br />
-         <div onclick="javascript:clicked_whiteboard()" py:content="whiteboard.display(options=whiteboard_options)" />   
+         <div class='margined' onclick="javascript:clicked_whiteboard()" py:content="whiteboard.display(options=whiteboard_options)" />   
 
          <strong class='smallfont'>${whiteboard_filter.label}</strong>
          <span style='display:inline'  py:content='whiteboard_filter.display()' />
+
      </div>
    
      <div> 
         <h3 style="display:inline">${job_ids.label}</h3><br />
-        <div onclick="javascript:clicked_jobs()" py:content="job_ids.display(value=job_ids_vals)" /> 
+        <div class='margined'  onclick="javascript:clicked_jobs()" py:content="job_ids.display(value=job_ids_vals)" /> 
      </div>
    
-    <div style='padding:2em 0 2em 0'> 
-      <input type='submit' value='Generate' />
-    </div>  
+      <br /> 
+      <input class='submit-button' type='submit' value='Generate' />
+  
     <div py:if="grid"> 
       ${grid.display(list)} 
     </div>

@@ -1,6 +1,5 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-<?python import sitetemplate ?>
-<html xmlns="http://www.w3.org/1999/xhtml" xmlns:py="http://purl.org/kid/ns#" py:extends="sitetemplate">
+<?python import sitetemplate ?><html xmlns="http://www.w3.org/1999/xhtml" xmlns:py="http://purl.org/kid/ns#" py:extends="sitetemplate">
 
 <head py:match="item.tag=='{http://www.w3.org/1999/xhtml}head'" py:attrs="item.items()">
     <meta content="text/html; charset=UTF-8" http-equiv="content-type" py:replace="''"/>
@@ -71,8 +70,7 @@ $(document).ready(function() {
                             <li><a href="${tg.url('/powertypes')}">Power Types</a></li>
                             <li><a href="${tg.url('/keytypes')}">Key Types</a></li>
                             <li><a href="${tg.url('/csv/csv_import')}">Import</a></li>
-                            <li><a href="${tg.url('/csv')}">Export</a></li>
-                            <li><a href="${tg.url('/matrix')}">Job Matrix</a></li>
+                            <li><a href="${tg.url('/csv')}">Export</a></li> 
                             <li><a href="${tg.url('/osversions')}">OS Versions</a></li>
                         </ul>
                     </div>
@@ -81,6 +79,10 @@ $(document).ready(function() {
             <ul id="fedora-side-nav"> 
                 <li py:if="not tg.identity.anonymous"><a href="${tg.url('/prefs/')}">${tg.identity.user_name}'s Prefs</a></li>
                 <li py:if="not tg.identity.anonymous"><a href="${tg.url('/mine/')}">${tg.identity.user_name}'s Home</a></li>
+                <li py:if="not tg.identity.anonymous"><a href="${tg.url('/')}">Reporting</a></li>
+                <ul>
+                  <li><a href="${tg.url('/matrix')}">Job Matrix</a></li>  
+                </ul>
                 <li py:if="not tg.identity.anonymous and not 'admin' in tg.identity.groups"><a href="${tg.url('/groups')}">Groups</a></li>
                 <li py:if="not tg.identity.anonymous"><a href="${tg.url('/available/')}">Available Systems</a></li>
                 <li py:if="not tg.identity.anonymous"><a href="${tg.url('/free/')}">Free Systems</a></li>

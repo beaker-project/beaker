@@ -2,6 +2,7 @@ from sqlalchemy import select, distinct, Table, Column, Integer, String
 from sqlalchemy.sql.expression import case, func, and_, bindparam
 from turbogears import controllers, identity, expose, url, database
 from turbogears.database import session, metadata, mapper
+from kid import Element, SubElement
 from beaker.server.widgets import JobMatrixReport as JobMatrixWidget, myDataGrid
 
 import model
@@ -68,11 +69,10 @@ class JobMatrix:
           for elem in x:
               val = getattr(elem,'arch',None)
               if val is not None:
-                  if val == this_arch: 
-                      return 'Pass:%s Fail:%s Warn:%s' % (elem.Pass,elem.Fail,elem.Warn) 
-                 
+                  if val == this_arch:
+                      return_text =  cls.make_result_box('New Pass Warn Fail Panic',elem)
+                      return return_text
       return f      
-
     @classmethod
     def _job_grid_fields(self,arches_used,**kw):
         fields = [] 
@@ -106,11 +106,11 @@ class JobMatrix:
         for recipe,arch in recipes:     
             whiteboard_data[arch] = recipe.whiteboard 
 
-        case0 = case([(model.task_result_table.c.result == 'New',1)],else_=0)
-        case1 = case([(model.task_result_table.c.result == 'Pass',1)],else_=0)
-        case2 = case([(model.task_result_table.c.result == 'Warn',1)],else_=0)
-        case3 = case([(model.task_result_table.c.result == 'Fail',1)],else_=0)
-        case4 = case([(model.task_result_table.c.result == 'Panic',1)],else_=0) 
+        case0 = case([(model.task_result_table.c.result == u'New',1)],else_=0)
+        case1 = case([(model.task_result_table.c.result == u'Pass',1)],else_=0)
+        case2 = case([(model.task_result_table.c.result == u'Warn',1)],else_=0)
+        case3 = case([(model.task_result_table.c.result == u'Fail',1)],else_=0)
+        case4 = case([(model.task_result_table.c.result == u'Panic',1)],else_=0) 
     
         arch_alias = model.arch_table.alias()
         recipe_table_alias = model.recipe_table.alias()
@@ -191,3 +191,19 @@ class JobMatrix:
             result_data.append(my_tuple)
  
         return result_data 
+
+    @classmethod
+    def make_result_box(cls,returns,query_obj,result=None):
+        #if result is None:
+        #    result = text.lower()
+        elem = Element('div',{'class' : 'result-box'})
+        items = returns.split()
+        for item in items:
+            how_many = getattr(query_obj,item,None)
+            if how_many is not None and how_many > 0:            
+                result = item.lower()
+                sub_span = SubElement(elem,'span', {'class':'rounded-side-pad %s' % result}) 
+                SubElement(elem,'br')
+                sub_link = SubElement(sub_span,'a', {'style':'color:inherit;text-decoration:none'}, href=url('/matrix/test_report?id=')) 
+                sub_link.text = '%s: %s' % (item,how_many)
+        return elem

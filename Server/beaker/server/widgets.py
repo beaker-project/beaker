@@ -139,6 +139,7 @@ class JobMatrixWidgets(WidgetsList):
 
 class JobMatrixReport(Form):     
     javascript = [LocalJSLink('beaker', '/static/javascript/job_matrix.js')]
+    css = [LocalCSSLink('beaker','/static/css/job_matrix.css')] 
     template = 'beaker.server.templates.job_matrix' 
     member_widgets = ['whiteboard','job_ids','generate_button'] 
     params = ['list','whiteboard_filter','whiteboard_options','job_ids_vals']
