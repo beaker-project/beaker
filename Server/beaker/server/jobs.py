@@ -49,6 +49,7 @@ class Jobs(RPCRoot):
     hidden_id = widgets.HiddenField(name='id')
     confirm = widgets.Label(name='confirm', default="Are you sure you want to cancel?")
     message = widgets.TextArea(name='msg', label=_(u'Reason?'), help=_(u'Optional'))
+    job_input = widgets.TextArea(name='job', label=_(u'Job XML'))
 
     form = widgets.TableForm(
         'jobs',
@@ -62,6 +63,12 @@ class Jobs(RPCRoot):
         fields = [hidden_id, message, confirm],
         action = 'really_cancel',
         submit_text = _(u'Yes')
+    )
+
+    job_form = widgets.TableForm(
+        'job',
+        fields = [job_input],
+        submit_text = _(u'Schedule')
     )
 
     @expose(template='beaker.server.templates.form-post')
@@ -233,6 +240,25 @@ class Jobs(RPCRoot):
         job.cancel(msg)
         flash(_(u"Successfully cancelled job %s" % id))
         redirect(".")
+
+    @identity.require(identity.not_anonymous())
+    @expose(template="beaker.server.templates.form")
+    def clone(self, id):
+        """
+        Review cloned xml before submitting it.
+        """
+        try:
+            job = Job.by_id(id)
+        except InvalidRequestError:
+            flash(_(u"Invalid job id %s" % id))
+            redirect(".")
+        return dict(
+            title = 'Clone Job %s' % id,
+            form = self.job_form,
+            action = './really_clone',
+            options = {},
+            value = dict(job = "%s" % job.to_xml(clone=True).toprettyxml()),
+        )
 
     @identity.require(identity.not_anonymous())
     @expose(template="beaker.server.templates.form")
