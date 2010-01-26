@@ -318,7 +318,7 @@ class BeakerWriter(writers.CachingWriter):
         self.offset = 0
         if repr:
             self.repr = repr
-        writers.CachingWriter.__init__(self, 4096)
+        writers.CachingWriter.__init__(self, 4096, True)
 
     def send(self, cdata):
         """

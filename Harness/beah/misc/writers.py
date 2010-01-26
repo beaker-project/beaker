@@ -29,9 +29,17 @@ class Writer(object):
 
 class CachingWriter(Writer):
 
-    def __init__(self, capacity=4096):
+    def __init__(self, capacity=4096, no_split=False):
         self.capacity = capacity
+        if no_split:
+            self.write = self.write_ns
         self.buffer = ""
+
+    def write_ns(self, obj):
+        self.buffer += self.repr(obj)
+        if len(self.buffer) >= self.capacity:
+            self.send(self.buffer)
+            self.buffer = ""
 
     def write(self, obj):
         self.buffer += self.repr(obj)
@@ -87,4 +95,26 @@ if __name__ == '__main__':
     assertf(l, ['0123', '4567', '8901', '2', '0123'])
     wr.close()
     assertf(l, ['0123', '4567', '8901', '2', '0123', '45'])
+
+    l = []
+    wr = CachingWriter(4, True)
+    wr.repr = lambda obj: "%s" % obj
+    wr.send = l.append
+    wr.write('0')
+    assertf(l, [])
+    wr.write('12')
+    assertf(l, [])
+    wr.write('345678')
+    assertf(l, ['012345678'])
+    wr.write('0')
+    assertf(l, ['012345678'])
+    wr.write('1')
+    assertf(l, ['012345678'])
+    wr.write('2')
+    assertf(l, ['012345678'])
+    wr.write('3')
+    assertf(l, ['012345678', '0123'])
+    wr.write('012')
+    wr.close()
+    assertf(l, ['012345678', '0123', '012'])
 
