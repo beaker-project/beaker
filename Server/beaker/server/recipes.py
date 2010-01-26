@@ -160,6 +160,7 @@ class Recipes(RPCRoot):
             redirect(".")
         if not identity.current.user.is_admin() and recipe.recipeset.job.owner != identity.current.user:
             flash(_(u"You don't have permission to cancel recipe id %s" % id))
+            redirect(".")
         recipe.cancel(msg)
         flash(_(u"Successfully cancelled recipe %s" % id))
         redirect(".")
@@ -177,6 +178,7 @@ class Recipes(RPCRoot):
             redirect(".")
         if not identity.current.user.is_admin() and recipe.recipeset.job.owner != identity.current.user:
             flash(_(u"You don't have permission to cancel recipe id %s" % id))
+            redirect(".")
         return dict(
             title = 'Cancel Recipe %s' % id,
             form = self.cancel_form,

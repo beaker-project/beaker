@@ -229,6 +229,7 @@ class Jobs(RPCRoot):
             redirect(".")
         if not identity.current.user.is_admin() and job.owner != identity.current.user:
             flash(_(u"You don't have permission to cancel job id %s" % id))
+            redirect(".")
         job.cancel(msg)
         flash(_(u"Successfully cancelled job %s" % id))
         redirect(".")
@@ -246,6 +247,7 @@ class Jobs(RPCRoot):
             redirect(".")
         if not identity.current.user.is_admin() and job.owner != identity.current.user:
             flash(_(u"You don't have permission to cancel job id %s" % id))
+            redirect(".")
         return dict(
             title = 'Cancel Job %s' % id,
             form = self.cancel_form,
