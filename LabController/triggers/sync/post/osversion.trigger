@@ -10,7 +10,7 @@ import xmlrpclib
 import cpioarchive
 import string
 from cobbler import utils
-from ConfigParser import ConfigParser
+import ConfigParser
 
 def rpm2cpio(rpm_file, out=sys.stdout, bufsize=2048):
     """Performs roughly the equivalent of rpm2cpio(8).
@@ -176,28 +176,34 @@ def update_comment(distro):
     except rpmUtils.RpmUtilsError, e:
         print "Warning, %s" % e
     if os.path.exists("%s/../../.composeinfo" % paths['tree_path']):
-        parser = ConfigParser()
+        parser = ConfigParser.ConfigParser()
         parser.read("%s/../../.composeinfo" % paths['tree_path'])
         try:
             distro['comment'] = "%s\narches=%s" % (distro['comment'], parser.get('tree','arches'))
         except ConfigParser.NoSectionError:
-            pass
+            print "missing section tree in %s/../../.composeinfo" % paths['tree_path']
     if os.path.exists("%s/.treeinfo" % paths['tree_path']):
-        parser = ConfigParser()
+        parser = ConfigParser.ConfigParser()
         parser.read("%s/.treeinfo" % paths['tree_path'])
         try:
             family  = parser.get('general','family').replace(" ","")
         except ConfigParser.NoSectionError:
-            pass
+            print "missing section general in %s/.treeinfo" % paths['tree_path']
+        except ConfigParser.NoOptionError:
+            print "missing option family in %s/.treeinfo" % paths['tree_path']
         try:
             version = parser.get('general', 'version').replace("-",".")
         except ConfigParser.NoSectionError:
-            pass
+            print "missing section general in %s/.treeinfo" % paths['tree_path']
+        except ConfigParser.NoOptionError:
+            print "missing option version in %s/.treeinfo" % paths['tree_path']
         try:
             distro['comment'] = "%s\nvariant=%s" % (distro['comment'],
                                                     parser.get('general', 'variant'))
         except ConfigParser.NoSectionError:
-            pass
+            print "missing section general in %s/.treeinfo" % paths['tree_path']
+        except ConfigParser.NoOptionError:
+            print "missing option variant in %s/.treeinfo" % paths['tree_path']
         family = "%s%s" % ( family, version.split('.')[0] )
         if version.find('.') != -1:
             update = version.split('.')[1]
