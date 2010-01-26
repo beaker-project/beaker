@@ -6,8 +6,8 @@
 %endif
 
 Name:           beaker
-Version:        0.4.79
-Release:        1%{?timestamp}%{?branch}%{?dist}
+Version:        0.4.80
+Release:        0%{?timestamp}%{?branch}%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -146,6 +146,8 @@ ln -s Fedora.ks $RPM_BUILD_ROOT/var/lib/cobbler/kickstarts/Fedoradevelopment.ks
 /usr/share/man/man1/beakerlib*
 
 %changelog
+* Tue Jan 26 2010 Bill Peck <bpeck@redhat.com> - 0.4.80-0
+- added support for variants being read from .treeinfo
 * Mon Jan 25 2010 Bill Peck <bpeck@redhat.com> - 0.4.79-1
 - add missing admin decorators to user methods
 * Fri Jan 22 2010 Bill Peck <bpeck@redhat.com> - 0.4.79-0

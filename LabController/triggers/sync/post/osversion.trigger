@@ -193,6 +193,11 @@ def update_comment(distro):
             version = parser.get('general', 'version').replace("-",".")
         except ConfigParser.NoSectionError:
             pass
+        try:
+            distro['comment'] = "%s\nvariant=%s" % (distro['comment'],
+                                                    parser.get('general', 'variant'))
+        except ConfigParser.NoSectionError:
+            pass
         family = "%s%s" % ( family, version.split('.')[0] )
         if version.find('.') != -1:
             update = version.split('.')[1]

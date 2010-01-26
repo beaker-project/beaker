@@ -104,6 +104,7 @@ class LabControllers(RPCRoot):
         valid_methods  = ['http','ftp','nfs']
         release = re.compile(r'family=([^\s]+)')
         arches_search = re.compile(r'arches=([^\s]+)')
+        variant_search = re.compile(r'variant=([^\s]+)')
         for lc_distro in lc_distros:
             name = lc_distro['name'].split('_')[0]
             meta = string.join(lc_distro['name'].split('_')[1:],'_').split('-')
@@ -136,6 +137,10 @@ class LabControllers(RPCRoot):
                            arches.append(Arch.by_name(arch_name))
                         except InvalidRequestError:
                            pass
+
+                # If variant is specified in comment then use it.
+                if variant_search.search(lc_distro['comment']):
+                    variant = variant_search.search(lc_distro['comment']).group(1)
 
                 try:
                     distro = Distro.by_install_name(lc_distro['name'])
