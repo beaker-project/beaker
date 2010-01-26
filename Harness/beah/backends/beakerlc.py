@@ -16,9 +16,6 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-from twisted.web.xmlrpc import Proxy
-from twisted.internet import reactor
-
 import sys
 import os
 import os.path
@@ -30,18 +27,20 @@ import simplejson as json
 import logging
 from xml.dom import minidom
 
-from beah.misc.log_this import log_this
-from beah.misc import format_exc, dict_update, log_flush, writers
+from twisted.web.xmlrpc import Proxy
+from twisted.internet import reactor
 
-from beah.core.backends import ExtBackend
-from beah.core import command, event, addict
-from beah.core.constants import ECHO, RC
 from beah import config
-
+from beah.core import command, event, addict
+from beah.core.backends import SerializingBackend
+from beah.core.constants import ECHO, RC
+from beah.misc import format_exc, dict_update, log_flush, writers
+from beah.misc.log_this import log_this
 import beah.system
 # FIXME: using rpm's, yum - too much Fedora centric(?)
 from beah.system.dist_fedora import RPMInstaller
 from beah.system.os_linux import ShExecutable
+from beah.wires.internals.repeatingproxy import RepeatingProxy, repeating_proxy_make_verbose
 from beah.wires.internals.twbackend import start_backend, log_handler
 
 """
@@ -318,7 +317,7 @@ class BeakerWriter(writers.CachingWriter):
         self.offset = 0
         if repr:
             self.repr = repr
-        writers.CachingWriter.__init__(self, 4096)
+        writers.CachingWriter.__init__(self, 4096, True)
 
     def send(self, cdata):
         """
@@ -344,7 +343,7 @@ def make_writer_verbose(writer):
     writer.send = print_this(writer.send)
     return
 
-class BeakerLCBackend(ExtBackend):
+class BeakerLCBackend(SerializingBackend):
 
     GET_RECIPE = 'get_recipe'
     TASK_START = 'task_start'
@@ -359,6 +358,7 @@ class BeakerLCBackend(ExtBackend):
         self.__writers = {}
         self.__tasks_by_id = {}
         self.__tasks_by_uuid = {}
+        SerializingBackend.__init__(self)
 
     verbose_cls = False
 
@@ -408,8 +408,11 @@ class BeakerLCBackend(ExtBackend):
                 .addErrback(self.on_lc_failure)
         self.waiting_for_lc = True
 
+    def idle(self):
+        return self.proxy.is_idle()
+
     def set_controller(self, controller=None):
-        ExtBackend.set_controller(self, controller)
+        SerializingBackend.set_controller(self, controller)
         if controller:
             self.conf = config.config('BEAH_BEAKER_CONF', 'beah_beaker.conf',
                     {
@@ -418,9 +421,12 @@ class BeakerLCBackend(ExtBackend):
                             'http://%s:8000/server' %
                             os.getenv('COBBLER_SERVER', 'localhost'))})
             url = self.conf.get('DEFAULT', 'LAB_CONTROLLER')
-            self.proxy = VerboseProxy(url)
+            self.proxy = RepeatingProxy(url)
+            self.proxy.serializing = True
+            self.proxy.on_idle = self.set_idle
             if self.verbose_cls:
-                self.proxy.make_verbose()
+                #self.proxy.make_verbose()
+                repeating_proxy_make_verbose(self.proxy)
                 make_logging_proxy(self.proxy)
             self.proxy.logging_print = log.info
             self.on_idle()

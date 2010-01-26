@@ -25,14 +25,17 @@ class BasicBackend(object):
         self.controller = None
     def set_controller(self, controller=None):
         self.controller = controller
+    def proc_error(self, evt):
+        return False
     def proc_evt(self, evt, **flags):
         if "proc_evt_"+evt.event() in dir(self):
             try:
-                self.__getattribute__("proc_evt_"+evt.event())(evt)
+                answ = self.__getattribute__("proc_evt_"+evt.event())(evt)
+                if answ is None:
+                    return True
+                return answ
             except:
-                # FIXME: log error
-                pass
-            return True
+                return self.proc_error(evt)
         return False
     def proc_evt_bye(self, evt):
         raise GoodBye("Controller said: \"bye\".")
@@ -49,6 +52,60 @@ class ExtBackend(BasicBackend):
             return True
         answ = BasicBackend.proc_evt(self, evt, **flags)
         return self.post_proc(evt, answ)
+
+class SerializingBackend(ExtBackend):
+
+    """
+    Backend to serialize events.
+
+    event handlers (pre_proc, post_proc, proc_evt_*) have to call set_busy and
+    set_idle. idle could be overridden, but implementor has to ensure _next_evt
+    is called, e.g. by calling set_idle().
+    """
+
+    def __init__(self):
+        self.__idle = True
+        self.__evt_queue = []
+        ExtBackend.__init__(self)
+
+    def set_busy(self, busy=True):
+        self.set_idle(not busy)
+
+    def set_idle(self, idle=True):
+        self.__idle = idle
+        self._next_evt()
+
+    def idle(self):
+        """
+        Method returning True when backend is idle indicating next event could
+        be processed.
+        """
+        return self.__idle
+
+    def filter_evt(self, evt):
+        """
+        Method returning True when event is to be processed.
+
+        Override this.
+        """
+        return True
+
+    def _queue_evt(self, evt, **flags):
+        self.__evt_queue.append([evt, flags])
+
+    def _pop_evt(self):
+        return self.__evt_queue.pop(0)
+
+    def proc_evt(self, evt, **flags):
+        if not self.filter_evt(evt):
+            return False
+        self._queue_evt(evt, **flags)
+        self._next_evt()
+
+    def _next_evt(self):
+        while self.__evt_queue and self.idle():
+            evt, flags = self._pop_evt()
+            ExtBackend.proc_evt(self, evt, **flags)
 
 import pprint
 class PprintBackend(ExtBackend):
