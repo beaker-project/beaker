@@ -2682,7 +2682,8 @@ class RecipeSet(TaskBase):
     """
     def to_xml(self, clone=False):
         recipeSet = self.doc.createElement("recipeSet")
-        recipeSet.setAttribute("id", "%s" % self.id)
+        if not clone:
+            recipeSet.setAttribute("id", "%s" % self.id)
         for r in self.recipes:
             recipeSet.appendChild(r.to_xml(clone))
         return recipeSet
@@ -2850,7 +2851,7 @@ class Recipe(TaskBase):
         repo.setAttribute("url", "http://%s/rpms" % get("servername", socket.gethostname()))
         repos.appendChild(repo)
         for repo in self.repos:
-            repos.appendChild(repo.to_xml(clone))
+            repos.appendChild(repo.to_xml())
         recipe.appendChild(repos)
         drs = xml.dom.minidom.parseString(self.distro_requires)
         hrs = xml.dom.minidom.parseString(self.host_requires)
