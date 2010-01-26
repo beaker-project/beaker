@@ -31,26 +31,26 @@ def log_this(logf, log_on=True):
             def tempf(*args, **kwargs):
                 try: argstr = "*"+repr(args)+", **"+repr(kwargs)
                 except: argstr = "???"
-                try: logf("start %s(%s) {\n" % (fstr, argstr))
+                try: logf("start %s(%s) {" % (fstr, argstr))
                 except: pass
                 try:
                     answ = f(*args, **kwargs)
-                    try: logf("} %s returned %s\n" % (fstr, repr(answ)))
+                    try: logf("} %s returned %s" % (fstr, repr(answ)))
                     except: pass
                     return answ
                 except exceptions.Exception, e:
                     tb = format_exc()
-                    try: logf("} %s raised %s (%r)\n" % (fstr, repr(e), tb))
+                    try: logf("} %s raised %s (%r)" % (fstr, repr(e), tb))
                     except: pass
                     raise
                 except object, e:
                     tb = format_exc()
-                    try: logf("} %s raised %s (%r)\n" % (fstr, repr(e), tb))
+                    try: logf("} %s raised %s (%r)" % (fstr, repr(e), tb))
                     except: pass
                     raise
                 except:
                     tb = format_exc()
-                    try: logf("} %s raised an exception (%r)\n" % (fstr, tb))
+                    try: logf("} %s raised an exception (%r)" % (fstr, tb))
                     except: pass
                     raise
             tempf.__doc__ = f.__doc__
