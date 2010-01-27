@@ -100,7 +100,17 @@ class PowerTypeForm(CompoundFormField):
 	self.key_field = HiddenField(name="key")
 
 class myDataGrid(DataGrid):
-    template = "beaker.server.templates.my_datagrid" 
+    template = "beaker.server.templates.my_datagrid"
+    
+class InnerGrid(DataGrid):
+    template = "beaker.server.templates.inner_grid" 
+    params = ['show_headers']
+    
+    def display(self,value=None,**params):
+        if 'options' in params:
+            if 'show_headers' in params['options']:
+                params['show_headers'] = params['options']['show_headers']
+        return super(InnerGrid,self).display(value,**params)
 
 class myPaginateDataGrid(PaginateDataGrid):
     template = "beaker.server.templates.my_paginate_datagrid"
@@ -129,7 +139,11 @@ class TextFieldJSON(TextField):
         return {
                 'field_id' : self.field_id,             
                }
- 
+
+class NestedGrid(CompoundWidget):
+    template = "beaker.server.templates.inner_grid" 
+    params = ['inner_list']
+
 class JobMatrixWidgets(WidgetsList): 
     default_validator = validators.NotEmpty()
     whiteboard = MultipleSelectField('whiteboard', validator=default_validator) 
