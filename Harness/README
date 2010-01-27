@@ -32,7 +32,7 @@ For installing into non-standard directory use --prefix option e.g.:
 
 To build RPMs, use
 
-  python setup.py bdist_rpm
+  python setup.py bdist_rpm --requires "python python-hashlib python-setuptools python-simplejson python-twisted-core python-twisted-web python-uuid python-zope-interface"
 
 === Usage ===
 
