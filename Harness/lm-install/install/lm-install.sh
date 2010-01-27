@@ -264,6 +264,7 @@ function lm_logs()
 function lm_rm_logs()
 {
   rm -f $LM_LOGS
+  rm -rf /tmp/beah-fakelc-logs
 }
 
 function ls_egg()
@@ -300,10 +301,26 @@ function lm_view_logs()
 
 function lm_mon()
 {
+  local file1=/tmp/lm_mon_file1
+  local file2=/tmp/lm_mon_file2
+  touch $file1
+  touch $file2
   while true; do
-    echo "-------------------"
-    #ps -efH
-    lm_ps
+    lm_ps &> $file1
+    if ! diff $file1 $file2 &>/dev/null; then
+      echo
+      echo "-------------------"
+      cat $file1
+    fi
+    echo -n "."
+    sleep ${1:-2}
+    lm_ps &> $file2
+    if ! diff $file1 $file2 &>/dev/null; then
+      echo
+      echo "-------------------"
+      cat $file2
+    fi
+    echo -n "."
     sleep ${1:-2}
   done
 }

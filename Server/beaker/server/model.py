@@ -2483,7 +2483,7 @@ class Log(MappedObject):
         return False
 
     def result(self):
-        return self.recipe.result
+        return self.parent.result
 
     result = property(result)
 
@@ -2571,6 +2571,18 @@ class TaskBase(MappedObject):
         return div
     progress_bar = property(progress_bar)
 
+    def action_link(self):
+        """
+        Return action links depending on status
+        """
+        if self.is_finished():
+            return make_link(url = self.clone_link(),
+                            text = "Clone")
+        else:
+            return make_link(url = self.cancel_link(),
+                            text = "Cancel")
+    action_link = property(action_link)
+
 
 class Job(TaskBase):
     """
@@ -2584,15 +2596,26 @@ class Job(TaskBase):
         res = Job.query().filter_by(whiteboard = desc)
         return res
 
-    def to_xml(self):
+    def clone_link(self):
+        """ return link to clone this job
+        """
+        return "/jobs/clone?id=%s" % self.id
+
+    def cancel_link(self):
+        """ return link to cancel this job
+        """
+        return "/jobs/cancel?id=%s" % self.id
+
+    def to_xml(self, clone=False):
         job = self.doc.createElement("job")
-        job.setAttribute("id", "%s" % self.id)
-        job.setAttribute("owner", "%s" % self.owner.email_address)
-        job.setAttribute("result", "%s" % self.result)
-        job.setAttribute("status", "%s" % self.status)
+        if not clone:
+            job.setAttribute("id", "%s" % self.id)
+            job.setAttribute("owner", "%s" % self.owner.email_address)
+            job.setAttribute("result", "%s" % self.result)
+            job.setAttribute("status", "%s" % self.status)
         job.appendChild(self.node("whiteboard", self.whiteboard))
         for rs in self.recipesets:
-            job.appendChild(rs.to_xml())
+            job.appendChild(rs.to_xml(clone))
         return job
 
     def cancel(self, msg=None):
@@ -2657,11 +2680,12 @@ class RecipeSet(TaskBase):
     """
     A Collection of Recipes that must be executed at the same time.
     """
-    def to_xml(self):
+    def to_xml(self, clone=False):
         recipeSet = self.doc.createElement("recipeSet")
-        recipeSet.setAttribute("id", "%s" % self.id)
+        if not clone:
+            recipeSet.setAttribute("id", "%s" % self.id)
         for r in self.recipes:
-            recipeSet.appendChild(r.to_xml())
+            recipeSet.appendChild(r.to_xml(clone))
         return recipeSet
 
     @classmethod
@@ -2783,6 +2807,16 @@ class Recipe(TaskBase):
     """
     stop_types = ['abort','cancel']
 
+    def clone_link(self):
+        """ return link to clone this recipe
+        """
+        return "/recipes/clone?id=%s" % self.id
+
+    def cancel_link(self):
+        """ return link to cancel this recipe
+        """
+        return "/recipes/cancel?id=%s" % self.id
+
     def filepath(self):
         """
         Return file path for this recipe
@@ -2793,22 +2827,23 @@ class Recipe(TaskBase):
                                          self.id)
     filepath = property(filepath)
 
-    def to_xml(self, recipe):
-        recipe.setAttribute("id", "%s" % self.id)
-        recipe.setAttribute("job_id", "%s" % self.recipeset.job_id)
-        recipe.setAttribute("recipe_set_id", "%s" % self.recipe_set_id)
-        if self.duration:
+    def to_xml(self, recipe, clone=False):
+        if not clone:
+            recipe.setAttribute("id", "%s" % self.id)
+            recipe.setAttribute("job_id", "%s" % self.recipeset.job_id)
+            recipe.setAttribute("recipe_set_id", "%s" % self.recipe_set_id)
+        if self.duration and not clone:
             recipe.setAttribute("duration", "%s" % self.duration)
-        if self.result:
+        if self.result and not clone:
             recipe.setAttribute("result", "%s" % self.result)
-        if self.status:
+        if self.status and not clone:
             recipe.setAttribute("status", "%s" % self.status)
-        if self.distro:
+        if self.distro and not clone:
             recipe.setAttribute("distro", "%s" % self.distro.name)
             recipe.setAttribute("arch", "%s" % self.distro.arch)
             recipe.setAttribute("family", "%s" % self.distro.osversion.osmajor)
             recipe.setAttribute("variant", "%s" % self.distro.variant)
-        if self.system:
+        if self.system and not clone:
             recipe.setAttribute("system", "%s" % self.system)
         repos = self.doc.createElement("repos")
         repo = self.doc.createElement("repo")
@@ -2828,7 +2863,7 @@ class Recipe(TaskBase):
                 hostRequires.appendChild(child)
         recipe.appendChild(hostRequires)
         for t in self.tasks:
-            recipe.appendChild(t.to_xml())
+            recipe.appendChild(t.to_xml(clone))
         return recipe
 
     def _get_duration(self):
@@ -3028,11 +3063,11 @@ class Recipe(TaskBase):
 
 class GuestRecipe(Recipe):
     systemtype = 'Virtual'
-    def to_xml(self):
+    def to_xml(self, clone=False):
         recipe = self.doc.createElement("guestrecipe")
         recipe.setAttribute("guestname", "%s" % self.guestname)
         recipe.setAttribute("guestargs", "%s" % self.guestargs)
-        return Recipe.to_xml(self,recipe)
+        return Recipe.to_xml(self,recipe,clone)
 
 
 class MachineRecipe(Recipe):
@@ -3041,11 +3076,11 @@ class MachineRecipe(Recipe):
       which will be executed on this system.
     """
     systemtype = 'Machine'
-    def to_xml(self):
+    def to_xml(self, clone=False):
         recipe = self.doc.createElement("recipe")
         for guest in self.guests:
-            recipe.appendChild(guest.to_xml())
-        return Recipe.to_xml(self,recipe)
+            recipe.appendChild(guest.to_xml(clone))
+        return Recipe.to_xml(self,recipe,clone)
 
     def _get_distro_requires(self):
         drs = xml.dom.minidom.parseString(self._distro_requires)
@@ -3095,17 +3130,22 @@ class RecipeTask(TaskBase):
                                          self.id)
     filepath = property(filepath)
 
-    def to_xml(self):
+    def to_xml(self, clone=False):
         task = self.doc.createElement("task")
-        task.setAttribute("id", "%s" % self.id)
         task.setAttribute("name", "%s" % self.task.name)
-        task.setAttribute("avg_time", "%s" % self.task.avg_time)
         task.setAttribute("role", "%s" % self.role)
-        task.setAttribute("result", "%s" % self.result)
-        task.setAttribute("status", "%s" % self.status)
-        if self.duration:
+        if not clone:
+            task.setAttribute("id", "%s" % self.id)
+            task.setAttribute("avg_time", "%s" % self.task.avg_time)
+            task.setAttribute("result", "%s" % self.result)
+            task.setAttribute("status", "%s" % self.status)
+            rpm = self.doc.createElement("rpm")
+            rpm.setAttribute("name", "%s" % self.task.rpm)
+            rpm.setAttribute("path", "%s" % self.task.path)
+            task.appendChild(rpm)
+        if self.duration and not clone:
             task.setAttribute("duration", "%s" % self.duration)
-        if self.roles:
+        if self.roles and not clone:
             roles = self.doc.createElement("roles")
             for role in self.roles.to_xml():
                 roles.appendChild(role)
@@ -3115,11 +3155,7 @@ class RecipeTask(TaskBase):
             for p in self.params:
                 params.appendChild(p.to_xml())
             task.appendChild(params)
-        rpm = self.doc.createElement("rpm")
-        rpm.setAttribute("name", "%s" % self.task.rpm)
-        rpm.setAttribute("path", "%s" % self.task.path)
-        task.appendChild(rpm)
-        if self.results:
+        if self.results and not clone:
             results = self.doc.createElement("results")
             for result in self.results:
                 results.appendChild(result.to_xml())

@@ -46,11 +46,22 @@ class Jobs(RPCRoot):
     recipe_tasks_widget = RecipeTasksWidget()
 
     upload = widgets.FileField(name='job_xml', label='Job XML')
+    hidden_id = widgets.HiddenField(name='id')
+    confirm = widgets.Label(name='confirm', default="Are you sure you want to cancel?")
+    message = widgets.TextArea(name='msg', label=_(u'Reason?'), help=_(u'Optional'))
+
     form = widgets.TableForm(
         'jobs',
         fields = [upload],
         action = 'save_data',
         submit_text = _(u'Submit Data')
+    )
+
+    cancel_form = widgets.TableForm(
+        'cancel_job',
+        fields = [hidden_id, message, confirm],
+        action = 'really_cancel',
+        submit_text = _(u'Yes')
     )
 
     @expose(template='beaker.server.templates.form-post')
@@ -72,7 +83,7 @@ class Jobs(RPCRoot):
         xml = xmltramp.parse(job_xml)
         xmljob = XmlJob(xml)
         try:
-            job = self.process_xmljob(xmljob,identity.current.user_id)
+            job = self.process_xmljob(xmljob,identity.current.user)
         except BeakerException, err:
             session.rollback()
             raise
@@ -92,7 +103,7 @@ class Jobs(RPCRoot):
         xml = xmltramp.parse(job_xml.file.read())
         xmljob = XmlJob(xml)
         try:
-            job = self.process_xmljob(xmljob,identity.current.user_id)
+            job = self.process_xmljob(xmljob,identity.current.user)
         except BeakerException, err:
             session.rollback()
             flash(_(u'Failed to import job because of %s' % err ))
@@ -107,9 +118,9 @@ class Jobs(RPCRoot):
         flash(_(u'Success! job id: %s' % job.id))
         redirect(".")
 
-    def process_xmljob(self, xmljob, userid):
+    def process_xmljob(self, xmljob, user):
         job = Job(whiteboard='%s' % xmljob.whiteboard, ttasks=0,
-                  owner_id=userid)
+                  owner=user)
         for xmlrecipeSet in xmljob.iter_recipeSets():
             recipeSet = RecipeSet(ttasks=0)
             for xmlrecipe in xmlrecipeSet.iter_recipes():
@@ -201,8 +212,50 @@ class Jobs(RPCRoot):
                      widgets.PaginateDataGrid.Column(name='progress', getter=lambda x: x.progress_bar, title='Progress', options=dict(sortable=False)),
 		     widgets.PaginateDataGrid.Column(name='status.status', getter=lambda x:x.status, title='Status', options=dict(sortable=True)),
 		     widgets.PaginateDataGrid.Column(name='result.result', getter=lambda x:x.result, title='Result', options=dict(sortable=True)),
+		     widgets.PaginateDataGrid.Column(name='action', getter=lambda x:x.action_link, title='Action', options=dict(sortable=False)),
                     ])
         return dict(title="Jobs", grid=jobs_grid, list=jobs, search_bar=None)
+
+    @identity.require(identity.not_anonymous())
+    @expose()
+    def really_cancel(self, id, msg=None):
+        """
+        Confirm cancel job
+        """
+        try:
+            job = Job.by_id(id)
+        except InvalidRequestError:
+            flash(_(u"Invalid job id %s" % id))
+            redirect(".")
+        if not identity.current.user.is_admin() and job.owner != identity.current.user:
+            flash(_(u"You don't have permission to cancel job id %s" % id))
+            redirect(".")
+        job.cancel(msg)
+        flash(_(u"Successfully cancelled job %s" % id))
+        redirect(".")
+
+    @identity.require(identity.not_anonymous())
+    @expose(template="beaker.server.templates.form")
+    def cancel(self, id):
+        """
+        Confirm cancel job
+        """
+        try:
+            job = Job.by_id(id)
+        except InvalidRequestError:
+            flash(_(u"Invalid job id %s" % id))
+            redirect(".")
+        if not identity.current.user.is_admin() and job.owner != identity.current.user:
+            flash(_(u"You don't have permission to cancel job id %s" % id))
+            redirect(".")
+        return dict(
+            title = 'Cancel Job %s' % id,
+            form = self.cancel_form,
+            action = './really_cancel',
+            options = {},
+            value = dict(id = job.id,
+                         confirm = 'really cancel job %s?' % id),
+        )
 
     @expose(template="beaker.server.templates.job")
     def view(self, id):

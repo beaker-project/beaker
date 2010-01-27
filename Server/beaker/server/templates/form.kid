@@ -5,7 +5,7 @@
 <head>
     <meta content="text/html; charset=UTF-8" http-equiv="content-type" py:replace="''"/>
 
-    <title>Power Type Edit</title>
+    <title>${title}</title>
 </head>
 
 
