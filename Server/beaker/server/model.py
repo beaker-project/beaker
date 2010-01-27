@@ -2835,7 +2835,8 @@ class Recipe(TaskBase):
         recipe.setAttribute("whiteboard", "%s" % self.whiteboard and self.whiteboard or '')
         if self.kickstart:
             kickstart = self.doc.createElement("kickstart")
-            kickstart.appendChild("%s" % self.kickstart)
+            text = self.doc.createCDATASection('%s' % self.kickstart)
+            kickstart.appendChild(text)
             recipe.appendChild(kickstart)
         recipe.setAttribute("kernel_options", "%s" % self.kernel_options and self.kernel_options or '')
         recipe.setAttribute("kernel_options_post", "%s" % self.kernel_options_post and self.kernel_options_post or '')
