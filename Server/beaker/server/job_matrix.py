@@ -1,9 +1,11 @@
 from sqlalchemy import select, distinct, Table, Column, Integer, String
 from sqlalchemy.sql.expression import case, func, and_, bindparam
 from turbogears import controllers, identity, expose, url, database
+from turbogears.widgets import DataGrid
 from turbogears.database import session, metadata, mapper
 from kid import Element, SubElement
-from beaker.server.widgets import JobMatrixReport as JobMatrixWidget, myDataGrid
+from beaker.server.widgets import JobMatrixReport as JobMatrixWidget, InnerGrid, myDataGrid
+from beaker.server.helpers import make_link
 
 import model
 
@@ -13,9 +15,18 @@ log = logging.getLogger(__name__)
 class JobMatrix: 
     job_matrix_widget = JobMatrixWidget() 
     arches_used = {}
+    whiteboards_used_by_arch = {}
+    inner_grid_cache = {}
+
+    def __init__(self,**kw):
+        self.disable_headers = False
+        self.max_cols = 0
+        self.col_call = 0
 
     @expose(template='beaker.server.templates.generic')
-    def index(self,**kw):    
+    def index(self,**kw):
+        self.col_call = 0
+        self.max_cols = 0
         matrix_options = {} 
         if 'whiteboard_filter' in kw:
             filter = kw['whiteboard_filter']
@@ -61,25 +72,46 @@ class JobMatrix:
         res = s1.execute()  
         a = [r[0] for r in res]
         return a 
+ 
+    def display_whiteboard_results(self,whiteboard): 
+      def f(x): 
+          if x.whiteboard == whiteboard:
+              return self.make_result_box('New Pass Warn Fail Panic',x)
+      return f
+
+    def inner_data_grid(self,data,show_headers): 
+        fields = []
+        my_list = [] 
+        for objs in data:
+            whiteboard_title = whiteboard_name = objs[0]
+            if whiteboard_name is None:
+                whiteboard_name = 'none'
+                whiteboard_title = 'none'
+            my_list += list(objs[1])
+            fields.append(InnerGrid.Column(name=whiteboard_name, getter=self.display_whiteboard_results(objs[0]), title=whiteboard_name))       
+        options = {'show_headers' : show_headers  } 
+        return InnerGrid(fields=fields).display(my_list,options=options)
         
-    @classmethod
-    def arch_stat_getter(cls,this_arch):
-      #ahh nice little closure...
-      def f(x):
+    def arch_stat_getter(self,this_arch): 
+       def f(x):
+          self.col_call += 1
+          x = x[1:]
           for elem in x:
-              val = getattr(elem,'arch',None)
-              if val is not None:
-                  if val == this_arch:
-                      return_text =  cls.make_result_box('New Pass Warn Fail Panic',elem)
-                      return return_text
-      return f      
-    @classmethod
+              if elem[0] != this_arch: #don't use magic number here              
+                  continue
+              else:
+                  show_headers = self.col_call <= self.max_cols 
+                  return self.inner_data_grid(elem[1:],show_headers)
+       return f      
+   
     def _job_grid_fields(self,arches_used,**kw):
         fields = [] 
-        fields.append(myDataGrid.Column(name='task', getter=lambda x: x[0], title='Task')) 
-         
+        fields.append(myDataGrid.Column(name='task', getter=lambda x: x[0], title='Task'))         
+        cols = 0
         for arch in arches_used:
-            fields.append(myDataGrid.Column(name=arch, getter=JobMatrix.arch_stat_getter(arch), title=arch))
+            cols += 1
+            fields.append(myDataGrid.Column(name=arch, getter=self.arch_stat_getter(arch), title=arch)) 
+        self.max_cols = cols
         return fields 
  
     def generate(self,**kw):
@@ -99,12 +131,14 @@ class JobMatrix:
                 jobs.append(job.id) 
         else:
            pass
-           #raise AssertionError('Incorrect or no filter passed to job matrix report generator')
-        #recipes = model.MachineRecipe.query().join(['distro','arch']).join(['recipeset','job']).add_column(model.Arch.arch) 
-        recipes = model.MachineRecipe.query().join(['distro','arch']).join(['recipeset','job']).filter(model.RecipeSet.job_id.in_(jobs)).add_column(model.Arch.arch) 
-        #log.debug(recipes)
-        for recipe,arch in recipes:     
-            whiteboard_data[arch] = recipe.whiteboard 
+ 
+        recipes = model.MachineRecipe.query().join(['distro','arch']).join(['recipeset','job']).filter(model.RecipeSet.job_id.in_(jobs)).add_column(model.Arch.arch)  
+        for recipe,arch in recipes: 
+            if arch in whiteboard_data:    
+                if recipe.whiteboard not in whiteboard_data[arch]:
+                    whiteboard_data[arch].append(recipe.whiteboard)
+            else:
+                whiteboard_data[arch] = [recipe.whiteboard] 
 
         case0 = case([(model.task_result_table.c.result == u'New',1)],else_=0)
         case1 = case([(model.task_result_table.c.result == u'Pass',1)],else_=0)
@@ -137,67 +171,82 @@ class JobMatrix:
         #build a specific table for it
         #eng = database.get_engine()
         #c = s2.compile(eng) 
-        #eng.execute("CREATE VIEW foobar AS %s" % c) 
-
-        result_data = []    
+        #eng.execute("CREATE VIEW foobar AS %s" % c)
+       
         my_hash = {} 
-        for arch_val,whiteboard_val in whiteboard_data.iteritems():
-           
-            if whiteboard_val is not None:
-                my_and = and_( model.recipe_set_table.c.job_id.in_(jobs),
-                               arch_alias.c.arch == bindparam('arch'), 
-                               recipe_table_alias.c.whiteboard == bindparam('recipe_whiteboard'))
-              
-              
-            else: 
-                my_and = and_( model.recipe_set_table.c.job_id.in_(jobs),
-                               arch_alias.c.arch == bindparam('arch'), 
-                               recipe_table_alias.c.whiteboard==None)
-            s2 = select(my_select,from_obj=my_from,whereclause=my_and).alias('foo')
-            s2 = s2.params(arch=arch_val)
-            if whiteboard_val is not None:
-                 s2 = s2.params(recipe_whiteboard=whiteboard_val) 
-               
-           
-            s1  = select([func.count(s2.c.result),
-                                  func.sum(s2.c.rc0).label('New'),
-                                  func.sum(s2.c.rc1).label('Pass'),
-                                  func.sum(s2.c.rc2).label('Warn'),
-                                  func.sum(s2.c.rc3).label('Fail'),
-                                  func.sum(s2.c.rc4).label('Panic'),
-                                  s2.c.arch,
-                                  model.task_table.c.name.label('task_name'),  
-                                  s2.c.task_id.label('task_id_pk')],
-                                  s2.c.task_id == model.task_table.c.id,
-                     
-                                  from_obj=[model.task_table,s2]).group_by(model.task_table.c.name).order_by(model.task_table.c.name).alias()
-          
-            class InnerDynamo(object):
-                pass
-            mapper(InnerDynamo,s1)
- 
-            dyn = InnerDynamo.query() 
-            for d in dyn: 
-                self.arches_used[d.arch] = 1 
-                if d.task_name not in my_hash:
-                    my_hash[d.task_name] = [d]
-                else:  
-                    my_hash[d.task_name].append(d) 
-      
-        for k,v in my_hash.items():
-            my_tuple = (k,)
-            for elem in v: 
-                my_tuple += (elem,) 
-            result_data.append(my_tuple)
- 
-        return result_data 
+        for arch_val,whiteboard_set in whiteboard_data.iteritems():
+            for whiteboard_val in whiteboard_set:
+                if whiteboard_val is not None:
+                    my_and = and_( model.recipe_set_table.c.job_id.in_(jobs),
+                                   arch_alias.c.arch == bindparam('arch'), 
+                                   recipe_table_alias.c.whiteboard == bindparam('recipe_whiteboard'))
+                else: 
+                    my_and = and_( model.recipe_set_table.c.job_id.in_(jobs),
+                                   arch_alias.c.arch == bindparam('arch'), 
+                                   recipe_table_alias.c.whiteboard==None)
 
-    @classmethod
-    def make_result_box(cls,returns,query_obj,result=None):
-        #if result is None:
-        #    result = text.lower()
+                s2 = select(my_select,from_obj=my_from,whereclause=my_and).alias('foo')
+                s2 = s2.params(arch=arch_val)
+                if whiteboard_val is not None:
+                    s2 = s2.params(recipe_whiteboard=whiteboard_val) 
+ 
+                s1  = select([func.count(s2.c.result),
+                              func.sum(s2.c.rc0).label('New'),
+                              func.sum(s2.c.rc1).label('Pass'),
+                              func.sum(s2.c.rc2).label('Warn'),
+                              func.sum(s2.c.rc3).label('Fail'),
+                              func.sum(s2.c.rc4).label('Panic'),
+                              s2.c.whiteboard,
+                              s2.c.arch,
+                              model.task_table.c.name.label('task_name'),  
+                              s2.c.task_id.label('task_id_pk')],
+                              s2.c.task_id == model.task_table.c.id,
+                     
+                              from_obj=[model.task_table,s2]).group_by(model.task_table.c.name).order_by(model.task_table.c.name).alias()
+          
+                class InnerDynamo(object):
+                    pass
+                mapper(InnerDynamo,s1)
+ 
+                dyn = InnerDynamo.query() 
+                for d in dyn: 
+                    self.arches_used[d.arch] = 1 
+                    if d.task_name not in my_hash:
+                        my_hash[d.task_name]= {d.arch : {  whiteboard_val: [d] } }
+                    else:  
+                        if d.arch in my_hash[d.task_name]:
+                            if whiteboard_val not in my_hash[d.task_name][d.arch]:
+                                my_hash[d.task_name][d.arch][whiteboard_val] = [d]
+                            else:
+                                my_hash[d.task_name][d.arch][whiteboard_val].append(d)                          
+                        else:
+                            my_hash[d.task_name][d.arch] = { whiteboard_val : [d] } 
+       
+        result_data = [] 
+        for task,data in my_hash.items(): 
+            fourth_inner = None
+            for arch,whiteboard_data in data.items():
+                third_inner = None
+                for whiteboard, objs in whiteboard_data.items():
+                    second_inner = None
+                    first_inner = ()
+                    for obj in objs:
+                        first_inner += (obj,)
+                    second_inner = (whiteboard,first_inner) 
+                    if third_inner:
+                        third_inner += (second_inner,)
+                    else:
+                        third_inner = (arch,second_inner)
+                if fourth_inner:
+                    fourth_inner += (third_inner,)
+                else:
+                    fourth_inner = (task,third_inner)
+            result_data.append(fourth_inner)       
+        return result_data 
+ 
+    def make_result_box(self,returns,query_obj,result=None): 
         elem = Element('div',{'class' : 'result-box'})
-        items = returns.split()
+        items = returns.split() 
         for item in items:
             how_many = getattr(query_obj,item,None)
             if how_many is not None and how_many > 0:            
@@ -206,5 +255,5 @@ class JobMatrix:
                 SubElement(elem,'br')
                 #sub_link = SubElement(sub_span,'a', {'style':'color:inherit;text-decoration:none'}, href=url('/matrix/test_report?id=')) 
                 #sub_link.text = '%s: %s' % (item,how_many)
-                sub_span.text = '%s: %s' % (item,how_many)
+                sub_span.text = '%s: %s' % (item,how_many) 
         return elem
