@@ -49,7 +49,7 @@ class Jobs(RPCRoot):
     hidden_id = widgets.HiddenField(name='id')
     confirm = widgets.Label(name='confirm', default="Are you sure you want to cancel?")
     message = widgets.TextArea(name='msg', label=_(u'Reason?'), help=_(u'Optional'))
-    job_input = widgets.TextArea(name='job', label=_(u'Job XML'))
+    job_input = widgets.TextArea(name='jobxml', label=_(u'Job XML'), attrs=dict(rows=40, cols=155))
 
     form = widgets.TableForm(
         'jobs',
@@ -68,7 +68,7 @@ class Jobs(RPCRoot):
     job_form = widgets.TableForm(
         'job',
         fields = [job_input],
-        submit_text = _(u'Schedule')
+        submit_text = _(u'Queue')
     )
 
     @expose(template='beaker.server.templates.form-post')
@@ -119,11 +119,58 @@ class Jobs(RPCRoot):
             session.rollback()
             flash(_(u'Failed to import job because of %s' % err ))
             redirect(".")
-
         session.save(job)
         session.flush()
         flash(_(u'Success! job id: %s' % job.id))
-        redirect(".")
+
+    @identity.require(identity.not_anonymous())
+    @expose(template="beaker.server.templates.form-post")
+    def clone(self, id=None, jobxml=None, **kw):
+        """
+        Review cloned xml before submitting it.
+        """
+        if id:
+            try:
+                job = Job.by_id(id)
+            except InvalidRequestError:
+                flash(_(u"Invalid job id %s" % id))
+                redirect(".")
+            jobxml = job.to_xml(clone=True).toprettyxml()
+        if not id:
+            xmljob = XmlJob(xmltramp.parse(jobxml))
+            try:
+                job = self.process_xmljob(xmljob,identity.current.user)
+            except BeakerException, err:
+                session.rollback()
+                flash(_(u'Failed to import job because of %s' % err ))
+                return dict(
+                    title = 'Clone Job %s' % id,
+                    form = self.job_form,
+                    action = './clone',
+                    options = {},
+                    value = dict(jobxml = "%s" % jobxml),
+                )
+            except ValueError, err:
+                session.rollback()
+                flash(_(u'Failed to import job because of %s' % err ))
+                return dict(
+                    title = 'Clone Job %s' % id,
+                    form = self.job_form,
+                    action = './clone',
+                    options = {},
+                    value = dict(jobxml = "%s" % jobxml),
+                )
+            session.save(job)
+            session.flush()
+            flash(_(u'Success! job id: %s' % job.id))
+            redirect(".")
+        return dict(
+            title = 'Clone Job %s' % id,
+            form = self.job_form,
+            action = './clone',
+            options = {},
+            value = dict(jobxml = "%s" % jobxml),
+        )
 
     def process_xmljob(self, xmljob, user):
         job = Job(whiteboard='%s' % xmljob.whiteboard, ttasks=0,
@@ -240,25 +287,6 @@ class Jobs(RPCRoot):
         job.cancel(msg)
         flash(_(u"Successfully cancelled job %s" % id))
         redirect(".")
-
-    @identity.require(identity.not_anonymous())
-    @expose(template="beaker.server.templates.form")
-    def clone(self, id):
-        """
-        Review cloned xml before submitting it.
-        """
-        try:
-            job = Job.by_id(id)
-        except InvalidRequestError:
-            flash(_(u"Invalid job id %s" % id))
-            redirect(".")
-        return dict(
-            title = 'Clone Job %s' % id,
-            form = self.job_form,
-            action = './really_clone',
-            options = {},
-            value = dict(job = "%s" % job.to_xml(clone=True).toprettyxml()),
-        )
 
     @identity.require(identity.not_anonymous())
     @expose(template="beaker.server.templates.form")

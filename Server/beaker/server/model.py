@@ -2832,6 +2832,13 @@ class Recipe(TaskBase):
             recipe.setAttribute("id", "%s" % self.id)
             recipe.setAttribute("job_id", "%s" % self.recipeset.job_id)
             recipe.setAttribute("recipe_set_id", "%s" % self.recipe_set_id)
+        recipe.setAttribute("whiteboard", "%s" % self.whiteboard and self.whiteboard or '')
+        if self.kickstart:
+            kickstart = self.doc.createElement("kickstart")
+            kickstart.appendChild("%s" % self.kickstart)
+            recipe.appendChild(kickstart)
+        recipe.setAttribute("kernel_options", "%s" % self.kernel_options and self.kernel_options or '')
+        recipe.setAttribute("kernel_options_post", "%s" % self.kernel_options_post and self.kernel_options_post or '')
         if self.duration and not clone:
             recipe.setAttribute("duration", "%s" % self.duration)
         if self.result and not clone:
@@ -2846,10 +2853,11 @@ class Recipe(TaskBase):
         if self.system and not clone:
             recipe.setAttribute("system", "%s" % self.system)
         repos = self.doc.createElement("repos")
-        repo = self.doc.createElement("repo")
-        repo.setAttribute("name", "beaker-tasks")
-        repo.setAttribute("url", "http://%s/rpms" % get("servername", socket.gethostname()))
-        repos.appendChild(repo)
+        if not clone:
+            repo = self.doc.createElement("repo")
+            repo.setAttribute("name", "beaker-tasks")
+            repo.setAttribute("url", "http://%s/rpms" % get("servername", socket.gethostname()))
+            repos.appendChild(repo)
         for repo in self.repos:
             repos.appendChild(repo.to_xml())
         recipe.appendChild(repos)
@@ -3133,7 +3141,7 @@ class RecipeTask(TaskBase):
     def to_xml(self, clone=False):
         task = self.doc.createElement("task")
         task.setAttribute("name", "%s" % self.task.name)
-        task.setAttribute("role", "%s" % self.role)
+        task.setAttribute("role", "%s" % self.role and self.role or 'STANDALONE')
         if not clone:
             task.setAttribute("id", "%s" % self.id)
             task.setAttribute("avg_time", "%s" % self.task.avg_time)
@@ -3150,11 +3158,10 @@ class RecipeTask(TaskBase):
             for role in self.roles.to_xml():
                 roles.appendChild(role)
             task.appendChild(roles)
-        if self.params:
-            params = self.doc.createElement("params")
-            for p in self.params:
-                params.appendChild(p.to_xml())
-            task.appendChild(params)
+        params = self.doc.createElement("params")
+        for p in self.params:
+            params.appendChild(p.to_xml())
+        task.appendChild(params)
         if self.results and not clone:
             results = self.doc.createElement("results")
             for result in self.results:
