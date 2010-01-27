@@ -106,6 +106,28 @@ function inst_all()
   fi
   popd
 }
+function pwdless_()
+{
+  ssh root@$LABM mkdir -p .ssh
+  cat ~/.ssh/id_rsa.pub | ssh root@$LABM 'cat >> .ssh/authorized_keys'
+}
+function pwdless()
+{
+  local append=
+  if [[ "$1" == "-a" ]]; then
+    shift
+    append=$@
+  fi
+  if [[ -z "$*" ]]; then
+    for labm in $LABMS $append; do
+      LABM=$labm pwdless_
+    done
+  else
+    for labm in $@; do
+      LABM=$labm pwdless_
+    done
+  fi
+}
 function launcher()
 (
   default="s o l"

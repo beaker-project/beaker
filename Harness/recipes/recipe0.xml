@@ -1,0 +1,191 @@
+<recipe arch="i386" distro="RHEL5-Server-U3"
+        family="RedHatEnterpriseLinuxServer5"
+        status="Running" variant="None"
+        id="21" job_id="11" recipe_set_id="11"
+        system="%(machine0)s"
+        >
+    <repos>
+        <repo name="beaker-task"
+                url="http://beaker-devel.app.eng.bos.redhat.com/rpms" />
+    </repos>
+    <distroRequires>
+        <distro_arch op="=" value="i386"/>
+        <distro_family op="=" value="RedHatEnterpriseLinuxServer5"/>
+    </distroRequires>
+    <hostRequires>
+        <system_type value="Machine"/>
+    </hostRequires>
+
+    <task avg_time="1200" id="40"
+            name="/examples/rhts_tutorial/mcsontos/beah_iptables"
+            role="STANDALONE"
+            result="%(task40_res)s"
+            status="%(task40_stat)s"
+            >
+        <roles>
+            <role value="STANDALONE">
+                <system value="%(machine0)s"/>
+            </role>
+        </roles>
+        <rpm name="tmp-examples-rhts_tutorial-mcsontos-beah_iptables.noarch"/>
+    </task>
+    <!--
+    <task ...
+            name="/beah-tests/beah_iptables"
+            ...>...
+        <rpm name="tmp-beah-tests-beah_iptables.noarch"/>
+    </task>
+    -->
+
+    <!--
+    <task avg_time="1200" id="41"
+            name="/examples/testargs" role="STANDALONE"
+            result="%(task41_res)s"
+            status="%(task41_stat)s"
+            >
+        <roles>
+            <role value="STANDALONE">
+                <system value="%(machine0)s"/>
+            </role>
+        </roles>
+        <rpm name="rh-tests-examples-testargs-1.1-1.noarch.rpm"/>
+    </task>
+                <system value="%(machine1)s"/>
+    -->
+
+    <task avg_time="1200" id="42"
+            name="/examples/testargs" role="CLIENTS"
+            result="%(task42_res)s"
+            status="%(task42_stat)s"
+            >
+        <roles>
+            <role value="CLIENTS">
+                <system value="%(machine0)s"/>
+            </role>
+        </roles>
+        <params>
+            <param name="KERNELARGNAME" value="kernel"/>
+            <param name="KERNELARGVARIANT" value="up"/>
+            <param name="KERNELARGVERSION"
+                value="2.6.18-153.el5testabort"/>
+        </params>
+        <rpm name="rh-tests-examples-testargs.noarch"/>
+    </task>
+            <role value="SERVERS">
+                <system value="%(machine1)s"/>
+            </role>
+
+    <!--
+    <task avg_time="1200" id="43"
+            name="/beah/examples/tasks/a_task" role="STANDALONE"
+            result="%(task43_res)s"
+            status="%(task43_stat)s"
+            >
+        <roles>
+            <role value="STANDALONE">
+                <system value="%(machine0)s"/>
+            </role>
+        </roles>
+        <executable url="%(beah_root)s/examples/tasks/a_task"/>
+    </task>
+                <system value="%(machine1)s"/>
+
+    <task avg_time="1200" id="44"
+            name="/beah/examples/tasks/socket" role="STANDALONE"
+            result="%(task44_res)s"
+            status="%(task44_stat)s"
+            >
+        <roles>
+            <role value="STANDALONE">
+                <system value="%(machine0)s"/>
+            </role>
+        </roles>
+        <executable url="%(beah_root)s/examples/tasks/socket"/>
+    </task>
+                <system value="%(machine1)s"/>
+
+    <task avg_time="1200" id="45"
+            name="/beah/examples/tasks/rhts" role="STANDALONE"
+            result="%(task45_res)s"
+            status="%(task45_stat)s"
+            >
+        <roles>
+            <role value="STANDALONE">
+                <system value="%(machine0)s"/>
+            </role>
+        </roles>
+        <executable url="%(beah_root)s/examples/tasks/rhts" />
+    </task>
+                <system value="%(machine1)s"/>
+
+    <task avg_time="1200" id="46"
+            name="/beah/examples/tests/rhtsex" role="STANDALONE"
+            result="%(task46_res)s"
+            status="%(task46_stat)s"
+            >
+        <roles>
+            <role value="STANDALONE">
+                <system value="%(machine0)s"/>
+            </role>
+        </roles>
+        <executable url="/usr/bin/python2.6">
+            <arg value="%(beah_py_root)s/tasks/rhts_xmlrpc.py" />
+            <arg value="%(beah_root)s/examples/tests/rhtsex" />
+        </executable>
+    </task>
+                <system value="%(machine1)s"/>
+
+    <task avg_time="1200" id="47"
+            name="/beah/examples/tests/testargs" role="STANDALONE"
+            result="%(task47_res)s"
+            status="%(task47_stat)s"
+            >
+        <roles>
+            <role value="STANDALONE">
+                <system value="%(machine0)s"/>
+            </role>
+        </roles>
+        <executable url="/usr/bin/python2.6">
+            <arg value="%(beah_py_root)s/tasks/rhts_xmlrpc.py" />
+            <arg value="%(beah_root)s/examples/tests/testargs" />
+        </executable>
+    </task>
+                <system value="%(machine1)s"/>
+    -->
+
+    <!--
+            name="/distribution/install" role="STANDALONE"
+            name="/distribution/kernelinstall" role="CLIENTS"
+
+    <task avg_time="120" id="95" testorder="95"
+            name="/examples/rhts_tutorial/mcsontos/beah_logs" role="CLIENTS"
+            result="%(task95_res)s"
+            status="%(task95_stat)s"
+            >
+        <roles>
+            <role value="CLIENTS">
+                <system value="%(machine0)s"/>
+            </role>
+        </roles>
+        <rpm name="tmp-examples-rhts_tutorial-mcsontos-beah_logs.noarch"/>
+    </task>
+    -->
+
+    <task avg_time="84400" id="99"
+            name="/examples/rhts_tutorial/mcsontos/beah_reserve" role="CLIENTS"
+            result="%(task99_res)s"
+            status="%(task99_stat)s"
+            >
+        <roles>
+            <role value="CLIENTS">
+                <system value="%(machine0)s"/>
+            </role>
+        </roles>
+        <params>
+            <param name="TESTORDER" value="99"/>
+        </params>
+        <rpm name="rh-tests-examples-rhts_tutorial-mcsontos-beah_reserve.noarch"/>
+    </task>
+
+</recipe>
+

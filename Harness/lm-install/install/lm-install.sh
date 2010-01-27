@@ -347,12 +347,12 @@ function lm_stop()
   service beah-srv stop
 }
 
-function lm_restart()
+function lm_start()
 {
   rm -rf /var/cache/rhts
-  service beah-srv restart
+  service beah-srv start
   if [[ -n "$FAKELC_SERVICE" ]]; then
-    service beah-fakelc restart
+    service beah-fakelc start
   else
     if [[ -n "$LM_FAKELC" ]]; then
       beah-fakelc &> /tmp/beah-fakelc.out &
@@ -360,9 +360,15 @@ function lm_restart()
       sleep 2
     fi
   fi
-  service beah-beaker-backend restart
-  service beah-fwd-backend restart
+  service beah-beaker-backend start
+  service beah-fwd-backend start
   lm_mon
+}
+
+function lm_restart()
+{
+  lm_stop
+  lm_start
 }
 
 function lm_kill()

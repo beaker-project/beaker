@@ -34,7 +34,10 @@ def glob_to(prefix, dirs):
     return list([(prefix+'/'+dir, glob_(dir+'/*')) for dir in dirs])
 
 # FIXME: add all recursively
+# edit MANIFEST.in
 more_data_files = glob_to('share/beah', [
+    'recipes',
+    'recipesets',
     'examples/tasks',
     'examples/tests',
     'examples/tests/rhtsex',
