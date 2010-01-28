@@ -152,7 +152,10 @@ class XmlRecipe(ElementWrapper):
         elif attrname == 'whiteboard':
             return self.get_xml_attr('whiteboard', unicode, None)
         elif attrname == 'kickstart':
-            return self.get_xml_attr('kickstart', unicode, None)
+            try:
+                return ''.join([t for t in self.wrappedEl['kickstart']])
+            except: 
+                return None
         else: raise AttributeError, attrname
 
 class XmlRecipeMachine(XmlRecipe):
