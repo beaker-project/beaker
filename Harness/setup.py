@@ -21,6 +21,7 @@ from time import strftime
 import os
 import os.path
 import glob
+import fnmatch
 
 # FIXME: Works only if setup.py runs from same directory it is located in!
 def glob_(*patterns):
@@ -30,23 +31,37 @@ def glob_(*patterns):
     answ = list([file for file in answ if not os.path.isdir(file)])
     return answ
 
+def rdglob(dirs, din=("*"), dex=()):
+    """Glob directories recursively.
+    
+    din - include directories matching any of these patterns
+    dex - exclude directories matching any of these patterns
+    """
+    dirs = list([dir for dir in dirs if os.path.isdir(dir)])
+    ix = 0
+    while ix < len(dirs):
+        dir = dirs[ix]
+        ls = [dir+"/"+d for d in os.listdir(dir) if os.path.isdir(dir+"/"+d)]
+        dirs.extend([d for d in ls if [True for di in din if fnmatch.fnmatch(d, di)] and not [True for de in dex if fnmatch.fnmatch(d, de)]])
+        ix += 1
+    return dirs
+
 def glob_to(prefix, dirs):
     return list([(prefix+'/'+dir, glob_(dir+'/*')) for dir in dirs])
 
-# FIXME: add all recursively
-more_data_files = glob_to('share/beah', [
+# edit MANIFEST.in
+more_data_files = glob_to('share/beah', rdglob([
+    'recipes',
+    'recipesets',
     'examples/tasks',
     'examples/tests',
-    'examples/tests/rhtsex',
-    'examples/tests/testargs',
-    'beah-tests/beah_iptables',
-    'beah-tests/beah_update',
-    #'tests', # FIXME: add some tests here!
+    'beah-tests',
+    'tests', # FIXME: add some tests here!
     'doc',
-    ])
+    ], dex=('*.tmp', '*.wip')))
 
 if os.environ.get('BEAH_DEV', ''):
-    # Add some RHTS tests to /mnt/tests
+    # Add selected RHTS tests to /mnt/tests
     more_data_files += glob_to('/mnt/tests', [
         'examples/tests/rhtsex',
         'examples/tests/testargs',
@@ -107,6 +122,7 @@ setup(
             'beah-fwd-backend = beah.backends.forwarder:main',
             'beah-fakelc = beah.tools.fakelc:main',
             'beah-rhts-task = beah.tasks.rhts_xmlrpc:main',
+            'beah-root = beah.tools:get_root',
         ),
     },
 

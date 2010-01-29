@@ -2,5 +2,8 @@ include *.conf
 include beahlib.sh
 graft init.d
 graft examples
+graft recipes
+graft recipesets
+graft beah-tests
 graft tests
 graft doc

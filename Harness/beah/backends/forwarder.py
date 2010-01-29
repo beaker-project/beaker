@@ -1,12 +1,15 @@
 from beah.wires.internals.twbackend import start_backend, log_handler
 from beah.core.backends import ExtBackend
-from beah.core import command
+from beah.core import command, event
+from beah.core.constants import ECHO
 from beah.misc.log_this import log_this
 from beah.misc import localhost
 from beah import config
 
+from twisted.internet.defer import Deferred
 from twisted.internet import reactor
 import logging
+import exceptions
 
 conf = config.config()
 
@@ -19,9 +22,11 @@ print_this = log_this(lambda s: log.debug(s), log_on=True)
 class ForwarderBackend(ExtBackend):
 
     verbose_cls = False
+    RETRY_IN = 10
 
     def __init__(self):
         self.__remotes = {}
+        ExtBackend.__init__(self)
 
     def make_verbose(cls):
         if not cls.verbose_cls:
@@ -29,6 +34,7 @@ class ForwarderBackend(ExtBackend):
             cls.reconnect = print_this(cls.reconnect)
             cls.remote_call = print_this(cls.remote_call)
             cls.proc_evt_variable_get = print_this(cls.proc_evt_variable_get)
+            cls.handle_evt_variable_get = print_this(cls.handle_evt_variable_get)
             cls.verbose_cls = True
     make_verbose = classmethod(make_verbose)
 
@@ -56,9 +62,31 @@ class ForwarderBackend(ExtBackend):
         port = int(port)
         # create a backend if necessary
         rem = self.remote_backend((host, port))
-        rem.send_cmd(cmd)
+        return rem.send_cmd(cmd)
+
+    def handle_evt_variable_get(self, result, evt):
+        type, pass_, remote_be, cmd_id, rest = result
+        if type == 'timeout':
+            log.error("Timeout.")
+            remote_be.done(cmd_id)
+            reactor.callLater(self.RETRY_IN, self.proc_evt_variable_get, evt)
+            return
+        if type == 'forward_response' and pass_ and rest.command() == 'variable_value':
+            self.controller.proc_cmd(self, rest)
+            remote_be.done(cmd_id)
+            return
+        if type != 'echo':
+            log.warning("Unexpected answer. Waiting more... (diagnostic=%r)", result)
+            remote_be.more(cmd_id).addCallback(self.handle_evt_variable_get, evt)
+            return
+        log.error("Remote end send echo without any answer! (diagnostic=%r)", result)
+        remote_be.done(cmd_id)
+        reactor.callLater(self.RETRY_IN, self.proc_evt_variable_get, evt)
 
     def proc_evt_variable_get(self, evt):
+        # FIXME!20100129 is this necessary?
+        #if not isinstance(evt, event.Event):
+        #    evt = event.Event(evt)
         host = evt.arg('dest')
         # FIXME: local host with different port # could be used! (for
         # testing multihost on single machine)
@@ -69,11 +97,12 @@ class ForwarderBackend(ExtBackend):
             host = 'localhost'
             # Clean the dest field to avoid inifinite loop:
             evt.args()['dest'] = ''
-        # FIXME: remote Controller could listen on another port:
+        # FIXME!!! remote Controller could listen on another port:
         port = conf.get('BACKEND', 'PORT')
-        self.remote_call(
-                command.forward(event=evt, host=host, port=port),
-                host, port)
+        cmd = command.forward(event=evt, host=host, port=port)
+        d = self.remote_call(cmd, host, port)
+        if d:
+            d.addCallback(self.handle_evt_variable_get, evt)
 
 class _RemoteBackend(ExtBackend):
 
@@ -82,16 +111,19 @@ class _RemoteBackend(ExtBackend):
     """
 
     ALLOWED_COMMANDS = ['variable_value']
+    TIMEOUT = 5
 
-    _CONNECTED=()
-    _NEW=()
-    _IDLE=()
+    _CONNECTED=object()
+    _NEW=object()
+    _IDLE=object()
 
-    def __init__(self, caller, dest, queue=None):
+    def __init__(self, caller, dest, queue=None, pending=None):
         self.__caller = caller
         self.__dest = dest
         self.__queue = queue or []
+        self.__pending = pending or {}
         self.__status = self._NEW
+        ExtBackend.__init__(self)
 
     verbose_cls = False
 
@@ -99,6 +131,7 @@ class _RemoteBackend(ExtBackend):
         if not cls.verbose_cls:
             cls.send_cmd = print_this(cls.send_cmd)
             cls.done = print_this(cls.done)
+            cls.more = print_this(cls.more)
             cls.set_controller = print_this(cls.set_controller)
             cls.clone = print_this(cls.clone)
             cls.proc_evt_forward_response = print_this(cls.proc_evt_forward_response)
@@ -110,17 +143,41 @@ class _RemoteBackend(ExtBackend):
         return self.__dest
 
     def send_cmd(self, cmd):
-        self.__queue.append(cmd)
+        for c, _ in self.__pending.values():
+            if cmd.same_as(c):
+                return None
+        d = Deferred()
+        cid = cmd.id()
+        self.__queue.append(cid)
+        self.__pending[cid] = (cmd, d)
         if self.__status is self._CONNECTED:
             self.controller.proc_cmd(self, cmd)
+            reactor.callLater(self.TIMEOUT, self.timeout, cid)
+        return d
 
-    def done(self, remote_be, cmd_id, evt):
-        n = len(self.__queue)
-        while n>0:
-            n -= 1
-            cmd = self.__queue[n]
-            if cmd.id() == cmd_id:
-                del self.__queue[n]
+    def __replaced(self, cmd_id, d):
+        c, dd = self.__pending.get(cmd_id, (None, None))
+        if c is None:
+            return None
+        self.__pending[cmd_id] = (c, d)
+        return dd
+
+    def timeout(self, cmd_id):
+        d = self.__replaced(cmd_id, None)
+        if d:
+            d.callback(('timeout', False, self, cmd_id, None))
+
+    def more(self, cmd_id):
+        d = Deferred()
+        if self.__replaced(cmd_id, d):
+            raise exceptions.RuntimeError('more should be called from callbacks only!')
+        return d
+
+    def done(self, cmd_id):
+        if self.__pending[cmd_id][1]:
+            raise exceptions.RuntimeError('done should be called from callbacks only!')
+        del self.__pending[cmd_id]
+        self.__queue = list([cid for cid in self.__queue if cid != cmd_id])
 
     def set_controller(self, controller=None):
         ExtBackend.set_controller(self, controller)
@@ -128,25 +185,32 @@ class _RemoteBackend(ExtBackend):
             self.__status = self._CONNECTED
             # FIXME: implement proper output filterring instead of no_output:
             controller.proc_cmd(self, command.no_output())
-            for cmd in self.__queue:
+            for cid in self.__queue:
+                cmd, d = self.__pending[cid]
                 controller.proc_cmd(self, cmd)
+                reactor.callLater(self.TIMEOUT, self.timeout, cid)
         else:
             self.__status = self._IDLE
-            reactor.callLater(10, self.__caller.reconnect, self)
 
     def clone(self):
-        return _RemoteBackend(self.__caller, self.__dest, self.__queue)
+        return _RemoteBackend(self.__caller, self.__dest, self.__queue,
+                self.__pending)
 
     def proc_evt_forward_response(self, evt):
         cmd = command.command(evt.arg('command'))
-        if cmd.command() in self.ALLOWED_COMMANDS:
-            self.__caller.controller.proc_cmd(self.__caller, cmd)
-        else:
-            log.warning("Command %s not allowed! cmd=%r", cmd.command(), cmd)
-            pass
+        cid = evt.arg('forward_id')
+        d = self.__replaced(cid, None)
+        if d:
+            cmd_ok = cmd.command() in self.ALLOWED_COMMANDS
+            if not cmd_ok:
+                log.warning("Command %s not allowed! cmd=%r", cmd.command(), cmd)
+            d.callback(('forward_response', cmd_ok, self, cid, cmd))
 
     def proc_evt_echo(self, evt):
-        self.done(self, evt.arg('cmd_id'), evt)
+        cid = evt.arg('cmd_id')
+        d = self.__replaced(cid, None)
+        if d:
+            d.callback(('echo', evt.arg('rc') == ECHO.OK, self, cid, evt))
 
 def start_forwarder_backend():
     if config.parse_bool(conf.get('BACKEND', 'DEVEL')):

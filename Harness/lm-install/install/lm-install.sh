@@ -294,6 +294,14 @@ function lm_rm_beah_eggs()
   rm_egg beah
 }
 
+function lm_rm_all()
+{
+  lm_rm_logs
+  lm_rm_beah_eggs
+  pushd $LM_INSTALL_ROOT
+  rm -rf *
+}
+
 function lm_view_logs()
 {
   view -o $LM_LOGS
@@ -347,12 +355,12 @@ function lm_stop()
   service beah-srv stop
 }
 
-function lm_restart()
+function lm_start()
 {
   rm -rf /var/cache/rhts
-  service beah-srv restart
+  service beah-srv start
   if [[ -n "$FAKELC_SERVICE" ]]; then
-    service beah-fakelc restart
+    service beah-fakelc start
   else
     if [[ -n "$LM_FAKELC" ]]; then
       beah-fakelc &> /tmp/beah-fakelc.out &
@@ -360,9 +368,15 @@ function lm_restart()
       sleep 2
     fi
   fi
-  service beah-beaker-backend restart
-  service beah-fwd-backend restart
+  service beah-beaker-backend start
+  service beah-fwd-backend start
   lm_mon
+}
+
+function lm_restart()
+{
+  lm_stop
+  lm_start
 }
 
 function lm_kill()
@@ -434,6 +448,14 @@ REPO_END
   lm_install_rhts_repo
   else
     true
+  fi
+}
+
+function beah_pushd()
+{
+  local pth=$(beah-root)
+  if [[ ! -z "$pth" ]]; then
+    pushd $pth/..
   fi
 }
 

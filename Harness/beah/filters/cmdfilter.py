@@ -62,7 +62,7 @@ class CmdFilter(object):
         return command.PING(args)
 
     def proc_cmd_dump(self, cmd, line):
-        return command.command('dump')
+        return command.Command('dump')
 
     def proc_cmd_kill(self, cmd, line):
         return command.kill()

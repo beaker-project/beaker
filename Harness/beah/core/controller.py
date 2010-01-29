@@ -83,6 +83,8 @@ class Controller(object):
         if backend and not (backend in self.backends):
             self.backends.append(backend)
             self.out_backends.append(backend)
+            for k, v in self.__waiting_tasks.items():
+                backend.proc_evt(v[0])
             return True
 
     def remove_backend(self, backend):
@@ -152,11 +154,14 @@ class Controller(object):
                 if dest == 'test.loop':
                     dest = ''
                 s = repr(("command.variable_value", key, handle, dest))
-                l = self.__waiting_tasks.setdefault(s, [])
-                if task not in l:
-                    l.append(task)
+                if self.__waiting_tasks.has_key(s):
+                    _, l = self.__waiting_tasks[s]
+                    if task not in l:
+                        l.append(task)
+                        log_debug("Controller.__waiting_tasks=%r", self.__waiting_tasks)
+                    return 
+                _, l = self.__waiting_tasks[s] = (evt, [task])
                 log_debug("Controller.__waiting_tasks=%r", self.__waiting_tasks)
-                log_debug("Controller.__waiting_tasks[%r]=%r", s, l)
         # controller - spawn_task
         orig = evt.origin()
         if not orig.has_key('id'):
@@ -249,22 +254,22 @@ class Controller(object):
 
     def proc_cmd_variable_value(self, backend, cmd, echo_evt):
         s = repr(("command.variable_value", cmd.arg("key"), cmd.arg("handle"), cmd.arg("dest")))
-        l = self.__waiting_tasks.get(s, None)
-        log_debug("Controller.__waiting_tasks=%r", self.__waiting_tasks)
+        _, l = self.__waiting_tasks.get(s, (None, None))
         log_debug("Controller.__waiting_tasks[%r]=%r", s, l)
         if l is not None:
             for task in l:
                 log_debug("Controller: %s.proc_cmd(%r)", task, cmd)
                 task.proc_cmd(cmd)
             del self.__waiting_tasks[s]
+        log_debug("Controller.__waiting_tasks=%r", self.__waiting_tasks)
 
     def proc_cmd_ping(self, backend, cmd, echo_evt):
-        evt = event.event('pong', message=cmd.arg('message', None))
+        evt = event.Event('pong', message=cmd.arg('message', None))
         log_debug("Controller: backend.proc_evt(%r)", evt)
         backend.proc_evt(evt, explicit=True)
 
     def proc_cmd_PING(self, backend, cmd, echo_evt):
-        self.generate_evt(event.event('PONG', message=cmd.arg('message', None)))
+        self.generate_evt(event.Event('PONG', message=cmd.arg('message', None)))
 
     def proc_cmd_config(self, backend, cmd, echo_evt):
         self.conf.update(cmd.args())
@@ -297,7 +302,7 @@ class Controller(object):
         # FIXME: [optional] add timeout - if there are still some backends
         # running, close anyway...
         self.killed = True
-        self.generate_evt(event.event('bye', message='killed'), to_all=True)
+        self.generate_evt(event.Event('bye', message='killed'), to_all=True)
         self.on_killed()
 
     def proc_cmd_dump(self, backend, cmd, echo_evt):
@@ -333,7 +338,7 @@ class Controller(object):
         if self.killed:
             answ += "\n== Killed ==\nTrue\n"
 
-        evt = event.event(event.event('dump', message=answ))
+        evt = event.Event('dump', message=answ)
         log_debug("Controller: backend.proc_evt(%r)", evt)
         backend.proc_evt(evt, explicit=True)
 

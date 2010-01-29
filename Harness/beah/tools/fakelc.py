@@ -16,18 +16,83 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-from twisted.web import xmlrpc
-from twisted.internet import reactor
-import beah
-from beah.wires.internals.twmisc import serveAnyChild, serveAnyRequest
-from beah.misc import format_exc, log_this, log_flush, make_log_handler
 import sys
 import os
+import os.path
 import exceptions
 import traceback
 import pprint
+import re
 from random import randint
 import logging
+import simplejson as json
+from optparse import OptionParser
+
+from twisted.web import xmlrpc, server
+from twisted.internet import reactor
+
+import beah
+from beah.wires.internals.twmisc import serveAnyChild, serveAnyRequest
+from beah.misc import format_exc, log_this, log_flush, make_log_handler
+
+def conf_opt(args):
+    """
+    Parses command line for common options.
+
+    This seeks only the few most common options. For other options use your own
+    parser.
+
+    Returns tuple (options, args). For descritpin see
+    optparse.OptionParser.parse_args and optparse.Values
+    """
+    opt = OptionParser()
+    opt.add_option("-v", "--verbose", action="count", dest="verbose",
+            help="Increase verbosity.")
+    opt.add_option("-q", "--quiet", action="count", dest="quiet",
+            help="Decrease verbosity.")
+    opt.add_option("-j", "--job", action="store", dest="job_id", metavar="JOB_ID",
+            help="Specify JOB_ID. Shall be filled in for multihost tasks.")
+    opt.add_option("-s", "--recipeset", action="store", dest="recipeset_id",
+            metavar="RECIPESET_ID",
+            help="Specify RECIPESET_ID. Shall be filled in for multihost tasks.")
+    opt.add_option("-r", "--recipe", action="store", dest="recipe",
+            metavar="RECIPE",
+            help="RECIPE is name of file which contains JSON definition of recipe.")
+    #opt.add_option("-S", "--recipes", action="store", dest="recipeset",
+    #        metavar="RECIPESET",
+    #        help="RECIPESET is name of file which contains JSON definition of recipe set.")
+    opt.add_option("-D", "--define", action="append", dest="variables",
+            metavar="VARIABLES",
+            help="VARIABLES specify list of overrides.")
+    return opt.parse_args(args)
+
+def conf_main(conf, args):
+    (opts, _) = conf_opt(args)
+    if opts.verbose is not None or opts.quiet is not None:
+        conf['verbosity'] = (opts.verbose or 0) - (opts.quiet or 0)
+    else:
+        conf['verbosity'] = 0
+    job_id = opts.job_id
+    if job_id is None:
+        job_id = 100 + randint(0, 99)
+    recipeset_id = opts.recipeset_id
+    if recipeset_id is None:
+        recipeset_id = job_id*100 + randint(0, 99)
+    conf['job_id'] = job_id
+    conf['recipeset_id'] = recipeset_id
+    if opts.recipe is None:
+        #raise exceptions.Exception("RECIPE must be specified!")
+        conf['recipe'] = 'recipes/recipe0'
+    else:
+        conf['recipe'] = opts.recipe
+    varre = re.compile('''^([a-zA-Z_][a-zA-Z0-9_]*)=(['"]?)(.*)\\2$''')
+    variables = {}
+    if opts.variables:
+        for pair in opts.variables:
+            key, value = varre.match(pair).group(1,3)
+            variables[key] = value
+    conf['variables'] = variables
+    return conf
 
 def logger():
     log = logging.getLogger('fakelc')
@@ -39,6 +104,7 @@ log = logger()
 # FIXME: Use config option for log_on:
 print_this = log_this.log_this(lambda s: log.debug(s), log_on=True)
 
+conf = dict(job_id=11, recipeset_id=11, recipe='recipes/recipe0', variables={})
 recipes = {}
 fqdn_recipes = {}
 task_recipe = {}
@@ -371,231 +437,75 @@ serveAnyRequest(LCHandler, 'catch_xmlrpc', xmlrpc.XMLRPC)
 # RECIPE DEFINITIONS:
 ################################################################################
 def build_recipe(fqdn):
+    global conf
     if fqdn is None:
         return None
+    if not fqdn:
+        fqdn = os.environ["HOSTNAME"]
     if fqdn_recipes.has_key(fqdn):
         return fqdn_recipes[fqdn]
-    return build_recipe_21(fqdn)
+    return recipe_builder(conf['job_id'], conf['recipeset_id'], conf['recipe'], conf['variables'], fqdn)
 
-def build_recipe_21(fqdn):
-    recipe21 = """\
-            <recipe arch="i386" distro="RHEL5-Server-U3"
-                    family="RedHatEnterpriseLinuxServer5"
-                    status="Running" variant="None"
-                    id="21" job_id="11" recipe_set_id="11"
-                    system="%(machine0)s"
-                    >
-                <repos>
-                    <repo name="beaker-task"
-                            url="http://beaker-devel.app.eng.bos.redhat.com/rpms" />
-                </repos>
-                <distroRequires>
-                    <distro_arch op="=" value="i386"/>
-                    <distro_family op="=" value="RedHatEnterpriseLinuxServer5"/>
-                </distroRequires>
-                <hostRequires>
-                    <system_type value="Machine"/>
-                </hostRequires>
+def beah_roots():
+    list = [os.environ.get("BEAH_ROOT", ""),
+            sys.prefix + "/share/beah",
+            beah.__path__[0] + "/../share/beah"]
+    return [d for d in list if d and os.path.isdir(d)]
 
-                <task avg_time="1200" id="40"
-                        name="/beah-tests/beah_iptables" role="STANDALONE"
-                        result="%(task40_res)s"
-                        status="%(task40_stat)s"
-                        >
-                    <roles>
-                        <role value="STANDALONE">
-                            <system value="%(machine0)s"/>
-                        </role>
-                    </roles>
-                    <rpm name="tmp-beah-tests-beah_iptables.noarch"/>
-                </task>
+def beah_py_root():
+    return beah.__path__[0]
 
-                <!--
-                <task avg_time="1200" id="41"
-                        name="/examples/testargs" role="STANDALONE"
-                        result="%(task41_res)s"
-                        status="%(task41_stat)s"
-                        >
-                    <roles>
-                        <role value="STANDALONE">
-                            <system value="%(machine0)s"/>
-                        </role>
-                    </roles>
-                    <rpm name="rh-tests-examples-testargs-1.1-1.noarch.rpm"/>
-                </task>
-                            <system value="%(machine1)s"/>
-                -->
+def find_open(fname):
+    if fname[0] == '/':
+        return open(fname)
+    for d in beah_roots():
+        f = d + '/' + fname
+        if os.path.isfile(f):
+            return open(f)
+    raise exceptions.RuntimeError("Could not find file '%s'" % fname)
 
-                <task avg_time="1200" id="42"
-                        name="/examples/testargs" role="CLIENTS"
-                        result="%(task42_res)s"
-                        status="%(task42_stat)s"
-                        >
-                    <roles>
-                        <role value="CLIENTS">
-                            <system value="%(machine0)s"/>
-                        </role>
-                    </roles>
-                    <params>
-                        <param name="KERNELARGNAME" value="kernel"/>
-                        <param name="KERNELARGVARIANT" value="up"/>
-                        <param name="KERNELARGVERSION"
-                            value="2.6.18-153.el5testabort"/>
-                    </params>
-                    <rpm name="rh-tests-examples-testargs.noarch"/>
-                </task>
-                        <role value="SERVERS">
-                            <system value="%(machine1)s"/>
-                        </role>
-
-                <!--
-                <task avg_time="1200" id="43"
-                        name="/beah/examples/tasks/a_task" role="STANDALONE"
-                        result="%(task43_res)s"
-                        status="%(task43_stat)s"
-                        >
-                    <roles>
-                        <role value="STANDALONE">
-                            <system value="%(machine0)s"/>
-                        </role>
-                    </roles>
-                    <executable url="%(beah_root)s/examples/tasks/a_task"/>
-                </task>
-                            <system value="%(machine1)s"/>
-
-                <task avg_time="1200" id="44"
-                        name="/beah/examples/tasks/socket" role="STANDALONE"
-                        result="%(task44_res)s"
-                        status="%(task44_stat)s"
-                        >
-                    <roles>
-                        <role value="STANDALONE">
-                            <system value="%(machine0)s"/>
-                        </role>
-                    </roles>
-                    <executable url="%(beah_root)s/examples/tasks/socket"/>
-                </task>
-                            <system value="%(machine1)s"/>
-
-                <task avg_time="1200" id="45"
-                        name="/beah/examples/tasks/rhts" role="STANDALONE"
-                        result="%(task45_res)s"
-                        status="%(task45_stat)s"
-                        >
-                    <roles>
-                        <role value="STANDALONE">
-                            <system value="%(machine0)s"/>
-                        </role>
-                    </roles>
-                    <executable url="%(beah_root)s/examples/tasks/rhts" />
-                </task>
-                            <system value="%(machine1)s"/>
-
-                <task avg_time="1200" id="46"
-                        name="/beah/examples/tests/rhtsex" role="STANDALONE"
-                        result="%(task46_res)s"
-                        status="%(task46_stat)s"
-                        >
-                    <roles>
-                        <role value="STANDALONE">
-                            <system value="%(machine0)s"/>
-                        </role>
-                    </roles>
-                    <executable url="/usr/bin/python2.6">
-                        <arg value="%(beah_py_root)s/tasks/rhts_xmlrpc.py" />
-                        <arg value="%(beah_root)s/examples/tests/rhtsex" />
-                    </executable>
-                </task>
-                            <system value="%(machine1)s"/>
-
-                <task avg_time="1200" id="47"
-                        name="/beah/examples/tests/testargs" role="STANDALONE"
-                        result="%(task47_res)s"
-                        status="%(task47_stat)s"
-                        >
-                    <roles>
-                        <role value="STANDALONE">
-                            <system value="%(machine0)s"/>
-                        </role>
-                    </roles>
-                    <executable url="/usr/bin/python2.6">
-                        <arg value="%(beah_py_root)s/tasks/rhts_xmlrpc.py" />
-                        <arg value="%(beah_root)s/examples/tests/testargs" />
-                    </executable>
-                </task>
-                            <system value="%(machine1)s"/>
-                -->
-
-                <!--
-                        name="/distribution/install" role="STANDALONE"
-                        name="/distribution/kernelinstall" role="CLIENTS"
-
-                <task avg_time="120" id="95" testorder="95"
-                        name="/examples/rhts_tutorial/mcsontos/beah_logs" role="CLIENTS"
-                        result="%(task95_res)s"
-                        status="%(task95_stat)s"
-                        >
-                    <roles>
-                        <role value="CLIENTS">
-                            <system value="%(machine0)s"/>
-                        </role>
-                    </roles>
-                    <rpm name="tmp-examples-rhts_tutorial-mcsontos-beah_logs.noarch"/>
-                </task>
-                -->
-
-                <task avg_time="84400" id="99"
-                        name="/examples/rhts_tutorial/mcsontos/beah_reserve" role="CLIENTS"
-                        result="%(task99_res)s"
-                        status="%(task99_stat)s"
-                        >
-                    <roles>
-                        <role value="CLIENTS">
-                            <system value="%(machine0)s"/>
-                        </role>
-                    </roles>
-                    <params>
-                        <param name="TESTORDER" value="99"/>
-                    </params>
-                    <rpm name="rh-tests-examples-rhts_tutorial-mcsontos-beah_reserve.noarch"/>
-                </task>
-
-            </recipe>
-        """
-
-    args21 = dict(
-            beah_root=os.environ.get("BEAH_ROOT", None) or sys.prefix + "/share/beah",
-            beah_py_root=beah.__path__[0],
-            )
-
-    global recipes, task_recipe, fqdn_recipes
-    recipes[21] = (recipe21, args21)
-    args = args21
-    tasks = [40, 41, 42, 43, 44, 45, 46, 47, 95, 99]
-    machines = [
-            fqdn or os.environ["HOSTNAME"],
-            "test1.example.com",
-            "lab-machine2.example.com",
-            ]
+def recipe_builder(job_id, recipeset_id, recipefile, overrides, fqdn):
+    f = find_open(recipefile)
+    try:
+        recipexml, machines, tasks, args = json.load(f)
+    finally:
+        f.close()
+    f = find_open(recipexml)
+    try:
+        recipe = f.read()
+    finally:
+        f.close()
+    args['beah_root'] = beah_roots()[0]
+    args['beah_py_root'] = beah_py_root()
+    args.update(overrides)
+    args['job_id'] = job_id
+    args['recipeset_id'] = recipeset_id
+    recipe_id = args.setdefault('recipe_id', 99)
     for task in tasks:
-        task_recipe[task] = 21
-        args['task%d_stat' % task] = 'Waiting'
-        args['task%d_res' % task] = 'None'
+        args.setdefault('task%d_stat' % task, 'Waiting')
+        args.setdefault('task%d_res' % task, 'None')
     for machine_ix in range(len(machines)):
         machine = machines[machine_ix]
-        fqdn_recipes[machine] = 21
-        args['machine%d' % machine_ix] = machine
-        args['machine%d_stat' % machine_ix] = 'None'
+        args.setdefault('machine%d' % machine_ix, machine)
+        args.setdefault('machine%d_stat' % machine_ix, 'None')
+    machine = args['machine0'] = fqdn
+    schedule(machine, recipe_id, recipe, args, tasks)
+    return recipe_id
 
+def schedule(machine, recipe_id, recipe, args, tasks):
+    global recipes, task_recipe, fqdn_recipes
+    recipes[recipe_id] = (recipe, args)
     log.info("%s", pprint.pformat(recipes))
-
-    return 21
+    fqdn_recipes[machine] = recipe_id
+    for task in tasks:
+        task_recipe[task] = recipe_id
 
 def main():
 ################################################################################
 # EXECUTE:
 ################################################################################
-    from twisted.web import server
+    global conf
+    conf = conf_main({}, sys.argv[1:])
     lc = LCHandler()
     s = server.Site(LCHandler(), None, 60*60*12)
     #reactor.listenTCP(5222, s, interface='localhost')

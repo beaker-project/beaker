@@ -1,0 +1,5 @@
+["recipes/test-fwd-be.xml",
+ ["machine0", "machine1"],
+ [40],
+ {}]
+

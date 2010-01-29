@@ -30,9 +30,12 @@ Events are used to communicate events from Task to Controller and finally back
 to Backend.
 
 Classes:
-    Event(list)
+    Event(list[, ...]) - class used for all events.
 
-Module contains many functions (e.g. idle, pong, start, end, etc.) to
+Function:
+    event(list) - make Event from list if necessary.
+
+Module contains many helper functions (e.g. idle, pong, start, end, etc.) to
 instantiate Event of particular type.
 
 Event is basically a list ['Event', evt, origin, timestamp, args] where:
@@ -90,7 +93,7 @@ def stderr(data, origin={}, timestamp=None):
     return output(data, "stderr", origin, timestamp)
 
 def output(data, out_handle="", origin={}, timestamp=None):
-    return event('output', origin, timestamp, out_handle=out_handle, data=data)
+    return Event('output', origin, timestamp, out_handle=out_handle, data=data)
 def stdout(data, origin={}, timestamp=None):
     return output(data, "stdout", origin, timestamp)
 def stderr(data, origin={}, timestamp=None):
@@ -287,7 +290,7 @@ def forward_response(command, forward_id, origin={}, timestamp=None,
     It is required all these response is sent before event.echo.
     """
     return Event('forward_response', origin=origin, timestamp=timestamp,
-            command=command, **kwargs)
+            command=command, forward_id=forward_id, **kwargs)
 
 def relation(handle, id1, id2, title=None, n2m=False, title1=None, origin={},
         timestamp=None, **kwargs):
@@ -361,8 +364,10 @@ def decode(codec, data):
 ################################################################################
 # IMPLEMENTATION:
 ################################################################################
-def event(evt, origin={}, timestamp=None, **kwargs):
-    return Event(evt, origin, timestamp, **kwargs)
+def event(evt):
+    if isinstance(evt, Event):
+        return evt
+    return Event(evt)
 
 import time
 class Event(list):
@@ -439,6 +444,17 @@ class Event(list):
     def args(self): return self[self.ARGS]
     def arg(self, name, val=None):
         return self.args().get(name, val)
+    def same_as(self, evt):
+        if not isinstance(evt, Event):
+            evt = Event(evt)
+        if self.event() != evt.event():
+            return False
+        if self.origin() != evt.origin():
+            return False
+        if self.args() == evt.args():
+            return True
+        # FIXME: are there any exceptions?
+        return False
 
 ################################################################################
 # TESTING:

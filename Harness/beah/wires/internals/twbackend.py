@@ -83,7 +83,7 @@ def start_backend(backend, host=None, port=None,
     else:
         ll = logging.DEBUG
     log.setLevel(ll)
-    reactor.connectTCP(host, port, BackendFactory(backend, adaptor, byef))
+    return reactor.connectTCP(host, port, BackendFactory(backend, adaptor, byef))
 
 ################################################################################
 # TEST:

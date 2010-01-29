@@ -72,7 +72,7 @@ if __name__=='__main__':
                 beahlib.ldebug("environment", environment=dict(os.environ))
 
                 beahlib.linfo("introduce")
-                self.controller.proc_evt(self, event.event('introduce', id=self.id))
+                self.controller.proc_evt(self, event.Event('introduce', id=self.id))
                 yield
 
                 beahlib.linfo("try pong")

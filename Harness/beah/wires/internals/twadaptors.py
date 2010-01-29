@@ -34,7 +34,7 @@ class ControllerAdaptor_Backend_JSON(JSONProtocol):
         """Process data(Event) received from Controller - forward to Backend"""
         if self.backend:
             try:
-                self.backend.proc_evt(event.event(cmd))
+                self.backend.proc_evt(event.Event(cmd))
             except KilledException:
                 # FIXME: kill?
                 print "Server was killed, should also die..."
@@ -58,7 +58,7 @@ class BackendAdaptor_JSON(JSONProtocol):
     def proc_input(self, cmd):
         """Process data(Command) received from Backend - forward to Controller"""
         if self.controller:
-            self.controller.proc_cmd(self, command.command(cmd))
+            self.controller.proc_cmd(self, command.Command(cmd))
     def proc_evt(self, evt, **flags):
         """Process Event received from Controller - forward to Backed"""
         self.send_cmd(evt)
@@ -83,7 +83,7 @@ class TaskAdaptor_JSON(JSONProtocol):
             return
         if self.controller:
             try:
-                evt = event.event(cmd)
+                evt = event.Event(cmd)
                 evt.origin().update(self.origin)
             except:
                 evt = event.lose_item(data=cmd, origin=dict(self.origin))
@@ -115,7 +115,7 @@ class ControllerAdaptor_Task_JSON(JSONProtocol):
     def proc_input(self, cmd):
         """Process data(Command) received from Controller - forward to Task"""
         if self.task:
-            self.task.proc_cmd(command.command(cmd))
+            self.task.proc_cmd(command.Command(cmd))
     def proc_evt(self, task, evt):
         """Process Event received from Task - forward to Controller"""
         self.send_cmd(evt)
