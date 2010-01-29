@@ -74,7 +74,7 @@ function inst2() { if [[ ! -z "$LABM2" ]]; then inst_all $LABM2; fi }
 function inst3() { if [[ ! -z "$LABM3" ]]; then inst_all $LABM3; fi }
 function inst4() { if [[ ! -z "$LABM4" ]]; then inst_all $LABM4; fi }
 function inst5() { if [[ ! -z "$LABM5" ]]; then inst_all $LABM5; fi }
-function labms_()
+function _labms()
 {
   if [[ ! -z "$1" ]]; then
     echo -n "$1 "
@@ -83,50 +83,74 @@ function labms_()
 function labms()
 {
   for i in $*; do
-    eval "labms_ \"\$LABM$i\""
+    eval "_labms \"\$LABM$i\""
   done
   echo
 }
+
+function lmcall()
+{
+  local lms=
+  local append=
+  while [[ ! -z "$1" ]]; do
+    case "$1" in
+      -m)
+        shift
+        lms="$lms $1"
+        shift
+        ;;
+      -a)
+        shift
+        append="$append $1"
+        shift
+        ;;
+      -n)
+        shift
+        append="$append $(labms $1)"
+        shift
+        ;;
+      --)
+        shift
+        break
+        ;;
+      -*)
+        echo "--- ERROR: Unknow option $1" >&2
+        return 1
+        ;;
+      *)
+        break
+        ;;
+    esac
+  done
+  for labm in ${lms:-$LABMS} $append; do
+    LABM=$labm "$@"
+  done
+}
+
+function xlm()
+{
+  TITLE=$LABM xt
+}
+
+function gxlm()
+{
+  lmcall "$@" xlm
+}
+
 function inst_all()
 {
   pushd $BEAH_ROOT
-  local append=
-  if [[ "$1" == "-a" ]]; then
-    shift
-    append=$@
-  fi
-  if [[ -z "$*" ]]; then
-    for labm in $LABMS $append; do
-      LABM=$labm ./lm-install.sh
-    done
-  else
-    for labm in $@; do
-      LABM=$labm ./lm-install.sh
-    done
-  fi
+  lmcall "$@" ./lm-install.sh
   popd
 }
-function pwdless_()
+function pwdless()
 {
   ssh root@$LABM mkdir -p .ssh
   cat ~/.ssh/id_rsa.pub | ssh root@$LABM 'cat >> .ssh/authorized_keys'
 }
-function pwdless()
+function gpwdless()
 {
-  local append=
-  if [[ "$1" == "-a" ]]; then
-    shift
-    append=$@
-  fi
-  if [[ -z "$*" ]]; then
-    for labm in $LABMS $append; do
-      LABM=$labm pwdless_
-    done
-  else
-    for labm in $@; do
-      LABM=$labm pwdless_
-    done
-  fi
+  lmcall "$@" pwdless
 }
 function launcher()
 (
