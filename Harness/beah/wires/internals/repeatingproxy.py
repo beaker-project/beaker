@@ -222,7 +222,6 @@ if __name__ == '__main__':
     from twisted.web.xmlrpc import XMLRPC
     from twisted.web import server
 
-    @print_this
     def chk(result, method, result_ok, expected_ok):
         print "%s: method %s resulted in %s %s%s" % (
                 result_ok == expected_ok and "OK" or "ERROR",
@@ -232,25 +231,25 @@ if __name__ == '__main__':
                 '', #":\n%s" % result,
                 )
         return None
+    chk = print_this(chk)
 
-    @print_this
     def rem_call(proxy, method, exp_):
         return proxy.callRemote(method) \
                 .addCallbacks(chk, chk,
                         callbackArgs=[method, True, exp_],
                         errbackArgs=[method, False, exp_])
+    rem_call = print_this(rem_call)
 
     class TestHandler(XMLRPC):
-        @print_this
         def xmlrpc_test(self): return "OK"
-        @print_this
+        xmlrpc_test = print_this(xmlrpc_test)
         def xmlrpc_test_exc(self): raise exceptions.RuntimeError
-        @print_this
+        xmlrpc_test_exc = print_this(xmlrpc_test_exc)
         def xmlrpc_test_exc2(self): raise exceptions.NotImplementedError
+        xmlrpc_test_exc2 = print_this(xmlrpc_test_exc2)
 
     p = RepeatingProxy(url='http://localhost:54123/')
     repeating_proxy_make_verbose(p)
-    #@print_this
     #def accepted_failure(fail):
     #    if fail.check(exceptions.NotImplementedError):
     #        # This does not work :-(
@@ -259,6 +258,7 @@ if __name__ == '__main__':
     #        # This would work:
     #        return True
     #    return False
+    #accepted_failure = print_this(accepted_failure)
     #p.is_accepted_failure = accepted_failure
     p.delay = 3
     p.max_retries = 6
