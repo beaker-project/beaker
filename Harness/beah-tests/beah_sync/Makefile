@@ -5,7 +5,7 @@ include /usr/share/rhts/lib/rhts-make.include
 TOPLEVEL_NAMESPACE=/distribution
 
 # The path of the test below the package:
-RELATIVE_PATH=beaker/beah/update
+RELATIVE_PATH=beaker/beah/sync
 
 export TESTVERSION=1.1
 
@@ -34,9 +34,9 @@ $(METADATA): Makefile
 	@echo "Name:		$(TEST)"		>> $(METADATA)
 	@echo "Path:		$(TEST_DIR)"		>> $(METADATA)
 	@echo "TestVersion:	$(TESTVERSION)"		>> $(METADATA)
-	@echo "Description:	Update harness from git." >> $(METADATA)
-	@echo "TestTime:	30m"			>> $(METADATA)
+	@echo "Description:	Sync point." >> $(METADATA)
+	@echo "TestTime:	120m"			>> $(METADATA)
 	@echo "Priority:	Manual"			>> $(METADATA)
-	@echo "Requires:	git"		>> $(METADATA)
 	@echo "License:		GNU GPL 2"	>> $(METADATA)
+
 

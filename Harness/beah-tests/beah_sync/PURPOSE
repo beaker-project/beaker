@@ -1,0 +1,5 @@
+Sync point. This is dummy test to synchronize machines in recipe set.
+
+The rationale behind this test is to have a sync point outside of task doing
+real work, so we can set test time more accurately in these independently of
+previous tasks.
