@@ -294,6 +294,14 @@ function lm_rm_beah_eggs()
   rm_egg beah
 }
 
+function lm_rm_all()
+{
+  lm_rm_logs
+  lm_rm_beah_eggs
+  pushd $LM_INSTALL_ROOT
+  rm -rf *
+}
+
 function lm_view_logs()
 {
   view -o $LM_LOGS
@@ -440,6 +448,14 @@ REPO_END
   lm_install_rhts_repo
   else
     true
+  fi
+}
+
+function beah_pushd()
+{
+  local pth=$(beah-root)
+  if [[ ! -z "$pth" ]]; then
+    pushd $pth/..
   fi
 }
 
