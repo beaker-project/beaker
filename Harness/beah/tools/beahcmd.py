@@ -137,12 +137,12 @@ if __name__ == '__main__':
     def coro():
         yield command.ping('Are you there?')
         yield command.PING('Hello World!')
-        yield command.command('dump')
+        yield command.Command('dump')
         yield command.run('/usr/bin/bash', args=['-c','echo $ZZ1; echo $ZZ2'], env=dict(ZZ1='Zzzz...', ZZ2='__ZZZZ__'))
         yield 'end' # start monitoring 'end'
-        yield command.command('dump')
+        yield command.Command('dump')
         yield WAIT
-        yield command.command('dump')
+        yield command.Command('dump')
         return
 
     beah_run(coro())

@@ -259,12 +259,12 @@ class Controller(object):
             del self.__waiting_tasks[s]
 
     def proc_cmd_ping(self, backend, cmd, echo_evt):
-        evt = event.event('pong', message=cmd.arg('message', None))
+        evt = event.Event('pong', message=cmd.arg('message', None))
         log_debug("Controller: backend.proc_evt(%r)", evt)
         backend.proc_evt(evt, explicit=True)
 
     def proc_cmd_PING(self, backend, cmd, echo_evt):
-        self.generate_evt(event.event('PONG', message=cmd.arg('message', None)))
+        self.generate_evt(event.Event('PONG', message=cmd.arg('message', None)))
 
     def proc_cmd_config(self, backend, cmd, echo_evt):
         self.conf.update(cmd.args())
@@ -297,7 +297,7 @@ class Controller(object):
         # FIXME: [optional] add timeout - if there are still some backends
         # running, close anyway...
         self.killed = True
-        self.generate_evt(event.event('bye', message='killed'), to_all=True)
+        self.generate_evt(event.Event('bye', message='killed'), to_all=True)
         self.on_killed()
 
     def proc_cmd_dump(self, backend, cmd, echo_evt):
@@ -333,7 +333,7 @@ class Controller(object):
         if self.killed:
             answ += "\n== Killed ==\nTrue\n"
 
-        evt = event.event(event.event('dump', message=answ))
+        evt = event.Event('dump', message=answ)
         log_debug("Controller: backend.proc_evt(%r)", evt)
         backend.proc_evt(evt, explicit=True)
 

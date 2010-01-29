@@ -31,34 +31,34 @@ eventually Task.)
 ################################################################################
 def ping(message=None):
     if message:
-        return command('ping', message=message)
-    return command('ping')
+        return Command('ping', message=message)
+    return Command('ping')
 
 def PING(message=None):
     if message:
-        return command('PING', message=message)
-    return command('PING')
+        return Command('PING', message=message)
+    return Command('PING')
 
 def run(file, name=None, env=None, args=None):
     if name is None:
         name = file
-    return command('run', task_info={'file':file, 'name':name}, env=env, args=args)
+    return Command('run', task_info={'file':file, 'name':name}, env=env, args=args)
 
 def run_this(script, name=None, env=None, args=None):
-    return command('run_this', script=script, task_info={'name':name}, env=env, args=args)
+    return Command('run_this', script=script, task_info={'name':name}, env=env, args=args)
 
 def kill():
-    return command('kill')
+    return Command('kill')
 
 def no_input():
-    return command('no_input')
+    return Command('no_input')
 
 def no_output():
-    return command('no_output')
+    return Command('no_output')
 
 def variable_value(key, value, handle='', **kwargs):
     """Used to return a "variable's" value to task."""
-    return command('variable_value', key=key, value=value, handle=handle,
+    return Command('variable_value', key=key, value=value, handle=handle,
             **kwargs)
 
 def forward(event, host, port=None):
@@ -72,17 +72,19 @@ def forward(event, host, port=None):
     before sending event.echo. command.forward is recommended afterwards, as
     connection could be closed.
     """
-    return command('forward', event=event, destination=(host, port))
+    return Command('forward', event=event, destination=(host, port))
 
 ################################################################################
 # IMPLEMENTATION:
 ################################################################################
-def command(cmd, **kwargs):
-    return Command(cmd, **kwargs)
+def command(cmd):
+    if isinstance(cmd, Command):
+        return cmd
+    return Command(cmd)
 
 def mkcommand(cmd, __doc__="", **kwargs):
     def cmdf(**kwargs):
-        return command(cmd)
+        return Command(cmd)
     setfname(cmdf, cmd)
     cmdf.__doc__ = __doc__ or "Command %s" % cmd
     return cmdf
