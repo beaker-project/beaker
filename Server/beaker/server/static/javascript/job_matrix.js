@@ -1,42 +1,60 @@
-connect(document,'onsubmit', submit_changes)
+JobMatrix = function (jobs,whiteboard,filter) {
 
-function submit_changes() {
-  if (getNodeAttribute('remote_form_whiteboard','readonly') != null) {
-      getElement('remote_form_whiteboard').setAttribute('disabled',1) 
+    this.job_field = jobs
+    this.whiteboard_field = whiteboard
+    this.filter_field = filter
+
+    this.job_value = null
+    this.whiteboard_value = null
+    this.filter_value = null 
+    bindMethods(this)
+}
+
+
+JobMatrix.prototype.initialize = function() {
+    //this.whiteboard_value = getElement(this.whiteboard_field).value
+    //this.job_value = getElement(this.job_field).value
+    //this.filter_value = getElement(this.filter_field).value
+}
+
+JobMatrix.prototype.submit_changes = function() {
+  if (getNodeAttribute(this.whiteboard_field,'readonly') != null) {
+      getElement(this.whiteboard_field).setAttribute('disabled',1) 
   }
 
 
-  if (getNodeAttribute('remote_form_job_ids','readonly') != null) {
-      getElement('remote_form_job_ids').setAttribute('disabled',1) 
+  if (getNodeAttribute(this.job_field,'readonly') != null) {
+      getElement(this.job_field).setAttribute('disabled',1) 
   }
 }
 
-function clicked_whiteboard() {
-    getElement('remote_form_whiteboard').removeAttribute('readonly')
-    getElement('remote_form_job_ids').setAttribute('readonly',1) 
+JobMatrix.prototype.clicked_whiteboard = function() {
+    getElement(this.whiteboard_field).removeAttribute('readonly')
+    getElement(this.job_field).setAttribute('readonly',1) 
 }
 
 
-function clicked_jobs() {
-    getElement('remote_form_job_ids').removeAttribute('readonly')
-    getElement('remote_form_whiteboard').setAttribute('readonly',1)    
+JobMatrix.prototype.clicked_jobs = function() {
+    getElement(this.job_field).removeAttribute('readonly')
+    getElement(this.whiteboard_field).setAttribute('readonly',1)    
 }
 
 
-function filter_on_whiteboard(event) {
+JobMatrix.prototype.filter_on_whiteboard = function(event) {
     var params = { 'tg_format' : 'json',
                    'tg_random' : new Date().getTime(),
-                   'filter' : getElement('remote_form_whiteboard_filter').value }
+                   'filter' : getElement(this.filter_field).value }
     var d = loadJSONDoc('./get_whiteboard_options_json?' + queryString(params))
-    d.addCallback(replace_whiteboard)
+    d.addCallback(this.replace_whiteboard)
 } 
 
 
-function replace_whiteboard(result) { 
-    replaceChildNodes('remote_form_whiteboard', map(replaceOptions, result.options));
+JobMatrix.prototype.replace_whiteboard = function(result) { 
+    replaceChildNodes(this.whiteboard_field, map(this.replaceOptions, result.options));
 }
 
-function replaceOptions(arg) {
+JobMatrix.prototype.replaceOptions = function(arg) {
     option = OPTION({"value": arg}, arg)
     return option
 }
+
