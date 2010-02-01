@@ -111,6 +111,23 @@ def parse_conf_name(name):
     return (match.group(1) or 'DEFAULT', match.group(2))
 
 
+class ConfigParserFix(ConfigParser):
+    """
+    Class overriding ConfigParser to workaround a bug in Python 2.3.
+    
+    The problem is that optionxform is not applied consistently to keys.
+
+    Using str.upper for optionxform, as uppercase keys are used in beah.
+    """
+    def __init__(self, defaults={}, optionxformf=str.upper):
+        self.optionxform = optionxformf
+        defs = {}
+        if defaults:
+            for key, value in defaults.items():
+                defs[self.optionxform(key)] = value
+        ConfigParser.__init__(self, defs)
+
+
 def config(conf_env_var='BEAH_CONF', conf_filename='beah.conf', defaults=None,
         **opts):
 
@@ -131,9 +148,7 @@ def config(conf_env_var='BEAH_CONF', conf_filename='beah.conf', defaults=None,
 
     glob_var = '_conf_%s' % conf_env_var
     if not globals().has_key(glob_var):
-        if defaults is None:
-            defaults = {}
-        conf = ConfigParser(defaults=defaults)
+        conf = ConfigParserFix(defaults)
         conf.read(_get_conf_file(conf_env_var, conf_filename,
             opts.get("CONF_FILE", '')))
         globals()[glob_var]=conf
