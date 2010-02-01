@@ -426,7 +426,7 @@ class BeakerLCBackend(SerializingBackend):
             self.proxy.on_idle = self.set_idle
             if self.verbose_cls:
                 #self.proxy.make_verbose()
-                repeating_proxy_make_verbose(self.proxy)
+                repeating_proxy_make_verbose(self.proxy, print_this=print_this)
                 make_logging_proxy(self.proxy)
             self.proxy.logging_print = log.info
             self.on_idle()

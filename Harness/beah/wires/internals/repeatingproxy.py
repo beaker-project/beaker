@@ -193,26 +193,28 @@ class RepeatingProxy(Proxy):
     def push(self, m):
         self.__cache.append(m)
 
-def repeating_proxy_make_verbose(proxy):
+def repeating_proxy_make_verbose(proxy, print_this=print_this, verbosity=1):
     if not isinstance(proxy, RepeatingProxy):
         return proxy
     if "_repeating_proxy_verbose" in dir(proxy):
         return proxy
     proxy._repeating_proxy_verbose = True
-    proxy.is_auto_retry_condition = print_this(proxy.is_auto_retry_condition)
-    proxy.is_accepted_failure = print_this(proxy.is_accepted_failure)
-    proxy.on_ok = print_this(proxy.on_ok)
-    proxy.on_error = print_this(proxy.on_error)
-    proxy.resend = print_this(proxy.resend)
-    proxy.send_next = print_this(proxy.send_next)
-    proxy.callRemote = print_this(proxy.callRemote)
-    proxy.callRemote_ = print_this(proxy.callRemote_)
-    proxy.when_idle = print_this(proxy.when_idle)
-    proxy.is_empty = print_this(proxy.is_empty)
-    proxy.is_idle = print_this(proxy.is_idle)
-    proxy.pop = print_this(proxy.pop)
-    proxy.insert = print_this(proxy.insert)
-    proxy.push = print_this(proxy.push)
+    if verbosity >= 1:
+        proxy.callRemote = print_this(proxy.callRemote)
+        proxy.callRemote_ = print_this(proxy.callRemote_)
+        if verbosity >= 2:
+            proxy.is_auto_retry_condition = print_this(proxy.is_auto_retry_condition)
+            proxy.is_accepted_failure = print_this(proxy.is_accepted_failure)
+            proxy.on_ok = print_this(proxy.on_ok)
+            proxy.on_error = print_this(proxy.on_error)
+            proxy.resend = print_this(proxy.resend)
+            proxy.send_next = print_this(proxy.send_next)
+            proxy.when_idle = print_this(proxy.when_idle)
+            proxy.is_empty = print_this(proxy.is_empty)
+            proxy.is_idle = print_this(proxy.is_idle)
+            proxy.pop = print_this(proxy.pop)
+            proxy.insert = print_this(proxy.insert)
+            proxy.push = print_this(proxy.push)
     return proxy
 
 if __name__ == '__main__':
