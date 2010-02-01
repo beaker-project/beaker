@@ -399,24 +399,26 @@ class Event(list):
 
     # FIXME: Clean-up! All the indices are ugly!!!
     def __init__(self, evt, origin={}, timestamp=None, id=None, **kwargs):
-        if isinstance(evt, Event):
-            list.__init__(self, evt)
-            return
-        list.__init__(self, ['Event', None, None, None, None, None]) # is this backwards compatible? Even with Python 2.3?
         if isinstance(evt, list):
-            if evt[0] != 'Event':
-                raise exceptions.TypeError('%r\'s first element has to be \'Event\'' % evt)
-            self[self.EVENT] = evt[self.EVENT]
-            self[self.ID] = evt[self.ID]
-            self[self.ORIGIN] = dict(evt[self.ORIGIN])
-            self[self.TIMESTAMP] = evt[self.TIMESTAMP]
-            self[self.ARGS] = dict(evt[self.ARGS])
+            list.__init__(self, evt)
+            self[self.ORIGIN] = dict(evt[self.ORIGIN]) # make a copy
+            self[self.ARGS] = dict(evt[self.ARGS]) # make a copy
+            if isinstance(evt, Event):
+                return
         else:
-            self[self.EVENT] = evt
-            self[self.ID] = id
-            self[self.ORIGIN] = origin
-            self[self.TIMESTAMP] = timestamp
-            self[self.ARGS] = kwargs
+            list.__init__(self, ['Event', None, None, None, None, None])
+            if isinstance(evt, dict):
+                self[self.EVENT] = evt.get('evt')
+                self[self.ID] = evt.get('id', None)
+                self[self.ORIGIN] = dict(evt.get('origin', {}))
+                self[self.TIMESTAMP] = evt.get('timestamp', None)
+                self[self.ARGS] = dict(evt.get('args', {}))
+            else:
+                self[self.EVENT] = evt
+                self[self.ID] = id
+                self[self.ORIGIN] = dict(origin)
+                self[self.TIMESTAMP] = timestamp
+                self[self.ARGS] = dict(kwargs)
 
         for i in range(1, 6):
             if callable(self[i]):
@@ -432,7 +434,13 @@ class Event(list):
             if callable(self[self.ARGS][key]):
                 self[self.ARGS][key] = self[self.ARGS][key](self)
 
+        self.check()
+
+    def check(self):
+        if self[0] != 'Event':
+            raise exceptions.TypeError('%r not permitted as %r[0]. Has to be \'Event\'' % (self[0]))
         check_type("event", self.event(), self.TESTTYPE)
+        check_type("id", self.id(), self.TESTTYPE)
         check_type("origin", self.origin(), dict)
         check_type("args", self.args(), dict)
         check_type("timestamp", self.timestamp(), float, True)

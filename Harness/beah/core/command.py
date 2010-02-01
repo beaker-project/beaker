@@ -18,7 +18,7 @@
 
 import exceptions
 import sys
-from beah.core import event, new_id
+from beah.core import event, new_id, check_type
 from beah.misc import setfname
 
 """
@@ -102,27 +102,31 @@ class Command(list):
         TESTTYPE = str
 
     def __init__(self, cmd, id=None, **kwargs):
-        if isinstance(cmd, Command):
-            list.__init__(self, cmd)
-            return
-        list.__init__(self, ['Command', None, None, None]) # is this backwards compatible? Even with Python 2.3?
         if isinstance(cmd, list):
-            if cmd[0] != 'Command' or not isinstance(cmd[self.COMMAND], self.TESTTYPE) or not isinstance(cmd[self.ARGS], dict):
-                raise exceptions.TypeError('%r not permitted. Has to be [\'Command\', str, str, dict]' % cmd)
-            self[self.COMMAND] = str(cmd[self.COMMAND])
-            self[self.ID] = cmd[self.ID]
-            self[self.ARGS] = dict(cmd[self.ARGS])
-        elif isinstance(cmd, self.TESTTYPE):
-            self[self.COMMAND] = str(cmd)
-            self[self.ID] = id
-            self[self.ARGS] = dict(kwargs)
+            list.__init__(self, cmd)
+            self[self.ARGS] = dict(cmd[self.ARGS]) # make a copy
+            if isinstance(cmd, Command):
+                return
         else:
-            raise exceptions.TypeError('%s not permitted as command, it has to be an instance of list or str' % cmd.__class__.__name__)
-
+            list.__init__(self, ['Command', None, None, None])
+            if isinstance(cmd, dict):
+                self[self.COMMAND] = cmd.get('cmd', cmd.get('command'))
+                self[self.ID] = cmd.get('id', None)
+                self[self.ARGS] = dict(cmd.get('args', {}))
+            else:
+                self[self.COMMAND] = str(cmd)
+                self[self.ID] = id
+                self[self.ARGS] = dict(kwargs)
         if self[self.ID] is None:
             self[self.ID] = new_id()
-        if not isinstance(self.id(), self.TESTTYPE):
-            raise exceptions.TypeError('%r not permitted as id. Has to be str.' % self.id())
+        self.check()
+
+    def check(self):
+        if self[0] != 'Command':
+            raise exceptions.TypeError('%r not permitted as %r[0]. Has to be \'Command\'' % (self[0], self))
+        check_type("command", self.command(), self.TESTTYPE)
+        check_type("id", self.id(), self.TESTTYPE)
+        check_type("args", self.args(), dict)
 
     def command(self):
         return self[self.COMMAND]

@@ -540,10 +540,8 @@ class BeakerLCBackend(SerializingBackend):
         if id is None:
             return False
         if evt.event() == 'file_write':
-            d = dict(evt.args())
-            d['data'] = '...hidden...'
-            evt = event.Event('file_write', id=evt.id(), origin=evt.origin(),
-                    timestamp=evt.timestamp(), **d)
+            evt = event.Event(evt)
+            evt.args()['data'] = '...hidden...'
         self.get_writer(id, '.task_beah_raw', BeakerWriter).write(jsonln(evt))
         return False
 
