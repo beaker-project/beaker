@@ -79,14 +79,14 @@ class JobMatrix:
 
     def inner_data_grid(self,data,show_headers): 
         fields = []
-        my_list = [] 
+        my_list = []
         for objs in data:
             whiteboard_title = whiteboard_name = objs[0]
-            if whiteboard_name is None:
+            if not whiteboard_name:
                 whiteboard_name = 'none'
                 whiteboard_title = 'none'
-            my_list += list(objs[self.OBJECTS_TUPLE_INDEX])
-            fields.append(InnerGrid.Column(name=whiteboard_name, 
+            my_list += list(objs[self.OBJECTS_TUPLE_INDEX]) 
+            fields.append(InnerGrid.Column(name=whiteboard_name,
                                            getter=self.display_whiteboard_results(objs[self.WHITEBOARD_VALUE_INDEX]), 
                                            title=whiteboard_name))       
         options = {'show_headers' : show_headers  } 
@@ -243,7 +243,7 @@ class JobMatrix:
         #             (<arch>
         #                    (<whiteboard>
         #                                 (<obj>,<obj>)))))
-        result_data = []                                       
+        result_data = []                                    
         for task,data in my_hash.items(): 
             fourth_inner = None
             for arch,whiteboard_data in data.items():
@@ -262,7 +262,7 @@ class JobMatrix:
                     fourth_inner += (third_inner,)
                 else:
                     fourth_inner = (task,third_inner)
-            result_data.append(fourth_inner)       
+            result_data.append(fourth_inner)  
         return result_data 
  
     def make_result_box(self,returns,query_obj,result=None): 
