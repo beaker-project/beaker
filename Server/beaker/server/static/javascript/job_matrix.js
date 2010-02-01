@@ -12,10 +12,9 @@ JobMatrix = function (jobs,whiteboard,filter) {
 
 
 JobMatrix.prototype.initialize = function() {
-    //this.whiteboard_value = getElement(this.whiteboard_field).value
-    //this.job_value = getElement(this.job_field).value
-    //this.filter_value = getElement(this.filter_field).value
+
 }
+
 
 JobMatrix.prototype.submit_changes = function() {
   if (getNodeAttribute(this.whiteboard_field,'readonly') != null) {
@@ -45,12 +44,14 @@ JobMatrix.prototype.filter_on_whiteboard = function(event) {
                    'tg_random' : new Date().getTime(),
                    'filter' : getElement(this.filter_field).value }
     var d = loadJSONDoc('./get_whiteboard_options_json?' + queryString(params))
+    removeElementClass('loading','hidden')
     d.addCallback(this.replace_whiteboard)
 } 
 
 
 JobMatrix.prototype.replace_whiteboard = function(result) { 
     replaceChildNodes(this.whiteboard_field, map(this.replaceOptions, result.options));
+    addElementClass('loading','hidden') 
 }
 
 JobMatrix.prototype.replaceOptions = function(arg) {

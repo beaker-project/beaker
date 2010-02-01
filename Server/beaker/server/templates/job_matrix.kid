@@ -23,6 +23,7 @@ $(document).ready( function() {
 
          <strong class='smallfont'>${whiteboard_filter.label}</strong>
          <span style='display:inline'  py:content='whiteboard_filter.display()' />
+         <span id='loading' class='hidden'>&nbsp;&nbsp;&nbsp;&nbsp;</span>
 
      </div>
    
