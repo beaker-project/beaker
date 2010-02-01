@@ -134,21 +134,56 @@ function lm_install_setuptools()
   popd
 }
 
+function lm_unpack()
+{
+  lm_pushd || return 1
+    export BEAH_DEV
+
+    BEAH_SRC_DIR="$PWD/beah-0.1.a1${BEAH_DEV}"
+    if [[ -d "$BEAH_SRC_DIR" ]]; then
+      echo "Directory \"beah-0.1.a1${BEAH_DEV}\" exists."
+    else
+      tar xvzf ${LM_INSTALL_ROOT}/install/beah-0.1.a1${BEAH_DEV}.tar.gz
+    fi
+  popd
+  [[ -d "$BEAH_SRC_DIR" ]]
+}
+
 function lm_build_rpm()
 {
-  if [[ -e "$BEAH_RPM" ]]; then
-    echo "RPM file \"$BEAH_RPM\" exists."
-  else
-    python setup.py bdist_rpm
-  fi
+  export BEAH_DEV
+  lm_unpack || return 1;
+  pushd $BEAH_SRC_DIR || return 1;
+    BEAH_RPM="${PWD}/dist/beah-0.1.a1${BEAH_DEV}-1.noarch.rpm"
+    if [[ -e "$BEAH_RPM" ]]; then
+      echo "Nothing to do: RPM file \"$BEAH_RPM\" already exists."
+    else
+      local deps
+      if [[ "$1" == "-d" ]]; then
+        deps="--requires \"$(echo python{,-{hashlib,setuptools,simplejson,twisted-{core,web},uuid,zope-interface}})\""
+      else
+        deps=""
+      fi
+      python setup.py bdist_rpm $deps
+    fi
+  popd
+  [[ -e "$BEAH_RPM" ]]
 }
+
 function lm_build_egg()
 {
-  if [[ -e "$BEAH_EGG" ]]; then
-    echo "Egg file \"$BEAH_EGG\" exists."
-  else
-    python setup.py bdist_egg
-  fi
+  export BEAH_DEV
+  lm_unpack || return 1
+  pushd $BEAH_SRC_DIR || return 1;
+    EGG_VER="$(python -V 2>&1 | cut -d " " -f 2 -s)"
+    BEAH_EGG="${PWD}/dist/beah-0.1.a1${BEAH_DEV}-py$EGG_VER.egg"
+    if [[ -e "$BEAH_EGG" ]]; then
+      echo "Nothing to do: Egg file \"$BEAH_EGG\" already exists."
+    else
+      python setup.py bdist_egg
+    fi
+  popd
+  [[ -e "$BEAH_EGG" ]]
 }
 
 # Other Dependencies:
@@ -167,69 +202,52 @@ function lm_build_egg()
 
 function lm_install_beah()
 {
-  lm_pushd || return 1
-    export BEAH_DEV
-
-    if [[ -d "beah-0.1.a1${BEAH_DEV}" ]]; then
-      echo "Directory \"beah-0.1.a1${BEAH_DEV}\" exists."
-    else
-      tar xvzf ${LM_INSTALL_ROOT}/install/beah-0.1.a1${BEAH_DEV}.tar.gz
-    fi
-
-    pushd beah-0.1.a1${BEAH_DEV} || { popd; return 1; }
-      BEAH_RPM="dist/beah-0.1.a1${BEAH_DEV}-1.noarch.rpm"
-
-      EGG_VER="$(python -V 2>&1 | cut -d " " -f 2 -s)"
-      BEAH_EGG="dist/beah-0.1.a1${BEAH_DEV}-py$EGG_VER.egg"
-
-      case "${1:-"src"}" in
-        rpm|-r|--rpm)
-          lm_build_rpm
-          if [[ -r "$BEAH_RPM" ]]; then
-            yum -y install python-{zope-interface,twisted-{core,web},simplejson}
-            rpm -iF "$BEAH_RPM"
-          else
-            false
-          fi
-          ;;
-        yum|-y|--yum)
-          lm_build_rpm
-          if [[ -r "$BEAH_RPM" ]]; then
-            yum -y install --nogpgcheck "$BEAH_RPM"
-          else
-            false
-          fi
-          ;;
-        egg|-e|--egg)
-          lm_build_egg
-          if [[ -r "$BEAH_EGG" ]]; then
-            easy_install "$BEAH_EGG"
-          else
-            false
-          fi
-          ;;
-        src-nodep|-n|--src-nodep)
-          python setup.py install
-          ;;
-        src|-s|--src)
-          yum -y install python-{zope-interface,twisted-{core,web},simplejson} && \
-          python setup.py install
-          ;;
-        build|-b|--build)
-          lm_build_rpm && \
-          lm_build_egg
-          ;;
-        help|-h|-?|--help)
-          echo "USAGE: $0 [src|egg|rpm|build|help]"
-          ;;
-        *)
-          soft-error "lm_install_beah does not understand '$1'"
-          echo "USAGE: $0 [src|egg|rpm|build|help]" >&2
+  lm_unpack || return 1
+  pushd "$BEAH_SRC_DIR" || return 1
+    case "${1:-"src"}" in
+      rpm|-r|--rpm)
+        if lm_build_rpm; then
+          yum -y install python-{zope-interface,twisted-{core,web},simplejson}
+          rpm -iF "$BEAH_RPM"
+        else
           false
-          ;;
-      esac
-      local _answ=$?
-    popd
+        fi
+        ;;
+      yum|-y|--yum)
+        if lm_build_rpm; then
+          yum -y install --nogpgcheck "$BEAH_RPM"
+        else
+          false
+        fi
+        ;;
+      egg|-e|--egg)
+        if lm_build_egg; then
+          easy_install "$BEAH_EGG"
+        else
+          false
+        fi
+        ;;
+      src-nodep|-n|--src-nodep)
+        python setup.py install
+        ;;
+      src|-s|--src)
+        yum -y install python-{zope-interface,twisted-{core,web},simplejson} && \
+        python setup.py install
+        ;;
+      build|-b|--build)
+        lm_build_rpm && \
+        lm_build_egg
+        ;;
+      help|-h|-?|--help)
+        echo "USAGE: $0 [src|egg|rpm|build|help]"
+        ;;
+      *)
+        soft-error "lm_install_beah does not understand '$1'"
+        echo "USAGE: $0 [src|egg|rpm|build|help]" >&2
+        false
+        ;;
+    esac
+    local _answ=$?
   popd
   echo "lm_install_beah: return $_answ"
   return $_answ
@@ -267,6 +285,12 @@ function lm_rm_logs()
   rm -rf /tmp/beah-fakelc-logs
 }
 
+function lm_rm_runtime()
+{
+  rm -rf /var/beah/*
+  rm -rf /tmp/beah-fakelc-logs/*
+}
+
 function ls_egg()
 {
   if [[ -z "$1" ]]; then
@@ -298,6 +322,7 @@ function lm_rm_all()
 {
   lm_rm_logs
   lm_rm_beah_eggs
+  lm_rm_runtime
   pushd $LM_INSTALL_ROOT
   rm -rf *
 }
