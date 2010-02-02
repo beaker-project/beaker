@@ -518,6 +518,7 @@ class System(SystemObject):
     searchable_columns = {'Vendor'    : myColumn(column=model.System.vendor,col_type='string'),
                           'Name'      : myColumn(column=model.System.fqdn,col_type='string'),
                           'Lender'    : myColumn(column=model.System.lender,col_type='string'),
+                          'Location' : myColumn(column=model.System.location, col_type='string'),
                           'Model'     : myColumn(column=model.System.model,col_type='string'),
                           'Memory'    : myColumn(column=model.System.memory,col_type='numeric'),
                           'User'      : myColumn(column=model.User.user_name, col_type='string', has_alias=True, system_relation='user'),

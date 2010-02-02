@@ -7,7 +7,7 @@
 
 Name:           beaker
 Version:        0.4.81
-Release:        1%{?timestamp}%{?branch}%{?dist}
+Release:        2%{?timestamp}%{?branch}%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -146,11 +146,13 @@ ln -s Fedora.ks $RPM_BUILD_ROOT/var/lib/cobbler/kickstarts/Fedoradevelopment.ks
 /usr/share/man/man1/beakerlib*
 
 %changelog
-* Tue Feb 02 2010 Bill Peck <bpeck@redhat.com> - 0.4.81-0
+* Tue Feb 02 2010 Bill Peck <bpeck@redhat.com> - 0.4.81-2
 - Fix bz#560823 for rhel3 systems not checking in to rhts properly
 - Fix ISE 500 when looking up an invalid profile on cobbler
 - Fix for rt#58689 when importing anything but an nfs distro we get the location 
   of the repos wrong.
+- Fix bz#555551 - missing location for search and custom columns
+- FIX bz#559656 - unable to handle commented %packages in kickstart
 * Tue Jan 26 2010 Bill Peck <bpeck@redhat.com> - 0.4.80-0
 - added support for variants being read from .treeinfo
 * Mon Jan 25 2010 Bill Peck <bpeck@redhat.com> - 0.4.79-1

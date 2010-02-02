@@ -172,7 +172,7 @@ class Utility:
             options = {} 
             for column_desc in systems: 
                 table,column = column_desc.split('/')
-                if column.lower() in ('name','vendor','memory','model'):
+                if column.lower() in ('name','vendor','memory','model','location'):
                     sort_me = True
                 else:
                     sort_me = False
