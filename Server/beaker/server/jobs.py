@@ -104,18 +104,26 @@ class Jobs(RPCRoot):
 
     @identity.require(identity.not_anonymous())
     @expose(template="beaker.server.templates.form-post")
-    def clone(self, id=None, textxml=None, filexml=None, **kw):
+    def clone(self, job_id=None, recipe_id=None, textxml=None, filexml=None, **kw):
         """
         Review cloned xml before submitting it.
         """
-        if id:
+        if job_id:
             # Clone from Job ID
             try:
-                job = Job.by_id(id)
+                job = Job.by_id(job_id)
             except InvalidRequestError:
-                flash(_(u"Invalid job id %s" % id))
+                flash(_(u"Invalid job id %s" % job_id))
                 redirect(".")
             textxml = job.to_xml(clone=True).toprettyxml()
+        elif recipe_id:
+            # Clone from Recipe ID
+            try:
+                recipe = Recipe.by_id(recipe_id)
+            except InvalidRequestError:
+                flash(_(u"Invalid recipe id %s" % recipe_id))
+                redirect(".")
+            textxml = recipe.to_xml(clone=True).toprettyxml()
         elif isinstance(filexml, cgi.FieldStorage):
             # Clone from file
             textxml = filexml.file.read()

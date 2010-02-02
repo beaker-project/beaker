@@ -2612,7 +2612,7 @@ class Job(TaskBase):
     def clone_link(self):
         """ return link to clone this job
         """
-        return "/jobs/clone?id=%s" % self.id
+        return "/jobs/clone?job_id=%s" % self.id
 
     def cancel_link(self):
         """ return link to cancel this job
@@ -2698,7 +2698,7 @@ class RecipeSet(TaskBase):
         if not clone:
             recipeSet.setAttribute("id", "%s" % self.id)
         for r in self.recipes:
-            recipeSet.appendChild(r.to_xml(clone))
+            recipeSet.appendChild(r.to_xml(clone, from_recipeset=True))
         return recipeSet
 
     @classmethod
@@ -2823,7 +2823,7 @@ class Recipe(TaskBase):
     def clone_link(self):
         """ return link to clone this recipe
         """
-        return "/recipes/clone?id=%s" % self.id
+        return "/jobs/clone?recipe_id=%s" % self.id
 
     def cancel_link(self):
         """ return link to cancel this recipe
@@ -2840,7 +2840,7 @@ class Recipe(TaskBase):
                                          self.id)
     filepath = property(filepath)
 
-    def to_xml(self, recipe, clone=False):
+    def to_xml(self, recipe, clone=False, from_recipeset=False):
         if not clone:
             recipe.setAttribute("id", "%s" % self.id)
             recipe.setAttribute("job_id", "%s" % self.recipeset.job_id)
@@ -2886,6 +2886,13 @@ class Recipe(TaskBase):
         recipe.appendChild(hostRequires)
         for t in self.tasks:
             recipe.appendChild(t.to_xml(clone))
+        if not from_recipeset:
+            recipeSet = self.doc.createElement("recipeSet")
+            recipeSet.appendChild(recipe)
+            job = self.doc.createElement("job")
+            job.appendChild(self.node("whiteboard", self.recipeset.job.whiteboard))
+            job.appendChild(recipeSet)
+            return job
         return recipe
 
     def _get_duration(self):
