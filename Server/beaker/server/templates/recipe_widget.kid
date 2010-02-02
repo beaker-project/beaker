@@ -28,6 +28,8 @@
    <td class="value">${recipe.recipeset.queue_time}</td>
    <td class="title"><b>Started</b></td>
    <td class="value">${recipe.start_time}</td>
+   <td class="title"><b>Action(s)</b></td>
+   <td class="value">${recipe.action_link}</td>
   </tr>
   <tr>
    <td class="title"><b>Finsihed</b></td>
