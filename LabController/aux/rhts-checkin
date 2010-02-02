@@ -114,7 +114,7 @@ class WatchedFile:
             tries = 0
             while tries <= retries:
                 debug("uploadFile('%s', '%s', %s, %s, ...)\n" % (installid, self.alias, sz, offset))
-                if session.results.uploadFile(installid,self.alias, sz, None, offset, data):
+                if session.results.uploadFile(installid,self.alias, sz, '', offset, data):
                     break
                 else:
                     tries = tries + 1
@@ -252,7 +252,7 @@ while n < len(sys.argv):
     n = n+1
 
 # Create an xmlrpc session handle
-session = xmlrpclib.Server("http://%s:%s/cgi-bin/rhts/scheduler_xmlrpc.cgi" % (server, port), allow_none=True)
+session = xmlrpclib.Server("http://%s:%s/cgi-bin/rhts/scheduler_xmlrpc.cgi" % (server, port))
 
 installid = session.watchdog.installCheckin(name,recipeid)
 
