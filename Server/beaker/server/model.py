@@ -1238,11 +1238,24 @@ class System(SystemObject):
                     # Escape any $ signs or cobbler will barf
                     kickstart = kickstart.replace('$','\$')
                     # add in cobbler packages snippet...
-                    # Find next line after %packages
-                    packages_slot = kickstart.find("\n",kickstart.find("%packages"))
-                    beforepackages = kickstart[:packages_slot]
+                    packages_slot = 0
+                    nopackages = True
+                    for line in kickstart.split('\n'):
+                        # Add the length of line + newline
+                        packages_slot += len(line) + 1
+                        if line.find('%packages') == 0:
+                            nopackages = False
+                            break
+                        elif line.find('%post') == 0 or line.find('%pre') == 0:
+                            # If we haven't found a %packages section by now then add one
+                            # need to back up one line
+                            packages_slot -= len(line) + 1
+                            break
+                    beforepackages = kickstart[:packages_slot-1]
+                    # if no %packages section then add it
+                    if nopackages:
+                        beforepackages = "%s\n%%packages --ignoremissing" % beforepackages
                     afterpackages = kickstart[packages_slot:]
-
                     # Fill in basic requirements for RHTS
                     kicktemplate = """
 url --url=$tree
