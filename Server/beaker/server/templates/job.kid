@@ -62,6 +62,8 @@
    <td class="value">${job.owner}</td>
    <td class="title"><b>Progress</b></td>
    <td class="value">${job.progress_bar}</td>
+   <td class="title"><b>Action(s)</b></td>
+   <td class="value">${job.action_link}</td>
   </tr>
   <tr>
    <td class="title"><b>Whiteboard</b></td>

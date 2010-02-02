@@ -2183,7 +2183,7 @@ class Distro(object):
         queries = []
         joins = []
         for child in ElementWrapper(xmltramp.parse(filter)):
-            if callable(getattr(child, 'filter')):
+            if callable(getattr(child, 'filter', None)):
                 (join, query) = child.filter()
                 queries.append(query)
                 joins.extend(join)
@@ -2857,7 +2857,7 @@ class Recipe(TaskBase):
         if not clone:
             repo = self.doc.createElement("repo")
             repo.setAttribute("name", "beaker-tasks")
-            repo.setAttribute("url", "http://%s/rpms" % get("servername", socket.gethostname()))
+            repo.setAttribute("url", "https://%s/rpms" % get("servername", socket.gethostname()))
             repos.appendChild(repo)
         for repo in self.repos:
             repos.appendChild(repo.to_xml())

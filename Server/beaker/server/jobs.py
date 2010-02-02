@@ -37,6 +37,7 @@ from bexceptions import *
 
 import xmltramp
 from jobxml import *
+import cgi
 
 class Jobs(RPCRoot):
     # For XMLRPC methods in this class.
@@ -45,11 +46,11 @@ class Jobs(RPCRoot):
     recipe_widget = RecipeWidget()
     recipe_tasks_widget = RecipeTasksWidget()
 
-    upload = widgets.FileField(name='job_xml', label='Job XML')
+    upload = widgets.FileField(name='filexml', label='Job XML')
     hidden_id = widgets.HiddenField(name='id')
     confirm = widgets.Label(name='confirm', default="Are you sure you want to cancel?")
     message = widgets.TextArea(name='msg', label=_(u'Reason?'), help=_(u'Optional'))
-    job_input = widgets.TextArea(name='jobxml', label=_(u'Job XML'), attrs=dict(rows=40, cols=155))
+    job_input = widgets.TextArea(name='textxml', label=_(u'Job XML'), attrs=dict(rows=40, cols=155))
 
     form = widgets.TableForm(
         'jobs',
@@ -77,17 +78,17 @@ class Jobs(RPCRoot):
         return dict(
             title = 'New Job',
             form = self.form,
-            action = './save',
+            action = './clone',
             options = {},
             value = kw,
         )
 
     @cherrypy.expose
-    def upload(self, job_xml):
+    def upload(self, jobxml):
         """
         XMLRPC method to upload job
         """
-        xml = xmltramp.parse(job_xml)
+        xml = xmltramp.parse(jobxml)
         xmljob = XmlJob(xml)
         try:
             job = self.process_xmljob(xmljob,identity.current.user)
@@ -101,43 +102,25 @@ class Jobs(RPCRoot):
         session.flush()
         return "j:%s" % job.id
 
-    @expose()
-    @identity.require(identity.not_anonymous())
-    def save(self, job_xml, *args, **kw):
-        """
-        TurboGears method to upload job xml
-        """
-        xml = xmltramp.parse(job_xml.file.read())
-        xmljob = XmlJob(xml)
-        try:
-            job = self.process_xmljob(xmljob,identity.current.user)
-        except BeakerException, err:
-            session.rollback()
-            flash(_(u'Failed to import job because of %s' % err ))
-            redirect(".")
-        except ValueError, err:
-            session.rollback()
-            flash(_(u'Failed to import job because of %s' % err ))
-            redirect(".")
-        session.save(job)
-        session.flush()
-        flash(_(u'Success! job id: %s' % job.id))
-
     @identity.require(identity.not_anonymous())
     @expose(template="beaker.server.templates.form-post")
-    def clone(self, id=None, jobxml=None, **kw):
+    def clone(self, id=None, textxml=None, filexml=None, **kw):
         """
         Review cloned xml before submitting it.
         """
         if id:
+            # Clone from Job ID
             try:
                 job = Job.by_id(id)
             except InvalidRequestError:
                 flash(_(u"Invalid job id %s" % id))
                 redirect(".")
-            jobxml = job.to_xml(clone=True).toprettyxml()
-        if not id:
-            xmljob = XmlJob(xmltramp.parse(jobxml))
+            textxml = job.to_xml(clone=True).toprettyxml()
+        elif isinstance(filexml, cgi.FieldStorage):
+            # Clone from file
+            textxml = filexml.file.read()
+        elif textxml:
+            xmljob = XmlJob(xmltramp.parse(textxml))
             try:
                 job = self.process_xmljob(xmljob,identity.current.user)
             except BeakerException, err:
@@ -148,7 +131,7 @@ class Jobs(RPCRoot):
                     form = self.job_form,
                     action = './clone',
                     options = {},
-                    value = dict(jobxml = "%s" % jobxml),
+                    value = dict(textxml = "%s" % textxml),
                 )
             except ValueError, err:
                 session.rollback()
@@ -158,7 +141,7 @@ class Jobs(RPCRoot):
                     form = self.job_form,
                     action = './clone',
                     options = {},
-                    value = dict(jobxml = "%s" % jobxml),
+                    value = dict(textxml = "%s" % textxml),
                 )
             session.save(job)
             session.flush()
@@ -169,7 +152,7 @@ class Jobs(RPCRoot):
             form = self.job_form,
             action = './clone',
             options = {},
-            value = dict(jobxml = "%s" % jobxml),
+            value = dict(textxml = "%s" % textxml),
         )
 
     def process_xmljob(self, xmljob, user):
@@ -197,8 +180,12 @@ class Jobs(RPCRoot):
                         raise BX(_('No Distro matches Guest Recipe: %s' % guest.distro_requires))
                     guest.ttasks = len(guest.tasks)
                     recipeSet.ttasks += guest.ttasks
+            if not recipeSet.recipes:
+                raise BX(_('No Recipes! You can not have a recipeSet with no recipes!'))
             job.recipesets.append(recipeSet)    
             job.ttasks += recipeSet.ttasks
+        if not job.recipesets:
+            raise BX(_('No RecipeSets! You can not have a Job with no recipeSets!'))
         return job
 
     def handleRecipe(self, xmlrecipe, guest=False):
@@ -232,6 +219,8 @@ class Jobs(RPCRoot):
                                         value=xmlparam.value)
                 recipetask.params.append(param)
             recipe.tasks.append(recipetask)
+        if not recipe.tasks:
+            raise BX(_('No Tasks! You can not have a recipe with no tasks!'))
         return recipe
 
     @cherrypy.expose
