@@ -87,10 +87,44 @@ class Users(RPCRoot):
     @identity.require(identity.in_group("admin"))
     @expose()
     def remove(self, id, **kw):
-        user = User.by_id(id)
-        flash( _(u"%s Deleted") % user.display_name )
+        try:
+            user = User.by_id(id)
+        except InvalidRequestError:
+            flash(_(u'Invalid user id %s' % id))
+            raise redirect('.')
+        flash( _(u'%s Deleted') % user.display_name )
+        self._remove(user=user, method='WEBUI')
+        raise redirect('.')
+
+    @cherrypy.expose
+    @identity.require(identity.in_group('admin'))
+    def close_account(self, username):
+        try:
+            user = User.by_user_name(username)
+        except InvalidRequestError:
+            raise BX(_('Invalid User %s ' % username))
+        self._remove(user=user, method='XMLRPC')
+
+    def _remove(self, user, method, **kw):
+        # Return all systems in use by this user
+        for system in System.query().filter(System.user==user):
+            msg = ''
+            try:
+                system.action_release()
+            except BX, error_msg:
+                msg = 'Error: %s Action: %s' % (error_msg,system.release_action)
+                system.activity.append(SystemActivity(identity.current.user, method, '%s' % system.release_action, 'Return', '', msg))
+                system.activity.append(SystemActivity(identity.current.user, method, 'Returned', 'User', '%s' % user, ''))
+        # Return all loaned systems in use by this user
+        for system in System.query().filter(System.loaned==user):
+            system.activity.append(SystemActivity(identity.current.user, method, 'Changed', 'Loaned To', '%s' % system.loaned, 'None'))
+            system.loaned = None
+        # Change the owner to the caller
+        for system in System.query().filter(System.owner==user):
+            system.owner = identity.current.user
+            system.activity.append(SystemActivity(identity.current.user, method, 'Changed', 'Owner', '%s' % user, '%s' % identity.current.user))
+        # Finally delete the user
         session.delete(user)
-        raise redirect(".")
 
     @expose(format='json')
     def by_name(self, input):
