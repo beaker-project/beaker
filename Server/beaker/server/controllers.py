@@ -953,13 +953,18 @@ class Root(RPCRoot):
         if system.user:
             if system.user == identity.current.user or \
               identity.current.user.is_admin():
-                status = "Returned"
-                activity = SystemActivity(identity.current.user, "WEBUI", status, "User", '%s' % system.user, "")
-                try:
-                    system.action_release()
-                except BX, error_msg:
-                    msg = "Error: %s Action: %s" % (error_msg,system.release_action)
-                    system.activity.append(SystemActivity(identity.current.user, "WEBUI", "%s" % system.release_action, "Return", "", msg))
+                # Don't return a system with an active watchdog
+                if system.watchdog:
+                    flash(_(u"Can't return %s active recipe %s" % (system.fqdn, system.watchdog.recipe_id)))
+                    redirect("/recipes/view?id=%s" % system.watchdog.recipe_id)
+                else:
+                    status = "Returned"
+                    activity = SystemActivity(identity.current.user, "WEBUI", status, "User", '%s' % system.user, "")
+                    try:
+                        system.action_release()
+                    except BX, error_msg:
+                        msg = "Error: %s Action: %s" % (error_msg,system.release_action)
+                        system.activity.append(SystemActivity(identity.current.user, "WEBUI", "%s" % system.release_action, "Return", "", msg))
         else:
             if system.can_share(identity.current.user):
                 status = "Reserved"
