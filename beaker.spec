@@ -152,7 +152,8 @@ ln -s Fedora.ks $RPM_BUILD_ROOT/var/lib/cobbler/kickstarts/Fedoradevelopment.ks
 - Fix for rt#58689 when importing anything but an nfs distro we get the location 
   of the repos wrong.
 - Fix bz#555551 - missing location for search and custom columns
-- FIX bz#559656 - unable to handle commented %packages in kickstart
+- Fix bz#559656 - unable to handle commented %packages in kickstart
+- Merged AccountClosure code.
 * Tue Jan 26 2010 Bill Peck <bpeck@redhat.com> - 0.4.80-0
 - added support for variants being read from .treeinfo
 * Mon Jan 25 2010 Bill Peck <bpeck@redhat.com> - 0.4.79-1
