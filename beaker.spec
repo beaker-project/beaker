@@ -147,7 +147,7 @@ ln -s Fedora.ks $RPM_BUILD_ROOT/var/lib/cobbler/kickstarts/Fedoradevelopment.ks
 
 %changelog
 * Tue Feb 02 2010 Bill Peck <bpeck@redhat.com> - 0.4.81-0
-- Fix bz# for rhel3 systems not checking in to rhts properly
+- Fix bz#560823 for rhel3 systems not checking in to rhts properly
 - Fix ISE 500 when looking up an invalid profile on cobbler
 * Tue Jan 26 2010 Bill Peck <bpeck@redhat.com> - 0.4.80-0
 - added support for variants being read from .treeinfo
