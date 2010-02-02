@@ -67,6 +67,13 @@ def get_paths(distro):
     if tree_path_re.search(kerneldir):
         tree_path = tree_path_re.search(kerneldir).group(1)
 
+    # if not importing an nfs tree we get things wrong
+    if tree.find("nfs://") == -1:
+        path = tree_path
+        path = path[path.find('/')+1:]
+        path = path[path.find('/')+1:]
+        path = path[path.find('/'):]
+
     found = None
     while kerneldir != os.path.dirname(tree_path):
         for x in signatures:
