@@ -2,9 +2,15 @@
 <body>
 <head>
 <script type='text/javascript'>
+var matrix = new JobMatrix("${job_ids.field_id}","${whiteboard.field_id}","${whiteboard_filter.field_id}")
+connect(document,'onsubmit', matrix.submit_changes)
 $(document).ready( function() {
-    $('#remote_form_whiteboard_filter').blur(function () { filter_on_whiteboard()  } )
+    $('#${whiteboard_filter.field_id}').blur(function () { matrix.filter_on_whiteboard()  } )
+    $('#${whiteboard.field_id}').click(function () { matrix.clicked_whiteboard() } )
+    $('#${job_ids.field_id}').click(function () { matrix.clicked_jobs() } )
 })
+
+
 
 </script>
 </head>
@@ -13,10 +19,11 @@ $(document).ready( function() {
 
      <div style='float:left'> 
          <h3 style="display:inline"> ${whiteboard.label}</h3><br />
-         <div class='margined' onclick="javascript:clicked_whiteboard()" py:content="whiteboard.display(options=whiteboard_options)" />   
+         <div class='margined' onclick="javascript:JobMatrix.clicked_whiteboard()" py:content="whiteboard.display(options=whiteboard_options)" />   
 
          <strong class='smallfont'>${whiteboard_filter.label}</strong>
          <span style='display:inline'  py:content='whiteboard_filter.display()' />
+         <span id='loading' class='hidden'>&nbsp;&nbsp;&nbsp;&nbsp;</span>
 
      </div>
    
