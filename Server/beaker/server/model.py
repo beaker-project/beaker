@@ -3092,11 +3092,11 @@ class Recipe(TaskBase):
 
 class GuestRecipe(Recipe):
     systemtype = 'Virtual'
-    def to_xml(self, clone=False):
+    def to_xml(self, clone=False, from_recipeset=False):
         recipe = self.doc.createElement("guestrecipe")
         recipe.setAttribute("guestname", "%s" % self.guestname)
         recipe.setAttribute("guestargs", "%s" % self.guestargs)
-        return Recipe.to_xml(self,recipe,clone)
+        return Recipe.to_xml(self, recipe, clone, from_recipeset)
 
 
 class MachineRecipe(Recipe):
@@ -3105,11 +3105,11 @@ class MachineRecipe(Recipe):
       which will be executed on this system.
     """
     systemtype = 'Machine'
-    def to_xml(self, clone=False):
+    def to_xml(self, clone=False, from_recipeset=False):
         recipe = self.doc.createElement("recipe")
         for guest in self.guests:
             recipe.appendChild(guest.to_xml(clone))
-        return Recipe.to_xml(self,recipe,clone)
+        return Recipe.to_xml(self, recipe, clone, from_recipeset)
 
     def _get_distro_requires(self):
         drs = xml.dom.minidom.parseString(self._distro_requires)
