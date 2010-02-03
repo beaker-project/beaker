@@ -113,10 +113,16 @@ def xml_attr(node, key, default=None):
     except:
         return default
 
-def parse_recipe_xml(input_xml):
+def parse_recipe_xml(input_xml, hostname):
 
     root = minidom.parseString(input_xml)
-    er = root.firstChild
+    for er in root.getElementsByTagName('recipe'):
+        system = xml_attr(er, 'system')
+        if system == hostname:
+            break
+    else:
+        log.info("parse_recipe_xml: No recipe for %s." % hostname)
+        return None
     task_env = {}
 
     rs = xml_attr(er, 'status')
@@ -363,6 +369,13 @@ class BeakerLCBackend(SerializingBackend):
         self.__writers = {}
         self.__tasks_by_id = {}
         self.__tasks_by_uuid = {}
+        self.conf = config.config('BEAH_BEAKER_CONF', 'beah_beaker.conf',
+                {
+                    'HOSTNAME': os.getenv('HOSTNAME'),
+                    'LAB_CONTROLLER': os.getenv('LAB_CONTROLLER',
+                        'http://%s:8000/server' %
+                        os.getenv('COBBLER_SERVER', 'localhost'))})
+        self.hostname = self.conf.get('DEFAULT', 'HOSTNAME')
         SerializingBackend.__init__(self)
 
     verbose_cls = False
@@ -407,8 +420,7 @@ class BeakerLCBackend(SerializingBackend):
             self.on_error("on_idle called with waiting_for_lc already set.")
             return
 
-        hostname = self.conf.get('DEFAULT', 'HOSTNAME')
-        self.proxy.callRemote(self.GET_RECIPE, hostname) \
+        self.proxy.callRemote(self.GET_RECIPE, self.hostname) \
                 .addCallback(self.handle_new_task) \
                 .addErrback(self.on_lc_failure)
         self.waiting_for_lc = True
@@ -419,12 +431,6 @@ class BeakerLCBackend(SerializingBackend):
     def set_controller(self, controller=None):
         SerializingBackend.set_controller(self, controller)
         if controller:
-            self.conf = config.config('BEAH_BEAKER_CONF', 'beah_beaker.conf',
-                    {
-                        'HOSTNAME': os.getenv('HOSTNAME'),
-                        'LAB_CONTROLLER': os.getenv('LAB_CONTROLLER',
-                            'http://%s:8000/server' %
-                            os.getenv('COBBLER_SERVER', 'localhost'))})
             url = self.conf.get('DEFAULT', 'LAB_CONTROLLER')
             self.proxy = RepeatingProxy(url)
             self.proxy.serializing = True
@@ -445,7 +451,7 @@ class BeakerLCBackend(SerializingBackend):
         self.recipe_xml = result
 
         try:
-            self.task_data = parse_recipe_xml(self.recipe_xml)
+            self.task_data = parse_recipe_xml(self.recipe_xml, self.hostname)
         except:
             self.on_exception("parse_recipe_xml Failed: %s", format_exc())
             raise
