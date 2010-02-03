@@ -286,7 +286,7 @@ class Proxy(ProxyHelper):
         kill_time = 10800
         # look up system recipe based on hostname...
         # get first task
-        task = xmltramp.parse(self.get_recipe()).task()
+        task = xmltramp.parse(self.get_recipe()).recipeSet.recipe.task()
         # Only do this if first task is Running
         if task['status'] == 'Running':
             self.logger.info("Extending watchdog for task %s" % task['id'])
