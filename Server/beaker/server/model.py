@@ -1219,9 +1219,12 @@ class System(SystemObject):
                 system_id = self.get_system()
                 profile = distro.install_name
                 systemprofile = profile
-                profile_id = self.remote.get_profile_handle(profile, self.token)
+                try:
+                    profile_id = self.remote.get_profile_handle(profile, self.token)
+                except xmlrpclib.Fault, fault:
+                    raise BX(_("%s profile not found on %s" % (profile, self.system.lab_controller.fqdn)))
                 if not profile_id:
-                    raise BX(_("%s profile not found on %s" % (profile, self.system.labcontroller.fqdn)))
+                    raise BX(_("%s profile not found on %s" % (profile, self.system.lab_controller.fqdn)))
                 self.remote.modify_system(system_id, 
                                           'ksmeta',
                                            ks_meta,
