@@ -65,11 +65,6 @@ log = logging.getLogger('backend')
 # FIXME: Use config option for log_on:
 print_this = log_this(lambda s: log.debug(s), log_on=True)
 
-# FIXME!!!
-# Where to take path from? Where to store runtime?
-#runtime = runtimes.ShelveRuntime(RUNTIME_PATHNAME)
-#rtargs = runtimes.TypeDict(runtime, 'args')
-
 def mk_beaker_task(rpm_name):
     # FIXME: proper RHTS launcher shold go here.
     # create a script to: check, install and run a test
@@ -90,7 +85,11 @@ class RHTSTask(ShExecutable):
 # THIS SHOULD PREVENT rhts-test-runner.sh to install rpm from default rhts
 # repository and use repositories defined in recipe
 #mkdir -p $TESTPATH
-yum -y --disablerepo=* %s install $TESTRPMNAME
+yum -y --disablerepo=* %s install "$TESTRPMNAME"
+if ! rpm -q "$TESTRPMNAME"; then
+    echo "ERROR: $TESTRPMNAME was not installed." >&2
+    exit 1
+fi
 beah-rhts-task
 #%s -m beah.tasks.rhts_xmlrpc
 """ % (' '.join(['--enablerepo=%s' % repo for repo in self.__repos]),
@@ -362,20 +361,23 @@ class BeakerLCBackend(SerializingBackend):
     TASK_RESULT = 'task_result'
 
     def __init__(self):
-        self.waiting_for_lc = False
-        self.__commands = {}
-        self.__results_by_uuid = {}
-        self.__file_info = {}
-        self.__writers = {}
-        self.__tasks_by_id = {}
-        self.__tasks_by_uuid = {}
+        cfg_defaults = dict(conf.items('DEFAULT'))
+        cfg_defaults.update(conf.items('BACKEND'))
+        cfg_defaults['HOSTNAME'] = os.getenv('HOSTNAME')
+        cfg_defaults['LAB_CONTROLLER'] = os.getenv('LAB_CONTROLLER') or \
+                'http://%s:8000/server' % os.getenv('COBBLER_SERVER', 'localhost')
         self.conf = config.config('BEAH_BEAKER_CONF', 'beah_beaker.conf',
-                {
-                    'HOSTNAME': os.getenv('HOSTNAME'),
-                    'LAB_CONTROLLER': os.getenv('LAB_CONTROLLER',
-                        'http://%s:8000/server' %
-                        os.getenv('COBBLER_SERVER', 'localhost'))})
+                cfg_defaults)
         self.hostname = self.conf.get('DEFAULT', 'HOSTNAME')
+        self.waiting_for_lc = False
+        self.runtime = runtimes.ShelveRuntime(self.conf.get('DEFAULT', 'RUNTIME_FILE_NAME'))
+        self.__commands = {}
+        self.__results_by_uuid = runtimes.TypeDict(self.runtime, 'results_by_uuid')
+        self.__file_info = {}
+        # FIXME!!!
+        self.__writers = {}
+        self.__tasks_by_id = runtimes.TypeDict(self.runtime, 'tasks_by_id')
+        self.__tasks_by_uuid = runtimes.TypeDict(self.runtime, 'tasks_by_uuid')
         SerializingBackend.__init__(self)
 
     verbose_cls = False
@@ -464,14 +466,18 @@ class BeakerLCBackend(SerializingBackend):
             return
 
         task_id = self.task_data['task_env']['TASKID']
-        task_name = self.task_data['task_env']['TASKNAME'] or None
-        run_cmd = command.run(self.task_data['executable'],
-                name=task_name,
-                env=self.task_data['task_env'],
-                args=self.task_data['args'])
+        run_cmd, _ = self.__tasks_by_id.get(id, (None, None))
+        new_cmd = not run_cmd
+        if new_cmd:
+            task_name = self.task_data['task_env']['TASKNAME'] or None
+            run_cmd = command.run(self.task_data['executable'],
+                    name=task_name,
+                    env=self.task_data['task_env'],
+                    args=self.task_data['args'])
         self.controller.proc_cmd(self, run_cmd)
         self.save_command(run_cmd)
-        self.save_task(run_cmd, task_id)
+        if new_cmd:
+            self.save_task(run_cmd, task_id)
 
         # Persistent env (handled by Controller?) - env to run task under,
         # task can change it, and when restarted will continue with same
@@ -668,7 +674,8 @@ class BeakerLCBackend(SerializingBackend):
         if finfo is None:
             self.on_error("File with given id (%s) does not exist." % fid)
             return
-        finfo = addict(finfo)
+        # NOTE: be careful here. finfo is not ordinary dict! It never rewrites
+        # existing items with None's.
         finfo['codec'] = evt.arg('codec', None)
         codec = finfo.get('codec', None)
         offset = evt.arg('offset', None)
@@ -728,14 +735,21 @@ class BeakerLCBackend(SerializingBackend):
 
     def get_file_info(self, id):
         """Get a data associated with file. Find file by UUID."""
-        return self.__file_info.get(id, None)
+        finfo = self.__file_info.get(id, None)
+        if finfo:
+            return finfo
+        finfo = runtimes.TypeAddict(self.runtime, 'file_info/%s' % id)
+        if finfo.has_key('__id'):
+            self.__file_info[id] = finfo
+            return finfo
+        return None
 
     def set_file_info(self, id, *args, **kwargs):
         """Attach a data to file. Find file by UUID."""
-        finfo = self.__file_info.setdefault(id, addict())
-        for d in args:
-            finfo.update(d)
-        finfo.update(kwargs)
+        finfo = runtimes.TypeAddict(self.runtime, 'file_info/%s' % id)
+        finfo.update(*args, **kwargs)
+        finfo['__id'] = id
+        self.__file_info[id] = finfo
 
     def get_result_id(self, event_id):
         """Get a data associated with result. Find result by UUID."""
