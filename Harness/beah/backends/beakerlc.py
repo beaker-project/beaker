@@ -614,9 +614,6 @@ class BeakerLCBackend(SerializingBackend):
             log.error("Exception in proc_evt_result: %s", s)
             print s
             raise
-        # FIXME!!! add caching events here! While waiting for result, we do not
-        # want to submit other events, not to change their order.
-        # This is required for result_upload_file. We might lose data!
 
     def __on_error(self, level, msg, tb, *args, **kwargs):
         if args: msg += '; *args=%r' % (args,)
@@ -642,9 +639,8 @@ class BeakerLCBackend(SerializingBackend):
                 self.on_error("Result with given id (%s) does not exist." % rid)
                 return
             if result_id == '':
-                # FIXME!!! this might be undefined! cache data, until id is
-                # known.
-                raise exceptions.NotImplementedError
+                self.on_error("Waiting for result_id from LC for given id (%s)." % rid)
+                return
             fid = evt.arg('id2')
             finfo = self.get_file_info(fid)
             if finfo is None:
@@ -712,7 +708,6 @@ class BeakerLCBackend(SerializingBackend):
                 if upload_as[0] == 'result_file':
                     if upload_as[2]:
                         filename = upload_as[2]
-                    # FIXME!!! this might be undefined!
                     id = upload_as[1]
                     method = 'result_upload_file'
             # I would prefer following, but rsplit is not in python2.3:
