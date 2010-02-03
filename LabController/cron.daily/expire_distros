@@ -7,7 +7,6 @@ from datetime import timedelta
 from cobbler import utils
 
 if __name__ == '__main__':
-    expiredelta = datetime.now() + timedelta(weeks=-1)
     cobbler = xmlrpclib.ServerProxy('http://127.0.0.1/cobbler_api')
     token = cobbler.login("", utils.get_shared_secret())
     settings = cobbler.get_settings(token)
@@ -16,16 +15,13 @@ if __name__ == '__main__':
     rdistros = []
     for distro in distros:
         if not os.path.exists(distro['kernel']):
-            print "Removing distro %s" % distro['name']
-            cobbler.remove_distro(distro['name'], token, True)
             rdistros.append(distro['name'])
-            continue
-        if 'tree' in distro['ks_meta']:
-            if distro['ks_meta']['tree'].find('nightly') == -1:
-                continue
-            distro_timestamp = datetime.fromtimestamp(float(distro['tree_build_time']))
-            if distro_timestamp < expiredelta:
-                print "Removing distro %s" % distro['name']
-                cobbler.remove_distro(distro['name'], token,True)
-                rdistros.append(distro['name'])
-    inventory.labcontrollers.removeDistros(settings['server'], rdistros)
+    # if all distros are expired then something is probably wrong.
+    if len(distros) != len(rdistros):
+        for distro in rdistros:
+            print "Removing distro %s" % distro['name']
+            cobbler.remove_distro(distro, token, True)
+        inventory.labcontrollers.removeDistros(settings['server'], rdistros)
+    else:
+        print "All distros are missing! Please check nfs mounts"
+        sys.exit(1)
