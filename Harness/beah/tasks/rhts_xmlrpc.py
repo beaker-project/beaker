@@ -29,15 +29,19 @@ import traceback
 import uuid
 import logging
 from beah.core import event, command
-from beah.misc import format_exc, make_log_handler
+from beah.misc import format_exc, runtimes, make_log_handler
 from beah.wires.internals.twmisc import serveAnyChild, serveAnyRequest, JSONProtocol
 from beah.core.constants import RC
+
+LOG_PATH = '/tmp/var/log'
+VAR_PATH = '/var/beah'
+RUNTIME_PATHNAME_TEMPLATE = VAR_PATH + '/rhts_task_%s.db'
 
 # FIXME: change log level to WARNING, use tempfile and upload log when process
 # ends.
 def __logger():
     log = logging.getLogger('rhts_task')
-    make_log_handler(log, "/tmp/var/log", "rhts_task.log")
+    make_log_handler(log, LOG_PATH, "rhts_task.log")
     log.setLevel(logging.DEBUG)
     return log
 
@@ -354,7 +358,6 @@ class RHTSMain(object):
         self.listener = None
         self.task_path = task_path
         self.__done = False
-        self.__files = {}
         self.__waits_for = []
 
         # FIXME: is return value of any use?
@@ -368,6 +371,10 @@ class RHTSMain(object):
             self.env = dict(env)
         else:
             self.env = dict(os.environ)
+
+        # No point in storing everything in one big file. Use one file per task
+        taskid = "J%(JOBID)s-S%(RECIPESETID)s-R%(RECIPEID)s-T%(TASKID)s" % self.env
+        self.__files = runtimes.TypeDict(runtimes.ShelveRuntime(RUNTIME_PATHNAME_TEMPLATE % taskid), 'vars')
 
         # FIXME: Any other env.variables to set?
         # FIXME: What values should be used here?

@@ -34,7 +34,7 @@ from beah import config
 from beah.core import command, event, addict
 from beah.core.backends import SerializingBackend
 from beah.core.constants import ECHO, RC
-from beah.misc import format_exc, dict_update, log_flush, writers
+from beah.misc import format_exc, dict_update, log_flush, writers, runtimes
 from beah.misc.log_this import log_this
 import beah.system
 # FIXME: using rpm's, yum - too much Fedora centric(?)
@@ -64,6 +64,11 @@ log = logging.getLogger('backend')
 
 # FIXME: Use config option for log_on:
 print_this = log_this(lambda s: log.debug(s), log_on=True)
+
+# FIXME!!!
+# Where to take path from? Where to store runtime?
+#runtime = runtimes.ShelveRuntime(RUNTIME_PATHNAME)
+#rtargs = runtimes.TypeDict(runtime, 'args')
 
 def mk_beaker_task(rpm_name):
     # FIXME: proper RHTS launcher shold go here.
@@ -119,7 +124,7 @@ def parse_recipe_xml(input_xml):
         log.info("parse_recipe_xml: This recipe has finished.")
         return None
 
-    dict_update(task_env, 
+    dict_update(task_env,
             ARCH=xml_attr(er, 'arch'),
             RECIPEID=xml_attr(er, 'id'),
             JOBID=xml_attr(er, 'job_id'),
@@ -657,7 +662,11 @@ class BeakerLCBackend(SerializingBackend):
 
     def proc_evt_file_write(self, evt):
         fid = evt.arg('file_id')
-        finfo = addict(self.get_file_info(fid))
+        finfo = self.get_file_info(fid)
+        if finfo is None:
+            self.on_error("File with given id (%s) does not exist." % fid)
+            return
+        finfo = addict(finfo)
         finfo['codec'] = evt.arg('codec', None)
         codec = finfo.get('codec', None)
         offset = evt.arg('offset', None)

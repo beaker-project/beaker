@@ -100,7 +100,8 @@ def start_server(conf=None, backend_host=None, backend_port=None,
     task_host = task_host or conf.get('TASK', 'INTERFACE')
     task_port = task_port or int(conf.get('TASK', 'PORT'))
     controller = Controller(spawn or Spawn(task_host, task_port))
-    controller.runtime = runtimes.PickleRuntime(conf.get('CONTROLLER', 'RUNTIME_FILE_NAME'))
+    controller.runtime = runtimes.ShelveRuntime(conf.get('CONTROLLER', 'RUNTIME_FILE_NAME'))
+    controller.runtime.vars = runtimes.TypeDict(controller.runtime, 'vars')
     def on_killed():
         if not controller.backends:
             reactor.stop()

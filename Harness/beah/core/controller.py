@@ -144,9 +144,9 @@ class Controller(object):
             key = evt.arg('key')
             if handle == '' and localhost(dest):
                 if evev == 'variable_set':
-                    self.runtime.set_var(key, evt.arg('value'))
+                    self.runtime.vars[key] = evt.arg('value')
                 else:
-                    value = self.runtime.get_var(key)
+                    value = self.runtime.vars[key]
                     task.proc_cmd(command.variable_value(key, value,
                         handle=handle, dest=dest))
                 return
@@ -329,11 +329,10 @@ class Controller(object):
         if self.conf:
             answ += "\n== Config ==\n%s\n" % (self.conf,)
 
-        vars = self.runtime.get_vars()
-        if vars:
+        if self.runtime.vars:
             answ += "\n== Variables ==\n"
-            for k in sorted(vars.keys()):
-                answ += "%r=%r\n" % (k, vars[k])
+            for k in sorted(self.runtime.vars.keys()):
+                answ += "%r=%r\n" % (k, self.runtime.vars[k])
 
         if self.killed:
             answ += "\n== Killed ==\nTrue\n"
@@ -352,27 +351,4 @@ class Controller(object):
         # backends, for broadcast - e.g. bye event.
         if backend in self.out_backends:
             self.out_backends.remove(backend)
-
-class RuntimeBase(object):
-
-    def __init__(self, variables=()):
-        self.__vars = dict(variables)
-
-    def has_var(self, key):
-        return self.__vars.has_key(key)
-
-    def get_var(self, key, default=None):
-        return self.__vars.get(key, default)
-
-    def get_vars(self):
-        return dict(self.__vars)
-
-    def set_var(self, key, value):
-        self.__vars[key] = value
-
-    def setdefault_var(self, key, defvalue):
-        if self.has_var(key):
-            return self.get_var('key')
-        self.set_var(key, defvalue)
-        return defvalue
 

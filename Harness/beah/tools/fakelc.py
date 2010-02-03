@@ -33,7 +33,11 @@ from twisted.internet import reactor
 
 import beah
 from beah.wires.internals.twmisc import serveAnyChild, serveAnyRequest
-from beah.misc import format_exc, log_this, log_flush, make_log_handler
+from beah.misc import format_exc, log_this, log_flush, make_log_handler, runtimes
+
+LOG_PATH = '/var/log'
+VAR_PATH = '/var/beah'
+RUNTIME_PATHNAME = VAR_PATH + '/fakelc.db'
 
 def conf_opt(args):
     """
@@ -96,7 +100,7 @@ def conf_main(conf, args):
 
 def logger():
     log = logging.getLogger('fakelc')
-    make_log_handler(log, "/var/log", "beah_fakelc.log")
+    make_log_handler(log, LOG_PATH, "beah_fakelc.log")
     log.setLevel(logging.DEBUG)
     return log
 log = logger()
@@ -464,6 +468,8 @@ def find_open(fname):
             return open(f)
     raise exceptions.RuntimeError("Could not find file '%s'" % fname)
 
+runtime = runtimes.ShelveRuntime(RUNTIME_PATHNAME)
+
 def recipe_builder(job_id, recipeset_id, recipefile, overrides, fqdn):
     f = find_open(recipefile)
     try:
@@ -489,7 +495,11 @@ def recipe_builder(job_id, recipeset_id, recipefile, overrides, fqdn):
         args.setdefault('machine%d' % machine_ix, machine)
         args.setdefault('machine%d_stat' % machine_ix, 'None')
     machine = args['machine0'] = fqdn
-    schedule(machine, recipe_id, recipe, args, tasks)
+    rtargs = runtimes.TypeDict(runtime, 'args/%s/%s/%s' % (job_id,
+        recipeset_id, recipe_id))
+    for k, v in args.items():
+        rtargs.setdefault(k, v)
+    schedule(machine, recipe_id, recipe, rtargs, tasks)
     return recipe_id
 
 def schedule(machine, recipe_id, recipe, args, tasks):

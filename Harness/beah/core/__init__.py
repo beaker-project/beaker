@@ -55,34 +55,70 @@ def check_type(name, value, type_, allows_none=False):
     raise exceptions.TypeError('%r not permitted as %s. Has to be %s%s.' \
             % (value, name, type_.__name__, allows_none and " or None" or ""))
 
-class addict(dict):
-    """
-    Dictionary extension, which filters input.
-    """
+def make_addict(d):
 
-    def filter(self, k, v):
+    class new_addict(d):
+
         """
-        Filter function.
-
-        Returning True, if (k,v) pair is to be included in dictionary.
+        Dictionary extension, which filters input.
         """
-        return k is not None and v is not None
 
-    def update(self, *args, **kwargs):
-        # FIXME: a in args should be:
-        # - a dictionary
-        # - an iterable of key/value pairs (as a tuple or another iterable of
-        # length 2.)
-        for a in args:
-            check_type('an argument', a, dict)
-            for k, v in a.items():
-                self[k] = v
-        for k, v in kwargs.items():
-            self[k] = v
+        def __init__(self, *args, **kwargs):
+            tmp = self.flatten(args, kwargs)
+            d.__init__(self, tmp)
 
-    def __setitem__(self, k, v):
-        if self.filter(k, v):
-            dict.__setitem__(self, k, v)
+        def filter(self, k, v):
+            """
+            Filter function.
+
+            This method is to be reimplemented.
+
+            Returning True, if (k,v) pair is to be included in dictionary.
+            """
+            return k is not None and v is not None
+
+        def flatten(self, args, kwargs):
+            # FIXME: a in args could be:
+            # - a dictionary
+            # - an iterable of key/value pairs (as a tuple or another iterable
+            #   of length 2.)
+            tmp = dict()
+            for a in args:
+                #check_type('an argument', a, dict)
+                for k, v in a.items():
+                    if self.filter(k, v):
+                        tmp[k] = v
+            for k, v in kwargs.items():
+                if self.filter(k, v):
+                    tmp[k] = v
+            return tmp
+
+        def update(self, *args, **kwargs):
+            d.update(self, self.flatten(args, kwargs))
+
+        def __setitem__(self, k, v):
+            if self.filter(k, v):
+                d.__setitem__(self, k, v)
+
+    return new_addict
+
+addict = make_addict(dict)
+
+def test_addict():
+    ad = addict()
+    d = dict()
+    ad[None] = 'a'
+    ad['a'] = None
+    d['b'] = ad['b'] = 'c'
+    ad.update(c=None, d='e')
+    d.update(d='e')
+    ad.update({None: 'e', 'e': None, 'f': 'g'})
+    d.update({'f': 'g'})
+    assert ad == dict(b='c', d='e', f='g')
+    assert ad == d
+    ad = addict(a=None, b='c')
+    assert ad == dict(b='c')
 
 if __name__ == '__main__':
     test_esc_name()
+    test_addict()
