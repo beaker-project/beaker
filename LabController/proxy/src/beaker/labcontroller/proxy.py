@@ -7,6 +7,7 @@ import time
 import datetime
 import base64
 import xmltramp
+import glob
 from xmlrpclib import Fault, ProtocolError
 from cStringIO import StringIO
 from socket import gethostbyaddr
@@ -81,7 +82,7 @@ class ProxyHelper(object):
             indicates where the chunk belongs
             the special offset -1 is used to indicate the final chunk
         """
-        self.logger.info("recipe_upload_file recipe_id:%s" % recipe_id)
+        self.logger.info("recipe_upload_file rid:%s %s" % (recipe_id, name))
         return self.hub.recipes.upload_file(recipe_id, 
                                             path, 
                                             name, 
@@ -125,6 +126,65 @@ class ProxyHelper(object):
         """
         self.logger.info("job_stop %s" % job_id)
         return self.hub.jobs.stop(job_id, stop_type, msg)
+
+
+class WatchFile(object):
+    """
+    Helper class to watch log files and upload them to Scheduler
+    """
+
+    def __init__(self, log, watchdog, proxy):
+        self.log = log
+        self.watchdog = watchdog
+        self.proxy = proxy
+        self.filename = os.path.basename(self.log)
+        # If filename is the hostname then rename it to console.log
+        if self.filename == self.watchdog['system']:
+            self.filename="console.log"
+        self.where = 0
+
+    def __cmp__(self,other):
+        """
+        Used to compare logs that are already being watched.
+        """
+        if self.log == other:
+            return 0
+        else:
+            return 1
+
+    def update(self):
+        """
+        If the log exists and the file has grown then upload the new piece
+        """
+        if os.path.exists(self.log):
+            file = open(self.log, "r")
+            where = self.where
+            file.seek(where)
+            line = file.read(65536)
+            self.where = file.tell()
+            file.close()
+            #FIXME make this work on a list of search items
+            # Also, allow it to be disabled
+            if line.find("Kernel panic") != -1:
+                self.logger.info("Panic detected for system: %s" % self.watchdog['system'])
+                # Report the panic
+                #self.task_result(self.watchdog['task_id'])
+                # Abort the recipe
+                #self.recipe_abort(self.watchdog['recipe_id'])
+            if not line:
+                return False
+            else:
+                size = len(line)
+                data = base64.encodestring(line)
+                md5sum = md5_constructor(line).hexdigest()
+                self.proxy.recipe_upload_file(self.watchdog['recipe_id'],
+                                             "/",
+                                             self.filename,
+                                             size,
+                                             md5sum,
+                                             where,
+                                             data)
+                return True
 
 
 class Watchdog(ProxyHelper):
@@ -195,34 +255,18 @@ class Watchdog(ProxyHelper):
             signal.signal(signal.SIGTERM, signal.SIG_DFL)
 
             # watch the console log
-            log = "%s/%s" % (self.conf["CONSOLE_LOGS"], watchdog["system"])
-            if os.path.exists(log):
-                file = open(log, "r")
-                while True:
-                    where = file.tell()
-                    line = file.read(65536)
-                    #FIXME make this work on a list of search items
-                    # Also, allow it to be disabled
-                    if line.find("Kernel panic") != -1:
-                        self.logger.info("Panic detected for system: %s" % watchdog['system'])
-                        # Report the panic
-                        #self.task_result(watchdog['task_id'])
-                        # Abort the recipe
-                        #self.recipe_abort(watchdog['recipe_id'])
-                    if not line:
-                        time.sleep(1)
-                        file.seek(where)
-                    else:
-                        size = len(line)
-                        data = base64.encodestring(line)
-                        md5sum = md5_constructor(line).hexdigest()
-                        self.recipe_upload_file(watchdog['recipe_id'],
-                                                "/",
-                                                "console.log",
-                                                size,
-                                                md5sum,
-                                                where,
-                                                data)
+            watchedFiles = [WatchFile("%s/%s" % (self.conf["CONSOLE_LOGS"], watchdog["system"]),watchdog,self)]
+            while True:
+                updated = False
+                logs = filter(os.path.isfile, glob.glob('%s/%s/*' % ( self.conf["ANAMON_LOGS"], watchdog["system"])))
+                for log in logs:
+                    if log not in watchedFiles:
+                        watchedFiles.append(WatchFile(log, watchdog,self))
+                for watchedFile in watchedFiles:
+                    if watchedFile.update():
+                        updated = True
+                if not updated:
+                    time.sleep(1)
         finally:
             # die
             os._exit(os.EX_OK)
