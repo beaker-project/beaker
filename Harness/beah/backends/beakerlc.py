@@ -369,7 +369,7 @@ class BeakerLCBackend(SerializingBackend):
 
     def __init__(self):
         cfg_defaults = dict(conf.items('DEFAULT'))
-        cfg_defaults.update(conf.items('BACKEND'))
+        dict_update(cfg_defaults, conf.items('BACKEND'))
         cfg_defaults['HOSTNAME'] = os.getenv('HOSTNAME')
         cfg_defaults['LAB_CONTROLLER'] = os.getenv('LAB_CONTROLLER') or \
                 'http://%s:8000/server' % os.getenv('COBBLER_SERVER', 'localhost')
