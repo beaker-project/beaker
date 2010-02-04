@@ -166,11 +166,11 @@ class WatchFile(object):
             #FIXME make this work on a list of search items
             # Also, allow it to be disabled
             if line.find("Kernel panic") != -1:
-                self.logger.info("Panic detected for system: %s" % self.watchdog['system'])
+                self.proxy.logger.info("Panic detected for system: %s" % self.watchdog['system'])
                 # Report the panic
-                #self.task_result(self.watchdog['task_id'])
+                #self.proxy.task_result(self.watchdog['task_id'])
                 # Abort the recipe
-                #self.recipe_abort(self.watchdog['recipe_id'])
+                #self.proxy.recipe_abort(self.watchdog['recipe_id'])
             if not line:
                 return False
             else:
