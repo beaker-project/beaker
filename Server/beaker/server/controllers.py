@@ -19,6 +19,7 @@ from beaker.server.distro import Distros
 from beaker.server.activity import Activities
 from beaker.server.reports import Reports
 from beaker.server.job_matrix import JobMatrix
+from beaker.server.task_list import TaskList
 from beaker.server.widgets import myPaginateDataGrid
 from beaker.server.widgets import PowerTypeForm
 from beaker.server.widgets import PowerForm
@@ -357,6 +358,7 @@ class Root(RPCRoot):
     taskactions = TaskActions()
     reports = Reports()
     matrix = JobMatrix()
+    tasklist = TaskList()
 
     id         = widgets.HiddenField(name='id')
     submit     = widgets.SubmitButton(name='submit')
