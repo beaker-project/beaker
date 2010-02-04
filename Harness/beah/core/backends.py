@@ -93,6 +93,9 @@ class SerializingBackend(ExtBackend):
     def _queue_evt(self, evt, **flags):
         self.__evt_queue.append([evt, flags])
 
+    def _get_evt(self):
+        return self.__evt_queue[0]
+
     def _pop_evt(self):
         return self.__evt_queue.pop(0)
 
@@ -104,8 +107,11 @@ class SerializingBackend(ExtBackend):
 
     def _next_evt(self):
         while self.__evt_queue and self.idle():
-            evt, flags = self._pop_evt()
-            ExtBackend.proc_evt(self, evt, **flags)
+            evt, flags = self._get_evt()
+            try:
+                ExtBackend.proc_evt(self, evt, **flags)
+            finally:
+                self._pop_evt()
 
 import pprint
 class PprintBackend(ExtBackend):
