@@ -14,7 +14,7 @@
         id = $(this).attr('id')
         my_regex = /^show_results_table_(\d{1,})/
         number = id.replace(my_regex,"$1")
-        $('#results_table_'+number).toggle() 
+        $('#results_table_'+number).toggle()
       });
     });
     </script>
@@ -111,7 +111,7 @@
                  No result data found 
                </info>
              </span>
-             <table class='inner_table' id="results_table_${i}" py:for="re in result">
+             <table py:if="result" class='inner_table' id="results_table_${i}">
                <thead>
                  <tr>
                    <th style='width:14em'>Task</th>
@@ -120,7 +120,7 @@
                  </tr>
                </thead>
                <tbody>
-                 <tr>
+                 <tr py:for="re in result">
                    <td>${re.path}</td>
                    <td>${re.result}</td>
                    <td>none</td>
