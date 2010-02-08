@@ -8,26 +8,38 @@
 # Source function library.
 . /etc/rc.d/init.d/functions
 
+# CUSTOMIZE THESE VARIABLES:
+
+# NOTE: predefined functions (daemon, killproc, status) init.d/functions in
+# el4 do not support -p/--pidfile options. pidfile has to be named same as
+# binary file.
+#
+# In order to have multiple daemons of same type running at the same time it
+# is necessary/recomended to create a wrapper with different name.
 prog="beah-srv"
 # FIXME: path should use the prefix used during installation, not the const
 # /usr
 BEAH_INSTALL_ROOT=/usr
+# FIXME: this is not 100% reliable - if installed from egg these files are
+# located in egg's tree.
 export BEAH_ROOT=${BEAH_INSTALL_ROOT}/share/beah
 export BEAHLIB_ROOT=$BEAH_ROOT
-path="/usr/bin/beah-srv"
+# FIXME: may need to change this(?)
+RUN_AS=root
 
+# DO NOT CHANGE THESE VARIABLES WITHOUT GOOD REASON:
+
+path="$BEAH_INSTALL_ROOT/bin/$prog"
 [ -f $path ] || exit 0
-
-# FIXME: check this!
 PIDFILE=/var/run/${prog}.pid
 LOCKFILE=/var/lock/subsys/$prog
-# FIXME: will need to fix this(?)
-RUN_AS=root
 
 start() {
     echo -n $"Starting $prog: "
-    daemon --user $RUN_AS $path ">> /tmp/$prog.out 2>&1 &"
+    daemon --user $RUN_AS $path ">> /tmp/$prog.out 2>&1 &" 'echo $!' ">$PIDFILE"
     RETVAL=$?
+    #echo "\$!=$!"
+    echo "$prog running as process `cat $PIDFILE`"
     echo
     if test $RETVAL = 0; then
         touch $LOCKFILE
@@ -37,7 +49,11 @@ start() {
 
 stop() {
     echo -n $"Stopping $prog: "
-    killproc $path
+    if ! killproc $path; then
+        kill `cat $PIDFILE`
+    else
+        true
+    fi
     RETVAL=$?
     echo
     rm -f $LOCKFILE
@@ -63,7 +79,7 @@ case "$1" in
 	stop
 	;;
     status)
-	status -p $PIDFILE $prog
+	status $prog
 	RETVAL=$?
         ;;
     restart)
