@@ -59,9 +59,6 @@ Beaker Backend should invoke these XML-RPC:
     - stop_type: stop|abort|cancel
 """
 
-conf = config.config()
-
-log_handler('beah_beaker_backend.log')
 log = logging.getLogger('backend')
 
 # FIXME: Use config option for log_on:
@@ -311,13 +308,7 @@ class BeakerLCBackend(SerializingBackend):
             'set_file_info', 'get_result_id', 'handle_Result']
 
     def __init__(self):
-        cfg_defaults = dict(conf.items('DEFAULT'))
-        dict_update(cfg_defaults, conf.items('BACKEND'))
-        cfg_defaults['HOSTNAME'] = os.getenv('HOSTNAME')
-        cfg_defaults['LAB_CONTROLLER'] = os.getenv('LAB_CONTROLLER') or \
-                'http://%s:8000/server' % os.getenv('COBBLER_SERVER', 'localhost')
-        self.conf = config.config('BEAH_BEAKER_CONF', 'beah_beaker.conf',
-                cfg_defaults)
+        self.conf = config.get_conf('beah-beaker')
         self.hostname = self.conf.get('DEFAULT', 'HOSTNAME')
         self.waiting_for_lc = False
         self.runtime = runtimes.ShelveRuntime(self.conf.get('DEFAULT', 'RUNTIME_FILE_NAME'))
@@ -754,7 +745,7 @@ class BeakerLCBackend(SerializingBackend):
         reactor.callLater(1, reactor.stop)
 
 def start_beaker_backend():
-    if config.parse_bool(conf.get('BACKEND', 'DEVEL')):
+    if config.parse_bool(config.get_conf('beah').get('BACKEND', 'DEVEL')):
         make_class_verbose(BeakerLCBackend, print_this)
         make_class_verbose(BeakerWriter, print_this)
         make_class_verbose(RepeatingProxy, print_this)
@@ -763,6 +754,15 @@ def start_beaker_backend():
     start_backend(backend, byef=lambda evt: reactor.callLater(1, reactor.stop))
 
 def main():
+    config.beah_conf()
+    conf = config.get_conf('beah')
+    cfg_defaults = {}
+    cfg_defaults['HOSTNAME'] = os.getenv('HOSTNAME')
+    cfg_defaults['LAB_CONTROLLER'] = os.getenv('LAB_CONTROLLER') or \
+            'http://%s:8000/server' % os.getenv('COBBLER_SERVER', 'localhost')
+    config.backend_conf('beah-beaker', 'BEAH_BEAKER_CONF', 'beah_beaker.conf',
+            cfg_defaults, {})
+    log_handler('beah_beaker_backend.log')
     start_beaker_backend()
     reactor.run()
 

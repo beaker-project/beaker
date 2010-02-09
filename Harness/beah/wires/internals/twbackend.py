@@ -68,14 +68,13 @@ class BackendFactory(ReconnectingClientFactory):
         ReconnectingClientFactory.clientConnectionFailed(self, connector, reason)
 
 def log_handler(log_file_name):
-    conf = config.config()
-    lp = conf.get('DEFAULT', 'LOG_PATH') or "/var/log"
+    lp = config.get_conf('beah').get('DEFAULT', 'LOG_PATH') or "/var/log"
     make_log_handler(log, lp, log_file_name, syslog=True)
 
 def start_backend(backend, host=None, port=None,
         adaptor=ControllerAdaptor_Backend_JSON,
         byef=None):
-    conf = config.config()
+    conf = config.get_conf('beah')
     host = host or conf.get('BACKEND', 'INTERFACE')
     port = port or int(conf.get('BACKEND', 'PORT'))
     if not config.parse_bool(conf.get('BACKEND', 'DEVEL')):
@@ -117,6 +116,7 @@ if __name__=='__main__':
             if controller:
                 self.controller.proc_cmd(self, command.ping("Are you there?"))
 
+    config.beah_conf()
     log_handler('beah_demo_backend.log')
     start_backend(DemoPprintBackend(), adaptor=DemoOutAdaptor, byef=lambda evt: reactor.stop())
     reactor.run()

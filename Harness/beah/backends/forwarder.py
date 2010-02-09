@@ -1,3 +1,21 @@
+# Beah - Test harness. Part of Beaker project.
+#
+# Copyright (C) 2009 Marian Csontos <mcsontos@redhat.com>
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
 from beah.wires.internals.twbackend import start_backend, log_handler
 from beah.core.backends import ExtBackend
 from beah.core import command, event
@@ -11,9 +29,6 @@ from twisted.internet import reactor
 import logging
 import exceptions
 
-conf = config.config()
-
-log_handler('beah_forwarder_backend.log')
 log = logging.getLogger('backend')
 
 # FIXME: Use config option for log_on:
@@ -26,6 +41,7 @@ class ForwarderBackend(ExtBackend):
     def __init__(self):
         self.__remotes = {}
         ExtBackend.__init__(self)
+        self.def_port = config.get_conf('beah').get('BACKEND', 'PORT')
 
     _VERBOSE = ('remote_backend', 'reconnect', 'remote_call',
             'proc_evt_variable_get', 'handle_evt_variable_get')
@@ -50,7 +66,7 @@ class ForwarderBackend(ExtBackend):
 
     def remote_call(self, cmd, host, port=None):
         if port is None:
-            port = conf.get('BACKEND', 'PORT')
+            port = self.def_port
         port = int(port)
         # create a backend if necessary
         rem = self.remote_backend((host, port))
@@ -90,7 +106,7 @@ class ForwarderBackend(ExtBackend):
             # Clean the dest field to avoid inifinite loop:
             evt.args()['dest'] = ''
         # FIXME!!! remote Controller could listen on another port:
-        port = conf.get('BACKEND', 'PORT')
+        port = self.def_port
         cmd = command.forward(event=evt, host=host, port=port)
         d = self.remote_call(cmd, host, port)
         if d:
@@ -194,7 +210,7 @@ class _RemoteBackend(ExtBackend):
             d.callback(('echo', evt.arg('rc') == ECHO.OK, self, cid, evt))
 
 def start_forwarder_backend():
-    if config.parse_bool(conf.get('BACKEND', 'DEVEL')):
+    if config.parse_bool(config.get_conf('beah').get('BACKEND', 'DEVEL')):
         make_class_verbose(ForwarderBackend, print_this)
         make_class_verbose(_RemoteBackend, print_this)
     backend = ForwarderBackend()
@@ -203,6 +219,8 @@ def start_forwarder_backend():
     return backend
 
 def main():
+    conf = config.beah_conf()
+    log_handler('beah_forwarder_backend.log')
     start_forwarder_backend()
     reactor.run()
 

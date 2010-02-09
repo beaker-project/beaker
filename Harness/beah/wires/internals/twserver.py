@@ -67,7 +67,9 @@ def start_server(conf=None, backend_host=None, backend_port=None,
 
     # CONFIG:
     if not conf:
-        conf = config.main_config()
+        # FIXME!!! add option parser
+        config.beah_conf()
+        conf = config.get_conf('beah')
 
     # LOGGING:
     if not config.parse_bool(conf.get('CONTROLLER', 'DEVEL')):

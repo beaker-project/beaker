@@ -32,31 +32,34 @@ from beah.system import Executable
 ################################################################################
 log = logging.getLogger('beacon')
 
-# FIXME: !!!
-conf = config.main_config()
-
-def log_print(level, args, kwargs):
-    """Redirect log messages - to stdout"""
-    print level, args[0] % args[1:]
-
+# FIXME!!! use logging handler to write to console... There must be one
 def mklog(level, logf):
-    """Create a wrapper for logging."""
-    if config.parse_bool(conf.get('CONTROLLER', 'CONSOLE_LOG')):
-        def log_w_level(*args, **kwargs):
-            """Log wrapper - redirect log message and log it."""
-            log_print(level, args, kwargs)
-            return logf(*args, **kwargs)
-        return log_w_level
     return logf
+
+#def log_print(level, args, kwargs):
+#    """Redirect log messages - to stdout"""
+#    print level, args[0] % args[1:]
+#
+#def mklog(level, logf):
+#    """Create a wrapper for logging."""
+#    return logf
+#    if config.parse_bool(config.get_conf('beah').get('CONTROLLER', 'CONSOLE_LOG')):
+#        def log_w_level(*args, **kwargs):
+#            """Log wrapper - redirect log message and log it."""
+#            log_print(level, args, kwargs)
+#            return logf(*args, **kwargs)
+#        return log_w_level
+#    return logf
 
 log_debug   = mklog("--- DEBUG:   ", log.debug)
 log_info    = mklog("--- INFO:    ", log.info)
 log_warning = mklog("--- WARNING: ", log.warning)
 log_error   = mklog("--- ERROR:   ", log.error)
 
+# FIXME!!! use _VERBOSE and make_class_verbose instead of fcall_log
 # INFO: This is for debugging purposes only - allows tracing function calls
-fcall_log = log_this(log_debug,
-        config.parse_bool(conf.get('CONTROLLER', 'DEVEL')))
+#fcall_log = log_this(log_debug,
+#        config.parse_bool(config.get_conf('beah').get('CONTROLLER', 'DEVEL')))
 
 ################################################################################
 # Controller class:

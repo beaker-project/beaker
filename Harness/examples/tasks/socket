@@ -121,7 +121,8 @@ if __name__=='__main__':
                 self.run()
 
 
-    start_task(config.config(), DemoTask(os.getenv('BEACON_TID'), 2),
+    config.beah_conf()
+    start_task(config.get_conf('beah'), DemoTask(os.getenv('BEACON_TID'), 2),
             host=os.getenv('BEACON_THOST'), port=os.getenv('BEACON_TPORT'),
             adaptor=LoggingAdaptor)
     reactor.run()
