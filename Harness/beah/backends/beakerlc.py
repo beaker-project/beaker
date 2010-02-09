@@ -34,14 +34,16 @@ from beah import config
 from beah.core import command, event, addict
 from beah.core.backends import SerializingBackend
 from beah.core.constants import ECHO, RC
-from beah.misc import format_exc, dict_update, log_flush, writers, runtimes
+from beah.misc import format_exc, dict_update, log_flush, writers, runtimes, \
+        make_class_verbose, is_class_verbose
 from beah.misc.log_this import log_this
 import beah.system
 # FIXME: using rpm's, yum - too much Fedora centric(?)
 from beah.system.dist_fedora import RPMInstaller
 from beah.system.os_linux import ShExecutable
-from beah.wires.internals.repeatingproxy import RepeatingProxy, repeating_proxy_make_verbose
+from beah.wires.internals.repeatingproxy import RepeatingProxy
 from beah.wires.internals.twbackend import start_backend, log_handler
+from beah.wires.internals.twmisc import make_logging_proxy
 
 """
 Beaker Backend.
@@ -244,61 +246,6 @@ def handle_error(result, *args, **kwargs):
     log.warning("Deferred Failed(%r, *%r, **%r)", result, args, kwargs)
     return result
 
-# FIXME: Extract this to twmisc!
-class VerboseProxy(Proxy):
-
-    verbose_cls = False
-
-    def make_verbose(cls):
-        if cls.verbose_cls:
-            return
-        cls.callRemote = print_this(cls.callRemote)
-        cls.verbose_cls = True
-    make_verbose = classmethod(make_verbose)
-
-# FIXME: Extract this to twmisc!
-def make_logging_proxy(proxy):
-    """
-    Override proxy's callRemote method to log results.
-
-    Parameters:
-    - proxy is an instance of Proxy class to be "decorated".
-
-    Return:
-    - will return proxy
-
-    Customize by overriding proxy's logging_print, logging_log or
-    logging_log_err.
-
-    Function will refuse to add logging trait twice.
-    """
-
-    if 'trait_logging_proxy' in dir(proxy) and proxy.trait_logging_proxy:
-        return proxy
-
-    proxy.trait_logging_proxy = True
-
-    def logging_print(fmt, *args, **kwargs):
-        print fmt % args, kwargs
-    proxy.logging_print = logging_print
-
-    def logging_log(result, message, method, args, kwargs):
-        proxy.logging_print("XML-RPC call %s %s: %s", method, message, result)
-        proxy.logging_print("original call: %s(*%r, **%r)", method, args, kwargs)
-        return result
-    proxy.logging_log = logging_log
-    proxy.logging_log_err = logging_log
-
-    proxy_callRemote = proxy.callRemote
-    def callRemote(method, *args, **kwargs):
-        return proxy_callRemote(method, *args, **kwargs) \
-                .addCallbacks(proxy.logging_log, proxy.logging_log_err,
-                        callbackArgs=["returned", method, args, kwargs],
-                        errbackArgs=["failed", method, args, kwargs])
-    proxy.callRemote = callRemote
-
-    return proxy
-
 
 def jsonln(obj):
     return "%s\n" % json.dumps(obj)
@@ -306,22 +253,19 @@ def jsonln(obj):
 
 class BeakerWriter(writers.JournallingWriter):
 
+    _VERBOSE = ('write', 'send')
+
     def __init__(self, journal=None, offs=None, proxy=None, method=None, id=None, path=None,
             filename=None, repr=None):
-        if not journal:
-            raise exceptions.RuntimeError("empty journal passed!")
         if offs is None:
             raise exceptions.RuntimeError("empty offs passed!")
-        if not proxy:
-            raise exceptions.RuntimeError("empty proxy passed!")
+        for var in ('journal', 'proxy', 'id', 'filename'):
+            if not locals()[var]:
+                raise exceptions.RuntimeError("empty %s passed!" % (var,))
         self.proxy = proxy
         self.method = method or 'task_upload_file'
-        if not id:
-            raise exceptions.RuntimeError("empty id passed!")
         self.id = id
         self.path = path or '/'
-        if not filename:
-            raise exceptions.RuntimeError("empty filename passed!")
         self.filename = filename
         if repr:
             self.repr = repr
@@ -343,16 +287,6 @@ class BeakerWriter(writers.JournallingWriter):
         return self.proxy.callRemote(self.method, self.id, self.path,
                 self.filename, str(size), digest, offs, data)
 
-def make_writer_verbose(writer):
-    if not isinstance(writer, writers.Writer):
-        return
-    if 'trait_verbose' in dir(writer) and writer.trait_verbose:
-        return
-    writer.trait_verbose = True
-    writer.write = print_this(writer.write)
-    writer.send = print_this(writer.send)
-    return
-
 def open_(name, mode):
     if not os.path.isfile(name):
         path = os.path.dirname(name)
@@ -366,6 +300,15 @@ class BeakerLCBackend(SerializingBackend):
     TASK_START = 'task_start'
     TASK_STOP = 'task_stop'
     TASK_RESULT = 'task_result'
+
+    _VERBOSE = ['on_idle', 'on_lc_failure', 'set_controller',
+            'handle_new_task', 'save_command', 'get_command', 'get_writer',
+            'close_writers', 'pre_proc', 'proc_evt_output',
+            'proc_evt_lose_item', 'proc_evt_log', 'proc_evt_echo',
+            'proc_evt_start', 'proc_evt_end', 'proc_evt_result',
+            'proc_evt_relation', 'proc_evt_file', 'proc_evt_file_meta',
+            'proc_evt_file_write', 'handle_Stop', 'get_file_info',
+            'set_file_info', 'get_result_id', 'handle_Result']
 
     def __init__(self):
         cfg_defaults = dict(conf.items('DEFAULT'))
@@ -404,8 +347,6 @@ class BeakerLCBackend(SerializingBackend):
             except:
                 log.on_error("Can not parse following line from journal: %r", ln)
 
-    verbose_cls = False
-
     def get_journal(self):
         if self.__journal_file is None:
             jname = self.conf.get('DEFAULT', 'VAR_ROOT') + '/journals/beakerlc.journal'
@@ -422,35 +363,6 @@ class BeakerLCBackend(SerializingBackend):
         self.__journal_offs += self.__len_queue.pop(0)
         self.runtime.type_set('', 'journal_offs', self.__journal_offs)
         return SerializingBackend._pop_evt(self)
-
-    def make_verbose(cls):
-        cls.on_idle = print_this(cls.on_idle)
-        cls.on_lc_failure = print_this(cls.on_lc_failure)
-        cls.set_controller = print_this(cls.set_controller)
-        cls.handle_new_task = print_this(cls.handle_new_task)
-        cls.save_command = print_this(cls.save_command)
-        cls.get_command = print_this(cls.get_command)
-        cls.get_writer = print_this(cls.get_writer)
-        cls.close_writers = print_this(cls.close_writers)
-        cls.pre_proc = print_this(cls.pre_proc)
-        cls.proc_evt_output = print_this(cls.proc_evt_output)
-        cls.proc_evt_lose_item = print_this(cls.proc_evt_lose_item)
-        cls.proc_evt_log = print_this(cls.proc_evt_log)
-        cls.proc_evt_echo = print_this(cls.proc_evt_echo)
-        cls.proc_evt_start = print_this(cls.proc_evt_start)
-        cls.proc_evt_end = print_this(cls.proc_evt_end)
-        cls.proc_evt_result = print_this(cls.proc_evt_result)
-        cls.proc_evt_relation = print_this(cls.proc_evt_relation)
-        cls.proc_evt_file = print_this(cls.proc_evt_file)
-        cls.proc_evt_file_meta = print_this(cls.proc_evt_file_meta)
-        cls.proc_evt_file_write = print_this(cls.proc_evt_file_write)
-        cls.handle_Stop = print_this(cls.handle_Stop)
-        cls.get_file_info = print_this(cls.get_file_info)
-        cls.set_file_info = print_this(cls.set_file_info)
-        cls.get_result_id = print_this(cls.get_result_id)
-        cls.handle_Result = print_this(cls.handle_Result)
-        cls.verbose_cls = True
-    make_verbose = classmethod(make_verbose)
 
     def on_lc_failure(self, result):
         self.waiting_for_lc = False
@@ -478,11 +390,9 @@ class BeakerLCBackend(SerializingBackend):
             self.proxy = RepeatingProxy(url)
             self.proxy.serializing = True
             self.proxy.on_idle = self.set_idle
-            if self.verbose_cls:
-                #self.proxy.make_verbose()
-                repeating_proxy_make_verbose(self.proxy, print_this=print_this)
+            if is_class_verbose(self):
                 make_logging_proxy(self.proxy)
-            self.proxy.logging_print = log.info
+                self.proxy.logging_print = log.info
             self.on_idle()
 
     def handle_new_task(self, result):
@@ -596,8 +506,6 @@ class BeakerLCBackend(SerializingBackend):
                 offss[name] = offs
                 writer_set_offset(offs)
             writer.set_offset = wroff
-            if self.verbose_cls:
-                make_writer_verbose(writer)
             self.__writers[id][name] = writer
         return writer
 
@@ -759,8 +667,12 @@ class BeakerLCBackend(SerializingBackend):
         if offset is None:
             offset = seqoff
         elif offset != seqoff:
-            self.on_error("Given offset (%s) does not match calculated (%s)."
-                    % (offset, seqoff))
+            if offset == 0:
+                # task might want to re-upload file from offset 0.
+                log.info('Rewriting file %s.' % fid)
+            else:
+                self.on_warning("Given offset (%s) does not match calculated (%s)."
+                        % (offset, seqoff))
         data = evt.arg('data')
         try:
             cdata = event.decode(codec, data)
@@ -843,7 +755,9 @@ class BeakerLCBackend(SerializingBackend):
 
 def start_beaker_backend():
     if config.parse_bool(conf.get('BACKEND', 'DEVEL')):
-        BeakerLCBackend.make_verbose()
+        make_class_verbose(BeakerLCBackend, print_this)
+        make_class_verbose(BeakerWriter, print_this)
+        make_class_verbose(RepeatingProxy, print_this)
     backend = BeakerLCBackend()
     # Start a default TCP client:
     start_backend(backend, byef=lambda evt: reactor.callLater(1, reactor.stop))

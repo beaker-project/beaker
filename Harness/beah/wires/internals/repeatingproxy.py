@@ -14,6 +14,7 @@ from twisted.web.xmlrpc import Proxy
 from twisted.internet.defer import Deferred
 from twisted.internet.error import ConnectionRefusedError
 from beah.misc.log_this import print_this
+from beah.misc import make_class_verbose
 
 import sys
 
@@ -193,29 +194,10 @@ class RepeatingProxy(Proxy):
     def push(self, m):
         self.__cache.append(m)
 
-def repeating_proxy_make_verbose(proxy, print_this=print_this, verbosity=1):
-    if not isinstance(proxy, RepeatingProxy):
-        return proxy
-    if "_repeating_proxy_verbose" in dir(proxy):
-        return proxy
-    proxy._repeating_proxy_verbose = True
-    if verbosity >= 1:
-        proxy.callRemote = print_this(proxy.callRemote)
-        proxy.callRemote_ = print_this(proxy.callRemote_)
-        if verbosity >= 2:
-            proxy.is_auto_retry_condition = print_this(proxy.is_auto_retry_condition)
-            proxy.is_accepted_failure = print_this(proxy.is_accepted_failure)
-            proxy.on_ok = print_this(proxy.on_ok)
-            proxy.on_error = print_this(proxy.on_error)
-            proxy.resend = print_this(proxy.resend)
-            proxy.send_next = print_this(proxy.send_next)
-            proxy.when_idle = print_this(proxy.when_idle)
-            proxy.is_empty = print_this(proxy.is_empty)
-            proxy.is_idle = print_this(proxy.is_idle)
-            proxy.pop = print_this(proxy.pop)
-            proxy.insert = print_this(proxy.insert)
-            proxy.push = print_this(proxy.push)
-    return proxy
+    _VERBOSE = ('callRemote', 'callRemote_')
+    _MORE_VERBOSE = ('is_auto_retry_condition', 'is_accepted_failure', 'on_ok', 'on_error',
+                'resend', 'send_next', 'when_idle', 'is_empty', 'is_idle',
+                'pop', 'insert', 'push')
 
 if __name__ == '__main__':
 
@@ -243,15 +225,14 @@ if __name__ == '__main__':
     rem_call = print_this(rem_call)
 
     class TestHandler(XMLRPC):
+        _VERBOSE = ('xmlrpc_test', 'xmlrpc_test_exc', 'xmlrpc_test_exc2')
         def xmlrpc_test(self): return "OK"
-        xmlrpc_test = print_this(xmlrpc_test)
         def xmlrpc_test_exc(self): raise exceptions.RuntimeError
-        xmlrpc_test_exc = print_this(xmlrpc_test_exc)
         def xmlrpc_test_exc2(self): raise exceptions.NotImplementedError
-        xmlrpc_test_exc2 = print_this(xmlrpc_test_exc2)
 
+    make_class_verbose(RepeatingProxy, print_this)
+    make_class_verbose(TestHandler, print_this)
     p = RepeatingProxy(url='http://localhost:54123/')
-    repeating_proxy_make_verbose(p)
     #def accepted_failure(fail):
     #    if fail.check(exceptions.NotImplementedError):
     #        # This does not work :-(

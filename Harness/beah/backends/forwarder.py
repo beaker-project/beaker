@@ -3,7 +3,7 @@ from beah.core.backends import ExtBackend
 from beah.core import command, event
 from beah.core.constants import ECHO
 from beah.misc.log_this import log_this
-from beah.misc import localhost
+from beah.misc import localhost, make_class_verbose
 from beah import config
 
 from twisted.internet.defer import Deferred
@@ -21,22 +21,14 @@ print_this = log_this(lambda s: log.debug(s), log_on=True)
 
 class ForwarderBackend(ExtBackend):
 
-    verbose_cls = False
     RETRY_IN = 10
 
     def __init__(self):
         self.__remotes = {}
         ExtBackend.__init__(self)
 
-    def make_verbose(cls):
-        if not cls.verbose_cls:
-            cls.remote_backend = print_this(cls.remote_backend)
-            cls.reconnect = print_this(cls.reconnect)
-            cls.remote_call = print_this(cls.remote_call)
-            cls.proc_evt_variable_get = print_this(cls.proc_evt_variable_get)
-            cls.handle_evt_variable_get = print_this(cls.handle_evt_variable_get)
-            cls.verbose_cls = True
-    make_verbose = classmethod(make_verbose)
+    _VERBOSE = ('remote_backend', 'reconnect', 'remote_call',
+            'proc_evt_variable_get', 'handle_evt_variable_get')
 
     def remote_backend(self, dest):
         dest_s = '%s:%s' % dest
@@ -125,19 +117,8 @@ class _RemoteBackend(ExtBackend):
         self.__status = self._NEW
         ExtBackend.__init__(self)
 
-    verbose_cls = False
-
-    def make_verbose(cls):
-        if not cls.verbose_cls:
-            cls.send_cmd = print_this(cls.send_cmd)
-            cls.done = print_this(cls.done)
-            cls.more = print_this(cls.more)
-            cls.set_controller = print_this(cls.set_controller)
-            cls.clone = print_this(cls.clone)
-            cls.proc_evt_forward_response = print_this(cls.proc_evt_forward_response)
-            cls.proc_evt_echo = print_this(cls.proc_evt_echo)
-            cls.verbose_cls = True
-    make_verbose = classmethod(make_verbose)
+    _VERBOSE = ('send_cmd', 'done', 'more', 'set_controller', 'clone',
+            'proc_evt_forward_response', 'proc_evt_echo')
 
     def dest(self):
         return self.__dest
@@ -214,8 +195,8 @@ class _RemoteBackend(ExtBackend):
 
 def start_forwarder_backend():
     if config.parse_bool(conf.get('BACKEND', 'DEVEL')):
-        ForwarderBackend.make_verbose()
-        _RemoteBackend.make_verbose()
+        make_class_verbose(ForwarderBackend, print_this)
+        make_class_verbose(_RemoteBackend, print_this)
     backend = ForwarderBackend()
     # Start a default TCP client:
     start_backend(backend, byef=lambda evt: reactor.callLater(1, reactor.stop))

@@ -18,7 +18,7 @@
 
 import simplejson as json
 from twisted.protocols import basic
-from exceptions import NotImplementedError
+import exceptions
 
 USE_DEFAULT = object()
 
@@ -34,7 +34,7 @@ class JSONProtocol(basic.LineReceiver):
     ########################################
     def proc_input(self, cmd):
         """Process object received in a message"""
-        raise NotImplementedError
+        raise exceptions.NotImplementedError
 
     def lose_item(self, data):
         raise
@@ -89,12 +89,28 @@ class OsFifo(abstract.FileDescriptor):
         return self.fd
 
 def serveAnyChild(cls):
+    """
+    Modify cls, a subclass of twisted.web.xmlrpc.Proxy, to handle any child's
+    requests.
+    """
     def getChild(self, path, request):
         """Will return self for any child request."""
         return self
     cls.getChild = getChild
 
 def serveAnyRequest(cls, by, base=USE_DEFAULT):
+    """
+    Modify cls, a subclass of twisted.web.xmlrpc.Proxy, to handle requests for
+    any path.
+
+    Parameters:
+    by: function handling RPC
+    base: how to handle baseclass calls
+    - None: do not pass calls to baseclass
+    - USE_DEFAULT: use first baseclass to handle RPC
+    - class: use given baseclass to handle RPC
+
+    """
     if base is USE_DEFAULT:
         base = cls.__base__
 
@@ -103,6 +119,8 @@ def serveAnyRequest(cls, by, base=USE_DEFAULT):
             """Will return handler for all requests."""
             return getattr(self, by)
     else:
+        if not issubclass(cls, base):
+            raise exceptions.RuntimeError('%s is not a baseclass of %s' % (base, cls))
         def _getFunction(self, functionPath):
             """Will return handler for all unhandled requests."""
             try:
@@ -110,4 +128,47 @@ def serveAnyRequest(cls, by, base=USE_DEFAULT):
             except:
                 return getattr(self, by)
     cls._getFunction = _getFunction
+
+
+def make_logging_proxy(proxy):
+    """
+    Override proxy's callRemote method to log results.
+
+    Parameters:
+    - proxy is an instance of Proxy class to be "decorated".
+
+    Return:
+    - will return proxy
+
+    Customize by overriding proxy's logging_print, logging_log or
+    logging_log_err.
+
+    Function will refuse to add logging trait twice.
+    """
+
+    if getattr(proxy, 'trait_logging_proxy', False):
+        return proxy
+
+    proxy.trait_logging_proxy = True
+
+    def logging_print(fmt, *args, **kwargs):
+        print fmt % args, kwargs
+    proxy.logging_print = logging_print
+
+    def logging_log(result, message, method, args, kwargs):
+        proxy.logging_print("XML-RPC call %s %s: %s", method, message, result)
+        proxy.logging_print("original call: %s(*%r, **%r)", method, args, kwargs)
+        return result
+    proxy.logging_log = logging_log
+    proxy.logging_log_err = logging_log
+
+    proxy_callRemote = proxy.callRemote
+    def callRemote(method, *args, **kwargs):
+        return proxy_callRemote(method, *args, **kwargs) \
+                .addCallbacks(proxy.logging_log, proxy.logging_log_err,
+                        callbackArgs=["returned", method, args, kwargs],
+                        errbackArgs=["failed", method, args, kwargs])
+    proxy.callRemote = callRemote
+
+    return proxy
 

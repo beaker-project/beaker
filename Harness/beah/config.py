@@ -114,7 +114,7 @@ def parse_conf_name(name):
 class ConfigParserFix(ConfigParser):
     """
     Class overriding ConfigParser to workaround a bug in Python 2.3.
-    
+
     The problem is that optionxform is not applied consistently to keys.
 
     Using str.upper for optionxform, as uppercase keys are used in beah.
@@ -189,7 +189,7 @@ def main_config(conf_env_var='BEAH_CONF', conf_filename='beah.conf',
 
 
 def parse_bool(arg):
-    """Premissive string into bool parser."""
+    """Permissive string into bool parser."""
     if arg == True or arg == False:
         return arg
     if str(arg).strip().lower() in ['', '0', 'false']:

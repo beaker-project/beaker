@@ -22,6 +22,7 @@ import traceback
 import os
 import sys
 import logging
+import inspect
 
 def raiser(exc=exceptions.Exception, *args, **kwargs):
     raise exc(*args, **kwargs)
@@ -131,6 +132,49 @@ def make_log_handler(log, log_path, log_file_name=None, syslog=None):
         lhandler.setFormatter(logging.Formatter('%(asctime)s %(name)s'+fmt))
         lhandler.setLevel(logging.WARNING)
         log.addHandler(lhandler)
+
+def is_class_verbose(cls):
+    if not inspect.isclass(cls):
+        cls = cls.__class__
+    if 'is_class_verbose' in dir(cls):
+        return cls.is_class_verbose()
+    return '_class_is_verbose' in dir(cls) and cls._class_is_verbose
+
+def make_class_verbose(cls, print_on_call):
+    if not inspect.isclass(cls):
+        cls = cls.__class__
+    if hasattr(cls, 'make_class_verbose'):
+        cls.make_class_verbose(print_on_call)
+        return
+    if hasattr(cls, '_VERBOSE'):
+        if getattr(cls, '_class_is_verbose', False):
+            return
+        cls._class_is_verbose = True
+        for id in cls._VERBOSE:
+            if isinstance(id, (tuple, list)):
+                if id[1] == classmethod:
+                    # FIXME: Have a look at following! It sort-of works, but I
+                    # am not sure it is correct.
+                    #setattr(cls, id[0], staticmethod(print_on_call(getattr(cls, id[0]))))
+                    print >> sys.stderr, "ERROR: at the moment classmethod can not be reliably made verbose."
+                    continue
+                else:
+                    meth = getattr(cls, id[0])
+                    new_meth = print_on_call(meth)
+                    new_meth.original_method = meth
+                    new_meth = id[1](new_meth)
+                    setattr(cls, id[0], new_meth)
+            else:
+                meth = getattr(cls, id)
+                new_meth = print_on_call(meth)
+                new_meth.original_method = meth
+                setattr(cls, id, new_meth)
+    for c in getattr(cls, '__bases__', ()):
+        try:
+            make_class_verbose(c, print_on_call)
+        except:
+            print >> sys.stderr, "ERROR: can not make %s verbose." % (c,)
+
 
 # Auxiliary functions for testing:
 def assert_(result, *expecteds, **kwargs):
