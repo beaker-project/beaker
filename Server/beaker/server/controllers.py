@@ -241,7 +241,7 @@ class Netboot:
         ADDREPO = re.compile(r'AddRepo\s+([^\s]+)')
         TESTREPO = re.compile(r'TestRepo\s+([^\s]+)')
         INSTALLPACKAGE = re.compile(r'InstallPackage\s+([^\s]+)')
-        KICKPART = re.compole(r'KickPart\s+([^\s]+)')
+        KICKPART = re.compile(r'KickPart\s+([^\s]+)')
 
         for command in commands.split('\n'):
             if SETENV.match(command):
