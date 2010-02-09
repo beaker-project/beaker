@@ -234,12 +234,14 @@ class Netboot:
         testrepo = None
         hostname = None
         distro_name = None
+        partitions = None
         SETENV = re.compile(r'SetEnvironmentVar\s+([^\s]+)\s+"*([^"]+)')
         BOOTARGS = re.compile(r'BootArgs\s+(.*)')
         KICKSTART = re.compile(r'Kickstart\s+(.*)')
         ADDREPO = re.compile(r'AddRepo\s+([^\s]+)')
         TESTREPO = re.compile(r'TestRepo\s+([^\s]+)')
         INSTALLPACKAGE = re.compile(r'InstallPackage\s+([^\s]+)')
+        KICKPART = re.compole(r'KickPart\s+([^\s]+)')
 
         for command in commands.split('\n'):
             if SETENV.match(command):
@@ -253,6 +255,8 @@ class Netboot:
                     hostname = SETENV.match(command).group(2)
                 if SETENV.match(command).group(1) == "INSTALL_NAME":
                     distro_name = SETENV.match(command).group(2)
+            if KICKPART.match(command):
+                partitions = KICKPART.match(command).group(1)
             if INSTALLPACKAGE.match(command):
                 packages.append(INSTALLPACKAGE.match(command).group(1))
             if BOOTARGS.match(command):
@@ -269,6 +273,8 @@ class Netboot:
             ks_meta = "%s runtest_url=%s" % (ks_meta, runtest_url)
         if repos:
             ks_meta = "%s customrepos=%s" % (ks_meta, string.join(repos,"|"))
+        if partitions:
+            ks_meta = "%s partitions=%s" % (ks_meta, partitions)
         if distro_name:
             distro = Distro.by_install_name(distro_name)
         else:
