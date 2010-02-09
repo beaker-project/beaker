@@ -29,6 +29,7 @@
 
 Client() {
     rhts-sync-set -s READY
+    rhtsecho "Waiting for servers."
     rhts-sync-block -s READY $SERVERS
     rhtsecho "Servers are READY."
     rhts-sync-set -s DONE
@@ -37,8 +38,10 @@ Client() {
 
 Server() {
     rhts-sync-set -s READY
+    rhtsecho "Waiting for clients."
     rhts-sync-block -s DONE $CLIENTS
     rhtsecho "Clients are DONE."
+    rhts-sync-set -s DONE
     report_result $TEST Pass 0
 }
 

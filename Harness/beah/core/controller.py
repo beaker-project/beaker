@@ -146,9 +146,10 @@ class Controller(object):
                 if evev == 'variable_set':
                     self.runtime.vars[key] = evt.arg('value')
                 else:
-                    value = self.runtime.vars[key]
-                    task.proc_cmd(command.variable_value(key, value,
-                        handle=handle, dest=dest))
+                    if self.runtime.vars.has_key(key):
+                        value = self.runtime.vars[key]
+                        task.proc_cmd(command.variable_value(key, value,
+                            handle=handle, dest=dest))
                 return
             else:
                 if dest == 'test.loop':
@@ -159,7 +160,7 @@ class Controller(object):
                     if task not in l:
                         l.append(task)
                         log_debug("Controller.__waiting_tasks=%r", self.__waiting_tasks)
-                    return 
+                    return
                 _, l = self.__waiting_tasks[s] = (evt, [task])
                 log_debug("Controller.__waiting_tasks=%r", self.__waiting_tasks)
         # controller - spawn_task

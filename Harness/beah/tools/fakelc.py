@@ -471,6 +471,8 @@ def find_open(fname):
 runtime = runtimes.ShelveRuntime(RUNTIME_PATHNAME)
 
 def recipe_builder(job_id, recipeset_id, recipefile, overrides, fqdn):
+    log.debug("recipe_builder(%r, %r, %r, %r, %r)" % (job_id, recipeset_id,
+        recipefile, overrides, fqdn))
     f = find_open(recipefile)
     try:
         recipexml, machines, tasks, args = json.load(f)
@@ -494,15 +496,28 @@ def recipe_builder(job_id, recipeset_id, recipefile, overrides, fqdn):
         machine = machines[machine_ix]
         args.setdefault('machine%d' % machine_ix, machine)
         args.setdefault('machine%d_stat' % machine_ix, 'None')
-    machine = args['machine0'] = fqdn
     rtargs = runtimes.TypeDict(runtime, 'args/%s/%s/%s' % (job_id,
         recipeset_id, recipe_id))
     for k, v in args.items():
         rtargs.setdefault(k, v)
-    schedule(machine, recipe_id, recipe, rtargs, tasks)
+    for machine_ix in range(len(machines)):
+        if rtargs.get('machine%d' % machine_ix, '') == fqdn:
+            log.debug("recipe_builder: found %r as %r" % (fqdn, machine_ix))
+            break
+    else:
+        log.debug("recipe_builder: %r not found, using machine 0" % (fqdn,))
+        rtargs['machine0'] = fqdn
+    log.debug("recipe_builder: args=%r" % (dict(rtargs),))
+    for machine_ix in range(len(machines)):
+        machine = rtargs.get('machine%d' % machine_ix, '')
+        if machine == '' or machine == 'machine%d' % machine_ix:
+            log.warning("Machine %d was not specified.", machine_ix)
+    schedule(fqdn, recipe_id, recipe, rtargs, tasks)
     return recipe_id
 
 def schedule(machine, recipe_id, recipe, args, tasks):
+    log.debug("schedule(%r, %r, %r, %r, %r)" % (machine, recipe_id,
+        recipe, dict(args), tasks))
     global recipes, task_recipe, fqdn_recipes
     recipes[recipe_id] = (recipe, args)
     log.info("%s", pprint.pformat(recipes))

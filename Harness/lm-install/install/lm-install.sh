@@ -382,6 +382,13 @@ function lm_stop()
   service beah-srv stop
 }
 
+function lm_clean()
+{
+  lm_rm_logs
+  lm_rm_runtime
+  rm -rf /var/cache/rhts
+}
+
 function lm_start()
 {
   rm -rf /var/cache/rhts

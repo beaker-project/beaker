@@ -58,12 +58,17 @@ def localhost(host):
         return True
     if host in ['test.loop']:
         return False
+    hfqdn, haliaslist, hipaddrs = socket.gethostbyname_ex(host)
+    if 'localhost' in haliaslist:
+        return True
     fqdn, aliaslist, ipaddrs = socket.gethostbyname_ex(socket.gethostname())
     if host == fqdn or host in aliaslist or host in ipaddrs:
         return True
-    hfqdn, haliaslist, hipaddrs = socket.gethostbyname_ex(host)
     if hfqdn == fqdn:
         return True
+    for hipaddr in hipaddrs:
+        if hipaddr in ipaddrs:
+            return True
     return False
 
 if sys.version_info[1] < 4:
