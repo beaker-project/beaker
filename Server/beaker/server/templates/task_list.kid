@@ -34,7 +34,7 @@
       <a href="${tg.paginate.href_next}">&gt;</a>
       <a href="${tg.paginate.href_last}">&gt;&gt;</a>
     </span>
-    <table py:for=" i,(d, rpm, result) in enumerate(data)" id='outer_table'>
+    <table py:for=" i,(d, result) in enumerate(data)" id='outer_table'>
       <thead>
         <tr>
           <th>Job</th>
@@ -67,33 +67,6 @@
          <td>${d.system_name}</td>
          <td>${d.arch}</td>
        </tr>
-     <tr>
-        <td colspan="6">  
-          <span py:if="not rpm.all()">
-            <info id="rpm_table_${i}" >
-              No RPM data found 
-            </info>
-          </span>
-          <table class="inner_table" id="rpm_table_${i}" py:for="r in rpm"> 
-            <thead>
-              <tr>
-                <th>Package</th>
-                <th>Version</th>
-                <th>Release</th>
-                <th>Arch</th>
-              </tr>
-            </thead> 
-            <tbody>
-              <tr>
-                <td>${r.package}</td>
-                <td>${r.version}</td>
-                <td>${r.release}</td>
-                <td>${r.arch}</td>
-              </tr>
-            </tbody>
-          </table>
-          </td>
-         </tr>    
          <tr>
            <td colspan="6" class="toggle_link">
              <a class="rounded-side-pad" id="show_results_table_${i}">Toggle Result details</a>  

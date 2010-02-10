@@ -73,7 +73,7 @@ class TaskList:
         return_data = () 
         for d in dyn: 
             recipe_result = model.RecipeTaskResult.query().filter(model.RecipeTaskResult.recipe_task_id == d.id)    
-            return_data += ((d,recipe_rpm,recipe_result),)
+            return_data += ((d,recipe_result),)
        
         return dict(widget=self.widget, title='Task List', widget_options=return_data )
 
