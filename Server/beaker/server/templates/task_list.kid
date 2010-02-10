@@ -62,16 +62,11 @@
          <td class='sub_head'>Arch</td>
        </tr> 
        <tr> 
-         <td>fam</td>
+         <td>${d.family}</td>
          <td>${d.distro_name}-${d.variant}</td>
          <td>${d.system_name}</td>
          <td>${d.arch}</td>
        </tr>
-     <tr>
-       <td colspan="6" class="toggle_link">
-         <a class="rounded-side-pad" id="show_rpm_table_${i}">Toggle RPM details</a>  
-       </td>
-     </tr>
      <tr>
         <td colspan="6">  
           <span py:if="not rpm.all()">
