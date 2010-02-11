@@ -7,7 +7,7 @@
 
 Name:           beaker
 Version:        0.4.82
-Release:        1%{?timestamp}%{?branch}%{?dist}
+Release:        2%{?timestamp}%{?branch}%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -146,11 +146,12 @@ ln -s Fedora.ks $RPM_BUILD_ROOT/var/lib/cobbler/kickstarts/Fedoradevelopment.ks
 /usr/share/man/man1/beakerlib*
 
 %changelog
-* Wed Feb 03 2010 Bill Peck <bpeck@redhat.com> - 0.4.82-1
+* Wed Feb 03 2010 Bill Peck <bpeck@redhat.com> - 0.4.82-2
 - Don't expire nightlies in one week, leave it up to the filesystem
 - fix bz#554852 don't remove any distros if all are missing
 - Process KickPart directive from legacy rhts if passed in.
 - Update rhts_partitions snippet to support fstype
+- run addDistro.sh with variant specified in .treeinfo if available
 * Tue Feb 02 2010 Bill Peck <bpeck@redhat.com> - 0.4.81-2
 - Fix bz#560823 for rhel3 systems not checking in to rhts properly
 - Fix ISE 500 when looking up an invalid profile on cobbler
