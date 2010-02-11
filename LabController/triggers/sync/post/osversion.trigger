@@ -282,6 +282,7 @@ if __name__ == '__main__':
         if os.path.exists(addDistroCmd):
             valid_variants = ['AS', 'ES', 'WS', 'Desktop']
             release = re.compile(r'family=([^\s]+)')
+            variant_search = re.compile(r'variant=([^\s]+)')
             for distro in push_distros:
                 # Only process nfs distros
                 if distro['name'].find('_nfs-') == -1:
@@ -300,6 +301,8 @@ if __name__ == '__main__':
                         break
                 TPATH = DISTPATH + distro['ks_meta']['tree'].split(DISTPATH)[1:][0]
                 FAMILYUPDATE=release.search(distro['comment']).group(1)
+                if variant_search.search(distro['comment']):
+                    VARIANT = variant_search.search(distro['comment']).group(1)
                 #addDistro.sh rel-eng RHEL6.0-20090626.2 RedHatEnterpriseLinux6.0 x86_64 Default rel-eng/RHEL6.0-20090626.2/6/x86_64/os
                 cmd = '%s %s %s %s %s %s %s' % (addDistroCmd, DISTPATH, DIST,
                                                 FAMILYUPDATE, distro['arch'],
