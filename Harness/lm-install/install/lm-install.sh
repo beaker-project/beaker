@@ -261,6 +261,8 @@ LAB_CONTROLLER=${LAB_CONTROLLER:-"http://localhost:5222/client"}
 
 # PRETEND TO BE ANOTHER MACHINE:
 HOSTNAME=${BEAKER_HOSTNAME:-"$HOSTNAME"}
+
+RUNTIME_FILE_NAME=%(VAR_ROOT)s/beah_beaker.runtime
 END
 
   rm -f /etc/beah.conf.orig

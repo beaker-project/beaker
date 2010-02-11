@@ -65,19 +65,6 @@ log = logging.getLogger('backend')
 # FIXME: Use config option for log_on:
 print_this = log_this(lambda s: log.debug(s), log_on=True)
 
-# FIXME!!!
-# Where to take path from? Where to store runtime?
-#runtime = runtimes.ShelveRuntime(RUNTIME_PATHNAME)
-#rtargs = runtimes.TypeDict(runtime, 'args')
-
-def mk_beaker_task(rpm_name):
-    # FIXME: proper RHTS launcher shold go here.
-    # create a script to: check, install and run a test
-    # should task have an "envelope" - e.g. binary to run...
-    e = RPMInstaller(rpm_name)
-    e.make()
-    return e.executable
-
 class RHTSTask(ShExecutable):
 
     def __init__(self, env_, repos):
@@ -90,7 +77,11 @@ class RHTSTask(ShExecutable):
 # THIS SHOULD PREVENT rhts-test-runner.sh to install rpm from default rhts
 # repository and use repositories defined in recipe
 #mkdir -p $TESTPATH
-yum -y --disablerepo=* %s install $TESTRPMNAME
+yum -y --disablerepo=* %s install "$TESTRPMNAME"
+if ! rpm -q "$TESTRPMNAME"; then
+    echo "ERROR: $TESTRPMNAME was not installed." >&2
+    exit 1
+fi
 beah-rhts-task
 #%s -m beah.tasks.rhts_xmlrpc
 """ % (' '.join(['--enablerepo=%s' % repo for repo in self.__repos]),
@@ -98,6 +89,9 @@ beah-rhts-task
 
 
 def mk_rhts_task(env_, repos):
+    # FIXME: proper RHTS launcher shold go here.
+    # create a script to: check, install and run a test
+    # should task have an "envelope" - e.g. binary to run...
     e = RHTSTask(env_, repos)
     e.make()
     return e.executable
@@ -305,13 +299,19 @@ def make_logging_proxy(proxy):
 
     return proxy
 
+
 def jsonln(obj):
     return "%s\n" % json.dumps(obj)
 
-class BeakerWriter(writers.CachingWriter):
 
-    def __init__(self, proxy=None, method=None, id=None, path=None,
+class BeakerWriter(writers.JournallingWriter):
+
+    def __init__(self, journal=None, offs=None, proxy=None, method=None, id=None, path=None,
             filename=None, repr=None):
+        if not journal:
+            raise exceptions.RuntimeError("empty journal passed!")
+        if offs is None:
+            raise exceptions.RuntimeError("empty offs passed!")
         if not proxy:
             raise exceptions.RuntimeError("empty proxy passed!")
         self.proxy = proxy
@@ -323,24 +323,23 @@ class BeakerWriter(writers.CachingWriter):
         if not filename:
             raise exceptions.RuntimeError("empty filename passed!")
         self.filename = filename
-        # FIXME? I want to use file size for offset, but the file is remote, we
-        # do not know the size!
-        self.offset = 0
         if repr:
             self.repr = repr
-        writers.CachingWriter.__init__(self, 4096, True)
+        writers.JournallingWriter.__init__(self, journal, offs, capacity=4096, no_split=True)
 
     def send(self, cdata):
         """
         Calculate necessary fields and send.
         """
         size = len(cdata)
-        offs = self.offset
-        self.offset += size
+        offs = self.get_offset()
         d = hashlib.md5()
         d.update(cdata)
         digest = d.hexdigest()
         data = event.encode("base64", cdata)
+        # FIXME? I would like to be able to append to the file. *_upload_file
+        # calls require offset but the file is remote and there is no way to
+        # find the file's real size
         return self.proxy.callRemote(self.method, self.id, self.path,
                 self.filename, str(size), digest, offs, data)
 
@@ -354,6 +353,13 @@ def make_writer_verbose(writer):
     writer.send = print_this(writer.send)
     return
 
+def open_(name, mode):
+    if not os.path.isfile(name):
+        path = os.path.dirname(name)
+        if not os.path.isdir(path):
+            os.makedirs(path)
+    return open(name, mode)
+
 class BeakerLCBackend(SerializingBackend):
 
     GET_RECIPE = 'get_recipe'
@@ -362,23 +368,60 @@ class BeakerLCBackend(SerializingBackend):
     TASK_RESULT = 'task_result'
 
     def __init__(self):
+        cfg_defaults = dict(conf.items('DEFAULT'))
+        dict_update(cfg_defaults, conf.items('BACKEND'))
+        cfg_defaults['HOSTNAME'] = os.getenv('HOSTNAME')
+        cfg_defaults['LAB_CONTROLLER'] = os.getenv('LAB_CONTROLLER') or \
+                'http://%s:8000/server' % os.getenv('COBBLER_SERVER', 'localhost')
+        self.conf = config.config('BEAH_BEAKER_CONF', 'beah_beaker.conf',
+                cfg_defaults)
+        self.hostname = self.conf.get('DEFAULT', 'HOSTNAME')
         self.waiting_for_lc = False
+        self.runtime = runtimes.ShelveRuntime(self.conf.get('DEFAULT', 'RUNTIME_FILE_NAME'))
         self.__commands = {}
-        self.__results_by_uuid = {}
+        self.__results_by_uuid = runtimes.TypeDict(self.runtime, 'results_by_uuid')
         self.__file_info = {}
         self.__writers = {}
-        self.__tasks_by_id = {}
-        self.__tasks_by_uuid = {}
-        self.conf = config.config('BEAH_BEAKER_CONF', 'beah_beaker.conf',
-                {
-                    'HOSTNAME': os.getenv('HOSTNAME'),
-                    'LAB_CONTROLLER': os.getenv('LAB_CONTROLLER',
-                        'http://%s:8000/server' %
-                        os.getenv('COBBLER_SERVER', 'localhost'))})
-        self.hostname = self.conf.get('DEFAULT', 'HOSTNAME')
+        self.__offsets = {}
+        self.__writer_args = {}
+        self.__tasks_by_id = runtimes.TypeDict(self.runtime, 'tasks_by_id')
+        self.__tasks_by_uuid = runtimes.TypeDict(self.runtime, 'tasks_by_uuid')
+        self.__journal_file = None
+        self.__len_queue = []
+        offs = self.__journal_offs = self.runtime.type_get('', 'journal_offs', 0)
         SerializingBackend.__init__(self)
+        f = self.get_journal()
+        f.seek(offs, 1)
+        while True:
+            ln = f.readline()
+            if ln == '':
+                break
+            try:
+                evt, flags = json.loads(ln)
+                evt = event.Event(evt)
+                SerializingBackend._queue_evt(self, evt, **flags)
+                self.__len_queue.append(len(ln))
+            except:
+                log.on_error("Can not parse following line from journal: %r", ln)
 
     verbose_cls = False
+
+    def get_journal(self):
+        if self.__journal_file is None:
+            jname = self.conf.get('DEFAULT', 'VAR_ROOT') + '/journals/beakerlc.journal'
+            self.__journal_file = open_(jname, 'ab+')
+        return self.__journal_file
+
+    def _queue_evt(self, evt, **flags):
+        data = jsonln((evt, flags))
+        self.__len_queue.append(len(data))
+        self.__journal_file.write(data)
+        SerializingBackend._queue_evt(self, evt, **flags)
+
+    def _pop_evt(self):
+        self.__journal_offs += self.__len_queue.pop(0)
+        self.runtime.type_set('', 'journal_offs', self.__journal_offs)
+        return SerializingBackend._pop_evt(self)
 
     def make_verbose(cls):
         cls.on_idle = print_this(cls.on_idle)
@@ -464,14 +507,18 @@ class BeakerLCBackend(SerializingBackend):
             return
 
         task_id = self.task_data['task_env']['TASKID']
-        task_name = self.task_data['task_env']['TASKNAME'] or None
-        run_cmd = command.run(self.task_data['executable'],
-                name=task_name,
-                env=self.task_data['task_env'],
-                args=self.task_data['args'])
+        run_cmd, _ = self.__tasks_by_id.get(id, (None, None))
+        new_cmd = not run_cmd
+        if new_cmd:
+            task_name = self.task_data['task_env']['TASKNAME'] or None
+            run_cmd = command.run(self.task_data['executable'],
+                    name=task_name,
+                    env=self.task_data['task_env'],
+                    args=self.task_data['args'])
         self.controller.proc_cmd(self, run_cmd)
         self.save_command(run_cmd)
-        self.save_task(run_cmd, task_id)
+        if new_cmd:
+            self.save_task(run_cmd, task_id)
 
         # Persistent env (handled by Controller?) - env to run task under,
         # task can change it, and when restarted will continue with same
@@ -529,22 +576,57 @@ class BeakerLCBackend(SerializingBackend):
     def get_command(self, cmd_id):
         return self.__commands.get(cmd_id, None)
 
-    def get_writer(self, id, name, constructor, constructor_args=(), constructor_kwargs={}):
+    def get_writer(self, id, name, args=(), kwargs={}):
         writer = self.__writers.setdefault(id, {}).get(name, None)
         if writer is None:
-            writer = constructor(filename=name, id=id, proxy=self.proxy,
-                    *constructor_args, **constructor_kwargs)
+            offss = self.__offsets.get(id, None)
+            if offss is None:
+                offss = self.__offsets[id] = runtimes.TypeDict(self.runtime, 'offsets/%s' % id)
+            offs = offss.get(name, 0)
+            wrargs = self.__writer_args.get(id, None)
+            if wrargs is None:
+                wrargs = self.__writer_args[id] = runtimes.TypeDict(self.runtime, 'writer_args/%s' % id)
+            wrargs[name] = (args, kwargs)
+            jname = self.conf.get('DEFAULT', 'VAR_ROOT') + "/journals/%s/%s" % (id, name)
+            journal = open_(jname, "ab+")
+            writer = BeakerWriter(journal, offs, filename=name, id=id,
+                    proxy=self.proxy, *args, **kwargs)
+            writer_set_offset = writer.set_offset
+            def wroff(offs):
+                offss[name] = offs
+                writer_set_offset(offs)
+            writer.set_offset = wroff
             if self.verbose_cls:
                 make_writer_verbose(writer)
             self.__writers[id][name] = writer
         return writer
 
     def close_writers(self, id):
+        wrargs = self.__writer_args.get(id, None)
+        if wrargs is not None:
+            writers = self.__writers.get(id, {})
+            for name in list(wrargs.keys()):
+                args = wrargs[name]
+                writer = self.get_writer(id, name, args[0], args[1])
+                if not writer:
+                    self.on_error("Can not open a writer(%r, %r)", id, name)
+                else:
+                    writer.close()
+                    del writers[name]
+                del wrargs[name]
+            del self.__writer_args[id]
         writers = self.__writers.get(id, None)
-        if writers:
-            for name, writer in writers.items():
-                writer.close()
+        if writers is not None:
+            for name in list(writers.keys()):
+                log.warning("close_writers: writer(%r, %r) without args record", id, name)
+                writers[name].close()
+                del writers[name]
             del self.__writers[id]
+        offss = self.__offsets.get(id, None)
+        if offss is not None:
+            for name in list(offss.keys()):
+                del offss[name]
+            del self.__offsets[id]
 
     def pre_proc(self, evt):
         id = evt.task_id = self.get_evt_task_id(evt)
@@ -553,16 +635,16 @@ class BeakerLCBackend(SerializingBackend):
         if evt.event() == 'file_write':
             evt = event.Event(evt)
             evt.args()['data'] = '...hidden...'
-        self.get_writer(id, '.task_beah_raw', BeakerWriter).write(jsonln(evt))
+        self.get_writer(id, '.task_beah_raw').write(jsonln(evt))
         return False
 
     def proc_evt_output(self, evt):
-        self.get_writer(evt.task_id, 'task_output_%s' % evt.arg('out_handle'),
-                BeakerWriter).write(str(evt.arg('data')))
+        self.get_writer(evt.task_id, 'task_output_%s' % evt.arg('out_handle')) \
+                        .write(str(evt.arg('data')))
 
     def proc_evt_lose_item(self, evt):
-        self.get_writer(evt.task_id, 'task_beah_unexpected',
-                BeakerWriter).write(str(evt.arg('data')))
+        self.get_writer(evt.task_id, 'task_beah_unexpected') \
+                .write(str(evt.arg('data')))
 
     def proc_evt_log(self, evt):
         # FIXME!!!
@@ -614,9 +696,6 @@ class BeakerLCBackend(SerializingBackend):
             log.error("Exception in proc_evt_result: %s", s)
             print s
             raise
-        # FIXME!!! add caching events here! While waiting for result, we do not
-        # want to submit other events, not to change their order.
-        # This is required for result_upload_file. We might lose data!
 
     def __on_error(self, level, msg, tb, *args, **kwargs):
         if args: msg += '; *args=%r' % (args,)
@@ -642,9 +721,8 @@ class BeakerLCBackend(SerializingBackend):
                 self.on_error("Result with given id (%s) does not exist." % rid)
                 return
             if result_id == '':
-                # FIXME!!! this might be undefined! cache data, until id is
-                # known.
-                raise exceptions.NotImplementedError
+                self.on_error("Waiting for result_id from LC for given id (%s)." % rid)
+                return
             fid = evt.arg('id2')
             finfo = self.get_file_info(fid)
             if finfo is None:
@@ -672,7 +750,8 @@ class BeakerLCBackend(SerializingBackend):
         if finfo is None:
             self.on_error("File with given id (%s) does not exist." % fid)
             return
-        finfo = addict(finfo)
+        # NOTE: be careful here. finfo is not ordinary dict! It never rewrites
+        # existing items with None's.
         finfo['codec'] = evt.arg('codec', None)
         codec = finfo.get('codec', None)
         offset = evt.arg('offset', None)
@@ -712,7 +791,6 @@ class BeakerLCBackend(SerializingBackend):
                 if upload_as[0] == 'result_file':
                     if upload_as[2]:
                         filename = upload_as[2]
-                    # FIXME!!! this might be undefined!
                     id = upload_as[1]
                     method = 'result_upload_file'
             # I would prefer following, but rsplit is not in python2.3:
@@ -733,14 +811,21 @@ class BeakerLCBackend(SerializingBackend):
 
     def get_file_info(self, id):
         """Get a data associated with file. Find file by UUID."""
-        return self.__file_info.get(id, None)
+        finfo = self.__file_info.get(id, None)
+        if finfo:
+            return finfo
+        finfo = runtimes.TypeAddict(self.runtime, 'file_info/%s' % id)
+        if finfo.has_key('__id'):
+            self.__file_info[id] = finfo
+            return finfo
+        return None
 
     def set_file_info(self, id, *args, **kwargs):
         """Attach a data to file. Find file by UUID."""
-        finfo = self.__file_info.setdefault(id, addict())
-        for d in args:
-            finfo.update(d)
-        finfo.update(kwargs)
+        finfo = runtimes.TypeAddict(self.runtime, 'file_info/%s' % id)
+        finfo.update(*args, **kwargs)
+        finfo['__id'] = id
+        self.__file_info[id] = finfo
 
     def get_result_id(self, event_id):
         """Get a data associated with result. Find result by UUID."""

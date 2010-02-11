@@ -38,7 +38,6 @@ JobMatrix.prototype.clicked_jobs = function() {
     getElement(this.whiteboard_field).setAttribute('readonly',1)    
 }
 
-
 JobMatrix.prototype.filter_on_whiteboard = function(event) {
     var params = { 'tg_format' : 'json',
                    'tg_random' : new Date().getTime(),
@@ -47,7 +46,6 @@ JobMatrix.prototype.filter_on_whiteboard = function(event) {
     removeElementClass('loading','hidden')
     d.addCallback(this.replace_whiteboard)
 } 
-
 
 JobMatrix.prototype.replace_whiteboard = function(result) { 
     replaceChildNodes(this.whiteboard_field, map(this.replaceOptions, result.options));

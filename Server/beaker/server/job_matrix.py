@@ -158,11 +158,11 @@ class JobMatrix:
                      case3.label('rc3'),
                      case4.label('rc4')]
                        
-        my_from = [model.recipe_set_table.join(recipe_table_alias).
-                              join(model.task_result_table,model.task_result_table.c.id == recipe_table_alias.c.result_id).
+        my_from = [model.recipe_set_table.join(recipe_table_alias). 
                               join(model.distro_table, model.distro_table.c.id == recipe_table_alias.c.distro_id).
                               join(arch_alias, arch_alias.c.id == model.distro_table.c.arch_id).
                               join(model.recipe_task_table, model.recipe_task_table.c.recipe_id == recipe_table_alias.c.id).
+                              join(model.task_result_table,model.task_result_table.c.id == model.recipe_task_table.c.result_id).
                               join(model.task_table, model.task_table.c.id == model.recipe_task_table.c.task_id)]
                    
         #If this query starts to bog down and slow up, we could create a view for the inner select (s2)

@@ -18,8 +18,8 @@ table {
   margin-right:auto;
   margin-top : 1em;
   margin-bottom : 1em;
-  color: #A7B2C9;
-  background-color:#22437F;
+  color: #FFFFFF;
+  background-color:#172322;
   border-spacing:0;
   border: outset 0.25em;
   max-width: 90%;
@@ -27,7 +27,7 @@ table {
 }
 
 #outer_table thead {
-  background-color: #34548F;
+  background-color: #b3b3b3;
   color:#FFFFFF;
 }
 
@@ -38,8 +38,8 @@ table {
 .inner_table {
   margin-top:3em;
   margin-left:6em;
-  color: #A7B2C9;
-  background-color:#22437F;
+  color: #FFFFFF;
+  background-color:#172322;
   border-spacing:0;
   display:none; 
 }
@@ -76,5 +76,5 @@ table {
   padding-left:0.25em;
   padding-right:0.25em;
   color:#FFFFFF;
-  background-color: #A7B2C9;
+  background-color: #b3b3b3;
 }

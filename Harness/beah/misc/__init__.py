@@ -127,3 +127,25 @@ def make_log_handler(log, log_path, log_file_name=None, syslog=None):
         lhandler.setLevel(logging.WARNING)
         log.addHandler(lhandler)
 
+# Auxiliary functions for testing:
+def assert_(result, *expecteds, **kwargs):
+    compare = kwargs.get('compare', lambda x, y: x == y)
+    for expected in expecteds:
+        if compare(result, expected):
+            return result
+    else:
+        print >> sys.stderr, "ERROR: got %r\n\texpected: %r" % (result, expecteds)
+        assert result == expected
+
+def prints(obj):
+    print "%s" % obj
+    return obj
+
+def printr(obj):
+    print "%r" % obj
+    return obj
+
+def assertp(result, *expecteds):
+    print "OK: %r" % assert_(result, *expecteds)
+    return result
+
