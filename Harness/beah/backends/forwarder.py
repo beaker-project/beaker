@@ -28,11 +28,11 @@ from twisted.internet.defer import Deferred
 from twisted.internet import reactor
 import logging
 import exceptions
+import sys
+import os
+from optparse import OptionParser
 
 log = logging.getLogger('backend')
-
-# FIXME: Use config option for log_on:
-print_this = log_this(lambda s: log.debug(s), log_on=True)
 
 class ForwarderBackend(ExtBackend):
 
@@ -41,7 +41,7 @@ class ForwarderBackend(ExtBackend):
     def __init__(self):
         self.__remotes = {}
         ExtBackend.__init__(self)
-        self.def_port = config.get_conf('beah').get('BACKEND', 'PORT')
+        self.def_port = config.get_conf('beah-backend').get('DEFAULT', 'PORT')
 
     _VERBOSE = ('remote_backend', 'reconnect', 'remote_call',
             'proc_evt_variable_get', 'handle_evt_variable_get')
@@ -210,7 +210,9 @@ class _RemoteBackend(ExtBackend):
             d.callback(('echo', evt.arg('rc') == ECHO.OK, self, cid, evt))
 
 def start_forwarder_backend():
-    if config.parse_bool(config.get_conf('beah').get('BACKEND', 'DEVEL')):
+    if config.parse_bool(config.get_conf('beah-backend').get('DEFAULT', 'DEVEL')):
+        # FIXME: Use config option for log_on:
+        print_this = log_this(lambda s: log.debug(s), log_on=True)
         make_class_verbose(ForwarderBackend, print_this)
         make_class_verbose(_RemoteBackend, print_this)
     backend = ForwarderBackend()
@@ -219,8 +221,10 @@ def start_forwarder_backend():
     return backend
 
 def main():
-    conf = config.beah_conf()
-    log_handler('beah_forwarder_backend.log')
+    config.backend_conf(
+            defaults={'NAME':'beah_forwarder_backend'},
+            overrides=config.backend_opts())
+    log_handler()
     start_forwarder_backend()
     reactor.run()
 

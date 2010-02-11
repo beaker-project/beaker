@@ -1,4 +1,5 @@
-from beah.wires.internals.twbackend import start_backend
+from beah import config
+from beah.wires.internals.twbackend import start_backend, log_handler
 from beah.core import command
 from beah.core.backends import ExtBackend
 from beah.core.constants import ECHO
@@ -128,6 +129,10 @@ def beah_run(coro, **kwargs):
     I do not want to stop reactor directly, but would like if it stopped when
     there are no more protocols.
     """
+    config.backend_conf(
+            defaults={'NAME':'beahcmd_backend'},
+            overrides=config.backend_opts())
+    log_handler()
     backend = BeahRunner(coro)
     # Start a default TCP client:
     start_backend(backend, **kwargs)

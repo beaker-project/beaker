@@ -16,8 +16,9 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-from beah.wires.internals.twbackend import start_backend
+from beah.wires.internals.twbackend import start_backend, log_handler
 from beah.core.backends import CmdOnlyBackend
+from beah import config
 from twisted.internet import stdio
 from twisted.protocols.basic import LineReceiver
 from twisted.internet import reactor
@@ -53,17 +54,18 @@ class TwistedCmdBackend(LineReceiver):
         except StopIteration:
             reactor.stop()
 
+cmd_backend_intro="""
+This is a Backend to issue commands to Controller.
+
+Type help on the prompt for help on available commands.
+
+You might not see any output here - run output backend in another terminal.
+
+Type <Ctrl-C> to finish (and kindly ignore the traceback which will follow.)
+"""
 def cmd_backend():
     """
-    This is a Backend to issue commands to Controller.
-
-    Type help on the prompt for help o commands.
-
-    You might not see any output here - run out_backend.
-
-    Known issues:
-
-    * Type <Ctrl-C> to finish.
+    Interactive backend issuing commands to Controller.
 
     I do not want to stop reactor directly, but would like if it stopped if
     there are no more protocols.
@@ -75,7 +77,11 @@ def cmd_backend():
     start_backend(backend.backend, byef=lambda evt: reactor.callLater(1, reactor.stop))
 
 def main():
-    print cmd_backend.__doc__
+    config.backend_conf(
+            defaults={'NAME':'beah_cmd_backend'},
+            overrides=config.backend_opts())
+    log_handler()
+    print cmd_backend_intro
     cmd_backend()
     reactor.run()
 

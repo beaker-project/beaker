@@ -30,6 +30,6 @@ function echo_var()
 
 echo_var PATH
 echo_var PYTHONPATH
-echo_var BEACON_THOST
-echo_var BEACON_TPORT
-echo_var BEACON_TID
+echo_var BEAH_THOST
+echo_var BEAH_TPORT
+echo_var BEAH_TID

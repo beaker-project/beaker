@@ -67,7 +67,7 @@ class PipeTask(object):
         reactor.addReader(fifo)
         # SET ENVIRONMENT
         task_env = dict(os.getenv())
-        task_env['BEACON_PNAME'] = self.pname
+        task_env['BEAH_PNAME'] = self.pname
         # SPAWN A TEST
         self.protocol = (proto or DefaultTestProtocol)()
         self.protocol.controller = self.controller
@@ -103,8 +103,8 @@ if __name__=='__main__':
             print self.__class__.__name__, ": Data received.  Data: %r" % data
             ControllerAdaptor_Task_JSON.lineReceived(self, data)
 
-    start_task(PipeTask(os.getenv('BEACON_TID'), 'test'),
-            host=os.getenv('BEACON_THOST'), port=os.getenv('BEACON_TPORT'),
+    start_task(PipeTask(os.getenv('BEAH_TID'), 'test'),
+            host=os.getenv('BEAH_THOST'), port=os.getenv('BEAH_TPORT'),
             adaptor=LoggingAdaptor)
     reactor.run()
 

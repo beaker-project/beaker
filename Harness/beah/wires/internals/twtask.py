@@ -23,7 +23,7 @@ from beah.misc import dict_update
 import logging
 import os
 
-log = logging.getLogger('beacon')
+log = logging.getLogger('beah')
 
 class TaskStdoutProtocol(ProcessProtocol):
     def __init__(self, task_id, task_protocol=twadaptors.TaskAdaptor_JSON):
@@ -61,15 +61,15 @@ def Spawn(host, port, proto=None):
     def spawn(controller, backend, task_info, env, args):
         task_env = dict(env)
         # 1. set env.variables
-        # BEACON_THOST - host name
-        # BEACON_TPORT - port
-        # BEACON_TID - id of task - used to introduce itself when opening socket
+        # BEAH_THOST - host name
+        # BEAH_TPORT - port
+        # BEAH_TID - id of task - used to introduce itself when opening socket
         task_id = task_info['id']
         dict_update(task_env,
                 CALLED_BY_BEAH="1",
-                BEACON_THOST=str(host),
-                BEACON_TPORT=str(port),
-                BEACON_TID=str(task_id),
+                BEAH_THOST=str(host),
+                BEAH_TPORT=str(port),
+                BEAH_TID=str(task_id),
                 )
         # FIXME: This is neccessary for some tasks!
         if os.getenv('BEAH_ROOT') is not None:

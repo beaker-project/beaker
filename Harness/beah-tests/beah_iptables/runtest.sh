@@ -39,8 +39,9 @@ fi
 beah_iptables_set()
 {
 # FIXME: Allow only machines in recipeset to access Controller: use -s IPADDR
-dbg_run_noout iptables -D INPUT -p tcp -m state --state NEW -m tcp --dport 12432 -j ACCEPT
-dbg_run iptables -I INPUT -p tcp -m state --state NEW -m tcp --dport 12432 -j ACCEPT && \
+local port=${1:-12432}
+dbg_run_noout iptables -D INPUT -p tcp -m state --state NEW -m tcp --dport $port -j ACCEPT
+dbg_run iptables -I INPUT -p tcp -m state --state NEW -m tcp --dport $port -j ACCEPT && \
 dbg_run service iptables save
 }
 

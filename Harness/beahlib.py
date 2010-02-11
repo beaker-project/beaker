@@ -23,9 +23,11 @@ DARGS = list()
 DKWARGS = dict()
 
 def def_conf(*args, **kwargs):
-    """\
-Change default settings. These will be used for all mkev generated functions,
-unless overridden."""
+    """
+    Change default settings.
+
+    These will be used for all mkev generated functions, unless overridden.
+    """
     global DARGS, DKWARGS
     DARGS = args
     DKWARGS = kwargs
@@ -43,6 +45,7 @@ send = send_stdout
 
 def mkev(evtf, *dargs, **dkwargs):
     def evt_wrapper(*args, **kwargs):
+        global DARGS, DKWARGS
         lkwargs = {}
         lkwargs.update(DKWARGS)
         lkwargs.update(dkwargs)

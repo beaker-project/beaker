@@ -30,7 +30,7 @@ from beah.system import Executable
 ################################################################################
 # Logging:
 ################################################################################
-log = logging.getLogger('beacon')
+log = logging.getLogger('beah')
 
 # FIXME!!! use logging handler to write to console... There must be one
 def mklog(level, logf):

@@ -17,7 +17,8 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 from twisted.internet import reactor
-from beah.wires.internals.twbackend import start_backend
+from beah import config
+from beah.wires.internals.twbackend import start_backend, log_handler
 from beah.core.backends import ExtBackend
 from beah.core import command
 from beah.core.constants import ECHO
@@ -69,7 +70,7 @@ class CmdLineBackend(ExtBackend):
             pprint.pprint(evt)
         return answ
 
-def main_beah(cmdline):
+def main_beah(args=None):
     """\
 This is a Backend to issue commands to Controller.
 
@@ -84,6 +85,12 @@ Known issues:
    I do not want to stop reactor directly, but would like if it stopped if
    there are no more protocols.
 """
+    overrides, rest = config.backend_opts_ex(args=args)
+    config.backend_conf(
+            defaults={'NAME':'beah_cli_backend'},
+            overrides=overrides)
+    log_handler()
+    cmdline = ' '.join(rest)
     backend = CmdLineBackend(cmdline)
     # Start a default TCP client:
     start_backend(backend)
@@ -92,7 +99,7 @@ def main():
     import sys
     rc = 0
     try:
-        main_beah(' '.join(sys.argv[1:]))
+        main_beah()
     except:
         sys.exit(1)
     reactor.run()

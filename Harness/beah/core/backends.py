@@ -148,7 +148,7 @@ class CmdBackend(ExtBackend):
 
     def prompt(self):
         if self.controller:
-            return "beacon> "
+            return "beah> "
         else:
             return "waiting for controller... "
 

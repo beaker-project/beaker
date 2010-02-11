@@ -24,11 +24,10 @@ from beah import config
 from twisted.internet import protocol
 from twisted.internet import reactor
 import logging
-import logging.handlers
 import os
 import sys
 
-log = logging.getLogger('beacon')
+log = logging.getLogger('beah')
 
 class BackendListener(protocol.ServerFactory):
     def __init__(self, controller, backend_protocol=BackendAdaptor_JSON):
@@ -67,15 +66,15 @@ def start_server(conf=None, backend_host=None, backend_port=None,
 
     # CONFIG:
     if not conf:
-        # FIXME!!! add option parser
         config.beah_conf()
         conf = config.get_conf('beah')
 
     # LOGGING:
-    if not config.parse_bool(conf.get('CONTROLLER', 'DEVEL')):
-        ll = logging.WARNING
-    else:
-        ll = logging.DEBUG
+    # FIXME!!! This is a good candidate for lib function
+    ll = dict(debug=logging.DEBUG, info=logging.INFO, warning=logging.WARNING,
+            warn=logging.WARNING, error=logging.ERROR, fatal=logging.FATAL,
+            critical=logging.CRITICAL, false=logging.ERROR) \
+                    .get(conf.get('CONTROLLER', 'LOG').lower(), logging.WARNING)
     log.setLevel(ll)
 
     # Create a directory for runtime

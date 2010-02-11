@@ -28,6 +28,7 @@ import exceptions
 import traceback
 import uuid
 import logging
+import random
 from beah.core import event, command
 from beah.misc import format_exc, runtimes, make_log_handler
 from beah.wires.internals.twmisc import serveAnyChild, serveAnyRequest, JSONProtocol
@@ -37,25 +38,9 @@ LOG_PATH = '/tmp/var/log'
 VAR_PATH = '/var/beah'
 RUNTIME_PATHNAME_TEMPLATE = VAR_PATH + '/rhts_task_%s.db'
 
-# FIXME: change log level to WARNING, use tempfile and upload log when process
-# ends.
-def __logger():
-    log = logging.getLogger('rhts_task')
-    make_log_handler(log, LOG_PATH, "rhts_task.log")
-    log.setLevel(logging.DEBUG)
-    return log
-
-log = __logger()
+log = logging.getLogger('rhts_task')
 
 USE_DEFAULT = object()
-TEST_ENV = dict(
-        JOBID='321',
-        RECIPESETID='4321',
-        RECIPEID='54321',
-        RECIPETESTID='654321',
-        TESTID='321321',
-        OUTPUTFILE=tempfile.mkstemp()[1],
-        AVC_ERROR=tempfile.mkstemp()[1])
 
 ################################################################################
 # AUXILIARY:
@@ -351,30 +336,20 @@ class RHTSMain(object):
     VARIABLE_VALUE_TIMEOUT=2
 
     def __init__(self, task_path, env):
-        self.controller = ControllerLink(self)
-        self.task = RHTSTask(self)
-        self.server = RHTSServer(self)
         self.process = None
         self.listener = None
         self.task_path = task_path
         self.__done = False
         self.__waits_for = []
 
-        # FIXME: is return value of any use?
-        stdio.StandardIO(self.controller)
-
         # FIXME: randomize port(?) - use configurable range of ports.
-        port = 7080
+        port = os.environ.get('RHTS_PORT', random.randint(7080, 7099))
 
         # FIXME: is inheriting the whole environment desirable?
         if env is not USE_DEFAULT:
             self.env = dict(env)
         else:
             self.env = dict(os.environ)
-
-        # No point in storing everything in one big file. Use one file per task
-        taskid = "J%(JOBID)s-S%(RECIPESETID)s-R%(RECIPEID)s-T%(TASKID)s" % self.env
-        self.__files = runtimes.TypeDict(runtimes.ShelveRuntime(RUNTIME_PATHNAME_TEMPLATE % taskid), 'vars')
 
         # FIXME: Any other env.variables to set?
         # FIXME: What values should be used here?
@@ -387,11 +362,27 @@ class RHTSMain(object):
         #       be able to find about the rest...
         # RESULT_SERVER - host:port[/prefixpath]
         self.env['RESULT_SERVER'] = "%s:%s%s" % ("localhost", port, "")
-        self.env.setdefault('TESTORDER', '123') # FIXME: What should go here???
+        self.env.setdefault('TESTORDER', '123') # FIXME: More sensible default
+
+        taskid = "J%(JOBID)s-S%(RECIPESETID)s-R%(RECIPEID)s-T%(TASKID)s" % self.env
+
+        # FIXME: change log level to WARNING, use tempfile and upload log when
+        # process ends.
+        log = logging.getLogger('rhts_task')
+        make_log_handler(log, LOG_PATH, "rhts_task_%s.log" % (taskid,))
+        log.setLevel(logging.DEBUG)
+
+        # No point in storing everything in one big file. Use one file per task
+        self.__files = runtimes.TypeDict(runtimes.ShelveRuntime(RUNTIME_PATHNAME_TEMPLATE % taskid), 'vars')
 
         # FIXME: should any checks go here?
         # e.g. does Makefile PURPOSE exist? try running `make testinfo.desc`? ...
 
+        self.controller = ControllerLink(self)
+        self.task = RHTSTask(self)
+        self.server = RHTSServer(self)
+        # FIXME: is return value of any use?
+        stdio.StandardIO(self.controller)
         # FIXME: is return value of any use?
         reactor.listenTCP(port, self.server, interface='localhost')
 

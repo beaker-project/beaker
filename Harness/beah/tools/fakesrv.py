@@ -152,10 +152,7 @@ def conf_main(conf, args):
         conf['verbosity'] = (opts.verbose or 0) - (opts.quiet or 0)
     else:
         conf['verbosity'] = 0
-    if opts.port:
-        conf['port'] = int(opts.port)
-    else:
-        conf['port'] = 12432
+    conf['port'] = int(opts.port or 12432)
     conf['slow'] = opts.slow
     return conf, rest
 

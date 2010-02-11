@@ -37,7 +37,6 @@ from beah.misc import format_exc, log_this, log_flush, make_log_handler, runtime
 
 LOG_PATH = '/var/log'
 VAR_PATH = '/var/beah'
-RUNTIME_PATHNAME = VAR_PATH + '/fakelc.db'
 
 def conf_opt(args):
     """
@@ -50,6 +49,12 @@ def conf_opt(args):
     optparse.OptionParser.parse_args and optparse.Values
     """
     opt = OptionParser()
+    opt.add_option("-n", "--name", action="store", dest="name",
+            help="Name of instance.")
+    opt.add_option("-p", "--port", action="store", dest="port",
+            help="TCP port to listen on.")
+    opt.add_option("-i", "--interface", action="store", dest="interface",
+            help="Network interface to listen on.")
     opt.add_option("-v", "--verbose", action="count", dest="verbose",
             help="Increase verbosity.")
     opt.add_option("-q", "--quiet", action="count", dest="quiet",
@@ -72,10 +77,13 @@ def conf_opt(args):
 
 def conf_main(conf, args):
     (opts, _) = conf_opt(args)
+    conf['name'] = opts.name or 'fakelc'
     if opts.verbose is not None or opts.quiet is not None:
         conf['verbosity'] = (opts.verbose or 0) - (opts.quiet or 0)
     else:
         conf['verbosity'] = 0
+    conf['port'] = int(opts.port or 5222)
+    conf['interface'] = opts.interface or ''
     job_id = opts.job_id
     if job_id is None:
         job_id = 100 + randint(0, 99)
@@ -98,12 +106,7 @@ def conf_main(conf, args):
     conf['variables'] = variables
     return conf
 
-def logger():
-    log = logging.getLogger('fakelc')
-    make_log_handler(log, LOG_PATH, "beah_fakelc.log")
-    log.setLevel(logging.DEBUG)
-    return log
-log = logger()
+log = logging.getLogger('beah_fakelc')
 
 # FIXME: Use config option for log_on:
 print_this = log_this.log_this(lambda s: log.debug(s), log_on=True)
@@ -468,9 +471,8 @@ def find_open(fname):
             return open(f)
     raise exceptions.RuntimeError("Could not find file '%s'" % fname)
 
-runtime = runtimes.ShelveRuntime(RUNTIME_PATHNAME)
-
 def recipe_builder(job_id, recipeset_id, recipefile, overrides, fqdn):
+    global runtime
     log.debug("recipe_builder(%r, %r, %r, %r, %r)" % (job_id, recipeset_id,
         recipefile, overrides, fqdn))
     f = find_open(recipefile)
@@ -529,12 +531,17 @@ def main():
 ################################################################################
 # EXECUTE:
 ################################################################################
-    global conf
+    global conf, runtime
     conf = conf_main({}, sys.argv[1:])
+    name = conf['name']
+    runtime = runtimes.ShelveRuntime(VAR_PATH + '/' + name)
+    log = logging.getLogger('beah_fakelc')
+    make_log_handler(log, LOG_PATH, "%s.log" % name)
+    log.setLevel(logging.DEBUG)
+
     lc = LCHandler()
     s = server.Site(LCHandler(), None, 60*60*12)
-    #reactor.listenTCP(5222, s, interface='localhost')
-    reactor.listenTCP(5222, s)
+    reactor.listenTCP(conf['port'], s, interface=conf['interface'])
     reactor.run()
 
 ################################################################################

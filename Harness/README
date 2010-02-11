@@ -58,7 +58,7 @@ Development environment provides these shell functions:
 
  * beah-srv - controller server
  * beah-cmd-backend - backend to issue commands to controller. Enter `help'
-   when "beacon>" prompt is displayed.
+   when "beah>" prompt is displayed.
  * beah-out-backend - backend to display messages from controller
  * beah - command line tool. Use `beah help' to display help. This uses the
    same command set as beah-cmd-backend
@@ -149,7 +149,7 @@ functions. Run lm_main_help and lm_help for more help on available functions.
 
 === Glossary ===
 
-_Controller_ (aka beacon) is a center piece of harness. It is used to process
+_Controller_ is a center piece of harness. It is used to process
 Commands from Backends, spawn Tasks and process Events from Tasks, and
 eventually forwarding these to Backends.
 

@@ -270,7 +270,7 @@ END
   sed -e 's/^DEVEL=.*$/DEVEL=True/' /etc/beah.conf.orig > /etc/beah.conf || true
 }
 
-LM_LOGS="/tmp/beah-*.out /var/log/beah*.log /tmp/var/log/rhts_task.log"
+LM_LOGS="/tmp/beah*.out /var/log/beah*.log /tmp/var/log/rhts_task*.log"
 function lm_tar_logs()
 {
   tar cf $LM_INSTALL_ROOT/lm-logs.tar.gz $LM_LOGS
@@ -427,8 +427,9 @@ function lm_kill()
 
 function lm_iptables()
 {
-  iptables -D INPUT -p tcp -m state --state NEW -m tcp --dport 12432 -j ACCEPT &>/dev/null
-  iptables -I INPUT -p tcp -m state --state NEW -m tcp --dport 12432 -j ACCEPT
+  local port=${1:-12432}
+  iptables -D INPUT -p tcp -m state --state NEW -m tcp --dport $port -j ACCEPT &>/dev/null
+  iptables -I INPUT -p tcp -m state --state NEW -m tcp --dport $port -j ACCEPT
   service iptables save
 }
 

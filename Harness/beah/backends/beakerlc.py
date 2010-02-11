@@ -61,9 +61,6 @@ Beaker Backend should invoke these XML-RPC:
 
 log = logging.getLogger('backend')
 
-# FIXME: Use config option for log_on:
-print_this = log_this(lambda s: log.debug(s), log_on=True)
-
 class RHTSTask(ShExecutable):
 
     def __init__(self, env_, repos):
@@ -308,7 +305,7 @@ class BeakerLCBackend(SerializingBackend):
             'set_file_info', 'get_result_id', 'handle_Result']
 
     def __init__(self):
-        self.conf = config.get_conf('beah-beaker')
+        self.conf = config.get_conf('beah-backend')
         self.hostname = self.conf.get('DEFAULT', 'HOSTNAME')
         self.waiting_for_lc = False
         self.runtime = runtimes.ShelveRuntime(self.conf.get('DEFAULT', 'RUNTIME_FILE_NAME'))
@@ -745,7 +742,8 @@ class BeakerLCBackend(SerializingBackend):
         reactor.callLater(1, reactor.stop)
 
 def start_beaker_backend():
-    if config.parse_bool(config.get_conf('beah').get('BACKEND', 'DEVEL')):
+    if config.parse_bool(config.get_conf('beah-backend').get('DEFAULT', 'DEVEL')):
+        print_this = log_this(lambda s: log.debug(s), log_on=True)
         make_class_verbose(BeakerLCBackend, print_this)
         make_class_verbose(BeakerWriter, print_this)
         make_class_verbose(RepeatingProxy, print_this)
@@ -753,16 +751,29 @@ def start_beaker_backend():
     # Start a default TCP client:
     start_backend(backend, byef=lambda evt: reactor.callLater(1, reactor.stop))
 
+def beakerlc_opts(opt, conf):
+    def lc_cb(option, opt_str, value, parser):
+        # FIXME!!! check value
+        conf['LAB_CONTROLLER'] = value
+    opt.add_option("-l", "--lab-controller", "--lc",
+            action="callback", callback=lc_cb, type='string',
+            help="Specify lab controller's URL.")
+    def hostname_cb(option, opt_str, value, parser):
+        # FIXME!!! check value
+        conf['HOSTNAME'] = value
+    opt.add_option("-H", "--hostname",
+            action="callback", callback=hostname_cb, type='string',
+            help="Identify as HOSTNAME when talking to Lab Controller.")
+    return opt
+
 def main():
-    config.beah_conf()
-    conf = config.get_conf('beah')
-    cfg_defaults = {}
-    cfg_defaults['HOSTNAME'] = os.getenv('HOSTNAME')
-    cfg_defaults['LAB_CONTROLLER'] = os.getenv('LAB_CONTROLLER') or \
+    lc = os.getenv('LAB_CONTROLLER', '') or \
             'http://%s:8000/server' % os.getenv('COBBLER_SERVER', 'localhost')
-    config.backend_conf('beah-beaker', 'BEAH_BEAKER_CONF', 'beah_beaker.conf',
-            cfg_defaults, {})
-    log_handler('beah_beaker_backend.log')
+    defaults = {'NAME':'beah_forwarder_backend', 'LAB_CONTROLLER':lc,
+            'HOSTNAME':os.getenv('HOSTNAME')}
+    config.backend_conf(env_var='BEAH_BEAKER_CONF', filename='beah_beaker.conf',
+            defaults=defaults, overrides=config.backend_opts(option_adder=beakerlc_opts))
+    log_handler()
     start_beaker_backend()
     reactor.run()
 

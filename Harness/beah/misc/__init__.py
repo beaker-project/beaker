@@ -22,6 +22,7 @@ import traceback
 import os
 import sys
 import logging
+import logging.handlers
 import inspect
 
 def raiser(exc=exceptions.Exception, *args, **kwargs):

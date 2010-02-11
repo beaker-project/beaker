@@ -16,21 +16,29 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
+from beah import config
 from beah.core.backends import PprintBackend
 from beah.wires.internals.twbackend import start_backend, log_handler
 from twisted.internet import reactor
 
-def out_backend():
-    """\
-This is a Backend to issue commands to Controller.
+out_backend_intro="""
+This is a Backend pretty-printing all events received from Controller.
 
 Type <Ctrl-C> to exit.
 """
-    log_handler('beah_out_backend.log')
+
+def out_backend():
+    """
+    Simple backend for pretty-printing events received from Controller.
+    """
+    config.backend_conf(
+            defaults={'NAME':'beah_out_backend'},
+            overrides=config.backend_opts())
+    log_handler()
     start_backend(PprintBackend(), byef=lambda evt: reactor.stop())
 
 def main():
-    print out_backend.__doc__
+    print out_backend_intro
     out_backend()
     reactor.run()
 
