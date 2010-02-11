@@ -1108,9 +1108,12 @@ $SNIPPET("rhts_post")
         Return install options based on distro selected.
         Inherit options from Arch -> Family -> Update
         """
-        results = dict(ks_meta = string_to_hash(ks_meta), 
+        override = dict(ks_meta = string_to_hash(ks_meta), 
                        kernel_options = string_to_hash(kernel_options), 
                        kernel_options_post = string_to_hash(kernel_options_post))
+        results = dict(ks_meta = {},
+                       kernel_options = {},
+                       kernel_options_post = {})
         if distro.arch in self.provisions:
             pa = self.provisions[distro.arch]
             node = self.provision_to_dict(pa)
@@ -1123,6 +1126,7 @@ $SNIPPET("rhts_post")
                     pfu = pf.provision_family_updates[distro.osversion]
                     node = self.provision_to_dict(pfu)
                     consolidate(node,results)
+        consolidate(override,results)
         return results
 
     def provision_to_dict(self, provision):
