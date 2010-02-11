@@ -29,6 +29,7 @@ part swap --recommended --asprimary
 #set fstype = $partition[3]
 #else
 #set fstype = 'ext3'
+#end if
 #if $partition[1] == 'part'
 part /$partition[0] --fstype $fstype --size=$partition[2]
 #end if
