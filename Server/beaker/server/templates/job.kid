@@ -51,7 +51,7 @@
  <table width="97%" class="show">
   <tr>
    <td class="title"><b>Job ID</b></td>
-   <td class="value"><a class="list" href="${tg.url('/jobs/view?id=%s' % job.id)}">${job.t_id}</a></td>
+   <td class="value"><a class="list" href="${tg.url('/jobs/%s' % job.id)}">${job.t_id}</a></td>
    <td class="title"><b>Status</b></td>
    <td class="value">${job.status}</td>
    <td class="title"><b>Result</b></td>

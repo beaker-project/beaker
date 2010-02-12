@@ -1879,6 +1879,10 @@ class Arch(SystemObject):
         return '%s' % self.arch
 
     @classmethod
+    def get_all(cls):
+        return [(0,"All")] + [(arch.id, arch.arch) for arch in cls.query()]
+
+    @classmethod
     def by_id(cls, id):
         return cls.query.filter_by(id=id).one()
 
@@ -1946,8 +1950,7 @@ class OSMajor(SystemObject):
 
     @classmethod
     def get_all(cls):
-        all = cls.query()
-        return [(0,"All")] + [(major.id, major.osmajor) for major in all]
+        return [(0,"All")] + [(major.id, major.osmajor) for major in cls.query()]
 
     def __repr__(self):
         return '%s' % self.osmajor
@@ -2310,7 +2313,7 @@ class Distro(object):
         """ Returns a hyper link to this distro
         """ 
         return make_link(url = '/distros/view?id=%s' % self.id,
-                         text = self.name)
+                         text = self.install_name)
 
     link = property(link)
 
@@ -2452,6 +2455,10 @@ class TaskStatus(object):
     def by_name(cls, status_name):
         return cls.query().filter_by(status=status_name).one()
 
+    @classmethod
+    def get_all(cls):
+        return [(0,"All")] + [(status.id, status.status) for status in cls.query()]
+
     def __cmp__(self, other):
         if hasattr(other,'severity'):
             other = other.severity
@@ -2471,6 +2478,10 @@ class TaskResult(object):
     def by_name(cls, result_name):
         return cls.query().filter_by(result=result_name).one()
 
+    @classmethod
+    def get_all(cls):
+        return [(0,"All")] + [(result.id, result.result) for result in cls.query()]
+
     def __cmp__(self, other):
         if hasattr(other,'severity'):
             other = other.severity
@@ -2488,15 +2499,6 @@ class Log(MappedObject):
     def __init__(self, path=None, filename=None):
         self.path = path
         self.filename = filename
-
-    def is_result(self):
-        return False
-   
-    def is_log(self):
-        return True
-   
-    def is_task(self):
-        return False
 
     def result(self):
         return self.parent.result
@@ -2551,8 +2553,9 @@ class TaskBase(MappedObject):
         """ 
         Return True if the task has failed
         """
-        if self.status in [TaskStatus.by_name(u'Cancelled'),
-                           TaskStatus.by_name(u'Aborted')]:
+        if self.result in [TaskResult.by_name(u'Warn'),
+                           TaskResult.by_name(u'Fail'),
+                           TaskResult.by_name(u'Panic')]:
             return True
         else:
             return False
@@ -3084,12 +3087,8 @@ class Recipe(TaskBase):
         """
         for task in self.tasks:
             yield task
-            for log in task.logs:
-                yield log
             for task_result in task.results:
                 yield task_result
-                for log in task_result.logs:
-                    yield log
     all_tasks = property(all_tasks)
 
 
@@ -3204,14 +3203,13 @@ class RecipeTask(TaskBase):
         return self.task.name
     path = property(path)
 
-    def is_result(self):
-        return False
-   
-    def is_log(self):
-        return False
-   
-    def is_task(self):
-        return True
+    def link_id(self):
+        """ Return a link to this Executed Recipe->Task
+        """
+        return make_link(url = '/recipes/%s#task%s' % (self.recipe.id, self.id),
+                         text = 'T:%s' % self.id)
+
+    link_id = property(link_id)
 
     def link(self):
         """ Return a link to this Task
@@ -3541,7 +3539,7 @@ class RecipeTaskRpm(MappedObject):
     pass
 
 
-class RecipeTaskResult(MappedObject):
+class RecipeTaskResult(TaskBase):
     """
     Each task can report multiple results
     """
@@ -3609,15 +3607,6 @@ class RecipeTaskResult(MappedObject):
 
     short_path = property(short_path)
 
-    def is_task(self):
-        return False
-
-    def is_result(self):
-        return True
-   
-    def is_log(self):
-        return False
-   
 
 class Task(MappedObject):
     """

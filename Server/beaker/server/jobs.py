@@ -257,7 +257,7 @@ class Jobs(RPCRoot):
     def index(self, *args, **kw):
         jobs = session.query(Job).join('status').join('owner').outerjoin('result')
         jobs_grid = myPaginateDataGrid(fields=[
-		     widgets.PaginateDataGrid.Column(name='id', getter=lambda x:make_link(url = 'view?id=%s' % x.id, text = x.t_id), title='ID', options=dict(sortable=True)),
+		     widgets.PaginateDataGrid.Column(name='id', getter=lambda x:make_link(url = './%s' % x.id, text = x.t_id), title='ID', options=dict(sortable=True)),
 		     widgets.PaginateDataGrid.Column(name='whiteboard', getter=lambda x:x.whiteboard, title='Whiteboard', options=dict(sortable=True)),
 		     widgets.PaginateDataGrid.Column(name='owner.email_address', getter=lambda x:x.owner.email_address, title='Owner', options=dict(sortable=True)),
                      widgets.PaginateDataGrid.Column(name='progress', getter=lambda x: x.progress_bar, title='Progress', options=dict(sortable=False)),
@@ -309,7 +309,7 @@ class Jobs(RPCRoot):
         )
 
     @expose(template="beaker.server.templates.job")
-    def view(self, id):
+    def default(self, id):
         try:
             job = Job.by_id(id)
         except InvalidRequestError:

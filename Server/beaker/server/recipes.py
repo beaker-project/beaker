@@ -135,7 +135,7 @@ class Recipes(RPCRoot):
     def index(self, *args, **kw):
         recipes = session.query(MachineRecipe)
         recipes_grid = myPaginateDataGrid(fields=[
-		     widgets.PaginateDataGrid.Column(name='id', getter=lambda x:make_link(url='view?id=%s' % x.id, text=x.t_id), title='ID', options=dict(sortable=True)),
+		     widgets.PaginateDataGrid.Column(name='id', getter=lambda x:make_link(url='./%s' % x.id, text=x.t_id), title='ID', options=dict(sortable=True)),
 		     widgets.PaginateDataGrid.Column(name='whiteboard', getter=lambda x:x.whiteboard, title='Whiteboard', options=dict(sortable=True)),
 		     widgets.PaginateDataGrid.Column(name='arch', getter=lambda x:x.arch, title='Arch', options=dict(sortable=True)),
 		     widgets.PaginateDataGrid.Column(name='system', getter=lambda x: x.system and x.system.link, title='System', options=dict(sortable=True)),
@@ -189,7 +189,7 @@ class Recipes(RPCRoot):
         )
 
     @expose(template="beaker.server.templates.recipe")
-    def view(self, id):
+    def default(self, id):
         try:
             recipe = Recipe.by_id(id)
         except InvalidRequestError:

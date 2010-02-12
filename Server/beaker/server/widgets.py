@@ -6,7 +6,7 @@ import model
 from decimal import Decimal
 from turbogears.widgets import (Form, TextField, SubmitButton, TextArea,
                                 AutoCompleteField, SingleSelectField, CheckBox,
-                                HiddenField, RemoteForm, CheckBoxList, JSLink,
+                                HiddenField, RemoteForm, LinkRemoteFunction, CheckBoxList, JSLink,
                                 Widget, TableForm, FormField, CompoundFormField,
                                 static, PaginateDataGrid, DataGrid, RepeatingFormField,
                                 CompoundWidget, AjaxGrid, Tabber, CSSLink,
@@ -436,6 +436,47 @@ class PowerActionForm(Form):
             if d['value']['power']:
                 d['enabled'] = True
 
+class TaskSearchForm(RemoteForm):
+    template = "beaker.server.templates.task_search_form"
+    member_widgets = ['system_id', 'system', 'task', 'distro', 'family', 'arch', 'start', 'finish', 'status', 'result']
+    params = ['options','hidden']
+    fields = [HiddenField(name='system_id', validator=validators.Int()),
+              HiddenField(name='distro_id', validator=validators.Int()),
+              HiddenField(name='task_id', validator=validators.Int()),
+              TextField(name='task', label=_(u'Task')),
+#              AutoCompleteField(name='task',
+#                                search_controller=url('/tasks/by_name'),
+#                                search_param='task',
+#                                result_name='tasks'),
+              TextField(name='system', label=_(u'System')),
+              SingleSelectField(name='arch', label=_(u'Arch'),validator=validators.Int(),
+                                options=model.Arch.get_all),
+              TextField(name='distro', label=_(u'Distro')),
+#              AutoCompleteField(name='distro',
+#                                search_controller=url('/distros/by_name'),
+#                                search_param='distro',
+#                                result_name='distros'),
+              SingleSelectField(name='osmajor', label=_(u'Family'),validator=validators.Int(),
+                                options=model.OSMajor.get_all),
+              SingleSelectField(name='status', label=_(u'Status'),validator=validators.Int(),
+                                options=model.TaskStatus.get_all),
+              SingleSelectField(name='result', label=_(u'Result'),validator=validators.Int(),
+                                options=model.TaskResult.get_all),
+             ]
+
+#    def__init__(self, *args, **kw):
+#        super(TaskSearchForm, self).__init__(*args, **kw)
+#        self.system_id = HiddenField(name='system_id')
+#        self.system    = TextField(name='system', label=_(u'System'))
+#        self.task      = TextField(name='task', label=_(u'Task'))
+
+    def update_params(self, d):
+        print "d=", d
+        super(TaskSearchForm, self).update_params(d)
+        if 'arch_id' in d['options']:
+            d['arch_id'] = d['options']['arch_id']
+
+
 class LabInfoForm(Form):
     template = "beaker.server.templates.system_labinfo"
     member_widgets = ["id", "labinfo", "orig_cost", "curr_cost", "dimensions",
@@ -816,7 +857,8 @@ class SystemHistory(Widget):
     params = ['system']
 
 class SystemForm(Form):
-    javascript = [LocalJSLink('beaker', '/static/javascript/provision.js')]
+    javascript = [LocalJSLink('beaker', '/static/javascript/provision.js'),
+                  JSLink(static,'ajax.js')]
     template = "beaker.server.templates.system_form"
     params = ['id','readonly',
               'user_change','user_change_text',
@@ -893,9 +935,22 @@ class SystemForm(Form):
                                                           d["value_for"](f),
                                                                   **attrs)
 
+class TasksWidget(CompoundWidget):
+    template = "beaker.server.templates.tasks_widget"
+    params = ['tasks', 'hidden']
+    member_widgets = ['link'] 
+    link = LinkRemoteFunction(name='link', method='post')
+
 class RecipeTasksWidget(Widget):
-    template = "beaker.server.templates.recipe_tasks_widget"
-    params = ['recipe_tasks']
+    template = "beaker.server.templates.tasks_widget"
+    params = ['tasks', 'hidden']
+
+    def update_params(self, d):
+        d["hidden"] = dict(system  = 1,
+                           arch    = 1,
+                           distro  = 1,
+                           osmajor = 1,
+                          )
 
 class RecipeWidget(CompoundWidget):
     javascript = []

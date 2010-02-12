@@ -68,32 +68,20 @@ types = types.replace('&', '&amp;')
         </span>
     </tr>
 </table>
-<table width="97%" class="list" py:if="task.runs">
-    <tr class="list">
-        <td colspan="7" class="list">
-            <div class="show">Last 10 Test Runs for this Test</div>
-        </td>
-    </tr>
-    <tr class="list">
-     <th class="list">Run ID</th>
-     <th class="list">Distro</th>
-     <th class="list">Family</th>
-     <th class="list">Arch</th>
-     <th class="list">System</th>
-     <th class="list">Status</th>
-     <th class="list">Result</th>
-     <th class="list">Duration</th>
-    </tr>
-    <tr class="list" py:for="taskrun in reversed(task.runs[-10:])">
-      <td class="list">${taskrun.id}</td>
-      <td class="list"><span py:if="taskrun.recipe.distro">${taskrun.recipe.distro.name}</span></td>
-      <td class="list"><span py:if="taskrun.recipe.distro">${taskrun.recipe.distro.osversion}</span></td>
-      <td class="list"><span py:if="taskrun.recipe.distro">${taskrun.recipe.distro.arch}</span></td>
-      <td class="list">${taskrun.recipe.system}</td>
-      <td class="list">${taskrun.status}</td>
-      <td class="list">${taskrun.result}</td>
-      <td class="list">${taskrun.duration}</td>
-    </tr>
-</table>
+<div>
+<h2>Executed Tasks</h2>
+    ${form.display(
+    value=value,
+    options=options,
+    hidden=options['hidden'],
+    action=action,
+    target_dom='task_items',
+    update='task_items',
+    before='getElement(\'loading\').innerHTML=\'Searching...\';',
+    on_complete='getElement(\'loading\').innerHTML=\'Done!\';',
+    )}
+    <div id="loading"></div>
+    <div id="task_items">&nbsp;</div>
+ </div>
 </body>
 </html>

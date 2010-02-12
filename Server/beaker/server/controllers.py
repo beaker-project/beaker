@@ -35,6 +35,7 @@ from beaker.server.widgets import SystemInstallOptions
 from beaker.server.widgets import SystemProvision
 from beaker.server.widgets import SearchBar, SystemForm
 from beaker.server.widgets import SystemArches
+from beaker.server.widgets import TaskSearchForm
 from beaker.server.authentication import Auth
 from beaker.server.xmlrpccontroller import RPCRoot
 from beaker.server.cobbler_utils import hash_to_string
@@ -414,6 +415,7 @@ class Root(RPCRoot):
     system_installoptions = SystemInstallOptions(name='installoptions')
     system_provision = SystemProvision(name='provision')
     arches_form = SystemArches(name='arches') 
+    task_form = TaskSearchForm(name='tasks')
 
     @expose(format='json')
     def get_keyvalue_search_options(self,**kw):
@@ -822,7 +824,9 @@ class Root(RPCRoot):
                                     install   = self.system_installoptions,
                                     provision = self.system_provision,
                                     power_action = self.power_action_form, 
-                                    arches    = self.arches_form),
+                                    arches    = self.arches_form,
+                                    tasks      = self.task_form,
+                                  ),
             widgets_action  = dict( power     = '/save_power',
                                     labinfo   = '/save_labinfo',
                                     exclude   = '/save_exclude',
@@ -832,7 +836,9 @@ class Root(RPCRoot):
                                     install   = '/save_install',
                                     provision = '/action_provision',
                                     power_action = '/action_power',
-                                    arches    = '/save_arch'),
+                                    arches    = '/save_arch',
+                                    tasks     = '/tasks/do_search',
+                                  ),
             widgets_options = dict(power     = options,
                                    labinfo   = options,
                                    exclude   = options,
@@ -851,7 +857,11 @@ class Root(RPCRoot):
                                                     prov_install = [(distro.id, distro.install_name) for distro in system.distros().order_by(distro_table.c.install_name)]),
                                    power_action   = options,
                                    arches    = dict(readonly = readonly,
-                                                    arches = system.arch)),
+                                                    arches = system.arch),
+                                   tasks      = dict(system_id = system.id,
+                                                     arch = [(0, 'All')] + [(arch.id, arch.arch) for arch in system.arch],
+                                                     hidden = dict(system = 1)),
+                                  ),
         )
          
     @expose(template='beaker.server.templates.form')

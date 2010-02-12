@@ -9,7 +9,7 @@
  <table class="show ${result}">
   <tr>
    <td class="title"><b>Recipe ID</b></td>
-   <td class="value"><a class="list" href="${tg.url('/recipes/view?id=%s' % recipe.id)}">${recipe.t_id}</a></td>
+   <td class="value"><a class="list" href="${tg.url('/recipes/%s' % recipe.id)}">${recipe.t_id}</a></td>
    <td class="title"><b>Status</b></td>
    <td class="value">${recipe.status}</td>
    <td class="title"><b>Result</b></td>
@@ -61,6 +61,6 @@
 
  <div py:if="recipe_tasks_widget" class="recipe-tasks ${result}">
   <h2>Task Runs</h2>
-  <p py:content="recipe_tasks_widget(recipe_tasks=recipe.all_tasks)">Recipe Tasks goes here</p>
+  <p py:content="recipe_tasks_widget(tasks=recipe.all_tasks)">Recipe Tasks goes here</p>
  </div>
 </div>

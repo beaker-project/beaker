@@ -40,7 +40,7 @@
  <table width="97%">
   <tr>
    <td>
-    <div class="show"><a href="${tg.url('/jobs/view?id=%s' % recipe.recipeset.job.id)}">Job: ${recipe.recipeset.job.t_id}</a></div>
+    <div class="show"><a href="${tg.url('/jobs/%s' % recipe.recipeset.job.id)}">Job: ${recipe.recipeset.job.t_id}</a></div>
    </td>
   </tr>
  </table>

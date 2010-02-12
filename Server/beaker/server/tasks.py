@@ -21,6 +21,8 @@ from turbogears import identity, redirect
 from cherrypy import request, response
 from kid import Element
 from beaker.server.widgets import myPaginateDataGrid
+from beaker.server.widgets import TasksWidget
+from beaker.server.widgets import TaskSearchForm
 from beaker.server.xmlrpccontroller import RPCRoot
 from beaker.server.helpers import make_link
 from sqlalchemy import exceptions
@@ -42,6 +44,8 @@ class Tasks(RPCRoot):
     # For XMLRPC methods in this class.
     exposed = True
 
+    task_form = TaskSearchForm()
+    task_widget = TasksWidget()
     task_dir = config.get("basepath.rpms", "/tmp")
 
     upload = widgets.FileField(name='task_rpm', label='Task rpm')
@@ -104,6 +108,54 @@ class Tasks(RPCRoot):
         flash(_(u"%s Added/Updated at id:%s" % (task.name,task.id)))
         redirect(".")
 
+    @expose(template='beaker.server.templates.tasks')
+    @validate(form=task_form)
+    @paginate('tasks',default_order='-id', limit=30)
+    def do_search(self, hidden={}, **kw):
+        tasks = None
+        if kw.get('distro_id'):
+            try:
+                tasks = RecipeTask.query().join(['recipe','distro']).filter(Distro.id==kw.get('distro_id'))
+                hidden = dict(distro = 1,
+                              osmajor = 1,
+                              arch = 1,
+                              logs = 1)
+            except InvalidRequestError:
+                return "<div>Invalid data:<br>%r</br></div>" % kw
+        if kw.get('task_id'):
+            try:
+                tasks = RecipeTask.query().join('task').filter(Task.id==kw.get('task_id'))
+                hidden = dict(task = 1,
+                              logs = 1)
+            except InvalidRequestError:
+                return "<div>Invalid data:<br>%r</br></div>" % kw
+        if kw.get('system_id'):
+            try:
+                tasks = RecipeTask.query().join(['recipe','system']).filter(System.id==kw.get('system_id')).order_by(recipe_task_table.c.id.desc())
+                hidden = dict(system = 1,
+                              logs   = 1)
+            except InvalidRequestError:
+                return "<div>Invalid data:<br>%r</br></div>" % kw
+        if kw.get('system'):
+            tasks = tasks.join(['recipe','system']).filter(System.fqdn.like('%%%s%%' % kw.get('system')))
+        if kw.get('task'):
+            # Shouldn't have to do this.  This only happens on the LinkRemoteFunction calls
+            kw['task'] = kw.get('task').replace('%2F','/')
+            tasks = tasks.join('task').filter(Task.name.like('%%%s%%' % kw.get('task')))
+        if kw.get('distro'):
+            tasks = tasks.join(['recipe','distro']).filter(Distro.install_name.like('%%%s%%' % kw.get('distro')))
+        if kw.get('arch'):
+            tasks = tasks.join(['recipe','distro','arch']).filter(Arch.id==kw.get('arch'))
+        if kw.get('status'):
+            tasks = tasks.join('status').filter(TaskStatus.id==kw.get('status'))
+        if kw.get('result'):
+            tasks = tasks.join('result').filter(TaskResult.id==kw.get('result'))
+        if kw.get('osmajor'):
+            tasks = tasks.join(['recipe','distro','osversion','osmajor']).filter(OSMajor.id==kw.get('osmajor'))
+        return dict(tasks = tasks,
+                    hidden = hidden,
+                    task_widget = self.task_widget)
+
     @expose(template='beaker.server.templates.grid')
     @paginate('list',default_order='name', limit=30)
     def index(self, *args, **kw):
@@ -117,8 +169,16 @@ class Tasks(RPCRoot):
 
     @expose(template='beaker.server.templates.task')
     def default(self, *args, **kw):
-        task = Task.by_id(args[0])
-        return dict(task=task)
+        try:
+            task = Task.by_id(args[0])
+        except InvalidRequestError:
+            flash(_(u'Invalid task id %s' % args[0] ))
+            redirect(".")
+        return dict(task=task,
+                    form = self.task_form,
+                    value = dict(task_id = task.id),
+                    options = dict(hidden=dict(task = 1)),
+                    action = './do_search')
 
     def process_taskinfo(self, raw_taskinfo):
         tinfo = testinfo.parse_string(raw_taskinfo['desc'])
@@ -163,6 +223,11 @@ class Tasks(RPCRoot):
         task.license = tinfo.license
 
         return task
+
+    @expose(format='json')
+    def by_name(self, task):
+        task = task.lower()
+        return dict(tasks=[(task.name) for task in Task.query().filter(Task.name.like('%s%%' % task))])
 
     def read_taskinfo(self, rpm_file):
         taskinfo = {}

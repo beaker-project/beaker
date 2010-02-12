@@ -73,6 +73,20 @@
    <div py:if="widgets.has_key('history')" class="tabbertab"><h2>History</h2>
     ${widgets['history'].display(system=value)} 
    </div>
+   <div class="tabbertab"><h2>Tasks</h2>
+    ${widgets['tasks'].display(
+    value=widgets_options['tasks'],
+    options=widgets_options['tasks'],
+    hidden=widgets_options['tasks']['hidden'],
+    action=widgets_action['tasks'],
+    target_dom='task_items',
+    update='task_items',
+    before='getElement(\'loading\').innerHTML=\'Searching...\';',
+    on_complete='getElement(\'loading\').innerHTML=\'Done!\';',
+    )}
+    <div id="loading"></div>
+    <div id="task_items">&nbsp;</div>
+   </div>
   </div>
  </body>
 </html>

@@ -228,8 +228,12 @@ class LabControllers(RPCRoot):
             now = time.time()
             url = "http://%s/cobbler_api" % labcontroller.fqdn
             remote = xmlrpclib.ServerProxy(url)
-            token = remote.login(labcontroller.username,
+            try:
+                token = remote.login(labcontroller.username,
                                  labcontroller.password)
+            except xmlrpclib.Fault, msg:
+                flash( _(u"Failed to login: %s" % msg))
+                
             lc_distros = remote.get_distros()
 
             distros = self._addDistros(labcontroller.fqdn, lc_distros)

@@ -88,5 +88,19 @@
   <div><h2>Tags</h2>
    ${form.display(method='get', action=action, value=value, options=options)}
   </div>
+  <div><h2>Executed Tasks</h2>
+    ${form_task.display(
+    value=value_task,
+    options=options,
+    hidden=options['hidden'],
+    action=action_task,
+    target_dom='task_items',
+    update='task_items',
+    before='getElement(\'loading\').innerHTML=\'Searching...\';',
+    on_complete='getElement(\'loading\').innerHTML=\'Done!\';',
+    )}
+    <div id="loading"></div>
+    <div id="task_items">&nbsp;</div>
+  </div>
  </body>
 </html>
