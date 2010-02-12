@@ -654,6 +654,7 @@ class Cpu(SystemObject):
                           'Cores'       : CpuColumn(col_type='numeric',column = model.Cpu.cores),
                           'Sockets'     : CpuColumn(col_type='numeric',column = model.Cpu.sockets),
                           'Model'       : CpuColumn(col_type='numeric',column = model.Cpu.model),
+                          'ModelName'   : CpuColumn(col_type='string',column = model.Cpu.model_name),
                           'Family'      : CpuColumn(col_type='numeric',column = model.Cpu.family),
                           'Stepping'    : CpuColumn(col_type='numeric',column = model.Cpu.stepping),
                           'Speed'       : CpuColumn(col_type='numeric',column = model.Cpu.speed),
