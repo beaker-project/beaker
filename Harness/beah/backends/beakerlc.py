@@ -769,7 +769,7 @@ def beakerlc_opts(opt, conf):
 def main():
     lc = os.getenv('LAB_CONTROLLER', '') or \
             'http://%s:8000/server' % os.getenv('COBBLER_SERVER', 'localhost')
-    defaults = {'NAME':'beah_forwarder_backend', 'LAB_CONTROLLER':lc,
+    defaults = {'NAME':'beah_beaker_backend', 'LAB_CONTROLLER':lc,
             'HOSTNAME':os.getenv('HOSTNAME')}
     config.backend_conf(env_var='BEAH_BEAKER_CONF', filename='beah_beaker.conf',
             defaults=defaults, overrides=config.backend_opts(option_adder=beakerlc_opts))

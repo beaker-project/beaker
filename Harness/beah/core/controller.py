@@ -23,7 +23,6 @@ from beah.core import event, command
 from beah.core.constants import ECHO
 from beah.misc import Raiser, localhost, format_exc, dict_update, log_flush
 from beah import config
-from beah.misc.log_this import log_this
 
 from beah.system import Executable
 
@@ -31,35 +30,6 @@ from beah.system import Executable
 # Logging:
 ################################################################################
 log = logging.getLogger('beah')
-
-# FIXME!!! use logging handler to write to console... There must be one
-def mklog(level, logf):
-    return logf
-
-#def log_print(level, args, kwargs):
-#    """Redirect log messages - to stdout"""
-#    print level, args[0] % args[1:]
-#
-#def mklog(level, logf):
-#    """Create a wrapper for logging."""
-#    return logf
-#    if config.parse_bool(config.get_conf('beah').get('CONTROLLER', 'CONSOLE_LOG')):
-#        def log_w_level(*args, **kwargs):
-#            """Log wrapper - redirect log message and log it."""
-#            log_print(level, args, kwargs)
-#            return logf(*args, **kwargs)
-#        return log_w_level
-#    return logf
-
-log_debug   = mklog("--- DEBUG:   ", log.debug)
-log_info    = mklog("--- INFO:    ", log.info)
-log_warning = mklog("--- WARNING: ", log.warning)
-log_error   = mklog("--- ERROR:   ", log.error)
-
-# FIXME!!! use _VERBOSE and make_class_verbose instead of fcall_log
-# INFO: This is for debugging purposes only - allows tracing function calls
-#fcall_log = log_this(log_debug,
-#        config.parse_bool(config.get_conf('beah').get('CONTROLLER', 'DEVEL')))
 
 ################################################################################
 # Controller class:
@@ -71,6 +41,13 @@ class Controller(object):
     __origin = {'class':'controller'}
 
     __ON_KILLED = staticmethod(Raiser(ServerKilled, "Aaargh, I was killed!"))
+    _VERBOSE = ('add_backend', 'remove_backend', 'add_task', 'remove_task',
+            'find_task', 'proc_evt', 'send_evt', 'task_started',
+            'task_finished', 'handle_exception', 'proc_cmd', 'generate_evt',
+            'proc_cmd_forward', 'proc_cmd_variable_value', 'proc_cmd_ping',
+            'proc_cmd_PING', 'proc_cmd_config', 'proc_cmd_run',
+            'proc_cmd_run_this', 'proc_cmd_kill', 'proc_cmd_dump',
+            'proc_cmd_no_input', 'proc_cmd_no_output')
 
     def __init__(self, spawn_task, on_killed=None):
         self.spawn_task = spawn_task
@@ -131,7 +108,7 @@ class Controller(object):
 
         This is the only method mandatory for Task side Controller-Adaptor.
         """
-        log_debug("Controller: proc_evt(..., %r)", evt)
+        log.debug("Controller: proc_evt(..., %r)", evt)
         evev = evt.event()
         if evev == 'introduce':
             task_id = evt.arg('id')
@@ -139,7 +116,7 @@ class Controller(object):
             task.origin['source'] = "socket"
             task.origin['id'] = task_id
             if not self.find_task(task_id):
-                log_error("Controller: No task %s", task_id)
+                log.error("Controller: No task %s", task_id)
             return
         elif evev in ['variable_set', 'variable_get']:
             handle = evt.arg('handle', '')
@@ -162,10 +139,10 @@ class Controller(object):
                     _, l = self.__waiting_tasks[s]
                     if task not in l:
                         l.append(task)
-                        log_debug("Controller.__waiting_tasks=%r", self.__waiting_tasks)
+                        log.debug("Controller.__waiting_tasks=%r", self.__waiting_tasks)
                     return
                 _, l = self.__waiting_tasks[s] = (evt, [task])
-                log_debug("Controller.__waiting_tasks=%r", self.__waiting_tasks)
+                log.debug("Controller.__waiting_tasks=%r", self.__waiting_tasks)
         # controller - spawn_task
         orig = evt.origin()
         if not orig.has_key('id'):
@@ -194,7 +171,7 @@ class Controller(object):
         log_flush(log)
 
     def handle_exception(self, message="Exception raised."):
-        log_error("Controller: %s %s", message, format_exc())
+        log.error("Controller: %s %s", message, format_exc())
 
     def proc_cmd(self, backend, cmd):
         """Process Command received from backend.
@@ -204,7 +181,7 @@ class Controller(object):
 
         This is the only method mandatory for Backend side
         Controller-Adaptor."""
-        log_debug("Controller: proc_cmd(..., %r)", cmd)
+        log.debug("Controller: proc_cmd(..., %r)", cmd)
         handler = None
         hana = "proc_cmd_"+cmd.command()
         if hana in dir(self):
@@ -221,7 +198,7 @@ class Controller(object):
                 dict_update(evt.args(),
                         rc=ECHO.EXCEPTION,
                         exception=format_exc())
-        log_debug("Controller: echo(%r)", evt)
+        log.debug("Controller: echo(%r)", evt)
         backend.proc_evt(evt, explicit=True)
 
     def generate_evt(self, evt, to_all=False):
@@ -232,7 +209,7 @@ class Controller(object):
 
         to_all - if True, send to all backends, including no_output BE's
         """
-        log_debug("Controller: generate_evt(..., %r, %r)", evt, to_all)
+        log.debug("Controller: generate_evt(..., %r, %r)", evt, to_all)
         self.send_evt(evt, to_all)
 
     class BackendFakeTask(object):
@@ -259,17 +236,17 @@ class Controller(object):
     def proc_cmd_variable_value(self, backend, cmd, echo_evt):
         s = repr(("command.variable_value", cmd.arg("key"), cmd.arg("handle"), cmd.arg("dest")))
         _, l = self.__waiting_tasks.get(s, (None, None))
-        log_debug("Controller.__waiting_tasks[%r]=%r", s, l)
+        log.debug("Controller.__waiting_tasks[%r]=%r", s, l)
         if l is not None:
             for task in l:
-                log_debug("Controller: %s.proc_cmd(%r)", task, cmd)
+                log.debug("Controller: %s.proc_cmd(%r)", task, cmd)
                 task.proc_cmd(cmd)
             del self.__waiting_tasks[s]
-        log_debug("Controller.__waiting_tasks=%r", self.__waiting_tasks)
+        log.debug("Controller.__waiting_tasks=%r", self.__waiting_tasks)
 
     def proc_cmd_ping(self, backend, cmd, echo_evt):
         evt = event.Event('pong', message=cmd.arg('message', None))
-        log_debug("Controller: backend.proc_evt(%r)", evt)
+        log.debug("Controller: backend.proc_evt(%r)", evt)
         backend.proc_evt(evt, explicit=True)
 
     def proc_cmd_PING(self, backend, cmd, echo_evt):
@@ -342,10 +319,10 @@ class Controller(object):
             answ += "\n== Killed ==\nTrue\n"
 
         evt = event.Event('dump', message=answ)
-        log_debug("Controller: backend.proc_evt(%r)", evt)
+        log.debug("Controller: backend.proc_evt(%r)", evt)
         backend.proc_evt(evt, explicit=True)
 
-        log_info('%s', answ)
+        log.info('%s', answ)
 
     def proc_cmd_no_input(self, backend, cmd, echo_evt):
         pass

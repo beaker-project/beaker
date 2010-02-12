@@ -95,7 +95,8 @@ def log_flush(logger):
         except:
             pass
 
-def make_log_handler(log, log_path, log_file_name=None, syslog=None):
+def make_log_handler(log, log_path, log_file_name=None, syslog=None,
+        console=None):
 
     # FIXME: add config.option?
     if sys.version_info[0] == 2 and sys.version_info[1] <= 4:
@@ -132,6 +133,11 @@ def make_log_handler(log, log_path, log_file_name=None, syslog=None):
         lhandler = logging.handlers.SysLogHandler()
         lhandler.setFormatter(logging.Formatter('%(asctime)s %(name)s'+fmt))
         lhandler.setLevel(logging.WARNING)
+        log.addHandler(lhandler)
+
+    if console:
+        lhandler = logging.StreamHandler()
+        lhandler.setFormatter(logging.Formatter('%(asctime)s %(name)s'+fmt))
         log.addHandler(lhandler)
 
 def is_class_verbose(cls):

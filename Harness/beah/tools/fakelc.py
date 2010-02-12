@@ -536,6 +536,7 @@ def main():
     name = conf['name']
     runtime = runtimes.ShelveRuntime(VAR_PATH + '/' + name)
     log = logging.getLogger('beah_fakelc')
+    # FIXME: redirect to console or syslog?
     make_log_handler(log, LOG_PATH, "%s.log" % name)
     log.setLevel(logging.DEBUG)
 

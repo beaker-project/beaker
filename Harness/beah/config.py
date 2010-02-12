@@ -375,14 +375,14 @@ def default_opt(opt, conf, kwargs):
             help="Increase verbosity.")
     opt.add_option("-q", "--quiet", action="count",
             help="Decrease verbosity.")
-    def log_stdout_cb(option, opt_str, value, parser, arg):
+    def log_stderr_cb(option, opt_str, value, parser, arg):
         conf['CONSOLE_LOG'] = arg
-    opt.add_option("-O", "--log-stdout", action="callback",
-            callback=log_stdout_cb, callback_args=("True",),
-            help="Write all logging to stdout.")
-    opt.add_option("--no-log-stdout", action="callback",
-            callback=log_stdout_cb, callback_args=("False",),
-            help="Do not write logging info to stdout.")
+    opt.add_option("-O", "--log-stderr", action="callback",
+            callback=log_stderr_cb, callback_args=("True",),
+            help="Write all logging to stderr.")
+    opt.add_option("--no-log-stderr", action="callback",
+            callback=log_stderr_cb, callback_args=("False",),
+            help="Do not write logging info to stderr.")
     def log_level_cb(option, opt_str, value, parser):
         # FIXME!!! check value
         conf['LOG'] = value

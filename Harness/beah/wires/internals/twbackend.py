@@ -74,7 +74,8 @@ def log_handler(log_file_name=None):
             log_file_name = conf.get('DEFAULT', 'NAME') + '.log'
     lp = conf.get('DEFAULT', 'LOG_PATH') or "/var/log"
     log = logging.getLogger('backend')
-    make_log_handler(log, lp, log_file_name, syslog=True)
+    cons = config.parse_bool(conf.get('DEFAULT', 'CONSOLE_LOG', False))
+    make_log_handler(log, lp, log_file_name, syslog=True, console=cons)
     return log
 
 def start_backend(backend, host=None, port=None,

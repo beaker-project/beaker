@@ -19,7 +19,8 @@
 from beah.wires.internals.twadaptors import BackendAdaptor_JSON, TaskAdaptor_JSON
 from beah.wires.internals.twtask import Spawn
 from beah.core.controller import Controller
-from beah.misc import runtimes, make_log_handler
+from beah.misc import runtimes, make_log_handler, make_class_verbose
+from beah.misc.log_this import log_this
 from beah import config
 from twisted.internet import protocol
 from twisted.internet import reactor
@@ -93,7 +94,11 @@ def start_server(conf=None, backend_host=None, backend_port=None,
 
     # Create a directory for logging and check permissions
     lp = conf.get('CONTROLLER', 'LOG_PATH')
-    make_log_handler(log, lp, conf.get('CONTROLLER', 'LOG_FILE_NAME'), True)
+    make_log_handler(log, lp, conf.get('CONTROLLER', 'LOG_FILE_NAME'),
+            syslog=True, console=config.parse_bool(conf.get('CONTROLLER', 'CONSOLE_LOG', False)))
+    if config.parse_bool(config.get_conf('beah').get('CONTROLLER', 'DEVEL')):
+        print_this = log_this(log.debug, True)
+        make_class_verbose(Controller, print_this)
 
     # RUN:
     backend_host = backend_host or conf.get('BACKEND', 'INTERFACE')
