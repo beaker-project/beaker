@@ -19,20 +19,25 @@ part swap --recommended --asprimary
 
 ## Loop through partitions variable and create appropriate part commands
 ## partitions=partitions=rhel5_pv_guest.img:lvm:10;rhel5_hvm_guest.img:lvm:10
+#partitions = /mnt/block1:part:1;mylvm:lvm:5;/mnt/block4ext4:part:1:ext4dev;mylvm4ext4:lvm:5:ext4dev;/mnt/block2:part:1;/mnt/block24ext4:part:1:ext4dev;mylvm2:lvm:5; 
+# (ext4dev is the fstype in some of them in the above example)
 #set is_lvm = 0
 #set _partitions = $getVar('partitions','').split(';')
 #for $_partition in $_partitions:
 #set partition = $_partition.split(':')
-#if len($partition) == 3
+#if len($partition) == 4
+#set fstype = $partition[3]
+#else
+#set fstype = 'ext3'
+#end if
 #if $partition[1] == 'part'
-part /$partition[0] --fstype ext3 --size=$partition[2]
+part /$partition[0] --fstype $fstype --size=$partition[2]
 #end if
 #if $partition[1] == 'lvm'
 #set is_lvm = $is_lvm + 1
 part pv.00$is_lvm --size=$partition[2]
 volgroup TestVolume00$is_lvm pv.00$is_lvm
-logvol /$partition[0] --fstype ext3 --name=$partition[0] --vgname=TestVolume00$is_lvm --size=$partition[2]
-#end if
+logvol /$partition[0] --fstype $fstype --name=$partition[0] --vgname=TestVolume00$is_lvm --size=$partition[2]
 #end if
 #end for
 
