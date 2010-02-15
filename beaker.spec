@@ -6,8 +6,8 @@
 %endif
 
 Name:           beaker
-Version:        0.4.82
-Release:        3%{?timestamp}%{?branch}%{?dist}
+Version:        0.4.83
+Release:        0%{?timestamp}%{?branch}%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -194,6 +194,9 @@ fi
 /usr/share/man/man1/beakerlib*
 
 %changelog
+* Mon Feb 15 2010 Bill Peck <bpeck@redhat.com> - 0.4.83-0
+- Remove auth from rhel6 kickstart, default is sane.
+- Includes rmancy's update, added cpu_model_name to search options.
 * Wed Feb 03 2010 Bill Peck <bpeck@redhat.com> - 0.4.82-3
 - Don't expire nightlies in one week, leave it up to the filesystem
 - fix bz#554852 don't remove any distros if all are missing
