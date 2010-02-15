@@ -81,10 +81,7 @@
     action=widgets_action['tasks'],
     target_dom='task_items',
     update='task_items',
-    before='getElement(\'loading\').innerHTML=\'Searching...\';',
-    on_complete='getElement(\'loading\').innerHTML=\'Done!\';',
     )}
-    <div id="loading"></div>
     <div id="task_items">&nbsp;</div>
    </div>
   </div>

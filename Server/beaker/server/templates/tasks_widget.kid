@@ -5,16 +5,16 @@
   from cgi import  parse_qs
   if getattr(tg, 'paginate', False):
       if tg.paginate.href_first:
-          action_first = "%s://%s%s" % urlparse(tg.paginate.href_first)[0:3]
+          action_first = urlparse(tg.paginate.href_first)[2]
           data_first = parse_qs(urlparse(tg.paginate.href_first)[4])
       if tg.paginate.href_prev:
-          action_prev = "%s://%s%s" % urlparse(tg.paginate.href_prev)[0:3]
+          action_prev = urlparse(tg.paginate.href_prev)[2]
           data_prev = parse_qs(urlparse(tg.paginate.href_prev)[4])
       if tg.paginate.href_next:
-          action_next = "%s://%s%s" % urlparse(tg.paginate.href_next)[0:3]
+          action_next = urlparse(tg.paginate.href_next)[2]
           data_next = parse_qs(urlparse(tg.paginate.href_next)[4])
       if tg.paginate.href_last:
-          action_last = "%s://%s%s" % urlparse(tg.paginate.href_last)[0:3]
+          action_last = urlparse(tg.paginate.href_last)[2]
           data_last = parse_qs(urlparse(tg.paginate.href_last)[4])
  ?>
  <table width="97%">
