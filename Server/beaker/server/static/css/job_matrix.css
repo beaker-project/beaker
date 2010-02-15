@@ -1,6 +1,3 @@
-#loading {
-  background-image: url('/static/images/ajax-loader.gif'); 
-}
 
 .margined {
   margin:1.25em 1.25em 1.25em 0; 
@@ -19,13 +16,6 @@ input.submit-button {
   margin-bottom:0.25em
 } 
 
-.rounded-side-pad {
-  -moz-border-radius: 0.35em;
-  -webkit-border-radius: 0.35em;
-  border-radius: 0.25em;
-  padding-left:0.25em;
-  padding-right:0.25em
-}
 
 .inline {
 display:inline

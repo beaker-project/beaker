@@ -1374,19 +1374,24 @@ $SNIPPET("rhts_post")
 #                                      system_group_table.c.system_id==None))))
 
     @classmethod
-    def free(cls, user):
+    def free(cls, user, systems=None):
         """
         Builds on available.  Only systems with no users.
         """
-        return System.available(user).filter(System.user==None)
+        return System.available(user,systems).filter(System.user==None)
 
     @classmethod
-    def available(cls, user):
+    def available(cls, user,systems=None):
         """
         Builds on all.  Only systems which this user has permission to reserve.
           If a system is loaned then its only available for that person.
         """
-        return System.all(user).filter(and_(
+        if systems:
+            query = systems
+        else:
+            query = System.all(user)
+           
+        return query.filter(and_(
                                 System.status==SystemStatus.by_name(u'Working'),
                                     or_(and_(System.owner==user,
                                              System.loaned==None),
@@ -1437,6 +1442,13 @@ $SNIPPET("rhts_post")
     @classmethod
     def by_id(cls, id, user):
         return System.all(user).filter(System.id == id).one()
+
+    @classmethod
+    def by_arch(cls,arch,query=None):
+        if query:
+            return query.filter(System.arch.any(Arch.arch == arch))
+        else:
+            return System.query().filter(System.arch.any(Arch.arch == arch))
 
     def excluded_families(self):
         """
@@ -2178,6 +2190,11 @@ def _create_tag(tag):
 class Distro(object):
     def __init__(self, install_name=None):
         self.install_name = install_name
+    
+    @classmethod
+    def all_methods(cls):
+        methods = [elem[0] for elem in select([distro_table.c.method],whereclause=distro_table.c.method != None,from_obj=distro_table,distinct=True).execute()]
+        return methods 
 
     @classmethod
     def by_install_name(cls, install_name):

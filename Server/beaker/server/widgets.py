@@ -34,7 +34,7 @@ class LocalJSLink(JSLink):
     """
     Link to local Javascript files
     """
-    def update_params(self, d):
+    def update_params(self,d): 
         super(JSLink, self).update_params(d)
         d["link"] = url(self.name)
 
@@ -99,6 +99,50 @@ class PowerTypeForm(CompoundFormField):
         self.powercontroller_field = SingleSelectField(name="powercontroller", options=callback)
 	self.key_field = HiddenField(name="key")
 
+class ReserveWorkflow(Form): 
+    javascript = [LocalJSLink('beaker', '/static/javascript/reserve_workflow.js')] 
+    template="beaker.server.templates.reserve_workflow"
+    css = [LocalCSSLink('beaker','/static/css/reserve_workflow.css')] 
+    member_widgets = ['arch','distro','distro_family','method_','tag'] 
+    params = ['arch_value','method_value','tag_value','distro_family_value','all_arches',
+              'all_tags','all_methods','all_distro_familys','to_json'] 
+
+    def __init__(self,*args,**kw):
+        super(ReserveWorkflow,self).__init__(*args, **kw)  
+        self.all_arches = [('','None Selected')] + [elem.arch for elem in model.Arch.query()]
+        self.all_tags = [('','None Selected')] + [elem.tag for elem in model.DistroTag.query()]  
+        self.all_methods = [('','None Selected')] + [elem for elem in model.Distro.all_methods()]
+        self.all_distro_familys = [('','None Selected')] + [elem.osmajor for elem in model.OSMajor.query()] 
+
+        self.method_ = SingleSelectField(name='method', label='Method', options=[None],validator=validators.NotEmpty())
+        self.distro = SingleSelectField(name='distro', label='Distro', 
+                                        options=[('','None available')],validator=validators.NotEmpty())
+        self.distro_family = SingleSelectField(name='distro_family', label='Distro Family', 
+                                               options=[None],validator=validators.NotEmpty())
+        self.tag = SingleSelectField(name='tag', label='Tag', options=[None],validator=validators.NotEmpty())
+        self.arch = SingleSelectField(name='arch', label='Arch', options=[None],validator=validators.NotEmpty())
+
+        self.to_json = UtilJSON.dynamic_json()
+        self.name = 'reserveworkflow_form'
+        self.action = '/reserve_system'
+        self.submit = SubmitButton(name='search',attrs={'value':'Show Systems'})
+                                                                
+    def display(self,value=None,**params):
+        if 'options' in params:
+            for k in params['options'].keys():
+                params[k] = params['options'][k]
+                del params['options'][k]
+        return super(ReserveWorkflow,self).display(value,**params)
+
+    def update_params(self,d):
+        super(ReserveWorkflow,self).update_params(d) 
+        if 'values' in d:
+            if d['values']:
+                d['arch_value'] = d['values']['arch'] 
+                d['distro_family_value'] = d['values']['distro_family']
+                d['tag_value'] = d['values']['tag']
+                d['method_value'] = d['values']['method']
+
 class myDataGrid(DataGrid):
     template = "beaker.server.templates.my_datagrid"
     
@@ -143,12 +187,6 @@ class TextFieldJSON(TextField):
 class NestedGrid(CompoundWidget):
     template = "beaker.server.templates.inner_grid" 
     params = ['inner_list']
-
-class JobMatrixWidgets(WidgetsList): 
-    default_validator = validators.NotEmpty()
-    whiteboard = MultipleSelectField('whiteboard', validator=default_validator) 
-    job_ids = TextArea('job_ids',rows=20,cols=7, validator=default_validator)
-   
 
 
 class JobMatrixReport(Form):     
@@ -216,6 +254,9 @@ class SearchBar(RepeatingFormField):
       py:attrs="form_attrs" 
       style="display:${simple}"
     >
+    <span py:for="hidden in extra_hiddens or []">
+        <input type='hidden' id='${hidden[0]}' name='${hidden[0]}' value='${hidden[1]}' />
+    </span> 
     <table>
      <tr>
       <td><input type="text" name="simplesearch" value="${simplesearch}" class="textfield"/>
@@ -236,6 +277,10 @@ class SearchBar(RepeatingFormField):
       py:attrs="form_attrs"
       style="display:${advanced}"
     >
+
+    <span py:for="hidden in extra_hiddens or []">
+        <input type='hidden' id='${hidden[0]}' name='${hidden[0]}' value='${hidden[1]}' />
+    </span> 
     <fieldset>
      <legend>Search</legend>
      <table>
@@ -298,7 +343,7 @@ class SearchBar(RepeatingFormField):
     <a style='margin-left:10px' id="selectall" href="#">Select All</a>
     <a style='margin-left:10px' id="selectdefault" href="#">Select Default</a>
     </div> 
-     </fieldset>
+     </fieldset>  
     </form>
     <script type="text/javascript">
     $(document).ready(function() {
@@ -331,7 +376,7 @@ class SearchBar(RepeatingFormField):
     """
 
     params = ['repetitions', 'form_attrs', 'search_controller', 'simplesearch',
-              'advanced', 'simple','to_json','this_operations_field','this_searchvalue_field',
+              'advanced', 'simple','to_json','this_operations_field','this_searchvalue_field','extra_hiddens',
               'extra_callbacks_stringified','table_search_controllers_stringified','keyvaluevalue',
               'result_columns','col_options','col_defaults','custom_column_checked','default_result_columns']
     form_attrs = {}
@@ -349,9 +394,8 @@ class SearchBar(RepeatingFormField):
         # to access in the template
         self.this_operations_field = operation_field
         self.this_searchvalue_field = value_field
-        self.fields = [table_field,operation_field,value_field] 
-
-         
+        self.fields = [table_field,operation_field,value_field]
+       
         new_selects = []
         self.extra_callbacks = {}
         if extra_selects is not None: 
@@ -381,7 +425,7 @@ class SearchBar(RepeatingFormField):
         controllers = kw.get('table_search_controllers','') 
         
         self.table_search_controllers_stringified = str(controllers)
-        self.to_json = UtilJSON.dynamic_json() 
+        self.to_json = UtilJSON.dynamic_json()
         
         self.extra_callbacks_stringified = str(self.extra_callbacks)
         self.fields.extend(new_inputs)
@@ -399,6 +443,9 @@ class SearchBar(RepeatingFormField):
                 for elem in params['options']['result_columns']: 
                     json_this.update({elem : 1})
                 params['default_result_columns'] = jsonify.encode(json_this)     
+            if 'extra_hiddens' in params['options']:
+                params['extra_hiddens'] = [(k,v) for k,v in params['options']['extra_hiddens'].iteritems()] 
+
         if value and not 'simplesearch' in params:
             params['advanced'] = 'True'
             params['simple'] = 'none'
