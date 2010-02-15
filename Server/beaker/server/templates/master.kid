@@ -94,7 +94,7 @@ from beaker.server.model import system_types
                     </li>
                     <li><a href="${tg.url('/jobs')}">Jobs</a></li>
                     <li><a href="${tg.url('/recipes')}">Recipes</a></li>
-                    <li><a href="${tg.url('/tasks')}">Tasks</a></li>
+                    <li><a href="${tg.url('/tasks')}">Task Library</a></li>
                     <li class="last">
                         <img class="corner_left" alt="" src="/static/images/corner_left.png"/>
                         <img class="middle" alt="" src="/static/images/dot.gif"/>

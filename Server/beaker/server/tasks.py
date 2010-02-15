@@ -165,7 +165,7 @@ class Tasks(RPCRoot):
 		     widgets.PaginateDataGrid.Column(name='description', getter=lambda x:x.description, title='Description', options=dict(sortable=True)),
 		     widgets.PaginateDataGrid.Column(name='version', getter=lambda x:x.version, title='Version', options=dict(sortable=True)),
                     ])
-        return dict(title="Tasks", grid=tasks_grid, list=tasks, search_bar=None)
+        return dict(title="Task Library", grid=tasks_grid, list=tasks, search_bar=None)
 
     @expose(template='beaker.server.templates.task')
     def default(self, *args, **kw):
