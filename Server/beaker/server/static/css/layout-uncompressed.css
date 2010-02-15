@@ -665,3 +665,22 @@ body { font-family:Arial, Helvetica, Sans-Serif; font-size:12px; margin:0px 20px
 #menu .corner_left { position:absolute; left:0px; top:0px;}
 #menu .corner_right { position:absolute; left:132px; top:0px;}
 #menu .middle { position:absolute; left:18px; height: 20px; width: 115px; top:0px;}
+
+.rounded-side-pad {
+  -moz-border-radius: 0.35em;
+  -webkit-border-radius: 0.35em;
+  border-radius: 0.25em;
+  padding-left:0.25em;
+  padding-right:0.25em
+}
+
+warn {
+  background-color:#FFB200;
+  margin:auto;
+  color:black;
+  font-size:large;
+} 
+
+#loading {
+  background-image: url('/static/images/ajax-loader.gif'); 
+}

@@ -1,8 +1,6 @@
 from turbogears.database import session
 from turbogears import controllers, expose, flash, widgets, validate, error_handler, validators, redirect, paginate, url
 from model import *
-
-
 from turbogears import identity, redirect, config
 import search_utility
 import beaker
@@ -20,6 +18,7 @@ from beaker.server.activity import Activities
 from beaker.server.reports import Reports
 from beaker.server.job_matrix import JobMatrix
 from beaker.server.task_list import TaskList
+from beaker.server.reserve_workflow import ReserveWorkflow
 from beaker.server.widgets import myPaginateDataGrid
 from beaker.server.widgets import PowerTypeForm
 from beaker.server.widgets import PowerForm
@@ -75,9 +74,21 @@ class Utility:
     #is making it quite large.
 
     @classmethod
+    def direct_column(cls,title,getter):
+        """
+        direct_column() will return a DataGrid Column and is intended to be used to generate 
+        columns to be inserted into a grid without any other sideaffects (unlike custom_systems_grid()).
+        They are also free of control from other elemnts such as the result_columns()
+        """
+        col = widgets.DataGrid.Column(name=title, title=title, getter=getter)
+        return col
+
+    @classmethod
     def result_columns(cls,values_checked = None):  
-      #Call function which will return list of columns that can be searched on 
-      # Ticket 51 
+      """
+      result_columns() will return the list of columns that are able to bereturned
+      in the system search results.
+      """
       column_names = search_utility.SystemSearch.create_column_table([{search_utility.Cpu :{'exclude': ['Flags']} },
                                                                       {search_utility.System: {'all':[]} }] ) 
       send = [(elem,elem) for elem in column_names]  
@@ -365,8 +376,9 @@ class Root(RPCRoot):
     taskactions = TaskActions()
     reports = Reports()
     matrix = JobMatrix()
-    tasklist = TaskList()
-
+    tasklist = TaskList()  
+    reserveworkflow = ReserveWorkflow()
+    
     id         = widgets.HiddenField(name='id')
     submit     = widgets.SubmitButton(name='submit')
 
@@ -528,6 +540,55 @@ class Root(RPCRoot):
     def mine(self, *args, **kw):
         return self.systems(systems = System.mine(identity.current.user), *args, **kw)
 
+    @expose(template='beaker.server.templates.grid')   
+    @identity.require(identity.not_anonymous())
+    @paginate('list') 
+    def reserve_system(self, *args,**kw): 
+        
+        try:    
+            distro_install_name = kw['distro'] #this should be the distro install_name  
+        except KeyError, (e):
+            flash('Need a distro to search on') 
+            redirect(url('/reserveworkflow',**kw))
+              
+        try: 
+            distro = Distro.query().filter(Distro.install_name == distro_install_name).one()
+        except InvalidRequestError,(e):
+            flash('The Distro entered does not appear to be valid')
+            redirect(url('/reserveworkflow',**kw))
+            
+        #there seems to be a bug distro.systems 
+        #it seems to be auto correlateing the inner query when you pass it a user, not possible to manually correlate
+        #a Query object in 0.4  
+        systems_distro_query = distro.systems()
+        avail_systems_distro_query = System.free(identity.current.user,systems_distro_query)  
+        warn = None
+        if avail_systems_distro_query.count() < 1:
+            show_systems = systems_distro_query
+            warn = 'All suitable systems are currently in use'
+            reserve_title = 'Queue Reservation'
+            getter = lambda x: make_link("/queuereserve/%s" % Utility.get_correct_system_column(x).fqdn, reserve_title)
+        else:
+            show_systems = avail_systems_distro_query
+            reserve_title = 'Reserve'
+            getter = lambda x: make_link("/reserve/%s" % Utility.get_correct_system_column(x).fqdn, reserve_title)
+       
+        if show_systems.count() < 1: 
+            reserve_title = None
+            warn = 'No Systems compatible with distro %s' % distro_install_name
+          
+        direct_column = Utility.direct_column(title='Action',getter=getter)     
+        return_dict  = self.systems(systems=show_systems, direct_columns=[(2,direct_column)],warn_msg=warn, *args, **kw)
+       
+        return_dict['title'] = 'Reserve Systems'
+        return_dict['warn_msg'] = warn
+        return_dict['tg_template'] = "beaker.server.templates.reserve_grid"
+        return_dict['action'] = '/reserve_system'
+        return_dict['options']['extra_hiddens'] = {'distro' : distro_install_name}
+        return_dict['col_defaults']['Action'] = 1
+      
+        return return_dict  
+
     def _system_search(self,kw,sys_search,use_custom_columns = False): 
         for search in kw['systemsearch']: 
 	        #clsinfo = System.get_dict()[search['table']] #Need to change this
@@ -542,14 +603,8 @@ class Root(RPCRoot):
 
         return sys_search.return_results()
 
-
-    # @identity.require(identity.in_group("admin"))
+ 
     def systems(self, systems, *args, **kw):
-        # Reset joinpoint and then outerjoin on user.  This is so the sort 
-        # column works in paginate/datagrid.
-        # Also need to do distinct or paginate gets confused by the joins
-        #log.debug(kw)        
-
         if 'simplesearch' in kw:
             simplesearch = kw['simplesearch']
             kw['systemsearch'] = [{'table' : 'System/Name',   
@@ -571,8 +626,7 @@ class Root(RPCRoot):
                 vals_to_set = text.split(',')
                 for elem in vals_to_set:
                     kw['systemsearch_column_%s' % elem] = elem 
-      
-    
+       
         default_result_columns = ('System/Name', 'System/Status', 'System/Vendor',
                                   'System/Model','System/Arch', 'System/User', 'System/Type') 
 
@@ -583,9 +637,8 @@ class Root(RPCRoot):
             for elem in kw:
                 if re.match('systemsearch_column_',elem):
                     columns.append(kw[elem])
-
-            #If nothing is selected, let's give them the default    
-            if columns.__len__() == 0:
+           
+            if columns.__len__() == 0:  #If nothing is selected, let's give them the default    
                 for elem in default_result_columns:
                     key = 'systemsearch_column_',elem
                     kw[key] = elem
@@ -602,6 +655,9 @@ class Root(RPCRoot):
             systems = self._system_search(kw,sys_search)
 
             (system_columns_desc,extra_columns_desc) = sys_search.get_column_descriptions()  
+            # I want to create another type of column, a 'direct' column which will have some kind 'action'
+            # Like 'reserve' or something of that nature. It doesn't need to be included in the custom columns
+            # because it will always have the same value, and is not actually a result of any kind.
             if use_custom_columns is True:
                 my_fields = Utility.custom_systems_grid(system_columns_desc,extra_columns_desc)
             else: 
@@ -614,9 +670,12 @@ class Root(RPCRoot):
             columns = None
             searchvalue = None
             my_fields = Utility.custom_systems_grid(default_result_columns)
+        
+        if 'direct_columns' in kw: #Let's add our direct columns here
+            for index,col in kw['direct_columns']:
+                my_fields.insert(index - 1, col)
                 
         display_grid = myPaginateDataGrid(fields=my_fields)
-
         col_data = Utility.result_columns(columns)   
              
         return dict(title="Systems", grid = display_grid,
