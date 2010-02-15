@@ -270,8 +270,11 @@ class JobMatrix:
             if job:
                 job_string += 'job_id=%s&' % job
          
-        result_string = '/tasklist?task_name=%s&result=%s&whiteboard=%s&arch=%s&' % \
-                        (query_obj.task_name, result, query_obj.whiteboard or '', query_obj.arch) 
+        result_string = '/tasks/do_search?task=%s&result=%s&whiteboard=%s&arch=%s&' % \
+                        (query_obj.task_name, 
+                         result, 
+                         query_obj.whiteboard or '', 
+                         query_obj.arch) 
         return result_string + job_string
 
     def make_result_box(self,returns,query_obj,result=None): 

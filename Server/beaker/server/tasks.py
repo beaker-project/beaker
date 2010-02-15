@@ -136,22 +136,31 @@ class Tasks(RPCRoot):
                               logs   = 1)
             except InvalidRequestError:
                 return "<div>Invalid data:<br>%r</br></div>" % kw
+        if kw.get('job_id'):
+            tasks = RecipeTask.query().join(['recipe','recipeset','job']).filter(Job.id.in_(kw.get('job_id')))
+            # build
         if kw.get('system'):
             tasks = tasks.join(['recipe','system']).filter(System.fqdn.like('%%%s%%' % kw.get('system')))
         if kw.get('task'):
             # Shouldn't have to do this.  This only happens on the LinkRemoteFunction calls
             kw['task'] = kw.get('task').replace('%2F','/')
-            tasks = tasks.join('task').filter(Task.name.like('%%%s%%' % kw.get('task')))
+            tasks = tasks.join('task').filter(Task.name.like('%s' % kw.get('task').replace('*','%%')))
         if kw.get('distro'):
             tasks = tasks.join(['recipe','distro']).filter(Distro.install_name.like('%%%s%%' % kw.get('distro')))
+        if kw.get('arch_id'):
+            tasks = tasks.join(['recipe','distro','arch']).filter(Arch.id==kw.get('arch_id'))
+        if kw.get('status_id'):
+            tasks = tasks.join('status').filter(TaskStatus.id==kw.get('status_id'))
+        if kw.get('result_id'):
+            tasks = tasks.join('result').filter(TaskResult.id==kw.get('result_id'))
+        if kw.get('osmajor_id'):
+            tasks = tasks.join(['recipe','distro','osversion','osmajor']).filter(OSMajor.id==kw.get('osmajor_id'))
+        if kw.get('whiteboard'):
+            tasks = tasks.join(['recipe']).filter(Recipe.whiteboard==kw.get('whiteboard'))
         if kw.get('arch'):
-            tasks = tasks.join(['recipe','distro','arch']).filter(Arch.id==kw.get('arch'))
-        if kw.get('status'):
-            tasks = tasks.join('status').filter(TaskStatus.id==kw.get('status'))
+            tasks = tasks.join(['recipe','distro','arch']).filter(Arch.arch==kw.get('arch'))
         if kw.get('result'):
-            tasks = tasks.join('result').filter(TaskResult.id==kw.get('result'))
-        if kw.get('osmajor'):
-            tasks = tasks.join(['recipe','distro','osversion','osmajor']).filter(OSMajor.id==kw.get('osmajor'))
+            tasks = tasks.join('result').filter(TaskResult.result==kw.get('result'))
         return dict(tasks = tasks,
                     hidden = hidden,
                     task_widget = self.task_widget)
