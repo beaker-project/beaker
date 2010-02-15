@@ -95,6 +95,7 @@ ReserveWorkflow.prototype.replaceDistros = function(result) {
         getElement(this.submit_id).removeAttribute('disabled')
     } else {
         result.options.unshift('None selected')
+        getElement(this.submit_id).setAttribute('disabled',1)
     }
 
     replaceChildNodes(this.distro_id, map(this.replaceOptions, result.options));
