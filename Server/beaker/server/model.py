@@ -1442,6 +1442,17 @@ $SNIPPET("rhts_post")
     @classmethod
     def by_id(cls, id, user):
         return System.all(user).filter(System.id == id).one()
+    
+    @classmethod
+    def by_type(cls,type,user=None,systems=None):
+        if systems:
+            query = systems
+        else:
+            if user:
+                query = System.all(user)
+            else:
+                query = System.all()
+        return query.filter(System.type.has(SystemType.type == type))
 
     @classmethod
     def by_arch(cls,arch,query=None):

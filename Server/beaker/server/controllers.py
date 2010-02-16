@@ -566,8 +566,8 @@ class Root(RPCRoot):
         #there seems to be a bug distro.systems 
         #it seems to be auto correlateing the inner query when you pass it a user, not possible to manually correlate
         #a Query object in 0.4  
-        systems_distro_query = distro.systems()
-        avail_systems_distro_query = System.available(identity.current.user,systems_distro_query)  
+        systems_distro_query = distro.systems() 
+        avail_systems_distro_query = System.available(identity.current.user,System.by_type(type='machine',systems=systems_distro_query)) 
      
         warn = None
         if avail_systems_distro_query.count() < 1: 
