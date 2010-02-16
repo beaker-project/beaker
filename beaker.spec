@@ -197,6 +197,7 @@ fi
 * Mon Feb 15 2010 Bill Peck <bpeck@redhat.com> - 0.4.83-0
 - Remove auth from rhel6 kickstart, default is sane.
 - Includes rmancy's update, added cpu_model_name to search options.
+- escape variables in cheetah snippets.
 * Wed Feb 03 2010 Bill Peck <bpeck@redhat.com> - 0.4.82-3
 - Don't expire nightlies in one week, leave it up to the filesystem
 - fix bz#554852 don't remove any distros if all are missing
