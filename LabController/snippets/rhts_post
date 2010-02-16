@@ -11,29 +11,29 @@ $SNIPPET('post_anamon')
 ## Turn on ntpd
 /sbin/chkconfig ntpdate on
 /sbin/chkconfig ntpd on
-echo 'OPTIONS="$OPTIONS -x"' >>/etc/sysconfig/ntpd
+echo 'OPTIONS="\$OPTIONS -x"' >>/etc/sysconfig/ntpd
 
 #if $getVar('grubport','') != ''
 #/bin/sed -i 's/^serial.*/serial --port=$grubport --speed=115200/' /boot/grub/grub.conf
-/bin/sed -i 's/^\(serial.*\)--unit=\S\+\(.*\)$/\1--port=$grubport\2/' /boot/grub/grub.conf
+/bin/sed -i 's/^\(serial.*\)--unit=\S\+\(.*\)\$/\1--port=$grubport\2/' /boot/grub/grub.conf
 #end if
 
 #if $getVar('arch','') == 'ia64'
-BOOT=\$(/usr/sbin/efibootmgr -v | grep BootOrder | awk '{print $2}' | awk -F, '{print $1}')
-EFI=\$(/usr/sbin/efibootmgr -v | grep Boot$BOOT | awk '{print $NF}')
+BOOT=\$(/usr/sbin/efibootmgr -v | grep BootOrder | awk '{print \$2}' | awk -F, '{print \$1}')
+EFI=\$(/usr/sbin/efibootmgr -v | grep Boot\$BOOT | awk '{print \$NF}')
 PXE_SLOT=\$(/usr/sbin/efibootmgr -v | grep -i Netboot |cut -c5-8)
 #
 # If There is no Netboot Entry we can't continue
 # You have to manually setup a Netboot entry first
 # from EFI maint menu.
 #
-if [ ! -z $PXE_SLOT ]; then
-   NEWBOOT=\$(echo $BOOT| sed -e 's/$PXE_SLOT,//')
+if [ ! -z \$PXE_SLOT ]; then
+   NEWBOOT=\$(echo \$BOOT| sed -e 's/\$PXE_SLOT,//')
    # its cheesy. but it works.
-   NEWBOOT=\$(echo $NEWBOOT| sed -e 's/,$PXE_SLOT,//')
-   NEWBOOT=\$(echo $NEWBOOT| sed -e 's/,$PXE_SLOT//')
-   /usr/sbin/efibootmgr -o $PXE_SLOT,$NEWBOOT
-   /usr/sbin/efibootmgr -n $BOOT
+   NEWBOOT=\$(echo \$NEWBOOT| sed -e 's/,\$PXE_SLOT,//')
+   NEWBOOT=\$(echo \$NEWBOOT| sed -e 's/,\$PXE_SLOT//')
+   /usr/sbin/efibootmgr -o \$PXE_SLOT,\$NEWBOOT
+   /usr/sbin/efibootmgr -n \$BOOT
 fi
 #end if
 
@@ -109,6 +109,6 @@ wget -O /mnt/tests/runtests.sh http://$rhts_server/testlogs/recipes/$recipeid/ru
 chmod 755 /mnt/tests/runtests.sh
 #end if
 #Add test user account
-useradd --password '$6$oIW3o2Mr$XbWZKaM7nA.cQqudfDJScupXOia5h1u517t6Htx/Q/MgXm82Pc/OcytatTeI4ULNWOMJzvpCigWiL4xKP9PX4.' test
+useradd --password '\$6\$oIW3o2Mr\$XbWZKaM7nA.cQqudfDJScupXOia5h1u517t6Htx/Q/MgXm82Pc/OcytatTeI4ULNWOMJzvpCigWiL4xKP9PX4.' test
 $kickstart_done
 $SNIPPET('post_s390_reboot')
