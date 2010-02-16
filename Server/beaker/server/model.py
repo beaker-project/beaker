@@ -2517,6 +2517,10 @@ class TaskResult(object):
         return cls.query().filter_by(result=result_name).one()
 
     @classmethod
+    def get_results(cls):
+        return [(result.id,result.result) for result in cls.query()] 
+
+    @classmethod
     def get_all(cls):
         return [(0,"All")] + [(result.id, result.result) for result in cls.query()]
 

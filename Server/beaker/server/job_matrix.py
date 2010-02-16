@@ -74,7 +74,7 @@ class JobMatrix:
     def display_whiteboard_results(self,whiteboard): 
       def f(x): 
           if x.whiteboard == whiteboard:
-              return self.make_result_box('New Pass Warn Fail Panic',x)
+              return self.make_result_box(model.TaskResult.get_results(),x)
       return f
 
     def inner_data_grid(self,data,show_headers): 
@@ -152,6 +152,7 @@ class JobMatrix:
                      model.task_result_table.c.id.label('result'),
                      recipe_table_alias.c.whiteboard,
                      arch_alias.c.arch,
+                     arch_alias.c.id.label('arch_id'),
                      case0.label('rc0'),
                      case1.label('rc1'),
                      case2.label('rc2'),
@@ -197,6 +198,7 @@ class JobMatrix:
                               func.sum(s2.c.rc4).label('Panic'),
                               s2.c.whiteboard,
                               s2.c.arch,
+                              s2.c.arch_id,
                               model.task_table.c.name.label('task_name'),  
                               s2.c.task_id.label('task_id_pk')],
                               s2.c.task_id == model.task_table.c.id,
@@ -270,29 +272,32 @@ class JobMatrix:
             if job:
                 job_string += 'job_id=%s&' % job
          
-        result_string = '/tasks/executed?task=%s&result=%s&whiteboard=%s&arch=%s&' % \
+        result_string = '/tasks/do_search?task=%s&result_id=%s&whiteboard=%s&arch_id=%s&' % \
+
                         (query_obj.task_name, 
                          result, 
                          query_obj.whiteboard or '', 
-                         query_obj.arch) 
+                         query_obj.arch_id) 
         return result_string + job_string
 
     def make_result_box(self,returns,query_obj,result=None): 
         elem = Element('div',{'class' : 'result-box'})
-        items = returns.split() 
-        for item in items:
-            how_many = getattr(query_obj,item,None)
+        
+        for item in returns:
+            result_text = item[1]
+            result_id = item[0]
+            how_many = getattr(query_obj,result_text,None)
             if how_many is not None and how_many > 0:            
-                result = item.lower()
-                sub_span = SubElement(elem,'span', {'class':'rounded-side-pad %s' % result}) 
+                result_text_lower = result_text.lower()
+                sub_span = SubElement(elem,'span', {'class':'rounded-side-pad %s' % result_text_lower}) 
                 SubElement(elem,'br') 
-                task_list_params = self._create_task_list_params(query_obj,item)
+                task_list_params = self._create_task_list_params(query_obj,result_id)
                 sub_link = SubElement(sub_span,
                                       'a', 
                                       {'style':'color:inherit;text-decoration:none'}, 
                                       href=url(task_list_params))
                                                
 
-                sub_link.text = '%s: %s' % (item,how_many)
+                sub_link.text = '%s: %s' % (result_text,how_many)
                 #sub_span.text = '%s: %s' % (item,how_many) 
         return elem
