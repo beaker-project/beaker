@@ -53,15 +53,13 @@ class ReserveWorkflow:
             my_and = and_(model.OSMajor.osmajor == distro_family,
                           model.Distro.method == method,
                           model.Arch.arch == arch) 
-
-        log.debug('arch:%s distro_family:%s method:%s tag:%s ' % (arch,distro_family,method,tag))
+ 
         distro = model.Distro.query().join(['osversion','osmajor']).join('arch').join('_tags'). \
                                       filter(my_and)
                                             
                                            
                                           
-        options = [elem.install_name for elem in distro]  
-        log.debug(distro) 
+        options = [elem.install_name for elem in distro]
         return {'options': options}
 
       
