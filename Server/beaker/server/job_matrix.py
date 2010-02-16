@@ -307,7 +307,6 @@ class JobMatrix:
                 job_string += 'job_id=%s&' % job
          
         result_string = '/tasks/do_search?task=%s&result_id=%s&whiteboard=%s&arch_id=%s&' % \
-
                         (query_obj.task_name, 
                          result, 
                          query_obj.whiteboard or '', 
