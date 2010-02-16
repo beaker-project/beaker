@@ -1497,6 +1497,12 @@ $SNIPPET("rhts_post")
         return dict(ks_meta = ks_meta, kernel_options = kernel_options,
                             kernel_options_post = kernel_options_post)
 
+    def is_free(self):
+        if not self.user:
+            return True
+        else:
+            return False
+
     def can_admin(self, user=None):
         if user:
             if user == self.owner or user.is_admin():

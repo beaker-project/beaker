@@ -544,7 +544,13 @@ class Root(RPCRoot):
     @identity.require(identity.not_anonymous())
     @paginate('list') 
     def reserve_system(self, *args,**kw): 
-        
+
+        def reserve_link(x,distro):
+            if x.is_free():
+                return make_link("/reserve/%s&distro=%s" % (Utility.get_correct_system_column(x).fqdn,distro), 'Reserve Now')
+            else:
+                return make_link("/queuereserve/%s&distro=%s" % (Utility.get_correct_system_column(x).fqdn,distro), 'Queue Reservation')
+
         try:    
             distro_install_name = kw['distro'] #this should be the distro install_name  
         except KeyError, (e):
@@ -561,24 +567,15 @@ class Root(RPCRoot):
         #it seems to be auto correlateing the inner query when you pass it a user, not possible to manually correlate
         #a Query object in 0.4  
         systems_distro_query = distro.systems()
-        avail_systems_distro_query = System.free(identity.current.user,systems_distro_query)  
+        avail_systems_distro_query = System.available(identity.current.user,systems_distro_query)  
+     
         warn = None
-        if avail_systems_distro_query.count() < 1:
-            show_systems = systems_distro_query
-            warn = 'All suitable systems are currently in use'
-            reserve_title = 'Queue Reservation'
-            getter = lambda x: make_link("/queuereserve/%s" % Utility.get_correct_system_column(x).fqdn, reserve_title)
-        else:
-            show_systems = avail_systems_distro_query
-            reserve_title = 'Reserve'
-            getter = lambda x: make_link("/reserve/%s" % Utility.get_correct_system_column(x).fqdn, reserve_title)
-       
-        if show_systems.count() < 1: 
-            reserve_title = None
+        if avail_systems_distro_query.count() < 1: 
             warn = 'No Systems compatible with distro %s' % distro_install_name
-          
+
+        getter = lambda x: reserve_link(x,distro_install_name)       
         direct_column = Utility.direct_column(title='Action',getter=getter)     
-        return_dict  = self.systems(systems=show_systems, direct_columns=[(2,direct_column)],warn_msg=warn, *args, **kw)
+        return_dict  = self.systems(systems=avail_systems_distro_query, direct_columns=[(8,direct_column)],warn_msg=warn, *args, **kw)
        
         return_dict['title'] = 'Reserve Systems'
         return_dict['warn_msg'] = warn
