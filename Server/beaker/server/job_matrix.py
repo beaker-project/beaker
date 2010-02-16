@@ -42,12 +42,12 @@ class JobMatrix:
             gen_results = self.generate(**kw) 
             matrix_options['grid'] = gen_results['grid']
             matrix_options['list'] = gen_results['data'] 
-            if 'whiteboard' in kw:
+            if 'whiteboard' in kw: # Getting results by whiteboard
                 jobs = model.Job.by_whiteboard(kw['whiteboard'])  
                 job_ids = [str(j.id) for j in jobs]
                 self.job_ids = job_ids
                 matrix_options['job_ids_vals'] = "\n".join(job_ids)
-            if 'job_ids' in kw:
+            if 'job_ids' in kw: #Getting results by job id
                 self.job_ids = kw['job_ids'].split("\n")
                 matrix_options['job_ids_vals'] = kw['job_ids']
         else: 
@@ -62,22 +62,37 @@ class JobMatrix:
         return return_dict
 
     def get_whiteboard_options(self,filter):
+        """
+        get_whiteboard_options() returns all whiteboards from the job_table
+        if value is passed in for 'filter' it will perform an SQL 'like' operation 
+        against whiteboard
+        """
         if filter: 
             where = model.job_table.c.whiteboard.like('%%%s%%' % filter)   
         else:
             where = None
-        s1 = select([model.job_table.c.whiteboard],whereclause=where,group_by=[model.job_table.c.whiteboard,model.job_table.c.id],order_by=[model.job_table.c.id],distinct=True,limit=50)  
+        s1 = select([model.job_table.c.whiteboard],whereclause=where,
+                     group_by=[model.job_table.c.whiteboard,model.job_table.c.id],
+                     order_by=[model.job_table.c.id],distinct=True,limit=50)  
         res = s1.execute()  
         filtered_whiteboards = [r[0] for r in res]
         return filtered_whiteboards 
  
-    def display_whiteboard_results(self,whiteboard): 
-      def f(x): 
-          if x.whiteboard == whiteboard:
-              return self.make_result_box(model.TaskResult.get_results(),x)
-      return f
+    def display_whiteboard_results(self,whiteboard):
+        """
+        display_whiteboard_results() is a closure. It takes a whiteboard
+        and returns a function that will return a result box if the whiteboard passed
+        to it matches the whiteboard var which is closed over.
+        """
+        def f(x): 
+            if x.whiteboard == whiteboard:
+                return self.make_result_box(model.TaskResult.get_results(),x)
+        return f
 
     def inner_data_grid(self,data,show_headers): 
+        """
+        inner_data_grid() displays the grid that is the recipe whiteboard grid for each arch.
+        """
         fields = []
         my_list = []
         for objs in data:
@@ -93,6 +108,10 @@ class JobMatrix:
         return InnerGrid(fields=fields).display(my_list,options=options)
         
     def arch_stat_getter(self,this_arch): 
+       """
+       arch_stat_getter() is a closure. It returns an anonymous function. This function
+       will return an inner_data_grid of an a
+       """
        def f(x):
           self.col_call += 1 #Track that we have another arch column
           x = x[self.ARCH_TUPLE_INDEX:] # Get the arch tuple
@@ -100,11 +119,15 @@ class JobMatrix:
               if elem[self.ARCH_VALUE_INDEX] != this_arch: 
                   continue
               else:
-                  show_headers = self.col_call <= self.max_cols 
+                  show_headers = self.col_call <= self.max_cols # This way we only show the headers for the first task name
                   return self.inner_data_grid(elem[self.WHITEBOARD_TUPLE_INDEX:],show_headers) 
        return f      
    
     def _job_grid_fields(self,arches_used,**kw):
+        """
+        _job_grid_fields() takes a list of arches and will return a list of Column objects
+        to represent those arches. Also sets the max_cols variable to the number of arch columns. 
+        """
         fields = [] 
         fields.append(myDataGrid.Column(name='task', getter=lambda x: x[0], title='Task'))         
         cols = 0
@@ -115,11 +138,17 @@ class JobMatrix:
         return fields 
  
     def generate(self,**kw):
+        """
+        generate() returns a grid of type myDataGrid and a dataset for it to operate on
+        """
         grid_data = self.generate_data(**kw)  
         grid = myDataGrid(fields = self._job_grid_fields(self.arches_used.keys()))
         return {'grid' : grid, 'data' : grid_data }     
        
     def generate_data(self,**kw): 
+        """
+        generate_data() returns a nested tuple which represents tasks->arches->whiteboards and their data objects
+        """
         jobs = []
         self.arches_used = {}
         whiteboard_data = {} 
@@ -267,6 +296,11 @@ class JobMatrix:
         return result_data 
 
     def _create_task_list_params(self,query_obj,result):
+        """
+        _create_task_list_params() takes a query obj of the type generated in generate_data()
+        and will return a string representation of a URL pointing to a page which will display the
+        results of the given task 
+        """
         job_string = ''
         for job in self.job_ids:
             if job:
@@ -281,6 +315,10 @@ class JobMatrix:
         return result_string + job_string
 
     def make_result_box(self,returns,query_obj,result=None): 
+        """
+        make_result_box() takes a list of tuples containing a result id and result name, as well as
+        Query obj and returns DOM element representing a Task result. 
+        """
         elem = Element('div',{'class' : 'result-box'})
         
         for item in returns:
@@ -299,5 +337,5 @@ class JobMatrix:
                                                
 
                 sub_link.text = '%s: %s' % (result_text,how_many)
-                #sub_span.text = '%s: %s' % (item,how_many) 
+  
         return elem
