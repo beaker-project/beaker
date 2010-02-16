@@ -270,7 +270,7 @@ class JobMatrix:
             if job:
                 job_string += 'job_id=%s&' % job
          
-        result_string = '/tasks/do_search?task=%s&result=%s&whiteboard=%s&arch=%s&' % \
+        result_string = '/tasks/executed?task=%s&result=%s&whiteboard=%s&arch=%s&' % \
                         (query_obj.task_name, 
                          result, 
                          query_obj.whiteboard or '', 
