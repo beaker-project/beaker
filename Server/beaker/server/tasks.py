@@ -108,11 +108,25 @@ class Tasks(RPCRoot):
         flash(_(u"%s Added/Updated at id:%s" % (task.name,task.id)))
         redirect(".")
 
+    @expose(template='beaker.server.templates.task_search')
+    @validate(form=task_form)
+    @paginate('tasks',default_order='-id', limit=30)
+    def executed(self, hidden={}, **kw):
+        tmp = self._do_search(hidden, **kw)
+        tmp['form'] = self.task_form
+        tmp['action'] = './do_search'
+        tmp['value'] = None
+        tmp['options'] = dict()
+        return tmp
+    
     @expose(template='beaker.server.templates.tasks')
     @validate(form=task_form)
     @paginate('tasks',default_order='-id', limit=30)
     def do_search(self, hidden={}, **kw):
-        tasks = None
+        return self._do_search(hidden=hidden, **kw)
+
+    def _do_search(self, hidden={}, **kw):
+        tasks = RecipeTask.query()
         if kw.get('distro_id'):
             try:
                 tasks = RecipeTask.query().join(['recipe','distro']).filter(Distro.id==kw.get('distro_id'))
