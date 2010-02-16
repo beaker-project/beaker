@@ -35,40 +35,40 @@ ReserveWorkflow.prototype.replace_fields = function() {
 
 
 ReserveWorkflow.prototype.replaceMethod = function(arg) { 
-        if ( arg == this.method_val ) {
-            option = OPTION({"value": arg,
-                             "selected": true}, arg);
+        if ( arg[0] == this.method_val ) {
+            option = OPTION({"value": arg[0],
+                             "selected": true}, arg[1]);
         } else {
-            option = OPTION({"value": arg}, arg);
+            option = OPTION({"value": arg[0]}, arg[1]);
         }
         return option;
 }
 ReserveWorkflow.prototype.replaceDistroFamily = function(arg) { 
-        if ( arg == this.distro_family_val ) {
-            option = OPTION({"value": arg,
-                             "selected": true}, arg);
+        if ( arg[0] == this.distro_family_val ) {
+            option = OPTION({"value": arg[0],
+                             "selected": true}, arg[1]);
         } else {
-            option = OPTION({"value": arg}, arg);
+            option = OPTION({"value": arg[0]}, arg[1]);
         }
         return option;
 }
 
 ReserveWorkflow.prototype.replaceTag = function(arg) { 
-        if ( arg == this.tag_val ) {
-            option = OPTION({"value": arg,
-                             "selected": true}, arg);
+        if ( arg[0] == this.tag_val ) {
+            option = OPTION({"value": arg[0],
+                             "selected": true}, arg[1]);
         } else {
-            option = OPTION({"value": arg}, arg);
+            option = OPTION({"value": arg[0]}, arg[1]);
         }
         return option;
 }
 
 ReserveWorkflow.prototype.replaceArch = function(arg) { 
-        if ( arg == this.arch_val ) {
-            option = OPTION({"value": arg,
-                             "selected": true}, arg);
+        if ( arg[0] == this.arch_val ) {
+            option = OPTION({"value": arg[0],
+                             "selected": true}, arg[1]);
         } else {
-            option = OPTION({"value": arg}, arg);
+            option = OPTION({"value": arg[0]}, arg[1]);
         }
         return option;
 }

@@ -109,10 +109,10 @@ class ReserveWorkflow(Form):
 
     def __init__(self,*args,**kw):
         super(ReserveWorkflow,self).__init__(*args, **kw)  
-        self.all_arches = [('','None Selected')] + [elem.arch for elem in model.Arch.query()]
-        self.all_tags = [('','None Selected')] + [elem.tag for elem in model.DistroTag.query()]  
-        self.all_methods = [('','None Selected')] + [elem for elem in model.Distro.all_methods()]
-        self.all_distro_familys = [('','None Selected')] + [elem.osmajor for elem in model.OSMajor.query()] 
+        self.all_arches = [['','None Selected']] + [[elem.arch,elem.arch] for elem in model.Arch.query()]
+        self.all_tags = [['','None Selected']] + [[elem.tag,elem.tag] for elem in model.DistroTag.query()]  
+        self.all_methods = [('','None Selected')] + [[elem,elem] for elem in model.Distro.all_methods()]
+        self.all_distro_familys = [('','None Selected')] + [[elem.osmajor,elem.osmajor] for elem in model.OSMajor.query()] 
 
         self.method_ = SingleSelectField(name='method', label='Method', options=[None],validator=validators.NotEmpty())
         self.distro = SingleSelectField(name='distro', label='Distro', 

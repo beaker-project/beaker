@@ -29,11 +29,11 @@ class ReserveWorkflow:
         """
         get_arch_options() will return all arch's available for a particular distro_family,
         method and tag
-        """
+        """   
         arches = model.Arch.query().outerjoin(['distros','osversion','osmajor']).outerjoin(['distros','_tags']). \
-                                  filter(and_(model.OSMajor.osmajor == distro_family,
-                                              model.Distro.method == method,
-                                              model.DistroTag.tag == tag)) 
+                                              filter(and_(model.OSMajor.osmajor == distro_family,
+                                                          model.Distro.method == method,
+                                                          model.DistroTag.tag == tag))
         options = [elem.arch for elem in arches]
         return {'options' : options }
 
@@ -43,12 +43,23 @@ class ReserveWorkflow:
         get_distro_options() will return all the distros for a given arch,
         distro_family,method and tag
         """
+
+        if tag:
+            my_and = and_(model.OSMajor.osmajor == distro_family,
+                          model.Distro.method == method,
+                          model.Arch.arch == arch, 
+                          model.DistroTag.tag == tag)
+        else: 
+            my_and = and_(model.OSMajor.osmajor == distro_family,
+                          model.Distro.method == method,
+                          model.Arch.arch == arch) 
+
         log.debug('arch:%s distro_family:%s method:%s tag:%s ' % (arch,distro_family,method,tag))
         distro = model.Distro.query().join(['osversion','osmajor']).join('arch').join('_tags'). \
-                                      filter(and_(model.Arch.arch == arch, 
-                                                  model.OSMajor.osmajor == distro_family,
-                                                  model.Distro.method == method,
-                                                  model.DistroTag.tag == tag))
+                                      filter(my_and)
+                                            
+                                           
+                                          
         options = [elem.install_name for elem in distro]  
         log.debug(distro) 
         return {'options': options}
