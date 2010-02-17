@@ -194,7 +194,9 @@ from beaker.server.model import system_types
 </div>
 
     <div id="fedora-nav"></div>
-    Version - ${tg.beaker_version()}
+    <div id="beaker-version">
+        Version - ${tg.beaker_version()}
+    </div>
     <!-- header END -->
     <div id="fedora-middle-one">
         <div class="fedora-corner-tr">&nbsp;</div>
