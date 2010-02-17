@@ -175,13 +175,18 @@ exclude_osversion_table = Table('exclude_osversion', metadata,
     Column('osversion_id', Integer, ForeignKey('osversion.id')),
 )
 
-task_exclude_table = Table('task_exclude', metadata,
+task_exclude_arch_table = Table('task_exclude_arch', metadata,
     Column('id', Integer, autoincrement=True,
            nullable=False, primary_key=True),
     Column('task_id', Integer, ForeignKey('task.id')),
     Column('arch_id', Integer, ForeignKey('arch.id')),
+)
+
+task_exclude_osmajor_table = Table('task_exclude_osmajor', metadata,
+    Column('id', Integer, autoincrement=True,
+           nullable=False, primary_key=True),
+    Column('task_id', Integer, ForeignKey('task.id')),
     Column('osmajor_id', Integer, ForeignKey('osmajor.id')),
-    Column('osversion_id', Integer, ForeignKey('osversion.id')),
 )
 
 labinfo_table = Table('labinfo', metadata,
@@ -1904,7 +1909,7 @@ class SystemStatus(SystemObject):
 
 
 
-class Arch(SystemObject):
+class Arch(MappedObject):
     def __init__(self, arch=None):
         self.arch = arch
 
@@ -1964,7 +1969,7 @@ class Breed(SystemObject):
         return self.breed
 
 
-class OSMajor(SystemObject):
+class OSMajor(MappedObject):
     def __init__(self, osmajor):
         self.osmajor = osmajor
 
@@ -1989,7 +1994,7 @@ class OSMajor(SystemObject):
         return '%s' % self.osmajor
 
 
-class OSVersion(SystemObject):
+class OSVersion(MappedObject):
     def __init__(self, osmajor, osminor, arches=None):
         self.osmajor = osmajor
         self.osminor = osminor
@@ -2295,19 +2300,14 @@ class Distro(object):
         """
         return Task.query().filter(
                 not_(or_(Task.id.in_(select([task_table.c.id]).
-                 where(task_table.c.id==task_exclude_table.c.task_id).
-                 where(task_exclude_table.c.arch_id==arch_table.c.id).
+                 where(task_table.c.id==task_exclude_arch_table.c.task_id).
+                 where(task_exclude_arch_table.c.arch_id==arch_table.c.id).
                  where(arch_table.c.id==self.arch_id)
                                       ),
                          Task.id.in_(select([task_table.c.id]).
-                 where(task_table.c.id==task_exclude_table.c.task_id).
-                 where(task_exclude_table.c.osmajor_id==osmajor_table.c.id).
+                 where(task_table.c.id==task_exclude_osmajor_table.c.task_id).
+                 where(task_exclude_osmajor_table.c.osmajor_id==osmajor_table.c.id).
                  where(osmajor_table.c.id==self.osversion.osmajor.id)
-                                      ),
-                         Task.id.in_(select([task_table.c.id]).
-                 where(task_table.c.id==task_exclude_table.c.task_id).
-                 where(task_exclude_table.c.osversion_id==osversion_table.c.id).
-                 where(osversion_table.c.id==self.osversion.id)
                                       ),
                         )
                     )
@@ -3133,6 +3133,15 @@ class Recipe(TaskBase):
                 yield task_result
     all_tasks = property(all_tasks)
 
+    def append_tasks(self, recipetask):
+        """ Before appending the task to this Recipe, make sure it applies.
+            ie: not excluded for this distro family or arch.
+        """
+        if self.distro.arch in recipetasks.excluded_arch:
+            return
+        if self.distro.osmajor in recipetasks.excluded_osmajor:
+            return
+        self.tasks.append(recipetask)
 
 class GuestRecipe(Recipe):
     systemtype = 'Virtual'
@@ -3142,6 +3151,26 @@ class GuestRecipe(Recipe):
         recipe.setAttribute("guestargs", "%s" % self.guestargs)
         return Recipe.to_xml(self, recipe, clone, from_recipeset)
 
+    def _get_distro_requires(self):
+        drs = xml.dom.minidom.parseString(self._distro_requires)
+        # If no distro_virt is asked for default to Virt
+        if not drs.getElementsByTagName("distro_virt"):
+            distroRequires = self.doc.createElement("distroRequires")
+            for dr in drs.getElementsByTagName("distroRequires"):
+                for child in dr.childNodes[:]:
+                    distroRequires.appendChild(child)
+            distro_virt = self.doc.createElement("distro_virt")
+            distro_virt.setAttribute("op", "=")
+            distro_virt.setAttribute("value", True)
+            distroRequires.appendChild(distro_virt)
+            return distroRequires.toxml()
+        else:
+            return self._distro_requires
+
+    def _set_distro_requires(self, value):
+        self._distro_requires = value
+
+    distro_requires = property(_get_distro_requires, _set_distro_requires)
 
 class MachineRecipe(Recipe):
     """
@@ -3704,12 +3733,32 @@ class Task(MappedObject):
         return separator.join(time)
 
 
-class TaskExclude(MappedObject):
+class TaskExcludeOSMajor(MappedObject):
     """
     A task can be excluded by arch, osmajor, or osversion
-                        i386, RedHatEnterpriseLinux3, RedHatEnterpriseLinux3.0
+                        RedHatEnterpriseLinux3, RedHatEnterpriseLinux4
     """
-    pass
+    def __cmp__(self, other):
+        """ Used to compare excludes that are already stored. 
+        """
+        if other == "%s" % self.osmajor.osmajor or \
+           other == "%s" % self.osmajor.alias:
+            return 0
+        else:
+            return 1
+
+class TaskExcludeArch(MappedObject):
+    """
+    A task can be excluded by arch
+                        i386, s390
+    """
+    def __cmp__(self, other):
+        """ Used to compare excludes that are already stored. 
+        """
+        if other == "%s" % self.arch.arch:
+            return 0
+        else:
+            return 1
 
 class TaskType(MappedObject):
     """
@@ -3915,7 +3964,9 @@ mapper(Task, task_table,
         properties = {'types':relation(TaskType,
                                         secondary=task_type_map,
                                         backref='tasks'),
-                      'excluded':relation(TaskExclude,
+                      'excluded_osmajor':relation(TaskExcludeOSMajor,
+                                        backref='task'),
+                      'excluded_arch':relation(TaskExcludeArch,
                                         backref='task'),
                       'runfor':relation(TaskPackage,
                                         secondary=task_packages_runfor_map,
@@ -3929,10 +3980,15 @@ mapper(Task, task_table,
                      }
       )
 
-mapper(TaskExclude, task_exclude_table,
-       properties = {'arch':relation(Arch),
+mapper(TaskExcludeOSMajor, task_exclude_osmajor_table,
+       properties = {
                      'osmajor':relation(OSMajor),
-                     'osversion':relation(OSVersion),
+                    }
+      )
+
+mapper(TaskExcludeArch, task_exclude_arch_table,
+       properties = {
+                     'arch':relation(Arch),
                     }
       )
 
