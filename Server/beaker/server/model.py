@@ -2279,7 +2279,7 @@ class Distro(object):
         queries = []
         joins = []
         for child in ElementWrapper(xmltramp.parse(filter)):
-            if callable(getattr(child, 'filter')):
+            if callable(getattr(child, 'filter', None)):
                 (join, query) = child.filter()
                 queries.append(query)
                 joins.extend(join)
