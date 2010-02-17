@@ -219,14 +219,15 @@ class Tasks(RPCRoot):
         for family in tinfo.releases:
             if family.startswith('-'):
                 try:
-                    if TaskExclude(task=task,osmajor=osmajor.by_name(family.lstrip('-'))) not in task.excluded:
-                        task.excluded.append(TaskExclude(osmajor=osmajor.by_name(family.lstrip('-'))))
+                    if family.lstrip('-') not in task.excluded_osmajor:
+                        task.excluded_osmajor.append(TaskExcludeOSMajor(osmajor=OSMajor.by_name_alias(family.lstrip('-'))))
                 except exceptions.InvalidRequestError:
                     pass
         if tinfo.test_archs:
             arches = set([ '%s' % arch.arch for arch in Arch.query()])
             for arch in arches.difference(set(tinfo.test_archs)):
-                task.excluded.append(TaskExclude(arch=Arch.by_name(arch)))
+                if arch not in task.excluded_arch:
+                    task.excluded_arch.append(TaskExcludeArch(arch=Arch.by_name(arch)))
         task.avg_time = tinfo.avg_test_time
         for type in tinfo.types:
             task.types.append(TaskType.lazy_create(type=type))
