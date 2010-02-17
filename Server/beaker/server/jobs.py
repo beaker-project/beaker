@@ -170,22 +170,12 @@ class Jobs(RPCRoot):
             recipeSet = RecipeSet(ttasks=0)
             for xmlrecipe in xmlrecipeSet.iter_recipes():
                 recipe = self.handleRecipe(xmlrecipe)
-                try:
-                    recipe.distro = Distro.by_filter("%s" % 
-                                                   recipe.distro_requires)[0]
-                except IndexError:
-                    raise BX(_('No Distro matches Machine Recipe: %s' % recipe.distro_requires))
                 recipe.ttasks = len(recipe.tasks)
                 recipeSet.ttasks += recipe.ttasks
                 recipeSet.recipes.append(recipe)
                 # We want the guests to be part of the same recipeSet
                 for guest in recipe.guests:
                     recipeSet.recipes.append(guest)
-                    try:
-                        guest.distro = Distro.by_filter("%s" % 
-                                                   guest.distro_requires)[0]
-                    except IndexError:
-                        raise BX(_('No Distro matches Guest Recipe: %s' % guest.distro_requires))
                     guest.ttasks = len(guest.tasks)
                     recipeSet.ttasks += guest.ttasks
             if not recipeSet.recipes:
@@ -208,6 +198,11 @@ class Jobs(RPCRoot):
             recipe.guestargs = xmlrecipe.guestargs
         recipe.host_requires = xmlrecipe.hostRequires()
         recipe.distro_requires = xmlrecipe.distroRequires()
+        try:
+            recipe.distro = Distro.by_filter("%s" % 
+                                           recipe.distro_requires)[0]
+        except IndexError:
+            raise BX(_('No Distro matches Recipe: %s' % recipe.distro_requires))
         recipe.whiteboard = xmlrecipe.whiteboard
         recipe.kickstart = xmlrecipe.kickstart
         recipe.kernel_options = xmlrecipe.kernel_options
@@ -226,7 +221,8 @@ class Jobs(RPCRoot):
                 param = RecipeTaskParam( name=xmlparam.name, 
                                         value=xmlparam.value)
                 recipetask.params.append(param)
-            recipe.tasks.append(recipetask)
+            #FIXME Filter Tasks based on distro selected.
+            recipe.append_tasks(recipetask)
         if not recipe.tasks:
             raise BX(_('No Tasks! You can not have a recipe with no tasks!'))
         return recipe
