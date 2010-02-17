@@ -755,7 +755,7 @@ task_table = Table('task',metadata,
         Column('path', Unicode(4096)),
         Column('description', Unicode(2048)),
         Column('repo', Unicode(256)),
-        Column('avg_time', Integer),
+        Column('avg_time', Integer, default=0),
         Column('destructive', Boolean),
         Column('nda', Boolean),
         # This should be a map table
