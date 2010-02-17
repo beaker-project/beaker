@@ -171,10 +171,6 @@ class Tasks(RPCRoot):
             tasks = tasks.join(['recipe','distro','osversion','osmajor']).filter(OSMajor.id==kw.get('osmajor_id'))
         if kw.get('whiteboard'):
             tasks = tasks.join(['recipe']).filter(Recipe.whiteboard==kw.get('whiteboard'))
-        if kw.get('arch'):
-            tasks = tasks.join(['recipe','distro','arch']).filter(Arch.arch==kw.get('arch'))
-        if kw.get('result'):
-            tasks = tasks.join('result').filter(TaskResult.result==kw.get('result'))
         return dict(tasks = tasks,
                     hidden = hidden,
                     task_widget = self.task_widget)

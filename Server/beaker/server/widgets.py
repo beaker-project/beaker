@@ -499,6 +499,7 @@ class TaskSearchForm(RemoteForm):
               SingleSelectField(name='arch_id', label=_(u'Arch'),validator=validators.Int(),
                                 options=model.Arch.get_all),
               TextField(name='distro', label=_(u'Distro')),
+              TextField(name='whiteboard', label=_(u'Recipe Whiteboard')),
 #              AutoCompleteField(name='distro',
 #                                search_controller=url('/distros/by_name'),
 #                                search_param='distro',
