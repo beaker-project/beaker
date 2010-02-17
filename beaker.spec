@@ -6,7 +6,7 @@
 %endif
 
 Name:           beaker
-Version:        0.4.83
+Version:        0.4.84
 Release:        0%{?timestamp}%{?branch}%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
@@ -194,6 +194,8 @@ fi
 /usr/share/man/man1/beakerlib*
 
 %changelog
+* Wed Feb 17 2010 Bill Peck <bpeck@redhat.com> - 0.4.84-0
+- update osversion.trigger to only process newly imported distros
 * Mon Feb 15 2010 Bill Peck <bpeck@redhat.com> - 0.4.83-0
 - Remove auth from rhel6 kickstart, default is sane.
 - Includes rmancy's update, added cpu_model_name to search options.

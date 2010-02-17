@@ -93,7 +93,7 @@ def update_repos(distro):
     paths = get_paths(distro)
 
     if not paths:
-        return False
+        return distro
     repo_path_re = re.compile(r'(%s.*)/repodata' % paths['path'])
     tree_repos = None
     repo = os.path.join(paths['tree_path'],"repodata")
@@ -110,7 +110,7 @@ def update_repos(distro):
                     if repo_path_re.search(repos[i]):
                         repos[i] = repo_path_re.search(repos[i]).group(1)
         except TypeError:
-            return False
+            return distro
         tree_repos = string.join(repos,':')
 
     if not tree_repos:
@@ -132,7 +132,7 @@ def update_repos(distro):
                     tree_repos = repo_path_re.search(repo).group(1)
 
     if not tree_repos:
-        return False
+        return distro
     distro['ks_meta']['tree_repos'] = tree_repos
     cobbler.modify_distro(distro['id'],'ksmeta',distro['ks_meta'],token)
     return distro
@@ -141,7 +141,7 @@ def update_comment(distro):
     paths = get_paths(distro)
 
     if not paths:
-        return False
+        return Distro
     family = ""
     update = 0
     data = glob.glob(os.path.join(paths['package_path'], "*release-*"))
@@ -153,7 +153,7 @@ def update_comment(distro):
            b.find("centos") != -1:
             data2.append(x)
     if not data2:
-        return False
+        return Distro
     filename = data2[0]
     cpio_object = tempfile.TemporaryFile()
     try:
@@ -258,21 +258,16 @@ if __name__ == '__main__':
     push_distros = []
 
     for distro in distros:
-        distro['id'] = cobbler.get_distro_handle(distro['name'],token)
-        update = False
-        if 'tree_repos' not in distro['ks_meta']:
-            print "Update TreeRepos for %s" % distro['name']
-            tmpdistro = update_repos(distro)
-            if tmpdistro:
-                distro = tmpdistro
-                update = True
-        if distro['comment'].find("family=") == -1:
-            print "Update Family for %s" % distro['name']
-            tmpdistro = update_comment(distro)
-            if tmpdistro:
-                distro = tmpdistro
-                update = True
-        if update or distro['comment'].find("PUSHED") == -1:
+        # If we haven't pushed this distro to Inventory yet, then its the first
+        # time importing it, look for repos and specific family.
+        if distro['comment'].find("PUSHED") == -1:
+            distro['id'] = cobbler.get_distro_handle(distro['name'],token)
+            if 'tree_repos' not in distro['ks_meta']:
+                print "Update TreeRepos for %s" % distro['name']
+                distro = update_repos(distro)
+            if distro['comment'].find("family=") == -1:
+                print "Update Family for %s" % distro['name']
+                distro = update_comment(distro)
             push_distros.append(distro)
     if push_distros:
         inventory = xmlrpclib.ServerProxy('%s/RPC2' % settings['redhat_management_server'], allow_none=True)
