@@ -4,9 +4,13 @@
 
  <head>
   <meta content="text/html; charset=UTF-8" http-equiv="content-type" py:replace="''"/>
-  <title>${title}</title>
- </head>
 
+  <style type="text/css" media="print">
+   @import "${tg.url('/static/css/system-print.css')}";
+  </style>
+  <title>${title}</title>
+ 
+ </head>
 
  <body class="flora">
   ${form.display(method='get', action=action, value=value, options=options)}

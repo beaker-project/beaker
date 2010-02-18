@@ -1,0 +1,20 @@
+#fedora-nav, #fedora-header, #fedora-footer, #beaker-version {
+  display:none
+}
+
+.tabbernav, .tabbernavhide, .tabbertabhide  {
+  display:none
+}
+
+
+body {
+  color : #000000;
+  background : #ffffff;
+  font-family : "Times New Roman", Times, serif;
+  font-size : 12pt;
+}
+
+a {
+  text-decoration : underline;
+  color : #0000ff;
+}

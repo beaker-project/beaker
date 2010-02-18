@@ -47,8 +47,9 @@ $(document).ready(function() {
                     <img src="${tg.url('/static/images/wait.gif')}" height="48" width="48"/> 
                 </div>
                 <span style="margin-right:2em">
-                    <p>Version - ${tg.beaker_version()} 
-                    </p>                                         
+                  <div id="beaker-version">
+                    Version - ${tg.beaker_version()}
+                  </div>
                 </span>
                 
             </td></tr></table>
