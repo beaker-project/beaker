@@ -1,4 +1,4 @@
-SearchBar = function (fields, searchController,operationvalue,column_based_controllers,table_search_controllers,searchvalue,keyvaluevalue) {
+SearchBar = function (fields, searchController,operationvalue,column_based_controllers,table_search_controllers,searchvalue,keyvaluevalue) { 
 	this.operationvalue = operationvalue
 	this.searchvalue = searchvalue 
         this.keyvaluevalue = keyvaluevalue
@@ -33,6 +33,7 @@ SearchBar = function (fields, searchController,operationvalue,column_based_contr
 	this.searchController = searchController;
 	bindMethods(this);
 };
+
 
 SearchBar.prototype.initialize = function() { 
         SearchBarForm.searchbar_instances.push(this)
