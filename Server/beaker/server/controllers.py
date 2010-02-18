@@ -407,8 +407,7 @@ class Root(RPCRoot):
         fields = [id, autoUsers,],
         action = 'save_data',
         submit_text = _(u'Change'),
-    ) 
-   
+    )  
     search_bar = SearchBar(name='systemsearch',
                            label=_(u'System Search'), 
                            extra_selects = [ { 'name': 'keyvalue', 'column':'key/value','display':'none' , 'pos' : 2,'callback':url('/get_operators_keyvalue') }], 
@@ -435,12 +434,44 @@ class Root(RPCRoot):
     arches_form = SystemArches(name='arches') 
     task_form = TaskSearchForm(name='tasks')
 
+    def get_search_options_worker(self,search,col_type):   
+        return_dict = {}
+        #Determine what field type we are dealing with. If it is Boolean, convert our values to 0 for False
+        # and 1 for True
+        if col_type.lower() == 'boolean':
+            search['values'] = { 0:'False', 1:'True'}
+            
+        #Determine if we have search values. If we do, then we should only have the operators
+        # 'is' and 'is not'.
+        if search['values']:
+            search['operators'] = filter(lambda x: x == 'is' or x == 'is not', search['operators'])         
+
+        search['operators'].sort()
+        return_dict['search_by'] = search['operators'] 
+        return_dict['search_vals'] = search['values'] 
+        return return_dict
+
     @expose(format='json')
     def get_keyvalue_search_options(self,**kw):
         return_dict = {}
         return_dict['keyvals'] = Key.get_all_keys()
         return return_dict
-
+    
+    @expose(format='json')
+    def get_search_options_activity(self,table_field,**kw):
+        field = table_field
+        search = search_utility.Activity.search.search_on(field) 
+        col_type = search_utility.Activity.search.field_type(field)
+        return self.get_search_options_worker(search,col_type)
+ 
+    @expose(format='json')
+    def get_search_options_history(self,table_field,**kw):
+        field = table_field     
+        search = search_utility.History.search.search_on(field) 
+        col_type = search_utility.History.search.field_type(field)
+        return self.get_search_options_worker(search,col_type)  
+    
+   
     @expose(format='json')
     def get_operators_keyvalue(self,keyvalue_field,*args,**kw): 
         return_dict = {}
@@ -586,6 +617,13 @@ class Root(RPCRoot):
       
         return return_dict  
 
+    def _history_search(self,activity,**kw):
+        history_search = search_utility.History.search(activity)
+        for search in kw['historysearch']:
+            col = search['table'] 
+            history_search.append_results(search['value'],col,search['operation'],**kw)
+        return history_search.return_results()
+
     def _system_search(self,kw,sys_search,use_custom_columns = False): 
         for search in kw['systemsearch']: 
 	        #clsinfo = System.get_dict()[search['table']] #Need to change this
@@ -599,7 +637,27 @@ class Root(RPCRoot):
                sys_search.append_results(cls_ref,search['value'],col,search['operation'],keyvalue=search['keyvalue']) 
 
         return sys_search.return_results()
+              
 
+    def histories(self,activity,**kw):  
+       
+        return_dict = {}                    
+        if 'simplesearch' in kw:
+            simplesearch = kw['simplesearch']
+            kw['historysearch'] = [{'table' : 'Field Name',   
+                                    'operation' : 'contains', 
+                                    'value' : kw['simplesearch']}] 
+                    
+        else:
+            simplesearch = None
+        return_dict.update({'simplesearch':simplesearch})
+
+        if kw.get("historysearch"):
+            searchvalue = kw['historysearch']  
+            activities_found = self._history_search(activity,**kw)
+            return_dict.update({'activities_found':activities_found})               
+            return_dict.update({'searchvalue':searchvalue})
+        return return_dict
  
     def systems(self, systems, *args, **kw):
         if 'simplesearch' in kw:
@@ -677,12 +735,12 @@ class Root(RPCRoot):
              
         return dict(title="Systems", grid = display_grid,
                                      list = systems, 
-                                     searchvalue = searchvalue,
-                                     col_defaults = col_data['default'],
-                                     col_options = col_data['options'], 
-                                     enable_custom_column = use_custom_columns, 
-                                     options =  {'simplesearch':simplesearch,'columns':col_data,
-                                                 'result_columns':default_result_columns}, 
+                                     searchvalue = searchvalue,                                    
+                                     options =  {'simplesearch' : simplesearch,'columns':col_data,
+                                                 'result_columns' : default_result_columns,
+                                                 'col_defaults' : col_data['default'],
+                                                 'col_options' : col_data['options'],
+                                                 'custom_column_checked' : use_custom_columns}, 
                                      action = '.', 
                                      search_bar = self.search_bar )
                                                                         
@@ -819,6 +877,7 @@ class Root(RPCRoot):
                      prov_install = [(distro.id, distro.install_name) for distro in system.distros()]))
 
     @expose(template="beaker.server.templates.system")
+    @paginate('history_data',limit=30,default_order='-created')
     def view(self, fqdn=None, **kw):
         if fqdn:
             try:
@@ -826,6 +885,14 @@ class Root(RPCRoot):
             except InvalidRequestError:
                 flash( _(u"Unable to find %s" % fqdn) )
                 redirect("/")
+
+            #Let's deal with a history search here
+            histories_return = self.histories(SystemActivity.query().with_parent(system,"activity"), **kw) 
+            history_options = {}
+            if 'searchvalue' in histories_return:
+                history_options['searchvalue'] = histories_return['searchvalue']
+            if 'simplesearch' in histories_return:
+                history_options['simplesearch'] = histories_return['simplesearch'] 
         elif kw.get('id'):
             try:
                 system = System.by_id(kw['id'],identity.current.user)
@@ -839,6 +906,7 @@ class Root(RPCRoot):
         is_user = False
         if system:
             title = system.fqdn
+            options['show_creator_field'] = True
             if system.can_admin(identity.current.user):
                 options['owner_change_text'] = ' (Change)'
             else:
@@ -855,6 +923,11 @@ class Root(RPCRoot):
         else:
             title = 'New'
 
+        if 'activities_found' in histories_return: 
+            historical_data = histories_return['activities_found']
+        else: 
+            historical_data = system.activity[:150]
+            
         if readonly:
             attrs = dict(readonly = 'True')
         else:
@@ -866,7 +939,7 @@ class Root(RPCRoot):
         options['excluded_families'] = []
         for arch in system.arch:
             options['excluded_families'].append((arch.arch, [(osmajor.id, osmajor.osmajor, [(osversion.id, '%s' % osversion, attrs) for osversion in osmajor.osversion],attrs) for osmajor in OSMajor.query()]))
-
+        
         return dict(
             title    = title,
             readonly = readonly,
@@ -875,6 +948,7 @@ class Root(RPCRoot):
             action   = '/save',
             value    = system,
             options  = options,
+            history_data = historical_data,
             widgets         = dict( power     = self.power_form,
                                     labinfo   = self.labinfo_form,
                                     details   = self.system_details,
@@ -890,6 +964,7 @@ class Root(RPCRoot):
                                     tasks      = self.task_form,
                                   ),
             widgets_action  = dict( power     = '/save_power',
+                                    history   = '/view/%s' % fqdn,
                                     labinfo   = '/save_labinfo',
                                     exclude   = '/save_exclude',
                                     keys      = '/save_keys',
@@ -902,6 +977,7 @@ class Root(RPCRoot):
                                     tasks     = '/tasks/do_search',
                                   ),
             widgets_options = dict(power     = options,
+                                   history   = history_options or {},
                                    labinfo   = options,
                                    exclude   = options,
                                    keys      = dict(readonly = readonly,
@@ -917,7 +993,7 @@ class Root(RPCRoot):
                                    provision = dict(is_user = is_user,
                                                     lab_controller = system.lab_controller,
                                                     prov_install = [(distro.id, distro.install_name) for distro in system.distros().order_by(distro_table.c.install_name)]),
-                                   power_action   = options,
+                                   power_action  = options,
                                    arches    = dict(readonly = readonly,
                                                     arches = system.arch),
                                    tasks      = dict(system_id = system.id,
@@ -1207,7 +1283,7 @@ class Root(RPCRoot):
             if System.query().filter(System.fqdn == kw['fqdn']).count() != 0:   
                 flash( _(u"%s already exists!" % kw['fqdn']) )
                 redirect("/")
-            system = System(fqdn=kw['fqdn'],owner=identity.current.user)
+            system = System(fqdn=kw['fqdn'],owner=identity.current.user,creator=identity.current.user)
 # TODO what happens if you log changes here but there is an issue and the actual change to the system fails?
 #      would be good to have the save wait until the system is updated
 # TODO log  group +/-
@@ -1503,6 +1579,10 @@ class Root(RPCRoot):
             # remove arch option
             system.provisions[arch] = None
         redirect("/view/%s" % system.fqdn)
+
+    @expose()
+    def search_history(self):
+        pass
 
     @expose()
     @identity.require(identity.not_anonymous())
