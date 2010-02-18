@@ -7,7 +7,7 @@
 <tbody>
   <tr py:for="i, row in enumerate(value)" class="${i%2 and 'odd' or 'even'}">
   
-    <td style="vertical-align:top" py:for="col in columns" align="${col.get_option('align', None)}" py:content="col.get_field(row)"/>
+    <td style="vertical-align:center" py:for="col in columns" align="${col.get_option('align', None)}" py:content="col.get_field(row)"/>
   </tr>
 </tbody>
 </table>
