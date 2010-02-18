@@ -906,7 +906,6 @@ class Root(RPCRoot):
         is_user = False
         if system:
             title = system.fqdn
-            options['show_creator_field'] = True
             if system.can_admin(identity.current.user):
                 options['owner_change_text'] = ' (Change)'
             else:
@@ -1283,7 +1282,7 @@ class Root(RPCRoot):
             if System.query().filter(System.fqdn == kw['fqdn']).count() != 0:   
                 flash( _(u"%s already exists!" % kw['fqdn']) )
                 redirect("/")
-            system = System(fqdn=kw['fqdn'],owner=identity.current.user,creator=identity.current.user)
+            system = System(fqdn=kw['fqdn'],owner=identity.current.user)
 # TODO what happens if you log changes here but there is an issue and the actual change to the system fails?
 #      would be good to have the save wait until the system is updated
 # TODO log  group +/-

@@ -169,14 +169,6 @@ $(document).ready(function(){
        <td class="list">
         ${display_field_for("type_id")}
        </td>
-       <span py:if="show_creator_field">
-         <th class="list">
-           <b>Creator</b>
-         </th>
-         <td class="list">
-           ${value_for("creator")}
-         </td>
-       </span>
       </tr>
       <tr py:if="not readonly">
        <td colspan="4">
