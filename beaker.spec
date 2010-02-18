@@ -7,7 +7,7 @@
 
 Name:           beaker
 Version:        0.4.84
-Release:        0%{?timestamp}%{?branch}%{?dist}
+Release:        1%{?timestamp}%{?branch}%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -146,8 +146,10 @@ ln -s Fedora.ks $RPM_BUILD_ROOT/var/lib/cobbler/kickstarts/Fedoradevelopment.ks
 /usr/share/man/man1/beakerlib*
 
 %changelog
-* Wed Feb 17 2010 Bill Peck <bpeck@redhat.com> - 0.4.84-0
+* Wed Feb 17 2010 Bill Peck <bpeck@redhat.com> - 0.4.84-1
 - update osversion.trigger to only process newly imported distros
+- add robustness to rhts_partitions snippet.
+- rmancy merged history search.
 * Mon Feb 15 2010 Bill Peck <bpeck@redhat.com> - 0.4.83-0
 - Remove auth from rhel6 kickstart, default is sane.
 - Includes rmancy's update, added cpu_model_name to search options.
