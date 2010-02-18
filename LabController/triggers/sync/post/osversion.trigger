@@ -282,7 +282,7 @@ if __name__ == '__main__':
                 # Only process nfs distros
                 if distro['name'].find('_nfs-') == -1:
                     continue
-                VARIANT='Default'
+                VARIANT=''
                 DISTPATH='nightly'
                 if distro['ks_meta']['tree'].find('/rel-eng/') != -1:
                     DISTPATH='rel-eng'
@@ -299,10 +299,11 @@ if __name__ == '__main__':
                 if variant_search.search(distro['comment']):
                     VARIANT = variant_search.search(distro['comment']).group(1)
                 #addDistro.sh rel-eng RHEL6.0-20090626.2 RedHatEnterpriseLinux6.0 x86_64 Default rel-eng/RHEL6.0-20090626.2/6/x86_64/os
-                cmd = '%s %s %s %s %s %s %s' % (addDistroCmd, DISTPATH, DIST,
+                cmd = '%s %s %s %s %s "%s" %s' % (addDistroCmd, DISTPATH, DIST,
                                                 FAMILYUPDATE, distro['arch'],
                                                 VARIANT, TPATH)
-                print os.system(cmd)
+                print cmd
+                os.system(cmd)
 
         for distro in push_distros:
             comment = "%s\nPUSHED" % distro['comment']
