@@ -294,7 +294,7 @@ if __name__ == '__main__':
                     if curr_variant in meta:
                         VARIANT = curr_variant
                         break
-                TPATH = DISTPATH + ''.join(distro['ks_meta']['tree'].split(DISTPATH)[1:])
+                TPATH = DISTPATH + ''.join(distro['ks_meta']['tree'].split(DISTPATH,1)[1:])
                 FAMILYUPDATE=release.search(distro['comment']).group(1)
                 if variant_search.search(distro['comment']):
                     VARIANT = variant_search.search(distro['comment']).group(1)
