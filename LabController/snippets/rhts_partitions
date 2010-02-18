@@ -25,19 +25,22 @@ part swap --recommended --asprimary
 #set _partitions = $getVar('partitions','').split(';')
 #for $_partition in $_partitions:
 #set partition = $_partition.split(':')
+#if len($partition) >= 3
+#set size = $partition[2] * 1024
 #if len($partition) == 4
 #set fstype = $partition[3]
 #else
 #set fstype = 'ext3'
 #end if
 #if $partition[1] == 'part'
-part /$partition[0] --fstype $fstype --size=$partition[2]
+part /$partition[0] --fstype $fstype --size=$size
 #end if
 #if $partition[1] == 'lvm'
 #set is_lvm = $is_lvm + 1
-part pv.00$is_lvm --size=$partition[2]
+part pv.00$is_lvm --size=$size
 volgroup TestVolume00$is_lvm pv.00$is_lvm
-logvol /$partition[0] --fstype $fstype --name=$partition[0] --vgname=TestVolume00$is_lvm --size=$partition[2]
+logvol /$partition[0] --fstype $fstype --name=$partition[0] --vgname=TestVolume00$is_lvm --size=$size
+#end if
 #end if
 #end for
 
