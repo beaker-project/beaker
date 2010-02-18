@@ -4,9 +4,13 @@
 
  <head>
   <meta content="text/html; charset=UTF-8" http-equiv="content-type" py:replace="''"/>
-  <title>${title}</title>
- </head>
 
+  <style type="text/css" media="print">
+   @import "${tg.url('/static/css/system-print.css')}";
+  </style>
+  <title>${title}</title>
+ 
+ </head>
 
  <body class="flora">
   ${form.display(method='get', action=action, value=value, options=options)}
@@ -71,7 +75,7 @@
     ${widgets['labinfo'].display(method='get', action=widgets_action['labinfo'], value=value, options=widgets_options['labinfo'])}
    </div>
    <div py:if="widgets.has_key('history')" class="tabbertab"><h2>History</h2>
-    ${widgets['history'].display(system=value)} 
+    ${widgets['history'].display(list=history_data,options=widgets_options['history'],action=widgets_action['history'])} 
    </div>
   </div>
  </body>
