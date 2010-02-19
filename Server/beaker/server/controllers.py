@@ -458,6 +458,13 @@ class Root(RPCRoot):
         return_dict = {}
         return_dict['keyvals'] = Key.get_all_keys()
         return return_dict
+
+    @expose(format='json')
+    def get_search_options_task(self,table_field,**kw):
+        field = table_field
+        search = search_utility.Task.search.search_on(field) 
+        col_type = search_utility.Task.search.field_type(field)
+        return self.get_search_options_worker(search,col_type)
     
     @expose(format='json')
     def get_search_options_activity(self,table_field,**kw):

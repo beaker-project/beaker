@@ -16,13 +16,15 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 from turbogears.database import session
-from turbogears import controllers, expose, flash, widgets, validate, error_handler, validators, redirect, paginate, config
+from turbogears import controllers, expose, flash, widgets, validate, error_handler, validators, redirect, paginate, config, url
 from turbogears import identity, redirect
 from cherrypy import request, response
 from kid import Element
+from beaker.server import search_utility
 from beaker.server.widgets import myPaginateDataGrid
 from beaker.server.widgets import TasksWidget
 from beaker.server.widgets import TaskSearchForm
+from beaker.server.widgets import SearchBar
 from beaker.server.xmlrpccontroller import RPCRoot
 from beaker.server.helpers import make_link
 from sqlalchemy import exceptions
@@ -179,12 +181,29 @@ class Tasks(RPCRoot):
     @paginate('list',default_order='name', limit=30)
     def index(self, *args, **kw):
         tasks = session.query(Task)
+        tasks_return = self._tasks(tasks,**kw)
+        searchvalue = None
+        search_options = {}
+        if tasks_return:
+            if 'tasks_found' in tasks_return:
+                tasks = tasks_return['tasks_found']
+            if 'searchvalue' in tasks_return:
+                searchvalue = tasks_return['searchvalue']
+            if 'simplesearch' in tasks_return:
+                search_options['simplesearch'] = tasks_return['simplesearch']
+
         tasks_grid = myPaginateDataGrid(fields=[
 		     widgets.PaginateDataGrid.Column(name='name', getter=lambda x: make_link("./%s" % x.id, x.name), title='Name', options=dict(sortable=True)),
 		     widgets.PaginateDataGrid.Column(name='description', getter=lambda x:x.description, title='Description', options=dict(sortable=True)),
 		     widgets.PaginateDataGrid.Column(name='version', getter=lambda x:x.version, title='Version', options=dict(sortable=True)),
                     ])
-        return dict(title="Task Library", grid=tasks_grid, list=tasks, search_bar=None)
+
+        search_bar = SearchBar(name='tasksearch',
+                           label=_(u'Task Search'),    
+                           table = search_utility.Task.search.create_search_table(),
+                           search_controller=url("/get_search_options_task"), 
+                           )
+        return dict(title="Task Library", grid=tasks_grid, list=tasks, search_bar=search_bar,action='.', options=search_options, searchvalue=searchvalue)
 
     @expose(template='beaker.server.templates.task')
     def default(self, *args, **kw):
@@ -281,3 +300,29 @@ class Tasks(RPCRoot):
                  'rpm': "%s" % rpm_file.split('/')[-1:][0],
                  'files': hdr['filenames']}
 
+
+    def _tasks(self,task,**kw):
+        return_dict = {}                    
+        if 'simplesearch' in kw:
+            simplesearch = kw['simplesearch']
+            kw['tasksearch'] = [{'table' : 'Name',   
+                                 'operation' : 'contains', 
+                                 'value' : kw['simplesearch']}]                    
+        else:
+            simplesearch = None
+
+        return_dict.update({'simplesearch':simplesearch})
+
+        if kw.get("tasksearch"):
+            searchvalue = kw['tasksearch']  
+            tasks_found = self._task_search(task,**kw)
+            return_dict.update({'tasks_found':tasks_found})               
+            return_dict.update({'searchvalue':searchvalue})
+        return return_dict
+
+    def _task_search(self,task,**kw):
+        task_search = search_utility.Task.search(task)
+        for search in kw['tasksearch']:
+            col = search['table'] 
+            task_search.append_results(search['value'],col,search['operation'],**kw)
+        return task_search.return_results()
