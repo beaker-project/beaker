@@ -2746,7 +2746,8 @@ class RecipeSet(TaskBase):
         if not clone:
             recipeSet.setAttribute("id", "%s" % self.id)
         for r in self.recipes:
-            recipeSet.appendChild(r.to_xml(clone, from_recipeset=True))
+            if not isinstance(r,GuestRecipe):
+                recipeSet.appendChild(r.to_xml(clone, from_recipeset=True))
         return recipeSet
 
     @classmethod
@@ -2934,7 +2935,7 @@ class Recipe(TaskBase):
         recipe.appendChild(hostRequires)
         for t in self.tasks:
             recipe.appendChild(t.to_xml(clone))
-        if not from_recipeset:
+        if not from_recipeset and not isinstance(self, GuestRecipe):
             recipeSet = self.doc.createElement("recipeSet")
             recipeSet.appendChild(recipe)
             job = self.doc.createElement("job")
