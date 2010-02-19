@@ -741,8 +741,7 @@ class Root(RPCRoot):
                                      options =  {'simplesearch' : simplesearch,'columns':col_data,
                                                  'result_columns' : default_result_columns,
                                                  'col_defaults' : col_data['default'],
-                                                 'col_options' : col_data['options'],
-                                                 'custom_column_checked' : use_custom_columns}, 
+                                                 'col_options' : col_data['options']},
                                      action = '.', 
                                      search_bar = self.search_bar )
                                                                         
