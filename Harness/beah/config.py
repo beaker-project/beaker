@@ -61,6 +61,7 @@ import os
 import os.path
 import re
 import exceptions
+import random
 from ConfigParser import ConfigParser
 from optparse import OptionParser
 from beah.misc import dict_update
@@ -121,6 +122,9 @@ class _Config(object):
         for key, value in defs:
             if defaults.has_key(key) and defaults[key] == value:
                 continue
+            tmpkey = "DEFAULT.%s" % key
+            if defaults.has_key(tmpkey) and defaults[tmpkey] == value:
+                continue
             print "%s=%r" % (key, value)
         print ""
         defs = dict(defs)
@@ -130,6 +134,9 @@ class _Config(object):
             print "[%s]" % section
             for key, value in conf.items(section, raw=raw):
                 if defs.has_key(key) and defs[key] == value:
+                    continue
+                tmpkey = "%s.%s" % (section, key)
+                if defaults.has_key(tmpkey) and defaults[tmpkey] == value:
                     continue
                 print "%s=%r" % (key, value)
             print ""
@@ -156,8 +163,26 @@ class _Config(object):
     def _conf_opt(self):
         return self.opts.get(self.conf_env_var, '')
 
+    def upd_conf(conf, dict, warn_section=False):
+        for (sec_name, value) in dict.items():
+            sec_name_pair = _Config.parse_conf_name(sec_name)
+            if not sec_name_pair:
+                print >> sys.stderr, "--- WARNING: Can not parse %r." % sec_name
+                continue
+            section, name = sec_name_pair
+            if not isinstance(value, basestring):
+                print >> sys.stderr, "--- WARNING: Value for %s.%s (%r) is not an string." % (section, name, value)
+                continue
+            if section and section != 'DEFAULT' and not conf.has_section(section):
+                if warn_section:
+                    print >> sys.stderr, "--- WARNING: Section %r does not exist." % section
+                conf.add_section(section)
+            conf.set(section, name, value)
+    upd_conf = staticmethod(upd_conf)
+
     def read_conf(self):
-        conf = _ConfigParserFix(self.defaults)
+        conf = _ConfigParserFix()
+        self.upd_conf(conf, self.defaults, warn_section=False)
         fn = self._get_conf_file(self._conf_opt())
         if not fn:
             if self.conf_filename:
@@ -170,18 +195,7 @@ class _Config(object):
             except:
                 print >> sys.stderr, "--- ERROR: Could not read %r." % fn
                 raise
-        for (sec_name, value) in self.opts.items():
-            sec_name_pair = self.parse_conf_name(sec_name)
-            if not sec_name_pair:
-                print >> sys.stderr, "--- WARNING: Can not parse %r." % sec_name
-                continue
-            section, name = sec_name_pair
-            if not conf.has_section(section) and section != 'DEFAULT':
-                print >> sys.stderr, "--- WARNING: Section %r does not exist." % section
-            if not isinstance(value, basestring):
-                print >> sys.stderr, "--- WARNING: Value for %s.%s (%r) is not an string." % (section, name, value)
-                continue
-            conf.set(section, name, value)
+        self.upd_conf(conf, self.opts, warn_section=True)
         self.conf = conf
 
     def parse_conf_name(name):
@@ -253,13 +267,12 @@ class _BeahConfig(_Config):
         return conf_list + _Config._conf_files(self)
 
     def beah_conf(opts):
-        # FIXME!!! define sensible defaults here
-        return _BeahConfig('beah', 'BEAH_CONF', 'beah.conf', {}, opts)
+        return _BeahConfig('beah', 'BEAH_CONF', 'beah.conf', beah_defaults(), opts)
     beah_conf = staticmethod(beah_conf)
 
     def backend_conf(id, conf_env_var, conf_filename, defaults, opts):
         defs = dict(defaults)
-        dict_update(defs, _Config.get_config('beah-tmp').conf.items('BACKEND'))
+        dict_update(defs, _Config.get_config('beah-tmp').conf.items('BACKEND', raw=True))
         _Config._remove('beah-tmp')
         return _BeahConfig(id, conf_env_var, conf_filename, defs, opts)
     backend_conf = staticmethod(backend_conf)
@@ -267,6 +280,36 @@ class _BeahConfig(_Config):
 
 def get_conf(id):
     return _Config.get_config(id).conf
+
+
+def defaults():
+    return dict(
+            LOG='Warning',
+            ROOT='',
+            ETC_ROOT='%(ROOT)s/etc',
+            VAR_ROOT='%(ROOT)s/var/beah',
+            LOG_PATH='%(ROOT)s/var/log',
+            DEVEL='False',
+            CONSOLE_LOG='False',
+            NAME='beah-default-%2.2d' % random.randint(0,99),
+            RUNTIME_FILE_NAME='%(VAR_ROOT)s/%(NAME)s.runtime',
+            )
+
+
+def beah_defaults():
+    d = defaults()
+    d.update({
+            'CONTROLLER.NAME':'beah',
+            'CONTROLLER.LOG_FILE_NAME':'%(LOG_PATH)s/%(NAME)s.log',
+            'BACKEND.INTERFACE':'',
+            'BACKEND.PORT':'12432',
+            'TASK.INTERFACE':'localhost',
+            'TASK.PORT':'12434'})
+    return d
+
+
+def backend_defaults():
+    return {}
 
 
 def beah_conf(overrides=None, args=None):
@@ -487,23 +530,30 @@ if __name__ == '__main__':
             print "Failed: result:%r != expected:%r" % (result, expected)
             raise
 
-    def _try_conf():
+    def _try_beah_conf():
         beah_conf(overrides={'BEAH_CONF':'', 'TEST':'Test'}, args=())
         def dump_config(config):
             print "\n=== Dump:%s ===" % config.id
             print "files: %s + %s" % (config._conf_runtime(None), config._conf_files())
             print "file: %s" % (config._get_conf_file({}), )
         _get_config('beah').print_()
-        backend_conf('BEAH_BEAKER_CONF', 'beah_beaker.conf', {'MY_OWN':'1'}, {'MY_OWN':'2', 'DEFAULT.MY_OWN':'3'})
-        _get_config('beah-backend').print_()
-        _get_config('beah-backend').print_(defaults_display='exclude')
-        _get_config('beah-backend').print_(defaults_display='show')
-        _get_config('beah-backend').print_(raw=True)
-        _get_config('beah-backend').print_(raw=True, defaults_display='exclude')
-        _get_config('beah-backend').print_(raw=True, defaults_display='show')
-        #dump_config(_get_config('beah-backend'))
         _Config._remove('beah')
+
+    def _try_backend_conf():
+        _BeahConfig('beah-tmp', None, None, beah_defaults(), {})
+        backend_conf('BEAH_BEAKER_CONF', 'beah_beaker.conf', {'MY_OWN':'1', 'TEST.MY_OWN':'2'}, {'DEFAULT.MY_OWN':'4', 'TEST.MY_OWN':'3'})
+        _get_config('beah-backend').print_()
+        #_get_config('beah-backend').print_(defaults_display='exclude')
+        #_get_config('beah-backend').print_(defaults_display='show')
+        #_get_config('beah-backend').print_(raw=True)
+        #_get_config('beah-backend').print_(raw=True, defaults_display='exclude')
+        #_get_config('beah-backend').print_(raw=True, defaults_display='show')
+        #dump_config(_get_config('beah-backend'))
         _Config._remove('beah-backend')
+
+    def _try_conf():
+        #_try_beah_conf()
+        _try_backend_conf()
 
     def _try_conf2():
         overrides = backend_opts()
@@ -590,7 +640,7 @@ if __name__ == '__main__':
             opt.parse_args(['--cb'])
 
     #make_class_verbose(_BeahConfig, log_this.print_this)
-    #_try_conf()
+    _try_conf()
     _test_conf()
     _test_opt()
     _try_conf2()

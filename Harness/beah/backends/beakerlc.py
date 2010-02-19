@@ -16,6 +16,21 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
+"""
+Backend translating beah events to XML-RPCs understood by beaker's Lab
+Controller.
+"""
+
+# Beaker Backend should invoke these XML-RPC:
+#  1. recipes.to_xml(recipe_id)
+#     recipes.system_xml(fqdn)
+#  2. parse XML
+#  3. recipes.tasks.Start(task_id, kill_time)
+#  *. recipes.tasks.Result(task_id, result_type, path, score, summary)
+#     - result_type: pass_|warn|fail|panic
+#  4. recipes.tasks.Stop(task_id, stop_type, msg)
+#     - stop_type: stop|abort|cancel
+
 import sys
 import os
 import os.path
@@ -44,20 +59,6 @@ from beah.system.os_linux import ShExecutable
 from beah.wires.internals.repeatingproxy import RepeatingProxy
 from beah.wires.internals.twbackend import start_backend, log_handler
 from beah.wires.internals.twmisc import make_logging_proxy
-
-"""
-Beaker Backend.
-
-Beaker Backend should invoke these XML-RPC:
- 1. recipes.to_xml(recipe_id)
-    recipes.system_xml(fqdn)
- 2. parse XML
- 3. recipes.tasks.Start(task_id, kill_time)
- *. recipes.tasks.Result(task_id, result_type, path, score, summary)
-    - result_type: pass_|warn|fail|panic
- 4. recipes.tasks.Stop(task_id, stop_type, msg)
-    - stop_type: stop|abort|cancel
-"""
 
 log = logging.getLogger('backend')
 
@@ -766,17 +767,33 @@ def beakerlc_opts(opt, conf):
             help="Identify as HOSTNAME when talking to Lab Controller.")
     return opt
 
+def defaults():
+    d = config.backend_defaults()
+    lc = os.getenv('LAB_CONTROLLER', '')
+    if not lc:
+        lc = os.getenv('COBBLER_SERVER', '')
+        if lc:
+            lc = 'http://%s:8000/server' % lc
+        else:
+            lc = 'http://localhost:5222/'
+    d.update({
+            'NAME':'beah_beaker_backend',
+            'LAB_CONTROLLER':lc,
+            'HOSTNAME':os.getenv('HOSTNAME')
+            })
+    return d
+
 def main():
-    lc = os.getenv('LAB_CONTROLLER', '') or \
-            'http://%s:8000/server' % os.getenv('COBBLER_SERVER', 'localhost')
-    defaults = {'NAME':'beah_beaker_backend', 'LAB_CONTROLLER':lc,
-            'HOSTNAME':os.getenv('HOSTNAME')}
     config.backend_conf(env_var='BEAH_BEAKER_CONF', filename='beah_beaker.conf',
-            defaults=defaults, overrides=config.backend_opts(option_adder=beakerlc_opts))
+            defaults=defaults(), overrides=config.backend_opts(option_adder=beakerlc_opts))
     log_handler()
     start_beaker_backend()
     reactor.run()
 
+def test():
+    # FIXME!!! Implement self-test
+    raise exceptions.NotImplementedError
+
 if __name__ == '__main__':
-    main()
+    test()
 
