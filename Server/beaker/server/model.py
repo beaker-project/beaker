@@ -3137,9 +3137,9 @@ class Recipe(TaskBase):
         """ Before appending the task to this Recipe, make sure it applies.
             ie: not excluded for this distro family or arch.
         """
-        if self.distro.arch in recipetasks.excluded_arch:
+        if self.distro.arch in recipetask.task.excluded_arch:
             return
-        if self.distro.osmajor in recipetasks.excluded_osmajor:
+        if self.distro.osversion.osmajor in recipetask.task.excluded_osmajor:
             return
         self.tasks.append(recipetask)
 
@@ -3161,7 +3161,7 @@ class GuestRecipe(Recipe):
                     distroRequires.appendChild(child)
             distro_virt = self.doc.createElement("distro_virt")
             distro_virt.setAttribute("op", "=")
-            distro_virt.setAttribute("value", True)
+            distro_virt.setAttribute("value", "1")
             distroRequires.appendChild(distro_virt)
             return distroRequires.toxml()
         else:
