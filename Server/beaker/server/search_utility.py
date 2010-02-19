@@ -894,8 +894,7 @@ class Key(SystemObject):
     
     @classmethod
     def search_operators(cls,type,loose_match=None):
-        m = Modeller()
-        log.debug('field type is %s' % type)
+        m = Modeller() 
         operators = m.return_operators(type,loose_match)    
         return operators
      
