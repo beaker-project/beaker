@@ -136,6 +136,7 @@ function lm_install_setuptools()
 
 function lm_unpack()
 {
+  # define BEAH_SRC_DIR local in caller!
   lm_pushd || return 1
     export BEAH_DEV
 
@@ -151,7 +152,9 @@ function lm_unpack()
 
 function lm_build_rpm()
 {
+  # define BEAH_RPM local in caller!
   export BEAH_DEV
+  local BEAH_SRC_DIR=
   lm_unpack || return 1;
   pushd $BEAH_SRC_DIR || return 1;
     BEAH_RPM="${PWD}/dist/beah-0.1.a1${BEAH_DEV}-1.noarch.rpm"
@@ -172,11 +175,13 @@ function lm_build_rpm()
 
 function lm_build_egg()
 {
+  # define BEAH_EGG local in caller!
   export BEAH_DEV
+  local BEAH_SRC_DIR=
   lm_unpack || return 1
   pushd $BEAH_SRC_DIR || return 1;
-    EGG_VER="$(python -V 2>&1 | cut -d " " -f 2 -s)"
-    BEAH_EGG="${PWD}/dist/beah-0.1.a1${BEAH_DEV}-py$EGG_VER.egg"
+    local egg_ver="$(python -V 2>&1 | cut -d " " -f 2 -s)"
+    BEAH_EGG="${PWD}/dist/beah-0.1.a1${BEAH_DEV}-py$egg_ver.egg"
     if [[ -e "$BEAH_EGG" ]]; then
       echo "Nothing to do: Egg file \"$BEAH_EGG\" already exists."
     else
@@ -202,10 +207,12 @@ function lm_build_egg()
 
 function lm_install_beah()
 {
+  local BEAH_SRC_DIR=
   lm_unpack || return 1
   pushd "$BEAH_SRC_DIR" || return 1
     case "${1:-"src"}" in
       rpm|-r|--rpm)
+        local BEAH_RPM=
         if lm_build_rpm; then
           yum -y install python-{zope-interface,twisted-{core,web},simplejson}
           rpm -iF "$BEAH_RPM"
@@ -214,6 +221,7 @@ function lm_install_beah()
         fi
         ;;
       yum|-y|--yum)
+        local BEAH_RPM=
         if lm_build_rpm; then
           yum -y install --nogpgcheck "$BEAH_RPM"
         else
@@ -221,6 +229,7 @@ function lm_install_beah()
         fi
         ;;
       egg|-e|--egg)
+        local BEAH_EGG=
         if lm_build_egg; then
           easy_install "$BEAH_EGG"
         else

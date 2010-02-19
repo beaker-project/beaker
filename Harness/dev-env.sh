@@ -61,14 +61,15 @@ fi
 ################################################################################
 # FUNCTIONS:
 ################################################################################
-function beah() { python $BEAH_ROOT/beah/bin/cli.py "$@"; }
-function beah-srv() { python $BEAH_ROOT/beah/bin/srv.py "$@"; }
-function beah-out-backend() { $BEAH_ROOT; python $BEAH_ROOT/beah/bin/out_backend.py "$@"; }
-function beah-cmd-backend() { python $BEAH_ROOT/beah/bin/cmd_backend.py "$@"; }
-function fakelc() { python $BEAH_ROOT/beah/tools/fakelc.py; }
-function beah-beaker-backend() { python $BEAH_ROOT/beah/backends/beakerlc.py; }
-function beah-fwd-backend() { python -c "from beah.backends.forwarder import main; main()"; }
-function beah-rhts-task() { python -c "from beah.tasks.rhts_xmlrpc import main; main()"; }
+function beah() { python -c "from beah.bin.cli import main; main()" "$@"; }
+function beah-srv() { python -c "from beah.bin.srv import main; main()" "$@"; }
+function beah-out-backend() { python -c "from beah.bin.out_backend import main; main()" "$@"; }
+function beah-cmd-backend() { python -c "from beah.bin.cmd_backend import main; main()" "$@"; }
+function fakelc() { python -c "from beah.tools.fakelc import main; main()" "$@"; }
+function beah-beaker-backend() { python -c "from beah.backends.beakerlc import main; main()" "$@"; }
+function beah-fwd-backend() { python -c "from beah.backends.forwarder import main; main()" "$@"; }
+function beah-rhts-task() { python -c "from beah.tasks.rhts_xmlrpc import main; main()" "$@"; }
+function beah-root() { python -c "from beah.tools import get_root; get_root()" "$@"; }
 function inst1() { if [[ ! -z "$LABM1" ]]; then inst_all $LABM1; fi }
 function inst2() { if [[ ! -z "$LABM2" ]]; then inst_all $LABM2; fi }
 function inst3() { if [[ ! -z "$LABM3" ]]; then inst_all $LABM3; fi }

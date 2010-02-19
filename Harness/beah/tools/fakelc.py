@@ -541,7 +541,7 @@ def main():
     log.setLevel(logging.DEBUG)
 
     lc = LCHandler()
-    s = server.Site(LCHandler(), None, 60*60*12)
+    s = server.Site(lc, None, 60*60*12)
     reactor.listenTCP(conf['port'], s, interface=conf['interface'])
     reactor.run()
 

@@ -16,15 +16,15 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-import exceptions
-import sys
-from beah.core import event, new_id, check_type
-from beah.misc import setfname
-
 """
 Commands are used to send instructions from Backend to Controller (and
 eventually Task.)
 """
+
+import exceptions
+import sys
+from beah.core import event, new_id, check_type
+from beah.misc import setfname
 
 ################################################################################
 # PUBLIC INTERFACE:
@@ -61,18 +61,17 @@ def variable_value(key, value, handle='', **kwargs):
     return Command('variable_value', key=key, value=value, handle=handle,
             **kwargs)
 
-def forward(event, host, port=None):
+def forward(event):
     """
     Used to forward an event to another controller.
 
     @event - the original event.
-    @host, @port - host and port where remote controller is listening.
 
     event.forward_response could be used in answer. Sending answer is required
     before sending event.echo. command.forward is recommended afterwards, as
     connection could be closed.
     """
-    return Command('forward', event=event, destination=(host, port))
+    return Command('forward', event=event)
 
 ################################################################################
 # IMPLEMENTATION:

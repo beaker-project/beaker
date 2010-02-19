@@ -16,15 +16,6 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-import exceptions
-import base64
-import zlib
-import bz2
-import sys
-from beah.core.constants import RC, LOG_LEVEL
-from beah.core import new_id, check_type
-from beah.misc import setfname
-
 """
 Events are used to communicate events from Task to Controller and finally back
 to Backend.
@@ -44,6 +35,17 @@ Event is basically a list ['Event', evt, origin, timestamp, args] where:
     isinstance(timestamp, float) or timestamp is None
     isinstance(args, dict)
 """
+
+
+import exceptions
+import base64
+import zlib
+import bz2
+import sys
+from beah.core.constants import RC, LOG_LEVEL
+from beah.core import new_id, check_type
+from beah.misc import setfname
+
 
 ################################################################################
 # PUBLIC INTERFACE:
@@ -84,13 +86,6 @@ def echo(cmd, rc, message="", origin={}, timestamp=None, **kwargs):
 def lose_item(data, origin={}, timestamp=None):
     """Event generated when unformatted data are received."""
     return Event('lose_item', origin, timestamp, data=data)
-
-def output(data, out_handle="", origin={}, timestamp=None):
-    return Event('output', origin, timestamp, out_handle=out_handle, data=data)
-def stdout(data, origin={}, timestamp=None):
-    return output(data, "stdout", origin, timestamp)
-def stderr(data, origin={}, timestamp=None):
-    return output(data, "stderr", origin, timestamp)
 
 def output(data, out_handle="", origin={}, timestamp=None):
     return Event('output', origin, timestamp, out_handle=out_handle, data=data)
@@ -199,12 +194,11 @@ def file_meta(file_id, name=None, digest=None, size=None, content_handler=None,
     """
     Attach metadata to already created file.
 
-    FIXME: change to use metadata.
-
     Parameters:
     - file_id - an id of file event used to create a file,
     - see file for the rest.
     """
+    # FIXME? change to use metadata
     return Event('file_meta', origin=origin, timestamp=timestamp,
             file_id=file_id, name=name, digest=digest, size=size, codec=codec,
             content_handler=content_handler,
@@ -214,8 +208,9 @@ def metadata(obj_id, origin={}, timestamp=None, **kwargs):
     """
     Attach metadata to the object with given id.
 
-    - kwargs - free form metadata. FIXME: add at least some specification
+    - kwargs - free form metadata.
     """
+    # FIXME: add at least some specification
     return Event('metadata', origin=origin, timestamp=timestamp, **kwargs)
 
 def file_write(file_id, data, digest=None, codec=None, offset=None, origin={},
@@ -461,7 +456,7 @@ class Event(list):
             return False
         if self.args() == evt.args():
             return True
-        # FIXME: are there any exceptions?
+        # FIXME: are there any other exceptions?
         return False
 
 ################################################################################

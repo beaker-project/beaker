@@ -92,22 +92,20 @@ class ForwarderBackend(ExtBackend):
         reactor.callLater(self.RETRY_IN, self.proc_evt_variable_get, evt)
 
     def proc_evt_variable_get(self, evt):
-        # FIXME!20100129 is this necessary?
-        #if not isinstance(evt, event.Event):
-        #    evt = event.Event(evt)
         host = evt.arg('dest')
-        # FIXME: local host with different port # could be used! (for
-        # testing multihost on single machine)
         if localhost(host):
             return
+        # FIXME? remote Controller could listen on another port:
+        port = self.def_port
         # loop for testing:
-        if host == 'test.loop':
+        if host[:9] == 'test.loop':
+            # test.loop for testing forwarder on single machine.
+            # could be used with port number test.loop:11432
             host = 'localhost'
             # Clean the dest field to avoid inifinite loop:
             evt.args()['dest'] = ''
-        # FIXME!!! remote Controller could listen on another port:
-        port = self.def_port
-        cmd = command.forward(event=evt, host=host, port=port)
+            port = int(host[10:] or port)
+        cmd = command.forward(event=evt)
         d = self.remote_call(cmd, host, port)
         if d:
             d.addCallback(self.handle_evt_variable_get, evt)

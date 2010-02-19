@@ -117,7 +117,9 @@ def serveAnyRequest(cls, by, base=USE_DEFAULT):
     if base is None:
         def _getFunction(self, functionPath):
             """Will return handler for all requests."""
-            return getattr(self, by)
+            def tempf(*args):
+                return getattr(self, by)(functionPath, *args)
+            return tempf
     else:
         if not issubclass(cls, base):
             raise exceptions.RuntimeError('%s is not a baseclass of %s' % (base, cls))
@@ -126,7 +128,9 @@ def serveAnyRequest(cls, by, base=USE_DEFAULT):
             try:
                 return base._getFunction(self, functionPath)
             except:
-                return getattr(self, by)
+                def tempf(*args):
+                    return getattr(self, by)(functionPath, *args)
+                return tempf
     cls._getFunction = _getFunction
 
 
