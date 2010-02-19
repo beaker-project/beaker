@@ -79,7 +79,7 @@ class Activities(RPCRoot):
         
         self.search_bar = SearchBar(name='activitysearch',
                            label=_(u'Activity Search'),    
-                           table = search_utility.Activity.search.create_search_table(search_utility.Activity),
+                           table = search_utility.Activity.search.create_search_table(),
                            search_controller=url("/get_search_options_activity"), 
                            )
        

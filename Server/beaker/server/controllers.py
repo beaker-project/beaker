@@ -89,8 +89,9 @@ class Utility:
       result_columns() will return the list of columns that are able to bereturned
       in the system search results.
       """
-      column_names = search_utility.SystemSearch.create_column_table([{search_utility.Cpu :{'exclude': ['Flags']} },
-                                                                      {search_utility.System: {'all':[]} }] ) 
+      column_names = search_utility.System.search.create_column_table([{search_utility.Cpu :{'exclude': ['Flags']} },
+                                                                       {search_utility.System: {'all':[]} }] ) 
+      
       send = [(elem,elem) for elem in column_names]  
      
       if values_checked is not None:
@@ -410,11 +411,12 @@ class Root(RPCRoot):
     )  
     search_bar = SearchBar(name='systemsearch',
                            label=_(u'System Search'), 
+                           enable_custom_columns = True,
                            extra_selects = [ { 'name': 'keyvalue', 'column':'key/value','display':'none' , 'pos' : 2,'callback':url('/get_operators_keyvalue') }], 
-                           table=search_utility.SystemSearch.create_search_table([{search_utility.System:{'all':[]}},
-										  {search_utility.Cpu:{'all':[]}},
-                                                                                  {search_utility.Device:{'all':[]}},
-                                                                                  {search_utility.Key:{'all':[]}} ] ),
+                           table=search_utility.System.search.create_search_table([{search_utility.System:{'all':[]}},
+										   {search_utility.Cpu:{'all':[]}},
+                                                                                   {search_utility.Device:{'all':[]}},
+                                                                                   {search_utility.Key:{'all':[]}} ] ),
                            search_controller=url("/get_search_options"),
                            table_search_controllers = {'key/value':url('/get_keyvalue_search_options')},)
                  
@@ -475,7 +477,7 @@ class Root(RPCRoot):
     @expose(format='json')
     def get_operators_keyvalue(self,keyvalue_field,*args,**kw): 
         return_dict = {}
-        search = search_utility.SystemSearch.search_on_keyvalue(keyvalue_field)
+        search = search_utility.System.search.search_on_keyvalue(keyvalue_field)
         search.sort()
         return_dict['search_by'] = search
         return return_dict
@@ -483,11 +485,11 @@ class Root(RPCRoot):
     @expose(format='json')
     def get_search_options(self,table_field,**kw): 
         return_dict = {}
-        search =  search_utility.SystemSearch.search_on(table_field)  
+        search =  search_utility.System.search.search_on(table_field)  
       
         #Determine what field type we are dealing with. If it is Boolean, convert our values to 0 for False
         # and 1 for True
-        col_type = search_utility.SystemSearch.field_type(table_field)
+        col_type = search_utility.System.search.field_type(table_field)
        
         if col_type.lower() == 'boolean':
             search['values'] = { 0:'False', 1:'True'}
@@ -628,7 +630,7 @@ class Root(RPCRoot):
         for search in kw['systemsearch']: 
 	        #clsinfo = System.get_dict()[search['table']] #Need to change this
             class_field_list = search['table'].split('/')
-            cls_ref = search_utility.SystemSearch.translate_name(class_field_list[0])
+            cls_ref = search_utility.System.search.translate_name(class_field_list[0])
             col = class_field_list[1]              
             #If value id False or True, let's convert them to
             if class_field_list[0] != 'Key':
@@ -687,7 +689,7 @@ class Root(RPCRoot):
 
         if kw.get("systemsearch"):
             searchvalue = kw['systemsearch']
-            sys_search = search_utility.SystemSearch(systems)
+            sys_search = search_utility.System.search(systems)
             columns = []
             for elem in kw:
                 if re.match('systemsearch_column_',elem):

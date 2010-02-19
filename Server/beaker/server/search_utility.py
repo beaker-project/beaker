@@ -351,6 +351,10 @@ class ActivitySearch(Search):
         else: 
             filter_final = self.return_standard_filter(mycolumn,operation,value)
         self.queri = self.queri.filter(filter_final())   
+
+    @classmethod 
+    def create_search_table(cls,*args,**kw):
+        return Search.create_search_table(Activity,*args,**kw)
       
 class HistorySearch(Search):
     search_table = []
@@ -372,138 +376,10 @@ class HistorySearch(Search):
         else: 
             filter_final = self.return_standard_filter(mycolumn,operation,value)
         self.queri = self.queri.filter(filter_final())   
-"""
-class SystemSearch: 
-    class_external_mapping = {}
-    search_table = []
     
-    def __init__(self, systems=None):
-        if systems:
-            self.queri = systems
-        else:
-            self.queri = session.query(model.System)
- 
-
-   # def append_results(self,cls_ref,value,column,operation,**kw):  
-         
-        append_results() will take a value, column and operation from the search field,
-        as well as the class of which the search pertains to, and will append the join
-        and the filter needed to return the correct results.   
-             
-        pre = self.pre_operations(column,operation,value,cls_ref,**kw)
-        mycolumn = cls_ref.searchable_columns.get(column)
-        if mycolumn:
-            if cls_ref is Key:    
-                if pre['results_from_pre'] == 'string':
-                    mycolumn.set_column(mycolumn.string_column)
-                    mycolumn.set_type('string')
-                elif pre['results_from_pre'] == 'int':
-                    mycolumn.set_column(mycolumn.int_column)
-                    mycolumn.set_type('int')
-                else:
-                    log.error('Expecting the string value \'string\' or \'int\' to be returned from col_op_pre function when searching on Key/Value');       
-            self.do_joins(mycolumn)
-        else:       
-            log.error('Error accessing attribute within append_results')
-                   
-        if pre['col_op_filter']:
-            filter_func = pre['col_op_filter']   
-            filter_final = lambda: filter_func(mycolumn.column,value)
-            #If you want to pass custom args to your custom filter, here is where you do it
-            if kw.get('keyvalue'): 
-                filter_final = lambda: filter_func(mycolumn.column,value,key_name=kw['keyvalue'])   
-        else:
-            #using just the regular filter operations from Modeller 
-            filter_final = self.return_standard_filter(mycolumn,operation,value) 
-                                   
-        self.queri = self.queri.filter(filter_final())
-       
-
     @classmethod 
-    def field_type(cls,class_field): 
-        
-       Takes a class/field string (ie'CPU/Processor') and returns the type of the field
-       
-       returned_class_field = cls.split_class_field(class_field) 
-       display_name = returned_class_field[0]
-       field = returned_class_field[1]        
-      
-       class_ref = cls.translate_name(display_name)
-       field_type = class_ref.get_field_type(field)  
-       
-       if field_type:
-           return field_type
-       else:
-           log.debug('There was a problem in retrieving the field_type for the column %s' % field)
-           return
-
-    @classmethod
-    def search_on_keyvalue(cls,key_name):
-        
-        search_on_keyvalue() takes a key_name and returns the operations suitable for the 
-        field type it represents
-        
-        row = model.Key.by_name(key_name) 
-        if row.numeric == 1:
-            field_type = 'Numeric'
-        elif row.numeric == 0:
-            field_type = 'String'        
-        else:
-            log.error('Cannot determine type for %s, defaulting to generic' % key_name)
-            field_type = 'generic'
-
-        return Key.search_operators(field_type,loose_match=True)
-        
-             
-    @classmethod 
-    def search_on(cls,class_field): 
-        
-        search_on() takes a combination of class name and field name (i.e 'Cpu/vendor') and
-        returns the operations suitable for the field type it represents
-         
-        returned_class_field = cls.split_class_field(class_field) 
-        display_name = returned_class_field[0]
-        field = returned_class_field[1]        
-        class_ref = cls.translate_name(display_name)
-        
-        try:
-            field_type = class_ref.get_field_type(field) 
-            vals = None
-            try:
-                vals = class_ref.search_values(field)
-            except AttributeError:
-                log.debug('Not using predefined search values for %s->%s' % (class_ref.__name__,field))  
-        except AttributeError, (error):
-            log.error('Error accessing attribute within search_on: %s' % (error))
-        else:
-            return dict(operators = class_ref.search_operators(field_type), values = vals)
-      
-    @classmethod
-    def create_mapping(cls,obj):
-        display_name = getattr(obj,'display_name',None)
-        if display_name != None:
-            display_name = obj.display_name
-                  
-            #If the display name is already mapped to this class
-            if cls.class_external_mapping.has_key(display_name) and cls.class_external_mapping.get(display_name) is obj: 
-                #this class is already mapped, all good
-                pass 
-            elif cls.class_external_mapping.has_key(display_name) and cls.class_external_mapping.get(display_name) is not obj:                   
-                log.debug("Display name %s is already in use. Will try and use %s as display name for class %s" % (display_name, obj.__name__,obj.__name__))
-                display_name = obj.__name__             
-        else:
-            display_name = obj.__name__
-              
-        #We have our final display name, if it still exists in the mapping
-        #there isn't much we can do, and we don't want to overwrite it. 
-        if cls.class_external_mapping.has_key(display_name) and cls.class_external_mapping.get(display_name) is not obj: 
-            log.error("Display name %s cannot be set for %s" % (display_name,obj.__name__))               
-        else: 
-            cls.class_external_mapping[display_name] = obj
-        return display_name
-
-
- """              
+    def create_search_table(cls,*args,**kw):
+        return Search.create_search_table(History,*args,**kw)
    
 class SystemSearch(Search): 
     class_external_mapping = {}
@@ -570,8 +446,7 @@ class SystemSearch(Search):
             except AttributeError, (error):     
                 log.error('Error accessing attribute type within append_results: %s' % (error))
                    
-            modeller = Modeller() 
-            log.debug('Col type is %s' % col_type)
+            modeller = Modeller()  
             filter_func = modeller.return_function(col_type,operation,loose_match=True)   
             filter_final = lambda: filter_func(mycolumn.column,value)
 
@@ -646,7 +521,6 @@ class SystemSearch(Search):
     def create_search_table(cls,options): 
         return cls._create_table(options,cls.search_table) 
    
-
     @classmethod
     def _create_table(cls,options,lookup_table):  
         """
@@ -809,8 +683,7 @@ class SystemObject:
         """             
         m = Modeller() 
     
-        try:                  
-            log.debug('field_type is %s' % field)
+        try: 
             return m.return_operators(field)
         except KeyError, (e): 
             log.error('Failed to find search_type by index %s, got error: %s' % (index_type,e))
@@ -858,8 +731,7 @@ class Activity(SystemObject):
     searchable_columns = { 
                            'User' : MyColumn(col_type='string', column=model.User.user_name, relations='user'),
                            'Via' : MyColumn(col_type='string', column=model.Activity.service),
-                           'System/Name' : MyColumn(col_type='string', column=model.System.fqdn, relations='object'),
-                           'System/Arch' : MyColumn(col_type='string', column=model.Arch.arch, relations=['object','arch']),
+                           'System/Name' : MyColumn(col_type='string', column=model.System.fqdn, relations='object'), 
                            'Property': MyColumn(col_type='string', column=model.Activity.field_name),
                            'Action' : MyColumn(col_type='string', column=model.Activity.action),
                            'Old Value' : MyColumn(col_type='string', column=model.Activity.old_value),
@@ -882,7 +754,7 @@ class Activity(SystemObject):
 class History(SystemObject): 
     search = HistorySearch
     searchable_columns = {
-                          'PUser' : MyColumn(col_type='string', column=model.User.user_name,relations='user'),
+                          'User' : MyColumn(col_type='string', column=model.User.user_name,relations='user'),
                           'Service' : MyColumn(col_type='string', column=model.Activity.service),
                           'Field Name' : MyColumn(col_type='string', column=model.Activity.field_name),
                           'Action' : MyColumn(col_type='string', column=model.Activity.action),
@@ -895,8 +767,7 @@ class Key(SystemObject):
     
     @classmethod
     def search_operators(cls,type,loose_match=None):
-        m = Modeller()
-        log.debug('field type is %s' % type)
+        m = Modeller() 
         operators = m.return_operators(type,loose_match)    
         return operators
      
