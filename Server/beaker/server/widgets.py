@@ -212,7 +212,7 @@ class SearchBar(RepeatingFormField):
      </tr>
      </table>
     
-    <a id="customcolumns" href="#">Toggle Result Columns</a> 
+    <a py:if="enable_custom_columns" id="customcolumns" href="#">Toggle Result Columns</a> 
     <div style='display:none'  id='selectablecolumns'>
       <ul class="${field_class}" id="${field_id}">
         <li py:if="col_options" py:for="value,desc in col_options">
@@ -260,12 +260,13 @@ class SearchBar(RepeatingFormField):
     params = ['repetitions', 'form_attrs', 'search_controller', 'simplesearch',
               'advanced', 'simple','to_json','this_operations_field','this_searchvalue_field',
               'extra_callbacks_stringified','table_search_controllers_stringified','keyvaluevalue',
-              'result_columns','col_options','col_defaults','custom_column_checked','default_result_columns']
+              'result_columns','col_options','col_defaults','enable_custom_columns','default_result_columns']
     form_attrs = {}
     simplesearch = None
 
-    def __init__(self, table,search_controller,extra_selects = None,extra_inputs = None, *args, **kw): 
+    def __init__(self, table,search_controller,extra_selects=None, extra_inputs=None, enable_custom_columns=False, *args, **kw): 
         super(SearchBar,self).__init__(*args, **kw)
+        self.enable_custom_columns = enable_custom_columns
         self.search_controller=search_controller
         self.repetitions = 1            
         self.default_result_columns = {}
@@ -332,8 +333,8 @@ class SearchBar(RepeatingFormField):
                 params['col_options'] = []
             if 'col_defaults' in params['options']:
                 params['col_defaults'] = params['options']['col_defaults']
-            if 'custom_column_checked' in params['options']:
-                params['custom_column_checked'] = params['options']['custom_column_checked']
+            if 'enable_custom_columns' in params['options']:
+                params['enable_custom_columns'] = params['options']['enable_custom_columns']
 
         if value and not 'simplesearch' in params:
             params['advanced'] = 'True'
@@ -751,7 +752,7 @@ class SystemHistory(CompoundWidget):
     
     def __init__(self):
         #filter_column_options = model.Activity.distinct_field_names() 
-        self.grid  = myPaginateDataGrid(fields = [PaginateDataGrid.Column(name='user',title='PUser',getter=lambda x: x.user,options=dict(sortable=True)),
+        self.grid  = myPaginateDataGrid(fields = [PaginateDataGrid.Column(name='user',title='User',getter=lambda x: x.user,options=dict(sortable=True)),
                                                   PaginateDataGrid.Column(name='service', title='Service', getter=lambda x: x.service, options=dict(sortable=True)),
                                                   PaginateDataGrid.Column(name='created', title='Created', getter=lambda x: x.created, options = dict(sortable=True)),
                                                   PaginateDataGrid.Column(name='field_name', title='Field Name', getter=lambda x: x.field_name, options=dict(sortable=True)),

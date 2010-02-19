@@ -858,8 +858,7 @@ class Activity(SystemObject):
     searchable_columns = { 
                            'User' : MyColumn(col_type='string', column=model.User.user_name, relations='user'),
                            'Via' : MyColumn(col_type='string', column=model.Activity.service),
-                           'System/Name' : MyColumn(col_type='string', column=model.System.fqdn, relations='object'),
-                           'System/Arch' : MyColumn(col_type='string', column=model.Arch.arch, relations=['object','arch']),
+                           'System/Name' : MyColumn(col_type='string', column=model.System.fqdn, relations='object'), 
                            'Property': MyColumn(col_type='string', column=model.Activity.field_name),
                            'Action' : MyColumn(col_type='string', column=model.Activity.action),
                            'Old Value' : MyColumn(col_type='string', column=model.Activity.old_value),
@@ -882,7 +881,7 @@ class Activity(SystemObject):
 class History(SystemObject): 
     search = HistorySearch
     searchable_columns = {
-                          'PUser' : MyColumn(col_type='string', column=model.User.user_name,relations='user'),
+                          'User' : MyColumn(col_type='string', column=model.User.user_name,relations='user'),
                           'Service' : MyColumn(col_type='string', column=model.Activity.service),
                           'Field Name' : MyColumn(col_type='string', column=model.Activity.field_name),
                           'Action' : MyColumn(col_type='string', column=model.Activity.action),

@@ -40,7 +40,7 @@
   </tr> 
   <tr class="list" bgcolor="${row_color}" py:for="key_value in key_values_string">
    <td class="list">
-    <!--${key_value.key.key_name} -->
+    ${key_value.key.key_name}
    </td>
    <td class="list">
     ${key_value.key_value}

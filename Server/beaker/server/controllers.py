@@ -384,6 +384,7 @@ class Root(RPCRoot):
     )  
     search_bar = SearchBar(name='systemsearch',
                            label=_(u'System Search'), 
+                           enable_custom_columns = True,
                            extra_selects = [ { 'name': 'keyvalue', 'column':'key/value','display':'none' , 'pos' : 2,'callback':url('/get_operators_keyvalue') }], 
                            table=search_utility.SystemSearch.create_search_table([{search_utility.System:{'all':[]}},
 										  {search_utility.Cpu:{'all':[]}},
