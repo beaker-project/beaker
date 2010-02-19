@@ -762,7 +762,7 @@ class SystemHistory(CompoundWidget):
 
         self.search_bar = SearchBar(name='historysearch',
                            label=_(u'History Search'),    
-                           table = search_utility.HistorySearch.create_search_table(search_utility.History),
+                           table = search_utility.History.search.create_search_table(),
                            search_controller=url("/get_search_options_history"), 
                            )
 
