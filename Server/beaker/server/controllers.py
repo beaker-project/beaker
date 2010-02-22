@@ -614,8 +614,8 @@ class Root(RPCRoot):
         warn = None
         if avail_systems_distro_query.count() < 1: 
             warn = 'No Systems compatible with distro %s' % distro_install_name
-
-        getter = lambda x: reserve_link(x,distro_install_name)       
+        distro_query = Distro.by_install_name(distro_install_name)
+        getter = lambda x: reserve_link(x,distro_query.id)       
         direct_column = Utility.direct_column(title='Action',getter=getter)     
         return_dict  = self.systems(systems=avail_systems_distro_query, direct_columns=[(8,direct_column)],warn_msg=warn, *args, **kw)
        
@@ -624,8 +624,7 @@ class Root(RPCRoot):
         return_dict['tg_template'] = "beaker.server.templates.reserve_grid"
         return_dict['action'] = '/reserve_system'
         return_dict['options']['extra_hiddens'] = {'distro' : distro_install_name}
-        return_dict['col_defaults']['Action'] = 1
-      
+        
         return return_dict  
 
     def _history_search(self,activity,**kw):
