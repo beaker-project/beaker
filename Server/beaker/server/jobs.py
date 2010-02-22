@@ -249,7 +249,7 @@ class Jobs(RPCRoot):
         return dict(xml=jobxml)
 
     @expose(template='beaker.server.templates.grid')
-    @paginate('list',default_order='-id')
+    @paginate('list',default_order='-id', limit=50)
     def index(self, *args, **kw):
         jobs = session.query(Job).join('status').join('owner').outerjoin('result')
         jobs_grid = myPaginateDataGrid(fields=[

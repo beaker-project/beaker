@@ -131,7 +131,7 @@ class Recipes(RPCRoot):
         return recipexml
 
     @expose(template='beaker.server.templates.grid')
-    @paginate('list',default_order='-id')
+    @paginate('list',default_order='-id', limit=50)
     def index(self, *args, **kw):
         recipes = session.query(MachineRecipe)
         recipes_grid = myPaginateDataGrid(fields=[
