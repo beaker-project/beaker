@@ -269,6 +269,8 @@ class Netboot:
                 testrepo = TESTREPO.match(command).group(1)
             
         ks_meta = "rhts_server=%s testrepo=%s recipeid=%s packages=%s" % (rhts_server, testrepo, recipeid, string.join(packages,":"))
+        if config.get('test_password'):
+            ks_meta = '%s password=%s' % (ks_meta, config.get('test_password'))
         if runtest_url:
             ks_meta = "%s runtest_url=%s" % (ks_meta, runtest_url)
         if repos:
