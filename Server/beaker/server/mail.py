@@ -37,7 +37,7 @@ def send_mail(sender, to, subject, body):
     message.plain = body
     try:
         #log.debug("Sending mail: %s" % message.plain)
-        turbomail.enqueue(message)
+        turbomail.send(message)
     except MailNotEnabledException:
         log.warning("TurboMail is not enabled!")
     except Exception, e:
@@ -46,16 +46,19 @@ def send_mail(sender, to, subject, body):
 def failed_recipes(job):
     msg = "JobID: %s Status: %s Result: %s\n" % \
              (job.id, job.status, job.result)
-    for recipe in job.recipes:
-        if recipe.is_failed():
-            msg = "%s\tRecipeID: %s Arch: %s System: %s Distro: %s OSVersion: Status: %s Result: %s\n" \
-                   % (msg, recipe.id, recipe.distro.arch, recipe.system, recipe.distro,
-                      recipe.distro.osversion, recipe.status, recipe.result)
-            for task in recipe.tasks:
-                if task.is_failed():
-                    msg = "%s\t\tTaskID: %s TaskName: %s StartTime: %s Duration: %s Status: %s Result: %s\n" \
-                       % (msg, task.id, task.task.name, task.start_time, task.elapsed_time,
-                          task.status, task.result)
+    for recipeset in job.recipesets:
+        if recipeset.is_failed():
+            msg = "%s\tRecipeSetID: %s\n" % ( msg, recipeset.id )
+            for recipe in recipeset.recipes:
+                if recipe.is_failed():
+                    msg = "%s\t\tRecipeID: %s Arch: %s System: %s Distro: %s OSVersion: %s Status: %s Result: %s\n" \
+                           % (msg, recipe.id, recipe.distro.arch, recipe.system, recipe.distro,
+                              recipe.distro.osversion, recipe.status, recipe.result)
+                    for task in recipe.tasks:
+                        if task.is_failed():
+                            msg = "%s\t\t\tTaskID: %s TaskName: %s StartTime: %s Duration: %s Status: %s Result: %s\n" \
+                               % (msg, task.id, task.task.name, task.start_time, task.duration,
+                                  task.status, task.result)
     return msg
 
 def job_notify(job, sender=None):
