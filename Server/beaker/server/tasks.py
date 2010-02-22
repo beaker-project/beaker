@@ -240,7 +240,7 @@ class Tasks(RPCRoot):
                 try:
                     if family.lstrip('-') not in task.excluded_osmajor:
                         task.excluded_osmajor.append(TaskExcludeOSMajor(osmajor=OSMajor.by_name_alias(family.lstrip('-'))))
-                except exceptions.InvalidRequestError:
+                except InvalidRequestError:
                     pass
         if tinfo.test_archs:
             arches = set([ '%s' % arch.arch for arch in Arch.query()])
