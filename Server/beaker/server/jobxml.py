@@ -145,6 +145,8 @@ class XmlRecipe(ElementWrapper):
             return self.get_xml_attr('status', unicode, None)
         elif attrname == 'result': 
             return self.get_xml_attr('result', unicode, None)
+        elif attrname == 'ks_meta':
+            return self.get_xml_attr('ks_meta', unicode, None)
         elif attrname == 'kernel_options':
             return self.get_xml_attr('kernel_options', unicode, None)
         elif attrname == 'kernel_options_post':

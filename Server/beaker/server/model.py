@@ -25,6 +25,7 @@ from sqlalchemy.orm.collections import collection
 from bexceptions import *
 from kid import Element
 from beaker.server.helpers import *
+from beaker.server import mail
 import traceback
 from BasicAuthTransport import BasicAuthTransport
 import xmlrpclib
@@ -615,6 +616,7 @@ recipe_table = Table('recipe',metadata,
         # Total Panic tasks
         Column('ktasks', Integer, default=0),
         Column('whiteboard',Unicode(2000)),
+        Column('ks_meta', String(1024)),
         Column('kernel_options', String(1024)),
         Column('kernel_options_post', String(1024)),
 )
@@ -2746,6 +2748,9 @@ class Job(TaskBase):
                 max_result = recipeset.result
         self.status = max_status
         self.result = max_result
+        if self.is_finished():
+            # Send email notification
+            mail.job_notify(self.submitter, msg_type, self)
 
     def t_id(self):
         return "J:%s" % self.id
@@ -2915,6 +2920,7 @@ class Recipe(TaskBase):
             text = self.doc.createCDATASection('%s' % self.kickstart)
             kickstart.appendChild(text)
             recipe.appendChild(kickstart)
+        recipe.setAttribute("ks_meta", "%s" % self.ks_meta and self.ks_meta or '')
         recipe.setAttribute("kernel_options", "%s" % self.kernel_options and self.kernel_options or '')
         recipe.setAttribute("kernel_options_post", "%s" % self.kernel_options_post and self.kernel_options_post or '')
         if self.duration and not clone:
