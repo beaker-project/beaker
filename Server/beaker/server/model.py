@@ -3396,7 +3396,7 @@ class RecipeTask(TaskBase):
         """
         # Only record an abort/cancel on tasks that are New, Queued, Scheduled 
         # or Running.
-        if not self.finish_time:
+        if not self.is_finished():
             self.finish_time = datetime.utcnow()
             self.status = TaskStatus.by_name(status)
             self.results.append(RecipeTaskResult(recipetask=self,
