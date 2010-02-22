@@ -1,13 +1,15 @@
-
-.margined {
-  margin:1.25em 1.25em 1.25em 0; 
+#widget thead tr th {
+  min-width:131px
 }
-
 input.submit-button {
   margin-left:20em;
   margin-top:2em;
   margin-bottom:2em;
 }
+.margined {
+  margin:1.25em 1.25em 1.25em 0; 
+}
+
 
 .result-box { 
   color: white;
