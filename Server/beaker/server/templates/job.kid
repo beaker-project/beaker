@@ -67,16 +67,15 @@
   </tr>
   <tr>
    <td class="title"><b>Whiteboard</b></td>
-   <td class="value" colspan="5">${job.whiteboard}</td>
+   <td class="value" colspan="3">${job.whiteboard}</td>
+   <span py:if="job.is_queued()"> 
+    <td class="title"><b>Priority</b></td>
+    <td class="value">${priority_widget.display(job)}</td>
+   </span>
   </tr>
  </table>
   <div py:for="recipeset in job.recipesets" class="recipeset">
-   <table width="97%">
-    <tr>
-     <td class="title"><b>RecipeSet ID</b></td>
-     <td class="value">${recipeset.t_id}</td>
-    </tr>
-   </table>
+   <div py:content="recipeset_widget(recipeset=recipeset,show_priority=True)"></div>
    <div py:for="recipe in recipeset.recipes" class="recipe">
     <div py:content="recipe_widget(recipe=recipe)">Recipe goes here</div>
    </div>
