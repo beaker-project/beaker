@@ -78,9 +78,9 @@ def new_recipes(*args):
     if not recipes.count():
         return False
     log.debug("Entering new_recipes routine")
-    session.begin()
-    try:
-        for recipe in recipes:
+    for recipe in recipes:
+        session.begin()
+        try:
             if recipe.distro:
                 systems = recipe.distro.systems_filter(
                                             recipe.recipeset.job.owner,
@@ -98,11 +98,11 @@ def new_recipes(*args):
                     recipe.recipeset.abort('Recipe ID %s does not match any systems' % recipe.id)
             else:
                 recipe.recipeset.abort('Recipe ID %s does not have a distro' % recipe.id)
-        session.commit()
-    except exceptions.Exception, e:
-        session.rollback()
-        log.error("Failed to commit due to :%s" % e)
-    session.close()
+            session.commit()
+        except exceptions.Exception, e:
+            session.rollback()
+            log.error("Failed to commit due to :%s" % e)
+        session.close()
     log.debug("Exiting new_recipes routine")
     return True
 
@@ -113,108 +113,107 @@ def processed_recipesets(*args):
     if not recipesets.count():
         return False
     log.debug("Entering processed_recipes routine")
-    session.begin()
-    try:
-        for recipeset in recipesets:
+    for recipeset in recipesets:
+        session.begin()
+        try:
             bad_l_controllers = set()
             # We only need to do this processing on multi-host recipes
             if len(recipeset.recipes) == 1:
                 log.info("recipe ID %s moved from Processed to Queued" % recipeset.recipes[0].id)
                 recipeset.recipes[0].queue()
-                continue
-   
-            # Find all the lab controllers that this recipeset may run.
-            rsl_controllers = set(LabController.query()\
-                                          .join(['systems',
-                                                 'queued_recipes',
-                                                 'recipeset'])\
-                                          .filter(RecipeSet.id==recipeset.id).all())
+            else:
+                # Find all the lab controllers that this recipeset may run.
+                rsl_controllers = set(LabController.query()\
+                                              .join(['systems',
+                                                     'queued_recipes',
+                                                     'recipeset'])\
+                                              .filter(RecipeSet.id==recipeset.id).all())
     
-            # Any lab controllers that are not associated to all recipes in the
-            # recipe set must have those systems on that lab controller removed
-            # from any recipes.  For multi-host all recipes must be schedulable
-            # on one lab controller
-            for recipe in recipeset.recipes:
-                rl_controllers = set(LabController.query()\
-                                           .join(['systems',
-                                                  'queued_recipes'])\
-                                           .filter(Recipe.id==recipe.id).all())
-                bad_l_controllers = bad_l_controllers.union(rl_controllers.difference(rsl_controllers))
-    
-            for l_controller in rsl_controllers:
-                enough_systems = False
+                # Any lab controllers that are not associated to all recipes in the
+                # recipe set must have those systems on that lab controller removed
+                # from any recipes.  For multi-host all recipes must be schedulable
+                # on one lab controller
                 for recipe in recipeset.recipes:
-                    systems = recipe.dyn_systems.filter(
-                                              System.lab_controller==l_controller
-                                                       ).all()
-                    if len(systems) < len(recipeset.recipes):
-                        break
-                else:
-                    # There are enough choices We don't need to worry about dead
-                    # locks
-                    enough_systems = True
-                if not enough_systems:
-                    # Eliminate bad choices.
-                    for recipe in recipeset.recipes_orderby(l_controller)[:]:
-                        for tmprecipe in recipeset.recipes:
-                            systemsa = set(recipe.dyn_systems.filter(
-                                              System.lab_controller==l_controller
-                                                                    ).all())
-                            systemsb = set(tmprecipe.dyn_systems.filter(
-                                              System.lab_controller==l_controller
-                                                                       ).all())
-    
-                            if systemsa.difference(systemsb):
-                                for rem_system in systemsa.intersection(systemsb):
-                                    log.debug("Removing %s from recipe id %s" % (rem_system, recipe.id))
-                                    recipe.systems.remove(rem_system)
+                    rl_controllers = set(LabController.query()\
+                                               .join(['systems',
+                                                      'queued_recipes'])\
+                                               .filter(Recipe.id==recipe.id).all())
+                    bad_l_controllers = bad_l_controllers.union(rl_controllers.difference(rsl_controllers))
+        
+                for l_controller in rsl_controllers:
+                    enough_systems = False
                     for recipe in recipeset.recipes:
-                        count = 0
                         systems = recipe.dyn_systems.filter(
-                                          System.lab_controller==l_controller
+                                                  System.lab_controller==l_controller
                                                            ).all()
-                        for tmprecipe in recipeset.recipes:
-                            tmpsystems = tmprecipe.dyn_systems.filter(
+                        if len(systems) < len(recipeset.recipes):
+                            break
+                    else:
+                        # There are enough choices We don't need to worry about dead
+                        # locks
+                        enough_systems = True
+                    if not enough_systems:
+                        # Eliminate bad choices.
+                        for recipe in recipeset.recipes_orderby(l_controller)[:]:
+                            for tmprecipe in recipeset.recipes:
+                                systemsa = set(recipe.dyn_systems.filter(
+                                                  System.lab_controller==l_controller
+                                                                        ).all())
+                                systemsb = set(tmprecipe.dyn_systems.filter(
+                                                  System.lab_controller==l_controller
+                                                                           ).all())
+        
+                                if systemsa.difference(systemsb):
+                                    for rem_system in systemsa.intersection(systemsb):
+                                        log.debug("Removing %s from recipe id %s" % (rem_system, recipe.id))
+                                        recipe.systems.remove(rem_system)
+                        for recipe in recipeset.recipes:
+                            count = 0
+                            systems = recipe.dyn_systems.filter(
                                               System.lab_controller==l_controller
-                                                                     ).all()
-                            if recipe != tmprecipe and \
-                               systems == tmpsystems:
-                                count += 1
-                        if len(systems) <= count:
-                            # Remove all systems from this lc on this rs.
-                            log.debug("Removing lab %s from recipe id %s" % (l_controller, recipe.id))
-                            bad_l_controllers = bad_l_controllers.union([l_controller])
-    
-            # Remove systems that are on bad lab controllers
-            # This means one of the recipes can be fullfilled on a lab controller
-            # but not the rest of the recipes in the recipeSet.
-            # This could very well remove ALL systems from all recipes in this
-            # recipeSet.  If that happens then the recipeSet cannot be scheduled
-            # and will be aborted by the abort process.
-            for recipe in recipeset.recipes:
-                for l_controller in bad_l_controllers:
-                    systems = (recipe.dyn_systems.filter(
-                                              System.lab_controller==l_controller
-                                                    ).all()
-                                  )
-                    log.debug("Removing lab %s from recipe id %s" % (l_controller, recipe.id))
-                    for system in systems:
-                        log.debug("Removing %s from recipe id %s" % (system, recipe.id))
-                        recipe.systems.remove(system)
-                if recipe.systems:
-                    # Set status to Queued 
-                    log.info("recipe ID %s moved from Processed to Queued" % recipe.id)
-                    recipe.queue()
-                else:
-                    # Set status to Aborted 
-                    log.info("recipe ID %s moved from Processed to Aborted" % recipe.id)
-                    recipe.recipeset.abort('Recipe ID %s does not match any systems' % recipe.id)
+                                                               ).all()
+                            for tmprecipe in recipeset.recipes:
+                                tmpsystems = tmprecipe.dyn_systems.filter(
+                                                  System.lab_controller==l_controller
+                                                                         ).all()
+                                if recipe != tmprecipe and \
+                                   systems == tmpsystems:
+                                    count += 1
+                            if len(systems) <= count:
+                                # Remove all systems from this lc on this rs.
+                                log.debug("Removing lab %s from recipe id %s" % (l_controller, recipe.id))
+                                bad_l_controllers = bad_l_controllers.union([l_controller])
+        
+                # Remove systems that are on bad lab controllers
+                # This means one of the recipes can be fullfilled on a lab controller
+                # but not the rest of the recipes in the recipeSet.
+                # This could very well remove ALL systems from all recipes in this
+                # recipeSet.  If that happens then the recipeSet cannot be scheduled
+                # and will be aborted by the abort process.
+                for recipe in recipeset.recipes:
+                    for l_controller in bad_l_controllers:
+                        systems = (recipe.dyn_systems.filter(
+                                                  System.lab_controller==l_controller
+                                                        ).all()
+                                      )
+                        log.debug("Removing lab %s from recipe id %s" % (l_controller, recipe.id))
+                        for system in systems:
+                            log.debug("Removing %s from recipe id %s" % (system, recipe.id))
+                            recipe.systems.remove(system)
+                    if recipe.systems:
+                        # Set status to Queued 
+                        log.info("recipe ID %s moved from Processed to Queued" % recipe.id)
+                        recipe.queue()
+                    else:
+                        # Set status to Aborted 
+                        log.info("recipe ID %s moved from Processed to Aborted" % recipe.id)
+                        recipe.recipeset.abort('Recipe ID %s does not match any systems' % recipe.id)
                         
-        session.commit()
-    except exceptions.Exception, e:
-        session.rollback()
-        log.error("Failed to commit due to :%s" % e)
-    session.close()
+            session.commit()
+        except exceptions.Exception, e:
+            session.rollback()
+            log.error("Failed to commit due to :%s" % e)
+        session.close()
     log.debug("Exiting processed_recipes routine")
     return True
 
@@ -238,9 +237,9 @@ def queued_recipes(*args):
     if not recipes.count():
         return False
     log.debug("Entering queued_recipes routine")
-    session.begin()
-    try:
-        for recipe in recipes:
+    for recipe in recipes:
+        session.begin()
+        try:
             systems = recipe.dyn_systems.filter(System.user==None)
             if recipe.recipeset.lab_controller:
                 # First recipe of a recipeSet determines the lab_controller
@@ -286,11 +285,11 @@ def queued_recipes(*args):
                     # to deal with multi-host jobs at remote locations.  May need to
                     # enforce single recipes for remote execution.
                     pass
-        session.commit()
-    except exceptions.Exception, e:
-        session.rollback()
-        log.error("Failed to commit due to :%s" % e)
-    session.close()
+            session.commit()
+        except exceptions.Exception, e:
+            session.rollback()
+            log.error("Failed to commit due to :%s" % e)
+        session.close()
     log.debug("Exiting queued_recipes routine")
     return True
 
@@ -309,9 +308,9 @@ def scheduled_recipes(*args):
     if not recipesets:
         return False
     log.debug("Entering scheduled_recipes routine")
-    session.begin()
-    try:
-        for recipeset in recipesets:
+    for recipeset in recipesets:
+        session.begin()
+        try:
             # Go through each recipe in the recipeSet
             for recipe in recipeset.recipes:
                 # If one of the recipes gets aborted then don't try and run
@@ -358,11 +357,11 @@ def scheduled_recipes(*args):
                                                                              recipe.id,
                                                                             e))
        
-        session.commit()
-    except exceptions.Exception, e:
-        session.rollback()
-        log.error("Failed to commit due to :%s" % e)
-    session.close()
+            session.commit()
+        except exceptions.Exception, e:
+            session.rollback()
+            log.error("Failed to commit due to :%s" % e)
+        session.close()
     log.debug("Exiting scheduled_recipes routine")
     return True
 
