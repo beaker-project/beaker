@@ -1034,6 +1034,21 @@ class RecipeTasksWidget(Widget):
                            osmajor = 1,
                           )
 
+class RecipeSetWidget(CompoundWidget):
+    javascript = []
+    css = []
+    template = "beaker.server.templates.recipe_set"
+    params = ['recipeset','show_priority']
+    member_widgets = ['priority_widget']
+
+    def __init__(self,*args,**kw):
+        self.priority_widget = PriorityWidget('/set_recipeset_priority')
+        if 'recipeset' in kw:
+            self.recipeset = kw['recipeset']
+        else:
+            self.recipeset = None
+
+   
 class RecipeWidget(CompoundWidget):
     javascript = []
     css = []
@@ -1041,3 +1056,35 @@ class RecipeWidget(CompoundWidget):
     params = ['recipe']
     member_widgets = ['recipe_tasks_widget']
     recipe_tasks_widget = RecipeTasksWidget()
+
+class PriorityWidget(SingleSelectField):
+   template = "beaker.server.templates.priority"
+   javascript = [LocalJSLink('beaker', '/static/javascript/priority.js')]
+   css = []
+   validator = validators.NotEmpty()
+   params = ['default','controller'] 
+   def __init__(self,controller,*args,**kw):
+       self.controller = controller
+       self.options = [] 
+       self.field_class = 'singleselectfield'
+       #self.id = random number
+
+   def update_params(self,d): 
+       all_priorities = model.TaskPriority.query().all() 
+       rows = []
+       for priori in all_priorities:  
+           rows.append((priori.id,priori.priority)) 
+       d['options'] = rows
+       d['default'] = 2 #d['priority']
+       super(PriorityWidget,self).update_params(d)
+
+   def display(self,value=None,**params): 
+       if 'obj' in params:
+           try:
+               params['priority'] = params['obj'].priority          
+           except AttributeError, (e): 
+               log.error('%s does not contain a priority attribute, class must be of type RecipeSet')
+               raise AttributeError(e) 
+       return super(PriorityWidget,self).display(value,**params)
+
+

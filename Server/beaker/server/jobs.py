@@ -26,6 +26,8 @@ from beaker.server.xmlrpccontroller import RPCRoot
 from beaker.server.helpers import *
 from beaker.server.widgets import RecipeWidget
 from beaker.server.widgets import RecipeTasksWidget
+from beaker.server.widgets import RecipeSetWidget
+from beaker.server.widgets import PriorityWidget
 import datetime
 
 import cherrypy
@@ -42,8 +44,9 @@ import cgi
 class Jobs(RPCRoot):
     # For XMLRPC methods in this class.
     exposed = True
-
+    recipeset_widget = RecipeSetWidget()
     recipe_widget = RecipeWidget()
+    priority_widget = PriorityWidget('./set_job_priorities')
     recipe_tasks_widget = RecipeTasksWidget()
 
     upload = widgets.FileField(name='filexml', label='Job XML')
@@ -312,7 +315,11 @@ class Jobs(RPCRoot):
             flash(_(u"Invalid job id %s" % id))
             redirect(".")
         return dict(title   = 'Job',
+                    priority_widget      = self.priority_widget,
+                    recipeset_widget     = self.recipeset_widget,
                     recipe_widget        = self.recipe_widget,
                     recipe_tasks_widget  = self.recipe_tasks_widget,
                     job                  = job)
 
+    def set_job_priorities(self,priority,*args,**kw):
+        log.debug('Priority received is %s' % priority)

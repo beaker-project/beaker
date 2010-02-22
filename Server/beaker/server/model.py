@@ -2591,6 +2591,21 @@ class TaskBase(MappedObject):
         else:
             return False
 
+    def is_queued(self):
+        """
+        State if the task is queued
+        """ 
+        if self.status in [TaskStatus.by_name(u'New'),
+                           TaskStatus.by_name(u'Processed'),
+                           TaskStatus.by_name(u'Queued'),
+                           TaskStatus.by_name(u'Scheduled')]:
+            return True
+        else:
+            return False 
+
+           
+        
+
     def is_failed(self):
         """ 
         Return True if the task has failed
