@@ -622,8 +622,7 @@ class Root(RPCRoot):
         return_dict['tg_template'] = "beaker.server.templates.reserve_grid"
         return_dict['action'] = '/reserve_system'
         return_dict['options']['extra_hiddens'] = {'distro' : distro_install_name}
-        return_dict['col_defaults']['Action'] = 1
-      
+        
         return return_dict  
 
     def _history_search(self,activity,**kw):
