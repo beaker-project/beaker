@@ -262,12 +262,10 @@ if __name__ == '__main__':
         # time importing it, look for repos and specific family.
         if distro['comment'].find("PUSHED") == -1:
             distro['id'] = cobbler.get_distro_handle(distro['name'],token)
-            if 'tree_repos' not in distro['ks_meta']:
-                print "Update TreeRepos for %s" % distro['name']
-                distro = update_repos(distro)
-            if distro['comment'].find("family=") == -1:
-                print "Update Family for %s" % distro['name']
-                distro = update_comment(distro)
+            print "Update TreeRepos for %s" % distro['name']
+            distro = update_repos(distro)
+            print "Update Family for %s" % distro['name']
+            distro = update_comment(distro)
             push_distros.append(distro)
     if push_distros:
         inventory = xmlrpclib.ServerProxy('%s/RPC2' % settings['redhat_management_server'], allow_none=True)
