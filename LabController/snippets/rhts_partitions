@@ -26,7 +26,7 @@ part swap --recommended --asprimary
 #for $_partition in $_partitions:
 #set partition = $_partition.split(':')
 #if len($partition) >= 3
-#set size = $partition[2] * 1024
+#set size = int($partition[2]) * 1024
 #if len($partition) == 4
 #set fstype = $partition[3]
 #else
