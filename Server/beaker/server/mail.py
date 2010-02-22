@@ -23,6 +23,13 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 import turbomail
 
 from turbogears import config
+import logging
+#logging.basicConfig()
+#logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
+#logging.getLogger('sqlalchemy.orm.unitofwork').setLevel(logging.DEBUG)
+
+log = logging.getLogger(__name__)
+
 
 def send_mail(sender, to, subject, body):
     from turbomail import MailNotEnabledException
@@ -52,13 +59,13 @@ def failed_recipes(job):
     return msg
 
 def job_notify(job, sender=None):
-    """ Send a completion notification to job submitter """
+    """ Send a completion notification to job owner """
     if not sender:
         sender = config.get('beaker_email')
     if not sender:
         log.warning("beaker_email not defined in app.cfg; unable to send mail")
         return
     send_mail(sender, 
-              job.submitter.email_address,
+              job.owner.email_address,
               '[Beaker Job Completion] [%s] %s %s' % (job.id, job.status, job.result),
               failed_recipes(job))

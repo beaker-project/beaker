@@ -2750,7 +2750,7 @@ class Job(TaskBase):
         self.result = max_result
         if self.is_finished():
             # Send email notification
-            mail.job_notify(self.submitter, msg_type, self)
+            mail.job_notify(self)
 
     def t_id(self):
         return "J:%s" % self.id
