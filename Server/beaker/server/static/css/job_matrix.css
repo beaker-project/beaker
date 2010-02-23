@@ -1,6 +1,16 @@
-#widget thead tr th {
-  min-width:131px
+th.list {
+  min-width:131px;  
 }
+
+td{
+  vertical-align:top
+}
+
+tr > td:first-child {
+  vertical-align:middle
+}
+
+
 input.submit-button {
   margin-left:20em;
   margin-top:2em;
@@ -10,6 +20,13 @@ input.submit-button {
   margin:1.25em 1.25em 1.25em 0; 
 }
 
+#widget td {
+  vertical-align:middle
+}
+
+#my_datagrid tbody tr:first-child > td:first-child {
+  vertical-align:bottom
+}
 
 .result-box { 
   color: white;
@@ -18,9 +35,13 @@ input.submit-button {
   margin-bottom:0.25em
 } 
 
+.hidden_header {
+  visibility:hidden;
+  padding-left:0px;
+}
 
 .inline {
-display:inline
+  display:inline
 }
 
 .pass {

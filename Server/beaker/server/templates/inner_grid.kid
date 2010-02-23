@@ -5,12 +5,12 @@ show = columns and show_headers
 ?>
 <thead py:if="show">
   <tr>
-    <th py:for="i, col in enumerate(columns)" class="list" py:if="col.title != 'none'" py:content="col.title"/>
+    <th py:for="i, col in enumerate(columns)" class="list" style='padding-left:0px' py:if="col.title != 'none'" py:content="col.title"/>
   </tr>
 </thead>
 <thead py:if="not show">
   <tr>
-    <th py:for="i, col in enumerate(columns)" py:attrs="{'style':'display:none'}"  class="list" py:if="col.title != 'none'" py:content="col.title"/>
+    <th py:for="i, col in enumerate(columns)"  class="list hidden_header" py:if="col.title != 'none'" py:content=""/>
   </tr>
 </thead>
 <tbody>
