@@ -161,6 +161,7 @@ class ReserveWorkflow(Form):
 
 class myDataGrid(DataGrid):
     template = "beaker.server.templates.my_datagrid"
+    name = "my_datagrid"
     
 class InnerGrid(DataGrid):
     template = "beaker.server.templates.inner_grid" 

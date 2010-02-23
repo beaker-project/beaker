@@ -29,13 +29,12 @@ class TaskR:
             if not whiteboard:
                 return_list = []
                 for w in self.results[arch]:
-                    return_list += self.results[arch][w]
-                log.debug(return_list)
+                    return_list += self.results[arch][w] 
                 return return_list
             else:
                 return self.results[arch][whiteboard]
-        except KeyError, (e):
-            log.debug('Error %s' % e)
+        except KeyError, (e): #This is fine, just means that this task has no entry for a given arch/whiteboard
+            #log.debug('Index does not exist Arch %s whiteboard:%s ' % (arch,whiteboard))
             return []
 
 class JobMatrix:
@@ -45,6 +44,8 @@ class JobMatrix:
     job_matrix_widget = JobMatrixWidget() 
     arches_used = {} 
     whiteboards_used = {}
+    result_data = []
+    show_header_interval = 10
 
     @expose(template='beaker.server.templates.generic')
     def index(self,**kw):
@@ -114,13 +115,12 @@ class JobMatrix:
         """
         def f(x):
                 try:
-                    dyn_objs = x.get_results(arch,whiteboard) 
-                    for d in dyn_objs:
-                        log.debug('dyn has arch %s and whiteboard %s' % (d.arch,d.whiteboard))
+                    dyn_objs = x.get_results(arch,whiteboard)
+                    for d in dyn_objs: 
                         if d.arch == arch and d.whiteboard == whiteboard:
                             return self.make_result_box(model.TaskResult.get_results(),d)
                 except Exception, (e):
-                    log.debug(e)
+                    log.error('Error %s' % e)
         return f
 
     def inner_data_grid(self,data,this_arch,show_headers): 
@@ -129,16 +129,16 @@ class JobMatrix:
         """
         fields = []
         my_list = []
-        for whiteboard in self.whiteboards_used.keys():
-            #log.debug('Whiteboard is %s' % type(whiteboard))
+        sorted_keys = sorted(set(self.whiteboards_used[this_arch])) 
+        for whiteboard in sorted_keys: 
             whiteboard_title = whiteboard_name = orig_whiteboard_name = whiteboard
             if not whiteboard_name:
                 whiteboard_title = whiteboard_name = self.default_whiteboard_title   
+             
             fields.append(InnerGrid.Column(name=whiteboard_name,
                                            getter=self.display_whiteboard_results(orig_whiteboard_name,this_arch), 
-                                           title=orig_whiteboard_name))       
-            
-        options = {'show_headers' : show_headers  } 
+                                           title=orig_whiteboard_name))            
+        options = {'show_headers' : show_headers } 
         #my_list = data.get_results(this_arch)
         return InnerGrid(fields=fields).display([data],options=options)
         
@@ -272,61 +272,37 @@ class JobMatrix:
                 dyn = InnerDynamo.query() 
                
                 for d in dyn:
-                    self.arches_used[d.arch] = 1 
-                    self.whiteboards_used[whiteboard_val] = 1
+                    self.arches_used[d.arch] = 1 #so we know how to build the datagrid columns
+                    if d.arch not in self.whiteboards_used: #so we know how to build inner grid columns
+                        self.whiteboards_used[d.arch] = [whiteboard_val]
+                    else:
+                        self.whiteboards_used[d.arch].append(whiteboard_val)
                     if d.task_name not in my_hash:
                         my_hash[d.task_name]= {d.arch : {  whiteboard_val: [d] } }
                     else:  
                         if d.arch in my_hash[d.task_name]:
                             if whiteboard_val not in my_hash[d.task_name][d.arch]:
                                 my_hash[d.task_name][d.arch][whiteboard_val] = [d]
-                            else:
-                                log.debug('Appending')
+                            else: 
                                 my_hash[d.task_name][d.arch][whiteboard_val].append(d)                          
                         else:
                             my_hash[d.task_name][d.arch] = { whiteboard_val : [d] } 
         
-        # The tuples that are built here are kind of complex, but are built like this to make
-        # processing of the data easier.
-        # They will look something like this
-        # ((<task_name>
-        #             (<arch>
-        #                    (<whiteboard>
-        #                                 (<obj>,<obj>,<obj>)),
-        #                    (<whiteboard>
-        #                                 (<obj>))),
-        #             (<arch>
-        #                    (<whiteboard>
-        #                                 (<obj>,<obj>)))),
-        #  (<task_name>
-        #             (<arch>
-        #                    (<whiteboard>
-        #                                 (<obj>,<obj>,<obj>)),
-        #                    (<whiteboard>
-        #                                 (<obj>))),
-        #             (<arch>
-        #                    (<whiteboard>
-        #                                 (<obj>,<obj>)))))
-
+        # Here we append TaskR objects to an array. Each TaskR object
+        # will have a nested dict accessable by a arch/whiteboard key, which will
+        # return a InnerDynamo object. There should be one TaskR object for each
+        # task name
         result_data = []
         for task_name,arch_whiteboard_val in my_hash.items():
-            n = TaskR(task_name)
-            
+            n = TaskR(task_name)     
+
             for arch,whiteboard_val in arch_whiteboard_val.items():
                
                 for whiteboard,dynamo_objs in whiteboard_val.items(): 
                     n.add_result(arch,whiteboard,dynamo_objs)
-
+           
             result_data.append(n) 
-
-       
-
-        for i in result_data:
-            try:
-                 pass
-                #log.debug(i.results['i386']['N/A'][0].whiteboard)
-            except Exception:
-                log.debug('except')
+        self.result_data = result_data           
         return result_data 
 
     def _create_task_list_params(self,query_obj,result):
