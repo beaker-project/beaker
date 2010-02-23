@@ -10,7 +10,7 @@ show = columns and show_headers
 </thead>
 <thead py:if="not show">
   <tr>
-    <th py:for="i, col in enumerate(columns)"  class="list hidden_header" py:if="col.title != 'none'" py:content=""/>
+    <th py:for="i, col in enumerate(columns)"  class="list hidden_header" style='padding-left:0px' py:if="col.title != 'none'" py:content=""/>
   </tr>
 </thead>
 <tbody>
