@@ -26,6 +26,8 @@ pkg_resources.require("SQLAlchemy>=0.3.10")
 from beaker.server.model import *
 from beaker.server.util import load_config
 from turbogears.database import session
+from turbogears import config
+from turbomail.control import interface
 
 from os.path import dirname, exists, join
 from os import getcwd
@@ -447,6 +449,8 @@ def main():
     # 'prod.cfg' in the current directory and then for a default
     # config file called 'default.cfg' packaged in the egg.
     load_config(opts.configfile)
+
+    interface.start(config)
 
     if opts.daemonize:
         daemonize_self()
