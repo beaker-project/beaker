@@ -47,7 +47,7 @@ class ReserveWorkflow:
             recipe.kernel_options_post = kw.get('koptions_post')
         # Eventually we will want the option to add more tasks.
         # Add Install task
-        recipe.append_tasks(model.RecipeTask(task = model.Task.by_name('/distribution/install'))
+        recipe.append_tasks(model.RecipeTask(task = model.Task.by_name('/distribution/install')))
         # Add Reserve task
         reserveTask = model.RecipeTask(task = model.Task.by_name('/distribution/reservesys'))
         if kw.get('reservetime'):
