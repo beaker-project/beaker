@@ -6,7 +6,7 @@ from sqlalchemy import distinct
 import model
 import search_utility
 from decimal import Decimal
-from turbogears.widgets import (Form, TextField, SubmitButton, TextArea,
+from turbogears.widgets import (Form, TextField, SubmitButton, TextArea, Label,
                                 AutoCompleteField, SingleSelectField, CheckBox,
                                 HiddenField, RemoteForm, LinkRemoteFunction, CheckBoxList, JSLink,
                                 Widget, TableForm, FormField, CompoundFormField,
@@ -96,6 +96,24 @@ class PowerTypeForm(CompoundFormField):
         self.search_controller=search_controller
         self.powercontroller_field = SingleSelectField(name="powercontroller", options=callback)
 	self.key_field = HiddenField(name="key")
+
+class ReserveSystem(TableForm):
+    fields = [
+	      HiddenField(name='distro_id'),
+	      HiddenField(name='system_id'),
+              Label(name='system', label=_(u'System to Provision')),
+              Label(name='distro', label=_(u'Distro to Provision')),
+              TextField(name='whiteboard', attrs=dict(size=50),
+                        label=_(u'Job Whiteboard')),
+              TextField(name='ks_meta', attrs=dict(size=50),
+                        label=_(u'KickStart MetaData')),
+              TextField(name='koptions', attrs=dict(size=50),
+                        label=_(u'Kernel Options (Install)')),
+              TextField(name='koptions_post', 
+                        attrs=dict(size=50),
+                        label=_(u'Kernel Options (Post)')),
+             ]
+    submit_text = 'Queue Job'
 
 class ReserveWorkflow(Form): 
     javascript = [LocalJSLink('beaker', '/static/javascript/reserve_workflow.js')] 

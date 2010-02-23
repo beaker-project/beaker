@@ -208,6 +208,7 @@ class Jobs(RPCRoot):
             raise BX(_('No Distro matches Recipe: %s' % recipe.distro_requires))
         recipe.whiteboard = xmlrecipe.whiteboard
         recipe.kickstart = xmlrecipe.kickstart
+        recipe.ks_meta = xmlrecipe.ks_meta
         recipe.kernel_options = xmlrecipe.kernel_options
         recipe.kernel_options_post = xmlrecipe.kernel_options_post
         for xmlrepo in xmlrecipe.iter_repos():

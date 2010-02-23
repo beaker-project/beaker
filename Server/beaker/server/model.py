@@ -993,7 +993,7 @@ class MappedObject(object):
         return cls.query.filter_by(id=id).one()
 
 
-class SystemObject(object):
+class SystemObject(MappedObject):
     @classmethod
     def get_tables(cls):
         tables = cls.get_dict().keys()
@@ -1107,6 +1107,29 @@ class System(SystemObject):
         self.owner = owner
     
 
+
+    def to_xml(self, clone=False):
+        """ Return xml describing this system """
+        fields = dict(
+                      hostname    = 'fqdn',
+                      system_type = ['type','type'],
+                     )
+                      
+        host_requires = self.doc.createElement('hostRequires')
+        xmland = self.doc.createElement('and')
+        for key in fields.keys():
+            require = self.doc.createElement(key)
+            require.setAttribute('op', '=')
+            if isinstance(fields[key], list):
+                obj = self
+                for field in fields[key]:
+                    obj = getattr(obj, field, None)
+                require.setAttribute('value', obj or '')
+            else:
+                require.setAttribute('value', getattr(self, fields[key], None) or '')
+            xmland.appendChild(require)
+        host_requires.appendChild(xmland)
+        return host_requires
 
     def remote(self):
         class CobblerAPI:
@@ -2211,7 +2234,7 @@ def _create_tag(tag):
     return tag
 
 
-class Distro(object):
+class Distro(MappedObject):
     def __init__(self, install_name=None):
         self.install_name = install_name
     
@@ -2257,6 +2280,33 @@ class Distro(object):
         if queries:
             distros = distros.filter(and_(*queries))
         return distros.order_by('-date_created')
+
+    def to_xml(self, clone=False):
+        """ Return xml describing this distro """
+        fields = dict(
+                      distro_name    = 'name',
+                      distro_arch    = ['arch','arch'],
+                      distro_method  = 'method',
+                      distro_variant = 'variant',
+                      distro_virt    = 'virt',
+                      distro_family  = ['osversion','osmajor','osmajor'],
+                     )
+                      
+        distro_requires = self.doc.createElement('distroRequires')
+        xmland = self.doc.createElement('and')
+        for key in fields.keys():
+            require = self.doc.createElement(key)
+            require.setAttribute('op', '=')
+            if isinstance(fields[key], list):
+                obj = self
+                for field in fields[key]:
+                    obj = getattr(obj, field, None)
+                require.setAttribute('value', obj or '')
+            else:
+                require.setAttribute('value', getattr(self, fields[key], None) or '')
+            xmland.appendChild(require)
+        distro_requires.appendChild(xmland)
+        return distro_requires
 
     def systems_filter(self, user, filter):
         """
@@ -2691,7 +2741,7 @@ class Job(TaskBase):
             job.setAttribute("owner", "%s" % self.owner.email_address)
             job.setAttribute("result", "%s" % self.result)
             job.setAttribute("status", "%s" % self.status)
-        job.appendChild(self.node("whiteboard", self.whiteboard))
+        job.appendChild(self.node("whiteboard", self.whiteboard or ''))
         for rs in self.recipesets:
             job.appendChild(rs.to_xml(clone))
         return job

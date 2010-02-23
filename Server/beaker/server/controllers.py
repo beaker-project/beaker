@@ -589,9 +589,9 @@ class Root(RPCRoot):
 
         def reserve_link(x,distro):
             if x.is_free():
-                return make_link("/reserve/%s&distro=%s" % (Utility.get_correct_system_column(x).fqdn,distro), 'Reserve Now')
+                return make_link("/reserveworkflow/reserve?system_id=%s&distro_id=%s" % (Utility.get_correct_system_column(x).id,distro), 'Reserve Now')
             else:
-                return make_link("/queuereserve/%s&distro=%s" % (Utility.get_correct_system_column(x).fqdn,distro), 'Queue Reservation')
+                return make_link("/reserveworkflow/reserve?system_id=%s&distro_id=%s" % (Utility.get_correct_system_column(x).id,distro), 'Queue Reservation')
 
         try:    
             distro_install_name = kw['distro'] #this should be the distro install_name  
