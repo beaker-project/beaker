@@ -535,6 +535,27 @@ class Root(RPCRoot):
         return dict(ks_meta = ks_meta, kernel_options = kernel_options,
                     kernel_options_post = kernel_options_post)
 
+    @expose(format='json')
+    def change_priority_recipeset(self,priority_id,recipeset_id):  
+        try: 
+            priority_query = TaskPriority.by_id(priority_id)  # will throw an error here if priorty id is invalid
+        except InvalidRequestError, (e):
+            log.error('No rows returned for priority_id %s in change_priority_recipeset:%s' % (priority_id,e)) 
+            return { 'result' : None }
+        priority = priority_query.id
+        try:
+            recipeset = RecipeSet.by_id(recipeset_id)
+        except InvalidRequestError, (e):
+            log.error('No rows returned for recipeset_id %s in change_priority_recipeset:%s' % (recipeset_id,e))
+
+        recipeset.priority = priority_query
+        session.save_or_update(recipeset) 
+        return {'result' : True } 
+       
+    @expose(format='json')
+    def change_priority_job(self,priority,id):
+        log.debug('Here in job')
+
     @expose(template='beaker.server.templates.grid_add')
     @paginate('list',default_order='fqdn',limit=20,allow_limit_override=True)
     def index(self, *args, **kw):   

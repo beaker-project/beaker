@@ -14,5 +14,5 @@ Priority.prototype.changePriority = function(priority) {
 }
 
 Priority.prototype.priorityChanged = function() {
- 
+   
 }
