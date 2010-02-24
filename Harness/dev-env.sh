@@ -41,8 +41,6 @@ function script_path()
 ################################################################################
 export BEAH_DIR="$(script_path)"
 
-export BEAHLIB_ROOT=$BEAH_DIR
-
 export PATH=$PATH:$BEAH_DIR/bin:$BEAH_DIR/beah/bin
 export PYTHONPATH=$PYTHONPATH:$BEAH_DIR
 
@@ -69,12 +67,15 @@ function fakelc() { python -c "from beah.tools.fakelc import main; main()" "$@";
 function beah-beaker-backend() { python -c "from beah.backends.beakerlc import main; main()" "$@"; }
 function beah-fwd-backend() { python -c "from beah.backends.forwarder import main; main()" "$@"; }
 function beah-rhts-task() { python -c "from beah.tasks.rhts_xmlrpc import main; main()" "$@"; }
-function beah-root() { python -c "from beah.tools import get_root; get_root()" "$@"; }
-function inst1() { if [[ ! -z "$LABM1" ]]; then inst_all $LABM1; fi }
-function inst2() { if [[ ! -z "$LABM2" ]]; then inst_all $LABM2; fi }
-function inst3() { if [[ ! -z "$LABM3" ]]; then inst_all $LABM3; fi }
-function inst4() { if [[ ! -z "$LABM4" ]]; then inst_all $LABM4; fi }
-function inst5() { if [[ ! -z "$LABM5" ]]; then inst_all $LABM5; fi }
+function beah-root() { python -c "from beah import tools; tools.main_root()" "$@"; }
+function beah-data-root() { python -c "from beah import tools; tools.main_data_root()" "$@"; }
+function beah-data-file() { python -c "from beah import tools; tools.main_data_file()" "$@"; }
+function beah-data-dir() { python -c "from beah import tools; tools.main_data_dir()" "$@"; }
+function inst1() { if [[ ! -z "$LABM1" ]]; then inst_all -m $LABM1; fi }
+function inst2() { if [[ ! -z "$LABM2" ]]; then inst_all -m $LABM2; fi }
+function inst3() { if [[ ! -z "$LABM3" ]]; then inst_all -m $LABM3; fi }
+function inst4() { if [[ ! -z "$LABM4" ]]; then inst_all -m $LABM4; fi }
+function inst5() { if [[ ! -z "$LABM5" ]]; then inst_all -m $LABM5; fi }
 function _labms()
 {
   if [[ ! -z "$1" ]]; then

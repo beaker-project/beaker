@@ -74,7 +74,7 @@ def cmd_backend():
     # Start a LineReceiver on stdio:
     stdio.StandardIO(backend)
     # Start a default TCP client:
-    start_backend(backend.backend, byef=lambda evt: reactor.callLater(1, reactor.stop))
+    start_backend(backend.backend)
 
 def main():
     config.backend_conf(

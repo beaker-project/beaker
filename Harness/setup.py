@@ -18,39 +18,71 @@
 
 from setuptools import setup, find_packages
 from time import strftime
+import sys
 import os
 import os.path
 import glob
 import fnmatch
 
-# FIXME: Works only if setup.py runs from same directory it is located in!
-def glob_(*patterns):
+def glob_(prefix, *patterns):
+    if prefix and prefix[-1]!='/':
+        prefix += '/'
     answ = []
     for pattern in patterns:
-        answ += glob.glob(pattern)
+        answ += glob.glob(prefix+pattern)
     answ = list([file for file in answ if not os.path.isdir(file)])
     return answ
 
-def rdglob(dirs, din=("*"), dex=()):
-    """Glob directories recursively.
+def rdglob(prefix, dirs, din=("*"), dex=()):
+    """
+    Glob directories recursively.
     
+    prefix - root directory
+    dirs - directory names relative to root to process
     din - include directories matching any of these patterns
     dex - exclude directories matching any of these patterns
     """
+    #print "input:", dirs
+    if prefix:
+        if prefix[-1]!='/':
+            prefix += '/'
+        dirs = [prefix+dir for dir in dirs]
+        #print "prefixed:", dirs
     dirs = list([dir for dir in dirs if os.path.isdir(dir)])
+    #print "dirs only:", dirs
     ix = 0
+    l = len(prefix)
+    def matchf(d):
+        d = d[l:]
+        for di in din:
+            if not fnmatch.fnmatch(d, di):
+                return False
+        for de in dex:
+            if fnmatch.fnmatch(d, de):
+                return False
+        return True
     while ix < len(dirs):
         dir = dirs[ix]
         ls = [dir+"/"+d for d in os.listdir(dir) if os.path.isdir(dir+"/"+d)]
-        dirs.extend([d for d in ls if [True for di in din if fnmatch.fnmatch(d, di)] and not [True for de in dex if fnmatch.fnmatch(d, de)]])
+        #print "ls:", ls
+        dirs.extend([d for d in ls if matchf(d)])
+        #print "extended:", dirs
         ix += 1
+    if prefix:
+        dirs = list([dir[l:] for dir in dirs])
+    #print "result:", dirs
     return dirs
 
-def glob_to(prefix, dirs):
-    return list([(prefix+'/'+dir, glob_(dir+'/*')) for dir in dirs])
+def glob_to(prefix, new_prefix, dirs):
+    if prefix and prefix[-1]!='/':
+        prefix += '/'
+    return list([(new_prefix+'/'+dir, glob_(prefix, dir+'/*')) for dir in dirs])
 
 # edit MANIFEST.in
-more_data_files = glob_to('share/beah', rdglob([
+prefix = sys.path[0]
+if prefix and prefix[-1]!='/':
+    prefix += '/'
+more_data_files = glob_to(prefix, 'share/beah', rdglob(prefix, [
     'recipes',
     'recipesets',
     'examples/tasks',
@@ -59,14 +91,7 @@ more_data_files = glob_to('share/beah', rdglob([
     'tests', # FIXME: add some tests here!
     'doc',
     ], dex=('*.tmp', '*.wip')))
-
-if os.environ.get('BEAH_DEV', ''):
-    # Add selected RHTS tests to /mnt/tests
-    more_data_files += glob_to('/mnt/tests', [
-        'examples/tests/rhtsex',
-        'examples/tests/testargs',
-        'beah-tests/beah_iptables',
-        ])
+#print "more_data_files:", more_data_files
 
 # FIXME: Find out about real requirements - packages, versions.
 if os.environ.get('BEAH_NODEP', ''):
@@ -122,7 +147,10 @@ setup(
             'beah-fwd-backend = beah.backends.forwarder:main',
             'beah-fakelc = beah.tools.fakelc:main',
             'beah-rhts-task = beah.tasks.rhts_xmlrpc:main',
-            'beah-root = beah.tools:get_root',
+            'beah-root = beah.tools:main_root',
+            'beah-data-root = beah.tools:mina_data_root',
+            'beah-data-file = beah.tools:main_data_file',
+            'beah-data-dir = beah.tools:main_data_dir',
         ),
     },
 

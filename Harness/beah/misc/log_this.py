@@ -17,6 +17,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 from beah.misc import setfname, format_exc
+import sys
 import exceptions
 import traceback
 
@@ -38,21 +39,16 @@ def log_this(logf, log_on=True):
                     try: logf("} %s returned %s" % (fstr, repr(answ)))
                     except: pass
                     return answ
-                except exceptions.Exception, e:
-                    tb = format_exc()
-                    try: logf("} %s raised %s (%r)" % (fstr, repr(e), tb))
-                    except: pass
-                    raise
-                except object, e:
-                    tb = format_exc()
-                    try: logf("} %s raised %s (%r)" % (fstr, repr(e), tb))
-                    except: pass
-                    raise
                 except:
-                    tb = format_exc()
-                    try: logf("} %s raised an exception (%r)" % (fstr, tb))
+                    (etype, e, etb) = sys.exc_info()
+                    if getattr(e, '_printed', False):
+                        tb = '...'
+                    else:
+                        tb = repr(format_exc())
+                        setattr(e, '_printed', True)
+                    try: logf("} %s raised %s (%s)" % (fstr, repr(e), tb))
                     except: pass
-                    raise
+                    raise e, None, etb
             tempf.__doc__ = f.__doc__
             setfname(tempf, f.__name__)
             return tempf

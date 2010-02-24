@@ -153,10 +153,7 @@ if __name__ == '__main__':
     beah_run(coro())
     print "\n********************\n%s\n********************" % "Starting reactor."
     try:
-        try:
-            reactor.run()
-        finally:
-            print "\n********************\n%s\n********************" % "Reactor stopped!"
-    except:
-        raise
+        reactor.run()
+    finally:
+        print "\n********************\n%s\n********************" % "Reactor stopped!"
 

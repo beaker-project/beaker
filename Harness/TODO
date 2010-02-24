@@ -3,11 +3,6 @@
  !! add self-test suite
  !  integrate into /distribution/beaker/* tests
  !  properly daemonize controller
- !  command line options:
-    - server and backends using command line options and configuration
- !  clean up backends/server output
-    - filter messages
-    - logging: add configuration option for forwarding to stdout
  !  run pylint and clean up the code!
     - this covers documentation strings too
  !  write examples, HOWTOs
@@ -18,16 +13,11 @@
       - backends
         - list of backends (name, launcher=(env,executable,args)) which should
           always run
- 9  command line options:
-    - command + options
-      - beah [BEAH-OPTIONS] cmd [CMD-OPTIONS] [CMD-ARGS]
  9  twisted scaffolding for controller, backend and task.
     - I/O - sockets, stdio, named-pipes
     - spawn process
- 9  backends should end cleanly when "bye" is received.
  9  check compatibility with ms windows
- 9  account for slow network - submit in a batch as a signed archive
- 8 rhts-test-runner.sh
+ 8  rhts-test-runner.sh
     - get and store repository info in /etc/yum.repos.d/
     - check environment
     - create /tmp/TESTOUT.log - it is required by rhts-abort

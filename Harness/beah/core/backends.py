@@ -28,9 +28,10 @@ class BasicBackend(object):
     def proc_error(self, evt):
         return False
     def proc_evt(self, evt, **flags):
-        if "proc_evt_"+evt.event() in dir(self):
+        f = getattr(self, "proc_evt_"+evt.event(), None)
+        if f:
             try:
-                answ = self.__getattribute__("proc_evt_"+evt.event())(evt)
+                answ = f(evt)
                 if answ is None:
                     return True
                 return answ

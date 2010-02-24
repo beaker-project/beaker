@@ -18,7 +18,8 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-source $BEAHLIB_ROOT/beahlib.sh
+# FIXME! how to organize data?
+source $(beah-data-file bin/beahlib.sh)
 
 sleep 1; linfo  "Hello World!"
 sleep 1; echo   "Some lose data"

@@ -336,7 +336,7 @@ def proc_verbosity(opts, conf):
     if not conf.has_key('LOG'):
         level = 'error'
         if verbosity > 2:
-            level = debug
+            level = 'debug'
         else:
             level = ('warning', 'info', 'debug')[verbosity]
         conf['LOG'] = level

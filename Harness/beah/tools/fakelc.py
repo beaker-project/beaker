@@ -32,8 +32,11 @@ from twisted.web import xmlrpc, server
 from twisted.internet import reactor
 
 import beah
+import beah.config
 from beah.wires.internals.twmisc import serveAnyChild, serveAnyRequest
-from beah.misc import format_exc, log_this, log_flush, make_log_handler, runtimes
+from beah import misc
+from beah.misc import log_this, runtimes
+import beah.tools
 
 LOG_PATH = '/var/log'
 VAR_PATH = '/var/beah'
@@ -77,11 +80,8 @@ def conf_opt(args):
 
 def conf_main(conf, args):
     (opts, _) = conf_opt(args)
-    conf['name'] = opts.name or 'fakelc'
-    if opts.verbose is not None or opts.quiet is not None:
-        conf['verbosity'] = (opts.verbose or 0) - (opts.quiet or 0)
-    else:
-        conf['verbosity'] = 0
+    conf['name'] = opts.name or 'beah_fakelc'
+    beah.config.proc_verbosity(opts, conf)
     conf['port'] = int(opts.port or 5222)
     conf['interface'] = opts.interface or ''
     job_id = opts.job_id
@@ -107,9 +107,6 @@ def conf_main(conf, args):
     return conf
 
 log = logging.getLogger('beah_fakelc')
-
-# FIXME: Use config option for log_on:
-print_this = log_this.log_this(lambda s: log.debug(s), log_on=True)
 
 conf = dict(job_id=11, recipeset_id=11, recipe='recipes/recipe0', variables={})
 recipes = {}
@@ -163,7 +160,7 @@ def do_task_start(fname, task_id, kill_time):
     if not rec_args:
         return "ERROR: no task %s" % task_id
     rec_args['task%s_stat' % task_id]='Running'
-    log_flush(log)
+    misc.log_flush(log)
     return 0
 
 def do_task_stop(fname, task_id, stop_type, msg):
@@ -180,7 +177,7 @@ def do_task_stop(fname, task_id, stop_type, msg):
     if not rec_args:
         return "ERROR: no task %s" % task_id
     rec_args['task%s_stat' % task_id]=stop_type
-    log_flush(log)
+    misc.log_flush(log)
     return 0
 
 def do_task_result(fname, task_id, result_type, path, score, summary):
@@ -207,10 +204,10 @@ def do_task_result(fname, task_id, result_type, path, score, summary):
         result_id = randint(1, 9999999)
         add_result(task_id, result_id)
         log.info("%s.RETURN: %s", fname, result_id)
-        log_flush(log)
+        misc.log_flush(log)
         return result_id
     except:
-        log.error("%s", format_exc())
+        log.error("%s", misc.format_exc())
         raise
 
 tasks_by_results = {}
@@ -374,6 +371,9 @@ def do_result_upload_file(fname, result_id, path, name, size, digest, offset, da
 # XML-RPC HANDLERS:
 ################################################################################
 class LCRecipes(xmlrpc.XMLRPC):
+
+    _VERBOSE = (('return_recipe', staticmethod), 'xmlrpc_to_xml', 'xmlrpc_system_xml')
+
     def return_recipe(**kwargs):
         return get_recipe_xml(**kwargs)
     return_recipe = staticmethod(return_recipe)
@@ -387,6 +387,8 @@ class LCRecipes(xmlrpc.XMLRPC):
         return do_get_recipe("recipes.system_xml", fqdn)
 
 class LCRecipeTasks(xmlrpc.XMLRPC):
+
+    _VERBOSE = ('xmlrpc_Start', 'xmlrpc_Stop', 'xmlrpc_Result')
 
     def xmlrpc_Start(self, task_id, kill_time):
         return do_task_start("recipes.tasks.Start", task_id, kill_time)
@@ -402,6 +404,12 @@ class LCHandler(xmlrpc.XMLRPC):
 
     """XMLRPC handler to handle requests to LC."""
 
+    # FIXME: file upload: do not display the data...
+    _VERBOSE = ('xmlrpc_get_recipe', 'xmlrpc_task_start', 'xmlrpc_task_stop',
+            'xmlrpc_task_result', 'xmlrpc_task_upload_file',
+            'xmlrpc_result_upload_file', 'catch_xmlrpc',
+            'xmlrpc_recipeset_stop', 'xmlrpc_recipe_stop', 'xmlrpc_job_stop')
+
     def __init__(self, *args, **kwargs):
         xmlrpc.XMLRPC.__init__(self, *args, **kwargs)
         recipes = LCRecipes()
@@ -414,8 +422,17 @@ class LCHandler(xmlrpc.XMLRPC):
     def xmlrpc_task_start(self, task_id, kill_time):
         return do_task_start("task_start", task_id, kill_time)
 
-    def xmlrpc_task_stop(self, task_id, stop_type, msg):
+    def xmlrpc_task_stop(self, task_id, stop_type, msg=''):
         return do_task_stop("task_stop", task_id, stop_type, msg)
+
+    def xmlrpc_recipeset_stop(self, recipeset_id, stop_type, msg=''):
+        return 0
+
+    def xmlrpc_recipe_stop(self, recipe_id, stop_type, msg=''):
+        return 0
+
+    def xmlrpc_job_stop(self, job_id, stop_type, msg=''):
+        return 0
 
     def xmlrpc_task_result(self, task_id, result_type, path, score, summary):
         return do_task_result("task_result", task_id, result_type, path, score,
@@ -453,22 +470,10 @@ def build_recipe(fqdn):
         return fqdn_recipes[fqdn]
     return recipe_builder(conf['job_id'], conf['recipeset_id'], conf['recipe'], conf['variables'], fqdn)
 
-def beah_roots():
-    list = [os.environ.get("BEAH_ROOT", ""),
-            sys.prefix + "/share/beah",
-            beah.__path__[0] + "/../share/beah"]
-    return [d for d in list if d and os.path.isdir(d)]
-
-def beah_py_root():
-    return beah.__path__[0]
-
 def find_open(fname):
-    if fname[0] == '/':
-        return open(fname)
-    for d in beah_roots():
-        f = d + '/' + fname
-        if os.path.isfile(f):
-            return open(f)
+    fn = beah.tools.get_file(fname)
+    if fn:
+        return open(fn)
     raise exceptions.RuntimeError("Could not find file '%s'" % fname)
 
 def recipe_builder(job_id, recipeset_id, recipefile, overrides, fqdn):
@@ -485,8 +490,8 @@ def recipe_builder(job_id, recipeset_id, recipefile, overrides, fqdn):
         recipe = f.read()
     finally:
         f.close()
-    args['beah_root'] = beah_roots()[0]
-    args['beah_py_root'] = beah_py_root()
+    args['beah_root'] = beah.tools.get_data_root().next()
+    args['beah_py_root'] = beah.tools.get_root()
     args.update(overrides)
     args['job_id'] = job_id
     args['recipeset_id'] = recipeset_id
@@ -537,9 +542,14 @@ def main():
     runtime = runtimes.ShelveRuntime(VAR_PATH + '/' + name)
     log = logging.getLogger('beah_fakelc')
     # FIXME: redirect to console or syslog?
-    make_log_handler(log, LOG_PATH, "%s.log" % name)
-    log.setLevel(logging.DEBUG)
-
+    misc.make_log_handler(log, LOG_PATH, "%s.log" % name)
+    log.setLevel(misc.str2log_level(conf.get('LOG', 'warning')))
+    if conf.get('DEVEL', False):
+        print_this = log_this.log_this(lambda s: log.debug(s), log_on=True)
+        # make the classes verbose:
+        misc.make_class_verbose(LCRecipes, print_this)
+        misc.make_class_verbose(LCRecipeTasks, print_this)
+        misc.make_class_verbose(LCHandler, print_this)
     lc = LCHandler()
     s = server.Site(lc, None, 60*60*12)
     reactor.listenTCP(conf['port'], s, interface=conf['interface'])

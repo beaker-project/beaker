@@ -25,9 +25,9 @@
 
 (
 
-## BEAH_ROOT - directory used to store downloaded files and for building
+## BEAH_TEMP - directory used to store downloaded files and for building
 ## components.
-echo "BEAH_ROOT=${BEAH_ROOT:="/root/beah"}"
+echo "BEAH_TEMP=${BEAH_TEMP:="/root/beah"}"
 
 ## PYTHON:
 ## PY_VER - version of python to build. Uncomment to include python in
@@ -80,8 +80,8 @@ echo "HL_VER=${HL_VER:="20081119"}"
 
 ################################################################################
 
-mkdir -p $BEAH_ROOT
-pushd $BEAH_ROOT
+mkdir -p $BEAH_TEMP
+pushd $BEAH_TEMP
 
 ################################################################################
 # BUILD AND INSTALL NEWER PYTHON (E.G. 2.5):
@@ -98,10 +98,10 @@ cd Python-${PY_VER} && \
 make && \
 { make test || true; } && \
 make altinstall
-echo $? > ${BEAH_ROOT}/python.rc
-) | tee ${BEAH_ROOT}/python.out 2> ${BEAH_ROOT}/python.err
+echo $? > ${BEAH_TEMP}/python.rc
+) | tee ${BEAH_TEMP}/python.out 2> ${BEAH_TEMP}/python.err
 
-PY_OK=`cat ${BEAH_ROOT}/python.rc`
+PY_OK=`cat ${BEAH_TEMP}/python.rc`
 
 popd
 else
@@ -124,10 +124,10 @@ tar xvzf zope.interface-${ZI_VER}.tar.gz && \
 cd zope.interface-${ZI_VER} && \
 $PYBIN setup.py build && \
 $PYBIN setup.py install
-echo $? > ${BEAH_ROOT}/zope-interface.rc
-) | tee ${BEAH_ROOT}/zope-interface.out 2> ${BEAH_ROOT}/zope-interface.err
+echo $? > ${BEAH_TEMP}/zope-interface.rc
+) | tee ${BEAH_TEMP}/zope-interface.out 2> ${BEAH_TEMP}/zope-interface.err
 
-ZI_OK=`cat ${BEAH_ROOT}/zope-interface.rc`
+ZI_OK=`cat ${BEAH_TEMP}/zope-interface.rc`
 
 popd
 else
@@ -146,10 +146,10 @@ wget http://tmrc.mit.edu/mirror/twisted/Twisted/8.2/Twisted-${TW_VER}.tar.bz2 &&
 tar xvjf Twisted-${TW_VER}.tar.bz2 && \
 cd Twisted-${TW_VER} && \
 $PYBIN setup.py install
-echo $? > ${BEAH_ROOT}/twisted.rc
-) | tee ${BEAH_ROOT}/twisted.out 2> ${BEAH_ROOT}/twisted.err
+echo $? > ${BEAH_TEMP}/twisted.rc
+) | tee ${BEAH_TEMP}/twisted.out 2> ${BEAH_TEMP}/twisted.err
 
-TW_OK=`cat ${BEAH_ROOT}/twisted.rc`
+TW_OK=`cat ${BEAH_TEMP}/twisted.rc`
 
 popd
 else
@@ -172,10 +172,10 @@ make configure && \
 make all doc && \
 make check && \
 make install
-echo $? > ${BEAH_ROOT}/git.rc
-) | tee ${BEAH_ROOT}/git.out 2> ${BEAH_ROOT}/git.err
+echo $? > ${BEAH_TEMP}/git.rc
+) | tee ${BEAH_TEMP}/git.out 2> ${BEAH_TEMP}/git.err
 
-GIT_OK=`cat ${BEAH_ROOT}/git.rc`
+GIT_OK=`cat ${BEAH_TEMP}/git.rc`
 
 popd
 else
@@ -195,10 +195,10 @@ tar xvzf setuptools-${ST_VER}.tar.gz && \
 cd setuptools-${ST_VER} && \
 $PYBIN setup.py build && \
 $PYBIN setup.py install
-echo $? > ${BEAH_ROOT}/setuptools.rc
-) | tee ${BEAH_ROOT}/setuptools.out 2> ${BEAH_ROOT}/setuptools.err
+echo $? > ${BEAH_TEMP}/setuptools.rc
+) | tee ${BEAH_TEMP}/setuptools.out 2> ${BEAH_TEMP}/setuptools.err
 
-ST_OK=`cat ${BEAH_ROOT}/setuptools.rc`
+ST_OK=`cat ${BEAH_TEMP}/setuptools.rc`
 
 popd
 else
@@ -218,10 +218,10 @@ tar xvzf simplejson-${SJ_VER}.tar.gz && \
 cd simplejson-${SJ_VER} && \
 $PYBIN setup.py build && \
 $PYBIN setup.py install
-echo $? > ${BEAH_ROOT}/simplejson.rc
-) | tee ${BEAH_ROOT}/simplejson.out 2> ${BEAH_ROOT}/simplejson.err
+echo $? > ${BEAH_TEMP}/simplejson.rc
+) | tee ${BEAH_TEMP}/simplejson.out 2> ${BEAH_TEMP}/simplejson.err
 
-SJ_OK=`cat ${BEAH_ROOT}/simplejson.rc`
+SJ_OK=`cat ${BEAH_TEMP}/simplejson.rc`
 
 popd
 else
@@ -241,10 +241,10 @@ tar xvzf uuid-${UUID_VER}.tar.gz && \
 cd uuid-${UUID_VER} && \
 $PYBIN setup.py build && \
 $PYBIN setup.py install
-echo $? > ${BEAH_ROOT}/uuid.rc
-) | tee ${BEAH_ROOT}/uuid.out 2> ${BEAH_ROOT}/uuid.err
+echo $? > ${BEAH_TEMP}/uuid.rc
+) | tee ${BEAH_TEMP}/uuid.out 2> ${BEAH_TEMP}/uuid.err
 
-UUID_OK=`cat ${BEAH_ROOT}/uuid.rc`
+UUID_OK=`cat ${BEAH_TEMP}/uuid.rc`
 
 popd
 else
@@ -264,10 +264,10 @@ tar xvzf hashlib-${HL_VER}.tar.gz && \
 cd hashlib-${HL_VER} && \
 $PYBIN setup.py build && \
 $PYBIN setup.py install
-echo $? > ${BEAH_ROOT}/hashlib.rc
-) | tee ${BEAH_ROOT}/hashlib.out 2> ${BEAH_ROOT}/hashlib.err
+echo $? > ${BEAH_TEMP}/hashlib.rc
+) | tee ${BEAH_TEMP}/hashlib.out 2> ${BEAH_TEMP}/hashlib.err
 
-HL_OK=`cat ${BEAH_ROOT}/hashlib.rc`
+HL_OK=`cat ${BEAH_TEMP}/hashlib.rc`
 
 popd
 else

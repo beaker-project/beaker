@@ -19,7 +19,7 @@
 from beah.wires.internals.twadaptors import BackendAdaptor_JSON, TaskAdaptor_JSON
 from beah.wires.internals.twtask import Spawn
 from beah.core.controller import Controller
-from beah.misc import runtimes, make_log_handler, make_class_verbose
+from beah.misc import runtimes, make_log_handler, make_class_verbose, str2log_level
 from beah.misc.log_this import log_this
 from beah import config
 from twisted.internet import protocol
@@ -71,12 +71,7 @@ def start_server(conf=None, backend_host=None, backend_port=None,
         conf = config.get_conf('beah')
 
     # LOGGING:
-    # FIXME!!! This is a good candidate for lib function
-    ll = dict(debug=logging.DEBUG, info=logging.INFO, warning=logging.WARNING,
-            warn=logging.WARNING, error=logging.ERROR, fatal=logging.FATAL,
-            critical=logging.CRITICAL, false=logging.ERROR) \
-                    .get(conf.get('CONTROLLER', 'LOG').lower(), logging.WARNING)
-    log.setLevel(ll)
+    log.setLevel(str2log_level(conf.get('CONTROLLER', 'LOG')))
 
     # Create a directory for runtime
     vp = conf.get('CONTROLLER', 'VAR_ROOT')

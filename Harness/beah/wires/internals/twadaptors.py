@@ -38,6 +38,7 @@ class ControllerAdaptor_Backend_JSON(JSONProtocol):
             except KilledException:
                 # FIXME: kill?
                 print "Server was killed, should also die..."
+                self.transport.loseConnection()
                 raise
     def proc_cmd(self, backend, cmd):
         """Process Command received from backend - forward to Controller"""

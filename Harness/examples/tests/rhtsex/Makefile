@@ -23,14 +23,13 @@
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 
 # The toplevel namespace within which the test lives.
-TOPLEVEL_NAMESPACE=beah
+TOPLEVEL_NAMESPACE=examples
 
 # The name of the package under test:
-# FIXME: you wil need to change this:
-PACKAGE_NAME=bash
+PACKAGE_NAME=beah
 
 # The path of the test below the package:
-RELATIVE_PATH=examples/tests/rhtsex
+RELATIVE_PATH=beah/rhtsex
 
 # Version of the Test. Used with make tag.
 export TESTVERSION=1.1
@@ -72,16 +71,16 @@ include /usr/share/rhts/lib/rhts-make.include
 $(METADATA): Makefile
 	@touch $(METADATA)
 # Change to the test owner's name
-	@echo "Owner:        Marian Csontos <mcsontos@redhat.com>" > $(METADATA) # FIXME: customize this
+	@echo "Owner:        Marian Csontos <mcsontos@redhat.com>" > $(METADATA)
 	@echo "Name:         $(TEST)" >> $(METADATA)
 	@echo "Path:         $(TEST_DIR)"	>> $(METADATA)
 	@echo "License:      GPL" >> $(METADATA)
 	@echo "TestVersion:  $(TESTVERSION)"	>> $(METADATA)
 	@echo "Description:  Demonstrates rhts executables usage.">> $(METADATA)
 	@echo "TestTime:     15m" >> $(METADATA)
-	@echo "RunFor:       $(PACKAGE_NAME)" >> $(METADATA)
+	#@echo "RunFor:       $(PACKAGE_NAME)" >> $(METADATA)
 # add any other packages for which your test ought to run here
-	@echo "Requires:     $(PACKAGE_NAME)" >> $(METADATA)
+	#@echo "Requires:     $(PACKAGE_NAME)" >> $(METADATA)
 # add any other requirements for the script to run here
 
 # You may need other fields here; see the documentation

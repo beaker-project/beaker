@@ -21,6 +21,7 @@ from twisted.internet import reactor, protocol, stdio
 from twisted.protocols import basic
 from twisted.internet.defer import Deferred
 import simplejson as json
+import sys
 import os
 import os.path
 import tempfile
@@ -30,7 +31,7 @@ import uuid
 import logging
 import random
 from beah.core import event, command
-from beah.misc import format_exc, runtimes, make_log_handler
+from beah.misc import format_exc, runtimes, make_log_handler, str2log_level
 from beah.wires.internals.twmisc import serveAnyChild, serveAnyRequest, JSONProtocol
 from beah.core.constants import RC
 
@@ -185,7 +186,10 @@ class RHTSResults(xmlrpc.XMLRPC):
     def xmlrpc_recipeTestRpms(self, test_id, pkg_list):
         log.debug("XMLRPC: results.recipeTestRpms(%r, %r)",
                 test_id, pkg_list)
-        # FIXME! implement this!!!
+        # bpeck on 2010-02-19 wrote:
+        # > I think this was flawed in the original rhts and I don't really
+        # > want to bring it forward.  If a user wants a list of installed rpms
+        # > then we should have a task that reports them.
         return 0 # or "Failure reason"
     xmlrpc_recipeTestRpms.signature = [
             ['int', 'int', 'list'],
@@ -199,25 +203,28 @@ class RHTSWatchdog(xmlrpc.XMLRPC):
 
     def xmlrpc_abortJob(self, job_id):
         log.debug("XMLRPC: watchdog.abortJob(%r)", job_id)
-        # FIXME: implement this
+        # FIXME!!! check this!
+        self.main.send_evt(event.abort('job', target=job_id))
         return 0 # or "Failure reason"
     xmlrpc_abortJob.signature = [['int', 'int']]
 
     def xmlrpc_abortRecipeSet(self, recipe_set_id):
         log.debug("XMLRPC: watchdog.abortRecipeSet(%r)", recipe_set_id)
-        # FIXME: implement this
+        # FIXME!!! check this!
+        self.main.send_evt(event.abort('recipeset', target=recipe_set_id))
         return 0 # or "Failure reason"
     xmlrpc_abortRecipeSet.signature = [['int', 'int']]
 
     def xmlrpc_abortRecipe(self, recipe_id):
         log.debug("XMLRPC: watchdog.abortRecipe(%r)", recipe_id)
-        # FIXME: implement this
+        # FIXME!!! check this!
+        self.main.send_evt(event.abort('recipe', target=recipe_id))
         return 0 # or "Failure reason"
     xmlrpc_abortRecipe.signature = [['int', 'int']]
 
     def xmlrpc_testCheckin(self, hostname, job_id, test, kill_time, test_id):
         log.debug("XMLRPC: watchdog.testCheckin(%r, %r, %r, %r, %r)", hostname, job_id, test, kill_time, test_id)
-        # FIXME: implement this
+        # FIXME? implement this
         return 1 # or "Failure reason"
     xmlrpc_testCheckin.signature = [['int', 'string', 'int', 'string', 'int', 'int']]
 
@@ -366,11 +373,10 @@ class RHTSMain(object):
 
         taskid = "J%(JOBID)s-S%(RECIPESETID)s-R%(RECIPEID)s-T%(TASKID)s" % self.env
 
-        # FIXME: change log level to WARNING, use tempfile and upload log when
-        # process ends.
+        # FIXME! use tempfile and upload log when process ends.
         log = logging.getLogger('rhts_task')
         make_log_handler(log, LOG_PATH, "rhts_task_%s.log" % (taskid,))
-        log.setLevel(logging.DEBUG)
+        log.setLevel(str2log_level(os.environ.get('BEAH_TASK_LOG', "warning")))
 
         # No point in storing everything in one big file. Use one file per task
         self.__files = runtimes.TypeDict(runtimes.ShelveRuntime(RUNTIME_PATHNAME_TEMPLATE % taskid), 'vars')
@@ -386,12 +392,13 @@ class RHTSMain(object):
         # FIXME: is return value of any use?
         reactor.listenTCP(port, self.server, interface='localhost')
 
-    def on_exit(self):
+    def on_exit(self, exitCode):
         # FIXME! handling!
         # should submit captured files (AVC_ERROR, OUTPUTFILE)
         log.info("quitting...")
-        reactor.callLater(2, reactor.stop)
+        reactor.callLater(1, reactor.stop)
         self.__done = True
+        self.exitCode = exitCode
 
     def __controller_output(self, data):
         self.controller.sendLine(data)
@@ -424,7 +431,7 @@ class RHTSMain(object):
     def controller_disconnected(self, reason):
         if not self.__done:
             log.error("Connection to controller was lost! reason=%s", reason)
-            self.on_exit()
+            self.on_exit(-127)
 
     def task_stdout(self, data):
         # FIXME: RHTS Task can send an event! Handle it!
@@ -435,16 +442,14 @@ class RHTSMain(object):
         self.send_evt(event.stderr(data))
 
     def task_exited(self, reason):
+        log.info("task_exited(%s)", reason)
         if not self.__done:
-            log.info("task_exited(%s)", reason)
-            self.send_evt(event.linfo("task_exited", reason=str(reason)))
-            self.on_exit()
+            self.on_exit(reason.value.exitCode)
 
     def task_ended(self, reason):
+        log.info("task_ended(%s)", reason)
         if not self.__done:
-            log.info("task_ended(%s)", reason)
-            self.send_evt(event.linfo("task_ended", reason=str(reason)))
-            self.on_exit()
+            self.on_exit(reason.value.exitCode)
 
     def handle_variable_value(self, cmd):
         log.debug("handling variable_value.")
@@ -531,8 +536,9 @@ def main(task_path=None):
         #else:
         #    log.error("Test directory not provided.", reason)
         #    raise exceptions.RuntimeError("Test directory not provided.")
-    RHTSMain(task_path, USE_DEFAULT)
+    m = RHTSMain(task_path, USE_DEFAULT)
     reactor.run()
+    sys.exit(getattr(m, 'exitCode', -1))
 
 
 ################################################################################

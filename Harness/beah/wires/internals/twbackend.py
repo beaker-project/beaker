@@ -20,7 +20,7 @@ from twisted.internet.protocol import ReconnectingClientFactory
 from twisted.internet import reactor
 from beah.wires.internals.twadaptors import ControllerAdaptor_Backend_JSON
 from beah import config
-from beah.misc import make_log_handler
+from beah.misc import make_log_handler, str2log_level
 
 import os
 import sys
@@ -32,8 +32,16 @@ import logging
 class BackendFactory(ReconnectingClientFactory):
     def __init__(self, backend, controller_protocol, byef=None):
         self.backend = backend
-        if byef:
-            self.backend.proc_evt_bye = byef
+        self._done = False
+        if not byef:
+            def byef(evt):
+                reactor.callLater(1, reactor.stop)
+        def proc_evt_bye(evt):
+            self._done = True
+            if backend.controller:
+                backend.controller.transport.loseConnection()
+            byef(evt)
+        backend.proc_evt_bye = proc_evt_bye
         self.controller_protocol = controller_protocol
 
     def linfo(self, fmt, *args, **kwargs):
@@ -58,12 +66,14 @@ class BackendFactory(ReconnectingClientFactory):
     def clientConnectionLost(self, connector, reason):
         self.linfo('Lost connection.  Reason: %s', reason)
         self.backend.set_controller()
-        ReconnectingClientFactory.clientConnectionLost(self, connector, reason)
+        if not self._done:
+            ReconnectingClientFactory.clientConnectionLost(self, connector, reason)
 
     def clientConnectionFailed(self, connector, reason):
         self.linfo('Connection failed. Reason: %s', reason)
         self.backend.set_controller()
-        ReconnectingClientFactory.clientConnectionFailed(self, connector, reason)
+        if not self._done:
+            ReconnectingClientFactory.clientConnectionFailed(self, connector, reason)
 
 def log_handler(log_file_name=None):
     conf = config.get_conf('beah-backend')
@@ -84,11 +94,7 @@ def start_backend(backend, host=None, port=None,
     conf = config.get_conf('beah-backend')
     host = host or conf.get('DEFAULT', 'INTERFACE')
     port = port or int(conf.get('DEFAULT', 'PORT'))
-    if not config.parse_bool(conf.get('DEFAULT', 'DEVEL')):
-        ll = logging.WARNING
-    else:
-        ll = logging.DEBUG
-    logging.getLogger('backend').setLevel(ll)
+    logging.getLogger('backend').setLevel(str2log_level(conf.get('DEFAULT', 'LOG')))
     return reactor.connectTCP(host, port, BackendFactory(backend, adaptor, byef))
 
 ################################################################################
@@ -127,6 +133,6 @@ if __name__=='__main__':
             defaults={'NAME':'beah_demo_backend'},
             overrides=config.backend_opts())
     log_handler()
-    start_backend(DemoPprintBackend(), adaptor=DemoOutAdaptor, byef=lambda evt: reactor.stop())
+    start_backend(DemoPprintBackend(), adaptor=DemoOutAdaptor)
     reactor.run()
 

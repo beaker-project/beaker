@@ -43,8 +43,7 @@ run_kill()
   sleep 2
 }
 
-echo "BEAH_ROOT=${BEAH_ROOT:="/usr/lib/python*/site-packages/beah-*.egg"}"
-TESTFWDC="$BEAH_ROOT/beah/tools/fakesrv.py"
+TESTFWDC="$(beah-root)/tools/fakesrv.py"
 echo "TIMEOUT=${TIMEOUT:=150}"
 
 echo "No controller running..."

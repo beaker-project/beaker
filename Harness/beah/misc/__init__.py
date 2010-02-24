@@ -205,3 +205,9 @@ def assertp(result, *expecteds):
     print "OK: %r" % assert_(result, *expecteds)
     return result
 
+def str2log_level(s, default=logging.WARNING):
+    return dict(debug=logging.DEBUG, info=logging.INFO, warning=logging.WARNING,
+            warn=logging.WARNING, error=logging.ERROR, fatal=logging.FATAL,
+            critical=logging.CRITICAL, false=logging.ERROR) \
+                    .get(s.lower(), default)
+

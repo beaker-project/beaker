@@ -35,7 +35,7 @@ def out_backend():
             defaults={'NAME':'beah_out_backend'},
             overrides=config.backend_opts())
     log_handler()
-    start_backend(PprintBackend(), byef=lambda evt: reactor.stop())
+    start_backend(PprintBackend())
 
 def main():
     print out_backend_intro

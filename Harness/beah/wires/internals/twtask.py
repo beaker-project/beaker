@@ -19,6 +19,7 @@
 from twisted.internet import reactor
 from twisted.internet.protocol import ProcessProtocol, ReconnectingClientFactory
 from beah.wires.internals import twadaptors
+from beah import config
 from beah.misc import dict_update
 import logging
 import os
@@ -47,11 +48,6 @@ class TaskStdoutProtocol(ProcessProtocol):
     def errReceived(self, data):
         self.task.lose_item(data)
 
-    #def processExited(self, reason):
-    #    log.info("%s:processExited(%s)", self.__class__.__name__, reason)
-    #    self.controller.task_finished(self.task, rc=reason.value.exitCode)
-    #    self.task.set_controller()
-
     def processEnded(self, reason):
         log.info("%s:processEnded(%s)", self.__class__.__name__, reason)
         self.controller.task_finished(self.task, rc=reason.value.exitCode)
@@ -71,11 +67,8 @@ def Spawn(host, port, proto=None):
                 BEAH_TPORT=str(port),
                 BEAH_TID=str(task_id),
                 )
-        # FIXME: This is neccessary for some tasks!
-        if os.getenv('BEAH_ROOT') is not None:
-            task_env['BEAH_ROOT'] = os.getenv('BEAH_ROOT')
-        if os.getenv('BEAHLIB_ROOT') is not None:
-            task_env['BEAHLIB_ROOT'] = os.getenv('BEAHLIB_ROOT')
+        ll = config.get_conf('beah').get('TASK', 'LOG')
+        task_env.setdefault('BEAH_TASK_LOG', ll)
         val = os.getenv('PYTHONPATH')
         if val:
             task_env['PYTHONPATH'] = val

@@ -68,6 +68,16 @@ def end(task_id, rc, origin={}, timestamp=None):
     """Event generated when task finished"""
     return Event('end', origin, timestamp, task_id=task_id, rc=rc)
 
+def abort(type, target=None, origin={}, timestamp=None):
+    """
+    Abort given {recipe,recipeset,job}.
+
+    Abort currently running recipe, recipeset or job, if no target is specified.
+    """
+    if type not in ('recipe', 'recipeset', 'job'):
+        raise exceptions.NotImplementedError('type must be recipe, recipeset or job. %r given' % type)
+    return Event('abort', origin, timestamp, type=type, target=target)
+
 def echo(cmd, rc, message="", origin={}, timestamp=None, **kwargs):
     """
     Event generated as a response to a command.
@@ -392,7 +402,6 @@ class Event(list):
     else:
         TESTTYPE = str
 
-    # FIXME: Clean-up! All the indices are ugly!!!
     def __init__(self, evt, origin={}, timestamp=None, id=None, **kwargs):
         if isinstance(evt, list):
             list.__init__(self, evt)
@@ -402,32 +411,17 @@ class Event(list):
                 return
         else:
             list.__init__(self, ['Event', None, None, None, None, None])
-            if isinstance(evt, dict):
-                self[self.EVENT] = evt.get('evt')
-                self[self.ID] = evt.get('id', None)
-                self[self.ORIGIN] = dict(evt.get('origin', {}))
-                self[self.TIMESTAMP] = evt.get('timestamp', None)
-                self[self.ARGS] = dict(evt.get('args', {}))
-            else:
-                self[self.EVENT] = evt
-                self[self.ID] = id
-                self[self.ORIGIN] = dict(origin)
-                self[self.TIMESTAMP] = timestamp
-                self[self.ARGS] = dict(kwargs)
+            self[self.EVENT] = evt
+            self[self.ID] = id
+            self[self.ORIGIN] = dict(origin)
+            self[self.TIMESTAMP] = timestamp
+            self[self.ARGS] = dict(kwargs)
 
-        for i in range(1, 6):
-            if callable(self[i]):
-                self[i] = self[i](self)
-
-        if self[self.TIMESTAMP] is True:
+        if self[self.TIMESTAMP] == True:
             self[self.TIMESTAMP] = time.time()
 
         if self[self.ID] is None:
             self[self.ID] = new_id()
-
-        for key in self[self.ARGS].keys():
-            if callable(self[self.ARGS][key]):
-                self[self.ARGS][key] = self[self.ARGS][key](self)
 
         self.check()
 

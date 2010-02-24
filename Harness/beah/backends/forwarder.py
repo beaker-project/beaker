@@ -209,13 +209,12 @@ class _RemoteBackend(ExtBackend):
 
 def start_forwarder_backend():
     if config.parse_bool(config.get_conf('beah-backend').get('DEFAULT', 'DEVEL')):
-        # FIXME: Use config option for log_on:
         print_this = log_this(lambda s: log.debug(s), log_on=True)
         make_class_verbose(ForwarderBackend, print_this)
         make_class_verbose(_RemoteBackend, print_this)
     backend = ForwarderBackend()
     # Start a default TCP client:
-    start_backend(backend, byef=lambda evt: reactor.callLater(1, reactor.stop))
+    start_backend(backend)
     return backend
 
 def main():

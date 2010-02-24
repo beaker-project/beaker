@@ -48,7 +48,7 @@ from twisted.internet import reactor
 from beah import config
 from beah.core import command, event, addict
 from beah.core.backends import SerializingBackend
-from beah.core.constants import ECHO, RC
+from beah.core.constants import ECHO, RC, LOG_LEVEL
 from beah.misc import format_exc, dict_update, log_flush, writers, runtimes, \
         make_class_verbose, is_class_verbose
 from beah.misc.log_this import log_this
@@ -64,9 +64,10 @@ log = logging.getLogger('backend')
 
 class RHTSTask(ShExecutable):
 
-    def __init__(self, env_, repos):
+    def __init__(self, env_, repos, repof):
         self.__env = env_
         self.__repos = repos
+        self.__repof = repof
         ShExecutable.__init__(self)
 
     def content(self):
@@ -74,6 +75,9 @@ class RHTSTask(ShExecutable):
 # THIS SHOULD PREVENT rhts-test-runner.sh to install rpm from default rhts
 # repository and use repositories defined in recipe
 #mkdir -p $TESTPATH
+cat >/etc/yum.repos.d/beaker-tests.repo <<REPO_END
+%s
+REPO_END
 yum -y --disablerepo=* %s install "$TESTRPMNAME"
 if ! rpm -q "$TESTRPMNAME"; then
     echo "ERROR: $TESTRPMNAME was not installed." >&2
@@ -81,15 +85,15 @@ if ! rpm -q "$TESTRPMNAME"; then
 fi
 beah-rhts-task
 #%s -m beah.tasks.rhts_xmlrpc
-""" % (' '.join(['--enablerepo=%s' % repo for repo in self.__repos]),
+""" % (self.__repof, ' '.join(['--enablerepo=%s' % repo for repo in self.__repos]),
                 sys.executable))
 
 
-def mk_rhts_task(env_, repos):
+def mk_rhts_task(env_, repos, repof):
     # FIXME: proper RHTS launcher shold go here.
     # create a script to: check, install and run a test
     # should task have an "envelope" - e.g. binary to run...
-    e = RHTSTask(env_, repos)
+    e = RHTSTask(env_, repos, repof)
     e.make()
     return e.executable
 
@@ -136,10 +140,6 @@ def parse_recipe_xml(input_xml, hostname):
         repos.append(name)
         repof += "[%s]\nname=beaker provided '%s' repo\nbaseurl=%s\nenabled=1\ngpgcheck=0\n\n" \
                 % (name, name, xml_attr(r, 'url'))
-    if repof:
-        f = open('/etc/yum.repos.d/beaker-tests.repo', 'w+')
-        f.write(repof)
-        f.close()
     task_env['BEAKER_REPOS']=':'.join(repos)
 
     test_order = 0
@@ -194,7 +194,7 @@ def parse_recipe_xml(input_xml, hostname):
                         TESTRPMNAME=normalize_rpm_name(rpm_name),
                         TESTPATH="/mnt/tests"+task_name ,
                         KILLTIME=str(ewd))
-                executable = mk_rhts_task(task_env, repos)
+                executable = mk_rhts_task(task_env, repos, repof)
                 args = [rpm_name]
                 log.info("parse_recipe_xml: RPMTest %s - %s %s", rpm_name, executable, args)
                 break
@@ -202,6 +202,10 @@ def parse_recipe_xml(input_xml, hostname):
             exec_tags = task.getElementsByTagName('executable')
             log.debug("parse_recipe_xml: executable tag: %s", exec_tags)
             if exec_tags:
+                if repof:
+                    f = open('/etc/yum.repos.d/beaker-tests.repo', 'w+')
+                    f.write(repof)
+                    f.close()
                 executable = xml_attr(exec_tag[0], 'url')
                 for arg in exec_tag[0].getElementsByTagName('arg'):
                     args.append(xml_attr(arg, 'value'))
@@ -229,9 +233,9 @@ def parse_recipe_xml(input_xml, hostname):
             continue
 
         if task_env.has_key('TESTORDER'):
-            task_env['TESTORDER'] = 'TSK_' + task_env['TESTORDER']
+            task_env['TESTORDER'] = str(8*int(task_env['TESTORDER']) + 4)
         else:
-            task_env['TESTORDER'] = 'RCP_' + str(test_order)
+            task_env['TESTORDER'] = str(8*test_order)
         return dict(task_env=task_env, executable=executable, args=args,
                 ewd=ewd)
 
@@ -442,6 +446,22 @@ class BeakerLCBackend(SerializingBackend):
                 ("warn", "Warning: Unknown Code (%s)" % rc))
     result_type = staticmethod(result_type)
 
+    LOG_TYPE = {
+            LOG_LEVEL.DEBUG3: "DEBUG3",
+            LOG_LEVEL.DEBUG2: "DEBUG2",
+            LOG_LEVEL.DEBUG1: "DEBUG",
+            LOG_LEVEL.INFO: "INFO",
+            LOG_LEVEL.WARNING: "WARNING",
+            LOG_LEVEL.ERROR: "ERROR",
+            LOG_LEVEL.CRITICAL: "CRITICAL",
+            LOG_LEVEL.FATAL: "FATAL",
+            }
+
+    def log_type(log_level):
+        return BeakerLCBackend.LOG_TYPE.get(log_level,
+                "WARNING(%s)" % (log_level,))
+    log_type = staticmethod(log_type)
+
     def mk_msg(self, **kwargs):
         return json.dumps(kwargs)
 
@@ -540,13 +560,22 @@ class BeakerLCBackend(SerializingBackend):
                         .write(str(evt.arg('data')))
 
     def proc_evt_lose_item(self, evt):
-        self.get_writer(evt.task_id, 'task_beah_unexpected') \
-                .write(str(evt.arg('data')))
+        f = self.get_writer(evt.task_id, 'task_beah_unexpected')
+        f.write(str(evt.arg('data')) + "\n")
 
     def proc_evt_log(self, evt):
-        # FIXME!!!
-        # args: log_handle, log_level, message. opt: reason
-        pass
+        message = evt.arg('message', '')
+        reason = evt.arg('reason', '')
+        join = ''
+        if reason:
+            reason = 'reason=%s' % reason
+            if message:
+                message = "%s; %s" % (message, reason)
+            else:
+                message = reason
+        message = "LOG:%s(%s): %s\n" % (evt.arg('log_handle', ''),
+                self.log_type(evt.arg('log_level')), message)
+        self.get_writer(evt.task_id, 'task_log').write(message)
 
     def proc_evt_echo(self, evt):
         cmd = self.get_command(evt.arg('cmd_id'))
@@ -577,15 +606,39 @@ class BeakerLCBackend(SerializingBackend):
                         .addCallback(self.handle_Stop)
                         # FIXME: addErrback(...) needed!
 
+    def find_job_id(self, id):
+        return id
+
+    def find_recipe_id(self, id):
+        return id
+
+    def proc_evt_abort(self, evt):
+        type = evt.arg('type', '')
+        if not type:
+            log.error("No abort type specified.")
+            raise exceptions.RuntimeError("No abort type specified.")
+        target = evt.arg('target', None)
+        d = None
+        if type == 'job':
+            target = self.find_job_id(target)
+            if target is not None:
+                d = self.proxy.callRemote('job_stop', target, 'abort', 'Aborted by task.')
+        elif type == 'recipe':
+            target = self.find_recipe_id(target)
+            if target is not None:
+                d = self.proxy.callRemote('recipe_stop', target, 'abort', 'Aborted by task.')
+
     def proc_evt_result(self, evt):
         try:
-            self.proxy.callRemote(self.TASK_RESULT,
-                    evt.task_id,
-                    self.result_type(evt.arg("rc", None))[0],
-                    evt.arg("handle", "%s/%s" % \
-                            (self.task_data['task_env']['TASKNAME'], evt.id())),
-                    evt.arg("statistics", {}).get("score", 0),
-                    self.mk_msg(event=evt)) \
+            type = self.result_type(evt.arg("rc", None))
+            handle = evt.arg("handle", "%s/%s" % \
+                    (self.task_data['task_env']['TASKNAME'], evt.id()))
+            score = evt.arg("statistics", {}).get("score", 0)
+            message = evt.arg('message', '') or self.mk_msg(event=evt)
+            log_msg = "%s:%s: %s score=%s\n" % (type[1], handle, message, score)
+            self.get_writer(evt.task_id, 'task_log').write(log_msg)
+            self.proxy.callRemote(self.TASK_RESULT, evt.task_id,
+                    type[0], handle, score, message) \
                             .addCallback(self.handle_Result, event_id=evt.id())
             self.__results_by_uuid[evt.id()] = ""
         except:
@@ -750,7 +803,7 @@ def start_beaker_backend():
         make_class_verbose(RepeatingProxy, print_this)
     backend = BeakerLCBackend()
     # Start a default TCP client:
-    start_backend(backend, byef=lambda evt: reactor.callLater(1, reactor.stop))
+    start_backend(backend)
 
 def beakerlc_opts(opt, conf):
     def lc_cb(option, opt_str, value, parser):

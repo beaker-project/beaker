@@ -70,14 +70,6 @@ function lm_pushd()
   pushd $LM_INSTALL_ROOT/temp
 }
 
-function host_based_auth()
-{
-  # FIXME: find out how to do it!
-  echo "FIXME: NotImplemented." >&2
-  return 1
-  #echo -e "\nHost *\n\tHostbasedAuthentication yes" >> /etc/ssh/ssh_config
-}
-
 function lm_install_yum()
 {
   if rpm -q yum; then
@@ -336,6 +328,7 @@ function lm_rm_all()
   lm_rm_runtime
   pushd $LM_INSTALL_ROOT
   rm -rf *
+  popd
 }
 
 function lm_view_logs()

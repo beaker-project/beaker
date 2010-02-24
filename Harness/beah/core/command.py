@@ -108,14 +108,9 @@ class Command(list):
                 return
         else:
             list.__init__(self, ['Command', None, None, None])
-            if isinstance(cmd, dict):
-                self[self.COMMAND] = cmd.get('cmd', cmd.get('command'))
-                self[self.ID] = cmd.get('id', None)
-                self[self.ARGS] = dict(cmd.get('args', {}))
-            else:
-                self[self.COMMAND] = str(cmd)
-                self[self.ID] = id
-                self[self.ARGS] = dict(kwargs)
+            self[self.COMMAND] = str(cmd)
+            self[self.ID] = id
+            self[self.ARGS] = dict(kwargs)
         if self[self.ID] is None:
             self[self.ID] = new_id()
         self.check()

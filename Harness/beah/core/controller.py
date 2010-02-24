@@ -182,10 +182,7 @@ class Controller(object):
         This is the only method mandatory for Backend side
         Controller-Adaptor."""
         log.debug("Controller: proc_cmd(..., %r)", cmd)
-        handler = None
-        hana = "proc_cmd_"+cmd.command()
-        if hana in dir(self):
-            handler = self.__getattribute__(hana)
+        handler = getattr(self, "proc_cmd_"+cmd.command(), None)
         if not handler:
             evt = event.echo(cmd, ECHO.NOT_IMPLEMENTED, origin=self.__origin)
         else:
@@ -328,8 +325,6 @@ class Controller(object):
         pass
 
     def proc_cmd_no_output(self, backend, cmd, echo_evt):
-        # FIXME: Do not delete from backends. There should be a list of all
-        # backends, for broadcast - e.g. bye event.
         if backend in self.out_backends:
             self.out_backends.remove(backend)
 

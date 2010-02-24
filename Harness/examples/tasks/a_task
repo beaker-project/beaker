@@ -22,9 +22,7 @@
 from beahlib import *
 
 # CONFIGURE LIBRARY:
-#def_conf(origin={"file":__file__, "module":__name__}, timestamp=True)
-# DEMONSTRATE USING CALLABLE INSTEAD OF VALUE:
-def_conf(origin=lambda x: {"file":__file__, "module":__name__}, timestamp=True)
+def_conf(origin={"file":__file__, "module":__name__}, timestamp=True)
 
 # LOGGING:
 linfo("Hello World!")

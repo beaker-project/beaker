@@ -41,9 +41,6 @@ class CmdLineBackend(ExtBackend):
             controller.proc_cmd(self, self.cmd)
             self.wait = True
 
-    def proc_evt_bye(self, evt):
-        reactor.callLater(1,reactor.stop)
-
     def proc_evt_echo(self, evt):
         if evt.arg('cmd_id', '') == self.cmd.id():
             global rc
@@ -63,7 +60,7 @@ class CmdLineBackend(ExtBackend):
                     return
                 return
             finally:
-                reactor.callLater(1,reactor.stop)
+                self.proc_evt_bye(evt)
 
     def post_proc(self, evt, answ):
         if self.wait:
@@ -90,7 +87,7 @@ Known issues:
             defaults={'NAME':'beah_cli_backend'},
             overrides=overrides)
     log_handler()
-    cmdline = ' '.join(rest)
+    cmdline = ' '.join(["%r" % r for r in rest])
     backend = CmdLineBackend(cmdline)
     # Start a default TCP client:
     start_backend(backend)

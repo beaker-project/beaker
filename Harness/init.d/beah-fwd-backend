@@ -20,10 +20,6 @@ prog="beah-fwd-backend"
 # FIXME: path should use the prefix used during installation, not the const
 # /usr
 BEAH_INSTALL_ROOT=/usr
-# FIXME: this is not 100% reliable - if installed from egg these files are
-# located in egg's tree.
-export BEAH_ROOT=${BEAH_INSTALL_ROOT}/share/beah
-export BEAHLIB_ROOT=$BEAH_ROOT
 # FIXME: may need to change this(?)
 RUN_AS=root
 
