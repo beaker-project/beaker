@@ -3139,7 +3139,7 @@ class Recipe(TaskBase):
            and self.status == TaskStatus.by_name(u'Running'):
             self.start_time = datetime.utcnow()
 
-        if not self.finish_time \
+        if self.start_time and not self.finish_time \
            and self.status != TaskStatus.by_name(u'Running') \
            and self.status != TaskStatus.by_name(u'Waiting') \
            and self.status.severity >= TaskStatus.by_name(u'Completed').severity:
@@ -3442,7 +3442,7 @@ class RecipeTask(TaskBase):
             raise BX(_('No watchdog exists for recipe %s' % self.recipe.id))
         if not self.start_time:
             raise BX(_('recipe task %s was never started' % self.id))
-        if not self.finish_time:
+        if self.start_time and not self.finish_time:
             self.finish_time = datetime.utcnow()
         self.status = TaskStatus.by_name(u'Completed')
         self.update_status()
@@ -3468,7 +3468,8 @@ class RecipeTask(TaskBase):
         # Only record an abort/cancel on tasks that are New, Queued, Scheduled 
         # or Running.
         if not self.is_finished():
-            self.finish_time = datetime.utcnow()
+            if self.start_time:
+                self.finish_time = datetime.utcnow()
             self.status = TaskStatus.by_name(status)
             self.results.append(RecipeTaskResult(recipetask=self,
                                        path=u'/',
