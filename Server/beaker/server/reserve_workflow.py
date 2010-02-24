@@ -92,7 +92,7 @@ class ReserveWorkflow:
                                  distro = distro.install_name,
                                 ),
                     options = None,
-                    title='Reserve System %s' % system)
+                    title='Reserve System %s' % system_name)
 
     @expose(template='beaker.server.templates.generic') 
     def index(self,*args,**kw):
