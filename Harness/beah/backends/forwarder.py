@@ -43,26 +43,31 @@ class ForwarderBackend(ExtBackend):
         ExtBackend.__init__(self)
         self.def_port = config.get_conf('beah-backend').get('DEFAULT', 'PORT')
 
-    _VERBOSE = ('remote_backend', 'reconnect', 'remote_call',
+    _VERBOSE = ('stop_remote', 'remote_backend', 'remote_call',
             'proc_evt_variable_get', 'handle_evt_variable_get')
+
+    def stop_remote(self, dest):
+        dest_s = '%s:%s' % dest
+        rb = self.__remotes.get(dest_s, None)
+        if rb:
+            if not rb.idle():
+                log.warning("Can not stop RemoteBackend for %s, which is not idle!", dest_s)
+            else:
+                log.info("Closing RemoteBackend for %s.", dest_s)
+                rb.proc_evt_bye(event.Event('bye', message='Idle timeout.'))
+                del self.__remotes[dest_s]
+        else:
+            log.warning("No RemoteBackend for %s", dest_s)
 
     def remote_backend(self, dest):
         dest_s = '%s:%s' % dest
         rb = self.__remotes.get(dest_s, None)
         if rb is None:
             rb = _RemoteBackend(self, dest)
-            start_backend(rb, host=dest[0], port=dest[1])
+            start_backend(rb, host=dest[0], port=dest[1],
+                    byef=lambda evt: None)
             self.__remotes[dest_s] = rb
         return rb
-
-    def reconnect(self, remote_be):
-        rb = remote_be.clone()
-        dest = rb.dest()
-        dest_s = '%s:%s' % dest
-        del remote_be
-        del self.__remotes[dest_s]
-        start_backend(rb, host=dest[0], port=dest[1])
-        self.__remotes[dest_s] = rb
 
     def remote_call(self, cmd, host, port=None):
         if port is None:
@@ -118,6 +123,7 @@ class _RemoteBackend(ExtBackend):
 
     ALLOWED_COMMANDS = ['variable_value']
     TIMEOUT = 5
+    IDLE_TIMEOUT = 10
 
     _CONNECTED=object()
     _NEW=object()
@@ -126,13 +132,17 @@ class _RemoteBackend(ExtBackend):
     def __init__(self, caller, dest, queue=None, pending=None):
         self.__caller = caller
         self.__dest = dest
+        self.__idle = None
         self.__queue = queue or []
         self.__pending = pending or {}
         self.__status = self._NEW
         ExtBackend.__init__(self)
 
-    _VERBOSE = ('send_cmd', 'done', 'more', 'set_controller', 'clone',
+    _VERBOSE = ('send_cmd', 'done', 'more', 'set_controller',
             'proc_evt_forward_response', 'proc_evt_echo')
+
+    def idle(self):
+        return not self.__queue
 
     def dest(self):
         return self.__dest
@@ -144,6 +154,10 @@ class _RemoteBackend(ExtBackend):
         d = Deferred()
         cid = cmd.id()
         self.__queue.append(cid)
+        if self.__idle:
+            if self.__idle.active():
+                self.__idle.cancel()
+            self.__idle = None
         self.__pending[cid] = (cmd, d)
         if self.__status is self._CONNECTED:
             self.controller.proc_cmd(self, cmd)
@@ -173,6 +187,8 @@ class _RemoteBackend(ExtBackend):
             raise exceptions.RuntimeError('done should be called from callbacks only!')
         del self.__pending[cmd_id]
         self.__queue = list([cid for cid in self.__queue if cid != cmd_id])
+        if self.idle():
+            self.__idle = reactor.callLater(self.IDLE_TIMEOUT, self.__caller.stop_remote, self.__dest)
 
     def set_controller(self, controller=None):
         ExtBackend.set_controller(self, controller)
@@ -186,10 +202,6 @@ class _RemoteBackend(ExtBackend):
                 reactor.callLater(self.TIMEOUT, self.timeout, cid)
         else:
             self.__status = self._IDLE
-
-    def clone(self):
-        return _RemoteBackend(self.__caller, self.__dest, self.__queue,
-                self.__pending)
 
     def proc_evt_forward_response(self, evt):
         cmd = command.command(evt.arg('command'))
@@ -227,7 +239,6 @@ def main():
 
 if __name__ == '__main__':
     from beah.bin.srv import main_srv
-    from beah.core import event
     srv = main_srv()
 
     class FakeTask(object):
