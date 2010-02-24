@@ -148,6 +148,13 @@ def main():
         VENDOR		= Key('VENDOR')
         XENCERT		= Key('XENCERT')
 
+    if TaskPriority.query().count() == 0:
+        low             = TaskPriority(priority=u'Low')
+        medium          = TaskPriority(priority=u'Medium')
+        normal          = TaskPriority(priority=u'Normal')
+        high            = TaskPriority(priority=u'High')
+        urgent          = TaskPriority(priority=u'Urghent')
+
     #Setup Test Status
     if TaskStatus.query().count() == 0:
         NEW       = TaskStatus(status=u'New', severity=10)
