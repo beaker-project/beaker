@@ -2537,8 +2537,9 @@ class Key_Value_Int(object):
 
 
 class TaskPriority(object):
-    pass
-
+    @classmethod
+    def by_id(cls,id):
+      return cls.query().filter_by(id=id).one()
 
 class TaskStatus(object):
     @classmethod
@@ -2831,6 +2832,10 @@ class RecipeSet(TaskBase):
         if not query:
             query=cls.query
         return query.filter(RecipeSet.queue_time <= datestamp)
+
+    @classmethod 
+    def by_id(cls,id): 
+       return cls.query().filter_by(id=id).one()
 
     @classmethod
     def iter_recipeSets(self, status=u'Assigned'):

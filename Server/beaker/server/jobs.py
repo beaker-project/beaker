@@ -46,7 +46,7 @@ class Jobs(RPCRoot):
     exposed = True
     recipeset_widget = RecipeSetWidget()
     recipe_widget = RecipeWidget()
-    priority_widget = PriorityWidget('./set_job_priorities')
+    priority_widget = PriorityWidget()
     recipe_tasks_widget = RecipeTasksWidget()
 
     upload = widgets.FileField(name='filexml', label='Job XML')
@@ -322,5 +322,3 @@ class Jobs(RPCRoot):
                     recipe_tasks_widget  = self.recipe_tasks_widget,
                     job                  = job)
 
-    def set_job_priorities(self,priority,*args,**kw):
-        log.debug('Priority received is %s' % priority)

@@ -1061,7 +1061,7 @@ class RecipeSetWidget(CompoundWidget):
     member_widgets = ['priority_widget']
 
     def __init__(self,*args,**kw):
-        self.priority_widget = PriorityWidget('/set_recipeset_priority')
+        self.priority_widget = PriorityWidget()
         if 'recipeset' in kw:
             self.recipeset = kw['recipeset']
         else:
@@ -1076,34 +1076,26 @@ class RecipeWidget(CompoundWidget):
     member_widgets = ['recipe_tasks_widget']
     recipe_tasks_widget = RecipeTasksWidget()
 
-class PriorityWidget(SingleSelectField):
-   template = "beaker.server.templates.priority"
-   javascript = [LocalJSLink('beaker', '/static/javascript/priority.js')]
-   css = []
+class PriorityWidget(SingleSelectField):   
    validator = validators.NotEmpty()
    params = ['default','controller'] 
-   def __init__(self,controller,*args,**kw):
-       self.controller = controller
+   def __init__(self,*args,**kw): 
        self.options = [] 
-       self.field_class = 'singleselectfield'
-       #self.id = random number
+       self.field_class = 'singleselectfield' 
 
    def update_params(self,d): 
        all_priorities = model.TaskPriority.query().all() 
        rows = []
        for priori in all_priorities:  
            rows.append((priori.id,priori.priority)) 
-       d['options'] = rows
-       d['default'] = 2 #d['priority']
+       d['options'] = rows 
        super(PriorityWidget,self).update_params(d)
 
-   def display(self,value=None,**params): 
-       if 'obj' in params:
-           try:
-               params['priority'] = params['obj'].priority          
-           except AttributeError, (e): 
-               log.error('%s does not contain a priority attribute, class must be of type RecipeSet')
-               raise AttributeError(e) 
+   def display(self,obj,**params):           
+       if obj:
+           if 'id_prefix' in params:
+               params['attrs'] = {'id' : '%s_%s' % (params['id_prefix'],obj.id) }
+           value = obj.priority.id 
        return super(PriorityWidget,self).display(value,**params)
 
 
