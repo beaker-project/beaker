@@ -105,7 +105,8 @@ class _Config(object):
         self.opts = opts
         self.conf = None
         self.read_conf()
-        self._configs[id] = self
+        if id:
+            self._configs[id] = self
 
     def _remove(id):
         del _Config._configs[id]
@@ -189,9 +190,7 @@ class _Config(object):
                 print >> sys.stderr, "--- WARNING: Could not find conf.file."
         else:
             try:
-                #print "--- INFO: Reading %r." % fn
                 conf.read(fn)
-                #self.print_conf(conf)
             except:
                 print >> sys.stderr, "--- ERROR: Could not read %r." % fn
                 raise
@@ -256,7 +255,8 @@ class _Config(object):
 
 class _BeahConfig(_Config):
 
-    _VERBOSE = ('_conf_files', ('beah_conf', staticmethod), ('backend_conf', staticmethod))
+    _VERBOSE = ('_conf_files', '_get_conf_file', ('beah_conf', staticmethod),
+            ('backend_conf', staticmethod))
 
     def _conf_files(self):
         conf_list = []
@@ -266,14 +266,21 @@ class _BeahConfig(_Config):
                     os.environ.get('BEAH_ROOT')+'/etc/'+self.conf_filename]
         return conf_list + _Config._conf_files(self)
 
-    def beah_conf(opts):
-        return _BeahConfig('beah', 'BEAH_CONF', 'beah.conf', beah_defaults(), opts)
+    def _get_conf_file(self, opt=None):
+        try:
+            return _Config._get_conf_file(self, opt=opt)
+        except:
+            return ''
+
+    def beah_conf(opts, id='beah'):
+        return _BeahConfig(id, 'BEAH_CONF', 'beah.conf', beah_defaults(), opts)
     beah_conf = staticmethod(beah_conf)
 
     def backend_conf(id, conf_env_var, conf_filename, defaults, opts):
-        defs = dict(defaults)
-        dict_update(defs, _Config.get_config('beah-tmp').conf.items('BACKEND', raw=True))
-        _Config._remove('beah-tmp')
+        conf2 = {'BEAH_CONF': opts.get('BEAH_CONF', '')}
+        conf = _BeahConfig.beah_conf(conf2, id=None).conf
+        defs = dict(conf.items('BACKEND', raw=True))
+        dict_update(defs, defaults)
         return _BeahConfig(id, conf_env_var, conf_filename, defs, opts)
     backend_conf = staticmethod(backend_conf)
 
@@ -286,7 +293,6 @@ def defaults():
     return dict(
             LOG='Warning',
             ROOT='',
-            ETC_ROOT='%(ROOT)s/etc',
             VAR_ROOT='%(ROOT)s/var/beah',
             LOG_PATH='%(ROOT)s/var/log',
             DEVEL='False',
@@ -319,7 +325,8 @@ def beah_conf(overrides=None, args=None):
 
 
 def backend_conf(env_var=None, filename=None, defaults={}, overrides={}):
-    return _BeahConfig.backend_conf('beah-backend', env_var, filename, defaults, overrides)
+    return _BeahConfig.backend_conf('beah-backend', env_var, filename,
+            defaults, overrides)
 
 
 def _get_config(id):
@@ -369,11 +376,6 @@ def backend_opts_ex(args=None, option_adder=None):
     if option_adder is not None:
         opt = option_adder(opt, conf)
     conf, rest = beah_opts_aux(opt, conf, args=args)
-    if conf.get('BEAH_CONF', ''):
-        conf2 = {'BEAH_CONF': conf['BEAH_CONF']}
-    else:
-        conf2 = {}
-    _BeahConfig('beah-tmp', 'BEAH_CONF', 'beah.conf', {}, conf2)
     return conf, rest
 
 
@@ -511,6 +513,7 @@ def backend_opt(opt, conf, kwargs=None):
 if __name__ == '__main__':
 
     from beah.misc import log_this, make_class_verbose
+    import tempfile
 
     def _tst_eq(result, expected):
         """Check test result against expected value and assert on
@@ -540,8 +543,9 @@ if __name__ == '__main__':
         _Config._remove('beah')
 
     def _try_backend_conf():
-        _BeahConfig('beah-tmp', None, None, beah_defaults(), {})
-        backend_conf('BEAH_BEAKER_CONF', 'beah_beaker.conf', {'MY_OWN':'1', 'TEST.MY_OWN':'2'}, {'DEFAULT.MY_OWN':'4', 'TEST.MY_OWN':'3'})
+        backend_conf('BEAH_BEAKER_CONF', 'beah_beaker.conf',
+                {'MY_OWN':'1', 'TEST.MY_OWN':'2', 'TEST2.DEF':'3'},
+                {'DEFAULT.MY_OWN':'4', 'TEST.MY_OWN':'3'})
         _get_config('beah-backend').print_()
         #_get_config('beah-backend').print_(defaults_display='exclude')
         #_get_config('beah-backend').print_(defaults_display='show')
@@ -557,13 +561,9 @@ if __name__ == '__main__':
 
     def _try_conf2():
         overrides = backend_opts()
-        #c = _get_config('beah-tmp')
-        #print c._get_conf_file()
-        #c.print_()
         backend_conf(
                 defaults={'NAME':'beah_demo_backend'},
                 overrides=overrides)
-        #_Config._remove('beah')
         _Config._remove('beah-backend')
 
     def _test_conf():
@@ -573,41 +573,52 @@ if __name__ == '__main__':
         _tst_eq(_Config.parse_conf_name('NAME'), ('DEFAULT', 'NAME'))
         _tst_eq(_Config.parse_conf_name('SEC.NAME'), ('SEC', 'NAME'))
 
-        c = _Config('test', 'BEAH_CONF', 'beah.conf', {}, dict(ROOT='/tmp', LOG='False', DEVEL='True', BEAH_CONF='beah.conf'))
-        _tst_eq(c._get_conf_file('beah.conf'), 'beah.conf')
-        _tst_eq(c._get_conf_file('beah.conf.tmp'), 'beah.conf.tmp')
+        fd, fn = tempfile.mkstemp()
         try:
-            _tst_ne(c._get_conf_file('empty-beah.conf.tmp'), 'empty-beah.conf.tmp')
-            raise exceptions.RuntimeError("c._get_conf_file('empty-beah.conf.tmp') should have failed with exception")
-        except:
-            pass
+            os.close(fd)
+            c = _BeahConfig('test', '_BEAH_CONF', '_beah.conf',
+                    beah_defaults(),
+                    dict(ROOT='/tmp', LOG='False', DEVEL='True', _BEAH_CONF=fn))
+            _tst_eq(c._get_conf_file(fn), fn)
+            _tst_eq(c._get_conf_file(), '')
+            _tst_eq(c._get_conf_file('empty-beah.conf.tmp'), '')
 
-        cfg = c.conf
-        cfg.set('BACKEND', 'INTERFACE', "localhost")
-        _tst_eq(parse_bool(cfg.get('DEFAULT', 'DEVEL')), True)
-        _tst_eq(parse_bool(cfg.get('DEFAULT', 'LOG')), False)
-        _tst_eq(cfg.get('BACKEND', 'INTERFACE'), "localhost")
-        _tst_eq(int(cfg.get('BACKEND', 'PORT')), 12432)
-        _tst_eq(cfg.get('DEFAULT', 'ROOT'), "/tmp")
+            cfg = c.conf
+            cfg.set('BACKEND', 'INTERFACE', "localhost")
+            _tst_eq(parse_bool(cfg.get('DEFAULT', 'DEVEL')), True)
+            _tst_eq(parse_bool(cfg.get('DEFAULT', 'LOG')), False)
+            _tst_eq(cfg.get('BACKEND', 'INTERFACE'), "localhost")
+            _tst_eq(int(cfg.get('BACKEND', 'PORT')), 12432)
+            _tst_eq(cfg.get('DEFAULT', 'ROOT'), "/tmp")
 
-        cfg.set('DEFAULT', 'LOG', 'True')
-        _tst_eq(parse_bool(cfg.get('DEFAULT', 'DEVEL')), True)
-        _tst_eq(parse_bool(cfg.get('DEFAULT', 'LOG')), True)
-        _tst_eq(cfg.get('BACKEND', 'INTERFACE'), "localhost")
-        _tst_eq(int(cfg.get('BACKEND', 'PORT')), 12432)
-        _tst_eq(cfg.get('DEFAULT', 'ROOT'), "/tmp")
+            cfg.set('DEFAULT', 'LOG', 'True')
+            _tst_eq(parse_bool(cfg.get('DEFAULT', 'DEVEL')), True)
+            _tst_eq(parse_bool(cfg.get('DEFAULT', 'LOG')), True)
+            _tst_eq(cfg.get('BACKEND', 'INTERFACE'), "localhost")
+            _tst_eq(int(cfg.get('BACKEND', 'PORT')), 12432)
+            _tst_eq(cfg.get('DEFAULT', 'ROOT'), "/tmp")
+
+            _Config._remove('test')
+        finally:
+            os.remove(fn)
+
 
         try:
-            c = _Config('test2', None, 'empty-missing-no.conf', dict(GREETING="Hello %(NAME)s!"), dict(NAME="World"))
-            _Config._remove('test2')
+            c = _Config('test2', None, 'empty-missing-no.conf',
+                    dict(GREETING="Hello %(NAME)s!"), dict(NAME="World"))
+            try:
+                _Config._remove('test2')
+            except:
+                pass
             raise exceptions.RuntimeError("this should have failed with exception")
         except:
             pass
 
-        c = _Config('test3', None, None, dict(GREETING="Hello %(NAME)s!"), dict(NAME="World"))
+        c = _Config('test3', None, None,
+                dict(GREETING="Hello %(NAME)s!"),
+                dict(NAME="World"))
         _tst_eq(c.conf.get('DEFAULT', 'GREETING'), 'Hello World!')
         _tst_eq(get_conf('test3').get('DEFAULT', 'GREETING'), 'Hello World!')
-        _Config._remove('test')
         _Config._remove('test3')
 
     def _test_opt():

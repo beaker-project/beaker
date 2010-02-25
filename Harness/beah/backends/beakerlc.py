@@ -836,16 +836,37 @@ def defaults():
             })
     return d
 
-def main():
+def configure():
     config.backend_conf(env_var='BEAH_BEAKER_CONF', filename='beah_beaker.conf',
             defaults=defaults(), overrides=config.backend_opts(option_adder=beakerlc_opts))
+
+def main():
+    configure()
     log_handler()
     start_beaker_backend()
     reactor.run()
 
+def test_configure():
+    configure()
+    cfg = config._get_config('beah-backend')
+    conf = config.get_conf('beah-backend')
+    #cfg.print_()
+    #conf.write(sys.stdout)
+    assert conf.has_option('DEFAULT', 'NAME')
+    assert conf.has_option('DEFAULT', 'LAB_CONTROLLER')
+    assert conf.has_option('DEFAULT', 'HOSTNAME')
+    assert conf.has_option('DEFAULT', 'INTERFACE')
+    assert conf.has_option('DEFAULT', 'PORT')
+    assert conf.has_option('DEFAULT', 'LOG')
+    assert conf.has_option('DEFAULT', 'DEVEL')
+    assert conf.has_option('DEFAULT', 'VAR_ROOT')
+    assert conf.has_option('DEFAULT', 'LOG_PATH')
+    assert conf.has_option('DEFAULT', 'RUNTIME_FILE_NAME')
+
 def test():
     # FIXME!!! Implement self-test
-    raise exceptions.NotImplementedError
+    test_configure()
+    raise exceptions.NotImplementedError("More test to be added here!")
 
 if __name__ == '__main__':
     test()
