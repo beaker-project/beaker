@@ -13,9 +13,8 @@
  $(document).ready(function() {
     ShowResults();
     $("input[@name='results']").change(ShowResults);
-    $("select[id^='priority']").change(function() { alert('here');pri_manager.changePriority($(this).attr("id"),$(this).val())}) 
-   
-    
+    $("select[id^='priority']").change(function() {pri_manager.changePriority($(this).attr("id"),$(this).val())})  
+    $("a[id^='priority']").click(function() {pri_manager.changePriority($(this).attr("id"),$(this).attr('name'))})
  });
 
 
@@ -80,8 +79,11 @@
    <td class="title"><b>Whiteboard</b></td>
    <td class="value" colspan="3">${job.whiteboard}</td>
    <span py:if="job.is_queued()"> 
-    <td class="title"><b>Priority</b></td> 
-    <!--<td class="value">${priority_widget.display(job, attrs=dict(id='priority_job_%s' % job.id))}</td>-->
+    <td class="title"><b>Set RecipeSet Priority</b></td> 
+     <td class="value"><a py:for="p in priorities" class="list" name="${p.id}" id="priority_job_${job.id}">${p.priority}<br /></a></td>
+      <script type='text/javascript'>
+       pri_manager.register('priority_job_${job.id}','parent')
+      </script>
    </span>
   </tr>
  </table>

@@ -1091,11 +1091,17 @@ class PriorityWidget(SingleSelectField):
        d['options'] = rows 
        super(PriorityWidget,self).update_params(d)
 
-   def display(self,obj,**params):           
-       if obj:
+   def display(self,obj,value=None,**params):           
+       if isinstance(obj,model.Job):
            if 'id_prefix' in params:
                params['attrs'] = {'id' : '%s_%s' % (params['id_prefix'],obj.id) }
-           value = obj.priority.id 
-       return super(PriorityWidget,self).display(value,**params)
+       elif obj:
+           if 'id_prefix' in params:
+               params['attrs'] = {'id' : '%s_%s' % (params['id_prefix'],obj.id) }
+           try:
+               value = obj.priority.id 
+           except AttributeError,(e):
+               log.error('Object %s passed to display does not have a valid priority: %s' % (type(obj),e))
+       return super(PriorityWidget,self).display(value or None,**params)
 
 
