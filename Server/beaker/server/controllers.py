@@ -541,7 +541,7 @@ class Root(RPCRoot):
             priority_query = TaskPriority.by_id(priority_id)  # will throw an error here if priorty id is invalid
         except InvalidRequestError, (e):
             log.error('No rows returned for priority_id %s in change_priority_recipeset:%s' % (priority_id,e)) 
-            return { 'result' : None }
+            return { 'success' : None }
         priority = priority_query.id
         try:
             recipeset = RecipeSet.by_id(recipeset_id)
@@ -550,7 +550,7 @@ class Root(RPCRoot):
 
         recipeset.priority = priority_query
         session.save_or_update(recipeset) 
-        return {'result' : True } 
+        return {'success' : True } 
        
     @expose(format='json')
     def change_priority_job(self,priority,id):

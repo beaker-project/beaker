@@ -948,6 +948,12 @@ class User(object):
     def is_admin(self):
         return u'admin' in [group.group_name for group in self.groups]
 
+    def in_group(self,check_groups):
+        my_groups = [group.group_name for group in self.groups]
+        for my_g in check_groups:
+            if my_g in my_groups:
+                return True 
+        return False
 
 class Permission(object):
     """
@@ -2842,6 +2848,10 @@ class RecipeSet(TaskBase):
     @classmethod 
     def by_id(cls,id): 
        return cls.query().filter_by(id=id).one()
+    
+    @classmethod
+    def allowed_priorities(cls,user):
+        pass
 
     @classmethod
     def iter_recipeSets(self, status=u'Assigned'):
