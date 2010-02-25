@@ -7,7 +7,7 @@
 
 Name:           beaker
 Version:        0.4.85
-Release:        1%{?timestamp}%{?branch}%{?dist}
+Release:        2%{?timestamp}%{?branch}%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -194,6 +194,8 @@ fi
 /usr/share/man/man1/beakerlib*
 
 %changelog
+* Wed Feb 24 2010 Bill Peck <bpeck@redhat.com> - 0.4.85-2
+- Added @x11 and @basic-desktop to rhel6 kickstarts
 * Fri Feb 19 2010 Raymond Mancy <rmancy@redhat.com> - 0.4.85-1
 - refactored system search
 - cast partition size to int() before multiplying. 

@@ -60,6 +60,7 @@ $SNIPPET("rhts_partitions")
 %packages --ignoremissing
 #if $getVar('rhts_server', '') == ''
 @x11
+@basic-desktop
 @admin-tools
 @base
 @base-x
