@@ -2542,6 +2542,11 @@ class TaskPriority(object):
       return cls.query().filter_by(id=id).one()
 
 class TaskStatus(object):
+
+    @classmethod
+    def max(cls):
+        return cls.query().order_by(TaskStatus.severity.desc()).first()
+
     @classmethod
     def by_name(cls, status_name):
         return cls.query().filter_by(status=status_name).one()
@@ -2633,6 +2638,7 @@ class LogRecipeTaskResult(Log):
     pass
 
 class TaskBase(MappedObject):
+
     def is_finished(self):
         """
         Simply state if the task is finished or not
@@ -2786,18 +2792,18 @@ class Job(TaskBase):
         self.ftasks = 0
         self.ktasks = 0
         max_result = None
-        max_status = None
+        min_status = TaskStatus.max()
         for recipeset in self.recipesets:
             if recipeset.is_finished():
                 self.ptasks += recipeset.ptasks
                 self.wtasks += recipeset.wtasks
                 self.ftasks += recipeset.ftasks
                 self.ktasks += recipeset.ktasks
-            if recipeset.status > max_status:
-                max_status = recipeset.status
+            if recipeset.status < min_status:
+                min_status = recipeset.status
             if recipeset.result > max_result:
                 max_result = recipeset.result
-        self.status = max_status
+        self.status = min_status
         self.result = max_result
         if self.is_finished():
             # Send email notification
@@ -2876,18 +2882,18 @@ class RecipeSet(TaskBase):
         self.ftasks = 0
         self.ktasks = 0
         max_result = None
-        max_status = None
+        min_status = TaskStatus.max()
         for recipe in self.recipes:
             if recipe.is_finished():
                 self.ptasks += recipe.ptasks
                 self.wtasks += recipe.wtasks
                 self.ftasks += recipe.ftasks
                 self.ktasks += recipe.ktasks
-            if recipe.status > max_status:
-                max_status = recipe.status
+            if recipe.status < min_status:
+                min_status = recipe.status
             if recipe.result > max_result:
                 max_result = recipe.result
-        self.status = max_status
+        self.status = min_status
         self.result = max_result
 
         # Return systems if recipeSet finished
@@ -3121,7 +3127,7 @@ class Recipe(TaskBase):
         task_panic = TaskResult.by_name(u'Panic')
 
         max_result = None
-        max_status = None
+        min_status = TaskStatus.max()
         for task in self.tasks:
             if task.is_finished():
                 if task.result == task_pass:
@@ -3132,11 +3138,11 @@ class Recipe(TaskBase):
                     self.ftasks += 1
                 if task.result == task_panic:
                     self.ktasks += 1
-            if task.status > max_status:
-                max_status = task.status
+            if task.status < min_status:
+                min_status = task.status
             if task.result > max_result:
                 max_result = task.result
-        self.status = max_status
+        self.status = min_status
         self.result = max_result
 
         # Record the start of this Recipe.
@@ -3144,10 +3150,7 @@ class Recipe(TaskBase):
            and self.status == TaskStatus.by_name(u'Running'):
             self.start_time = datetime.utcnow()
 
-        if self.start_time and not self.finish_time \
-           and self.status != TaskStatus.by_name(u'Running') \
-           and self.status != TaskStatus.by_name(u'Waiting') \
-           and self.status.severity >= TaskStatus.by_name(u'Completed').severity:
+        if self.start_time and not self.finish_time and self.is_finished():
             # Record the completion of this Recipe.
             self.finish_time = datetime.utcnow()
 
