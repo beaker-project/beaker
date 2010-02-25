@@ -316,6 +316,7 @@ class Jobs(RPCRoot):
             flash(_(u"Invalid job id %s" % id))
             redirect(".")
         return dict(title   = 'Job',
+                    user                 = identity.current.user,
                     priorities           = TaskPriority.query().all(),
                     priority_widget      = self.priority_widget,
                     recipeset_widget     = self.recipeset_widget,

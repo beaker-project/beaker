@@ -9,6 +9,7 @@ body {
 	background-color: #d9d9d9;
 }
 
+
 a:link {
 	color: #22437F;
 }
@@ -498,6 +499,28 @@ div.dd div.blue {
     float: left;
 }
 
+/*
+** CSS for alert/warn msgs etc
+*/
+msg {
+
+  -moz-border-radius: 0.35em;
+  -webkit-border-radius: 0.35em;
+  border-radius: 0.25em;
+  padding-left:0.25em;
+  padding-right:0.25em
+
+}
+
+msg.success {
+  background-color:#0f0; 
+  color:#4F4F4F 
+}
+
+msg.warn {
+  background-color:red;
+  color:black;
+ } 
 /*
 ** CSS for displaying package updates (show.kid)
 */

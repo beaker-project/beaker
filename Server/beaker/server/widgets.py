@@ -1092,6 +1092,8 @@ class PriorityWidget(SingleSelectField):
        super(PriorityWidget,self).update_params(d)
 
    def display(self,obj,value=None,**params):           
+       if 'priorities' in params:
+           pass        
        if isinstance(obj,model.Job):
            if 'id_prefix' in params:
                params['attrs'] = {'id' : '%s_%s' % (params['id_prefix'],obj.id) }

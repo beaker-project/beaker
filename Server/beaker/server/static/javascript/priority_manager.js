@@ -12,8 +12,7 @@ PriorityManager.prototype.register = function(id,type) {
     this.field_type[id] = type
 }
 
-PriorityManager.prototype.changePriority = function(elem_id,new_val) {
-   
+PriorityManager.prototype.changePriority = function(elem_id,new_val) { 
     var type = this.field_type[elem_id]
     id = elem_id.replace(this.my_regex,"$1") 
     if (type) {
@@ -31,7 +30,7 @@ PriorityManager.prototype.RecipeSetChanged = function(new_priority_id,recipeset_
                   "recipeset_id" : recipeset_id }
   
     var d = loadJSONDoc('/change_priority_recipeset' + "?" + queryString(params))
-    d.addCallback(this.priorityChanged)
+    d.addCallback(PriorityManager.prototype.priorityChanged)
 }
 
 PriorityManager.prototype.ChangeAll = function(new_priority_id,job_id) { 
@@ -46,6 +45,12 @@ PriorityManager.prototype.ChangeAll = function(new_priority_id,job_id) {
         }
     }
 }
-PriorityManager.prototype.priorityChanged = function(result) {
-  
-}
+
+PriorityManager.prototype.priorityChanged = function(result) { 
+   
+}  
+
+
+
+
+

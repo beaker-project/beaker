@@ -5,18 +5,41 @@
 <head>
     <meta content="text/html; charset=UTF-8" http-equiv="content-type" py:replace="''"/>
     <script type="text/javascript" src="${tg.url('/static/javascript/priority_manager.js')}"></script>
+    <script type="text/javascript" src="${tg.url('/static/javascript/jquery.timers-1.2.js')}"></script>
     <script type='text/javascript'>
-        pri_manager = new PriorityManager()
-        pri_manager.initialize()
+ pri_manager = new PriorityManager()
+ pri_manager.initialize()
        
-
+ PARENT_ = 1
+ NOT_PARENT = 0
  $(document).ready(function() {
     ShowResults();
     $("input[@name='results']").change(ShowResults);
-    $("select[id^='priority']").change(function() {pri_manager.changePriority($(this).attr("id"),$(this).val())})  
-    $("a[id^='priority']").click(function() {pri_manager.changePriority($(this).attr("id"),$(this).attr('name'))})
+    $("select[id^='priority']").change(function() {
+        var success = pri_manager.changePriority($(this).attr("id"),$(this).val())
+        ShowPriorityResults($(this),$(this).val(),NOT_PARENT)
+    })  
+    $("a[id^='priority']").click(function() {
+        var success = pri_manager.changePriority($(this).attr("id"),$(this).attr("name"))
+        ShowPriorityResults($(this),$(this).attr('name'),PARENT_);
+    })
  });
 
+ function ShowPriorityResults(jquery_obj,parent_) { 
+     if (parent_) {
+         var selector_msg = "msg[id^='recipeset_status']"
+     } else {
+         var id = elem_id.replace(/^.+?(\d{1,})$/, "$1")  
+         var selector_msg = "msg[id='recipeset_status_"+ id +"']"
+     }
+     
+     $(selector_msg).toggle('slow')
+     $(selector_msg).removeAttr('class') 
+     $(selector_msg).addClass("success") 
+     jquery_obj.oneTime(2000, "hide", function() { 
+         $(selector_msg).toggle('slow') 
+     });
+ }
 
  function ShowResults()
  {
@@ -80,7 +103,7 @@
    <td class="value" colspan="3">${job.whiteboard}</td>
    <span py:if="job.is_queued()"> 
     <td class="title"><b>Set RecipeSet Priority</b></td> 
-     <td class="value"><a py:for="p in priorities" class="list" name="${p.id}" id="priority_job_${job.id}">${p.priority}<br /></a></td>
+     <td class="value"><a py:for="p in priorities" class="list" style="color: #22437F;cursor:pointer" name="${p.id}" id="priority_job_${job.id}">${p.priority}<br /></a></td>
       <script type='text/javascript'>
        pri_manager.register('priority_job_${job.id}','parent')
       </script>
@@ -93,8 +116,11 @@
      <td class="title"><b>RecipeSet ID</b></td>
      <td class="value">${recipeset.t_id}</td>  
    <span py:if="recipeset.is_queued()"> 
-    <td class="title"><b>Priority</b></td>  
-   <td class="value">${priority_widget.display(obj=recipeset,id_prefix='priority_recipeset')}</td>
+    <?python 
+        allowed_priorities = recipeset.allowed_priorities(user)
+    ?>    
+    <td class="title"><msg id="recipeset_status_${recipeset.id}" class='hidden'>Priority has been changed</msg> <b>Priority</b></td>  
+   <td class="value">${priority_widget.display(obj=recipeset,id_prefix='priority_recipeset',priorities=allowed_priorities)}</td>
     <script type='text/javascript'>
        pri_manager.register('priority_recipeset_${recipeset.id}','recipeset')
     </script>
