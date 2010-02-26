@@ -12,33 +12,64 @@
        
  PARENT_ = 1
  NOT_PARENT = 0
+ 
+
  $(document).ready(function() {
     ShowResults();
     $("input[@name='results']").change(ShowResults);
     $("select[id^='priority']").change(function() {
-        var success = pri_manager.changePriority($(this).attr("id"),$(this).val())
-        ShowPriorityResults($(this),$(this).val(),NOT_PARENT)
+        var callback = {'function' : ShowPriorityResults }
+        callback['args'] = { 'element_id' : null, 'value' : null }
+        callback['args']['element_id'] = $(this).attr("id")
+        callback['args']['value'] = $(this).val()
+        var success = pri_manager.changePriority($(this).attr("id"),$(this).val(),callback)
+        //ShowPriorityResults($(this),$(this).val(),NOT_PARENT)
     })  
+
     $("a[id^='priority']").click(function() {
-        var success = pri_manager.changePriority($(this).attr("id"),$(this).attr("name"))
-        ShowPriorityResults($(this),$(this).attr('name'),PARENT_);
+        var callback = {'function' : ShowPriorityResults }
+        callback['args'] = {}
+        callback['args']['value'] = $(this).attr("name")
+        var success = pri_manager.changePriority($(this).attr("id"),$(this).attr("name"),callback)
+        //ShowPriorityResults($(this),$(this).attr('name'),PARENT_);
     })
  });
 
- function ShowPriorityResults(jquery_obj,parent_) { 
-     if (parent_) {
-         var selector_msg = "msg[id^='recipeset_status']"
+ function ShowPriorityResults(elem_id,value,old_value,msg,success) { 
+     jquery_obj = $("#"+elem_id)
+     var id = elem_id.replace(/^.+?(\d{1,})$/,"$1") 
+     var selector_msg = "msg[id='recipeset_status_"+id+"']"
+     var msg_text = ''
+     if(success) {
+         jquery_obj.val(value)
+         var class_ = "success" 
+         if (msg) {
+             msg_text = msg
+         } else {
+             msg_text = "Priority has been updated" 
+         }
      } else {
-         var id = elem_id.replace(/^.+?(\d{1,})$/, "$1")  
-         var selector_msg = "msg[id='recipeset_status_"+ id +"']"
+         var warn = 1
+         var class_ = "warn" 
+         if (old_value) {
+             jquery_obj.val(old_value)
+         }
+         if (msg) {
+             msg_text = msg
+         } else {
+             msg_text = "Unable to update priority" 
+         }
+        
      }
-     
-     $(selector_msg).toggle('slow')
+     $(selector_msg).text(msg_text) 
+     $(selector_msg).show('slow')  
      $(selector_msg).removeAttr('class') 
-     $(selector_msg).addClass("success") 
-     jquery_obj.oneTime(2000, "hide", function() { 
-         $(selector_msg).toggle('slow') 
-     });
+     $(selector_msg).addClass(class_)     
+     if (!warn) {
+         jquery_obj.oneTime(2000, "hide", function() { 
+             $(selector_msg).hide('slow') 
+         });
+     }
  }
 
  function ShowResults()
@@ -101,8 +132,8 @@
   <tr>
    <td class="title"><b>Whiteboard</b></td>
    <td class="value" colspan="3">${job.whiteboard}</td>
-   <span py:if="job.is_queued()"> 
-    <td class="title"><b>Set RecipeSet Priority</b></td> 
+   <span py:if="job.is_queued() and job.access_priority(user)"> 
+    <td class="title"><b>Set all RecipeSet priorities</b></td> 
      <td class="value"><a py:for="p in priorities" class="list" style="color: #22437F;cursor:pointer" name="${p.id}" id="priority_job_${job.id}">${p.priority}<br /></a></td>
       <script type='text/javascript'>
        pri_manager.register('priority_job_${job.id}','parent')
@@ -111,16 +142,19 @@
   </tr>
  </table>
   <div py:for="recipeset in job.recipesets" class="recipeset">
+    <?python 
+        allowed_priorities = recipeset.allowed_priorities(user) 
+        if allowed_priorities:
+            priorities_list = [(elem.id,elem.priority) for elem in allowed_priorities]
+        else: priorities_list = None
+    ?>   
    <table width="97%">
     <tr>
      <td class="title"><b>RecipeSet ID</b></td>
      <td class="value">${recipeset.t_id}</td>  
-   <span py:if="recipeset.is_queued()"> 
-    <?python 
-        allowed_priorities = recipeset.allowed_priorities(user)
-    ?>    
-    <td class="title"><msg id="recipeset_status_${recipeset.id}" class='hidden'>Priority has been changed</msg> <b>Priority</b></td>  
-   <td class="value">${priority_widget.display(obj=recipeset,id_prefix='priority_recipeset',priorities=allowed_priorities)}</td>
+   <span py:if="recipeset.is_queued() and priorities_list"> 
+   <td class="title"><msg id="recipeset_status_${recipeset.id}" class='hidden'></msg> <b>Priority</b></td>  
+   <td class="value">${priority_widget.display(obj=recipeset,id_prefix='priority_recipeset',priorities=priorities_list)}</td>
     <script type='text/javascript'>
        pri_manager.register('priority_recipeset_${recipeset.id}','recipeset')
     </script>

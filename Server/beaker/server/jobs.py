@@ -315,8 +315,9 @@ class Jobs(RPCRoot):
         except InvalidRequestError:
             flash(_(u"Invalid job id %s" % id))
             redirect(".")
+        log.debug(identity.current.user)
         return dict(title   = 'Job',
-                    user                 = identity.current.user,
+                    user                 = identity.current.user,   #I think there is a TG var to use in the template so we dont need to pass this ?
                     priorities           = TaskPriority.query().all(),
                     priority_widget      = self.priority_widget,
                     recipeset_widget     = self.recipeset_widget,

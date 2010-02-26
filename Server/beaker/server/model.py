@@ -2812,6 +2812,17 @@ class Job(TaskBase):
     def t_id(self):
         return "J:%s" % self.id
     t_id = property(t_id)
+  
+    def access_priority(self,user):
+        if not user:
+            return
+        try:
+            if self.owner == user or (user.in_group(['admin','queue_admin'])):
+                return True
+        except:
+            return
+
+             
     
 
 class RecipeSet(TaskBase):
@@ -2842,11 +2853,7 @@ class RecipeSet(TaskBase):
     @classmethod 
     def by_id(cls,id): 
        return cls.query().filter_by(id=id).one()
-    
-    @classmethod
-    def allowed_priorities(cls,user):
-        pass
-
+     
     @classmethod
     def iter_recipeSets(self, status=u'Assigned'):
         self.recipeSets = []
@@ -2945,6 +2952,14 @@ class RecipeSet(TaskBase):
     def t_id(self):
         return "RS:%s" % self.id
     t_id = property(t_id)
+ 
+    def allowed_priorities(self,user):
+        if not user:
+            return [] 
+        if user.in_group(['admin','queue_admin']):
+            return TaskPriority.query().all()
+        elif user == self.job.owner: 
+            return TaskPriority.query.filter(TaskPriority.id <= self.priority.id)
 
 
 class Recipe(TaskBase):
