@@ -123,27 +123,27 @@ class ReserveWorkflow:
         return {'options' : options }
 
     @expose(allow_json=True)
-    def get_distro_options(self,arch,distro_family,method,tag):       
+    def get_distro_options(self,arch,distro_family,method,tag):
         """
         get_distro_options() will return all the distros for a given arch,
         distro_family,method and tag
         """
 
+        distro = model.Distro.query().join(['osversion','osmajor']).join('arch')
+
         if tag:
             my_and = and_(model.OSMajor.osmajor == distro_family,
                           model.Distro.method == method,
-                          model.Arch.arch == arch, 
+                          model.Arch.arch == arch,
                           model.DistroTag.tag == tag)
-        else: 
+            distro = distro.join('_tags')
+        else:
             my_and = and_(model.OSMajor.osmajor == distro_family,
                           model.Distro.method == method,
-                          model.Arch.arch == arch) 
- 
-        distro = model.Distro.query().join(['osversion','osmajor']).join('arch').join('_tags'). \
-                                      filter(my_and)
-                                            
-                                           
-                                          
+                          model.Arch.arch == arch)
+
+        distro = distro.filter(my_and)
+
         options = [elem.install_name for elem in distro]
         return {'options': options}
 
