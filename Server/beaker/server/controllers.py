@@ -536,25 +536,35 @@ class Root(RPCRoot):
                     kernel_options_post = kernel_options_post)
 
     @expose(format='json')
-    def change_priority_recipeset(self,priority_id,recipeset_id):  
-        try: 
-            priority_query = TaskPriority.by_id(priority_id)  # will throw an error here if priorty id is invalid
-        except InvalidRequestError, (e):
-            log.error('No rows returned for priority_id %s in change_priority_recipeset:%s' % (priority_id,e)) 
-            return { 'success' : None }
-        priority = priority_query.id
+    def change_priority_recipeset(self,priority_id,recipeset_id): 
+        user = identity.current.user
+        if not user:
+            return {'success' : None, 'msg' : 'Must be logged in' }
+
         try:
             recipeset = RecipeSet.by_id(recipeset_id)
-        except InvalidRequestError, (e):
+            old_priority = recipeset.priority.priority
+        except:
             log.error('No rows returned for recipeset_id %s in change_priority_recipeset:%s' % (recipeset_id,e))
+            return { 'success' : None, 'msg' : 'RecipeSet is not valid' }
 
-        recipeset.priority = priority_query
-        session.save_or_update(recipeset) 
-        return {'success' : True } 
+        try: 
+            priority_query = TaskPriority.by_id(priority_id)  # will throw an error here if priorty id is invalid 
+        except InvalidRequestError, (e):
+            log.error('No rows returned for priority_id %s in change_priority_recipeset:%s' % (priority_id,e)) 
+            return { 'success' : None, 'msg' : 'Priority not found', 'current_priority' : recipeset.priority.id }
+         
+        allowed_priority_ids = [elem.id for elem in recipeset.allowed_priorities(user)]
        
-    @expose(format='json')
-    def change_priority_job(self,priority,id):
-        log.debug('Here in job')
+        if long(priority_id) not in allowed_priority_ids:
+            return {'success' : None, 'msg' : 'Insufficent privileges for that priority', 'current_priority' : recipeset.priority.id }
+         
+
+        activity = RecipeSetActivity(identity.current.user, 'WEBUI', 'Changed', 'Priority', recipeset.priority.id,priority_id)
+        recipeset.priority = priority_query
+        session.save_or_update(recipeset)        
+        recipeset.activity.append(activity)
+        return {'success' : True } 
 
     @expose(template='beaker.server.templates.grid_add')
     @paginate('list',default_order='fqdn',limit=20,allow_limit_override=True)

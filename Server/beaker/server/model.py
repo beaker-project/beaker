@@ -453,6 +453,11 @@ system_activity_table = Table('system_activity', metadata,
     Column('system_id', Integer, ForeignKey('system.id'))
 )
 
+recipeset_activity_table = Table('recipeset_activity', metadata,
+    Column('id', Integer,ForeignKey('activity.id'), primary_key=True),
+    Column('recipeset_id', Integer, ForeignKey('recipe_set.id'))
+)
+
 group_activity_table = Table('group_activity', metadata,
     Column('id', Integer, ForeignKey('activity.id'), primary_key=True),
     Column('group_id', Integer, ForeignKey('tg_group.group_id'))
@@ -2464,7 +2469,10 @@ class SystemActivity(Activity):
     def object_name(self):
         return "System: %s" % self.object.fqdn
      
-         
+class RecipeSetActivity(Activity):
+    def object_name(self):
+        return "RecipeSet: %s" % self.object.id
+          
 class GroupActivity(Activity):
     def object_name(self):
         return "Group: %s" % self.object.display_name
@@ -2542,7 +2550,9 @@ class Key_Value_Int(object):
 
 
 
-class TaskPriority(object):
+class TaskPriority(object):   
+    default_priority = 'Normal'
+
     @classmethod
     def by_id(cls,id):
       return cls.query().filter_by(id=id).one()
@@ -2818,6 +2828,17 @@ class Job(TaskBase):
     def t_id(self):
         return "J:%s" % self.id
     t_id = property(t_id)
+  
+    def access_priority(self,user):
+        if not user:
+            return
+        try:
+            if self.owner == user or (user.in_group(['admin','queue_admin'])):
+                return True
+        except:
+            return
+
+             
     
 
 class RecipeSet(TaskBase):
@@ -2834,6 +2855,15 @@ class RecipeSet(TaskBase):
         return recipeSet
 
     @classmethod
+    def allowed_priorities_initial(cls,user):
+        if not user:
+            return
+        if user.in_group(['admin','queue_admin']):
+            return TaskPriority.query().all()
+        default_id = TaskPriority.query().filter_by(priority = TaskPriority.default_priority).one().id
+        return TaskPriority.query().filter(TaskPriority.id < default_id)
+        
+    @classmethod
     def by_status(cls, status, query=None):
         if not query:
             query=cls.query
@@ -2848,11 +2878,7 @@ class RecipeSet(TaskBase):
     @classmethod 
     def by_id(cls,id): 
        return cls.query().filter_by(id=id).one()
-    
-    @classmethod
-    def allowed_priorities(cls,user):
-        pass
-
+     
     @classmethod
     def iter_recipeSets(self, status=u'Assigned'):
         self.recipeSets = []
@@ -2951,6 +2977,14 @@ class RecipeSet(TaskBase):
     def t_id(self):
         return "RS:%s" % self.id
     t_id = property(t_id)
+ 
+    def allowed_priorities(self,user):
+        if not user:
+            return [] 
+        if user.in_group(['admin','queue_admin']):
+            return TaskPriority.query().all()
+        elif user == self.job.owner: 
+            return TaskPriority.query.filter(TaskPriority.id <= self.priority.id)
 
 
 class Recipe(TaskBase):
@@ -4028,6 +4062,9 @@ mapper(Activity, activity_table,
 mapper(SystemActivity, system_activity_table, inherits=Activity,
         polymorphic_identity='system_activity')
 
+mapper(RecipeSetActivity, recipeset_activity_table, inherits=Activity,
+       polymorphic_identity='recipeset_activity')
+
 mapper(GroupActivity, group_activity_table, inherits=Activity,
         polymorphic_identity='group_activity',
         properties=dict(object=relation(Group, uselist=False,
@@ -4098,6 +4135,9 @@ mapper(RecipeSet, recipe_set_table,
                       'priority':relation(TaskPriority, uselist=False),
                       'result':relation(TaskResult, uselist=False),
                       'status':relation(TaskStatus, uselist=False),
+                      'activity':relation(RecipeSetActivity,
+                                     order_by=[activity_table.c.created.desc()],
+                                               backref='object'),
                       'lab_controller':relation(LabController, uselist=False),
                      })
 

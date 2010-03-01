@@ -1083,23 +1083,17 @@ class PriorityWidget(SingleSelectField):
        self.options = [] 
        self.field_class = 'singleselectfield' 
 
-   def update_params(self,d): 
-       all_priorities = model.TaskPriority.query().all() 
-       rows = []
-       for priori in all_priorities:  
-           rows.append((priori.id,priori.priority)) 
-       d['options'] = rows 
-       super(PriorityWidget,self).update_params(d)
-
    def display(self,obj,value=None,**params):           
-       if 'priorities' in params:
-           pass        
+       if 'priorities' in params: 
+           params['options'] =  params['priorities']       
+       else:
+           params['options'] = [(elem.id,elem.priority) for elem in TaskPriority.query().all()]
        if isinstance(obj,model.Job):
            if 'id_prefix' in params:
                params['attrs'] = {'id' : '%s_%s' % (params['id_prefix'],obj.id) }
        elif obj:
            if 'id_prefix' in params:
-               params['attrs'] = {'id' : '%s_%s' % (params['id_prefix'],obj.id) }
+               params['attrs'] = {'id' : '%s_%s' % (params['id_prefix'],obj.id) } 
            try:
                value = obj.priority.id 
            except AttributeError,(e):

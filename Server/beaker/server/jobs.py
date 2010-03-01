@@ -22,6 +22,7 @@ from turbogears import identity, redirect
 from cherrypy import request, response
 from kid import Element
 from beaker.server.widgets import myPaginateDataGrid
+from beaker.server.widgets import myDataGrid
 from beaker.server.xmlrpccontroller import RPCRoot
 from beaker.server.helpers import *
 from beaker.server.widgets import RecipeWidget
@@ -43,7 +44,7 @@ import cgi
 
 class Jobs(RPCRoot):
     # For XMLRPC methods in this class.
-    exposed = True
+    exposed = True 
     recipeset_widget = RecipeSetWidget()
     recipe_widget = RecipeWidget()
     priority_widget = PriorityWidget()
@@ -171,7 +172,22 @@ class Jobs(RPCRoot):
                   owner=user)
         for xmlrecipeSet in xmljob.iter_recipeSets():
             recipeSet = RecipeSet(ttasks=0)
-            for xmlrecipe in xmlrecipeSet.iter_recipes():
+            recipeset_priority = xmlrecipeSet.get_xml_attr('priority',str,None)
+            if recipeset_priority is not None:
+                try:
+                    my_priority = TaskPriority.query().filter_by(priority = recipeset_priority).one()
+                except InvalidRequestError, (e):
+                    raise BX(_('You have specified an invalid recipeSet priority:%s' % recipeset_priority))
+                allowed_priorities = RecipeSet.allowed_priorities_initial(identity.current.user)
+                allowed = [elem for elem in allowed_priorities if elem.priority == recipeset_priority]
+                if allowed:
+                    recipeSet.priority = allowed[0]
+                else:
+                    recipeSet.priority = TaskPriority.query().filter_by(priority = TaskPriority.default_priority).one()
+            else:
+                recipeSet.priority = TaskPriority.query().filter(priority = TaskPriority.default_priority).one() 
+
+            for xmlrecipe in xmlrecipeSet.iter_recipes(): 
                 recipe = self.handleRecipe(xmlrecipe)
                 recipe.ttasks = len(recipe.tasks)
                 recipeSet.ttasks += recipe.ttasks
@@ -308,18 +324,38 @@ class Jobs(RPCRoot):
                          confirm = 'really cancel job %s?' % id),
         )
 
-    @expose(template="beaker.server.templates.job")
-    def default(self, id):
+    @expose(template="beaker.server.templates.job") 
+    def default(self, id): 
         try:
             job = Job.by_id(id)
         except InvalidRequestError:
             flash(_(u"Invalid job id %s" % id))
             redirect(".")
+    
+        recipe_set_history = [RecipeSetActivity.query().with_parent(elem,"activity") for elem in job.recipesets]
+        recipe_set_data = []
+        for query in recipe_set_history:
+            for d in query: 
+                recipe_set_data.append(d)   
+ 
+        job_history_grid = widgets.DataGrid(fields= [
+                               widgets.DataGrid.Column(name='recipeset', 
+                                                               getter=lambda x: make_link(url='#RS_%s' % x.recipeset_id,text ='RS:%s' % x.recipeset_id), 
+                                                               title='RecipeSet', options=dict(sortable=True)), 
+                               widgets.DataGrid.Column(name='user', getter= lambda x: x.user, title='User', options=dict(sortable=True)), 
+                               widgets.DataGrid.Column(name='created', title='Created', getter=lambda x: x.created, options = dict(sortable=True)),
+                               widgets.DataGrid.Column(name='field', getter=lambda x: x.field_name, title='Field Name', options=dict(sortable=True)),
+                               widgets.DataGrid.Column(name='action', getter=lambda x: x.action, title='Action', options=dict(sortable=True)),
+                               widgets.DataGrid.Column(name='old_value', getter=lambda x: x.old_value, title='Old value', options=dict(sortable=True)),
+                               widgets.DataGrid.Column(name='new_value', getter=lambda x: x.new_value, title='New value', options=dict(sortable=True)),])
+
         return dict(title   = 'Job',
-                    user                 = identity.current.user,
+                    user                 = identity.current.user,   #I think there is a TG var to use in the template so we dont need to pass this ?
                     priorities           = TaskPriority.query().all(),
-                    priority_widget      = self.priority_widget,
+                    priority_widget      = self.priority_widget, 
                     recipeset_widget     = self.recipeset_widget,
+                    job_history          = recipe_set_data,
+                    job_history_grid     = job_history_grid, 
                     recipe_widget        = self.recipe_widget,
                     recipe_tasks_widget  = self.recipe_tasks_widget,
                     job                  = job)
