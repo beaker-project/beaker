@@ -44,7 +44,7 @@ import cgi
 
 class Jobs(RPCRoot):
     # For XMLRPC methods in this class.
-    exposed = True
+    exposed = True 
     recipeset_widget = RecipeSetWidget()
     recipe_widget = RecipeWidget()
     priority_widget = PriorityWidget()
@@ -172,7 +172,22 @@ class Jobs(RPCRoot):
                   owner=user)
         for xmlrecipeSet in xmljob.iter_recipeSets():
             recipeSet = RecipeSet(ttasks=0)
-            for xmlrecipe in xmlrecipeSet.iter_recipes():
+            recipeset_priority = xmlrecipeSet.get_xml_attr('priority',str,None)
+            if recipeset_priority is not None:
+                try:
+                    my_priority = TaskPriority.query().filter_by(priority = recipeset_priority).one()
+                except InvalidRequestError, (e):
+                    raise BX(_('You have specified an invalid recipeSet priority:%s' % recipeset_priority))
+                allowed_priorities = RecipeSet.allowed_priorities_initial(identity.current.user)
+                allowed = [elem for elem in allowed_priorities if elem.priority == recipeset_priority]
+                if allowed:
+                    recipeSet.priority = allowed[0]
+                else:
+                    recipeSet.priority = TaskPriority.query().filter_by(priority = TaskPriority.default_priority).one()
+            else:
+                recipeSet.priority = TaskPriority.query().filter(priority = TaskPriority.default_priority).one() 
+
+            for xmlrecipe in xmlrecipeSet.iter_recipes(): 
                 recipe = self.handleRecipe(xmlrecipe)
                 recipe.ttasks = len(recipe.tasks)
                 recipeSet.ttasks += recipe.ttasks

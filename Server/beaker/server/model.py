@@ -2550,7 +2550,9 @@ class Key_Value_Int(object):
 
 
 
-class TaskPriority(object):
+class TaskPriority(object):   
+    default_priority = 'Normal'
+
     @classmethod
     def by_id(cls,id):
       return cls.query().filter_by(id=id).one()
@@ -2846,6 +2848,15 @@ class RecipeSet(TaskBase):
                 recipeSet.appendChild(r.to_xml(clone, from_recipeset=True))
         return recipeSet
 
+    @classmethod
+    def allowed_priorities_initial(cls,user):
+        if not user:
+            return
+        if user.in_group(['admin','queue_admin']):
+            return TaskPriority.query().all()
+        default_id = TaskPriority.query().filter_by(priority = TaskPriority.default_priority).one().id
+        return TaskPriority.query().filter(TaskPriority.id < default_id)
+        
     @classmethod
     def by_status(cls, status, query=None):
         if not query:
