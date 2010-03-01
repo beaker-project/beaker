@@ -17,6 +17,7 @@
  $(document).ready(function() {
     ShowResults();
     $("input[@name='results']").change(ShowResults);
+    $("#toggle_job_history").click(function() { $("#job_history").toggle() })
     $("select[id^='priority']").change(function() {
         var callback = {'function' : ShowPriorityResults }
         callback['args'] = { 'element_id' : null, 'value' : null }
@@ -110,8 +111,11 @@
   <label for="results_fail">Only failed items</label>
   <input id="results_ackneeded" type="radio" name="results" value="ackneeded" />
   <label for="results_ackneeded">Failed items needing review</label>
+  <a id='toggle_job_history' style="color: rgb(34, 67, 127); cursor: pointer;">Toggle Job history</a>
  </form>
-
+ <div style='padding-bottom:0.25em' id="job_history" class="hidden">
+   ${job_history_grid.display(job_history)}
+ </div>
  <table width="97%" class="show">
   <tr>
    <td class="title"><b>Job ID</b></td>
@@ -149,6 +153,7 @@
         else: priorities_list = None
     ?>   
    <table width="97%">
+    <a name="RS_${recipeset.id}" />
     <tr>
      <td class="title"><b>RecipeSet ID</b></td>
      <td class="value">${recipeset.t_id}</td>  

@@ -453,6 +453,11 @@ system_activity_table = Table('system_activity', metadata,
     Column('system_id', Integer, ForeignKey('system.id'))
 )
 
+recipeset_activity_table = Table('recipeset_activity', metadata,
+    Column('id', Integer,ForeignKey('activity.id'), primary_key=True),
+    Column('recipeset_id', Integer, ForeignKey('recipe_set.id'))
+)
+
 group_activity_table = Table('group_activity', metadata,
     Column('id', Integer, ForeignKey('activity.id'), primary_key=True),
     Column('group_id', Integer, ForeignKey('tg_group.group_id'))
@@ -2464,7 +2469,10 @@ class SystemActivity(Activity):
     def object_name(self):
         return "System: %s" % self.object.fqdn
      
-         
+class RecipeSetActivity(Activity):
+    def object_name(self):
+        return "RecipeSet: %s" % self.object.id
+          
 class GroupActivity(Activity):
     def object_name(self):
         return "Group: %s" % self.object.display_name
@@ -4040,6 +4048,9 @@ mapper(Activity, activity_table,
 mapper(SystemActivity, system_activity_table, inherits=Activity,
         polymorphic_identity='system_activity')
 
+mapper(RecipeSetActivity, recipeset_activity_table, inherits=Activity,
+       polymorphic_identity='recipeset_activity')
+
 mapper(GroupActivity, group_activity_table, inherits=Activity,
         polymorphic_identity='group_activity',
         properties=dict(object=relation(Group, uselist=False,
@@ -4110,6 +4121,9 @@ mapper(RecipeSet, recipe_set_table,
                       'priority':relation(TaskPriority, uselist=False),
                       'result':relation(TaskResult, uselist=False),
                       'status':relation(TaskStatus, uselist=False),
+                      'activity':relation(RecipeSetActivity,
+                                     order_by=[activity_table.c.created.desc()],
+                                               backref='object'),
                       'lab_controller':relation(LabController, uselist=False),
                      })
 

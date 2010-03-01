@@ -22,6 +22,7 @@ from turbogears import identity, redirect
 from cherrypy import request, response
 from kid import Element
 from beaker.server.widgets import myPaginateDataGrid
+from beaker.server.widgets import myDataGrid
 from beaker.server.xmlrpccontroller import RPCRoot
 from beaker.server.helpers import *
 from beaker.server.widgets import RecipeWidget
@@ -308,19 +309,38 @@ class Jobs(RPCRoot):
                          confirm = 'really cancel job %s?' % id),
         )
 
-    @expose(template="beaker.server.templates.job")
-    def default(self, id):
+    @expose(template="beaker.server.templates.job") 
+    def default(self, id): 
         try:
             job = Job.by_id(id)
         except InvalidRequestError:
             flash(_(u"Invalid job id %s" % id))
             redirect(".")
-        log.debug(identity.current.user)
+    
+        recipe_set_history = [RecipeSetActivity.query().with_parent(elem,"activity") for elem in job.recipesets]
+        recipe_set_data = []
+        for query in recipe_set_history:
+            for d in query: 
+                recipe_set_data.append(d)   
+ 
+        job_history_grid = widgets.DataGrid(fields= [
+                               widgets.DataGrid.Column(name='recipeset', 
+                                                               getter=lambda x: make_link(url='#RS_%s' % x.recipeset_id,text ='RS:%s' % x.recipeset_id), 
+                                                               title='RecipeSet', options=dict(sortable=True)), 
+                               widgets.DataGrid.Column(name='user', getter= lambda x: x.user, title='User', options=dict(sortable=True)), 
+                               widgets.DataGrid.Column(name='created', title='Created', getter=lambda x: x.created, options = dict(sortable=True)),
+                               widgets.DataGrid.Column(name='field', getter=lambda x: x.field_name, title='Field Name', options=dict(sortable=True)),
+                               widgets.DataGrid.Column(name='action', getter=lambda x: x.action, title='Action', options=dict(sortable=True)),
+                               widgets.DataGrid.Column(name='old_value', getter=lambda x: x.old_value, title='Old value', options=dict(sortable=True)),
+                               widgets.DataGrid.Column(name='new_value', getter=lambda x: x.new_value, title='New value', options=dict(sortable=True)),])
+
         return dict(title   = 'Job',
                     user                 = identity.current.user,   #I think there is a TG var to use in the template so we dont need to pass this ?
                     priorities           = TaskPriority.query().all(),
-                    priority_widget      = self.priority_widget,
+                    priority_widget      = self.priority_widget, 
                     recipeset_widget     = self.recipeset_widget,
+                    job_history          = recipe_set_data,
+                    job_history_grid     = job_history_grid, 
                     recipe_widget        = self.recipe_widget,
                     recipe_tasks_widget  = self.recipe_tasks_widget,
                     job                  = job)
