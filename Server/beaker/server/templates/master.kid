@@ -167,27 +167,6 @@ from beaker.server.model import system_types
             </li>
             <li py:if="not tg.identity.anonymous"><a href="${tg.url('/logout')}">Logout</a>
             </li>
-            <li class="searchContainer">
-                <div>
-                <input type="text" id="searchField" />
-                <img src="/static/images/magnifier.png" alt="Search" onclick="alert('You clicked on search button')" /></div>
-                <ul id="search">
-                    <li>
-                        <img class="corner_inset_left" alt="" src="/static/images/corner_inset_left.png"/>
-                        <input id="cbxAll" type="checkbox" />All
-                        <img class="corner_inset_right" alt="" src="/static/images/corner_inset_right.png"/>
-                    </li>
-                    <li><input id="Systems" type="checkbox" />Systems</li>
-                    <li><input id="Distros" type="checkbox" />Distros</li>
-                    <li><input id="Jobs" type="checkbox" />Jobs</li>
-                    <li><input id="Devices" type="checkbox" />Devices</li>
-                    <li class="last">
-                        <img class="corner_left" alt="" src="/static/images/corner_left.png"/>
-                        <img class="middle" alt="" src="/static/images/dot.gif"/>
-                        <img class="corner_right" alt="" src="/static/images/corner_right.png"/>
-                    </li>
-                </ul>
-            </li>
         </ul>
         <img style="float:left;" alt="" src="/static/images/menu_right.png"/>
     </div>
