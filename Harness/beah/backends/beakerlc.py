@@ -135,6 +135,12 @@ def parse_recipe_xml(input_xml, hostname):
             RECIPESETID=xml_attr(er, 'recipe_set_id'),
             HOSTNAME=xml_attr(er, 'system'))
 
+    for job in root.getElementsByTagName('job'):
+        submitter = xml_attr(job, 'owner')
+        if submitter:
+            task_env['SUBMITTER'] = submitter
+        break
+
     # FIXME: This will eventually need to be replaced by sth RPM independent...
     repos = []
     repof = ''

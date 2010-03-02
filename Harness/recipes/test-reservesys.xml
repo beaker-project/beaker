@@ -1,3 +1,4 @@
+<job owner="%(owner)s">
 <recipe arch="i386" distro="RHEL5-Server-U3"
         family="RedHatEnterpriseLinuxServer5"
         status="Running" variant="None"
@@ -48,4 +49,4 @@
         <rpm name="rh-tests-distribution-reservesys.noarch"/>
     </task>
 </recipe>
-
+</job>
