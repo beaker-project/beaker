@@ -68,6 +68,9 @@ def end(task_id, rc, origin={}, timestamp=None):
     """Event generated when task finished"""
     return Event('end', origin, timestamp, task_id=task_id, rc=rc)
 
+def extend_watchdog(timeout, origin={}, timestamp=None):
+    return Event('extend_watchdog', origin, timestamp, timeout=timeout)
+
 def abort(type, target=None, origin={}, timestamp=None):
     """
     Abort given {recipe,recipeset,job}.
