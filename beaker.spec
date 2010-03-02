@@ -6,8 +6,8 @@
 %endif
 
 Name:           beaker
-Version:        0.4.85
-Release:        2%{?timestamp}%{?branch}%{?dist}
+Version:        0.4.86
+Release:        0%{?timestamp}%{?branch}%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -146,6 +146,8 @@ ln -s Fedora.ks $RPM_BUILD_ROOT/var/lib/cobbler/kickstarts/Fedoradevelopment.ks
 /usr/share/man/man1/beakerlib*
 
 %changelog
+* Tue Mar 02 2010 Bill Peck <bpeck@redhat.com> - 0.4.86-0
+- fixed osversion.trigger, Distro -> distro.
 * Wed Feb 24 2010 Bill Peck <bpeck@redhat.com> - 0.4.85-2
 - Added @x11 and @basic-desktop to rhel6 kickstarts
 * Fri Feb 19 2010 Raymond Mancy <rmancy@redhat.com> - 0.4.85-1
