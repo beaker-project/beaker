@@ -141,7 +141,7 @@ def update_comment(distro):
     paths = get_paths(distro)
 
     if not paths:
-        return Distro
+        return distro
     family = ""
     update = 0
     data = glob.glob(os.path.join(paths['package_path'], "*release-*"))
@@ -153,7 +153,7 @@ def update_comment(distro):
            b.find("centos") != -1:
             data2.append(x)
     if not data2:
-        return Distro
+        return distro
     filename = data2[0]
     cpio_object = tempfile.TemporaryFile()
     try:
