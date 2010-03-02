@@ -133,6 +133,11 @@ function xlm()
 {
   TITLE=$LABM xt
 }
+function xlm1() { LABM=$LABM1 xlm; }
+function xlm2() { LABM=$LABM2 xlm; }
+function xlm3() { LABM=$LABM3 xlm; }
+function xlm4() { LABM=$LABM4 xlm; }
+function xlm5() { LABM=$LABM5 xlm; }
 
 function gxlm()
 {
