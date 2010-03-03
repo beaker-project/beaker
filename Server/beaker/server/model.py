@@ -3276,6 +3276,16 @@ class GuestRecipe(Recipe):
         recipe = self.doc.createElement("guestrecipe")
         recipe.setAttribute("guestname", "%s" % self.guestname)
         recipe.setAttribute("guestargs", "%s" % self.guestargs)
+        if self.system and not clone:
+            recipe.setAttribute("mac_address", "%s" % self.system.mac_address)
+        if self.distro and self.system and not clone:
+            location = LabControllerDistro.query().filter(
+                            and_(
+                               LabControllerDistro.distro == recipe.distro,
+                               LabControllerDistro.lab_controller == recipe.system.lab_controller
+                                )
+                                                         ).one().tree_path
+            recipe.setAttribute("location", "%s" % ,location)
         return Recipe.to_xml(self, recipe, clone, from_recipeset)
 
     def _get_distro_requires(self):
