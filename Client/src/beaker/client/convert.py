@@ -40,9 +40,13 @@ class Convert(object):
         requires_search = re.compile(r'([^\s]+)\s+([^\s]+)\s+([^\s]+)')
         if requires_search.match(requires):
             (dummy, key, op, value, dummy) = requires_search.split(requires)
-            require = self.doc.createElement('distro_%s' % key.lower())
+            if key in ['ARCH', 'FAMILY', 'NAME', 'VARIANT', 'METHOD']:
+                require = self.doc.createElement('distro_%s' % key.lower())
+                require.setAttribute('value', '%s' % value)
+            else:
+                require = self.doc.createElement('distro_tag')
+                require.setAttribute('value', '%s' % key)
             require.setAttribute('op', '%s' % op)
-            require.setAttribute('value', '%s' % value)
         return require
 
     def handle_addrepo(self, addrepo):
