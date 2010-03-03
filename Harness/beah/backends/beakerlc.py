@@ -83,6 +83,9 @@ if ! rpm -q "$TESTRPMNAME"; then
     echo "ERROR: $TESTRPMNAME was not installed." >&2
     exit 1
 fi
+# This is a workaround for /distribution/reservesys test:
+touch /mnt/tests/runtests.sh
+chmod a+x /mnt/tests/runtests.sh
 beah-rhts-task
 #%s -m beah.tasks.rhts_xmlrpc
 """ % (self.__repof, ' '.join(['--enablerepo=%s' % repo for repo in self.__repos]),
@@ -131,6 +134,12 @@ def parse_recipe_xml(input_xml, hostname):
             JOBID=xml_attr(er, 'job_id'),
             RECIPESETID=xml_attr(er, 'recipe_set_id'),
             HOSTNAME=xml_attr(er, 'system'))
+
+    for job in root.getElementsByTagName('job'):
+        submitter = xml_attr(job, 'owner')
+        if submitter:
+            task_env['SUBMITTER'] = submitter
+        break
 
     # FIXME: This will eventually need to be replaced by sth RPM independent...
     repos = []
@@ -591,6 +600,10 @@ class BeakerLCBackend(SerializingBackend):
                             event=evt)) \
                                     .addCallback(self.handle_Stop)
                                     # FIXME: addErrback(...) needed!
+
+    def proc_evt_extend_watchdog(self, evt):
+        timeout = evt.arg('timeout')
+        self.proxy.callRemote('extend_watchdog', evt.task_id, timeout)
 
     def proc_evt_start(self, evt):
         self.proxy.callRemote(self.TASK_START, evt.task_id, 0)

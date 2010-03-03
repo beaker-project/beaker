@@ -23,6 +23,10 @@ BEAH_INSTALL_ROOT=/usr
 # FIXME: may need to change this(?)
 RUN_AS=root
 
+if [ -f /etc/sysconfig/$prog ]; then
+    . /etc/sysconfig/$prog
+fi
+
 # DO NOT CHANGE THESE VARIABLES WITHOUT GOOD REASON:
 
 path="$BEAH_INSTALL_ROOT/bin/$prog"
@@ -36,7 +40,7 @@ start() {
       /usr/bin/nm-online
     fi
     echo -n $"Starting $prog: "
-    daemon --user $RUN_AS $path ">> /tmp/$prog.out 2>&1 &" 'echo $!' ">$PIDFILE"
+    daemon --user $RUN_AS $path "$OPTIONS >> /tmp/$prog.out 2>&1 &" 'echo $!' ">$PIDFILE"
     RETVAL=$?
     #echo "\$!=$!"
     echo "$prog running as process `cat $PIDFILE`"

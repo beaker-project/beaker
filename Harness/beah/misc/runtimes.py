@@ -70,6 +70,19 @@ class BaseRuntime(object):
     def type_has_key(self, type, key):
         return key in self.type_keys(type)
 
+    def type_set_primitive(self, type, key, value):
+        raise exceptions.NotImplementedError
+
+    def type_del_primitive(self, type, key):
+        raise exceptions.NotImplementedError
+
+    def type_get(self, type, key, defval=UNDEFINED):
+        raise exceptions.NotImplementedError
+
+    def type_keys(self, type):
+        raise exceptions.NotImplementedError
+
+
 
 class TypeDict(object):
 

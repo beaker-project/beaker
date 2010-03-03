@@ -406,8 +406,8 @@ class LCHandler(xmlrpc.XMLRPC):
 
     # FIXME: file upload: do not display the data...
     _VERBOSE = ('xmlrpc_get_recipe', 'xmlrpc_task_start', 'xmlrpc_task_stop',
-            'xmlrpc_task_result', 'xmlrpc_task_upload_file',
-            'xmlrpc_result_upload_file', 'catch_xmlrpc',
+            'xmlrpc_task_result', 'xmlrpc_task_upload_file', 'catch_xmlrpc',
+            'xmlrpc_result_upload_file', 'xmlrpc_extend_watchdog',
             'xmlrpc_recipeset_stop', 'xmlrpc_recipe_stop', 'xmlrpc_job_stop')
 
     def __init__(self, *args, **kwargs):
@@ -426,17 +426,24 @@ class LCHandler(xmlrpc.XMLRPC):
         return do_task_stop("task_stop", task_id, stop_type, msg)
 
     def xmlrpc_recipeset_stop(self, recipeset_id, stop_type, msg=''):
+        log.info('recipeset_stop(%r, %r, %r)', recipeset_id, stop_type, msg)
         return 0
 
     def xmlrpc_recipe_stop(self, recipe_id, stop_type, msg=''):
+        log.info('recipe_stop(%r, %r, %r)', recipe_id, stop_type, msg)
         return 0
 
     def xmlrpc_job_stop(self, job_id, stop_type, msg=''):
+        log.info('job_stop(%r, %r, %r)', job_id, stop_type, msg)
         return 0
 
     def xmlrpc_task_result(self, task_id, result_type, path, score, summary):
         return do_task_result("task_result", task_id, result_type, path, score,
                 summary)
+
+    def xmlrpc_extend_watchdog(self, task_id, kill_time):
+        log.info('extend_watchdog(%r, %r)', task_id, kill_time)
+        return 0
 
     def xmlrpc_task_upload_file(self, task_id, path, name, size, digest,
             offset, data):

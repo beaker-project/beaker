@@ -24,6 +24,7 @@ import simplejson as json
 import sys
 import os
 import os.path
+import re
 import tempfile
 import exceptions
 import traceback
@@ -222,12 +223,24 @@ class RHTSWatchdog(xmlrpc.XMLRPC):
         return 0 # or "Failure reason"
     xmlrpc_abortRecipe.signature = [['int', 'int']]
 
-    def xmlrpc_testCheckin(self, hostname, job_id, test, kill_time, test_id):
-        log.debug("XMLRPC: watchdog.testCheckin(%r, %r, %r, %r, %r)", hostname, job_id, test, kill_time, test_id)
-        # FIXME? implement this
-        return 1 # or "Failure reason"
-    xmlrpc_testCheckin.signature = [['int', 'string', 'int', 'string', 'int', 'int']]
+    TIME_RE = re.compile('^([0-9]+)([dhms]?)$')
+    TIME_UNITS = {'d':24*3600, 'h':3600, 'm':60, 's':1, '':1}
+    def canonical_time(time):
+        amount, units = RHTSWatchdog.TIME_RE.match(time.lower()).group(1, 2)
+        return int(amount)*RHTSWatchdog.TIME_UNITS[units]
+    canonical_time = staticmethod(canonical_time)
 
+    def xmlrpc_testCheckin(self, hostname, job_id, test, kill_time, test_id):
+        # NB: return 1 means success in this case! See test-env-lab/bin/rhts-test-checkin
+        log.debug("XMLRPC: watchdog.testCheckin(%r, %r, %r, %r, %r)", hostname, job_id, test, kill_time, test_id)
+        try:
+            kill_time = self.canonical_time(kill_time)
+        except:
+            log.error("watchdog.testCheckin: bad kill_time value %r", kill_time)
+            return 0
+        self.main.send_evt(event.extend_watchdog(kill_time))
+        return 1 # or "Failure reason"
+    xmlrpc_testCheckin.signature = [['int', 'string', 'int', 'string', 'string', 'int']]
 
 
 class RHTSWorkflows(xmlrpc.XMLRPC):
@@ -249,7 +262,10 @@ class RHTSTest(xmlrpc.XMLRPC):
 
     def xmlrpc_testCheckin(self, test_id, call_type):
         log.debug("XMLRPC: test.testCheckin(%r, %r)", test_id, call_type)
-        # FIXME: implement this!!!
+        if call_type == 'finish':
+            self.main.checkin_finish()
+        elif call_type == 'start':
+            self.main.checkin_start()
         return 0 # or "Failure reason"
     xmlrpc_testCheckin.signature = [['int', 'int', 'string']]
 
@@ -349,9 +365,6 @@ class RHTSMain(object):
         self.__done = False
         self.__waits_for = []
 
-        # FIXME: randomize port(?) - use configurable range of ports.
-        port = os.environ.get('RHTS_PORT', random.randint(7080, 7099))
-
         # FIXME: is inheriting the whole environment desirable?
         if env is not USE_DEFAULT:
             self.env = dict(env)
@@ -367,9 +380,6 @@ class RHTSMain(object):
         #     - e.g. JOBID, RECIPESETID, RECIPEID are not interesting at all
         #     - use task_id for RECIPESETID, and BE (or LC eventually) should
         #       be able to find about the rest...
-        # RESULT_SERVER - host:port[/prefixpath]
-        self.env['RESULT_SERVER'] = "%s:%s%s" % ("localhost", port, "")
-        self.env.setdefault('TESTORDER', '123') # FIXME: More sensible default
 
         taskid = "J%(JOBID)s-S%(RECIPESETID)s-R%(RECIPEID)s-T%(TASKID)s" % self.env
 
@@ -379,7 +389,17 @@ class RHTSMain(object):
         log.setLevel(str2log_level(os.environ.get('BEAH_TASK_LOG', "warning")))
 
         # No point in storing everything in one big file. Use one file per task
-        self.__files = runtimes.TypeDict(runtimes.ShelveRuntime(RUNTIME_PATHNAME_TEMPLATE % taskid), 'vars')
+        rt = runtimes.ShelveRuntime(RUNTIME_PATHNAME_TEMPLATE % taskid)
+        self.__files = runtimes.TypeDict(rt, 'files')
+
+        # FIXME: use configurable range of ports.
+        self.variables = runtimes.TypeDict(rt, 'variables')
+        port = self.variables.setdefault('port', os.environ.get('RHTS_PORT', random.randint(7080, 7099)))
+        self.variables.setdefault('nohup', False)
+
+        # RESULT_SERVER - host:port[/prefixpath]
+        self.env['RESULT_SERVER'] = "%s:%s%s" % ("localhost", port, "")
+        self.env.setdefault('TESTORDER', '123') # FIXME: More sensible default
 
         # FIXME: should any checks go here?
         # e.g. does Makefile PURPOSE exist? try running `make testinfo.desc`? ...
@@ -395,8 +415,11 @@ class RHTSMain(object):
     def on_exit(self, exitCode):
         # FIXME! handling!
         # should submit captured files (AVC_ERROR, OUTPUTFILE)
-        log.info("quitting...")
-        reactor.callLater(1, reactor.stop)
+        if self.variables['nohup']:
+            log.info("waiting for finish...")
+        else:
+            log.info("quitting...")
+            reactor.callLater(1, reactor.stop)
         self.__done = True
         self.exitCode = exitCode
 
@@ -440,6 +463,18 @@ class RHTSMain(object):
     def task_stderr(self, data):
         # FIXME: RHTS Task can send an event! Handle it!
         self.send_evt(event.stderr(data))
+
+    def checkin_start(self):
+        log.info("setting nohup")
+        self.variables['nohup'] = True
+
+    def checkin_finish(self):
+        log.info("resetting nohup")
+        self.variables['nohup'] = False
+        if self.__done:
+            # subprocess has finished already, but server waits for checkin
+            self.on_exit(0)
+        # else: pass -- waiting for subprocess which is still running
 
     def task_exited(self, reason):
         log.info("task_exited(%s)", reason)
