@@ -3281,8 +3281,8 @@ class GuestRecipe(Recipe):
         if self.distro and self.system and not clone:
             location = LabControllerDistro.query().filter(
                             and_(
-                               LabControllerDistro.distro == recipe.distro,
-                               LabControllerDistro.lab_controller == recipe.system.lab_controller
+                               LabControllerDistro.distro == self.distro,
+                               LabControllerDistro.lab_controller == self.system.lab_controller
                                 )
                                                          ).one().tree_path
             recipe.setAttribute("location", "%s" % location)
