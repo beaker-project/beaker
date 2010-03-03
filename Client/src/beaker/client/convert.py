@@ -54,6 +54,7 @@ class Convert(object):
         return repo
     
     def handle_hostRequires(self, requires):
+        require = None
         requires_search = re.compile(r'([^\s]+)\s+([^\s]+)\s+([^\s]+)')
         if requires_search.match(requires):
             (dummy, key, op, value, dummy) = requires_search.split(requires)
