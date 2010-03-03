@@ -3036,6 +3036,7 @@ class Recipe(TaskBase):
             recipe.setAttribute("status", "%s" % self.status)
         if self.distro and not clone:
             recipe.setAttribute("distro", "%s" % self.distro.name)
+            recipe.setAttribute("install_name", "%s" % self.distro.install_name)
             recipe.setAttribute("arch", "%s" % self.distro.arch)
             recipe.setAttribute("family", "%s" % self.distro.osversion.osmajor)
             recipe.setAttribute("variant", "%s" % self.distro.variant)
