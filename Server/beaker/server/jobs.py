@@ -92,18 +92,21 @@ class Jobs(RPCRoot):
         """
         XMLRPC method to upload job
         """
+        session.begin()
         xml = xmltramp.parse(jobxml)
         xmljob = XmlJob(xml)
         try:
             job = self.process_xmljob(xmljob,identity.current.user)
+            session.commit()
         except BeakerException, err:
             session.rollback()
             raise
         except ValueError, err:
             session.rollback()
             raise
-        session.save(job)
-        session.flush()
+        # With transactions we shouldn't need save or flush. remove when verified.
+        #session.save(job)
+        #session.flush()
         return "j:%s" % job.id
 
     @identity.require(identity.not_anonymous())
