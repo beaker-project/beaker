@@ -518,8 +518,6 @@ class Parser:
             if key in fields:
                 handler = fields[key]
                 handler(key, value)
-            else:
-                self.handle_error('Unknown field "%s"'%key)
 
         # Postprocessing:
 	# Ensure mandatory fields have values:
