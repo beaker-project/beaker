@@ -6,7 +6,7 @@
 %endif
 
 Name:           beaker
-Version:        0.4.87
+Version:        0.4.88
 Release:        0%{?timestamp}%{?branch}%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
@@ -146,6 +146,8 @@ ln -s Fedora.ks $RPM_BUILD_ROOT/var/lib/cobbler/kickstarts/Fedoradevelopment.ks
 /usr/share/man/man1/beakerlib*
 
 %changelog
+* Wed Mar 03 2010 Bill Peck <bpeck@redhat.com> - 0.4.88-0
+- update osversion.trigger to ignore xen variants when calling addDistro.sh
 * Wed Mar 03 2010 Bill Peck <bpeck@redhat.com> - 0.4.87-0
 - fixed osversion.trigger, FAMILYUPDATE may not exist for some distros.
 * Tue Mar 02 2010 Bill Peck <bpeck@redhat.com> - 0.4.86-1
