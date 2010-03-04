@@ -58,7 +58,7 @@ yum -y erase beah
 yum -y install git
 mkdir -p /tmp/beah-new
 pushd /tmp/beah-new
-git clone "${BEAH_GIT_REPO:-"git://git.fedorahosted.org/git/beaker.git"}"
+git clone --depth 1 "${BEAH_GIT_REPO:-"git://git.fedorahosted.org/git/beaker.git"}"
 cd beaker
 git reset --hard
 git checkout "${BEAH_GIT_BRANCH:-"origin/Scheduler"}"
