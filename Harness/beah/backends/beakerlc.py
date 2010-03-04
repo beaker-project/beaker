@@ -144,10 +144,12 @@ def parse_recipe_xml(input_xml, hostname):
             RECIPESETID=xml_attr(er, 'recipe_set_id'),
             HOSTNAME=xml_attr(er, 'system'))
 
-    GUEST_ATTRS = ('guestname', 'mac_address', 'location', 'install_name', 'guestargs')
+    # The following is necessary for Virtual Workflows:
+    GUEST_ATTRS = ('system', 'mac_address', 'location', 'guestargs', 'install_name')
     task_env['GUESTS'] = '|'.join([
         ';'.join([xml_attr(gr, a, '') for a in GUEST_ATTRS])
             for gr in xml_get_nodes(er, 'guestrecipe')])
+    task_env['LAB_CONTROLLER'] = config.get_conf('beah-backend').get('DEFAULT', 'LAB_CONTROLLER')
 
     for job in root.getElementsByTagName('job'):
         submitter = xml_attr(job, 'owner')
