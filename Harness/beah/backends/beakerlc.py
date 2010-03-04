@@ -111,6 +111,15 @@ def xml_attr(node, key, default=None):
     except:
         return default
 
+def xml_get_nodes(node, tag):
+    return [n for n in node.childNodes if n.nodeName == tag]
+
+def xml_first_node(node, tag):
+    for n in node.childNodes:
+        if n.nodeName == tag:
+            return n
+    return None
+
 def parse_recipe_xml(input_xml, hostname):
 
     root = minidom.parseString(input_xml)
@@ -135,6 +144,11 @@ def parse_recipe_xml(input_xml, hostname):
             RECIPESETID=xml_attr(er, 'recipe_set_id'),
             HOSTNAME=xml_attr(er, 'system'))
 
+    GUEST_ATTRS = ('guestname', 'mac_address', 'location', 'install_name', 'guestargs')
+    task_env['GUESTS'] = '|'.join([
+        ';'.join([xml_attr(gr, a, '') for a in GUEST_ATTRS])
+            for gr in xml_get_nodes(er, 'guestrecipe')])
+
     for job in root.getElementsByTagName('job'):
         submitter = xml_attr(job, 'owner')
         if submitter:
@@ -144,7 +158,7 @@ def parse_recipe_xml(input_xml, hostname):
     # FIXME: This will eventually need to be replaced by sth RPM independent...
     repos = []
     repof = ''
-    for r in er.getElementsByTagName('repo'):
+    for r in xml_get_nodes(xml_first_node(er, 'repos'), 'repo'):
         name = xml_attr(r, 'name')
         repos.append(name)
         repof += "[%s]\nname=beaker provided '%s' repo\nbaseurl=%s\nenabled=1\ngpgcheck=0\n\n" \
@@ -153,7 +167,7 @@ def parse_recipe_xml(input_xml, hostname):
 
     test_order = 0
 
-    for task in er.getElementsByTagName('task'):
+    for task in xml_get_nodes(er, 'task'):
 
         to = xml_attr(task, 'testorder')
         if to is not None:
