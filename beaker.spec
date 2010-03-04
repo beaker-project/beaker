@@ -6,8 +6,8 @@
 %endif
 
 Name:           beaker
-Version:        0.4.86
-Release:        1%{?timestamp}%{?branch}%{?dist}
+Version:        0.4.88
+Release:        0%{?timestamp}%{?branch}%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -195,6 +195,10 @@ fi
 /usr/share/man/man1/beakerlib*
 
 %changelog
+* Wed Mar 03 2010 Bill Peck <bpeck@redhat.com> - 0.4.88-0
+- update osversion.trigger to ignore xen variants when calling addDistro.sh
+* Wed Mar 03 2010 Bill Peck <bpeck@redhat.com> - 0.4.87-0
+- fixed osversion.trigger, FAMILYUPDATE may not exist for some distros.
 * Tue Mar 02 2010 Bill Peck <bpeck@redhat.com> - 0.4.86-1
 - fixed osversion.trigger, Distro -> distro.
 - extend visit timeout to 6 hours by default.
