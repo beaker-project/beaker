@@ -283,6 +283,7 @@ if __name__ == '__main__':
                 if distro['name'].find('_nfs-') == -1:
                     continue
                 VARIANT=''
+                FAMILYUPDATE=None
                 DISTPATH='nightly'
                 if distro['ks_meta']['tree'].find('/rel-eng/') != -1:
                     DISTPATH='rel-eng'
@@ -295,15 +296,17 @@ if __name__ == '__main__':
                         VARIANT = curr_variant
                         break
                 TPATH = DISTPATH + ''.join(distro['ks_meta']['tree'].split(DISTPATH,1)[1:])
-                FAMILYUPDATE=release.search(distro['comment']).group(1)
+                if release.search(distro['comment']):
+                    FAMILYUPDATE=release.search(distro['comment']).group(1)
                 if variant_search.search(distro['comment']):
                     VARIANT = variant_search.search(distro['comment']).group(1)
                 #addDistro.sh rel-eng RHEL6.0-20090626.2 RedHatEnterpriseLinux6.0 x86_64 Default rel-eng/RHEL6.0-20090626.2/6/x86_64/os
-                cmd = '%s %s %s %s %s "%s" %s' % (addDistroCmd, DISTPATH, DIST,
-                                                FAMILYUPDATE, distro['arch'],
-                                                VARIANT, TPATH)
-                print cmd
-                os.system(cmd)
+                if FAMILYUPDATE:
+                    cmd = '%s %s %s %s %s "%s" %s' % (addDistroCmd, DISTPATH, DIST,
+                                                    FAMILYUPDATE, distro['arch'],
+                                                    VARIANT, TPATH)
+                    print cmd
+                    os.system(cmd)
 
         for distro in push_distros:
             comment = "%s\nPUSHED" % distro['comment']
