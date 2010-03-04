@@ -279,8 +279,9 @@ if __name__ == '__main__':
             release = re.compile(r'family=([^\s]+)')
             variant_search = re.compile(r'variant=([^\s]+)')
             for distro in push_distros:
-                # Only process nfs distros
-                if distro['name'].find('_nfs-') == -1:
+                # Only process nfs distros and skip xen distros too
+                if distro['name'].find('_nfs-') == -1 or \
+                   distro['name'].find('-xen-') != -1:
                     continue
                 VARIANT=''
                 FAMILYUPDATE=None
