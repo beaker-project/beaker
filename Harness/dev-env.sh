@@ -23,6 +23,9 @@ if [[ "$0" == "dev-env.sh" ]]; then
 	exit 1
 fi
 
+BEAH_FUNCTIONS=
+BEAH_PRIVATE=
+
 function file_path()
 (
         [[ -n "$2" ]] && cd "$2"
@@ -63,7 +66,7 @@ function beah() { python -c "from beah.bin.cli import main; main()" "$@"; }
 function beah-srv() { python -c "from beah.bin.srv import main; main()" "$@"; }
 function beah-out-backend() { python -c "from beah.bin.out_backend import main; main()" "$@"; }
 function beah-cmd-backend() { python -c "from beah.bin.cmd_backend import main; main()" "$@"; }
-function fakelc() { python -c "from beah.tools.fakelc import main; main()" "$@"; }
+function beah-fakelc() { python -c "from beah.tools.fakelc import main; main()" "$@"; }
 function beah-beaker-backend() { python -c "from beah.backends.beakerlc import main; main()" "$@"; }
 function beah-fwd-backend() { python -c "from beah.backends.forwarder import main; main()" "$@"; }
 function beah-rhts-task() { python -c "from beah.tasks.rhts_xmlrpc import main; main()" "$@"; }
@@ -71,11 +74,15 @@ function beah-root() { python -c "from beah import tools; tools.main_root()" "$@
 function beah-data-root() { python -c "from beah import tools; tools.main_data_root()" "$@"; }
 function beah-data-file() { python -c "from beah import tools; tools.main_data_file()" "$@"; }
 function beah-data-dir() { python -c "from beah import tools; tools.main_data_dir()" "$@"; }
+BEAH_FUNCTIONS="$BEAH_FUNCTIONS beah $(echo beah-{srv,{out,cmd,beaker,fwd}-backend,fakelc,root,data-{root,file,dir}})"
+
 function inst1() { if [[ ! -z "$LABM1" ]]; then inst_all -m $LABM1; fi }
 function inst2() { if [[ ! -z "$LABM2" ]]; then inst_all -m $LABM2; fi }
 function inst3() { if [[ ! -z "$LABM3" ]]; then inst_all -m $LABM3; fi }
 function inst4() { if [[ ! -z "$LABM4" ]]; then inst_all -m $LABM4; fi }
 function inst5() { if [[ ! -z "$LABM5" ]]; then inst_all -m $LABM5; fi }
+BEAH_PRIVATE="$BEAH_PRIVATE $(echo inst{_all,1,2,3,4,5})"
+
 function _labms()
 {
   if [[ ! -z "$1" ]]; then
@@ -143,6 +150,7 @@ function gxlm()
 {
   lmcall "$@" xlm
 }
+BEAH_PRIVATE="$BEAH_PRIVATE gxlm $(echo xlm{,1,2,3,4,5})"
 
 function inst_all()
 {
@@ -159,6 +167,8 @@ function gpwdless()
 {
   lmcall "$@" pwdless
 }
+BEAH_PRIVATE="$BEAH_PRIVATE $(echo {,g}pwdless)"
+
 function launcher()
 (
   default="s o l"
@@ -243,11 +253,11 @@ END
   fi
 )
 
-FUNCTIONS="$(echo "beah"{,-srv,-{out,cmd,beaker}-backend}) launcher fakelc inst_all"
-export -f $FUNCTIONS
+BEAH_FUNCTIONS="$BEAH_FUNCTIONS launcher"
+export -f $BEAH_FUNCTIONS
 
 cat <<END
 ** Environment is set. **
-Run ${FUNCTIONS/ /, }
+Run ${BEAH_FUNCTIONS/ /, }
 END
 
