@@ -94,6 +94,7 @@ from beaker.server.model import system_types
                     </li>
                     <li><a href="${tg.url('/jobs')}">Jobs</a></li>
                     <li><a href="${tg.url('/recipes')}">Recipes</a></li>
+                    <li><a href="${tg.url('/tasks/new')}">New Task</a></li>
                     <li><a href="${tg.url('/tasks')}">Task Library</a></li>
                     <li><a href="${tg.url('/reserveworkflow')}">Reserve</a></li>
                     <li class="last">
