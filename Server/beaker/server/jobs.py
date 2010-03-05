@@ -135,7 +135,17 @@ class Jobs(RPCRoot):
             # Clone from file
             textxml = filexml.file.read()
         elif textxml:
-            xmljob = XmlJob(xmltramp.parse(textxml))
+            try:
+                xmljob = XmlJob(xmltramp.parse(textxml))
+            except Exception,err:
+                flash(_(u'Failed to import job because of:%s' % err))
+                return dict(
+                    title = 'Clone Job %s' % id,
+                    form = self.job_form,
+                    action = './clone',
+                    options = {},
+                    value = dict(textxml = "%s" % textxml),
+                )
             try:
                 job = self.process_xmljob(xmljob,identity.current.user)
             except BeakerException, err:
