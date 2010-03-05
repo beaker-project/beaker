@@ -6,7 +6,7 @@ $SNIPPET('pre_install_network_config')
 python << _EOF_
 import xmlrpclib
 server = xmlrpclib.Server("http://$server:8000")
-server.install_start()
+server.install_start("$name")
 _EOF_
 
 ## Enable rhts watchdog checkin

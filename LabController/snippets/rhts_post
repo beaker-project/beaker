@@ -141,6 +141,7 @@ LAB_CONTROLLER=http://$server:8000/server
 #
 # # HOSTNAME: Pretend to be machine with given name:
 # #HOSTNAME=fake.hostname.com
+HOSTNAME=$name
 EOF
 # Turn on Debug logging
 /bin/sed -i 's/DEVEL=False/DEVEL=True/' /etc/beah.conf
