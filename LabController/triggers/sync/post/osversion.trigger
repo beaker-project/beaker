@@ -270,6 +270,10 @@ if __name__ == '__main__':
     if push_distros:
         inventory = xmlrpclib.ServerProxy('%s/RPC2' % settings['redhat_management_server'], allow_none=True)
         distros = inventory.labcontrollers.addDistros(settings['server'], push_distros)
+        for distro in push_distros:
+            comment = "%s\nPUSHED" % distro['comment']
+            cobbler.modify_distro(distro['id'],'comment',comment,token)
+            cobbler.save_distro(distro['id'],token)
         # Needed for legacy RHTS
         addDistroCmd = '/var/lib/beaker/addDistro.sh'
         if os.path.exists(addDistroCmd):
@@ -307,7 +311,3 @@ if __name__ == '__main__':
                     print cmd
                     os.system(cmd)
 
-        for distro in push_distros:
-            comment = "%s\nPUSHED" % distro['comment']
-            cobbler.modify_distro(distro['id'],'comment',comment,token)
-            cobbler.save_distro(distro['id'],token)
