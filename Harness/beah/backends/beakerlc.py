@@ -129,8 +129,13 @@ def parse_recipe_xml(input_xml, hostname):
         if system == hostname:
             break
     else:
-        log.info("parse_recipe_xml: No recipe for %s." % hostname)
-        return None
+        for er in root.getElementsByTagName('guestrecipe'):
+            system = xml_attr(er, 'system')
+            if system == hostname:
+                break
+        else:
+            log.info("parse_recipe_xml: No recipe for %s." % hostname)
+            return None
     task_env = {}
 
     rs = xml_attr(er, 'status')
@@ -604,7 +609,7 @@ class BeakerLCBackend(SerializingBackend):
         cmd = self.get_command(evt.arg('cmd_id'))
         if (cmd is not None and cmd.command()=='run'):
             rc = evt.arg('rc')
-            if rc!=ECHO.OK:
+            if rc not in (ECHO.OK, ECHO.DUPLICATE):
                 # FIXME: Start was not issued. Is it OK?
                 self.proxy.callRemote(self.TASK_STOP,
                         evt.task_id,
