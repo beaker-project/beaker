@@ -129,8 +129,13 @@ def parse_recipe_xml(input_xml, hostname):
         if system == hostname:
             break
     else:
-        log.info("parse_recipe_xml: No recipe for %s." % hostname)
-        return None
+        for er in root.getElementsByTagName('guestrecipe'):
+            system = xml_attr(er, 'system')
+            if system == hostname:
+                break
+        else:
+            log.info("parse_recipe_xml: No recipe for %s." % hostname)
+            return None
     task_env = {}
 
     rs = xml_attr(er, 'status')
