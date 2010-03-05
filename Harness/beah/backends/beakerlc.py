@@ -604,7 +604,7 @@ class BeakerLCBackend(SerializingBackend):
         cmd = self.get_command(evt.arg('cmd_id'))
         if (cmd is not None and cmd.command()=='run'):
             rc = evt.arg('rc')
-            if rc!=ECHO.OK:
+            if rc not in (ECHO.OK, ECHO.DUPLICATE):
                 # FIXME: Start was not issued. Is it OK?
                 self.proxy.callRemote(self.TASK_STOP,
                         evt.task_id,

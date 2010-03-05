@@ -57,4 +57,5 @@ class ECHO:
     OK              = 0
     NOT_IMPLEMENTED = 1
     EXCEPTION       = 2
+    DUPLICATE       = 3 # Command with same id as one which has been already processed.
 

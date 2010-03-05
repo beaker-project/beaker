@@ -226,6 +226,8 @@ class Controller(object):
         evev = evt.event()
         # FIXME: incomming events filter - CHECK
         if evev not in ['variable_get', 'variable_set']:
+            echo_evt.args['rc'] = ECHO.EXCEPTION
+            echo_evt.args['message'] = 'Event %r is not permitted here.' % evev
             return
         fake_task = self.BackendFakeTask(self, backend, cmd.id())
         self.proc_evt(fake_task, evt)
@@ -254,7 +256,12 @@ class Controller(object):
 
     def proc_cmd_run(self, backend, cmd, echo_evt):
         task_info = dict(cmd.arg('task_info'))
-        task_info['id'] = cmd.id()
+        task_id = cmd.id()
+        if self.find_task(task_id) is not None:
+            echo_evt.args['rc'] = ECHO.DUPLICATE
+            echo_evt.args['message'] = 'The task with id == %r is already running.' % task_id
+            return
+        task_info['id'] = task_id
         # FIXME!!! save task_info
         task_env = dict(cmd.arg('env') or {})
         task_args = list(cmd.arg('args') or [])
