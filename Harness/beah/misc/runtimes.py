@@ -18,6 +18,7 @@
 
 import exceptions
 import shelve
+from beah.misc import pre_open
 from beah.core import make_addict
 
 
@@ -278,6 +279,7 @@ class ShelveRuntime(BaseRuntime):
 
     def __init__(self, fname):
         self.fname = fname
+        pre_open(fname)
         self.so = shelve.open(fname, 'c')
 
     def close(self):

@@ -51,7 +51,7 @@ from beah.core import command, event, addict
 from beah.core.backends import SerializingBackend
 from beah.core.constants import ECHO, RC, LOG_LEVEL
 from beah.misc import format_exc, dict_update, log_flush, writers, runtimes, \
-        make_class_verbose, is_class_verbose
+        make_class_verbose, is_class_verbose, pre_open
 from beah.misc.log_this import log_this
 import beah.system
 # FIXME: using rpm's, yum - too much Fedora centric(?)
@@ -313,10 +313,7 @@ class BeakerWriter(writers.JournallingWriter):
                 self.filename, str(size), digest, offs, data)
 
 def open_(name, mode):
-    if not os.path.isfile(name):
-        path = os.path.dirname(name)
-        if not os.path.isdir(path):
-            os.makedirs(path)
+    pre_open(name)
     return open(name, mode)
 
 class BeakerLCBackend(SerializingBackend):

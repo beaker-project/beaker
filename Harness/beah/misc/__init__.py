@@ -20,6 +20,7 @@ import exceptions
 import socket
 import traceback
 import os
+import os.path
 import sys
 import logging
 import logging.handlers
@@ -210,4 +211,10 @@ def str2log_level(s, default=logging.WARNING):
             warn=logging.WARNING, error=logging.ERROR, fatal=logging.FATAL,
             critical=logging.CRITICAL, false=logging.ERROR, true=logging.INFO) \
                     .get(s.lower(), default)
+
+def pre_open(name):
+    if not os.path.isfile(name):
+        path = os.path.dirname(name)
+        if not os.path.isdir(path):
+            os.makedirs(path)
 
