@@ -8,12 +8,11 @@ SearchBar = function (fields, searchController,operationvalue,column_based_contr
         this.row_identifier = ''
         this.fields = []  
         for (index in fields) {
-            field_actual = fields[index].field_id  
-            this.my_regex = /(.+?_\d{1,})_(.+)/
+            field_actual = fields[index].field_id 
             field_complete = field_actual 
-            field_name_mod = field_actual.replace(this.my_regex, "$2") 
+            field_name_mod = field_actual.replace(/^(.+?_\d{1,})_(.+)$/, "$2") 
             if (!this.row_identifier) {
-                this.row_identifier = field_actual.replace(this.my_regex, "$1") 
+                this.row_identifier = field_actual.replace(/^(.+?_\d{1,})_(.+)$/, "$1") 
             }
             field_name = field_name_mod + 'id'
             this[field_name] = field_actual  
@@ -42,7 +41,7 @@ SearchBar.prototype.initialize = function() {
             field_id = this[field+'id']
             this[field+'Field'] = getElement(field_id)
            
-            bare_name = field_id.replace(this.my_regex,"$2")
+            bare_name = field_id.replace(/^(.+?_\d{1,})_(.+)$/,"$2")
             column_controller = this.column_controller[bare_name]
             
             if (column_controller) {
@@ -76,7 +75,7 @@ SearchBar.prototype.initialize = function() {
 }
 
 SearchBar.prototype.show = function(field) {
-       column_name = field.replace(this.my_regex,"$2")
+       column_name = field.replace(/^(.+?_\d{1,})_(.+)$/,"$2")
        count = SearchBarForm.column_count[column_name]
        //If we don't have any other instances of this column already, let's display the header for it
        if (count < 1) { 
@@ -258,7 +257,7 @@ SearchBar.prototype.theOnChange = function(event) {
     tracked_column = SearchBarForm.tracking_columns[table_value_lower]
     if (tracked_column) {
         table_field_id = this.tableField.id 
-        parent_tr_id  = table_field_id.replace(this.my_regex,"$1")
+        parent_tr_id  = table_field_id.replace(/^(.+?_\d{1,})_(.+)$/,"$1")
         field_to_show = parent_tr_id+'_'+SearchBarForm.tracking_columns[table_value_lower]
         this.show(field_to_show)    
     }

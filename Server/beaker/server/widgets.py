@@ -130,7 +130,7 @@ class TextFieldJSON(TextField):
 
 class SearchBar(RepeatingFormField):
     """Search Bar""" 
-    javascript = [LocalJSLink('beaker', '/static/javascript/searchbar_v4.js')]
+    javascript = [LocalJSLink('beaker', '/static/javascript/searchbar_v5.js')]
     template = """
     <div xmlns:py="http://purl.org/kid/ns#">
     <a id="advancedsearch" href="#">Toggle Search</a>
@@ -777,7 +777,7 @@ class SystemHistory(CompoundWidget):
     
 
 class SystemForm(Form):
-    javascript = [LocalJSLink('beaker', '/static/javascript/provision.js'),LocalJSLink('beaker', '/static/javascript/searchbar_v4.js')]
+    javascript = [LocalJSLink('beaker', '/static/javascript/provision.js'),LocalJSLink('beaker', '/static/javascript/searchbar_v5.js')]
     template = "beaker.server.templates.system_form"
     params = ['id','readonly',
               'user_change','user_change_text',
