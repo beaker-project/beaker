@@ -159,6 +159,24 @@ SysReport ()
 	syskerror5=$(/bin/grep -i FATAL: $FILEAREA/install_kernel.log >> $FILEAREA/kerror.log)
 	syskerror6=$(/bin/grep -i WARNING: $FILEAREA/install_kernel.log >> $FILEAREA/kerror.log)
     fi
+
+    # upload bootloader config files
+    if [ -e /boot/grub/grub.conf ]; then
+	rhts_submit_log -S $RESULT_SERVER -T $TESTID -l /boot/grub/grub.conf
+    fi
+
+    if [ -e /boot/efi/efi/redhat/elilo.conf ]; then
+	rhts_submit_log -S $RESULT_SERVER -T $TESTID -l /boot/efi/efi/redhat/elilo.conf
+    fi
+
+    if [ -e /etc/yaboot.conf ]; then
+	rhts_submit_log -S $RESULT_SERVER -T $TESTID -l /etc/yaboot.conf
+    fi
+
+    if [ -e /etc/zipl.conf ]; then
+	rhts_submit_log -S $RESULT_SERVER -T $TESTID -l /etc/zipl.conf
+    fi
+
     echo "********** System Information **********" >> $OUTPUTFILE
     echo "Hostname                = $sysnode"       >> $OUTPUTFILE
     echo "Kernel Version          = $syskernel"     >> $OUTPUTFILE

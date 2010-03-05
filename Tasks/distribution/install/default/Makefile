@@ -18,7 +18,7 @@ RELATIVE_PATH=install
 #  will remain /distribution/install 
 
 # Required variables
-export TESTVERSION=1.9
+export TESTVERSION=1.10
 export TEST=$(TOPLEVEL_NAMESPACE)/$(RELATIVE_PATH)
 TEST_DIR=/mnt/tests$(TEST)
 BINFILE=hvm_detect
