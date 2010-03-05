@@ -2095,19 +2095,32 @@ class Watchdog(MappedObject):
     def by_status(cls, labcontroller, status="active"):
         """ return a list of all watchdog entries that are either active 
             or expired for this lab controller
+            All recipes in a recipeset have to expire.
         """
-
         REMAP_STATUS = {
-            "active"  : "__gt__",
-            "expired" : "__le__",
+            "active"  : dict(
+                               op = "__gt__",
+                              fop = "max",
+                            ),
+            "expired" : dict(
+                               op = "__le__",
+                              fop = "min",
+                            ),
         }
-        op = REMAP_STATUS.get(status, None)
-        if op:
-            return cls.query.join(['system']).filter(
-                                      and_(System.lab_controller==labcontroller,
-                                 getattr(Watchdog.kill_time, op)(datetime.utcnow())
-                                          )
-                                                    )
+        op = REMAP_STATUS.get(status, None)['op']
+        fop = REMAP_STATUS.get(status, None)['fop']
+
+        if op and fop:
+            return cls.query().join('system').join(['recipe','recipeset']).filter(
+                    and_(System.lab_controller==labcontroller,
+                       RecipeSet.id.in_(select([recipe_set_table.c.id], 
+                                  from_obj=[watchdog_table.join(recipe_table).join(recipe_set_table)]
+                                 ).group_by(RecipeSet.id).having(
+                                        getattr(func, fop)(getattr(Watchdog.kill_time, op)(datetime.utcnow()))
+                                                                )
+                                       )
+                        )
+                                                                                 )
 
 class LabInfo(SystemObject):
     fields = ['orig_cost', 'curr_cost', 'dimensions', 'weight', 'wattage', 'cooling']
