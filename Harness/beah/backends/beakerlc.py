@@ -34,6 +34,7 @@ Controller.
 import sys
 import os
 import os.path
+import re
 import traceback
 import exceptions
 import base64
@@ -149,7 +150,7 @@ def parse_recipe_xml(input_xml, hostname):
     task_env['GUESTS'] = '|'.join([
         ';'.join([xml_attr(gr, a, '') for a in GUEST_ATTRS])
             for gr in xml_get_nodes(er, 'guestrecipe')])
-    task_env['LAB_CONTROLLER'] = config.get_conf('beah-backend').get('DEFAULT', 'LAB_CONTROLLER')
+    task_env['LAB_CONTROLLER'] = config.get_conf('beah-backend').get('DEFAULT', 'COBBLER_SERVER')
 
     for job in root.getElementsByTagName('job'):
         submitter = xml_attr(job, 'owner')
@@ -841,6 +842,12 @@ def beakerlc_opts(opt, conf):
     opt.add_option("-l", "--lab-controller", "--lc",
             action="callback", callback=lc_cb, type='string',
             help="Specify lab controller's URL.")
+    def cs_cb(option, opt_str, value, parser):
+        # FIXME!!! check value
+        conf['COBBLER_SERVER'] = value
+    opt.add_option("-S", "--cobbler-server", "--cs",
+            action="callback", callback=cs_cb, type='string',
+            help="Cobbler server's host name.")
     def hostname_cb(option, opt_str, value, parser):
         # FIXME!!! check value
         conf['HOSTNAME'] = value
@@ -851,16 +858,20 @@ def beakerlc_opts(opt, conf):
 
 def defaults():
     d = config.backend_defaults()
+    cs = os.getenv('COBBLER_SERVER', '')
     lc = os.getenv('LAB_CONTROLLER', '')
     if not lc:
-        lc = os.getenv('COBBLER_SERVER', '')
-        if lc:
-            lc = 'http://%s:8000/server' % lc
+        if cs:
+            lc = 'http://%s:8000/server' % cs
         else:
+            cs = 'localhost'
             lc = 'http://localhost:5222/'
+    if not cs:
+        cs = re.compile('^(https?://)?([^/:]+?)(:[0-9]+)?(/.*)?$').match(lc).group(2)
     d.update({
             'NAME':'beah_beaker_backend',
             'LAB_CONTROLLER':lc,
+            'COBBLER_SERVER':cs,
             'HOSTNAME':os.getenv('HOSTNAME')
             })
     return d
