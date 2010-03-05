@@ -3027,7 +3027,7 @@ class Recipe(TaskBase):
                                          self.id)
     filepath = property(filepath)
 
-    def to_xml(self, recipe, clone=False, from_recipeset=False):
+    def to_xml(self, recipe, clone=False, from_recipeset=False, from_machine=False):
         if not clone:
             recipe.setAttribute("id", "%s" % self.id)
             recipe.setAttribute("job_id", "%s" % self.recipeset.job_id)
@@ -3075,7 +3075,7 @@ class Recipe(TaskBase):
         recipe.appendChild(hostRequires)
         for t in self.tasks:
             recipe.appendChild(t.to_xml(clone))
-        if not from_recipeset and not isinstance(self, GuestRecipe):
+        if not from_recipeset and not from_machine:
             recipeSet = self.doc.createElement("recipeSet")
             recipeSet.appendChild(recipe)
             job = self.doc.createElement("job")
@@ -3285,7 +3285,7 @@ class Recipe(TaskBase):
 
 class GuestRecipe(Recipe):
     systemtype = 'Virtual'
-    def to_xml(self, clone=False, from_recipeset=False):
+    def to_xml(self, clone=False, from_recipeset=False, from_machine=False):
         recipe = self.doc.createElement("guestrecipe")
         recipe.setAttribute("guestname", "%s" % self.guestname)
         recipe.setAttribute("guestargs", "%s" % self.guestargs)
@@ -3299,7 +3299,7 @@ class GuestRecipe(Recipe):
                                 )
                                                          ).one().tree_path
             recipe.setAttribute("location", "%s" % location)
-        return Recipe.to_xml(self, recipe, clone, from_recipeset)
+        return Recipe.to_xml(self, recipe, clone, from_recipeset, from_machine)
 
     def _get_distro_requires(self):
         drs = xml.dom.minidom.parseString(self._distro_requires)
@@ -3331,7 +3331,7 @@ class MachineRecipe(Recipe):
     def to_xml(self, clone=False, from_recipeset=False):
         recipe = self.doc.createElement("recipe")
         for guest in self.guests:
-            recipe.appendChild(guest.to_xml(clone))
+            recipe.appendChild(guest.to_xml(clone, from_machine=True))
         return Recipe.to_xml(self, recipe, clone, from_recipeset)
 
     def _get_distro_requires(self):
