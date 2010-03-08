@@ -158,6 +158,8 @@ class XmlRecipe(ElementWrapper):
                 return ''.join([t for t in self.wrappedEl['kickstart']])
             except: 
                 return None
+        elif attrname == 'role':
+            return self.get_xml_attr('role', unicode, u'None')
         else: raise AttributeError, attrname
 
 class XmlRecipeMachine(XmlRecipe):

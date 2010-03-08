@@ -624,6 +624,7 @@ recipe_table = Table('recipe',metadata,
         Column('ks_meta', String(1024)),
         Column('kernel_options', String(1024)),
         Column('kernel_options_post', String(1024)),
+        Column('role', Unicode(255)),
 )
 
 machine_recipe_table = Table('machine_recipe', metadata,
@@ -701,6 +702,15 @@ recipe_task_table =Table('recipe_task',metadata,
         Column('status_id', Integer,
                 ForeignKey('task_status.id'),default=select([task_status_table.c.id], limit=1).where(task_status_table.c.status==u'New').correlate(None)),
         Column('role', Unicode(255)),
+)
+
+recipe_role_table = Table('recipe_role', metadata,
+        Column('id', Integer, primary_key=True),
+        Column('recipe_id', Integer,
+                ForeignKey('recipe.id')),
+        Column('role',Unicode(255)),
+        Column('system_id', Integer,
+                ForeignKey('system.id')),
 )
 
 recipe_task_role_table = Table('recipe_task_role', metadata,
@@ -3055,6 +3065,11 @@ class Recipe(TaskBase):
             recipe.setAttribute("variant", "%s" % self.distro.variant)
         if self.system and not clone:
             recipe.setAttribute("system", "%s" % self.system)
+        if self.roles and not clone:
+            roles = self.doc.createElement("roles")
+            for role in self.roles.to_xml():
+                roles.appendChild(role)
+            recipe.appendChild(roles)
         repos = self.doc.createElement("repos")
         if not clone:
             repo = self.doc.createElement("repo")
@@ -3282,6 +3297,93 @@ class Recipe(TaskBase):
         if self.distro.osversion.osmajor in recipetask.task.excluded_osmajor:
             return
         self.tasks.append(recipetask)
+
+class RecipeRoleListAdapter(object):
+    def __init__(self, parent, role):
+        self.__parent = parent
+        self.__role = role
+
+    def __cached(self):
+        try:
+            return self.__cached_systems
+        except AttributeError:
+            self.__cached_systems = [item.system for item in self.__parent._roles if item.role == self.__role]
+            return self.__cached_systems
+    __cached = property(__cached)
+
+    def __delcached(self):
+        try:
+            del self.__cached_systems
+        except AttributeError:
+            pass
+
+    def __iter__(self):
+        return iter(self.__cached)
+
+    def __eq__(self, other):
+        return list(self) == list(other)
+
+    def __repr__(self):
+        return repr(list(self))
+
+    def append(self, item):
+        self.__delcached()
+        self.__parent._roles.append(RecipeRole(self.__role, item))
+
+    def __getitem__(self, index):
+        return self.__cached[index]
+
+    def __setitem__(self, index, value):
+        self.__delcached()
+        [item for item in self.__parent._roles if item.role == self.__role][index].roles = value
+        self.__cached[index] = value
+
+
+class RecipeRoleDictAdapterAttribute(object):
+    def __get__(self, instance, owner):
+        if instance is None:
+            return self
+        class RecipeRoleDictAdapter(MappedObject):
+            def __getitem__(self, role):
+                return RecipeRoleListAdapter(instance, role)
+            def keys(self):
+                return iter(set([item.role for item in instance._roles]))
+            def __eq__(self, other):
+                return dict(self) == dict(other)
+            def __repr__(self):
+                return repr(dict(self))
+            def to_xml(self):
+                """ For each key return an xml dom
+                """
+                for key in self.keys():
+                    role = self.doc.createElement("role")
+                    role.setAttribute("value", "%s" % key)
+                    for s in RecipeRoleListAdapter(instance, key):
+                        system = self.doc.createElement("system")
+                        system.setAttribute("value", "%s" % s)
+                        role.appendChild(system)
+                    yield(role)
+
+            # other dict like methods
+
+        return RecipeRoleDictAdapter()
+
+    def __set__(self, instance, somedict):
+        l =[]
+        for key, somelist in somedict.items():
+            for item in somelist:
+                l.append(RecipeRole(key, item))
+                instance._roles = l
+
+
+Recipe.roles = RecipeRoleDictAdapterAttribute()
+
+class RecipeRole(MappedObject):
+    """ Holds the roles for every Recipe
+    """
+    def __init__(self, role, system):
+        self.role = role
+        self.system = system
 
 class GuestRecipe(Recipe):
     systemtype = 'Virtual'
@@ -4198,6 +4300,7 @@ mapper(Recipe, recipe_table,
                       'result':relation(TaskResult, uselist=False),
                       'status':relation(TaskStatus, uselist=False),
                       'logs':relation(LogRecipe, backref='parent'),
+                      '_roles':relation(RecipeRole),
                      }
       )
 mapper(GuestRecipe, guest_recipe_table, inherits=Recipe,
@@ -4228,6 +4331,10 @@ mapper(RecipeTask, recipe_task_table,
                      }
       )
 
+mapper(RecipeRole, recipe_role_table,
+        properties = {'system':relation(System, uselist=False),
+                     }
+      )
 mapper(RecipeTaskRole, recipe_task_role_table,
         properties = {'system':relation(System, uselist=False),
                      }

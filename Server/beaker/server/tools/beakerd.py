@@ -319,6 +319,11 @@ def scheduled_recipes(*args):
                 if recipe.status != TaskStatus.by_name(u'Scheduled'):
                     continue
                 recipe.waiting()
+
+                # Go Through each recipe and find out everyone's role.
+                for peer in recipe.recipeset.recipes:
+                    recipe.roles[peer.role].append(peer.system)
+
                 # Go Through each task and find out the roles of everyone else
                 for i, task in enumerate(recipe.tasks):
                     for peer in recipe.recipeset.recipes:
