@@ -3043,6 +3043,7 @@ class Recipe(TaskBase):
             recipe.setAttribute("job_id", "%s" % self.recipeset.job_id)
             recipe.setAttribute("recipe_set_id", "%s" % self.recipe_set_id)
         recipe.setAttribute("whiteboard", "%s" % self.whiteboard and self.whiteboard or '')
+        recipe.setAttribute("role", "%s" % self.role and self.role or '')
         if self.kickstart:
             kickstart = self.doc.createElement("kickstart")
             text = self.doc.createCDATASection('%s' % self.kickstart)
