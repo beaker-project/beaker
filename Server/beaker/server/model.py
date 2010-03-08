@@ -2574,7 +2574,10 @@ class Key_Value_Int(object):
 
 
 class TaskPriority(object):   
-    default_priority = 'Normal'
+
+    @classmethod
+    def default_priority(cls):
+        return cls.query().filter_by(id=3).one()
 
     @classmethod
     def by_id(cls,id):
@@ -2883,7 +2886,7 @@ class RecipeSet(TaskBase):
             return
         if user.in_group(['admin','queue_admin']):
             return TaskPriority.query().all()
-        default_id = TaskPriority.query().filter_by(priority = TaskPriority.default_priority).one().id
+        default_id = TaskPriority.default_priority().id
         return TaskPriority.query().filter(TaskPriority.id < default_id)
         
     @classmethod
