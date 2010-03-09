@@ -94,6 +94,7 @@ class ReserveWorkflow:
                     options = None,
                     title='Reserve System %s' % system_name)
 
+    @identity.require(identity.not_anonymous())
     @expose(template='beaker.server.templates.generic') 
     def index(self,*args,**kw):
         values = {}
