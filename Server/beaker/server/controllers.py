@@ -612,12 +612,25 @@ class Root(RPCRoot):
     @paginate('list',limit=20,allow_limit_override=True)
     def mine(self, *args, **kw):
         return self.systems(systems = System.mine(identity.current.user), *args, **kw)
-
-    @expose(template='beaker.server.templates.grid')   
+    
+    @expose(allow_json=True) 
+    def find_systems_for_distro(self,distro_install_name,*args,**kw): 
+        try: 
+            distro = Distro.query().filter(Distro.install_name == distro_install_name).one()
+        except InvalidRequestError,(e):
+            return { 'count' : 0 } 
+                 
+        #there seems to be a bug distro.systems 
+        #it seems to be auto correlateing the inner query when you pass it a user, not possible to manually correlate
+        #a Query object in 0.4  
+        systems_distro_query = distro.systems()
+        avail_systems_distro_query = System.available(identity.current.user,System.by_type(type='machine',systems=systems_distro_query)) 
+        return {'count' : avail_systems_distro_query.count(), 'distro_id' : distro.id }
+      
+    @expose(template='beaker.server.templates.grid') 
     @identity.require(identity.not_anonymous())
     @paginate('list') 
-    def reserve_system(self, *args,**kw): 
-
+    def reserve_system(self, *args,**kw):
         def reserve_link(x,distro):
             if x.is_free():
                 return make_link("/reserveworkflow/reserve?system_id=%s&distro_id=%s" % (Utility.get_correct_system_column(x).id,distro), 'Reserve Now')
@@ -625,39 +638,34 @@ class Root(RPCRoot):
                 return make_link("/reserveworkflow/reserve?system_id=%s&distro_id=%s" % (Utility.get_correct_system_column(x).id,distro), 'Queue Reservation')
 
         try:    
-            distro_install_name = kw['distro'] #this should be the distro install_name  
-        except KeyError, (e):
-            flash('Need a distro to search on') 
-            redirect(url('/reserveworkflow',**kw))
-              
-        try: 
+            distro_install_name = kw['distro'] #this should be the distro install_name   
             distro = Distro.query().filter(Distro.install_name == distro_install_name).one()
-        except InvalidRequestError,(e):
-            flash('The Distro entered does not appear to be valid')
-            redirect(url('/reserveworkflow',**kw))
             
-        #there seems to be a bug distro.systems 
-        #it seems to be auto correlateing the inner query when you pass it a user, not possible to manually correlate
-        #a Query object in 0.4  
-        systems_distro_query = distro.systems() 
-        avail_systems_distro_query = System.available(identity.current.user,System.by_type(type='machine',systems=systems_distro_query)) 
-     
-        warn = None
-        if avail_systems_distro_query.count() < 1: 
-            warn = 'No Systems compatible with distro %s' % distro_install_name
-        distro_query = Distro.by_install_name(distro_install_name)
-        getter = lambda x: reserve_link(x,distro_query.id)       
-        direct_column = Utility.direct_column(title='Action',getter=getter)     
-        return_dict  = self.systems(systems=avail_systems_distro_query, direct_columns=[(8,direct_column)],warn_msg=warn, *args, **kw)
+            # I don't like duplicating this code in find_systems_for_distro() but it dies on trying to jsonify a Query object..... 
+            systems_distro_query = distro.systems() 
+            avail_systems_distro_query = System.available(identity.current.user,System.by_type(type='machine',systems=systems_distro_query)) 
+           
+            warn = None
+            if avail_systems_distro_query.count() < 1: 
+                warn = 'No Systems compatible with distro %s' % distro_install_name
+            distro_query = Distro.by_install_name(distro_install_name)
+            getter = lambda x: reserve_link(x,distro_query.id)       
+            direct_column = Utility.direct_column(title='Action',getter=getter)     
+            return_dict  = self.systems(systems=avail_systems_distro_query, direct_columns=[(8,direct_column)],warn_msg=warn, *args, **kw)
        
-        return_dict['title'] = 'Reserve Systems'
-        return_dict['warn_msg'] = warn
-        return_dict['tg_template'] = "beaker.server.templates.reserve_grid"
-        return_dict['action'] = '/reserve_system'
-        return_dict['options']['extra_hiddens'] = {'distro' : distro_install_name}
-        
-        return return_dict  
-
+            return_dict['title'] = 'Reserve Systems'
+            return_dict['warn_msg'] = warn
+            return_dict['tg_template'] = "beaker.server.templates.reserve_grid"
+            return_dict['action'] = '/reserve_system'
+            return_dict['options']['extra_hiddens'] = {'distro' : distro_install_name} 
+            return return_dict
+        except KeyError, (e):
+            flash(_(u'Need a distro to search on')) 
+            redirect(url('/reserveworkflow',**kw))              
+        except InvalidRequestError,(e):
+            flash(_(u'Invalid Distro given'))                 
+            redirect(url('/reserveworkflow',**kw))    
+          
     def _history_search(self,activity,**kw):
         history_search = search_utility.History.search(activity)
         for search in kw['historysearch']:

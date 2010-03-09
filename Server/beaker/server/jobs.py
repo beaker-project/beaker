@@ -196,9 +196,9 @@ class Jobs(RPCRoot):
                 if allowed:
                     recipeSet.priority = allowed[0]
                 else:
-                    recipeSet.priority = TaskPriority.query().filter_by(TaskPriority.priority == TaskPriority.default_priority).one()
+                    recipeSet.priority = TaskPriority.default_priority() 
             else:
-                recipeSet.priority = TaskPriority.query().filter(TaskPriority.priority == TaskPriority.default_priority).one() 
+                recipeSet.priority = TaskPriority.default_priority() 
 
             for xmlrecipe in xmlrecipeSet.iter_recipes(): 
                 recipe = self.handleRecipe(xmlrecipe)

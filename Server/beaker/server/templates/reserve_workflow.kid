@@ -3,9 +3,8 @@
   <body>
     <head>
     <script type='text/javascript'>
-
     var rw = new ReserveWorkflow("${arch.field_id}","${distro_family.field_id}","${method_.field_id}",
-                                 "${tag.field_id}","${distro.field_id}","${submit.field_id}",
+                                 "${tag.field_id}","${distro.field_id}","${submit.field_id}","${auto_pick.field_id}",
                                  "${arch_value}","${distro_family_value}","${tag_value}","${method_value}",
                                  [${to_json(all_arches)}],[${to_json(all_distro_familys)}],[${to_json(all_tags)}],[${to_json(all_methods)}])
     addLoadEvent(rw.initialize)
@@ -13,6 +12,10 @@
         $("select[id!=${distro.field_id}]").change(function() { 
             rw.get_distros()
         });
+
+        $("#${auto_pick.field_id}").click(function() { 
+            rw.system_available()
+         })
 
        $("#${arch.field_id}").change(function() {
             rw.get_distros()
@@ -48,6 +51,8 @@
       </div>
      <br /><br />
      ${submit.display()} 
+
+     ${auto_pick.display()}&nbsp;<warn id="reserve_error" class="rounded-side-pad" style='display:none'>No Systems compatible for that distro</warn> 
     </form>
   </body>
 </html>

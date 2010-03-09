@@ -121,7 +121,7 @@ class ReserveWorkflow(Form):
     css = [LocalCSSLink('beaker','/static/css/reserve_workflow.css')] 
     member_widgets = ['arch','distro','distro_family','method_','tag'] 
     params = ['arch_value','method_value','tag_value','distro_family_value','all_arches',
-              'all_tags','all_methods','all_distro_familys','to_json'] 
+              'all_tags','all_methods','all_distro_familys','to_json','auto_pick'] 
 
     def __init__(self,*args,**kw):
         super(ReserveWorkflow,self).__init__(*args, **kw)  
@@ -139,6 +139,7 @@ class ReserveWorkflow(Form):
         self.arch = SingleSelectField(name='arch', label='Arch', options=[None],validator=validators.NotEmpty())
 
         self.to_json = UtilJSON.dynamic_json()
+        self.auto_pick = Button(default="Auto pick system", name='auto_pick', attrs={'class':None})
         self.name = 'reserveworkflow_form'
         self.action = '/reserve_system'
         self.submit = SubmitButton(name='search',attrs={'value':'Show Systems'})
