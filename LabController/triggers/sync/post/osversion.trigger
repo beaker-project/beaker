@@ -288,10 +288,11 @@ if __name__ == '__main__':
                 VARIANT=''
                 FAMILYUPDATE=None
                 DISTPATH='nightly'
-                if distro['ks_meta']['tree'].find('/rel-eng/') != -1:
-                    DISTPATH='rel-eng'
-                if distro['ks_meta']['tree'].find('/released/') != -1:
-                    DISTPATH='released'
+                if 'tree' in distro['ks_meta']:
+                    if distro['ks_meta']['tree'].find('/rel-eng/') != -1:
+                        DISTPATH='rel-eng'
+                    if distro['ks_meta']['tree'].find('/released/') != -1:
+                        DISTPATH='released'
                 DIST=distro['name'].split('_')[0]
                 meta = string.join(distro['name'].split('_')[1:],'_').split('-')
                 for curr_variant in valid_variants:
