@@ -1,4 +1,4 @@
-ReserveWorkflow = function (arch,distro_family,method,tag,distro,submit,arch_val,distro_family_val,tag_val,method_val,
+ReserveWorkflow = function (arch,distro_family,method,tag,distro,submit,auto_pick,arch_val,distro_family_val,tag_val,method_val,
                             all_arches,all_distro_familys,all_tags,all_methods) {
     this.arch_id = arch
     this.distro_family_id = distro_family
@@ -6,6 +6,7 @@ ReserveWorkflow = function (arch,distro_family,method,tag,distro,submit,arch_val
     this.tag_id = tag
     this.distro_id = distro 
     this.submit_id = submit
+    this.auto_pick_id = auto_pick
 
     this.arch_val = arch_val
     this.distro_family_val = distro_family_val
@@ -20,7 +21,8 @@ ReserveWorkflow = function (arch,distro_family,method,tag,distro,submit,arch_val
 };
 
 ReserveWorkflow.prototype.initialize = function() {  
-    getElement(this.submit_id).setAttribute('disabled',1)
+    getElement(this.submit_id).setAttribute('disabled',1) 
+    getElement(this.auto_pick_id).setAttribute('disabled',1)
     this.replace_fields() 
 }
 
@@ -73,18 +75,36 @@ ReserveWorkflow.prototype.replaceArch = function(arg) {
         return option;
 }
 
+ReserveWorkflow.prototype.system_available = function(arg) {
+    var distro_value = getElement(this.distro_id).value 
+    var params = { 'tg_format' : 'json',
+                   'tg_random' : new Date().getTime(),
+                   'distro_install_name' : distro_value}
+    var d = loadJSONDoc('/find_systems_for_distro?' + queryString(params));
+    d.addCallback(this.show_auto_pick_warnings)                
+}
+
+ReserveWorkflow.prototype.show_auto_pick_warnings = function(result) {
+    count = result['count'] 
+    if (count < 1) {
+         getElement('reserve_error').setAttribute('style','display:inline') 
+    } else {
+         location.href='/reserveworkflow/reserve?distro_id=' + result['distro_id']
+    }
+}
+
 ReserveWorkflow.prototype.get_distros = function() {
     var arch_value = getElement(this.arch_id).value
     var distro_family_value = getElement(this.distro_family_id).value
     var method_value = getElement(this.method_id).value
     var tag_value = getElement(this.tag_id).value
-
     var params = { 'tg_format' : 'json',
                    'tg_random' : new Date().getTime(),
                    'arch' : arch_value,
                    'distro_family' : distro_family_value,
                    'method' : method_value,
                    'tag' : tag_value }
+
     var d = loadJSONDoc('/reserveworkflow/get_distro_options?' + queryString(params)); 
     d.addCallback(this.replaceDistros)
 };
@@ -93,9 +113,11 @@ ReserveWorkflow.prototype.get_distros = function() {
 ReserveWorkflow.prototype.replaceDistros = function(result) {  
     if (result.options.length > 0) {
         getElement(this.submit_id).removeAttribute('disabled')
+        getElement(this.auto_pick_id).removeAttribute('disabled')
     } else {
         result.options.unshift('None selected')
         getElement(this.submit_id).setAttribute('disabled',1)
+        getElement(this.auto_pick_id).setAttribute('disabled',1)
     }
 
     replaceChildNodes(this.distro_id, map(this.replaceOptions, result.options));
