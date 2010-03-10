@@ -38,7 +38,7 @@ class ReserveWorkflow:
                 redirect('/')
             # Inlcude the XML definition so that cloning this job will act as expected.
             recipe.host_requires = system.to_xml().toxml()
-            recipe.system = system
+            recipe.systems.append(system)
         if kw.get('ks_meta'):
             recipe.ks_meta = kw.get('ks_meta')
         if kw.get('koptions'):
@@ -59,7 +59,7 @@ class ReserveWorkflow:
         recipe.append_tasks(reserveTask)
         recipeSet.recipes.append(recipe)
         job.recipesets.append(recipeSet)
-        if recipe.system:
+        if recipe.systems:
             # We already picked the system skip New -> Processed states
             recipe.queue()
         session.save(job)
