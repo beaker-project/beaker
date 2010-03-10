@@ -151,7 +151,7 @@ def parse_recipe_xml(input_xml, hostname):
             HOSTNAME=xml_attr(er, 'system'))
 
     # The following is necessary for Virtual Workflows:
-    GUEST_ATTRS = ('system', 'mac_address', 'location', 'guestargs', 'install_name')
+    GUEST_ATTRS = ('system', 'mac_address', 'location', 'guestargs', 'guestname')
     task_env['GUESTS'] = '|'.join([
         ';'.join([xml_attr(gr, a, '') for a in GUEST_ATTRS])
             for gr in xml_get_nodes(er, 'guestrecipe')])
