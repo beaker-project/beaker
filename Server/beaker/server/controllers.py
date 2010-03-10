@@ -1153,7 +1153,7 @@ class Root(RPCRoot):
                 # Don't return a system with an active watchdog
                 if system.watchdog:
                     flash(_(u"Can't return %s active recipe %s" % (system.fqdn, system.watchdog.recipe_id)))
-                    redirect("/recipes/view?id=%s" % system.watchdog.recipe_id)
+                    redirect("/recipes/%s" % system.watchdog.recipe_id)
                 else:
                     status = "Returned"
                     activity = SystemActivity(identity.current.user, "WEBUI", status, "User", '%s' % system.user, "")
