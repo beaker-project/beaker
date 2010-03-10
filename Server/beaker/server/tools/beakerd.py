@@ -329,8 +329,11 @@ def scheduled_recipes(*args):
                     for peer in recipe.recipeset.recipes:
                         # Roles are only shared amongst like recipe types
                         if type(recipe) == type(peer):
-                            key = peer.tasks[i].role
-                            task.roles[key].append(peer.system)
+                            try:
+                                task.roles[peer.tasks[i].role].append(peer.system)
+                            except IndexError:
+                                # We have uneven tasks
+                                pass
       
                 # Start the first task in the recipe
                 try:
