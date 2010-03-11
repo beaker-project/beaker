@@ -77,7 +77,7 @@
    <div py:if="widgets.has_key('history')" class="tabbertab"><h2>History</h2>
     ${widgets['history'].display(list=history_data,options=widgets_options['history'],action=widgets_action['history'])} 
    </div>
-   <div class="tabbertab"><h2>Tasks</h2>
+   <div py:if="widgets.has_key('tasks')" class="tabbertab"><h2>Tasks</h2>
     ${widgets['tasks'].display(
     value=widgets_options['tasks'],
     options=widgets_options['tasks'],
