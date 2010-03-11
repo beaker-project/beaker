@@ -3080,7 +3080,7 @@ class Recipe(TaskBase):
         if not clone:
             repo = self.doc.createElement("repo")
             repo.setAttribute("name", "beaker-tasks")
-            repo.setAttribute("url", "https://%s/rpms" % get("servername", socket.gethostname()))
+            repo.setAttribute("url", "http://%s/rpms" % get("servername", socket.gethostname()))
             repos.appendChild(repo)
         for repo in self.repos:
             repos.appendChild(repo.to_xml())
