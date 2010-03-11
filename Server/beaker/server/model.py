@@ -2308,7 +2308,9 @@ class Distro(MappedObject):
                 (join, query) = child.filter()
                 queries.append(query)
                 joins.extend(join)
-        distros = Distro.query()
+        # Join on lab_controller_assocs or we may get a distro that is not on any 
+        # lab controller anymore.
+        distros = Distro.query().join('lab_controller_assocs')
         if joins:
             distros = distros.filter(and_(*joins))
         if queries:
