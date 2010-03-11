@@ -3132,7 +3132,12 @@ class Recipe(TaskBase):
 
     def _get_host_requires(self):
         # If no system_type is specified then add defaults
-        hrs = xml.dom.minidom.parseString(self._host_requires)
+        try:
+            hrs = xml.dom.minidom.parseString(self._host_requires)
+        except TypeError:
+            hrs = self.doc.createElement("hostRequires")
+        except xml.parsers.expat.ExpatError:
+            hrs = self.doc.createElement("hostRequires")
         if not hrs.getElementsByTagName("system_type"):
             hostRequires = self.doc.createElement("hostRequires")
             for hr in hrs.getElementsByTagName("hostRequires"):
@@ -3143,7 +3148,7 @@ class Recipe(TaskBase):
             hostRequires.appendChild(system_type)
             return hostRequires.toxml()
         else:
-            return self._host_requires
+            return hrs.toxml()
 
     def _set_host_requires(self, value):
         self._host_requires = value
@@ -3410,7 +3415,12 @@ class GuestRecipe(Recipe):
         return Recipe.to_xml(self, recipe, clone, from_recipeset, from_machine)
 
     def _get_distro_requires(self):
-        drs = xml.dom.minidom.parseString(self._distro_requires)
+        try:
+            drs = xml.dom.minidom.parseString(self._distro_requires)
+        except TypeError:
+            drs = self.doc.createElement("distroRequires")
+        except xml.parsers.expat.ExpatError:
+            drs = self.doc.createElement("distroRequires")
         # If no distro_virt is asked for default to Virt
         if not drs.getElementsByTagName("distro_virt"):
             distroRequires = self.doc.createElement("distroRequires")
@@ -3423,7 +3433,7 @@ class GuestRecipe(Recipe):
             distroRequires.appendChild(distro_virt)
             return distroRequires.toxml()
         else:
-            return self._distro_requires
+            return drs.toxml()
 
     def _set_distro_requires(self, value):
         self._distro_requires = value
