@@ -120,7 +120,7 @@ gpgcheck=0
 EOF
 
 # RHEL3 - RHEL5 need additional packages
-#if $os_version in ['rhel3','rhel4','rhel5']
+#if $os_version in ['rhel3','rhel4','rhel5','rhel6']
 cat << EOF > /etc/yum.repos.d/beaker-support.repo
 [beaker-support]
 name=Beaker Support
