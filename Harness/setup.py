@@ -102,6 +102,8 @@ else:
             'zope.interface >= 0',
             'simplejson >= 0']
 
+requirements = [] 
+
 setup(
 
     name="beah",
