@@ -57,14 +57,7 @@ class JobMatrix:
             filter = kw['whiteboard_filter']
         else:
             filter = None 
-
-        whiteboard_options =  self.get_whiteboard_options(filter)
-        # This is silly, I can't call get_whiteboard_options from here because it's always
-        # returning JSON. Even though I only have the allow_json=True on, it should otherwise
-        # give me regular returns if I'm not sending tg_format='json'. I've had to create
-        # get_whiteboard_options_json 
-        
-        whiteboard_options = [(w[0],w[0]) for w in whiteboard_options]  # I want tuples
+       
         matrix_options['whiteboard_options'] = self.get_whiteboard_options(filter)
 
         if ('job_ids' in kw) or ('whiteboard' in kw): 
@@ -102,7 +95,7 @@ class JobMatrix:
             where = None
         s1 = select([model.job_table.c.whiteboard],whereclause=where,
                      group_by=[model.job_table.c.whiteboard,model.job_table.c.id],
-                     order_by=[model.job_table.c.id],distinct=True,limit=50)  
+                     order_by=[model.job_table.c.id],distinct=True,limit=50) 
         res = s1.execute()  
         filtered_whiteboards = [r[0] for r in res]
         return filtered_whiteboards 
