@@ -1,8 +1,8 @@
 ## install koan re-install script
-wget -O /etc/rc.d/init.d/anamon "http://$server/beaker/koan.init"
+wget -O /etc/rc.d/init.d/koan "http://$server/beaker/koan.init"
 
 ## adjust permissions
-test -d /selinux && restorecon /etc/rc.d/init.d/koan.init
+test -d /selinux && restorecon /etc/rc.d/init.d/koan
 
 ## enable the script
 chkconfig --add koan
