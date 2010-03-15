@@ -144,7 +144,11 @@ class MountWatcher:
         self.time = time.time()
 
     def update(self):
-        fd = open('/proc/mounts')
+        try:
+            fd = open('/proc/mounts')
+        except:
+            self.time = time.time()
+            return 0
         found = 0
         while 1:
             line = fd.readline()
