@@ -2,6 +2,7 @@
 wget -O /etc/rc.d/init.d/koan "http://$server/beaker/koan.init"
 
 ## adjust permissions
+chmod 755 /etc/rc.d/init.d/koan
 test -d /selinux && restorecon /etc/rc.d/init.d/koan
 
 ## enable the script
