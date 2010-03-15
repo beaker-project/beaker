@@ -1,8 +1,9 @@
 from turbogears.database import session
 from turbogears import controllers, expose, flash, widgets, validate, error_handler, validators, redirect, paginate, url
 from model import *
-
-
+from tempfile import NamedTemporaryFile
+from cherrypy.lib.cptools import serve_file
+import csv
 from turbogears import identity, redirect, config
 import search_utility
 import beaker
@@ -65,6 +66,12 @@ class Utility:
     #I this I will move this Utility class out into another module and then
     #perhaps break it down into further classes. Work from other tickets
     #is making it quite large.
+
+    @classmethod
+    def get_custom_name_function(cls,table,column):
+        name_function_name = '%s_%s_name' % (table, column)
+        custom_name = getattr(Utility,name_function_name,None)
+        return custom_name
 
     @classmethod
     def result_columns(cls,values_checked = None):  
@@ -136,11 +143,10 @@ class Utility:
             options = {}
             lower_column = column.lower()
             lower_table = table.lower()
+           
+            custom_name = Utility.get_custom_name_function(lower_table,lower_column)
 
-            name_function_name = '%s_%s_name' % (lower_table, lower_column)
-            custom_name = getattr(Utility,name_function_name,None)
-
-            getter_function_name = '%s_%s_getter' % (table.lower(), column.lower())
+            getter_function_name = '%s_%s_getter' % (lower_table, lower_column)
             custom_getter = getattr(Utility, getter_function_name,None)
 
             if custom_name:
@@ -183,10 +189,7 @@ class Utility:
                     (name_string, title_string, options, my_getter) = get_widget_attrs(table, column, with_desc=False, sortable=True)
 
                 new_widget = widgets.PaginateDataGrid.Column(name=name_string, getter=my_getter, title=title_string, options=options) 
-                if column == 'Name':
-                    fields.insert(0,new_widget)
-                else:
-                    fields.append(new_widget)
+                fields.append(new_widget)
 
         if others:
             for index,column_desc in enumerate(others):  
@@ -500,6 +503,7 @@ class Root(RPCRoot):
         return dict(ks_meta = ks_meta, kernel_options = kernel_options,
                     kernel_options_post = kernel_options_post)
 
+
     @expose(template='beaker.server.templates.grid_add')
     @paginate('list',default_order='fqdn',limit=20,allow_limit_override=True)
     def index(self, *args, **kw):   
@@ -588,6 +592,54 @@ class Root(RPCRoot):
             return_dict.update({'activities_found':activities_found})               
             return_dict.update({'searchvalue':searchvalue})
         return return_dict
+     
+    @expose() 
+    def system_search_csv(self, tg_errors=None):
+        time = datetime.utcnow()
+        sys_search = self.sys_search_utility
+        file = NamedTemporaryFile() 
+        writer = csv.writer(file) 
+        query = self.sys_search_utility.return_results()
+        
+        if sys_search.use_custom_columns is False:
+            columns = sys_search.default_result_columns
+            writer.writerow(columns) 
+            rows = []        
+            for row in query:
+                writer.writerow([row.fqdn,row.status,row.vendor,row.model,row.arch,row.user,row.type])
+        else:
+            columns = sys_search.get_column_descriptions()
+            system_columns = columns[0]
+            other_columns = columns[1] 
+            headers = []
+            system_query_attrs = []
+          
+            for elem in system_columns:
+                headers.append(elem) 
+                table,column = elem.split("/")
+                lower_table = table.lower()
+                lower_column = column.lower()
+                custom_name = Utility.get_custom_name_function(lower_table,lower_column)
+                if custom_name:
+                    lower_column = custom_name()
+                system_query_attrs.append(lower_column) 
+            
+            [headers.append(elem) for elem in other_columns]
+            writer.writerow(headers)
+            for row in query:
+                system_query = row[0]
+                other_result = [i for i in row[1:] ] #tuple --> list
+                result_row = []
+                for e in system_query_attrs:
+                    result = getattr(system_query,e) 
+                    result_row.append(result)
+                result_row += other_result
+                writer.writerow(result_row)
+
+        file.seek(0)       
+        return serve_file(file.name,contentType="text/csv",disposition="attachment",name="system_search_%s.csv" % time)
+      
+        
  
     def systems(self, systems, *args, **kw):
         # Reset joinpoint and then outerjoin on user.  This is so the sort 
@@ -617,49 +669,41 @@ class Root(RPCRoot):
                 for elem in vals_to_set:
                     kw['systemsearch_column_%s' % elem] = elem 
       
-    
-        default_result_columns = ('System/Name', 'System/Status', 'System/Vendor',
-                                  'System/Model','System/Arch', 'System/User', 'System/Type') 
-
+        sys_search = search_utility.System.search(systems) 
+        self.sys_search_utility = sys_search
+        default_result_columns = ['System/%s' % x for x in self.sys_search_utility.default_result_columns]   
         if kw.get("systemsearch"):
-            searchvalue = kw['systemsearch']
-            sys_search = search_utility.System.search(systems)
+            searchvalue = kw['systemsearch']   
             columns = []
             for elem in kw:
-                if re.match('systemsearch_column_',elem):
+                if re.match('systemsearch_column_',elem): 
                     columns.append(kw[elem])
-
+           
             #If nothing is selected, let's give them the default    
             if columns.__len__() == 0:
                 for elem in default_result_columns:
                     key = 'systemsearch_column_',elem
                     kw[key] = elem
                     columns.append(elem)
-
-            use_custom_columns = False
-            for column in columns:
-                table,col = column.split('/')
-                if sys_search.translate_name(table) is not search_utility.System:
-                    use_custom_columns = True     
-                    break     
-
+          
             sys_search.add_columns_desc(columns) 
-            systems = self._system_search(kw,sys_search)
-
+            systems = self._system_search(kw,sys_search)        
             (system_columns_desc,extra_columns_desc) = sys_search.get_column_descriptions()  
-            if use_custom_columns is True:
+            if self.sys_search_utility.use_custom_columns is True:
                 my_fields = Utility.custom_systems_grid(system_columns_desc,extra_columns_desc)
             else: 
                 my_fields = Utility.custom_systems_grid(system_columns_desc)
 
             systems = systems.reset_joinpoint().outerjoin('user').distinct() 
+          
         else: 
             systems = systems.reset_joinpoint().outerjoin('user').distinct() 
-            use_custom_columns = False
+            self.sys_search_utility.use_custom_columns = False
             columns = None
             searchvalue = None
             my_fields = Utility.custom_systems_grid(default_result_columns)
-                
+
+        self.system_search_query = systems       
         display_grid = myPaginateDataGrid(fields=my_fields)
 
         col_data = Utility.result_columns(columns)   
@@ -671,7 +715,7 @@ class Root(RPCRoot):
                                                  'result_columns' : default_result_columns,
                                                  'col_defaults' : col_data['default'],
                                                  'col_options' : col_data['options'],
-                                                 'custom_column_checked' : use_custom_columns}, 
+                                                 'custom_column_checked' : self.sys_search_utility.use_custom_columns}, 
                                      action = '.', 
                                      search_bar = self.search_bar )
                                                                         
