@@ -183,7 +183,7 @@ fi
 /var/lib/cobbler/triggers/sync/post/osversion.trigger
 /var/lib/cobbler/snippets/*
 /var/lib/cobbler/kickstarts/*
-/var/www/beaker/rhts-checkin
+/var/www/beaker/*
 %attr(-,apache,root) %dir %{_localstatedir}/log/%{name}
 %{_sysconfdir}/init.d/%{name}-proxy
 %{_sysconfdir}/init.d/%{name}-watchdog

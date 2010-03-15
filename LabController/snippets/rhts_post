@@ -132,6 +132,8 @@ EOF
 
 # Install old rhts commands
 yum -y install rhts-test-env-lab rhts-legacy
+## If koan is available install it.  This allows for easy re-installs
+yum -y install koan
 # Install new harness
 yum -y install beah
 cat << EOF > /etc/beah_beaker.conf
@@ -155,5 +157,6 @@ chkconfig --add beah-fwd-backend
 
 #Add test user account
 useradd --password '\$6\$oIW3o2Mr\$XbWZKaM7nA.cQqudfDJScupXOia5h1u517t6Htx/Q/MgXm82Pc/OcytatTeI4ULNWOMJzvpCigWiL4xKP9PX4.' test
+$SNIPPET('post_koan')
 $kickstart_done
 $SNIPPET('post_s390_reboot')
