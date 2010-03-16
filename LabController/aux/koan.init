@@ -22,7 +22,7 @@
 LOCKFILE="/var/lock/subsys/koan"
 
 # Source in cobbler settings
-. /etc/profile.d/cobber.sh
+. /etc/profile.d/cobbler.sh
 
 # Source function library.
 . /etc/init.d/functions
