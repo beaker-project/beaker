@@ -671,7 +671,7 @@ class CSV_KeyValue(CSV):
             try:
                 key = Key.by_name(data['key'])
             except InvalidRequestError:
-                log.append('%s: Invalid Key %s ' % data['key'])
+                log.append('%s: Invalid Key %s ' % (system.fqdn, data['key']))
                 return False
         else:
             log.append('%s: Key must not be blank!' % system.fqdn)
