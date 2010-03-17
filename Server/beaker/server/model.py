@@ -2825,8 +2825,17 @@ class Job(TaskBase):
                     result          = "%s" % self.result,
                     is_finished     = self.is_finished(),
                     is_failed       = self.is_failed(),
-                    subtask_id_list = ["RS:%s" % rs.id for rs in self.recipesets]
+                    subtask_id_list = ["R:%s" % r.id for r in self.all_recipes]
                    )
+
+    def all_recipes(self):
+        """
+        Return all recipes
+        """
+        for recipeset in self.recipesets:
+            for recipe in recipeset.recipes:
+                yield recipe
+    all_recipes = property(all_recipes)
 
     def update_status(self):
         """
