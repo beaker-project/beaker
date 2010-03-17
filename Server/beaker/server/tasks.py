@@ -222,12 +222,17 @@ class Tasks(RPCRoot):
         tinfo = testinfo.parse_string(raw_taskinfo['desc'])
 
         task = Task.lazy_create(name=tinfo.test_name)
-        # Remove old RPM
-        if task.rpm and task.rpm != raw_taskinfo['hdr']['rpm']:
+        # RPM is the same version we have. don't process
+        if task.rpm == raw_taskinfo['hdr']['rpm']:
+            return task
+        # Keep N-1 versions of task rpms.  This allows currently running tasks to finish.
+        if task.oldrpm:
             try:
-                os.unlink("%s/%s" % (self.task_dir, task.rpm))
+                os.unlink("%s/%s" % (self.task_dir, task.oldrpm))
             except OSError, err:
                 raise BX(_(err))   
+        # Current becomes old
+        task.oldrpm = task.rpm
         task.rpm = raw_taskinfo['hdr']['rpm']
         task.version = raw_taskinfo['hdr']['ver']
         task.description = tinfo.test_description
