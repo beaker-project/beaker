@@ -3282,7 +3282,9 @@ class Recipe(TaskBase):
                     result          = "%s" % self.result,
                     is_finished     = self.is_finished(),
                     is_failed       = self.is_failed(),
-                    subtask_id_list = ["T:%s" % t.id for t in self.tasks]
+# Disable tasks status, TaskWatcher needs to do this differently.  its very resource intesive to make
+# so many xmlrpc calls.
+#                    subtask_id_list = ["T:%s" % t.id for t in self.tasks],
                    )
 
     def t_id(self):
