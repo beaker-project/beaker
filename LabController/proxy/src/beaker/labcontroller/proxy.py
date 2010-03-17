@@ -271,8 +271,11 @@ class Watchdog(ProxyHelper):
                 for watchedFile in watchedFiles:
                     if watchedFile.update():
                         updated = True
-                if not updated:
+                # Don't DOS the Scheduler!
+                if updated:
                     time.sleep(1)
+                else:
+                    time.sleep(5)
         finally:
             # die
             os._exit(os.EX_OK)
