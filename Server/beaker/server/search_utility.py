@@ -385,8 +385,6 @@ class SystemSearch(Search):
     class_external_mapping = {}
     search_table = []
     column_table = [] 
-    default_result_columns = ('Name', 'Status', 'Vendor',
-                              'Model','Arch', 'User', 'Type') 
     def __init__(self,systems=None):
         if systems:
             self.queri = systems
@@ -395,12 +393,10 @@ class SystemSearch(Search):
        
         self.system_columns_desc = []
         self.extra_columns_desc = []
-        self.use_custom_columns = False
   
     def __getitem__(self,key):
-        return self.key
+        pass
  
-
     def get_column_descriptions(self):
         return [self.system_columns_desc,self.extra_columns_desc]
 
@@ -502,15 +498,10 @@ class SystemSearch(Search):
             for elem in result_columns: 
                 (display_name,col) = self.split_class_field(elem) 
                 cls_ref = self.translate_name(display_name)  
-                if cls_ref is not System:
-                    self.use_custom_columns = True
                 col_ref = cls_ref.searchable_columns[col].column
                 #If they are System columns we won't need to explicitly add them to the query, as they are already returned in the System query  
-                if cls_ref is System: 
-                    if col == 'Name':
-                        self.system_columns_desc.insert(0,elem) #ensures that System/Name
-                    else:
-                        self.system_columns_desc.append(elem)
+                if cls_ref is System:     
+                    self.system_columns_desc.append(elem)
                     continue
                 elif col_ref is not None: 
                     self.extra_columns_desc.append(elem)
