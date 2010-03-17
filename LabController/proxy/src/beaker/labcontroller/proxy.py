@@ -133,10 +133,11 @@ class WatchFile(object):
     Helper class to watch log files and upload them to Scheduler
     """
 
-    def __init__(self, log, watchdog, proxy):
+    def __init__(self, log, watchdog, proxy, blocksize=65536):
         self.log = log
         self.watchdog = watchdog
         self.proxy = proxy
+        self.blocksize = blocksize
         self.filename = os.path.basename(self.log)
         # If filename is the hostname then rename it to console.log
         if self.filename == self.watchdog['system']:
@@ -160,8 +161,9 @@ class WatchFile(object):
             file = open(self.log, "r")
             where = self.where
             file.seek(where)
-            line = file.read(65536)
-            self.where = file.tell()
+            line = file.read(self.blocksize)
+            size = len(line)
+            now = file.tell()
             file.close()
             #FIXME make this work on a list of search items
             # Also, allow it to be disabled
@@ -173,8 +175,12 @@ class WatchFile(object):
                 #self.proxy.recipe_abort(self.watchdog['recipe_id'])
             if not line:
                 return False
+            # If we didn't read our full blocksize and we are still growing
+            #  then don't send anything yet.
+            elif size < self.blocksize and where == now:
+                return False
             else:
-                size = len(line)
+                self.where = now
                 data = base64.encodestring(line)
                 md5sum = md5_constructor(line).hexdigest()
                 self.proxy.recipe_upload_file(self.watchdog['recipe_id'],
