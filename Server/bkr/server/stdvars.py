@@ -4,7 +4,7 @@ import bkr
 
 def beaker_version():
    try: 
-        return beaker.__version__
+        return bkr.__version__
    except AttributeError, (e): 
         return 'devel-version'   
 
