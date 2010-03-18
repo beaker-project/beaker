@@ -172,9 +172,9 @@ fi
 %files lab-controller
 %defattr(-,root,root,-)
 %config(noreplace) %{_sysconfdir}/beaker/proxy.conf
-%{python_sitelib}/%{name}/labcontroller/
-%{python_sitelib}/%{name}.labcontroller-%{version}-*
-%{python_sitelib}/%{name}.labcontroller-%{version}-py%{pyver}.egg-info/
+%{python_sitelib}/bkr/labcontroller/
+%{python_sitelib}/bkr.labcontroller-%{version}-*
+%{python_sitelib}/bkr.labcontroller-%{version}-py%{pyver}.egg-info/
 %{_bindir}/%{name}-proxy
 %{_bindir}/%{name}-watchdog
 %doc LabController/README

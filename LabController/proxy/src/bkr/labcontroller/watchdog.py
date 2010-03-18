@@ -4,7 +4,7 @@ import sys
 import signal
 from optparse import OptionParser
 
-from beaker.labcontroller.proxy import Watchdog
+from bkr.labcontroller.proxy import Watchdog
 
 import kobo.conf
 from kobo.exceptions import ShutdownException

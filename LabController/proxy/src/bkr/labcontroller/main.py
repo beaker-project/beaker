@@ -7,7 +7,7 @@ from optparse import OptionParser
 import SocketServer
 import DocXMLRPCServer
 
-from beaker.labcontroller.proxy import Proxy
+from bkr.labcontroller.proxy import Proxy
 
 import kobo.conf
 from kobo.exceptions import ShutdownException
