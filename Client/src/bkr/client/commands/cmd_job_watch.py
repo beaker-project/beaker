@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 
 
-from beaker.client import BeakerCommand
+from bkr.client import BeakerCommand
 from optparse import OptionValueError
-from beaker.client.task_watcher import *
+from bkr.client.task_watcher import *
 
 class Job_Watch(BeakerCommand):
     """Watch Jobs/Recipes"""

@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
 
-from beaker.client.task_watcher import *
-from beaker.client import BeakerCommand
+from bkr.client.task_watcher import *
+from bkr.client import BeakerCommand
 from optparse import OptionValueError
 import sys
 import os.path

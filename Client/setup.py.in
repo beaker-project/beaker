@@ -1,12 +1,12 @@
 from setuptools import setup, find_packages
 setup(
-    name = "beaker.client",
+    name = "bkr.client",
     version = "@VERSION@",
 
     packages=find_packages('src'),
     package_dir = {'':'src'},
 
-    namespace_packages = ['beaker'],
+    namespace_packages = ['bkr'],
 
     data_files = [('/etc/beaker/', ['client.conf']),],
     package_data = {
@@ -15,7 +15,7 @@ setup(
 
     entry_points = {
         'console_scripts': (
-            'bkr = beaker.client.main:main',
+            'bkr = bkr.client.main:main',
         ),
     }
 )

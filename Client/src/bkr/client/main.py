@@ -14,8 +14,8 @@ __all__ = (
 
 
 # register default command plugins
-import beaker.client.commands
-CommandContainer.register_module(beaker.client.commands, prefix="cmd_")
+import bkr.client.commands
+CommandContainer.register_module(bkr.client.commands, prefix="cmd_")
 
 
 def main():

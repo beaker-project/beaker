@@ -164,9 +164,9 @@ fi
 %files client
 %defattr(-,root,root,-)
 %config(noreplace) %{_sysconfdir}/beaker/client.conf
-%{python_sitelib}/%{name}/client/
-%{python_sitelib}/%{name}.client-%{version}-*
-%{python_sitelib}/%{name}.client-%{version}-py%{pyver}.egg-info/
+%{python_sitelib}/bkr/client/
+%{python_sitelib}/bkr.client-%{version}-*
+%{python_sitelib}/bkr.client-%{version}-py%{pyver}.egg-info/
 %{_bindir}/bkr
 
 %files lab-controller

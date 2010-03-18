@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 
-from beaker.client import BeakerCommand
+from bkr.client import BeakerCommand
 
 
 class List_LabControllers(BeakerCommand):

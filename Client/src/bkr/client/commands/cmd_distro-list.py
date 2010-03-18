@@ -2,7 +2,7 @@
 
 
 import sys
-from beaker.client import BeakerCommand
+from bkr.client import BeakerCommand
 
 
 class Distros_List(BeakerCommand):
