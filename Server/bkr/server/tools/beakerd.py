@@ -23,16 +23,16 @@ import sys
 import os
 import pkg_resources
 pkg_resources.require("SQLAlchemy>=0.3.10")
-from beaker.server.model import *
-from beaker.server.util import load_config
+from bkr.server.model import *
+from bkr.server.util import load_config
 from turbogears.database import session
 from turbogears import config
 from turbomail.control import interface
 
 from os.path import dirname, exists, join
 from os import getcwd
-import beaker.server.scheduler
-from beaker.server.scheduler import add_onetime_task
+import bkr.server.scheduler
+from bkr.server.scheduler import add_onetime_task
 from socket import gethostname
 import exceptions
 import time
@@ -391,7 +391,7 @@ def queued_recipes_loop(*args, **kwargs):
             time.sleep(20)
 
 def schedule():
-    beaker.server.scheduler._start_scheduler()
+    bkr.server.scheduler._start_scheduler()
     log.debug("starting new recipes Thread")
     # Create new_recipes Thread
     add_onetime_task(action=new_recipes_loop,

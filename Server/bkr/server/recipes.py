@@ -20,12 +20,12 @@ from turbogears import controllers, expose, flash, widgets, validate, error_hand
 from turbogears import identity, redirect
 from cherrypy import request, response
 from kid import Element
-from beaker.server.widgets import myPaginateDataGrid
-from beaker.server.widgets import RecipeWidget
-from beaker.server.widgets import RecipeTasksWidget
-from beaker.server.xmlrpccontroller import RPCRoot
-from beaker.server.helpers import *
-from beaker.server.recipetasks import RecipeTasks
+from bkr.server.widgets import myPaginateDataGrid
+from bkr.server.widgets import RecipeWidget
+from bkr.server.widgets import RecipeTasksWidget
+from bkr.server.xmlrpccontroller import RPCRoot
+from bkr.server.helpers import *
+from bkr.server.recipetasks import RecipeTasks
 from socket import gethostname
 from upload import Uploader
 import exceptions
@@ -130,7 +130,7 @@ class Recipes(RPCRoot):
             raise BX(_("Invalid Recipe ID %s" % recipe_id))
         return recipexml
 
-    @expose(template='beaker.server.templates.grid')
+    @expose(template='bkr.server.templates.grid')
     @paginate('list',default_order='-id', limit=50)
     def index(self, *args, **kw):
         recipes = session.query(MachineRecipe)
@@ -166,7 +166,7 @@ class Recipes(RPCRoot):
         redirect(".")
 
     @identity.require(identity.not_anonymous())
-    @expose(template="beaker.server.templates.form")
+    @expose(template="bkr.server.templates.form")
     def cancel(self, id):
         """
         Confirm cancel recipe
@@ -188,7 +188,7 @@ class Recipes(RPCRoot):
                          confirm = 'really cancel recipe %s?' % id),
         )
 
-    @expose(template="beaker.server.templates.recipe")
+    @expose(template="bkr.server.templates.recipe")
     def default(self, id):
         try:
             recipe = Recipe.by_id(id)

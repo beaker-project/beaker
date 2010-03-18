@@ -26,7 +26,7 @@ proper start script.
 """
 
 import sys
-from beaker.server.commands import start, ConfigurationError
+from bkr.server.commands import start, ConfigurationError
 
 if __name__ == "__main__":
     try:

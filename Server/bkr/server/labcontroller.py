@@ -5,8 +5,8 @@ from turbogears import identity, redirect
 from cherrypy import request, response
 from tg_expanding_form_widget.tg_expanding_form_widget import ExpandingForm
 from kid import Element
-from beaker.server.xmlrpccontroller import RPCRoot
-from beaker.server.helpers import *
+from bkr.server.xmlrpccontroller import RPCRoot
+from bkr.server.helpers import *
 from xmlrpclib import ProtocolError
 
 import cherrypy
@@ -16,9 +16,9 @@ import re
 from BasicAuthTransport import BasicAuthTransport
 import xmlrpclib
 
-# from beaker.server import json
+# from bkr.server import json
 # import logging
-# log = logging.getLogger("beaker.server.controllers")
+# log = logging.getLogger("bkr.server.controllers")
 #import model
 from model import *
 import string
@@ -46,7 +46,7 @@ class LabControllers(RPCRoot):
     )
 
     @identity.require(identity.in_group("admin"))
-    @expose(template='beaker.server.templates.form')
+    @expose(template='bkr.server.templates.form')
     def new(self, **kw):
         return dict(
             form = self.labcontroller_form,
@@ -56,7 +56,7 @@ class LabControllers(RPCRoot):
         )
 
     @identity.require(identity.in_group("admin"))
-    @expose(template='beaker.server.templates.form')
+    @expose(template='bkr.server.templates.form')
     def edit(self, id, **kw):
         labcontroller = LabController.by_id(id)
         return dict(
@@ -250,7 +250,7 @@ class LabControllers(RPCRoot):
         redirect(".")
 
     @identity.require(identity.in_group("admin"))
-    @expose(template="beaker.server.templates.grid_add")
+    @expose(template="bkr.server.templates.grid_add")
     @paginate('list')
     def index(self):
         labcontrollers = session.query(LabController)

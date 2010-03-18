@@ -21,14 +21,14 @@ from turbogears import controllers, expose, flash, widgets, validate, error_hand
 from turbogears import identity, redirect
 from cherrypy import request, response
 from kid import Element
-from beaker.server.widgets import myPaginateDataGrid
-from beaker.server.widgets import myDataGrid
-from beaker.server.xmlrpccontroller import RPCRoot
-from beaker.server.helpers import *
-from beaker.server.widgets import RecipeWidget
-from beaker.server.widgets import RecipeTasksWidget
-from beaker.server.widgets import RecipeSetWidget
-from beaker.server.widgets import PriorityWidget
+from bkr.server.widgets import myPaginateDataGrid
+from bkr.server.widgets import myDataGrid
+from bkr.server.xmlrpccontroller import RPCRoot
+from bkr.server.helpers import *
+from bkr.server.widgets import RecipeWidget
+from bkr.server.widgets import RecipeTasksWidget
+from bkr.server.widgets import RecipeSetWidget
+from bkr.server.widgets import PriorityWidget
 import datetime
 
 import cherrypy
@@ -76,7 +76,7 @@ class Jobs(RPCRoot):
         submit_text = _(u'Queue')
     )
 
-    @expose(template='beaker.server.templates.form-post')
+    @expose(template='bkr.server.templates.form-post')
     @identity.require(identity.not_anonymous())
     def new(self, **kw):
         return dict(
@@ -110,7 +110,7 @@ class Jobs(RPCRoot):
         return "j:%s" % job.id
 
     @identity.require(identity.not_anonymous())
-    @expose(template="beaker.server.templates.form-post")
+    @expose(template="bkr.server.templates.form-post")
     def clone(self, job_id=None, recipe_id=None, textxml=None, filexml=None, **kw):
         """
         Review cloned xml before submitting it.
@@ -282,7 +282,7 @@ class Jobs(RPCRoot):
         jobxml = Job.by_id(id).to_xml().toxml()
         return dict(xml=jobxml)
 
-    @expose(template='beaker.server.templates.grid')
+    @expose(template='bkr.server.templates.grid')
     @paginate('list',default_order='-id', limit=50)
     def index(self, *args, **kw):
         jobs = session.query(Job).join('status').join('owner').outerjoin('result')
@@ -316,7 +316,7 @@ class Jobs(RPCRoot):
         redirect(".")
 
     @identity.require(identity.not_anonymous())
-    @expose(template="beaker.server.templates.form")
+    @expose(template="bkr.server.templates.form")
     def cancel(self, id):
         """
         Confirm cancel job
@@ -338,7 +338,7 @@ class Jobs(RPCRoot):
                          confirm = 'really cancel job %s?' % id),
         )
 
-    @expose(template="beaker.server.templates.job") 
+    @expose(template="bkr.server.templates.job") 
     def default(self, id): 
         try:
             job = Job.by_id(id)

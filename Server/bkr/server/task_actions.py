@@ -5,7 +5,7 @@ from turbogears import identity, redirect, config
 from cherrypy import request, response
 from cherrypy.lib.cptools import serve_file
 from bexceptions import *
-from beaker.server.xmlrpccontroller import RPCRoot
+from bkr.server.xmlrpccontroller import RPCRoot
 
 from kid import Element
 import cherrypy
@@ -14,9 +14,9 @@ import md5
 # for debugging
 import sys
 
-# from beaker.server import json
+# from bkr.server import json
 # import logging
-# log = logging.getLogger("beaker.server.controllers")
+# log = logging.getLogger("bkr.server.controllers")
 import breadcrumbs
 from datetime import datetime
 

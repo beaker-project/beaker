@@ -5,14 +5,14 @@ from turbogears import identity, redirect
 from cherrypy import request, response
 from tg_expanding_form_widget.tg_expanding_form_widget import ExpandingForm
 from kid import Element
-from beaker.server.xmlrpccontroller import RPCRoot
-from beaker.server.helpers import *
+from bkr.server.xmlrpccontroller import RPCRoot
+from bkr.server.helpers import *
 
 import cherrypy
 
-# from beaker.server import json
+# from bkr.server import json
 # import logging
-# log = logging.getLogger("beaker.server.controllers")
+# log = logging.getLogger("bkr.server.controllers")
 #import model
 from model import *
 import string
@@ -69,7 +69,7 @@ class Groups(RPCRoot):
         return dict(groups=groups)
     
     @identity.require(identity.in_group("admin"))
-    @expose(template='beaker.server.templates.form')
+    @expose(template='bkr.server.templates.form')
     def new(self, **kw):
         return dict(
             form = self.group_form,
@@ -91,7 +91,7 @@ class Groups(RPCRoot):
 
         return widgets.DataGrid(fields=user_fields)
     
-    @expose(template='beaker.server.templates.group_users')
+    @expose(template='bkr.server.templates.group_users')
     def group_members(self,id, **kw):
         group = Group.by_id(id)
         usergrid = self.show_members(id)
@@ -99,7 +99,7 @@ class Groups(RPCRoot):
 
 
     @identity.require(identity.in_group("admin"))
-    @expose(template='beaker.server.templates.group_form')
+    @expose(template='bkr.server.templates.group_form')
     def edit(self, id, **kw):
         group = Group.by_id(id)
         usergrid = self.show_members(id) 
@@ -162,14 +162,14 @@ class Groups(RPCRoot):
         flash( _(u"OK") )
         redirect("./edit?id=%s" % kw['group_id'])
 
-    @expose(template="beaker.server.templates.grid_add")
+    @expose(template="bkr.server.templates.grid_add")
     @paginate('list')
     def index(self):
         groups = session.query(Group)
         if not 'admin' in identity.current.groups:
             group_name =('Group Name', lambda x: make_link('group_members?id=%s' % x.group_id,x.group_name))
             remove_link = None 
-            template = "beaker.server.templates.grid"
+            template = "bkr.server.templates.grid"
         else:
             group_name =('Group Name', lambda x: make_edit_link(x.group_name,x.group_id))
             remove_link = (' ', lambda x: make_remove_link(x.group_id))  

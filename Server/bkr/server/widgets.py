@@ -117,7 +117,7 @@ class ReserveSystem(TableForm):
 
 class ReserveWorkflow(Form): 
     javascript = [LocalJSLink('beaker', '/static/javascript/reserve_workflow.js')] 
-    template="beaker.server.templates.reserve_workflow"
+    template="bkr.server.templates.reserve_workflow"
     css = [LocalCSSLink('beaker','/static/css/reserve_workflow.css')] 
     member_widgets = ['arch','distro','distro_family','method_','tag'] 
     params = ['arch_value','method_value','tag_value','distro_family_value','all_arches',
@@ -161,11 +161,11 @@ class ReserveWorkflow(Form):
                 d['method_value'] = d['values']['method']
 
 class myDataGrid(DataGrid):
-    template = "beaker.server.templates.my_datagrid"
+    template = "bkr.server.templates.my_datagrid"
     name = "my_datagrid"
     
 class InnerGrid(DataGrid):
-    template = "beaker.server.templates.inner_grid" 
+    template = "bkr.server.templates.inner_grid" 
     params = ['show_headers']
     
     def display(self,value=None,**params):
@@ -175,7 +175,7 @@ class InnerGrid(DataGrid):
         return super(InnerGrid,self).display(value,**params)
 
 class myPaginateDataGrid(PaginateDataGrid):
-    template = "beaker.server.templates.my_paginate_datagrid"
+    template = "bkr.server.templates.my_paginate_datagrid"
 
 
 class SingleSelectFieldJSON(SingleSelectField):
@@ -204,14 +204,14 @@ class TextFieldJSON(TextField):
                }
 
 class NestedGrid(CompoundWidget):
-    template = "beaker.server.templates.inner_grid" 
+    template = "bkr.server.templates.inner_grid" 
     params = ['inner_list']
 
 
 class JobMatrixReport(Form):     
     javascript = [LocalJSLink('beaker', '/static/javascript/job_matrix.js')]
     css = [LocalCSSLink('beaker','/static/css/job_matrix.css')] 
-    template = 'beaker.server.templates.job_matrix' 
+    template = 'bkr.server.templates.job_matrix' 
     member_widgets = ['whiteboard','job_ids','generate_button'] 
     params = ['list','whiteboard_filter','whiteboard_options','job_ids_vals']
     default_validator = validators.NotEmpty() 
@@ -245,7 +245,7 @@ class JobMatrixReport(Form):
         return super(JobMatrixReport,self).display(value=None,**params)
 
 class TaskList(Widget):
-    template = 'beaker.server.templates.task_list'
+    template = 'bkr.server.templates.task_list'
     css = [LocalCSSLink('beaker','/static/css/task_list.css')] 
     params = ['data']
     
@@ -492,7 +492,7 @@ class ProvisionForm(RepeatingFormField):
     pass
 
 class PowerActionForm(Form):
-    template = "beaker.server.templates.system_power_action"
+    template = "bkr.server.templates.system_power_action"
     member_widgets = ["id", "power", "lab_controller"]
     params = ['options', 'action', 'enabled']
     
@@ -509,7 +509,7 @@ class PowerActionForm(Form):
                 d['enabled'] = True
 
 class TaskSearchForm(RemoteForm):
-    template = "beaker.server.templates.task_search_form"
+    template = "bkr.server.templates.task_search_form"
     member_widgets = ['system_id', 'system', 'task', 'distro', 'family', 'arch', 'start', 'finish', 'status', 'result']
     params = ['options','hidden']
     fields = [HiddenField(name='system_id', validator=validators.Int()),
@@ -551,7 +551,7 @@ class TaskSearchForm(RemoteForm):
 
 
 class LabInfoForm(Form):
-    template = "beaker.server.templates.system_labinfo"
+    template = "bkr.server.templates.system_labinfo"
     member_widgets = ["id", "labinfo", "orig_cost", "curr_cost", "dimensions",
                       "weight", "wattage", "cooling"]
     params = ['options']
@@ -585,7 +585,7 @@ class LabInfoForm(Form):
                 d['value']['cooling'] = labinfo.cooling
 
 class PowerForm(Form):
-    template = "beaker.server.templates.system_power"
+    template = "bkr.server.templates.system_power"
     member_widgets = ["id", "power", "power_type_id", "power_address", 
                       "power_user", "power_passwd", "power_id",
                        "release_action_id", "reprovision_distro_id"]
@@ -730,7 +730,7 @@ class ExcludedFamilies(FormField):
         return False
 
 class SystemKeys(Form):
-    template = "beaker.server.templates.system_keys"
+    template = "bkr.server.templates.system_keys"
     member_widgets = ["id", "key_name", "key_value"]
     params = ['options', 'readonly', 'key_values_int', 'key_values_string']
 
@@ -750,7 +750,7 @@ class SystemKeys(Form):
             d['key_values_string'] = d['options']['key_values_string']
 
 class SystemArches(Form):
-    template = "beaker.server.templates.system_arches"
+    template = "bkr.server.templates.system_arches"
     member_widgets = ["id", "arch"]
     params = ['options', 'readonly', 'arches']
 
@@ -770,7 +770,7 @@ class SystemArches(Form):
             d['arches'] = d['options']['arches']
         
 class DistroTags(Form):
-    template = "beaker.server.templates.distro_tags"
+    template = "bkr.server.templates.distro_tags"
     member_widgets = ["id", "tag"]
     params = ['options', 'readonly', 'tags']
 
@@ -790,7 +790,7 @@ class DistroTags(Form):
             d['tags'] = d['options']['tags']
 
 class SystemGroups(Form):
-    template = "beaker.server.templates.system_groups"
+    template = "bkr.server.templates.system_groups"
     member_widgets = ["id", "group"]
     params = ['options', 'readonly', 'groups']
     
@@ -811,7 +811,7 @@ class SystemGroups(Form):
 
 class SystemProvision(Form):
     javascript = [LocalJSLink('beaker', '/static/javascript/provision.js')]
-    template = "beaker.server.templates.system_provision"
+    template = "bkr.server.templates.system_provision"
     member_widgets = ["id", "prov_install", "ks_meta", "power",
                       "koptions", "koptions_post", "reboot"]
     params = ['options', 'is_user', 'lab_controller', 'power_enabled']
@@ -847,7 +847,7 @@ class SystemProvision(Form):
                 d['power_enabled'] = True
 
 class SystemInstallOptions(Form):
-    template = "beaker.server.templates.system_installoptions"
+    template = "bkr.server.templates.system_installoptions"
     member_widgets = ["id", "prov_arch", "prov_osmajor", "prov_osversion",
                        "prov_ksmeta", "prov_koptions", "prov_koptionspost"]
     params = ['options', 'readonly', 'provisions']
@@ -880,7 +880,7 @@ class SystemInstallOptions(Form):
             d['provisions'] = d['options']['provisions']
 
 class SystemNotes(Form):
-    template = "beaker.server.templates.system_notes"
+    template = "bkr.server.templates.system_notes"
     member_widgets = ["id", "note"]
     params = ['options', 'readonly', 'notes']
 
@@ -922,11 +922,11 @@ class SystemExclude(Form):
             d['readonly'] = d['options']['readonly']
 
 class SystemDetails(Widget):
-    template = "beaker.server.templates.system_details"
+    template = "bkr.server.templates.system_details"
     params = ['system']
 
 class SystemHistory(CompoundWidget): 
-    template = "beaker.server.templates.system_activity"
+    template = "bkr.server.templates.system_activity"
     params = ['list','grid','search_bar','searchvalue','all_history'] 
     
     def __init__(self):
@@ -960,7 +960,7 @@ class SystemForm(Form):
                   LocalJSLink('beaker', '/static/javascript/searchbar_v5.js'),
                   JSLink(static,'ajax.js'),
                  ]
-    template = "beaker.server.templates.system_form"
+    template = "bkr.server.templates.system_form"
     params = ['id','readonly',
               'user_change','user_change_text',
               'loan_change', 'loan_text',
@@ -1038,13 +1038,13 @@ class SystemForm(Form):
                                                                   **attrs)
 
 class TasksWidget(CompoundWidget):
-    template = "beaker.server.templates.tasks_widget"
+    template = "bkr.server.templates.tasks_widget"
     params = ['tasks', 'hidden']
     member_widgets = ['link'] 
     link = LinkRemoteFunction(name='link', method='post')
 
 class RecipeTasksWidget(Widget):
-    template = "beaker.server.templates.tasks_widget"
+    template = "bkr.server.templates.tasks_widget"
     params = ['tasks', 'hidden']
 
     def update_params(self, d):
@@ -1057,7 +1057,7 @@ class RecipeTasksWidget(Widget):
 class RecipeSetWidget(CompoundWidget):
     javascript = []
     css = []
-    template = "beaker.server.templates.recipe_set"
+    template = "bkr.server.templates.recipe_set"
     params = ['recipeset','show_priority']
     member_widgets = ['priority_widget']
 
@@ -1072,7 +1072,7 @@ class RecipeSetWidget(CompoundWidget):
 class RecipeWidget(CompoundWidget):
     javascript = []
     css = []
-    template = "beaker.server.templates.recipe_widget"
+    template = "bkr.server.templates.recipe_widget"
     params = ['recipe']
     member_widgets = ['recipe_tasks_widget']
     recipe_tasks_widget = RecipeTasksWidget()

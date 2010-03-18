@@ -22,9 +22,9 @@
 import sys
 import pkg_resources
 pkg_resources.require("SQLAlchemy>=0.3.10")
-from beaker.server.model import *
-from beaker.server.commands import ConfigurationError
-from beaker.server.util import load_config
+from bkr.server.model import *
+from bkr.server.commands import ConfigurationError
+from bkr.server.util import load_config
 from turbogears.database import session
 from os.path import dirname, exists, join
 from os import getcwd

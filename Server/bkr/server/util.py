@@ -56,7 +56,7 @@ def load_config(configfile=None):
         log.error("Unable to find configuration to load!")
         return
     log.debug("Loading configuration: %s" % configfile)
-    turbogears.update_config(configfile=configfile, modulename="beaker.server.config")
+    turbogears.update_config(configfile=configfile, modulename="bkr.server.config")
 
 def to_unicode(obj, encoding='utf-8'):
     if isinstance(obj, basestring):

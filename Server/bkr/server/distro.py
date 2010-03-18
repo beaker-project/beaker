@@ -5,19 +5,19 @@ from turbogears import identity, redirect
 from cherrypy import request, response
 from tg_expanding_form_widget.tg_expanding_form_widget import ExpandingForm
 from kid import Element
-from beaker.server.xmlrpccontroller import RPCRoot
-from beaker.server.widgets import DistroTags
-from beaker.server.widgets import TaskSearchForm
-from beaker.server.helpers import *
+from bkr.server.xmlrpccontroller import RPCRoot
+from bkr.server.widgets import DistroTags
+from bkr.server.widgets import TaskSearchForm
+from bkr.server.helpers import *
 
 import cherrypy
 
 from BasicAuthTransport import BasicAuthTransport
 import xmlrpclib
 
-# from beaker.server import json
+# from bkr.server import json
 # import logging
-# log = logging.getLogger("beaker.server.controllers")
+# log = logging.getLogger("bkr.server.controllers")
 #import model
 from model import *
 import string
@@ -31,7 +31,7 @@ class Distros(RPCRoot):
     task_form = TaskSearchForm()
     tag_form = DistroTags(name='tags')
 
-    @expose(template="beaker.server.templates.distro")
+    @expose(template="bkr.server.templates.distro")
     def view(self, id=None, *args, **kw):
         try:
             distro = Distro.by_id(id)
@@ -85,7 +85,7 @@ class Distros(RPCRoot):
         distro = distro.lower()
         return dict(distros=[(distro.install_name) for distro in Distro.query().filter(Distro.install_name.like('%s%%' % distro)).order_by('-date_created')])
 
-    @expose(template="beaker.server.templates.grid")
+    @expose(template="bkr.server.templates.grid")
     @paginate('list',default_order='-date_created', limit=50,allow_limit_override=True)
     def index(self, *args, **kw):
         distros = session.query(Distro).join('breed').join('arch').join(['osversion','osmajor'])

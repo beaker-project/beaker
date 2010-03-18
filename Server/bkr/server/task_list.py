@@ -3,8 +3,8 @@ from turbogears.database import mapper
 from sqlalchemy import select
 from sqlalchemy.sql import func
 from sqlalchemy.sql.expression import and_, or_
-from beaker.server import model
-from beaker.server.widgets import TaskList as TaskListWidget
+from bkr.server import model
+from bkr.server.widgets import TaskList as TaskListWidget
 
 import logging
 log = logging.getLogger(__name__)
@@ -12,7 +12,7 @@ log = logging.getLogger(__name__)
 class TaskList:
 
     widget = TaskListWidget() 
-    @expose(template='beaker.server.templates.generic')
+    @expose(template='bkr.server.templates.generic')
     @paginate('widget_options') #Ideally I want to find out how to paginate elements of the return dict
     def index(self,**kw):
      

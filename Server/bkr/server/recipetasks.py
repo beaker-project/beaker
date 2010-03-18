@@ -20,9 +20,9 @@ from turbogears import controllers, expose, flash, widgets, validate, error_hand
 from turbogears import identity, redirect
 from cherrypy import request, response
 from kid import Element
-from beaker.server.widgets import myPaginateDataGrid
-from beaker.server.xmlrpccontroller import RPCRoot
-from beaker.server.helpers import *
+from bkr.server.widgets import myPaginateDataGrid
+from bkr.server.xmlrpccontroller import RPCRoot
+from bkr.server.helpers import *
 from bexceptions import *
 from upload import Uploader
 #from turbogears.scheduler import add_interval_task

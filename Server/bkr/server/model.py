@@ -24,8 +24,8 @@ from sqlalchemy import func
 from sqlalchemy.orm.collections import collection
 from bexceptions import *
 from kid import Element
-from beaker.server.helpers import *
-from beaker.server import mail
+from bkr.server.helpers import *
+from bkr.server import mail
 import traceback
 from BasicAuthTransport import BasicAuthTransport
 import xmlrpclib

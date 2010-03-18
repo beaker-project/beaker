@@ -11,15 +11,15 @@ import cherrypy
 import cherrypy._cpwsgi
 import turbogears
 
-from beaker.server.util import load_config
+from bkr.server.util import load_config
 load_config()
 
 turbogears.config.update({'global': {'server.environment': 'production'}})
 turbogears.config.update({'global': {'autoreload.on': False}})
 turbogears.config.update({'global': {'server.log_to_screen': False}})
 
-import beaker.server.controllers
-cherrypy.root = beaker.server.controllers.Root()
+import bkr.server.controllers
+cherrypy.root = bkr.server.controllers.Root()
 
 if cherrypy.server.state == 0:
     atexit.register(cherrypy.server.stop)

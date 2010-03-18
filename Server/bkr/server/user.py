@@ -4,14 +4,14 @@ from turbogears.widgets import AutoCompleteField
 from turbogears import identity, redirect
 from cherrypy import request, response
 from kid import Element
-from beaker.server.xmlrpccontroller import RPCRoot
-from beaker.server.helpers import *
+from bkr.server.xmlrpccontroller import RPCRoot
+from bkr.server.helpers import *
 
 import cherrypy
 
-# from beaker.server import json
+# from bkr.server import json
 # import logging
-# log = logging.getLogger("beaker.server.controllers")
+# log = logging.getLogger("bkr.server.controllers")
 #import model
 from model import *
 import string
@@ -34,7 +34,7 @@ class Users(RPCRoot):
     )
 
     @identity.require(identity.in_group("admin"))
-    @expose(template='beaker.server.templates.form')
+    @expose(template='bkr.server.templates.form')
     def new(self, **kw):
         return dict(
             form = self.user_form,
@@ -44,7 +44,7 @@ class Users(RPCRoot):
         )
 
     @identity.require(identity.in_group("admin"))
-    @expose(template='beaker.server.templates.form')
+    @expose(template='bkr.server.templates.form')
     def edit(self, id, **kw):
         user = User.by_id(id)
         return dict(
@@ -71,7 +71,7 @@ class Users(RPCRoot):
         flash( _(u"%s saved" % user.display_name) )
         redirect(".")
 
-    @expose(template="beaker.server.templates.grid_add")
+    @expose(template="bkr.server.templates.grid_add")
     @paginate('list', default_order='user_name')
     def index(self):
         users = session.query(User)

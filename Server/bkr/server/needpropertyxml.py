@@ -23,7 +23,7 @@ import os
 import sys
 import pkg_resources
 pkg_resources.require("SQLAlchemy>=0.3.10")
-from beaker.server.model import *
+from bkr.server.model import *
 from commands import ConfigurationError
 from turbogears.database import session
 from os.path import dirname, exists, join
@@ -431,7 +431,7 @@ if __name__=='__main__':
             raise ConfigurationError("Could not find default configuration.")
 
     turbogears.update_config(configfile=configfile,
-        modulename="beaker.server.config")
+        modulename="bkr.server.config")
 
     file = sys.argv[1]
     FH = open(file,"r")

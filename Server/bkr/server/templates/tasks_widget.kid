@@ -1,6 +1,6 @@
 <div xmlns:py="http://purl.org/kid/ns#">
  <?python
-  from beaker.server.model import RecipeTask, RecipeTaskResult
+  from bkr.server.model import RecipeTask, RecipeTaskResult
   from urlparse import urlparse
   from cgi import  parse_qs
   if getattr(tg, 'paginate', False):

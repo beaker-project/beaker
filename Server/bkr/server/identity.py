@@ -7,7 +7,7 @@ import ldap
 import logging
 import cherrypy
 import os
-log = logging.getLogger("beaker.server.controllers")
+log = logging.getLogger("bkr.server.controllers")
 
 class LdapSqlAlchemyIdentityProvider(SqlAlchemyIdentityProvider):
     """

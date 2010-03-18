@@ -27,8 +27,8 @@
 <body py:match="item.tag=='{http://www.w3.org/1999/xhtml}body'" py:attrs="item.items()">
 
 <?python
-from beaker.server.model import device_classes
-from beaker.server.model import system_types
+from bkr.server.model import device_classes
+from bkr.server.model import system_types
 ?>
 <div id="fedora-header">
     <div style="float:left; margin-left:50px;">

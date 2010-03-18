@@ -5,8 +5,8 @@ from turbogears import identity, redirect
 from cherrypy import request, response
 from tg_expanding_form_widget.tg_expanding_form_widget import ExpandingForm
 from kid import Element
-from beaker.server.xmlrpccontroller import RPCRoot
-from beaker.server.helpers import *
+from bkr.server.xmlrpccontroller import RPCRoot
+from bkr.server.helpers import *
 from xmlrpclib import ProtocolError
 from turbogears.identity import IdentityException
 
@@ -14,9 +14,9 @@ import cherrypy
 import time
 import re
 
-# from beaker.server import json
+# from bkr.server import json
 # import logging
-# log = logging.getLogger("beaker.server.controllers")
+# log = logging.getLogger("bkr.server.controllers")
 #import model
 from model import *
 import string

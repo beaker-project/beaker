@@ -30,7 +30,7 @@ pkg_resources.require("SQLAlchemy>=0.3.10")
 import cherrypy
 import turbogears
 
-from beaker.server.util import load_config
+from bkr.server.util import load_config
 
 cherrypy.lowercase_api = True
 
@@ -45,5 +45,5 @@ def start():
     else:
         load_config()
 
-    from beaker.server.controllers import Root
+    from bkr.server.controllers import Root
     turbogears.start_server(Root())

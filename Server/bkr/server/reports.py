@@ -5,8 +5,8 @@ from turbogears import identity, redirect
 from cherrypy import request, response
 from tg_expanding_form_widget.tg_expanding_form_widget import ExpandingForm
 from kid import Element
-from beaker.server.xmlrpccontroller import RPCRoot
-from beaker.server.helpers import *
+from bkr.server.xmlrpccontroller import RPCRoot
+from bkr.server.helpers import *
 from distro import Distros
 
 import cherrypy
@@ -14,9 +14,9 @@ import cherrypy
 from BasicAuthTransport import BasicAuthTransport
 import xmlrpclib
 
-# from beaker.server import json
+# from bkr.server import json
 # import logging
-# log = logging.getLogger("beaker.server.controllers")
+# log = logging.getLogger("bkr.server.controllers")
 #import model
 from model import *
 import string
@@ -27,7 +27,7 @@ class Reports(RPCRoot):
     # For XMLRPC methods in this class.
     exposed = True
 
-    @expose(template="beaker.server.templates.grid")
+    @expose(template="bkr.server.templates.grid")
     @paginate('list',default_order='created',limit=50,allow_limit_override=True)
     def reserve(self):
         activity = []

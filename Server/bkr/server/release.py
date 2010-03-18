@@ -1,4 +1,4 @@
-# Release information about beaker.server
+# Release information about bkr.server
 
 version = "0.3"
 

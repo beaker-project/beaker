@@ -20,13 +20,13 @@ from turbogears import controllers, expose, flash, widgets, validate, error_hand
 from turbogears import identity, redirect
 from cherrypy import request, response
 from kid import Element
-from beaker.server import search_utility
-from beaker.server.widgets import myPaginateDataGrid
-from beaker.server.widgets import TasksWidget
-from beaker.server.widgets import TaskSearchForm
-from beaker.server.widgets import SearchBar
-from beaker.server.xmlrpccontroller import RPCRoot
-from beaker.server.helpers import make_link
+from bkr.server import search_utility
+from bkr.server.widgets import myPaginateDataGrid
+from bkr.server.widgets import TasksWidget
+from bkr.server.widgets import TaskSearchForm
+from bkr.server.widgets import SearchBar
+from bkr.server.xmlrpccontroller import RPCRoot
+from bkr.server.helpers import make_link
 from sqlalchemy import exceptions
 from subprocess import *
 import testinfo
@@ -58,7 +58,7 @@ class Tasks(RPCRoot):
         submit_text = _(u'Submit Data')
     )
 
-    @expose(template='beaker.server.templates.form-post')
+    @expose(template='bkr.server.templates.form-post')
     def new(self, **kw):
         return dict(
             title = 'New Task',
@@ -110,7 +110,7 @@ class Tasks(RPCRoot):
         flash(_(u"%s Added/Updated at id:%s" % (task.name,task.id)))
         redirect(".")
 
-    @expose(template='beaker.server.templates.task_search')
+    @expose(template='bkr.server.templates.task_search')
     @validate(form=task_form)
     @paginate('tasks',default_order='-id', limit=30)
     def executed(self, hidden={}, **kw):
@@ -121,7 +121,7 @@ class Tasks(RPCRoot):
         tmp['options'] = dict()
         return tmp
     
-    @expose(template='beaker.server.templates.tasks')
+    @expose(template='bkr.server.templates.tasks')
     @validate(form=task_form)
     @paginate('tasks',default_order='-id', limit=30)
     def do_search(self, hidden={}, **kw):
@@ -177,7 +177,7 @@ class Tasks(RPCRoot):
                     hidden = hidden,
                     task_widget = self.task_widget)
 
-    @expose(template='beaker.server.templates.grid')
+    @expose(template='bkr.server.templates.grid')
     @paginate('list',default_order='name', limit=30)
     def index(self, *args, **kw):
         tasks = session.query(Task)
@@ -205,7 +205,7 @@ class Tasks(RPCRoot):
                            )
         return dict(title="Task Library", grid=tasks_grid, list=tasks, search_bar=search_bar,action='.', options=search_options, searchvalue=searchvalue)
 
-    @expose(template='beaker.server.templates.task')
+    @expose(template='bkr.server.templates.task')
     def default(self, *args, **kw):
         try:
             task = Task.by_id(args[0])

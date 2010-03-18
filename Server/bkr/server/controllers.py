@@ -4,53 +4,53 @@ from model import *
 from turbogears import identity, redirect, config
 import search_utility
 import beaker
-import beaker.server.stdvars
-from beaker.server.power import PowerTypes
-from beaker.server.keytypes import KeyTypes
-from beaker.server.CSV_import_export import CSV
-from beaker.server.group import Groups
-from beaker.server.tag import Tags
-from beaker.server.osversion import OSVersions
-from beaker.server.labcontroller import LabControllers
-from beaker.server.user import Users
-from beaker.server.distro import Distros
-from beaker.server.activity import Activities
-from beaker.server.reports import Reports
-from beaker.server.job_matrix import JobMatrix
-from beaker.server.task_list import TaskList
-from beaker.server.reserve_workflow import ReserveWorkflow
-from beaker.server.widgets import myPaginateDataGrid
-from beaker.server.widgets import PowerTypeForm
-from beaker.server.widgets import PowerForm
-from beaker.server.widgets import LabInfoForm
-from beaker.server.widgets import PowerActionForm
-from beaker.server.widgets import SystemDetails
-from beaker.server.widgets import SystemHistory
-from beaker.server.widgets import SystemExclude
-from beaker.server.widgets import SystemKeys
-from beaker.server.widgets import SystemNotes
-from beaker.server.widgets import SystemGroups
-from beaker.server.widgets import SystemInstallOptions
-from beaker.server.widgets import SystemProvision
-from beaker.server.widgets import SearchBar, SystemForm
-from beaker.server.widgets import SystemArches
-from beaker.server.widgets import TaskSearchForm
-from beaker.server.authentication import Auth
-from beaker.server.xmlrpccontroller import RPCRoot
-from beaker.server.cobbler_utils import hash_to_string
-from beaker.server.jobs import Jobs
-from beaker.server.recipes import Recipes
-from beaker.server.tasks import Tasks
-from beaker.server.task_actions import TaskActions
+import bkr.server.stdvars
+from bkr.server.power import PowerTypes
+from bkr.server.keytypes import KeyTypes
+from bkr.server.CSV_import_export import CSV
+from bkr.server.group import Groups
+from bkr.server.tag import Tags
+from bkr.server.osversion import OSVersions
+from bkr.server.labcontroller import LabControllers
+from bkr.server.user import Users
+from bkr.server.distro import Distros
+from bkr.server.activity import Activities
+from bkr.server.reports import Reports
+from bkr.server.job_matrix import JobMatrix
+from bkr.server.task_list import TaskList
+from bkr.server.reserve_workflow import ReserveWorkflow
+from bkr.server.widgets import myPaginateDataGrid
+from bkr.server.widgets import PowerTypeForm
+from bkr.server.widgets import PowerForm
+from bkr.server.widgets import LabInfoForm
+from bkr.server.widgets import PowerActionForm
+from bkr.server.widgets import SystemDetails
+from bkr.server.widgets import SystemHistory
+from bkr.server.widgets import SystemExclude
+from bkr.server.widgets import SystemKeys
+from bkr.server.widgets import SystemNotes
+from bkr.server.widgets import SystemGroups
+from bkr.server.widgets import SystemInstallOptions
+from bkr.server.widgets import SystemProvision
+from bkr.server.widgets import SearchBar, SystemForm
+from bkr.server.widgets import SystemArches
+from bkr.server.widgets import TaskSearchForm
+from bkr.server.authentication import Auth
+from bkr.server.xmlrpccontroller import RPCRoot
+from bkr.server.cobbler_utils import hash_to_string
+from bkr.server.jobs import Jobs
+from bkr.server.recipes import Recipes
+from bkr.server.tasks import Tasks
+from bkr.server.task_actions import TaskActions
 from cherrypy import request, response
 from cherrypy.lib.cptools import serve_file
 from tg_expanding_form_widget.tg_expanding_form_widget import ExpandingForm
-from beaker.server.needpropertyxml import *
-from beaker.server.helpers import *
-from beaker.server.tools.init import dummy
+from bkr.server.needpropertyxml import *
+from bkr.server.helpers import *
+from bkr.server.tools.init import dummy
 from decimal import Decimal
 from bexceptions import *
-import beaker.server.recipes
+import bkr.server.recipes
 import random
 
 from kid import Element
@@ -62,9 +62,9 @@ import string
 # for debugging
 import sys
 
-# from beaker.server import json
+# from bkr.server import json
 import logging
-log = logging.getLogger("beaker.server.controllers")
+log = logging.getLogger("bkr.server.controllers")
 import breadcrumbs
 from datetime import datetime
 
@@ -324,7 +324,7 @@ class Arches:
 
 class Devices:
 
-    @expose(template='beaker.server.templates.grid')
+    @expose(template='bkr.server.templates.grid')
     @paginate('list')
     def view(self, id):
         device = session.query(Device).get(id)
@@ -336,7 +336,7 @@ class Devices:
         return dict(title="", grid = device_grid, search_bar=None,
                                               list = systems)
 
-    @expose(template='beaker.server.templates.grid')
+    @expose(template='bkr.server.templates.grid')
     @paginate('list',default_order='description',limit=50,allow_limit_override=True)
     def default(self, *args, **kw):
         args = list(args)
@@ -566,13 +566,13 @@ class Root(RPCRoot):
         recipeset.activity.append(activity)
         return {'success' : True } 
 
-    @expose(template='beaker.server.templates.grid_add')
+    @expose(template='bkr.server.templates.grid_add')
     @paginate('list',default_order='fqdn',limit=20,allow_limit_override=True)
     def index(self, *args, **kw):   
         return_dict =  self.systems(systems = System.all(identity.current.user), *args, **kw) 
         return return_dict
 
-    @expose(template='beaker.server.templates.form')
+    @expose(template='bkr.server.templates.form')
     @identity.require(identity.not_anonymous())
     def prefs(self, *args, **kw):
         user = identity.current.user
@@ -595,19 +595,19 @@ class Root(RPCRoot):
             identity.current.user.email_address = email
         redirect('/')
 
-    @expose(template='beaker.server.templates.grid')
+    @expose(template='bkr.server.templates.grid')
     @identity.require(identity.not_anonymous())
     @paginate('list',default_order='fqdn',limit=20,allow_limit_override=True)
     def available(self, *args, **kw):
         return self.systems(systems = System.available(identity.current.user), *args, **kw)
 
-    @expose(template='beaker.server.templates.grid')
+    @expose(template='bkr.server.templates.grid')
     @identity.require(identity.not_anonymous())
     @paginate('list',default_order='fqdn',limit=20,allow_limit_override=True)
     def free(self, *args, **kw):
         return self.systems(systems = System.free(identity.current.user), *args, **kw)
 
-    @expose(template='beaker.server.templates.grid')
+    @expose(template='bkr.server.templates.grid')
     @identity.require(identity.not_anonymous())
     @paginate('list',limit=20,allow_limit_override=True)
     def mine(self, *args, **kw):
@@ -627,7 +627,7 @@ class Root(RPCRoot):
         avail_systems_distro_query = System.available(identity.current.user,System.by_type(type='machine',systems=systems_distro_query)) 
         return {'count' : avail_systems_distro_query.count(), 'distro_id' : distro.id }
       
-    @expose(template='beaker.server.templates.grid') 
+    @expose(template='bkr.server.templates.grid') 
     @identity.require(identity.not_anonymous())
     @paginate('list') 
     def reserve_system(self, *args,**kw):
@@ -655,7 +655,7 @@ class Root(RPCRoot):
        
             return_dict['title'] = 'Reserve Systems'
             return_dict['warn_msg'] = warn
-            return_dict['tg_template'] = "beaker.server.templates.reserve_grid"
+            return_dict['tg_template'] = "bkr.server.templates.reserve_grid"
             return_dict['action'] = '/reserve_system'
             return_dict['options']['extra_hiddens'] = {'distro' : distro_install_name} 
             return return_dict
@@ -893,7 +893,7 @@ class Root(RPCRoot):
             flash(_(u"Group ID not found"))
         redirect("./view/%s" % system.fqdn)
 
-    @expose(template="beaker.server.templates.system")
+    @expose(template="bkr.server.templates.system")
     @identity.require(identity.not_anonymous())
     def new(self):
         options = {}
@@ -906,7 +906,7 @@ class Root(RPCRoot):
             value    = None,
             options  = options)
 
-    @expose(template="beaker.server.templates.form")
+    @expose(template="bkr.server.templates.form")
     def test(self, fqdn=None, **kw):
         try:
             system = System.by_fqdn(fqdn,identity.current.user)
@@ -924,7 +924,7 @@ class Root(RPCRoot):
                      lab_controller = system.lab_controller,
                      prov_install = [(distro.id, distro.install_name) for distro in system.distros()]))
 
-    @expose(template="beaker.server.templates.system")
+    @expose(template="bkr.server.templates.system")
     @paginate('history_data',limit=30,default_order='-created')
     def view(self, fqdn=None, **kw):
         if fqdn:
@@ -1049,7 +1049,7 @@ class Root(RPCRoot):
                                   ),
         )
          
-    @expose(template='beaker.server.templates.form')
+    @expose(template='bkr.server.templates.form')
     @identity.require(identity.not_anonymous())
     def loan_change(self, id):
         try:
@@ -1079,7 +1079,7 @@ class Root(RPCRoot):
             value = {'id': system.id},
         )
 
-    @expose(template='beaker.server.templates.form')
+    @expose(template='bkr.server.templates.form')
     @identity.require(identity.not_anonymous())
     def owner_change(self, id):
         try:
@@ -1859,7 +1859,7 @@ class Root(RPCRoot):
             system = System(fqdn=fqdn)
         return system.update(inventory)
 
-    @expose(template="beaker.server.templates.login")
+    @expose(template="bkr.server.templates.login")
     def login(self, forward_url='/', previous_url=None, *args, **kw):
 
         if not identity.current.anonymous \
@@ -1900,7 +1900,7 @@ class Root(RPCRoot):
         filename = join(os.path.normpath(static_dir), 'images', 'favicon.ico')
         return serve_file(filename)
 
-#    @expose(template='beaker.server.templates.activity')
+#    @expose(template='bkr.server.templates.activity')
 #    def activity(self, *args, **kw):
 # TODO This is mainly for testing
 # if it hangs around it should check for admin access

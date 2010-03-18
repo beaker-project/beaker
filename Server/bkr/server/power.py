@@ -4,13 +4,13 @@ from turbogears import identity, redirect
 from cherrypy import request, response
 from tg_expanding_form_widget.tg_expanding_form_widget import ExpandingForm
 from kid import Element
-from beaker.server.xmlrpccontroller import RPCRoot
+from bkr.server.xmlrpccontroller import RPCRoot
 
 import cherrypy
 
-# from beaker.server import json
+# from bkr.server import json
 # import logging
-# log = logging.getLogger("beaker.server.controllers")
+# log = logging.getLogger("bkr.server.controllers")
 #import model
 from model import *
 import string
@@ -67,7 +67,7 @@ class PowerTypes(RPCRoot):
         submit_text = _(u'Submit Data'),
     )
 
-    @expose(template='beaker.server.templates.form')
+    @expose(template='bkr.server.templates.form')
     def new(self, **kw):
         return dict(
             form = self.form,
@@ -76,7 +76,7 @@ class PowerTypes(RPCRoot):
             value = kw,
         )
 
-    @expose(template='beaker.server.templates.form')
+    @expose(template='bkr.server.templates.form')
     def edit(self,**kw):
         values = []
         if kw.get('id'):
@@ -104,7 +104,7 @@ class PowerTypes(RPCRoot):
         flash( _(u"OK") )
         redirect(".")
 
-    @expose(template="beaker.server.templates.grid_add")
+    @expose(template="bkr.server.templates.grid_add")
     @paginate('list')
     def index(self):
         powertypes = session.query(PowerType)

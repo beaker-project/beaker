@@ -1,11 +1,11 @@
 from turbogears import controllers, identity, expose, url, database, validate, flash, redirect
 from turbogears.database import session
 from sqlalchemy.sql.expression import and_
-from beaker.server.widgets import ReserveWorkflow as ReserveWorkflowWidget
-from beaker.server.widgets import ReserveSystem
-import beaker.server.model as model
+from bkr.server.widgets import ReserveWorkflow as ReserveWorkflowWidget
+from bkr.server.widgets import ReserveSystem
+import bkr.server.model as model
 from sqlalchemy.exceptions import InvalidRequestError
-from beaker.server.cobbler_utils import hash_to_string
+from bkr.server.cobbler_utils import hash_to_string
 
 import logging
 log = logging.getLogger(__name__)
@@ -68,7 +68,7 @@ class ReserveWorkflow:
         flash(_(u'Successfully queued job %s' % job.id))
         redirect('/jobs/%s' % job.id)
 
-    @expose(template='beaker.server.templates.form')
+    @expose(template='bkr.server.templates.form')
     def reserve(self, distro_id, system_id=None):
         """ Either queue or provision the system now """
         if system_id:
@@ -95,7 +95,7 @@ class ReserveWorkflow:
                     title='Reserve System %s' % system_name)
 
     @identity.require(identity.not_anonymous())
-    @expose(template='beaker.server.templates.generic') 
+    @expose(template='bkr.server.templates.generic') 
     def index(self,*args,**kw):
         values = {}
         if 'arch' in kw:

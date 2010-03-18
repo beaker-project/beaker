@@ -5,17 +5,17 @@ from turbogears import identity, redirect
 from cherrypy import request, response
 from tg_expanding_form_widget.tg_expanding_form_widget import ExpandingForm
 from kid import Element
-from beaker.server.xmlrpccontroller import RPCRoot
-from beaker.server.helpers import *
+from bkr.server.xmlrpccontroller import RPCRoot
+from bkr.server.helpers import *
 
 import cherrypy
 
 from BasicAuthTransport import BasicAuthTransport
 import xmlrpclib
 
-# from beaker.server import json
+# from bkr.server import json
 # import logging
-# log = logging.getLogger("beaker.server.controllers")
+# log = logging.getLogger("bkr.server.controllers")
 #import model
 from model import *
 import string
@@ -37,7 +37,7 @@ class OSVersions(RPCRoot):
         submit_text = _(u"Edit OSVersion"),
     )
 
-    @expose(template="beaker.server.templates.form")
+    @expose(template="bkr.server.templates.form")
     def edit(self, id=None, *args, **kw):
         try:
             osversion = OSVersion.by_id(id)
@@ -67,7 +67,7 @@ class OSVersions(RPCRoot):
             flash(_(u"No Changes for %s" % osversion))
         redirect(".")
 
-    @expose(template="beaker.server.templates.grid")
+    @expose(template="bkr.server.templates.grid")
     @paginate('list',limit=50,allow_limit_override=True)
     def index(self):
         osversions = session.query(OSVersion)

@@ -147,9 +147,9 @@ fi
 %defattr(-,root,root,-)
 %doc Server/README COPYING
 %doc SchemaUpgrades/*
-%{python_sitelib}/%{name}/server/
-%{python_sitelib}/%{name}.server-%{version}-*
-%{python_sitelib}/%{name}.server-%{version}-py%{pyver}.egg-info/
+%{python_sitelib}/bkr/server/
+%{python_sitelib}/bkr.server-%{version}-*
+%{python_sitelib}/bkr.server-%{version}-py%{pyver}.egg-info/
 %{_bindir}/start-%{name}
 %{_bindir}/%{name}-init
 %{_sysconfdir}/init.d/%{name}d

@@ -4,8 +4,8 @@ from turbogears import identity, redirect
 from cherrypy import request, response
 from tg_expanding_form_widget.tg_expanding_form_widget import ExpandingForm
 from kid import Element
-from beaker.server.xmlrpccontroller import RPCRoot
-from beaker.server.helpers import *
+from bkr.server.xmlrpccontroller import RPCRoot
+from bkr.server.helpers import *
 from tempfile import NamedTemporaryFile
 from cherrypy.lib.cptools import serve_file
 
@@ -55,7 +55,7 @@ class CSV(RPCRoot):
         submit_text = _(u'Export CSV'),
     )
 
-    @expose(template='beaker.server.templates.form')
+    @expose(template='bkr.server.templates.form')
     def index(self, **kw):
         return dict(
             form = self.exportform,
@@ -64,7 +64,7 @@ class CSV(RPCRoot):
             value = kw,
         )
 
-    @expose(template='beaker.server.templates.form-post')
+    @expose(template='bkr.server.templates.form-post')
     def csv_import(self, **kw):
         return dict(
             form = self.importform,
@@ -83,7 +83,7 @@ class CSV(RPCRoot):
                                      name="%s.csv" % csv_type)
         
 
-    @expose(template='beaker.server.templates.csv_import')
+    @expose(template='bkr.server.templates.csv_import')
     def action_import(self, csv_file, *args, **kw):
         """
         TurboGears method to import data from csv

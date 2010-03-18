@@ -4,8 +4,8 @@ from turbogears import controllers, identity, expose, url, database
 from turbogears.widgets import DataGrid
 from turbogears.database import session, metadata, mapper
 from kid import Element, SubElement
-from beaker.server.widgets import JobMatrixReport as JobMatrixWidget, InnerGrid, myDataGrid
-from beaker.server.helpers import make_link
+from bkr.server.widgets import JobMatrixReport as JobMatrixWidget, InnerGrid, myDataGrid
+from bkr.server.helpers import make_link
 import model
 
 import pprint
@@ -47,7 +47,7 @@ class JobMatrix:
     result_data = []
     show_header_interval = 10
 
-    @expose(template='beaker.server.templates.generic')
+    @expose(template='bkr.server.templates.generic')
     def index(self,**kw):
         self.col_call = 0
         self.max_cols = 0

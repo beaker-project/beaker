@@ -134,8 +134,8 @@ package_data = find_package_data(where='beaker',
                                  exclude=excludeFiles,
                                  exclude_directories=excludeDataDirs)
 setup(
-    name="beaker.server",
-    namespace_packages = ['beaker'],
+    name="bkr.server",
+    namespace_packages = ['bkr'],
     version='@VERSION@',
 
     # uncomment the following lines if you fill them out in release.py
@@ -171,12 +171,12 @@ setup(
     test_suite='nose.collector',
     entry_points = {
         'turbogears.identity.provider': (
-            'ldapsa = beaker.server.identity:LdapSqlAlchemyIdentityProvider'
+            'ldapsa = bkr.server.identity:LdapSqlAlchemyIdentityProvider'
         ),
         'console_scripts': (
-            'start-beaker = beaker.server.commands:start',
-            'beaker-init = beaker.server.tools.init:main',
-            'beakerd = beaker.server.tools.beakerd:main',
+            'start-beaker = bkr.server.commands:start',
+            'beaker-init = bkr.server.tools.init:main',
+            'beakerd = bkr.server.tools.beakerd:main',
         ),
     }
     )
