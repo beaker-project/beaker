@@ -3,7 +3,7 @@ from turbogears import controllers, expose, flash, widgets, validate, error_hand
 from model import *
 from turbogears import identity, redirect, config
 import search_utility
-import beaker
+import bkr
 import bkr.server.stdvars
 from bkr.server.power import PowerTypes
 from bkr.server.keytypes import KeyTypes
