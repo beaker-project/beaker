@@ -148,6 +148,37 @@ def main():
         VENDOR		= Key('VENDOR')
         XENCERT		= Key('XENCERT')
 
+    if TaskPriority.query().count() == 0:
+        low             = TaskPriority(priority=u'Low')
+        medium          = TaskPriority(priority=u'Medium')
+        normal          = TaskPriority(priority=u'Normal')
+        high            = TaskPriority(priority=u'High')
+        urgent          = TaskPriority(priority=u'Urghent')
+
+    #Setup Test Status
+    if TaskStatus.query().count() == 0:
+        NEW       = TaskStatus(status=u'New', severity=10)
+        PROCESSED = TaskStatus(status=u'Processed', severity=20)
+        QUEUEUD   = TaskStatus(status=u'Queued', severity=30)
+        SCHEDULED = TaskStatus(status=u'Scheduled', severity=40)
+        # RUNNING and WAITING are transient states.  It will never be final.
+        #  But having it the lowest Severity will show a job as 
+        #  Running until it finishes with either Completed, Cancelled or 
+        #  Aborted.
+        WAITING   = TaskStatus(status=u'Waiting', severity=7)
+        RUNNING   = TaskStatus(status=u'Running', severity=5)
+        COMPLETED = TaskStatus(status=u'Completed', severity=50)
+        CANCELLED = TaskStatus(status=u'Cancelled', severity=60)
+        ABORTED   = TaskStatus(status=u'Aborted', severity=70)
+
+    #Setup Test Result
+    if TaskResult.query().count() == 0:
+        NEW       = TaskResult(result=u'New', severity=10)
+        PASS      = TaskResult(result=u'Pass', severity=20)
+        WARN      = TaskResult(result=u'Warn', severity=30)
+        FAIL      = TaskResult(result=u'Fail', severity=40)
+        PANIC     = TaskResult(result=u'Panic', severity=50)
+
     session.flush()
 
 def get_parser():

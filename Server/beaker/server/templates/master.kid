@@ -1,6 +1,5 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-<?python import sitetemplate ?>
-<html xmlns="http://www.w3.org/1999/xhtml" xmlns:py="http://purl.org/kid/ns#" py:extends="sitetemplate">
+<?python import sitetemplate ?><html xmlns="http://www.w3.org/1999/xhtml" xmlns:py="http://purl.org/kid/ns#" py:extends="sitetemplate">
 
 <head py:match="item.tag=='{http://www.w3.org/1999/xhtml}head'" py:attrs="item.items()">
     <meta content="text/html; charset=UTF-8" http-equiv="content-type" py:replace="''"/>
@@ -31,80 +30,155 @@
 from beaker.server.model import device_classes
 from beaker.server.model import system_types
 ?>
-<script type="text/javascript" py:if="'admin' in tg.identity.groups">
-$(document).ready(function() {
-    $('#administration').click( function() { $('#adminlist').toggle('slow'); });
-});
-</script>
-    <div id="fedora-header">
-        <div id="fedora-header-logo">
-            <a href="${tg.url('/')}"><img src="${tg.url('/static/images/header-beaker_logo.png')}" /></a>
-        </div>
-
-        <div id="fedora-header-items">
-            <table><tr><td> &nbsp; </td><td>
-                <div id="wait" style="display: none">
-                    <img src="${tg.url('/static/images/wait.gif')}" height="48" width="48"/> 
-                </div>
-                <span style="margin-right:2em">
-                  <div id="beaker-version">
-                    Version - ${tg.beaker_version()}
-                  </div>
-                </span>
-                
-            </td></tr></table>
-        </div>
-    </div>
-
-    <div id="fedora-nav"></div>
-    <!-- header END -->
-   <!-- leftside BEGIN -->
-    <div id="fedora-side-left">
-        <div id="fedora-side-nav-label">Site Navigation:</div>
-            <div py:if="not tg.identity.anonymous and 'admin' in tg.identity.groups">
-                <ul id="fedora-side-nav">
-                    <li><a id="administration" href="#">Administration</a></li>
-                    <div id="adminlist" style="display: none">
-                        <ul>
-                            <li><a href="${tg.url('/labcontrollers')}">Lab Controllers</a></li>
-                            <li><a href="${tg.url('/users')}">Accounts</a></li>
-                            <li><a href="${tg.url('/groups')}">Groups</a></li>
-                            <li><a href="${tg.url('/powertypes')}">Power Types</a></li>
-                            <li><a href="${tg.url('/keytypes')}">Key Types</a></li>
-                            <li><a href="${tg.url('/csv/csv_import')}">Import</a></li>
-                            <li><a href="${tg.url('/csv')}">Export</a></li>
-                            <li><a href="${tg.url('/osversions')}">OS Versions</a></li>
-                        </ul>
-                    </div>
-                </ul>
-            </div>
-            <ul id="fedora-side-nav"> 
-                <li py:if="not tg.identity.anonymous"><a href="${tg.url('/prefs/')}">${tg.identity.user_name}'s Prefs</a></li>
-                <li py:if="not tg.identity.anonymous"><a href="${tg.url('/mine/')}">${tg.identity.user_name}'s Home</a></li>
-                <li py:if="not tg.identity.anonymous and not 'admin' in tg.identity.groups"><a href="${tg.url('/groups')}">Groups</a></li>
-                <li py:if="not tg.identity.anonymous"><a href="${tg.url('/available/')}">Available Systems</a></li>
-                <li py:if="not tg.identity.anonymous"><a href="${tg.url('/free/')}">Free Systems</a></li>
-                <li><a href="${tg.url('/')}">All Systems</a></li>
-                <ul>
-                    <li py:for="type in system_types()">
-                      <a href="${tg.url('/', type = type.type)}">${type.type}</a>
+<div id="fedora-header">
+    <div style="float:left; margin-left:50px;">
+        <ul id="menu">
+            <li class="logo">
+                <img style="float:right;" alt="" src="/static/images/header-beaker_logo2.png"/>
+            </li>
+            <li>Systems
+                <ul id="systems">
+                    <li>
+                        <img class="corner_inset_left" alt="" src="/static/images/corner_inset_left.png"/>
+                        <a href="${tg.url('/')}">All</a>
+                        <img class="corner_inset_right" alt="" src="/static/images/corner_inset_right.png"/>
+                    </li>
+                    <li><a href="${tg.url('/mine/')}">Mine</a></li>
+                    <li><a href="${tg.url('/available/')}">Available</a></li>
+                    <li><a href="${tg.url('/free/')}">Free</a></li>
+                    <li class="last">
+                        <img class="corner_left" alt="" src="/static/images/corner_left.png"/>
+                        <img class="middle" alt="" src="/static/images/dot.gif"/>
+                        <img class="corner_right" alt="" src="/static/images/corner_right.png"/>
                     </li>
                 </ul>
-                <li><a href="${tg.url('/devices')}">Devices</a>
-                <ul>
+            </li>
+            <li>Devices
+                <ul id="devices">
+                    <li>
+                        <img class="corner_inset_left" alt="" src="/static/images/corner_inset_left.png"/>
+                        <a href="${tg.url('/devices')}">All</a>
+                        <img class="corner_inset_right" alt="" src="/static/images/corner_inset_right.png"/>
+                    </li>
                     <li py:for="device_class in device_classes()">
-                    <a href="${tg.url('/devices/%s' % device_class)}">${device_class}</a></li>
-                </ul></li>
-                <li><a href="${tg.url('/distros')}">Distros</a></li>
-                <li><a href="${tg.url('/tags')}">Distro Tags</a></li>
-                <li><a href="${tg.url('/activity')}">Activity</a></li>
-                <li py:if="not tg.identity.anonymous"><a href="${tg.url('/logout')}">Logout</a></li>
-                <li py:if="tg.identity.anonymous"><a href="${tg.url('/login')}">Login</a></li>
-            </ul>
-        </div>
-        <!-- leftside END -->
+                     <a href="${tg.url('/devices/%s' % device_class)}">${device_class}</a>
+                    </li>
+                    <li class="last">
+                        <img class="corner_left" alt="" src="/static/images/corner_left.png"/>
+                        <img class="middle" alt="" src="/static/images/dot.gif"/>
+                        <img class="corner_right" alt="" src="/static/images/corner_right.png"/>
+                    </li>
+                </ul>
+            </li>
+            <li>Distros
+                <ul id="distros">
+                    <li>
+                        <img class="corner_inset_left" alt="" src="/static/images/corner_inset_left.png"/>
+                        <a href="${tg.url('/distros')}">All</a>
+                        <img class="corner_inset_right" alt="" src="/static/images/corner_inset_right.png"/>
+                    </li>
+                    <li><a href="${tg.url('/tags')}">Tags</a></li>
+                    <li class="last">
+                        <img class="corner_left" alt="" src="/static/images/corner_left.png"/>
+                        <img class="middle" alt="" src="/static/images/dot.gif"/>
+                        <img class="corner_right" alt="" src="/static/images/corner_right.png"/>
+                    </li>
+                </ul>
+            </li>
+            <li>Scheduler
+                <ul id="scheduler">
+                    <li>
+                        <img class="corner_inset_left" alt="" src="/static/images/corner_inset_left.png"/>
+                        <a href="${tg.url('/jobs/new')}">New Job</a>
+                        <img class="corner_inset_right" alt="" src="/static/images/corner_inset_right.png"/>
+                    </li>
+                    <li><a href="${tg.url('/jobs')}">Jobs</a></li>
+                    <li><a href="${tg.url('/recipes')}">Recipes</a></li>
+                    <li><a href="${tg.url('/tasks/new')}">New Task</a></li>
+                    <li><a href="${tg.url('/tasks')}">Task Library</a></li>
+                    <li><a href="${tg.url('/reserveworkflow')}">Reserve</a></li>
+                    <li class="last">
+                        <img class="corner_left" alt="" src="/static/images/corner_left.png"/>
+                        <img class="middle" alt="" src="/static/images/dot.gif"/>
+                        <img class="corner_right" alt="" src="/static/images/corner_right.png"/>
+                    </li>
+                </ul>
+            </li>
+            <li>Reports
+                <ul id="reports">
+                    <li>
+                        <img class="corner_inset_left" alt="" src="/static/images/corner_inset_left.png"/>
+                        <a href="${tg.url('/reports')}">Reserve</a>
+                        <img class="corner_inset_right" alt="" src="/static/images/corner_inset_right.png"/>
+                    </li>
+                    <li><a href="${tg.url('/matrix')}">Matrix</a></li>
+                    <li><a href="${tg.url('/reports')}">Executed</a></li>
+                    <li class="last">
+                        <img class="corner_left" alt="" src="/static/images/corner_left.png"/>
+                        <img class="middle" alt="" src="/static/images/dot.gif"/>
+                        <img class="corner_right" alt="" src="/static/images/corner_right.png"/>
+                    </li>
+                </ul>
+            </li>
+            <li>Activity
+                <ul id="Activity">
+                    <li>
+                        <img class="corner_inset_left" alt="" src="/static/images/corner_inset_left.png"/>
+                        <a href="${tg.url('/activity')}">All</a>
+                        <img class="corner_inset_right" alt="" src="/static/images/corner_inset_right.png"/>
+                    </li>
+                    <li><a href="${tg.url('/activity')}">Systems</a></li>
+                    <li><a href="${tg.url('/activity')}">Distros</a></li>
+                    <li class="last">
+                        <img class="corner_left" alt="" src="/static/images/corner_left.png"/>
+                        <img class="middle" alt="" src="/static/images/dot.gif"/>
+                        <img class="corner_right" alt="" src="/static/images/corner_right.png"/>
+                    </li>
+                </ul>
+            </li>
+            <li py:if="'admin' in tg.identity.groups">Admin
+                <ul id="admin">
+                    <li>
+                        <img class="corner_inset_left" alt="" src="/static/images/corner_inset_left.png"/>
+                        <a href="${tg.url('/users')}">Accounts</a>
+                        <img class="corner_inset_right" alt="" src="/static/images/corner_inset_right.png"/>
+                    </li>
+                    <li><a href="${tg.url('/groups')}">Groups</a></li>
+                    <li><a href="${tg.url('/labcontrollers')}">Lab Controllers</a></li>
+                    <li><a href="${tg.url('/powertypes')}">Power Types</a></li>
+                    <li><a href="${tg.url('/keytypes')}">Key Types</a></li>
+                    <li><a href="${tg.url('/osversions')}">OS Versions</a></li>
+                    <li><a href="${tg.url('/csv/csv_import')}">Import</a></li>
+                    <li><a href="${tg.url('/csv')}">Export</a></li>
+                    <li class="last">
+                        <img class="corner_left" alt="" src="/static/images/corner_left.png"/>
+                        <img class="middle" alt="" src="/static/images/dot.gif"/>
+                        <img class="corner_right" alt="" src="/static/images/corner_right.png"/>
+                    </li>
+                </ul>
+            </li>
+            <li>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</li>
+        </ul>
+        <img style="float:left;" alt="" src="/static/images/menu_right.png"/>
+    </div>
+    <div style="float:right; margin-right:50px;">
+        <img style="float:left;" alt="" src="/static/images/menu_left.png"/>
+        <ul id="menu">
+            <li py:if="tg.identity.anonymous"><a href="${tg.url('/login')}">Login</a>
+            </li>
+            <li py:if="not tg.identity.anonymous"><a href="${tg.url('/logout')}">Logout</a>
+            </li>
+        </ul>
+        <img style="float:left;" alt="" src="/static/images/menu_right.png"/>
+    </div>
+</div>
 
-    <div id="fedora-middle-two">
+    <div id="fedora-nav"></div>
+    <div id="beaker-version">
+        Version - ${tg.beaker_version()}
+    </div>
+    <!-- header END -->
+    <div id="fedora-middle-one">
         <div class="fedora-corner-tr">&nbsp;</div>
         <div class="fedora-corner-tl">&nbsp;</div>
         <div id="fedora-content">

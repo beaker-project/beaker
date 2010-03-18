@@ -6,15 +6,14 @@ from sqlalchemy import distinct
 import model
 import search_utility
 from decimal import Decimal
-from turbogears.widgets import (Form, TextField, SubmitButton, TextArea,
+from turbogears.widgets import (Form, TextField, SubmitButton, TextArea, Label,
                                 AutoCompleteField, SingleSelectField, CheckBox,
-                                HiddenField, RemoteForm, CheckBoxList, JSLink,
+                                HiddenField, RemoteForm, LinkRemoteFunction, CheckBoxList, JSLink,
                                 Widget, TableForm, FormField, CompoundFormField,
-                                static, PaginateDataGrid, RepeatingFormField,
+                                static, PaginateDataGrid, DataGrid, RepeatingFormField,
                                 CompoundWidget, AjaxGrid, Tabber, CSSLink,
-                                RadioButtonList,
-                                RepeatingFieldSet, SelectionField)
-
+                                RadioButtonList, MultipleSelectField, Button,
+                                RepeatingFieldSet, SelectionField,WidgetsList)
 import logging
 log = logging.getLogger(__name__)
 
@@ -94,10 +93,86 @@ class PowerTypeForm(CompoundFormField):
 
     def __init__(self, callback, search_controller, *args, **kw):
         super(PowerTypeForm,self).__init__(*args, **kw)
-
         self.search_controller=search_controller
         self.powercontroller_field = SingleSelectField(name="powercontroller", options=callback)
 	self.key_field = HiddenField(name="key")
+
+class ReserveSystem(TableForm):
+    fields = [
+	      HiddenField(name='distro_id'),
+	      HiddenField(name='system_id'),
+              Label(name='system', label=_(u'System to Provision')),
+              Label(name='distro', label=_(u'Distro to Provision')),
+              TextField(name='whiteboard', attrs=dict(size=50),
+                        label=_(u'Job Whiteboard')),
+              TextField(name='ks_meta', attrs=dict(size=50),
+                        label=_(u'KickStart MetaData')),
+              TextField(name='koptions', attrs=dict(size=50),
+                        label=_(u'Kernel Options (Install)')),
+              TextField(name='koptions_post', 
+                        attrs=dict(size=50),
+                        label=_(u'Kernel Options (Post)')),
+             ]
+    submit_text = 'Queue Job'
+
+class ReserveWorkflow(Form): 
+    javascript = [LocalJSLink('beaker', '/static/javascript/reserve_workflow.js')] 
+    template="beaker.server.templates.reserve_workflow"
+    css = [LocalCSSLink('beaker','/static/css/reserve_workflow.css')] 
+    member_widgets = ['arch','distro','distro_family','method_','tag'] 
+    params = ['arch_value','method_value','tag_value','distro_family_value','all_arches',
+              'all_tags','all_methods','all_distro_familys','to_json','auto_pick'] 
+
+    def __init__(self,*args,**kw):
+        super(ReserveWorkflow,self).__init__(*args, **kw)  
+        self.all_arches = [['','None Selected']] + [[elem.arch,elem.arch] for elem in model.Arch.query()]
+        self.all_tags = [['','None Selected']] + [[elem.tag,elem.tag] for elem in model.DistroTag.query()]  
+        self.all_methods = [('','None Selected')] + [[elem,elem] for elem in model.Distro.all_methods()]
+        self.all_distro_familys = [('','None Selected')] + [[elem.osmajor,elem.osmajor] for elem in model.OSMajor.query()] 
+
+        self.method_ = SingleSelectField(name='method', label='Method', options=[None],validator=validators.NotEmpty())
+        self.distro = SingleSelectField(name='distro', label='Distro', 
+                                        options=[('','None available')],validator=validators.NotEmpty())
+        self.distro_family = SingleSelectField(name='distro_family', label='Distro Family', 
+                                               options=[None],validator=validators.NotEmpty())
+        self.tag = SingleSelectField(name='tag', label='Tag', options=[None],validator=validators.NotEmpty())
+        self.arch = SingleSelectField(name='arch', label='Arch', options=[None],validator=validators.NotEmpty())
+
+        self.to_json = UtilJSON.dynamic_json()
+        self.auto_pick = Button(default="Auto pick system", name='auto_pick', attrs={'class':None})
+        self.name = 'reserveworkflow_form'
+        self.action = '/reserve_system'
+        self.submit = SubmitButton(name='search',attrs={'value':'Show Systems'})
+                                                                
+    def display(self,value=None,**params):
+        if 'options' in params:
+            for k in params['options'].keys():
+                params[k] = params['options'][k]
+                del params['options'][k]
+        return super(ReserveWorkflow,self).display(value,**params)
+
+    def update_params(self,d):
+        super(ReserveWorkflow,self).update_params(d) 
+        if 'values' in d:
+            if d['values']:
+                d['arch_value'] = d['values']['arch'] 
+                d['distro_family_value'] = d['values']['distro_family']
+                d['tag_value'] = d['values']['tag']
+                d['method_value'] = d['values']['method']
+
+class myDataGrid(DataGrid):
+    template = "beaker.server.templates.my_datagrid"
+    name = "my_datagrid"
+    
+class InnerGrid(DataGrid):
+    template = "beaker.server.templates.inner_grid" 
+    params = ['show_headers']
+    
+    def display(self,value=None,**params):
+        if 'options' in params:
+            if 'show_headers' in params['options']:
+                params['show_headers'] = params['options']['show_headers']
+        return super(InnerGrid,self).display(value,**params)
 
 class myPaginateDataGrid(PaginateDataGrid):
     template = "beaker.server.templates.my_paginate_datagrid"
@@ -126,7 +201,61 @@ class TextFieldJSON(TextField):
     def __json__(self):
         return {
                 'field_id' : self.field_id,             
-               } 
+               }
+
+class NestedGrid(CompoundWidget):
+    template = "beaker.server.templates.inner_grid" 
+    params = ['inner_list']
+
+
+class JobMatrixReport(Form):     
+    javascript = [LocalJSLink('beaker', '/static/javascript/job_matrix.js')]
+    css = [LocalCSSLink('beaker','/static/css/job_matrix.css')] 
+    template = 'beaker.server.templates.job_matrix' 
+    member_widgets = ['whiteboard','job_ids','generate_button'] 
+    params = ['list','whiteboard_filter','whiteboard_options','job_ids_vals']
+    default_validator = validators.NotEmpty() 
+    def __init__(self,*args,**kw): 
+        super(JobMatrixReport,self).__init__(*args, **kw)       
+        self.class_name = self.__class__.__name__
+        if 'whiteboard_options' in kw:
+            whiteboard_options = kw['whiteboard_options']
+        else:
+            whiteboard_options = []
+
+        self.whiteboard_options = whiteboard_options or []
+      
+        self.whiteboard = SingleSelectField('whiteboard',label='Whiteboard',attrs={'size':5}, options=whiteboard_options, validator=self.default_validator) 
+        self.job_ids = TextArea('job_ids',label='Job ID', rows=7,cols=7, validator=self.default_validator) 
+        self.whiteboard_filter = TextField('whiteboard_filter', label='Filter Whiteboard') 
+
+        self.name='remote_form' 
+        self.action = '.'   
+    
+    def display(self,**params):     
+        if 'options' in params:
+            if 'whiteboard_options' in params['options']:
+                params['whiteboard_options'] = params['options']['whiteboard_options'] 
+            if 'job_ids_vals' in params['options']:
+                params['job_ids_vals'] = params['options']['job_ids_vals']
+            if 'grid' in params['options']:              
+                params['grid'] = params['options']['grid'] 
+            if 'list' in params['options']: 
+                params['list'] = params['options']['list']
+        return super(JobMatrixReport,self).display(value=None,**params)
+
+class TaskList(Widget):
+    template = 'beaker.server.templates.task_list'
+    css = [LocalCSSLink('beaker','/static/css/task_list.css')] 
+    params = ['data']
+    
+    def display(self,value=None,**params):
+        if 'options' in params:
+            params['data'] = params['options'] #this is temp, ned to figure out how to paginate elements of a dict
+            #if 'data' in params['options']:
+            #    if params['options']['data']:
+            #        params['data'] = params['options']['data']
+        return super(TaskList,self).display(value,**params)   
 
 class SearchBar(RepeatingFormField):
     """Search Bar""" 
@@ -143,6 +272,9 @@ class SearchBar(RepeatingFormField):
       py:attrs="form_attrs" 
       style="display:${simple}"
     >
+    <span py:for="hidden in extra_hiddens or []">
+        <input type='hidden' id='${hidden[0]}' name='${hidden[0]}' value='${hidden[1]}' />
+    </span> 
     <table>
      <tr>
       <td><input type="text" name="simplesearch" value="${simplesearch}" class="textfield"/>
@@ -163,6 +295,10 @@ class SearchBar(RepeatingFormField):
       py:attrs="form_attrs"
       style="display:${advanced}"
     >
+
+    <span py:for="hidden in extra_hiddens or []">
+        <input type='hidden' id='${hidden[0]}' name='${hidden[0]}' value='${hidden[1]}' />
+    </span> 
     <fieldset>
      <legend>Search</legend>
      <table>
@@ -225,7 +361,7 @@ class SearchBar(RepeatingFormField):
     <a style='margin-left:10px' id="selectall" href="#">Select All</a>
     <a style='margin-left:10px' id="selectdefault" href="#">Select Default</a>
     </div> 
-     </fieldset>
+     </fieldset>  
     </form>
     <script type="text/javascript">
     $(document).ready(function() {
@@ -258,7 +394,7 @@ class SearchBar(RepeatingFormField):
     """
 
     params = ['repetitions', 'form_attrs', 'search_controller', 'simplesearch',
-              'advanced', 'simple','to_json','this_operations_field','this_searchvalue_field',
+              'advanced', 'simple','to_json','this_operations_field','this_searchvalue_field','extra_hiddens',
               'extra_callbacks_stringified','table_search_controllers_stringified','keyvaluevalue',
               'result_columns','col_options','col_defaults','enable_custom_columns','default_result_columns']
     form_attrs = {}
@@ -277,8 +413,7 @@ class SearchBar(RepeatingFormField):
         # to access in the template
         self.this_operations_field = operation_field
         self.this_searchvalue_field = value_field
-        self.fields = [table_field,operation_field,value_field] 
-
+        self.fields = [table_field,operation_field,value_field]
         new_selects = []
         self.extra_callbacks = {}
         if extra_selects is not None: 
@@ -308,7 +443,7 @@ class SearchBar(RepeatingFormField):
         controllers = kw.get('table_search_controllers',dict()) 
          
         self.table_search_controllers_stringified = str(controllers)
-        self.to_json = UtilJSON.dynamic_json() 
+        self.to_json = UtilJSON.dynamic_json()
         
         self.extra_callbacks_stringified = str(self.extra_callbacks)
         self.fields.extend(new_inputs)
@@ -335,6 +470,8 @@ class SearchBar(RepeatingFormField):
                 params['col_defaults'] = params['options']['col_defaults']
             if 'enable_custom_columns' in params['options']:
                 params['enable_custom_columns'] = params['options']['enable_custom_columns']
+            if 'extra_hiddens' in params['options']:
+                params['extra_hiddens'] = [(k,v) for k,v in params['options']['extra_hiddens'].iteritems()] 
 
         if value and not 'simplesearch' in params:
             params['advanced'] = 'True'
@@ -370,6 +507,48 @@ class PowerActionForm(Form):
         if 'power' in d['value'] and 'lab_controller' in d['value']:
             if d['value']['power']:
                 d['enabled'] = True
+
+class TaskSearchForm(RemoteForm):
+    template = "beaker.server.templates.task_search_form"
+    member_widgets = ['system_id', 'system', 'task', 'distro', 'family', 'arch', 'start', 'finish', 'status', 'result']
+    params = ['options','hidden']
+    fields = [HiddenField(name='system_id', validator=validators.Int()),
+              HiddenField(name='distro_id', validator=validators.Int()),
+              HiddenField(name='task_id', validator=validators.Int()),
+              TextField(name='task', label=_(u'Task')),
+#              AutoCompleteField(name='task',
+#                                search_controller=url('/tasks/by_name'),
+#                                search_param='task',
+#                                result_name='tasks'),
+              TextField(name='system', label=_(u'System')),
+              SingleSelectField(name='arch_id', label=_(u'Arch'),validator=validators.Int(),
+                                options=model.Arch.get_all),
+              TextField(name='distro', label=_(u'Distro')),
+              TextField(name='whiteboard', label=_(u'Recipe Whiteboard')),
+#              AutoCompleteField(name='distro',
+#                                search_controller=url('/distros/by_name'),
+#                                search_param='distro',
+#                                result_name='distros'),
+              SingleSelectField(name='osmajor_id', label=_(u'Family'),validator=validators.Int(),
+                                options=model.OSMajor.get_all),
+              SingleSelectField(name='status_id', label=_(u'Status'),validator=validators.Int(),
+                                options=model.TaskStatus.get_all),
+              SingleSelectField(name='result_id', label=_(u'Result'),validator=validators.Int(),
+                                options=model.TaskResult.get_all),
+             ]
+
+#    def__init__(self, *args, **kw):
+#        super(TaskSearchForm, self).__init__(*args, **kw)
+#        self.system_id = HiddenField(name='system_id')
+#        self.system    = TextField(name='system', label=_(u'System'))
+#        self.task      = TextField(name='task', label=_(u'Task'))
+
+    def update_params(self, d):
+        print "d=", d
+        super(TaskSearchForm, self).update_params(d)
+        if 'arch_id' in d['options']:
+            d['arch_id'] = d['options']['arch_id']
+
 
 class LabInfoForm(Form):
     template = "beaker.server.templates.system_labinfo"
@@ -777,7 +956,10 @@ class SystemHistory(CompoundWidget):
     
 
 class SystemForm(Form):
-    javascript = [LocalJSLink('beaker', '/static/javascript/provision.js'),LocalJSLink('beaker', '/static/javascript/searchbar_v5.js')]
+    javascript = [LocalJSLink('beaker', '/static/javascript/provision.js'),
+                  LocalJSLink('beaker', '/static/javascript/searchbar_v5.js'),
+                  JSLink(static,'ajax.js'),
+                 ]
     template = "beaker.server.templates.system_form"
     params = ['id','readonly',
               'user_change','user_change_text',
@@ -855,10 +1037,38 @@ class SystemForm(Form):
                                                           d["value_for"](f),
                                                                   **attrs)
 
-class RecipeTasksWidget(Widget):
-    template = "beaker.server.templates.recipe_tasks_widget"
-    params = ['recipe_tasks']
+class TasksWidget(CompoundWidget):
+    template = "beaker.server.templates.tasks_widget"
+    params = ['tasks', 'hidden']
+    member_widgets = ['link'] 
+    link = LinkRemoteFunction(name='link', method='post')
 
+class RecipeTasksWidget(Widget):
+    template = "beaker.server.templates.tasks_widget"
+    params = ['tasks', 'hidden']
+
+    def update_params(self, d):
+        d["hidden"] = dict(system  = 1,
+                           arch    = 1,
+                           distro  = 1,
+                           osmajor = 1,
+                          )
+
+class RecipeSetWidget(CompoundWidget):
+    javascript = []
+    css = []
+    template = "beaker.server.templates.recipe_set"
+    params = ['recipeset','show_priority']
+    member_widgets = ['priority_widget']
+
+    def __init__(self,*args,**kw):
+        self.priority_widget = PriorityWidget()
+        if 'recipeset' in kw:
+            self.recipeset = kw['recipeset']
+        else:
+            self.recipeset = None
+
+   
 class RecipeWidget(CompoundWidget):
     javascript = []
     css = []
@@ -866,3 +1076,29 @@ class RecipeWidget(CompoundWidget):
     params = ['recipe']
     member_widgets = ['recipe_tasks_widget']
     recipe_tasks_widget = RecipeTasksWidget()
+
+class PriorityWidget(SingleSelectField):   
+   validator = validators.NotEmpty()
+   params = ['default','controller'] 
+   def __init__(self,*args,**kw): 
+       self.options = [] 
+       self.field_class = 'singleselectfield' 
+
+   def display(self,obj,value=None,**params):           
+       if 'priorities' in params: 
+           params['options'] =  params['priorities']       
+       else:
+           params['options'] = [(elem.id,elem.priority) for elem in TaskPriority.query().all()]
+       if isinstance(obj,model.Job):
+           if 'id_prefix' in params:
+               params['attrs'] = {'id' : '%s_%s' % (params['id_prefix'],obj.id) }
+       elif obj:
+           if 'id_prefix' in params:
+               params['attrs'] = {'id' : '%s_%s' % (params['id_prefix'],obj.id) } 
+           try:
+               value = obj.priority.id 
+           except AttributeError,(e):
+               log.error('Object %s passed to display does not have a valid priority: %s' % (type(obj),e))
+       return super(PriorityWidget,self).display(value or None,**params)
+
+

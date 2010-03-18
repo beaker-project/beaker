@@ -107,8 +107,56 @@ wget -O /mnt/tests/runtests.sh http://$rhts_server/testlogs/$runtest_url
 wget -O /mnt/tests/runtests.sh http://$rhts_server/testlogs/recipes/$recipeid/runtests.sh
 #end if
 chmod 755 /mnt/tests/runtests.sh
+#else
+
+# If not rhts then 
+# install beaker harness
+cat << EOF > /etc/yum.repos.d/beaker-harness.repo
+[beaker-harness]
+name=Beaker Harness
+baseurl=http://$server/harness/noarch
+enabled=1
+gpgcheck=0
+EOF
+
+# RHEL3 - RHEL5 need additional packages
+#if $os_version in ['rhel3','rhel4','rhel5','rhel6']
+cat << EOF > /etc/yum.repos.d/beaker-support.repo
+[beaker-support]
+name=Beaker Support
+baseurl=http://$server/harness/$os_version/$arch
+enabled=1
+gpgcheck=0
+EOF
 #end if
+
+# Install old rhts commands
+yum -y install rhts-test-env-lab rhts-legacy
+## If koan is available install it.  This allows for easy re-installs
+yum -y install koan
+# Install new harness
+yum -y install beah
+cat << EOF > /etc/beah_beaker.conf
+[DEFAULT]
+# LAB_CONTROLLER: URI of Beaker's XML-RPC handler
+LAB_CONTROLLER=http://$server:8000/server
+#
+# # HOSTNAME: Pretend to be machine with given name:
+# #HOSTNAME=fake.hostname.com
+HOSTNAME=$name
+EOF
+# Turn on Debug logging
+/bin/sed -i 's/DEVEL=False/DEVEL=True/' /etc/beah.conf
+/bin/sed -i 's/INTERFACE=localhost/INTERFACE=/' /etc/beah.conf
+/bin/sed -i 's/CONSOLE_LOG=.*/CONSOLE_LOG=True/' /etc/beah.conf
+
+chkconfig --add beah-srv
+chkconfig --add beah-beaker-backend
+chkconfig --add beah-fwd-backend
+#end if
+
 #Add test user account
 useradd --password '\$6\$oIW3o2Mr\$XbWZKaM7nA.cQqudfDJScupXOia5h1u517t6Htx/Q/MgXm82Pc/OcytatTeI4ULNWOMJzvpCigWiL4xKP9PX4.' test
+$SNIPPET('post_koan')
 $kickstart_done
 $SNIPPET('post_s390_reboot')

@@ -2,6 +2,13 @@ $kickstart_start
 
 $SNIPPET('pre_install_network_config')
 
+# Check in with Beaker Server
+python << _EOF_
+import xmlrpclib
+server = xmlrpclib.Server("http://$server:8000")
+server.install_start("$name")
+_EOF_
+
 ## Enable rhts watchdog checkin
 #if $getVar('rhts_server','') != ''
 wget -O /tmp/rhts-checkin "http://$server/beaker/rhts-checkin"

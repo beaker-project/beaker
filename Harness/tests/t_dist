@@ -1,0 +1,36 @@
+#!/usr/bin/python
+
+from beah import system
+import os
+
+from beah.system import os_linux, dist_fedora
+
+print 40*"*"+"\n* system\n"+40*"*"
+print "arch/os:", system.ARCH, system.OS
+print "dir:", dir(system)
+print "dir(Executable):", dir(system.Executable)
+
+print 40*"*"+"\n* os_linux\n"+40*"*"
+print "name/ver:", os_linux.DISTNAME, os_linux.DISTVER
+print "dir:", dir(os_linux)
+print "dir(ShExecutable):", dir(os_linux.ShExecutable)
+
+print 40*"*"+"\n* dist_fedora\n"+40*"*"
+print "dir:", dir(dist_fedora)
+print "dir(RPMInstaller):", dir(dist_fedora.RPMInstaller)
+
+print system.systemos()
+print system.systemos().systemdist()
+
+e = dist_fedora.RPMInstaller('a_package_name')
+e.make()
+
+f = open(e.executable, 'r')
+fc = f.read()
+f.close()
+
+print e.executable
+print fc
+
+os.unlink(e.executable)
+

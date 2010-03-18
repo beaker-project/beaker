@@ -1,0 +1,5 @@
+["recipes/test-sync.xml",
+ ["machine0", "machine1"],
+ [40, 41],
+ {}]
+

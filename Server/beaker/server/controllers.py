@@ -1,8 +1,6 @@
 from turbogears.database import session
 from turbogears import controllers, expose, flash, widgets, validate, error_handler, validators, redirect, paginate, url
 from model import *
-
-
 from turbogears import identity, redirect, config
 import search_utility
 import beaker
@@ -18,6 +16,9 @@ from beaker.server.user import Users
 from beaker.server.distro import Distros
 from beaker.server.activity import Activities
 from beaker.server.reports import Reports
+from beaker.server.job_matrix import JobMatrix
+from beaker.server.task_list import TaskList
+from beaker.server.reserve_workflow import ReserveWorkflow
 from beaker.server.widgets import myPaginateDataGrid
 from beaker.server.widgets import PowerTypeForm
 from beaker.server.widgets import PowerForm
@@ -33,9 +34,14 @@ from beaker.server.widgets import SystemInstallOptions
 from beaker.server.widgets import SystemProvision
 from beaker.server.widgets import SearchBar, SystemForm
 from beaker.server.widgets import SystemArches
+from beaker.server.widgets import TaskSearchForm
 from beaker.server.authentication import Auth
 from beaker.server.xmlrpccontroller import RPCRoot
 from beaker.server.cobbler_utils import hash_to_string
+from beaker.server.jobs import Jobs
+from beaker.server.recipes import Recipes
+from beaker.server.tasks import Tasks
+from beaker.server.task_actions import TaskActions
 from cherrypy import request, response
 from cherrypy.lib.cptools import serve_file
 from tg_expanding_form_widget.tg_expanding_form_widget import ExpandingForm
@@ -44,6 +50,7 @@ from beaker.server.helpers import *
 from beaker.server.tools.init import dummy
 from decimal import Decimal
 from bexceptions import *
+import beaker.server.recipes
 import random
 
 from kid import Element
@@ -67,11 +74,24 @@ class Utility:
     #is making it quite large.
 
     @classmethod
+    def direct_column(cls,title,getter):
+        """
+        direct_column() will return a DataGrid Column and is intended to be used to generate 
+        columns to be inserted into a grid without any other sideaffects (unlike custom_systems_grid()).
+        They are also free of control from other elemnts such as the result_columns()
+        """
+        col = widgets.DataGrid.Column(name=title, title=title, getter=getter)
+        return col
+
+    @classmethod
     def result_columns(cls,values_checked = None):  
-      #Call function which will return list of columns that can be searched on 
-      # Ticket 51 
+      """
+      result_columns() will return the list of columns that are able to bereturned
+      in the system search results.
+      """
       column_names = search_utility.System.search.create_column_table([{search_utility.Cpu :{'exclude': ['Flags']} },
                                                                        {search_utility.System: {'all':[]} }] ) 
+      
       send = [(elem,elem) for elem in column_names]  
      
       if values_checked is not None:
@@ -353,8 +373,15 @@ class Root(RPCRoot):
     netboot = Netboot()
     auth = Auth()
     csv = CSV()
+    jobs = Jobs()
+    recipes = Recipes()
+    tasks = Tasks()
+    taskactions = TaskActions()
     reports = Reports()
-
+    matrix = JobMatrix()
+    tasklist = TaskList()  
+    reserveworkflow = ReserveWorkflow()
+    
     id         = widgets.HiddenField(name='id')
     submit     = widgets.SubmitButton(name='submit')
 
@@ -409,6 +436,7 @@ class Root(RPCRoot):
     system_installoptions = SystemInstallOptions(name='installoptions')
     system_provision = SystemProvision(name='provision')
     arches_form = SystemArches(name='arches') 
+    task_form = TaskSearchForm(name='tasks')
 
     def get_search_options_worker(self,search,col_type):   
         return_dict = {}
@@ -432,6 +460,13 @@ class Root(RPCRoot):
         return_dict = {}
         return_dict['keyvals'] = Key.get_all_keys()
         return return_dict
+
+    @expose(format='json')
+    def get_search_options_task(self,table_field,**kw):
+        field = table_field
+        search = search_utility.Task.search.search_on(field) 
+        col_type = search_utility.Task.search.field_type(field)
+        return self.get_search_options_worker(search,col_type)
     
     @expose(format='json')
     def get_search_options_activity(self,table_field,**kw):
@@ -500,6 +535,37 @@ class Root(RPCRoot):
         return dict(ks_meta = ks_meta, kernel_options = kernel_options,
                     kernel_options_post = kernel_options_post)
 
+    @expose(format='json')
+    def change_priority_recipeset(self,priority_id,recipeset_id): 
+        user = identity.current.user
+        if not user:
+            return {'success' : None, 'msg' : 'Must be logged in' }
+
+        try:
+            recipeset = RecipeSet.by_id(recipeset_id)
+            old_priority = recipeset.priority.priority
+        except:
+            log.error('No rows returned for recipeset_id %s in change_priority_recipeset:%s' % (recipeset_id,e))
+            return { 'success' : None, 'msg' : 'RecipeSet is not valid' }
+
+        try: 
+            priority_query = TaskPriority.by_id(priority_id)  # will throw an error here if priorty id is invalid 
+        except InvalidRequestError, (e):
+            log.error('No rows returned for priority_id %s in change_priority_recipeset:%s' % (priority_id,e)) 
+            return { 'success' : None, 'msg' : 'Priority not found', 'current_priority' : recipeset.priority.id }
+         
+        allowed_priority_ids = [elem.id for elem in recipeset.allowed_priorities(user)]
+       
+        if long(priority_id) not in allowed_priority_ids:
+            return {'success' : None, 'msg' : 'Insufficent privileges for that priority', 'current_priority' : recipeset.priority.id }
+         
+
+        activity = RecipeSetActivity(identity.current.user, 'WEBUI', 'Changed', 'Priority', recipeset.priority.id,priority_id)
+        recipeset.priority = priority_query
+        session.save_or_update(recipeset)        
+        recipeset.activity.append(activity)
+        return {'success' : True } 
+
     @expose(template='beaker.server.templates.grid_add')
     @paginate('list',default_order='fqdn',limit=20,allow_limit_override=True)
     def index(self, *args, **kw):   
@@ -546,7 +612,60 @@ class Root(RPCRoot):
     @paginate('list',limit=20,allow_limit_override=True)
     def mine(self, *args, **kw):
         return self.systems(systems = System.mine(identity.current.user), *args, **kw)
+    
+    @expose(allow_json=True) 
+    def find_systems_for_distro(self,distro_install_name,*args,**kw): 
+        try: 
+            distro = Distro.query().filter(Distro.install_name == distro_install_name).one()
+        except InvalidRequestError,(e):
+            return { 'count' : 0 } 
+                 
+        #there seems to be a bug distro.systems 
+        #it seems to be auto correlateing the inner query when you pass it a user, not possible to manually correlate
+        #a Query object in 0.4  
+        systems_distro_query = distro.systems()
+        avail_systems_distro_query = System.available(identity.current.user,System.by_type(type='machine',systems=systems_distro_query)) 
+        return {'count' : avail_systems_distro_query.count(), 'distro_id' : distro.id }
+      
+    @expose(template='beaker.server.templates.grid') 
+    @identity.require(identity.not_anonymous())
+    @paginate('list') 
+    def reserve_system(self, *args,**kw):
+        def reserve_link(x,distro):
+            if x.is_free():
+                return make_link("/reserveworkflow/reserve?system_id=%s&distro_id=%s" % (Utility.get_correct_system_column(x).id,distro), 'Reserve Now')
+            else:
+                return make_link("/reserveworkflow/reserve?system_id=%s&distro_id=%s" % (Utility.get_correct_system_column(x).id,distro), 'Queue Reservation')
 
+        try:    
+            distro_install_name = kw['distro'] #this should be the distro install_name   
+            distro = Distro.query().filter(Distro.install_name == distro_install_name).one()
+            
+            # I don't like duplicating this code in find_systems_for_distro() but it dies on trying to jsonify a Query object..... 
+            systems_distro_query = distro.systems() 
+            avail_systems_distro_query = System.available(identity.current.user,System.by_type(type='machine',systems=systems_distro_query)) 
+           
+            warn = None
+            if avail_systems_distro_query.count() < 1: 
+                warn = 'No Systems compatible with distro %s' % distro_install_name
+            distro_query = Distro.by_install_name(distro_install_name)
+            getter = lambda x: reserve_link(x,distro_query.id)       
+            direct_column = Utility.direct_column(title='Action',getter=getter)     
+            return_dict  = self.systems(systems=avail_systems_distro_query, direct_columns=[(8,direct_column)],warn_msg=warn, *args, **kw)
+       
+            return_dict['title'] = 'Reserve Systems'
+            return_dict['warn_msg'] = warn
+            return_dict['tg_template'] = "beaker.server.templates.reserve_grid"
+            return_dict['action'] = '/reserve_system'
+            return_dict['options']['extra_hiddens'] = {'distro' : distro_install_name} 
+            return return_dict
+        except KeyError, (e):
+            flash(_(u'Need a distro to search on')) 
+            redirect(url('/reserveworkflow',**kw))              
+        except InvalidRequestError,(e):
+            flash(_(u'Invalid Distro given'))                 
+            redirect(url('/reserveworkflow',**kw))    
+          
     def _history_search(self,activity,**kw):
         history_search = search_utility.History.search(activity)
         for search in kw['historysearch']:
@@ -590,11 +709,6 @@ class Root(RPCRoot):
         return return_dict
  
     def systems(self, systems, *args, **kw):
-        # Reset joinpoint and then outerjoin on user.  This is so the sort 
-        # column works in paginate/datagrid.
-        # Also need to do distinct or paginate gets confused by the joins
-        #log.debug(kw)        
-
         if 'simplesearch' in kw:
             simplesearch = kw['simplesearch']
             kw['systemsearch'] = [{'table' : 'System/Name',   
@@ -616,8 +730,7 @@ class Root(RPCRoot):
                 vals_to_set = text.split(',')
                 for elem in vals_to_set:
                     kw['systemsearch_column_%s' % elem] = elem 
-      
-    
+       
         default_result_columns = ('System/Name', 'System/Status', 'System/Vendor',
                                   'System/Model','System/Arch', 'System/User', 'System/Type') 
 
@@ -628,9 +741,8 @@ class Root(RPCRoot):
             for elem in kw:
                 if re.match('systemsearch_column_',elem):
                     columns.append(kw[elem])
-
-            #If nothing is selected, let's give them the default    
-            if columns.__len__() == 0:
+           
+            if columns.__len__() == 0:  #If nothing is selected, let's give them the default    
                 for elem in default_result_columns:
                     key = 'systemsearch_column_',elem
                     kw[key] = elem
@@ -647,6 +759,9 @@ class Root(RPCRoot):
             systems = self._system_search(kw,sys_search)
 
             (system_columns_desc,extra_columns_desc) = sys_search.get_column_descriptions()  
+            # I want to create another type of column, a 'direct' column which will have some kind 'action'
+            # Like 'reserve' or something of that nature. It doesn't need to be included in the custom columns
+            # because it will always have the same value, and is not actually a result of any kind.
             if use_custom_columns is True:
                 my_fields = Utility.custom_systems_grid(system_columns_desc,extra_columns_desc)
             else: 
@@ -659,9 +774,12 @@ class Root(RPCRoot):
             columns = None
             searchvalue = None
             my_fields = Utility.custom_systems_grid(default_result_columns)
+        
+        if 'direct_columns' in kw: #Let's add our direct columns here
+            for index,col in kw['direct_columns']:
+                my_fields.insert(index - 1, col)
                 
         display_grid = myPaginateDataGrid(fields=my_fields)
-
         col_data = Utility.result_columns(columns)   
              
         return dict(title="Systems", grid = display_grid,
@@ -670,8 +788,7 @@ class Root(RPCRoot):
                                      options =  {'simplesearch' : simplesearch,'columns':col_data,
                                                  'result_columns' : default_result_columns,
                                                  'col_defaults' : col_data['default'],
-                                                 'col_options' : col_data['options'],
-                                                 'custom_column_checked' : use_custom_columns}, 
+                                                 'col_options' : col_data['options']},
                                      action = '.', 
                                      search_bar = self.search_bar )
                                                                         
@@ -890,7 +1007,9 @@ class Root(RPCRoot):
                                     install   = self.system_installoptions,
                                     provision = self.system_provision,
                                     power_action = self.power_action_form, 
-                                    arches    = self.arches_form),
+                                    arches    = self.arches_form,
+                                    tasks      = self.task_form,
+                                  ),
             widgets_action  = dict( power     = '/save_power',
                                     history   = '/view/%s' % fqdn,
                                     labinfo   = '/save_labinfo',
@@ -900,9 +1019,11 @@ class Root(RPCRoot):
                                     groups    = '/save_group',
                                     install   = '/save_install',
                                     provision = '/action_provision',
-                                    power_action = '/action_power', 
-                                    arches    = '/save_arch'),
-            widgets_options = dict(power     = options, 
+                                    power_action = '/action_power',
+                                    arches    = '/save_arch',
+                                    tasks     = '/tasks/do_search',
+                                  ),
+            widgets_options = dict(power     = options,
                                    history   = history_options or {},
                                    labinfo   = options,
                                    exclude   = options,
@@ -921,7 +1042,11 @@ class Root(RPCRoot):
                                                     prov_install = [(distro.id, distro.install_name) for distro in system.distros().order_by(distro_table.c.install_name)]),
                                    power_action  = options,
                                    arches    = dict(readonly = readonly,
-                                                    arches = system.arch)),
+                                                    arches = system.arch),
+                                   tasks      = dict(system_id = system.id,
+                                                     arch = [(0, 'All')] + [(arch.id, arch.arch) for arch in system.arch],
+                                                     hidden = dict(system = 1)),
+                                  ),
         )
          
     @expose(template='beaker.server.templates.form')
@@ -1025,13 +1150,18 @@ class Root(RPCRoot):
         if system.user:
             if system.user == identity.current.user or \
               identity.current.user.is_admin():
-                status = "Returned"
-                activity = SystemActivity(identity.current.user, "WEBUI", status, "User", '%s' % system.user, "")
-                try:
-                    system.action_release()
-                except BX, error_msg:
-                    msg = "Error: %s Action: %s" % (error_msg,system.release_action)
-                    system.activity.append(SystemActivity(identity.current.user, "WEBUI", "%s" % system.release_action, "Return", "", msg))
+                # Don't return a system with an active watchdog
+                if system.watchdog:
+                    flash(_(u"Can't return %s active recipe %s" % (system.fqdn, system.watchdog.recipe_id)))
+                    redirect("/recipes/%s" % system.watchdog.recipe_id)
+                else:
+                    status = "Returned"
+                    activity = SystemActivity(identity.current.user, "WEBUI", status, "User", '%s' % system.user, "")
+                    try:
+                        system.action_release()
+                    except BX, error_msg:
+                        msg = "Error: %s Action: %s" % (error_msg,system.release_action)
+                        system.activity.append(SystemActivity(identity.current.user, "WEBUI", "%s" % system.release_action, "Return", "", msg))
         else:
             if system.can_share(identity.current.user):
                 status = "Reserved"

@@ -5,8 +5,8 @@ from beaker.client import BeakerCommand
 from optparse import OptionValueError
 from beaker.client.task_watcher import *
 
-class Tasks_Watch(BeakerCommand):
-    """Watch Tasks"""
+class Job_Watch(BeakerCommand):
+    """Watch Jobs/Recipes"""
     enabled = True
 
     def options(self):

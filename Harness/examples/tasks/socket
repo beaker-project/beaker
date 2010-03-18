@@ -1,0 +1,129 @@
+#!/usr/bin/env python
+
+# Beah - Test harness. Part of Beaker project.
+#
+# Copyright (C) 2009 Marian Csontos <mcsontos@redhat.com>
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+import os
+import time
+import exceptions
+
+################################################################################
+# FACTORY:
+################################################################################
+from twisted.internet import reactor
+from beah.wires.internals.twadaptors import ControllerAdaptor_Task_JSON
+from beah.wires.internals.twtask import TaskFactory, start_task
+from beah import config
+from beah.core import event
+import beahlib
+################################################################################
+# TEST:
+################################################################################
+if __name__=='__main__':
+
+    beahlib.def_conf(timestamp=True)
+
+    class LoggingAdaptor(ControllerAdaptor_Task_JSON):
+        def connectionMade(self):
+            print "%s: I am connected!" % self.__class__.__name__
+            ControllerAdaptor_Task_JSON.connectionMade(self)
+
+        def connectionLost(self, reason):
+            print "%s: I was lost!" % self.__class__.__name__
+
+        def lineReceived(self, data):
+            print self.__class__.__name__, ": Data received.  Data: %r" % data
+            ControllerAdaptor_Task_JSON.lineReceived(self, data)
+
+    class DemoTask(object):
+        """Class used as a Task should implement this interface. This includes
+        Controller side Task-Adaptor"""
+
+        def __init__(self, id, delay=0):
+            self.delay = delay
+            if id is None or id == '':
+                self.id = -1
+            else:
+                self.id = int(id)
+            self.test = None
+            self.controller = None
+
+        def proc_cmd(self, cmd):
+            """Process command received from Controller"""
+            pass
+
+        def test_def(self):
+
+                beahlib.ldebug("environment", environment=dict(os.environ))
+
+                beahlib.linfo("introduce")
+                self.controller.proc_evt(self, event.Event('introduce', id=self.id))
+                yield
+
+                beahlib.linfo("try pong")
+                self.controller.proc_evt(self, event.pong(message="Are you there?"))
+                yield
+
+                beahlib.linfo("try passed")
+                self.controller.proc_evt(self, event.passed())
+                yield
+
+                beahlib.linfo("try failed")
+                self.controller.proc_evt(self, event.failed())
+                yield
+
+                beahlib.linfo("try linfo")
+                self.controller.proc_evt(self, event.linfo("Info message"))
+                yield
+
+                beahlib.linfo("try lerror")
+                self.controller.proc_evt(self, event.lerror("Error message"))
+                yield
+
+                beahlib.linfo("try structured data as lose_data")
+                self.controller.proc_evt(self, ['Object',{'what':'something else', 'where':'nowhere'}])
+                return
+
+        def run(self):
+            if self.test is None:
+                self.test = self.test_def()
+            if self.delay:
+                try:
+                    self.test.next()
+                    reactor.callLater(self.delay, self.run)
+                except exceptions.StopIteration:
+                    self.test = None
+                    reactor.callLater(2, reactor.stop)
+            else:
+                for test in self.test:
+                    pass
+                self.test = None
+                reactor.callLater(2, reactor.stop)
+
+        def set_controller(self, controller=None):
+            self.controller = controller
+            if controller:
+                self.run()
+
+
+    config.beah_conf()
+    start_task(config.get_conf('beah'), DemoTask(os.getenv('BEAH_TID'), 2),
+            host=os.getenv('BEAH_THOST'), port=os.getenv('BEAH_TPORT'),
+            adaptor=LoggingAdaptor)
+    reactor.run()
+

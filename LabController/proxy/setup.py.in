@@ -1,0 +1,29 @@
+from setuptools import setup, find_packages
+setup(
+    name = "beaker.labcontroller",
+    version = "@VERSION@",
+
+    packages=find_packages('src'),
+    package_dir = {'':'src'},
+
+    namespace_packages = ['beaker'],
+
+    data_files = [('/etc/beaker/', ['proxy.conf']),
+                  ('/etc/init.d', ['init.d/beaker-proxy',
+                                   'init.d/beaker-watchdog'])],
+    package_data = {
+        'beaker.labcontroller': [
+            'default.conf',
+        ],
+        '/etc/beaker': ['proxy.conf'],
+        '/etc/init.d': ['init.d/beaker-proxy',
+                        'init.d/beaker-watchdog'],
+    },
+
+    entry_points = {
+        'console_scripts': (
+            'beaker-proxy    = beaker.labcontroller.main:main',
+            'beaker-watchdog = beaker.labcontroller.watchdog:main',
+        ),
+    }
+)

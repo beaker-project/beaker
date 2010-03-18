@@ -1,0 +1,70 @@
+== TODO ==
+
+ !! add self-test suite
+ !  integrate into /distribution/beaker/* tests
+ !  properly daemonize controller
+ !  run pylint and clean up the code!
+    - this covers documentation strings too
+ !  write examples, HOWTOs
+ !  library of common methods for download, install, check and uninstall tasks
+ !  go on with refactoring - identify duplicates, useless stuff, patterns.
+ 9  configuration
+    - controller config
+      - backends
+        - list of backends (name, launcher=(env,executable,args)) which should
+          always run
+ 9  twisted scaffolding for controller, backend and task.
+    - I/O - sockets, stdio, named-pipes
+    - spawn process
+ 9  check compatibility with ms windows
+ 8  rhts-test-runner.sh
+    - get and store repository info in /etc/yum.repos.d/
+    - check environment
+    - create /tmp/TESTOUT.log - it is required by rhts-abort
+    - get the test
+    - set environment
+    - run the test and capture outputs
+    - check all outputs
+ 8  beah-tcp-sink
+    - reading stdin and forwarding to beah-controller by socket
+      - not necessary now
+ 8  add support for other programming languages - convenience directory.
+    - interfaces should be generated from metadata
+    - interfaces should use keyword/value (or --option=value) for all obscure
+      choices, so it is easy to extend, backward compatible.
+      Use positional arguments only for obvious always present arguments.
+      Provide wrappers for most common tasks - e.g. simple logging,...
+ 8  support for reboot - after rebooting:
+    - set-up environment, start the controller and backends, and re-start
+      tasks.
+ 7  identify common formats (e.g. cppunit) and create filters
+ 4  create filter taking stdin and sending to Controller via socket
+    - tee for sockets
+ 4  output backend w/ colorful output.
+
+=== Testing ===
+
+ 9  Test Twisted XML-RPC beaviour, when connection is lost
+    - are incoming requests queued?
+    - is their order preserved?
+    Configure retries
+
+=== Legend ===
+
+Priority classification: (Thanks to Vim)
+
+|| !! || next step ||
+|| ! || things to fix immediately ||
+|| 9 || next point release ||
+|| 8 || next release ||
+|| 7 || as soon as possible ||
+|| 6 || soon ||
+|| 5 || should be included ||
+|| 4 || nice to have ||
+|| 3 || consider including ||
+|| 2 || maybe not ||
+|| 1 || probably not ||
+|| - || unclassified ||
+
+# vim:et:sw=2
+

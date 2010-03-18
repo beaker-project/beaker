@@ -7,6 +7,7 @@ from tg_expanding_form_widget.tg_expanding_form_widget import ExpandingForm
 from kid import Element
 from beaker.server.xmlrpccontroller import RPCRoot
 from beaker.server.widgets import DistroTags
+from beaker.server.widgets import TaskSearchForm
 from beaker.server.helpers import *
 
 import cherrypy
@@ -27,6 +28,7 @@ class Distros(RPCRoot):
     # For XMLRPC methods in this class.
     exposed = True
 
+    task_form = TaskSearchForm()
     tag_form = DistroTags(name='tags')
 
     @expose(template="beaker.server.templates.distro")
@@ -36,11 +38,17 @@ class Distros(RPCRoot):
         except InvalidRequestError:
             flash(_(u"Invalid distro id %s" % id))
             redirect(".")
-        return dict(title   = 'Distro',
-                    value   = distro,
-                    form    = self.tag_form,
-                    action  = './save_tag',
-                    options = dict(tags = distro.tags))
+        return dict(title       = 'Distro',
+                    value       = distro,
+                    value_task  = dict(distro_id = distro.id),
+                    form        = self.tag_form,
+                    form_task   = self.task_form,
+                    action      = './save_tag',
+                    action_task = '/tasks/do_search',
+                    options   = dict(tags = distro.tags,
+                                    hidden = dict(distro  = 1,
+                                                  osmajor = 1,
+                                                  arch    = 1)))
 
     @expose()
     @identity.require(identity.not_anonymous())
@@ -71,6 +79,11 @@ class Distros(RPCRoot):
                     Activity(identity.current.user,'WEBUI','UnTagged',distro.install_name,tag,None)
                     flash(_(u"Removed Tag %s" % tag))
         redirect("./view?id=%s" % id)
+
+    @expose(format='json')
+    def by_name(self, distro):
+        distro = distro.lower()
+        return dict(distros=[(distro.install_name) for distro in Distro.query().filter(Distro.install_name.like('%s%%' % distro)).order_by('-date_created')])
 
     @expose(template="beaker.server.templates.grid")
     @paginate('list',default_order='-date_created', limit=50,allow_limit_override=True)

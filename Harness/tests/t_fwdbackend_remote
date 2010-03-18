@@ -1,0 +1,63 @@
+#!/bin/bash
+
+# Run this on a lab machine, when testing forwarder backend
+
+trykill()
+{
+  SLEEP="${1:-"2"}"
+  shift
+  kill $@ && sleep $SLEEP && kill $@
+}
+
+killer()
+{
+  echo "attempt to 'kill -2 $1'"
+  trykill 2 -2 $1 && {
+    ps -lp $1
+    echo "attempt to 'kill $1'"
+    trykill 2 $1 && {
+      ps -lp $1
+      echo "attempt to 'kill -9 $1'"
+      trykill 2 -9 $1 && {
+        ps -lp $1
+        echo "Is $1 a highlander?"
+      }
+    }
+  }
+}
+
+run_kill()
+{
+  DELAY="$1"
+  shift
+  "$@" &
+  C_PID=$!
+  echo "running '$@' as $C_PID"
+  ps -lp $C_PID
+  sleep $DELAY
+  ps -lp $C_PID
+  killer $C_PID
+  echo "waiting for $C_PID"
+  wait $C_PID
+  echo "$C_PID is dead!"
+  sleep 2
+}
+
+TESTFWDC="$(beah-root)/tools/fakesrv.py"
+echo "TIMEOUT=${TIMEOUT:=150}"
+
+echo "No controller running..."
+sleep $TIMEOUT
+echo "...ignoring input..."
+run_kill $TIMEOUT python $TESTFWDC ignorant
+echo "...sending echos, but nothing more..."
+run_kill $TIMEOUT python $TESTFWDC echo
+echo "...sending echos slowly..."
+run_kill $TIMEOUT python $TESTFWDC -s echo
+echo "...serving wrong value..."
+run_kill $TIMEOUT python $TESTFWDC var_const WAIT_PLEASE
+echo "...serving wrong value slowly..."
+run_kill $TIMEOUT python $TESTFWDC -s var_const WAIT_PLEASE
+echo "...and finally serving expected value..."
+run_kill $TIMEOUT python $TESTFWDC var_const FINITO
+

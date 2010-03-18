@@ -1,0 +1,104 @@
+== Backend(BE)-Controller(C) ==
+
+Using following notation in this document:
+-> cmd          # BE->C
+<- evt          # BE<-C
+
+=== Echo ===
+Any command will result in echo event.
+
+-> cmd
+<- echo(rc, cmd)
+
+=== New BE ===
+
+==== Introduce ====
+Set BE's name. OPTIONAL
+
+-> name(name)
+(
+    <- echo(OK)     # if OK
+OR
+    <- echo(*)      # name is already active
+)
+
+==== No output ====
+This BE does not process events. OPTIONAL
+
+-> no_output()
+<- echo(*)      # BE has to process events anyway - there are some events sent
+anyway
+
+==== Always on ====
+pause if this BE fails. OPTIONAL
+Requires name to be set.
+
+-> always_on(True)
+(
+    <- echo(OK)     # alway on set
+OR
+    <- echo(*)      # could not set - likely problem with name?
+)
+
+==== Restart ====
+In case of C's failure, C can send a restart executable pathname.
+This has to be standalone - e.g. it has to set up environment and run C.
+
+<- launcher(pathname)
+
+=== BE is quitting ===
+
+-> bye()
+set timeout
+(
+    <- echo(OK)
+    ...
+    <- bye_bye()
+    close()
+OR
+    <- echo(*)      # this should not happen!
+    if always_on:
+        -> always_on(False)
+        <- echo(*)
+    close()     - close anyway.
+OR
+    timeout expired
+    close()
+)
+
+=== C is quitting (in a clean way) ===
+
+<- bye()
+close()
+
+=== C was interrupted ===
+
+on_closed:
+set timeout
+- try to reconnect
+if timeout expired:
+- try to restart C [ problem: what configuration to use? ]
+
+=== C is idle ===
+Send when there is no running task.
+
+<- idle()
+
+=== Start a task ===
+
+-> run(task_info)       # task_info is used to identify task within BE/C.
+(
+    <- echo(OK)
+    ...
+    <- start(task_info)     # task_info can contain C specific information.
+                            # Save it and use for sending commands to C
+OR
+    <- echo (*)
+)
+
+=== Task finished ===
+Each task has to send a finish message to C, which will forward it to BE
+
+<- end(task_info, rc)   # rc is either OK, or failure
+
+# vim:et:sw=4:ts=4

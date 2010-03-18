@@ -148,16 +148,23 @@ class Modeller(object):
         return x == bool_y
 
     def not_equal(self,x,y): 
+        wildcard_y = re.sub('\*','%',y)
+        if wildcard_y != y: #looks like we found a wildcard
+            return not_(x.like(wildcard_y))
         if not y:
             return and_(x != None,x != y)
         return or_(x != y, x == None)
 
     def equals(self,x,y):    
+        wildcard_y = re.sub('\*','%',y)
+        if wildcard_y != y: #looks like we found a wildcard
+            return x.like(wildcard_y)
         if not y:
             return or_(x == None,x==y)
         return x == y
 
     def contains(self,x,y): 
+        
         return x.like('%%%s%%' % y )
  
     def return_function(self,type,operator,loose_match=True):
@@ -331,6 +338,31 @@ class Search:
         searchable = cls_to_search.get_searchable()
         searchable.sort()
         return searchable    
+
+class TaskSearch(Search):
+    search_table = []
+    def __init__(self,task):
+        self.queri = task
+
+    def append_results(self,value,column,operation,**kw):
+        pre = self.pre_operations(column,operation,value,**kw)
+        mycolumn = Task.searchable_columns.get(column) 
+        if mycolumn:
+            self.do_joins(mycolumn)
+        else:
+            log.error('Error accessing attribute within %s.append_results' % self.__class__.__name__)
+       
+        if pre['col_op_filter']:
+            filter_func = pre['col_op_filter']
+            filter_final = lambda: filter_func(mycolumn.column,value)
+        else: 
+            filter_final = self.return_standard_filter(mycolumn,operation,value)
+        self.queri = self.queri.filter(filter_final())   
+
+    @classmethod 
+    def create_search_table(cls,*args,**kw):
+        return Search.create_search_table(Task,*args,**kw)
+
 
 class ActivitySearch(Search):
     search_table = [] 
@@ -726,6 +758,15 @@ class System(SystemObject):
     def search_values(cls,col):  
        if cls.search_values_dict.has_key(col):
            return cls.search_values_dict[col]() 
+
+class Task(SystemObject):
+    search = TaskSearch
+    searchable_columns = {
+                          'Name' : MyColumn(col_type='string', column=model.Task.name),
+                          'Description' : MyColumn(col_type='string', column=model.Task.description),
+                          'Version' : MyColumn(col_type='string', column=model.Task.version),
+                         }
+
        
 class Activity(SystemObject):
     search = ActivitySearch    
@@ -852,6 +893,7 @@ class Key(SystemObject):
                 return and_(or_(model.Key_Value_String.key_value != val,model.Key_Value_String.key_value == None), or_(model.Key_Value_String.key_id == key_id, model.Key_Value_String.key_id == None))         
             else:
                 return and_(model.Key_Value_String.key_value != val, model.Key_Value_String.key_id == key_id)
+
             
 class Cpu(SystemObject):      
     display_name = 'CPU'   
