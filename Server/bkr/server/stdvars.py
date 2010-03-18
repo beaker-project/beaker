@@ -1,5 +1,5 @@
 import turbogears
-import beaker
+import bkr
 
 
 def beaker_version():
