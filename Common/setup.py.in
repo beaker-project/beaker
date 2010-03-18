@@ -1,6 +1,6 @@
 from setuptools import setup, find_packages
 setup(
-    name = "beaker",
+    name = "bkr",
     version = "@VERSION@",
 
     packages=find_packages('.'),

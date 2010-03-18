@@ -139,9 +139,9 @@ fi
 
 %files
 %defattr(-,root,root,-)
-%{python_sitelib}/%{name}/__init__.py*
-%{python_sitelib}/%{name}-%{version}-*
-%{python_sitelib}/%{name}-%{version}-py%{pyver}.egg-info/
+%{python_sitelib}/bkr/__init__.py*
+%{python_sitelib}/bkr-%{version}-*
+%{python_sitelib}/bkr-%{version}-py%{pyver}.egg-info/
 
 %files server
 %defattr(-,root,root,-)
