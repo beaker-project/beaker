@@ -5,8 +5,8 @@ from beaker.client import BeakerCommand
 from optparse import OptionValueError
 
 
-class Cancel_Tasks(BeakerCommand):
-    """Cancel Tasks"""
+class Job_Cancel(BeakerCommand):
+    """Cancel Jobs/Recipes"""
     enabled = True
 
     def options(self):
