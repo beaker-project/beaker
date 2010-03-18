@@ -155,7 +155,7 @@ fi
 %{_sysconfdir}/init.d/%{name}d
 %attr(0755,root,root)%{_bindir}/%{name}d
 %config(noreplace) %{_sysconfdir}/httpd/conf.d/%{name}-server.conf
-%attr(-,apache,root) %{_datadir}/%{name}
+%attr(-,apache,root) %{_datadir}/bkr
 %attr(-,apache,root) %config(noreplace) %{_sysconfdir}/%{name}/server.cfg
 %attr(-,apache,root) %dir %{_localstatedir}/log/%{name}
 %attr(-,apache,root) %dir %{_localstatedir}/www/%{name}/logs
