@@ -7,7 +7,7 @@
 
 Name:           beaker
 Version:        0.5.0
-Release:        0%{?timestamp}%{?branch}%{?dist}
+Release:        1%{?timestamp}%{?branch}%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -195,7 +195,7 @@ fi
 /usr/share/man/man1/beakerlib*
 
 %changelog
-* Thu Mar 18 2010 Bill Peck <bpeck@redhat.com> - 0.5.0-0
+* Thu Mar 18 2010 Bill Peck <bpeck@redhat.com> - 0.5.0-1
 - Merged Scheduler into master, renamed site-packages/beaker to site-packages/bkr
 * Thu Mar 04 2010 Bill Peck <bpeck@redhat.com> - 0.4.89-0
 - update osversion.trigger to update pushed data before calling addDistro.sh
