@@ -49,7 +49,7 @@ class LocalCSSLink(CSSLink):
 
 class PowerTypeForm(CompoundFormField):
     """Dynmaically modifies power arguments based on Power Type Selection"""
-    javascript = [LocalJSLink('beaker', '/static/javascript/power.js')]
+    javascript = [LocalJSLink('bkr', '/static/javascript/power.js')]
     template = """
     <div xmlns:py="http://purl.org/kid/ns#" id="${field_id}">
     <script language="JavaScript" type="text/JavaScript">
@@ -116,9 +116,9 @@ class ReserveSystem(TableForm):
     submit_text = 'Queue Job'
 
 class ReserveWorkflow(Form): 
-    javascript = [LocalJSLink('beaker', '/static/javascript/reserve_workflow.js')] 
+    javascript = [LocalJSLink('bkr', '/static/javascript/reserve_workflow.js')] 
     template="bkr.server.templates.reserve_workflow"
-    css = [LocalCSSLink('beaker','/static/css/reserve_workflow.css')] 
+    css = [LocalCSSLink('bkr','/static/css/reserve_workflow.css')] 
     member_widgets = ['arch','distro','distro_family','method_','tag'] 
     params = ['arch_value','method_value','tag_value','distro_family_value','all_arches',
               'all_tags','all_methods','all_distro_familys','to_json','auto_pick'] 
@@ -209,8 +209,8 @@ class NestedGrid(CompoundWidget):
 
 
 class JobMatrixReport(Form):     
-    javascript = [LocalJSLink('beaker', '/static/javascript/job_matrix.js')]
-    css = [LocalCSSLink('beaker','/static/css/job_matrix.css')] 
+    javascript = [LocalJSLink('bkr', '/static/javascript/job_matrix.js')]
+    css = [LocalCSSLink('bkr','/static/css/job_matrix.css')] 
     template = 'bkr.server.templates.job_matrix' 
     member_widgets = ['whiteboard','job_ids','generate_button'] 
     params = ['list','whiteboard_filter','whiteboard_options','job_ids_vals']
@@ -246,7 +246,7 @@ class JobMatrixReport(Form):
 
 class TaskList(Widget):
     template = 'bkr.server.templates.task_list'
-    css = [LocalCSSLink('beaker','/static/css/task_list.css')] 
+    css = [LocalCSSLink('bkr','/static/css/task_list.css')] 
     params = ['data']
     
     def display(self,value=None,**params):
@@ -259,7 +259,7 @@ class TaskList(Widget):
 
 class SearchBar(RepeatingFormField):
     """Search Bar""" 
-    javascript = [LocalJSLink('beaker', '/static/javascript/searchbar_v5.js')]
+    javascript = [LocalJSLink('bkr', '/static/javascript/searchbar_v5.js')]
     template = """
     <div xmlns:py="http://purl.org/kid/ns#">
     <a id="advancedsearch" href="#">Toggle Search</a>
@@ -810,7 +810,7 @@ class SystemGroups(Form):
             d['groups'] = d['options']['groups']
 
 class SystemProvision(Form):
-    javascript = [LocalJSLink('beaker', '/static/javascript/provision.js')]
+    javascript = [LocalJSLink('bkr', '/static/javascript/provision.js')]
     template = "bkr.server.templates.system_provision"
     member_widgets = ["id", "prov_install", "ks_meta", "power",
                       "koptions", "koptions_post", "reboot"]
@@ -956,8 +956,8 @@ class SystemHistory(CompoundWidget):
     
 
 class SystemForm(Form):
-    javascript = [LocalJSLink('beaker', '/static/javascript/provision.js'),
-                  LocalJSLink('beaker', '/static/javascript/searchbar_v5.js'),
+    javascript = [LocalJSLink('bkr', '/static/javascript/provision.js'),
+                  LocalJSLink('bkr', '/static/javascript/searchbar_v5.js'),
                   JSLink(static,'ajax.js'),
                  ]
     template = "bkr.server.templates.system_form"
