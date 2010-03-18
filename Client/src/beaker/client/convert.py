@@ -50,11 +50,11 @@ class Convert(object):
         return require
 
     def handle_addrepo(self, addrepo):
-        """ strip off \ from $ since new system doesn't need escaping """
+        """ process repos """
         self.counter += 1
         repo = self.doc.createElement('repo')
         repo.setAttribute('name','myrepo_%s' % self.counter)
-        repo.setAttribute('url','%s' % addrepo.replace('\\$','$'))
+        repo.setAttribute('url','%s' % addrepo)
         return repo
     
     def handle_hostRequires(self, requires):
