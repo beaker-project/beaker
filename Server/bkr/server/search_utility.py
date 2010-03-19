@@ -214,6 +214,24 @@ class Modeller(object):
         return operators
         
 class Search:
+    def append_results(self,value,column,operation,**kw): 
+        pre = self.pre_operations(column,operation,value,**kw)
+        cls_name = re.sub('Search','',self.__class__.__name__)
+        cls = globals()[cls_name] 
+        log.debug(column)
+        mycolumn = cls.searchable_columns.get(column)
+        if mycolumn:
+            self.do_joins(mycolumn)
+        else:
+            log.error('Error accessing attribute within %s.append_results' % self.__class__.__name__)
+       
+        if pre['col_op_filter']:
+            filter_func = pre['col_op_filter']
+            filter_final = lambda: filter_func(mycolumn.column,value)
+        else: 
+            filter_final = self.return_standard_filter(mycolumn,operation,value)
+        self.queri = self.queri.filter(filter_final())   
+
     def return_results(self): 
         return self.queri        
 
@@ -339,6 +357,15 @@ class Search:
         searchable.sort()
         return searchable    
 
+class JobSearch(Search):
+    search_table = []
+    def __init__(self,job):
+        self.queri = job
+
+    @classmethod 
+    def create_search_table(cls,*args,**kw):
+        return Search.create_search_table(Job,*args,**kw)
+
 class TaskSearch(Search):
     search_table = []
     def __init__(self,task):
@@ -346,18 +373,19 @@ class TaskSearch(Search):
 
     def append_results(self,value,column,operation,**kw):
         pre = self.pre_operations(column,operation,value,**kw)
-        mycolumn = Task.searchable_columns.get(column) 
+        mycolumn = Job.searchable_columns.get(column) 
         if mycolumn:
             self.do_joins(mycolumn)
         else:
             log.error('Error accessing attribute within %s.append_results' % self.__class__.__name__)
+            raise BeakerException('Unable to access column')  
        
         if pre['col_op_filter']:
             filter_func = pre['col_op_filter']
             filter_final = lambda: filter_func(mycolumn.column,value)
         else: 
             filter_final = self.return_standard_filter(mycolumn,operation,value)
-        self.queri = self.queri.filter(filter_final())   
+        self.queri = self.queri.filter(filter_final()) 
 
     @classmethod 
     def create_search_table(cls,*args,**kw):
@@ -893,6 +921,13 @@ class Key(SystemObject):
                 return and_(or_(model.Key_Value_String.key_value != val,model.Key_Value_String.key_value == None), or_(model.Key_Value_String.key_id == key_id, model.Key_Value_String.key_id == None))         
             else:
                 return and_(model.Key_Value_String.key_value != val, model.Key_Value_String.key_id == key_id)
+
+class Job(SystemObject):
+    search = JobSearch
+    display_name='Job'
+    searchable_columns = {
+                           'Id' : MyColumn(col_type='numeric',column=model.Job.id), 
+                         }
 
             
 class Cpu(SystemObject):      

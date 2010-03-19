@@ -17,7 +17,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 from turbogears.database import session
-from turbogears import controllers, expose, flash, widgets, validate, error_handler, validators, redirect, paginate
+from turbogears import controllers, expose, flash, widgets, validate, error_handler, validators, redirect, paginate, url
 from turbogears import identity, redirect
 from cherrypy import request, response
 from kid import Element
@@ -29,6 +29,8 @@ from bkr.server.widgets import RecipeWidget
 from bkr.server.widgets import RecipeTasksWidget
 from bkr.server.widgets import RecipeSetWidget
 from bkr.server.widgets import PriorityWidget
+from bkr.server.widgets import SearchBar
+from bkr.server import search_utility
 import datetime
 
 import cherrypy
@@ -218,6 +220,32 @@ class Jobs(RPCRoot):
             raise BX(_('No RecipeSets! You can not have a Job with no recipeSets!'))
         return job
 
+    def _jobs(self,job,**kw):
+        return_dict = {}                    
+        if 'simplesearch' in kw:
+            simplesearch = kw['simplesearch']
+            kw['jobsearch'] = [{'table' : 'Id',   
+                                 'operation' : 'is', 
+                                 'value' : kw['simplesearch']}]                    
+        else:
+            simplesearch = None
+
+        return_dict.update({'simplesearch':simplesearch})
+        log.debug('kw is %s' % kw)
+        if kw.get("jobsearch"):
+            searchvalue = kw['jobsearch']  
+            jobs_found = self._job_search(job,**kw)
+            return_dict.update({'jobs_found':jobs_found})               
+            return_dict.update({'searchvalue':searchvalue})
+        return return_dict
+
+    def _job_search(self,task,**kw):
+        job_search = search_utility.Job.search(task)
+        for search in kw['jobsearch']:
+            col = search['table'] 
+            job_search.append_results(search['value'],col,search['operation'],**kw)
+        return job_search.return_results()
+
     def handleRecipe(self, xmlrecipe, guest=False):
         if not guest:
             recipe = MachineRecipe(ttasks=0)
@@ -286,6 +314,20 @@ class Jobs(RPCRoot):
     @paginate('list',default_order='-id', limit=50)
     def index(self, *args, **kw):
         jobs = session.query(Job).join('status').join('owner').outerjoin('result')
+
+        jobs_return = self._jobs(jobs,**kw)
+        log.debug(jobs_return)
+        searchvalue = None
+        search_options = {}
+        log.debug('Here we are with jobs %s' % jobs_return)
+        if jobs_return:
+            if 'jobs_found' in jobs_return:
+                jobs = jobs_return['jobs_found']
+            if 'searchvalue' in jobs_return:
+                searchvalue = jobs_return['searchvalue']
+            if 'simplesearch' in jobs_return:
+                search_options['simplesearch'] = jobs_return['simplesearch']
+
         jobs_grid = myPaginateDataGrid(fields=[
 		     widgets.PaginateDataGrid.Column(name='id', getter=lambda x:make_link(url = './%s' % x.id, text = x.t_id), title='ID', options=dict(sortable=True)),
 		     widgets.PaginateDataGrid.Column(name='whiteboard', getter=lambda x:x.whiteboard, title='Whiteboard', options=dict(sortable=True)),
@@ -295,7 +337,13 @@ class Jobs(RPCRoot):
 		     widgets.PaginateDataGrid.Column(name='result.result', getter=lambda x:x.result, title='Result', options=dict(sortable=True)),
 		     widgets.PaginateDataGrid.Column(name='action', getter=lambda x:x.action_link, title='Action', options=dict(sortable=False)),
                     ])
-        return dict(title="Jobs", grid=jobs_grid, list=jobs, search_bar=None)
+
+        search_bar = SearchBar(name='jobsearch',
+                           label=_(u'Job Search'),    
+                           table = search_utility.Job.search.create_search_table(),
+                           search_controller=url("/get_search_options_job"), 
+                           )
+        return dict(title="Jobs", grid=jobs_grid, list=jobs, search_bar=search_bar, action='.', options=search_options, searchvalue=searchvalue)
 
     @identity.require(identity.not_anonymous())
     @expose()
