@@ -2600,6 +2600,11 @@ class TaskStatus(object):
     def get_all(cls):
         return [(0,"All")] + [(status.id, status.status) for status in cls.query()]
 
+    @classmethod
+    def get_all_status(cls):
+        all = cls.query()
+        return [elem.status for elem in all]
+
     def __cmp__(self, other):
         if hasattr(other,'severity'):
             other = other.severity
@@ -2626,6 +2631,10 @@ class TaskResult(object):
     @classmethod
     def get_all(cls):
         return [(0,"All")] + [(result.id, result.result) for result in cls.query()]
+
+    @classmethod
+    def get_all_results(cls):
+        return [elem.result for elem in cls.query()]
 
     def __cmp__(self, other):
         if hasattr(other,'severity'):
