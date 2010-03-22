@@ -217,8 +217,7 @@ class Search:
     def append_results(self,value,column,operation,**kw): 
         pre = self.pre_operations(column,operation,value,**kw)
         cls_name = re.sub('Search','',self.__class__.__name__)
-        cls = globals()[cls_name] 
-        log.debug(column)
+        cls = globals()[cls_name]  
         mycolumn = cls.searchable_columns.get(column)
         if mycolumn:
             self.do_joins(mycolumn)
@@ -313,7 +312,7 @@ class Search:
                 log.debug('Not using predefined search values for %s->%s' % (cls_ref.__name__,field))  
         except AttributeError, (error):
             log.error('Error accessing attribute within search_on: %s' % (error))
-        else:
+        else: 
             return dict(operators = cls_ref.search_operators(field_type), values=vals)
 
     @classmethod 
@@ -927,8 +926,16 @@ class Job(SystemObject):
     display_name='Job'
     searchable_columns = {
                            'Id' : MyColumn(col_type='numeric',column=model.Job.id), 
+                           'Owner' : MyColumn(col_type='string',column=model.User.email_address, relations='owner'),
+                           'Status' : MyColumn(col_type='string', column=model.TaskStatus.status, relations='status'),
+                           'Result' : MyColumn(col_type='string',column=model.TaskResult.result, relations='result'),
+                           'Whiteboard' : MyColumn(col_type='string', column=model.Job.whiteboard)
+
                          }
 
+    search_values_dict = {'Status' : model.TaskStatus.get_all_status(),
+                          'Result' : model.TaskResult.get_all_results()}
+                         
             
 class Cpu(SystemObject):      
     display_name = 'CPU'   
