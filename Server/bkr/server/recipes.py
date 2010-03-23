@@ -16,13 +16,15 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 from turbogears.database import session
-from turbogears import controllers, expose, flash, widgets, validate, error_handler, validators, redirect, paginate, config
+from turbogears import controllers, expose, flash, widgets, validate, error_handler, validators, redirect, paginate, config, url
 from turbogears import identity, redirect
 from cherrypy import request, response
 from kid import Element
 from bkr.server.widgets import myPaginateDataGrid
 from bkr.server.widgets import RecipeWidget
 from bkr.server.widgets import RecipeTasksWidget
+from bkr.server.widgets import SearchBar
+from bkr.server import search_utility
 from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.helpers import *
 from bkr.server.recipetasks import RecipeTasks
@@ -130,10 +132,47 @@ class Recipes(RPCRoot):
             raise BX(_("Invalid Recipe ID %s" % recipe_id))
         return recipexml
 
+    def _recipe_search(self,recipe,**kw):
+        recipe_search = search_utility.Recipe.search(recipe)
+        for search in kw['recipesearch']:
+            col = search['table'] 
+            recipe_search.append_results(search['value'],col,search['operation'],**kw)
+        return recipe_search.return_results()
+
+    def _recipes(self,recipe,**kw):
+        return_dict = {}                    
+        if 'simplesearch' in kw:
+            simplesearch = kw['simplesearch']
+            kw['recipesearch'] = [{'table' : 'Whiteboard',   
+                                   'operation' : 'is', 
+                                   'value' : kw['simplesearch']}]                    
+        else:
+            simplesearch = None
+
+        return_dict.update({'simplesearch':simplesearch})
+
+        if kw.get("recipesearch"):
+            searchvalue = kw['recipesearch']
+            recipes_found = self._recipe_search(recipe,**kw)
+            return_dict.update({'recipes_found':recipes_found})
+            return_dict.update({'searchvalue':searchvalue})
+        return return_dict
+
     @expose(template='bkr.server.templates.grid')
     @paginate('list',default_order='-id', limit=50)
     def index(self, *args, **kw):
         recipes = session.query(MachineRecipe)
+        recipes_return = self._recipes(recipes,**kw)
+        searchvalue = None
+        search_options = {}
+        if recipes_return:
+            if 'recipes_found' in recipes_return:
+                recipes = recipes_return['recipes_found']
+            if 'searchvalue' in recipes_return:
+                searchvalue = recipes_return['searchvalue']
+            if 'simplesearch' in recipes_return:
+                search_options['simplesearch'] = recipes_return['simplesearch']
+
         recipes_grid = myPaginateDataGrid(fields=[
 		     widgets.PaginateDataGrid.Column(name='id', getter=lambda x:make_link(url='./%s' % x.id, text=x.t_id), title='ID', options=dict(sortable=True)),
 		     widgets.PaginateDataGrid.Column(name='whiteboard', getter=lambda x:x.whiteboard, title='Whiteboard', options=dict(sortable=True)),
@@ -145,7 +184,13 @@ class Recipes(RPCRoot):
 		     widgets.PaginateDataGrid.Column(name='result.result', getter=lambda x:x.result, title='Result', options=dict(sortable=True)),
                      widgets.PaginateDataGrid.Column(name='action', getter=lambda x:x.action_link, title='Action', options=dict(sortable=False)),
                     ])
-        return dict(title="Recipes", grid=recipes_grid, list=recipes, search_bar=None)
+
+        search_bar = SearchBar(name='recipesearch',
+                           label=_(u'Recipe Search'),    
+                           table = search_utility.Recipe.search.create_search_table(),
+                           search_controller=url("/get_search_options_recipe"), 
+                           )
+        return dict(title="Recipes", grid=recipes_grid, list=recipes, search_bar=search_bar,action='.',options=search_options,searchvalue=searchvalue)
 
     @identity.require(identity.not_anonymous())
     @expose()
