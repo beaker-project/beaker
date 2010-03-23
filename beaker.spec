@@ -6,7 +6,7 @@
 %endif
 
 Name:           beaker
-Version:        0.5.2
+Version:        0.5.3
 Release:        0%{?timestamp}%{?branch}%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
@@ -195,6 +195,9 @@ fi
 /usr/share/man/man1/beakerlib*
 
 %changelog
+* Tue Mar 23 2010 Bill Peck <bpeck@redhat.com> - 0.5.3-0
+- merged rmancy fix for bz574176 - searching in jobs 
+- merged mcsontos fix for bz576128 - add help for beaker-client subcommands
 * Thu Mar 18 2010 Bill Peck <bpeck@redhat.com> - 0.5.2-0
 - Merged Scheduler into master, renamed site-packages/beaker to site-packages/bkr
 * Thu Mar 04 2010 Bill Peck <bpeck@redhat.com> - 0.4.89-0
