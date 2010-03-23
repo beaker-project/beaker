@@ -292,11 +292,13 @@ function LabController()
      perl -pi -e "s|^anamon_enabled: 0|anamon_enabled: 1|g" /etc/cobbler/settings
      perl -pi -e "s|^redhat_management_server: .*|redhat_management_server: \"https://testuser:testpassword\@$SERVER\"|g" /etc/cobbler/settings
     #FIXME edit /etc/cobbler/modules.conf
-     # enable testing auth module
-     perl -pi -e "s|^module = authn_denyall|module = authn_testing|g" /etc/cobbler/modules.conf
+    # enable testing auth module
+    perl -pi -e "s|^module = authn_denyall|module = authn_testing|g" /etc/cobbler/modules.conf
     setsebool -P httpd_can_network_connect true
     semanage fcontext -a -t public_content_t "/var/lib/tftpboot/.*"
     semanage fcontext -a -t public_content_t "/var/www/cobbler/images/.*"
+    # Turn on wsgi
+    perl -pi -e 's|^#LoadModule wsgi_module modules/mod_wsgi.so|LoadModule wsgi_module modules/mod_wsgi.so|g' /etc/httpd/conf.d/wsgi.conf
     service httpd start
     service xinetd start
     service cobblerd start
