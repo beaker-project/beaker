@@ -7,7 +7,7 @@
 
 Name:           beaker
 Version:        0.5.6
-Release:        1%{?timestamp}%{?branch}%{?dist}
+Release:        2%{?timestamp}%{?branch}%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -62,17 +62,6 @@ Requires:	kobo-client
 Requires:	python-setuptools
 Requires:	python-xmltramp
 
-%package lib
-Summary:        Test Library
-Group:          QA
-Obsoletes:      rhtslib
-Provides:       rhtslib
-Obsoletes:      beakerlib
-Provides:       beakerlib
-
-%description
-Filesystem layout for beaker
-
 %description client
 This is the command line interface used to interact with the Beaker Server.
 
@@ -85,10 +74,6 @@ To Be Filled in - Server Side..
 This is the interface to link Medusa and Cobbler together. Mostly provides
 snippets and kickstarts.
 
-
-%description lib
-The beakerlib project means to provide a library of various helpers,
-which could be used when writing Beaker tests.
 
 %prep
 %setup -q
@@ -188,16 +173,11 @@ fi
 %{_sysconfdir}/init.d/%{name}-proxy
 %{_sysconfdir}/init.d/%{name}-watchdog
 
-%files lib
-/usr/lib/beakerlib/*
-/usr/share/beakerlib/*
-/usr/share/rhts-library/*
-/usr/share/man/man1/beakerlib*
-
 %changelog
-* Wed Mar 24 2010 Bill Peck <bpeck@redhat.com> - 0.5.6-1
+* Wed Mar 24 2010 Bill Peck <bpeck@redhat.com> - 0.5.6-2
 - merged rmancy fix for bz576446 - added MyJobs/MyRecipe links to menu.
 - moved My menus to Login area.
+- removed -lib subpackage. beakerlib is now its own project.
 * Tue Mar 23 2010 Bill Peck <bpeck@redhat.com> - 0.5.5-0
 - merged rmancy fix for bz574178 - added recipe search.
 * Tue Mar 23 2010 Bill Peck <bpeck@redhat.com> - 0.5.4-0
