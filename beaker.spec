@@ -6,7 +6,7 @@
 %endif
 
 Name:           beaker
-Version:        0.5.7
+Version:        0.5.8
 Release:        0%{?timestamp}%{?branch}%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
@@ -61,6 +61,10 @@ Requires:	beaker
 Requires:	kobo-client
 Requires:	python-setuptools
 Requires:	python-xmltramp
+
+%description
+Filesystem layout for beaker
+
 
 %description client
 This is the command line interface used to interact with the Beaker Server.
@@ -174,7 +178,7 @@ fi
 %{_sysconfdir}/init.d/%{name}-watchdog
 
 %changelog
-* Wed Mar 24 2010 Bill Peck <bpeck@redhat.com> - 0.5.7-0
+* Wed Mar 24 2010 Bill Peck <bpeck@redhat.com> - 0.5.8-0
 - removed -lib subpackage. beakerlib is now its own project.
 * Wed Mar 24 2010 Bill Peck <bpeck@redhat.com> - 0.5.6-2
 - merged rmancy fix for bz576446 - added MyJobs/MyRecipe links to menu.
