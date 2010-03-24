@@ -143,7 +143,7 @@ class Recipes(RPCRoot):
         return_dict = {}                    
         if 'simplesearch' in kw:
             simplesearch = kw['simplesearch']
-            kw['recipesearch'] = [{'table' : 'Whiteboard',   
+            kw['recipesearch'] = [{'table' : 'Id',   
                                    'operation' : 'is', 
                                    'value' : kw['simplesearch']}]                    
         else:

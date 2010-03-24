@@ -16,7 +16,7 @@ class Job_Cancel(BeakerCommand):
             help="Optional message to record as to why you cancelled",
         )
 
-        self.parser.usage = "%%prog %s" % self.normalized_name
+        self.parser.usage = "%%prog %s [options] <taskspec>..." % self.normalized_name
 
 
     def run(self, *args, **kwargs):

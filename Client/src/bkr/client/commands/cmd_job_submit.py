@@ -12,7 +12,7 @@ class Job_Submit(BeakerCommand):
     enabled = True
 
     def options(self):
-        self.parser.usage = "%%prog %s" % self.normalized_name
+        self.parser.usage = "%%prog %s [options] <jobxml>..." % self.normalized_name
         self.parser.add_option(
             "--debug",
             default=False,

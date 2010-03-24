@@ -230,6 +230,7 @@ class Search:
         else: 
             filter_final = self.return_standard_filter(mycolumn,operation,value)
         self.queri = self.queri.filter(filter_final())   
+
     def return_results(self): 
         return self.queri        
 
@@ -310,7 +311,7 @@ class Search:
                 log.debug('Not using predefined search values for %s->%s' % (cls_ref.__name__,field))  
         except AttributeError, (error):
             log.error('Error accessing attribute within search_on: %s' % (error))
-        else:
+        else: 
             return dict(operators = cls_ref.search_operators(field_type), values=vals)
 
     @classmethod 
@@ -354,6 +355,7 @@ class Search:
         searchable.sort()
         return searchable    
 
+
 class RecipeSearch(Search):
     search_table = []
     def __init__(self,recipe):
@@ -363,6 +365,16 @@ class RecipeSearch(Search):
     def create_search_table(cls,*args,**kw):
         return Search.create_search_table(Recipe,*args,**kw)
 
+class JobSearch(Search):
+    search_table = []
+    def __init__(self,job):
+        self.queri = job
+
+    @classmethod 
+    def create_search_table(cls,*args,**kw):
+        return Search.create_search_table(Job,*args,**kw)
+
+
 class TaskSearch(Search):
     search_table = []
     def __init__(self,task):
@@ -370,18 +382,19 @@ class TaskSearch(Search):
 
     def append_results(self,value,column,operation,**kw):
         pre = self.pre_operations(column,operation,value,**kw)
-        mycolumn = Task.searchable_columns.get(column) 
+        mycolumn = Job.searchable_columns.get(column) 
         if mycolumn:
             self.do_joins(mycolumn)
         else:
             log.error('Error accessing column %s attribute within %s.append_results' %(column,self.__class__.__name__))
-       
+            raise BeakerException('Unable to access column') 
+           
         if pre['col_op_filter']:
             filter_func = pre['col_op_filter']
             filter_final = lambda: filter_func(mycolumn.column,value)
         else: 
             filter_final = self.return_standard_filter(mycolumn,operation,value)
-        self.queri = self.queri.filter(filter_final())   
+        self.queri = self.queri.filter(filter_final()) 
 
     @classmethod 
     def create_search_table(cls,*args,**kw):
@@ -791,10 +804,12 @@ class Recipe(SystemObject):
                             'System' : MyColumn(col_type='string', column=model.System.fqdn, relations='system'),
                             'Arch' : MyColumn(col_type='string', column=model.Arch.arch, relations=['distro', 'arch']),
                             'Distro' : MyColumn(col_type='string', column=model.Distro.name, relations='distro'),
-                            'Status' : MyColumn(col_type='string', column=model.TaskStatus.status),
-                            'Result' : MyColumn(col_type='string', column=model.TaskResult.result),
+                            'Status' : MyColumn(col_type='string', column=model.TaskStatus.status, relations='status'),
+                            'Result' : MyColumn(col_type='string', column=model.TaskResult.result, relations='result'),
                          }
 
+    search_values_dict = {'Status' : model.TaskStatus.get_all_status(),
+                          'Result' : model.TaskResult.get_all_results()}
     
 
 class Task(SystemObject):
@@ -932,6 +947,21 @@ class Key(SystemObject):
             else:
                 return and_(model.Key_Value_String.key_value != val, model.Key_Value_String.key_id == key_id)
 
+class Job(SystemObject):
+    search = JobSearch
+    display_name='Job'
+    searchable_columns = {
+                           'Id' : MyColumn(col_type='numeric',column=model.Job.id), 
+                           'Owner' : MyColumn(col_type='string',column=model.User.email_address, relations='owner'),
+                           'Status' : MyColumn(col_type='string', column=model.TaskStatus.status, relations='status'),
+                           'Result' : MyColumn(col_type='string',column=model.TaskResult.result, relations='result'),
+                           'Whiteboard' : MyColumn(col_type='string', column=model.Job.whiteboard)
+
+                         }
+
+    search_values_dict = {'Status' : model.TaskStatus.get_all_status(),
+                          'Result' : model.TaskResult.get_all_results()}
+                         
             
 class Cpu(SystemObject):      
     display_name = 'CPU'   

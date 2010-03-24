@@ -10,7 +10,7 @@ class Job_Watch(BeakerCommand):
     enabled = True
 
     def options(self):
-        self.parser.usage = "%%prog %s" % self.normalized_name
+        self.parser.usage = "%%prog %s [options] <taskspec>..." % self.normalized_name
 
 
     def run(self, *args, **kwargs):
