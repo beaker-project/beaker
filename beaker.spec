@@ -6,8 +6,8 @@
 %endif
 
 Name:           beaker
-Version:        0.5.6
-Release:        2%{?timestamp}%{?branch}%{?dist}
+Version:        0.5.7
+Release:        0%{?timestamp}%{?branch}%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -174,10 +174,11 @@ fi
 %{_sysconfdir}/init.d/%{name}-watchdog
 
 %changelog
+* Wed Mar 24 2010 Bill Peck <bpeck@redhat.com> - 0.5.7-0
+- removed -lib subpackage. beakerlib is now its own project.
 * Wed Mar 24 2010 Bill Peck <bpeck@redhat.com> - 0.5.6-2
 - merged rmancy fix for bz576446 - added MyJobs/MyRecipe links to menu.
 - moved My menus to Login area.
-- removed -lib subpackage. beakerlib is now its own project.
 * Tue Mar 23 2010 Bill Peck <bpeck@redhat.com> - 0.5.5-0
 - merged rmancy fix for bz574178 - added recipe search.
 * Tue Mar 23 2010 Bill Peck <bpeck@redhat.com> - 0.5.4-0
