@@ -7,7 +7,7 @@
 
 Name:           beaker
 Version:        0.5.8
-Release:        0%{?timestamp}%{?branch}%{?dist}
+Release:        1%{?timestamp}%{?branch}%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -178,8 +178,9 @@ fi
 %{_sysconfdir}/init.d/%{name}-watchdog
 
 %changelog
-* Wed Mar 24 2010 Bill Peck <bpeck@redhat.com> - 0.5.8-0
+* Wed Mar 24 2010 Bill Peck <bpeck@redhat.com> - 0.5.8-1
 - removed -lib subpackage. beakerlib is now its own project.
+- fixed extend_watchdog to not return None.
 * Wed Mar 24 2010 Bill Peck <bpeck@redhat.com> - 0.5.6-2
 - merged rmancy fix for bz576446 - added MyJobs/MyRecipe links to menu.
 - moved My menus to Login area.

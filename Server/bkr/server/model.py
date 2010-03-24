@@ -3666,6 +3666,7 @@ class RecipeTask(TaskBase):
         """
         self.recipe.watchdog.kill_time = datetime.utcnow() + timedelta(
                                                               seconds=kill_time)
+        return self.recipe.watchdog.kill_time
 
     def stop(self, *args, **kwargs):
         """
