@@ -160,8 +160,16 @@ class Recipes(RPCRoot):
 
     @expose(template='bkr.server.templates.grid')
     @paginate('list',default_order='-id', limit=50)
-    def index(self, *args, **kw):
-        recipes = session.query(MachineRecipe)
+    def index(self,*args,**kw):
+        return self.recipes(recipes=session.query(MachineRecipe),*args,**kw)
+
+    @identity.require(identity.not_anonymous())
+    @expose(template='bkr.server.templates.grid')
+    @paginate('list',default_order='-id', limit=50)
+    def mine(self,*args,**kw):
+        return self.recipes(recipes=MachineRecipe.mine(identity.current.user),action='./mine',*args,**kw)
+
+    def recipes(self,recipes,action='.',*args, **kw): 
         recipes_return = self._recipes(recipes,**kw)
         searchvalue = None
         search_options = {}
@@ -190,7 +198,7 @@ class Recipes(RPCRoot):
                            table = search_utility.Recipe.search.create_search_table(),
                            search_controller=url("/get_search_options_recipe"), 
                            )
-        return dict(title="Recipes", grid=recipes_grid, list=recipes, search_bar=search_bar,action='.',options=search_options,searchvalue=searchvalue)
+        return dict(title="Recipes", grid=recipes_grid, list=recipes, search_bar=search_bar,action=action,options=search_options,searchvalue=searchvalue)
 
     @identity.require(identity.not_anonymous())
     @expose()

@@ -350,8 +350,10 @@ class Search:
         return (display_name,field)
 
     @classmethod
-    def create_search_table(cls,cls_to_search): 
-        searchable = cls_to_search.get_searchable()
+    def create_search_table(cls,*args,**kw): 
+        cls_name = re.sub('Search','',cls.__name__)
+        cls_ref = globals()[cls_name]  
+        searchable = cls_ref.get_searchable(*args,**kw)
         searchable.sort()
         return searchable    
 
@@ -361,48 +363,25 @@ class RecipeSearch(Search):
     def __init__(self,recipe):
         self.queri = recipe
 
-    @classmethod 
-    def create_search_table(cls,*args,**kw):
-        return Search.create_search_table(Recipe,*args,**kw)
-
 class JobSearch(Search):
     search_table = []
     def __init__(self,job):
         self.queri = job
-
-    @classmethod 
-    def create_search_table(cls,*args,**kw):
-        return Search.create_search_table(Job,*args,**kw)
-
 
 class TaskSearch(Search):
     search_table = []
     def __init__(self,task):
         self.queri = task
 
-    @classmethod 
-    def create_search_table(cls,*args,**kw):
-        return Search.create_search_table(Task,*args,**kw)
-
-
 class ActivitySearch(Search):
     search_table = [] 
     def __init__(self,activity):
         self.queri = activity
-   
-    @classmethod 
-    def create_search_table(cls,*args,**kw):
-        return Search.create_search_table(Activity,*args,**kw)
-      
+    
 class HistorySearch(Search):
-    search_table = []
-     
+    search_table = []   
     def __init__(self,activity):
         self.queri = activity 
-  
-    @classmethod 
-    def create_search_table(cls,*args,**kw):
-        return Search.create_search_table(History,*args,**kw)
    
 class SystemSearch(Search): 
     class_external_mapping = {}
@@ -686,14 +665,22 @@ class SystemObject:
            return cls.search_values_dict[col]
        
     @classmethod
-    def get_searchable(cls):
+    def get_searchable(cls,*args,**kw):
         """
         get_searchable will return the description of how the calling class can be searched by returning a list
         of fields that can be searched after any field filtering has
         been applied
         """
         try:           
-            return [k for (k,v) in cls.searchable_columns.iteritems()]
+            searchable_columns = [k for (k,v) in cls.searchable_columns.iteritems()]
+            if 'exclude' in kw:
+                if type(kw['without']) == type(()):
+                    for i in kw['exclude']:
+                        try:
+                            del searchable_columns[i]
+                        except KeyError,e:
+                            log.error('Cannot remove column %s from searchable column in class %s as it is not a searchable column in the first place' % (i,cls.__name__))
+            return searchable_columns
         except AttributeError,(e):
             log.debug('Unable to access searchable_columns of class %s' % cls.__name__)
             return []

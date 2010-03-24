@@ -2781,6 +2781,13 @@ class Job(TaskBase):
     stop_types = ['abort','cancel']
 
     @classmethod
+    def mine(cls, owner):
+        """
+        A class method that can be used to search for Jobs that belong to a user
+        """
+        return cls.query.filter(Job.owner==owner)
+
+    @classmethod
     def by_whiteboard(cls,desc):
         res = Job.query().filter_by(whiteboard = desc)
         return res
@@ -2794,6 +2801,7 @@ class Job(TaskBase):
         """ return link to cancel this job
         """
         return "/jobs/cancel?id=%s" % self.id
+
 
     def to_xml(self, clone=False):
         job = self.doc.createElement("job")
@@ -3330,6 +3338,13 @@ class Recipe(TaskBase):
             return
         self.tasks.append(recipetask)
 
+    @classmethod
+    def mine(cls, owner):
+        """
+        A class method that can be used to search for Jobs that belong to a user
+        """
+        return cls.query.join(['recipeset','job','owner']).filter(Job.owner==owner)
+
 class RecipeRoleListAdapter(object):
     def __init__(self, parent, role):
         self.__parent = parent
@@ -3493,6 +3508,7 @@ class MachineRecipe(Recipe):
         self._distro_requires = value
 
     distro_requires = property(_get_distro_requires, _set_distro_requires)
+
 
 class RecipeTag(MappedObject):
     """

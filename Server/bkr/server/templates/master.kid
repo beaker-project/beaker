@@ -93,7 +93,9 @@ from bkr.server.model import system_types
                         <img class="corner_inset_right" alt="" src="/static/images/corner_inset_right.png"/>
                     </li>
                     <li><a href="${tg.url('/jobs')}">Jobs</a></li>
+                    <li><a href="${tg.url('/jobs/mine')}">My Jobs</a></li>
                     <li><a href="${tg.url('/recipes')}">Recipes</a></li>
+                    <li><a href="${tg.url('/recipes/mine')}">My Recipes</a></li>
                     <li><a href="${tg.url('/tasks/new')}">New Task</a></li>
                     <li><a href="${tg.url('/tasks')}">Task Library</a></li>
                     <li><a href="${tg.url('/reserveworkflow')}">Reserve</a></li>

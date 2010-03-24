@@ -309,15 +309,22 @@ class Jobs(RPCRoot):
         jobxml = Job.by_id(id).to_xml().toxml()
         return dict(xml=jobxml)
 
+    
     @expose(template='bkr.server.templates.grid')
     @paginate('list',default_order='-id', limit=50)
-    def index(self, *args, **kw):
-        jobs = session.query(Job).join('status').join('owner').outerjoin('result')
+    def index(self,*args,**kw): 
+        return self.jobs(jobs=session.query(Job).join('status').join('owner').outerjoin('result'),*args,**kw)
 
+    @identity.require(identity.not_anonymous()) 
+    @expose(template='bkr.server.templates.grid')
+    @paginate('list',default_order='-id', limit=50)
+    def mine(self,*args,**kw): 
+        return self.jobs(jobs=Job.mine(identity.current.user),action='./mine',*args,**kw)
+ 
+    def jobs(self,jobs,action='.', *args, **kw): 
         jobs_return = self._jobs(jobs,**kw) 
         searchvalue = None
         search_options = {}
-        log.debug('Here we are with jobs %s' % jobs_return)
         if jobs_return:
             if 'jobs_found' in jobs_return:
                 jobs = jobs_return['jobs_found']
@@ -338,10 +345,11 @@ class Jobs(RPCRoot):
 
         search_bar = SearchBar(name='jobsearch',
                            label=_(u'Job Search'),    
-                           table = search_utility.Job.search.create_search_table(),
+                           table = search_utility.Job.search.create_search_table(without=('Owner')),
                            search_controller=url("/get_search_options_job"), 
                            )
-        return dict(title="Jobs", grid=jobs_grid, list=jobs, search_bar=search_bar, action='.', options=search_options, searchvalue=searchvalue)
+        return dict(title="Jobs", grid=jobs_grid, list=jobs, search_bar=search_bar, action=action, options=search_options, searchvalue=searchvalue)
+
 
     @identity.require(identity.not_anonymous())
     @expose()
