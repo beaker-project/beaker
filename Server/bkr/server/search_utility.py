@@ -370,22 +370,6 @@ class TaskSearch(Search):
     def __init__(self,task):
         self.queri = task
 
-    def append_results(self,value,column,operation,**kw):
-        pre = self.pre_operations(column,operation,value,**kw)
-        mycolumn = Job.searchable_columns.get(column) 
-        if mycolumn:
-            self.do_joins(mycolumn)
-        else:
-            log.error('Error accessing attribute within %s.append_results' % self.__class__.__name__)
-            raise BeakerException('Unable to access column')  
-       
-        if pre['col_op_filter']:
-            filter_func = pre['col_op_filter']
-            filter_final = lambda: filter_func(mycolumn.column,value)
-        else: 
-            filter_final = self.return_standard_filter(mycolumn,operation,value)
-        self.queri = self.queri.filter(filter_final()) 
-
     @classmethod 
     def create_search_table(cls,*args,**kw):
         return Search.create_search_table(Task,*args,**kw)
@@ -396,21 +380,6 @@ class ActivitySearch(Search):
     def __init__(self,activity):
         self.queri = activity
    
-    def append_results(self,value,column,operation,**kw):
-        pre = self.pre_operations(column,operation,value,**kw)
-        mycolumn = Activity.searchable_columns.get(column) 
-        if mycolumn:
-            self.do_joins(mycolumn)
-        else:
-            log.error('Error accessing attribute within %s.append_results' % self.__class__.__name__)
-       
-        if pre['col_op_filter']:
-            filter_func = pre['col_op_filter']
-            filter_final = lambda: filter_func(mycolumn.column,value)
-        else: 
-            filter_final = self.return_standard_filter(mycolumn,operation,value)
-        self.queri = self.queri.filter(filter_final())   
-
     @classmethod 
     def create_search_table(cls,*args,**kw):
         return Search.create_search_table(Activity,*args,**kw)
@@ -420,22 +389,7 @@ class HistorySearch(Search):
      
     def __init__(self,activity):
         self.queri = activity 
- 
-    def append_results(self,value,column,operation,**kw):
-        pre = self.pre_operations(column,operation,value,**kw)
-        mycolumn = History.searchable_columns.get(column) 
-        if mycolumn:
-            self.do_joins(mycolumn)
-        else:
-            log.error('Error accessing attribute within %s.append_results' % self.__class__.__name__)
-       
-        if pre['col_op_filter']:
-            filter_func = pre['col_op_filter']
-            filter_final = lambda: filter_func(mycolumn.column,value)
-        else: 
-            filter_final = self.return_standard_filter(mycolumn,operation,value)
-        self.queri = self.queri.filter(filter_final())   
-    
+  
     @classmethod 
     def create_search_table(cls,*args,**kw):
         return Search.create_search_table(History,*args,**kw)
@@ -483,7 +437,7 @@ class SystemSearch(Search):
             results_from_pre = None
         
         mycolumn = cls_ref.searchable_columns.get(column)  
-	if mycolumn:
+        if mycolumn:
             try: 
                 self.__do_join(cls_ref,mycolumn=mycolumn,results_from_pre = results_from_pre)             
             except TypeError, (error):
