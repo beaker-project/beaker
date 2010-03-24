@@ -7,7 +7,7 @@
 
 Name:           beaker
 Version:        0.5.6
-Release:        0%{?timestamp}%{?branch}%{?dist}
+Release:        1%{?timestamp}%{?branch}%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -195,8 +195,9 @@ fi
 /usr/share/man/man1/beakerlib*
 
 %changelog
-* Wed Mar 24 2010 Bill Peck <bpeck@redhat.com> - 0.5.6-0
+* Wed Mar 24 2010 Bill Peck <bpeck@redhat.com> - 0.5.6-1
 - merged rmancy fix for bz576446 - added MyJobs/MyRecipe links to menu.
+- moved My menus to Login area.
 * Tue Mar 23 2010 Bill Peck <bpeck@redhat.com> - 0.5.5-0
 - merged rmancy fix for bz574178 - added recipe search.
 * Tue Mar 23 2010 Bill Peck <bpeck@redhat.com> - 0.5.4-0

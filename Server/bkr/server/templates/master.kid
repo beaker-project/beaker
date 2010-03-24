@@ -43,7 +43,6 @@ from bkr.server.model import system_types
                         <a href="${tg.url('/')}">All</a>
                         <img class="corner_inset_right" alt="" src="/static/images/corner_inset_right.png"/>
                     </li>
-                    <li><a href="${tg.url('/mine/')}">Mine</a></li>
                     <li><a href="${tg.url('/available/')}">Available</a></li>
                     <li><a href="${tg.url('/free/')}">Free</a></li>
                     <li class="last">
@@ -93,9 +92,7 @@ from bkr.server.model import system_types
                         <img class="corner_inset_right" alt="" src="/static/images/corner_inset_right.png"/>
                     </li>
                     <li><a href="${tg.url('/jobs')}">Jobs</a></li>
-                    <li><a href="${tg.url('/jobs/mine')}">My Jobs</a></li>
                     <li><a href="${tg.url('/recipes')}">Recipes</a></li>
-                    <li><a href="${tg.url('/recipes/mine')}">My Recipes</a></li>
                     <li><a href="${tg.url('/tasks/new')}">New Task</a></li>
                     <li><a href="${tg.url('/tasks')}">Task Library</a></li>
                     <li><a href="${tg.url('/reserveworkflow')}">Reserve</a></li>
@@ -159,13 +156,31 @@ from bkr.server.model import system_types
                     </li>
                 </ul>
             </li>
-            <li>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</li>
+            <li>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</li>
         </ul>
         <img style="float:left;" alt="" src="/static/images/menu_right.png"/>
     </div>
     <div style="float:right; margin-right:50px;">
         <img style="float:left;" alt="" src="/static/images/menu_left.png"/>
         <ul id="menu">
+            <li>&nbsp;&nbsp;</li>
+            <li py:if="not tg.identity.anonymous">Hello, ${tg.identity.user}
+                <ul id="User">
+                    <li>
+                        <img class="corner_inset_left" alt="" src="/static/images/corner_inset_left.png"/>
+                        <a href="${tg.url('/prefs')}">Preferences</a>
+                        <img class="corner_inset_right" alt="" src="/static/images/corner_inset_right.png"/>
+                    </li>
+                    <li><a href="${tg.url('/mine')}">My Systems</a></li>
+                    <li><a href="${tg.url('/jobs/mine')}">My Jobs</a></li>
+                    <li><a href="${tg.url('/recipes/mine')}">My Recipes</a></li>
+                    <li class="last">
+                        <img class="corner_left" alt="" src="/static/images/corner_left.png"/>
+                        <img class="middle" alt="" src="/static/images/dot.gif"/>
+                        <img class="corner_right" alt="" src="/static/images/corner_right.png"/>
+                    </li>
+                </ul>
+            </li>
             <li py:if="tg.identity.anonymous"><a href="${tg.url('/login')}">Login</a>
             </li>
             <li py:if="not tg.identity.anonymous"><a href="${tg.url('/logout')}">Logout</a>
