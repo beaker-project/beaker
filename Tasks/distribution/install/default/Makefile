@@ -55,5 +55,6 @@ $(METADATA): Makefile
 	@echo "TestTime:	20m"		>> $(METADATA)
 	@echo "Priority:	Manual"		>> $(METADATA)
 	@echo "Requires:	make"		>> $(METADATA)
+	@echo "Requires:	gcc"		>> $(METADATA)
 	@echo "Requires:	wget"		>> $(METADATA)
 	@echo "License:		GPL"		>> $(METADATA)
