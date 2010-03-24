@@ -230,8 +230,7 @@ class Jobs(RPCRoot):
         else:
             simplesearch = None
 
-        return_dict.update({'simplesearch':simplesearch})
-        log.debug('kw is %s' % kw)
+        return_dict.update({'simplesearch':simplesearch}) 
         if kw.get("jobsearch"):
             searchvalue = kw['jobsearch']  
             jobs_found = self._job_search(job,**kw)
@@ -315,8 +314,7 @@ class Jobs(RPCRoot):
     def index(self, *args, **kw):
         jobs = session.query(Job).join('status').join('owner').outerjoin('result')
 
-        jobs_return = self._jobs(jobs,**kw)
-        log.debug(jobs_return)
+        jobs_return = self._jobs(jobs,**kw) 
         searchvalue = None
         search_options = {}
         log.debug('Here we are with jobs %s' % jobs_return)
