@@ -7,7 +7,7 @@
 
 Name:           beaker
 Version:        0.5.9
-Release:        0%{?timestamp}%{?branch}%{?dist}
+Release:        1%{?timestamp}%{?branch}%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -178,9 +178,11 @@ fi
 %{_sysconfdir}/init.d/%{name}-watchdog
 
 %changelog
-* Thu Mar 25 2010 Bill Peck <bpeck@redhat.com> - 0.5.9-0
+* Thu Mar 25 2010 Bill Peck <bpeck@redhat.com> - 0.5.9-1
 - Added missing code to deal with priorities.
 - Added missing code to order available systems by Owner,Group, then shared.
+- fixed extend_watchdog to return status_watchdog()
+- added status_watchdog method to return the number of seconds remaining on watchfdog.
 * Wed Mar 24 2010 Bill Peck <bpeck@redhat.com> - 0.5.8-1
 - removed -lib subpackage. beakerlib is now its own project.
 - fixed extend_watchdog to not return None.
