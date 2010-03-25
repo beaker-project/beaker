@@ -759,6 +759,7 @@ class Task(SystemObject):
                           'Name' : MyColumn(col_type='string', column=model.Task.name),
                           'Description' : MyColumn(col_type='string', column=model.Task.description),
                           'Version' : MyColumn(col_type='string', column=model.Task.version),
+                          'Types' : MyColumn(col_type='string',column=model.TaskType.type,relations=['types'])
                          }
 
        
