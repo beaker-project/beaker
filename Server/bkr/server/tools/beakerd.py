@@ -252,6 +252,7 @@ def queued_recipes(*args):
             # preference from the job.
             # <recipe><scheduler method='random|fair|owner|group'/></recipe>
             if True:
+                user = recipe.recipeset.job.owner
                 systems = systems.order_by(case([(System.owner==user, 1),
                           (System.owner!=user and Group.systems==None, 2)],
                               else_=3))
