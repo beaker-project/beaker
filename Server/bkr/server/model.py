@@ -3668,9 +3668,9 @@ class RecipeTask(TaskBase):
             raise BX(_('No watchdog exists for recipe %s' % self.recipe.id))
         self.recipe.watchdog.kill_time = datetime.utcnow() + timedelta(
                                                               seconds=kill_time)
-        return self.watchdog()
+        return self.status_watchdog()
 
-    def watchdog(self):
+    def status_watchdog(self):
         """
         Return the number of seconds left on the current watchdog if it exists.
         """

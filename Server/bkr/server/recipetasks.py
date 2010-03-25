@@ -134,7 +134,7 @@ class RecipeTasks(RPCRoot):
             task = RecipeTask.by_id(task_id)
         except InvalidRequestError:
             raise BX(_('Invalid task ID: %s' % task_id))
-        return task.watchdog()
+        return task.status_watchdog()
 
     @cherrypy.expose
     @identity.require(identity.not_anonymous())
