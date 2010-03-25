@@ -154,6 +154,21 @@ sqlalchemy.pool_recycle = 3600
 # for Windows users, sqlite URIs look like:
 # sqlobject.dburi="sqlite:///drive_letter:/path/to/file"
 
+# Password for installed systems
+
+test_password='$1$rhts$ShuaoxZPm2Dr79tpoP8NE.'
+
+##
+## TurboMail settings
+##
+mail.on = False
+mail.manager = 'immediate'
+mail.transport = 'smtp'
+mail.provider = 'smtp'
+mail.smtp.server = '127.0.0.1'
+
+beaker_email='root@localhost.localdomain'
+
 
 # Authentication
 
@@ -173,7 +188,7 @@ server.webpath=""
 server.log_file = "/var/log/beaker/server.log"
 server.log_to_screen = True
 
-autoreload.package="beaker.server"
+autoreload.package="bkr.server"
 tg.strict_parameters = True
 
 # Sets the number of threads the server uses
@@ -196,11 +211,11 @@ tg.include_widgets = ['turbogears.mochikit']
 
 [/static]
 static_filter.on = True
-static_filter.dir = "/usr/share/beaker/server/static"
+static_filter.dir = "/usr/share/bkr/server/static"
 
 [/favicon.ico]
 static_filter.on = True
-static_filter.file = "/usr/share/beaker/server/static/images/favicon.ico"
+static_filter.file = "/usr/share/bkr/server/static/images/favicon.ico"
 
 # LOGGING
 # Logging configuration generally follows the style of the standard
@@ -211,6 +226,17 @@ static_filter.file = "/usr/share/beaker/server/static/images/favicon.ico"
 
 [[handlers]]
 
+[[[debug_out]]]
+class='FileHandler'
+formatter='full_content'
+args="('/var/log/beaker/server-debug.log', 'a+')"
+
+[[[error_out]]]
+level='WARN'
+class='FileHandler'
+formatter='full_content'
+args="('/var/log/beaker/server-errors.log', 'a+')"
+
 [[[access_out]]]
 # set the filename as the first argument below
 args="('/var/log/beaker/server.log',)"
@@ -219,16 +245,14 @@ level='INFO'
 formatter='message_only'
 
 [[loggers]]
-[[[server]]]
-level='ERROR'
-qualname='beaker.server'
-handlers=['error_out']
+[[[bkr.server]]]
+level='DEBUG'
+qualname='bkr.server'
+handlers=['debug_out']
 
 [[[access]]]
 level='INFO'
-qualname='turbogears.access'
-handlers=['access_out']
-propagate=0
+handlers=['access_out', 'error_out']
 __EOF__
 }
 
