@@ -284,7 +284,7 @@ function Inventory()
     estatus_fail "**** Failed to initialize beaker DB ****"
     # beaker-init creates the server.log as root.  this prevents apache from 
     #  working since it can't write to it.
-    /bin/rm -f /var/log/beaker/server.log
+    /bin/rm -f /var/log/beaker/server*.log
     service iptables stop
     # Turn on wsgi
     perl -pi -e 's|^#LoadModule wsgi_module modules/mod_wsgi.so|LoadModule wsgi_module modules/mod_wsgi.so|g' /etc/httpd/conf.d/wsgi.conf
