@@ -97,7 +97,14 @@ def start_server(conf=None, backend_host=None, backend_port=None,
 
     # RUN:
     backend_host = backend_host or conf.get('BACKEND', 'INTERFACE')
-    backend_port = backend_port or int(conf.get('BACKEND', 'PORT'))
+    backend_port = backend_port or conf.get('BACKEND', 'PORT')
+    if os.name == 'posix':
+        if backend_port != '':
+            backend_port = int(backend_port)
+        backend_socket = conf.get('BACKEND', 'SOCKET')
+    else:
+        backend_port = int(backend_port)
+        backend_socket = ''
     task_host = task_host or conf.get('TASK', 'INTERFACE')
     task_port = task_port or int(conf.get('TASK', 'PORT'))
     controller = Controller(spawn or Spawn(task_host, task_port))
@@ -112,11 +119,14 @@ def start_server(conf=None, backend_host=None, backend_port=None,
     log.info("################################")
     log.info("#   Starting a Controller...   #")
     log.info("################################")
-    log.info("Controller: BackendListener listening on %s:%s", backend_host,
-            backend_port)
-    reactor.listenTCP(backend_port,
-            BackendListener(controller, backend_adaptor),
-            interface=backend_host)
+    backend_listener = BackendListener(controller, backend_adaptor)
+    if backend_port != '':
+        log.info("Controller: BackendListener listening on %s:%s", backend_host,
+                backend_port)
+        reactor.listenTCP(backend_port, backend_listener, interface=backend_host)
+    if backend_socket:
+        log.info("Controller: BackendListener listening on %s", backend_socket)
+        reactor.listenUNIX(backend_socket, backend_listener)
     log.info("Controller: TaskListener listening on %s:%s", task_host,
             task_port)
     reactor.listenTCP(task_port, TaskListener(controller, task_adaptor),

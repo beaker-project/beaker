@@ -84,7 +84,7 @@ def log_handler(log_file_name=None):
             log_file_name = conf.get('DEFAULT', 'NAME') + '.log'
     lp = conf.get('DEFAULT', 'LOG_PATH') or "/var/log"
     log = logging.getLogger('backend')
-    cons = config.parse_bool(conf.get('DEFAULT', 'CONSOLE_LOG', False))
+    cons = config.parse_bool(conf.get('DEFAULT', 'CONSOLE_LOG'))
     make_log_handler(log, lp, log_file_name, syslog=True, console=cons)
     return log
 
@@ -93,9 +93,28 @@ def start_backend(backend, host=None, port=None,
         byef=None):
     conf = config.get_conf('beah-backend')
     host = host or conf.get('DEFAULT', 'INTERFACE')
-    port = port or int(conf.get('DEFAULT', 'PORT'))
+    port = port or conf.get('DEFAULT', 'PORT')
+    if os.name == 'posix':
+        socket = conf.get('DEFAULT', 'SOCKET')
+        # 0. check SOCKET_OPT (socket given on command line)
+        if config.parse_bool(conf.get('DEFAULT', 'SOCKET_OPT')) and socket != '':
+            port = ''
+        # 1. check INTERFACE - if not empty nor localhost: must use TCP
+        if host != '' and host != 'localhost':
+            socket = ''
+        # 2. check PORT_OPT (port given on command line)
+        if config.parse_bool(conf.get('DEFAULT', 'PORT_OPT')) and port != '':
+            socket = ''
+    else:
+        socket = ''
     logging.getLogger('backend').setLevel(str2log_level(conf.get('DEFAULT', 'LOG')))
-    return reactor.connectTCP(host, port, BackendFactory(backend, adaptor, byef))
+    backend_factory = BackendFactory(backend, adaptor, byef)
+    if socket != '':
+        return reactor.connectUNIX(socket, backend_factory)
+    elif port != '':
+        return reactor.connectTCP(host, int(port), backend_factory)
+    else:
+        raise exceptions.Exception('Either socket or port must be configured.')
 
 ################################################################################
 # TEST:
