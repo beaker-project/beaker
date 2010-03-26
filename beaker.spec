@@ -6,7 +6,7 @@
 %endif
 
 Name:           beaker
-Version:        0.5.10
+Version:        0.5.11
 Release:        0%{?timestamp}%{?branch}%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
@@ -178,6 +178,8 @@ fi
 %{_sysconfdir}/init.d/%{name}-watchdog
 
 %changelog
+* Fri Mar 26 2010 Bill Peck <bpeck@redhat.com> - 0.5.11-0
+- fix status_watchdog to return correct seconds if remaining time is over a day.
 * Thu Mar 25 2010 Bill Peck <bpeck@redhat.com> - 0.5.10-0
 - Added missing code to deal with priorities.
 - Added missing code to order available systems by Owner,Group, then shared.

@@ -3675,7 +3675,8 @@ class RecipeTask(TaskBase):
         Return the number of seconds left on the current watchdog if it exists.
         """
         if self.recipe.watchdog:
-            return (self.recipe.watchdog.kill_time - datetime.utcnow()).seconds
+            delta = self.recipe.watchdog.kill_time - datetime.utcnow()
+            return delta.seconds + (86400 * delta.days)
         else:
             return False
 
