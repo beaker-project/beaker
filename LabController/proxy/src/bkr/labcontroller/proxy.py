@@ -359,6 +359,12 @@ class Proxy(ProxyHelper):
         self.logger.info("extend_watchdog %s %s", task_id, kill_time)
         return self.hub.recipes.tasks.extend(task_id, kill_time)
 
+    def status_watchdog(self, task_id):
+        """ Ask the scheduler how many seconds are left on a watchdog for this task
+        """
+        self.logger.info("status_watchdog %s %s", task_id)
+        return self.hub.recipes.tasks.watchdog(task_id)
+
     def task_stop(self,
                   task_id,
                   stop_type,
