@@ -3,9 +3,8 @@ import re
 import random
 import sqlalchemy
 from sqlalchemy import or_, and_, not_
-from sqlalchemy.sql import visitors
+from sqlalchemy.sql import visitors, select
 from turbogears.database import session
-
 import logging
 log = logging.getLogger(__name__)
 
@@ -759,9 +758,105 @@ class Task(SystemObject):
                           'Name' : MyColumn(col_type='string', column=model.Task.name),
                           'Description' : MyColumn(col_type='string', column=model.Task.description),
                           'Version' : MyColumn(col_type='string', column=model.Task.version),
-                          'Types' : MyColumn(col_type='string',column=model.TaskType.type,relations=['types'])
+                          'Types' : MyColumn(col_type='string',column=model.TaskType.type,relations=['types']),
+                          'Arch' : MyColumn(col_type='string', column=model.Arch.arch,relations=['excluded_arch','arch']),
+                          'Distro' : MyColumn(col_type='string', column=model.OSMajor.osmajor,relations=['excluded_osmajor','osmajor']),
                          }
 
+    @classmethod
+    def distro_is_filter(cls,x,y): 
+        queri = model.Task.query().outerjoin(['excluded_osmajor','osmajor'])
+        wildcard_y = re.sub('\*','%',y)
+        if wildcard_y != y: #looks like we found a wildcard
+            queri = queri.filter(model.OSMajor.osmajor.like(wildcard_y)) 
+        else:
+            queri = queri.filter(model.OSMajor.osmajor == y)
+        ids = [r.id for r in queri]
+
+        #What this block is trying to do is determine if all the excluded distros of a particular task make up
+        #all the distros, and thus leaving the task with no distro. Not likely, but we need to cater for this scenario
+        #at least for sake of consistency.
+        if not y:
+            table = model.task_table.join(model.task_exclude_osmajor_table).join(model.osmajor_table)
+            osmajor_queri = model.OSMajor.query()
+            osmajor_ids = [r.id for r in osmajor_queri]
+            last_teo_alias  = None
+            for id in osmajor_ids:
+                teo_alias = model.task_exclude_osmajor_table.alias()
+                table = table.join(teo_alias,teo_alias.c.osmajor_id==id)
+                last_teo_alias = teo_alias
+            s = select([last_teo_alias.c.task_id],from_obj=table).group_by(last_teo_alias.c.task_id)           
+            r = s.execute()
+            ids = []
+            for i in r:
+                ids.append(i[0])
+            return model.Task.id.in_(ids) 
+        
+        return not_(model.Task.id.in_(ids)) 
+       
+
+    @classmethod
+    def arch_is_filter(cls,x,y): 
+        queri = model.Task.query().outerjoin(['excluded_arch','arch'])
+        wildcard_y = re.sub('\*','%',y)
+        if wildcard_y != y: #looks like we found a wildcard
+            queri = queri.filter(model.Arch.arch.like(wildcard_y))
+            #return not_(x.like(wildcard_y))
+        else:
+            queri = queri.filter(model.Arch.arch == y)
+        ids = [r.id for r in queri]
+
+        #What this block is trying to do is determine if all the excluded arches of a particular task make up
+        #all the arches, and thus leaving the task with no arch. Not likely, but we need to cater for this scenario
+        #at least for sake of consistency.
+        if not y:
+            table = model.task_table.join(model.task_exclude_arch_table).join(model.arch_table)
+            arch_queri = model.Arch.query()
+            arch_ids = [r.id for r in arch_queri]
+            last_tea_alias  = None
+            for id in arch_ids:
+                tea_alias = model.task_exclude_arch_table.alias()
+                table = table.join(tea_alias,tea_alias.c.arch_id==id)
+                last_tea_alias = tea_alias
+            s = select([last_tea_alias.c.task_id],from_obj=table).group_by(last_tea_alias.c.task_id)           
+            r = s.execute()
+            ids = []
+            for i in r:
+                ids.append(i[0])
+            return model.Task.id.in_(ids) 
+        
+        return not_(model.Task.id.in_(ids)) 
+
+    @classmethod
+    def arch_is_not_filter(cls,x,y):
+        return cls._opposites_is_not_filter(x,y)
+
+    @classmethod
+    def distro_is_not_filter(cls,x,y):
+        return cls._opposites_is_not_filter(x,y)
+
+    @classmethod
+    def _opposites_is_not_filter(cls,x,y):    
+        wildcard_y = re.sub('\*','%',y)
+        if wildcard_y != y: #looks like we found a wildcard
+            return x.like(wildcard_y)
+        if not y:
+            return or_(x == None,x==y)
+        return x == y
+
+    @classmethod
+    def arch_contains_filter(cls,x,y):
+        return cls._opposites_contains_filter(x,y)
+
+    @classmethod
+    def distro_contains_filter(cls,x,y):
+        return cls._opposites_contains_filter(x,y)
+
+    @classmethod
+    def _opposites_contains_filter(cls,col,val): 
+        queri = model.Task.query().outerjoin(['excluded_arch','arch']).filter(model.Arch.arch.like('%%%s%%' % val))
+        ids = [r.id for r in queri]
+        return not_(model.Task.id.in_(ids))
        
 class Activity(SystemObject):
     search = ActivitySearch    
