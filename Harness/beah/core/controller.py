@@ -271,7 +271,7 @@ class Controller(object):
         # FIXME: This looks dangerous! Is future BE filter enough? Disable!
         se = Executable()
         # FIXME: windows? need different ext and different default.
-        se.content = lambda se: se.write_line(cmd.arg('script', "#!/bin/sh\nexit 1"))
+        se.content = lambda: se.write_line(cmd.arg('script', "#!/bin/sh\nexit 1"))
         se.make()
         task_info = dict(cmd.arg('task_info'))
         task_info['id'] = cmd.id()

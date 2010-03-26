@@ -576,7 +576,7 @@ class BeakerLCBackend(SerializingBackend):
     def pre_proc(self, evt):
         id = evt.task_id = self.get_evt_task_id(evt)
         if id is None:
-            return False
+            return True
         if evt.event() == 'file_write':
             evt = event.Event(evt)
             evt.args()['data'] = '...hidden...'
