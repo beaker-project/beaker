@@ -183,6 +183,7 @@ fi
 - added stdin support for bkr job-submit
 - minor spec file changes for fedora package review.
 - added xmlrpc method to tasks for getting list of all tasks
+- added command module to list tasks
 * Fri Mar 26 2010 Bill Peck <bpeck@redhat.com> - 0.5.11-0
 - fix status_watchdog to return correct seconds if remaining time is over a day.
 * Thu Mar 25 2010 Bill Peck <bpeck@redhat.com> - 0.5.10-0
