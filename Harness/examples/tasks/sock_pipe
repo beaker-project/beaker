@@ -105,6 +105,6 @@ if __name__=='__main__':
 
     start_task(PipeTask(os.getenv('BEAH_TID'), 'test'),
             host=os.getenv('BEAH_THOST'), port=os.getenv('BEAH_TPORT'),
-            adaptor=LoggingAdaptor)
+            adaptor=LoggingAdaptor, socket=os.getenv('BEAH_TSOCKET'))
     reactor.run()
 

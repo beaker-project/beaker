@@ -1,0 +1,31 @@
+#!/usr/bin/python
+
+import os
+import socket
+import time
+import beahlib
+import simplejson as json
+from beah.core import event
+
+def open_socket():
+    s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    s.connect(os.getenv('BEAH_TSOCKET'))
+    return s
+
+def socket_sender(s):
+    def send(evt):
+        s.send(json.dumps(evt)+"\n")
+    return send
+
+s = open_socket()
+try:
+    beahlib.send = socket_sender(s)
+    beahlib.send(event.Event('introduce', id=os.getenv('BEAH_TID')))
+    beahlib.ldebug("environment", environment=dict(os.environ))
+    time.sleep(10)
+    beahlib.passed("pass1")
+    time.sleep(10)
+    beahlib.warning("warn1")
+finally:
+    s.close()
+

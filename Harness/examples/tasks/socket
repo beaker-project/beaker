@@ -124,6 +124,6 @@ if __name__=='__main__':
     config.beah_conf()
     start_task(config.get_conf('beah'), DemoTask(os.getenv('BEAH_TID'), 2),
             host=os.getenv('BEAH_THOST'), port=os.getenv('BEAH_TPORT'),
-            adaptor=LoggingAdaptor)
+            adaptor=LoggingAdaptor, socket=os.getenv('BEAH_TSOCKET'))
     reactor.run()
 

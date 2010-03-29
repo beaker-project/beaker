@@ -315,8 +315,9 @@ def beah_defaults():
     if os.name == 'posix':
         # using PORT as ID, not NAME. NAME could (and should) be different for
         # each backend as well as for the controller.
-        d['BACKEND.SOCKET'] = '%(VAR_ROOT)s/backend%(PORT).socket'
+        d['BACKEND.SOCKET'] = '%(VAR_ROOT)s/backend%(PORT)s.socket'
         d['BACKEND.SOCKET_OPT'] = 'False'
+        d['TASK.SOCKET'] = '%(VAR_ROOT)s/task%(PORT)s.socket'
     return d
 
 
@@ -498,6 +499,16 @@ def beah_t_opt(opt, conf, kwargs):
     opt.add_option("-P", "--task-port", action="callback", callback=port_cb,
             type='string',
             help="port number tasks are using.")
+    if os.name == 'posix':
+        def socket_cb(option, opt_str, value, parser):
+            # FIXME!!! check value
+            if kwargs['type'] == 'beah':
+                conf['TASK.SOCKET'] = value
+            else:
+                conf['SOCKET'] = value
+        opt.add_option("-S", "--task-socket", action="callback", callback=socket_cb,
+                type='string',
+                help="socket for tasks.")
     return opt
 
 
