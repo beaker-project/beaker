@@ -82,7 +82,7 @@ class Tasks(RPCRoot):
 
         # Filter by packages if specified
         # apache, kernel, mysql, etc..
-        if 'packages' in filter:
+        if 'packages' in filter and filter['packages']:
             # if not a list, make it into a list.
             if isinstance(filter['packages'], str):
                 filter['packages'] = [filter['packages']]
@@ -99,7 +99,7 @@ class Tasks(RPCRoot):
 
         # Filter by type if specified
         # Tier1, Regression, KernelTier1, etc..
-        if 'types' in filter:
+        if 'types' in filter and filter['types']:
             # if not a list, make it into a list.
             if isinstance(filter['types'], str):
                 filter['types'] = [filter['types']]

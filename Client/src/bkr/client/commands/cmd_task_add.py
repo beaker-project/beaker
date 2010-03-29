@@ -8,7 +8,7 @@ import sys
 import os.path
 import xmlrpclib
 
-class Tasks_Add(BeakerCommand):
+class Task_Add(BeakerCommand):
     """Add/Update task to scheduler"""
     enabled = True
 
