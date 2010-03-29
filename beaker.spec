@@ -1,8 +1,8 @@
-%{!?python_sitelib: %define python_sitelib %(%{__python} -c "from distutils.sysconfig import get_python_lib; print get_python_lib()")}
-%{!?pyver: %define pyver %(%{__python} -c "import sys ; print sys.version[:3]")}
-%{!?branch: %define branch %(echo "$Format:%d$"| awk -F/ '{print $NF}'| sed -e 's/[()$]//g' | awk '{print "." $NF}' | grep -v master)}
+%{!?python_sitelib: %global python_sitelib %(%{__python} -c "from distutils.sysconfig import get_python_lib; print get_python_lib()")}
+%{!?pyver: %global pyver %(%{__python} -c "import sys ; print sys.version[:3]")}
+%{!?branch: %global branch %(echo "$Format:%d$"| awk -F/ '{print $NF}'| sed -e 's/[()$]//g' | awk '{print "." $NF}' | grep -v master)}
 %if "0%{branch}" != "0"
-%{!?timestamp: %define timestamp $Format:.%at$}
+%{!?timestamp: %global timestamp $Format:.%at$}
 %endif
 
 Name:           beaker
@@ -17,7 +17,7 @@ BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 BuildArch:      noarch
 BuildRequires:  python-setuptools
 BuildRequires:  python-setuptools-devel
-BuildRequires:  python-devel
+BuildRequires:  python2-devel
 BuildRequires:  TurboGears
 
 
@@ -88,8 +88,8 @@ DESTDIR=$RPM_BUILD_ROOT make
 
 %install
 DESTDIR=$RPM_BUILD_ROOT make install
-ln -s RedHatEnterpriseLinux6.ks $RPM_BUILD_ROOT/var/lib/cobbler/kickstarts/redhat6.ks
-ln -s Fedora.ks $RPM_BUILD_ROOT/var/lib/cobbler/kickstarts/Fedoradevelopment.ks
+ln -s RedHatEnterpriseLinux6.ks $RPM_BUILD_ROOT/%{_var}/lib/cobbler/kickstarts/redhat6.ks
+ln -s Fedora.ks $RPM_BUILD_ROOT/%{_var}/lib/cobbler/kickstarts/Fedoradevelopment.ks
 
 %clean
 %{__rm} -rf %{buildroot}
@@ -169,10 +169,10 @@ fi
 %doc LabController/README
 %config(noreplace) %{_sysconfdir}/httpd/conf.d/%{name}-lab-controller.conf
 %{_sysconfdir}/cron.daily/expire_distros
-/var/lib/cobbler/triggers/sync/post/osversion.trigger
-/var/lib/cobbler/snippets/*
-/var/lib/cobbler/kickstarts/*
-/var/www/beaker/*
+%{_var}/lib/cobbler/triggers/sync/post/osversion.trigger
+%{_var}/lib/cobbler/snippets/*
+%{_var}/lib/cobbler/kickstarts/*
+%{_var}/www/beaker/*
 %attr(-,apache,root) %dir %{_localstatedir}/log/%{name}
 %{_sysconfdir}/init.d/%{name}-proxy
 %{_sysconfdir}/init.d/%{name}-watchdog
