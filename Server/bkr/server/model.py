@@ -4086,8 +4086,8 @@ class TaskType(MappedObject):
     """
 
     @classmethod
-    def by_name(cls, name):
-        return cls.query.filter_by(name=name).one()
+    def by_name(cls, type):
+        return cls.query.filter_by(type=type).one()
 
 
 class TaskPackage(MappedObject):
@@ -4096,8 +4096,8 @@ class TaskPackage(MappedObject):
     """
 
     @classmethod
-    def by_name(cls, name):
-        return cls.query.filter_by(name=name).one()
+    def by_name(cls, package):
+        return cls.query.filter_by(package=package).one()
 
     def __repr__(self):
         return self.package

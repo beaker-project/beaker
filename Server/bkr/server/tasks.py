@@ -109,7 +109,7 @@ class Tasks(RPCRoot):
                 try:
                     tasktype = TaskType.by_name(type)
                 except InvalidRequestError, err:
-                    raise BX(_('Invalid Task Type: %s' % task))
+                    raise BX(_('Invalid Task Type: %s' % type))
                 or_types.append(TaskType.id==tasktype.id)
             tasks = tasks.filter(or_(*or_types))
 
