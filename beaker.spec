@@ -6,7 +6,7 @@
 %endif
 
 Name:           beaker
-Version:        0.4.89
+Version:        0.4.90
 Release:        0%{?timestamp}%{?branch}%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
@@ -146,6 +146,9 @@ ln -s Fedora.ks $RPM_BUILD_ROOT/var/lib/cobbler/kickstarts/Fedoradevelopment.ks
 /usr/share/man/man1/beakerlib*
 
 %changelog
+* Mon Mar 29 2010 Bill Peck <bpeck@redhat.com> - 0.4.90-0
+- Include Gozen's fix for anamon traceback.
+- Fix logging error in CSV import.
 * Thu Mar 04 2010 Bill Peck <bpeck@redhat.com> - 0.4.89-0
 - update osversion.trigger to update pushed data before calling addDistro.sh
 * Wed Mar 03 2010 Bill Peck <bpeck@redhat.com> - 0.4.88-0
