@@ -7,7 +7,7 @@
 
 Name:           beaker
 Version:        0.5.12
-Release:        0%{?timestamp}%{?branch}%{?dist}
+Release:        1%{?timestamp}%{?branch}%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -178,10 +178,11 @@ fi
 %{_sysconfdir}/init.d/%{name}-watchdog
 
 %changelog
-* Mon Mar 29 2010 Bill Peck <bpeck@redhat.com> - 0.5.12-0
+* Mon Mar 29 2010 Bill Peck <bpeck@redhat.com> - 0.5.12-1
 - merged bz574179, arch and distro search in tasks.
 - added stdin support for bkr job-submit
 - minor spec file changes for fedora package review.
+- added xmlrpc method to tasks for getting list of all tasks
 * Fri Mar 26 2010 Bill Peck <bpeck@redhat.com> - 0.5.11-0
 - fix status_watchdog to return correct seconds if remaining time is over a day.
 * Thu Mar 25 2010 Bill Peck <bpeck@redhat.com> - 0.5.10-0
