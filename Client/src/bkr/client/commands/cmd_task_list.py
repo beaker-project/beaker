@@ -28,6 +28,7 @@ class Task_List(BeakerCommand):
         self.parser.add_option(
             "--params",
             action="append",
+            default=[],
             help="if xml is enabled, add these params as args to each task",
         )
         self.parser.add_option(
@@ -47,10 +48,16 @@ class Task_List(BeakerCommand):
         params = kwargs.pop("params", [])
         xml = kwargs.pop("xml")
 
-        install_name = args[0]
+        if args:
+            install_name = args[0]
+        else:
+            self.parser.print_help()
+            sys.exit(1)
+            
 
         self.set_hub(username, password)
         doc = Document()
+        xmlparams = doc.createElement('params')
         for param in params:
             try:
                 (key, value) = param.split('=',1)
