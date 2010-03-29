@@ -320,7 +320,7 @@ class Tasks(RPCRoot):
 
         if kw.get("tasksearch"):
             searchvalue = kw['tasksearch']  
-            tasks_found = self._task_search(task,**kw)
+            tasks_found = self._task_search(task,**kw) 
             return_dict.update({'tasks_found':tasks_found})               
             return_dict.update({'searchvalue':searchvalue})
         return return_dict
