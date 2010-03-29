@@ -4084,13 +4084,21 @@ class TaskType(MappedObject):
     A task can be classified into serveral task types which can be used to
     select tasks for batch runs
     """
-    pass
+
+    @classmethod
+    def by_name(cls, name):
+        return cls.query.filter_by(name=name).one()
 
 
 class TaskPackage(MappedObject):
     """
     A list of packages that a tasks should be run for.
     """
+
+    @classmethod
+    def by_name(cls, name):
+        return cls.query.filter_by(name=name).one()
+
     def __repr__(self):
         return self.package
 
