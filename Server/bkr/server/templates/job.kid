@@ -110,7 +110,7 @@
   <input id="results_fail" type="radio" name="results" value="fail" checked="${(None, '')[default == 'ShowFail']}" />
   <label for="results_fail">Only failed items</label>
   <input id="results_ackneeded" type="radio" name="results" value="ackneeded" />
-  <label for="results_ackneeded">Failed items needing review</label>
+  <!-- <label for="results_ackneeded">Failed items needing review</label> -->
   <a id='toggle_job_history' style="color: rgb(34, 67, 127); cursor: pointer;">Toggle Job history</a>
  </form>
  <div style='padding-bottom:0.25em' id="job_history" class="hidden">

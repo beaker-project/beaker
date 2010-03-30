@@ -50,7 +50,7 @@
   <input id="results_fail" type="radio" name="results" value="fail" checked="${(None, '')[default == 'ShowFail']}" />
   <label for="results_fail">Only failed items</label>
   <input id="results_ackneeded" type="radio" name="results" value="ackneeded" />
-  <label for="results_ackneeded">Failed items needing review</label>
+  <!-- <label for="results_ackneeded">Failed items needing review</label> -->
  </form>
  <div py:if="recipe_widget">
 <p py:content="recipe_widget(recipe=recipe)">Recipe goes here</p>
