@@ -244,18 +244,6 @@ class JobMatrixReport(Form):
                 params['list'] = params['options']['list']
         return super(JobMatrixReport,self).display(value=None,**params)
 
-class TaskList(Widget):
-    template = 'bkr.server.templates.task_list'
-    css = [LocalCSSLink('bkr','/static/css/task_list.css')] 
-    params = ['data']
-    
-    def display(self,value=None,**params):
-        if 'options' in params:
-            params['data'] = params['options'] #this is temp, ned to figure out how to paginate elements of a dict
-            #if 'data' in params['options']:
-            #    if params['options']['data']:
-            #        params['data'] = params['options']['data']
-        return super(TaskList,self).display(value,**params)   
 
 class SearchBar(RepeatingFormField):
     """Search Bar""" 

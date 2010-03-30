@@ -3,7 +3,7 @@
     if recipe.result:
         result = recipe.result.result == 'Pass' and 'pass' or 'fail'
     else:
-        result = 'fail'
+        result = 'pass'
  ?>
 
  <table class="show ${result}">

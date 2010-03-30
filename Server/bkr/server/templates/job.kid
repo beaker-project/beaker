@@ -95,7 +95,7 @@
     if job.result:
         default = job.result.result == 'Pass' and 'ShowAll' or 'ShowFail'
     else:
-        default = 'ShowFail'
+        default = 'ShowAll'
  ?>
 
 <script type="text/javascript">

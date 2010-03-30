@@ -3993,6 +3993,8 @@ class RecipeTaskResult(TaskBase):
             short_path = '.%s' % short_path
         elif not short_path.startswith('.'):
             short_path = './%s' % short_path
+        if self.path == '/' and self.log:
+            short_path = self.log
         return short_path
 
     short_path = property(short_path)

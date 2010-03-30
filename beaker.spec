@@ -6,8 +6,8 @@
 %endif
 
 Name:           beaker
-Version:        0.5.12
-Release:        1%{?timestamp}%{?branch}%{?dist}
+Version:        0.5.13
+Release:        0%{?timestamp}%{?branch}%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -178,6 +178,10 @@ fi
 %{_sysconfdir}/init.d/%{name}-watchdog
 
 %changelog
+* Tue Mar 30 2010 Bill Peck <bpeck@redhat.com> - 0.5.13-0
+- removed uneeded task_list code
+- default task result to pass when no result recorded, this is for css display.
+- display log summary when task.path == /
 * Mon Mar 29 2010 Bill Peck <bpeck@redhat.com> - 0.5.12-1
 - merged bz574179, arch and distro search in tasks.
 - added stdin support for bkr job-submit

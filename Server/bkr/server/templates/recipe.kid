@@ -12,7 +12,7 @@
     if recipe.result:
         default = recipe.result.result == 'Pass' and 'ShowAll' or 'ShowFail'
     else:
-        default = 'ShowFail'
+        default = 'ShowAll'
  ?>
 
 <script type="text/javascript">
