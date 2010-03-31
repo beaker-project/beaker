@@ -97,10 +97,10 @@ EOF
 #end if
 
 # Install RHTS RPMS
-yum -y --disablerepo=* --enablerepo=rhts-noarch install \ 
+yum -y --disablerepo=* --enablerepo=rhts-noarch \ 
                        --enablerepo=distro* \
-                       --enablerepo=customrepo* rhts-test-env-lab rhts-legacy
-yum -y --disablerepo=* --enablerepo=rhts-noarch\ 
+                       --enablerepo=customrepo* install rhts-test-env-lab rhts-legacy
+yum -y --disablerepo=* --enablerepo=rhts-noarch \ 
                        --enablerepo=distro* \
                        --enablerepo=customrepo*  install yum-utils
 
