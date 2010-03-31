@@ -83,8 +83,7 @@ class Controller(object):
             if 'origin' not in dir(task):
                 task.origin = {}
             if not task.origin.has_key('id'):
-                task.origin['id'] = task.task_id
-
+                task.origin['id'] = getattr(task, 'task_id', None)
             self.tasks.append(task)
             return True
 
@@ -111,7 +110,7 @@ class Controller(object):
         log.debug("Controller: proc_evt(..., %r)", evt)
         evev = evt.event()
         if evev == 'introduce':
-            task_id = evt.arg('id')
+            task_id = evt.arg('task_id')
             task.task_id = task_id
             task.origin['source'] = "socket"
             task.origin['id'] = task_id

@@ -66,7 +66,7 @@ def socket_sender(s):
     return send
 
 def introduce():
-    return event.Event('introduce', id=os.getenv('BEAH_TID'))
+    return event.introduce(os.getenv('BEAH_TID'))
 
 
 # FIXME:
