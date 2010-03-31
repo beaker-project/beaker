@@ -30,7 +30,7 @@ RepeatingProxy(twisted.web.xmlrpc.Proxy):
 from twisted.internet import reactor
 from twisted.web.xmlrpc import Proxy
 from twisted.internet.defer import Deferred
-from twisted.internet.error import ConnectionRefusedError
+from twisted.internet.error import ConnectError, DNSLookupError, ConnectionLost
 from beah.misc.log_this import print_this
 from beah.misc import make_class_verbose
 
@@ -56,7 +56,7 @@ class RepeatingProxy(Proxy):
     In serializing mode, submitted calls are cached, and are processed in
     order, later call waiting for previous to finish.
 
-    This implementation will retry forever on ConnectionRefusedError.
+    This implementation will retry forever on ConnectError.
 
     There are two ways how to handle idle status:
     * by overriding on_idle
@@ -105,7 +105,7 @@ class RepeatingProxy(Proxy):
 
         When True is returned the call is rescheduled.
         """
-        return fail.check(ConnectionRefusedError)
+        return fail.check(ConnectError, DNSLookupError, ConnectionLost)
 
     def is_accepted_failure(self, fail):
         """
