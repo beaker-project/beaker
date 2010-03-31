@@ -16,6 +16,21 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
+"""
+harness library - early attempt.
+
+WARNING: Do not use this please. Apart from GPL notice, nothing will remain the
+same.
+"""
+
+import sys
+print >> sys.stderr, """\
+WARNING: beahlib.py is deprecated as it will change.
+Do not use it outside of beah tree please.
+"""
+
+import os
+import socket
 from beah.core import event
 import simplejson as json
 
@@ -33,7 +48,26 @@ def def_conf(*args, **kwargs):
     DKWARGS = kwargs
 
 def send_stdout(evt):
-        print json.dumps(evt)
+    print json.dumps(evt)
+
+def open_socket():
+    tsocket = os.getenv('BEAH_TSOCKET')
+    if tsocket:
+        s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        # FIXME: if BEAH_TSOCKET is not defined: write to a file
+        s.connect(tsocket)
+        return s
+    else:
+        raise
+
+def socket_sender(s):
+    def send(evt):
+        s.send(json.dumps(evt)+"\n")
+    return send
+
+def introduce():
+    return event.Event('introduce', id=os.getenv('BEAH_TID'))
+
 
 # FIXME:
 # * add send_fifo and send_socket functions - open, send, close

@@ -1,31 +1,59 @@
 #!/usr/bin/python
 
 import os
+import sys
 import socket
 import time
 import beahlib
 import simplejson as json
 from beah.core import event
 
-def open_socket():
-    s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-    s.connect(os.getenv('BEAH_TSOCKET'))
-    return s
+class SocketSender(object):
+    def __init__(self):
+        self.s = beahlib.open_socket()
+        self.__call__ = beahlib.socket_sender(self.s)
+    def close(self):
+        self.s.close()
+    def __enter__(self):
+        self.__beahlib_send = beahlib.send
+        beahlib.send = self.__call__
+        beahlib.send(beahlib.introduce())
+        return beahlib
+    def __exit__(self, type, value, traceback):
+        beahlib.send = self.__beahlib_send
+        self.close()
 
-def socket_sender(s):
-    def send(evt):
-        s.send(json.dumps(evt)+"\n")
-    return send
+if __name__ == '__main__':
+    def a_test():
+        beahlib.linfo("task started...")
+        beahlib.ldebug("environment", environment=dict(os.environ))
+        time.sleep(10)
+        beahlib.passed("pass1")
+        time.sleep(10)
+        beahlib.warning("warn1")
+        time.sleep(10)
+        beahlib.linfo("task finished...")
 
-s = open_socket()
-try:
-    beahlib.send = socket_sender(s)
-    beahlib.send(event.Event('introduce', id=os.getenv('BEAH_TID')))
-    beahlib.ldebug("environment", environment=dict(os.environ))
-    time.sleep(10)
-    beahlib.passed("pass1")
-    time.sleep(10)
-    beahlib.warning("warn1")
-finally:
-    s.close()
+    v = sys.version_info
+    v = v[0]*100 + v[1]
+    if False:
+        s = beahlib.open_socket()
+        try:
+            beahlib.send = beahlib.socket_sender(s)
+            beahlib.send(beahlib.introduce())
+            a_test()
+        finally:
+            s.close()
+    elif v < 205 or True:
+        s = SocketSender()
+        try:
+            s.__enter__()
+            a_test()
+        finally:
+            s.__exit__(*sys.exc_info())
+    else:
+        pass
+        ## Following is left in as an example, but it will break loading file in python < 2.5
+        #with SocketSender():
+        #    a_test()
 
