@@ -373,6 +373,11 @@ class TaskSearch(Search):
     def __init__(self,task):
         self.queri = task
 
+class DistroSearch(Search):
+    searh_table = []
+    def __init__(self,distro):
+        self.queri = distro
+
 class ActivitySearch(Search):
     search_table = [] 
     def __init__(self,activity):
@@ -759,6 +764,19 @@ class Task(SystemObject):
                           'Name' : MyColumn(col_type='string', column=model.Task.name),
                           'Description' : MyColumn(col_type='string', column=model.Task.description),
                           'Version' : MyColumn(col_type='string', column=model.Task.version),
+                         }
+
+class Distro(SystemObject):
+    search = DistroSearch
+    search_values_dict = { 'Virt' : ['True','False'] }
+    searchable_columns = {
+                            'Name' : MyColumn(col_type='string',column=model.Distro.name),
+                            'InstallName' : MyColumn(col_type='string',column=model.Distro.install_name),
+                            'OSMajor' : MyColumn(col_type='string',column=model.OSMajor.osmajor,relations=['osversion','osmajor']),
+                            'Arch' : MyColumn(col_type='string',column=model.Arch.arch,relations='arch'),
+                            'Virt' : MyColumn(col_type='boolean',column=model.Distro.virt),
+                            'Method' : MyColumn(col_type='string',column=model.Distro.method),
+                            'Breed' : MyColumn(col_type='string',column=model.Distro.breed),
                          }
 
        

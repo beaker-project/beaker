@@ -416,7 +416,7 @@ class Root(RPCRoot):
                            enable_custom_columns = True,
                            extra_selects = [ { 'name': 'keyvalue', 'column':'key/value','display':'none' , 'pos' : 2,'callback':url('/get_operators_keyvalue') }], 
                            table=search_utility.System.search.create_search_table([{search_utility.System:{'all':[]}},
-										   {search_utility.Cpu:{'all':[]}},
+                                                                                   {search_utility.Cpu:{'all':[]}},
                                                                                    {search_utility.Device:{'all':[]}},
                                                                                    {search_utility.Key:{'all':[]}} ] ),
                            search_controller=url("/get_search_options"),
@@ -460,6 +460,13 @@ class Root(RPCRoot):
         return_dict = {}
         return_dict['keyvals'] = Key.get_all_keys()
         return return_dict
+
+    @expose(format='json')
+    def get_search_options_distros(self,table_field,**kw): 
+        field = table_field
+        search = search_utility.Distro.search.search_on(field) 
+        col_type = search_utility.Distro.search.field_type(field)
+        return self.get_search_options_worker(search,col_type)
 
     @expose(format='json')
     def get_search_options_recipe(self,table_field,**kw): 
@@ -618,7 +625,7 @@ class Root(RPCRoot):
     @expose(template='bkr.server.templates.grid')
     @identity.require(identity.not_anonymous())
     @paginate('list',default_order='fqdn',limit=20,allow_limit_override=True)
-    def free(self, *args, **kw):
+    def free(self, *args, **kw): 
         return self.systems(systems = System.free(identity.current.user), *args, **kw)
 
     @expose(template='bkr.server.templates.grid')
