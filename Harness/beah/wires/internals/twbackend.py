@@ -43,6 +43,9 @@ class BackendFactory(ReconnectingClientFactory):
             byef(evt)
         backend.proc_evt_bye = proc_evt_bye
         self.controller_protocol = controller_protocol
+        # set up ReconnectingClientFactory:
+        # we do not want test killed by watchdog. repeat at least every 120s.
+        self.maxDelay = 120
 
     def linfo(self, fmt, *args, **kwargs):
         l = [self.__class__.__name__]
