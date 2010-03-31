@@ -3105,10 +3105,25 @@ class Recipe(TaskBase):
             recipe.appendChild(roles)
         repos = self.doc.createElement("repos")
         if not clone:
-            repo = self.doc.createElement("repo")
-            repo.setAttribute("name", "beaker-tasks")
-            repo.setAttribute("url", "http://%s/rpms" % get("servername", socket.gethostname()))
-            repos.appendChild(repo)
+            servername = get("servername",socket.gethostname())
+            harnesspath = get("basepath.harness", "/var/www/beaker/harness")
+            if os.path.exists("%s/%s/%s" % (harnesspath, 
+                                            self.distro.osversion.osmajor,
+                                            self.distro.arch)):
+                hrepo = self.doc.createElement("repo")
+                hrepo.setAttribute("name", "beaker-harness")
+                hrepo.setAttribute("url", "http://%s/harnes/%s/%s" % (servername,
+                                                                      self.distro.osversion.osmajor,
+                                                                      self.distro.arch))
+                repos.appendChild(hrepo)
+            nrepo = self.doc.createElement("repo")
+            nrepo.setAttribute("name", "beaker-rhts")
+            nrepo.setAttribute("url", "http://%s/harness/noarch" % servername)
+            repos.appendChild(nrepo)
+            trepo = self.doc.createElement("repo")
+            trepo.setAttribute("name", "beaker-tasks")
+            trepo.setAttribute("url", "http://%s/rpms" % servername)
+            repos.appendChild(trepo)
         for repo in self.repos:
             repos.appendChild(repo.to_xml())
         recipe.appendChild(repos)

@@ -6,7 +6,7 @@
 %endif
 
 Name:           beaker
-Version:        0.5.14
+Version:        0.5.15
 Release:        0%{?timestamp}%{?branch}%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
@@ -180,6 +180,8 @@ fi
 %{_sysconfdir}/init.d/%{name}-watchdog
 
 %changelog
+* Wed Mar 31 2010 Bill Peck <bpeck@redhat.com> - 0.5.15-0
+- move harness repos to server from lab-controller.
 * Wed Mar 31 2010 Bill Peck <bpeck@redhat.com> - 0.5.14-0
 - update rhts-post snippet to only enable our repos.
 * Tue Mar 30 2010 Bill Peck <bpeck@redhat.com> - 0.5.13-1
