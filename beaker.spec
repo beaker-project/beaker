@@ -28,6 +28,7 @@ Requires:       python
 Requires:       kobo-client
 Requires:	python-setuptools
 Requires:	beaker
+Requires:       python-krbV
 
 
 %package server
@@ -61,6 +62,7 @@ Requires:	beaker
 Requires:	kobo-client
 Requires:	python-setuptools
 Requires:	python-xmltramp
+Requires:       python-krbV
 
 %description
 Filesystem layout for beaker
