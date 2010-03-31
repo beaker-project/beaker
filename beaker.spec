@@ -6,8 +6,8 @@
 %endif
 
 Name:           beaker
-Version:        0.4.90
-Release:        0%{?timestamp}%{?branch}%{?dist}
+Version:        0.4.91
+Release:        1%{?timestamp}%{?branch}%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -146,6 +146,8 @@ ln -s Fedora.ks $RPM_BUILD_ROOT/var/lib/cobbler/kickstarts/Fedoradevelopment.ks
 /usr/share/man/man1/beakerlib*
 
 %changelog
+* Wed Mar 31 2010 Bill Peck <bpeck@redhat.com> - 0.4.91-1
+- in rhts_post snippet disable all repos but the ones we added ourselves.
 * Mon Mar 29 2010 Bill Peck <bpeck@redhat.com> - 0.4.90-0
 - Include Gozen's fix for anamon traceback.
 - Fix logging error in CSV import.
