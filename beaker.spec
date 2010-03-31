@@ -7,7 +7,7 @@
 
 Name:           beaker
 Version:        0.5.15
-Release:        0%{?timestamp}%{?branch}%{?dist}
+Release:        7%{?timestamp}%{?branch}%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -180,7 +180,11 @@ fi
 %{_sysconfdir}/init.d/%{name}-watchdog
 
 %changelog
-* Wed Mar 31 2010 Bill Peck <bpeck@redhat.com> - 0.5.15-0
+* Thu Apr 01 2010 Bill Peck <bpeck@redhat.com> - 0.5.15-7
+- fix apache conf for beaker-server
+- pass repos to cobbler, separate harness_repos from custom_repos
+- allow ks_meta to be passed in from recipe
+* Wed Mar 31 2010 Bill Peck <bpeck@redhat.com> - 0.5.15-1
 - move harness repos to server from lab-controller.
 * Wed Mar 31 2010 Bill Peck <bpeck@redhat.com> - 0.5.14-0
 - update rhts-post snippet to only enable our repos.

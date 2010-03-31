@@ -29,6 +29,7 @@ from bkr.server import mail
 import traceback
 from BasicAuthTransport import BasicAuthTransport
 import xmlrpclib
+import os
 
 from turbogears import identity
 
@@ -3069,6 +3070,30 @@ class Recipe(TaskBase):
                                          self.id)
     filepath = property(filepath)
 
+    def harness_repos(self):
+        """
+        return repos needed for harness and task install
+        """
+        repos = []
+        if self.distro:
+            servername = get("servername",socket.gethostname())
+            harnesspath = get("basepath.harness", "/var/www/beaker/harness")
+            if os.path.exists("%s/%s/%s" % (harnesspath, 
+                                            self.distro.osversion.osmajor,
+                                            self.distro.arch)):
+                repo = dict(name = "beaker-harness",
+                             url  = "http://%s/harness/%s/%s" % (servername,
+                                                                      self.distro.osversion.osmajor,
+                                                                      self.distro.arch))
+                repos.append(repo)
+            repo = dict(name = "beaker-rhts",
+                        url  = "http://%s/harness/noarch" % servername)
+            repos.append(repo)
+            repo = dict(name = "beaker-tasks",
+                        url  = "http://%s/rpms" % servername)
+            repos.append(repo)
+        return repos
+
     def to_xml(self, recipe, clone=False, from_recipeset=False, from_machine=False):
         if not clone:
             recipe.setAttribute("id", "%s" % self.id)
@@ -3104,26 +3129,6 @@ class Recipe(TaskBase):
                 roles.appendChild(role)
             recipe.appendChild(roles)
         repos = self.doc.createElement("repos")
-        if not clone:
-            servername = get("servername",socket.gethostname())
-            harnesspath = get("basepath.harness", "/var/www/beaker/harness")
-            if os.path.exists("%s/%s/%s" % (harnesspath, 
-                                            self.distro.osversion.osmajor,
-                                            self.distro.arch)):
-                hrepo = self.doc.createElement("repo")
-                hrepo.setAttribute("name", "beaker-harness")
-                hrepo.setAttribute("url", "http://%s/harnes/%s/%s" % (servername,
-                                                                      self.distro.osversion.osmajor,
-                                                                      self.distro.arch))
-                repos.appendChild(hrepo)
-            nrepo = self.doc.createElement("repo")
-            nrepo.setAttribute("name", "beaker-rhts")
-            nrepo.setAttribute("url", "http://%s/harness/noarch" % servername)
-            repos.appendChild(nrepo)
-            trepo = self.doc.createElement("repo")
-            trepo.setAttribute("name", "beaker-tasks")
-            trepo.setAttribute("url", "http://%s/rpms" % servername)
-            repos.appendChild(trepo)
         for repo in self.repos:
             repos.appendChild(repo.to_xml())
         recipe.appendChild(repos)

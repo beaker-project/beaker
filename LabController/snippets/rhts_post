@@ -61,13 +61,48 @@ cat << EOF >> /etc/yum.repos.d/distro.repo
 #set $i = 0
 #for $repo in $getVar('tree_repos','').split(':')
 #set $i = $i + 1
-[distro$i]
-name=distro$i
+[beaker-distro$i]
+name=beaker-distro$i
 baseurl=http://$server/distros$repo
 enabled=1
 gpgcheck=0
 #end for
 EOF
+#end if
+
+# Add Harness Repos
+#if $getVar('harnessrepos','') != ''
+#for $repo in $getVar('harnessrepos','').split('|')
+#set (reponame, repourl) = $repo.split(',', 1)
+cat << EOF >>/etc/yum.repos.d/${reponame}.repo
+[$reponame]
+name=$reponame
+baseurl=$repourl
+enabled=1
+gpgcheck=0
+EOF
+#end for
+#end if
+
+# Add Custom Repos
+#if $getVar('customrepos','') != ''
+#set $i = 0
+#for $repo in $getVar('customrepos','').split('|')
+#set $i = $i + 1
+#if $repo.find(",") != -1
+#set (reponame, repourl) = $repo.split(',', 1)
+#else
+#set $reponame = "customrepo%s" % i
+#set $repourl = $repo
+#end if
+cat << EOF >>/etc/yum.repos.d/${reponame}.repo
+[$reponame]
+name=$reponame
+baseurl=$repourl
+enabled=1
+gpgcheck=0
+EOF
+#end for
 #end if
 
 #if $getVar('rhts_server','') != ''
@@ -78,23 +113,7 @@ name=rhts tests $testrepo
 baseurl=http://$rhts_server/rpms/$testrepo/noarch/noarch
 enabled=1
 gpgcheck=0
-
 EOF
-
-# Add Custom Repos
-#if $getVar('customrepos','') != ''
-cat << EOF >>/etc/yum.repos.d/rhts-custom.repo
-#set $i = 0
-#for $repo in $getVar('customrepos','').split('|')
-#set $i = $i + 1
-[customrepo$i]
-name=customrepo$i
-baseurl=$repo
-enabled=1
-gpgcheck=0
-#end for
-EOF
-#end if
 
 # Install RHTS RPMS
 yum -y --disablerepo=* --enablerepo=rhts-noarch \
@@ -136,7 +155,6 @@ EOF
 chkconfig --add beah-srv
 chkconfig --add beah-beaker-backend
 chkconfig --add beah-fwd-backend
-#end if
 
 #Add test user account
 useradd --password '\$6\$oIW3o2Mr\$XbWZKaM7nA.cQqudfDJScupXOia5h1u517t6Htx/Q/MgXm82Pc/OcytatTeI4ULNWOMJzvpCigWiL4xKP9PX4.' test
