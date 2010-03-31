@@ -3993,6 +3993,8 @@ class RecipeTaskResult(TaskBase):
             short_path = '.%s' % short_path
         elif not short_path.startswith('.'):
             short_path = './%s' % short_path
+        if self.path == '/' and self.log:
+            short_path = self.log
         return short_path
 
     short_path = property(short_path)
@@ -4084,13 +4086,21 @@ class TaskType(MappedObject):
     A task can be classified into serveral task types which can be used to
     select tasks for batch runs
     """
-    pass
+
+    @classmethod
+    def by_name(cls, type):
+        return cls.query.filter_by(type=type).one()
 
 
 class TaskPackage(MappedObject):
     """
     A list of packages that a tasks should be run for.
     """
+
+    @classmethod
+    def by_name(cls, package):
+        return cls.query.filter_by(package=package).one()
+
     def __repr__(self):
         return self.package
 

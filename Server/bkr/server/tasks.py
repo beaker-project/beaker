@@ -69,6 +69,55 @@ class Tasks(RPCRoot):
         )
 
     @cherrypy.expose
+    def filter(self, install_name, filter=None):
+        """
+        XMLRPC method to query all tasks that apply to this distro
+        """
+        try:
+            distro = Distro.by_install_name(install_name)
+        except InvalidRequestError, err:
+            raise BX(_('Invalid Distro: %s ' % install_name))   
+        
+        tasks = distro.tasks()
+
+        # Filter by packages if specified
+        # apache, kernel, mysql, etc..
+        if 'packages' in filter and filter['packages']:
+            # if not a list, make it into a list.
+            if isinstance(filter['packages'], str):
+                filter['packages'] = [filter['packages']]
+            tasks = tasks.join('runfor')
+            or_runfor = []
+            for package in filter['packages']:
+                try:
+                    taskpackage = TaskPackage.by_name(package)
+                except InvalidRequestError, err:
+                    # Should we fail on invalid package?
+                    raise BX(_('Invalid Package : %s' % package))
+                or_runfor.append(TaskPackage.id==taskpackage.id)
+            tasks = tasks.filter(or_(*or_runfor))
+
+        # Filter by type if specified
+        # Tier1, Regression, KernelTier1, etc..
+        if 'types' in filter and filter['types']:
+            # if not a list, make it into a list.
+            if isinstance(filter['types'], str):
+                filter['types'] = [filter['types']]
+            tasks = tasks.join('types')
+            or_types = []
+            for type in filter['types']:
+                try:
+                    tasktype = TaskType.by_name(type)
+                except InvalidRequestError, err:
+                    raise BX(_('Invalid Task Type: %s' % type))
+                or_types.append(TaskType.id==tasktype.id)
+            tasks = tasks.filter(or_(*or_types))
+
+        # Return all task names
+        return [task.name for task in tasks]
+
+
+    @cherrypy.expose
     def upload(self, task_rpm_name, task_rpm_data):
         """
         XMLRPC method to upload task rpm package
@@ -320,7 +369,7 @@ class Tasks(RPCRoot):
 
         if kw.get("tasksearch"):
             searchvalue = kw['tasksearch']  
-            tasks_found = self._task_search(task,**kw)
+            tasks_found = self._task_search(task,**kw) 
             return_dict.update({'tasks_found':tasks_found})               
             return_dict.update({'searchvalue':searchvalue})
         return return_dict

@@ -97,8 +97,12 @@ EOF
 #end if
 
 # Install RHTS RPMS
-yum -y install rhts-test-env-lab rhts-legacy
-yum -y install yum-utils
+yum -y --disablerepo=* --enablerepo=rhts-noarch \
+                       --enablerepo=distro* \
+                       --enablerepo=customrepo* install rhts-test-env-lab rhts-legacy
+yum -y --disablerepo=* --enablerepo=rhts-noarch \
+                       --enablerepo=distro* \
+                       --enablerepo=customrepo*  install yum-utils
 
 # Get the RHTS job
 #if $getVar('runtest_url','') != ''
