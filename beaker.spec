@@ -7,7 +7,7 @@
 
 Name:           beaker
 Version:        0.5.13
-Release:        0%{?timestamp}%{?branch}%{?dist}
+Release:        1%{?timestamp}%{?branch}%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -178,7 +178,7 @@ fi
 %{_sysconfdir}/init.d/%{name}-watchdog
 
 %changelog
-* Tue Mar 30 2010 Bill Peck <bpeck@redhat.com> - 0.5.13-0
+* Tue Mar 30 2010 Bill Peck <bpeck@redhat.com> - 0.5.13-1
 - removed uneeded task_list code
 - default task result to pass when no result recorded, this is for css display.
 - display log summary when task.path == /
