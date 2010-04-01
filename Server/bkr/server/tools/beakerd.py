@@ -358,6 +358,13 @@ def scheduled_recipes(*args):
                                                                          recipe.id,
                                                                             e))
                 ks_meta = "packages=%s" % ":".join([p.package for p in recipe.packages])
+                harnessrepos="|".join(["%s,%s" % (r["name"], r["url"]) for r in recipe.harness_repos()])
+                customrepos= "|".join(["%s,%s" % (r.name, r.url) for r in recipe.repos])
+                ks_meta = "%s customrepos=%s harnessrepos=%s" % (ks_meta, customrepos, harnessrepos)
+                # If ks_meta is defined from recipe pass it along.
+                # add it last to allow for overriding previous settings.
+                if recipe.ks_meta:
+                    ks_meta = "%s %s" % ( ks_meta, recipe.ks_meta)
                 try:
                     recipe.system.action_auto_provision(recipe.distro,
                                                      ks_meta,

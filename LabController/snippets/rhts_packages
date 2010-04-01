@@ -8,6 +8,8 @@ libxml2-python
 ntp
 expect
 pyOpenSSL
+beah
+koan
 ## If packages variable is set add additional packages to this install
 ## packages=httpd:selinux:kernel
 #if $getVar('packages', '') != ''
