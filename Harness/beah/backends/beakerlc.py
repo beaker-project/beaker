@@ -79,7 +79,7 @@ class RHTSTask(ShExecutable):
 cat >/tmp/etc/yum.repos.d/beaker-tests.repo <<REPO_END
 %s
 REPO_END
-yum -y --disablerepo=* %s install "$TESTRPMNAME"
+yum -y --disablerepo=* --enablerepo=beaker-* install "$TESTRPMNAME"
 if ! rpm -q "$TESTRPMNAME"; then
     echo "ERROR: $TESTRPMNAME was not installed." >&2
     exit 1
@@ -89,7 +89,7 @@ touch /mnt/tests/runtests.sh
 chmod a+x /mnt/tests/runtests.sh
 beah-rhts-task
 #%s -m beah.tasks.rhts_xmlrpc
-""" % (self.__repof, ' '.join(['--enablerepo=%s' % repo for repo in self.__repos]),
+""" % (self.__repof,
                 sys.executable))
 
 
