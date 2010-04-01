@@ -76,7 +76,7 @@ class RHTSTask(ShExecutable):
 # THIS SHOULD PREVENT rhts-test-runner.sh to install rpm from default rhts
 # repository and use repositories defined in recipe
 #mkdir -p $TESTPATH
-cat >/etc/yum.repos.d/beaker-tests.repo <<REPO_END
+cat >/tmp/etc/yum.repos.d/beaker-tests.repo <<REPO_END
 %s
 REPO_END
 yum -y --disablerepo=* %s install "$TESTRPMNAME"
