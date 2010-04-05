@@ -275,7 +275,7 @@ class Tasks(RPCRoot):
         if task.rpm == raw_taskinfo['hdr']['rpm']:
             return task
         # Keep N-1 versions of task rpms.  This allows currently running tasks to finish.
-        if task.oldrpm and os.path.exists("%s/%s" % (self.task_dir, task.oldrpm):
+        if task.oldrpm and os.path.exists("%s/%s" % (self.task_dir, task.oldrpm)):
             try:
                 os.unlink("%s/%s" % (self.task_dir, task.oldrpm))
             except OSError, err:
