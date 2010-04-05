@@ -279,7 +279,7 @@ class Tasks(RPCRoot):
             try:
                 os.unlink("%s/%s" % (self.task_dir, task.oldrpm))
             except OSError, err:
-                raise BX(_(err))   
+                raise BX(_("%s" % err))   
         # Current becomes old
         task.oldrpm = task.rpm
         task.rpm = raw_taskinfo['hdr']['rpm']
