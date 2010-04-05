@@ -121,6 +121,26 @@ def xml_first_node(node, tag):
             return n
     return None
 
+def role_empty(role):
+    return not role or role == 'None'
+
+def proc_role(systems, role_node):
+    for system_node in xml_get_nodes(role_node, 'system'):
+        system = xml_attr(system_node, 'value')
+        if system not in systems:
+            systems.append(system)
+
+def proc_roles(roles, roles_node):
+    for role_node in xml_get_nodes(roles_node, 'role'):
+        role = 'RECIPE_MEMBERS'
+        systems = roles.setdefault(role, [])
+        proc_role(systems, role_node)
+        role = xml_attr(role_node, 'value')
+        if role_empty(role) or role == 'RECIPE_MEMBERS':
+            continue
+        systems = roles.setdefault(role, [])
+        proc_role(systems, role_node)
+
 def parse_recipe_xml(input_xml, hostname):
 
     root = minidom.parseString(input_xml)
@@ -148,14 +168,13 @@ def parse_recipe_xml(input_xml, hostname):
             RECIPEID=xml_attr(er, 'id'),
             JOBID=xml_attr(er, 'job_id'),
             RECIPESETID=xml_attr(er, 'recipe_set_id'),
-            HOSTNAME=xml_attr(er, 'system'))
+            HOSTNAME=hostname)
 
     # The following is necessary for Virtual Workflows:
     GUEST_ATTRS = ('system', 'mac_address', 'location', 'guestargs', 'guestname')
     task_env['GUESTS'] = '|'.join([
         ';'.join([xml_attr(gr, a, '') for a in GUEST_ATTRS])
             for gr in xml_get_nodes(er, 'guestrecipe')])
-    task_env['LAB_CONTROLLER'] = config.get_conf('beah-backend').get('DEFAULT', 'COBBLER_SERVER')
 
     for job in root.getElementsByTagName('job'):
         submitter = xml_attr(job, 'owner')
@@ -172,6 +191,12 @@ def parse_recipe_xml(input_xml, hostname):
         repof += "[%s]\nname=beaker provided '%s' repo\nbaseurl=%s\nenabled=1\ngpgcheck=0\n\n" \
                 % (name, name, xml_attr(r, 'url'))
     task_env['BEAKER_REPOS']=':'.join(repos)
+
+    task_env['RECIPE_ROLE'] = xml_attr(er, 'role')
+    roles = {}
+    for roles_node in xml_get_nodes(er, 'roles'):
+        proc_roles(roles, roles_node)
+        break
 
     test_order = 0
 
@@ -203,11 +228,12 @@ def parse_recipe_xml(input_xml, hostname):
         for p in task.getElementsByTagName('param'):
             task_env[xml_attr(p, 'name')]=xml_attr(p, 'value')
 
-        for r in task.getElementsByTagName('role'):
-            role = []
-            for s in r.getElementsByTagName('system'):
-                role.append(xml_attr(s, 'value'))
-            task_env[xml_attr(r, 'value')]=' '.join(role)
+        for roles_node in xml_get_nodes(task, 'roles'):
+            proc_roles(roles, roles_node)
+            break
+
+        for role_str in roles.keys():
+            task_env[role_str]=' '.join(roles[role_str])
 
         ewd = xml_attr(task, 'avg_time')
         task_env['KILLTIME'] = ewd
@@ -438,6 +464,7 @@ class BeakerLCBackend(SerializingBackend):
             return
 
         task_id = self.task_data['task_env']['TASKID']
+        self.task_data['task_env']['LAB_CONTROLLER'] = config.get_conf('beah-backend').get('DEFAULT', 'COBBLER_SERVER')
         run_cmd, _ = self.__tasks_by_id.get(id, (None, None))
         new_cmd = not run_cmd
         if new_cmd:
