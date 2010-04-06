@@ -125,7 +125,11 @@ class Utility:
 
     @classmethod
     def get_attr(cls,c):        
-        return lambda x:getattr(cls.get_correct_system_column(x),c.lower())           
+        return lambda x:getattr(cls.get_correct_system_column(x),c.lower()) 
+
+    @classmethod
+    def system_loanedto_getter(cls):
+        return lambda x: x.loaned
           
     @classmethod
     def system_powertype_getter(cls):
