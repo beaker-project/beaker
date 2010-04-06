@@ -223,7 +223,7 @@ def queued_recipes(*args):
     recipes = Recipe.query()\
                     .join('status')\
                     .join('systems')\
-                    .join('recipeset')\
+                    .join(['recipeset','priority'])\
                     .filter(
                          or_(
                          and_(Recipe.status==TaskStatus.by_name(u'Queued'),
@@ -236,6 +236,10 @@ def queued_recipes(*args):
                              )
                             )
                            )
+    # Order recipes by priority.
+    # FIXME Add secondary order by number of matched systems.
+    if True:
+        recipes = recipes.order_by(TaskPriority.id.desc())
     if not recipes.count():
         return False
     log.debug("Entering queued_recipes routine")
@@ -243,6 +247,15 @@ def queued_recipes(*args):
         session.begin()
         try:
             systems = recipe.dyn_systems.filter(System.user==None)
+            # Order systems by owner, then Group, finally shared for everyone.
+            # FIXME Make this configurable, so that a user can specify their scheduling
+            # preference from the job.
+            # <recipe><scheduler method='random|fair|owner|group'/></recipe>
+            if True:
+                user = recipe.recipeset.job.owner
+                systems = systems.order_by(case([(System.owner==user, 1),
+                          (System.owner!=user and Group.systems==None, 2)],
+                              else_=3))
             if recipe.recipeset.lab_controller:
                 # First recipe of a recipeSet determines the lab_controller
                 systems = systems.filter(
@@ -345,6 +358,13 @@ def scheduled_recipes(*args):
                                                                          recipe.id,
                                                                             e))
                 ks_meta = "packages=%s" % ":".join([p.package for p in recipe.packages])
+                harnessrepos="|".join(["%s,%s" % (r["name"], r["url"]) for r in recipe.harness_repos()])
+                customrepos= "|".join(["%s,%s" % (r.name, r.url) for r in recipe.repos])
+                ks_meta = "%s customrepos=%s harnessrepos=%s" % (ks_meta, customrepos, harnessrepos)
+                # If ks_meta is defined from recipe pass it along.
+                # add it last to allow for overriding previous settings.
+                if recipe.ks_meta:
+                    ks_meta = "%s %s" % ( ks_meta, recipe.ks_meta)
                 try:
                     recipe.system.action_auto_provision(recipe.distro,
                                                      ks_meta,

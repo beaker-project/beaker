@@ -17,7 +17,6 @@ from bkr.server.distro import Distros
 from bkr.server.activity import Activities
 from bkr.server.reports import Reports
 from bkr.server.job_matrix import JobMatrix
-from bkr.server.task_list import TaskList
 from bkr.server.reserve_workflow import ReserveWorkflow
 from bkr.server.widgets import myPaginateDataGrid
 from bkr.server.widgets import PowerTypeForm
@@ -379,7 +378,6 @@ class Root(RPCRoot):
     taskactions = TaskActions()
     reports = Reports()
     matrix = JobMatrix()
-    tasklist = TaskList()  
     reserveworkflow = ReserveWorkflow()
     
     id         = widgets.HiddenField(name='id')

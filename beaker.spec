@@ -1,13 +1,13 @@
-%{!?python_sitelib: %define python_sitelib %(%{__python} -c "from distutils.sysconfig import get_python_lib; print get_python_lib()")}
-%{!?pyver: %define pyver %(%{__python} -c "import sys ; print sys.version[:3]")}
-%{!?branch: %define branch %(echo "$Format:%d$"| awk -F/ '{print $NF}'| sed -e 's/[()$]//g' | awk '{print "." $NF}' | grep -v master)}
+%{!?python_sitelib: %global python_sitelib %(%{__python} -c "from distutils.sysconfig import get_python_lib; print get_python_lib()")}
+%{!?pyver: %global pyver %(%{__python} -c "import sys ; print sys.version[:3]")}
+%{!?branch: %global branch %(echo "$Format:%d$"| awk -F/ '{print $NF}'| sed -e 's/[()$]//g' | awk '{print "." $NF}' | grep -v master)}
 %if "0%{branch}" != "0"
-%{!?timestamp: %define timestamp $Format:.%at$}
+%{!?timestamp: %global timestamp $Format:.%at$}
 %endif
 
 Name:           beaker
-Version:        0.5.8
-Release:        1%{?timestamp}%{?branch}%{?dist}
+Version:        0.5.17
+Release:        2%{?timestamp}%{?branch}%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -17,7 +17,7 @@ BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 BuildArch:      noarch
 BuildRequires:  python-setuptools
 BuildRequires:  python-setuptools-devel
-BuildRequires:  python-devel
+BuildRequires:  python2-devel
 BuildRequires:  TurboGears
 
 
@@ -28,6 +28,7 @@ Requires:       python
 Requires:       kobo-client
 Requires:	python-setuptools
 Requires:	beaker
+Requires:       python-krbV
 
 
 %package server
@@ -61,6 +62,7 @@ Requires:	beaker
 Requires:	kobo-client
 Requires:	python-setuptools
 Requires:	python-xmltramp
+Requires:       python-krbV
 
 %description
 Filesystem layout for beaker
@@ -88,8 +90,8 @@ DESTDIR=$RPM_BUILD_ROOT make
 
 %install
 DESTDIR=$RPM_BUILD_ROOT make install
-ln -s RedHatEnterpriseLinux6.ks $RPM_BUILD_ROOT/var/lib/cobbler/kickstarts/redhat6.ks
-ln -s Fedora.ks $RPM_BUILD_ROOT/var/lib/cobbler/kickstarts/Fedoradevelopment.ks
+ln -s RedHatEnterpriseLinux6.ks $RPM_BUILD_ROOT/%{_var}/lib/cobbler/kickstarts/redhat6.ks
+ln -s Fedora.ks $RPM_BUILD_ROOT/%{_var}/lib/cobbler/kickstarts/Fedoradevelopment.ks
 
 %clean
 %{__rm} -rf %{buildroot}
@@ -169,15 +171,48 @@ fi
 %doc LabController/README
 %config(noreplace) %{_sysconfdir}/httpd/conf.d/%{name}-lab-controller.conf
 %{_sysconfdir}/cron.daily/expire_distros
-/var/lib/cobbler/triggers/sync/post/osversion.trigger
-/var/lib/cobbler/snippets/*
-/var/lib/cobbler/kickstarts/*
-/var/www/beaker/*
+%{_var}/lib/cobbler/triggers/sync/post/osversion.trigger
+%{_var}/lib/cobbler/snippets/*
+%{_var}/lib/cobbler/kickstarts/*
+%{_var}/www/beaker/*
 %attr(-,apache,root) %dir %{_localstatedir}/log/%{name}
 %{_sysconfdir}/init.d/%{name}-proxy
 %{_sysconfdir}/init.d/%{name}-watchdog
 
 %changelog
+* Tue Apr 06 2010 Bill Peck <bpeck@redhat.com> - 0.5.17-2
+- fixed bz 570986, "TypeError: string indices must be integers" in expire_distros
+- fixed task_stop(cancel or abort) returning None.
+- fixed child.filter() to not die on unrecognized tags.
+* Mon Apr 05 2010 Bill Peck <bpeck@redhat.com> - 0.5.16-2
+- make sure old task rpm exists before trying to remove it.
+- overwrite repos, don't append in rhts_post snippet.
+* Thu Apr 01 2010 Bill Peck <bpeck@redhat.com> - 0.5.15-8
+- fix apache conf for beaker-server
+- pass repos to cobbler, separate harness_repos from custom_repos
+- allow ks_meta to be passed in from recipe
+* Wed Mar 31 2010 Bill Peck <bpeck@redhat.com> - 0.5.15-1
+- move harness repos to server from lab-controller.
+* Wed Mar 31 2010 Bill Peck <bpeck@redhat.com> - 0.5.14-0
+- update rhts-post snippet to only enable our repos.
+* Tue Mar 30 2010 Bill Peck <bpeck@redhat.com> - 0.5.13-1
+- removed uneeded task_list code
+- default task result to pass when no result recorded, this is for css display.
+- display log summary when task.path == /
+* Mon Mar 29 2010 Bill Peck <bpeck@redhat.com> - 0.5.12-1
+- merged bz574179, arch and distro search in tasks.
+- added stdin support for bkr job-submit
+- minor spec file changes for fedora package review.
+- added xmlrpc method to tasks for getting list of all tasks
+- added command module to list tasks
+* Fri Mar 26 2010 Bill Peck <bpeck@redhat.com> - 0.5.11-0
+- fix status_watchdog to return correct seconds if remaining time is over a day.
+* Thu Mar 25 2010 Bill Peck <bpeck@redhat.com> - 0.5.10-0
+- Added missing code to deal with priorities.
+- Added missing code to order available systems by Owner,Group, then shared.
+- fixed extend_watchdog to return status_watchdog()
+- added status_watchdog method to return the number of seconds remaining on watchdog.
+- added missing user variable for system sorting.
 * Wed Mar 24 2010 Bill Peck <bpeck@redhat.com> - 0.5.8-1
 - removed -lib subpackage. beakerlib is now its own project.
 - fixed extend_watchdog to not return None.

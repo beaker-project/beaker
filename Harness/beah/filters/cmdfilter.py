@@ -92,9 +92,19 @@ class CmdFilter(object):
             for pair in opts.variables:
                 key, value = self.__varre.match(pair).group(1, 2)
                 variables[key] = value
-        return command.run(os.path.abspath(args[0]), name=opts.name or args[0],
-                env=variables, args=args[1:])
+        if cmd == 'runthis':
+            f = open(os.path.abspath(args[0]), 'r')
+            try:
+                script = f.read()
+                return command.run_this(script, name=opts.name or args[0],
+                        env=variables, args=args[1:])
+            finally:
+                f.close()
+        else:
+            return command.run(os.path.abspath(args[0]), name=opts.name or args[0],
+                    env=variables, args=args[1:])
     proc_cmd_r = proc_cmd_run
+    proc_cmd_runthis = proc_cmd_run
 
     def proc_line(self, data):
         args = shlex.split(data, True)
@@ -114,6 +124,9 @@ run [OPTS] TASK [ARGS]\nr TASK\trun a task. TASK is an executable.
 \tOptions:
 \t-n --name=NAME -- task name
 \t-D --define VARIABLE=VALUE -- define environment variable VARIABLE.
+runthis [OPTS] TASK [ARGS]\n\trun a task. TASK is an executable (a script).
+\tThis command takes same options as run but sends file content as a string.
+\tUseful to run a script on a remote machine.
 kill\tkill a controller.
 dump\tinstruct controller to print a diagnostics message on stdout.
 quit\nq\tclose this backend.

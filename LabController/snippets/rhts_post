@@ -57,17 +57,52 @@ popd
 
 # Add Distro Repos
 #if $getVar('tree_repos','') != ''
-cat << EOF >> /etc/yum.repos.d/distro.repo
+cat << EOF > /etc/yum.repos.d/distro.repo
 #set $i = 0
 #for $repo in $getVar('tree_repos','').split(':')
 #set $i = $i + 1
-[distro$i]
-name=distro$i
+[beaker-distro$i]
+name=beaker-distro$i
 baseurl=http://$server/distros$repo
 enabled=1
 gpgcheck=0
 #end for
 EOF
+#end if
+
+# Add Harness Repos
+#if $getVar('harnessrepos','') != ''
+#for $repo in $getVar('harnessrepos','').split('|')
+#set (reponame, repourl) = $repo.split(',', 1)
+cat << EOF >/etc/yum.repos.d/${reponame}.repo
+[$reponame]
+name=$reponame
+baseurl=$repourl
+enabled=1
+gpgcheck=0
+EOF
+#end for
+#end if
+
+# Add Custom Repos
+#if $getVar('customrepos','') != ''
+#set $i = 0
+#for $repo in $getVar('customrepos','').split('|')
+#set $i = $i + 1
+#if $repo.find(",") != -1
+#set (reponame, repourl) = $repo.split(',', 1)
+#else
+#set $reponame = "customrepo%s" % i
+#set $repourl = $repo
+#end if
+cat << EOF >/etc/yum.repos.d/${reponame}.repo
+[$reponame]
+name=$reponame
+baseurl=$repourl
+enabled=1
+gpgcheck=0
+EOF
+#end for
 #end if
 
 #if $getVar('rhts_server','') != ''
@@ -78,27 +113,15 @@ name=rhts tests $testrepo
 baseurl=http://$rhts_server/rpms/$testrepo/noarch/noarch
 enabled=1
 gpgcheck=0
-
 EOF
-
-# Add Custom Repos
-#if $getVar('customrepos','') != ''
-cat << EOF >>/etc/yum.repos.d/rhts-custom.repo
-#set $i = 0
-#for $repo in $getVar('customrepos','').split('|')
-#set $i = $i + 1
-[customrepo$i]
-name=customrepo$i
-baseurl=$repo
-enabled=1
-gpgcheck=0
-#end for
-EOF
-#end if
 
 # Install RHTS RPMS
-yum -y install rhts-test-env-lab rhts-legacy
-yum -y install yum-utils
+yum -y --disablerepo=* --enablerepo=rhts-noarch \
+                       --enablerepo=distro* \
+                       --enablerepo=customrepo* install rhts-test-env-lab rhts-legacy
+yum -y --disablerepo=* --enablerepo=rhts-noarch \
+                       --enablerepo=distro* \
+                       --enablerepo=customrepo*  install yum-utils
 
 # Get the RHTS job
 #if $getVar('runtest_url','') != ''
@@ -107,35 +130,14 @@ wget -O /mnt/tests/runtests.sh http://$rhts_server/testlogs/$runtest_url
 wget -O /mnt/tests/runtests.sh http://$rhts_server/testlogs/recipes/$recipeid/runtests.sh
 #end if
 chmod 755 /mnt/tests/runtests.sh
-#else
-
-# If not rhts then 
-# install beaker harness
-cat << EOF > /etc/yum.repos.d/beaker-harness.repo
-[beaker-harness]
-name=Beaker Harness
-baseurl=http://$server/harness/noarch
-enabled=1
-gpgcheck=0
-EOF
-
-# RHEL3 - RHEL5 need additional packages
-#if $os_version in ['rhel3','rhel4','rhel5','rhel6']
-cat << EOF > /etc/yum.repos.d/beaker-support.repo
-[beaker-support]
-name=Beaker Support
-baseurl=http://$server/harness/$os_version/$arch
-enabled=1
-gpgcheck=0
-EOF
 #end if
 
 # Install old rhts commands
-yum -y install rhts-test-env-lab rhts-legacy
+yum -y --disablerepo=* --enablerepo=beaker-* install rhts-test-env-lab rhts-legacy
 ## If koan is available install it.  This allows for easy re-installs
-yum -y install koan
+yum -y --disablerepo=* --enablerepo=beaker-* install koan
 # Install new harness
-yum -y install beah
+yum -y --disablerepo=* --enablerepo=beaker-* install beah
 cat << EOF > /etc/beah_beaker.conf
 [DEFAULT]
 # LAB_CONTROLLER: URI of Beaker's XML-RPC handler
@@ -153,7 +155,6 @@ EOF
 chkconfig --add beah-srv
 chkconfig --add beah-beaker-backend
 chkconfig --add beah-fwd-backend
-#end if
 
 #Add test user account
 useradd --password '\$6\$oIW3o2Mr\$XbWZKaM7nA.cQqudfDJScupXOia5h1u517t6Htx/Q/MgXm82Pc/OcytatTeI4ULNWOMJzvpCigWiL4xKP9PX4.' test

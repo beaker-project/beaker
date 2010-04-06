@@ -126,6 +126,18 @@ class RecipeTasks(RPCRoot):
 
     @cherrypy.expose
     @identity.require(identity.not_anonymous())
+    def watchdog(self, task_id):
+        """
+        Returns number of seconds left on task_id watchdog, or False if it doesn't exist.
+        """
+        try:
+            task = RecipeTask.by_id(task_id)
+        except InvalidRequestError:
+            raise BX(_('Invalid task ID: %s' % task_id))
+        return task.status_watchdog()
+
+    @cherrypy.expose
+    @identity.require(identity.not_anonymous())
     def stop(self, task_id, stop_type, msg=None):
         """
         Set task status to Completed

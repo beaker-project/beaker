@@ -309,8 +309,15 @@ def beah_defaults():
             'CONTROLLER.LOG_FILE_NAME':'%(LOG_PATH)s/%(NAME)s.log',
             'BACKEND.INTERFACE':'',
             'BACKEND.PORT':'12432',
+            'BACKEND.PORT_OPT':'False',
             'TASK.INTERFACE':'localhost',
             'TASK.PORT':'12434'})
+    if os.name == 'posix':
+        # using PORT as ID, not NAME. NAME could (and should) be different for
+        # each backend as well as for the controller.
+        d['BACKEND.SOCKET'] = '%(VAR_ROOT)s/backend%(PORT)s.socket'
+        d['BACKEND.SOCKET_OPT'] = 'False'
+        d['TASK.SOCKET'] = '%(VAR_ROOT)s/task%(PORT)s.socket'
     return d
 
 
@@ -451,11 +458,25 @@ def beah_be_opt(opt, conf, kwargs):
         # FIXME!!! check value
         if kwargs['type'] == 'beah':
             conf['BACKEND.PORT'] = value
+            conf['BACKEND.PORT_OPT'] = 'True'
         else:
             conf['PORT'] = value
+            conf['PORT_OPT'] = 'True'
     opt.add_option("-p", "--port", action="callback", callback=port_cb,
             type='string',
             help="port number backends are using.")
+    if os.name == 'posix':
+        def socket_cb(option, opt_str, value, parser):
+            # FIXME!!! check value
+            if kwargs['type'] == 'beah':
+                conf['BACKEND.SOCKET'] = value
+                conf['BACKEND.SOCKET_OPT'] = 'True'
+            else:
+                conf['SOCKET'] = value
+                conf['SOCKET_OPT'] = 'True'
+        opt.add_option("-s", "--socket", action="callback", callback=socket_cb,
+                type='string',
+                help="socket for backends.")
     return opt
 
 
@@ -478,6 +499,16 @@ def beah_t_opt(opt, conf, kwargs):
     opt.add_option("-P", "--task-port", action="callback", callback=port_cb,
             type='string',
             help="port number tasks are using.")
+    if os.name == 'posix':
+        def socket_cb(option, opt_str, value, parser):
+            # FIXME!!! check value
+            if kwargs['type'] == 'beah':
+                conf['TASK.SOCKET'] = value
+            else:
+                conf['SOCKET'] = value
+        opt.add_option("-S", "--task-socket", action="callback", callback=socket_cb,
+                type='string',
+                help="socket for tasks.")
     return opt
 
 

@@ -120,10 +120,15 @@ def make_slow(c, lower=5, upper=15):
         reactor.callLater(randint(lower, upper), c_proc_cmd, cmd)
     c.proc_cmd = proc_cmd
 
-def start_server(port, proto, host=''):
+def start_server(port, proto, host='', socket=''):
     listener = protocol.ServerFactory()
     listener.protocol = proto
-    reactor.listenTCP(port, listener, interface=host)
+    if not port and not socket:
+        raise exceptions.Exception('Either port or socket must be provided.')
+    if port:
+        reactor.listenTCP(port, listener, interface=host)
+    if socket:
+        reactor.listenUNIX(socket, listener)
 
 def conf_opt(args):
     """
@@ -142,6 +147,8 @@ def conf_opt(args):
             help="Decrease verbosity.")
     opt.add_option("-p", "--port", action="store", dest="port",
             help="Port to listen on.")
+    opt.add_option("-S", "--socket", action="store", dest="socket",
+            help="UNIX socket to listen on.")
     opt.add_option("-s", "--slow", action="store_true", dest="slow",
             help="Create rather slow controller.")
     return opt.parse_args(args)
@@ -153,6 +160,7 @@ def conf_main(conf, args):
     else:
         conf['verbosity'] = 0
     conf['port'] = int(opts.port or 12432)
+    conf['socket'] = opts.socket or '/var/beah/backend.socket'
     conf['slow'] = opts.slow
     return conf, rest
 
@@ -185,7 +193,8 @@ def make_controller(args, slow=False):
 
 def main():
     conf, rest = conf_main({}, sys.argv[1:])
-    start_server(conf['port'], make_controller(rest, slow=conf['slow']))
+    start_server(conf['port'], make_controller(rest, slow=conf['slow']),
+            socket=conf['socket'])
     reactor.run()
 
 if __name__ == '__main__':

@@ -54,7 +54,10 @@ class Job_Submit(BeakerCommand):
         submitted_jobs = []
         failed = False
         for job in jobs:
-            jobxml = open(job, "r").read()
+            if job == '-':
+                jobxml = sys.stdin.read()
+            else:
+                jobxml = open(job, "r").read()
             if convert:
                 jobxml = Convert.rhts2beaker(jobxml)
             if debug:

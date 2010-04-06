@@ -53,18 +53,20 @@ class TaskStdoutProtocol(ProcessProtocol):
         self.controller.task_finished(self.task, rc=reason.value.exitCode)
         self.task.set_controller()
 
-def Spawn(host, port, proto=None):
+def Spawn(host, port, proto=None, socket=''):
     def spawn(controller, backend, task_info, env, args):
         task_env = dict(env)
         # 1. set env.variables
         # BEAH_THOST - host name
         # BEAH_TPORT - port
+        # BEAH_TSOCKET - socket
         # BEAH_TID - id of task - used to introduce itself when opening socket
         task_id = task_info['id']
         dict_update(task_env,
                 CALLED_BY_BEAH="1",
                 BEAH_THOST=str(host),
                 BEAH_TPORT=str(port),
+                BEAH_TSOCKET=str(socket),
                 BEAH_TID=str(task_id),
                 )
         ll = config.get_conf('beah').get('TASK', 'LOG')
@@ -114,8 +116,15 @@ class TaskFactory(ReconnectingClientFactory):
         ReconnectingClientFactory.clientConnectionFailed(self, connector, reason)
 
 def start_task(conf, task, host=None, port=None,
-        adaptor=twadaptors.ControllerAdaptor_Task_JSON,
+        adaptor=twadaptors.ControllerAdaptor_Task_JSON, socket=None,
         ):
+    factory = TaskFactory(task, adaptor)
+    if os.name == 'posix':
+        socket = socket or conf.get('TASK', 'SOCKET')
+        if socket != '':
+            return reactor.connectUNIX(socket, factory)
     host = host or conf.get('TASK', 'INTERFACE')
     port = port or int(conf.get('TASK', 'PORT'))
-    reactor.connectTCP(host, int(port), TaskFactory(task, adaptor))
+    if port != '':
+        return reactor.connectTCP(host, int(port), factory)
+    raise exceptions.Exception('Either socket or port must be given.')
