@@ -57,7 +57,7 @@ popd
 
 # Add Distro Repos
 #if $getVar('tree_repos','') != ''
-cat << EOF >> /etc/yum.repos.d/distro.repo
+cat << EOF > /etc/yum.repos.d/distro.repo
 #set $i = 0
 #for $repo in $getVar('tree_repos','').split(':')
 #set $i = $i + 1
@@ -74,7 +74,7 @@ EOF
 #if $getVar('harnessrepos','') != ''
 #for $repo in $getVar('harnessrepos','').split('|')
 #set (reponame, repourl) = $repo.split(',', 1)
-cat << EOF >>/etc/yum.repos.d/${reponame}.repo
+cat << EOF >/etc/yum.repos.d/${reponame}.repo
 [$reponame]
 name=$reponame
 baseurl=$repourl
@@ -95,7 +95,7 @@ EOF
 #set $reponame = "customrepo%s" % i
 #set $repourl = $repo
 #end if
-cat << EOF >>/etc/yum.repos.d/${reponame}.repo
+cat << EOF >/etc/yum.repos.d/${reponame}.repo
 [$reponame]
 name=$reponame
 baseurl=$repourl

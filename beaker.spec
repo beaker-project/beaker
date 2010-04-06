@@ -7,7 +7,7 @@
 
 Name:           beaker
 Version:        0.5.16
-Release:        1%{?timestamp}%{?branch}%{?dist}
+Release:        2%{?timestamp}%{?branch}%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -180,8 +180,9 @@ fi
 %{_sysconfdir}/init.d/%{name}-watchdog
 
 %changelog
-* Mon Apr 05 2010 Bill Peck <bpeck@redhat.com> - 0.5.16-1
+* Mon Apr 05 2010 Bill Peck <bpeck@redhat.com> - 0.5.16-2
 - make sure old task rpm exists before trying to remove it.
+- overwrite repos, don't append in rhts_post snippet.
 * Thu Apr 01 2010 Bill Peck <bpeck@redhat.com> - 0.5.15-8
 - fix apache conf for beaker-server
 - pass repos to cobbler, separate harness_repos from custom_repos
