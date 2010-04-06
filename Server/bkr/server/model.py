@@ -3718,13 +3718,13 @@ class RecipeTask(TaskBase):
         """
         Cancel this task
         """
-        self._abort_cancel(u'Cancelled', msg)
+        return self._abort_cancel(u'Cancelled', msg)
 
     def abort(self, msg=None):
         """
         Abort this task
         """
-        self._abort_cancel(u'Aborted', msg)
+        return self._abort_cancel(u'Aborted', msg)
     
     def _abort_cancel(self, status, msg=None):
         """
