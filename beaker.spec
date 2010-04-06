@@ -7,7 +7,7 @@
 
 Name:           beaker
 Version:        0.5.17
-Release:        1%{?timestamp}%{?branch}%{?dist}
+Release:        2%{?timestamp}%{?branch}%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -180,9 +180,10 @@ fi
 %{_sysconfdir}/init.d/%{name}-watchdog
 
 %changelog
-* Tue Apr 06 2010 Bill Peck <bpeck@redhat.com> - 0.5.17-1
+* Tue Apr 06 2010 Bill Peck <bpeck@redhat.com> - 0.5.17-2
 - fixed bz 570986, "TypeError: string indices must be integers" in expire_distros
 - fixed task_stop(cancel or abort) returning None.
+- fixed child.filter() to not die on unrecognized tags.
 * Mon Apr 05 2010 Bill Peck <bpeck@redhat.com> - 0.5.16-2
 - make sure old task rpm exists before trying to remove it.
 - overwrite repos, don't append in rhts_post snippet.
