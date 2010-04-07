@@ -768,8 +768,17 @@ class Task(SystemObject):
         queri = model.Task.query().outerjoin(['excluded_osmajor','osmajor'])
         wildcard_y = re.sub('\*','%',y)
         if wildcard_y != y: #looks like we found a wildcard
+            osmajors = model.OSMajor.query().filter(model.OSMajor.osmajor.like(wildcard_y))
+            osmajor_ids = [osmajor.id for osmajor in osmajors]
+            if not osmajor_ids:
+                return 'False'
             queri = queri.filter(model.OSMajor.osmajor.like(wildcard_y)) 
         else:
+            try:
+                model.OSMajor.query().filter(model.OSMajor.osmajor == y).one()
+                wildcard = False
+            except:
+                return 'False'
             queri = queri.filter(model.OSMajor.osmajor == y)
         ids = [r.id for r in queri]
 
@@ -800,10 +809,19 @@ class Task(SystemObject):
         queri = model.Task.query().outerjoin(['excluded_arch','arch'])
         wildcard_y = re.sub('\*','%',y)
         if wildcard_y != y: #looks like we found a wildcard
+            arches = model.Arch.query().filter(model.Arch.arch.like(wildcard_y))
+            arch_ids = [arch.id for arch in arches]
+            if not arch_ids:
+                return 'False'
             queri = queri.filter(model.Arch.arch.like(wildcard_y))
             #return not_(x.like(wildcard_y))
         else:
+            try:
+                valid_arch = model.Arch.query().filter(model.Arch.arch == y).one()
+            except:
+                return 'False'
             queri = queri.filter(model.Arch.arch == y)
+        log.debug(queri)
         ids = [r.id for r in queri]
 
         #What this block is trying to do is determine if all the excluded arches of a particular task make up
@@ -829,17 +847,45 @@ class Task(SystemObject):
 
     @classmethod
     def arch_is_not_filter(cls,x,y):
-        return cls._opposites_is_not_filter(x,y)
+        wildcard_y = re.sub('\*','%',y)
+        if wildcard_y != y: #looks like we found a wildcard 
+            arches = model.Arch.query().filter(model.Arch.arch.like(wildcard_y))
+            arch_ids = [arch.id for arch in arches]
+            if not arch_ids:
+                return 'True'
+            wildcard = True
+            y = wildcard_y
+        else:
+        
+            try:
+                valid_arch = model.Arch.query().filter(model.Arch.arch == y).one()
+                wildcard = False
+            except:
+                return 'True'
+        return cls._opposites_is_not_filter(x,y,wildcard=wildcard)
 
     @classmethod
     def distro_is_not_filter(cls,x,y):
-        return cls._opposites_is_not_filter(x,y)
+        wildcard_y = re.sub('\*','%',y)
+        if wildcard_y != y: #looks like we found a wildcard 
+            osmajors = model.OSMajor.query().filter(model.OSMajor.osmajor.like(wildcard_y))
+            osmajor_ids = [osmajor.id for osmajor in osmajors]
+            if not osmajor_ids:
+                return 'True'
+            wildcard = True
+            y = wildcard_y
+        else:
+            try:
+                model.OSMajor.query().filter(model.OSMajor.osmajor == y).one()
+                wildcard = False
+            except:
+                return 'True'
+        return cls._opposites_is_not_filter(x,y,wildcard)
 
     @classmethod
-    def _opposites_is_not_filter(cls,x,y):    
-        wildcard_y = re.sub('\*','%',y)
-        if wildcard_y != y: #looks like we found a wildcard
-            return x.like(wildcard_y)
+    def _opposites_is_not_filter(cls,x,y,wildcard):    
+        if wildcard: #looks like we found a wildcard
+            return x.like(y)
         if not y:
             return or_(x == None,x==y)
         return x == y
