@@ -97,6 +97,13 @@ class Convert(object):
             and_distro = self.doc.createElement('and')
             and_host = self.doc.createElement('and')
             repos = self.doc.createElement('repos')
+            kernel_options = ''
+            if 'kernel_options' in recipe._attrs:
+                kernel_options = '%s ' % recipe.getAttribute('kernel_options')
+            if 'bootargs' in recipe._attrs:
+                recipe.setAttribute('kernel_options',"%s%s" % (kernel_options, 
+                                                                recipe.getAttribute('bootargs')))
+                recipe.removeAttribute('bootargs')
             for child in recipe.childNodes:
                 if child.nodeType == child.ELEMENT_NODE and \
                    child.tagName == 'distroRequires':
