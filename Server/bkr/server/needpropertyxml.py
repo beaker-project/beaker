@@ -262,7 +262,10 @@ class XmlAnd(ElementWrapper):
                 (join, query) = child.filter()
                 queries.append(query)
                 joins.extend(join)
-        return (joins, and_(*queries))
+        if queries:
+            return (joins, and_(*queries))
+        else:
+            return ([],None)
 
 class XmlOr(ElementWrapper):
     """
@@ -276,7 +279,10 @@ class XmlOr(ElementWrapper):
                 (join, query) = child.filter()
                 queries.append(query)
                 joins.extend(join)
-        return (joins, or_(*queries))
+        if queries:
+            return (joins, or_(*queries))
+        else:
+            return ([],None)
 
 class XmlAutoProv(ElementWrapper):
     """

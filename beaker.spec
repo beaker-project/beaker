@@ -7,7 +7,7 @@
 
 Name:           beaker
 Version:        0.5.18
-Release:        0%{?timestamp}%{?branch}%{?dist}
+Release:        1%{?timestamp}%{?branch}%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -180,8 +180,9 @@ fi
 %{_sysconfdir}/init.d/%{name}-watchdog
 
 %changelog
-* Wed Apr 07 2010 Bill Peck <bpeck@redhat.com> - 0.5.18-0
+* Wed Apr 07 2010 Bill Peck <bpeck@redhat.com> - 0.5.18-1
 - BZ #578548 - fix provided by gozen
+- fixed hostRequires and distroRequires parsing to not choke on empty <and/> or <or/> tags
 * Tue Apr 06 2010 Bill Peck <bpeck@redhat.com> - 0.5.17-2
 - fixed bz 570986, "TypeError: string indices must be integers" in expire_distros
 - fixed task_stop(cancel or abort) returning None.
