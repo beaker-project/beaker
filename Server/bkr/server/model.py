@@ -4224,8 +4224,7 @@ mapper(OSMajor, osmajor_table,
                                      order_by=[osversion_table.c.osminor])})
 mapper(LabInfo, labinfo_table)
 mapper(Watchdog, watchdog_table,
-       properties = {'recipetask':relation(RecipeTask, uselist=False,
-                                           backref='watchdog'),
+       properties = {'recipetask':relation(RecipeTask, uselist=False),
                      'recipe':relation(Recipe, uselist=False,
                                       )})
 CpuFlag.mapper = mapper(CpuFlag, cpu_flag_table)
@@ -4426,6 +4425,7 @@ mapper(RecipeTask, recipe_task_table,
                       'status':relation(TaskStatus, uselist=False),
                       '_roles':relation(RecipeTaskRole),
                       'logs':relation(LogRecipeTask, backref='parent'),
+                      'watchdog':relation(Watchdog, uselist=False),
                      }
       )
 

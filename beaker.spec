@@ -7,7 +7,7 @@
 
 Name:           beaker
 Version:        0.5.18
-Release:        2%{?timestamp}%{?branch}%{?dist}
+Release:        3%{?timestamp}%{?branch}%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -180,7 +180,7 @@ fi
 %{_sysconfdir}/init.d/%{name}-watchdog
 
 %changelog
-* Wed Apr 07 2010 Bill Peck <bpeck@redhat.com> - 0.5.18-2
+* Wed Apr 07 2010 Bill Peck <bpeck@redhat.com> - 0.5.18-3
 - BZ #578548 - fix provided by gozen
 - fixed hostRequires and distroRequires parsing to not choke on empty <and/> or <or/> tags
 - display time left in duration column if watchdog exists
