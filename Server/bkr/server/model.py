@@ -3589,10 +3589,12 @@ class RecipeTask(TaskBase):
         return task
 
     def _get_duration(self):
-        try:
-            return self.finish_time - self.start_time
-        except TypeError:
-            return None
+        duration = None
+        if self.finish_time and self.start_time:
+            duration =  self.finish_time - self.start_time
+        elif self.watchdog and self.watchdog.kill_time:
+            duration =  'Time Remaining %.7s' % (self.watchdog.kill_time - datetime.utcnow())
+        return duration
     duration = property(_get_duration)
 
     def path(self):
