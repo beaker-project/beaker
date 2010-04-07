@@ -19,7 +19,7 @@ if __name__ == '__main__':
     # if all distros are expired then something is probably wrong.
     if len(distros) != len(rdistros):
         for distro in rdistros:
-            print "Removing distro %s" % distro['name']
+            print "Removing distro %s" % distro
             cobbler.remove_distro(distro, token, True)
         inventory.labcontrollers.removeDistros(settings['server'], rdistros)
     else:

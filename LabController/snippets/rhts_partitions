@@ -32,14 +32,19 @@ part swap --recommended --asprimary
 #else
 #set fstype = 'ext3'
 #end if
+#set partname = $partition[0]
+#if $partname.startswith('/')
+#set partname = $partname.lstrip('/')
+#end if
 #if $partition[1] == 'part'
-part /$partition[0] --fstype $fstype --size=$size
+part /$partname --fstype $fstype --size=$size
 #end if
 #if $partition[1] == 'lvm'
 #set is_lvm = $is_lvm + 1
+#set lvmname = $partname.replace('/','_')
 part pv.00$is_lvm --size=$size
 volgroup TestVolume00$is_lvm pv.00$is_lvm
-logvol /$partition[0] --fstype $fstype --name=$partition[0] --vgname=TestVolume00$is_lvm --size=$size
+logvol /$partname --fstype $fstype --name=$lvmname --vgname=TestVolume00$is_lvm --size=$size
 #end if
 #end if
 #end for
