@@ -388,11 +388,12 @@ class SearchBar(RepeatingFormField):
     form_attrs = {}
     simplesearch = None
 
-    def __init__(self, table,search_controller,extra_selects=None, extra_inputs=None, enable_custom_columns=False, *args, **kw): 
+    def __init__(self, table,search_controller,extra_selects=None, extra_inputs=None,extra_hiddens=None, enable_custom_columns=False, *args, **kw): 
         super(SearchBar,self).__init__(*args, **kw)
         self.enable_custom_columns = enable_custom_columns
         self.search_controller=search_controller
-        self.repetitions = 1            
+        self.repetitions = 1 
+        self.extra_hiddens = extra_hiddens
         self.default_result_columns = {}
         table_field = SingleSelectFieldJSON(name="table", options=table, validator=validators.NotEmpty()) 
         operation_field = SingleSelectFieldJSON(name="operation", options=[None], validator=validators.NotEmpty())
@@ -426,7 +427,7 @@ class SearchBar(RepeatingFormField):
         if extra_inputs is not None:
             for the_name in extra_inputs:
                 new_input = TextField(name=the_name,display='none')
-                new_inputs.append(new_input)   
+                new_inputs.append(new_input)
 
         controllers = kw.get('table_search_controllers',dict()) 
          
@@ -435,7 +436,7 @@ class SearchBar(RepeatingFormField):
         
         self.extra_callbacks_stringified = str(self.extra_callbacks)
         self.fields.extend(new_inputs)
-        self.fields.extend(new_selects)
+        self.fields.extend(new_selects) 
  
     def display(self, value=None, **params): 
         if 'options' in params: 

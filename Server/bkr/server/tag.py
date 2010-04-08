@@ -60,7 +60,7 @@ class Tags(RPCRoot):
     def index(self):
         tags = session.query(DistroTag)
         tags_grid = widgets.PaginateDataGrid(fields=[
-                                  widgets.PaginateDataGrid.Column(name='tag', getter=lambda x: make_link(url  = '../distros?tag=%s' % x.tag,
+                                  widgets.PaginateDataGrid.Column(name='tag', getter=lambda x: make_link(url  = '../distros/tagsearch/?tag=%s' % x.tag,
                                   text = x.tag), title='Tag', options=dict(sortable=True)),
                               ])
         return dict(title="Tags", grid = tags_grid,

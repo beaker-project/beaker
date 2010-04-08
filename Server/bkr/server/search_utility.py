@@ -372,6 +372,11 @@ class TaskSearch(Search):
     def __init__(self,task):
         self.queri = task
 
+class DistroSearch(Search):
+    searh_table = []
+    def __init__(self,distro):
+        self.queri = distro
+
 class ActivitySearch(Search):
     search_table = [] 
     def __init__(self,activity):
@@ -764,6 +769,7 @@ class Task(SystemObject):
                           'Distro' : MyColumn(col_type='string', column=model.OSMajor.osmajor,relations=['excluded_osmajor','osmajor']),
                          }
 
+
     @classmethod
     def distro_is_filter(cls,x,y): 
         queri = model.Task.query().outerjoin(['excluded_osmajor','osmajor'])
@@ -904,6 +910,20 @@ class Task(SystemObject):
         queri = model.Task.query().outerjoin(['excluded_arch','arch']).filter(model.Arch.arch.like('%%%s%%' % val))
         ids = [r.id for r in queri]
         return not_(model.Task.id.in_(ids))
+
+class Distro(SystemObject):
+    search = DistroSearch
+    search_values_dict = { 'Virt' : ['True','False'] }
+    searchable_columns = {
+                            'Name' : MyColumn(col_type='string',column=model.Distro.name),
+                            'InstallName' : MyColumn(col_type='string',column=model.Distro.install_name),
+                            'OSMajor' : MyColumn(col_type='string',column=model.OSMajor.osmajor,relations=['osversion','osmajor']),
+                            'Arch' : MyColumn(col_type='string',column=model.Arch.arch,relations='arch'),
+                            'Virt' : MyColumn(col_type='boolean',column=model.Distro.virt),
+                            'Method' : MyColumn(col_type='string',column=model.Distro.method),
+                            'Breed' : MyColumn(col_type='string',column=model.Distro.breed),
+                         }
+
        
 class Activity(SystemObject):
     search = ActivitySearch    
