@@ -184,6 +184,7 @@ fi
 - Merge remote branch 'origin/bz576327'
 - Merge remote branch 'origin/bz579972'
 - Merge remote branch 'origin/bz578383'
+- Fixed --convert to handle <partition> tags in legacy xml
 * Wed Apr 07 2010 Bill Peck <bpeck@redhat.com> - 0.5.18-3
 - BZ #578548 - fix provided by gozen
 - fixed hostRequires and distroRequires parsing to not choke on empty <and/> or <or/> tags
