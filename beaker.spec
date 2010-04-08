@@ -7,7 +7,7 @@
 
 Name:           beaker
 Version:        0.5.19
-Release:        0%{?timestamp}%{?branch}%{?dist}
+Release:        1%{?timestamp}%{?branch}%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -180,6 +180,8 @@ fi
 %{_sysconfdir}/init.d/%{name}-watchdog
 
 %changelog
+* Thu Apr 08 2010 Bill Peck <bpeck@redhat.com> - 0.5.19-1
+- fixed scheduler to honor system status.
 * Thu Apr 08 2010 Bill Peck <bpeck@redhat.com> - 0.5.19-0
 - Merge remote branch 'origin/bz576327'
 - Merge remote branch 'origin/bz579972'
