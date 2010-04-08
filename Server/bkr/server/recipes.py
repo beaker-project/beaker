@@ -141,7 +141,15 @@ class Recipes(RPCRoot):
 
     def _recipes(self,recipe,**kw):
         return_dict = {}                    
-        if 'simplesearch' in kw:
+        if 'recipesearch' in kw:
+            if 'quick_search' in kw['recipesearch']:
+                table,op,value = kw['recipesearch']['quick_search'].split('-')
+                kw['recipesearch'] = [{'table' : table,
+                                       'operation' : op,
+                                       'keyvalue': None,
+                                       'value' : value}]
+                simplesearch = kw['simplesearch']
+        elif 'simplesearch' in kw:
             simplesearch = kw['simplesearch']
             kw['recipesearch'] = [{'table' : 'Id',   
                                    'operation' : 'is', 
@@ -197,6 +205,10 @@ class Recipes(RPCRoot):
                            label=_(u'Recipe Search'),    
                            table = search_utility.Recipe.search.create_search_table(),
                            search_controller=url("/get_search_options_recipe"), 
+                           quick_searches = ['Status-is-Running','Status-is-Queued','Status-is-Aborted',
+                                             'Status-is-Completed','Status-is-New','Status-is-Scheduled',
+                                             'Status-is-Cancelled','Status-is-Waiting','Status-is-Processed'],
+
                            )
         return dict(title="Recipes", grid=recipes_grid, list=recipes, search_bar=search_bar,action=action,options=search_options,searchvalue=searchvalue)
 

@@ -208,6 +208,18 @@ class NestedGrid(CompoundWidget):
     params = ['inner_list']
 
 
+class JobQuickSearch(CompoundWidget):
+    template = 'bkr.server.templates.quick_search'
+    member_widgets = ['status_running','status_queued']
+
+    def __init__(self,*args,**kw): 
+        self.status_running = Button(default="Status is Running",
+                                     name='status_running',
+                                     attrs = {'onclick' : "document.location.href('./?jobsearch-0.table=Status&jobsearch-0.operation=is&jobsearch-0.value=Running&Search=Search')" })
+
+        self.status_queued = Button(default="Status is Queued", name='status_queued')
+
+
 class JobMatrixReport(Form):     
     javascript = [LocalJSLink('bkr', '/static/javascript/job_matrix.js')]
     css = [LocalCSSLink('bkr','/static/css/job_matrix.css')] 
@@ -273,6 +285,10 @@ class SearchBar(RepeatingFormField):
    
      </tr>
     </table>
+     <h4 py:if="quickly_searches">Quick Searches</h4>
+     <div style="margin:0 0.5em 0.5em 0.5em;" py:for="quickly_search in quickly_searches">
+        ${quickly_search.display()}
+     </div>
     </form>
     <form 
       id="searchform"
@@ -324,9 +340,8 @@ class SearchBar(RepeatingFormField):
        </tr>
       </tbody>
      </table></td><td>
-     <input type="submit" name="Search" value="Search"/>
+     <input type="submit" name="Search" value="Search"/> 
      </td>
-    
    
      </tr>
      <tr>
@@ -381,7 +396,7 @@ class SearchBar(RepeatingFormField):
     </div>
     """
 
-    params = ['repetitions', 'form_attrs', 'search_controller', 'simplesearch',
+    params = ['repetitions', 'form_attrs', 'search_controller', 'simplesearch','quickly_searches',
               'advanced', 'simple','to_json','this_operations_field','this_searchvalue_field','extra_hiddens',
               'extra_callbacks_stringified','table_search_controllers_stringified','keyvaluevalue',
               'result_columns','col_options','col_defaults','enable_custom_columns','default_result_columns']
@@ -426,7 +441,18 @@ class SearchBar(RepeatingFormField):
         if extra_inputs is not None:
             for the_name in extra_inputs:
                 new_input = TextField(name=the_name,display='none')
-                new_inputs.append(new_input)   
+                new_inputs.append(new_input) 
+
+        self.quickly_searches = []
+        if 'quick_searches' in kw:
+            if kw['quick_searches'] is not None: 
+                for elem in kw['quick_searches']:
+                    vals = elem.split('-')
+                    if len(vals) != 3:
+                        log.error('Quick searches expects vals as <column>-<operation>-<value>. The following is incorrect: %s' % (elem)) 
+                    else:
+                        self.quickly_searches.append(SubmitButton(name='quick_search', attrs = {'value' : '%s-%s-%s' % (vals[0],vals[1].lower(),vals[2]),
+                                                                                          'class' : 'button'}))
 
         controllers = kw.get('table_search_controllers',dict()) 
          
@@ -1088,5 +1114,3 @@ class PriorityWidget(SingleSelectField):
            except AttributeError,(e):
                log.error('Object %s passed to display does not have a valid priority: %s' % (type(obj),e))
        return super(PriorityWidget,self).display(value or None,**params)
-
-

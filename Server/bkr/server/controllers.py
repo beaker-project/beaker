@@ -417,7 +417,7 @@ class Root(RPCRoot):
 										   {search_utility.Cpu:{'all':[]}},
                                                                                    {search_utility.Device:{'all':[]}},
                                                                                    {search_utility.Key:{'all':[]}} ] ),
-                           search_controller=url("/get_search_options"),
+                           search_controller=url("/get_search_options"), 
                            table_search_controllers = {'key/value':url('/get_keyvalue_search_options')},)
                  
   
@@ -721,7 +721,15 @@ class Root(RPCRoot):
         return return_dict
  
     def systems(self, systems, *args, **kw):
-        if 'simplesearch' in kw:
+        if 'systemsearch' in kw:
+            if 'quick_search' in kw['systemsearch']:
+                table,op,value = kw['systemsearch']['quick_search'].split('-')
+                kw['systemsearch'] = [{'table' : table,
+                                    'operation' : op,
+                                    'keyvalue': None,
+                                    'value' : value}]
+                simplesearch = kw['simplesearch']
+        elif 'simplesearch' in kw:
             simplesearch = kw['simplesearch']
             kw['systemsearch'] = [{'table' : 'System/Name',   
                                    'operation' : 'contains',
