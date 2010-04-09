@@ -372,6 +372,11 @@ class TaskSearch(Search):
     def __init__(self,task):
         self.queri = task
 
+class DistroSearch(Search):
+    searh_table = []
+    def __init__(self,distro):
+        self.queri = distro
+
 class ActivitySearch(Search):
     search_table = [] 
     def __init__(self,activity):
@@ -711,7 +716,8 @@ class System(SystemObject):
                           'Status'    : MyColumn(column=model.SystemStatus.status, col_type='string', relations='status'),
                           'Arch'      : MyColumn(column=model.Arch.arch, col_type='string', relations='arch'),
                           'Type'      : MyColumn(column=model.SystemType.type, col_type='string', relations='type'),
-                          'PowerType' : MyColumn(column=model.PowerType.name, col_type='string', relations=['power','power_type'])
+                          'PowerType' : MyColumn(column=model.PowerType.name, col_type='string', relations=['power','power_type']),
+                          'LoanedTo'  : MyColumn(column=model.User.user_name,col_type='string',has_alias=True, relations='loaned')
                          }  
     search_values_dict = {'Status' : lambda: model.SystemStatus.get_all_status_name(),
                           'Type' : lambda: model.SystemType.get_all_type_names() }   
@@ -763,13 +769,23 @@ class Task(SystemObject):
                           'Distro' : MyColumn(col_type='string', column=model.OSMajor.osmajor,relations=['excluded_osmajor','osmajor']),
                          }
 
+
     @classmethod
     def distro_is_filter(cls,x,y): 
         queri = model.Task.query().outerjoin(['excluded_osmajor','osmajor'])
         wildcard_y = re.sub('\*','%',y)
         if wildcard_y != y: #looks like we found a wildcard
+            osmajors = model.OSMajor.query().filter(model.OSMajor.osmajor.like(wildcard_y))
+            osmajor_ids = [osmajor.id for osmajor in osmajors]
+            if not osmajor_ids:
+                return 'False'
             queri = queri.filter(model.OSMajor.osmajor.like(wildcard_y)) 
         else:
+            try:
+                model.OSMajor.query().filter(model.OSMajor.osmajor == y).one()
+                wildcard = False
+            except:
+                return 'False'
             queri = queri.filter(model.OSMajor.osmajor == y)
         ids = [r.id for r in queri]
 
@@ -800,10 +816,19 @@ class Task(SystemObject):
         queri = model.Task.query().outerjoin(['excluded_arch','arch'])
         wildcard_y = re.sub('\*','%',y)
         if wildcard_y != y: #looks like we found a wildcard
+            arches = model.Arch.query().filter(model.Arch.arch.like(wildcard_y))
+            arch_ids = [arch.id for arch in arches]
+            if not arch_ids:
+                return 'False'
             queri = queri.filter(model.Arch.arch.like(wildcard_y))
             #return not_(x.like(wildcard_y))
         else:
+            try:
+                valid_arch = model.Arch.query().filter(model.Arch.arch == y).one()
+            except:
+                return 'False'
             queri = queri.filter(model.Arch.arch == y)
+        log.debug(queri)
         ids = [r.id for r in queri]
 
         #What this block is trying to do is determine if all the excluded arches of a particular task make up
@@ -829,17 +854,45 @@ class Task(SystemObject):
 
     @classmethod
     def arch_is_not_filter(cls,x,y):
-        return cls._opposites_is_not_filter(x,y)
+        wildcard_y = re.sub('\*','%',y)
+        if wildcard_y != y: #looks like we found a wildcard 
+            arches = model.Arch.query().filter(model.Arch.arch.like(wildcard_y))
+            arch_ids = [arch.id for arch in arches]
+            if not arch_ids:
+                return 'True'
+            wildcard = True
+            y = wildcard_y
+        else:
+        
+            try:
+                valid_arch = model.Arch.query().filter(model.Arch.arch == y).one()
+                wildcard = False
+            except:
+                return 'True'
+        return cls._opposites_is_not_filter(x,y,wildcard=wildcard)
 
     @classmethod
     def distro_is_not_filter(cls,x,y):
-        return cls._opposites_is_not_filter(x,y)
+        wildcard_y = re.sub('\*','%',y)
+        if wildcard_y != y: #looks like we found a wildcard 
+            osmajors = model.OSMajor.query().filter(model.OSMajor.osmajor.like(wildcard_y))
+            osmajor_ids = [osmajor.id for osmajor in osmajors]
+            if not osmajor_ids:
+                return 'True'
+            wildcard = True
+            y = wildcard_y
+        else:
+            try:
+                model.OSMajor.query().filter(model.OSMajor.osmajor == y).one()
+                wildcard = False
+            except:
+                return 'True'
+        return cls._opposites_is_not_filter(x,y,wildcard)
 
     @classmethod
-    def _opposites_is_not_filter(cls,x,y):    
-        wildcard_y = re.sub('\*','%',y)
-        if wildcard_y != y: #looks like we found a wildcard
-            return x.like(wildcard_y)
+    def _opposites_is_not_filter(cls,x,y,wildcard):    
+        if wildcard: #looks like we found a wildcard
+            return x.like(y)
         if not y:
             return or_(x == None,x==y)
         return x == y
@@ -857,6 +910,20 @@ class Task(SystemObject):
         queri = model.Task.query().outerjoin(['excluded_arch','arch']).filter(model.Arch.arch.like('%%%s%%' % val))
         ids = [r.id for r in queri]
         return not_(model.Task.id.in_(ids))
+
+class Distro(SystemObject):
+    search = DistroSearch
+    search_values_dict = { 'Virt' : ['True','False'] }
+    searchable_columns = {
+                            'Name' : MyColumn(col_type='string',column=model.Distro.name),
+                            'InstallName' : MyColumn(col_type='string',column=model.Distro.install_name),
+                            'OSMajor' : MyColumn(col_type='string',column=model.OSMajor.osmajor,relations=['osversion','osmajor']),
+                            'Arch' : MyColumn(col_type='string',column=model.Arch.arch,relations='arch'),
+                            'Virt' : MyColumn(col_type='boolean',column=model.Distro.virt),
+                            'Method' : MyColumn(col_type='string',column=model.Distro.method),
+                            'Breed' : MyColumn(col_type='string',column=model.Distro.breed),
+                         }
+
        
 class Activity(SystemObject):
     search = ActivitySearch    

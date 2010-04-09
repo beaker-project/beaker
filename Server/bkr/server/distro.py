@@ -1,14 +1,15 @@
 from turbogears.database import session
-from turbogears import controllers, expose, flash, widgets, validate, error_handler, validators, redirect, paginate
-from turbogears.widgets import AutoCompleteField
+from turbogears import controllers, expose, flash, widgets, validate, error_handler, validators, redirect, paginate, url
+from turbogears.widgets import AutoCompleteField, HiddenField
 from turbogears import identity, redirect
 from cherrypy import request, response
 from tg_expanding_form_widget.tg_expanding_form_widget import ExpandingForm
 from kid import Element
 from bkr.server.xmlrpccontroller import RPCRoot
-from bkr.server.widgets import DistroTags
+from bkr.server.widgets import DistroTags, SearchBar
 from bkr.server.widgets import TaskSearchForm
 from bkr.server.helpers import *
+from bkr.server import search_utility 
 
 import cherrypy
 
@@ -84,15 +85,60 @@ class Distros(RPCRoot):
     def by_name(self, distro):
         distro = distro.lower()
         return dict(distros=[(distro.install_name) for distro in Distro.query().filter(Distro.install_name.like('%s%%' % distro)).order_by('-date_created')])
+    
+    def _distros(self,distro,**kw):
+        return_dict = {} 
+        if 'simplesearch' in kw:
+            simplesearch = kw['simplesearch']
+            kw['distrosearch'] = [{'table' : 'Name',   
+                                   'operation' : 'is', 
+                                   'value' : kw['simplesearch']}]                    
+        else:
+            simplesearch = None
+
+        return_dict.update({'simplesearch':simplesearch}) 
+        if kw.get("distrosearch"):
+            searchvalue = kw['distrosearch']  
+            distros_found = self._distro_search(distro,**kw)
+            return_dict.update({'distros_found':distros_found})               
+            return_dict.update({'searchvalue':searchvalue})
+        return return_dict
+
+    def _distro_search(self,distro,**kw):
+        distro_search = search_utility.Distro.search(distro)
+        for search in kw['distrosearch']:
+            col = search['table'] 
+            distro_search.append_results(search['value'],col,search['operation'],**kw)
+        return distro_search.return_results()
 
     @expose(template="bkr.server.templates.grid")
     @paginate('list',default_order='-date_created', limit=50,allow_limit_override=True)
-    def index(self, *args, **kw):
-        distros = session.query(Distro).join('breed').join('arch').join(['osversion','osmajor'])
-        if 'tag' in kw:
-            distros = distros.join('_tags').filter(distro_tag_table.c.tag==kw['tag'])
-        if 'name' in kw:
-            distros = distros.filter(distro_table.c.install_name.like('%s' % kw['name']))
+    def index(self,*args,**kw):
+        return self.distros(distros=session.query(Distro).join('breed').join('arch').join(['osversion','osmajor']),*args,**kw)
+
+    @expose(template="bkr.server.templates.grid")
+    @paginate('list',default_order='-date_created', limit=50,allow_limit_override=True)
+    def tagsearch(self,*args,**kw): 
+        return self.distros(distros=session.query(Distro).join('breed').join('arch').join(['osversion','osmajor']).join('_tags').filter(distro_tag_table.c.tag==kw['tag']),action='./tagsearch',**kw)
+
+    @expose(template="bkr.server.templates.grid")
+    @paginate('list',default_order='-date_created', limit=50,allow_limit_override=True)
+    def name(self,*args,**kw):
+        return self.distros(distros=session.query(Distro).join('breed').join('arch').join(['osversion','osmajor']).filter(distro_table.c.install_name.like('%s' % kw['name'])),action='./name')
+
+    def distros(self, distros,action='.',*args, **kw):
+        distros_return = self._distros(distros,**kw) 
+        searchvalue = None
+        hidden_fields = None
+        search_options = {}
+        if distros_return:
+            if 'distros_found' in distros_return:
+                distros = distros_return['distros_found']
+            if 'searchvalue' in distros_return:
+                searchvalue = distros_return['searchvalue']
+            if 'simplesearch' in distros_return:
+                search_options['simplesearch'] = distros_return['simplesearch']
+
         distros_grid = widgets.PaginateDataGrid(fields=[
                                   widgets.PaginateDataGrid.Column(name='install_name', getter=lambda x: make_link(url  = 'view?id=%s' % x.id,
                                   text = x.install_name), title='Install Name', options=dict(sortable=True)),
@@ -106,9 +152,23 @@ class Distros(RPCRoot):
                                   widgets.PaginateDataGrid.Column(name='method', getter=lambda x: x.method, title='Method', options=dict(sortable=True)),
                                   widgets.PaginateDataGrid.Column(name='date_created', getter=lambda x: x.date_created, title='Date Created', options=dict(sortable=True)),
                               ])
-        return dict(title="Distros", grid = distros_grid,
-                                         search_bar = None,
-                                         list = distros)
+        if 'tag' in kw: 
+            hidden_fields = [('tag',kw['tag'])]
+
+        search_bar = SearchBar(name='distrosearch',
+                           label=_(u'Distro Search'),    
+                           table=search_utility.Distro.search.create_search_table(),
+                           search_controller=url("/get_search_options_distros"), 
+                           extra_hiddens=hidden_fields
+                           )
+
+        return dict(title="Distros", 
+                    grid=distros_grid,
+                    search_bar=search_bar,
+                    action=action,
+                    options=search_options,
+                    searchvalue=searchvalue,
+                    list=distros)
 
     #XMLRPC method for listing distros
     @cherrypy.expose

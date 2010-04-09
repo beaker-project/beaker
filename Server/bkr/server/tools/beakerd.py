@@ -243,10 +243,12 @@ def queued_recipes(*args):
     if not recipes.count():
         return False
     log.debug("Entering queued_recipes routine")
+    working = Status.by_name(u'Working')
     for recipe in recipes:
         session.begin()
         try:
-            systems = recipe.dyn_systems.filter(System.user==None)
+            systems = recipe.dyn_systems.filter(and_(System.user==None,
+                                                     System.status==working))
             # Order systems by owner, then Group, finally shared for everyone.
             # FIXME Make this configurable, so that a user can specify their scheduling
             # preference from the job.

@@ -6,8 +6,8 @@
 %endif
 
 Name:           beaker
-Version:        0.5.18
-Release:        3%{?timestamp}%{?branch}%{?dist}
+Version:        0.5.19
+Release:        1%{?timestamp}%{?branch}%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -180,6 +180,13 @@ fi
 %{_sysconfdir}/init.d/%{name}-watchdog
 
 %changelog
+* Thu Apr 08 2010 Bill Peck <bpeck@redhat.com> - 0.5.19-1
+- fixed scheduler to honor system status.
+* Thu Apr 08 2010 Bill Peck <bpeck@redhat.com> - 0.5.19-0
+- Merge remote branch 'origin/bz576327'
+- Merge remote branch 'origin/bz579972'
+- Merge remote branch 'origin/bz578383'
+- Fixed --convert to handle <partition> tags in legacy xml
 * Wed Apr 07 2010 Bill Peck <bpeck@redhat.com> - 0.5.18-3
 - BZ #578548 - fix provided by gozen
 - fixed hostRequires and distroRequires parsing to not choke on empty <and/> or <or/> tags
