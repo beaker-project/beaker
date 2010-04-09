@@ -28,7 +28,7 @@ class Users(RPCRoot):
     password     = widgets.PasswordField(name='password', label=_(u'Password'))
 
     search_users = AutoCompleteField(name='user', 
-                                     search_controller = url("/users/by_name?anywhere=1"),
+                                     search_controller = url("/users/by_name?anywhere=1&ldap=0"),
                                      search_param = "input",
                                      result_name = "matches")
     user_form = widgets.TableForm(
@@ -155,6 +155,6 @@ class Users(RPCRoot):
         session.delete(user)
 
     @expose(format='json')
-    def by_name(self, input,anywhere=False):
+    def by_name(self, input,anywhere=False,ldap=True):
         input = input.lower()
-        return dict(matches=User.list_by_name(input,anywhere))
+        return dict(matches=User.list_by_name(input,anywhere,ldap))

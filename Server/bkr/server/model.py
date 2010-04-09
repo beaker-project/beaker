@@ -933,9 +933,9 @@ class User(object):
         return user
 
     @classmethod
-    def list_by_name(cls, username,find_anywhere=False):
+    def list_by_name(cls, username,find_anywhere=False,find_ldap_users=True):
         ldap_users = []
-        if cls.ldapenabled:
+        if cls.ldapenabled and find_ldap_users is True:
             filter = "(uid=%s*)" % username
             ldapcon = ldap.initialize(cls.uri)
             rc = ldapcon.search(cls.basedn, ldap.SCOPE_SUBTREE, filter)
