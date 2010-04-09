@@ -3064,9 +3064,10 @@ class Recipe(TaskBase):
         """
         Return file path for this recipe
         """
-        job_id    = self.recipeset.job.id
-        return "%02d/%s/%s" % (int(str(job_id)[-2:]),
-                                         job_id,
+        job    = self.recipeset.job
+        return "%s/%02d/%s/%s" % (job.start_time.year,
+                                  int(str(job.id)[-2:]),
+                                         job.id,
                                          self.id)
     filepath = property(filepath)
 
@@ -3549,10 +3550,11 @@ class RecipeTask(TaskBase):
         """
         Return file path for this task
         """
-        job_id    = self.recipe.recipeset.job.id
+        job    = self.recipe.recipeset.job
         recipe_id = self.recipe.id
-        return "%02d/%s/%s/%s" % (int(str(job_id)[-2:]),
-                                         job_id,
+        return "%s/%02d/%s/%s/%s" % (job.start_time.year,
+                                     int(str(job.id)[-2:]),
+                                         job.id,
                                          recipe_id,
                                          self.id)
     filepath = property(filepath)
@@ -3959,11 +3961,12 @@ class RecipeTaskResult(TaskBase):
         """
         Return file path for this result
         """
-        job_id    = self.recipetask.recipe.recipeset.job.id
+        job    = self.recipetask.recipe.recipeset.job
         recipe_id = self.recipetask.recipe.id
         task_id   = self.recipetask.id
-        return "%02d/%s/%s/%s/%s" % (int(str(job_id)[-2:]),
-                                         job_id,
+        return "%s/%02d/%s/%s/%s/%s" % (job.start_time.year,
+                                     int(str(job.id)[-2:]),
+                                         job.id,
                                          recipe_id,
                                          task_id,
                                          self.id)

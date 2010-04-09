@@ -6,8 +6,8 @@
 %endif
 
 Name:           beaker
-Version:        0.5.19
-Release:        1%{?timestamp}%{?branch}%{?dist}
+Version:        0.5.20
+Release:        0%{?timestamp}%{?branch}%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -180,6 +180,8 @@ fi
 %{_sysconfdir}/init.d/%{name}-watchdog
 
 %changelog
+* Fri Apr 09 2010 Bill Peck <bpeck@redhat.com> - 0.5.20-0
+- prepend log dir with year of start_time.
 * Thu Apr 08 2010 Bill Peck <bpeck@redhat.com> - 0.5.19-1
 - fixed scheduler to honor system status.
 * Thu Apr 08 2010 Bill Peck <bpeck@redhat.com> - 0.5.19-0
