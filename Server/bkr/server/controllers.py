@@ -721,14 +721,13 @@ class Root(RPCRoot):
         return return_dict
  
     def systems(self, systems, *args, **kw):
-        if 'systemsearch' in kw:
-            if 'quick_search' in kw['systemsearch']:
-                table,op,value = kw['systemsearch']['quick_search'].split('-')
-                kw['systemsearch'] = [{'table' : table,
-                                    'operation' : op,
-                                    'keyvalue': None,
-                                    'value' : value}]
-                simplesearch = kw['simplesearch']
+        if 'quick_search' in kw:
+            table,op,value = kw['quick_search'].split('-')
+            kw['systemsearch'] = [{'table' : table,
+                                'operation' : op,
+                                'keyvalue': None,
+                                'value' : value}]
+            simplesearch = kw['simplesearch']
         elif 'simplesearch' in kw:
             simplesearch = kw['simplesearch']
             kw['systemsearch'] = [{'table' : 'System/Name',   

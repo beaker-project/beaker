@@ -160,6 +160,23 @@ class ReserveWorkflow(Form):
                 d['tag_value'] = d['values']['tag']
                 d['method_value'] = d['values']['method']
 
+class MyButton(Widget):
+    template="bkr.server.templates.my_button"
+    params = ['submit','button_label','name']
+    def __init__(self,name,submit=True,*args,**kw): 
+        self.submit = submit 
+        self.name = name
+        self.button_label = None
+
+    def display(self,value,**params):
+        if 'options' in params:
+            if 'label' in params['options']:
+                params['button_label'] = params['options']['label']       
+            if 'name' in params['options']:
+                params['name'] = params['options']['name']
+        return super(MyButton,self).display(value,**params)
+
+
 class myDataGrid(DataGrid):
     template = "bkr.server.templates.my_datagrid"
     name = "my_datagrid"
@@ -279,16 +296,16 @@ class SearchBar(RepeatingFormField):
      <tr>
       <td><input type="text" name="simplesearch" value="${simplesearch}" class="textfield"/>
       </td>
-    <td><input type="submit" name="search" value="Search"/>
+    <td><input type="submit" name="search" value="${simplesearch_label}"/>
+
+     <span style="margin:0 0.5em 0.5em 0.5em;" py:for="quickly_search in quickly_searches">
+        ${button_widget.display(value=quickly_search[1],options=dict(label=quickly_search[0]))}
+     </span>
       </td>
 
    
      </tr>
-    </table>
-     <h4 py:if="quickly_searches">Quick Searches</h4>
-     <div style="margin:0 0.5em 0.5em 0.5em;" py:for="quickly_search in quickly_searches">
-        ${quickly_search.display()}
-     </div>
+    </table> 
     </form>
     <form 
       id="searchform"
@@ -396,9 +413,9 @@ class SearchBar(RepeatingFormField):
     </div>
     """
 
-    params = ['repetitions', 'form_attrs', 'search_controller', 'simplesearch','quickly_searches',
+    params = ['repetitions', 'form_attrs', 'search_controller', 'simplesearch','quickly_searches','button_widget',
               'advanced', 'simple','to_json','this_operations_field','this_searchvalue_field','extra_hiddens',
-              'extra_callbacks_stringified','table_search_controllers_stringified','keyvaluevalue',
+              'extra_callbacks_stringified','table_search_controllers_stringified','keyvaluevalue','simplesearch_label',
               'result_columns','col_options','col_defaults','enable_custom_columns','default_result_columns']
     form_attrs = {}
     simplesearch = None
@@ -443,16 +460,21 @@ class SearchBar(RepeatingFormField):
                 new_input = TextField(name=the_name,display='none')
                 new_inputs.append(new_input) 
 
+        if 'simplesearch_label' in kw:
+            self.simplesearch_label = kw['simplesearch_label']
+        else:
+            self.simplesearch_label = 'Search'
+
+        self.button_widget = MyButton(name='quick_search')
         self.quickly_searches = []
         if 'quick_searches' in kw:
             if kw['quick_searches'] is not None: 
-                for elem in kw['quick_searches']:
+                for elem,name in kw['quick_searches']:
                     vals = elem.split('-')
                     if len(vals) != 3:
                         log.error('Quick searches expects vals as <column>-<operation>-<value>. The following is incorrect: %s' % (elem)) 
-                    else:
-                        self.quickly_searches.append(SubmitButton(name='quick_search', attrs = {'value' : '%s-%s-%s' % (vals[0],vals[1].lower(),vals[2]),
-                                                                                          'class' : 'button'}))
+                    else: 
+                        self.quickly_searches.append((name, '%s-%s-%s' % (vals[0],vals[1],vals[2])))
 
         controllers = kw.get('table_search_controllers',dict()) 
          
