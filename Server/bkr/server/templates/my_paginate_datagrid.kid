@@ -1,5 +1,15 @@
 <div xmlns:py="http://purl.org/kid/ns#">
   <div class="list">
+    <span py:if="tg.paginate.limit > 0" style="margin-right:0.5em;">
+    <span py:if="tg.paginate.page_count > 1">
+      <?python 
+        from re import sub 
+        if tg.request.query_string:
+            tg.request.query_string = sub('\w{1,}_tgp_limit=\d{1,}','',tg.request.query_string)
+      ?> 
+      <a py:if="tg.request.query_string" href="${tg.request.path_info}?${tg.request.query_string}&amp;tg_paginate_limit=0">Show all</a>
+      <a py:if="not tg.request.query_string" href="${tg.request.path_info}?tg_paginate_limit=0">Show all</a></span>
+    </span>
     <span py:if="tg.paginate.href_prev">
         <a href="${tg.paginate.href_first}">&lt;&lt;</a>
         <a href="${tg.paginate.href_prev}">&lt;</a>

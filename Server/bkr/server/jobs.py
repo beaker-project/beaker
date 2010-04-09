@@ -311,13 +311,13 @@ class Jobs(RPCRoot):
 
     
     @expose(template='bkr.server.templates.grid')
-    @paginate('list',default_order='-id', limit=50)
+    @paginate('list',default_order='-id', limit=50, allow_limit_override=True)
     def index(self,*args,**kw): 
         return self.jobs(jobs=session.query(Job).join('status').join('owner').outerjoin('result'),*args,**kw)
 
     @identity.require(identity.not_anonymous()) 
     @expose(template='bkr.server.templates.grid')
-    @paginate('list',default_order='-id', limit=50)
+    @paginate('list',default_order='-id', limit=50, allow_limit_override=True)
     def mine(self,*args,**kw): 
         return self.jobs(jobs=Job.mine(identity.current.user),action='./mine',*args,**kw)
  

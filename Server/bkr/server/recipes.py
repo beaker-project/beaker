@@ -159,7 +159,7 @@ class Recipes(RPCRoot):
         return return_dict
 
     @expose(template='bkr.server.templates.grid')
-    @paginate('list',default_order='-id', limit=50)
+    @paginate('list',default_order='-id', limit=50, allow_limit_override=True)
     def index(self,*args,**kw):
         return self.recipes(recipes=session.query(MachineRecipe),*args,**kw)
 

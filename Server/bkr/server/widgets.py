@@ -1089,4 +1089,9 @@ class PriorityWidget(SingleSelectField):
                log.error('Object %s passed to display does not have a valid priority: %s' % (type(obj),e))
        return super(PriorityWidget,self).display(value or None,**params)
 
+class UserAlphaNavBar(Widget):
+    template = "bkr.server.templates.user_alpha_navbar"
+    params = ['letters']
 
+    def __init__(self,letters,*args,**kw):
+        self.letters = letters 

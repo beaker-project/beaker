@@ -933,7 +933,7 @@ class User(object):
         return user
 
     @classmethod
-    def list_by_name(cls, username):
+    def list_by_name(cls, username,find_anywhere=False):
         ldap_users = []
         if cls.ldapenabled:
             filter = "(uid=%s*)" % username
@@ -941,7 +941,11 @@ class User(object):
             rc = ldapcon.search(cls.basedn, ldap.SCOPE_SUBTREE, filter)
             objects = ldapcon.result(rc)[1]
             ldap_users = [object[0].split(',')[0].split('=')[1] for object in objects]
-        db_users = [user.user_name for user in cls.query().filter(User.user_name.like('%s%%' % username))]
+        if find_anywhere:
+            f = User.user_name.like('%%%s%%' % username)
+        else:
+            f = User.user_name.like('%s%%' % username)
+        db_users = [user.user_name for user in cls.query().filter(f)]
         return list(set(db_users + ldap_users))
         
     def _set_password(self, password):

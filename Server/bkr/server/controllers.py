@@ -937,7 +937,7 @@ class Root(RPCRoot):
                      prov_install = [(distro.id, distro.install_name) for distro in system.distros()]))
 
     @expose(template="bkr.server.templates.system")
-    @paginate('history_data',limit=30,default_order='-created')
+    @paginate('history_data',limit=30,default_order='-created', allow_limit_override=True)
     def view(self, fqdn=None, **kw):
         if fqdn:
             try:
@@ -1873,7 +1873,6 @@ class Root(RPCRoot):
 
     @expose(template="bkr.server.templates.login")
     def login(self, forward_url='/', previous_url=None, *args, **kw):
-
         if not identity.current.anonymous \
             and identity.was_login_attempted() \
             and not identity.get_identity_errors():
