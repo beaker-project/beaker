@@ -53,6 +53,16 @@ timezone  $getVar('timezone', 'America/New_York')
 # Install OS instead of upgrade
 install
 
+## Add Optional repos
+#if $getVar('tree_repos','') != ''
+#for $repo in $getVar('tree_repos','').split(':')
+#if $repo.find(",") != -1
+#set (reponame, repourl) = $repo.split(',',1)
+repo --name=$reponame --cost=100 --baseurl=http://$server/distros$repourl
+#end if
+#end for
+#end if
+
 $SNIPPET("RedHatEnterpriseLinuxClient5")
 $SNIPPET("rhts_scsi_ethdevices")
 $SNIPPET("rhts_partitions")
