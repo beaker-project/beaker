@@ -7,7 +7,7 @@
 
 Name:           beaker
 Version:        0.5.21
-Release:        0%{?timestamp}%{?branch}%{?dist}
+Release:        1%{?timestamp}%{?branch}%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -180,6 +180,8 @@ fi
 %{_sysconfdir}/init.d/%{name}-watchdog
 
 %changelog
+* Sat Apr 10 2010 Bill Peck <bpeck@redhat.com> - 0.5.21-1
+- cherry-picked rcm addRepo code from 0.4.x
 * Sat Apr 10 2010 Bill Peck <bpeck@redhat.com> - 0.5.21-0
 - fixed beakerd filtering on Status, actually is SystemStatus.
 * Fri Apr 09 2010 Bill Peck <bpeck@redhat.com> - 0.5.20-0
