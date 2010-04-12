@@ -18,7 +18,7 @@ $SNIPPET("network")
 firewall --disabled
 #end if
 #if $getVar('rhts_server', '') == ''
-firewall --enabled --port=22:tcp
+firewall --enabled --port=22:tcp --port=12432:tcp
 #end if
 
 #if $getVar('rhts_server', '') != ''

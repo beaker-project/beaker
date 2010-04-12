@@ -7,7 +7,7 @@ bootloader --location=mbr
 $getVar('mode','text')
 $SNIPPET("network")
 # Firewall configuration
-firewall --disabled
+firewall --disabled --port=12432:tcp
 # Run the Setup Agent on first boot
 firstboot --disable
 # System keyboard

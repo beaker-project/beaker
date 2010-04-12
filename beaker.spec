@@ -7,7 +7,7 @@
 
 Name:           beaker
 Version:        0.5.22
-Release:        0%{?timestamp}%{?branch}%{?dist}
+Release:        1%{?timestamp}%{?branch}%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -180,6 +180,8 @@ fi
 %{_sysconfdir}/init.d/%{name}-watchdog
 
 %changelog
+* Mon Apr 12 2010 Bill Peck <bpeck@redhat.com> - 0.5.22-1
+- Opened port 12432 for beah multi-host by default.
 * Mon Apr 12 2010 Bill Peck <bpeck@redhat.com> - 0.5.22-0
 - Added recipeset_stop to proxy method.
 * Sat Apr 10 2010 Bill Peck <bpeck@redhat.com> - 0.5.21-1
