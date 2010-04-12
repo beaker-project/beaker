@@ -2901,6 +2901,9 @@ class RecipeSet(TaskBase):
     """
     A Collection of Recipes that must be executed at the same time.
     """
+
+    stop_types = ['abort','cancel']
+
     def to_xml(self, clone=False):
         recipeSet = self.doc.createElement("recipeSet")
         if not clone:

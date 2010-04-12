@@ -39,6 +39,7 @@ from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.cobbler_utils import hash_to_string
 from bkr.server.jobs import Jobs
 from bkr.server.recipes import Recipes
+from bkr.server.recipesets import RecipeSets
 from bkr.server.tasks import Tasks
 from bkr.server.task_actions import TaskActions
 from cherrypy import request, response
@@ -377,6 +378,7 @@ class Root(RPCRoot):
     auth = Auth()
     csv = CSV()
     jobs = Jobs()
+    recipesets = RecipeSets()
     recipes = Recipes()
     tasks = Tasks()
     taskactions = TaskActions()
