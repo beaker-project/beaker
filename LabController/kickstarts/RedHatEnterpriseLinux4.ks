@@ -45,9 +45,10 @@ timezone  $getVar('timezone', 'America/New_York')
 # Install OS instead of upgrade
 install
 
-$SNIPPET("RedHatEnterpriseLinux4")
 $SNIPPET("rhts_scsi_ethdevices")
 $SNIPPET("rhts_partitions")
+$SNIPPET("RedHatEnterpriseLinux4")
+$SNIPPET("system")
 
 %packages --resolvedeps --ignoremissing
 #if $getVar('rhts_server','') == ''
@@ -71,9 +72,11 @@ $SNIPPET("rhts_packages")
 
 #end if
 %pre
-$SNIPPET("RedHatEnterpriseLinux4_pre")
 $SNIPPET("rhts_pre")
+$SNIPPET("RedHatEnterpriseLinux4_pre")
+$SNIPPET("system_pre")
 
 %post
-$SNIPPET("RedHatEnterpriseLinux4_post")
 $SNIPPET("rhts_post")
+$SNIPPET("RedHatEnterpriseLinux4_post")
+$SNIPPET("system_post")

@@ -63,9 +63,10 @@ repo --name=$reponame --cost=100 --baseurl=http://$server/distros$repourl
 #end for
 #end if
 
-$SNIPPET("RedHatEnterpriseLinuxClient5")
 $SNIPPET("rhts_scsi_ethdevices")
 $SNIPPET("rhts_partitions")
+$SNIPPET("RedHatEnterpriseLinuxClient5")
+$SNIPPET("system")
 
 %packages --resolvedeps --ignoremissing
 #if $getVar('rhts_server', '') == ''
@@ -99,9 +100,11 @@ $SNIPPET("rhts_packages")
 
 #end if
 %pre
-$SNIPPET("RedHatEnterpriseLinuxClient5_pre")
 $SNIPPET("rhts_pre")
+$SNIPPET("RedHatEnterpriseLinuxClient5_pre")
+$SNIPPET("system_pre")
 
 %post
-$SNIPPET("RedHatEnterpriseLinuxClient5_post")
 $SNIPPET("rhts_post")
+$SNIPPET("RedHatEnterpriseLinuxClient5_post")
+$SNIPPET("system_post")

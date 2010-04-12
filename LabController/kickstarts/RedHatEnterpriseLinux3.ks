@@ -29,9 +29,10 @@ timezone  America/New_York
 # Install OS instead of upgrade
 install
 
-$SNIPPET("RedHatEnterpriseLinux3")
 $SNIPPET("rhts_scsi_ethdevices")
 $SNIPPET("rhts_partitions")
+$SNIPPET("RedHatEnterpriseLinux3")
+$SNIPPET("system")
 
 %packages --resolvedeps --ignoremissing
 $SNIPPET("rhts_packages")
@@ -39,10 +40,12 @@ $SNIPPET("rhts_packages")
 #end if
 %pre
 PATH=/usr/bin:$PATH
-$SNIPPET("RedHatEnterpriseLinux3_pre")
 $SNIPPET("rhts_pre")
+$SNIPPET("RedHatEnterpriseLinux3_pre")
+$SNIPPET("system_pre")
 
 %post
 PATH=/usr/bin:$PATH
-$SNIPPET("RedHatEnterpriseLinux3_post")
 $SNIPPET("rhts_post")
+$SNIPPET("RedHatEnterpriseLinux3_post")
+$SNIPPET("system_post")
