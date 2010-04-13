@@ -23,6 +23,7 @@ from cherrypy import request, response
 from kid import Element
 from bkr.server.widgets import myPaginateDataGrid
 from bkr.server.widgets import myDataGrid
+from bkr.server.widgets import JobQuickSearch
 from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.helpers import *
 from bkr.server.widgets import RecipeWidget
@@ -221,8 +222,16 @@ class Jobs(RPCRoot):
         return job
 
     def _jobs(self,job,**kw):
-        return_dict = {}                    
-        if 'simplesearch' in kw:
+        return_dict = {} 
+        # We can do a quick search, or a regular simple search. If we have done neither of these,
+        # it will fall back to an advanced search and look in the 'jobsearch' 
+        if 'quick_search' in kw:
+            table,op,value = kw['quick_search'].split('-')
+            kw['jobsearch'] = [{'table' : table,
+                                'operation' : op,
+                                'value' : value}]
+            simplesearch = kw['simplesearch']
+        elif 'simplesearch' in kw:
             simplesearch = kw['simplesearch']
             kw['jobsearch'] = [{'table' : 'Id',   
                                  'operation' : 'is', 
@@ -230,9 +239,10 @@ class Jobs(RPCRoot):
         else:
             simplesearch = None
 
-        return_dict.update({'simplesearch':simplesearch}) 
+        return_dict.update({'simplesearch':simplesearch})
         if kw.get("jobsearch"):
-            searchvalue = kw['jobsearch']  
+            log.debug(kw['jobsearch'])
+            searchvalue = kw['jobsearch']
             jobs_found = self._job_search(job,**kw)
             return_dict.update({'jobs_found':jobs_found})               
             return_dict.update({'searchvalue':searchvalue})
@@ -345,9 +355,12 @@ class Jobs(RPCRoot):
 
         search_bar = SearchBar(name='jobsearch',
                            label=_(u'Job Search'),    
+                           simplesearch_label = 'Lookup ID',
                            table = search_utility.Job.search.create_search_table(without=('Owner')),
-                           search_controller=url("/get_search_options_job"), 
-                           )
+                           search_controller=url("/get_search_options_job"),
+                           quick_searches = [('Status-is-Queued','Queued'),('Status-is-Running','Running'),('Status-is-Completed','Completed')])
+                            
+
         return dict(title="Jobs", grid=jobs_grid, list=jobs, search_bar=search_bar, action=action, options=search_options, searchvalue=searchvalue)
 
 

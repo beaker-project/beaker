@@ -160,6 +160,23 @@ class ReserveWorkflow(Form):
                 d['tag_value'] = d['values']['tag']
                 d['method_value'] = d['values']['method']
 
+class MyButton(Widget):
+    template="bkr.server.templates.my_button"
+    params = ['submit','button_label','name']
+    def __init__(self,name,submit=True,*args,**kw): 
+        self.submit = submit 
+        self.name = name
+        self.button_label = None
+
+    def display(self,value,**params):
+        if 'options' in params:
+            if 'label' in params['options']:
+                params['button_label'] = params['options']['label']       
+            if 'name' in params['options']:
+                params['name'] = params['options']['name']
+        return super(MyButton,self).display(value,**params)
+
+
 class myDataGrid(DataGrid):
     template = "bkr.server.templates.my_datagrid"
     name = "my_datagrid"
@@ -206,6 +223,18 @@ class TextFieldJSON(TextField):
 class NestedGrid(CompoundWidget):
     template = "bkr.server.templates.inner_grid" 
     params = ['inner_list']
+
+
+class JobQuickSearch(CompoundWidget):
+    template = 'bkr.server.templates.quick_search'
+    member_widgets = ['status_running','status_queued']
+
+    def __init__(self,*args,**kw): 
+        self.status_running = Button(default="Status is Running",
+                                     name='status_running',
+                                     attrs = {'onclick' : "document.location.href('./?jobsearch-0.table=Status&jobsearch-0.operation=is&jobsearch-0.value=Running&Search=Search')" })
+
+        self.status_queued = Button(default="Status is Queued", name='status_queued')
 
 
 class JobMatrixReport(Form):     
@@ -267,12 +296,16 @@ class SearchBar(RepeatingFormField):
      <tr>
       <td><input type="text" name="simplesearch" value="${simplesearch}" class="textfield"/>
       </td>
-    <td><input type="submit" name="search" value="Search"/>
+    <td><input type="submit" name="search" value="${simplesearch_label}"/>
+
+     <span style="margin:0 0.5em 0.5em 0.5em;" py:for="quickly_search in quickly_searches">
+        ${button_widget.display(value=quickly_search[1],options=dict(label=quickly_search[0]))}
+     </span>
       </td>
 
    
      </tr>
-    </table>
+    </table> 
     </form>
     <form 
       id="searchform"
@@ -324,9 +357,8 @@ class SearchBar(RepeatingFormField):
        </tr>
       </tbody>
      </table></td><td>
-     <input type="submit" name="Search" value="Search"/>
+     <input type="submit" name="Search" value="Search"/> 
      </td>
-    
    
      </tr>
      <tr>
@@ -381,9 +413,9 @@ class SearchBar(RepeatingFormField):
     </div>
     """
 
-    params = ['repetitions', 'form_attrs', 'search_controller', 'simplesearch',
+    params = ['repetitions', 'form_attrs', 'search_controller', 'simplesearch','quickly_searches','button_widget',
               'advanced', 'simple','to_json','this_operations_field','this_searchvalue_field','extra_hiddens',
-              'extra_callbacks_stringified','table_search_controllers_stringified','keyvaluevalue',
+              'extra_callbacks_stringified','table_search_controllers_stringified','keyvaluevalue','simplesearch_label',
               'result_columns','col_options','col_defaults','enable_custom_columns','default_result_columns']
     form_attrs = {}
     simplesearch = None
@@ -427,7 +459,23 @@ class SearchBar(RepeatingFormField):
         if extra_inputs is not None:
             for the_name in extra_inputs:
                 new_input = TextField(name=the_name,display='none')
-                new_inputs.append(new_input)
+                new_inputs.append(new_input) 
+
+        if 'simplesearch_label' in kw:
+            self.simplesearch_label = kw['simplesearch_label']
+        else:
+            self.simplesearch_label = 'Search'
+
+        self.button_widget = MyButton(name='quick_search')
+        self.quickly_searches = []
+        if 'quick_searches' in kw:
+            if kw['quick_searches'] is not None: 
+                for elem,name in kw['quick_searches']:
+                    vals = elem.split('-')
+                    if len(vals) != 3:
+                        log.error('Quick searches expects vals as <column>-<operation>-<value>. The following is incorrect: %s' % (elem)) 
+                    else: 
+                        self.quickly_searches.append((name, '%s-%s-%s' % (vals[0],vals[1],vals[2])))
 
         controllers = kw.get('table_search_controllers',dict()) 
          
@@ -1089,5 +1137,3 @@ class PriorityWidget(SingleSelectField):
            except AttributeError,(e):
                log.error('Object %s passed to display does not have a valid priority: %s' % (type(obj),e))
        return super(PriorityWidget,self).display(value or None,**params)
-
-
