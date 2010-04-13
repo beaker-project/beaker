@@ -57,17 +57,23 @@ popd
 
 # Add Distro Repos
 #if $getVar('tree_repos','') != ''
-cat << EOF > /etc/yum.repos.d/distro.repo
 #set $i = 0
 #for $repo in $getVar('tree_repos','').split(':')
 #set $i = $i + 1
-[beaker-distro$i]
-name=beaker-distro$i
-baseurl=http://$server/distros$repo
+#if $repo.find(",") != -1
+#set (reponame, repourl) = $repo.split(',',1)
+#else
+#set $reponame = "beaker-distro%s" % i
+#set $repourl = $repo
+#end if
+cat << EOF > /etc/yum.repos.d/${reponame}.repo
+[$reponame]
+name=$reponame
+baseurl=http://$server/distros$repourl
 enabled=1
 gpgcheck=0
-#end for
 EOF
+#end for
 #end if
 
 # Add Harness Repos

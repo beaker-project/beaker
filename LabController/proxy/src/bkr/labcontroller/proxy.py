@@ -116,6 +116,17 @@ class ProxyHelper(object):
         self.logger.info("recipe_stop %s" % recipe_id)
         return self.hub.recipes.stop(recipe_id, stop_type, msg)
 
+    def recipeset_stop(self,
+                    recipeset_id,
+                    stop_type,
+                    msg=None):
+        """ tell the scheduler that we are stopping this recipeset
+            stop_type = ['abort', 'cancel']
+            msg to record
+        """
+        self.logger.info("recipeset_stop %s" % recipeset_id)
+        return self.hub.recipesets.stop(recipeset_id, stop_type, msg)
+
     def job_stop(self,
                     job_id,
                     stop_type,

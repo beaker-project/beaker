@@ -243,7 +243,7 @@ def queued_recipes(*args):
     if not recipes.count():
         return False
     log.debug("Entering queued_recipes routine")
-    working = Status.by_name(u'Working')
+    working = SystemStatus.by_name(u'Working')
     for recipe in recipes:
         session.begin()
         try:

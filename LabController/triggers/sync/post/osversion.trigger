@@ -94,14 +94,35 @@ def update_repos(distro):
 
     if not paths:
         return distro
+
     repo_path_re = re.compile(r'(%s.*)/repodata' % paths['path'])
     tree_repos = None
-    repo = os.path.join(paths['tree_path'],"repodata")
+
+    if rcm is not None:
+        distro_path = paths['path']
+        while distro_path != '':
+            distro_path = '/'.join(distro_path.split('/')[1:])
+            prepos = None
+            try:
+                prepos = rcm.tree_repos(distro_path)
+                break
+            except xmlrpclib.ResponseError:
+                pass
+        if prepos:
+            repos = []
+            for prepo in prepos:
+                repo = os.path.join(paths['tree_path'],prepos[prepo],"repodata")
+                if os.path.exists(repo) and repo_path_re.search(repo):
+                    repos.append('beaker-%s,%s' % (prepo, repo_path_re.search(repo).group(1)))
+            tree_repos = ':'.join(repos)
+             
     # Catch Fedora Repos
-    if os.path.exists(repo):
+    repo = os.path.join(paths['tree_path'],"repodata")
+    if not tree_repos and os.path.exists(repo):
         if repo_path_re.search(repo):
             tree_repos = repo_path_re.search(repo).group(1)
-    else:
+
+    if not tree_repos:
         # Catch RHEL5 Repos
         try:
             repos = glob.glob(os.path.join(paths['tree_path'],"*/repodata"))
@@ -253,6 +274,9 @@ if __name__ == '__main__':
     cobbler = xmlrpclib.ServerProxy('http://127.0.0.1/cobbler_api')
     token = cobbler.login("", utils.get_shared_secret())
     settings = cobbler.get_settings(token)
+    rcm = None
+    if 'rcm' in settings:
+        rcm = xmlrpclib.ServerProxy(settings['rcm'])
 
     distros = cobbler.get_distros()
     push_distros = []

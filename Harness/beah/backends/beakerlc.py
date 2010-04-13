@@ -143,31 +143,39 @@ def proc_roles(roles, roles_node):
 
 def parse_recipe_xml(input_xml, hostname):
 
+    task_env = {}
     root = minidom.parseString(input_xml)
     for er in root.getElementsByTagName('recipe'):
         system = xml_attr(er, 'system')
         if system == hostname:
+            task_env['RECIPETYPE'] = 'machine'
             break
     else:
         for er in root.getElementsByTagName('guestrecipe'):
             system = xml_attr(er, 'system')
             if system == hostname:
+                task_env['RECIPETYPE'] = 'guest'
                 break
         else:
             log.info("parse_recipe_xml: No recipe for %s." % hostname)
             return None
-    task_env = {}
 
     rs = xml_attr(er, 'status')
     if rs not in ['Running', 'Waiting']:
         log.info("parse_recipe_xml: This recipe has finished.")
         return None
 
+    variant = xml_attr(er, 'variant', '')
+    if variant == 'None':
+        variant = ''
     dict_update(task_env,
             ARCH=xml_attr(er, 'arch'),
             RECIPEID=xml_attr(er, 'id'),
             JOBID=xml_attr(er, 'job_id'),
             RECIPESETID=xml_attr(er, 'recipe_set_id'),
+            DISTRO=xml_attr(er, 'distro', ''),
+            FAMILY=xml_attr(er, 'family', ''),
+            VARIANT=variant,
             HOSTNAME=hostname)
 
     # The following is necessary for Virtual Workflows:
@@ -192,7 +200,7 @@ def parse_recipe_xml(input_xml, hostname):
                 % (name, name, xml_attr(r, 'url'))
     task_env['BEAKER_REPOS']=':'.join(repos)
 
-    task_env['RECIPE_ROLE'] = xml_attr(er, 'role')
+    task_env['RECIPE_ROLE'] = xml_attr(er, 'role', '')
     roles = {}
     for roles_node in xml_get_nodes(er, 'roles'):
         proc_roles(roles, roles_node)
@@ -221,7 +229,7 @@ def parse_recipe_xml(input_xml, hostname):
                 RECIPETESTID=str(task_id),
                 TESTID=str(task_id),
                 TASKNAME=task_name,
-                ROLE=xml_attr(task, 'role'))
+                ROLE=xml_attr(task, 'role', ''))
 
         # FIXME: Anything else to save?
 

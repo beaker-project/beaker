@@ -140,7 +140,7 @@ class Distros(RPCRoot):
                 search_options['simplesearch'] = distros_return['simplesearch']
 
         distros_grid = widgets.PaginateDataGrid(fields=[
-                                  widgets.PaginateDataGrid.Column(name='install_name', getter=lambda x: make_link(url  = 'view?id=%s' % x.id,
+                                  widgets.PaginateDataGrid.Column(name='install_name', getter=lambda x: make_link(url  = '/distros/view?id=%s' % x.id,
                                   text = x.install_name), title='Install Name', options=dict(sortable=True)),
                                   widgets.PaginateDataGrid.Column(name='name', getter=lambda x: x.name, title='Name', options=dict(sortable=True)),
                                   widgets.PaginateDataGrid.Column(name='breed.breed', getter=lambda x: x.breed, title='Breed', options=dict(sortable=True)),

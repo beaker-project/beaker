@@ -39,6 +39,7 @@ from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.cobbler_utils import hash_to_string
 from bkr.server.jobs import Jobs
 from bkr.server.recipes import Recipes
+from bkr.server.recipesets import RecipeSets
 from bkr.server.tasks import Tasks
 from bkr.server.task_actions import TaskActions
 from cherrypy import request, response
@@ -383,6 +384,7 @@ class Root(RPCRoot):
     auth = Auth()
     csv = CSV()
     jobs = Jobs()
+    recipesets = RecipeSets()
     recipes = Recipes()
     tasks = Tasks()
     taskactions = TaskActions()
@@ -1889,12 +1891,21 @@ class Root(RPCRoot):
         return system.update(inventory)
 
     @expose(template="bkr.server.templates.login")
-    def login(self, forward_url='/', previous_url=None, *args, **kw):
-
+    def login(self, forward_url="/", previous_url=None, *args, **kw): 
         if not identity.current.anonymous \
             and identity.was_login_attempted() \
-            and not identity.get_identity_errors():
-            raise redirect(forward_url)
+            and not identity.get_identity_errors():     
+            #This stops an ISE if going directly to the /login URL
+            if 'Referer' in request.headers:
+            #The reason for this if clause is because when we are not using kerberos login dialog
+            #the referer will be a different value to when we are
+            #If not for this if clause, it would behave one way when using kerberos login and another way when not 
+                if re.match('^(.+)?/%s$' % self.login.__name__,request.headers['Referer']):
+                    raise redirect(forward_url)
+                else:
+                    raise redirect(request.headers.get("Referer","/"))
+            else:
+                redirect(forward_url)
 
         forward_url=None
         previous_url= request.path

@@ -7,7 +7,7 @@ bootloader --location=mbr
 $getVar('mode', 'text')
 $SNIPPET("network")
 # Firewall configuration
-firewall --enabled
+firewall --enabled --port=12432:tcp
 # Run the Setup Agent on first boot
 firstboot --disable
 # System keyboard
@@ -29,18 +29,22 @@ timezone  $getVar('timezone', 'America/New_York')
 # Install OS instead of upgrade
 install
 
-$SNIPPET("Fedora")
 $SNIPPET("rhts_devices")
 $SNIPPET("rhts_partitions")
+$SNIPPET("Fedora")
+$SNIPPET("system")
 
 %packages --ignoremissing
 $SNIPPET("rhts_packages")
 
 #end if
 %pre
-$SNIPPET("Fedora_pre")
 $SNIPPET("rhts_pre")
+$SNIPPET("Fedora_pre")
+$SNIPPET("system_pre")
+
 
 %post
-$SNIPPET("Fedora_post")
 $SNIPPET("rhts_post")
+$SNIPPET("Fedora_post")
+$SNIPPET("system_post")

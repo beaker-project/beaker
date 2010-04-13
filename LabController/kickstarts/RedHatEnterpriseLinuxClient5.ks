@@ -22,7 +22,7 @@ $SNIPPET("network")
 firewall --disabled
 #end if
 #if $getVar('rhts_server', '') == ''
-firewall --enabled --port=22:tcp
+firewall --enabled --port=22:tcp --port=12432:tcp
 #end if
 
 #if $getVar('rhts_server', '') != ''
@@ -53,9 +53,20 @@ timezone  $getVar('timezone', 'America/New_York')
 # Install OS instead of upgrade
 install
 
-$SNIPPET("RedHatEnterpriseLinuxClient5")
+## Add Optional repos
+#if $getVar('tree_repos','') != ''
+#for $repo in $getVar('tree_repos','').split(':')
+#if $repo.find(",") != -1
+#set (reponame, repourl) = $repo.split(',',1)
+repo --name=$reponame --cost=100 --baseurl=http://$server/distros$repourl
+#end if
+#end for
+#end if
+
 $SNIPPET("rhts_scsi_ethdevices")
 $SNIPPET("rhts_partitions")
+$SNIPPET("RedHatEnterpriseLinuxClient5")
+$SNIPPET("system")
 
 %packages --resolvedeps --ignoremissing
 #if $getVar('rhts_server', '') == ''
@@ -89,9 +100,11 @@ $SNIPPET("rhts_packages")
 
 #end if
 %pre
-$SNIPPET("RedHatEnterpriseLinuxClient5_pre")
 $SNIPPET("rhts_pre")
+$SNIPPET("RedHatEnterpriseLinuxClient5_pre")
+$SNIPPET("system_pre")
 
 %post
-$SNIPPET("RedHatEnterpriseLinuxClient5_post")
 $SNIPPET("rhts_post")
+$SNIPPET("RedHatEnterpriseLinuxClient5_post")
+$SNIPPET("system_post")

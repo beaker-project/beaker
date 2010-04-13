@@ -6,8 +6,8 @@
 %endif
 
 Name:           beaker
-Version:        0.5.19
-Release:        1%{?timestamp}%{?branch}%{?dist}
+Version:        0.5.22
+Release:        2%{?timestamp}%{?branch}%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -180,6 +180,21 @@ fi
 %{_sysconfdir}/init.d/%{name}-watchdog
 
 %changelog
+* Mon Apr 12 2010 Bill Peck <bpeck@redhat.com> - 0.5.22-2
+- add system specific kickstart snippets
+- Merge remote branch 'origin/bz578420'
+- Merge remote branch 'origin/master_variables'
+- Merge remote branch 'origin/job_submit_nowait'
+* Mon Apr 12 2010 Bill Peck <bpeck@redhat.com> - 0.5.22-1
+- Opened port 12432 for beah multi-host by default.
+* Mon Apr 12 2010 Bill Peck <bpeck@redhat.com> - 0.5.22-0
+- Added recipeset_stop to proxy method.
+* Sat Apr 10 2010 Bill Peck <bpeck@redhat.com> - 0.5.21-1
+- cherry-picked rcm addRepo code from 0.4.x
+* Sat Apr 10 2010 Bill Peck <bpeck@redhat.com> - 0.5.21-0
+- fixed beakerd filtering on Status, actually is SystemStatus.
+* Fri Apr 09 2010 Bill Peck <bpeck@redhat.com> - 0.5.20-0
+- prepend log dir with year of start_time.
 * Thu Apr 08 2010 Bill Peck <bpeck@redhat.com> - 0.5.19-1
 - fixed scheduler to honor system status.
 * Thu Apr 08 2010 Bill Peck <bpeck@redhat.com> - 0.5.19-0

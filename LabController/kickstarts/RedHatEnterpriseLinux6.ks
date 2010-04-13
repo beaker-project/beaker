@@ -17,7 +17,7 @@ $SNIPPET("network")
 firewall --disabled
 #end if
 #if $getVar('rhts_server', '') == ''
-firewall --enabled --port=22:tcp
+firewall --enabled --port=22:tcp --port=12432:tcp
 #end if
 
 #if $getVar('rhts_server', '') != ''
@@ -53,9 +53,20 @@ timezone  $getVar('timezone', 'America/New_York')
 # Install OS instead of upgrade
 install
 
-$SNIPPET("RedHatEnterpriseLinux6")
+## Add Optional repos
+#if $getVar('tree_repos','') != ''
+#for $repo in $getVar('tree_repos','').split(':')
+#if $repo.find(",") != -1
+#set (reponame, repourl) = $repo.split(',',1)
+repo --name=$reponame --cost=100 --baseurl=http://$server/distros$repourl
+#end if
+#end for
+#end if
+
 $SNIPPET("rhts_devices")
 $SNIPPET("rhts_partitions")
+$SNIPPET("RedHatEnterpriseLinux6")
+$SNIPPET("system")
 
 %packages --ignoremissing
 #if $getVar('rhts_server', '') == ''
@@ -91,9 +102,11 @@ $SNIPPET("rhts_packages")
 
 #end if
 %pre
-$SNIPPET("RedHatEnterpriseLinux6_pre")
 $SNIPPET("rhts_pre")
+$SNIPPET("RedHatEnterpriseLinux6_pre")
+$SNIPPET("system_pre")
 
 %post
-$SNIPPET("RedHatEnterpriseLinux6_post")
 $SNIPPET("rhts_post")
+$SNIPPET("RedHatEnterpriseLinux6_post")
+$SNIPPET("system_post")
