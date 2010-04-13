@@ -7,7 +7,7 @@
 
 Name:           beaker
 Version:        0.5.23
-Release:        1%{?timestamp}%{?branch}%{?dist}
+Release:        2%{?timestamp}%{?branch}%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -180,6 +180,8 @@ fi
 %{_sysconfdir}/init.d/%{name}-watchdog
 
 %changelog
+* Tue Apr 13 2010 Bill Peck <bpeck@redhat.com> - 0.5.23-2
+- fixed install_start to push guest watchdog entries out as well.
 * Tue Apr 13 2010 Bill Peck <bpeck@redhat.com> - 0.5.23-1
 - Merge remote branch 'origin/bz541281' No sorting, filtering, or pagination settings on Accounts list
 - Merge remote branch 'origin/bz580091' quick links on Job/Recipe pages for "Running", "Queued"
