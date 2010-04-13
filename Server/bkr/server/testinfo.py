@@ -318,7 +318,6 @@ class Parser:
                 cleaned_release = release
                 # print "Got positive release: %s"%release
                 num_positive_releases+=1
-            self.error_if_not_in_array("Release", cleaned_release, self.valid_releases)
 
             if num_negative_releases>0 and num_positive_releases>0:
                 self.handle_warning("Releases field lists both negated and non-negated release names (should be all negated, or all non-negated)")
