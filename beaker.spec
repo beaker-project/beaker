@@ -6,8 +6,8 @@
 %endif
 
 Name:           beaker
-Version:        0.5.22
-Release:        2%{?timestamp}%{?branch}%{?dist}
+Version:        0.5.23
+Release:        0%{?timestamp}%{?branch}%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -180,6 +180,8 @@ fi
 %{_sysconfdir}/init.d/%{name}-watchdog
 
 %changelog
+* Tue Apr 13 2010 Bill Peck <bpeck@redhat.com> - 0.5.23-0
+- fix firewall syntax for mutliple ports
 * Mon Apr 12 2010 Bill Peck <bpeck@redhat.com> - 0.5.22-2
 - add system specific kickstart snippets
 - Merge remote branch 'origin/bz578420'
