@@ -957,7 +957,7 @@ class Root(RPCRoot):
                      prov_install = [(distro.id, distro.install_name) for distro in system.distros()]))
 
     @expose(template="bkr.server.templates.system")
-    @paginate('history_data',limit=30,default_order='-created')
+    @paginate('history_data',limit=30,default_order='-created', allow_limit_override=True)
     def view(self, fqdn=None, **kw):
         if fqdn:
             try:
