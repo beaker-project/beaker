@@ -140,8 +140,15 @@ class Recipes(RPCRoot):
         return recipe_search.return_results()
 
     def _recipes(self,recipe,**kw):
-        return_dict = {}                    
-        if 'simplesearch' in kw:
+        return_dict = {} 
+        if 'quick_search' in kw:
+            table,op,value = kw['quick_search'].split('-')
+            kw['recipesearch'] = [{'table' : table,
+                                    'operation' : op,
+                                    'keyvalue': None,
+                                    'value' : value}]
+            simplesearch = kw['simplesearch']
+        elif 'simplesearch' in kw:
             simplesearch = kw['simplesearch']
             kw['recipesearch'] = [{'table' : 'Id',   
                                    'operation' : 'is', 
@@ -159,13 +166,13 @@ class Recipes(RPCRoot):
         return return_dict
 
     @expose(template='bkr.server.templates.grid')
-    @paginate('list',default_order='-id', limit=50)
+    @paginate('list',default_order='-id', limit=50, allow_limit_override=True)
     def index(self,*args,**kw):
         return self.recipes(recipes=session.query(MachineRecipe),*args,**kw)
 
     @identity.require(identity.not_anonymous())
     @expose(template='bkr.server.templates.grid')
-    @paginate('list',default_order='-id', limit=50)
+    @paginate('list',default_order='-id', limit=50, allow_limit_override=True)
     def mine(self,*args,**kw):
         return self.recipes(recipes=MachineRecipe.mine(identity.current.user),action='./mine',*args,**kw)
 
@@ -195,9 +202,10 @@ class Recipes(RPCRoot):
 
         search_bar = SearchBar(name='recipesearch',
                            label=_(u'Recipe Search'),    
+                           simplesearch_label = 'Lookup ID',
                            table = search_utility.Recipe.search.create_search_table(),
                            search_controller=url("/get_search_options_recipe"), 
-                           )
+                           quick_searches = [('Status-is-Queued','Queued'),('Status-is-Running','Running'),('Status-is-Completed','Completed')])
         return dict(title="Recipes", grid=recipes_grid, list=recipes, search_bar=search_bar,action=action,options=search_options,searchvalue=searchvalue)
 
     @identity.require(identity.not_anonymous())
