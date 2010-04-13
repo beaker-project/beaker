@@ -151,6 +151,7 @@ chmod 777 $SCRIPT2
 
 NOTIFY()
 {
+    /sbin/service sendmail start
     mail -s "$HOSTNAME" $SUBMITTER < /etc/motd
 }
 
