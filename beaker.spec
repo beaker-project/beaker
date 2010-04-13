@@ -180,6 +180,9 @@ fi
 %{_sysconfdir}/init.d/%{name}-watchdog
 
 %changelog
+* Tue Apr 13 2010 Bill Peck <bpeck@redhat.com> - 0.5.23-1
+- Merge remote branch 'origin/bz541281' No sorting, filtering, or pagination settings on Accounts list
+- Merge remote branch 'origin/bz580091' quick links on Job/Recipe pages for "Running", "Queued"
 * Tue Apr 13 2010 Bill Peck <bpeck@redhat.com> - 0.5.23-0
 - fix firewall syntax for mutliple ports
 * Mon Apr 12 2010 Bill Peck <bpeck@redhat.com> - 0.5.22-2
