@@ -80,9 +80,11 @@ class Users(RPCRoot):
                                   ('Display Name', lambda x: x.display_name),
                                   (' ', lambda x: make_remove_link(x.user_id)),
                               ])
-        return dict(title="Users", grid = users_grid,
-                                         search_bar = None,
-                                         list = users)
+        return dict(title="Users",
+                    grid = users_grid,
+                    object_count = users.count(),
+                    search_bar = None,
+                    list = users)
 
     @identity.require(identity.in_group("admin"))
     @expose()

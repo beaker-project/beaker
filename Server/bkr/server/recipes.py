@@ -198,7 +198,14 @@ class Recipes(RPCRoot):
                            table = search_utility.Recipe.search.create_search_table(),
                            search_controller=url("/get_search_options_recipe"), 
                            )
-        return dict(title="Recipes", grid=recipes_grid, list=recipes, search_bar=search_bar,action=action,options=search_options,searchvalue=searchvalue)
+        return dict(title="Recipes", 
+                    object_count=recipes.count(),
+                    grid=recipes_grid, 
+                    list=recipes,
+                    search_bar=search_bar,
+                    action=action,
+                    options=search_options,
+                    searchvalue=searchvalue)
 
     @identity.require(identity.not_anonymous())
     @expose()

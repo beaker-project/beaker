@@ -78,15 +78,17 @@ class Activities(RPCRoot):
                               ])
         
         self.search_bar = SearchBar(name='activitysearch',
-                           label=_(u'Activity Search'),    
+                           label=_(u'Activity Search'),
                            table = search_utility.Activity.search.create_search_table(),
                            search_controller=url("/get_search_options_activity"), 
                            )
        
-        return dict(title="Activity", grid = activity_grid,
-                                         search_bar = self.search_bar,
-                                         searchvalue = searchvalue,
-                                         action = '.',
-                                         options = search_options,
-                                         list = activity)
+        return dict(title="Activity", 
+                    grid = activity_grid,
+                    object_count = activity.count(),
+                    search_bar = self.search_bar,
+                    searchvalue = searchvalue,
+                    action = '.',
+                    options = search_options,
+                    list = activity)
     default = index

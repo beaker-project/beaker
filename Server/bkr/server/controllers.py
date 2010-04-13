@@ -336,8 +336,11 @@ class Devices:
                         ('System', lambda x: make_link("/view/%s" % x.fqdn, x.fqdn)),
                         ('Description', lambda x: device.description),
                        ])
-        return dict(title="", grid = device_grid, search_bar=None,
-                                              list = systems)
+        return dict(title="", 
+                    grid = device_grid, 
+                    search_bar=None,
+                    object_count = systems.count(),
+                    list = systems)
 
     @expose(template='bkr.server.templates.grid')
     @paginate('list',default_order='description',limit=50,allow_limit_override=True)
@@ -358,8 +361,11 @@ class Devices:
                         widgets.PaginateDataGrid.Column(name='subsys_vendor_id', getter=lambda x: x.subsys_vendor_id, title='Subsys Vendor ID', options=dict(sortable=True)),
                         widgets.PaginateDataGrid.Column(name='subsys_device_id', getter=lambda x: x.subsys_device_id, title='Subsys Device ID', options=dict(sortable=True)),
                        ])
-        return dict(title="Devices", grid = devices_grid, search_bar=None,
-                                     list = devices)
+        return dict(title="Devices", 
+                    grid = devices_grid, 
+                    search_bar=None, 
+                    object_count = devices.count(),
+                    list = devices)
 
 class Root(RPCRoot): 
     powertypes = PowerTypes()
@@ -387,7 +393,7 @@ class Root(RPCRoot):
     id         = widgets.HiddenField(name='id')
     submit     = widgets.SubmitButton(name='submit')
 
-    email      = widgets.TextField(name='email_address', label='Email Address')
+    email      = widgets.TextField(name='email_address', label='Email Address') 
     autoUsers  = widgets.AutoCompleteField(name='user',
                                            search_controller=url("/users/by_name"),
                                            search_param="input",
@@ -611,7 +617,7 @@ class Root(RPCRoot):
     @expose()
     @identity.require(identity.not_anonymous())
     def save_prefs(self, *args, **kw):
-        email = kw.get('email_address',None)
+        email = kw.get('email_address',None) 
         
         if email and email != identity.current.user.email_address:
             flash(_(u"Email Address Changed"))
@@ -804,9 +810,10 @@ class Root(RPCRoot):
                 
         display_grid = myPaginateDataGrid(fields=my_fields)
         col_data = Utility.result_columns(columns)   
-             
+        #systems_count = len(systems)     
         return dict(title="Systems", grid = display_grid,
                                      list = systems, 
+                                     object_count = systems.count(),
                                      searchvalue = searchvalue,                                    
                                      options =  {'simplesearch' : simplesearch,'columns':col_data,
                                                  'result_columns' : default_result_columns,
@@ -1874,7 +1881,6 @@ class Root(RPCRoot):
             return (0,"You must supply a FQDN")
         if not inventory:
             return (0,"No inventory data provided")
-
         try:
             system = System.query.filter(System.fqdn == fqdn).one()
         except InvalidRequestError:

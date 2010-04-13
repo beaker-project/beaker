@@ -348,7 +348,14 @@ class Jobs(RPCRoot):
                            table = search_utility.Job.search.create_search_table(without=('Owner')),
                            search_controller=url("/get_search_options_job"), 
                            )
-        return dict(title="Jobs", grid=jobs_grid, list=jobs, search_bar=search_bar, action=action, options=search_options, searchvalue=searchvalue)
+        return dict(title="Jobs", 
+                    object_count = jobs.count(),
+                    grid=jobs_grid, 
+                    list=jobs, 
+                    search_bar=search_bar, 
+                    action=action, 
+                    options=search_options, 
+                    searchvalue=searchvalue)
 
 
     @identity.require(identity.not_anonymous())

@@ -80,9 +80,11 @@ class KeyTypes(RPCRoot):
                                   ('Numeric', lambda x: x.numeric),
                                   (' ', lambda x: make_remove_link(x.id)),
                               ])
-        return dict(title="Key Types", grid = keytypes_grid,
-                                         search_bar = None,
-                                         list = keytypes)
+        return dict(title="Key Types", 
+                    grid = keytypes_grid,
+                    search_bar = None,
+                    object_count = keytypes.count(),
+                    list = keytypes)
 
     @expose()
     def remove(self, **kw):

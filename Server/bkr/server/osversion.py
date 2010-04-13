@@ -76,8 +76,10 @@ class OSVersions(RPCRoot):
                                   widgets.PaginateDataGrid.Column(name='arches', getter=lambda x: " ".join([arch.arch for arch in x.arches]), title='Arches', options=dict(sortable=True)),
                                   #(' ', lambda x: make_remove_link(x.id)),
                               ])
-        return dict(title="Tags", grid = osversions_grid,
-                                         search_bar = None,
-                                         list = osversions)
+        return dict(title="Tags", 
+                    grid = osversions_grid,
+                    search_bar = None,
+                    object_count = osversions.count(),
+                    list = osversions)
 
     default = index
