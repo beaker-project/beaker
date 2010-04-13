@@ -176,7 +176,7 @@ echo "***** Building /etc/motd *****" >> $OUTPUTFILE
 MOTD
 
 # send email to the submitter
-echo "***** Sending email to $RESERVEBY *****" >> $OUTPUTFILE
+echo "***** Sending email to $SUBMITTER *****" >> $OUTPUTFILE
 NOTIFY
 
 # set the external watchdog timeout
