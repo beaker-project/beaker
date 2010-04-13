@@ -145,7 +145,7 @@ class ReserveWorkflow:
 
         distro = distro.filter(my_and)
 
-        options = [elem.install_name for elem in distro]
+        options = sorted([elem.install_name for elem in distro])
         return {'options': options}
 
       
