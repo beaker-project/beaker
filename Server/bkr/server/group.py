@@ -182,8 +182,15 @@ class Groups(RPCRoot):
         else:
             group_name =('Group Name', lambda x: make_edit_link(x.group_name,x.group_id))
             remove_link = (' ', lambda x: make_remove_link(x.group_id))  
-          
-        systems = ('Systems', lambda x: make_link('systems?group_id=%s' % x.group_id, 'System count: %s' % len(x.systems)))
+        
+       
+        def f(x):
+            if len(x.systems):
+                return make_link('systems?group_id=%s' % x.group_id, 'System count: %s' % len(x.systems))
+            else:
+                return 'System count: 0' 
+
+        systems = ('Systems', lambda x: f(x))
         display_name = ('Display Name', lambda x: x.display_name)
         
         potential_grid = (group_name,display_name,systems,remove_link)     
