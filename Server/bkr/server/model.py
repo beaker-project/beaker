@@ -819,6 +819,15 @@ task_packages_required_map = Table('task_packages_required_map', metadata,
                                              ondelete='CASCADE')),
 )
 
+task_packages_custom_map = Table('task_packages_custom_map', metadata,
+        Column('recipe_id', Integer,
+                ForeignKey('recipe.id', onupdate='CASCADE',
+                                      ondelete='CASCADE')),
+        Column('package_id', Integer,
+                ForeignKey('task_package.id',onupdate='CASCADE',
+                                             ondelete='CASCADE')),
+)
+
 task_property_needed_table = Table('task_property_needed', metadata,
         Column('id', Integer, primary_key=True),
         Column('task_id', Integer,
@@ -3175,6 +3184,7 @@ class Recipe(TaskBase):
         packages = []
         for task in self.tasks:
             packages.extend(task.task.required)
+        packages.extend(self.custom_packages)
         return packages
 
     packages = property(_get_packages)
@@ -4408,6 +4418,8 @@ mapper(Recipe, recipe_table,
                       'status':relation(TaskStatus, uselist=False),
                       'logs':relation(LogRecipe, backref='parent'),
                       '_roles':relation(RecipeRole),
+                      'custom_packages':relation(TaskPackage,
+                                        secondary=task_packages_custom_map),
                      }
       )
 mapper(GuestRecipe, guest_recipe_table, inherits=Recipe,

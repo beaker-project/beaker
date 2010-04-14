@@ -113,6 +113,10 @@ class XmlRecipe(ElementWrapper):
             else:
                 yield XmlTask(task)
 
+    def installPackages(self):
+        for installpackage in self.wrappedEl['installPackage':]:
+            yield installpackage
+
     def iter_repos(self):
         for repos in self.wrappedEl['repos':]:
             for repo in repos['repo':]:
