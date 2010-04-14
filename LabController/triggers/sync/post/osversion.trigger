@@ -102,6 +102,8 @@ def update_repos(distro):
         distro_path = paths['path']
         while distro_path != '':
             distro_path = '/'.join(distro_path.split('/')[1:])
+            if not distro_path:
+                break
             prepos = None
             try:
                 prepos = rcm.tree_repos(distro_path)
