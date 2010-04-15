@@ -324,6 +324,8 @@ function LabController()
     setsebool -P httpd_can_network_connect true
     semanage fcontext -a -t public_content_t "/var/lib/tftpboot/.*"
     semanage fcontext -a -t public_content_t "/var/www/cobbler/images/.*"
+    # Turn on wsgi
+    perl -pi -e 's|^#LoadModule wsgi_module modules/mod_wsgi.so|LoadModule wsgi_module modules/mod_wsgi.so|g' /etc/httpd/conf.d/wsgi.conf
     service httpd start
     service xinetd start
     service cobblerd start
