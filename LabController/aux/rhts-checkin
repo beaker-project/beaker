@@ -177,6 +177,7 @@ def anamon_loop():
     alog.lookfor("step installpackages$")
 
     slog = WatchedFile("/tmp/syslog", "sys.log")
+    xlog = WatchedFile("/tmp/X.log", "X.log")
     llog = WatchedFile("/tmp/lvmout", "lvmout.log")
     storage_log = WatchedFile("/tmp/storage.log", "storage.log")
     prgm_log = WatchedFile("/tmp/program.log", "program.log")
@@ -205,7 +206,7 @@ def anamon_loop():
 
     # Use the default watchlist and waitlist
     else:
-        watchlist = [alog, slog, dump, scrlog, mod, llog, kcfg, storage_log, prgm_log, vnc_log]
+        watchlist = [alog, slog, dump, scrlog, mod, llog, kcfg, storage_log, prgm_log, vnc_log, xlog]
         waitlist = [ilog, ilog2, ulog, ulog2]
 
     # Monitor loop
