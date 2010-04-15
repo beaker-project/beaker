@@ -51,7 +51,6 @@ Requires:       python-TurboMail
 Summary:        Lab Controller xmlrpc server
 Group:          Applications/Internet
 Requires:       python
-Requires:       mod_python
 Requires:       httpd
 Requires:       cobbler >= 1.4
 Requires:       yum-utils
