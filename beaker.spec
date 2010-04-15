@@ -6,7 +6,7 @@
 %endif
 
 Name:           beaker
-Version:        0.5.24
+Version:        0.5.25
 Release:        0%{?timestamp}%{?branch}%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
@@ -179,6 +179,9 @@ fi
 %{_sysconfdir}/init.d/%{name}-watchdog
 
 %changelog
+* Thu Apr 15 2010 Bill Peck <bpeck@redhat.com> - 0.5.25-0
+- remove mod_python requirement from lab-controller
+- Add X.log monitoring to anamon
 * Wed Apr 14 2010 Bill Peck <bpeck@redhat.com> - 0.5.24-0
 - added missing installPackage tag processing.
 * Tue Apr 13 2010 Bill Peck <bpeck@redhat.com> - 0.5.23-2
