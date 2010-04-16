@@ -91,7 +91,7 @@ class Distros(RPCRoot):
         if 'simplesearch' in kw:
             simplesearch = kw['simplesearch']
             kw['distrosearch'] = [{'table' : 'Name',   
-                                   'operation' : 'is', 
+                                   'operation' : 'contains', 
                                    'value' : kw['simplesearch']}]                    
         else:
             simplesearch = None
