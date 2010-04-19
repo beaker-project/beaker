@@ -8,7 +8,10 @@ from kid import Element
 from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.widgets import DistroTags, SearchBar
 from bkr.server.widgets import TaskSearchForm
+from bkr.server.widgets import myPaginateDataGrid
+from bkr.server.model import System
 from bkr.server.helpers import *
+from bkr.server.controller_utilities import Utility
 from bkr.server import search_utility 
 
 import cherrypy
@@ -111,6 +114,7 @@ class Distros(RPCRoot):
             distro_search.append_results(search['value'],col,search['operation'],**kw)
         return distro_search.return_results()
 
+    @identity.require(identity.not_anonymous())
     @expose(template="bkr.server.templates.grid")
     @paginate('list',default_order='-date_created', limit=50,allow_limit_override=True)
     def index(self,*args,**kw):
@@ -139,25 +143,37 @@ class Distros(RPCRoot):
             if 'simplesearch' in distros_return:
                 search_options['simplesearch'] = distros_return['simplesearch']
 
-        distros_grid = widgets.PaginateDataGrid(fields=[
-                                  widgets.PaginateDataGrid.Column(name='install_name', getter=lambda x: make_link(url  = '/distros/view?id=%s' % x.id,
+        distros_grid =  myPaginateDataGrid(fields=[
+                                  myPaginateDataGrid.Column(name='install_name', getter=lambda x: make_link(url  = '/distros/view?id=%s' % x.id,
                                   text = x.install_name), title='Install Name', options=dict(sortable=True)),
-                                  widgets.PaginateDataGrid.Column(name='name', getter=lambda x: x.name, title='Name', options=dict(sortable=True)),
-                                  widgets.PaginateDataGrid.Column(name='breed.breed', getter=lambda x: x.breed, title='Breed', options=dict(sortable=True)),
-                                  widgets.PaginateDataGrid.Column(name='osversion.osmajor.osmajor', getter=lambda x: x.osversion.osmajor, title='OS Major Version', options=dict(sortable=True)),
-                                  widgets.PaginateDataGrid.Column(name='osversion.osminor', getter=lambda x: x.osversion.osminor, title='OS Minor Version', options=dict(sortable=True)),
-                                  widgets.PaginateDataGrid.Column(name='variant', getter=lambda x: x.variant, title='Variant', options=dict(sortable=True)),
-                                  widgets.PaginateDataGrid.Column(name='virt', getter=lambda x: x.virt, title='Virt', options=dict(sortable=True)),
-                                  widgets.PaginateDataGrid.Column(name='arch.arch', getter=lambda x: x.arch, title='Arch', options=dict(sortable=True)),
-                                  widgets.PaginateDataGrid.Column(name='method', getter=lambda x: x.method, title='Method', options=dict(sortable=True)),
-                                  widgets.PaginateDataGrid.Column(name='date_created', getter=lambda x: x.date_created, title='Date Created', options=dict(sortable=True)),
+                                  myPaginateDataGrid.Column(name='name', getter=lambda x: x.name, title='Name', options=dict(sortable=True)),
+                                  myPaginateDataGrid.Column(name='breed.breed', getter=lambda x: x.breed, title='Breed', options=dict(sortable=True)),
+                                  myPaginateDataGrid.Column(name='osversion.osmajor.osmajor', getter=lambda x: x.osversion.osmajor, title='OS Major Version', options=dict(sortable=True)),
+                                  myPaginateDataGrid.Column(name='osversion.osminor', getter=lambda x: x.osversion.osminor, title='OS Minor Version', options=dict(sortable=True)),
+                                  myPaginateDataGrid.Column(name='variant', getter=lambda x: x.variant, title='Variant', options=dict(sortable=True)),
+                                  myPaginateDataGrid.Column(name='virt', getter=lambda x: x.virt, title='Virt', options=dict(sortable=True)),
+                                  myPaginateDataGrid.Column(name='arch.arch', getter=lambda x: x.arch, title='Arch', options=dict(sortable=True)),
+                                  myPaginateDataGrid.Column(name='method', getter=lambda x: x.method, title='Method', options=dict(sortable=True)),
+                                  myPaginateDataGrid.Column(name='date_created', getter=lambda x: x.date_created, title='Date Created', options=dict(sortable=True)),
+                                  Utility.direct_column(title='Provision', getter=lambda x: _provision_system_link(x))
                               ])
+
+        def _provision_system_link(x):
+            systems = x.systems()
+            avail_systems_distro_query = System.available(identity.current.user,System.by_type(type='machine',systems=systems)) 
+            if avail_systems_distro_query.count() < 1:
+                return
+            else:
+                return make_link("/reserveworkflow/reserve?distro_id=%s" % x.id, "Provision System")
+
+        
+
         if 'tag' in kw: 
             hidden_fields = [('tag',kw['tag'])]
 
         search_bar = SearchBar(name='distrosearch',
                            label=_(u'Distro Search'),    
-                           table=search_utility.Distro.search.create_search_table(),
+                           table=search_utility.Distro.search.create_search_table(), 
                            search_controller=url("/get_search_options_distros"), 
                            extra_hiddens=hidden_fields
                            )
