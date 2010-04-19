@@ -55,16 +55,3 @@ class Tags(RPCRoot):
         tags = [match.tag for match in search]
         return dict(tags=tags)
 
-    @expose(template="bkr.server.templates.grid")
-    @paginate('list',default_order='tag',limit=50,allow_limit_override=True)
-    def index(self):
-        tags = session.query(DistroTag)
-        tags_grid = widgets.PaginateDataGrid(fields=[
-                                  widgets.PaginateDataGrid.Column(name='tag', getter=lambda x: make_link(url  = '../distros/tagsearch/?tag=%s' % x.tag,
-                                  text = x.tag), title='Tag', options=dict(sortable=True)),
-                              ])
-        return dict(title="Tags", grid = tags_grid,
-                                         search_bar = None,
-                                         list = tags)
-
-    default = index

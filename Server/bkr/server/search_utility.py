@@ -922,7 +922,23 @@ class Distro(SystemObject):
                             'Virt' : MyColumn(col_type='boolean',column=model.Distro.virt),
                             'Method' : MyColumn(col_type='string',column=model.Distro.method),
                             'Breed' : MyColumn(col_type='string',column=model.Distro.breed),
+                            'Tag' : MyColumn(col_type='string', column=model.DistroTag.tag, relations=['_tags'])
                          }
+    search_values_dict = {'Tag' : [e.tag for e in model.DistroTag.list_by_tag('')]}
+
+    @classmethod
+    def tag_is_not_filter(cls,col,val):
+        """
+        tag_is_not_filter is a function dynamically called from append_results.
+        """       
+        if not val: 
+           return or_(col != None, col != val) 
+        else:
+            #If anyone knows of a better way to do this, by all means...
+            query = model.Distro.query().filter(model.Distro._tags.any(model.DistroTag.tag == val))       
+          
+        ids = [r.id for r in query]  
+        return not_(model.distro_table.c.id.in_(ids)) 
 
        
 class Activity(SystemObject):
