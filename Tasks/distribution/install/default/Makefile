@@ -57,4 +57,5 @@ $(METADATA): Makefile
 	@echo "Requires:	make"		>> $(METADATA)
 	@echo "Requires:	gcc"		>> $(METADATA)
 	@echo "Requires:	wget"		>> $(METADATA)
+	@echo "Requires:	procmail"	>> $(METADATA)
 	@echo "License:		GPL"		>> $(METADATA)
