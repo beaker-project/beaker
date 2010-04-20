@@ -18,7 +18,7 @@ part / --fstype ext3 --size 1024 --grow --asprimary
 part swap --recommended --asprimary
 
 ## Loop through partitions variable and create appropriate part commands
-## partitions=partitions=rhel5_pv_guest.img:lvm:10;rhel5_hvm_guest.img:lvm:10
+## partitions=rhel5_pv_guest.img:lvm:10;rhel5_hvm_guest.img:lvm:10
 #partitions = /mnt/block1:part:1;mylvm:lvm:5;/mnt/block4ext4:part:1:ext4dev;mylvm4ext4:lvm:5:ext4dev;/mnt/block2:part:1;/mnt/block24ext4:part:1:ext4dev;mylvm2:lvm:5; 
 # (ext4dev is the fstype in some of them in the above example)
 #set is_lvm = 0
