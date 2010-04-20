@@ -6,7 +6,7 @@
 %endif
 
 Name:           beaker
-Version:        0.5.25
+Version:        0.5.26
 Release:        0%{?timestamp}%{?branch}%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
@@ -54,7 +54,11 @@ Requires:       python
 Requires:       httpd
 Requires:       cobbler >= 1.4
 Requires:       yum-utils
+%if 0%{?fedora} || 0%{?rhel} > 5
+Requires:       /usr/sbin/fenced
+%else
 Requires:       /sbin/fenced
+%endif
 Requires:       telnet
 Requires:       python-cpio
 Requires:	beaker
@@ -179,6 +183,13 @@ fi
 %{_sysconfdir}/init.d/%{name}-watchdog
 
 %changelog
+* Tue Apr 20 2010 Bill Peck <bpeck@redhat.com> - 0.5.26-0
+- Example cleanup in rhts_partitions snippet
+- Fixed osversion.trigger not to process distros without ks_meta['tree']
+- moved mod_wsgi socket location to /var/run to make fedora happy
+- replaced Unicode() with UnicodeText() to make fedora happy
+- add <packages><package name=""/></packages> tags so cloning works for custom_packages.
+- loosen error checking on root name spaces for new tasks.
 * Thu Apr 15 2010 Bill Peck <bpeck@redhat.com> - 0.5.25-0
 - remove mod_python requirement from lab-controller
 - Add X.log monitoring to anamon

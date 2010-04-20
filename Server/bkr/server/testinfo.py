@@ -271,8 +271,6 @@ class Parser:
         # Check root namespace:
         #print name_frags
         root_ns = name_frags[1]
-        if not root_ns in self.valid_root_ns:
-            self.handle_error("%s is not a valid root namespace (within %s)"%(root_ns, value))
         
         self.info.test_name_root_ns = root_ns
         self.info.test_name_under_root_ns = "/".join(name_frags[2:])
