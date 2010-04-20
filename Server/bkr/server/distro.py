@@ -164,7 +164,7 @@ class Distros(RPCRoot):
             if avail_systems_distro_query.count() < 1:
                 return
             else:
-                return make_link("/reserveworkflow/reserve?distro_id=%s" % x.id, "Provision System")
+                return make_link("/reserve_system?distro_id=%s" % (x.id,), "Provision System")
 
         
 

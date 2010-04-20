@@ -496,10 +496,16 @@ class Root(RPCRoot):
             else:
                 return make_link("/reserveworkflow/reserve?system_id=%s&distro_id=%s" % (Utility.get_correct_system_column(x).id,distro), 'Queue Reservation')
 
-        try:    
-            distro_install_name = kw['distro'] #this should be the distro install_name   
-            distro = Distro.query().filter(Distro.install_name == distro_install_name).one()
-            
+        try:
+            try:
+                distro_install_name = kw['distro'] #this should be the distro install_name   
+                distro = Distro.query().filter(Distro.install_name == distro_install_name).one()
+            except KeyError:
+                try:
+                    distro_id = kw['distro_id']
+                    distro = Distro.query().filter(Distro.id == distro_id).one()
+                except KeyError:
+                    raise
             # I don't like duplicating this code in find_systems_for_distro() but it dies on trying to jsonify a Query object..... 
             systems_distro_query = distro.systems() 
             avail_systems_distro_query = System.available(identity.current.user,System.by_type(type='machine',systems=systems_distro_query)) 
@@ -507,8 +513,8 @@ class Root(RPCRoot):
             warn = None
             if avail_systems_distro_query.count() < 1: 
                 warn = 'No Systems compatible with distro %s' % distro_install_name
-            distro_query = Distro.by_install_name(distro_install_name)
-            getter = lambda x: reserve_link(x,distro_query.id)       
+          
+            getter = lambda x: reserve_link(x,distro.id)       
             direct_column = Utility.direct_column(title='Action',getter=getter)     
             return_dict  = self.systems(systems=avail_systems_distro_query, direct_columns=[(8,direct_column)],warn_msg=warn, *args, **kw)
        
@@ -516,10 +522,10 @@ class Root(RPCRoot):
             return_dict['warn_msg'] = warn
             return_dict['tg_template'] = "bkr.server.templates.reserve_grid"
             return_dict['action'] = '/reserve_system'
-            return_dict['options']['extra_hiddens'] = {'distro' : distro_install_name} 
+            return_dict['options']['extra_hiddens'] = {'distro' : distro.install_name} 
             return return_dict
         except KeyError, (e):
-            flash(_(u'Need a distro to search on')) 
+            flash(_(u'Need a  valid distro to search on')) 
             redirect(url('/reserveworkflow',**kw))              
         except InvalidRequestError,(e):
             flash(_(u'Invalid Distro given'))                 
