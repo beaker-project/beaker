@@ -1,0 +1,4 @@
+<!ENTITY PRODUCT "Documentation">
+<!ENTITY BOOKID "beaker_user_guide">
+<!ENTITY YEAR "2010">
+<!ENTITY HOLDER "| You need to change the HOLDER entity in the en-US/beaker_user_guide.ent file |">
