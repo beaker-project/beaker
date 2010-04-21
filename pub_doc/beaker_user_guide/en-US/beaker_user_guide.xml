@@ -7,6 +7,11 @@
 	<xi:include href="Book_Info.xml" xmlns:xi="http://www.w3.org/2001/XInclude" />
 	<xi:include href="Preface.xml" xmlns:xi="http://www.w3.org/2001/XInclude" />
 	<xi:include href="Systems.xml" xmlns:xi="http://www.w3.org/2001/XInclude" />
+	<xi:include href="Distro.xml" xmlns:xi="http://www.w3.org/2001/XInclude" />
+	<xi:include href="Job.xml" xmlns:xi="http://www.w3.org/2001/XInclude" />
+	<xi:include href="Recipe.xml" xmlns:xi="http://www.w3.org/2001/XInclude" />
+	<xi:include href="Task.xml" xmlns:xi="http://www.w3.org/2001/XInclude" />
+	<xi:include href="Report.xml" xmlns:xi="http://www.w3.org/2001/XInclude" />
 	<xi:include href="Revision_History.xml" xmlns:xi="http://www.w3.org/2001/XInclude" />
 	<index />
 </book>
