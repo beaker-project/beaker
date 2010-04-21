@@ -88,7 +88,7 @@
     }
  }
     </script>
-    <title>Job</title>
+    <title>Job ${job.t_id} - ${job.whiteboard} | ${job.status} | ${job.result}</title>
 </head>
 
  <?python

@@ -5,7 +5,7 @@
 <head>
     <meta content="text/html; charset=UTF-8" http-equiv="content-type" py:replace="''"/>
 
-    <title>Recipe</title>
+    <title>Recipe ${recipe.t_id} - ${recipe.recipeset.job.whiteboard}/${recipe.whiteboard} | ${recipe.status} | ${recipe.result}</title>
 </head>
 
  <?python
