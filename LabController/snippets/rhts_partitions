@@ -60,7 +60,8 @@ part /$partname --fstype $fstype --size=$size
 #if $partition[1] == 'lvm'
 #set is_lvm = $is_lvm + 1
 #set lvmname = $partname.replace('/','_')
-part pv.00$is_lvm --size=$size
+#set part_size = $size + 5
+part pv.00$is_lvm --size=$part_size
 volgroup TestVolume00$is_lvm pv.00$is_lvm
 logvol /$partname --fstype $fstype --name=$lvmname --vgname=TestVolume00$is_lvm --size=$size
 #end if
