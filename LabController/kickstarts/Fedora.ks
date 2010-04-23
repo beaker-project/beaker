@@ -6,8 +6,21 @@ bootloader --location=mbr
 # Use text mode install
 $getVar('mode', 'text')
 $SNIPPET("network")
-# Firewall configuration
-firewall --enabled --port=12432:tcp
+
+## Firewall configuration
+## firewall in kickstart metadata will enable the firewall
+## firewall=22:tcp,80:tcp will enable the firewall with ports 22 and 80 open.
+## always allow port 12432 so that beah harness will support multihost
+firewall #slurp
+#if $getVar('firewall', 'disabled') == 'disabled':
+--disabled
+#else
+--enabled --port=12432:tcp #slurp
+#if $getVar('firewall', '') != '':
+,$getVar('firewall')
+#end if
+#end if
+
 # Run the Setup Agent on first boot
 firstboot --disable
 # System keyboard
