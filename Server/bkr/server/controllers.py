@@ -42,6 +42,7 @@ from bkr.server.recipes import Recipes
 from bkr.server.recipesets import RecipeSets
 from bkr.server.tasks import Tasks
 from bkr.server.task_actions import TaskActions
+from bkr.server.controller_utilities import Utility
 from cherrypy import request, response
 from cherrypy.lib.cptools import serve_file
 from tg_expanding_form_widget.tg_expanding_form_widget import ExpandingForm
@@ -68,173 +69,6 @@ log = logging.getLogger("bkr.server.controllers")
 import breadcrumbs
 from datetime import datetime
 
-class Utility:
-    #I this I will move this Utility class out into another module and then
-    #perhaps break it down into further classes. Work from other tickets
-    #is making it quite large.
-
-    @classmethod
-    def direct_column(cls,title,getter):
-        """
-        direct_column() will return a DataGrid Column and is intended to be used to generate 
-        columns to be inserted into a grid without any other sideaffects (unlike custom_systems_grid()).
-        They are also free of control from other elemnts such as the result_columns()
-        """
-        col = widgets.DataGrid.Column(name=title, title=title, getter=getter)
-        return col
-
-    @classmethod
-    def result_columns(cls,values_checked = None):  
-      """
-      result_columns() will return the list of columns that are able to bereturned
-      in the system search results.
-      """
-      column_names = search_utility.System.search.create_column_table([{search_utility.Cpu :{'exclude': ['Flags']} },
-                                                                       {search_utility.System: {'all':[]} }] ) 
-      
-      send = [(elem,elem) for elem in column_names]  
-     
-      if values_checked is not None:
-         vals_to_set = values_checked
-         response.simple_cookie['column_values'] = ','.join(values_checked)
-      elif request.simple_cookie.has_key('column_values'): 
-         text = request.simple_cookie['column_values'].value
-         vals_to_set = text.split(',') 
-      else:
-         vals_to_set = [] 
-
-      default = {}
-      for elem in vals_to_set:
-          default[elem] = 1;
-
-      return {'options' : send, 'default':default}; 
-      
-    @classmethod
-    def get_correct_system_column(cls,x):
-        if type(x) == type(()):
-            return x[0] 
-        else:
-            return x
-
-    @classmethod
-    def system_name_name(cls):
-        return 'fqdn'
-
-    @classmethod
-    def system_powertype_name(cls):
-        return 'power'
-
-    @classmethod
-    def get_attr(cls,c):        
-        return lambda x:getattr(cls.get_correct_system_column(x),c.lower()) 
-
-    @classmethod
-    def system_loanedto_getter(cls):
-        return lambda x: x.loaned
-          
-    @classmethod
-    def system_powertype_getter(cls):
-        def my_f(x):
-            try:
-                return cls.get_correct_system_column(x).power.power_type.name  
-            except Exception,(e): 
-                return ''   
-        return my_f
-
-    @classmethod
-    def system_arch_getter(cls):
-        return lambda x: ', '.join([arch.arch for arch in cls.get_correct_system_column(x).arch])  
-
-    @classmethod
-    def system_name_getter(cls):
-        return lambda x: make_link("/view/%s" % cls.get_correct_system_column(x).fqdn, cls.get_correct_system_column(x).fqdn)
-
-    @classmethod
-    def get_attr_other(cls,index):
-        return lambda x: x[index]
-
-    @classmethod 
-    def custom_systems_grid(cls,systems,others=None):
-   
-        def get_widget_attrs(table,column,with_desc=True,sortable=False,index=None): 
-            options = {}
-            lower_column = column.lower()
-            lower_table = table.lower()
-
-            name_function_name = '%s_%s_name' % (lower_table, lower_column)
-            custom_name = getattr(Utility,name_function_name,None)
-
-            getter_function_name = '%s_%s_getter' % (table.lower(), column.lower())
-            custom_getter = getattr(Utility, getter_function_name,None)
-
-            if custom_name:
-                lower_column = custom_name()
-
-            if custom_getter: 
-                my_getter = custom_getter()
-            elif index is not None:         
-                my_getter = Utility.get_attr_other(index_in_queri)
-            else:
-                my_getter = Utility.get_attr(column)
-
-            if with_desc: 
-                title_string = '%s-%s' % (table,column)
-            else: 
-                title_string = '%s' % column
-             
-            if sortable:
-                options['sortable'] = True
-                name_string = '%s' % lower_column  #sortable columns need a real name
-            else:
-                options['sortable'] = False 
-                name_string = '%s.%s' % (lower_table,lower_column)
-         
-            return name_string,title_string,options,my_getter
-
-        fields = []
-        if systems:
-            options = {} 
-            for column_desc in systems: 
-                table,column = column_desc.split('/')
-                if column.lower() in ('name','vendor','memory','model','location'):
-                    sort_me = True
-                else:
-                    sort_me = False
-
-                if others:
-                    (name_string, title_string, options, my_getter) = get_widget_attrs(table, column, with_desc=True, sortable=sort_me)
-                else:
-                    (name_string, title_string, options, my_getter) = get_widget_attrs(table, column, with_desc=False, sortable=True)
-
-                new_widget = widgets.PaginateDataGrid.Column(name=name_string, getter=my_getter, title=title_string, options=options) 
-                if column == 'Name':
-                    fields.insert(0,new_widget)
-                else:
-                    fields.append(new_widget)
-
-        if others:
-            for index,column_desc in enumerate(others):  
-                table,column = column_desc.split('/') 
-                index_in_queri = index + 1
-                (name_string, title_string, options, my_getter) = get_widget_attrs(table, column, with_desc=True, 
-                                                                                   sortable=False, index=index_in_queri)
-                new_widget = widgets.PaginateDataGrid.Column(name=name_string , 
-                                                             getter = my_getter, 
-                                                             title=title_string, 
-                                                             options=options) 
-                fields.append(new_widget)
-        return fields
-
-    @classmethod
-    def status_id_change_handler(cls,current_val,new_val,**kw): 
-        bad_status = ['broken','removed']
-        new_status = SystemStatus.by_id(new_val)
-        if new_status.status.lower() == 'working': 
-            if current_val:
-                old_status = SystemStatus.by_id(current_val)
-                if old_status.status.lower() in bad_status:
-                    kw['status_reason'] = None  #remove the status notes
-        return kw           
 
 class Netboot:
     # For XMLRPC methods in this class.
@@ -668,10 +502,16 @@ class Root(RPCRoot):
             else:
                 return make_link("/reserveworkflow/reserve?system_id=%s&distro_id=%s" % (Utility.get_correct_system_column(x).id,distro), 'Queue Reservation')
 
-        try:    
-            distro_install_name = kw['distro'] #this should be the distro install_name   
-            distro = Distro.query().filter(Distro.install_name == distro_install_name).one()
-            
+        try:
+            try:
+                distro_install_name = kw['distro'] #this should be the distro install_name   
+                distro = Distro.query().filter(Distro.install_name == distro_install_name).one()
+            except KeyError:
+                try:
+                    distro_id = kw['distro_id']
+                    distro = Distro.query().filter(Distro.id == distro_id).one()
+                except KeyError:
+                    raise
             # I don't like duplicating this code in find_systems_for_distro() but it dies on trying to jsonify a Query object..... 
             systems_distro_query = distro.systems() 
             avail_systems_distro_query = System.available(identity.current.user,System.by_type(type='machine',systems=systems_distro_query)) 
@@ -679,8 +519,8 @@ class Root(RPCRoot):
             warn = None
             if avail_systems_distro_query.count() < 1: 
                 warn = 'No Systems compatible with distro %s' % distro_install_name
-            distro_query = Distro.by_install_name(distro_install_name)
-            getter = lambda x: reserve_link(x,distro_query.id)       
+          
+            getter = lambda x: reserve_link(x,distro.id)       
             direct_column = Utility.direct_column(title='Action',getter=getter)     
             return_dict  = self.systems(systems=avail_systems_distro_query, direct_columns=[(8,direct_column)],warn_msg=warn, *args, **kw)
        
@@ -688,10 +528,10 @@ class Root(RPCRoot):
             return_dict['warn_msg'] = warn
             return_dict['tg_template'] = "bkr.server.templates.reserve_grid"
             return_dict['action'] = '/reserve_system'
-            return_dict['options']['extra_hiddens'] = {'distro' : distro_install_name} 
+            return_dict['options']['extra_hiddens'] = {'distro' : distro.install_name} 
             return return_dict
         except KeyError, (e):
-            flash(_(u'Need a distro to search on')) 
+            flash(_(u'Need a  valid distro to search on')) 
             redirect(url('/reserveworkflow',**kw))              
         except InvalidRequestError,(e):
             flash(_(u'Invalid Distro given'))                 
@@ -797,9 +637,6 @@ class Root(RPCRoot):
             systems = self._system_search(kw,sys_search)
 
             (system_columns_desc,extra_columns_desc) = sys_search.get_column_descriptions()  
-            # I want to create another type of column, a 'direct' column which will have some kind 'action'
-            # Like 'reserve' or something of that nature. It doesn't need to be included in the custom columns
-            # because it will always have the same value, and is not actually a result of any kind.
             if use_custom_columns is True:
                 my_fields = Utility.custom_systems_grid(system_columns_desc,extra_columns_desc)
             else: 
