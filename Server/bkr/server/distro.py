@@ -118,11 +118,6 @@ class Distros(RPCRoot):
 
     @expose(template="bkr.server.templates.grid")
     @paginate('list',default_order='-date_created', limit=50,allow_limit_override=True)
-    def tagsearch(self,*args,**kw): 
-        return self.distros(distros=session.query(Distro).join('breed').join('arch').join(['osversion','osmajor']).join('_tags').filter(distro_tag_table.c.tag==kw['tag']),action='./tagsearch',**kw)
-
-    @expose(template="bkr.server.templates.grid")
-    @paginate('list',default_order='-date_created', limit=50,allow_limit_override=True)
     def name(self,*args,**kw):
         return self.distros(distros=session.query(Distro).join('breed').join('arch').join(['osversion','osmajor']).filter(distro_table.c.install_name.like('%s' % kw['name'])),action='./name')
 
