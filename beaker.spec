@@ -6,7 +6,7 @@
 %endif
 
 Name:           beaker
-Version:        0.5.26
+Version:        0.5.27
 Release:        0%{?timestamp}%{?branch}%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
@@ -183,6 +183,19 @@ fi
 %{_sysconfdir}/init.d/%{name}-watchdog
 
 %changelog
+* Fri Apr 23 2010 Bill Peck <bpeck@redhat.com> - 0.5.27-0
+- bz583535 - RFE Provision from distro page
+- bz582879 - Show all - bug in tasks library
+- bz582186 - Searches should default to 'Contains'
+- bz581684 - Remove Tag page for Distros, distro page can now search on tags
+- bz581502 - Sort distro family list
+- bz567788 - search should show number of items returned
+- update rhts_partitions snippet to allow ondisk specification
+- update kickstarts to support firewall variable
+- deprecate <installPackage> tag and replace with <packages><package name=""/></packages>
+- bz557116 - Show/search systems owned by groups
+- bz582729 - Fixed html <title> to show job/recipe etc.. id on each page
+- includes pub docs
 * Tue Apr 20 2010 Bill Peck <bpeck@redhat.com> - 0.5.26-0
 - Example cleanup in rhts_partitions snippet
 - Fixed osversion.trigger not to process distros without ks_meta['tree']
