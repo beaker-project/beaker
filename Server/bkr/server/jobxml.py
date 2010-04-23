@@ -113,6 +113,11 @@ class XmlRecipe(ElementWrapper):
             else:
                 yield XmlTask(task)
 
+    def packages(self):
+        for packages in self.wrappedEl['packages':]:
+            for package in packagess['package':]:
+                yield XmlPackage(package)
+
     def installPackages(self):
         for installpackage in self.wrappedEl['installPackage':]:
             yield installpackage
@@ -202,6 +207,12 @@ class XmlTask(ElementWrapper):
             return XmlRpm(self.wrappedEl['rpm'])
         else: raise AttributeError, attrname
 
+
+class XmlPackage(ElementWrapper):
+    def __getattr__(self, attrname):
+        if attrname == 'name':
+            self.get_xml_attr('name', unicode, u'None')
+        else: raise AttributeError, attrname
 
 class XmlRepo(ElementWrapper):
     def __getattr__(self, attrname):
