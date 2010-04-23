@@ -367,7 +367,7 @@ class Tasks(RPCRoot):
         if 'simplesearch' in kw:
             simplesearch = kw['simplesearch']
             kw['tasksearch'] = [{'table' : 'Name',   
-                                 'operation' : 'is', 
+                                 'operation' : 'contains', 
                                  'value' : kw['simplesearch']}]                    
         else:
             simplesearch = None
