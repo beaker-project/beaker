@@ -1,21 +1,39 @@
 zerombr
 clearpart --all --initlabel
 
-#if $getVar('partitions', '') != ''
+#if $getVar('partitions', '') != '' or $getVar('ondisk', '') != ''
 
 ## Arch Specific Boot requirements
 #if $arch == 'ia64'
-part /boot/efi --fstype vfat --size 200 --recommended
+part /boot/efi --fstype vfat --size 200 --recommended #slurp
+#if $getVar('ondisk', '') != ''
+--ondisk=$getVar('ondisk','')
+#end if
+
 #elif $arch.startswith('ppc')
 part None --fstype 'PPC PReP Boot' --size 8
-part /boot --fstype ext3 --size 200 --recommended
+part /boot --fstype ext3 --size 200 --recommended #slurp
+#if $getVar('ondisk', '') != ''
+--ondisk=$getVar('ondisk','')
+#end if
+
 #else
-part /boot --fstype ext3 --size 200 --recommended
+part /boot --fstype ext3 --size 200 --recommended #slurp
+#if $getVar('ondisk', '') != ''
+--ondisk=$getVar('ondisk','')
+#end if
 #end if
 
 ## Basic root Filesystem plus Swap
-part / --fstype ext3 --size 1024 --grow --asprimary
-part swap --recommended --asprimary
+part / --fstype ext3 --size 1024 --grow --asprimary #slurp
+#if $getVar('ondisk', '') != ''
+--ondisk=$getVar('ondisk','')
+#end if
+
+part swap --recommended --asprimary #slurp
+#if $getVar('ondisk', '') != ''
+--ondisk=$getVar('ondisk','')
+#end if
 
 ## Loop through partitions variable and create appropriate part commands
 ## partitions=rhel5_pv_guest.img:lvm:10;rhel5_hvm_guest.img:lvm:10
