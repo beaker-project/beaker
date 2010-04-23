@@ -112,9 +112,11 @@ class PowerTypes(RPCRoot):
                                   ('Power Type', make_edit_link),
                                   (' ', make_remove_link),
                               ])
-        return dict(title="Power Types", grid = powertypes_grid,
-                                         search_bar = None,
-                                         list = powertypes)
+        return dict(title="Power Types", 
+                    grid = powertypes_grid,
+                    search_bar = None,
+                    object_count = powertypes.count(),
+                    list = powertypes)
 
     @expose()
     def remove(self, **kw):

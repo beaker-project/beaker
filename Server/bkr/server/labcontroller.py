@@ -260,9 +260,11 @@ class LabControllers(RPCRoot):
                                   (' ', lambda x: make_remove_link(x.id)),
                                   (' ', lambda x: make_scan_link(x.id)),
                               ])
-        return dict(title="Lab Controllers", grid = labcontrollers_grid,
-                                         search_bar = None,
-                                         list = labcontrollers)
+        return dict(title="Lab Controllers", 
+                    grid = labcontrollers_grid,
+                    search_bar = None,
+                    object_count = labcontrollers.count(),
+                    list = labcontrollers)
 
     @identity.require(identity.in_group("admin"))
     @expose()

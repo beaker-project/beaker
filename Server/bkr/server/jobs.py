@@ -365,7 +365,14 @@ class Jobs(RPCRoot):
                            quick_searches = [('Status-is-Queued','Queued'),('Status-is-Running','Running'),('Status-is-Completed','Completed')])
                             
 
-        return dict(title="Jobs", grid=jobs_grid, list=jobs, search_bar=search_bar, action=action, options=search_options, searchvalue=searchvalue)
+        return dict(title="Jobs",
+                    object_count = jobs.count(),
+                    grid=jobs_grid,
+                    list=jobs,
+                    search_bar=search_bar,
+                    action=action,
+                    options=search_options,
+                    searchvalue=searchvalue)
 
 
     @identity.require(identity.not_anonymous())

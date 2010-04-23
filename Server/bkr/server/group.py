@@ -197,9 +197,11 @@ class Groups(RPCRoot):
         actual_grid = [elem for elem in potential_grid if elem is not None]
    
         groups_grid = widgets.PaginateDataGrid(fields=actual_grid)
-        return_dict = dict(title="Groups", grid = groups_grid,
-                                         search_bar = None,
-                                         list = groups)
+        return_dict = dict(title="Groups", 
+                           grid = groups_grid,
+                           object_count = groups.count(),
+                           search_bar = None,
+                           list = groups)
         if 'template' in locals():
             return_dict['tg_template'] = template
 
