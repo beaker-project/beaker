@@ -192,7 +192,6 @@ fi
 - bz567788 - search should show number of items returned
 - update rhts_partitions snippet to allow ondisk specification
 - update kickstarts to support firewall variable
-- deprecate installPackage tag and replace with packages - package name="" 
 - bz557116 - Show/search systems owned by groups
 - bz582729 - Fixed html title to show job/recipe etc.. id on each page
 - includes pub docs
