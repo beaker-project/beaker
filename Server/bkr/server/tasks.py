@@ -227,7 +227,7 @@ class Tasks(RPCRoot):
                     task_widget = self.task_widget)
 
     @expose(template='bkr.server.templates.grid')
-    @paginate('list',default_order='name', limit=30)
+    @paginate('list',default_order='name', limit=30, allow_limit_override=True)
     def index(self, *args, **kw):
         tasks = session.query(Task)
         tasks_return = self._tasks(tasks,**kw)
