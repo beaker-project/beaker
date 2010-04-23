@@ -4,6 +4,7 @@ from turbojson import jsonify
 from turbogears.widgets.rpc import RPC
 from sqlalchemy import distinct
 import model
+import re
 import search_utility
 from decimal import Decimal
 from turbogears.widgets import (Form, TextField, SubmitButton, TextArea, Label,
@@ -125,10 +126,38 @@ class ReserveWorkflow(Form):
 
     def __init__(self,*args,**kw):
         super(ReserveWorkflow,self).__init__(*args, **kw)  
+        def my_cmp(x,y):
+            m1 = re.search('^(.+?)(\d{1,})?$',x)
+            m2 = re.search('^(.+?)(\d{1,})?$',y)
+            try:
+                distro_1 = m1.group(1).lower() 
+            except AttributeError,e:
+                #x has no value, it goes first
+                return -1
+
+            try:
+                distro_2 = m2.group(1).lower() 
+            except AttributeError,e:
+                #y has no value, it goes first 
+                return 1
+
+            distro_1_ver = int(m1.group(2) or 0)
+            distro_2_ver = int(m2.group(2) or 0)
+
+            if not distro_1 or not distro_2:
+                return distro_1 and 1 or -1
+            if distro_1 == distro_2: 
+                #Basically,if x has no version or is a lower version than y, it goes first 
+                return distro_1_ver and (distro_2_ver and (distro_1_ver < distro_2_ver and -1 or 1)  or 1) or -1 
+            else:
+                #Sort distro alphabetically,diregarding version
+                return distro_1 < distro_2 and -1 or 1
+                              
         self.all_arches = [['','None Selected']] + [[elem.arch,elem.arch] for elem in model.Arch.query()]
         self.all_tags = [['','None Selected']] + [[elem.tag,elem.tag] for elem in model.DistroTag.query()]  
         self.all_methods = [('','None Selected')] + [[elem,elem] for elem in model.Distro.all_methods()]
-        self.all_distro_familys = [('','None Selected')] + [[elem.osmajor,elem.osmajor] for elem in model.OSMajor.query()] 
+        e = [elem.osmajor for elem in model.OSMajor.query()] 
+        self.all_distro_familys = [('','None Selected')] + [[osmajor,osmajor] for osmajor in sorted(e,cmp=my_cmp )]  
 
         self.method_ = SingleSelectField(name='method', label='Method', options=[None],validator=validators.NotEmpty())
         self.distro = SingleSelectField(name='distro', label='Distro', 
