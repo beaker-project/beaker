@@ -1,0 +1,241 @@
+<?xml version='1.0' encoding='utf-8' ?>
+<!DOCTYPE chapter PUBLIC "-//OASIS//DTD DocBook XML V4.5//EN" "http://www.oasis-open.org/docbook/xml/4.5/docbookx.dtd" [
+<!ENTITY % BOOK_ENTITIES SYSTEM "beaker_user_guide.ent">
+%BOOK_ENTITIES;
+]>
+<chapter id="chap-beaker_user_guide-System_Chapter">
+	<title>Systems</title>
+	<para>
+		Beaker provides an inventory of machines attached to lab controllers. Machines can be added, removed, have details changed, and be provisioned
+		amongst other things
+	</para>
+	<section id="sect-beaker_user_guide-System_Chapter-System_Search">
+		<title>System Searching</title>
+		<para>
+		System searches are conducted by first clicking on one of the items of the <literal>System</literal> menu at the top of the page.
+                The search types are as follows;
+                  
+		<itemizedlist>
+			<listitem>
+				<para>
+					<literal>All</literal> will search through all machines listed in Beaker
+				</para>
+			</listitem>
+
+			<listitem>
+				<para>
+					<literal>Available</literal> will search through only machines that the currently logged in user has permission to reserve
+				</para>
+			</listitem>
+
+			<listitem>
+				<para>
+					<literal>Free</literal> will search through only machines that the currently logged in user has permission to reserve and are currently free
+				</para>
+			</listitem>
+		</itemizedlist>
+
+                <mediaobject>
+                  <imageobject>
+                   <imagedata fileref="./images/system_menu.png" />
+                  </imageobject>
+                </mediaobject>
+		</para>
+                <para>
+                 The search panel has two modes; simple and advanced. The simple search is the default, and the default search is of the System names, using the 'contains' operator.
+                 To toggle between the two search modes, press the <literal>Toggle Search</literal> link.
+                </para>
+                <para id="search_panel_advanced">
+		 The advanced search panel is reasonably self explanitory. The first column(Table) is the attribute on which the search is being performed, the second(Operation) 
+                 is the type of search, and the third(Value) is the actual value to search on. The operators change depending on what type of attribute is being searched.
+                 <note><title>Wildcards</title><para> No operator provides explicit wildcards other than the <literal>is</literal> operation, which allows the <literal>*</literal> wildcard when searching an attribute which is a string.</para></note>
+                </para>
+                <para>
+                The kind of data returned in the System search can be changed by adding/removing the result columns. To do this the <literal>Toggle Result Columns</literal> link is pressed
+                and the columns checked/unchecked.
+                </para>
+                <mediaobject>
+                  <imageobject>
+                   <imagedata fileref="./images/system_search_panel.png" />
+                  </imageobject>
+                </mediaobject>
+                <para>
+                <note><title>Shortcut for finding systems you are using</title><para>The top right hand corner has a menu which srarts with <literal>Hello,</literal> 
+                followed by the name of the user currently logged in. Click on this, then down to <literal>My Systems</literal></para></note> 
+                </para>
+
+	</section>
+
+	<section id="sect-beaker_user_guide-System_Chapter-System_Adding">
+		<title>Adding a System</title>
+		<para>
+                To add a System, go to any System search page, and click on the <literal>Add(+)</literal> link on the bottom left. You must be logged in to do this.
+                After filling in the details on the resulting page, press the <literal>Save Changes</literal> button on the bottom left hand corner.	        
+		</para>
+                <mediaobject>
+                  <imageobject>
+                   <imagedata fileref="./images/system_add.png" />
+                  </imageobject>
+                </mediaobject>
+	</section>
+	
+	<section id="sect-beaker_user_guide-System_Chapter-System_Details">
+		<title>System Details</title>
+		<para>
+		After finding a system in a search page, clicking on the System name will show the System details.
+                To change these details, you must be logged in as either the owner of the machine, or an admin.
+                </para>
+                <para> 
+                The following tabs on the System details page provide further information
+		<itemizedlist>
+			<listitem>
+				<para>
+					<literal>Details</literal> shows the details of the System's CPU, as well as Devices attached to the System
+				</para>
+			</listitem>
+			<listitem>
+				<para>
+					<literal>Arch(s)</literal> shows the architects supported by the system
+				</para>
+			</listitem>
+			<listitem>
+				<para>
+					<literal>Key/Values</literal> shows further hardware details
+				</para>
+			</listitem>
+			<listitem>
+				<para>
+					<literal>Groups</literal> shows the groups of which this machine is a part of
+				</para>
+			</listitem>
+			<listitem>
+				<para>
+					<literal>Excluded Families</literal> are the list of Distros that this system does not support
+				</para>
+			</listitem>
+			<listitem>
+				<para>
+					<literal>Power</literal> is a tab allowing the powering off/on and rebooting of this System. These options are only available
+                                        if you are the current user of this system or in the admin group
+				</para>
+			</listitem>
+			<listitem>
+				<para>
+					<literal>Notes</literal>
+				</para>
+			</listitem>
+
+			<listitem>
+				<para>
+					<literal>Install Options</literal>
+				</para>
+			</listitem>
+			<listitem>
+				<para>
+					<literal>Provision</literal> tab allows the user of this System to install a Distro on it.
+				</para>
+			</listitem>
+			<listitem>
+				<para>
+					<literal>Lab Info</literal> will display practical details of the system like cost,power usage, weight etc
+				</para>
+			</listitem>
+			<listitem>
+				<para>
+					<literal>History</literal> shows the activity on this system for the duration of the systems life as an inventory item in Beaker.
+                                        These activites can also be searched. By default, the simple search does a <literal>contains</literal> search on the <literal>Field</literal>
+                                        attribute. Please see <xref linkend="search_panel_advanced" /> for details on searching.
+				</para>
+			</listitem>
+
+		</itemizedlist>
+		</para>
+	</section>
+
+	<section id="sect-beaker_user_guide-System_Chapter-System_Activity">
+		<title>System Activity</title>
+		<para>
+	        If you want to search through the historical activity of all Systems, you will have to access the <literal>All</literal> link on the <literal>Activity</literal> menu.	
+                The default search is <literal>contains</literal> on the <literal>Property</literal> attribute.
+                <note><title>Individual System history</title><para>To search the history of a specific machine, see the <literal>History</literal> tab in <xref linkend="sect-beaker_user_guide-System_Chapter-System_Details"/></para> </note>
+                <mediaobject>
+                  <imageobject>
+                   <imagedata fileref="./images/system_activity_all.png" />
+                  </imageobject>
+                </mediaobject>
+		</para>
+	</section>
+	<section id="sect-beaker_user_guide-System_Chapter-System_Provisioning">
+        	<title>System Provisioning</title>
+        	 	<para>If you would like to use one of these machines you will need to provision it. There are a couple of ways of doing this, which are outlined below</para>  
+            		<section id="sect-beaker_user_guide-System_Chapter-System_Provisioning-Provision_by_System">
+                        <title>Provision by System</title>
+			<para>
+        		Go to the System details page (see <xref linkend="sect-beaker_user_guide-System_Chapter-System_Details" />) of a machine that is 
+                        free (see <xref linkend="sect-beaker_user_guide-System_Chapter-System_Search" />) and click on <literal>Take</literal> in the <literal>Current User</literal> field.
+			 After succesfully taking the machine, the <literal>Provision</literal>
+        		tab of the System details page will allow you to install a Distro of your choosing onto the System.</para>
+
+                        <mediaobject>
+                          <imageobject>
+                            <imagedata fileref="./images/system_provision_by_system.png" />
+                          </imageobject>
+                        </mediaobject>
+                       </section>
+                         
+		       <section id="sect-beaker_user_guide-System_Chapter-System_Provisioning-Provision_by_Distro">
+                       <title>Provision by Distro</title>
+		       <para>
+                       Go to the Distro search page and search for a Distro you would like to provision onto a System. Once you have found the Distro you require,
+                       click <literal>Provision System</literal>, which is located in the far right column of your search results. If the <literal>Provision System</literal> link is
+                       not there, it's because there is no suitable System available to use with that Distro</para>
+                       <para>
+                       The resulting page lists the Systems you can use. Systems with <literal>Reserve Now</literal> in the far right column mean that no on else is using them and 
+                       you can take them immedietly, otherwise you will see <literal>Queue Reservation</literal>; which means that someone is currently using the system but you can be 
+                       appended to the queue of people wanting to use this System.</para>
+                       <para>
+                       After choosing your system and clicking on the the aforementioned links, you will be presented with a Form with the following fields
+                       <itemizedlist>
+                         <listitem>
+                           <para>
+                             <literal>System To Provision</literal> our System
+                           </para>
+                        </listitem>
+			<listitem>
+                           <para>
+                             <literal>Distro To Provision</literal> our Distro
+                           </para>
+                        </listitem>
+			<listitem>
+                           <para>
+                             <literal>Job Whiteboard</literal> is the name that will show up in the Jobs list !!Insert reference!!
+                           </para>
+                        </listitem>
+			<listitem>
+                           <para>
+                             <literal>KickStart MetaData</literal> are arguments passed to the KickStart script
+                           </para>
+                        </listitem>
+			<listitem>
+                           <para>
+                             <literal>Kernel Options (install)</literal> 
+                           </para>
+                        </listitem>
+			<listitem>
+                           <para>
+                             <literal>Kernel Options (Post)</literal> 
+                           </para>
+                        </listitem>
+                    </itemizedlist>
+                       Pressing the <literal>Queue Job</literal> button will submit provisioning as a Job and redirect us to the details of our newly created Job
+                       </para>
+                      </section>
+      </section>
+	
+       
+      
+     
+                                
+
+</chapter>
+
