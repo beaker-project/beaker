@@ -303,7 +303,8 @@ function LabController()
 {
     # We only want the first one
     SERVER=$(echo $SERVERS| awk '{print $1}')
-    ipaddress=$(host $HOSTNAME | awk '{print $NF}')
+    # limit to only ipv4 address
+    ipaddress=$(host $HOSTNAME | awk '/has address/ {print $NF}')
     yum install -y python-twill
     InstallLabController$SOURCE
     chkconfig httpd on
