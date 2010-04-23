@@ -7,7 +7,7 @@
 
 Name:           beaker
 Version:        0.5.27
-Release:        0%{?timestamp}%{?branch}%{?dist}
+Release:        1%{?timestamp}%{?branch}%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -183,6 +183,8 @@ fi
 %{_sysconfdir}/init.d/%{name}-watchdog
 
 %changelog
+* Fri Apr 23 2010 Bill Peck <bpeck@redhat.com> - 0.5.27-1
+- fixed bad merge
 * Fri Apr 23 2010 Bill Peck <bpeck@redhat.com> - 0.5.27-0
 - bz583535 - RFE Provision from distro page
 - bz582879 - Show all - bug in tasks library
