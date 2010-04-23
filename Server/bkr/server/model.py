@@ -1508,6 +1508,10 @@ $SNIPPET("rhts_post")
     @classmethod
     def by_id(cls, id, user):
         return System.all(user).filter(System.id == id).one()
+
+    @classmethod
+    def by_group(cls,group_id,*args,**kw):
+        return System.query().join(['groups']).filter(Group.group_id == group_id)
     
     @classmethod
     def by_type(cls,type,user=None,systems=None):
@@ -4300,10 +4304,8 @@ mapper(User, users_table,
         properties=dict(_password=users_table.c.password))
 
 Group.mapper = mapper(Group, groups_table,
-        properties=dict(users=relation(User,
-                secondary=user_group_table, backref='groups'),
-                        systems=relation(System,
-                secondary=system_group_table, backref='groups')))
+        properties=dict(users=relation(User,secondary=user_group_table, backref='groups'),
+                        systems=relation(System,secondary=system_group_table, backref='groups')))
 
 mapper(Permission, permissions_table,
         properties=dict(groups=relation(Group,
