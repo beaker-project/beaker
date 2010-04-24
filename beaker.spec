@@ -6,8 +6,8 @@
 %endif
 
 Name:           beaker
-Version:        0.5.27
-Release:        1%{?timestamp}%{?branch}%{?dist}
+Version:        0.5.28
+Release:        0%{?timestamp}%{?branch}%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -183,6 +183,9 @@ fi
 %{_sysconfdir}/init.d/%{name}-watchdog
 
 %changelog
+* Sat Apr 24 2010 Bill Peck <bpeck@redhat.com> - 0.5.28-0
+- compress task results by default, links for showall and showfail if failures
+  state it remembered via a cookie.
 * Fri Apr 23 2010 Bill Peck <bpeck@redhat.com> - 0.5.27-1
 - fixed bad merge
 * Fri Apr 23 2010 Bill Peck <bpeck@redhat.com> - 0.5.27-0
