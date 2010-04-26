@@ -211,7 +211,7 @@ class XmlTask(ElementWrapper):
 class XmlPackage(ElementWrapper):
     def __getattr__(self, attrname):
         if attrname == 'name':
-            self.get_xml_attr('name', unicode, u'None')
+            return self.get_xml_attr('name', unicode, u'None')
         else: raise AttributeError, attrname
 
 class XmlRepo(ElementWrapper):
@@ -253,11 +253,11 @@ if __name__=='__main__':
     myJob = xmltramp.parse(xml)
     job   = XmlJob(myJob)
 
-    print job.workflow
     print job.whiteboard
-    print job.submitter
     for recipeSet in job.iter_recipeSets():
         for recipe in recipeSet.iter_recipes():
+            for xmlpackage in recipe.packages():
+                print xmlpackage.name
             print recipe.hostRequires()
             for guest in recipe.iter_guests():
                 print guest.guestargs
