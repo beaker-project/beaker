@@ -115,7 +115,7 @@ class XmlRecipe(ElementWrapper):
 
     def packages(self):
         for packages in self.wrappedEl['packages':]:
-            for package in packagess['package':]:
+            for package in packages['package':]:
                 yield XmlPackage(package)
 
     def installPackages(self):

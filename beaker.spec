@@ -6,7 +6,7 @@
 %endif
 
 Name:           beaker
-Version:        0.5.28
+Version:        0.5.29
 Release:        0%{?timestamp}%{?branch}%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
@@ -183,6 +183,8 @@ fi
 %{_sysconfdir}/init.d/%{name}-watchdog
 
 %changelog
+* Mon Apr 26 2010 Bill Peck <bpeck@redhat.com> - 0.5.29-0
+- fix package tag issues
 * Sat Apr 24 2010 Bill Peck <bpeck@redhat.com> - 0.5.28-0
 - compress task results by default, links for showall and showfail if failures
   state it remembered via a cookie.
