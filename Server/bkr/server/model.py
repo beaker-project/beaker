@@ -2782,12 +2782,14 @@ class TaskBase(MappedObject):
         """
         Return action links depending on status
         """
-        if self.is_finished():
-            return make_link(url = self.clone_link(),
-                            text = "Clone")
-        else:
-            return make_link(url = self.cancel_link(),
-                            text = "Cancel")
+        div = Element('div')
+        div.append(make_link(url = self.clone_link(),
+                        text = "Clone"))
+        if not self.is_finished():
+            div.append(Element('br'))
+            div.append(make_link(url = self.cancel_link(),
+                            text = "Cancel"))
+        return div
     action_link = property(action_link)
 
 

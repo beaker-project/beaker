@@ -30,7 +30,6 @@ function shownone_${recipe.id}()
 }
 
 $(document).ready(function() {
-    $('.recipe_${recipe.id}').hide();
     if($.cookie('recipe_${recipe.id}')) 
     {
        switch ($.cookie('recipe_${recipe.id}'))
@@ -42,11 +41,15 @@ $(document).ready(function() {
             showfail_${recipe.id}();
         break;
        }
+    } else {
+        shownone_${recipe.id}();
     }
 
     $('#all_recipe_${recipe.id}').click( function() { showall_${recipe.id}(); });
     $('#failed_recipe_${recipe.id}').click( function() { showfail_${recipe.id}(); });
     $('#hide_recipe_${recipe.id}').click( function() { shownone_${recipe.id}(); });
+    $('#logs_button_${recipe.id}').click(function () { $('#logs_${recipe.id}').toggleClass('hidden', 'addOrRemove'); });
+
 });
 </script>
 
@@ -61,7 +64,7 @@ $(document).ready(function() {
    <td class="title"><b>Result</b></td>
    <td class="value">${recipe.result}</td>
   </tr>
-  <tr class="ecipe_${recipe.id}">
+  <tr>
    <td class="title"><b>Distro</b></td>
    <td class="value">${recipe.distro.link}</td>
    <td class="title"><b>Arch</b></td>
@@ -71,7 +74,7 @@ $(document).ready(function() {
    <td class="title"><b>Action(s)</b></td>
    <td class="value">${recipe.action_link}</td>
   </tr>
-  <tr class="ecipe_${recipe.id}">
+  <tr>
    <td class="title"><b>Queued</b></td>
    <td class="value">${recipe.recipeset.queue_time}</td>
    <td class="title"><b>Started</b></td>
@@ -81,26 +84,34 @@ $(document).ready(function() {
    <td class="title"><b>Duration</b></td>
    <td class="value">${recipe.duration}</td>
   </tr>
-  <tr py:if="recipe.system" class="ecipe_${recipe.id}">
+  <tr py:if="recipe.system">
    <td class="title"><b>System</b></td>
    <td class="value" colspan="8">${recipe.system.link}</td>
   </tr>
-  <tr class="ecipe_${recipe.id}">
+  <tr>
    <td class="title"><b>Whiteboard</b></td>
    <td class="value" colspan="8">${recipe.whiteboard}</td>
   </tr>
-  <tr class="ecipe_${recipe.id}">
-   <td class="title"><b>Logs</b></td>
-   <td class="value logs" colspan="8"><br py:for="log in recipe.logs">${log.link}</br></td>
+  <tr>
+   <td class="title"><button id="logs_button_${recipe.id}">Logs</button></td>
+   <td id="logs_${recipe.id}" class="hidden value" colspan="8"><br py:for="log in recipe.logs">${log.link}</br></td>
   </tr>
-  <tr py:if="recipe.systems" class="ecipe_${recipe.id}">
+  <tr py:if="recipe.systems">
    <td class="title"><b>Possible Systems</b></td>
    <td class="value" colspan="8">${len(recipe.systems)}</td>
   </tr>
   <tr>
-   <td class="all_show_recipe_${recipe.id}"><a id="all_recipe_${recipe.id}" href="#">Show All Results</a></td>
-   <td py:if="recipe.is_failed()" class="fail_show_recipe_${recipe.id}"><a id="failed_recipe_${recipe.id}" href="#">Show Failed Results</a></td>
-   <td class="hidden hide_recipe_${recipe.id}"><a id="hide_recipe_${recipe.id}" href="#">Hide Results</a></td>
+   <td colspan="9">
+    <button class="all_show_recipe_${recipe.id}" id="all_recipe_${recipe.id}">
+      Show All Results
+    </button>
+    <button py:if="recipe.is_failed()" class="fail_show_recipe_${recipe.id}" id="failed_recipe_${recipe.id}">
+      Show Failed Results
+    </button>
+    <button class="hide_recipe_${recipe.id}" id="hide_recipe_${recipe.id}">
+     Hide Results
+    </button>
+   </td>
   </tr>
  </table>
 

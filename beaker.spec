@@ -7,7 +7,7 @@
 
 Name:           beaker
 Version:        0.5.29
-Release:        1%{?timestamp}%{?branch}%{?dist}
+Release:        2%{?timestamp}%{?branch}%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -183,6 +183,10 @@ fi
 %{_sysconfdir}/init.d/%{name}-watchdog
 
 %changelog
+* Mon Apr 26 2010 Bill Peck <bpeck@redhat.com> - 0.5.29-2
+- switch show/hide links to buttons.
+- hide logs by default
+- show clone link for all jobs.
 * Mon Apr 26 2010 Bill Peck <bpeck@redhat.com> - 0.5.29-1
 - really fix package tag issues
 * Mon Apr 26 2010 Bill Peck <bpeck@redhat.com> - 0.5.29-0
