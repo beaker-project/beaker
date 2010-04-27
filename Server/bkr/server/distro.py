@@ -114,7 +114,6 @@ class Distros(RPCRoot):
             distro_search.append_results(search['value'],col,search['operation'],**kw)
         return distro_search.return_results()
 
-    @identity.require(identity.not_anonymous())
     @expose(template="bkr.server.templates.grid")
     @paginate('list',default_order='-date_created', limit=50,allow_limit_override=True)
     def index(self,*args,**kw):
