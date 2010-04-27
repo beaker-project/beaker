@@ -62,7 +62,9 @@
 				The whole purpose of Jobs is to view the output of the Job, and more to the point, Tasks that ran within the Job. To do this, you must first go to the Job search screen (<xref linkend="sect-beaker_user_guide-Jobs-Job_Searching" />). After finding the Job you want to see the results of, click on the link in the <literal>ID</literal> column.
 			</para>
 			<para>
-				The Job results page is divided into blocks titled <literal>Task Runs</literal>. There is one of these blocks for each Recipe in the Job.
+				The Job results page is divided by <literal>Recipe Set</literal>. To show the results of each Recipe within these Recipe Sets, click the 
+                                <literal>Show All Results</literal> button. Also you can just show the tasks that have a status of <literal>Fail</literal> by clicking 
+                                <literal>Show Failed Results</literal>.
 			</para>
 			<para>
 				The information in each column contains the following: 
