@@ -153,12 +153,11 @@ class Distros(RPCRoot):
                               ])
 
         def _provision_system_link(x):
-            systems = x.systems()
-            avail_systems_distro_query = System.available(identity.current.user,System.by_type(type='machine',systems=systems)) 
-            if avail_systems_distro_query.count() < 1:
-                return
-            else:
-                return make_link("/reserve_system?distro_id=%s" % (x.id,), "Provision System")
+            div = Element('div')
+            div.append(make_link("/reserve_system?distro_id=%s" % (x.id,), "Pick System"))
+            div.append(Element('br'))
+            div.append(make_link("/reserveworkflow/reserve?distro_id=%s" % (x.id,), "Pick Any System"))
+            return div
 
         
 
