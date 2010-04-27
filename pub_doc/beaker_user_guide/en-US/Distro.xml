@@ -3,11 +3,18 @@
 <!ENTITY % BOOK_ENTITIES SYSTEM "beaker_user_guide.ent">
 %BOOK_ENTITIES;
 ]>
-<chapter id="chap-beaker_user_guide-Distro_Chapter">
-        <title>Distros</title>
-        <para>FIXME </para>
-	<section id="sect-beaker_user_guide-Distro_Chapter-Distro_Search">
-        <title>Distro Searching</title>
-	<para>FIXME </para>
+<chapter id="chap-beaker_user_guide-Distros">
+	<title>Distros</title>
+	<para>
+	Beaker can keep a record of Distros that are available to install on Systems in it's Inventory.
+     	
+	</para>
+	<section id="sect-beaker_user_guide-Distros-Distro_Searching">
+		<title>Distro Searching</title>
+		<para>
+		The find a particular Distro, click <literal>Distros->All</literal>. The default search is on the Distro's <literal>Name</literal>, with a <literal>contains</literal> clause
+		</para>
 	</section>
+
 </chapter>
+
