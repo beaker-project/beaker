@@ -7,7 +7,7 @@
 
 Name:           beaker
 Version:        0.5.31
-Release:        0%{?timestamp}%{?branch}%{?dist}
+Release:        1%{?timestamp}%{?branch}%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -183,6 +183,8 @@ fi
 %{_sysconfdir}/init.d/%{name}-watchdog
 
 %changelog
+* Wed Apr 28 2010 Bill Peck <bpeck@redhat.com> - 0.5.31-1
+- merged bz586163 - fixes job matrix report
 * Wed Apr 28 2010 Bill Peck <bpeck@redhat.com> - 0.5.31-0
 - added both provision methods to distro link
 * Tue Apr 27 2010 Bill Peck <bpeck@redhat.com> - 0.5.30-0
