@@ -6,7 +6,7 @@
 %endif
 
 Name:           beaker
-Version:        0.5.30
+Version:        0.5.31
 Release:        0%{?timestamp}%{?branch}%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
@@ -183,6 +183,8 @@ fi
 %{_sysconfdir}/init.d/%{name}-watchdog
 
 %changelog
+* Wed Apr 28 2010 Bill Peck <bpeck@redhat.com> - 0.5.31-0
+- added both provision methods to distro link
 * Tue Apr 27 2010 Bill Peck <bpeck@redhat.com> - 0.5.30-0
 - remove uneeded @identity on /distros/ 
 * Mon Apr 26 2010 Bill Peck <bpeck@redhat.com> - 0.5.29-2
