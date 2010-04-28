@@ -7,7 +7,7 @@
 
 Name:           beaker
 Version:        0.5.31
-Release:        1%{?timestamp}%{?branch}%{?dist}
+Release:        2%{?timestamp}%{?branch}%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -183,6 +183,8 @@ fi
 %{_sysconfdir}/init.d/%{name}-watchdog
 
 %changelog
+* Wed Apr 28 2010 Bill Peck <bpeck@redhat.com> - 0.5.31-2
+- release_system should now catch tracebacks from failed cobbler attempts.
 * Wed Apr 28 2010 Bill Peck <bpeck@redhat.com> - 0.5.31-1
 - merged bz586163 - fixes job matrix report
 * Wed Apr 28 2010 Bill Peck <bpeck@redhat.com> - 0.5.31-0
