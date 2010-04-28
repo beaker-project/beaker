@@ -3,12 +3,57 @@
 <!ENTITY % BOOK_ENTITIES SYSTEM "beaker_user_guide.ent">
 %BOOK_ENTITIES;
 ]>
-<chapter id="chap-beaker_user_guide-Report_Chapter">
-        <title>Reports</title>
-        <para>FIXME</para>
-	<section id="sect-beaker_user_guide-Report_Chapter-Report_Matrix">
-        <title>Matrix Report</title>
-	<para>FIXME </para>
+<chapter id="chap-beaker_user_guide-Reports">
+	<title>Reports</title>
+	<para>
+        Beaker offers a few different reports. They can be accessed from the <literal>Reports</literal> menu at the top of the page.
+        The <literal>Reserve</literal> report will give reservation details of Systems that are currently in use. The other report offered is the <literal>Matrix</literal> report.
+	</para>
+	<section id="sect-beaker_user_guide-Reports-Matrix_Report">
+		<title>Matrix Report</title>
+		<para>
+                The <literal>Matrix</literal> report gives a user an overall picture of results for any given Job, or number of Jobs combined. It shows a matrix of
+                Tasks run and the Arch that they were run on. The <literal>Reports-&gt;Matrix</literal> is accesable from the top menu.		
+		</para>
+
+		<mediaobject>
+			<imageobject>
+				<imagedata fileref="./images/report_matrix.png" format="PNG" width="444" />
+			</imageobject>
+		</mediaobject>
+               
+                <para>
+                There are two ways of defining what Job results to display. You can select the Job by it's <literal>Whiteboard</literal>, or by it's <literal>Job ID</literal>. 
+                To show a Job's Matrix report from it's Whiteboard, click on the Whiteboard text in the <literal>Whiteboard</literal> select box. 
+                If you wish to select the Job by it's ID, enter the Job ID into the <literal>Job ID</literal> text area. The Job Whiteboard and the Job ID are mutually 
+                exclusive when generating the Matrix report. To change between the two, click on their respective input areas.  Click the <literal>Generate</literal> button to
+                create the report. 
+                <note><title>Filtering Whiteboards</title> <para>You can filter what is displayed in the whiteboard select box by typing text 
+                 into the <literal>Filter Whiteboard</literal> field, and then clicking anywhere outside the field.</para>
+                 </note>
+                 <note><title>Displaying reports of any combination of Jobs</title> <para>Displaying the matrix reports of any Jobs together, is possible when selecting
+                  by <literal>Job ID</literal>. Enter in all the relevant <literal>Job IDs</literal> seperate by whitespace or a newline.</para>
+                 </note>
+                </para> 
+		<mediaobject>
+			<imageobject>
+				<imagedata fileref="./images/report_matrix_generate.png" format="PNG" />
+			</imageobject>
+		</mediaobject>
+                <para>
+                The generated <literal>Matrix</literal> report shows the result of each Task with it's corresponding Arch and Recipe Whiteboard. The points in the matrix describe the result of the 
+                Task, and how many occurences of that result there are. Clicking on these results will take you to the <literal>Executed Tasks</literal> page. 
+                See <xref linkend="sect-beaker_user_guide-Tasks-Task_Searching" />.
+                </para>
+		<mediaobject>
+			<imageobject>
+				<imagedata fileref="./images/report_matrix_results.png" format="PNG" />
+			</imageobject>
+		</mediaobject>
+               
+                
+
 	</section>
 
 </chapter>
+
