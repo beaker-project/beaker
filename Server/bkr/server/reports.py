@@ -52,7 +52,7 @@ class Reports(RPCRoot):
                                   title='Current User', options=dict(sortable=True)),
                               ])
         return dict(title="Reserve Report", grid = reserve_grid,
-                                         search_bar = None,
+                                         search_bar = None, object_count=len(activity),
                                          list = activity)
 
     default = reserve

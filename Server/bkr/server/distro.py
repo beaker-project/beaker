@@ -8,7 +8,10 @@ from kid import Element
 from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.widgets import DistroTags, SearchBar
 from bkr.server.widgets import TaskSearchForm
+from bkr.server.widgets import myPaginateDataGrid
+from bkr.server.model import System
 from bkr.server.helpers import *
+from bkr.server.controller_utilities import Utility
 from bkr.server import search_utility 
 
 import cherrypy
@@ -91,7 +94,7 @@ class Distros(RPCRoot):
         if 'simplesearch' in kw:
             simplesearch = kw['simplesearch']
             kw['distrosearch'] = [{'table' : 'Name',   
-                                   'operation' : 'is', 
+                                   'operation' : 'contains', 
                                    'value' : kw['simplesearch']}]                    
         else:
             simplesearch = None
@@ -118,11 +121,6 @@ class Distros(RPCRoot):
 
     @expose(template="bkr.server.templates.grid")
     @paginate('list',default_order='-date_created', limit=50,allow_limit_override=True)
-    def tagsearch(self,*args,**kw): 
-        return self.distros(distros=session.query(Distro).join('breed').join('arch').join(['osversion','osmajor']).join('_tags').filter(distro_tag_table.c.tag==kw['tag']),action='./tagsearch',**kw)
-
-    @expose(template="bkr.server.templates.grid")
-    @paginate('list',default_order='-date_created', limit=50,allow_limit_override=True)
     def name(self,*args,**kw):
         return self.distros(distros=session.query(Distro).join('breed').join('arch').join(['osversion','osmajor']).filter(distro_table.c.install_name.like('%s' % kw['name'])),action='./name')
 
@@ -139,25 +137,36 @@ class Distros(RPCRoot):
             if 'simplesearch' in distros_return:
                 search_options['simplesearch'] = distros_return['simplesearch']
 
-        distros_grid = widgets.PaginateDataGrid(fields=[
-                                  widgets.PaginateDataGrid.Column(name='install_name', getter=lambda x: make_link(url  = '/distros/view?id=%s' % x.id,
+        distros_grid =  myPaginateDataGrid(fields=[
+                                  myPaginateDataGrid.Column(name='install_name', getter=lambda x: make_link(url  = '/distros/view?id=%s' % x.id,
                                   text = x.install_name), title='Install Name', options=dict(sortable=True)),
-                                  widgets.PaginateDataGrid.Column(name='name', getter=lambda x: x.name, title='Name', options=dict(sortable=True)),
-                                  widgets.PaginateDataGrid.Column(name='breed.breed', getter=lambda x: x.breed, title='Breed', options=dict(sortable=True)),
-                                  widgets.PaginateDataGrid.Column(name='osversion.osmajor.osmajor', getter=lambda x: x.osversion.osmajor, title='OS Major Version', options=dict(sortable=True)),
-                                  widgets.PaginateDataGrid.Column(name='osversion.osminor', getter=lambda x: x.osversion.osminor, title='OS Minor Version', options=dict(sortable=True)),
-                                  widgets.PaginateDataGrid.Column(name='variant', getter=lambda x: x.variant, title='Variant', options=dict(sortable=True)),
-                                  widgets.PaginateDataGrid.Column(name='virt', getter=lambda x: x.virt, title='Virt', options=dict(sortable=True)),
-                                  widgets.PaginateDataGrid.Column(name='arch.arch', getter=lambda x: x.arch, title='Arch', options=dict(sortable=True)),
-                                  widgets.PaginateDataGrid.Column(name='method', getter=lambda x: x.method, title='Method', options=dict(sortable=True)),
-                                  widgets.PaginateDataGrid.Column(name='date_created', getter=lambda x: x.date_created, title='Date Created', options=dict(sortable=True)),
+                                  myPaginateDataGrid.Column(name='name', getter=lambda x: x.name, title='Name', options=dict(sortable=True)),
+                                  myPaginateDataGrid.Column(name='breed.breed', getter=lambda x: x.breed, title='Breed', options=dict(sortable=True)),
+                                  myPaginateDataGrid.Column(name='osversion.osmajor.osmajor', getter=lambda x: x.osversion.osmajor, title='OS Major Version', options=dict(sortable=True)),
+                                  myPaginateDataGrid.Column(name='osversion.osminor', getter=lambda x: x.osversion.osminor, title='OS Minor Version', options=dict(sortable=True)),
+                                  myPaginateDataGrid.Column(name='variant', getter=lambda x: x.variant, title='Variant', options=dict(sortable=True)),
+                                  myPaginateDataGrid.Column(name='virt', getter=lambda x: x.virt, title='Virt', options=dict(sortable=True)),
+                                  myPaginateDataGrid.Column(name='arch.arch', getter=lambda x: x.arch, title='Arch', options=dict(sortable=True)),
+                                  myPaginateDataGrid.Column(name='method', getter=lambda x: x.method, title='Method', options=dict(sortable=True)),
+                                  myPaginateDataGrid.Column(name='date_created', getter=lambda x: x.date_created, title='Date Created', options=dict(sortable=True)),
+                                  Utility.direct_column(title='Provision', getter=lambda x: _provision_system_link(x))
                               ])
+
+        def _provision_system_link(x):
+            div = Element('div')
+            div.append(make_link("/reserve_system?distro_id=%s" % (x.id,), "Pick System"))
+            div.append(Element('br'))
+            div.append(make_link("/reserveworkflow/reserve?distro_id=%s" % (x.id,), "Pick Any System"))
+            return div
+
+        
+
         if 'tag' in kw: 
             hidden_fields = [('tag',kw['tag'])]
 
         search_bar = SearchBar(name='distrosearch',
                            label=_(u'Distro Search'),    
-                           table=search_utility.Distro.search.create_search_table(),
+                           table=search_utility.Distro.search.create_search_table(), 
                            search_controller=url("/get_search_options_distros"), 
                            extra_hiddens=hidden_fields
                            )
@@ -165,6 +174,7 @@ class Distros(RPCRoot):
         return dict(title="Distros", 
                     grid=distros_grid,
                     search_bar=search_bar,
+                    object_count = distros.count(),
                     action=action,
                     options=search_options,
                     searchvalue=searchvalue,

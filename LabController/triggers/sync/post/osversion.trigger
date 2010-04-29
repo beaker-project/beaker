@@ -319,22 +319,22 @@ if __name__ == '__main__':
                         DISTPATH='rel-eng'
                     if distro['ks_meta']['tree'].find('/released/') != -1:
                         DISTPATH='released'
-                DIST=distro['name'].split('_')[0]
-                meta = string.join(distro['name'].split('_')[1:],'_').split('-')
-                for curr_variant in valid_variants:
-                    if curr_variant in meta:
-                        VARIANT = curr_variant
-                        break
-                TPATH = DISTPATH + ''.join(distro['ks_meta']['tree'].split(DISTPATH,1)[1:])
-                if release.search(distro['comment']):
-                    FAMILYUPDATE=release.search(distro['comment']).group(1)
-                if variant_search.search(distro['comment']):
-                    VARIANT = variant_search.search(distro['comment']).group(1)
-                #addDistro.sh rel-eng RHEL6.0-20090626.2 RedHatEnterpriseLinux6.0 x86_64 Default rel-eng/RHEL6.0-20090626.2/6/x86_64/os
-                if FAMILYUPDATE:
-                    cmd = '%s %s %s %s %s "%s" %s' % (addDistroCmd, DISTPATH, DIST,
-                                                    FAMILYUPDATE, distro['arch'],
-                                                    VARIANT, TPATH)
-                    print cmd
-                    os.system(cmd)
+                    DIST=distro['name'].split('_')[0]
+                    meta = string.join(distro['name'].split('_')[1:],'_').split('-')
+                    for curr_variant in valid_variants:
+                        if curr_variant in meta:
+                            VARIANT = curr_variant
+                            break
+                    TPATH = DISTPATH + ''.join(distro['ks_meta']['tree'].split(DISTPATH,1)[1:])
+                    if release.search(distro['comment']):
+                        FAMILYUPDATE=release.search(distro['comment']).group(1)
+                    if variant_search.search(distro['comment']):
+                        VARIANT = variant_search.search(distro['comment']).group(1)
+                    #addDistro.sh rel-eng RHEL6.0-20090626.2 RedHatEnterpriseLinux6.0 x86_64 Default rel-eng/RHEL6.0-20090626.2/6/x86_64/os
+                    if FAMILYUPDATE:
+                        cmd = '%s %s %s %s %s "%s" %s' % (addDistroCmd, DISTPATH, DIST,
+                                                        FAMILYUPDATE, distro['arch'],
+                                                        VARIANT, TPATH)
+                        print cmd
+                        os.system(cmd)
 

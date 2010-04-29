@@ -113,6 +113,11 @@ class XmlRecipe(ElementWrapper):
             else:
                 yield XmlTask(task)
 
+    def packages(self):
+        for packages in self.wrappedEl['packages':]:
+            for package in packages['package':]:
+                yield XmlPackage(package)
+
     def installPackages(self):
         for installpackage in self.wrappedEl['installPackage':]:
             yield installpackage
@@ -203,6 +208,12 @@ class XmlTask(ElementWrapper):
         else: raise AttributeError, attrname
 
 
+class XmlPackage(ElementWrapper):
+    def __getattr__(self, attrname):
+        if attrname == 'name':
+            return self.get_xml_attr('name', unicode, u'None')
+        else: raise AttributeError, attrname
+
 class XmlRepo(ElementWrapper):
     def __getattr__(self, attrname):
         if attrname == 'name':
@@ -242,11 +253,11 @@ if __name__=='__main__':
     myJob = xmltramp.parse(xml)
     job   = XmlJob(myJob)
 
-    print job.workflow
     print job.whiteboard
-    print job.submitter
     for recipeSet in job.iter_recipeSets():
         for recipe in recipeSet.iter_recipes():
+            for xmlpackage in recipe.packages():
+                print xmlpackage.name
             print recipe.hostRequires()
             for guest in recipe.iter_guests():
                 print guest.guestargs

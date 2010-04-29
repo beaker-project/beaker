@@ -227,7 +227,7 @@ class Tasks(RPCRoot):
                     task_widget = self.task_widget)
 
     @expose(template='bkr.server.templates.grid')
-    @paginate('list',default_order='name', limit=30)
+    @paginate('list',default_order='name', limit=30, allow_limit_override=True)
     def index(self, *args, **kw):
         tasks = session.query(Task)
         tasks_return = self._tasks(tasks,**kw)
@@ -252,7 +252,14 @@ class Tasks(RPCRoot):
                            table = search_utility.Task.search.create_search_table(),
                            search_controller=url("/get_search_options_task"), 
                            )
-        return dict(title="Task Library", grid=tasks_grid, list=tasks, search_bar=search_bar,action='.', options=search_options, searchvalue=searchvalue)
+        return dict(title="Task Library", 
+                    object_count=tasks.count(),
+                    grid=tasks_grid, 
+                    list=tasks, 
+                    search_bar=search_bar,
+                    action='.',
+                    options=search_options,
+                    searchvalue=searchvalue)
 
     @expose(template='bkr.server.templates.task')
     def default(self, *args, **kw):
@@ -360,7 +367,7 @@ class Tasks(RPCRoot):
         if 'simplesearch' in kw:
             simplesearch = kw['simplesearch']
             kw['tasksearch'] = [{'table' : 'Name',   
-                                 'operation' : 'is', 
+                                 'operation' : 'contains', 
                                  'value' : kw['simplesearch']}]                    
         else:
             simplesearch = None

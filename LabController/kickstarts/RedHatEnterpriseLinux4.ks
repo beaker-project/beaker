@@ -10,12 +10,18 @@ text
 $getVar('mode', '')
 
 $SNIPPET("network")
-# Firewall configuration
-#if $getVar('rhts_server', '') != ''
-firewall --disabled
+## Firewall configuration
+## firewall in kickstart metadata will enable the firewall
+## firewall=22:tcp,80:tcp will enable the firewall with ports 22 and 80 open.
+## always allow port 12432 so that beah harness will support multihost
+firewall #slurp
+#if $getVar('firewall', 'disabled') == 'disabled':
+--disabled
+#else
+--enabled --port=12432:tcp #slurp
+#if $getVar('firewall', '') != '':
+,$getVar('firewall')
 #end if
-#if $getVar('rhts_server', '') == ''
-firewall --enabled --port=22:tcp,12432:tcp
 #end if
 
 #if $getVar('rhts_server', '') != ''

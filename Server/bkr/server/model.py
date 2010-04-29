@@ -576,8 +576,8 @@ log_recipe_table = Table('log_recipe', metadata,
         Column('id', Integer, primary_key=True),
         Column('recipe_id', Integer,
                 ForeignKey('recipe.id')),
-        Column('path', Unicode()),
-        Column('filename', Unicode(), nullable=False),
+        Column('path', UnicodeText()),
+        Column('filename', UnicodeText(), nullable=False),
         Column('start_time',DateTime, default=datetime.utcnow),
 )
 
@@ -585,8 +585,8 @@ log_recipe_task_table = Table('log_recipe_task', metadata,
         Column('id', Integer, primary_key=True),
         Column('recipe_task_id', Integer,
                 ForeignKey('recipe_task.id')),
-        Column('path', Unicode()),
-        Column('filename', Unicode(), nullable=False),
+        Column('path', UnicodeText()),
+        Column('filename', UnicodeText(), nullable=False),
         Column('start_time',DateTime, default=datetime.utcnow),
 )
 
@@ -594,8 +594,8 @@ log_recipe_task_result_table = Table('log_recipe_task_result', metadata,
         Column('id', Integer, primary_key=True),
         Column('recipe_task_result_id', Integer,
                 ForeignKey('recipe_task_result.id')),
-        Column('path', Unicode()),
-        Column('filename', Unicode(), nullable=False),
+        Column('path', UnicodeText()),
+        Column('filename', UnicodeText(), nullable=False),
         Column('start_time',DateTime, default=datetime.utcnow),
 )
 
@@ -613,9 +613,9 @@ recipe_table = Table('recipe',metadata,
                 ForeignKey('task_status.id'),default=select([task_status_table.c.id], limit=1).where(task_status_table.c.status==u'New').correlate(None)),
         Column('start_time',DateTime),
         Column('finish_time',DateTime),
-        Column('_host_requires',Unicode()),
-        Column('_distro_requires',Unicode()),
-        Column('kickstart',Unicode()),
+        Column('_host_requires',UnicodeText()),
+        Column('_distro_requires',UnicodeText()),
+        Column('kickstart',UnicodeText()),
         # type = recipe, machine_recipe or guest_recipe
         Column('type', String(30), nullable=False),
         # Total tasks
@@ -641,8 +641,8 @@ machine_recipe_table = Table('machine_recipe', metadata,
 
 guest_recipe_table = Table('guest_recipe', metadata,
         Column('id', Integer, ForeignKey('recipe.id'), primary_key=True),
-        Column('guestname', Unicode()),
-        Column('guestargs', Unicode())
+        Column('guestname', UnicodeText()),
+        Column('guestargs', UnicodeText())
 )
 
 machine_guest_map =Table('machine_guest_map',metadata,
@@ -735,14 +735,14 @@ recipe_task_param_table = Table('recipe_task_param', metadata,
         Column('recipe_task_id', Integer,
                 ForeignKey('recipe_task.id')),
         Column('name',Unicode(255)),
-        Column('value',Unicode())
+        Column('value',UnicodeText())
 )
 
 recipe_task_comment_table = Table('recipe_task_comment',metadata,
         Column('id', Integer, primary_key=True),
         Column('recipe_task_id', Integer,
                 ForeignKey('recipe_task.id')),
-        Column('comment', Unicode()),
+        Column('comment', UnicodeText()),
         Column('created', DateTime),
         Column('user_id', Integer,
                 ForeignKey('tg_user.user_id'), index=True)
@@ -774,7 +774,7 @@ recipe_task_result_table = Table('recipe_task_result',metadata,
         Column('result_id', Integer,
                 ForeignKey('task_result.id')),
         Column('score', Numeric(10)),
-        Column('log', Unicode()),
+        Column('log', UnicodeText()),
         Column('start_time',DateTime, default=datetime.utcnow),
 )
 
@@ -1521,6 +1521,10 @@ $SNIPPET("rhts_post")
     @classmethod
     def by_id(cls, id, user):
         return System.all(user).filter(System.id == id).one()
+
+    @classmethod
+    def by_group(cls,group_id,*args,**kw):
+        return System.query().join(['groups']).filter(Group.group_id == group_id)
     
     @classmethod
     def by_type(cls,type,user=None,systems=None):
@@ -1845,8 +1849,11 @@ $SNIPPET("rhts_post")
         # Attempt to remove Netboot entry
         # and turn off machine, but don't fail if we can't
         if self.release_action:
-            self.remote.release(power=False)
-            self.release_action.do(self)
+            try:
+                self.remote.release(power=False)
+                self.release_action.do(self)
+            except BX, error:
+                pass
         else:
             try:
                 self.remote.release()
@@ -2822,12 +2829,14 @@ class TaskBase(MappedObject):
         """
         Return action links depending on status
         """
-        if self.is_finished():
-            return make_link(url = self.clone_link(),
-                            text = "Clone")
-        else:
-            return make_link(url = self.cancel_link(),
-                            text = "Cancel")
+        div = Element('div')
+        div.append(make_link(url = self.clone_link(),
+                        text = "Clone"))
+        if not self.is_finished():
+            div.append(Element('br'))
+            div.append(make_link(url = self.cancel_link(),
+                            text = "Cancel"))
+        return div
     action_link = property(action_link)
 
 
@@ -3184,6 +3193,12 @@ class Recipe(TaskBase):
             recipe.setAttribute("variant", "%s" % self.distro.variant)
         if self.system and not clone:
             recipe.setAttribute("system", "%s" % self.system)
+        packages = self.doc.createElement("packages")
+        if self.custom_packages:
+            for package in self.custom_packages:
+                packages.appendChild(package.to_xml())
+        recipe.appendChild(packages)
+            
         if self.roles and not clone:
             roles = self.doc.createElement("roles")
             for role in self.roles.to_xml():
@@ -3354,7 +3369,7 @@ class Recipe(TaskBase):
     def release_system(self):
         """ Release the system and remove the watchdog
         """
-        if self.system:
+        if self.system and self.watchdog:
             try:
                 self.system.action_release()
                 log.debug("Return system %s for recipe %s" % (self.system, self.id))
@@ -4190,6 +4205,10 @@ class TaskPackage(MappedObject):
     def __repr__(self):
         return self.package
 
+    def to_xml(self):
+        package = self.doc.createElement("package")
+        package.setAttribute("name", "%s" % self.package)
+        return package
 
 class TaskPropertyNeeded(MappedObject):
     """

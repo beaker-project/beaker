@@ -717,7 +717,8 @@ class System(SystemObject):
                           'Arch'      : MyColumn(column=model.Arch.arch, col_type='string', relations='arch'),
                           'Type'      : MyColumn(column=model.SystemType.type, col_type='string', relations='type'),
                           'PowerType' : MyColumn(column=model.PowerType.name, col_type='string', relations=['power','power_type']),
-                          'LoanedTo'  : MyColumn(column=model.User.user_name,col_type='string',has_alias=True, relations='loaned')
+                          'LoanedTo'  : MyColumn(column=model.User.user_name,col_type='string',has_alias=True, relations='loaned'),
+                          'Group'     : MyColumn(column=model.Group.group_name, col_type='string',has_alias=True, relations ='groups')
                          }  
     search_values_dict = {'Status' : lambda: model.SystemStatus.get_all_status_name(),
                           'Type' : lambda: model.SystemType.get_all_type_names() }   
@@ -922,7 +923,23 @@ class Distro(SystemObject):
                             'Virt' : MyColumn(col_type='boolean',column=model.Distro.virt),
                             'Method' : MyColumn(col_type='string',column=model.Distro.method),
                             'Breed' : MyColumn(col_type='string',column=model.Distro.breed),
+                            'Tag' : MyColumn(col_type='string', column=model.DistroTag.tag, relations=['_tags'])
                          }
+    search_values_dict = {'Tag' : [e.tag for e in model.DistroTag.list_by_tag('')]}
+
+    @classmethod
+    def tag_is_not_filter(cls,col,val):
+        """
+        tag_is_not_filter is a function dynamically called from append_results.
+        """       
+        if not val: 
+           return or_(col != None, col != val) 
+        else:
+            #If anyone knows of a better way to do this, by all means...
+            query = model.Distro.query().filter(model.Distro._tags.any(model.DistroTag.tag == val))       
+          
+        ids = [r.id for r in query]  
+        return not_(model.distro_table.c.id.in_(ids)) 
 
        
 class Activity(SystemObject):

@@ -2,10 +2,11 @@
 <table xmlns:py="http://purl.org/kid/ns#" id="${name}" class="list" cellpadding="0" cellspacing="1" border="0">
 <?python
 show = columns and show_headers
+import re
 ?>
 <thead py:if="show">
   <tr>
-    <th py:for="i, col in enumerate(columns)" class="list" style='padding-left:0px' py:if="col.title != 'none'" py:content="col.title"/>
+    <th py:for="i, col in enumerate(columns)" class="list" style='padding-left:0px' py:if="col.title != 'none'" py:content="re.sub('_0\.\d{1,}$','', col.title)"/>
   </tr>
 </thead>
 <thead py:if="not show">

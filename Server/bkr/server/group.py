@@ -7,6 +7,7 @@ from tg_expanding_form_widget.tg_expanding_form_widget import ExpandingForm
 from kid import Element
 from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.helpers import *
+from bkr.server.widgets import myDataGrid
 
 import cherrypy
 
@@ -90,6 +91,14 @@ class Groups(RPCRoot):
             user_fields.append(remove_link)
 
         return widgets.DataGrid(fields=user_fields)
+
+    @expose(template='bkr.server.templates.grid')
+    def systems(self,group_id,*args,**kw):
+        systems = System.by_group(group_id)
+        system_link = ('System', lambda x: x.link)
+        group = Group.by_id(group_id)
+        grid = myDataGrid(fields=[system_link])
+        return dict(grid=grid,list=systems,title='Systems for group %s' % group.group_name,search_bar = None)
     
     @expose(template='bkr.server.templates.group_users')
     def group_members(self,id, **kw):
@@ -173,17 +182,26 @@ class Groups(RPCRoot):
         else:
             group_name =('Group Name', lambda x: make_edit_link(x.group_name,x.group_id))
             remove_link = (' ', lambda x: make_remove_link(x.group_id))  
-          
-      
+        
+       
+        def f(x):
+            if len(x.systems):
+                return make_link('systems?group_id=%s' % x.group_id, 'System count: %s' % len(x.systems))
+            else:
+                return 'System count: 0' 
+
+        systems = ('Systems', lambda x: f(x))
         display_name = ('Display Name', lambda x: x.display_name)
         
-        potential_grid = (group_name,display_name,remove_link)     
+        potential_grid = (group_name,display_name,systems,remove_link)     
         actual_grid = [elem for elem in potential_grid if elem is not None]
    
         groups_grid = widgets.PaginateDataGrid(fields=actual_grid)
-        return_dict = dict(title="Groups", grid = groups_grid,
-                                         search_bar = None,
-                                         list = groups)
+        return_dict = dict(title="Groups", 
+                           grid = groups_grid,
+                           object_count = groups.count(),
+                           search_bar = None,
+                           list = groups)
         if 'template' in locals():
             return_dict['tg_template'] = template
 

@@ -278,6 +278,8 @@ class Jobs(RPCRoot):
         recipe.kernel_options = xmlrecipe.kernel_options
         recipe.kernel_options_post = xmlrecipe.kernel_options_post
         recipe.role = xmlrecipe.role
+        for xmlpackage in xmlrecipe.packages():
+            recipe.custom_packages.append(TaskPackage.lazy_create(package=xmlpackage.name))
         for installPackage in xmlrecipe.installPackages():
             recipe.custom_packages.append(TaskPackage.lazy_create(package=installPackage))
         for xmlrepo in xmlrecipe.iter_repos():
@@ -363,7 +365,14 @@ class Jobs(RPCRoot):
                            quick_searches = [('Status-is-Queued','Queued'),('Status-is-Running','Running'),('Status-is-Completed','Completed')])
                             
 
-        return dict(title="Jobs", grid=jobs_grid, list=jobs, search_bar=search_bar, action=action, options=search_options, searchvalue=searchvalue)
+        return dict(title="Jobs",
+                    object_count = jobs.count(),
+                    grid=jobs_grid,
+                    list=jobs,
+                    search_bar=search_bar,
+                    action=action,
+                    options=search_options,
+                    searchvalue=searchvalue)
 
 
     @identity.require(identity.not_anonymous())

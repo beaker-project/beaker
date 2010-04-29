@@ -6,8 +6,8 @@
 %endif
 
 Name:           beaker
-Version:        0.5.24
-Release:        0%{?timestamp}%{?branch}%{?dist}
+Version:        0.5.31
+Release:        3%{?timestamp}%{?branch}%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -51,11 +51,14 @@ Requires:       python-TurboMail
 Summary:        Lab Controller xmlrpc server
 Group:          Applications/Internet
 Requires:       python
-Requires:       mod_python
 Requires:       httpd
 Requires:       cobbler >= 1.4
 Requires:       yum-utils
+%if 0%{?fedora} || 0%{?rhel} > 5
+Requires:       /usr/sbin/fenced
+%else
 Requires:       /sbin/fenced
+%endif
 Requires:       telnet
 Requires:       python-cpio
 Requires:	beaker
@@ -180,6 +183,51 @@ fi
 %{_sysconfdir}/init.d/%{name}-watchdog
 
 %changelog
+* Wed Apr 28 2010 Bill Peck <bpeck@redhat.com> - 0.5.31-3
+- only release_system if there is an active watchdog.
+* Wed Apr 28 2010 Bill Peck <bpeck@redhat.com> - 0.5.31-2
+- release_system should now catch tracebacks from failed cobbler attempts.
+* Wed Apr 28 2010 Bill Peck <bpeck@redhat.com> - 0.5.31-1
+- merged bz586163 - fixes job matrix report
+* Wed Apr 28 2010 Bill Peck <bpeck@redhat.com> - 0.5.31-0
+- added both provision methods to distro link
+* Tue Apr 27 2010 Bill Peck <bpeck@redhat.com> - 0.5.30-0
+- remove uneeded @identity on /distros/ 
+* Mon Apr 26 2010 Bill Peck <bpeck@redhat.com> - 0.5.29-2
+- switch show/hide links to buttons.
+- hide logs by default
+- show clone link for all jobs.
+* Mon Apr 26 2010 Bill Peck <bpeck@redhat.com> - 0.5.29-1
+- really fix package tag issues
+* Mon Apr 26 2010 Bill Peck <bpeck@redhat.com> - 0.5.29-0
+- fix package tag issues
+* Sat Apr 24 2010 Bill Peck <bpeck@redhat.com> - 0.5.28-0
+- compress task results by default, links for showall and showfail if failures
+  state it remembered via a cookie.
+* Fri Apr 23 2010 Bill Peck <bpeck@redhat.com> - 0.5.27-1
+- fixed bad merge
+* Fri Apr 23 2010 Bill Peck <bpeck@redhat.com> - 0.5.27-0
+- bz583535 - RFE Provision from distro page
+- bz582879 - Show all - bug in tasks library
+- bz582186 - Searches should default to Contains
+- bz581684 - Remove Tag page for Distros, distro page can now search on tags
+- bz581502 - Sort distro family list
+- bz567788 - search should show number of items returned
+- update rhts_partitions snippet to allow ondisk specification
+- update kickstarts to support firewall variable
+- bz557116 - Show/search systems owned by groups
+- bz582729 - Fixed html title to show job/recipe etc.. id on each page
+- includes pub docs
+* Tue Apr 20 2010 Bill Peck <bpeck@redhat.com> - 0.5.26-0
+- Example cleanup in rhts_partitions snippet
+- Fixed osversion.trigger not to process distros without ks_meta['tree']
+- moved mod_wsgi socket location to /var/run to make fedora happy
+- replaced Unicode() with UnicodeText() to make fedora happy
+- add <packages><package name=""/></packages> tags so cloning works for custom_packages.
+- loosen error checking on root name spaces for new tasks.
+* Thu Apr 15 2010 Bill Peck <bpeck@redhat.com> - 0.5.25-0
+- remove mod_python requirement from lab-controller
+- Add X.log monitoring to anamon
 * Wed Apr 14 2010 Bill Peck <bpeck@redhat.com> - 0.5.24-0
 - added missing installPackage tag processing.
 * Tue Apr 13 2010 Bill Peck <bpeck@redhat.com> - 0.5.23-2

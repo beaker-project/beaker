@@ -4,7 +4,7 @@
 
  <head>
   <meta content="text/html; charset=UTF-8" http-equiv="content-type" py:replace="''"/>
-  <title>${title}</title>
+  <title>${title} ${value.install_name}</title>
  </head>
 
 

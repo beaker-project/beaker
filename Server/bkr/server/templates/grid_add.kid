@@ -8,10 +8,9 @@
 <body>
 <h2>$title</h2>
 <span py:if="search_bar">${search_bar.display(method='GET',action=action,value=searchvalue,options=options)}
-       
 </span>
-
 ${grid.display(list)}
 <a href="${tg.url('./new')}">Add ( + )</a>
+<p py:if='object_count' style="margin-left:0.5em;">Items found: ${object_count}</p>
 </body>
 </html>

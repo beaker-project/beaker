@@ -75,8 +75,7 @@ from bkr.server.model import system_types
                         <img class="corner_inset_left" alt="" src="/static/images/corner_inset_left.png"/>
                         <a href="${tg.url('/distros')}">All</a>
                         <img class="corner_inset_right" alt="" src="/static/images/corner_inset_right.png"/>
-                    </li>
-                    <li><a href="${tg.url('/tags')}">Tags</a></li>
+                    </li> 
                     <li class="last">
                         <img class="corner_left" alt="" src="/static/images/corner_left.png"/>
                         <img class="middle" alt="" src="/static/images/dot.gif"/>
@@ -171,6 +170,7 @@ from bkr.server.model import system_types
                         <a href="${tg.url('/prefs')}">Preferences</a>
                         <img class="corner_inset_right" alt="" src="/static/images/corner_inset_right.png"/>
                     </li>
+                    <li><a href="${tg.url('/groups')}">Groups</a></li>
                     <li><a href="${tg.url('/mine')}">My Systems</a></li>
                     <li><a href="${tg.url('/jobs/mine')}">My Jobs</a></li>
                     <li><a href="${tg.url('/recipes/mine')}">My Recipes</a></li>

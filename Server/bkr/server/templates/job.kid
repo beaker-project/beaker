@@ -6,6 +6,7 @@
     <meta content="text/html; charset=UTF-8" http-equiv="content-type" py:replace="''"/>
     <script type="text/javascript" src="${tg.url('/static/javascript/priority_manager.js')}"></script>
     <script type="text/javascript" src="${tg.url('/static/javascript/jquery.timers-1.2.js')}"></script>
+    <script type="text/javascript" src="${tg.url('/static/javascript/jquery.cookie.js')}"></script>
     <script type='text/javascript'>
  pri_manager = new PriorityManager()
  pri_manager.initialize()
@@ -15,8 +16,6 @@
  
 
  $(document).ready(function() {
-    ShowResults();
-    $("input[@name='results']").change(ShowResults);
     $("#toggle_job_history").click(function() { $("#job_history").toggle() })
     $("select[id^='priority']").change(function() {
         var callback = {'function' : ShowPriorityResults }
@@ -72,31 +71,9 @@
          });
      }
  }
-
- function ShowResults()
- {
-    switch ($("input[@name='results']:checked").val())
-    {
-        case 'all':
-            $('.fail').show();
-            $('.pass').show();
-        break;
-        case 'fail':
-            $('.fail').show();
-            $('.pass').hide();
-        break;
-    }
- }
     </script>
-    <title>Job</title>
+    <title>Job ${job.t_id} - ${job.whiteboard} | ${job.status} | ${job.result}</title>
 </head>
-
- <?python
-    if job.result:
-        default = job.result.result == 'Pass' and 'ShowAll' or 'ShowFail'
-    else:
-        default = 'ShowAll'
- ?>
 
 <script type="text/javascript">
 
@@ -104,15 +81,7 @@
 
 
 <body class="flora">
- <form>
-  <input id="results_all" type="radio" name="results" value="all" checked="${(None, '')[default == 'ShowAll']}" />
-  <label for="results_all">All results</label>
-  <input id="results_fail" type="radio" name="results" value="fail" checked="${(None, '')[default == 'ShowFail']}" />
-  <label for="results_fail">Only failed items</label>
-  <!-- <input id="results_ackneeded" type="radio" name="results" value="ackneeded" />
-  <label for="results_ackneeded">Failed items needing review</label> -->
-  <a id='toggle_job_history' style="color: rgb(34, 67, 127); cursor: pointer;">Toggle Job history</a>
- </form>
+ <a id='toggle_job_history' style="color: rgb(34, 67, 127); cursor: pointer;">Toggle Job history</a>
  <div style='padding-bottom:0.25em' id="job_history" class="hidden">
    ${job_history_grid.display(job_history)}
  </div>
