@@ -438,3 +438,11 @@ if $(echo $SERVERS | grep -q $HOSTNAME); then
     Inventory
 fi
 
+if $(echo $STANDALONE | grep -q $HOSTNAME); then
+    echo "Running test as both Lab Controller and Scheduler" | tee -a $OUTPUTFILE
+    CLIENTS=$STANDALONE
+    SERVERS=$STANDALONE
+    TEST="$TEST/lab_controller" LabController &
+    TEST="$TEST/inventory" Inventory
+fi
+
