@@ -3,15 +3,19 @@
 <!ENTITY % BOOK_ENTITIES SYSTEM "beaker_user_guide.ent">
 %BOOK_ENTITIES;
 ]>
-<chapter id="chap-beaker_user_guide-Jobs">
-	<title>Jobs</title>
+<section id="chap-beaker_user_guide-Components-Jobs">
+	<title>Jobs</title> 
 	<para>
 		The purpose of a Job is to provide an encapsulation of Tasks. It is to provide a single point of submission of these Tasks, and a single point of reviewing the output and results of these Tasks. The Tasks within a Job may or may not be related to each other; although it would make sense to define Jobs based on the relationship of the Tasks within it.
-	</para>
-	<section id="sect-beaker_user_guide-Jobs-Job_Searching">
+	</para> 
+	<section id="sect-beaker_user_guide-Components-Jobs-Job_Workflow">
+		<title>Job Workflow<remark> No idea really</remark></title>
+	
+	</section>
+	<section id="sect-beaker_user_guide-Components-Jobs-Job_Searching">
 		<title>Job Searching</title>
 		<para>
-			To search for a Job, go to the <literal>Scheduler</literal> menu at the top of the page, and click on <literal>Jobs</literal>. To look up the <literal>Job ID</literal>, enter a number into the searh box and press the <literal>Lookup ID</literal> button. Please see <xref linkend="sect-beaker_user_guide-Systems-System_Searching" /> for details on searching. 
+			To search for a Job, navigate to <guimenu>Scheduler</guimenu>&gt;<guimenuitem>Jobs</guimenuitem> at the top of the page. To look up the <literal>Job ID</literal>, enter a number in the search box and press the <literal>Lookup ID</literal> button. Please see <xref linkend="sect-beaker_user_guide-Components-Systems-System_Searching" /> for details on searching. 
 			<note>
 				<title>Quick Searches</title>
 				<para>
@@ -21,24 +25,24 @@
 		</para>
 	</section>
 	
-	<section id="sect-beaker_user_guide-Jobs-Job_Submission">
+	<section id="sect-beaker_user_guide-Components-Jobs-Job_Submission">
 		<title>Job Submission</title>
 		<para>
-			There are two ways of submitting a Job through the UI.They are outlined below
+			There are two ways of submitting a Job through the UI.They are outlined below.
 		</para>
-		<section id="sect-beaker_user_guide-Job_Submission-New_Job">	
+		<section id="sect-beaker_user_guide-Components-Jobs-Job_Submission-New_Job">	
                   <title>Submitting a new Job</title>
                   <para>
-                   Once you have created an XML Job workflow, you able able to submit it as a new Job. To do this, go to the <literal>Scheduler</literal> and click 
-                   <literal>New Job</literal>. Click <literal>Browse</literal> to select your XML file, and then hit the <literal>Submit Data</literal> button.
+                   Once you have created an XML Job workflow, you able able to submit it as a new Job. To do this, go to the <guimenu>Scheduler</guimenu>&gt;
+                   <guimenuitem>New Job</guimenuitem>. Click <literal>Browse</literal> to select your XML file, and then hit the <literal>Submit Data</literal> button.
                    The next page shown gives you an opportunity to check/edit your XML before queueing it as a Job by pressing the <literal>Queue</literal> button. 
                   </para>
                 </section>
-               
-		<section id="sect-beaker_user_guide-Job_Submission-Cloning_an_existing_Job">
+
+		<section id="sect-beaker_user_guide-Components-Jobs-Job_Submission-Cloning_an_existing_Job">
 			<title>Cloning an existing Job</title>
 			<para>
-				Cloning a Job means to take a Job that has already been run on the System, and re-submit it. To do this you first need to be on the Job search page. See <xref linkend="sect-beaker_user_guide-Jobs-Job_Searching" />.
+				Cloning a Job means to take a Job that has already been run on the System, and re-submit it. To do this you first need to be on the Job search page. See <xref linkend="sect-beaker_user_guide-Components-Jobs-Job_Searching" />.
 			</para>
 			<mediaobject>
 				<imageobject>
@@ -56,10 +60,10 @@
 			</note>
 		</section>
 		
-		<section id="sect-beaker_user_guide-Job_Submission-Job_Results">
+		<section id="sect-beaker_user_guide-Components-Jobs-Job_Submission-Job_Results">
 			<title>Job Results</title>
 			<para>
-				The whole purpose of Jobs is to view the output of the Job, and more to the point, Tasks that ran within the Job. To do this, you must first go to the Job search screen (<xref linkend="sect-beaker_user_guide-Jobs-Job_Searching" />). After finding the Job you want to see the results of, click on the link in the <literal>ID</literal> column.
+				The whole purpose of Jobs is to view the output of the Job, and more to the point, Tasks that ran within the Job. To do this, you must first go to the Job search screen (<xref linkend="sect-beaker_user_guide-Components-Jobs-Job_Searching" />). After finding the Job you want to see the results of, click on the link in the <literal>ID</literal> column.
 			</para>
 			<para>
 				The Job results page is divided by <literal>Recipe Set</literal>. To show the results of each Recipe within these Recipe Sets, click the 
@@ -67,54 +71,65 @@
                                 <literal>Show Failed Results</literal>.
 			</para>
 			<para>
-				The information in each column contains the following: 
-				<itemizedlist>
-					<listitem>
-						<para>
-							<literal>Run</literal> This is the <literal>ID</literal> of the instance of the particular Task.
-						</para>
-					</listitem>
-					<listitem>
-						<para>
-							<literal>Task</literal> A Task which is part of our current Job.
-						</para>
-					</listitem>
-					<listitem>
-						<para>
-							<literal>Start</literal> The time at which the Task commenced.
-						</para>
-					</listitem>
-					<listitem>
-						<para>
-							<literal>Finish</literal> The time at which the Task completed.
-						</para>
-					</listitem>
-					<listitem>
-						<para>
-							<literal>Duration</literal> Time the Task took to run.
-						</para>
-					</listitem>
-					<listitem>
-						<para>
-							<literal>Logs</literal> This is a listing of all the output logs generated during the running of this Task.
-						</para>
-					</listitem>
-					<listitem>
-						<para>
-							<literal>Status</literal> This is the current Status of the Task. <literal>Aborted</literal>,<literal>Cancelled</literal> and <literal>Completed</literal> mean that the Task has finished running.
-						</para>
-					</listitem>
-					<listitem>
-						<para>
-							<literal>Result</literal>
-						</para>
-					</listitem>
-					<listitem>
-						<para>
-							<literal>Action</literal> The two options here are <literal>Cancel</literal> and <literal>Clone</literal>.See <xref linkend="sect-beaker_user_guide-Job_Submission-Cloning_an_existing_Job" /> to lean about Cloning.
-						</para>
-					</listitem>
-				</itemizedlist>
+			
+				<variablelist><title>Result Details</title>
+                                	<varlistentry><term>Run</term>
+						<listitem>
+							<para>
+								This is the <literal>ID</literal> of the instance of the particular Task.
+							</para>
+						</listitem>
+                                        </varlistentry>
+                                        <varlistentry><term>Task</term>
+						<listitem>
+							<para>
+							         A Task which is part of our current Job.
+							</para>
+						</listitem>
+                                        </varlistentry>
+ 					<varlistentry><term>Start</term>
+						<listitem>
+							<para>
+								The time at which the Task commenced.
+							</para>
+						</listitem>
+					</varlistentry>
+ 					<varlistentry><term>Finish</term>
+						<listitem>
+							<para>
+								The time at which the Task completed.
+							</para>
+						</listitem>
+					</varlistentry>
+					<varlistentry><term>Duration</term>
+						<listitem>
+							<para>
+								Time the Task took to run.
+							</para>
+						</listitem>
+					</varlistentry>
+					<varlistentry><term>Logs</term>
+						<listitem>
+							<para>
+								This is a listing of all the output logs generated during the running of this Task.
+							</para>
+						</listitem>
+					</varlistentry>
+					<varlistentry><term>Status</term>
+						<listitem>
+							<para>
+								This is the current Status of the Task. <literal>Aborted</literal>,<literal>Cancelled</literal> and <literal>Completed</literal> mean that the Task has finished running.
+							</para>
+						</listitem>
+					</varlistentry>
+					<varlistentry><term>Action</term>
+						<listitem>
+							<para>
+								 The two options here are <literal>Cancel</literal> and <literal>Clone</literal>.See <xref linkend="sect-beaker_user_guide-Components-Jobs-Job_Submission-Cloning_an_existing_Job" /> to learn about Cloning.
+							</para>
+						</listitem>
+					</varlistentry>
+				</variablelist>
 				<note>
 					<title>Viewing Job results at a glance</title>
 					<para>
@@ -127,5 +142,5 @@
 
 	</section>
 
-</chapter>
+</section>
 

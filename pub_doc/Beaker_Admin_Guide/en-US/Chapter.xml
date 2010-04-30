@@ -1,0 +1,100 @@
+<?xml version='1.0' encoding='utf-8' ?>
+<!DOCTYPE chapter PUBLIC "-//OASIS//DTD DocBook XML V4.5//EN" "http://www.oasis-open.org/docbook/xml/4.5/docbookx.dtd" [
+<!ENTITY % BOOK_ENTITIES SYSTEM "Beaker_Admin_Guide.ent">
+%BOOK_ENTITIES;
+]>
+<chapter id="chap-Beaker_Admin_Guide-Beaker">
+	<title>Installing Beaker</title>
+	<para>
+		Currently the only way to install Beaker is by checking out the source.
+	</para>
+	
+	<section id="chap-Beaker_Admin_Guide-Beaker-Git">
+	<title>Install from Git</title>
+	<para>
+
+		 Install the dependencies:
+		<screen>
+<userinput><prompt>$</prompt> yum -y install python-setuptools-devel</userinput>
+<userinput><prompt>$</prompt> yum -y install rpm-build python-devel TurboGears</userinput>
+<userinput><prompt>$</prompt> yum -y install mod_wsgi python-TurboMail python-decorator python-tgexpandingformwidget python-xmltramp</userinput>
+		</screen>
+		To get Beaker from the Git repository, you need to install the following:
+		<screen><userinput><prompt>$</prompt>yum -y install git </userinput></screen>
+
+		Get a copy of the git repository, switch to master branch, and create the RPMs.
+		<screen>
+$<userinput> git clone git://git.fedorahosted.org/beaker</userinput>
+$<userinput> cd beaker</userinput>
+$<userinput> git checkout master</userinput>
+$<userinput> make snaparchive</userinput>
+$<userinput> make rpms</userinput>
+$<userinput> ls rpm-build/noarch/</userinput>
+beaker-client-<replaceable>version</replaceable>.<replaceable>distro</replaceable>.noarch.rpm
+beaker-lab-controller-<replaceable>version</replaceable>.<replaceable>distro</replaceable>.noarch.rpm
+beaker-<replaceable>version</replaceable>.<replaceable>distro</replaceable>.noarch.rpm
+beaker-server-<replaceable>version</replaceable>.<replaceable>distro</replaceable>.noarch.rpm
+		</screen>
+
+                Install Beaker libs and server rpm<remark>Installing of libs was not in the wiki setup</remark>
+		<screen>$<userinput> rpm -i rpm-build/noarch/beaker-<replaceable>version</replaceable>.<replaceable>distro</replaceable>.noarch.rpm</userinput></screen>
+		<screen>$<userinput> rpm -i rpm-build/noarch/beaker-server-<replaceable>version</replaceable>.<replaceable>distro</replaceable>.noarch.rpm</userinput></screen>
+
+	</para>
+	</section>
+	<section id="sect-Beaker_Admin_Guide-Beaker-Yum">
+		<title>Installing from Yum<remark>When will this be ready?</remark></title>
+		<para>
+		stuff	
+		</para>
+	</section>
+	<section id="chap-Beaker_Admin_Guide-Beaker-DB">
+	<title>Install DB</title>
+
+	
+
+    <para>
+    	Beaker supports MySQL,MSSQL,Oracle,MaxDB,PostgreSQL, and SQLite. For this tutorial,we will use MySQL. First, make sure MySQL server is installed, and configure
+    	the daemon to run at startup
+    	<screen>
+$ <userinput>yum install -y mysql-server MySQL-python</userinput>
+$ <userinput>chkconfig mysqld on</userinput>
+$ <userinput>service mysqld start</userinput>
+	</screen>
+    
+	Create a database, and grant access to beaker user. You can put the database on the local machine, or on a remote machine. In the example below, the database is hosted on
+	the local machine.
+   	<screen>
+$ <userinput>echo "create database beaker;" | mysql</userinput>
+$ <userinput>echo "grant all on beaker.* to 'beaker'@'localhost' IDENTIFIED BY 'beaker';"| mysql</userinput>
+	</screen>
+
+	Now let's initialise our DB with tables.<remark>This deviates from the wiki. If I didn't cd into Server and specify the config file, it would die</remark>
+	We'll also create an admin account called <literal>admin</literal> with password <literal>testing</literal>
+	<screen>
+$ <userinput>cd ./Server</userinput>
+$ <userinput>beaker-init -u admin -p testing -e rmancy@redhat.com -c server.cfg</userinput>
+	</screen>
+
+    </para>
+
+</section>
+
+	<section id="chap-Beaker_Admin_Guide-Beaker-Run">
+	<title>Start Beaker</title>
+	<para>
+	We are now ready to start the Beaker service. First make sure apache is on and configured to run on startup.
+	<screen>
+$ <userinput>sudo chkconfig httpd on</userinput>
+$ <userinput>sudo /sbin/service/httpd start</userinput>
+	</screen>
+	Start beaker and configure it to run on startup.
+	<screen>
+$ <userinput>sudo chkconfig beakerd on</userinput>
+$ <userinput>sudo /sbin/service beakerd start</userinput>
+	</screen>
+	To make sure Beaker is running go to <literal>http://localhost/</literal> in your browser.
+	</para>
+	</section>
+</chapter>
+

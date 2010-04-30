@@ -1,0 +1,37 @@
+<?xml version='1.0' encoding='utf-8' ?>
+<!DOCTYPE chapter PUBLIC "-//OASIS//DTD DocBook XML V4.5//EN" "http://www.oasis-open.org/docbook/xml/4.5/docbookx.dtd" [
+<!ENTITY % BOOK_ENTITIES SYSTEM "Beaker_Admin_Guide.ent">
+%BOOK_ENTITIES;
+]>
+<chapter id="chap-Beaker_Admin_Guide-Lab_Controllers">
+    <title>Lab Controller</title>
+    <para>
+  	Beaker uses Lab Controllers to manage it's system inventory. The Lab Controller has to sit on a seperate machine to Beaker. <remark>Is this still valid?</remark>
+	To install a Lab Controller, open a terminal on the Labcontroller and clone a copy of the repository as in <xref linkend="chap-Beaker_Admin_Guide-Beaker-Git"  />.
+
+    </para>
+    <para>
+	These dependencies are needed to make the rpm.
+	<screen>
+$ <userinput>sudo yum -y install python-setuptools-devel</userinput>
+$ <userinput>sudo yum -y install rpm-build python-devel TurboGears</userinput>
+	</screen>
+
+	Now create the rpm
+	<screen>
+$ <userinput>make snaparchive</userinput>
+$ <userinput>sudo make rpms</userinput>
+	</screen>
+
+	Now install the Lab Controller rpm
+	<screen>
+$ <userinput>sudo yum localinstall rpm-build/noarch/beaker-lab-controller-0.5.31-3.fc11.noarch.rpm --nogpg</userinput><remark>fails without switching gpg off</remark>
+	</screen>
+
+
+
+    </para>
+
+    
+	
+</chapter>
