@@ -75,6 +75,17 @@ $SNIPPET("RedHatEnterpriseLinux6")
 $SNIPPET("system")
 
 %packages --ignoremissing
+#if $getVar('packages','') == ''
+@base
+@core
+@fonts
+@x11
+@basic-desktop
+@general-desktop
+@input-methods
+@print-client
+@internet-browser
+#end if
 #if $getVar('rhts_server', '') == ''
 @x11
 @basic-desktop

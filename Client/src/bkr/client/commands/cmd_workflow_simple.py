@@ -60,6 +60,7 @@ class Workflow_Simple(BeakerWorkflow):
             recipe = copy.deepcopy(recipeTemplate)
 
             arch_node = self.doc.createElement('distro_arch')
+            arch_node.setAttribute('op', '=')
             arch_node.setAttribute('value', arch)
             recipe.addDistroRequires(arch_node)
 

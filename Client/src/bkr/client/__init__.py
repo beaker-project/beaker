@@ -190,16 +190,15 @@ class BeakerRecipeSet(BeakerBase):
 class BeakerRecipe(BeakerBase):
     def __init__(self, *args, **kwargs):
         self.node = self.doc.createElement('recipe')
+        self.node.setAttribute('whiteboard','')
         self.andDistroRequires = self.doc.createElement('and')
         self.andHostRequires = self.doc.createElement('and')
-        self.tasks = self.doc.createElement('tasks')
         distroRequires = self.doc.createElement('distroRequires')
         hostRequires = self.doc.createElement('hostRequires')
         distroRequires.appendChild(self.andDistroRequires)
         hostRequires.appendChild(self.andHostRequires)
         self.node.appendChild(distroRequires)
         self.node.appendChild(hostRequires)
-        self.node.appendChild(self.tasks)
 
     def addBaseRequires(self, *args, **kwargs):
         """ Add base requires """
@@ -208,10 +207,12 @@ class BeakerRecipe(BeakerBase):
         tags = kwargs.get("tag", [])
         if distro:
             distroName = self.doc.createElement('distro_name')
+            distroName.setAttribute('op', '=')
             distroName.setAttribute('value', '%s' % distro)
             self.addDistroRequires(distroName)
         if family:
             distroFamily = self.doc.createElement('distro_family')
+            distroFamily.setAttribute('op', '=')
             distroFamily.setAttribute('value', '%s' % family)
             self.addDistroRequires(distroFamily)
         for tag in tags:
@@ -239,5 +240,5 @@ class BeakerRecipe(BeakerBase):
             param.setAttribute('value' , taskParam.split('=',1)[1])
             params.appendChild(param)
         recipeTask.appendChild(params)
-        self.tasks.appendChild(recipeTask)
+        self.node.appendChild(recipeTask)
 
