@@ -65,7 +65,7 @@ class BeakerWorkflow(BeakerCommand):
         self.parser.add_option(
             "--package",
             action="append",
-            default=[],
+            default=None,
             help="Include tests for Package in job",
         )
         self.parser.add_option(
@@ -95,7 +95,7 @@ class BeakerWorkflow(BeakerCommand):
         self.parser.add_option(
             "--type",
             action="append",
-            default=[],
+            default=None,
             help="Include tasks of this type in job",
         )
         self.parser.add_option(
@@ -119,10 +119,22 @@ class BeakerWorkflow(BeakerCommand):
     def getTasks(self, *args, **kwargs):
         """ get all requested tasks """
 
+        username = kwargs.get("username", None)
+        password = kwargs.get("password", None)
+        types    = kwargs.get("type", None)
+        packages = kwargs.get("package", None)
+
+        filter = dict()
+        if types:
+            filter['types'] = types
+        if packages:
+            filter['packages'] = packages
+        
         tasks = list(args)
-        #FIXME add tasks based on packages
-        #FIXME add tasks based on task type
-        tasks.extend([])
+        if filter['types'] or filter['packages']:
+            self.set_hub(username, password)
+            tasks.extend(self.hub.tasks.filter(filter))
+
         return tasks
 
 class BeakerBase(object):
@@ -141,12 +153,24 @@ class BeakerJob(BeakerBase):
 
     def addRecipeSet(self, recipeSet):
         """ properly add a recipeSet to this job """
-        self.node.appendChild(recipeSet.node)
+        if isinstance(recipeSet, BeakerRecipeSet):
+            self.node.appendChild(recipeSet.node)
+        elif isinstance(recipeSet, xml.dom.minidom.Element):
+            recipeSet.appendChild(recipeSet)
+        else:
+            #FIXME raise error here.
+            sys.stderr.write("invalid object\n")
 
     def addRecipe(self, recipe):
         """ properly add a recipe to this job """
         recipeSet = self.doc.createElement('recipeSet')
-        recipeSet.appendChild(recipe.node)
+        if isinstance(recipe, BeakerRecipe):
+            recipeSet.appendChild(recipe.node)
+        elif isinstance(recipe, xml.dom.minidom.Element):
+            recipeSet.appendChild(recipe)
+        else:
+            #FIXME raise error here.
+            sys.stderr.write("invalid object\n")
         self.node.appendChild(recipeSet)
 
 class BeakerRecipeSet(BeakerBase):
@@ -155,7 +179,13 @@ class BeakerRecipeSet(BeakerBase):
 
     def addRecipe(self, recipe):
         """ properly add a recipe to this recipeSet """
-        self.node.appendChild(recipe.node)
+        if isinstance(recipe, BeakerRecipe):
+            self.node.appendChild(recipe.node)
+        elif isinstance(recipe, xml.dom.minidom.Element):
+            self.node.appendChild(recipe)
+        else:
+            #FIXME raise error here.
+            sys.stderr.write("invalid object\n")
 
 class BeakerRecipe(BeakerBase):
     def __init__(self, *args, **kwargs):

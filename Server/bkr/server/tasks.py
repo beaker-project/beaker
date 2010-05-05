@@ -69,16 +69,18 @@ class Tasks(RPCRoot):
         )
 
     @cherrypy.expose
-    def filter(self, install_name, filter=None):
+    def filter(self, filter=None):
         """
         XMLRPC method to query all tasks that apply to this distro
         """
-        try:
-            distro = Distro.by_install_name(install_name)
-        except InvalidRequestError, err:
-            raise BX(_('Invalid Distro: %s ' % install_name))   
-        
-        tasks = distro.tasks()
+        if 'install_name' in filter:
+            try:
+                distro = Distro.by_install_name(filter['install_name'])
+            except InvalidRequestError, err:
+                raise BX(_('Invalid Distro: %s ' % filter['install_name']))   
+            tasks = distro.tasks()
+        else:
+            tasks = Task.query()
 
         # Filter by packages if specified
         # apache, kernel, mysql, etc..

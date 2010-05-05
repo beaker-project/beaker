@@ -6,8 +6,8 @@
 %endif
 
 Name:           beaker
-Version:        0.5.31
-Release:        3%{?timestamp}%{?branch}%{?dist}
+Version:        0.5.32
+Release:        0%{?timestamp}%{?branch}%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -183,6 +183,9 @@ fi
 %{_sysconfdir}/init.d/%{name}-watchdog
 
 %changelog
+* Wed May 05 2010 Bill Peck <bpeck@redhat.com> - 0.5.32-0
+- New beaker-client command workflow-simple
+- minor fix to tasks/filter to support new workflow
 * Wed Apr 28 2010 Bill Peck <bpeck@redhat.com> - 0.5.31-3
 - only release_system if there is an active watchdog.
 * Wed Apr 28 2010 Bill Peck <bpeck@redhat.com> - 0.5.31-2

@@ -14,7 +14,7 @@ class Task_List(BeakerCommand):
     enabled = True
 
     def options(self):
-        self.parser.usage = "%%prog %s [options] <install_name>..." % self.normalized_name
+        self.parser.usage = "%%prog %s [options] ..." % self.normalized_name
         self.parser.add_option(
             "--type",
             action="append",
@@ -24,6 +24,11 @@ class Task_List(BeakerCommand):
             "--package",
             action="append",
             help="Only return tasks that apply to these packages (kernel, apache, postgresql)",
+        )
+        self.parser.add_option(
+            "--install_name",
+            default="",
+            help="Only return tasks that apply to this distro",
         )
         self.parser.add_option(
             "--params",
@@ -45,15 +50,9 @@ class Task_List(BeakerCommand):
         password = kwargs.pop("password", None)
         filter['types'] = kwargs.pop("type", None)
         filter['packages'] = kwargs.pop("package", None)
+        filter['install_name'] = kwargs.pop("install_name", None)
         params = kwargs.pop("params", [])
         xml = kwargs.pop("xml")
-
-        if args:
-            install_name = args[0]
-        else:
-            self.parser.print_help()
-            sys.exit(1)
-            
 
         self.set_hub(username, password)
         doc = Document()
@@ -68,7 +67,7 @@ class Task_List(BeakerCommand):
             xmlparam.setAttribute('name', '%s' % key)
             xmlparam.setAttribute('value', '%s' % value)
             xmlparams.appendChild(xmlparam)
-        for task in self.hub.tasks.filter(install_name, filter):
+        for task in self.hub.tasks.filter(filter):
             if xml:
                 xmltask = doc.createElement('task')
                 xmltask.setAttribute('name', task)
