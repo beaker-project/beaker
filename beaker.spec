@@ -45,6 +45,7 @@ Requires:       httpd
 Requires:       python-krbV
 Requires:       beaker
 Requires:       python-TurboMail
+Requires:	createrepo
 
 
 %package lab-controller
