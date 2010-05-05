@@ -7,7 +7,7 @@
 
 Name:           beaker
 Version:        0.5.32
-Release:        1%{?timestamp}%{?branch}%{?dist}
+Release:        2%{?timestamp}%{?branch}%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -183,6 +183,8 @@ fi
 %{_sysconfdir}/init.d/%{name}-watchdog
 
 %changelog
+* Wed May 05 2010 Bill Peck <bpeck@redhat.com> - 0.5.32-2
+- fix workflow-simple to handle taskparam correctly and task types/packages
 * Wed May 05 2010 Bill Peck <bpeck@redhat.com> - 0.5.32-1
 - fix BeakerJob classes to add tasks to the correct node.
 * Wed May 05 2010 Bill Peck <bpeck@redhat.com> - 0.5.32-0

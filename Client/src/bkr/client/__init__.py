@@ -87,7 +87,7 @@ class BeakerWorkflow(BeakerCommand):
             help="Include this task in job",
         )
         self.parser.add_option(
-            "--taskparams",
+            "--taskparam",
             action="append",
             default=[],
             help="Set task params 'name=value'",
@@ -131,7 +131,7 @@ class BeakerWorkflow(BeakerCommand):
             filter['packages'] = packages
         
         tasks = list(args)
-        if filter['types'] or filter['packages']:
+        if types or packages:
             self.set_hub(username, password)
             tasks.extend(self.hub.tasks.filter(filter))
 
