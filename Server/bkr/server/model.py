@@ -3518,7 +3518,7 @@ class GuestRecipe(Recipe):
                     distroRequires.appendChild(child)
             distro_virt = self.doc.createElement("distro_virt")
             distro_virt.setAttribute("op", "=")
-            distro_virt.setAttribute("value", "1")
+            distro_virt.setAttribute("value", "")
             distroRequires.appendChild(distro_virt)
             return distroRequires.toxml()
         else:

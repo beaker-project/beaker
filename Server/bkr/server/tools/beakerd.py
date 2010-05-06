@@ -155,6 +155,8 @@ def processed_recipesets(*args):
                         # locks
                         enough_systems = True
                     if not enough_systems:
+                        log.debug("recipe: %s labController:%s entering not enough systems logic" % 
+                                              (recipe.id, l_controller))
                         # Eliminate bad choices.
                         for recipe in recipeset.recipes_orderby(l_controller)[:]:
                             for tmprecipe in recipeset.recipes:
@@ -167,7 +169,7 @@ def processed_recipesets(*args):
         
                                 if systemsa.difference(systemsb):
                                     for rem_system in systemsa.intersection(systemsb):
-                                        log.debug("Removing %s from recipe id %s" % (rem_system, recipe.id))
+                                        log.debug("recipe: %s labController:%s Removing system %s" % (recipe.id, l_controller, rem_system))
                                         recipe.systems.remove(rem_system)
                         for recipe in recipeset.recipes:
                             count = 0
@@ -183,7 +185,7 @@ def processed_recipesets(*args):
                                     count += 1
                             if len(systems) <= count:
                                 # Remove all systems from this lc on this rs.
-                                log.debug("Removing lab %s from recipe id %s" % (l_controller, recipe.id))
+                                log.debug("recipe: %s labController:%s %s <= %s Removing lab" % (recipe.id, l_controller, len(systems), count))
                                 bad_l_controllers = bad_l_controllers.union([l_controller])
         
                 # Remove systems that are on bad lab controllers
@@ -198,13 +200,13 @@ def processed_recipesets(*args):
                                                   System.lab_controller==l_controller
                                                         ).all()
                                       )
-                        log.debug("Removing lab %s from recipe id %s" % (l_controller, recipe.id))
+                        log.debug("recipe: %s labController: %s Removing lab" % (recipe.id, l_controller))
                         for system in systems:
-                            log.debug("Removing %s from recipe id %s" % (system, recipe.id))
+                            log.debug("recipe: %s labController: %s Removing system %s" % (recipe.id, l)controller, system))
                             recipe.systems.remove(system)
                     if recipe.systems:
                         # Set status to Queued 
-                        log.info("recipe ID %s moved from Processed to Queued" % recipe.id)
+                        log.info("recipe: %s moved from Processed to Queued" % recipe.id)
                         recipe.queue()
                     else:
                         # Set status to Aborted 
@@ -275,7 +277,7 @@ def queued_recipes(*args):
                     # it did not execute the update_status method.
                     recipe.schedule()
                     # Atomic operation to reserve the system
-                    if session.connection(System).execute(system_table.update(
+                    if session.connection(Recipe).execute(system_table.update(
                          and_(system_table.c.id==system.id,
                           system_table.c.user_id==None)),
                           user_id=recipe.recipeset.job.owner.user_id).rowcount == 1:
