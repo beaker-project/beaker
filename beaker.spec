@@ -6,8 +6,8 @@
 %endif
 
 Name:           beaker
-Version:        0.5.32
-Release:        2%{?timestamp}%{?branch}%{?dist}
+Version:        0.5.33
+Release:        0%{?timestamp}%{?branch}%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -184,6 +184,8 @@ fi
 %{_sysconfdir}/init.d/%{name}-watchdog
 
 %changelog
+* Thu May 06 2010 Bill Peck <bpeck@redhat.com> - 0.5.33-0
+- Remove --cost from rhel5 kickstart templates.  rhel5 doesn't support --cost.
 * Wed May 05 2010 Bill Peck <bpeck@redhat.com> - 0.5.32-2
 - fix workflow-simple to handle taskparam correctly and task types/packages
 * Wed May 05 2010 Bill Peck <bpeck@redhat.com> - 0.5.32-1
