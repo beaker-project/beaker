@@ -1221,7 +1221,7 @@ class System(SystemObject):
                     raise an exception if it fails.
                     raise an exception if it takes more then 5 minutes
                 """
-                expiredelta = datetime.utcnow() + timedelta(minutes=5)
+                expiredelta = datetime.utcnow() + timedelta(minutes=10)
                 while(True):
                     for line in self.get_event_log(task_id).split('\n'):
                         if line.find("### TASK COMPLETE ###") != -1:

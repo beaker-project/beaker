@@ -7,7 +7,7 @@
 
 Name:           beaker
 Version:        0.5.33
-Release:        1%{?timestamp}%{?branch}%{?dist}
+Release:        2%{?timestamp}%{?branch}%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -184,6 +184,8 @@ fi
 %{_sysconfdir}/init.d/%{name}-watchdog
 
 %changelog
+* Thu May 06 2010 Bill Peck <bpeck@redhat.com> - 0.5.33-2
+- pushed remote cobbler method to a ten minute timeout.  some power options take this long.
 * Thu May 06 2010 Bill Peck <bpeck@redhat.com> - 0.5.33-1
 - added additional debug code to beakerd.
 - default guest recipes to non virt distro, ask for it if you want virt.
