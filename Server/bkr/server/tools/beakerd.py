@@ -202,7 +202,7 @@ def processed_recipesets(*args):
                                       )
                         log.debug("recipe: %s labController: %s Removing lab" % (recipe.id, l_controller))
                         for system in systems:
-                            log.debug("recipe: %s labController: %s Removing system %s" % (recipe.id, l)controller, system))
+                            log.debug("recipe: %s labController: %s Removing system %s" % (recipe.id, l_controller, system))
                             recipe.systems.remove(system)
                     if recipe.systems:
                         # Set status to Queued 
@@ -434,7 +434,7 @@ def schedule():
     # Run scheduled_recipes in this process
     while True:
         queued = queued_recipes()
-        scheduled = scheduled_recipes():
+        scheduled = scheduled_recipes()
         if not queued and not scheduled:
             time.sleep(20)
 
