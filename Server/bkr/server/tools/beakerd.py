@@ -104,7 +104,7 @@ def new_recipes(*args):
         except exceptions.Exception, e:
             session.rollback()
             log.error("Failed to commit due to :%s" % e)
-        session.close()
+    session.close()
     log.debug("Exiting new_recipes routine")
     return True
 
@@ -217,7 +217,7 @@ def processed_recipesets(*args):
         except exceptions.Exception, e:
             session.rollback()
             log.error("Failed to commit due to :%s" % e)
-        session.close()
+    session.close()
     log.debug("Exiting processed_recipes routine")
     return True
 
@@ -308,7 +308,7 @@ def queued_recipes(*args):
         except exceptions.Exception, e:
             session.rollback()
             log.error("Failed to commit due to :%s" % e)
-        session.close()
+    session.close()
     log.debug("Exiting queued_recipes routine")
     return True
 
@@ -395,7 +395,7 @@ def scheduled_recipes(*args):
         except exceptions.Exception, e:
             session.rollback()
             log.error("Failed to commit due to :%s" % e)
-        session.close()
+    session.close()
     log.debug("Exiting scheduled_recipes routine")
     return True
 
@@ -433,7 +433,9 @@ def schedule():
     log.debug("starting scheduled recipes Thread")
     # Run scheduled_recipes in this process
     while True:
-        if not queued_recipes() and not scheduled_recipes():
+        queued = queued_recipes()
+        scheduled = scheduled_recipes():
+        if not queued and not scheduled:
             time.sleep(20)
 
 def daemonize_self():

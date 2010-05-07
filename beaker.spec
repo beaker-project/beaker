@@ -6,8 +6,8 @@
 %endif
 
 Name:           beaker
-Version:        0.5.33
-Release:        2%{?timestamp}%{?branch}%{?dist}
+Version:        0.5.34
+Release:        0%{?timestamp}%{?branch}%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -184,6 +184,9 @@ fi
 %{_sysconfdir}/init.d/%{name}-watchdog
 
 %changelog
+* Fri May 07 2010 Bill Peck <bpeck@redhat.com> - 0.5.34-0
+- possible fix for same identity key exists in this session (beakerd)
+- also fix it so scheduled_recipes routine always runs after queued_recipes
 * Thu May 06 2010 Bill Peck <bpeck@redhat.com> - 0.5.33-2
 - pushed remote cobbler method to a ten minute timeout.  some power options take this long.
 * Thu May 06 2010 Bill Peck <bpeck@redhat.com> - 0.5.33-1
