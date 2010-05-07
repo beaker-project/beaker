@@ -1,0 +1,61 @@
+<?xml version='1.0' encoding='utf-8' ?>
+<!DOCTYPE chapter PUBLIC "-//OASIS//DTD DocBook XML V4.5//EN" "http://www.oasis-open.org/docbook/xml/4.5/docbookx.dtd" [
+<!ENTITY % BOOK_ENTITIES SYSTEM "Beaker_Admin_Guide.ent">
+%BOOK_ENTITIES;
+]>
+<chapter id="chap-Beaker_Admin_Guide-Overview">
+	<title>Beaker Overview</title>
+	<section id="chap-Beaker_Admin_Guide-Overview-Components">
+		<title>Components</title>
+		<para>
+		Beaker is the name for an automated testing framework. It consists of the following.
+		
+		<variablelist>
+			
+		<varlistentry><term>Lab Controller</term> 
+			<listitem>
+			<para>
+			The Lab Controller maintains inventory data about distros available to install and machines to install on. It Can be used by itself, or in conjunction with the Beaker server. 
+			The Lab Controller is the only conduit of communication between the Lab Machines and the Beaker Server. The Lab Controller is built on top of several existing tools: 
+			
+				<itemizedlist>
+					<listitem><para><literal>cobbler</literal>: Does the actual provisioning.</para></listitem>
+					<listitem><para><literal>conserver</literal>: Provides console logging.</para></listitem>
+					<listitem><para><literal>fence-agents</literal>: Power cycles amchines to start PXE installs and to recover.</para></listitem>
+					<listitem><para><literal>smolt</literal>: Provides the inventory data.</para></listitem>
+				</itemizedlist>
+			</para> 
+			</listitem>
+		</varlistentry>
+
+		<varlistentry><term>Beaker server</term> 
+			<listitem>
+			<para>The Beaker server is a central point at which all Job related activity occurs. System inventory as well as the ability to provision Systems is also controlled from here. It also holds the repository of Tasks.</para> 
+			</listitem>
+		</varlistentry>
+
+		<varlistentry><term>Beah test harness</term> 
+			<listitem>
+				<para> The Beah test harness is responsible for executing tests on the Systems. It runs locally on the provisioned Systems.</para> 
+			</listitem>
+		</varlistentry>
+		</variablelist>
+		</para>
+	</section>
+	<section id="chap-Beaker_Admin_Guide-Overview-Topology">
+		<title>Topology</title>
+		<para>
+		Beaker's topology is relatively simple. The Beaker server acts as the interface through which all user actions are performed. Some of the requests are performed local to the 
+		Beaker server (such as scheduling Jobs and creating reports), but other requests are forwarded to the System (running Tasks, provisioning a System). This communication between the 
+		Beaker server and the System occurs via the Lab Controller.	
+		</para>
+
+		<mediaobject>
+			<imageobject>
+				<imagedata fileref="./images/beaker_network_topology.png" format="PNG" width="444" />
+			</imageobject>
+		</mediaobject>
+	
+	</section>
+
+</chapter>

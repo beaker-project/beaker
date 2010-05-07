@@ -6,10 +6,11 @@
 <section id="chap-beaker_user_guide-Components-Jobs">
 	<title>Jobs</title> 
 	<para>
-		The purpose of a Job is to provide an encapsulation of Tasks. It is to provide a single point of submission of these Tasks, and a single point of reviewing the output and results of these Tasks. The Tasks within a Job may or may not be related to each other; although it would make sense to define Jobs based on the relationship of the Tasks within it.
+		The purpose of a Job is to provide an encapsulation of Tasks. It is to provide a single point of submission of these Tasks, and a single point of reviewing the output and results of these Tasks. The Tasks within a Job may or may not be related to each other; although it would make sense to define Jobs based on the relationship of the Tasks within it. Once a Job has been submitted you can not alter it's contents, or pause it. You can however cancel it (<xref linkend="sect-beaker_user_guide-Components-Jobs-Job_Submission-Job_Results" />), and alter it's priority (
 	</para> 
 	<section id="sect-beaker_user_guide-Components-Jobs-Job_Workflow">
-		<title>Job Workflow<remark> No idea really</remark></title>
+		<title>Job Workflow<remark>Empty!</remark></title>
+		<para></para>
 	
 	</section>
 	<section id="sect-beaker_user_guide-Components-Jobs-Job_Searching">
@@ -63,13 +64,30 @@
 		<section id="sect-beaker_user_guide-Components-Jobs-Job_Submission-Job_Results">
 			<title>Job Results</title>
 			<para>
-				The whole purpose of Jobs is to view the output of the Job, and more to the point, Tasks that ran within the Job. To do this, you must first go to the Job search screen (<xref linkend="sect-beaker_user_guide-Components-Jobs-Job_Searching" />). After finding the Job you want to see the results of, click on the link in the <literal>ID</literal> column.
+				The whole purpose of Jobs is to view the output of the Job, and more to the point, Tasks that ran within the Job. To do this, you must first go to the Job search screen (<xref linkend="sect-beaker_user_guide-Components-Jobs-Job_Searching" />). After finding the Job you want to see the results of, click on the link in the <literal>ID</literal> column.You don't have to wait until the Job has completed to view the results. Of course only
+				the results of those Tasks that have already finished running will be available.
 			</para>
 			<para>
 				The Job results page is divided by <literal>Recipe Set</literal>. To show the results of each Recipe within these Recipe Sets, click the 
-                                <literal>Show All Results</literal> button. Also you can just show the tasks that have a status of <literal>Fail</literal> by clicking 
-                                <literal>Show Failed Results</literal>.
+                                <literal>Show All Results</literal> button. You can just show the tasks that have a status of <literal>Fail</literal> by clicking 
+                                <literal>Show Failed Results</literal>. 
 			</para>
+			<para> 
+				While your Job is still <literal>Queued</literal> it's possible to change the priority. You can change the priority of individual Recipe Sets by changing the value of <literal>Priority</literal>, or you can change all the Job's Recipe Sets at once by clicking an option beside the text <literal>Set all RecipeSet priorities</literal>, which is at the top right of the page. If successful, a green success message will briefly display, otherwise a red error message will be shown.
+			</para>
+			<note><title>Priority permissions</title>
+				<para>
+					If you are not an Admin you will only be able to lower the priority. Admins can lower and raise the priority
+				</para>
+			</note>
+			<mediaobject>
+				<imageobject>
+					<imagedata fileref="./images/job_priority_change.png" format="PNG" width="444" />
+				</imageobject>
+			</mediaobject>
+			
+				
+			
 			<para>
 			
 				<variablelist><title>Result Details</title>

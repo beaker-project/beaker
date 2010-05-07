@@ -8,6 +8,7 @@
 	<para>
         Tasks are the lowest unit in the Job hierarchy, and running a Task is the primary purpose of running a Job.
         There purpose is to run one or more commands, and then collect the results of those commands in a way that other entities can access them.
+	You can run as many or as few Tasks in a Job as you like. 
 	</para>
         <remark>Creating Task package</remark>
 	<section id="sect-beaker_user_guide-Components-Tasks-Task_Searching">

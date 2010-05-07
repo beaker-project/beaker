@@ -12,7 +12,7 @@
 		<section id="sect-beaker_user_guide-Components-System_Provisioning-Provision_by_System">
 			<title>Provision by System</title>
 			<para>
-				Go to the System details page (see <xref linkend="sect-beaker_user_guide-Components-Systems-System_Details" />) of a System that is free (see <xref linkend="sect-beaker_user_guide-Components-Systems-System_Searching" />) and click on <literal>Take</literal> in the <literal>Current User</literal> field. After succesfully taking the System, click the <literal>Provision</literal> tab of the System details page to provision the System.
+				Go to the System details page (see <xref linkend="sect-beaker_user_guide-Components-Systems-System_Details" />) of a System that is free (see <xref linkend="sect-beaker_user_guide-Components-Systems-System_Searching" />) and click on <literal>Take</literal> in the <literal>Current User</literal> field. After successfully taking the System, click the <literal>Provision</literal> tab of the System details page to provision the System.
 			</para>
 			<mediaobject>
 				<imageobject>

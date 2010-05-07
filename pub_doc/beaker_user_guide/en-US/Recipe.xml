@@ -6,7 +6,7 @@
 <section id="chap-beaker_user_guide-Components-Recipes">
 	<title>Recipes</title>
 	<para>
-		Recipes are contained within a Job and are themselves a container for Tasks. There can be more than one Recipe per Job. The purpose of a Recipe is to group a set of Tasks into a single logical unit.
+		Recipes are contained within a Job (although indirectly, as directly they are contained in a <literal>Recipe Set</literal>) and are themselves a container for Tasks. There can be more than one Recipe per Job. The purpose of a Recipe is to group a set of Tasks into a single logical unit.
 	</para>
 	<section id="sect-beaker_user_guide-Components-Recipes-Recipe_Searching">
 		<title>Recipe Searching</title>
