@@ -4,12 +4,12 @@
 %BOOK_ENTITIES;
 ]>
 <bookinfo id="book-beaker_user_guide-beaker_user_guide">
-	<title>beaker user guide</title>
+	<title>User Guide</title>
 	<subtitle>Using Beaker effectively</subtitle>
 	<productname>Beaker</productname>
 	<productnumber>0.1</productnumber>
 	<edition>0</edition>
-	<pubsnumber>8</pubsnumber>
+	<pubsnumber>10</pubsnumber>
 	<abstract>
 		<para>
 			This user guide will explain how to use both the Inventory and Job scheduling components of Beaker.

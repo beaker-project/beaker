@@ -4,15 +4,14 @@
 %BOOK_ENTITIES;
 ]>
 <bookinfo id="book-Beaker_Admin_Guide-Beaker_Admin_Guide">
-	<title>Beaker Admin Guide</title>
-	<subtitle>short description</subtitle>
-	<productname>Documentation</productname>
+	<title>Administration Guide</title>
+	<subtitle>Setting up Beaker</subtitle>
+	<productname>Beaker</productname>
 	<productnumber>0.1</productnumber>
 	<edition>0</edition>
-	<pubsnumber>0</pubsnumber>
+	<pubsnumber>5</pubsnumber>
 	<abstract>
 		<para>
-			A short overview and summary of the book's subject and purpose, traditionally no more than one paragraph long. Note: the abstract will appear in the front matter of your book and will also be placed in the description field of the book's RPM spec file.
 		</para>
 	</abstract>
 	<corpauthor>

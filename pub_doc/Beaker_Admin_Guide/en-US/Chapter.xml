@@ -15,9 +15,9 @@
 
 		 Install the dependencies:
 		<screen>
-<userinput><prompt>$</prompt> yum -y install python-setuptools-devel</userinput>
 <userinput><prompt>$</prompt> yum -y install rpm-build python-devel TurboGears</userinput>
-<userinput><prompt>$</prompt> yum -y install mod_wsgi python-TurboMail python-decorator python-tgexpandingformwidget python-xmltramp</userinput>
+<userinput><prompt>$</prompt> yum -y install mod_wsgi python-decorator python-tgexpandingformwidget python-xmltramp</userinput>
+<userinput><prompt>$</prompt> easy_install TurboMail</userinput>
 		</screen>
 		To get Beaker from the Git repository, you need to install the following:
 		<screen><userinput><prompt>$</prompt>yum -y install git </userinput></screen>
@@ -36,7 +36,7 @@ beaker-<replaceable>version</replaceable>.<replaceable>distro</replaceable>.noar
 beaker-server-<replaceable>version</replaceable>.<replaceable>distro</replaceable>.noarch.rpm
 		</screen>
 
-                Install Beaker libs and server rpm<remark>Installing of libs was not in the wiki setup</remark>
+                Install Beaker libs and server rpm.<remark>Installing of libs was not in the wiki setup</remark>
 		<screen>$<userinput> rpm -i rpm-build/noarch/beaker-<replaceable>version</replaceable>.<replaceable>distro</replaceable>.noarch.rpm</userinput></screen>
 		<screen>$<userinput> rpm -i rpm-build/noarch/beaker-server-<replaceable>version</replaceable>.<replaceable>distro</replaceable>.noarch.rpm</userinput></screen>
 
@@ -45,7 +45,7 @@ beaker-server-<replaceable>version</replaceable>.<replaceable>distro</replaceabl
 	<section id="sect-Beaker_Admin_Guide-Beaker-Yum">
 		<title>Installing from Yum<remark>When will this be ready?</remark></title>
 		<para>
-		stuff	
+		Beaker is currently not in any yum repository.	
 		</para>
 	</section>
 	<section id="chap-Beaker_Admin_Guide-Beaker-DB">
@@ -95,6 +95,48 @@ $ <userinput>sudo /sbin/service beakerd start</userinput>
 	</screen>
 	To make sure Beaker is running go to <literal>http://localhost/</literal> in your browser.
 	</para>
+	</section>
+
+	<section id="chap-Beaker_Admin_Guide-Beaker-Lab_details">
+	<title>Add Lab Controller details</title>
+	<para> One more step we need to do is add the Lab Controller we have yet to configure (<xref linkend="chap-Beaker_Admin_Guide-Lab_Controllers" />).
+	       Login in at http://localhost/labcontrollers/new. Use the username and password above from the beaker-init command.
+	       The new lab controller form requires 3 fields
+	       <variablelist>
+		<varlistentry><term>FQDN</term>
+			<listitem><para> This is the fully qualified domain name of the lab controller.</para></listitem>
+		</varlistentry>
+
+		<varlistentry><term>Username</term>
+			<listitem><para>This is the login name we will use for xmlrpc, for the purposes of this document will use the login name : testing</para></listitem>
+		</varlistentry>
+
+		<varlistentry><term>Password</term>
+			<listitem><para> is the password that goes along with the username, again we will use : testing </para></listitem>
+		</varlistentry>
+		</variablelist>
+
+		The new lab controller also needs a user account. Login at http://localhost/users/new.
+
+	       <variablelist>
+		<varlistentry><term>Login</term>
+			<listitem><para> Should be the host/<replaceable>FQDN</replaceable> (<replaceable>FQDN</replaceable> is the fully qualified domain of the lab controller.</para></listitem>
+		</varlistentry>
+
+		<varlistentry><term>Display Name</term>
+			<listitem><para>Should be just <replaceable>FQDN</replaceable>.</para></listitem>
+		</varlistentry>
+
+		<varlistentry><term>Email adrress</term>
+			<listitem><para>The email address should be root@<replaceable>FQDN</replaceable>.</para></listitem>
+		</varlistentry>
+
+		<varlistentry><term>Password</term>
+			<listitem><para>If you are not using Kerberos authentication, you willneed a password here.</para></listitem>
+		</varlistentry>
+		</variablelist>
+		Save the form and we are done with the Inventory side for now. 
+		</para>
 	</section>
 </chapter>
 
