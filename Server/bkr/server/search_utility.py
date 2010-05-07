@@ -163,7 +163,6 @@ class Modeller(object):
         return x == y
 
     def contains(self,x,y): 
-        
         return x.like('%%%s%%' % y )
  
     def return_function(self,type,operator,loose_match=True):
@@ -922,7 +921,7 @@ class Distro(SystemObject):
                             'Arch' : MyColumn(col_type='string',column=model.Arch.arch,relations='arch'),
                             'Virt' : MyColumn(col_type='boolean',column=model.Distro.virt),
                             'Method' : MyColumn(col_type='string',column=model.Distro.method),
-                            'Breed' : MyColumn(col_type='string',column=model.Distro.breed),
+                            'Breed' : MyColumn(col_type='string',column=model.Breed.breed, relations=['breed']),
                             'Tag' : MyColumn(col_type='string', column=model.DistroTag.tag, relations=['_tags'])
                          }
     search_values_dict = {'Tag' : [e.tag for e in model.DistroTag.list_by_tag('')]}
