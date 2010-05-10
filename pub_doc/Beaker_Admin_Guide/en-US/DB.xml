@@ -28,9 +28,6 @@ $ <userinput>sudo yum install beaker-lab-controller</userinput>
 	</para>
 	</section>
 	
-	</para>
-	
-	</section>
 	<section id="chap-Beaker_Admin_Guide-Beaker-Configure">
 	<title>Configure Lab Controller</title>
 	<para>

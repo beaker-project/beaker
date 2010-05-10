@@ -24,8 +24,8 @@ and Lab Controller. The following should be done as root.
 <userinput><prompt>$</prompt> yum -y install rpm-build python-devel TurboGears python-TurboMail</userinput>
 <userinput><prompt>$</prompt> yum -y install mod_wsgi python-decorator python-tgexpandingformwidget python-xmltramp</userinput>
 		</screen>
-
-</section>
+        </para>
+        </section>
 	<section id="chap-Beaker_Admin_Guide-Beaker-Yum">
 	<title>Installing from Yum</title>
 	<para>
