@@ -110,8 +110,8 @@ def new_recipes(*args):
 
 def processed_recipesets(*args):
     recipesets = RecipeSet.query()\
-                       .join(['recipes','status'])\
-                       .filter(Recipe.status==TaskStatus.by_name(u'Processed'))
+                       .join(['status'])\
+                       .filter(RecipeSet.status==TaskStatus.by_name(u'Processed'))
     if not recipesets.count():
         return False
     log.debug("Entering processed_recipes routine")
