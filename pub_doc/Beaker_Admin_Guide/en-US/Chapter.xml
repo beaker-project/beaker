@@ -5,57 +5,55 @@
 ]>
 <chapter id="chap-Beaker_Admin_Guide-Beaker">
 	<title>Installing Beaker</title>
+	<section id="chap-Beaker_Admin_Guide-Beaker-Setup">
+	<title>Installing Dependencies</title>
+	<para>	
+		Please add the beaker.repo file that Red Hat
+provided for you on the machine(s) that will be running your Scheduler
+and Lab Controller. The following should be done as root.
+	<warning><title>Disabling Repos</title>
 	<para>
-		Currently the only way to install Beaker is by checking out the source.
+		Please disable other repos to ensure that packages are installed from the beaker repo.
 	</para>
-	
-	<section id="chap-Beaker_Admin_Guide-Beaker-Git">
-	<title>Install from Git</title>
+	</warning>
+	</para>	
 	<para>
 
 		 Install the dependencies:
 		<screen>
-<userinput><prompt>$</prompt> yum -y install rpm-build python-devel TurboGears</userinput>
+<userinput><prompt>$</prompt> yum -y install rpm-build python-devel TurboGears python-TurboMail</userinput>
 <userinput><prompt>$</prompt> yum -y install mod_wsgi python-decorator python-tgexpandingformwidget python-xmltramp</userinput>
-<userinput><prompt>$</prompt> easy_install TurboMail</userinput>
 		</screen>
-		To get Beaker from the Git repository, you need to install the following:
-		<screen><userinput><prompt>$</prompt>yum -y install git </userinput></screen>
-
-		Get a copy of the git repository, switch to master branch, and create the RPMs.
-		<screen>
-$<userinput> git clone git://git.fedorahosted.org/beaker</userinput>
-$<userinput> cd beaker</userinput>
-$<userinput> git checkout master</userinput>
-$<userinput> make snaparchive</userinput>
-$<userinput> make rpms</userinput>
-$<userinput> ls rpm-build/noarch/</userinput>
-beaker-client-<replaceable>version</replaceable>.<replaceable>distro</replaceable>.noarch.rpm
-beaker-lab-controller-<replaceable>version</replaceable>.<replaceable>distro</replaceable>.noarch.rpm
-beaker-<replaceable>version</replaceable>.<replaceable>distro</replaceable>.noarch.rpm
-beaker-server-<replaceable>version</replaceable>.<replaceable>distro</replaceable>.noarch.rpm
-		</screen>
-
-                Install Beaker libs and server rpm.<remark>Installing of libs was not in the wiki setup</remark>
-		<screen>$<userinput> rpm -i rpm-build/noarch/beaker-<replaceable>version</replaceable>.<replaceable>distro</replaceable>.noarch.rpm</userinput></screen>
-		<screen>$<userinput> rpm -i rpm-build/noarch/beaker-server-<replaceable>version</replaceable>.<replaceable>distro</replaceable>.noarch.rpm</userinput></screen>
-
-	</para>
-	</section>
-	<section id="sect-Beaker_Admin_Guide-Beaker-Yum">
-		<title>Installing from Yum<remark>When will this be ready?</remark></title>
-		<para>
-		Beaker is currently not in any yum repository.	
-		</para>
-	</section>
-	<section id="chap-Beaker_Admin_Guide-Beaker-DB">
-	<title>Install DB</title>
 
 	
 
+	Setup SSL certificates,create a private key, and a CSR.
+	<screen>
+$ <userinput>yum install openssl</userinput>
+$ <userinput>openssl genrsa -out beaker-stage.app.eng.bos.redhagt.com.key 1024</userinput>
+$ <userinput>openssl req -new -key <replaceable>beaker_server</replaceable>.key -out <replaceable>beaker_server</replaceable>.csr</userinput>
+	</screen>
+	Send CSR to CA to get signed.
+	Install key, cert, and optionally the CSR in /etc/httpd/conf/ssl.<replaceable>crt/csr/key</replaceable> or wherever you define your SSL certs to be in /etc/httpd/conf.d/ssl.conf 
+	or create your own self-signed cert.
+	</para>
+</section>
+	<section id="chap-Beaker_Admin_Guide-Beaker-Yum">
+	<title>Installing from Yum</title>
+	<para>
+                Install Beaker libs and server.
+		<screen>
+<userinput><prompt>$</prompt> yum install beaker-libs</userinput>
+<userinput><prompt>$</prompt> yum install beaker-server</userinput>
+		</screen>
+
+	</para>
+</section>	
+	<section id="chap-Beaker_Admin_Guide-Beaker-DB">
+	<title>Install DB</title>
     <para>
     	Beaker supports MySQL,MSSQL,Oracle,MaxDB,PostgreSQL, and SQLite. For this tutorial,we will use MySQL. First, make sure MySQL server is installed, and configure
-    	the daemon to run at startup
+    	the daemon to run at startup.
     	<screen>
 $ <userinput>yum install -y mysql-server MySQL-python</userinput>
 $ <userinput>chkconfig mysqld on</userinput>
@@ -68,12 +66,15 @@ $ <userinput>service mysqld start</userinput>
 $ <userinput>echo "create database beaker;" | mysql</userinput>
 $ <userinput>echo "grant all on beaker.* to 'beaker'@'localhost' IDENTIFIED BY 'beaker';"| mysql</userinput>
 	</screen>
-
-	Now let's initialise our DB with tables.<remark>This deviates from the wiki. If I didn't cd into Server and specify the config file, it would die</remark>
-	We'll also create an admin account called <literal>admin</literal> with password <literal>testing</literal>
+	Now let's initialise our DB with tables.
+	We'll also create an admin account called <literal>admin</literal> with password <literal>testing</literal>.
+	<warning><title>Table type</title>
+	<para> Beaker requires a transactional DB. If using a Database that default to something else (i.e MySQL defaults to MyISAM), either the default table type
+	      for the database needs to be changed (to InnoDB in MySQL's case) or the user will have to convert the tables to a transactional DB after running beaker-init.
+	</para>
+	</warning>
 	<screen>
-$ <userinput>cd ./Server</userinput>
-$ <userinput>beaker-init -u admin -p testing -e rmancy@redhat.com -c server.cfg</userinput>
+$ <userinput>beaker-init -u admin -p testing -e <replaceable>admin_email_address</replaceable></userinput>
 	</screen>
 
     </para>
@@ -88,7 +89,15 @@ $ <userinput>beaker-init -u admin -p testing -e rmancy@redhat.com -c server.cfg<
 $ <userinput>sudo chkconfig httpd on</userinput>
 $ <userinput>sudo /sbin/service/httpd start</userinput>
 	</screen>
-	Start beaker and configure it to run on startup.
+	We need to switch SELinux off.
+	<screen>
+$ <userinput>setenforce 0</userinput>
+	</screen>
+	Due to permission issues, we need to delete the log file before we start Beaker for the first time.
+	<screen>
+$ <userinput>sudo rm /etc/beaker/server.log</userinput>
+	</screen>
+	Start Beaker and configure it to run on startup.
 	<screen>
 $ <userinput>sudo chkconfig beakerd on</userinput>
 $ <userinput>sudo /sbin/service beakerd start</userinput>
@@ -108,11 +117,11 @@ $ <userinput>sudo /sbin/service beakerd start</userinput>
 		</varlistentry>
 
 		<varlistentry><term>Username</term>
-			<listitem><para>This is the login name we will use for xmlrpc, for the purposes of this document will use the login name : testing</para></listitem>
+			<listitem><para>This is the login name we will use for xmlrpc, for the purposes of this document will use the login name <literal>testing</literal></para></listitem>
 		</varlistentry>
 
 		<varlistentry><term>Password</term>
-			<listitem><para> is the password that goes along with the username, again we will use : testing </para></listitem>
+			<listitem><para>This is the password that goes along with the username, again we will use : testing </para></listitem>
 		</varlistentry>
 		</variablelist>
 
@@ -120,7 +129,7 @@ $ <userinput>sudo /sbin/service beakerd start</userinput>
 
 	       <variablelist>
 		<varlistentry><term>Login</term>
-			<listitem><para> Should be the host/<replaceable>FQDN</replaceable> (<replaceable>FQDN</replaceable> is the fully qualified domain of the lab controller.</para></listitem>
+			<listitem><para> Should be the host/<replaceable>FQDN</replaceable> (<replaceable>FQDN</replaceable> is the fully qualified domain of the lab controller).</para></listitem>
 		</varlistentry>
 
 		<varlistentry><term>Display Name</term>
@@ -132,7 +141,7 @@ $ <userinput>sudo /sbin/service beakerd start</userinput>
 		</varlistentry>
 
 		<varlistentry><term>Password</term>
-			<listitem><para>If you are not using Kerberos authentication, you willneed a password here.</para></listitem>
+			<listitem><para>If you are not using Kerberos authentication, you will need a password here.</para></listitem>
 		</varlistentry>
 		</variablelist>
 		Save the form and we are done with the Inventory side for now. 
