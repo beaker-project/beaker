@@ -7,7 +7,7 @@
 
 Name:           beaker
 Version:        0.5.35
-Release:        0%{?timestamp}%{?branch}%{?dist}
+Release:        1%{?timestamp}%{?branch}%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -184,6 +184,8 @@ fi
 %{_sysconfdir}/init.d/%{name}-watchdog
 
 %changelog
+* Mon May 10 2010 Bill Peck <bpeck@redhat.com> - 0.5.35-1
+- Change default to /bkr
 * Mon May 10 2010 Bill Peck <bpeck@redhat.com> - 0.5.35-0
 - Fix beakerd to not do process_routine until all recipes are in state processed.
 - possible fix for favicon.ico not being found.
