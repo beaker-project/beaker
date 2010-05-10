@@ -27,21 +27,6 @@ $ <userinput>sudo yum install beaker-lab-controller</userinput>
 	</screen>
 	</para>
 	</section>
-	<section id="chap-Beaker_Admin_Guide-Beaker-Lab_Setup_Local">
-	<title>Installing Lab Controller/Server on same machine</title>
-	<para>If you want to install the Lab Controller on the same machine as the Beaker server, you will need to configure your beaker-server.conf file on your Beaker server.
-	<screen>
-$ <userinput>sudo /etc/httpd/conf.d/beaker-server.conf</userinput>
-	</screen>
-	Add the lines with <literal>+</literal> and remove the lines with <literal>-</literal>
-	<screen>
-- Alias /static /usr/share/bkr/server/static
-+ Alias /bkr/static /usr/share/bkr/server/static
-
-
-- WSGIScriptAlias / /usr/share/bkr/beaker-server.wsgi
-+ WSGIScriptAlias /bkr /usr/share/bkr/beaker-server.wsgi/bkr
-	</screen>
 	
 	</para>
 	
@@ -56,7 +41,7 @@ $ <userinput>sudo /etc/httpd/conf.d/beaker-server.conf</userinput>
 		<listitem><para><literal>next_server</literal>: If you use cobbler as your dhcp server this needs to be the ip address of the Lab Controller.</para></listitem>
 		<listitem><para><literal>pxe_just_once</literal>: 1.</para></listitem> 
 		<listitem><para><literal>anamon_enabled</literal>: 1.</para></listitem>
-		<listitem><para><literal>redhat_management_server</literal>:  "https://login:password@BeakerServer". login would be admin, password would be testing, and BeakerServer would be the HOSTNAME of the Beaker/Server you installed earlier. If your Lab Controller is on the same machine as your Beaker server, the values should be <literal>https://login:password@BeakerServer/bkr</literal></para></listitem>
+		<listitem><para><literal>redhat_management_server</literal>:  "https://login:password@BeakerServer.example.com/bkr". login would be admin, password would be testing, and BeakerServer would be the HOSTNAME of the Beaker/Server you installed earlier. If your Lab Controller is on the same machine as your Beaker server, the values should be <literal>https://login:password@BeakerServer/bkr</literal></para></listitem>
 	</itemizedlist>
 
 	
@@ -109,13 +94,13 @@ $ <userinput>cobbler import --path=/net/${NFSSERVER}/${NFSPATH} \
 	<screen>
 $ <userinput>/var/lib/cobbler/triggers/sync/post/osversion.trigger</userinput>
 	</screen>
-	Check that the Disto was added succesfully by going to to http://beaker/distros.
+	Check that the Disto was added succesfully by going to to https://BeakerServer.example.com/bkr/distros.
 	</para>
 	<para>
 	You'll nee to configure the <literal>/etc/beaker/proxy.conf</literal> file with the following settings.
 	<screen>
 # Hub xml-rpc address.
-HUB_URL = "https://BeakerServer.example.com"
+HUB_URL = "https://BeakerServer.example.com/bkr"
 #HUB_URL = "http://localhost:8080"
 
 # Hub authentication method. Example: krbv, password, worker_key

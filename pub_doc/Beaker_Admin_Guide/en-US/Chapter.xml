@@ -25,18 +25,6 @@ and Lab Controller. The following should be done as root.
 <userinput><prompt>$</prompt> yum -y install mod_wsgi python-decorator python-tgexpandingformwidget python-xmltramp</userinput>
 		</screen>
 
-	
-
-	Setup SSL certificates,create a private key, and a CSR.
-	<screen>
-$ <userinput>yum install openssl</userinput>
-$ <userinput>openssl genrsa -out beaker-stage.app.eng.bos.redhagt.com.key 1024</userinput>
-$ <userinput>openssl req -new -key <replaceable>beaker_server</replaceable>.key -out <replaceable>beaker_server</replaceable>.csr</userinput>
-	</screen>
-	Send CSR to CA to get signed.
-	Install key, cert, and optionally the CSR in /etc/httpd/conf/ssl.<replaceable>crt/csr/key</replaceable> or wherever you define your SSL certs to be in /etc/httpd/conf.d/ssl.conf 
-	or create your own self-signed cert.
-	</para>
 </section>
 	<section id="chap-Beaker_Admin_Guide-Beaker-Yum">
 	<title>Installing from Yum</title>
@@ -72,6 +60,11 @@ $ <userinput>echo "grant all on beaker.* to 'beaker'@'localhost' IDENTIFIED BY '
 	<para> Beaker requires a transactional DB. If using a Database that default to something else (i.e MySQL defaults to MyISAM), either the default table type
 	      for the database needs to be changed (to InnoDB in MySQL's case) or the user will have to convert the tables to a transactional DB after running beaker-init.
 	</para>
+        <para> You can change the default storage engine for mysql by editing the file /etc/my.cnf and adding the following line in the [mysqld] section.
+        </para>
+        <screen>
+default-storage-engine=INNODB
+        </screen>
 	</warning>
 	<screen>
 $ <userinput>beaker-init -u admin -p testing -e <replaceable>admin_email_address</replaceable></userinput>
@@ -95,21 +88,21 @@ $ <userinput>setenforce 0</userinput>
 	</screen>
 	Due to permission issues, we need to delete the log file before we start Beaker for the first time.
 	<screen>
-$ <userinput>sudo rm /etc/beaker/server.log</userinput>
+$ <userinput>sudo rm /etc/beaker/server*.log</userinput>
 	</screen>
 	Start Beaker and configure it to run on startup.
 	<screen>
 $ <userinput>sudo chkconfig beakerd on</userinput>
 $ <userinput>sudo /sbin/service beakerd start</userinput>
 	</screen>
-	To make sure Beaker is running go to <literal>http://localhost/</literal> in your browser.
+	To make sure Beaker is running go to <literal>http://BeakerServer.example.com/bkr/</literal> in your browser.
 	</para>
 	</section>
 
 	<section id="chap-Beaker_Admin_Guide-Beaker-Lab_details">
 	<title>Add Lab Controller details</title>
 	<para> One more step we need to do is add the Lab Controller we have yet to configure (<xref linkend="chap-Beaker_Admin_Guide-Lab_Controllers" />).
-	       Login in at http://localhost/labcontrollers/new. Use the username and password above from the beaker-init command.
+	       Login in at http://BeakerServer.example.com/bkr/labcontrollers/new. Use the username and password above from the beaker-init command.
 	       The new lab controller form requires 3 fields
 	       <variablelist>
 		<varlistentry><term>FQDN</term>
@@ -125,7 +118,7 @@ $ <userinput>sudo /sbin/service beakerd start</userinput>
 		</varlistentry>
 		</variablelist>
 
-		The new lab controller also needs a user account. Login at http://localhost/users/new.
+		The new lab controller also needs a user account. Login at http://BeakerServer.example.com/bkr/users/new.
 
 	       <variablelist>
 		<varlistentry><term>Login</term>
