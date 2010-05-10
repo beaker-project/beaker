@@ -422,7 +422,7 @@ class Root(RPCRoot):
         allowed_priority_ids = [elem.id for elem in recipeset.allowed_priorities(user)]
        
         if long(priority_id) not in allowed_priority_ids:
-            return {'success' : None, 'msg' : 'Insufficent privileges for that priority', 'current_priority' : recipeset.priority.id }
+            return {'success' : None, 'msg' : 'Insufficient privileges for that priority', 'current_priority' : recipeset.priority.id }
          
 
         activity = RecipeSetActivity(identity.current.user, 'WEBUI', 'Changed', 'Priority', recipeset.priority.id,priority_id)
