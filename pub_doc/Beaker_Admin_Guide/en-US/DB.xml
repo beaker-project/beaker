@@ -8,24 +8,46 @@
     <para>
   	Beaker uses Lab Controllers to manage it's system inventory. Open a terminal window on the system you will be running the Lab Controller on.
     </para>
-    <para>
-	These dependencies are needed to make the rpm.
+
+	<section id="chap-Beaker_Admin_Guide-Beaker-Dependencies">
+	<title>Installing Dependencies</title>
+    	<para>
+	If you have not installed the beaker repo on the Lab Controller, please do so.
+	Install the Lab Controller rpm. These dependencies are needed to make the rpm.
 	<screen>
 $ <userinput>sudo yum -y install rpm-build python-devel TurboGears</userinput>
 	</screen>
-	Clone a copy of the repository as in <xref linkend="chap-Beaker_Admin_Guide-Beaker-Git"  />.
-	Now create the rpm.
+	</para>
+	</section>
+	<section id="chap-Beaker_Admin_Guide-Beaker-Lab_Setup">
+	<title>Installing Lab Controller</title>
+	<para>To install the Lab Controller, enter the following.
 	<screen>
-$ <userinput>cd beaker</userinput>
-$ <userinput>make snaparchive</userinput>
-$ <userinput>sudo make rpms</userinput>
-	</screen>
-
-	Now install the Lab Controller rpm
-	<screen>
-$ <userinput>sudo yum localinstall rpm-build/noarch/beaker-lab-controller-<replaceable>version</replaceable>.<replaceable>distro</replaceable>.<replaceable>arch</replaceable>.rpm --nogpg</userinput><remark>fails without switching gpg off</remark>
+$ <userinput>sudo yum install beaker-lab-controller</userinput>
 	</screen>
 	</para>
+	</section>
+	<section id="chap-Beaker_Admin_Guide-Beaker-Lab_Setup_Local">
+	<title>Installing Lab Controller/Server on same machine</title>
+	<para>If you want to install the Lab Controller on the same machine as the Beaker server, you will need to configure your beaker-server.conf file on your Beaker server.
+	<screen>
+$ <userinput>sudo /etc/httpd/conf.d/beaker-server.conf</userinput>
+	</screen>
+	Add the lines with <literal>+</literal> and remove the lines with <literal>-</literal>
+	<screen>
+- Alias /static /usr/share/bkr/server/static
++ Alias /bkr/static /usr/share/bkr/server/static
+
+
+- WSGIScriptAlias / /usr/share/bkr/beaker-server.wsgi
++ WSGIScriptAlias /bkr /usr/share/bkr/beaker-server.wsgi/bkr
+	</screen>
+	
+	</para>
+	
+	</section>
+	<section id="chap-Beaker_Admin_Guide-Beaker-Configure">
+	<title>Configure Lab Controller</title>
 	<para>
 	Cobbler is one of the dependencies that is installed with the Lab Controller. You'll need to edit the <literal>/etc/cobbler/settings</literal>
 	file.
@@ -34,7 +56,7 @@ $ <userinput>sudo yum localinstall rpm-build/noarch/beaker-lab-controller-<repla
 		<listitem><para><literal>next_server</literal>: If you use cobbler as your dhcp server this needs to be the ip address of the Lab Controller.</para></listitem>
 		<listitem><para><literal>pxe_just_once</literal>: 1.</para></listitem> 
 		<listitem><para><literal>anamon_enabled</literal>: 1.</para></listitem>
-		<listitem><para><literal>redhat_management_server</literal>:  "https://login:password@BeakerServer". login would be admin, password would be testing, and BeakerServer would be the HOSTNAME of the Beaker/Server you installed earlier. </para></listitem>
+		<listitem><para><literal>redhat_management_server</literal>:  "https://login:password@BeakerServer". login would be admin, password would be testing, and BeakerServer would be the HOSTNAME of the Beaker/Server you installed earlier. If your Lab Controller is on the same machine as your Beaker server, the values should be <literal>https://login:password@BeakerServer/bkr</literal></para></listitem>
 	</itemizedlist>
 
 	
@@ -48,36 +70,36 @@ $ <userinput>sudo yum localinstall rpm-build/noarch/beaker-lab-controller-<repla
 	<para>
     	If you are using SELinux, do the following.
 	<screen>
-$ <userinput>setsebool -P httpd_can_network_connect true</userinput>
-$ <userinput>semanage fcontext -a -t public_content_t "/var/lib/tftpboot/.*"</userinput>
-$ <userinput>semanage fcontext -a -t public_content_t "/var/www/cobbler/images/.*"</userinput>
+$ <userinput>sudo setsebool -P httpd_can_network_connect true</userinput>
+$ <userinput>sudo semanage fcontext -a -t public_content_t "/var/lib/tftpboot/.*"</userinput>
+$ <userinput>sudo semanage fcontext -a -t public_content_t "/var/www/cobbler/images/.*"</userinput>
 	</screen>
 	
 	Turn on some services
 	<screen>
 //Turn on http
-$ <userinput>chkconfig httpd on</userinput>
-$<userinput>service httpd start</userinput>
+$ <userinput>sudo chkconfig httpd on</userinput>
+$ <userinput>sudo service httpd start</userinput>
 
 //Turn on tftp
-$<userinput>chkconfig xinetd on</userinput>
-$<userinput>chkconfig tftp on</userinput>
-$<userinput>service xinetd start</userinput>
+$ <userinput>sudo chkconfig xinetd on</userinput>
+$ <userinput>sudo chkconfig tftp on</userinput>
+$ <userinput>sudo service xinetd start</userinput>
 
 //Turn on cobbler
-$<userinput>chkconfig cobblerd on</userinput><remark>Hmm, I think this is already on</remark>
-$<userinput>service cobblerd start</userinput>
+$ <userinput>sudo chkconfig cobblerd on</userinput>
+$ <userinput>sudo service cobblerd start</userinput>
 
 //Enable and turn on beaker watchdog proxy
-$<userinput>chkconfig beaker-watchdog on</userinput>
-$<userinput>chkconfig beaker-proxy on</userinput>
-$<userinput>service beaker-watchdog start</userinput>
-$<userinput>service beaker-proxy start</userinput>
+$ <userinput>sudo chkconfig beaker-watchdog on</userinput>
+$ <userinput>sudo chkconfig beaker-proxy on</userinput>
+$ <userinput>sudo service beaker-watchdog start</userinput>
+$ <userinput>sudo service beaker-proxy start</userinput>
 	</screen>
 	Cobbler should now be running.
 	</para>
 	<para>
-	Yoo'll need to import some distros. You can use the following command (whilst replacing the variables).
+	You'll need to import some distros. You can use the following command (whilst replacing the variables).
 	<screen>
 $ <userinput>cobbler import --path=/net/${NFSSERVER}/${NFSPATH} \
                        --name=$DISTRONAME \
@@ -111,4 +133,5 @@ KRB_SERVICE = "HTTP"
 KRB_REALM = "EXAMPLE.COM"
 	</screen>
 	</para>   
+</section>
 </chapter>
