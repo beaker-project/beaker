@@ -1463,7 +1463,7 @@ $SNIPPET("rhts_post")
                                              System.loaned==None),
                                       System.loaned==user,
                                       and_(System.shared==True,
-                                           Group.systems==None,
+                                           System.groups==None,
                                            System.loaned==None
                                           ),
                                       and_(System.shared==True,
