@@ -188,6 +188,7 @@ fi
 - merged bz589723 - fix spelling mistakes
 - merged bz589843 - cannot select systems in reserve workflow
 - merged bz590665 - link to systems owner by a particular group gives internal error
+- merged bz589857 - Distro search dies on 'Breed' search
 * Mon May 10 2010 Bill Peck <bpeck@redhat.com> - 0.5.35-1
 - Change default to /bkr
 * Mon May 10 2010 Bill Peck <bpeck@redhat.com> - 0.5.35-0
