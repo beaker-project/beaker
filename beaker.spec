@@ -6,8 +6,8 @@
 %endif
 
 Name:           beaker
-Version:        0.5.35
-Release:        1%{?timestamp}%{?branch}%{?dist}
+Version:        0.5.36
+Release:        0%{?timestamp}%{?branch}%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -184,6 +184,10 @@ fi
 %{_sysconfdir}/init.d/%{name}-watchdog
 
 %changelog
+* Tue May 11 2010 Bill Peck <bpeck@redhat.com> - 0.5.36-0
+- merged bz589723 - fix spelling mistakes
+- merged bz589843 - cannot select systems in reserve workflow
+- merged bz590665 - link to systems owner by a particular group gives internal error
 * Mon May 10 2010 Bill Peck <bpeck@redhat.com> - 0.5.35-1
 - Change default to /bkr
 * Mon May 10 2010 Bill Peck <bpeck@redhat.com> - 0.5.35-0
