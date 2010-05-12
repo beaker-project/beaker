@@ -6,7 +6,7 @@
 %endif
 
 Name:           beaker
-Version:        0.5.36
+Version:        0.5.37
 Release:        0%{?timestamp}%{?branch}%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
@@ -184,6 +184,8 @@ fi
 %{_sysconfdir}/init.d/%{name}-watchdog
 
 %changelog
+* Wed May 12 2010 Bill Peck <bpeck@redhat.com> - 0.5.37-0
+- fixed proxy to fork properly
 * Tue May 11 2010 Bill Peck <bpeck@redhat.com> - 0.5.36-0
 - merged bz589723 - fix spelling mistakes
 - merged bz589843 - cannot select systems in reserve workflow

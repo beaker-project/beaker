@@ -16,28 +16,21 @@ from kobo.tback import Traceback, set_except_hook
 from kobo.log import add_stderr_logger
 set_except_hook()
 
-proxy = None
-
 class myHandler(DocXMLRPCServer.DocXMLRPCRequestHandler):
     def do_POST(self):
-        global proxy
-        proxy.clientIP, proxy.clientPort = self.client_address
+        # try and log back in if needed
+        try:
+            self.server.instance.hub._login(verbose=self.server.instance.hub._conf.get("DEBUG_XMLRPC"))
+        except KeyboardInterrupt:
+            raise
+        except Exception, e:
+            raise
         DocXMLRPCServer.DocXMLRPCRequestHandler.do_POST(self)
 
 
 class ForkingXMLRPCServer (SocketServer.ForkingMixIn,
                            DocXMLRPCServer.DocXMLRPCServer):
-    def process_request(self, request, client_address):
-        # try and log back in if needed
-        try:
-            self.instance.hub._login(verbose=self.instance.hub._conf.get("DEBUG_XMLRPC"))
-        except KeyboardInterrupt:
-            raise
-        except Exception, e:
-            raise
-        DocXMLRPCServer.DocXMLRPCServer.process_request(self,
-                                                        request,
-                                                        client_address)
+    allow_reuse_address = True
 
 
 def daemon_shutdown(*args, **kwargs):
@@ -45,8 +38,6 @@ def daemon_shutdown(*args, **kwargs):
 
 def main_loop(conf=None, foreground=False):
     """infinite daemon loop"""
-
-    global proxy
 
     # define custom signal handlers
     signal.signal(signal.SIGTERM, daemon_shutdown)
