@@ -6,7 +6,7 @@ from cherrypy import request, response
 from kid import Element
 from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.helpers import *
-from bkr.server.widgets import myPaginateDataGrid, UserAlphaNavBar
+from bkr.server.widgets import myPaginateDataGrid, AlphaNavBar
 
 import cherrypy
 
@@ -86,13 +86,14 @@ class Users(RPCRoot):
 
     @expose(template="bkr.server.templates.users")
     @paginate('list', default_order='user_name', allow_limit_override=True)
-    def index(self,*args,**kw):
+    def index(self,*args,**kw): 
         users = session.query(User)
         list_by_letters = []
         for elem in users:
             first_letter = elem.user_name[0]
             list_by_letters.append(first_letter.capitalize()) 
         list_by_letters = set(list_by_letters) 
+
         if 'user' in kw:
             if 'text' in kw['user']:
                 if 'starts_with' in kw['user']['text']:
@@ -109,7 +110,7 @@ class Users(RPCRoot):
         return dict(title="Users",
                     grid = users_grid,
                     object_count = users.count(),
-                    alpha_nav_bar = UserAlphaNavBar(list_by_letters),
+                    alpha_nav_bar = AlphaNavBar(list_by_letters,'user'),
                     search_users = self.search_user_form,
                     search_bar = None,
                     list = users)

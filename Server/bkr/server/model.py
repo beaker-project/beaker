@@ -1119,12 +1119,16 @@ class Group(object):
         return self.display_name
 
     @classmethod
-    def list_by_name(cls, name):
+    def list_by_name(cls, name, find_anywhere=False):
         """
         A class method that can be used to search groups
         based on the group_name
         """
-        return cls.query().filter(Group.group_name.like('%s%%' % name))
+        if find_anywhere is True:
+            return cls.query().filter(Group.group_name.like('%%%s%%' % name)) 
+        else:
+            return cls.query().filter(Group.group_name.like('%s%%' % name))
+           
 
 
 class System(SystemObject):
