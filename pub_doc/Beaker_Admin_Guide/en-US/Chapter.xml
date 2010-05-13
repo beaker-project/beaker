@@ -4,9 +4,9 @@
 %BOOK_ENTITIES;
 ]>
 <chapter id="chap-Beaker_Admin_Guide-Beaker">
-	<title>Installing Beaker</title>
+	<title>Setting up Beaker Server</title>
 	<section id="chap-Beaker_Admin_Guide-Beaker-Setup">
-	<title>Installing Dependencies</title>
+	<title>Install Beaker</title>
 	<para>	
 		Please add the beaker.repo file that Red Hat
 provided for you on the machine(s) that will be running your Scheduler
@@ -17,24 +17,21 @@ and Lab Controller. The following should be done as root.
 	</para>
 	</warning>
 	</para>	
-	<para>
 
-		 Install the dependencies:
-		<screen>
+
+		
+			<para>Install the dependencies
+			<screen>
 <userinput><prompt>$</prompt> yum -y install rpm-build python-devel TurboGears python-TurboMail</userinput>
 <userinput><prompt>$</prompt> yum -y install mod_wsgi python-decorator python-tgexpandingformwidget python-xmltramp</userinput>
-		</screen>
-        </para>
-        </section>
-	<section id="chap-Beaker_Admin_Guide-Beaker-Yum">
-	<title>Installing from Yum</title>
+			</screen>
+			</para>
 	<para>
                 Install Beaker libs and server.
 		<screen>
 <userinput><prompt>$</prompt> yum install beaker-libs</userinput>
 <userinput><prompt>$</prompt> yum install beaker-server</userinput>
 		</screen>
-
 	</para>
 </section>	
 	<section id="chap-Beaker_Admin_Guide-Beaker-DB">
@@ -97,10 +94,8 @@ $ <userinput>sudo /sbin/service beakerd start</userinput>
 	</screen>
 	To make sure Beaker is running go to <literal>http://BeakerServer.example.com/bkr/</literal> in your browser.
 	</para>
-	</section>
 
-	<section id="chap-Beaker_Admin_Guide-Beaker-Lab_details">
-	<title>Add Lab Controller details</title>
+	<formalpara><title>Add Lab Controller details</title>
 	<para> One more step we need to do is add the Lab Controller we have yet to configure (<xref linkend="chap-Beaker_Admin_Guide-Lab_Controllers" />).
 	       Login in at http://BeakerServer.example.com/bkr/labcontrollers/new. Use the username and password above from the beaker-init command.
 	       The new lab controller form requires 3 fields
@@ -139,6 +134,7 @@ $ <userinput>sudo /sbin/service beakerd start</userinput>
 		</variablelist>
 		Save the form and we are done with the Inventory side for now. 
 		</para>
+	</formalpara>
 	</section>
 </chapter>
 
