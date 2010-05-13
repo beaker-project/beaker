@@ -7,6 +7,7 @@ from tg_expanding_form_widget.tg_expanding_form_widget import ExpandingForm
 from kid import Element
 from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.helpers import *
+from bkr.server.widgets import myPaginateDataGrid
 from xmlrpclib import ProtocolError
 
 import cherrypy
@@ -254,7 +255,7 @@ class LabControllers(RPCRoot):
     @paginate('list')
     def index(self):
         labcontrollers = session.query(LabController)
-        labcontrollers_grid = widgets.PaginateDataGrid(fields=[
+        labcontrollers_grid = myPaginateDataGrid(fields=[
                                   ('FQDN', lambda x: make_edit_link(x.fqdn,x.id)),
                                   ('Timestamp', lambda x: x.distros_md5),
                                   (' ', lambda x: make_remove_link(x.id)),

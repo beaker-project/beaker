@@ -1,10 +1,13 @@
 from turbogears.database import session
-from turbogears import controllers, expose, flash, widgets, validate, error_handler, validators, redirect, paginate
+from turbogears import controllers, expose, flash, widgets, validate, error_handler, validators, redirect, paginate, url
 from turbogears import identity, redirect
 from cherrypy import request, response
 from tg_expanding_form_widget.tg_expanding_form_widget import ExpandingForm
 from kid import Element
 from bkr.server.xmlrpccontroller import RPCRoot
+from bkr.server.widgets import AlphaNavBar, myPaginateDataGrid
+from bkr.server.model import PowerType
+from bkr.server.admin_page import AdminPage
 
 import cherrypy
 
@@ -53,7 +56,7 @@ def get_power_type(power):
     return make_link(url  = '../powertypes/edit?id=%s' % power.powertype.id,
                      text = power.powertype.name)
 
-class PowerTypes(RPCRoot):
+class PowerTypes(AdminPage):
     # For XMLRPC methods in this class.
     exposed = False
 
@@ -66,6 +69,16 @@ class PowerTypes(RPCRoot):
         action = 'save_data',
         submit_text = _(u'Submit Data'),
     )
+
+
+    def __init__(self,*args,**kw):
+        kw['search_url'] =  url("/powertypes/by_name?anywhere=1"),
+        kw['search_name'] = 'power'
+        super(PowerTypes,self).__init__(*args,**kw)
+
+        self.search_col = PowerType.name
+        self.search_mapper = PowerType
+      
 
     @expose(template='bkr.server.templates.form')
     def new(self, **kw):
@@ -104,17 +117,36 @@ class PowerTypes(RPCRoot):
         flash( _(u"OK") )
         redirect(".")
 
-    @expose(template="bkr.server.templates.grid_add")
-    @paginate('list')
-    def index(self):
+    @expose(format='json')
+    def by_name(self,input,*args,**kw): 
+        if 'anywhere' in kw:
+            search = PowerType.list_by_name(input,find_anywhere=True)
+        else:
+            search = PowerType.list_by_name(input)
+
+        powers = [elem.name for elem in search]
+        return dict(matches=powers)
+
+    @expose(template="bkr.server.templates.admin_grid")
+    @paginate('list', default_order='name', allow_limit_override=True)
+    def index(self,*args,**kw):
         powertypes = session.query(PowerType)
-        powertypes_grid = widgets.PaginateDataGrid(fields=[
+        list_by_letters = set([elem.name[0].capitalize() for elem in powertypes])
+        results = self.process_search(**kw)
+        if results:
+            powertypes = results
+
+        powertypes_grid = myPaginateDataGrid(fields=[
                                   ('Power Type', make_edit_link),
                                   (' ', make_remove_link),
                               ])
+        
+
         return dict(title="Power Types", 
                     grid = powertypes_grid,
-                    search_bar = None,
+                    addable = self.add,
+                    search_widget = self.search_widget_form,
+                    alpha_nav_bar = AlphaNavBar(list_by_letters,'power'),
                     object_count = powertypes.count(),
                     list = powertypes)
 

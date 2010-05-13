@@ -1124,11 +1124,11 @@ class Group(object):
         A class method that can be used to search groups
         based on the group_name
         """
-        if find_anywhere is True:
-            return cls.query().filter(Group.group_name.like('%%%s%%' % name)) 
+        if find_anywhere:
+            q = cls.query().filter(Group.group_name.like('%%%s%%' % name))
         else:
-            return cls.query().filter(Group.group_name.like('%s%%' % name))
-           
+            q = cls.query().filter(Group.group_name.like('%s%%' % name))
+        return q
 
 
 class System(SystemObject):
@@ -2085,8 +2085,19 @@ class OSVersion(MappedObject):
         all = cls.query()
         return [(0,"All")] + [(version.id, version.osminor) for version in all]
 
+    @classmethod
+    def list_osmajor_by_name(cls,name,find_anywhere=False):
+        if find_anywhere:
+            q = cls.query().join(['osmajor']).filter(OSMajor.osmajor.like('%%%s%%' % name))
+        else:
+            q = cls.query().join(['osmajor']).filter(OSMajor.osmajor.like('%s%%' % name))
+        return q
+    
+
     def __repr__(self):
         return "%s.%s" % (self.osmajor,self.osminor)
+
+    
 
 
 class LabControllerDistro(SystemObject):
@@ -2263,6 +2274,13 @@ class PowerType(object):
     def by_id(cls, id):
         return cls.query.filter_by(id=id).one()
 
+    @classmethod
+    def list_by_name(cls,name,find_anywhere=False):
+        if find_anywhere:
+            q = cls.query().filter(PowerType.name.like('%%%s%%' % name))
+        else:
+            q = cls.query().filter(PowerType.name.like('%s%%' % name))
+        return q
 
 class Power(SystemObject):
     pass
@@ -2554,6 +2572,19 @@ class Key(SystemObject):
     @classmethod
     def by_name(cls, key_name):
         return cls.query().filter_by(key_name=key_name).one()
+
+
+    @classmethod
+    def list_by_name(cls, name, find_anywhere=False):
+        """
+        A class method that can be used to search keys
+        based on the key_name
+        """
+        if find_anywhere:
+            q = cls.query().filter(Key.key_name.like('%%%s%%' % name))
+        else:
+            q = cls.query().filter(Key.key_name.like('%s%%' % name))
+        return q
 
     @classmethod
     def by_id(cls, id):

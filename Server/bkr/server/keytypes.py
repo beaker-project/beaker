@@ -1,11 +1,13 @@
 from turbogears.database import session
-from turbogears import controllers, expose, flash, widgets, validate, error_handler, validators, redirect, paginate
+from turbogears import controllers, expose, flash, widgets, validate, error_handler, validators, redirect, paginate, url
 from turbogears import identity, redirect
 from cherrypy import request, response
 from tg_expanding_form_widget.tg_expanding_form_widget import ExpandingForm
 from kid import Element
 from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.helpers import *
+from bkr.server.widgets import myPaginateDataGrid, AlphaNavBar
+from bkr.server.admin_page import AdminPage
 
 import cherrypy
 
@@ -16,7 +18,7 @@ import cherrypy
 from model import *
 import string
 
-class KeyTypes(RPCRoot):
+class KeyTypes(AdminPage):
     # For XMLRPC methods in this class.
     exposed = False
 
@@ -31,6 +33,15 @@ class KeyTypes(RPCRoot):
         submit_text = _(u'Submit Data'),
     )
 
+    
+    def __init__(self,*args,**kw):
+        kw['search_url'] =  url("/keytypes/by_name?anywhere=1"),
+        kw['search_name'] = 'key'
+        super(KeyTypes,self).__init__(*args,**kw)
+
+        self.search_col = Key.key_name
+        self.search_mapper = Key
+    
     @expose(template='bkr.server.templates.form')
     def new(self, **kw):
         return dict(
@@ -71,18 +82,24 @@ class KeyTypes(RPCRoot):
         flash( _(u"OK") )
         redirect(".")
 
-    @expose(template="bkr.server.templates.grid_add")
+    @expose(template="bkr.server.templates.admin_grid")
     @paginate('list')
-    def index(self):
-        keytypes = session.query(Key)
-        keytypes_grid = widgets.PaginateDataGrid(fields=[
+    def index(self,*args,**kw):
+        keytypes = session.query(Key) 
+        list_by_letters = set([elem.key_name[0].capitalize() for elem in keytypes])
+        results = self.process_search(**kw)
+        if results:
+            keytypes = results
+        keytypes_grid = myPaginateDataGrid(fields=[
                                   ('Key', lambda x: make_edit_link(x.key_name, x.id)),
                                   ('Numeric', lambda x: x.numeric),
                                   (' ', lambda x: make_remove_link(x.id)),
-                              ])
+                              ]) 
         return dict(title="Key Types", 
-                    grid = keytypes_grid,
-                    search_bar = None,
+                    grid = keytypes_grid, 
+                    search_widget = self.search_widget_form,
+                    alpha_nav_bar = AlphaNavBar(list_by_letters,self.search_name),
+                    addable = self.add,
                     object_count = keytypes.count(),
                     list = keytypes)
 
@@ -92,4 +109,14 @@ class KeyTypes(RPCRoot):
         session.delete(remove)
         flash( _(u"%s Deleted") % remove.key_name )
         raise redirect(".")
+
+    @expose(format='json')
+    def by_name(self,input,*args,**kw):
+        if 'anywhere' in kw:
+            search = Key.list_by_name(input,find_anywhere=True)
+        else:
+            search = Key.list_by_name(input)
+
+        keys = [elem.key_name for elem in search]
+        return dict(matches=keys)
 

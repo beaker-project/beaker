@@ -7,6 +7,7 @@ from kid import Element
 from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.helpers import *
 from bkr.server.widgets import myPaginateDataGrid, AlphaNavBar
+from bkr.server.admin_page import AdminPage
 
 import cherrypy
 
@@ -17,7 +18,7 @@ import cherrypy
 from model import *
 import string
 
-class Users(RPCRoot):
+class Users(AdminPage):
     # For XMLRPC methods in this class.
     exposed = False
 
@@ -27,10 +28,6 @@ class Users(RPCRoot):
     email_address = widgets.TextField(name='email_address', label=_(u'Email Address'))
     password     = widgets.PasswordField(name='password', label=_(u'Password'))
 
-    search_users = AutoCompleteField(name='user', 
-                                     search_controller = url("/users/by_name?anywhere=1&ldap=0"),
-                                     search_param = "input",
-                                     result_name = "matches")
     user_form = widgets.TableForm(
         'User',
         fields = [user_id, user_name, display_name, email_address, password],
@@ -38,14 +35,14 @@ class Users(RPCRoot):
         submit_text = _(u'Save'),
     )
 
+    def __init__(self,*args,**kw):
+        kw['search_url'] =  url("/users/by_name?anywhere=1&ldap=0")
+        kw['search_name'] = 'user'
+        super(Users,self).__init__(*args,**kw)
 
-    search_user_form = widgets.TableForm(
-        'SearchUser',
-        fields = [search_users],
-        action = '.',
-        submit_text = _(u'Search'),
-    )
-
+        self.search_col = User.user_name
+        self.search_mapper = User
+      
     @identity.require(identity.in_group("admin"))
     @expose(template='bkr.server.templates.form')
     def new(self, **kw):
@@ -84,22 +81,14 @@ class Users(RPCRoot):
         flash( _(u"%s saved" % user.display_name) )
         redirect(".")
 
-    @expose(template="bkr.server.templates.users")
+    @expose(template="bkr.server.templates.admin_grid")
     @paginate('list', default_order='user_name', allow_limit_override=True)
     def index(self,*args,**kw): 
-        users = session.query(User)
-        list_by_letters = []
-        for elem in users:
-            first_letter = elem.user_name[0]
-            list_by_letters.append(first_letter.capitalize()) 
-        list_by_letters = set(list_by_letters) 
-
-        if 'user' in kw:
-            if 'text' in kw['user']:
-                if 'starts_with' in kw['user']['text']:
-                    users = session.query(User).filter(User.user_name.like('%s%%' % kw['user']['text']['starts_with']))
-                else:
-                    users = session.query(User).filter_by(user_name = kw['user']['text'])
+        users = session.query(User) 
+        list_by_letters = set([elem.user_name[0].capitalize() for elem in users]) 
+        result = self.process_search(**kw)
+        if result:
+            users = result
         
        
         users_grid = myPaginateDataGrid(fields=[
@@ -111,8 +100,8 @@ class Users(RPCRoot):
                     grid = users_grid,
                     object_count = users.count(),
                     alpha_nav_bar = AlphaNavBar(list_by_letters,'user'),
-                    search_users = self.search_user_form,
-                    search_bar = None,
+                    search_widget = self.search_widget_form,
+                    addable = self.add, 
                     list = users)
 
     @identity.require(identity.in_group("admin"))
