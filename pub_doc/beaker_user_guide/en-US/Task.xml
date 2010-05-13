@@ -28,7 +28,7 @@
                <title>Adding a new Task</title>
                <para>
                To add a Task which has already been packaged, click <guimenu>Scheduler</guimenu>&gt;<guimenuitem>New Task</guimenuitem>. You will need to click on 
-               <literal>Browse</literal> to locate your Task, and then add it with the <literal>Submit Data</literal> button.
+               <literal>Browse</literal> to locate your Task, and then add it with the <literal>Submit Data</literal> button. See also <xref linkend="chap-beaker_user_guide-CLI"/> for adding a task via the beaker client.
                </para>
         </section>
 </section>
