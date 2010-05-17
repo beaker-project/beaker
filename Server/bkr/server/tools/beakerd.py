@@ -222,6 +222,7 @@ def processed_recipesets(*args):
     return True
 
 def queued_recipes(*args):
+    working = SystemStatus.by_name(u'Working')
     recipes = Recipe.query()\
                     .join('status')\
                     .join('systems')\
@@ -230,10 +231,12 @@ def queued_recipes(*args):
                          or_(
                          and_(Recipe.status==TaskStatus.by_name(u'Queued'),
                               System.user==None,
+                              System.status==working,
                               RecipeSet.lab_controller==None
                              ),
                          and_(Recipe.status==TaskStatus.by_name(u'Queued'),
                               System.user==None,
+                              System.status==working,
                               RecipeSet.lab_controller_id==System.lab_controller_id
                              )
                             )
@@ -245,7 +248,6 @@ def queued_recipes(*args):
     if not recipes.count():
         return False
     log.debug("Entering queued_recipes routine")
-    working = SystemStatus.by_name(u'Working')
     for recipe in recipes:
         session.begin()
         try:
