@@ -6,7 +6,7 @@
 %endif
 
 Name:           beaker
-Version:        0.5.37
+Version:        0.5.38
 Release:        0%{?timestamp}%{?branch}%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
@@ -184,6 +184,9 @@ fi
 %{_sysconfdir}/init.d/%{name}-watchdog
 
 %changelog
+* Mon May 17 2010 Bill Peck <bpeck@redhat.com> - 0.5.38-0
+- upaded proxy to only re-authenticate every 60 seconds.
+- fixed beakerd to not look at systems not in Working state.
 * Wed May 12 2010 Bill Peck <bpeck@redhat.com> - 0.5.37-0
 - fixed proxy to fork properly
 * Tue May 11 2010 Bill Peck <bpeck@redhat.com> - 0.5.36-0
