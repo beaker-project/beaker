@@ -27,9 +27,8 @@ and Lab Controller. The following should be done as root.
 			</screen>
 			</para>
 	<para>
-                Install Beaker libs and server.
+                Install Beaker server.
 		<screen>
-<userinput><prompt>$</prompt> yum install beaker-libs</userinput>
 <userinput><prompt>$</prompt> yum install beaker-server</userinput>
 		</screen>
 	</para>
@@ -74,7 +73,13 @@ $ <userinput>beaker-init -u admin -p testing -e <replaceable>admin_email_address
 	<section id="chap-Beaker_Admin_Guide-Beaker-Run">
 	<title>Start Beaker</title>
 	<para>
-	We are now ready to start the Beaker service. First make sure apache is on and configured to run on startup.
+	We are now ready to start the Beaker service.
+        Make sure you have the following line in your <literal>/etc/httpd/conf.d/wsgi.conf</literal> and that it is uncommented.
+	<screen>
+LoadModule wsgi_module modules/mod_wsgi.so
+	</screen>
+First make sure apache is on and configured to run on startup.
+	
 	<screen>
 $ <userinput>sudo chkconfig httpd on</userinput>
 $ <userinput>sudo /sbin/service/httpd start</userinput>
@@ -85,7 +90,7 @@ $ <userinput>setenforce 0</userinput>
 	</screen>
 	Due to permission issues, we need to delete the log file before we start Beaker for the first time.
 	<screen>
-$ <userinput>sudo rm /etc/beaker/server*.log</userinput>
+$ <userinput>sudo rm /var/log/beaker/server*.log</userinput>
 	</screen>
 	Start Beaker and configure it to run on startup.
 	<screen>
