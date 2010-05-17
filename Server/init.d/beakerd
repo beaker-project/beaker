@@ -13,13 +13,13 @@
 [ -f /usr/bin/beakerd ] || exit 0
 
 prog="beakerd"
-PIDFILE=/var/run/${prog}.pid
+PIDFILE=/var/run/beaker/${prog}.pid
 LOCKFILE=/var/lock/subsys/$prog
 RUN_AS=apache
 
 start() {
     echo -n $"Starting $prog: "
-    daemon --user $RUN_AS $prog
+    daemon --pidfile $PIDFILE --user $RUN_AS $prog
     RETVAL=$?
     echo
     if test $RETVAL = 0; then

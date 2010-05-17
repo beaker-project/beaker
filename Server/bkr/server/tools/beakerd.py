@@ -58,12 +58,10 @@ def get_parser():
     ## Defaults
     parser.set_defaults(daemonize=True, log_level=None)
     ## Actions
-    parser.add_option('-B', '--daemonize', dest='daemonize', 
-                      action='store_true',
-                      help='run in background (default)')
-    parser.add_option('-F', '--no-daemonize', dest='daemonize', 
-                      action='store_false', 
-                      help='run in foreground (do not daemonize)')
+    parser.add_option("-f", "--foreground", default=False, action="store_true",
+                      help="run in foreground (do not spawn a daemon)")
+    parser.add_option("-p", "--pid-file",
+                      help="specify a pid file")
     parser.add_option('-l', '--log-level', dest='log_level', metavar='LEVEL',
                       help='log level (ie. INFO, WARNING, ERROR, CRITICAL)')
     parser.add_option("-c", "--config", action="store", type="string",
@@ -440,36 +438,70 @@ def schedule():
         if not queued and not scheduled:
             time.sleep(20)
 
-def daemonize_self():
-    # daemonizing code:  http://aspn.activestate.com/ASPN/Cookbook/Python/Recipe/66012
-    try: 
-        pid = os.fork() 
-        if pid > 0:
-            # exit first parent
-            sys.exit(0) 
-    except OSError, e: 
-        print >>sys.stderr, "fork #1 failed: %d (%s)" % (e.errno, e.strerror) 
+def daemonize(daemon_func, daemon_pid_file=None, daemon_start_dir=".", daemon_out_log="/dev/null", daemon_err_log="/dev/null", *args, **kwargs):
+    """Robustly turn into a UNIX daemon, running in daemon_start_dir."""
+
+    if daemon_pid_file and os.path.exists(daemon_pid_file):
+        try:
+            f = open(daemon_pid_file, "r")
+            pid = f.read()
+            f.close()
+        except:
+            pid = None
+
+        if pid:
+            try:
+                fn = os.path.join("/proc", pid, "cmdline")
+                f = open(fn, "r")
+                cmdline = f.read()
+                f.close()
+            except:
+                cmdline = None
+
+        if cmdline and cmdline.find(sys.argv[0]) >=0:
+            sys.stderr.write("A proces is still running, pid: %s\n" % pid)
+            sys.exit(1)
+
+    # first fork
+    try:
+        if os.fork() > 0:
+            # exit from first parent
+            sys.exit(0)
+    except OSError, ex:
+        sys.stderr.write("fork #1 failed: (%d) %s\n" % (ex.errno, ex.strerror))
         sys.exit(1)
+
     # decouple from parent environment
-    os.chdir("/") 
-    os.setsid() 
-    os.umask(0) 
+    os.setsid()
+    os.chdir(daemon_start_dir)
+    os.umask(0)
 
-    # do second fork
-    try: 
-        pid = os.fork() 
+    # second fork
+    try:
+        pid = os.fork()
         if pid > 0:
-            # print "Daemon PID %d" % pid 
-            sys.exit(0) 
-    except OSError, e: 
-        print >>sys.stderr, "fork #2 failed: %d (%s)" % (e.errno, e.strerror) 
-        sys.exit(1) 
+            # write pid to pid_file
+            if daemon_pid_file is not None:
+                f = open(daemon_pid_file, "w")
+                f.write("%s" % pid)
+                f.close()
+            # exit from second parent
+            sys.exit(0)
+    except OSError, ex:
+        sys.stderr.write("fork #2 failed: (%d) %s\n" % (ex.errno, ex.strerror))
+        sys.exit(1)
 
-    #dev_null = file('/dev/null','rw') 
-    #os.dup2(dev_null.fileno(), sys.stdin.fileno()) 
-    #os.dup2(dev_null.fileno(), sys.stdout.fileno()) 
-    #os.dup2(dev_null.fileno(), sys.stderr.fileno()) 
+    # redirect stdin, stdout and stderr
+    stdin = open("/dev/null", "r")
+    stdout = open(daemon_out_log, "a+", 0)
+    stderr = open(daemon_err_log, "a+", 0)
+    os.dup2(stdin.fileno(), sys.stdin.fileno())
+    os.dup2(stdout.fileno(), sys.stdout.fileno())
+    os.dup2(stderr.fileno(), sys.stderr.fileno())
 
+    # run the daemon loop
+    daemon_func(*args, **kwargs)
+    sys.exit(0)
 
 def main():
     parser = get_parser()
@@ -488,10 +520,15 @@ def main():
 
     interface.start(config)
 
-    if opts.daemonize:
-        daemonize_self()
+    pid_file = opts.pid_file
+    if pid_file is None:
+        pid_file = config.get("PID_FILE", "/var/run/beaker/beakerd.pid")
 
-    schedule()
+
+    if opts.foreground:
+        schedule()
+    else:
+        daemonize(schedule, daemon_pid_file=pid_file)
 
 if __name__ == "__main__":
     main()

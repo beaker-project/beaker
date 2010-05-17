@@ -126,6 +126,7 @@ data_files = [
     ("/usr/share/bkr", filter(os.path.isfile, glob.glob("apache/*.wsgi"))),
     ("/var/log/beaker", []),
     ("/var/www/beaker/logs", []),
+    ("/var/run/beaker", []),
     ("/var/www/beaker/rpms", []),
 ]
 
