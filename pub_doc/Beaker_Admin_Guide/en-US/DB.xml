@@ -4,13 +4,13 @@
 %BOOK_ENTITIES;
 ]>
 <chapter id="chap-Beaker_Admin_Guide-Lab_Controllers">
-    <title>Lab Controller</title>
+    <title>Setup Lab Controller</title>
     <para>
   	Beaker uses Lab Controllers to manage it's system inventory. Open a terminal window on the system you will be running the Lab Controller on.
     </para>
 
 	<section id="chap-Beaker_Admin_Guide-Beaker-Dependencies">
-	<title>Installing Dependencies</title>
+	<title>Install Lab Controller</title>
     	<para>
 	If you have not installed the beaker repo on the Lab Controller, please do so.
 	Install the Lab Controller rpm. These dependencies are needed to make the rpm.
@@ -18,16 +18,12 @@
 $ <userinput>sudo yum -y install rpm-build python-devel TurboGears</userinput>
 	</screen>
 	</para>
-	</section>
-	<section id="chap-Beaker_Admin_Guide-Beaker-Lab_Setup">
-	<title>Installing Lab Controller</title>
 	<para>To install the Lab Controller, enter the following.
 	<screen>
 $ <userinput>sudo yum install beaker-lab-controller</userinput>
 	</screen>
 	</para>
-	</section>
-	
+	</section>	
 	<section id="chap-Beaker_Admin_Guide-Beaker-Configure">
 	<title>Configure Lab Controller</title>
 	<para>
@@ -38,7 +34,7 @@ $ <userinput>sudo yum install beaker-lab-controller</userinput>
 		<listitem><para><literal>next_server</literal>: If you use cobbler as your dhcp server this needs to be the ip address of the Lab Controller.</para></listitem>
 		<listitem><para><literal>pxe_just_once</literal>: 1.</para></listitem> 
 		<listitem><para><literal>anamon_enabled</literal>: 1.</para></listitem>
-		<listitem><para><literal>redhat_management_server</literal>:  "https://login:password@BeakerServer.example.com/bkr". login would be admin, password would be testing, and BeakerServer would be the HOSTNAME of the Beaker/Server you installed earlier. If your Lab Controller is on the same machine as your Beaker server, the values should be <literal>https://login:password@BeakerServer/bkr</literal></para></listitem>
+		<listitem><para><literal>redhat_management_server</literal>:  <literal>https://<replaceable>login</replaceable>:<replaceable>password</replaceable>@BeakerServer.example.com/bkr</literal>. login would be admin, password would be testing, and BeakerServer would be the HOSTNAME of the Beaker/Server you installed earlier. If your Lab Controller is on the same machine as your Beaker server, the values should be <literal>https://login:password@BeakerServer/bkr</literal></para></listitem>
 	</itemizedlist>
 
 	
@@ -46,7 +42,7 @@ $ <userinput>sudo yum install beaker-lab-controller</userinput>
 	<itemizedlist>
 		<listitem><para>Change <literal>module = auth_denyall</literal> to <literal>module = authn_testing</literal></para></listitem>
 		<listitem><para>authn_testing gives a login of testing password testing</para></listitem>
-		<listitem><para>If you create proper accounts, make sure they match what you entered in http://Beaker/labcontrollers/new</para></listitem>
+		<listitem><para>If you create proper accounts, make sure they match what you entered in <literal>http://BeakerServer/labcontrollers/new</literal></para></listitem>
 	</itemizedlist>
     </para>
 	<para>
@@ -57,22 +53,27 @@ $ <userinput>sudo semanage fcontext -a -t public_content_t "/var/lib/tftpboot/.*
 $ <userinput>sudo semanage fcontext -a -t public_content_t "/var/www/cobbler/images/.*"</userinput>
 	</screen>
 	
-	Turn on some services
+	Turn on http
 	<screen>
-//Turn on http
 $ <userinput>sudo chkconfig httpd on</userinput>
 $ <userinput>sudo service httpd start</userinput>
+	</screen>
 
-//Turn on tftp
+	Turn on tftp
+	<screen>
 $ <userinput>sudo chkconfig xinetd on</userinput>
 $ <userinput>sudo chkconfig tftp on</userinput>
 $ <userinput>sudo service xinetd start</userinput>
+	</screen>
 
-//Turn on cobbler
+	Turn on cobbler
+	<screen>
 $ <userinput>sudo chkconfig cobblerd on</userinput>
 $ <userinput>sudo service cobblerd start</userinput>
+	</screen>
 
-//Enable and turn on beaker watchdog proxy
+	Enable and turn on beaker watchdog proxy
+	<screen>
 $ <userinput>sudo chkconfig beaker-watchdog on</userinput>
 $ <userinput>sudo chkconfig beaker-proxy on</userinput>
 $ <userinput>sudo service beaker-watchdog start</userinput>
@@ -91,7 +92,7 @@ $ <userinput>cobbler import --path=/net/${NFSSERVER}/${NFSPATH} \
 	<screen>
 $ <userinput>/var/lib/cobbler/triggers/sync/post/osversion.trigger</userinput>
 	</screen>
-	Check that the Disto was added succesfully by going to to https://BeakerServer.example.com/bkr/distros.
+	Check that the Disto was added succesfully by going to to <literal>https://BeakerServer.example.com/bkr/distros</literal>.
 	</para>
 	<para>
 	You'll nee to configure the <literal>/etc/beaker/proxy.conf</literal> file with the following settings.
