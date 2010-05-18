@@ -15,6 +15,9 @@ from model import *
 import string
 import csv
 
+import logging
+logger = logging.getLogger(__name__)
+
 def smart_bool(s):
     if s is True or s is False:
         return s
@@ -182,8 +185,8 @@ class CSV(RPCRoot):
     def _from_csv(cls,system,data,csv_type,log):
         """
         Import data from CSV file into Objects
-        """
-        csv_object = getattr(system, csv_type, None)
+        """ 
+        csv_object = getattr(system, csv_type, None) 
         for key in data.keys():
             if key in cls.csv_keys:
                 current_data = getattr(csv_object, key, None)
@@ -426,6 +429,18 @@ class CSV_LabInfo(CSV):
         self.weight = labinfo.weight
         self.wattage = labinfo.wattage
         self.cooling = labinfo.cooling
+
+    @classmethod 
+    def _from_csv(cls,system,data,csv_type,log):
+        new_data = dict()
+        for c_type in cls.csv_keys:
+            if c_type in data:
+                new_data[c_type] = data[c_type]
+       
+        system.labinfo = LabInfo(**new_data)
+        session.save_or_update(system)
+        session.flush([system])
+        
 
 class CSV_Exclude(CSV):
     csv_type = 'exclude'
