@@ -6,8 +6,8 @@
 %endif
 
 Name:           beaker
-Version:        0.5.38
-Release:        1%{?timestamp}%{?branch}%{?dist}
+Version:        0.5.39
+Release:        0%{?timestamp}%{?branch}%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -185,6 +185,8 @@ fi
 %{_sysconfdir}/init.d/%{name}-watchdog
 
 %changelog
+* Mon May 17 2010 Bill Peck <bpeck@redhat.com> - 0.5.39-0
+- fix job_matrix report to show virt recipes as well.
 * Mon May 17 2010 Bill Peck <bpeck@redhat.com> - 0.5.38-1
 - added --pid-file to beakerd startup. make sure only one beakerd is running at a time.
 * Mon May 17 2010 Bill Peck <bpeck@redhat.com> - 0.5.38-0
