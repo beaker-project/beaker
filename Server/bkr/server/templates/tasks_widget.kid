@@ -5,25 +5,21 @@
   from cgi import  parse_qs
   if getattr(tg, 'paginate', False):
       if tg.paginate.href_first:
-          action_first = urlparse(tg.paginate.href_first)[2]
           data_first = parse_qs(urlparse(tg.paginate.href_first)[4])
       if tg.paginate.href_prev:
-          action_prev = urlparse(tg.paginate.href_prev)[2]
           data_prev = parse_qs(urlparse(tg.paginate.href_prev)[4])
       if tg.paginate.href_next:
-          action_next = urlparse(tg.paginate.href_next)[2]
           data_next = parse_qs(urlparse(tg.paginate.href_next)[4])
-      if tg.paginate.href_last:
-          action_last = urlparse(tg.paginate.href_last)[2]
+      if tg.paginate.href_last: 
           data_last = parse_qs(urlparse(tg.paginate.href_last)[4])
  ?>
  <table width="97%">
   <tr py:if="getattr(tg, 'paginate', False) and tg.paginate.page_count > 2">
    <td align="center">
-    <span py:if="tg.paginate.href_prev">${link.display("&lt;&lt;", action=action_first, data=data_first, update="task_items")}</span>
-    <span py:if="tg.paginate.href_prev">${link.display("&lt;", action=action_prev, data=data_prev, update="task_items")}</span>&#160;
-    <span py:if="tg.paginate.href_next">${link.display("&gt;", action=action_next, data=data_next, update="task_items")}</span>
-    <span py:if="tg.paginate.href_next">${link.display("&gt;&gt;", action=action_last, data=data_last, update="task_items")}</span>
+    <span py:if="tg.paginate.href_prev">${link.display("&lt;&lt;", action=action, data=data_first, update="task_items")}</span>
+    <span py:if="tg.paginate.href_prev">${link.display("&lt;", action=action, data=data_prev, update="task_items")}</span>&#160;
+    <span py:if="tg.paginate.href_next">${link.display("&gt;", action=action, data=data_next, update="task_items")}</span>
+    <span py:if="tg.paginate.href_next">${link.display("&gt;&gt;", action=action, data=data_last, update="task_items")}</span>
    </td>
   </tr>
  </table>

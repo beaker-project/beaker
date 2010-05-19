@@ -1105,8 +1105,9 @@ class SystemForm(Form):
 
 class TasksWidget(CompoundWidget):
     template = "bkr.server.templates.tasks_widget"
-    params = ['tasks', 'hidden']
+    params = ['tasks', 'hidden','action']
     member_widgets = ['link'] 
+    action = './do_search'
     link = LinkRemoteFunction(name='link', method='post')
 
 class RecipeTasksWidget(Widget):
