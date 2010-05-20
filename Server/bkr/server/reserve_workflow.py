@@ -15,6 +15,7 @@ class ReserveWorkflow:
     reserveform = ReserveSystem()
  
     @expose()
+    @identity.require(identity.not_anonymous())
     def doit(self, distro_id, **kw):
         """ Create a new reserve job, if system_id is defined schedule it too """
         try:
@@ -69,6 +70,7 @@ class ReserveWorkflow:
         redirect('/jobs/%s' % job.id)
 
     @expose(template='bkr.server.templates.form')
+    @identity.require(identity.not_anonymous())
     def reserve(self, distro_id, system_id=None):
         """ Either queue or provision the system now """
         if system_id:
