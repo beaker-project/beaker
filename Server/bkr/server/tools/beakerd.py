@@ -328,13 +328,14 @@ def scheduled_recipes(*args):
         return False
     log.debug("Entering scheduled_recipes routine")
     for recipeset in recipesets:
+        log.info("scheduled_recipes: RS:%s" % recipeset.id)
         session.begin()
         try:
             # Go through each recipe in the recipeSet
             for recipe in recipeset.recipes:
                 # If one of the recipes gets aborted then don't try and run
                 if recipe.status != TaskStatus.by_name(u'Scheduled'):
-                    continue
+                    break
                 recipe.waiting()
 
                 # Go Through each recipe and find out everyone's role.
@@ -361,6 +362,7 @@ def scheduled_recipes(*args):
                                                                              (
                                                                          recipe.id,
                                                                             e))
+                    break
                 ks_meta = "packages=%s" % ":".join([p.package for p in recipe.packages])
                 harnessrepos="|".join(["%s,%s" % (r["name"], r["url"]) for r in recipe.harness_repos()])
                 customrepos= "|".join(["%s,%s" % (r.name, r.url) for r in recipe.repos])
