@@ -3181,7 +3181,7 @@ class Recipe(TaskBase):
             job = self.doc.createElement("job")
             if not clone:
                 job.setAttribute("owner", "%s" % self.recipeset.job.owner.email_address)
-            job.appendChild(self.node("whiteboard", self.recipeset.job.whiteboard))
+            job.appendChild(self.node("whiteboard", self.recipeset.job.whiteboard or ''))
             job.appendChild(recipeSet)
             return job
         return recipe
