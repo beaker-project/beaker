@@ -3,13 +3,12 @@ key --skip
 
 #if $getVar('system_name', '') != '' and $getVar('manual', 'False') == 'False'
 # System bootloader configuration
-bootloader --location=mbr
-
-#if $getVar('rhts_server', '') != ''
-# Use text mode install
-text
+bootloader --location=mbr #slurp
+#if $getVar('kernel_options_post','') != ''
+    --append="$kernel_options_post"
 #end if
-$getVar('mode', '')
+
+$getVar('mode', 'cmdline')
 
 $SNIPPET("network")
 ## Firewall configuration
