@@ -126,7 +126,9 @@ $(document).ready(function() {
  <div py:if="recipe_tasks_widget" class="hidden recipe-tasks fail_recipe_${recipe.id} recipe_${recipe.id}">
   <h2>Task Runs</h2>  <span class="hidden" id="task_items_loading_${recipe.id}"><img src="${tg.url('/static/images/ajax-loader.gif')}" /> </span>
   <p class="hidden"> ${recipe_tasks_widget.link.display("I am hidden",action='/tasks/do_search', 
-                                                        data=dict(recipe_id = recipe.id),  
+                                                        data=dict(recipe_id = recipe.id,
+                                                                  tasks_tgp_order='id',
+                                                                  tasks_tgp_limit=0),  
                                                         before="$('#task_items_loading_%s').removeClass('hidden')" % recipe.id, 
                                                         on_complete="$('#task_items_loading_%s').addClass('hidden')" % recipe.id, 
                                                         update="task_items_%s" % recipe.id, 

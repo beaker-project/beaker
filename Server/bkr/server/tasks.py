@@ -174,7 +174,7 @@ class Tasks(RPCRoot):
     
     @expose(template='bkr.server.templates.tasks')
     @validate(form=task_form)
-    @paginate('tasks',default_order='-id', limit=30)
+    @paginate('tasks',default_order='-id', limit=30, allow_limit_override=True)
     def do_search(self, hidden={}, **kw):
         return self._do_search(hidden=hidden, **kw)
 
@@ -185,7 +185,6 @@ class Tasks(RPCRoot):
             hidden = dict(distro = 1,
                           osmajor = 1,
                           arch = 1,
-                          logs = 1,
                           system = 1)
                          
             return dict(tasks=tasks,hidden=hidden,task_widget=self.task_widget)
@@ -197,21 +196,21 @@ class Tasks(RPCRoot):
                 hidden = dict(distro = 1,
                               osmajor = 1,
                               arch = 1,
-                              logs = 1)
+                             )
             except InvalidRequestError:
                 return "<div>Invalid data:<br>%r</br></div>" % kw
         if kw.get('task_id'):
             try:
                 tasks = RecipeTask.query().join('task').filter(Task.id==kw.get('task_id'))
                 hidden = dict(task = 1,
-                              logs = 1)
+                             )
             except InvalidRequestError:
                 return "<div>Invalid data:<br>%r</br></div>" % kw
         if kw.get('system_id'):
             try:
                 tasks = RecipeTask.query().join(['recipe','system']).filter(System.id==kw.get('system_id')).order_by(recipe_task_table.c.id.desc())
                 hidden = dict(system = 1,
-                              logs   = 1)
+                             )
             except InvalidRequestError:
                 return "<div>Invalid data:<br>%r</br></div>" % kw
         if kw.get('job_id'):

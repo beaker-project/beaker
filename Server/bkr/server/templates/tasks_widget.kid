@@ -29,13 +29,11 @@
   <tr class="list">
    <th class="list" py:if="not hidden.has_key('rid')">Run ID</th>
    <th class="list" py:if="not hidden.has_key('task')">Task</th>
+   <th class="list" py:if="hidden.has_key('task')">&nbsp;</th>
    <th class="list" py:if="not hidden.has_key('distro')">Distro</th>
-   <th class="list" py:if="not hidden.has_key('osmajor')">Family</th>
    <th class="list" py:if="not hidden.has_key('arch')">Arch</th>
    <th class="list" py:if="not hidden.has_key('system')">System</th>
-   <th class="list" py:if="not hidden.has_key('start')">Start</th>
-   <th class="list" py:if="not hidden.has_key('finish')">Finish</th>
-   <th class="list" py:if="not hidden.has_key('duration')">Duration</th>
+   <th class="list" py:if="not hidden.has_key('start')"><br>StartTime</br><br>[FinishTime]</br><br>[Duration]</br></th>
    <th class="list" py:if="not hidden.has_key('logs')">Logs</th>
    <th class="list" py:if="not hidden.has_key('status')">Status</th>
    <th class="list" py:if="not hidden.has_key('result')">Result</th>
@@ -56,11 +54,9 @@
     <td class="list task" py:if="not hidden.has_key('task')">
      ${task.link}
     </td>
+    <td class="list task" py:if="hidden.has_key('task')">&nbsp;</td>
     <td class="list task" py:if="not hidden.has_key('distro')">
      ${task.recipe.distro == None and ' ' or task.recipe.distro.link}
-    </td>
-    <td class="list task" py:if="not hidden.has_key('osmajor')">
-     ${task.recipe.distro.osversion}
     </td>
     <td class="list task" py:if="not hidden.has_key('arch')">
      ${task.recipe.distro.arch}
@@ -68,14 +64,10 @@
     <td class="list task" py:if="not hidden.has_key('system')">
      ${task.recipe.system == None and ' ' or task.recipe.system.link}
     </td>
-    <td class="list task" py:if="not hidden.has_key('start')">
-     ${task.start_time}
-    </td>
-    <td class="list task" py:if="not hidden.has_key('finish')">
-     ${task.finish_time}
-    </td>
-    <td class="list task" py:if="not hidden.has_key('duration')">
-     ${task.duration}
+    <td class="list task" style="white-space:nowrap;" py:if="not hidden.has_key('start')">
+      <br>${task.start_time}</br>
+      <br>${task.finish_time}</br>
+      <br>${task.duration}</br>
     </td>
     <td class="list task" py:if="not hidden.has_key('logs')">
      <br py:for="log in task.logs">${log.link}</br>
@@ -90,22 +82,18 @@
      &nbsp;
     </td>
     </tr>
-    </span>
-    <span py:if="isinstance(task, RecipeTaskResult)" py:strip="1">
+    <span py:for="task_result in task.results" py:strip="1">
     <?python
         result = task.is_failed() and 'fail' or 'pass'
     ?>
-     <tr class="${i%2 and 'odd' or 'even'} ${result}_recipe_${task.recipetask.recipe.id} recipe_${task.recipetask.recipe.id}">
+     <tr class="${i%2 and 'odd' or 'even'} ${result}_recipe_${task.recipe.id} recipe_${task.recipe.id}">
     <td class="list result" py:if="not hidden.has_key('rid')">
      &nbsp;
     </td>
-    <td class="list result" py:if="not hidden.has_key('task')">
-     &nbsp;&nbsp;${task.short_path}
+    <td class="list result">
+     &nbsp;&nbsp;${task_result.short_path}
     </td>
     <td class="list result" py:if="not hidden.has_key('distro')">
-     &nbsp;
-    </td>
-    <td class="list result" py:if="not hidden.has_key('osmajor')">
      &nbsp;
     </td>
     <td class="list result" py:if="not hidden.has_key('arch')">
@@ -114,29 +102,24 @@
     <td class="list result" py:if="not hidden.has_key('system')">
      &nbsp;
     </td>
-    <td class="list result" py:if="not hidden.has_key('start')">
-     ${task.start_time}
-    </td>
-    <td class="list result" py:if="not hidden.has_key('finish')">
-     &nbsp;
-    </td>
-    <td class="list result" py:if="not hidden.has_key('duration')">
-     &nbsp;
+    <td class="list task" style="white-space:nowrap;" py:if="not hidden.has_key('start')">
+      ${task_result.start_time}
     </td>
     <td class="list result" py:if="not hidden.has_key('logs')">
-     <br py:for="log in task.logs">${log.link}</br>
+     <br py:for="log in task_result.logs">${log.link}</br>
     </td>
     <td class="list result" py:if="not hidden.has_key('status')">
      &nbsp;
     </td>
     <td class="list result" py:if="not hidden.has_key('result')">
-     ${task.result}
+     ${task_result.result}
     </td>
     <td class="list result" py:if="not hidden.has_key('score')">
-     ${task.score}
+     ${task_result.score}
     </td>
     </tr>
     </span>
+   </span>
   </span>
  </table>
 </div>
