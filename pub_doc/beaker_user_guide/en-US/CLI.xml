@@ -1,0 +1,18 @@
+<?xml version='1.0' encoding='utf-8' ?>
+<!DOCTYPE chapter PUBLIC "-//OASIS//DTD DocBook XML V4.5//EN" "http://www.oasis-open.org/docbook/xml/4.5/docbookx.dtd" [
+<!ENTITY % BOOK_ENTITIES SYSTEM "beaker_user_guide.ent">
+%BOOK_ENTITIES;
+]>
+<chapter id="chap-beaker_user_guide-CLI">
+<title>Beaker client</title>
+<para>
+The shell based client provides users with mostly a subset of what is possible via the UI, although it does provide one or two things which the UI does not provide. 
+To install beaker-client, type <userinput>yum install beaker-client</userinput> at the shell prompt. To verify it is working properly, type <userinput>bkr list-labcontrollers</userinput>
+into the shell. It should return a list of labcontrollers configured in Beaker.
+</para>
+<para>To submit a Job enter <userinput>bkr job-submit <replaceable>job_xml</replaceable></userinput>. If succesful, you will be shown the <literal>Job ID</literal> and the progress of your Job.</para>
+<para>To watch a Job, enter <userinput>bkr job-watch J:<replaceable>job_id</replaceable></userinput>.</para>
+<para>To cancel a Job you have created, do this <userinput>bkr job-cancel J:<replaceable>job_id</replaceable></userinput></para>
+<para>To show all Tasks available for a given distro, do this at the shell <userinput>bkr task-list <replaceable>distro</replaceable></userinput>.</para>
+<para>To add a Task, use this command <userinput>bkr task-add <replaceable>task_rpm</replaceable></userinput>.</para>
+</chapter>

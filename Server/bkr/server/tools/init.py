@@ -153,7 +153,7 @@ def main():
         medium          = TaskPriority(priority=u'Medium')
         normal          = TaskPriority(priority=u'Normal')
         high            = TaskPriority(priority=u'High')
-        urgent          = TaskPriority(priority=u'Urghent')
+        urgent          = TaskPriority(priority=u'Urgent')
 
     #Setup Test Status
     if TaskStatus.query().count() == 0:

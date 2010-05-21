@@ -3,18 +3,17 @@
 <!ENTITY % BOOK_ENTITIES SYSTEM "beaker_user_guide.ent">
 %BOOK_ENTITIES;
 ]>
-<chapter id="chap-beaker_user_guide-Distros">
+<section id="chap-beaker_user_guide-Components-Distros">
 	<title>Distros</title>
 	<para>
-	Beaker can keep a record of Distros that are available to install on Systems in it's Inventory.
-     	
+	Beaker can keep a record of Distros that are available to install on Systems in it's Inventory.	
 	</para>
-	<section id="sect-beaker_user_guide-Distros-Distro_Searching">
+	<section id="sect-beaker_user_guide-Components-Distros-Distro_Searching">
 		<title>Distro Searching</title>
 		<para>
-		The find a particular Distro, click <literal>Distros->All</literal>. The default search is on the Distro's <literal>Name</literal>, with a <literal>contains</literal> clause
+		The find a particular Distro, click <guimenu>Distros</guimenu>&gt;<guimenuitem>All</guimenuitem>. The default search is on the Distro's <literal>Name</literal>, with a <literal>contains</literal> clause
 		</para>
 	</section>
 
-</chapter>
+</section>
 

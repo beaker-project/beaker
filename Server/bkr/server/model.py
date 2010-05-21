@@ -1234,7 +1234,7 @@ class System(SystemObject):
                     raise an exception if it fails.
                     raise an exception if it takes more then 5 minutes
                 """
-                expiredelta = datetime.utcnow() + timedelta(minutes=5)
+                expiredelta = datetime.utcnow() + timedelta(minutes=10)
                 while(True):
                     for line in self.get_event_log(task_id).split('\n'):
                         if line.find("### TASK COMPLETE ###") != -1:
@@ -1476,7 +1476,7 @@ $SNIPPET("rhts_post")
                                              System.loaned==None),
                                       System.loaned==user,
                                       and_(System.shared==True,
-                                           Group.systems==None,
+                                           System.groups==None,
                                            System.loaned==None
                                           ),
                                       and_(System.shared==True,
@@ -3225,7 +3225,7 @@ class Recipe(TaskBase):
             job = self.doc.createElement("job")
             if not clone:
                 job.setAttribute("owner", "%s" % self.recipeset.job.owner.email_address)
-            job.appendChild(self.node("whiteboard", self.recipeset.job.whiteboard))
+            job.appendChild(self.node("whiteboard", self.recipeset.job.whiteboard or ''))
             job.appendChild(recipeSet)
             return job
         return recipe
@@ -3415,6 +3415,7 @@ class Recipe(TaskBase):
         return "R:%s" % self.id
     t_id = property(t_id)
 
+    @property
     def all_tasks(self):
         """
         Return all tasks and task-results, along with associated logs
@@ -3423,7 +3424,6 @@ class Recipe(TaskBase):
             yield task
             for task_result in task.results:
                 yield task_result
-    all_tasks = property(all_tasks)
 
     def append_tasks(self, recipetask):
         """ Before appending the task to this Recipe, make sure it applies.
@@ -3562,7 +3562,7 @@ class GuestRecipe(Recipe):
                     distroRequires.appendChild(child)
             distro_virt = self.doc.createElement("distro_virt")
             distro_virt.setAttribute("op", "=")
-            distro_virt.setAttribute("value", "1")
+            distro_virt.setAttribute("value", "")
             distroRequires.appendChild(distro_virt)
             return distroRequires.toxml()
         else:

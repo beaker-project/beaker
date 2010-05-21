@@ -186,7 +186,7 @@ class JobMatrix:
         else:
            pass
  
-        recipes = model.MachineRecipe.query().join(['distro','arch']).join(['recipeset','job']).filter(model.RecipeSet.job_id.in_(jobs)).add_column(model.Arch.arch)  
+        recipes = model.Recipe.query().join(['distro','arch']).join(['recipeset','job']).filter(model.RecipeSet.job_id.in_(jobs)).add_column(model.Arch.arch)  
         for recipe,arch in recipes: 
             if arch in whiteboard_data:    
                 if recipe.whiteboard not in whiteboard_data[arch]:

@@ -14,10 +14,9 @@ class Distros_List(BeakerCommand):
         self.parser.usage = "%%prog %s" % self.normalized_name
 
         self.parser.add_option(
-            "--details",
-            default=False,
-            action="store_true",
-            help="show details",
+            "--limit",
+            default=None,
+            help="Limit results to this many",
         )
         self.parser.add_option(
             "--tag",
@@ -49,21 +48,20 @@ class Distros_List(BeakerCommand):
     def run(self, *args, **kwargs):
         username = kwargs.pop("username", None)
         password = kwargs.pop("password", None)
-        name = kwargs.pop("name", None)
-        treepath = kwargs.pop("treepath", None)
-        family = kwargs.pop("family", None)
-        arch = kwargs.pop("arch", None)
-        tags = kwargs.pop("tag", [])
+        filter = dict( limit    = kwargs.pop("limit", None),
+                       name     = kwargs.pop("name", None),
+                       treepath = kwargs.pop("treepath", None),
+                       family   = kwargs.pop("family", None),
+                       arch     = kwargs.pop("arch", None),
+                       tags     = kwargs.pop("tag", []),
+                     )
 
         self.set_hub(username, password)
-        distros = self.hub.distros.list(name, family, arch, tags, treepath)
+        distros = self.hub.distros.filter(filter)
         if distros:
-            if kwargs.pop("details"):
-                print "Name,Arch,OSVersion,Variant,Method,Virt"
-                for distro in distros:
-                    print ','.join([str(d) for d in distro])
-            else:
-                print distros[0][0]
+            print "Name,Arch,OSVersion,Variant,Method,Virt,[Tags],[LabController,Path]"
+            for distro in distros:
+                print ','.join([str(d) for d in distro])
         else:
             sys.stderr.write("Nothing Matches\n")
             sys.exit(1)

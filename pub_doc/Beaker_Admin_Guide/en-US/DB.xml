@@ -1,0 +1,120 @@
+<?xml version='1.0' encoding='utf-8' ?>
+<!DOCTYPE chapter PUBLIC "-//OASIS//DTD DocBook XML V4.5//EN" "http://www.oasis-open.org/docbook/xml/4.5/docbookx.dtd" [
+<!ENTITY % BOOK_ENTITIES SYSTEM "Beaker_Admin_Guide.ent">
+%BOOK_ENTITIES;
+]>
+<chapter id="chap-Beaker_Admin_Guide-Lab_Controllers">
+    <title>Setup Lab Controller</title>
+    <para>
+  	Beaker uses Lab Controllers to manage it's system inventory. Open a terminal window on the system you will be running the Lab Controller on.
+    </para>
+
+	<section id="chap-Beaker_Admin_Guide-Beaker-Dependencies">
+	<title>Install Lab Controller</title>
+    	<para>
+	If you have not installed the beaker repo on the Lab Controller, please do so.
+	Install the Lab Controller rpm. These dependencies are needed to make the rpm.
+	<screen>
+$ <userinput>sudo yum -y install rpm-build python-devel TurboGears</userinput>
+	</screen>
+	</para>
+	<para>To install the Lab Controller, enter the following.
+	<screen>
+$ <userinput>sudo yum install beaker-lab-controller</userinput>
+	</screen>
+	</para>
+	</section>	
+	<section id="chap-Beaker_Admin_Guide-Beaker-Configure">
+	<title>Configure Lab Controller</title>
+	<para>
+	Cobbler is one of the dependencies that is installed with the Lab Controller. You'll need to edit the <literal>/etc/cobbler/settings</literal>
+	file.
+	<itemizedlist>
+		<listitem><para><literal>server</literal>: This needs to be set to the Lab Controllers Fully qualified domain name.</para></listitem>
+		<listitem><para><literal>next_server</literal>: If you use cobbler as your dhcp server this needs to be the ip address of the Lab Controller.</para></listitem>
+		<listitem><para><literal>pxe_just_once</literal>: 1.</para></listitem> 
+		<listitem><para><literal>anamon_enabled</literal>: 1.</para></listitem>
+		<listitem><para><literal>redhat_management_server</literal>:  <literal>https://<replaceable>login</replaceable>:<replaceable>password</replaceable>@BeakerServer.example.com/bkr</literal>. login would be admin, password would be testing, and BeakerServer would be the HOSTNAME of the Beaker/Server you installed earlier. If your Lab Controller is on the same machine as your Beaker server, the values should be <literal>https://login:password@BeakerServer/bkr</literal></para></listitem>
+	</itemizedlist>
+
+	
+        You will need to enable an auth method in <literal>/etc/cobbler/modules.conf</literal>
+	<itemizedlist>
+		<listitem><para>Change <literal>module = auth_denyall</literal> to <literal>module = authn_testing</literal></para></listitem>
+		<listitem><para>authn_testing gives a login of testing password testing</para></listitem>
+		<listitem><para>If you create proper accounts, make sure they match what you entered in <literal>http://BeakerServer/labcontrollers/new</literal></para></listitem>
+	</itemizedlist>
+    </para>
+	<para>
+    	If you are using SELinux, do the following.
+	<screen>
+$ <userinput>sudo setsebool -P httpd_can_network_connect true</userinput>
+$ <userinput>sudo semanage fcontext -a -t public_content_t "/var/lib/tftpboot/.*"</userinput>
+$ <userinput>sudo semanage fcontext -a -t public_content_t "/var/www/cobbler/images/.*"</userinput>
+	</screen>
+	
+	Turn on http
+	<screen>
+$ <userinput>sudo chkconfig httpd on</userinput>
+$ <userinput>sudo service httpd start</userinput>
+	</screen>
+
+	Turn on tftp
+	<screen>
+$ <userinput>sudo chkconfig xinetd on</userinput>
+$ <userinput>sudo chkconfig tftp on</userinput>
+$ <userinput>sudo service xinetd start</userinput>
+	</screen>
+
+	Turn on cobbler
+	<screen>
+$ <userinput>sudo chkconfig cobblerd on</userinput>
+$ <userinput>sudo service cobblerd start</userinput>
+	</screen>
+
+	Enable and turn on beaker watchdog proxy
+	<screen>
+$ <userinput>sudo chkconfig beaker-watchdog on</userinput>
+$ <userinput>sudo chkconfig beaker-proxy on</userinput>
+$ <userinput>sudo service beaker-watchdog start</userinput>
+$ <userinput>sudo service beaker-proxy start</userinput>
+	</screen>
+	Cobbler should now be running.
+	</para>
+	<para>
+	You'll need to import some distros. You can use the following command (whilst replacing the variables).
+	<screen>
+$ <userinput>cobbler import --path=/net/${NFSSERVER}/${NFSPATH} \
+                       --name=$DISTRONAME \
+                       --available-as=nfs://${NFSSERVER}:/${NFSPATH} </userinput>
+	</screen>
+	Beaker/Server needs a little more info than cobbler normally stores about a distro in order to use it. Thats why beaker-lab-controller provides a script in /var/lib/cobbler/triggers/sync/post/osversion.trigger which needs to be run after you import a new distro. It looks up the distros full family.update and looks for any yum repos that may be in the distro path. It also adds the cobbler distros into the Beaker server.
+	<screen>
+$ <userinput>/var/lib/cobbler/triggers/sync/post/osversion.trigger</userinput>
+	</screen>
+	Check that the Disto was added succesfully by going to to <literal>https://BeakerServer.example.com/bkr/distros</literal>.
+	</para>
+	<para>
+	You'll nee to configure the <literal>/etc/beaker/proxy.conf</literal> file with the following settings.
+	<screen>
+# Hub xml-rpc address.
+HUB_URL = "https://BeakerServer.example.com/bkr"
+#HUB_URL = "http://localhost:8080"
+
+# Hub authentication method. Example: krbv, password, worker_key
+AUTH_METHOD = "password"
+#AUTH_METHOD = "krbv"
+
+# Username and password
+USERNAME = "host/lab.example.com"  # This needs to match the account your created on the Beaker Scheduler
+PASSWORD = "testing"  # Again, only if you are not using kerberos does this need to be set.
+
+# Kerberos service prefix. Example: host, HTTP
+KRB_SERVICE = "HTTP"
+
+# Kerberos realm. If commented, last two parts of domain name are used. Example: MYDOMAIN.COM.
+KRB_REALM = "EXAMPLE.COM"
+	</screen>
+	</para>   
+</section>
+</chapter>

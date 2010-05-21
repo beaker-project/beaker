@@ -18,6 +18,36 @@ import sys
 import logging
 log = logging.getLogger("bkr.server.controllers")
 
+class _FKLogEntry:
+    def __init__(self,form_field,mapper_class,mapper_column_name,description=None):
+        if description is None:
+            log.debug('No description passed to %s, using form_field value of %s instead' % (self.__class__.__name__,form_field))
+        self.description = description or form_field
+        self.form_field = form_field
+        self.mapper_class = mapper_class
+        valid_column = getattr(mapper_class,mapper_column_name,None)  
+        self.mapper_column_name = mapper_column_name
+
+
+class _SystemSaveFormHandler:
+
+    @classmethod
+    def status_id_change_handler(cls,current_val,new_val,**kw): 
+        bad_status = ['broken','removed']
+        new_status = SystemStatus.by_id(new_val)
+        if new_status.status.lower() == 'working': 
+            if current_val:
+                old_status = SystemStatus.by_id(current_val)
+                if old_status.status.lower() in bad_status:
+                    kw['status_reason'] = None  #remove the status notes
+        return kw 
+
+
+class SystemSaveForm:
+    handler = _SystemSaveFormHandler
+    fk_log_entry = _FKLogEntry 
+
+
 class Utility:
     #I this I will move this Utility class out into another module and then
     #perhaps break it down into further classes. Work from other tickets
@@ -175,13 +205,3 @@ class Utility:
                 fields.append(new_widget)
         return fields
 
-    @classmethod
-    def status_id_change_handler(cls,current_val,new_val,**kw): 
-        bad_status = ['broken','removed']
-        new_status = SystemStatus.by_id(new_val)
-        if new_status.status.lower() == 'working': 
-            if current_val:
-                old_status = SystemStatus.by_id(current_val)
-                if old_status.status.lower() in bad_status:
-                    kw['status_reason'] = None  #remove the status notes
-        return kw           

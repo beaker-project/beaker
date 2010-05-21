@@ -98,7 +98,7 @@ class Groups(RPCRoot):
         system_link = ('System', lambda x: x.link)
         group = Group.by_id(group_id)
         grid = myDataGrid(fields=[system_link])
-        return dict(grid=grid,list=systems,title='Systems for group %s' % group.group_name,search_bar = None)
+        return dict(grid=grid,list=systems,title='Systems for group %s' % group.group_name,search_bar = None,object_count=systems.count())
     
     @expose(template='bkr.server.templates.group_users')
     def group_members(self,id, **kw):

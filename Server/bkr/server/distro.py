@@ -182,6 +182,39 @@ class Distros(RPCRoot):
 
     #XMLRPC method for listing distros
     @cherrypy.expose
+    def filter(self, filter):
+        distros = session.query(Distro)
+        name = filter.get('name', None)
+        family = filter.get('family', None)
+        tags = filter.get('tags', [])
+        arch = filter.get('arch', None)
+        treepath = filter.get('treepath', None)
+        limit = filter.get('limit', None)
+        if tags:
+            sqltags = []
+            distros = distros.join('_tags')
+            for tag in tags:
+                sqltags.append(distro_tag_table.c.tag==tag)
+            distros = distros.filter(and_(*sqltags))
+        if name:
+            distros = distros.filter(distro_table.c.name.like('%s' % name))
+        if family:
+            distros = distros.join(['osversion','osmajor'])
+            distros = distros.filter(osmajor_table.c.osmajor=='%s' % family)
+        if arch:
+            distros = distros.join('arch')
+            distros = distros.filter(arch_table.c.arch=='%s' % arch)
+        if treepath:
+            distros = distros.filter(lab_controller_distro_map.c.tree_path.like('%s' % treepath))
+        # join on lab controllers, we only want distros that are active in at least one lab controller
+        distros = distros.join('lab_controller_assocs')
+        distros = distros.order_by(distro_table.c.date_created.desc())
+        if limit:
+            distros = distros[:limit]
+        return [(distro.name, '%s' % distro.arch, '%s' % distro.osversion, distro.variant, distro.method, distro.virt, ['%s' % tag for tag in distro.tags], [(lc.lab_controller.fqdn, lc.tree_path) for lc in distro.lab_controller_assocs]) for distro in distros]
+
+    #XMLRPC method for listing distros
+    @cherrypy.expose
     def list(self, name, family, arch, tags, treepath):
         distros = session.query(Distro)
         if tags:

@@ -1,0 +1,82 @@
+<?xml version='1.0' encoding='utf-8' ?>
+<!DOCTYPE chapter PUBLIC "-//OASIS//DTD DocBook XML V4.5//EN" "http://www.oasis-open.org/docbook/xml/4.5/docbookx.dtd" [
+<!ENTITY % BOOK_ENTITIES SYSTEM "beaker_user_guide.ent">
+%BOOK_ENTITIES;
+]>
+<chapter id="chap-beaker_user_guide-Provision">
+<title>Provisioning a System</title>
+
+		<para>
+			If you would like to use one of these System you will need to provision it. There are a couple of ways of doing this, which are outlined below
+		</para>
+		<section id="sect-beaker_user_guide-Components-System_Provisioning-Provision_by_System">
+			<title>Provision by System</title>
+			<para>
+				Go to the System details page (see <xref linkend="sect-beaker_user_guide-Components-Systems-System_Details" />) of a System that is free (see <xref linkend="sect-beaker_user_guide-Components-Systems-System_Searching" />) and click on <literal>Take</literal> in the <literal>Current User</literal> field. After successfully taking the System, click the <literal>Provision</literal> tab of the System details page to provision the System.
+			</para>
+			<mediaobject>
+				<imageobject>
+					<imagedata fileref="./images/system_provision_by_system.png" format="PNG" width="444" />
+				</imageobject>
+			</mediaobject>
+		</section>
+		
+		<section id="sect-beaker_user_guide-Components-System_Provisioning-Provision_by_Distro">
+			<title>Provision by Distro</title>
+			<para>
+				Go to the Distro search page(<xref linkend="sect-beaker_user_guide-Components-Distros-Distro_Searching" />) and search for a Distro you would like to provision onto a System. Once you have found the Distro you require, click <literal>Provision System</literal>, which is located in the far right column of your search results. If the <literal>Provision System</literal> link is not there, it's because there is no suitable System available to use with that Distro.
+			</para>
+			<para>
+				The resulting page lists the Systems you can use. Systems with <literal>Reserve Now</literal> in the far right column mean that no on else is using them and you can take them immedietly, otherwise you will see <literal>Queue Reservation</literal>; which means that someone is currently using the System but you can be appended to the queue of people wanting to use this System.
+			</para>
+			<para>
+				After choosing your System and clicking on the the aforementioned links, you will be presented with a form with the following fields 
+				<variablelist>
+					<varlistentry><term>System To Provision</term>
+						<listitem>
+							<para>
+								This is our System we will provision.
+							</para>
+						</listitem>
+					</varlistentry>
+					<varlistentry><term>Distro To Provision</term>
+						<listitem>
+							<para>
+								The Distro we will be installing on the System.
+							</para>
+						</listitem>
+					</varlistentry>
+					<varlistentry><term>Job Whiteboard</term>
+		
+						<listitem>
+							<para>
+								This is a refernce that will be displayed in Jobs list. You can enter anything in here.
+							</para>
+						</listitem>
+					</varlistentry>
+					<varlistentry><term>KickStartMetaData</term>
+						<listitem>
+							<para>
+								Arguments passed to the KickStart script.<remark>Is this right</remark>?
+							</para>
+						</listitem>
+					</varlistentry>
+					<varlistentry><term>Kernel Options (install)</term>
+						<listitem>
+							<para>
+								<remark>Not sure what goes here</remark>	
+							</para>
+						</listitem>
+					</varlistentry>
+					<varlistentry><term>Kernel Options(Post)</term>
+						<listitem>
+							<para>
+								<remark>Not sure what goes here</remark>	
+							</para>
+						</listitem>
+					</varlistentry>
+				</variablelist>
+				 Pressing the <literal>Queue Job</literal> button will submit this provisioning as a Job and redirect us to the details of the newly created Job.
+			</para>
+		</section>
+</chapter>

@@ -42,7 +42,7 @@ from bkr.server.recipes import Recipes
 from bkr.server.recipesets import RecipeSets
 from bkr.server.tasks import Tasks
 from bkr.server.task_actions import TaskActions
-from bkr.server.controller_utilities import Utility
+from bkr.server.controller_utilities import Utility, SystemSaveForm
 from cherrypy import request, response
 from cherrypy.lib.cptools import serve_file
 from tg_expanding_form_widget.tg_expanding_form_widget import ExpandingForm
@@ -442,7 +442,7 @@ class Root(RPCRoot):
         allowed_priority_ids = [elem.id for elem in recipeset.allowed_priorities(user)]
        
         if long(priority_id) not in allowed_priority_ids:
-            return {'success' : None, 'msg' : 'Insufficent privileges for that priority', 'current_priority' : recipeset.priority.id }
+            return {'success' : None, 'msg' : 'Insufficient privileges for that priority', 'current_priority' : recipeset.priority.id }
          
 
         activity = RecipeSetActivity(identity.current.user, 'WEBUI', 'Changed', 'Priority', recipeset.priority.id,priority_id)
@@ -1237,9 +1237,23 @@ class Root(RPCRoot):
 #      would be good to have the save wait until the system is updated
 # TODO log  group +/-
         # Fields missing from kw have been set to NULL
-        log_fields = [ 'fqdn', 'vendor', 'lender', 'model', 'serial', 'location', 'type_id', 
-                       'checksum', 'status_id', 'lab_controller_id' , 'mac_address', 'status_reason']
+        # We want to store the logged info in a somewhat verbose manner, so if the column is in fact a FK to another table, put it in a fk_log_entry obj
+        status_entry = SystemSaveForm.fk_log_entry(form_field='status_id', mapper_class=SystemStatus, mapper_column_name='status', description='Status')
+        lab_controller_entry = SystemSaveForm.fk_log_entry(form_field='lab_controller_id', mapper_class=LabController, mapper_column_name='fqdn', description='LabController') 
+        type_entry = SystemSaveForm.fk_log_entry(form_field='type_id', mapper_class=SystemType, mapper_column_name='type',description='Type')
+
+
+        log_fields = [ 'fqdn', 'vendor', 'lender', 'model', 'serial', 'location', 
+                       'checksum','mac_address', 'status_reason', status_entry,lab_controller_entry,type_entry]
+
         for field in log_fields:
+            if isinstance(field,SystemSaveForm.fk_log_entry): #check if we are a foreign key with mapper object and column name           
+                fk_log_entry_obj = field
+                field = fk_log_entry_obj.form_field
+                mapper_class = fk_log_entry_obj.mapper_class
+                col_name = fk_log_entry_obj.mapper_column_name
+                description = fk_log_entry_obj.description 
+                       
             try:
                 current_val = getattr(system,field)
             except KeyError:
@@ -1250,12 +1264,40 @@ class Root(RPCRoot):
             new_val = str(kw.get(field) or "")
             if str(current_val) != new_val:
                 function_name = '%s_change_handler' % field
-                field_change_handler = getattr(Utility,function_name,None)
+                field_change_handler = getattr(SystemSaveForm.handler,function_name,None)
                 if field_change_handler is not None:
                     kw = field_change_handler(current_val,new_val,**kw)
-                activity = SystemActivity(identity.current.user, 'WEBUI', 'Changed', field, current_val, new_val )
-                system.activity.append(activity)
 
+                #The following try/except block trys to set the actual old/new values for the fields we are changing
+                # It tests for current and new values that are 'None' (i.e Changing from a valid lab controller to no lab controller)
+                # Except will trigger if the mapper_class has not been declared (i.e we are not a tuple), or if our mapper_column_name was invalid
+                # and will log a warning msg
+                try:
+                    if current_val: 
+                        current_sqla_obj = mapper_class.by_id(current_val)
+                        current_val = getattr(current_sqla_obj,col_name)
+                    if new_val: 
+                        new_sqla_obj = mapper_class.by_id(new_val)
+                        new_val = getattr(new_sqla_obj,col_name)
+
+                    field = description
+                except AttributeError,e:
+                    log.error(e)
+                    warn_msg =  "There was a problem logging the new value for %s" % (description)          
+                    try:
+                        unloggable_warn += "\n%s" % warn_msg
+                    except UnboundLocalError,e:
+                        unloggable_warn = warn_msg
+                    continue
+                except UnboundLocalError, e: pass # We probably weren't a fk_log_entry object
+                   
+                
+                activity = SystemActivity(identity.current.user, 'WEBUI', 'Changed', field, current_val, new_val)
+                system.activity.append(activity)
+        
+        try: 
+            flash(unloggable_warn)
+        except UnboundLocalError,e: pass
         # We only want admins to be able to share systems to everyone.
         shared = kw.get('shared',False)
         if shared != system.shared:
@@ -1263,14 +1305,16 @@ class Root(RPCRoot):
               shared and len(system.groups) == 0:
                 flash( _(u"You don't have permission to share without the system being in a group first " ) )
                 redirect("/view/%s" % system.fqdn)
-            activity = SystemActivity(identity.current.user, 'WEBUI', 'Changed', 'shared', system.shared, shared )
+            current_val = str(system.shared and True or False) #give us the text 'True' or 'False'
+            new_val = str(shared and True) #give us the text 'True' or 'False'
+            activity = SystemActivity(identity.current.user, 'WEBUI', 'Changed', 'shared', current_val, new_val )
             system.activity.append(activity)
             system.shared = shared
                 
         log_bool_fields = [ 'private' ]
         for field in log_bool_fields:
             try:
-                current_val = getattr(system,field)
+                current_val = str(getattr(system,field) and True or False)
             except KeyError:
                 current_val = ""
             new_val = str(kw.get(field) or False)

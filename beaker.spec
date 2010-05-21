@@ -6,8 +6,8 @@
 %endif
 
 Name:           beaker
-Version:        0.5.31
-Release:        3%{?timestamp}%{?branch}%{?dist}
+Version:        0.5.39
+Release:        0%{?timestamp}%{?branch}%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -45,6 +45,7 @@ Requires:       httpd
 Requires:       python-krbV
 Requires:       beaker
 Requires:       python-TurboMail
+Requires:	createrepo
 
 
 %package lab-controller
@@ -154,6 +155,7 @@ fi
 %attr(-,apache,root) %dir %{_localstatedir}/log/%{name}
 %attr(-,apache,root) %dir %{_localstatedir}/www/%{name}/logs
 %attr(-,apache,root) %dir %{_localstatedir}/www/%{name}/rpms
+%attr(-,apache,root) %dir %{_localstatedir}/run/%{name}
 
 %files client
 %defattr(-,root,root,-)
@@ -183,6 +185,44 @@ fi
 %{_sysconfdir}/init.d/%{name}-watchdog
 
 %changelog
+* Mon May 17 2010 Bill Peck <bpeck@redhat.com> - 0.5.39-0
+- fix job_matrix report to show virt recipes as well.
+* Mon May 17 2010 Bill Peck <bpeck@redhat.com> - 0.5.38-1
+- added --pid-file to beakerd startup. make sure only one beakerd is running at a time.
+* Mon May 17 2010 Bill Peck <bpeck@redhat.com> - 0.5.38-0
+- upaded proxy to only re-authenticate every 60 seconds.
+- fixed beakerd to not look at systems not in Working state.
+* Wed May 12 2010 Bill Peck <bpeck@redhat.com> - 0.5.37-0
+- fixed proxy to fork properly
+* Tue May 11 2010 Bill Peck <bpeck@redhat.com> - 0.5.36-0
+- merged bz589723 - fix spelling mistakes
+- merged bz589843 - cannot select systems in reserve workflow
+- merged bz590665 - link to systems owner by a particular group gives internal error
+- merged bz589857 - Distro search dies on 'Breed' search
+* Mon May 10 2010 Bill Peck <bpeck@redhat.com> - 0.5.35-1
+- Change default to /bkr
+* Mon May 10 2010 Bill Peck <bpeck@redhat.com> - 0.5.35-0
+- Fix beakerd to not do process_routine until all recipes are in state processed.
+- possible fix for favicon.ico not being found.
+* Fri May 07 2010 Bill Peck <bpeck@redhat.com> - 0.5.34-1
+- fix syntax errors in beakerd
+* Fri May 07 2010 Bill Peck <bpeck@redhat.com> - 0.5.34-0
+- possible fix for same identity key exists in this session (beakerd)
+- also fix it so scheduled_recipes routine always runs after queued_recipes
+* Thu May 06 2010 Bill Peck <bpeck@redhat.com> - 0.5.33-2
+- pushed remote cobbler method to a ten minute timeout.  some power options take this long.
+* Thu May 06 2010 Bill Peck <bpeck@redhat.com> - 0.5.33-1
+- added additional debug code to beakerd.
+- default guest recipes to non virt distro, ask for it if you want virt.
+* Thu May 06 2010 Bill Peck <bpeck@redhat.com> - 0.5.33-0
+- Remove --cost from rhel5 kickstart templates.  rhel5 doesn't support --cost.
+* Wed May 05 2010 Bill Peck <bpeck@redhat.com> - 0.5.32-2
+- fix workflow-simple to handle taskparam correctly and task types/packages
+* Wed May 05 2010 Bill Peck <bpeck@redhat.com> - 0.5.32-1
+- fix BeakerJob classes to add tasks to the correct node.
+* Wed May 05 2010 Bill Peck <bpeck@redhat.com> - 0.5.32-0
+- New beaker-client command workflow-simple
+- minor fix to tasks/filter to support new workflow
 * Wed Apr 28 2010 Bill Peck <bpeck@redhat.com> - 0.5.31-3
 - only release_system if there is an active watchdog.
 * Wed Apr 28 2010 Bill Peck <bpeck@redhat.com> - 0.5.31-2

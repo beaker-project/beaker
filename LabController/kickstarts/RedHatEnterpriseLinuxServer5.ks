@@ -65,7 +65,7 @@ install
 #for $repo in $getVar('tree_repos','').split(':')
 #if $repo.find(",") != -1
 #set (reponame, repourl) = $repo.split(',',1)
-repo --name=$reponame --cost=100 --baseurl=http://$server/distros$repourl
+repo --name=$reponame --baseurl=http://$server/distros$repourl
 #end if
 #end for
 #end if

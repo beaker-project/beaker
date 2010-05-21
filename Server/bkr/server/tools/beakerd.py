@@ -58,12 +58,10 @@ def get_parser():
     ## Defaults
     parser.set_defaults(daemonize=True, log_level=None)
     ## Actions
-    parser.add_option('-B', '--daemonize', dest='daemonize', 
-                      action='store_true',
-                      help='run in background (default)')
-    parser.add_option('-F', '--no-daemonize', dest='daemonize', 
-                      action='store_false', 
-                      help='run in foreground (do not daemonize)')
+    parser.add_option("-f", "--foreground", default=False, action="store_true",
+                      help="run in foreground (do not spawn a daemon)")
+    parser.add_option("-p", "--pid-file",
+                      help="specify a pid file")
     parser.add_option('-l', '--log-level', dest='log_level', metavar='LEVEL',
                       help='log level (ie. INFO, WARNING, ERROR, CRITICAL)')
     parser.add_option("-c", "--config", action="store", type="string",
@@ -104,14 +102,14 @@ def new_recipes(*args):
         except exceptions.Exception, e:
             session.rollback()
             log.error("Failed to commit due to :%s" % e)
-        session.close()
+    session.close()
     log.debug("Exiting new_recipes routine")
     return True
 
 def processed_recipesets(*args):
     recipesets = RecipeSet.query()\
-                       .join(['recipes','status'])\
-                       .filter(Recipe.status==TaskStatus.by_name(u'Processed'))
+                       .join(['status'])\
+                       .filter(RecipeSet.status==TaskStatus.by_name(u'Processed'))
     if not recipesets.count():
         return False
     log.debug("Entering processed_recipes routine")
@@ -155,6 +153,8 @@ def processed_recipesets(*args):
                         # locks
                         enough_systems = True
                     if not enough_systems:
+                        log.debug("recipe: %s labController:%s entering not enough systems logic" % 
+                                              (recipe.id, l_controller))
                         # Eliminate bad choices.
                         for recipe in recipeset.recipes_orderby(l_controller)[:]:
                             for tmprecipe in recipeset.recipes:
@@ -167,7 +167,7 @@ def processed_recipesets(*args):
         
                                 if systemsa.difference(systemsb):
                                     for rem_system in systemsa.intersection(systemsb):
-                                        log.debug("Removing %s from recipe id %s" % (rem_system, recipe.id))
+                                        log.debug("recipe: %s labController:%s Removing system %s" % (recipe.id, l_controller, rem_system))
                                         recipe.systems.remove(rem_system)
                         for recipe in recipeset.recipes:
                             count = 0
@@ -183,7 +183,7 @@ def processed_recipesets(*args):
                                     count += 1
                             if len(systems) <= count:
                                 # Remove all systems from this lc on this rs.
-                                log.debug("Removing lab %s from recipe id %s" % (l_controller, recipe.id))
+                                log.debug("recipe: %s labController:%s %s <= %s Removing lab" % (recipe.id, l_controller, len(systems), count))
                                 bad_l_controllers = bad_l_controllers.union([l_controller])
         
                 # Remove systems that are on bad lab controllers
@@ -198,13 +198,13 @@ def processed_recipesets(*args):
                                                   System.lab_controller==l_controller
                                                         ).all()
                                       )
-                        log.debug("Removing lab %s from recipe id %s" % (l_controller, recipe.id))
+                        log.debug("recipe: %s labController: %s Removing lab" % (recipe.id, l_controller))
                         for system in systems:
-                            log.debug("Removing %s from recipe id %s" % (system, recipe.id))
+                            log.debug("recipe: %s labController: %s Removing system %s" % (recipe.id, l_controller, system))
                             recipe.systems.remove(system)
                     if recipe.systems:
                         # Set status to Queued 
-                        log.info("recipe ID %s moved from Processed to Queued" % recipe.id)
+                        log.info("recipe: %s moved from Processed to Queued" % recipe.id)
                         recipe.queue()
                     else:
                         # Set status to Aborted 
@@ -215,11 +215,12 @@ def processed_recipesets(*args):
         except exceptions.Exception, e:
             session.rollback()
             log.error("Failed to commit due to :%s" % e)
-        session.close()
+    session.close()
     log.debug("Exiting processed_recipes routine")
     return True
 
 def queued_recipes(*args):
+    working = SystemStatus.by_name(u'Working')
     recipes = Recipe.query()\
                     .join('status')\
                     .join('systems')\
@@ -228,10 +229,12 @@ def queued_recipes(*args):
                          or_(
                          and_(Recipe.status==TaskStatus.by_name(u'Queued'),
                               System.user==None,
+                              System.status==working,
                               RecipeSet.lab_controller==None
                              ),
                          and_(Recipe.status==TaskStatus.by_name(u'Queued'),
                               System.user==None,
+                              System.status==working,
                               RecipeSet.lab_controller_id==System.lab_controller_id
                              )
                             )
@@ -243,7 +246,6 @@ def queued_recipes(*args):
     if not recipes.count():
         return False
     log.debug("Entering queued_recipes routine")
-    working = SystemStatus.by_name(u'Working')
     for recipe in recipes:
         session.begin()
         try:
@@ -275,7 +277,7 @@ def queued_recipes(*args):
                     # it did not execute the update_status method.
                     recipe.schedule()
                     # Atomic operation to reserve the system
-                    if session.connection(System).execute(system_table.update(
+                    if session.connection(Recipe).execute(system_table.update(
                          and_(system_table.c.id==system.id,
                           system_table.c.user_id==None)),
                           user_id=recipe.recipeset.job.owner.user_id).rowcount == 1:
@@ -306,7 +308,7 @@ def queued_recipes(*args):
         except exceptions.Exception, e:
             session.rollback()
             log.error("Failed to commit due to :%s" % e)
-        session.close()
+    session.close()
     log.debug("Exiting queued_recipes routine")
     return True
 
@@ -326,13 +328,14 @@ def scheduled_recipes(*args):
         return False
     log.debug("Entering scheduled_recipes routine")
     for recipeset in recipesets:
+        log.info("scheduled_recipes: RS:%s" % recipeset.id)
         session.begin()
         try:
             # Go through each recipe in the recipeSet
             for recipe in recipeset.recipes:
                 # If one of the recipes gets aborted then don't try and run
                 if recipe.status != TaskStatus.by_name(u'Scheduled'):
-                    continue
+                    break
                 recipe.waiting()
 
                 # Go Through each recipe and find out everyone's role.
@@ -359,6 +362,7 @@ def scheduled_recipes(*args):
                                                                              (
                                                                          recipe.id,
                                                                             e))
+                    break
                 ks_meta = "packages=%s" % ":".join([p.package for p in recipe.packages])
                 harnessrepos="|".join(["%s,%s" % (r["name"], r["url"]) for r in recipe.harness_repos()])
                 customrepos= "|".join(["%s,%s" % (r.name, r.url) for r in recipe.repos])
@@ -393,7 +397,7 @@ def scheduled_recipes(*args):
         except exceptions.Exception, e:
             session.rollback()
             log.error("Failed to commit due to :%s" % e)
-        session.close()
+    session.close()
     log.debug("Exiting scheduled_recipes routine")
     return True
 
@@ -431,39 +435,75 @@ def schedule():
     log.debug("starting scheduled recipes Thread")
     # Run scheduled_recipes in this process
     while True:
-        if not queued_recipes() and not scheduled_recipes():
+        queued = queued_recipes()
+        scheduled = scheduled_recipes()
+        if not queued and not scheduled:
             time.sleep(20)
 
-def daemonize_self():
-    # daemonizing code:  http://aspn.activestate.com/ASPN/Cookbook/Python/Recipe/66012
-    try: 
-        pid = os.fork() 
-        if pid > 0:
-            # exit first parent
-            sys.exit(0) 
-    except OSError, e: 
-        print >>sys.stderr, "fork #1 failed: %d (%s)" % (e.errno, e.strerror) 
+def daemonize(daemon_func, daemon_pid_file=None, daemon_start_dir=".", daemon_out_log="/dev/null", daemon_err_log="/dev/null", *args, **kwargs):
+    """Robustly turn into a UNIX daemon, running in daemon_start_dir."""
+
+    if daemon_pid_file and os.path.exists(daemon_pid_file):
+        try:
+            f = open(daemon_pid_file, "r")
+            pid = f.read()
+            f.close()
+        except:
+            pid = None
+
+        if pid:
+            try:
+                fn = os.path.join("/proc", pid, "cmdline")
+                f = open(fn, "r")
+                cmdline = f.read()
+                f.close()
+            except:
+                cmdline = None
+
+        if cmdline and cmdline.find(sys.argv[0]) >=0:
+            sys.stderr.write("A proces is still running, pid: %s\n" % pid)
+            sys.exit(1)
+
+    # first fork
+    try:
+        if os.fork() > 0:
+            # exit from first parent
+            sys.exit(0)
+    except OSError, ex:
+        sys.stderr.write("fork #1 failed: (%d) %s\n" % (ex.errno, ex.strerror))
         sys.exit(1)
+
     # decouple from parent environment
-    os.chdir("/") 
-    os.setsid() 
-    os.umask(0) 
+    os.setsid()
+    os.chdir(daemon_start_dir)
+    os.umask(0)
 
-    # do second fork
-    try: 
-        pid = os.fork() 
+    # second fork
+    try:
+        pid = os.fork()
         if pid > 0:
-            # print "Daemon PID %d" % pid 
-            sys.exit(0) 
-    except OSError, e: 
-        print >>sys.stderr, "fork #2 failed: %d (%s)" % (e.errno, e.strerror) 
-        sys.exit(1) 
+            # write pid to pid_file
+            if daemon_pid_file is not None:
+                f = open(daemon_pid_file, "w")
+                f.write("%s" % pid)
+                f.close()
+            # exit from second parent
+            sys.exit(0)
+    except OSError, ex:
+        sys.stderr.write("fork #2 failed: (%d) %s\n" % (ex.errno, ex.strerror))
+        sys.exit(1)
 
-    #dev_null = file('/dev/null','rw') 
-    #os.dup2(dev_null.fileno(), sys.stdin.fileno()) 
-    #os.dup2(dev_null.fileno(), sys.stdout.fileno()) 
-    #os.dup2(dev_null.fileno(), sys.stderr.fileno()) 
+    # redirect stdin, stdout and stderr
+    stdin = open("/dev/null", "r")
+    stdout = open(daemon_out_log, "a+", 0)
+    stderr = open(daemon_err_log, "a+", 0)
+    os.dup2(stdin.fileno(), sys.stdin.fileno())
+    os.dup2(stdout.fileno(), sys.stdout.fileno())
+    os.dup2(stderr.fileno(), sys.stderr.fileno())
 
+    # run the daemon loop
+    daemon_func(*args, **kwargs)
+    sys.exit(0)
 
 def main():
     parser = get_parser()
@@ -482,10 +522,15 @@ def main():
 
     interface.start(config)
 
-    if opts.daemonize:
-        daemonize_self()
+    pid_file = opts.pid_file
+    if pid_file is None:
+        pid_file = config.get("PID_FILE", "/var/run/beaker/beakerd.pid")
 
-    schedule()
+
+    if opts.foreground:
+        schedule()
+    else:
+        daemonize(schedule, daemon_pid_file=pid_file)
 
 if __name__ == "__main__":
     main()

@@ -294,12 +294,10 @@ class Watchdog(ProxyHelper):
         
 class Proxy(ProxyHelper):
     def get_recipe(self, system_name=None):
-        """ return the active recipe for this system 
-            If system_name is not provided look up via client_ip"""
-        if not system_name:
-            system_name = gethostbyaddr(self.clientIP)[0]
-        self.logger.info("get_recipe %s" % system_name)
-        return self.hub.recipes.system_xml(system_name)
+        """ return the active recipe for this system """
+        if system_name:
+            self.logger.info("get_recipe %s" % system_name)
+            return self.hub.recipes.system_xml(system_name)
 
     def task_upload_file(self, 
                          task_id, 
