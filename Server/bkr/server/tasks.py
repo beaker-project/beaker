@@ -179,7 +179,18 @@ class Tasks(RPCRoot):
         return self._do_search(hidden=hidden, **kw)
 
     def _do_search(self, hidden={}, **kw):
-        tasks = RecipeTask.query()
+        if 'recipe_id' in kw: #most likely we are coming here from a LinkRemoteFunction in recipe_widgets
+            tasks = RecipeTask.query().join(['recipe']).filter(Recipe.id == kw['recipe_id'])
+
+            hidden = dict(distro = 1,
+                          osmajor = 1,
+                          arch = 1,
+                          logs = 1,
+                          system = 1)
+                         
+            return dict(tasks=tasks,hidden=hidden,task_widget=self.task_widget)
+
+        tasks = RecipeTask.query() 
         if kw.get('distro_id'):
             try:
                 tasks = RecipeTask.query().join(['recipe','distro']).filter(Distro.id==kw.get('distro_id'))
@@ -389,3 +400,9 @@ class Tasks(RPCRoot):
             col = search['table'] 
             task_search.append_results(search['value'],col,search['operation'],**kw)
         return task_search.return_results()
+
+    @expose(template='bkr.server.templates.tasks')
+    def parrot(self,*args,**kw): 
+        if 'recipe_id' in kw:
+            recipe = Recipe.by_id(kw['recipe_id'])
+            return recipe.all_tasks

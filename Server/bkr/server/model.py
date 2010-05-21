@@ -3371,6 +3371,7 @@ class Recipe(TaskBase):
         return "R:%s" % self.id
     t_id = property(t_id)
 
+    @property
     def all_tasks(self):
         """
         Return all tasks and task-results, along with associated logs
@@ -3379,7 +3380,6 @@ class Recipe(TaskBase):
             yield task
             for task_result in task.results:
                 yield task_result
-    all_tasks = property(all_tasks)
 
     def append_tasks(self, recipetask):
         """ Before appending the task to this Recipe, make sure it applies.
