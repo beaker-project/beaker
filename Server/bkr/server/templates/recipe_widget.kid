@@ -3,6 +3,10 @@
 <script type="text/javascript">
 function showall_${recipe.id}()
 { 
+    if (!($('#task_items_${recipe.id}').html()) ) 
+    {
+        $('#task_all_recipe_${recipe.id}').click()   
+    }
     $('.recipe_${recipe.id}').show();
     $('.hide_recipe_${recipe.id}').show();
     $('.fail_show_recipe_${recipe.id}').show();
@@ -12,6 +16,10 @@ function showall_${recipe.id}()
 
 function showfail_${recipe.id}()
 {
+    if (!($('#task_items_${recipe.id}').html()) ) 
+    {
+        $('#task_all_recipe_${recipe.id}').click()   
+    }
     $('.recipe_${recipe.id}').hide();
     $('.fail_recipe_${recipe.id}').show();
     $('.hide_recipe_${recipe.id}').show();
@@ -46,10 +54,6 @@ $(document).ready(function() {
     }
 
     $('#all_recipe_${recipe.id}').click( function() { 
-                                                      if (!($('#task_items_${recipe.id}').html()) ) 
-                                                      {
-                                                          $('#task_all_recipe_${recipe.id}').click()   
-                                                      }
                                                       showall_${recipe.id}();
     });
                                                       
