@@ -18,6 +18,7 @@ from bkr.server.activity import Activities
 from bkr.server.reports import Reports
 from bkr.server.job_matrix import JobMatrix
 from bkr.server.reserve_workflow import ReserveWorkflow
+from bkr.server.watchdog import Watchdogs
 from bkr.server.widgets import myPaginateDataGrid
 from bkr.server.widgets import PowerTypeForm
 from bkr.server.widgets import PowerForm
@@ -225,6 +226,7 @@ class Root(RPCRoot):
     reports = Reports()
     matrix = JobMatrix()
     reserveworkflow = ReserveWorkflow()
+    watchdogs = Watchdogs()
     
     id         = widgets.HiddenField(name='id')
     submit     = widgets.SubmitButton(name='submit')
