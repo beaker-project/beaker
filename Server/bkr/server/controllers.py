@@ -300,6 +300,26 @@ class Root(RPCRoot):
         return return_dict
 
     @expose(format='json')
+    def change_system_admin(self,system_id=None,group_id=None,cmd=None,**kw):
+        if system_id is None or group_id is None or cmd is None:
+            log.debug('Did not call change_system_admin with correct formal args')
+            return {'success' : 0}
+
+        sys = System.by_id(system_id,identity.current.user)
+        if sys.is_admin() is None:
+            #Someone tried to be tricky...
+            return {'success' : 0}
+
+        group = Group.by_id(group_id)
+        if cmd == 'add':
+            group.admin_systems.append(System.by_id(system_id,identity.current.user)) 
+            return { 'success' : 1 }
+        if cmd == 'remove':
+            group.admin_systems.remove(System.by_id(system_id,identity.current.user))
+            return {'success' : 1 }
+            
+        
+    @expose(format='json')
     def get_keyvalue_search_options(self,**kw):
         return_dict = {}
         return_dict['keyvals'] = Key.get_all_keys()
@@ -830,7 +850,7 @@ class Root(RPCRoot):
         is_user = False
         if system:
             title = system.fqdn
-            if system.can_admin(identity.current.user):
+            if system.can_admin(user=identity.current.user): 
                 options['owner_change_text'] = ' (Change)'
             else:
                 readonly = True
@@ -862,7 +882,11 @@ class Root(RPCRoot):
         options['excluded_families'] = []
         for arch in system.arch:
             options['excluded_families'].append((arch.arch, [(osmajor.id, osmajor.osmajor, [(osversion.id, '%s' % osversion, attrs) for osversion in osmajor.osversion],attrs) for osmajor in OSMajor.query()]))
-        
+        try:
+            can_admin = system.is_admin(user_id = identity.current.user.user_id)
+        except AttributeError,e:
+            can_admin = False
+
         return dict(
             title    = title,
             readonly = readonly,
@@ -909,7 +933,9 @@ class Root(RPCRoot):
                                    notes     = dict(readonly = readonly,
                                                 notes = system.notes),
                                    groups    = dict(readonly = readonly,
-                                                groups = system.groups),
+                                                groups = system.groups,
+                                                system_id = system.id,
+                                                can_admin = can_admin),
                                    install   = dict(readonly = readonly,
                                                 provisions = system.provisions,
                                                 prov_arch = [(arch.id, arch.arch) for arch in system.arch]),

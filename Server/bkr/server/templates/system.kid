@@ -9,7 +9,6 @@
    @import "${tg.url('/static/css/system-print.css')}";
   </style>
   <title>${title}</title>
- 
  </head>
 
  <body class="flora">

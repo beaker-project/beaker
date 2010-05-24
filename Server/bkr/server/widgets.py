@@ -855,14 +855,15 @@ class DistroTags(Form):
         if 'tags' in d['options']:
             d['tags'] = d['options']['tags']
 
-class SystemGroups(Form):
+class SystemGroups(Form): 
+    javascript = [LocalJSLink('bkr','/static/javascript/system_admin.js')]
     template = "bkr.server.templates.system_groups"
     member_widgets = ["id", "group"]
-    params = ['options', 'readonly', 'groups']
+    params = ['options', 'readonly', 'groups','can_admin']
     
     def __init__(self, *args, **kw):
         super(SystemGroups, self).__init__(*args, **kw)
-	self.id    = HiddenField(name="id")
+    	self.id    = HiddenField(name="id")
         self.group = AutoCompleteField(name='group',
                                       search_controller=url("/groups/by_name"),
                                       search_param="name",
@@ -874,6 +875,11 @@ class SystemGroups(Form):
             d['readonly'] = d['options']['readonly']
         if 'groups' in d['options']:
             d['groups'] = d['options']['groups']
+        if 'system_id' in d['options']:
+            d['system_id'] = d['options']['system_id']
+        if 'can_admin' in d['options']:
+            d['can_admin'] = d['options']['can_admin']
+
 
 class SystemProvision(Form):
     javascript = [LocalJSLink('bkr', '/static/javascript/provision.js')]
@@ -1022,7 +1028,9 @@ class SystemHistory(CompoundWidget):
     
 
 class SystemForm(Form):
-    javascript = [LocalJSLink('bkr', '/static/javascript/provision.js'),
+    javascript = [LocalJSLink('bkr', '/static/javascript/jquery.js'),
+                  LocalJSLink('bkr', '/static/javascript/provision.js'),
+                  LocalJSLink('bkr','/static/javascript/system_admin.js'),
                   LocalJSLink('bkr', '/static/javascript/searchbar_v5.js'),
                   JSLink(static,'ajax.js'),
                  ]

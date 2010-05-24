@@ -426,6 +426,13 @@ system_group_table = Table('system_group', metadata,
         onupdate='CASCADE', ondelete='CASCADE'))
 )
 
+system_admin_map_table = Table('system_admin_map', metadata, 
+    Column('system_id', Integer, ForeignKey('system.id',
+        onupdate='CASCADE', ondelete='CASCADE')),
+    Column('group_id', Integer, ForeignKey('tg_group.group_id',
+        onupdate='CASCADE', ondelete='CASCADE'))
+)
+
 group_permission_table = Table('group_permission', metadata,
     Column('group_id', Integer, ForeignKey('tg_group.group_id',
         onupdate='CASCADE', ondelete='CASCADE')),
@@ -976,7 +983,7 @@ class User(object):
         return self.user_name
 
     def is_admin(self):
-        return u'admin' in [group.group_name for group in self.groups]
+        return u'admin' in [group.group_name for group in self.groups] 
 
     def in_group(self,check_groups):
         my_groups = [group.group_name for group in self.groups]
@@ -1075,8 +1082,6 @@ class SystemObject(MappedObject):
                 tables['system/%s' % property.key] = dict(joins=[property.key], cls=property.mapper.class_) 
         return tables
 
-
-
     def _get_dict(cls):
         tables = {}
         for property in cls.mapper.iterate_properties:
@@ -1093,7 +1098,6 @@ class SystemObject(MappedObject):
                 tables[property.key] = dict(joins=[property.key], cls=property.mapper.class_)
         return tables
     _get_dict = classmethod(_get_dict)
-
    
     def get_fields(cls, lookup=None):
         if lookup:
@@ -1102,6 +1106,8 @@ class SystemObject(MappedObject):
         return cls.mapper.c.keys()
     get_fields = classmethod(get_fields)
 
+class SystemAdmin(MappedObject):
+    pass
 
 class Group(object):
     """
@@ -1114,6 +1120,16 @@ class Group(object):
     @classmethod
     def by_id(cls, id):
         return cls.query.filter_by(group_id=id).one()
+
+    def can_admin_system(self,system_id=None,*args,**kw):
+        if system_id is None:
+            log.debug('can_admin_system called with no system_id')
+            return False
+        try:
+            self.query().join(['admin_systems']).filter(and_(SystemAdmin.system_id == system_id,SystemAdmin.group_id == self.group_id)).one() 
+            return True 
+        except InvalidRequestError,e: 
+            return False
 
     def __repr__(self):
         return self.display_name
@@ -1130,7 +1146,6 @@ class Group(object):
             q = cls.query().filter(Group.group_name.like('%s%%' % name))
         return q
 
-
 class System(SystemObject):
 
     def __init__(self, fqdn=None, status=None, contact=None, location=None,
@@ -1146,8 +1161,6 @@ class System(SystemObject):
         self.vendor = vendor
         self.owner = owner
     
-
-
     def to_xml(self, clone=False):
         """ Return xml describing this system """
         fields = dict(
@@ -1588,9 +1601,36 @@ $SNIPPET("rhts_post")
         else:
             return False
 
-    def can_admin(self, user=None):
+    def is_admin(self,group_id=None,user_id=None,groups=None,*args,**kw):
+        if group_id: #Let's try this first as this will be the quicker query
+            try:
+                if self.admins.query().filter(SystemAdmin.group_id==group_id).one():
+                    return True
+            except InvalidRequestError, e:
+                return False
+
+        if user_id: 
+                group_q = Group.query().join('users').filter_by(user_id=user_id)
+                g_ids = [e.group_id for e in group_q] 
+                admin_q = self.query().join(['admins']).filter(and_(SystemAdmin.group_id.in_(g_ids),SystemAdmin.system_id == self.id))
+             
+                if admin_q.count() > 0: 
+                    log.debug('We have a count of more than 1!!')
+                    return True
+                else:
+                    return False 
+
+        #let's try the currently logged in user
+        groups = identity.current.user.groups
+        for group in groups:
+            if group.can_admin_system(self.id):
+                return True
+    
+        return False
+
+    def can_admin(self,user=None,group_id=None): 
         if user:
-            if user == self.owner or user.is_admin():
+            if user == self.owner or user.is_admin() or self.is_admin(group_id=group_id,user_id=user.user_id): 
                 return True
         return False
 
@@ -2514,6 +2554,10 @@ class DistroTag(object):
         """
         return cls.query().filter(DistroTag.tag.like('%s%%' % tag))
 
+class Admin(object):
+    def __init__(self,system_id,group_id): 
+        self.system_id = system_id
+        self.group_id = group_id
 
 # Activity model
 class Activity(object):
@@ -4249,7 +4293,7 @@ System.mapper = mapper(System, system_table,
                      'user':relation(User, uselist=False,
                           primaryjoin=system_table.c.user_id==users_table.c.user_id,foreign_keys=system_table.c.user_id),
                      'owner':relation(User, uselist=False,
-                          primaryjoin=system_table.c.owner_id==users_table.c.user_id,foreign_keys=system_table.c.owner_id),
+                          primaryjoin=system_table.c.owner_id==users_table.c.user_id,foreign_keys=system_table.c.owner_id), 
                      'lab_controller':relation(LabController, uselist=False,
                                                backref='systems'),
                      'notes':relation(Note,
@@ -4273,6 +4317,7 @@ Cpu.mapper = mapper(Cpu,cpu_table,properties = {
                                                  'flags':relation(CpuFlag), 
                                                  'system':relation(System) } )
 mapper(Arch, arch_table)
+mapper(SystemAdmin,system_admin_map_table,primary_key=[system_admin_map_table.c.system_id,system_admin_map_table.c.group_id])
 mapper(Provision, provision_table,
        properties = {'provision_families':relation(ProvisionFamily, collection_class=attribute_mapped_collection('osmajor')),
                      'arch':relation(Arch)})
@@ -4345,7 +4390,9 @@ mapper(User, users_table,
 
 Group.mapper = mapper(Group, groups_table,
         properties=dict(users=relation(User,secondary=user_group_table, backref='groups'),
-                        systems=relation(System,secondary=system_group_table, backref='groups')))
+                        systems=relation(System,secondary=system_group_table, backref='groups'),
+                        admin_systems=relation(System,secondary=system_admin_map_table,backref='admins')))
+                        
 
 mapper(Permission, permissions_table,
         properties=dict(groups=relation(Group,
@@ -4521,7 +4568,6 @@ mapper(RecipeTaskResult, recipe_task_result_table,
                       'logs':relation(LogRecipeTaskResult, backref='parent'),
                      }
       )
-
 mapper(TaskPriority, task_priority_table)
 mapper(TaskStatus, task_status_table)
 mapper(TaskResult, task_result_table)
