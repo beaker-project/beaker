@@ -163,10 +163,10 @@ class Arches:
 class Devices:
 
     @expose(template='bkr.server.templates.grid')
-    @paginate('list')
+    @paginate('list',default_order='fqdn',limit=10,allow_limit_override=True)
     def view(self, id):
         device = session.query(Device).get(id)
-        systems = System.all(identity.current.user).join('devices').filter_by(id=id)
+        systems = System.all(identity.current.user).join('devices').filter_by(id=id).distinct()
         device_grid = myPaginateDataGrid(fields=[
                         ('System', lambda x: make_link("/view/%s" % x.fqdn, x.fqdn)),
                         ('Description', lambda x: device.description),
