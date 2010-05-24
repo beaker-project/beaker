@@ -498,13 +498,13 @@ class CSV_Exclude(CSV):
                                                        data['family']))
                 return False
             if osmajor not in [oldosmajor.osmajor for oldosmajor in system.excluded_osmajor_byarch(arch)]:
-                if data['excluded'] == 'True':
+                if data['excluded'].lower() == 'true':
                     exclude_osmajor = ExcludeOSMajor(osmajor=osmajor, arch=arch)
                     system.excluded_osmajor.append(exclude_osmajor)
                     activity = SystemActivity(identity.current.user, 'CSV', 'Added', 'Excluded_families', '', '%s/%s' % (osmajor, arch))
                     system.activity.append(activity)
             else:
-                if data['excluded'] == 'False':
+                if data['excluded'].lower() == 'false':
                     for old_osmajor in system.excluded_osmajor_byarch(arch):
                         if old_osmajor.osmajor == osmajor:
                             activity = SystemActivity(identity.current.user, 'CSV', 'Removed', 'Excluded_families', '%s/%s' % (old_osmajor.osmajor, arch),'')
