@@ -59,7 +59,7 @@ class Distros_List(BeakerCommand):
         self.set_hub(username, password)
         distros = self.hub.distros.filter(filter)
         if distros:
-            print "Name,Arch,OSVersion,Variant,Method,Virt,[Tags],[LabController,Path]"
+            print "InstallName,Name,Arch,OSVersion,Variant,Method,Virt,[Tags,],{LabController:Path,}"
             for distro in distros:
                 print ','.join([str(d) for d in distro])
         else:

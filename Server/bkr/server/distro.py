@@ -211,7 +211,7 @@ class Distros(RPCRoot):
         distros = distros.order_by(distro_table.c.date_created.desc())
         if limit:
             distros = distros[:limit]
-        return [(distro.name, '%s' % distro.arch, '%s' % distro.osversion, distro.variant, distro.method, distro.virt, ['%s' % tag for tag in distro.tags], dict([(lc.lab_controller.fqdn, lc.tree_path) for lc in distro.lab_controller_assocs])) for distro in distros]
+        return [(distro.install_name, distro.name, '%s' % distro.arch, '%s' % distro.osversion, distro.variant, distro.method, distro.virt, ['%s' % tag for tag in distro.tags], dict([(lc.lab_controller.fqdn, lc.tree_path) for lc in distro.lab_controller_assocs])) for distro in distros]
 
     #XMLRPC method for listing distros
     @cherrypy.expose

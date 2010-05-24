@@ -61,9 +61,9 @@ class Distros_Verify(BeakerCommand):
         distros = self.hub.distros.filter(filter)
         if distros:
             for distro in distros:
-                print "%s Tags:%s" % (distro[0], distro[6])
+                print "%s Tags:%s" % (distro[0], distro[7])
                 for lab in lab_controllers:
-                    if lab not in distro[7]:
+                    if lab not in distro[8]:
                         print "missing from lab %s" % lab
         else:
             sys.stderr.write("Nothing Matches\n")
