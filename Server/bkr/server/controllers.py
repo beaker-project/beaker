@@ -1235,7 +1235,7 @@ class Root(RPCRoot):
             # catch nullable fields return None.
             if current_val is None:
                 current_val = ""
-            new_val = str(kw.get(field) or "")
+            new_val = unicode(kw.get(field) or "")
             if str(current_val) != new_val:
                 function_name = '%s_change_handler' % field
                 field_change_handler = getattr(SystemSaveForm.handler,function_name,None)

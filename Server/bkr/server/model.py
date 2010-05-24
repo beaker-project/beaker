@@ -3078,19 +3078,19 @@ class Recipe(TaskBase):
     def clone_link(self):
         """ return link to clone this recipe
         """
-        return "/jobs/clone?recipe_id=%s" % self.id
+        return u"/jobs/clone?recipe_id=%s" % self.id
 
     def cancel_link(self):
         """ return link to cancel this recipe
         """
-        return "/recipes/cancel?id=%s" % self.id
+        return u"/recipes/cancel?id=%s" % self.id
 
     def filepath(self):
         """
         Return file path for this recipe
         """
         job    = self.recipeset.job
-        return "%s/%02d/%s/%s" % (self.start_time.year,
+        return u"%s/%02d/%s/%s" % (self.start_time.year,
                                   int(str(job.id)[-2:]),
                                          job.id,
                                          self.id)
@@ -3104,19 +3104,19 @@ class Recipe(TaskBase):
         if self.distro:
             servername = get("servername",socket.gethostname())
             harnesspath = get("basepath.harness", "/var/www/beaker/harness")
-            if os.path.exists("%s/%s/%s" % (harnesspath, 
+            if os.path.exists(u"%s/%s/%s" % (harnesspath, 
                                             self.distro.osversion.osmajor,
                                             self.distro.arch)):
                 repo = dict(name = "beaker-harness",
-                             url  = "http://%s/harness/%s/%s" % (servername,
+                             url  = u"http://%s/harness/%s/%s" % (servername,
                                                                       self.distro.osversion.osmajor,
                                                                       self.distro.arch))
                 repos.append(repo)
             repo = dict(name = "beaker-rhts",
-                        url  = "http://%s/harness/noarch" % servername)
+                        url  = u"http://%s/harness/noarch" % servername)
             repos.append(repo)
             repo = dict(name = "beaker-tasks",
-                        url  = "http://%s/rpms" % servername)
+                        url  = u"http://%s/rpms" % servername)
             repos.append(repo)
         return repos
 
@@ -3124,17 +3124,17 @@ class Recipe(TaskBase):
         if not clone:
             recipe.setAttribute("id", "%s" % self.id)
             recipe.setAttribute("job_id", "%s" % self.recipeset.job_id)
-            recipe.setAttribute("recipe_set_id", "%s" % self.recipe_set_id)
-        recipe.setAttribute("whiteboard", "%s" % self.whiteboard and self.whiteboard or '')
-        recipe.setAttribute("role", "%s" % self.role and self.role or 'RECIPE_MEMBERS')
+            recipe.setAttribute("recipe_set_id", u"%s" % self.recipe_set_id)
+        recipe.setAttribute("whiteboard", u"%s" % self.whiteboard and self.whiteboard or '')
+        recipe.setAttribute("role", u"%s" % self.role and self.role or 'RECIPE_MEMBERS')
         if self.kickstart:
             kickstart = self.doc.createElement("kickstart")
-            text = self.doc.createCDATASection('%s' % self.kickstart)
+            text = self.doc.createCDATASection(u'%s' % self.kickstart)
             kickstart.appendChild(text)
             recipe.appendChild(kickstart)
-        recipe.setAttribute("ks_meta", "%s" % self.ks_meta and self.ks_meta or '')
-        recipe.setAttribute("kernel_options", "%s" % self.kernel_options and self.kernel_options or '')
-        recipe.setAttribute("kernel_options_post", "%s" % self.kernel_options_post and self.kernel_options_post or '')
+        recipe.setAttribute("ks_meta", u"%s" % self.ks_meta and self.ks_meta or u'')
+        recipe.setAttribute("kernel_options", u"%s" % self.kernel_options and self.kernel_options or '')
+        recipe.setAttribute("kernel_options_post", u"%s" % self.kernel_options_post and self.kernel_options_post or '')
         if self.duration and not clone:
             recipe.setAttribute("duration", "%s" % self.duration)
         if self.result and not clone:
@@ -4103,7 +4103,7 @@ class Task(MappedObject):
             value = seconds / length
             if value > 0:
                 seconds = seconds % length
-                time.append('%s%s' % (str(value),
+                time.append(u'%s%s' % (unicode(value),
                             (suffix, (suffix, suffix + 's')[value > 1])[add_s]))
             if seconds < 1:
                 break
