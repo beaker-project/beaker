@@ -2,6 +2,7 @@ import model
 import re
 import random
 import sqlalchemy
+from turbogears import flash
 from sqlalchemy import or_, and_, not_
 from sqlalchemy.sql import visitors, select
 from turbogears.database import session
@@ -177,8 +178,11 @@ class Modeller(object):
                 op_dict = self.loose_type_match(type)            
             if not op_dict: 
                 op_dict = self.structure['generic']
-       
-        return op_dict[operator]        
+        try: 
+            return op_dict[operator]
+        except KeyError,e:
+            flash(_('%s is not a valid operator' % operator))
+            raise
 
     def return_operators(self,field_type,loose_match=True): 
         # loose_match flag will specify if we should try and 'guess' what data type it is 
@@ -216,18 +220,28 @@ class Search:
         pre = self.pre_operations(column,operation,value,**kw)
         cls_name = re.sub('Search','',self.__class__.__name__)
         cls = globals()[cls_name]  
-        mycolumn = cls.searchable_columns.get(column)
-        if mycolumn:
-            self.do_joins(mycolumn)
-        else:
-            log.error('Error accessing %s attribute within %s.append_results' % (column,self.__class__.__name__))
-       
-        if pre['col_op_filter']:
-            filter_func = pre['col_op_filter']
-            filter_final = lambda: filter_func(mycolumn.column,value)
-        else: 
-            filter_final = self.return_standard_filter(mycolumn,operation,value)
-        self.queri = self.queri.filter(filter_final())   
+        try:
+            mycolumn = cls.searchable_columns[column]
+        except KeyError,e:
+            flash(_(u'%s is not a valid search criteria' % column)) 
+            raise
+   
+        self.do_joins(mycolumn)
+             
+        try: 
+            if pre['col_op_filter']:
+                filter_func = pre['col_op_filter']
+                filter_final = lambda: filter_func(mycolumn.column,value)
+            else: 
+                filter_final = self.return_standard_filter(mycolumn,operation,value)
+        except KeyError,e:
+            log.error(e)
+            return self.queri
+        except AttributeError,e:
+            log.error(e)
+            return self.queri
+
+        self.queri = self.queri.filter(filter_final())
 
     def return_results(self): 
         return self.queri        
@@ -252,7 +266,7 @@ class Search:
             except TypeError, (error):
                 log.error('Column %s has not specified joins validly:%s' % (column, error))                                                               
 
-    def return_standard_filter(self,mycolumn,operation,value,loose_match=True): 
+    def return_standard_filter(self,mycolumn,operation,value,loose_match=True):  
         col_type = mycolumn.type
         modeller = Modeller() 
         filter_func = modeller.return_function(col_type,operation,loose_match=True)   
@@ -268,7 +282,7 @@ class Search:
             match_obj = re.search('^(.+)?Search$',self.__class__.__name__) 
             cls_ref = globals()[match_obj.group(1)]
             if cls_ref is None:
-                raise BeakerException('No cls_ref passed in and class naming convetion did give valid class')
+                raise BeakerException('No cls_ref passed in and class naming convention did give valid class')
         results_dict = {}
         underscored_operation = re.sub(' ','_',operation) 
         column_match = re.match('^(.+)?/(.+)?$',column)
@@ -299,7 +313,7 @@ class Search:
             match_obj = re.search('^(.+)?Search$',cls.__name__) 
             cls_ref = globals()[match_obj.group(1)]
             if cls_ref is None:
-                raise BeakerException('No cls_ref passed in and class naming convetion did give valid class')          
+                raise BeakerException('No cls_ref passed in and class naming convention did give valid class')          
         try:
             field_type = cls_ref.get_field_type(field) 
             vals = None

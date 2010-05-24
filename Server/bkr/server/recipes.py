@@ -135,8 +135,13 @@ class Recipes(RPCRoot):
     def _recipe_search(self,recipe,**kw):
         recipe_search = search_utility.Recipe.search(recipe)
         for search in kw['recipesearch']:
-            col = search['table'] 
-            recipe_search.append_results(search['value'],col,search['operation'],**kw)
+            col = search['table']      
+            try:
+                recipe_search.append_results(search['value'],col,search['operation'],**kw)
+            except KeyError,e:
+                log.error(e)
+                return recipe_search.return_results()
+
         return recipe_search.return_results()
 
     def _recipes(self,recipe,**kw):
@@ -147,7 +152,9 @@ class Recipes(RPCRoot):
                                     'operation' : op,
                                     'keyvalue': None,
                                     'value' : value}]
-            simplesearch = kw['simplesearch']
+            try:
+                simplesearch = kw['simplesearch']
+            except KeyError, e: simplesearch = None
         elif 'simplesearch' in kw:
             simplesearch = kw['simplesearch']
             kw['recipesearch'] = [{'table' : 'Id',   
