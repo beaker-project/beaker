@@ -7,7 +7,9 @@ from tg_expanding_form_widget.tg_expanding_form_widget import ExpandingForm
 from kid import Element
 from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.helpers import *
-from bkr.server.widgets import myDataGrid
+from bkr.server.widgets import myDataGrid, myPaginateDataGrid, AlphaNavBar
+from bkr.server.admin_page import AdminPage
+
 
 import cherrypy
 
@@ -24,21 +26,26 @@ class GroupFormSchema(validators.Schema):
     display_name = validators.UnicodeString(not_empty=True, max=256, strip=True)
     group_name = validators.UnicodeString(not_empty=True, max=256, strip=True)
 
-class Groups(RPCRoot):
+class Groups(AdminPage):
     # For XMLRPC methods in this class.
     exposed = False
 
     group_id     = widgets.HiddenField(name='group_id')
     display_name = widgets.TextField(name='display_name', label=_(u'Display Name'))
     group_name   = widgets.TextField(name='group_name', label=_(u'Group Name'))
-    autoUsers    = AutoCompleteField(name='user', 
+    auto_users    = AutoCompleteField(name='user', 
                                      search_controller = url("/users/by_name"),
                                      search_param = "input",
                                      result_name = "matches")
-    autoSystems  = AutoCompleteField(name='system', 
+    auto_systems  = AutoCompleteField(name='system', 
                                      search_controller = url("/by_fqdn"),
                                      search_param = "input",
                                      result_name = "matches")
+
+    search_groups = AutoCompleteField(name='group', 
+                                     search_controller = url("/groups/by_name?anywhere=1"),
+                                     search_param = "name",
+                                     result_name = "groups")
 
     group_form = widgets.TableForm(
         'Group',
@@ -50,24 +57,37 @@ class Groups(RPCRoot):
 
     group_user_form = widgets.TableForm(
         'GroupUser',
-        fields = [group_id, autoUsers],
+        fields = [group_id, auto_users],
         action = 'save_data',
         submit_text = _(u'Add'),
     )
 
     group_system_form = widgets.TableForm(
         'GroupSystem',
-        fields = [group_id, autoSystems],
+        fields = [group_id, auto_systems],
         action = 'save_data',
         submit_text = _(u'Add'),
     )
 
+    def __init__(self,*args,**kw):
+        kw['search_url'] =  url("/groups/by_name?anywhere=1")
+        kw['search_name'] = 'group'
+        super(Groups,self).__init__(*args,**kw)
+
+        self.search_col = Group.group_name
+        self.search_mapper = Group
+        
+
     @expose(format='json')
-    def by_name(self, name):
-        name = name.lower()
-        search = Group.list_by_name(name)
+    def by_name(self, input,*args,**kw):
+        input = input.lower()
+        if 'anywhere' in kw:
+            search = Group.list_by_name(input, find_anywhere=True)
+        else:
+            search = Group.list_by_name(input)
+
         groups =  [match.group_name for match in search]
-        return dict(groups=groups)
+        return dict(matches=groups)
     
     @identity.require(identity.in_group("admin"))
     @expose(template='bkr.server.templates.form')
@@ -93,7 +113,10 @@ class Groups(RPCRoot):
         return widgets.DataGrid(fields=user_fields)
 
     @expose(template='bkr.server.templates.grid')
-    def systems(self,group_id,*args,**kw):
+    def systems(self,group_id=None,*args,**kw):
+        if group_id is None:
+            flash(_(u'Need a valid group to search on'))
+            redirect(url('/groups'))
         systems = System.by_group(group_id)
         system_link = ('System', lambda x: x.link)
         group = Group.by_id(group_id)
@@ -171,10 +194,15 @@ class Groups(RPCRoot):
         flash( _(u"OK") )
         redirect("./edit?id=%s" % kw['group_id'])
 
-    @expose(template="bkr.server.templates.grid_add")
-    @paginate('list')
-    def index(self):
+    @expose(template="bkr.server.templates.admin_grid")
+    @paginate('list', default_order='group_name', allow_limit_override=True)
+    def index(self,*args,**kw):
         groups = session.query(Group)
+        list_by_letters = set([elem.group_name[0].capitalize() for elem in groups])
+        result = self.process_search(**kw)
+        if result:
+            groups = result
+
         if not 'admin' in identity.current.groups:
             group_name =('Group Name', lambda x: make_link('group_members?id=%s' % x.group_id,x.group_name))
             remove_link = None 
@@ -196,11 +224,14 @@ class Groups(RPCRoot):
         potential_grid = (group_name,display_name,systems,remove_link)     
         actual_grid = [elem for elem in potential_grid if elem is not None]
    
-        groups_grid = widgets.PaginateDataGrid(fields=actual_grid)
+        groups_grid = myPaginateDataGrid(fields=actual_grid)
+        search_group_form = widgets.TableForm('SearchGroup',fields=[self.search_groups],action='.',submit_test=_(u'Search'),)
         return_dict = dict(title="Groups", 
                            grid = groups_grid,
+                           alpha_nav_bar = AlphaNavBar(list_by_letters,'group'),
                            object_count = groups.count(),
-                           search_bar = None,
+                           addable = self.add,
+                           search_widget = self.search_widget_form, 
                            list = groups)
         if 'template' in locals():
             return_dict['tg_template'] = template
@@ -256,3 +287,4 @@ class Groups(RPCRoot):
     def get_group_systems(self, group_id=None, *args, **kw):
         systems = Group.by_id(group_id).systems
         return [(system.id, system.fqdn) for system in systems]
+

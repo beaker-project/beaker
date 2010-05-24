@@ -8,10 +8,11 @@
 <body>
 <h2>$title</h2>
 <span>
-${search_users.display()} 
+${search_widget.display()} 
 </span>
 ${alpha_nav_bar.display()}
 ${grid.display(list)}
-<a href="${tg.url('./new')}">Add ( + )</a>
+
+<a py:if="addable is not False" href="${tg.url('./new')}">Add ( + )</a>
 </body>
 </html>
