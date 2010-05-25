@@ -121,10 +121,15 @@ class Convert(object):
             if 'kernel_options' in recipe._attrs:
                 kernel_options = '%s ' % recipe.getAttribute('kernel_options')
             if 'bootargs' in recipe._attrs:
-                recipe.setAttribute('kernel_options',"%s%s" % (kernel_options, 
-                                                                recipe.getAttribute('bootargs')))
+                kernel_options = '%s%s' % (kernel_options, recipe.getAttribute('bootargs'))
+                recipe.setAttribute('kernel_options',kernel_options)
                 recipe.removeAttribute('bootargs')
             for child in recipe.childNodes:
+                if child.nodeType == child.ELEMENT_NODE and \
+                   child.tagName == 'bootargs':
+                       del_nodes.append(child)
+                       kernel_options = '%s%s' % (kernel_options, self.getText(child.childNodes))
+                       recipe.setAttribute('kernel_options' , kernel_options)
                 if child.nodeType == child.ELEMENT_NODE and \
                    child.tagName == 'distroRequires':
                        del_nodes.append(child)
