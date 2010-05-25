@@ -99,6 +99,11 @@ class BeakerWorkflow(BeakerCommand):
             help="Include tasks of this type in job",
         )
         self.parser.add_option(
+            "--systype",
+            default=None,
+            help="Specify the System Type (Machine, Laptop, etc..)",
+        )
+        self.parser.add_option(
             "--keyvalues",
             action="append",
             default=[],
@@ -123,6 +128,7 @@ class BeakerWorkflow(BeakerCommand):
         password = kwargs.get("password", None)
         types    = kwargs.get("type", None)
         packages = kwargs.get("package", None)
+        tasks    = kwargs.get("task", [])
 
         filter = dict()
         if types:
@@ -130,7 +136,6 @@ class BeakerWorkflow(BeakerCommand):
         if packages:
             filter['packages'] = packages
         
-        tasks = list(args)
         if types or packages:
             self.set_hub(username, password)
             tasks.extend(self.hub.tasks.filter(filter))
@@ -205,6 +210,7 @@ class BeakerRecipe(BeakerBase):
         distro = kwargs.get("distro", None)
         family = kwargs.get("family", None)
         tags = kwargs.get("tag", [])
+        systype = kwargs.get("systype", None)
         if distro:
             distroName = self.doc.createElement('distro_name')
             distroName.setAttribute('op', '=')
@@ -220,6 +226,11 @@ class BeakerRecipe(BeakerBase):
             distroTag.setAttribute('op', '=')
             distroTag.setAttribute('value', '%s' % tag)
             self.addDistroRequires(distroTag)
+        if systype:
+            systemType = self.doc.createElement('system_type')
+            systemType.setAttribute('op', '=')
+            systemType.setAttribute('value', '%s' % systype)
+            self.addHostRequires(systemType)
 
     def addHostRequires(self, node):
         self.andHostRequires.appendChild(node)

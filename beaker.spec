@@ -7,7 +7,7 @@
 
 Name:           beaker
 Version:        0.5.39
-Release:        6%{?timestamp}%{?branch}%{?dist}
+Release:        7%{?timestamp}%{?branch}%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+

@@ -15,7 +15,7 @@ class Workflow_Simple(BeakerWorkflow):
 
     def options(self):
         super(Workflow_Simple, self).options()
-        self.parser.usage = "%%prog %s [options] <task> <task>" % self.normalized_name
+        self.parser.usage = "%%prog %s [options]" % self.normalized_name
 
     def run(self, *args, **kwargs):
         username = kwargs.get("username", None)
@@ -34,6 +34,10 @@ class Workflow_Simple(BeakerWorkflow):
 
         if not family and not distro:
             sys.stderr.write("No Family or Distro specified\n")
+            sys.exit(1)
+
+        if not arches:
+            sys.stderr.write("No arches specified, you must specify at least one\n")
             sys.exit(1)
 
         if not requestedTasks:
