@@ -73,7 +73,7 @@ class Tasks(RPCRoot):
         """
         XMLRPC method to query all tasks that apply to this distro
         """
-        if 'install_name' in filter:
+        if 'install_name' in filter and filter['install_name']:
             try:
                 distro = Distro.by_install_name(filter['install_name'])
             except InvalidRequestError, err:
