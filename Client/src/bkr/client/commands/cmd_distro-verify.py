@@ -14,6 +14,11 @@ class Distros_Verify(BeakerCommand):
         self.parser.usage = "%%prog %s" % self.normalized_name
 
         self.parser.add_option(
+            "--broken",
+            action="store_true",
+            help="Only show distros not synced on every lab",
+        )
+        self.parser.add_option(
             "--limit",
             default=None,
             help="Limit results to this many",
@@ -48,6 +53,7 @@ class Distros_Verify(BeakerCommand):
     def run(self, *args, **kwargs):
         username = kwargs.pop("username", None)
         password = kwargs.pop("password", None)
+        onlybroken = kwargs.pop("broken", False)
         filter = dict( limit    = kwargs.pop("limit", None),
                        name     = kwargs.pop("name", None),
                        treepath = kwargs.pop("treepath", None),
@@ -57,14 +63,15 @@ class Distros_Verify(BeakerCommand):
                      )
 
         self.set_hub(username, password)
-        lab_controllers = self.hub.lab_controllers()
+        lab_controllers = set(self.hub.lab_controllers())
         distros = self.hub.distros.filter(filter)
         if distros:
             for distro in distros:
-                print "%s Tags:%s" % (distro[0], distro[7])
-                for lab in lab_controllers:
-                    if lab not in distro[8]:
-                        print "missing from lab %s" % lab
+                broken = lab_controllers.difference(set(distro[8]))
+                if not onlybroken or broken:
+                    print "%s Tags:%s" % (distro[0], distro[7])
+                    if broken:
+                        print "missing from labs %s" % list(broken)
         else:
             sys.stderr.write("Nothing Matches\n")
             sys.exit(1)
