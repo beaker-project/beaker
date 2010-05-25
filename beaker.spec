@@ -6,8 +6,8 @@
 %endif
 
 Name:           beaker
-Version:        0.5.39
-Release:        7%{?timestamp}%{?branch}%{?dist}
+Version:        0.5.40
+Release:        0%{?timestamp}%{?branch}%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -185,6 +185,21 @@ fi
 %{_sysconfdir}/init.d/%{name}-watchdog
 
 %changelog
+* Tue May 25 2010 Bill Peck <bpeck@redhat.com> - 0.5.40-0
+- minor fixes in command line workflow.
+- minor fixes in command line task list.
+- added new command distro-verify to help admins.
+- 592978 "Change Job detail page to use AJAX for showing results"
+- 570186 "[Beaker] RFE: Ability to set system owner to a group or individual"
+- 541290 "[Beaker] RFE: Consistent use of the terminology."
+- 580090 "Beaker doesn't take into account boot command line parameters"
+- 594746 "[Beaker] [Execute Tasks] View does not report sub test results."
+- 559337 "[Beaker] RFE: executed test report"
+- 584586 "Importing labinfo results in 500 ISE"
+- 584587 "Importing excludes doesn't work"
+- 591147 "strange listing of systems with a particular devices"
+- 591401 "RFE: User style searches for other admin pages."
+- 594038 "Increase proper error handling"
 * Mon May 17 2010 Bill Peck <bpeck@redhat.com> - 0.5.39-0
 - fix job_matrix report to show virt recipes as well.
 * Mon May 17 2010 Bill Peck <bpeck@redhat.com> - 0.5.38-1
