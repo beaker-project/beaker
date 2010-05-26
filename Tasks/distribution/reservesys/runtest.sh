@@ -152,7 +152,17 @@ chmod 777 $SCRIPT2
 NOTIFY()
 {
     /sbin/service sendmail start
-    mail -s "$HOSTNAME" $SUBMITTER < /etc/motd
+    local msg=$(mktemp)
+
+cat > $msg <<-EOF
+To: $SUBMITTER
+Subject: $HOSTNAME
+X-RHTS-test: $TEST
+
+EOF
+    cat /etc/motd >>$msg
+    cat $msg | sendmail -t
+    \rm -f $msg
 }
 
 WATCHDOG()
