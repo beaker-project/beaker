@@ -91,7 +91,7 @@ $(document).ready(function() {
    <td class="value">${recipe.recipeset.queue_time}</td>
    <td class="title"><b>Started</b></td>
    <td class="value">${recipe.start_time}</td>
-   <td class="title"><b>Finsihed</b></td>
+   <td class="title"><b>Finished</b></td>
    <td class="value">${recipe.finish_time}</td>
    <td class="title"><b>Duration</b></td>
    <td class="value">${recipe.duration}</td>
