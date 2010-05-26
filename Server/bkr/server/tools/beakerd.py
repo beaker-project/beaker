@@ -293,7 +293,7 @@ def queued_recipes(*args):
                     else:
                         # The system was taken from underneath us.  Put recipe
                         # back into queued state and try again.
-                        recipe.queue()
+                        raise BX(_('System %s was stolen from underneath us. will try again.' % system))
                 else:
                     #Some other thread beat us. Skip this recipe now.
                     # Depending on scheduler load it should be safe to run multiple
