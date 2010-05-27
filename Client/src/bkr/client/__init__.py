@@ -4,6 +4,7 @@ import os
 import xml.dom.minidom
 import sys
 import copy
+import re
 from kobo.client import ClientCommand
 
 class BeakerCommand(ClientCommand):
@@ -265,12 +266,12 @@ class BeakerRecipe(BeakerBase):
         self.andHostRequires = self.doc.createElement('and')
         distroRequires = self.doc.createElement('distroRequires')
         hostRequires = self.doc.createElement('hostRequires')
-        repos = self.doc.createElement('repos')
+        self.repos = self.doc.createElement('repos')
         distroRequires.appendChild(self.andDistroRequires)
         hostRequires.appendChild(self.andHostRequires)
         self.node.appendChild(distroRequires)
         self.node.appendChild(hostRequires)
-        self.node.appendChild(repos)
+        self.node.appendChild(self.repos)
 
     def addBaseRequires(self, *args, **kwargs):
         """ Add base requires """
