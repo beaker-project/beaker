@@ -23,9 +23,9 @@ class Workflow_Simple(BeakerWorkflow):
         # get all tasks requested
         requestedTasks = self.getTasks(*args, **kwargs)
 
-        debug   = kwargs.get("debug", False)
-        dryrun  = kwargs.get("dryrun", False)
-        nowait  = kwargs.get("nowait", False)
+        debug  = kwargs.get("debug", False)
+        dryrun = kwargs.get("dryrun", False)
+        nowait = kwargs.get("nowait", False)
 	family = kwargs.get("family", None)
 	distro = kwargs.get("distro", None)
 	arches = kwargs.get("arch", [])
