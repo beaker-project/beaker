@@ -231,6 +231,7 @@ class Groups(AdminPage):
                            alpha_nav_bar = AlphaNavBar(list_by_letters,'group'),
                            object_count = groups.count(),
                            addable = self.add,
+                           search_bar = None,
                            search_widget = self.search_widget_form, 
                            list = groups)
         if 'template' in locals():
