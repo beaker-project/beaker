@@ -308,6 +308,13 @@ class BeakerRecipe(BeakerBase):
             distroTag.setAttribute('op', '=')
             distroTag.setAttribute('value', '%s' % tag)
             self.addDistroRequires(distroTag)
+        # If no tag is asked for default to distros tagged as STABLE
+        # But only if we didn't ask for a specific distro
+        if not tags and not distro:
+            distroTag = self.doc.createElement('distro_tag')
+            distroTag.setAttribute('op', '=')
+            distroTag.setAttribute('value', 'STABLE')
+            self.addDistroRequires(distroTag)
         if systype:
             systemType = self.doc.createElement('system_type')
             systemType.setAttribute('op', '=')
