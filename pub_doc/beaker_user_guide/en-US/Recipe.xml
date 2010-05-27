@@ -13,11 +13,13 @@
 		<para>
 			The Recipe search is accessed through the <literal>Scheduler</literal> at the top of the page, and clicking on the <literal>Recipe</literal> link.
 		</para>
-		<mediaobject>
-			<imageobject>
-				<imagedata fileref="./images/recipe_search.png" format="PNG" width="444" />
-			</imageobject>
-		</mediaobject>
+		<figure><title>Searching for a Recipe</title>
+			<mediaobject>
+				<imageobject>
+					<imagedata fileref="./images/recipe_search.png" format="PNG" width="444" />
+				</imageobject>
+			</mediaobject>
+		</figure>
 		<para>
 			To look up the <literal>Recipe ID</literal> enter a number into the search box and press the <literal>Lookup ID</literal> button. See <xref linkend="sect-beaker_user_guide-Components-Systems-System_Searching"/> for details on searching.
 			<note>

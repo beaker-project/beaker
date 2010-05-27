@@ -14,11 +14,13 @@
 			<para>
 				Go to the System details page (see <xref linkend="sect-beaker_user_guide-Components-Systems-System_Details" />) of a System that is free (see <xref linkend="sect-beaker_user_guide-Components-Systems-System_Searching" />) and click on <literal>Take</literal> in the <literal>Current User</literal> field. After successfully taking the System, click the <literal>Provision</literal> tab of the System details page to provision the System.
 			</para>
-			<mediaobject>
-				<imageobject>
-					<imagedata fileref="./images/system_provision_by_system.png" format="PNG" width="444" />
-				</imageobject>
-			</mediaobject>
+			<figure><title>Provisioning a System via it's details page</title>
+				<mediaobject>
+					<imageobject>
+						<imagedata fileref="./images/system_provision_by_system.png" format="PNG" width="444" />
+					</imageobject>
+				</mediaobject>
+			</figure>
 		</section>
 		
 		<section id="sect-beaker_user_guide-Components-System_Provisioning-Provision_by_Distro">
