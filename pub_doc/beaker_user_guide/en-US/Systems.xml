@@ -30,12 +30,13 @@
 					</listitem>
 				</varlistentry>
                          </variablelist>
-		
-			<mediaobject>
-				<imageobject>
-					<imagedata fileref="./images/system_menu.png" format="PNG" width="444" />
-				</imageobject>
-			</mediaobject>
+			<figure><title>System menu</title>				
+				<mediaobject>
+					<imageobject>
+						<imagedata fileref="./images/system_menu.png" format="PNG" width="444" />
+					</imageobject>
+				</mediaobject>
+			</figure>
 		</para>
 		<para>
 			The search panel has two modes; simple and advanced. The simple search is the default, and the default search is of the System <literal>Name</literal>, using the <literal>contains</literal> operator. To toggle between the two search modes, press the <literal>Toggle Search</literal> link.
@@ -53,11 +54,13 @@
 		<para>
 			The kind of data returned in the System search can be changed by adding/removing the result columns. To do this the <literal>Toggle Result Columns</literal> link is pressed and the columns checked/unchecked.
 		</para>
-		<mediaobject>
-			<imageobject>
-				<imagedata fileref="./images/system_search_panel.png" format="PNG" width="444" />
-			</imageobject>
-		</mediaobject>
+		<figure><title>Searching for a System</title>
+			<mediaobject>
+				<imageobject>
+					<imagedata fileref="./images/system_search_panel.png" format="PNG" width="444" />
+				</imageobject>
+			</mediaobject>
+		</figure>
 		<para>
 			<note>
 				<title>Shortcut for finding Systems you are using</title>
@@ -73,11 +76,13 @@
 		<para>
 			To add a System, go to any System search page, and click on the <literal>Add(+)</literal> link on the bottom left. You must be logged in to do this. After filling in the details, press the <literal>Save Changes</literal> button on the bottom left hand corner.
 		</para>
-		<mediaobject>
-			<imageobject>
-				<imagedata fileref="./images/system_add.png" format="PNG" width="444" />
-			</imageobject>
-		</mediaobject>
+		<figure><title>Adding a System</title>
+			<mediaobject>
+				<imageobject>
+					<imagedata fileref="./images/system_add.png" format="PNG" width="444" />
+				</imageobject>
+			</mediaobject>
+		</figure>
 	</section>
 	
 	<section id="sect-beaker_user_guide-Components-Systems-System_Details">
@@ -180,11 +185,13 @@
 					To search the history of a specific System, see the <literal>History</literal> tab in <xref linkend="sect-beaker_user_guide-Components-Systems-System_Details" />
 				</para>
 			</note>
-			<mediaobject>
-				<imageobject>
-					<imagedata fileref="./images/system_activity_all.png" format="PNG" width="444" />
-				</imageobject>
-			</mediaobject>
+			<figure><title>Searching through all System's activities</title>
+				<mediaobject>
+					<imageobject>
+						<imagedata fileref="./images/system_activity_all.png" format="PNG" width="444" />
+					</imageobject>
+				</mediaobject>
+			</figure>
 		</para>
 	</section>
 </section>

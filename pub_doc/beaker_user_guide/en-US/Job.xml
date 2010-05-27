@@ -9,8 +9,10 @@
 		The purpose of a Job is to provide an encapsulation of Tasks. It is to provide a single point of submission of these Tasks, and a single point of reviewing the output and results of these Tasks. The Tasks within a Job may or may not be related to each other; although it would make sense to define Jobs based on the relationship of the Tasks within it. Once a Job has been submitted you can not alter it's contents, or pause it. You can however cancel it (<xref linkend="sect-beaker_user_guide-Components-Jobs-Job_Submission-Job_Results" />), and alter it's priority (
 	</para> 
 	<section id="sect-beaker_user_guide-Components-Jobs-Job_Workflow">
-		<title>Job Workflow<remark>Empty!</remark></title>
-		<para></para>
+		<title>Job Workflow</title>
+		<para>
+			To create a simple Job workflow, see the <literal>bkr workflow-simple</literal> command in <xref linkend="chap-beaker_user_guide-CLI" />
+		</para>
 	
 	</section>
 	<section id="sect-beaker_user_guide-Components-Jobs-Job_Searching">
@@ -45,11 +47,13 @@
 			<para>
 				Cloning a Job means to take a Job that has already been run on the System, and re-submit it. To do this you first need to be on the Job search page. See <xref linkend="sect-beaker_user_guide-Components-Jobs-Job_Searching" />.
 			</para>
-			<mediaobject>
-				<imageobject>
-					<imagedata fileref="./images/job_submit_clone.png" format="PNG" width="444" />
-				</imageobject>
-			</mediaobject>
+			<figure><title>Cloning a Job</title>
+				<mediaobject>
+					<imageobject>
+						<imagedata fileref="./images/job_submit_clone.png" format="PNG" width="444" />
+					</imageobject>
+				</mediaobject>
+			</figure>
 			<para>
 				Clicking on <literal>Clone</literal> under the <literal>Action</literal> column will take you to a page that shows the structure of the Job in the XML.
 			</para>
@@ -80,12 +84,13 @@
 					If you are not an Admin you will only be able to lower the priority. Admins can lower and raise the priority
 				</para>
 			</note>
-			<mediaobject>
-				<imageobject>
-					<imagedata fileref="./images/job_priority_change.png" format="PNG" width="444" />
-				</imageobject>
-			</mediaobject>
-			
+			<figure><title>Changing the priority of a Job's Recipe Set</title>
+				<mediaobject>
+					<imageobject>
+						<imagedata fileref="./images/job_priority_change.png" format="PNG" width="444" />
+					</imageobject>
+				</mediaobject>
+			</figure>
 				
 			
 			<para>

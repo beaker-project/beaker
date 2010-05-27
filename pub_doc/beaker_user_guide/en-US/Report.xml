@@ -15,12 +15,13 @@
                 The <literal>Matrix</literal> report gives a user an overall picture of results for any given Job, or number of Jobs combined. It shows a matrix of
                 Tasks run and the Arch that they were run on. The <literal>Reports-&gt;Matrix</literal> is accesable from the top menu.		
 		</para>
-
-		<mediaobject>
-			<imageobject>
-				<imagedata fileref="./images/report_matrix.png" format="PNG" width="444" />
-			</imageobject>
-		</mediaobject>
+		<figure><title>Generating a Matrix report from the Job's Whiteboard</title>
+			<mediaobject>
+				<imageobject>
+					<imagedata fileref="./images/report_matrix.png" format="PNG" width="444" />
+				</imageobject>
+			</mediaobject>
+		</figure>
                
                 <para>
                 There are two ways of defining what Job results to display. You can select the Job by it's <literal>Whiteboard</literal>, or by it's <literal>Job ID</literal>. 
@@ -35,21 +36,25 @@
                   by <literal>Job ID</literal>. Enter in all the relevant <literal>Job IDs</literal> seperate by whitespace or a newline.</para>
                  </note>
                 </para> 
-		<mediaobject>
-			<imageobject>
-				<imagedata fileref="./images/report_matrix_generate.png" format="PNG" />
-			</imageobject>
-		</mediaobject>
+		<figure><title>Generating a Matrix report from the Job ID</title>
+			<mediaobject>
+				<imageobject>
+					<imagedata fileref="./images/report_matrix_generate.png" format="PNG" />
+				</imageobject>
+			</mediaobject>
+		</figure>
                 <para>
                 The generated Matrix report shows the result of each Task with it's corresponding Arch and Recipe Whiteboard. The points in the matrix describe the result of the 
                 Task, and how many occurences of that result there are. Clicking on these results will take you to the <literal>Executed Tasks</literal> page. 
                 See <xref linkend="sect-beaker_user_guide-Components-Tasks-Task_Searching" />.
                 </para>
-		<mediaobject>
-			<imageobject>
-				<imagedata fileref="./images/report_matrix_results.png" format="PNG" />
-			</imageobject>
-		</mediaobject>
+		<figure><title>Viewing the result of one or more Jobs via the Matrix report</title>
+			<mediaobject>
+				<imageobject>
+					<imagedata fileref="./images/report_matrix_results.png" format="PNG" />
+				</imageobject>
+			</mediaobject>
+		</figure>
                
                 
 
