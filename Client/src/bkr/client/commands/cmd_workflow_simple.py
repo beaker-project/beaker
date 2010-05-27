@@ -2,11 +2,10 @@
 
 
 from bkr.client.task_watcher import *
-from bkr.client import BeakerCommand, BeakerWorkflow, BeakerJob, BeakerRecipe
+from bkr.client import BeakerCommand, BeakerWorkflow, BeakerJob, BeakerRecipeSet, BeakerRecipe
 from optparse import OptionValueError
 import sys
 import xml.dom.minidom
-import copy
 
 class Workflow_Simple(BeakerWorkflow):
     """Simple workflow to generate job to scheduler"""
@@ -55,24 +54,34 @@ class Workflow_Simple(BeakerWorkflow):
 
         # Add Host Requirements
 
-        # Add tasks that have been requested
-        for task in requestedTasks:
-            recipeTemplate.addTask(task, taskParams=taskParams)
 
         for arch in arches:
-            # Copy basic requirements
-            recipe = copy.deepcopy(recipeTemplate)
-
             arch_node = self.doc.createElement('distro_arch')
             arch_node.setAttribute('op', '=')
             arch_node.setAttribute('value', arch)
-            recipe.addDistroRequires(arch_node)
-
-            job.addRecipe(recipe)
-
+            if self.multi_host:
+                recipeSet = BeakerRecipeSet()
+                for i in range(self.n_servers):
+                    recipeSet.addRecipe(self.processTemplate(recipeTemplate, 
+                                                             requestedTasks,
+                                                             taskParams=taskParams,
+                                                             distroRequires=arch_node, 
+                                                             role='SERVERS'))
+                for i in range(self.n_clients):
+                    recipeSet.addRecipe(self.processTemplate(recipeTemplate, 
+                                                             requestedTasks,
+                                                             taskParams=taskParams,
+                                                             distroRequires=arch_node, 
+                                                             role='CLIENTS'))
+                job.addRecipeSet(recipeSet)
+            else:
+                job.addRecipe(self.processTemplate(recipeTemplate,
+                                                   requestedTasks,
+                                                   taskParams=taskParams,
+                                                   distroRequires=arch_node))
 
         # jobxml
-        jobxml = job.toxml()
+        jobxml = job.toxml(**kwargs)
 
         if debug:
             print jobxml
@@ -90,7 +99,5 @@ class Workflow_Simple(BeakerWorkflow):
         if not dryrun:
             if not nowait:
                 TaskWatcher.watch_tasks(self.hub, submitted_jobs)
-            for submitted_job in submitted_jobs:
-                print self.hub.taskactions.to_xml(submitted_job)
             if failed:
                 sys.exit(1)

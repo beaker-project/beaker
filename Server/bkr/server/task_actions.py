@@ -54,7 +54,7 @@ class TaskActions(RPCRoot):
                 task = self.task_types[task_type.upper()].by_id(task_id)
             except InvalidRequestError, e:
                 raise BX(_("Invalid %s %s" % (task_type, task_id)))
-        return task.to_xml().toprettyxml()
+        return task.to_xml().toxml()
 
     @cherrypy.expose
     def stop(self, taskid, stop_type, msg):

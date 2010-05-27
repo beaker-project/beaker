@@ -3,6 +3,7 @@
 import os
 import xml.dom.minidom
 import sys
+import copy
 from kobo.client import ClientCommand
 
 class BeakerCommand(ClientCommand):
@@ -25,9 +26,22 @@ class BeakerCommand(ClientCommand):
 class BeakerWorkflow(BeakerCommand):
     doc = xml.dom.minidom.Document()
 
+    def __init__(self, *args, **kwargs):
+        """ Initialize Workflow """
+        super(BeakerWorkflow, self).__init__(*args, **kwargs)
+        self.multi_host = False
+        self.n_clients = 1
+        self.n_servers = 1
+
     def options(self):
         """ Default options that all Workflows use """
 
+        self.parser.add_option(
+            "--prettyxml",
+            default=False,
+            action="store_true",
+            help="print the xml in pretty format",
+        )
         self.parser.add_option(
             "--debug",
             default=False,
@@ -120,6 +134,18 @@ class BeakerWorkflow(BeakerCommand):
             action="store_true",
             help="Don't wait on job completion",
         )
+        self.parser.add_option(
+            "--clients",
+            default=None,
+            type=int,
+            help="Specify how many client hosts to be involved in multihost test",
+        )
+        self.parser.add_option(
+            "--servers",
+            default=None,
+            type=int,
+            help="Specify how many server hosts to be involved in multihost test",
+        )
 
     def getTasks(self, *args, **kwargs):
         """ get all requested tasks """
@@ -129,6 +155,11 @@ class BeakerWorkflow(BeakerCommand):
         types    = kwargs.get("type", None)
         packages = kwargs.get("package", None)
         tasks    = kwargs.get("task", [])
+        self.n_clients = kwargs.get("clients", None)
+        self.n_servers = kwargs.get("servers", None)
+
+        if self.n_clients or self.n_servers:
+            self.multi_host = True
 
         filter = dict()
         if types:
@@ -136,18 +167,52 @@ class BeakerWorkflow(BeakerCommand):
         if packages:
             filter['packages'] = packages
         
+        self.set_hub(username, password)
         if types or packages:
-            self.set_hub(username, password)
             tasks.extend(self.hub.tasks.filter(filter))
 
+        multihost_tasks = self.hub.tasks.filter(dict(types=['Multihost']))
+
+        if self.multi_host:
+            for t in tasks[:]:
+                if t not in multihost_tasks:
+                    #FIXME add debug print here
+                    tasks.remove(t)
+        else:
+            for t in tasks[:]:
+                if t in multihost_tasks:
+                    #FIXME add debug print here
+                    tasks.remove(t)
         return tasks
+
+    def processTemplate(self, recipeTemplate,
+                         requestedTasks,
+                         taskParams=[],
+                         distroRequires=None,
+                         hostRequires=None,
+                         role='STANDALONE'):
+        """ add tasks and additional requires to our template """
+        # Copy basic requirements
+        recipe = copy.deepcopy(recipeTemplate)
+        if distroRequires:
+            recipe.addDistroRequires(copy.deepcopy(distroRequires))
+        if hostRequires:
+            recipe.addHostRequires(copy.deepcopy(hostRequires))
+        for task in requestedTasks:
+            recipe.addTask(task, role=role, taskParams=taskParams)
+        return recipe
+
 
 class BeakerBase(object):
     doc = xml.dom.minidom.Document()
 
-    def toxml(self):
+    def toxml(self, prettyxml=False, **kwargs):
         """ return xml of job """
-        return self.node.toprettyxml()
+        if prettyxml:
+            myxml = self.node.toprettyxml()
+        else:
+            myxml = self.node.toxml()
+        return myxml
 
 class BeakerJob(BeakerBase):
     def __init__(self, *args, **kwargs):
@@ -231,6 +296,8 @@ class BeakerRecipe(BeakerBase):
             systemType.setAttribute('op', '=')
             systemType.setAttribute('value', '%s' % systype)
             self.addHostRequires(systemType)
+        # Add in install task
+        self.addTask('/distribution/install')
 
     def addHostRequires(self, node):
         self.andHostRequires.appendChild(node)

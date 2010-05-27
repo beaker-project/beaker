@@ -4,26 +4,31 @@
 from bkr.client import BeakerCommand
 from optparse import OptionValueError
 from bkr.client.task_watcher import *
+from xml.dom.minidom import Document, parseString
 
-class Job_Watch(BeakerCommand):
-    """Watch Jobs/Recipes"""
+class Job_Results(BeakerCommand):
+    """Get Jobs/Recipes Results"""
     enabled = True
 
     def options(self):
         self.parser.usage = "%%prog %s [options] <taskspec>..." % self.normalized_name
         self.parser.add_option(
-            "--nowait",
+            "--prettyxml",
             default=False,
             action="store_true",
-            help="Don't wait on job completion",
+            help="Pretty print the xml",
         )
 
 
     def run(self, *args, **kwargs):
         username = kwargs.pop("username", None)
         password = kwargs.pop("password", None)
-        nowait   = kwargs.pop("nowait", None)
+        prettyxml   = kwargs.pop("prettyxml", None)
 
         self.set_hub(username, password)
-        if not nowait:
-            TaskWatcher.watch_tasks(self.hub, args)
+        for task in args:
+            myxml = self.hub.taskactions.to_xml(task)
+            if prettyxml:
+                print xml.dom.minidom.parseString(myxml).toprettyxml()
+            else:
+                print myxml
