@@ -118,10 +118,10 @@ class BeakerWorkflow(BeakerCommand):
             help="Specify the System Type (Machine, Laptop, etc..)",
         )
         self.parser.add_option(
-            "--keyvalues",
+            "--keyvalue",
             action="append",
             default=[],
-            help="Specify a system that matches these key/values",
+            help="Specify a system that matches this key/value Example: NETWORK=e1000 ",
         )
         self.parser.add_option(
             "--whiteboard",
@@ -265,17 +265,23 @@ class BeakerRecipe(BeakerBase):
         self.andHostRequires = self.doc.createElement('and')
         distroRequires = self.doc.createElement('distroRequires')
         hostRequires = self.doc.createElement('hostRequires')
+        repos = self.doc.createElement('repos')
         distroRequires.appendChild(self.andDistroRequires)
         hostRequires.appendChild(self.andHostRequires)
         self.node.appendChild(distroRequires)
         self.node.appendChild(hostRequires)
+        self.node.appendChild(repos)
 
     def addBaseRequires(self, *args, **kwargs):
         """ Add base requires """
         distro = kwargs.get("distro", None)
         family = kwargs.get("family", None)
+        variant = kwargs.get("variant", None)
         tags = kwargs.get("tag", [])
         systype = kwargs.get("systype", None)
+        machine = kwargs.get("machine", None)
+        keyvalues = kwargs.get("keyvalue", [])
+        repos = kwargs.get("repo", [])
         if distro:
             distroName = self.doc.createElement('distro_name')
             distroName.setAttribute('op', '=')
@@ -286,6 +292,16 @@ class BeakerRecipe(BeakerBase):
             distroFamily.setAttribute('op', '=')
             distroFamily.setAttribute('value', '%s' % family)
             self.addDistroRequires(distroFamily)
+        if variant:
+            distroVariant = self.doc.createElement('distro_variant')
+            distroVariant.setAttribute('op', '=')
+            distroVariant.setAttribute('value', '%s' % variant)
+            self.addDistroRequires(distroVariant)
+        for i, repo in enumerate(repos):
+            myrepo = self.doc.createElement('repo')
+            myrepo.setAttribute('name', 'myrepo_%s' % i)
+            myrepo.setAttribute('url', '%s' % repo)
+            self.addRepo(myrepo)
         for tag in tags:
             distroTag = self.doc.createElement('distro_tag')
             distroTag.setAttribute('op', '=')
@@ -296,8 +312,24 @@ class BeakerRecipe(BeakerBase):
             systemType.setAttribute('op', '=')
             systemType.setAttribute('value', '%s' % systype)
             self.addHostRequires(systemType)
+        if machine:
+            hostMachine = self.doc.createElement('hostname')
+            hostMachine.setAttribute('op', '=')
+            hostMachine.setAttribute('value', '%s' % machine)
+            self.addHostRequires(hostMachine)
+        p2 = re.compile(r'([\!=<>]+|&gt;|&lt;)')
+        for keyvalue in keyvalues:
+            key, op, value = p2.split(keyvalue,3)
+            mykeyvalue = self.doc.createElement('key_value')
+            mykeyvalue.setAttribute('key', '%s' % key)
+            mykeyvalue.setAttribute('op', '%s' % op)
+            mykeyvalue.setAttribute('value', '%s' % value)
+            self.addHostRequires(mykeyvalue)
         # Add in install task
         self.addTask('/distribution/install')
+
+    def addRepo(self, node):
+        self.repos.appendChild(node)
 
     def addHostRequires(self, node):
         self.andHostRequires.appendChild(node)
