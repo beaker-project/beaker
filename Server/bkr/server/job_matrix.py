@@ -262,6 +262,7 @@ class JobMatrix:
                 class InnerDynamo(object):
                     pass
                 mapper(InnerDynamo,s1)
+
                                                         
                 dyn = InnerDynamo.query() 
                
@@ -287,7 +288,8 @@ class JobMatrix:
         # return a InnerDynamo object. There should be one TaskR object for each
         # task name
         result_data = []
-        for task_name,arch_whiteboard_val in my_hash.items():
+        sorted_hash = sorted(my_hash.items())
+        for task_name,arch_whiteboard_val in sorted_hash:
             n = TaskR(task_name)     
 
             for arch,whiteboard_val in arch_whiteboard_val.items():
