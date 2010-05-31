@@ -883,7 +883,7 @@ class Root(RPCRoot):
         for arch in system.arch:
             options['excluded_families'].append((arch.arch, [(osmajor.id, osmajor.osmajor, [(osversion.id, '%s' % osversion, attrs) for osversion in osmajor.osversion],attrs) for osmajor in OSMajor.query()]))
         try:
-            can_admin = system.is_admin(user_id = identity.current.user.user_id)
+            can_admin = system.can_admin(user = identity.current.user)
         except AttributeError,e:
             can_admin = False
 
