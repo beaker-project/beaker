@@ -16,7 +16,7 @@
 		<para>
 		To search for a Task, go to <guimenu>Scheduler</guimenu>&gt;<guimenuitem>Task Library</guimenuitem> at the top of the page.
                 The default search is on the <literal>Name</literal> property, with the <literal>contains</literal> operator. See <xref linkend="advanced_search" /> for search details.</para>
-                <para>Once you've found a particular Task, you can see it's details by clicking on the Link in the <literal>Name</literal> column.
+                <para>Once you've found a particular Task, you can see its details by clicking on the Link in the <literal>Name</literal> column.
 		</para>
                   
                 <para>

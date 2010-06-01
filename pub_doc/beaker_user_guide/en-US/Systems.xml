@@ -42,7 +42,7 @@
 			The search panel has two modes; simple and advanced. The simple search is the default, and the default search is of the System <literal>Name</literal>, using the <literal>contains</literal> operator. To toggle between the two search modes, press the <literal>Toggle Search</literal> link.
 		</para>
 		<para id="advanced_search">
-			The advanced search panel is reasonably self explanatory. The first column(<literal>Table</literal>) is the attribute on which the search is being performed, the second(<literal>Operation</literal>) is the type of search, and the third(<literal>Value</literal>) is the actual value to search on.
+			The first column(<literal>Table</literal>) is the attribute on which the search is being performed, the second(<literal>Operation</literal>) is the type of search, and the third(<literal>Value</literal>) is the actual value to search on. To add another search criteria (row), click the <literal>Add( + )</literal> link just below the <literal>Table</literal> column. When using more than just one search criteria, the defaul operation between the criterias is an SQL AND operation.
                         The operators change depending on what type of attribute is being searched. 
 			<note>
 				<title>Wildcards</title>
@@ -65,7 +65,7 @@
 			<note>
 				<title>Shortcut for finding Systems you are using</title>
 				<para>
-					The top right hand corner has a menu which srarts with <literal>Hello,</literal> followed by the name of the user currently logged in. Click on this, then down to <literal>My Systems</literal>
+					The top right hand corner has a menu which starts with <literal>Hello,</literal> followed by the name of the user currently logged in. Click on this, then down to <literal>My Systems</literal>
 				</para>
 			</note>
 		</para>

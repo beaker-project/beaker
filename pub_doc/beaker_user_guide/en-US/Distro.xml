@@ -6,7 +6,7 @@
 <section id="chap-beaker_user_guide-Components-Distros">
 	<title>Distros</title>
 	<para>
-	Beaker can keep a record of Distros that are available to install on Systems in it's Inventory.	
+	Beaker can keep a record of Distros that are available to install on Systems in its Inventory.	
 	</para>
 	<section id="sect-beaker_user_guide-Components-Distros-Distro_Searching">
 		<title>Distro Searching</title>

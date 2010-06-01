@@ -6,7 +6,7 @@
 <chapter id="chap-beaker_user_guide-CLI">
 <title>Beaker client</title>
 <para>
-The shell based client provides users with mostly a subset of what is possible via the UI, although it does provide one or two things which the UI does not provide. 
+The shell based client (CLI) provides users with a subset of functions available in the Beaker web app, plus a few functions that the Beaker web app does not provide.
 To install beaker-client:
 	<screen>
 $ <userinput>yum install beaker-client</userinput>

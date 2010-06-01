@@ -6,7 +6,7 @@
 <section id="chap-beaker_user_guide-Components-Jobs">
 	<title>Jobs</title> 
 	<para>
-		The purpose of a Job is to provide an encapsulation of Tasks. It is to provide a single point of submission of these Tasks, and a single point of reviewing the output and results of these Tasks. The Tasks within a Job may or may not be related to each other; although it would make sense to define Jobs based on the relationship of the Tasks within it. Once a Job has been submitted you can not alter it's contents, or pause it. You can however cancel it (<xref linkend="sect-beaker_user_guide-Components-Jobs-Job_Submission-Job_Results" />), and alter it's priority (
+		The purpose of a Job is to provide an encapsulation of Tasks. It is to provide a single point of submission of these Tasks, and a single point of reviewing the output and results of these Tasks. The Tasks within a Job may or may not be related to each other; although it would make sense to define Jobs based on the relationship of the Tasks within it. Once a Job has been submitted you can not alter its contents, or pause it. You can however cancel it (<xref linkend="sect-beaker_user_guide-Components-Jobs-Job_Submission-Job_Results" />), and alter its Recipe Set's priorities (you can only lower the priority level if you are not in the admin group). Adjusting this priority upwards will change which Recipe Set is run sooner, and vice a versa.
 	</para> 
 	<section id="sect-beaker_user_guide-Components-Jobs-Job_Workflow">
 		<title>Job Workflow</title>
@@ -31,7 +31,7 @@
 	<section id="sect-beaker_user_guide-Components-Jobs-Job_Submission">
 		<title>Job Submission</title>
 		<para>
-			There are two ways of submitting a Job through the UI.They are outlined below.
+			There are two ways of submitting a Job through the web app.They are outlined below.
 		</para>
 		<section id="sect-beaker_user_guide-Components-Jobs-Job_Submission-New_Job">	
                   <title>Submitting a new Job</title>
@@ -74,7 +74,7 @@
 			<para>
 				The Job results page is divided by <literal>Recipe Set</literal>. To show the results of each Recipe within these Recipe Sets, click the 
                                 <literal>Show All Results</literal> button. You can just show the tasks that have a status of <literal>Fail</literal> by clicking 
-                                <literal>Show Failed Results</literal>. 
+                                <literal>Show Failed Results</literal>.
 			</para>
 			<para> 
 				While your Job is still <literal>Queued</literal> it's possible to change the priority. You can change the priority of individual Recipe Sets by changing the value of <literal>Priority</literal>, or you can change all the Job's Recipe Sets at once by clicking an option beside the text <literal>Set all RecipeSet priorities</literal>, which is at the top right of the page. If successful, a green success message will briefly display, otherwise a red error message will be shown.
