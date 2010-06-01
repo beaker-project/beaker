@@ -1,12 +1,34 @@
 <div xmlns:py="http://purl.org/kid/ns#">
 
 <script type="text/javascript">
-function showall_${recipe.id}()
-{ 
+var STATUS_${recipe.id};
+
+function getresults_${recipe.id}(f)
+{
+
     if (!($('#task_items_${recipe.id}').html()) ) 
     {
-        $('#task_all_recipe_${recipe.id}').click()   
+        $('#task_all_recipe_${recipe.id}').click()
+    } else {
+	f()
     }
+
+}
+
+function recipe_callback_${recipe.id}()
+{
+    switch (STATUS_${recipe.id}) {
+	case 'all': 
+		showall_${recipe.id}();
+
+	case 'fail':
+		showfail_${recipe.id}();
+
+    }
+}
+
+function showall_${recipe.id}()
+{  
     $('.recipe_${recipe.id}').show();
     $('.hide_recipe_${recipe.id}').show();
     $('.fail_show_recipe_${recipe.id}').show();
@@ -15,11 +37,7 @@ function showall_${recipe.id}()
 }
 
 function showfail_${recipe.id}()
-{
-    if (!($('#task_items_${recipe.id}').html()) ) 
-    {
-        $('#task_all_recipe_${recipe.id}').click()   
-    }
+{ 
     $('.recipe_${recipe.id}').hide();
     $('.fail_recipe_${recipe.id}').show();
     $('.hide_recipe_${recipe.id}').show();
@@ -37,28 +55,38 @@ function shownone_${recipe.id}()
     $.cookie('recipe_${recipe.id}',null)
 }
 
+// I need to set the status here so if we need to call the ajax function,
+// the callback knows what we clicked on.
 $(document).ready(function() {
     if($.cookie('recipe_${recipe.id}')) 
     {
        switch ($.cookie('recipe_${recipe.id}'))
        {
         case 'all':
-            showall_${recipe.id}();
+	    STATUS_${recipe.id} = 'all';
+            getresults_${recipe.id}(showall_${recipe.id});
         break;
         case 'fail':
-            showfail_${recipe.id}();
+	    STATUS_${recipe.id} = 'fail';
+            getresults_${recipe.id}(showfail_${recipe.id});
         break;
        }
     } else {
-        shownone_${recipe.id}();
+        STATUS_${recipe.id} = 'none';
+        getresults_${recipe.id}(shownone_${recipe.id});
     }
 
     $('#all_recipe_${recipe.id}').click( function() { 
-                                                      showall_${recipe.id}();
+	    STATUS_${recipe.id} = 'all';
+     	getresults_${recipe.id}(showall_${recipe.id});
     });
                                                       
                                                     
-    $('#failed_recipe_${recipe.id}').click( function() { showfail_${recipe.id}(); });
+    $('#failed_recipe_${recipe.id}').click( function() {
+        STATUS_${recipe.id} = 'fail';
+        getresults_${recipe.id}(showfail_${recipe.id});
+
+      })
     $('#hide_recipe_${recipe.id}').click( function() { shownone_${recipe.id}(); });
     $('#logs_button_${recipe.id}').click(function () { $('#logs_${recipe.id}').toggleClass('hidden', 'addOrRemove'); });
 
@@ -134,10 +162,11 @@ $(document).ready(function() {
                                                                   tasks_tgp_order='id',
                                                                   tasks_tgp_limit=0),  
                                                         before="$('#task_items_loading_%s').removeClass('hidden')" % recipe.id, 
-                                                        on_complete="$('#task_items_loading_%s').addClass('hidden')" % recipe.id, 
+                                                        on_complete="$('#task_items_loading_%s').addClass('hidden');recipe_callback_%s();" % (recipe.id,recipe.id), 
                                                         update="task_items_%s" % recipe.id, 
-                                                        attrs=dict(id='task_all_recipe_%s' % recipe.id,style='display:none;'))}</p>
- 
+                                                        attrs=dict(id='task_all_recipe_%s' % recipe.id,style='display:none;'))}
+ </p>
+
   <div id="task_items_${recipe.id}"></div>
  </div>
 </div>
