@@ -6,8 +6,8 @@
 %endif
 
 Name:           beaker
-Version:        0.5.40
-Release:        3%{?timestamp}%{?branch}%{?dist}
+Version:        0.5.41
+Release:        0%{?timestamp}%{?branch}%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -185,6 +185,17 @@ fi
 %{_sysconfdir}/init.d/%{name}-watchdog
 
 %changelog
+* Tue Jun 01 2010 Bill Peck <bpeck@redhat.com> - 0.5.41-0
+- bz501511,RFE: Use STABLE trees by default
+- bz582295,No Watchdog page anymore?
+- bz583014,RFE] provide single_package.py replacement with same CLI interface
+- bz584592,Inventory not UTF safe?
+- bz591992,Job Status page: typo: ""Finsihed""
+- bz594714,Beaker] [Job Matrix Report] Test column out of order leads to confusion
+- bz596802,RFE] split bkr job-watch
+- bz597155,variant option of workflow-simple doesn't work
+- bz598320,show failed results' shows passed results also
+
 * Tue May 25 2010 Bill Peck <bpeck@redhat.com> - 0.5.40-0
 - minor fixes in command line workflow.
 - minor fixes in command line task list.
