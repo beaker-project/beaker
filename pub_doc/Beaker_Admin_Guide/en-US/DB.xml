@@ -6,7 +6,8 @@
 <chapter id="chap-Beaker_Admin_Guide-Lab_Controllers">
     <title>Setup Lab Controller</title>
     <para>
-  	Beaker uses Lab Controllers to manage it's system inventory. Open a terminal window on the system you will be running the Lab Controller on.
+  	Beaker uses Lab Controllers to manage the Systems in it's inventory.Open a terminal window on the system you will be running the Lab Controller on. This can be a seperate
+	system than the one running the Beaker server.
     </para>
 
 	<section id="chap-Beaker_Admin_Guide-Beaker-Dependencies">

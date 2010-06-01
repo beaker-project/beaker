@@ -8,21 +8,21 @@
 	<section id="chap-Beaker_Admin_Guide-Overview-Components">
 		<title>Components</title>
 		<para>
-		Beaker is the name for an automated testing framework. It consists of the following.
+			Beaker is an Open Source automated testing framework, consisting of the following core parts:	
 		
 		<variablelist>
 			
 		<varlistentry><term>Lab Controller</term> 
 			<listitem>
 			<para>
-			The Lab Controller maintains inventory data about distros available to install and machines to install on. It Can be used by itself, or in conjunction with the Beaker server. 
-			The Lab Controller is the only conduit of communication between the Lab Machines and the Beaker Server. The Lab Controller is built on top of several existing tools: 
+			The Lab Controller maintains inventory data about distros available to install and machines to install on. It can be used by itself or in conjunction with the Beaker server. 
+			The Lab Controller is the only conduit of communication between the Lab Machines and the Beaker server. The Lab Controller is built on top of several existing tools: 
 			
 				<itemizedlist>
-					<listitem><para><literal>cobbler</literal>: Does the actual provisioning.</para></listitem>
-					<listitem><para><literal>conserver</literal>: Provides console logging.</para></listitem>
-					<listitem><para><literal>fence-agents</literal>: Power cycles amchines to start PXE installs and to recover.</para></listitem>
-					<listitem><para><literal>smolt</literal>: Provides the inventory data.</para></listitem>
+					<listitem><para><ulink url="https://fedorahosted.org/cobbler" >cobbler</ulink>: Does the actul interations with the test systems (install distro etc).</para></listitem>
+					<listitem><para><ulink url="http://www.conserver.com/" >conserver</ulink>: Provides console logging.</para></listitem>
+					<listitem><para><ulink url="http://sources.redhat.com/cluster/wiki/" >fence-agents</ulink>: Power cycles machines to start PXE installs and to recover.</para></listitem>
+					<listitem><para><ulink url="http://fedorahosted.org/smolt">smolt</ulink>: Provides the inventory data. That is, the hardware data of the test systems.</para></listitem>
 				</itemizedlist>
 			</para> 
 			</listitem>
@@ -30,7 +30,7 @@
 
 		<varlistentry><term>Beaker server</term> 
 			<listitem>
-			<para>The Beaker server is a central point at which all Job related activity occurs. System inventory as well as the ability to provision Systems is also controlled from here. It also holds the repository of Tasks.</para> 
+			<para>The Beaker server is the central point at which all Job related activity occurs. System inventory as well as the ability to provision Systems is also controlled from here. It also holds the repository of Tasks.</para> 
 			</listitem>
 		</varlistentry>
 
@@ -46,15 +46,15 @@
 		<title>Topology</title>
 		<para>
 		Beaker's topology is relatively simple. The Beaker server acts as the interface through which all user actions are performed. Some of the requests are performed local to the 
-		Beaker server (such as scheduling Jobs and creating reports), but other requests are forwarded to the System (running Tasks, provisioning a System). This communication between the 
-		Beaker server and the System occurs via the Lab Controller.	
+		Beaker server (such as scheduling Jobs and creating reports), but other requests are forwarded to the provisioned System  (i.e running of tasks). This communication between the Beaker server and the System occurs via the Lab Controller.	
 		</para>
-
-		<mediaobject>
-			<imageobject>
-				<imagedata fileref="./images/beaker_network_topology.png" format="PNG" width="444" />
-			</imageobject>
-		</mediaobject>
+		<figure><title>High level network topology of Beaker's components</title>
+			<mediaobject>
+				<imageobject>
+					<imagedata fileref="./images/beaker_network_topology.png" format="PNG" width="444" />
+				</imageobject>
+			</mediaobject>
+		</figure>
 	
 	</section>
 

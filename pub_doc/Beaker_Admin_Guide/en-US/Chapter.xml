@@ -88,7 +88,7 @@ $ <userinput>sudo /sbin/service/httpd start</userinput>
 	<screen>
 $ <userinput>setenforce 0</userinput>
 	</screen>
-	Due to permission issues, we need to delete the log file before we start Beaker for the first time.
+	Due to permission issues, we need to delete the log file before we start Beaker for the first time. Otherwise Beaker will not run properly.
 	<screen>
 $ <userinput>sudo rm /var/log/beaker/server*.log</userinput>
 	</screen>
