@@ -824,8 +824,8 @@ class Root(RPCRoot):
 
     @expose(template="bkr.server.templates.system")
     @paginate('history_data',limit=30,default_order='-created', allow_limit_override=True)
-    def view(self, fqdn=None, **kw):
-        if fqdn:
+    def view(self, fqdn=None, **kw): 
+        if fqdn: 
             try:
                 system = System.by_fqdn(fqdn,identity.current.user)
             except InvalidRequestError:
@@ -1102,7 +1102,7 @@ class Root(RPCRoot):
                 if new_value != orig_value:
                     activity = SystemActivity(identity.current.user, 'WEBUI', 'Changed', field, '%s' % orig_value, kw[field] )
                     setattr(labinfo, field, kw[field])
-                    system.activity.append(activity)
+                    system.activity.append(activity) 
         system.labinfo = labinfo
         flash( _(u"Saved Lab Info") )
         redirect("/view/%s" % system.fqdn)
@@ -1258,13 +1258,13 @@ class Root(RPCRoot):
                        
             try:
                 current_val = getattr(system,field)
-            except KeyError:
-                current_val = ""
-            # catch nullable fields return None.
-            if current_val is None:
-                current_val = ""
-            new_val = str(kw.get(field) or "")
-            if str(current_val) != new_val:
+            except AttributeError:
+                flash(_(u'Field %s is not a valid system property' % field)) 
+                continue
+
+            new_val = kw.get(field)
+             
+            if unicode(current_val) != unicode(new_val): 
                 function_name = '%s_change_handler' % field
                 field_change_handler = getattr(SystemSaveForm.handler,function_name,None)
                 if field_change_handler is not None:
@@ -1344,6 +1344,7 @@ class Root(RPCRoot):
         else:
             system.lab_controller_id = kw['lab_controller_id']
         system.mac_address=kw['mac_address']
+        session.save_or_update(system)
         redirect("/view/%s" % system.fqdn)
 
     @expose()
