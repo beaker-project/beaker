@@ -184,7 +184,7 @@ identity.krb_auth_keytab='/etc/httpd/conf/httpd.keytab'
 
 server.socket_port=8084
 server.environment="development"
-server.webpath=""
+server.webpath="/bkr"
 server.log_file = "/var/log/beaker/server.log"
 server.log_to_screen = True
 
