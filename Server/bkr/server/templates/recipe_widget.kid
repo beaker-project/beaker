@@ -20,10 +20,10 @@ function recipe_callback_${recipe.id}()
     switch (STATUS_${recipe.id}) {
 	case 'all': 
 		showall_${recipe.id}();
-
+    break;
 	case 'fail':
 		showfail_${recipe.id}();
-
+    break;
     }
 }
 
@@ -73,7 +73,7 @@ $(document).ready(function() {
        }
     } else {
         STATUS_${recipe.id} = 'none';
-        getresults_${recipe.id}(shownone_${recipe.id});
+        shownone_${recipe.id}();
     }
 
     $('#all_recipe_${recipe.id}').click( function() { 
@@ -151,12 +151,13 @@ $(document).ready(function() {
     <button class="hide_recipe_${recipe.id}" id="hide_recipe_${recipe.id}">
      Hide Results
     </button>
+    <span class="hidden" id="task_items_loading_${recipe.id}"><img src="${tg.url('/static/images/ajax-loader.gif')}" /> </span>
    </td>
   </tr>
  </table>
-
+ 
  <div py:if="recipe_tasks_widget" class="hidden recipe-tasks fail_recipe_${recipe.id} recipe_${recipe.id}">
-  <h2>Task Runs</h2>  <span class="hidden" id="task_items_loading_${recipe.id}"><img src="${tg.url('/static/images/ajax-loader.gif')}" /> </span>
+  <h2>Task Runs</h2> 
   <p class="hidden"> ${recipe_tasks_widget.link.display("I am hidden",action='/tasks/do_search', 
                                                         data=dict(recipe_id = recipe.id,
                                                                   tasks_tgp_order='id',
