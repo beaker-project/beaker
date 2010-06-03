@@ -3201,9 +3201,10 @@ class Recipe(TaskBase):
                                                                       self.distro.osversion.osmajor,
                                                                       self.distro.arch))
                 repos.append(repo)
-            repo = dict(name = "beaker-rhts",
-                        url  = "http://%s/harness/noarch" % servername)
-            repos.append(repo)
+            # This should not be needed anymore...
+            #repo = dict(name = "beaker-rhts",
+            #            url  = "http://%s/harness/noarch" % servername)
+            #repos.append(repo)
             repo = dict(name = "beaker-tasks",
                         url  = "http://%s/rpms" % servername)
             repos.append(repo)
