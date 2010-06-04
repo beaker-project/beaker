@@ -3475,9 +3475,9 @@ class Recipe(TaskBase):
         """ Before appending the task to this Recipe, make sure it applies.
             ie: not excluded for this distro family or arch.
         """
-        if self.distro.arch in recipetask.task.excluded_arch:
+        if self.distro.arch in [arch.arch for arch in recipetask.task.excluded_arch]:
             return
-        if self.distro.osversion.osmajor in recipetask.task.excluded_osmajor:
+        if self.distro.osversion.osmajor in [osmajor.osmajor for osmajor in recipetask.task.excluded_osmajor]:
             return
         self.tasks.append(recipetask)
 
