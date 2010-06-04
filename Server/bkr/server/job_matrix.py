@@ -1,5 +1,5 @@
 from sqlalchemy import select, distinct, Table, Column, Integer, String
-from sqlalchemy.sql.expression import case, func, and_, bindparam
+from sqlalchemy.sql.expression import case, func, and_, bindparam, not_
 from turbogears import controllers, identity, expose, url, database
 from turbogears.widgets import DataGrid
 from turbogears.database import session, metadata, mapper
@@ -60,7 +60,7 @@ class JobMatrix:
             filter = None 
        
         matrix_options['whiteboard_options'] = self.get_whiteboard_options(filter)
-
+       
         if ('job_ids' in kw) or ('whiteboard' in kw): 
             gen_results = self.generate(**kw) 
             matrix_options['grid'] = gen_results['grid']
@@ -71,12 +71,32 @@ class JobMatrix:
                 self.job_ids = job_ids
                 matrix_options['job_ids_vals'] = "\n".join(job_ids)
             if 'job_ids' in kw: #Getting results by job id
-                self.job_ids = kw['job_ids'].split("\n")
+                self.job_ids = kw['job_ids'].split()
                 matrix_options['job_ids_vals'] = kw['job_ids']
+
+            all_rs_queri = model.RecipeSet.query().join(['job']).filter(model.Job.id.in_(self.job_ids))
+            all_ids = [elem.id for elem in all_rs_queri] 
+            rs_nacks = model.Job.get_nacks(self.job_ids)
+          
+            def _build_output():
+                output = []
+                for k in all_ids:
+                    if k in rs_nacks:
+                        output.append((k,'RS: %s' % k, {'checked' : k}))
+                    else:
+                        output.append((k,'RS: %s' % k))
+                return output
+        
+            matrix_options['nacks'] = _build_output() 
+            matrix_options['toggle_nacks'] = True
         else: 
+            matrix_options['nacks'] = []
+            matrix_options['selected_nacks'] = []
             matrix_options['grid'] = None 
+            matrix_options['toggle_nacks'] = None
        
         return dict(widget = self.job_matrix_widget,widget_options=matrix_options, title="Job Matrix Report") 
+
 
     @expose(format='json')
     def get_whiteboard_options_json(self,filter):
@@ -167,7 +187,18 @@ class JobMatrix:
         """
         grid_data = self.generate_data(**kw)  
         grid = myDataGrid(fields = self._job_grid_fields(self.arches_used.keys()))
+        session.flush()
         return {'grid' : grid, 'data' : grid_data }     
+
+
+    def _nack_handler(self,jobs,recipes,nacks):
+        if nacks:
+            exclude_recipe_sets = type(nacks) == type(list()) and nacks or [nacks] #turns single item into single entry list
+        else:
+            exclude_recipe_sets = []  
+        exclude_recipe_sets = model.Job.update_nacks(jobs,exclude_recipe_sets) 
+       
+        return exclude_recipe_sets      
        
     def generate_data(self,**kw): 
         """
@@ -185,8 +216,15 @@ class JobMatrix:
                 jobs.append(job.id) 
         else:
            pass
- 
+
         recipes = model.Recipe.query().join(['distro','arch']).join(['recipeset','job']).filter(model.RecipeSet.job_id.in_(jobs)).add_column(model.Arch.arch)  
+        if 'toggle_nacks_on' in kw: #if we're here we are potentially trying to add/remove nacks
+            exclude_recipe_sets = self._nack_handler(jobs,recipes,kw.get('nacks'))  
+            recipes = recipes.filter(not_(model.RecipeSet.id.in_(exclude_recipe_sets)))
+        else: #Likely this is the initial page load for these Jobs. No modifying the nack db.
+            exclude_recipe_sets = model.Job.get_nacks(jobs)
+            recipes = recipes.filter(not_(model.RecipeSet.id.in_(exclude_recipe_sets))) 
+
         for recipe,arch in recipes: 
             if arch in whiteboard_data:    
                 if recipe.whiteboard not in whiteboard_data[arch]:
@@ -231,15 +269,22 @@ class JobMatrix:
         for arch_val,whiteboard_set in whiteboard_data.iteritems():
             for whiteboard_val in whiteboard_set:
                 if whiteboard_val is not None:
-                    my_and = and_( model.recipe_set_table.c.job_id.in_(jobs),
+                    my_and = [model.recipe_set_table.c.job_id.in_(jobs),
                                    arch_alias.c.arch == bindparam('arch'), 
-                                   recipe_table_alias.c.whiteboard == bindparam('recipe_whiteboard'))
+                                   recipe_table_alias.c.whiteboard == bindparam('recipe_whiteboard')]
                 else: 
-                    my_and = and_( model.recipe_set_table.c.job_id.in_(jobs),
+                    my_and = [model.recipe_set_table.c.job_id.in_(jobs),
                                    arch_alias.c.arch == bindparam('arch'), 
-                                   recipe_table_alias.c.whiteboard==None)
+                                   recipe_table_alias.c.whiteboard==None]
 
-                s2 = select(my_select,from_obj=my_from,whereclause=my_and).alias('foo')
+                
+                try:
+                    ex = locals()['exclude_recipe_sets'] 
+                    my_and.append(not_(model.recipe_set_table.c.id.in_(exclude_recipe_sets)))
+                except KeyError, e: pass
+
+                
+                s2 = select(my_select,from_obj=my_from,whereclause=and_(*my_and)).alias('foo')
                 s2 = s2.params(arch=arch_val)
                 if whiteboard_val is not None:
                     s2 = s2.params(recipe_whiteboard=whiteboard_val) 
@@ -253,17 +298,16 @@ class JobMatrix:
                               s2.c.whiteboard,
                               s2.c.arch,
                               s2.c.arch_id,
-                              model.task_table.c.name.label('task_name'),  
+                              model.task_table.c.name.label('task_name'),
                               s2.c.task_id.label('task_id_pk')],
                               s2.c.task_id == model.task_table.c.id,
                      
                               from_obj=[model.task_table,s2]).group_by(model.task_table.c.name).order_by(model.task_table.c.name).alias()
-          
+               
                 class InnerDynamo(object):
                     pass
                 mapper(InnerDynamo,s1)
-
-                                                        
+ 
                 dyn = InnerDynamo.query() 
                
                 for d in dyn:

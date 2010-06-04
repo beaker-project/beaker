@@ -267,11 +267,11 @@ class JobQuickSearch(CompoundWidget):
 
 
 class JobMatrixReport(Form):     
-    javascript = [LocalJSLink('bkr', '/static/javascript/job_matrix.js')]
+    javascript = [LocalJSLink('bkr', '/static/javascript/job_matrix.js'),LocalJSLink('bkr','/static/javascript/jquery-1.3.1.js'),LocalJSLink('bkr','/static/javascript/jquery.blockUI.js')]
     css = [LocalCSSLink('bkr','/static/css/job_matrix.css')] 
     template = 'bkr.server.templates.job_matrix' 
-    member_widgets = ['whiteboard','job_ids','generate_button'] 
-    params = ['list','whiteboard_filter','whiteboard_options','job_ids_vals']
+    member_widgets = ['whiteboard','job_ids','generate_button','nack_list'] 
+    params = ['list','whiteboard_filter','whiteboard_options','job_ids_vals','nacks','selected_nacks']
     default_validator = validators.NotEmpty() 
     def __init__(self,*args,**kw): 
         super(JobMatrixReport,self).__init__(*args, **kw)       
@@ -281,8 +281,25 @@ class JobMatrixReport(Form):
         else:
             whiteboard_options = []
 
-        self.whiteboard_options = whiteboard_options or []
-      
+
+        self.whiteboard_options = whiteboard_options
+        self.nack_list = CheckBoxList("nacks",validator=self.default_validator, template = """
+    <ul xmlns:py="http://purl.org/kid/ns#"
+        class="${field_class}"
+        id="${field_id}"
+        py:attrs="list_attrs"
+    >
+        <li py:for="value, desc, attrs in options">
+            <input type="checkbox"
+                name="${name}"
+                id="${field_id}_${value}"
+                value="${value}"
+                py:attrs="attrs"
+            />
+            <label for="${field_id}_${value}" py:content="desc" />&nbsp;<span id="comment_${field_id}_${value}" style="font-size:xx-small">comment</span>
+        </li>
+    </ul>
+    """)
         self.whiteboard = SingleSelectField('whiteboard',label='Whiteboard',attrs={'size':5}, options=whiteboard_options, validator=self.default_validator) 
         self.job_ids = TextArea('job_ids',label='Job ID', rows=7,cols=7, validator=self.default_validator) 
         self.whiteboard_filter = TextField('whiteboard_filter', label='Filter Whiteboard') 
@@ -300,8 +317,12 @@ class JobMatrixReport(Form):
                 params['grid'] = params['options']['grid'] 
             if 'list' in params['options']: 
                 params['list'] = params['options']['list']
-        return super(JobMatrixReport,self).display(value=None,**params)
+            if 'nacks' in params['options']:
+                params['nacks'] = params['options']['nacks']
+            if 'toggle_nacks' in params['options']:
+                params['toggle_nacks'] = params['options']['toggle_nacks']
 
+        return super(JobMatrixReport,self).display(value=None,**params)
 
 class SearchBar(RepeatingFormField):
     """Search Bar""" 
