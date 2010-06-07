@@ -204,12 +204,12 @@ class WatchFile(object):
                     self.proxy.logger.info("Panic detected for system: %s" % self.watchdog['system'])
                     recipeset = xmltramp.parse(self.proxy.get_recipe(self.watchdog['system'])).recipeSet
                     try:
-                        task = recipeset.recipe.task()
+                        recipe = recipeset.recipe()
                     except AttributeError:
-                        task = recipeset.guestrecipe.task()
-                    if 'panic' in task and task['panic'] == 'ignore':
+                        recipe = recipeset.guestrecipe()
+                    if 'panic' in recipe and recipe['panic'] == 'ignore':
                         # Don't Report the panic
-                        self.proxy.logger.info("Not reporting panic, task set to ignore")
+                        self.proxy.logger.info("Not reporting panic, recipe set to ignore")
                     else:
                         # Report the panic
                         self.proxy.task_result(self.watchdog['task_id'], 'panic', '/', 0, panic.group())
@@ -438,3 +438,13 @@ class Proxy(ProxyHelper):
                                                   md5sum, 
                                                   offset, 
                                                   data)
+
+    def push(self, fqdn, inventory):
+        """ Push inventory data to Scheduler
+        """
+        return self.hub.legacypush(fqdn, inventory)
+
+    def legacypush(self, fqdn, inventory):
+        """ Push legacy inventory data to Scheduler
+        """
+        return self.hub.legacypush(fqdn, inventory)
