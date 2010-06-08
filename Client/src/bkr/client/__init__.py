@@ -22,6 +22,7 @@ class BeakerCommand(ClientCommand):
             conf = old_conf
         else:
             conf = "/etc/beaker/client.conf"
+            sys.stderr.write("%s not found, using %s\n" % (user_conf, conf))
         os.environ[conf_environ_key] = conf
 
 class BeakerWorkflow(BeakerCommand):

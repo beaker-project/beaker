@@ -169,7 +169,10 @@ class XmlRecipe(ElementWrapper):
                 return None
         elif attrname == 'role':
             return self.get_xml_attr('role', unicode, u'None')
+        elif attrname == 'watchdog':
+            return XmlWatchdog(self.wrappedEl['watchdog'])
         else: raise AttributeError, attrname
+
 
 class XmlRecipeMachine(XmlRecipe):
     def iter_guests(self):
@@ -207,6 +210,16 @@ class XmlTask(ElementWrapper):
             return XmlRpm(self.wrappedEl['rpm'])
         else: raise AttributeError, attrname
 
+
+class XmlWatchdog(ElementWrapper):
+    def __getattr__(self, attrname):
+        if attrname == 'panic':
+            return self.get_xml_attr('panic', unicode, u'None')
+        elif attrname == 'trigger':
+            return self.get_xml_attr('trigger', unicode, u'None')
+        elif attrname == 'extend':
+            return self.get_xml_attr('extend', int, 0)
+        else: raise AttributeError, attrname
 
 class XmlPackage(ElementWrapper):
     def __getattr__(self, attrname):

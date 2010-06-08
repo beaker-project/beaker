@@ -75,34 +75,28 @@ $SNIPPET("system")
 
 %packages --ignoremissing
 #if $getVar('packages','') == ''
-@base
-@core
-@fonts
-@x11
-@basic-desktop
-@general-desktop
-@input-methods
-@print-client
-@internet-browser
-#end if
-#if $getVar('rhts_server', '') == ''
-@x11
-@basic-desktop
 @admin-tools
 @base
 @base-x
+@basic-desktop
 @core
 @dialup
 @editors
+@fonts
 @games
+@general-desktop
 @gnome-desktop
 @graphical-internet
 @graphics
+@input-methods
+@internet-browser
 @java
 @office
+@print-client
 @printing
 @sound-and-video
 @text-internet
+@x11
 busybox
 comps-extras
 cracklib-dicts

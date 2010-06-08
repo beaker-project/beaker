@@ -642,6 +642,7 @@ recipe_table = Table('recipe',metadata,
         Column('kernel_options', String(1024)),
         Column('kernel_options_post', String(1024)),
         Column('role', Unicode(255)),
+        Column('panic', Unicode(20)),
 )
 
 machine_recipe_table = Table('machine_recipe', metadata,
@@ -1653,14 +1654,14 @@ $SNIPPET("rhts_post")
         if user and self.loaned:
             if self.loaned == user or \
                self.owner  == user or \
-               user.is_admin():
+               self.is_admin():
                 return True
         return False
 
     def current_user(self, user=None):
         if user and self.user:
             if self.user  == user \
-               or user.is_admin():
+               or self.can_admin(user):
                 return True
         return False
         
@@ -3281,9 +3282,10 @@ class Recipe(TaskBase):
                                                                       self.distro.osversion.osmajor,
                                                                       self.distro.arch))
                 repos.append(repo)
-            repo = dict(name = "beaker-rhts",
-                        url  = "http://%s/harness/noarch" % servername)
-            repos.append(repo)
+            # This should not be needed anymore...
+            #repo = dict(name = "beaker-rhts",
+            #            url  = "http://%s/harness/noarch" % servername)
+            #repos.append(repo)
             repo = dict(name = "beaker-tasks",
                         url  = "http://%s/rpms" % servername)
             repos.append(repo)
@@ -3316,6 +3318,10 @@ class Recipe(TaskBase):
             recipe.setAttribute("arch", "%s" % self.distro.arch)
             recipe.setAttribute("family", "%s" % self.distro.osversion.osmajor)
             recipe.setAttribute("variant", "%s" % self.distro.variant)
+        watchdog = self.doc.createElement("watchdog")
+        if self.panic:
+            watchdog.setAttribute("panic", "%s" % self.panic)
+        recipe.appendChild(watchdog)
         if self.system and not clone:
             recipe.setAttribute("system", "%s" % self.system)
         packages = self.doc.createElement("packages")
@@ -3554,9 +3560,9 @@ class Recipe(TaskBase):
         """ Before appending the task to this Recipe, make sure it applies.
             ie: not excluded for this distro family or arch.
         """
-        if self.distro.arch in recipetask.task.excluded_arch:
+        if self.distro.arch in [arch.arch for arch in recipetask.task.excluded_arch]:
             return
-        if self.distro.osversion.osmajor in recipetask.task.excluded_osmajor:
+        if self.distro.osversion.osmajor in [osmajor.osmajor for osmajor in recipetask.task.excluded_osmajor]:
             return
         self.tasks.append(recipetask)
 

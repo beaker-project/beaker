@@ -7,7 +7,7 @@
 
 Name:           beaker
 Version:        0.5.41
-Release:        1%{?timestamp}%{?branch}%{?dist}
+Release:        5%{?timestamp}%{?branch}%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -185,6 +185,8 @@ fi
 %{_sysconfdir}/init.d/%{name}-watchdog
 
 %changelog
+* Mon Jun 07 2010 Bill Peck <bpeck@redhat.com> - 0.5.41-3
+- added push and legacypush to proxy
 * Tue Jun 01 2010 Bill Peck <bpeck@redhat.com> - 0.5.41-1
 - minor update for bz598320
 * Tue Jun 01 2010 Bill Peck <bpeck@redhat.com> - 0.5.41-0

@@ -8,6 +8,7 @@ import datetime
 import base64
 import xmltramp
 import glob
+import re
 from xmlrpclib import Fault, ProtocolError
 from cStringIO import StringIO
 from socket import gethostbyaddr
@@ -138,13 +139,25 @@ class ProxyHelper(object):
         self.logger.info("job_stop %s" % job_id)
         return self.hub.jobs.stop(job_id, stop_type, msg)
 
+    def get_recipe(self, system_name=None):
+        """ return the active recipe for this system """
+        if system_name:
+            self.logger.info("get_recipe %s" % system_name)
+            return self.hub.recipes.system_xml(system_name)
+
+    def extend_watchdog(self, task_id, kill_time):
+        """ tell the scheduler to extend the watchdog by kill_time seconds
+        """
+        self.logger.info("extend_watchdog %s %s", task_id, kill_time)
+        return self.hub.recipes.tasks.extend(task_id, kill_time)
+
 
 class WatchFile(object):
     """
     Helper class to watch log files and upload them to Scheduler
     """
 
-    def __init__(self, log, watchdog, proxy, blocksize=65536):
+    def __init__(self, log, watchdog, proxy, panic, blocksize=65536):
         self.log = log
         self.watchdog = watchdog
         self.proxy = proxy
@@ -153,6 +166,13 @@ class WatchFile(object):
         # If filename is the hostname then rename it to console.log
         if self.filename == self.watchdog['system']:
             self.filename="console.log"
+            # Leave newline
+            self.control_chars = ''.join(map(unichr, range(0,9) + range(11,32) + range(127,160)))
+            self.strip_ansi = re.compile('[%s]' % re.escape(self.control_chars))
+            self.panic = re.compile(r'%s' % panic)
+        else:
+            self.strip_ansi = None
+            self.panic = None
         self.where = 0
 
     def __cmp__(self,other):
@@ -173,17 +193,33 @@ class WatchFile(object):
             where = self.where
             file.seek(where)
             line = file.read(self.blocksize)
+            if self.strip_ansi:
+                line = self.strip_ansi.sub('',line.decode('ascii', 'ignore'))
             size = len(line)
             now = file.tell()
             file.close()
-            #FIXME make this work on a list of search items
-            # Also, allow it to be disabled
-            if line.find("Kernel panic") != -1:
-                self.proxy.logger.info("Panic detected for system: %s" % self.watchdog['system'])
-                # Report the panic
-                #self.proxy.task_result(self.watchdog['task_id'])
-                # Abort the recipe
-                #self.proxy.recipe_abort(self.watchdog['recipe_id'])
+            if self.panic:
+                # Search the line for panics
+                # The regex is stored in /etc/beaker/proxy.conf
+                panic = self.panic.search(line)
+                if panic:
+                    self.proxy.logger.info("Panic detected for system: %s" % self.watchdog['system'])
+                    recipeset = xmltramp.parse(self.proxy.get_recipe(self.watchdog['system'])).recipeSet
+                    try:
+                        watchdog = recipeset.recipe.watchdog()
+                    except AttributeError:
+                        watchdog = recipeset.guestrecipe.watchdog()
+                    if 'panic' in watchdog and watchdog['panic'] == 'ignore':
+                        # Don't Report the panic
+                        self.proxy.logger.info("Not reporting panic, recipe set to ignore")
+                    else:
+                        # Report the panic
+                        self.proxy.task_result(self.watchdog['task_id'], 'panic', '/', 0, panic.group())
+                        # set the watchdog timeout to 10 seconds, gives some time for all data to 
+                        # print out on the serial console
+                        # this may abort the recipe depending on what the recipeSets
+                        # watchdog behaviour is set to.
+                        self.proxy.extend_watchdog(self.watchdog['task_id'], 10)
             if not line:
                 return False
             # If we didn't read our full blocksize and we are still growing
@@ -272,13 +308,13 @@ class Watchdog(ProxyHelper):
             signal.signal(signal.SIGTERM, signal.SIG_DFL)
 
             # watch the console log
-            watchedFiles = [WatchFile("%s/%s" % (self.conf["CONSOLE_LOGS"], watchdog["system"]),watchdog,self)]
+            watchedFiles = [WatchFile("%s/%s" % (self.conf["CONSOLE_LOGS"], watchdog["system"]),watchdog,self, self.conf["PANIC_REGEX"])]
             while True:
                 updated = False
                 logs = filter(os.path.isfile, glob.glob('%s/%s/*' % ( self.conf["ANAMON_LOGS"], watchdog["system"])))
                 for log in logs:
                     if log not in watchedFiles:
-                        watchedFiles.append(WatchFile(log, watchdog,self))
+                        watchedFiles.append(WatchFile(log, watchdog,self, self.conf["PANIC_REGEX"]))
                 for watchedFile in watchedFiles:
                     if watchedFile.update():
                         updated = True
@@ -293,12 +329,6 @@ class Watchdog(ProxyHelper):
 
         
 class Proxy(ProxyHelper):
-    def get_recipe(self, system_name=None):
-        """ return the active recipe for this system """
-        if system_name:
-            self.logger.info("get_recipe %s" % system_name)
-            return self.hub.recipes.system_xml(system_name)
-
     def task_upload_file(self, 
                          task_id, 
                          path, 
@@ -366,12 +396,6 @@ class Proxy(ProxyHelper):
             return True
         return False
 
-    def extend_watchdog(self, task_id, kill_time):
-        """ tell the scheduler to extend the watchdog by kill_time seconds
-        """
-        self.logger.info("extend_watchdog %s %s", task_id, kill_time)
-        return self.hub.recipes.tasks.extend(task_id, kill_time)
-
     def status_watchdog(self, task_id):
         """ Ask the scheduler how many seconds are left on a watchdog for this task
         """
@@ -416,3 +440,13 @@ class Proxy(ProxyHelper):
                                                   md5sum, 
                                                   offset, 
                                                   data)
+
+    def push(self, fqdn, inventory):
+        """ Push inventory data to Scheduler
+        """
+        return self.hub.legacypush(fqdn, inventory)
+
+    def legacypush(self, fqdn, inventory):
+        """ Push legacy inventory data to Scheduler
+        """
+        return self.hub.legacypush(fqdn, inventory)
