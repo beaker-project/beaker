@@ -633,6 +633,7 @@ recipe_table = Table('recipe',metadata,
         Column('kernel_options', String(1024)),
         Column('kernel_options_post', String(1024)),
         Column('role', Unicode(255)),
+        Column('panic', Unicode(20)),
 )
 
 machine_recipe_table = Table('machine_recipe', metadata,
@@ -3237,6 +3238,10 @@ class Recipe(TaskBase):
             recipe.setAttribute("arch", "%s" % self.distro.arch)
             recipe.setAttribute("family", "%s" % self.distro.osversion.osmajor)
             recipe.setAttribute("variant", "%s" % self.distro.variant)
+        watchdog = self.doc.createElement("watchdog")
+        if self.panic:
+            watchdog.setAttribute("panic", "%s" % self.panic)
+        recipe.appendChild(watchdog)
         if self.system and not clone:
             recipe.setAttribute("system", "%s" % self.system)
         packages = self.doc.createElement("packages")
