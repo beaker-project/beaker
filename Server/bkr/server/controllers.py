@@ -1052,8 +1052,7 @@ class Root(RPCRoot):
             flash( _(u"Unable to find system with id of %s" % id) )
             redirect("/")
         if system.user:
-            if system.user == identity.current.user or \
-              identity.current.user.is_admin():
+            if system.current_user(identity.current.user):
                 # Don't return a system with an active watchdog
                 if system.watchdog:
                     flash(_(u"Can't return %s active recipe %s" % (system.fqdn, system.watchdog.recipe_id)))
@@ -1419,7 +1418,7 @@ class Root(RPCRoot):
         except InvalidRequestError:
             flash( _(u"Unable to look up system id:%s via your login" % id) )
             redirect("/")
-        if system.user != identity.current.user:
+        if not system.current_user(identity.current.user): 
             flash( _(u"You are not the current User for %s" % system) )
             redirect("/")
         try:
