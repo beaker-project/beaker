@@ -206,10 +206,10 @@ class WatchFile(object):
                     self.proxy.logger.info("Panic detected for system: %s" % self.watchdog['system'])
                     recipeset = xmltramp.parse(self.proxy.get_recipe(self.watchdog['system'])).recipeSet
                     try:
-                        recipe = recipeset.recipe()
+                        watchdog = recipeset.recipe.watchdog()
                     except AttributeError:
-                        recipe = recipeset.guestrecipe()
-                    if 'panic' in recipe and recipe['panic'] == 'ignore':
+                        watchdog = recipeset.guestrecipe.watchdog()
+                    if 'panic' in watchdog and watchdog['panic'] == 'ignore':
                         # Don't Report the panic
                         self.proxy.logger.info("Not reporting panic, recipe set to ignore")
                     else:
