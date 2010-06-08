@@ -6,8 +6,8 @@
 %endif
 
 Name:           beaker
-Version:        0.5.41
-Release:        5%{?timestamp}%{?branch}%{?dist}
+Version:        0.5.42
+Release:        0%{?timestamp}%{?branch}%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -185,6 +185,11 @@ fi
 %{_sysconfdir}/init.d/%{name}-watchdog
 
 %changelog
+- bz570186 Hopefully fix: Ability to set system owner to a group or individual
+- bz589904 tests which crashing the system will timeout the watchdog
+- bz591384 getenv("TERM") returns NULL
+- bz599086 improve configfile handling
+- bz600353 Limiting architectures (releases) in Beaker 
 * Mon Jun 07 2010 Bill Peck <bpeck@redhat.com> - 0.5.41-3
 - added push and legacypush to proxy
 * Tue Jun 01 2010 Bill Peck <bpeck@redhat.com> - 0.5.41-1
