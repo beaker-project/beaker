@@ -185,6 +185,7 @@ fi
 %{_sysconfdir}/init.d/%{name}-watchdog
 
 %changelog
+* Tue Jun 08 2010 Bill Peck <bpeck@redhat.com> - 0.5.42-0
 - bz570186 Hopefully fix: Ability to set system owner to a group or individual
 - bz589904 tests which crashing the system will timeout the watchdog
 - bz591384 getenv("TERM") returns NULL
