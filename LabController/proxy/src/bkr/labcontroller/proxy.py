@@ -166,7 +166,9 @@ class WatchFile(object):
         # If filename is the hostname then rename it to console.log
         if self.filename == self.watchdog['system']:
             self.filename="console.log"
-            self.strip_ansi = re.compile("[^\t\n\x20-\x7E]+|\[[0-9]+\;[0-9]+H")
+            # Leave newline
+            self.control_chars = ''.join(map(unichr, range(0,9) + range(11,32) + range(127,160)))
+            self.strip_ansi = re.compile('[%s]' % re.escape(self.control_chars))
             self.panic = re.compile(r'%s' % panic)
         else:
             self.strip_ansi = None
@@ -192,7 +194,7 @@ class WatchFile(object):
             file.seek(where)
             line = file.read(self.blocksize)
             if self.strip_ansi:
-                line = self.strip_ansi.sub("\n", line)
+                line = self.strip_ansi.sub('',line.decode('ascii', 'ignore'))
             size = len(line)
             now = file.tell()
             file.close()
