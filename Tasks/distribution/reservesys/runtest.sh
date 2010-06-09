@@ -5,7 +5,12 @@
 
 STOPRHTS()
 {
-    /sbin/service rhts stop
+    chkconfig rhts
+    if [ $? -eq 0 ]; then
+        /sbin/service rhts stop
+    else
+        /usr/bin/killall rhts-test-runner.sh
+    fi
 }
 
 if [ $REBOOTCOUNT -gt 0 ]; then
