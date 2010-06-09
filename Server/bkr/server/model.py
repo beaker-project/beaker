@@ -2434,7 +2434,9 @@ class Distro(MappedObject):
                     obj = getattr(obj, field, None)
                 require.setAttribute('value', obj or '')
             else:
-                require.setAttribute('value', getattr(self, fields[key], None) or '')
+                value_text = getattr(self,fields[key],None) or '' 
+                # if value_text is bool(True) then we return 'True', else if it's not it will return str() value of whatever it is
+                require.setAttribute('value', value_text is True and value_text is False or str(value_text))
             xmland.appendChild(require)
         distro_requires.appendChild(xmland)
         return distro_requires
