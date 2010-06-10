@@ -193,9 +193,9 @@ class WatchFile(object):
             where = self.where
             file.seek(where)
             line = file.read(self.blocksize)
-            if self.strip_ansi:
-                line = self.strip_ansi.sub('',line.decode('ascii', 'ignore'))
             size = len(line)
+            if self.strip_ansi:
+                line = self.strip_ansi.sub(' ',line.decode('ascii', 'replace').encode('ascii', 'replace'))
             now = file.tell()
             file.close()
             if self.panic:
