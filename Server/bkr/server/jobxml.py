@@ -170,7 +170,7 @@ class XmlRecipe(ElementWrapper):
         elif attrname == 'role':
             return self.get_xml_attr('role', unicode, u'None')
         elif attrname == 'watchdog':
-            if 'watchdog' in self.wrappedEl:
+            if hasattr(self.wrappedEl, 'watchdog'):
                 return XmlWatchdog(self.wrappedEl['watchdog'])
             else:
                 return None
