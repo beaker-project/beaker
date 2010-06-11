@@ -49,7 +49,7 @@ class OSVersions(AdminPage):
         self.search_mapper = OSVersion
         self.add = False
      
-
+    @identity.require(identity.in_group("admin"))
     @expose(template="bkr.server.templates.form")
     def edit(self, id=None, *args, **kw):
         try:
@@ -63,7 +63,7 @@ class OSVersions(AdminPage):
                     form    = self.osversion_form,
                     action  = "./save",
                     options = None)
-
+    @identity.require(identity.in_group("admin"))
     @expose()
     @validate(form=osversion_form)
     def save(self, id=None, arches=None, *args, **kw):
@@ -113,7 +113,8 @@ class OSVersions(AdminPage):
                                   #(' ', lambda x: make_remove_link(x.id)),
                               ])
 
-       
+        if kw.get('grid'): 
+            osversions_grid = kw['grid']
         return dict(title="Tags", 
                     grid = osversions_grid, 
                     search_widget = self.search_widget_form,

@@ -11,6 +11,7 @@ from bkr.server.CSV_import_export import CSV
 from bkr.server.group import Groups
 from bkr.server.tag import Tags
 from bkr.server.osversion import OSVersions
+from bkr.server.distro_family import DistroFamily
 from bkr.server.labcontroller import LabControllers
 from bkr.server.user import Users
 from bkr.server.distro import Distros
@@ -209,6 +210,7 @@ class Root(RPCRoot):
     devices = Devices()
     groups = Groups()
     tags = Tags()
+    distrofamily = DistroFamily()
     osversions = OSVersions()
     labcontrollers = LabControllers()
     distros = Distros()
