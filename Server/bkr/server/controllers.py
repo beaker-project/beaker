@@ -540,7 +540,7 @@ class Root(RPCRoot):
            
             warn = None
             if avail_systems_distro_query.count() < 1: 
-                warn = 'No Systems compatible with distro %s' % distro_install_name
+                warn = 'No Systems compatible with distro %s' % distro.install_name
           
             getter = lambda x: reserve_link(x,distro.id)       
             direct_column = Utility.direct_column(title='Action',getter=getter)     
