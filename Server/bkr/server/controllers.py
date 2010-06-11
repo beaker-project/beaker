@@ -516,7 +516,7 @@ class Root(RPCRoot):
       
     @expose(template='bkr.server.templates.grid') 
     @identity.require(identity.not_anonymous())
-    @paginate('list') 
+    @paginate('list',default_order='fqdn', limit=20, allow_limit_override=True)
     def reserve_system(self, *args,**kw):
         def reserve_link(x,distro):
             if x.is_free():
