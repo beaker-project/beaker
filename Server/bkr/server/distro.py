@@ -268,7 +268,6 @@ class Distros(RPCRoot):
 
         # Check each Distro
         for distro in distros:
-            print distro
             if osversion != distro.osversion:
                 edited.append('%s' % distro.install_name)
                 Activity(identity.current.user,'XMLRPC','OSVersion',distro.install_name,'%s' % distro.osversion,'%s' % osversion)
