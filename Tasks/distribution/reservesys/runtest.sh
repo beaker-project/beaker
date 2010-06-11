@@ -32,40 +32,48 @@ RprtRslt()
 MOTD()
 {
     FILE=/etc/motd
+    local inventory="https://beaker.engineering.redhat.com"
+    local watchdog= system=
+    if [[ -z "$CALLED_BY_BEAH" ]]; then
+        watchdog="http://$RESULT_SERVER/cgi-bin/rhts/watchdog.cgi"
+        system="http://$LAB_SERVER/cgi-bin/rhts/systems.cgi?fqdn=$HOSTNAME"
+    else
+        watchdog="$inventory/recipes/$RECIPEID"
+        system="$inventory/view/$HOSTNAME"
+    fi
+    else
+    fi
 
     mv $FILE $FILE.orig
-
-    echo "**  **  **  **  **  **  **  **  **  **  **  **  **  **  **  **  **  **" > $FILE
-    echo "                 This System is reserved by $SUBMITTER.               " >> $FILE
-    echo "                                                                      " >> $FILE
-    echo " To return this system early. You can run the command: return2rhts.sh " >> $FILE
-    echo "  Ensure you have your logs off the system before returning to RHTS   " >> $FILE
-    echo "                                                                      " >> $FILE
-    echo " To extend your reservation time. You can run the command:            " >> $FILE
-    echo "  extendtesttime.sh                                                   " >> $FILE
-    echo " This is an interactive script. You will be prompted for how many     " >> $FILE
-    echo "  hours you would like to extend the reservation.                     " >> $FILE
-    echo "  Please use this command responsibly, Everyone uses these machines.  " >> $FILE
-    echo "                                                                      " >> $FILE
-    echo " You should verify the watchdog was update succesfully after          " >> $FILE
-    echo "  you extend your reservation.                                        " >> $FILE
-    echo "  http://$RESULT_SERVER/cgi-bin/rhts/watchdog.cgi                     " >> $FILE
-    echo "                                                                      " >> $FILE
-    echo " For ssh, kvm, serial and power control operations please look here:  " >> $FILE
-    if [ -z "$LAB_SERVER" ]; then
-	echo "  https://inventory.engineering.redhat.com/view/$HOSTNAME          " >> $FILE
-    else
-	echo "  http://$LAB_SERVER/cgi-bin/rhts/systems.cgi?fqdn=$HOSTNAME          " >> $FILE
-    fi
-    echo "                                                                      " >> $FILE
-    echo "      RHTS Test information:                                          " >> $FILE
-    echo "                         HOSTNAME=$HOSTNAME                           " >> $FILE
-    echo "                            JOBID=$JOBID                              " >> $FILE
-    echo "                         RECIPEID=$RECIPEID                           " >> $FILE
-    echo "                    RESULT_SERVER=$RESULT_SERVER                      " >> $FILE
-    echo "                           DISTRO=$DISTRO                             " >> $FILE
-    echo "                     ARCHITECTURE=$ARCH                               " >> $FILE
-    echo "**  **  **  **  **  **  **  **  **  **  **  **  **  **  **  **  **  **" >> $FILE
+    cat <<END > $FILE
+**  **  **  **  **  **  **  **  **  **  **  **  **  **  **  **  **  **
+                 This System is reserved by $SUBMITTER.               
+                                                                      
+ To return this system early. You can run the command: return2rhts.sh 
+  Ensure you have your logs off the system before returning to RHTS   
+                                                                      
+ To extend your reservation time. You can run the command:            
+  extendtesttime.sh                                                   
+ This is an interactive script. You will be prompted for how many     
+  hours you would like to extend the reservation.                     
+  Please use this command responsibly, Everyone uses these machines.  
+                                                                      
+ You should verify the watchdog was updated succesfully after         
+  you extend your reservation.                                        
+  $watchdog                                                           
+                                                                      
+ For ssh, kvm, serial and power control operations please look here:  
+  $system                                                             
+                                                                      
+      RHTS Test information:                                          
+                         HOSTNAME=$HOSTNAME                           
+                            JOBID=$JOBID                              
+                         RECIPEID=$RECIPEID                           
+                    RESULT_SERVER=$RESULT_SERVER                      
+                           DISTRO=$DISTRO                             
+                     ARCHITECTURE=$ARCH                               
+**  **  **  **  **  **  **  **  **  **  **  **  **  **  **  **  **  **
+END
 }
 
 RETURNSCRIPT()
@@ -77,11 +85,15 @@ RETURNSCRIPT()
     echo "export TESTID=$TESTID" >> $SCRIPT
     echo "/usr/bin/rhts-test-update $RESULT_SERVER $TESTID finish" >> $SCRIPT
     echo "touch /var/cache/rhts/$TESTID/done" >> $SCRIPT
-    echo "/bin/echo Hit Return to reboot the system and continue any" >> $SCRIPT
-    echo "/bin/echo remaining RHTS tests. Or hit CTRL-C now if this" >> $SCRIPT
-    echo "/bin/echo is not desired." >> $SCRIPT
-    echo "read dummy" >> $SCRIPT
-    echo "/usr/bin/rhts-reboot" >> $SCRIPT
+    if [[ -z "$CALLED_BY_BEAH" ]]; then
+        echo "/bin/echo Hit Return to reboot the system and continue any" >> $SCRIPT
+        echo "/bin/echo remaining RHTS tests. Or hit CTRL-C now if this" >> $SCRIPT
+        echo "/bin/echo is not desired." >> $SCRIPT
+        echo "read dummy" >> $SCRIPT
+        echo "/usr/bin/rhts-reboot" >> $SCRIPT
+    else
+        echo "Going on..."
+    fi
 
     chmod 777 $SCRIPT
 }
