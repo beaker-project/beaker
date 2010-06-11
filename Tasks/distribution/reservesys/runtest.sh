@@ -41,8 +41,6 @@ MOTD()
         watchdog="$inventory/recipes/$RECIPEID"
         system="$inventory/view/$HOSTNAME"
     fi
-    else
-    fi
 
     mv $FILE $FILE.orig
     cat <<END > $FILE
@@ -105,10 +103,14 @@ SCRIPT2=/usr/bin/extendtesttime.sh
 cat > $SCRIPT2 <<-EOF
 howmany()
 {
-echo "How many hours would you like to extend the reservation."
-echo "             Must be between 1 and 99                   "
-read RESPONSE
-validint \$RESPONSE 1 99
+if [ -z "\$1" ]; then
+  read RESPONSE
+else
+  echo "How many hours would you like to extend the reservation."
+  echo "             Must be between 1 and 99                   "
+  RESPONSE="\$1"
+fi
+validint "\$RESPONSE" 1 99
 echo "Extending reservation time \$RESPONSE"
 EXTRESTIME=\$(echo \$RESPONSE)h
 }
@@ -152,7 +154,7 @@ fi
 return 0
 }
 
-howmany
+howmany "\$1"
 
 export RESULT_SERVER=$RESULT_SERVER
 export HOSTNAME=$HOSTNAME
@@ -170,10 +172,12 @@ NOTIFY()
 {
     /sbin/service sendmail start
     local msg=$(mktemp)
+    local tag=
+    [[ -n "$CALLED_BY_BEAH" ]] && tag="[Beaker Machine Reserved] "
 
 cat > $msg <<-EOF
 To: $SUBMITTER
-Subject: $HOSTNAME
+Subject: $tag$HOSTNAME
 X-RHTS-test: $TEST
 
 EOF
