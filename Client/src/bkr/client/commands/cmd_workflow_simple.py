@@ -66,19 +66,19 @@ class Workflow_Simple(BeakerWorkflow):
                                                              requestedTasks,
                                                              taskParams=taskParams,
                                                              distroRequires=arch_node, 
-                                                             role='SERVERS'))
+                                                             role='SERVERS', **kwargs))
                 for i in range(self.n_clients):
                     recipeSet.addRecipe(self.processTemplate(recipeTemplate, 
                                                              requestedTasks,
                                                              taskParams=taskParams,
                                                              distroRequires=arch_node, 
-                                                             role='CLIENTS'))
+                                                             role='CLIENTS', **kwargs))
                 job.addRecipeSet(recipeSet)
             else:
                 job.addRecipe(self.processTemplate(recipeTemplate,
                                                    requestedTasks,
                                                    taskParams=taskParams,
-                                                   distroRequires=arch_node))
+                                                   distroRequires=arch_node, **kwargs))
 
         # jobxml
         jobxml = job.toxml(**kwargs)

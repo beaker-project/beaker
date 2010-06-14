@@ -148,6 +148,18 @@ class BeakerWorkflow(BeakerCommand):
             type=int,
             help="Specify how many server hosts to be involved in multihost test",
         )
+        self.parser.add_option(
+            "--install",
+            default=[],
+            action="append",
+            help="Specify Package to install, this will add /distribution/pkginstall.",
+        )
+        self.parser.add_option(
+            "--dump",
+            default=False,
+            action="store_true",
+            help="Turn on ndnc/kdump. (which one depends on the family)",
+        )
 
     def getTasks(self, *args, **kwargs):
         """ get all requested tasks """
@@ -192,14 +204,31 @@ class BeakerWorkflow(BeakerCommand):
                          taskParams=[],
                          distroRequires=None,
                          hostRequires=None,
-                         role='STANDALONE'):
+                         role='STANDALONE',
+                         whiteboard=None,
+                         install=None,
+                         dump=None,
+                         **kwargs):
         """ add tasks and additional requires to our template """
         # Copy basic requirements
         recipe = copy.deepcopy(recipeTemplate)
+        if whiteboard:
+            recipe.whiteboard = whiteboard
         if distroRequires:
             recipe.addDistroRequires(copy.deepcopy(distroRequires))
         if hostRequires:
             recipe.addHostRequires(copy.deepcopy(hostRequires))
+        if '/distribution/install' not in requestedTasks:
+            recipe.addTask('/distribution/install')
+        if install:
+            paramnode = self.doc.createElement('param')
+            paramnode.setAttribute('name' , 'PKGARGNAME')
+            paramnode.setAttribute('value' , ' '.join(install))
+            recipe.addTask('/distribution/pkginstall', paramNodes=[paramnode])
+        if dump:
+            # Add both, One is for RHEL5 and newer, the Scheduler will filter out the wrong one.
+            recipe.addTask('/kernel/networking/ndnc')
+            recipe.addTask('/kernel/networking/kdump')
         for task in requestedTasks:
             recipe.addTask(task, role=role, taskParams=taskParams)
         return recipe
@@ -334,8 +363,6 @@ class BeakerRecipe(BeakerBase):
             mykeyvalue.setAttribute('op', '%s' % op)
             mykeyvalue.setAttribute('value', '%s' % value)
             self.addHostRequires(mykeyvalue)
-        # Add in install task
-        self.addTask('/distribution/install')
 
     def addRepo(self, node):
         self.repos.appendChild(node)
