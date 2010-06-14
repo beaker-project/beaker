@@ -128,7 +128,7 @@ class PowerTypes(AdminPage):
         return dict(matches=powers)
 
     @expose(template="bkr.server.templates.admin_grid")
-    @paginate('list', default_order='name', allow_limit_override=True)
+    @paginate('list', default_order='name', max_limit=None)
     def index(self,*args,**kw):
         powertypes = session.query(PowerType)
         list_by_letters = set([elem.name[0].capitalize() for elem in powertypes])

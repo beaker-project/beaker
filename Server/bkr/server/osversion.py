@@ -94,7 +94,7 @@ class OSVersions(AdminPage):
         return dict(matches=osmajors)
 
     @expose(template="bkr.server.templates.admin_grid")
-    @paginate('list',limit=50, default_order='osmajor', allow_limit_override=True)
+    @paginate('list',limit=50, default_order='osmajor', max_limit=None)
     def index(self,*args,**kw):
         osversions = session.query(OSVersion)
         list_by_letters = []

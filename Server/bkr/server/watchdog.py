@@ -12,7 +12,7 @@ log = logging.getLogger(__name__)
 class Watchdogs(RPCRoot):
 
     @expose('bkr.server.templates.grid')
-    @paginate('list', default_order='job_id', limit=50, allow_limit_override=True)
+    @paginate('list', default_order='job_id', limit=50, max_limit=None)
     def index(self,*args,**kw): 
         s = select([watchdog_table.c.kill_time,
                 watchdog_table.c.id,

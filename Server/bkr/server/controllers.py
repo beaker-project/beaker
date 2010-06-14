@@ -164,7 +164,7 @@ class Arches:
 class Devices:
 
     @expose(template='bkr.server.templates.grid')
-    @paginate('list',default_order='fqdn',limit=10,allow_limit_override=True)
+    @paginate('list',default_order='fqdn',limit=10,max_limit=None)
     def view(self, id):
         device = session.query(Device).get(id)
         systems = System.all(identity.current.user).join('devices').filter_by(id=id).distinct()
@@ -179,7 +179,7 @@ class Devices:
                     list = systems)
 
     @expose(template='bkr.server.templates.grid')
-    @paginate('list',default_order='description',limit=50,allow_limit_override=True)
+    @paginate('list',default_order='description',limit=50,max_limit=None)
     def default(self, *args, **kw):
         args = list(args)
         if len(args) == 1:
@@ -454,7 +454,7 @@ class Root(RPCRoot):
         return {'success' : True } 
 
     @expose(template='bkr.server.templates.grid_add')
-    @paginate('list',default_order='fqdn',limit=20,allow_limit_override=True)
+    @paginate('list',default_order='fqdn',limit=20,max_limit=None)
     def index(self, *args, **kw):   
         return_dict =  self.systems(systems = System.all(identity.current.user), *args, **kw) 
         return return_dict
@@ -484,19 +484,19 @@ class Root(RPCRoot):
 
     @expose(template='bkr.server.templates.grid')
     @identity.require(identity.not_anonymous())
-    @paginate('list',default_order='fqdn',limit=20,allow_limit_override=True)
+    @paginate('list',default_order='fqdn',limit=20,max_limit=None)
     def available(self, *args, **kw):
         return self.systems(systems = System.available(identity.current.user), *args, **kw)
 
     @expose(template='bkr.server.templates.grid')
     @identity.require(identity.not_anonymous())
-    @paginate('list',default_order='fqdn',limit=20,allow_limit_override=True)
+    @paginate('list',default_order='fqdn',limit=20,max_limit=None)
     def free(self, *args, **kw): 
         return self.systems(systems = System.free(identity.current.user), *args, **kw)
 
     @expose(template='bkr.server.templates.grid')
     @identity.require(identity.not_anonymous())
-    @paginate('list',limit=20,allow_limit_override=True)
+    @paginate('list',limit=20,max_limit=None)
     def mine(self, *args, **kw):
         return self.systems(systems = System.mine(identity.current.user), *args, **kw)
     
@@ -823,7 +823,7 @@ class Root(RPCRoot):
                      prov_install = [(distro.id, distro.install_name) for distro in system.distros()]))
 
     @expose(template="bkr.server.templates.system")
-    @paginate('history_data',limit=30,default_order='-created', allow_limit_override=True)
+    @paginate('history_data',limit=30,default_order='-created', max_limit=None)
     def view(self, fqdn=None, **kw): 
         if fqdn: 
             try:
