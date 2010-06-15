@@ -28,14 +28,14 @@ if not user:
     usage()
 
 # login
-go("http://localhost/login")
+go("http://localhost/bkr/login")
 formclear(1)
 fv("1","user_name","admin")
 fv("1","password","testing")
 submit('login')
 
 # Add user
-go("/users/new")
+go("/bkr/users/new")
 code(200)
 formclear(1)
 fv("1","user_name", user)

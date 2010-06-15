@@ -25,14 +25,14 @@ if not labcontroller:
     usage()
 
 # login
-go("http://localhost/login")
+go("http://localhost/bkr/login")
 formclear(1)
 fv("1","user_name","admin")
 fv("1","password","testing")
 submit('login')
 
 # Add lab controller
-go("/labcontrollers/new")
+go("/bkr/labcontrollers/new")
 code(200)
 formclear(1)
 fv("1","fqdn",labcontroller)

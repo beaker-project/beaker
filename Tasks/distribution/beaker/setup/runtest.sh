@@ -288,21 +288,19 @@ function Inventory()
     service iptables stop
     # Turn on wsgi
     perl -pi -e 's|^#LoadModule wsgi_module modules/mod_wsgi.so|LoadModule wsgi_module modules/mod_wsgi.so|g' /etc/httpd/conf.d/wsgi.conf
-    service httpd start
+    service httpd restart
     estatus_fail "**** Failed to start httpd ****"
     # Add the lab controller
     ./add_labcontroller.py -l $CLIENT
     ./add_user.py -u host/$CLIENT
     estatus_fail "**** Failed to add lab controller ****"
-    rhts-sync-set -s READY
+    rhts-sync-set -s SERVERREADY
     rhts-sync-block -s DONE -s ABORT $CLIENT
     result_pass 
 }
 
 function LabController()
 {
-    # We only want the first one
-    SERVER=$(echo $SERVERS| awk '{print $1}')
     # limit to only ipv4 address
     ipaddress=$(host $HOSTNAME | awk '/has address/ {print $NF}')
     yum install -y python-twill
@@ -317,7 +315,7 @@ function LabController()
      perl -pi -e "s|^pxe_just_once: 0|pxe_just_once: 1|g" /etc/cobbler/settings
      perl -pi -e "s|^anamon_enabled: 0|anamon_enabled: 1|g" /etc/cobbler/settings
      perl -pi -e "s|^anamon_enabled: 0|anamon_enabled: 1|g" /etc/cobbler/settings
-     perl -pi -e "s|^redhat_management_server: .*|redhat_management_server: \"https://testuser:testpassword\@$SERVER\"|g" /etc/cobbler/settings
+     perl -pi -e "s|^redhat_management_server: .*|redhat_management_server: \"$SERVER_URL\"|g" /etc/cobbler/settings
     echo "rcm: \"http://rcm-xmlrpc.build.bos.redhat.com/rcm\"" >> /etc/cobbler/settings
     #FIXME edit /etc/cobbler/modules.conf
     # enable testing auth module
@@ -327,14 +325,14 @@ function LabController()
     semanage fcontext -a -t public_content_t "/var/www/cobbler/images/.*"
     # Turn on wsgi
     perl -pi -e 's|^#LoadModule wsgi_module modules/mod_wsgi.so|LoadModule wsgi_module modules/mod_wsgi.so|g' /etc/httpd/conf.d/wsgi.conf
-    service httpd start
+    service httpd restart
     service xinetd start
     service cobblerd start
     cobbler get-loaders
     #service autofs start
     service iptables stop
     rhts-sync-set -s READY
-    abort=$(rhts-sync-block -s READY -s ABORT $SERVER)
+    abort=$(rhts-sync-block -s SERVERREADY -s ABORT $SERVER)
     echo "abort=$abort"
     # Add some distros
     # NFS format HOSTNAME:DISTRONAME:NFSPATH
@@ -419,16 +417,11 @@ function LabController()
     result_pass 
 }
 
-if [ -z "$SERVERS" -o -z "$CLIENTS" ]; then
-    echo "Can not determine my Role! Client/Server Failed:" | tee -a $OUTPUTFILE
-    echo "If you are running in developer mode try setting" | tee -a $OUTPUTFILE
-    echo "the environment variables CLIENTS and SERVERS"    | tee -a $OUTPUTFILE
-    report_result $TEST Warn
-fi
-
 if $(echo $CLIENTS | grep -q $HOSTNAME); then
     echo "Running test as Lab Controller" | tee -a $OUTPUTFILE
     TEST="$TEST/lab_controller"
+    SERVER=$(echo $SERVERS | awk '{print $1}')
+    SERVER_URL="https://testuser:testpassword@$SERVER/bkr/"
     LabController
 fi
 
@@ -442,7 +435,10 @@ if $(echo $STANDALONE | grep -q $HOSTNAME); then
     echo "Running test as both Lab Controller and Scheduler" | tee -a $OUTPUTFILE
     CLIENTS=$STANDALONE
     SERVERS=$STANDALONE
+    SERVER=$(echo $SERVERS | awk '{print $1}')
+    SERVER_URL="https://testuser:testpassword\@$SERVER/bkr"
     TEST="$TEST/lab_controller" LabController &
+    sleep 120
     TEST="$TEST/inventory" Inventory
 fi
 
