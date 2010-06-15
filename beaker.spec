@@ -6,8 +6,8 @@
 %endif
 
 Name:           beaker
-Version:        0.5.42
-Release:        4%{?timestamp}%{?branch}%{?dist}
+Version:        0.5.43
+Release:        0%{?timestamp}%{?branch}%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -185,6 +185,17 @@ fi
 %{_sysconfdir}/init.d/%{name}-watchdog
 
 %changelog
+* Tue Jun 15 2010 Bill Peck <bpeck@redhat.com> - 0.5.43-0
+- bz581860	Listing of possible families
+- bz589904 	tests which crashing the system will timeout the watchdog
+- bz601220 	extendtesttime.sh does not work
+- bz601485 	bkr --convert should convert CPUNAME to cpu_codename
+- bz601763 	When trying to reserve a machine I get 500 Internal error
+- bz602214 	--prettyxml option to bkr job-results doesn't work
+- bz602907 	https://beaker.engineering.redhat.com/reserve_system defects
+- bz602915 	Error with "Pick System" from Distro page 
+- bz600098   	strip ansi chars from console.log so browsers show it as text/plain.
+
 * Tue Jun 15 2010 Bill Peck <bpeck@redhat.com> - 0.5.42-4
 - changed update_status() to not get into recursive loops
 * Mon Jun 14 2010 Bill Peck <bpeck@redhat.com> - 0.5.42-3
