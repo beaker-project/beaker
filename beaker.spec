@@ -7,7 +7,7 @@
 
 Name:           beaker
 Version:        0.5.42
-Release:        3%{?timestamp}%{?branch}%{?dist}
+Release:        4%{?timestamp}%{?branch}%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -185,6 +185,8 @@ fi
 %{_sysconfdir}/init.d/%{name}-watchdog
 
 %changelog
+* Tue Jun 15 2010 Bill Peck <bpeck@redhat.com> - 0.5.42-4
+- changed update_status() to not get into recursive loops
 * Mon Jun 14 2010 Bill Peck <bpeck@redhat.com> - 0.5.42-3
 - replace allow_limit_override=True with max_limit=None
 * Tue Jun 08 2010 Bill Peck <bpeck@redhat.com> - 0.5.42-1

@@ -2933,14 +2933,14 @@ class Job(TaskBase):
         Method to cancel all recipesets for this job.
         """
         for recipeset in self.recipesets:
-            recipeset.cancel(msg)
+            recipeset._cancel(msg)
 
     def abort(self, msg=None):
         """
         Method to abort all recipesets for this job.
         """
         for recipeset in self.recipesets:
-            recipeset.abort(msg)
+            recipeset._abort(msg)
 
     def task_info(self):
         """
@@ -2978,6 +2978,7 @@ class Job(TaskBase):
         max_result = None
         min_status = TaskStatus.max()
         for recipeset in self.recipesets:
+            recipeset._update_status()
             if recipeset.is_finished():
                 self.ptasks += recipeset.ptasks
                 self.wtasks += recipeset.wtasks
@@ -3068,19 +3069,39 @@ class RecipeSet(TaskBase):
         """
         Method to cancel all recipes in this recipe set.
         """
+        self._cancel(msg)
+        self.update_status()
+
+    def _cancel(self, msg=None):
+        """
+        Method to cancel all recipes in this recipe set.
+        """
         self.status = TaskStatus.by_name(u'Cancelled')
         for recipe in self.recipes:
-            recipe.cancel(msg)
+            recipe._cancel(msg)
 
     def abort(self, msg=None):
         """
         Method to abort all recipes in this recipe set.
         """
+        self._abort(msg)
+        self.update_status()
+
+    def _abort(self, msg=None):
+        """
+        Method to abort all recipes in this recipe set.
+        """
         self.status = TaskStatus.by_name(u'Aborted')
         for recipe in self.recipes:
-            recipe.abort(msg)
+            recipe._abort(msg)
 
     def update_status(self):
+        """
+        Update number of passes, failures, warns, panics..
+        """
+        self.job.update_status()
+
+    def _update_status(self):
         """
         Update number of passes, failures, warns, panics..
         """
@@ -3091,6 +3112,7 @@ class RecipeSet(TaskBase):
         max_result = None
         min_status = TaskStatus.max()
         for recipe in self.recipes:
+            recipe._update_status()
             if recipe.is_finished():
                 self.ptasks += recipe.ptasks
                 self.wtasks += recipe.wtasks
@@ -3107,8 +3129,6 @@ class RecipeSet(TaskBase):
         if self.is_finished():
             for recipe in self.recipes:
                 recipe.release_system()
-
-        self.job.update_status()
 
     def recipes_orderby(self, labcontroller):
         query = select([recipe_table.c.id, 
@@ -3334,47 +3354,95 @@ class Recipe(TaskBase):
         """
         Move from New -> Queued
         """
+        self._queue()
+        self.update_status()
+
+    def _queue(self):
+        """
+        Move from New -> Queued
+        """
         for task in self.tasks:
-            task.queue()
+            task._queue()
 
     def process(self):
         """
         Move from Queued -> Processed
         """
+        self._process()
+        self.update_status()
+
+    def _process(self):
+        """
+        Move from Queued -> Processed
+        """
         for task in self.tasks:
-            task.process()
+            task._process()
 
     def schedule(self):
         """
         Move from Processed -> Scheduled
         """
+        self._schedule()
+        self.update_status()
+
+    def _schedule(self):
+        """
+        Move from Processed -> Scheduled
+        """
         for task in self.tasks:
-            task.schedule()
+            task._schedule()
 
     def waiting(self):
         """
         Move from Scheduled to Waiting
         """
+        self._waiting()
+        self.update_status()
+
+    def _waiting(self):
+        """
+        Move from Scheduled to Waiting
+        """
         for task in self.tasks:
-            task.waiting()
+            task._waiting()
 
     def cancel(self, msg=None):
         """
         Method to cancel all tasks in this recipe.
         """
+        self._cancel(msg)
+        self.update_status()
+
+    def _cancel(self, msg=None):
+        """
+        Method to cancel all tasks in this recipe.
+        """
         self.status = TaskStatus.by_name(u'Cancelled')
         for task in self.tasks:
-            task.cancel(msg)
+            task._cancel(msg)
 
     def abort(self, msg=None):
         """
         Method to abort all tasks in this recipe.
         """
+        self._abort(msg)
+        self.update_status()
+
+    def _abort(self, msg=None):
+        """
+        Method to abort all tasks in this recipe.
+        """
         self.status = TaskStatus.by_name(u'Aborted')
         for task in self.tasks:
-            task.abort(msg)
+            task._abort(msg)
 
     def update_status(self):
+        """
+        Update number of passes, failures, warns, panics..
+        """
+        self.recipeset.job.update_status()
+
+    def _update_status(self):
         """
         Update number of passes, failures, warns, panics..
         """
@@ -3390,6 +3458,7 @@ class Recipe(TaskBase):
         max_result = None
         min_status = TaskStatus.max()
         for task in self.tasks:
+            task._update_status()
             if task.is_finished():
                 if task.result == task_pass:
                     self.ptasks += 1
@@ -3415,8 +3484,6 @@ class Recipe(TaskBase):
             # Record the completion of this Recipe.
             self.finish_time = datetime.utcnow()
 
-        self.recipeset.update_status()
-    
     def release_system(self):
         """ Release the system and remove the watchdog
         """
@@ -3754,40 +3821,69 @@ class RecipeTask(TaskBase):
         """
         Update number of passes, failures, warns, panics..
         """
+        self.recipe.recipeset.job.update_status()
+
+    def _update_status(self):
+        """
+        Update number of passes, failures, warns, panics..
+        """
         max_result = None
         for result in self.results:
             if result.result > max_result:
                 max_result = result.result
         self.result = max_result
-        self.recipe.update_status()
 
     def queue(self):
         """
         Moved from New -> Queued
         """
-        self.status = TaskStatus.by_name(u'Queued')
+        self._queue()
         self.update_status()
+
+    def _queue(self):
+        """
+        Moved from New -> Queued
+        """
+        self.status = TaskStatus.by_name(u'Queued')
 
     def process(self):
         """
         Moved from Queued -> Processed
         """
-        self.status = TaskStatus.by_name(u'Processed')
+        self._process()
         self.update_status()
+
+    def _process(self):
+        """
+        Moved from Queued -> Processed
+        """
+        self.status = TaskStatus.by_name(u'Processed')
 
     def schedule(self):
         """
         Moved from Processed -> Scheduled
         """
-        self.status = TaskStatus.by_name(u'Scheduled')
+        self._schedule()
         self.update_status()
+
+    def _schedule(self):
+        """
+        Moved from Processed -> Scheduled
+        """
+        self.status = TaskStatus.by_name(u'Scheduled')
 
     def waiting(self):
         """
         Moved from Scheduled -> Waiting
         """
-        self.status = TaskStatus.by_name(u'Waiting')
+        self._waiting()
         self.update_status()
+
+    def _waiting(self):
+        """
+        Moved from Scheduled -> Waiting
+        """
+        self.status = TaskStatus.by_name(u'Waiting')
 
     def start(self, watchdog_override=None):
         """
@@ -3849,9 +3945,23 @@ class RecipeTask(TaskBase):
         """
         Cancel this task
         """
+        self._cancel(msg)
+        self.update_status()
+
+    def _cancel(self, msg=None):
+        """
+        Cancel this task
+        """
         return self._abort_cancel(u'Cancelled', msg)
 
     def abort(self, msg=None):
+        """
+        Abort this task
+        """
+        self._abort(msg)
+        self.update_status()
+    
+    def _abort(self, msg=None):
         """
         Abort this task
         """
@@ -3873,7 +3983,6 @@ class RecipeTask(TaskBase):
                                        result=TaskResult.by_name(u'Warn'),
                                        score=0,
                                        log=msg))
-        self.update_status()
         return True
 
     def pass_(self, path, score, summary):
