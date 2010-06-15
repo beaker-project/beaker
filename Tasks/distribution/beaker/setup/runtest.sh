@@ -421,7 +421,7 @@ if $(echo $CLIENTS | grep -q $HOSTNAME); then
     echo "Running test as Lab Controller" | tee -a $OUTPUTFILE
     TEST="$TEST/lab_controller"
     SERVER=$(echo $SERVERS | awk '{print $1}')
-    SERVER_URL="https://testuser:testpassword@$SERVER/bkr/"
+    SERVER_URL="https://testuser:testpassword\@$SERVER/bkr/"
     LabController
 fi
 
