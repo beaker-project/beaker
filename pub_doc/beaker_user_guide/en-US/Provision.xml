@@ -14,6 +14,12 @@
 			<title>Provision by System</title>
 			<para>
 				Go to the System details page (see <xref linkend="sect-beaker_user_guide-Components-Systems-System_Details" />) of a System that is free (see <xref linkend="sect-beaker_user_guide-Components-Systems-System_Searching" />) and click on <literal>Take</literal> in the <literal>Current User</literal> field. After successfully taking the System, click the <literal>Provision</literal> tab of the System details page to provision the System.
+			<note><title>Returning a System</title><para>
+                        	After provisioning a System, you can manually return it by going to the above mentioned System
+				details page, clicking on the <literal>Return</literal> link in the <literal>Current User</literal> field.
+                        </para>
+                        </note>
+
 			</para>
 			<figure><title>Provisioning a System via its details page</title>
 				<mediaobject>
