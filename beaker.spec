@@ -7,7 +7,7 @@
 
 Name:           beaker
 Version:        0.5.43
-Release:        0%{?timestamp}%{?branch}%{?dist}
+Release:        1%{?timestamp}%{?branch}%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -185,6 +185,9 @@ fi
 %{_sysconfdir}/init.d/%{name}-watchdog
 
 %changelog
+* Wed Jun 16 2010 Bill Peck <bpeck@redhat.com> - 0.5.43-1
+- require a valid user for xmlrpc job.upload()
+
 * Tue Jun 15 2010 Bill Peck <bpeck@redhat.com> - 0.5.43-0
 - bz581860	Listing of possible families
 - bz589904 	tests which crashing the system will timeout the watchdog

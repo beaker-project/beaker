@@ -91,6 +91,7 @@ class Jobs(RPCRoot):
         )
 
     @cherrypy.expose
+    @identity.require(identity.not_anonymous())
     def upload(self, jobxml):
         """
         XMLRPC method to upload job
