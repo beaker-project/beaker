@@ -2935,6 +2935,7 @@ class Job(TaskBase):
         """
         for recipeset in self.recipesets:
             recipeset._cancel(msg)
+        self.update_status()
 
     def abort(self, msg=None):
         """
@@ -2942,6 +2943,7 @@ class Job(TaskBase):
         """
         for recipeset in self.recipesets:
             recipeset._abort(msg)
+        self.update_status()
 
     def task_info(self):
         """
