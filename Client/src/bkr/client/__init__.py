@@ -160,6 +160,16 @@ class BeakerWorkflow(BeakerCommand):
             action="store_true",
             help="Turn on ndnc/kdump. (which one depends on the family)",
         )
+        self.parser.add_option(
+            "--method",
+            default="nfs",
+            help="Installation source method (nfs/http) (optional)"
+        )
+        self.parser.add_option(
+            "--kernel_options",
+            default=None,
+            help="Boot arguments to supply (optional)"
+        )
 
     def getTasks(self, *args, **kwargs):
         """ get all requested tasks """
@@ -249,7 +259,7 @@ class BeakerJob(BeakerBase):
     def __init__(self, *args, **kwargs):
         self.node = self.doc.createElement('job')
         whiteboard = self.doc.createElement('whiteboard')
-        whiteboard.appendChild(self.doc.createTextNode(kwargs.pop("whiteboard","")))
+        whiteboard.appendChild(self.doc.createTextNode(kwargs.get('whiteboard','')))
         self.node.appendChild(whiteboard)
 
     def addRecipeSet(self, recipeSet):
@@ -308,6 +318,8 @@ class BeakerRecipe(BeakerBase):
         distro = kwargs.get("distro", None)
         family = kwargs.get("family", None)
         variant = kwargs.get("variant", None)
+        method = kwargs.get("method", None)
+        kernel_options = kwargs.get("kernel_options", None)
         tags = kwargs.get("tag", [])
         systype = kwargs.get("systype", None)
         machine = kwargs.get("machine", None)
@@ -328,6 +340,14 @@ class BeakerRecipe(BeakerBase):
             distroVariant.setAttribute('op', '=')
             distroVariant.setAttribute('value', '%s' % variant)
             self.addDistroRequires(distroVariant)
+        if method:
+            distroMethod = self.doc.createElement('distro_method')
+            distroMethod.setAttribute('op', '=')
+            distroMethod.setAttribute('value', method)
+            self.addDistroRequires(distroMethod)
+        if kernel_options:
+            self.node.setAttribute('kernel_options',
+                                   kwargs.get('kernel_options', ''))
         for i, repo in enumerate(repos):
             myrepo = self.doc.createElement('repo')
             myrepo.setAttribute('name', 'myrepo_%s' % i)
@@ -387,4 +407,9 @@ class BeakerRecipe(BeakerBase):
             params.appendChild(param)
         recipeTask.appendChild(params)
         self.node.appendChild(recipeTask)
+
+    def addKickstart(self, kickstart):
+        recipeKickstart = self.doc.createElement('kickstart')
+        recipeKickstart.appendChild(self.doc.createCDATASection(kickstart))
+        self.node.appendChild(recipeKickstart)
 

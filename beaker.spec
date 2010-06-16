@@ -7,7 +7,7 @@
 
 Name:           beaker
 Version:        0.5.43
-Release:        1%{?timestamp}%{?branch}%{?dist}
+Release:        2%{?timestamp}%{?branch}%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -185,6 +185,9 @@ fi
 %{_sysconfdir}/init.d/%{name}-watchdog
 
 %changelog
+* Wed Jun 16 2010 Bill Peck <bpeck@redhat.com> - 0.5.43-2
+- update BeakerWorkflow to support --method and --kernel_options
+
 * Wed Jun 16 2010 Bill Peck <bpeck@redhat.com> - 0.5.43-1
 - require a valid user for xmlrpc job.upload()
 
