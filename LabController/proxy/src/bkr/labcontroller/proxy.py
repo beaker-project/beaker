@@ -206,15 +206,20 @@ class WatchFile(object):
                     self.proxy.logger.info("Panic detected for system: %s" % self.watchdog['system'])
                     recipeset = xmltramp.parse(self.proxy.get_recipe(self.watchdog['system'])).recipeSet
                     try:
-                        watchdog = recipeset.recipe.watchdog()
+                        recipe = recipeset.recipe
                     except AttributeError:
-                        watchdog = recipeset.guestrecipe.watchdog()
+                        recipe = recipeset.guestrecipe
+                    watchdog = recipe.watchdog()
                     if 'panic' in watchdog and watchdog['panic'] == 'ignore':
                         # Don't Report the panic
                         self.proxy.logger.info("Not reporting panic, recipe set to ignore")
                     else:
                         # Report the panic
-                        self.proxy.task_result(self.watchdog['task_id'], 'panic', '/', 0, panic.group())
+                        # Look for active task, worst case it records it on the last task
+                        for task in recipe['task':]:
+                            if task()['status'] == 'Running':
+                                break
+                        self.proxy.task_result(task()['id'], 'panic', '/', 0, panic.group())
                         # set the watchdog timeout to 10 seconds, gives some time for all data to 
                         # print out on the serial console
                         # this may abort the recipe depending on what the recipeSets
