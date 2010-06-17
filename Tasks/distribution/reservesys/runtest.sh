@@ -45,38 +45,38 @@ MOTD()
     mv $FILE $FILE.orig
     cat <<END > $FILE
 **  **  **  **  **  **  **  **  **  **  **  **  **  **  **  **  **  **
-                 This System is reserved by $SUBMITTER.               
-                                                                      
- To return this system early. You can run the command: return2rhts.sh 
-  Ensure you have your logs off the system before returning to RHTS   
-                                                                      
- To extend your reservation time. You can run the command:            
-  extendtesttime.sh                                                   
- This is an interactive script. You will be prompted for how many     
-  hours you would like to extend the reservation.                     
-  Please use this command responsibly, Everyone uses these machines.  
-                                                                      
- You should verify the watchdog was updated succesfully after         
-  you extend your reservation.                                        
-  $watchdog                                                           
-                                                                      
- For ssh, kvm, serial and power control operations please look here:  
-  $system                                                             
-                                                                      
-      RHTS Test information:                                          
-                         HOSTNAME=$HOSTNAME                           
-                            JOBID=$JOBID                              
-                         RECIPEID=$RECIPEID                           
-                    RESULT_SERVER=$RESULT_SERVER                      
-                           DISTRO=$DISTRO                             
-                     ARCHITECTURE=$ARCH                               
+                 This System is reserved by $SUBMITTER.
+
+ To return this system early. You can run the command: $return2pool
+  Ensure you have your logs off the system before returning to $scheduler
+
+ To extend your reservation time. You can run the command:
+  extendtesttime.sh
+ This is an interactive script. You will be prompted for how many
+  hours you would like to extend the reservation.
+  Please use this command responsibly, Everyone uses these machines.
+
+ You should verify the watchdog was updated succesfully after
+  you extend your reservation.
+  $watchdog
+
+ For ssh, kvm, serial and power control operations please look here:
+  $system
+
+      $scheduler Test information:
+                         HOSTNAME=$HOSTNAME
+                            JOBID=$JOBID
+                         RECIPEID=$RECIPEID
+                    RESULT_SERVER=$RESULT_SERVER
+                           DISTRO=$DISTRO
+                     ARCHITECTURE=$ARCH
 **  **  **  **  **  **  **  **  **  **  **  **  **  **  **  **  **  **
 END
 }
 
 RETURNSCRIPT()
 {
-    SCRIPT=/usr/bin/return2rhts.sh
+    SCRIPT=/usr/bin/$return2pool
 
     echo "#!/bin/sh"                           > $SCRIPT
     echo "export RESULT_SERVER=$RESULT_SERVER" >> $SCRIPT
@@ -90,7 +90,9 @@ RETURNSCRIPT()
         echo "read dummy" >> $SCRIPT
         echo "/usr/bin/rhts-reboot" >> $SCRIPT
     else
-        echo "Going on..."
+        echo "/bin/echo Going on..." >> $SCRIPT
+        rm -f /usr/bin/return2rhts.sh &> /dev/null || true
+        ln -s $SCRIPT /usr/bin/return2rhts.sh &> /dev/null || true
     fi
 
     chmod 777 $SCRIPT
@@ -130,9 +132,9 @@ testvalue="\${number#?}" # all but first character
 else
 testvalue="\$number"
 fi
-  
+
 nodigits="\$(echo \$testvalue | sed 's/[[:digit:]]//g')"
- 
+
 if [ ! -z "\$nodigits" ] ; then
 echo "Invalid number format! Only digits, no commas, spaces, etc."
 exit 1
@@ -178,7 +180,7 @@ NOTIFY()
 cat > $msg <<-EOF
 To: $SUBMITTER
 Subject: $tag$HOSTNAME
-X-RHTS-test: $TEST
+X-$scheduler-test: $TEST
 
 EOF
     cat /etc/motd >>$msg
@@ -203,27 +205,41 @@ fi
 
 echo "***** Start of reservesys test *****" > $OUTPUTFILE
 
-# build the /etc/motd file
-echo "***** Building /etc/motd *****" >> $OUTPUTFILE
-MOTD
+BUILD_()
+{
+    local scheduler= return2pool=
+    if [[ -z "$CALLED_BY_BEAH" ]]; then
+        scheduler=RHTS
+        return2pool=return2rhts.sh
+    else
+        scheduler=Beaker
+        return2pool=return2beaker.sh
+    fi
 
-# send email to the submitter
-echo "***** Sending email to $SUBMITTER *****" >> $OUTPUTFILE
-NOTIFY
+    # build the /etc/motd file
+    echo "***** Building /etc/motd *****" >> $OUTPUTFILE
+    MOTD
 
-# set the external watchdog timeout
-echo "***** Setting the external watchdog timeout *****" >> $OUTPUTFILE
-WATCHDOG
+    # send email to the submitter
+    echo "***** Sending email to $SUBMITTER *****" >> $OUTPUTFILE
+    NOTIFY
 
-# build /usr/bin/extendtesttime.sh script to allow user
-#  to extend the time time.
-echo "***** Building /usr/bin/extendtesttime.sh *****" >> $OUTPUTFILE
-EXTENDTESTTIME
+    # set the external watchdog timeout
+    echo "***** Setting the external watchdog timeout *****" >> $OUTPUTFILE
+    WATCHDOG
 
-# build /usr/bin/return2rhts.sh script to allow user
-#  to return the system to RHTS early.
-echo "***** Building /usr/bin/return2rhts.sh *****" >> $OUTPUTFILE
-RETURNSCRIPT
+    # build /usr/bin/extendtesttime.sh script to allow user
+    #  to extend the time time.
+    echo "***** Building /usr/bin/extendtesttime.sh *****" >> $OUTPUTFILE
+    EXTENDTESTTIME
+
+    # build /usr/bin/$return2pool script to allow user
+    #  to return the system to $scheduler early.
+    echo "***** Building /usr/bin/$return2pool *****" >> $OUTPUTFILE
+    RETURNSCRIPT
+}
+
+BUILD_
 
 echo "***** End of reservesys test *****" >> $OUTPUTFILE
 RprtRslt $TEST PASS 0
