@@ -7,7 +7,7 @@
 
 Name:           beaker
 Version:        0.5.44
-Release:        0%{?timestamp}%{?branch}%{?dist}
+Release:        1%{?timestamp}%{?branch}%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -185,6 +185,9 @@ fi
 %{_sysconfdir}/init.d/%{name}-watchdog
 
 %changelog
+* Thu Jun 17 2010 Bill Peck <bpeck@redhat.com> - 0.5.44-1
+- fix panic reporting to report on Running task
+
 * Thu Jun 17 2010 Bill Peck <bpeck@redhat.com> - 0.5.44-0
 - fix job actions cancel and abort to call update_status()
 
