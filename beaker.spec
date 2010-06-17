@@ -6,8 +6,8 @@
 %endif
 
 Name:           beaker
-Version:        0.5.43
-Release:        2%{?timestamp}%{?branch}%{?dist}
+Version:        0.5.44
+Release:        0%{?timestamp}%{?branch}%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -185,6 +185,9 @@ fi
 %{_sysconfdir}/init.d/%{name}-watchdog
 
 %changelog
+* Thu Jun 17 2010 Bill Peck <bpeck@redhat.com> - 0.5.44-0
+- fix job actions cancel and abort to call update_status()
+
 * Wed Jun 16 2010 Bill Peck <bpeck@redhat.com> - 0.5.43-2
 - update BeakerWorkflow to support --method and --kernel_options
 
