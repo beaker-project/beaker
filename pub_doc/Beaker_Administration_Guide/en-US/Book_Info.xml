@@ -1,15 +1,15 @@
 <?xml version='1.0' encoding='utf-8' ?>
 <!DOCTYPE bookinfo PUBLIC "-//OASIS//DTD DocBook XML V4.5//EN" "http://www.oasis-open.org/docbook/xml/4.5/docbookx.dtd" [
-<!ENTITY % BOOK_ENTITIES SYSTEM "Beaker_Admin_Guide.ent">
+<!ENTITY % BOOK_ENTITIES SYSTEM "Administration_Guide.ent">
 %BOOK_ENTITIES;
 ]>
-<bookinfo id="book-Beaker_Admin_Guide-Beaker_Admin_Guide">
+<bookinfo id="book-Administration_Guide-Administration_Guide" lang="en-US">
 	<title>Administration Guide</title>
 	<subtitle>Setting up Beaker</subtitle>
 	<productname>Beaker</productname>
 	<productnumber>0.5</productnumber>
 	<edition>0</edition>
-	<pubsnumber>1</pubsnumber>
+	<pubsnumber>3</pubsnumber>
 	<abstract>
 		<para>
 		</para>

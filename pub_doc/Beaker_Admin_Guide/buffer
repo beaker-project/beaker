@@ -1,7 +1,0 @@
-
-				<itemizedlist>
-					<listitem><literal>cobbler</literal><para>:Does the actual provisioning.</para></listitem>
-					<listitem><literal>conserver</literal><para>:Provides console logging.</para></listitem>
-					<listitem><literal>fence-agents</literal><para>:Power cycles amchines to start PXE installs and to recover.</para></listitem>
-					<listitem><literal>smolt</literal><para>:Provides the inventory data.</para></listitem>
-				</itemizedlist>

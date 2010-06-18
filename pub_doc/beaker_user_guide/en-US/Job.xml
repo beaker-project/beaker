@@ -64,7 +64,257 @@
 				</para>
 			</note>
 		</section>
-		
+		<section id="sect-beaker_user_guide-Components-Jobs-Job_Submission-XML_details">
+		<title>Job workflow details</title>
+		<para>
+		There are various XML entities in a Job workflow. You may wish to look at what some of these may be by looking at <xref linkend="sect-beaker_user_guide-Components-Jobs-Job_Submission-Cloning_an_existing_Job" />
+		Each Job has a root node called the <literal>job</literal> element:
+		<screen>
+&lt;job&gt;
+&lt;/job&gt;
+		</screen>
+		A direct child is the <literal>whiteboard</literal>. The content is normally a mnemonic piece of text describing the Job:
+		<screen>
+
+&lt;job&gt;
+&lt;whiteboard&gt;
+	Apache 2.2 test
+&lt;/whiteboard&gt;
+&lt;/job&gt;
+		</screen> 
+		The next tag in the <literal>recipeSet</literal> tag (which describes a Recipe Set. 
+		See <xref linkend="chap-beaker_user_guide-Components-Recipes" /> for details). A Job workflow can have one or more <literal>recipeSet</literal>. 
+		All Recipes within a Recipe Set are run simultaneously, whereas multiple Recipe Sets are run in no predetermined order. This should help you decide
+		whether you wish to run tasks in one or many Recipe Set (i.e Multihost tests will require no more than one Recipe Set).
+		<screen>
+&lt;job&gt;
+  &lt;whiteboard&gt;
+    Apache 2.2 test
+  &lt;/whiteboard&gt;
+    &lt;recipeSet&gt;
+    &lt;/recipeSet&gt;
+&lt;/job&gt;
+		</screen>
+		Of course a <literal>recipeSet</literal> element needs one or more <literal>recipe</literal> children. As mentioned above, Recipes run simultaneously.
+		The <literal>recipeSet</literal> element can have the following attributes
+		<variablelist>
+			<varlistentry><term>kernel_options</term>
+				<listitem>
+					<para>
+					</para>
+				</listitem>
+			</varlistentry>
+
+			<varlistentry><term>kernel_options_post</term>
+				<listitem>
+					<para>
+					</para>
+				</listitem>
+			</varlistentry>
+
+			<varlistentry><term>ks_meta</term>
+				<listitem>
+					<para>
+					</para>
+				</listitem>
+			</varlistentry>
+
+			<varlistentry><term>role</term>
+				<listitem>
+					<para>
+					In a Multihost environment, it could be either <literal>SERVERS</literal>, <literal>CLIENT</literal> or <literal>STANDALONE</literal>.
+					If it is not important, it can be <literal>None</literal>.
+					</para>
+				</listitem>
+			</varlistentry>
+
+			<varlistentry><term>whiteboard</term>
+				<listitem>
+					<para>
+						Text that describes the Recipe
+					</para>
+				</listitem>
+			</varlistentry>
+		</variablelist>
+		Here is an example:
+		<screen>	
+&lt;job&gt;
+  &lt;whiteboard&gt;
+    Apache 2.2 test
+  &lt;/whiteboard&gt;
+    &lt;recipeSet&gt;
+      &lt;recipe kernel_options="" kernel_options_post="" ks_meta="" role="None" whiteboard="Lab Controller"&gt;
+      &lt;/recipe&gt;
+    &lt;/recipeSet&gt;
+&lt;/job&gt;
+		</screen>
+		<note><title>Avoid having many Recipes in one Recipe Set</title>
+		<para>
+			Because Recipes are run simultaneously, not one Recipe will commence until all other sibling Recipes are ready. This involves each Recipe 
+			reserving a machine, and waiting until every other Recipe has reserved a machine. This can tie up resources and keep them idle for long amounts of time.
+			Try having many Recipe Sets containing few Recipes, rather than the opposite. Of course this only applies to Recipes that do not need to be run
+			simultaneously (i.e not Multihost Jobs)
+		</para>
+		</note>
+		Within the <literal>recipe</literal> tag, you can specify what packages need to be installed on top of anything that comes installed by default.
+		<screen>
+
+&lt;job&gt;
+  &lt;whiteboard&gt;
+    Apache 2.2 test
+  &lt;/whiteboard&gt;
+    &lt;recipeSet&gt;
+      &lt;recipe kernel_options="" kernel_options_post="" ks_meta="" role="None" whiteboard="Lab Controller"&gt;
+	&lt;packages&gt;
+	  &lt;package name="emacs"/&gt;
+	  &lt;package name="vim-enhanced"/&gt;
+          &lt;package name="unifdef"/&gt;
+	  &lt;package name="mysql-server"/&gt;
+	  &lt;package name="MySQL-python"/&gt;
+	  &lt;package name="python-twill"/&gt;
+			&lt;/packages&gt;
+      &lt;/recipe&gt;
+    &lt;/recipeSet&gt;
+&lt;/job&gt;
+		</screen>
+		If you would like you can also specify your own repository that provides extra packages that your Job requires. Use the <literal>repo</literal> tag for this.
+		You can use any text you like for the name attribute.
+		<screen>
+&lt;job&gt;
+  &lt;whiteboard&gt;
+    Apache 2.2 test
+  &lt;/whiteboard&gt;
+    &lt;recipeSet&gt;
+      &lt;recipe kernel_options="" kernel_options_post="" ks_meta="" role="None" whiteboard="Lab Controller"&gt;
+	&lt;packages&gt;
+	  &lt;package name="emacs"/&gt;
+	  &lt;package name="vim-enhanced"/&gt;
+          &lt;package name="unifdef"/&gt;
+	  &lt;package name="mysql-server"/&gt;
+	  &lt;package name="MySQL-python"/&gt;
+	  &lt;package name="python-twill"/&gt;
+	&lt;/packages&gt;
+
+	&lt;repos&gt;
+	  &lt;repo name="myrepo_1" url="http://my-repo.com/tools/beaker/devel/"/&gt;
+	&lt;/repos&gt;
+
+      &lt;/recipe&gt;
+    &lt;/recipeSet&gt;
+&lt;/job&gt;
+		</screen>		
+		To actually determine what distro will be installed, the <literal>distroRequires</literal> element needs to be populated. Within, we can specify such elements
+		as <literal>distro_arch</literal>, <literal>distro_name</literal> and <literal>distro_method</literal>. This relates to the Distro architecture, the name of the 
+		Distro, and it's install method (i.e nfs,ftp etc) respectively. The <literal>op</literal> determines if we do or do not want this value i.e <literal>=</literal> 
+		means we do want that value, <literal>!=</literal> means we do not want that value. The <literal>distro_virt</literal> element will determine whether we install
+		on a virtual machine or not.
+		<screen>
+&lt;job&gt;
+  &lt;whiteboard&gt;
+    Apache 2.2 test
+  &lt;/whiteboard&gt;
+    &lt;recipeSet&gt;
+      &lt;recipe kernel_options="" kernel_options_post="" ks_meta="" role="None" whiteboard="Lab Controller"&gt;
+	&lt;packages&gt;
+	  &lt;package name="emacs"/&gt;
+	  &lt;package name="vim-enhanced"/&gt;
+          &lt;package name="unifdef"/&gt;
+	  &lt;package name="mysql-server"/&gt;
+	  &lt;package name="MySQL-python"/&gt;
+	  &lt;package name="python-twill"/&gt;
+	&lt;/packages&gt;
+
+	&lt;repos&gt;
+	  &lt;repo name="myrepo_1" url="http://my-repo.com/tools/beaker/devel/"/&gt;
+	&lt;/repos&gt;
+	&lt;distroRequires&gt;
+  	  &lt;and&gt;
+	    &lt;distro_arch op="=" value="x86_64"/&gt;
+	    &lt;distro_name op="=" value="RHEL5-Server-U4"/&gt;
+	    &lt;distro_method op="=" value="nfs"/&gt;
+	  &lt;/and&gt;
+	  &lt;distro_virt op="=" value=""/&gt;
+        &lt;/distroRequires&gt;
+      &lt;/recipe&gt;
+    &lt;/recipeSet&gt;
+&lt;/job&gt;
+		</screen>
+		<literal>hostRequires</literal> has similar attributes to <literal>distroRequires</literal>
+		<screen>
+&lt;job&gt;
+  &lt;whiteboard&gt;
+    Apache 2.2 test
+  &lt;/whiteboard&gt;
+    &lt;recipeSet&gt;
+      &lt;recipe kernel_options="" kernel_options_post="" ks_meta="" role="None" whiteboard="Lab Controller"&gt;
+	&lt;packages&gt;
+	  &lt;package name="emacs"/&gt;
+	  &lt;package name="vim-enhanced"/&gt;
+          &lt;package name="unifdef"/&gt;
+	  &lt;package name="mysql-server"/&gt;
+	  &lt;package name="MySQL-python"/&gt;
+	  &lt;package name="python-twill"/&gt;
+	&lt;/packages&gt;
+	&lt;repos&gt;
+	  &lt;repo name="myrepo_1" url="http://my-repo.com/tools/beaker/devel/"/&gt;
+	&lt;/repos&gt;
+	&lt;distroRequires&gt;
+  	  &lt;and&gt;
+	    &lt;distro_arch op="=" value="x86_64"/&gt;
+	    &lt;distro_name op="=" value="RHEL5-Server-U4"/&gt;
+	    &lt;distro_method op="=" value="nfs"/&gt;
+	  &lt;/and&gt;
+	  &lt;distro_virt op="=" value=""/&gt;
+        &lt;/distroRequires&gt;
+	&lt;hostRequires&gt;
+	  &lt;and&gt;
+	    &lt;arch op="=" value="x86_64"/&gt;
+	  &lt;/and&gt;
+	&lt;/hostRequires&gt;
+      &lt;/recipe&gt;
+    &lt;/recipeSet&gt;
+&lt;/job&gt;
+		</screen>
+		All that's left to populate our XML with, are the <literal>task</literal> elements. The two attributes we need to specify
+		are the <literal>name</literal> and the <literal>role</literal>. Details of how to find which Task's are available, see <xref linkend="sect-beaker_user_guide-Components-Tasks-Task_Searching" />. 
+		<screen>
+&lt;job&gt;
+  &lt;whiteboard&gt;
+    Apache 2.2 test
+  &lt;/whiteboard&gt;
+    &lt;recipeSet&gt;
+      &lt;recipe kernel_options="" kernel_options_post="" ks_meta="" role="None" whiteboard="Lab Controller"&gt;
+	&lt;packages&gt;
+	  &lt;package name="emacs"/&gt;
+	  &lt;package name="vim-enhanced"/&gt;
+          &lt;package name="unifdef"/&gt;
+	  &lt;package name="mysql-server"/&gt;
+	  &lt;package name="MySQL-python"/&gt;
+	  &lt;package name="python-twill"/&gt;
+	&lt;/packages&gt;
+
+	&lt;repos&gt;
+	  &lt;repo name="myrepo_1" url="http://my-repo.com/tools/beaker/devel/"/&gt;
+	&lt;/repos&gt;
+	&lt;distroRequires&gt;
+  	  &lt;and&gt;
+	    &lt;distro_arch op="=" value="x86_64"/&gt;
+	    &lt;distro_name op="=" value="RHEL5-Server-U4"/&gt;
+	    &lt;distro_method op="=" value="nfs"/&gt;
+	  &lt;/and&gt;
+	  &lt;distro_virt op="=" value=""/&gt;
+        &lt;/distroRequires&gt;
+
+	&lt;task name="/distribution/install" role="STANDALONE"&gt;
+	  &lt;params/&gt;
+	&lt;/task&gt;
+
+      &lt;/recipe&gt;
+    &lt;/recipeSet&gt;
+&lt;/job&gt;
+		</screen>
+		</para>
+		</section>
 		<section id="sect-beaker_user_guide-Components-Jobs-Job_Submission-Job_Results">
 			<title>Job Results</title>
 			<para>
