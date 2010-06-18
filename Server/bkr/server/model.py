@@ -1603,7 +1603,11 @@ $SNIPPET("rhts_post")
             return False
 
     def is_admin(self,group_id=None,user_id=None,groups=None,*args,**kw):
-        if group_id: #Let's try this first as this will be the quicker query
+
+        if identity.current.user.is_admin() is True: #first let's see if we are an _admin_
+            return True
+
+        if group_id: #Let's try this next as this will be the quicker query
             try:
                 if self.admins.query().filter(SystemAdmin.group_id==group_id).one():
                     return True
@@ -1637,7 +1641,7 @@ $SNIPPET("rhts_post")
 
     def can_loan(self, user=None):
         if user and not self.loaned and not self.user:
-            if user == self.owner or user.is_admin():
+            if self.can_admin(user):
                 return True
         return False
 
