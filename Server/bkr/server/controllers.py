@@ -518,7 +518,7 @@ class Root(RPCRoot):
       
     @expose(template='bkr.server.templates.grid') 
     @identity.require(identity.not_anonymous())
-    @paginate('list',default_order='fqdn', limit=20, allow_limit_override=True)
+    @paginate('list',default_order='fqdn', limit=20, max_limit=None)
     def reserve_system(self, *args,**kw):
         def reserve_link(x,distro):
             if x.is_free():
@@ -1065,16 +1065,23 @@ class Root(RPCRoot):
                     try:
                         system.action_release()
                     except BX, error_msg:
-                        msg = "Error: %s Action: %s" % (error_msg,system.release_action)
+                        msg = ", Error: %s Action: %s" % (error_msg,system.release_action)
                         system.activity.append(SystemActivity(identity.current.user, "WEBUI", "%s" % system.release_action, "Return", "", msg))
         else:
             if system.can_share(identity.current.user):
-                status = "Reserved"
-                system.user = identity.current.user
-                activity = SystemActivity(identity.current.user, 'WEBUI', status, 'User', '', '%s' % system.user )
+                # Atomic operation to reserve the system
+                if session.connection(System).execute(system_table.update(
+                     and_(system_table.c.id==system.id,
+                      system_table.c.user_id==None)),
+                      user_id=identity.current.user.id).rowcount == 1:
+                    status = "Reserved"
+                    activity = SystemActivity(identity.current.user, 'WEBUI', status, 'User', '', '%s' % system.user )
+                else:
+                    status = "Failed to Reserve:"
+                    msg = ", System is already reserved."
         system.activity.append(activity)
         session.save_or_update(system)
-        flash( _(u"%s %s %s" % (status,system.fqdn,msg)) )
+        flash( _(u"%s %s%s" % (status,system.fqdn,msg)) )
         redirect("/view/%s" % system.fqdn)
 
     @error_handler(view)
