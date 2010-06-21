@@ -1008,10 +1008,13 @@ class MappedObject(object):
     def lazy_create(cls, **kwargs):
         try:
             item = cls.query.filter_by(**kwargs).one()
-        except:
-            item = cls(**kwargs)
-            session.save(item)
-            session.flush([item])
+        except InvalidRequestError, e:
+            if e == 'Multiple rows returned for one()':
+                log.error('Mutlitple rows returned for %s' % kwargs)
+            elif e == 'No rows returned for one()':
+                item = cls(**kwargs)
+                session.save(item)
+                session.flush([item])
         return item
 
     def node(self, element, value):
@@ -3506,6 +3509,8 @@ class Recipe(TaskBase):
                 pass
             except xmlrpclib.Fault, error:
                 #FIXME
+                pass
+            except AttributeError, error:
                 pass
             ## FIXME Should we actually remove the watchdog?
             ##       Maybe we should set the status of the watchdog to reclaim
