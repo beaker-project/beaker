@@ -1073,7 +1073,7 @@ class Root(RPCRoot):
                 if session.connection(System).execute(system_table.update(
                      and_(system_table.c.id==system.id,
                       system_table.c.user_id==None)),
-                      user_id=identity.current.user.id).rowcount == 1:
+                      user_id=identity.current.user.user_id).rowcount == 1:
                     status = "Reserved"
                     activity = SystemActivity(identity.current.user, 'WEBUI', status, 'User', '', '%s' % system.user )
                 else:
