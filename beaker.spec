@@ -6,8 +6,8 @@
 %endif
 
 Name:           beaker
-Version:        0.5.44
-Release:        4%{?timestamp}%{?branch}%{?dist}
+Version:        0.5.45
+Release:        0%{?timestamp}%{?branch}%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -185,6 +185,9 @@ fi
 %{_sysconfdir}/init.d/%{name}-watchdog
 
 %changelog
+* Tue Jun 21 2010 Bill Peck <bpeck@redhat.com> - 0.5.45-0
+- fixed job submission where we call lazy_create.  would create dupe package entries.
+
 * Thu Jun 17 2010 Bill Peck <bpeck@redhat.com> - 0.5.44-3
 - bz604906 Pagination setting on Distro->Family are a bit funny
 - bz605260 [Beaker] Not able to "Loan" a system even though the group has admin perms
