@@ -35,7 +35,7 @@ fv("1","password","testing")
 submit('login')
 
 # Add user
-go("/bkr/users/new")
+go("http://localhost/bkr/users/new")
 code(200)
 formclear(1)
 fv("1","user_name", user)
