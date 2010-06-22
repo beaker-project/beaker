@@ -266,7 +266,7 @@ function Inventory()
     InstallInventory$SOURCE
     # Backup /etc/my.cnf and make INNODB the default engine.
     cp /etc/my.cnf /etc/my.cnf-orig
-    cat /etc/my.cnf-orig | awk '{print $1}; /\[mysqld\]/ {print "default-storage-engine=INNODB"}' > /etc/my.cnf
+    cat /etc/my.cnf-orig | awk '{print $1}; /\[mysqld\]/ {print "default-storage-engine=INNODB"}' | awk '{print$1}; /\[mysqld\]/ {print "max_allowed_packet=50M" }' > /etc/my.cnf
     #
     service mysqld start
     estatus_fail "**** Failed to start mysqld ****"
