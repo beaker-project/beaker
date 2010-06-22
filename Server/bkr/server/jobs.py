@@ -282,9 +282,9 @@ class Jobs(RPCRoot):
         recipe.kernel_options_post = xmlrecipe.kernel_options_post
         recipe.role = xmlrecipe.role
         for xmlpackage in xmlrecipe.packages():
-            recipe.custom_packages.append(TaskPackage.lazy_create(package=xmlpackage.name))
+            recipe.custom_packages.append(TaskPackage.lazy_create(package='%s' % xmlpackage.name))
         for installPackage in xmlrecipe.installPackages():
-            recipe.custom_packages.append(TaskPackage.lazy_create(package=installPackage))
+            recipe.custom_packages.append(TaskPackage.lazy_create(package='%s' % installPackage))
         for xmlrepo in xmlrecipe.iter_repos():
             recipe.repos.append(RecipeRepo(name=xmlrepo.name, url=xmlrepo.url))
         for xmltask in xmlrecipe.iter_tasks():
