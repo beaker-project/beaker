@@ -1006,6 +1006,7 @@ class MappedObject(object):
 
     @classmethod
     def lazy_create(cls, **kwargs):
+        item = None
         try:
             item = cls.query.filter_by(**kwargs).one()
         except InvalidRequestError, e:
