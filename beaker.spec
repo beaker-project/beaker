@@ -7,7 +7,7 @@
 
 Name:           beaker
 Version:        0.5.45
-Release:        0%{?timestamp}%{?branch}%{?dist}
+Release:        1%{?timestamp}%{?branch}%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -185,6 +185,9 @@ fi
 %{_sysconfdir}/init.d/%{name}-watchdog
 
 %changelog
+* Wed Jun 22 2010 Bill Peck <bpeck@redhat.com> - 0.5.45-1
+- fix string compare
+
 * Tue Jun 21 2010 Bill Peck <bpeck@redhat.com> - 0.5.45-0
 - fixed job submission where we call lazy_create.  would create dupe package entries.
 
