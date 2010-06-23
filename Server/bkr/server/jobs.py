@@ -309,7 +309,7 @@ class Jobs(RPCRoot):
         rs = RecipeSet.by_id(recipe_set_id)
         try:
             if rs.nacked is None:
-                rs.nacked = RecipeSetNack(recipe_set_id,response_id=response_id)
+                rs.nacked = RecipeSetResponse(recipe_set_id,response_id=response_id)
             else:
                 rs.nacked.response = Response.by_id(response_id)
             

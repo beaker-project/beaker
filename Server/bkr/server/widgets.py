@@ -267,7 +267,7 @@ class JobQuickSearch(CompoundWidget):
 
 class AckPanel(RadioButtonList):     
     javascript = [LocalJSLink('bkr','/static/javascript/response.js')]
-    params = ['widget_name'] 
+    params = ['widget_name','unreal_response'] 
     
     template = """
     <ul xmlns:py="http://purl.org/kid/ns#"
@@ -276,12 +276,8 @@ class AckPanel(RadioButtonList):
         py:attrs="list_attrs"
     >
         <li py:for="value, desc, attrs in options">
-            <input type="radio"
-                name="${widget_name}"
-                id="${field_id}_${value}"
-                value="${value}"
-                py:attrs="attrs"
-            />
+            <input type="radio" name="${widget_name}" py:if="unreal_response != value" id="${field_id}_${value}" value="${value}" py:attrs="attrs" />
+            <input type="radio" name="${widget_name}" py:if="unreal_response == value" id="unreal_response" value="${value}" py:attrs="attrs" />
             <label for="${field_id}_${value}" py:content="desc" />
         </li>
     </ul>
@@ -300,7 +296,9 @@ class AckPanel(RadioButtonList):
         OPTIONS_ID_INDEX = 0
         OPTIONS_RESPONSE_INDEX = 1
         OPTIONS_ATTR_INDEX = 2
-        max_response_id = None
+        # Purpose of this for loops is to determine details of where the responses are in the options list
+        # and how to create a non response item as well (i.e 'Needs Review')
+        max_response_id = 0
         for index,(id,response,attrs) in enumerate(pre_ops):
             if response == 'Ack':
                 ACK_INDEX = index
@@ -309,35 +307,37 @@ class AckPanel(RadioButtonList):
                 NAK_INDEX = index
                 NAK_ID = id 
             if id > max_response_id:
-                max_response_id = int(id) + 1
+                max_response_id = int(id) + 1 #this is a number which is one bigger than our biggest valid response_id
         else:
             EXTRA_RESPONSE_INDEX = index + 1 
         EXTRA_RESPONSE_RESPONSE = 'Needs Review' 
         pre_ops.append((max_response_id,EXTRA_RESPONSE_RESPONSE,{}))
+        params['unreal_response'] = max_response_id # we use this in the template to determine which response is not a real one
         
         rs_id = value
         rs = model.RecipeSet.by_id(rs_id)
-        if rs.status.status.lower() not in ('completed','cancelled','aborted'):
+        if not rs.is_finished():
             return 
         the_opts = pre_ops
-        if rs.result.result.lower() == 'pass':
-            the_opts[ACK_INDEX] = (the_opts[ACK_INDEX][OPTIONS_ID_INDEX],the_opts[ACK_INDEX][OPTIONS_RESPONSE_INDEX],{'checked': 1 } )
-           
-            log.debug('Displaying Acks checkbox!!! %s' % the_opts)            
-            del(the_opts[EXTRA_RESPONSE_INDEX])
-        else: #Need to put here If I dont' have a response, if I do, yadda yadda yadda 
-            if not rs.nacked: # We need to review 
-                the_opts[EXTRA_RESPONSE_INDEX] = (the_opts[EXTRA_RESPONSE_INDEX][OPTIONS_ID_INDEX],the_opts[EXTRA_RESPONSE_INDEX][OPTIONS_RESPONSE_INDEX],{'checked': 1 } )
-            elif rs.nacked.response == model.Response.by_response('ack'):# We've acked it 
-                the_opts[ACK_INDEX] = (the_opts[ACK_INDEX][OPTIONS_ID_INDEX],the_opts[ACK_INDEX][OPTIONS_RESPONSE_INDEX],{'checked': 1 } )
+
+        #If not nacked
+        if not rs.nacked: # We need to review 
+            if not rs.is_failed():
+                the_opts[ACK_INDEX] = (the_opts[ACK_INDEX][OPTIONS_ID_INDEX],the_opts[ACK_INDEX][OPTIONS_RESPONSE_INDEX],{'checked': 1 })
+                del(the_opts[EXTRA_RESPONSE_INDEX])
+            else:
+                the_opts[EXTRA_RESPONSE_INDEX] = (the_opts[EXTRA_RESPONSE_INDEX][OPTIONS_ID_INDEX],the_opts[EXTRA_RESPONSE_INDEX][OPTIONS_RESPONSE_INDEX],{'checked': 1 })
+
+        else: #Let's get aout value from the db  
+            if rs.nacked.response == model.Response.by_response('ack'):# We've acked it 
+                the_opts[ACK_INDEX] = (the_opts[ACK_INDEX][OPTIONS_ID_INDEX],the_opts[ACK_INDEX][OPTIONS_RESPONSE_INDEX],{'checked': 1 })
                 del(the_opts[EXTRA_RESPONSE_INDEX])
             elif  rs.nacked.response == model.Response.by_response('nak'): # We've naked it
-                the_opts[NAK_INDEX] = (the_opts[NAK_INDEX][OPTIONS_ID_INDEX],the_opts[NAK_INDEX][OPTIONS_RESPONSE_INDEX],{'checked': 1 } )
+                the_opts[NAK_INDEX] = (the_opts[NAK_INDEX][OPTIONS_ID_INDEX],the_opts[NAK_INDEX][OPTIONS_RESPONSE_INDEX],{'checked': 1 })
                 del(the_opts[EXTRA_RESPONSE_INDEX])
         params['widget_name'] = 'response_box_%s' % rs_id 
         params['options'] = the_opts 
         return super(AckPanel,self).display(value,*args,**params)
-
         
 class JobMatrixReport(Form):     
     javascript = [LocalJSLink('bkr','/static/javascript/jquery-1.3.1.js'),
@@ -346,7 +346,7 @@ class JobMatrixReport(Form):
     css = [LocalCSSLink('bkr','/static/css/job_matrix.css'), LocalCSSLink('bkr','/static/css/smoothness/jquery-ui-1.7.3.custom.css')] 
     template = 'bkr.server.templates.job_matrix' 
     member_widgets = ['whiteboard','job_ids','generate_button','nack_list'] 
-    params = ['list','whiteboard_filter','whiteboard_options','job_ids_vals','nacks','selected_nacks','comments_field'] 
+    params = ['list','whiteboard_filter','whiteboard_options','job_ids_vals','nacks','selected_nacks','comments_field','toggle_nacks_on'] 
     default_validator = validators.NotEmpty() 
     def __init__(self,*args,**kw): 
         super(JobMatrixReport,self).__init__(*args, **kw)       
@@ -357,23 +357,9 @@ class JobMatrixReport(Form):
             whiteboard_options = []
 
         self.whiteboard_options = whiteboard_options
-        self.nack_list = CheckBoxList("nacks",validator=self.default_validator, template = """
-    <ul xmlns:py="http://purl.org/kid/ns#"
-        class="${field_class}"
-        id="${field_id}"
-        py:attrs="list_attrs"
-    >
-        <li py:for="value, desc, attrs in options">
-            <input type="checkbox"
-                name="${name}"
-                id="${field_id}_${value}"
-                value="${value}"
-                py:attrs="attrs"
-            />
-            <label for="${field_id}_${value}" py:content="desc" />&nbsp;<span id="comment_${field_id}_${value}" style="font-size:xx-small">comment</span>
-        </li>
-    </ul>
-    """)
+
+        self.nack_list = CheckBoxList("Hide naks",validator=self.default_validator)
+        
         self.whiteboard = SingleSelectField('whiteboard',label='Whiteboard',attrs={'size':5}, options=whiteboard_options, validator=self.default_validator) 
         self.job_ids = TextArea('job_ids',label='Job ID', rows=7,cols=7, validator=self.default_validator) 
         self.whiteboard_filter = TextField('whiteboard_filter', label='Filter Whiteboard') 
@@ -393,8 +379,8 @@ class JobMatrixReport(Form):
                 params['list'] = params['options']['list']
             if 'nacks' in params['options']:
                 params['nacks'] = params['options']['nacks']
-            if 'toggle_nacks' in params['options']:
-                params['toggle_nacks'] = params['options']['toggle_nacks']
+            if 'toggle_nacks_on' in params['options']:
+                params['toggle_nacks_on'] = params['options']['toggle_nacks_on']
 
         return super(JobMatrixReport,self).display(value=None,**params)
 

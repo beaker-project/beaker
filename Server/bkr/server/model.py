@@ -2923,7 +2923,8 @@ class Job(TaskBase):
         for r in results:
             rs_id = r[0]
             rs = RecipeSet.by_id(rs_id)
-            if rs.nacked:
+            response = getattr(rs.nacked,'response',None)
+            if response == Response.by_response('nak'):
                 current_nacks.append(rs_id)
         return current_nacks
 
@@ -2944,7 +2945,7 @@ class Job(TaskBase):
                 rs.nacked = []
             else: 
                 if not rs.nacked and rs_id in rs_nacks: #looks like we're adding it then
-                    rs.nacked = [RecipeSetNack(rs_id)]
+                    rs.nacked = [RecipeSetResponse(rs_id)]
                     current_nacks.append(rs_id)
                 elif rs.nacked:
                     current_nacks.append(rs_id)
@@ -3073,7 +3074,7 @@ class Response(MappedObject):
     def by_response(cls,response,*args,**kw):
         return cls.query().filter_by(response = response).one()
 
-class RecipeSetNack(MappedObject):
+class RecipeSetResponse(MappedObject):
     """
     An acknowledgment of a RecipeSet's results. Can be used for filtering reports
     """
@@ -3115,6 +3116,11 @@ class RecipeSet(TaskBase):
     """
 
     stop_types = ['abort','cancel']
+
+    def is_owner(self,user):
+        if self.job.owner == user:
+            return True
+        return False
 
     def to_xml(self, clone=False):
         recipeSet = self.doc.createElement("recipeSet")
@@ -4597,7 +4603,7 @@ mapper(Job, job_table,
                       'owner':relation(User, uselist=False, backref='jobs'),
                       'result':relation(TaskResult, uselist=False),
                       'status':relation(TaskStatus, uselist=False)})
-mapper(RecipeSetNack,recipe_set_nacked_table,
+mapper(RecipeSetResponse,recipe_set_nacked_table,
         properties = { 'recipesets':relation(RecipeSet),
                         'response' : relation(Response,uselist=False)})
 
@@ -4612,7 +4618,7 @@ mapper(RecipeSet, recipe_set_table,
                                      order_by=[activity_table.c.created.desc()],
                                                backref='object'),
                       'lab_controller':relation(LabController, uselist=False),
-                      'nacked':relation(RecipeSetNack,cascade="all, delete-orphan",uselist=False),
+                      'nacked':relation(RecipeSetResponse,cascade="all, delete-orphan",uselist=False),
                      })
 
 mapper(LogRecipe, log_recipe_table)

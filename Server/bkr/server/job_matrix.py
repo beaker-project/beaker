@@ -73,6 +73,10 @@ class JobMatrix:
             if 'job_ids' in kw: #Getting results by job id
                 self.job_ids = kw['job_ids'].split()
                 matrix_options['job_ids_vals'] = kw['job_ids']
+            if 'toggle_nacks_on' in kw:
+                matrix_options['toggle_nacks_on'] = True
+            else:
+                matrix_options['toggle_nacks_on'] = False
 
             all_rs_queri = model.RecipeSet.query().join(['job']).filter(model.Job.id.in_(self.job_ids))
             all_ids = [elem.id for elem in all_rs_queri] 
@@ -88,18 +92,17 @@ class JobMatrix:
                 return output
         
             matrix_options['nacks'] = _build_output() 
-            matrix_options['toggle_nacks'] = True
         else: 
             matrix_options['nacks'] = []
             matrix_options['selected_nacks'] = []
+            matrix_options['toggle_nacks_on'] = False
             matrix_options['grid'] = None 
-            matrix_options['toggle_nacks'] = None
        
         return dict(widget = self.job_matrix_widget,widget_options=matrix_options, title="Job Matrix Report") 
 
     @expose(format='json')
     def get_nack_comment(self,rs_id):      
-        rs_nacked = model.RecipeSetNack.by_id(rs_id)
+        rs_nacked = model.RecipeSetResponse.by_id(rs_id)
         comm = rs_nacked.comment
 
         if comm:
@@ -201,14 +204,14 @@ class JobMatrix:
         return {'grid' : grid, 'data' : grid_data }     
 
 
-    def _nack_handler(self,jobs,recipes,nacks):
-        if nacks:
-            exclude_recipe_sets = type(nacks) == type(list()) and nacks or [nacks] #turns single item into single entry list
-        else:
-            exclude_recipe_sets = []  
-        exclude_recipe_sets = model.Job.update_nacks(jobs,exclude_recipe_sets) 
-       
-        return exclude_recipe_sets      
+    #def _nack_handler(self,jobs,recipes,nacks):
+    #    if nacks:
+    #        exclude_recipe_sets = type(nacks) == type(list()) and nacks or [nacks] #turns single item into single entry list
+    #    else:
+    #        exclude_recipe_sets = []  
+    #    exclude_recipe_sets = model.Job.update_nacks(jobs,exclude_recipe_sets) 
+    #   
+    #    return exclude_recipe_sets      
        
     def generate_data(self,**kw): 
         """
@@ -229,11 +232,12 @@ class JobMatrix:
 
         recipes = model.Recipe.query().join(['distro','arch']).join(['recipeset','job']).filter(model.RecipeSet.job_id.in_(jobs)).add_column(model.Arch.arch)  
         if 'toggle_nacks_on' in kw: #if we're here we are potentially trying to add/remove nacks
-            exclude_recipe_sets = self._nack_handler(jobs,recipes,kw.get('nacks'))  
+            #exclude_recipe_sets = self._nack_handler(jobs,recipes,kw.get('nacks'))  
+            exclude_recipe_sets = model.Job.get_nacks(jobs)
             recipes = recipes.filter(not_(model.RecipeSet.id.in_(exclude_recipe_sets)))
         else: #Likely this is the initial page load for these Jobs. No modifying the nack db.
-            exclude_recipe_sets = model.Job.get_nacks(jobs)
-            recipes = recipes.filter(not_(model.RecipeSet.id.in_(exclude_recipe_sets))) 
+            exclude_recipe_sets = [] 
+            #recipes = recipes.filter(not_(model.RecipeSet.id.in_(exclude_recipe_sets))) 
 
         for recipe,arch in recipes: 
             if arch in whiteboard_data:    
