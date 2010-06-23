@@ -23,6 +23,7 @@ from cherrypy import request, response
 from kid import Element
 from bkr.server.widgets import myPaginateDataGrid
 from bkr.server.widgets import myDataGrid
+from bkr.server.widgets import AckPanel
 from bkr.server.widgets import JobQuickSearch
 from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.helpers import *
@@ -303,6 +304,20 @@ class Jobs(RPCRoot):
             raise BX(_('No Tasks! You can not have a recipe with no tasks!'))
         return recipe
 
+    @expose('json')
+    def update_recipe_set_response(self,recipe_set_id,response_id):
+        rs = RecipeSet.by_id(recipe_set_id)
+        try:
+            if rs.nacked is None:
+                rs.nacked = RecipeSetNack(recipe_set_id,response_id=response_id)
+            else:
+                rs.nacked.response = Response.by_id(response_id)
+            
+            return {'success' : 1, 'rs_id' : recipe_set_id }
+        except: raise
+            
+        
+    
     @cherrypy.expose
     @identity.require(identity.not_anonymous())
     def stop(self, job_id, stop_type, msg=None):
@@ -358,6 +373,8 @@ class Jobs(RPCRoot):
 		     widgets.PaginateDataGrid.Column(name='action', getter=lambda x:x.action_link, title='Action', options=dict(sortable=False)),
                     ])
 
+        
+
         search_bar = SearchBar(name='jobsearch',
                            label=_(u'Job Search'),    
                            simplesearch_label = 'Lookup ID',
@@ -369,7 +386,7 @@ class Jobs(RPCRoot):
         return dict(title="Jobs",
                     object_count = jobs.count(),
                     grid=jobs_grid,
-                    list=jobs,
+                    list=jobs, 
                     search_bar=search_bar,
                     action=action,
                     options=search_options,
@@ -442,9 +459,11 @@ class Jobs(RPCRoot):
                                widgets.DataGrid.Column(name='old_value', getter=lambda x: x.old_value, title='Old value', options=dict(sortable=True)),
                                widgets.DataGrid.Column(name='new_value', getter=lambda x: x.new_value, title='New value', options=dict(sortable=True)),])
 
+   
         return dict(title   = 'Job',
                     user                 = identity.current.user,   #I think there is a TG var to use in the template so we dont need to pass this ?
                     priorities           = TaskPriority.query().all(),
+                    ack_panel            = AckPanel(),
                     priority_widget      = self.priority_widget, 
                     recipeset_widget     = self.recipeset_widget,
                     job_history          = recipe_set_data,

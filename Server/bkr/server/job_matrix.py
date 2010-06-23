@@ -97,6 +97,16 @@ class JobMatrix:
        
         return dict(widget = self.job_matrix_widget,widget_options=matrix_options, title="Job Matrix Report") 
 
+    @expose(format='json')
+    def get_nack_comment(self,rs_id):      
+        rs_nacked = model.RecipeSetNack.by_id(rs_id)
+        comm = rs_nacked.comment
+
+        if comm:
+            return {'comment' : comm, 'rs_id' : rs_id }
+        else:
+            return {'comment' : 'No comment', 'rs_id' : rs_id }
+       
 
     @expose(format='json')
     def get_whiteboard_options_json(self,filter):

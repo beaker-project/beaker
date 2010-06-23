@@ -17,15 +17,13 @@ function compareArray(a,b) {
 $(document).ready( function() {
     current_job_ids = $('#remote_form_job_ids').val().split(" ")
     
-    $("span[id ^='comment_remote_form_nacks']").hover(
+    $("span[id ^='comment_remote_form_nacks']").click(
                 function() { 
-                           
+                          matrix.get_nack_comment(1); //this is just testing!!!!!!!11
                           
-                        }, 
+                        
+        }) 
 
-                function() {
-
-                    })
 
     $("form[name='remote_form']").submit(function() {
         if ($('#${job_ids.field_id}').attr('readonly') == true) { //seems we are searching by whiteboard, don't change any nacks

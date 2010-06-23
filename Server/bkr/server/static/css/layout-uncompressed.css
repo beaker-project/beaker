@@ -689,6 +689,18 @@ body { font-family:Arial, Helvetica, Sans-Serif; font-size:12px; margin:0px 20px
 #menu .corner_right { position:absolute; left:132px; top:0px;}
 #menu .middle { position:absolute; left:18px; height: 20px; width: 115px; top:0px;}
 
+.ackpanel {
+    list-style-type:none;
+    float:left;
+    margin:-1.5em 0  0 15%;
+    ;
+}
+
+ul.ackpanel > li {
+    float:left;
+    padding:0 0.5em 0 0.5em;
+}
+
 .rounded-side-pad {
   -moz-border-radius: 0.35em;
   -webkit-border-radius: 0.35em;

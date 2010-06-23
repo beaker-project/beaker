@@ -436,10 +436,16 @@ system_admin_map_table = Table('system_admin_map', metadata,
 recipe_set_nacked_table = Table('recipe_set_nacked', metadata,
     Column('recipe_set_id', Integer, ForeignKey('recipe_set.id',
         onupdate='CASCADE', ondelete='CASCADE'), primary_key=True,nullable=False), 
+    Column('response_id', Integer, ForeignKey('response.id', 
+        onupdate='CASCADE', ondelete='CASCADE'), nullable=False),
     Column('comment', Unicode(255),nullable=True),
     Column('created',DateTime,nullable=False,default=datetime.utcnow)
 )
 
+response_table = Table('response', metadata,
+    Column('id', Integer, autoincrement=True, primary_key=True, nullable=False),
+    Column('response',Unicode(50), nullable=False)
+)
 
 
 group_permission_table = Table('group_permission', metadata,
@@ -3053,16 +3059,37 @@ class Job(TaskBase):
         except:
             return
 
+class Response(MappedObject):
+
+    def __init__(self,id,response,*args,**kw):
+        self.id = id
+        self.response = response
+
+    @classmethod
+    def get_all(cls,*args,**kw):
+        return cls.query()
+
+    @classmethod
+    def by_response(cls,response,*args,**kw):
+        return cls.query().filter_by(response = response).one()
 
 class RecipeSetNack(MappedObject):
     """
     An acknowledgment of a RecipeSet's results. Can be used for filtering reports
     """
     
-    def __init__(self,id,comment=None):
+    def __init__(self,id,type=None,response_id=None,comment=None):
         self.id = id
+        if response_id is not None:
+            res = Response.by_id(response_id)
+        elif type is not None:
+            res = Response.by_response(type)
+        self.response = res
         self.comment = comment
 
+    @classmethod 
+    def by_id(cls,id): 
+       return cls.query().filter_by(recipe_set_id=id).one()
 
     @classmethod
     def by_jobs(cls,job_ids):
@@ -4571,7 +4598,10 @@ mapper(Job, job_table,
                       'result':relation(TaskResult, uselist=False),
                       'status':relation(TaskStatus, uselist=False)})
 mapper(RecipeSetNack,recipe_set_nacked_table,
-        properties = { 'recipesets':relation(RecipeSet)})
+        properties = { 'recipesets':relation(RecipeSet),
+                        'response' : relation(Response,uselist=False)})
+
+mapper(Response,response_table)
 
 mapper(RecipeSet, recipe_set_table,
         properties = {'recipes':relation(Recipe, backref='recipeset'),
@@ -4582,7 +4612,7 @@ mapper(RecipeSet, recipe_set_table,
                                      order_by=[activity_table.c.created.desc()],
                                                backref='object'),
                       'lab_controller':relation(LabController, uselist=False),
-                      'nacked':relation(RecipeSetNack,cascade="all, delete-orphan"),
+                      'nacked':relation(RecipeSetNack,cascade="all, delete-orphan",uselist=False),
                      })
 
 mapper(LogRecipe, log_recipe_table)
