@@ -315,8 +315,27 @@ class Jobs(RPCRoot):
             
             return {'success' : 1, 'rs_id' : recipe_set_id }
         except: raise
-            
-        
+           
+    @expose(format='json')
+    def save_response_comment(self,rs_id,comment):
+        try:
+            rs = RecipeSetResponse.by_id(rs_id)
+            rs.comment = comment
+            session.flush() 
+            return {'success' : True, 'rs_id' : rs_id }
+        except Exception, e:
+            log.error(e)
+            return {'success' : False, 'rs_id' : rs_id }
+
+    @expose(format='json')
+    def get_response_comment(self,rs_id):      
+        rs_nacked = RecipeSetResponse.by_id(rs_id)
+        comm = rs_nacked.comment
+
+        if comm:
+            return {'comment' : comm, 'rs_id' : rs_id }
+        else:
+            return {'comment' : 'No comment', 'rs_id' : rs_id }
     
     @cherrypy.expose
     @identity.require(identity.not_anonymous())

@@ -10,7 +10,8 @@
     <script type='text/javascript'>
  pri_manager = new PriorityManager()
  pri_manager.initialize()
- response  = new RecipeSetResponse()
+ ackpanel  = new AckPanel()
+
        
  PARENT_ = 1
  NOT_PARENT = 0
@@ -20,14 +21,23 @@
     $('ul.ackpanel input').change(function () {  
         var response_id = $(this).val()
         changed_to_text = $(this).next().text().toLowerCase() 
-        if (changed_to_text != 'ack' || changed_to_text != 'nak') { //this is a bit hackey, but basically if we selecting OFF "Needs Review" we want to delete it.
+        if (changed_to_text != 'ack' || changed_to_text != 'nak') { //this is a bit hackey, but basically if we're deselecting "Needs Review" we want to delete it.
             $(this).parents('ul:first').find('#unreal_response').parent().remove()
+            $(this).parents('ul:first').find("a[id ^='comment_response_box']").removeClass('hidden')
         }
         var parent_span = $(this).parents('span:first')
         var span_id = parent_span.attr('id') 
         var rs_id = span_id.replace(/^response_(\d{1,})$/,"$1") 
-        response.update(rs_id,response_id) 
+        ackpanel.update(rs_id,response_id) 
     })
+
+    $("a[id ^='comment_']").click(function () {
+        var this_id = $(this).attr('id')
+        var rs_id = this_id.replace(/^(.+)?_(\d{1,})$/,"$2")
+        ackpanel.get_response_comment(rs_id)
+    });
+
+
 
     $("#toggle_job_history").click(function() { $("#job_history").toggle() })
     $("select[id^='priority']").change(function() {

@@ -117,7 +117,7 @@ class ReserveSystem(TableForm):
     submit_text = 'Queue Job'
 
 class ReserveWorkflow(Form): 
-    javascript = [LocalJSLink('bkr', '/static/javascript/reserve_workflow.js')] 
+    javascript = [LocalJSLink('bkr', '/static/javascript/reserve_workflow.js'),LocalJSLink('bkr','/static/javascript/jquery-1.3.1.js')] 
     template="bkr.server.templates.reserve_workflow"
     css = [LocalCSSLink('bkr','/static/css/reserve_workflow.css')] 
     member_widgets = ['arch','distro','distro_family','method_','tag'] 
@@ -266,8 +266,13 @@ class JobQuickSearch(CompoundWidget):
         self.status_queued = Button(default="Status is Queued", name='status_queued')
 
 class AckPanel(RadioButtonList):     
-    javascript = [LocalJSLink('bkr','/static/javascript/response.js')]
-    params = ['widget_name','unreal_response'] 
+
+    javascript = [LocalJSLink('bkr','/static/javascript/jquery-1.3.1.js'),
+                  LocalJSLink('bkr','/static/javascript/jquery-ui-1.7.3.custom.min.js'), 
+                  LocalJSLink('bkr','/static/javascript/response.js')]
+
+    css =  [LocalCSSLink('bkr','/static/css/smoothness/jquery-ui-1.7.3.custom.css')] 
+    params = ['widget_name','unreal_response','comment_id','comment_class']
     
     template = """
     <ul xmlns:py="http://purl.org/kid/ns#"
@@ -280,6 +285,7 @@ class AckPanel(RadioButtonList):
             <input type="radio" name="${widget_name}" py:if="unreal_response == value" id="unreal_response" value="${value}" py:attrs="attrs" />
             <label for="${field_id}_${value}" py:content="desc" />
         </li>
+        <a id="${comment_id}" style="cursor:pointer" class="${comment_class}">comment</a>
     </ul>
     """
     
@@ -292,7 +298,8 @@ class AckPanel(RadioButtonList):
     def display(self,value=None,*args,**params): 
         #params['options']  = self.options
         pre_ops = [(str(elem.id),elem.response.capitalize(),{}) for elem in model.Response.get_all()]
-       
+        if len(pre_ops) is 0: #no responses in the Db ? lets get out of here
+            return
         OPTIONS_ID_INDEX = 0
         OPTIONS_RESPONSE_INDEX = 1
         OPTIONS_ATTR_INDEX = 2
@@ -308,7 +315,7 @@ class AckPanel(RadioButtonList):
                 NAK_ID = id 
             if id > max_response_id:
                 max_response_id = int(id) + 1 #this is a number which is one bigger than our biggest valid response_id
-        else:
+        else: 
             EXTRA_RESPONSE_INDEX = index + 1 
         EXTRA_RESPONSE_RESPONSE = 'Needs Review' 
         pre_ops.append((max_response_id,EXTRA_RESPONSE_RESPONSE,{}))
@@ -326,7 +333,8 @@ class AckPanel(RadioButtonList):
                 the_opts[ACK_INDEX] = (the_opts[ACK_INDEX][OPTIONS_ID_INDEX],the_opts[ACK_INDEX][OPTIONS_RESPONSE_INDEX],{'checked': 1 })
                 del(the_opts[EXTRA_RESPONSE_INDEX])
             else:
-                the_opts[EXTRA_RESPONSE_INDEX] = (the_opts[EXTRA_RESPONSE_INDEX][OPTIONS_ID_INDEX],the_opts[EXTRA_RESPONSE_INDEX][OPTIONS_RESPONSE_INDEX],{'checked': 1 })
+                the_opts[EXTRA_RESPONSE_INDEX] = (the_opts[EXTRA_RESPONSE_INDEX][OPTIONS_ID_INDEX],the_opts[EXTRA_RESPONSE_INDEX][OPTIONS_RESPONSE_INDEX],{'checked': 1 }) 
+                params['comment_class'] = 'hidden'
 
         else: #Let's get aout value from the db  
             if rs.nacked.response == model.Response.by_response('ack'):# We've acked it 
@@ -336,7 +344,12 @@ class AckPanel(RadioButtonList):
                 the_opts[NAK_INDEX] = (the_opts[NAK_INDEX][OPTIONS_ID_INDEX],the_opts[NAK_INDEX][OPTIONS_RESPONSE_INDEX],{'checked': 1 })
                 del(the_opts[EXTRA_RESPONSE_INDEX])
         params['widget_name'] = 'response_box_%s' % rs_id 
-        params['options'] = the_opts 
+        params['options'] = the_opts
+        try:
+            params['comment_id'] = "comment_%s" % (params['name'])
+        except KeyError,e:
+            log.debug("Unable to use name given to %s for comment id" % self.__class__.__name__)
+            params['comment_id'] = "comment_%s" % rs_id
         return super(AckPanel,self).display(value,*args,**params)
         
 class JobMatrixReport(Form):     
@@ -386,7 +399,7 @@ class JobMatrixReport(Form):
 
 class SearchBar(RepeatingFormField):
     """Search Bar""" 
-    javascript = [LocalJSLink('bkr', '/static/javascript/searchbar_v5.js')]
+    javascript = [LocalJSLink('bkr', '/static/javascript/searchbar_v5.js'),LocalJSLink('bkr','/static/javascript/jquery-1.3.1.js')]
     template = """
     <div xmlns:py="http://purl.org/kid/ns#">
     <a id="advancedsearch" href="#">Toggle Search</a>

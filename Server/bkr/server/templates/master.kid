@@ -4,7 +4,7 @@
 <head py:match="item.tag=='{http://www.w3.org/1999/xhtml}head'" py:attrs="item.items()">
     <meta content="text/html; charset=UTF-8" http-equiv="content-type" py:replace="''"/>
     <title py:replace="''">Your title goes here</title>
-    <script type="text/javascript" src="${tg.url('/static/javascript/jquery-1.3.1.js')}"></script>
+
     <meta py:replace="item[:]"/>
     <style type="text/css">
         #pageLogin
