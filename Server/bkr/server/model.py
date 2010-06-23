@@ -1010,9 +1010,9 @@ class MappedObject(object):
         try:
             item = cls.query.filter_by(**kwargs).one()
         except InvalidRequestError, e:
-            if e == 'Multiple rows returned for one()':
+            if '%s' % e == 'Multiple rows returned for one()':
                 log.error('Mutlitple rows returned for %s' % kwargs)
-            elif e == 'No rows returned for one()':
+            elif '%s' % e == 'No rows returned for one()':
                 item = cls(**kwargs)
                 session.save(item)
                 session.flush([item])
