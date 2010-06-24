@@ -112,8 +112,11 @@ class PowerTypes(AdminPage):
         if kw['id']:
             edit = PowerType.by_id(kw['id'])
             edit.name = kw['name']
-        else:
+        elif kw.get('name'):
             new = PowerType(name=kw['name'])
+        else:
+            flash(_(u"Invalid Power Type entry"))
+            redirect(".")
         flash( _(u"OK") )
         redirect(".")
 
@@ -131,7 +134,7 @@ class PowerTypes(AdminPage):
     @paginate('list', default_order='name', max_limit=None)
     def index(self,*args,**kw):
         powertypes = session.query(PowerType)
-        list_by_letters = set([elem.name[0].capitalize() for elem in powertypes])
+        list_by_letters = set([elem.name[0].capitalize() for elem in powertypes if elem.name])
         results = self.process_search(**kw)
         if results:
             powertypes = results
