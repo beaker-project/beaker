@@ -153,9 +153,9 @@ class ReserveWorkflow(Form):
                 #Sort distro alphabetically,diregarding version
                 return distro_1 < distro_2 and -1 or 1
                               
-        self.all_arches = [['','None Selected']] + [[elem.arch,elem.arch] for elem in model.Arch.query()]
+        self.all_arches = [[elem.arch,elem.arch] for elem in model.Arch.query()]
         self.all_tags = [['','None Selected']] + [[elem.tag,elem.tag] for elem in model.DistroTag.query()]  
-        self.all_methods = [('','None Selected')] + [[elem,elem] for elem in model.Distro.all_methods()]
+        self.all_methods = [[elem,elem] for elem in model.Distro.all_methods()]
         e = [elem.osmajor for elem in model.OSMajor.query()] 
         self.all_distro_familys = [('','None Selected')] + [[osmajor,osmajor] for osmajor in sorted(e,cmp=my_cmp )]  
 
@@ -165,7 +165,7 @@ class ReserveWorkflow(Form):
         self.distro_family = SingleSelectField(name='distro_family', label='Distro Family', 
                                                options=[None],validator=validators.NotEmpty())
         self.tag = SingleSelectField(name='tag', label='Tag', options=[None],validator=validators.NotEmpty())
-        self.arch = SingleSelectField(name='arch', label='Arch', options=[None],validator=validators.NotEmpty())
+        self.arch = SingleSelectField(name='arch', label='Arch', options=[None],attrs={'size':5,'multiple': 1},validator=validators.NotEmpty())
 
         self.to_json = UtilJSON.dynamic_json()
         self.auto_pick = Button(default="Auto pick system", name='auto_pick', attrs={'class':None})

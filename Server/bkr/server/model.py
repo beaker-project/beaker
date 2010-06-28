@@ -5,7 +5,7 @@ from turbogears.database import metadata, mapper, session
 from turbogears.config import get
 import ldap
 from sqlalchemy import Table, Column, ForeignKey
-from sqlalchemy.orm import relation, backref, synonym, dynamic_loader,query
+from sqlalchemy.orm import relation, backref, synonym, dynamic_loader,query 
 from sqlalchemy import String, Unicode, Integer, DateTime, UnicodeText, Boolean, Float, VARCHAR, TEXT, Numeric
 from sqlalchemy import or_, and_, not_, select
 from sqlalchemy.exceptions import InvalidRequestError
@@ -2363,10 +2363,14 @@ def _create_tag(tag):
     return tag
 
 
-class Distro(MappedObject):
+class Distro(MappedObject): 
+    # EXCLUDE_OVER_MULTIPLE_ARCHES holds text that we do not want in a multi arch install. We have PAE here,
+    # because  a PAE and non PAE i386 distro is indutinguishable from another, so it will return a PAE distro, if we are searching on
+    # i386 and say x86_64, even though clearly, it's not applicable to the later. This only applies to multiple arches 
+    _EXCLUDE_OVER_MULTIPLE_ARCHES = 'PAE'
     def __init__(self, install_name=None):
         self.install_name = install_name
-    
+ 
     @classmethod
     def all_methods(cls):
         methods = [elem[0] for elem in select([distro_table.c.method],whereclause=distro_table.c.method != None,from_obj=distro_table,distinct=True).execute()]
@@ -2496,6 +2500,114 @@ class Distro(MappedObject):
                         )
                     )
         )
+    @classmethod
+    def _create_arch_distro_map(cls,*args,**kw):
+        """
+        multiple_distro_systems() will return a list of distro's that are applicable for a certain criteria.
+        The criteria can be
+        *method
+        *arch
+        *osmajor
+        """
+        method = kw.get('method')
+        arch = kw.get('arch')
+        osmajor = kw.get('osmajor')
+        tag = kw.get('tag')
+
+        if method is None and arch is None and osmajor is None:
+            log.error('Nothing has been passed into mulitple_distro_systems')
+            return
+         
+        if isinstance(arch,list):
+            local_arches = arch 
+        elif isinstance(arch,str):
+            local_arches = [arch]
+        
+        cache_locator = []
+        my_from = distro_table
+        my_and = [not_(distro_table.c.install_name.like('%%%s%%' % Distro._EXCLUDE_OVER_MULTIPLE_ARCHES))]
+        if arch:
+            my_from = my_from.join(arch_table)
+        if osmajor:
+            my_from = my_from.join(osversion_table). \
+                                join(osmajor_table) 
+            my_and.append(osmajor_table.c.osmajor == osmajor)
+        if tag: 
+            my_from = my_from.join(distro_tag_map).join(distro_tag_table)
+            my_and.append(distro_tag_table.c.tag == tag) 
+        for var in (osmajor,method,tag) + tuple(sorted(local_arches)):
+            if var:
+                cache_locator.append(var)
+        cache_location = "_".join(cache_locator)
+        the_cache = getattr(Distro,cache_location,None)
+        if the_cache: #phew, we don't have to do that big ugly slow query 
+            log.debug('Returning our cached items for %s' % cache_location)
+            return the_cache
+        current_derived = None
+        future_arch_cache = {}
+        for local_arch in local_arches:
+            my_derived = select([distro_table.c.name,distro_table.c.install_name,distro_table.c.id.label('distro_id'),distro_table.c.date_created],
+                                whereclause= and_(*my_and + [arch_table.c.arch == local_arch,distro_table.c.method == method] ),
+                                from_obj=my_from).alias(local_arch)
+            
+            if current_derived is None:
+                current_derived = my_derived
+                first_derived = my_derived
+                s = select([my_derived.c.distro_id,my_derived.c.install_name,my_derived.c.date_created],from_obj=my_derived) 
+            else:
+                try:
+                    current_derived = current_derived.join(my_derived,current_derived.c.name == my_derived.c.name)
+                except AttributeError:
+                    current_derived = current_derived.join(my_derived,first_derived.c.name == my_derived.c.name)
+            future_arch_cache[local_arch] = {} 
+     
+        s = current_derived.select(use_labels=True)     
+        result = s.execute() 
+        #The following dict should look something like this (for example only)
+        #
+        #{ 'i386' => { 'RHEL5.5-Server-20100318.nightly_nfs' : [125,date_create],
+        #              'RHEL5.5-Server-20100315.nightly_nfs' : [128,date_create] },
+        #  'x86_64' => { 'RHEL5.5-Server-20100318.nightly_nfs' : 126,
+        #                'RHEL5.5-Server-20100315.nightly_nfs' : 127},
+        #}
+        #        
+        for res in result:
+            for arch in local_arches:
+                cacheable_distro_install_name = res[current_derived.c['%s_install_name' % arch]]
+                if not  future_arch_cache[arch].get(cacheable_distro_install_name):#below we remove the arch from the end of the distro isntall_name, it's redundant
+                    future_arch_cache[arch][re.sub(r'^(.+)\-(.+?)$',r'\1',cacheable_distro_install_name)]  \
+                        =  [res[current_derived.c['%s_distro_id' % arch]],res[current_derived.c['%s_date_created' % arch]]]
+                else:
+                    continue
+
+        if future_arch_cache:
+            setattr(Distro,cache_location,future_arch_cache)
+        return getattr(Distro,cache_location,None)
+
+    @classmethod
+    def multiple_systems_distro(self,*args,**kw):
+        _date_created_index = 1
+        _install_name_index = 0
+        arch_distro_map = self._create_arch_distro_map(**kw)
+        
+        try: 
+            arch_results = [[]] * len(arch_distro_map.keys()) #creates our initial 2D array
+        except AttributeError: #hmm, perhaps we don't have an arch_distros_map
+            log.debug('We have no entries for mutiple system distros')
+            return []
+       
+        for index,(arch,distro_ref) in enumerate(arch_distro_map.iteritems()): 
+            #sort it
+            arch_results[index] = sorted(distro_ref.keys(), 
+                                        lambda a,b: distro_ref[a][_date_created_index] > distro_ref[b][_date_created_index] and -1 or 1 ) 
+            if index > 0:
+                if arch_results[index-1] != arch_results[index]: #just a sanity check
+                    log.error('Not all arches have the same distros')
+        try:
+            results_to_return = arch_results.pop()
+            return results_to_return
+        except IndexError,e:
+            return []
 
     def systems(self, user=None):
         """
@@ -2506,7 +2618,7 @@ class Distro(MappedObject):
             systems = System.available_order(user)
         else:
             systems = System.query()
-
+        
         return systems.join(['lab_controller','_distros','distro']).filter(
              and_(Distro.install_name==self.install_name,
                   System.arch.contains(self.arch),
@@ -4496,6 +4608,7 @@ mapper(LabController, lab_controller_table,
         properties = {'_distros':relation(LabControllerDistro,
                                           backref='lab_controller'),
     })
+
 mapper(Distro, distro_table,
         properties = {'osversion':relation(OSVersion, uselist=False,
                                            backref='distros'),

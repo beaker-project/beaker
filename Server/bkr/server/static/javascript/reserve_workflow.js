@@ -77,10 +77,19 @@ ReserveWorkflow.prototype.replaceArch = function(arg) {
 
 ReserveWorkflow.prototype.system_available = function(arg) {
     var distro_value = getElement(this.distro_id).value 
+    var arch_value = jQuery('#'+this.arch_id).val() 
     var params = { 'tg_format' : 'json',
                    'tg_random' : new Date().getTime(),
-                   'distro_install_name' : distro_value}
-    var d = loadJSONDoc('/find_systems_for_distro?' + queryString(params));
+                   'distro_install_name' : distro_value,
+                   'arches' : arch_value }
+       
+    if (arch_value.length > 1) {
+        var d = loadJSONDoc('/find_systems_for_multiple_distros?' + queryString(params));
+    } else { //If we have multiple arches we need to get our systems another way 
+        var d = loadJSONDoc('/find_systems_for_distro?' + queryString(params));
+    }
+
+
     d.addCallback(this.show_auto_pick_warnings)                
 }
 
@@ -94,8 +103,11 @@ ReserveWorkflow.prototype.show_auto_pick_warnings = function(result) {
 }
 
 ReserveWorkflow.prototype.get_distros = function() {
-    var arch_value = getElement(this.arch_id).value
     var distro_family_value = getElement(this.distro_family_id).value
+    if (!distro_family_value) { //we aren't going to get any distros if we dont have our distro family
+        return;
+    }
+    var arch_value = jQuery('#'+this.arch_id).val()  
     var method_value = getElement(this.method_id).value
     var tag_value = getElement(this.tag_id).value
     var params = { 'tg_format' : 'json',
@@ -112,7 +124,13 @@ ReserveWorkflow.prototype.get_distros = function() {
 
 ReserveWorkflow.prototype.replaceDistros = function(result) {  
     if (result.options.length > 0) {
-        getElement(this.submit_id).removeAttribute('disabled')
+        var arch_value = jQuery('#'+this.arch_id).val() 
+        if (arch_value.length == 1) {
+            getElement(this.submit_id).removeAttribute('disabled')
+        } else {
+            getElement(this.submit_id).setAttribute('disabled',1)
+        }
+       
         getElement(this.auto_pick_id).removeAttribute('disabled')
     } else {
         result.options.unshift('None selected')
