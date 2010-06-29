@@ -1337,11 +1337,6 @@ class System(SystemObject):
                         if line.find('%packages') == 0:
                             nopackages = False
                             break
-                        elif line.find('%post') == 0 or line.find('%pre') == 0:
-                            # If we haven't found a %packages section by now then add one
-                            # need to back up one line
-                            packages_slot -= len(line) + 1
-                            break
                     beforepackages = kickstart[:packages_slot-1]
                     # if no %packages section then add it
                     if nopackages:
