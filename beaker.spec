@@ -6,8 +6,8 @@
 %endif
 
 Name:           beaker
-Version:        0.5.45
-Release:        1%{?timestamp}%{?branch}%{?dist}
+Version:        0.5.46
+Release:        0%{?timestamp}%{?branch}%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -185,6 +185,11 @@ fi
 %{_sysconfdir}/init.d/%{name}-watchdog
 
 %changelog
+* Tue Jun 29 2010 Bill Peck <bpeck@redhat.com> - 0.5.46-0
+- bz608621 added sane defaults to bkr distro-list (limit 10)
+- use %packages --default for RHEL6 kickstart
+- bz607558 - relax check for %packages, before we stopped if we saw %post or %pre.
+
 * Wed Jun 22 2010 Bill Peck <bpeck@redhat.com> - 0.5.45-1
 - fix string compare
 
