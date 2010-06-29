@@ -119,7 +119,7 @@ class ReserveSystem(TableForm):
 class ReserveWorkflow(Form): 
     javascript = [LocalJSLink('bkr', '/static/javascript/reserve_workflow.js')] 
     template="bkr.server.templates.reserve_workflow"
-    css = [LocalCSSLink('bkr','/static/css/reserve_workflow.css')] 
+    css = [LocalCSSLink('bkr',url('/static/css/reserve_workflow.css'))] 
     member_widgets = ['arch','distro','distro_family','method_','tag'] 
     params = ['arch_value','method_value','tag_value','distro_family_value','all_arches',
               'all_tags','all_methods','all_distro_familys','to_json','auto_pick'] 
@@ -170,7 +170,7 @@ class ReserveWorkflow(Form):
         self.to_json = UtilJSON.dynamic_json()
         self.auto_pick = Button(default="Auto pick system", name='auto_pick', attrs={'class':None})
         self.name = 'reserveworkflow_form'
-        self.action = '/reserve_system'
+        self.action = url('/reserve_system')
         self.submit = SubmitButton(name='search',attrs={'value':'Show Systems'})
                                                                 
     def display(self,value=None,**params):
@@ -268,7 +268,7 @@ class JobQuickSearch(CompoundWidget):
 
 class JobMatrixReport(Form):     
     javascript = [LocalJSLink('bkr', '/static/javascript/job_matrix.js')]
-    css = [LocalCSSLink('bkr','/static/css/job_matrix.css')] 
+    css = [LocalCSSLink('bkr',url('/static/css/job_matrix.css'))] 
     template = 'bkr.server.templates.job_matrix' 
     member_widgets = ['whiteboard','job_ids','generate_button'] 
     params = ['list','whiteboard_filter','whiteboard_options','job_ids_vals']
@@ -288,7 +288,7 @@ class JobMatrixReport(Form):
         self.whiteboard_filter = TextField('whiteboard_filter', label='Filter Whiteboard') 
 
         self.name='remote_form' 
-        self.action = '.'   
+        self.action = url('.')   
     
     def display(self,**params):     
         if 'options' in params:
@@ -1038,9 +1038,9 @@ class SystemForm(Form):
               'user_change','user_change_text',
               'loan_change', 'loan_text',
               'owner_change', 'owner_change_text']
-    user_change = '/user_change'
-    owner_change = '/owner_change'
-    loan_change = '/loan_change'
+    user_change = url('/user_change')
+    owner_change = url('/owner_change')
+    loan_change = url('/loan_change')
     fields = [
                HiddenField(name='id'),
                TextField(name='fqdn', 
@@ -1114,7 +1114,7 @@ class TasksWidget(CompoundWidget):
     template = "bkr.server.templates.tasks_widget"
     params = ['tasks', 'hidden','action']
     member_widgets = ['link'] 
-    action = './do_search'
+    action = url('./do_search')
     link = LinkRemoteFunction(name='link', method='post')
 
 class RecipeTasksWidget(TasksWidget):
