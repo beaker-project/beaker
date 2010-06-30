@@ -501,7 +501,28 @@ class Root(RPCRoot):
     @paginate('list',limit=20,max_limit=None)
     def mine(self, *args, **kw):
         return self.systems(systems = System.mine(identity.current.user), *args, **kw)
-    
+
+    @expose(allow_json=True)
+    def find_systems_for_multiple_distros(self,distro_install_name,arches=None,*args,**kw):
+        all_distro_names = list()
+        for arch in arches.split(','): 
+            all_distro_names.append('%s-%s' % (distro_install_name,arch))
+
+        systems_queries, distro_ids = [],[] 
+        for install_name in all_distro_names:
+            try:
+                distro = Distro.query().filter(Distro.install_name == install_name).one()
+                distro_ids.append(distro.id)
+            except InvalidRequestError:
+                log.error(u'Could not find distro %s, continuing with other distros' % install_name)
+                continue
+            
+            systems_distro_query = distro.systems()
+            systems_available = System.available(identity.current.user,System.by_type(type='machine',systems=systems_distro_query)) 
+            systems_queries = systems_queries + systems_available.select()
+
+        return { 'count' : len(set(systems_queries)), 'distro_id' : distro_ids }
+              
     @expose(allow_json=True) 
     def find_systems_for_distro(self,distro_install_name,*args,**kw): 
         try: 
@@ -520,23 +541,23 @@ class Root(RPCRoot):
     @identity.require(identity.not_anonymous())
     @paginate('list',default_order='fqdn', limit=20, max_limit=None)
     def reserve_system(self, *args,**kw):
+        
         def reserve_link(x,distro):
             if x.is_free():
                 return make_link("/reserveworkflow/reserve?system_id=%s&distro_id=%s" % (Utility.get_correct_system_column(x).id,distro), 'Reserve Now')
             else:
                 return make_link("/reserveworkflow/reserve?system_id=%s&distro_id=%s" % (Utility.get_correct_system_column(x).id,distro), 'Queue Reservation')
-
         try:
-            try:
-                distro_install_name = kw['distro'] #this should be the distro install_name   
+            try: 
+                distro_install_name = kw['distro'] #this should be the distro install_name, throw KeyError is expected and caught
                 distro = Distro.query().filter(Distro.install_name == distro_install_name).one()
             except KeyError:
-                try:
+                try: 
                     distro_id = kw['distro_id']
                     distro = Distro.query().filter(Distro.id == distro_id).one()
                 except KeyError:
                     raise
-            # I don't like duplicating this code in find_systems_for_distro() but it dies on trying to jsonify a Query object..... 
+            # I don't like duplicating this code in find_systems_for_distro() but it dies on trying to jsonify a Query object... 
             systems_distro_query = distro.systems() 
             avail_systems_distro_query = System.available(identity.current.user,System.by_type(type='machine',systems=systems_distro_query)) 
            
