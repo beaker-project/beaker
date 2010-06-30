@@ -32,6 +32,7 @@ ReserveWorkflow.prototype.replace_fields = function() {
     replaceChildNodes(this.arch_id, map(this.replaceArch ,this.all_arches))
     replaceChildNodes(this.distro_family_id, map(this.replaceDistroFamily ,this.all_distro_familys))
     replaceChildNodes(this.tag_id, map(this.replaceTag ,this.all_tags))
+    $("#"+this.tag_id+" option[value='STABLE']").attr('selected', 'selected') //SET default tag as 'STABLE'
     replaceChildNodes(this.method_id, map(this.replaceMethod ,this.all_methods))
 }
 
