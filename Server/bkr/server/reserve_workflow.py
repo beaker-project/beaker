@@ -31,6 +31,8 @@ class ReserveWorkflow:
         # Inlcude the XML definition so that cloning this job will act as expected.
         recipe.distro_requires = distro.to_xml().toxml()
         recipe.distro = distro
+        # Don't report panic's for reserve workflow.
+        recipe.panic = 'ignore'
         if kw.get('system_id'):
             try:
                 system = model.System.by_id(kw.get('system_id'), identity.current.user)
