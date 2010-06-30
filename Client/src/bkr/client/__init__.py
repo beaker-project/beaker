@@ -22,6 +22,7 @@ class BeakerCommand(ClientCommand):
             conf = old_conf
         else:
             conf = "/etc/beaker/client.conf"
+            sys.stderr.write("%s not found, using %s\n" % (user_conf, conf))
         os.environ[conf_environ_key] = conf
 
 class BeakerWorkflow(BeakerCommand):
@@ -147,6 +148,28 @@ class BeakerWorkflow(BeakerCommand):
             type=int,
             help="Specify how many server hosts to be involved in multihost test",
         )
+        self.parser.add_option(
+            "--install",
+            default=[],
+            action="append",
+            help="Specify Package to install, this will add /distribution/pkginstall.",
+        )
+        self.parser.add_option(
+            "--dump",
+            default=False,
+            action="store_true",
+            help="Turn on ndnc/kdump. (which one depends on the family)",
+        )
+        self.parser.add_option(
+            "--method",
+            default="nfs",
+            help="Installation source method (nfs/http) (optional)"
+        )
+        self.parser.add_option(
+            "--kernel_options",
+            default=None,
+            help="Boot arguments to supply (optional)"
+        )
 
     def getTasks(self, *args, **kwargs):
         """ get all requested tasks """
@@ -191,14 +214,31 @@ class BeakerWorkflow(BeakerCommand):
                          taskParams=[],
                          distroRequires=None,
                          hostRequires=None,
-                         role='STANDALONE'):
+                         role='STANDALONE',
+                         whiteboard=None,
+                         install=None,
+                         dump=None,
+                         **kwargs):
         """ add tasks and additional requires to our template """
         # Copy basic requirements
         recipe = copy.deepcopy(recipeTemplate)
+        if whiteboard:
+            recipe.whiteboard = whiteboard
         if distroRequires:
             recipe.addDistroRequires(copy.deepcopy(distroRequires))
         if hostRequires:
             recipe.addHostRequires(copy.deepcopy(hostRequires))
+        if '/distribution/install' not in requestedTasks:
+            recipe.addTask('/distribution/install')
+        if install:
+            paramnode = self.doc.createElement('param')
+            paramnode.setAttribute('name' , 'PKGARGNAME')
+            paramnode.setAttribute('value' , ' '.join(install))
+            recipe.addTask('/distribution/pkginstall', paramNodes=[paramnode])
+        if dump:
+            # Add both, One is for RHEL5 and newer, the Scheduler will filter out the wrong one.
+            recipe.addTask('/kernel/networking/ndnc')
+            recipe.addTask('/kernel/networking/kdump')
         for task in requestedTasks:
             recipe.addTask(task, role=role, taskParams=taskParams)
         return recipe
@@ -219,7 +259,7 @@ class BeakerJob(BeakerBase):
     def __init__(self, *args, **kwargs):
         self.node = self.doc.createElement('job')
         whiteboard = self.doc.createElement('whiteboard')
-        whiteboard.appendChild(self.doc.createTextNode(kwargs.pop("whiteboard","")))
+        whiteboard.appendChild(self.doc.createTextNode(kwargs.get('whiteboard','')))
         self.node.appendChild(whiteboard)
 
     def addRecipeSet(self, recipeSet):
@@ -278,6 +318,8 @@ class BeakerRecipe(BeakerBase):
         distro = kwargs.get("distro", None)
         family = kwargs.get("family", None)
         variant = kwargs.get("variant", None)
+        method = kwargs.get("method", None)
+        kernel_options = kwargs.get("kernel_options", None)
         tags = kwargs.get("tag", [])
         systype = kwargs.get("systype", None)
         machine = kwargs.get("machine", None)
@@ -298,6 +340,14 @@ class BeakerRecipe(BeakerBase):
             distroVariant.setAttribute('op', '=')
             distroVariant.setAttribute('value', '%s' % variant)
             self.addDistroRequires(distroVariant)
+        if method:
+            distroMethod = self.doc.createElement('distro_method')
+            distroMethod.setAttribute('op', '=')
+            distroMethod.setAttribute('value', method)
+            self.addDistroRequires(distroMethod)
+        if kernel_options:
+            self.node.setAttribute('kernel_options',
+                                   kwargs.get('kernel_options', ''))
         for i, repo in enumerate(repos):
             myrepo = self.doc.createElement('repo')
             myrepo.setAttribute('name', 'myrepo_%s' % i)
@@ -333,8 +383,6 @@ class BeakerRecipe(BeakerBase):
             mykeyvalue.setAttribute('op', '%s' % op)
             mykeyvalue.setAttribute('value', '%s' % value)
             self.addHostRequires(mykeyvalue)
-        # Add in install task
-        self.addTask('/distribution/install')
 
     def addRepo(self, node):
         self.repos.appendChild(node)
@@ -359,4 +407,9 @@ class BeakerRecipe(BeakerBase):
             params.appendChild(param)
         recipeTask.appendChild(params)
         self.node.appendChild(recipeTask)
+
+    def addKickstart(self, kickstart):
+        recipeKickstart = self.doc.createElement('kickstart')
+        recipeKickstart.appendChild(self.doc.createCDATASection(kickstart))
+        self.node.appendChild(recipeKickstart)
 

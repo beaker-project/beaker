@@ -144,6 +144,8 @@ yum -y --disablerepo=* --enablerepo=beaker-* install rhts-test-env-lab rhts-lega
 yum -y --disablerepo=* --enablerepo=beaker-* install koan
 # Install new harness
 yum -y --disablerepo=* --enablerepo=beaker-* install beah
+# This may fail if you are outside of Red Hat..
+yum -y --disablerepo=* --enablerepo=beaker-* install beakerlib-redhat
 cat << EOF > /etc/beah_beaker.conf
 [DEFAULT]
 # LAB_CONTROLLER: URI of Beaker's XML-RPC handler

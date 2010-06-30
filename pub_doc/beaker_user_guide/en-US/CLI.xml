@@ -44,6 +44,12 @@ It should return a list of labcontrollers configured in Beaker.
 	<screen>
 $ <userinput>bkr workflow-simple --help</userinput>
 	</screen>
+A common set of paramaters that may be passed to the <literal>workflow-simple</literal> options would be the following:
+	<screen>
+$ <userinput>bkr workflow-simple --username=&lt;user&gt; --password=&lt;passwd&gt; --dryrun</userinput>
+		<userinput>--arch=&lt;arch&gt;--distro=&lt;distro_name&gt; --task=&lt;task_name&gt;</userinput>
+		<userinput>--type=&lt;TYPE&gt; --whiteborad=&lt;whitebord_name&gt; --debug &gt; my_job.xml</userinput>
+	</screen>
 </para>
 
 <para>To submit an existing Job workflow:

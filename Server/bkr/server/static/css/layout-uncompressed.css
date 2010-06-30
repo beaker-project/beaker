@@ -431,7 +431,7 @@ div.list {
  */
 
 div.recipeset {
-    /*border-style: outset;*/
+    border-style: ridge;
     margin: 2px;
 }
 
@@ -440,7 +440,7 @@ div.recipeset {
  */
 
 div.recipe {
-    border-style: outset;
+    border-style: hidden;
     margin: 5px;
 }
 

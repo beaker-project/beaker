@@ -115,12 +115,12 @@ class Distros(RPCRoot):
         return distro_search.return_results()
 
     @expose(template="bkr.server.templates.grid")
-    @paginate('list',default_order='-date_created', limit=50,allow_limit_override=True)
+    @paginate('list',default_order='-date_created', limit=50,max_limit=None)
     def index(self,*args,**kw):
         return self.distros(distros=session.query(Distro).join('breed').join('arch').join(['osversion','osmajor']),*args,**kw)
 
     @expose(template="bkr.server.templates.grid")
-    @paginate('list',default_order='-date_created', limit=50,allow_limit_override=True)
+    @paginate('list',default_order='-date_created', limit=50,max_limit=None)
     def name(self,*args,**kw):
         return self.distros(distros=session.query(Distro).join('breed').join('arch').join(['osversion','osmajor']).filter(distro_table.c.install_name.like('%s' % kw['name'])),action='./name')
 
@@ -268,7 +268,6 @@ class Distros(RPCRoot):
 
         # Check each Distro
         for distro in distros:
-            print distro
             if osversion != distro.osversion:
                 edited.append('%s' % distro.install_name)
                 Activity(identity.current.user,'XMLRPC','OSVersion',distro.install_name,'%s' % distro.osversion,'%s' % osversion)

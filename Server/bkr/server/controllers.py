@@ -11,6 +11,7 @@ from bkr.server.CSV_import_export import CSV
 from bkr.server.group import Groups
 from bkr.server.tag import Tags
 from bkr.server.osversion import OSVersions
+from bkr.server.distro_family import DistroFamily
 from bkr.server.labcontroller import LabControllers
 from bkr.server.user import Users
 from bkr.server.distro import Distros
@@ -164,7 +165,7 @@ class Arches:
 class Devices:
 
     @expose(template='bkr.server.templates.grid')
-    @paginate('list',default_order='fqdn',limit=10,allow_limit_override=True)
+    @paginate('list',default_order='fqdn',limit=10,max_limit=None)
     def view(self, id):
         device = session.query(Device).get(id)
         systems = System.all(identity.current.user).join('devices').filter_by(id=id).distinct()
@@ -179,7 +180,7 @@ class Devices:
                     list = systems)
 
     @expose(template='bkr.server.templates.grid')
-    @paginate('list',default_order='description',limit=50,allow_limit_override=True)
+    @paginate('list',default_order='description',limit=50,max_limit=None)
     def default(self, *args, **kw):
         args = list(args)
         if len(args) == 1:
@@ -209,6 +210,7 @@ class Root(RPCRoot):
     devices = Devices()
     groups = Groups()
     tags = Tags()
+    distrofamily = DistroFamily()
     osversions = OSVersions()
     labcontrollers = LabControllers()
     distros = Distros()
@@ -454,7 +456,7 @@ class Root(RPCRoot):
         return {'success' : True } 
 
     @expose(template='bkr.server.templates.grid_add')
-    @paginate('list',default_order='fqdn',limit=20,allow_limit_override=True)
+    @paginate('list',default_order='fqdn',limit=20,max_limit=None)
     def index(self, *args, **kw):   
         return_dict =  self.systems(systems = System.all(identity.current.user), *args, **kw) 
         return return_dict
@@ -484,19 +486,19 @@ class Root(RPCRoot):
 
     @expose(template='bkr.server.templates.grid')
     @identity.require(identity.not_anonymous())
-    @paginate('list',default_order='fqdn',limit=20,allow_limit_override=True)
+    @paginate('list',default_order='fqdn',limit=20,max_limit=None)
     def available(self, *args, **kw):
         return self.systems(systems = System.available(identity.current.user), *args, **kw)
 
     @expose(template='bkr.server.templates.grid')
     @identity.require(identity.not_anonymous())
-    @paginate('list',default_order='fqdn',limit=20,allow_limit_override=True)
+    @paginate('list',default_order='fqdn',limit=20,max_limit=None)
     def free(self, *args, **kw): 
         return self.systems(systems = System.free(identity.current.user), *args, **kw)
 
     @expose(template='bkr.server.templates.grid')
     @identity.require(identity.not_anonymous())
-    @paginate('list',limit=20,allow_limit_override=True)
+    @paginate('list',limit=20,max_limit=None)
     def mine(self, *args, **kw):
         return self.systems(systems = System.mine(identity.current.user), *args, **kw)
     
@@ -516,7 +518,7 @@ class Root(RPCRoot):
       
     @expose(template='bkr.server.templates.grid') 
     @identity.require(identity.not_anonymous())
-    @paginate('list') 
+    @paginate('list',default_order='fqdn', limit=20, max_limit=None)
     def reserve_system(self, *args,**kw):
         def reserve_link(x,distro):
             if x.is_free():
@@ -540,7 +542,7 @@ class Root(RPCRoot):
            
             warn = None
             if avail_systems_distro_query.count() < 1: 
-                warn = 'No Systems compatible with distro %s' % distro_install_name
+                warn = 'No Systems compatible with distro %s' % distro.install_name
           
             getter = lambda x: reserve_link(x,distro.id)       
             direct_column = Utility.direct_column(title='Action',getter=getter)     
@@ -823,7 +825,7 @@ class Root(RPCRoot):
                      prov_install = [(distro.id, distro.install_name) for distro in system.distros()]))
 
     @expose(template="bkr.server.templates.system")
-    @paginate('history_data',limit=30,default_order='-created', allow_limit_override=True)
+    @paginate('history_data',limit=30,default_order='-created', max_limit=None)
     def view(self, fqdn=None, **kw): 
         if fqdn: 
             try:
@@ -1052,8 +1054,7 @@ class Root(RPCRoot):
             flash( _(u"Unable to find system with id of %s" % id) )
             redirect("/")
         if system.user:
-            if system.user == identity.current.user or \
-              identity.current.user.is_admin():
+            if system.current_user(identity.current.user):
                 # Don't return a system with an active watchdog
                 if system.watchdog:
                     flash(_(u"Can't return %s active recipe %s" % (system.fqdn, system.watchdog.recipe_id)))
@@ -1064,16 +1065,23 @@ class Root(RPCRoot):
                     try:
                         system.action_release()
                     except BX, error_msg:
-                        msg = "Error: %s Action: %s" % (error_msg,system.release_action)
+                        msg = ", Error: %s Action: %s" % (error_msg,system.release_action)
                         system.activity.append(SystemActivity(identity.current.user, "WEBUI", "%s" % system.release_action, "Return", "", msg))
         else:
             if system.can_share(identity.current.user):
-                status = "Reserved"
-                system.user = identity.current.user
-                activity = SystemActivity(identity.current.user, 'WEBUI', status, 'User', '', '%s' % system.user )
+                # Atomic operation to reserve the system
+                if session.connection(System).execute(system_table.update(
+                     and_(system_table.c.id==system.id,
+                      system_table.c.user_id==None)),
+                      user_id=identity.current.user.user_id).rowcount == 1:
+                    status = "Reserved"
+                    activity = SystemActivity(identity.current.user, 'WEBUI', status, 'User', '', '%s' % system.user )
+                else:
+                    status = "Failed to Reserve:"
+                    msg = ", System is already reserved."
         system.activity.append(activity)
         session.save_or_update(system)
-        flash( _(u"%s %s %s" % (status,system.fqdn,msg)) )
+        flash( _(u"%s %s%s" % (status,system.fqdn,msg)) )
         redirect("/view/%s" % system.fqdn)
 
     @error_handler(view)
@@ -1419,7 +1427,7 @@ class Root(RPCRoot):
         except InvalidRequestError:
             flash( _(u"Unable to look up system id:%s via your login" % id) )
             redirect("/")
-        if system.user != identity.current.user:
+        if not system.current_user(identity.current.user): 
             flash( _(u"You are not the current User for %s" % system) )
             redirect("/")
         try:

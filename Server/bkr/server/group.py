@@ -195,7 +195,7 @@ class Groups(AdminPage):
         redirect("./edit?id=%s" % kw['group_id'])
 
     @expose(template="bkr.server.templates.admin_grid")
-    @paginate('list', default_order='group_name', allow_limit_override=True)
+    @paginate('list', default_order='group_name', max_limit=None)
     def index(self,*args,**kw):
         groups = session.query(Group)
         list_by_letters = set([elem.group_name[0].capitalize() for elem in groups])

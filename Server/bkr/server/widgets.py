@@ -610,7 +610,6 @@ class TaskSearchForm(RemoteForm):
 #        self.task      = TextField(name='task', label=_(u'Task'))
 
     def update_params(self, d):
-        print "d=", d
         super(TaskSearchForm, self).update_params(d)
         if 'arch_id' in d['options']:
             d['arch_id'] = d['options']['arch_id']

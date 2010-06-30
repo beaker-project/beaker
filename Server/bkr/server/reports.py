@@ -28,7 +28,7 @@ class Reports(RPCRoot):
     exposed = True
 
     @expose(template="bkr.server.templates.grid")
-    @paginate('list',default_order='created',limit=50,allow_limit_override=True)
+    @paginate('list',default_order='created',limit=50,max_limit=None)
     def reserve(self):
         activity = []
         for system in System.all(identity.current.user).filter(System.user!=None):

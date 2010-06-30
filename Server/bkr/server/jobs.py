@@ -91,6 +91,7 @@ class Jobs(RPCRoot):
         )
 
     @cherrypy.expose
+    @identity.require(identity.not_anonymous())
     def upload(self, jobxml):
         """
         XMLRPC method to upload job
@@ -274,14 +275,16 @@ class Jobs(RPCRoot):
             raise BX(_('No Distro matches Recipe: %s' % recipe.distro_requires))
         recipe.whiteboard = xmlrecipe.whiteboard
         recipe.kickstart = xmlrecipe.kickstart
+        if xmlrecipe.watchdog:
+            recipe.panic = xmlrecipe.watchdog.panic
         recipe.ks_meta = xmlrecipe.ks_meta
         recipe.kernel_options = xmlrecipe.kernel_options
         recipe.kernel_options_post = xmlrecipe.kernel_options_post
         recipe.role = xmlrecipe.role
         for xmlpackage in xmlrecipe.packages():
-            recipe.custom_packages.append(TaskPackage.lazy_create(package=xmlpackage.name))
+            recipe.custom_packages.append(TaskPackage.lazy_create(package='%s' % xmlpackage.name))
         for installPackage in xmlrecipe.installPackages():
-            recipe.custom_packages.append(TaskPackage.lazy_create(package=installPackage))
+            recipe.custom_packages.append(TaskPackage.lazy_create(package='%s' % installPackage))
         for xmlrepo in xmlrecipe.iter_repos():
             recipe.repos.append(RecipeRepo(name=xmlrepo.name, url=xmlrepo.url))
         for xmltask in xmlrecipe.iter_tasks():
@@ -325,13 +328,13 @@ class Jobs(RPCRoot):
 
     
     @expose(template='bkr.server.templates.grid')
-    @paginate('list',default_order='-id', limit=50, allow_limit_override=True)
+    @paginate('list',default_order='-id', limit=50, max_limit=None)
     def index(self,*args,**kw): 
         return self.jobs(jobs=session.query(Job).join('status').join('owner').outerjoin('result'),*args,**kw)
 
     @identity.require(identity.not_anonymous()) 
     @expose(template='bkr.server.templates.grid')
-    @paginate('list',default_order='-id', limit=50, allow_limit_override=True)
+    @paginate('list',default_order='-id', limit=50, max_limit=None)
     def mine(self,*args,**kw): 
         return self.jobs(jobs=Job.mine(identity.current.user),action='./mine',*args,**kw)
  

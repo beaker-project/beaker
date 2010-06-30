@@ -73,46 +73,11 @@ $SNIPPET("rhts_partitions")
 $SNIPPET("RedHatEnterpriseLinux6")
 $SNIPPET("system")
 
-%packages --ignoremissing
-#if $getVar('packages','') == ''
-@base
-@core
-@fonts
-@x11
-@basic-desktop
-@general-desktop
-@input-methods
-@print-client
-@internet-browser
-#end if
-#if $getVar('rhts_server', '') == ''
-@x11
-@basic-desktop
-@admin-tools
-@base
-@base-x
-@core
-@dialup
-@editors
-@games
-@gnome-desktop
-@graphical-internet
-@graphics
-@java
-@office
-@printing
-@sound-and-video
-@text-internet
-busybox
-comps-extras
-cracklib-dicts
-gnome-mime-data
-iso-codes
-kernel-headers
-nash
-rmt
-tzdata
-xkeyboard-config
+%packages --ignoremissing #slurp
+#if $getVar('packages', '') == '':
+--default
+#else
+
 #end if
 $SNIPPET("rhts_packages")
 

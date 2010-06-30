@@ -35,12 +35,12 @@ class RPCRoot(controllers.Controller):
                 import traceback
                 (type, value, tb) = sys.exc_info()
                 try:
-                    print "Exception type: %s"%type
-                    print "Exception value: %s"%value
+                    print >> sys.stderr, "Exception type: %s"%type
+                    print >> sys.stderr, "Exception value: %s"%value
                 except: pass # survive failure in stringification of value                   
-                print "Traceback:"
+                print >> sys.stderr, "Traceback:"
                 for line in traceback.format_tb(tb):
-                    print line,
+                    print >> sys.stderr, line,
 
             # Some other error; send back some error info
             response = xmlrpclib.dumps(
