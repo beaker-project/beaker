@@ -29,12 +29,12 @@ LOCKFILE="/var/lock/subsys/koan"
 
 start() {
     echo -n $"koan, Checking for re-install: "
-    netboot_enabled=$(/usr/bin/koan --display | grep netboot_enabled)
+    netboot_enabled=$(/usr/bin/koan --display --system $(/bin/hostname) | grep netboot_enabled)
     if [ -n "$netboot_enabled" ]; then
         echo $netboot_enabled | grep -q True
         if [ $? -eq 0 ]; then
             echo -n $"Re-Install!"
-            /usr/bin/koan --replace-self && reboot
+            /usr/bin/koan --replace-self --system $(/bin/hostname) && reboot
         fi
     fi
 }
