@@ -3097,11 +3097,10 @@ class Job(TaskBase):
         min_status = TaskStatus.max()
         for recipeset in self.recipesets:
             recipeset._update_status()
-            if recipeset.is_finished():
-                self.ptasks += recipeset.ptasks
-                self.wtasks += recipeset.wtasks
-                self.ftasks += recipeset.ftasks
-                self.ktasks += recipeset.ktasks
+            self.ptasks += recipeset.ptasks
+            self.wtasks += recipeset.wtasks
+            self.ftasks += recipeset.ftasks
+            self.ktasks += recipeset.ktasks
             if recipeset.status < min_status:
                 min_status = recipeset.status
             if recipeset.result > max_result:
@@ -3231,11 +3230,10 @@ class RecipeSet(TaskBase):
         min_status = TaskStatus.max()
         for recipe in self.recipes:
             recipe._update_status()
-            if recipe.is_finished():
-                self.ptasks += recipe.ptasks
-                self.wtasks += recipe.wtasks
-                self.ftasks += recipe.ftasks
-                self.ktasks += recipe.ktasks
+            self.ptasks += recipe.ptasks
+            self.wtasks += recipe.wtasks
+            self.ftasks += recipe.ftasks
+            self.ktasks += recipe.ktasks
             if recipe.status < min_status:
                 min_status = recipe.status
             if recipe.result > max_result:

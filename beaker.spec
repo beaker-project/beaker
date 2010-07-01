@@ -7,7 +7,7 @@
 
 Name:           beaker
 Version:        0.5.46
-Release:        1%{?timestamp}%{?branch}%{?dist}
+Release:        2%{?timestamp}%{?branch}%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -185,6 +185,9 @@ fi
 %{_sysconfdir}/init.d/%{name}-watchdog
 
 %changelog
+* Wed Jun 30 2010 Bill Peck <bpeck@redhat.com> - 0.5.46-2
+- fix bz589876 - Job list progress bars should show progress of running recipes
+
 * Wed Jun 30 2010 Bill Peck <bpeck@redhat.com> - 0.5.46-1
 - disable panic detection from reserve workflow.
 - merged bz607560, fixes NULL powertype.
