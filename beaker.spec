@@ -6,7 +6,7 @@
 %endif
 
 Name:           beaker
-Version:        0.5.45
+Version:        0.5.46
 Release:        0%{?timestamp}%{?branch}%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
@@ -185,6 +185,14 @@ fi
 %{_sysconfdir}/init.d/%{name}-watchdog
 
 %changelog
+* Tue Jun 29 2010 Bill Peck <bpeck@redhat.com> - 0.5.46-0
+- bz608621 added sane defaults to bkr distro-list (limit 10)
+- use %packages --default for RHEL6 kickstart
+- bz607558 - relax check for %packages, before we stopped if we saw %post or %pre.
+
+* Wed Jun 22 2010 Bill Peck <bpeck@redhat.com> - 0.5.45-1
+- fix string compare
+
 * Tue Jun 21 2010 Bill Peck <bpeck@redhat.com> - 0.5.45-0
 - fixed job submission where we call lazy_create.  would create dupe package entries.
 

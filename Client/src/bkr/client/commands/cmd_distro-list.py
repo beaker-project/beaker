@@ -15,8 +15,9 @@ class Distros_List(BeakerCommand):
 
         self.parser.add_option(
             "--limit",
-            default=None,
-            help="Limit results to this many",
+            default=10,
+            type=int,
+            help="Limit results to this many (default 10)",
         )
         self.parser.add_option(
             "--tag",

@@ -1010,9 +1010,9 @@ class MappedObject(object):
         try:
             item = cls.query.filter_by(**kwargs).one()
         except InvalidRequestError, e:
-            if e == 'Multiple rows returned for one()':
+            if '%s' % e == 'Multiple rows returned for one()':
                 log.error('Mutlitple rows returned for %s' % kwargs)
-            elif e == 'No rows returned for one()':
+            elif '%s' % e == 'No rows returned for one()':
                 item = cls(**kwargs)
                 session.save(item)
                 session.flush([item])
@@ -1336,11 +1336,6 @@ class System(SystemObject):
                         packages_slot += len(line) + 1
                         if line.find('%packages') == 0:
                             nopackages = False
-                            break
-                        elif line.find('%post') == 0 or line.find('%pre') == 0:
-                            # If we haven't found a %packages section by now then add one
-                            # need to back up one line
-                            packages_slot -= len(line) + 1
                             break
                     beforepackages = kickstart[:packages_slot-1]
                     # if no %packages section then add it
