@@ -30,8 +30,10 @@ FILES=$(BUILT_FILES) $(METADATA) runtest.sh Makefile
 build: $(BUILT_FILES)
 ifeq ($(shell arch),x86_64)
 	@echo "x86_64 arch, hvm_detect will be built"
-	gcc $(BINFILE).c -o ./$(BINFILE)
-	chmod a+x ./$(BINFILE)
+	if which gcc; then
+		gcc $(BINFILE).c -o ./$(BINFILE)
+		chmod a+x ./$(BINFILE)
+	fi
 endif
 	chmod a+x ./runtest.sh
 
