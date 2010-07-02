@@ -99,7 +99,20 @@ ReserveWorkflow.prototype.show_auto_pick_warnings = function(result) {
     if (count < 1) {
          getElement('reserve_error').setAttribute('style','display:inline') 
     } else {
-         location.href='/reserveworkflow/reserve?distro_id=' + result['distro_id']
+        var the_distro_ids = result['distro_id']
+        if (the_distro_ids instanceof Array) {
+         
+        } else {
+           the_distro_ids = [the_distro_ids]
+        }
+        var real_get_args = null
+        if (the_distro_ids.length == 1) {
+            real_get_args = 'distro_id='+the_distro_ids[0]
+        } else {
+            var joined_args = the_distro_ids.join('&distro_id=')
+            real_get_args = joined_args.replace(/^(.+)?&(.+)$/,"$2&distro_id=$1")
+        }
+         location.href='/reserveworkflow/reserve?' + real_get_args
     }
 }
 

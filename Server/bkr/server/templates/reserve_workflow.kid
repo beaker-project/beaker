@@ -42,7 +42,7 @@
       <div id="reserve_wizard" style='margin-left:3em'>
         <h3>Reserve Criteria</h3>
         <div id="arch_input">
-          <label>${arch.label}</label>${arch.display()}<span id='loading' class='hidden'>&nbsp;&nbsp;&nbsp;&nbsp;</span>
+          <label style="display:block;">${arch.label}</label>${arch.display(attrs=dict(size=5,multiple=1,style= "margin-left:5.5em;"))}<span id='loading' class='hidden'>&nbsp;&nbsp;&nbsp;&nbsp;</span>
         </div>
 
         <div id="distro_family_input"> 

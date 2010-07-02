@@ -22,9 +22,11 @@ class ReserveWorkflow:
         """ Create a new reserve job, if system_id is defined schedule it too """
         job = Job(ttasks=0, owner=identity.current.user)
         if kw.get('whiteboard'):
-            job.whiteboard = kw.get('whiteboard')
-        # We shouldn't be doing this split,  we should rely on TG to pass us an array.
-        for id in distro_id.split(","):
+            job.whiteboard = kw.get('whiteboard') 
+        if not isinstance(distro_id,list):
+            distro_id = [distro_id]
+
+        for id in distro_id: 
             try:
                 distro = Distro.by_id(id)
             except InvalidRequestError:
@@ -89,21 +91,28 @@ class ReserveWorkflow:
         else:
             system_name = 'Any System'
         distro_names = [] 
-        for id in distro_id.split(","):
+
+        return_value = dict(
+                            system_id = system_id, 
+                            system = system_name,
+                            distro = '',
+                            distro_ids = [],
+                            )
+        if not isinstance(distro_id,list):
+            distro_id = [distro_id]
+        for id in distro_id:
             try:
                 distro = Distro.by_id(id)
                 distro_names.append(distro.install_name)
+                return_value['distro_ids'].append(id)
             except InvalidRequestError:
-                flash(_(u'Invalid Distro ID %s' % distro_id)) 
+                flash(_(u'Invalid Distro ID %s' % id)) 
         distro = ", ".join(distro_names)
+        return_value['distro'] = distro
+        
         return dict(form=self.reserveform,
                     action='./doit',
-                    value = dict(
-                                system_id = system_id,
-                                distro_id = distro_id,
-                                system = system_name,
-                                distro = distro,
-                                ),
+                    value = return_value,
                     options = None,
                     title='Reserve System %s' % system_name)
 
