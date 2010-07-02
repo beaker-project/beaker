@@ -50,7 +50,7 @@ class Uploader:
         if offset != -1:
             if size is not None:
                 if size != len(contents): return False
-            if md5sum is not None:
+            if md5sum:
                 if md5sum != md5_constructor(contents).hexdigest():
                     return False
         uploadpath = self.basepath
@@ -103,7 +103,7 @@ class Uploader:
                         # log_error("truncating fd %r to size %r" % (fd,size))
                     finally:
                         fcntl.lockf(fd, fcntl.LOCK_UN)
-                if md5sum is not None:
+                if md5sum:
                     #check final md5sum
                     sum = md5_constructor()
                     fcntl.lockf(fd, fcntl.LOCK_SH|fcntl.LOCK_NB)
