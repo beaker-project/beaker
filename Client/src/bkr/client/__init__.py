@@ -177,7 +177,7 @@ class BeakerWorkflow(BeakerCommand):
         username = kwargs.get("username", None)
         password = kwargs.get("password", None)
         distro   = kwargs.get("distro", None)
-        family   = kwargs.gets("family", None)
+        family   = kwargs.get("family", None)
 
         self.set_hub(username, password)
 

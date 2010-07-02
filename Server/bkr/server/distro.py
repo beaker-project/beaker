@@ -58,7 +58,11 @@ class Distros(RPCRoot):
     def get_family(self, distro):
         """ pass in a distro name and get back the osmajor is belongs to.
         """
-        return Distro.by_name(name=distro).osversion.osminor
+        try:
+            family = '%s' % Distro.by_name(distro).osversion.osmajor
+        except AttributeError:
+            raise BX(_('Invalid Distro: %s' % distro))
+        return family
 
     @expose()
     def get_arch(self, filter):
@@ -66,10 +70,16 @@ class Distros(RPCRoot):
         """
         if 'distro' in filter:
             # look up distro
-            arches = Distro.by_name(name=filter['distro']).osversion.arches
+            try:
+                arches = [arch.arch for arch in Distro.by_name(filter['distro']).osversion.arches]
+            except AttributeError:
+                raise BX(_('Invalid Distro: %s' % filter['distro']))
         elif 'osmajor' in filter:
             # look up osmajor
-            arches = OSMajor.by_name(name=filter['osmajor']).osminor.arches
+            try:
+                arches = [arch.arch for arch in OSMajor.by_name(filter['osmajor']).osminor[0].arches]
+            except InvalidRequestError:
+                raise BX(_('Invalid OSMajor: %s' % filter['osmajor']))
         return arches
 
     @expose()
