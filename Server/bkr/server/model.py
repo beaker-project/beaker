@@ -2384,6 +2384,10 @@ class Distro(MappedObject):
         return cls.query.filter_by(install_name=install_name).one()
 
     @classmethod
+    def by_name(cls, name):
+        return cls.query.filter_by(name=name).first()
+
+    @classmethod
     def by_id(cls, id):
         return cls.query.filter_by(id=id).one()
 

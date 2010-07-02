@@ -171,6 +171,31 @@ class BeakerWorkflow(BeakerCommand):
             help="Boot arguments to supply (optional)"
         )
 
+    def getArches(self, *args, **kwargs):
+        """ Get all arches that apply to either this distro or family/osmajor """
+
+        username = kwargs.get("username", None)
+        password = kwargs.get("password", None)
+        distro   = kwargs.get("distro", None)
+        family   = kwargs.gets("family", None)
+
+        self.set_hub(username, password)
+
+        if family:
+            return self.hub.distros.get_arch(dict(osmajor=family))
+        if distro:
+            return self.hub.distros.get_arch(dict(distro=distro))
+
+    def getFamily(self, *args, **kwargs):
+        """ Get the family/osmajor for a particular distro """
+        username = kwargs.get("username", None)
+        password = kwargs.get("password", None)
+        distro   = kwargs.get("distro", None)
+
+        self.set_hub(username, password)
+
+        return self.hub.distros.get_family(distro)
+    
     def getTasks(self, *args, **kwargs):
         """ get all requested tasks """
 

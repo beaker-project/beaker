@@ -55,6 +55,24 @@ class Distros(RPCRoot):
                                                   arch    = 1)))
 
     @expose()
+    def get_family(self, distro):
+        """ pass in a distro name and get back the osmajor is belongs to.
+        """
+        return Distro.by_name(name=distro).osversion.osminor
+
+    @expose()
+    def get_arch(self, filter):
+        """ pass in a dict() with either distro or osmajor to get possible arches
+        """
+        if 'distro' in filter:
+            # look up distro
+            arches = Distro.by_name(name=filter['distro']).osversion.arches
+        elif 'osmajor' in filter:
+            # look up osmajor
+            arches = OSMajor.by_name(name=filter['osmajor']).osminor.arches
+        return arches
+
+    @expose()
     @identity.require(identity.not_anonymous())
     def save_tag(self, id=None, tag=None, *args, **kw):
         try:
