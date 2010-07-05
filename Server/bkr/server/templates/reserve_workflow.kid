@@ -10,15 +10,29 @@
     rw.set_remotes("${distro_rpc}","${system_rpc}","${reserve_href}")
     addLoadEvent(rw.initialize)
     $(document).ready(function() {
-        $("select[id!=${distro.field_id}]").change(function() { 
-            rw.get_distros()
-        });
+        //$("select[id!=${distro.field_id}]").change(function() { 
+        //    rw.get_distros()
+        //});
 
         $("#${auto_pick.field_id}").click(function() { 
             rw.system_available()
          })
 
        $("#${arch.field_id}").change(function() {
+            rw.get_distros()
+       })
+
+       $("#${distro_family.field_id}").change(function() {
+            var arch_value = jQuery('#'+rw.arch_id).val() 
+            if (arch_value) 
+                rw.get_distros()
+       })
+
+       $("#${method_.field_id}").change(function() {
+            rw.get_distros()
+       })
+
+       $("#${tag.field_id}").change(function() {
             rw.get_distros()
        })
        

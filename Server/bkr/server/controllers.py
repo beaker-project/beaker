@@ -501,42 +501,29 @@ class Root(RPCRoot):
     @paginate('list',limit=20,max_limit=None)
     def mine(self, *args, **kw):
         return self.systems(systems = System.mine(identity.current.user), *args, **kw)
-    
-    @expose(allow_json=True) 
-    def find_systems_for_distro(self,distro_install_name,*args,**kw): 
-        try: 
-            distro = Distro.query().filter(Distro.install_name == distro_install_name).one()
-        except InvalidRequestError,(e):
-            return { 'count' : 0 } 
-                 
-        #there seems to be a bug distro.systems 
-        #it seems to be auto correlateing the inner query when you pass it a user, not possible to manually correlate
-        #a Query object in 0.4  
-        systems_distro_query = distro.systems()
-        avail_systems_distro_query = System.available(identity.current.user,System.by_type(type='machine',systems=systems_distro_query)) 
-        return {'count' : avail_systems_distro_query.count(), 'distro_id' : distro.id }
+
       
     @expose(template='bkr.server.templates.grid') 
     @identity.require(identity.not_anonymous())
     @paginate('list',default_order='fqdn', limit=20, max_limit=None)
     def reserve_system(self, *args,**kw):
+        
         def reserve_link(x,distro):
             if x.is_free():
                 return make_link("/reserveworkflow/reserve?system_id=%s&distro_id=%s" % (Utility.get_correct_system_column(x).id,distro), 'Reserve Now')
             else:
                 return make_link("/reserveworkflow/reserve?system_id=%s&distro_id=%s" % (Utility.get_correct_system_column(x).id,distro), 'Queue Reservation')
-
         try:
-            try:
-                distro_install_name = kw['distro'] #this should be the distro install_name   
+            try: 
+                distro_install_name = kw['distro'] #this should be the distro install_name, throw KeyError is expected and caught
                 distro = Distro.query().filter(Distro.install_name == distro_install_name).one()
             except KeyError:
-                try:
+                try: 
                     distro_id = kw['distro_id']
                     distro = Distro.query().filter(Distro.id == distro_id).one()
                 except KeyError:
                     raise
-            # I don't like duplicating this code in find_systems_for_distro() but it dies on trying to jsonify a Query object..... 
+            # I don't like duplicating this code in find_systems_for_distro() but it dies on trying to jsonify a Query object... 
             systems_distro_query = distro.systems() 
             avail_systems_distro_query = System.available(identity.current.user,System.by_type(type='machine',systems=systems_distro_query)) 
            
