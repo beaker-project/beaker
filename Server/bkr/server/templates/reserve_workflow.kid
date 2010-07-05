@@ -7,7 +7,7 @@
                                  "${tag.field_id}","${distro.field_id}","${submit.field_id}","${auto_pick.field_id}",
                                  "${arch_value}","${distro_family_value}","${tag_value}","${method_value}",
                                  [${to_json(all_arches)}],[${to_json(all_distro_familys)}],[${to_json(all_tags)}],[${to_json(all_methods)}])
-    rw.set_remotes("${distro_rpc}","${system_rpc}","${reserve_href}")
+    rw.set_remotes("${tg.url(distro_rpc)}","${tg.url(system_rpc)}","${tg.url(system_many_rpc)}","${tg.url(reserve_href)}")
     addLoadEvent(rw.initialize)
     $(document).ready(function() {
         //$("select[id!=${distro.field_id}]").change(function() { 

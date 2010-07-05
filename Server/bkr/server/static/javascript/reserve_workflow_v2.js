@@ -20,9 +20,10 @@ ReserveWorkflow = function (arch,distro_family,method,tag,distro,submit,auto_pic
     bindMethods(this)
 };
 
-ReserveWorkflow.prototype.set_remotes = function(distro_rpc,system_rpc,reserve_href) {
+ReserveWorkflow.prototype.set_remotes = function(distro_rpc,system_one_distro_rpc,system_many_distros_rpc,reserve_href) {
     this.get_distros_rpc =  distro_rpc
-    this.find_systems_rpc = system_rpc
+    this.find_systems_one_distro_rpc = system_one_distro_rpc
+    this.find_systems_many_distro_rpc = system_many_distros_rpc
     this.reserve_system_href = reserve_href
     bindMethods(this)
 }
@@ -93,7 +94,7 @@ ReserveWorkflow.prototype.system_available = function(arg) {
                    'arches' : arch_value }
        
     if (arch_value.length > 1) {
-        var d = loadJSONDoc('./find_systems_for_multiple_distros?' + queryString(params));
+        var d = loadJSONDoc(this.find_systems_many_distro_rpc + '?' + queryString(params));
     } else { //If we have multiple arches we need to get our systems another way 
         var d = loadJSONDoc(this.find_systems_rpc + '?' + queryString(params)); 
     }

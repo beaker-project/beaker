@@ -122,7 +122,7 @@ class ReserveWorkflow(Form):
     css = [LocalCSSLink('bkr','/static/css/reserve_workflow.css')] 
     member_widgets = ['arch','distro','distro_family','method_','tag'] 
     params = ['arch_value','method_value','tag_value','distro_family_value','all_arches',
-              'all_tags','all_methods','all_distro_familys','to_json','auto_pick','distro_rpc','system_rpc','reserve_href'] 
+              'all_tags','all_methods','all_distro_familys','to_json','auto_pick','distro_rpc','system_rpc','system_many_rpc','reserve_href'] 
 
     def __init__(self,*args,**kw):
         super(ReserveWorkflow,self).__init__(*args, **kw)  
@@ -168,8 +168,9 @@ class ReserveWorkflow(Form):
         self.arch = SingleSelectField(name='arch', label='Arch', options=[None],attrs={'size':5,'multiple': 1},validator=validators.NotEmpty())
 
         self.to_json = UtilJSON.dynamic_json()
-        self.system_rpc ='./find_systems_for_distro'
-        self.distro_rpc = './get_distro_options' 
+        self.system_rpc = './find_systems_for_distro'
+        self.system_many_rpc= './find_systems_for_multiple_distros'
+        self.distro_rpc = './get_distro_options'
         self.reserve_href = './reserve'
         self.auto_pick = Button(default="Auto pick system", name='auto_pick', attrs={'class':None})
         self.name = 'reserveworkflow_form'
