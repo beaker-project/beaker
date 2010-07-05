@@ -20,6 +20,14 @@ ReserveWorkflow = function (arch,distro_family,method,tag,distro,submit,auto_pic
     bindMethods(this)
 };
 
+ReserveWorkflow.prototype.set_remotes = function(distro_rpc,system_rpc,reserve_href) {
+    this.get_distros_rpc =  distro_rpc
+    this.find_systems_rpc = system_rpc
+    this.reserve_system_href = reserve_href
+    bindMethods(this)
+}
+
+
 ReserveWorkflow.prototype.initialize = function() {  
     getElement(this.submit_id).setAttribute('disabled',1) 
     getElement(this.auto_pick_id).setAttribute('disabled',1)
@@ -80,7 +88,7 @@ ReserveWorkflow.prototype.system_available = function(arg) {
     var params = { 'tg_format' : 'json',
                    'tg_random' : new Date().getTime(),
                    'distro_install_name' : distro_value}
-    var d = loadJSONDoc('/find_systems_for_distro?' + queryString(params));
+    var d = loadJSONDoc(this.find_systems_rpc + '?' + queryString(params));
     d.addCallback(this.show_auto_pick_warnings)                
 }
 
@@ -89,7 +97,7 @@ ReserveWorkflow.prototype.show_auto_pick_warnings = function(result) {
     if (count < 1) {
          getElement('reserve_error').setAttribute('style','display:inline') 
     } else {
-         location.href='/reserveworkflow/reserve?distro_id=' + result['distro_id']
+         location.href=this.reserve_system_href + '?distro_id=' + result['distro_id']
     }
 }
 
@@ -105,7 +113,7 @@ ReserveWorkflow.prototype.get_distros = function() {
                    'method' : method_value,
                    'tag' : tag_value }
 
-    var d = loadJSONDoc('/reserveworkflow/get_distro_options?' + queryString(params)); 
+    var d = loadJSONDoc(this.get_distros_rpc + '?' + queryString(params)); 
     d.addCallback(this.replaceDistros)
 };
 
