@@ -8,7 +8,7 @@
 </head>
 <body>
 <h2>$title</h2>
-<span py:if="search_bar">${search_bar.display(method='GET', action=action, value=searchvalue, options=options)}</span>
+<span py:if="search_bar">${search_bar.display(method='GET', action="${tg.url(action)}", value=searchvalue, options=options)}</span>
 
 <div py:if="warn_msg" style='text-align:center'><warn class='rounded-side-pad'>${warn_msg}</warn></div>
 ${grid.display(list)}

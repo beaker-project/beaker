@@ -914,18 +914,18 @@ class Root(RPCRoot):
                                     arches    = self.arches_form,
                                     tasks      = self.task_form,
                                   ),
-            widgets_action  = dict( power     = url('/save_power'),
-                                    history   = url('/view/%s' % fqdn),
-                                    labinfo   = url('/save_labinfo'),
-                                    exclude   = url('/save_exclude'),
-                                    keys      = url('/save_keys'),
-                                    notes     = url('/save_note'),
-                                    groups    = url('/save_group'),
-                                    install   = url('/save_install'),
-                                    provision = url('/action_provision'),
-                                    power_action = url('/action_power'),
-                                    arches    = url('/save_arch'),
-                                    tasks     = url('/tasks/do_search'),
+            widgets_action  = dict( power     = '/save_power',
+                                    history   = '/view/%s' % fqdn,
+                                    labinfo   = '/save_labinfo',
+                                    exclude   = '/save_exclude',
+                                    keys      = '/save_keys',
+                                    notes     = '/save_note',
+                                    groups    = '/save_group',
+                                    install   = '/save_install',
+                                    provision = '/action_provision',
+                                    power_action = '/action_power',
+                                    arches    = '/save_arch',
+                                    tasks     = '/tasks/do_search',
                                   ),
             widgets_options = dict(power     = options,
                                    history   = history_options or {},
@@ -1816,7 +1816,7 @@ class Root(RPCRoot):
         return system.update(inventory)
 
     @expose(template="bkr.server.templates.login")
-    def login(self, forward_url="/", previous_url=None, *args, **kw): 
+    def login(self, forward_url=url("/"), previous_url=None, *args, **kw): 
         if not identity.current.anonymous \
             and identity.was_login_attempted() \
             and not identity.get_identity_errors():     
@@ -1828,7 +1828,7 @@ class Root(RPCRoot):
                 if re.match('^(.+)?/%s$' % self.login.__name__,request.headers['Referer']):
                     raise redirect(forward_url)
                 else:
-                    raise redirect(request.headers.get("Referer","/"))
+                    raise redirect(request.headers.get("Referer",url("/")))
             else:
                 redirect(forward_url)
 
@@ -1843,7 +1843,7 @@ class Root(RPCRoot):
                    "this resource.")
         else:
             msg=_("Please log in.")
-            forward_url= request.headers.get("Referer", "/")
+            forward_url= request.headers.get("Referer", url("/"))
             
         response.status=403
         return dict(message=msg, previous_url=previous_url, logging_in=True,

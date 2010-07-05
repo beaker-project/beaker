@@ -15,7 +15,7 @@ $(document).ready( function() {
 </script>
 </head>
 <div style='padding-left:2em'>
-<form action='${action}' name="${name}">  
+<form action='${tg.url(action)}' name="${name}">  
 
      <div style='float:left'> 
          <h3 style="display:inline"> ${whiteboard.label}</h3><br />
