@@ -452,8 +452,8 @@ activity_table = Table('activity', metadata,
     Column('field_name', String(40), nullable=False),
     Column('service', String(100), nullable=False),
     Column('action', String(40), nullable=False),
-    Column('old_value', String(40)),
-    Column('new_value', String(40))
+    Column('old_value', String(60)),
+    Column('new_value', String(60))
 )
 
 system_activity_table = Table('system_activity', metadata,
@@ -1854,7 +1854,7 @@ $SNIPPET("rhts_post")
                     )
                   )
         )
-        if self.type.type == 'Machine':
+        if self.type.type != 'Virtual':
             distros = distros.filter(distro_table.c.virt==False)
         return distros
 

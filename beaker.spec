@@ -6,8 +6,8 @@
 %endif
 
 Name:           beaker
-Version:        0.5.46
-Release:        5%{?timestamp}%{?branch}%{?dist}
+Version:        0.5.47
+Release:        0%{?timestamp}%{?branch}%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -185,6 +185,9 @@ fi
 %{_sysconfdir}/init.d/%{name}-watchdog
 
 %changelog
+* Tue Jul 06 2010 Bill Peck <bpeck@redhat.com> - 0.5.47-0
+- proper release
+
 * Tue Jul 06 2010 Bill Peck <bpeck@redhat.com> - 0.5.46-5
 - bz598878, minor update to code to not need split(',')
 - bz572798, Missing conditions/events in history view.
