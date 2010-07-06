@@ -96,7 +96,7 @@ ReserveWorkflow.prototype.system_available = function(arg) {
     if (arch_value.length > 1) {
         var d = loadJSONDoc(this.find_systems_many_distro_rpc + '?' + queryString(params));
     } else { //If we have multiple arches we need to get our systems another way 
-        var d = loadJSONDoc(this.find_systems_rpc + '?' + queryString(params)); 
+        var d = loadJSONDoc(this.find_systems_one_distro_rpc + '?' + queryString(params)); 
     }
 
     d.addCallback(this.show_auto_pick_warnings)                
