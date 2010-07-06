@@ -160,3 +160,38 @@ class ReserveWorkflow:
         options = sorted([(elem.install_name,elem.date_created) for elem in distro], key = lambda e1: e1[1],reverse=True) #so we don't have to guess the install_name later
         options = [elem[0] for elem in options]
         return {'options': options} 
+
+    @expose(allow_json=True)
+    def find_systems_for_multiple_distros(self,distro_install_name,arches=None,*args,**kw):
+        all_distro_names = list()
+        for arch in arches.split(','): 
+            all_distro_names.append('%s-%s' % (distro_install_name,arch))
+
+        systems_queries, distro_ids = [],[] 
+        for install_name in all_distro_names:
+            try:
+                distro = Distro.query().filter(Distro.install_name == install_name).one()
+                distro_ids.append(distro.id)
+            except InvalidRequestError:
+                log.error(u'Could not find distro %s, continuing with other distros' % install_name)
+                continue
+            
+            systems_distro_query = distro.systems()
+            systems_available = System.available(identity.current.user,System.by_type(type='machine',systems=systems_distro_query)) 
+            systems_queries = systems_queries + systems_available.select()
+
+        return { 'count' : len(set(systems_queries)), 'distro_id' : distro_ids }
+              
+    @expose(allow_json=True) 
+    def find_systems_for_distro(self,distro_install_name,*args,**kw): 
+        try: 
+            distro = Distro.query().filter(Distro.install_name == distro_install_name).one()
+        except InvalidRequestError,(e):
+            return { 'count' : 0 } 
+                 
+        #there seems to be a bug distro.systems 
+        #it seems to be auto correlateing the inner query when you pass it a user, not possible to manually correlate
+        #a Query object in 0.4  
+        systems_distro_query = distro.systems()
+        avail_systems_distro_query = System.available(identity.current.user,System.by_type(type='machine',systems=systems_distro_query)) 
+        return {'count' : avail_systems_distro_query.count(), 'distro_id' : distro.id }
