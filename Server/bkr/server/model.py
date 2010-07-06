@@ -1243,16 +1243,22 @@ class System(SystemObject):
                     raise an exception if it fails.
                     raise an exception if it takes more then 5 minutes
                 """
-                expiredelta = datetime.utcnow() + timedelta(minutes=10)
-                while(True):
-                    for line in self.get_event_log(task_id).split('\n'):
-                        if line.find("### TASK COMPLETE ###") != -1:
-                            return True
-                        if line.find("### TASK FAILED ###") != -1:
-                            raise BX(_("Cobbler Task:%s Failed" % task_id))
-                    if datetime.utcnow() > expiredelta:
-                        raise BX(_('Cobbler Task:%s Timed out' % task_id))
-                    time.sleep(5)
+                try:
+                    expiredelta = datetime.utcnow() + timedelta(minutes=10)
+                    while(True): 
+                        for line in self.get_event_log(task_id).split('\n'):
+                            if line.find("### TASK COMPLETE ###") != -1:
+                                return True
+                            if line.find("### TASK FAILED ###") != -1:
+                                raise BX(_("Cobbler Task:%s Failed" % task_id))
+                        if datetime.utcnow() > expiredelta:
+                            raise BX(_('Cobbler Task:%s Timed out' % task_id))
+    
+                        time.sleep(5)
+                except BX,e:
+                    self.system.activity.append(SystemActivity(self.system.user,service='Cobbler API',action='Task',new_value='Fail: %s' % e))
+                    raise
+
 
                         
             def power(self,action='reboot', wait=True):

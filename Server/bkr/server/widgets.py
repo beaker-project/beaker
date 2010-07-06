@@ -45,7 +45,7 @@ class LocalCSSLink(CSSLink):
     """
     def update_params(self, d):
         super(CSSLink, self).update_params(d)
-        d["link"] = url(self.name)
+        d["link"] = self.name
 
 
 class PowerTypeForm(CompoundFormField):
