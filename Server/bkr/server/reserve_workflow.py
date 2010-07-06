@@ -19,23 +19,26 @@ class ReserveWorkflow:
     @expose()
     @identity.require(identity.not_anonymous())
     def doit(self, distro_id, **kw):
-        jobs = []
-        for id in distro_id.split(","):
-            """ Create a new reserve job, if system_id is defined schedule it too """
+        """ Create a new reserve job, if system_id is defined schedule it too """
+        job = Job(ttasks=0, owner=identity.current.user)
+        if kw.get('whiteboard'):
+            job.whiteboard = kw.get('whiteboard') 
+        if not isinstance(distro_id,list):
+            distro_id = [distro_id]
+
+        for id in distro_id: 
             try:
                 distro = Distro.by_id(id)
             except InvalidRequestError:
                 flash(_(u'Invalid Distro ID %s' % id))
                 redirect('/')
-            job = Job(ttasks=2, owner=identity.current.user)
-            jobs.append(job)
-            if kw.get('whiteboard'):
-                job.whiteboard = kw.get('whiteboard')
             recipeSet = RecipeSet(ttasks=2)
             recipe = MachineRecipe(ttasks=2)
             # Inlcude the XML definition so that cloning this job will act as expected.
             recipe.distro_requires = distro.to_xml().toxml()
             recipe.distro = distro
+            # Don't report panic's for reserve workflow.
+            recipe.panic = 'ignore'
             if kw.get('system_id'):
                 try:
                     system = System.by_id(kw.get('system_id'), identity.current.user)
@@ -65,21 +68,15 @@ class ReserveWorkflow:
             recipe.append_tasks(reserveTask)
             recipeSet.recipes.append(recipe)
             job.recipesets.append(recipeSet)
+            job.ttasks += recipeSet.ttasks
             if recipe.systems:
                 # We already picked the system skip New -> Processed states
                 recipe.queue()
-            session.save(job)
-           
+        session.save(job)
         session.flush()
-        if len(jobs) > 1:
-            success_msg =  u'Successfully queued jobs %s' % ",".join([str(j.id) for j in jobs])
-            redirect_msg = '/jobs/mine' # Seems like a reasonable place to redirect them to
-        else:
-            success_msg = u'Successfully queued job %s' % job.id
-            redirect_msg = '/jobs/%s' % jobs[0].id
 
-        flash(_(success_msg))
-        redirect(redirect_msg)
+        flash(_(u'Successfully queued job %s' % job.id))
+        redirect('/jobs/%s' % job.id)
 
     @expose(template='bkr.server.templates.form')
     @identity.require(identity.not_anonymous())
@@ -94,21 +91,28 @@ class ReserveWorkflow:
         else:
             system_name = 'Any System'
         distro_names = [] 
-        for id in distro_id.split(","):
+
+        return_value = dict(
+                            system_id = system_id, 
+                            system = system_name,
+                            distro = '',
+                            distro_ids = [],
+                            )
+        if not isinstance(distro_id,list):
+            distro_id = [distro_id]
+        for id in distro_id:
             try:
                 distro = Distro.by_id(id)
                 distro_names.append(distro.install_name)
+                return_value['distro_ids'].append(id)
             except InvalidRequestError:
-                flash(_(u'Invalid Distro ID %s' % distro_id)) 
+                flash(_(u'Invalid Distro ID %s' % id)) 
         distro = ", ".join(distro_names)
+        return_value['distro'] = distro
+        
         return dict(form=self.reserveform,
                     action='./doit',
-                    value = dict(
-                                system_id = system_id,
-                                distro_id = distro_id,
-                                system = system_name,
-                                distro = distro,
-                                ),
+                    value = return_value,
                     options = None,
                     title='Reserve System %s' % system_name)
 

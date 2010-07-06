@@ -452,8 +452,8 @@ activity_table = Table('activity', metadata,
     Column('field_name', String(40), nullable=False),
     Column('service', String(100), nullable=False),
     Column('action', String(40), nullable=False),
-    Column('old_value', String(40)),
-    Column('new_value', String(40))
+    Column('old_value', String(60)),
+    Column('new_value', String(60))
 )
 
 system_activity_table = Table('system_activity', metadata,
@@ -1243,16 +1243,22 @@ class System(SystemObject):
                     raise an exception if it fails.
                     raise an exception if it takes more then 5 minutes
                 """
-                expiredelta = datetime.utcnow() + timedelta(minutes=10)
-                while(True):
-                    for line in self.get_event_log(task_id).split('\n'):
-                        if line.find("### TASK COMPLETE ###") != -1:
-                            return True
-                        if line.find("### TASK FAILED ###") != -1:
-                            raise BX(_("Cobbler Task:%s Failed" % task_id))
-                    if datetime.utcnow() > expiredelta:
-                        raise BX(_('Cobbler Task:%s Timed out' % task_id))
-                    time.sleep(5)
+                try:
+                    expiredelta = datetime.utcnow() + timedelta(minutes=10)
+                    while(True): 
+                        for line in self.get_event_log(task_id).split('\n'):
+                            if line.find("### TASK COMPLETE ###") != -1:
+                                return True
+                            if line.find("### TASK FAILED ###") != -1:
+                                raise BX(_("Cobbler Task:%s Failed" % task_id))
+                        if datetime.utcnow() > expiredelta:
+                            raise BX(_('Cobbler Task:%s Timed out' % task_id))
+    
+                        time.sleep(5)
+                except BX,e:
+                    self.system.activity.append(SystemActivity(self.system.user,service='Cobbler API',action='Task',new_value='Fail: %s' % e))
+                    raise
+
 
                         
             def power(self,action='reboot', wait=True):
@@ -1848,7 +1854,7 @@ $SNIPPET("rhts_post")
                     )
                   )
         )
-        if self.type.type == 'Machine':
+        if self.type.type != 'Virtual':
             distros = distros.filter(distro_table.c.virt==False)
         return distros
 
@@ -2382,6 +2388,10 @@ class Distro(MappedObject):
     @classmethod
     def by_install_name(cls, install_name):
         return cls.query.filter_by(install_name=install_name).one()
+
+    @classmethod
+    def by_name(cls, name):
+        return cls.query.filter_by(name=name).first()
 
     @classmethod
     def by_id(cls, id):
@@ -3097,11 +3107,10 @@ class Job(TaskBase):
         min_status = TaskStatus.max()
         for recipeset in self.recipesets:
             recipeset._update_status()
-            if recipeset.is_finished():
-                self.ptasks += recipeset.ptasks
-                self.wtasks += recipeset.wtasks
-                self.ftasks += recipeset.ftasks
-                self.ktasks += recipeset.ktasks
+            self.ptasks += recipeset.ptasks
+            self.wtasks += recipeset.wtasks
+            self.ftasks += recipeset.ftasks
+            self.ktasks += recipeset.ktasks
             if recipeset.status < min_status:
                 min_status = recipeset.status
             if recipeset.result > max_result:
@@ -3231,11 +3240,10 @@ class RecipeSet(TaskBase):
         min_status = TaskStatus.max()
         for recipe in self.recipes:
             recipe._update_status()
-            if recipe.is_finished():
-                self.ptasks += recipe.ptasks
-                self.wtasks += recipe.wtasks
-                self.ftasks += recipe.ftasks
-                self.ktasks += recipe.ktasks
+            self.ptasks += recipe.ptasks
+            self.wtasks += recipe.wtasks
+            self.ftasks += recipe.ftasks
+            self.ktasks += recipe.ktasks
             if recipe.status < min_status:
                 min_status = recipe.status
             if recipe.result > max_result:

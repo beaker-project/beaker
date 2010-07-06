@@ -36,8 +36,8 @@ class Workflow_Simple(BeakerWorkflow):
             sys.exit(1)
 
         if not arches:
-            sys.stderr.write("No arches specified, you must specify at least one\n")
-            sys.exit(1)
+            # Get default arches that apply for this distro/family
+            arches = self.getArches(*args, **kwargs)
 
         if not requestedTasks:
             sys.stderr.write("You must specify a package, type or task to run\n")

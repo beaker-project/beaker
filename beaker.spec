@@ -6,8 +6,8 @@
 %endif
 
 Name:           beaker
-Version:        0.5.46
-Release:        1%{?timestamp}%{?branch}%{?dist}
+Version:        0.5.47
+Release:        0%{?timestamp}%{?branch}%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -185,6 +185,25 @@ fi
 %{_sysconfdir}/init.d/%{name}-watchdog
 
 %changelog
+* Tue Jul 06 2010 Bill Peck <bpeck@redhat.com> - 0.5.47-0
+- proper release
+
+* Tue Jul 06 2010 Bill Peck <bpeck@redhat.com> - 0.5.46-5
+- bz598878, minor update to code to not need split(',')
+- bz572798, Missing conditions/events in history view.
+
+* Fri Jul 02 2010 Bill Peck <bpeck@redhat.com> - 0.5.46-3
+- added get_arches and get_family xmlrpc calls.
+- updated workflow-simple to use get_arches if no arches specified.
+
+* Wed Jun 30 2010 Bill Peck <bpeck@redhat.com> - 0.5.46-2
+- fix bz589876 - Job list progress bars should show progress of running recipes
+
+* Wed Jun 30 2010 Bill Peck <bpeck@redhat.com> - 0.5.46-1
+- disable panic detection from reserve workflow.
+- merged bz607560, fixes NULL powertype.
+- merged bz598878, reserve more machines in one step.
+
 * Tue Jun 29 2010 Bill Peck <bpeck@redhat.com> - 0.5.46-0
 - bz608621 added sane defaults to bkr distro-list (limit 10)
 - use %packages --default for RHEL6 kickstart

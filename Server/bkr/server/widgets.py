@@ -45,7 +45,7 @@ class LocalCSSLink(CSSLink):
     """
     def update_params(self, d):
         super(CSSLink, self).update_params(d)
-        d["link"] = url(self.name)
+        d["link"] = self.name
 
 
 class PowerTypeForm(CompoundFormField):
@@ -99,8 +99,8 @@ class PowerTypeForm(CompoundFormField):
 	self.key_field = HiddenField(name="key")
 
 class ReserveSystem(TableForm):
-    fields = [
-	      HiddenField(name='distro_id'),
+    fields = [ 
+          #HiddenField(name='distro_id'),
 	      HiddenField(name='system_id'),
               Label(name='system', label=_(u'System to Provision')),
               Label(name='distro', label=_(u'Distro to Provision')),
@@ -115,6 +115,19 @@ class ReserveSystem(TableForm):
                         label=_(u'Kernel Options (Post)')),
              ]
     submit_text = 'Queue Job'
+
+    def update_params(self,d): 
+        log.debug(d)
+        if 'value' in d:
+            if 'distro_ids' in d['value']:
+                if(isinstance(d['value']['distro_ids'],list)):
+                    for distro_id in d['value']['distro_ids']:
+                        d['hidden_fields'] = [HiddenField(name='distro_id',attrs = {'value' : distro_id})] + d['hidden_fields'][0:]
+                
+
+        super(ReserveSystem,self).update_params(d)
+
+
 
 class ReserveWorkflow(Form): 
     javascript = [LocalJSLink('bkr', '/static/javascript/reserve_workflow_v2.js')] 
@@ -165,7 +178,7 @@ class ReserveWorkflow(Form):
         self.distro_family = SingleSelectField(name='distro_family', label='Distro Family', 
                                                options=[None],validator=validators.NotEmpty())
         self.tag = SingleSelectField(name='tag', label='Tag', options=[None],validator=validators.NotEmpty())
-        self.arch = SingleSelectField(name='arch', label='Arch', options=[None],attrs={'size':5,'multiple': 1},validator=validators.NotEmpty())
+        self.arch = SingleSelectField(name='arch', label='Arch', options=[None],validator=validators.NotEmpty())
 
         self.to_json = UtilJSON.dynamic_json()
         self.system_rpc = './find_systems_for_distro'
