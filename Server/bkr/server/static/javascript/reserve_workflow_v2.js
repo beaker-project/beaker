@@ -112,7 +112,7 @@ ReserveWorkflow.prototype.show_auto_pick_warnings = function(result) {
             var joined_args = the_distro_ids.join('&distro_id=')
             real_get_args = joined_args.replace(/^(.+)?&(.+)$/,"$2&distro_id=$1")
         }
-         location.href='/reserveworkflow/reserve?' + real_get_args
+         location.href='./reserve?' + real_get_args
     }
 }
 
@@ -131,7 +131,7 @@ ReserveWorkflow.prototype.get_distros = function() {
                    'method' : method_value,
                    'tag' : tag_value }
 
-    var d = loadJSONDoc('/reserveworkflow/get_distro_options?' + queryString(params)); 
+    var d = loadJSONDoc('./get_distro_options?' + queryString(params)); 
     d.addCallback(this.replaceDistros)
 };
 
