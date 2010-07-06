@@ -75,6 +75,8 @@ class Convert(object):
             elif key == 'FAMILY':
                 # FAMILY doesn't make sense to beaker
                 require = None
+            elif key == 'CPUNAME':
+                require = self.doc.createElement('cpu_codename')
             else:
                 require = self.doc.createElement('key_value')
                 require.setAttribute('key', '%s' % key)

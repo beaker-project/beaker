@@ -45,7 +45,7 @@ class LocalCSSLink(CSSLink):
     """
     def update_params(self, d):
         super(CSSLink, self).update_params(d)
-        d["link"] = url(self.name)
+        d["link"] = self.name
 
 
 class PowerTypeForm(CompoundFormField):
@@ -99,8 +99,8 @@ class PowerTypeForm(CompoundFormField):
 	self.key_field = HiddenField(name="key")
 
 class ReserveSystem(TableForm):
-    fields = [
-	      HiddenField(name='distro_id'),
+    fields = [ 
+          #HiddenField(name='distro_id'),
 	      HiddenField(name='system_id'),
               Label(name='system', label=_(u'System to Provision')),
               Label(name='distro', label=_(u'Distro to Provision')),
@@ -116,8 +116,23 @@ class ReserveSystem(TableForm):
              ]
     submit_text = 'Queue Job'
 
+    def update_params(self,d): 
+        log.debug(d)
+        if 'value' in d:
+            if 'distro_ids' in d['value']:
+                if(isinstance(d['value']['distro_ids'],list)):
+                    for distro_id in d['value']['distro_ids']:
+                        d['hidden_fields'] = [HiddenField(name='distro_id',attrs = {'value' : distro_id})] + d['hidden_fields'][0:]
+                
+
+        super(ReserveSystem,self).update_params(d)
+
+
+
 class ReserveWorkflow(Form): 
-    javascript = [LocalJSLink('bkr', '/static/javascript/reserve_workflow.js'),LocalJSLink('bkr','/static/javascript/jquery-1.3.1.js')] 
+    javascript = [LocalJSLink('bkr', '/static/javascript/reserve_workflow_v2.js'),
+                  LocalJSLink('bkr','/static/javascript/jquery-1.3.1.js'),
+                 ] 
     template="bkr.server.templates.reserve_workflow"
     css = [LocalCSSLink('bkr','/static/css/reserve_workflow.css')] 
     member_widgets = ['arch','distro','distro_family','method_','tag'] 
@@ -153,9 +168,9 @@ class ReserveWorkflow(Form):
                 #Sort distro alphabetically,diregarding version
                 return distro_1 < distro_2 and -1 or 1
                               
-        self.all_arches = [['','None Selected']] + [[elem.arch,elem.arch] for elem in model.Arch.query()]
+        self.all_arches = [[elem.arch,elem.arch] for elem in model.Arch.query()]
         self.all_tags = [['','None Selected']] + [[elem.tag,elem.tag] for elem in model.DistroTag.query()]  
-        self.all_methods = [('','None Selected')] + [[elem,elem] for elem in model.Distro.all_methods()]
+        self.all_methods = [[elem,elem] for elem in model.Distro.all_methods()]
         e = [elem.osmajor for elem in model.OSMajor.query()] 
         self.all_distro_familys = [('','None Selected')] + [[osmajor,osmajor] for osmajor in sorted(e,cmp=my_cmp )]  
 
@@ -705,7 +720,6 @@ class TaskSearchForm(RemoteForm):
 #        self.task      = TextField(name='task', label=_(u'Task'))
 
     def update_params(self, d):
-        print "d=", d
         super(TaskSearchForm, self).update_params(d)
         if 'arch_id' in d['options']:
             d['arch_id'] = d['options']['arch_id']

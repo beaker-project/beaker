@@ -158,7 +158,7 @@ $(document).ready(function() {
  
  <div py:if="recipe_tasks_widget" class="hidden recipe-tasks fail_recipe_${recipe.id} recipe_${recipe.id}">
   <h2>Task Runs</h2> 
-  <p class="hidden"> ${recipe_tasks_widget.link.display("I am hidden",action='/tasks/do_search', 
+  <p class="hidden"> ${recipe_tasks_widget.link.display("I am hidden",action=tg.url('/tasks/do_search'), 
                                                         data=dict(recipe_id = recipe.id,
                                                                   tasks_tgp_order='id',
                                                                   tasks_tgp_limit=0),  

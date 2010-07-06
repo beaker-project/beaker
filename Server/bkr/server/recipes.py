@@ -173,13 +173,13 @@ class Recipes(RPCRoot):
         return return_dict
 
     @expose(template='bkr.server.templates.grid')
-    @paginate('list',default_order='-id', limit=50, allow_limit_override=True)
+    @paginate('list',default_order='-id', limit=50, max_limit=None)
     def index(self,*args,**kw):
         return self.recipes(recipes=session.query(MachineRecipe),*args,**kw)
 
     @identity.require(identity.not_anonymous())
     @expose(template='bkr.server.templates.grid')
-    @paginate('list',default_order='-id', limit=50, allow_limit_override=True)
+    @paginate('list',default_order='-id', limit=50, max_limit=None)
     def mine(self,*args,**kw):
         return self.recipes(recipes=MachineRecipe.mine(identity.current.user),action='./mine',*args,**kw)
 

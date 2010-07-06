@@ -131,7 +131,10 @@
 				<varlistentry><term>Power</term>
 					<listitem>
 						<para>
-							Allows the powering off/on and rebooting of this System. These options are only available if you are the current user of this System or in the admin group.
+							Allows the powering off/on and rebooting of this System.
+							These options are only available if you are the current user of this System, in the admin group or are
+							part of a group that has been given admin rights over the machine. Also the machine must be <literal>Taken</literal>.
+							
 						</para>
 					</listitem>
 				</varlistentry>

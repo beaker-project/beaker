@@ -29,6 +29,6 @@ class Job_Results(BeakerCommand):
         for task in args:
             myxml = self.hub.taskactions.to_xml(task)
             if prettyxml:
-                print xml.dom.minidom.parseString(myxml).toprettyxml()
+                print parseString(myxml).toprettyxml()
             else:
                 print myxml

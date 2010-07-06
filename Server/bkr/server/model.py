@@ -5,7 +5,7 @@ from turbogears.database import metadata, mapper, session
 from turbogears.config import get
 import ldap
 from sqlalchemy import Table, Column, ForeignKey
-from sqlalchemy.orm import relation, backref, synonym, dynamic_loader,query
+from sqlalchemy.orm import relation, backref, synonym, dynamic_loader,query 
 from sqlalchemy import String, Unicode, Integer, DateTime, UnicodeText, Boolean, Float, VARCHAR, TEXT, Numeric
 from sqlalchemy import or_, and_, not_, select
 from sqlalchemy.exceptions import InvalidRequestError
@@ -1021,12 +1021,16 @@ class MappedObject(object):
 
     @classmethod
     def lazy_create(cls, **kwargs):
+        item = None
         try:
             item = cls.query.filter_by(**kwargs).one()
-        except:
-            item = cls(**kwargs)
-            session.save(item)
-            session.flush([item])
+        except InvalidRequestError, e:
+            if '%s' % e == 'Multiple rows returned for one()':
+                log.error('Mutlitple rows returned for %s' % kwargs)
+            elif '%s' % e == 'No rows returned for one()':
+                item = cls(**kwargs)
+                session.save(item)
+                session.flush([item])
         return item
 
     def node(self, element, value):
@@ -1254,16 +1258,22 @@ class System(SystemObject):
                     raise an exception if it fails.
                     raise an exception if it takes more then 5 minutes
                 """
-                expiredelta = datetime.utcnow() + timedelta(minutes=10)
-                while(True):
-                    for line in self.get_event_log(task_id).split('\n'):
-                        if line.find("### TASK COMPLETE ###") != -1:
-                            return True
-                        if line.find("### TASK FAILED ###") != -1:
-                            raise BX(_("Cobbler Task:%s Failed" % task_id))
-                    if datetime.utcnow() > expiredelta:
-                        raise BX(_('Cobbler Task:%s Timed out' % task_id))
-                    time.sleep(5)
+                try:
+                    expiredelta = datetime.utcnow() + timedelta(minutes=10)
+                    while(True): 
+                        for line in self.get_event_log(task_id).split('\n'):
+                            if line.find("### TASK COMPLETE ###") != -1:
+                                return True
+                            if line.find("### TASK FAILED ###") != -1:
+                                raise BX(_("Cobbler Task:%s Failed" % task_id))
+                        if datetime.utcnow() > expiredelta:
+                            raise BX(_('Cobbler Task:%s Timed out' % task_id))
+    
+                        time.sleep(5)
+                except BX,e:
+                    self.system.activity.append(SystemActivity(self.system.user,service='Cobbler API',action='Task',new_value='Fail: %s' % e))
+                    raise
+
 
                         
             def power(self,action='reboot', wait=True):
@@ -1347,11 +1357,6 @@ class System(SystemObject):
                         packages_slot += len(line) + 1
                         if line.find('%packages') == 0:
                             nopackages = False
-                            break
-                        elif line.find('%post') == 0 or line.find('%pre') == 0:
-                            # If we haven't found a %packages section by now then add one
-                            # need to back up one line
-                            packages_slot -= len(line) + 1
                             break
                     beforepackages = kickstart[:packages_slot-1]
                     # if no %packages section then add it
@@ -1618,7 +1623,11 @@ $SNIPPET("rhts_post")
             return False
 
     def is_admin(self,group_id=None,user_id=None,groups=None,*args,**kw):
-        if group_id: #Let's try this first as this will be the quicker query
+
+        if identity.current.user.is_admin() is True: #first let's see if we are an _admin_
+            return True
+
+        if group_id: #Let's try this next as this will be the quicker query
             try:
                 if self.admins.query().filter(SystemAdmin.group_id==group_id).one():
                     return True
@@ -1652,7 +1661,7 @@ $SNIPPET("rhts_post")
 
     def can_loan(self, user=None):
         if user and not self.loaned and not self.user:
-            if user == self.owner or user.is_admin():
+            if self.can_admin(user):
                 return True
         return False
 
@@ -2378,10 +2387,14 @@ def _create_tag(tag):
     return tag
 
 
-class Distro(MappedObject):
+class Distro(MappedObject): 
+    # EXCLUDE_OVER_MULTIPLE_ARCHES holds text that we do not want in a multi arch install. We have PAE here,
+    # because  a PAE and non PAE i386 distro is indutinguishable from another, so it will return a PAE distro, if we are searching on
+    # i386 and say x86_64, even though clearly, it's not applicable to the later. This only applies to multiple arches 
+    _EXCLUDE_OVER_MULTIPLE_ARCHES = 'PAE'
     def __init__(self, install_name=None):
         self.install_name = install_name
-    
+ 
     @classmethod
     def all_methods(cls):
         methods = [elem[0] for elem in select([distro_table.c.method],whereclause=distro_table.c.method != None,from_obj=distro_table,distinct=True).execute()]
@@ -2390,6 +2403,10 @@ class Distro(MappedObject):
     @classmethod
     def by_install_name(cls, install_name):
         return cls.query.filter_by(install_name=install_name).one()
+
+    @classmethod
+    def by_name(cls, name):
+        return cls.query.filter_by(name=name).first()
 
     @classmethod
     def by_id(cls, id):
@@ -2449,7 +2466,8 @@ class Distro(MappedObject):
                     obj = getattr(obj, field, None)
                 require.setAttribute('value', obj or '')
             else:
-                require.setAttribute('value', getattr(self, fields[key], None) or '')
+                value_text = getattr(self,fields[key],None) or '' 
+                require.setAttribute('value', str(value_text))
             xmland.appendChild(require)
         distro_requires.appendChild(xmland)
         return distro_requires
@@ -2510,6 +2528,114 @@ class Distro(MappedObject):
                         )
                     )
         )
+    @classmethod
+    def _create_arch_distro_map(cls,*args,**kw):
+        """
+        multiple_distro_systems() will return a list of distro's that are applicable for a certain criteria.
+        The criteria can be
+        *method
+        *arch
+        *osmajor
+        """
+        method = kw.get('method')
+        arch = kw.get('arch')
+        osmajor = kw.get('osmajor')
+        tag = kw.get('tag')
+
+        if method is None and arch is None and osmajor is None:
+            log.error('Nothing has been passed into mulitple_distro_systems')
+            return
+         
+        if isinstance(arch,list):
+            local_arches = arch 
+        elif isinstance(arch,str):
+            local_arches = [arch]
+        
+        cache_locator = []
+        my_from = distro_table
+        my_and = [not_(distro_table.c.install_name.like('%%%s%%' % Distro._EXCLUDE_OVER_MULTIPLE_ARCHES))]
+        if arch:
+            my_from = my_from.join(arch_table)
+        if osmajor:
+            my_from = my_from.join(osversion_table). \
+                                join(osmajor_table) 
+            my_and.append(osmajor_table.c.osmajor == osmajor)
+        if tag: 
+            my_from = my_from.join(distro_tag_map).join(distro_tag_table)
+            my_and.append(distro_tag_table.c.tag == tag) 
+        for var in (osmajor,method,tag) + tuple(sorted(local_arches)):
+            if var:
+                cache_locator.append(var)
+        cache_location = "_".join(cache_locator)
+        the_cache = getattr(Distro,cache_location,None)
+        if the_cache: #phew, we don't have to do that big ugly slow query 
+            log.debug('Returning our cached items for %s' % cache_location)
+            return the_cache
+        current_derived = None
+        future_arch_cache = {}
+        for local_arch in local_arches:
+            my_derived = select([distro_table.c.name,distro_table.c.install_name,distro_table.c.id.label('distro_id'),distro_table.c.date_created],
+                                whereclause= and_(*my_and + [arch_table.c.arch == local_arch,distro_table.c.method == method] ),
+                                from_obj=my_from).alias(local_arch)
+            
+            if current_derived is None:
+                current_derived = my_derived
+                first_derived = my_derived
+                s = select([my_derived.c.distro_id,my_derived.c.install_name,my_derived.c.date_created],from_obj=my_derived) 
+            else:
+                try:
+                    current_derived = current_derived.join(my_derived,current_derived.c.name == my_derived.c.name)
+                except AttributeError:
+                    current_derived = current_derived.join(my_derived,first_derived.c.name == my_derived.c.name)
+            future_arch_cache[local_arch] = {} 
+     
+        s = current_derived.select(use_labels=True)     
+        result = s.execute() 
+        #The following dict should look something like this (for example only)
+        #
+        #{ 'i386' => { 'RHEL5.5-Server-20100318.nightly_nfs' : [125,date_create],
+        #              'RHEL5.5-Server-20100315.nightly_nfs' : [128,date_create] },
+        #  'x86_64' => { 'RHEL5.5-Server-20100318.nightly_nfs' : 126,
+        #                'RHEL5.5-Server-20100315.nightly_nfs' : 127},
+        #}
+        #        
+        for res in result:
+            for arch in local_arches:
+                cacheable_distro_install_name = res[current_derived.c['%s_install_name' % arch]]
+                if not  future_arch_cache[arch].get(cacheable_distro_install_name):#below we remove the arch from the end of the distro isntall_name, it's redundant
+                    future_arch_cache[arch][re.sub(r'^(.+)\-(.+?)$',r'\1',cacheable_distro_install_name)]  \
+                        =  [res[current_derived.c['%s_distro_id' % arch]],res[current_derived.c['%s_date_created' % arch]]]
+                else:
+                    continue
+
+        if future_arch_cache:
+            setattr(Distro,cache_location,future_arch_cache)
+        return getattr(Distro,cache_location,None)
+
+    @classmethod
+    def multiple_systems_distro(self,*args,**kw):
+        _date_created_index = 1
+        _install_name_index = 0
+        arch_distro_map = self._create_arch_distro_map(**kw)
+        
+        try: 
+            arch_results = [[]] * len(arch_distro_map.keys()) #creates our initial 2D array
+        except AttributeError: #hmm, perhaps we don't have an arch_distros_map
+            log.debug('We have no entries for mutiple system distros')
+            return []
+       
+        for index,(arch,distro_ref) in enumerate(arch_distro_map.iteritems()): 
+            #sort it
+            arch_results[index] = sorted(distro_ref.keys(), 
+                                        lambda a,b: distro_ref[a][_date_created_index] > distro_ref[b][_date_created_index] and -1 or 1 ) 
+            if index > 0:
+                if arch_results[index-1] != arch_results[index]: #just a sanity check
+                    log.error('Not all arches have the same distros')
+        try:
+            results_to_return = arch_results.pop()
+            return results_to_return
+        except IndexError,e:
+            return []
 
     def systems(self, user=None):
         """
@@ -2520,7 +2646,7 @@ class Distro(MappedObject):
             systems = System.available_order(user)
         else:
             systems = System.query()
-
+        
         return systems.join(['lab_controller','_distros','distro']).filter(
              and_(Distro.install_name==self.install_name,
                   System.arch.contains(self.arch),
@@ -2987,14 +3113,16 @@ class Job(TaskBase):
         Method to cancel all recipesets for this job.
         """
         for recipeset in self.recipesets:
-            recipeset.cancel(msg)
+            recipeset._cancel(msg)
+        self.update_status()
 
     def abort(self, msg=None):
         """
         Method to abort all recipesets for this job.
         """
         for recipeset in self.recipesets:
-            recipeset.abort(msg)
+            recipeset._abort(msg)
+        self.update_status()
 
     def task_info(self):
         """
@@ -3032,11 +3160,11 @@ class Job(TaskBase):
         max_result = None
         min_status = TaskStatus.max()
         for recipeset in self.recipesets:
-            if recipeset.is_finished():
-                self.ptasks += recipeset.ptasks
-                self.wtasks += recipeset.wtasks
-                self.ftasks += recipeset.ftasks
-                self.ktasks += recipeset.ktasks
+            recipeset._update_status()
+            self.ptasks += recipeset.ptasks
+            self.wtasks += recipeset.wtasks
+            self.ftasks += recipeset.ftasks
+            self.ktasks += recipeset.ktasks
             if recipeset.status < min_status:
                 min_status = recipeset.status
             if recipeset.result > max_result:
@@ -3181,19 +3309,39 @@ class RecipeSet(TaskBase):
         """
         Method to cancel all recipes in this recipe set.
         """
+        self._cancel(msg)
+        self.update_status()
+
+    def _cancel(self, msg=None):
+        """
+        Method to cancel all recipes in this recipe set.
+        """
         self.status = TaskStatus.by_name(u'Cancelled')
         for recipe in self.recipes:
-            recipe.cancel(msg)
+            recipe._cancel(msg)
 
     def abort(self, msg=None):
         """
         Method to abort all recipes in this recipe set.
         """
+        self._abort(msg)
+        self.update_status()
+
+    def _abort(self, msg=None):
+        """
+        Method to abort all recipes in this recipe set.
+        """
         self.status = TaskStatus.by_name(u'Aborted')
         for recipe in self.recipes:
-            recipe.abort(msg)
+            recipe._abort(msg)
 
     def update_status(self):
+        """
+        Update number of passes, failures, warns, panics..
+        """
+        self.job.update_status()
+
+    def _update_status(self):
         """
         Update number of passes, failures, warns, panics..
         """
@@ -3204,11 +3352,11 @@ class RecipeSet(TaskBase):
         max_result = None
         min_status = TaskStatus.max()
         for recipe in self.recipes:
-            if recipe.is_finished():
-                self.ptasks += recipe.ptasks
-                self.wtasks += recipe.wtasks
-                self.ftasks += recipe.ftasks
-                self.ktasks += recipe.ktasks
+            recipe._update_status()
+            self.ptasks += recipe.ptasks
+            self.wtasks += recipe.wtasks
+            self.ftasks += recipe.ftasks
+            self.ktasks += recipe.ktasks
             if recipe.status < min_status:
                 min_status = recipe.status
             if recipe.result > max_result:
@@ -3220,8 +3368,6 @@ class RecipeSet(TaskBase):
         if self.is_finished():
             for recipe in self.recipes:
                 recipe.release_system()
-
-        self.job.update_status()
 
     def recipes_orderby(self, labcontroller):
         query = select([recipe_table.c.id, 
@@ -3447,47 +3593,95 @@ class Recipe(TaskBase):
         """
         Move from New -> Queued
         """
+        self._queue()
+        self.update_status()
+
+    def _queue(self):
+        """
+        Move from New -> Queued
+        """
         for task in self.tasks:
-            task.queue()
+            task._queue()
 
     def process(self):
         """
         Move from Queued -> Processed
         """
+        self._process()
+        self.update_status()
+
+    def _process(self):
+        """
+        Move from Queued -> Processed
+        """
         for task in self.tasks:
-            task.process()
+            task._process()
 
     def schedule(self):
         """
         Move from Processed -> Scheduled
         """
+        self._schedule()
+        self.update_status()
+
+    def _schedule(self):
+        """
+        Move from Processed -> Scheduled
+        """
         for task in self.tasks:
-            task.schedule()
+            task._schedule()
 
     def waiting(self):
         """
         Move from Scheduled to Waiting
         """
+        self._waiting()
+        self.update_status()
+
+    def _waiting(self):
+        """
+        Move from Scheduled to Waiting
+        """
         for task in self.tasks:
-            task.waiting()
+            task._waiting()
 
     def cancel(self, msg=None):
         """
         Method to cancel all tasks in this recipe.
         """
+        self._cancel(msg)
+        self.update_status()
+
+    def _cancel(self, msg=None):
+        """
+        Method to cancel all tasks in this recipe.
+        """
         self.status = TaskStatus.by_name(u'Cancelled')
         for task in self.tasks:
-            task.cancel(msg)
+            task._cancel(msg)
 
     def abort(self, msg=None):
         """
         Method to abort all tasks in this recipe.
         """
+        self._abort(msg)
+        self.update_status()
+
+    def _abort(self, msg=None):
+        """
+        Method to abort all tasks in this recipe.
+        """
         self.status = TaskStatus.by_name(u'Aborted')
         for task in self.tasks:
-            task.abort(msg)
+            task._abort(msg)
 
     def update_status(self):
+        """
+        Update number of passes, failures, warns, panics..
+        """
+        self.recipeset.job.update_status()
+
+    def _update_status(self):
         """
         Update number of passes, failures, warns, panics..
         """
@@ -3503,6 +3697,7 @@ class Recipe(TaskBase):
         max_result = None
         min_status = TaskStatus.max()
         for task in self.tasks:
+            task._update_status()
             if task.is_finished():
                 if task.result == task_pass:
                     self.ptasks += 1
@@ -3528,8 +3723,6 @@ class Recipe(TaskBase):
             # Record the completion of this Recipe.
             self.finish_time = datetime.utcnow()
 
-        self.recipeset.update_status()
-    
     def release_system(self):
         """ Release the system and remove the watchdog
         """
@@ -3549,6 +3742,8 @@ class Recipe(TaskBase):
                 pass
             except xmlrpclib.Fault, error:
                 #FIXME
+                pass
+            except AttributeError, error:
                 pass
             ## FIXME Should we actually remove the watchdog?
             ##       Maybe we should set the status of the watchdog to reclaim
@@ -3867,40 +4062,69 @@ class RecipeTask(TaskBase):
         """
         Update number of passes, failures, warns, panics..
         """
+        self.recipe.recipeset.job.update_status()
+
+    def _update_status(self):
+        """
+        Update number of passes, failures, warns, panics..
+        """
         max_result = None
         for result in self.results:
             if result.result > max_result:
                 max_result = result.result
         self.result = max_result
-        self.recipe.update_status()
 
     def queue(self):
         """
         Moved from New -> Queued
         """
-        self.status = TaskStatus.by_name(u'Queued')
+        self._queue()
         self.update_status()
+
+    def _queue(self):
+        """
+        Moved from New -> Queued
+        """
+        self.status = TaskStatus.by_name(u'Queued')
 
     def process(self):
         """
         Moved from Queued -> Processed
         """
-        self.status = TaskStatus.by_name(u'Processed')
+        self._process()
         self.update_status()
+
+    def _process(self):
+        """
+        Moved from Queued -> Processed
+        """
+        self.status = TaskStatus.by_name(u'Processed')
 
     def schedule(self):
         """
         Moved from Processed -> Scheduled
         """
-        self.status = TaskStatus.by_name(u'Scheduled')
+        self._schedule()
         self.update_status()
+
+    def _schedule(self):
+        """
+        Moved from Processed -> Scheduled
+        """
+        self.status = TaskStatus.by_name(u'Scheduled')
 
     def waiting(self):
         """
         Moved from Scheduled -> Waiting
         """
-        self.status = TaskStatus.by_name(u'Waiting')
+        self._waiting()
         self.update_status()
+
+    def _waiting(self):
+        """
+        Moved from Scheduled -> Waiting
+        """
+        self.status = TaskStatus.by_name(u'Waiting')
 
     def start(self, watchdog_override=None):
         """
@@ -3962,9 +4186,23 @@ class RecipeTask(TaskBase):
         """
         Cancel this task
         """
+        self._cancel(msg)
+        self.update_status()
+
+    def _cancel(self, msg=None):
+        """
+        Cancel this task
+        """
         return self._abort_cancel(u'Cancelled', msg)
 
     def abort(self, msg=None):
+        """
+        Abort this task
+        """
+        self._abort(msg)
+        self.update_status()
+    
+    def _abort(self, msg=None):
         """
         Abort this task
         """
@@ -3986,7 +4224,6 @@ class RecipeTask(TaskBase):
                                        result=TaskResult.by_name(u'Warn'),
                                        score=0,
                                        log=msg))
-        self.update_status()
         return True
 
     def pass_(self, path, score, summary):
@@ -4497,6 +4734,7 @@ mapper(LabController, lab_controller_table,
         properties = {'_distros':relation(LabControllerDistro,
                                           backref='lab_controller'),
     })
+
 mapper(Distro, distro_table,
         properties = {'osversion':relation(OSVersion, uselist=False,
                                            backref='distros'),

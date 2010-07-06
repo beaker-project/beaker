@@ -6,7 +6,7 @@
 %endif
 
 Name:           beaker
-Version:        0.5.41
+Version:        0.5.46
 Release:        5%{?timestamp}%{?branch}%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
@@ -185,6 +185,72 @@ fi
 %{_sysconfdir}/init.d/%{name}-watchdog
 
 %changelog
+* Tue Jul 06 2010 Bill Peck <bpeck@redhat.com> - 0.5.46-5
+- bz598878, minor update to code to not need split(',')
+- bz572798, Missing conditions/events in history view.
+
+* Fri Jul 02 2010 Bill Peck <bpeck@redhat.com> - 0.5.46-3
+- added get_arches and get_family xmlrpc calls.
+- updated workflow-simple to use get_arches if no arches specified.
+
+* Wed Jun 30 2010 Bill Peck <bpeck@redhat.com> - 0.5.46-2
+- fix bz589876 - Job list progress bars should show progress of running recipes
+
+* Wed Jun 30 2010 Bill Peck <bpeck@redhat.com> - 0.5.46-1
+- disable panic detection from reserve workflow.
+- merged bz607560, fixes NULL powertype.
+- merged bz598878, reserve more machines in one step.
+
+* Tue Jun 29 2010 Bill Peck <bpeck@redhat.com> - 0.5.46-0
+- bz608621 added sane defaults to bkr distro-list (limit 10)
+- use %packages --default for RHEL6 kickstart
+- bz607558 - relax check for %packages, before we stopped if we saw %post or %pre.
+
+* Wed Jun 22 2010 Bill Peck <bpeck@redhat.com> - 0.5.45-1
+- fix string compare
+
+* Tue Jun 21 2010 Bill Peck <bpeck@redhat.com> - 0.5.45-0
+- fixed job submission where we call lazy_create.  would create dupe package entries.
+
+* Thu Jun 17 2010 Bill Peck <bpeck@redhat.com> - 0.5.44-3
+- bz604906 Pagination setting on Distro->Family are a bit funny
+- bz605260 [Beaker] Not able to "Loan" a system even though the group has admin perms
+- bz604972 Inventory allows reservation of an already reserved machine 
+- bz598525 bkr workflow-simple --package not working
+
+* Thu Jun 17 2010 Bill Peck <bpeck@redhat.com> - 0.5.44-1
+- fix panic reporting to report on Running task
+
+* Thu Jun 17 2010 Bill Peck <bpeck@redhat.com> - 0.5.44-0
+- fix job actions cancel and abort to call update_status()
+
+* Wed Jun 16 2010 Bill Peck <bpeck@redhat.com> - 0.5.43-2
+- update BeakerWorkflow to support --method and --kernel_options
+
+* Wed Jun 16 2010 Bill Peck <bpeck@redhat.com> - 0.5.43-1
+- require a valid user for xmlrpc job.upload()
+
+* Tue Jun 15 2010 Bill Peck <bpeck@redhat.com> - 0.5.43-0
+- bz581860	Listing of possible families
+- bz589904 	tests which crashing the system will timeout the watchdog
+- bz601220 	extendtesttime.sh does not work
+- bz601485 	bkr --convert should convert CPUNAME to cpu_codename
+- bz601763 	When trying to reserve a machine I get 500 Internal error
+- bz602214 	--prettyxml option to bkr job-results doesn't work
+- bz602907 	https://beaker.engineering.redhat.com/reserve_system defects
+- bz602915 	Error with "Pick System" from Distro page 
+- bz600098   	strip ansi chars from console.log so browsers show it as text/plain.
+
+* Tue Jun 15 2010 Bill Peck <bpeck@redhat.com> - 0.5.42-4
+- changed update_status() to not get into recursive loops
+* Mon Jun 14 2010 Bill Peck <bpeck@redhat.com> - 0.5.42-3
+- replace allow_limit_override=True with max_limit=None
+* Tue Jun 08 2010 Bill Peck <bpeck@redhat.com> - 0.5.42-1
+- bz570186 Hopefully fix: Ability to set system owner to a group or individual
+- bz589904 tests which crashing the system will timeout the watchdog
+- bz591384 getenv("TERM") returns NULL
+- bz599086 improve configfile handling
+- bz600353 Limiting architectures (releases) in Beaker 
 * Mon Jun 07 2010 Bill Peck <bpeck@redhat.com> - 0.5.41-3
 - added push and legacypush to proxy
 * Tue Jun 01 2010 Bill Peck <bpeck@redhat.com> - 0.5.41-1
