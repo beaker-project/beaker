@@ -7,7 +7,7 @@
 
 Name:           beaker
 Version:        0.5.46
-Release:        4%{?timestamp}%{?branch}%{?dist}
+Release:        5%{?timestamp}%{?branch}%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -185,6 +185,10 @@ fi
 %{_sysconfdir}/init.d/%{name}-watchdog
 
 %changelog
+* Tue Jul 06 2010 Bill Peck <bpeck@redhat.com> - 0.5.46-5
+- bz598878, minor update to code to not need split(',')
+- bz572798, Missing conditions/events in history view.
+
 * Fri Jul 02 2010 Bill Peck <bpeck@redhat.com> - 0.5.46-3
 - added get_arches and get_family xmlrpc calls.
 - updated workflow-simple to use get_arches if no arches specified.
