@@ -1,13 +1,9 @@
 %{!?python_sitelib: %global python_sitelib %(%{__python} -c "from distutils.sysconfig import get_python_lib; print get_python_lib()")}
 %{!?pyver: %global pyver %(%{__python} -c "import sys ; print sys.version[:3]")}
-%{!?branch: %global branch %(echo "$Format:%d$"| awk -F/ '{print $NF}'| sed -e 's/[()$]//g' | awk '{print "." $NF}' | grep -v master)}
-%if "0%{branch}" != "0"
-%{!?timestamp: %global timestamp $Format:.%at$}
-%endif
 
 Name:           beaker
-Version:        0.5.47
-Release:        0%{?timestamp}%{?branch}%{?dist}
+Version:        0.5.48
+Release:        1%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -185,6 +181,9 @@ fi
 %{_sysconfdir}/init.d/%{name}-watchdog
 
 %changelog
+* Wed Jul 07 2010 Bill Peck <bpeck@redhat.com> 0.5.48-1
+- new package built with tito
+
 * Tue Jul 06 2010 Bill Peck <bpeck@redhat.com> - 0.5.47-0
 - proper release
 
