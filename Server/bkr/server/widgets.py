@@ -130,14 +130,14 @@ class ReserveSystem(TableForm):
 
 
 class ReserveWorkflow(Form): 
-    javascript = [LocalJSLink('bkr', '/static/javascript/reserve_workflow_v2.js'),
+    javascript = [LocalJSLink('bkr', '/static/javascript/reserve_workflow_v3.js'),
                   LocalJSLink('bkr','/static/javascript/jquery-1.3.1.js'),
                  ] 
     template="bkr.server.templates.reserve_workflow"
     css = [LocalCSSLink('bkr','/static/css/reserve_workflow.css')] 
     member_widgets = ['arch','distro','distro_family','method_','tag'] 
     params = ['arch_value','method_value','tag_value','distro_family_value','all_arches',
-              'all_tags','all_methods','all_distro_familys','to_json','auto_pick'] 
+              'all_tags','all_methods','all_distro_familys','to_json','auto_pick','distro_rpc','system_rpc','system_many_rpc','reserve_href'] 
 
     def __init__(self,*args,**kw):
         super(ReserveWorkflow,self).__init__(*args, **kw)  
@@ -183,6 +183,10 @@ class ReserveWorkflow(Form):
         self.arch = SingleSelectField(name='arch', label='Arch', options=[None],validator=validators.NotEmpty())
 
         self.to_json = UtilJSON.dynamic_json()
+        self.system_rpc = './find_systems_for_distro'
+        self.system_many_rpc= './find_systems_for_multiple_distros'
+        self.distro_rpc = './get_distro_options'
+        self.reserve_href = './reserve'
         self.auto_pick = Button(default="Auto pick system", name='auto_pick', attrs={'class':None})
         self.name = 'reserveworkflow_form'
         self.action = '/reserve_system'
@@ -394,7 +398,7 @@ class JobMatrixReport(Form):
         self.whiteboard_filter = TextField('whiteboard_filter', label='Filter Whiteboard') 
 
         self.name='remote_form' 
-        self.action = '.'   
+        self.action = '.'
     
     def display(self,**params):     
         if 'options' in params:
@@ -692,19 +696,11 @@ class TaskSearchForm(RemoteForm):
               HiddenField(name='distro_id', validator=validators.Int()),
               HiddenField(name='task_id', validator=validators.Int()),
               TextField(name='task', label=_(u'Task')),
-#              AutoCompleteField(name='task',
-#                                search_controller=url('/tasks/by_name'),
-#                                search_param='task',
-#                                result_name='tasks'),
               TextField(name='system', label=_(u'System')),
               SingleSelectField(name='arch_id', label=_(u'Arch'),validator=validators.Int(),
                                 options=model.Arch.get_all),
               TextField(name='distro', label=_(u'Distro')),
               TextField(name='whiteboard', label=_(u'Recipe Whiteboard')),
-#              AutoCompleteField(name='distro',
-#                                search_controller=url('/distros/by_name'),
-#                                search_param='distro',
-#                                result_name='distros'),
               SingleSelectField(name='osmajor_id', label=_(u'Family'),validator=validators.Int(),
                                 options=model.OSMajor.get_all),
               SingleSelectField(name='status_id', label=_(u'Status'),validator=validators.Int(),
@@ -713,11 +709,6 @@ class TaskSearchForm(RemoteForm):
                                 options=model.TaskResult.get_all),
              ]
 
-#    def__init__(self, *args, **kw):
-#        super(TaskSearchForm, self).__init__(*args, **kw)
-#        self.system_id = HiddenField(name='system_id')
-#        self.system    = TextField(name='system', label=_(u'System'))
-#        self.task      = TextField(name='task', label=_(u'Task'))
 
     def update_params(self, d):
         super(TaskSearchForm, self).update_params(d)
@@ -933,7 +924,7 @@ class SystemArches(Form):
         super(SystemArches, self).__init__(*args, **kw)
 	self.id    = HiddenField(name="id")
         self.arch  = AutoCompleteField(name='arch',
-                                      search_controller=url("/arches/by_name"),
+                                      search_controller="/arches/by_name",
                                       search_param="name",
                                       result_name="arches")
 
@@ -953,7 +944,7 @@ class DistroTags(Form):
         super(DistroTags, self).__init__(*args, **kw)
 	self.id    = HiddenField(name="id")
         self.tag = AutoCompleteField(name='tag',
-                                      search_controller=url("/tags/by_tag"),
+                                      search_controller="/tags/by_tag",
                                       search_param="tag",
                                       result_name="tags")
 

@@ -1,7 +1,7 @@
 <form xmlns:py="http://purl.org/kid/ns#"
     name="${use_name and name or None}"
     id="${not use_name and name or None}"
-    action="${action}"
+    action="${tg.url(action)}"
     method="${method}"
     class="tableform"
     py:attrs="form_attrs"

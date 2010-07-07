@@ -16,10 +16,10 @@
  <table width="97%">
   <tr py:if="getattr(tg, 'paginate', False) and tg.paginate.page_count > 2">
    <td align="center">
-    <span py:if="tg.paginate.href_prev">${link.display("&lt;&lt;", action=action, data=data_first, update="task_items")}</span>
-    <span py:if="tg.paginate.href_prev">${link.display("&lt;", action=action, data=data_prev, update="task_items")}</span>&#160;
-    <span py:if="tg.paginate.href_next">${link.display("&gt;", action=action, data=data_next, update="task_items")}</span>
-    <span py:if="tg.paginate.href_next">${link.display("&gt;&gt;", action=action, data=data_last, update="task_items")}</span>
+    <span py:if="tg.paginate.href_prev">${link.display("&lt;&lt;", action=tg.url(action), data=data_first, update="task_items")}</span>
+    <span py:if="tg.paginate.href_prev">${link.display("&lt;", action=tg.url(action), data=data_prev, update="task_items")}</span>&#160;
+    <span py:if="tg.paginate.href_next">${link.display("&gt;", action=tg.url(action), data=data_next, update="task_items")}</span>
+    <span py:if="tg.paginate.href_next">${link.display("&gt;&gt;", action=tg.url(action), data=data_last, update="task_items")}</span>
    </td>
   </tr>
  </table>

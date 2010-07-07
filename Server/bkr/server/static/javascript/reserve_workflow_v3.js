@@ -20,6 +20,15 @@ ReserveWorkflow = function (arch,distro_family,method,tag,distro,submit,auto_pic
     bindMethods(this)
 };
 
+ReserveWorkflow.prototype.set_remotes = function(distro_rpc,system_one_distro_rpc,system_many_distros_rpc,reserve_href) {
+    this.get_distros_rpc =  distro_rpc
+    this.find_systems_one_distro_rpc = system_one_distro_rpc
+    this.find_systems_many_distro_rpc = system_many_distros_rpc
+    this.reserve_system_href = reserve_href
+    bindMethods(this)
+}
+
+
 ReserveWorkflow.prototype.initialize = function() {  
     getElement(this.submit_id).setAttribute('disabled',1) 
     getElement(this.auto_pick_id).setAttribute('disabled',1)
@@ -85,11 +94,10 @@ ReserveWorkflow.prototype.system_available = function(arg) {
                    'arches' : arch_value }
        
     if (arch_value.length > 1) {
-        var d = loadJSONDoc('./find_systems_for_multiple_distros?' + queryString(params));
+        var d = loadJSONDoc(this.find_systems_many_distro_rpc + '?' + queryString(params));
     } else { //If we have multiple arches we need to get our systems another way 
-        var d = loadJSONDoc('./find_systems_for_distro?' + queryString(params));
+        var d = loadJSONDoc(this.find_systems_one_distro_rpc + '?' + queryString(params)); 
     }
-
 
     d.addCallback(this.show_auto_pick_warnings)                
 }
@@ -112,7 +120,7 @@ ReserveWorkflow.prototype.show_auto_pick_warnings = function(result) {
             var joined_args = the_distro_ids.join('&distro_id=')
             real_get_args = joined_args.replace(/^(.+)?&(.+)$/,"$2&distro_id=$1")
         }
-         location.href='./reserve?' + real_get_args
+         location.href=this.reserve_system_href + '?' + real_get_args
     }
 }
 
@@ -131,7 +139,7 @@ ReserveWorkflow.prototype.get_distros = function() {
                    'method' : method_value,
                    'tag' : tag_value }
 
-    var d = loadJSONDoc('./get_distro_options?' + queryString(params)); 
+    var d = loadJSONDoc(this.get_distros_rpc + '?' + queryString(params)); 
     d.addCallback(this.replaceDistros)
 };
 

@@ -1803,7 +1803,7 @@ class Root(RPCRoot):
         return system.update(inventory)
 
     @expose(template="bkr.server.templates.login")
-    def login(self, forward_url="/", previous_url=None, *args, **kw): 
+    def login(self, forward_url=url("/"), previous_url=None, *args, **kw): 
         if not identity.current.anonymous \
             and identity.was_login_attempted() \
             and not identity.get_identity_errors():     
@@ -1815,7 +1815,7 @@ class Root(RPCRoot):
                 if re.match('^(.+)?/%s$' % self.login.__name__,request.headers['Referer']):
                     raise redirect(forward_url)
                 else:
-                    raise redirect(request.headers.get("Referer","/"))
+                    raise redirect(request.headers.get("Referer",url("/")))
             else:
                 redirect(forward_url)
 
@@ -1830,7 +1830,7 @@ class Root(RPCRoot):
                    "this resource.")
         else:
             msg=_("Please log in.")
-            forward_url= request.headers.get("Referer", "/")
+            forward_url= request.headers.get("Referer", url("/"))
             
         response.status=403
         return dict(message=msg, previous_url=previous_url, logging_in=True,
