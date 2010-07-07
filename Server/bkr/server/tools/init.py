@@ -180,6 +180,11 @@ def main():
         FAIL      = TaskResult(result=u'Fail', severity=40)
         PANIC     = TaskResult(result=u'Panic', severity=50)
 
+    #Setup ack/nak reposnses
+    if Response.query().count() == 0:
+        ACK      = Response(response=u'ack')
+        NAK      = Response(response=u'nak')
+
     session.flush()
 
 def get_parser():
