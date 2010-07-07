@@ -2377,6 +2377,7 @@ class Distro(MappedObject):
     # because  a PAE and non PAE i386 distro is indutinguishable from another, so it will return a PAE distro, if we are searching on
     # i386 and say x86_64, even though clearly, it's not applicable to the later. This only applies to multiple arches 
     _EXCLUDE_OVER_MULTIPLE_ARCHES = 'PAE'
+
     def __init__(self, install_name=None):
         self.install_name = install_name
  
@@ -2551,6 +2552,9 @@ class Distro(MappedObject):
         for var in (osmajor,method,tag) + tuple(sorted(local_arches)):
             if var:
                 cache_locator.append(var)
+
+        #FIXME: It was probably silly of me to be creating class vars on the fly and caching values in them
+        # I should really create a more throughly thought out caching system
         cache_location = "_".join(cache_locator)
         the_cache = getattr(Distro,cache_location,None)
         if the_cache: #phew, we don't have to do that big ugly slow query 
