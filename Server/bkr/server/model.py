@@ -433,6 +433,21 @@ system_admin_map_table = Table('system_admin_map', metadata,
         onupdate='CASCADE', ondelete='CASCADE'))
 )
 
+recipe_set_nacked_table = Table('recipe_set_nacked', metadata,
+    Column('recipe_set_id', Integer, ForeignKey('recipe_set.id',
+        onupdate='CASCADE', ondelete='CASCADE'), primary_key=True,nullable=False), 
+    Column('response_id', Integer, ForeignKey('response.id', 
+        onupdate='CASCADE', ondelete='CASCADE'), nullable=False),
+    Column('comment', Unicode(255),nullable=True),
+    Column('created',DateTime,nullable=False,default=datetime.utcnow)
+)
+
+response_table = Table('response', metadata,
+    Column('id', Integer, autoincrement=True, primary_key=True, nullable=False),
+    Column('response',Unicode(50), nullable=False)
+)
+
+
 group_permission_table = Table('group_permission', metadata,
     Column('group_id', Integer, ForeignKey('tg_group.group_id',
         onupdate='CASCADE', ondelete='CASCADE')),
@@ -3031,6 +3046,45 @@ class Job(TaskBase):
         return cls.query.filter(Job.owner==owner)
 
     @classmethod
+    def get_nacks(self,jobs):
+        queri = select([recipe_set_table.c.id], from_obj=job_table.join(recipe_set_table), whereclause=job_table.c.id.in_(jobs),distinct=True)
+        results = queri.execute() 
+        current_nacks = []
+        for r in results:
+            rs_id = r[0]
+            rs = RecipeSet.by_id(rs_id)
+            response = getattr(rs.nacked,'response',None)
+            if response == Response.by_response('nak'):
+                current_nacks.append(rs_id)
+        return current_nacks
+
+    @classmethod
+    def update_nacks(cls,job_ids,rs_nacks):
+        """
+        update_nacks() takes a list of job_ids and updates the job's recipesets with the correct nacks
+        """
+        queri = select([recipe_set_table.c.id], from_obj=job_table.join(recipe_set_table), whereclause=job_table.c.id.in_(job_ids),distinct=True)
+        results = queri.execute()
+        current_nacks = []
+        if len(rs_nacks) > 0:
+            rs_nacks = map(lambda x: int(x), rs_nacks) # they come in as unicode objs
+        for res in results:
+            rs_id = res[0]
+            rs = RecipeSet.by_id(rs_id)
+            if rs_id not in rs_nacks and rs.nacked: #looks like we're deleting it then 
+                rs.nacked = []
+            else: 
+                if not rs.nacked and rs_id in rs_nacks: #looks like we're adding it then
+                    rs.nacked = [RecipeSetResponse(rs_id)]
+                    current_nacks.append(rs_id)
+                elif rs.nacked:
+                    current_nacks.append(rs_id)
+                    
+        return current_nacks 
+
+
+
+    @classmethod
     def by_whiteboard(cls,desc):
         res = Job.query().filter_by(whiteboard = desc)
         return res
@@ -3138,8 +3192,55 @@ class Job(TaskBase):
         except:
             return
 
-             
+class Response(MappedObject):
+
+    def __init__(self,id,response,*args,**kw):
+        self.id = id
+        self.response = response
+
+    @classmethod
+    def get_all(cls,*args,**kw):
+        return cls.query()
+
+    @classmethod
+    def by_response(cls,response,*args,**kw):
+        return cls.query().filter_by(response = response).one()
+
+class RecipeSetResponse(MappedObject):
+    """
+    An acknowledgment of a RecipeSet's results. Can be used for filtering reports
+    """
     
+    def __init__(self,id,type=None,response_id=None,comment=None):
+        self.id = id
+        if response_id is not None:
+            res = Response.by_id(response_id)
+        elif type is not None:
+            res = Response.by_response(type)
+        self.response = res
+        self.comment = comment
+
+    @classmethod 
+    def by_id(cls,id): 
+       return cls.query().filter_by(recipe_set_id=id).one()
+
+    @classmethod
+    def by_jobs(cls,job_ids):
+        try:
+            job_ids_type = type(job_ids)
+            if job_ids_type == type(list()):
+                clause = Job.id.in_(job_ids)
+            elif job_ids_type == int:
+                clause = Job.id == job_id
+            else:
+                raise BeakerException('job_ids needs to be either type \'int\' or \'list\'. Found %s' % job_ids_type)
+            queri = cls.query().outerjoin(['recipesets','job']).filter(clause)
+            results = {}
+            for elem in queri:
+                results[elem.recipe_set_id] = elem.comment
+            return results
+     
+        except: raise
 
 class RecipeSet(TaskBase):
     """
@@ -3147,6 +3248,11 @@ class RecipeSet(TaskBase):
     """
 
     stop_types = ['abort','cancel']
+
+    def is_owner(self,user):
+        if self.job.owner == user:
+            return True
+        return False
 
     def to_xml(self, clone=False):
         recipeSet = self.doc.createElement("recipeSet")
@@ -3181,6 +3287,13 @@ class RecipeSet(TaskBase):
     @classmethod 
     def by_id(cls,id): 
        return cls.query().filter_by(id=id).one()
+
+    @classmethod
+    def by_job_id(cls,job_id):
+        try:
+            queri = RecipeSet.query().outerjoin(['job']).filter(Job.id == job_id)
+            return queri
+        except: raise 
      
     @classmethod
     def iter_recipeSets(self, status=u'Assigned'):
@@ -4732,6 +4845,12 @@ mapper(Job, job_table,
                       'owner':relation(User, uselist=False, backref='jobs'),
                       'result':relation(TaskResult, uselist=False),
                       'status':relation(TaskStatus, uselist=False)})
+mapper(RecipeSetResponse,recipe_set_nacked_table,
+        properties = { 'recipesets':relation(RecipeSet),
+                        'response' : relation(Response,uselist=False)})
+
+mapper(Response,response_table)
+
 mapper(RecipeSet, recipe_set_table,
         properties = {'recipes':relation(Recipe, backref='recipeset'),
                       'priority':relation(TaskPriority, uselist=False),
@@ -4741,6 +4860,7 @@ mapper(RecipeSet, recipe_set_table,
                                      order_by=[activity_table.c.created.desc()],
                                                backref='object'),
                       'lab_controller':relation(LabController, uselist=False),
+                      'nacked':relation(RecipeSetResponse,cascade="all, delete-orphan",uselist=False),
                      })
 
 mapper(LogRecipe, log_recipe_table)
