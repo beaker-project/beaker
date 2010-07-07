@@ -3194,10 +3194,6 @@ class Job(TaskBase):
 
 class Response(MappedObject):
 
-    def __init__(self,id,response,*args,**kw):
-        self.id = id
-        self.response = response
-
     @classmethod
     def get_all(cls,*args,**kw):
         return cls.query()
