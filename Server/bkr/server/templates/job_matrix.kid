@@ -62,12 +62,7 @@ $(document).ready( function() {
 </script>
 </head>
 <div style='padding-left:2em'>
-<<<<<<< HEAD
-<form action='${action}' name="${name}">   
-=======
-<form action='${tg.url(action)}' name="${name}">  
-
->>>>>>> d7ec98483e709317a4cc2329f7a9e86a07d353bd
+<form action='${tg.url(action)}' name="${name}">   
      <div style='float:left'> 
     
          <h3 style="display:inline"> ${whiteboard.label}</h3><br />
