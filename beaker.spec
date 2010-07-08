@@ -8,7 +8,7 @@ Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
 URL:            http://fedorahosted.org/beaker
-Source0:        http://fedorahosted.org/releases/b/e/%{name}-%{version}.tar.bz2
+Source0:        http://fedorahosted.org/releases/b/e/%{name}-%{version}.tar.gz
 BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 BuildArch:      noarch
 BuildRequires:  python-setuptools
@@ -23,7 +23,7 @@ Group:          Applications/Internet
 Requires:       python
 Requires:       kobo-client
 Requires:	python-setuptools
-Requires:	beaker
+Requires:	%{name} = %{version}-%{release}
 Requires:       python-krbV
 
 
@@ -39,7 +39,7 @@ Requires:       mod_wsgi
 Requires:       python-tgexpandingformwidget
 Requires:       httpd
 Requires:       python-krbV
-Requires:       beaker
+Requires:	%{name} = %{version}-%{release}
 Requires:       python-TurboMail
 Requires:	createrepo
 
@@ -58,7 +58,7 @@ Requires:       /sbin/fenced
 %endif
 Requires:       telnet
 Requires:       python-cpio
-Requires:	beaker
+Requires:	%{name} = %{version}-%{release}
 Requires:	kobo-client
 Requires:	python-setuptools
 Requires:	python-xmltramp
@@ -133,10 +133,11 @@ fi
 %{python_sitelib}/bkr/__init__.py*
 %{python_sitelib}/bkr-%{version}-*
 %{python_sitelib}/bkr-%{version}-py%{pyver}.egg-info/
+%doc COPYING
 
 %files server
 %defattr(-,root,root,-)
-%doc Server/README COPYING
+%doc Server/README
 %doc SchemaUpgrades/*
 %{python_sitelib}/bkr/server/
 %{python_sitelib}/bkr.server-%{version}-*
