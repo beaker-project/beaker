@@ -16,6 +16,8 @@ required = ''
 needs = ''
 bugzillas = ''
 types = ''
+excluded_osmajors = '<br/>'.join(['%s' % osmajor.osmajor for osmajor in task.excluded_osmajor])
+excluded_arches  = '<br/>'.join(['%s' % arch.arch for arch in task.excluded_arch])
 
 for need in task.needs:
     needs += '%s<br/>' % need.property
@@ -61,6 +63,8 @@ types = types.replace('&', '&amp;')
         ['Types',             (types) and XML(types) or ''],
         ['Run For',           (runfor) and XML(runfor) or ''],
         ['Requires',          (required) and XML(required) or ''],
+        ['Excluded OSMajors', (excluded_osmajors) and XML(excluded_osmajors) or ''],
+        ['Excluded Arches',   (excluded_arches) and XML(excluded_arches) or ''],
     )">
         <span py:if="field[1] != None and field[1] != ''">
             <td class="title"><b>${field[0]}:</b></td>
