@@ -1271,7 +1271,7 @@ class System(SystemObject):
     
                         time.sleep(5)
                 except BX,e:
-                    self.system.activity.append(SystemActivity(self.system.user,service='Cobbler API',action='Task',new_value='Fail: %s' % e))
+                    self.system.activity.append(SystemActivity(self.system.user,service='Cobbler API',action='Task',field_name='', new_value='Fail: %s' % e))
                     raise
 
 
@@ -1874,7 +1874,6 @@ $SNIPPET("rhts_post")
         return distros
 
     def action_release(self):
-        self.user = None
         # Attempt to remove Netboot entry
         # and turn off machine, but don't fail if we can't
         if self.release_action:
@@ -1888,6 +1887,7 @@ $SNIPPET("rhts_post")
                 self.remote.release()
             except:
                 pass
+        self.user = None
 
     def action_provision(self, 
                          distro=None,
