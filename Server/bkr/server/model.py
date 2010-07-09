@@ -1276,7 +1276,7 @@ class System(SystemObject):
 
 
                         
-            def power(self,action='reboot', wait=True):
+            def power(self,action='reboot', wait=False):
                 system_id = self.get_system()
                 self.remote.modify_system(system_id, 'power_type', 
                                               self.system.power.power_type.name,
@@ -1908,7 +1908,8 @@ $SNIPPET("rhts_post")
                              ks_meta=None,
                              kernel_options=None,
                              kernel_options_post=None,
-                             kickstart=None):
+                             kickstart=None,
+                             wait=False):
         if not self.remote:
             return False
 
@@ -1917,7 +1918,7 @@ $SNIPPET("rhts_post")
                                                kernel_options_post)
         self.remote.provision(distro, kickstart, **results)
         if self.power:
-            self.remote.power(action="reboot")
+            self.remote.power(action="reboot", wait=wait)
 
     def action_power(self,
                      action='reboot'):
