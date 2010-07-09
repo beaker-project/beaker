@@ -308,6 +308,8 @@ class Tasks(RPCRoot):
         task.required = []
         task.runfor = []
         task.needs = []
+        task.excluded_osmajor = []
+        task.excluded_arch = []
         for family in tinfo.releases:
             if family.startswith('-'):
                 try:
