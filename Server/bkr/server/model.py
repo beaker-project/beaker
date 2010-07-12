@@ -1778,18 +1778,18 @@ $SNIPPET("rhts_post")
                 self.arch.append(new_arch)
 
     def updateDevices(self, deviceinfo):
+        currentDevices = []
         for device in deviceinfo:
             try:
-                device = Device.query().filter_by(vendor_id = device['vendorID'],
+                mydevice = Device.query().filter_by(vendor_id = device['vendorID'],
                                    device_id = device['deviceID'],
                                    subsys_vendor_id = device['subsysVendorID'],
                                    subsys_device_id = device['subsysDeviceID'],
                                    bus = device['bus'],
                                    driver = device['driver'],
                                    description = device['description']).one()
-                self.devices.append(device)
             except InvalidRequestError:
-                new_device = Device(vendor_id       = device['vendorID'],
+                mydevice = Device(vendor_id       = device['vendorID'],
                                      device_id       = device['deviceID'],
                                      subsys_vendor_id = device['subsysVendorID'],
                                      subsys_device_id = device['subsysDeviceID'],
@@ -1797,9 +1797,14 @@ $SNIPPET("rhts_post")
                                      driver         = device['driver'],
                                      device_class   = device['type'],
                                      description    = device['description'])
-                session.save(new_device)
-                session.flush([new_device])
-                self.devices.append(new_device)
+                session.save(mydevice)
+                session.flush([mydevice])
+            self.devices.append(mydevice)
+            currentDevices.append(mydevice)
+        # Remove any old entries
+        for device in self.devices[:]:
+            if device not in currentDevices:
+                self.devices.remove(device)
 
     def updateCpu(self, cpuinfo):
         # Remove all old CPU data
