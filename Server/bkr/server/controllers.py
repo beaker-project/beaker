@@ -878,29 +878,33 @@ class Root(RPCRoot):
         except AttributeError,e:
             can_admin = False
 
+        widgets = dict( 
+                        labinfo   = self.labinfo_form,
+                        details   = self.system_details,
+                        history   = self.system_activity,
+                        exclude   = self.system_exclude,
+                        keys      = self.system_keys,
+                        notes     = self.system_notes,
+                        groups    = self.system_groups,
+                        install   = self.system_installoptions,
+                        arches    = self.arches_form,
+                        tasks      = self.task_form,
+                      )
+        if system.type != SystemType.by_name(u'Virtual'):
+            widgets['provision'] = self.system_provision
+            widgets['power'] = self.power_form
+            widgets['power_action'] = self.power_action_form
+
         return dict(
-            title    = title,
-            readonly = readonly,
-            is_user  = is_user,
-            form     = self.system_form,
-            action   = '/save',
-            value    = system,
-            options  = options,
-            history_data = historical_data,
-            widgets         = dict( power     = self.power_form,
-                                    labinfo   = self.labinfo_form,
-                                    details   = self.system_details,
-                                    history   = self.system_activity,
-                                    exclude   = self.system_exclude,
-                                    keys      = self.system_keys,
-                                    notes     = self.system_notes,
-                                    groups    = self.system_groups,
-                                    install   = self.system_installoptions,
-                                    provision = self.system_provision,
-                                    power_action = self.power_action_form, 
-                                    arches    = self.arches_form,
-                                    tasks      = self.task_form,
-                                  ),
+            title           = title,
+            readonly        = readonly,
+            is_user         = is_user,
+            form            = self.system_form,
+            action          = '/save',
+            value           = system,
+            options         = options,
+            history_data    = historical_data,
+            widgets         = widgets,
             widgets_action  = dict( power     = '/save_power',
                                     history   = '/view/%s' % fqdn,
                                     labinfo   = '/save_labinfo',
