@@ -1244,7 +1244,9 @@ class RecipeSetWidget(CompoundWidget):
 
    
 class RecipeWidget(CompoundWidget):
-    javascript = []
+    javascript = [
+                  LocalJSLink('bkr','/static/javascript/jquery-1.3.1.js'),
+                 ]
     css = []
     template = "bkr.server.templates.recipe_widget"
     params = ['recipe']
