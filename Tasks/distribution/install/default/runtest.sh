@@ -92,6 +92,7 @@ SysReport ()
     sysmem=$(/usr/bin/free -m | /bin/awk '{if($1=="Mem:") {print $2,"MB"}}')
     syscpu=$(/bin/cat /proc/cpuinfo | /bin/grep processor | wc -l)
     syslspci=$(/sbin/lspci > $FILEAREA/lspci.log)
+    sysprocmem=$(hostname > $FILEAREA/procmem.log; /bin/cat /proc/meminfo >> $FILEAREA/procmem.log)
     if [ -f /etc/fedora-release ]; then
 	sysrelease=$(/bin/cat /etc/fedora-release)
     else
@@ -212,6 +213,12 @@ SysReport ()
 	    FAILURE=TRUE
 	fi
     fi
+
+    # Submit proc meminfo log
+    if [ -e $FILEAREA/procmem.log ]; then
+	rhts_submit_log -S $RESULT_SERVER -T $TESTID -l $FILEAREA/procmem.log
+    fi
+
     # Check dmesg log for avc failures
     if [ -s $FILEAREA/avcerror.log ]; then
 	echo "******** SElinux AVC Failures ********" >> $OUTPUTFILE
@@ -246,10 +253,6 @@ SysReport ()
 }
 
 echo "***** Start of Install test *****" > $OUTPUTFILE
-
-# this is a experimental kernel aggregation collection
-# TURNED OFF
-#KA
 
 FILEAREA=/mnt/testarea
 /bin/dmesg > $FILEAREA/boot.messages
