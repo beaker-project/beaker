@@ -1549,12 +1549,12 @@ $SNIPPET("rhts_post")
             return System.query().filter(System.arch.any(Arch.arch == arch))
 
     @classmethod
-    def reserved_via_taken(cls): 
+    def reserved_via(cls, service='WEBUI'): 
         activity_ids = cls._latest_reserved()
         taken = []
         for id in activity_ids:
             try: 
-                take_activity = SystemActivity.query().join('object').filter(and_(SystemActivity.id==id,SystemActivity.service == 'WEBUI')).one()
+                take_activity = SystemActivity.query().join('object').filter(and_(SystemActivity.id==id,SystemActivity.service == service)).one()
                 taken.append(take_activity)
             except InvalidRequestError,e:
                 pass

@@ -10,12 +10,14 @@ from optparse import OptionParser
 __version__ = '0.1'
 __description__ = 'Beaker nag mail script'
 
-USAGE_TEXT="""Usage: nag_email --threshold <hours> --interval <hours>
+USAGE_TEXT="""Usage: nag_email --threshold <hours>
 """
 
 def get_parser():
     usage = "usage: %prog [options]"
     parser = OptionParser(usage, description=__description__,version=__version__)
+    parser.add_option("-s","--service", default='WEBUI',
+                      help="Report on this service (WEBUI,SCHEDULER), Default is WEBUI")
     parser.add_option("-t","--threshold", default=3,
                       help="This is the number of days after a reservation of a machine takes place, that the nag emails will commence")
     parser.add_option("-c","--config-file",dest="configfile",default=None)
@@ -26,23 +28,21 @@ def usage():
     sys.exit(-1)
     
 def main():
-    global threshold,interval
     current_date = None
-    nag_threshold = None
-    nag_interval = None
     parser = get_parser() 
     opts,args = parser.parse_args()
     threshold = opts.threshold
+    service   = opts.service
     
     configfile = opts.configfile
 
     load_config(configfile)
     interface.start(config)
     get_engine()
-    identify_nags()
+    identify_nags(threshold, service)
 
-def identify_nags():
-    sys_activities = System.reserved_via_taken()
+def identify_nags(threshold, service):
+    sys_activities = System.reserved_via(service)
     for activity in sys_activities: 
         date_reserved =  activity.created
         date_now = datetime.fromtimestamp(time.time())
