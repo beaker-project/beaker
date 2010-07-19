@@ -30,6 +30,7 @@ import traceback
 from BasicAuthTransport import BasicAuthTransport
 import xmlrpclib
 import os
+import shutil
 
 from turbogears import identity
 
@@ -3429,6 +3430,9 @@ class Recipe(TaskBase):
     Also contains what tasks will be executed.
     """
     stop_types = ['abort','cancel']
+    harnesspath = get("basepath.harness", "/var/www/beaker/harness")
+    rpmspath = get("basepath.rpms", "/var/www/beaker/rpms")
+    repopath = get("basepath.repos", "/var/www/beaker/repos")
 
     def clone_link(self):
         """ return link to clone this recipe
@@ -3445,7 +3449,7 @@ class Recipe(TaskBase):
         Return file path for this recipe
         """
         job    = self.recipeset.job
-        return "%s/%02d/%s/%s" % (self.start_time.year,
+        return "%s/%02d/%s/%s" % (self.recipeset.queue_time.year,
                                   int(str(job.id)[-2:]),
                                          job.id,
                                          self.id)
@@ -3458,8 +3462,7 @@ class Recipe(TaskBase):
         repos = []
         if self.distro:
             servername = get("servername",socket.gethostname())
-            harnesspath = get("basepath.harness", "/var/www/beaker/harness")
-            if os.path.exists("%s/%s/%s" % (harnesspath, 
+            if os.path.exists("%s/%s/%s" % (self.harnesspath, 
                                             self.distro.osversion.osmajor,
                                             self.distro.arch)):
                 repo = dict(name = "beaker-harness",
@@ -3467,12 +3470,8 @@ class Recipe(TaskBase):
                                                                       self.distro.osversion.osmajor,
                                                                       self.distro.arch))
                 repos.append(repo)
-            # This should not be needed anymore...
-            #repo = dict(name = "beaker-rhts",
-            #            url  = "http://%s/harness/noarch" % servername)
-            #repos.append(repo)
             repo = dict(name = "beaker-tasks",
-                        url  = "http://%s/rpms" % servername)
+                        url  = "http://%s/repos/%s" % (servername, self.id))
             repos.append(repo)
         return repos
 
@@ -3623,6 +3622,49 @@ class Recipe(TaskBase):
         for task in self.tasks:
             task._process()
 
+    def createRepo(self):
+        """
+        Create Recipe specific task repo based on the tasks requested.
+        """
+        directory = '%s/%s' % (self.repopath, self.id)
+        try:
+            os.makedirs(directory)
+        except OSError:
+            #thrown when dir already exists (could happen in a race)
+            if not os.path.isdir(directory):
+                #something else must have gone wrong
+                raise
+        for task in self.tasks:
+            # Create hardlink from /var/www/beaker/rpms to /var/www/beaker/repos/TASKID
+            if not os.path.isfile('%s/%s' % (directory,task.task.rpm)):
+                try:
+                    os.link('%s/%s' % (self.rpmspath,task.task.rpm), 
+                            '%s/%s' % (directory,task.task.rpm))
+                except Exception, e:
+                    raise BX('%s: %s/%s %s/%s' % (e, 
+                                                  self.rpmspath,task.task.rpm, 
+                                                  directory,task.task.rpm))
+        # pushd /var/www/beaker/logs/filepath/rpms 
+        cwd = os.getcwd()
+        os.chdir(directory)
+        # createrepo 
+        os.system("createrepo .")
+        os.chdir(cwd)
+        return True
+
+    def destroyRepo(self):
+        """
+        Done with Repo, destroy it.
+        """
+        folder = '%s/%s' % (self.repopath, self.id)
+        if os.path.isdir(folder):
+            try:
+                shutil.rmtree(folder)
+            except OSError:
+                if os.path.isdir(folder):
+                    #something else must have gone wrong
+                    raise
+
     def schedule(self):
         """
         Move from Processed -> Scheduled
@@ -3751,6 +3793,7 @@ class Recipe(TaskBase):
                 pass
             except AttributeError, error:
                 pass
+            self.destroyRepo()
             ## FIXME Should we actually remove the watchdog?
             ##       Maybe we should set the status of the watchdog to reclaim
             ##       so that the lab controller returns the system instead.
@@ -3993,7 +4036,7 @@ class RecipeTask(TaskBase):
         """
         job    = self.recipe.recipeset.job
         recipe = self.recipe
-        return "%s/%02d/%s/%s/%s" % (recipe.start_time.year,
+        return "%s/%02d/%s/%s/%s" % (recipe.recipeset.queue_time.year,
                                      int(str(job.id)[-2:]),
                                          job.id,
                                          recipe.id,
@@ -4447,7 +4490,7 @@ class RecipeTaskResult(TaskBase):
         job    = self.recipetask.recipe.recipeset.job
         recipe = self.recipetask.recipe
         task_id   = self.recipetask.id
-        return "%s/%02d/%s/%s/%s/%s" % (recipe.start_time.year,
+        return "%s/%02d/%s/%s/%s/%s" % (recipe.recipeset.queue_time.year,
                                      int(str(job.id)[-2:]),
                                          job.id,
                                          recipe.id,

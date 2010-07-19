@@ -69,9 +69,6 @@ class ReserveWorkflow:
             recipeSet.recipes.append(recipe)
             job.recipesets.append(recipeSet)
             job.ttasks += recipeSet.ttasks
-            if recipe.systems:
-                # We already picked the system skip New -> Processed states
-                recipe.queue()
         session.save(job)
         session.flush()
 

@@ -273,6 +273,7 @@ def queued_recipes(*args):
                      and_(recipe_table.c.id==recipe.id,
                        recipe_table.c.status_id==TaskStatus.by_name(u'Queued').id)),
                        status_id=TaskStatus.by_name(u'Scheduled').id).rowcount == 1:
+                    recipe.createRepo()
                     # Even though the above put the recipe in the "Scheduled" state
                     # it did not execute the update_status method.
                     recipe.schedule()

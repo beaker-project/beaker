@@ -133,8 +133,6 @@ class Tasks(RPCRoot):
         except ValueError, err:
             session.rollback()
             return "Failed to import because of %s" % str(err)
-        os.chdir(self.task_dir)
-        os.system("createrepo .")
         return "Success"
 
     @expose()
@@ -155,8 +153,6 @@ class Tasks(RPCRoot):
             session.rollback()
             flash(_(u'Failed to import because of %s' % err ))
             redirect(".")
-        os.chdir(self.task_dir)
-        os.system("createrepo .")
 
         flash(_(u"%s Added/Updated at id:%s" % (task.name,task.id)))
         redirect(".")
