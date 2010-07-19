@@ -97,6 +97,7 @@ class Workflow_Simple(BeakerWorkflow):
                 failed = True
                 print ex
         if not dryrun:
+            print "Submitted: %s" % submitted_jobs
             if not nowait:
                 TaskWatcher.watch_tasks(self.hub, submitted_jobs)
             if failed:

@@ -68,7 +68,9 @@ class Job_Submit(BeakerCommand):
                 except Exception, ex:
                     failed = True
                     print ex
-        if not dryrun and not nowait:
-            TaskWatcher.watch_tasks(self.hub, submitted_jobs)
+        if not dryrun:
+            print "Submitted: %s" % submitted_jobs
+            if not nowait:
+                TaskWatcher.watch_tasks(self.hub, submitted_jobs)
             if failed:
                 sys.exit(1)

@@ -4192,8 +4192,9 @@ class RecipeTask(TaskBase):
         if watchdog_override:
             self.recipe.watchdog.kill_time = watchdog_override
         else:
+            # add in 30 minutes at a minimum
             self.recipe.watchdog.kill_time = datetime.utcnow() + timedelta(
-                                                    seconds=self.task.avg_time)
+                                                    seconds=self.task.avg_time + 1800)
         self.update_status()
         return True
 
