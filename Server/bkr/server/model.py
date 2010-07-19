@@ -433,6 +433,21 @@ system_admin_map_table = Table('system_admin_map', metadata,
         onupdate='CASCADE', ondelete='CASCADE'))
 )
 
+recipe_set_nacked_table = Table('recipe_set_nacked', metadata,
+    Column('recipe_set_id', Integer, ForeignKey('recipe_set.id',
+        onupdate='CASCADE', ondelete='CASCADE'), primary_key=True,nullable=False), 
+    Column('response_id', Integer, ForeignKey('response.id', 
+        onupdate='CASCADE', ondelete='CASCADE'), nullable=False),
+    Column('comment', Unicode(255),nullable=True),
+    Column('created',DateTime,nullable=False,default=datetime.utcnow)
+)
+
+response_table = Table('response', metadata,
+    Column('id', Integer, autoincrement=True, primary_key=True, nullable=False),
+    Column('response',Unicode(50), nullable=False)
+)
+
+
 group_permission_table = Table('group_permission', metadata,
     Column('group_id', Integer, ForeignKey('tg_group.group_id',
         onupdate='CASCADE', ondelete='CASCADE')),
@@ -452,8 +467,8 @@ activity_table = Table('activity', metadata,
     Column('field_name', String(40), nullable=False),
     Column('service', String(100), nullable=False),
     Column('action', String(40), nullable=False),
-    Column('old_value', String(40)),
-    Column('new_value', String(40))
+    Column('old_value', String(60)),
+    Column('new_value', String(60))
 )
 
 system_activity_table = Table('system_activity', metadata,
@@ -1243,19 +1258,25 @@ class System(SystemObject):
                     raise an exception if it fails.
                     raise an exception if it takes more then 5 minutes
                 """
-                expiredelta = datetime.utcnow() + timedelta(minutes=10)
-                while(True):
-                    for line in self.get_event_log(task_id).split('\n'):
-                        if line.find("### TASK COMPLETE ###") != -1:
-                            return True
-                        if line.find("### TASK FAILED ###") != -1:
-                            raise BX(_("Cobbler Task:%s Failed" % task_id))
-                    if datetime.utcnow() > expiredelta:
-                        raise BX(_('Cobbler Task:%s Timed out' % task_id))
-                    time.sleep(5)
+                try:
+                    expiredelta = datetime.utcnow() + timedelta(minutes=10)
+                    while(True): 
+                        for line in self.get_event_log(task_id).split('\n'):
+                            if line.find("### TASK COMPLETE ###") != -1:
+                                return True
+                            if line.find("### TASK FAILED ###") != -1:
+                                raise BX(_("Cobbler Task:%s Failed" % task_id))
+                        if datetime.utcnow() > expiredelta:
+                            raise BX(_('Cobbler Task:%s Timed out' % task_id))
+    
+                        time.sleep(5)
+                except BX,e:
+                    self.system.activity.append(SystemActivity(self.system.user,service='Cobbler API',action='Task',field_name='', new_value='Fail: %s' % e))
+                    raise
+
 
                         
-            def power(self,action='reboot', wait=True):
+            def power(self,action='reboot', wait=False):
                 system_id = self.get_system()
                 self.remote.modify_system(system_id, 'power_type', 
                                               self.system.power.power_type.name,
@@ -1782,18 +1803,18 @@ $SNIPPET("rhts_post")
                 self.arch.append(new_arch)
 
     def updateDevices(self, deviceinfo):
+        currentDevices = []
         for device in deviceinfo:
             try:
-                device = Device.query().filter_by(vendor_id = device['vendorID'],
+                mydevice = Device.query().filter_by(vendor_id = device['vendorID'],
                                    device_id = device['deviceID'],
                                    subsys_vendor_id = device['subsysVendorID'],
                                    subsys_device_id = device['subsysDeviceID'],
                                    bus = device['bus'],
                                    driver = device['driver'],
                                    description = device['description']).one()
-                self.devices.append(device)
             except InvalidRequestError:
-                new_device = Device(vendor_id       = device['vendorID'],
+                mydevice = Device(vendor_id       = device['vendorID'],
                                      device_id       = device['deviceID'],
                                      subsys_vendor_id = device['subsysVendorID'],
                                      subsys_device_id = device['subsysDeviceID'],
@@ -1801,9 +1822,14 @@ $SNIPPET("rhts_post")
                                      driver         = device['driver'],
                                      device_class   = device['type'],
                                      description    = device['description'])
-                session.save(new_device)
-                session.flush([new_device])
-                self.devices.append(new_device)
+                session.save(mydevice)
+                session.flush([mydevice])
+            self.devices.append(mydevice)
+            currentDevices.append(mydevice)
+        # Remove any old entries
+        for device in self.devices[:]:
+            if device not in currentDevices:
+                self.devices.remove(device)
 
     def updateCpu(self, cpuinfo):
         # Remove all old CPU data
@@ -1873,12 +1899,11 @@ $SNIPPET("rhts_post")
                     )
                   )
         )
-        if self.type.type == 'Machine':
+        if self.type.type != 'Virtual':
             distros = distros.filter(distro_table.c.virt==False)
         return distros
 
     def action_release(self):
-        self.user = None
         # Attempt to remove Netboot entry
         # and turn off machine, but don't fail if we can't
         if self.release_action:
@@ -1892,6 +1917,7 @@ $SNIPPET("rhts_post")
                 self.remote.release()
             except:
                 pass
+        self.user = None
 
     def action_provision(self, 
                          distro=None,
@@ -1912,7 +1938,8 @@ $SNIPPET("rhts_post")
                              ks_meta=None,
                              kernel_options=None,
                              kernel_options_post=None,
-                             kickstart=None):
+                             kickstart=None,
+                             wait=False):
         if not self.remote:
             return False
 
@@ -1921,7 +1948,7 @@ $SNIPPET("rhts_post")
                                                kernel_options_post)
         self.remote.provision(distro, kickstart, **results)
         if self.power:
-            self.remote.power(action="reboot")
+            self.remote.power(action="reboot", wait=wait)
 
     def action_power(self,
                      action='reboot'):
@@ -2396,6 +2423,7 @@ class Distro(MappedObject):
     # because  a PAE and non PAE i386 distro is indutinguishable from another, so it will return a PAE distro, if we are searching on
     # i386 and say x86_64, even though clearly, it's not applicable to the later. This only applies to multiple arches 
     _EXCLUDE_OVER_MULTIPLE_ARCHES = 'PAE'
+
     def __init__(self, install_name=None):
         self.install_name = install_name
  
@@ -2570,6 +2598,9 @@ class Distro(MappedObject):
         for var in (osmajor,method,tag) + tuple(sorted(local_arches)):
             if var:
                 cache_locator.append(var)
+
+        #FIXME: It was probably silly of me to be creating class vars on the fly and caching values in them
+        # I should really create a more throughly thought out caching system
         cache_location = "_".join(cache_locator)
         the_cache = getattr(Distro,cache_location,None)
         if the_cache: #phew, we don't have to do that big ugly slow query 
@@ -3047,6 +3078,45 @@ class Job(TaskBase):
         return cls.query.filter(Job.owner==owner)
 
     @classmethod
+    def get_nacks(self,jobs):
+        queri = select([recipe_set_table.c.id], from_obj=job_table.join(recipe_set_table), whereclause=job_table.c.id.in_(jobs),distinct=True)
+        results = queri.execute() 
+        current_nacks = []
+        for r in results:
+            rs_id = r[0]
+            rs = RecipeSet.by_id(rs_id)
+            response = getattr(rs.nacked,'response',None)
+            if response == Response.by_response('nak'):
+                current_nacks.append(rs_id)
+        return current_nacks
+
+    @classmethod
+    def update_nacks(cls,job_ids,rs_nacks):
+        """
+        update_nacks() takes a list of job_ids and updates the job's recipesets with the correct nacks
+        """
+        queri = select([recipe_set_table.c.id], from_obj=job_table.join(recipe_set_table), whereclause=job_table.c.id.in_(job_ids),distinct=True)
+        results = queri.execute()
+        current_nacks = []
+        if len(rs_nacks) > 0:
+            rs_nacks = map(lambda x: int(x), rs_nacks) # they come in as unicode objs
+        for res in results:
+            rs_id = res[0]
+            rs = RecipeSet.by_id(rs_id)
+            if rs_id not in rs_nacks and rs.nacked: #looks like we're deleting it then 
+                rs.nacked = []
+            else: 
+                if not rs.nacked and rs_id in rs_nacks: #looks like we're adding it then
+                    rs.nacked = [RecipeSetResponse(rs_id)]
+                    current_nacks.append(rs_id)
+                elif rs.nacked:
+                    current_nacks.append(rs_id)
+                    
+        return current_nacks 
+
+
+
+    @classmethod
     def by_whiteboard(cls,desc):
         res = Job.query().filter_by(whiteboard = desc)
         return res
@@ -3154,8 +3224,51 @@ class Job(TaskBase):
         except:
             return
 
-             
+class Response(MappedObject):
+
+    @classmethod
+    def get_all(cls,*args,**kw):
+        return cls.query()
+
+    @classmethod
+    def by_response(cls,response,*args,**kw):
+        return cls.query().filter_by(response = response).one()
+
+class RecipeSetResponse(MappedObject):
+    """
+    An acknowledgment of a RecipeSet's results. Can be used for filtering reports
+    """
     
+    def __init__(self,id,type=None,response_id=None,comment=None):
+        self.id = id
+        if response_id is not None:
+            res = Response.by_id(response_id)
+        elif type is not None:
+            res = Response.by_response(type)
+        self.response = res
+        self.comment = comment
+
+    @classmethod 
+    def by_id(cls,id): 
+       return cls.query().filter_by(recipe_set_id=id).one()
+
+    @classmethod
+    def by_jobs(cls,job_ids):
+        try:
+            job_ids_type = type(job_ids)
+            if job_ids_type == type(list()):
+                clause = Job.id.in_(job_ids)
+            elif job_ids_type == int:
+                clause = Job.id == job_id
+            else:
+                raise BeakerException('job_ids needs to be either type \'int\' or \'list\'. Found %s' % job_ids_type)
+            queri = cls.query().outerjoin(['recipesets','job']).filter(clause)
+            results = {}
+            for elem in queri:
+                results[elem.recipe_set_id] = elem.comment
+            return results
+     
+        except: raise
 
 class RecipeSet(TaskBase):
     """
@@ -3163,6 +3276,11 @@ class RecipeSet(TaskBase):
     """
 
     stop_types = ['abort','cancel']
+
+    def is_owner(self,user):
+        if self.job.owner == user:
+            return True
+        return False
 
     def to_xml(self, clone=False):
         recipeSet = self.doc.createElement("recipeSet")
@@ -3197,6 +3315,13 @@ class RecipeSet(TaskBase):
     @classmethod 
     def by_id(cls,id): 
        return cls.query().filter_by(id=id).one()
+
+    @classmethod
+    def by_job_id(cls,job_id):
+        try:
+            queri = RecipeSet.query().outerjoin(['job']).filter(Job.id == job_id)
+            return queri
+        except: raise 
      
     @classmethod
     def iter_recipeSets(self, status=u'Assigned'):
@@ -4748,6 +4873,12 @@ mapper(Job, job_table,
                       'owner':relation(User, uselist=False, backref='jobs'),
                       'result':relation(TaskResult, uselist=False),
                       'status':relation(TaskStatus, uselist=False)})
+mapper(RecipeSetResponse,recipe_set_nacked_table,
+        properties = { 'recipesets':relation(RecipeSet),
+                        'response' : relation(Response,uselist=False)})
+
+mapper(Response,response_table)
+
 mapper(RecipeSet, recipe_set_table,
         properties = {'recipes':relation(Recipe, backref='recipeset'),
                       'priority':relation(TaskPriority, uselist=False),
@@ -4757,6 +4888,7 @@ mapper(RecipeSet, recipe_set_table,
                                      order_by=[activity_table.c.created.desc()],
                                                backref='object'),
                       'lab_controller':relation(LabController, uselist=False),
+                      'nacked':relation(RecipeSetResponse,cascade="all, delete-orphan",uselist=False),
                      })
 
 mapper(LogRecipe, log_recipe_table)

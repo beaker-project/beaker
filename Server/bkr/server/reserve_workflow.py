@@ -22,9 +22,11 @@ class ReserveWorkflow:
         """ Create a new reserve job, if system_id is defined schedule it too """
         job = Job(ttasks=0, owner=identity.current.user)
         if kw.get('whiteboard'):
-            job.whiteboard = kw.get('whiteboard')
-        # We shouldn't be doing this split,  we should rely on TG to pass us an array.
-        for id in distro_id.split(","):
+            job.whiteboard = kw.get('whiteboard') 
+        if not isinstance(distro_id,list):
+            distro_id = [distro_id]
+
+        for id in distro_id: 
             try:
                 distro = Distro.by_id(id)
             except InvalidRequestError:
@@ -89,21 +91,28 @@ class ReserveWorkflow:
         else:
             system_name = 'Any System'
         distro_names = [] 
-        for id in distro_id.split(","):
+
+        return_value = dict(
+                            system_id = system_id, 
+                            system = system_name,
+                            distro = '',
+                            distro_ids = [],
+                            )
+        if not isinstance(distro_id,list):
+            distro_id = [distro_id]
+        for id in distro_id:
             try:
                 distro = Distro.by_id(id)
                 distro_names.append(distro.install_name)
+                return_value['distro_ids'].append(id)
             except InvalidRequestError:
-                flash(_(u'Invalid Distro ID %s' % distro_id)) 
+                flash(_(u'Invalid Distro ID %s' % id)) 
         distro = ", ".join(distro_names)
+        return_value['distro'] = distro
+        
         return dict(form=self.reserveform,
                     action='./doit',
-                    value = dict(
-                                system_id = system_id,
-                                distro_id = distro_id,
-                                system = system_name,
-                                distro = distro,
-                                ),
+                    value = return_value,
                     options = None,
                     title='Reserve System %s' % system_name)
 
@@ -160,3 +169,38 @@ class ReserveWorkflow:
         options = sorted([(elem.install_name,elem.date_created) for elem in distro], key = lambda e1: e1[1],reverse=True) #so we don't have to guess the install_name later
         options = [elem[0] for elem in options]
         return {'options': options} 
+
+    @expose(allow_json=True)
+    def find_systems_for_multiple_distros(self,distro_install_name,arches=None,*args,**kw):
+        all_distro_names = list()
+        for arch in arches.split(','): 
+            all_distro_names.append('%s-%s' % (distro_install_name,arch))
+
+        systems_queries, distro_ids = [],[] 
+        for install_name in all_distro_names:
+            try:
+                distro = Distro.query().filter(Distro.install_name == install_name).one()
+                distro_ids.append(distro.id)
+            except InvalidRequestError:
+                log.error(u'Could not find distro %s, continuing with other distros' % install_name)
+                continue
+            
+            systems_distro_query = distro.systems()
+            systems_available = System.available(identity.current.user,System.by_type(type='machine',systems=systems_distro_query)) 
+            systems_queries = systems_queries + systems_available.select()
+
+        return { 'count' : len(set(systems_queries)), 'distro_id' : distro_ids }
+              
+    @expose(allow_json=True) 
+    def find_systems_for_distro(self,distro_install_name,*args,**kw): 
+        try: 
+            distro = Distro.query().filter(Distro.install_name == distro_install_name).one()
+        except InvalidRequestError,(e):
+            return { 'count' : 0 } 
+                 
+        #there seems to be a bug distro.systems 
+        #it seems to be auto correlateing the inner query when you pass it a user, not possible to manually correlate
+        #a Query object in 0.4  
+        systems_distro_query = distro.systems()
+        avail_systems_distro_query = System.available(identity.current.user,System.by_type(type='machine',systems=systems_distro_query)) 
+        return {'count' : avail_systems_distro_query.count(), 'distro_id' : distro.id }

@@ -91,7 +91,8 @@ def main():
         machine   = SystemType(u'Machine')
         virtual   = SystemType(u'Virtual')
         resource  = SystemType(u'Resource')
-        laptop  = SystemType(u'Laptop')
+        laptop    = SystemType(u'Laptop')
+        prototype = SystemType(u'Prototype')
 
     #Setup base Architectures
     if Arch.query().count() == 0:
@@ -178,6 +179,11 @@ def main():
         WARN      = TaskResult(result=u'Warn', severity=30)
         FAIL      = TaskResult(result=u'Fail', severity=40)
         PANIC     = TaskResult(result=u'Panic', severity=50)
+
+    #Setup ack/nak reposnses
+    if Response.query().count() == 0:
+        ACK      = Response(response=u'ack')
+        NAK      = Response(response=u'nak')
 
     session.flush()
 

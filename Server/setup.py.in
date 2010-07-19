@@ -113,9 +113,11 @@ class InstallData(_install_data, object):
                 self.install_dir = self.temp_data
 
 data_files = [
-    ('bkr/server/static', filter(os.path.isfile, glob.glob('bkr/server/static/*'))),
-    ('bkr/server/static/css', filter(os.path.isfile,
-                                 glob.glob('bkr/server/static/css/*'))),
+    ('bkr/server/static', filter(os.path.isfile,glob.glob('bkr/server/static/*'))),
+    ('bkr/server/static/css', filter(os.path.isfile,glob.glob('bkr/server/static/css/*'))),
+    ('bkr/server/static/css/smoothness', filter(os.path.isfile,glob.glob('bkr/server/static/css/smoothness/*'))),
+   ('bkr/server/static/css/smoothness/images', filter(os.path.isfile,glob.glob('bkr/server/static/css/smoothness/images/*'))),
+
     ('bkr/server/static/javascript', filter(os.path.isfile,
                                  glob.glob('bkr/server/static/javascript/*'))),
     ('bkr/server/static/images', filter(os.path.isfile,

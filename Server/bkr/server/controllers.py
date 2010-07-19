@@ -502,40 +502,6 @@ class Root(RPCRoot):
     def mine(self, *args, **kw):
         return self.systems(systems = System.mine(identity.current.user), *args, **kw)
 
-    @expose(allow_json=True)
-    def find_systems_for_multiple_distros(self,distro_install_name,arches=None,*args,**kw):
-        all_distro_names = list()
-        for arch in arches.split(','): 
-            all_distro_names.append('%s-%s' % (distro_install_name,arch))
-
-        systems_queries, distro_ids = [],[] 
-        for install_name in all_distro_names:
-            try:
-                distro = Distro.query().filter(Distro.install_name == install_name).one()
-                distro_ids.append(distro.id)
-            except InvalidRequestError:
-                log.error(u'Could not find distro %s, continuing with other distros' % install_name)
-                continue
-            
-            systems_distro_query = distro.systems()
-            systems_available = System.available(identity.current.user,System.by_type(type='machine',systems=systems_distro_query)) 
-            systems_queries = systems_queries + systems_available.select()
-
-        return { 'count' : len(set(systems_queries)), 'distro_id' : distro_ids }
-              
-    @expose(allow_json=True) 
-    def find_systems_for_distro(self,distro_install_name,*args,**kw): 
-        try: 
-            distro = Distro.query().filter(Distro.install_name == distro_install_name).one()
-        except InvalidRequestError,(e):
-            return { 'count' : 0 } 
-                 
-        #there seems to be a bug distro.systems 
-        #it seems to be auto correlateing the inner query when you pass it a user, not possible to manually correlate
-        #a Query object in 0.4  
-        systems_distro_query = distro.systems()
-        avail_systems_distro_query = System.available(identity.current.user,System.by_type(type='machine',systems=systems_distro_query)) 
-        return {'count' : avail_systems_distro_query.count(), 'distro_id' : distro.id }
       
     @expose(template='bkr.server.templates.grid') 
     @identity.require(identity.not_anonymous())
@@ -912,29 +878,33 @@ class Root(RPCRoot):
         except AttributeError,e:
             can_admin = False
 
+        widgets = dict( 
+                        labinfo   = self.labinfo_form,
+                        details   = self.system_details,
+                        history   = self.system_activity,
+                        exclude   = self.system_exclude,
+                        keys      = self.system_keys,
+                        notes     = self.system_notes,
+                        groups    = self.system_groups,
+                        install   = self.system_installoptions,
+                        arches    = self.arches_form,
+                        tasks      = self.task_form,
+                      )
+        if system.type != SystemType.by_name(u'Virtual'):
+            widgets['provision'] = self.system_provision
+            widgets['power'] = self.power_form
+            widgets['power_action'] = self.power_action_form
+
         return dict(
-            title    = title,
-            readonly = readonly,
-            is_user  = is_user,
-            form     = self.system_form,
-            action   = '/save',
-            value    = system,
-            options  = options,
-            history_data = historical_data,
-            widgets         = dict( power     = self.power_form,
-                                    labinfo   = self.labinfo_form,
-                                    details   = self.system_details,
-                                    history   = self.system_activity,
-                                    exclude   = self.system_exclude,
-                                    keys      = self.system_keys,
-                                    notes     = self.system_notes,
-                                    groups    = self.system_groups,
-                                    install   = self.system_installoptions,
-                                    provision = self.system_provision,
-                                    power_action = self.power_action_form, 
-                                    arches    = self.arches_form,
-                                    tasks      = self.task_form,
-                                  ),
+            title           = title,
+            readonly        = readonly,
+            is_user         = is_user,
+            form            = self.system_form,
+            action          = '/save',
+            value           = system,
+            options         = options,
+            history_data    = historical_data,
+            widgets         = widgets,
             widgets_action  = dict( power     = '/save_power',
                                     history   = '/view/%s' % fqdn,
                                     labinfo   = '/save_labinfo',
@@ -1837,7 +1807,7 @@ class Root(RPCRoot):
         return system.update(inventory)
 
     @expose(template="bkr.server.templates.login")
-    def login(self, forward_url="/", previous_url=None, *args, **kw): 
+    def login(self, forward_url=url("/"), previous_url=None, *args, **kw): 
         if not identity.current.anonymous \
             and identity.was_login_attempted() \
             and not identity.get_identity_errors():     
@@ -1849,7 +1819,7 @@ class Root(RPCRoot):
                 if re.match('^(.+)?/%s$' % self.login.__name__,request.headers['Referer']):
                     raise redirect(forward_url)
                 else:
-                    raise redirect(request.headers.get("Referer","/"))
+                    raise redirect(request.headers.get("Referer",url("/")))
             else:
                 redirect(forward_url)
 
@@ -1864,7 +1834,7 @@ class Root(RPCRoot):
                    "this resource.")
         else:
             msg=_("Please log in.")
-            forward_url= request.headers.get("Referer", "/")
+            forward_url= request.headers.get("Referer", url("/"))
             
         response.status=403
         return dict(message=msg, previous_url=previous_url, logging_in=True,

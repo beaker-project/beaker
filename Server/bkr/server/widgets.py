@@ -45,7 +45,7 @@ class LocalCSSLink(CSSLink):
     """
     def update_params(self, d):
         super(CSSLink, self).update_params(d)
-        d["link"] = url(self.name)
+        d["link"] = self.name
 
 
 class PowerTypeForm(CompoundFormField):
@@ -99,8 +99,8 @@ class PowerTypeForm(CompoundFormField):
 	self.key_field = HiddenField(name="key")
 
 class ReserveSystem(TableForm):
-    fields = [
-	      HiddenField(name='distro_id'),
+    fields = [ 
+          #HiddenField(name='distro_id'),
 	      HiddenField(name='system_id'),
               Label(name='system', label=_(u'System to Provision')),
               Label(name='distro', label=_(u'Distro to Provision')),
@@ -116,13 +116,28 @@ class ReserveSystem(TableForm):
              ]
     submit_text = 'Queue Job'
 
+    def update_params(self,d): 
+        log.debug(d)
+        if 'value' in d:
+            if 'distro_ids' in d['value']:
+                if(isinstance(d['value']['distro_ids'],list)):
+                    for distro_id in d['value']['distro_ids']:
+                        d['hidden_fields'] = [HiddenField(name='distro_id',attrs = {'value' : distro_id})] + d['hidden_fields'][0:]
+                
+
+        super(ReserveSystem,self).update_params(d)
+
+
+
 class ReserveWorkflow(Form): 
-    javascript = [LocalJSLink('bkr', '/static/javascript/reserve_workflow.js')] 
+    javascript = [LocalJSLink('bkr', '/static/javascript/reserve_workflow_v3.js'),
+                  LocalJSLink('bkr','/static/javascript/jquery-1.3.1.js'),
+                 ] 
     template="bkr.server.templates.reserve_workflow"
     css = [LocalCSSLink('bkr','/static/css/reserve_workflow.css')] 
     member_widgets = ['arch','distro','distro_family','method_','tag'] 
     params = ['arch_value','method_value','tag_value','distro_family_value','all_arches',
-              'all_tags','all_methods','all_distro_familys','to_json','auto_pick'] 
+              'all_tags','all_methods','all_distro_familys','to_json','auto_pick','distro_rpc','system_rpc','system_many_rpc','reserve_href'] 
 
     def __init__(self,*args,**kw):
         super(ReserveWorkflow,self).__init__(*args, **kw)  
@@ -165,9 +180,13 @@ class ReserveWorkflow(Form):
         self.distro_family = SingleSelectField(name='distro_family', label='Distro Family', 
                                                options=[None],validator=validators.NotEmpty())
         self.tag = SingleSelectField(name='tag', label='Tag', options=[None],validator=validators.NotEmpty())
-        self.arch = SingleSelectField(name='arch', label='Arch', options=[None],attrs={'size':5,'multiple': 1},validator=validators.NotEmpty())
+        self.arch = SingleSelectField(name='arch', label='Arch', options=[None],validator=validators.NotEmpty())
 
         self.to_json = UtilJSON.dynamic_json()
+        self.system_rpc = './find_systems_for_distro'
+        self.system_many_rpc= './find_systems_for_multiple_distros'
+        self.distro_rpc = './get_distro_options'
+        self.reserve_href = './reserve'
         self.auto_pick = Button(default="Auto pick system", name='auto_pick', attrs={'class':None})
         self.name = 'reserveworkflow_form'
         self.action = '/reserve_system'
@@ -265,13 +284,102 @@ class JobQuickSearch(CompoundWidget):
 
         self.status_queued = Button(default="Status is Queued", name='status_queued')
 
+class AckPanel(RadioButtonList):     
 
+    javascript = [LocalJSLink('bkr','/static/javascript/jquery-1.3.1.js'),
+                  LocalJSLink('bkr','/static/javascript/jquery-ui-1.7.3.custom.min.js'), 
+                  LocalJSLink('bkr','/static/javascript/response.js')]
+
+    css =  [LocalCSSLink('bkr','/static/css/smoothness/jquery-ui-1.7.3.custom.css')] 
+    params = ['widget_name','unreal_response','comment_id','comment_class']
+    
+    template = """
+    <ul xmlns:py="http://purl.org/kid/ns#"
+        class="${field_class}"
+        id="${field_id}"
+        py:attrs="list_attrs"
+    >
+        <li py:for="value, desc, attrs in options">
+            <input type="radio" name="${widget_name}" py:if="unreal_response != value" id="${field_id}_${value}" value="${value}" py:attrs="attrs" />
+            <input type="radio" name="${widget_name}" py:if="unreal_response == value" id="unreal_response" value="${value}" py:attrs="attrs" />
+            <label for="${field_id}_${value}" py:content="desc" />
+        </li>
+        <a id="${comment_id}" style="cursor:pointer" class="${comment_class}">comment</a>
+    </ul>
+    """
+    
+    def __init__(self,*args,**kw):
+        
+        #self.options = options 
+        self.validator = validators.NotEmpty() 
+        super(AckPanel,self).__init__(*args,**kw)
+
+    def display(self,value=None,*args,**params): 
+        #params['options']  = self.options
+        pre_ops = [(str(elem.id),elem.response.capitalize(),{}) for elem in model.Response.get_all()]
+        if len(pre_ops) is 0: #no responses in the Db ? lets get out of here
+            return
+        OPTIONS_ID_INDEX = 0
+        OPTIONS_RESPONSE_INDEX = 1
+        OPTIONS_ATTR_INDEX = 2
+        # Purpose of this for loops is to determine details of where the responses are in the options list
+        # and how to create a non response item as well (i.e 'Needs Review')
+        max_response_id = 0
+        for index,(id,response,attrs) in enumerate(pre_ops):
+            if response == 'Ack':
+                ACK_INDEX = index
+                ACK_ID = id
+            elif response == 'Nak':
+                NAK_INDEX = index
+                NAK_ID = id 
+            if id > max_response_id:
+                max_response_id = int(id) + 1 #this is a number which is one bigger than our biggest valid response_id
+        else: 
+            EXTRA_RESPONSE_INDEX = index + 1 
+        EXTRA_RESPONSE_RESPONSE = 'Needs Review' 
+        pre_ops.append((max_response_id,EXTRA_RESPONSE_RESPONSE,{}))
+        params['unreal_response'] = max_response_id # we use this in the template to determine which response is not a real one
+        
+        rs_id = value
+        rs = model.RecipeSet.by_id(rs_id)
+        if not rs.is_finished():
+            return 
+        the_opts = pre_ops
+
+        #If not nacked
+        if not rs.nacked: # We need to review 
+            if not rs.is_failed(): #it's passed,
+                rs.nacked = model.RecipeSetResponse(id=rs_id,type='ack') # so we will auto ack it
+                the_opts[ACK_INDEX] = (the_opts[ACK_INDEX][OPTIONS_ID_INDEX],the_opts[ACK_INDEX][OPTIONS_RESPONSE_INDEX],{'checked': 1 })
+                del(the_opts[EXTRA_RESPONSE_INDEX])
+            else:
+                the_opts[EXTRA_RESPONSE_INDEX] = (the_opts[EXTRA_RESPONSE_INDEX][OPTIONS_ID_INDEX],the_opts[EXTRA_RESPONSE_INDEX][OPTIONS_RESPONSE_INDEX],{'checked': 1 }) 
+                params['comment_class'] = 'hidden'
+
+        else: #Let's get aout value from the db  
+            if rs.nacked.response == model.Response.by_response('ack'):# We've acked it 
+                the_opts[ACK_INDEX] = (the_opts[ACK_INDEX][OPTIONS_ID_INDEX],the_opts[ACK_INDEX][OPTIONS_RESPONSE_INDEX],{'checked': 1 })
+                del(the_opts[EXTRA_RESPONSE_INDEX])
+            elif  rs.nacked.response == model.Response.by_response('nak'): # We've naked it
+                the_opts[NAK_INDEX] = (the_opts[NAK_INDEX][OPTIONS_ID_INDEX],the_opts[NAK_INDEX][OPTIONS_RESPONSE_INDEX],{'checked': 1 })
+                del(the_opts[EXTRA_RESPONSE_INDEX])
+        params['widget_name'] = 'response_box_%s' % rs_id 
+        params['options'] = the_opts
+        try:
+            params['comment_id'] = "comment_%s" % (params['name'])
+        except KeyError,e:
+            log.debug("Unable to use name given to %s for comment id" % self.__class__.__name__)
+            params['comment_id'] = "comment_%s" % rs_id
+        return super(AckPanel,self).display(value,*args,**params)
+        
 class JobMatrixReport(Form):     
-    javascript = [LocalJSLink('bkr', '/static/javascript/job_matrix.js')]
-    css = [LocalCSSLink('bkr','/static/css/job_matrix.css')] 
+    javascript = [LocalJSLink('bkr','/static/javascript/jquery-1.3.1.js'),
+                  LocalJSLink('bkr','/static/javascript/jquery-ui-1.7.3.custom.min.js'),
+                  LocalJSLink('bkr', '/static/javascript/job_matrix.js')]
+    css = [LocalCSSLink('bkr','/static/css/job_matrix.css'), LocalCSSLink('bkr','/static/css/smoothness/jquery-ui-1.7.3.custom.css')] 
     template = 'bkr.server.templates.job_matrix' 
-    member_widgets = ['whiteboard','job_ids','generate_button'] 
-    params = ['list','whiteboard_filter','whiteboard_options','job_ids_vals']
+    member_widgets = ['whiteboard','job_ids','generate_button','nack_list'] 
+    params = ['list','whiteboard_filter','whiteboard_options','job_ids_vals','nacks','selected_nacks','comments_field','toggle_nacks_on'] 
     default_validator = validators.NotEmpty() 
     def __init__(self,*args,**kw): 
         super(JobMatrixReport,self).__init__(*args, **kw)       
@@ -281,14 +389,16 @@ class JobMatrixReport(Form):
         else:
             whiteboard_options = []
 
-        self.whiteboard_options = whiteboard_options or []
-      
+        self.whiteboard_options = whiteboard_options
+
+        self.nack_list = CheckBoxList("Hide naks",validator=self.default_validator)
+        
         self.whiteboard = SingleSelectField('whiteboard',label='Whiteboard',attrs={'size':5}, options=whiteboard_options, validator=self.default_validator) 
         self.job_ids = TextArea('job_ids',label='Job ID', rows=7,cols=7, validator=self.default_validator) 
         self.whiteboard_filter = TextField('whiteboard_filter', label='Filter Whiteboard') 
 
         self.name='remote_form' 
-        self.action = '.'   
+        self.action = '.'
     
     def display(self,**params):     
         if 'options' in params:
@@ -300,12 +410,16 @@ class JobMatrixReport(Form):
                 params['grid'] = params['options']['grid'] 
             if 'list' in params['options']: 
                 params['list'] = params['options']['list']
-        return super(JobMatrixReport,self).display(value=None,**params)
+            if 'nacks' in params['options']:
+                params['nacks'] = params['options']['nacks']
+            if 'toggle_nacks_on' in params['options']:
+                params['toggle_nacks_on'] = params['options']['toggle_nacks_on']
 
+        return super(JobMatrixReport,self).display(value=None,**params)
 
 class SearchBar(RepeatingFormField):
     """Search Bar""" 
-    javascript = [LocalJSLink('bkr', '/static/javascript/searchbar_v5.js')]
+    javascript = [LocalJSLink('bkr', '/static/javascript/searchbar_v5.js'),LocalJSLink('bkr','/static/javascript/jquery-1.3.1.js')]
     template = """
     <div xmlns:py="http://purl.org/kid/ns#">
     <a id="advancedsearch" href="#">Toggle Search</a>
@@ -582,19 +696,11 @@ class TaskSearchForm(RemoteForm):
               HiddenField(name='distro_id', validator=validators.Int()),
               HiddenField(name='task_id', validator=validators.Int()),
               TextField(name='task', label=_(u'Task')),
-#              AutoCompleteField(name='task',
-#                                search_controller=url('/tasks/by_name'),
-#                                search_param='task',
-#                                result_name='tasks'),
               TextField(name='system', label=_(u'System')),
               SingleSelectField(name='arch_id', label=_(u'Arch'),validator=validators.Int(),
                                 options=model.Arch.get_all),
               TextField(name='distro', label=_(u'Distro')),
               TextField(name='whiteboard', label=_(u'Recipe Whiteboard')),
-#              AutoCompleteField(name='distro',
-#                                search_controller=url('/distros/by_name'),
-#                                search_param='distro',
-#                                result_name='distros'),
               SingleSelectField(name='osmajor_id', label=_(u'Family'),validator=validators.Int(),
                                 options=model.OSMajor.get_all),
               SingleSelectField(name='status_id', label=_(u'Status'),validator=validators.Int(),
@@ -603,11 +709,6 @@ class TaskSearchForm(RemoteForm):
                                 options=model.TaskResult.get_all),
              ]
 
-#    def__init__(self, *args, **kw):
-#        super(TaskSearchForm, self).__init__(*args, **kw)
-#        self.system_id = HiddenField(name='system_id')
-#        self.system    = TextField(name='system', label=_(u'System'))
-#        self.task      = TextField(name='task', label=_(u'Task'))
 
     def update_params(self, d):
         super(TaskSearchForm, self).update_params(d)
@@ -823,7 +924,7 @@ class SystemArches(Form):
         super(SystemArches, self).__init__(*args, **kw)
 	self.id    = HiddenField(name="id")
         self.arch  = AutoCompleteField(name='arch',
-                                      search_controller=url("/arches/by_name"),
+                                      search_controller="/arches/by_name",
                                       search_param="name",
                                       result_name="arches")
 
@@ -843,7 +944,7 @@ class DistroTags(Form):
         super(DistroTags, self).__init__(*args, **kw)
 	self.id    = HiddenField(name="id")
         self.tag = AutoCompleteField(name='tag',
-                                      search_controller=url("/tags/by_tag"),
+                                      search_controller="/tags/by_tag",
                                       search_param="tag",
                                       result_name="tags")
 
@@ -1143,7 +1244,9 @@ class RecipeSetWidget(CompoundWidget):
 
    
 class RecipeWidget(CompoundWidget):
-    javascript = []
+    javascript = [
+                  LocalJSLink('bkr','/static/javascript/jquery-1.3.1.js'),
+                 ]
     css = []
     template = "bkr.server.templates.recipe_widget"
     params = ['recipe']

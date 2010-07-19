@@ -1,18 +1,14 @@
 %{!?python_sitelib: %global python_sitelib %(%{__python} -c "from distutils.sysconfig import get_python_lib; print get_python_lib()")}
 %{!?pyver: %global pyver %(%{__python} -c "import sys ; print sys.version[:3]")}
-%{!?branch: %global branch %(echo "$Format:%d$"| awk -F/ '{print $NF}'| sed -e 's/[()$]//g' | awk '{print "." $NF}' | grep -v master)}
-%if "0%{branch}" != "0"
-%{!?timestamp: %global timestamp $Format:.%at$}
-%endif
 
 Name:           beaker
-Version:        0.5.46
-Release:        4%{?timestamp}%{?branch}%{?dist}
+Version:        0.5.49
+Release:        1%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
 URL:            http://fedorahosted.org/beaker
-Source0:        http://fedorahosted.org/releases/b/e/%{name}-%{version}.tar.bz2
+Source0:        http://fedorahosted.org/releases/b/e/%{name}-%{version}.tar.gz
 BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 BuildArch:      noarch
 BuildRequires:  python-setuptools
@@ -27,7 +23,7 @@ Group:          Applications/Internet
 Requires:       python
 Requires:       kobo-client
 Requires:	python-setuptools
-Requires:	beaker
+Requires:	%{name} = %{version}-%{release}
 Requires:       python-krbV
 
 
@@ -43,7 +39,7 @@ Requires:       mod_wsgi
 Requires:       python-tgexpandingformwidget
 Requires:       httpd
 Requires:       python-krbV
-Requires:       beaker
+Requires:	%{name} = %{version}-%{release}
 Requires:       python-TurboMail
 Requires:	createrepo
 
@@ -62,7 +58,7 @@ Requires:       /sbin/fenced
 %endif
 Requires:       telnet
 Requires:       python-cpio
-Requires:	beaker
+Requires:	%{name} = %{version}-%{release}
 Requires:	kobo-client
 Requires:	python-setuptools
 Requires:	python-xmltramp
@@ -137,10 +133,11 @@ fi
 %{python_sitelib}/bkr/__init__.py*
 %{python_sitelib}/bkr-%{version}-*
 %{python_sitelib}/bkr-%{version}-py%{pyver}.egg-info/
+%doc COPYING
 
 %files server
 %defattr(-,root,root,-)
-%doc Server/README COPYING
+%doc Server/README
 %doc SchemaUpgrades/*
 %{python_sitelib}/bkr/server/
 %{python_sitelib}/bkr.server-%{version}-*
@@ -185,6 +182,56 @@ fi
 %{_sysconfdir}/init.d/%{name}-watchdog
 
 %changelog
+* Tue Jul 13 2010 Bill Peck <bpeck@redhat.com> 0.5.49-1
+- include schema upgrade script. (bpeck@redhat.com)
+- RecipeWidget needs to require JQuery in its javascript list.  This fixes the
+  recipe view. (bpeck@redhat.com)
+- Fix push inventory to remove old devices. (bpeck@redhat.com)
+- Don't give provision or power options to Virtual systems. (bpeck@redhat.com)
+- reset excluded_arches and excluded_osmajor.  Otherwise we only add.
+  (bpeck@redhat.com)
+- default to not wait on power commands (bpeck@redhat.com)
+- Now support editing the OSMajor alias from the web page. this finishes the
+  fix for    bz600353 - Limiting architectures (releases) in Beaker
+  (bpeck@redhat.com)
+- Put COPYING in base package, use .tar.gz for package since tito expects that
+  (bpeck@redhat.com)
+- bz543061 - RHTS client side tools do not work properly in FIPS enabled mode
+           - accept empty string as no-digest. (mcsontos@redhat.com)
+- no need for .gitattributes anymore (bpeck@redhat.com)
+- put in a FIXME comment for the way the Distro caches queries on multiple
+  distros (rmancy@redhat.com)
+- bz608946 - system/view not working due to error (rmancy@redhat.com)
+           - Added rpc definition for multiple_distros from merged branch
+           - fixed small error in JS (rmancy@redhat.com)
+           - Made rpc calls in reserve_workflow.js to use the correct url
+             (rmancy@redhat.com)
+           - url() for my paginate grid (rmancy@redhat.com)
+           - Ok, I've decided it's a bad idea to specify the full url in the
+             widget. Instead I've gone through the templates and made sure that the full
+             url path is being specified in there (rmancy@redhat.com)
+           - More url() (rmancy@redhat.com)
+           - changed a lot of static links to use tg.url() (rmancy@redhat.com)
+- bz598878 - reserve more machines in one step (rmancy@redhat.com)
+- bz596410 - Job Matrix nack, minus comment and auth feature
+             hide/show recipesets that have been nak'd (rmancy@redhat.com)
+           - Ack/Nak/NeedsReview panel is shown in Jobs listing, only available
+             to owners and admin of Job. Checkbox in matrix view will show/hide nak recipesets.
+           - Comments now working (rmancy@redhat.com)
+           - Can comment on item before the ack/nak is changed (rmancy@redhat.com)
+           - Added css for jquery UI (rmancy@redhat.com)
+             (rmancy@redhat.com)
+
+* Wed Jul 07 2010 Bill Peck <bpeck@redhat.com> 0.5.48-1
+- new package built with tito
+
+* Tue Jul 06 2010 Bill Peck <bpeck@redhat.com> - 0.5.47-0
+- proper release
+
+* Tue Jul 06 2010 Bill Peck <bpeck@redhat.com> - 0.5.46-5
+- bz598878, minor update to code to not need split(',')
+- bz572798, Missing conditions/events in history view.
+
 * Fri Jul 02 2010 Bill Peck <bpeck@redhat.com> - 0.5.46-3
 - added get_arches and get_family xmlrpc calls.
 - updated workflow-simple to use get_arches if no arches specified.

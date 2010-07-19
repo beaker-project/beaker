@@ -29,9 +29,16 @@ class OSVersions(AdminPage):
     exposed = False
 
     id      = widgets.HiddenField(name="id")
+    alias   = widgets.TextField(name="alias")
     arches  = widgets.CheckBoxList(name="arches", label="Arches",
                                       options=[(arch.id, arch.arch) for arch in Arch.query()],
                                       validator=validators.Int())
+
+    osmajor_form = widgets.TableForm(
+        fields      = [id, alias],
+        action      = "edit osmajor",
+        submit_text = _(u"Edit OSMajor"),
+    )
 
     osversion_form = widgets.TableForm(
         fields      = [id, arches],
@@ -63,6 +70,38 @@ class OSVersions(AdminPage):
                     form    = self.osversion_form,
                     action  = "./save",
                     options = None)
+
+    @identity.require(identity.in_group("admin"))
+    @expose(template="bkr.server.templates.form")
+    def edit_osmajor(self, id=None, *args, **kw):
+        try:
+            osmajor = OSMajor.by_id(id)
+        except InvalidRequestError:
+            flash(_(u"Invalid OSMajor ID %s" % id))
+            redirect(".")
+        return dict(title   = "OSMajor",
+                    value   = dict(id     = osmajor.id,
+                                   alias  = osmajor.alias),
+                    form    = self.osmajor_form,
+                    action  = "./save_osmajor",
+                    options = None)
+
+    @identity.require(identity.in_group("admin"))
+    @expose()
+    @validate(form=osversion_form)
+    def save_osmajor(self, id=None, alias=None, *args, **kw):
+        try:
+            osmajor = OSMajor.by_id(id)
+        except InvalidRequestError:
+            flash(_(u"Invalid OSMajor ID %s" % id))
+            redirect(".")
+        if osmajor.alias != alias:
+            osmajor.alias = alias
+            flash(_(u"Changes Saved for %s" % osmajor))
+        else:
+            flash(_(u"No Changes for %s" % osmajor))
+        redirect(".")
+
     @identity.require(identity.in_group("admin"))
     @expose()
     @validate(form=osversion_form)
@@ -108,7 +147,9 @@ class OSVersions(AdminPage):
             osversions = results
 
         osversions_grid = myPaginateDataGrid(fields=[
-                                  myPaginateDataGrid.Column(name='osmajor', getter=lambda x: make_link(url  = './edit?id=%s' % x.id, text = x), title='OS Version', options=dict(sortable=True)),
+                                  myPaginateDataGrid.Column(name='osmajor', getter=lambda x: make_link(url = './edit_osmajor?id=%s' % x.osmajor.id, text = x.osmajor), title='OS Major', options=dict(sortable=True)),
+                                  myPaginateDataGrid.Column(name='alias', getter=lambda x: x.osmajor.alias, title='Alias', options=dict(sortable=True)),
+                                  myPaginateDataGrid.Column(name='osversion', getter=lambda x: make_link(url  = './edit?id=%s' % x.id, text = x.osminor), title='OS Minor', options=dict(sortable=True)),
                                   myPaginateDataGrid.Column(name='arches', getter=lambda x: " ".join([arch.arch for arch in x.arches]), title='Arches', options=dict(sortable=True)),
                                   #(' ', lambda x: make_remove_link(x.id)),
                               ])
