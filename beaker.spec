@@ -144,6 +144,7 @@ fi
 %{python_sitelib}/bkr.server-%{version}-py%{pyver}.egg-info/
 %{_bindir}/start-%{name}
 %{_bindir}/%{name}-init
+%{_bindir}/nag-mail
 %{_sysconfdir}/init.d/%{name}d
 %attr(0755,root,root)%{_bindir}/%{name}d
 %config(noreplace) %{_sysconfdir}/httpd/conf.d/%{name}-server.conf

@@ -47,7 +47,7 @@ log = logging.getLogger(__name__)
 system_table = Table('system', metadata,
     Column('id', Integer, autoincrement=True,
            nullable=False, primary_key=True),
-    Column('fqdn', String(255), nullable=False),
+    Column('fqdn', Unicode(255), nullable=False),
     Column('serial', Unicode(1024)),
     Column('date_added', DateTime, 
            default=datetime.utcnow, nullable=False),
@@ -1570,6 +1570,31 @@ $SNIPPET("rhts_post")
         else:
             return System.query().filter(System.arch.any(Arch.arch == arch))
 
+    @classmethod
+    def reserved_via(cls, service='WEBUI'): 
+        activity_ids = cls._latest_reserved()
+        taken = []
+        for id in activity_ids:
+            try: 
+                take_activity = SystemActivity.query().join('object').filter(and_(SystemActivity.id==id,SystemActivity.service == service)).one()
+                taken.append(take_activity)
+            except InvalidRequestError,e:
+                pass
+        return taken
+   
+    @classmethod
+    def _latest_reserved(cls): 
+        f_obj= system_table.join(system_activity_table).join(activity_table)
+        s = select([func.max(system_activity_table.c.id)],from_obj=f_obj,whereclause=and_(activity_table.c.action == 'Reserved',System.user != None)).group_by(system_table.c.id)
+        log.debug(s)
+        result = s.execute()
+        ids = [row[0] for row in result.fetchall()] 
+        log.debug(ids) 
+        return ids
+
+    
+
+
     def excluded_families(self):
         """
         massage excluded_osmajor for Checkbox values
@@ -2744,7 +2769,8 @@ class Activity(object):
 class SystemActivity(Activity):
     def object_name(self):
         return "System: %s" % self.object.fqdn
-     
+
+        
 class RecipeSetActivity(Activity):
     def object_name(self):
         return "RecipeSet: %s" % self.object.id
