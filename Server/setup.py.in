@@ -130,6 +130,7 @@ data_files = [
     ("/var/www/beaker/logs", []),
     ("/var/run/beaker", []),
     ("/var/www/beaker/rpms", []),
+    ("/var/www/beaker/repos", []),
 ]
 
 package_data = find_package_data(where='bkr',
