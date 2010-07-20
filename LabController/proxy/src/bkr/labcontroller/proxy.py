@@ -106,6 +106,12 @@ class ProxyHelper(object):
                                              result_score,
                                              result_summary)
 
+    def task_info(self,
+                  qtask_id):
+        """ accepts qualified task_id J:213 RS:1234 R:312 T:1234 etc.. Returns dict with status """
+        self.logger.info("task_info %s" % qtask_id)
+        return self.hub.taskactions.task_info(qtask_id)
+
     def recipe_stop(self,
                     recipe_id,
                     stop_type,
