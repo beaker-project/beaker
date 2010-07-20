@@ -18,7 +18,7 @@ def get_parser():
     parser = OptionParser(usage, description=__description__,version=__version__)
     parser.add_option("-s","--service", default='WEBUI',
                       help="Report on this service (WEBUI,SCHEDULER), Default is WEBUI")
-    parser.add_option("-t","--threshold", default=3,
+    parser.add_option("-t","--threshold", default=3, type=int,
                       help="This is the number of days after a reservation of a machine takes place, that the nag emails will commence")
     parser.add_option("-c","--config-file",dest="configfile",default=None)
     return parser
@@ -47,7 +47,7 @@ def identify_nags(threshold, service):
         date_reserved =  activity.created
         date_now = datetime.fromtimestamp(time.time())
         threshold_delta = timedelta(days=threshold)
-        if date_reserved + threshold_delta > date_now: #Let's send them a reminder
+        if date_reserved + threshold_delta < date_now: #Let's send them a reminder
             system = System.query().filter_by(id=activity.system_id).one()
             recipient =  system.user.email_address
             subject = "[Beaker Reminder]: System %s" % system.fqdn
