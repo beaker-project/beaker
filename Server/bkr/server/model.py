@@ -3456,6 +3456,7 @@ class Recipe(TaskBase):
     Also contains what tasks will be executed.
     """
     stop_types = ['abort','cancel']
+    servername = get("servername",socket.gethostname())
     harnesspath = get("basepath.harness", "/var/www/beaker/harness")
     rpmspath = get("basepath.rpms", "/var/www/beaker/rpms")
     repopath = get("basepath.repos", "/var/www/beaker/repos")
@@ -3487,17 +3488,16 @@ class Recipe(TaskBase):
         """
         repos = []
         if self.distro:
-            servername = get("servername",socket.gethostname())
             if os.path.exists("%s/%s/%s" % (self.harnesspath, 
                                             self.distro.osversion.osmajor,
                                             self.distro.arch)):
                 repo = dict(name = "beaker-harness",
-                             url  = "http://%s/harness/%s/%s" % (servername,
+                             url  = "http://%s/harness/%s/%s" % (self.servername,
                                                                       self.distro.osversion.osmajor,
                                                                       self.distro.arch))
                 repos.append(repo)
             repo = dict(name = "beaker-tasks",
-                        url  = "http://%s/repos/%s" % (servername, self.id))
+                        url  = "http://%s/repos/%s" % (self.servername, self.id))
             repos.append(repo)
         return repos
 
@@ -3660,21 +3660,13 @@ class Recipe(TaskBase):
             if not os.path.isdir(directory):
                 #something else must have gone wrong
                 raise
-        for task in self.tasks:
-            # Create hardlink from /var/www/beaker/rpms to /var/www/beaker/repos/TASKID
-            if not os.path.isfile('%s/%s' % (directory,task.task.rpm)):
-                try:
-                    os.link('%s/%s' % (self.rpmspath,task.task.rpm), 
-                            '%s/%s' % (directory,task.task.rpm))
-                except Exception, e:
-                    raise BX('%s: %s/%s %s/%s' % (e, 
-                                                  self.rpmspath,task.task.rpm, 
-                                                  directory,task.task.rpm))
-        # pushd /var/www/beaker/logs/filepath/rpms 
         cwd = os.getcwd()
-        os.chdir(directory)
-        # createrepo 
-        os.system("createrepo .")
+        os.chdir(self.rpmspath)
+        # update base repo, specifying -o and baseurl allow us to copy the repo and have it
+        # still reference the rpms in another directory.
+        os.system("createrepo -q --update -o . --baseurl http://%s/rpms ." % (self.servername))
+        # Copy updated repo to recipe specific repo
+        shutil.copytree('%s/repodata' % (self.rpmspath), '%s/repodata' % (directory))
         os.chdir(cwd)
         return True
 
@@ -3682,12 +3674,12 @@ class Recipe(TaskBase):
         """
         Done with Repo, destroy it.
         """
-        folder = '%s/%s' % (self.repopath, self.id)
-        if os.path.isdir(folder):
+        directory = '%s/%s' % (self.repopath, self.id)
+        if os.path.isdir(directory):
             try:
-                shutil.rmtree(folder)
+                shutil.rmtree(directory)
             except OSError:
-                if os.path.isdir(folder):
+                if os.path.isdir(directory):
                     #something else must have gone wrong
                     raise
 
