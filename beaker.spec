@@ -2,7 +2,7 @@
 %{!?pyver: %global pyver %(%{__python} -c "import sys ; print sys.version[:3]")}
 
 Name:           beaker
-Version:        0.5.49
+Version:        0.5.50
 Release:        1%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
@@ -184,6 +184,27 @@ fi
 %{_sysconfdir}/init.d/%{name}-watchdog
 
 %changelog
+* Wed Jul 21 2010 Bill Peck <bpeck@redhat.com> 0.5.50-1
+- export task_info command to lab controller proxy. (bpeck@redhat.com)
+- Create recipe specific repos instead of one giant repo. (bpeck@redhat.com)
+  Update to createRepo to update the base repo and copy it to recipe specific.
+  This is faster  and allows the entire task repo to be available.
+  (bpeck@redhat.com)
+  add missing repos dir (bpeck@redhat.com)
+- fix possible race condition when starting a new task, normally the running
+  task adds in some extra time for the watchdog, this makes sure we do.
+  (bpeck@redhat.com)
+- bz607176 - does not return exit code different from 0 if --nowait and error
+  is present. (bpeck@redhat.com)
+- bz609444 - Job id cannot be easily captured by external script
+  (bpeck@redhat.com)
+- install nag-email script (bpeck@redhat.com)
+- bz572226 - WIP for nag email (rmancy@redhat.com)
+  minor edits to nag_email. Allow user to specify which service.
+  (bpeck@redhat.com)
+  fix nag_email logic fix option parsing to assign threshold to an int.
+  (bpeck@redhat.com)
+
 * Tue Jul 13 2010 Bill Peck <bpeck@redhat.com> 0.5.49-1
 - include schema upgrade script. (bpeck@redhat.com)
 - RecipeWidget needs to require JQuery in its javascript list.  This fixes the
