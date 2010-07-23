@@ -93,10 +93,10 @@ class Tasks(RPCRoot):
             for package in filter['packages']:
                 try:
                     taskpackage = TaskPackage.by_name(package)
+                    or_runfor.append(TaskPackage.id==taskpackage.id)
                 except InvalidRequestError, err:
-                    # Should we fail on invalid package?
-                    raise BX(_('Invalid Package : %s' % package))
-                or_runfor.append(TaskPackage.id==taskpackage.id)
+                    # ignore invalid packages
+                    pass
             tasks = tasks.filter(or_(*or_runfor))
 
         # Filter by type if specified

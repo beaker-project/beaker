@@ -81,7 +81,7 @@ class BeakerWorkflow(BeakerCommand):
         self.parser.add_option(
             "--package",
             action="append",
-            default=None,
+            default=[],
             help="Include tests for Package in job",
         )
         self.parser.add_option(
