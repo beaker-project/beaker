@@ -3812,7 +3812,8 @@ class Recipe(TaskBase):
     def release_system(self):
         """ Release the system and remove the watchdog
         """
-        if self.system and self.watchdog:
+        if self.system and self.watchdog and \
+           self.watchdog.recipe_id = self.id:
             try:
                 self.system.action_release()
                 log.debug("Return system %s for recipe %s" % (self.system, self.id))
