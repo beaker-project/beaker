@@ -1600,7 +1600,7 @@ $SNIPPET("rhts_post")
         if self.loaned != None:
             if self.loaned == self.user:
                 return True
-            else
+            else:
                 return False
         # If were the owner and its not loaned we have access.
         if self.owner == user:
