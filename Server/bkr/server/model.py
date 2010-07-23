@@ -3814,6 +3814,13 @@ class Recipe(TaskBase):
         """
         if self.system and self.watchdog and \
            self.watchdog.recipe_id = self.id:
+            self.destroyRepo()
+            ## FIXME Should we actually remove the watchdog?
+            ##       Maybe we should set the status of the watchdog to reclaim
+            ##       so that the lab controller returns the system instead.
+            # Remove this recipes watchdog
+            log.debug("Remove watchdog for recipe %s" % self.id)
+            del(self.watchdog)
             try:
                 self.system.action_release()
                 log.debug("Return system %s for recipe %s" % (self.system, self.id))
@@ -3832,13 +3839,6 @@ class Recipe(TaskBase):
                 pass
             except AttributeError, error:
                 pass
-            self.destroyRepo()
-            ## FIXME Should we actually remove the watchdog?
-            ##       Maybe we should set the status of the watchdog to reclaim
-            ##       so that the lab controller returns the system instead.
-            # Remove this recipes watchdog
-            log.debug("Remove watchdog for recipe %s" % self.id)
-            del(self.watchdog)
 
     def task_info(self):
         """
