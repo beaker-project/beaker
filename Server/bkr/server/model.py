@@ -3680,14 +3680,15 @@ class Recipe(TaskBase):
             if not os.path.isdir(directory):
                 #something else must have gone wrong
                 raise
-        cwd = os.getcwd()
-        os.chdir(self.rpmspath)
-        # update base repo, specifying -o and baseurl allow us to copy the repo and have it
-        # still reference the rpms in another directory.
-        os.system("createrepo -q --update -o . --baseurl http://%s/rpms ." % (self.servername))
-        # Copy updated repo to recipe specific repo
-        shutil.copytree('%s/repodata' % (self.rpmspath), '%s/repodata' % (directory))
-        os.chdir(cwd)
+        if not os.path.isdir('%s/repodata' % (directory)):
+            cwd = os.getcwd()
+            os.chdir(self.rpmspath)
+            # update base repo, specifying -o and baseurl allow us to copy the repo and have it
+            # still reference the rpms in another directory.
+            os.system("createrepo -q --update -o . --baseurl http://%s/rpms ." % (self.servername))
+            # Copy updated repo to recipe specific repo
+            shutil.copytree('%s/repodata' % (self.rpmspath), '%s/repodata' % (directory))
+            os.chdir(cwd)
         return True
 
     def destroyRepo(self):
