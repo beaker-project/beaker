@@ -3813,33 +3813,33 @@ class Recipe(TaskBase):
     def release_system(self):
         """ Release the system and remove the watchdog
         """
-        if self.system and self.watchdog and \
-           self.watchdog.recipe_id = self.id:
+        if self.system and self.watchdog:
             self.destroyRepo()
             ## FIXME Should we actually remove the watchdog?
             ##       Maybe we should set the status of the watchdog to reclaim
             ##       so that the lab controller returns the system instead.
             # Remove this recipes watchdog
             log.debug("Remove watchdog for recipe %s" % self.id)
+            if self.watchdog.system == self.system:
+                try:
+                    self.system.action_release()
+                    log.debug("Return system %s for recipe %s" % (self.system, self.id))
+                    self.system.activity.append(
+                        SystemActivity(self.recipeset.job.owner, 
+                                       'Scheduler', 
+                                       'Returned', 
+                                       'User', 
+                                       '%s' % self.recipeset.job.owner, 
+                                       ''))
+                except socket.gaierror, error:
+                    #FIXME
+                    pass
+                except xmlrpclib.Fault, error:
+                    #FIXME
+                    pass
+                except AttributeError, error:
+                    pass
             del(self.watchdog)
-            try:
-                self.system.action_release()
-                log.debug("Return system %s for recipe %s" % (self.system, self.id))
-                self.system.activity.append(
-                    SystemActivity(self.recipeset.job.owner, 
-                                   'Scheduler', 
-                                   'Returned', 
-                                   'User', 
-                                   '%s' % self.recipeset.job.owner, 
-                                   ''))
-            except socket.gaierror, error:
-                #FIXME
-                pass
-            except xmlrpclib.Fault, error:
-                #FIXME
-                pass
-            except AttributeError, error:
-                pass
 
     def task_info(self):
         """
