@@ -4,7 +4,10 @@ key $getVar('key', '49af89414d147589')
 #if $getVar('system_name', '') != '' and $getVar('manual', 'False') == 'False'
 auth  --useshadow  --enablemd5
 # System bootloader configuration
-bootloader --location=mbr
+bootloader --location=mbr #slurp
+#if $getVar('kernel_options_post','') != ''
+    --append="$kernel_options_post"
+#end if
 
 #if $getVar('rhts_server', '') != ''
 # Use text mode install

@@ -3,6 +3,10 @@ url --url=$tree
 authconfig  --enableshadow  --enablemd5
 # System bootloader configuration
 bootloader --location=mbr
+#if $getVar('kernel_options_post','') != ''
+    --append="$kernel_options_post"
+#end if
+
 #if $getVar('rhts_server', '') != ''
 # Use text mode install
 text

@@ -1,6 +1,6 @@
 $yum_config_stanza
 # End yum configuration
-$SNIPPET('post_install_kernel_options')
+#$SNIPPET('post_install_kernel_options') # this no longer works with RHEL6
 $SNIPPET('func_register_if_enabled')
 $SNIPPET('download_config_files')
 $SNIPPET('koan_environment')
