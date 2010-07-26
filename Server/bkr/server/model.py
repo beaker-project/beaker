@@ -3693,10 +3693,10 @@ class Recipe(TaskBase):
                     size = self.getText(child.childNodes)
                 if node.nodeName == 'fs':
                     fs = self.getText(child.childNodes)
-           if fs:
-               partitions.append('%s:%s:%s:%s' % (name, type, size, fs))
-           else:
-               partitions.append('%s:%s:%s' % (name, type, size))
+            if fs:
+                partitions.append('%s:%s:%s:%s' % (name, type, size, fs))
+            else:
+                partitions.append('%s:%s:%s' % (name, type, size))
         return ';'.join(partitions)
             
     def queue(self):
