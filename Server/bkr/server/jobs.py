@@ -269,6 +269,7 @@ class Jobs(RPCRoot):
             recipe.guestargs = xmlrecipe.guestargs
         recipe.host_requires = xmlrecipe.hostRequires()
         recipe.distro_requires = xmlrecipe.distroRequires()
+        recipe.partitions = xmlrecipe.partitions()
         try:
             recipe.distro = Distro.by_filter("%s" % 
                                            recipe.distro_requires)[0]

@@ -379,7 +379,9 @@ def scheduled_recipes(*args):
                 # If ks_meta is defined from recipe pass it along.
                 # add it last to allow for overriding previous settings.
                 if recipe.ks_meta:
-                    ks_meta = "%s %s" % ( ks_meta, recipe.ks_meta)
+                    ks_meta = "%s %s" % (ks_meta, recipe.ks_meta)
+                if recipe.partitionsKSMeta:
+                    ks_meta = "%s %s" % (ks_meta, recipe.partitionsKSMeta)
                 try:
                     recipe.system.action_auto_provision(recipe.distro,
                                                      ks_meta,

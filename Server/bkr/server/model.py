@@ -650,6 +650,7 @@ recipe_table = Table('recipe',metadata,
         Column('kernel_options_post', String(1024)),
         Column('role', Unicode(255)),
         Column('panic', Unicode(20)),
+        Column('_partitions',UnicodeText()),
 )
 
 machine_recipe_table = Table('machine_recipe', metadata,
@@ -1038,6 +1039,13 @@ class MappedObject(object):
         node = self.doc.createElement(element)
         node.appendChild(self.doc.createTextNode(value))
         return node
+
+    def getText(self, nodelist):
+        rc = ""
+        for node in nodelist:
+            if node.nodeType == node.TEXT_NODE:
+                rc = rc + node.data
+        return rc
 
     def __repr__(self):
         # pretty-print the attributes, so we can see what's getting autoloaded for us:
@@ -3578,6 +3586,12 @@ class Recipe(TaskBase):
             for child in hr.childNodes:
                 hostRequires.appendChild(child)
         recipe.appendChild(hostRequires)
+        prs = xml.dom/minidom.parseString(self.partitions)
+        partitions = self.doc.createElement("partitions")
+        for pr in prs.getElementsByTagName("partitions"):
+            for child in pr.childNodes:
+                partitions.appendChild(child)
+        recipe.appendChild(partitions)
         for t in self.tasks:
             recipe.appendChild(t.to_xml(clone))
         if not from_recipeset and not from_machine:
@@ -3640,6 +3654,51 @@ class Recipe(TaskBase):
 
     host_requires = property(_get_host_requires, _set_host_requires)
 
+    def _get_partitions(self):
+        """ get _partitions """
+        try:
+            prs = xml.dom.minidom.parseString(self._partitions)
+        except TypeError:
+            prs = self.doc.createElement("partitions")
+        except xml.parsers.expat.ExpatError:
+            prs = self.doc.createElement("partitions")
+        return prs.toxml()
+
+    def _set_partitions(self, value):
+        """ set _partitions """
+        self._partitions = value
+
+    partitions = property(_get_partitions, _set_partitions)
+
+    def partitionsKSMeta(self):
+        """ Parse partitions xml into ks_meta variable which cobbler will understand """
+        partitions = []
+        try:
+            prs = xml.dom.minidom.parseString(self.partitions)
+        except TypeError:
+            prs = self.doc.createElement("partitions")
+        except xml.parsers.expat.ExpatError:
+            prs = self.doc.createElement("partitions")
+        for partition in prs.getElementsByTagName("partition"):
+            fs = None
+            type = 'part'
+            name = 'testarea'
+            size = '5'
+            for node in partition.childNodes:
+                if node.nodeName == 'type':
+                    type = self.getText(child.childNodes)
+                if node.nodeName == 'name':
+                    name = self.getText(child.childNodes)
+                if node.nodeName == 'size':
+                    size = self.getText(child.childNodes)
+                if node.nodeName == 'fs':
+                    fs = self.getText(child.childNodes)
+           if fs:
+               partitions.append('%s:%s:%s:%s' % (name, type, size, fs))
+           else:
+               partitions.append('%s:%s:%s' % (name, type, size))
+        return ';'.join(partitions)
+            
     def queue(self):
         """
         Move from New -> Queued
