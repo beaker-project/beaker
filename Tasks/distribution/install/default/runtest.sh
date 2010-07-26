@@ -134,7 +134,7 @@ SysReport ()
     sysderror7=$(/bin/grep WARNING: $FILEAREA/boot.messages >> $FILEAREA/derror.log)
     sysderror8=$(/bin/grep -i "command not found" $FILEAREA/boot.messages >> $FILEAREA/derror.log)
     sysderror9=$(/bin/cat $FILEAREA/boot.messages | grep avc: | grep -v granted >> $FILEAREA/avcerror.log)
-    sysderror10=$(/bin/grep -ci "PAT not supported by CPU" $FILEAREA/boot.messages >> $FILEAREA/derror.log)
+    sysderror10=$(/bin/grep -ci "PAT not supported by CPU" $FILEAREA/boot.messages)
     if [ -e /root/install.log ]; then
 	cp /root/install.log $FILEAREA/install.log
 	sysierror=$(/bin/grep -i error: $FILEAREA/install.log >> $FILEAREA/ierror.log)
@@ -209,7 +209,7 @@ SysReport ()
 	echo "******** Potential Issues dmesg ********" >> $OUTPUTFILE
 	/bin/cat $FILEAREA/derror.log               >> $OUTPUTFILE
 	rhts_submit_log -S $RESULT_SERVER -T $TESTID -l $FILEAREA/boot.messages
-	if [ $sysderror10 -ne 0 ]; then
+	if [ "$sysderror10" -ne 0 ]; then
 	    FAILURE=TRUE
 	fi
     fi
