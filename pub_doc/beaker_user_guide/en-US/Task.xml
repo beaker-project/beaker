@@ -157,7 +157,8 @@ $ <userinput>make package</userinput>
 				<note>
 					<title>Tagging</title>
 					<para>
-						If you wish to, you can increase the version of the package with the following command: 
+					 If you wish to, and your Task is revisioned with git or CVS, you can increase the version of the package with the following command:
+
 <screen>
 $ <userinput>make tag</userinput>
 </screen>
