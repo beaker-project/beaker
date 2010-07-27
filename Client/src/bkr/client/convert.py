@@ -93,29 +93,23 @@ class Convert(object):
                 else:
                     self.handle_tasks(child)
     
-    def handle_partition(self, partition):
-        fs = None
-        type = 'part'
-        name = 'testarea'
-        size = '5'
-        for child in partition.childNodes:
+    def handle_partition(self, node):
+        partition = self.doc.createElement('partition')
+        for child in node.childNodes:
             if child.nodeName == 'type':
-                type = self.getText(child.childNodes)
+                partition.setAttribute('type', self.getText(child.childNodes))
             if child.nodeName == 'name':
-                name = self.getText(child.childNodes)
+                partition.setAttribute('name', self.getText(child.childNodes))
             if child.nodeName == 'size':
-                size = self.getText(child.childNodes)
+                partition.setAttribute('size', self.getText(child.childNodes))
             if child.nodeName == 'fs':
-                fs = self.getText(child.childNodes)
-        part_str = '%s:%s:%s' % (name,type,size)
-        if fs:
-            part_str = '%s:%s' % (part_str, fs)
-        return part_str
+                partition.setAttribute('fs', self.getText(child.childNodes))
+        return partition
 
     def handle_recipes(self, recipes):
         for recipe in recipes:
             del_nodes = []
-            partitions = []
+            partitions = self.doc.createElement('partitions')
             and_distro = self.doc.createElement('and')
             and_host = self.doc.createElement('and')
             repos = self.doc.createElement('repos')
@@ -149,7 +143,7 @@ class Convert(object):
                 if child.nodeType == child.ELEMENT_NODE and \
                    child.tagName == 'partition':
                        del_nodes.append(child)
-                       partitions.append(self.handle_partition(child))
+                       partitions.appendChild(self.handle_partition(child))
                    
                 if child.nodeType == child.ELEMENT_NODE and \
                    child.tagName == 'addrepo':
@@ -161,15 +155,11 @@ class Convert(object):
             distro.appendChild(and_distro)
             host = self.doc.createElement('hostRequires')
             host.appendChild(and_host)
-            if partitions:
-                ks_meta = ''
-                if recipe.hasAttribute('ks_meta'):
-                    ks_meta = '%s ' % recipe.getAttribute('ks_meta')
-                recipe.setAttribute('ks_meta','%spartitions=%s' % (ks_meta, ';'.join(partitions)))
         
             for child in del_nodes:
                 recipe.removeChild(child)
             recipe.appendChild(repos)
             recipe.appendChild(distro)
             recipe.appendChild(host)
+            recipe.appendChild(partitions)
     
