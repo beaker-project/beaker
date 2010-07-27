@@ -3,7 +3,7 @@
 
 Name:           beaker
 Version:        0.5.51
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -184,6 +184,9 @@ fi
 %{_sysconfdir}/init.d/%{name}-watchdog
 
 %changelog
+* Tue Jul 27 2010 Bill Peck <bpeck@redhat.com> 0.5.51-2
+-  fixed syntax error in beakerd.
+
 * Tue Jul 27 2010 Bill Peck <bpeck@redhat.com> 0.5.51-1
 - fixed bkr job-submit --convert to use new <partitions/> tag format.
   (bpeck@redhat.com)
