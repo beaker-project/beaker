@@ -271,7 +271,7 @@ def queued_recipes(*args):
                 # Check to see if user still has proper permissions to use system
                 # Remember the mapping of available systems could have happend hours or even
                 # days ago and groups or loans could have been put in place since.
-                if not System.free(user).filter(System.fqdn == system).first()
+                if not System.free(user).filter(System.fqdn == system).first():
                      log.debug("System : %s recipe: %s no longer has access. removing" % (system, 
                                                                                           recipe.id))
                      recipe.systems.remove(system)
