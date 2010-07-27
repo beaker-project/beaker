@@ -1040,13 +1040,6 @@ class MappedObject(object):
         node.appendChild(self.doc.createTextNode(value))
         return node
 
-    def getText(self, nodelist):
-        rc = ""
-        for node in nodelist:
-            if node.nodeType == node.TEXT_NODE:
-                rc = rc + node.data
-        return rc
-
     def __repr__(self):
         # pretty-print the attributes, so we can see what's getting autoloaded for us:
         attrStr = ""
@@ -1600,29 +1593,6 @@ $SNIPPET("rhts_post")
         log.debug(ids) 
         return ids
 
-    def has_access(self, user):
-        """
-        Given a user return True if that user has access to this system
-        """
-        # If a system is loaned its available exclusively to that user
-        if self.loaned != None:
-            if self.loaned == self.user:
-                return True
-            else:
-                return False
-        # If were the owner and its not loaned we have access.
-        if self.owner == user:
-            return True
-        # If its shared and not in any groups we have access.
-        # otherwise we need to be in the one of the groups for access.
-        if self.shared == True:
-            if self.groups == None:
-                return True
-            elif self.user in [group.id for group in self.groups]:
-                return True
-
-        return False
-        
     def excluded_families(self):
         """
         massage excluded_osmajor for Checkbox values
