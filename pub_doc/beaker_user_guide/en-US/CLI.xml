@@ -15,7 +15,7 @@ $ <userinput>yum install beaker-client</userinput>
 <para>
 You will need to edit Beaker's configuration file, <literal>~/.beaker_client/config</literal>. You will need to set the value -f <literal>HUB_URL</literal> to that of your Beaker server:
 	<screen>
-HUB_URL = "<replaceable>beaker_server_fully_qualified_domain_name</replaceable>"
+HUB_URL = "http://<replaceable>beaker_server_fully_qualified_domain_name</replaceable>"
 	</screen>
 </para>
 <para>
