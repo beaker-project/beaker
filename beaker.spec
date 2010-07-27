@@ -2,7 +2,7 @@
 %{!?pyver: %global pyver %(%{__python} -c "import sys ; print sys.version[:3]")}
 
 Name:           beaker
-Version:        0.5.50
+Version:        0.5.51
 Release:        1%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
@@ -184,6 +184,23 @@ fi
 %{_sysconfdir}/init.d/%{name}-watchdog
 
 %changelog
+* Tue Jul 27 2010 Bill Peck <bpeck@redhat.com> 0.5.51-1
+- fixed bkr job-submit --convert to use new <partitions/> tag format.
+  (bpeck@redhat.com)
+- bz617467 - Minor edit, added 'http://' in front of the HUB URL val as it
+  needs to be there, also            added in caveat about needed cvs or git
+  revisioned task to have 'make tag' work (rmancy@redhat.com)
+- bz601367 - lvm based guest images and most likely guest OS lvm filesystem requests 
+  not being processed properly by beaker
+- Make sure the watchdog point to this recipes system. (bpeck@redhat.com)
+  Set the user to None as the very last step. (bpeck@redhat.com)
+- Let anaconda install kernel_options_post for us. (bpeck@redhat.com)
+- Its possible we already created the repo before.  If so skip.
+  (bpeck@redhat.com)
+- Change default to package to []. (bpeck@redhat.com)
+- fixes bz617364 - System loaned to userA for RHTS is stolen by Beaker Job for
+  userB (bpeck@redhat.com)
+
 * Wed Jul 21 2010 Bill Peck <bpeck@redhat.com> 0.5.50-1
 - export task_info command to lab controller proxy. (bpeck@redhat.com)
 - Create recipe specific repos instead of one giant repo. (bpeck@redhat.com)
