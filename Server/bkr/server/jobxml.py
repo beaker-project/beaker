@@ -134,7 +134,10 @@ class XmlRecipe(ElementWrapper):
         return self.wrappedEl['hostRequires'].__repr__(True)
 
     def partitions(self, *args):
-        return self.wrappedEl['partitions'].__repr__(True)
+        if hasattr(self.wrappedEl, 'partitions'):
+            return self.wrappedEl['partitions'].__repr__(True)
+        else:
+            return None
 
     def __getattr__(self, attrname):
         if attrname == 'arch':

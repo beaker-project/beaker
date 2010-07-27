@@ -3586,7 +3586,7 @@ class Recipe(TaskBase):
             for child in hr.childNodes:
                 hostRequires.appendChild(child)
         recipe.appendChild(hostRequires)
-        prs = xml.dom/minidom.parseString(self.partitions)
+        prs = xml.dom.minidom.parseString(self.partitions)
         partitions = self.doc.createElement("partitions")
         for pr in prs.getElementsByTagName("partitions"):
             for child in pr.childNodes:
@@ -3670,7 +3670,7 @@ class Recipe(TaskBase):
 
     partitions = property(_get_partitions, _set_partitions)
 
-    def partitionsKSMeta(self):
+    def _partitionsKSMeta(self):
         """ Parse partitions xml into ks_meta variable which cobbler will understand """
         partitions = []
         try:
@@ -3680,25 +3680,17 @@ class Recipe(TaskBase):
         except xml.parsers.expat.ExpatError:
             prs = self.doc.createElement("partitions")
         for partition in prs.getElementsByTagName("partition"):
-            fs = None
-            type = 'part'
-            name = 'testarea'
-            size = '5'
-            for node in partition.childNodes:
-                if node.nodeName == 'type':
-                    type = self.getText(child.childNodes)
-                if node.nodeName == 'name':
-                    name = self.getText(child.childNodes)
-                if node.nodeName == 'size':
-                    size = self.getText(child.childNodes)
-                if node.nodeName == 'fs':
-                    fs = self.getText(child.childNodes)
+            fs = partition.getAttribute('fs')
+            name = partition.getAttribute('name')
+            type = partition.getAttribute('type') or 'part'
+            size = partition.getAttribute('size') or '5'
             if fs:
                 partitions.append('%s:%s:%s:%s' % (name, type, size, fs))
             else:
                 partitions.append('%s:%s:%s' % (name, type, size))
         return ';'.join(partitions)
-            
+    partitionsKSMeta = property(_partitionsKSMeta)
+
     def queue(self):
         """
         Move from New -> Queued

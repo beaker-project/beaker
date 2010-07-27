@@ -381,7 +381,7 @@ def scheduled_recipes(*args):
                 if recipe.ks_meta:
                     ks_meta = "%s %s" % (ks_meta, recipe.ks_meta)
                 if recipe.partitionsKSMeta:
-                    ks_meta = "%s %s" % (ks_meta, recipe.partitionsKSMeta)
+                    ks_meta = "%s partitions=%s" % (ks_meta, recipe.partitionsKSMeta)
                 try:
                     recipe.system.action_auto_provision(recipe.distro,
                                                      ks_meta,
