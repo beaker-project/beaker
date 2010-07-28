@@ -131,10 +131,10 @@ class BeakerWorkflow(BeakerCommand):
             help="Set the whiteboard for this job",
         )
         self.parser.add_option(
-            "--nowait",
+            "--wait",
             default=False,
             action="store_true",
-            help="Don't wait on job completion",
+            help="wait on job completion",
         )
         self.parser.add_option(
             "--clients",
