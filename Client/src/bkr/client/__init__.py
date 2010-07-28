@@ -323,9 +323,8 @@ class BeakerRecipeSet(BeakerBase):
             #FIXME raise error here.
             sys.stderr.write("invalid object\n")
 
-class BeakerRecipe(BeakerBase):
+class BeakerRecipeBase(BeakerBase):
     def __init__(self, *args, **kwargs):
-        self.node = self.doc.createElement('recipe')
         self.node.setAttribute('whiteboard','')
         self.andDistroRequires = self.doc.createElement('and')
         self.andHostRequires = self.doc.createElement('and')
@@ -344,7 +343,7 @@ class BeakerRecipe(BeakerBase):
         family = kwargs.get("family", None)
         variant = kwargs.get("variant", None)
         method = kwargs.get("method", None)
-        kernel_options = kwargs.get("kernel_options", None)
+        kernel_options = kwargs.get("kernel_options", '')
         tags = kwargs.get("tag", [])
         systype = kwargs.get("systype", None)
         machine = kwargs.get("machine", None)
@@ -371,8 +370,7 @@ class BeakerRecipe(BeakerBase):
             distroMethod.setAttribute('value', method)
             self.addDistroRequires(distroMethod)
         if kernel_options:
-            self.node.setAttribute('kernel_options',
-                                   kwargs.get('kernel_options', ''))
+            self.kernel_options = kernel_options
         for i, repo in enumerate(repos):
             myrepo = self.doc.createElement('repo')
             myrepo.setAttribute('name', 'myrepo_%s' % i)
@@ -437,4 +435,58 @@ class BeakerRecipe(BeakerBase):
         recipeKickstart = self.doc.createElement('kickstart')
         recipeKickstart.appendChild(self.doc.createCDATASection(kickstart))
         self.node.appendChild(recipeKickstart)
+
+    def set_ks_meta(self, value):
+        return self.node.setAttribute('ks_meta', value)
+
+    def get_ks_meta(self):
+        return self.node.getAttribute('ks_meta')
+
+    ks_meta = property(get_ks_meta, set_ks_meta)
+
+    def set_kernel_options(self, value):
+        return self.node.setAttribute('kernel_options', value)
+
+    def get_kernel_options(self):
+        return self.node.getAttribute('kernel_options')
+
+    kernel_options = property(get_kernel_options, set_kernel_options)
+
+    def set_kernel_options_post(self, value):
+        return self.node.setAttribute('kernel_options_post', value)
+
+    def get_kernel_options_post(self):
+        return self.node.getAttribute('kernel_options_post')
+
+    kernel_options_post = property(get_kernel_options_post, set_kernel_options_post)
+
+
+class BeakerRecipe(BeakerRecipeBase):
+    def __init__(self, *args, **kwargs):
+        self.node = self.doc.createElement('recipe')
+        super(BeakerRecipe,self).__init__(*args, **kwargs)
+
+    def addGuestRecipe(self, guestrecipe):
+        """ properly add a guest recipe to this recipe """
+        if isinstance(guestrecipe, BeakerGuestRecipe):
+            self.node.appendChild(guestrecipe.node)
+        elif isinstance(guestrecipe, xml.dom.minidom.Element) and \
+             guestrecipe.tagName == 'guestrecipe':
+            self.node.appendChild(guestrecipe)
+        else:
+            #FIXME raise error here.
+            sys.stderr.write("invalid object\n")
+
+class BeakerGuestRecipe(BeakerRecipeBase):
+    def __init__(self, *args, **kwargs):
+        self.node = self.doc.createElement('guestrecipe')
+        super(BeakerGuestRecipe,self).__init__(*args, **kwargs)
+
+    def set_guestargs(self, value):
+        return self.node.setAttribute('guestargs', value)
+
+    def get_guestargs(self):
+        return self.node.getAttribute('guestargs')
+
+    guestargs = property(get_guestargs, set_guestargs)
 
