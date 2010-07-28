@@ -276,7 +276,8 @@
 &lt;/job&gt;
 		</screen>
 		All that's left to populate our XML with, are the <literal>task</literal> elements. The two attributes we need to specify
-		are the <literal>name</literal> and the <literal>role</literal>. Details of how to find which Task's are available, see <xref linkend="sect-beaker_user_guide-Components-Tasks-Task_Searching" />. 
+		are the <literal>name</literal> and the <literal>role</literal>. Details of how to find which Task's are available, see <xref linkend="sect-beaker_user_guide-Components-Tasks-Task_Searching" />. Also note that we've added in a <literal>param</literal> as a descendant of <literal>task</literal>. The <literal>value</literal> of this will be
+		assigned to a new environment variable specified by <literal>name</literal>. 
 		<screen>
 &lt;job&gt;
   &lt;whiteboard&gt;
@@ -306,6 +307,8 @@
         &lt;/distroRequires&gt;
 
 	&lt;task name="/distribution/install" role="STANDALONE"&gt;
+	  &lt;params&gt;
+		&lt;param name="My_ENV_VAR" value="foo"/&gt;
 	  &lt;params/&gt;
 	&lt;/task&gt;
 
