@@ -16,6 +16,8 @@ if __name__ == '__main__':
     for distro in distros:
         if not os.path.exists(distro['kernel']):
             rdistros.append(distro['name'])
+        elif len(sys.argv) > 1 and distro['name'].find(sys.argv[1]) != -1:
+            rdistros.append(distro['name'])
     # if all distros are expired then something is probably wrong.
     if len(distros) != len(rdistros):
         for distro in rdistros:
