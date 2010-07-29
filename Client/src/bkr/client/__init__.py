@@ -137,6 +137,13 @@ class BeakerWorkflow(BeakerCommand):
             help="wait on job completion",
         )
         self.parser.add_option(
+            "--nowait",
+            default=False,
+            action="store_false",
+            dest="wait",
+            help="Do not wait on job completion [Default]",
+        )
+        self.parser.add_option(
             "--clients",
             default=None,
             type=int,
