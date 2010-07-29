@@ -467,6 +467,14 @@ class BeakerRecipeBase(BeakerBase):
 
     kernel_options_post = property(get_kernel_options_post, set_kernel_options_post)
 
+    def set_whiteboard(self, value):
+        return self.node.setAttribute('whiteboard', value)
+
+    def get_whiteboard(self):
+        return self.node.getAttribute('whiteboard')
+
+    whiteboard = property(get_whiteboard, set_whiteboard)
+
 
 class BeakerRecipe(BeakerRecipeBase):
     def __init__(self, *args, **kwargs):
