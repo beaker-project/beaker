@@ -1,4 +1,17 @@
 <div xmlns:py="http://purl.org/kid/ns#">
+ &nbsp;&nbsp;<b>System</b>
+ <table class="list">
+     <tr class="list">   
+         <th class="list">
+             <b>Memory</b>
+         </th>
+     </tr>
+    <tr class="list" bgcolor="#FFFFFF">
+      <td py:if="system.memory" class="list">
+          ${system.memory} MB
+      </td>
+    </tr>
+ </table>
 <span py:if="system.cpu">
  &nbsp;&nbsp;<b>Cpu</b>
  <table class="list">
