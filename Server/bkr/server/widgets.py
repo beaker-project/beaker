@@ -1232,10 +1232,12 @@ class RecipeSetWidget(CompoundWidget):
     javascript = []
     css = []
     template = "bkr.server.templates.recipe_set"
-    params = ['recipeset','show_priority']
-    member_widgets = ['priority_widget']
+    params = ['recipeset','show_priority','action','priorities_list']
+    member_widgets = ['priority_widget','ack_panel_widget']
 
-    def __init__(self,*args,**kw):
+    def __init__(self, priorities_list=None, *args, **kw):
+        self.priorities_list = priorities_list
+        self.ack_panel_widget = AckPanel()
         self.priority_widget = PriorityWidget()
         if 'recipeset' in kw:
             self.recipeset = kw['recipeset']

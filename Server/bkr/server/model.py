@@ -3046,7 +3046,8 @@ class TaskBase(MappedObject):
         div.tail = "%s%%" % percentCompleted
         return div
     progress_bar = property(progress_bar)
-
+    
+    @property
     def action_link(self):
         """
         Return action links depending on status
@@ -3059,7 +3060,6 @@ class TaskBase(MappedObject):
             div.append(make_link(url = self.cancel_link(),
                             text = "Cancel"))
         return div
-    action_link = property(action_link)
 
 
 class Job(TaskBase):
@@ -3281,14 +3281,25 @@ class RecipeSet(TaskBase):
             return True
         return False
 
-    def to_xml(self, clone=False):
+    def to_xml(self, clone=False, from_job=True):
         recipeSet = self.doc.createElement("recipeSet")
+        return_node = recipeSet
         if not clone:
             recipeSet.setAttribute("id", "%s" % self.id)
+
         for r in self.recipes:
             if not isinstance(r,GuestRecipe):
                 recipeSet.appendChild(r.to_xml(clone, from_recipeset=True))
-        return recipeSet
+
+        if not from_job:
+            job = self.doc.createElement("job") 
+            if not clone:
+                job.setAttribute("owner", "%s" % self.job.owner.email_address)
+            job.appendChild(self.node("whiteboard", self.job.whiteboard or ''))
+            job.appendChild(recipeSet)
+            return_node = job
+            
+        return return_node
 
     @classmethod
     def allowed_priorities_initial(cls,user):
@@ -3446,6 +3457,21 @@ class RecipeSet(TaskBase):
             return TaskPriority.query().all()
         elif user == self.job.owner: 
             return TaskPriority.query.filter(TaskPriority.id <= self.priority.id)
+
+    @property
+    def action_link(self):
+        """
+        Return action links depending on status
+        """
+        div = Element('div')
+        div.append(make_link(url = self.clone_link(),
+                        text = "Clone"))
+        return div
+
+    def clone_link(self):
+        """ return link to clone this recipe
+        """
+        return "/jobs/clone?recipeset_id=%s" % self.id
 
 
 class Recipe(TaskBase):
@@ -3910,6 +3936,21 @@ class Recipe(TaskBase):
         A class method that can be used to search for Jobs that belong to a user
         """
         return cls.query.join(['recipeset','job','owner']).filter(Job.owner==owner)
+
+    @property
+    def action_link(self):
+        """
+        Return action links depending on status
+        """
+        div = Element('div')
+
+        if not self.is_finished(): 
+            div.append(make_link(url = self.cancel_link(),
+                            text = "Cancel"))
+            return div
+        else:
+            return None
+
 
 class RecipeRoleListAdapter(object):
     def __init__(self, parent, role):

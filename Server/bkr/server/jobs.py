@@ -116,7 +116,7 @@ class Jobs(RPCRoot):
 
     @identity.require(identity.not_anonymous())
     @expose(template="bkr.server.templates.form-post")
-    def clone(self, job_id=None, recipe_id=None, textxml=None, filexml=None, **kw):
+    def clone(self, job_id=None, recipe_id=None, recipeset_id=None, textxml=None, filexml=None, **kw):
         """
         Review cloned xml before submitting it.
         """
@@ -128,14 +128,13 @@ class Jobs(RPCRoot):
                 flash(_(u"Invalid job id %s" % job_id))
                 redirect(".")
             textxml = job.to_xml(clone=True).toprettyxml()
-        elif recipe_id:
-            # Clone from Recipe ID
+        elif recipeset_id:
             try:
-                recipe = Recipe.by_id(recipe_id)
+                recipeset = RecipeSet.by_id(recipeset_id)
             except InvalidRequestError:
-                flash(_(u"Invalid recipe id %s" % recipe_id))
+                flash(_(u"Invalid recipeset id %s" % recipeset_id))
                 redirect(".")
-            textxml = recipe.to_xml(clone=True).toprettyxml()
+            textxml = recipeset.to_xml(clone=True,from_job=False).toprettyxml()
         elif isinstance(filexml, cgi.FieldStorage):
             # Clone from file
             textxml = filexml.file.read()
@@ -484,8 +483,7 @@ class Jobs(RPCRoot):
    
         return dict(title   = 'Job',
                     user                 = identity.current.user,   #I think there is a TG var to use in the template so we dont need to pass this ?
-                    priorities           = TaskPriority.query().all(),
-                    ack_panel            = AckPanel(),
+                    priorities           = TaskPriority.query().all(), 
                     priority_widget      = self.priority_widget, 
                     recipeset_widget     = self.recipeset_widget,
                     job_history          = recipe_set_data,
