@@ -4634,6 +4634,32 @@ class Task(MappedObject):
             query=cls.query
         return query.join('runfor').filter(TaskPackage.package==package)
 
+    def to_dict(self):
+        """ return a dict of this object """
+        return dict(id = self.id,
+                    name = self.name,
+                    rpm = self.rpm,
+                    oldrpm = self.oldrpm,
+                    path = self.path,
+                    description = self.description,
+                    repo = self.repo,
+                    max_time = self.avg_time,
+                    destructive = self.destructive,
+                    nda = self.nda,
+                    creation_date = '%s' % self.creation_date,
+                    update_date = '%s' % self.update_date,
+                    uploader = '%s' % self.owner,
+                    version = self.version,
+                    license = self.license,
+                    valid = self.valid,
+                    types = ['%s' % type.type for type in self.types],
+                    excluded_osmajor = ['%s' % osmajor.osmajor for osmajor in self.excluded_osmajor],
+                    excluded_arch = ['%s' % arch.arch for arch in self.excluded_arch],
+                    runfor = ['%s' % package for package in self.runfor],
+                    required = ['%s' % package for package in self.required],
+                    bugzillas = ['%s' % bug.bugzilla_id for bug in self.bugzillas],
+                   )
+
     def elapsed_time(self, suffixes=[' year',' week',' day',' hour',' minute',' second'], add_s=True, separator=', '):
         """
         Takes an amount of seconds and turns it into a human-readable amount of 
