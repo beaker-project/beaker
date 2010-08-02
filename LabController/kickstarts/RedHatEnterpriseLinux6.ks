@@ -86,3 +86,7 @@ $SNIPPET("system_pre")
 $SNIPPET("rhts_post")
 $SNIPPET("RedHatEnterpriseLinux6_post")
 $SNIPPET("system_post")
+
+#if $getVar('ks_appends', '') != '':
+$SNIPPET("ks_appends")
+#end if

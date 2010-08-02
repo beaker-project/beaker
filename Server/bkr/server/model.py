@@ -715,6 +715,13 @@ recipe_repo_table =Table('recipe_repo',metadata,
         Column('url',Unicode(1024))
 )
 
+recipe_ksappend_table = Table('recipe_ksappend', metadata,
+        Column('id', Integer, primary_key=True),
+        Column('recipe_id', Integer,
+                ForeignKey('recipe.id'), nullable=False),
+        Column('ks_append',UnicodeText()),
+)
+
 recipe_task_table =Table('recipe_task',metadata,
         Column('id', Integer, primary_key=True),
         Column('recipe_id',Integer,
@@ -1319,7 +1326,8 @@ class System(SystemObject):
                           kickstart=None,
                           ks_meta=None,
                           kernel_options=None,
-                          kernel_options_post=None):
+                          kernel_options_post=None,
+                          ks_appends=None):
                 """
                 Provision the System
                 make xmlrpc call to lab controller
@@ -1336,6 +1344,20 @@ class System(SystemObject):
                     raise BX(_("%s profile not found on %s" % (profile, self.system.lab_controller.fqdn)))
                 if not profile_id:
                     raise BX(_("%s profile not found on %s" % (profile, self.system.lab_controller.fqdn)))
+                if ks_appends:
+                    ks_appends_text = '\n'.join([ks.ks_append for ks in ks_appends]).replace('$','\$')
+                    ks_file = '/var/lib/cobbler/snippets/per_system/ks_appends/%s' % self.system.fqdn
+                    if self.remote.read_or_write_snippet(ks_file,
+                                                         False,
+                                                         ks_appends_text,
+                                                         self.token):
+                        if ks_meta:
+                            ks_meta = "%s ks_appends=True"
+                        else:
+                            ks_meta = "ks_appends=True"
+                    else:
+                        raise BX(_("Failed to save ks_appends"))
+
                 self.remote.modify_system(system_id, 
                                           'ksmeta',
                                            ks_meta,
@@ -1923,14 +1945,16 @@ $SNIPPET("rhts_post")
                          ks_meta=None,
                          kernel_options=None,
                          kernel_options_post=None,
-                         kickstart=None):
+                         kickstart=None,
+                         ks_appends=None):
         if not self.remote:
             return False
         self.remote.provision(distro=distro, 
                               ks_meta=ks_meta,
                               kernel_options=kernel_options,
                               kernel_options_post=kernel_options_post,
-                              kickstart=kickstart)
+                              kickstart=kickstart,
+                              ks_appends=None)
 
     def action_auto_provision(self, 
                              distro=None,
@@ -1938,6 +1962,7 @@ $SNIPPET("rhts_post")
                              kernel_options=None,
                              kernel_options_post=None,
                              kickstart=None,
+                             ks_appends=None,
                              wait=False):
         if not self.remote:
             return False
@@ -1945,7 +1970,10 @@ $SNIPPET("rhts_post")
         results = self.install_options(distro, ks_meta,
                                                kernel_options,
                                                kernel_options_post)
-        self.remote.provision(distro, kickstart, **results)
+        self.remote.provision(distro=distro,
+                              kickstart=kickstart,
+                              ks_appends=ks_appends,
+                              **results)
         if self.power:
             self.remote.power(action="reboot", wait=wait)
 
@@ -3537,6 +3565,12 @@ class Recipe(TaskBase):
             for package in self.custom_packages:
                 packages.appendChild(package.to_xml())
         recipe.appendChild(packages)
+
+        ks_appends = self.doc.createElement("ks_appends")
+        if self.ks_appends:
+            for ks_append in self.ks_appends:
+                ks_appends.appendChild(ks_append.to_xml())
+        recipe.appendChild(ks_appends)
             
         if self.roles and not clone:
             roles = self.doc.createElement("roles")
@@ -4513,6 +4547,17 @@ class RecipeRepo(MappedObject):
         return repo
 
 
+class RecipeKSAppend(MappedObject):
+    """
+    Kickstart appends
+    """
+    def to_xml(self):
+        ks_append = self.doc.createElement("ks_append")
+        text = self.doc.createCDATASection('%s' % self.ks_append)
+        ks_append.appendChild(text)
+        return ks_append
+
+
 class RecipeTaskComment(MappedObject):
     """
     User comments about the task execution.
@@ -5030,6 +5075,7 @@ mapper(Recipe, recipe_table,
                       '_roles':relation(RecipeRole),
                       'custom_packages':relation(TaskPackage,
                                         secondary=task_packages_custom_map),
+                      'ks_appends':relation(RecipeKSAppend),
                      }
       )
 mapper(GuestRecipe, guest_recipe_table, inherits=Recipe,
@@ -5042,6 +5088,7 @@ mapper(MachineRecipe, machine_recipe_table, inherits=Recipe,
 mapper(RecipeTag, recipe_tag_table)
 mapper(RecipeRpm, recipe_rpm_table)
 mapper(RecipeRepo, recipe_repo_table)
+mapper(RecipeKSAppend, recipe_ksappend_table)
 
 mapper(RecipeTask, recipe_task_table,
         properties = {'results':relation(RecipeTaskResult, 

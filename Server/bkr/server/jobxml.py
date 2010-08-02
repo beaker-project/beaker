@@ -122,6 +122,11 @@ class XmlRecipe(ElementWrapper):
         for installpackage in self.wrappedEl['installPackage':]:
             yield installpackage
 
+    def iter_ksappends(self):
+        for ks_appends in self.wrappedEl['ks_appends':]:
+            for ks_append in ks_appends['ks_append':]:
+                yield ''.join([t for t in ks_append])
+
     def iter_repos(self):
         for repos in self.wrappedEl['repos':]:
             for repo in repos['repo':]:

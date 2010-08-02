@@ -65,3 +65,7 @@ PATH=/usr/bin:$PATH
 $SNIPPET("rhts_post")
 $SNIPPET("RedHatEnterpriseLinux3_post")
 $SNIPPET("system_post")
+
+#if $getVar('ks_appends', '') != '':
+$SNIPPET("ks_appends")
+#end if

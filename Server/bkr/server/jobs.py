@@ -289,6 +289,8 @@ class Jobs(RPCRoot):
             recipe.custom_packages.append(TaskPackage.lazy_create(package='%s' % installPackage))
         for xmlrepo in xmlrecipe.iter_repos():
             recipe.repos.append(RecipeRepo(name=xmlrepo.name, url=xmlrepo.url))
+        for xmlksappend in xmlrecipe.iter_ksappends():
+            recipe.ks_appends.append(RecipeKSAppend(ks_append=xmlksappend))
         for xmltask in xmlrecipe.iter_tasks():
             recipetask = RecipeTask()
             try:
