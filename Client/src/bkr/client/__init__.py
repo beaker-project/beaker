@@ -417,11 +417,33 @@ class BeakerRecipeBase(BeakerBase):
     def addRepo(self, node):
         self.repos.appendChild(node)
 
-    def addHostRequires(self, node):
-        self.andHostRequires.appendChild(node)
+    def addHostRequires(self, nodes):
+        """ Accepts either xml, dom.Element or a list of dom.Elements """
+        if isinstance(nodes, str):
+            parse = xml.dom.minidom.parseString(nodes.strip())
+            nodes = []
+            for node in parse.getElementsByTagName("hostRequires"):
+                nodes.extend(node.childNodes)
+        elif isinstance(nodes, xml.dom.minidom.Element):
+            nodes = [nodes]
+        if isinstance(nodes, list):
+            for node in nodes:
+                if isinstance(node, xml.dom.minidom.Element):
+                    self.andHostRequires.appendChild(node)
 
-    def addDistroRequires(self, node):
-        self.andDistroRequires.appendChild(node)
+    def addDistroRequires(self, nodes):
+        """ Accepts either xml, dom.Element or a list of dom.Elements """
+        if isinstance(nodes, str):
+            parse = xml.dom.minidom.parseString(nodes.strip())
+            nodes = []
+            for node in parse.getElementsByTagName("distroRequires"):
+                nodes.extend(node.childNodes)
+        elif isinstance(nodes, xml.dom.minidom.Element):
+            nodes = [nodes]
+        if isinstance(nodes, list):
+            for node in nodes:
+                if isinstance(node, xml.dom.minidom.Element):
+                    self.andDistroRequires.appendChild(node)
 
     def addTask(self, task, role='STANDALONE', paramNodes=[], taskParams=[]):
         recipeTask = self.doc.createElement('task')
