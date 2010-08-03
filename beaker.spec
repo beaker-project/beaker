@@ -2,8 +2,8 @@
 %{!?pyver: %global pyver %(%{__python} -c "import sys ; print sys.version[:3]")}
 
 Name:           beaker
-Version:        0.5.51
-Release:        2%{?dist}
+Version:        0.5.52
+Release:        1%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -184,6 +184,35 @@ fi
 %{_sysconfdir}/init.d/%{name}-watchdog
 
 %changelog
+* Tue Aug 03 2010 Bill Peck <bpeck@redhat.com> 0.5.52-1
+- remove uneeded schema upgrades. (bpeck@redhat.com)
+- found bug with ks_appends and ks_meta during testing. (bpeck@redhat.com)
+- bz616491 - All users have access to power cycle all machines. Added
+  confirmation screen for non users of machines (rmancy@redhat.com)
+- bz609202 - new bkr command displaying task details 
+- bz607937 - new XML-RPC to get metadata (bpeck@redhat.com)
+- addHostRequires and addDistroRequires will now take <xml> from a string.  You
+  can still pass in an  xml node too. (bpeck@redhat.com)
+- bz595642 - RecipeSets can now be cloned instead of Recipes. Also using
+  RecipeSetWidget now (rmancy@redhat.com)
+- bz610259 - add the ability to provide %post...%end to kickstartd from job xml
+  (bpeck@redhat.com)
+- add whiteboard handlers (bpeck@redhat.com)
+- Add missing #slurp to bootloader line. (bpeck@redhat.com)
+- bkr-client: added watchdog-show (mcsontos@redhat.com)
+- bz612710 - Makes systems available to members of groups that are on the ACL
+  for systems. i.e in System->Available, and in Scheduler->Reserve.
+  Also consolidated some of the import statements (rmancy@redhat.com)
+- update to expire_distros to allow admin to delete distros from command line.
+  (bpeck@redhat.com)
+- fix for bz617664 -  Manual provisions and automated installs should provide a
+  default set of packages (bpeck@redhat.com)
+- change default options to not wait.  taskwatcher now uses 30 seconds between
+  polls. (bpeck@redhat.com)
+- Added job-clone feature. (bpeck@redhat.com)
+- bz603719 - Added some text which explains how to add test params into the Job
+  XML workflow (rmancy@redhat.com)
+
 * Tue Jul 27 2010 Bill Peck <bpeck@redhat.com> 0.5.51-2
 -  fixed syntax error in beakerd.
 
