@@ -20,7 +20,7 @@ def display_tasklist_status(task_list):
     print "--> " + " ".join(( "%s: %s" % (key, state_dict[key]) for key in sorted(state_dict) )) + " [total: %s]" % sum(state_dict.values())
 
 
-def watch_tasks(hub, task_id_list, indentation_level=0, sleep_time=5, task_url=None):
+def watch_tasks(hub, task_id_list, indentation_level=0, sleep_time=30, task_url=None):
     """Watch the task statuses until they finish."""
     if not task_id_list:
         return

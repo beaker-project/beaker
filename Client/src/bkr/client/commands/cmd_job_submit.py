@@ -32,10 +32,10 @@ class Job_Submit(BeakerCommand):
             help="convert from legacy rhts xml to beaker xml",
         )
         self.parser.add_option(
-            "--nowait",
+            "--wait",
             default=False,
             action="store_true",
-            help="Don't wait on job completion",
+            help="wait on job completion",
         )
 
 
@@ -46,7 +46,7 @@ class Job_Submit(BeakerCommand):
         convert  = kwargs.pop("convert", False)
         debug   = kwargs.pop("debug", False)
         dryrun  = kwargs.pop("dryrun", False)
-        nowait  = kwargs.pop("nowait", False)
+        wait  = kwargs.pop("wait", False)
 
         jobs = args
 
@@ -70,7 +70,7 @@ class Job_Submit(BeakerCommand):
                     print ex
         if not dryrun:
             print "Submitted: %s" % submitted_jobs
-            if not nowait:
+            if wait:
                 TaskWatcher.watch_tasks(self.hub, submitted_jobs)
             if failed:
                 sys.exit(1)

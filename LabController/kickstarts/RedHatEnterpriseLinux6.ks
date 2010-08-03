@@ -73,12 +73,7 @@ $SNIPPET("rhts_partitions")
 $SNIPPET("RedHatEnterpriseLinux6")
 $SNIPPET("system")
 
-%packages --ignoremissing #slurp
-#if $getVar('packages', '') == '':
---default
-#else
-
-#end if
+%packages --ignoremissing --default
 $SNIPPET("rhts_packages")
 
 #end if
@@ -91,3 +86,7 @@ $SNIPPET("system_pre")
 $SNIPPET("rhts_post")
 $SNIPPET("RedHatEnterpriseLinux6_post")
 $SNIPPET("system_post")
+
+#if $getVar('ks_appends', '') != '':
+$SNIPPET("ks_appends")
+#end if

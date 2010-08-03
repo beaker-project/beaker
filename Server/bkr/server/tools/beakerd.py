@@ -388,6 +388,7 @@ def scheduled_recipes(*args):
                                                      recipe.kernel_options,
                                                      recipe.kernel_options_post,
                                                      recipe.kickstart,
+                                                     recipe.ks_appends,
                                                      wait=True)
                     recipe.system.activity.append(
                          SystemActivity(recipe.recipeset.job.owner, 

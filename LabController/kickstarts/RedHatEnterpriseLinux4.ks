@@ -2,7 +2,7 @@ url --url=$tree
 #if $getVar('system_name', '') != '' and $getVar('manual', 'False') == 'False'
 authconfig  --enableshadow  --enablemd5
 # System bootloader configuration
-bootloader --location=mbr
+bootloader --location=mbr #slurp
 #if $getVar('kernel_options_post','') != ''
     --append="$kernel_options_post"
 #end if
@@ -90,3 +90,7 @@ $SNIPPET("system_pre")
 $SNIPPET("rhts_post")
 $SNIPPET("RedHatEnterpriseLinux4_post")
 $SNIPPET("system_post")
+
+#if $getVar('ks_appends', '') != '':
+$SNIPPET("ks_appends")
+#end if

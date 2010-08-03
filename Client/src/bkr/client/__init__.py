@@ -131,10 +131,17 @@ class BeakerWorkflow(BeakerCommand):
             help="Set the whiteboard for this job",
         )
         self.parser.add_option(
-            "--nowait",
+            "--wait",
             default=False,
             action="store_true",
-            help="Don't wait on job completion",
+            help="wait on job completion",
+        )
+        self.parser.add_option(
+            "--nowait",
+            default=False,
+            action="store_false",
+            dest="wait",
+            help="Do not wait on job completion [Default]",
         )
         self.parser.add_option(
             "--clients",
@@ -323,9 +330,8 @@ class BeakerRecipeSet(BeakerBase):
             #FIXME raise error here.
             sys.stderr.write("invalid object\n")
 
-class BeakerRecipe(BeakerBase):
+class BeakerRecipeBase(BeakerBase):
     def __init__(self, *args, **kwargs):
-        self.node = self.doc.createElement('recipe')
         self.node.setAttribute('whiteboard','')
         self.andDistroRequires = self.doc.createElement('and')
         self.andHostRequires = self.doc.createElement('and')
@@ -344,7 +350,7 @@ class BeakerRecipe(BeakerBase):
         family = kwargs.get("family", None)
         variant = kwargs.get("variant", None)
         method = kwargs.get("method", None)
-        kernel_options = kwargs.get("kernel_options", None)
+        kernel_options = kwargs.get("kernel_options", '')
         tags = kwargs.get("tag", [])
         systype = kwargs.get("systype", None)
         machine = kwargs.get("machine", None)
@@ -371,8 +377,7 @@ class BeakerRecipe(BeakerBase):
             distroMethod.setAttribute('value', method)
             self.addDistroRequires(distroMethod)
         if kernel_options:
-            self.node.setAttribute('kernel_options',
-                                   kwargs.get('kernel_options', ''))
+            self.kernel_options = kernel_options
         for i, repo in enumerate(repos):
             myrepo = self.doc.createElement('repo')
             myrepo.setAttribute('name', 'myrepo_%s' % i)
@@ -412,11 +417,33 @@ class BeakerRecipe(BeakerBase):
     def addRepo(self, node):
         self.repos.appendChild(node)
 
-    def addHostRequires(self, node):
-        self.andHostRequires.appendChild(node)
+    def addHostRequires(self, nodes):
+        """ Accepts either xml, dom.Element or a list of dom.Elements """
+        if isinstance(nodes, str):
+            parse = xml.dom.minidom.parseString(nodes.strip())
+            nodes = []
+            for node in parse.getElementsByTagName("hostRequires"):
+                nodes.extend(node.childNodes)
+        elif isinstance(nodes, xml.dom.minidom.Element):
+            nodes = [nodes]
+        if isinstance(nodes, list):
+            for node in nodes:
+                if isinstance(node, xml.dom.minidom.Element):
+                    self.andHostRequires.appendChild(node)
 
-    def addDistroRequires(self, node):
-        self.andDistroRequires.appendChild(node)
+    def addDistroRequires(self, nodes):
+        """ Accepts either xml, dom.Element or a list of dom.Elements """
+        if isinstance(nodes, str):
+            parse = xml.dom.minidom.parseString(nodes.strip())
+            nodes = []
+            for node in parse.getElementsByTagName("distroRequires"):
+                nodes.extend(node.childNodes)
+        elif isinstance(nodes, xml.dom.minidom.Element):
+            nodes = [nodes]
+        if isinstance(nodes, list):
+            for node in nodes:
+                if isinstance(node, xml.dom.minidom.Element):
+                    self.andDistroRequires.appendChild(node)
 
     def addTask(self, task, role='STANDALONE', paramNodes=[], taskParams=[]):
         recipeTask = self.doc.createElement('task')
@@ -437,4 +464,66 @@ class BeakerRecipe(BeakerBase):
         recipeKickstart = self.doc.createElement('kickstart')
         recipeKickstart.appendChild(self.doc.createCDATASection(kickstart))
         self.node.appendChild(recipeKickstart)
+
+    def set_ks_meta(self, value):
+        return self.node.setAttribute('ks_meta', value)
+
+    def get_ks_meta(self):
+        return self.node.getAttribute('ks_meta')
+
+    ks_meta = property(get_ks_meta, set_ks_meta)
+
+    def set_kernel_options(self, value):
+        return self.node.setAttribute('kernel_options', value)
+
+    def get_kernel_options(self):
+        return self.node.getAttribute('kernel_options')
+
+    kernel_options = property(get_kernel_options, set_kernel_options)
+
+    def set_kernel_options_post(self, value):
+        return self.node.setAttribute('kernel_options_post', value)
+
+    def get_kernel_options_post(self):
+        return self.node.getAttribute('kernel_options_post')
+
+    kernel_options_post = property(get_kernel_options_post, set_kernel_options_post)
+
+    def set_whiteboard(self, value):
+        return self.node.setAttribute('whiteboard', value)
+
+    def get_whiteboard(self):
+        return self.node.getAttribute('whiteboard')
+
+    whiteboard = property(get_whiteboard, set_whiteboard)
+
+
+class BeakerRecipe(BeakerRecipeBase):
+    def __init__(self, *args, **kwargs):
+        self.node = self.doc.createElement('recipe')
+        super(BeakerRecipe,self).__init__(*args, **kwargs)
+
+    def addGuestRecipe(self, guestrecipe):
+        """ properly add a guest recipe to this recipe """
+        if isinstance(guestrecipe, BeakerGuestRecipe):
+            self.node.appendChild(guestrecipe.node)
+        elif isinstance(guestrecipe, xml.dom.minidom.Element) and \
+             guestrecipe.tagName == 'guestrecipe':
+            self.node.appendChild(guestrecipe)
+        else:
+            #FIXME raise error here.
+            sys.stderr.write("invalid object\n")
+
+class BeakerGuestRecipe(BeakerRecipeBase):
+    def __init__(self, *args, **kwargs):
+        self.node = self.doc.createElement('guestrecipe')
+        super(BeakerGuestRecipe,self).__init__(*args, **kwargs)
+
+    def set_guestargs(self, value):
+        return self.node.setAttribute('guestargs', value)
+
+    def get_guestargs(self):
+        return self.node.getAttribute('guestargs')
+
+    guestargs = property(get_guestargs, set_guestargs)
 

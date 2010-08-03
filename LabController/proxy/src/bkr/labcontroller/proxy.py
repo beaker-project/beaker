@@ -157,6 +157,11 @@ class ProxyHelper(object):
         self.logger.info("extend_watchdog %s %s", task_id, kill_time)
         return self.hub.recipes.tasks.extend(task_id, kill_time)
 
+    def task_to_dict(self, task_name):
+        """ returns metadata about task_name from the TaskLibrary 
+        """
+        return self.hub.tasks.to_dict(task_name)
+
 
 class WatchFile(object):
     """

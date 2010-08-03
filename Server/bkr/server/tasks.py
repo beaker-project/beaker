@@ -339,6 +339,11 @@ class Tasks(RPCRoot):
         task = task.lower()
         return dict(tasks=[(task.name) for task in Task.query().filter(Task.name.like('%s%%' % task))])
 
+    @cherrypy.expose
+    def to_dict(self, name):
+        """ Return the metadata about task """
+        return Task.by_name(name).to_dict()
+
     def read_taskinfo(self, rpm_file):
         taskinfo = {}
         taskinfo['hdr'] = self.get_rpm_info(rpm_file)

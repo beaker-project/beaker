@@ -25,7 +25,7 @@ class Workflow_Simple(BeakerWorkflow):
 
         debug  = kwargs.get("debug", False)
         dryrun = kwargs.get("dryrun", False)
-        nowait = kwargs.get("nowait", False)
+        wait = kwargs.get("wait", False)
 	family = kwargs.get("family", None)
 	distro = kwargs.get("distro", None)
 	arches = kwargs.get("arch", [])
@@ -98,7 +98,7 @@ class Workflow_Simple(BeakerWorkflow):
                 print ex
         if not dryrun:
             print "Submitted: %s" % submitted_jobs
-            if not nowait:
+            if wait:
                 TaskWatcher.watch_tasks(self.hub, submitted_jobs)
             if failed:
                 sys.exit(1)
