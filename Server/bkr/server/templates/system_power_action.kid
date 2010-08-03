@@ -3,11 +3,19 @@
 <!--
 function confirmSubmit(action)
 {
-var agree=confirm("Are you sure you wish to " + action + "?");
-if (agree)
-	return true ;
-else
-	return false ;
+    var agree=confirm("Are you sure you wish to " + action + "?");
+    if (agree) {
+
+        if (${not is_user and 1 or 0}) { //1 if we are not the user, otherwise 0
+             
+            var agree_again=confirm("You are NOT the user of this machine, are you SURE you wish to " + action + "?");
+            if (!agree_again)
+                return false
+        }
+	    return true ;
+    } else {
+	    return false ;
+    }
 }
 // -->
  </script>

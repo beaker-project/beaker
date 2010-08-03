@@ -44,7 +44,7 @@
       System must be associated to a lab controller to edit power.
      </span>
     </fieldset>
-    <fieldset py:if="is_user">
+    <fieldset>
      <legend>Power Action</legend>
       ${widgets['power_action'].display(method='get', action=widgets_action['power_action'], value=value, options=widgets_options['power_action'])}
     </fieldset>

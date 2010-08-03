@@ -937,7 +937,7 @@ class Root(RPCRoot):
                                    provision = dict(is_user = is_user,
                                                     lab_controller = system.lab_controller,
                                                     prov_install = [(distro.id, distro.install_name) for distro in system.distros().order_by(distro_table.c.install_name)]),
-                                   power_action  = options,
+                                   power_action = dict(is_user=is_user),
                                    arches    = dict(readonly = readonly,
                                                     arches = system.arch),
                                    tasks      = dict(system_id = system.id,
@@ -1417,9 +1417,6 @@ class Root(RPCRoot):
             system = System.by_id(id,identity.current.user)
         except InvalidRequestError:
             flash( _(u"Unable to look up system id:%s via your login" % id) )
-            redirect("/")
-        if not system.current_user(identity.current.user): 
-            flash( _(u"You are not the current User for %s" % system) )
             redirect("/")
         try:
             system.action_power(action)

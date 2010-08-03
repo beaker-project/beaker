@@ -674,11 +674,11 @@ class ProvisionForm(RepeatingFormField):
 class PowerActionForm(Form):
     template = "bkr.server.templates.system_power_action"
     member_widgets = ["id", "power", "lab_controller"]
-    params = ['options', 'action', 'enabled']
+    params = ['options', 'action', 'enabled','is_user']
     
     def __init__(self, *args, **kw):
         super(PowerActionForm, self).__init__(*args, **kw)
-	self.id = HiddenField(name="id")
+        self.id = HiddenField(name="id")
         self.power = HiddenField(name="power")
         self.lab_controller = HiddenField(name="lab_controller")
 
@@ -688,6 +688,13 @@ class PowerActionForm(Form):
             if d['value']['power']:
                 d['enabled'] = True
 
+    def display(self, value, *args, **kw):
+        if 'options' in kw:
+            if 'is_user' in kw['options']:
+                kw['is_user'] = kw['options']['is_user']
+        return super(PowerActionForm,self).display(value,*args,**kw)
+
+    
 class TaskSearchForm(RemoteForm):
     template = "bkr.server.templates.task_search_form"
     member_widgets = ['system_id', 'system', 'task', 'distro', 'family', 'arch', 'start', 'finish', 'status', 'result']
