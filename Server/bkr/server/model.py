@@ -4,24 +4,23 @@ from datetime import datetime
 from turbogears.database import metadata, mapper, session
 from turbogears.config import get
 import ldap
-from sqlalchemy import Table, Column, ForeignKey
+from sqlalchemy import (Table, Column, ForeignKey, String, Unicode, Integer, DateTime,
+                        UnicodeText, Boolean, Float, VARCHAR, TEXT, Numeric, 
+                        or_, and_, not_, select, case, func)
+
 from sqlalchemy.orm import relation, backref, synonym, dynamic_loader,query 
-from sqlalchemy import String, Unicode, Integer, DateTime, UnicodeText, Boolean, Float, VARCHAR, TEXT, Numeric
-from sqlalchemy import or_, and_, not_, select
+from sqlalchemy.sql import exists
+from sqlalchemy.sql.expression import join
 from sqlalchemy.exceptions import InvalidRequestError
 from identity import LdapSqlAlchemyIdentityProvider
 from cobbler_utils import consolidate, string_to_hash
-from sqlalchemy.orm.collections import attribute_mapped_collection
+from sqlalchemy.orm.collections import attribute_mapped_collection, MappedCollection, collection
 from sqlalchemy.util import OrderedDict
-from sqlalchemy.orm.collections import MappedCollection
 from sqlalchemy.ext.associationproxy import association_proxy
 import socket
 from xmlrpclib import ProtocolError
 from bexceptions import *
-from sqlalchemy import case
 import time
-from sqlalchemy import func
-from sqlalchemy.orm.collections import collection
 from bexceptions import *
 from kid import Element
 from bkr.server.helpers import *
@@ -1518,23 +1517,24 @@ $SNIPPET("rhts_post")
             query = systems
         else:
             query = System.all(user)
-           
-        return query.filter(and_(
+       
+        query = query.filter(and_(
                                 System.status==SystemStatus.by_name(u'Working'),
+                                case([(System.groups == None,1),(System.groups.any(User.groups.any(User.user_id == user.user_id)),1)],else_ = 0),
                                     or_(and_(System.owner==user,
-                                             System.loaned==None),
-                                      System.loaned==user,
-                                      and_(System.shared==True,
-                                           System.groups==None,
-                                           System.loaned==None
-                                          ),
-                                      and_(System.shared==True,
-                                           System.loaned==None,
-                                           User.user_id==user.user_id
-                                          )
-                                       )
-                                           )
-                                      )
+                                             System.loaned==None), 
+                                        System.loaned==user,
+                                        and_(System.shared==True, 
+                                             System.loaned==None
+                                        ),
+                                        and_(System.shared==True,
+                                             System.loaned==None,
+                                             User.user_id==user.user_id
+                                            )
+                                        )
+                                 )
+                            )
+        return query
 
     @classmethod
     def available_order(cls, user):
@@ -4979,7 +4979,7 @@ mapper(User, users_table,
         properties=dict(_password=users_table.c.password))
 
 Group.mapper = mapper(Group, groups_table,
-        properties=dict(users=relation(User,secondary=user_group_table, backref='groups'),
+        properties=dict(users=relation(User,uselist=True, secondary=user_group_table, backref='groups'),
                         systems=relation(System,secondary=system_group_table, backref='groups'),
                         admin_systems=relation(System,secondary=system_admin_map_table,backref='admins')))
                         
