@@ -1350,10 +1350,7 @@ class System(SystemObject):
                                                          False,
                                                          ks_appends_text,
                                                          self.token):
-                        if ks_meta:
-                            ks_meta = "%s ks_appends=True"
-                        else:
-                            ks_meta = "ks_appends=True"
+                        ks_meta['ks_appends'] = True
                     else:
                         raise BX(_("Failed to save ks_appends"))
 
