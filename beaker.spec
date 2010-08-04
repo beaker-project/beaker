@@ -184,6 +184,11 @@ fi
 %{_sysconfdir}/init.d/%{name}-watchdog
 
 %changelog
+* Wed Aug 04 2010 Bill Peck <bpeck@redhat.com> 0.5.52-2
+- bump minor release (bpeck@redhat.com)
+- revert --default option on %packages.  Seems to ignore all remaining
+  packages. (bpeck@redhat.com)
+
 * Tue Aug 03 2010 Bill Peck <bpeck@redhat.com> 0.5.52-1
 - remove uneeded schema upgrades. (bpeck@redhat.com)
 - found bug with ks_appends and ks_meta during testing. (bpeck@redhat.com)
