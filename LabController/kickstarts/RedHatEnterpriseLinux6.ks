@@ -73,7 +73,12 @@ $SNIPPET("rhts_partitions")
 $SNIPPET("RedHatEnterpriseLinux6")
 $SNIPPET("system")
 
-%packages --ignoremissing --default
+%packages --ignoremissing #slurp
+#if $getVar('packages', '') == '':
+--default
+#else
+
+#end if
 $SNIPPET("rhts_packages")
 
 #end if
