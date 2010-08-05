@@ -1511,17 +1511,21 @@ $SNIPPET("rhts_post")
           If a system is loaned then its only available for that person.
         """
         if systems:
-            query = systems
+            try:
+                query = systems.outerjoin(['groups','users'], aliased=True)
+            except AttributeError, (e):
+                log.error('A non Query object has been passed into the available method, using default query instead: %s' % e)
+                query = cls.query().outerjoin(['groups','users'], aliased=True)
         else:
             query = System.all(user)
        
         query = query.filter(and_(
                                 System.status==SystemStatus.by_name(u'Working'),
-                                case([(System.groups == None,1),(System.groups.any(User.groups.any(User.user_id == user.user_id)),1)],else_ = 0),
                                     or_(and_(System.owner==user,
                                              System.loaned==None), 
                                         System.loaned==user,
                                         and_(System.shared==True, 
+                                             System.groups==None,
                                              System.loaned==None
                                         ),
                                         and_(System.shared==True,
