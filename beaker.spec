@@ -184,6 +184,10 @@ fi
 %{_sysconfdir}/init.d/%{name}-watchdog
 
 %changelog
+* Thu Aug 05 2010 Bill Peck <bpeck@redhat.com> 0.5.52-3
+- bump minor release (bpeck@redhat.com)
+- fix System.available() to work correctly with group acl's. (bpeck@redhat.com)
+
 * Wed Aug 04 2010 Bill Peck <bpeck@redhat.com> 0.5.52-2
 - bump minor release (bpeck@redhat.com)
 - revert --default option on %packages.  Seems to ignore all remaining
