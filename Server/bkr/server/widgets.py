@@ -973,8 +973,8 @@ class SystemGroups(Form):
     	self.id    = HiddenField(name="id")
         self.group = AutoCompleteField(name='group',
                                       search_controller=url("/groups/by_name"),
-                                      search_param="name",
-                                      result_name="groups")
+                                      search_param="input",
+                                      result_name="matches")
 
     def update_params(self, d):
         super(SystemGroups, self).update_params(d)
