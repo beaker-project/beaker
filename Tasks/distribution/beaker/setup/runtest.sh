@@ -298,6 +298,7 @@ function Inventory()
     service iptables stop
     # Turn on wsgi
     perl -pi -e 's|^#LoadModule wsgi_module modules/mod_wsgi.so|LoadModule wsgi_module modules/mod_wsgi.so|g' /etc/httpd/conf.d/wsgi.conf
+    perl -pi -e 's|^WSGIDaemonProcess.*|WSGIDaemonProcess beaker user=apache group=apache display-name=beaker maximum-requests=10 processes=4 threads=1|g' /etc/httpd/conf.d/beaker-server.conf
     service httpd restart
     estatus_fail "**** Failed to start httpd ****"
     service beakerd start
@@ -345,11 +346,12 @@ function LabController()
     cobbler get-loaders
     #service autofs start
     service iptables stop
-    service beaker-proxy start
-    service beaker-watchdog start
     rhts-sync-set -s READY
     abort=$(rhts-sync-block -s SERVERREADY -s ABORT $SERVER)
     echo "abort=$abort"
+    # We can start the proxies when our accounts have been created on the scheduler.
+    service beaker-proxy start
+    service beaker-watchdog start
     # Add some distros
     # NFS format HOSTNAME:DISTRONAME:NFSPATH
     if [ -z "$NFSDISTROS" ]; then
