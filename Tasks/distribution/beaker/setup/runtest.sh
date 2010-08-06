@@ -121,6 +121,16 @@ function estatus_fail()
     fi
 }
 
+function generate_proxy_cfg()
+{
+    cat << __EOF__ > /etc/beaker/proxy.conf
+HUB_URL = "https://$SERVER/bkr/"
+AUTH_METHOD = "password"
+USERNAME = "host/$HOSTNAME"
+PASSWORD = "testing"
+__EOF__
+}
+
 function generate_beaker_cfg()
 {
     cat << __EOF__ > /etc/beaker/server.cfg
@@ -294,7 +304,7 @@ function Inventory()
     estatus_fail "**** Failed to start beakerd ****"
     # Add the lab controller
     ./add_labcontroller.py -l $CLIENT
-    ./add_user.py -u host/$CLIENT
+    ./add_user.py -u host/$CLIENT -p testing
     estatus_fail "**** Failed to add lab controller ****"
     rhts-sync-set -s SERVERREADY
     rhts-sync-block -s DONE -s ABORT $CLIENT
@@ -325,6 +335,8 @@ function LabController()
     setsebool -P httpd_can_network_connect true
     semanage fcontext -a -t public_content_t "/var/lib/tftpboot/.*"
     semanage fcontext -a -t public_content_t "/var/www/cobbler/images/.*"
+    # Configure beaker-proxy config
+    generate_proxy_cfg
     # Turn on wsgi
     perl -pi -e 's|^#LoadModule wsgi_module modules/mod_wsgi.so|LoadModule wsgi_module modules/mod_wsgi.so|g' /etc/httpd/conf.d/wsgi.conf
     service httpd restart
@@ -333,6 +345,8 @@ function LabController()
     cobbler get-loaders
     #service autofs start
     service iptables stop
+    service beaker-proxy start
+    service beaker-watchdog start
     rhts-sync-set -s READY
     abort=$(rhts-sync-block -s SERVERREADY -s ABORT $SERVER)
     echo "abort=$abort"
