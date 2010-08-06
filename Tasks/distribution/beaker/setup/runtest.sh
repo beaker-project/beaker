@@ -433,6 +433,9 @@ function LabController()
     result_pass 
 }
 
+#Disable selinux
+/usr/sbin/setenforce 0
+
 if $(echo $CLIENTS | grep -q $HOSTNAME); then
     echo "Running test as Lab Controller" | tee -a $OUTPUTFILE
     TEST="$TEST/lab_controller"
