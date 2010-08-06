@@ -184,7 +184,7 @@ identity.krb_auth_keytab='/etc/httpd/conf/httpd.keytab'
 
 server.socket_port=8084
 server.environment="development"
-server.webpath="/bkr"
+server.webpath="/bkr/"
 server.log_file = "/var/log/beaker/server.log"
 server.log_to_screen = True
 
@@ -290,6 +290,8 @@ function Inventory()
     perl -pi -e 's|^#LoadModule wsgi_module modules/mod_wsgi.so|LoadModule wsgi_module modules/mod_wsgi.so|g' /etc/httpd/conf.d/wsgi.conf
     service httpd restart
     estatus_fail "**** Failed to start httpd ****"
+    service beakerd start
+    estatus_fail "**** Failed to start beakerd ****"
     # Add the lab controller
     ./add_labcontroller.py -l $CLIENT
     ./add_user.py -u host/$CLIENT
@@ -436,7 +438,7 @@ if $(echo $STANDALONE | grep -q $HOSTNAME); then
     CLIENTS=$STANDALONE
     SERVERS=$STANDALONE
     SERVER=$(echo $SERVERS | awk '{print $1}')
-    SERVER_URL="https://testuser:testpassword\@$SERVER/bkr"
+    SERVER_URL="https://testuser:testpassword\@$SERVER/bkr/"
     TEST="$TEST/lab_controller" LabController &
     sleep 120
     TEST="$TEST/inventory" Inventory
