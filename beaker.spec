@@ -2,8 +2,8 @@
 %{!?pyver: %global pyver %(%{__python} -c "import sys ; print sys.version[:3]")}
 
 Name:           beaker
-Version:        0.5.52
-Release:        3%{?dist}
+Version:        0.5.53
+Release:        1%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -184,6 +184,15 @@ fi
 %{_sysconfdir}/init.d/%{name}-watchdog
 
 %changelog
+* Tue Aug 10 2010 Raymond Mancy <rmancy@redhat.com> 0.5.53-1
+- allow getFamily() to work with either a distro or family passed from the
+  command line. (bpeck@redhat.com)
+- as per bz612025 - Updated docs to document how to add groups
+  (rmancy@redhat.com)
+- bz617444 - We can now see  the memory values that the filter called by the
+  Scheduler uses to determine the system has the correct            memory, in
+  accordance with hostRequires (rmancy@redhat.com)
+
 * Thu Aug 05 2010 Bill Peck <bpeck@redhat.com> 0.5.52-3
 - bump minor release (bpeck@redhat.com)
 - fix System.available() to work correctly with group acl's. (bpeck@redhat.com)
