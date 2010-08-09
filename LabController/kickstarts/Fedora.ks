@@ -1,3 +1,10 @@
+#if $varExists('sysprofile')
+#set listed_snippet_profiles = $getVar('sysprofile','').split(';')
+#for $snippet_profile in $listed_snippet_profiles
+# Snippet Profile: $snippet_profile
+$SNIPPET($snippet_profile)
+#end for
+#else
 url --url=$tree
 #if $getVar('system_name', '') != '' and $getVar('manual', 'False') == 'False'
 auth  --useshadow  --enablemd5
@@ -54,6 +61,7 @@ $SNIPPET("system")
 %packages --ignoremissing
 $SNIPPET("rhts_packages")
 
+#end if
 #end if
 %pre
 $SNIPPET("rhts_pre")
