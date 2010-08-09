@@ -268,8 +268,6 @@ __EOF__
 
 function Inventory()
 {
-    # We only want the first one
-    CLIENT=$(echo $CLIENTS| awk '{print $1}')
     PACKAGES="mysql-server MySQL-python python-twill"
     yum install -y $PACKAGES
     estatus_fail "**** Yum Install of $PACKAGES Failed ****"
@@ -303,12 +301,14 @@ function Inventory()
     estatus_fail "**** Failed to start httpd ****"
     service beakerd start
     estatus_fail "**** Failed to start beakerd ****"
-    # Add the lab controller
-    ./add_labcontroller.py -l $CLIENT
-    ./add_user.py -u host/$CLIENT -p testing
+    # Add the lab controller(s)
+    for CLIENT in $CLIENTS; do
+        ./add_labcontroller.py -l $CLIENT
+        ./add_user.py -u host/$CLIENT -p testing
+    done
     estatus_fail "**** Failed to add lab controller ****"
     rhts-sync-set -s SERVERREADY
-    rhts-sync-block -s DONE -s ABORT $CLIENT
+    rhts-sync-block -s DONE -s ABORT $CLIENTS
     result_pass 
 }
 
