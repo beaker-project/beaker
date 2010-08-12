@@ -133,7 +133,7 @@ class OSVersions(AdminPage):
         return dict(matches=osmajors)
 
     @expose(template="bkr.server.templates.admin_grid")
-    @paginate('list',limit=50, default_order='osmajor', max_limit=None)
+    @paginate('list',limit=50, default_order='osmajor.osmajor', max_limit=None)
     def index(self,*args,**kw):
         osversions = session.query(OSVersion)
         list_by_letters = []
@@ -145,18 +145,17 @@ class OSVersions(AdminPage):
         results = self.process_search(**kw)
         if results:
             osversions = results
-
+        log.debug(osversions)
         osversions_grid = myPaginateDataGrid(fields=[
-                                  myPaginateDataGrid.Column(name='osmajor', getter=lambda x: make_link(url = './edit_osmajor?id=%s' % x.osmajor.id, text = x.osmajor), title='OS Major', options=dict(sortable=True)),
-                                  myPaginateDataGrid.Column(name='alias', getter=lambda x: x.osmajor.alias, title='Alias', options=dict(sortable=True)),
-                                  myPaginateDataGrid.Column(name='osversion', getter=lambda x: make_link(url  = './edit?id=%s' % x.id, text = x.osminor), title='OS Minor', options=dict(sortable=True)),
+                                  myPaginateDataGrid.Column(name='osmajor.osmajor', getter=lambda x: make_link(url = './edit_osmajor?id=%s' % x.osmajor.id, text = x.osmajor), title='OS Major', options=dict(sortable=True)),
+                                  myPaginateDataGrid.Column(name='osmajor.alias', getter=lambda x: x.osmajor.alias, title='Alias', options=dict(sortable=True)),
+                                  myPaginateDataGrid.Column(name='osminor', getter=lambda x: make_link(url  = './edit?id=%s' % x.id, text = x.osminor), title='OS Minor', options=dict(sortable=True)),
                                   myPaginateDataGrid.Column(name='arches', getter=lambda x: " ".join([arch.arch for arch in x.arches]), title='Arches', options=dict(sortable=True)),
-                                  #(' ', lambda x: make_remove_link(x.id)),
                               ])
 
         if kw.get('grid'): 
             osversions_grid = kw['grid']
-        return dict(title="Tags", 
+        return dict(title="OS Versions", 
                     grid = osversions_grid, 
                     search_widget = self.search_widget_form,
                     alpha_nav_bar = AlphaNavBar(list_by_letters,self.search_name),
