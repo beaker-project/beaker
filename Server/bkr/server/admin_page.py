@@ -36,6 +36,9 @@ class AdminPage(RPCRoot):
         self.join = []
         self.add = True
 
+    def _build_nav_bar(self, query_data, name):
+        return AlphaNavBar(query_data,name),
+
     def process_search(self,*args,**kw):
         s_name = self.search_name
         if s_name in kw:

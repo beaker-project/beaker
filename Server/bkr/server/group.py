@@ -98,7 +98,6 @@ class Groups(AdminPage):
             options = {},
             value = kw,
         )
-
     
     def show_members(self,id): 
         user_member = ('User Members', lambda x: x.display_name)
@@ -194,24 +193,45 @@ class Groups(AdminPage):
         flash( _(u"OK") )
         redirect("./edit?id=%s" % kw['group_id'])
 
-    @expose(template="bkr.server.templates.admin_grid")
-    @paginate('list', default_order='group_name', max_limit=None)
-    def index(self,*args,**kw):
-        groups = session.query(Group)
-        list_by_letters = set([elem.group_name[0].capitalize() for elem in groups])
-        result = self.process_search(**kw)
-        if result:
-            groups = result
 
-        if not 'admin' in identity.current.groups:
-            group_name =('Group Name', lambda x: make_link('group_members?id=%s' % x.group_id,x.group_name))
+    @expose(template="bkr.server.templates.grid")
+    @paginate('list', default_order='group_name', max_limit=None)
+    def index(self, *args, **kw):
+        return self.groups(*args, **kw)
+
+   
+    @expose(template="bkr.server.templates.admin_grid")
+    @identity.require(identity.in_group('admin'))
+    @paginate('list', default_order='group_name', max_limit=None)
+    def admin(self, *args, **kw):
+        groups = self.process_search(*args, **kw)
+        template_data = self.groups(groups, identity.current.user, *args, **kw)
+
+        alpha_nav_data = set([elem.group_name[0].capitalize() for elem in groups])
+        nav_bar = self._build_nav_bar(alpha_nav_data,'group')
+
+        template_data['alpha_nav_bar'] = nav_bar 
+        return template_data
+
+
+    @expose()
+    @identity.require(identity.not_anonymous())
+    def mine(self,*args,**kw):
+        current_user = identity.current.user
+        my_groups = Group.by_user(current_user)
+        return self.groups(my_groups,*args,**kw)
+
+    def groups(self, groups=None, user=None, *args,**kw):
+        if groups is None:
+            groups = session.query(Group)
+                   
+        if user.is_admin(): #FIXME catch if not user was passed
+            group_name = ('Group Name', lambda x: make_link('group_members?id=%s' % x.group_id,x.group_name))
             remove_link = None 
-            template = "bkr.server.templates.grid"
         else:
-            group_name =('Group Name', lambda x: make_edit_link(x.group_name,x.group_id))
+            group_name = ('Group Name', lambda x: make_edit_link(x.group_name,x.group_id))
             remove_link = (' ', lambda x: make_remove_link(x.group_id))  
-        
-       
+ 
         def f(x):
             if len(x.systems):
                 return make_link('systems?group_id=%s' % x.group_id, 'System count: %s' % len(x.systems))
@@ -225,17 +245,14 @@ class Groups(AdminPage):
         actual_grid = [elem for elem in potential_grid if elem is not None]
    
         groups_grid = myPaginateDataGrid(fields=actual_grid)
-        search_group_form = widgets.TableForm('SearchGroup',fields=[self.search_groups],action='.',submit_test=_(u'Search'),)
+        #search_group_form = widgets.TableForm('SearchGroup',fields=[self.search_groups],action='.',submit_test=_(u'Search'),)
         return_dict = dict(title="Groups", 
-                           grid = groups_grid,
-                           alpha_nav_bar = AlphaNavBar(list_by_letters,'group'),
+                           grid = groups_grid, 
                            object_count = groups.count(),
                            addable = self.add,
                            search_bar = None,
                            search_widget = self.search_widget_form, 
                            list = groups)
-        if 'template' in locals():
-            return_dict['tg_template'] = template
 
         return return_dict
   

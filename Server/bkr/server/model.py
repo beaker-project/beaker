@@ -1174,6 +1174,15 @@ class Group(object):
             q = cls.query().filter(Group.group_name.like('%s%%' % name))
         return q
 
+    @classmethod
+    def by_user(cls,user):
+        try:
+            groups = Group.query().join('users').filter(User.user_id == user.user_id)
+            return groups
+        except Exception, e: 
+            log.error(e)
+            return
+
 class System(SystemObject):
 
     def __init__(self, fqdn=None, status=None, contact=None, location=None,
