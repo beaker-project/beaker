@@ -33,23 +33,24 @@ class AdminPage(RPCRoot):
                                                 search_param = self.search_param,
                                                 result_name = self.result_name)
         self.search_widget_form = TableForm('SearchUser', fields=[self.search_auto], action='.', submit_text=_(u'Search'),) 
-        self.join = []
+        if getattr(self,'join',None) is None:
+            self.join = []
         self.add = True
 
     def _build_nav_bar(self, query_data, name):
         return AlphaNavBar(query_data,name),
 
-    def process_search(self,*args,**kw):
-        s_name = self.search_name
+    def process_search(self,*args,**kw): 
+        q = session.query(self.search_mapper)
+        for j in self.join: 
+            q = q.join(j) 
+        s_name = self.search_name 
         if s_name in kw:
             if 'text' in kw[s_name]:
-                q = session.query(self.search_mapper)
-                for j in self.join:
-                    q = q.join(j) 
                 
                 if 'starts_with' in kw[s_name]['text']:
                     q = q.filter(self.search_col.like('%s%%' % kw[s_name]['text']['starts_with']))
                 else: 
                     q = q.filter(self.search_col == kw[s_name]['text'])
                 
-                return q 
+        return q 
