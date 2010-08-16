@@ -187,6 +187,9 @@ class Groups(AdminPage):
     @error_handler(edit)
     def save_user(self, **kw):
         user = User.by_user_name(kw['user']['text'])
+        if user is None: 
+            flash(_(u"Invalid user %s" % kw['user']['text']))
+            redirect("./edit?id=%s" % kw['group_id'])
         group = Group.by_id(kw['group_id'])
         group.users.append(user)
         activity = GroupActivity(identity.current.user, 'WEBUI', 'Added', 'User', "", user.user_name)
