@@ -3,6 +3,7 @@ from turbogears.database import session
 from turbogears.widgets import AutoCompleteField, TableForm
 from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.bexceptions import BeakerException
+from bkr.server.widgets import AlphaNavBar
 
 class AdminPage(RPCRoot):
     exposed = False
@@ -38,7 +39,7 @@ class AdminPage(RPCRoot):
         self.add = True
 
     def _build_nav_bar(self, query_data, name):
-        return AlphaNavBar(query_data,name),
+        return AlphaNavBar(query_data,name)
 
     def process_search(self,*args,**kw): 
         q = session.query(self.search_mapper)

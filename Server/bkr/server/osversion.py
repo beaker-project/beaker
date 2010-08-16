@@ -135,32 +135,37 @@ class OSVersions(AdminPage):
     @expose(template="bkr.server.templates.admin_grid")
     @paginate('list',limit=50, default_order='osmajor.osmajor', max_limit=None)
     def index(self,*args,**kw):
-        osversions = session.query(OSVersion)
+        osversions = self.process_search(*args,**kw) 
         list_by_letters = []
         for elem in osversions:
             osmajor_name = elem.osmajor.osmajor
             if osmajor_name:
                 list_by_letters.append(osmajor_name[0].capitalize())
-        list_by_letters = set(list_by_letters)
-        results = self.process_search(**kw)
-        if results:
-            osversions = results
-        log.debug(osversions)
+        alpha_nav_data = set(list_by_letters)
+        template_data = self.osversions(osversions,*args, **kw)
+        nav_bar = self._build_nav_bar(alpha_nav_data,self.search_name)
+        template_data['alpha_nav_bar'] = nav_bar
+        return template_data
+         
+
+    def osversions(self, osversions=None, *args, **kw):
+        q = session.query(self.search_mapper) # This line +3 dupes the start of process_search
+        if osversions is None:
+            for j in self.join:
+                q = q.join(j)
+            osversions = q
         osversions_grid = myPaginateDataGrid(fields=[
                                   myPaginateDataGrid.Column(name='osmajor.osmajor', getter=lambda x: make_link(url = './edit_osmajor?id=%s' % x.osmajor.id, text = x.osmajor), title='OS Major', options=dict(sortable=True)),
                                   myPaginateDataGrid.Column(name='osmajor.alias', getter=lambda x: x.osmajor.alias, title='Alias', options=dict(sortable=True)),
                                   myPaginateDataGrid.Column(name='osminor', getter=lambda x: make_link(url  = './edit?id=%s' % x.id, text = x.osminor), title='OS Minor', options=dict(sortable=True)),
                                   myPaginateDataGrid.Column(name='arches', getter=lambda x: " ".join([arch.arch for arch in x.arches]), title='Arches', options=dict(sortable=True)),
                               ])
-
-        if kw.get('grid'): 
-            osversions_grid = kw['grid']
+ 
         return dict(title="OS Versions", 
                     grid = osversions_grid, 
                     search_widget = self.search_widget_form,
-                    alpha_nav_bar = AlphaNavBar(list_by_letters,self.search_name),
-                    object_count = osversions.count(),
-                    addable = self.add,
+                    addable = False,              
+                    object_count = osversions.count(), 
                     list = osversions)
 
     default = index

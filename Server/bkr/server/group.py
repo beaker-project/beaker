@@ -7,7 +7,7 @@ from tg_expanding_form_widget.tg_expanding_form_widget import ExpandingForm
 from kid import Element
 from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.helpers import *
-from bkr.server.widgets import myDataGrid, myPaginateDataGrid, AlphaNavBar
+from bkr.server.widgets import myDataGrid, myPaginateDataGrid
 from bkr.server.admin_page import AdminPage
 
 
@@ -197,8 +197,7 @@ class Groups(AdminPage):
     @expose(template="bkr.server.templates.grid")
     @paginate('list', default_order='group_name', max_limit=None)
     def index(self, *args, **kw):
-        return self.groups(*args, **kw)
-
+        return self.groups(user=identity.current.user, *args, **kw)
    
     @expose(template="bkr.server.templates.admin_grid")
     @identity.require(identity.in_group('admin'))
@@ -209,29 +208,35 @@ class Groups(AdminPage):
 
         alpha_nav_data = set([elem.group_name[0].capitalize() for elem in groups])
         nav_bar = self._build_nav_bar(alpha_nav_data,'group')
-
         template_data['alpha_nav_bar'] = nav_bar 
+        template_data['addable'] = True
         return template_data
 
 
-    @expose()
-    @identity.require(identity.not_anonymous())
+    @expose(template="bkr.server.templates.grid")
+    @identity.require(identity.not_anonymous()) 
+    @paginate('list', default_order='group_name', max_limit=None) 
     def mine(self,*args,**kw):
         current_user = identity.current.user
         my_groups = Group.by_user(current_user)
-        return self.groups(my_groups,*args,**kw)
+        template_data = self.groups(my_groups,current_user,*args,**kw)
+        template_data['title'] = 'My Groups'
+        return template_data
 
     def groups(self, groups=None, user=None, *args,**kw):
         if groups is None:
             groups = session.query(Group)
-                   
-        if user.is_admin(): #FIXME catch if not user was passed
+         
+        try:
+            if user.is_admin(): #Raise if no user, then give default columns
+                group_name = ('Group Name', lambda x: make_edit_link(x.group_name,x.group_id))
+                remove_link = (' ', lambda x: make_remove_link(x.group_id))  
+            else:
+                raise AttributeError() #If we aren't admin, the except block will assign our columns below
+        except AttributeError, e: 
             group_name = ('Group Name', lambda x: make_link('group_members?id=%s' % x.group_id,x.group_name))
-            remove_link = None 
-        else:
-            group_name = ('Group Name', lambda x: make_edit_link(x.group_name,x.group_id))
-            remove_link = (' ', lambda x: make_remove_link(x.group_id))  
- 
+            remove_link = None
+     
         def f(x):
             if len(x.systems):
                 return make_link('systems?group_id=%s' % x.group_id, 'System count: %s' % len(x.systems))
@@ -245,11 +250,10 @@ class Groups(AdminPage):
         actual_grid = [elem for elem in potential_grid if elem is not None]
    
         groups_grid = myPaginateDataGrid(fields=actual_grid)
-        #search_group_form = widgets.TableForm('SearchGroup',fields=[self.search_groups],action='.',submit_test=_(u'Search'),)
+        search_group_form = widgets.TableForm('SearchGroup',fields=[self.search_groups],action='.',submit_test=_(u'Search'),)
         return_dict = dict(title="Groups", 
                            grid = groups_grid, 
-                           object_count = groups.count(),
-                           addable = self.add,
+                           object_count = groups.count(), 
                            search_bar = None,
                            search_widget = self.search_widget_form, 
                            list = groups)

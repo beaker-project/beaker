@@ -145,7 +145,7 @@ from bkr.server.model import system_types
                         <a href="${tg.url('/users')}">Accounts</a>
                         <img class="corner_inset_right" alt="" src="${tg.url('/static/images/corner_inset_right.png')}"/>
                     </li>
-                    <li><a href="${tg.url('/groups')}">Groups</a></li>
+                    <li><a href="${tg.url('/groups/admin')}">Groups</a></li>
                     <li><a href="${tg.url('/labcontrollers')}">Lab Controllers</a></li>
                     <li><a href="${tg.url('/powertypes')}">Power Types</a></li>
                     <li><a href="${tg.url('/keytypes')}">Key Types</a></li>
@@ -174,10 +174,11 @@ from bkr.server.model import system_types
                         <a href="${tg.url('/prefs')}">Preferences</a>
                         <img class="corner_inset_right" alt="" src="${tg.url('/static/images/corner_inset_right.png')}"/>
                     </li>
-                    <li><a href="${tg.url('/groups')}">Groups</a></li>
+                    <li py:if="'admin' not in tg.identity.groups"><a href="${tg.url('/groups')}">Groups</a></li>
                     <li><a href="${tg.url('/mine')}">My Systems</a></li>
                     <li><a href="${tg.url('/jobs/mine')}">My Jobs</a></li>
                     <li><a href="${tg.url('/recipes/mine')}">My Recipes</a></li>
+                    <li><a href="${tg.url('/groups/mine')}">My Groups</a></li>
                     <li class="last">
                         <img class="corner_left" alt="" src="${tg.url('/static/images/corner_left.png')}"/>
                         <img class="middle" alt="" src="${tg.url('/static/images/dot.gif')}"/>
