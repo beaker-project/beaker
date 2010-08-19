@@ -1480,7 +1480,18 @@ $SNIPPET("rhts_post")
             except AttributeError, (e):
                 log.error('A non Query object has been passed into the all method, using default query instead: %s' % e)        
                 query = cls.query().outerjoin(['groups','users'], aliased=True)
-                
+
+        return cls.permissable_systems(query,user)
+
+    @classmethod
+    def permissable_systems(cls, query, user=None, *arg, **kw):
+
+        if user is None:
+            try:
+                user = identity.current.user # change this to catch the exception if there is no identity?
+            except AttributeError, e:
+                user = None
+
         if user:
             if not user.is_admin():
                 query = query.filter(
@@ -1491,11 +1502,9 @@ $SNIPPET("rhts_post")
                                         System.user==user))))
         else:
             query = query.filter(System.private==False)
-     
+         
         return query
 
-#                                  or_(User.user_id==user.user_id, 
-#                                      system_group_table.c.system_id==None))))
 
     @classmethod
     def free(cls, user, systems=None):

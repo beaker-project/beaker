@@ -14,7 +14,6 @@ import cherrypy
 from model import *
 import string
 import csv
-
 import logging
 logger = logging.getLogger(__name__)
 
@@ -57,8 +56,9 @@ class CSV(RPCRoot):
         action = 'export data',
         submit_text = _(u'Export CSV'),
     )
-
+    
     @expose(template='bkr.server.templates.form')
+    @identity.require(identity.not_anonymous())
     def index(self, **kw):
         return dict(
             form = self.exportform,
@@ -68,6 +68,7 @@ class CSV(RPCRoot):
         )
 
     @expose(template='bkr.server.templates.form-post')
+    @identity.require(identity.in_group('admin'))
     def csv_import(self, **kw):
         return dict(
             form = self.importform,
@@ -77,6 +78,7 @@ class CSV(RPCRoot):
         )
 
     @expose()
+    @identity.require(identity.not_anonymous())
     def action_export(self, csv_type, *args, **kw):
         file = NamedTemporaryFile()
         log = self.to_csv(file, csv_type)
@@ -85,8 +87,8 @@ class CSV(RPCRoot):
                                      disposition="attachment",
                                      name="%s.csv" % csv_type)
         
-
     @expose(template='bkr.server.templates.csv_import')
+    @identity.require(identity.in_group('admin'))
     def action_import(self, csv_file, *args, **kw):
         """
         TurboGears method to import data from csv
@@ -201,10 +203,12 @@ class CSV(RPCRoot):
 
         return True
 
+    @to_byte_string('utf8')
     def to_datastruct(self):
         datastruct = dict()
         for csv_key in self.csv_keys:
-            datastruct[csv_key] = getattr(self, csv_key, None)
+            val = unicode(getattr(self, csv_key, None))
+            datastruct[csv_key] = getattr(self, csv_key, None) 
         yield datastruct
 
 class CSV_System(CSV):
@@ -220,7 +224,7 @@ class CSV_System(CSV):
 
     @classmethod
     def query(cls):
-        for system in System.query():
+        for system in System.permissable_systems(System.query().outerjoin('user')):
             yield CSV_System(system)
 
     @classmethod
@@ -397,7 +401,7 @@ class CSV_Power(CSV):
 
     @classmethod
     def query(cls):
-        for power in Power.query():
+        for power in System.permissable_systems(Power.query().outerjoin(['system','user'])):
             if power.system:
                 yield CSV_Power(power)
 
@@ -416,7 +420,7 @@ class CSV_LabInfo(CSV):
 
     @classmethod
     def query(cls):
-        for labinfo in LabInfo.query():
+        for labinfo in System.permissable_systems(LabInfo.query().outerjoin(['system','user'])):
             if labinfo.system:
                 yield CSV_LabInfo(labinfo)
 
@@ -448,10 +452,10 @@ class CSV_Exclude(CSV):
 
     @classmethod
     def query(cls):
-        for exclude in ExcludeOSMajor.query():
+        for exclude in System.permissable_systems(ExcludeOSMajor.query().outerjoin(['system','user'])):
             if exclude.system:
                 yield CSV_Exclude(exclude)
-        for exclude in ExcludeOSVersion.query():
+        for exclude in System.permissable_systems(ExcludeOSVersion.query().outerjoin(['system','user'])):
             if exclude.system:
                 yield CSV_Exclude(exclude)
 
@@ -529,7 +533,7 @@ class CSV_Install(CSV):
 
     @classmethod
     def query(cls):
-        for install in Provision.query():
+        for install in System.permissable_systems(Provision.query().outerjoin(['system','user'])):
             if install.system:
                 yield CSV_Install(install)
 
@@ -637,6 +641,7 @@ class CSV_Install(CSV):
         self.fqdn = install.system.fqdn
         self.arch = install.arch
 
+    @to_byte_string('utf8') 
     def to_datastruct(self):
         datastruct = dict(fqdn = self.fqdn,
                           arch = self.arch,
@@ -669,11 +674,11 @@ class CSV_KeyValue(CSV):
     csv_keys = ['fqdn', 'key', 'key_value', 'deleted' ]
 
     @classmethod
-    def query(cls):
-        for key_int in Key_Value_Int.query():
+    def query(cls):        
+        for key_int in System.permissable_systems(Key_Value_Int.query().outerjoin(['system','user'])):
             if key_int.system:
                 yield CSV_KeyValue(key_int)
-        for key_string in Key_Value_String.query():
+        for key_string in System.permissable_systems(Key_Value_String.query().outerjoin(['system','user'])):
             if key_string.system:
                 yield CSV_KeyValue(key_string)
 
@@ -788,7 +793,7 @@ class CSV_GroupSystem(CSV):
 
     @classmethod
     def query(cls):
-        for system in System.query():
+        for system in System.permissable_systems(System.query().outerjoin('user')):
             for group in system.groups:
                 yield CSV_GroupSystem(system, group)
 

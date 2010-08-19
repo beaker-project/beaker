@@ -114,6 +114,7 @@ from bkr.server.model import system_types
                         <img class="corner_inset_right" alt="" src="${tg.url('/static/images/corner_inset_right.png')}"/>
                     </li>
                     <li><a href="${tg.url('/matrix')}">Matrix</a></li>
+                    <li><a href="${tg.url('/csv')}">CSV</a></li>
                     <li><a href="${tg.url('/tasks/executed')}">Executed</a></li>
                     <li class="last">
                         <img class="corner_left" alt="" src="${tg.url('/static/images/corner_left.png')}"/>
