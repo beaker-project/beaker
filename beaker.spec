@@ -2,7 +2,7 @@
 %{!?pyver: %global pyver %(%{__python} -c "import sys ; print sys.version[:3]")}
 
 Name:           beaker
-Version:        0.5.53
+Version:        0.5.54
 Release:        1%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
@@ -184,6 +184,18 @@ fi
 %{_sysconfdir}/init.d/%{name}-watchdog
 
 %changelog
+* Thu Aug 19 2010 Raymond Mancy <rmancy@redhat.com> 0.5.54-1
+- bz621284 - Added restrictions to CSV, also fixed a problem with csv not being
+  able to write unicode objects (rmancy@redhat.com)
+- bz541297 - Invalid users are caught when adding them to groups
+  (rmancy@redhat.com)
+- bz618249 - Refactoring some code to seperate view from data
+  (rmancy@redhat.com)
+- bz605310 - Fix ordering in Admin->OSversion and Distro->Family
+  (rmancy@redhat.com)
+- bz21458 - Dropdown now works when adding groups to a system
+  (rmancy@redhat.com)
+
 * Tue Aug 10 2010 Raymond Mancy <rmancy@redhat.com> 0.5.53-1
 - allow getFamily() to work with either a distro or family passed from the
   command line. (bpeck@redhat.com)
