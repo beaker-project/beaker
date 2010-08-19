@@ -21,3 +21,32 @@ def make_scan_link(id):
     # make a rescan link
     return make_link(url  = 'rescan?id=%s' % id,
                      text = 'Rescan (*)')
+
+def to_byte_string(encoding):
+    """
+    encode the dict/array/string returned by generators
+    """
+    def encode(f):
+        def inner(*args, **kw):
+            encoded_return = None 
+            try:
+                result = f(*args, **kw).next() 
+                try:
+                    encoded_return = {}
+                    for k,v in result.items():
+                        encoded_return[k] = unicode(v).encode(encoding)
+                    yield encoded_return
+                except AttributeError, e: 
+                    log.debug(e) 
+                    try:
+                        encoded_return = [unicode(v).encode(encoding) for v in result]
+                        yield encoded_return
+                    except AttributeError, e: 
+                        log.debug(e)
+                        yield unicode(result).encode(encoding)
+            except AttributeError,e: 
+                log.error('Function %s does not implement generator methods. Failed with error: %s' % (f.__name__, e))
+                yield None
+
+        return inner
+    return encode
