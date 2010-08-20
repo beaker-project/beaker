@@ -191,7 +191,7 @@
   </tr>
   <tr>
    <td class="title"><b>Whiteboard</b></td>
-   <td class="value" colspan="3">${job.whiteboard}</td>
+   <td class="value" colspan="3" style="vertical-align: top;">${whiteboard_widget(value=job.whiteboard, job_id=job.id, readonly=not job.can_admin(user))}</td>
   </tr> 
   <tr py:if="job.access_rights(user)">
   ${job.retention_settings(prefix=u'retentiontag_job_')}

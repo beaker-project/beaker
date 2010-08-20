@@ -18,6 +18,7 @@
 
 import unittest
 import logging
+import time
 import tempfile
 from turbogears.database import session
 
@@ -32,12 +33,12 @@ class TestNewJob(SeleniumTestCase):
         session.flush()
         self.selenium = self.get_selenium()
         self.selenium.start()
-        self.login()
 
     def tearDown(self):
         self.selenium.stop()
 
     def test_warns_about_xsd_validation_errors(self):
+        self.login()
         sel = self.selenium
         sel.open('')
         sel.click('link=New Job')
@@ -75,3 +76,24 @@ class TestNewJob(SeleniumTestCase):
         sel.wait_for_page_to_load('3000')
         self.assertEqual(sel.get_title(), 'Jobs')
         self.assert_(sel.get_text('css=.flash').startswith('Success!'))
+    
+    def test_edit_job_whiteboard(self):
+        user = data_setup.create_user(password='asdf')
+        job = data_setup.create_job(owner=user)
+        session.flush()
+        self.login(user=user.user_name, password='asdf')
+        sel = self.selenium
+        sel.open('jobs/%s' % job.id)
+        sel.wait_for_page_to_load('3000')
+        self.assert_(sel.is_editable('name=whiteboard'))
+        new_whiteboard = 'new whiteboard value %s' % int(time.time())
+        sel.type('name=whiteboard', new_whiteboard)
+        sel.click('//form[@id="job_whiteboard_form"]//button[@type="submit"]')
+        for i in range(100):
+            try:
+                if sel.is_element_present('//form[@id="job_whiteboard_form"]//div[@class="msg success"]'): break
+            except: pass
+            time.sleep(0.2)
+        else: self.fail('timed out looking for save success message')
+        sel.open('jobs/%s' % job.id)
+        self.assertEqual(new_whiteboard, sel.get_value('name=whiteboard'))
