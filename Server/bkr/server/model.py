@@ -2878,6 +2878,9 @@ class Key(SystemObject):
 
 # key_value model
 class Key_Value_String(object):
+
+    key_type = 'string'
+
     def __init__(self, key, key_value, system=None):
         self.system = system
         self.key = key
@@ -2894,6 +2897,9 @@ class Key_Value_String(object):
 
 
 class Key_Value_Int(object):
+
+    key_type = 'int'
+
     def __init__(self, key, key_value, system=None):
         self.system = system
         self.key = key
