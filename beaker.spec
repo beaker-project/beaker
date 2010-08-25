@@ -145,7 +145,9 @@ fi
 %{_bindir}/start-%{name}
 %{_bindir}/%{name}-init
 %{_bindir}/nag-mail
+%{_bindir}/%{name}-cleanup-visits
 %{_sysconfdir}/init.d/%{name}d
+%config(noreplace) %{_sysconfdir}/cron.d/%{name}
 %attr(0755,root,root)%{_bindir}/%{name}d
 %config(noreplace) %{_sysconfdir}/httpd/conf.d/%{name}-server.conf
 %attr(-,apache,root) %{_datadir}/bkr
