@@ -44,7 +44,7 @@ from bkr.server.recipes import Recipes
 from bkr.server.recipesets import RecipeSets
 from bkr.server.tasks import Tasks
 from bkr.server.task_actions import TaskActions
-from bkr.server.controller_utilities import Utility, SystemSaveForm
+from bkr.server.controller_utilities import Utility, SystemSaveForm, SearchOptions
 from cherrypy import request, response
 from cherrypy.lib.cptools import serve_file
 from tg_expanding_form_widget.tg_expanding_form_widget import ExpandingForm
@@ -286,22 +286,6 @@ class Root(RPCRoot):
     arches_form = SystemArches(name='arches') 
     task_form = TaskSearchForm(name='tasks')
 
-    def get_search_options_worker(self,search,col_type):   
-        return_dict = {}
-        #Determine what field type we are dealing with. If it is Boolean, convert our values to 0 for False
-        # and 1 for True
-        if col_type.lower() == 'boolean':
-            search['values'] = { 0:'False', 1:'True'}
-            
-        #Determine if we have search values. If we do, then we should only have the operators
-        # 'is' and 'is not'.
-        if search['values']:
-            search['operators'] = filter(lambda x: x == 'is' or x == 'is not', search['operators'])         
-
-        search['operators'].sort()
-        return_dict['search_by'] = search['operators'] 
-        return_dict['search_vals'] = search['values'] 
-        return return_dict
 
     @expose(format='json')
     def change_system_admin(self,system_id=None,group_id=None,cmd=None,**kw):
@@ -334,42 +318,42 @@ class Root(RPCRoot):
         field = table_field
         search = search_utility.Distro.search.search_on(field) 
         col_type = search_utility.Distro.search.field_type(field)
-        return self.get_search_options_worker(search,col_type)
+        return SearchOptions.get_search_options_worker(search,col_type)
 
     @expose(format='json')
     def get_search_options_recipe(self,table_field,**kw): 
         field = table_field
         search = search_utility.Recipe.search.search_on(field) 
         col_type = search_utility.Recipe.search.field_type(field)
-        return self.get_search_options_worker(search,col_type)
+        return SearchOptions.get_search_options_worker(search,col_type)
 
     @expose(format='json')
     def get_search_options_job(self,table_field,**kw):
         field = table_field
         search = search_utility.Job.search.search_on(field)  
         col_type = search_utility.Job.search.field_type(field)
-        return self.get_search_options_worker(search,col_type)
+        return SearchOptions.get_search_options_worker(search,col_type)
 
     @expose(format='json')
     def get_search_options_task(self,table_field,**kw):
         field = table_field
         search = search_utility.Task.search.search_on(field) 
         col_type = search_utility.Task.search.field_type(field)
-        return self.get_search_options_worker(search,col_type)
+        return SearchOptions.get_search_options_worker(search,col_type)
     
     @expose(format='json')
     def get_search_options_activity(self,table_field,**kw):
         field = table_field
         search = search_utility.Activity.search.search_on(field) 
         col_type = search_utility.Activity.search.field_type(field)
-        return self.get_search_options_worker(search,col_type)
+        return SearchOptions.get_search_options_worker(search,col_type)
  
     @expose(format='json')
     def get_search_options_history(self,table_field,**kw):
         field = table_field     
         search = search_utility.History.search.search_on(field) 
         col_type = search_utility.History.search.field_type(field)
-        return self.get_search_options_worker(search,col_type)  
+        return SearchOptions.get_search_options_worker(search,col_type)  
     
    
     @expose(format='json')
