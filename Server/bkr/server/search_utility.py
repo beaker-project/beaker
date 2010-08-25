@@ -2,7 +2,7 @@ import model
 import re
 import random
 import sqlalchemy
-from turbogears import flash
+from turbogears import flash, identity
 from sqlalchemy import or_, and_, not_
 from sqlalchemy.sql import visitors, select
 from turbogears.database import session
@@ -390,6 +390,11 @@ class DistroSearch(Search):
     def __init__(self,distro):
         self.queri = distro
 
+class SystemReserveSearch(Search):
+    search_table = []
+    def __init__(self,system_reserve=None):
+        self.queri = system_reserve
+
 class ActivitySearch(Search):
     search_table = [] 
     def __init__(self,activity):
@@ -753,8 +758,11 @@ class System(SystemObject):
            
     @classmethod
     def search_values(cls,col):  
-       if cls.search_values_dict.has_key(col):
-           return cls.search_values_dict[col]() 
+        if cls.search_values_dict.has_key(col):
+            try:
+                return cls.search_values_dict[col]()
+            except TypeError, e: #perhaps we have a hash and not a callable
+                return cls.search_values_dict[col]
 
 class Recipe(SystemObject):
     search = RecipeSearch
@@ -953,6 +961,22 @@ class Distro(SystemObject):
           
         ids = [r.id for r in query]  
         return not_(model.distro_table.c.id.in_(ids)) 
+
+
+class SystemReserve(System):
+    search = SystemReserveSearch
+    searchable_columns =  {
+                            'Name'      : MyColumn(column=model.System.fqdn,col_type='string', relations=['object']),
+                            'Type'      : MyColumn(column=model.SystemType.type, col_type='string', relations=['object','type']),
+                            'Status'    : MyColumn(column=model.SystemStatus.status, col_type='string', relations=['object','status']),
+                            'Owner'     : MyColumn(column=model.User.user_name, col_type='string', has_alias=True, relations=['object','owner']),
+                            'Shared'    : MyColumn(column=model.System.shared, col_type='boolean', relations='object'),
+                            'User'      : MyColumn(column=model.User.user_name, col_type='string', has_alias=True, relations=['object','user']),
+                            'LoanedTo'  : MyColumn(column=model.User.user_name,col_type='string', has_alias=True, relations=['object','loaned']),
+                          }
+
+    System.search_values_dict['Shared'] =  ['True','False'] 
+    
 
        
 class Activity(SystemObject):

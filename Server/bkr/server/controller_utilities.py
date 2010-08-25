@@ -48,6 +48,28 @@ class SystemSaveForm:
     fk_log_entry = _FKLogEntry 
 
 
+class SearchOptions:
+    
+    @classmethod
+    def get_search_options_worker(cls,search,col_type):   
+        return_dict = {}
+        #Determine what field type we are dealing with. If it is Boolean, convert our values to 0 for False
+        # and 1 for True
+        if col_type.lower() == 'boolean':
+            search['values'] = { 0:'False', 1:'True'}
+            
+        #Determine if we have search values. If we do, then we should only have the operators
+        # 'is' and 'is not'.
+        if search['values']:
+            search['operators'] = filter(lambda x: x == 'is' or x == 'is not', search['operators'])         
+
+        search['operators'].sort()
+        return_dict['search_by'] = search['operators'] 
+        return_dict['search_vals'] = search['values'] 
+        return return_dict
+
+
+
 class Utility:
     #I this I will move this Utility class out into another module and then
     #perhaps break it down into further classes. Work from other tickets
