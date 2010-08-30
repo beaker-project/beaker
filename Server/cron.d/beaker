@@ -1,0 +1,2 @@
+# clean up stale visit rows
+52 3 * * * apache /usr/bin/beaker-cleanup-visits

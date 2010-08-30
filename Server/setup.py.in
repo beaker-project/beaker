@@ -125,6 +125,7 @@ data_files = [
     ("/etc/beaker", ["server.cfg"]),
     ("/etc/httpd/conf.d", ["apache/beaker-server.conf"]),
     ("/etc/init.d", ["init.d/beakerd"]),
+    ("/etc/cron.d", ["cron.d/beaker"]),
     ("/usr/share/bkr", filter(os.path.isfile, glob.glob("apache/*.wsgi"))),
     ("/var/log/beaker", []),
     ("/var/www/beaker/logs", []),
@@ -181,7 +182,8 @@ setup(
             'start-beaker = bkr.server.commands:start',
             'beaker-init = bkr.server.tools.init:main',
             'beakerd = bkr.server.tools.beakerd:main',
-            'nag-mail = bkr.server.tools.nag_email:main'
+            'nag-mail = bkr.server.tools.nag_email:main',
+            'beaker-cleanup-visits = bkr.server.tools.cleanup_visits:main'
         ),
     }
     )

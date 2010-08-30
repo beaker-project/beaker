@@ -2,7 +2,7 @@
 %{!?pyver: %global pyver %(%{__python} -c "import sys ; print sys.version[:3]")}
 
 Name:           beaker
-Version:        0.5.54
+Version:        0.5.55
 Release:        1%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
@@ -21,7 +21,7 @@ BuildRequires:  TurboGears
 Summary:        Client component for talking to Beaker server
 Group:          Applications/Internet
 Requires:       python
-Requires:       kobo-client
+Requires:       kobo-client >= 0.3
 Requires:	python-setuptools
 Requires:	%{name} = %{version}-%{release}
 Requires:       python-krbV
@@ -145,7 +145,9 @@ fi
 %{_bindir}/start-%{name}
 %{_bindir}/%{name}-init
 %{_bindir}/nag-mail
+%{_bindir}/%{name}-cleanup-visits
 %{_sysconfdir}/init.d/%{name}d
+%config(noreplace) %{_sysconfdir}/cron.d/%{name}
 %attr(0755,root,root)%{_bindir}/%{name}d
 %config(noreplace) %{_sysconfdir}/httpd/conf.d/%{name}-server.conf
 %attr(-,apache,root) %{_datadir}/bkr
@@ -184,6 +186,13 @@ fi
 %{_sysconfdir}/init.d/%{name}-watchdog
 
 %changelog
+* Thu Aug 26 2010 Raymond Mancy <rmancy@redhat.com> 0.5.55-1
+- bz624594 - patch for beaker-clien tto work with kobo >= 0.3 Daniel Mach
+  (rmancy@redhat.com)
+- bz626648 - console script to clean up visit and visit_identity tables
+  (dcallagh) (rmancy@redhat.com)
+- bz595360 - Search bar in Reserve report (rmancy@redhat.com)
+
 * Thu Aug 19 2010 Raymond Mancy <rmancy@redhat.com> 0.5.54-1
 - bz621284 - Added restrictions to CSV, also fixed a problem with csv not being
   able to write unicode objects (rmancy@redhat.com)
