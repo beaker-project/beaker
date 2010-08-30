@@ -1497,7 +1497,7 @@ $SNIPPET("rhts_post")
 
         if user is None:
             try:
-                user = identity.current.user # change this to catch the exception if there is no identity?
+                user = identity.current.user
             except AttributeError, e:
                 user = None
 
