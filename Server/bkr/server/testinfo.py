@@ -726,7 +726,7 @@ class ReleasesFieldTests(unittest.TestCase):
     def test_releases(self):
         "Ensure Releases field is parsed correctly"
         ti = parse_string("Releases: FC5 FC6", raise_errors=False)
-        self.assertEquals(ti.releases, "FC5 FC6")
+        self.assertEquals(ti.releases, ['FC5', 'FC6'])
 
 class ArchitecturesFieldTests(unittest.TestCase):
     def test_architectures(self):
@@ -739,7 +739,7 @@ class ArchitecturesFieldTests(unittest.TestCase):
         ti = parse_string("""
         Releases: FC5 FC6
         Architectures: i386 x86_64""", raise_errors=False)
-        self.assertEquals(ti.releases, "FC5 FC6")
+        self.assertEquals(ti.releases, ['FC5', 'FC6'])
         self.assertEquals(ti.test_archs, ["i386", "x86_64"])
 
 class NotifyFieldTests(unittest.TestCase):
