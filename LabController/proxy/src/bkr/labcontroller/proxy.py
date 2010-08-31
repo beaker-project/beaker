@@ -83,7 +83,10 @@ class ProxyHelper(object):
             indicates where the chunk belongs
             the special offset -1 is used to indicate the final chunk
         """
-        self.logger.info("recipe_upload_file rid:%s %s" % (recipe_id, name))
+        self.logger.info("recipe_upload_file recipe_id:%s name:%s offset:%s size:%s" % (recipe_id, 
+                                                                                        name,
+                                                                                        offset,
+                                                                                        size))
         return self.hub.recipes.upload_file(recipe_id, 
                                             path, 
                                             name, 
@@ -365,7 +368,10 @@ class Proxy(ProxyHelper):
             indicates where the chunk belongs
             the special offset -1 is used to indicate the final chunk
         """
-        self.logger.info("task_upload_file %s" % task_id)
+        self.logger.info("task_upload_file task_id:%s name:%s offset:%s size:%s" % (task_id,
+                                                                                    name,
+                                                                                    offset,
+                                                                                    size))
         return self.hub.recipes.tasks.upload_file(task_id, 
                                                   path, 
                                                   name, 
@@ -448,7 +454,10 @@ class Proxy(ProxyHelper):
             indicates where the chunk belongs
             the special offset -1 is used to indicate the final chunk
         """
-        self.logger.info("result_upload_file %s" % result_id)
+        self.logger.info("result_upload_file result_id:%s name:%s offset:%s size:%s" % (result_id,
+                                                                                        name,
+                                                                                        offset,
+                                                                                        size))
         return self.hub.recipes.tasks.result_upload_file(result_id, 
                                                   path, 
                                                   name, 
