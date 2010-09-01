@@ -8,7 +8,7 @@ from sqlalchemy.sql import func
 from kid import Element
 from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.helpers import *
-from bkr.server.widgets import SearchBar
+from bkr.server.widgets import SearchBar, myPaginateDataGrid
 from bkr.server.controller_utilities import SearchOptions
 from bkr.server import search_utility
 from distro import Distros
@@ -38,35 +38,8 @@ class Reports(RPCRoot):
         return self.reserve(*args, **kw)
 
     def reserve(self, action='.', *args, **kw): 
-        searchvalue = None
-        activity = []
-        queri = SystemActivity.query().outerjoin('object')
-        queri = System.permissable_systems(queri,identity.current.user)
-
-        my_from = system_table.join(system_activity_table).join(activity_table)
-        my_where = and_(SystemActivity.action=='Reserved',SystemActivity.field_name=='User')
-        sel_groupwise = select([func.max(SystemActivity.created).label('created')],from_obj=my_from, whereclause=my_where, group_by=[System.id]).alias('groupwise')
-        queri = queri.filter(and_(SystemActivity.field_name=='User',
-                                  System.user!=None,
-                                  sel_groupwise.c.created==SystemActivity.created,
-                                  SystemActivity.action=='Reserved')).group_by(System.id)
-        reserves = queri
-       
-        """
-        for system in System.all(identity.current.user).filter(System.user!=None):
-            # Build a list of the last Reserve entry for each system
-            try:
-                activity.append(SystemActivity.query().filter(
-                    and_(SystemActivity.object==system,
-                        SystemActivity.field_name=='User',
-                        SystemActivity.action=='Reserved'
-                        )).order_by(SystemActivity.created.desc())[0])
-            except IndexError:
-                # due to an old bug, we may not have a Reserved action
-                pass 
-        """
-        # Hmm, I hope the outerjoin accomodates this old bug
-
+        searchvalue = None 
+        reserves = System.all(identity.current.user).filter(and_(System.user!=None, System.status!=SystemStatus.by_name('Removed')))
         reserves_return = self._reserves(reserves, **kw)
         search_options = {}
         if reserves_return:
@@ -82,8 +55,20 @@ class Reports(RPCRoot):
                                table = search_utility.SystemReserve.search.create_search_table(),
                                search_controller=url("./get_search_options_reserve"),
                                )
+        activity = []
+        for system in reserves:
+            # Build a list of the last Reserve entry for each system
+            try:
+                activity.append(SystemActivity.query().filter(
+                    and_(SystemActivity.object==system,
+                        SystemActivity.field_name=='User',
+                        SystemActivity.action=='Reserved'
+                        )).order_by(SystemActivity.created.desc())[0])
+            except IndexError:
+                # due to an old bug, we may not have a Reserved action
+                pass 
                                
-        reserve_grid = widgets.PaginateDataGrid(fields=[
+        reserve_grid = myPaginateDataGrid(fields=[
                                   widgets.PaginateDataGrid.Column(name='object.fqdn', getter=lambda x: make_link(url  = '/view/%s' % x.object, text = x.object), title='System', options=dict(sortable=True)),
                                   widgets.PaginateDataGrid.Column(name='created', getter=lambda x: x.created, title='Reserved Since', options=dict(sortable=True)),
                                   widgets.PaginateDataGrid.Column(name='user', getter=lambda x: x.user, title='Current User', options=dict(sortable=True)),
@@ -95,8 +80,8 @@ class Reports(RPCRoot):
                     options = search_options,
                     action=action, 
                     searchvalue = searchvalue,
-                    object_count=len(reserves.all()), #sqla count() does not work as expected with grouped queries.
-                    list = reserves) 
+                    object_count=len(activity),
+                    list = activity) 
 
     def _reserves(self,reserve,**kw):
         return_dict = {} 

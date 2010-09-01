@@ -966,13 +966,12 @@ class Distro(SystemObject):
 class SystemReserve(System):
     search = SystemReserveSearch
     searchable_columns =  {
-                            'Name'      : MyColumn(column=model.System.fqdn,col_type='string', relations=['object']),
-                            'Type'      : MyColumn(column=model.SystemType.type, col_type='string', relations=['object','type']),
-                            'Status'    : MyColumn(column=model.SystemStatus.status, col_type='string', relations=['object','status']),
-                            'Owner'     : MyColumn(column=model.User.user_name, col_type='string', has_alias=True, relations=['object','owner']),
-                            'Shared'    : MyColumn(column=model.System.shared, col_type='boolean', relations='object'),
-                            'User'      : MyColumn(column=model.User.user_name, col_type='string', has_alias=True, relations=['object','user']),
-                            'LoanedTo'  : MyColumn(column=model.User.user_name,col_type='string', has_alias=True, relations=['object','loaned']),
+                            'Name'      : MyColumn(column=model.System.fqdn,col_type='string'),
+                            'Type'      : MyColumn(column=model.SystemType.type, col_type='string', relations='type'), 
+                            'Owner'     : MyColumn(column=model.User.user_name, col_type='string', has_alias=True, relations='owner'),
+                            'Shared'    : MyColumn(column=model.System.shared, col_type='boolean'),
+                            'User'      : MyColumn(column=model.User.user_name, col_type='string', has_alias=True, relations='user'),
+                            'LoanedTo'  : MyColumn(column=model.User.user_name,col_type='string', has_alias=True, relations='loaned'),
                           }
 
     System.search_values_dict['Shared'] =  ['True','False'] 
