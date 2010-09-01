@@ -3033,6 +3033,9 @@ class TaskResult(object):
         return "%s" % (self.result)
 
 class Log(MappedObject):
+
+    MAX_ENTRIES_PER_DIRECTORY = 100
+
     def __init__(self, path=None, filename=None):
         self.path = path
         self.filename = filename
@@ -3648,10 +3651,9 @@ class Recipe(TaskBase):
         Return file path for this recipe
         """
         job    = self.recipeset.job
-        return "%s/%02d/%s/%s" % (self.recipeset.queue_time.year,
-                                  int(str(job.id)[-2:]),
-                                         job.id,
-                                         self.id)
+        return "%s/%02d/%s/%s/%s" % (self.recipeset.queue_time.year,
+                self.recipeset.queue_time.month,
+                job.id // Log.MAX_ENTRIES_PER_DIRECTORY, job.id, self.id)
     filepath = property(filepath)
 
     def harness_repos(self):
@@ -4292,11 +4294,10 @@ class RecipeTask(TaskBase):
         """
         job    = self.recipe.recipeset.job
         recipe = self.recipe
-        return "%s/%02d/%s/%s/%s" % (recipe.recipeset.queue_time.year,
-                                     int(str(job.id)[-2:]),
-                                         job.id,
-                                         recipe.id,
-                                         self.id)
+        return "%s/%02d/%s/%s/%s/%s" % (recipe.recipeset.queue_time.year,
+                recipe.recipeset.queue_time.month,
+                job.id // Log.MAX_ENTRIES_PER_DIRECTORY, job.id,
+                recipe.id, self.id)
     filepath = property(filepath)
 
     def to_xml(self, clone=False):
@@ -4758,12 +4759,10 @@ class RecipeTaskResult(TaskBase):
         job    = self.recipetask.recipe.recipeset.job
         recipe = self.recipetask.recipe
         task_id   = self.recipetask.id
-        return "%s/%02d/%s/%s/%s/%s" % (recipe.recipeset.queue_time.year,
-                                     int(str(job.id)[-2:]),
-                                         job.id,
-                                         recipe.id,
-                                         task_id,
-                                         self.id)
+        return "%s/%02d/%s/%s/%s/%s/%s" % (recipe.recipeset.queue_time.year,
+                recipe.recipeset.queue_time.month,
+                job.id // Log.MAX_ENTRIES_PER_DIRECTORY, job.id,
+                recipe.id, task_id, self.id)
     filepath = property(filepath)
 
     def to_xml(self):
