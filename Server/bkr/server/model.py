@@ -1804,7 +1804,7 @@ $SNIPPET("rhts_post")
 
     def get_update_method(self,obj_str):
         methods = dict ( Cpu = self.updateCpu, Arch = self.updateArch, 
-                         Devices = self.updateDevices )
+                         Devices = self.updateDevices, Numa = self.updateNuma )
         return methods[obj_str]
 
     def update_legacy(self, inventory):
@@ -1922,6 +1922,12 @@ $SNIPPET("rhts_post")
                   flags      = cpuinfo['CpuFlags'])
 
         self.cpu = cpu
+
+    def updateNuma(self, numainfo):
+        if self.numa:
+            session.delete(self.numa)
+        if numainfo.get('nodes', None) is not None:
+            self.numa = Numa(nodes=numainfo['nodes'])
 
     def excluded_osmajor_byarch(self, arch):
         """
@@ -4982,7 +4988,7 @@ System.mapper = mapper(System, system_table,
                      'labinfo':relation(LabInfo, uselist=False,
                                         backref='system'),
                      'cpu':relation(Cpu, uselist=False,backref='systems'),
-                     'numa':relation(Numa, uselist=False),
+                     'numa':relation(Numa, uselist=False, backref='system'),
                      'power':relation(Power, uselist=False,
                                          backref='system'),
                      'excluded_osmajor':relation(ExcludeOSMajor,
