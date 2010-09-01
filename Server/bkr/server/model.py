@@ -1688,8 +1688,13 @@ $SNIPPET("rhts_post")
             return False
 
     def is_admin(self,group_id=None,user_id=None,groups=None,*args,**kw):
-
-        if identity.current.user.is_admin() is True: #first let's see if we are an _admin_
+        try:
+            if identity.current.user.is_admin() is True: #first let's see if we are an _admin_
+                return True
+        except AttributeError,e: pass #We may not be logged in...
+        
+        #If we are the owner.... 
+        if self.owner == User.by_id(user_id):
             return True
 
         if group_id: #Let's try this next as this will be the quicker query
@@ -1714,8 +1719,7 @@ $SNIPPET("rhts_post")
         groups = identity.current.user.groups
         for group in groups:
             if group.can_admin_system(self.id):
-                return True
-    
+                return True 
         return False
 
     def can_admin(self,user=None,group_id=None): 
@@ -1724,6 +1728,14 @@ $SNIPPET("rhts_post")
                 return True
         return False
 
+    def can_provision_now(self,user=None):
+        if user is not None and self.is_admin(user_id=user.user_id):
+            return True
+        else:
+            if user is not None and self.loaned == user:
+                return True
+        return False
+                
     def can_loan(self, user=None):
         if user and not self.loaned and not self.user:
             if self.can_admin(user):
@@ -1744,8 +1756,27 @@ $SNIPPET("rhts_post")
                or self.can_admin(user):
                 return True
         return False
+
+    def is_available(self,user=None):
+        """
+        is_available() will return true if this system is allowed to be used by the user.
+        """
+        if user:
+            if self.loaned and self.loaned == user:
+                return True
+            if self.shared:
+                # If the user is in the Systems groups
+                if self.groups:
+                    for group in user.groups:
+                        if group in self.groups:
+                            return True
+                else: 
+                    return True
         
     def can_share(self, user=None):
+        """
+        can_share() will return True id the system is currently free and allwoed to be used by the user
+        """
         if user and not self.user:
             # If the system is loaned its exclusive!
             if self.loaned:
@@ -1966,6 +1997,12 @@ $SNIPPET("rhts_post")
                          kernel_options_post=None,
                          kickstart=None,
                          ks_appends=None):
+        try:
+            if not self.can_provision_now(identity.current.user): #Needs to be an authorised user to do this
+                return False
+        except AttributeError, e: #Anonymous can't provision now
+            return False
+
         if not self.remote:
             return False
         self.remote.provision(distro=distro, 
@@ -3160,13 +3197,65 @@ class Job(TaskBase):
                     
         return current_nacks 
 
-
-
     @classmethod
     def by_whiteboard(cls,desc):
         res = Job.query().filter_by(whiteboard = desc)
         return res
 
+    @classmethod
+    def provision_system_job(cls, distro_id, **kw):
+        """ Create a new reserve job, if system_id is defined schedule it too """
+        job = Job(ttasks=0, owner=identity.current.user)
+        if kw.get('whiteboard'):
+            job.whiteboard = kw.get('whiteboard') 
+        if not isinstance(distro_id,list):
+            distro_id = [distro_id]
+
+        for id in distro_id: 
+            try:
+                distro = Distro.by_id(id)
+            except InvalidRequestError:
+                raise BX(u'Invalid Distro ID %s' % id)
+            recipeSet = RecipeSet(ttasks=2)
+            recipe = MachineRecipe(ttasks=2)
+            # Inlcude the XML definition so that cloning this job will act as expected.
+            recipe.distro_requires = distro.to_xml().toxml()
+            recipe.distro = distro
+            # Don't report panic's for reserve workflow.
+            recipe.panic = 'ignore'
+            if kw.get('system_id'):
+                try:
+                    system = System.by_id(kw.get('system_id'), identity.current.user)
+                except InvalidRequestError:
+                    raise BX(u'Invalid System ID %s' % system_id)
+                # Inlcude the XML definition so that cloning this job will act as expected.
+                recipe.host_requires = system.to_xml().toxml()
+                recipe.systems.append(system)
+            if kw.get('ks_meta'):
+                recipe.ks_meta = kw.get('ks_meta')
+            if kw.get('koptions'):
+                recipe.kernel_options = kw.get('koptions')
+            if kw.get('koptions_post'):
+                recipe.kernel_options_post = kw.get('koptions_post')
+            # Eventually we will want the option to add more tasks.
+            # Add Install task
+            recipe.append_tasks(RecipeTask(task = Task.by_name(u'/distribution/install')))
+            # Add Reserve task
+            reserveTask = RecipeTask(task = Task.by_name(u'/distribution/reservesys'))
+            if kw.get('reservetime'):
+                #FIXME add DateTimePicker to ReserveSystem Form
+                reserveTask.params.append(RecipeTaskParam( name = 'RESERVETIME', 
+                                                                value = kw.get('reservetime')
+                                                            )
+                                        )
+            recipe.append_tasks(reserveTask)
+            recipeSet.recipes.append(recipe)
+            job.recipesets.append(recipeSet)
+            job.ttasks += recipeSet.ttasks
+        session.save(job)
+        session.flush()
+        return job
+        
     def clone_link(self):
         """ return link to clone this job
         """

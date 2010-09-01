@@ -80,6 +80,11 @@ class Jobs(RPCRoot):
         submit_text = _(u'Queue')
     )
 
+    @classmethod
+    def success_redirect(cls, id, url='/jobs', *args, **kw):
+        flash(_(u'Success! job id: %s' % id))
+        redirect('%s' % url)
+
     @expose(template='bkr.server.templates.form-post')
     @identity.require(identity.not_anonymous())
     def new(self, **kw):
@@ -174,8 +179,7 @@ class Jobs(RPCRoot):
                 )
             session.save(job)
             session.flush()
-            flash(_(u'Success! job id: %s' % job.id))
-            redirect(".")
+            self.success_redirect(job.id)
         return dict(
             title = 'Clone Job %s' % id,
             form = self.job_form,
@@ -183,6 +187,7 @@ class Jobs(RPCRoot):
             options = {},
             value = dict(textxml = "%s" % textxml),
         )
+
 
     def process_xmljob(self, xmljob, user):
         job = Job(whiteboard='%s' % xmljob.whiteboard, ttasks=0,
