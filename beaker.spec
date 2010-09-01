@@ -2,7 +2,7 @@
 %{!?pyver: %global pyver %(%{__python} -c "import sys ; print sys.version[:3]")}
 
 Name:           beaker
-Version:        0.5.55
+Version:        0.5.56
 Release:        1%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
@@ -186,6 +186,19 @@ fi
 %{_sysconfdir}/init.d/%{name}-watchdog
 
 %changelog
+* Thu Sep 02 2010 Raymond Mancy <rmancy@redhat.com> 0.5.56-1
+- bz595360 - Fixed reserve report to not crash mysql (rmancy@redhat.com)
+- bz620604 - Removed take for those without the correct permissions.
+  (rmancy@redhat.com)
+- bz629067 - adds additional logging to beaker-proxy which may help track down
+  memory issues. (bpeck@redhat.com)
+- bz593606 - support NUMA node count (dcallagh@redhat.com)
+- bz628811 - update unit tests for testinfo.py (dcallagh@redhat.com)
+- bz627814 - Fixed a couple of typos (rmancy@redhat.com)
+- Merge branch 'master' into bz595360 (rmancy@redhat.com)
+- bz593560 - Do over of the reserve report filter. (rmancy@redhat.com)
+- bz541285 - sort system key/values (dcallagh@redhat.com)
+
 * Thu Aug 26 2010 Raymond Mancy <rmancy@redhat.com> 0.5.55-1
 - bz624594 - patch for beaker-clien tto work with kobo >= 0.3 Daniel Mach
   (rmancy@redhat.com)
