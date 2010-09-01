@@ -277,7 +277,7 @@ def queued_recipes(*args):
                      recipe.systems.remove(system)
 
                 # Atomic operation to put recipe in Scheduled state
-                if session.connection(Recipe).execute(recipe_table.update(
+                elif session.connection(Recipe).execute(recipe_table.update(
                      and_(recipe_table.c.id==recipe.id,
                        recipe_table.c.status_id==TaskStatus.by_name(u'Queued').id)),
                        status_id=TaskStatus.by_name(u'Scheduled').id).rowcount == 1:
