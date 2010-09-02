@@ -399,6 +399,20 @@ class XmlArch(ElementWrapper):
                              getattr(arch_alias.c.arch, op)(value))
         return (joins, query)
 
+class XmlNumaNodeCount(ElementWrapper):
+    """
+    Pick a system with the correct number of NUMA nodes.
+    """
+    def filter(self):
+        op = self.op_table[self.get_xml_attr('op', unicode, '==')]
+        value = self.get_xml_attr('value', int, None)
+        joins = []
+        query = None
+        if value:
+            joins = [system_table.c.id == numa_table.c.system_id]
+            query = getattr(numa_table.c.nodes, op)(value)
+        return (joins, query)
+
 subclassDict = {
     'host'                : XmlHost,
     'distro'              : XmlDistro,
@@ -421,6 +435,7 @@ subclassDict = {
     'cpu_count'           : XmlCpuCount,
     'hostname'            : XmlHostName,
     'arch'                : XmlArch,
+    'numa_node_count'     : XmlNumaNodeCount,
     }
 
 if __name__=='__main__':

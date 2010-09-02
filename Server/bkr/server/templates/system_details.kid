@@ -2,13 +2,19 @@
  &nbsp;&nbsp;<b>System</b>
  <table class="list">
      <tr class="list">   
-         <th class="list">
+         <th class="list" style="width: 20%;"><!-- !just a hack to prevent the next column from sitting way off in the middle of the page -->
              <b>Memory</b>
+         </th>
+         <th class="list" py:if="system.numa">
+             <b>NUMA Nodes</b>
          </th>
      </tr>
     <tr class="list" bgcolor="#FFFFFF">
-      <td py:if="system.memory" class="list">
-          ${system.memory} MB
+      <td class="list">
+          <span py:if="system.memory">${system.memory} MB</span>
+      </td>
+      <td class="list" py:if="system.numa">
+          ${system.numa.nodes}
       </td>
     </tr>
  </table>

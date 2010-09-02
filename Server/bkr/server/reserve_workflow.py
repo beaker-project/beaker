@@ -1,13 +1,16 @@
 from turbogears import controllers, identity, expose, url, database, validate, flash, redirect
 from turbogears.database import session
 from sqlalchemy.sql.expression import and_, func, not_
+from sqlalchemy.exceptions import InvalidRequestError
 from bkr.server.widgets import ReserveWorkflow as ReserveWorkflowWidget
 from bkr.server.widgets import ReserveSystem
 from bkr.server.model import (osversion_table, distro_table, osmajor_table, arch_table, distro_tag_table,
                               Distro, Job, RecipeSet, MachineRecipe, System, RecipeTask, RecipeTaskParam,
                               Task, Arch, OSMajor, DistroTag)
-from sqlalchemy.exceptions import InvalidRequestError
+from bkr.server.model import Job
+from bkr.server.jobs import Jobs as JobController
 from bkr.server.cobbler_utils import hash_to_string
+from bexceptions import *
 import re
 import logging
 log = logging.getLogger(__name__)
@@ -20,60 +23,15 @@ class ReserveWorkflow:
     @identity.require(identity.not_anonymous())
     def doit(self, distro_id, **kw):
         """ Create a new reserve job, if system_id is defined schedule it too """
-        job = Job(ttasks=0, owner=identity.current.user)
-        if kw.get('whiteboard'):
-            job.whiteboard = kw.get('whiteboard') 
-        if not isinstance(distro_id,list):
-            distro_id = [distro_id]
-
-        for id in distro_id: 
-            try:
-                distro = Distro.by_id(id)
-            except InvalidRequestError:
-                flash(_(u'Invalid Distro ID %s' % id))
-                redirect('/')
-            recipeSet = RecipeSet(ttasks=2)
-            recipe = MachineRecipe(ttasks=2)
-            # Inlcude the XML definition so that cloning this job will act as expected.
-            recipe.distro_requires = distro.to_xml().toxml()
-            recipe.distro = distro
-            # Don't report panic's for reserve workflow.
-            recipe.panic = 'ignore'
-            if kw.get('system_id'):
-                try:
-                    system = System.by_id(kw.get('system_id'), identity.current.user)
-                except InvalidRequestError:
-                    flash(_(u'Invalid System ID %s' % system_id))
-                    redirect('/')
-                # Inlcude the XML definition so that cloning this job will act as expected.
-                recipe.host_requires = system.to_xml().toxml()
-                recipe.systems.append(system)
-            if kw.get('ks_meta'):
-                recipe.ks_meta = kw.get('ks_meta')
-            if kw.get('koptions'):
-                recipe.kernel_options = kw.get('koptions')
-            if kw.get('koptions_post'):
-                recipe.kernel_options_post = kw.get('koptions_post')
-            # Eventually we will want the option to add more tasks.
-            # Add Install task
-            recipe.append_tasks(RecipeTask(task = Task.by_name(u'/distribution/install')))
-            # Add Reserve task
-            reserveTask = RecipeTask(task = Task.by_name(u'/distribution/reservesys'))
-            if kw.get('reservetime'):
-                #FIXME add DateTimePicker to ReserveSystem Form
-                reservetask.params.append(RecipeTaskParam( name = 'RESERVETIME', 
-                                                                value = kw.get('reservetime')
-                                                            )
-                                        )
-            recipe.append_tasks(reserveTask)
-            recipeSet.recipes.append(recipe)
-            job.recipesets.append(recipeSet)
-            job.ttasks += recipeSet.ttasks
-        session.save(job)
-        session.flush()
-
-        flash(_(u'Successfully queued job %s' % job.id))
-        redirect('/jobs/%s' % job.id)
+        if 'system_id' in kw:
+            kw['id'] = kw['system_id']
+         
+        try:
+            provision_system_job = Job.provision_system_job(distro_id, **kw)
+        except BX, msg:
+            flash(_(u"%s" % msg))
+            redirect(u".")
+        JobController.success_redirect(provision_system_job.id)
 
     @expose(template='bkr.server.templates.form')
     @identity.require(identity.not_anonymous())

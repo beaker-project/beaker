@@ -992,13 +992,19 @@ class SystemProvision(Form):
     javascript = [LocalJSLink('bkr', '/static/javascript/provision.js')]
     template = "bkr.server.templates.system_provision"
     member_widgets = ["id", "prov_install", "ks_meta", "power",
-                      "koptions", "koptions_post", "reboot"]
-    params = ['options', 'is_user', 'lab_controller', 'power_enabled']
-    
+                      "koptions", "koptions_post", "reboot","schedule_reserve_days"]
+    params = ['options', 'is_user', 'lab_controller', 'power_enabled','provision_now_rights','will_provision']
+    MAX_DAYS_PROVISION = 7
+    DEFAULT_RESERVE_DAYS = 0.5
+
     def __init__(self, *args, **kw):
         super(SystemProvision, self).__init__(*args, **kw)
 	self.id           = HiddenField(name="id")
 	self.power        = HiddenField(name="power")
+        self.schedule_reserve_days = SingleSelectField(name='reserve_days',
+                                                       label=_('Days to reserve for'),
+                                                       options = range(1, self.MAX_DAYS_PROVISION + 1),
+                                                       validator=validators.NotEmpty())
         self.prov_install = SingleSelectField(name='prov_install',
                                              label=_(u'Distro'),
                                              options=[],
@@ -1017,6 +1023,10 @@ class SystemProvision(Form):
 
     def update_params(self, d):
         super(SystemProvision, self).update_params(d)
+        if 'will_provision' in d['options']:
+            d['will_provision'] = d['options']['will_provision']
+        if 'provision_now_rights' in d['options']:
+            d['provision_now_rights'] = d['options']['provision_now_rights']
         if 'is_user' in d['options']:
             d['is_user'] = d['options']['is_user']
         if 'lab_controller' in d['options']:
