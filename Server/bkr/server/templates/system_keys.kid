@@ -1,3 +1,6 @@
+<?python
+from itertools import chain
+?>
 <form xmlns:py="http://purl.org/kid/ns#"
  name="${name}"
  action="${tg.url(action)}"
@@ -27,25 +30,19 @@
     <a class="button" href="javascript:document.${name}.submit();">Add ( + )</a>
    </td>
   </tr>
-  <?python row_color = "#f1f1f1" ?>
-  <tr class="list" bgcolor="${row_color}" py:for="key_value in key_values_int">
+  <?python
+    row_color = "#f1f1f1"
+    sorted_key_values = sorted(chain(key_values_int, key_values_string),
+            key=lambda kv: (kv.key.key_name, kv.key_value))
+  ?>
+  <tr class="list" bgcolor="${row_color}" py:for="key_value in sorted_key_values">
    <td class="list">
     ${key_value.key.key_name}
    </td>
    <td class="list">
     ${key_value.key_value}
    </td>
-   <td class="list"><a py:if="not readonly" class="button" href="${tg.url('/key_remove', key_type='int', system_id=value_for('id'), key_value_id=key_value.id)}">Delete ( - )</a></td>
-   <?python row_color = (row_color == "#f1f1f1") and "#FFFFFF" or "#f1f1f1" ?>
-  </tr> 
-  <tr class="list" bgcolor="${row_color}" py:for="key_value in key_values_string">
-   <td class="list">
-    ${key_value.key.key_name}
-   </td>
-   <td class="list">
-    ${key_value.key_value}
-   </td>
-   <td class="list"><a py:if="not readonly" class="button" href="${tg.url('/key_remove', key_type='string', system_id=value_for('id'), key_value_id=key_value.id)}">Delete ( - )</a></td>
+   <td class="list"><a py:if="not readonly" class="button" href="${tg.url('/key_remove', key_type=key_value.key_type, system_id=value_for('id'), key_value_id=key_value.id)}">Delete ( - )</a></td>
    <?python row_color = (row_color == "#f1f1f1") and "#FFFFFF" or "#f1f1f1" ?>
   </tr> 
  </table>

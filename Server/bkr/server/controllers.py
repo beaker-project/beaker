@@ -825,19 +825,44 @@ class Root(RPCRoot):
         is_user = False
         if system:
             title = system.fqdn
-            if system.can_admin(user=identity.current.user): 
+            our_user = identity.current.user #simple optimisation
+            currently_held = system.user == our_user
+            if system.can_admin(user=our_user): 
                 options['owner_change_text'] = ' (Change)'
             else:
                 readonly = True
-            if system.can_loan(identity.current.user):
+            if system.can_loan(our_user):
                 options['loan_text'] = ' (Loan)'
-            if system.current_loan(identity.current.user):
+            if system.current_loan(our_user):
                 options['loan_text'] = ' (Return)'
-            if system.can_share(identity.current.user):
+
+            if system.can_share(our_user) and system.can_provision_now(our_user): #Has privs and machine is available, can take
                 options['user_change_text'] = ' (Take)'
-            if system.current_user(identity.current.user):
-                options['user_change_text'] = ' (Return)'
-                is_user = True
+                self.provision_now_rights = True
+                self.will_provision = False 
+            elif not system.can_provision_now(our_user): # If you don't have privs to take
+                if system.is_available(our_user): #And you have access to the machine, schedule
+                    self.provision_action = '/schedule_provision'
+                    self.provision_now_rights = False
+                    self.will_provision = True
+                else: #No privs to machine at all
+                    self.will_provision = False  
+                    self.provision_now_rights = False 
+            elif system.can_provision_now(our_user) and currently_held: #Has privs, and we are current user, we can provision
+                self.provision_action = '/action_provision'
+                self.provision_now_rights = True
+                self.will_provision = True
+            elif system.can_provision_now(our_user) and not currently_held: #Has privs, not current user, You need to Take it first
+                self.provision_now_rights = True
+                self.will_provision = False
+            else:
+                log.error('Could not follow logic when determining user access to machine')
+                self.will_provision = False
+                self.provision_now_rights = False
+
+        if system.current_user(our_user):
+            options['user_change_text'] = ' (Return)'
+            is_user = True
         else:
             title = 'New'
 
@@ -897,7 +922,7 @@ class Root(RPCRoot):
                                     notes     = '/save_note',
                                     groups    = '/save_group',
                                     install   = '/save_install',
-                                    provision = '/action_provision',
+                                    provision = getattr(self,'provision_action',''),
                                     power_action = '/action_power',
                                     arches    = '/save_arch',
                                     tasks     = '/tasks/do_search',
@@ -919,6 +944,8 @@ class Root(RPCRoot):
                                                 provisions = system.provisions,
                                                 prov_arch = [(arch.id, arch.arch) for arch in system.arch]),
                                    provision = dict(is_user = is_user,
+                                                    will_provision = self.will_provision,
+                                                    provision_now_rights = self.provision_now_rights,
                                                     lab_controller = system.lab_controller,
                                                     prov_install = [(distro.id, distro.install_name) for distro in system.distros().order_by(distro_table.c.install_name)]),
                                    power_action = dict(is_user=is_user),
@@ -1422,24 +1449,78 @@ class Root(RPCRoot):
 
     @expose()
     @identity.require(identity.not_anonymous())
-    def action_provision(self, id, prov_install=None, ks_meta=None, 
-                             koptions=None, koptions_post=None, reboot=None):
+    def schedule_provision(self,id, prov_install=None, ks_meta=None, koptions=None, koptions_post=None, reserve_days=None, **kw):
+        distro_id = prov_install
         try:
-            system = System.by_id(id,identity.current.user)
+            user = identity.current.user
+            system = System.by_id(id,user)
         except InvalidRequestError:
-            flash( _(u"Unable to save Provision for %s" % id) )
+            flash( _(u"Unable to save scheduled provision for %s" % id) )
             redirect("/")
         try:
-            distro = Distro.by_id(prov_install)
+            distro = Distro.by_id(distro_id)
         except InvalidRequestError:
             flash( _(u"Unable to lookup distro for %s" % id) )
+            redirect(u"/view/%s" % system.fqdn)
+    
+        reserve_days = int(reserve_days)
+        if reserve_days is None:#This should not happen
+            log.debug('reserve_days has not been set in provision page, using default')
+            reserve_days = SystemProvision.DEFAULT_RESERVE_DAYS
+        else: 
+            if reserve_days > SystemProvision.MAX_DAYS_PROVISION: #Someone is trying to cheat
+                log.debug('User has tried to set provision to %s days, which is more than the allowable %s days' % (reserve_days,SystemProvision.DEFAULT_RESERVE_DAYS))
+                reserve_days = SystemProvision.DEFAULT_RESERVE_DAYS
+
+        reserve_time =  ((reserve_days * 24) * 60) * 60    
+        job_details = dict(whiteboard = 'Provision %s' % distro.name,
+                            distro_id = distro_id,
+                            system_id = id,
+                            ks_meta = ks_meta,
+                            koptions = koptions,
+                            koptions_post = koptions_post,
+                            reservetime = reserve_time)
+
+        try:                               
+            provision_system_job = Job.provision_system_job(**job_details)
+        except BX, msg:
+            flash(_(u"%s" % msg))
+            redirect(u"/view/%s" % system.fqdn)
+
+        self.jobs.success_redirect(provision_system_job.id)
+    
+    @expose()
+    @identity.require(identity.not_anonymous())
+    def action_provision(self, id, prov_install=None, ks_meta=None, 
+                             koptions=None, koptions_post=None, reboot=None):
+
+        """
+        We schedule a job which will provision a system. 
+
+        """
+        distro_id = prov_install
+        try:
+            user = identity.current.user
+            system = System.by_id(id,user)
+        except InvalidRequestError:
+            flash( _(u"Unable to save scheduled provision for %s" % id) )
             redirect("/")
         try:
-            system.action_provision(distro = distro,
-                                    ks_meta = ks_meta,
-                                    kernel_options = koptions,
-                                    kernel_options_post = koptions_post)
-        except BX, msg:
+            distro = Distro.by_id(distro_id)
+        except InvalidRequestError:
+            flash( _(u"Unable to lookup distro for %s" % id) )
+            redirect(u"/view/%s" % system.fqdn)
+         
+        try:
+            can_provision_now = system.can_provision_now(user) #Check perms
+            if can_provision_now:
+                system.action_provision(distro = distro,
+                                        ks_meta = ks_meta,
+                                        kernel_options = koptions,
+                                        kernel_options_post = koptions_post)
+            else: #This shouldn't happen, maybe someone is trying to be funny
+                raise BX('User: %s has insufficent permissions to provision %s' % (user.user_name, system.fqdn))
+        except BX, msg: 
             activity = SystemActivity(identity.current.user, 'WEBUI', 'Provision', 'Distro', "", "%s: %s" % (msg, distro.install_name))
             system.activity.append(activity)
             flash(_(u"%s" % msg))
