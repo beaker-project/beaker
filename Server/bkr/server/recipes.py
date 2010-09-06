@@ -175,13 +175,21 @@ class Recipes(RPCRoot):
     @expose(template='bkr.server.templates.grid')
     @paginate('list',default_order='-id', limit=50, max_limit=None)
     def index(self,*args,**kw):
-        return self.recipes(recipes=session.query(MachineRecipe),*args,**kw)
+        return self.recipes(recipes=session.query(MachineRecipe)
+                # need to join in case the user sorts by these related properties
+                .join('status').join('result').join('system')
+                .join('distro').join(['distro', 'arch']),
+                *args, **kw)
 
     @identity.require(identity.not_anonymous())
     @expose(template='bkr.server.templates.grid')
     @paginate('list',default_order='-id', limit=50, max_limit=None)
     def mine(self,*args,**kw):
-        return self.recipes(recipes=MachineRecipe.mine(identity.current.user),action='./mine',*args,**kw)
+        return self.recipes(recipes=MachineRecipe.mine(identity.current.user)
+                # need to join in case the user sorts by these related properties
+                .join('status').join('result').join('system')
+                .join('distro').join(['distro', 'arch']),
+                action='./mine', *args, **kw)
 
     def recipes(self,recipes,action='.',*args, **kw): 
         recipes_return = self._recipes(recipes,**kw)
@@ -198,9 +206,9 @@ class Recipes(RPCRoot):
         recipes_grid = myPaginateDataGrid(fields=[
 		     widgets.PaginateDataGrid.Column(name='id', getter=lambda x:make_link(url='./%s' % x.id, text=x.t_id), title='ID', options=dict(sortable=True)),
 		     widgets.PaginateDataGrid.Column(name='whiteboard', getter=lambda x:x.whiteboard, title='Whiteboard', options=dict(sortable=True)),
-		     widgets.PaginateDataGrid.Column(name='arch', getter=lambda x:x.arch, title='Arch', options=dict(sortable=True)),
-		     widgets.PaginateDataGrid.Column(name='system', getter=lambda x: x.system and x.system.link, title='System', options=dict(sortable=True)),
-		     widgets.PaginateDataGrid.Column(name='distro', getter=lambda x: x.distro and x.distro.link, title='Distro', options=dict(sortable=True)),
+		     widgets.PaginateDataGrid.Column(name='distro.arch.arch', getter=lambda x:x.arch, title='Arch', options=dict(sortable=True)),
+		     widgets.PaginateDataGrid.Column(name='system.fqdn', getter=lambda x: x.system and x.system.link, title='System', options=dict(sortable=True)),
+		     widgets.PaginateDataGrid.Column(name='distro.install_name', getter=lambda x: x.distro and x.distro.link, title='Distro', options=dict(sortable=True)),
 		     widgets.PaginateDataGrid.Column(name='progress', getter=lambda x: x.progress_bar, title='Progress', options=dict(sortable=False)),
 		     widgets.PaginateDataGrid.Column(name='status.status', getter=lambda x:x.status, title='Status', options=dict(sortable=True)),
 		     widgets.PaginateDataGrid.Column(name='result.result', getter=lambda x:x.result, title='Result', options=dict(sortable=True)),
