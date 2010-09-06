@@ -25,6 +25,20 @@ import time
 logging.basicConfig(level=logging.DEBUG)
 log = logging.getLogger('bkr.server.test.selenium.__init__')
 
+def check_listen(port):
+    """
+    Returns True iff any process on the system is listening
+    on the given TCP port.
+    """
+    # with newer lsof we could just use -sTCP:LISTEN,
+    # but RHEL5's lsof is too old so we have to filter for LISTEN state ourselves
+    output, _ = subprocess.Popen(['/usr/sbin/lsof', '-iTCP:%d' % port],
+            stdout=subprocess.PIPE).communicate()
+    for line in output.splitlines():
+        if '(LISTEN)' in line:
+            return True
+    return False
+
 class Process(object):
     """
     Thin wrapper around subprocess.Popen which supports starting and killing 
@@ -38,6 +52,10 @@ class Process(object):
         self.listen_port = listen_port
 
     def start(self):
+        if self.listen_port and check_listen(self.listen_port):
+            log.warning('Another process is already listening on %d, not starting %s',
+                    self.listen_port, self.name)
+            return
         log.info('Spawning %s: %s %r', self.name, ' '.join(self.args), self.env)
         env = dict(os.environ)
         if self.env:
@@ -54,13 +72,8 @@ class Process(object):
         # XXX is there a better way to do this?
         for i in range(20):
             log.info('Waiting for %s to listen on port %d', self.name, port)
-            # with newer lsof we could just use -sTCP:LISTEN,
-            # but RHEL5's lsof is too old so we have to filter for LISTEN state
-            output, _ = subprocess.Popen(['/usr/sbin/lsof', '-p%d' % self.popen.pid,
-                    '-iTCP:%d' % port], stdout=subprocess.PIPE).communicate()
-            for line in output.splitlines():
-                if '(LISTEN)' in line:
-                    return
+            if check_listen(self.listen_port):
+                return
             time.sleep(1)
         raise RuntimeError('Gave up waiting for LISTEN %d' % port)
 
