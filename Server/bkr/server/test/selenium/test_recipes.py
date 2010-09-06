@@ -31,7 +31,7 @@ def assert_sorted(things):
 class TestRecipesIndex(unittest.TestCase):
 
     slow = True
-    log = logging.getLogger('bkr.server.seleniumtests.test_recipes.TestRecipesIndex')
+    log = logging.getLogger('bkr.server.test.selenium.test_recipes.TestRecipesIndex')
 
     def setUp(self):
         # XXX we could save a *lot* of time by reusing Firefox instances across tests

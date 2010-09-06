@@ -23,7 +23,7 @@ import signal
 import time
 
 logging.basicConfig(level=logging.DEBUG)
-log = logging.getLogger('bkr.server.seleniumtests.__init__')
+log = logging.getLogger('bkr.server.test.selenium.__init__')
 
 class Process(object):
     """
