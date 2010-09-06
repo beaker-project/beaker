@@ -39,9 +39,18 @@ __description__ = 'Command line tool for initializing Beaker DB'
 def dummy():
     pass
 
-def main():
-    parser = get_parser()
-    opts, args = parser.parse_args()
+def main(**kw):
+    if kw: #Used when testing
+        class Opts(object):
+            def __init__(self,**kw):
+                for (k,v) in kw.iteritems():
+                    setattr(self,k,v)
+            def __getattr__(self,name):
+                return None
+        opts = Opts(**kw)
+    else:
+        parser = get_parser()
+        opts, args = parser.parse_args()
     setupdir = dirname(dirname(__file__))
     curdir = getcwd()
 
