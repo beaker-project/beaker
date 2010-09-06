@@ -31,11 +31,11 @@ class Process(object):
     the process in setup/teardown.
     """
 
-    def __init__(self, name, args, env=None, startup_delay=0):
+    def __init__(self, name, args, env=None, listen_port=None):
         self.name = name
         self.args = args
         self.env = env
-        self.startup_delay = startup_delay
+        self.listen_port = listen_port
 
     def start(self):
         log.info('Spawning %s: %s %r', self.name, ' '.join(self.args), self.env)
@@ -43,11 +43,31 @@ class Process(object):
         if self.env:
             env.update(self.env)
         self.popen = subprocess.Popen(self.args, env=env)
-        if self.startup_delay:
-            time.sleep(self.startup_delay) # TODO use a real condition here!
+        if self.listen_port:
+            self._wait_for_listen(self.listen_port)
+
+    def _wait_for_listen(self, port):
+        """
+        Blocks until some process on the system is listening
+        on the given TCP port.
+        """
+        # XXX is there a better way to do this?
+        for i in range(20):
+            log.info('Waiting for %s to listen on port %d', self.name, port)
+            # with newer lsof we could just use -sTCP:LISTEN,
+            # but RHEL5's lsof is too old so we have to filter for LISTEN state
+            output, _ = subprocess.Popen(['/usr/sbin/lsof', '-p%d' % self.popen.pid,
+                    '-iTCP:%d' % port], stdout=subprocess.PIPE).communicate()
+            for line in output.splitlines():
+                if '(LISTEN)' in line:
+                    return
+            time.sleep(1)
+        raise RuntimeError('Gave up waiting for LISTEN %d' % port)
 
     def stop(self, signal=signal.SIGTERM):
-        if self.popen.poll() is not None:
+        if not hasattr(self, 'popen'):
+            log.warning('%s never started, not killing', self.name)
+        elif self.popen.poll() is not None:
             log.warning('%s (pid %d) already dead, not killing', self.name, self.popen.pid)
         else:
             log.info('Sending %r to %s (pid %d)', signal, self.name, self.popen.pid)
@@ -58,9 +78,9 @@ xvfb = Process('Xvfb', args=['Xvfb', ':4', '-fp', '/usr/share/X11/fonts/misc',
         '-screen', '0', '1024x768x24'])
 selenium_server = Process('selenium-server', args=['java', '-jar',
         '/opt/selenium/selenium-server-1.0.3/selenium-server.jar',
-        '-log', 'selenium.log'], env={'DISPLAY': ':4'}, startup_delay=10)
+        '-log', 'selenium.log'], env={'DISPLAY': ':4'}, listen_port=4444)
 beaker = Process('beaker', args=['./start-server.py', 'test.cfg'],
-        startup_delay=2)
+        listen_port=8080)
 
 def setup_package():
     xvfb.start()
