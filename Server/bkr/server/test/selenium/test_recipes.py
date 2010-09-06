@@ -18,6 +18,7 @@
 
 import unittest
 import logging
+import re
 from selenium import selenium
 
 def assert_sorted(things):
@@ -54,9 +55,6 @@ class TestRecipesIndex(unittest.TestCase):
                        for row in range(0, row_count)]
         assert_sorted(cell_values)
 
-    def test_can_sort_by_id(self):
-        self.check_column_sort(1)
-
     def test_can_sort_by_whiteboard(self):
         self.check_column_sort(2)
 
@@ -74,3 +72,21 @@ class TestRecipesIndex(unittest.TestCase):
 
     def test_can_sort_by_result(self):
         self.check_column_sort(8)
+
+    # this version is different since the cell values will be like ['R:1', 'R:10', ...]
+    def test_can_sort_by_id(self):
+        column = 1
+        sel = self.selenium
+        sel.open('recipes/')
+        sel.click('//table[@id="widget"]/thead/th[%d]//a[@href]' % column)
+        sel.wait_for_page_to_load('30000')
+        row_count = int(sel.get_xpath_count(
+                '//table[@id="widget"]/tbody/tr/td[%d]' % column))
+        self.assertEquals(row_count, 50)
+        cell_values = []
+        for row in range(0, row_count):
+            raw_value = sel.get_table('widget.%d.%d' % (row, column - 1)) # zero-indexed
+            m = re.match(r'R:(\d+)$', raw_value)
+            assert m.group(1)
+            cell_values.append(int(m.group(1)))
+        assert_sorted(cell_values)
