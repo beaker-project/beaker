@@ -6,11 +6,12 @@ $(document).ready(function(){
         if ($('#form_status_id :selected').text() == 'Broken' || $('#form_status_id :selected').text() == 'Removed') {
              $('#condition_report_row').removeClass('hidden')
         };
-        if ($('#form_status_id :selected').text() == 'Working') {
+        if ($('#form_status_id :selected').text() == 'Manual' || $('#form_status_id :selected').text() == 'Automated') {
              $('#condition_report_row').addClass('hidden')
         } 
     });
-    if ($('#form_status_id :selected').text() == 'Working') {
+
+    if ($('#form_status_id :selected').text() == 'Manual' || $('#form_status_id :selected').text() == 'Automated') {
          $('#condition_report_row').addClass('hidden')
     } 
 });
