@@ -42,7 +42,7 @@ class TestElementWrapperFilters(unittest.TestCase):
             """)
         self.assertEquals(2, len(clauses))
         self.assertEquals('system.id = cpu.system_id', str(clauses[0]))
-        self.assertEquals('cpu.processors = :processors_1', str(clauses[1]))
+        self.assertEquals('cpu.processors = %s', str(clauses[1]))
         self.assertEquals(4, clauses[1].compile().params['processors_1'])
 
     def test_numa_node_count(self):
@@ -55,5 +55,5 @@ class TestElementWrapperFilters(unittest.TestCase):
             """)
         self.assertEquals(2, len(clauses))
         self.assertEquals('system.id = numa.system_id', str(clauses[0]))
-        self.assertEquals('numa.nodes >= :nodes_1', str(clauses[1]))
+        self.assertEquals('numa.nodes >= %s', str(clauses[1]))
         self.assertEquals(32, clauses[1].compile().params['nodes_1'])
