@@ -1,9 +1,8 @@
 #!/usr/bin/python
-from bkr.server.test import BeakerTest
-from selenium import selenium
+import bkr.server.test.selenium
 import unittest, time, re, os
 
-class AddUser(unittest.TestCase):
+class AddUser(bkr.server.test.selenium.SeleniumTestCase):
 
     BEAKER_TEST_USER_2 = os.environ.get('BEAKER_TEST_USER_2','anonymous2')
     BEAKER_TEST_EMAIL_2 = os.environ.get('BEAKER_TEST_USER_2','anonymous2@my.com')
@@ -14,8 +13,7 @@ class AddUser(unittest.TestCase):
 
     def setUp(self):
         self.verificationErrors = []
-        self.selenium = selenium("localhost", 4444, "*chrome", "http://%s/" % BeakerTest.SERVER)
-
+        self.selenium = self.get_selenium()
         self.selenium.start()
     
     def test_adduser(self):

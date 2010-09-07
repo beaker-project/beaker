@@ -21,9 +21,21 @@ import logging
 import subprocess
 import signal
 import time
+import turbogears.config
+from selenium import selenium
+import unittest
 
-logging.basicConfig(level=logging.DEBUG)
-log = logging.getLogger('bkr.server.test.selenium.__init__')
+log = logging.getLogger(__name__)
+
+class SeleniumTestCase(unittest.TestCase):
+
+    BEAKER_LOGIN_USER = 'admin'
+    BEAKER_LOGIN_PASSWORD = 'testing'
+
+    def get_selenium(self):
+        return selenium('localhost', 4444, '*chrome',
+                'http://%s:%s/' % (os.environ.get('SERVER', 'localhost'),
+                turbogears.config.get('server.socket_port')))
 
 def check_listen(port):
     """
@@ -45,11 +57,13 @@ class Process(object):
     the process in setup/teardown.
     """
 
-    def __init__(self, name, args, env=None, listen_port=None):
+    def __init__(self, name, args, env=None, listen_port=None,
+            stop_signal=signal.SIGTERM):
         self.name = name
         self.args = args
         self.env = env
         self.listen_port = listen_port
+        self.stop_signal = stop_signal
 
     def start(self):
         if self.listen_port and check_listen(self.listen_port):
@@ -60,7 +74,7 @@ class Process(object):
         env = dict(os.environ)
         if self.env:
             env.update(self.env)
-        self.popen = subprocess.Popen(self.args, env=env)
+        self.popen = subprocess.Popen(self.args, stderr=subprocess.STDOUT, env=env)
         if self.listen_port:
             self._wait_for_listen(self.listen_port)
 
@@ -77,30 +91,39 @@ class Process(object):
             time.sleep(1)
         raise RuntimeError('Gave up waiting for LISTEN %d' % port)
 
-    def stop(self, signal=signal.SIGTERM):
+    def stop(self):
         if not hasattr(self, 'popen'):
             log.warning('%s never started, not killing', self.name)
         elif self.popen.poll() is not None:
             log.warning('%s (pid %d) already dead, not killing', self.name, self.popen.pid)
         else:
-            log.info('Sending %r to %s (pid %d)', signal, self.name, self.popen.pid)
-            os.kill(self.popen.pid, signal)
+            log.info('Sending signal %r to %s (pid %d)',
+                    self.stop_signal, self.name, self.popen.pid)
+            os.kill(self.popen.pid, self.stop_signal)
             self.popen.wait()
 
-xvfb = Process('Xvfb', args=['Xvfb', ':4', '-fp', '/usr/share/X11/fonts/misc',
-        '-screen', '0', '1024x768x24'])
-selenium_server = Process('selenium-server', args=['java', '-jar',
-        '/opt/selenium/selenium-server-1.0.3/selenium-server.jar',
-        '-log', 'selenium.log'], env={'DISPLAY': ':4'}, listen_port=4444)
-beaker = Process('beaker', args=['./start-server.py', 'test.cfg'],
-        listen_port=8080)
+processes = []
 
 def setup_package():
-    xvfb.start()
-    selenium_server.start()
-    beaker.start()
+    processes.extend([
+        Process('Xvfb', args=['Xvfb', ':4', '-fp', '/usr/share/X11/fonts/misc',
+                '-screen', '0', '1024x768x24']),
+        Process('selenium-server', args=['java', '-jar',
+                '/opt/selenium/selenium-server-1.0.3/selenium-server.jar',
+                '-log', 'selenium.log'], env={'DISPLAY': ':4'},
+                listen_port=4444),
+        Process('beaker', args=['./start-server.py', 'test.cfg'],
+                listen_port=turbogears.config.get('server.socket_port'),
+                stop_signal=signal.SIGINT)
+    ])
+    try:
+        for process in processes:
+            process.start()
+    except:
+        for process in processes:
+            process.stop()
+        raise
 
 def teardown_package():
-    beaker.stop(signal.SIGINT)
-    selenium_server.stop()
-    xvfb.stop()
+    for process in processes:
+        process.stop()

@@ -19,7 +19,8 @@
 import unittest
 import logging
 import re
-from selenium import selenium
+
+import bkr.server.test.selenium
 
 def assert_sorted(things):
     if len(things) == 0: return
@@ -28,14 +29,14 @@ def assert_sorted(things):
             raise AssertionError('Not in sorted order, found %r after %r' %
                     (things[n], things[n - 1]))
 
-class TestRecipesIndex(unittest.TestCase):
+class TestRecipesIndex(bkr.server.test.selenium.SeleniumTestCase):
 
     slow = True
-    log = logging.getLogger('bkr.server.test.selenium.test_recipes.TestRecipesIndex')
+    log = logging.getLogger(__name__ + '.TestRecipesIndex')
 
     def setUp(self):
         # XXX we could save a *lot* of time by reusing Firefox instances across tests
-        self.selenium = selenium('localhost', 4444, '*chrome', 'http://localhost:8080/')
+        self.selenium = self.get_selenium()
         self.selenium.start()
 
     def tearDown(self):

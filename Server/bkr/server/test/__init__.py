@@ -17,11 +17,6 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 from bkr.server.util import load_config
-from bkr.server.util import load_config
-from bkr.server.tools.init import main as beaker_init
-from bkr.server.model import System, User, Distro, LabController
-from bkr.server.bexceptions import *
-from bkr.server.tools import init
 import turbogears as tg
 import sqlalchemy as sqla
 import unittest
@@ -30,17 +25,10 @@ import os
 import time
 
 log = logging.getLogger(__name__)
-ch = logging.StreamHandler()
-ch.setLevel(logging.DEBUG)
-log.addHandler(ch)
-
 
 class BeakerTest(unittest.TestCase):
 
     CONFIG_FILE='test.cfg' #Fixme, get this from opts perhaps?    
-    BEAKER_LOGIN_USER = 'admin'
-    BEAKER_LOGIN_PASSWORD = 'testing'
-    SERVER = '%s:%s' % (os.environ.get('SERVER','localhost'), tg.config.get('server.socket_port'))
 
 
 class DataSetup(object):
@@ -59,16 +47,13 @@ class DataSetup(object):
         has_run_setup = cls.ran_setup
         if not has_run_setup or override:
             try:
-                try:
-                    tg.update_config(configfile=BeakerTest.CONFIG_FILE, modulename="bkr.server.config")
-                except Exception, e:
-                    raise Exception('Could not update config %s' % e)   
+                from bkr.server.tools.init import init_db
                 db_name = str(tg.config.get('db_name'))
                 e = cls._create_engine()
                 if override:
                     e("DROP DATABASE IF EXISTS %s" % db_name)
                 e("CREATE DATABASE %s" % db_name)
-                beaker_init(configfile=BeakerTest.CONFIG_FILE)#FIXME, add switch so we can run from beaker-init script if we can
+                init_db()
             except Exception, e:
                 log.error('Setup failed: %s' % e)
                 cls.ran_setup = True
@@ -99,6 +84,7 @@ class DataSetup(object):
 
     @classmethod
     def create_labcontroller(cls,**kw):
+        from bkr.server.model import LabController
         if kw.get('fqdn'):
             lc_fqdn = kw['fqdn']
         else:
@@ -117,6 +103,7 @@ class DataSetup(object):
         return True
 
 def setup_package():
+    log.info('Loading test configuration from %s', BeakerTest.CONFIG_FILE)
     load_config(BeakerTest.CONFIG_FILE)
     DataSetup.setup_model()
     DataSetup.create_labcontroller() #always need a labcontroller
