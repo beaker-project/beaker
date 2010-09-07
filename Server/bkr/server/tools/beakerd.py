@@ -220,7 +220,7 @@ def processed_recipesets(*args):
     return True
 
 def queued_recipes(*args):
-    working = SystemStatus.by_name(u'Working')
+    automated = SystemStatus.by_name(u'Automated')
     recipes = Recipe.query()\
                     .join('status')\
                     .join('systems')\
@@ -229,12 +229,12 @@ def queued_recipes(*args):
                          or_(
                          and_(Recipe.status==TaskStatus.by_name(u'Queued'),
                               System.user==None,
-                              System.status==working,
+                              System.status==automated,
                               RecipeSet.lab_controller==None
                              ),
                          and_(Recipe.status==TaskStatus.by_name(u'Queued'),
                               System.user==None,
-                              System.status==working,
+                              System.status==automated,
                               RecipeSet.lab_controller_id==System.lab_controller_id
                              )
                             )
@@ -250,7 +250,7 @@ def queued_recipes(*args):
         session.begin()
         try:
             systems = recipe.dyn_systems.filter(and_(System.user==None,
-                                                     System.status==working))
+                                                     System.status==automated))
             # Order systems by owner, then Group, finally shared for everyone.
             # FIXME Make this configurable, so that a user can specify their scheduling
             # preference from the job.

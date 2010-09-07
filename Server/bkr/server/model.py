@@ -1537,8 +1537,8 @@ $SNIPPET("rhts_post")
         else:
             query = System.all(user)
        
-        query = query.filter(and_(
-                                System.status==SystemStatus.by_name(u'Working'),
+        query = query.filter(or_(and_(
+                                System.status==SystemStatus.by_name(u'Automated'),
                                     or_(and_(System.owner==user,
                                              System.loaned==None), 
                                         System.loaned==user,
@@ -1551,7 +1551,16 @@ $SNIPPET("rhts_post")
                                              User.user_id==user.user_id
                                             )
                                         )
-                                 )
+                                 ), and_(System.status==SystemStatus.by_name(u'Manual'), #Owner,loanee,group
+                                        or_(and_(System.owner==user,
+                                                 System.loaned==None), 
+                                            System.loaned==user, 
+                                        and_(System.shared==True,
+                                             System.loaned==None,
+                                             User.user_id==user.user_id
+                                            ))
+                                        )
+                                ) 
                             )
         return query
 
