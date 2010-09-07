@@ -296,7 +296,6 @@ function Inventory()
     service iptables stop
     # Turn on wsgi
     perl -pi -e 's|^#LoadModule wsgi_module modules/mod_wsgi.so|LoadModule wsgi_module modules/mod_wsgi.so|g' /etc/httpd/conf.d/wsgi.conf
-    perl -pi -e 's|^WSGIDaemonProcess.*|WSGIDaemonProcess beaker user=apache group=apache display-name=beaker maximum-requests=10 processes=4 threads=1|g' /etc/httpd/conf.d/beaker-server.conf
     service httpd restart
     estatus_fail "**** Failed to start httpd ****"
     service beakerd start
