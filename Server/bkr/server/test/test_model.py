@@ -1,5 +1,4 @@
 import sys
-from bkr.server.util import load_config
 import unittest
 
 from bkr.server.model import System, User
@@ -19,8 +18,8 @@ class SystemCreation(unittest.TestCase):
     
 class SystemUser(unittest.TestCase):
     def setUp(self):
-        self.system = System('test_system')
-        self.user = User('test_user')
+        self.system = System(fqdn='test_system')
+        self.user = User(user_name='test_user')
 
     def test_add_user_to_system(self): 
         self.system.user = self.user
