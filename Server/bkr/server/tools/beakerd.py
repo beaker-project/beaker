@@ -42,7 +42,7 @@ import logging
 #logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
 #logging.getLogger('sqlalchemy.orm.unitofwork').setLevel(logging.DEBUG)
 
-log = logging.getLogger(__name__)
+log = logging.getLogger("beakerd")
 
 from optparse import OptionParser
 
