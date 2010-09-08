@@ -38,7 +38,7 @@ def create_labcontroller(fqdn=None):
     return lc
 
 def create_user(password=None):
-    user = User(user_name='user%d' % int(time.time() * 1000))
+    user = User(user_name=u'user%d' % int(time.time() * 1000))
     if password:
         user.password = password
     log.debug('Created user %r', user)
@@ -62,7 +62,7 @@ def create_distro(name=u'DAN6-Server-U9', breed=u'Dan',
     return distro
 
 def create_system(arch=u'i386', type=u'Machine', status=u'Working'):
-    system = System(fqdn='system%d.testdata' % int(time.time() * 1000),
+    system = System(fqdn=u'system%d.testdata' % int(time.time() * 1000),
             type=SystemType.by_name(type), status=SystemStatus.by_name(status))
     system.arch.append(Arch.by_name(arch))
     log.debug('Created system %r', system)
