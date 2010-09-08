@@ -2,6 +2,7 @@
 import os
 import sys
 import signal
+import logging
 from optparse import OptionParser
 
 from bkr.labcontroller.proxy import Watchdog
@@ -10,7 +11,10 @@ import kobo.conf
 from kobo.exceptions import ShutdownException
 from kobo.process import daemonize
 from kobo.tback import Traceback, set_except_hook
-from kobo.log import add_stderr_logger
+from kobo.log import add_stderr_logger, add_rotating_file_logger
+
+VERBOSE_LOG_FORMAT = "%(asctime)s [%(levelname)-8s] {%(process)5d} %(name)s.%(module)s:%(lineno)4d %(message)s"
+
 set_except_hook()
 
 
@@ -23,8 +27,23 @@ def main_loop(conf=None, foreground=False):
     # define custom signal handlers
     signal.signal(signal.SIGTERM, daemon_shutdown)
 
+    config = kobo.conf.PyConfigParser()
+
+    # load default config
+    default_config = os.path.abspath(os.path.join(os.path.dirname(__file__), "default.conf"))
+    config.load_from_file(default_config)
+
+    logger = logging.getLogger("Watchdog")
+    logger.setLevel(logging.DEBUG)
+    log_level = logging._levelNames.get(config["LOG_LEVEL"].upper())
+    log_file = config["WATCHDOG_LOG_FILE"]
+    add_rotating_file_logger(logger,
+                             log_file,
+                             log_level=log_level,
+                             format=VERBOSE_LOG_FORMAT)
+
     try:
-        watchdog = Watchdog(conf=conf)
+        watchdog = Watchdog(conf=conf, logger=logger)
     except Exception, ex:
         sys.stderr.write("Error initializing Watchdog: %s\n" % ex)
         sys.exit(1)
