@@ -16,6 +16,7 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
+import sys
 import os
 import logging
 import subprocess
@@ -24,6 +25,7 @@ import time
 import turbogears.config
 from selenium import selenium
 import unittest
+import threading
 
 log = logging.getLogger(__name__)
 
@@ -74,7 +76,9 @@ class Process(object):
         env = dict(os.environ)
         if self.env:
             env.update(self.env)
-        self.popen = subprocess.Popen(self.args, stderr=subprocess.STDOUT, env=env)
+        self.popen = subprocess.Popen(self.args, stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT, env=env)
+        CommunicateThread(popen=self.popen).start()
         if self.listen_port:
             self._wait_for_listen(self.listen_port)
 
@@ -101,6 +105,25 @@ class Process(object):
                     self.stop_signal, self.name, self.popen.pid)
             os.kill(self.popen.pid, self.stop_signal)
             self.popen.wait()
+
+class CommunicateThread(threading.Thread):
+    """
+    Nose has support for capturing stdout during tests, by fiddling with sys.stdout.
+    Subprocesses' stdout streams won't be captured that way, however. So for each subprocess
+    one of these threads will read from its stdout and write back to sys.stdout
+    for nose to capture.
+    """
+
+    def __init__(self, popen, **kwargs):
+        super(CommunicateThread, self).__init__(**kwargs)
+        self.daemon = True
+        self.popen = popen
+
+    def run(self):
+        while True:
+            data = self.popen.stdout.read(4096)
+            if not data: break
+            sys.stdout.write(data)
 
 processes = []
 
