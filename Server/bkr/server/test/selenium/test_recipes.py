@@ -36,9 +36,11 @@ class TestRecipesDataGrid(SeleniumTestCase):
     slow = True
     log = logging.getLogger(__name__ + '.TestRecipesIndex')
 
-    def setUp(self):
+    # tests in this class can safely share the same firefox session
+    @classmethod
+    def setUpClass(cls):
         # create a bunch of jobs
-        self.user = user = data_setup.create_user(password=self.BEAKER_LOGIN_PASSWORD)
+        cls.user = user = data_setup.create_user(password=cls.BEAKER_LOGIN_PASSWORD)
         arches = [u'i386', u'x86_64', u'ia64']
         distro_names = [u'DAN5-Server-U5', u'DAN5-Client-U5',
                 u'DAN6-Server-U1', u'DAN6-Server-RC3']
@@ -50,7 +52,7 @@ class TestRecipesDataGrid(SeleniumTestCase):
         session.flush()
 
         # XXX we could save a *lot* of time by reusing Firefox instances across tests
-        self.selenium = sel = self.get_selenium()
+        cls.selenium = sel = cls.get_selenium()
         sel.start()
 
         # log in
@@ -58,12 +60,13 @@ class TestRecipesDataGrid(SeleniumTestCase):
         sel.click('link=Login')
         sel.wait_for_page_to_load('3000')
         sel.type('user_name', user.user_name)
-        sel.type('password', self.BEAKER_LOGIN_PASSWORD)
+        sel.type('password', cls.BEAKER_LOGIN_PASSWORD)
         sel.click('login')
         sel.wait_for_page_to_load('3000')
 
-    def tearDown(self):
-        self.selenium.stop()
+    @classmethod
+    def tearDownClass(cls):
+        cls.selenium.stop()
 
     # see https://bugzilla.redhat.com/show_bug.cgi?id=629147
 

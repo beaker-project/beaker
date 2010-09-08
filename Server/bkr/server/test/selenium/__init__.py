@@ -34,7 +34,8 @@ class SeleniumTestCase(unittest.TestCase):
     BEAKER_LOGIN_USER = 'admin'
     BEAKER_LOGIN_PASSWORD = 'testing'
 
-    def get_selenium(self):
+    @classmethod
+    def get_selenium(cls):
         return selenium('localhost', 4444, '*chrome',
                 'http://%s:%s/' % (os.environ.get('SERVER', 'localhost'),
                 turbogears.config.get('server.socket_port')))
