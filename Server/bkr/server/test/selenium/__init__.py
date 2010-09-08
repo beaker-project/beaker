@@ -122,7 +122,7 @@ class CommunicateThread(threading.Thread):
 
     def run(self):
         while True:
-            data = self.popen.stdout.read(4096)
+            data = self.popen.stdout.readline()
             if not data: break
             sys.stdout.write(data)
 
