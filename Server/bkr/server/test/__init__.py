@@ -82,31 +82,12 @@ class DataSetup(object):
                 log.error('Could not drop database: %s' % e)
                 return False
 
-    @classmethod
-    def create_labcontroller(cls,**kw):
-        from bkr.server.model import LabController
-        if kw.get('fqdn'):
-            lc_fqdn = kw['fqdn']
-        else:
-            lc_fqdn = tg.config.get('lc_fqdn')
-
-        try:
-            lc = LabController.by_name(lc_fqdn)  
-        except Exception, e: #Doesn't exist ?
-            if  '%s' % e == 'No rows returned for one()':
-                lc = LabController(fqdn=lc_fqdn)
-                return True
-            else:
-                raise
-
-        log.debug('labcontroller %s already exists' % lc_fqdn)
-        return True
-
 def setup_package():
     log.info('Loading test configuration from %s', BeakerTest.CONFIG_FILE)
     load_config(BeakerTest.CONFIG_FILE)
     DataSetup.setup_model()
-    DataSetup.create_labcontroller() #always need a labcontroller
+    from bkr.server.test.data_setup import create_labcontroller
+    create_labcontroller() #always need a labcontroller
 
 def teardown_package():
     pass

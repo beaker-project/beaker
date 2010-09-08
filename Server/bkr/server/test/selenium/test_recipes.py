@@ -19,8 +19,10 @@
 import unittest
 import logging
 import re
+from turbogears.database import session
 
-import bkr.server.test.selenium
+from bkr.server.test.selenium import SeleniumTestCase
+from bkr.server.test import data_setup
 
 def assert_sorted(things):
     if len(things) == 0: return
@@ -29,15 +31,36 @@ def assert_sorted(things):
             raise AssertionError('Not in sorted order, found %r after %r' %
                     (things[n], things[n - 1]))
 
-class TestRecipesIndex(bkr.server.test.selenium.SeleniumTestCase):
+class TestRecipesDataGrid(SeleniumTestCase):
 
     slow = True
     log = logging.getLogger(__name__ + '.TestRecipesIndex')
 
     def setUp(self):
+        # create a bunch of jobs
+        self.user = user = data_setup.create_user(password=self.BEAKER_LOGIN_PASSWORD)
+        arches = [u'i386', u'x86_64', u'ia64']
+        distro_names = [u'DAN5-Server-U5', u'DAN5-Client-U5',
+                u'DAN6-Server-U1', u'DAN6-Server-RC3']
+        for arch in arches:
+            for distro_name in distro_names:
+                distro = data_setup.create_distro(name=distro_name, arch=arch)
+                data_setup.create_job(owner=user, distro=distro)
+                data_setup.create_completed_job(owner=user, distro=distro)
+        session.flush()
+
         # XXX we could save a *lot* of time by reusing Firefox instances across tests
-        self.selenium = self.get_selenium()
-        self.selenium.start()
+        self.selenium = sel = self.get_selenium()
+        sel.start()
+
+        # log in
+        sel.open('')
+        sel.click('link=Login')
+        sel.wait_for_page_to_load('3000')
+        sel.type('user_name', user.user_name)
+        sel.type('password', self.BEAKER_LOGIN_PASSWORD)
+        sel.click('login')
+        sel.wait_for_page_to_load('3000')
 
     def tearDown(self):
         self.selenium.stop()
@@ -46,12 +69,12 @@ class TestRecipesIndex(bkr.server.test.selenium.SeleniumTestCase):
 
     def check_column_sort(self, column):
         sel = self.selenium
-        sel.open('recipes/')
+        sel.open('recipes/mine')
         sel.click('//table[@id="widget"]/thead/th[%d]//a[@href]' % column)
         sel.wait_for_page_to_load('30000')
         row_count = int(sel.get_xpath_count(
                 '//table[@id="widget"]/tbody/tr/td[%d]' % column))
-        self.assertEquals(row_count, 50)
+        self.assertEquals(row_count, 24)
         cell_values = [sel.get_table('widget.%d.%d' % (row, column - 1)) # zero-indexed
                        for row in range(0, row_count)]
         assert_sorted(cell_values)
@@ -78,12 +101,12 @@ class TestRecipesIndex(bkr.server.test.selenium.SeleniumTestCase):
     def test_can_sort_by_id(self):
         column = 1
         sel = self.selenium
-        sel.open('recipes/')
+        sel.open('recipes/mine')
         sel.click('//table[@id="widget"]/thead/th[%d]//a[@href]' % column)
         sel.wait_for_page_to_load('30000')
         row_count = int(sel.get_xpath_count(
                 '//table[@id="widget"]/tbody/tr/td[%d]' % column))
-        self.assertEquals(row_count, 50)
+        self.assertEquals(row_count, 24)
         cell_values = []
         for row in range(0, row_count):
             raw_value = sel.get_table('widget.%d.%d' % (row, column - 1)) # zero-indexed
