@@ -58,6 +58,7 @@ $(METADATA): Makefile
 	@echo "Priority:	Manual"		>> $(METADATA)
 	@echo "Requires:	make"		>> $(METADATA)
 	@echo "Requires:	gcc"		>> $(METADATA)
+	@echo "Requires:	nfs-utils"	>> $(METADATA)
 	@echo "Requires:	wget"		>> $(METADATA)
 	@echo "Requires:	procmail"	>> $(METADATA)
 	@echo "Requires:	redhat-lsb"	>> $(METADATA)
