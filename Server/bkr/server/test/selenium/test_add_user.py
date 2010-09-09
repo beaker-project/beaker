@@ -1,5 +1,6 @@
 #!/usr/bin/python
 import bkr.server.test.selenium
+from bkr.server.test import data_setup
 import unittest, time, re, os
 
 class AddUser(bkr.server.test.selenium.SeleniumTestCase):
@@ -21,8 +22,8 @@ class AddUser(bkr.server.test.selenium.SeleniumTestCase):
         sel.open("/")
         sel.click("link=Login")
         sel.wait_for_page_to_load("3000")
-        sel.type("user_name", self.BEAKER_LOGIN_USER)
-        sel.type("password", self.BEAKER_LOGIN_PASSWORD)
+        sel.type("user_name", data_setup.ADMIN_USER)
+        sel.type("password", data_setup.ADMIN_PASSWORD)
         sel.click("login")
         sel.wait_for_page_to_load("3000")
         sel.click("link=Accounts")

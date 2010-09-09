@@ -17,11 +17,30 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 import logging
+import re
 import sqlalchemy
-import turbogears.config
+import turbogears.config, turbogears.database
 from bkr.server.model import *
 
 log = logging.getLogger(__name__)
+
+ADMIN_USER = u'admin'
+ADMIN_PASSWORD = u'testing'
+
+def setup_model(override=True):
+    from bkr.server.tools.init import init_db
+    engine = turbogears.database.get_engine()
+    db_name = engine.url.database
+    connection = engine.connect()
+    if override:
+        log.info('Dropping database %s', db_name)
+        connection.execute('DROP DATABASE IF EXISTS %s' % db_name)
+    log.info('Creating database %s', db_name)
+    connection.execute('CREATE DATABASE %s' % db_name)
+    connection.invalidate() # can't reuse this one
+    del connection
+    log.info('Initialising model')
+    init_db(user_name=ADMIN_USER, password=ADMIN_PASSWORD)
 
 def create_labcontroller(fqdn=None):
     if fqdn is None:
