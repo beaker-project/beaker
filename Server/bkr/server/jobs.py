@@ -160,17 +160,7 @@ class Jobs(RPCRoot):
                 )
             try:
                 job = self.process_xmljob(xmljob,identity.current.user)
-            except BeakerException, err:
-                session.rollback()
-                flash(_(u'Failed to import job because of %s' % err ))
-                return dict(
-                    title = title,
-                    form = self.job_form,
-                    action = './clone',
-                    options = {},
-                    value = dict(textxml = "%s" % textxml),
-                )
-            except ValueError, err:
+            except (BeakerException, ValueError), err:
                 session.rollback()
                 flash(_(u'Failed to import job because of %s' % err ))
                 return dict(
