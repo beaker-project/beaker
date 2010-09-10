@@ -203,7 +203,7 @@ class Jobs(RPCRoot):
                 recipeSet.priority = TaskPriority.default_priority() 
 
             for xmlrecipe in xmlrecipeSet.iter_recipes(): 
-                recipe = self.handleRecipe(xmlrecipe)
+                recipe = self.handleRecipe(xmlrecipe, user)
                 recipe.ttasks = len(recipe.tasks)
                 recipeSet.ttasks += recipe.ttasks
                 recipeSet.recipes.append(recipe)
@@ -254,11 +254,11 @@ class Jobs(RPCRoot):
             job_search.append_results(search['value'],col,search['operation'],**kw)
         return job_search.return_results()
 
-    def handleRecipe(self, xmlrecipe, guest=False):
+    def handleRecipe(self, xmlrecipe, user, guest=False):
         if not guest:
             recipe = MachineRecipe(ttasks=0)
             for xmlguest in xmlrecipe.iter_guests():
-                guestrecipe = self.handleRecipe(xmlguest, guest=True)
+                guestrecipe = self.handleRecipe(xmlguest, user, guest=True)
                 recipe.guests.append(guestrecipe)
         else:
             recipe = GuestRecipe(ttasks=0)
@@ -272,6 +272,11 @@ class Jobs(RPCRoot):
                                            recipe.distro_requires)[0]
         except IndexError:
             raise BX(_('No Distro matches Recipe: %s' % recipe.distro_requires))
+        try:
+            # try evaluating the host_requires, to make sure it's valid
+            recipe.distro.systems_filter(user, recipe.host_requires)
+        except StandardError, e:
+            raise BX(_('Error in hostRequires: %s' % e))
         recipe.whiteboard = xmlrecipe.whiteboard
         recipe.kickstart = xmlrecipe.kickstart
         if xmlrecipe.watchdog:
