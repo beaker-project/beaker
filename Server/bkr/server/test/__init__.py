@@ -17,6 +17,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 import logging
+from turbogears.database import session
 from bkr.server.util import load_config
 from bkr.server.test import data_setup
 
@@ -29,6 +30,7 @@ def setup_package():
     load_config(CONFIG_FILE)
     data_setup.setup_model()
     data_setup.create_labcontroller() #always need a labcontroller
+    session.flush()
 
 def teardown_package():
     pass

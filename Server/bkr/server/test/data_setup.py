@@ -65,18 +65,22 @@ def create_user(password=None):
 
 def create_distro(name=u'DAN6-Server-U9', breed=u'Dan',
         osmajor=u'DansAwesomeLinuxServer6', osminor=u'9',
-        arch=u'i386', method=u'http'):
-    install_name = u'%s_%s-%s' % (name, method, arch)
-    distro = Distro.lazy_create(install_name=install_name)
+        arch=u'i386', method=u'http', virt=False):
+    install_name = u'%s-%d_%s-%s' % (name, int(time.time() * 1000), method, arch)
+    distro = Distro(install_name=install_name)
     distro.name = name
     distro.method = method
     distro.breed = Breed.lazy_create(breed=breed)
+    distro.virt = virt
     osmajor = OSMajor.lazy_create(osmajor=osmajor)
     try:
         distro.osversion = OSVersion.by_name(osmajor, osminor)
     except sqlalchemy.exceptions.InvalidRequestError:
         distro.osversion = OSVersion(osmajor, osminor, arches=[])
     distro.arch = Arch.by_name(arch)
+    # make it available in all lab controllers
+    for lc in LabController.query():
+        distro.lab_controller_assocs.append(LabControllerDistro(lab_controller=lc))
     log.debug('Created distro %r', distro)
     return distro
 
@@ -87,11 +91,14 @@ def create_system(arch=u'i386', type=u'Machine', status=u'Working'):
     log.debug('Created system %r', system)
     return system
 
-def create_job(owner, distro=None, task_name=u'/distribution/reservesys'):
+def create_task(name=u'/distribution/reservesys'):
+    return Task.lazy_create(name=name)
+
+def create_job(owner, distro=None):
     job = Job(whiteboard=u'job %d' % int(time.time() * 1000), ttasks=1, owner=owner)
     recipe_set = RecipeSet(ttasks=1, priority=TaskPriority.default_priority())
     recipe = MachineRecipe(ttasks=1, distro=distro or Distro.query()[0])
-    recipe.append_tasks(RecipeTask(task=Task.lazy_create(name=task_name)))
+    recipe.append_tasks(RecipeTask(task=create_task()))
     recipe_set.recipes.append(recipe)
     job.recipesets.append(recipe_set)
     log.debug('Created %s', job.t_id)
