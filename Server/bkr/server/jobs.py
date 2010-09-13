@@ -31,6 +31,7 @@ from bkr.server.widgets import RecipeWidget
 from bkr.server.widgets import RecipeTasksWidget
 from bkr.server.widgets import RecipeSetWidget
 from bkr.server.widgets import PriorityWidget
+from bkr.server.widgets import RetentionTagWidget
 from bkr.server.widgets import SearchBar
 from bkr.server import search_utility
 import datetime
@@ -51,8 +52,12 @@ class Jobs(RPCRoot):
     exposed = True 
     recipeset_widget = RecipeSetWidget()
     recipe_widget = RecipeWidget()
-    priority_widget = PriorityWidget()
+    priority_widget = PriorityWidget() #FIXME I have a feeling we don't need this as the RecipeSet widget declares an instance of it
+    retention_tag_widget = RetentionTagWidget()
     recipe_tasks_widget = RecipeTasksWidget()
+    job_type = { 'RS' : RecipeSet,
+                 'J'  : Job
+               }
 
     upload = widgets.FileField(name='filexml', label='Job XML')
     hidden_id = widgets.HiddenField(name='id')
@@ -95,6 +100,68 @@ class Jobs(RPCRoot):
             options = {},
             value = kw,
         )
+
+    def _list(self, tags, days_complete_for, family, **kw):
+        query = None
+        if days_complete_for:
+            #This takes the same kw names as timedelta   
+            query = RecipeSet.complete_delta({'days':int(days_complete_for)})
+        if family:
+            try:
+                OSMajor.by_name(family)
+            except InvalidRequestError, e:
+                if '%s' % e == 'No rows returned for one()':
+                    raise ValueError('Family is invalid')
+            query = RecipeSet.has_family(family,query)
+        if tags:
+            if len(tags) == 1:
+                tags = tags[0]
+            query = RecipeSet.by_tag(tags,query)           
+        return query.all()
+
+    @cherrypy.expose
+    def list(self, tags, days_complete_for,family, **kw):
+        try:
+            recipesets = self._list(tags, days_complete_for, family, **kw)
+        except ValueError, e:
+            return 'Invalid arguments: %s' % e
+        return_value = [rs.t_id for rs in recipesets]
+        return return_value,'Count: %s' % len(return_value)
+
+    @cherrypy.expose
+    @identity.require(identity.in_group("admin"))
+    def delete_jobs(self, jobs, tag, complete_days, remove_all,**kw):
+        """
+        Handles deletion of jobs and entities within jobs
+        """
+        #TODO Test this for 0.5.59, fix OOM issue
+        return_value = []
+        if jobs:
+            for j in jobs:        
+                type,id = j.split(":", 1)
+                try:
+                    model_class = self.job_type[type]
+                    model_obj = model_class.by_id(id)
+                    
+                    return_value = return_value + model_obj.delete(remove_all)#FIXME just testing path
+                    #return 'Deleted %s' % j
+                except KeyError, e: #FIXME add InvalidRequestError on this line as well
+                    return 'Invalid Job type passed:%s' % j
+        else:
+            recipesets = self._list(tag, complete_days, **kw)
+            for rs in recipesets:
+                return_value = return_value + rs.delete(remove_all)  
+
+        if not remove_all and not return_value: #i.e only logs
+            r_msg = 'Nothing to delete'
+        elif return_value and remove_all:
+            r_msg =  'Deleted log and DB entries'
+        elif not return_value:
+            r_msg = 'Deleted DB entries'
+        else:
+            r_msg = 'Deleted log entries'
+
+        return '%s %s' % (r_msg, " ".join(return_value)) 
 
     @cherrypy.expose
     @identity.require(identity.not_anonymous())
@@ -189,40 +256,58 @@ class Jobs(RPCRoot):
         )
 
 
+    def _handle_recipe_set(self, xmlrecipeSet, *args, **kw):
+        """
+        Handles the processing of recipesets into DB entries from their xml
+        """
+        recipeSet = RecipeSet(ttasks=0)
+        recipeset_priority = xmlrecipeSet.get_xml_attr('priority',unicode,None)
+        if recipeset_priority is not None:
+            try:
+                my_priority = TaskPriority.query().filter_by(priority = recipeset_priority).one()
+            except InvalidRequestError, (e):
+                raise BX(_('You have specified an invalid recipeSet priority:%s' % recipeset_priority))
+            allowed_priorities = RecipeSet.allowed_priorities_initial(identity.current.user)
+            allowed = [elem for elem in allowed_priorities if elem.priority == recipeset_priority]
+            if allowed:
+                recipeSet.priority = allowed[0]
+            else:
+                recipeSet.priority = TaskPriority.default_priority() 
+        else:
+            recipeSet.priority = TaskPriority.default_priority() 
+        
+        recipeset_retention = xmlrecipeSet.get_xml_attr('retention_tag',unicode,None) 
+        if recipeset_retention is None: #Set default value
+            tag = RetentionTag.get_default()
+        else:
+            try:
+                tag = RetentionTag.by_tag(recipeset_retention.lower())
+            except InvalidRequestError:
+                raise BX(_("Invalid retention_days attribute passed. Needs to be one of %s. You gave: %s" % (','.join([x.tag for x in RetentionTag.get_all()]), recipeset_retention)))
+        recipeSet.retention_tag = tag
+        
+        for xmlrecipe in xmlrecipeSet.iter_recipes(): 
+            recipe = self.handleRecipe(xmlrecipe)
+            recipe.ttasks = len(recipe.tasks)
+            recipeSet.ttasks += recipe.ttasks
+            recipeSet.recipes.append(recipe)
+            # We want the guests to be part of the same recipeSet
+            for guest in recipe.guests:
+                recipeSet.recipes.append(guest)
+                guest.ttasks = len(guest.tasks)
+                recipeSet.ttasks += guest.ttasks
+        if not recipeSet.recipes:
+            raise BX(_('No Recipes! You can not have a recipeSet with no recipes!'))
+        return recipeSet
+
     def process_xmljob(self, xmljob, user):
         job = Job(whiteboard='%s' % xmljob.whiteboard, ttasks=0,
                   owner=user)
         for xmlrecipeSet in xmljob.iter_recipeSets():
-            recipeSet = RecipeSet(ttasks=0)
-            recipeset_priority = xmlrecipeSet.get_xml_attr('priority',str,None)
-            if recipeset_priority is not None:
-                try:
-                    my_priority = TaskPriority.query().filter_by(priority = recipeset_priority).one()
-                except InvalidRequestError, (e):
-                    raise BX(_('You have specified an invalid recipeSet priority:%s' % recipeset_priority))
-                allowed_priorities = RecipeSet.allowed_priorities_initial(identity.current.user)
-                allowed = [elem for elem in allowed_priorities if elem.priority == recipeset_priority]
-                if allowed:
-                    recipeSet.priority = allowed[0]
-                else:
-                    recipeSet.priority = TaskPriority.default_priority() 
-            else:
-                recipeSet.priority = TaskPriority.default_priority() 
+            recipe_set = self._handle_recipe_set(xmlrecipeSet)
+            job.recipesets.append(recipe_set)
+            job.ttasks += recipe_set.ttasks
 
-            for xmlrecipe in xmlrecipeSet.iter_recipes(): 
-                recipe = self.handleRecipe(xmlrecipe)
-                recipe.ttasks = len(recipe.tasks)
-                recipeSet.ttasks += recipe.ttasks
-                recipeSet.recipes.append(recipe)
-                # We want the guests to be part of the same recipeSet
-                for guest in recipe.guests:
-                    recipeSet.recipes.append(guest)
-                    guest.ttasks = len(guest.tasks)
-                    recipeSet.ttasks += guest.ttasks
-            if not recipeSet.recipes:
-                raise BX(_('No Recipes! You can not have a recipeSet with no recipes!'))
-            job.recipesets.append(recipeSet)    
-            job.ttasks += recipeSet.ttasks
         if not job.recipesets:
             raise BX(_('No RecipeSets! You can not have a Job with no recipeSets!'))
         return job
@@ -312,6 +397,35 @@ class Jobs(RPCRoot):
         if not recipe.tasks:
             raise BX(_('No Tasks! You can not have a recipe with no tasks!'))
         return recipe
+
+    @expose('json')
+    def change_retentiontag_recipeset(self, retentiontag_id, recipeset_id):
+        user = identity.current.user
+        if not user:
+            return {'success' : None, 'msg' : 'Must be logged in' }
+
+        try:
+            recipeset = RecipeSet.by_id(recipeset_id)
+            old_retentiontag = recipeset.retention_tag.tag
+        except InvalidRequestError, e:
+            if '%s' % e == 'No rows returned for one()':
+                log.error('No rows returned for recipeset_id %s in change_retentiontag_recipeset' % (recipeset_id))
+            elif '%s' % e == 'Multiple rows returned for one()':
+                log.error('Multiple rows for recipeset_id %s in change_retentiontag_recipeset' % (recipeset_id))
+            return { 'success' : None, 'msg' : 'RecipeSet is not valid' }
+
+        try: 
+            new_retentiontag = RetentionTag.by_id(retentiontag_id)  # will throw an error here if retentiontag id is invalid 
+        except InvalidRequestError, (e):
+            log.error('No rows returned for retentiontag_id %s in change_retentiontag_recipeset:%s' % (priority_id,e)) 
+            return { 'success' : None, 'msg' : 'Retention Tag not found', 'current_retentiontag' : recipeset.retention_tag.id }
+         
+        activity = RecipeSetActivity(identity.current.user, 'WEBUI', 'Changed', 'RetentionTag', recipeset.retention_tag.tag, new_retentiontag.tag)
+        recipeset.retention_tag = new_retentiontag
+        session.save_or_update(recipeset)        
+        recipeset.activity.append(activity)
+        return {'success' : True } 
+
 
     @expose('json')
     def update_recipe_set_response(self,recipe_set_id,response_id):
@@ -491,6 +605,8 @@ class Jobs(RPCRoot):
         return dict(title   = 'Job',
                     user                 = identity.current.user,   #I think there is a TG var to use in the template so we dont need to pass this ?
                     priorities           = TaskPriority.query().all(), 
+                    retentiontags        = RetentionTag.query().all(),
+                    retentiontag_widget  = self.retention_tag_widget,
                     priority_widget      = self.priority_widget, 
                     recipeset_widget     = self.recipeset_widget,
                     job_history          = recipe_set_data,

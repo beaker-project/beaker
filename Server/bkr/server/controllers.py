@@ -19,6 +19,7 @@ from bkr.server.activity import Activities
 from bkr.server.reports import Reports
 from bkr.server.job_matrix import JobMatrix
 from bkr.server.reserve_workflow import ReserveWorkflow
+from bkr.server.retention_tags import RetentionTag as RetentionTagController
 from bkr.server.watchdog import Watchdogs
 from bkr.server.widgets import myPaginateDataGrid
 from bkr.server.widgets import PowerTypeForm
@@ -229,6 +230,7 @@ class Root(RPCRoot):
     matrix = JobMatrix()
     reserveworkflow = ReserveWorkflow()
     watchdogs = Watchdogs()
+    retentiontag = RetentionTagController()
     
     id         = widgets.HiddenField(name='id')
     submit     = widgets.SubmitButton(name='submit')
@@ -441,7 +443,7 @@ class Root(RPCRoot):
 
     @expose(template='bkr.server.templates.grid_add')
     @paginate('list',default_order='fqdn',limit=20,max_limit=None)
-    def index(self, *args, **kw):   
+    def index(self, *args, **kw): 
         return_dict =  self.systems(systems = System.all(identity.current.user), *args, **kw) 
         return return_dict
 
