@@ -469,7 +469,7 @@ class Proxy(ProxyHelper):
     def push(self, fqdn, inventory):
         """ Push inventory data to Scheduler
         """
-        return self.hub.legacypush(fqdn, inventory)
+        return self.hub.push(fqdn, inventory)
 
     def legacypush(self, fqdn, inventory):
         """ Push legacy inventory data to Scheduler
