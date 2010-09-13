@@ -1,3 +1,10 @@
+#if $varExists('sysprofile')
+#set listed_snippet_profiles = $getVar('sysprofile','').split(';')
+#for $snippet_profile in $listed_snippet_profiles
+# Snippet Profile: $snippet_profile
+$SNIPPET($snippet_profile)
+#end for
+#else
 url --url=$tree
 key --skip
 
@@ -81,6 +88,7 @@ $SNIPPET("system")
 #end if
 $SNIPPET("rhts_packages")
 
+#end if
 #end if
 %pre
 $SNIPPET("rhts_pre")
