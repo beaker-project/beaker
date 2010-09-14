@@ -40,7 +40,7 @@ Requires:       python-tgexpandingformwidget
 Requires:       httpd
 Requires:       python-krbV
 Requires:	%{name} = %{version}-%{release}
-Requires:       python-TurboMail
+Requires:       python-TurboMail >= 3.0
 Requires:	createrepo
 
 
