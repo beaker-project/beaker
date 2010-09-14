@@ -28,6 +28,7 @@ from bkr.server import mail
 import traceback
 from BasicAuthTransport import BasicAuthTransport
 import xmlrpclib
+import bkr.timeout_xmlrpclib
 import os
 import shutil
 
@@ -1226,7 +1227,7 @@ class System(SystemObject):
             def __init__(self, system):
                 self.system = system
                 url = "http://%s/cobbler_api" % system.lab_controller.fqdn
-                self.remote = xmlrpclib.ServerProxy(url, allow_none=True)
+                self.remote = bkr.timeout_xmlrpclib.ServerProxy(url, allow_none=True)
                 self.token = self.remote.login(system.lab_controller.username,
                                                system.lab_controller.password)
 
