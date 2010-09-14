@@ -125,8 +125,10 @@ class Jobs(RPCRoot):
         """
         Review cloned xml before submitting it.
         """
+        title = 'Clone Job'
         if job_id:
             # Clone from Job ID
+            title = 'Clone Job %s' % job_id
             try:
                 job = Job.by_id(job_id)
             except InvalidRequestError:
@@ -134,6 +136,7 @@ class Jobs(RPCRoot):
                 redirect(".")
             textxml = job.to_xml(clone=True).toprettyxml()
         elif recipeset_id:
+            title = 'Clone Recipeset %s' % recipeset_id
             try:
                 recipeset = RecipeSet.by_id(recipeset_id)
             except InvalidRequestError:
@@ -149,7 +152,7 @@ class Jobs(RPCRoot):
             except Exception,err:
                 flash(_(u'Failed to import job because of:%s' % err))
                 return dict(
-                    title = 'Clone Job %s' % id,
+                    title = title,
                     form = self.job_form,
                     action = './clone',
                     options = {},
@@ -161,7 +164,7 @@ class Jobs(RPCRoot):
                 session.rollback()
                 flash(_(u'Failed to import job because of %s' % err ))
                 return dict(
-                    title = 'Clone Job %s' % id,
+                    title = title,
                     form = self.job_form,
                     action = './clone',
                     options = {},
@@ -171,7 +174,7 @@ class Jobs(RPCRoot):
                 session.rollback()
                 flash(_(u'Failed to import job because of %s' % err ))
                 return dict(
-                    title = 'Clone Job %s' % id,
+                    title = title,
                     form = self.job_form,
                     action = './clone',
                     options = {},
@@ -181,7 +184,7 @@ class Jobs(RPCRoot):
             session.flush()
             self.success_redirect(job.id)
         return dict(
-            title = 'Clone Job %s' % id,
+            title = title,
             form = self.job_form,
             action = './clone',
             options = {},
