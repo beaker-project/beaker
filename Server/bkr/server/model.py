@@ -1537,8 +1537,8 @@ $SNIPPET("rhts_post")
         else:
             query = System.all(user)
        
-        query = query.filter(and_(
-                                System.status==SystemStatus.by_name(u'Working'),
+        query = query.filter(or_(and_(
+                                or_(System.status==SystemStatus.by_name(u'Automated'),System.status==SystemStatus.by_name(u'Manual')),
                                     or_(and_(System.owner==user,
                                              System.loaned==None), 
                                         System.loaned==user,
@@ -1551,7 +1551,8 @@ $SNIPPET("rhts_post")
                                              User.user_id==user.user_id
                                             )
                                         )
-                                 )
+                                    )
+                                ) 
                             )
         return query
 
@@ -1689,7 +1690,7 @@ $SNIPPET("rhts_post")
 
     def is_admin(self,group_id=None,user_id=None,groups=None,*args,**kw):
         try:
-            if identity.current.user.is_admin() is True: #first let's see if we are an _admin_
+            if identity.in_group('admin'): #first let's see if we are an _admin_
                 return True
         except AttributeError,e: pass #We may not be logged in...
         
@@ -1728,12 +1729,14 @@ $SNIPPET("rhts_post")
                 return True
         return False
 
-    def can_provision_now(self,user=None):
+    def can_provision_now(self,user=None): 
         if user is not None and self.is_admin(user_id=user.user_id):
             return True
         else:
             if user is not None and self.loaned == user:
                 return True
+        if self.status==SystemStatus.by_name('Manual'): #If it's manual then we us eour original perm system.
+            return self._has_regular_perms(user)
         return False
                 
     def can_loan(self, user=None):
@@ -1778,25 +1781,40 @@ $SNIPPET("rhts_post")
         can_share() will return True id the system is currently free and allwoed to be used by the user
         """
         if user and not self.user:
-            # If the system is loaned its exclusive!
-            if self.loaned:
-                if user == self.loaned:
-                    return True
-                else:
-                    return False
-            # If its the owner always allow.
-            if user == self.owner:
-                return True
-            if self.shared:
-                # If the user is in the Systems groups
-                if self.groups:
-                    for group in user.groups:
-                        if group in self.groups:
-                            return True
-                else:
-                # If the system has no groups
-                    return True
+            return self._has_regular_perms(user)
         return False
+
+    def _has_regular_perms(self,user, *args, **kw):
+        """
+        This represents the basic system perms,loanee, owner,  shared and in group or shared and no group
+        """
+        try:
+            if identity.in_group('admin'):
+                return True
+        except AttributeError, e: pass #not logged in ?
+
+        if self.loaned:
+            if user == self.loaned:
+                return True
+            else:
+                return False
+        # If its the owner always allow.
+        if user == self.owner:
+            return True
+        if self.shared:
+            # If the user is in the Systems groups
+            return self._in_group(user)
+
+
+    def _in_group(self,user, *args, **kw):
+            if self.groups:
+                for group in user.groups:
+                    if group in self.groups:
+                        return True
+            else:
+                # If the system has no groups
+                return True
+
         
     def get_allowed_attr(self):
         attributes = ['vendor','model','memory']
