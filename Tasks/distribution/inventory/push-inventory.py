@@ -23,6 +23,8 @@ import commands
 import pprint
 import math
 import re
+import shutil
+import glob
 
 sys.path.append('.')
 sys.path.append("/usr/lib/anaconda")
@@ -43,6 +45,180 @@ def push_inventory(hostname, inventory):
          raise NameError, "ERROR: Pushing Inventory for host %s." % hostname
    except:
       raise
+
+def check_for_virt_iommu():
+
+    virt_iommu = 0
+    cpu_info = smolt.read_cpuinfo()
+    cpu_info_pat = re.compile("x86")
+
+    if not cpu_info_pat.search(cpu_info['platform']):
+        #only x86 boxes support virt iommu
+        return 0
+
+    #setup data directory
+    path="acpiout"
+    try:
+        os.makedirs(path)
+    except OSError:
+        pass
+
+    #find and extract data
+    if not os.path.exists("acpidump") or not os.path.exists("acpixtract"):
+        raise ("missing acpidump and/or acpixtract executables")
+    os.chdir(path)
+    os.system("../acpidump --output acpi.dump > /dev/null")
+    os.system("../acpixtract -a acpi.dump > /dev/null")
+
+    #test what type of system we are on
+    if os.path.exists("DMAR.dat"):
+        # alright we are on an Intel vt-d box
+        hwu = False
+        ba = False
+
+        # create ascii file
+        os.system("iasl -d DMAR.dat > /dev/null 2>&1")
+        if os.path.exists("DMAR.dsl"):
+            f = open("DMAR.dsl", 'r')
+
+            #look for keywords to validate ascii file
+            hwu_pat = re.compile ('Hardware Unit')
+            ba_pat = re.compile ('Base Address')
+            ba_inv_pat = re.compile ('0000000000000000|FFFFFFFFFFFFFFFF')
+
+            for line in f.readlines():
+                if hwu_pat.search(line):
+                    hwu = True
+                if ba_pat.search(line):
+                    if ba_inv_pat.search(line):
+                        print "VIRT_IOMMU: Invalid Base address: 0's or F's"
+                    else:
+                        ba = True
+            if not hwu:
+                print "VIRT_IOMMU: No Hardware Unit"
+            elif not ba:
+                print "VIRT_IOMMU: No Base Address"
+            else:
+                virt_iommu = 1
+        else:
+            print "VIRT_IOMMU: Failed to create DMAR.dsl"
+
+    elif os.path.exists("IVRS.dat"):
+        # alright we are on an AMD iommu box
+        #  we don't have a good way to validate this
+        virt_iommu = 1
+
+    #clean up
+    os.chdir("..")
+    try:
+        shutil.rmtree(path)
+    except:
+        print "VIRT_IOMMU: can't remove directory"
+
+    return virt_iommu
+
+def kernel_inventory():
+    # get the data from SMOLT but modify it for how RHTS expects to see it
+    # Eventually we'll switch over to SMOLT properly.
+    data = {}
+    data['VIRT_IOMMU'] = False
+
+    ##########################################
+    # check for virtual iommu/vt-d capability
+    # if this passes, assume we pick up sr-iov for free
+
+    if check_for_virt_iommu():
+        data['VIRT_IOMMU'] = True
+
+    ##########################################
+    # determine which stroage controller has a disk behind it
+    path = "/sys/block"
+    virt_pat = re.compile('virtual')
+    floppy_pat = re.compile('fd[0-9]')
+    sr_pat = re.compile('sr[0-9]')
+    for block in glob.glob( os.path.join(path, '*')):
+        #skip read only/floppy devices
+        if sr_pat.search(block) or floppy_pat.search(block):
+            continue
+
+        #skip block devices that don't point to a device
+        if not os.path.islink(block + "/device"):
+            continue
+        sysfs_link = os.readlink(block + "/device")
+
+        #skip virtual devices
+        if virt_pat.search(sysfs_link):
+            continue
+
+        #cheap way to create an absolute path, there is probably a better way
+        sysfs_path = sysfs_link.replace('../..','/sys')
+
+        #start abusing hal to give us the info we want
+        cmd = 'hal-find-by-property --key linux.sysfs_path --string %s' % sysfs_path
+        status,udi =  commands.getstatusoutput(cmd)
+        if status:
+            print "DISK_CONTROLLER: hal-find-by-property failed: %d" % status
+            continue
+
+        while udi:
+            cmd = 'hal-get-property --udi %s --key info.linux.driver 2>/dev/null' % udi
+            status, driver = commands.getstatusoutput(cmd)
+            if status == 0 and driver != "sd" and driver != "sr":
+                #success
+                data['DISK_CONTROLLER'] = driver
+                break
+
+            #get the parent and try again
+            cmd = 'hal-get-property --udi %s  --key info.parent' % udi
+            status,udi =  commands.getstatusoutput(cmd)
+            if status:
+                print "DISK_CONTROLLER: hal-get-property failed: %d" % status
+                break
+
+        if not udi:
+            print "DISK_CONTROLLER: can not determine driver for %s" %block
+           
+    ##########################################
+    # determine if machine is using multipath or not
+
+    #ok, I am really lazy
+    #remove the default blacklist in /etc/multipath.conf
+    os.system("sed -i '/^blacklist/,/^}$/d' /etc/multipath.conf")
+
+    #restart multipathd to see what it detects
+    #this spits out errors if the root device is on a 
+    #multipath device, I guess ignore for now and hope the code
+    #correctly figures things out
+    os.system("service multipathd restart")
+
+    #the multipath commands will display the topology if it
+    #exists otherwise nothing
+    #filter out vbds and single device paths
+    status, mpaths = commands.getstatusoutput("multipath -ll")
+    if status:
+        print "MULTIPATH: multipath -ll failed with %d" % status
+    else:
+        count = 0
+        mp = False
+        mpath_pat = re.compile(" dm-[0-9]* ")
+        sd_pat = re.compile(" sd[a-z]")
+        for line in mpaths.split('\n'):
+            #reset when a new section starts
+            if mpath_pat.search(line):
+                # found at least one mp instance, declare success
+                if count > 1:
+                    mp = True
+                    break
+                count = 0
+
+            #a hit! increment to indicate this
+            if sd_pat.search(line):
+                count = count + 1
+
+    if mp == True:
+        data['DISK_MULTIPATH'] = 1
+        
+    return data
 
 def read_inventory():
     # get the data from SMOLT but modify it for how RHTS expects to see it
@@ -182,6 +358,7 @@ def main():
 
     lab_server = "%s/%s" % (server, rpc)
     inventory = read_inventory()
+    inventory.update(kernel_inventory())
     if debug:
         print inventory
     else:

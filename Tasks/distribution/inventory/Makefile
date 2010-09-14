@@ -39,8 +39,33 @@ export TEST=/$(TOPLEVEL_NAMESPACE)/$(RELATIVE_PATH)
 # name, and to improve performance.
 .PHONY: all install download clean
 
+TARGET=pmtools-20070511
+ARCH=$(shell uname -m)
+ACPI_SUPPORT=$(shell echo $(ARCH) | egrep -q "i?x86|x86_64" && echo "yes" || echo "")
+
+$(TARGET).tar.gz:
+	wget http://lesswatts.org/patches/linux_acpi/$(TARGET).tar.gz
+
+$(TARGET): $(TARGET).tar.gz
+	tar -zxvf $(TARGET).tar.gz
+	(cd $(TARGET) && make all)
+
+$(TARGET)-clean:
+	rm -rf $(TARGET)
+	rm -f $(TARGET).tar.gz
+
+acpidump: $(TARGET)
+	cp $(TARGET)/acpidump/acpidump .
+
+acpixtract: $(TARGET)
+	cp $(TARGET)/acpixtract/acpixtract .
+
 # executables to be built should be added here, they will be generated on the system under test.
-BUILT_FILES= 
+ifeq ("$(ACPI_SUPPORT)", "yes")
+  BUILT_FILES=acpidump acpixtract
+else
+  BUILT_FILES=
+endif
 
 # data files, .c files, scripts anything needed to either compile the test and/or run it.
 FILES=$(METADATA) runtest.sh Makefile PURPOSE push-inventory.py \
@@ -53,7 +78,7 @@ run: $(FILES) build
 build: $(BUILT_FILES)
 	chmod a+x ./runtest.sh
 
-clean:
+clean: $(TARGET)-clean
 	rm -f *~ *.rpm $(BUILT_FILES)
 
 # You may need to add other targets e.g. to build executables from source code
@@ -78,5 +103,9 @@ $(METADATA): Makefile
 	@echo "Requires:     anaconda" >> $(METADATA)
 	@echo "Requires:     smolt" >> $(METADATA)
 	@echo "Requires:     kvm" >> $(METADATA)
+	@echo "Requires:     iasl" >> $(METADATA)
+	@echo "Requires:     gcc" >> $(METADATA)
+	@echo "Requires:     make" >> $(METADATA)
+	@echo "Requires:     device-mapper-multipath" >> $(METADATA)
 
 
