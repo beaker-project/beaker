@@ -1538,7 +1538,7 @@ $SNIPPET("rhts_post")
             query = System.all(user)
        
         query = query.filter(or_(and_(
-                                System.status==SystemStatus.by_name(u'Automated'),
+                                or_(System.status==SystemStatus.by_name(u'Automated'),System.status==SystemStatus.by_name(u'Manual')),
                                     or_(and_(System.owner==user,
                                              System.loaned==None), 
                                         System.loaned==user,
@@ -1551,15 +1551,7 @@ $SNIPPET("rhts_post")
                                              User.user_id==user.user_id
                                             )
                                         )
-                                 ), and_(System.status==SystemStatus.by_name(u'Manual'), #Owner,loanee,group
-                                        or_(and_(System.owner==user,
-                                                 System.loaned==None), 
-                                            System.loaned==user, 
-                                        and_(System.shared==True,
-                                             System.loaned==None,
-                                             User.user_id==user.user_id
-                                            ))
-                                        )
+                                    )
                                 ) 
                             )
         return query
@@ -1698,7 +1690,7 @@ $SNIPPET("rhts_post")
 
     def is_admin(self,group_id=None,user_id=None,groups=None,*args,**kw):
         try:
-            if identity.current.user.is_admin() is True: #first let's see if we are an _admin_
+            if identity.in_group('admin'): #first let's see if we are an _admin_
                 return True
         except AttributeError,e: pass #We may not be logged in...
         
@@ -1796,6 +1788,11 @@ $SNIPPET("rhts_post")
         """
         This represents the basic system perms,loanee, owner,  shared and in group or shared and no group
         """
+        try:
+            if identity.in_group('admin'):
+                return True
+        except AttributeError, e: pass #not logged in ?
+
         if self.loaned:
             if user == self.loaned:
                 return True
