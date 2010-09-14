@@ -216,7 +216,9 @@ def kernel_inventory():
                 count = count + 1
 
     if mp == True:
-        data['DISK_MULTIPATH'] = 1
+        data['DISK_MULTIPATH'] = True
+    else 
+        data['DISK_MULTIPATH'] = False
         
     return data
 
