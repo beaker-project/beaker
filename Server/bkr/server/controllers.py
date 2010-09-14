@@ -823,6 +823,7 @@ class Root(RPCRoot):
         options = {}
         readonly = False
         is_user = False
+        title = 'New'
         if system:
             title = system.fqdn
             our_user = identity.current.user #simple optimisation
@@ -860,11 +861,9 @@ class Root(RPCRoot):
                 self.will_provision = False
                 self.provision_now_rights = False
 
-        if system.current_user(our_user):
-            options['user_change_text'] = ' (Return)'
-            is_user = True
-        else:
-            title = 'New'
+            if system.current_user(our_user):
+                options['user_change_text'] = ' (Return)'
+                is_user = True
 
         if 'activities_found' in histories_return: 
             historical_data = histories_return['activities_found']
