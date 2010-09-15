@@ -56,10 +56,12 @@ def create_labcontroller(fqdn=None):
     log.debug('labcontroller %s already exists' % fqdn)
     return lc
 
-def create_user(password=None):
-    user = User(user_name=u'user%d' % int(time.time() * 1000))
+def create_user(display_name=u'Kevin Rudd', password=None):
+    user = User(user_name=u'user%d' % int(time.time() * 1000),
+            display_name=display_name)
     if password:
         user.password = password
+    user.email_address = u'%s@example.com' % user.user_name
     log.debug('Created user %r', user)
     return user
 
@@ -84,9 +86,13 @@ def create_distro(name=u'DAN6-Server-U9', breed=u'Dan',
     log.debug('Created distro %r', distro)
     return distro
 
-def create_system(arch=u'i386', type=u'Machine', status=u'Working'):
+def create_system(arch=u'i386', type=u'Machine', status=u'Working',
+        owner=None):
+    if owner is None:
+        owner = create_user()
     system = System(fqdn=u'system%d.testdata' % int(time.time() * 1000),
-            type=SystemType.by_name(type), status=SystemStatus.by_name(status))
+            type=SystemType.by_name(type), status=SystemStatus.by_name(status),
+            owner=owner)
     system.arch.append(Arch.by_name(arch))
     log.debug('Created system %r', system)
     return system

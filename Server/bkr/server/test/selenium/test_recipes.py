@@ -18,10 +18,12 @@
 
 import unittest
 import logging
+import email
 import re
 from turbogears.database import session
 
 from bkr.server.test.selenium import SeleniumTestCase
+from bkr.server.test.mail_capture import MailCaptureThread
 from bkr.server.test import data_setup
 
 def assert_sorted(things):
@@ -117,3 +119,71 @@ class TestRecipesDataGrid(SeleniumTestCase):
             assert m.group(1)
             cell_values.append(int(m.group(1)))
         assert_sorted(cell_values)
+
+class TestRecipeView(SeleniumTestCase):
+
+    slow = True
+
+    def setUp(self):
+        self.user = user = data_setup.create_user(display_name=u'Bob Brown',
+                password='password')
+        self.system_owner = data_setup.create_user()
+        self.system = data_setup.create_system(owner=self.system_owner, arch=u'x86_64')
+        distro = data_setup.create_distro(arch=u'x86_64')
+        self.job = data_setup.create_completed_job(owner=user, distro=distro)
+        for recipe in self.job.all_recipes:
+            recipe.system = self.system
+        session.flush()
+        self.selenium = sel = self.get_selenium()
+        self.selenium.start()
+        self.mail_capture = MailCaptureThread()
+        self.mail_capture.start()
+
+        # log in
+        sel.open('')
+        sel.click('link=Login')
+        sel.wait_for_page_to_load('3000')
+        sel.type('user_name', user.user_name)
+        sel.type('password', 'password')
+        sel.click('login')
+        sel.wait_for_page_to_load('3000')
+
+    def tearDown(self):
+        self.selenium.stop()
+        self.mail_capture.stop()
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=623603
+    # see also TestSystemView.test_can_report_problem
+    def test_can_report_problem(self):
+        sel = self.selenium
+        sel.open('recipes/mine')
+        recipe = list(self.job.all_recipes)[0]
+        sel.click('link=R:%s' % recipe.id)
+        sel.wait_for_page_to_load('3000')
+        sel.click('link=Report problem with system')
+        sel.wait_for_page_to_load('3000')
+        self.assertEqual(self.selenium.get_title(),
+                'Report a problem with %s' % self.system.fqdn)
+        self.assertEqual(
+                # value of cell beside "Problematic system" cell
+                sel.get_text('//form[@name="report_problem"]//table//td'
+                    '[preceding-sibling::th[1]/text() = "Problematic system"]'),
+                self.system.fqdn)
+        sel.type('report_problem_problem_description', 'b0rk b0rk b0rk')
+        sel.submit('report_problem')
+        sel.wait_for_page_to_load('20000')
+        self.assertEqual(sel.get_text('css=div.flash'),
+                'Your problem report has been forwarded to the system owner')
+        # assert the problem report e-mail
+        self.assertEqual(len(self.mail_capture.captured_mails), 1)
+        sender, rcpts, raw_msg = self.mail_capture.captured_mails[0]
+        self.assertEqual(rcpts, [self.system_owner.email_address])
+        msg = email.message_from_string(raw_msg)
+        self.assertEqual(msg['to'], self.system_owner.email_address)
+        self.assertEqual(msg['subject'], 'Problem reported for %s' % self.system.fqdn)
+        self.assertEqual(msg.get_payload(),
+                'A Beaker user has reported a problem with system %s.\n\n'
+                'Reported by: Bob Brown\n'
+                'Related to: R:%s <http://localhost:9090/recipes/%s>\n\n'
+                'Problem description:\nb0rk b0rk b0rk'
+                % (self.system.fqdn, recipe.id, recipe.id))
