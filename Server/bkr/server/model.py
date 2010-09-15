@@ -2029,6 +2029,8 @@ $SNIPPET("rhts_post")
                 self.release_action.do(self)
             except BX, error:
                 pass
+            except xmlrpclib.Fault:
+                pass
         else:
             try:
                 self.remote.release()
