@@ -141,7 +141,7 @@ class ReserveWorkflow:
                 continue
             
             systems_distro_query = distro.systems()
-            systems_available = System.available(identity.current.user,System.by_type(type='machine',systems=systems_distro_query)) 
+            systems_available = System.available_for_schedule(identity.current.user,System.by_type(type='machine',systems=systems_distro_query)) 
             systems_queries = systems_queries + systems_available.select()
 
         return { 'count' : len(set(systems_queries)), 'distro_id' : distro_ids }
@@ -157,5 +157,5 @@ class ReserveWorkflow:
         #it seems to be auto correlateing the inner query when you pass it a user, not possible to manually correlate
         #a Query object in 0.4  
         systems_distro_query = distro.systems()
-        avail_systems_distro_query = System.available(identity.current.user,System.by_type(type='machine',systems=systems_distro_query)) 
+        avail_systems_distro_query = System.available_for_schedule(identity.current.user,System.by_type(type='machine',systems=systems_distro_query)) 
         return {'count' : avail_systems_distro_query.count(), 'distro_id' : distro.id }

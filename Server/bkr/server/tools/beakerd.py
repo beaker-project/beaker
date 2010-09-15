@@ -42,7 +42,7 @@ import logging
 #logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
 #logging.getLogger('sqlalchemy.orm.unitofwork').setLevel(logging.DEBUG)
 
-log = logging.getLogger(__name__)
+log = logging.getLogger("beakerd")
 
 from optparse import OptionParser
 
@@ -220,7 +220,7 @@ def processed_recipesets(*args):
     return True
 
 def queued_recipes(*args):
-    working = SystemStatus.by_name(u'Working')
+    automated = SystemStatus.by_name(u'Automated')
     recipes = Recipe.query()\
                     .join('status')\
                     .join('systems')\
@@ -229,12 +229,12 @@ def queued_recipes(*args):
                          or_(
                          and_(Recipe.status==TaskStatus.by_name(u'Queued'),
                               System.user==None,
-                              System.status==working,
+                              System.status==automated,
                               RecipeSet.lab_controller==None
                              ),
                          and_(Recipe.status==TaskStatus.by_name(u'Queued'),
                               System.user==None,
-                              System.status==working,
+                              System.status==automated,
                               RecipeSet.lab_controller_id==System.lab_controller_id
                              )
                             )
@@ -250,7 +250,7 @@ def queued_recipes(*args):
         session.begin()
         try:
             systems = recipe.dyn_systems.filter(and_(System.user==None,
-                                                     System.status==working))
+                                                     System.status==automated))
             # Order systems by owner, then Group, finally shared for everyone.
             # FIXME Make this configurable, so that a user can specify their scheduling
             # preference from the job.
@@ -277,7 +277,7 @@ def queued_recipes(*args):
                      recipe.systems.remove(system)
 
                 # Atomic operation to put recipe in Scheduled state
-                if session.connection(Recipe).execute(recipe_table.update(
+                elif session.connection(Recipe).execute(recipe_table.update(
                      and_(recipe_table.c.id==recipe.id,
                        recipe_table.c.status_id==TaskStatus.by_name(u'Queued').id)),
                        status_id=TaskStatus.by_name(u'Scheduled').id).rowcount == 1:

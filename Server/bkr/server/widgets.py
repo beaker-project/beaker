@@ -7,6 +7,7 @@ import model
 import re
 import search_utility
 from decimal import Decimal
+from itertools import chain
 from turbogears.widgets import (Form, TextField, SubmitButton, TextArea, Label,
                                 AutoCompleteField, SingleSelectField, CheckBox,
                                 HiddenField, RemoteForm, LinkRemoteFunction, CheckBoxList, JSLink,
@@ -917,10 +918,10 @@ class SystemKeys(Form):
         super(SystemKeys, self).update_params(d)
         if 'readonly' in d['options']:
             d['readonly'] = d['options']['readonly']
-        if 'key_values_int' in d['options']:
-            d['key_values_int'] = d['options']['key_values_int']
-        if 'key_values_string' in d['options']:
-            d['key_values_string'] = d['options']['key_values_string']
+        d['key_values'] = sorted(chain(
+                d['options'].get('key_values_int', []), 
+                d['options'].get('key_values_string', [])),
+                key=lambda kv: (kv.key.key_name, kv.key_value))
 
 class SystemArches(Form):
     template = "bkr.server.templates.system_arches"

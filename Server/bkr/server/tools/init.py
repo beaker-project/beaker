@@ -65,9 +65,10 @@ def main():
 
     #Setup SystemStatus Table
     if SystemStatus.query().count() == 0:
-        working   = SystemStatus(u'Working')
-        broken    = SystemStatus(u'Broken')
-        removed   = SystemStatus(u'Removed')
+        automated   = SystemStatus(u'Automated')
+        broken      = SystemStatus(u'Broken')
+        removed     = SystemStatus(u'Removed')
+        manual      = SystemStatus(u'Manual')
     try:
         admin = Group.by_name(u'admin')
     except InvalidRequestError:

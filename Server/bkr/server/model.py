@@ -206,7 +206,7 @@ labinfo_table = Table('labinfo', metadata,
 watchdog_table = Table('watchdog', metadata,
     Column('id', Integer, autoincrement=True,
            nullable=False, primary_key=True),
-    Column('system_id', Integer, ForeignKey('system.id')),
+    Column('system_id', Integer, ForeignKey('system.id'), nullable=False),
     Column('recipe_id', Integer, ForeignKey('recipe.id')),
     Column('recipetask_id', Integer, ForeignKey('recipe_task.id')),
     Column('subtask', Unicode(255)),
@@ -1523,10 +1523,17 @@ $SNIPPET("rhts_post")
         return System.available(user,systems).filter(System.user==None)
 
     @classmethod
-    def available(cls, user,systems=None):
+    def available_for_schedule(cls, user, systems=None):
+        """ 
+        Will return systems that are available to user for scheduling
+        """
+        return cls._available(user, systems=systems, system_status=SystemStatus.by_name(u'Automated'))
+
+    @classmethod
+    def _available(self, user, system_status=None, systems=None):
         """
         Builds on all.  Only systems which this user has permission to reserve.
-          If a system is loaned then its only available for that person.
+          If a system is loaned then its only available for that person. Can take varying system_status' as args as well
         """
         if systems:
             try:
@@ -1536,24 +1543,39 @@ $SNIPPET("rhts_post")
                 query = cls.query().outerjoin(['groups','users'], aliased=True)
         else:
             query = System.all(user)
-       
-        query = query.filter(and_(
-                                System.status==SystemStatus.by_name(u'Working'),
-                                    or_(and_(System.owner==user,
-                                             System.loaned==None), 
-                                        System.loaned==user,
-                                        and_(System.shared==True, 
-                                             System.groups==None,
-                                             System.loaned==None
+
+        if type(system_status) is list:
+            whereclause_items = [System.status==k for k in system_status]
+            system_status_whereclause = or_(*whereclause_items)
+        elif type(system_status) is SystemStatus: 
+            system_status_whereclause = System.status==system_status 
+        else: #Possibly we are none or somthing else...
+            system_status_whereclause = or_(System.status==SystemStatus.by_name(u'Automated'),System.status==SystemStatus.by_name(u'Manual'))
+ 
+        query = query.filter(and_(system_status_whereclause,
+                                or_(and_(System.owner==user,
+                                        System.loaned==None), 
+                                    System.loaned==user,
+                                    and_(System.shared==True, 
+                                         System.groups==None,
+                                         System.loaned==None
                                         ),
-                                        and_(System.shared==True,
-                                             System.loaned==None,
-                                             User.user_id==user.user_id
-                                            )
+                                    and_(System.shared==True,
+                                         System.loaned==None,
+                                         User.user_id==user.user_id
                                         )
-                                 )
+                                    )
+                                )
                             )
         return query
+
+
+    @classmethod
+    def available(cls, user, systems=None):
+        """
+        Will return systems that are available to user
+        """
+        return cls._available(user, systems=systems)
 
     @classmethod
     def available_order(cls, user):
@@ -1689,7 +1711,7 @@ $SNIPPET("rhts_post")
 
     def is_admin(self,group_id=None,user_id=None,groups=None,*args,**kw):
         try:
-            if identity.current.user.is_admin() is True: #first let's see if we are an _admin_
+            if identity.in_group('admin'): #first let's see if we are an _admin_
                 return True
         except AttributeError,e: pass #We may not be logged in...
         
@@ -1728,12 +1750,14 @@ $SNIPPET("rhts_post")
                 return True
         return False
 
-    def can_provision_now(self,user=None):
+    def can_provision_now(self,user=None): 
         if user is not None and self.is_admin(user_id=user.user_id):
             return True
         else:
             if user is not None and self.loaned == user:
                 return True
+        if self.status==SystemStatus.by_name('Manual'): #If it's manual then we us eour original perm system.
+            return self._has_regular_perms(user)
         return False
                 
     def can_loan(self, user=None):
@@ -1778,25 +1802,40 @@ $SNIPPET("rhts_post")
         can_share() will return True id the system is currently free and allwoed to be used by the user
         """
         if user and not self.user:
-            # If the system is loaned its exclusive!
-            if self.loaned:
-                if user == self.loaned:
-                    return True
-                else:
-                    return False
-            # If its the owner always allow.
-            if user == self.owner:
-                return True
-            if self.shared:
-                # If the user is in the Systems groups
-                if self.groups:
-                    for group in user.groups:
-                        if group in self.groups:
-                            return True
-                else:
-                # If the system has no groups
-                    return True
+            return self._has_regular_perms(user)
         return False
+
+    def _has_regular_perms(self,user, *args, **kw):
+        """
+        This represents the basic system perms,loanee, owner,  shared and in group or shared and no group
+        """
+        try:
+            if identity.in_group('admin'):
+                return True
+        except AttributeError, e: pass #not logged in ?
+
+        if self.loaned:
+            if user == self.loaned:
+                return True
+            else:
+                return False
+        # If its the owner always allow.
+        if user == self.owner:
+            return True
+        if self.shared:
+            # If the user is in the Systems groups
+            return self._in_group(user)
+
+
+    def _in_group(self,user, *args, **kw):
+            if self.groups:
+                for group in user.groups:
+                    if group in self.groups:
+                        return True
+            else:
+                # If the system has no groups
+                return True
+
         
     def get_allowed_attr(self):
         attributes = ['vendor','model','memory']
@@ -2065,6 +2104,7 @@ $SNIPPET("rhts_post")
 
 
 class SystemType(SystemObject):
+
     def __init__(self, type=None):
         self.type = type
 
@@ -3033,6 +3073,9 @@ class TaskResult(object):
         return "%s" % (self.result)
 
 class Log(MappedObject):
+
+    MAX_ENTRIES_PER_DIRECTORY = 100
+
     def __init__(self, path=None, filename=None):
         self.path = path
         self.filename = filename
@@ -3648,10 +3691,9 @@ class Recipe(TaskBase):
         Return file path for this recipe
         """
         job    = self.recipeset.job
-        return "%s/%02d/%s/%s" % (self.recipeset.queue_time.year,
-                                  int(str(job.id)[-2:]),
-                                         job.id,
-                                         self.id)
+        return "%s/%02d/%s/%s/%s" % (self.recipeset.queue_time.year,
+                self.recipeset.queue_time.month,
+                job.id // Log.MAX_ENTRIES_PER_DIRECTORY, job.id, self.id)
     filepath = property(filepath)
 
     def harness_repos(self):
@@ -4292,11 +4334,10 @@ class RecipeTask(TaskBase):
         """
         job    = self.recipe.recipeset.job
         recipe = self.recipe
-        return "%s/%02d/%s/%s/%s" % (recipe.recipeset.queue_time.year,
-                                     int(str(job.id)[-2:]),
-                                         job.id,
-                                         recipe.id,
-                                         self.id)
+        return "%s/%02d/%s/%s/%s/%s" % (recipe.recipeset.queue_time.year,
+                recipe.recipeset.queue_time.month,
+                job.id // Log.MAX_ENTRIES_PER_DIRECTORY, job.id,
+                recipe.id, self.id)
     filepath = property(filepath)
 
     def to_xml(self, clone=False):
@@ -4758,12 +4799,10 @@ class RecipeTaskResult(TaskBase):
         job    = self.recipetask.recipe.recipeset.job
         recipe = self.recipetask.recipe
         task_id   = self.recipetask.id
-        return "%s/%02d/%s/%s/%s/%s" % (recipe.recipeset.queue_time.year,
-                                     int(str(job.id)[-2:]),
-                                         job.id,
-                                         recipe.id,
-                                         task_id,
-                                         self.id)
+        return "%s/%02d/%s/%s/%s/%s/%s" % (recipe.recipeset.queue_time.year,
+                recipe.recipeset.queue_time.month,
+                job.id // Log.MAX_ENTRIES_PER_DIRECTORY, job.id,
+                recipe.id, task_id, self.id)
     filepath = property(filepath)
 
     def to_xml(self):

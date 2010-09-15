@@ -138,7 +138,7 @@ fi
 %files server
 %defattr(-,root,root,-)
 %doc Server/README
-%doc SchemaUpgrades/*
+%doc SchemaUpgrades/upgrade_*.sql
 %{python_sitelib}/bkr/server/
 %{python_sitelib}/bkr.server-%{version}-*
 %{python_sitelib}/bkr.server-%{version}-py%{pyver}.egg-info/
