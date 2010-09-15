@@ -36,9 +36,38 @@ class SeleniumTestCase(unittest.TestCase):
 
     @classmethod
     def get_selenium(cls):
-        return selenium('localhost', 4444, '*chrome',
-                'http://%s:%s/' % (os.environ.get('SERVER', 'localhost'),
-                turbogears.config.get('server.socket_port')))
+        cls.sel = selenium('localhost', 4444, '*chrome',
+                    'http://%s:%s/' % (os.environ.get('SERVER', 'localhost'),
+                    turbogears.config.get('server.socket_port')))
+        return cls.sel
+
+    @classmethod
+    def logout(cls):
+        sel = getattr(cls,'sel',None)
+        if sel is not None:
+            sel.open("/")
+            sel.click("link=Logout")
+            sel.wait_for_page_to_load("3000")
+            return True 
+        return False
+
+    @classmethod
+    def login(cls,user=None, password=None):
+        if user is None and password is None:
+            user = cls.BEAKER_LOGIN_USER
+            password = cls.BEAKER_LOGIN_PASSWORD
+        
+        sel = getattr(cls,'sel',None)
+        if sel is not None:
+            sel.open("/")
+            sel.click("link=Login")
+            sel.wait_for_page_to_load("3000")
+            sel.type("user_name", user)
+            sel.type("password", password)
+            sel.click("login")
+            sel.wait_for_page_to_load("3000")
+            return True
+        return False
 
 def check_listen(port):
     """
@@ -133,7 +162,7 @@ def setup_package():
         Process('Xvfb', args=['Xvfb', ':4', '-fp', '/usr/share/X11/fonts/misc',
                 '-screen', '0', '1024x768x24']),
         Process('selenium-server', args=['java', '-jar',
-                '/opt/selenium/selenium-server-1.0.3/selenium-server.jar',
+                '/usr/lib/selenium/selenium-server-1.0.3/selenium-server.jar',
                 '-log', 'selenium.log'], env={'DISPLAY': ':4'},
                 listen_port=4444),
         Process('beaker', args=['./start-server.py', 'test.cfg'],
