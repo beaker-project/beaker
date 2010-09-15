@@ -217,7 +217,7 @@ def kernel_inventory():
 
     if mp == True:
         data['DISK_MULTIPATH'] = True
-    else 
+    else:
         data['DISK_MULTIPATH'] = False
         
     return data
