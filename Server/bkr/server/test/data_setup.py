@@ -57,7 +57,12 @@ def create_labcontroller(fqdn=None):
     log.debug('labcontroller %s already exists' % fqdn)
     return lc
 
-def create_user(display_name=u'Kevin Rudd', password=None):
+def create_user(user_name=None, password=None):
+    if user_name is None:
+        display_name = user_name = u'user%d' % int(time.time() * 1000)
+    else:
+        display_name = user_name
+
     user = User(user_name=u'user%d' % int(time.time() * 1000),
             display_name=display_name)
     if password:
