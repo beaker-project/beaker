@@ -1523,10 +1523,17 @@ $SNIPPET("rhts_post")
         return System.available(user,systems).filter(System.user==None)
 
     @classmethod
-    def available(cls, user,systems=None):
+    def available_for_schedule(cls, user, systems=None):
+        """ 
+        Will return systems that are available to user for scheduling
+        """
+        return cls._available(user, systems=systems, system_status=SystemStatus.by_name(u'Automated'))
+
+    @classmethod
+    def _available(self, user, system_status=None, systems=None):
         """
         Builds on all.  Only systems which this user has permission to reserve.
-          If a system is loaned then its only available for that person.
+          If a system is loaned then its only available for that person. Can take varying system_status' as args as well
         """
         if systems:
             try:
@@ -1536,25 +1543,39 @@ $SNIPPET("rhts_post")
                 query = cls.query().outerjoin(['groups','users'], aliased=True)
         else:
             query = System.all(user)
-       
-        query = query.filter(or_(and_(
-                                or_(System.status==SystemStatus.by_name(u'Automated'),System.status==SystemStatus.by_name(u'Manual')),
-                                    or_(and_(System.owner==user,
-                                             System.loaned==None), 
-                                        System.loaned==user,
-                                        and_(System.shared==True, 
-                                             System.groups==None,
-                                             System.loaned==None
+
+        if type(system_status) is list:
+            whereclause_items = [System.status==k for k in system_status]
+            system_status_whereclause = or_(*whereclause_items)
+        elif type(system_status) is SystemStatus: 
+            system_status_whereclause = System.status==system_status 
+        else: #Possibly we are none or somthing else...
+            system_status_whereclause = or_(System.status==SystemStatus.by_name(u'Automated'),System.status==SystemStatus.by_name(u'Manual'))
+ 
+        query = query.filter(and_(system_status_whereclause,
+                                or_(and_(System.owner==user,
+                                        System.loaned==None), 
+                                    System.loaned==user,
+                                    and_(System.shared==True, 
+                                         System.groups==None,
+                                         System.loaned==None
                                         ),
-                                        and_(System.shared==True,
-                                             System.loaned==None,
-                                             User.user_id==user.user_id
-                                            )
+                                    and_(System.shared==True,
+                                         System.loaned==None,
+                                         User.user_id==user.user_id
                                         )
                                     )
-                                ) 
+                                )
                             )
         return query
+
+
+    @classmethod
+    def available(cls, user, systems=None):
+        """
+        Will return systems that are available to user
+        """
+        return cls._available(user, systems=systems)
 
     @classmethod
     def available_order(cls, user):
@@ -2083,6 +2104,7 @@ $SNIPPET("rhts_post")
 
 
 class SystemType(SystemObject):
+
     def __init__(self, type=None):
         self.type = type
 
