@@ -23,6 +23,7 @@ import sys
 import os
 import pkg_resources
 pkg_resources.require("SQLAlchemy>=0.3.10")
+from bkr.server.bexceptions import BX, CobblerTaskFailedException
 from bkr.server.model import *
 from bkr.server.util import load_config
 from turbogears.database import session
@@ -397,7 +398,16 @@ def scheduled_recipes(*args):
                                         'Distro',
                                         '',
                                         '%s' % recipe.distro))
-                except exceptions.Exception, e:
+                except CobblerTaskFailedException, e:
+                    log.error('Cobbler task failed for recipe %s: %s' % (recipe.id, e))
+                    recipe.recipeset.abort(_(u'Cobbler task failed for recipe %s: %s')
+                            % (recipe.id, e))
+                    old_status = recipe.system.status
+                    recipe.system.mark_broken(reason=str(e), recipe=recipe)
+                    recipe.system.activity.append(SystemActivity(service='Scheduler',
+                            action='Changed', field_name='Status',
+                            old_value=old_status, new_value=recipe.system.status))
+                except Exception, e:
                     log.error(u"Failed to provision recipeid %s, %s" % (
                                                                          recipe.id,
                                                                             e))

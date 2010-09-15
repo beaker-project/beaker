@@ -20,10 +20,9 @@ from sqlalchemy.util import OrderedDict
 from sqlalchemy.ext.associationproxy import association_proxy
 import socket
 from xmlrpclib import ProtocolError
-from bexceptions import *
 import time
-from bexceptions import *
 from kid import Element
+from bkr.server.bexceptions import BeakerException, BX, CobblerTaskFailedException
 from bkr.server.helpers import *
 from bkr.server import mail
 import traceback
@@ -1284,12 +1283,12 @@ class System(SystemObject):
                             if line.find("### TASK COMPLETE ###") != -1:
                                 return True
                             if line.find("### TASK FAILED ###") != -1:
-                                raise BX(_("Cobbler Task:%s Failed" % task_id))
+                                raise CobblerTaskFailedException(_("Cobbler Task:%s Failed" % task_id))
                         if datetime.utcnow() > expiredelta:
-                            raise BX(_('Cobbler Task:%s Timed out' % task_id))
+                            raise CobblerTaskFailedException(_('Cobbler Task:%s Timed out' % task_id))
     
                         time.sleep(5)
-                except BX,e:
+                except CobblerTaskFailedException, e:
                     self.system.activity.append(SystemActivity(self.system.user,service='Cobbler API',action='Task',field_name='', new_value='Fail: %s' % e))
                     raise
 
@@ -2102,6 +2101,12 @@ $SNIPPET("rhts_post")
 
     def report_problem_href(self, **kwargs):
         return url('/report_problem', system_id=self.id, **kwargs)
+
+    def mark_broken(self, reason, recipe=None):
+        """Sets the system status to Broken and notifies its owner."""
+        log.warning('Marking system %s as broken' % self.fqdn)
+        self.status = SystemStatus.by_name(u'Broken')
+        mail.broken_system_notify(self, reason, recipe)
 
 # for property in System.mapper.iterate_properties:
 #     print property.mapper.class_.__name__
