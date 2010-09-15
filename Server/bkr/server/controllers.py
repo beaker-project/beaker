@@ -300,7 +300,7 @@ class Root(RPCRoot):
         submit_text = _(u'Report problem')
         params = ['system', 'recipe']
 
-        def update_data(self, d):
+        def update_params(self, d):
             d['system'] = d['options']['system']
             d['recipe'] = d['options'].get('recipe')
 
