@@ -1,6 +1,3 @@
-<?python
-from itertools import chain
-?>
 <form xmlns:py="http://purl.org/kid/ns#"
  name="${name}"
  action="${tg.url(action)}"
@@ -32,10 +29,8 @@ from itertools import chain
   </tr>
   <?python
     row_color = "#f1f1f1"
-    sorted_key_values = sorted(chain(key_values_int, key_values_string),
-            key=lambda kv: (kv.key.key_name, kv.key_value))
   ?>
-  <tr class="list" bgcolor="${row_color}" py:for="key_value in sorted_key_values">
+  <tr class="list" bgcolor="${row_color}" py:for="key_value in key_values">
    <td class="list">
     ${key_value.key.key_name}
    </td>

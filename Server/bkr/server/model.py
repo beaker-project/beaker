@@ -207,7 +207,7 @@ labinfo_table = Table('labinfo', metadata,
 watchdog_table = Table('watchdog', metadata,
     Column('id', Integer, autoincrement=True,
            nullable=False, primary_key=True),
-    Column('system_id', Integer, ForeignKey('system.id')),
+    Column('system_id', Integer, ForeignKey('system.id'), nullable=False),
     Column('recipe_id', Integer, ForeignKey('recipe.id')),
     Column('recipetask_id', Integer, ForeignKey('recipe_task.id')),
     Column('subtask', Unicode(255)),
@@ -1538,8 +1538,8 @@ $SNIPPET("rhts_post")
         else:
             query = System.all(user)
        
-        query = query.filter(and_(
-                                System.status==SystemStatus.by_name(u'Working'),
+        query = query.filter(or_(and_(
+                                System.status==SystemStatus.by_name(u'Automated'),
                                     or_(and_(System.owner==user,
                                              System.loaned==None), 
                                         System.loaned==user,
@@ -1552,7 +1552,16 @@ $SNIPPET("rhts_post")
                                              User.user_id==user.user_id
                                             )
                                         )
-                                 )
+                                 ), and_(System.status==SystemStatus.by_name(u'Manual'), #Owner,loanee,group
+                                        or_(and_(System.owner==user,
+                                                 System.loaned==None), 
+                                            System.loaned==user, 
+                                        and_(System.shared==True,
+                                             System.loaned==None,
+                                             User.user_id==user.user_id
+                                            ))
+                                        )
+                                ) 
                             )
         return query
 
@@ -1729,12 +1738,14 @@ $SNIPPET("rhts_post")
                 return True
         return False
 
-    def can_provision_now(self,user=None):
+    def can_provision_now(self,user=None): 
         if user is not None and self.is_admin(user_id=user.user_id):
             return True
         else:
             if user is not None and self.loaned == user:
                 return True
+        if self.status==SystemStatus.by_name('Manual'): #If it's manual then we us eour original perm system.
+            return self._has_regular_perms(user)
         return False
                 
     def can_loan(self, user=None):
@@ -1779,25 +1790,35 @@ $SNIPPET("rhts_post")
         can_share() will return True id the system is currently free and allwoed to be used by the user
         """
         if user and not self.user:
-            # If the system is loaned its exclusive!
-            if self.loaned:
-                if user == self.loaned:
-                    return True
-                else:
-                    return False
-            # If its the owner always allow.
-            if user == self.owner:
-                return True
-            if self.shared:
-                # If the user is in the Systems groups
-                if self.groups:
-                    for group in user.groups:
-                        if group in self.groups:
-                            return True
-                else:
-                # If the system has no groups
-                    return True
+            return self._has_regular_perms(user)
         return False
+
+    def _has_regular_perms(self,user, *args, **kw):
+        """
+        This represents the basic system perms,loanee, owner,  shared and in group or shared and no group
+        """
+        if self.loaned:
+            if user == self.loaned:
+                return True
+            else:
+                return False
+        # If its the owner always allow.
+        if user == self.owner:
+            return True
+        if self.shared:
+            # If the user is in the Systems groups
+            return self._in_group(user)
+
+
+    def _in_group(self,user, *args, **kw):
+            if self.groups:
+                for group in user.groups:
+                    if group in self.groups:
+                        return True
+            else:
+                # If the system has no groups
+                return True
+
         
     def get_allowed_attr(self):
         attributes = ['vendor','model','memory']
@@ -3037,6 +3058,9 @@ class TaskResult(object):
         return "%s" % (self.result)
 
 class Log(MappedObject):
+
+    MAX_ENTRIES_PER_DIRECTORY = 100
+
     def __init__(self, path=None, filename=None):
         self.path = path
         self.filename = filename
@@ -3657,10 +3681,9 @@ class Recipe(TaskBase):
         Return file path for this recipe
         """
         job    = self.recipeset.job
-        return "%s/%02d/%s/%s" % (self.recipeset.queue_time.year,
-                                  int(str(job.id)[-2:]),
-                                         job.id,
-                                         self.id)
+        return "%s/%02d/%s/%s/%s" % (self.recipeset.queue_time.year,
+                self.recipeset.queue_time.month,
+                job.id // Log.MAX_ENTRIES_PER_DIRECTORY, job.id, self.id)
     filepath = property(filepath)
 
     def harness_repos(self):
@@ -4305,11 +4328,10 @@ class RecipeTask(TaskBase):
         """
         job    = self.recipe.recipeset.job
         recipe = self.recipe
-        return "%s/%02d/%s/%s/%s" % (recipe.recipeset.queue_time.year,
-                                     int(str(job.id)[-2:]),
-                                         job.id,
-                                         recipe.id,
-                                         self.id)
+        return "%s/%02d/%s/%s/%s/%s" % (recipe.recipeset.queue_time.year,
+                recipe.recipeset.queue_time.month,
+                job.id // Log.MAX_ENTRIES_PER_DIRECTORY, job.id,
+                recipe.id, self.id)
     filepath = property(filepath)
 
     def to_xml(self, clone=False):
@@ -4771,12 +4793,10 @@ class RecipeTaskResult(TaskBase):
         job    = self.recipetask.recipe.recipeset.job
         recipe = self.recipetask.recipe
         task_id   = self.recipetask.id
-        return "%s/%02d/%s/%s/%s/%s" % (recipe.recipeset.queue_time.year,
-                                     int(str(job.id)[-2:]),
-                                         job.id,
-                                         recipe.id,
-                                         task_id,
-                                         self.id)
+        return "%s/%02d/%s/%s/%s/%s/%s" % (recipe.recipeset.queue_time.year,
+                recipe.recipeset.queue_time.month,
+                job.id // Log.MAX_ENTRIES_PER_DIRECTORY, job.id,
+                recipe.id, task_id, self.id)
     filepath = property(filepath)
 
     def to_xml(self):
