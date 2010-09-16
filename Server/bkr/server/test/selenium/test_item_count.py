@@ -14,14 +14,14 @@ class ItemCount(bkr.server.test.selenium.SeleniumTestCase):
         data_setup.create_job() # needed for job page
         data_setup.create_task() #create task
         system = data_setup.create_system()
+        system.shared = True
         system.activity.append(data_setup.create_system_activity())
+        session.flush()
     
     def test_itemcount(self):
         sel = self.selenium
         sel.open("/")
-        try:
-            self.login()
-        except:pass
+        self.login()
         sel.click("link=All")
         sel.wait_for_page_to_load("3000")
         self.failUnless(sel.is_text_present("Items found:"))

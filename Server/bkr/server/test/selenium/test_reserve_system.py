@@ -12,8 +12,8 @@ class ReserveSystem(bkr.server.test.selenium.SeleniumTestCase):
         self.lc = data_setup.create_labcontroller()
         self.system = data_setup.create_system(fqdn=u'test_reserve_system',arch=u'i386')
         self.distro = data_setup.create_distro(name=u'test_reserve_system_distro')
-        data_setup.create_task(task_name=u'/distribution/install')
-        data_setup.append_distro_to_lc(self.distro,self.lc)
+        data_setup.create_task(name=u'/distribution/install')
+        data_setup.create_task(name=u'/distribution/reservesys')
         self.system.lab_controller = self.lc
         self.system.shared = True
         session.flush()

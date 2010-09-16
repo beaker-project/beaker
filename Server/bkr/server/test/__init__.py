@@ -29,6 +29,7 @@ def setup_package():
     log.info('Loading test configuration from %s', CONFIG_FILE)
     load_config(CONFIG_FILE)
     data_setup.setup_model()
+    data_setup.create_distro()
     data_setup.create_labcontroller() #always need a labcontroller
     session.flush()
 

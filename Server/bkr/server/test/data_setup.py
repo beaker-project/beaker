@@ -50,42 +50,30 @@ def create_labcontroller(fqdn=None):
     except sqlalchemy.exceptions.InvalidRequestError, e: #Doesn't exist ?
         if e.args[0] == 'No rows returned for one()':
             lc = LabController(fqdn=fqdn)
-            session.flush()
             return lc
         else:
             raise
     log.debug('labcontroller %s already exists' % fqdn)
     return lc
 
-def create_user(user_name=None, password=None):
+def create_user(user_name=None, password=None, display_name=None):
     if user_name is None:
-        display_name = user_name = u'user%d' % int(time.time() * 1000)
-    else:
+        user_name = u'user%d' % int(time.time() * 1000)
+    if display_name is None:
         display_name = user_name
-
-    user = User(user_name=u'user%d' % int(time.time() * 1000),
-            display_name=display_name)
+    user = User(user_name=user_name, display_name=display_name,
+            email_address=u'%s@example.com' % user_name)
     if password:
         user.password = password
-    user.email_address = u'%s@example.com' % user.user_name
     log.debug('Created user %r', user)
-    session.flush()
     return user
 
 def create_group():
     group = Group(group_name=u'group%s' % str(int(time.time() * 1000))[5:9])
-    session.flush()
     return group
 
 def add_user_to_group(user,group):
     user.groups.append(group)
-    session.flush()
-
-def append_distro_to_lc(distro,lc):
-    lcd = LabControllerDistro()
-    lcd.distro = distro
-    lc._distros.append(lcd)
-    session.flush()
 
 def create_distro(name=u'DAN6-Server-U9', breed=u'Dan',
         osmajor=u'DansAwesomeLinuxServer6', osminor=u'9',
@@ -115,7 +103,6 @@ def create_system(arch=u'i386', type=u'Machine', status=u'Automated',
     system = System(fqdn=fqdn,type=SystemType.by_name(type), owner=owner, 
                 status=SystemStatus.by_name(status), **kw)
     system.arch.append(Arch.by_name(arch))
-    session.flush()
     log.debug('Created system %r', system)
     return system
 
@@ -123,23 +110,21 @@ def create_system_activity(user=None, **kw):
     if not user:
         user = create_user()
     activity = SystemActivity(user, 'WEBUI', 'Changed', 'Loaned To', 'random_%d' % int(time.time() * 1000) , '%s' % user)
-    session.flush()
     return activity
 
-def create_task(task_name=None):
-    if task_name is None:
-        task_name = u'/distribution/test_task_%d' % int(time.time() * 1000)
-    task = Task.lazy_create(name=task_name)
-    session.flush()
+def create_task(name=None):
+    if name is None:
+        name = u'/distribution/test_task_%d' % int(time.time() * 1000)
+    task = Task.lazy_create(name=name)
     return task
 
-def create_job(owner, distro=None, task_name=u'/distribution/reservesys'):
+def create_job(owner=None, distro=None, task_name=u'/distribution/reservesys'):
     if owner is None:
         owner = create_user()
     job = Job(whiteboard=u'job %d' % int(time.time() * 1000), ttasks=1, owner=owner)
     recipe_set = RecipeSet(ttasks=1, priority=TaskPriority.default_priority())
     recipe = MachineRecipe(ttasks=1, distro=distro or Distro.query()[0])
-    recipe.append_tasks(RecipeTask(task=create_task(task_name=task_name)))
+    recipe.append_tasks(RecipeTask(task=create_task(name=task_name)))
     recipe_set.recipes.append(recipe)
     job.recipesets.append(recipe_set)
     log.debug('Created %s', job.t_id)
@@ -160,5 +145,3 @@ def create_completed_job(result=u'Pass', **kwargs):
 
 def create_device(**kw):
     device = Device(**kw)
-    session.flush()
-
