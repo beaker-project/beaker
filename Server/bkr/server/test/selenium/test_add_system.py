@@ -1,10 +1,8 @@
 #!/usr/bin/python
-import MySQLdb
 import bkr.server.test.selenium
 from bkr.server.test import data_setup
 import unittest, time, re, os
-from turbogears import config
-from turbogears.database import session
+from turbogears.database import session, get_engine
 
 class AddSystem(bkr.server.test.selenium.SeleniumTestCase):
     def setUp(self):
@@ -191,18 +189,13 @@ class AddSystem(bkr.server.test.selenium.SeleniumTestCase):
         except Exception,e:self.verificationErrors.append(str(e))
 
     def check_db(self,fqdn):
-        conn = MySQLdb.connect(db = config.get('db_name'))
-                                #user = "",
-                                #passwd = "testpass",
-                                #host = ""
-        cursor = conn.cursor()
-        cursor.execute("SELECT s.status,l.fqdn, t.type \
+        conn = get_engine().connect()
+        result = conn.execute("SELECT s.status,l.fqdn, t.type \
                         FROM system \
                             INNER JOIN system_status AS s ON s.id = system.status_id\
                             INNER JOIN system_type AS t ON t.id = system.type_id\
                             INNER JOIN lab_controller AS l ON system.lab_controller_id = l.id\
-                        WHERE system.fqdn = '%s'" % fqdn)
-        result = cursor.fetchone()
+                        WHERE system.fqdn = %s", fqdn).fetchone()
         if not result:
             raise AssertionError('Could not find status,type,lab_controller for  system %s in db' % fqdn)
         return {'status' : result[0], 'lab_controller' : result[1], 'type' : result[2] }
