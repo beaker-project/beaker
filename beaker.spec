@@ -185,6 +185,7 @@ fi
 %attr(-,apache,root) %dir %{_localstatedir}/log/%{name}
 %{_sysconfdir}/init.d/%{name}-proxy
 %{_sysconfdir}/init.d/%{name}-watchdog
+%attr(-,apache,root) %dir %{_localstatedir}/run/%{name}-lab-controller
 
 %changelog
 * Thu Sep 16 2010 Raymond Mancy <rmancy@redhat.com> 0.5.57-1
