@@ -1303,3 +1303,21 @@ class AlphaNavBar(Widget):
     def __init__(self,letters,keyword='alpha',*args,**kw):
         self.letters = letters 
         self.keyword = keyword
+
+class ReportProblemForm(Form):
+    template = 'bkr.server.templates.report_problem_form'
+    name = 'report_problem'
+    fields=[
+        TextArea(name='problem_description', label=_(u'Description of problem'))
+    ]
+    hidden_fields=[
+        HiddenField(name='system_id'),
+        HiddenField(name='recipe_id')
+    ]
+    submit_text = _(u'Report problem')
+    params = ['system', 'recipe']
+
+    def update_params(self, d):
+        super(ReportProblemForm, self).update_params(d)
+        d['system'] = d['options']['system']
+        d['recipe'] = d['options'].get('recipe')
