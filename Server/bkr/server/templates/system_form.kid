@@ -94,6 +94,7 @@ $(document).ready(function(){
        </th>
        <td class="list">
         ${display_field_for("status_id")}
+        <a href="${tg.url('/report_problem', system_id=id)}">(Report problem)</a>
        </td>
        <th class="list">
         <b>Owner</b>

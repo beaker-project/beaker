@@ -3,6 +3,7 @@ import re
 from datetime import datetime
 from turbogears.database import metadata, mapper, session
 from turbogears.config import get
+from turbogears import url
 import ldap
 from sqlalchemy import (Table, Column, ForeignKey, String, Unicode, Integer, DateTime,
                         UnicodeText, Boolean, Float, VARCHAR, TEXT, Numeric, 
@@ -2099,6 +2100,9 @@ $SNIPPET("rhts_post")
 
     link = property(link)
 
+    def report_problem_href(self, **kwargs):
+        return url('/report_problem', system_id=self.id, **kwargs)
+
 # for property in System.mapper.iterate_properties:
 #     print property.mapper.class_.__name__
 #     print property.key
@@ -3689,6 +3693,11 @@ class Recipe(TaskBase):
         """
         return "/recipes/cancel?id=%s" % self.id
 
+    @property
+    def link(self):
+        """ Return a link to this recipe. """
+        return make_link(url='/recipes/%s' % self.id, text=self.t_id)
+
     def filepath(self):
         """
         Return file path for this recipe
@@ -4142,13 +4151,17 @@ class Recipe(TaskBase):
         Return action links depending on status
         """
         div = Element('div')
-
         if not self.is_finished(): 
             div.append(make_link(url = self.cancel_link(),
                             text = "Cancel"))
-            return div
-        else:
-            return None
+            div.append(Element('br'))
+        if self.system:
+            a = Element('a', {'class': 'list'},
+                    href=self.system.report_problem_href(recipe_id=self.id))
+            a.text = _(u'Report problem with system')
+            div.append(a)
+            div.append(Element('br'))
+        return div
 
 
 class RecipeRoleListAdapter(object):
