@@ -5,7 +5,7 @@
 <head>
     <meta content="text/html; charset=UTF-8" http-equiv="content-type" py:replace="''"/>
 
-    <title>Form</title>
+    <title>${value_of('title', 'Form')}</title>
 </head>
 
 
