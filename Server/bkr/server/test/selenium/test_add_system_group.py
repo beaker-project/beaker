@@ -22,7 +22,7 @@ class AddSystemGroupTest(bkr.server.test.selenium.SeleniumTestCase):
         # as admin, assign the system to our test group
         self.login()
         sel.open("/view/%s" % self.system.fqdn)
-        sel.click('link=Groups')
+        sel.click('//ul[@class="tabbernav"]//a[text()="Groups"]')
         sel.type("groups_group_text", "%s" % self.group.group_name)
         sel.click('link=Add ( + )')
         sel.wait_for_page_to_load("30000")
