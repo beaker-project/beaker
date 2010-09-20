@@ -2,7 +2,7 @@
 %{!?pyver: %global pyver %(%{__python} -c "import sys ; print sys.version[:3]")}
 
 Name:           beaker
-Version:        0.5.56
+Version:        0.5.57
 Release:        1%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
@@ -131,6 +131,7 @@ fi
 %files
 %defattr(-,root,root,-)
 %{python_sitelib}/bkr/__init__.py*
+%{python_sitelib}/bkr/timeout_xmlrpclib.py*
 %{python_sitelib}/bkr-%{version}-*
 %{python_sitelib}/bkr-%{version}-py%{pyver}.egg-info/
 %doc COPYING
@@ -138,7 +139,7 @@ fi
 %files server
 %defattr(-,root,root,-)
 %doc Server/README
-%doc SchemaUpgrades/*
+%doc SchemaUpgrades/upgrade_*.sql
 %{python_sitelib}/bkr/server/
 %{python_sitelib}/bkr.server-%{version}-*
 %{python_sitelib}/bkr.server-%{version}-py%{pyver}.egg-info/
@@ -186,6 +187,26 @@ fi
 %{_sysconfdir}/init.d/%{name}-watchdog
 
 %changelog
+* Thu Sep 16 2010 Raymond Mancy <rmancy@redhat.com> 0.5.57-1
+- bz620605 - Introduction of Automated status (rmancy@redhat.com)
+- fix beaker-watchdog to not leave zombies around. (bpeck@redhat.com)
+- break watchdog logging into its own log file. (bpeck@redhat.com)
+- Updated server.cfg and beakerd to write to its own log file.
+  (bpeck@redhat.com)
+- need outer joins here in case there is no associated row (e.g. new jobs won't
+  have a system or result yet) (dcallagh@redhat.com)
+- Sql required to upgrade already installed DB. (bpeck@redhat.com)
+- bz629147 - fix column sorting for recipes (dcallagh@redhat.com)
+- bz606862 - use a deeper directory hierarchy for logs (dcallagh@redhat.com)
+- bz629272 - fix logic to prevent us from using systems that we no longer have
+  access to. (bpeck@redhat.com)
+- moved key-value sorting logic from template to widget code
+  (dcallagh@redhat.com)
+- bz629080 - fix beaker-proxy push method to call proper method.
+  (bpeck@redhat.com)
+- bz629076 - add not null constraint on watchdog/system_id. (bpeck@redhat.com)
+- Support for Arlinton's SystemProfiles. (bpeck@redhat.com)
+
 * Thu Sep 02 2010 Raymond Mancy <rmancy@redhat.com> 0.5.56-1
 - bz595360 - Fixed reserve report to not crash mysql (rmancy@redhat.com)
 - bz620604 - Removed take for those without the correct permissions.

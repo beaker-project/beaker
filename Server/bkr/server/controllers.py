@@ -25,6 +25,7 @@ from bkr.server.widgets import PowerTypeForm
 from bkr.server.widgets import PowerForm
 from bkr.server.widgets import LabInfoForm
 from bkr.server.widgets import PowerActionForm
+from bkr.server.widgets import ReportProblemForm
 from bkr.server.widgets import SystemDetails
 from bkr.server.widgets import SystemHistory
 from bkr.server.widgets import SystemExclude
@@ -286,24 +287,6 @@ class Root(RPCRoot):
     system_provision = SystemProvision(name='provision')
     arches_form = SystemArches(name='arches') 
     task_form = TaskSearchForm(name='tasks')
-
-    class ReportProblemForm(widgets.Form):
-        template = 'bkr.server.templates.report_problem_form'
-        name = 'report_problem'
-        fields=[
-            widgets.TextArea(name='problem_description', label=_(u'Description of problem'))
-        ]
-        hidden_fields=[
-            widgets.HiddenField(name='system_id'),
-            widgets.HiddenField(name='recipe_id')
-        ]
-        submit_text = _(u'Report problem')
-        params = ['system', 'recipe']
-
-        def update_data(self, d):
-            d['system'] = d['options']['system']
-            d['recipe'] = d['options'].get('recipe')
-
     report_problem_form = ReportProblemForm()
 
     @expose(format='json')
@@ -528,7 +511,7 @@ class Root(RPCRoot):
                     raise
             # I don't like duplicating this code in find_systems_for_distro() but it dies on trying to jsonify a Query object... 
             systems_distro_query = distro.systems() 
-            avail_systems_distro_query = System.available(identity.current.user,System.by_type(type='machine',systems=systems_distro_query)) 
+            avail_systems_distro_query = System.available_for_schedule(identity.current.user,System.by_type(type='machine',systems=systems_distro_query)) 
            
             warn = None
             if avail_systems_distro_query.count() < 1: 

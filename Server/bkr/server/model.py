@@ -29,6 +29,7 @@ from bkr.server import mail
 import traceback
 from BasicAuthTransport import BasicAuthTransport
 import xmlrpclib
+import bkr.timeout_xmlrpclib
 import os
 import shutil
 
@@ -1227,7 +1228,7 @@ class System(SystemObject):
             def __init__(self, system):
                 self.system = system
                 url = "http://%s/cobbler_api" % system.lab_controller.fqdn
-                self.remote = xmlrpclib.ServerProxy(url, allow_none=True)
+                self.remote = bkr.timeout_xmlrpclib.ServerProxy(url, allow_none=True)
                 self.token = self.remote.login(system.lab_controller.username,
                                                system.lab_controller.password)
 
@@ -1524,10 +1525,17 @@ $SNIPPET("rhts_post")
         return System.available(user,systems).filter(System.user==None)
 
     @classmethod
-    def available(cls, user,systems=None):
+    def available_for_schedule(cls, user, systems=None):
+        """ 
+        Will return systems that are available to user for scheduling
+        """
+        return cls._available(user, systems=systems, system_status=SystemStatus.by_name(u'Automated'))
+
+    @classmethod
+    def _available(self, user, system_status=None, systems=None):
         """
         Builds on all.  Only systems which this user has permission to reserve.
-          If a system is loaned then its only available for that person.
+          If a system is loaned then its only available for that person. Can take varying system_status' as args as well
         """
         if systems:
             try:
@@ -1537,33 +1545,39 @@ $SNIPPET("rhts_post")
                 query = cls.query().outerjoin(['groups','users'], aliased=True)
         else:
             query = System.all(user)
-       
-        query = query.filter(or_(and_(
-                                System.status==SystemStatus.by_name(u'Automated'),
-                                    or_(and_(System.owner==user,
-                                             System.loaned==None), 
-                                        System.loaned==user,
-                                        and_(System.shared==True, 
-                                             System.groups==None,
-                                             System.loaned==None
+
+        if type(system_status) is list:
+            whereclause_items = [System.status==k for k in system_status]
+            system_status_whereclause = or_(*whereclause_items)
+        elif type(system_status) is SystemStatus: 
+            system_status_whereclause = System.status==system_status 
+        else: #Possibly we are none or somthing else...
+            system_status_whereclause = or_(System.status==SystemStatus.by_name(u'Automated'),System.status==SystemStatus.by_name(u'Manual'))
+ 
+        query = query.filter(and_(system_status_whereclause,
+                                or_(and_(System.owner==user,
+                                        System.loaned==None), 
+                                    System.loaned==user,
+                                    and_(System.shared==True, 
+                                         System.groups==None,
+                                         System.loaned==None
                                         ),
-                                        and_(System.shared==True,
-                                             System.loaned==None,
-                                             User.user_id==user.user_id
-                                            )
+                                    and_(System.shared==True,
+                                         System.loaned==None,
+                                         User.user_id==user.user_id
                                         )
-                                 ), and_(System.status==SystemStatus.by_name(u'Manual'), #Owner,loanee,group
-                                        or_(and_(System.owner==user,
-                                                 System.loaned==None), 
-                                            System.loaned==user, 
-                                        and_(System.shared==True,
-                                             System.loaned==None,
-                                             User.user_id==user.user_id
-                                            ))
-                                        )
-                                ) 
+                                    )
+                                )
                             )
         return query
+
+
+    @classmethod
+    def available(cls, user, systems=None):
+        """
+        Will return systems that are available to user
+        """
+        return cls._available(user, systems=systems)
 
     @classmethod
     def available_order(cls, user):
@@ -1699,7 +1713,7 @@ $SNIPPET("rhts_post")
 
     def is_admin(self,group_id=None,user_id=None,groups=None,*args,**kw):
         try:
-            if identity.current.user.is_admin() is True: #first let's see if we are an _admin_
+            if identity.in_group('admin'): #first let's see if we are an _admin_
                 return True
         except AttributeError,e: pass #We may not be logged in...
         
@@ -1797,6 +1811,11 @@ $SNIPPET("rhts_post")
         """
         This represents the basic system perms,loanee, owner,  shared and in group or shared and no group
         """
+        try:
+            if identity.in_group('admin'):
+                return True
+        except AttributeError, e: pass #not logged in ?
+
         if self.loaned:
             if user == self.loaned:
                 return True
@@ -2011,6 +2030,8 @@ $SNIPPET("rhts_post")
                 self.release_action.do(self)
             except BX, error:
                 pass
+            except xmlrpclib.Fault:
+                pass
         else:
             try:
                 self.remote.release()
@@ -2090,6 +2111,7 @@ $SNIPPET("rhts_post")
 
 
 class SystemType(SystemObject):
+
     def __init__(self, type=None):
         self.type = type
 
