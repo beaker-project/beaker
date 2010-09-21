@@ -9,5 +9,9 @@ Harness/build
 Server/build
 Server/devdata.sqlite
 Server/setup.py
-Common/beaker/__init__.py
+Common/bkr/__init__.py
+Common/build
+Common/setup.py
+Client/build
+Client/setup.py
 *.diff

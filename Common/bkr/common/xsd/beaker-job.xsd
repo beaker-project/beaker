@@ -1,0 +1,210 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-stylesheet type="text/xsl" href="xs3p/xs3p.xsl"?>
+<!--
+<?xml-model href="XMLSchema.xsd"?>
+
+This does not work!
+See: http://www.w3.org/XML/2010/01/xml-model/
+-->
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <xs:annotation>
+    <xs:documentation>
+      WARNING: This document is for reference only. It is neither complete nor
+      authoritative source of information.
+    </xs:documentation>
+  </xs:annotation>
+  <xs:annotation>
+    <xs:documentation>
+      If the job XML is validated successfully, it is likely it will be
+      accepted by beaker. Run:
+
+          xmllint --noout --schema beaker-job.xsd $FILE
+    </xs:documentation>
+  </xs:annotation>
+  <xs:annotation>
+    <xs:documentation>
+      Known issues:
+
+       * guestrecipe cannot contain guestrecipe
+    </xs:documentation>
+  </xs:annotation>
+
+  <xs:simpleType name="op">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="!="/>
+      <xs:enumeration value="=="/>
+      <xs:enumeration value="="/>
+      <xs:enumeration value="&lt;="/>
+      <xs:enumeration value="&lt;"/>
+      <xs:enumeration value="&gt;="/>
+      <xs:enumeration value="&gt;"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:complexType name="req">
+    <!-- FIXME: there is only finite number of ops! -->
+    <xs:attribute name="op" type="op"/>
+    <xs:attribute name="value" type="xs:string" use="required"/>
+  </xs:complexType>
+  <xs:group name="distroreqs">
+    <xs:choice>
+      <xs:element name="and" type="distroreq" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:element name="or" type="distroreq" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:element name="distro" type="req" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:element name="distro_family" type="req" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:element name="distro_name" type="req" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:element name="distro_tag" type="req" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:element name="distro_variant" type="req" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:element name="distro_arch" type="req" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:element name="distro_virt" type="req" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:element name="distro_method" type="req" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:element name="distrolabcontroller" type="req" minOccurs="0" maxOccurs="unbounded"/>
+    </xs:choice>
+  </xs:group>
+  <xs:complexType name="distroreq">
+    <xs:group ref="distroreqs" minOccurs="0" maxOccurs="unbounded"/>
+  </xs:complexType>
+  <xs:group name="hostreqs">
+    <xs:choice>
+      <xs:element name="and" type="hostreq" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:element name="or" type="hostreq" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:element name="host" type="req" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:element name="hostlabcontroller" type="req" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:element name="system_type" type="req" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:element name="system" type="req" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:element name="memory" type="req" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:element name="cpu_count" type="req" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:element name="hostname" type="req" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:element name="arch" type="req" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:element name="auto_prov" type="req" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:element name="key_value" minOccurs="0" maxOccurs="unbounded">
+        <xs:complexType>
+          <xs:attribute name="key" type="xs:string" use="required"/>
+          <xs:attribute name="op" type="op"/>
+          <xs:attribute name="value" type="xs:string" use="required"/>
+        </xs:complexType>
+      </xs:element>
+    </xs:choice>
+  </xs:group>
+  <xs:complexType name="hostreq">
+    <xs:group ref="hostreqs" minOccurs="0" maxOccurs="unbounded"/>
+  </xs:complexType>
+  <xs:complexType name="recipe">
+    <xs:sequence>
+      <xs:element name="guestrecipe" type="guestrecipe" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:element name="kickstart" minOccurs="0" maxOccurs="1" type="xs:string" />
+      <xs:element name="watchdog" minOccurs="0" maxOccurs="1">
+        <xs:complexType>
+          <xs:attribute name="panic">
+            <xs:simpleType>
+              <xs:restriction base="xs:string">
+                <xs:enumeration value="ignore"/>
+                <xs:enumeration value="None"/>
+              </xs:restriction>
+            </xs:simpleType>
+          </xs:attribute>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="packages" minOccurs="0" maxOccurs="1">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="package" minOccurs="0" maxOccurs="unbounded">
+              <xs:complexType>
+                <xs:attribute name="name" type="xs:string" use="required"/>
+              </xs:complexType>
+            </xs:element>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="ks_appends" minOccurs="0" maxOccurs="1" type="xs:string" />
+      <xs:element name="repos" minOccurs="0" maxOccurs="1">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="repo" minOccurs="0" maxOccurs="unbounded">
+              <xs:complexType>
+                <xs:attribute name="name" type="xs:string" use="required"/>
+                <xs:attribute name="url" type="xs:string" use="required"/>
+              </xs:complexType>
+            </xs:element>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="distroRequires" minOccurs="1" maxOccurs="1" type="distroreq"/>
+      <xs:element name="hostRequires" minOccurs="0" maxOccurs="1" type="hostreq"/>
+      <xs:element name="partitions" minOccurs="0" maxOccurs="1">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="partition" minOccurs="0" maxOccurs="unbounded">
+              <xs:complexType>
+                <xs:attribute name="fs" type="xs:string" use="required"/>
+                <xs:attribute name="name" type="xs:string" use="required"/>
+                <xs:attribute name="type" type="xs:string"/>
+                <xs:attribute name="size" type="xs:integer"/>
+              </xs:complexType>
+            </xs:element>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="task" minOccurs="1" maxOccurs="unbounded">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="params" minOccurs="0" maxOccurs="1">
+              <xs:complexType>
+                <xs:sequence>
+                  <xs:element name="param" minOccurs="0" maxOccurs="unbounded">
+                    <xs:complexType>
+                      <xs:attribute name="name" type="xs:string" use="required"/>
+                      <xs:attribute name="value" type="xs:string" use="required"/>
+                    </xs:complexType>
+                  </xs:element>
+                </xs:sequence>
+              </xs:complexType>
+            </xs:element>
+          </xs:sequence>
+          <xs:attribute name="name" type="xs:string" use="required"/>
+          <xs:attribute name="role" type="xs:string"/>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+    <xs:attribute name="kernel_options" type="xs:string"/>
+    <xs:attribute name="kernel_options_post" type="xs:string"/>
+    <xs:attribute name="ks_meta" type="xs:string"/>
+    <xs:attribute name="role" type="xs:string"/>
+    <xs:attribute name="whiteboard" type="xs:string"/>
+  </xs:complexType>
+  <xs:complexType name="guestrecipe">
+    <xs:complexContent>
+      <xs:extension base="recipe">
+        <xs:sequence>
+        </xs:sequence>
+        <xs:attribute name="guestname" type="xs:string" use="required"/>
+        <xs:attribute name="guestargs" type="xs:string"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+
+  <xs:element name="job">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="whiteboard" type="xs:string" minOccurs="0" maxOccurs="1">
+          <xs:annotation>
+            <xs:documentation>Job's Whiteboard to display in views.</xs:documentation>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="recipeSet" minOccurs="1" maxOccurs="unbounded">
+          <xs:annotation>
+            <xs:documentation>
+              RecipeSet defines set of Recipes which will be provisioned and run at the same time.
+              Unless you really need multiple recipes (aka multi-host) use single recipe only here.
+            </xs:documentation>
+          </xs:annotation>
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="recipe" type="recipe" minOccurs="1" maxOccurs="unbounded"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>
+
