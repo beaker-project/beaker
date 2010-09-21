@@ -97,7 +97,7 @@ class Jobs(RPCRoot):
     job_form = JobForm()
 
     job_xsd_doc = lxml.etree.parse(pkg_resources.resource_stream(
-            __module__, 'xsd/beaker-job.xsd'))
+            'bkr.common', 'xsd/beaker-job.xsd'))
 
     @classmethod
     def success_redirect(cls, id, url='/jobs', *args, **kw):
