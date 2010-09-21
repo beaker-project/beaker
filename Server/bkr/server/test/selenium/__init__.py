@@ -162,7 +162,7 @@ def setup_package():
         Process('Xvfb', args=['Xvfb', ':4', '-fp', '/usr/share/X11/fonts/misc',
                 '-screen', '0', '1024x768x24']),
         Process('selenium-server', args=['java', '-jar',
-                '/usr/lib/selenium/selenium-server-1.0.3/selenium-server.jar',
+                '/usr/local/share/selenium/selenium-server-1.0.3/selenium-server.jar',
                 '-log', 'selenium.log'], env={'DISPLAY': ':4'},
                 listen_port=4444),
         Process('beaker', args=['./start-server.py', 'test.cfg'],
