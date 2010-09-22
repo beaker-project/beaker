@@ -4265,8 +4265,9 @@ class GuestRecipe(Recipe):
                                LabControllerDistro.distro == self.distro,
                                LabControllerDistro.lab_controller == self.system.lab_controller
                                 )
-                                                         ).one().tree_path
-            recipe.setAttribute("location", "%s" % location)
+                                                         ).first()
+            if location:
+                recipe.setAttribute("location", "%s" % location.tree_path)
         return Recipe.to_xml(self, recipe, clone, from_recipeset, from_machine)
 
     def _get_distro_requires(self):
