@@ -295,9 +295,6 @@ class Watchdog(ProxyHelper):
     def abort(self, watchdog):
         """ Abort expired watchdog entry
         """
-        # Check to see if we have an active monitor and remove it.
-        if watchdog['system'] in self.watchdogs:
-            del self.watchdogs[watchdog['system']]
         self.logger.info("External Watchdog Expired for %s" % watchdog['system'])
         self.recipe_stop(watchdog['recipe_id'],
                          'abort', 
