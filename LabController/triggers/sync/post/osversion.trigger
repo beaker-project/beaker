@@ -1,6 +1,7 @@
 #!/usr/bin/python
 
 import sys, os, rpm
+import time
 import rpmUtils.transaction
 import gzip
 import tempfile
@@ -273,6 +274,7 @@ def findKickstart(arch, family, update):
     return None
 
 if __name__ == '__main__':
+    new_run = time.time()
     cobbler = xmlrpclib.ServerProxy('http://127.0.0.1/cobbler_api')
     token = cobbler.login("", utils.get_shared_secret())
     settings = cobbler.get_settings(token)
@@ -280,7 +282,12 @@ if __name__ == '__main__':
     if 'rcm' in settings:
         rcm = xmlrpclib.ServerProxy(settings['rcm'])
 
-    distros = cobbler.get_distros()
+    filename="/var/run/beaker-lab-controller/osversion.mtime"
+    if os.path.exists(filename):
+        last_run = float(open(filename).readline())
+    else:
+        last_run = 0.0
+    distros = cobbler.get_distros_since(last_run)
     push_distros = []
 
     for distro in distros:
@@ -300,6 +307,9 @@ if __name__ == '__main__':
             comment = "%s\nPUSHED" % distro['comment']
             cobbler.modify_distro(distro['id'],'comment',comment,token)
             cobbler.save_distro(distro['id'],token)
+        FH = open(filename, "w")
+        FH.write('%s' % new_run)
+        FH.close()
         # Needed for legacy RHTS
         addDistroCmd = '/var/lib/beaker/addDistro.sh'
         if os.path.exists(addDistroCmd):
