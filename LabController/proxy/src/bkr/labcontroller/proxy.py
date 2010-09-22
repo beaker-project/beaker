@@ -272,23 +272,21 @@ class Watchdog(ProxyHelper):
     def active_watchdogs(self):
         """Monitor active watchdog entries"""
 
-        # Look for zombies
-        for watchdog_system in self.watchdogs.copy():
-            if self.is_finished(watchdog_system):
-                self.logger.info("Monitor for %s died" % watchdog_system)
-                del self.watchdogs[watchdog_system]
         active_watchdogs = []
         for watchdog in self.hub.recipes.tasks.watchdogs('active'):
             active_watchdogs.append(watchdog['system'])
             if watchdog['system'] not in self.watchdogs:
-                self.watchdogs[watchdog['system']] = self.monitor(watchdog)
-        # Kill Monitor if watchdog does not exist.
+                self.watchdogs[watchdog['system']] = Monitor(watchdog,self.logger,self.conf)
+        # Remove Monitor if watchdog does not exist.
         for watchdog_system in self.watchdogs.copy():
             if watchdog_system not in active_watchdogs:
-                kill_process_group(self.watchdogs[watchdog_system],
-                                   logger=self.logger)
                 del self.watchdogs[watchdog_system]
                 self.logger.info("Removed Monitor for %s" % watchdog_system)
+        updated = False
+        for monitor in self.watchdogs:
+            if self.watchdogs[monitor].run():
+                updated = True
+        return updated
 
     def sleep(self):
         # Sleep between polling
@@ -297,82 +295,40 @@ class Watchdog(ProxyHelper):
     def abort(self, watchdog):
         """ Abort expired watchdog entry
         """
-        # Check to see if we have an active monitor running and kill it.
+        # Check to see if we have an active monitor and remove it.
         if watchdog['system'] in self.watchdogs:
-            try:
-                kill_process_group(self.watchdogs[watchdog['system']],
-                                   logger=self.logger)
-            except IOError, ex:
-                # proc file doesn't exist -> process was already killed
-                pass
             del self.watchdogs[watchdog['system']]
         self.logger.info("External Watchdog Expired for %s" % watchdog['system'])
         self.recipe_stop(watchdog['recipe_id'],
                          'abort', 
                          'External Watchdog Expired')
 
-    def is_finished(self, system):
-        """Determine if monitor has died.
-        Calling os.waitpid removes finished child process zombies.
+class Monitor(ProxyHelper):
+    """ Upload console log if present to Scheduler
+         and look for panic/bug/etc..
+    """
+
+    def __init__(self, watchdog, *args, **kwargs):
+        """ Monitor system
         """
+        super(Monitor, self).__init__(*args, **kwargs)
+        self.watchdog = watchdog
+        self.logger.debug("Initialize monitor for system: %s" % self.watchdog['system'])
+        self.watchedFiles = [WatchFile("%s/%s" % (self.conf["CONSOLE_LOGS"], self.watchdog["system"]),self.watchdog,self, self.conf["PANIC_REGEX"])]
 
-        pid = self.watchdogs[system]
-
-        try:
-            (childpid, status) = os.waitpid(pid, os.WNOHANG)
-        except OSError, ex:
-            if ex.errno != errno.ECHILD:
-                # should not happen
-                self.logger.error("Monitor hasn't exited with errno.ECHILD: %s" % system)
-                raise
-
-            # the process is already gone
-            return False
-
-        if childpid != 0:
-            return True
-
-        return False
-
-    def monitor(self, watchdog):
-        """ Upload console log if present to Scheduler
-             and look for panic/bug/etc..
+    def run(self):
+        """ check the logs for new data to upload/or cp
         """
-        self.logger.debug("Forking monitor for system: %s" % watchdog['system'])
-        pid = os.fork()
-        if pid:
-            self.logger.info("Monitor forked %s: pid=%s" % (watchdog['system'],
-                                                            pid))
-            return pid
-        try:
-            # set process group
-            os.setpgrp()
-
-            # set a do-nothing handler for sigusr2
-            # do not use signal.signal(signal.SIGUSR2, signal.SIG_IGN) - it completely masks interrups !!!
-            signal.signal(signal.SIGUSR2, lambda *args: None)
-            # set a default handler for SIGTERM
-            signal.signal(signal.SIGTERM, signal.SIG_DFL)
-
-            # watch the console log
-            watchedFiles = [WatchFile("%s/%s" % (self.conf["CONSOLE_LOGS"], watchdog["system"]),watchdog,self, self.conf["PANIC_REGEX"])]
-            while True:
-                updated = False
-                logs = filter(os.path.isfile, glob.glob('%s/%s/*' % ( self.conf["ANAMON_LOGS"], watchdog["system"])))
-                for log in logs:
-                    if log not in watchedFiles:
-                        watchedFiles.append(WatchFile(log, watchdog,self, self.conf["PANIC_REGEX"]))
-                for watchedFile in watchedFiles:
-                    if watchedFile.update():
-                        updated = True
-                # Don't DOS the Scheduler!
-                if updated:
-                    time.sleep(1)
-                else:
-                    time.sleep(5)
-        finally:
-            # die
-            os._exit(os.EX_OK)
+        # watch the console log
+        updated = False
+        logs = filter(os.path.isfile, glob.glob('%s/%s/*' % ( self.conf["ANAMON_LOGS"], self.watchdog["system"])))
+        for log in logs:
+            if log not in self.watchedFiles:
+                self.watchedFiles.append(WatchFile(log, self.watchdog,self, self.conf["PANIC_REGEX"]))
+        for watchedFile in self.watchedFiles:
+            if watchedFile.update():
+                updated = True
+        return updated
 
         
 class Proxy(ProxyHelper):
