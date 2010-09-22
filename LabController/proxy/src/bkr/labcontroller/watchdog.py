@@ -57,8 +57,8 @@ def main_loop(conf=None, foreground=False):
             watchdog.hub._login()
             watchdog.expire_watchdogs()
             if not watchdog.active_watchdogs():
-                watchdog.sleep()
                 watchdog.logger.debug(80 * '-')
+                watchdog.sleep()
 
             # FIXME: Check for recipes that match systems under
             #        this lab controller, if so take recipe and provision
