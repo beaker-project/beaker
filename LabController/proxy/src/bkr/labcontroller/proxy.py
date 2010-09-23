@@ -272,11 +272,6 @@ class Watchdog(ProxyHelper):
     def active_watchdogs(self):
         """Monitor active watchdog entries"""
 
-        # Look for zombies
-        for watchdog_system in self.watchdogs.copy():
-            if self.is_finished(watchdog_system):
-                self.logger.info("Monitor for %s died" % watchdog_system)
-                del self.watchdogs[watchdog_system]
         active_watchdogs = []
         for watchdog in self.hub.recipes.tasks.watchdogs('active'):
             active_watchdogs.append(watchdog['system'])
@@ -310,29 +305,6 @@ class Watchdog(ProxyHelper):
         self.recipe_stop(watchdog['recipe_id'],
                          'abort', 
                          'External Watchdog Expired')
-
-    def is_finished(self, system):
-        """Determine if monitor has died.
-        Calling os.waitpid removes finished child process zombies.
-        """
-
-        pid = self.watchdogs[system]
-
-        try:
-            (childpid, status) = os.waitpid(pid, os.WNOHANG)
-        except OSError, ex:
-            if ex.errno != errno.ECHILD:
-                # should not happen
-                self.logger.error("Monitor hasn't exited with errno.ECHILD: %s" % system)
-                raise
-
-            # the process is already gone
-            return False
-
-        if childpid != 0:
-            return True
-
-        return False
 
     def monitor(self, watchdog):
         """ Upload console log if present to Scheduler
