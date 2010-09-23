@@ -305,10 +305,11 @@ class Monitor(ProxyHelper):
          and look for panic/bug/etc..
     """
 
-    def __init__(self, watchdog, *args, **kwargs):
+    def __init__(self, watchdog, logger, conf, *args, **kwargs):
         """ Monitor system
         """
-        super(Monitor, self).__init__(*args, **kwargs)
+        self.log = logger
+        self.conf = conf
         self.watchdog = watchdog
         self.logger.debug("Initialize monitor for system: %s" % self.watchdog['system'])
         self.watchedFiles = [WatchFile("%s/%s" % (self.conf["CONSOLE_LOGS"], self.watchdog["system"]),self.watchdog,self, self.conf["PANIC_REGEX"])]
