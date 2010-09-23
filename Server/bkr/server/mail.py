@@ -100,8 +100,7 @@ def broken_system_notify(system, reason, recipe=None):
     body = [_(u'Beaker has automatically marked system %s as broken, due to:') % system.fqdn, '',
             reason, '', _(u'Please investigate this error and take appropriate action.'), '']
     if recipe:
-        body.append(_(u'Failure occurred in %s <%s%s>') % (recipe.t_id,
-                cherrypy.request.base, url('/recipes/%s' % recipe.id)))
+        body.append(_(u'Failure occurred in %s') % recipe.t_id)
     send_mail(sender, system.owner.email_address,
             _(u'System %s automatically marked broken') % system.fqdn,
             '\n'.join(body))
