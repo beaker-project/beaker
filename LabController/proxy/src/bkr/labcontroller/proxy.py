@@ -266,12 +266,14 @@ class Watchdog(ProxyHelper):
     def expire_watchdogs(self):
         """Clear out expired watchdog entries"""
 
+        self.logger.info("Entering expire_watchdogs")
         for watchdog in self.hub.recipes.tasks.watchdogs('expired'):
             self.abort(watchdog)
 
     def active_watchdogs(self):
         """Monitor active watchdog entries"""
 
+        self.logger.info("Entering active_watchdogs")
         active_watchdogs = []
         for watchdog in self.hub.recipes.tasks.watchdogs('active'):
             active_watchdogs.append(watchdog['system'])
