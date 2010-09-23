@@ -3,6 +3,7 @@ import os
 import sys
 import signal
 import logging
+from datetime import datetime, timedelta
 from optparse import OptionParser
 
 from bkr.labcontroller.proxy import Watchdog
@@ -51,12 +52,16 @@ def main_loop(conf=None, foreground=False):
     if foreground:
         add_stderr_logger(watchdog.logger)
 
+    later = datetime.now()
     while True:
         try:
             # Poll the scheduler for watchdogs
             watchdog.hub._login()
-            watchdog.expire_watchdogs()
-            if not watchdog.active_watchdogs():
+            if datetime.now() > later:
+                watchdog.expire_watchdogs()
+                watchdog.active_watchdogs()
+                later = datetime.now() + timedelta(seconds=60)
+            if not watchdog.run():
                 watchdog.logger.debug(80 * '-')
                 watchdog.sleep()
 

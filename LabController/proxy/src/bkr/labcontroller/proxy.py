@@ -282,6 +282,8 @@ class Watchdog(ProxyHelper):
             if watchdog_system not in active_watchdogs:
                 del self.watchdogs[watchdog_system]
                 self.logger.info("Removed Monitor for %s" % watchdog_system)
+
+    def run(self):
         updated = False
         for monitor in self.watchdogs:
             if self.watchdogs[monitor].run():
