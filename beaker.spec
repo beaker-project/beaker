@@ -186,6 +186,9 @@ fi
 %{_sysconfdir}/init.d/%{name}-watchdog
 
 %changelog
+* Thu Sep 23 2010 Bill Peck <bpeck@redhat.com> 0.5.57-2
+- Revert "bz632374 fix beaker-watchdog to not leave zombies around." (bpeck@redhat.com)
+
 * Thu Sep 16 2010 Raymond Mancy <rmancy@redhat.com> 0.5.57-1
 - bz620605 - Introduction of Automated status (rmancy@redhat.com)
 - fix beaker-watchdog to not leave zombies around. (bpeck@redhat.com)
