@@ -106,11 +106,11 @@ cat > $SCRIPT2 <<-EOF
 howmany()
 {
 if [ -n "\$1" ]; then
-  read RESPONSE
+  RESPONSE="\$1"
 else
   echo "How many hours would you like to extend the reservation."
   echo "             Must be between 1 and 99                   "
-  RESPONSE="\$1"
+  read RESPONSE
 fi
 validint "\$RESPONSE" 1 99
 echo "Extending reservation time \$RESPONSE"
