@@ -105,7 +105,7 @@ SCRIPT2=/usr/bin/extendtesttime.sh
 cat > $SCRIPT2 <<-EOF
 howmany()
 {
-if [ -z "\$1" ]; then
+if [ -n "\$1" ]; then
   read RESPONSE
 else
   echo "How many hours would you like to extend the reservation."
