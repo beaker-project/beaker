@@ -1,4 +1,4 @@
-import sys
+import sys 
 import re
 from turbogears.database import metadata, mapper, session
 from turbogears.config import get
@@ -451,7 +451,7 @@ beaker_tag_table = Table('beaker_tag', metadata,
 
 retention_tag_table = Table('retention_tag', metadata,
     Column('id', Integer, ForeignKey('beaker_tag.id', onupdate='CASCADE', ondelete='CASCADE'),nullable=False, primary_key=True),
-    Column('default_', Boolean, unique=True)
+    Column('default_', Boolean)
 )
 
 response_table = Table('response', metadata,
@@ -3489,9 +3489,9 @@ class BeakerTag(object):
 
 class RetentionTag(BeakerTag):
 
-    def __init__(self, is_default, tag, *args, **kw):
+    def __init__(self, tag, is_default=False, *args, **kw):
         self.set_default_val(is_default)
-        super(RetentionTag, self).__init__(tag, *args, **kw)
+        super(RetentionTag, self).__init__(tag, **kw)
         session.flush()
 
     def get_default_val(self):
@@ -3571,6 +3571,17 @@ class RecipeSet(TaskBase):
     """
     A Collection of Recipes that must be executed at the same time.
     """
+
+    def __init__(self, *args, **kw):
+        if 'tag' in kw:
+            try:
+                self.retention_tag = RetentionTag.by_tag(unicode(kw['tag']))
+            except InvalidRequestError, e:
+                if '%s' % e == 'No rows returned for one()':
+                    self.retention_tag = RetentionTag.get_default()
+        else:
+            self.retention_tag = RetentionTag.get_default()
+        super(RecipeSet,self).__init__(*args, **kw)
 
     stop_types = ['abort','cancel']
     def is_owner(self,user):
