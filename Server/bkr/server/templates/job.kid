@@ -4,12 +4,18 @@
 
 <head>
     <meta content="text/html; charset=UTF-8" http-equiv="content-type" py:replace="''"/>
+    <script type="text/javascript" src="${tg.url('/static/javascript/master_slave.js')}"></script>
     <script type="text/javascript" src="${tg.url('/static/javascript/priority_manager.js')}"></script>
+    <script type="text/javascript" src="${tg.url('/static/javascript/rettag_manager.js')}"></script>
     <script type="text/javascript" src="${tg.url('/static/javascript/jquery.timers-1.2.js')}"></script>
     <script type="text/javascript" src="${tg.url('/static/javascript/jquery.cookie.js')}"></script>
     <script type='text/javascript'>
  pri_manager = new PriorityManager()
  pri_manager.initialize()
+
+ retentiontag_manager = new RetentionTagManager()
+ retentiontag_manager.initialize()
+
  ackpanel  = new AckPanel()
 
        
@@ -57,12 +63,70 @@
         var success = pri_manager.changePriority($(this).attr("id"),$(this).attr("name"),callback)
         //ShowPriorityResults($(this),$(this).attr('name'),PARENT_);
     })
+
+
+    $("select[id^='retentiontag']").change(function() {
+
+        var callback = {'function' : ShowRetentionTagResults }
+        callback['args'] = { 'element_id' : null, 'value' : null }
+        callback['args']['element_id'] = $(this).attr("id")
+        callback['args']['value'] = $(this).val()
+        var success = retentiontag_manager.changeValue($(this).attr("id"),$(this).val(),callback)
+        //ShowPriorityResults($(this),$(this).val(),NOT_PARENT)
+    })  
+
+    $("a[id^='retentiontag']").click(function() {
+        var callback = {'function' : ShowRetentionTagResults }
+        callback['args'] = {}
+        callback['args']['value'] = $(this).attr("name")
+        var success = retentiontag_manager.changeValue($(this).attr("id"),$(this).attr("name"),callback)
+        //ShowPriorityResults($(this),$(this).attr('name'),PARENT_);
+    })
+
+    
+
  });
+
+ function ShowRetentionTagResults(elem_id,value,old_value,msg,success) { 
+     jquery_obj = $("#"+elem_id)
+     var id = elem_id.replace(/^.+?(\d{1,})$/,"$1") 
+     var selector_msg = "msg[id='recipeset_tag_status_"+id+"']" 
+     var msg_text = ''
+     if(success) {
+         jquery_obj.val(value)
+         var class_ = "success" 
+         if (msg) {
+             msg_text = msg
+         } else {
+             msg_text = "Tag has been updated" 
+         }
+     } else {
+         var warn = 1
+         var class_ = "warn" 
+         if (old_value) {
+             jquery_obj.val(old_value)
+         }
+         if (msg) {
+             msg_text = msg
+         } else {
+             msg_text = "Unable to update Tag" 
+         }
+        
+     }
+     $(selector_msg).text(msg_text) 
+     $(selector_msg).fadeIn(1000)
+     //$(selector_msg).show('slow')  
+     $(selector_msg).removeAttr('class') 
+     $(selector_msg).addClass(class_)     
+     if (!warn) {  
+         $(selector_msg).fadeOut(1000)
+     }
+ }
 
  function ShowPriorityResults(elem_id,value,old_value,msg,success) { 
      jquery_obj = $("#"+elem_id)
      var id = elem_id.replace(/^.+?(\d{1,})$/,"$1") 
-     var selector_msg = "msg[id='recipeset_status_"+id+"']"
+     var selector_msg = "msg[id='recipeset_priority_status_"+id+"']"
      var msg_text = ''
      if(success) {
          jquery_obj.val(value)
@@ -86,13 +150,12 @@
         
      }
      $(selector_msg).text(msg_text) 
-     $(selector_msg).show('slow')  
+     $(selector_msg).fadeIn(1000)
+     //$(selector_msg).show('slow')  
      $(selector_msg).removeAttr('class') 
      $(selector_msg).addClass(class_)     
      if (!warn) {
-         jquery_obj.oneTime(2000, "hide", function() { 
-             $(selector_msg).hide('slow') 
-         });
+         $(selector_msg).fadeOut(1000)
      }
  }
     </script>
@@ -129,14 +192,22 @@
   <tr>
    <td class="title"><b>Whiteboard</b></td>
    <td class="value" colspan="3">${job.whiteboard}</td>
-   <span py:if="job.is_queued() and job.access_priority(user)"> 
-    <td class="title"><b>Set all RecipeSet priorities</b></td> 
-     <td class="value"><a py:for="p in priorities" class="list" style="color: #22437F;cursor:pointer" name="${p.id}" id="priority_job_${job.id}">${p.priority}<br /></a></td>
-      <script type='text/javascript'>
-       pri_manager.register('priority_job_${job.id}','parent')
-      </script>
-   </span>
+  </tr> 
+  <tr py:if="job.access_rights(user)">
+  ${job.retention_settings(prefix=u'retentiontag_job_')}
+
+    <script type='text/javascript'>
+        retentiontag_manager.register('retentiontag_job_${job.id}','master')
+    </script>
   </tr>
+  <tr py:if="job.access_rights(user) and job.is_queued()">
+  ${job.priority_settings(prefix=u'priority_job_')}
+
+    <script type='text/javascript'>
+         pri_manager.register('priority_job_${job.id}','parent')
+    </script> 
+  </tr>
+
  </table>
   <div py:for="recipeset in job.recipesets" class="recipeset">
     <?python 

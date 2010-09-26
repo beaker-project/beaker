@@ -188,6 +188,7 @@ fi
 %attr(-,apache,root) %dir %{_localstatedir}/run/%{name}-lab-controller
 
 %changelog
+<<<<<<< HEAD:beaker.spec
 * Thu Sep 16 2010 Raymond Mancy <rmancy@redhat.com> 0.5.57-1
 - bz620605 - Introduction of Automated status (rmancy@redhat.com)
 - fix beaker-watchdog to not leave zombies around. (bpeck@redhat.com)
@@ -208,6 +209,8 @@ fi
 - bz629076 - add not null constraint on watchdog/system_id. (bpeck@redhat.com)
 - Support for Arlinton's SystemProfiles. (bpeck@redhat.com)
 
+=======
+>>>>>>> bz595801:beaker.spec
 * Thu Sep 02 2010 Raymond Mancy <rmancy@redhat.com> 0.5.56-1
 - bz595360 - Fixed reserve report to not crash mysql (rmancy@redhat.com)
 - bz620604 - Removed take for those without the correct permissions.

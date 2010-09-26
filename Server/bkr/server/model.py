@@ -1,6 +1,5 @@
 import sys
 import re
-from datetime import datetime
 from turbogears.database import metadata, mapper, session
 from turbogears.config import get
 from turbogears import url
@@ -444,6 +443,17 @@ recipe_set_nacked_table = Table('recipe_set_nacked', metadata,
     Column('created',DateTime,nullable=False,default=datetime.utcnow)
 )
 
+beaker_tag_table = Table('beaker_tag', metadata,
+    Column('id', Integer, primary_key=True, nullable = False),
+    Column('tag', Unicode(20), primary_key=True, nullable = False),
+    Column('type', Unicode(40), nullable=False)
+)
+
+retention_tag_table = Table('retention_tag', metadata,
+    Column('id', Integer, ForeignKey('beaker_tag.id', onupdate='CASCADE', ondelete='CASCADE'),nullable=False, primary_key=True),
+    Column('default_', Boolean, unique=True)
+)
+
 response_table = Table('response', metadata,
     Column('id', Integer, autoincrement=True, primary_key=True, nullable=False),
     Column('response',Unicode(50), nullable=False)
@@ -566,11 +576,13 @@ job_table = Table('job',metadata,
 
 recipe_set_table = Table('recipe_set',metadata,
         Column('id', Integer, primary_key=True),
-        Column('job_id',Integer,
+        Column('job_id', Integer,
                 ForeignKey('job.id')),
         Column('priority_id', Integer,
                 ForeignKey('task_priority.id'), default=select([task_priority_table.c.id], limit=1).where(task_priority_table.c.priority==u'Normal').correlate(None)),
         Column('queue_time',DateTime, nullable=False, default=datetime.utcnow),
+        Column('delete_time', DateTime, nullable=True),
+        Column('retention_tag_id', Integer, ForeignKey('retention_tag.id', ondelete="CASCADE", onupdate="CASCADE"), nullable=False), 
         Column('result_id', Integer,
                 ForeignKey('task_result.id')),
         Column('status_id', Integer,
@@ -3207,6 +3219,15 @@ class TaskBase(MappedObject):
                             text = "Cancel"))
         return div
 
+    def access_rights(self,user):
+        if not user:
+            return
+        try:
+            if self.owner == user or (user.in_group(['admin','queue_admin'])):
+                return True
+        except:
+            return
+
 
 class Job(TaskBase):
     """
@@ -3317,7 +3338,13 @@ class Job(TaskBase):
         session.save(job)
         session.flush()
         return job
-        
+
+    def delete(self, remove_all, *args, **kw):
+        paths_to_del = []
+        for rs in self.recipesets:
+            paths_to_del = paths_to_del + rs.delete(remove_all)
+        return paths_to_del
+
     def clone_link(self):
         """ return link to clone this job
         """
@@ -3327,6 +3354,37 @@ class Job(TaskBase):
         """ return link to cancel this job
         """
         return "/jobs/cancel?id=%s" % self.id
+
+    def priority_settings(self,prefix):
+        span = Element('span')
+        title = Element('td')
+        title.attrib['class']='title' 
+        title.text = "Set all RecipeSet priorities"        
+        content = Element('td')
+        priorities = TaskPriority.query().all()
+        for p in priorities:
+            id = '%s%s' % (prefix, self.id)
+            a_href = make_fake_link(unicode(p.id), id, p.priority)
+            content.append(a_href)
+        
+        span.append(title)
+        span.append(content)
+        return span
+
+    def retention_settings(self,prefix):
+        span = Element('span')
+        title = Element('td')
+        title.attrib['class']='title' 
+        title.text = "Set all RecipeSet tags"        
+        content = Element('td')
+        tags = RetentionTag.query().all()
+        for t in tags:
+            id = '%s%s' % (u'retentiontag_job_', self.id)
+            a_href = make_fake_link(unicode(t.id), id, t.tag)
+            content.append(a_href)
+        span.append(title)
+        span.append(content)
+        return span
 
 
     def to_xml(self, clone=False):
@@ -3412,14 +3470,56 @@ class Job(TaskBase):
         return "J:%s" % self.id
     t_id = property(t_id)
   
-    def access_priority(self,user):
-        if not user:
-            return
-        try:
-            if self.owner == user or (user.in_group(['admin','queue_admin'])):
-                return True
-        except:
-            return
+class BeakerTag(object):
+
+    def __init__(self, tag, *args, **kw):
+        self.tag = tag
+
+    @classmethod
+    def by_id(cls, id, *args, **kw):
+        return cls.query().filter(cls.id==id).one()
+
+    @classmethod
+    def by_tag(cls, tag, *args, **kw):
+        return cls.query().filter(cls.tag==tag).one()
+
+    @classmethod
+    def get_all(cls, *args, **kw):
+        return cls.query()
+
+class RetentionTag(BeakerTag):
+
+    def __init__(self, is_default, tag, *args, **kw):
+        self.set_default_val(is_default)
+        super(RetentionTag, self).__init__(tag, *args, **kw)
+        session.flush()
+
+    def get_default_val(self):
+        return self.is_default
+    
+    def set_default_val(self, is_default):
+        if is_default:
+            try:
+                current_default = self.get_default()
+                current_default.is_default = False
+            except InvalidRequestError, e: pass
+        self.is_default = is_default
+    default = property(get_default_val,set_default_val)
+        
+    @classmethod
+    def get_default(cls, *args, **kw):
+        return cls.query().filter(cls.is_default==True).one()
+
+    @classmethod
+    def list_by_tag(cls, tag, anywhere=True, *args, **kw):
+        if anywhere is True:
+            q = cls.query().filter(cls.tag.like('%%%s%%' % tag))
+        else:
+            q = cls.query().filter(cls.tag.like('%s%%' % tag))
+        return q
+        
+    def __repr__(self, *args, **kw):
+        return self.tag
 
 class Response(MappedObject):
 
@@ -3473,7 +3573,6 @@ class RecipeSet(TaskBase):
     """
 
     stop_types = ['abort','cancel']
-
     def is_owner(self,user):
         if self.job.owner == user:
             return True
@@ -3482,6 +3581,7 @@ class RecipeSet(TaskBase):
     def to_xml(self, clone=False, from_job=True):
         recipeSet = self.doc.createElement("recipeSet")
         return_node = recipeSet
+        recipeSet.setAttribute('retention_tag', "%s"  % self.retention_tag) 
         if not clone:
             recipeSet.setAttribute("id", "%s" % self.id)
 
@@ -3499,6 +3599,18 @@ class RecipeSet(TaskBase):
             
         return return_node
 
+    def delete(self, remove_all,unlink=False, *args, **kw):
+        #FIXME add logic for unlink and remove all
+        self.deleted = datetime.utcnow() 
+        errors = []
+        for r in self.recipes: 
+            recipe_to_del = Recipe.by_id(r.id)
+            errors = errors + recipe_to_del.delete()
+            session.flush() #Testing of flushing session here, trying to fix OOM problem
+       
+        return errors #FIXME testing, want to actually unlink here
+        #os.unlink(path_to_del)
+
     @classmethod
     def allowed_priorities_initial(cls,user):
         if not user:
@@ -3513,6 +3625,31 @@ class RecipeSet(TaskBase):
         if not query:
             query=cls.query
         return query.join('status').filter(Status.status==status)
+
+    @classmethod
+    def by_tag(cls, tag, query=None):
+        if query is None:
+            query = cls.query()
+        if type(tag) is list:
+            tag_query = cls.retention_tag_id.in_([RetentionTag.by_tag(unicode(t)).id for t in tag])
+        else:
+            tag_query = cls.retention_tag==RetentionTag.by_tag(unicode(tag))
+        
+        return query.filter(tag_query)
+
+    @classmethod
+    def has_family(cls,family,query=None, **kw):
+        if query is None:
+            query = cls.query()
+        query = query.join(['recipes','distro','osversion','osmajor']).filter(OSMajor.osmajor == family).reset_joinpoint()
+        return query
+
+    @classmethod
+    def complete_delta(cls,delta):
+        delta = timedelta(**delta)
+        query = cls.query().join('recipes').filter(and_(Recipe.finish_time > datetime.utcnow() - delta,
+            cls.status_id.in_(TaskStatus.by_name(u'Completed').id,TaskStatus.by_name(u'Aborted').id,TaskStatus.by_name(u'Cancelled').id)))
+        return query
 
     @classmethod
     def by_datestamp(cls, datestamp, query=None):
@@ -3679,6 +3816,7 @@ class Recipe(TaskBase):
     """
     stop_types = ['abort','cancel']
     servername = get("servername",socket.gethostname())
+    logspath = get("basepath.logs", "/var/www/beaker/logs")
     harnesspath = get("basepath.harness", "/var/www/beaker/harness")
     rpmspath = get("basepath.rpms", "/var/www/beaker/rpms")
     repopath = get("basepath.repos", "/var/www/beaker/repos")
@@ -3707,6 +3845,30 @@ class Recipe(TaskBase):
                 self.recipeset.queue_time.month,
                 job.id // Log.MAX_ENTRIES_PER_DIRECTORY, job.id, self.id)
     filepath = property(filepath)
+
+    def delete(self, *args, **kw):
+        """
+        Deleted job instance and entities
+        """
+        #TODO Fix this for 0.5.59, check OOM problem
+        log_paths = {}
+        log.debug('Logs to del are:%s' % self.logs)
+        for log_ in self.logs:  
+            if log_.path: 
+                if log_.path[0] == u'/': #Removes the leading '/' which will wig os.path.join out
+                    if len(log_.path) > 1:
+                        r_log_path = log_.path[1:]
+                    else:
+                        r_log_path = ''
+            else:
+                r_log_path = ''
+             
+            log_paths[os.path.join(self.logspath,self.filepath, r_log_path)] = 1
+        self.logs = [] #This deletes the logs from log_recipe
+        for task in self.tasks:
+            task_to_delete = RecipeTask.by_id(task.id)
+            task_to_delete.delete(unlink=False) 
+        return [k for k,v in log_paths.items()]
 
     def harness_repos(self):
         """
@@ -4345,6 +4507,13 @@ class RecipeTask(TaskBase):
     result_types = ['pass_','warn','fail','panic']
     stop_types = ['stop','abort','cancel']
 
+    def delete(self,unlink=False): 
+        if unlink is False: #only remove log_recipe_task table entries
+            self.logs = [] #delete recipetask logs
+            for results in self.results:
+                results.delete(unlink=unlink)
+        #TODO in the future we may want to unlink from the recipe_task level
+
     def filepath(self):
         """
         Return file path for this task
@@ -4822,6 +4991,11 @@ class RecipeTaskResult(TaskBase):
                 recipe.id, task_id, self.id)
     filepath = property(filepath)
 
+    def delete(self, unlink=False, *args, **kw):
+        if unlink is False:
+            self.logs = [] #Remove our log entries
+        #TODO unlink from here if we want to 
+    
     def to_xml(self):
         """
         Return result in xml
@@ -5164,6 +5338,13 @@ mapper(Permission, permissions_table,
         properties=dict(groups=relation(Group,
                 secondary=group_permission_table, backref='permissions')))
 
+mapper(BeakerTag, beaker_tag_table,
+        polymorphic_on=beaker_tag_table.c.type, polymorphic_identity='tag')
+
+mapper(RetentionTag, retention_tag_table, inherits=BeakerTag, 
+        properties=dict(is_default=retention_tag_table.c.default_),
+        polymorphic_identity='retention_tag')
+
 mapper(Activity, activity_table,
         polymorphic_on=activity_table.c.type, polymorphic_identity='activity',
         properties=dict(user=relation(User, uselist=False,
@@ -5251,11 +5432,13 @@ mapper(RecipeSet, recipe_set_table,
                       'priority':relation(TaskPriority, uselist=False),
                       'result':relation(TaskResult, uselist=False),
                       'status':relation(TaskStatus, uselist=False),
+                      'retention_tag':relation(RetentionTag, uselist=False,backref='recipeset'),
                       'activity':relation(RecipeSetActivity,
                                      order_by=[activity_table.c.created.desc()],
                                                backref='object'),
                       'lab_controller':relation(LabController, uselist=False),
                       'nacked':relation(RecipeSetResponse,cascade="all, delete-orphan",uselist=False),
+                      'deleted':recipe_set_table.c.delete_time
                      })
 
 mapper(LogRecipe, log_recipe_table)

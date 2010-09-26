@@ -186,6 +186,13 @@ def main():
         ACK      = Response(response=u'ack')
         NAK      = Response(response=u'nak')
 
+    if RetentionTag.query().count() == 0:
+        SCRATCH         = RetentionTag(tag='scratch', is_default=1)
+        SIXTYDAYS       = RetentionTag(tag='60days')
+        ONETWENTYDAYS   = RetentionTag(tag='120days')
+        ACTIVE          = RetentionTag(tag='active')
+        AUDIT           = RetentionTag(tag='audit')
+        
     session.flush()
 
 def get_parser():
