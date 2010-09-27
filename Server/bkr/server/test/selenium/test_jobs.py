@@ -75,3 +75,34 @@ class TestNewJob(SeleniumTestCase):
         sel.wait_for_page_to_load('3000')
         self.assertEqual(sel.get_title(), 'Jobs')
         self.assert_(sel.get_text('css=.flash').startswith('Success!'))
+
+    def test_valid_job_xml_doesnt_trigger_xsd_warning(self):
+        sel = self.selenium
+        sel.open('')
+        sel.click('link=New Job')
+        sel.wait_for_page_to_load('3000')
+        xml_file = tempfile.NamedTemporaryFile()
+        xml_file.write('''
+            <job>
+                <whiteboard>valid job</whiteboard>
+                <recipeSet retention_tag="scratch">
+                    <recipe>
+                        <distroRequires>
+                            <distro_name op="=" value="BlueShoeLinux5-5" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" role="STANDALONE">
+                            <params/>
+                        </task>
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''')
+        xml_file.flush()
+        sel.type('jobs_filexml', xml_file.name)
+        sel.click('//input[@value="Submit Data"]')
+        sel.wait_for_page_to_load('3000')
+        sel.click('//input[@value="Queue"]')
+        sel.wait_for_page_to_load('3000')
+        self.assertEqual(sel.get_title(), 'Jobs')
+        self.assert_(sel.get_text('css=.flash').startswith('Success!'))
