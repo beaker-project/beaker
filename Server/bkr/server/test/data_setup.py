@@ -69,7 +69,8 @@ def create_user(user_name=None, password=None, display_name=None):
     return user
 
 def create_group():
-    group = Group(group_name=u'group%s' % str(int(time.time() * 1000))[5:9])
+    # tg_group.group_name column is VARCHAR(16)
+    group = Group(group_name=u'group%s' % str(int(time.time() * 1000))[-11:])
     return group
 
 def add_user_to_group(user,group):
