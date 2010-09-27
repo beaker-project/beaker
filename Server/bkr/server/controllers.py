@@ -1718,7 +1718,7 @@ class Root(RPCRoot):
         try:
             system = System.by_id(system_id, identity.current.user)
         except InvalidRequestError:
-            flash(_(u'Unable to find system with id of %s' % id))
+            flash(_(u'Unable to find system with id of %s' % system_id))
             redirect('/')
         try:
             recipe = Recipe.by_id(recipe_id)
