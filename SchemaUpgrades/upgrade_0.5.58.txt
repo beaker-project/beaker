@@ -1,0 +1,10 @@
+This SQL needs to be run after the init.py has created the new tables
+
+use beaker;
+ALTER TABLE recipe_set ADD COLUMN `retention_tag_id` INT NULL AFTER `queue_time`;
+alter TABLE recipe_set ADD COLUMN `delete_time` datetime default NULL;
+ALTER TABLE recipe_set ADD FOREIGN KEY (`retention_tag_id`) REFERENCES `retention_tag` (`id`);
+UPDATE recipe_set SET retention_tag_id = (SELECT id FROM retention_tag where default_ is True) WHERE retention_tag_id is NULL;
+
+
+
