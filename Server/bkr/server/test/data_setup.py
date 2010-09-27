@@ -68,6 +68,9 @@ def create_user(user_name=None, password=None, display_name=None):
     log.debug('Created user %r', user)
     return user
 
+def add_system_lab_controller(system,lc): 
+    system.lab_controller_id = lc.id
+
 def create_group():
     # tg_group.group_name column is VARCHAR(16)
     group = Group(group_name=u'group%s' % str(int(time.time() * 1000))[-11:])
@@ -75,6 +78,9 @@ def create_group():
 
 def add_user_to_group(user,group):
     user.groups.append(group)
+
+def add_group_to_system(system,group):
+    system.groups.append(group)
 
 def create_distro(name=u'DAN6-Server-U9', breed=u'Dan',
         osmajor=u'DansAwesomeLinuxServer6', osminor=u'9',

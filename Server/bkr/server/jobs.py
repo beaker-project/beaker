@@ -307,7 +307,7 @@ class Jobs(RPCRoot):
             try:
                 tag = RetentionTag.by_tag(recipeset_retention.lower())
             except InvalidRequestError:
-                raise BX(_("Invalid retention_days attribute passed. Needs to be one of %s. You gave: %s" % (','.join([x.tag for x in RetentionTag.get_all()]), recipeset_retention)))
+                raise BX(_("Invalid retention_tag attribute passed. Needs to be one of %s. You gave: %s" % (','.join([x.tag for x in RetentionTag.get_all()]), recipeset_retention)))
         recipeSet.retention_tag = tag
         
         for xmlrecipe in xmlrecipeSet.iter_recipes(): 
