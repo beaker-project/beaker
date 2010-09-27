@@ -1766,10 +1766,12 @@ $SNIPPET("rhts_post")
     def can_provision_now(self,user=None): 
         if user is not None and self.is_admin(user_id=user.user_id):
             return True
-        else:
-            if user is not None and self.loaned == user:
-                return True
-        if self.status==SystemStatus.by_name('Manual'): #If it's manual then we us eour original perm system.
+        elif user is not None and self.loaned == user:
+            return True
+        elif user is not None and self._user_in_systemgroup(user):
+            return True
+         
+        if self.status==SystemStatus.by_name('Manual'): #If it's manual then we us our original perm system.
             return self._has_regular_perms(user)
         return False
                 
@@ -1794,6 +1796,13 @@ $SNIPPET("rhts_post")
                 return True
         return False
 
+    def _user_in_systemgroup(self,user=None):
+        if self.groups:
+            for group in user.groups:
+                if group in self.groups:
+                    return True
+
+
     def is_available(self,user=None):
         """
         is_available() will return true if this system is allowed to be used by the user.
@@ -1804,9 +1813,8 @@ $SNIPPET("rhts_post")
             if self.shared:
                 # If the user is in the Systems groups
                 if self.groups:
-                    for group in user.groups:
-                        if group in self.groups:
-                            return True
+                    if self._user_in_systemgroup(user):
+                        return True
                 else: 
                     return True
         
@@ -3360,12 +3368,13 @@ class Job(TaskBase):
         """
         return "/jobs/cancel?id=%s" % self.id
 
-    def priority_settings(self,prefix):
+    def priority_settings(self, prefix, colspan='1'):
         span = Element('span')
         title = Element('td')
         title.attrib['class']='title' 
         title.text = "Set all RecipeSet priorities"        
         content = Element('td')
+        content.attrib['colspan'] = colspan
         priorities = TaskPriority.query().all()
         for p in priorities:
             id = '%s%s' % (prefix, self.id)
@@ -3376,12 +3385,13 @@ class Job(TaskBase):
         span.append(content)
         return span
 
-    def retention_settings(self,prefix):
+    def retention_settings(self,prefix,colspan='1'):
         span = Element('span')
         title = Element('td')
         title.attrib['class']='title' 
         title.text = "Set all RecipeSet tags"        
         content = Element('td')
+        content.attrib['colspan'] = colspan
         tags = RetentionTag.query().all()
         for t in tags:
             id = '%s%s' % (u'retentiontag_job_', self.id)
