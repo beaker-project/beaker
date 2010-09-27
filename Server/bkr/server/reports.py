@@ -59,11 +59,13 @@ class Reports(RPCRoot):
         for system in reserves:
             # Build a list of the last Reserve entry for each system
             try:
-                activity.append(SystemActivity.query().filter(
+                sys_activity = SystemActivity.query().filter(
                     and_(SystemActivity.object==system,
                         SystemActivity.field_name=='User',
                         SystemActivity.action=='Reserved'
-                        )).order_by(SystemActivity.created.desc())[0])
+                        )).order_by(SystemActivity.created.desc())[0]
+                if sys_activity.service != 'VIA None': #If not reserved from externally
+                    activity.append(sys_activity)
             except IndexError:
                 # due to an old bug, we may not have a Reserved action
                 pass 
