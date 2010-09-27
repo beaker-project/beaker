@@ -5358,11 +5358,11 @@ mapper(Permission, permissions_table,
                 secondary=group_permission_table, backref='permissions')))
 
 mapper(BeakerTag, beaker_tag_table,
-        polymorphic_on=beaker_tag_table.c.type, polymorphic_identity='tag')
+        polymorphic_on=beaker_tag_table.c.type, polymorphic_identity=u'tag')
 
 mapper(RetentionTag, retention_tag_table, inherits=BeakerTag, 
         properties=dict(is_default=retention_tag_table.c.default_),
-        polymorphic_identity='retention_tag')
+        polymorphic_identity=u'retention_tag')
 
 mapper(Activity, activity_table,
         polymorphic_on=activity_table.c.type, polymorphic_identity='activity',
