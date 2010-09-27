@@ -10,6 +10,7 @@
     <script type="text/javascript" src="${tg.url('/static/javascript/jquery.timers-1.2.js')}"></script>
     <script type="text/javascript" src="${tg.url('/static/javascript/jquery.cookie.js')}"></script>
     <script type='text/javascript'>
+    //TODO I should move a lot of this out to a seperate JS file
  pri_manager = new PriorityManager()
  pri_manager.initialize()
 
@@ -17,12 +18,10 @@
  retentiontag_manager.initialize()
 
  ackpanel  = new AckPanel()
-
-       
+      
  PARENT_ = 1
  NOT_PARENT = 0
  
-
  $(document).ready(function() {
     $('ul.ackpanel input').change(function () {  
         var response_id = $(this).val()
@@ -194,14 +193,14 @@
    <td class="value" colspan="3">${job.whiteboard}</td>
   </tr> 
   <tr py:if="job.access_rights(user)">
-  ${job.retention_settings(prefix=u'retentiontag_job_')}
+  ${job.retention_settings(prefix=u'retentiontag_job_', colspan='3')}
 
     <script type='text/javascript'>
         retentiontag_manager.register('retentiontag_job_${job.id}','master')
     </script>
   </tr>
   <tr py:if="job.access_rights(user) and job.is_queued()">
-  ${job.priority_settings(prefix=u'priority_job_')}
+  ${job.priority_settings(prefix=u'priority_job_', colspan='3')}
 
     <script type='text/javascript'>
          pri_manager.register('priority_job_${job.id}','parent')

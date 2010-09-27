@@ -3355,12 +3355,13 @@ class Job(TaskBase):
         """
         return "/jobs/cancel?id=%s" % self.id
 
-    def priority_settings(self,prefix):
+    def priority_settings(self, prefix, colspan='1'):
         span = Element('span')
         title = Element('td')
         title.attrib['class']='title' 
         title.text = "Set all RecipeSet priorities"        
         content = Element('td')
+        content.attrib['colspan'] = colspan
         priorities = TaskPriority.query().all()
         for p in priorities:
             id = '%s%s' % (prefix, self.id)
@@ -3371,12 +3372,13 @@ class Job(TaskBase):
         span.append(content)
         return span
 
-    def retention_settings(self,prefix):
+    def retention_settings(self,prefix,colspan='1'):
         span = Element('span')
         title = Element('td')
         title.attrib['class']='title' 
         title.text = "Set all RecipeSet tags"        
         content = Element('td')
+        content.attrib['colspan'] = colspan
         tags = RetentionTag.query().all()
         for t in tags:
             id = '%s%s' % (u'retentiontag_job_', self.id)
