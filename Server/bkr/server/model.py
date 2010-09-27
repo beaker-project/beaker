@@ -1592,7 +1592,7 @@ $SNIPPET("rhts_post")
 
     @classmethod
     def available_order(cls, user):
-        return cls.available(user).order_by(case([(System.owner==user, 1),
+        return cls.available_for_schedule(user).order_by(case([(System.owner==user, 1),
                           (System.owner!=user and Group.systems==None, 2)],
                               else_=3))
 
