@@ -3572,16 +3572,19 @@ class RecipeSet(TaskBase):
     A Collection of Recipes that must be executed at the same time.
     """
 
-    def __init__(self, *args, **kw):
-        if 'tag' in kw:
+    def __init__(self, ttasks=0, priority=None, tag=None):
+        self.ttasks = ttasks
+        self.priority = priority
+        if tag is not None:
             try:
-                self.retention_tag = RetentionTag.by_tag(unicode(kw['tag']))
+                self.retention_tag = RetentionTag.by_tag(unicode(tag))
             except InvalidRequestError, e:
                 if '%s' % e == 'No rows returned for one()':
                     self.retention_tag = RetentionTag.get_default()
+                else:
+                    raise
         else:
             self.retention_tag = RetentionTag.get_default()
-        super(RecipeSet,self).__init__(*args, **kw)
 
     stop_types = ['abort','cancel']
     def is_owner(self,user):
