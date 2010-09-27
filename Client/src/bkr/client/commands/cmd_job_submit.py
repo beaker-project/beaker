@@ -5,6 +5,8 @@ from bkr.client.task_watcher import *
 from bkr.client.convert import Convert
 from bkr.client import BeakerCommand
 from optparse import OptionValueError
+import lxml.etree
+import pkg_resources
 import sys
 
 class Job_Submit(BeakerCommand):
@@ -49,6 +51,8 @@ class Job_Submit(BeakerCommand):
         wait  = kwargs.pop("wait", False)
 
         jobs = args
+        xsd = lxml.etree.XMLSchema(lxml.etree.parse(
+                pkg_resources.resource_stream('bkr.common', 'xsd/beaker-job.xsd')))
 
         self.set_hub(username, password)
         submitted_jobs = []
@@ -62,6 +66,10 @@ class Job_Submit(BeakerCommand):
                 jobxml = Convert.rhts2beaker(jobxml)
             if debug:
                 print jobxml
+            try:
+                xsd.assertValid(lxml.etree.fromstring(jobxml))
+            except Exception, e:
+                print >>sys.stderr, 'WARNING: job xml validation failed: %s' % e
             if not dryrun:
                 try:
                     submitted_jobs.append(self.hub.jobs.upload(jobxml))

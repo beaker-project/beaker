@@ -1,8 +1,12 @@
 from setuptools import setup, find_packages
+from turbogears.finddata import find_package_data, standard_exclude
+
 setup(
     name = "bkr",
     version = "@VERSION@",
 
     packages=find_packages('.'),
     package_dir = {'':'.'},
+    package_data=find_package_data(where='bkr', package='bkr',
+            exclude=('*.in',) + standard_exclude),
 )

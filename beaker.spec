@@ -25,6 +25,7 @@ Requires:       kobo-client >= 0.3
 Requires:	python-setuptools
 Requires:	%{name} = %{version}-%{release}
 Requires:       python-krbV
+Requires:       python-lxml
 
 
 %package server
@@ -34,6 +35,7 @@ Requires:       TurboGears
 Requires:       intltool
 Requires:       python-decorator
 Requires:       python-xmltramp
+Requires:       python-lxml
 Requires:       python-ldap
 Requires:       mod_wsgi
 Requires:       python-tgexpandingformwidget
@@ -132,6 +134,7 @@ fi
 %defattr(-,root,root,-)
 %{python_sitelib}/bkr/__init__.py*
 %{python_sitelib}/bkr/timeout_xmlrpclib.py*
+%{python_sitelib}/bkr/common/
 %{python_sitelib}/bkr-%{version}-*
 %{python_sitelib}/bkr-%{version}-py%{pyver}.egg-info/
 %doc COPYING

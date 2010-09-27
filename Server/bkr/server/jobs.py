@@ -35,6 +35,9 @@ from bkr.server.widgets import RetentionTagWidget
 from bkr.server.widgets import SearchBar
 from bkr.server import search_utility
 import datetime
+import pkg_resources
+import lxml.etree
+import logging
 
 import cherrypy
 
@@ -46,6 +49,24 @@ from bexceptions import *
 import xmltramp
 from jobxml import *
 import cgi
+
+log = logging.getLogger(__name__)
+
+class JobForm(widgets.Form):
+
+    template = 'bkr.server.templates.job_form'
+    name = 'job'
+    submit_text = _(u'Queue')
+    fields = [widgets.TextArea(name='textxml', label=_(u'Job XML'), attrs=dict(rows=40, cols=155))]
+    hidden_fields = [widgets.HiddenField(name='confirmed', validator=validators.StringBool())]
+    params = ['xsd_errors']
+    xsd_errors = None
+
+    def update_params(self, d):
+        super(JobForm, self).update_params(d)
+        if 'xsd_errors' in d['options']:
+            d['xsd_errors'] = d['options']['xsd_errors']
+            d['submit_text'] = _(u'Queue despite validation errors')
 
 class Jobs(RPCRoot):
     # For XMLRPC methods in this class.
@@ -63,7 +84,6 @@ class Jobs(RPCRoot):
     hidden_id = widgets.HiddenField(name='id')
     confirm = widgets.Label(name='confirm', default="Are you sure you want to cancel?")
     message = widgets.TextArea(name='msg', label=_(u'Reason?'), help=_(u'Optional'))
-    job_input = widgets.TextArea(name='textxml', label=_(u'Job XML'), attrs=dict(rows=40, cols=155))
 
     form = widgets.TableForm(
         'jobs',
@@ -79,11 +99,10 @@ class Jobs(RPCRoot):
         submit_text = _(u'Yes')
     )
 
-    job_form = widgets.TableForm(
-        'job',
-        fields = [job_input],
-        submit_text = _(u'Queue')
-    )
+    job_form = JobForm()
+
+    job_xsd_doc = lxml.etree.parse(pkg_resources.resource_stream(
+            'bkr.common', 'xsd/beaker-job.xsd'))
 
     @classmethod
     def success_redirect(cls, id, url='/jobs', *args, **kw):
@@ -188,7 +207,9 @@ class Jobs(RPCRoot):
 
     @identity.require(identity.not_anonymous())
     @expose(template="bkr.server.templates.form-post")
-    def clone(self, job_id=None, recipe_id=None, recipeset_id=None, textxml=None, filexml=None, **kw):
+    @validate(validators={'confirmed': validators.StringBool()})
+    def clone(self, job_id=None, recipe_id=None, recipeset_id=None,
+            textxml=None, filexml=None, confirmed=False, **kw):
         """
         Review cloned xml before submitting it.
         """
@@ -214,6 +235,16 @@ class Jobs(RPCRoot):
             # Clone from file
             textxml = filexml.file.read()
         elif textxml:
+            if not confirmed:
+                job_xsd = lxml.etree.XMLSchema(self.job_xsd_doc)
+                if not job_xsd.validate(lxml.etree.fromstring(textxml)):
+                    return dict(
+                        title = title,
+                        form = self.job_form,
+                        action = 'clone',
+                        options = {'xsd_errors': job_xsd.error_log},
+                        value = dict(textxml=textxml, confirmed=True),
+                    )
             try:
                 xmljob = XmlJob(xmltramp.parse(textxml))
             except Exception,err:
@@ -223,11 +254,11 @@ class Jobs(RPCRoot):
                     form = self.job_form,
                     action = './clone',
                     options = {},
-                    value = dict(textxml = "%s" % textxml),
+                    value = dict(textxml = "%s" % textxml, confirmed=confirmed),
                 )
             try:
                 job = self.process_xmljob(xmljob,identity.current.user)
-            except BeakerException, err:
+            except (BeakerException, ValueError), err:
                 session.rollback()
                 flash(_(u'Failed to import job because of %s' % err ))
                 return dict(
@@ -235,17 +266,7 @@ class Jobs(RPCRoot):
                     form = self.job_form,
                     action = './clone',
                     options = {},
-                    value = dict(textxml = "%s" % textxml),
-                )
-            except ValueError, err:
-                session.rollback()
-                flash(_(u'Failed to import job because of %s' % err ))
-                return dict(
-                    title = title,
-                    form = self.job_form,
-                    action = './clone',
-                    options = {},
-                    value = dict(textxml = "%s" % textxml),
+                    value = dict(textxml = "%s" % textxml, confirmed=confirmed),
                 )
             session.save(job)
             session.flush()
@@ -255,11 +276,11 @@ class Jobs(RPCRoot):
             form = self.job_form,
             action = './clone',
             options = {},
-            value = dict(textxml = "%s" % textxml),
+            value = dict(textxml = "%s" % textxml, confirmed=confirmed),
         )
 
 
-    def _handle_recipe_set(self, xmlrecipeSet, *args, **kw):
+    def _handle_recipe_set(self, xmlrecipeSet, user, *args, **kw):
         """
         Handles the processing of recipesets into DB entries from their xml
         """
@@ -290,7 +311,7 @@ class Jobs(RPCRoot):
         recipeSet.retention_tag = tag
         
         for xmlrecipe in xmlrecipeSet.iter_recipes(): 
-            recipe = self.handleRecipe(xmlrecipe)
+            recipe = self.handleRecipe(xmlrecipe, user)
             recipe.ttasks = len(recipe.tasks)
             recipeSet.ttasks += recipe.ttasks
             recipeSet.recipes.append(recipe)
@@ -307,7 +328,7 @@ class Jobs(RPCRoot):
         job = Job(whiteboard='%s' % xmljob.whiteboard, ttasks=0,
                   owner=user)
         for xmlrecipeSet in xmljob.iter_recipeSets():
-            recipe_set = self._handle_recipe_set(xmlrecipeSet)
+            recipe_set = self._handle_recipe_set(xmlrecipeSet, user)
             job.recipesets.append(recipe_set)
             job.ttasks += recipe_set.ttasks
 
@@ -349,11 +370,11 @@ class Jobs(RPCRoot):
             job_search.append_results(search['value'],col,search['operation'],**kw)
         return job_search.return_results()
 
-    def handleRecipe(self, xmlrecipe, guest=False):
+    def handleRecipe(self, xmlrecipe, user, guest=False):
         if not guest:
             recipe = MachineRecipe(ttasks=0)
             for xmlguest in xmlrecipe.iter_guests():
-                guestrecipe = self.handleRecipe(xmlguest, guest=True)
+                guestrecipe = self.handleRecipe(xmlguest, user, guest=True)
                 recipe.guests.append(guestrecipe)
         else:
             recipe = GuestRecipe(ttasks=0)
@@ -367,6 +388,11 @@ class Jobs(RPCRoot):
                                            recipe.distro_requires)[0]
         except IndexError:
             raise BX(_('No Distro matches Recipe: %s' % recipe.distro_requires))
+        try:
+            # try evaluating the host_requires, to make sure it's valid
+            recipe.distro.systems_filter(user, recipe.host_requires)
+        except StandardError, e:
+            raise BX(_('Error in hostRequires: %s' % e))
         recipe.whiteboard = xmlrecipe.whiteboard
         recipe.kickstart = xmlrecipe.kickstart
         if xmlrecipe.watchdog:
