@@ -91,3 +91,16 @@ def system_problem_report(system, description, recipe=None, reporter=None):
     body.extend(['', _(u'Problem description:'), description])
     send_mail(sender, system.owner.email_address,
             _(u'Problem reported for %s') % system.fqdn, '\n'.join(body))
+
+def broken_system_notify(system, reason, recipe=None):
+    sender = config.get('beaker_email')
+    if not sender:
+        log.warning("beaker_email not defined in app.cfg; unable to send mail")
+        return
+    body = [_(u'Beaker has automatically marked system %s as broken, due to:') % system.fqdn, '',
+            reason, '', unicode(_(u'Please investigate this error and take appropriate action.')), '']
+    if recipe:
+        body.append(_(u'Failure occurred in %s') % recipe.t_id)
+    send_mail(sender, system.owner.email_address,
+            _(u'System %s automatically marked broken') % system.fqdn,
+            '\n'.join(body))

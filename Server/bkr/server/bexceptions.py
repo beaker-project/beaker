@@ -20,9 +20,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 02110-1301  USA
 """
 
-import exceptions
-
-class BeakerException(exceptions.Exception):
+class BeakerException(Exception):
 
    def __init__(self, value, *args):
        self.value = value % args
@@ -33,3 +31,9 @@ class BeakerException(exceptions.Exception):
 class BX(BeakerException):
    pass
 
+class CobblerTaskFailedException(BeakerException):
+    """
+    Raised when a Cobbler task reports failure.
+    NB: this is intentionally distinct from a failure in talking to Cobbler!
+    """
+    pass
