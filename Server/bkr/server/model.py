@@ -1767,10 +1767,12 @@ $SNIPPET("rhts_post")
     def can_provision_now(self,user=None): 
         if user is not None and self.is_admin(user_id=user.user_id):
             return True
-        else:
-            if user is not None and self.loaned == user:
-                return True
-        if self.status==SystemStatus.by_name('Manual'): #If it's manual then we us eour original perm system.
+        elif user is not None and self.loaned == user:
+            return True
+        elif user is not None and self._user_in_systemgroup(user):
+            return True
+         
+        if self.status==SystemStatus.by_name('Manual'): #If it's manual then we us our original perm system.
             return self._has_regular_perms(user)
         return False
                 
@@ -1795,6 +1797,13 @@ $SNIPPET("rhts_post")
                 return True
         return False
 
+    def _user_in_systemgroup(self,user=None):
+        if self.groups:
+            for group in user.groups:
+                if group in self.groups:
+                    return True
+
+
     def is_available(self,user=None):
         """
         is_available() will return true if this system is allowed to be used by the user.
@@ -1805,9 +1814,8 @@ $SNIPPET("rhts_post")
             if self.shared:
                 # If the user is in the Systems groups
                 if self.groups:
-                    for group in user.groups:
-                        if group in self.groups:
-                            return True
+                    if self._user_in_systemgroup(user):
+                        return True
                 else: 
                     return True
         
