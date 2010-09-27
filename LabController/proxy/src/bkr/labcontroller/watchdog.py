@@ -3,6 +3,7 @@ import os
 import sys
 import signal
 import logging
+from datetime import datetime, timedelta
 from optparse import OptionParser
 
 from bkr.labcontroller.proxy import Watchdog
@@ -51,13 +52,18 @@ def main_loop(conf=None, foreground=False):
     if foreground:
         add_stderr_logger(watchdog.logger)
 
+    later = datetime.now()
     while True:
         try:
-            watchdog.logger.debug(80 * '-')
             # Poll the scheduler for watchdogs
             watchdog.hub._login()
-            watchdog.expire_watchdogs()
-            watchdog.active_watchdogs()
+            if datetime.now() > later:
+                watchdog.expire_watchdogs()
+                watchdog.active_watchdogs()
+                later = datetime.now() + timedelta(seconds=60)
+            if not watchdog.run():
+                watchdog.logger.debug(80 * '-')
+                watchdog.sleep()
 
             # FIXME: Check for recipes that match systems under
             #        this lab controller, if so take recipe and provision
@@ -66,9 +72,6 @@ def main_loop(conf=None, foreground=False):
             # write to stdout / stderr
             sys.stdout.flush()
             sys.stderr.flush()
-
-            # sleep for some time
-            watchdog.sleep()
 
         except (ShutdownException, KeyboardInterrupt):
             # ignore keyboard interrupts and sigterm
