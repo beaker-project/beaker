@@ -201,6 +201,7 @@ See: http://www.w3.org/XML/2010/01/xml-model/
             <xs:sequence>
               <xs:element name="recipe" type="recipe" minOccurs="1" maxOccurs="unbounded"/>
             </xs:sequence>
+            <xs:attribute name="retention_tag" type="xs:string" />
           </xs:complexType>
         </xs:element>
       </xs:sequence>
