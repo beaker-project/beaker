@@ -45,4 +45,4 @@ $(METADATA): Makefile
 	@echo "Requires:	vim-enhanced"		>> $(METADATA)
 	@echo "Requires:	unifdef"		>> $(METADATA)
 	@echo "Requires:	sendmail"		>> $(METADATA)
-	@echo "License:		Red Hat Internal"	>> $(METADATA)
+	@echo "License:		GPLv2"	                >> $(METADATA)
