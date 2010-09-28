@@ -1,4 +1,5 @@
 import sys 
+
 import re
 from turbogears.database import metadata, mapper, session
 from turbogears.config import get
@@ -27,6 +28,7 @@ from bkr.server import mail
 import traceback
 from BasicAuthTransport import BasicAuthTransport
 import xmlrpclib
+import errno
 import bkr.timeout_xmlrpclib
 import os
 import shutil
@@ -3352,11 +3354,14 @@ class Job(TaskBase):
         session.flush()
         return job
 
-    def delete(self, remove_all, *args, **kw):
-        paths_to_del = []
+    def delete(self, *args, **kw):
+        paths = []
+        errors = []
         for rs in self.recipesets:
-            paths_to_del = paths_to_del + rs.delete(remove_all)
-        return paths_to_del
+            paths_to_del, new_errors = rs.delete()
+            paths.extend(paths_to_del)
+            errors.extend(new_errors)
+        return paths, errors
 
     def clone_link(self):
         """ return link to clone this job
@@ -3610,7 +3615,7 @@ class RecipeSet(TaskBase):
     def to_xml(self, clone=False, from_job=True):
         recipeSet = self.doc.createElement("recipeSet")
         return_node = recipeSet
-        recipeSet.setAttribute('retention_tag', "%s"  % self.retention_tag) 
+        recipeSet.setAttribute('retention_tag', "%s"  % self.retention_tag)
         if not clone:
             recipeSet.setAttribute("id", "%s" % self.id)
 
@@ -3625,21 +3630,34 @@ class RecipeSet(TaskBase):
             job.appendChild(self.node("whiteboard", self.job.whiteboard or ''))
             job.appendChild(recipeSet)
             return_node = job
-            
         return return_node
 
-    def delete(self, remove_all,unlink=False, *args, **kw):
-        #FIXME add logic for unlink and remove all
-        self.deleted = datetime.utcnow() 
+    def delete(self, *args, **kw): 
         errors = []
-        for r in self.recipes: 
-            recipe_to_del = Recipe.by_id(r.id)
-            errors = errors + recipe_to_del.delete()
-            session.flush() #Testing of flushing session here, trying to fix OOM problem
-       
-        return errors #FIXME testing, want to actually unlink here
-        #os.unlink(path_to_del)
+        paths = []
+        session.begin()
+        def _del_recipes():
+            """
+            A generator for deleting recipes and returning the path deleted
+            """
+            try:
+                for r in self.recipes:
+                    recipe_to_del = Recipe.by_id(r.id)
+                    yield recipe_to_del.delete()
+            except BX, e:
+                errors.append('%s:  %s' % (self.t_id,unicode(e)))
+                yield None
+                #There is no point in rollingback anything here 
+            else:
+                session.commit()
+                self.deleted = datetime.utcnow()
 
+        if self.deleted is not None:
+            return paths,errors
+        paths = [deleted_path for deleted_path in _del_recipes() if deleted_path is not None]
+        log.debug(paths)
+        return paths,errors
+    
     @classmethod
     def allowed_priorities_initial(cls,user):
         if not user:
@@ -3877,27 +3895,28 @@ class Recipe(TaskBase):
 
     def delete(self, *args, **kw):
         """
-        Deleted job instance and entities
+        How we delete a Recipe.
+        At the moment only unlinking log files and deleting log table rows
         """
-        #TODO Fix this for 0.5.59, check OOM problem
-        log_paths = {}
-        log.debug('Logs to del are:%s' % self.logs)
-        for log_ in self.logs:  
-            if log_.path: 
-                if log_.path[0] == u'/': #Removes the leading '/' which will wig os.path.join out
-                    if len(log_.path) > 1:
-                        r_log_path = log_.path[1:]
-                    else:
-                        r_log_path = ''
-            else:
-                r_log_path = ''
-             
-            log_paths[os.path.join(self.logspath,self.filepath, r_log_path)] = 1
         self.logs = [] #This deletes the logs from log_recipe
+        full_recipe_logpath = '%s/%s' % (self.logspath, self.filepath)
+
+        try:
+            shutil.rmtree(full_recipe_logpath)
+            return_val = full_recipe_logpath
+        except OSError, e:
+            if e.errno == errno.ENOENT: #File/Dir does not exist
+                pass #Maybe the logs don't exist?? Carry on... 
+                return_val = None
+            elif e.errno == errno.EACCES: #Incorrect perms
+                raise BX(_(u'Incorrect perms to delete %s:' % full_recipe_logpath))
+            else:
+                raise BX(_(u'Received unexpected error: %s' % e.errstr)) 
+
         for task in self.tasks:
             task_to_delete = RecipeTask.by_id(task.id)
-            task_to_delete.delete(unlink=False) 
-        return [k for k,v in log_paths.items()]
+            task_to_delete.delete(unlink=False)
+        return return_val
 
     def harness_repos(self):
         """
@@ -4537,11 +4556,9 @@ class RecipeTask(TaskBase):
     stop_types = ['stop','abort','cancel']
 
     def delete(self,unlink=False): 
-        if unlink is False: #only remove log_recipe_task table entries
-            self.logs = [] #delete recipetask logs
-            for results in self.results:
-                results.delete(unlink=unlink)
-        #TODO in the future we may want to unlink from the recipe_task level
+        self.logs = [] #delete logs from log_recipe_task_table
+        for r in self.results:
+            r.delete()
 
     def filepath(self):
         """
@@ -5021,10 +5038,8 @@ class RecipeTaskResult(TaskBase):
     filepath = property(filepath)
 
     def delete(self, unlink=False, *args, **kw):
-        if unlink is False:
-            self.logs = [] #Remove our log entries
-        #TODO unlink from here if we want to 
-    
+        self.logs = []
+
     def to_xml(self):
         """
         Return result in xml

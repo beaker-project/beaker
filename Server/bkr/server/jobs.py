@@ -15,7 +15,6 @@
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
-
 from turbogears.database import session
 from turbogears import controllers, expose, flash, widgets, validate, error_handler, validators, redirect, paginate, url
 from turbogears import identity, redirect
@@ -123,7 +122,7 @@ class Jobs(RPCRoot):
     def _list(self, tags, days_complete_for, family, **kw):
         query = None
         if days_complete_for:
-            #This takes the same kw names as timedelta   
+            #This takes the same kw names as timedelta
             query = RecipeSet.complete_delta({'days':int(days_complete_for)})
         if family:
             try:
@@ -135,11 +134,11 @@ class Jobs(RPCRoot):
         if tags:
             if len(tags) == 1:
                 tags = tags[0]
-            query = RecipeSet.by_tag(tags,query)           
+            query = RecipeSet.by_tag(tags,query)
         return query.all()
 
     @cherrypy.expose
-    def list(self, tags, days_complete_for,family, **kw):
+    def list(self, tags, days_complete_for, family, **kw):
         try:
             recipesets = self._list(tags, days_complete_for, family, **kw)
         except ValueError, e:
@@ -149,38 +148,32 @@ class Jobs(RPCRoot):
 
     @cherrypy.expose
     @identity.require(identity.in_group("admin"))
-    def delete_jobs(self, jobs, tag, complete_days, remove_all,**kw):
+    def delete_jobs(self, jobs=None, tag=None, complete_days=None,family=None,**kw):
         """
         Handles deletion of jobs and entities within jobs
         """
-        #TODO Test this for 0.5.59, fix OOM issue
-        return_value = []
+        deleted_paths = []
+        errors = []
         if jobs:
-            for j in jobs:        
+            for j in jobs:
                 type,id = j.split(":", 1)
                 try:
                     model_class = self.job_type[type]
                     model_obj = model_class.by_id(id)
-                    
-                    return_value = return_value + model_obj.delete(remove_all)#FIXME just testing path
-                    #return 'Deleted %s' % j
-                except KeyError, e: #FIXME add InvalidRequestError on this line as well
+                    newly_deleted_paths, new_errors = model_obj.delete()
+                    deleted_paths.extend(newly_deleted_paths)
+                    errors.extend(new_errors)
+                except KeyError, e: 
                     return 'Invalid Job type passed:%s' % j
+                except InvalidRequestError, e:
+                    return 'Invalid id passed: %s:%s' % (type,id)
         else:
-            recipesets = self._list(tag, complete_days, **kw)
+            recipesets = self._list(tag, complete_days,family, **kw)
             for rs in recipesets:
-                return_value = return_value + rs.delete(remove_all)  
-
-        if not remove_all and not return_value: #i.e only logs
-            r_msg = 'Nothing to delete'
-        elif return_value and remove_all:
-            r_msg =  'Deleted log and DB entries'
-        elif not return_value:
-            r_msg = 'Deleted DB entries'
-        else:
-            r_msg = 'Deleted log entries'
-
-        return '%s %s' % (r_msg, " ".join(return_value)) 
+                newly_deleted_paths, new_errors = rs.delete()
+                deleted_paths.extend(newly_deleted_paths)
+                errors.extend(new_errors)
+        return 'Deleted paths:%s' % ','.join(deleted_paths), ' Errors: %s' % ','.join(errors)
 
     @cherrypy.expose
     @identity.require(identity.not_anonymous())

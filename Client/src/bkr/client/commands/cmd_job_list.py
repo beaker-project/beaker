@@ -17,20 +17,19 @@ class Job_List(BeakerCommand):
             "-c",
             "--completeDays",
             type='int',
-            help="Number of days job has been completed for. If not present\
-                will be set to greater than 0"
+            help="Number of days job has been completed for"
         )
 
         self.parser.add_option(
             "-t",
             "--tag",
-            action="append", 
+            action="append",
             help="RecipeSets with a particular Tag"
         )
-            
+
     def run(self,*args, **kwargs):
         username = kwargs.pop("username", None)
-        password = kwargs.pop("password", None) 
+        password = kwargs.pop("password", None)
         family = kwargs.pop('family',None)
         tag = kwargs.pop('tag',None)
         complete_days = kwargs.pop('completeDays', None)
