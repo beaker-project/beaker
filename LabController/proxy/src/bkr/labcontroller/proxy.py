@@ -278,7 +278,7 @@ class Watchdog(ProxyHelper):
         for watchdog in self.hub.recipes.tasks.watchdogs('active'):
             active_watchdogs.append(watchdog['system'])
             if watchdog['system'] not in self.watchdogs:
-                self.watchdogs[watchdog['system']] = Monitor(watchdog,self.logger,self.conf)
+                self.watchdogs[watchdog['system']] = Monitor(watchdog,self.logger,self.conf,self.hub)
         # Remove Monitor if watchdog does not exist.
         for watchdog_system in self.watchdogs.copy():
             if watchdog_system not in active_watchdogs:
@@ -309,11 +309,12 @@ class Monitor(ProxyHelper):
          and look for panic/bug/etc..
     """
 
-    def __init__(self, watchdog, logger, conf, *args, **kwargs):
+    def __init__(self, watchdog, logger, conf, hub, *args, **kwargs):
         """ Monitor system
         """
-        self.log = logger
+        self.logger = logger
         self.conf = conf
+        self.hub = hub
         self.watchdog = watchdog
         self.logger.debug("Initialize monitor for system: %s" % self.watchdog['system'])
         self.watchedFiles = [WatchFile("%s/%s" % (self.conf["CONSOLE_LOGS"], self.watchdog["system"]),self.watchdog,self, self.conf["PANIC_REGEX"])]
