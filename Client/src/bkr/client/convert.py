@@ -57,6 +57,12 @@ class Convert(object):
         repo.setAttribute('url','%s' % addrepo)
         return repo
     
+    def handle_addpackage(self, addpackage):
+        """ process packages """
+        package = self.doc.createElement('package')
+        package.setAttribute('name','%s' % addpackage)
+        return package
+    
     def handle_hostRequires(self, requires):
         require = None
         requires_search = re.compile(r'([^\s]+)\s+([^\s]+)\s+([^\s]+)')
@@ -113,6 +119,7 @@ class Convert(object):
             and_distro = self.doc.createElement('and')
             and_host = self.doc.createElement('and')
             repos = self.doc.createElement('repos')
+            packages = self.doc.createElement('packages')
             kernel_options = ''
             if 'kernel_options' in recipe._attrs:
                 kernel_options = '%s ' % recipe.getAttribute('kernel_options')
@@ -120,6 +127,8 @@ class Convert(object):
                 kernel_options = '%s%s' % (kernel_options, recipe.getAttribute('bootargs'))
                 recipe.setAttribute('kernel_options',kernel_options)
                 recipe.removeAttribute('bootargs')
+            if 'testrepo' in recipe._attrs:
+                recipe.removeAttribute('testrepo')
             for child in recipe.childNodes:
                 if child.nodeType == child.ELEMENT_NODE and \
                    child.tagName == 'bootargs':
@@ -151,13 +160,20 @@ class Convert(object):
                        repo = self.handle_addrepo(self.getText(child.childNodes))
                        repos.appendChild(repo)
     
+                if child.nodeType == child.ELEMENT_NODE and \
+                   child.tagName == 'installPackage':
+                       del_nodes.append(child)
+                       package = self.handle_addpackage(self.getText(child.childNodes))
+                       packages.appendChild(package)
+    
             distro = self.doc.createElement('distroRequires')
             distro.appendChild(and_distro)
             host = self.doc.createElement('hostRequires')
             host.appendChild(and_host)
         
             for child in del_nodes:
-                recipe.removeChild(child)
+                recipe.removeChild(child) 
+            recipe.appendChild(packages)
             recipe.appendChild(repos)
             recipe.appendChild(distro)
             recipe.appendChild(host)
