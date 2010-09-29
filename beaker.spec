@@ -2,8 +2,8 @@
 %{!?pyver: %global pyver %(%{__python} -c "import sys ; print sys.version[:3]")}
 
 Name:           beaker
-Version:        0.5.57
-Release:        1%{?dist}
+Version:        0.5.58
+Release:        2%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -191,6 +191,56 @@ fi
 %attr(-,apache,root) %dir %{_localstatedir}/run/%{name}-lab-controller
 
 %changelog
+* Thu Sep 30 2010 Raymond Mancy <rmancy@redhat.com> 0.5.58-2
+- bz631971 - prototype now showing in reserve_systems (rmancy@redhat.com)
+- bz634033 - Remove machines from reserve report that have ben reserved via
+  RHTS (rmancy@redhat.com)
+- bz629888 - group member can now take (rmancy@redhat.com)
+- bz595801 - This is the first go at adding retention tags. Admins can add and
+  change default settings. They are picked up in recipesets,            There
+  is an interface in the jobs page to change the retention tag. Also job-list
+  is a valid command            which will list jobs by family,tag,number of
+  days complete for, or any combination of these. (rmancy@redhat.com)
+- bz634702 - Record the last time osversion.trigger ran so we can only process new distros
+- only ask the scheduler for active and expired watchdogs every 60 seconds.
+  (bpeck@redhat.com)
+- bz636651 - re-structure beaker-watchdog to not fork a separate process per
+  recipe. (bpeck@redhat.com)
+- bz591652 - automatically mark systems as broken if cobbler task fails
+  (dcallagh@redhat.com)
+- bz612227 - validate against XSD in bkr job-submit (dcallagh@redhat.com)
+- Record the last time osversion.trigger ran so we can only process new distros
+  (bpeck@redhat.com)
+- fix except code to handle cobbler xmlrpc errors. (bpeck@redhat.com)
+- bz629422 - disable TurboGears scheduler (dcallagh@redhat.com)
+- add timeout_xmlrpclib.ServerProxy() to keep us from getting stuck.
+  (bpeck@redhat.com)
+- bz631421 - fix page title for systems (dcallagh@redhat.com)
+- bz623603 - allow users to report a problem with a system
+  (dcallagh@redhat.com)
+* Thu Sep 30 2010 Raymond Mancy <rmancy@redhat.com>
+- bz631971 - prototype now showing in reserve_systems (rmancy@redhat.com)
+- bz634033 - Remove machines from reserve report that have ben reserved via
+  RHTS (rmancy@redhat.com)
+- bz629888 - group member can now take (rmancy@redhat.com)
+- bz595801 - This is the first go at adding retention tags. Admins can add and
+  change default settings. They are picked up in recipesets,            There
+  is an interface in the jobs page to change the retention tag. Also job-list
+  is a valid command            which will list jobs by family,tag,number of
+  days complete for, or any combination of these. (rmancy@redhat.com)
+- bz636651 - re-structure beaker-watchdog to not fork a separate process per
+  recipe. (bpeck@redhat.com)
+- bz591652 - automatically mark systems as broken if cobbler task fails
+  (dcallagh@redhat.com)
+- bz612227 - validate against XSD in bkr job-submit (dcallagh@redhat.com)
+- Record the last time osversion.trigger ran so we can only process new distros
+  (bpeck@redhat.com)
+- bz629422 - disable TurboGears scheduler (dcallagh@redhat.com)
+- add timeout_xmlrpclib.ServerProxy() to keep us from getting stuck.
+  (bpeck@redhat.com)
+- bz631421 - fix page title for systems (dcallagh@redhat.com)
+- bz623603 - allow users to report a problem with a system
+  (dcallagh@redhat.com)
 * Thu Sep 16 2010 Raymond Mancy <rmancy@redhat.com> 0.5.57-1
 - bz620605 - Introduction of Automated status (rmancy@redhat.com)
 - fix beaker-watchdog to not leave zombies around. (bpeck@redhat.com)
