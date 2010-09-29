@@ -25,6 +25,7 @@ Requires:       kobo-client >= 0.3
 Requires:	python-setuptools
 Requires:	%{name} = %{version}-%{release}
 Requires:       python-krbV
+Requires:       python-lxml
 
 
 %package server
@@ -34,13 +35,14 @@ Requires:       TurboGears
 Requires:       intltool
 Requires:       python-decorator
 Requires:       python-xmltramp
+Requires:       python-lxml
 Requires:       python-ldap
 Requires:       mod_wsgi
 Requires:       python-tgexpandingformwidget
 Requires:       httpd
 Requires:       python-krbV
 Requires:	%{name} = %{version}-%{release}
-Requires:       python-TurboMail
+Requires:       python-TurboMail >= 3.0
 Requires:	createrepo
 
 
@@ -131,6 +133,8 @@ fi
 %files
 %defattr(-,root,root,-)
 %{python_sitelib}/bkr/__init__.py*
+%{python_sitelib}/bkr/timeout_xmlrpclib.py*
+%{python_sitelib}/bkr/common/
 %{python_sitelib}/bkr-%{version}-*
 %{python_sitelib}/bkr-%{version}-py%{pyver}.egg-info/
 %doc COPYING
@@ -138,7 +142,7 @@ fi
 %files server
 %defattr(-,root,root,-)
 %doc Server/README
-%doc SchemaUpgrades/upgrade_*.sql
+%doc SchemaUpgrades/upgrade_*
 %{python_sitelib}/bkr/server/
 %{python_sitelib}/bkr.server-%{version}-*
 %{python_sitelib}/bkr.server-%{version}-py%{pyver}.egg-info/
@@ -184,6 +188,7 @@ fi
 %attr(-,apache,root) %dir %{_localstatedir}/log/%{name}
 %{_sysconfdir}/init.d/%{name}-proxy
 %{_sysconfdir}/init.d/%{name}-watchdog
+%attr(-,apache,root) %dir %{_localstatedir}/run/%{name}-lab-controller
 
 %changelog
 * Thu Sep 16 2010 Raymond Mancy <rmancy@redhat.com> 0.5.57-1

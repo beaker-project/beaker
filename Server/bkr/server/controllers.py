@@ -19,12 +19,14 @@ from bkr.server.activity import Activities
 from bkr.server.reports import Reports
 from bkr.server.job_matrix import JobMatrix
 from bkr.server.reserve_workflow import ReserveWorkflow
+from bkr.server.retention_tags import RetentionTag as RetentionTagController
 from bkr.server.watchdog import Watchdogs
 from bkr.server.widgets import myPaginateDataGrid
 from bkr.server.widgets import PowerTypeForm
 from bkr.server.widgets import PowerForm
 from bkr.server.widgets import LabInfoForm
 from bkr.server.widgets import PowerActionForm
+from bkr.server.widgets import ReportProblemForm
 from bkr.server.widgets import SystemDetails
 from bkr.server.widgets import SystemHistory
 from bkr.server.widgets import SystemExclude
@@ -51,6 +53,7 @@ from tg_expanding_form_widget.tg_expanding_form_widget import ExpandingForm
 from bkr.server.needpropertyxml import *
 from bkr.server.helpers import *
 from bkr.server.tools.init import dummy
+from bkr.server import mail
 from decimal import Decimal
 from bexceptions import *
 import bkr.server.recipes
@@ -229,6 +232,7 @@ class Root(RPCRoot):
     matrix = JobMatrix()
     reserveworkflow = ReserveWorkflow()
     watchdogs = Watchdogs()
+    retentiontag = RetentionTagController()
     
     id         = widgets.HiddenField(name='id')
     submit     = widgets.SubmitButton(name='submit')
@@ -285,7 +289,7 @@ class Root(RPCRoot):
     system_provision = SystemProvision(name='provision')
     arches_form = SystemArches(name='arches') 
     task_form = TaskSearchForm(name='tasks')
-
+    report_problem_form = ReportProblemForm()
 
     @expose(format='json')
     def change_system_admin(self,system_id=None,group_id=None,cmd=None,**kw):
@@ -441,7 +445,7 @@ class Root(RPCRoot):
 
     @expose(template='bkr.server.templates.grid_add')
     @paginate('list',default_order='fqdn',limit=20,max_limit=None)
-    def index(self, *args, **kw):   
+    def index(self, *args, **kw): 
         return_dict =  self.systems(systems = System.all(identity.current.user), *args, **kw) 
         return return_dict
 
@@ -508,9 +512,8 @@ class Root(RPCRoot):
                 except KeyError:
                     raise
             # I don't like duplicating this code in find_systems_for_distro() but it dies on trying to jsonify a Query object... 
-            systems_distro_query = distro.systems() 
-            avail_systems_distro_query = System.available_for_schedule(identity.current.user,System.by_type(type='machine',systems=systems_distro_query)) 
-           
+            systems_distro_query = distro.systems()
+            avail_systems_distro_query = System.available_for_schedule(identity.current.user,systems=systems_distro_query)
             warn = None
             if avail_systems_distro_query.count() < 1: 
                 warn = 'No Systems compatible with distro %s' % distro.install_name
@@ -823,6 +826,7 @@ class Root(RPCRoot):
         options = {}
         readonly = False
         is_user = False
+        title = 'New'
         if system:
             title = system.fqdn
             our_user = identity.current.user #simple optimisation
@@ -860,11 +864,9 @@ class Root(RPCRoot):
                 self.will_provision = False
                 self.provision_now_rights = False
 
-        if system.current_user(our_user):
-            options['user_change_text'] = ' (Return)'
-            is_user = True
-        else:
-            title = 'New'
+            if system.current_user(our_user):
+                options['user_change_text'] = ' (Return)'
+                is_user = True
 
         if 'activities_found' in histories_return: 
             historical_data = histories_return['activities_found']
@@ -1705,6 +1707,38 @@ class Root(RPCRoot):
                 provision.arch=arch
                 system.provisions[arch] = provision
         redirect("/view/%s" % system.fqdn)
+
+    @expose(template='bkr.server.templates.form-post')
+    @validate(form=report_problem_form)
+    def report_problem(self, system_id, recipe_id=None, problem_description=None):
+        """
+        Allows users to report a problem with a system to the system's owner.
+        """
+        try:
+            system = System.by_id(system_id, identity.current.user)
+        except InvalidRequestError:
+            flash(_(u'Unable to find system with id of %s' % system_id))
+            redirect('/')
+        try:
+            recipe = Recipe.by_id(recipe_id)
+        except InvalidRequestError:
+            recipe = None
+        if request.method == 'POST':
+            mail.system_problem_report(system, problem_description,
+                    recipe, identity.current.user)
+            activity = SystemActivity(identity.current.user, 'WEBUI', 'Reported problem',
+                    'Status', None, problem_description)
+            system.activity.append(activity)
+            flash(_(u'Your problem report has been forwarded to the system owner'))
+            redirect('/view/%s' % system.fqdn)
+        return dict(
+            title=_(u'Report a problem with %s') % system.fqdn,
+            form=self.report_problem_form,
+            method='post',
+            action='report_problem',
+            value={},
+            options={'system': system, 'recipe': recipe}
+        )
 
     @cherrypy.expose
     # Testing auth via xmlrpc

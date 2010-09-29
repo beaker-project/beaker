@@ -39,21 +39,7 @@ __description__ = 'Command line tool for initializing Beaker DB'
 def dummy():
     pass
 
-def main():
-    parser = get_parser()
-    opts, args = parser.parse_args()
-    setupdir = dirname(dirname(__file__))
-    curdir = getcwd()
-
-    # First look on the command line for a desired config file,
-    # if it's not on the command line, then look for 'setup.py'
-    # in the current directory. If there, load configuration
-    # from a file called 'dev.cfg'. If it's not there, the project
-    # is probably installed and we'll look first for a file called
-    # 'prod.cfg' in the current directory and then for a default
-    # config file called 'default.cfg' packaged in the egg.
-    load_config(opts.configfile)
-
+def init_db(user_name=None, password=None, user_display_name=None, user_email_address=None):
     get_engine()
     metadata.create_all()
 
@@ -75,14 +61,13 @@ def main():
         admin     = Group(group_name=u'admin',display_name=u'Admin')
     
     #Setup User account
-    if opts.user_name:
-        if opts.password:
-            user = User(user_name=opts.user_name,
-                        password=opts.password)
-            if opts.display_name:
-                user.display_name = opts.display_name
-            if opts.email_address:
-                user.email_address = opts.email_address
+    if user_name:
+        if password:
+            user = User(user_name=user_name, password=password)
+            if user_display_name:
+                user.display_name = user_display_name
+            if user_email_address:
+                user.email_address = user_email_address
             admin.users.append(user)
         else:
             print "Password must be provided with username"
@@ -186,6 +171,13 @@ def main():
         ACK      = Response(response=u'ack')
         NAK      = Response(response=u'nak')
 
+    if RetentionTag.query().count() == 0:
+        SCRATCH         = RetentionTag(tag=u'scratch', is_default=1)
+        SIXTYDAYS       = RetentionTag(tag=u'60days')
+        ONETWENTYDAYS   = RetentionTag(tag=u'120days')
+        ACTIVE          = RetentionTag(tag=u'active')
+        AUDIT           = RetentionTag(tag=u'audit')
+        
     session.flush()
 
 def get_parser():
@@ -207,6 +199,14 @@ def get_parser():
                       dest="display_name", help="Full name of Admin account")
 
     return parser
+
+def main():
+    parser = get_parser()
+    opts, args = parser.parse_args()
+    load_config(opts.configfile)
+    init_db(user_name=opts.user_name, password=opts.password,
+            user_display_name=opts.display_name,
+            user_email_address=opts.email_address)
 
 if __name__ == "__main__":
     main()

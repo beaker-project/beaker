@@ -19,6 +19,7 @@ install:
 		$(INSTALL) $$snippet $(DESTDIR)/var/lib/cobbler/$$snippet;\
 	done
 	mkdir -p $(DESTDIR)/var/lib/cobbler/snippets/per_system/ks_appends
+	mkdir -p $(DESTDIR)/var/run/beaker-lab-controller
 	for kickstart in $(KICKSTARTS); do \
 		$(INSTALL) $$kickstart $(DESTDIR)/var/lib/cobbler/$$kickstart;\
 	done

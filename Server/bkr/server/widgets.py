@@ -305,7 +305,7 @@ class AckPanel(RadioButtonList):
             <input type="radio" name="${widget_name}" py:if="unreal_response == value" id="unreal_response" value="${value}" py:attrs="attrs" />
             <label for="${field_id}_${value}" py:content="desc" />
         </li>
-        <a id="${comment_id}" style="cursor:pointer" class="${comment_class}">comment</a>
+        <a id="${comment_id}" class="${comment_class}" style="cursor:pointer;display:inline-block;margin-top:0.3em">comment</a>
     </ul>
     """
     
@@ -1251,12 +1251,13 @@ class RecipeSetWidget(CompoundWidget):
     css = []
     template = "bkr.server.templates.recipe_set"
     params = ['recipeset','show_priority','action','priorities_list']
-    member_widgets = ['priority_widget','ack_panel_widget']
+    member_widgets = ['priority_widget','retentiontag_widget','ack_panel_widget']
 
     def __init__(self, priorities_list=None, *args, **kw):
         self.priorities_list = priorities_list
         self.ack_panel_widget = AckPanel()
         self.priority_widget = PriorityWidget()
+        self.retentiontag_widget = RetentionTagWidget()
         if 'recipeset' in kw:
             self.recipeset = kw['recipeset']
         else:
@@ -1272,6 +1273,30 @@ class RecipeWidget(CompoundWidget):
     params = ['recipe']
     member_widgets = ['recipe_tasks_widget']
     recipe_tasks_widget = RecipeTasksWidget()
+
+class RetentionTagWidget(SingleSelectField): #FIXME perhaps I shoudl create a parent that both Retention and Priority inherit from
+    validator = validators.NotEmpty() 
+    params = ['default','controller']
+
+    def __init__(self, *args, **kw):
+       self.options = [] 
+       self.field_class = 'singleselectfield'
+
+    def display(self,obj, value=None, **params):
+        params['options'] = [(elem.id,elem.tag) for elem in model.RetentionTag.query().all()]
+
+        if isinstance(obj,model.Job):
+            if 'id_prefix' in params:
+                params['attrs'] = {'id' : '%s_%s' % (params['id_prefix'],obj.id) }
+        elif obj:
+            if 'id_prefix' in params:
+                params['attrs'] = {'id' : '%s_%s' % (params['id_prefix'],obj.id) } 
+                try:
+                    value = obj.retention_tag.id 
+                except AttributeError,(e):
+                    log.error('Object %s passed to display does not have a valid retention_tag: %s' % (type(obj),e))
+
+        return super(RetentionTagWidget,self).display(value or None,**params)
 
 class PriorityWidget(SingleSelectField):   
    validator = validators.NotEmpty()
@@ -1304,3 +1329,21 @@ class AlphaNavBar(Widget):
     def __init__(self,letters,keyword='alpha',*args,**kw):
         self.letters = letters 
         self.keyword = keyword
+
+class ReportProblemForm(Form):
+    template = 'bkr.server.templates.report_problem_form'
+    name = 'report_problem'
+    fields=[
+        TextArea(name='problem_description', label=_(u'Description of problem'))
+    ]
+    hidden_fields=[
+        HiddenField(name='system_id'),
+        HiddenField(name='recipe_id')
+    ]
+    submit_text = _(u'Report problem')
+    params = ['system', 'recipe']
+
+    def update_params(self, d):
+        super(ReportProblemForm, self).update_params(d)
+        d['system'] = d['options']['system']
+        d['recipe'] = d['options'].get('recipe')

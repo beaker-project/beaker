@@ -513,13 +513,16 @@ msg {
 }
 
 msg.success {
-  background-color:#0f0; 
-  color:#4F4F4F 
+  background:#00FF00; 
+  font-weight:normal;
+  padding: 1 1 1 1;
+   
 }
 
-msg.warn {
+msg.warn { 
+  color:white;
+  font-weight:normal;
   background-color:red;
-  color:black;
  } 
 /*
 ** CSS for displaying package updates (show.kid)
@@ -692,8 +695,6 @@ body { font-family:Arial, Helvetica, Sans-Serif; font-size:12px; margin:0px 20px
 .ackpanel {
     list-style-type:none;
     float:left;
-    margin:-1.5em 0  0 15%;
-    ;
 }
 
 ul.ackpanel > li {

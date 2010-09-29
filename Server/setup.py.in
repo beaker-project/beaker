@@ -157,6 +157,9 @@ setup(
     install_requires=[
         "TurboGears >= 1.0.3.2",
     ],
+    tests_require=[
+        'selenium',
+    ],
     scripts=[],
     zip_safe=False,
     data_files = data_files,

@@ -16,6 +16,7 @@ import re
 
 from BasicAuthTransport import BasicAuthTransport
 import xmlrpclib
+import bkr.timeout_xmlrpclib
 
 # from bkr.server import json
 # import logging
@@ -228,7 +229,7 @@ class LabControllers(RPCRoot):
             labcontroller = LabController.by_id(kw['id'])
             now = time.time()
             url = "http://%s/cobbler_api" % labcontroller.fqdn
-            remote = xmlrpclib.ServerProxy(url)
+            remote = bkr.timeout_xmlrpclib.ServerProxy(url)
             try:
                 token = remote.login(labcontroller.username,
                                  labcontroller.password)

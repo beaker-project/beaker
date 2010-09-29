@@ -96,7 +96,7 @@ $(document).ready(function() {
  <table class="show">
   <tr>
    <td class="title"><b>Recipe ID</b></td>
-   <td class="value"><a class="list" href="${tg.url('/recipes/%s' % recipe.id)}">${recipe.t_id}</a></td>
+   <td class="value">${recipe.link}</td>
    <td class="title"><b>Progress</b></td>
    <td class="value">${recipe.progress_bar}</td>
    <td class="title"><b>Status</b></td>

@@ -72,6 +72,7 @@ class Groups(AdminPage):
     def __init__(self,*args,**kw):
         kw['search_url'] =  url("/groups/by_name?anywhere=1")
         kw['search_name'] = 'group'
+        kw['widget_action'] = './admin'
         super(Groups,self).__init__(*args,**kw)
 
         self.search_col = Group.group_name

@@ -21,8 +21,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 """
 
 
-from turbogears import config
-
+from turbogears import config, url
+import cherrypy
 import turbomail
 import logging
 #logging.basicConfig()
@@ -73,3 +73,34 @@ def job_notify(job, sender=None):
               job.owner.email_address,
               '[Beaker Job Completion] [%s] %s %s' % (job.id, job.status, job.result),
               failed_recipes(job))
+
+def system_problem_report(system, description, recipe=None, reporter=None):
+    if reporter is not None:
+        sender = u'%s (via Beaker) <%s>' % (reporter.display_name, reporter.email_address)
+    else:
+        sender = config.get('beaker_email')
+    if not sender:
+        log.warning("beaker_email not defined in app.cfg; unable to send mail")
+        return
+    body = [_(u'A Beaker user has reported a problem with system %s.') % system.fqdn, '']
+    if reporter is not None:
+        body.append(_(u'Reported by: %s') % reporter.display_name)
+    if recipe is not None:
+        body.append(_(u'Related to: %s <%s%s>') % (recipe.t_id,
+                cherrypy.request.base, url('/recipes/%s' % recipe.id)))
+    body.extend(['', _(u'Problem description:'), description])
+    send_mail(sender, system.owner.email_address,
+            _(u'Problem reported for %s') % system.fqdn, '\n'.join(body))
+
+def broken_system_notify(system, reason, recipe=None):
+    sender = config.get('beaker_email')
+    if not sender:
+        log.warning("beaker_email not defined in app.cfg; unable to send mail")
+        return
+    body = [_(u'Beaker has automatically marked system %s as broken, due to:') % system.fqdn, '',
+            reason, '', unicode(_(u'Please investigate this error and take appropriate action.')), '']
+    if recipe:
+        body.append(_(u'Failure occurred in %s') % recipe.t_id)
+    send_mail(sender, system.owner.email_address,
+            _(u'System %s automatically marked broken') % system.fqdn,
+            '\n'.join(body))

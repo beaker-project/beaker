@@ -147,6 +147,7 @@ from bkr.server.model import system_types
                         <img class="corner_inset_right" alt="" src="${tg.url('/static/images/corner_inset_right.png')}"/>
                     </li>
                     <li><a href="${tg.url('/groups/admin')}">Groups</a></li>
+                    <li><a href="${tg.url('/retentiontag/admin')}">Retention Tags</a></li>
                     <li><a href="${tg.url('/labcontrollers')}">Lab Controllers</a></li>
                     <li><a href="${tg.url('/powertypes')}">Power Types</a></li>
                     <li><a href="${tg.url('/keytypes')}">Key Types</a></li>

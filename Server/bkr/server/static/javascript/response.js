@@ -45,7 +45,7 @@ AckPanel.prototype.update_results = function (result) {
         return_msg.fadeOut(1000)
 
     } else {
-        var return_msg = $("<span></span>").html(text).css('background-color',colour).attr('id','response_'+rs_id+'_'+response_type).addClass('rounded-side-pad')
+        var return_msg = $("<span></span>").html(text).css('background-color',colour).css('display','inline-block').css('margin','1em 0 0 2em').attr('id','response_'+rs_id+'_'+response_type).addClass('rounded-side-pad')
         $('#response_'+rs_id).after(return_msg).fadeIn("slow")
         return_msg.fadeOut(1000)
     }
