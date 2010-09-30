@@ -3676,7 +3676,7 @@ class RecipeSet(TaskBase):
     @classmethod
     def complete_delta(cls,delta):
         delta = timedelta(**delta)
-        query = cls.query().join('recipes').filter(and_(Recipe.finish_time > datetime.utcnow() - delta,
+        query = cls.query().join('recipes').filter(and_(Recipe.finish_time < datetime.utcnow() - delta,
             cls.status_id.in_(TaskStatus.by_name(u'Completed').id,TaskStatus.by_name(u'Aborted').id,TaskStatus.by_name(u'Cancelled').id)))
         return query
 

@@ -2,8 +2,8 @@
 %{!?pyver: %global pyver %(%{__python} -c "import sys ; print sys.version[:3]")}
 
 Name:           beaker
-Version:        0.5.57
-Release:        1%{?dist}
+Version:        0.5.58
+Release:        2%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -142,7 +142,7 @@ fi
 %files server
 %defattr(-,root,root,-)
 %doc Server/README
-%doc SchemaUpgrades/upgrade_*.sql
+%doc SchemaUpgrades/upgrade_*
 %{python_sitelib}/bkr/server/
 %{python_sitelib}/bkr.server-%{version}-*
 %{python_sitelib}/bkr.server-%{version}-py%{pyver}.egg-info/
@@ -191,6 +191,219 @@ fi
 %attr(-,apache,root) %dir %{_localstatedir}/run/%{name}-lab-controller
 
 %changelog
+* Wed Sep 29 2010 Raymond Mancy <rmancy@redhat.com> 0.5.58-2
+- minor fixes for beaker-watchdog.
+
+* Wed Sep 29 2010 Raymond Mancy <rmancy@redhat.com> 0.5.58-1
+- Added downgrade instructions to upgrade txt (rmancy@redhat.com)
+- we don't transform installPackage and we leave the invalid attribute
+  testrepo. (rmancy@redhat.com)
+- Change to xsd which allows elements to be in no particular order
+  (rmancy@redhat.com)
+- completeDays args passed to job-list is now exclusive, rather than inclusive
+  also not allowing integer's less than 1 into completeDays (rmancy@redhat.com)
+- update specfile to bundle new upgrade notes files (which are .txt instead of
+  .sql) (dcallagh@redhat.com)
+- fix bad merge (bpeck@redhat.com)
+- Merge branch 'bz636651' into develop (rmancy@redhat.com)
+- bz631971 - prototype now showing in reserve_systems (rmancy@redhat.com)
+- bz634033 - Remove machines from reserve report that have ben reserved via
+  RHTS (rmancy@redhat.com)
+- Merge branch 'develop' of ssh://rmancy@git.fedorahosted.org/git/beaker into
+  develop (rmancy@redhat.com)
+- Merge branch 'bz629888' into develop (rmancy@redhat.com)
+- Test for taking systems (rmancy@redhat.com)
+- bz629888 - group member can now take (rmancy@redhat.com)
+- fix typo in /report_problem error message (dcallagh@redhat.com)
+- add new retention_tag attribute to XSD (dcallagh@redhat.com)
+- avoid duplicate group names (dcallagh@redhat.com)
+- fix some unicode SAWarnings which were annoying me (dcallagh@redhat.com)
+- Merge branch 'selenium-tests' into develop (dcallagh@redhat.com)
+- Merge branch 'bz591652' into develop (dcallagh@redhat.com)
+- Merge branch 'bz612227' into develop (dcallagh@redhat.com)
+- if RecipeSet has a constructor, it has to explicitly handle any args passed
+  to it (super() does not invoke the sqlalchemy magic) (dcallagh@redhat.com)
+- this file is replaced by upgrade_0.5.58.txt (dcallagh@redhat.com)
+- Fixed up SQL alter table, removed create tables as they are redundant
+  (rmancy@redhat.com)
+- Added ability to change colspan of retention and priority cols
+  (rmancy@redhat.com)
+- Fix problem with RecipeSet __init__ and RetentionTag __init__ and table
+  schema (rmancy@redhat.com)
+- Merge branch 'bz595801' into develop (rmancy@redhat.com)
+- bz595801 - This is the first go at adding retention tags. Admins can add and
+  change default settings. They are picked up in recipesets,            There
+  is an interface in the jobs page to change the retention tag. Also job-list
+  is a valid command            which will list jobs by family,tag,number of
+  days complete for, or any combination of these. (rmancy@redhat.com)
+- bz620605 - Introduction of Automated status (rmancy@redhat.com)
+- Automatic commit of package [beaker] release [0.5.56-1]. (rmancy@redhat.com)
+- bz593560 - Do over of the reserve report filter. (rmancy@redhat.com)
+- additional logging (bpeck@redhat.com)
+- only ask the scheduler for active and expired watchdogs every 60 seconds.
+  (bpeck@redhat.com)
+- don't call parent __init__ on Monitor class. (bpeck@redhat.com)
+- apparently gettext gives us a lazystring which has to be coerced to a real
+  type (weird) (dcallagh@redhat.com)
+- there is no cherrypy.request in beakerd, so we have no nice way of producing
+  an absolute url (dcallagh@redhat.com)
+- minor chnage.  show debug line before sleep. (bpeck@redhat.com)
+- don't remove the monitor in the expired watchdog code. (bpeck@redhat.com)
+- Merge branch 'bz634702' into develop (bpeck@redhat.com)
+- bz636651 - re-structure beaker-watchdog to not fork a separate process per
+  recipe. (bpeck@redhat.com)
+- the tree_path will not be available if the distro has been expired from the
+  lab. (bpeck@redhat.com)
+- bz591652 - automatically mark systems as broken if cobbler task fails
+  (dcallagh@redhat.com)
+- selenium test for bz612227 XSD validation warning (dcallagh@redhat.com)
+- Merge branch 'bz612227' into selenium-tests (dcallagh@redhat.com)
+- add python-lxml to Requires for Server and Client (using it for XSD
+  validation) (dcallagh@redhat.com)
+- bz612227 - validate against XSD in bkr job-submit (dcallagh@redhat.com)
+- bz612227 - warn users before accepting job XML which does not validate
+  (dcallagh@redhat.com)
+- bz612227 - evaluate hostRequires at job submission time, to catch errors in
+  XML (dcallagh@redhat.com)
+- can catch multiple exception classes, instead of repeating the except clause
+  (dcallagh@redhat.com)
+- some additions to .gitignore (dcallagh@redhat.com)
+- use %(package_dir)s for static locations, so that we can run from a working
+  copy or a system-wide install (dcallagh@redhat.com)
+- change selenium install location to /usr/local/share/selenium
+  (dcallagh@redhat.com)
+- Merge branch 'develop' into selenium-tests (dcallagh@redhat.com)
+- Record the last time osversion.trigger ran so we can only process new distros
+  (bpeck@redhat.com)
+- link=Groups locator is ambiguous, use an xpath instead (dcallagh@redhat.com)
+- Merge branch 'bz629422' into develop (dcallagh@redhat.com)
+- Merge branch 'bz631421' into develop (dcallagh@redhat.com)
+- Merge branch 'bz623603' into develop (dcallagh@redhat.com)
+- moved ReportProblemForm widget into bkr.server.widgets, added missing super()
+  call (dcallagh@redhat.com)
+- a bunch of fiddling, to get all the tests to pass (yay!)
+  (dcallagh@redhat.com)
+- execute SQL through sqlalchemy instead of MySQLdb directly, in order to re-
+  use config etc (dcallagh@redhat.com)
+- create_user was breaking my tests, changed it. Still seems to be breaking
+  stuff. will look at later (rmancy@redhat.com)
+- Merge branch 'develop' into selenium-tests (dcallagh@redhat.com)
+- Some of the selenium tests (rmancy@redhat.com)
+- Merge branch '634247' into develop (bpeck@redhat.com)
+- Merge branch 'bz633885' into develop (bpeck@redhat.com)
+- Merge branch 'master' into develop (bpeck@redhat.com)
+- fix except code to handle cobbler xmlrpc errors. (bpeck@redhat.com)
+- only package up the consolidated upgrade_xxx.sql scripts. (bpeck@redhat.com)
+- bz629422 - disable TurboGears scheduler (dcallagh@redhat.com)
+- oops, update_data is deprecated (update_params is what I meant)
+  (dcallagh@redhat.com)
+- selenium test for bz623603 (dcallagh@redhat.com)
+- Merge branch 'bz623603' into selenium-tests (dcallagh@redhat.com)
+- full path to bkr.timeout_xmlrpclib. (bpeck@redhat.com)
+- update spec file to include timeout_xmlrpclib.py (bpeck@redhat.com)
+- add missing timeout code. (bpeck@redhat.com)
+- add timeout_xmlrpclib.ServerProxy() to keep us from getting stuck.
+  (bpeck@redhat.com)
+- Merge branch 'develop' of ssh://git.fedorahosted.org/git/beaker into develop
+  (bpeck@redhat.com)
+- added sql upgrade commands for 0.5.56->0.5.57. (bpeck@redhat.com)
+- selenium test for bz631421 (dcallagh@redhat.com)
+- Merge branch 'bz631421' into selenium-tests (dcallagh@redhat.com)
+- set page title correctly in form-post.kid (dcallagh@redhat.com)
+- bz631421 - fix page title for systems (dcallagh@redhat.com)
+- bz623603 - allow users to report a problem with a system
+  (dcallagh@redhat.com)
+- depend on TurboMail >= 3.0, v2.0 doesn't work (dcallagh@redhat.com)
+- unit test for bz612227 (dcallagh@redhat.com)
+- Merge branch 'bz612227' into selenium-tests (dcallagh@redhat.com)
+- bz612227 - evaluate hostRequires at job submission time, to catch errors in
+  XML (dcallagh@redhat.com)
+- can catch multiple exception classes, instead of repeating the except clause
+  (dcallagh@redhat.com)
+- create admin user when initialising db (this fixes test_add_user.py)
+  (dcallagh@redhat.com)
+- read from subprocesses line-at-a-time, to ensure lines don't get buffered
+  across test boundaries (dcallagh@redhat.com)
+- tests need to be not executable, otherwise nose will skip them
+  (dcallagh@redhat.com)
+- this particular test can reuse firefox sessions, to save time
+  (dcallagh@redhat.com)
+- reader thread, to allow nose to capture subprocesses' stdout
+  (dcallagh@redhat.com)
+- use unicode objects to keep sqlalchemy happy (dcallagh@redhat.com)
+- declare selenium client as a test dependency (dcallagh@redhat.com)
+- introduced new data_setup module for setting up test data; using that for
+  thorough, repeatable, passing selenium tests for recipe data grid
+  (dcallagh@redhat.com)
+- Merge branch 'bz629147' into selenium-tests (dcallagh@redhat.com)
+- need to pass kwargs to model constructors (dcallagh@redhat.com)
+- the generated SQL comes out differently here if we have configured MySQL as
+  the engine (dcallagh@redhat.com)
+- cleaned up tests to use correct TurboGears config; eliminated duplicate
+  config loading and logging (dcallagh@redhat.com)
+- Merge branch 'selenium-tests' of ssh://rmancy@git.fedorahosted.org/git/beaker
+  into selenium-tests (rmancy@redhat.com)
+- Changes to deal with seting up DB in test mode (rmancy@redhat.com)
+- if selenium/beaker is already running, warn and continue (without starting it
+  again) (dcallagh@redhat.com)
+- oops, forgot to update logger names for package move (dcallagh@redhat.com)
+- fixed recipes test to correctly assert ordering for id column
+  (dcallagh@redhat.com)
+- Merge branch 'bz629147' into selenium-tests (dcallagh@redhat.com)
+- wait for beaker and selenium-server to start listening during setup (instead
+  of waiting for a hardcoded delay) (dcallagh@redhat.com)
+- moved selenium tests into bkr/server/test/selenium; also start beaker-server
+  in package setup (dcallagh@redhat.com)
+- first go at setting up selenium tests (dcallagh@redhat.com)
+
+* Wed Sep 29 2010 Raymond Mancy <rmancy@redhat.com> 0.5.57-1
+- we don't transform installPackage and we leave the invalid attribute
+  testrepo. (rmancy@redhat.com)
+- Change to xsd which allows elements to be in no particular order
+  (rmancy@redhat.com)
+- completeDays args passed to job-list is now exclusive, rather than inclusive
+- bz631971 - prototype now showing in reserve_systems (rmancy@redhat.com)
+- bz634033 - Remove machines from reserve report that have ben reserved via
+  RHTS (rmancy@redhat.com)
+- Test for taking systems (rmancy@redhat.com)
+- bz629888 - group member can now take (rmancy@redhat.com)
+- if RecipeSet has a constructor, it has to explicitly handle any args passed
+  to it (super() does not invoke the sqlalchemy magic) (dcallagh@redhat.com)
+- this file is replaced by upgrade_0.5.58.txt (dcallagh@redhat.com)
+- Fixed up SQL alter table, removed create tables as they are redundant
+  (rmancy@redhat.com)
+- Added ability to change colspan of retention and priority cols
+  (rmancy@redhat.com)
+- Fix problem with RecipeSet __init__ and RetentionTag __init__ and table
+  schema (rmancy@redhat.com)
+- bz595801 - This is the first go at adding retention tags. Admins can add and
+  change default settings. They are picked up in recipesets,            There
+  is an interface in the jobs page to change the retention tag. Also job-list
+  is a valid command            which will list jobs by family,tag,number of
+  days complete for, or any combination of these. (rmancy@redhat.com)
+- only ask the scheduler for active and expired watchdogs every 60 seconds.
+  (bpeck@redhat.com)
+- bz636651 - re-structure beaker-watchdog to not fork a separate process per
+  recipe. (bpeck@redhat.com)
+- the tree_path will not be available if the distro has been expired from the
+  lab. (bpeck@redhat.com)
+- bz591652 - automatically mark systems as broken if cobbler task fails
+  (dcallagh@redhat.com)
+- bz612227 - validate against XSD in bkr job-submit (dcallagh@redhat.com)
+- bz612227 - warn users before accepting job XML which does not validate
+  (dcallagh@redhat.com)
+- bz612227 - evaluate hostRequires at job submission time, to catch errors in
+  XML (dcallagh@redhat.com)
+- Record the last time osversion.trigger ran so we can only process new distros
+  (bpeck@redhat.com)
+- Some of the selenium tests (rmancy@redhat.com)
+- fix except code to handle cobbler xmlrpc errors. (bpeck@redhat.com)
+- only package up the consolidated upgrade_xxx.sql scripts. (bpeck@redhat.com)
+- bz629422 - disable TurboGears scheduler (dcallagh@redhat.com)
+- update spec file to include timeout_xmlrpclib.py (bpeck@redhat.com)
+- add missing timeout code. (bpeck@redhat.com)
+- add timeout_xmlrpclib.ServerProxy() to keep us from getting stuck.
+  (bpeck@redhat.com)
 * Thu Sep 16 2010 Raymond Mancy <rmancy@redhat.com> 0.5.57-1
 - bz620605 - Introduction of Automated status (rmancy@redhat.com)
 - fix beaker-watchdog to not leave zombies around. (bpeck@redhat.com)
