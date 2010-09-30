@@ -3484,6 +3484,10 @@ class Job(TaskBase):
     def t_id(self):
         return "J:%s" % self.id
     t_id = property(t_id)
+
+    def can_admin(self, user=None):
+        """Returns True iff the given user can administer this Job."""
+        return bool(user) and (self.owner == user or user.is_admin())
   
 class BeakerTag(object):
 
