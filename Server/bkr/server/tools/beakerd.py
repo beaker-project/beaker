@@ -341,7 +341,7 @@ def scheduled_recipes(*args):
         return False
     log.debug("Entering scheduled_recipes routine")
     for _recipeset in recipesets:
-        log.info("scheduled_recipes: RS:%s" % recipeset.id)
+        log.info("scheduled_recipes: RS:%s" % _recipeset.id)
         session.begin()
         try:
             recipeset = RecipeSet.by_id(_recipeset.id)
