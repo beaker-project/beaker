@@ -79,9 +79,10 @@ def new_recipes(*args):
     if not recipes.count():
         return False
     log.debug("Entering new_recipes routine")
-    for recipe in recipes:
+    for _recipe in recipes:
         session.begin()
         try:
+            recipe = Recipe.by_id(_recipe.id)
             if recipe.distro:
                 systems = recipe.distro.systems_filter(
                                             recipe.recipeset.job.owner,
@@ -103,7 +104,7 @@ def new_recipes(*args):
         except exceptions.Exception, e:
             session.rollback()
             log.error("Failed to commit due to :%s" % e)
-    session.close()
+        session.close()
     log.debug("Exiting new_recipes routine")
     return True
 
@@ -114,9 +115,10 @@ def processed_recipesets(*args):
     if not recipesets.count():
         return False
     log.debug("Entering processed_recipes routine")
-    for recipeset in recipesets:
+    for _recipeset in recipesets:
         session.begin()
         try:
+            recipeset = RecipeSet.by_id(_recipeset.id)
             bad_l_controllers = set()
             # We only need to do this processing on multi-host recipes
             if len(recipeset.recipes) == 1:
@@ -216,7 +218,7 @@ def processed_recipesets(*args):
         except exceptions.Exception, e:
             session.rollback()
             log.error("Failed to commit due to :%s" % e)
-    session.close()
+        session.close()
     log.debug("Exiting processed_recipes routine")
     return True
 
@@ -247,9 +249,10 @@ def queued_recipes(*args):
     if not recipes.count():
         return False
     log.debug("Entering queued_recipes routine")
-    for recipe in recipes:
+    for _recipe in recipes:
         session.begin()
         try:
+            recipe = Recipe.by_id(_recipe.id)
             systems = recipe.dyn_systems.filter(and_(System.user==None,
                                                      System.status==automated))
             # Order systems by owner, then Group, finally shared for everyone.
@@ -318,7 +321,7 @@ def queued_recipes(*args):
         except exceptions.Exception, e:
             session.rollback()
             log.error("Failed to commit due to :%s" % e)
-    session.close()
+        session.close()
     log.debug("Exiting queued_recipes routine")
     return True
 
@@ -337,10 +340,11 @@ def scheduled_recipes(*args):
     if not recipesets:
         return False
     log.debug("Entering scheduled_recipes routine")
-    for recipeset in recipesets:
+    for _recipeset in recipesets:
         log.info("scheduled_recipes: RS:%s" % recipeset.id)
         session.begin()
         try:
+            recipeset = RecipeSet.by_id(_recipeset.id)
             # Go through each recipe in the recipeSet
             for recipe in recipeset.recipes:
                 # If one of the recipes gets aborted then don't try and run
@@ -420,7 +424,7 @@ def scheduled_recipes(*args):
         except exceptions.Exception, e:
             session.rollback()
             log.error("Failed to commit due to :%s" % e)
-    session.close()
+        session.close()
     log.debug("Exiting scheduled_recipes routine")
     return True
 
