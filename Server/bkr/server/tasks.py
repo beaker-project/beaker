@@ -300,6 +300,7 @@ class Tasks(RPCRoot):
         task.rpm = raw_taskinfo['hdr']['rpm']
         task.version = raw_taskinfo['hdr']['ver']
         task.description = tinfo.test_description
+        task.types = []
         task.bugzillas = []
         task.required = []
         task.runfor = []
