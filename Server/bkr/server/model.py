@@ -677,20 +677,16 @@ guest_recipe_table = Table('guest_recipe', metadata,
 
 machine_guest_map =Table('machine_guest_map',metadata,
         Column('machine_recipe_id', Integer,
-                ForeignKey('machine_recipe.id'),
-                nullable=False),
+                ForeignKey('machine_recipe.id', onupdate='CASCADE', ondelete='CASCADE')),
         Column('guest_recipe_id', Integer,
-                ForeignKey('recipe.id'),
-                nullable=False)
+                ForeignKey('recipe.id', onupdate='CASCADE', ondelete='CASCADE')),
 )
 
 system_recipe_map = Table('system_recipe_map', metadata,
         Column('system_id', Integer,
-                ForeignKey('system.id'),
-                nullable=False),
+                ForeignKey('system.id', onupdate='CASCADE', ondelete='CASCADE')),
         Column('recipe_id', Integer,
-                ForeignKey('recipe.id'),
-                nullable=False),
+                ForeignKey('recipe.id', onupdate='CASCADE', ondelete='CASCADE')),
 )
 
 recipe_tag_table = Table('recipe_tag',metadata,
@@ -700,11 +696,9 @@ recipe_tag_table = Table('recipe_tag',metadata,
 
 recipe_tag_map = Table('recipe_tag_map', metadata,
         Column('tag_id', Integer,
-               ForeignKey('recipe_tag.id'),
-               nullable=False),
+               ForeignKey('recipe_tag.id', onupdate='CASCADE', ondelete='CASCADE')),
         Column('recipe_id', Integer, 
-               ForeignKey('recipe.id'),
-               nullable=False),
+               ForeignKey('recipe.id', onupdate='CASCADE', ondelete='CASCADE')),
 )
 
 recipe_rpm_table =Table('recipe_rpm',metadata,
