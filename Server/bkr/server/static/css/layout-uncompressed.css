@@ -501,8 +501,10 @@ div.dd div.blue {
 
 /*
 ** CSS for alert/warn msgs etc
+*
+* XXX msg is not a real HTML element!
 */
-msg {
+msg, div.msg {
 
   -moz-border-radius: 0.35em;
   -webkit-border-radius: 0.35em;
@@ -512,14 +514,14 @@ msg {
 
 }
 
-msg.success {
+msg.success, div.msg.success {
   background:#00FF00; 
   font-weight:normal;
   padding: 1 1 1 1;
    
 }
 
-msg.warn { 
+msg.warn, div.msg.warn {
   color:white;
   font-weight:normal;
   background-color:red;
