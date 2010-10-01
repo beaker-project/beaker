@@ -238,7 +238,7 @@ class WatchFile(object):
                         # print out on the serial console
                         # this may abort the recipe depending on what the recipeSets
                         # watchdog behaviour is set to.
-                        self.proxy.extend_watchdog(self.watchdog['task_id'], 10)
+                        self.proxy.extend_watchdog(task()['id'], 10)
             if not line:
                 return False
             # If we didn't read our full blocksize and we are still growing
@@ -276,9 +276,10 @@ class Watchdog(ProxyHelper):
         self.logger.info("Entering active_watchdogs")
         active_watchdogs = []
         for watchdog in self.hub.recipes.tasks.watchdogs('active'):
-            active_watchdogs.append(watchdog['system'])
-            if watchdog['system'] not in self.watchdogs:
-                self.watchdogs[watchdog['system']] = Monitor(watchdog,self.logger,self.conf,self.hub)
+            watchdog_key = '%s:%s' % (watchdog['system'], watchdog['recipe_id'])
+            active_watchdogs.append(watchdog_key)
+            if watchdog_key not in self.watchdogs:
+                self.watchdogs[watchdog_key] = Monitor(watchdog,self.logger,self.conf,self.hub)
         # Remove Monitor if watchdog does not exist.
         for watchdog_system in self.watchdogs.copy():
             if watchdog_system not in active_watchdogs:
