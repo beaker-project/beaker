@@ -191,6 +191,11 @@ fi
 %attr(-,apache,root) %dir %{_localstatedir}/run/%{name}-lab-controller
 
 %changelog
+* Fri Oct 01 2010 Bill Peck <bpeck@redhat.com> 0.5.58-3
+- beaker-watchdog monitor key needs to include the recipeid to keep us
+  from monitoring the wrong recipe.
+- remove recipe_taskid from watchdog list, we won't always have one. (bpeck@redhat.com)
+
 * Wed Sep 29 2010 Raymond Mancy <rmancy@redhat.com> 0.5.58-2
 - minor fixes for beaker-watchdog.
 
