@@ -69,7 +69,7 @@ def create_user(user_name=None, password=None, display_name=None):
     return user
 
 def add_system_lab_controller(system,lc): 
-    system.lab_controller_id = lc.id
+    system.lab_controller = lc
 
 def create_group():
     # tg_group.group_name column is VARCHAR(16)

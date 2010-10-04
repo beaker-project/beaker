@@ -46,7 +46,7 @@ from bkr.server.recipes import Recipes
 from bkr.server.recipesets import RecipeSets
 from bkr.server.tasks import Tasks
 from bkr.server.task_actions import TaskActions
-from bkr.server.controller_utilities import Utility, SystemSaveForm, SearchOptions
+from bkr.server.controller_utilities import Utility, SystemSaveForm, SearchOptions, SystemTab
 from cherrypy import request, response
 from cherrypy.lib.cptools import serve_file
 from tg_expanding_form_widget.tg_expanding_form_widget import ExpandingForm
@@ -839,34 +839,16 @@ class Root(RPCRoot):
                 options['loan_text'] = ' (Loan)'
             if system.current_loan(our_user):
                 options['loan_text'] = ' (Return)'
-
+             
             if system.can_share(our_user) and system.can_provision_now(our_user): #Has privs and machine is available, can take
                 options['user_change_text'] = ' (Take)'
-                self.provision_now_rights = True
-                self.will_provision = False 
-            elif not system.can_provision_now(our_user): # If you don't have privs to take
-                if system.is_available(our_user): #And you have access to the machine, schedule
-                    self.provision_action = '/schedule_provision'
-                    self.provision_now_rights = False
-                    self.will_provision = True
-                else: #No privs to machine at all
-                    self.will_provision = False  
-                    self.provision_now_rights = False 
-            elif system.can_provision_now(our_user) and currently_held: #Has privs, and we are current user, we can provision
-                self.provision_action = '/action_provision'
-                self.provision_now_rights = True
-                self.will_provision = True
-            elif system.can_provision_now(our_user) and not currently_held: #Has privs, not current user, You need to Take it first
-                self.provision_now_rights = True
-                self.will_provision = False
-            else:
-                log.error('Could not follow logic when determining user access to machine')
-                self.will_provision = False
-                self.provision_now_rights = False
 
             if system.current_user(our_user):
                 options['user_change_text'] = ' (Return)'
                 is_user = True
+
+            self.provision_now_rights,self.will_provision,self.provision_action = \
+                SystemTab.get_provision_perms(system, our_user, currently_held)
 
         if 'activities_found' in histories_return: 
             historical_data = histories_return['activities_found']

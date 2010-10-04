@@ -1234,7 +1234,7 @@ class TasksWidget(CompoundWidget):
     params = ['tasks', 'hidden','action']
     member_widgets = ['link'] 
     action = './do_search'
-    link = LinkRemoteFunction(name='link', method='post')
+    link = LinkRemoteFunction(name='link')
 
 class RecipeTasksWidget(TasksWidget):
     
