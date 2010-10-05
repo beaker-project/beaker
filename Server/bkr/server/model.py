@@ -2123,8 +2123,10 @@ $SNIPPET("rhts_post")
         mail.broken_system_notify(self, reason, recipe)
 
     def suspicious_abort(self):
+        if self.status == SystemStatus.by_name(u'Broken'):
+            return # nothing to do
         if self.type != SystemType.by_name(u'Machine'):
-            return
+            return # prototypes get more leeway, and virtual machines can't really "break"...
         # Since its last status change, has this system had an 
         # uninterrupted run of aborted recipes leading up to this one, with 
         # at least two different STABLE distros?
