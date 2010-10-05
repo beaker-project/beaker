@@ -2128,24 +2128,25 @@ $SNIPPET("rhts_post")
         # Since its last status change, has this system had an 
         # uninterrupted run of aborted recipes leading up to this one, with 
         # at least two different STABLE distros?
-        outer_recipe = recipe_table.alias()
         status_change_subquery = select([func.max(activity_table.c.created)],
             from_obj=activity_table.join(system_activity_table))\
             .where(and_(
-                system_activity_table.c.system_id == outer_recipe.c.system_id,
+                system_activity_table.c.system_id == self.id,
                 activity_table.c.field_name == u'Status',
                 activity_table.c.action == u'Changed'))
         nonaborted_recipe_subquery = select([func.max(recipe_table.c.finish_time)],
             from_obj=recipe_table.join(system_table))\
             .where(and_(
                 recipe_table.c.status_id != TaskStatus.by_name(u'Aborted').id,
-                recipe_table.c.system_id == outer_recipe.c.system_id))
-        query = select([func.count(outer_recipe.c.distro_id.distinct())],
-            from_obj=outer_recipe.join(distro_table).join(distro_tag_map))\
+                recipe_table.c.system_id == self.id))
+        query = select([func.count(recipe_table.c.distro_id.distinct())],
+            from_obj=recipe_table.join(distro_table).join(distro_tag_map)
+                .join(system_table, onclause=recipe_table.c.system_id == system_table.c.id))\
             .where(and_(
+                system_table.c.id == self.id,
                 distro_tag_map.c.distro_tag_id == DistroTag.by_tag(u'STABLE').id,
-                outer_recipe.c.start_time > status_change_subquery,
-                outer_recipe.c.finish_time > nonaborted_recipe_subquery))
+                recipe_table.c.start_time > status_change_subquery,
+                recipe_table.c.finish_time > nonaborted_recipe_subquery))
         if session.execute(query).scalar() >= 2:
             # Broken!
             reason = unicode(_(u'System has a run of aborted recipes '
