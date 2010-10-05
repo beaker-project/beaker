@@ -307,6 +307,7 @@ class Tasks(RPCRoot):
         task.needs = []
         task.excluded_osmajor = []
         task.excluded_arch = []
+        includeFamily=[]
         for family in tinfo.releases:
             if family.startswith('-'):
                 try:
@@ -314,6 +315,12 @@ class Tasks(RPCRoot):
                         task.excluded_osmajor.append(TaskExcludeOSMajor(osmajor=OSMajor.by_name_alias(family.lstrip('-'))))
                 except InvalidRequestError:
                     pass
+            else:
+                includeFamily.append(OSMajor.by_name_alias(family).osmajor)
+        families = set([ '%s' % family.osmajor for family in OSMajor.query()])
+        for family in families.difference(set(includeFamily)):
+            if family not in task.excluded_osmajor:
+                task.excluded_osmajor.append(TaskExcludeOSMajor(osmajor=OSMajor.by_name_alias(family)))
         if tinfo.test_archs:
             arches = set([ '%s' % arch.arch for arch in Arch.query()])
             for arch in arches.difference(set(tinfo.test_archs)):
