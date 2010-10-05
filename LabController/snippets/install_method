@@ -1,0 +1,11 @@
+## The following code supports method=http|ftp from ks_meta to change the install method
+## Only perform this on nfs imports.
+## Remove nfs://SERVER: from $tree
+#set $tree = $tree.split(':')[2:][0]
+## If method_dirs_to_eat is defined, eat that many slashes
+#if $mgmt_parameters.has_key("method_dirs_to_eat")
+#set $tree = '/'.join($tree.split('/')[$mgmt_parameters["method_dirs_to_eat"]:])
+#end if
+#set $tree = "%s/%s" % ($mgmt_parameters["method_%s" % $method], $tree)
+url #slurp
+--url=$tree
