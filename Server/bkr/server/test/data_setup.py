@@ -18,9 +18,15 @@
 
 import logging
 import re
+import time
+import datetime
 import sqlalchemy
 import turbogears.config, turbogears.database
-from bkr.server.model import *
+from bkr.server.model import LabController, User, Group, Distro, Breed, Arch, \
+        OSMajor, OSVersion, SystemActivity, Task, MachineRecipe, System, \
+        SystemType, SystemStatus, Recipe, RecipeTask, RecipeTaskResult, \
+        Device, TaskResult, TaskStatus, Job, RecipeSet, TaskPriority, \
+        LabControllerDistro
 
 log = logging.getLogger(__name__)
 
@@ -84,13 +90,15 @@ def add_group_to_system(system,group):
 
 def create_distro(name=u'DAN6-Server-U9', breed=u'Dan',
         osmajor=u'DansAwesomeLinuxServer6', osminor=u'9',
-        arch=u'i386', method=u'http', virt=False):
+        arch=u'i386', method=u'http', virt=False, tags=None):
     install_name = u'%s-%d_%s-%s' % (name, int(time.time() * 1000), method, arch)
     distro = Distro(install_name=install_name)
     distro.name = name
     distro.method = method
     distro.breed = Breed.lazy_create(breed=breed)
     distro.virt = virt
+    if tags:
+        distro.tags.extend(tags)
     osmajor = OSMajor.lazy_create(osmajor=osmajor)
     try:
         distro.osversion = OSVersion.by_name(osmajor, osminor)
@@ -104,7 +112,9 @@ def create_distro(name=u'DAN6-Server-U9', breed=u'Dan',
     return distro
 
 def create_system(arch=u'i386', type=u'Machine', status=u'Automated',
-    owner=None,fqdn=None, **kw):
+        owner=None, fqdn=None, **kw):
+    if owner is None:
+        owner = create_user()
     if fqdn is None:
         fqdn = u'system%d.testdata' % int(time.time() * 1000)
     system = System(fqdn=fqdn,type=SystemType.by_name(type), owner=owner, 
@@ -125,28 +135,43 @@ def create_task(name=None):
     task = Task.lazy_create(name=name)
     return task
 
-def create_job(owner=None, distro=None, task_name=u'/distribution/reservesys'):
+def create_recipe(system=None, distro=None, task_name=u'/distribution/reservesys'):
+    recipe = MachineRecipe(ttasks=1, system=system,
+            distro=distro or Distro.query()[0])
+    recipe.append_tasks(RecipeTask(task=create_task(name=task_name)))
+    return recipe
+
+def create_job_for_recipes(recipes, owner=None):
     if owner is None:
         owner = create_user()
     job = Job(whiteboard=u'job %d' % int(time.time() * 1000), ttasks=1, owner=owner)
-    recipe_set = RecipeSet(ttasks=1, priority=TaskPriority.default_priority())
-    recipe = MachineRecipe(ttasks=1, distro=distro or Distro.query()[0])
-    recipe.append_tasks(RecipeTask(task=create_task(name=task_name)))
-    recipe_set.recipes.append(recipe)
+    recipe_set = RecipeSet(ttasks=sum(r.ttasks for r in recipes),
+            priority=TaskPriority.default_priority())
+    recipe_set.recipes.extend(recipes)
     job.recipesets.append(recipe_set)
     log.debug('Created %s', job.t_id)
     return job
 
-def create_completed_job(result=u'Pass', **kwargs):
+def create_job(owner=None, distro=None, task_name=u'/distribution/reservesys'):
+    recipe = create_recipe(distro=distro, task_name=task_name)
+    return create_job_for_recipes([recipe], owner=owner)
+
+def create_completed_job(result=u'Pass', system=None, **kwargs):
     job = create_job(**kwargs)
     for recipe in job.all_recipes:
-        recipe.system = create_system(arch=recipe.arch)
+        if system is None:
+            recipe.system = create_system(arch=recipe.arch)
+        else:
+            recipe.system = system
+        for recipe_task in recipe.tasks:
+            recipe_task.status = TaskStatus.by_name(u'Running')
+        recipe.update_status()
         for recipe_task in recipe.tasks:
             rtr = RecipeTaskResult(recipetask=recipe_task,
                     result=TaskResult.by_name(result))
             recipe_task.status = TaskStatus.by_name(u'Completed')
             recipe_task.results.append(rtr)
-    job.update_status()
+        recipe.update_status()
     log.debug('Marked %s as complete with result %s', job.t_id, result)
     return job
 

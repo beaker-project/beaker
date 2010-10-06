@@ -2122,6 +2122,46 @@ $SNIPPET("rhts_post")
         self.status = SystemStatus.by_name(u'Broken')
         mail.broken_system_notify(self, reason, recipe)
 
+    def suspicious_abort(self):
+        if self.status == SystemStatus.by_name(u'Broken'):
+            return # nothing to do
+        if self.type != SystemType.by_name(u'Machine'):
+            return # prototypes get more leeway, and virtual machines can't really "break"...
+        # Since its last status change, has this system had an 
+        # uninterrupted run of aborted recipes leading up to this one, with 
+        # at least two different STABLE distros?
+        status_change_subquery = select([func.max(activity_table.c.created)],
+            from_obj=activity_table.join(system_activity_table))\
+            .where(and_(
+                system_activity_table.c.system_id == self.id,
+                activity_table.c.field_name == u'Status',
+                activity_table.c.action == u'Changed'))
+        nonaborted_recipe_subquery = select([func.max(recipe_table.c.finish_time)],
+            from_obj=recipe_table.join(system_table))\
+            .where(and_(
+                recipe_table.c.status_id != TaskStatus.by_name(u'Aborted').id,
+                recipe_table.c.system_id == self.id))
+        query = select([func.count(recipe_table.c.distro_id.distinct())],
+            from_obj=recipe_table.join(distro_table).join(distro_tag_map)
+                .join(system_table, onclause=recipe_table.c.system_id == system_table.c.id))\
+            .where(and_(
+                system_table.c.id == self.id,
+                distro_tag_map.c.distro_tag_id == DistroTag.by_tag(u'STABLE').id,
+                recipe_table.c.start_time > status_change_subquery,
+                recipe_table.c.finish_time > nonaborted_recipe_subquery))
+        if session.execute(query).scalar() >= 2:
+            # Broken!
+            reason = unicode(_(u'System has a run of aborted recipes '
+                    'with STABLE distros'))
+            log.warn(reason)
+            old_status = self.status
+            self.mark_broken(reason=reason)
+            self.activity.append(
+                    SystemActivity(service=u'Scheduler',
+                    action=u'Changed', field_name=u'Status',
+                    old_value=old_status,
+                    new_value=self.status))
+
 # for property in System.mapper.iterate_properties:
 #     print property.mapper.class_.__name__
 #     print property.key
@@ -4197,6 +4237,9 @@ class Recipe(TaskBase):
         """
         self._abort(msg)
         self.update_status()
+        session.flush() # XXX bad
+        if self.system is not None and u'STABLE' in self.distro.tags:
+            self.system.suspicious_abort()
 
     def _abort(self, msg=None):
         """
