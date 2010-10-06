@@ -171,13 +171,13 @@ test_password='$1$rhts$ShuaoxZPm2Dr79tpoP8NE.'
 ##
 ## TurboMail settings
 ##
-mail.on = False
+mail.on = True
 mail.manager = 'immediate'
 mail.transport = 'smtp'
 mail.provider = 'smtp'
-mail.smtp.server = '127.0.0.1'
+mail.smtp.server = '127.0.0.1:19999'
 
-beaker_email='root@localhost.localdomain'
+beaker_email='$SUBMITTER'
 
 
 # Authentication
