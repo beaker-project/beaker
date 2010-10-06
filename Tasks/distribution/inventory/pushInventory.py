@@ -94,6 +94,7 @@ def read_inventory():
     data['model'] = "%s" % profile.host.systemModel
     #data['FORMFACTOR'] = "%s" % profile.host.formfactor
     data['memory'] = int(memory['ram'])
+    data['Numa'] = {'nodes': profile.host.numaNodes}
 
     for VendorID, DeviceID, SubsysVendorID, SubsysDeviceID, Bus, Driver, Type, Description in profile.deviceIter():
         device = dict ( vendorID = "%04x" % (VendorID and VendorID or 0),

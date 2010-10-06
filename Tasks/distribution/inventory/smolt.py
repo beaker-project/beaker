@@ -40,6 +40,7 @@ import urlgrabber.grabber
 import sys
 from urlparse import urljoin
 from urllib import urlencode
+import glob
 
 smoonURL = 'http://smolt.fedoraproject.org/'
 smoltProtocol = '.91'
@@ -167,6 +168,7 @@ class Host:
         self.cpuModel = cpuInfo['model']
         self.numCpus = cpuInfo['count']
         self.cpuSpeed = cpuInfo['speed']
+        self.numaNodes = len(glob.glob('/sys/devices/system/node/node*')) #: number of NUMA nodes in the system, or 0 if not supported
         self.systemMemory = memory['ram']
         self.systemSwap = memory['swap']
         self.kernelVersion = os.uname()[2]
