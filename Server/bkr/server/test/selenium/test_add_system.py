@@ -36,7 +36,7 @@ class AddSystem(bkr.server.test.selenium.SeleniumTestCase):
         #                  type,private,shared,vendor,model,location,mac]
         try:
             sel = self.selenium
-            sel.open("/")
+            sel.open("")
             sel.wait_for_page_to_load("3000")
             sel.click("//div[@id='fedora-content']/a")
             sel.wait_for_page_to_load("3000")
@@ -73,7 +73,7 @@ class AddSystem(bkr.server.test.selenium.SeleniumTestCase):
         #                  type,private,shared,vendor,model,location,mac]
         try:
             sel = self.selenium
-            sel.open("/")
+            sel.open("")
             sel.wait_for_page_to_load("3000")
             sel.click("//div[@id='fedora-content']/a")
             sel.wait_for_page_to_load("3000")
@@ -107,7 +107,7 @@ class AddSystem(bkr.server.test.selenium.SeleniumTestCase):
         #                  type,private,shared,vendor,model,location,mac]
         try:
             sel = self.selenium 
-            sel.open("/")
+            sel.open("")
             sel.wait_for_page_to_load("3000")
             sel.click("//div[@id='fedora-content']/a")
             sel.wait_for_page_to_load("3000")
@@ -140,7 +140,7 @@ class AddSystem(bkr.server.test.selenium.SeleniumTestCase):
         #                  type,private,shared,vendor,model,location,mac]
         try:
             sel = self.selenium 
-            sel.open("/")
+            sel.open("")
             sel.wait_for_page_to_load("3000")
             sel.click("//div[@id='fedora-content']/a")
             sel.wait_for_page_to_load("3000")
@@ -174,7 +174,7 @@ class AddSystem(bkr.server.test.selenium.SeleniumTestCase):
         #                  type,private,shared,vendor,model,location,mac]
         try:
             sel = self.selenium 
-            sel.open("/")
+            sel.open("")
             sel.wait_for_page_to_load("3000")
             sel.click("//div[@id='fedora-content']/a")
             sel.wait_for_page_to_load("3000")

@@ -24,7 +24,7 @@ class Menu(bkr.server.test.selenium.SeleniumTestCase):
        
     def test_menulist(self):
         sel = self.selenium
-        sel.open("/")
+        sel.open("")
         sel.click("link=All")
         sel.wait_for_page_to_load("3000")
         sel.click("link=My Systems") 

@@ -37,7 +37,7 @@ class SystemGroupUserTake(bkr.server.test.selenium.SeleniumTestCase):
         #Auto Machine
         session.flush()
         sel = self.selenium
-        sel.open("/")
+        sel.open("")
         sel.type("simplesearch", "%s" % self.automated_system.fqdn)
         sel.click("search")
         sel.wait_for_page_to_load("30000")
@@ -48,7 +48,7 @@ class SystemGroupUserTake(bkr.server.test.selenium.SeleniumTestCase):
 
         #Manual machine 
         #import pdb;pdb.set_trace()
-        sel.open("/")
+        sel.open("")
         sel.type("simplesearch", "%s" % self.manual_system.fqdn)
         sel.click("search")
         sel.wait_for_page_to_load("30000")
@@ -62,7 +62,7 @@ class SystemGroupUserTake(bkr.server.test.selenium.SeleniumTestCase):
         data_setup.add_group_to_system(self.automated_system,self.group) # Add systemgroup
         session.flush()
         sel = self.selenium
-        sel.open("/")
+        sel.open("")
         sel.type("simplesearch", "%s" % self.automated_system.fqdn)
         sel.click("search")
         sel.wait_for_page_to_load("30000")
@@ -75,7 +75,7 @@ class SystemGroupUserTake(bkr.server.test.selenium.SeleniumTestCase):
         data_setup.add_group_to_system(self.manual_system, self.group) # Add systemgroup
         session.flush()
         sel = self.selenium
-        sel.open("/")
+        sel.open("")
         sel.type("simplesearch", "%s" % self.manual_system.fqdn)
         sel.click("search")
         sel.wait_for_page_to_load("30000")
@@ -91,7 +91,7 @@ class SystemGroupUserTake(bkr.server.test.selenium.SeleniumTestCase):
         data_setup.add_user_to_group(self.user,self.group) # Add user to group 
         session.flush()
         sel = self.selenium
-        sel.open("/")
+        sel.open("")
         sel.type("simplesearch", "%s" % self.automated_system.fqdn)
         sel.click("search")
         sel.wait_for_page_to_load("30000")
@@ -104,7 +104,7 @@ class SystemGroupUserTake(bkr.server.test.selenium.SeleniumTestCase):
         data_setup.add_group_to_system(self.manual_system, self.group) # Add systemgroup
         session.flush()
         sel = self.selenium
-        sel.open("/")
+        sel.open("")
         sel.type("simplesearch", "%s" % self.manual_system.fqdn)
         sel.click("search")
         sel.wait_for_page_to_load("30000")

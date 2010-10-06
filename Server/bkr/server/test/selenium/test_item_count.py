@@ -20,7 +20,7 @@ class ItemCount(bkr.server.test.selenium.SeleniumTestCase):
     
     def test_itemcount(self):
         sel = self.selenium
-        sel.open("/")
+        sel.open("")
         self.login()
         sel.click("link=All")
         sel.wait_for_page_to_load("3000")

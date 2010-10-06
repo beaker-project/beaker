@@ -45,7 +45,7 @@ class SeleniumTestCase(unittest.TestCase):
     def logout(cls):
         sel = getattr(cls,'sel',None)
         if sel is not None:
-            sel.open("/")
+            sel.open("")
             sel.click("link=Logout")
             sel.wait_for_page_to_load("3000")
             return True 
@@ -59,7 +59,7 @@ class SeleniumTestCase(unittest.TestCase):
         
         sel = getattr(cls,'sel',None)
         if sel is not None:
-            sel.open("/")
+            sel.open("")
             sel.click("link=Login")
             sel.wait_for_page_to_load("3000")
             sel.type("user_name", user)

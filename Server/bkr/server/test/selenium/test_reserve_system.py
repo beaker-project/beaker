@@ -24,7 +24,7 @@ class ReserveSystem(bkr.server.test.selenium.SeleniumTestCase):
         except: pass
         self.login()
         sel = self.selenium
-        sel.open("/distros/")
+        sel.open("distros/")
         sel.type("simplesearch", "%s" % self.distro.name)
         sel.click("search")
         sel.wait_for_page_to_load("3000")
