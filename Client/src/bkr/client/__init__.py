@@ -159,6 +159,11 @@ class BeakerWorkflow(BeakerCommand):
             help="Installation source method (nfs/http) (optional)"
         )
         self.parser.add_option(
+            "--priority",
+            default="Normal",
+            help="Set the priority to this (Low,Medium,Normal,High,Urgent) (optional)"
+        )
+        self.parser.add_option(
             "--kernel_options",
             default=None,
             help="Boot arguments to supply (optional)"
@@ -309,6 +314,7 @@ class BeakerJob(BeakerBase):
 class BeakerRecipeSet(BeakerBase):
     def __init__(self, *args, **kwargs):
         self.node = self.doc.createElement('recipeSet')
+        self.node.setAttribute('priority', kwargs.get('priority', ''))
 
     def addRecipe(self, recipe):
         """ properly add a recipe to this recipeSet """
