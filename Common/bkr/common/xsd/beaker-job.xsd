@@ -88,8 +88,8 @@ See: http://www.w3.org/XML/2010/01/xml-model/
   <xs:complexType name="hostreq">
     <xs:group ref="hostreqs" minOccurs="0" maxOccurs="unbounded"/>
   </xs:complexType>
-  <xs:complexType name="recipe">
-    <xs:sequence>
+  <xs:group name="_recipe">
+   <xs:choice>
       <xs:element name="guestrecipe" type="guestrecipe" minOccurs="0" maxOccurs="unbounded"/>
       <xs:element name="kickstart" minOccurs="0" maxOccurs="1" type="xs:string" />
       <xs:element name="watchdog" minOccurs="0" maxOccurs="1">
@@ -164,12 +164,15 @@ See: http://www.w3.org/XML/2010/01/xml-model/
           <xs:attribute name="role" type="xs:string"/>
         </xs:complexType>
       </xs:element>
-    </xs:sequence>
-    <xs:attribute name="kernel_options" type="xs:string"/>
-    <xs:attribute name="kernel_options_post" type="xs:string"/>
-    <xs:attribute name="ks_meta" type="xs:string"/>
-    <xs:attribute name="role" type="xs:string"/>
-    <xs:attribute name="whiteboard" type="xs:string"/>
+    </xs:choice>
+  </xs:group>
+  <xs:complexType name="recipe">
+   <xs:group ref="_recipe" minOccurs="0" maxOccurs="unbounded"/>
+   <xs:attribute name="kernel_options" type="xs:string"/>
+   <xs:attribute name="kernel_options_post" type="xs:string"/>
+   <xs:attribute name="ks_meta" type="xs:string"/>
+   <xs:attribute name="role" type="xs:string"/>
+   <xs:attribute name="whiteboard" type="xs:string"/>
   </xs:complexType>
   <xs:complexType name="guestrecipe">
     <xs:complexContent>

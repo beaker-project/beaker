@@ -1347,3 +1347,31 @@ class ReportProblemForm(Form):
         super(ReportProblemForm, self).update_params(d)
         d['system'] = d['options']['system']
         d['recipe'] = d['options'].get('recipe')
+
+class JobWhiteboard(RPC, CompoundWidget):
+    """
+    Widget for displaying/updating a job's whiteboard. Saves asynchronously using js.
+    """
+
+    javascript = [LocalJSLink('bkr', '/static/javascript/jquery-1.3.1.js')]
+    template = 'bkr.server.templates.job_whiteboard'
+    hidden_id = HiddenField(name='id')
+    field = TextField(name='whiteboard')
+    member_widgets = ['hidden_id', 'field']
+    params = ['action', 'form_attrs', 'job_id', 'readonly']
+    params_doc = {'action': 'Form action (URL to submit to)',
+                  'form_attrs': 'Additional HTML attributes to set on the <form>',
+                  'job_id': 'Job id whose whiteboard is being displayed in this widget',
+                  'readonly': 'Whether changes to the whiteboard are forbidden'}
+    action = '/jobs/update'
+    form_attrs = {}
+    readonly = False
+    # these are references to js functions defined in the widget template:
+    on_success = 'job_whiteboard_save_success()'
+    on_failure = 'job_whiteboard_save_failure()'
+
+    # taken from turbogears.widgets.RemoteForm
+    def update_params(self, d):
+        super(JobWhiteboard, self).update_params(d)
+        d['form_attrs']['onsubmit'] = "return !remoteFormRequest(this, null, %s);" % (
+            jsonify.encode(self.get_options(d)))

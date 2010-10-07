@@ -3,8 +3,22 @@ This SQL needs to be run after the init.py has created the new tables
 use beaker;
 ALTER TABLE recipe_set ADD COLUMN `retention_tag_id` INT NULL AFTER `queue_time`;
 alter TABLE recipe_set ADD COLUMN `delete_time` datetime default NULL;
-ALTER TABLE recipe_set ADD FOREIGN KEY (`retention_tag_id`) REFERENCES `retention_tag` (`id`);
+ALTER TABLE recipe_set ADD FOREIGN KEY (`retention_tag_id`) REFERENCES `retention_tag` (`id`) ON UPDATE CASCADE ON DELETE CASCADE;
 UPDATE recipe_set SET retention_tag_id = (SELECT id FROM retention_tag where default_ is True) WHERE retention_tag_id is NULL;
+
+If you need to rollback:
+
+yum downgrade beaker\*
+
+then issue the following SQL. For the dropping of FK's, please dbl check the
+name of the FK in the table.
+
+DROP table beaker_tag;
+ALTER TABLE recipe_set DROP FOREIGN KEY recipe_set_ibfk_1;
+ALTER TABLE recipe_set DROP COLUMN retention_tag_id;
+ALTER TABLE recipe_set DROP COLUMN delete_time;
+DROP table retention_tag;
+
 
 
 

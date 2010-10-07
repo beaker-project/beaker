@@ -34,8 +34,11 @@ class Job_List(BeakerCommand):
         tag = kwargs.pop('tag',None)
         complete_days = kwargs.pop('completeDays', None)
 
+        if complete_days is not None and complete_days < 1:
+            self.parser.error('Please pass a positive integer to completeDays')
+
         if complete_days is None and tag is None and family is None:
-            self.parser.error('Please pass either the complete time delta, a tag or family')
+            self.parser.error('Please pass either the completeDays time delta, a tag or family')
 
         self.set_hub(username,password)
         jobs = []

@@ -32,6 +32,7 @@ from bkr.server.widgets import RecipeSetWidget
 from bkr.server.widgets import PriorityWidget
 from bkr.server.widgets import RetentionTagWidget
 from bkr.server.widgets import SearchBar
+from bkr.server.widgets import JobWhiteboard
 from bkr.server import search_utility
 import datetime
 import pkg_resources
@@ -78,6 +79,7 @@ class Jobs(RPCRoot):
     job_type = { 'RS' : RecipeSet,
                  'J'  : Job
                }
+    whiteboard_widget = JobWhiteboard()
 
     upload = widgets.FileField(name='filexml', label='Job XML')
     hidden_id = widgets.HiddenField(name='id')
@@ -598,6 +600,25 @@ class Jobs(RPCRoot):
                          confirm = 'really cancel job %s?' % id),
         )
 
+    @identity.require(identity.not_anonymous())
+    @expose(format='json')
+    def update(self, id, whiteboard=None):
+        session.begin()
+        try:
+            try:
+                job = Job.by_id(id)
+            except InvalidRequestError:
+                raise cherrypy.HTTPError(status=400, message='Invalid job id %s' % id)
+            if not job.can_admin(identity.current.user):
+                raise cherrypy.HTTPError(status=403,
+                        message="You don't have permission to update job id %s" % id)
+            job.whiteboard = whiteboard
+            session.commit()
+            return {'success': True}
+        except:
+            session.rollback()
+            raise
+
     @expose(template="bkr.server.templates.job") 
     def default(self, id): 
         try:
@@ -635,5 +656,6 @@ class Jobs(RPCRoot):
                     job_history_grid     = job_history_grid, 
                     recipe_widget        = self.recipe_widget,
                     recipe_tasks_widget  = self.recipe_tasks_widget,
+                    whiteboard_widget    = self.whiteboard_widget,
                     job                  = job)
 
