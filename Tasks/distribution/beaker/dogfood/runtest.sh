@@ -17,4 +17,4 @@
 
 export SERVER_BASE_URL="http://localhost/bkr/"
 
-rhts-run-simple-test $TEST nosetests -v bkr.server
+rhts-run-simple-test $TEST 'nosetests -v bkr.server'

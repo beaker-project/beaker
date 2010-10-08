@@ -27,11 +27,11 @@ BUILT_FILES=
 DOWNLOADED_FILES=selenium-remote-control-1.0.3.zip
 
 # data files, .c files, scripts anything needed to either compile the test and/or run it.
-FILES=$(METADATA) runtest.sh Makefile PURPOSE \
-	/usr/lib/python2.4/site-packages/selenium-2.0a5-py2.4.egg \
-	/usr/local/share/selenium/selenium-server-1.0.3
+FILES=$(METADATA) runtest.sh Makefile PURPOSE
 
-run: $(FILES) build
+run: $(FILES) build \
+     /usr/lib/python2.4/site-packages/selenium-2.0a5-py2.4.egg \
+     /usr/local/share/selenium/selenium-server-1.0.3
 	./runtest.sh
 
 build: $(BUILT_FILES)
@@ -40,13 +40,13 @@ build: $(BUILT_FILES)
 download: $(DOWNLOADED_FILES)
 
 selenium-remote-control-1.0.3.zip:
-	wget http://selenium.googlecode.com/files/$@
+	wget -nv http://selenium.googlecode.com/files/$@
 
 clean:
 	rm -f *~ *.rpm $(BUILT_FILES) $(DOWNLOADED_FILES)
 
-/usr/local/share/selenium/selenium-server-1.0.3:
-	unzip -d /usr/local/share/selenium selenium-remote-control-1.0.3.zip
+/usr/local/share/selenium/selenium-server-1.0.3: selenium-remote-control-1.0.3.zip
+	unzip -o -d /usr/local/share/selenium $<
 
 /usr/lib/python2.4/site-packages/selenium-2.0a5-py2.4.egg:
 	easy_install 'selenium==2.0a5'
