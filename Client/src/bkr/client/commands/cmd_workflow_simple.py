@@ -59,8 +59,8 @@ class Workflow_Simple(BeakerWorkflow):
             arch_node = self.doc.createElement('distro_arch')
             arch_node.setAttribute('op', '=')
             arch_node.setAttribute('value', arch)
+            recipeSet = BeakerRecipeSet(**kwargs)
             if self.multi_host:
-                recipeSet = BeakerRecipeSet()
                 for i in range(self.n_servers):
                     recipeSet.addRecipe(self.processTemplate(recipeTemplate, 
                                                              requestedTasks,
@@ -73,12 +73,12 @@ class Workflow_Simple(BeakerWorkflow):
                                                              taskParams=taskParams,
                                                              distroRequires=arch_node, 
                                                              role='CLIENTS', **kwargs))
-                job.addRecipeSet(recipeSet)
             else:
-                job.addRecipe(self.processTemplate(recipeTemplate,
-                                                   requestedTasks,
-                                                   taskParams=taskParams,
-                                                   distroRequires=arch_node, **kwargs))
+                recipeSet.addRecipe(self.processTemplate(recipeTemplate,
+                                                         requestedTasks,
+                                                         taskParams=taskParams,
+                                                         distroRequires=arch_node, **kwargs))
+            job.addRecipeSet(recipeSet)
 
         # jobxml
         jobxml = job.toxml(**kwargs)

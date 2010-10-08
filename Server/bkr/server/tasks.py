@@ -316,11 +316,15 @@ class Tasks(RPCRoot):
                 except InvalidRequestError:
                     pass
             else:
-                includeFamily.append(OSMajor.by_name_alias(family).osmajor)
+                try:
+                    includeFamily.append(OSMajor.by_name_alias(family).osmajor)
+                except InvalidRequestError:
+                    pass
         families = set([ '%s' % family.osmajor for family in OSMajor.query()])
-        for family in families.difference(set(includeFamily)):
-            if family not in task.excluded_osmajor:
-                task.excluded_osmajor.append(TaskExcludeOSMajor(osmajor=OSMajor.by_name_alias(family)))
+        if includeFamily:
+            for family in families.difference(set(includeFamily)):
+                if family not in task.excluded_osmajor:
+                    task.excluded_osmajor.append(TaskExcludeOSMajor(osmajor=OSMajor.by_name_alias(family)))
         if tinfo.test_archs:
             arches = set([ '%s' % arch.arch for arch in Arch.query()])
             for arch in arches.difference(set(tinfo.test_archs)):
