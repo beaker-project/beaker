@@ -22,7 +22,7 @@
    <td class="value">${recipeset.action_link}</td>
   </tr>
   <tr py:if="recipeset.deleted is not None">
-  <td colspan='4' align='center'><msg class='warn'>Recipe and Task logs have been deleted: ${recipeset.deleted}</msg> </td>
+  <td colspan='7' align='center'><msg class='warn'>Recipe and Task logs have been deleted: ${recipeset.deleted}</msg> </td>
   </tr>
  </table>
 </div>
