@@ -3589,6 +3589,9 @@ class Response(MappedObject):
     def by_response(cls,response,*args,**kw):
         return cls.query().filter_by(response = response).one()
 
+    def __repr__(self):
+        return self.response
+
 class RecipeSetResponse(MappedObject):
     """
     An acknowledgment of a RecipeSet's results. Can be used for filtering reports
@@ -3653,7 +3656,12 @@ class RecipeSet(TaskBase):
     def to_xml(self, clone=False, from_job=True):
         recipeSet = self.doc.createElement("recipeSet")
         return_node = recipeSet
-        recipeSet.setAttribute('retention_tag', "%s"  % self.retention_tag)
+        recipeSet.setAttribute('retention_tag', "%s"  % self.retention_tag) 
+        #Add in Ack/Nak response here if it exists
+        response = self.get_response()
+        if response:
+            recipeSet.setAttribute('response','%s' % str(response))
+
         if not clone:
             recipeSet.setAttribute("id", "%s" % self.id)
 
@@ -3850,6 +3858,10 @@ class RecipeSet(TaskBase):
                         group_by=[Recipe.id],
                         order_by='count')
         return map(lambda x: Recipe.query().filter_by(id=x[0]).first(), session.connection(RecipeSet).execute(query).fetchall())
+
+    def get_response(self):
+        response = getattr(self.nacked,'response',None)
+        return response
 
     def task_info(self):
         """
