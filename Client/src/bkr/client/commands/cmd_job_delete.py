@@ -1,14 +1,38 @@
 from bkr.client import BeakerCommand
-from bkr.client.commands.cmd_job_list import Job_List
 from optparse import OptionValueError
 
-class Job_Delete(Job_List):
+class Job_Delete(BeakerCommand):
     """Delete Jobs in Beaker """
     enabled = True
 
     def options(self):
-        super(Job_Delete,self).options()
         self.parser.usage = "%%prog %s [options] ..." % self.normalized_name
+        self.parser.add_option(
+            "-f",
+            "--family",
+            help="Family for which the Job is run against"
+        )
+
+        self.parser.add_option(
+            "-c",
+            "--completeDays",
+            type='int',
+            help="Number of days job has been completed for"
+        )
+
+        self.parser.add_option(
+            "-t",
+            "--tag",
+            action="append",
+            help="RecipeSets with a particular Tag"
+        )
+
+        self.parser.add_option(
+            "--dryrun",
+            default=False,
+            action="store_true",
+            help="Test the likely output of job-delete without deleting anything",
+        )
 
         """
         Currently not implemented: Allow degrees of deleteion
@@ -29,6 +53,7 @@ class Job_Delete(Job_List):
         tag = kwargs.pop('tag',None)
         complete_days = kwargs.pop('completeDays', None)
         family = kwargs.pop('family',None)
+        dryrun = kwargs.pop('dryrun',None)
 
         if len(args) < 1 and tag is None and complete_days is None and family is None:
             self.parser.error('Please specify either a job,recipeset, tag, family or complete days')
@@ -40,5 +65,5 @@ class Job_Delete(Job_List):
         if args:
             for job in args:
                 jobs.append(job)
-        print self.hub.jobs.delete_jobs(jobs,tag,complete_days,family)
+        print self.hub.jobs.delete_jobs(jobs,tag,complete_days,family,dryrun)
 

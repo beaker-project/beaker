@@ -3348,11 +3348,11 @@ class Job(TaskBase):
         session.flush()
         return job
 
-    def delete(self, *args, **kw):
+    def delete(self,dryrun, *args, **kw):
         paths = []
         errors = []
         for rs in self.recipesets:
-            paths_to_del, new_errors = rs.delete()
+            paths_to_del, new_errors = rs.delete(dryrun)
             paths.extend(paths_to_del)
             errors.extend(new_errors)
         return paths, errors
@@ -3630,32 +3630,33 @@ class RecipeSet(TaskBase):
             return_node = job
         return return_node
 
-    def delete(self, *args, **kw): 
+    def delete(self, dryrun, *args, **kw):
         errors = []
         paths = []
-        session.begin()
         def _del_recipes():
-            """
-            A generator for deleting recipes and returning the path deleted
-            """
-            try:
-                for r in self.recipes:
+            for r in self.recipes:
+                try:
                     recipe_to_del = Recipe.by_id(r.id)
-                    yield recipe_to_del.delete()
-            except BX, e:
-                errors.append('%s:  %s' % (self.t_id,unicode(e)))
-                yield None
-                #There is no point in rollingback anything here 
-            else:
-                session.commit()
-                self.deleted = datetime.utcnow()
+                    new_path = recipe_to_del.delete(dryrun)
+                    if new_path is not None:
+                        paths.append(new_path)
+                except BX, e:
+                    errors.append('%s:  %s' % (self.t_id,unicode(e)))
 
         if self.deleted is not None:
             return paths,errors
-        paths = [deleted_path for deleted_path in _del_recipes() if deleted_path is not None]
-        log.debug(paths)
+
+        if not dryrun:
+            session.begin()
+            _del_recipes()
+            if len(errors) == 0:
+                self.deleted = datetime.utcnow()
+                session.commit()
+        else:
+            _del_recipes()
+
         return paths,errors
-    
+
     @classmethod
     def allowed_priorities_initial(cls,user):
         if not user:
@@ -3891,30 +3892,39 @@ class Recipe(TaskBase):
                 job.id // Log.MAX_ENTRIES_PER_DIRECTORY, job.id, self.id)
     filepath = property(filepath)
 
-    def delete(self, *args, **kw):
+    def delete(self, dryrun, *args, **kw):
         """
         How we delete a Recipe.
         At the moment only unlinking log files and deleting log table rows
         """
-        self.logs = [] #This deletes the logs from log_recipe
-        full_recipe_logpath = '%s/%s' % (self.logspath, self.filepath)
 
-        try:
-            shutil.rmtree(full_recipe_logpath)
-            return_val = full_recipe_logpath
-        except OSError, e:
-            if e.errno == errno.ENOENT: #File/Dir does not exist
-                pass #Maybe the logs don't exist?? Carry on... 
-                return_val = None
-            elif e.errno == errno.EACCES: #Incorrect perms
+        full_recipe_logpath = '%s/%s' % (self.logspath, self.filepath)
+        if dryrun is True:
+            if not (os.access(full_recipe_logpath,os.R_OK)): #See if it exists
+                return None
+            elif not (os.access(full_recipe_logpath,os.W_OK)): #See if we can write it
                 raise BX(_(u'Incorrect perms to delete %s:' % full_recipe_logpath))
             else:
-                raise BX(_(u'Received unexpected error: %s' % e.errstr)) 
+                return full_recipe_logpath #success
+        else:
+            try:
+                shutil.rmtree(full_recipe_logpath)
+                return_val = full_recipe_logpath
+            except OSError, e:
+                if e.errno == errno.ENOENT: #File/Dir does not exist
+                    pass #Maybe the logs don't exist?? Carry on...
+                    return_val = None
+                elif e.errno == errno.EACCES: #Incorrect perms
+                    raise BX(_(u'Incorrect perms to delete %s:' % full_recipe_logpath))
+                else:
+                    raise BX(_(u'Received unexpected error: %s' % e.errstr))
 
-        for task in self.tasks:
-            task_to_delete = RecipeTask.by_id(task.id)
-            task_to_delete.delete(unlink=False)
-        return return_val
+            self.logs = []
+
+            for task in self.tasks:
+                task_to_delete = RecipeTask.by_id(task.id)
+                task_to_delete.delete()
+            return return_val
 
     def harness_repos(self):
         """
@@ -3922,7 +3932,7 @@ class Recipe(TaskBase):
         """
         repos = []
         if self.distro:
-            if os.path.exists("%s/%s/%s" % (self.harnesspath, 
+            if os.path.exists("%s/%s/%s" % (self.harnesspath,
                                             self.distro.osversion.osmajor,
                                             self.distro.arch)):
                 repo = dict(name = "beaker-harness",
@@ -4553,8 +4563,8 @@ class RecipeTask(TaskBase):
     result_types = ['pass_','warn','fail','panic']
     stop_types = ['stop','abort','cancel']
 
-    def delete(self,unlink=False): 
-        self.logs = [] #delete logs from log_recipe_task_table
+    def delete(self): 
+        self.logs = []
         for r in self.results:
             r.delete()
 
@@ -5035,8 +5045,8 @@ class RecipeTaskResult(TaskBase):
                 recipe.id, task_id, self.id)
     filepath = property(filepath)
 
-    def delete(self, unlink=False, *args, **kw):
-        self.logs = []
+    def delete(self, *args, **kw):
+        self.logs = [] 
 
     def to_xml(self):
         """

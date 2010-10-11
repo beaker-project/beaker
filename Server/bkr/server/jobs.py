@@ -150,7 +150,7 @@ class Jobs(RPCRoot):
 
     @cherrypy.expose
     @identity.require(identity.in_group("admin"))
-    def delete_jobs(self, jobs=None, tag=None, complete_days=None,family=None,**kw):
+    def delete_jobs(self, jobs=None, tag=None, complete_days=None, family=None, dryrun=False,**kw):
         """
         Handles deletion of jobs and entities within jobs
         """
@@ -161,18 +161,19 @@ class Jobs(RPCRoot):
                 type,id = j.split(":", 1)
                 try:
                     model_class = self.job_type[type]
-                    model_obj = model_class.by_id(id)
-                    newly_deleted_paths, new_errors = model_obj.delete()
-                    deleted_paths.extend(newly_deleted_paths)
-                    errors.extend(new_errors)
-                except KeyError, e: 
+                except KeyError, e:
                     return 'Invalid Job type passed:%s' % j
+                try:
+                    model_obj = model_class.by_id(id)
                 except InvalidRequestError, e:
                     return 'Invalid id passed: %s:%s' % (type,id)
+                newly_deleted_paths, new_errors = model_obj.delete(dryrun)
+                deleted_paths.extend(newly_deleted_paths)
+                errors.extend(new_errors)
         else:
             recipesets = self._list(tag, complete_days,family, **kw)
             for rs in recipesets:
-                newly_deleted_paths, new_errors = rs.delete()
+                newly_deleted_paths, new_errors = rs.delete(dryrun)
                 deleted_paths.extend(newly_deleted_paths)
                 errors.extend(new_errors)
         return 'Deleted paths:%s' % ','.join(deleted_paths), ' Errors: %s' % ','.join(errors)
