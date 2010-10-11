@@ -135,16 +135,19 @@ def create_task(name=None):
     task = Task.lazy_create(name=name)
     return task
 
-def create_recipe(system=None, distro=None, task_name=u'/distribution/reservesys'):
-    recipe = MachineRecipe(ttasks=1, system=system,
+def create_recipe(system=None, distro=None, task_name=u'/distribution/reservesys',
+        whiteboard=None):
+    recipe = MachineRecipe(ttasks=1, system=system, whiteboard=whiteboard,
             distro=distro or Distro.query()[0])
     recipe.append_tasks(RecipeTask(task=create_task(name=task_name)))
     return recipe
 
-def create_job_for_recipes(recipes, owner=None):
+def create_job_for_recipes(recipes, owner=None, whiteboard=None):
     if owner is None:
         owner = create_user()
-    job = Job(whiteboard=u'job %d' % int(time.time() * 1000), ttasks=1, owner=owner)
+    if whiteboard is None:
+        whiteboard = u'job %d' % int(time.time() * 1000)
+    job = Job(whiteboard=whiteboard, ttasks=1, owner=owner)
     recipe_set = RecipeSet(ttasks=sum(r.ttasks for r in recipes),
             priority=TaskPriority.default_priority())
     recipe_set.recipes.extend(recipes)
@@ -152,9 +155,11 @@ def create_job_for_recipes(recipes, owner=None):
     log.debug('Created %s', job.t_id)
     return job
 
-def create_job(owner=None, distro=None, task_name=u'/distribution/reservesys'):
-    recipe = create_recipe(distro=distro, task_name=task_name)
-    return create_job_for_recipes([recipe], owner=owner)
+def create_job(owner=None, distro=None, task_name=u'/distribution/reservesys',
+        whiteboard=None, recipe_whiteboard=None):
+    recipe = create_recipe(distro=distro, task_name=task_name,
+            whiteboard=recipe_whiteboard)
+    return create_job_for_recipes([recipe], owner=owner, whiteboard=whiteboard)
 
 def create_completed_job(result=u'Pass', system=None, **kwargs):
     job = create_job(**kwargs)
