@@ -1,0 +1,12 @@
+Please run this SQL against the db01
+use beaker;
+ALTER TABLE log_recipe_task_result  ADD INDEX `recipe_task_result_id_id` (recipe_task_result_id,id);
+ALTER TABLE log_recipe  ADD INDEX `recipe_id_id` (recipe_id,id);
+ALTER TABLE log_recipe_task  ADD INDEX `recipe_task_id_id` (recipe_task_id,id);
+
+Whilst these indexes are not dependent on any code, if you need to remove them:
+use beaker;
+ALTER TABLE log_recipe_task_result DROP INDEX recipe_task_result_id_id
+ALTER TABLE log_recipe DROP INDEX recipe_id_id
+ALTER TABLE log_recipe_task DROP INDEX recipe_task_id_id
+
