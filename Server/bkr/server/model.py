@@ -558,6 +558,7 @@ job_table = Table('job',metadata,
         Column('id', Integer, primary_key=True),
         Column('owner_id', Integer,
                 ForeignKey('tg_user.user_id'), index=True),
+        Column('cc', UnicodeText()),
         Column('whiteboard',Unicode(2000)),
         Column('result_id', Integer,
                 ForeignKey('task_result.id')),
@@ -3448,6 +3449,8 @@ class Job(TaskBase):
             job.setAttribute("owner", "%s" % self.owner.email_address)
             job.setAttribute("result", "%s" % self.result)
             job.setAttribute("status", "%s" % self.status)
+        if self.cc:
+            job.setAttribute('cc', self.cc)
         job.appendChild(self.node("whiteboard", self.whiteboard or ''))
         for rs in self.recipesets:
             job.appendChild(rs.to_xml(clone))

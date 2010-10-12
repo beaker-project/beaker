@@ -1,0 +1,3 @@
+Execute the following SQL:
+
+ALTER TABLE job ADD COLUMN cc TEXT DEFAULT NULL AFTER owner_id;

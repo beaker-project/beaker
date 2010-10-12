@@ -208,6 +208,14 @@ See: http://www.w3.org/XML/2010/01/xml-model/
           </xs:complexType>
         </xs:element>
       </xs:sequence>
+      <xs:attribute name="cc" type="xs:string">
+        <xs:annotation>
+            <xs:documentation>
+                A list of e-mail addresses to be notified when this job completes,
+                in addition to the job owner. Multiple addresses may be separated by semicolons.
+            </xs:documentation>
+        </xs:annotation>
+      </xs:attribute>
     </xs:complexType>
   </xs:element>
 </xs:schema>

@@ -20,6 +20,7 @@ import unittest
 import logging
 import time
 import tempfile
+import pkg_resources
 from turbogears.database import session
 
 from bkr.server.test.selenium import SeleniumTestCase
@@ -83,25 +84,8 @@ class TestNewJob(SeleniumTestCase):
         sel.open('')
         sel.click('link=New Job')
         sel.wait_for_page_to_load('3000')
-        xml_file = tempfile.NamedTemporaryFile()
-        xml_file.write('''
-            <job>
-                <whiteboard>valid job</whiteboard>
-                <recipeSet retention_tag="scratch">
-                    <recipe>
-                        <distroRequires>
-                            <distro_name op="=" value="BlueShoeLinux5-5" />
-                        </distroRequires>
-                        <hostRequires/>
-                        <task name="/distribution/install" role="STANDALONE">
-                            <params/>
-                        </task>
-                    </recipe>
-                </recipeSet>
-            </job>
-            ''')
-        xml_file.flush()
-        sel.type('jobs_filexml', xml_file.name)
+        sel.type('jobs_filexml', pkg_resources.resource_filename(
+                'bkr.server.test', 'complete-job.xml'))
         sel.click('//input[@value="Submit Data"]')
         sel.wait_for_page_to_load('3000')
         sel.click('//input[@value="Queue"]')
