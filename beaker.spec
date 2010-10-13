@@ -2,8 +2,8 @@
 %{!?pyver: %global pyver %(%{__python} -c "import sys ; print sys.version[:3]")}
 
 Name:           beaker
-Version:        0.5.58
-Release:        3%{?dist}
+Version:        0.5.59
+Release:        1%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -191,6 +191,23 @@ fi
 %attr(-,apache,root) %dir %{_localstatedir}/run/%{name}-lab-controller
 
 %changelog
+* Wed Oct 13 2010 Raymond Mancy <rmancy@redhat.com> 0.5.59-1
+- bz634571 - add response ack/nak into returned resipset xml if it exists
+  (rmancy@redhat.com)
+- bz636212 - update command line to use ks_meta="method=" for install method.
+  (bpeck@redhat.com)
+- bz467486 - New job delete (rmancy@redhat.com)
+- bz638003 - Users with higher privs can now schedule as well as take
+- bz618859 - make job whiteboard editable (dcallagh@redhat.com)
+- bz627281 - need to clear task types when uploading (dcallagh@redhat.com)
+- bz637260 - mark systems which have a run of aborted jobs as broken
+  (dcallagh@redhat.com)
+- bz589325 - Failed to provision recipeid 8, 'No watchdog exists for recipe 8'
+  (bpeck@redhat.com)
+- bz600353 - limit arch for releases (bpeck@redhat.com)
+- bz641016 - fix bkr errata-workflow cuts erratas names  (bpeck@redhat.com)
+- bz634485 -  fix can't use beaker's workflow-autofs to submit subtask (bpeck@redhat.com)
+
 * Fri Oct 01 2010 Bill Peck <bpeck@redhat.com> 0.5.58-3
 - beaker-watchdog monitor key needs to include the recipeid to keep us
   from monitoring the wrong recipe.
