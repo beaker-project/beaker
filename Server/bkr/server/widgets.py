@@ -350,7 +350,7 @@ class AckPanel(RadioButtonList):
         #If not nacked
         if not rs.nacked: # We need to review 
             if not rs.is_failed(): #it's passed,
-                rs.nacked = model.RecipeSetResponse(id=rs_id,type='ack') # so we will auto ack it
+                rs.nacked = model.RecipeSetResponse(type='ack') # so we will auto ack it
                 the_opts[ACK_INDEX] = (the_opts[ACK_INDEX][OPTIONS_ID_INDEX],the_opts[ACK_INDEX][OPTIONS_RESPONSE_INDEX],{'checked': 1 })
                 del(the_opts[EXTRA_RESPONSE_INDEX])
             else:

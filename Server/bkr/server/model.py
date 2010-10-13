@@ -3322,7 +3322,7 @@ class Job(TaskBase):
                 rs.nacked = []
             else: 
                 if not rs.nacked and rs_id in rs_nacks: #looks like we're adding it then
-                    rs.nacked = [RecipeSetResponse(rs_id)]
+                    rs.nacked = [RecipeSetResponse()]
                     current_nacks.append(rs_id)
                 elif rs.nacked:
                     current_nacks.append(rs_id)
@@ -3597,8 +3597,7 @@ class RecipeSetResponse(MappedObject):
     An acknowledgment of a RecipeSet's results. Can be used for filtering reports
     """
     
-    def __init__(self,id,type=None,response_id=None,comment=None):
-        self.id = id
+    def __init__(self,type=None,response_id=None,comment=None):
         if response_id is not None:
             res = Response.by_id(response_id)
         elif type is not None:

@@ -138,6 +138,11 @@ def create_task(name=None):
 def create_recipe(system=None, distro=None, task_name=u'/distribution/reservesys'):
     recipe = MachineRecipe(ttasks=1, system=system,
             distro=distro or Distro.query()[0])
+    recipe._distro_requires=u'<distroRequires><and><distro_arch value="i386"  \
+            op="="></distro_arch><distro_variant value="Workstation" op="="> \
+            </distro_variant><distro_family value="RedHatEnterpriseLinux6" op="="> \
+            </distro_family> </and><distro_virt value="" op="="></distro_virt> \
+            </distroRequires>'
     recipe.append_tasks(RecipeTask(task=create_task(name=task_name)))
     return recipe
 
