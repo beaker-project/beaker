@@ -83,5 +83,7 @@ class TestSystemView(SeleniumTestCase):
         self.assertEqual(msg['to'], self.system_owner.email_address)
         self.assertEqual(msg['subject'], 'Problem reported for %s' % self.system.fqdn)
         self.assertEqual(msg.get_payload(),
-                'A Beaker user has reported a problem with system %s.\n\n\n'
-                'Problem description:\nb0rk b0rk b0rk' % self.system.fqdn)
+                'A Beaker user has reported a problem with system \n'
+                '%s <http://localhost:9090/view/%s>.\n\n\n'
+                'Problem description:\nb0rk b0rk b0rk'
+                % (self.system.fqdn, self.system.fqdn))
