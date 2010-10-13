@@ -3688,18 +3688,23 @@ class RecipeSet(TaskBase):
                     new_path = recipe_to_del.delete(dryrun)
                     if new_path is not None:
                         paths.append(new_path)
-                except BX, e:
-                    errors.append('%s:  %s' % (self.t_id,unicode(e)))
+                except Exception,  e:
+                   errors.append('%s:  %s' % (self.t_id,unicode(e)))
 
         if self.deleted is not None:
             return paths,errors
 
         if not dryrun:
             session.begin()
-            _del_recipes()
-            if len(errors) == 0:
-                self.deleted = datetime.utcnow()
-                session.commit()
+            try:
+                _del_recipes()
+                if len(errors) == 0:
+                    self.deleted = datetime.utcnow()
+                    session.commit()
+                else:
+                    session.rollback()
+            except:
+                session.rollback()
         else:
             _del_recipes()
 
