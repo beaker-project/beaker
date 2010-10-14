@@ -3,7 +3,7 @@
 
 Name:           beaker
 Version:        0.5.59
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -191,6 +191,10 @@ fi
 %attr(-,apache,root) %dir %{_localstatedir}/run/%{name}-lab-controller
 
 %changelog
+* Thu Oct 14 2010 Raymond Mancy <rmancy@redhat.com> 0.5.59-2
+- hotfix - Cloned jobs with ack/nak were failing due to having response in the
+  xml.          removed this attribute when cloning (rmancy@redhat.com)
+
 * Wed Oct 13 2010 Raymond Mancy <rmancy@redhat.com> 0.5.59-1
 - bz634571 - add response ack/nak into returned resipset xml if it exists
   (rmancy@redhat.com)
