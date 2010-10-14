@@ -558,7 +558,6 @@ job_table = Table('job',metadata,
         Column('id', Integer, primary_key=True),
         Column('owner_id', Integer,
                 ForeignKey('tg_user.user_id'), index=True),
-        Column('cc', UnicodeText()),
         Column('whiteboard',Unicode(2000)),
         Column('result_id', Integer,
                 ForeignKey('task_result.id')),
@@ -574,6 +573,12 @@ job_table = Table('job',metadata,
         Column('ftasks', Integer, default=0),
         # Total Panic tasks
         Column('ktasks', Integer, default=0),
+)
+
+job_cc_table = Table('job_cc', metadata,
+        Column('job_id', Integer, ForeignKey('job.id', ondelete='CASCADE',
+            onupdate='CASCADE'), primary_key=True),
+        Column('email_address', Unicode(255), primary_key=True, index=True),
 )
 
 recipe_set_table = Table('recipe_set',metadata,
@@ -3450,7 +3455,10 @@ class Job(TaskBase):
             job.setAttribute("result", "%s" % self.result)
             job.setAttribute("status", "%s" % self.status)
         if self.cc:
-            job.setAttribute('cc', self.cc)
+            notify = self.doc.createElement('notify')
+            for email_address in self.cc:
+                notify.appendChild(self.node('cc', email_address))
+            job.appendChild(notify)
         job.appendChild(self.node("whiteboard", self.whiteboard or ''))
         for rs in self.recipesets:
             job.appendChild(rs.to_xml(clone))
@@ -3530,6 +3538,13 @@ class Job(TaskBase):
     def can_admin(self, user=None):
         """Returns True iff the given user can administer this Job."""
         return bool(user) and (self.owner == user or user.is_admin())
+
+    cc = association_proxy('_job_ccs', 'email_address')
+
+class JobCc(MappedObject):
+
+    def __init__(self, email_address):
+        self.email_address = email_address
   
 class BeakerTag(object):
 
@@ -5530,7 +5545,10 @@ mapper(Job, job_table,
         properties = {'recipesets':relation(RecipeSet, backref='job'),
                       'owner':relation(User, uselist=False, backref='jobs'),
                       'result':relation(TaskResult, uselist=False),
-                      'status':relation(TaskStatus, uselist=False)})
+                      'status':relation(TaskStatus, uselist=False),
+                      '_job_ccs': relation(JobCc, backref='job')})
+mapper(JobCc, job_cc_table)
+
 mapper(RecipeSetResponse,recipe_set_nacked_table,
         properties = { 'recipesets':relation(RecipeSet),
                         'response' : relation(Response,uselist=False)})

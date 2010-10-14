@@ -3,7 +3,8 @@ import time
 import unittest
 import email
 from turbogears.database import session
-from bkr.server.model import System, SystemStatus, SystemActivity, TaskStatus
+from bkr.server.model import System, SystemStatus, SystemActivity, TaskStatus, \
+        Job, JobCc, job_cc_table
 from bkr.server.test import data_setup
 from bkr.server.test.mail_capture import MailCaptureThread
 
@@ -104,6 +105,24 @@ class TestBrokenSystemDetection(unittest.TestCase):
         self.abort_recipe_with_stable_distro()
         self.assertEqual(self.system.status, SystemStatus.by_name(u'Broken'))
 
+class TestJob(unittest.TestCase):
+
+    def test_cc_property(self):
+        session.begin()
+        try:
+            job = data_setup.create_job()
+            session.flush()
+            session.execute(job_cc_table.insert(values={'job_id': job.id,
+                    'email_address': 'person@nowhere.example.com'}))
+            session.refresh(job)
+            self.assertEquals(job.cc, ['person@nowhere.example.com'])
+
+            job.cc.append('korolev@nauk.su')
+            session.flush()
+            self.assertEquals(JobCc.query().filter_by(job_id=job.id).count(), 2)
+        finally:
+            session.rollback()
+
 class TestJobCompletionNotification(unittest.TestCase):
 
     def setUp(self):
@@ -129,7 +148,7 @@ class TestJobCompletionNotification(unittest.TestCase):
     def test_job_cc_list_is_notified(self):
         self.job_owner = data_setup.create_user()
         self.job = data_setup.create_job(owner=self.job_owner,
-                cc=u'dan@example.com; ray@example.com')
+                cc=[u'dan@example.com', u'ray@example.com'])
         session.flush()
         data_setup.mark_job_complete(self.job)
 

@@ -1,4 +1,12 @@
-<job cc="dan@example.com; ray@example.com">
+<job>
+    <notify>
+        <cc>
+            dan@example.com
+        </cc>
+        <cc>
+            ray@example.com
+        </cc>
+    </notify>
     <whiteboard>
         valid job
     </whiteboard>

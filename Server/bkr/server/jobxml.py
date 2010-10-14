@@ -93,6 +93,11 @@ class XmlJob(ElementWrapper):
         for recipeSet in self.wrappedEl['recipeSet':]:
             yield XmlRecipeSet(recipeSet)
 
+    def iter_cc(self):
+        for notify in self.wrappedEl['notify':]:
+            for cc in notify['cc':]:
+                yield unicode(cc).strip()
+
     def __getattr__(self, attrname):
         try:
             return self.wrappedEl[attrname]

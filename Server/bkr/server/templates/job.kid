@@ -190,7 +190,7 @@
   </tr>
   <tr>
    <td class="title"><b>CC</b></td>
-   <td class="value" colspan="3">${job.cc}</td>
+   <td class="value" colspan="3">${'; '.join(job.cc)}</td>
   </tr>
   <tr>
    <td class="title"><b>Whiteboard</b></td>

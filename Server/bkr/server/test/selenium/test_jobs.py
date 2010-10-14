@@ -26,6 +26,28 @@ from turbogears.database import session
 from bkr.server.test.selenium import SeleniumTestCase
 from bkr.server.test import data_setup
 
+class TestViewJob(SeleniumTestCase):
+
+    def test_cc_list(self):
+        user = data_setup.create_user(password='password')
+        job = data_setup.create_job(owner=user,
+                cc=[u'laika@mir.su', u'tereshkova@kosmonavt.su'])
+        session.flush()
+        sel = self.get_selenium()
+        sel.start()
+        self.login(user=user.user_name, password='password')
+        sel.open('')
+        sel.click('link=My Jobs')
+        sel.wait_for_page_to_load('3000')
+        sel.click('link=%s' % job.t_id)
+        sel.wait_for_page_to_load('3000')
+        self.assert_(sel.get_title().startswith('Job %s' % job.t_id))
+        self.assertEqual(
+            # value of cell beside "CC" cell
+            sel.get_text('//table[@class="show"]//td'
+                '[preceding-sibling::td[1]/b/text() = "CC"]'),
+            'laika@mir.su; tereshkova@kosmonavt.su')
+
 class TestNewJob(SeleniumTestCase):
 
     def setUp(self):

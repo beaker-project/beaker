@@ -69,10 +69,7 @@ def job_notify(job, sender=None):
     if not sender:
         log.warning("beaker_email not defined in app.cfg; unable to send mail")
         return
-    cc = []
-    if job.cc:
-        cc = [addr.strip() for addr in job.cc.split(';') if addr.strip()]
-    send_mail(sender=sender, to=job.owner.email_address, cc=cc,
+    send_mail(sender=sender, to=job.owner.email_address, cc=job.cc,
               subject='[Beaker Job Completion] [%s] %s %s' % (job.id, job.status, job.result),
               body=failed_recipes(job))
 

@@ -145,7 +145,9 @@ def create_job_for_recipes(recipes, owner=None, cc=None):
     if owner is None:
         owner = create_user()
     job = Job(whiteboard=u'job %d' % int(time.time() * 1000), ttasks=1,
-            owner=owner, cc=cc)
+            owner=owner)
+    if cc is not None:
+        job.cc = cc
     recipe_set = RecipeSet(ttasks=sum(r.ttasks for r in recipes),
             priority=TaskPriority.default_priority())
     recipe_set.recipes.extend(recipes)
