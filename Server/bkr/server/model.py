@@ -2939,7 +2939,7 @@ class DistroTag(object):
         return cls.query().filter(DistroTag.tag.like('%s%%' % tag))
 
 class Admin(object):
-    def __init__(self,system_id,group_id): 
+    def __init__(self,system_id,group_id):
         self.system_id = system_id
         self.group_id = group_id
 
@@ -2966,11 +2966,11 @@ class SystemActivity(Activity):
     def object_name(self):
         return "System: %s" % self.object.fqdn
 
-        
+
 class RecipeSetActivity(Activity):
     def object_name(self):
         return "RecipeSet: %s" % self.object.id
-          
+
 class GroupActivity(Activity):
     def object_name(self):
         return "Group: %s" % self.object.display_name
@@ -3654,12 +3654,13 @@ class RecipeSet(TaskBase):
 
     def to_xml(self, clone=False, from_job=True):
         recipeSet = self.doc.createElement("recipeSet")
-        return_node = recipeSet
-        recipeSet.setAttribute('retention_tag', "%s"  % self.retention_tag) 
+        return_node = recipeSet 
+        recipeSet.setAttribute('retention_tag', "%s"  % self.retention_tag)
         #Add in Ack/Nak response here if it exists
-        response = self.get_response()
-        if response:
-            recipeSet.setAttribute('response','%s' % str(response))
+        if not clone:
+            response = self.get_response()
+            if response:
+                recipeSet.setAttribute('response','%s' % str(response))
 
         if not clone:
             recipeSet.setAttribute("id", "%s" % self.id)
@@ -5105,7 +5106,7 @@ class RecipeTaskResult(TaskBase):
     filepath = property(filepath)
 
     def delete(self, *args, **kw):
-        self.logs = [] 
+        self.logs = []
 
     def to_xml(self):
         """
