@@ -378,18 +378,6 @@ function LabController()
             result="PASS"
         fi
         report_result $TEST/ADD_DISTRO/${DISTRONAME}_NFS $result $score
-        result="FAIL"
-        echo cobbler import --path=/fakenet/${NFSSERVER}${NFSPATH} \
-                       --name=${DISTRONAME}_http \
-                       --available-as=http://${HOSTNAME}/fakenet/${NFSSERVER}${NFSPATH}
-        cobbler import --path=/fakenet/${NFSSERVER}${NFSPATH} \
-                       --name=${DISTRONAME}_http \
-                       --available-as=http://${HOSTNAME}/fakenet/${NFSSERVER}${NFSPATH}
-        score=$?
-        if [ "$score" -eq "0" ]; then
-            result="PASS"
-        fi
-        report_result $TEST/ADD_DISTRO/${DISTRONAME}_HTTP $result $score
     done
     # Import Rawhide
     if [ -n "$RAWHIDE_NFS" ]; then
@@ -408,18 +396,6 @@ function LabController()
             cobbler import --path=/fakenet/${NFSSERVER}${NFSDIR}/${DISTRO} \
                            --name=${DISTRONAME}_nfs \
                            --available-as=nfs://${NFSSERVER}:${NFSDIR}/${DISTRO}
-            score=$?
-            if [ "$score" -eq "0" ]; then
-                result="PASS"
-            fi
-            report_result $TEST/ADD_DISTRO/${DISTRONAME}_NFS $result $score
-            echo cobbler import \
-                            --path=/fakenet/${NFSSERVER}${NFSDIR}/${DISTRO} \
-                           --name=${DISTRONAME}_http \
-                           --available-as=http://${HOSTNAME}/fakenet/${NFSSERVER}${NFSDIR}/${DISTRO}
-            cobbler import --path=/fakenet/${NFSSERVER}${NFSDIR}/${DISTRO} \
-                           --name=${DISTRONAME}_http \
-                           --available-as=http://${HOSTNAME}/fakenet/${NFSSERVER}${NFSDIR}/${DISTRO}
             score=$?
             if [ "$score" -eq "0" ]; then
                 result="PASS"
