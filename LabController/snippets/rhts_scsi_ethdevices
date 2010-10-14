@@ -2,10 +2,10 @@
 ## scsidevices=qla2xxx,megaraid_mbox
 ## ethdevices=tg3,e1000
 #if $getVar('scsidevices', '') != ''
-#set $scsidevices = $getVar('scsidevices','').split(',')
-device scsi #echo ':'.join($scsidevices)
+#set $scsidevices = ':'.join($getVar('scsidevices','').split(','))
+device scsi $scsidevices
 #end if
 #if $getVar('ethdevices', '') != ''
-#set $ethdevices = $getVar('ethdevices','').split(',')
-device eth #echo ':'.join($ethdevices)
+#set $ethdevices = ':'.join($getVar('ethdevices','').split(','))
+device eth $ethdevices
 #end if
