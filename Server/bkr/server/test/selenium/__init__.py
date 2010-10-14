@@ -31,6 +31,10 @@ log = logging.getLogger(__name__)
 
 class SeleniumTestCase(unittest.TestCase):
 
+    # attributes for nose
+    destructive = True
+    slow = True
+
     BEAKER_LOGIN_USER = 'admin'
     BEAKER_LOGIN_PASSWORD = 'testing'
 

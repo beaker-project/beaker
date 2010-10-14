@@ -12,6 +12,8 @@ DynamicAttributeImpl.accepts_scalar_loader = False
 
 class TestSystem(unittest.TestCase):
 
+    destructive = True
+
     def test_create_system_params(self):
         new_system = System(fqdn='test_fqdn', contact='test@email.com',
                             location='Brisbane', model='Proliant', serial='4534534',
@@ -37,6 +39,9 @@ class TestSystem(unittest.TestCase):
         self.assert_(system.user is None)
 
 class TestBrokenSystemDetection(unittest.TestCase):
+
+    destructive = True
+    slow = True
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=637260
     # The 1-second sleeps here are so that the various timestamps
