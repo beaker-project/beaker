@@ -1,0 +1,16 @@
+Run the following SQL, ensuring that the "warnings" count for each statement is 0:
+
+ALTER IGNORE TABLE system_device_map ADD PRIMARY KEY (system_id, device_id);
+ALTER IGNORE TABLE system_arch_map ADD PRIMARY KEY (system_id, arch_id);
+ALTER IGNORE TABLE osversion_arch_map ADD PRIMARY KEY (osversion_id, arch_id);
+ALTER IGNORE TABLE user_group ADD PRIMARY KEY (user_id, group_id);
+ALTER IGNORE TABLE system_group ADD PRIMARY KEY (system_id, group_id);
+ALTER IGNORE TABLE system_admin_map ADD PRIMARY KEY (system_id, group_id);
+ALTER IGNORE TABLE group_permission ADD PRIMARY KEY (group_id, permission_id);
+ALTER IGNORE TABLE machine_guest_map ADD PRIMARY KEY (machine_recipe_id, guest_recipe_id);
+ALTER IGNORE TABLE system_recipe_map ADD PRIMARY KEY (system_id, recipe_id);
+ALTER IGNORE TABLE recipe_tag_map ADD PRIMARY KEY (tag_id, recipe_id);
+ALTER IGNORE TABLE task_packages_runfor_map ADD PRIMARY KEY (task_id, package_id);
+ALTER IGNORE TABLE task_packages_required_map ADD PRIMARY KEY (task_id, package_id);
+ALTER IGNORE TABLE task_packages_custom_map ADD PRIMARY KEY (recipe_id, package_id);
+ALTER IGNORE TABLE task_type_map ADD PRIMARY KEY (task_id, task_type_id);
