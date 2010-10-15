@@ -170,8 +170,9 @@ def processed_recipesets(*args):
         
                                 if systemsa.difference(systemsb):
                                     for rem_system in systemsa.intersection(systemsb):
-                                        log.debug("recipe: %s labController:%s Removing system %s" % (recipe.id, l_controller, rem_system))
-                                        recipe.systems.remove(rem_system)
+                                        if rem_system in recipe.systems:
+                                            log.debug("recipe: %s labController:%s Removing system %s" % (recipe.id, l_controller, rem_system))
+                                            recipe.systems.remove(rem_system)
                         for recipe in recipeset.recipes:
                             count = 0
                             systems = recipe.dyn_systems.filter(
@@ -203,8 +204,9 @@ def processed_recipesets(*args):
                                       )
                         log.debug("recipe: %s labController: %s Removing lab" % (recipe.id, l_controller))
                         for system in systems:
-                            log.debug("recipe: %s labController: %s Removing system %s" % (recipe.id, l_controller, system))
-                            recipe.systems.remove(system)
+                            if rem_system in recipe.systems:
+                                log.debug("recipe: %s labController: %s Removing system %s" % (recipe.id, l_controller, system))
+                                recipe.systems.remove(system)
                     if recipe.systems:
                         # Set status to Queued 
                         log.info("recipe: %s moved from Processed to Queued" % recipe.id)
