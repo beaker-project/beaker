@@ -204,7 +204,7 @@ def processed_recipesets(*args):
                                       )
                         log.debug("recipe: %s labController: %s Removing lab" % (recipe.id, l_controller))
                         for system in systems:
-                            if rem_system in recipe.systems:
+                            if system in recipe.systems:
                                 log.debug("recipe: %s labController: %s Removing system %s" % (recipe.id, l_controller, system))
                                 recipe.systems.remove(system)
                     if recipe.systems:
