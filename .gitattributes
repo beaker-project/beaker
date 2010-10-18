@@ -1,0 +1,2 @@
+*.py    diff=python whitespace=tab-in-indent
+*.txt   whitespace=-trailing-space
