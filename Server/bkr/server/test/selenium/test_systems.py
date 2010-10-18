@@ -18,7 +18,6 @@
 
 import unittest
 import logging
-import email
 from turbogears.database import session
 
 from bkr.server.test.selenium import SeleniumTestCase
@@ -75,15 +74,6 @@ class TestSystemView(SeleniumTestCase):
         sel.wait_for_page_to_load('20000')
         self.assertEqual(sel.get_text('css=div.flash'),
                 'Your problem report has been forwarded to the system owner')
-        # assert the problem report e-mail
         self.assertEqual(len(self.mail_capture.captured_mails), 1)
         sender, rcpts, raw_msg = self.mail_capture.captured_mails[0]
         self.assertEqual(rcpts, [self.system_owner.email_address])
-        msg = email.message_from_string(raw_msg)
-        self.assertEqual(msg['to'], self.system_owner.email_address)
-        self.assertEqual(msg['subject'], 'Problem reported for %s' % self.system.fqdn)
-        self.assertEqual(msg.get_payload(),
-                'A Beaker user has reported a problem with system \n'
-                '%s <http://localhost:9090/view/%s>.\n\n\n'
-                'Problem description:\nb0rk b0rk b0rk'
-                % (self.system.fqdn, self.system.fqdn))

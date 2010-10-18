@@ -26,7 +26,7 @@ from bkr.server.model import LabController, User, Group, Distro, Breed, Arch, \
         OSMajor, OSVersion, SystemActivity, Task, MachineRecipe, System, \
         SystemType, SystemStatus, Recipe, RecipeTask, RecipeTaskResult, \
         Device, TaskResult, TaskStatus, Job, RecipeSet, TaskPriority, \
-        LabControllerDistro
+        LabControllerDistro, Power, PowerType
 
 log = logging.getLogger(__name__)
 
@@ -62,13 +62,16 @@ def create_labcontroller(fqdn=None):
     log.debug('labcontroller %s already exists' % fqdn)
     return lc
 
-def create_user(user_name=None, password=None, display_name=None):
+def create_user(user_name=None, password=None, display_name=None,
+        email_address=None):
     if user_name is None:
         user_name = u'user%d' % int(time.time() * 1000)
     if display_name is None:
         display_name = user_name
+    if email_address is None:
+        email_address = u'%s@example.com' % user_name
     user = User(user_name=user_name, display_name=display_name,
-            email_address=u'%s@example.com' % user_name)
+            email_address=email_address)
     if password:
         user.password = password
     log.debug('Created user %r', user)
@@ -122,6 +125,20 @@ def create_system(arch=u'i386', type=u'Machine', status=u'Automated',
     system.arch.append(Arch.by_name(arch))
     log.debug('Created system %r', system)
     return system
+
+def configure_system_power(system, power_type=u'ilo', address=None,
+        user=None, password=None, power_id=None):
+    if address is None:
+        address = u'%s_power_address' % system.fqdn
+    if user is None:
+        user = u'%s_power_user' % system.fqdn
+    if password is None:
+        password = u'%s_power_password' % system.fqdn
+    if power_id is None:
+        power_id = '%d' % int(time.time() * 1000)
+    system.power = Power(power_type=PowerType.by_name(power_type),
+            power_address=address, power_id=power_id,
+            power_user=user, power_password=password)
 
 def create_system_activity(user=None, **kw):
     if not user:

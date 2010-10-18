@@ -29,10 +29,12 @@ from bkr.server.util import absolute_url
 log = logging.getLogger(__name__)
 
 
-def send_mail(sender, to, subject, body):
+def send_mail(sender, to, subject, body, headers=None):
     from turbomail import MailNotEnabledException
     message = turbomail.Message(sender, to, subject)
     message.plain = body
+    if headers is not None:
+        message.headers = headers
     try:
         #log.debug("Sending mail: %s" % message.plain)
         turbomail.send(message)
@@ -69,7 +71,9 @@ def job_notify(job, sender=None):
     send_mail(sender, 
               job.owner.email_address,
               '[Beaker Job Completion] [%s] %s %s' % (job.id, job.status, job.result),
-              failed_recipes(job))
+              failed_recipes(job),
+              headers=[('X-Beaker-Notification', 'job-completion'),
+                       ('X-Beaker-Job-ID', job.id)])
 
 def system_problem_report(system, description, recipe=None, reporter=None):
     if reporter is not None:
@@ -86,9 +90,11 @@ def system_problem_report(system, description, recipe=None, reporter=None):
     if recipe is not None:
         body.append(_(u'Related to: %s <%s>') % (recipe.t_id,
                 absolute_url('/recipes/%s' % recipe.id)))
-    body.extend(['', _(u'Problem description:'), description])
+    body.extend(['', unicode(_(u'Problem description:')), description])
     send_mail(sender, system.owner.email_address,
-            _(u'Problem reported for %s') % system.fqdn, '\n'.join(body))
+            _(u'Problem reported for %s') % system.fqdn, '\n'.join(body),
+            headers=[('X-Beaker-Notification', 'system-problem'),
+                     ('X-Beaker-System', system.fqdn)])
 
 def broken_system_notify(system, reason, recipe=None):
     sender = config.get('beaker_email')
@@ -101,9 +107,12 @@ def broken_system_notify(system, reason, recipe=None):
     if recipe:
         body.extend([_(u'Failure occurred in %s <%s>') % (recipe.t_id,
                 absolute_url('/recipes/%s' % recipe.id)), ''])
-    body.extend([_(u'Power type: %s') % system.power.power_type.name,
-                 _(u'Power address: %s') % system.power.power_address,
-                 _(u'Power id: %s') % system.power.power_id])
+    if system.power:
+        body.extend([_(u'Power type: %s') % system.power.power_type.name,
+                     _(u'Power address: %s') % system.power.power_address,
+                     _(u'Power id: %s') % system.power.power_id])
     send_mail(sender, system.owner.email_address,
             _(u'System %s automatically marked broken') % system.fqdn,
-            '\n'.join(body))
+            '\n'.join(body),
+            headers=[('X-Beaker-Notification', 'system-broken'),
+                     ('X-Beaker-System', system.fqdn)])

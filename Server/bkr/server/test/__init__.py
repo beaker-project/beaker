@@ -20,6 +20,7 @@ import os
 import logging
 from turbogears import update_config
 from turbogears.database import session
+import turbomail.adapters.tg1
 from bkr.server.test import data_setup
 
 log = logging.getLogger(__name__)
@@ -34,7 +35,8 @@ def setup_package():
     data_setup.create_distro()
     data_setup.create_labcontroller() #always need a labcontroller
     session.flush()
+    turbomail.adapters.tg1.start_extension()
 
 def teardown_package():
-    pass
+    turbomail.adapters.tg1.shutdown_extension()
 
