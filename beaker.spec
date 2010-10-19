@@ -135,6 +135,7 @@ fi
 %{python_sitelib}/bkr/__init__.py*
 %{python_sitelib}/bkr/timeout_xmlrpclib.py*
 %{python_sitelib}/bkr/common/
+%{python_sitelib}/bkr/upload.py*
 %{python_sitelib}/bkr-%{version}-*
 %{python_sitelib}/bkr-%{version}-py%{pyver}.egg-info/
 %doc COPYING
