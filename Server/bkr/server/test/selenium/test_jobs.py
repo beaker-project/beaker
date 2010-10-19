@@ -70,7 +70,7 @@ class TestNewJob(SeleniumTestCase):
         xml_file.write('''
             <job>
                 <whiteboard>job with invalid hostRequires</whiteboard>
-                <recipeSet>
+                <recipeSet retention_tag="scratch">
                     <recipe>
                         <distroRequires>
                             <distro_name op="=" value="BlueShoeLinux5-5" />
@@ -93,8 +93,8 @@ class TestNewJob(SeleniumTestCase):
         self.assertEqual(sel.get_text('css=.flash'),
                 'Job failed XSD validation. Please confirm that you want to submit it.')
         self.assertEqual(int(sel.get_xpath_count('//ul[@class="xsd-error-list"]/li')), 1)
-        self.assert_(sel.get_text('//ul[@class="xsd-error-list"]/li').startswith(
-                "Line 12, col 0: Element 'brokenElement': This element is not expected."))
+        self.assertEqual(sel.get_text('//ul[@class="xsd-error-list"]/li'),
+                'Line 12, col 0: Element recipe has extra content: brokenElement')
         sel.click('//input[@value="Queue despite validation errors"]')
         sel.wait_for_page_to_load('3000')
         self.assertEqual(sel.get_title(), 'Jobs')
