@@ -11,7 +11,7 @@ import glob
 import re
 from xmlrpclib import Fault, ProtocolError
 from cStringIO import StringIO
-from socket import gethostbyaddr
+from socket import gethostname
 
 import kobo.conf
 from kobo.client import HubProxy
@@ -19,6 +19,7 @@ from kobo.exceptions import ShutdownException
 
 from kobo.process import kill_process_group
 from kobo.log import add_rotating_file_logger
+from bkr.upload import Uploader
 
 try:
     from hashlib import md5 as md5_constructor
@@ -28,6 +29,7 @@ except ImportError:
 VERBOSE_LOG_FORMAT = "%(asctime)s [%(levelname)-8s] {%(process)5d} %(name)s.%(module)s:%(lineno)4d %(message)s"
 
 class ProxyHelper(object):
+
 
     def __init__(self, logger=None, conf=None, **kwargs):
         self.conf = kobo.conf.PyConfigParser()
@@ -62,6 +64,10 @@ class ProxyHelper(object):
 
         # self.hub is created here
         self.hub = HubProxy(logger=self.logger, conf=self.conf, **kwargs)
+        self.server = self.conf.get("SERVER", "http://%s" % gethostname())
+        if self.conf.get("CACHE", False):
+            basepath = self.conf.get("CACHEPATH", "/var/www/beaker/logs")
+            upload = Uploader('%s' % basepath).uploadFile
 
     def recipe_upload_file(self, 
                          recipe_id, 
@@ -87,13 +93,23 @@ class ProxyHelper(object):
                                                                                         name,
                                                                                         offset,
                                                                                         size))
-        return self.hub.recipes.upload_file(recipe_id, 
-                                            path, 
-                                            name, 
-                                            size, 
-                                            md5sum, 
-                                            offset, 
-                                            data)
+        if self.conf.get("CACHE",False):
+            if offset == 0:
+                self.hub.recipes.register_file('%s/recipes' % self.server, recipe_id, path, name))
+            return self.upload('/recipes/%s/%s' % (recipe_id, path), 
+                               name, 
+                               size, 
+                               md5sum, 
+                               offset, 
+                               data)
+        else:
+            return self.hub.recipes.upload_file(recipe_id,
+                                                path, 
+                                                name, 
+                                                size, 
+                                                md5sum, 
+                                                offset, 
+                                                data)
 
     def task_result(self, 
                     task_id, 
@@ -360,13 +376,25 @@ class Proxy(ProxyHelper):
                                                                                     name,
                                                                                     offset,
                                                                                     size))
-        return self.hub.recipes.tasks.upload_file(task_id, 
-                                                  path, 
-                                                  name, 
-                                                  size, 
-                                                  md5sum, 
-                                                  offset, 
-                                                  data)
+        if self.conf.get("CACHE",False):
+            if offset == 0:
+                self.hub.recipes.tasks.register_file('%s/tasks' % self.server, 
+                                                     task_id, path, name))
+
+            return self.upload('/tasks/%s/%s' % (task_id, path), 
+                               name, 
+                               size, 
+                               md5sum, 
+                               offset, 
+                               data)
+        else:
+            return self.hub.recipes.tasks.upload_file(task_id, 
+                                                      path, 
+                                                      name, 
+                                                      size, 
+                                                      md5sum, 
+                                                      offset, 
+                                                      data)
 
     def task_start(self,
                    task_id,
@@ -446,13 +474,25 @@ class Proxy(ProxyHelper):
                                                                                         name,
                                                                                         offset,
                                                                                         size))
-        return self.hub.recipes.tasks.result_upload_file(result_id, 
-                                                  path, 
-                                                  name, 
-                                                  size, 
-                                                  md5sum, 
-                                                  offset, 
-                                                  data)
+        if self.conf.get("CACHE",False):
+            if offset == 0:
+                self.hub.recipes.tasks.register_result_file('%s/results/' % self.server, 
+                                                            result_id, path, name)
+
+            return self.upload('/results/%s/%s' % (result_id, path), 
+                               name, 
+                               size, 
+                               md5sum, 
+                               offset, 
+                               data)
+        else:
+            return self.hub.recipes.tasks.result_upload_file(result_id, 
+                                                             path, 
+                                                             name, 
+                                                             size, 
+                                                             md5sum, 
+                                                             offset, 
+                                                             data)
 
     def push(self, fqdn, inventory):
         """ Push inventory data to Scheduler

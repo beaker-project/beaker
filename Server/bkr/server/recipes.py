@@ -29,7 +29,7 @@ from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.helpers import *
 from bkr.server.recipetasks import RecipeTasks
 from socket import gethostname
-from upload import Uploader
+from bkr.upload import Uploader
 import exceptions
 import time
 
@@ -62,6 +62,22 @@ class Recipes(RPCRoot):
     recipe_tasks_widget = RecipeTasksWidget()
 
     upload = Uploader(config.get("basepath.logs", "/var/www/beaker/logs"))
+
+    @cherrypy.expose
+    @identity.require(identity.not_anonymous())
+    def register_file(self, server, recipe_id, path, name):
+        """
+        register file and return path to store
+        """
+        try:
+            recipe = Recipe.by_id(recipe_id)
+        except InvalidRequestError:
+            raise BX(_('Invalid recipe ID: %s' % recipe_id))
+
+        # Add the log to the DB if it hasn't been recorded yet.
+        if LogRecipe(path,name) not in recipe.logs:
+            recipe.logs.append(LogRecipe(path, name, server))
+        return '%s' % recipe.filepath
 
     @cherrypy.expose
     @identity.require(identity.not_anonymous())

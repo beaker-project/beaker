@@ -610,6 +610,7 @@ log_recipe_table = Table('log_recipe', metadata,
         Column('path', UnicodeText()),
         Column('filename', UnicodeText(), nullable=False),
         Column('start_time',DateTime, default=datetime.utcnow),
+	Column('server', UnicodeText()),
 )
 
 log_recipe_task_table = Table('log_recipe_task', metadata,
@@ -619,6 +620,7 @@ log_recipe_task_table = Table('log_recipe_task', metadata,
         Column('path', UnicodeText()),
         Column('filename', UnicodeText(), nullable=False),
         Column('start_time',DateTime, default=datetime.utcnow),
+	Column('server', UnicodeText()),
 )
 
 log_recipe_task_result_table = Table('log_recipe_task_result', metadata,
@@ -628,6 +630,7 @@ log_recipe_task_result_table = Table('log_recipe_task_result', metadata,
         Column('path', UnicodeText()),
         Column('filename', UnicodeText(), nullable=False),
         Column('start_time',DateTime, default=datetime.utcnow),
+	Column('server', UnicodeText()),
 )
 
 recipe_table = Table('recipe',metadata,
@@ -3143,9 +3146,10 @@ class Log(MappedObject):
 
     MAX_ENTRIES_PER_DIRECTORY = 100
 
-    def __init__(self, path=None, filename=None):
+    def __init__(self, path=None, filename=None, server=None):
         self.path = path
         self.filename = filename
+        self.server = server
 
     def result(self):
         return self.parent.result
@@ -3157,9 +3161,14 @@ class Log(MappedObject):
         """
         text = "%s/%s" % (self.path != '/' and self.path or '', self.filename)
         text = text[-50:]
-        return make_link(url = '/logs/%s/%s/%s' % (self.parent.filepath,
+        # if server is defined then the logs are stored elsewhere.
+        if self.server:
+            url = '%s/%s/%s' % (self.server, self.path, self.filename)
+        else
+            url = '/logs/%s/%s/%s' % (self.parent.filepath,
                                                    self.path, 
-                                                   self.filename),
+                                                   self.filename)
+        return make_link(url = url,
                          text = text)
     link = property(link)
 
