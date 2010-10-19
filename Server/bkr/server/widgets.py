@@ -1186,7 +1186,9 @@ class SystemForm(Form):
                                  options=model.SystemType.get_all_types,
                                  validator=validators.NotEmpty()),
                TextField(name='location', label=_(u'Location')),
-               TextField(name='lender', label=_(u'Lender')),
+               TextField(name='lender', label=_(u'Lender'),
+                         help_text=_(u'Name of the organisation which has '
+                            'lent this system to Beaker\'s inventory')),
                TextField(name='user', label=_(u'Current User')),
                TextField(name='owner', label=_(u'Owner')),
                TextField(name='loaned', label=_(u'Loaned To')),

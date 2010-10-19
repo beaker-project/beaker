@@ -16,7 +16,11 @@ $(document).ready(function(){
     } 
 });
 </script>
-<label py:def="label_for(field_name)" for="${field_for(field_name).field_id}">${field_for(field_name).label}</label>
+<label py:def="label_for(field_name)"
+       for="${field_for(field_name).field_id}"
+       title="${getattr(field_for(field_name), 'help_text', '')}">
+    ${field_for(field_name).label}
+</label>
 <form xmlns:py="http://purl.org/kid/ns#"
   name="${name}"
   action="${tg.url(action)}"
