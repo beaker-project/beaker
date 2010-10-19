@@ -1193,8 +1193,12 @@ class SystemForm(Form):
                TextField(name='owner', label=_(u'Owner')),
                TextField(name='loaned', label=_(u'Loaned To')),
                TextField(name='contact', label=_(u'Contact')),
-               CheckBox(name='shared', label=_(u'Shared')),
-               CheckBox(name='private', label=_(u'Secret (NDA)')),
+               CheckBox(name='shared', label=_(u'Shared'),
+                        help_text=_(u'Should this system be made available '
+                            'for running other users\' jobs?')),
+               CheckBox(name='private', label=_(u'Secret (NDA)'),
+                        help_text=_(u'Should this system be invisible to '
+                            'all other users?')),
                Tabber(use_cookie=True),
                AutoCompleteField(name='group',
                                       search_controller=url("/groups/by_name"),
