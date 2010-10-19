@@ -191,6 +191,10 @@ fi
 %attr(-,apache,root) %dir %{_localstatedir}/run/%{name}-lab-controller
 
 %changelog
+* Tue Oct 19 2010 Bill Peck <bpeck@redhat.com> 0.5.59-3
+- HOTFIX bz643381 beakerd ERROR Failed to commit due to
+  :list.remove(x): x not in list (bpeck@redhat.com)
+
 * Thu Oct 14 2010 Raymond Mancy <rmancy@redhat.com> 0.5.59-2
 - hotfix - Cloned jobs with ack/nak were failing due to having response in the
   xml.          removed this attribute when cloning (rmancy@redhat.com)
