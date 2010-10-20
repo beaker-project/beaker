@@ -3164,7 +3164,7 @@ class Log(MappedObject):
         # if server is defined then the logs are stored elsewhere.
         if self.server:
             url = '%s/%s/%s' % (self.server, self.path, self.filename)
-        else
+        else:
             url = '/logs/%s/%s/%s' % (self.parent.filepath,
                                                    self.path, 
                                                    self.filename)
