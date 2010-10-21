@@ -63,66 +63,81 @@
         element.
       </a:documentation>
       <interleave>
-        <optional>
-          <attribute name="kernel_options"/>
-        </optional>
-        <optional>
-          <attribute name="kernel_options_post"/>
-        </optional>
-        <optional>
-          <attribute name="ks_meta"/>
-        </optional>
-        <optional>
-          <attribute name="role"/>
-        </optional>
-        <optional>
-          <attribute name="whiteboard">
-            <a:documentation xml:lang="en">
-              A textual description of this recipe, for human consumption only.
-            </a:documentation>
-            <text/>
-          </attribute>
-        </optional>
-        <optional>
-          <element name="kickstart"><text/></element>
-        </optional>
-        <optional>
-          <ref name="watchdog"/>
-        </optional>
-        <optional>
-          <ref name="packages"/>
-        </optional>
-        <optional>
-          <element name="ks_appends"><text/></element>
-        </optional>
-        <optional>
-          <ref name="repos"/>
-        </optional>
-        <element name="distroRequires">
-          <a:documentation xml:lang="en">
-            This element is a container for expressing contraints on the 
-            operating system distribution which will be selected and 
-            provisioned at the start of this recipe.
-          </a:documentation>
-          <zeroOrMore><ref name="distroreq"/></zeroOrMore>
-        </element>
-        <optional>
-          <element name="hostRequires">
-            <a:documentation xml:lang="en">
-              This element is a container for expressing contraints on the 
-              system which will be selected to run this recipe.
-            </a:documentation>
-            <zeroOrMore><ref name="hostreq"/></zeroOrMore>
+        <zeroOrMore>
+          <element name="guestrecipe">
+            <interleave>
+              <attribute name="guestname" />
+              <attribute name="guestargs" />
+              <ref name="recipe_contents" />
+            </interleave>
           </element>
-        </optional>
-        <optional>
-          <ref name="partitions"/>
-        </optional>
-        <oneOrMore>
-          <ref name="task"/>
-        </oneOrMore>
+        </zeroOrMore>
+        <ref name="recipe_contents" />
       </interleave>
     </element>
+  </define>
+  <define name="recipe_contents">
+    <!-- stuff which is common to both <recipe/> and <guestrecipe/> -->
+    <interleave>
+      <optional>
+        <attribute name="kernel_options"/>
+      </optional>
+      <optional>
+        <attribute name="kernel_options_post"/>
+      </optional>
+      <optional>
+        <attribute name="ks_meta"/>
+      </optional>
+      <optional>
+        <attribute name="role"/>
+      </optional>
+      <optional>
+        <attribute name="whiteboard">
+          <a:documentation xml:lang="en">
+            A textual description of this recipe, for human consumption only.
+          </a:documentation>
+          <text/>
+        </attribute>
+      </optional>
+      <optional>
+        <element name="kickstart"><text/></element>
+      </optional>
+      <optional>
+        <ref name="watchdog"/>
+      </optional>
+      <optional>
+        <ref name="packages"/>
+      </optional>
+      <optional>
+        <element name="ks_appends"><text/></element>
+      </optional>
+      <optional>
+        <ref name="repos"/>
+      </optional>
+      <element name="distroRequires">
+        <a:documentation xml:lang="en">
+          This element is a container for expressing contraints on the 
+          operating system distribution which will be selected and 
+          provisioned at the start of this recipe.
+        </a:documentation>
+        <zeroOrMore><ref name="distroreq"/></zeroOrMore>
+      </element>
+      <optional>
+        <element name="hostRequires">
+          <a:documentation xml:lang="en">
+            This element is a container for expressing contraints on the 
+            system which will be selected to run this recipe.
+          </a:documentation>
+          <zeroOrMore><ref name="hostreq"/></zeroOrMore>
+        </element>
+      </optional>
+      <optional>
+        <ref name="partitions"/>
+      </optional>
+      <oneOrMore>
+        <ref name="task"/>
+      </oneOrMore>
+    </interleave>
   </define>
   <define name="watchdog">
     <element name="watchdog">

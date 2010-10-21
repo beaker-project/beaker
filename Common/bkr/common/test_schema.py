@@ -38,10 +38,9 @@ class JobSchemaTest(unittest.TestCase):
         self.assert_valid('''
             <job>
                 <recipeSet retention_tag="scratch">
-                    <recipe kernel_options="" kernel_options_post="" ks_meta="" role="None" whiteboard="">
+                    <recipe>
                         <distroRequires>
                             <distro_name op="=" value="BlueShoeLinux5-5"/>
-                            <distro_virt op="=" value=""/>
                         </distroRequires>
                         <task name="/distribution/install" role="STANDALONE"/>
                     </recipe>
@@ -65,7 +64,6 @@ class JobSchemaTest(unittest.TestCase):
                         <packages/>
                         <distroRequires>
                             <distro_name op="=" value="BlueShoeLinux5-5"/>
-                            <distro_virt op="=" value=""/>
                         </distroRequires>
                         <watchdog panic="None"/>
                     </recipe>
@@ -94,4 +92,25 @@ class JobSchemaTest(unittest.TestCase):
             </job>
             ''',
             ['Extra element watchdog in interleave',
+             'Invalid sequence in interleave',
              'Element recipe failed to validate content'])
+
+    def test_guestrecipe(self):
+        self.assert_valid('''
+            <job>
+                <recipeSet retention_tag="scratch">
+                    <recipe>
+                        <guestrecipe guestname="asdf" guestargs="--lol">
+                            <distroRequires>
+                                <distro_name op="=" value="BlueShoeLinux5-5"/>
+                            </distroRequires>
+                            <task name="/distribution/install" role="STANDALONE"/>
+                        </guestrecipe>
+                        <distroRequires>
+                            <distro_name op="=" value="BlueShoeLinux5-5"/>
+                        </distroRequires>
+                        <task name="/distribution/install" role="STANDALONE"/>
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''')
