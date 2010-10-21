@@ -128,6 +128,7 @@ HUB_URL = "https://$SERVER/bkr/"
 AUTH_METHOD = "password"
 USERNAME = "host/$HOSTNAME"
 PASSWORD = "testing"
+CACHE = True
 __EOF__
 }
 
