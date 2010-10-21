@@ -367,8 +367,13 @@ class Monitor(ProxyHelper):
                 mysrc = '%s/%s/%s' % (mylog['basepath'], mylog['path'], mylog['filename'])
                 mydst = '%s/%s/%s/%s' % (self.conf.get("archive_rsync"),mylog['filepath'],
                                          mylog['path'], mylog['filename'])
-                if rsync(mysrc, mydst):
+                if self.rsync(mysrc, mydst):
                     self.hub.recipes.change_file(mylog['id'], server, basepath)
+
+    def rsync(self, src, dst):
+        """ Run system rsync command to move files
+        """
+        return False
 
         
 class Proxy(ProxyHelper):
