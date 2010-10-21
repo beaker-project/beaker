@@ -102,8 +102,8 @@ class Jobs(RPCRoot):
 
     job_form = JobForm()
 
-    job_xsd_doc = lxml.etree.parse(pkg_resources.resource_stream(
-            'bkr.common', 'xsd/beaker-job.xsd'))
+    job_schema_doc = lxml.etree.parse(pkg_resources.resource_stream(
+            'bkr.common', 'schema/beaker-job.rng'))
 
     @classmethod
     def success_redirect(cls, id, url='/jobs', *args, **kw):
@@ -232,13 +232,13 @@ class Jobs(RPCRoot):
             textxml = filexml.file.read()
         elif textxml:
             if not confirmed:
-                job_xsd = lxml.etree.XMLSchema(self.job_xsd_doc)
-                if not job_xsd.validate(lxml.etree.fromstring(textxml)):
+                job_schema = lxml.etree.RelaxNG(self.job_schema_doc)
+                if not job_schema.validate(lxml.etree.fromstring(textxml)):
                     return dict(
                         title = title,
                         form = self.job_form,
                         action = 'clone',
-                        options = {'xsd_errors': job_xsd.error_log},
+                        options = {'xsd_errors': job_schema.error_log},
                         value = dict(textxml=textxml, confirmed=True),
                     )
             try:
