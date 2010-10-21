@@ -301,6 +301,7 @@ class Watchdog(ProxyHelper):
         # Remove Monitor if watchdog does not exist.
         for watchdog_system in self.watchdogs.copy():
             if watchdog_system not in active_watchdogs:
+                self.watchdogs[watchdog_system].finish()
                 del self.watchdogs[watchdog_system]
                 self.logger.info("Removed Monitor for %s" % watchdog_system)
 
@@ -331,10 +332,10 @@ class Monitor(ProxyHelper):
     def __init__(self, watchdog, obj, *args, **kwargs):
         """ Monitor system
         """
+        self.watchdog = watchdog
         self.logger = obj.logger
         self.conf = obj.conf
         self.hub = obj.hub
-        self.watchdog = obj.watchdog
         self.server = obj.server
         self.upload = obj.upload
         self.basepath = obj.basepath
@@ -354,6 +355,20 @@ class Monitor(ProxyHelper):
             if watchedFile.update():
                 updated = True
         return updated
+
+    def finish(self):
+        """ If Cache is turned on then move the recipes logs to there final place
+        """
+        if self.conf.get("CACHE",False):
+            # Move logs
+            for mylog in self.hub.recipes.files(self.watchdog['recipe_id']):
+                server = '%s/%s' % (self.conf.get("archive_server"), mylog['filepath'])
+                basepath = '%s/%s' % (self.conf.get("archive_basepath"), mylog['filepath'])
+                mysrc = '%s/%s/%s' % (mylog['basepath'], mylog['path'], mylog['filename'])
+                mydst = '%s/%s/%s/%s' % (self.conf.get("archive_rsync"),mylog['filepath'],
+                                         mylog['path'], mylog['filename'])
+                if rsync(mysrc, mydst):
+                    self.hub.recipes.change_file(mylog['id'], server, basepath)
 
         
 class Proxy(ProxyHelper):
