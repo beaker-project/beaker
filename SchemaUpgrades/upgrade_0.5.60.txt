@@ -1,3 +1,9 @@
+Add the following two configuration directives to the [global] section in 
+/etc/beaker/server.cfg, with values set appropriately:
+
+tg.url_domain='beaker.example.com'
+tg.url_scheme='https'
+
 Run the following SQL, ensuring that the "warnings" count for each statement is 0:
 
 ALTER IGNORE TABLE system_device_map ADD PRIMARY KEY (system_id, device_id);

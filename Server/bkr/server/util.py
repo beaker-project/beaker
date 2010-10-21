@@ -64,3 +64,18 @@ def to_unicode(obj, encoding='utf-8'):
             obj = unicode(obj, encoding, 'replace')
     return obj
 
+# TG1.1 has this: http://docs.turbogears.org/1.1/URLs#turbogears-absolute-url
+def absolute_url(tgpath, tgparams=None, **kw):
+    """
+    Like turbogears.url, but makes the URL absolute (with scheme, hostname, 
+    and port from the tg.url_scheme and tg.url_domain configuration 
+    directives).
+    """
+    # TODO support relative paths
+    theurl = url(tgpath, tgparams, **kw)
+    assert theurl.startswith('/')
+    scheme = config.get('tg.url_scheme', 'http')
+    host_port = config.get('tg.url_domain',
+            '%s:%s' % (config.get('server.socket_host', 'localhost'),
+                config.get('socket_port', '8080')))
+    return '%s://%s%s' % (scheme, host_port, theurl)
