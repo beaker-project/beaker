@@ -20,6 +20,7 @@ from kobo.exceptions import ShutdownException
 from kobo.process import kill_process_group
 from kobo.log import add_rotating_file_logger
 from bkr.upload import Uploader
+import utils
 
 try:
     from hashlib import md5 as md5_constructor
@@ -362,18 +363,35 @@ class Monitor(ProxyHelper):
         if self.conf.get("CACHE",False):
             # Move logs
             for mylog in self.hub.recipes.files(self.watchdog['recipe_id']):
-                server = '%s/%s' % (self.conf.get("archive_server"), mylog['filepath'])
-                basepath = '%s/%s' % (self.conf.get("archive_basepath"), mylog['filepath'])
+                server = '%s/%s' % (self.conf.get("ARCHIVE_SERVER"), mylog['filepath'])
+                basepath = '%s/%s' % (self.conf.get("ARCHIVE_BASEPATH"), mylog['filepath'])
                 mysrc = '%s/%s/%s' % (mylog['basepath'], mylog['path'], mylog['filename'])
-                mydst = '%s/%s/%s/%s' % (self.conf.get("archive_rsync"),mylog['filepath'],
+                mydst = '%s/%s/%s/%s' % (self.conf.get("ARCHIVE_RSYNC"),mylog['filepath'],
                                          mylog['path'], mylog['filename'])
                 if self.rsync(mysrc, mydst):
                     self.hub.recipes.change_file(mylog['id'], server, basepath)
+                    self.rm(mysrc)
+                    self.removedirs(mylog['basepath'])
+
+    def rm(self, src):
+        """ remove src
+        """
+        if os.path.exists(src):
+            return os.unlink(src)
+        return True
+
+    def removedirs(self, path):
+        """ remove empty dirs
+        """
+        if os.path.exists(path):
+            return os.removedirs(path)
+        return True
 
     def rsync(self, src, dst):
         """ Run system rsync command to move files
         """
-        return False
+        my_cmd = 'rsync %s %s %s' % (self.conf.get('RSYNC_FLAGS',''), src, dst)
+        return utils.subprocess_call(self.logger,my_cmd,shell=True)
 
         
 class Proxy(ProxyHelper):
