@@ -66,7 +66,7 @@ class ProxyHelper(object):
         self.hub = HubProxy(logger=self.logger, conf=self.conf, **kwargs)
         self.server = self.conf.get("SERVER", "http://%s/beaker/logs" % gethostname())
         if self.conf.get("CACHE", False):
-            basepath = self.conf.get("CACHEPATH", "/var/www/beaker/logs")
+            self.basepath = self.conf.get("CACHEPATH", "/var/www/beaker/logs")
             self.upload = Uploader('%s' % basepath).uploadFile
 
     def recipe_upload_file(self, 
@@ -96,7 +96,8 @@ class ProxyHelper(object):
         if self.conf.get("CACHE",False):
             if offset == 0:
                 self.hub.recipes.register_file('%s/recipes/%s' % (self.server, recipe_id),
-                                                                  recipe_id, path, name)
+                                                                  recipe_id, path, name,
+                                               '%s/recipes/%s' % (self.basepath, result_id))
             return self.upload('/recipes/%s/%s' % (recipe_id, path), 
                                name, 
                                size, 
@@ -296,8 +297,7 @@ class Watchdog(ProxyHelper):
             watchdog_key = '%s:%s' % (watchdog['system'], watchdog['recipe_id'])
             active_watchdogs.append(watchdog_key)
             if watchdog_key not in self.watchdogs:
-                self.watchdogs[watchdog_key] = Monitor(watchdog, self.logger, self.conf,
-                                                       self.hub, self.server, self.upload)
+                self.watchdogs[watchdog_key] = Monitor(watchdog, self)
         # Remove Monitor if watchdog does not exist.
         for watchdog_system in self.watchdogs.copy():
             if watchdog_system not in active_watchdogs:
@@ -328,15 +328,16 @@ class Monitor(ProxyHelper):
          and look for panic/bug/etc..
     """
 
-    def __init__(self, watchdog, logger, conf, hub, server, upload, *args, **kwargs):
+    def __init__(self, watchdog, obj, *args, **kwargs):
         """ Monitor system
         """
-        self.logger = logger
-        self.conf = conf
-        self.hub = hub
-        self.watchdog = watchdog
-        self.server = server
-        self.upload = upload
+        self.logger = obj.logger
+        self.conf = obj.conf
+        self.hub = obj.hub
+        self.watchdog = obj.watchdog
+        self.server = obj.server
+        self.upload = obj.upload
+        self.basepath = obj.basepath
         self.logger.debug("Initialize monitor for system: %s" % self.watchdog['system'])
         self.watchedFiles = [WatchFile("%s/%s" % (self.conf["CONSOLE_LOGS"], self.watchdog["system"]),self.watchdog,self, self.conf["PANIC_REGEX"])]
 
@@ -383,7 +384,8 @@ class Proxy(ProxyHelper):
         if self.conf.get("CACHE",False):
             if offset == 0:
                 self.hub.recipes.tasks.register_file('%s/tasks/%s' % (self.server, task_id), 
-                                                     task_id, path, name)
+                                                     task_id, path, name, 
+                                                     '%s/tasks/%s' % (self.basepath, task_id))
 
             return self.upload('/tasks/%s/%s' % (task_id, path), 
                                name, 
@@ -481,7 +483,9 @@ class Proxy(ProxyHelper):
         if self.conf.get("CACHE",False):
             if offset == 0:
                 self.hub.recipes.tasks.register_result_file('%s/results/%s' % (self.server,result_id),
-                                                            result_id, path, name)
+                                                            result_id, path, name,
+                                                            '%s/results/%s' % (self.basepath, 
+                                                                               result_id))
 
             return self.upload('/results/%s/%s' % (result_id, path), 
                                name, 

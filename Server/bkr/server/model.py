@@ -611,6 +611,7 @@ log_recipe_table = Table('log_recipe', metadata,
         Column('filename', UnicodeText(), nullable=False),
         Column('start_time',DateTime, default=datetime.utcnow),
 	Column('server', UnicodeText()),
+	Column('basepath', UnicodeText()),
 )
 
 log_recipe_task_table = Table('log_recipe_task', metadata,
@@ -621,6 +622,7 @@ log_recipe_task_table = Table('log_recipe_task', metadata,
         Column('filename', UnicodeText(), nullable=False),
         Column('start_time',DateTime, default=datetime.utcnow),
 	Column('server', UnicodeText()),
+	Column('basepath', UnicodeText()),
 )
 
 log_recipe_task_result_table = Table('log_recipe_task_result', metadata,
@@ -631,6 +633,7 @@ log_recipe_task_result_table = Table('log_recipe_task_result', metadata,
         Column('filename', UnicodeText(), nullable=False),
         Column('start_time',DateTime, default=datetime.utcnow),
 	Column('server', UnicodeText()),
+	Column('basepath', UnicodeText()),
 )
 
 recipe_table = Table('recipe',metadata,
@@ -3146,10 +3149,11 @@ class Log(MappedObject):
 
     MAX_ENTRIES_PER_DIRECTORY = 100
 
-    def __init__(self, path=None, filename=None, server=None):
+    def __init__(self, path=None, filename=None, server=None, basepath=None):
         self.path = path
         self.filename = filename
         self.server = server
+        self.basepath = basepath
 
     def result(self):
         return self.parent.result

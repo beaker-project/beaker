@@ -65,7 +65,7 @@ class Recipes(RPCRoot):
 
     @cherrypy.expose
     @identity.require(identity.not_anonymous())
-    def register_file(self, server, recipe_id, path, name):
+    def register_file(self, server, recipe_id, path, name, basepath):
         """
         register file and return path to store
         """
@@ -76,7 +76,7 @@ class Recipes(RPCRoot):
 
         # Add the log to the DB if it hasn't been recorded yet.
         if LogRecipe(path,name) not in recipe.logs:
-            recipe.logs.append(LogRecipe(path, name, server))
+            recipe.logs.append(LogRecipe(path, name, server, basepath))
         return '%s' % recipe.filepath
 
     @cherrypy.expose
