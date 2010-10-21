@@ -3183,7 +3183,7 @@ class Log(MappedObject):
         return dict(server   = self.server,
                     path     = self.path,
                     filename = self.filename,
-                    type     = '%s:%s' % (self.type, self.id),
+                    tid      = '%s:%s' % (self.type, self.id),
                     filepath = self.filepath,
                     basepath = self.basepath,
                    )
@@ -4439,14 +4439,14 @@ class Recipe(TaskBase):
         """
         Return all logs for this recipe
         """
-        for log in self.logs:
-            yield log.dict
+        for mylog in self.logs:
+            yield mylog.dict
         for task in self.tasks:
-            for log in task.logs:
-                yield log.dict
+            for mylog in task.logs:
+                yield mylog.dict
             for result in task.results:
-                for log in result.logs:
-                    yeild log.dict
+                for mylog in result.logs:
+                    yield mylog.dict
 
     def append_tasks(self, recipetask):
         """ Before appending the task to this Recipe, make sure it applies.
