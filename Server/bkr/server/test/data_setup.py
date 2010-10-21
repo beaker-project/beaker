@@ -147,12 +147,14 @@ def create_recipe(system=None, distro=None, task_name=u'/distribution/reservesys
     recipe.append_tasks(RecipeTask(task=create_task(name=task_name)))
     return recipe
 
-def create_job_for_recipes(recipes, owner=None, whiteboard=None):
+def create_job_for_recipes(recipes, owner=None, whiteboard=None, cc=None):
     if owner is None:
         owner = create_user()
     if whiteboard is None:
         whiteboard = u'job %d' % int(time.time() * 1000)
     job = Job(whiteboard=whiteboard, ttasks=1, owner=owner)
+    if cc is not None:
+        job.cc = cc
     recipe_set = RecipeSet(ttasks=sum(r.ttasks for r in recipes),
             priority=TaskPriority.default_priority())
     recipe_set.recipes.extend(recipes)
@@ -160,14 +162,20 @@ def create_job_for_recipes(recipes, owner=None, whiteboard=None):
     log.debug('Created %s', job.t_id)
     return job
 
-def create_job(owner=None, distro=None, task_name=u'/distribution/reservesys',
-        whiteboard=None, recipe_whiteboard=None):
+def create_job(owner=None, cc=None, distro=None,
+        task_name=u'/distribution/reservesys', whiteboard=None,
+        recipe_whiteboard=None, **kwargs):
     recipe = create_recipe(distro=distro, task_name=task_name,
             whiteboard=recipe_whiteboard)
-    return create_job_for_recipes([recipe], owner=owner, whiteboard=whiteboard)
+    return create_job_for_recipes([recipe], owner=owner,
+            whiteboard=whiteboard, cc=cc)
 
-def create_completed_job(result=u'Pass', system=None, **kwargs):
+def create_completed_job(**kwargs):
     job = create_job(**kwargs)
+    mark_job_complete(job, **kwargs)
+    return job
+
+def mark_job_complete(job, result=u'Pass', system=None, **kwargs):
     for recipe in job.all_recipes:
         if system is None:
             recipe.system = create_system(arch=recipe.arch)
@@ -183,7 +191,6 @@ def create_completed_job(result=u'Pass', system=None, **kwargs):
             recipe_task.results.append(rtr)
         recipe.update_status()
     log.debug('Marked %s as complete with result %s', job.t_id, result)
-    return job
 
 def create_device(**kw):
     device = Device(**kw)

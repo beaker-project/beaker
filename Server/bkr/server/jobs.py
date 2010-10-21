@@ -321,8 +321,8 @@ class Jobs(RPCRoot):
         return recipeSet
 
     def process_xmljob(self, xmljob, user):
-        job = Job(whiteboard='%s' % xmljob.whiteboard, ttasks=0,
-                  owner=user)
+        job = Job(whiteboard='%s' % xmljob.whiteboard, ttasks=0, owner=user)
+        job.cc.extend(xmljob.iter_cc())
         for xmlrecipeSet in xmljob.iter_recipeSets():
             recipe_set = self._handle_recipe_set(xmlrecipeSet, user)
             job.recipesets.append(recipe_set)

@@ -32,9 +32,9 @@ import logging
 log = logging.getLogger(__name__)
 
 
-def send_mail(sender, to, subject, body):
+def send_mail(sender, to, subject, body, **kwargs):
     from turbomail import MailNotEnabledException
-    message = turbomail.Message(sender, to, subject)
+    message = turbomail.Message(sender, to, subject, **kwargs)
     message.plain = body
     try:
         #log.debug("Sending mail: %s" % message.plain)
@@ -42,7 +42,7 @@ def send_mail(sender, to, subject, body):
     except MailNotEnabledException:
         log.warning("TurboMail is not enabled!")
     except Exception, e:
-        log.error("Exception thrown when trying to send mail: %s" % str(e))
+        log.exception("Exception thrown when trying to send mail")
 
 def failed_recipes(job):
     msg = "JobID: %s Status: %s Result: %s\n" % \
@@ -63,16 +63,15 @@ def failed_recipes(job):
     return msg
 
 def job_notify(job, sender=None):
-    """ Send a completion notification to job owner """
+    """ Send a completion notification to job owner, and to job CC list if any. """
     if not sender:
         sender = config.get('beaker_email')
     if not sender:
         log.warning("beaker_email not defined in app.cfg; unable to send mail")
         return
-    send_mail(sender, 
-              job.owner.email_address,
-              '[Beaker Job Completion] [%s] %s %s' % (job.id, job.status, job.result),
-              failed_recipes(job))
+    send_mail(sender=sender, to=job.owner.email_address, cc=job.cc,
+              subject='[Beaker Job Completion] [%s] %s %s' % (job.id, job.status, job.result),
+              body=failed_recipes(job))
 
 def system_problem_report(system, description, recipe=None, reporter=None):
     if reporter is not None:

@@ -26,6 +26,9 @@ See bkr.server.test.selenium.test_systems for an example of how to use this.
 import threading
 import smtpd
 import asyncore
+import logging
+
+log = logging.getLogger(__name__)
 
 class MailCaptureThread(threading.Thread):
 
@@ -51,8 +54,11 @@ class MailCaptureThread(threading.Thread):
         captured_mails = self.captured_mails
         class CapturingSMTPServer(smtpd.SMTPServer):
             def process_message(self, peer, mailfrom, rcpttos, data):
+                log.debug('%r: Captured mail from peer %r: %r', self, peer,
+                        (mailfrom, rcpttos, data))
                 captured_mails.append((mailfrom, rcpttos, data))
         server = CapturingSMTPServer(('127.0.0.1', 19999), None)
+        log.debug('Spawning %r', server)
         try:
             while self._running:
                 asyncore.loop(timeout=1, count=1)

@@ -188,6 +188,25 @@ See: http://www.w3.org/XML/2010/01/xml-model/
   <xs:element name="job">
     <xs:complexType>
       <xs:sequence>
+        <xs:element name="notify" minOccurs="0" maxOccurs="1">
+          <xs:annotation>
+            <xs:documentation>
+              Notification options for when this job completes.
+              The job owner is always notified by e-mail, irrespective of any options present here.
+            </xs:documentation>
+          </xs:annotation>
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="cc" type="xs:string" minOccurs="0" maxOccurs="unbounded">
+                <xs:annotation>
+                  <xs:documentation>
+                    An e-mail address to be cc'ed on the job completion notification.
+                  </xs:documentation>
+                </xs:annotation>
+              </xs:element>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
         <xs:element name="whiteboard" type="xs:string" minOccurs="0" maxOccurs="1">
           <xs:annotation>
             <xs:documentation>Job's Whiteboard to display in views.</xs:documentation>

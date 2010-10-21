@@ -1,6 +1,7 @@
 
 import unittest
 import xmltramp
+import pkg_resources
 from turbogears.database import session
 from bkr.server.jobxml import XmlJob
 from bkr.server.bexceptions import BX
@@ -46,3 +47,12 @@ class TestJobsController(unittest.TestCase):
             </job>
             '''))
         self.assertRaises(BX, lambda: self.controller.process_xmljob(xmljob, self.user))
+
+    def test_job_xml_can_be_roundtripped(self):
+        # Ideally the logic for parsing job XML into a Job instance would live in model code,
+        # so that this test doesn't have to go through the web layer...
+        complete_job_xml = pkg_resources.resource_string('bkr.server.test', 'complete-job.xml')
+        xmljob = XmlJob(xmltramp.parse(complete_job_xml))
+        job = self.controller.process_xmljob(xmljob, self.user)
+        roundtripped_xml = job.to_xml(clone=True).toprettyxml(indent='    ')
+        self.assertEquals(roundtripped_xml, complete_job_xml)
