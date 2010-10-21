@@ -3176,6 +3176,22 @@ class Log(MappedObject):
                          text = text)
     link = property(link)
 
+    @property
+    def dict(self):
+        """ Return a dict describing this log
+        """
+        return dict(server   = self.server,
+                    path     = self.path,
+                    filename = self.filename,
+                    type     = '%s:%s' % (self.type, self.id),
+                    filepath = self.filepath,
+                    basepath = self.basepath,
+                   )
+
+    @classmethod 
+    def by_id(cls,id): 
+       return cls.query().filter_by(id=id).one()
+
     def __cmp__(self, other):
         """ Used to compare logs that are already stored. Log(path,filename) in Recipe.logs  == True
         """
@@ -3189,13 +3205,13 @@ class Log(MappedObject):
             return 1
 
 class LogRecipe(Log):
-    pass
+    type = 'R'
 
 class LogRecipeTask(Log):
-    pass
+    type = 'T'
 
 class LogRecipeTaskResult(Log):
-    pass
+    type = 'E'
 
 class TaskBase(MappedObject):
 
@@ -4417,6 +4433,20 @@ class Recipe(TaskBase):
             yield task
             for task_result in task.results:
                 yield task_result
+
+    @property
+    def all_logs(self):
+        """
+        Return all logs for this recipe
+        """
+        for log in self.logs:
+            yield log.dict
+        for task in self.tasks:
+            for log in task.logs:
+                yield log.dict
+            for result in task.results:
+                for log in result.logs:
+                    yeild log.dict
 
     def append_tasks(self, recipetask):
         """ Before appending the task to this Recipe, make sure it applies.

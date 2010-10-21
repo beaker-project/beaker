@@ -63,6 +63,11 @@ class Recipes(RPCRoot):
 
     upload = Uploader(config.get("basepath.logs", "/var/www/beaker/logs"))
 
+    log_types = dict(R = LogRecipe,
+                     T = LogRecipeTask,
+                     E = LogRecipeTaskResult,
+                    )
+
     @cherrypy.expose
     @identity.require(identity.not_anonymous())
     def register_file(self, server, recipe_id, path, name, basepath):
@@ -78,6 +83,35 @@ class Recipes(RPCRoot):
         if LogRecipe(path,name) not in recipe.logs:
             recipe.logs.append(LogRecipe(path, name, server, basepath))
         return '%s' % recipe.filepath
+
+    @cherrypy.expose
+    @identity.require(identity.not_anonymous())
+    def files(self, recipe_id):
+        """
+        Return an array of logs for this recipe
+        """
+        try:
+            recipe = Recipe.by_id(recipe_id)
+        except InvalidRequestError:
+            raise BX(_('Invalid recipe ID: %s' % recipe_id))
+        return recipe.all_logs
+
+    @cherrypy.expose
+    @identity.require(identity.not_anonymous())
+    def change_file(self, logid, server, basepath):
+        """
+        Change the server and basepath where the log file lives, Usually
+         used to move from lab controller cache to archive storage.
+        """
+        log_type, log_id = logid.split(":")
+        if log.upper() in self.log_types.keys():
+            try:
+                log = self.log_types[log_type.upper()].by_id(log_id)
+            except InvalidRequestError, e:
+                raise BX(_("Invalid %s %s" % (log_type, log_id)))
+        log.server = server
+        log.basepath = basepath
+        return True
 
     @cherrypy.expose
     @identity.require(identity.not_anonymous())
