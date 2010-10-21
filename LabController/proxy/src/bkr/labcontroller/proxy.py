@@ -67,7 +67,7 @@ class ProxyHelper(object):
         self.server = self.conf.get("SERVER", "http://%s/beaker/logs" % gethostname())
         if self.conf.get("CACHE", False):
             self.basepath = self.conf.get("CACHEPATH", "/var/www/beaker/logs")
-            self.upload = Uploader('%s' % basepath).uploadFile
+            self.upload = Uploader('%s' % self.basepath).uploadFile
 
     def recipe_upload_file(self, 
                          recipe_id, 
