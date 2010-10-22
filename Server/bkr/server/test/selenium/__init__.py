@@ -26,6 +26,7 @@ import turbogears.config
 from selenium import selenium
 import unittest
 import threading
+from bkr.server.bexceptions import BX
 
 log = logging.getLogger(__name__)
 
@@ -46,7 +47,10 @@ class SeleniumTestCase(unittest.TestCase):
         sel = getattr(cls,'sel',None)
         if sel is not None:
             sel.open("/")
-            sel.click("link=Logout")
+            try:
+                sel.click("link=Logout")
+            except Exception, e:
+                raise BX(_(e.unicode()))
             sel.wait_for_page_to_load("3000")
             return True 
         return False
@@ -60,7 +64,10 @@ class SeleniumTestCase(unittest.TestCase):
         sel = getattr(cls,'sel',None)
         if sel is not None:
             sel.open("/")
-            sel.click("link=Login")
+            try:
+                sel.click("link=Login")
+            except Exception, e:
+                raise BX(_(e.unicode()))
             sel.wait_for_page_to_load("3000")
             sel.type("user_name", user)
             sel.type("password", password)
