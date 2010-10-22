@@ -98,7 +98,7 @@ class ProxyHelper(object):
             if offset == 0:
                 self.hub.recipes.register_file('%s/recipes/%s' % (self.server, recipe_id),
                                                                   recipe_id, path, name,
-                                               '%s/recipes/%s' % (self.basepath, result_id))
+                                               '%s/recipes/%s' % (self.basepath, recipe_id))
             return self.upload('/recipes/%s/%s' % (recipe_id, path), 
                                name, 
                                size, 
