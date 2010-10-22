@@ -104,7 +104,7 @@ class Recipes(RPCRoot):
          used to move from lab controller cache to archive storage.
         """
         log_type, log_id = tid.split(":")
-        if log.upper() in self.log_types.keys():
+        if log_type.upper() in self.log_types.keys():
             try:
                 log = self.log_types[log_type.upper()].by_id(log_id)
             except InvalidRequestError, e:

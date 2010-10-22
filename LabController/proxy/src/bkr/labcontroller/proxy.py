@@ -9,6 +9,8 @@ import base64
 import xmltramp
 import glob
 import re
+import shutil
+import tempfile
 from xmlrpclib import Fault, ProtocolError
 from cStringIO import StringIO
 from socket import gethostname
@@ -361,17 +363,27 @@ class Monitor(ProxyHelper):
         """ If Cache is turned on then move the recipes logs to there final place
         """
         if self.conf.get("CACHE",False):
-            # Move logs
-            for mylog in self.hub.recipes.files(self.watchdog['recipe_id']):
+            tmpdir = tempfile.mkdtemp(dir=self.basepath)
+            # Move logs to tmp directory layout
+            mylogs = self.hub.recipes.files(self.watchdog['recipe_id'])
+            for mylog in mylogs:
                 server = '%s/%s' % (self.conf.get("ARCHIVE_SERVER"), mylog['filepath'])
                 basepath = '%s/%s' % (self.conf.get("ARCHIVE_BASEPATH"), mylog['filepath'])
                 mysrc = '%s/%s/%s' % (mylog['basepath'], mylog['path'], mylog['filename'])
-                mydst = '%s/%s/%s/%s' % (self.conf.get("ARCHIVE_RSYNC"),mylog['filepath'],
-                                         mylog['path'], mylog['filename'])
-                if self.rsync(mysrc, mydst):
-                    self.hub.recipes.change_file(mylog['id'], server, basepath)
+                mydst = '%s/%s/%s/%s' % (tmpdir, mylog['filepath'], 
+                                          mylog['path'], mylog['filename'])
+                os.makedirs(os.path.dirname(mydst))
+                os.link(mysrc,mydst)
+            # rsync the logs to there new home
+            rc = self.rsync('%s/' % tmpdir, '%s' % self.conf.get("ARCHIVE_RSYNC"))
+            if rc == 0:
+                # if the logs have been transfered then tell the server the new location
+                for mylog in mylogs:
+                    self.hub.recipes.change_file(mylog['tid'], server, basepath)
                     self.rm(mysrc)
                     self.removedirs(mylog['basepath'])
+                # get rid of our tmpdir.
+                shutil.rmtree(tmpdir)
 
     def rm(self, src):
         """ remove src
