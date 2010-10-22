@@ -3184,7 +3184,7 @@ class Log(MappedObject):
                     path     = self.path,
                     filename = self.filename,
                     tid      = '%s:%s' % (self.type, self.id),
-                    filepath = self.filepath,
+                    filepath = self.parent.filepath,
                     basepath = self.basepath,
                    )
 
