@@ -610,6 +610,8 @@ log_recipe_table = Table('log_recipe', metadata,
         Column('path', UnicodeText()),
         Column('filename', UnicodeText(), nullable=False),
         Column('start_time',DateTime, default=datetime.utcnow),
+	Column('server', UnicodeText()),
+	Column('basepath', UnicodeText()),
 )
 
 log_recipe_task_table = Table('log_recipe_task', metadata,
@@ -619,6 +621,8 @@ log_recipe_task_table = Table('log_recipe_task', metadata,
         Column('path', UnicodeText()),
         Column('filename', UnicodeText(), nullable=False),
         Column('start_time',DateTime, default=datetime.utcnow),
+	Column('server', UnicodeText()),
+	Column('basepath', UnicodeText()),
 )
 
 log_recipe_task_result_table = Table('log_recipe_task_result', metadata,
@@ -628,6 +632,8 @@ log_recipe_task_result_table = Table('log_recipe_task_result', metadata,
         Column('path', UnicodeText()),
         Column('filename', UnicodeText(), nullable=False),
         Column('start_time',DateTime, default=datetime.utcnow),
+	Column('server', UnicodeText()),
+	Column('basepath', UnicodeText()),
 )
 
 recipe_table = Table('recipe',metadata,
@@ -3143,9 +3149,11 @@ class Log(MappedObject):
 
     MAX_ENTRIES_PER_DIRECTORY = 100
 
-    def __init__(self, path=None, filename=None):
+    def __init__(self, path=None, filename=None, server=None, basepath=None):
         self.path = path
         self.filename = filename
+        self.server = server
+        self.basepath = basepath
 
     def result(self):
         return self.parent.result
@@ -3157,11 +3165,32 @@ class Log(MappedObject):
         """
         text = "%s/%s" % (self.path != '/' and self.path or '', self.filename)
         text = text[-50:]
-        return make_link(url = '/logs/%s/%s/%s' % (self.parent.filepath,
+        # if server is defined then the logs are stored elsewhere.
+        if self.server:
+            url = '%s/%s/%s' % (self.server, self.path, self.filename)
+        else:
+            url = '/logs/%s/%s/%s' % (self.parent.filepath,
                                                    self.path, 
-                                                   self.filename),
+                                                   self.filename)
+        return make_link(url = url,
                          text = text)
     link = property(link)
+
+    @property
+    def dict(self):
+        """ Return a dict describing this log
+        """
+        return dict(server   = self.server,
+                    path     = self.path,
+                    filename = self.filename,
+                    tid      = '%s:%s' % (self.type, self.id),
+                    filepath = self.parent.filepath,
+                    basepath = self.basepath,
+                   )
+
+    @classmethod 
+    def by_id(cls,id): 
+       return cls.query().filter_by(id=id).one()
 
     def __cmp__(self, other):
         """ Used to compare logs that are already stored. Log(path,filename) in Recipe.logs  == True
@@ -3176,13 +3205,13 @@ class Log(MappedObject):
             return 1
 
 class LogRecipe(Log):
-    pass
+    type = 'R'
 
 class LogRecipeTask(Log):
-    pass
+    type = 'T'
 
 class LogRecipeTaskResult(Log):
-    pass
+    type = 'E'
 
 class TaskBase(MappedObject):
 
@@ -4404,6 +4433,20 @@ class Recipe(TaskBase):
             yield task
             for task_result in task.results:
                 yield task_result
+
+    @property
+    def all_logs(self):
+        """
+        Return all logs for this recipe
+        """
+        for mylog in self.logs:
+            yield mylog.dict
+        for task in self.tasks:
+            for mylog in task.logs:
+                yield mylog.dict
+            for result in task.results:
+                for mylog in result.logs:
+                    yield mylog.dict
 
     def append_tasks(self, recipetask):
         """ Before appending the task to this Recipe, make sure it applies.

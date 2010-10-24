@@ -24,7 +24,7 @@ from bkr.server.widgets import myPaginateDataGrid
 from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.helpers import *
 from bexceptions import *
-from upload import Uploader
+from bkr.upload import Uploader
 #from turbogears.scheduler import add_interval_task
 
 import cherrypy
@@ -37,6 +37,22 @@ class RecipeTasks(RPCRoot):
     exposed = True
 
     upload = Uploader(config.get("basepath.logs", "/var/www/beaker/logs"))
+
+    @cherrypy.expose
+    @identity.require(identity.not_anonymous())
+    def register_file(self, server, task_id, path, name, basepath):
+        """
+        register file and return path to store
+        """
+        try:
+            recipetask = RecipeTask.by_id(task_id)
+        except InvalidRequestError:
+            raise BX(_('Invalid task ID: %s' % task_id))
+
+       # Add the log to the DB if it hasn't been recorded yet.
+        if LogRecipeTask(path,name) not in recipetask.logs:
+            recipetask.logs.append(LogRecipeTask(path, name, server, basepath))
+        return '%s' % recipetask.filepath
 
     @cherrypy.expose
     @identity.require(identity.not_anonymous())
@@ -59,6 +75,22 @@ class RecipeTasks(RPCRoot):
                                       md5sum,
                                       offset,
                                       data)
+
+    @cherrypy.expose
+    @identity.require(identity.not_anonymous())
+    def register_result_file(self, server, result_id, path, name, basepath):
+        """
+        register file and return path to store
+        """
+        try:
+            result = RecipeTaskResult.by_id(result_id)
+        except InvalidRequestError:
+            raise BX(_('Invalid result ID: %s' % result_id))
+
+       # Add the log to the DB if it hasn't been recorded yet.
+        if LogRecipeTaskResult(path,name) not in result.logs:
+            result.logs.append(LogRecipeTaskResult(path, name, server, basepath))
+        return '%s' % result.filepath
 
     @cherrypy.expose
     @identity.require(identity.not_anonymous())
