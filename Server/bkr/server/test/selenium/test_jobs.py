@@ -97,7 +97,7 @@ class TestNewJob(SeleniumTestCase):
                 'Line 12, col 0: Element recipe has extra content: brokenElement')
         sel.click('//input[@value="Queue despite validation errors"]')
         sel.wait_for_page_to_load('3000')
-        self.assertEqual(sel.get_title(), 'Jobs')
+        self.assertEqual(sel.get_title(), 'My Jobs')
         self.assert_(sel.get_text('css=.flash').startswith('Success!'))
 
     def test_valid_job_xml_doesnt_trigger_xsd_warning(self):
@@ -112,7 +112,7 @@ class TestNewJob(SeleniumTestCase):
         sel.wait_for_page_to_load('3000')
         sel.click('//input[@value="Queue"]')
         sel.wait_for_page_to_load('3000')
-        self.assertEqual(sel.get_title(), 'Jobs')
+        self.assertEqual(sel.get_title(), 'My Jobs')
         self.assert_(sel.get_text('css=.flash').startswith('Success!'))
     
     def test_edit_job_whiteboard(self):
