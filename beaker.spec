@@ -135,6 +135,7 @@ fi
 %{python_sitelib}/bkr/__init__.py*
 %{python_sitelib}/bkr/timeout_xmlrpclib.py*
 %{python_sitelib}/bkr/common/
+%{python_sitelib}/bkr/upload.py*
 %{python_sitelib}/bkr-%{version}-*
 %{python_sitelib}/bkr-%{version}-py%{pyver}.egg-info/
 %doc COPYING
@@ -184,7 +185,7 @@ fi
 %{_var}/lib/cobbler/triggers/sync/post/osversion.trigger
 %{_var}/lib/cobbler/snippets/*
 %{_var}/lib/cobbler/kickstarts/*
-%{_var}/www/beaker/*
+%attr(-,apache,root) %{_var}/www/beaker/*
 %attr(-,apache,root) %dir %{_localstatedir}/log/%{name}
 %{_sysconfdir}/init.d/%{name}-proxy
 %{_sysconfdir}/init.d/%{name}-watchdog
