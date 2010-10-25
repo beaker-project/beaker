@@ -1777,7 +1777,7 @@ $SNIPPET("rhts_post")
         return False
                 
     def can_loan(self, user=None):
-        if user and not self.loaned and not self.user:
+        if user and not self.loaned:
             if self.can_admin(user):
                 return True
         return False
