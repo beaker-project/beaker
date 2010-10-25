@@ -28,7 +28,7 @@ PriorityManager.prototype.RecipeSetChanged = function(new_priority_id,recipeset_
                   "tg_random" : new Date().getTime(),
                   "priority_id" : new_priority_id,
                   "recipeset_id" : recipeset_id }
-  
+    AjaxLoader.prototype.add_loader('priority_recipeset_' + recipeset_id) 
     var d = loadJSONDoc('/change_priority_recipeset' + "?" + queryString(params))
     // I wish we could just pass the callback var to priorityChanged
     // Reason we can't is because it each call uses the same pointer value it seems! 
@@ -49,6 +49,7 @@ PriorityManager.prototype.ChangeAll = function(new_priority_id,job_id,callback) 
 }
 
 PriorityManager.prototype.priorityChanged = function(f,elem_id,value,result) {  
+    AjaxLoader.prototype.remove_loader(elem_id)
     f(elem_id,value,result['current_priority'],result['msg'],result['success']) 
 }  
 

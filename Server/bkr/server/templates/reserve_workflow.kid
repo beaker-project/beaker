@@ -43,26 +43,26 @@
       <div id="reserve_wizard" style='margin-left:3em'>
         <h3>Reserve Criteria</h3>
         <div id="arch_input">
-          <label style="display:block;">${arch.label}</label>${arch.display(attrs=dict(size=5,multiple=1,style= "margin-left:5.5em;"))}<span id='loading' class='hidden'>&nbsp;&nbsp;&nbsp;&nbsp;</span>
+          <label style="display:block;">${arch.label}</label>${arch.display(attrs=dict(size=5,multiple=1,style= "margin-left:7.2em;"))}
         </div>
 
         <div id="distro_family_input"> 
-          <label>${distro_family.label}</label>${distro_family.display()}<span id='loading' class='hidden'>&nbsp;&nbsp;&nbsp;&nbsp;</span>
+          <label>${distro_family.label}</label>${distro_family.display()}
         </div>
         
         <div id="method_input">
-          <label>${method_.label}</label>${method_.display()}<span id='loading' class='hidden'>&nbsp;&nbsp;&nbsp;&nbsp;</span>
+          <label>${method_.label}</label>${method_.display(attrs=dict(style="margin-left:3.4em"))}
         </div>
 
         <div id="tag_input">
-          <label>${tag.label}</label>${tag.display()}<span id='loading' class='hidden'>&nbsp;&nbsp;&nbsp;&nbsp;</span>
+          <label>${tag.label}</label>${tag.display(attrs=dict(style="margin-left:5.2em"))}
         </div>
       </div>
 
      
       <div style="margin-left:3em">
         <h3>Select Distro</h3>     
-          <label>${distro.label}</label> ${distro.display()}<span id='loading' class='hidden'>&nbsp;&nbsp;&nbsp;&nbsp;</span>
+          <label>${distro.label}</label> ${distro.display(attrs=dict(style="margin-left:4em"))}
       </div>
      <br /><br />
      ${submit.display()} 

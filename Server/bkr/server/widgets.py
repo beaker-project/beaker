@@ -129,10 +129,10 @@ class ReserveSystem(TableForm):
         super(ReserveSystem,self).update_params(d)
 
 
-
 class ReserveWorkflow(Form): 
-    javascript = [LocalJSLink('bkr', '/static/javascript/reserve_workflow_v3.js'),
-                  LocalJSLink('bkr','/static/javascript/jquery-1.3.1.js'),
+    javascript = [LocalJSLink('bkr', '/static/javascript/loader.js'),
+                  LocalJSLink('bkr', '/static/javascript/reserve_workflow_v4.js'),
+                  LocalJSLink('bkr','/static/javascript/jquery.js'),
                  ] 
     template="bkr.server.templates.reserve_workflow"
     css = [LocalCSSLink('bkr','/static/css/reserve_workflow.css')] 
@@ -175,13 +175,15 @@ class ReserveWorkflow(Form):
         e = [elem.osmajor for elem in model.OSMajor.query()] 
         self.all_distro_familys = [('','None Selected')] + [[osmajor,osmajor] for osmajor in sorted(e,cmp=my_cmp )]  
 
-        self.method_ = SingleSelectField(name='method', label='Method', options=[None],validator=validators.NotEmpty())
+        self.method_ = SingleSelectField(name='method', label='Method', options=[None], 
+            validator=validators.NotEmpty())
         self.distro = SingleSelectField(name='distro', label='Distro', 
                                         options=[('','None available')],validator=validators.NotEmpty())
         self.distro_family = SingleSelectField(name='distro_family', label='Distro Family', 
                                                options=[None],validator=validators.NotEmpty())
         self.tag = SingleSelectField(name='tag', label='Tag', options=[None],validator=validators.NotEmpty())
-        self.arch = SingleSelectField(name='arch', label='Arch', options=[None],validator=validators.NotEmpty())
+        self.arch = SingleSelectField(name='arch', label='Arch', options=[None],
+            validator=validators.NotEmpty())
 
         self.to_json = UtilJSON.dynamic_json()
         self.system_rpc = './find_systems_for_distro'
@@ -285,15 +287,15 @@ class JobQuickSearch(CompoundWidget):
 
         self.status_queued = Button(default="Status is Queued", name='status_queued')
 
-class AckPanel(RadioButtonList):     
+class AckPanel(RadioButtonList): 
 
-    javascript = [LocalJSLink('bkr','/static/javascript/jquery-1.3.1.js'),
+    javascript = [LocalJSLink('bkr','/static/javascript/jquery.js'),
                   LocalJSLink('bkr','/static/javascript/jquery-ui-1.7.3.custom.min.js'), 
-                  LocalJSLink('bkr','/static/javascript/response.js')]
+                  LocalJSLink('bkr','/static/javascript/loader.js'),
+                  LocalJSLink('bkr','/static/javascript/response_v2.js')]
 
     css =  [LocalCSSLink('bkr','/static/css/smoothness/jquery-ui-1.7.3.custom.css')] 
     params = ['widget_name','unreal_response','comment_id','comment_class']
-    
     template = """
     <ul xmlns:py="http://purl.org/kid/ns#"
         class="${field_class}"
@@ -310,7 +312,6 @@ class AckPanel(RadioButtonList):
     """
     
     def __init__(self,*args,**kw):
-        
         #self.options = options 
         self.validator = validators.NotEmpty() 
         super(AckPanel,self).__init__(*args,**kw)
@@ -372,9 +373,9 @@ class AckPanel(RadioButtonList):
             log.debug("Unable to use name given to %s for comment id" % self.__class__.__name__)
             params['comment_id'] = "comment_%s" % rs_id
         return super(AckPanel,self).display(value,*args,**params)
-        
+ 
 class JobMatrixReport(Form):     
-    javascript = [LocalJSLink('bkr','/static/javascript/jquery-1.3.1.js'),
+    javascript = [LocalJSLink('bkr','/static/javascript/jquery.js'),
                   LocalJSLink('bkr','/static/javascript/jquery-ui-1.7.3.custom.min.js'),
                   LocalJSLink('bkr', '/static/javascript/job_matrix.js')]
     css = [LocalCSSLink('bkr','/static/css/job_matrix.css'), LocalCSSLink('bkr','/static/css/smoothness/jquery-ui-1.7.3.custom.css')] 
@@ -420,7 +421,7 @@ class JobMatrixReport(Form):
 
 class SearchBar(RepeatingFormField):
     """Search Bar""" 
-    javascript = [LocalJSLink('bkr', '/static/javascript/searchbar_v5.js'),LocalJSLink('bkr','/static/javascript/jquery-1.3.1.js')]
+    javascript = [LocalJSLink('bkr', '/static/javascript/searchbar_v5.js'),LocalJSLink('bkr','/static/javascript/jquery.js')]
     template = """
     <div xmlns:py="http://purl.org/kid/ns#">
     <a id="advancedsearch" href="#">Toggle Search</a>
@@ -676,7 +677,7 @@ class PowerActionForm(Form):
     template = "bkr.server.templates.system_power_action"
     member_widgets = ["id", "power", "lab_controller"]
     params = ['options', 'action', 'enabled','is_user']
-    
+
     def __init__(self, *args, **kw):
         super(PowerActionForm, self).__init__(*args, **kw)
         self.id = HiddenField(name="id")
@@ -697,6 +698,8 @@ class PowerActionForm(Form):
 
     
 class TaskSearchForm(RemoteForm):
+    RemoteForm.javascript.extend([LocalJSLink('bkr', '/static/javascript/jquery.js'),
+        LocalJSLink('bkr', '/static/javascript/loader.js')])
     template = "bkr.server.templates.task_search_form"
     member_widgets = ['system_id', 'system', 'task', 'distro', 'family', 'arch', 'start', 'finish', 'status', 'result']
     params = ['options','hidden']
@@ -716,7 +719,8 @@ class TaskSearchForm(RemoteForm):
               SingleSelectField(name='result_id', label=_(u'Result'),validator=validators.Int(),
                                 options=model.TaskResult.get_all),
              ]
-
+    before = 'task_search_before()'
+    on_complete = 'task_search_complete()'
 
     def update_params(self, d):
         super(TaskSearchForm, self).update_params(d)
@@ -1232,9 +1236,9 @@ class SystemForm(Form):
 class TasksWidget(CompoundWidget):
     template = "bkr.server.templates.tasks_widget"
     params = ['tasks', 'hidden','action']
-    member_widgets = ['link'] 
+    member_widgets = ['link']
     action = './do_search'
-    link = LinkRemoteFunction(name='link')
+    link = LinkRemoteFunction(name='link', before='task_search_before()', on_complete='task_search_complete()')
 
 class RecipeTasksWidget(TasksWidget):
     
@@ -1266,7 +1270,7 @@ class RecipeSetWidget(CompoundWidget):
    
 class RecipeWidget(CompoundWidget):
     javascript = [
-                  LocalJSLink('bkr','/static/javascript/jquery-1.3.1.js'),
+                  LocalJSLink('bkr','/static/javascript/jquery.js'),
                  ]
     css = []
     template = "bkr.server.templates.recipe_widget"
@@ -1353,7 +1357,7 @@ class JobWhiteboard(RPC, CompoundWidget):
     Widget for displaying/updating a job's whiteboard. Saves asynchronously using js.
     """
 
-    javascript = [LocalJSLink('bkr', '/static/javascript/jquery-1.3.1.js')]
+    javascript = [LocalJSLink('bkr', '/static/javascript/jquery.js')]
     template = 'bkr.server.templates.job_whiteboard'
     hidden_id = HiddenField(name='id')
     field = TextField(name='whiteboard')
@@ -1367,6 +1371,8 @@ class JobWhiteboard(RPC, CompoundWidget):
     form_attrs = {}
     readonly = False
     # these are references to js functions defined in the widget template:
+    before = 'job_whiteboard_before()'
+    on_complete = 'job_whiteboard_complete()'
     on_success = 'job_whiteboard_save_success()'
     on_failure = 'job_whiteboard_save_failure()'
 

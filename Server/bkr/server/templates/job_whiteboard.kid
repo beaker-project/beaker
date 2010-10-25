@@ -17,6 +17,13 @@
                         .appendTo($('#job_whiteboard_form'))
                         .show('slow');
             }
+            function job_whiteboard_before() {
+                AjaxLoader.prototype.add_loader('job_whiteboard_form')
+            }
+
+            function job_whiteboard_complete() {
+                AjaxLoader.prototype.remove_loader('job_whiteboard_form') 
+            }
         </script>
         ${hidden_id.display(value=job_id)}
         <span py:replace="field.display(value=value, attrs={'style': 'width: 20em;'})" />

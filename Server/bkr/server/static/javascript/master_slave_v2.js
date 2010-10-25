@@ -42,6 +42,7 @@ MasterSlave.prototype.SlaveChanged = function(new_value_id,slave_id,callback) {
 
 
 MasterSlave.prototype.valueChanged = function(f,elem_id,value,result) {  
+    AjaxLoader.prototype.remove_loader(elem_id)
     f(elem_id,value,result['current_value'],result['msg'],result['success']) 
 }  
 
