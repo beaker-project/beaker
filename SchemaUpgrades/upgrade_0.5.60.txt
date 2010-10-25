@@ -20,3 +20,10 @@ ALTER IGNORE TABLE task_packages_runfor_map ADD PRIMARY KEY (task_id, package_id
 ALTER IGNORE TABLE task_packages_required_map ADD PRIMARY KEY (task_id, package_id);
 ALTER IGNORE TABLE task_packages_custom_map ADD PRIMARY KEY (recipe_id, package_id);
 ALTER IGNORE TABLE task_type_map ADD PRIMARY KEY (task_id, task_type_id);
+
+ALTER IGNORE TABLE log_recipe ADD COLUMN server text NULL;
+ALTER IGNORE TABLE log_recipe ADD COLUMN basepath text NULL;
+ALTER IGNORE TABLE log_recipe_task ADD COLUMN server text NULL;
+ALTER IGNORE TABLE log_recipe_task ADD COLUMN basepath text NULL;
+ALTER IGNORE TABLE log_recipe_task_result ADD COLUMN server text NULL;
+ALTER IGNORE TABLE log_recipe_task_result ADD COLUMN basepath text NULL;
