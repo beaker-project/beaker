@@ -59,6 +59,7 @@ class Tasks(RPCRoot):
     )
 
     @expose(template='bkr.server.templates.form-post')
+    @identity.require(identity.not_anonymous())
     def new(self, **kw):
         return dict(
             title = 'New Task',
