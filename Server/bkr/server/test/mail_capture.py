@@ -26,18 +26,20 @@ See bkr.server.test.selenium.test_systems for an example of how to use this.
 import threading
 import smtpd
 import asyncore
+import logging
+
+log = logging.getLogger(__name__)
 
 class MailCaptureThread(threading.Thread):
 
-    # XXX smtpd.SMTPServer uses asyncore, which keeps a global map 
-    # of open connections -- that is really bad! This thread should have its
-    # own map, otherwise it will interfere with any other threads using asyncore.
-    # Sadly smtpd.SMTPServer does not give us any nice way to do that :-(
-    # For now this works because we don't have any other threads using asyncore
-    # in our tests.
-    assert not asyncore.socket_map
-
     def __init__(self, **kwargs):
+        # XXX smtpd.SMTPServer uses asyncore, which keeps a global map 
+        # of open connections -- that is really bad! This thread should have its
+        # own map, otherwise it will interfere with any other threads using asyncore.
+        # Sadly smtpd.SMTPServer does not give us any nice way to do that :-(
+        # For now this works because we don't have any other threads using asyncore
+        # in our tests.
+        assert not asyncore.socket_map
         super(MailCaptureThread, self).__init__(**kwargs)
         self.daemon = True
         self._running = True
@@ -51,8 +53,11 @@ class MailCaptureThread(threading.Thread):
         captured_mails = self.captured_mails
         class CapturingSMTPServer(smtpd.SMTPServer):
             def process_message(self, peer, mailfrom, rcpttos, data):
+                log.debug('%r: Captured mail from peer %r: %r', self, peer,
+                        (mailfrom, rcpttos, data))
                 captured_mails.append((mailfrom, rcpttos, data))
         server = CapturingSMTPServer(('127.0.0.1', 19999), None)
+        log.debug('Spawning %r', server)
         try:
             while self._running:
                 asyncore.loop(timeout=1, count=1)

@@ -102,11 +102,11 @@ class Jobs(RPCRoot):
 
     job_form = JobForm()
 
-    job_xsd_doc = lxml.etree.parse(pkg_resources.resource_stream(
-            'bkr.common', 'xsd/beaker-job.xsd'))
+    job_schema_doc = lxml.etree.parse(pkg_resources.resource_stream(
+            'bkr.common', 'schema/beaker-job.rng'))
 
     @classmethod
-    def success_redirect(cls, id, url='/jobs', *args, **kw):
+    def success_redirect(cls, id, url='/jobs/mine', *args, **kw):
         flash(_(u'Success! job id: %s' % id))
         redirect('%s' % url)
 
@@ -232,13 +232,13 @@ class Jobs(RPCRoot):
             textxml = filexml.file.read()
         elif textxml:
             if not confirmed:
-                job_xsd = lxml.etree.XMLSchema(self.job_xsd_doc)
-                if not job_xsd.validate(lxml.etree.fromstring(textxml)):
+                job_schema = lxml.etree.RelaxNG(self.job_schema_doc)
+                if not job_schema.validate(lxml.etree.fromstring(textxml)):
                     return dict(
                         title = title,
                         form = self.job_form,
                         action = 'clone',
-                        options = {'xsd_errors': job_xsd.error_log},
+                        options = {'xsd_errors': job_schema.error_log},
                         value = dict(textxml=textxml, confirmed=True),
                     )
             try:
@@ -321,8 +321,8 @@ class Jobs(RPCRoot):
         return recipeSet
 
     def process_xmljob(self, xmljob, user):
-        job = Job(whiteboard='%s' % xmljob.whiteboard, ttasks=0,
-                  owner=user)
+        job = Job(whiteboard='%s' % xmljob.whiteboard, ttasks=0, owner=user)
+        job.cc.extend(xmljob.iter_cc())
         for xmlrecipeSet in xmljob.iter_recipeSets():
             recipe_set = self._handle_recipe_set(xmlrecipeSet, user)
             job.recipesets.append(recipe_set)
@@ -516,9 +516,10 @@ class Jobs(RPCRoot):
     @expose(template='bkr.server.templates.grid')
     @paginate('list',default_order='-id', limit=50, max_limit=None)
     def mine(self,*args,**kw): 
-        return self.jobs(jobs=Job.mine(identity.current.user),action='./mine',*args,**kw)
+        return self.jobs(jobs=Job.mine(identity.current.user),action='./mine',
+                title=u'My Jobs', *args, **kw)
  
-    def jobs(self,jobs,action='.', *args, **kw): 
+    def jobs(self,jobs,action='.', title=u'Jobs', *args, **kw):
         jobs_return = self._jobs(jobs,**kw) 
         searchvalue = None
         search_options = {}
@@ -550,7 +551,7 @@ class Jobs(RPCRoot):
                            quick_searches = [('Status-is-Queued','Queued'),('Status-is-Running','Running'),('Status-is-Completed','Completed')])
                             
 
-        return dict(title="Jobs",
+        return dict(title=title,
                     object_count = jobs.count(),
                     grid=jobs_grid,
                     list=jobs, 

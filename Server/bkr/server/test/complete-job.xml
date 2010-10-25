@@ -1,0 +1,49 @@
+<job>
+    <notify>
+        <cc>
+            dan@example.com
+        </cc>
+        <cc>
+            ray@example.com
+        </cc>
+    </notify>
+    <whiteboard>
+        valid job
+    </whiteboard>
+    <recipeSet retention_tag="scratch">
+        <recipe kernel_options="" kernel_options_post="" ks_meta="" role="None" whiteboard="">
+            <guestrecipe guestargs="" guestname="" kernel_options="" kernel_options_post="" ks_meta="" role="None" whiteboard="">
+                <watchdog panic="None"/>
+                <packages/>
+                <ks_appends/>
+                <repos/>
+                <distroRequires>
+                    <distro_name op="=" value="BlueShoeLinux5-5"/>
+                    <distro_virt op="=" value=""/>
+                </distroRequires>
+                <hostRequires>
+                    <system_type value="Machine"/>
+                </hostRequires>
+                <partitions/>
+                <task name="/distribution/install" role="STANDALONE">
+                    <params/>
+                </task>
+            </guestrecipe>
+            <watchdog panic="None"/>
+            <packages/>
+            <ks_appends/>
+            <repos/>
+            <distroRequires>
+                <distro_name op="=" value="BlueShoeLinux5-5"/>
+                <distro_virt op="=" value=""/>
+            </distroRequires>
+            <hostRequires>
+                <system_type value="Machine"/>
+            </hostRequires>
+            <partitions/>
+            <task name="/distribution/install" role="STANDALONE">
+                <params/>
+            </task>
+        </recipe>
+    </recipeSet>
+</job>

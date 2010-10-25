@@ -5,7 +5,8 @@ from turbogears.database import metadata, mapper, session
 from turbogears.config import get
 from turbogears import url
 import ldap
-from sqlalchemy import (Table, Column, ForeignKey, String, Unicode, Integer, DateTime,
+from sqlalchemy import (Table, Column, ForeignKey, UniqueConstraint,
+                        String, Unicode, Integer, DateTime,
                         UnicodeText, Boolean, Float, VARCHAR, TEXT, Numeric, 
                         or_, and_, not_, select, case, func)
 
@@ -85,10 +86,10 @@ system_table = Table('system', metadata,
 system_device_map = Table('system_device_map', metadata,
     Column('system_id', Integer,
            ForeignKey('system.id'),
-           nullable=False),
+           primary_key=True),
     Column('device_id', Integer,
            ForeignKey('device.id'),
-           nullable=False),
+           primary_key=True),
 )
 
 system_type_table = Table('system_type', metadata,
@@ -118,19 +119,19 @@ arch_table = Table('arch', metadata,
 system_arch_map = Table('system_arch_map', metadata,
     Column('system_id', Integer,
            ForeignKey('system.id'),
-           nullable=False),
+           primary_key=True),
     Column('arch_id', Integer,
            ForeignKey('arch.id'),
-           nullable=False),
+           primary_key=True),
 )
 
 osversion_arch_map = Table('osversion_arch_map', metadata,
     Column('osversion_id', Integer,
            ForeignKey('osversion.id'),
-           nullable=False),
+           primary_key=True),
     Column('arch_id', Integer,
            ForeignKey('arch.id'),
-           nullable=False),
+           primary_key=True),
 )
 
 provision_table = Table('provision', metadata,
@@ -416,23 +417,23 @@ permissions_table = Table('permission', metadata,
 
 user_group_table = Table('user_group', metadata,
     Column('user_id', Integer, ForeignKey('tg_user.user_id',
-        onupdate='CASCADE', ondelete='CASCADE')),
+        onupdate='CASCADE', ondelete='CASCADE'), primary_key=True),
     Column('group_id', Integer, ForeignKey('tg_group.group_id',
-        onupdate='CASCADE', ondelete='CASCADE'))
+        onupdate='CASCADE', ondelete='CASCADE'), primary_key=True),
 )
 
 system_group_table = Table('system_group', metadata,
     Column('system_id', Integer, ForeignKey('system.id',
-        onupdate='CASCADE', ondelete='CASCADE')),
+        onupdate='CASCADE', ondelete='CASCADE'), primary_key=True),
     Column('group_id', Integer, ForeignKey('tg_group.group_id',
-        onupdate='CASCADE', ondelete='CASCADE'))
+        onupdate='CASCADE', ondelete='CASCADE'), primary_key=True),
 )
 
 system_admin_map_table = Table('system_admin_map', metadata, 
     Column('system_id', Integer, ForeignKey('system.id',
-        onupdate='CASCADE', ondelete='CASCADE')),
+        onupdate='CASCADE', ondelete='CASCADE'), primary_key=True),
     Column('group_id', Integer, ForeignKey('tg_group.group_id',
-        onupdate='CASCADE', ondelete='CASCADE'))
+        onupdate='CASCADE', ondelete='CASCADE'), primary_key=True),
 )
 
 recipe_set_nacked_table = Table('recipe_set_nacked', metadata,
@@ -463,9 +464,9 @@ response_table = Table('response', metadata,
 
 group_permission_table = Table('group_permission', metadata,
     Column('group_id', Integer, ForeignKey('tg_group.group_id',
-        onupdate='CASCADE', ondelete='CASCADE')),
+        onupdate='CASCADE', ondelete='CASCADE'), primary_key=True),
     Column('permission_id', Integer, ForeignKey('permission.permission_id',
-        onupdate='CASCADE', ondelete='CASCADE'))
+        onupdate='CASCADE', ondelete='CASCADE'), primary_key=True),
 )
 
 # activity schema
@@ -575,6 +576,12 @@ job_table = Table('job',metadata,
         Column('ktasks', Integer, default=0),
 )
 
+job_cc_table = Table('job_cc', metadata,
+        Column('job_id', Integer, ForeignKey('job.id', ondelete='CASCADE',
+            onupdate='CASCADE'), primary_key=True),
+        Column('email_address', Unicode(255), primary_key=True, index=True),
+)
+
 recipe_set_table = Table('recipe_set',metadata,
         Column('id', Integer, primary_key=True),
         Column('job_id', Integer,
@@ -679,16 +686,20 @@ guest_recipe_table = Table('guest_recipe', metadata,
 
 machine_guest_map =Table('machine_guest_map',metadata,
         Column('machine_recipe_id', Integer,
-                ForeignKey('machine_recipe.id', onupdate='CASCADE', ondelete='CASCADE')),
+                ForeignKey('machine_recipe.id', onupdate='CASCADE', ondelete='CASCADE'),
+                primary_key=True),
         Column('guest_recipe_id', Integer,
-                ForeignKey('recipe.id', onupdate='CASCADE', ondelete='CASCADE')),
+                ForeignKey('recipe.id', onupdate='CASCADE', ondelete='CASCADE'),
+                primary_key=True),
 )
 
 system_recipe_map = Table('system_recipe_map', metadata,
         Column('system_id', Integer,
-                ForeignKey('system.id', onupdate='CASCADE', ondelete='CASCADE')),
+                ForeignKey('system.id', onupdate='CASCADE', ondelete='CASCADE'),
+                primary_key=True),
         Column('recipe_id', Integer,
-                ForeignKey('recipe.id', onupdate='CASCADE', ondelete='CASCADE')),
+                ForeignKey('recipe.id', onupdate='CASCADE', ondelete='CASCADE'),
+                primary_key=True),
 )
 
 recipe_tag_table = Table('recipe_tag',metadata,
@@ -698,9 +709,11 @@ recipe_tag_table = Table('recipe_tag',metadata,
 
 recipe_tag_map = Table('recipe_tag_map', metadata,
         Column('tag_id', Integer,
-               ForeignKey('recipe_tag.id', onupdate='CASCADE', ondelete='CASCADE')),
+               ForeignKey('recipe_tag.id', onupdate='CASCADE', ondelete='CASCADE'),
+               primary_key=True),
         Column('recipe_id', Integer, 
-               ForeignKey('recipe.id', onupdate='CASCADE', ondelete='CASCADE')),
+               ForeignKey('recipe.id', onupdate='CASCADE', ondelete='CASCADE'),
+               primary_key=True),
 )
 
 recipe_rpm_table =Table('recipe_rpm',metadata,
@@ -842,30 +855,24 @@ task_bugzilla_table = Table('task_bugzilla',metadata,
 )
 
 task_packages_runfor_map = Table('task_packages_runfor_map', metadata,
-        Column('task_id', Integer,
-                ForeignKey('task.id', onupdate='CASCADE',
-                                      ondelete='CASCADE')),
-        Column('package_id', Integer,
-                ForeignKey('task_package.id',onupdate='CASCADE',
-                                             ondelete='CASCADE')),
+    Column('task_id', Integer, ForeignKey('task.id', onupdate='CASCADE',
+        ondelete='CASCADE'), primary_key=True),
+    Column('package_id', Integer, ForeignKey('task_package.id',
+        onupdate='CASCADE', ondelete='CASCADE'), primary_key=True),
 )
 
 task_packages_required_map = Table('task_packages_required_map', metadata,
-        Column('task_id', Integer,
-                ForeignKey('task.id', onupdate='CASCADE',
-                                      ondelete='CASCADE')),
-        Column('package_id', Integer,
-                ForeignKey('task_package.id',onupdate='CASCADE',
-                                             ondelete='CASCADE')),
+    Column('task_id', Integer, ForeignKey('task.id', onupdate='CASCADE',
+        ondelete='CASCADE'), primary_key=True),
+    Column('package_id', Integer, ForeignKey('task_package.id',
+        onupdate='CASCADE', ondelete='CASCADE'), primary_key=True),
 )
 
 task_packages_custom_map = Table('task_packages_custom_map', metadata,
-        Column('recipe_id', Integer,
-                ForeignKey('recipe.id', onupdate='CASCADE',
-                                      ondelete='CASCADE')),
-        Column('package_id', Integer,
-                ForeignKey('task_package.id',onupdate='CASCADE',
-                                             ondelete='CASCADE')),
+    Column('recipe_id', Integer, ForeignKey('recipe.id', onupdate='CASCADE',
+        ondelete='CASCADE'), primary_key=True),
+    Column('package_id', Integer, ForeignKey('task_package.id',
+        onupdate='CASCADE', ondelete='CASCADE'), primary_key=True),
 )
 
 task_property_needed_table = Table('task_property_needed', metadata,
@@ -886,12 +893,10 @@ task_type_table = Table('task_type',metadata,
 )
 
 task_type_map = Table('task_type_map',metadata,
-        Column('task_id', Integer,
-                ForeignKey('task.id',onupdate='CASCADE',
-                                     ondelete='CASCADE')),
-        Column('task_type_id', Integer,
-                ForeignKey('task_type.id', onupdate='CASCADE',
-                                           ondelete='CASCADE')),
+    Column('task_id', Integer, ForeignKey('task.id', onupdate='CASCADE',
+        ondelete='CASCADE'), primary_key=True),
+    Column('task_type_id', Integer, ForeignKey('task_type.id',
+        onupdate='CASCADE', ondelete='CASCADE'), primary_key=True),
 )
 
 # the identity model
@@ -3448,6 +3453,11 @@ class Job(TaskBase):
             job.setAttribute("owner", "%s" % self.owner.email_address)
             job.setAttribute("result", "%s" % self.result)
             job.setAttribute("status", "%s" % self.status)
+        if self.cc:
+            notify = self.doc.createElement('notify')
+            for email_address in self.cc:
+                notify.appendChild(self.node('cc', email_address))
+            job.appendChild(notify)
         job.appendChild(self.node("whiteboard", self.whiteboard or ''))
         for rs in self.recipesets:
             job.appendChild(rs.to_xml(clone))
@@ -3527,6 +3537,13 @@ class Job(TaskBase):
     def can_admin(self, user=None):
         """Returns True iff the given user can administer this Job."""
         return bool(user) and (self.owner == user or user.is_admin())
+
+    cc = association_proxy('_job_ccs', 'email_address')
+
+class JobCc(MappedObject):
+
+    def __init__(self, email_address):
+        self.email_address = email_address
   
 class BeakerTag(object):
 
@@ -5532,7 +5549,10 @@ mapper(Job, job_table,
         properties = {'recipesets':relation(RecipeSet, backref='job'),
                       'owner':relation(User, uselist=False, backref='jobs'),
                       'result':relation(TaskResult, uselist=False),
-                      'status':relation(TaskStatus, uselist=False)})
+                      'status':relation(TaskStatus, uselist=False),
+                      '_job_ccs': relation(JobCc, backref='job')})
+mapper(JobCc, job_cc_table)
+
 mapper(RecipeSetResponse,recipe_set_nacked_table,
         properties = { 'recipesets':relation(RecipeSet),
                         'response' : relation(Response,uselist=False)})

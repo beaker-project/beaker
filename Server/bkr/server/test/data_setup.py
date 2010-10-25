@@ -26,7 +26,7 @@ from bkr.server.model import LabController, User, Group, Distro, Breed, Arch, \
         OSMajor, OSVersion, SystemActivity, Task, MachineRecipe, System, \
         SystemType, SystemStatus, Recipe, RecipeTask, RecipeTaskResult, \
         Device, TaskResult, TaskStatus, Job, RecipeSet, TaskPriority, \
-        LabControllerDistro
+        LabControllerDistro, Power, PowerType
 
 log = logging.getLogger(__name__)
 
@@ -62,13 +62,16 @@ def create_labcontroller(fqdn=None):
     log.debug('labcontroller %s already exists' % fqdn)
     return lc
 
-def create_user(user_name=None, password=None, display_name=None):
+def create_user(user_name=None, password=None, display_name=None,
+        email_address=None):
     if user_name is None:
         user_name = u'user%d' % int(time.time() * 1000)
     if display_name is None:
         display_name = user_name
+    if email_address is None:
+        email_address = u'%s@example.com' % user_name
     user = User(user_name=user_name, display_name=display_name,
-            email_address=u'%s@example.com' % user_name)
+            email_address=email_address)
     if password:
         user.password = password
     log.debug('Created user %r', user)
@@ -123,6 +126,20 @@ def create_system(arch=u'i386', type=u'Machine', status=u'Automated',
     log.debug('Created system %r', system)
     return system
 
+def configure_system_power(system, power_type=u'ilo', address=None,
+        user=None, password=None, power_id=None):
+    if address is None:
+        address = u'%s_power_address' % system.fqdn
+    if user is None:
+        user = u'%s_power_user' % system.fqdn
+    if password is None:
+        password = u'%s_power_password' % system.fqdn
+    if power_id is None:
+        power_id = '%d' % int(time.time() * 1000)
+    system.power = Power(power_type=PowerType.by_name(power_type),
+            power_address=address, power_id=power_id,
+            power_user=user, power_password=password)
+
 def create_system_activity(user=None, **kw):
     if not user:
         user = create_user()
@@ -135,8 +152,9 @@ def create_task(name=None):
     task = Task.lazy_create(name=name)
     return task
 
-def create_recipe(system=None, distro=None, task_name=u'/distribution/reservesys'):
-    recipe = MachineRecipe(ttasks=1, system=system,
+def create_recipe(system=None, distro=None, task_name=u'/distribution/reservesys',
+        whiteboard=None):
+    recipe = MachineRecipe(ttasks=1, system=system, whiteboard=whiteboard,
             distro=distro or Distro.query()[0])
     recipe._distro_requires=u'<distroRequires><and><distro_arch value="i386"  \
             op="="></distro_arch><distro_variant value="Workstation" op="="> \
@@ -146,10 +164,14 @@ def create_recipe(system=None, distro=None, task_name=u'/distribution/reservesys
     recipe.append_tasks(RecipeTask(task=create_task(name=task_name)))
     return recipe
 
-def create_job_for_recipes(recipes, owner=None):
+def create_job_for_recipes(recipes, owner=None, whiteboard=None, cc=None):
     if owner is None:
         owner = create_user()
-    job = Job(whiteboard=u'job %d' % int(time.time() * 1000), ttasks=1, owner=owner)
+    if whiteboard is None:
+        whiteboard = u'job %d' % int(time.time() * 1000)
+    job = Job(whiteboard=whiteboard, ttasks=1, owner=owner)
+    if cc is not None:
+        job.cc = cc
     recipe_set = RecipeSet(ttasks=sum(r.ttasks for r in recipes),
             priority=TaskPriority.default_priority())
     recipe_set.recipes.extend(recipes)
@@ -157,12 +179,20 @@ def create_job_for_recipes(recipes, owner=None):
     log.debug('Created %s', job.t_id)
     return job
 
-def create_job(owner=None, distro=None, task_name=u'/distribution/reservesys'):
-    recipe = create_recipe(distro=distro, task_name=task_name)
-    return create_job_for_recipes([recipe], owner=owner)
+def create_job(owner=None, cc=None, distro=None,
+        task_name=u'/distribution/reservesys', whiteboard=None,
+        recipe_whiteboard=None, **kwargs):
+    recipe = create_recipe(distro=distro, task_name=task_name,
+            whiteboard=recipe_whiteboard)
+    return create_job_for_recipes([recipe], owner=owner,
+            whiteboard=whiteboard, cc=cc)
 
-def create_completed_job(result=u'Pass', system=None, **kwargs):
+def create_completed_job(**kwargs):
     job = create_job(**kwargs)
+    mark_job_complete(job, **kwargs)
+    return job
+
+def mark_job_complete(job, result=u'Pass', system=None, **kwargs):
     for recipe in job.all_recipes:
         if system is None:
             recipe.system = create_system(arch=recipe.arch)
@@ -178,7 +208,6 @@ def create_completed_job(result=u'Pass', system=None, **kwargs):
             recipe_task.results.append(rtr)
         recipe.update_status()
     log.debug('Marked %s as complete with result %s', job.t_id, result)
-    return job
 
 def create_device(**kw):
     device = Device(**kw)
