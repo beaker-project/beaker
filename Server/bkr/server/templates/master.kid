@@ -34,7 +34,9 @@ from bkr.server.model import system_types
     <div style="float:left; margin-left:50px;">
         <ul id="menu">
             <li class="logo">
-                <img style="float:right;" alt="" src="${tg.url('/static/images/header-beaker_logo2.png')}"/>
+                <a href="${tg.url('/')}">
+                  <img style="float:right;" alt="" src="${tg.url('/static/images/header-beaker_logo2.png')}"/>
+                </a>
             </li>
             <li>Systems
                 <ul id="systems">
