@@ -92,6 +92,14 @@ def new_recipes(*args):
                 for system in systems:
                     # Add matched systems to recipe.
                     recipe.systems.append(system)
+                # If the recipe only matches one system then bump its priority.
+                if len(recipe.systems) == 1:
+                    try:
+                        log.info("recipe ID %s matches one system, bumping priority" % recipe.id)
+                        recipe.recipeset.priority = TaskPriority.by_id(recipe.recipeset.priority.id + 1)
+                    except InvalidRequestError:
+                        # We may already be at the highest priority
+                        pass
                 if recipe.systems:
                     recipe.process()
                     log.info("recipe ID %s moved from New to Processed" % recipe.id)
