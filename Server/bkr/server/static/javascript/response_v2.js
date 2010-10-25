@@ -1,22 +1,26 @@
 AckPanel = function() {
-
 }
 
 AckPanel.prototype.initialize = function () {
+    
      bindMethods(this)  
 }
+AckPanel.prototype.response_loading_prefix = 'ack_response_loading_'
 
 AckPanel.prototype.update = function (rs_id,response_id) { 
     var params = { 'tg_format' : 'json',
                    'tg_random' : new Date().getTime(),
                    'response_id' : response_id,
                    'recipe_set_id' : rs_id }
+
+    AjaxLoader.prototype.add_loader('response_' + rs_id)
     var d = loadJSONDoc('./update_recipe_set_response?' + queryString(params)) 
     d.addCallback(this.update_results)
 }
 
-AckPanel.prototype.update_results = function (result) {
+AckPanel.prototype.update_results = function (result) { 
     var rs_id =  result['rs_id']
+    AjaxLoader.prototype.remove_loader('response_' + rs_id)
     var success = result['success']
     var text = null
 

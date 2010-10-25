@@ -124,12 +124,10 @@ ReserveWorkflow.prototype.show_auto_pick_warnings = function(result) {
     }
 }
 
+
 ReserveWorkflow.prototype.get_distros = function() {
     var distro_family_value = getElement(this.distro_family_id).value
-    if (!distro_family_value) { //we aren't going to get any distros if we dont have our distro family
-        return;
-    }
-    var arch_value = jQuery('#'+this.arch_id).val()  
+    var arch_value = jQuery('#'+this.arch_id).val()
     var method_value = getElement(this.method_id).value
     var tag_value = getElement(this.tag_id).value
     var params = { 'tg_format' : 'json',
@@ -138,11 +136,10 @@ ReserveWorkflow.prototype.get_distros = function() {
                    'distro_family' : distro_family_value,
                    'method' : method_value,
                    'tag' : tag_value }
-
-    var d = loadJSONDoc(this.get_distros_rpc + '?' + queryString(params)); 
+    AjaxLoader.prototype.add_loader(this.distro_id)
+    var d = loadJSONDoc(this.get_distros_rpc + '?' + queryString(params));
     d.addCallback(this.replaceDistros)
 };
-
 
 ReserveWorkflow.prototype.replaceDistros = function(result) {  
     if (result.options.length > 0) {
@@ -161,6 +158,7 @@ ReserveWorkflow.prototype.replaceDistros = function(result) {
     }
 
     replaceChildNodes(this.distro_id, map(this.replaceOptions, result.options));
+    AjaxLoader.prototype.remove_loader(this.distro_id)
 }
 
 ReserveWorkflow.prototype.replaceOptions = function(arg) {

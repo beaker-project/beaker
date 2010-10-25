@@ -15,7 +15,7 @@ RetentionTagManager.prototype.RecipeSetChanged = function(new_retentiontag_id,re
                   "tg_random" : new Date().getTime(),
                   "retentiontag_id" : new_retentiontag_id,
                   "recipeset_id" : recipeset_id }
-  
+    AjaxLoader.prototype.add_loader('retentiontag_recipeset_' + recipeset_id) 
     var d = loadJSONDoc('/jobs/change_retentiontag_recipeset' + "?" + queryString(params))
     // I wish we could just pass the callback var to priorityChanged
     // Reason we can't is because it each call uses the same pointer value it seems! 

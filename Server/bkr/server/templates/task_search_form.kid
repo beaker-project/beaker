@@ -1,4 +1,17 @@
-<form xmlns:py="http://purl.org/kid/ns#"
+<div xmlns:py="http://purl.org/kid/ns#" style="vertical-align: top;">
+<script type='text/javascript'>
+
+            function task_search_before() {
+                $('#task_items').empty()
+                AjaxLoader.prototype.add_loader('task_items')
+            }
+
+            function task_search_complete() {
+                AjaxLoader.prototype.remove_loader('task_items') 
+            }
+
+</script>
+<form 
     name="${use_name and name or None}"
     id="${not use_name and name or None}"
     action="${tg.url(action)}"
@@ -43,3 +56,4 @@
     </table>
    </fieldset>
 </form>
+</div>
