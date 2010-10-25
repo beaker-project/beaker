@@ -366,22 +366,35 @@ class Monitor(ProxyHelper):
             tmpdir = tempfile.mkdtemp(dir=self.basepath)
             # Move logs to tmp directory layout
             mylogs = self.hub.recipes.files(self.watchdog['recipe_id'])
+            trlogs = []
             for mylog in mylogs:
                 server = '%s/%s' % (self.conf.get("ARCHIVE_SERVER"), mylog['filepath'])
                 basepath = '%s/%s' % (self.conf.get("ARCHIVE_BASEPATH"), mylog['filepath'])
                 mysrc = '%s/%s/%s' % (mylog['basepath'], mylog['path'], mylog['filename'])
                 mydst = '%s/%s/%s/%s' % (tmpdir, mylog['filepath'], 
                                           mylog['path'], mylog['filename'])
-                os.makedirs(os.path.dirname(mydst))
-                os.link(mysrc,mydst)
+                if not os.path.exists(os.path.dirname(mydst)):
+                    os.makedirs(os.path.dirname(mydst))
+                try:
+                    os.link(mysrc,mydst)
+                    trlogs.append(mylog)
+                except OSError:
+                    pass
             # rsync the logs to there new home
             rc = self.rsync('%s/' % tmpdir, '%s' % self.conf.get("ARCHIVE_RSYNC"))
             if rc == 0:
                 # if the logs have been transfered then tell the server the new location
-                for mylog in mylogs:
+                for mylog in trlogs:
+                    server = '%s/%s' % (self.conf.get("ARCHIVE_SERVER"), mylog['filepath'])
+                    basepath = '%s/%s' % (self.conf.get("ARCHIVE_BASEPATH"), mylog['filepath'])
+                    mysrc = '%s/%s/%s' % (mylog['basepath'], mylog['path'], mylog['filename'])
                     self.hub.recipes.change_file(mylog['tid'], server, basepath)
                     self.rm(mysrc)
-                    self.removedirs(mylog['basepath'])
+                    try:
+                        self.removedirs(mylog['basepath'])
+                    except OSError:
+                        # Its ok if it fails, dir may not be empty yet
+                        pass
                 # get rid of our tmpdir.
                 shutil.rmtree(tmpdir)
 
