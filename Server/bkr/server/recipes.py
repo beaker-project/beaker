@@ -106,11 +106,11 @@ class Recipes(RPCRoot):
         log_type, log_id = tid.split(":")
         if log_type.upper() in self.log_types.keys():
             try:
-                log = self.log_types[log_type.upper()].by_id(log_id)
+                mylog = self.log_types[log_type.upper()].by_id(log_id)
             except InvalidRequestError, e:
                 raise BX(_("Invalid %s" % tid))
-        log.server = server
-        log.basepath = basepath
+        mylog.server = server
+        mylog.basepath = basepath
         return True
 
     @cherrypy.expose
