@@ -391,7 +391,7 @@ class Monitor(ProxyHelper):
                     self.hub.recipes.change_file(mylog['tid'], server, basepath)
                     self.rm(mysrc)
                     try:
-                        self.removedirs(mylog['basepath'])
+                        self.removedirs('%s/%s' % (mylog['basepath'], mylog['path']))
                     except OSError:
                         # Its ok if it fails, dir may not be empty yet
                         pass
