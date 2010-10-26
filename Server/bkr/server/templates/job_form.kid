@@ -1,7 +1,7 @@
 <div xmlns:py="http://purl.org/kid/ns#">
 <div py:if="xsd_errors">
     <center>
-        <div class="flash">Job failed XSD validation. Please confirm that you want to submit it.</div>
+        <div class="flash">Job failed schema validation. Please confirm that you want to submit it.</div>
         <ul class="xsd-error-list">
             <li py:for="error in xsd_errors">
                 Line ${error.line}, col ${error.column}: ${error.message}
