@@ -97,7 +97,7 @@ class ProxyHelper(object):
                                                                                         offset,
                                                                                         size))
         if self.conf.get("CACHE",False):
-            if offset == 0:
+            if int(offset) == 0:
                 self.hub.recipes.register_file('%s/recipes/%s' % (self.server, recipe_id),
                                                                   recipe_id, path, name,
                                                '%s/recipes/%s' % (self.basepath, recipe_id))
@@ -445,7 +445,7 @@ class Proxy(ProxyHelper):
                                                                                     offset,
                                                                                     size))
         if self.conf.get("CACHE",False):
-            if offset == 0:
+            if int(offset) == 0:
                 self.hub.recipes.tasks.register_file('%s/tasks/%s' % (self.server, task_id), 
                                                      task_id, path, name, 
                                                      '%s/tasks/%s' % (self.basepath, task_id))
@@ -544,7 +544,7 @@ class Proxy(ProxyHelper):
                                                                                         offset,
                                                                                         size))
         if self.conf.get("CACHE",False):
-            if offset == 0:
+            if int(offset) == 0:
                 self.hub.recipes.tasks.register_result_file('%s/results/%s' % (self.server,result_id),
                                                             result_id, path, name,
                                                             '%s/results/%s' % (self.basepath, 
