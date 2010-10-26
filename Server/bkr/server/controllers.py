@@ -870,7 +870,9 @@ class Root(RPCRoot):
             can_admin = system.can_admin(user = identity.current.user)
         except AttributeError,e:
             can_admin = False
-
+        # If you have anything in your widgets 'javascript' variable,
+        # do not return the widget here, the JS will not be loaded,
+        # return it as an arg in return()
         widgets = dict( 
                         labinfo   = self.labinfo_form,
                         details   = self.system_details,
@@ -880,8 +882,7 @@ class Root(RPCRoot):
                         notes     = self.system_notes,
                         groups    = self.system_groups,
                         install   = self.system_installoptions,
-                        arches    = self.arches_form,
-                        tasks      = self.task_form,
+                        arches    = self.arches_form 
                       )
         if system.type != SystemType.by_name(u'Virtual'):
             widgets['provision'] = self.system_provision
@@ -897,6 +898,7 @@ class Root(RPCRoot):
             value           = system,
             options         = options,
             history_data    = historical_data,
+            task_widget     = self.task_form,
             widgets         = widgets,
             widgets_action  = dict( power     = '/save_power',
                                     history   = '/view/%s' % fqdn,
