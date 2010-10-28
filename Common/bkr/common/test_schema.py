@@ -37,7 +37,7 @@ class JobSchemaTest(unittest.TestCase):
     def test_minimal_job(self):
         self.assert_valid('''
             <job>
-                <recipeSet retention_tag="scratch">
+                <recipeSet>
                     <recipe>
                         <distroRequires>
                             <distro_name op="=" value="BlueShoeLinux5-5"/>
@@ -93,7 +93,8 @@ class JobSchemaTest(unittest.TestCase):
             ''',
             ['Extra element watchdog in interleave',
              'Invalid sequence in interleave',
-             'Element recipe failed to validate content'])
+             'Element recipe failed to validate content',
+             'Element recipeSet failed to validate content'])
 
     def test_guestrecipe(self):
         self.assert_valid('''
