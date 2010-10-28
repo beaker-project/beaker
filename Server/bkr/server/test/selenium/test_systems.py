@@ -18,10 +18,62 @@
 
 import unittest
 import logging
+from urlparse import urljoin
+from urllib import urlencode, urlopen
+import lxml.etree
 from turbogears.database import session
 
 from bkr.server.test.selenium import SeleniumTestCase
-from bkr.server.test import data_setup
+from bkr.server.test import data_setup, get_server_base
+
+class TestSystemsGrid(SeleniumTestCase):
+
+    def setUp(self):
+        data_setup.create_system()
+        session.flush()
+        self.selenium = self.get_selenium()
+        self.selenium.start()
+
+    def tearDown(self):
+        self.selenium.stop()
+
+    def test_atom_feed_link_is_present(self):
+        sel = self.selenium
+        sel.open('')
+        self.assertEqual(sel.get_xpath_count('/html/head/link[@rel="feed" '
+                'and @title="Atom feed" and contains(@href, "tg_format=atom")]'),
+                '1')
+
+class TestSystemsAtomFeed(unittest.TestCase):
+
+    def setUp(self):
+        data_setup.create_system(fqdn='nogroup.system')
+        self.group = data_setup.create_group()
+        data_setup.create_system(fqdn='grouped.system').groups.append(self.group)
+        session.flush()
+
+    def feed_contains_system(self, feed, fqdn):
+        xpath = lxml.etree.XPath(
+                '/atom:feed/atom:entry/atom:title[text()="%s"]' % fqdn,
+                namespaces={'atom': 'http://www.w3.org/2005/Atom'})
+        return len(xpath(feed))
+
+    def test_all_systems(self):
+        feed_url = urljoin(get_server_base(), '?' + urlencode({
+                'tg_format': 'atom', 'list_tgp_order': '-date_modified'}))
+        feed = lxml.etree.parse(urlopen(feed_url)).getroot()
+        self.assert_(self.feed_contains_system(feed, 'nogroup.system'))
+        self.assert_(self.feed_contains_system(feed, 'grouped.system'))
+
+    def test_filter_by_group(self):
+        feed_url = urljoin(get_server_base(), '?' + urlencode({
+                'tg_format': 'atom', 'list_tgp_order': '-date_modified',
+                'systemsearch-0.table': 'System/Group',
+                'systemsearch-0.operation': 'is',
+                'systemsearch-0.value': self.group.group_name}))
+        feed = lxml.etree.parse(urlopen(feed_url)).getroot()
+        self.assert_(not self.feed_contains_system(feed, 'nogroup.system'))
+        self.assert_(self.feed_contains_system(feed, 'grouped.system'))
 
 class TestSystemView(SeleniumTestCase):
 

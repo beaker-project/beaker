@@ -488,6 +488,8 @@ class Root(RPCRoot):
         return {'success' : True } 
 
     @expose(template='bkr.server.templates.grid_add')
+    @expose(template='bkr.server.templates.systems_feed', format='xml', as_format='atom',
+            content_type='application/atom+xml', accept_format='application/atom+xml')
     @paginate('list',default_order='fqdn',limit=20,max_limit=None)
     def index(self, *args, **kw): 
         return_dict =  self.systems(systems = System.all(identity.current.user), *args, **kw) 
@@ -517,18 +519,24 @@ class Root(RPCRoot):
         redirect('/')
 
     @expose(template='bkr.server.templates.grid')
+    @expose(template='bkr.server.templates.systems_feed', format='xml', as_format='atom',
+            content_type='application/atom+xml', accept_format='application/atom+xml')
     @identity.require(identity.not_anonymous())
     @paginate('list',default_order='fqdn',limit=20,max_limit=None)
     def available(self, *args, **kw):
         return self.systems(systems = System.available(identity.current.user), *args, **kw)
 
     @expose(template='bkr.server.templates.grid')
+    @expose(template='bkr.server.templates.systems_feed', format='xml', as_format='atom',
+            content_type='application/atom+xml', accept_format='application/atom+xml')
     @identity.require(identity.not_anonymous())
     @paginate('list',default_order='fqdn',limit=20,max_limit=None)
     def free(self, *args, **kw): 
         return self.systems(systems = System.free(identity.current.user), *args, **kw)
 
     @expose(template='bkr.server.templates.grid')
+    @expose(template='bkr.server.templates.systems_feed', format='xml', as_format='atom',
+            content_type='application/atom+xml', accept_format='application/atom+xml')
     @identity.require(identity.not_anonymous())
     @paginate('list',limit=20,max_limit=None)
     def mine(self, *args, **kw):
@@ -708,7 +716,10 @@ class Root(RPCRoot):
                                                  'col_defaults' : col_data['default'],
                                                  'col_options' : col_data['options']},
                                      action = '.', 
-                                     search_bar = self.search_bar )
+                                     search_bar = self.search_bar,
+                                     atom_url='?tg_format=atom&list_tgp_order=-date_modified&'
+                                        + cherrypy.request.query_string,
+                                     )
                                                                         
 
     @expose(format='json')

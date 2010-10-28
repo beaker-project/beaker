@@ -4,6 +4,7 @@
 <head>
 <meta content="text/html; charset=utf-8" http-equiv="Content-Type" py:replace="''"/>
 <title>$title</title>
+<link py:if="defined('atom_url')" rel="feed" title="Atom feed" href="${atom_url}" />
 </head>
 <body>
 <h2>$title</h2>

@@ -33,6 +33,7 @@ import errno
 import bkr.timeout_xmlrpclib
 import os
 import shutil
+import urllib
 
 from turbogears import identity
 
@@ -2125,6 +2126,11 @@ $SNIPPET("rhts_post")
 
     def __repr__(self):
         return self.fqdn
+
+    @property
+    def href(self):
+        """Returns a relative URL for this system's page."""
+        return urllib.quote((u'/view/%s' % self.fqdn).encode('utf8'))
 
     def link(self):
         """ Return a link to this system
