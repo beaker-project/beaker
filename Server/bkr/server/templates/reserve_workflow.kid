@@ -39,7 +39,7 @@
     })
     </script>
     </head>
-    <form action="${action}" name="${name}">
+    <form action="${tg.url(action)}" name="${name}">
       <div id="reserve_wizard" style='margin-left:3em'>
         <h3>Reserve Criteria</h3>
         <div id="arch_input">

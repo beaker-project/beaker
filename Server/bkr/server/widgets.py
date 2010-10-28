@@ -401,8 +401,8 @@ class JobMatrixReport(Form):
 
         self.name='remote_form' 
         self.action = '.'
-    
-    def display(self,**params):     
+   
+    def display(self,**params): 
         if 'options' in params:
             if 'whiteboard_options' in params['options']:
                 params['whiteboard_options'] = params['options']['whiteboard_options'] 
@@ -697,9 +697,7 @@ class PowerActionForm(Form):
         return super(PowerActionForm,self).display(value,*args,**kw)
 
     
-class TaskSearchForm(RemoteForm):
-    RemoteForm.javascript.extend([LocalJSLink('bkr', '/static/javascript/jquery.js'),
-        LocalJSLink('bkr', '/static/javascript/loader.js')])
+class TaskSearchForm(RemoteForm): 
     template = "bkr.server.templates.task_search_form"
     member_widgets = ['system_id', 'system', 'task', 'distro', 'family', 'arch', 'start', 'finish', 'status', 'result']
     params = ['options','hidden']
@@ -722,11 +720,14 @@ class TaskSearchForm(RemoteForm):
     before = 'task_search_before()'
     on_complete = 'task_search_complete()'
 
+    def __init__(self, *args, **kw):
+        super(TaskSearchForm,self).__init__(*args,**kw)
+        self.javascript.extend([LocalJSLink('bkr', '/static/javascript/loader.js'),LocalJSLink('bkr','/static/javascript/jquery.js')])
+
     def update_params(self, d):
         super(TaskSearchForm, self).update_params(d)
         if 'arch_id' in d['options']:
             d['arch_id'] = d['options']['arch_id']
-
 
 class LabInfoForm(Form):
     template = "bkr.server.templates.system_labinfo"
@@ -1026,7 +1027,7 @@ class SystemProvision(Form):
                                        label=_(u'Reboot System?'),
                                        default=True)
 
-    def update_params(self, d):
+    def update_params(self, d): 
         super(SystemProvision, self).update_params(d)
         if 'will_provision' in d['options']:
             d['will_provision'] = d['options']['will_provision']

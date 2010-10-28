@@ -1,4 +1,4 @@
-from turbogears import widgets, url
+from turbogears import widgets
 from model import *
 import search_utility
 import bkr
@@ -25,7 +25,7 @@ class _FKLogEntry:
         self.description = description or form_field
         self.form_field = form_field
         self.mapper_class = mapper_class
-        valid_column = getattr(mapper_class,mapper_column_name,None)  
+        valid_column = getattr(mapper_class,mapper_column_name,None)
         self.mapper_column_name = mapper_column_name
 
 
@@ -36,19 +36,19 @@ class SystemTab:
 
         if system.can_share(our_user) and system.can_provision_now(our_user): #Has privs and machine is available, can take
             provision_now_rights = False
-            will_provision = True # User with take privs can also schedule it they wish 
-            provision_action = url(u'/schedule_provision')
+            will_provision = True # User with take privs can also schedule it they wish
+            provision_action = '/schedule_provision'
         elif not system.can_provision_now(our_user): # If you don't have privs to take
             if system.is_available(our_user): #And you have access to the machine, schedule
-                provision_action = url(u'/schedule_provision')
+                provision_action = '/schedule_provision'
                 provision_now_rights = False
                 will_provision = True
             else: #No privs to machine at all
-                will_provision = False  
-                provision_now_rights = False 
+                will_provision = False
+                provision_now_rights = False
                 provision_action = ''
         elif system.can_provision_now(our_user) and currently_held: #Has privs, and we are current user, we can provision
-            provision_action = url(u'/action_provision')
+            provision_action = '/action_provision'
             provision_now_rights = True
             will_provision = True
         elif system.can_provision_now(our_user) and not currently_held: #Has privs, not current user, You need to Take it first
