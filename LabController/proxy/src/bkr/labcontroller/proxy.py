@@ -9,9 +9,11 @@ import base64
 import xmltramp
 import glob
 import re
+import shutil
+import tempfile
 from xmlrpclib import Fault, ProtocolError
 from cStringIO import StringIO
-from socket import gethostbyaddr
+from socket import gethostname
 
 import kobo.conf
 from kobo.client import HubProxy
@@ -19,6 +21,8 @@ from kobo.exceptions import ShutdownException
 
 from kobo.process import kill_process_group
 from kobo.log import add_rotating_file_logger
+from bkr.upload import Uploader
+import utils
 
 try:
     from hashlib import md5 as md5_constructor
@@ -28,6 +32,7 @@ except ImportError:
 VERBOSE_LOG_FORMAT = "%(asctime)s [%(levelname)-8s] {%(process)5d} %(name)s.%(module)s:%(lineno)4d %(message)s"
 
 class ProxyHelper(object):
+
 
     def __init__(self, logger=None, conf=None, **kwargs):
         self.conf = kobo.conf.PyConfigParser()
@@ -62,6 +67,10 @@ class ProxyHelper(object):
 
         # self.hub is created here
         self.hub = HubProxy(logger=self.logger, conf=self.conf, **kwargs)
+        self.server = self.conf.get("SERVER", "http://%s/beaker/logs" % gethostname())
+        if self.conf.get("CACHE", False):
+            self.basepath = self.conf.get("CACHEPATH", "/var/www/beaker/logs")
+            self.upload = Uploader('%s' % self.basepath).uploadFile
 
     def recipe_upload_file(self, 
                          recipe_id, 
@@ -87,13 +96,25 @@ class ProxyHelper(object):
                                                                                         name,
                                                                                         offset,
                                                                                         size))
-        return self.hub.recipes.upload_file(recipe_id, 
-                                            path, 
-                                            name, 
-                                            size, 
-                                            md5sum, 
-                                            offset, 
-                                            data)
+        if self.conf.get("CACHE",False):
+            if int(offset) == 0:
+                self.hub.recipes.register_file('%s/recipes/%s' % (self.server, recipe_id),
+                                                                  recipe_id, path, name,
+                                               '%s/recipes/%s' % (self.basepath, recipe_id))
+            return self.upload('/recipes/%s/%s' % (recipe_id, path), 
+                               name, 
+                               size, 
+                               md5sum, 
+                               offset, 
+                               data)
+        else:
+            return self.hub.recipes.upload_file(recipe_id,
+                                                path, 
+                                                name, 
+                                                size, 
+                                                md5sum, 
+                                                offset, 
+                                                data)
 
     def task_result(self, 
                     task_id, 
@@ -238,7 +259,7 @@ class WatchFile(object):
                         # print out on the serial console
                         # this may abort the recipe depending on what the recipeSets
                         # watchdog behaviour is set to.
-                        self.proxy.extend_watchdog(self.watchdog['task_id'], 10)
+                        self.proxy.extend_watchdog(task()['id'], 10)
             if not line:
                 return False
             # If we didn't read our full blocksize and we are still growing
@@ -266,29 +287,33 @@ class Watchdog(ProxyHelper):
     def expire_watchdogs(self):
         """Clear out expired watchdog entries"""
 
+        self.logger.info("Entering expire_watchdogs")
         for watchdog in self.hub.recipes.tasks.watchdogs('expired'):
             self.abort(watchdog)
 
     def active_watchdogs(self):
         """Monitor active watchdog entries"""
 
-        # Look for zombies
-        for watchdog_system in self.watchdogs.copy():
-            if self.is_finished(watchdog_system):
-                self.logger.info("Monitor for %s died" % watchdog_system)
-                del self.watchdogs[watchdog_system]
+        self.logger.info("Entering active_watchdogs")
         active_watchdogs = []
         for watchdog in self.hub.recipes.tasks.watchdogs('active'):
-            active_watchdogs.append(watchdog['system'])
-            if watchdog['system'] not in self.watchdogs:
-                self.watchdogs[watchdog['system']] = self.monitor(watchdog)
-        # Kill Monitor if watchdog does not exist.
+            watchdog_key = '%s:%s' % (watchdog['system'], watchdog['recipe_id'])
+            active_watchdogs.append(watchdog_key)
+            if watchdog_key not in self.watchdogs:
+                self.watchdogs[watchdog_key] = Monitor(watchdog, self)
+        # Remove Monitor if watchdog does not exist.
         for watchdog_system in self.watchdogs.copy():
             if watchdog_system not in active_watchdogs:
-                kill_process_group(self.watchdogs[watchdog_system],
-                                   logger=self.logger)
+                self.watchdogs[watchdog_system].finish()
                 del self.watchdogs[watchdog_system]
                 self.logger.info("Removed Monitor for %s" % watchdog_system)
+
+    def run(self):
+        updated = False
+        for monitor in self.watchdogs:
+            if self.watchdogs[monitor].run():
+                updated = True
+        return updated
 
     def sleep(self):
         # Sleep between polling
@@ -297,82 +322,101 @@ class Watchdog(ProxyHelper):
     def abort(self, watchdog):
         """ Abort expired watchdog entry
         """
-        # Check to see if we have an active monitor running and kill it.
-        if watchdog['system'] in self.watchdogs:
-            try:
-                kill_process_group(self.watchdogs[watchdog['system']],
-                                   logger=self.logger)
-            except IOError, ex:
-                # proc file doesn't exist -> process was already killed
-                pass
-            del self.watchdogs[watchdog['system']]
         self.logger.info("External Watchdog Expired for %s" % watchdog['system'])
         self.recipe_stop(watchdog['recipe_id'],
                          'abort', 
                          'External Watchdog Expired')
 
-    def is_finished(self, system):
-        """Determine if monitor has died.
-        Calling os.waitpid removes finished child process zombies.
+class Monitor(ProxyHelper):
+    """ Upload console log if present to Scheduler
+         and look for panic/bug/etc..
+    """
+
+    def __init__(self, watchdog, obj, *args, **kwargs):
+        """ Monitor system
         """
+        self.watchdog = watchdog
+        self.logger = obj.logger
+        self.conf = obj.conf
+        self.hub = obj.hub
+        self.server = obj.server
+        self.upload = obj.upload
+        self.basepath = obj.basepath
+        self.logger.debug("Initialize monitor for system: %s" % self.watchdog['system'])
+        self.watchedFiles = [WatchFile("%s/%s" % (self.conf["CONSOLE_LOGS"], self.watchdog["system"]),self.watchdog,self, self.conf["PANIC_REGEX"])]
 
-        pid = self.watchdogs[system]
-
-        try:
-            (childpid, status) = os.waitpid(pid, os.WNOHANG)
-        except OSError, ex:
-            if ex.errno != errno.ECHILD:
-                # should not happen
-                self.logger.error("Monitor hasn't exited with errno.ECHILD: %s" % system)
-                raise
-
-            # the process is already gone
-            return False
-
-        if childpid != 0:
-            return True
-
-        return False
-
-    def monitor(self, watchdog):
-        """ Upload console log if present to Scheduler
-             and look for panic/bug/etc..
+    def run(self):
+        """ check the logs for new data to upload/or cp
         """
-        self.logger.debug("Forking monitor for system: %s" % watchdog['system'])
-        pid = os.fork()
-        if pid:
-            self.logger.info("Monitor forked %s: pid=%s" % (watchdog['system'],
-                                                            pid))
-            return pid
-        try:
-            # set process group
-            os.setpgrp()
+        # watch the console log
+        updated = False
+        logs = filter(os.path.isfile, glob.glob('%s/%s/*' % ( self.conf["ANAMON_LOGS"], self.watchdog["system"])))
+        for log in logs:
+            if log not in self.watchedFiles:
+                self.watchedFiles.append(WatchFile(log, self.watchdog,self, self.conf["PANIC_REGEX"]))
+        for watchedFile in self.watchedFiles:
+            if watchedFile.update():
+                updated = True
+        return updated
 
-            # set a do-nothing handler for sigusr2
-            # do not use signal.signal(signal.SIGUSR2, signal.SIG_IGN) - it completely masks interrups !!!
-            signal.signal(signal.SIGUSR2, lambda *args: None)
-            # set a default handler for SIGTERM
-            signal.signal(signal.SIGTERM, signal.SIG_DFL)
+    def finish(self):
+        """ If Cache is turned on then move the recipes logs to there final place
+        """
+        if self.conf.get("CACHE",False):
+            tmpdir = tempfile.mkdtemp(dir=self.basepath)
+            # Move logs to tmp directory layout
+            mylogs = self.hub.recipes.files(self.watchdog['recipe_id'])
+            trlogs = []
+            for mylog in mylogs:
+                server = '%s/%s' % (self.conf.get("ARCHIVE_SERVER"), mylog['filepath'])
+                basepath = '%s/%s' % (self.conf.get("ARCHIVE_BASEPATH"), mylog['filepath'])
+                mysrc = '%s/%s/%s' % (mylog['basepath'], mylog['path'], mylog['filename'])
+                mydst = '%s/%s/%s/%s' % (tmpdir, mylog['filepath'], 
+                                          mylog['path'], mylog['filename'])
+                if not os.path.exists(os.path.dirname(mydst)):
+                    os.makedirs(os.path.dirname(mydst))
+                try:
+                    os.link(mysrc,mydst)
+                    trlogs.append(mylog)
+                except OSError:
+                    pass
+            # rsync the logs to there new home
+            rc = self.rsync('%s/' % tmpdir, '%s' % self.conf.get("ARCHIVE_RSYNC"))
+            if rc == 0:
+                # if the logs have been transfered then tell the server the new location
+                for mylog in trlogs:
+                    server = '%s/%s' % (self.conf.get("ARCHIVE_SERVER"), mylog['filepath'])
+                    basepath = '%s/%s' % (self.conf.get("ARCHIVE_BASEPATH"), mylog['filepath'])
+                    mysrc = '%s/%s/%s' % (mylog['basepath'], mylog['path'], mylog['filename'])
+                    self.hub.recipes.change_file(mylog['tid'], server, basepath)
+                    self.rm(mysrc)
+                    try:
+                        self.removedirs('%s/%s' % (mylog['basepath'], mylog['path']))
+                    except OSError:
+                        # Its ok if it fails, dir may not be empty yet
+                        pass
+                # get rid of our tmpdir.
+                shutil.rmtree(tmpdir)
 
-            # watch the console log
-            watchedFiles = [WatchFile("%s/%s" % (self.conf["CONSOLE_LOGS"], watchdog["system"]),watchdog,self, self.conf["PANIC_REGEX"])]
-            while True:
-                updated = False
-                logs = filter(os.path.isfile, glob.glob('%s/%s/*' % ( self.conf["ANAMON_LOGS"], watchdog["system"])))
-                for log in logs:
-                    if log not in watchedFiles:
-                        watchedFiles.append(WatchFile(log, watchdog,self, self.conf["PANIC_REGEX"]))
-                for watchedFile in watchedFiles:
-                    if watchedFile.update():
-                        updated = True
-                # Don't DOS the Scheduler!
-                if updated:
-                    time.sleep(1)
-                else:
-                    time.sleep(5)
-        finally:
-            # die
-            os._exit(os.EX_OK)
+    def rm(self, src):
+        """ remove src
+        """
+        if os.path.exists(src):
+            return os.unlink(src)
+        return True
+
+    def removedirs(self, path):
+        """ remove empty dirs
+        """
+        if os.path.exists(path):
+            return os.removedirs(path)
+        return True
+
+    def rsync(self, src, dst):
+        """ Run system rsync command to move files
+        """
+        my_cmd = 'rsync %s %s %s' % (self.conf.get('RSYNC_FLAGS',''), src, dst)
+        return utils.subprocess_call(self.logger,my_cmd,shell=True)
 
         
 class Proxy(ProxyHelper):
@@ -400,13 +444,26 @@ class Proxy(ProxyHelper):
                                                                                     name,
                                                                                     offset,
                                                                                     size))
-        return self.hub.recipes.tasks.upload_file(task_id, 
-                                                  path, 
-                                                  name, 
-                                                  size, 
-                                                  md5sum, 
-                                                  offset, 
-                                                  data)
+        if self.conf.get("CACHE",False):
+            if int(offset) == 0:
+                self.hub.recipes.tasks.register_file('%s/tasks/%s' % (self.server, task_id), 
+                                                     task_id, path, name, 
+                                                     '%s/tasks/%s' % (self.basepath, task_id))
+
+            return self.upload('/tasks/%s/%s' % (task_id, path), 
+                               name, 
+                               size, 
+                               md5sum, 
+                               offset, 
+                               data)
+        else:
+            return self.hub.recipes.tasks.upload_file(task_id, 
+                                                      path, 
+                                                      name, 
+                                                      size, 
+                                                      md5sum, 
+                                                      offset, 
+                                                      data)
 
     def task_start(self,
                    task_id,
@@ -486,13 +543,27 @@ class Proxy(ProxyHelper):
                                                                                         name,
                                                                                         offset,
                                                                                         size))
-        return self.hub.recipes.tasks.result_upload_file(result_id, 
-                                                  path, 
-                                                  name, 
-                                                  size, 
-                                                  md5sum, 
-                                                  offset, 
-                                                  data)
+        if self.conf.get("CACHE",False):
+            if int(offset) == 0:
+                self.hub.recipes.tasks.register_result_file('%s/results/%s' % (self.server,result_id),
+                                                            result_id, path, name,
+                                                            '%s/results/%s' % (self.basepath, 
+                                                                               result_id))
+
+            return self.upload('/results/%s/%s' % (result_id, path), 
+                               name, 
+                               size, 
+                               md5sum, 
+                               offset, 
+                               data)
+        else:
+            return self.hub.recipes.tasks.result_upload_file(result_id, 
+                                                             path, 
+                                                             name, 
+                                                             size, 
+                                                             md5sum, 
+                                                             offset, 
+                                                             data)
 
     def push(self, fqdn, inventory):
         """ Push inventory data to Scheduler

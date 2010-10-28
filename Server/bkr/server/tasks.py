@@ -59,6 +59,7 @@ class Tasks(RPCRoot):
     )
 
     @expose(template='bkr.server.templates.form-post')
+    @identity.require(identity.not_anonymous())
     def new(self, **kw):
         return dict(
             title = 'New Task',
@@ -300,12 +301,14 @@ class Tasks(RPCRoot):
         task.rpm = raw_taskinfo['hdr']['rpm']
         task.version = raw_taskinfo['hdr']['ver']
         task.description = tinfo.test_description
+        task.types = []
         task.bugzillas = []
         task.required = []
         task.runfor = []
         task.needs = []
         task.excluded_osmajor = []
         task.excluded_arch = []
+        includeFamily=[]
         for family in tinfo.releases:
             if family.startswith('-'):
                 try:
@@ -313,6 +316,16 @@ class Tasks(RPCRoot):
                         task.excluded_osmajor.append(TaskExcludeOSMajor(osmajor=OSMajor.by_name_alias(family.lstrip('-'))))
                 except InvalidRequestError:
                     pass
+            else:
+                try:
+                    includeFamily.append(OSMajor.by_name_alias(family).osmajor)
+                except InvalidRequestError:
+                    pass
+        families = set([ '%s' % family.osmajor for family in OSMajor.query()])
+        if includeFamily:
+            for family in families.difference(set(includeFamily)):
+                if family not in task.excluded_osmajor:
+                    task.excluded_osmajor.append(TaskExcludeOSMajor(osmajor=OSMajor.by_name_alias(family)))
         if tinfo.test_archs:
             arches = set([ '%s' % arch.arch for arch in Arch.query()])
             for arch in arches.difference(set(tinfo.test_archs)):

@@ -501,8 +501,10 @@ div.dd div.blue {
 
 /*
 ** CSS for alert/warn msgs etc
+*
+* XXX msg is not a real HTML element!
 */
-msg {
+msg, div.msg {
 
   -moz-border-radius: 0.35em;
   -webkit-border-radius: 0.35em;
@@ -512,14 +514,17 @@ msg {
 
 }
 
-msg.success {
-  background-color:#0f0; 
-  color:#4F4F4F 
+msg.success, div.msg.success {
+  background:#00FF00; 
+  font-weight:normal;
+  padding: 1 1 1 1;
+   
 }
 
-msg.warn {
+msg.warn, div.msg.warn {
+  color:white;
+  font-weight:normal;
   background-color:red;
-  color:black;
  } 
 /*
 ** CSS for displaying package updates (show.kid)
@@ -692,8 +697,6 @@ body { font-family:Arial, Helvetica, Sans-Serif; font-size:12px; margin:0px 20px
 .ackpanel {
     list-style-type:none;
     float:left;
-    margin:-1.5em 0  0 15%;
-    ;
 }
 
 ul.ackpanel > li {

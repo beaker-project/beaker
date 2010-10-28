@@ -22,6 +22,16 @@ def make_scan_link(id):
     return make_link(url  = 'rescan?id=%s' % id,
                      text = 'Rescan (*)')
 
+def make_fake_link(name,id,text):
+    # make something look like a href
+    a  = Element('a')
+    a.attrib['class'] = "list"
+    a.attrib['style'] = "color:#22437f;cursor:pointer"
+    a.attrib['name'] = name
+    a.attrib['id'] = id
+    a.text = '%s ' % text
+    return a
+
 def to_byte_string(encoding):
     """
     encode the dict/array/string returned by generators

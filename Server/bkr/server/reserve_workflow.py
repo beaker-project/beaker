@@ -101,11 +101,13 @@ class ReserveWorkflow:
         return {'options' : options }
 
     @expose(allow_json=True)
-    def get_distro_options(self,arch,distro_family,method,tag):
+    def get_distro_options(self,arch=None,distro_family=None,method='nfs',tag=None):
         """
         get_distro_options() will return all the distros for a given arch,
         distro_family,method and tag
         """
+        if arch is None or distro_family is None:
+            return {'options' : [] }
         arch = arch.split(',')  
         if len(arch) > 1:
             results = Distro.multiple_systems_distro(method=method,arch=arch,osmajor=distro_family,tag=tag) 

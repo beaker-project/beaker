@@ -19,12 +19,14 @@ from bkr.server.activity import Activities
 from bkr.server.reports import Reports
 from bkr.server.job_matrix import JobMatrix
 from bkr.server.reserve_workflow import ReserveWorkflow
+from bkr.server.retention_tags import RetentionTag as RetentionTagController
 from bkr.server.watchdog import Watchdogs
 from bkr.server.widgets import myPaginateDataGrid
 from bkr.server.widgets import PowerTypeForm
 from bkr.server.widgets import PowerForm
 from bkr.server.widgets import LabInfoForm
 from bkr.server.widgets import PowerActionForm
+from bkr.server.widgets import ReportProblemForm
 from bkr.server.widgets import SystemDetails
 from bkr.server.widgets import SystemHistory
 from bkr.server.widgets import SystemExclude
@@ -44,13 +46,14 @@ from bkr.server.recipes import Recipes
 from bkr.server.recipesets import RecipeSets
 from bkr.server.tasks import Tasks
 from bkr.server.task_actions import TaskActions
-from bkr.server.controller_utilities import Utility, SystemSaveForm, SearchOptions
+from bkr.server.controller_utilities import Utility, SystemSaveForm, SearchOptions, SystemTab
 from cherrypy import request, response
 from cherrypy.lib.cptools import serve_file
 from tg_expanding_form_widget.tg_expanding_form_widget import ExpandingForm
 from bkr.server.needpropertyxml import *
 from bkr.server.helpers import *
 from bkr.server.tools.init import dummy
+from bkr.server import mail
 from decimal import Decimal
 from bexceptions import *
 import bkr.server.recipes
@@ -229,6 +232,7 @@ class Root(RPCRoot):
     matrix = JobMatrix()
     reserveworkflow = ReserveWorkflow()
     watchdogs = Watchdogs()
+    retentiontag = RetentionTagController()
     
     id         = widgets.HiddenField(name='id')
     submit     = widgets.SubmitButton(name='submit')
@@ -285,7 +289,7 @@ class Root(RPCRoot):
     system_provision = SystemProvision(name='provision')
     arches_form = SystemArches(name='arches') 
     task_form = TaskSearchForm(name='tasks')
-
+    report_problem_form = ReportProblemForm()
 
     @expose(format='json')
     def change_system_admin(self,system_id=None,group_id=None,cmd=None,**kw):
@@ -441,7 +445,7 @@ class Root(RPCRoot):
 
     @expose(template='bkr.server.templates.grid_add')
     @paginate('list',default_order='fqdn',limit=20,max_limit=None)
-    def index(self, *args, **kw):   
+    def index(self, *args, **kw): 
         return_dict =  self.systems(systems = System.all(identity.current.user), *args, **kw) 
         return return_dict
 
@@ -508,9 +512,8 @@ class Root(RPCRoot):
                 except KeyError:
                     raise
             # I don't like duplicating this code in find_systems_for_distro() but it dies on trying to jsonify a Query object... 
-            systems_distro_query = distro.systems() 
-            avail_systems_distro_query = System.available_for_schedule(identity.current.user,System.by_type(type='machine',systems=systems_distro_query)) 
-           
+            systems_distro_query = distro.systems()
+            avail_systems_distro_query = System.available_for_schedule(identity.current.user,systems=systems_distro_query)
             warn = None
             if avail_systems_distro_query.count() < 1: 
                 warn = 'No Systems compatible with distro %s' % distro.install_name
@@ -823,6 +826,7 @@ class Root(RPCRoot):
         options = {}
         readonly = False
         is_user = False
+        title = 'New'
         if system:
             title = system.fqdn
             our_user = identity.current.user #simple optimisation
@@ -835,36 +839,16 @@ class Root(RPCRoot):
                 options['loan_text'] = ' (Loan)'
             if system.current_loan(our_user):
                 options['loan_text'] = ' (Return)'
-
+             
             if system.can_share(our_user) and system.can_provision_now(our_user): #Has privs and machine is available, can take
                 options['user_change_text'] = ' (Take)'
-                self.provision_now_rights = True
-                self.will_provision = False 
-            elif not system.can_provision_now(our_user): # If you don't have privs to take
-                if system.is_available(our_user): #And you have access to the machine, schedule
-                    self.provision_action = '/schedule_provision'
-                    self.provision_now_rights = False
-                    self.will_provision = True
-                else: #No privs to machine at all
-                    self.will_provision = False  
-                    self.provision_now_rights = False 
-            elif system.can_provision_now(our_user) and currently_held: #Has privs, and we are current user, we can provision
-                self.provision_action = '/action_provision'
-                self.provision_now_rights = True
-                self.will_provision = True
-            elif system.can_provision_now(our_user) and not currently_held: #Has privs, not current user, You need to Take it first
-                self.provision_now_rights = True
-                self.will_provision = False
-            else:
-                log.error('Could not follow logic when determining user access to machine')
-                self.will_provision = False
-                self.provision_now_rights = False
 
-        if system.current_user(our_user):
-            options['user_change_text'] = ' (Return)'
-            is_user = True
-        else:
-            title = 'New'
+            if system.current_user(our_user):
+                options['user_change_text'] = ' (Return)'
+                is_user = True
+
+            self.provision_now_rights,self.will_provision,self.provision_action = \
+                SystemTab.get_provision_perms(system, our_user, currently_held)
 
         if 'activities_found' in histories_return: 
             historical_data = histories_return['activities_found']
@@ -886,7 +870,9 @@ class Root(RPCRoot):
             can_admin = system.can_admin(user = identity.current.user)
         except AttributeError,e:
             can_admin = False
-
+        # If you have anything in your widgets 'javascript' variable,
+        # do not return the widget here, the JS will not be loaded,
+        # return it as an arg in return()
         widgets = dict( 
                         labinfo   = self.labinfo_form,
                         details   = self.system_details,
@@ -896,8 +882,7 @@ class Root(RPCRoot):
                         notes     = self.system_notes,
                         groups    = self.system_groups,
                         install   = self.system_installoptions,
-                        arches    = self.arches_form,
-                        tasks      = self.task_form,
+                        arches    = self.arches_form 
                       )
         if system.type != SystemType.by_name(u'Virtual'):
             widgets['provision'] = self.system_provision
@@ -913,6 +898,7 @@ class Root(RPCRoot):
             value           = system,
             options         = options,
             history_data    = historical_data,
+            task_widget     = self.task_form,
             widgets         = widgets,
             widgets_action  = dict( power     = '/save_power',
                                     history   = '/view/%s' % fqdn,
@@ -1705,6 +1691,38 @@ class Root(RPCRoot):
                 provision.arch=arch
                 system.provisions[arch] = provision
         redirect("/view/%s" % system.fqdn)
+
+    @expose(template='bkr.server.templates.form-post')
+    @validate(form=report_problem_form)
+    def report_problem(self, system_id, recipe_id=None, problem_description=None):
+        """
+        Allows users to report a problem with a system to the system's owner.
+        """
+        try:
+            system = System.by_id(system_id, identity.current.user)
+        except InvalidRequestError:
+            flash(_(u'Unable to find system with id of %s' % system_id))
+            redirect('/')
+        try:
+            recipe = Recipe.by_id(recipe_id)
+        except InvalidRequestError:
+            recipe = None
+        if request.method == 'POST':
+            mail.system_problem_report(system, problem_description,
+                    recipe, identity.current.user)
+            activity = SystemActivity(identity.current.user, 'WEBUI', 'Reported problem',
+                    'Status', None, problem_description)
+            system.activity.append(activity)
+            flash(_(u'Your problem report has been forwarded to the system owner'))
+            redirect('/view/%s' % system.fqdn)
+        return dict(
+            title=_(u'Report a problem with %s') % system.fqdn,
+            form=self.report_problem_form,
+            method='post',
+            action='report_problem',
+            value={},
+            options={'system': system, 'recipe': recipe}
+        )
 
     @cherrypy.expose
     # Testing auth via xmlrpc

@@ -365,17 +365,12 @@ class JobMatrix:
         and will return a string representation of a URL pointing to a page which will display the
         results of the given task 
         """
-        job_string = ''
-        for job in self.job_ids:
-            if job:
-                job_string += 'job_id=%s&' % job
-         
-        result_string = '/tasks/executed?task=%s&result_id=%s&whiteboard=%s&arch_id=%s&' % \
-                        (query_obj.task_name, 
-                         result, 
-                         query_obj.whiteboard or '', 
-                         query_obj.arch_id) 
-        return result_string + job_string
+        return url('/tasks/executed',
+                task=query_obj.task_name,
+                result_id=result,
+                whiteboard=query_obj.whiteboard or '',
+                arch_id=query_obj.arch_id,
+                job_id=self.job_ids)
 
     def make_result_box(self,returns,query_obj,result=None): 
         """
@@ -396,7 +391,7 @@ class JobMatrix:
                 sub_link = SubElement(sub_span,
                                       'a', 
                                       {'style':'color:inherit;text-decoration:none'}, 
-                                      href=url(task_list_params))
+                                      href=task_list_params)
                                                
 
                 sub_link.text = '%s: %s' % (result_text,how_many)

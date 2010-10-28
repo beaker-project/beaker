@@ -34,7 +34,9 @@ from bkr.server.model import system_types
     <div style="float:left; margin-left:50px;">
         <ul id="menu">
             <li class="logo">
-                <img style="float:right;" alt="" src="${tg.url('/static/images/header-beaker_logo2.png')}"/>
+                <a href="${tg.url('/')}">
+                  <img style="float:right;" alt="" src="${tg.url('/static/images/header-beaker_logo2.png')}"/>
+                </a>
             </li>
             <li>Systems
                 <ul id="systems">
@@ -147,6 +149,7 @@ from bkr.server.model import system_types
                         <img class="corner_inset_right" alt="" src="${tg.url('/static/images/corner_inset_right.png')}"/>
                     </li>
                     <li><a href="${tg.url('/groups/admin')}">Groups</a></li>
+                    <li><a href="${tg.url('/retentiontag/admin')}">Retention Tags</a></li>
                     <li><a href="${tg.url('/labcontrollers')}">Lab Controllers</a></li>
                     <li><a href="${tg.url('/powertypes')}">Power Types</a></li>
                     <li><a href="${tg.url('/keytypes')}">Key Types</a></li>

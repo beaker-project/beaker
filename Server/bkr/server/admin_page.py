@@ -28,12 +28,17 @@ class AdminPage(RPCRoot):
             self.result_name = kw['result_name']
         else:
             self.result_name = 'matches'
+
+        if 'widget_action' in kw:
+            self.widget_action = kw['widget_action']
+        else:
+            self.widget_action = '.'
  
         self.search_auto = AutoCompleteField(name=self.search_name,
                                                 search_controller = url(self.search_url),
                                                 search_param = self.search_param,
                                                 result_name = self.result_name)
-        self.search_widget_form = TableForm('SearchUser', fields=[self.search_auto], action='.', submit_text=_(u'Search'),) 
+        self.search_widget_form = TableForm('Search', fields=[self.search_auto], action=self.widget_action, submit_text=_(u'Search'),) 
         if getattr(self,'join',None) is None:
             self.join = []
         self.add = True

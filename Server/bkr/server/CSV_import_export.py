@@ -56,7 +56,7 @@ class CSV(RPCRoot):
         action = 'export data',
         submit_text = _(u'Export CSV'),
     )
-    
+
     @expose(template='bkr.server.templates.form')
     @identity.require(identity.not_anonymous())
     def index(self, **kw):
@@ -79,14 +79,18 @@ class CSV(RPCRoot):
 
     @expose()
     @identity.require(identity.not_anonymous())
-    def action_export(self, csv_type, *args, **kw):
+    def action_export(self, csv_type, to_screen=False, *args, **kw):
         file = NamedTemporaryFile()
         log = self.to_csv(file, csv_type)
         file.seek(0)
-        return serve_file(file.name, contentType="text/csv", 
+
+        if to_screen: #Used for testing contents of CSV
+            return serve_file(file.name, contentType="text/plain")
+        else:
+            return serve_file(file.name, contentType="text/csv",
                                      disposition="attachment",
                                      name="%s.csv" % csv_type)
-        
+
     @expose(template='bkr.server.templates.csv_import')
     @identity.require(identity.in_group('admin'))
     def action_import(self, csv_file, *args, **kw):

@@ -23,6 +23,7 @@ import sys
 import os
 import pkg_resources
 pkg_resources.require("SQLAlchemy>=0.3.10")
+from bkr.server.bexceptions import BX, CobblerTaskFailedException
 from bkr.server.model import *
 from bkr.server.util import load_config
 from turbogears.database import session
@@ -78,9 +79,10 @@ def new_recipes(*args):
     if not recipes.count():
         return False
     log.debug("Entering new_recipes routine")
-    for recipe in recipes:
+    for _recipe in recipes:
         session.begin()
         try:
+            recipe = Recipe.by_id(_recipe.id)
             if recipe.distro:
                 systems = recipe.distro.systems_filter(
                                             recipe.recipeset.job.owner,
@@ -90,6 +92,14 @@ def new_recipes(*args):
                 for system in systems:
                     # Add matched systems to recipe.
                     recipe.systems.append(system)
+                # If the recipe only matches one system then bump its priority.
+                if len(recipe.systems) == 1:
+                    try:
+                        log.info("recipe ID %s matches one system, bumping priority" % recipe.id)
+                        recipe.recipeset.priority = TaskPriority.by_id(recipe.recipeset.priority.id + 1)
+                    except InvalidRequestError:
+                        # We may already be at the highest priority
+                        pass
                 if recipe.systems:
                     recipe.process()
                     log.info("recipe ID %s moved from New to Processed" % recipe.id)
@@ -102,7 +112,7 @@ def new_recipes(*args):
         except exceptions.Exception, e:
             session.rollback()
             log.error("Failed to commit due to :%s" % e)
-    session.close()
+        session.close()
     log.debug("Exiting new_recipes routine")
     return True
 
@@ -113,9 +123,10 @@ def processed_recipesets(*args):
     if not recipesets.count():
         return False
     log.debug("Entering processed_recipes routine")
-    for recipeset in recipesets:
+    for _recipeset in recipesets:
         session.begin()
         try:
+            recipeset = RecipeSet.by_id(_recipeset.id)
             bad_l_controllers = set()
             # We only need to do this processing on multi-host recipes
             if len(recipeset.recipes) == 1:
@@ -167,8 +178,9 @@ def processed_recipesets(*args):
         
                                 if systemsa.difference(systemsb):
                                     for rem_system in systemsa.intersection(systemsb):
-                                        log.debug("recipe: %s labController:%s Removing system %s" % (recipe.id, l_controller, rem_system))
-                                        recipe.systems.remove(rem_system)
+                                        if rem_system in recipe.systems:
+                                            log.debug("recipe: %s labController:%s Removing system %s" % (recipe.id, l_controller, rem_system))
+                                            recipe.systems.remove(rem_system)
                         for recipe in recipeset.recipes:
                             count = 0
                             systems = recipe.dyn_systems.filter(
@@ -200,8 +212,9 @@ def processed_recipesets(*args):
                                       )
                         log.debug("recipe: %s labController: %s Removing lab" % (recipe.id, l_controller))
                         for system in systems:
-                            log.debug("recipe: %s labController: %s Removing system %s" % (recipe.id, l_controller, system))
-                            recipe.systems.remove(system)
+                            if system in recipe.systems:
+                                log.debug("recipe: %s labController: %s Removing system %s" % (recipe.id, l_controller, system))
+                                recipe.systems.remove(system)
                     if recipe.systems:
                         # Set status to Queued 
                         log.info("recipe: %s moved from Processed to Queued" % recipe.id)
@@ -215,7 +228,7 @@ def processed_recipesets(*args):
         except exceptions.Exception, e:
             session.rollback()
             log.error("Failed to commit due to :%s" % e)
-    session.close()
+        session.close()
     log.debug("Exiting processed_recipes routine")
     return True
 
@@ -246,9 +259,10 @@ def queued_recipes(*args):
     if not recipes.count():
         return False
     log.debug("Entering queued_recipes routine")
-    for recipe in recipes:
+    for _recipe in recipes:
         session.begin()
         try:
+            recipe = Recipe.by_id(_recipe.id)
             systems = recipe.dyn_systems.filter(and_(System.user==None,
                                                      System.status==automated))
             # Order systems by owner, then Group, finally shared for everyone.
@@ -317,7 +331,7 @@ def queued_recipes(*args):
         except exceptions.Exception, e:
             session.rollback()
             log.error("Failed to commit due to :%s" % e)
-    session.close()
+        session.close()
     log.debug("Exiting queued_recipes routine")
     return True
 
@@ -336,10 +350,11 @@ def scheduled_recipes(*args):
     if not recipesets:
         return False
     log.debug("Entering scheduled_recipes routine")
-    for recipeset in recipesets:
-        log.info("scheduled_recipes: RS:%s" % recipeset.id)
+    for _recipeset in recipesets:
+        log.info("scheduled_recipes: RS:%s" % _recipeset.id)
         session.begin()
         try:
+            recipeset = RecipeSet.by_id(_recipeset.id)
             # Go through each recipe in the recipeSet
             for recipe in recipeset.recipes:
                 # If one of the recipes gets aborted then don't try and run
@@ -397,7 +412,16 @@ def scheduled_recipes(*args):
                                         'Distro',
                                         '',
                                         '%s' % recipe.distro))
-                except exceptions.Exception, e:
+                except CobblerTaskFailedException, e:
+                    log.error('Cobbler task failed for recipe %s: %s' % (recipe.id, e))
+                    old_status = recipe.system.status
+                    recipe.system.mark_broken(reason=str(e), recipe=recipe)
+                    recipe.system.activity.append(SystemActivity(service='Scheduler',
+                            action='Changed', field_name='Status',
+                            old_value=old_status, new_value=recipe.system.status))
+                    recipe.recipeset.abort(_(u'Cobbler task failed for recipe %s: %s')
+                            % (recipe.id, e))
+                except Exception, e:
                     log.error(u"Failed to provision recipeid %s, %s" % (
                                                                          recipe.id,
                                                                             e))
@@ -410,7 +434,7 @@ def scheduled_recipes(*args):
         except exceptions.Exception, e:
             session.rollback()
             log.error("Failed to commit due to :%s" % e)
-    session.close()
+        session.close()
     log.debug("Exiting scheduled_recipes routine")
     return True
 

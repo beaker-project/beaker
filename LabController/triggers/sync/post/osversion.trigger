@@ -1,6 +1,7 @@
 #!/usr/bin/python
 
 import sys, os, rpm
+import time
 import rpmUtils.transaction
 import gzip
 import tempfile
@@ -11,6 +12,7 @@ import cpioarchive
 import string
 from cobbler import utils
 import ConfigParser
+import getopt
 
 def rpm2cpio(rpm_file, out=sys.stdout, bufsize=2048):
     """Performs roughly the equivalent of rpm2cpio(8).
@@ -33,7 +35,7 @@ def rpm2cpio(rpm_file, out=sys.stdout, bufsize=2048):
         if tmp == "": break
         out.write(tmp)
     f.close()
- 
+
 def get_paths(distro):
     signatures = [
        'RedHat/RPMS',
@@ -85,7 +87,7 @@ def get_paths(distro):
             break
         kerneldir = os.path.dirname(kerneldir)
 
-    return dict( tree_path = tree_path, 
+    return dict( tree_path = tree_path,
                       path = path,
               package_path = os.path.join(tree_path ,x))
 
@@ -117,10 +119,10 @@ def update_repos(distro):
                 if os.path.exists(repo) and repo_path_re.search(repo):
                     repos.append('beaker-%s,%s' % (prepo, repo_path_re.search(repo).group(1)))
             tree_repos = ':'.join(repos)
-             
+
     # Catch Fedora Repos
     repo = os.path.join(paths['tree_path'],"repodata")
-    if not tree_repos and os.path.exists(repo):
+    if not tree_repos and os.path.exists(repo): 
         if repo_path_re.search(repo):
             tree_repos = repo_path_re.search(repo).group(1)
 
@@ -244,7 +246,7 @@ def update_comment(distro):
         if familyupdate.find('.') != -1:
             update = familyupdate.split(".")[1].replace(" ","")
         discinfo.close()
-        
+
     distro['comment'] = "%s\nfamily=%s.%s" % (distro['comment'], family, update)
     cobbler.modify_distro(distro['id'],'comment',distro['comment'],token)
     kickstart = findKickstart(distro['arch'], family, update)
@@ -273,6 +275,19 @@ def findKickstart(arch, family, update):
     return None
 
 if __name__ == '__main__':
+    try:
+        opts, args = getopt.getopt(sys.argv[1:], "f")
+        force = False
+        for o, a in opts:
+            if o == '-f':
+                force = True
+    except:
+        print str(err)
+        usage()
+        sys.exit(2)
+
+
+    new_run = time.time()
     cobbler = xmlrpclib.ServerProxy('http://127.0.0.1/cobbler_api')
     token = cobbler.login("", utils.get_shared_secret())
     settings = cobbler.get_settings(token)
@@ -280,13 +295,18 @@ if __name__ == '__main__':
     if 'rcm' in settings:
         rcm = xmlrpclib.ServerProxy(settings['rcm'])
 
-    distros = cobbler.get_distros()
+    filename="/var/run/beaker-lab-controller/osversion.mtime" 
+    if os.path.exists(filename) and not force:
+        last_run = float(open(filename).readline())
+    else:
+        last_run = 0.0
+    distros = cobbler.get_distros_since(last_run)
     push_distros = []
 
     for distro in distros:
         # If we haven't pushed this distro to Inventory yet, then its the first
         # time importing it, look for repos and specific family.
-        if distro['comment'].find("PUSHED") == -1:
+        if distro['comment'].find("PUSHED") == -1 or force:
             distro['id'] = cobbler.get_distro_handle(distro['name'],token)
             print "Update TreeRepos for %s" % distro['name']
             distro = update_repos(distro)
@@ -300,6 +320,9 @@ if __name__ == '__main__':
             comment = "%s\nPUSHED" % distro['comment']
             cobbler.modify_distro(distro['id'],'comment',comment,token)
             cobbler.save_distro(distro['id'],token)
+        FH = open(filename, "w")
+        FH.write('%s' % new_run)
+        FH.close()
         # Needed for legacy RHTS
         addDistroCmd = '/var/lib/beaker/addDistro.sh'
         if os.path.exists(addDistroCmd):
@@ -337,4 +360,3 @@ if __name__ == '__main__':
                                                         VARIANT, TPATH)
                         print cmd
                         os.system(cmd)
-
