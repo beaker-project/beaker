@@ -91,7 +91,7 @@ class TestNewJob(SeleniumTestCase):
         sel.click('//input[@value="Queue"]')
         sel.wait_for_page_to_load('3000')
         self.assertEqual(sel.get_text('css=.flash'),
-                'Job failed XSD validation. Please confirm that you want to submit it.')
+                'Job failed schema validation. Please confirm that you want to submit it.')
         self.assertEqual(int(sel.get_xpath_count('//ul[@class="xsd-error-list"]/li')), 3)
         self.assertEqual(sel.get_text('//ul[@class="xsd-error-list"]/li[1]'),
                 'Line 4, col 0: Expecting an element task, got nothing')
