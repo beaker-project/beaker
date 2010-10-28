@@ -28,7 +28,9 @@
               multihost testing. Otherwise, define only one recipe within the 
               recipeset.
             </a:documentation>
-            <attribute name="retention_tag"/>
+            <optional>
+             <attribute name="retention_tag"/>
+            </optional>
             <oneOrMore>
               <ref name="recipe"/>
             </oneOrMore>

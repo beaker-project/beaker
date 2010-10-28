@@ -17,12 +17,22 @@ class Convert(object):
 
     doc = xml.dom.minidom.Document()
     rhts2beaker = staticmethod(rhts2beaker)
+    invalidjobtags = ['submitter',
+                      'workflow',
+                     ]
+
+    invalidrecipetags = ['yumInstall',
+                         'driverdisk',
+                        ]
 
     def __init__(self, jobxml):
         self.counter = 0
         self.jobxml = jobxml
 
     def toxml(self):
+        self.handle_invalid(self.jobxml.getElementsByTagName("job"), self.invalidjobtags)
+        self.handle_invalid(self.jobxml.getElementsByTagName("recipe"), self.invalidrecipetags)
+        self.handle_invalid(self.jobxml.getElementsByTagName("guestrecipe"), self.invalidrecipetags)
         self.handle_tasks(self.jobxml)
         self.handle_recipes(self.jobxml.getElementsByTagName("recipe"))
         self.handle_recipes(self.jobxml.getElementsByTagName("guestrecipe"))
@@ -179,3 +189,8 @@ class Convert(object):
             recipe.appendChild(host)
             recipe.appendChild(partitions)
     
+    def handle_invalid(self, nodes, invalids):
+        for invalid in invalids:
+            for node in nodes:
+                for child in node.getElementsByTagName(invalid):
+                    node.removeChild(child)
