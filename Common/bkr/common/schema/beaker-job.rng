@@ -1,0 +1,272 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- vim: set sw=2: -->
+<grammar xmlns="http://relaxng.org/ns/structure/1.0"
+         datatypeLibrary="http://www.w3.org/2001/XMLSchema-datatypes"
+         xmlns:a="http://relaxng.org/ns/compatibility/annotations/1.0">
+  <start>
+    <ref name="job"/>
+  </start>
+  <define name="job">
+    <element name="job">
+      <interleave>
+        <optional>
+          <ref name="notify"/>
+        </optional>
+        <optional>
+          <element name="whiteboard">
+            <a:documentation xml:lang="en">
+              A textual description of this job, for human consumption only.
+            </a:documentation>
+            <text/>
+          </element>
+        </optional>
+        <oneOrMore>
+          <element name="recipeSet">
+            <a:documentation xml:lang="en">
+              A recipeset defines one or more recipes which are to be run in 
+              parallel. Define multiple recipes within a recipeset for 
+              multihost testing. Otherwise, define only one recipe within the 
+              recipeset.
+            </a:documentation>
+            <optional>
+             <attribute name="retention_tag"/>
+            </optional>
+            <oneOrMore>
+              <ref name="recipe"/>
+            </oneOrMore>
+          </element>
+        </oneOrMore>
+      </interleave>
+    </element>
+  </define>
+  <define name="notify">
+    <element name="notify">
+      <a:documentation xml:lang="en">
+        This element is a container for configurating notifications that this 
+        job has finished running.
+      </a:documentation>
+      <zeroOrMore>
+        <element name="cc">
+          <a:documentation xml:lang="en">
+            An e-mail address which will be cc'ed on the job completion e-mail.
+          </a:documentation>
+          <text/>
+        </element>
+      </zeroOrMore>
+    </element>
+  </define>
+  <define name="recipe">
+    <element name="recipe">
+      <a:documentation xml:lang="en">
+        A recipe is a sequence of tasks which are run on a single system,
+        in parallel with any other recipes in the same recipeset.
+        The system is always provisioned with an operating system at the start 
+        of each recipe. Options for provisioning are contained within this 
+        element.
+      </a:documentation>
+      <interleave>
+        <zeroOrMore>
+          <element name="guestrecipe">
+            <interleave>
+              <attribute name="guestname" />
+              <attribute name="guestargs" />
+              <ref name="recipe_contents" />
+            </interleave>
+          </element>
+        </zeroOrMore>
+        <ref name="recipe_contents" />
+      </interleave>
+    </element>
+  </define>
+  <define name="recipe_contents">
+    <!-- stuff which is common to both <recipe/> and <guestrecipe/> -->
+    <interleave>
+      <optional>
+        <attribute name="kernel_options"/>
+      </optional>
+      <optional>
+        <attribute name="kernel_options_post"/>
+      </optional>
+      <optional>
+        <attribute name="ks_meta"/>
+      </optional>
+      <optional>
+        <attribute name="role"/>
+      </optional>
+      <optional>
+        <attribute name="whiteboard">
+          <a:documentation xml:lang="en">
+            A textual description of this recipe, for human consumption only.
+          </a:documentation>
+          <text/>
+        </attribute>
+      </optional>
+      <optional>
+        <element name="kickstart"><text/></element>
+      </optional>
+      <optional>
+        <ref name="watchdog"/>
+      </optional>
+      <optional>
+        <ref name="packages"/>
+      </optional>
+      <optional>
+        <element name="ks_appends"><text/></element>
+      </optional>
+      <optional>
+        <ref name="repos"/>
+      </optional>
+      <element name="distroRequires">
+        <a:documentation xml:lang="en">
+          This element is a container for expressing contraints on the 
+          operating system distribution which will be selected and 
+          provisioned at the start of this recipe.
+        </a:documentation>
+        <zeroOrMore><ref name="distroreq"/></zeroOrMore>
+      </element>
+      <optional>
+        <element name="hostRequires">
+          <a:documentation xml:lang="en">
+            This element is a container for expressing contraints on the 
+            system which will be selected to run this recipe.
+          </a:documentation>
+          <zeroOrMore><ref name="hostreq"/></zeroOrMore>
+        </element>
+      </optional>
+      <optional>
+        <ref name="partitions"/>
+      </optional>
+      <oneOrMore>
+        <ref name="task"/>
+      </oneOrMore>
+    </interleave>
+  </define>
+  <define name="watchdog">
+    <element name="watchdog">
+      <optional>
+        <attribute name="panic">
+          <choice>
+            <value>ignore</value>
+            <value>None</value>
+          </choice>
+        </attribute>
+      </optional>
+    </element>
+  </define>
+  <define name="packages">
+    <element name="packages">
+      <zeroOrMore>
+        <element name="package">
+          <attribute name="name"/>
+        </element>
+      </zeroOrMore>
+    </element>
+  </define>
+  <define name="repos">
+    <element name="repos">
+      <zeroOrMore>
+        <element name="repo">
+          <attribute name="name"/>
+          <attribute name="url"/>
+        </element>
+      </zeroOrMore>
+    </element>
+  </define>
+  <define name="partitions">
+    <element name="partitions">
+      <zeroOrMore>
+        <element name="partition">
+          <attribute name="fs"/>
+          <attribute name="name"/>
+          <optional>
+            <attribute name="type"/>
+          </optional>
+          <attribute name="size">
+            <data type="integer"/>
+          </attribute>
+        </element>
+      </zeroOrMore>
+    </element>
+  </define>
+  <define name="task">
+    <element name="task">
+      <attribute name="name"/>
+      <optional>
+        <attribute name="role"/>
+      </optional>
+      <optional>
+        <element name="params">
+          <zeroOrMore>
+            <element name="param">
+              <attribute name="name"/>
+              <attribute name="value"/>
+            </element>
+          </zeroOrMore>
+        </element>
+      </optional>
+    </element>
+  </define>
+  <define name="distroreq">
+    <choice>
+      <element name="and">
+        <zeroOrMore><ref name="distroreq"/></zeroOrMore>
+      </element>
+      <element name="or">
+        <zeroOrMore><ref name="distroreq"/></zeroOrMore>
+      </element>
+      <element name="distro"><ref name="req"/></element>
+      <element name="distro_family"><ref name="req"/></element>
+      <element name="distro_name"><ref name="req"/></element>
+      <element name="distro_tag"><ref name="req"/></element>
+      <element name="distro_variant"><ref name="req"/></element>
+      <element name="distro_arch"><ref name="req"/></element>
+      <element name="distro_virt"><ref name="req"/></element>
+      <element name="distro_method"><ref name="req"/></element>
+      <element name="distrolabcontroller"><ref name="req"/></element>
+    </choice>
+  </define>
+  <define name="hostreq">
+    <choice>
+      <element name="and">
+        <zeroOrMore><ref name="hostreq"/></zeroOrMore>
+      </element>
+      <element name="or">
+        <zeroOrMore><ref name="hostreq"/></zeroOrMore>
+      </element>
+      <element name="host"><ref name="req"/></element>
+      <element name="hostlabcontroller"><ref name="req"/></element>
+      <element name="system_type"><ref name="req"/></element>
+      <element name="system"><ref name="req"/></element>
+      <element name="memory"><ref name="req"/></element>
+      <element name="cpu_count"><ref name="req"/></element>
+      <element name="numa_node_count"><ref name="req"/></element>
+      <element name="hostname"><ref name="req"/></element>
+      <element name="arch"><ref name="req"/></element>
+      <element name="auto_prov"><ref name="req"/></element>
+      <element name="key_value">
+        <attribute name="key"/>
+        <ref name="op"/>
+        <attribute name="value"/>
+      </element>
+    </choice>
+  </define>
+  <define name="req">
+    <optional>
+      <ref name="op"/>
+    </optional>
+    <attribute name="value"/>
+  </define>
+  <define name="op">
+    <attribute name="op">
+      <choice>
+        <value>!=</value>
+        <value>==</value>
+        <value>=</value>
+        <value>&lt;=</value>
+        <value>&lt;</value>
+        <value>&gt;=</value>
+        <value>&gt;</value>
+      </choice>
+    </attribute>
+  </define>
+</grammar>

@@ -121,6 +121,21 @@ function estatus_fail()
     fi
 }
 
+function generate_rsync_cfg()
+{
+    mkdir -p /var/www/html/beaker-logs
+    chown nobody /var/www/html/beaker-logs
+    chmod 755 /var/www/html/beaker-logs
+    cat <<__EOF__ > /etc/rsyncd.conf
+use chroot = false
+
+[beaker-logs]
+	path = /var/www/html/beaker-logs
+	comment = beaker logs
+	read only = false
+__EOF__
+}
+
 function generate_proxy_cfg()
 {
     cat << __EOF__ > /etc/beaker/proxy.conf
@@ -128,6 +143,11 @@ HUB_URL = "https://$SERVER/bkr/"
 AUTH_METHOD = "password"
 USERNAME = "host/$HOSTNAME"
 PASSWORD = "testing"
+CACHE = True
+ARCHIVE_SERVER = "http://$SERVER/beaker-logs"
+ARCHIVE_BASEPATH = "/var/www/html/beaker"
+ARCHIVE_RSYNC = "rsync://$SERVER/beaker-logs"
+RSYNC_FLAGS = "-arv"
 __EOF__
 }
 
@@ -306,6 +326,8 @@ function Inventory()
         ./add_user.py -u host/$CLIENT -p testing
     done
     estatus_fail "**** Failed to add lab controller ****"
+    generate_rsync_cfg
+    chkconfig rsync on
     rhts-sync-set -s SERVERREADY
     rhts-sync-block -s DONE -s ABORT $CLIENTS
     result_pass 
@@ -378,18 +400,6 @@ function LabController()
             result="PASS"
         fi
         report_result $TEST/ADD_DISTRO/${DISTRONAME}_NFS $result $score
-        result="FAIL"
-        echo cobbler import --path=/fakenet/${NFSSERVER}${NFSPATH} \
-                       --name=${DISTRONAME}_http \
-                       --available-as=http://${HOSTNAME}/fakenet/${NFSSERVER}${NFSPATH}
-        cobbler import --path=/fakenet/${NFSSERVER}${NFSPATH} \
-                       --name=${DISTRONAME}_http \
-                       --available-as=http://${HOSTNAME}/fakenet/${NFSSERVER}${NFSPATH}
-        score=$?
-        if [ "$score" -eq "0" ]; then
-            result="PASS"
-        fi
-        report_result $TEST/ADD_DISTRO/${DISTRONAME}_HTTP $result $score
     done
     # Import Rawhide
     if [ -n "$RAWHIDE_NFS" ]; then
@@ -408,18 +418,6 @@ function LabController()
             cobbler import --path=/fakenet/${NFSSERVER}${NFSDIR}/${DISTRO} \
                            --name=${DISTRONAME}_nfs \
                            --available-as=nfs://${NFSSERVER}:${NFSDIR}/${DISTRO}
-            score=$?
-            if [ "$score" -eq "0" ]; then
-                result="PASS"
-            fi
-            report_result $TEST/ADD_DISTRO/${DISTRONAME}_NFS $result $score
-            echo cobbler import \
-                            --path=/fakenet/${NFSSERVER}${NFSDIR}/${DISTRO} \
-                           --name=${DISTRONAME}_http \
-                           --available-as=http://${HOSTNAME}/fakenet/${NFSSERVER}${NFSDIR}/${DISTRO}
-            cobbler import --path=/fakenet/${NFSSERVER}${NFSDIR}/${DISTRO} \
-                           --name=${DISTRONAME}_http \
-                           --available-as=http://${HOSTNAME}/fakenet/${NFSSERVER}${NFSDIR}/${DISTRO}
             score=$?
             if [ "$score" -eq "0" ]; then
                 result="PASS"

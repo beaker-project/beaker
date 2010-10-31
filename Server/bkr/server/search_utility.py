@@ -1056,7 +1056,14 @@ class Key(SystemObject):
     @classmethod
     def value_contains_pre(cls,value,**kw):
         return cls.value_pre(value,**kw)
-    
+
+    @classmethod
+    def value_less_than_filter(cls,col,val,key_name):
+        result = model.Key.by_name(key_name)
+        int_table = result.numeric
+        key_id = result.id
+        return and_(model.Key_Value_Int.key_value < val, model.Key_Value_Int.key_id == key_id)
+
     @classmethod
     def value_greater_than_filter(cls,col,val,key_name):
         result = model.Key.by_name(key_name) 

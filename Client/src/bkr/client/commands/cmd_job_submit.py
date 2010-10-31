@@ -51,8 +51,8 @@ class Job_Submit(BeakerCommand):
         wait  = kwargs.pop("wait", False)
 
         jobs = args
-        xsd = lxml.etree.XMLSchema(lxml.etree.parse(
-                pkg_resources.resource_stream('bkr.common', 'xsd/beaker-job.xsd')))
+        job_schema = lxml.etree.RelaxNG(lxml.etree.parse(
+                pkg_resources.resource_stream('bkr.common', 'schema/beaker-job.rng')))
 
         self.set_hub(username, password)
         submitted_jobs = []
@@ -67,7 +67,7 @@ class Job_Submit(BeakerCommand):
             if debug:
                 print jobxml
             try:
-                xsd.assertValid(lxml.etree.fromstring(jobxml))
+                job_schema.assertValid(lxml.etree.fromstring(jobxml))
             except Exception, e:
                 print >>sys.stderr, 'WARNING: job xml validation failed: %s' % e
             if not dryrun:

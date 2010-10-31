@@ -1,10 +1,12 @@
 import sys 
+
 import re
 from turbogears.database import metadata, mapper, session
 from turbogears.config import get
 from turbogears import url
 import ldap
-from sqlalchemy import (Table, Column, ForeignKey, String, Unicode, Integer, DateTime,
+from sqlalchemy import (Table, Column, ForeignKey, UniqueConstraint,
+                        String, Unicode, Integer, DateTime,
                         UnicodeText, Boolean, Float, VARCHAR, TEXT, Numeric, 
                         or_, and_, not_, select, case, func)
 
@@ -27,6 +29,7 @@ from bkr.server import mail
 import traceback
 from BasicAuthTransport import BasicAuthTransport
 import xmlrpclib
+import errno
 import bkr.timeout_xmlrpclib
 import os
 import shutil
@@ -83,10 +86,10 @@ system_table = Table('system', metadata,
 system_device_map = Table('system_device_map', metadata,
     Column('system_id', Integer,
            ForeignKey('system.id'),
-           nullable=False),
+           primary_key=True),
     Column('device_id', Integer,
            ForeignKey('device.id'),
-           nullable=False),
+           primary_key=True),
 )
 
 system_type_table = Table('system_type', metadata,
@@ -116,19 +119,19 @@ arch_table = Table('arch', metadata,
 system_arch_map = Table('system_arch_map', metadata,
     Column('system_id', Integer,
            ForeignKey('system.id'),
-           nullable=False),
+           primary_key=True),
     Column('arch_id', Integer,
            ForeignKey('arch.id'),
-           nullable=False),
+           primary_key=True),
 )
 
 osversion_arch_map = Table('osversion_arch_map', metadata,
     Column('osversion_id', Integer,
            ForeignKey('osversion.id'),
-           nullable=False),
+           primary_key=True),
     Column('arch_id', Integer,
            ForeignKey('arch.id'),
-           nullable=False),
+           primary_key=True),
 )
 
 provision_table = Table('provision', metadata,
@@ -414,23 +417,23 @@ permissions_table = Table('permission', metadata,
 
 user_group_table = Table('user_group', metadata,
     Column('user_id', Integer, ForeignKey('tg_user.user_id',
-        onupdate='CASCADE', ondelete='CASCADE')),
+        onupdate='CASCADE', ondelete='CASCADE'), primary_key=True),
     Column('group_id', Integer, ForeignKey('tg_group.group_id',
-        onupdate='CASCADE', ondelete='CASCADE'))
+        onupdate='CASCADE', ondelete='CASCADE'), primary_key=True),
 )
 
 system_group_table = Table('system_group', metadata,
     Column('system_id', Integer, ForeignKey('system.id',
-        onupdate='CASCADE', ondelete='CASCADE')),
+        onupdate='CASCADE', ondelete='CASCADE'), primary_key=True),
     Column('group_id', Integer, ForeignKey('tg_group.group_id',
-        onupdate='CASCADE', ondelete='CASCADE'))
+        onupdate='CASCADE', ondelete='CASCADE'), primary_key=True),
 )
 
 system_admin_map_table = Table('system_admin_map', metadata, 
     Column('system_id', Integer, ForeignKey('system.id',
-        onupdate='CASCADE', ondelete='CASCADE')),
+        onupdate='CASCADE', ondelete='CASCADE'), primary_key=True),
     Column('group_id', Integer, ForeignKey('tg_group.group_id',
-        onupdate='CASCADE', ondelete='CASCADE'))
+        onupdate='CASCADE', ondelete='CASCADE'), primary_key=True),
 )
 
 recipe_set_nacked_table = Table('recipe_set_nacked', metadata,
@@ -461,9 +464,9 @@ response_table = Table('response', metadata,
 
 group_permission_table = Table('group_permission', metadata,
     Column('group_id', Integer, ForeignKey('tg_group.group_id',
-        onupdate='CASCADE', ondelete='CASCADE')),
+        onupdate='CASCADE', ondelete='CASCADE'), primary_key=True),
     Column('permission_id', Integer, ForeignKey('permission.permission_id',
-        onupdate='CASCADE', ondelete='CASCADE'))
+        onupdate='CASCADE', ondelete='CASCADE'), primary_key=True),
 )
 
 # activity schema
@@ -573,6 +576,12 @@ job_table = Table('job',metadata,
         Column('ktasks', Integer, default=0),
 )
 
+job_cc_table = Table('job_cc', metadata,
+        Column('job_id', Integer, ForeignKey('job.id', ondelete='CASCADE',
+            onupdate='CASCADE'), primary_key=True),
+        Column('email_address', Unicode(255), primary_key=True, index=True),
+)
+
 recipe_set_table = Table('recipe_set',metadata,
         Column('id', Integer, primary_key=True),
         Column('job_id', Integer,
@@ -607,6 +616,8 @@ log_recipe_table = Table('log_recipe', metadata,
         Column('path', UnicodeText()),
         Column('filename', UnicodeText(), nullable=False),
         Column('start_time',DateTime, default=datetime.utcnow),
+	Column('server', UnicodeText()),
+	Column('basepath', UnicodeText()),
 )
 
 log_recipe_task_table = Table('log_recipe_task', metadata,
@@ -616,6 +627,8 @@ log_recipe_task_table = Table('log_recipe_task', metadata,
         Column('path', UnicodeText()),
         Column('filename', UnicodeText(), nullable=False),
         Column('start_time',DateTime, default=datetime.utcnow),
+	Column('server', UnicodeText()),
+	Column('basepath', UnicodeText()),
 )
 
 log_recipe_task_result_table = Table('log_recipe_task_result', metadata,
@@ -625,6 +638,8 @@ log_recipe_task_result_table = Table('log_recipe_task_result', metadata,
         Column('path', UnicodeText()),
         Column('filename', UnicodeText(), nullable=False),
         Column('start_time',DateTime, default=datetime.utcnow),
+	Column('server', UnicodeText()),
+	Column('basepath', UnicodeText()),
 )
 
 recipe_table = Table('recipe',metadata,
@@ -677,16 +692,20 @@ guest_recipe_table = Table('guest_recipe', metadata,
 
 machine_guest_map =Table('machine_guest_map',metadata,
         Column('machine_recipe_id', Integer,
-                ForeignKey('machine_recipe.id', onupdate='CASCADE', ondelete='CASCADE')),
+                ForeignKey('machine_recipe.id', onupdate='CASCADE', ondelete='CASCADE'),
+                primary_key=True),
         Column('guest_recipe_id', Integer,
-                ForeignKey('recipe.id', onupdate='CASCADE', ondelete='CASCADE')),
+                ForeignKey('recipe.id', onupdate='CASCADE', ondelete='CASCADE'),
+                primary_key=True),
 )
 
 system_recipe_map = Table('system_recipe_map', metadata,
         Column('system_id', Integer,
-                ForeignKey('system.id', onupdate='CASCADE', ondelete='CASCADE')),
+                ForeignKey('system.id', onupdate='CASCADE', ondelete='CASCADE'),
+                primary_key=True),
         Column('recipe_id', Integer,
-                ForeignKey('recipe.id', onupdate='CASCADE', ondelete='CASCADE')),
+                ForeignKey('recipe.id', onupdate='CASCADE', ondelete='CASCADE'),
+                primary_key=True),
 )
 
 recipe_tag_table = Table('recipe_tag',metadata,
@@ -696,9 +715,11 @@ recipe_tag_table = Table('recipe_tag',metadata,
 
 recipe_tag_map = Table('recipe_tag_map', metadata,
         Column('tag_id', Integer,
-               ForeignKey('recipe_tag.id', onupdate='CASCADE', ondelete='CASCADE')),
+               ForeignKey('recipe_tag.id', onupdate='CASCADE', ondelete='CASCADE'),
+               primary_key=True),
         Column('recipe_id', Integer, 
-               ForeignKey('recipe.id', onupdate='CASCADE', ondelete='CASCADE')),
+               ForeignKey('recipe.id', onupdate='CASCADE', ondelete='CASCADE'),
+               primary_key=True),
 )
 
 recipe_rpm_table =Table('recipe_rpm',metadata,
@@ -840,30 +861,24 @@ task_bugzilla_table = Table('task_bugzilla',metadata,
 )
 
 task_packages_runfor_map = Table('task_packages_runfor_map', metadata,
-        Column('task_id', Integer,
-                ForeignKey('task.id', onupdate='CASCADE',
-                                      ondelete='CASCADE')),
-        Column('package_id', Integer,
-                ForeignKey('task_package.id',onupdate='CASCADE',
-                                             ondelete='CASCADE')),
+    Column('task_id', Integer, ForeignKey('task.id', onupdate='CASCADE',
+        ondelete='CASCADE'), primary_key=True),
+    Column('package_id', Integer, ForeignKey('task_package.id',
+        onupdate='CASCADE', ondelete='CASCADE'), primary_key=True),
 )
 
 task_packages_required_map = Table('task_packages_required_map', metadata,
-        Column('task_id', Integer,
-                ForeignKey('task.id', onupdate='CASCADE',
-                                      ondelete='CASCADE')),
-        Column('package_id', Integer,
-                ForeignKey('task_package.id',onupdate='CASCADE',
-                                             ondelete='CASCADE')),
+    Column('task_id', Integer, ForeignKey('task.id', onupdate='CASCADE',
+        ondelete='CASCADE'), primary_key=True),
+    Column('package_id', Integer, ForeignKey('task_package.id',
+        onupdate='CASCADE', ondelete='CASCADE'), primary_key=True),
 )
 
 task_packages_custom_map = Table('task_packages_custom_map', metadata,
-        Column('recipe_id', Integer,
-                ForeignKey('recipe.id', onupdate='CASCADE',
-                                      ondelete='CASCADE')),
-        Column('package_id', Integer,
-                ForeignKey('task_package.id',onupdate='CASCADE',
-                                             ondelete='CASCADE')),
+    Column('recipe_id', Integer, ForeignKey('recipe.id', onupdate='CASCADE',
+        ondelete='CASCADE'), primary_key=True),
+    Column('package_id', Integer, ForeignKey('task_package.id',
+        onupdate='CASCADE', ondelete='CASCADE'), primary_key=True),
 )
 
 task_property_needed_table = Table('task_property_needed', metadata,
@@ -884,12 +899,10 @@ task_type_table = Table('task_type',metadata,
 )
 
 task_type_map = Table('task_type_map',metadata,
-        Column('task_id', Integer,
-                ForeignKey('task.id',onupdate='CASCADE',
-                                     ondelete='CASCADE')),
-        Column('task_type_id', Integer,
-                ForeignKey('task_type.id', onupdate='CASCADE',
-                                           ondelete='CASCADE')),
+    Column('task_id', Integer, ForeignKey('task.id', onupdate='CASCADE',
+        ondelete='CASCADE'), primary_key=True),
+    Column('task_type_id', Integer, ForeignKey('task_type.id',
+        onupdate='CASCADE', ondelete='CASCADE'), primary_key=True),
 )
 
 # the identity model
@@ -1770,7 +1783,7 @@ $SNIPPET("rhts_post")
         return False
                 
     def can_loan(self, user=None):
-        if user and not self.loaned and not self.user:
+        if user and not self.loaned:
             if self.can_admin(user):
                 return True
         return False
@@ -2937,7 +2950,7 @@ class DistroTag(object):
         return cls.query().filter(DistroTag.tag.like('%s%%' % tag))
 
 class Admin(object):
-    def __init__(self,system_id,group_id): 
+    def __init__(self,system_id,group_id):
         self.system_id = system_id
         self.group_id = group_id
 
@@ -2964,11 +2977,11 @@ class SystemActivity(Activity):
     def object_name(self):
         return "System: %s" % self.object.fqdn
 
-        
+
 class RecipeSetActivity(Activity):
     def object_name(self):
         return "RecipeSet: %s" % self.object.id
-          
+
 class GroupActivity(Activity):
     def object_name(self):
         return "Group: %s" % self.object.display_name
@@ -3142,9 +3155,11 @@ class Log(MappedObject):
 
     MAX_ENTRIES_PER_DIRECTORY = 100
 
-    def __init__(self, path=None, filename=None):
+    def __init__(self, path=None, filename=None, server=None, basepath=None):
         self.path = path
         self.filename = filename
+        self.server = server
+        self.basepath = basepath
 
     def result(self):
         return self.parent.result
@@ -3156,11 +3171,32 @@ class Log(MappedObject):
         """
         text = "%s/%s" % (self.path != '/' and self.path or '', self.filename)
         text = text[-50:]
-        return make_link(url = '/logs/%s/%s/%s' % (self.parent.filepath,
+        # if server is defined then the logs are stored elsewhere.
+        if self.server:
+            url = '%s/%s/%s' % (self.server, self.path, self.filename)
+        else:
+            url = '/logs/%s/%s/%s' % (self.parent.filepath,
                                                    self.path, 
-                                                   self.filename),
+                                                   self.filename)
+        return make_link(url = url,
                          text = text)
     link = property(link)
+
+    @property
+    def dict(self):
+        """ Return a dict describing this log
+        """
+        return dict(server   = self.server,
+                    path     = self.path,
+                    filename = self.filename,
+                    tid      = '%s:%s' % (self.type, self.id),
+                    filepath = self.parent.filepath,
+                    basepath = self.basepath,
+                   )
+
+    @classmethod 
+    def by_id(cls,id): 
+       return cls.query().filter_by(id=id).one()
 
     def __cmp__(self, other):
         """ Used to compare logs that are already stored. Log(path,filename) in Recipe.logs  == True
@@ -3175,13 +3211,13 @@ class Log(MappedObject):
             return 1
 
 class LogRecipe(Log):
-    pass
+    type = 'R'
 
 class LogRecipeTask(Log):
-    pass
+    type = 'T'
 
 class LogRecipeTaskResult(Log):
-    pass
+    type = 'E'
 
 class TaskBase(MappedObject):
 
@@ -3320,7 +3356,7 @@ class Job(TaskBase):
                 rs.nacked = []
             else: 
                 if not rs.nacked and rs_id in rs_nacks: #looks like we're adding it then
-                    rs.nacked = [RecipeSetResponse(rs_id)]
+                    rs.nacked = [RecipeSetResponse()]
                     current_nacks.append(rs_id)
                 elif rs.nacked:
                     current_nacks.append(rs_id)
@@ -3386,11 +3422,14 @@ class Job(TaskBase):
         session.flush()
         return job
 
-    def delete(self, remove_all, *args, **kw):
-        paths_to_del = []
+    def delete(self,dryrun, *args, **kw):
+        paths = []
+        errors = []
         for rs in self.recipesets:
-            paths_to_del = paths_to_del + rs.delete(remove_all)
-        return paths_to_del
+            paths_to_del, new_errors = rs.delete(dryrun)
+            paths.extend(paths_to_del)
+            errors.extend(new_errors)
+        return paths, errors
 
     def clone_link(self):
         """ return link to clone this job
@@ -3443,6 +3482,11 @@ class Job(TaskBase):
             job.setAttribute("owner", "%s" % self.owner.email_address)
             job.setAttribute("result", "%s" % self.result)
             job.setAttribute("status", "%s" % self.status)
+        if self.cc:
+            notify = self.doc.createElement('notify')
+            for email_address in self.cc:
+                notify.appendChild(self.node('cc', email_address))
+            job.appendChild(notify)
         job.appendChild(self.node("whiteboard", self.whiteboard or ''))
         for rs in self.recipesets:
             job.appendChild(rs.to_xml(clone))
@@ -3522,6 +3566,13 @@ class Job(TaskBase):
     def can_admin(self, user=None):
         """Returns True iff the given user can administer this Job."""
         return bool(user) and (self.owner == user or user.is_admin())
+
+    cc = association_proxy('_job_ccs', 'email_address')
+
+class JobCc(MappedObject):
+
+    def __init__(self, email_address):
+        self.email_address = email_address
   
 class BeakerTag(object):
 
@@ -3584,13 +3635,15 @@ class Response(MappedObject):
     def by_response(cls,response,*args,**kw):
         return cls.query().filter_by(response = response).one()
 
+    def __repr__(self):
+        return self.response
+
 class RecipeSetResponse(MappedObject):
     """
     An acknowledgment of a RecipeSet's results. Can be used for filtering reports
     """
     
-    def __init__(self,id,type=None,response_id=None,comment=None):
-        self.id = id
+    def __init__(self,type=None,response_id=None,comment=None):
         if response_id is not None:
             res = Response.by_id(response_id)
         elif type is not None:
@@ -3647,8 +3700,14 @@ class RecipeSet(TaskBase):
 
     def to_xml(self, clone=False, from_job=True):
         recipeSet = self.doc.createElement("recipeSet")
-        return_node = recipeSet
-        recipeSet.setAttribute('retention_tag', "%s"  % self.retention_tag) 
+        return_node = recipeSet 
+        recipeSet.setAttribute('retention_tag', "%s"  % self.retention_tag)
+        #Add in Ack/Nak response here if it exists
+        if not clone:
+            response = self.get_response()
+            if response:
+                recipeSet.setAttribute('response','%s' % str(response))
+
         if not clone:
             recipeSet.setAttribute("id", "%s" % self.id)
 
@@ -3663,20 +3722,39 @@ class RecipeSet(TaskBase):
             job.appendChild(self.node("whiteboard", self.job.whiteboard or ''))
             job.appendChild(recipeSet)
             return_node = job
-            
         return return_node
 
-    def delete(self, remove_all,unlink=False, *args, **kw):
-        #FIXME add logic for unlink and remove all
-        self.deleted = datetime.utcnow() 
+    def delete(self, dryrun, *args, **kw):
         errors = []
-        for r in self.recipes: 
-            recipe_to_del = Recipe.by_id(r.id)
-            errors = errors + recipe_to_del.delete()
-            session.flush() #Testing of flushing session here, trying to fix OOM problem
-       
-        return errors #FIXME testing, want to actually unlink here
-        #os.unlink(path_to_del)
+        paths = []
+        def _del_recipes():
+            for r in self.recipes:
+                try:
+                    recipe_to_del = Recipe.by_id(r.id)
+                    new_path = recipe_to_del.delete(dryrun)
+                    if new_path is not None:
+                        paths.append(new_path)
+                except Exception,  e:
+                   errors.append('%s:  %s' % (self.t_id,unicode(e)))
+
+        if self.deleted is not None:
+            return paths,errors
+
+        if not dryrun:
+            session.begin()
+            try:
+                _del_recipes()
+                if len(errors) == 0:
+                    self.deleted = datetime.utcnow()
+                    session.commit()
+                else:
+                    session.rollback()
+            except:
+                session.rollback()
+        else:
+            _del_recipes()
+
+        return paths,errors
 
     @classmethod
     def allowed_priorities_initial(cls,user):
@@ -3832,6 +3910,10 @@ class RecipeSet(TaskBase):
                         order_by='count')
         return map(lambda x: Recipe.query().filter_by(id=x[0]).first(), session.connection(RecipeSet).execute(query).fetchall())
 
+    def get_response(self):
+        response = getattr(self.nacked,'response',None)
+        return response
+
     def task_info(self):
         """
         Method for exporting RecipeSet status for TaskWatcher
@@ -3913,29 +3995,39 @@ class Recipe(TaskBase):
                 job.id // Log.MAX_ENTRIES_PER_DIRECTORY, job.id, self.id)
     filepath = property(filepath)
 
-    def delete(self, *args, **kw):
+    def delete(self, dryrun, *args, **kw):
         """
-        Deleted job instance and entities
+        How we delete a Recipe.
+        At the moment only unlinking log files and deleting log table rows
         """
-        #TODO Fix this for 0.5.59, check OOM problem
-        log_paths = {}
-        log.debug('Logs to del are:%s' % self.logs)
-        for log_ in self.logs:  
-            if log_.path: 
-                if log_.path[0] == u'/': #Removes the leading '/' which will wig os.path.join out
-                    if len(log_.path) > 1:
-                        r_log_path = log_.path[1:]
-                    else:
-                        r_log_path = ''
+
+        full_recipe_logpath = '%s/%s' % (self.logspath, self.filepath)
+        if dryrun is True:
+            if not (os.access(full_recipe_logpath,os.R_OK)): #See if it exists
+                return None
+            elif not (os.access(full_recipe_logpath,os.W_OK)): #See if we can write it
+                raise BX(_(u'Incorrect perms to delete %s:' % full_recipe_logpath))
             else:
-                r_log_path = ''
-             
-            log_paths[os.path.join(self.logspath,self.filepath, r_log_path)] = 1
-        self.logs = [] #This deletes the logs from log_recipe
-        for task in self.tasks:
-            task_to_delete = RecipeTask.by_id(task.id)
-            task_to_delete.delete(unlink=False) 
-        return [k for k,v in log_paths.items()]
+                return full_recipe_logpath #success
+        else:
+            try:
+                shutil.rmtree(full_recipe_logpath)
+                return_val = full_recipe_logpath
+            except OSError, e:
+                if e.errno == errno.ENOENT: #File/Dir does not exist
+                    pass #Maybe the logs don't exist?? Carry on...
+                    return_val = None
+                elif e.errno == errno.EACCES: #Incorrect perms
+                    raise BX(_(u'Incorrect perms to delete %s:' % full_recipe_logpath))
+                else:
+                    raise BX(_(u'Received unexpected error: %s' % e.errstr))
+
+            self.logs = []
+
+            for task in self.tasks:
+                task_to_delete = RecipeTask.by_id(task.id)
+                task_to_delete.delete()
+            return return_val
 
     def harness_repos(self):
         """
@@ -3943,7 +4035,7 @@ class Recipe(TaskBase):
         """
         repos = []
         if self.distro:
-            if os.path.exists("%s/%s/%s" % (self.harnesspath, 
+            if os.path.exists("%s/%s/%s" % (self.harnesspath,
                                             self.distro.osversion.osmajor,
                                             self.distro.arch)):
                 repo = dict(name = "beaker-harness",
@@ -4360,6 +4452,20 @@ class Recipe(TaskBase):
             for task_result in task.results:
                 yield task_result
 
+    @property
+    def all_logs(self):
+        """
+        Return all logs for this recipe
+        """
+        for mylog in self.logs:
+            yield mylog.dict
+        for task in self.tasks:
+            for mylog in task.logs:
+                yield mylog.dict
+            for result in task.results:
+                for mylog in result.logs:
+                    yield mylog.dict
+
     def append_tasks(self, recipetask):
         """ Before appending the task to this Recipe, make sure it applies.
             ie: not excluded for this distro family or arch.
@@ -4577,12 +4683,10 @@ class RecipeTask(TaskBase):
     result_types = ['pass_','warn','fail','panic']
     stop_types = ['stop','abort','cancel']
 
-    def delete(self,unlink=False): 
-        if unlink is False: #only remove log_recipe_task table entries
-            self.logs = [] #delete recipetask logs
-            for results in self.results:
-                results.delete(unlink=unlink)
-        #TODO in the future we may want to unlink from the recipe_task level
+    def delete(self): 
+        self.logs = []
+        for r in self.results:
+            r.delete()
 
     def filepath(self):
         """
@@ -5061,11 +5165,9 @@ class RecipeTaskResult(TaskBase):
                 recipe.id, task_id, self.id)
     filepath = property(filepath)
 
-    def delete(self, unlink=False, *args, **kw):
-        if unlink is False:
-            self.logs = [] #Remove our log entries
-        #TODO unlink from here if we want to 
-    
+    def delete(self, *args, **kw):
+        self.logs = []
+
     def to_xml(self):
         """
         Return result in xml
@@ -5490,7 +5592,10 @@ mapper(Job, job_table,
         properties = {'recipesets':relation(RecipeSet, backref='job'),
                       'owner':relation(User, uselist=False, backref='jobs'),
                       'result':relation(TaskResult, uselist=False),
-                      'status':relation(TaskStatus, uselist=False)})
+                      'status':relation(TaskStatus, uselist=False),
+                      '_job_ccs': relation(JobCc, backref='job')})
+mapper(JobCc, job_cc_table)
+
 mapper(RecipeSetResponse,recipe_set_nacked_table,
         properties = { 'recipesets':relation(RecipeSet),
                         'response' : relation(Response,uselist=False)})

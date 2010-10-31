@@ -4,9 +4,9 @@
 
 <head>
     <meta content="text/html; charset=UTF-8" http-equiv="content-type" py:replace="''"/>
-    <script type="text/javascript" src="${tg.url('/static/javascript/master_slave.js')}"></script>
-    <script type="text/javascript" src="${tg.url('/static/javascript/priority_manager.js')}"></script>
-    <script type="text/javascript" src="${tg.url('/static/javascript/rettag_manager.js')}"></script>
+    <script type="text/javascript" src="${tg.url('/static/javascript/master_slave_v2.js')}"></script>
+    <script type="text/javascript" src="${tg.url('/static/javascript/priority_manager_v2.js')}"></script>
+    <script type="text/javascript" src="${tg.url('/static/javascript/rettag_manager_v2.js')}"></script>
     <script type="text/javascript" src="${tg.url('/static/javascript/jquery.timers-1.2.js')}"></script>
     <script type="text/javascript" src="${tg.url('/static/javascript/jquery.cookie.js')}"></script>
     <script type='text/javascript'>
@@ -185,8 +185,12 @@
    <td class="value">${job.owner}</td>
    <td class="title"><b>Progress</b></td>
    <td class="value">${job.progress_bar}</td>
-   <td class="title"><b>Action(s)</b></td>
-   <td class="value">${job.action_link}</td>
+   <td class="title" rowspan="2"><b>Action(s)</b></td>
+   <td class="value" rowspan="2">${job.action_link}</td>
+  </tr>
+  <tr>
+   <td class="title"><b>CC</b></td>
+   <td class="value" colspan="3">${'; '.join(job.cc)}</td>
   </tr>
   <tr>
    <td class="title"><b>Whiteboard</b></td>

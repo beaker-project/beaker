@@ -1,7 +1,8 @@
-<div xmlns:py="http://purl.org/kid/ns#" style="vertical-align: top;">
+<div xmlns:py="http://purl.org/kid/ns#">
     <form py:if="not readonly"
           action="${tg.url(action)}" method="post"
           id="job_whiteboard_form"
+          style="display: none;"
           py:attrs="form_attrs">
         <script type="text/javascript">
             function job_whiteboard_save_success() {
@@ -17,10 +18,17 @@
                         .appendTo($('#job_whiteboard_form'))
                         .show('slow');
             }
+            function job_whiteboard_before() {
+                AjaxLoader.prototype.add_loader('job_whiteboard_form')
+            }
+
+            function job_whiteboard_complete() {
+                AjaxLoader.prototype.remove_loader('job_whiteboard_form') 
+            }
         </script>
         ${hidden_id.display(value=job_id)}
         <span py:replace="field.display(value=value, attrs={'style': 'width: 20em;'})" />
         <button type="submit">Save</button>
     </form>
-    <span py:if="readonly">${value}</span>
+    <span>${value} <a py:if="not readonly" class="list" onclick="$('#job_whiteboard_form').show(); $(this).parent().hide(); return false;" href="#">(Edit)</a></span>
 </div>

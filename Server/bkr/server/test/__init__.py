@@ -16,9 +16,11 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
+import os
 import logging
+from turbogears import update_config
 from turbogears.database import session
-from bkr.server.util import load_config
+import turbomail.adapters.tg1
 from bkr.server.test import data_setup
 
 log = logging.getLogger(__name__)
@@ -27,12 +29,14 @@ CONFIG_FILE='test.cfg' #Fixme, get this from opts perhaps?
 
 def setup_package():
     log.info('Loading test configuration from %s', CONFIG_FILE)
-    load_config(CONFIG_FILE)
+    assert os.path.exists(CONFIG_FILE), 'Config file %s must exist' % CONFIG_FILE
+    update_config(configfile=CONFIG_FILE, modulename='bkr.server.config')
     data_setup.setup_model()
     data_setup.create_distro()
     data_setup.create_labcontroller() #always need a labcontroller
     session.flush()
+    turbomail.adapters.tg1.start_extension()
 
 def teardown_package():
-    pass
+    turbomail.adapters.tg1.shutdown_extension()
 

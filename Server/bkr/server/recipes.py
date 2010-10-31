@@ -29,7 +29,7 @@ from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.helpers import *
 from bkr.server.recipetasks import RecipeTasks
 from socket import gethostname
-from upload import Uploader
+from bkr.upload import Uploader
 import exceptions
 import time
 
@@ -62,6 +62,56 @@ class Recipes(RPCRoot):
     recipe_tasks_widget = RecipeTasksWidget()
 
     upload = Uploader(config.get("basepath.logs", "/var/www/beaker/logs"))
+
+    log_types = dict(R = LogRecipe,
+                     T = LogRecipeTask,
+                     E = LogRecipeTaskResult,
+                    )
+
+    @cherrypy.expose
+    @identity.require(identity.not_anonymous())
+    def register_file(self, server, recipe_id, path, name, basepath):
+        """
+        register file and return path to store
+        """
+        try:
+            recipe = Recipe.by_id(recipe_id)
+        except InvalidRequestError:
+            raise BX(_('Invalid recipe ID: %s' % recipe_id))
+
+        # Add the log to the DB if it hasn't been recorded yet.
+        if LogRecipe(path,name) not in recipe.logs:
+            recipe.logs.append(LogRecipe(path, name, server, basepath))
+        return '%s' % recipe.filepath
+
+    @cherrypy.expose
+    @identity.require(identity.not_anonymous())
+    def files(self, recipe_id):
+        """
+        Return an array of logs for this recipe
+        """
+        try:
+            recipe = Recipe.by_id(recipe_id)
+        except InvalidRequestError:
+            raise BX(_('Invalid recipe ID: %s' % recipe_id))
+        return [log for log in recipe.all_logs]
+
+    @cherrypy.expose
+    @identity.require(identity.not_anonymous())
+    def change_file(self, tid, server, basepath):
+        """
+        Change the server and basepath where the log file lives, Usually
+         used to move from lab controller cache to archive storage.
+        """
+        log_type, log_id = tid.split(":")
+        if log_type.upper() in self.log_types.keys():
+            try:
+                mylog = self.log_types[log_type.upper()].by_id(log_id)
+            except InvalidRequestError, e:
+                raise BX(_("Invalid %s" % tid))
+        mylog.server = server
+        mylog.basepath = basepath
+        return True
 
     @cherrypy.expose
     @identity.require(identity.not_anonymous())

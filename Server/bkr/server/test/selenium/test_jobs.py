@@ -20,10 +20,33 @@ import unittest
 import logging
 import time
 import tempfile
+import pkg_resources
 from turbogears.database import session
 
 from bkr.server.test.selenium import SeleniumTestCase
 from bkr.server.test import data_setup
+
+class TestViewJob(SeleniumTestCase):
+
+    def test_cc_list(self):
+        user = data_setup.create_user(password='password')
+        job = data_setup.create_job(owner=user,
+                cc=[u'laika@mir.su', u'tereshkova@kosmonavt.su'])
+        session.flush()
+        sel = self.get_selenium()
+        sel.start()
+        self.login(user=user.user_name, password='password')
+        sel.open('')
+        sel.click('link=My Jobs')
+        sel.wait_for_page_to_load('3000')
+        sel.click('link=%s' % job.t_id)
+        sel.wait_for_page_to_load('3000')
+        self.assert_(sel.get_title().startswith('Job %s' % job.t_id))
+        self.assertEqual(
+            # value of cell beside "CC" cell
+            sel.get_text('//table[@class="show"]//td'
+                '[preceding-sibling::td[1]/b/text() = "CC"]'),
+            'laika@mir.su; tereshkova@kosmonavt.su')
 
 class TestNewJob(SeleniumTestCase):
 
@@ -47,7 +70,7 @@ class TestNewJob(SeleniumTestCase):
         xml_file.write('''
             <job>
                 <whiteboard>job with invalid hostRequires</whiteboard>
-                <recipeSet>
+                <recipeSet retention_tag="scratch">
                     <recipe>
                         <distroRequires>
                             <distro_name op="=" value="BlueShoeLinux5-5" />
@@ -68,13 +91,17 @@ class TestNewJob(SeleniumTestCase):
         sel.click('//input[@value="Queue"]')
         sel.wait_for_page_to_load('3000')
         self.assertEqual(sel.get_text('css=.flash'),
-                'Job failed XSD validation. Please confirm that you want to submit it.')
-        self.assertEqual(int(sel.get_xpath_count('//ul[@class="xsd-error-list"]/li')), 1)
-        self.assert_(sel.get_text('//ul[@class="xsd-error-list"]/li').startswith(
-                "Line 12, col 0: Element 'brokenElement': This element is not expected."))
+                'Job failed schema validation. Please confirm that you want to submit it.')
+        self.assertEqual(int(sel.get_xpath_count('//ul[@class="xsd-error-list"]/li')), 3)
+        self.assertEqual(sel.get_text('//ul[@class="xsd-error-list"]/li[1]'),
+                'Line 4, col 0: Expecting an element task, got nothing')
+        self.assertEqual(sel.get_text('//ul[@class="xsd-error-list"]/li[2]'),
+                'Line 12, col 0: Element recipe has extra content: brokenElement')
+        self.assertEqual(sel.get_text('//ul[@class="xsd-error-list"]/li[3]'),
+                'Line 3, col 0: Element recipeSet failed to validate content')
         sel.click('//input[@value="Queue despite validation errors"]')
         sel.wait_for_page_to_load('3000')
-        self.assertEqual(sel.get_title(), 'Jobs')
+        self.assertEqual(sel.get_title(), 'My Jobs')
         self.assert_(sel.get_text('css=.flash').startswith('Success!'))
 
     def test_valid_job_xml_doesnt_trigger_xsd_warning(self):
@@ -83,30 +110,13 @@ class TestNewJob(SeleniumTestCase):
         sel.open('')
         sel.click('link=New Job')
         sel.wait_for_page_to_load('3000')
-        xml_file = tempfile.NamedTemporaryFile()
-        xml_file.write('''
-            <job>
-                <whiteboard>valid job</whiteboard>
-                <recipeSet retention_tag="scratch">
-                    <recipe>
-                        <distroRequires>
-                            <distro_name op="=" value="BlueShoeLinux5-5" />
-                        </distroRequires>
-                        <hostRequires/>
-                        <task name="/distribution/install" role="STANDALONE">
-                            <params/>
-                        </task>
-                    </recipe>
-                </recipeSet>
-            </job>
-            ''')
-        xml_file.flush()
-        sel.type('jobs_filexml', xml_file.name)
+        sel.type('jobs_filexml', pkg_resources.resource_filename(
+                'bkr.server.test', 'complete-job.xml'))
         sel.click('//input[@value="Submit Data"]')
         sel.wait_for_page_to_load('3000')
         sel.click('//input[@value="Queue"]')
         sel.wait_for_page_to_load('3000')
-        self.assertEqual(sel.get_title(), 'Jobs')
+        self.assertEqual(sel.get_title(), 'My Jobs')
         self.assert_(sel.get_text('css=.flash').startswith('Success!'))
     
     def test_edit_job_whiteboard(self):
