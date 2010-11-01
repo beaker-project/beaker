@@ -15,6 +15,8 @@
 #
 # Author: Dan Callaghan <dcallagh@redhat.com>
 
-export SERVER_BASE_URL="http://localhost/bkr/"
+export BEAKER_SERVER_BASE_URL="http://localhost/bkr/"
+export BEAKER_SKIP_INIT_DB=1
+export BEAKER_CONFIG_FILE=/etc/beaker/server.cfg
 
 rhts-run-simple-test $TEST 'nosetests -v bkr.server'

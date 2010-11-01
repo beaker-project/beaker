@@ -26,6 +26,7 @@ import turbogears.config
 from selenium import selenium
 import unittest
 import threading
+import bkr.server.test
 from bkr.server.bexceptions import BX
 
 log = logging.getLogger(__name__)
@@ -42,7 +43,7 @@ class SeleniumTestCase(unittest.TestCase):
     @classmethod
     def get_selenium(cls):
         cls.sel = selenium('localhost', 4444, '*chrome',
-                os.environ.get('SERVER_BASE_URL', 'http://localhost:%s/'
+                os.environ.get('BEAKER_SERVER_BASE_URL', 'http://localhost:%s/'
                     % turbogears.config.get('server.socket_port')))
         return cls.sel
 
@@ -173,10 +174,10 @@ def setup_package():
                 '-log', 'selenium.log'], env={'DISPLAY': ':4'},
                 listen_port=4444),
     ])
-    if 'SERVER_BASE_URL' not in os.environ:
+    if 'BEAKER_SERVER_BASE_URL' not in os.environ:
         # need to start the server ourselves
         processes.extend([
-            Process('beaker', args=['./start-server.py', 'test.cfg'],
+            Process('beaker', args=['./start-server.py', bkr.server.test.CONFIG_FILE],
                     listen_port=turbogears.config.get('server.socket_port'),
                     stop_signal=signal.SIGINT)
         ])

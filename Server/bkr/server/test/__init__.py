@@ -16,8 +16,10 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
+import sys
 import os
-import logging
+from StringIO import StringIO
+import logging, logging.config
 from turbogears import update_config
 from turbogears.database import session
 import turbomail.adapters.tg1
@@ -25,16 +27,28 @@ from bkr.server.test import data_setup
 
 log = logging.getLogger(__name__)
 
-CONFIG_FILE='test.cfg' #Fixme, get this from opts perhaps?    
+CONFIG_FILE = os.environ.get('BEAKER_CONFIG_FILE', 'test.cfg')
 
 def setup_package():
     log.info('Loading test configuration from %s', CONFIG_FILE)
     assert os.path.exists(CONFIG_FILE), 'Config file %s must exist' % CONFIG_FILE
     update_config(configfile=CONFIG_FILE, modulename='bkr.server.config')
-    data_setup.setup_model()
-    data_setup.create_distro()
-    data_setup.create_labcontroller() #always need a labcontroller
-    session.flush()
+
+    # Override loaded logging config, in case we are using the server's config file
+    # (we really always want our tests' logs to go to stdout, not /var/log/beaker/)
+    stream_handler = logging.StreamHandler(sys.stdout)
+    stream_handler.setFormatter(logging.Formatter('%(asctime)s %(name)s %(levelname)s %(message)s'))
+    # XXX terrible hack, but there is no better way in Python 2.4 :-(
+    for logger in logging.Logger.manager.loggerDict.itervalues():
+        if getattr(logger, 'handlers', None):
+            logger.handlers = [stream_handler]
+
+    if not 'BEAKER_SKIP_INIT_DB' in os.environ:
+        data_setup.setup_model()
+        data_setup.create_distro()
+        data_setup.create_labcontroller() #always need a labcontroller
+        session.flush()
+
     turbomail.adapters.tg1.start_extension()
 
 def teardown_package():
