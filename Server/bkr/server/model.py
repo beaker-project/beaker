@@ -1777,11 +1777,13 @@ $SNIPPET("rhts_post")
             return True
         elif user is not None and self._user_in_systemgroup(user):
             return True
-         
+        elif user is None:
+            return False
+
         if self.status==SystemStatus.by_name('Manual'): #If it's manual then we us our original perm system.
             return self._has_regular_perms(user)
         return False
-                
+
     def can_loan(self, user=None):
         if user and not self.loaned:
             if self.can_admin(user):
@@ -1833,14 +1835,15 @@ $SNIPPET("rhts_post")
             return self._has_regular_perms(user)
         return False
 
-    def _has_regular_perms(self,user, *args, **kw):
+    def _has_regular_perms(self, user=None, *args, **kw):
         """
         This represents the basic system perms,loanee, owner,  shared and in group or shared and no group
         """
         try:
             if identity.in_group('admin'):
                 return True
-        except AttributeError, e: pass #not logged in ?
+        except AttributeError, e: #not logged in ?
+            return False
 
         if self.loaned:
             if user == self.loaned:
@@ -1855,7 +1858,9 @@ $SNIPPET("rhts_post")
             return self._in_group(user)
 
 
-    def _in_group(self,user, *args, **kw):
+    def _in_group(self, user=None, *args, **kw):
+            if user is None:
+                return False
             if self.groups:
                 for group in user.groups:
                     if group in self.groups:
