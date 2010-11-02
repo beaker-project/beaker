@@ -77,6 +77,11 @@ class BeakerWorkflow(BeakerCommand):
             help="Pick latest distro matching this tag for job",
         )
         self.parser.add_option(
+            "--retention_tag",
+            default="Scratch",
+            help="Specify data retention policy for this job, defaults to Scratch",
+        )
+        self.parser.add_option(
             "--repo",
             action="append",
             default=[],
@@ -315,6 +320,8 @@ class BeakerRecipeSet(BeakerBase):
     def __init__(self, *args, **kwargs):
         self.node = self.doc.createElement('recipeSet')
         self.node.setAttribute('priority', kwargs.get('priority', ''))
+        if kwargs.get('retention_tag'):
+            self.node.setAttribute('retention_tag', kwargs.get('retention_tag'))
 
     def addRecipe(self, recipe):
         """ properly add a recipe to this recipeSet """
@@ -519,4 +526,12 @@ class BeakerGuestRecipe(BeakerRecipeBase):
         return self.node.getAttribute('guestargs')
 
     guestargs = property(get_guestargs, set_guestargs)
+
+    def set_guestname(self, value):
+        return self.node.setAttribute('guestname', value)
+
+    def get_guestname(self):
+        return self.node.getAttribute('guestname')
+
+    guestname = property(get_guestname, set_guestname)
 
