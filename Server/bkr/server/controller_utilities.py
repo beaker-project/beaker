@@ -54,7 +54,7 @@ class SystemTab:
         elif system.can_provision_now(our_user) and not currently_held: #Has privs, not current user, You need to Take it first
             provision_now_rights = False
             will_provision = True
-            provision_action = ''
+            provision_action = '/schedule_provision'
         else:
             log.error('Could not follow logic when determining user access to machine')
             will_provision = False
