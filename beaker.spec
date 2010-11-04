@@ -3,7 +3,7 @@
 
 Name:           beaker
 Version:        0.5.60
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -192,6 +192,9 @@ fi
 %attr(-,apache,root) %dir %{_localstatedir}/run/%{name}-lab-controller
 
 %changelog
+* Thu Oct 28 2010 Bill Peck <bpeck@redhat.com> 0.5.60-2
+- fix missing upload and basepath when cache is off. (bpeck@redhat.com)
+
 * Thu Oct 28 2010 Raymond Mancy <rmancy@redhat.com> 0.5.60-1
 - bz635611 - specific machine jobs haven't got higher priority than no machine
   specific ones (bpeck@redhat.com)
