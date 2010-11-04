@@ -131,6 +131,29 @@ class TestNewJob(SeleniumTestCase):
         self.assertEqual(sel.get_title(), 'My Jobs')
         self.assert_(sel.get_text('css=.flash').startswith('Success!'))
 
+    def test_refuses_to_accept_unparseable_xml(self):
+        self.login()
+        sel = self.selenium
+        sel.open('')
+        sel.click('link=New Job')
+        sel.wait_for_page_to_load('3000')
+        xml_file = tempfile.NamedTemporaryFile()
+        xml_file.write('''
+            <job>
+                <whiteboard>job with unterminated whiteboard
+            </job>
+            ''')
+        xml_file.flush()
+        sel.type('jobs_filexml', xml_file.name)
+        sel.click('//input[@value="Submit Data"]')
+        sel.wait_for_page_to_load('3000')
+        sel.click('//input[@value="Queue"]')
+        sel.wait_for_page_to_load('3000')
+        self.assertEqual(sel.get_text('css=.flash'),
+                'Failed to import job because of: '
+                'Opening and ending tag mismatch: '
+                'whiteboard line 2 and job, line 3, column 7')
+
     def test_valid_job_xml_doesnt_trigger_xsd_warning(self):
         self.login()
         sel = self.selenium
