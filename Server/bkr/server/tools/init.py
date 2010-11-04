@@ -65,9 +65,34 @@ def init_db(user_name=None, password=None, user_display_name=None, user_email_ad
         else:
             print "Password must be provided with username"
 
-    if Permission.query.count() == 0:
-        Permission(u'proxy_auth')
-        admin.permissions.append(Permission(u'tag_distro'))
+    # Create proxy_auth perm if not present
+    try:
+        proxy_auth_perm = Permission.by_name(u'proxy_auth')
+    except NoResultFound:
+        proxy_auth_perm = Permission(u'proxy_auth')
+
+    # Create tag_distro perm if not present
+    try:
+        tag_distro_perm = Permission.by_name(u'tag_distro')
+    except NoResultFound:
+        tag_distro_perm = Permission(u'tag_distro')
+        admin.permissions.append(tag_distro_perm)
+
+    # Create stop_task perm if not present
+    try:
+        stop_task_perm = Permission.by_name(u'stop_task')
+    except NoResultFound:
+        stop_task_perm = Permission(u'stop_task')
+        lab_controller.permissions.append(stop_task_perm)
+        admin.permissions.append(stop_task_perm)
+
+    # Create secret_visible perm if not present
+    try:
+        secret_visible_perm = Permission.by_name(u'secret_visible')
+    except NoResultFound:
+        secret_visible_perm = Permission(u'secret_visible')
+        lab_controller.permissions.append(secret_visible_perm)
+        admin.permissions.append(secret_visible_perm)
 
     #Setup Hypervisors Table
     if Hypervisor.query.count() == 0:

@@ -1458,6 +1458,16 @@ class User(MappedObject):
                 return True
         return False
 
+    def has_permission(self, requested_permission):
+        """ Check if user has requested permission """
+        try:
+            permission = Permission.by_name(requested_permission)
+        except NoResultFound:
+            permission = None
+        if permission in self.permissions:
+            return True
+        return False
+
 
 class Permission(MappedObject):
     """
@@ -4101,7 +4111,7 @@ class RecipeSet(TaskBase):
             self.nacked.response = Response.by_response(response)
 
     def is_owner(self,user):
-        if self.job.owner == user:
+        if self.owner == user:
             return True
         return False
 
@@ -4110,6 +4120,10 @@ class RecipeSet(TaskBase):
         return a tuple of strings containing the Recipes RS and J
         """
         return (self.job.t_id,)
+
+    def owner(self):
+        return self.job.owner
+    owner = property(owner)
 
     def to_xml(self, clone=False, from_job=True, *args, **kw):
         recipeSet = xmldoc.createElement("recipeSet")
@@ -4379,6 +4393,10 @@ class Recipe(TaskBase):
             if rt_log:
                 logs_to_return.extend(rt_log)
         return logs_to_return
+
+    def owner(self):
+        return self.recipeset.job.owner
+    owner = property(owner)
 
     def delete(self):
         """
@@ -5337,6 +5355,10 @@ class RecipeTask(TaskBase):
         self._change_status(TaskStatus.completed)
         self.update_status()
         return True
+
+    def owner(self):
+        return self.recipe.recipeset.job.owner
+    owner = property(owner)
 
     def cancel(self, msg=None):
         """
