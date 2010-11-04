@@ -2735,7 +2735,7 @@ class Distro(MappedObject):
         """
         from needpropertyxml import ElementWrapper
         import xmltramp
-        systems = self.systems(user)
+        systems = self.all_systems(user)
         #FIXME Should validate XML before processing.
         queries = []
         joins = []
@@ -2880,9 +2880,19 @@ class Distro(MappedObject):
         except IndexError,e:
             return []
 
-    def systems(self, user=None):
+    def systems(self, user=None): 
         """
         List of systems that support this distro
+        Limit to only lab controllers which have the distro.
+        Limit to what is available to user if user passed in.
+        """
+        return self.all_systems(user, join=['lab_controller','_distros','distro']).filter( \
+                    Distro.install_name==self.install_name)
+
+    def all_systems(self, user=None, join=['lab_controller']):
+        """
+        List of systems that support this distro
+        Will return all possible systems even if the distro is not on the lab controller yet.
         Limit to what is available to user if user passed in.
         """
         if user:
@@ -2890,8 +2900,8 @@ class Distro(MappedObject):
         else:
             systems = System.query()
         
-        return systems.join(['lab_controller','_distros','distro']).filter(
-             and_(Distro.install_name==self.install_name,
+        return systems.join(join).filter(
+             and_(
                   System.arch.contains(self.arch),
                 not_(or_(System.id.in_(select([system_table.c.id]).
                   where(system_table.c.id==system_arch_map.c.system_id).

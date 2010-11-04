@@ -236,19 +236,22 @@ def queued_recipes(*args):
     automated = SystemStatus.by_name(u'Automated')
     recipes = Recipe.query()\
                     .join('status')\
-                    .join('systems')\
+                    .join(['systems','lab_controller','_distros','distro'])\
                     .join(['recipeset','priority'])\
+                    .join(['distro','lab_controller_assocs','lab_controller'])\
                     .filter(
                          or_(
                          and_(Recipe.status==TaskStatus.by_name(u'Queued'),
                               System.user==None,
                               System.status==automated,
-                              RecipeSet.lab_controller==None
+                              RecipeSet.lab_controller==None,
+                              Recipe.distro_id==Distro.id,
                              ),
                          and_(Recipe.status==TaskStatus.by_name(u'Queued'),
                               System.user==None,
                               System.status==automated,
-                              RecipeSet.lab_controller_id==System.lab_controller_id
+                              Recipe.distro_id==Distro.id,
+                              RecipeSet.lab_controller_id==System.lab_controller_id,
                              )
                             )
                            )
