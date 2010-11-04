@@ -281,7 +281,7 @@ class Jobs(RPCRoot):
         Handles the processing of recipesets into DB entries from their xml
         """
         recipeSet = RecipeSet(ttasks=0)
-        recipeset_priority = xmlrecipeSet.get_xml_attr('priority',unicode,None)
+        recipeset_priority = xmlrecipeSet.get_xml_attr('priority',unicode,None) 
         if recipeset_priority is not None:
             try:
                 my_priority = TaskPriority.query().filter_by(priority = recipeset_priority).one()
@@ -295,7 +295,7 @@ class Jobs(RPCRoot):
                 recipeSet.priority = TaskPriority.default_priority() 
         else:
             recipeSet.priority = TaskPriority.default_priority() 
-        
+
         recipeset_retention = xmlrecipeSet.get_xml_attr('retention_tag',unicode,None) 
         if recipeset_retention is None: #Set default value
             tag = RetentionTag.get_default()
@@ -304,9 +304,24 @@ class Jobs(RPCRoot):
                 tag = RetentionTag.by_tag(recipeset_retention.lower())
             except InvalidRequestError:
                 raise BX(_("Invalid retention_tag attribute passed. Needs to be one of %s. You gave: %s" % (','.join([x.tag for x in RetentionTag.get_all()]), recipeset_retention)))
+        recipeset_product = xmlrecipeSet.get_xml_attr('product',unicode,None)
+
+        audit_tag = RetentionTag.by_tag(u'audit')
+        active_tag = RetentionTag.by_tag(u'active')
+        if recipeset_product is None:
+            if audit_tag == tag or active_tag == tag:
+                raise BX(_("%s and %s tags need to have a product associated with them, \
+                alternatively you could use one of the following tags %s" % (audit_tag.tag,active_tag.tag,','.join([x.tag for x in RetentionTag.get_all() if x != audit_tag and x != active_tag]))))
+        elif recipeset_product is not None and tag != audit_tag and tag != active_tag:
+            raise BX(_("Cannot specify a product with tag %s, please use %s or %s as a tag " % (recipeset_product,audit_tag.tag,active_tag.tag)))
+        else:
+            pass
+        #TODO Validate product
+        recipeSet.product = recipeset_product
+
         recipeSet.retention_tag = tag
-        
-        for xmlrecipe in xmlrecipeSet.iter_recipes(): 
+
+        for xmlrecipe in xmlrecipeSet.iter_recipes():
             recipe = self.handleRecipe(xmlrecipe, user)
             recipe.ttasks = len(recipe.tasks)
             recipeSet.ttasks += recipe.ttasks

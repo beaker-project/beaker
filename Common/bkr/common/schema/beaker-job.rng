@@ -31,6 +31,9 @@
             <optional>
              <attribute name="retention_tag"/>
             </optional>
+            <optional>
+             <attribute name="product"/>
+            </optional>
             <oneOrMore>
               <ref name="recipe"/>
             </oneOrMore>

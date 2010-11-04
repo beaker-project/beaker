@@ -597,6 +597,7 @@ recipe_set_table = Table('recipe_set',metadata,
                 ForeignKey('task_status.id'), default=select([task_status_table.c.id], limit=1).where(task_status_table.c.status==u'New').correlate(None)),
         Column('lab_controller_id', Integer,
                 ForeignKey('lab_controller.id')),
+        Column('product', Unicode(50)),
         # Total tasks
 	Column('ttasks', Integer, default=0),
         # Total Passing tasks
