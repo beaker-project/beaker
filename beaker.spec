@@ -192,6 +192,9 @@ fi
 %attr(-,apache,root) %dir %{_localstatedir}/run/%{name}-lab-controller
 
 %changelog
+* Thu Nov 04 2010 Bill Peck <bpeck@redhat.com> 0.5.60-3
+- quick hack to disable Key/Value -> Module search. (bpeck@redhat.com)
+
 * Thu Oct 28 2010 Bill Peck <bpeck@redhat.com> 0.5.60-2
 - fix missing upload and basepath when cache is off. (bpeck@redhat.com)
 
