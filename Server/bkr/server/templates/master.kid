@@ -29,6 +29,7 @@
 <?python
 from bkr.server.model import device_classes
 from bkr.server.model import system_types
+from bkr.server.reports import Reports
 ?>
 <div id="fedora-header">
     <div style="float:left; margin-left:50px;">
@@ -118,6 +119,7 @@ from bkr.server.model import system_types
                     <li><a href="${tg.url('/matrix')}">Matrix</a></li>
                     <li><a href="${tg.url('/csv')}">CSV</a></li>
                     <li><a href="${tg.url('/tasks/executed')}">Executed</a></li>
+                    <li py:for="controller in Reports.extension_controllers" py:replace="controller.menu_item" />
                     <li class="last">
                         <img class="corner_left" alt="" src="${tg.url('/static/images/corner_left.png')}"/>
                         <img class="middle" alt="" src="${tg.url('/static/images/dot.gif')}"/>
