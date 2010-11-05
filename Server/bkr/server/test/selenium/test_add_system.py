@@ -6,6 +6,9 @@ from turbogears.database import session, get_engine
 
 class AddSystem(bkr.server.test.selenium.SeleniumTestCase):
     def setUp(self):
+        data_setup.create_labcontroller(fqdn=u'lab-devel.rhts.eng.bos.redhat.com')
+        session.flush()
+
         try:
             self.verificationErrors = []
             self.selenium = self.get_selenium()
