@@ -678,6 +678,7 @@ recipe_table = Table('recipe',metadata,
         Column('role', Unicode(255)),
         Column('panic', Unicode(20)),
         Column('_partitions',UnicodeText()),
+        Column('autopick_random', Boolean, default=False),
 )
 
 machine_recipe_table = Table('machine_recipe', metadata,
@@ -4063,6 +4064,9 @@ class Recipe(TaskBase):
             recipe.setAttribute("id", "%s" % self.id)
             recipe.setAttribute("job_id", "%s" % self.recipeset.job_id)
             recipe.setAttribute("recipe_set_id", "%s" % self.recipe_set_id)
+        autopick = self.doc.createElement("autopick")
+        autopick.setAttribute("random", "%s" % self.autopick_random)
+        recipe.appendChild(autopick)
         recipe.setAttribute("whiteboard", "%s" % self.whiteboard and self.whiteboard or '')
         recipe.setAttribute("role", "%s" % self.role and self.role or 'RECIPE_MEMBERS')
         if self.kickstart:
