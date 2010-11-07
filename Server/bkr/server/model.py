@@ -525,16 +525,20 @@ key_table = Table('key_', metadata,
 key_value_string_table = Table('key_value_string', metadata,
     Column('id', Integer, autoincrement=True,
            nullable=False, primary_key=True),
-    Column('system_id', Integer, ForeignKey('system.id'), index=True),
-    Column('key_id', Integer, ForeignKey('key_.id'), index=True),
+    Column('system_id', Integer, ForeignKey('system.id',
+            onupdate='CASCADE', ondelete='CASCADE'), index=True),
+    Column('key_id', Integer, ForeignKey('key_.id',
+            onupdate='CASCADE', ondelete='CASCADE'), index=True),
     Column('key_value',TEXT, nullable=False)
 )
 
 key_value_int_table = Table('key_value_int', metadata,
     Column('id', Integer, autoincrement=True,
            nullable=False, primary_key=True),
-    Column('system_id', Integer, ForeignKey('system.id'), index=True),
-    Column('key_id', Integer, ForeignKey('key_.id'), index=True),
+    Column('system_id', Integer, ForeignKey('system.id',
+            onupdate='CASCADE', ondelete='CASCADE'), index=True),
+    Column('key_id', Integer, ForeignKey('key_.id',
+            onupdate='CASCADE', ondelete='CASCADE'), index=True),
     Column('key_value',Integer, nullable=False)
 )
 
@@ -5554,12 +5558,14 @@ mapper(Note, note_table,
 
 Key.mapper = mapper(Key, key_table)
            
-mapper(Key_Value_Int, key_value_int_table,
-        properties=dict(key=relation(Key, uselist=False,
-                        backref='key_value_int')))
-mapper(Key_Value_String, key_value_string_table,
-        properties=dict(key=relation(Key, uselist=False,
-                        backref='key_value_string')))
+mapper(Key_Value_Int, key_value_int_table, properties={
+        'key': relation(Key, uselist=False,
+            backref=backref('key_value_int', cascade='all, delete-orphan'))
+        })
+mapper(Key_Value_String, key_value_string_table, properties={
+        'key': relation(Key, uselist=False,
+            backref=backref('key_value_string', cascade='all, delete-orphan'))
+        })
 
 mapper(Task, task_table,
         properties = {'types':relation(TaskType,

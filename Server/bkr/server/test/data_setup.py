@@ -65,7 +65,7 @@ def create_labcontroller(fqdn=None):
 def create_user(user_name=None, password=None, display_name=None,
         email_address=None):
     if user_name is None:
-        user_name = u'user%d' % int(time.time() * 1000)
+        user_name = u'user%d' % int(time.time() * 10000)
     if display_name is None:
         display_name = user_name
     if email_address is None:
