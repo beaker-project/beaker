@@ -58,31 +58,3 @@ class MailTest(unittest.TestCase):
                 'Power type: drac\n'
                 'Power address: pdu2.home-one\n'
                 'Power id: 42')
-
-    def test_system_problem_report(self):
-        owner = data_setup.create_user(user_name=u'picard',
-                email_address=u'picard@starfleet.gov')
-        reporter = data_setup.create_user(user_name=u'crusher',
-                display_name=u'Beverley Crusher',
-                email_address=u'crusher@starfleet.gov')
-        system = data_setup.create_system(fqdn=u'ncc1701d', owner=owner)
-        session.flush()
-
-        bkr.server.mail.system_problem_report(system,
-                description='Make it so!', reporter=reporter)
-        self.assertEqual(len(self.mail_capture.captured_mails), 1)
-        sender, rcpts, raw_msg = self.mail_capture.captured_mails[0]
-        self.assertEqual(rcpts, ['picard@starfleet.gov'])
-        msg = email.message_from_string(raw_msg)
-        self.assertEqual(msg['From'],
-                r'"Beverley Crusher \(via Beaker\)" <crusher@starfleet.gov>')
-        self.assertEqual(msg['To'], 'picard@starfleet.gov')
-        self.assertEqual(msg['Subject'], 'Problem reported for ncc1701d')
-        self.assertEqual(msg['X-Beaker-Notification'], 'system-problem')
-        self.assertEqual(msg['X-Beaker-System'], 'ncc1701d')
-        self.assertEqual(msg.get_payload(),
-                'A Beaker user has reported a problem with system \n'
-                'ncc1701d <http://localhost:9090/view/ncc1701d>.\n\n'
-                'Reported by: Beverley Crusher\n\n'
-                'Problem description:\n'
-                'Make it so!')
