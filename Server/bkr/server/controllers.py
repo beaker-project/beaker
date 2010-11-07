@@ -64,6 +64,7 @@ import cherrypy
 import md5
 import re
 import string
+import pkg_resources
 
 # for debugging
 import sys
@@ -233,6 +234,12 @@ class Root(RPCRoot):
     reserveworkflow = ReserveWorkflow()
     watchdogs = Watchdogs()
     retentiontag = RetentionTagController()
+
+    for entry_point in pkg_resources.iter_entry_points('bkr.controllers'):
+        controller = entry_point.load()
+        log.info('Attaching root extension controller %s as %s',
+                controller, entry_point.name)
+        locals()[entry_point.name] = controller
     
     id         = widgets.HiddenField(name='id')
     submit     = widgets.SubmitButton(name='submit')
