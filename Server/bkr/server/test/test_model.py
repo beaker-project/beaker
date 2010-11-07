@@ -93,9 +93,6 @@ class TestBrokenSystemDetection(unittest.TestCase):
     def setUp(self):
         self.system = data_setup.create_system()
         self.system.status = SystemStatus.by_name(u'Automated')
-        self.system.activity.append(SystemActivity(service=u'Test data',
-                action=u'Changed', field_name=u'Status',
-                old_value=None, new_value=self.system.status))
         data_setup.create_completed_job(system=self.system)
         session.flush()
         time.sleep(1)

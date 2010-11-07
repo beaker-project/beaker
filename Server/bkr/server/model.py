@@ -2147,12 +2147,15 @@ $SNIPPET("rhts_post")
         # Since its last status change, has this system had an 
         # uninterrupted run of aborted recipes leading up to this one, with 
         # at least two different STABLE distros?
+        # XXX this query is stupidly big, I need to do something about it
         status_change_subquery = select([func.max(activity_table.c.created)],
             from_obj=activity_table.join(system_activity_table))\
             .where(and_(
                 system_activity_table.c.system_id == self.id,
                 activity_table.c.field_name == u'Status',
                 activity_table.c.action == u'Changed'))
+        system_added_subquery = select([system_table.c.date_added])\
+            .where(system_table.c.id == self.id)
         nonaborted_recipe_subquery = select([func.max(recipe_table.c.finish_time)],
             from_obj=recipe_table.join(system_table))\
             .where(and_(
@@ -2164,7 +2167,8 @@ $SNIPPET("rhts_post")
             .where(and_(
                 system_table.c.id == self.id,
                 distro_tag_map.c.distro_tag_id == DistroTag.by_tag(u'STABLE').id,
-                recipe_table.c.start_time > status_change_subquery,
+                recipe_table.c.start_time >
+                    func.ifnull(status_change_subquery, system_added_subquery),
                 recipe_table.c.finish_time > nonaborted_recipe_subquery))
         if session.execute(query).scalar() >= 2:
             # Broken!
