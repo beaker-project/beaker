@@ -1,4 +1,7 @@
-SearchBar = function (fields, searchController,operationvalue,column_based_controllers,table_search_controllers,searchvalue,keyvaluevalue) { 
+  SearchBar = function (fields, searchController,operationvalue,
+    column_based_controllers,table_search_controllers,searchvalue,keyvaluevalue, search_object) { 
+    this.search_object = new SearchObject()
+    this.search_object.initialize(search_object)
 	this.operationvalue = operationvalue
 	this.searchvalue = searchvalue 
         this.keyvaluevalue = keyvaluevalue
@@ -29,12 +32,13 @@ SearchBar = function (fields, searchController,operationvalue,column_based_contr
              this.table_controllers[index] = table_search_controllers[index]
         }
          
-	this.searchController = searchController;
+	this.searchController = searchController; 
 	bindMethods(this);
 };
 
 
 SearchBar.prototype.initialize = function() { 
+        
         SearchBarForm.searchbar_instances.push(this)
         for (index in this.fields) { 
             field = this.fields[index]
@@ -223,12 +227,18 @@ SearchBar.prototype.updateSearchVals = function(vals) {
 }
 
 SearchBar.prototype.keyValueOnChange = function(event) { 
+    cached_data = this.search_object.keyvalue_value(this.keyvalueField.value)
+    if (cached_data) {
+        this.replaceFields(cached_data)
+        return
+    }
     var params = {"tg_format"          : "json",
                   "tg_random"          : new Date().getTime(),
                   "keyvalue_field"     : this.keyvalueField.value};
     
     controller = this.column_controller['keyvalue'] 
-     
+    
+   
     var d = loadJSONDoc(controller + "?" + queryString(params));
     d.addCallback(this.replaceFields);
 
@@ -278,9 +288,14 @@ SearchBar.prototype.theOnChange = function(event) {
     } 
  
     this.last_table_value = table_value_lower
-    var d = loadJSONDoc(controller + "?" + queryString(params));
-    
-    d.addCallback(callback);
+    //Lets see if we have the value cached locally first
+    cached_data = this.search_object.table_value(table_value_lower)
+    if (cached_data) {
+        callback(cached_data)
+    } else {
+        var d = loadJSONDoc(controller + "?" + queryString(params));
+        d.addCallback(callback);
+    }
 }
 
 var SearchBarForm = {

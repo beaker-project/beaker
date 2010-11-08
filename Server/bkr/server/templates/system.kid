@@ -73,8 +73,8 @@
    <div py:if="widgets.has_key('labinfo')" class="tabbertab"><h2>Lab Info</h2>
     ${widgets['labinfo'].display(method='get', action=widgets_action['labinfo'], value=value, options=widgets_options['labinfo'])}
    </div>
-   <div py:if="widgets.has_key('history')" class="tabbertab"><h2>History</h2>
-    ${widgets['history'].display(list=history_data,options=widgets_options['history'],action=widgets_action['history'])} 
+   <div py:if="locals().has_key('history_widget')" class="tabbertab"><h2>History</h2>
+    ${history_widget.display(list=history_data,options=widgets_options['history'],action=widgets_action['history'])} 
    </div>
    <div py:if="widgets.has_key('tasks')" class="tabbertab"><h2>Tasks</h2>
     ${widgets['tasks'].display(
