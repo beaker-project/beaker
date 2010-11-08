@@ -365,7 +365,7 @@ class Root(RPCRoot):
     @expose(format='json')
     def get_search_options(self,table_field,**kw):
         return_dict = {}
-        search =  su.System.search.search_on(table_field
+        search =  su.System.search.search_on(table_field)
       
         #Determine what field type we are dealing with. If it is Boolean, convert our values to 0 for False
         # and 1 for True
