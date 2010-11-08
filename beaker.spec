@@ -192,7 +192,7 @@ fi
 %attr(-,apache,root) %dir %{_localstatedir}/run/%{name}-lab-controller
 
 %changelog
-<<<<<<< HEAD:beaker.spec
+
 * Thu Oct 28 2010 Bill Peck <bpeck@redhat.com> 0.5.60-2
 - fix missing upload and basepath when cache is off. (bpeck@redhat.com)
 
@@ -216,7 +216,6 @@ fi
 - bz643498 - Fixed 'less than' operator with Key/Value (rmancy@redhat.com)
 - bz643381 - beakerd ERROR Failed to commit due to :list.remove(x): x not in
              list (bpeck@redhat.com)
-=======
 * Wed Oct 27 2010 Raymond Mancy <rmancy@redhat.com> 0.5.60-1
 
 - bz635611 - specific machine jobs haven't got higher priority than no machine
@@ -242,15 +241,11 @@ fi
 - bz643498 - Fixed 'less than' operator with Key/Value (rmancy@redhat.com)
 - bz643381 - beakerd ERROR Failed to commit due to :list.remove(x): x not in
   list (bpeck@redhat.com)
->>>>>>> release-0.5.60:beaker.spec
 - bz643198 - #echo not safe cheetah command (bpeck@redhat.com)
 - bz642834 - define primary keys on association tables (dcallagh@redhat.com)
 - bz636530 - CC list for job completion notifications (dcallagh@redhat.com)
 - bz639227 - escape whiteboard in job matrix links (dcallagh@redhat.com)
-<<<<<<< HEAD:beaker.spec
-=======
 
->>>>>>> release-0.5.60:beaker.spec
 * Tue Oct 19 2010 Bill Peck <bpeck@redhat.com> 0.5.59-3
 - HOTFIX bz643381 beakerd ERROR Failed to commit due to
   :list.remove(x): x not in list (bpeck@redhat.com)
