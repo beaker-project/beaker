@@ -573,7 +573,7 @@ class Parser:
                 continue
 
             # Handle declarations e.g. "SiteConfig(server):  hostname of server"
-            m = re.match('(.*)\((.*)\):(.*)', line)
+            m = re.match('([^:]*)\((.*)\):(.*)', line)
             if m:
                 (decl, arg, value) = (m.group(1), m.group(2), m.group(3))
 
