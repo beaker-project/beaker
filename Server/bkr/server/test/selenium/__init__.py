@@ -55,7 +55,7 @@ class SeleniumTestCase(unittest.TestCase):
             try:
                 sel.click("link=Logout")
             except Exception, e:
-                raise BX(_(e.unicode()))
+                raise BX(unicode(e))
             sel.wait_for_page_to_load("3000")
             return True 
         return False
@@ -72,7 +72,7 @@ class SeleniumTestCase(unittest.TestCase):
             try:
                 sel.click("link=Login")
             except Exception, e:
-                raise BX(_(e.unicode()))
+                raise BX(unicode(e))
             sel.wait_for_page_to_load("3000")
             sel.type("user_name", user)
             sel.type("password", password)

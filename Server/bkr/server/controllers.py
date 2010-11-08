@@ -64,6 +64,7 @@ import cherrypy
 import md5
 import re
 import string
+import pkg_resources
 
 # for debugging
 import sys
@@ -233,6 +234,12 @@ class Root(RPCRoot):
     reserveworkflow = ReserveWorkflow()
     watchdogs = Watchdogs()
     retentiontag = RetentionTagController()
+
+    for entry_point in pkg_resources.iter_entry_points('bkr.controllers'):
+        controller = entry_point.load()
+        log.info('Attaching root extension controller %s as %s',
+                controller, entry_point.name)
+        locals()[entry_point.name] = controller
     
     id         = widgets.HiddenField(name='id')
     submit     = widgets.SubmitButton(name='submit')
@@ -1693,6 +1700,7 @@ class Root(RPCRoot):
         redirect("/view/%s" % system.fqdn)
 
     @expose(template='bkr.server.templates.form-post')
+    @identity.require(identity.not_anonymous())
     @validate(form=report_problem_form)
     def report_problem(self, system_id, recipe_id=None, problem_description=None):
         """
@@ -1703,10 +1711,12 @@ class Root(RPCRoot):
         except InvalidRequestError:
             flash(_(u'Unable to find system with id of %s' % system_id))
             redirect('/')
-        try:
-            recipe = Recipe.by_id(recipe_id)
-        except InvalidRequestError:
-            recipe = None
+        recipe = None
+        if recipe_id is not None:
+            try:
+                recipe = Recipe.by_id(recipe_id)
+            except InvalidRequestError:
+                pass
         if request.method == 'POST':
             mail.system_problem_report(system, problem_description,
                     recipe, identity.current.user)

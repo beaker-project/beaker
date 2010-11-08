@@ -525,16 +525,20 @@ key_table = Table('key_', metadata,
 key_value_string_table = Table('key_value_string', metadata,
     Column('id', Integer, autoincrement=True,
            nullable=False, primary_key=True),
-    Column('system_id', Integer, ForeignKey('system.id'), index=True),
-    Column('key_id', Integer, ForeignKey('key_.id'), index=True),
+    Column('system_id', Integer, ForeignKey('system.id',
+            onupdate='CASCADE', ondelete='CASCADE'), index=True),
+    Column('key_id', Integer, ForeignKey('key_.id',
+            onupdate='CASCADE', ondelete='CASCADE'), index=True),
     Column('key_value',TEXT, nullable=False)
 )
 
 key_value_int_table = Table('key_value_int', metadata,
     Column('id', Integer, autoincrement=True,
            nullable=False, primary_key=True),
-    Column('system_id', Integer, ForeignKey('system.id'), index=True),
-    Column('key_id', Integer, ForeignKey('key_.id'), index=True),
+    Column('system_id', Integer, ForeignKey('system.id',
+            onupdate='CASCADE', ondelete='CASCADE'), index=True),
+    Column('key_id', Integer, ForeignKey('key_.id',
+            onupdate='CASCADE', ondelete='CASCADE'), index=True),
     Column('key_value',Integer, nullable=False)
 )
 
@@ -2143,12 +2147,15 @@ $SNIPPET("rhts_post")
         # Since its last status change, has this system had an 
         # uninterrupted run of aborted recipes leading up to this one, with 
         # at least two different STABLE distros?
+        # XXX this query is stupidly big, I need to do something about it
         status_change_subquery = select([func.max(activity_table.c.created)],
             from_obj=activity_table.join(system_activity_table))\
             .where(and_(
                 system_activity_table.c.system_id == self.id,
                 activity_table.c.field_name == u'Status',
                 activity_table.c.action == u'Changed'))
+        system_added_subquery = select([system_table.c.date_added])\
+            .where(system_table.c.id == self.id)
         nonaborted_recipe_subquery = select([func.max(recipe_table.c.finish_time)],
             from_obj=recipe_table.join(system_table))\
             .where(and_(
@@ -2160,7 +2167,8 @@ $SNIPPET("rhts_post")
             .where(and_(
                 system_table.c.id == self.id,
                 distro_tag_map.c.distro_tag_id == DistroTag.by_tag(u'STABLE').id,
-                recipe_table.c.start_time > status_change_subquery,
+                recipe_table.c.start_time >
+                    func.ifnull(status_change_subquery, system_added_subquery),
                 recipe_table.c.finish_time > nonaborted_recipe_subquery))
         if session.execute(query).scalar() >= 2:
             # Broken!
@@ -2735,7 +2743,7 @@ class Distro(MappedObject):
         """
         from needpropertyxml import ElementWrapper
         import xmltramp
-        systems = self.systems(user)
+        systems = self.all_systems(user)
         #FIXME Should validate XML before processing.
         queries = []
         joins = []
@@ -2880,9 +2888,19 @@ class Distro(MappedObject):
         except IndexError,e:
             return []
 
-    def systems(self, user=None):
+    def systems(self, user=None): 
         """
         List of systems that support this distro
+        Limit to only lab controllers which have the distro.
+        Limit to what is available to user if user passed in.
+        """
+        return self.all_systems(user, join=['lab_controller','_distros','distro']).filter( \
+                    Distro.install_name==self.install_name)
+
+    def all_systems(self, user=None, join=['lab_controller']):
+        """
+        List of systems that support this distro
+        Will return all possible systems even if the distro is not on the lab controller yet.
         Limit to what is available to user if user passed in.
         """
         if user:
@@ -2890,8 +2908,8 @@ class Distro(MappedObject):
         else:
             systems = System.query()
         
-        return systems.join(['lab_controller','_distros','distro']).filter(
-             and_(Distro.install_name==self.install_name,
+        return systems.join(join).filter(
+             and_(
                   System.arch.contains(self.arch),
                 not_(or_(System.id.in_(select([system_table.c.id]).
                   where(system_table.c.id==system_arch_map.c.system_id).
@@ -5544,12 +5562,14 @@ mapper(Note, note_table,
 
 Key.mapper = mapper(Key, key_table)
            
-mapper(Key_Value_Int, key_value_int_table,
-        properties=dict(key=relation(Key, uselist=False,
-                        backref='key_value_int')))
-mapper(Key_Value_String, key_value_string_table,
-        properties=dict(key=relation(Key, uselist=False,
-                        backref='key_value_string')))
+mapper(Key_Value_Int, key_value_int_table, properties={
+        'key': relation(Key, uselist=False,
+            backref=backref('key_value_int', cascade='all, delete-orphan'))
+        })
+mapper(Key_Value_String, key_value_string_table, properties={
+        'key': relation(Key, uselist=False,
+            backref=backref('key_value_string', cascade='all, delete-orphan'))
+        })
 
 mapper(Task, task_table,
         properties = {'types':relation(TaskType,

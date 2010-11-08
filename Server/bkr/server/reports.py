@@ -24,6 +24,7 @@ import xmlrpclib
 #import model
 from model import *
 import string
+import pkg_resources
 
 # Validation Schemas
 
@@ -31,6 +32,13 @@ class Reports(RPCRoot):
     # For XMLRPC methods in this class.
     exposed = True
 
+    extension_controllers = []
+    for entry_point in pkg_resources.iter_entry_points('bkr.controllers.reports'):
+        controller = entry_point.load()
+        log.info('Attaching reports extension controller %s as %s',
+                controller, entry_point.name)
+        extension_controllers.append(controller)
+        locals()[entry_point.name] = controller
 
     @expose(template="bkr.server.templates.grid")
     @paginate('list',limit=50, default_order='created', max_limit=None)
