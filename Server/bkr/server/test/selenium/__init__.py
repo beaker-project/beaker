@@ -43,8 +43,7 @@ class SeleniumTestCase(unittest.TestCase):
     @classmethod
     def get_selenium(cls):
         cls.sel = selenium('localhost', 4444, '*chrome',
-                os.environ.get('BEAKER_SERVER_BASE_URL', 'http://localhost:%s/'
-                    % turbogears.config.get('server.socket_port')))
+                bkr.server.test.get_server_base())
         return cls.sel
 
     @classmethod

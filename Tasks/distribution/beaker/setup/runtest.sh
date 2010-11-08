@@ -212,6 +212,9 @@ identity.krb_auth_keytab='/etc/httpd/conf/httpd.keytab'
 
 # SERVER
 
+tg.url_domain='localhost'
+tg.url_scheme='http'
+
 server.socket_port=8084
 server.environment="development"
 server.webpath="/bkr/"

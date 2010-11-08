@@ -20,6 +20,7 @@ import sys
 import os
 from StringIO import StringIO
 import logging, logging.config
+import turbogears
 from turbogears import update_config
 from turbogears.database import session
 import turbomail.adapters.tg1
@@ -28,6 +29,10 @@ from bkr.server.test import data_setup
 log = logging.getLogger(__name__)
 
 CONFIG_FILE = os.environ.get('BEAKER_CONFIG_FILE', 'test.cfg')
+
+def get_server_base():
+    return os.environ.get('BEAKER_SERVER_BASE_URL',
+        'http://localhost:%s/' % turbogears.config.get('server.socket_port'))
 
 def setup_package():
     log.info('Loading test configuration from %s', CONFIG_FILE)
