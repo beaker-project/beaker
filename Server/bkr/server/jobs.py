@@ -538,6 +538,7 @@ class Jobs(RPCRoot):
                            label=_(u'Job Search'),    
                            simplesearch_label = 'Lookup ID',
                            table = search_utility.Job.search.create_search_table(without=('Owner')),
+                           complete_data = search_utility.Job.search.create_complete_search_table(),
                            search_controller=url("/get_search_options_job"),
                            quick_searches = [('Status-is-Queued','Queued'),('Status-is-Running','Running'),('Status-is-Completed','Completed')])
                             

@@ -2,7 +2,7 @@ from turbogears.database import session
 from turbogears import controllers, expose, flash, widgets, validate, error_handler, validators, redirect, paginate, url
 from model import *
 from turbogears import identity, redirect, config
-import search_utility
+import search_utility as su
 import bkr
 import bkr.server.stdvars
 from bkr.server.power import PowerTypes
@@ -271,14 +271,24 @@ class Root(RPCRoot):
         submit_text = _(u'Change'),
     )  
     search_bar = SearchBar(name='systemsearch',
-                           label=_(u'System Search'), 
+                           label=_(u'System Search'),
                            enable_custom_columns = True,
-                           extra_selects = [ { 'name': 'keyvalue', 'column':'key/value','display':'none' , 'pos' : 2,'callback':url('/get_operators_keyvalue') }], 
-                           table=search_utility.System.search.create_search_table([{search_utility.System:{'all':[]}},
-                                                                                   {search_utility.Cpu:{'all':[]}},
-                                                                                   {search_utility.Device:{'all':[]}},
-                                                                                   {search_utility.Key:{'all':[]}} ] ),
-                           search_controller=url("/get_search_options"), 
+                           extra_selects = [ { 'name': 'keyvalue',
+                                               'column':'key/value',
+                                               'display':'none',
+                                               'pos' : 2,
+                                               'callback':url('/get_operators_keyvalue') }],
+                           table=su.System.search.create_search_table(\
+                               [{su.System:{'all':[]}},
+                                {su.Cpu:{'all':[]}},
+                                {su.Device:{'all':[]}},
+                                {su.Key:{'all':[]}}]),
+                           complete_data = su.System.search.create_complete_search_table(\
+                               [{su.System:{'all':[]}},
+                                {su.Cpu:{'all':[]}},
+                                {su.Device:{'all':[]}},
+                                {su.Key:{'all':[]}}]),
+                           search_controller=url("/get_search_options"),
                            table_search_controllers = {'key/value':url('/get_keyvalue_search_options')},)
                  
   
@@ -316,8 +326,8 @@ class Root(RPCRoot):
         if cmd == 'remove':
             group.admin_systems.remove(System.by_id(system_id,identity.current.user))
             return {'success' : 1 }
-            
-        
+
+
     @expose(format='json')
     def get_keyvalue_search_options(self,**kw):
         return_dict = {}
@@ -325,64 +335,41 @@ class Root(RPCRoot):
         return return_dict
 
     @expose(format='json')
-    def get_search_options_distros(self,table_field,**kw): 
-        field = table_field
-        search = search_utility.Distro.search.search_on(field) 
-        col_type = search_utility.Distro.search.field_type(field)
-        return SearchOptions.get_search_options_worker(search,col_type)
+    def get_search_options_distros(self,table_field,**kw):
+        return su.Distro.search.get_search_options(table_field, *args, **kw)
 
     @expose(format='json')
-    def get_search_options_recipe(self,table_field,**kw): 
-        field = table_field
-        search = search_utility.Recipe.search.search_on(field) 
-        col_type = search_utility.Recipe.search.field_type(field)
-        return SearchOptions.get_search_options_worker(search,col_type)
+    def get_search_options_recipe(self,table_field, *args, **kw):
+        return su.Recipe.search.get_search_options(table_field, *args, **kw)
 
     @expose(format='json')
     def get_search_options_job(self,table_field,**kw):
-        field = table_field
-        search = search_utility.Job.search.search_on(field)  
-        col_type = search_utility.Job.search.field_type(field)
-        return SearchOptions.get_search_options_worker(search,col_type)
+        return su.Job.search.get_search_options(table_field, *args, **kw)
 
     @expose(format='json')
-    def get_search_options_task(self,table_field,**kw):
-        field = table_field
-        search = search_utility.Task.search.search_on(field) 
-        col_type = search_utility.Task.search.field_type(field)
-        return SearchOptions.get_search_options_worker(search,col_type)
-    
+    def get_search_options_task(self,table_field, *args, **kw):
+        return su.Task.search.get_search_options(table_field, *args, **kw)
+
     @expose(format='json')
     def get_search_options_activity(self,table_field,**kw):
-        field = table_field
-        search = search_utility.Activity.search.search_on(field) 
-        col_type = search_utility.Activity.search.field_type(field)
-        return SearchOptions.get_search_options_worker(search,col_type)
- 
+        return su.Activity.search.get_search_options(table_field, *args, **kw)
+
     @expose(format='json')
-    def get_search_options_history(self,table_field,**kw):
-        field = table_field     
-        search = search_utility.History.search.search_on(field) 
-        col_type = search_utility.History.search.field_type(field)
-        return SearchOptions.get_search_options_worker(search,col_type)  
-    
-   
+    def get_search_options_history(self,table_field, *args, **kw):
+        return su.History.search.get_search_options(table_field, *args, **kw)
+
     @expose(format='json')
-    def get_operators_keyvalue(self,keyvalue_field,*args,**kw): 
+    def get_operators_keyvalue(self,keyvalue_field,*args,**kw):
+        return su.Key.search.get_search_options(keyvalue_field, *args, **kw)
+
+    @expose(format='json')
+    def get_search_options(self,table_field,**kw):
         return_dict = {}
-        search = search_utility.System.search.search_on_keyvalue(keyvalue_field)
-        search.sort()
-        return_dict['search_by'] = search
-        return return_dict
-         
-    @expose(format='json')
-    def get_search_options(self,table_field,**kw): 
-        return_dict = {}
-        search =  search_utility.System.search.search_on(table_field)  
+        search =  su.System.search.search_on(table_field
       
         #Determine what field type we are dealing with. If it is Boolean, convert our values to 0 for False
         # and 1 for True
-        col_type = search_utility.System.search.field_type(table_field)
+        col_type = su.System.search.field_type(table_field)
        
         if col_type.lower() == 'boolean':
             search['values'] = { 0:'False', 1:'True'}
@@ -543,7 +530,7 @@ class Root(RPCRoot):
             redirect(url('/reserveworkflow',**kw))    
           
     def _history_search(self,activity,**kw):
-        history_search = search_utility.History.search(activity)
+        history_search = su.History.search(activity)
         for search in kw['historysearch']:
             col = search['table'] 
             history_search.append_results(search['value'],col,search['operation'],**kw)
@@ -553,7 +540,7 @@ class Root(RPCRoot):
         for search in kw['systemsearch']: 
 	        #clsinfo = System.get_dict()[search['table']] #Need to change this
             class_field_list = search['table'].split('/')
-            cls_ref = search_utility.System.search.translate_name(class_field_list[0])
+            cls_ref = su.System.search.translate_name(class_field_list[0])
             col = class_field_list[1]              
             #If value id False or True, let's convert them to
             if class_field_list[0] != 'Key':
@@ -619,7 +606,7 @@ class Root(RPCRoot):
 
         if kw.get("systemsearch"):
             searchvalue = kw['systemsearch']
-            sys_search = search_utility.System.search(systems)
+            sys_search = su.System.search(systems)
             columns = []
             for elem in kw:
                 if re.match('systemsearch_column_',elem):
@@ -634,7 +621,7 @@ class Root(RPCRoot):
             use_custom_columns = False
             for column in columns:
                 table,col = column.split('/')
-                if sys_search.translate_name(table) is not search_utility.System:
+                if sys_search.translate_name(table) is not su.System:
                     use_custom_columns = True     
                     break     
 
@@ -883,7 +870,6 @@ class Root(RPCRoot):
         widgets = dict( 
                         labinfo   = self.labinfo_form,
                         details   = self.system_details,
-                        history   = self.system_activity,
                         exclude   = self.system_exclude,
                         keys      = self.system_keys,
                         notes     = self.system_notes,
@@ -906,6 +892,7 @@ class Root(RPCRoot):
             options         = options,
             history_data    = historical_data,
             task_widget     = self.task_form,
+            history_widget  = self.system_activity,
             widgets         = widgets,
             widgets_action  = dict( power     = '/save_power',
                                     history   = '/view/%s' % fqdn,
