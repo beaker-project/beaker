@@ -30,7 +30,8 @@ class ReserveSystem(bkr.server.test.selenium.SeleniumTestCase):
         self.failUnless(sel.is_text_present("%s" % self.system.fqdn))
         # click Reserve Now link in the same row as the system we created in setUp
         sel.click('//table[@id="widget"]//td[a/text()="Reserve Now" '
-                'and preceding-sibling::td[7]/a/text() = "test_reserve_system"]/a')
+                'and preceding-sibling::td[7]/a/text() = "%s"]/a'
+                % self.system.fqdn)
         sel.wait_for_page_to_load("30000")
         sel.type("form_whiteboard", "testing")
         sel.type("form_whiteboard", "test_reserve_system_distro")
