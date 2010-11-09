@@ -102,6 +102,9 @@
         </attribute>
       </optional>
       <optional>
+        <ref name="autopick"/>
+      </optional>
+      <optional>
         <element name="kickstart"><text/></element>
       </optional>
       <optional>
@@ -140,6 +143,18 @@
         <ref name="task"/>
       </oneOrMore>
     </interleave>
+  </define>
+  <define name="autopick">
+    <element name="autopick">
+      <optional>
+        <attribute name="random">
+          <value type="boolean">true</value>
+        </attribute>
+      </optional>
+      <zeroOrMore>
+        <element name="pool"><text/></element>
+      </zeroOrMore>
+    </element>
   </define>
   <define name="watchdog">
     <element name="watchdog">

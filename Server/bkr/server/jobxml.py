@@ -185,6 +185,11 @@ class XmlRecipe(ElementWrapper):
                 return None
         elif attrname == 'role':
             return self.get_xml_attr('role', unicode, u'None')
+        elif attrname == 'autopick':
+            if hasattr(self.wrappedEl, 'autopick'):
+                return XmlAutoPick(self.wrappedEl['autopick'])
+            else:
+                return None
         elif attrname == 'watchdog':
             if hasattr(self.wrappedEl, 'watchdog'):
                 return XmlWatchdog(self.wrappedEl['watchdog'])
@@ -229,6 +234,12 @@ class XmlTask(ElementWrapper):
             return XmlRpm(self.wrappedEl['rpm'])
         else: raise AttributeError, attrname
 
+
+class XmlAutoPick(ElementWrapper):
+    def __getattr__(self, attrname):
+        if attrname == 'random':
+            return self.get_xml_attr('random', bool, False)
+        else: raise AttributeError, attrname
 
 class XmlWatchdog(ElementWrapper):
     def __getattr__(self, attrname):
