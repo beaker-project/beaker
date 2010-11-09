@@ -11,14 +11,7 @@ from distutils.command.install_data import install_data as _install_data
 from distutils.dep_util import newer
 from setuptools.command.install import install as _install
 from setuptools.command.install_lib import install_lib as _install_lib
-from turbogears.finddata import find_package_data, standard_exclude, \
-        standard_exclude_directories
 execfile(os.path.join("bkr/server", "release.py"))
-
-excludeFiles = ['*.cfg.in']
-excludeFiles.extend(standard_exclude)
-excludeDataDirs = ['bkr/server/static', 'comps']
-excludeDataDirs.extend(standard_exclude_directories)
 
 poFiles = filter(os.path.isfile, glob.glob('po/*.po'))
 
@@ -133,11 +126,6 @@ data_files = [
     ("/var/www/beaker/rpms", []),
     ("/var/www/beaker/repos", []),
 ]
-
-package_data = find_package_data(where='bkr',
-                                 package='bkr',
-                                 exclude=excludeFiles,
-                                 exclude_directories=excludeDataDirs)
 setup(
     name="bkr.server",
     namespace_packages = ['bkr'],
@@ -164,7 +152,11 @@ setup(
     zip_safe=False,
     data_files = data_files,
     packages = find_packages(),
-    package_data = package_data,
+    package_data={
+        'bkr.server.templates': ['*.kid'],
+        'bkr.server.test': ['complete-job.xml'],
+        'bkr.server.test.selenium': ['*.rpm', '*.csv'],
+    },
     keywords=[
         'turbogears.app',
     ],
