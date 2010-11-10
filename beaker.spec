@@ -2,8 +2,8 @@
 %{!?pyver: %global pyver %(%{__python} -c "import sys ; print sys.version[:3]")}
 
 Name:           beaker
-Version:        0.5.60
-Release:        2%{?dist}
+Version:        0.5.61
+Release:        1%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -192,6 +192,28 @@ fi
 %attr(-,apache,root) %dir %{_localstatedir}/run/%{name}-lab-controller
 
 %changelog
+* Thu Nov 11 2010 Raymond Mancy <rmancy@redhat.com> 0.5.61-1
+- bz644132 - Speed up searchbar (rmancy@redhat.com)
+- bz650300 - require login for reporting system problems (dcallagh@redhat.com)
+- bz598781 - To deterministic in host selection (bpeck@redhat.com)
+- bz648497 - Jobs don't run always when free systems available.   
+             When picking recipe.systems don't filter out systems from labs 
+             that don't have the distro yet. Update the Queued to Schedule code to
+             filter out systems from labs that don't have the distro (bpeck@redhat.com)
+- bz649179 - show friendly error message when unparseable job xml is submitted
+  (dcallagh@redhat.com)
+- bz640395 - make bkradd work (bpeck@redhat.com)
+- bz648527 - Now admins get 'Schedule provision' when they are looking at a
+  machine that is being used (rmancy@redhat.com)
+- bz646520 - Retention feature was added without allowing cmdline option.  Also
+  fixed bkr.client helpers to allow setting the guestname in guest recipes.
+  (bpeck@redhat.com)
+- bz647854 - Manual machine with a group will not ISE when viewed by non logged
+  in user (rmancy@redhat.com)
+- bz647566 - cascade key type deletions correctly (dcallagh@redhat.com)
+- bz647292 - fix up broken system detection to handle the case where a system's
+  status has never changed (dcallagh@redhat.com)
+
 
 * Thu Oct 28 2010 Bill Peck <bpeck@redhat.com> 0.5.60-2
 - fix missing upload and basepath when cache is off. (bpeck@redhat.com)
