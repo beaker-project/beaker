@@ -148,12 +148,13 @@
     <element name="autopick">
       <optional>
         <attribute name="random">
-          <value type="boolean">true</value>
+          <choice>
+            <data type="boolean"/>
+            <value>TRUE</value>
+            <value>FALSE</value>
+          </choice>
         </attribute>
       </optional>
-      <zeroOrMore>
-        <element name="pool"><text/></element>
-      </zeroOrMore>
     </element>
   </define>
   <define name="watchdog">

@@ -236,9 +236,17 @@ class XmlTask(ElementWrapper):
 
 
 class XmlAutoPick(ElementWrapper):
+    is_false = ('FALSE','0') #These need to be matched to the rng
+    is_true = ('TRUE','1')
     def __getattr__(self, attrname):
         if attrname == 'random':
-            return self.get_xml_attr('random', bool, False)
+            unicode_val = self.get_xml_attr('random', unicode, False)
+            # The order here is important, as it determines default behaviour
+            # At the moment this means it defauls to FALSE
+            if unicode_val in self.is_true:
+                return True
+            else:
+                return False
         else: raise AttributeError, attrname
 
 class XmlWatchdog(ElementWrapper):
