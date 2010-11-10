@@ -4078,7 +4078,7 @@ class Recipe(TaskBase):
             recipe.setAttribute("job_id", "%s" % self.recipeset.job_id)
             recipe.setAttribute("recipe_set_id", "%s" % self.recipe_set_id)
         autopick = self.doc.createElement("autopick")
-        autopick.setAttribute("random", "%s" % unicode(self.autopick_random).upper())
+        autopick.setAttribute("random", "%s" % unicode(self.autopick_random).lower())
         recipe.appendChild(autopick)
         recipe.setAttribute("whiteboard", "%s" % self.whiteboard and self.whiteboard or '')
         recipe.setAttribute("role", "%s" % self.role and self.role or 'RECIPE_MEMBERS')
