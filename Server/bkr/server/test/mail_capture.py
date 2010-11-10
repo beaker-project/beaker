@@ -56,6 +56,15 @@ class MailCaptureThread(threading.Thread):
                 log.debug('%r: Captured mail from peer %r: %r', self, peer,
                         (mailfrom, rcpttos, data))
                 captured_mails.append((mailfrom, rcpttos, data))
+            def close(self):
+                smtpd.SMTPServer.close(self)
+                # also clean up any orphaned SMTP channels
+                for dispatcher in asyncore.socket_map.values():
+                    if isinstance(dispatcher, smtpd.SMTPChannel) \
+                            and dispatcher.__server is self:
+                        log.debug('%r: Forcing close of orphaned channel %r',
+                                self, dispatcher)
+                        dispatcher.close()
         server = CapturingSMTPServer(('127.0.0.1', 19999), None)
         log.debug('Spawning %r', server)
         try:
