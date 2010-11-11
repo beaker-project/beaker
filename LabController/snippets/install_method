@@ -4,7 +4,7 @@
 #set $tree = $tree.split(':')[2:][0]
 ## If method_dir_to_split is defined, split on it.
 #if $mgmt_parameters.has_key("method_dir_to_split")
-#set $tree = '%s%s' % ($mgmt_parameters["method_dir_to_split"], $tree.split($mgmt_parameters["method_dir_to_split"])[1:][0])
+#set $tree = '%s' % ($tree.split($mgmt_parameters["method_dir_to_split"])[1:][0])
 #end if
 #set $tree = "%s/%s" % ($mgmt_parameters["method_%s" % $method], $tree)
 url #slurp
