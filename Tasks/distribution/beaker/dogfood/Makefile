@@ -16,7 +16,7 @@
 TOPLEVEL_NAMESPACE=distribution
 PACKAGE_NAME=beaker
 RELATIVE_PATH=dogfood
-export TESTVERSION=0.9
+export TESTVERSION=1.1
 export TEST=/$(TOPLEVEL_NAMESPACE)/$(PACKAGE_NAME)/$(RELATIVE_PATH)
 
 .PHONY: all install download clean
