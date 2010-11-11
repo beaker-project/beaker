@@ -382,6 +382,8 @@ class Jobs(RPCRoot):
             raise BX(_('Error in hostRequires: %s' % e))
         recipe.whiteboard = xmlrecipe.whiteboard
         recipe.kickstart = xmlrecipe.kickstart
+        if xmlrecipe.autopick:
+            recipe.autopick_random = xmlrecipe.autopick.random
         if xmlrecipe.watchdog:
             recipe.panic = xmlrecipe.watchdog.panic
         recipe.ks_meta = xmlrecipe.ks_meta

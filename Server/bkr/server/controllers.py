@@ -208,6 +208,56 @@ class Devices:
                     object_count = devices.count(),
                     list = devices)
 
+class ReportProblemController(object):
+
+    form_widget = ReportProblemForm()
+
+    @expose(template='bkr.server.templates.form-post')
+    @identity.require(identity.not_anonymous())
+    def index(self, system_id, recipe_id=None, problem_description=None, tg_errors=None):
+        """
+        Allows users to report a problem with a system to the system's owner.
+        """
+        try:
+            system = System.by_id(system_id, identity.current.user)
+        except InvalidRequestError:
+            flash(_(u'Unable to find system with id of %s' % system_id))
+            redirect('/')
+        recipe = None
+        if recipe_id is not None:
+            try:
+                recipe = Recipe.by_id(recipe_id)
+            except InvalidRequestError:
+                pass
+        return dict(
+            title=_(u'Report a problem with %s') % system.fqdn,
+            form=self.form_widget,
+            method='post',
+            action='submit',
+            value={'system_id': system_id, 'recipe_id': recipe_id},
+            options={'system': system, 'recipe': recipe}
+        )
+
+    @expose()
+    @error_handler(index)
+    @validate(form=form_widget)
+    @identity.require(identity.not_anonymous())
+    def submit(self, system_id, problem_description, recipe_id=None):
+        system = System.by_id(system_id, identity.current.user)
+        recipe = None
+        if recipe_id is not None:
+            try:
+                recipe = Recipe.by_id(recipe_id)
+            except InvalidRequestError:
+                pass
+        mail.system_problem_report(system, problem_description,
+                recipe, identity.current.user)
+        activity = SystemActivity(identity.current.user, 'WEBUI', 'Reported problem',
+                'Status', None, problem_description)
+        system.activity.append(activity)
+        flash(_(u'Your problem report has been forwarded to the system owner'))
+        redirect('/view/%s' % system.fqdn)
+
 class Root(RPCRoot): 
     powertypes = PowerTypes()
     keytypes = KeyTypes()
@@ -234,13 +284,14 @@ class Root(RPCRoot):
     reserveworkflow = ReserveWorkflow()
     watchdogs = Watchdogs()
     retentiontag = RetentionTagController()
+    report_problem = ReportProblemController()
 
     for entry_point in pkg_resources.iter_entry_points('bkr.controllers'):
         controller = entry_point.load()
         log.info('Attaching root extension controller %s as %s',
                 controller, entry_point.name)
         locals()[entry_point.name] = controller
-    
+
     id         = widgets.HiddenField(name='id')
     submit     = widgets.SubmitButton(name='submit')
 
@@ -306,7 +357,6 @@ class Root(RPCRoot):
     system_provision = SystemProvision(name='provision')
     arches_form = SystemArches(name='arches') 
     task_form = TaskSearchForm(name='tasks')
-    report_problem_form = ReportProblemForm()
 
     @expose(format='json')
     def change_system_admin(self,system_id=None,group_id=None,cmd=None,**kw):
@@ -331,7 +381,7 @@ class Root(RPCRoot):
     @expose(format='json')
     def get_keyvalue_search_options(self,**kw):
         return_dict = {}
-        return_dict['keyvals'] = Key.get_all_keys()
+        return_dict['keyvals'] = [x for x in Key.get_all_keys() if x != 'MODULE']
         return return_dict
 
     @expose(format='json')
@@ -1685,41 +1735,6 @@ class Root(RPCRoot):
                 provision.arch=arch
                 system.provisions[arch] = provision
         redirect("/view/%s" % system.fqdn)
-
-    @expose(template='bkr.server.templates.form-post')
-    @identity.require(identity.not_anonymous())
-    @validate(form=report_problem_form)
-    def report_problem(self, system_id, recipe_id=None, problem_description=None):
-        """
-        Allows users to report a problem with a system to the system's owner.
-        """
-        try:
-            system = System.by_id(system_id, identity.current.user)
-        except InvalidRequestError:
-            flash(_(u'Unable to find system with id of %s' % system_id))
-            redirect('/')
-        recipe = None
-        if recipe_id is not None:
-            try:
-                recipe = Recipe.by_id(recipe_id)
-            except InvalidRequestError:
-                pass
-        if request.method == 'POST':
-            mail.system_problem_report(system, problem_description,
-                    recipe, identity.current.user)
-            activity = SystemActivity(identity.current.user, 'WEBUI', 'Reported problem',
-                    'Status', None, problem_description)
-            system.activity.append(activity)
-            flash(_(u'Your problem report has been forwarded to the system owner'))
-            redirect('/view/%s' % system.fqdn)
-        return dict(
-            title=_(u'Report a problem with %s') % system.fqdn,
-            form=self.report_problem_form,
-            method='post',
-            action='report_problem',
-            value={},
-            options={'system': system, 'recipe': recipe}
-        )
 
     @cherrypy.expose
     # Testing auth via xmlrpc

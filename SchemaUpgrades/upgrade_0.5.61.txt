@@ -1,5 +1,5 @@
 Run the following SQL:
-
+use beaker;
 ALTER TABLE key_value_int ADD FOREIGN KEY (system_id) REFERENCES system (id) 
     ON UPDATE CASCADE ON DELETE CASCADE;
 ALTER TABLE key_value_int ADD FOREIGN KEY (key_id) REFERENCES key_ (id) 
@@ -8,3 +8,4 @@ ALTER TABLE key_value_string ADD FOREIGN KEY (system_id) REFERENCES system (id)
     ON UPDATE CASCADE ON DELETE CASCADE;
 ALTER TABLE key_value_string ADD FOREIGN KEY (key_id) REFERENCES key_ (id) 
     ON UPDATE CASCADE ON DELETE CASCADE;
+ALTER TABLE recipe ADD COLUMN (autopick_random tinyint DEFAULT 0);

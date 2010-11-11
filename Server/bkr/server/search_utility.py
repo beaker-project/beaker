@@ -589,7 +589,9 @@ class SystemSearch(Search):
         for col in searchable:
             #if you have any custom columns (i.e Key/Value, then get their results here)
             if col.lower() == 'key/value':
-                table_options[col] ={'keyvals' :  KeyModel.get_all_keys() }
+                #HACK to remove MODULE from Key/Value search. This is also implemented in
+                # get_value_search_options() to cater for an Ajax call
+                table_options[col] ={'keyvals' :  [x for x in KeyModel.get_all_keys() if x != 'MODULE']}
                 expanded_keyvals = {}
                 for k in table_options[col]['keyvals']:
                     expanded_keyvals.update({ k : Key.search.get_search_options(k) } )

@@ -49,6 +49,7 @@ class TestReportProblem(SeleniumTestCase):
         self.login(user=problem_reporter.user_name, password='password')
         sel = self.selenium
         sel.open('report_problem?system_id=%s' % system.id)
+        self.assertEqual(sel.get_title(), 'Report a problem with ncc1701d')
         self.assertEqual(
                 # value of cell beside "Problematic system" cell
                 sel.get_text('//form[@name="report_problem"]//table//td'
@@ -78,10 +79,17 @@ class TestReportProblem(SeleniumTestCase):
                 % get_server_base())
 
     def test_reporting_problem_requires_login(self):
-        system = data_setup.create_system()
+        problem_reporter = data_setup.create_user(password=u'password')
+        system = data_setup.create_system(fqdn=u'ncc1701e')
         session.flush()
+        sel = self.selenium
         try:
-            self.selenium.open('report_problem?system_id=%s' % system.id)
+            sel.open('report_problem?system_id=%s' % system.id)
             self.fail('Should raise 403')
         except Exception, e:
             self.assert_('Response_Code = 403' in e.args[0])
+        sel.type('user_name', problem_reporter.user_name)
+        sel.type('password', 'password')
+        sel.click('login')
+        sel.wait_for_page_to_load('3000')
+        self.assertEqual(sel.get_title(), 'Report a problem with ncc1701e')

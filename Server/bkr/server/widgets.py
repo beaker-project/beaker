@@ -1359,7 +1359,8 @@ class ReportProblemForm(Form):
     template = 'bkr.server.templates.report_problem_form'
     name = 'report_problem'
     fields=[
-        TextArea(name='problem_description', label=_(u'Description of problem'))
+        TextArea(name='problem_description', label=_(u'Description of problem'),
+                validator=validators.NotEmpty())
     ]
     hidden_fields=[
         HiddenField(name='system_id'),
