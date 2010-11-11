@@ -24,6 +24,7 @@ class SystemGroupUserTake(bkr.server.test.selenium.SeleniumTestCase):
         self.manual_system.shared = True
         self.group = data_setup.create_group()
         self.user = data_setup.create_user(password='password')
+        self.user2 = data_setup.create_user(password=u'password')
         lc = data_setup.create_labcontroller(u'test-lc')
         data_setup.add_system_lab_controller(self.automated_system,lc)
         data_setup.add_system_lab_controller(self.manual_system,lc)
@@ -34,6 +35,32 @@ class SystemGroupUserTake(bkr.server.test.selenium.SeleniumTestCase):
         data_setup.create_task(name=u'/distribution/reservesys')
         self.login(user=self.user.user_name,password='password')
         #TODO need to login
+
+    def test_schedule_provision_system_has_user(self):
+        self.automated_system.user = self.user2
+        session.flush()
+        self.logout()
+        self.login() # login as admin
+        sel = self.selenium
+        sel.open("/view/%s/" % self.automated_system.fqdn)
+        sel.wait_for_page_to_load("30000")
+        sel.click("link=Provision")
+        try: self.failUnless(sel.is_text_present("Schedule provision"))
+        except AssertionError, e: self.verificationErrors.append('Admin has no schedule provision option when system is in use')
+
+    def test_schedule_provision_system_has_user_with_group(self): 
+        self.automated_system.user = self.user2
+        data_setup.add_user_to_group(self.user,self.group)
+        data_setup.add_group_to_system(self.automated_system,self.group)
+        session.flush()
+        self.logout()
+        self.login(user=self.user.user_name,password='password') # login as admin
+        sel = self.selenium
+        sel.open("/view/%s/" % self.automated_system.fqdn)
+        sel.wait_for_page_to_load("30000")
+        sel.click("link=Provision")
+        try: self.failUnless(sel.is_text_present("Schedule provision"))
+        except AssertionError, e: self.verificationErrors.append('Systemgroup has no schedule provision option when system is in use')
 
 
     def test_system_no_group(self):

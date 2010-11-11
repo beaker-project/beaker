@@ -39,7 +39,7 @@ class MailCaptureThread(threading.Thread):
         # Sadly smtpd.SMTPServer does not give us any nice way to do that :-(
         # For now this works because we don't have any other threads using asyncore
         # in our tests.
-        assert not asyncore.socket_map
+        assert not asyncore.socket_map, asyncore.socket_map
         super(MailCaptureThread, self).__init__(**kwargs)
         self.daemon = True
         self._running = True

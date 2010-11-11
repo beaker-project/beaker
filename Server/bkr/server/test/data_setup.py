@@ -26,7 +26,7 @@ from bkr.server.model import LabController, User, Group, Distro, Breed, Arch, \
         OSMajor, OSVersion, SystemActivity, Task, MachineRecipe, System, \
         SystemType, SystemStatus, Recipe, RecipeTask, RecipeTaskResult, \
         Device, TaskResult, TaskStatus, Job, RecipeSet, TaskPriority, \
-        LabControllerDistro, Power, PowerType
+        LabControllerDistro, Power, PowerType, TaskExcludeArch, TaskExcludeOSMajor
 
 log = logging.getLogger(__name__)
 
@@ -65,7 +65,7 @@ def create_labcontroller(fqdn=None):
 def create_user(user_name=None, password=None, display_name=None,
         email_address=None):
     if user_name is None:
-        user_name = u'user%d' % int(time.time() * 1000)
+        user_name = u'user%d' % int(time.time() * 10000)
     if display_name is None:
         display_name = user_name
     if email_address is None:
@@ -147,10 +147,17 @@ def create_system_activity(user=None, **kw):
     activity = SystemActivity(user, 'WEBUI', 'Changed', 'Loaned To', 'random_%d' % int(time.time() * 1000) , '%s' % user)
     return activity
 
-def create_task(name=None):
+def create_task(name=None, exclude_arch=[],exclude_osmajor=[]):
     if name is None:
         name = u'/distribution/test_task_%d' % int(time.time() * 1000)
     task = Task.lazy_create(name=name)
+    if exclude_arch:
+       [TaskExcludeArch(arch_id=Arch.by_name(arch).id, task_id=task.id) for arch in exclude_arch]
+    if exclude_osmajor:
+        for osmajor in exclude_osmajor:
+            distro = create_distro(osmajor=osmajor) 
+            TaskExcludeOSMajor(task_id=task.id, osmajor_id=distro.osversion.osmajor.id)
+        
     return task
 
 def create_recipe(system=None, distro=None, task_name=u'/distribution/reservesys',

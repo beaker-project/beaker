@@ -16,6 +16,7 @@ from turbogears.widgets import (Form, TextField, SubmitButton, TextArea, Label,
                                 CompoundWidget, AjaxGrid, Tabber, CSSLink,
                                 RadioButtonList, MultipleSelectField, Button,
                                 RepeatingFieldSet, SelectionField,WidgetsList)
+from bkr.server import search_utility
 import logging
 log = logging.getLogger(__name__)
 
@@ -421,7 +422,9 @@ class JobMatrixReport(Form):
 
 class SearchBar(RepeatingFormField):
     """Search Bar""" 
-    javascript = [LocalJSLink('bkr', '/static/javascript/searchbar_v5.js'),LocalJSLink('bkr','/static/javascript/jquery.js')]
+    javascript = [LocalJSLink('bkr', '/static/javascript/search_object.js'),
+                  LocalJSLink('bkr', '/static/javascript/searchbar_v6.js'), 
+                  LocalJSLink('bkr','/static/javascript/jquery.js')]
     template = """
     <div xmlns:py="http://purl.org/kid/ns#">
     <a id="advancedsearch" href="#">Toggle Search</a>
@@ -483,8 +486,8 @@ class SearchBar(RepeatingFormField):
            class="${field_class}"
            id="${field_id}_${repetition}">
         <script language="JavaScript" type="text/JavaScript">
-            
-            ${field_id}_${repetition} = new SearchBar([${to_json(fields)}],'${search_controller}','${value_for(this_operations_field)}',${extra_callbacks_stringified},${table_search_controllers_stringified},'${value_for(this_searchvalue_field)}','${value_for(keyvaluevalue)}');
+
+            ${field_id}_${repetition} = new SearchBar([${to_json(fields)}],'${search_controller}','${value_for(this_operations_field)}',${extra_callbacks_stringified},${table_search_controllers_stringified},'${value_for(this_searchvalue_field)}','${value_for(keyvaluevalue)}',${search_object});
             addLoadEvent(${field_id}_${repetition}.initialize);
         </script>
         <td py:for="field in fields">
@@ -558,14 +561,21 @@ class SearchBar(RepeatingFormField):
     </div>
     """
 
-    params = ['repetitions', 'form_attrs', 'search_controller', 'simplesearch','quickly_searches','button_widget',
-              'advanced', 'simple','to_json','this_operations_field','this_searchvalue_field','extra_hiddens',
-              'extra_callbacks_stringified','table_search_controllers_stringified','keyvaluevalue','simplesearch_label',
-              'result_columns','col_options','col_defaults','enable_custom_columns','default_result_columns']
+    params = ['repetitions', 'search_object', 'form_attrs', 'search_controller',
+              'simplesearch','quickly_searches','button_widget',
+              'advanced', 'simple','to_json','this_operations_field',
+              'this_searchvalue_field','extra_hiddens',
+              'extra_callbacks_stringified','table_search_controllers_stringified',
+              'keyvaluevalue','simplesearch_label', 'result_columns','col_options',
+              'col_defaults','enable_custom_columns','default_result_columns']
+
     form_attrs = {}
     simplesearch = None
 
-    def __init__(self, table,search_controller,extra_selects=None, extra_inputs=None,extra_hiddens=None, enable_custom_columns=False, *args, **kw): 
+    def __init__(self, table,search_controller,extra_selects=None, 
+        extra_inputs=None,extra_hiddens=None, enable_custom_columns=False, 
+        complete_data=None, *args, **kw): 
+
         super(SearchBar,self).__init__(*args, **kw)
         self.enable_custom_columns = enable_custom_columns
         self.search_controller=search_controller
@@ -574,14 +584,16 @@ class SearchBar(RepeatingFormField):
         self.default_result_columns = {}
         table_field = SingleSelectFieldJSON(name="table", options=table, validator=validators.NotEmpty()) 
         operation_field = SingleSelectFieldJSON(name="operation", options=[None], validator=validators.NotEmpty())
-        value_field = TextFieldJSON(name="value") 
+        value_field = TextFieldJSON(name="value")
         # We don't know where in the fields array the operation array will be, so we will put it here
         # to access in the template
         self.this_operations_field = operation_field
         self.this_searchvalue_field = value_field
         self.fields = [table_field,operation_field,value_field]
         new_selects = []
-        self.extra_callbacks = {}
+        self.extra_callbacks = {} 
+        self.search_object = jsonify.encode(complete_data)
+            
         if extra_selects is not None: 
             new_class = [] 
             for elem in extra_selects:
@@ -1122,7 +1134,8 @@ class SystemDetails(Widget):
 
 class SystemHistory(CompoundWidget): 
     template = "bkr.server.templates.system_activity"
-    params = ['list','grid','search_bar','searchvalue','all_history'] 
+    member_widgets = ['search_bar']
+    params = ['list','grid','searchvalue','all_history'] 
     
     def __init__(self):
         #filter_column_options = model.Activity.distinct_field_names() 
@@ -1137,6 +1150,7 @@ class SystemHistory(CompoundWidget):
         self.search_bar = SearchBar(name='historysearch',
                            label=_(u'History Search'),    
                            table = search_utility.History.search.create_search_table(),
+                           complete_data = search_utility.History.search.create_complete_search_table(),
                            search_controller=url("/get_search_options_history"), 
                            )
 
@@ -1154,7 +1168,7 @@ class SystemForm(Form):
     javascript = [LocalJSLink('bkr', '/static/javascript/jquery.js'),
                   LocalJSLink('bkr', '/static/javascript/provision.js'),
                   LocalJSLink('bkr','/static/javascript/system_admin.js'),
-                  LocalJSLink('bkr', '/static/javascript/searchbar_v5.js'),
+                  LocalJSLink('bkr', '/static/javascript/searchbar_v6.js'),
                   JSLink(static,'ajax.js'),
                  ]
     template = "bkr.server.templates.system_form"
@@ -1345,7 +1359,8 @@ class ReportProblemForm(Form):
     template = 'bkr.server.templates.report_problem_form'
     name = 'report_problem'
     fields=[
-        TextArea(name='problem_description', label=_(u'Description of problem'))
+        TextArea(name='problem_description', label=_(u'Description of problem'),
+                validator=validators.NotEmpty())
     ]
     hidden_fields=[
         HiddenField(name='system_id'),

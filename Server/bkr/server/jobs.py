@@ -231,32 +231,24 @@ class Jobs(RPCRoot):
             # Clone from file
             textxml = filexml.file.read()
         elif textxml:
-            if not confirmed:
-                job_schema = lxml.etree.RelaxNG(self.job_schema_doc)
-                if not job_schema.validate(lxml.etree.fromstring(textxml)):
-                    return dict(
-                        title = title,
-                        form = self.job_form,
-                        action = 'clone',
-                        options = {'xsd_errors': job_schema.error_log},
-                        value = dict(textxml=textxml, confirmed=True),
-                    )
             try:
+                if not confirmed:
+                    job_schema = lxml.etree.RelaxNG(self.job_schema_doc)
+                    if not job_schema.validate(lxml.etree.fromstring(textxml)):
+                        return dict(
+                            title = title,
+                            form = self.job_form,
+                            action = 'clone',
+                            options = {'xsd_errors': job_schema.error_log},
+                            value = dict(textxml=textxml, confirmed=True),
+                        )
                 xmljob = XmlJob(xmltramp.parse(textxml))
-            except Exception,err:
-                flash(_(u'Failed to import job because of:%s' % err))
-                return dict(
-                    title = title,
-                    form = self.job_form,
-                    action = './clone',
-                    options = {},
-                    value = dict(textxml = "%s" % textxml, confirmed=confirmed),
-                )
-            try:
                 job = self.process_xmljob(xmljob,identity.current.user)
-            except (BeakerException, ValueError), err:
+                session.save(job)
+                session.flush()
+            except Exception,err:
                 session.rollback()
-                flash(_(u'Failed to import job because of %s' % err ))
+                flash(_(u'Failed to import job because of: %s' % err))
                 return dict(
                     title = title,
                     form = self.job_form,
@@ -264,9 +256,8 @@ class Jobs(RPCRoot):
                     options = {},
                     value = dict(textxml = "%s" % textxml, confirmed=confirmed),
                 )
-            session.save(job)
-            session.flush()
-            self.success_redirect(job.id)
+            else:
+                self.success_redirect(job.id)
         return dict(
             title = title,
             form = self.job_form,
@@ -391,6 +382,8 @@ class Jobs(RPCRoot):
             raise BX(_('Error in hostRequires: %s' % e))
         recipe.whiteboard = xmlrecipe.whiteboard
         recipe.kickstart = xmlrecipe.kickstart
+        if xmlrecipe.autopick:
+            recipe.autopick_random = xmlrecipe.autopick.random
         if xmlrecipe.watchdog:
             recipe.panic = xmlrecipe.watchdog.panic
         recipe.ks_meta = xmlrecipe.ks_meta
@@ -547,6 +540,7 @@ class Jobs(RPCRoot):
                            label=_(u'Job Search'),    
                            simplesearch_label = 'Lookup ID',
                            table = search_utility.Job.search.create_search_table(without=('Owner')),
+                           complete_data = search_utility.Job.search.create_complete_search_table(),
                            search_controller=url("/get_search_options_job"),
                            quick_searches = [('Status-is-Queued','Queued'),('Status-is-Running','Running'),('Status-is-Completed','Completed')])
                             

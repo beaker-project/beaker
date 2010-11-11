@@ -269,6 +269,7 @@ class Recipes(RPCRoot):
                            label=_(u'Recipe Search'),    
                            simplesearch_label = 'Lookup ID',
                            table = search_utility.Recipe.search.create_search_table(),
+                           complete_data = search_utility.Recipe.search.create_complete_search_table(),
                            search_controller=url("/get_search_options_recipe"), 
                            quick_searches = [('Status-is-Queued','Queued'),('Status-is-Running','Running'),('Status-is-Completed','Completed')])
         return dict(title="Recipes", 

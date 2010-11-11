@@ -37,7 +37,7 @@ class JobSchemaTest(unittest.TestCase):
     def test_minimal_job(self):
         self.assert_valid('''
             <job>
-                <recipeSet retention_tag="scratch">
+                <recipeSet>
                     <recipe>
                         <distroRequires>
                             <distro_name op="=" value="BlueShoeLinux5-5"/>
@@ -62,6 +62,7 @@ class JobSchemaTest(unittest.TestCase):
                         </hostRequires>
                         <task name="/distribution/reservesys" role="STANDALONE"/>
                         <packages/>
+                        <autopick random="False"/>
                         <distroRequires>
                             <distro_name op="=" value="BlueShoeLinux5-5"/>
                         </distroRequires>
@@ -76,6 +77,8 @@ class JobSchemaTest(unittest.TestCase):
             <job>
                 <recipeSet retention_tag="scratch">
                     <recipe kernel_options="" kernel_options_post="" ks_meta="" role="None" whiteboard="">
+                        <autopick random="True"/>
+                        <autopick random="False"/>
                         <watchdog panic="None"/>
                         <watchdog panic="always"/>
                         <packages/>
@@ -93,13 +96,15 @@ class JobSchemaTest(unittest.TestCase):
             ''',
             ['Extra element watchdog in interleave',
              'Invalid sequence in interleave',
-             'Element recipe failed to validate content'])
+             'Element recipe failed to validate content',
+             'Element recipeSet failed to validate content'])
 
     def test_guestrecipe(self):
         self.assert_valid('''
             <job>
                 <recipeSet retention_tag="scratch">
                     <recipe>
+                        <autopick random="True"/>
                         <guestrecipe guestname="asdf" guestargs="--lol">
                             <distroRequires>
                                 <distro_name op="=" value="BlueShoeLinux5-5"/>

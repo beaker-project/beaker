@@ -21,6 +21,7 @@
 
 import sys
 import os
+import random
 import pkg_resources
 pkg_resources.require("SQLAlchemy>=0.3.10")
 from bkr.server.bexceptions import BX, CobblerTaskFailedException
@@ -236,19 +237,22 @@ def queued_recipes(*args):
     automated = SystemStatus.by_name(u'Automated')
     recipes = Recipe.query()\
                     .join('status')\
-                    .join('systems')\
+                    .join(['systems','lab_controller','_distros','distro'])\
                     .join(['recipeset','priority'])\
+                    .join(['distro','lab_controller_assocs','lab_controller'])\
                     .filter(
                          or_(
                          and_(Recipe.status==TaskStatus.by_name(u'Queued'),
                               System.user==None,
                               System.status==automated,
-                              RecipeSet.lab_controller==None
+                              RecipeSet.lab_controller==None,
+                              Recipe.distro_id==Distro.id,
                              ),
                          and_(Recipe.status==TaskStatus.by_name(u'Queued'),
                               System.user==None,
                               System.status==automated,
-                              RecipeSet.lab_controller_id==System.lab_controller_id
+                              Recipe.distro_id==Distro.id,
+                              RecipeSet.lab_controller_id==System.lab_controller_id,
                              )
                             )
                            )
@@ -267,10 +271,17 @@ def queued_recipes(*args):
                                                      System.status==automated))
             # Order systems by owner, then Group, finally shared for everyone.
             # FIXME Make this configurable, so that a user can specify their scheduling
+            # Implemented order, still need to do pool
             # preference from the job.
-            # <recipe><scheduler method='random|fair|owner|group'/></recipe>
-            if True:
-                user = recipe.recipeset.job.owner
+            # <recipe>
+            #  <autopick order='sequence|random'>
+            #   <pool>owner</pool>
+            #   <pool>groups</pool>
+            #   <pool>public</pool>
+            #  </autopick>
+            # </recipe>
+            user = recipe.recipeset.job.owner
+            if True: #FIXME if pools are defined add them here in the order requested.
                 systems = systems.order_by(case([(System.owner==user, 1),
                           (System.owner!=user and Group.systems==None, 2)],
                               else_=3))
@@ -279,7 +290,13 @@ def queued_recipes(*args):
                 systems = systems.filter(
                              System.lab_controller==recipe.recipeset.lab_controller
                                       )
-            system = systems.first()
+            if recipe.autopick_random:
+                try:
+                    system = systems[random.randrange(0,systems.count() - 1)]
+                except IndexError:
+                    system = None
+            else:
+                system = systems.first()
             if system:
                 log.debug("System : %s is available for Recipe %s" % (system, recipe.id))
                 # Check to see if user still has proper permissions to use system
