@@ -19,7 +19,7 @@ class AddUser(bkr.server.test.selenium.SeleniumTestCase):
     
     def test_adduser(self):
         sel = self.selenium
-        sel.open("/")
+        sel.open("")
         sel.click("link=Login")
         sel.wait_for_page_to_load("3000")
         sel.type("user_name", data_setup.ADMIN_USER)
@@ -40,7 +40,7 @@ class AddUser(bkr.server.test.selenium.SeleniumTestCase):
         try: self.failUnless(sel.is_text_present("saved"))
         except AssertionError, e: self.verificationErrors.append(str(e))
    
-        sel.open("/users")
+        sel.open("users")
         #Test that user 1 is listed as part of users
         try: self.failUnless(sel.is_text_present("%s" % self.BEAKER_TEST_USER_1))
         except AssertionError, e: self.verificationErrors.append(str(e)) 
@@ -57,7 +57,7 @@ class AddUser(bkr.server.test.selenium.SeleniumTestCase):
         #Test Saved message came up
         try: self.failUnless(sel.is_text_present("%s saved" % self.BEAKER_TEST_USER_2))
         except AssertionError, e: self.verificationErrors.append(str(e))
-        sel.open("/users")
+        sel.open("users")
         #Test that user 2 is listed as part of users
         try: self.failUnless(sel.is_text_present("%s" % self.BEAKER_TEST_USER_2))
         except AssertionError, e: self.verificationErrors.append(str(e)) 

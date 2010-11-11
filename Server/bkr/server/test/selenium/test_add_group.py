@@ -14,10 +14,8 @@ class AddGroup(bkr.server.test.selenium.SeleniumTestCase):
                         
     def test_add_group(self):
         sel = self.selenium
-        sel.open("/")
-        try:
-            self.login()
-        except:pass
+        sel.open("")
+        self.login()
         sel.click("link=Groups")
         sel.wait_for_page_to_load("3000")
         sel.click("link=Add ( + )")

@@ -10,8 +10,8 @@ class ReserveSystem(bkr.server.test.selenium.SeleniumTestCase):
         self.selenium = self.get_selenium()
         self.selenium.start()
         self.lc = data_setup.create_labcontroller()
-        self.system = data_setup.create_system(fqdn=u'test_reserve_system',arch=u'i386')
-        self.distro = data_setup.create_distro(name=u'test_reserve_system_distro')
+        self.system = data_setup.create_system(arch=u'i386')
+        self.distro = data_setup.create_distro(name=u'test_reserve_system_distro', arch=u'i386')
         data_setup.create_task(name=u'/distribution/install')
         data_setup.create_task(name=u'/distribution/reservesys')
         self.system.lab_controller = self.lc
@@ -19,19 +19,19 @@ class ReserveSystem(bkr.server.test.selenium.SeleniumTestCase):
         session.flush()
     
     def test_by_distro(self):
-        try:
-            self.logout() 
-        except: pass
         self.login()
         sel = self.selenium
-        sel.open("/distros/")
+        sel.open("distros/")
         sel.type("simplesearch", "%s" % self.distro.name)
         sel.click("search")
         sel.wait_for_page_to_load("3000")
         sel.click("link=Pick System")
         sel.wait_for_page_to_load("3000")
         self.failUnless(sel.is_text_present("%s" % self.system.fqdn))
-        sel.click("link=Reserve Now")
+        # click Reserve Now link in the same row as the system we created in setUp
+        sel.click('//table[@id="widget"]//td[a/text()="Reserve Now" '
+                'and preceding-sibling::td[7]/a/text() = "%s"]/a'
+                % self.system.fqdn)
         sel.wait_for_page_to_load("30000")
         sel.type("form_whiteboard", "testing")
         sel.type("form_whiteboard", "test_reserve_system_distro")

@@ -23,7 +23,7 @@ from turbogears.database import session
 
 from bkr.server.test.selenium import SeleniumTestCase
 from bkr.server.test.mail_capture import MailCaptureThread
-from bkr.server.test import data_setup
+from bkr.server.test import data_setup, get_server_base
 
 class TestReportProblem(SeleniumTestCase):
 
@@ -71,10 +71,11 @@ class TestReportProblem(SeleniumTestCase):
         self.assertEqual(msg['X-Beaker-System'], 'ncc1701d')
         self.assertEqual(msg.get_payload(),
                 'A Beaker user has reported a problem with system \n'
-                'ncc1701d <http://localhost:9090/view/ncc1701d>.\n\n'
+                'ncc1701d <%sview/ncc1701d>.\n\n'
                 'Reported by: Beverley Crusher\n\n'
                 'Problem description:\n'
-                'Make it so!')
+                'Make it so!'
+                % get_server_base())
 
     def test_reporting_problem_requires_login(self):
         system = data_setup.create_system()
