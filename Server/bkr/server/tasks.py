@@ -27,9 +27,11 @@ from bkr.server.widgets import TaskSearchForm
 from bkr.server.widgets import SearchBar
 from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.helpers import make_link
+from bkr.server import testinfo
+from bkr.server.testinfo import ParserError, ParserWarning
 from sqlalchemy import exceptions
 from subprocess import *
-import testinfo
+
 import rpm
 import os
 
@@ -61,13 +63,14 @@ class Tasks(RPCRoot):
     @expose(template='bkr.server.templates.form-post')
     @identity.require(identity.not_anonymous())
     def new(self, **kw):
-        return dict(
+        return_dict = dict(
             title = 'New Task',
             form = self.form,
             action = './save',
             options = {},
             value = kw,
         )
+        return return_dict
 
     @cherrypy.expose
     def filter(self, filter=None):
@@ -150,10 +153,10 @@ class Tasks(RPCRoot):
 
         try:
             task = self.process_taskinfo(self.read_taskinfo(rpm_file))
-        except ValueError, err:
+        except (ValueError,ParserError,ParserWarning), err:
             session.rollback()
             flash(_(u'Failed to import because of %s' % err ))
-            redirect(".")
+            redirect(url("./new"))
 
         flash(_(u"%s Added/Updated at id:%s" % (task.name,task.id)))
         redirect(".")
