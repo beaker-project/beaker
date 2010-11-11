@@ -192,6 +192,8 @@ fi
 %attr(-,apache,root) %dir %{_localstatedir}/run/%{name}-lab-controller
 
 %changelog
+* Thu Nov 11 2010 Raymond Mancy <rmancy@redhat.com> 0.5.61-2
+- Merge branch 'release-0.5.60' into release-0.5.61 to ensure all changes from 60-2 are brought in (rmancy@redhat.com)
 * Thu Nov 11 2010 Raymond Mancy <rmancy@redhat.com> 0.5.61-1
 - bz644132 - Speed up searchbar (rmancy@redhat.com)
 - bz650300 - require login for reporting system problems (dcallagh@redhat.com)
