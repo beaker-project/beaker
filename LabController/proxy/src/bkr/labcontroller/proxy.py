@@ -68,6 +68,8 @@ class ProxyHelper(object):
         # self.hub is created here
         self.hub = HubProxy(logger=self.logger, conf=self.conf, **kwargs)
         self.server = self.conf.get("SERVER", "http://%s/beaker/logs" % gethostname())
+        self.basepath = None
+        self.upload = None
         if self.conf.get("CACHE", False):
             self.basepath = self.conf.get("CACHEPATH", "/var/www/beaker/logs")
             self.upload = Uploader('%s' % self.basepath).uploadFile
