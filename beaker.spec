@@ -192,6 +192,11 @@ fi
 %attr(-,apache,root) %dir %{_localstatedir}/run/%{name}-lab-controller
 
 %changelog
+* Thu Nov 11 2010 Bill Peck <bpeck@redhat.com> 0.5.61-4
+- increase timeout from 20 seconds to 40 seconds. (bpeck@redhat.com)
+- bz648497 fix (bpeck@redhat.com)
+- fixed changelogs (rmancy@redhat.com)
+
 * Thu Nov 11 2010 Raymond Mancy <rmancy@redhat.com> 0.5.61-3
 - Hack for Key/Value without MODULE now we aren't using XMLRPC call to get list
   (rmancy@redhat.com)
