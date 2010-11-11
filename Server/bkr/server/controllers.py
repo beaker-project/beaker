@@ -634,9 +634,13 @@ class Root(RPCRoot):
             else: 
                 my_fields = Utility.custom_systems_grid(system_columns_desc)
 
-            systems = systems.reset_joinpoint().outerjoin('user').distinct() 
+            systems = systems.reset_joinpoint().outerjoin('user')\
+                    .outerjoin('status').outerjoin('arch').outerjoin('type')\
+                    .distinct()
         else: 
-            systems = systems.reset_joinpoint().outerjoin('user').distinct() 
+            systems = systems.reset_joinpoint().outerjoin('user')\
+                    .outerjoin('status').outerjoin('arch').outerjoin('type')\
+                    .distinct()
             use_custom_columns = False
             columns = None
             searchvalue = None
