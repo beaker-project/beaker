@@ -196,10 +196,6 @@ fi
 - Hack for Key/Value without MODULE now we aren't using XMLRPC call to get list
   (rmancy@redhat.com)
 
-* Thu Nov 11 2010 Raymond Mancy <rmancy@redhat.com>
-- Hack for Key/Value without MODULE now we aren't using XMLRPC call to get list
-  (rmancy@redhat.com)
-
 * Thu Nov 11 2010 Raymond Mancy <rmancy@redhat.com> 0.5.61-2
 - Merge branch 'release-0.5.60' into release-0.5.61 to ensure all changes from 60-2 are brought in (rmancy@redhat.com)
 * Thu Nov 11 2010 Raymond Mancy <rmancy@redhat.com> 0.5.61-1
@@ -250,28 +246,6 @@ fi
 - bz643498 - Fixed 'less than' operator with Key/Value (rmancy@redhat.com)
 - bz643381 - beakerd ERROR Failed to commit due to :list.remove(x): x not in
              list (bpeck@redhat.com)
-
-* Thu Oct 28 2010 Raymond Mancy <rmancy@redhat.com> 0.5.60-1
-- bz635611 - specific machine jobs haven't got higher priority than no machine
-  specific ones (bpeck@redhat.com)
-- bz632583 - Can loan system when system has user (rmancy@redhat.com)
-- bz634832 - Have to be logged in to add task now (rmancy@redhat.com)i
-- bz568331 - Beaker logo now links to root dir (rmancy@redhat.com)
-- bz639171 - Added some Ajax spinners to the following: Reserve, Workflow, Task Search, Job Whiteboard, Ack/Nak recipe, Priority, Retention Tag (rmancy@redhat.com)
-- bz632675 - Re-architect beaker results reporting/storage (bpeck@redhat.com)
-- bz638092 - redirect to /jobs/mine after submitting a new job (dcallagh@redhat.com)
-- bz646046 - Enable option to force distro update in osversion.trigger (rmancy@redhat.com)
-- bz645635 - Some tests to check csv export privacy (rmancy@redhat.com)
-- bz638790 - add <guestrecipe/> definition to job xml schema (dcallagh@redhat.com)
-- bz642104 - descriptive text for system lender field (dcallagh@redhat.com)
-- bz638790 - use RELAX NG instead of XML Schema for validationg job xml (dcallagh@redhat.com)
-- bz642122 - include link to system and some system information in problem
-             report e-mail and brokenness notifications (dcallagh@redhat.com)
-
-- bz643498 - Fixed 'less than' operator with Key/Value (rmancy@redhat.com)
-- bz643381 - beakerd ERROR Failed to commit due to :list.remove(x): x not in
-             list (bpeck@redhat.com)
-
 
 * Tue Oct 19 2010 Bill Peck <bpeck@redhat.com> 0.5.59-3
 - HOTFIX bz643381 beakerd ERROR Failed to commit due to
