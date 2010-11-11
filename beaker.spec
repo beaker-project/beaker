@@ -3,7 +3,7 @@
 
 Name:           beaker
 Version:        0.5.61
-Release:        2%{?dist}
+Release:        3%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -192,6 +192,14 @@ fi
 %attr(-,apache,root) %dir %{_localstatedir}/run/%{name}-lab-controller
 
 %changelog
+* Thu Nov 11 2010 Raymond Mancy <rmancy@redhat.com> 0.5.61-3
+- Hack for Key/Value without MODULE now we aren't using XMLRPC call to get list
+  (rmancy@redhat.com)
+
+* Thu Nov 11 2010 Raymond Mancy <rmancy@redhat.com>
+- Hack for Key/Value without MODULE now we aren't using XMLRPC call to get list
+  (rmancy@redhat.com)
+
 * Thu Nov 11 2010 Raymond Mancy <rmancy@redhat.com> 0.5.61-2
 - Merge branch 'release-0.5.60' into release-0.5.61 to ensure all changes from 60-2 are brought in (rmancy@redhat.com)
 * Thu Nov 11 2010 Raymond Mancy <rmancy@redhat.com> 0.5.61-1
