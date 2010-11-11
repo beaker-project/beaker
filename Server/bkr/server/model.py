@@ -1926,8 +1926,6 @@ $SNIPPET("rhts_post")
         if self.checksum == md5sum:
             return 0
         self.checksum = md5sum
-        self.type_id = 1
-        self.status_id = 1
         for key in inventory:
             if key in self.get_allowed_attr():
                 if not getattr(self, key, None):
