@@ -3,7 +3,7 @@ import httplib
 
 def ServerProxy(url, *args, **kwargs):
    t = TimeoutTransport()
-   t.timeout = kwargs.get('timeout', 20)
+   t.timeout = kwargs.get('timeout', 40)
    if 'timeout' in kwargs:
        del kwargs['timeout']
    kwargs['transport'] = t
