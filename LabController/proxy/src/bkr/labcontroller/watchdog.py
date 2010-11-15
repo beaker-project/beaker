@@ -114,7 +114,7 @@ def main():
         main_loop(conf=conf, foreground=True)
     else:
         daemonize(main_loop, 
-                  daemon_pid_file=pid_file
+                  daemon_pid_file=pid_file,
                   conf=conf, 
                   foreground=False)
 
