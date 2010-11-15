@@ -571,8 +571,6 @@ class SystemSearch(Search):
                 #If they are System columns we won't need to explicitly add them to the query, as they are already returned in the System query  
                 if cls_ref is System:     
                     self.system_columns_desc.append(elem)
-                    rand_id = random.random()
-                    self.__do_join(cls_ref,col_name=col,id=rand_id)
                 elif col_ref is not None: 
                     self.extra_columns_desc.append(elem)
                     self.adding_columns = True 
