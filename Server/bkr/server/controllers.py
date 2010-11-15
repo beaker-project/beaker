@@ -252,8 +252,8 @@ class ReportProblemController(object):
                 pass
         mail.system_problem_report(system, problem_description,
                 recipe, identity.current.user)
-        activity = SystemActivity(identity.current.user, 'WEBUI', 'Reported problem',
-                'Status', None, problem_description)
+        activity = SystemActivity(identity.current.user, u'WEBUI', u'Reported problem',
+                u'Status', None, problem_description)
         system.activity.append(activity)
         flash(_(u'Your problem report has been forwarded to the system owner'))
         redirect('/view/%s' % system.fqdn)

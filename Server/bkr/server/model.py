@@ -25,6 +25,7 @@ import time
 from kid import Element
 from bkr.server.bexceptions import BeakerException, BX, CobblerTaskFailedException
 from bkr.server.helpers import *
+from bkr.server.util import unicode_truncate
 from bkr.server import mail
 import traceback
 from BasicAuthTransport import BasicAuthTransport
@@ -477,12 +478,12 @@ activity_table = Table('activity', metadata,
            nullable=False, primary_key=True),
     Column('user_id', Integer, ForeignKey('tg_user.user_id'), index=True),
     Column('created', DateTime, nullable=False, default=datetime.utcnow),
-    Column('type', String(40), nullable=False),
-    Column('field_name', String(40), nullable=False),
-    Column('service', String(100), nullable=False),
-    Column('action', String(40), nullable=False),
-    Column('old_value', String(60)),
-    Column('new_value', String(60))
+    Column('type', Unicode(40), nullable=False),
+    Column('field_name', Unicode(40), nullable=False),
+    Column('service', Unicode(100), nullable=False),
+    Column('action', Unicode(40), nullable=False),
+    Column('old_value', Unicode(60)),
+    Column('new_value', Unicode(60))
 )
 
 system_activity_table = Table('system_activity', metadata,
@@ -2984,6 +2985,14 @@ class Activity(object):
         self.service = service
         self.field_name = field_name
         self.action = action
+        # These values are likely to be truncated by MySQL, so let's make sure 
+        # we don't end up with invalid UTF-8 chars at the end
+        if old_value and isinstance(old_value, unicode):
+            old_value = unicode_truncate(old_value,
+                bytes_length=self.c.old_value.type.length)
+        if new_value and isinstance(new_value, unicode):
+            new_value = unicode_truncate(new_value,
+                bytes_length=self.c.new_value.type.length)
         self.old_value = old_value
         self.new_value = new_value
 

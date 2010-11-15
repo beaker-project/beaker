@@ -79,3 +79,13 @@ def absolute_url(tgpath, tgparams=None, **kw):
             '%s:%s' % (config.get('server.socket_host', 'localhost'),
                 config.get('socket_port', '8080')))
     return '%s://%s%s' % (scheme, host_port, theurl)
+
+# http://stackoverflow.com/questions/1809531/_/1820949#1820949
+def unicode_truncate(s, bytes_length, encoding='utf8'):
+    """
+    Returns a copy of the given unicode string, truncated to fit within the 
+    given number of bytes when encoded.
+    """
+    if len(s) * 4 < bytes_length: return # fast path
+    encoded = s.encode(encoding)[:bytes_length]
+    return encoded.decode(encoding, 'ignore')
