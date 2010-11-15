@@ -1,0 +1,239 @@
+@base <https://fedorahosted.org/beaker/rdfschema/inventory> .
+@prefix inv: <https://fedorahosted.org/beaker/rdfschema/inventory#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix dc: <http://purl.org/dc/terms/> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+
+<> a foaf:Document .
+
+inv:System a rdfs:Class ;
+    rdfs:isDefinedBy <> ;
+    rdfs:label "System"@en .
+
+inv:fqdn a rdf:Property ;
+    rdfs:isDefinedBy <> ;
+    rdfs:label "Fully-qualified domain name"@en ;
+    rdfs:domain inv:System ;
+    dc:description "Fully-qualified domain name of this system."@en .
+
+inv:controlledBy a rdf:Property ;
+    rdfs:isDefinedBy <> ;
+    rdfs:label "Controlled by"@en ;
+    rdfs:domain inv:System ;
+    rdfs:range inv:LabController ;
+    dc:description """
+        The lab controller which controls power and provisioning for this 
+        system.
+        """@en .
+
+inv:LabController a rdfs:Class ;
+    rdfs:isDefinedBy <> ;
+    rdfs:label "Lab controller"@en .
+
+inv:serialNumber a rdf:Property ;
+    rdfs:isDefinedBy <> ;
+    rdfs:label "Serial number"@en ;
+    rdfs:domain inv:System .
+
+inv:vendor a rdf:Property ;
+    rdfs:isDefinedBy <> ;
+    rdfs:label "Vendor"@en ;
+    rdfs:domain inv:System .
+
+inv:model a rdf:Property ;
+    rdfs:isDefinedBy <> ;
+    rdfs:label "Model"@en ;
+    rdfs:domain inv:System ;
+    dc:description """
+        Manufacturer's model number or code name for this system.
+        """@en .
+
+inv:location a rdf:Property ;
+    rdfs:isDefinedBy <> ;
+    rdfs:label "Location"@en ;
+    rdfs:domain inv:System .
+
+inv:macAddress a rdf:Property ;
+    rdfs:isDefinedBy <> ;
+    rdfs:label "MAC address"@en ;
+    rdfs:domain inv:System .
+
+inv:owner a rdf:Property ;
+    rdfs:isDefinedBy <> ;
+    rdfs:label "Owner"@en ;
+    rdfs:domain inv:System ;
+    rdfs:range foaf:Agent .
+
+inv:supportsArch a rdf:Property ;
+    rdfs:isDefinedBy <> ;
+    rdfs:label "Supports architecture"@en ;
+    rdfs:domain inv:System ;
+    rdfs:range inv:Arch ;
+    dc:description "A CPU architecture which is supported by this system."@en .
+
+inv:Arch a rdfs:Class ;
+    rdfs:isDefinedBy <> ;
+    rdfs:label "Architecture"@en ;
+    dc:description """
+        A CPU architecture.
+        """@en .
+
+inv:memory a rdf:Property ;
+    rdfs:isDefinedBy <> ;
+    rdfs:label "Memory"@en ;
+    rdfs:domain inv:System ;
+    dc:description """
+        Amount of available system memory, as reported by Linux. Expressed in 
+        mebibytes (MiB).
+        """@en .
+
+inv:numaNodes a rdf:Property ;
+    rdfs:isDefinedBy <> ;
+    rdfs:label "NUMA nodes"@en ;
+    rdfs:domain inv:System ;
+    dc:description "Number of NUMA nodes in this system."@en .
+
+inv:cpuVendor a rdf:Property ;
+    rdfs:isDefinedBy <> ;
+    rdfs:label "CPU vendor"@en ;
+    rdfs:domain inv:System ;
+    dc:description "Vendor string of the CPU(s) in this system."@en .
+
+inv:cpuModelName a rdf:Property ;
+    rdfs:isDefinedBy <> ;
+    rdfs:label "CPU model name"@en ;
+    rdfs:domain inv:System ;
+    dc:description "Model name of the CPU(s) in this system."@en .
+
+inv:cpuFamilyId a rdf:Property ;
+    rdfs:isDefinedBy <> ;
+    rdfs:label "CPU family ID"@en ;
+    rdfs:domain inv:System ;
+    dc:description "Family ID of the CPU(s) in this system."@en .
+
+inv:cpuModelId a rdf:Property ;
+    rdfs:isDefinedBy <> ;
+    rdfs:label "CPU model ID"@en ;
+    rdfs:domain inv:System ;
+    dc:description "Model ID of the CPU(s) in this system."@en .
+
+inv:cpuStepping a rdf:Property ;
+    rdfs:isDefinedBy <> ;
+    rdfs:label "CPU stepping"@en ;
+    rdfs:domain inv:System ;
+    dc:description "Stepping number of the CPU(s) in this system."@en .
+
+inv:cpuSpeed a rdf:Property ;
+    rdfs:isDefinedBy <> ;
+    rdfs:label "CPU speed"@en ;
+    rdfs:domain inv:System ;
+    dc:description """
+        Clock speed of the CPU(s) in this system, expressed in MHz.
+        """@en .
+
+inv:cpuCount a rdf:Property ;
+    rdfs:isDefinedBy <> ;
+    rdfs:label "CPU count"@en ;
+    rdfs:domain inv:System ;
+    dc:description "Number of logical CPUs in this system."@en .
+
+inv:cpuCoreCount a rdf:Property ;
+    rdfs:isDefinedBy <> ;
+    rdfs:label "CPU core count"@en ;
+    rdfs:domain inv:System ;
+    dc:description "Number of CPU cores in this system."@en .
+
+inv:cpuSocketCount a rdf:Property ;
+    rdfs:isDefinedBy <> ;
+    rdfs:label "CPU socket count"@en ;
+    rdfs:domain inv:System ;
+    dc:description "Number of CPU sockets in this system."@en .
+
+inv:cpuHyperthreading a rdf:Property ;
+    rdfs:isDefinedBy <> ;
+    rdfs:label "CPU hyperthreading"@en ;
+    rdfs:domain inv:System ;
+    dc:description """
+        Whether the CPU(s) in this system support hyperthreading/SMT.
+        """@en .
+
+inv:cpuFlag a rdf:Property ;
+    rdfs:isDefinedBy <> ;
+    rdfs:label "CPU flag"@en ;
+    rdfs:domain inv:System ;
+    dc:description """
+        A CPU flag, representing a feature which is supported by this 
+        system's CPU(s).
+        """@en .
+
+inv:hasDevice a rdf:Property ;
+    rdfs:isDefinedBy <> ;
+    rdfs:label "Has device"@en ;
+    rdfs:domain inv:System ;
+    rdfs:range inv:Device ;
+    dc:description """
+        A device which is present in, or attached to, this system.
+        """@en .
+
+inv:Device a rdfs:Class ;
+    rdfs:isDefinedBy <> ;
+    rdfs:label "Device"@en ;
+    dc:description """
+        A particular instance of a hardware device, which is part of (or 
+        attached to) a system.
+        """@en .
+
+inv:usingDriver a rdf:Property ;
+    rdfs:isDefinedBy <> ;
+    rdfs:label "Using driver"@en ;
+    dc:description """
+        The name of the driver which is being used to support this particular 
+        hardware device.
+        """@en .
+
+inv:attachedToBus a rdf:Property ;
+    rdfs:isDefinedBy <> ;
+    rdfs:label "Attached to bus"@en ;
+    rdfs:domain inv:Device ;
+    rdfs:range inv:BusType ;
+    dc:description """
+        The type of bus to which this device is attached.
+        """@en .
+
+inv:ofDeviceClass a rdf:Property ;
+    rdfs:isDefinedBy <> ;
+    rdfs:label "Of device class"@en ;
+    rdfs:domain inv:Device ;
+    rdfs:range inv:DeviceClass ;
+    dc:description """
+        Indicates that this device is of the given device class.
+        """@en .
+
+inv:pciVendorId a rdf:Property ;
+    rdfs:isDefinedBy <> ;
+    rdfs:label "PCI vendor ID"@en ;
+    rdfs:domain inv:Device .
+
+inv:pciDeviceId a rdf:Property ;
+    rdfs:isDefinedBy <> ;
+    rdfs:label "PCI device ID"@en ;
+    rdfs:domain inv:Device .
+
+inv:pciSubsystemVendorId a rdf:Property ;
+    rdfs:isDefinedBy <> ;
+    rdfs:label "PCI subsystem vendor ID"@en ;
+    rdfs:domain inv:Device .
+
+inv:pciSubsystemDeviceId a rdf:Property ;
+    rdfs:isDefinedBy <> ;
+    rdfs:label "PCI subsystem device ID"@en ;
+    rdfs:domain inv:Device .
+
+inv:DeviceClass a rdfs:Class ;
+    rdfs:isDefinedBy <> ;
+    rdfs:label "Device class"@en .
+
+inv:BusType a rdfs:Class ;
+    rdfs:isDefinedBy <> ;
+    rdfs:label "Bus type"@en .

@@ -57,6 +57,7 @@ from bkr.server import mail
 from decimal import Decimal
 from bexceptions import *
 import bkr.server.recipes
+import bkr.server.rdf
 import random
 
 from kid import Element
@@ -65,6 +66,7 @@ import md5
 import re
 import string
 import pkg_resources
+import rdflib.graph
 
 # for debugging
 import sys
@@ -855,7 +857,7 @@ class Root(RPCRoot):
 
     @expose(template="bkr.server.templates.system")
     @paginate('history_data',limit=30,default_order='-created', max_limit=None)
-    def view(self, fqdn=None, **kw): 
+    def _view_system_as_html(self, fqdn=None, **kw):
         if fqdn: 
             try:
                 system = System.by_fqdn(fqdn,identity.current.user)
@@ -997,6 +999,31 @@ class Root(RPCRoot):
                                                      hidden = dict(system = 1)),
                                   ),
         )
+    _view_system_as_html.exposed = False # exposed indirectly by view()
+
+    def _view_system_as_rdf(self, fqdn, **kwargs):
+        try:
+            system = System.by_fqdn(fqdn, identity.current.user)
+        except InvalidRequestError:
+            raise cherrypy.NotFound(fqdn)
+        graph = rdflib.graph.Graph()
+        bkr.server.rdf.describe_system(system, graph)
+        bkr.server.rdf.bind_namespaces(graph)
+        if kwargs['tg_format'] == 'turtle':
+            cherrypy.response.headers['Content-Type'] = 'application/x-turtle'
+            return graph.serialize(format='turtle')
+        else:
+            cherrypy.response.headers['Content-Type'] = 'application/rdf+xml'
+            return graph.serialize(format='pretty-xml')
+
+    @cherrypy.expose
+    def view(self, fqdn=None, **kwargs):
+        # XXX content negotiation too?
+        tg_format = kwargs.get('tg_format', 'html')
+        if tg_format in ('rdfxml', 'turtle'):
+            return self._view_system_as_rdf(fqdn, **kwargs)
+        else:
+            return self._view_system_as_html(fqdn, **kwargs)
          
     @expose(template='bkr.server.templates.form')
     @identity.require(identity.not_anonymous())
