@@ -15,13 +15,13 @@
 [ -f /usr/bin/beaker-proxy ] || exit 0
 
 prog="beaker-proxy"
-PIDFILE=/var/run/${prog}.pid
+PIDFILE=/var/run/beaker-lab-controller/${prog}.pid
 LOCKFILE=/var/lock/subsys/$prog
 RUN_AS=apache
 
 start() {
     echo -n $"Starting $prog: "
-    daemon --user $RUN_AS $prog
+    daemon --pidfile $PIDFILE --user $RUN_AS $prog
     RETVAL=$?
     echo
     if test $RETVAL = 0; then
