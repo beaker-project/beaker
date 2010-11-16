@@ -321,27 +321,6 @@ class Root(RPCRoot):
         action = 'save_data',
         submit_text = _(u'Change'),
     )  
-    search_bar = SearchBar(name='systemsearch',
-                           label=_(u'System Search'),
-                           enable_custom_columns = True,
-                           extra_selects = [ { 'name': 'keyvalue',
-                                               'column':'key/value',
-                                               'display':'none',
-                                               'pos' : 2,
-                                               'callback':url('/get_operators_keyvalue') }],
-                           table=su.System.search.create_search_table(\
-                               [{su.System:{'all':[]}},
-                                {su.Cpu:{'all':[]}},
-                                {su.Device:{'all':[]}},
-                                {su.Key:{'all':[]}}]),
-                           complete_data = su.System.search.create_complete_search_table(\
-                               [{su.System:{'all':[]}},
-                                {su.Cpu:{'all':[]}},
-                                {su.Device:{'all':[]}},
-                                {su.Key:{'all':[]}}]),
-                           search_controller=url("/get_search_options"),
-                           table_search_controllers = {'key/value':url('/get_keyvalue_search_options')},)
-                 
   
     system_form = SystemForm()
     power_form = PowerForm(name='power')
@@ -695,6 +674,27 @@ class Root(RPCRoot):
         if 'direct_columns' in kw: #Let's add our direct columns here
             for index,col in kw['direct_columns']:
                 my_fields.insert(index - 1, col)
+
+        search_bar = SearchBar(name='systemsearch',
+                               label=_(u'System Search'),
+                               enable_custom_columns = True,
+                               extra_selects = [ { 'name': 'keyvalue',
+                                                   'column':'key/value',
+                                                   'display':'none',
+                                                   'pos' : 2,
+                                                   'callback':url('/get_operators_keyvalue') }],
+                               table=su.System.search.create_search_table(\
+                                   [{su.System:{'all':[]}},
+                                    {su.Cpu:{'all':[]}},
+                                    {su.Device:{'all':[]}},
+                                    {su.Key:{'all':[]}}]),
+                               complete_data = su.System.search.create_complete_search_table(\
+                                   [{su.System:{'all':[]}},
+                                    {su.Cpu:{'all':[]}},
+                                    {su.Device:{'all':[]}},
+                                    {su.Key:{'all':[]}}]),
+                               search_controller=url("/get_search_options"),
+                               table_search_controllers = {'key/value':url('/get_keyvalue_search_options')},)
                 
         display_grid = myPaginateDataGrid(fields=my_fields)
         col_data = Utility.result_columns(columns)   
@@ -708,7 +708,7 @@ class Root(RPCRoot):
                                                  'col_defaults' : col_data['default'],
                                                  'col_options' : col_data['options']},
                                      action = '.', 
-                                     search_bar = self.search_bar )
+                                     search_bar = search_bar )
                                                                         
 
     @expose(format='json')
