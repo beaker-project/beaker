@@ -32,7 +32,7 @@ subsequent requests which belong with this session.
 
 .. automethod:: auth.login_password
 
-.. automethod:: auth.logout
+.. automethod:: auth.logout()
 
 
 DOCUMENTME
