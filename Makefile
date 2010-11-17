@@ -43,3 +43,7 @@ rpm: clean $(PKGNAME)-$(PKGVERSION).tar.bz2
 	$(RPMBUILDOPTS) -tb $(PKGNAME)-$(PKGVERSION).tar.bz2
 
 rpms: rpm
+
+.PHONY: apidoc
+apidoc::
+	$(MAKE) -C pub_doc/api html

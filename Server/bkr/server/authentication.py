@@ -21,6 +21,8 @@ import re
 from model import *
 import string
 
+__all__ = ['Auth']
+
 class Auth(RPCRoot):
     # For XMLRPC methods in this class.
     exposed = True
@@ -40,7 +42,7 @@ class Auth(RPCRoot):
     @cherrypy.expose
     def login_password(self, username, password):
         """
-        Login via password
+        Authenticates the current session using the given username and password.
         """
         visit_key = turbogears.visit.current().key
         user = identity.current_provider.validate_identity(username, password, visit_key)
@@ -51,7 +53,16 @@ class Auth(RPCRoot):
     # TODO: proxy_user
     @cherrypy.expose
     def login_krbV(self, krb_request, proxy_user=None):
-        """login_krbV(krb_request, proxy_user=None): session_key"""
+        """
+        Authenticates the current session using Kerberos.
+        
+        :param krb_request: KRB_AP_REQ message containing client credentials, 
+            as produced by :c:func:`krb5_mk_req`
+        :type krb_request: base64-encoded string
+
+        This method is also available under the alias :meth:`auth.login_krbv`, 
+        for compatibility with `Kobo`_.
+        """
         import krbV
         import base64
 
@@ -83,8 +94,10 @@ class Auth(RPCRoot):
     @cherrypy.expose
     def logout(self, *args):
         """
-        Logout session
+        Invalidates the current session.
         """
         identity.current.logout()
         return True
 
+# this is just a hack for sphinx autodoc
+auth = Auth

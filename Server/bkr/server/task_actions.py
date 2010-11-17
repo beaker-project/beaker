@@ -20,6 +20,8 @@ import sys
 import breadcrumbs
 from datetime import datetime
 
+__all__ = ['TaskActions']
+
 class TaskActions(RPCRoot):
     # For XMLRPC methods in this class.
     exposed = True
@@ -73,3 +75,5 @@ class TaskActions(RPCRoot):
         kwargs = dict(msg = msg)
         return getattr(task,stop_type)(**kwargs)
 
+# for sphinx
+taskactions = TaskActions

@@ -52,6 +52,8 @@ import cgi
 
 log = logging.getLogger(__name__)
 
+__all__ = ['JobForm', 'Jobs']
+
 class JobForm(widgets.Form):
 
     template = 'bkr.server.templates.job_form'
@@ -655,3 +657,5 @@ class Jobs(RPCRoot):
                     whiteboard_widget    = self.whiteboard_widget,
                     job                  = job)
 
+# for sphinx
+jobs = Jobs
