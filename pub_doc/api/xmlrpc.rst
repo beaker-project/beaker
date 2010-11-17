@@ -14,6 +14,7 @@ controller and the server. The internal API is not documented here.
 
 .. _Kobo: https://fedorahosted.org/kobo/
 
+
 ``auth``: Authentication
 ------------------------
 
@@ -32,3 +33,52 @@ subsequent requests which belong with this session.
 .. automethod:: auth.login_password
 
 .. automethod:: auth.logout
+
+
+DOCUMENTME
+----------
+
+.. currentmodule:: bkr.server.distro
+
+.. automethod:: distros.edit_version
+
+.. automethod:: distros.filter
+
+.. automethod:: distros.tag
+
+.. automethod:: distros.untag
+
+.. currentmodule:: bkr.server.task_actions
+
+.. automethod:: taskactions.stop
+
+.. automethod:: taskactions.to_xml
+
+.. automethod:: taskactions.task_info
+
+.. currentmodule:: bkr.server.jobs
+
+.. automethod:: jobs.upload
+
+.. automethod:: jobs.delete_jobs
+
+.. automethod:: jobs.list
+
+.. currentmodule:: bkr.server.tasks
+
+.. automethod:: tasks.upload
+
+.. automethod:: tasks.to_dict
+
+.. automethod:: tasks.filter
+
+..
+   These ones can't use autodoc because their names confuse it :-(
+
+.. currentmodule:: None
+
+.. function:: recipes.tasks.extend
+
+.. function:: recipes.tasks.watchdog
+
+.. function:: lab_controllers

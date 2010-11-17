@@ -26,7 +26,7 @@ import xmlrpclib
 from model import *
 import string
 
-# Validation Schemas
+__all__ = ['Distros']
 
 class Distros(RPCRoot):
     # For XMLRPC methods in this class.
@@ -367,3 +367,6 @@ class Distros(RPCRoot):
             return None
 
     default = index
+
+# for sphinx
+distros = Distros

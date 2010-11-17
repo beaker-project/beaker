@@ -42,6 +42,8 @@ import cherrypy
 from model import *
 import string
 
+__all__ = ['Tasks']
+
 class Tasks(RPCRoot):
     # For XMLRPC methods in this class.
     exposed = True
@@ -421,3 +423,6 @@ class Tasks(RPCRoot):
         if 'recipe_id' in kw:
             recipe = Recipe.by_id(kw['recipe_id'])
             return recipe.all_tasks
+
+# for sphinx
+tasks = Tasks
