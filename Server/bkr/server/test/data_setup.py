@@ -120,6 +120,8 @@ def create_system(arch=u'i386', type=u'Machine', status=u'Automated',
         owner = create_user()
     if fqdn is None:
         fqdn = u'system%d.testdata' % int(time.time() * 1000)
+    if System.query().filter(System.fqdn == fqdn).count():
+        raise ValueError('Attempted to create duplicate system %s' % fqdn)
     system = System(fqdn=fqdn,type=SystemType.by_name(type), owner=owner, 
                 status=SystemStatus.by_name(status), **kw)
     system.arch.append(Arch.by_name(arch))

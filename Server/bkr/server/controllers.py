@@ -57,6 +57,7 @@ from bkr.server import mail
 from decimal import Decimal
 from bexceptions import *
 import bkr.server.recipes
+import bkr.server.rdf
 import random
 
 from kid import Element
@@ -65,6 +66,7 @@ import md5
 import re
 import string
 import pkg_resources
+import rdflib.graph
 
 # for debugging
 import sys
@@ -488,6 +490,8 @@ class Root(RPCRoot):
         return {'success' : True } 
 
     @expose(template='bkr.server.templates.grid_add')
+    @expose(template='bkr.server.templates.systems_feed', format='xml', as_format='atom',
+            content_type='application/atom+xml', accept_format='application/atom+xml')
     @paginate('list',default_order='fqdn',limit=20,max_limit=None)
     def index(self, *args, **kw): 
         return_dict =  self.systems(systems = System.all(identity.current.user), *args, **kw) 
@@ -517,18 +521,24 @@ class Root(RPCRoot):
         redirect('/')
 
     @expose(template='bkr.server.templates.grid')
+    @expose(template='bkr.server.templates.systems_feed', format='xml', as_format='atom',
+            content_type='application/atom+xml', accept_format='application/atom+xml')
     @identity.require(identity.not_anonymous())
     @paginate('list',default_order='fqdn',limit=20,max_limit=None)
     def available(self, *args, **kw):
         return self.systems(systems = System.available(identity.current.user), *args, **kw)
 
     @expose(template='bkr.server.templates.grid')
+    @expose(template='bkr.server.templates.systems_feed', format='xml', as_format='atom',
+            content_type='application/atom+xml', accept_format='application/atom+xml')
     @identity.require(identity.not_anonymous())
     @paginate('list',default_order='fqdn',limit=20,max_limit=None)
     def free(self, *args, **kw): 
         return self.systems(systems = System.free(identity.current.user), *args, **kw)
 
     @expose(template='bkr.server.templates.grid')
+    @expose(template='bkr.server.templates.systems_feed', format='xml', as_format='atom',
+            content_type='application/atom+xml', accept_format='application/atom+xml')
     @identity.require(identity.not_anonymous())
     @paginate('list',limit=20,max_limit=None)
     def mine(self, *args, **kw):
@@ -708,7 +718,10 @@ class Root(RPCRoot):
                                                  'col_defaults' : col_data['default'],
                                                  'col_options' : col_data['options']},
                                      action = '.', 
-                                     search_bar = self.search_bar )
+                                     search_bar = self.search_bar,
+                                     atom_url='?tg_format=atom&list_tgp_order=-date_modified&'
+                                        + cherrypy.request.query_string,
+                                     )
                                                                         
 
     @expose(format='json')
@@ -844,7 +857,7 @@ class Root(RPCRoot):
 
     @expose(template="bkr.server.templates.system")
     @paginate('history_data',limit=30,default_order='-created', max_limit=None)
-    def view(self, fqdn=None, **kw): 
+    def _view_system_as_html(self, fqdn=None, **kw):
         if fqdn: 
             try:
                 system = System.by_fqdn(fqdn,identity.current.user)
@@ -986,6 +999,31 @@ class Root(RPCRoot):
                                                      hidden = dict(system = 1)),
                                   ),
         )
+    _view_system_as_html.exposed = False # exposed indirectly by view()
+
+    def _view_system_as_rdf(self, fqdn, **kwargs):
+        try:
+            system = System.by_fqdn(fqdn, identity.current.user)
+        except InvalidRequestError:
+            raise cherrypy.NotFound(fqdn)
+        graph = rdflib.graph.Graph()
+        bkr.server.rdf.describe_system(system, graph)
+        bkr.server.rdf.bind_namespaces(graph)
+        if kwargs['tg_format'] == 'turtle':
+            cherrypy.response.headers['Content-Type'] = 'application/x-turtle'
+            return graph.serialize(format='turtle')
+        else:
+            cherrypy.response.headers['Content-Type'] = 'application/rdf+xml'
+            return graph.serialize(format='pretty-xml')
+
+    @cherrypy.expose
+    def view(self, fqdn=None, **kwargs):
+        # XXX content negotiation too?
+        tg_format = kwargs.get('tg_format', 'html')
+        if tg_format in ('rdfxml', 'turtle'):
+            return self._view_system_as_rdf(fqdn, **kwargs)
+        else:
+            return self._view_system_as_html(fqdn, **kwargs)
          
     @expose(template='bkr.server.templates.form')
     @identity.require(identity.not_anonymous())

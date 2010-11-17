@@ -36,6 +36,7 @@ Requires:       python-decorator
 Requires:       python-xmltramp
 Requires:       python-lxml
 Requires:       python-ldap
+Requires:       python-rdflib >= 3.0.0
 Requires:       mod_wsgi
 Requires:       python-tgexpandingformwidget
 Requires:       httpd
