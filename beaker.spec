@@ -2,8 +2,10 @@
 %{!?pyver: %global pyver %(%{__python} -c "import sys ; print sys.version[:3]")}
 
 Name:           beaker
-Version:        0.5.61
-Release:        4%{?dist}
+# hacked version for external-scheduler-integration branch:
+# do not merge this change onto develop!
+Version:        0.5.999_esi
+Release:        1%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
