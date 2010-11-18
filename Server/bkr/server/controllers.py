@@ -21,6 +21,7 @@ from bkr.server.job_matrix import JobMatrix
 from bkr.server.reserve_workflow import ReserveWorkflow
 from bkr.server.retention_tags import RetentionTag as RetentionTagController
 from bkr.server.watchdog import Watchdogs
+from bkr.server.systems import SystemsController
 from bkr.server.widgets import myPaginateDataGrid
 from bkr.server.widgets import PowerTypeForm
 from bkr.server.widgets import PowerForm
@@ -287,6 +288,7 @@ class Root(RPCRoot):
     watchdogs = Watchdogs()
     retentiontag = RetentionTagController()
     report_problem = ReportProblemController()
+    systems = SystemsController()
 
     for entry_point in pkg_resources.iter_entry_points('bkr.controllers'):
         controller = entry_point.load()
@@ -473,7 +475,7 @@ class Root(RPCRoot):
             content_type='application/atom+xml', accept_format='application/atom+xml')
     @paginate('list',default_order='fqdn',limit=20,max_limit=None)
     def index(self, *args, **kw): 
-        return_dict =  self.systems(systems = System.all(identity.current.user), *args, **kw) 
+        return_dict =  self._systems(systems = System.all(identity.current.user), *args, **kw) 
         return return_dict
 
     @expose(template='bkr.server.templates.form')
@@ -505,7 +507,7 @@ class Root(RPCRoot):
     @identity.require(identity.not_anonymous())
     @paginate('list',default_order='fqdn',limit=20,max_limit=None)
     def available(self, *args, **kw):
-        return self.systems(systems = System.available(identity.current.user), *args, **kw)
+        return self._systems(systems = System.available(identity.current.user), *args, **kw)
 
     @expose(template='bkr.server.templates.grid')
     @expose(template='bkr.server.templates.systems_feed', format='xml', as_format='atom',
@@ -513,7 +515,7 @@ class Root(RPCRoot):
     @identity.require(identity.not_anonymous())
     @paginate('list',default_order='fqdn',limit=20,max_limit=None)
     def free(self, *args, **kw): 
-        return self.systems(systems = System.free(identity.current.user), *args, **kw)
+        return self._systems(systems = System.free(identity.current.user), *args, **kw)
 
     @expose(template='bkr.server.templates.grid')
     @expose(template='bkr.server.templates.systems_feed', format='xml', as_format='atom',
@@ -521,7 +523,7 @@ class Root(RPCRoot):
     @identity.require(identity.not_anonymous())
     @paginate('list',limit=20,max_limit=None)
     def mine(self, *args, **kw):
-        return self.systems(systems = System.mine(identity.current.user), *args, **kw)
+        return self._systems(systems = System.mine(identity.current.user), *args, **kw)
 
       
     @expose(template='bkr.server.templates.grid') 
@@ -553,7 +555,7 @@ class Root(RPCRoot):
           
             getter = lambda x: reserve_link(x,distro.id)       
             direct_column = Utility.direct_column(title='Action',getter=getter)     
-            return_dict  = self.systems(systems=avail_systems_distro_query, direct_columns=[(8,direct_column)],warn_msg=warn, *args, **kw)
+            return_dict  = self._systems(systems=avail_systems_distro_query, direct_columns=[(8,direct_column)],warn_msg=warn, *args, **kw)
        
             return_dict['title'] = 'Reserve Systems'
             return_dict['warn_msg'] = warn
@@ -610,7 +612,7 @@ class Root(RPCRoot):
             return_dict.update({'searchvalue':searchvalue})
         return return_dict
  
-    def systems(self, systems, *args, **kw):
+    def _systems(self, systems, *args, **kw):
         if 'quick_search' in kw:
             table,op,value = kw['quick_search'].split('-')
             kw['systemsearch'] = [{'table' : table,
@@ -1136,21 +1138,15 @@ class Root(RPCRoot):
                     except BX, error_msg:
                         msg = ", Error: %s Action: %s" % (error_msg,system.release_action)
                         system.activity.append(SystemActivity(identity.current.user, "WEBUI", "%s" % system.release_action, "Return", "", msg))
+                system.activity.append(activity)
+                flash( _(u"%s %s%s" % (status,system.fqdn,msg)) )
         else:
-            if system.can_share(identity.current.user):
-                # Atomic operation to reserve the system
-                if session.connection(System).execute(system_table.update(
-                     and_(system_table.c.id==system.id,
-                      system_table.c.user_id==None)),
-                      user_id=identity.current.user.user_id).rowcount == 1:
-                    status = "Reserved"
-                    activity = SystemActivity(identity.current.user, 'WEBUI', status, 'User', '', '%s' % system.user )
-                else:
-                    status = "Failed to Reserve:"
-                    msg = ", System is already reserved."
-        system.activity.append(activity)
-        session.save_or_update(system)
-        flash( _(u"%s %s%s" % (status,system.fqdn,msg)) )
+            try:
+                system.reserve(service=u'WEBUI')
+                flash(_(u'Reserved %s') % system.fqdn)
+            except BX, e:
+                log.exception('Failed to reserve')
+                flash(_(u'Failed to reserve %s: %s') % (system.fqdn, e.message))
         redirect("/view/%s" % system.fqdn)
 
     @error_handler(view)

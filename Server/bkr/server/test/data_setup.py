@@ -118,7 +118,7 @@ def create_distro(name=u'DAN6-Server-U9', breed=u'Dan',
     return distro
 
 def create_system(arch=u'i386', type=u'Machine', status=u'Automated',
-        owner=None, fqdn=None, powertype=None, **kw):
+        owner=None, fqdn=None, powertype=None, shared=False, **kw):
     if owner is None:
         owner = create_user()
     if fqdn is None:
@@ -127,6 +127,7 @@ def create_system(arch=u'i386', type=u'Machine', status=u'Automated',
         raise ValueError('Attempted to create duplicate system %s' % fqdn)
     system = System(fqdn=fqdn,type=SystemType.by_name(type), owner=owner, 
                 status=SystemStatus.by_name(status), **kw)
+    system.shared = shared
     system.arch.append(Arch.by_name(arch))
     system.power = Power(power_type_id = PowerType.by_name('ilo').id,power_address='something',power_user='user',power_password='pass')
     log.debug('Created system %r', system)
