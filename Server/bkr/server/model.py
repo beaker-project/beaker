@@ -2198,12 +2198,22 @@ $SNIPPET("rhts_post")
                     old_value=old_status,
                     new_value=self.status))
 
-# for property in System.mapper.iterate_properties:
-#     print property.mapper.class_.__name__
-#     print property.key
-#
-# systems = session.query(System).join('status').join('type').join(['cpu','flags']).filter(CpuFlag.c.flag=='lm')
-
+    def reserve(self, service):
+        if self.status != SystemStatus.by_name(u'Manual'):
+            raise BX(_(u'Cannot reserve system with status %s') % self.status)
+        if not self.can_share(identity.current.user):
+            raise BX(_(u'User %s cannot reserve system %s')
+                    % (identity.current.user, self))
+        # Atomic operation to reserve the system
+        if session.connection(System).execute(system_table.update(
+                and_(system_table.c.id == self.id,
+                     system_table.c.user_id == None)),
+                user_id=identity.current.user.user_id).rowcount == 1:
+            self.activity.append(SystemActivity(user=identity.current.user,
+                    service=service, action=u'Reserved', field_name=u'User',
+                    old_value=u'', new_value=identity.current.user))
+        else:
+            raise BX(_(u'System is already reserved'))
 
 class SystemType(SystemObject):
 

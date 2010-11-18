@@ -15,8 +15,8 @@ controller and the server. The internal API is not documented here.
 .. _Kobo: https://fedorahosted.org/kobo/
 
 
-``auth``: Authentication
-------------------------
+Authentication
+--------------
 
 XML-RPC methods in the :mod:`auth` namespace allow the caller to begin or end an 
 authenticated session with Beaker.
@@ -35,6 +35,17 @@ subsequent requests which belong with this session.
 .. automethod:: auth.logout()
 
 .. automethod:: auth.who_am_i
+
+
+Systems
+-------
+
+These XML-RPC methods allow the caller to manipulate systems in Beaker's 
+inventory.
+
+.. currentmodule:: bkr.server.systems
+
+.. automethod:: systems.reserve
 
 
 DOCUMENTME

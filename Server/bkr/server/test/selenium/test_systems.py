@@ -24,8 +24,9 @@ import lxml.etree
 import rdflib.graph
 from turbogears.database import session
 
-from bkr.server.test.selenium import SeleniumTestCase
+from bkr.server.test.selenium import SeleniumTestCase, XmlRpcTestCase
 from bkr.server.test import data_setup, get_server_base
+from bkr.server.model import User
 
 def atom_xpath(expr):
     return lxml.etree.XPath(expr, namespaces={'atom': 'http://www.w3.org/2005/Atom'})
@@ -171,3 +172,61 @@ class TestSystemViewRDF(unittest.TestCase):
         graph = rdflib.graph.Graph()
         graph.parse(location=rdf_url, format='xml')
         self.assert_(len(graph) >= 9)
+
+class ReserveSystemXmlRpcTest(XmlRpcTestCase):
+
+    def test_cannot_reserve_when_not_logged_in(self):
+        system = data_setup.create_system()
+        session.flush()
+        server = self.get_server()
+        try:
+            server.systems.reserve(system.fqdn)
+            self.fail('should raise')
+        except Exception, e:
+            self.assert_(e.faultString.startswith(
+                    'turbogears.identity.exceptions.IdentityFailure'))
+
+    def test_cannot_reserve_automated_system(self):
+        user = data_setup.create_user(password=u'password')
+        system = data_setup.create_system(owner=user, status=u'Automated', shared=True)
+        session.flush()
+        server = self.get_server()
+        server.auth.login_password(user.user_name, 'password')
+        try:
+            server.systems.reserve(system.fqdn)
+            self.fail('should raise')
+        except Exception, e:
+            self.assert_('Cannot reserve system with status Automated'
+                    in e.faultString)
+
+    def test_cannot_reserve_system_in_use(self):
+        user = data_setup.create_user(password=u'password')
+        system = data_setup.create_system(owner=user, status=u'Manual', shared=True)
+        system.user = User.by_user_name(data_setup.ADMIN_USER)
+        session.flush()
+        server = self.get_server()
+        server.auth.login_password(user.user_name, 'password')
+        try:
+            server.systems.reserve(system.fqdn)
+            self.fail('should raise')
+        except Exception, e:
+            self.assert_(e.faultString.startswith('bkr.server.bexceptions.BX'))
+
+    def test_reserve_system(self):
+        user = data_setup.create_user(password=u'password')
+        system = data_setup.create_system(
+                owner=User.by_user_name(data_setup.ADMIN_USER),
+                status=u'Manual', shared=True)
+        self.assert_(system.user is None)
+        session.flush()
+        server = self.get_server()
+        server.auth.login_password(user.user_name, 'password')
+        server.systems.reserve(system.fqdn)
+        session.refresh(system)
+        self.assertEqual(system.user, user)
+        reserved_activity = system.activity[-1]
+        self.assertEqual(reserved_activity.action, 'Reserved')
+        self.assertEqual(reserved_activity.field_name, 'User')
+        self.assertEqual(reserved_activity.user, user)
+        self.assertEqual(reserved_activity.new_value, user.user_name)
+        self.assertEqual(reserved_activity.service, 'XMLRPC')
