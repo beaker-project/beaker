@@ -55,14 +55,32 @@ class Distros(RPCRoot):
                                                   arch    = 1)))
 
     @expose()
-    def get_family(self, distro):
+    def get_osmajors(self, active=None):
+       """ Return all osmajors, limit to active ones if requested.
+       """ 
+       osmajors = OSMajor.query()
+       if active:
+           osmajors = osmajors.join(['osversion',
+                                     'distros',
+                                     'lab_controller_assocs',
+                                     'lab_controller']).\
+                               join(['osversion',
+                                     'distros',
+                                     '_tags']).\
+                               filter(DistroTag.tag==active)
+       return [osmajor.osmajor for osmajor in osmajors]
+
+    @expose()
+    def get_osmajor(self, distro):
         """ pass in a distro name and get back the osmajor is belongs to.
         """
         try:
-            family = '%s' % Distro.by_name(distro).osversion.osmajor
+            osmajor = '%s' % Distro.by_name(distro).osversion.osmajor
         except AttributeError:
             raise BX(_('Invalid Distro: %s' % distro))
-        return family
+        return osmajor
+
+    get_family = get_osmajor
 
     @expose()
     def get_arch(self, filter):
