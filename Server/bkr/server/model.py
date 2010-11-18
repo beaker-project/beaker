@@ -1046,8 +1046,13 @@ class Permission(object):
     """
     A relationship that determines what each Group can do
     """
-    pass
 
+    @classmethod
+    def by_name(cls, permission_name):
+        return cls.query.filter(cls.permission_name == permission_name).one()
+
+    def __init__(self, permission_name):
+        self.permission_name = permission_name
 
 class MappedObject(object):
 

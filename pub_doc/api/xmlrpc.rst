@@ -34,6 +34,8 @@ subsequent requests which belong with this session.
 
 .. automethod:: auth.logout()
 
+.. automethod:: auth.who_am_i
+
 
 DOCUMENTME
 ----------

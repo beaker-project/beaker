@@ -26,7 +26,8 @@ from bkr.server.model import LabController, User, Group, Distro, Breed, Arch, \
         OSMajor, OSVersion, SystemActivity, Task, MachineRecipe, System, \
         SystemType, SystemStatus, Recipe, RecipeTask, RecipeTaskResult, \
         Device, TaskResult, TaskStatus, Job, RecipeSet, TaskPriority, \
-        LabControllerDistro, Power, PowerType, TaskExcludeArch, TaskExcludeOSMajor
+        LabControllerDistro, Power, PowerType, TaskExcludeArch, TaskExcludeOSMajor, \
+        Permission
 
 log = logging.getLogger(__name__)
 
@@ -80,9 +81,11 @@ def create_user(user_name=None, password=None, display_name=None,
 def add_system_lab_controller(system,lc): 
     system.lab_controller = lc
 
-def create_group():
+def create_group(permissions=None):
     # tg_group.group_name column is VARCHAR(16)
     group = Group(group_name=u'group%s' % str(int(time.time() * 1000))[-11:])
+    if permissions:
+        group.permissions.extend(Permission.by_name(name) for name in permissions)
     return group
 
 def add_user_to_group(user,group):
