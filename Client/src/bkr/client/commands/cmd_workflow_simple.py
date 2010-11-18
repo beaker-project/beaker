@@ -19,6 +19,7 @@ class Workflow_Simple(BeakerWorkflow):
     def run(self, *args, **kwargs):
         username = kwargs.get("username", None)
         password = kwargs.get("password", None)
+        self.set_hub(username, password)
 
         # get all tasks requested
         requestedTasks = self.getTasks(*args, **kwargs)
@@ -86,7 +87,6 @@ class Workflow_Simple(BeakerWorkflow):
         if debug:
             print jobxml
 
-        self.set_hub(username, password)
         submitted_jobs = []
         failed = False
 
