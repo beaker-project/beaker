@@ -1418,17 +1418,18 @@ class System(SystemObject):
                             nopackages = False
                             break
                     beforepackages = kickstart[:packages_slot-1]
+                    afterpackages = kickstart[packages_slot:]
                     # if no %packages section then add it
                     if nopackages:
                         beforepackages = "%s\n%%packages --ignoremissing" % beforepackages
-                    afterpackages = kickstart[packages_slot:]
+                        if end:
+                            afterpackages = "%%end\n%s" % afterpackages
                     # Fill in basic requirements for RHTS
                     kicktemplate = """
 url --url=$tree
 %(beforepackages)s
 $SNIPPET("rhts_packages")
 %(afterpackages)s
-%(end)s
 
 %%pre
 $SNIPPET("rhts_pre")
