@@ -47,6 +47,8 @@ inventory.
 
 .. automethod:: systems.reserve
 
+.. automethod:: systems.release
+
 
 DOCUMENTME
 ----------

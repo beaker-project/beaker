@@ -2215,6 +2215,26 @@ $SNIPPET("rhts_post")
         else:
             raise BX(_(u'System is already reserved'))
 
+    def unreserve(self, service):
+        if not self.current_user(identity.current.user):
+            raise BX(_(u'System is reserved by a different user'))
+        # Don't return a system with an active watchdog
+        if self.watchdog:
+            # This won't really happen anymore since the Manual/Automated split
+            raise BX(_(u'System has active recipe %s') % self.watchdog.recipe_id)
+        activity = SystemActivity(user=identity.current.user,
+                service=service, action=u'Returned', field_name=u'User',
+                old_value=self.user.user_name, new_value=u'')
+        try:
+            self.action_release()
+        except BX, e:
+            msg = "Error: %s Action: %s" % (error_msg,self.release_action)
+            self.activity.append(SystemActivity(user=identity.current.user,
+                    service=service, action=unicode(self.release_action),
+                    field_name=u'Return', old_value=u'', new_value=msg))
+            raise e
+        self.activity.append(activity)
+
 class SystemType(SystemObject):
 
     def __init__(self, type=None):

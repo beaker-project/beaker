@@ -230,3 +230,53 @@ class ReserveSystemXmlRpcTest(XmlRpcTestCase):
         self.assertEqual(reserved_activity.user, user)
         self.assertEqual(reserved_activity.new_value, user.user_name)
         self.assertEqual(reserved_activity.service, 'XMLRPC')
+
+class ReleaseSystemXmlRpcTest(XmlRpcTestCase):
+
+    def test_cannot_release_when_not_logged_in(self):
+        system = data_setup.create_system()
+        session.flush()
+        server = self.get_server()
+        try:
+            server.systems.release(system.fqdn)
+            self.fail('should raise')
+        except Exception, e:
+            self.assert_(e.faultString.startswith(
+                    'turbogears.identity.exceptions.IdentityFailure'))
+
+    def test_cannot_release_when_not_current_user(self):
+        system = data_setup.create_system(
+                owner=User.by_user_name(data_setup.ADMIN_USER),
+                status=u'Manual', shared=True)
+        user = data_setup.create_user(password=u'password')
+        other_user = data_setup.create_user()
+        system.user = other_user
+        session.flush()
+        server = self.get_server()
+        server.auth.login_password(user.user_name, 'password')
+        try:
+            server.systems.release(system.fqdn)
+            self.fail('should raise')
+        except Exception, e:
+            self.assert_('System is reserved by a different user'
+                    in e.faultString)
+
+    def test_release_system(self):
+        system = data_setup.create_system(
+                owner=User.by_user_name(data_setup.ADMIN_USER),
+                status=u'Manual', shared=True)
+        user = data_setup.create_user(password=u'password')
+        system.user = user
+        session.flush()
+        server = self.get_server()
+        server.auth.login_password(user.user_name, 'password')
+        server.systems.release(system.fqdn)
+        session.refresh(system)
+        self.assert_(system.user is None)
+        released_activity = system.activity[-1]
+        self.assertEqual(released_activity.action, 'Returned')
+        self.assertEqual(released_activity.field_name, 'User')
+        self.assertEqual(released_activity.user, user)
+        self.assertEqual(released_activity.old_value, user.user_name)
+        self.assertEqual(released_activity.new_value, '')
+        self.assertEqual(released_activity.service, 'XMLRPC')

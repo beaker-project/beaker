@@ -48,6 +48,7 @@ from bkr.server.recipesets import RecipeSets
 from bkr.server.tasks import Tasks
 from bkr.server.task_actions import TaskActions
 from bkr.server.controller_utilities import Utility, SystemSaveForm, SearchOptions, SystemTab
+from bkr.server.bexceptions import *
 from cherrypy import request, response
 from cherrypy.lib.cptools import serve_file
 from tg_expanding_form_widget.tg_expanding_form_widget import ExpandingForm
@@ -56,7 +57,6 @@ from bkr.server.helpers import *
 from bkr.server.tools.init import dummy
 from bkr.server import mail
 from decimal import Decimal
-from bexceptions import *
 import bkr.server.recipes
 import bkr.server.rdf
 import random
@@ -1125,28 +1125,19 @@ class Root(RPCRoot):
             flash( _(u"Unable to find system with id of %s" % id) )
             redirect("/")
         if system.user:
-            if system.current_user(identity.current.user):
-                # Don't return a system with an active watchdog
-                if system.watchdog:
-                    flash(_(u"Can't return %s active recipe %s" % (system.fqdn, system.watchdog.recipe_id)))
-                    redirect("/recipes/%s" % system.watchdog.recipe_id)
-                else:
-                    status = "Returned"
-                    activity = SystemActivity(identity.current.user, "WEBUI", status, "User", '%s' % system.user, "")
-                    try:
-                        system.action_release()
-                    except BX, error_msg:
-                        msg = ", Error: %s Action: %s" % (error_msg,system.release_action)
-                        system.activity.append(SystemActivity(identity.current.user, "WEBUI", "%s" % system.release_action, "Return", "", msg))
-                system.activity.append(activity)
-                flash( _(u"%s %s%s" % (status,system.fqdn,msg)) )
+            try:
+                system.unreserve(service=u'WEBUI')
+                flash(_(u'Returned %s') % system.fqdn)
+            except BeakerException, e:
+                log.exception('Failed to return')
+                flash(_(u'Failed to return %s: %s') % (system.fqdn, e))
         else:
             try:
                 system.reserve(service=u'WEBUI')
                 flash(_(u'Reserved %s') % system.fqdn)
-            except BX, e:
+            except BeakerException, e:
                 log.exception('Failed to reserve')
-                flash(_(u'Failed to reserve %s: %s') % (system.fqdn, e.message))
+                flash(_(u'Failed to reserve %s: %s') % (system.fqdn, e))
         redirect("/view/%s" % system.fqdn)
 
     @error_handler(view)
