@@ -24,5 +24,19 @@ class SystemsController(controllers.Controller):
         system.reserve(service=u'XMLRPC')
         return system.fqdn # because turbogears makes us return something
 
+    @expose()
+    @identity.require(identity.not_anonymous())
+    def release(self, fqdn):
+        """
+        Releases a reservation on the system with the given fully-qualified 
+        domain name.
+
+        The caller must be the current user of a system (i.e. must have 
+        successfully reserved it previously).
+        """
+        system = System.by_fqdn(fqdn, identity.current.user)
+        system.unreserve(service=u'XMLRPC')
+        return system.fqdn # because turbogears makes us return something
+
 # for sphinx
 systems = SystemsController
