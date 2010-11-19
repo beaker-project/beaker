@@ -1407,38 +1407,7 @@ class System(SystemObject):
                                            kernel_options_post,
                                            self.token)
                 if kickstart:
-                    # Escape any $ signs or cobbler will barf
-                    kickstart = kickstart.replace('$','\$')
-                    # add in cobbler packages snippet...
-                    packages_slot = 0
-                    nopackages = True
-                    for line in kickstart.split('\n'):
-                        # Add the length of line + newline
-                        packages_slot += len(line) + 1
-                        if line.find('%packages') == 0:
-                            nopackages = False
-                            break
-                    beforepackages = kickstart[:packages_slot-1]
-                    # if no %packages section then add it
-                    if nopackages:
-                        beforepackages = "%s\n%%packages --ignoremissing" % beforepackages
-                    afterpackages = kickstart[packages_slot:]
-                    # Fill in basic requirements for RHTS
-                    kicktemplate = """
-url --url=$tree
-%(beforepackages)s
-$SNIPPET("rhts_packages")
-%(afterpackages)s
-
-%%pre
-$SNIPPET("rhts_pre")
-
-%%post
-$SNIPPET("rhts_post")
-                    """
-                    kickstart = kicktemplate % dict(
-                                                beforepackages = beforepackages,
-                                                afterpackages = afterpackages)
+                    kickstart = 'url --url=$tree\n' + kickstart
 
                     kickfile = '/var/lib/cobbler/kickstarts/%s.ks' % self.system.fqdn
         
@@ -2115,6 +2084,40 @@ $SNIPPET("rhts_post")
         results = self.install_options(distro, ks_meta,
                                                kernel_options,
                                                kernel_options_post)
+
+        if kickstart:
+            # Escape any $ signs or cobbler will barf
+            kickstart = kickstart.replace('$','\$')
+            # add in cobbler packages snippet...
+            packages_slot = 0
+            nopackages = True
+            for line in kickstart.split('\n'):
+                # Add the length of line + newline
+                packages_slot += len(line) + 1
+                if line.find('%packages') == 0:
+                    nopackages = False
+                    break
+            beforepackages = kickstart[:packages_slot-1]
+            # if no %packages section then add it
+            if nopackages:
+                beforepackages = "%s\n%%packages --ignoremissing" % beforepackages
+            afterpackages = kickstart[packages_slot:]
+            # Fill in basic requirements for RHTS
+            kicktemplate = """
+%(beforepackages)s
+$SNIPPET("rhts_packages")
+%(afterpackages)s
+
+%%pre
+$SNIPPET("rhts_pre")
+
+%%post
+$SNIPPET("rhts_post")
+            """
+            kickstart = kicktemplate % dict(
+                                        beforepackages = beforepackages,
+                                        afterpackages = afterpackages)
+
         self.remote.provision(distro=distro,
                               kickstart=kickstart,
                               ks_appends=ks_appends,

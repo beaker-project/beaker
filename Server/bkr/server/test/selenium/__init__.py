@@ -91,7 +91,8 @@ class XmlRpcTestCase(unittest.TestCase):
         transport = endpoint.startswith('https:') and \
                 kobo.xmlrpc.SafeCookieTransport() or \
                 kobo.xmlrpc.CookieTransport()
-        return xmlrpclib.ServerProxy(endpoint, transport=transport)
+        return xmlrpclib.ServerProxy(endpoint, transport=transport,
+                allow_none=True)
 
 def check_listen(port):
     """

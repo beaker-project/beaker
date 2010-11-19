@@ -38,13 +38,25 @@ class StubCobbler(object):
         'power_user',
         'power_pass',
         'power_id',
+        'ksmeta',
+        'kopts',
+        'kopts_post',
+        'profile',
+        'netboot-enabled',
     ])
     ACCEPTED_POWER_ACTIONS = frozenset(['on', 'off', 'reboot'])
+    ACCEPTED_PROFILE_KEYS = frozenset([
+        'name',
+        'kickstart',
+        'parent',
+    ])
 
     def __init__(self):
         self.systems = {}
         self.system_actions = {} #: system fdqn -> most recent power action
         self.incomplete_tasks = set()
+        self.profiles = {}
+        self.kickstarts = {}
 
     def version(self):
         return 2.0 # why is it a float? weird!
@@ -58,6 +70,13 @@ class StubCobbler(object):
             # pretend we had it all along
             self.systems[fqdn] = {}
         return 'StubCobblerSystem:%s' % fqdn
+
+    def get_profile_handle(self, name, token):
+        assert token == 'logged_in'
+        if name not in self.profiles:
+             # pretend we had it all along
+             self.profiles[name] = {}
+        return 'StubCobblerProfile:%s' % name
 
     def modify_system(self, system_handle, key, value, token):
         assert token == 'logged_in'
@@ -76,6 +95,14 @@ class StubCobbler(object):
         # do nothing
         log.info('%r system %s saved with values %r', self,
                 fqdn, self.systems[fqdn])
+        return True
+
+    def clear_system_logs(self, system_handle, token):
+        assert token == 'logged_in'
+        assert system_handle.startswith('StubCobblerSystem:')
+        fqdn = system_handle[len('StubCobblerSystem:'):]
+        assert fqdn in self.systems
+        # do nothing
         return True
 
     def background_power_system(self, d, token):
@@ -97,6 +124,31 @@ class StubCobbler(object):
         # always complete instantly, successfully
         self.incomplete_tasks.remove(task_handle)
         return '\n'.join(['### TASK COMPLETE ###', 'Stub cobbler did nothing'])
+
+    def read_or_write_kickstart_template(self, filename, read, contents, token):
+        assert token == 'logged_in'
+        assert not read
+        self.kickstarts[filename] = contents
+        return True
+
+    def modify_profile(self, profile_handle, key, value, token):
+        assert token == 'logged_in'
+        assert profile_handle.startswith('StubCobblerProfile:')
+        name = profile_handle[len('StubCobblerProfile:'):]
+        assert name in self.profiles
+        assert key in self.ACCEPTED_PROFILE_KEYS
+        self.profiles[name][key] = value
+        return True
+
+    def save_profile(self, profile_handle, token):
+        assert token == 'logged_in'
+        assert profile_handle.startswith('StubCobblerProfile:')
+        name = profile_handle[len('StubCobblerProfile:'):]
+        assert name in self.profiles
+        # do nothing
+        log.info('%r profile %s saved with values %r', self,
+                name, self.profiles[name])
+        return True
 
 class NicerXMLRPCServer(SimpleXMLRPCServer):
     
