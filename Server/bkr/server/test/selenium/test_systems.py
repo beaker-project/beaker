@@ -21,11 +21,12 @@ import logging
 from urlparse import urljoin
 from urllib import urlencode, urlopen, quote
 import lxml.etree
+import xmlrpclib
 import rdflib.graph
 from turbogears.database import session
 
 from bkr.server.test.selenium import SeleniumTestCase, XmlRpcTestCase
-from bkr.server.test import data_setup, get_server_base
+from bkr.server.test import data_setup, get_server_base, stub_cobbler
 from bkr.server.model import User
 
 def atom_xpath(expr):
@@ -195,7 +196,7 @@ class ReserveSystemXmlRpcTest(XmlRpcTestCase):
         try:
             server.systems.reserve(system.fqdn)
             self.fail('should raise')
-        except Exception, e:
+        except xmlrpclib.Fault, e:
             self.assert_('Cannot reserve system with status Automated'
                     in e.faultString)
 
@@ -209,7 +210,7 @@ class ReserveSystemXmlRpcTest(XmlRpcTestCase):
         try:
             server.systems.reserve(system.fqdn)
             self.fail('should raise')
-        except Exception, e:
+        except xmlrpclib.Fault, e:
             self.assert_(e.faultString.startswith('bkr.server.bexceptions.BX'))
 
     def test_reserve_system(self):
@@ -257,7 +258,7 @@ class ReleaseSystemXmlRpcTest(XmlRpcTestCase):
         try:
             server.systems.release(system.fqdn)
             self.fail('should raise')
-        except Exception, e:
+        except xmlrpclib.Fault, e:
             self.assert_('System is reserved by a different user'
                     in e.faultString)
 
@@ -280,3 +281,85 @@ class ReleaseSystemXmlRpcTest(XmlRpcTestCase):
         self.assertEqual(released_activity.old_value, user.user_name)
         self.assertEqual(released_activity.new_value, '')
         self.assertEqual(released_activity.service, 'XMLRPC')
+
+class SystemPowerXmlRpcTest(XmlRpcTestCase):
+
+    def setUp(self):
+        self.stub_cobbler_thread = stub_cobbler.StubCobblerThread()
+        self.stub_cobbler_thread.start()
+        self.lab_controller = data_setup.create_labcontroller(
+                fqdn=u'localhost:%d' % self.stub_cobbler_thread.port)
+        session.flush()
+        self.server = self.get_server()
+
+    def tearDown(self):
+        self.stub_cobbler_thread.stop()
+
+    def test_cannot_power_when_not_logged_in(self):
+        try:
+            self.server.systems.power('on', 'fqdn')
+            self.fail('should raise')
+        except xmlrpclib.Fault, e:
+            self.assert_(e.faultString.startswith(
+                    'turbogears.identity.exceptions.IdentityFailure'))
+        self.assert_(not self.stub_cobbler_thread.cobbler.system_actions)
+
+    def test_cannot_power_system_in_use(self):
+        user = data_setup.create_user(password=u'password')
+        other_user = data_setup.create_user()
+        system = data_setup.create_system()
+        system.user = other_user
+        session.flush()
+        self.server.auth.login_password(user.user_name, 'password')
+        try:
+            self.server.systems.power('on', system.fqdn)
+            self.fail('should raise')
+        except xmlrpclib.Fault, e:
+            self.assert_('System is in use' in e.faultString)
+        self.assert_(not self.stub_cobbler_thread.cobbler.system_actions)
+
+    def check_power_action(self, action):
+        user = data_setup.create_user(password=u'password')
+        system = data_setup.create_system()
+        data_setup.configure_system_power(system, power_type=u'drac',
+                address=u'nowhere.example.com', user=u'teh_powz0r',
+                password=u'onoffonoff', power_id=u'asdf')
+        system.lab_controller = self.lab_controller
+        system.user = None
+        session.flush()
+        self.server.auth.login_password(user.user_name, 'password')
+        self.server.systems.power(action, system.fqdn)
+        self.assertEqual(
+                self.stub_cobbler_thread.cobbler.system_actions[system.fqdn],
+                action)
+        self.assertEqual(self.stub_cobbler_thread.cobbler.systems[system.fqdn],
+                {'power_type': 'drac',
+                 'power_address': 'nowhere.example.com',
+                 'power_user': 'teh_powz0r',
+                 'power_pass': 'onoffonoff',
+                 'power_id': 'asdf'})
+
+    def test_power_on(self):
+        self.check_power_action('on')
+
+    def test_power_off(self):
+        self.check_power_action('off')
+
+    def test_reboot(self):
+        self.check_power_action('reboot')
+
+    def test_can_force_powering_system_in_use(self):
+        user = data_setup.create_user(password=u'password')
+        other_user = data_setup.create_user()
+        system = data_setup.create_system()
+        data_setup.configure_system_power(system, power_type=u'drac',
+                address=u'nowhere.example.com', user=u'teh_powz0r',
+                password=u'onoffonoff', power_id=u'asdf')
+        system.lab_controller = self.lab_controller
+        system.user = other_user
+        session.flush()
+        self.server.auth.login_password(user.user_name, 'password')
+        self.server.systems.power('on', system.fqdn, True)
+        self.assertEqual(
+                self.stub_cobbler_thread.cobbler.system_actions[system.fqdn],
+                'on')

@@ -1,6 +1,7 @@
 
 from turbogears import expose, identity, controllers
-from bkr.server.model import System
+from bkr.server.bexceptions import BX
+from bkr.server.model import System, SystemActivity
 from bkr.server.xmlrpccontroller import RPCRoot
 
 __all__ = ['SystemsController']
@@ -37,6 +38,37 @@ class SystemsController(controllers.Controller):
         system = System.by_fqdn(fqdn, identity.current.user)
         system.unreserve(service=u'XMLRPC')
         return system.fqdn # because turbogears makes us return something
+
+    @expose()
+    @identity.require(identity.not_anonymous())
+    def power(self, action, fqdn, force=False):
+        """
+        Controls power for the system with the given fully-qualified domain 
+        name.
+
+        Controlling power for a system is not normally permitted when the 
+        system is in use by someone else, because it is likely to interfere 
+        with their usage. Callers may pass True for the *force* argument to 
+        override this safety check.
+
+        This method does not return until Cobbler has reported that the power 
+        control was succesful. An exception will be raised if there is an error 
+        communicating with Cobbler, or if Cobbler reports a failure.
+
+        :param action: 'on', 'off', or 'reboot'
+        :type action: str
+        :param force: whether to power the system even if it is in use
+        :type force: bool
+        """
+        system = System.by_fqdn(fqdn, identity.current.user)
+        if not force and system.user is not None \
+                and not system.current_user(identity.current.user):
+            raise BX(_(u'System is in use'))
+        system.action_power(action)
+        system.activity.append(SystemActivity(user=identity.current.user,
+                service='XMLRPC', action=action, field_name='Power',
+                old_value=u'', new_value=u'Success'))
+        return action # because turbogears makes us return something
 
 # for sphinx
 systems = SystemsController

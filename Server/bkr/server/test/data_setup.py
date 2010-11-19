@@ -118,7 +118,7 @@ def create_distro(name=u'DAN6-Server-U9', breed=u'Dan',
     return distro
 
 def create_system(arch=u'i386', type=u'Machine', status=u'Automated',
-        owner=None, fqdn=None, powertype=None, shared=False, **kw):
+        owner=None, fqdn=None, shared=False, **kw):
     if owner is None:
         owner = create_user()
     if fqdn is None:
@@ -129,7 +129,7 @@ def create_system(arch=u'i386', type=u'Machine', status=u'Automated',
                 status=SystemStatus.by_name(status), **kw)
     system.shared = shared
     system.arch.append(Arch.by_name(arch))
-    system.power = Power(power_type_id = PowerType.by_name('ilo').id,power_address='something',power_user='user',power_password='pass')
+    configure_system_power(system)
     log.debug('Created system %r', system)
     return system
 
@@ -145,7 +145,7 @@ def configure_system_power(system, power_type=u'ilo', address=None,
         power_id = '%d' % int(time.time() * 1000)
     system.power = Power(power_type=PowerType.by_name(power_type),
             power_address=address, power_id=power_id,
-            power_user=user, power_password=password)
+            power_user=user, power_passwd=password)
 
 def create_system_activity(user=None, **kw):
     if not user:
