@@ -64,7 +64,7 @@ class SystemsController(controllers.Controller):
         if not force and system.user is not None \
                 and not system.current_user(identity.current.user):
             raise BX(_(u'System is in use'))
-        system.action_power(action)
+        system.action_power(action, wait=True)
         system.activity.append(SystemActivity(user=identity.current.user,
                 service='XMLRPC', action=action, field_name='Power',
                 old_value=u'', new_value=u'Success'))

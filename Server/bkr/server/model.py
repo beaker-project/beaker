@@ -2122,10 +2122,9 @@ $SNIPPET("rhts_post")
         if self.power:
             self.remote.power(action="reboot", wait=wait)
 
-    def action_power(self,
-                     action='reboot'):
+    def action_power(self, action='reboot', wait=False):
         if self.remote and self.power:
-            self.remote.power(action)
+            self.remote.power(action, wait=wait)
         else:
             return False
 
