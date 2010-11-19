@@ -51,6 +51,8 @@ inventory.
 
 .. automethod:: systems.power
 
+.. automethod:: systems.provision
+
 
 DOCUMENTME
 ----------

@@ -363,3 +363,117 @@ class SystemPowerXmlRpcTest(XmlRpcTestCase):
         self.assertEqual(
                 self.stub_cobbler_thread.cobbler.system_actions[system.fqdn],
                 'on')
+
+class SystemProvisionXmlRpcTest(XmlRpcTestCase):
+
+    def setUp(self):
+        self.stub_cobbler_thread = stub_cobbler.StubCobblerThread()
+        self.stub_cobbler_thread.start()
+        self.lab_controller = data_setup.create_labcontroller(
+                fqdn=u'localhost:%d' % self.stub_cobbler_thread.port)
+        self.distro = data_setup.create_distro()
+        self.server = self.get_server()
+
+    def tearDown(self):
+        self.stub_cobbler_thread.stop()
+
+    def test_cannot_provision_when_not_logged_in(self):
+        try:
+            self.server.systems.provision('fqdn', 'distro')
+            self.fail('should raise')
+        except xmlrpclib.Fault, e:
+            self.assert_(e.faultString.startswith(
+                    'turbogears.identity.exceptions.IdentityFailure'))
+        self.assert_(not self.stub_cobbler_thread.cobbler.system_actions)
+
+    def test_cannot_provision_automated_system(self):
+        system = data_setup.create_system(
+                owner=User.by_user_name(data_setup.ADMIN_USER),
+                status=u'Automated', shared=True)
+        user = data_setup.create_user(password=u'password')
+        session.flush()
+        self.server.auth.login_password(user.user_name, 'password')
+        try:
+            self.server.systems.provision(system.fqdn, 'distro')
+        except xmlrpclib.Fault, e:
+            # It's not really a permissions issue, but oh well
+            self.assert_('has insufficient permissions to provision'
+                    in e.faultString)
+        self.assert_(not self.stub_cobbler_thread.cobbler.system_actions)
+
+    def test_cannot_provision_system_in_use(self):
+        system = data_setup.create_system(
+                owner=User.by_user_name(data_setup.ADMIN_USER),
+                status=u'Manual', shared=True)
+        user = data_setup.create_user(password=u'password')
+        other_user = data_setup.create_user()
+        system.user = other_user
+        session.flush()
+        self.server.auth.login_password(user.user_name, 'password')
+        try:
+            self.server.systems.provision(system.fqdn, 'distro')
+        except xmlrpclib.Fault, e:
+            self.assert_('Reserve a system before provisioning'
+                    in e.faultString)
+        self.assert_(not self.stub_cobbler_thread.cobbler.system_actions)
+
+    def test_provision(self):
+        kickstart = '''
+            %%pre
+            kickstart lol!
+            do some stuff etc
+            '''
+        system = data_setup.create_system(
+                owner=User.by_user_name(data_setup.ADMIN_USER),
+                status=u'Manual', shared=True)
+        data_setup.configure_system_power(system, power_type=u'drac',
+                address=u'nowhere.example.com', user=u'teh_powz0r',
+                password=u'onoffonoff', power_id=u'asdf')
+        system.lab_controller = self.lab_controller
+        user = data_setup.create_user(password=u'password')
+        system.user = user
+        session.flush()
+        self.server.auth.login_password(user.user_name, 'password')
+        self.server.systems.provision(system.fqdn, self.distro.install_name,
+                {'method': 'nfs'},
+                'noapic',
+                'noapic runlevel=3',
+                kickstart)
+        self.assertEqual(self.stub_cobbler_thread.cobbler.systems[system.fqdn],
+                {'power_type': 'drac',
+                 'power_address': 'nowhere.example.com',
+                 'power_user': 'teh_powz0r',
+                 'power_pass': 'onoffonoff',
+                 'power_id': 'asdf',
+                 'ksmeta': {'method': 'nfs'},
+                 'kopts': 'noapic',
+                 'kopts_post': 'noapic runlevel=3',
+                 'profile': system.fqdn,
+                 'netboot-enabled': True})
+        kickstart_filename = '/var/lib/cobbler/kickstarts/%s.ks' % system.fqdn
+        self.assertEqual(self.stub_cobbler_thread.cobbler.profiles[system.fqdn],
+                {'kickstart': kickstart_filename,
+                 'parent': self.distro.install_name})
+        self.assertEqual(
+                self.stub_cobbler_thread.cobbler.kickstarts[kickstart_filename],
+                'url --url=$tree\n' + kickstart)
+        self.assertEqual(
+                self.stub_cobbler_thread.cobbler.system_actions[system.fqdn],
+                'reboot')
+
+    def test_provision_without_reboot(self):
+        system = data_setup.create_system(
+                owner=User.by_user_name(data_setup.ADMIN_USER),
+                status=u'Manual', shared=True)
+        data_setup.configure_system_power(system, power_type=u'drac',
+                address=u'nowhere.example.com', user=u'teh_powz0r',
+                password=u'onoffonoff', power_id=u'asdf')
+        system.lab_controller = self.lab_controller
+        user = data_setup.create_user(password=u'password')
+        system.user = user
+        session.flush()
+        self.server.auth.login_password(user.user_name, 'password')
+        self.server.systems.provision(system.fqdn, self.distro.install_name,
+                None, None, None, None,
+                False) # this last one is reboot=False
+        self.assert_(not self.stub_cobbler_thread.cobbler.system_actions)
