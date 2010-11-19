@@ -1401,6 +1401,11 @@ class System(SystemObject):
                                            kernel_options_post,
                                            self.token)
                 if kickstart:
+                    # Newer Kickstarts need %end after each section.
+                    if distro.osversion.osmajor.osmajor.startswith("Fedora"):
+                        end = "%end"
+                    else:
+                        end = ""
                     # Escape any $ signs or cobbler will barf
                     kickstart = kickstart.replace('$','\$')
                     # add in cobbler packages snippet...
@@ -1423,16 +1428,20 @@ url --url=$tree
 %(beforepackages)s
 $SNIPPET("rhts_packages")
 %(afterpackages)s
+%(end)
 
 %%pre
 $SNIPPET("rhts_pre")
+%(end)
 
 %%post
 $SNIPPET("rhts_post")
-                    """
+%(end)
+                   """
                     kickstart = kicktemplate % dict(
                                                 beforepackages = beforepackages,
-                                                afterpackages = afterpackages)
+                                                afterpackages = afterpackages,
+                                                end = end)
 
                     kickfile = '/var/lib/cobbler/kickstarts/%s.ks' % self.system.fqdn
         
