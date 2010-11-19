@@ -1428,15 +1428,15 @@ url --url=$tree
 %(beforepackages)s
 $SNIPPET("rhts_packages")
 %(afterpackages)s
-%(end)
+%(end)s
 
 %%pre
 $SNIPPET("rhts_pre")
-%(end)
+%(end)s
 
 %%post
 $SNIPPET("rhts_post")
-%(end)
+%(end)s
                    """
                     kickstart = kicktemplate % dict(
                                                 beforepackages = beforepackages,
