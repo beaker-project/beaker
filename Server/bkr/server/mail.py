@@ -90,6 +90,7 @@ def system_problem_report(system, description, recipe=None, reporter=None):
     body.extend(['', unicode(_(u'Problem description:')), description])
     send_mail(sender, system.owner.email_address,
             _(u'Problem reported for %s') % system.fqdn, '\n'.join(body),
+            cc=system.cc,
             headers=[('X-Beaker-Notification', 'system-problem'),
                      ('X-Beaker-System', system.fqdn)])
 
@@ -111,5 +112,6 @@ def broken_system_notify(system, reason, recipe=None):
     send_mail(sender, system.owner.email_address,
             _(u'System %s automatically marked broken') % system.fqdn,
             '\n'.join(body),
+            cc=system.cc,
             headers=[('X-Beaker-Notification', 'system-broken'),
                      ('X-Beaker-System', system.fqdn)])

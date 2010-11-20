@@ -176,6 +176,12 @@ $(document).ready(function(){
        <td class="list">
         ${display_field_for("type_id")}
        </td>
+       <th class="list">
+        Notify CC
+       </th>
+       <td class="list">
+        ${';'.join(value_for("cc"))}
+       </td>
       </tr>
       <tr py:if="not readonly">
        <td colspan="4">
