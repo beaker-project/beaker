@@ -23,13 +23,7 @@ from turbogears.database import session
 
 from bkr.server.test.selenium import SeleniumTestCase
 from bkr.server.test import data_setup
-
-def assert_sorted(things):
-    if len(things) == 0: return
-    for n in xrange(1, len(things)):
-        if things[n] < things[n - 1]:
-            raise AssertionError('Not in sorted order, found %r after %r' %
-                    (things[n], things[n - 1]))
+from bkr.server.test.assertions import assert_sorted
 
 class TestRecipesDataGrid(SeleniumTestCase):
 
