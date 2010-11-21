@@ -15,8 +15,8 @@ controller and the server. The internal API is not documented here.
 .. _Kobo: https://fedorahosted.org/kobo/
 
 
-``auth``: Authentication
-------------------------
+Authentication
+--------------
 
 XML-RPC methods in the :mod:`auth` namespace allow the caller to begin or end an 
 authenticated session with Beaker.
@@ -35,18 +35,39 @@ subsequent requests which belong with this session.
 .. automethod:: auth.logout
 
 
-DOCUMENTME
-----------
+Distros
+-------
+
+The following XML-RPC methods allow the caller to fetch and manipulate distros 
+recorded in Beaker.
 
 .. currentmodule:: bkr.server.distro
 
-.. automethod:: distros.edit_version
-
 .. automethod:: distros.filter
+
+.. automethod:: distros.edit_version
 
 .. automethod:: distros.tag
 
 .. automethod:: distros.untag
+
+
+Task library
+------------
+
+These XML-RPC methods fetch and manipulate tasks in the Beaker task library.
+
+.. currentmodule:: bkr.server.tasks
+
+.. automethod:: tasks.to_dict
+
+.. automethod:: tasks.filter
+
+.. automethod:: tasks.upload
+
+
+DOCUMENTME
+----------
 
 .. currentmodule:: bkr.server.task_actions
 
@@ -63,14 +84,6 @@ DOCUMENTME
 .. automethod:: jobs.delete_jobs
 
 .. automethod:: jobs.list
-
-.. currentmodule:: bkr.server.tasks
-
-.. automethod:: tasks.upload
-
-.. automethod:: tasks.to_dict
-
-.. automethod:: tasks.filter
 
 ..
    These ones can't use autodoc because their names confuse it :-(

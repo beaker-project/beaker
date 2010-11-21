@@ -212,6 +212,37 @@ class Distros(RPCRoot):
     #XMLRPC method for listing distros
     @cherrypy.expose
     def filter(self, filter):
+        """
+        Returns a list of details for distros filtered by the given criteria.
+
+        The *filter* argument must be an XML-RPC structure (dict) specifying 
+        filter criteria. The following keys are recognised:
+
+            'name'
+                Distro name. May include % SQL wildcards, for example 
+                ``'%20101121.nightly'``.
+            'family'
+                Distro family name, for example ``'RedHatEnterpriseLinuxServer5'``. 
+                Matches are exact.
+            'tags'
+                List of distro tags, for example ``['STABLE', 'RELEASED']``. All given 
+                tags must be present on the distro for it to match.
+            'arch'
+                Architecture name, for example ``'x86_64'``.
+            'treepath'
+                Tree path (on any lab controller). May include % SQL wildcards, for 
+                example ``'nfs://nfs.example.com:%'``.
+            'limit'
+                Integer limit to number of distros returned.
+
+        The return value is an array with one element per distro (up to the 
+        maximum number of distros given by 'limit'). Each array element is an 
+        array containing the following distro details:
+
+            (install name, name, arch, version, variant, install method, 
+            supports virt?, list of tags, dict of (lab controller hostname -> 
+            tree path))
+        """
         distros = session.query(Distro)
         name = filter.get('name', None)
         family = filter.get('family', None)
@@ -269,8 +300,15 @@ class Distros(RPCRoot):
     @cherrypy.expose
     @identity.require(identity.not_anonymous())
     def edit_version(self, name, version):
-        """ quick and dirty to allow editing the Version.
-            This is the one thing that needs editing at times
+        """
+        Updates the version for all distros with the given name.
+
+        :param name: name of distros to be updated, for example 
+            'RHEL5.6-Server-20101110.0'
+        :type name: string
+        :param version: new version to be applied, for example 
+            'RedHatEnterpriseLinuxServer5.6' or 'Fedora14'
+        :type version: string
         """
         distros = session.query(Distro).filter(distro_table.c.name.like('%s' % name))
         edited = []
@@ -307,6 +345,17 @@ class Distros(RPCRoot):
     @cherrypy.expose
     @identity.require(identity.not_anonymous())
     def tag(self, name, arch, tag):
+        """
+        Applies the given tag to all matching distros.
+
+        :param name: distro name to filter by (may include SQL wildcards)
+        :type name: string or nil
+        :param arch: arch name to filter by
+        :type arch: string or nil
+        :param tag: tag to be applied
+        :type tag: string
+        :returns: list of install names of distros which have been modified
+        """
         return self._tag(name, arch, tag)
 
     def _tag(self, name, arch, tag):
@@ -329,6 +378,9 @@ class Distros(RPCRoot):
     @cherrypy.expose
     @identity.require(identity.not_anonymous())
     def untag(self, name, arch, tag):
+        """
+        Like :meth:`distros.tag` but the opposite.
+        """
         removed = []
         distros = session.query(Distro)
         if name:
