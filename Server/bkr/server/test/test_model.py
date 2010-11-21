@@ -97,10 +97,10 @@ class TestBrokenSystemDetection(unittest.TestCase):
         session.flush()
         time.sleep(1)
 
-    def abort_recipe_with_stable_distro(self, distro=None):
+    def abort_recipe(self, distro=None):
         if distro is None:
             distro = data_setup.create_distro()
-            distro.tags.append(u'STABLE')
+            distro.tags.append(u'RELEASED')
         recipe = data_setup.create_recipe(distro=distro)
         data_setup.create_job_for_recipes([recipe])
         recipe.system = self.system
@@ -111,16 +111,16 @@ class TestBrokenSystemDetection(unittest.TestCase):
 
     def test_multiple_suspicious_aborts_triggers_broken_system(self):
         # first aborted recipe shouldn't trigger it
-        self.abort_recipe_with_stable_distro()
+        self.abort_recipe()
         self.assertNotEqual(self.system.status, SystemStatus.by_name(u'Broken'))
         # another recipe with a different stable distro *should* trigger it
-        self.abort_recipe_with_stable_distro()
+        self.abort_recipe()
         self.assertEqual(self.system.status, SystemStatus.by_name(u'Broken'))
 
     def test_status_change_is_respected(self):
         # two aborted recipes should trigger it...
-        self.abort_recipe_with_stable_distro()
-        self.abort_recipe_with_stable_distro()
+        self.abort_recipe()
+        self.abort_recipe()
         self.assertEqual(self.system.status, SystemStatus.by_name(u'Broken'))
         # then the owner comes along and marks it as fixed...
         self.system.status = SystemStatus.by_name(u'Automated')
@@ -131,20 +131,20 @@ class TestBrokenSystemDetection(unittest.TestCase):
         session.flush()
         time.sleep(1)
         # another recipe aborts...
-        self.abort_recipe_with_stable_distro()
+        self.abort_recipe()
         self.assertNotEqual(self.system.status, SystemStatus.by_name(u'Broken')) # not broken! yet
-        self.abort_recipe_with_stable_distro()
+        self.abort_recipe()
         self.assertEqual(self.system.status, SystemStatus.by_name(u'Broken')) # now it is
 
     def test_counts_distinct_stable_distros(self):
         first_distro = data_setup.create_distro()
-        first_distro.tags.append(u'STABLE')
+        first_distro.tags.append(u'RELEASED')
         # two aborted recipes for the same distro shouldn't trigger it
-        self.abort_recipe_with_stable_distro(distro=first_distro)
-        self.abort_recipe_with_stable_distro(distro=first_distro)
+        self.abort_recipe(distro=first_distro)
+        self.abort_recipe(distro=first_distro)
         self.assertNotEqual(self.system.status, SystemStatus.by_name(u'Broken'))
         # .. but a different distro should
-        self.abort_recipe_with_stable_distro()
+        self.abort_recipe()
         self.assertEqual(self.system.status, SystemStatus.by_name(u'Broken'))
 
 class TestJob(unittest.TestCase):

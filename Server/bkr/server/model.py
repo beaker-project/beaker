@@ -2159,6 +2159,9 @@ $SNIPPET("rhts_post")
             return # nothing to do
         if self.type != SystemType.by_name(u'Machine'):
             return # prototypes get more leeway, and virtual machines can't really "break"...
+        reliable_distro_tag = get('beaker.reliable_distro_tag', None)
+        if not reliable_distro_tag:
+            return
         # Since its last status change, has this system had an 
         # uninterrupted run of aborted recipes leading up to this one, with 
         # at least two different STABLE distros?
@@ -2181,14 +2184,14 @@ $SNIPPET("rhts_post")
                 .join(system_table, onclause=recipe_table.c.system_id == system_table.c.id))\
             .where(and_(
                 system_table.c.id == self.id,
-                distro_tag_map.c.distro_tag_id == DistroTag.by_tag(u'STABLE').id,
+                distro_tag_map.c.distro_tag_id == DistroTag.by_tag(reliable_distro_tag).id,
                 recipe_table.c.start_time >
                     func.ifnull(status_change_subquery, system_added_subquery),
                 recipe_table.c.finish_time > nonaborted_recipe_subquery))
         if session.execute(query).scalar() >= 2:
             # Broken!
             reason = unicode(_(u'System has a run of aborted recipes '
-                    'with STABLE distros'))
+                    'with reliable distros'))
             log.warn(reason)
             old_status = self.status
             self.mark_broken(reason=reason)
@@ -4374,7 +4377,8 @@ class Recipe(TaskBase):
         self._abort(msg)
         self.update_status()
         session.flush() # XXX bad
-        if self.system is not None and u'STABLE' in self.distro.tags:
+        if self.system is not None and \
+                get('beaker.reliable_distro_tag', None) in self.distro.tags:
             self.system.suspicious_abort()
 
     def _abort(self, msg=None):
