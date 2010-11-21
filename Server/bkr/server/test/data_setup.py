@@ -32,6 +32,7 @@ log = logging.getLogger(__name__)
 
 ADMIN_USER = u'admin'
 ADMIN_PASSWORD = u'testing'
+ADMIN_EMAIL_ADDRESS = u'admin@example.com'
 
 def setup_model(override=True):
     from bkr.server.tools.init import init_db
@@ -46,7 +47,8 @@ def setup_model(override=True):
     connection.invalidate() # can't reuse this one
     del connection
     log.info('Initialising model')
-    init_db(user_name=ADMIN_USER, password=ADMIN_PASSWORD)
+    init_db(user_name=ADMIN_USER, password=ADMIN_PASSWORD,
+            user_email_address=ADMIN_EMAIL_ADDRESS)
 
 def create_labcontroller(fqdn=None):
     if fqdn is None:

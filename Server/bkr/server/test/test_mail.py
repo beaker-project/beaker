@@ -49,7 +49,7 @@ class MailTest(unittest.TestCase):
                 'System home-one automatically marked broken')
         self.assertEqual(msg['X-Beaker-Notification'], 'system-broken')
         self.assertEqual(msg['X-Beaker-System'], 'home-one')
-        self.assertEqual(msg.get_payload(),
+        self.assertEqual(msg.get_payload(decode=True),
                 'Beaker has automatically marked system \n'
                 'home-one <%sview/home-one> \n'
                 'as broken, due to:\n\n'
