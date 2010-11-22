@@ -32,7 +32,7 @@ subsequent requests which belong with this session.
 
 .. automethod:: auth.login_password
 
-.. automethod:: auth.logout
+.. automethod:: auth.logout()
 
 
 Distros
@@ -52,6 +52,8 @@ recorded in Beaker.
 .. automethod:: distros.untag
 
 
+.. _task-library:
+
 Task library
 ------------
 
@@ -66,32 +68,51 @@ These XML-RPC methods fetch and manipulate tasks in the Beaker task library.
 .. automethod:: tasks.upload
 
 
-DOCUMENTME
-----------
-
-.. currentmodule:: bkr.server.task_actions
-
-.. automethod:: taskactions.stop
-
-.. automethod:: taskactions.to_xml
-
-.. automethod:: taskactions.task_info
+Running jobs
+------------
 
 .. currentmodule:: bkr.server.jobs
 
 .. automethod:: jobs.upload
 
-.. automethod:: jobs.delete_jobs
-
 .. automethod:: jobs.list
 
-..
-   These ones can't use autodoc because their names confuse it :-(
+.. automethod:: jobs.delete_jobs
 
 .. currentmodule:: None
 
-.. function:: recipes.tasks.extend
+.. function:: recipes.tasks.extend(task_id, kill_time)
+
+   Extends the watchdog for a running task.
+
+   :param task_id: id of task to be extended
+   :type task_id: integer
+   :param kill_time: number of seconds by which to extend the watchdog
+   :type kill_time: integer
 
 .. function:: recipes.tasks.watchdog
 
+   Returns number of seconds left on the watchdog for the given task, or False 
+   if it doesn't exist.
+
+   :param task_id: id of task
+   :type task_id: integer
+
+.. automodule:: bkr.server.task_actions
+
+.. automethod:: taskactions.task_info(taskid)
+
+.. automethod:: taskactions.to_xml
+
+.. automethod:: taskactions.stop
+
+
+General Beaker information
+--------------------------
+
+.. currentmodule:: None
+
 .. function:: lab_controllers
+
+   Returns an array containing the fully-qualified domain name of each lab 
+   controller attached to the Beaker server.

@@ -1,24 +1,27 @@
+
+"""
+XML-RPC methods in the :mod:`taskactions` namespace can be applied to a running 
+job or any of its constituent parts (recipe sets, recipes, tasks, and task 
+results). For methods related to Beaker's task library, see the 
+:ref:`task-library` section.
+
+These methods accept a *taskid* argument, which must be a string of the form 
+*type*:*id*, for example ``'RS:4321'``. The server recognises the following 
+values for *type*:
+
+* J: Job
+* RS: Recipe set
+* R: Recipe
+* T: Task within a recipe
+* TR: Result within a task
+"""
+
 from turbogears.database import session
-from turbogears import controllers, expose, flash, widgets, validate, error_handler, validators, redirect, paginate, url
-from model import *
-from turbogears import identity, redirect, config
-from cherrypy import request, response
-from cherrypy.lib.cptools import serve_file
-from bexceptions import *
+from turbogears import expose
+from bkr.server.model import *
+from bkr.server.bexceptions import BX
 from bkr.server.xmlrpccontroller import RPCRoot
-
-from kid import Element
 import cherrypy
-import md5
-
-# for debugging
-import sys
-
-# from bkr.server import json
-# import logging
-# log = logging.getLogger("bkr.server.controllers")
-import breadcrumbs
-from datetime import datetime
 
 __all__ = ['TaskActions']
 
@@ -35,7 +38,11 @@ class TaskActions(RPCRoot):
     @cherrypy.expose
     def task_info(self, taskid, flat=True):
         """
-        XMLRPC method to get task status
+        Returns an XML-RPC structure (dict) describing the current state of the 
+        given job component.
+
+        :param taskid: see above
+        :type taskid: string
         """
         task_type, task_id = taskid.split(":")
         if task_type.upper() in self.task_types.keys():
@@ -48,7 +55,11 @@ class TaskActions(RPCRoot):
     @cherrypy.expose
     def to_xml(self, taskid):
         """
-        XMLRPC method to get xml of Job/RecipeSet/Recipe/etc..
+        Returns an XML representation of the given job component, including its 
+        current state.
+
+        :param taskid: see above
+        :type taskid: string
         """
         task_type, task_id = taskid.split(":")
         if task_type.upper() in self.task_types.keys():
@@ -61,7 +72,17 @@ class TaskActions(RPCRoot):
     @cherrypy.expose
     def stop(self, taskid, stop_type, msg):
         """
-        XMLRPC method to cancel/abort a Job/RecipeSet/Recipe/etc..
+        Cancels the given job. Note that when cancelling some part of a job 
+        (for example, by passing *taskid* starting with ``R:`` to indicate 
+        a particular recipe within a job) the entire job is cancelled.
+
+        :param taskid: see above
+        :type taskid: string
+        :param stop_type: must be ``'cancel'`` (other values are reserved for 
+            Beaker's internal use)
+        :type stop_type: string
+        :param msg: reason for cancelling
+        :type msg: string
         """
         task_type, task_id = taskid.split(":")
         if task_type.upper() in self.task_types.keys():
