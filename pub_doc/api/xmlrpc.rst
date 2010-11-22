@@ -54,50 +54,84 @@ inventory.
 .. automethod:: systems.provision
 
 
-DOCUMENTME
-----------
+Distros
+-------
+
+The following XML-RPC methods allow the caller to fetch and manipulate distros 
+recorded in Beaker.
 
 .. currentmodule:: bkr.server.distro
 
-.. automethod:: distros.edit_version
-
 .. automethod:: distros.filter
+
+.. automethod:: distros.edit_version
 
 .. automethod:: distros.tag
 
 .. automethod:: distros.untag
 
-.. currentmodule:: bkr.server.task_actions
 
-.. automethod:: taskactions.stop
+.. _task-library:
 
-.. automethod:: taskactions.to_xml
+Task library
+------------
 
-.. automethod:: taskactions.task_info
-
-.. currentmodule:: bkr.server.jobs
-
-.. automethod:: jobs.upload
-
-.. automethod:: jobs.delete_jobs
-
-.. automethod:: jobs.list
+These XML-RPC methods fetch and manipulate tasks in the Beaker task library.
 
 .. currentmodule:: bkr.server.tasks
-
-.. automethod:: tasks.upload
 
 .. automethod:: tasks.to_dict
 
 .. automethod:: tasks.filter
 
-..
-   These ones can't use autodoc because their names confuse it :-(
+.. automethod:: tasks.upload
+
+
+Running jobs
+------------
+
+.. currentmodule:: bkr.server.jobs
+
+.. automethod:: jobs.upload
+
+.. automethod:: jobs.list
+
+.. automethod:: jobs.delete_jobs
 
 .. currentmodule:: None
 
-.. function:: recipes.tasks.extend
+.. function:: recipes.tasks.extend(task_id, kill_time)
+
+   Extends the watchdog for a running task.
+
+   :param task_id: id of task to be extended
+   :type task_id: integer
+   :param kill_time: number of seconds by which to extend the watchdog
+   :type kill_time: integer
 
 .. function:: recipes.tasks.watchdog
 
+   Returns number of seconds left on the watchdog for the given task, or False 
+   if it doesn't exist.
+
+   :param task_id: id of task
+   :type task_id: integer
+
+.. automodule:: bkr.server.task_actions
+
+.. automethod:: taskactions.task_info(taskid)
+
+.. automethod:: taskactions.to_xml
+
+.. automethod:: taskactions.stop
+
+
+General Beaker information
+--------------------------
+
+.. currentmodule:: None
+
 .. function:: lab_controllers
+
+   Returns an array containing the fully-qualified domain name of each lab 
+   controller attached to the Beaker server.

@@ -25,6 +25,7 @@ import time
 from kid import Element
 from bkr.server.bexceptions import BeakerException, BX, CobblerTaskFailedException
 from bkr.server.helpers import *
+from bkr.server.util import unicode_truncate
 from bkr.server import mail
 import traceback
 from BasicAuthTransport import BasicAuthTransport
@@ -82,6 +83,12 @@ system_table = Table('system', metadata,
            ForeignKey('release_action.id')),
     Column('reprovision_distro_id', Integer,
            ForeignKey('distro.id')),
+)
+
+system_cc_table = Table('system_cc', metadata,
+        Column('system_id', Integer, ForeignKey('system.id', ondelete='CASCADE',
+            onupdate='CASCADE'), primary_key=True),
+        Column('email_address', Unicode(255), primary_key=True, index=True),
 )
 
 system_device_map = Table('system_device_map', metadata,
@@ -478,12 +485,12 @@ activity_table = Table('activity', metadata,
            nullable=False, primary_key=True),
     Column('user_id', Integer, ForeignKey('tg_user.user_id'), index=True),
     Column('created', DateTime, nullable=False, default=datetime.utcnow),
-    Column('type', String(40), nullable=False),
-    Column('field_name', String(40), nullable=False),
-    Column('service', String(100), nullable=False),
-    Column('action', String(40), nullable=False),
-    Column('old_value', String(60)),
-    Column('new_value', String(60))
+    Column('type', Unicode(40), nullable=False),
+    Column('field_name', Unicode(40), nullable=False),
+    Column('service', Unicode(100), nullable=False),
+    Column('action', Unicode(40), nullable=False),
+    Column('old_value', Unicode(60)),
+    Column('new_value', Unicode(60))
 )
 
 system_activity_table = Table('system_activity', metadata,
@@ -2085,38 +2092,47 @@ class System(SystemObject):
                                                kernel_options,
                                                kernel_options_post)
 
-        if kickstart:
-            # Escape any $ signs or cobbler will barf
-            kickstart = kickstart.replace('$','\$')
-            # add in cobbler packages snippet...
-            packages_slot = 0
-            nopackages = True
-            for line in kickstart.split('\n'):
-                # Add the length of line + newline
-                packages_slot += len(line) + 1
-                if line.find('%packages') == 0:
-                    nopackages = False
-                    break
-            beforepackages = kickstart[:packages_slot-1]
-            # if no %packages section then add it
-            if nopackages:
-                beforepackages = "%s\n%%packages --ignoremissing" % beforepackages
-            afterpackages = kickstart[packages_slot:]
-            # Fill in basic requirements for RHTS
-            kicktemplate = """
+        # Newer Kickstarts need %end after each section.
+        if distro.osversion.osmajor.osmajor.startswith("Fedora"):
+            end = "%end"
+        else:
+            end = ""
+        # Escape any $ signs or cobbler will barf
+        kickstart = kickstart.replace('$','\$')
+        # add in cobbler packages snippet...
+        packages_slot = 0
+        nopackages = True
+        for line in kickstart.split('\n'):
+            # Add the length of line + newline
+            packages_slot += len(line) + 1
+            if line.find('%packages') == 0:
+                nopackages = False
+                break
+        beforepackages = kickstart[:packages_slot-1]
+        afterpackages = kickstart[packages_slot:]
+        # if no %packages section then add it
+        if nopackages:
+            beforepackages = "%s\n%%packages --ignoremissing" % beforepackages
+            if end:
+                afterpackages = "%%end\n%s" % afterpackages
+        # Fill in basic requirements for RHTS
+        kicktemplate = """
 %(beforepackages)s
 $SNIPPET("rhts_packages")
 %(afterpackages)s
 
 %%pre
 $SNIPPET("rhts_pre")
+%(end)s
 
 %%post
 $SNIPPET("rhts_post")
-            """
-            kickstart = kicktemplate % dict(
-                                        beforepackages = beforepackages,
-                                        afterpackages = afterpackages)
+%(end)s
+       """
+        kickstart = kicktemplate % dict(
+                                    beforepackages = beforepackages,
+                                    afterpackages = afterpackages,
+                                    end = end)
 
         self.remote.provision(distro=distro,
                               kickstart=kickstart,
@@ -2161,6 +2177,9 @@ $SNIPPET("rhts_post")
             return # nothing to do
         if self.type != SystemType.by_name(u'Machine'):
             return # prototypes get more leeway, and virtual machines can't really "break"...
+        reliable_distro_tag = get('beaker.reliable_distro_tag', None)
+        if not reliable_distro_tag:
+            return
         # Since its last status change, has this system had an 
         # uninterrupted run of aborted recipes leading up to this one, with 
         # at least two different STABLE distros?
@@ -2183,14 +2202,14 @@ $SNIPPET("rhts_post")
                 .join(system_table, onclause=recipe_table.c.system_id == system_table.c.id))\
             .where(and_(
                 system_table.c.id == self.id,
-                distro_tag_map.c.distro_tag_id == DistroTag.by_tag(u'STABLE').id,
+                distro_tag_map.c.distro_tag_id == DistroTag.by_tag(reliable_distro_tag).id,
                 recipe_table.c.start_time >
                     func.ifnull(status_change_subquery, system_added_subquery),
                 recipe_table.c.finish_time > nonaborted_recipe_subquery))
         if session.execute(query).scalar() >= 2:
             # Broken!
             reason = unicode(_(u'System has a run of aborted recipes '
-                    'with STABLE distros'))
+                    'with reliable distros'))
             log.warn(reason)
             old_status = self.status
             self.mark_broken(reason=reason)
@@ -2237,6 +2256,13 @@ $SNIPPET("rhts_post")
             raise e
         self.activity.append(activity)
 
+    cc = association_proxy('_system_ccs', 'email_address')
+
+class SystemCc(SystemObject):
+
+    def __init__(self, email_address):
+        self.email_address = email_address
+  
 class SystemType(SystemObject):
 
     def __init__(self, type=None):
@@ -3027,6 +3053,14 @@ class Activity(object):
         self.service = service
         self.field_name = field_name
         self.action = action
+        # These values are likely to be truncated by MySQL, so let's make sure 
+        # we don't end up with invalid UTF-8 chars at the end
+        if old_value and isinstance(old_value, unicode):
+            old_value = unicode_truncate(old_value,
+                bytes_length=self.c.old_value.type.length)
+        if new_value and isinstance(new_value, unicode):
+            new_value = unicode_truncate(new_value,
+                bytes_length=self.c.new_value.type.length)
         self.old_value = old_value
         self.new_value = new_value
 
@@ -4398,7 +4432,8 @@ class Recipe(TaskBase):
         self._abort(msg)
         self.update_status()
         session.flush() # XXX bad
-        if self.system is not None and u'STABLE' in self.distro.tags:
+        if self.system is not None and \
+                get('beaker.reliable_distro_tag', None) in self.distro.tags:
             self.system.suspicious_abort()
 
     def _abort(self, msg=None):
@@ -5489,7 +5524,11 @@ System.mapper = mapper(System, system_table,
                                                backref='object'),
                      'release_action':relation(ReleaseAction, uselist=False),
                      'reprovision_distro':relation(Distro, uselist=False),
+                      '_system_ccs': relation(SystemCc, backref='system',
+                                      cascade="all, delete, delete-orphan"),
                      })
+
+mapper(SystemCc, system_cc_table)
 
 Cpu.mapper = mapper(Cpu,cpu_table,properties = {
                                                 

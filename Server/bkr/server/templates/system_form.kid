@@ -176,6 +176,13 @@ $(document).ready(function(){
        <td class="list">
         ${display_field_for("type_id")}
        </td>
+       <th class="list">
+        ${label_for('cc')}
+       </th>
+       <td class="list">
+        ${'; '.join(value_for("cc") or [])}
+        <a py:if="not readonly" href="${tg.url('/cc_change', system_id=id)}">(Change)</a>
+       </td>
       </tr>
       <tr py:if="not readonly">
        <td colspan="4">

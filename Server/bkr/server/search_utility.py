@@ -571,7 +571,6 @@ class SystemSearch(Search):
                 #If they are System columns we won't need to explicitly add them to the query, as they are already returned in the System query  
                 if cls_ref is System:     
                     self.system_columns_desc.append(elem)
-                    continue
                 elif col_ref is not None: 
                     self.extra_columns_desc.append(elem)
                     self.adding_columns = True 

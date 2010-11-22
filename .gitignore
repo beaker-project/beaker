@@ -14,5 +14,7 @@ Common/build
 Common/setup.py
 Client/build
 Client/setup.py
+LabController/proxy/build
+LabController/proxy/setup.py
 *.diff
 /pub_doc/api/build

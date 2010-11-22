@@ -222,7 +222,7 @@ class CSV_System(CSV):
                 'serial', 'shared', 'vendor']
 
     spec_keys = ['arch', 'lab_controller', 'owner', 
-                 'secret', 'status','type']
+                 'secret', 'status','type','cc']
 
     csv_keys = reg_keys + spec_keys
 
@@ -265,6 +265,16 @@ class CSV_System(CSV):
                 activity = SystemActivity(identity.current.user, 'CSV', 'Changed', 'arch', '%s' % system.arch, '%s' % arch_objs)
                 system.activity.append(activity)
                 system.arch = arch_objs
+
+        # import cc
+        if 'cc' in data:
+            cc_objs = []
+            if data['cc']:
+                cc_objs = data['cc'].split(',')
+            if system.cc != cc_objs:
+                activity = SystemActivity(identity.current.user, 'CSV', 'Changed', 'cc', '%s' % system.cc, '%s' % cc_objs)
+                system.activity.append(activity)
+                system.cc = cc_objs
 
         # import labController
         if 'lab_controller' in data:
@@ -356,6 +366,7 @@ class CSV_System(CSV):
         self.status = system.status
         self.type = system.type
         self.vendor = system.vendor
+        self.cc = ','.join([cc for cc in system.cc])
 
 class CSV_Power(CSV):
     csv_type = 'power'
