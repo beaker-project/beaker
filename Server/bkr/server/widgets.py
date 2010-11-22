@@ -1262,19 +1262,20 @@ class RecipeSetWidget(CompoundWidget):
     css = []
     template = "bkr.server.templates.recipe_set"
     params = ['recipeset','show_priority','action','priorities_list']
-    member_widgets = ['priority_widget','retentiontag_widget','ack_panel_widget']
+    member_widgets = ['priority_widget','retentiontag_widget','ack_panel_widget', 'product_widget']
 
     def __init__(self, priorities_list=None, *args, **kw):
         self.priorities_list = priorities_list
         self.ack_panel_widget = AckPanel()
         self.priority_widget = PriorityWidget()
         self.retentiontag_widget = RetentionTagWidget()
+        self.product_widget = ProductWidget()
         if 'recipeset' in kw:
             self.recipeset = kw['recipeset']
         else:
             self.recipeset = None
 
-   
+
 class RecipeWidget(CompoundWidget):
     javascript = [
                   LocalJSLink('bkr','/static/javascript/jquery.js'),
@@ -1285,12 +1286,31 @@ class RecipeWidget(CompoundWidget):
     member_widgets = ['recipe_tasks_widget']
     recipe_tasks_widget = RecipeTasksWidget()
 
+
+class ProductWidget(SingleSelectField):
+    validator = validators.NotEmpty()
+    def display(self,obj,value=None, *args, **params):
+        params['options'] =[(0, None)] +  [(elem.id,elem.name) for elem in model.Product.query().all()]
+
+        if isinstance(obj,model.Job):
+            if 'id_prefix' in params:
+                params['attrs'] = {'id' : '%s_%s' % (params['id_prefix'],obj.id) }
+        elif obj:
+            if 'id_prefix' in params:
+                params['attrs'] = {'id' : '%s_%s' % (params['id_prefix'],obj.id) }
+                try:
+                    value = obj.product.id
+                except AttributeError,(e):
+                    log.error('Object %s passed to display does not have a valid product: %s' % (type(obj),e))
+
+        return super(ProductWidget,self).display(value,**params)
+
 class RetentionTagWidget(SingleSelectField): #FIXME perhaps I shoudl create a parent that both Retention and Priority inherit from
-    validator = validators.NotEmpty() 
+    validator = validators.NotEmpty()
     params = ['default','controller']
 
     def __init__(self, *args, **kw):
-       self.options = [] 
+       self.options = []
        self.field_class = 'singleselectfield'
 
     def display(self,obj, value=None, **params):

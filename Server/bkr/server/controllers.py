@@ -314,7 +314,7 @@ class Root(RPCRoot):
     @expose(format='json')
     def get_keyvalue_search_options(self,**kw):
         return_dict = {}
-        return_dict['keyvals'] = Key.get_all_keys()
+        return_dict['keyvals'] = [x for x in Key.get_all_keys() if x != 'MODULE']
         return return_dict
 
     @expose(format='json')

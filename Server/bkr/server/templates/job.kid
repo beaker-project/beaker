@@ -7,6 +7,7 @@
     <script type="text/javascript" src="${tg.url('/static/javascript/master_slave_v2.js')}"></script>
     <script type="text/javascript" src="${tg.url('/static/javascript/priority_manager_v2.js')}"></script>
     <script type="text/javascript" src="${tg.url('/static/javascript/rettag_manager_v2.js')}"></script>
+   <script type="text/javascript" src="${tg.url('/static/javascript/product_manager.js')}"></script>
     <script type="text/javascript" src="${tg.url('/static/javascript/jquery.timers-1.2.js')}"></script>
     <script type="text/javascript" src="${tg.url('/static/javascript/jquery.cookie.js')}"></script>
     <script type='text/javascript'>
@@ -16,6 +17,9 @@
 
  retentiontag_manager = new RetentionTagManager()
  retentiontag_manager.initialize()
+
+ product_manager = new ProductManager()
+ product_manager.initialize()
 
  ackpanel  = new AckPanel()
       
@@ -82,9 +86,63 @@
         //ShowPriorityResults($(this),$(this).attr('name'),PARENT_);
     })
 
+    $("select[id^='product']").change(function() {
+
+        var callback = {'function' : ShowProductResults }
+        callback['args'] = { 'element_id' : null, 'value' : null }
+        callback['args']['element_id'] = $(this).attr("id")
+        callback['args']['value'] = $(this).val()
+        var success = product_manager.changeValue($(this).attr("id"),$(this).val(),callback)
+    })  
+
+    $("a[id^='product']").click(function() {
+        var callback = {'function' : ShowProductResults }
+        callback['args'] = {}
+        callback['args']['value'] = $(this).attr("name")
+        var success = product_manager.changeValue($(this).attr("id"),$(this).attr("name"),callback)
+    })
+
     
 
  });
+
+
+ function ShowProductResults(elem_id,value,old_value,msg,success) {
+     jquery_obj = $("#"+elem_id)
+     var id = elem_id.replace(/^.+?(\d{1,})$/,"$1")
+     var selector_msg = "msg[id='recipeset_product_status_"+id+"']"
+     var msg_text = ''
+     if(success) {
+         jquery_obj.val(value)
+         var class_ = "success"
+         if (msg) {
+             msg_text = msg
+         } else {
+             msg_text = "Product has been updated"
+         }
+     } else {
+         var warn = 1
+         var class_ = "warn"
+         if (old_value) {
+             jquery_obj.val(old_value)
+         }
+         if (msg) {
+             msg_text = msg
+         } else {
+             msg_text = "Unable to update Product"
+         }
+        
+     }
+     $(selector_msg).text(msg_text)
+     $(selector_msg).fadeIn(1000)
+     //$(selector_msg).show('slow')  
+     $(selector_msg).removeAttr('class') 
+     $(selector_msg).addClass(class_)     
+     if (!warn) {  
+         $(selector_msg).fadeOut(1000)
+     }
+ }
+
 
  function ShowRetentionTagResults(elem_id,value,old_value,msg,success) { 
      jquery_obj = $("#"+elem_id)

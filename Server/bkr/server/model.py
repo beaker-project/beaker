@@ -453,7 +453,15 @@ beaker_tag_table = Table('beaker_tag', metadata,
 
 retention_tag_table = Table('retention_tag', metadata,
     Column('id', Integer, ForeignKey('beaker_tag.id', onupdate='CASCADE', ondelete='CASCADE'),nullable=False, primary_key=True),
-    Column('default_', Boolean)
+    Column('default_', Boolean),
+    Column('needs_product', Boolean)
+)
+
+product_table = Table('product', metadata,
+    Column('id', Integer, autoincrement=True, nullable=False,
+        primary_key=True),
+    Column('name', Unicode(100),unique=True, index=True, nullable=False),
+    Column('created', DateTime, nullable=False, default=datetime.utcnow),
 )
 
 response_table = Table('response', metadata,
@@ -597,7 +605,7 @@ recipe_set_table = Table('recipe_set',metadata,
                 ForeignKey('task_status.id'), default=select([task_status_table.c.id], limit=1).where(task_status_table.c.status==u'New').correlate(None)),
         Column('lab_controller_id', Integer,
                 ForeignKey('lab_controller.id')),
-        Column('product', Unicode(50)),
+        Column('product_id', Integer, ForeignKey('product.id'),nullable=True),
         # Total tasks
 	Column('ttasks', Integer, default=0),
         # Total Passing tasks
@@ -3574,7 +3582,21 @@ class JobCc(MappedObject):
 
     def __init__(self, email_address):
         self.email_address = email_address
-  
+
+
+class Product(object):
+
+    def __init__(self, name):
+        self.name = name
+
+    @classmethod
+    def by_id(cls, id):
+        return cls.query().filter(cls.id == id).one()
+
+    @classmethod
+    def by_name(cls, name):
+        return cls.query().filter(cls.name == name).one()
+
 class BeakerTag(object):
 
     def __init__(self, tag, *args, **kw):
@@ -3592,12 +3614,16 @@ class BeakerTag(object):
     def get_all(cls, *args, **kw):
         return cls.query()
 
+
 class RetentionTag(BeakerTag):
 
     def __init__(self, tag, is_default=False, *args, **kw):
         self.set_default_val(is_default)
         super(RetentionTag, self).__init__(tag, **kw)
         session.flush()
+
+    def requires_product(self):
+        return self.needs_product
 
     def get_default_val(self):
         return self.is_default
@@ -3621,7 +3647,7 @@ class RetentionTag(BeakerTag):
             q = cls.query().filter(cls.tag.like('%%%s%%' % tag))
         else:
             q = cls.query().filter(cls.tag.like('%s%%' % tag))
-        return q
+        return q 
         
     def __repr__(self, *args, **kw):
         return self.tag
@@ -3703,6 +3729,9 @@ class RecipeSet(TaskBase):
         recipeSet = self.doc.createElement("recipeSet")
         return_node = recipeSet 
         recipeSet.setAttribute('retention_tag', "%s"  % self.retention_tag)
+        product = self.product
+        if product:
+            recipeSet.setAttribute('product', '%s' % product.name)
         #Add in Ack/Nak response here if it exists
         if not clone:
             response = self.get_response()
@@ -3757,6 +3786,9 @@ class RecipeSet(TaskBase):
 
         return paths,errors
 
+    def requires_product(self):
+        return self.retention_tag.requires_product()
+
     @classmethod
     def allowed_priorities_initial(cls,user):
         if not user:
@@ -3782,6 +3814,12 @@ class RecipeSet(TaskBase):
             tag_query = cls.retention_tag==RetentionTag.by_tag(unicode(tag))
         
         return query.filter(tag_query)
+
+    @classmethod
+    def by_product(cls, product, query=None):
+        if query is None:
+            query=cls.query()
+        return query.join('product').filter(Product.name==product)
 
     @classmethod
     def has_family(cls,family,query=None, **kw):
@@ -5597,6 +5635,8 @@ mapper(Job, job_table,
                       '_job_ccs': relation(JobCc, backref='job')})
 mapper(JobCc, job_cc_table)
 
+mapper(Product, product_table)
+
 mapper(RecipeSetResponse,recipe_set_nacked_table,
         properties = { 'recipesets':relation(RecipeSet),
                         'response' : relation(Response,uselist=False)})
@@ -5609,6 +5649,7 @@ mapper(RecipeSet, recipe_set_table,
                       'result':relation(TaskResult, uselist=False),
                       'status':relation(TaskStatus, uselist=False),
                       'retention_tag':relation(RetentionTag, uselist=False,backref='recipeset'),
+                      'product':relation(Product, uselist=False, backref='recipeset'),
                       'activity':relation(RecipeSetActivity,
                                      order_by=[activity_table.c.created.desc()],
                                                backref='object'),

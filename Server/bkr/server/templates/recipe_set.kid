@@ -14,12 +14,17 @@
     <script type='text/javascript'>
        pri_manager.register('priority_recipeset_${recipeset.id}','recipeset')
     </script>
-   </span>   
+   </span>
    <span py:if="recipeset.is_owner(tg.identity.user) or 'admin' in tg.identity.groups">
-   <td class="title"><msg id="recipeset_tag_status_${recipeset.id}" class='hidden'></msg> <b>Retention Tag</b></td>  
+   <td class="title"><msg id="recipeset_tag_status_${recipeset.id}" class='hidden'></msg> <b>Retention Tag</b></td>
    <td class="value">${retentiontag_widget.display(obj=recipeset,id_prefix='retentiontag_recipeset')}</td>
    <script type='text/javascript'>
        retentiontag_manager.register('retentiontag_recipeset_${recipeset.id}','slave')
+   </script>
+   <td class="title"><msg id="recipeset_product_status_${recipeset.id}" class='hidden'></msg><b>Product</b></td>
+   <td class="value">${product_widget.display(obj=recipeset, id_prefix='product_recipeset')}</td>
+   <script type='text/javascript'>
+       product_manager.register('product_recipeset_${recipeset.id}','slave')
    </script>
    </span>
    <td class="title"><b>Action</b></td>

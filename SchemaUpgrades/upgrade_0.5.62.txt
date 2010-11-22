@@ -1,0 +1,13 @@
+SQL needed for bz649483:
+
+use beaker;
+ALTER TABLE retention_tag ADD COLUMN (needs_product tinyint default 0);
+UPDATE retention_tag SET needs_product = 1 WHERE id IN (SELECT id from beaker_tag where tag IN ('active','audit'));
+ALTER TABLE recipe_set ADD COLUMN (product_id varchar(100) default null);
+
+
+Rollback:
+DROP table product;
+ALTER TABLE retention_tag DROP COLUMN needs_product;
+ALTER TABLE recipe_set DROP COLUMN product_id;
+
