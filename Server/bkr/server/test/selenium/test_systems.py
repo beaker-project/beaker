@@ -61,3 +61,69 @@ class TestSystemView(SeleniumTestCase):
         sel.wait_for_page_to_load('3000')
         self.assertEqual(self.selenium.get_title(),
                 'Report a problem with %s' % self.system.fqdn)
+
+    def test_links_to_cc_change(self):
+        self.login()
+        sel = self.selenium
+        self.go_to_system_view()
+        sel.click( # link inside cell beside "Notify CC" cell
+                '//table[@class="list"]//td'
+                '[normalize-space(preceding-sibling::th[1]/label/text())="Notify CC"]'
+                '/a[text()="(Change)"]')
+        sel.wait_for_page_to_load('30000')
+        self.assertEqual(self.selenium.get_title(),
+                'Notify CC list for %s' % self.system.fqdn)
+
+class SystemCcTest(SeleniumTestCase):
+
+    def setUp(self):
+        user = data_setup.create_user(password=u'swordfish')
+        self.system = data_setup.create_system(owner=user)
+        session.flush()
+        self.selenium = self.get_selenium()
+        self.selenium.start()
+        self.login(user=user.user_name, password='swordfish')
+
+    def tearDown(self):
+        self.selenium.stop()
+
+    def test_add_email_addresses(self):
+        self.system.cc = []
+        session.flush()
+        sel = self.selenium
+        sel.open('cc_change?system_id=%s' % self.system.id)
+        assert not sel.get_value('cc_cc_0_email_address'), 'should be empty'
+        sel.type('cc_cc_0_email_address', 'roy.baty@pkd.com')
+        sel.click('doclink') # why the hell is it called this?
+        sel.type('cc_cc_1_email_address', 'deckard@police.gov')
+        sel.click('//input[@value="Change"]')
+        sel.wait_for_page_to_load('30000')
+        session.refresh(self.system)
+        self.assertEquals(set(self.system.cc),
+                set([u'roy.baty@pkd.com', u'deckard@police.gov']))
+
+    def test_remove_email_addresses(self):
+        self.system.cc = [u'roy.baty@pkd.com', u'deckard@police.gov']
+        session.flush()
+        sel = self.selenium
+        sel.open('cc_change?system_id=%s' % self.system.id)
+        sel.click('//tr[@id="cc_cc_1"]//a[text()="Remove (-)"]')
+        #sel.click('//tr[@id="cc_cc_0"]//a[text()="Remove (-)"]')
+        # The tg_expanding_widget javascript doesn't let us remove the last element,
+        # so we have to just clear it instead :-S
+        sel.type('cc_cc_0_email_address', '')
+        sel.click('//input[@value="Change"]')
+        sel.wait_for_page_to_load('30000')
+        session.refresh(self.system)
+        self.assertEquals(self.system.cc, [])
+
+    def test_replace_existing_email_address(self):
+        self.system.cc = [u'roy.baty@pkd.com']
+        session.flush()
+        sel = self.selenium
+        sel.open('cc_change?system_id=%s' % self.system.id)
+        sel.type('cc_cc_0_email_address', 'deckard@police.gov')
+        sel.click('//input[@value="Change"]')
+        sel.wait_for_page_to_load('30000')
+        session.refresh(self.system)
+        self.assertEquals(self.system.cc, [u'deckard@police.gov'])
