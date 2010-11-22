@@ -52,6 +52,8 @@ import cgi
 
 log = logging.getLogger(__name__)
 
+__all__ = ['JobForm', 'Jobs']
+
 class JobForm(widgets.Form):
 
     template = 'bkr.server.templates.job_form'
@@ -141,6 +143,21 @@ class Jobs(RPCRoot):
 
     @cherrypy.expose
     def list(self, tags, days_complete_for, family, **kw):
+        """
+        Lists recipe sets, filtered by the given criteria.
+
+        :param tags: limit to recipe sets which have one of these retention tags
+        :type tags: string or array of strings
+        :param days_complete_for: limit to recipe sets which completed at least this many days ago
+        :type days_complete_for: integer
+        :param family: limit to recipe sets which used distros with this family name
+        :type family: string
+
+        Returns a two-element array. The first element is an array of recipe 
+        set IDs of the form ``'RS:123'``, suitable to be passed to the 
+        :meth:`jobs.delete_jobs` method. The second element is a human-readable 
+        count of the number of recipe sets matched.
+        """
         try:
             recipesets = self._list(tags, days_complete_for, family, **kw)
         except ValueError, e:
@@ -152,7 +169,22 @@ class Jobs(RPCRoot):
     @identity.require(identity.in_group("admin"))
     def delete_jobs(self, jobs=None, tag=None, complete_days=None, family=None, dryrun=False,**kw):
         """
-        Handles deletion of jobs and entities within jobs
+        Deletes log data associated with jobs. Returns a human-readable 
+        description of files which have been deleted, and any errors 
+        encountered.
+
+        To select jobs by id, pass an array for the *jobs* argument. Elements 
+        of the array must be strings of the form ``'J:123'`` or ``'RS:123'``, 
+        to select jobs or recipe sets respectively.
+        Alternatively, pass some combination of the *tag*, *complete_days*, or 
+        *family* arguments to select jobs for deletion. These arguments behave 
+        as per the :meth:`jobs.list` method.
+
+        If *dryrun* is True, deletions will be reported but nothing will be 
+        deleted from the file system.
+
+        At present, only Beaker administrators (in the 'admin' group) are 
+        permitted to call this method.
         """
         deleted_paths = []
         errors = []
@@ -178,11 +210,15 @@ class Jobs(RPCRoot):
                 errors.extend(new_errors)
         return 'Deleted paths:%s' % ','.join(deleted_paths), ' Errors: %s' % ','.join(errors)
 
+    # XMLRPC method
     @cherrypy.expose
     @identity.require(identity.not_anonymous())
     def upload(self, jobxml):
         """
-        XMLRPC method to upload job
+        Queues a new job.
+
+        :param jobxml: XML description of job to be queued
+        :type jobxml: string
         """
         session.begin()
         xml = xmltramp.parse(jobxml)
@@ -655,3 +691,5 @@ class Jobs(RPCRoot):
                     whiteboard_widget    = self.whiteboard_widget,
                     job                  = job)
 
+# for sphinx
+jobs = Jobs

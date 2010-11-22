@@ -42,6 +42,8 @@ import cherrypy
 from model import *
 import string
 
+__all__ = ['Tasks']
+
 class Tasks(RPCRoot):
     # For XMLRPC methods in this class.
     exposed = True
@@ -70,9 +72,24 @@ class Tasks(RPCRoot):
         )
 
     @cherrypy.expose
-    def filter(self, filter=None):
+    def filter(self, filter):
         """
-        XMLRPC method to query all tasks that apply to this distro
+        Returns a list of tasks filtered by the given criteria.
+
+        The *filter* argument must be an XML-RPC structure (dict), with any of the following keys:
+
+            'install_name'
+                Distro install name. Include only tasks which are compatible 
+                with this distro.
+            'packages'
+                List of package names. Include only tasks which have a Run-For 
+                entry matching any of these packages.
+            'types'
+                List of task types. Include only tasks which have one or more 
+                of these types.
+
+        The return value is an array of names of the matching tasks. Call 
+        :meth:`tasks.to_dict` to fetch metadata for a particular task.
         """
         if 'install_name' in filter and filter['install_name']:
             try:
@@ -119,11 +136,16 @@ class Tasks(RPCRoot):
         # Return all task names
         return [task.name for task in tasks]
 
-
     @cherrypy.expose
     def upload(self, task_rpm_name, task_rpm_data):
         """
-        XMLRPC method to upload task rpm package
+        Uploads a new task RPM.
+
+        :param task_rpm_name: filename of the task RPM, for example 
+            ``'beaker-distribution-install-1.10-11.noarch.rpm'``
+        :type task_rpm_name: string
+        :param task_rpm_data: contents of the task RPM
+        :type task_rpm_data: XML-RPC binary
         """
         rpm_file = "%s/%s" % (self.task_dir, task_rpm_name)
         FH = open(rpm_file, "w")
@@ -354,7 +376,9 @@ class Tasks(RPCRoot):
 
     @cherrypy.expose
     def to_dict(self, name):
-        """ Return the metadata about task """
+        """
+        Returns an XML-RPC structure (dict) with details about the given task.
+        """
         return Task.by_name(name).to_dict()
 
     def read_taskinfo(self, rpm_file):
@@ -421,3 +445,6 @@ class Tasks(RPCRoot):
         if 'recipe_id' in kw:
             recipe = Recipe.by_id(kw['recipe_id'])
             return recipe.all_tasks
+
+# for sphinx
+tasks = Tasks

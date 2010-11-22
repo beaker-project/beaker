@@ -170,12 +170,6 @@ class ReserveWorkflow(Form):
                 #Sort distro alphabetically,diregarding version
                 return distro_1 < distro_2 and -1 or 1
                               
-        self.all_arches = [[elem.arch,elem.arch] for elem in model.Arch.query()]
-        self.all_tags = [['','None Selected']] + [[elem.tag,elem.tag] for elem in model.DistroTag.query()]  
-        self.all_methods = [[elem,elem] for elem in model.Distro.all_methods()]
-        e = [elem.osmajor for elem in model.OSMajor.query()] 
-        self.all_distro_familys = [('','None Selected')] + [[osmajor,osmajor] for osmajor in sorted(e,cmp=my_cmp )]  
-
         self.method_ = SingleSelectField(name='method', label='Method', options=[None], 
             validator=validators.NotEmpty())
         self.distro = SingleSelectField(name='distro', label='Distro', 
@@ -201,6 +195,11 @@ class ReserveWorkflow(Form):
             for k in params['options'].keys():
                 params[k] = params['options'][k]
                 del params['options'][k]
+        params['all_arches'] = [[elem.arch,elem.arch] for elem in model.Arch.query()]
+        params['all_tags'] = [['','None Selected']] + [[elem.tag,elem.tag] for elem in model.DistroTag.query()]
+        params['all_methods'] = [[elem,elem] for elem in model.Distro.all_methods()]
+        e = [elem.osmajor for elem in model.OSMajor.query()]
+        params['all_distro_familys'] = [('','None Selected')] + [[osmajor,osmajor] for osmajor in sorted(e,cmp=my_cmp )]
         return super(ReserveWorkflow,self).display(value,**params)
 
     def update_params(self,d):
@@ -789,7 +788,8 @@ class PowerForm(Form):
         self.power = HiddenField(name="power")
         self.power_type_id = SingleSelectField(name='power_type_id',
                                            label=_(u'Power Type'),
-                                           options=model.PowerType.get_all)
+                                           options=model.PowerType.get_all,
+                                           validator=validators.NotEmpty())
         self.power_address = TextField(name='power_address', label=_(u'Power Address'))
         self.power_user = TextField(name='power_user', label=_(u'Power Login'))
         self.power_passwd = TextField(name='power_passwd', label=_(u'Power Password'))
@@ -1068,10 +1068,12 @@ class SystemInstallOptions(Form):
                                  validator=validators.NotEmpty())
         self.prov_osmajor      = SingleSelectField(name='prov_osmajor',
                                  label=_(u'Family'),
-                                 options=model.OSMajor.get_all)
+                                 options=model.OSMajor.get_all,
+                                 validator=validators.NotEmpty())
         self.prov_osversion    = SingleSelectField(name='prov_osversion',
                                  label=_(u'Update'),
-                                 options=model.OSVersion.get_all)
+                                 options=model.OSVersion.get_all,
+                                 validator=validators.NotEmpty())
         self.prov_ksmeta       = TextField(name='prov_ksmeta', 
                                      label=_(u'Kickstart Metadata'))
         self.prov_koptions     = TextField(name='prov_koptions', 
@@ -1193,7 +1195,8 @@ class SystemForm(Form):
                TextArea(name='status_reason', label=_(u'Condition Report'),attrs={'rows':3,'cols':27},validator=validators.MaxLength(255)),
                SingleSelectField(name='lab_controller_id',
                                  label=_(u'Lab Controller'),
-                                 options=lambda: [(0,"None")] + model.LabController.get_all()),
+                                 options=lambda: [(0,"None")] + model.LabController.get_all(),
+                                 validator=validators.Int()),
                TextField(name='vendor', label=_(u'Vendor')),
                TextField(name='model', label=_(u'Model')),
                TextField(name='date_added', label=_(u'Date Created')),
