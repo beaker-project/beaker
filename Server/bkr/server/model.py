@@ -1284,9 +1284,7 @@ class System(SystemObject):
                                               'modify_interface',
                                               {'ipaddress-eth0': ipaddress}, 
                                               self.token)
-                    profile = self.remote.get_profiles(0,
-                                                       1,
-                                                       self.token)[0]['name']
+                    profile = self.remote.get_item_names('profile')[0]
                     self.remote.modify_system(system_id, 
                                               'profile', 
                                               profile,
