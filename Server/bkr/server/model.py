@@ -84,6 +84,12 @@ system_table = Table('system', metadata,
            ForeignKey('distro.id')),
 )
 
+system_cc_table = Table('system_cc', metadata,
+        Column('system_id', Integer, ForeignKey('system.id', ondelete='CASCADE',
+            onupdate='CASCADE'), primary_key=True),
+        Column('email_address', Unicode(255), primary_key=True, index=True),
+)
+
 system_device_map = Table('system_device_map', metadata,
     Column('system_id', Integer,
            ForeignKey('system.id'),
@@ -2201,6 +2207,7 @@ $SNIPPET("rhts_post")
                     old_value=old_status,
                     new_value=self.status))
 
+    cc = association_proxy('_system_ccs', 'email_address')
 # for property in System.mapper.iterate_properties:
 #     print property.mapper.class_.__name__
 #     print property.key
@@ -2208,6 +2215,11 @@ $SNIPPET("rhts_post")
 # systems = session.query(System).join('status').join('type').join(['cpu','flags']).filter(CpuFlag.c.flag=='lm')
 
 
+class SystemCc(SystemObject):
+
+    def __init__(self, email_address):
+        self.email_address = email_address
+  
 class SystemType(SystemObject):
 
     def __init__(self, type=None):
@@ -5469,7 +5481,11 @@ System.mapper = mapper(System, system_table,
                                                backref='object'),
                      'release_action':relation(ReleaseAction, uselist=False),
                      'reprovision_distro':relation(Distro, uselist=False),
+                      '_system_ccs': relation(SystemCc, backref='system',
+                                      cascade="all, delete, delete-orphan"),
                      })
+
+mapper(SystemCc, system_cc_table)
 
 Cpu.mapper = mapper(Cpu,cpu_table,properties = {
                                                 

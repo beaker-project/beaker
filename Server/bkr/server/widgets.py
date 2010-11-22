@@ -1224,6 +1224,7 @@ class SystemForm(Form):
                                       search_param="name",
                                       result_name="groups"),
                TextField(name='mac_address', label=_(u'Mac Address')),
+               TextField(name='cc', label=_(u'Notify CC')),
     ]
 
     def display_value(self, item, hidden_fields, value=None):
