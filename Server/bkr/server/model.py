@@ -1391,7 +1391,7 @@ class System(SystemObject):
                 if not profile_id:
                     raise BX(_("%s profile not found on %s" % (profile, self.system.lab_controller.fqdn)))
                 if ks_appends:
-                    ks_appends_text = '\n'.join([ks.ks_append for ks in ks_appends]).replace('$','\$')
+                    ks_appends_text = '#raw\n%s\n#end raw' % '\n'.join([ks.ks_append for ks in ks_appends])
                     ks_file = '/var/lib/cobbler/snippets/per_system/ks_appends/%s' % self.system.fqdn
                     if self.remote.read_or_write_snippet(ks_file,
                                                          False,
@@ -1414,7 +1414,13 @@ class System(SystemObject):
                                            kernel_options_post,
                                            self.token)
                 if kickstart:
-                    kickstart = 'url --url=$tree\n' + kickstart
+                    # We always wrap the user-supplied kickstart with #raw/#end raw, 
+                    # so that users don't need to worry about escaping their 
+                    # kickstarts from Cobbler's cheetah. If a user really does 
+                    # want to do fancy Cobbler template stuff, they can put 
+                    # #end raw and #raw lines in the appropriate place in their 
+                    # kickstart.
+                    kickstart = 'url --url=$tree\n#raw\n%s\n#end raw' % kickstart
 
                     kickfile = '/var/lib/cobbler/kickstarts/%s.ks' % self.system.fqdn
         
@@ -2097,8 +2103,6 @@ class System(SystemObject):
             end = "%end"
         else:
             end = ""
-        # Escape any $ signs or cobbler will barf
-        kickstart = kickstart.replace('$','\$')
         # add in cobbler packages snippet...
         packages_slot = 0
         nopackages = True
@@ -2118,8 +2122,11 @@ class System(SystemObject):
         # Fill in basic requirements for RHTS
         kicktemplate = """
 %(beforepackages)s
+#end raw
 $SNIPPET("rhts_packages")
+#raw
 %(afterpackages)s
+#end raw
 
 %%pre
 $SNIPPET("rhts_pre")
@@ -2128,6 +2135,7 @@ $SNIPPET("rhts_pre")
 %%post
 $SNIPPET("rhts_post")
 %(end)s
+#raw
        """
         kickstart = kicktemplate % dict(
                                     beforepackages = beforepackages,
