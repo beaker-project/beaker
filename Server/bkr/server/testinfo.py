@@ -227,6 +227,7 @@ class Parser:
 
         self.valid_options = [
             'Compatible',
+            'StrongerAVC',
             ]
         
         self.valid_properties = [
