@@ -26,6 +26,11 @@ from turbogears.database import session
 import turbomail.adapters.tg1
 from bkr.server.test import data_setup
 
+# workaround for weird sqlalchemy-0.4 bug :-S
+# http://markmail.org/message/rnnzdebfzrjt3kmi
+from sqlalchemy.orm.dynamic import DynamicAttributeImpl
+DynamicAttributeImpl.accepts_scalar_loader = False
+
 log = logging.getLogger(__name__)
 
 CONFIG_FILE = os.environ.get('BEAKER_CONFIG_FILE', 'test.cfg')

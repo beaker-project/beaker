@@ -7,12 +7,6 @@ from bkr.server.model import System, SystemStatus, SystemActivity, TaskStatus, \
         SystemType, Job, JobCc, Key, Key_Value_Int, Key_Value_String, \
         job_cc_table
 from bkr.server.test import data_setup
-from bkr.server.test.mail_capture import MailCaptureThread
-
-# workaround for weird sqlalchemy-0.4 bug :-S
-# http://markmail.org/message/rnnzdebfzrjt3kmi
-from sqlalchemy.orm.dynamic import DynamicAttributeImpl
-DynamicAttributeImpl.accepts_scalar_loader = False
 
 class TestSystem(unittest.TestCase):
 
@@ -164,44 +158,6 @@ class TestJob(unittest.TestCase):
             self.assertEquals(JobCc.query().filter_by(job_id=job.id).count(), 2)
         finally:
             session.rollback()
-
-class TestJobCompletionNotification(unittest.TestCase):
-
-    def setUp(self):
-        self.mail_capture = MailCaptureThread()
-        self.mail_capture.start()
-
-    def tearDown(self):
-        self.mail_capture.stop()
-
-    def test_job_owner_is_notified(self):
-        self.job_owner = data_setup.create_user()
-        self.job = data_setup.create_job(owner=self.job_owner)
-        session.flush()
-        data_setup.mark_job_complete(self.job)
-
-        self.assertEqual(len(self.mail_capture.captured_mails), 1)
-        sender, rcpts, raw_msg = self.mail_capture.captured_mails[0]
-        msg = email.message_from_string(raw_msg)
-        self.assertEqual([self.job_owner.email_address], rcpts)
-        self.assertEqual(self.job_owner.email_address, msg['To'])
-        self.assert_('[Beaker Job Completion]' in msg['Subject'])
-
-    def test_job_cc_list_is_notified(self):
-        self.job_owner = data_setup.create_user()
-        self.job = data_setup.create_job(owner=self.job_owner,
-                cc=[u'dan@example.com', u'ray@example.com'])
-        session.flush()
-        data_setup.mark_job_complete(self.job)
-
-        self.assertEqual(len(self.mail_capture.captured_mails), 1)
-        sender, rcpts, raw_msg = self.mail_capture.captured_mails[0]
-        msg = email.message_from_string(raw_msg)
-        self.assertEqual([self.job_owner.email_address, 'dan@example.com',
-                'ray@example.com'], rcpts)
-        self.assertEqual(self.job_owner.email_address, msg['To'])
-        self.assertEqual('dan@example.com, ray@example.com', msg['Cc'])
-        self.assert_('[Beaker Job Completion]' in msg['Subject'])
 
 if __name__ == '__main__':
     unittest.main()

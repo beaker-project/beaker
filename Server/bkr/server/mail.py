@@ -42,8 +42,8 @@ def send_mail(sender, to, subject, body, **kwargs):
         log.exception("Exception thrown when trying to send mail")
 
 def failed_recipes(job):
-    msg = "JobID: %s Status: %s Result: %s\n" % \
-             (job.id, job.status, job.result)
+    msg = "JobID: %s Status: %s Result: %s <%s>\n" % \
+             (job.id, job.status, job.result, absolute_url('/jobs/%s' % job.id))
     for recipeset in job.recipesets:
         if recipeset.is_failed():
             msg = "%s\tRecipeSetID: %s\n" % ( msg, recipeset.id )
