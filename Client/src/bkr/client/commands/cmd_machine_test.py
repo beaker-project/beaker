@@ -54,8 +54,10 @@ class Machine_Test(BeakerWorkflow):
             kwargs["whiteboard"] = "Test %s" % machine
 
         if not families:
+            if not kwargs.get("tag"):
+                kwargs['tag'].append(u'Active')
             try:
-                families = self.getOsMajors(*args, tag=u'Active')
+                families = self.getOsMajors(*args, **kwargs)
             except:
                 families = ['RedHatEnterpriseLinux3',
                             'RedHatEnterpriseLinux4',

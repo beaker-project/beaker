@@ -194,10 +194,10 @@ class BeakerWorkflow(BeakerCommand):
         """ Get all OsMajors, optionally filter by tag """ 
         username = kwargs.get("username", None)
         password = kwargs.get("password", None)
-        active = kwargs.get("tag", 0)
+        tags = kwargs.get("tag", [])
         if not hasattr(self,'hub'):
             self.set_hub(username, password)
-        return self.hub.distros.get_osmajors(active)
+        return self.hub.distros.get_osmajors(tags)
 
     def getFamily(self, *args, **kwargs):
         """ Get the family/osmajor for a particular distro """
