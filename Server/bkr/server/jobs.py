@@ -607,7 +607,7 @@ class Jobs(RPCRoot):
             redirect(".")
         job.cancel(msg)
         flash(_(u"Successfully cancelled job %s" % id))
-        redirect(".")
+        redirect('/jobs/mine')
 
     @identity.require(identity.not_anonymous())
     @expose(template="bkr.server.templates.form")
