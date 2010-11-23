@@ -1269,7 +1269,6 @@ class RecipeSetWidget(CompoundWidget):
         self.ack_panel_widget = AckPanel()
         self.priority_widget = PriorityWidget()
         self.retentiontag_widget = RetentionTagWidget()
-        self.product_widget = ProductWidget()
         if 'recipeset' in kw:
             self.recipeset = kw['recipeset']
         else:
@@ -1305,30 +1304,34 @@ class ProductWidget(SingleSelectField):
 
         return super(ProductWidget,self).display(value,**params)
 
-class RetentionTagWidget(SingleSelectField): #FIXME perhaps I shoudl create a parent that both Retention and Priority inherit from
-    validator = validators.NotEmpty()
-    params = ['default','controller']
+class RetentionTagWidget(SingleSelectField, RPC): #FIXME perhaps I shoudl create a parent that both Retention and Priority inherit from
+    javascript = [LocalJSLink('bkr', '/static/javascript/job_retentiontag.js')]
+    validator = validators.NotEmpty() 
+    params = ['action', 'job_id']
+    action  = '/jobs/update'
+    before = 'job_retentiontag_before()'
+    on_complete = 'job_retentiontag_complete()'
+    on_success = 'job_retentiontag_save_success()'
+    on_failure = 'job_retentiontag_save_failure()'
 
     def __init__(self, *args, **kw):
        self.options = []
        self.field_class = 'singleselectfield'
 
-    def display(self,obj, value=None, **params):
-        params['options'] = [(elem.id,elem.tag) for elem in model.RetentionTag.query().all()]
-
-        if isinstance(obj,model.Job):
-            if 'id_prefix' in params:
-                params['attrs'] = {'id' : '%s_%s' % (params['id_prefix'],obj.id) }
-        elif obj:
-            if 'id_prefix' in params:
-                params['attrs'] = {'id' : '%s_%s' % (params['id_prefix'],obj.id) } 
-                try:
-                    value = obj.retention_tag.id 
-                except AttributeError,(e):
-                    log.error('Object %s passed to display does not have a valid retention_tag: %s' % (type(obj),e))
-
+    def display(self,value, **params):
+        params['options'] = [(elem.id,elem.tag) for elem in model.RetentionTag.query().all()] 
         return super(RetentionTagWidget,self).display(value or None,**params)
 
+    def update_params(self, d):
+        super(RetentionTagWidget, self).update_params(d)
+        d['attrs']['id'] = 'job_retentiontag'
+        d['attrs']['onchange'] = "return ! remoteRequest(self, '%s', 'job_retentiontag', %s, %s)" % (
+            d.get('action'),
+            jsonify.encode(d.get('data')),
+            jsonify.encode(self.get_options(d)),
+            )
+
+          
 class PriorityWidget(SingleSelectField):   
    validator = validators.NotEmpty()
    params = ['default','controller'] 

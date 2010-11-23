@@ -568,6 +568,8 @@ job_table = Table('job',metadata,
         Column('owner_id', Integer,
                 ForeignKey('tg_user.user_id'), index=True),
         Column('whiteboard',Unicode(2000)),
+        Column('retention_tag_id', Integer, ForeignKey('retention_tag.id'), nullable=False),
+        Column('product_id', Integer, ForeignKey('product.id'),nullable=True),
         Column('result_id', Integer,
                 ForeignKey('task_result.id')),
         Column('status_id', Integer,
@@ -598,14 +600,12 @@ recipe_set_table = Table('recipe_set',metadata,
                 ForeignKey('task_priority.id'), default=select([task_priority_table.c.id], limit=1).where(task_priority_table.c.priority==u'Normal').correlate(None)),
         Column('queue_time',DateTime, nullable=False, default=datetime.utcnow),
         Column('delete_time', DateTime, nullable=True),
-        Column('retention_tag_id', Integer, ForeignKey('retention_tag.id', ondelete="CASCADE", onupdate="CASCADE"), nullable=False), 
         Column('result_id', Integer,
                 ForeignKey('task_result.id')),
         Column('status_id', Integer,
                 ForeignKey('task_status.id'), default=select([task_status_table.c.id], limit=1).where(task_status_table.c.status==u'New').correlate(None)),
         Column('lab_controller_id', Integer,
                 ForeignKey('lab_controller.id')),
-        Column('product_id', Integer, ForeignKey('product.id'),nullable=True),
         # Total tasks
 	Column('ttasks', Integer, default=0),
         # Total Passing tasks
@@ -2986,7 +2986,6 @@ class SystemActivity(Activity):
     def object_name(self):
         return "System: %s" % self.object.fqdn
 
-
 class RecipeSetActivity(Activity):
     def object_name(self):
         return "RecipeSet: %s" % self.object.id
@@ -3431,6 +3430,9 @@ class Job(TaskBase):
         session.flush()
         return job
 
+    def requires_product(self):
+        return self.retention_tag.requires_product()
+
     def delete(self,dryrun, *args, **kw):
         paths = []
         errors = []
@@ -3496,6 +3498,9 @@ class Job(TaskBase):
             for email_address in self.cc:
                 notify.appendChild(self.node('cc', email_address))
             job.appendChild(notify)
+        if self.product:
+            job.setAttribute("product", "%s" % self.product.name)
+        job.setAttribute("retention_tag", "%s" % self.retention_tag.tag)
         job.appendChild(self.node("whiteboard", self.whiteboard or ''))
         for rs in self.recipesets:
             job.appendChild(rs.to_xml(clone))
@@ -3705,19 +3710,9 @@ class RecipeSet(TaskBase):
     A Collection of Recipes that must be executed at the same time.
     """
 
-    def __init__(self, ttasks=0, priority=None, tag=None):
+    def __init__(self, ttasks=0, priority=None):
         self.ttasks = ttasks
         self.priority = priority
-        if tag is not None:
-            try:
-                self.retention_tag = RetentionTag.by_tag(unicode(tag))
-            except InvalidRequestError, e:
-                if '%s' % e == 'No rows returned for one()':
-                    self.retention_tag = RetentionTag.get_default()
-                else:
-                    raise
-        else:
-            self.retention_tag = RetentionTag.get_default()
 
     stop_types = ['abort','cancel']
     def is_owner(self,user):
@@ -3728,11 +3723,7 @@ class RecipeSet(TaskBase):
     def to_xml(self, clone=False, from_job=True):
         recipeSet = self.doc.createElement("recipeSet")
         return_node = recipeSet 
-        recipeSet.setAttribute('retention_tag', "%s"  % self.retention_tag)
-        product = self.product
-        if product:
-            recipeSet.setAttribute('product', '%s' % product.name)
-        #Add in Ack/Nak response here if it exists
+
         if not clone:
             response = self.get_response()
             if response:
@@ -3746,9 +3737,12 @@ class RecipeSet(TaskBase):
                 recipeSet.appendChild(r.to_xml(clone, from_recipeset=True))
 
         if not from_job:
-            job = self.doc.createElement("job") 
+            job = self.doc.createElement("job")
             if not clone:
                 job.setAttribute("owner", "%s" % self.job.owner.email_address)
+            if self.product:
+                job.setAttribute("product", "%s" % self.job.product.name)
+            job.setAttribute("retention_tag", "%s" % self.job.retention_tag.tag)
             job.appendChild(self.node("whiteboard", self.job.whiteboard or ''))
             job.appendChild(recipeSet)
             return_node = job
@@ -3785,9 +3779,6 @@ class RecipeSet(TaskBase):
             _del_recipes()
 
         return paths,errors
-
-    def requires_product(self):
-        return self.retention_tag.requires_product()
 
     @classmethod
     def allowed_priorities_initial(cls,user):
@@ -5631,8 +5622,11 @@ mapper(Job, job_table,
         properties = {'recipesets':relation(RecipeSet, backref='job'),
                       'owner':relation(User, uselist=False, backref='jobs'),
                       'result':relation(TaskResult, uselist=False),
+                      'retention_tag':relation(RetentionTag, uselist=False,backref='jobs'),
+                      'product':relation(Product, uselist=False, backref='jobs'),
                       'status':relation(TaskStatus, uselist=False),
                       '_job_ccs': relation(JobCc, backref='job')})
+
 mapper(JobCc, job_cc_table)
 
 mapper(Product, product_table)
@@ -5648,8 +5642,6 @@ mapper(RecipeSet, recipe_set_table,
                       'priority':relation(TaskPriority, uselist=False),
                       'result':relation(TaskResult, uselist=False),
                       'status':relation(TaskStatus, uselist=False),
-                      'retention_tag':relation(RetentionTag, uselist=False,backref='recipeset'),
-                      'product':relation(Product, uselist=False, backref='recipeset'),
                       'activity':relation(RecipeSetActivity,
                                      order_by=[activity_table.c.created.desc()],
                                                backref='object'),

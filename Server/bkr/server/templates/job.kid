@@ -26,6 +26,7 @@
  PARENT_ = 1
  NOT_PARENT = 0
  
+
  $(document).ready(function() {
     $('ul.ackpanel input').change(function () {  
         var response_id = $(this).val()
@@ -93,7 +94,7 @@
         callback['args']['element_id'] = $(this).attr("id")
         callback['args']['value'] = $(this).val()
         var success = product_manager.changeValue($(this).attr("id"),$(this).val(),callback)
-    })  
+    })
 
     $("a[id^='product']").click(function() {
         var callback = {'function' : ShowProductResults }
@@ -131,7 +132,6 @@
          } else {
              msg_text = "Unable to update Product"
          }
-        
      }
      $(selector_msg).text(msg_text)
      $(selector_msg).fadeIn(1000)
@@ -255,11 +255,12 @@
    <td class="value" colspan="3" style="vertical-align: top;">${whiteboard_widget(value=job.whiteboard, job_id=job.id, readonly=not job.can_admin(user))}</td>
   </tr> 
   <tr py:if="job.access_rights(user)">
-  ${job.retention_settings(prefix=u'retentiontag_job_', colspan='3')}
-
-    <script type='text/javascript'>
-        retentiontag_manager.register('retentiontag_job_${job.id}','master')
-    </script>
+  <td class="title"><b>Retention Tag</b></td>
+  <td class='value' coslpan="3" style="vertical-align:top;">${retention_tag_widget.display(value=job.retention_tag.id, job_id=job.id)} </td>
+  </tr>
+  <tr py:if="job.access_rights(user)">
+  <td class="title"><b>Product</b></td>
+  <td class='value' coslpan="3" style="vertical-align:top;">${product_widget.display(job)} <!--FIXME don't think I should have to pass my Job --></td>
   </tr>
   <tr py:if="job.access_rights(user) and job.is_queued()">
   ${job.priority_settings(prefix=u'priority_job_', colspan='3')}
@@ -282,5 +283,6 @@
     <div py:content="recipe_widget(recipe=recipe)">Recipe goes here</div>
    </div>
   </div>
+  ${hidden_id.display()}
 </body>
 </html>
