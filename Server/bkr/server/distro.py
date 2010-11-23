@@ -67,7 +67,7 @@ class Distros(RPCRoot):
                                join(['osversion',
                                      'distros',
                                      '_tags']).\
-                               filter(DistroTag.tag==active)
+                               filter(DistroTag.tag.in_(active))
        return [osmajor.osmajor for osmajor in osmajors]
 
     @expose()
