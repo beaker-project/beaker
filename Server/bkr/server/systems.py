@@ -44,10 +44,13 @@ class SystemsController(controllers.Controller):
 
     @expose()
     @identity.require(identity.not_anonymous())
-    def power(self, action, fqdn, force=False):
+    def power(self, action, fqdn, clear_netboot=False, force=False):
         """
         Controls power for the system with the given fully-qualified domain 
         name.
+
+        If the *clear_netboot* argument is True, the Cobbler netboot 
+        configuration for the system will be cleared before power controlling.
 
         Controlling power for a system is not normally permitted when the 
         system is in use by someone else, because it is likely to interfere 
@@ -59,15 +62,19 @@ class SystemsController(controllers.Controller):
         communicating with Cobbler, or if Cobbler reports a failure.
 
         :param action: 'on', 'off', or 'reboot'
-        :type action: str
+        :type action: string
+        :param fqdn: fully-qualified domain name of the system to be power controlled
+        :type fqdn: string
+        :param clear_netboot: whether to clear netboot configuration before powering
+        :type clear_netboot: boolean
         :param force: whether to power the system even if it is in use
-        :type force: bool
+        :type force: boolean
         """
         system = System.by_fqdn(fqdn, identity.current.user)
         if not force and system.user is not None \
                 and not system.current_user(identity.current.user):
             raise BX(_(u'System is in use'))
-        system.action_power(action, wait=True)
+        system.action_power(action, wait=True, clear_netboot=clear_netboot)
         system.activity.append(SystemActivity(user=identity.current.user,
                 service=u'XMLRPC', action=action, field_name=u'Power',
                 old_value=u'', new_value=u'Success'))

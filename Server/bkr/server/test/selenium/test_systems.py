@@ -531,10 +531,26 @@ class SystemPowerXmlRpcTest(XmlRpcTestCase):
         system.user = other_user
         session.flush()
         self.server.auth.login_password(user.user_name, 'password')
-        self.server.systems.power('on', system.fqdn, True)
+        self.server.systems.power('on', system.fqdn, False, True)
         self.assertEqual(
                 self.stub_cobbler_thread.cobbler.system_actions[system.fqdn],
                 'on')
+
+    def test_clear_netboot(self):
+        user = data_setup.create_user(password=u'password')
+        system = data_setup.create_system()
+        data_setup.configure_system_power(system)
+        system.lab_controller = self.lab_controller
+        system.user = None
+        session.flush()
+        self.server.auth.login_password(user.user_name, 'password')
+        self.server.systems.power('reboot', system.fqdn, True)
+        self.assertEqual(
+                self.stub_cobbler_thread.cobbler.system_actions[system.fqdn],
+                'reboot')
+        self.assertEqual(
+                self.stub_cobbler_thread.cobbler.systems[system.fqdn]['netboot-enabled'],
+                False)
 
 class SystemProvisionXmlRpcTest(XmlRpcTestCase):
 

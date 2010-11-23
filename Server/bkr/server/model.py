@@ -1331,8 +1331,11 @@ class System(SystemObject):
 
 
                         
-            def power(self,action='reboot', wait=False):
+            def power(self,action='reboot', wait=False, clear_netboot=False):
                 system_id = self.get_system()
+                if clear_netboot:
+                    self.remote.modify_system(system_id,
+                            'netboot-enabled', False, self.token)
                 self.remote.modify_system(system_id, 'power_type', 
                                               self.system.power.power_type.name,
                                                    self.token)
@@ -2149,9 +2152,9 @@ $SNIPPET("rhts_post")
         if self.power:
             self.remote.power(action="reboot", wait=wait)
 
-    def action_power(self, action='reboot', wait=False):
+    def action_power(self, action='reboot', wait=False, clear_netboot=False):
         if self.remote and self.power:
-            self.remote.power(action, wait=wait)
+            self.remote.power(action, wait=wait, clear_netboot=clear_netboot)
         else:
             return False
 
