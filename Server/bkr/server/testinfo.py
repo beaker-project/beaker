@@ -350,8 +350,11 @@ class Parser:
             self.info.avg_test_time = int(m.group(1))
             if re.match('.*m$', value):
                 self.info.avg_test_time *= 60
-            if re.match('.*h$', value):
+            elif re.match('.*h$', value):
                 self.info.avg_test_time *= 3600
+            else:
+                self.handle_warning("TestTime unit is not valid, should be m (minutes) or h (hours)")
+                return
 
             if self.info.avg_test_time<60:
                 self.handle_warning("TestTime should not be less than a minute")
