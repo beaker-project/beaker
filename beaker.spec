@@ -3,7 +3,7 @@
 
 Name:           beaker
 Version:        0.5.62
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -191,6 +191,10 @@ fi
 %attr(-,apache,root) %dir %{_localstatedir}/run/%{name}-lab-controller
 
 %changelog
+* Thu Nov 25 2010 Raymond Mancy <rmancy@redhat.com> 0.5.62-2
+- with rmancy: TestTime with no suffix means seconds (dcallagh@redhat.com)
+- fix for reserveworkflow: my_cmp was in the wrong place (dcallagh@redhat.com)
+
 * Wed Nov 24 2010 Raymond Mancy <rmancy@redhat.com> 0.5.62-1
 
 
