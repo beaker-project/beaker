@@ -305,20 +305,12 @@ def queued_recipes(*args):
                 # Remember the mapping of available systems could have happend hours or even
                 # days ago and groups or loans could have been put in place since.
                 if not System.free(user).filter(System.fqdn == system).first():
-                     log.debug("System : %s recipe: %s no longer has access. removing" % (system, 
-                                                                                          recipe.id))
-                     recipe.systems.remove(system)
-
-                # Atomic operation to put recipe in Scheduled state
-                elif session.connection(Recipe).execute(recipe_table.update(
-                     and_(recipe_table.c.id==recipe.id,
-                       recipe_table.c.status_id==TaskStatus.by_name(u'Queued').id)),
-                       status_id=TaskStatus.by_name(u'Scheduled').id).rowcount == 1:
-                    recipe.createRepo()
-                    # Even though the above put the recipe in the "Scheduled" state
-                    # it did not execute the update_status method.
+                    log.debug("System : %s recipe: %s no longer has access. removing" % (system, 
+                                                                                         recipe.id))
+                    recipe.systems.remove(system)
+                else:
                     recipe.schedule()
-                    # Atomic operation to reserve the system
+                    recipe.createRepo()
                     if session.connection(Recipe).execute(system_table.update(
                          and_(system_table.c.id==system.id,
                           system_table.c.user_id==None)),
@@ -336,16 +328,6 @@ def queued_recipes(*args):
                         # The system was taken from underneath us.  Put recipe
                         # back into queued state and try again.
                         raise BX(_('System %s was stolen from underneath us. will try again.' % system))
-                else:
-                    #Some other thread beat us. Skip this recipe now.
-                    # Depending on scheduler load it should be safe to run multiple
-                    # Queued processes..  Also, systems that we don't directly
-                    # control, for example, systems at a remote location that can
-                    # pull jobs but not have any pushed onto them.  These systems
-                    # could take a recipe and put it in running state. Not sure how
-                    # to deal with multi-host jobs at remote locations.  May need to
-                    # enforce single recipes for remote execution.
-                    pass
             session.commit()
         except exceptions.Exception, e:
             session.rollback()

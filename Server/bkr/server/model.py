@@ -1290,9 +1290,7 @@ class System(SystemObject):
                                               'modify_interface',
                                               {'ipaddress-eth0': ipaddress}, 
                                               self.token)
-                    profile = self.remote.get_profiles(0,
-                                                       1,
-                                                       self.token)[0]['name']
+                    profile = self.remote.get_item_names('profile')[0]
                     self.remote.modify_system(system_id, 
                                               'profile', 
                                               profile,
@@ -4331,28 +4329,40 @@ class Recipe(TaskBase):
 
     def queue(self):
         """
-        Move from New -> Queued
+        Move from Processed -> Queued
         """
-        self._queue()
-        self.update_status()
+        if session.connection(Recipe).execute(recipe_table.update(
+          and_(recipe_table.c.id==self.id,
+               recipe_table.c.status_id==TaskStatus.by_name(u'Processed').id)),
+          status_id=TaskStatus.by_name(u'Queued').id).rowcount == 1:
+            self._queue()
+            self.update_status()
+        else:
+            raise BX(_('Invalid state transition for Recipe ID %s' % self.id))
 
     def _queue(self):
         """
-        Move from New -> Queued
+        Move from Processed -> Queued
         """
         for task in self.tasks:
             task._queue()
 
     def process(self):
         """
-        Move from Queued -> Processed
+        Move from New -> Processed
         """
-        self._process()
-        self.update_status()
+        if session.connection(Recipe).execute(recipe_table.update(
+          and_(recipe_table.c.id==self.id,
+               recipe_table.c.status_id==TaskStatus.by_name(u'New').id)),
+          status_id=TaskStatus.by_name(u'Processed').id).rowcount == 1:
+            self._process()
+            self.update_status()
+        else:
+            raise BX(_('Invalid state transition for Recipe ID %s' % self.id))
 
     def _process(self):
         """
-        Move from Queued -> Processed
+        Move from New -> Processed
         """
         for task in self.tasks:
             task._process()
@@ -4395,10 +4405,16 @@ class Recipe(TaskBase):
 
     def schedule(self):
         """
-        Move from Processed -> Scheduled
+        Move from Queued -> Scheduled
         """
-        self._schedule()
-        self.update_status()
+        if session.connection(Recipe).execute(recipe_table.update(
+          and_(recipe_table.c.id==self.id,
+               recipe_table.c.status_id==TaskStatus.by_name(u'Queued').id)),
+          status_id=TaskStatus.by_name(u'Scheduled').id).rowcount == 1:
+            self._schedule()
+            self.update_status()
+        else:
+            raise BX(_('Invalid state transition for Recipe ID %s' % self.id))
 
     def _schedule(self):
         """
@@ -4411,8 +4427,14 @@ class Recipe(TaskBase):
         """
         Move from Scheduled to Waiting
         """
-        self._waiting()
-        self.update_status()
+        if session.connection(Recipe).execute(recipe_table.update(
+          and_(recipe_table.c.id==self.id,
+               recipe_table.c.status_id==TaskStatus.by_name(u'Scheduled').id)),
+          status_id=TaskStatus.by_name(u'Waiting').id).rowcount == 1:
+            self._waiting()
+            self.update_status()
+        else:
+            raise BX(_('Invalid state transition for Recipe ID %s' % self.id))
 
     def _waiting(self):
         """
