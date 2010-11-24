@@ -16,6 +16,7 @@ BuildArch:      noarch
 BuildRequires:  python-setuptools
 BuildRequires:  python-setuptools-devel
 BuildRequires:  python2-devel
+BuildRequires:  python-sphinx10
 
 
 %package client

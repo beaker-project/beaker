@@ -9,10 +9,11 @@ include ../rpmspec_rules.mk
 include ../py_rules.mk
 
 build: $(_SETUP_PY)
-	python $(SETUP_PY) build --install-data=/usr/share/
+	env PYTHONPATH=../Common$${PYTHONPATH:+:$$PYTHONPATH} \
+	    python $(SETUP_PY) build --install-data=/usr/share/
 
 install: $(_SETUP_PY)
 	python $(SETUP_PY) install -O1 --skip-build \
             --install-data=/usr/share --root $(DESTDIR)
 
-clean:
+clean: py-clean

@@ -1,0 +1,3 @@
+Add the following directive to /etc/http/beaker-server.conf:
+
+  Alias /bkr/apidoc /usr/share/bkr/server/apidoc/html
