@@ -15,4 +15,3 @@ Common/setup.py
 Client/build
 Client/setup.py
 *.diff
-/pub_doc/api/build
