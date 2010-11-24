@@ -208,6 +208,13 @@ class SystemCcTest(SeleniumTestCase):
         session.refresh(self.system)
         self.assertEquals(set(self.system.cc),
                 set([u'roy.baty@pkd.com', u'deckard@police.gov']))
+        activity = self.system.activity[-1]
+        self.assertEquals(activity.field_name, u'Cc')
+        self.assertEquals(activity.service, u'WEBUI')
+        self.assertEquals(activity.action, u'Changed')
+        self.assertEquals(activity.old_value, u'')
+        self.assertEquals(activity.new_value,
+                u'roy.baty@pkd.com; deckard@police.gov')
 
     def test_remove_email_addresses(self):
         self.system.cc = [u'roy.baty@pkd.com', u'deckard@police.gov']
@@ -223,6 +230,13 @@ class SystemCcTest(SeleniumTestCase):
         sel.wait_for_page_to_load('30000')
         session.refresh(self.system)
         self.assertEquals(self.system.cc, [])
+        activity = self.system.activity[-1]
+        self.assertEquals(activity.field_name, u'Cc')
+        self.assertEquals(activity.service, u'WEBUI')
+        self.assertEquals(activity.action, u'Changed')
+        self.assertEquals(activity.old_value,
+                u'deckard@police.gov; roy.baty@pkd.com')
+        self.assertEquals(activity.new_value, u'')
 
     def test_replace_existing_email_address(self):
         self.system.cc = [u'roy.baty@pkd.com']
@@ -234,3 +248,9 @@ class SystemCcTest(SeleniumTestCase):
         sel.wait_for_page_to_load('30000')
         session.refresh(self.system)
         self.assertEquals(self.system.cc, [u'deckard@police.gov'])
+        activity = self.system.activity[-1]
+        self.assertEquals(activity.field_name, u'Cc')
+        self.assertEquals(activity.service, u'WEBUI')
+        self.assertEquals(activity.action, u'Changed')
+        self.assertEquals(activity.old_value, u'roy.baty@pkd.com')
+        self.assertEquals(activity.new_value, u'deckard@police.gov')

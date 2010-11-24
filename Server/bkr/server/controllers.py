@@ -1168,8 +1168,14 @@ class Root(RPCRoot):
         if not system.can_admin(identity.current.user):
             flash(_(u'Insufficient permissions to edit CC list'))
             redirect('/')
-        system.cc = [item['email_address']
+        orig_value = list(system.cc)
+        new_value = [item['email_address']
                 for item in cc if item['email_address']]
+        system.cc = new_value
+        system.activity.append(SystemActivity(user=identity.current.user,
+                service=u'WEBUI', action=u'Changed', field_name=u'Cc',
+                old_value=u'; '.join(orig_value),
+                new_value=u'; '.join(new_value)))
         flash(_(u'Notify CC list for system %s changed') % system.fqdn)
         redirect('/view/%s' % system.fqdn)
 
