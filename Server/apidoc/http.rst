@@ -76,6 +76,8 @@ System inventory information
       For a list of supported filter criteria, please refer to the search box 
       on the system listing page.
 
+   .. versionadded:: 0.6
+
 .. object:: /view/{FQDN}
 
    Provides detailed information about a system. *{FQDN}* is the system's 
@@ -93,6 +95,8 @@ System inventory information
       returned (serialized as `RDF/XML`_ or `Turtle`_, respectively). For 
       a detailed description of the RDF schema used, refer to 
       :file:`Common/bkr/common/schema/beaker-inventory.ttl`.
+
+   .. versionadded:: 0.6
     
 .. _Atom: http://tools.ietf.org/html/rfc4287
 .. _RDF: http://www.w3.org/RDF/

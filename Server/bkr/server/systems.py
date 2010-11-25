@@ -23,6 +23,8 @@ class SystemsController(controllers.Controller):
 
         A system may only be reserved when: its condition is 'Manual', it is not 
         currently in use, and the caller has permission to use the system.
+
+        .. versionadded:: 0.6
         """
         system = System.by_fqdn(fqdn, identity.current.user)
         system.reserve(service=u'XMLRPC')
@@ -37,6 +39,8 @@ class SystemsController(controllers.Controller):
 
         The caller must be the current user of a system (i.e. must have 
         successfully reserved it previously).
+
+        .. versionadded:: 0.6
         """
         system = System.by_fqdn(fqdn, identity.current.user)
         system.unreserve(service=u'XMLRPC')
@@ -69,6 +73,8 @@ class SystemsController(controllers.Controller):
         :type clear_netboot: boolean
         :param force: whether to power the system even if it is in use
         :type force: boolean
+
+        .. versionadded:: 0.6
         """
         system = System.by_fqdn(fqdn, identity.current.user)
         if not force and system.user is not None \
@@ -100,6 +106,8 @@ class SystemsController(controllers.Controller):
         :type kickstart: str
         :param reboot: whether to reboot the system after applying Cobbler changes
         :type reboot: bool
+
+        .. versionadded:: 0.6
         """
         system = System.by_fqdn(fqdn, identity.current.user)
         if not system.can_provision_now(identity.current.user):

@@ -46,6 +46,8 @@ class Auth(RPCRoot):
         """
         Returns the username of the currently logged in user.
         Provided for testing purposes.
+
+        .. versionadded:: 0.6
         """
         return identity.current.user.user_name
 
