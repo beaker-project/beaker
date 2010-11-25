@@ -252,8 +252,8 @@ class ReportProblemController(object):
                 pass
         mail.system_problem_report(system, problem_description,
                 recipe, identity.current.user)
-        activity = SystemActivity(identity.current.user, 'WEBUI', 'Reported problem',
-                'Status', None, problem_description)
+        activity = SystemActivity(identity.current.user, u'WEBUI', u'Reported problem',
+                u'Status', None, problem_description)
         system.activity.append(activity)
         flash(_(u'Your problem report has been forwarded to the system owner'))
         redirect('/view/%s' % system.fqdn)
@@ -321,27 +321,6 @@ class Root(RPCRoot):
         action = 'save_data',
         submit_text = _(u'Change'),
     )  
-    search_bar = SearchBar(name='systemsearch',
-                           label=_(u'System Search'),
-                           enable_custom_columns = True,
-                           extra_selects = [ { 'name': 'keyvalue',
-                                               'column':'key/value',
-                                               'display':'none',
-                                               'pos' : 2,
-                                               'callback':url('/get_operators_keyvalue') }],
-                           table=su.System.search.create_search_table(\
-                               [{su.System:{'all':[]}},
-                                {su.Cpu:{'all':[]}},
-                                {su.Device:{'all':[]}},
-                                {su.Key:{'all':[]}}]),
-                           complete_data = su.System.search.create_complete_search_table(\
-                               [{su.System:{'all':[]}},
-                                {su.Cpu:{'all':[]}},
-                                {su.Device:{'all':[]}},
-                                {su.Key:{'all':[]}}]),
-                           search_controller=url("/get_search_options"),
-                           table_search_controllers = {'key/value':url('/get_keyvalue_search_options')},)
-                 
   
     system_form = SystemForm()
     power_form = PowerForm(name='power')
@@ -622,6 +601,27 @@ class Root(RPCRoot):
         return return_dict
  
     def systems(self, systems, *args, **kw):
+        search_bar = SearchBar(name='systemsearch',
+                               label=_(u'System Search'),
+                               enable_custom_columns = True,
+                               extra_selects = [ { 'name': 'keyvalue',
+                                                   'column':'key/value',
+                                                   'display':'none',
+                                                   'pos' : 2,
+                                                   'callback':url('/get_operators_keyvalue') }],
+                               table=su.System.search.create_search_table(\
+                                   [{su.System:{'all':[]}},
+                                    {su.Cpu:{'all':[]}},
+                                    {su.Device:{'all':[]}},
+                                    {su.Key:{'all':[]}}]),
+                               complete_data = su.System.search.create_complete_search_table(\
+                                   [{su.System:{'all':[]}},
+                                    {su.Cpu:{'all':[]}},
+                                    {su.Device:{'all':[]}},
+                                    {su.Key:{'all':[]}}]),
+                               search_controller=url("/get_search_options"),
+                               table_search_controllers = {'key/value':url('/get_keyvalue_search_options')},)
+
         if 'quick_search' in kw:
             table,op,value = kw['quick_search'].split('-')
             kw['systemsearch'] = [{'table' : table,
@@ -684,9 +684,13 @@ class Root(RPCRoot):
             else: 
                 my_fields = Utility.custom_systems_grid(system_columns_desc)
 
-            systems = systems.reset_joinpoint().outerjoin('user').distinct() 
+            systems = systems.reset_joinpoint().outerjoin('user')\
+                    .outerjoin('status').outerjoin('arch').outerjoin('type')\
+                    .distinct()
         else: 
-            systems = systems.reset_joinpoint().outerjoin('user').distinct() 
+            systems = systems.reset_joinpoint().outerjoin('user')\
+                    .outerjoin('status').outerjoin('arch').outerjoin('type')\
+                    .distinct()
             use_custom_columns = False
             columns = None
             searchvalue = None
@@ -708,7 +712,7 @@ class Root(RPCRoot):
                                                  'col_defaults' : col_data['default'],
                                                  'col_options' : col_data['options']},
                                      action = '.', 
-                                     search_bar = self.search_bar )
+                                     search_bar = search_bar )
                                                                         
 
     @expose(format='json')
@@ -1115,6 +1119,65 @@ class Root(RPCRoot):
         session.save_or_update(system)
         flash( _(u"%s %s%s" % (status,system.fqdn,msg)) )
         redirect("/view/%s" % system.fqdn)
+
+    system_cc_form = widgets.TableForm(
+        'cc',
+        fields=[
+            id,
+            ExpandingForm(
+                name='cc',
+                label=_(u'Notify CC'),
+                fields=[
+                    widgets.TextField(name='email_address', label=_(u'E-mail address'),
+                        validator=validators.Email()),
+                ],
+            ),
+        ],
+        submit_text=_(u'Change'),
+    )
+
+    @expose(template='bkr.server.templates.form-post')
+    @identity.require(identity.not_anonymous())
+    def cc_change(self, system_id):
+        try:
+            system = System.by_id(system_id, identity.current.user)
+        except InvalidRequestError:
+            flash(_(u'Unable to find system with id of %s' % system_id))
+            redirect('/')
+        if not system.can_admin(identity.current.user):
+            flash(_(u'Insufficient permissions to edit CC list'))
+            redirect('/')
+        return dict(
+            title=_(u'Notify CC list for %s') % system.fqdn,
+            form=self.system_cc_form,
+            action='save_cc',
+            options=None,
+            value={'id': system.id, 'cc': system._system_ccs},
+        )
+
+    @error_handler(cc_change)
+    @expose()
+    @identity.require(identity.not_anonymous())
+    @validate(form=system_cc_form)
+    def save_cc(self, id, cc):
+        try:
+            system = System.by_id(id, identity.current.user)
+        except InvalidRequestError:
+            flash(_(u'Unable to find system with id of %s' % id))
+            redirect('/')
+        if not system.can_admin(identity.current.user):
+            flash(_(u'Insufficient permissions to edit CC list'))
+            redirect('/')
+        orig_value = list(system.cc)
+        new_value = [item['email_address']
+                for item in cc if item['email_address']]
+        system.cc = new_value
+        system.activity.append(SystemActivity(user=identity.current.user,
+                service=u'WEBUI', action=u'Changed', field_name=u'Cc',
+                old_value=u'; '.join(orig_value),
+                new_value=u'; '.join(new_value)))
+        flash(_(u'Notify CC list for system %s changed') % system.fqdn)
+        redirect('/view/%s' % system.fqdn)
 
     @error_handler(view)
     @expose()

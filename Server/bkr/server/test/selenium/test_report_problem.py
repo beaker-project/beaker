@@ -23,7 +23,7 @@ from turbogears.database import session
 
 from bkr.server.test.selenium import SeleniumTestCase
 from bkr.server.test.mail_capture import MailCaptureThread
-from bkr.server.test import data_setup
+from bkr.server.test import data_setup, get_server_base
 
 class TestReportProblem(SeleniumTestCase):
 
@@ -70,12 +70,13 @@ class TestReportProblem(SeleniumTestCase):
         self.assertEqual(msg['Subject'], 'Problem reported for ncc1701d')
         self.assertEqual(msg['X-Beaker-Notification'], 'system-problem')
         self.assertEqual(msg['X-Beaker-System'], 'ncc1701d')
-        self.assertEqual(msg.get_payload(),
+        self.assertEqual(msg.get_payload(decode=True),
                 'A Beaker user has reported a problem with system \n'
-                'ncc1701d <http://localhost:9090/view/ncc1701d>.\n\n'
+                'ncc1701d <%sview/ncc1701d>.\n\n'
                 'Reported by: Beverley Crusher\n\n'
                 'Problem description:\n'
-                'Make it so!')
+                'Make it so!'
+                % get_server_base())
 
     def test_reporting_problem_requires_login(self):
         problem_reporter = data_setup.create_user(password=u'password')
@@ -92,3 +93,16 @@ class TestReportProblem(SeleniumTestCase):
         sel.click('login')
         sel.wait_for_page_to_load('3000')
         self.assertEqual(sel.get_title(), 'Report a problem with ncc1701e')
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=652334
+    def test_system_activity_entry_is_correctly_truncated(self):
+        system = data_setup.create_system()
+        session.flush()
+        self.login()
+        sel = self.selenium
+        sel.open('report_problem?system_id=%s' % system.id)
+        sel.type('report_problem_problem_description', u'a' + u'\u044f' * 100)
+        sel.submit('report_problem')
+        sel.wait_for_page_to_load('20000')
+        self.assertEqual(sel.get_text('css=div.flash'),
+                'Your problem report has been forwarded to the system owner')

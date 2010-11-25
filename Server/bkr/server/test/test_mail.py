@@ -20,7 +20,7 @@ import sys
 import email
 import unittest
 from turbogears.database import session
-from bkr.server.test import data_setup, mail_capture
+from bkr.server.test import data_setup, mail_capture, get_server_base
 import bkr.server.mail
 
 class MailTest(unittest.TestCase):
@@ -49,12 +49,13 @@ class MailTest(unittest.TestCase):
                 'System home-one automatically marked broken')
         self.assertEqual(msg['X-Beaker-Notification'], 'system-broken')
         self.assertEqual(msg['X-Beaker-System'], 'home-one')
-        self.assertEqual(msg.get_payload(),
+        self.assertEqual(msg.get_payload(decode=True),
                 'Beaker has automatically marked system \n'
-                'home-one <http://localhost:9090/view/home-one> \n'
+                'home-one <%sview/home-one> \n'
                 'as broken, due to:\n\n'
                 'It\'s a tarp!\n\n'
                 'Please investigate this error and take appropriate action.\n\n'
                 'Power type: drac\n'
                 'Power address: pdu2.home-one\n'
-                'Power id: 42')
+                'Power id: 42'
+                % get_server_base())

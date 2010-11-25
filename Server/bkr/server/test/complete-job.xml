@@ -13,6 +13,7 @@
     <recipeSet retention_tag="scratch">
         <recipe kernel_options="" kernel_options_post="" ks_meta="" role="None" whiteboard="">
             <guestrecipe guestargs="" guestname="" kernel_options="" kernel_options_post="" ks_meta="" role="None" whiteboard="">
+                <autopick random="true"/>
                 <watchdog panic="None"/>
                 <packages/>
                 <ks_appends/>
@@ -29,6 +30,7 @@
                     <params/>
                 </task>
             </guestrecipe>
+            <autopick random="true"/>
             <watchdog panic="None"/>
             <packages/>
             <ks_appends/>

@@ -43,7 +43,12 @@ def main():
 
 def identify_nags(threshold, service):
     sys_activities = System.reserved_via(service)
-    for activity in sys_activities: 
+    for activity in sys_activities:
+        #Only get those systems are not owner==user, and are shared
+        suitable_system = System.query().filter(and_(System.id == activity.system_id, System.shared == True, System.owner_id != System.user_id))
+        if suitable_system.count() < 1:
+            return #not applicable
+
         date_reserved =  activity.created
         date_now = datetime.fromtimestamp(time.time())
         threshold_delta = timedelta(days=threshold)

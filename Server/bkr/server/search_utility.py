@@ -571,7 +571,6 @@ class SystemSearch(Search):
                 #If they are System columns we won't need to explicitly add them to the query, as they are already returned in the System query  
                 if cls_ref is System:     
                     self.system_columns_desc.append(elem)
-                    continue
                 elif col_ref is not None: 
                     self.extra_columns_desc.append(elem)
                     self.adding_columns = True 
@@ -739,7 +738,7 @@ class SystemObject:
     @classmethod
     def search_values(cls,col):  
        if cls.search_values_dict.has_key(col):
-           return cls.search_values_dict[col]
+           return cls.search_values_dict[col]()
        
     @classmethod
     def get_searchable(cls,*args,**kw):
@@ -810,14 +809,6 @@ class System(SystemObject):
           
         ids = [r.id for r in query]  
         return not_(model.system_table.c.id.in_(ids)) 
-           
-    @classmethod
-    def search_values(cls,col):  
-        if cls.search_values_dict.has_key(col):
-            try:
-                return cls.search_values_dict[col]()
-            except TypeError, e: #perhaps we have a hash and not a callable
-                return cls.search_values_dict[col]
 
 class Recipe(SystemObject):
     search = RecipeSearch
@@ -831,8 +822,8 @@ class Recipe(SystemObject):
                             'Result' : MyColumn(col_type='string', column=model.TaskResult.result, relations='result'),
                          }
 
-    search_values_dict = {'Status' : model.TaskStatus.get_all_status(),
-                          'Result' : model.TaskResult.get_all_results()}
+    search_values_dict = {'Status' : lambda: model.TaskStatus.get_all_status(),
+                          'Result' : lambda: model.TaskResult.get_all_results()}
     
 
 class Task(SystemObject):
@@ -1001,7 +992,7 @@ class Distro(SystemObject):
                             'Breed' : MyColumn(col_type='string',column=model.Breed.breed, relations=['breed']),
                             'Tag' : MyColumn(col_type='string', column=model.DistroTag.tag, relations=['_tags'])
                          }
-    search_values_dict = {'Tag' : [e.tag for e in model.DistroTag.list_by_tag('')]}
+    search_values_dict = {'Tag' : lambda: [e.tag for e in model.DistroTag.list_by_tag('')]}
 
     @classmethod
     def tag_is_not_filter(cls,col,val):
@@ -1029,7 +1020,8 @@ class SystemReserve(System):
                             'LoanedTo'  : MyColumn(column=model.User.user_name,col_type='string', has_alias=True, relations='loaned'),
                           }
 
-    System.search_values_dict['Shared'] =  ['True','False'] 
+    search_values_dict = dict(System.search_values_dict.items() +
+                             [('Shared', lambda: ['True', 'False'])])
     
 
        
@@ -1179,13 +1171,13 @@ class Job(SystemObject):
 
                          }
 
-    search_values_dict = {'Status' : model.TaskStatus.get_all_status(),
-                          'Result' : model.TaskResult.get_all_results()}
+    search_values_dict = {'Status' : lambda: model.TaskStatus.get_all_status(),
+                          'Result' : lambda: model.TaskResult.get_all_results()}
                          
             
 class Cpu(SystemObject):      
     display_name = 'CPU'   
-    search_values_dict = { 'Hyper' : ['True','False'] }
+    search_values_dict = { 'Hyper' : lambda: ['True','False'] }
     searchable_columns = {
                           'Vendor'      : CpuColumn(col_type='string', column = model.Cpu.vendor),
                           'Processors'  : CpuColumn(col_type='numeric',column = model.Cpu.processors),

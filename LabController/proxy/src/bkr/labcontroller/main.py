@@ -85,6 +85,8 @@ def main():
                       help="Full path to config file to use")
     parser.add_option("-f", "--foreground", default=False, action="store_true",
                       help="run in foreground (do not spawn a daemon)")
+    parser.add_option("-p", "--pid-file",
+                      help="specify a pid file")
     (opts, args) = parser.parse_args()
 
     conf = kobo.conf.PyConfigParser()
@@ -93,11 +95,16 @@ def main():
         config = "/etc/beaker/proxy.conf"
 
     conf.load_from_file(config)
+
+    pid_file = opts.pid_file
+    if pid_file is None:
+        pid_file = conf.get("PID_FILE", "/var/run/beaker-lab-controller/beaker-proxy.pid")
     
     if opts.foreground:
         main_loop(conf=conf, foreground=True)
     else:
         daemonize(main_loop, 
+                  daemon_pid_file=pid_file,
                   conf=conf, 
                   foreground=False)
 

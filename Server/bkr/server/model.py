@@ -25,6 +25,7 @@ import time
 from kid import Element
 from bkr.server.bexceptions import BeakerException, BX, CobblerTaskFailedException
 from bkr.server.helpers import *
+from bkr.server.util import unicode_truncate
 from bkr.server import mail
 import traceback
 from BasicAuthTransport import BasicAuthTransport
@@ -81,6 +82,12 @@ system_table = Table('system', metadata,
            ForeignKey('release_action.id')),
     Column('reprovision_distro_id', Integer,
            ForeignKey('distro.id')),
+)
+
+system_cc_table = Table('system_cc', metadata,
+        Column('system_id', Integer, ForeignKey('system.id', ondelete='CASCADE',
+            onupdate='CASCADE'), primary_key=True),
+        Column('email_address', Unicode(255), primary_key=True, index=True),
 )
 
 system_device_map = Table('system_device_map', metadata,
@@ -477,12 +484,12 @@ activity_table = Table('activity', metadata,
            nullable=False, primary_key=True),
     Column('user_id', Integer, ForeignKey('tg_user.user_id'), index=True),
     Column('created', DateTime, nullable=False, default=datetime.utcnow),
-    Column('type', String(40), nullable=False),
-    Column('field_name', String(40), nullable=False),
-    Column('service', String(100), nullable=False),
-    Column('action', String(40), nullable=False),
-    Column('old_value', String(60)),
-    Column('new_value', String(60))
+    Column('type', Unicode(40), nullable=False),
+    Column('field_name', Unicode(40), nullable=False),
+    Column('service', Unicode(100), nullable=False),
+    Column('action', Unicode(40), nullable=False),
+    Column('old_value', Unicode(60)),
+    Column('new_value', Unicode(60))
 )
 
 system_activity_table = Table('system_activity', metadata,
@@ -594,7 +601,7 @@ recipe_set_table = Table('recipe_set',metadata,
                 ForeignKey('task_priority.id'), default=select([task_priority_table.c.id], limit=1).where(task_priority_table.c.priority==u'Normal').correlate(None)),
         Column('queue_time',DateTime, nullable=False, default=datetime.utcnow),
         Column('delete_time', DateTime, nullable=True),
-        Column('retention_tag_id', Integer, ForeignKey('retention_tag.id', ondelete="CASCADE", onupdate="CASCADE"), nullable=False), 
+        Column('retention_tag_id', Integer, ForeignKey('retention_tag.id'), nullable=False),
         Column('result_id', Integer,
                 ForeignKey('task_result.id')),
         Column('status_id', Integer,
@@ -1277,9 +1284,7 @@ class System(SystemObject):
                                               'modify_interface',
                                               {'ipaddress-eth0': ipaddress}, 
                                               self.token)
-                    profile = self.remote.get_profiles(0,
-                                                       1,
-                                                       self.token)[0]['name']
+                    profile = self.remote.get_item_names('profile')[0]
                     self.remote.modify_system(system_id, 
                                               'profile', 
                                               profile,
@@ -1401,6 +1406,11 @@ class System(SystemObject):
                                            kernel_options_post,
                                            self.token)
                 if kickstart:
+                    # Newer Kickstarts need %end after each section.
+                    if distro.osversion.osmajor.osmajor.startswith("Fedora"):
+                        end = "%end"
+                    else:
+                        end = ""
                     # Escape any $ signs or cobbler will barf
                     kickstart = kickstart.replace('$','\$')
                     # add in cobbler packages snippet...
@@ -1413,10 +1423,12 @@ class System(SystemObject):
                             nopackages = False
                             break
                     beforepackages = kickstart[:packages_slot-1]
+                    afterpackages = kickstart[packages_slot:]
                     # if no %packages section then add it
                     if nopackages:
                         beforepackages = "%s\n%%packages --ignoremissing" % beforepackages
-                    afterpackages = kickstart[packages_slot:]
+                        if end:
+                            afterpackages = "%%end\n%s" % afterpackages
                     # Fill in basic requirements for RHTS
                     kicktemplate = """
 url --url=$tree
@@ -1426,13 +1438,16 @@ $SNIPPET("rhts_packages")
 
 %%pre
 $SNIPPET("rhts_pre")
+%(end)s
 
 %%post
 $SNIPPET("rhts_post")
-                    """
+%(end)s
+                   """
                     kickstart = kicktemplate % dict(
                                                 beforepackages = beforepackages,
-                                                afterpackages = afterpackages)
+                                                afterpackages = afterpackages,
+                                                end = end)
 
                     kickfile = '/var/lib/cobbler/kickstarts/%s.ks' % self.system.fqdn
         
@@ -1926,8 +1941,6 @@ $SNIPPET("rhts_post")
         if self.checksum == md5sum:
             return 0
         self.checksum = md5sum
-        self.type_id = 1
-        self.status_id = 1
         for key in inventory:
             if key in self.get_allowed_attr():
                 if not getattr(self, key, None):
@@ -2150,6 +2163,9 @@ $SNIPPET("rhts_post")
             return # nothing to do
         if self.type != SystemType.by_name(u'Machine'):
             return # prototypes get more leeway, and virtual machines can't really "break"...
+        reliable_distro_tag = get('beaker.reliable_distro_tag', None)
+        if not reliable_distro_tag:
+            return
         # Since its last status change, has this system had an 
         # uninterrupted run of aborted recipes leading up to this one, with 
         # at least two different STABLE distros?
@@ -2172,14 +2188,14 @@ $SNIPPET("rhts_post")
                 .join(system_table, onclause=recipe_table.c.system_id == system_table.c.id))\
             .where(and_(
                 system_table.c.id == self.id,
-                distro_tag_map.c.distro_tag_id == DistroTag.by_tag(u'STABLE').id,
+                distro_tag_map.c.distro_tag_id == DistroTag.by_tag(reliable_distro_tag).id,
                 recipe_table.c.start_time >
                     func.ifnull(status_change_subquery, system_added_subquery),
                 recipe_table.c.finish_time > nonaborted_recipe_subquery))
         if session.execute(query).scalar() >= 2:
             # Broken!
             reason = unicode(_(u'System has a run of aborted recipes '
-                    'with STABLE distros'))
+                    'with reliable distros'))
             log.warn(reason)
             old_status = self.status
             self.mark_broken(reason=reason)
@@ -2189,6 +2205,7 @@ $SNIPPET("rhts_post")
                     old_value=old_status,
                     new_value=self.status))
 
+    cc = association_proxy('_system_ccs', 'email_address')
 # for property in System.mapper.iterate_properties:
 #     print property.mapper.class_.__name__
 #     print property.key
@@ -2196,6 +2213,11 @@ $SNIPPET("rhts_post")
 # systems = session.query(System).join('status').join('type').join(['cpu','flags']).filter(CpuFlag.c.flag=='lm')
 
 
+class SystemCc(SystemObject):
+
+    def __init__(self, email_address):
+        self.email_address = email_address
+  
 class SystemType(SystemObject):
 
     def __init__(self, type=None):
@@ -2986,6 +3008,14 @@ class Activity(object):
         self.service = service
         self.field_name = field_name
         self.action = action
+        # These values are likely to be truncated by MySQL, so let's make sure 
+        # we don't end up with invalid UTF-8 chars at the end
+        if old_value and isinstance(old_value, unicode):
+            old_value = unicode_truncate(old_value,
+                bytes_length=self.c.old_value.type.length)
+        if new_value and isinstance(new_value, unicode):
+            new_value = unicode_truncate(new_value,
+                bytes_length=self.c.new_value.type.length)
         self.old_value = old_value
         self.new_value = new_value
 
@@ -4245,28 +4275,40 @@ class Recipe(TaskBase):
 
     def queue(self):
         """
-        Move from New -> Queued
+        Move from Processed -> Queued
         """
-        self._queue()
-        self.update_status()
+        if session.connection(Recipe).execute(recipe_table.update(
+          and_(recipe_table.c.id==self.id,
+               recipe_table.c.status_id==TaskStatus.by_name(u'Processed').id)),
+          status_id=TaskStatus.by_name(u'Queued').id).rowcount == 1:
+            self._queue()
+            self.update_status()
+        else:
+            raise BX(_('Invalid state transition for Recipe ID %s' % self.id))
 
     def _queue(self):
         """
-        Move from New -> Queued
+        Move from Processed -> Queued
         """
         for task in self.tasks:
             task._queue()
 
     def process(self):
         """
-        Move from Queued -> Processed
+        Move from New -> Processed
         """
-        self._process()
-        self.update_status()
+        if session.connection(Recipe).execute(recipe_table.update(
+          and_(recipe_table.c.id==self.id,
+               recipe_table.c.status_id==TaskStatus.by_name(u'New').id)),
+          status_id=TaskStatus.by_name(u'Processed').id).rowcount == 1:
+            self._process()
+            self.update_status()
+        else:
+            raise BX(_('Invalid state transition for Recipe ID %s' % self.id))
 
     def _process(self):
         """
-        Move from Queued -> Processed
+        Move from New -> Processed
         """
         for task in self.tasks:
             task._process()
@@ -4309,10 +4351,16 @@ class Recipe(TaskBase):
 
     def schedule(self):
         """
-        Move from Processed -> Scheduled
+        Move from Queued -> Scheduled
         """
-        self._schedule()
-        self.update_status()
+        if session.connection(Recipe).execute(recipe_table.update(
+          and_(recipe_table.c.id==self.id,
+               recipe_table.c.status_id==TaskStatus.by_name(u'Queued').id)),
+          status_id=TaskStatus.by_name(u'Scheduled').id).rowcount == 1:
+            self._schedule()
+            self.update_status()
+        else:
+            raise BX(_('Invalid state transition for Recipe ID %s' % self.id))
 
     def _schedule(self):
         """
@@ -4325,8 +4373,14 @@ class Recipe(TaskBase):
         """
         Move from Scheduled to Waiting
         """
-        self._waiting()
-        self.update_status()
+        if session.connection(Recipe).execute(recipe_table.update(
+          and_(recipe_table.c.id==self.id,
+               recipe_table.c.status_id==TaskStatus.by_name(u'Scheduled').id)),
+          status_id=TaskStatus.by_name(u'Waiting').id).rowcount == 1:
+            self._waiting()
+            self.update_status()
+        else:
+            raise BX(_('Invalid state transition for Recipe ID %s' % self.id))
 
     def _waiting(self):
         """
@@ -4357,7 +4411,8 @@ class Recipe(TaskBase):
         self._abort(msg)
         self.update_status()
         session.flush() # XXX bad
-        if self.system is not None and u'STABLE' in self.distro.tags:
+        if self.system is not None and \
+                get('beaker.reliable_distro_tag', None) in self.distro.tags:
             self.system.suspicious_abort()
 
     def _abort(self, msg=None):
@@ -5448,7 +5503,11 @@ System.mapper = mapper(System, system_table,
                                                backref='object'),
                      'release_action':relation(ReleaseAction, uselist=False),
                      'reprovision_distro':relation(Distro, uselist=False),
+                      '_system_ccs': relation(SystemCc, backref='system',
+                                      cascade="all, delete, delete-orphan"),
                      })
+
+mapper(SystemCc, system_cc_table)
 
 Cpu.mapper = mapper(Cpu,cpu_table,properties = {
                                                 

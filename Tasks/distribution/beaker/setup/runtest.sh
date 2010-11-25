@@ -191,13 +191,13 @@ test_password='$1$rhts$ShuaoxZPm2Dr79tpoP8NE.'
 ##
 ## TurboMail settings
 ##
-mail.on = False
+mail.on = True
 mail.manager = 'immediate'
 mail.transport = 'smtp'
 mail.provider = 'smtp'
-mail.smtp.server = '127.0.0.1'
+mail.smtp.server = '127.0.0.1:19999'
 
-beaker_email='root@localhost.localdomain'
+beaker_email='$SUBMITTER'
 
 
 # Authentication
@@ -211,6 +211,9 @@ identity.krb_auth_principal='HTTP/$HOSTNAME@REDHAT.COM'
 identity.krb_auth_keytab='/etc/httpd/conf/httpd.keytab'
 
 # SERVER
+
+tg.url_domain='localhost'
+tg.url_scheme='http'
 
 server.socket_port=8084
 server.environment="development"

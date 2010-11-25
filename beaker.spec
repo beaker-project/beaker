@@ -2,8 +2,8 @@
 %{!?pyver: %global pyver %(%{__python} -c "import sys ; print sys.version[:3]")}
 
 Name:           beaker
-Version:        0.5.61
-Release:        4%{?dist}
+Version:        0.5.62
+Release:        2%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -14,7 +14,6 @@ BuildArch:      noarch
 BuildRequires:  python-setuptools
 BuildRequires:  python-setuptools-devel
 BuildRequires:  python2-devel
-BuildRequires:  TurboGears
 
 
 %package client
@@ -192,6 +191,69 @@ fi
 %attr(-,apache,root) %dir %{_localstatedir}/run/%{name}-lab-controller
 
 %changelog
+* Thu Nov 25 2010 Raymond Mancy <rmancy@redhat.com> 0.5.62-2
+- with rmancy: TestTime with no suffix means seconds (dcallagh@redhat.com)
+- fix for reserveworkflow: my_cmp was in the wrong place (dcallagh@redhat.com)
+
+* Wed Nov 24 2010 Raymond Mancy <rmancy@redhat.com> 0.5.62-1
+
+
+
+
+
+
+
+
+
+
+- Experiencing xmlrpc timeouts when talking to cobbler.  - cobbler is stupid
+  and doesn't honor the page, results_per_page options.    get_item_names still
+  doesn't honor results_per_page but it only transfers the names.  - Of course
+  this is stupid on many levels, creating a system record shouldn't force    us
+  to select a profile either. (bpeck@redhat.com)
+- first go at xmlrpc api docs: auth methods (dcallagh@redhat.com)
+- bz647176 - ui for changing system notify cc list (dcallagh@redhat.com)
+- bz654299 - configurable distro tag for broken system detection
+  (dcallagh@redhat.com)
+- bz647176 - RFE: Allow additional e-mail address to be notified when system is
+  automatically marked as broken (bpeck@redhat.com)
+- bz653513 - Need a replacement for test_lab_machine (bpeck@redhat.com)
+- bz654302 - Nag emails will now exclude owner/users and thos eon non shared
+  machines (rmancy@redhat.com)
+- bz654097  - support for Fedora14 kickstarts (bpeck@redhat.com)
+- bz624726 - beaker-proxy and beaker-watchdog init scripts do not create PID
+  file (bpeck@redhat.com)
+- bz652334 - ensure activity entries are truncated on UTF-8 character
+  boundaries (dcallagh@redhat.com)
+- bz652298 - don't blindly change the status or type of a system. (bpeck@redhat.com)
+- bz634896 - Stop on ParserWarnings and ParserErrors (rmancy@redhat.com)
+- bz651418 - fix system grid sorting (dcallagh@redhat.com)
+- bz645873 -  Job cancelled soon after creation doesn't terminate
+  (bpeck@redhat.com)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 * Thu Nov 11 2010 Bill Peck <bpeck@redhat.com> 0.5.61-4
 - increase timeout from 20 seconds to 40 seconds. (bpeck@redhat.com)
 - bz648497 fix (bpeck@redhat.com)
