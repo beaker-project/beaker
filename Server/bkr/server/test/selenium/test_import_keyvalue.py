@@ -13,7 +13,7 @@ class ImportKeyValue(bkr.server.test.selenium.SeleniumTestCase):
     
     def test_keyvalue(self):
         sel = self.selenium
-        sel.open("/")
+        sel.open("")
         try:
             self.logout()
         except: pass

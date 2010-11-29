@@ -6,7 +6,6 @@ from turbogears.database import session
 
 class SystemHasUserCanLoan(bkr.server.test.selenium.SeleniumTestCase):
     def setUp(self):
-        self.verificationErrors = []
         self.selenium = self.get_selenium()
         self.selenium.start()
         self.user = data_setup.create_user()
@@ -14,14 +13,13 @@ class SystemHasUserCanLoan(bkr.server.test.selenium.SeleniumTestCase):
         self.system.user = self.user 
         session.flush()
 
+    def tearDown(self):
+        self.selenium.stop()
 
     def test_can_loan(self):
-        try:
-            self.logout()
-        except: pass
         self.login()
         sel = self.selenium
-        sel.open('/view/%s' % self.system.fqdn) 
+        sel.open('view/%s' % self.system.fqdn)
         
         sel.wait_for_page_to_load("30000")
         # This is the (Loan) link...

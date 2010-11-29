@@ -62,6 +62,7 @@ class JobSchemaTest(unittest.TestCase):
                         </hostRequires>
                         <task name="/distribution/reservesys" role="STANDALONE"/>
                         <packages/>
+                        <autopick random="false"/>
                         <distroRequires>
                             <distro_name op="=" value="BlueShoeLinux5-5"/>
                         </distroRequires>
@@ -76,6 +77,8 @@ class JobSchemaTest(unittest.TestCase):
             <job>
                 <recipeSet>
                     <recipe kernel_options="" kernel_options_post="" ks_meta="" role="None" whiteboard="">
+                        <autopick random="true"/>
+                        <autopick random="false"/>
                         <watchdog panic="None"/>
                         <watchdog panic="always"/>
                         <packages/>
@@ -91,7 +94,7 @@ class JobSchemaTest(unittest.TestCase):
                 </recipeSet>
             </job>
             ''',
-            ['Extra element watchdog in interleave',
+            ['Extra element autopick in interleave',
              'Invalid sequence in interleave',
              'Element recipe failed to validate content',
              'Element recipeSet failed to validate content'])

@@ -2,7 +2,7 @@
 %{!?pyver: %global pyver %(%{__python} -c "import sys ; print sys.version[:3]")}
 
 Name:           beaker
-Version:        0.5.60
+Version:        0.5.62
 Release:        2%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
@@ -14,7 +14,6 @@ BuildArch:      noarch
 BuildRequires:  python-setuptools
 BuildRequires:  python-setuptools-devel
 BuildRequires:  python2-devel
-BuildRequires:  TurboGears
 
 
 %package client
@@ -192,6 +191,105 @@ fi
 %attr(-,apache,root) %dir %{_localstatedir}/run/%{name}-lab-controller
 
 %changelog
+* Thu Nov 25 2010 Raymond Mancy <rmancy@redhat.com> 0.5.62-2
+- with rmancy: TestTime with no suffix means seconds (dcallagh@redhat.com)
+- fix for reserveworkflow: my_cmp was in the wrong place (dcallagh@redhat.com)
+
+* Wed Nov 24 2010 Raymond Mancy <rmancy@redhat.com> 0.5.62-1
+
+
+
+
+
+
+
+
+
+
+- Experiencing xmlrpc timeouts when talking to cobbler.  - cobbler is stupid
+  and doesn't honor the page, results_per_page options.    get_item_names still
+  doesn't honor results_per_page but it only transfers the names.  - Of course
+  this is stupid on many levels, creating a system record shouldn't force    us
+  to select a profile either. (bpeck@redhat.com)
+- first go at xmlrpc api docs: auth methods (dcallagh@redhat.com)
+- bz647176 - ui for changing system notify cc list (dcallagh@redhat.com)
+- bz654299 - configurable distro tag for broken system detection
+  (dcallagh@redhat.com)
+- bz647176 - RFE: Allow additional e-mail address to be notified when system is
+  automatically marked as broken (bpeck@redhat.com)
+- bz653513 - Need a replacement for test_lab_machine (bpeck@redhat.com)
+- bz654302 - Nag emails will now exclude owner/users and thos eon non shared
+  machines (rmancy@redhat.com)
+- bz654097  - support for Fedora14 kickstarts (bpeck@redhat.com)
+- bz624726 - beaker-proxy and beaker-watchdog init scripts do not create PID
+  file (bpeck@redhat.com)
+- bz652334 - ensure activity entries are truncated on UTF-8 character
+  boundaries (dcallagh@redhat.com)
+- bz652298 - don't blindly change the status or type of a system. (bpeck@redhat.com)
+- bz634896 - Stop on ParserWarnings and ParserErrors (rmancy@redhat.com)
+- bz651418 - fix system grid sorting (dcallagh@redhat.com)
+- bz645873 -  Job cancelled soon after creation doesn't terminate
+  (bpeck@redhat.com)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+* Thu Nov 11 2010 Bill Peck <bpeck@redhat.com> 0.5.61-4
+- increase timeout from 20 seconds to 40 seconds. (bpeck@redhat.com)
+- bz648497 fix (bpeck@redhat.com)
+- fixed changelogs (rmancy@redhat.com)
+
+* Thu Nov 11 2010 Raymond Mancy <rmancy@redhat.com> 0.5.61-3
+- Hack for Key/Value without MODULE now we aren't using XMLRPC call to get list
+  (rmancy@redhat.com)
+
+* Thu Nov 11 2010 Raymond Mancy <rmancy@redhat.com> 0.5.61-2
+- Merge branch 'release-0.5.60' into release-0.5.61 to ensure all changes from 60-2 are brought in (rmancy@redhat.com)
+* Thu Nov 11 2010 Raymond Mancy <rmancy@redhat.com> 0.5.61-1
+- bz644132 - Speed up searchbar (rmancy@redhat.com)
+- bz650300 - require login for reporting system problems (dcallagh@redhat.com)
+- bz598781 - To deterministic in host selection (bpeck@redhat.com)
+- bz648497 - Jobs don't run always when free systems available.   
+             When picking recipe.systems don't filter out systems from labs 
+             that don't have the distro yet. Update the Queued to Schedule code to
+             filter out systems from labs that don't have the distro (bpeck@redhat.com)
+- bz649179 - show friendly error message when unparseable job xml is submitted
+  (dcallagh@redhat.com)
+- bz640395 - make bkradd work (bpeck@redhat.com)
+- bz648527 - Now admins get 'Schedule provision' when they are looking at a
+  machine that is being used (rmancy@redhat.com)
+- bz646520 - Retention feature was added without allowing cmdline option.  Also
+  fixed bkr.client helpers to allow setting the guestname in guest recipes.
+  (bpeck@redhat.com)
+- bz647854 - Manual machine with a group will not ISE when viewed by non logged
+  in user (rmancy@redhat.com)
+- bz647566 - cascade key type deletions correctly (dcallagh@redhat.com)
+- bz647292 - fix up broken system detection to handle the case where a system's
+  status has never changed (dcallagh@redhat.com)
+
+* Thu Nov 04 2010 Bill Peck <bpeck@redhat.com> 0.5.60-3
+- quick hack to disable Key/Value -> Module search. (bpeck@redhat.com)
+
 * Thu Oct 28 2010 Bill Peck <bpeck@redhat.com> 0.5.60-2
 - fix missing upload and basepath when cache is off. (bpeck@redhat.com)
 
@@ -215,10 +313,7 @@ fi
 - bz643498 - Fixed 'less than' operator with Key/Value (rmancy@redhat.com)
 - bz643381 - beakerd ERROR Failed to commit due to :list.remove(x): x not in
              list (bpeck@redhat.com)
-- bz643198 - #echo not safe cheetah command (bpeck@redhat.com)
-- bz642834 - define primary keys on association tables (dcallagh@redhat.com)
-- bz636530 - CC list for job completion notifications (dcallagh@redhat.com)
-- bz639227 - escape whiteboard in job matrix links (dcallagh@redhat.com)
+
 * Tue Oct 19 2010 Bill Peck <bpeck@redhat.com> 0.5.59-3
 - HOTFIX bz643381 beakerd ERROR Failed to commit due to
   :list.remove(x): x not in list (bpeck@redhat.com)

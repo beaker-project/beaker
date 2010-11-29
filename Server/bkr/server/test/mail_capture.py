@@ -39,7 +39,7 @@ class MailCaptureThread(threading.Thread):
         # Sadly smtpd.SMTPServer does not give us any nice way to do that :-(
         # For now this works because we don't have any other threads using asyncore
         # in our tests.
-        assert not asyncore.socket_map
+        assert not asyncore.socket_map, asyncore.socket_map
         super(MailCaptureThread, self).__init__(**kwargs)
         self.daemon = True
         self._running = True
@@ -56,6 +56,15 @@ class MailCaptureThread(threading.Thread):
                 log.debug('%r: Captured mail from peer %r: %r', self, peer,
                         (mailfrom, rcpttos, data))
                 captured_mails.append((mailfrom, rcpttos, data))
+            def close(self):
+                smtpd.SMTPServer.close(self)
+                # also clean up any orphaned SMTP channels
+                for dispatcher in asyncore.socket_map.values():
+                    if isinstance(dispatcher, smtpd.SMTPChannel) \
+                            and dispatcher.__server is self:
+                        log.debug('%r: Forcing close of orphaned channel %r',
+                                self, dispatcher)
+                        dispatcher.close()
         server = CapturingSMTPServer(('127.0.0.1', 19999), None)
         log.debug('Spawning %r', server)
         try:

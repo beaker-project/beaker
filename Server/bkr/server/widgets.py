@@ -17,6 +17,7 @@ from turbogears.widgets import (Form, TextField, SubmitButton, TextArea, Label,
                                 CompoundWidget, AjaxGrid, Tabber, CSSLink,
                                 RadioButtonList, MultipleSelectField, Button,
                                 RepeatingFieldSet, SelectionField,WidgetsList)
+from bkr.server import search_utility
 import logging
 log = logging.getLogger(__name__)
 
@@ -143,39 +144,6 @@ class ReserveWorkflow(Form):
 
     def __init__(self,*args,**kw):
         super(ReserveWorkflow,self).__init__(*args, **kw)  
-        def my_cmp(x,y):
-            m1 = re.search('^(.+?)(\d{1,})?$',x)
-            m2 = re.search('^(.+?)(\d{1,})?$',y)
-            try:
-                distro_1 = m1.group(1).lower() 
-            except AttributeError,e:
-                #x has no value, it goes first
-                return -1
-
-            try:
-                distro_2 = m2.group(1).lower() 
-            except AttributeError,e:
-                #y has no value, it goes first 
-                return 1
-
-            distro_1_ver = int(m1.group(2) or 0)
-            distro_2_ver = int(m2.group(2) or 0)
-
-            if not distro_1 or not distro_2:
-                return distro_1 and 1 or -1
-            if distro_1 == distro_2: 
-                #Basically,if x has no version or is a lower version than y, it goes first 
-                return distro_1_ver and (distro_2_ver and (distro_1_ver < distro_2_ver and -1 or 1)  or 1) or -1 
-            else:
-                #Sort distro alphabetically,diregarding version
-                return distro_1 < distro_2 and -1 or 1
-                              
-        self.all_arches = [[elem.arch,elem.arch] for elem in model.Arch.query()]
-        self.all_tags = [['','None Selected']] + [[elem.tag,elem.tag] for elem in model.DistroTag.query()]  
-        self.all_methods = [[elem,elem] for elem in model.Distro.all_methods()]
-        e = [elem.osmajor for elem in model.OSMajor.query()] 
-        self.all_distro_familys = [('','None Selected')] + [[osmajor,osmajor] for osmajor in sorted(e,cmp=my_cmp )]  
-
         self.method_ = SingleSelectField(name='method', label='Method', options=[None], 
             validator=validators.NotEmpty())
         self.distro = SingleSelectField(name='distro', label='Distro', 
@@ -195,12 +163,45 @@ class ReserveWorkflow(Form):
         self.name = 'reserveworkflow_form'
         self.action = '/reserve_system'
         self.submit = SubmitButton(name='search',attrs={'value':'Show Systems'})
-                                                                
+
+    @staticmethod
+    def my_cmp(x,y):
+        m1 = re.search('^(.+?)(\d{1,})?$',x)
+        m2 = re.search('^(.+?)(\d{1,})?$',y)
+        try:
+            distro_1 = m1.group(1).lower()
+        except AttributeError,e:
+            #x has no value, it goes first
+            return -1
+
+        try:
+            distro_2 = m2.group(1).lower()
+        except AttributeError,e:
+            #y has no value, it goes first
+            return 1
+
+        distro_1_ver = int(m1.group(2) or 0)
+        distro_2_ver = int(m2.group(2) or 0)
+
+        if not distro_1 or not distro_2:
+            return distro_1 and 1 or -1
+        if distro_1 == distro_2:
+            #Basically,if x has no version or is a lower version than y, it goes first
+            return distro_1_ver and (distro_2_ver and (distro_1_ver < distro_2_ver and -1 or 1)  or 1) or -1
+        else:
+            #Sort distro alphabetically,diregarding version
+            return distro_1 < distro_2 and -1 or 1
+
     def display(self,value=None,**params):
         if 'options' in params:
             for k in params['options'].keys():
                 params[k] = params['options'][k]
                 del params['options'][k]
+        params['all_arches'] = [[elem.arch,elem.arch] for elem in model.Arch.query()]
+        params['all_tags'] = [['','None Selected']] + [[elem.tag,elem.tag] for elem in model.DistroTag.query()]
+        params['all_methods'] = [[elem,elem] for elem in model.Distro.all_methods()]
+        e = [elem.osmajor for elem in model.OSMajor.query()]
+        params['all_distro_familys'] = [('','None Selected')] + [[osmajor,osmajor] for osmajor in sorted(e,cmp=self.my_cmp )]
         return super(ReserveWorkflow,self).display(value,**params)
 
     def update_params(self,d):
@@ -422,7 +423,9 @@ class JobMatrixReport(Form):
 
 class SearchBar(RepeatingFormField):
     """Search Bar""" 
-    javascript = [LocalJSLink('bkr', '/static/javascript/searchbar_v5.js'),LocalJSLink('bkr','/static/javascript/jquery.js')]
+    javascript = [LocalJSLink('bkr', '/static/javascript/search_object.js'),
+                  LocalJSLink('bkr', '/static/javascript/searchbar_v6.js'), 
+                  LocalJSLink('bkr','/static/javascript/jquery.js')]
     template = """
     <div xmlns:py="http://purl.org/kid/ns#">
     <a id="advancedsearch" href="#">Toggle Search</a>
@@ -484,8 +487,8 @@ class SearchBar(RepeatingFormField):
            class="${field_class}"
            id="${field_id}_${repetition}">
         <script language="JavaScript" type="text/JavaScript">
-            
-            ${field_id}_${repetition} = new SearchBar([${to_json(fields)}],'${search_controller}','${value_for(this_operations_field)}',${extra_callbacks_stringified},${table_search_controllers_stringified},'${value_for(this_searchvalue_field)}','${value_for(keyvaluevalue)}');
+
+            ${field_id}_${repetition} = new SearchBar([${to_json(fields)}],'${search_controller}','${value_for(this_operations_field)}',${extra_callbacks_stringified},${table_search_controllers_stringified},'${value_for(this_searchvalue_field)}','${value_for(keyvaluevalue)}',${search_object});
             addLoadEvent(${field_id}_${repetition}.initialize);
         </script>
         <td py:for="field in fields">
@@ -559,14 +562,21 @@ class SearchBar(RepeatingFormField):
     </div>
     """
 
-    params = ['repetitions', 'form_attrs', 'search_controller', 'simplesearch','quickly_searches','button_widget',
-              'advanced', 'simple','to_json','this_operations_field','this_searchvalue_field','extra_hiddens',
-              'extra_callbacks_stringified','table_search_controllers_stringified','keyvaluevalue','simplesearch_label',
-              'result_columns','col_options','col_defaults','enable_custom_columns','default_result_columns']
+    params = ['repetitions', 'search_object', 'form_attrs', 'search_controller',
+              'simplesearch','quickly_searches','button_widget',
+              'advanced', 'simple','to_json','this_operations_field',
+              'this_searchvalue_field','extra_hiddens',
+              'extra_callbacks_stringified','table_search_controllers_stringified',
+              'keyvaluevalue','simplesearch_label', 'result_columns','col_options',
+              'col_defaults','enable_custom_columns','default_result_columns']
+
     form_attrs = {}
     simplesearch = None
 
-    def __init__(self, table,search_controller,extra_selects=None, extra_inputs=None,extra_hiddens=None, enable_custom_columns=False, *args, **kw): 
+    def __init__(self, table,search_controller,extra_selects=None, 
+        extra_inputs=None,extra_hiddens=None, enable_custom_columns=False, 
+        complete_data=None, *args, **kw): 
+
         super(SearchBar,self).__init__(*args, **kw)
         self.enable_custom_columns = enable_custom_columns
         self.search_controller=search_controller
@@ -575,14 +585,16 @@ class SearchBar(RepeatingFormField):
         self.default_result_columns = {}
         table_field = SingleSelectFieldJSON(name="table", options=table, validator=validators.NotEmpty()) 
         operation_field = SingleSelectFieldJSON(name="operation", options=[None], validator=validators.NotEmpty())
-        value_field = TextFieldJSON(name="value") 
+        value_field = TextFieldJSON(name="value")
         # We don't know where in the fields array the operation array will be, so we will put it here
         # to access in the template
         self.this_operations_field = operation_field
         self.this_searchvalue_field = value_field
         self.fields = [table_field,operation_field,value_field]
         new_selects = []
-        self.extra_callbacks = {}
+        self.extra_callbacks = {} 
+        self.search_object = jsonify.encode(complete_data)
+            
         if extra_selects is not None: 
             new_class = [] 
             for elem in extra_selects:
@@ -778,7 +790,8 @@ class PowerForm(Form):
         self.power = HiddenField(name="power")
         self.power_type_id = SingleSelectField(name='power_type_id',
                                            label=_(u'Power Type'),
-                                           options=model.PowerType.get_all)
+                                           options=model.PowerType.get_all,
+                                           validator=validators.NotEmpty())
         self.power_address = TextField(name='power_address', label=_(u'Power Address'))
         self.power_user = TextField(name='power_user', label=_(u'Power Login'))
         self.power_passwd = TextField(name='power_passwd', label=_(u'Power Password'))
@@ -1057,10 +1070,12 @@ class SystemInstallOptions(Form):
                                  validator=validators.NotEmpty())
         self.prov_osmajor      = SingleSelectField(name='prov_osmajor',
                                  label=_(u'Family'),
-                                 options=model.OSMajor.get_all)
+                                 options=model.OSMajor.get_all,
+                                 validator=validators.NotEmpty())
         self.prov_osversion    = SingleSelectField(name='prov_osversion',
                                  label=_(u'Update'),
-                                 options=model.OSVersion.get_all)
+                                 options=model.OSVersion.get_all,
+                                 validator=validators.NotEmpty())
         self.prov_ksmeta       = TextField(name='prov_ksmeta', 
                                      label=_(u'Kickstart Metadata'))
         self.prov_koptions     = TextField(name='prov_koptions', 
@@ -1123,7 +1138,8 @@ class SystemDetails(Widget):
 
 class SystemHistory(CompoundWidget): 
     template = "bkr.server.templates.system_activity"
-    params = ['list','grid','search_bar','searchvalue','all_history'] 
+    member_widgets = ['search_bar']
+    params = ['list','grid','searchvalue','all_history'] 
     
     def __init__(self):
         #filter_column_options = model.Activity.distinct_field_names() 
@@ -1138,6 +1154,7 @@ class SystemHistory(CompoundWidget):
         self.search_bar = SearchBar(name='historysearch',
                            label=_(u'History Search'),    
                            table = search_utility.History.search.create_search_table(),
+                           complete_data = search_utility.History.search.create_complete_search_table(),
                            search_controller=url("/get_search_options_history"), 
                            )
 
@@ -1155,7 +1172,7 @@ class SystemForm(Form):
     javascript = [LocalJSLink('bkr', '/static/javascript/jquery.js'),
                   LocalJSLink('bkr', '/static/javascript/provision.js'),
                   LocalJSLink('bkr','/static/javascript/system_admin.js'),
-                  LocalJSLink('bkr', '/static/javascript/searchbar_v5.js'),
+                  LocalJSLink('bkr', '/static/javascript/searchbar_v6.js'),
                   JSLink(static,'ajax.js'),
                  ]
     template = "bkr.server.templates.system_form"
@@ -1180,7 +1197,8 @@ class SystemForm(Form):
                TextArea(name='status_reason', label=_(u'Condition Report'),attrs={'rows':3,'cols':27},validator=validators.MaxLength(255)),
                SingleSelectField(name='lab_controller_id',
                                  label=_(u'Lab Controller'),
-                                 options=[(0,"None")] + model.LabController.get_all()),
+                                 options=lambda: [(0,"None")] + model.LabController.get_all(),
+                                 validator=validators.Int()),
                TextField(name='vendor', label=_(u'Vendor')),
                TextField(name='model', label=_(u'Model')),
                TextField(name='date_added', label=_(u'Date Created')),
@@ -1211,6 +1229,7 @@ class SystemForm(Form):
                                       search_param="name",
                                       result_name="groups"),
                TextField(name='mac_address', label=_(u'Mac Address')),
+               TextField(name='cc', label=_(u'Notify CC')),
     ]
 
     def display_value(self, item, hidden_fields, value=None):
@@ -1380,7 +1399,8 @@ class ReportProblemForm(Form):
     template = 'bkr.server.templates.report_problem_form'
     name = 'report_problem'
     fields=[
-        TextArea(name='problem_description', label=_(u'Description of problem'))
+        TextArea(name='problem_description', label=_(u'Description of problem'),
+                validator=validators.NotEmpty())
     ]
     hidden_fields=[
         HiddenField(name='system_id'),

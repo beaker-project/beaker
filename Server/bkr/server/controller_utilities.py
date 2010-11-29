@@ -52,9 +52,9 @@ class SystemTab:
             provision_now_rights = True
             will_provision = True
         elif system.can_provision_now(our_user) and not currently_held: #Has privs, not current user, You need to Take it first
-            provision_now_rights = True
-            will_provision = False
-            provision_action = ''
+            provision_now_rights = False
+            will_provision = True
+            provision_action = '/schedule_provision'
         else:
             log.error('Could not follow logic when determining user access to machine')
             will_provision = False
@@ -156,8 +156,24 @@ class Utility:
         return 'fqdn'
 
     @classmethod
+    def system_status_name(cls):
+        return 'status.status'
+
+    @classmethod
+    def system_arch_name(cls):
+        return 'arch.arch'
+
+    @classmethod
+    def system_user_name(cls):
+        return 'user.user_name'
+
+    @classmethod
+    def system_type_name(cls):
+        return 'type.type'
+
+    @classmethod
     def system_powertype_name(cls):
-        return 'power'
+        return 'power.power_type.name'
 
     @classmethod
     def get_attr(cls,c):        
@@ -231,7 +247,9 @@ class Utility:
             options = {} 
             for column_desc in systems: 
                 table,column = column_desc.split('/')
-                if column.lower() in ('name','vendor','memory','model','location'):
+                if column.lower() in ('name', 'vendor', 'lender', 'location', 
+                        'memory', 'model', 'location', 'status', 'user',
+                        'type', 'powertype'):
                     sort_me = True
                 else:
                     sort_me = False
@@ -239,7 +257,7 @@ class Utility:
                 if others:
                     (name_string, title_string, options, my_getter) = get_widget_attrs(table, column, with_desc=True, sortable=sort_me)
                 else:
-                    (name_string, title_string, options, my_getter) = get_widget_attrs(table, column, with_desc=False, sortable=True)
+                    (name_string, title_string, options, my_getter) = get_widget_attrs(table, column, with_desc=False, sortable=sort_me)
 
                 new_widget = widgets.PaginateDataGrid.Column(name=name_string, getter=my_getter, title=title_string, options=options) 
                 if column == 'Name':

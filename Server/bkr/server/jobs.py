@@ -46,6 +46,8 @@ from bkr.server.job_utilities import Utility
 
 log = logging.getLogger(__name__)
 
+__all__ = ['JobForm', 'Jobs']
+
 class JobForm(widgets.Form):
 
     template = 'bkr.server.templates.job_form'
@@ -141,7 +143,22 @@ class Jobs(RPCRoot):
         return query.all()
 
     @cherrypy.expose
-    def list(self, tags, days_complete_for, family, product, **kw):
+    def list(self, tags, days_complete_for, family, product **kw):
+        """
+        Lists recipe sets, filtered by the given criteria.
+
+        :param tags: limit to recipe sets which have one of these retention tags
+        :type tags: string or array of strings
+        :param days_complete_for: limit to recipe sets which completed at least this many days ago
+        :type days_complete_for: integer
+        :param family: limit to recipe sets which used distros with this family name
+        :type family: string
+
+        Returns a two-element array. The first element is an array of recipe 
+        set IDs of the form ``'RS:123'``, suitable to be passed to the 
+        :meth:`jobs.delete_jobs` method. The second element is a human-readable 
+        count of the number of recipe sets matched.
+        """
         try:
             recipesets = self._list(tags, days_complete_for, family, product, **kw)
         except ValueError, e:
@@ -153,7 +170,22 @@ class Jobs(RPCRoot):
     @identity.require(identity.in_group("admin"))
     def delete_jobs(self, jobs=None, tag=None, complete_days=None, family=None, dryrun=False,**kw):
         """
-        Handles deletion of jobs and entities within jobs
+        Deletes log data associated with jobs. Returns a human-readable 
+        description of files which have been deleted, and any errors 
+        encountered.
+
+        To select jobs by id, pass an array for the *jobs* argument. Elements 
+        of the array must be strings of the form ``'J:123'`` or ``'RS:123'``, 
+        to select jobs or recipe sets respectively.
+        Alternatively, pass some combination of the *tag*, *complete_days*, or 
+        *family* arguments to select jobs for deletion. These arguments behave 
+        as per the :meth:`jobs.list` method.
+
+        If *dryrun* is True, deletions will be reported but nothing will be 
+        deleted from the file system.
+
+        At present, only Beaker administrators (in the 'admin' group) are 
+        permitted to call this method.
         """
         deleted_paths = []
         errors = []
@@ -179,11 +211,15 @@ class Jobs(RPCRoot):
                 errors.extend(new_errors)
         return 'Deleted paths:%s' % ','.join(deleted_paths), ' Errors: %s' % ','.join(errors)
 
+    # XMLRPC method
     @cherrypy.expose
     @identity.require(identity.not_anonymous())
     def upload(self, jobxml):
         """
-        XMLRPC method to upload job
+        Queues a new job.
+
+        :param jobxml: XML description of job to be queued
+        :type jobxml: string
         """
         session.begin()
         xml = xmltramp.parse(jobxml)
@@ -232,32 +268,24 @@ class Jobs(RPCRoot):
             # Clone from file
             textxml = filexml.file.read()
         elif textxml:
-            if not confirmed:
-                job_schema = lxml.etree.RelaxNG(self.job_schema_doc)
-                if not job_schema.validate(lxml.etree.fromstring(textxml)):
-                    return dict(
-                        title = title,
-                        form = self.job_form,
-                        action = 'clone',
-                        options = {'xsd_errors': job_schema.error_log},
-                        value = dict(textxml=textxml, confirmed=True),
-                    )
             try:
+                if not confirmed:
+                    job_schema = lxml.etree.RelaxNG(self.job_schema_doc)
+                    if not job_schema.validate(lxml.etree.fromstring(textxml)):
+                        return dict(
+                            title = title,
+                            form = self.job_form,
+                            action = 'clone',
+                            options = {'xsd_errors': job_schema.error_log},
+                            value = dict(textxml=textxml, confirmed=True),
+                        )
                 xmljob = XmlJob(xmltramp.parse(textxml))
-            except Exception,err:
-                flash(_(u'Failed to import job because of:%s' % err))
-                return dict(
-                    title = title,
-                    form = self.job_form,
-                    action = './clone',
-                    options = {},
-                    value = dict(textxml = "%s" % textxml, confirmed=confirmed),
-                )
-            try:
                 job = self.process_xmljob(xmljob,identity.current.user)
-            except (BeakerException, ValueError), err:
+                session.save(job)
+                session.flush()
+            except Exception,err:
                 session.rollback()
-                flash(_(u'Failed to import job because of %s' % err ))
+                flash(_(u'Failed to import job because of: %s' % err))
                 return dict(
                     title = title,
                     form = self.job_form,
@@ -265,9 +293,8 @@ class Jobs(RPCRoot):
                     options = {},
                     value = dict(textxml = "%s" % textxml, confirmed=confirmed),
                 )
-            session.save(job)
-            session.flush()
-            self.success_redirect(job.id)
+            else:
+                self.success_redirect(job.id)
         return dict(
             title = title,
             form = self.job_form,
@@ -419,6 +446,8 @@ class Jobs(RPCRoot):
             raise BX(_('Error in hostRequires: %s' % e))
         recipe.whiteboard = xmlrecipe.whiteboard
         recipe.kickstart = xmlrecipe.kickstart
+        if xmlrecipe.autopick:
+            recipe.autopick_random = xmlrecipe.autopick.random
         if xmlrecipe.watchdog:
             recipe.panic = xmlrecipe.watchdog.panic
         recipe.ks_meta = xmlrecipe.ks_meta
@@ -546,6 +575,7 @@ class Jobs(RPCRoot):
                            label=_(u'Job Search'),    
                            simplesearch_label = 'Lookup ID',
                            table = search_utility.Job.search.create_search_table(without=('Owner')),
+                           complete_data = search_utility.Job.search.create_complete_search_table(),
                            search_controller=url("/get_search_options_job"),
                            quick_searches = [('Status-is-Queued','Queued'),('Status-is-Running','Running'),('Status-is-Completed','Completed')])
                             
@@ -678,3 +708,5 @@ class Jobs(RPCRoot):
                     whiteboard_widget    = self.whiteboard_widget,
                     job                  = job)
 
+# for sphinx
+jobs = Jobs

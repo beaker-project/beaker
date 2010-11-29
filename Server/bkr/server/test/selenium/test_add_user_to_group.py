@@ -17,14 +17,14 @@ class TestAddUserToGroup(bkr.server.test.selenium.SeleniumTestCase):
     
     def test_add_user_to_admin_group(self):
         sel = self.selenium
-        sel.open("/")
+        sel.open("")
         sel.click("link=Login")
         sel.wait_for_page_to_load("3000")
         sel.type("user_name", self.BEAKER_LOGIN_USER)
         sel.type("password", self.BEAKER_LOGIN_PASSWORD)
         sel.click("login")
         sel.wait_for_page_to_load("3000")
-        sel.open("/users/")
+        sel.open("users/")
         sel.click("link=Groups")
         sel.wait_for_page_to_load("3000")
         sel.click("link=admin")
@@ -41,14 +41,14 @@ class TestAddUserToGroup(bkr.server.test.selenium.SeleniumTestCase):
 
     def test_add_user_to_nonadmin_group(self):
         sel = self.selenium
-        sel.open("/")
+        sel.open("")
         sel.click("link=Login")
         sel.wait_for_page_to_load("3000")
         sel.type("user_name", self.BEAKER_LOGIN_USER)
         sel.type("password", self.BEAKER_LOGIN_PASSWORD)
         sel.click("login")
         sel.wait_for_page_to_load("3000")
-        sel.open("/users/")
+        sel.open("users/")
         sel.click("link=Groups")
         sel.wait_for_page_to_load("3000")
         sel.click("link=%s" % self.GROUP)

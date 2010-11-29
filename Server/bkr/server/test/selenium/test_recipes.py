@@ -22,15 +22,8 @@ import re
 from turbogears.database import session
 
 from bkr.server.test.selenium import SeleniumTestCase
-from bkr.server.test.mail_capture import MailCaptureThread
 from bkr.server.test import data_setup
-
-def assert_sorted(things):
-    if len(things) == 0: return
-    for n in xrange(1, len(things)):
-        if things[n] < things[n - 1]:
-            raise AssertionError('Not in sorted order, found %r after %r' %
-                    (things[n], things[n - 1]))
+from bkr.server.test.assertions import assert_sorted
 
 class TestRecipesDataGrid(SeleniumTestCase):
 
@@ -135,8 +128,6 @@ class TestRecipeView(SeleniumTestCase):
         session.flush()
         self.selenium = sel = self.get_selenium()
         self.selenium.start()
-        self.mail_capture = MailCaptureThread()
-        self.mail_capture.start()
 
         # log in
         sel.open('')
@@ -149,7 +140,6 @@ class TestRecipeView(SeleniumTestCase):
 
     def tearDown(self):
         self.selenium.stop()
-        self.mail_capture.stop()
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=623603
     # see also TestSystemView.test_can_report_problem
@@ -163,16 +153,3 @@ class TestRecipeView(SeleniumTestCase):
         sel.wait_for_page_to_load('3000')
         self.assertEqual(self.selenium.get_title(),
                 'Report a problem with %s' % self.system.fqdn)
-        self.assertEqual(
-                # value of cell beside "Problematic system" cell
-                sel.get_text('//form[@name="report_problem"]//table//td'
-                    '[preceding-sibling::th[1]/text() = "Problematic system"]'),
-                self.system.fqdn)
-        sel.type('report_problem_problem_description', 'b0rk b0rk b0rk')
-        sel.submit('report_problem')
-        sel.wait_for_page_to_load('20000')
-        self.assertEqual(sel.get_text('css=div.flash'),
-                'Your problem report has been forwarded to the system owner')
-        self.assertEqual(len(self.mail_capture.captured_mails), 1)
-        sender, rcpts, raw_msg = self.mail_capture.captured_mails[0]
-        self.assertEqual(rcpts, [self.system_owner.email_address])

@@ -17,7 +17,7 @@ class Menu(bkr.server.test.selenium.SeleniumTestCase):
     def test_my_menu(self):
         sel = self.selenium
         try:
-            sel.open("/")
+            sel.open("")
             sel.click("link=My Jobs")
             sel.wait_for_page_to_load("3000")
             sel.click("link=My Recipes")

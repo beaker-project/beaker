@@ -187,12 +187,22 @@ class BeakerWorkflow(BeakerCommand):
         distro   = kwargs.get("distro", None)
         family   = kwargs.get("family", None)
 
-        self.set_hub(username, password)
+        if not hasattr(self,'hub'):
+            self.set_hub(username, password)
 
         if family:
             return self.hub.distros.get_arch(dict(osmajor=family))
         if distro:
             return self.hub.distros.get_arch(dict(distro=distro))
+
+    def getOsMajors(self, *args, **kwargs):
+        """ Get all OsMajors, optionally filter by tag """ 
+        username = kwargs.get("username", None)
+        password = kwargs.get("password", None)
+        tags = kwargs.get("tag", [])
+        if not hasattr(self,'hub'):
+            self.set_hub(username, password)
+        return self.hub.distros.get_osmajors(tags)
 
     def getFamily(self, *args, **kwargs):
         """ Get the family/osmajor for a particular distro """
@@ -204,9 +214,9 @@ class BeakerWorkflow(BeakerCommand):
         if family:
             return family
 
-        self.set_hub(username, password)
-
-        return self.hub.distros.get_family(distro)
+        if not hasattr(self,'hub'):
+            self.set_hub(username, password)
+        return self.hub.distros.get_osmajor(distro)
     
     def getTasks(self, *args, **kwargs):
         """ get all requested tasks """
@@ -228,22 +238,24 @@ class BeakerWorkflow(BeakerCommand):
         if packages:
             filter['packages'] = packages
         
-        self.set_hub(username, password)
+        if not hasattr(self,'hub'):
+            self.set_hub(username, password)
         if types or packages:
-            tasks.extend(self.hub.tasks.filter(filter))
+            ntasks = self.hub.tasks.filter(filter)
 
-        multihost_tasks = self.hub.tasks.filter(dict(types=['Multihost']))
+            multihost_tasks = self.hub.tasks.filter(dict(types=['Multihost']))
 
-        if self.multi_host:
-            for t in tasks[:]:
-                if t not in multihost_tasks:
-                    #FIXME add debug print here
-                    tasks.remove(t)
-        else:
-            for t in tasks[:]:
-                if t in multihost_tasks:
-                    #FIXME add debug print here
-                    tasks.remove(t)
+            if self.multi_host:
+                for t in ntasks[:]:
+                    if t not in multihost_tasks:
+                        #FIXME add debug print here
+                        ntasks.remove(t)
+            else:
+                for t in ntasks[:]:
+                    if t in multihost_tasks:
+                        #FIXME add debug print here
+                        ntasks.remove(t)
+            tasks.extend(ntasks)
         return tasks
 
     def processTemplate(self, recipeTemplate,

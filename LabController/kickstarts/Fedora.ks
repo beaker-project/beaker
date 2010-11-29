@@ -67,6 +67,7 @@ $SNIPPET("system")
 
 %packages --ignoremissing
 $SNIPPET("rhts_packages")
+%end
 
 #end if
 #end if
@@ -74,12 +75,14 @@ $SNIPPET("rhts_packages")
 $SNIPPET("rhts_pre")
 $SNIPPET("Fedora_pre")
 $SNIPPET("system_pre")
+%end
 
 
 %post
 $SNIPPET("rhts_post")
 $SNIPPET("Fedora_post")
 $SNIPPET("system_post")
+%end
 
 #if $getVar('ks_appends', '') != '':
 $SNIPPET("ks_appends")

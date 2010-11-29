@@ -6,6 +6,7 @@ from turbogears import flash, identity
 from sqlalchemy import or_, and_, not_
 from sqlalchemy.sql import visitors, select
 from turbogears.database import session
+from bkr.server.model import Key as KeyModel
 import logging
 log = logging.getLogger(__name__)
 
@@ -216,6 +217,32 @@ class Modeller(object):
         return operators
         
 class Search:
+
+    @classmethod
+    def get_search_options_worker(cls,search,col_type):
+        return_dict = {}
+        #Determine what field type we are dealing with. If it is Boolean, convert our values to 0 for False
+        # and 1 for True 
+        if col_type.lower() == 'boolean':
+            search['values'] = { 0:'False', 1:'True'}
+
+        #Determine if we have search values. If we do, then we should only have the operators
+        # 'is' and 'is not'.
+        if search['values']:
+            search['operators'] = filter(lambda x: x == 'is' or x == 'is not', search['operators'])
+
+        search['operators'].sort()
+        return_dict['search_by'] = search['operators'] 
+        return_dict['search_vals'] = search['values'] 
+        return return_dict
+
+    @classmethod
+    def get_search_options(cls, table_field, *args, **kw):
+        field = table_field
+        search = cls.search_on(field)
+        col_type = cls.field_type(field)
+        return cls.get_search_options_worker(search,col_type)
+
     def append_results(self,value,column,operation,**kw): 
         pre = self.pre_operations(column,operation,value,**kw)
         cls_name = re.sub('Search','',self.__class__.__name__)
@@ -367,11 +394,18 @@ class Search:
         cls_ref = globals()[cls_name]  
         searchable = cls_ref.get_searchable(*args,**kw)
         searchable.sort()
-        return searchable    
+        return searchable
+
+    @classmethod
+    def create_complete_search_table(cls, *args, **kw):
+        searchable = cls.create_search_table(*args, **kw)
+        table_options = {}
+        for col in searchable:
+            table_options[col] = cls.get_search_options(col)
+        return table_options
 
 
 class RecipeSearch(Search):
-    search_table = []
     def __init__(self,recipe):
         self.queri = recipe
 
@@ -386,9 +420,20 @@ class TaskSearch(Search):
         self.queri = task
 
 class DistroSearch(Search):
-    searh_table = []
+    search_table = []
     def __init__(self,distro):
         self.queri = distro
+
+class KeySearch(Search):
+    search_table = []
+
+    @classmethod 
+    def get_search_options(cls, keyvalue_field, *args, **kw):
+        return_dict = {}
+        search = System.search.search_on_keyvalue(keyvalue_field)
+        search.sort()
+        return_dict['search_by'] = search
+        return return_dict
 
 class SystemReserveSearch(Search):
     search_table = []
@@ -526,7 +571,6 @@ class SystemSearch(Search):
                 #If they are System columns we won't need to explicitly add them to the query, as they are already returned in the System query  
                 if cls_ref is System:     
                     self.system_columns_desc.append(elem)
-                    continue
                 elif col_ref is not None: 
                     self.extra_columns_desc.append(elem)
                     self.adding_columns = True 
@@ -536,6 +580,25 @@ class SystemSearch(Search):
  
     def return_results(self): 
         return self.queri        
+
+    @classmethod
+    def create_complete_search_table(cls, *args, **kw):
+        searchable = cls.create_search_table(*args, **kw)
+        table_options = {}
+        for col in searchable:
+            #if you have any custom columns (i.e Key/Value, then get their results here)
+            if col.lower() == 'key/value':
+                #HACK to remove MODULE from Key/Value search. This is also implemented in
+                # get_value_search_options() to cater for an Ajax call
+                table_options[col] ={'keyvals' :  [x for x in KeyModel.get_all_keys() if x != 'MODULE']}
+                expanded_keyvals = {}
+                for k in table_options[col]['keyvals']:
+                    expanded_keyvals.update({ k : Key.search.get_search_options(k) } )
+                    #table_options[col]['keyvals'] = { k:Key.search.get_search_options(k) }
+                table_options[col].update(expanded_keyvals)
+                continue
+            table_options[col] = cls.get_search_options(col)
+        return table_options
 
     @classmethod
     def create_column_table(cls,options): 
@@ -575,15 +638,6 @@ class SystemSearch(Search):
 
         lookup_table.sort()
         return lookup_table
-
-        for obj in searchable_objs: 
-
-            display_name = cls.create_mapping(obj)
-            #Now let's actually build the search table
-            searchable =  obj.get_searchable() 
-            
-            for item in searchable:    
-                 cls.search_table.append('%s/%s' % (display_name,item))  
 
     @classmethod
     def create_mapping(cls,obj):
@@ -684,7 +738,7 @@ class SystemObject:
     @classmethod
     def search_values(cls,col):  
        if cls.search_values_dict.has_key(col):
-           return cls.search_values_dict[col]
+           return cls.search_values_dict[col]()
        
     @classmethod
     def get_searchable(cls,*args,**kw):
@@ -755,14 +809,6 @@ class System(SystemObject):
           
         ids = [r.id for r in query]  
         return not_(model.system_table.c.id.in_(ids)) 
-           
-    @classmethod
-    def search_values(cls,col):  
-        if cls.search_values_dict.has_key(col):
-            try:
-                return cls.search_values_dict[col]()
-            except TypeError, e: #perhaps we have a hash and not a callable
-                return cls.search_values_dict[col]
 
 class Recipe(SystemObject):
     search = RecipeSearch
@@ -776,8 +822,8 @@ class Recipe(SystemObject):
                             'Result' : MyColumn(col_type='string', column=model.TaskResult.result, relations='result'),
                          }
 
-    search_values_dict = {'Status' : model.TaskStatus.get_all_status(),
-                          'Result' : model.TaskResult.get_all_results()}
+    search_values_dict = {'Status' : lambda: model.TaskStatus.get_all_status(),
+                          'Result' : lambda: model.TaskResult.get_all_results()}
     
 
 class Task(SystemObject):
@@ -946,7 +992,7 @@ class Distro(SystemObject):
                             'Breed' : MyColumn(col_type='string',column=model.Breed.breed, relations=['breed']),
                             'Tag' : MyColumn(col_type='string', column=model.DistroTag.tag, relations=['_tags'])
                          }
-    search_values_dict = {'Tag' : [e.tag for e in model.DistroTag.list_by_tag('')]}
+    search_values_dict = {'Tag' : lambda: [e.tag for e in model.DistroTag.list_by_tag('')]}
 
     @classmethod
     def tag_is_not_filter(cls,col,val):
@@ -974,7 +1020,8 @@ class SystemReserve(System):
                             'LoanedTo'  : MyColumn(column=model.User.user_name,col_type='string', has_alias=True, relations='loaned'),
                           }
 
-    System.search_values_dict['Shared'] =  ['True','False'] 
+    search_values_dict = dict(System.search_values_dict.items() +
+                             [('Shared', lambda: ['True', 'False'])])
     
 
        
@@ -1016,6 +1063,7 @@ class History(SystemObject):
        
 class Key(SystemObject):
     searchable_columns = {'Value': KeyColumn(relations=[['key_values_int','key'],['key_values_string','key']])}
+    search = KeySearch
     
     @classmethod
     def search_operators(cls,type,loose_match=None):
@@ -1123,13 +1171,13 @@ class Job(SystemObject):
 
                          }
 
-    search_values_dict = {'Status' : model.TaskStatus.get_all_status(),
-                          'Result' : model.TaskResult.get_all_results()}
+    search_values_dict = {'Status' : lambda: model.TaskStatus.get_all_status(),
+                          'Result' : lambda: model.TaskResult.get_all_results()}
                          
             
 class Cpu(SystemObject):      
     display_name = 'CPU'   
-    search_values_dict = { 'Hyper' : ['True','False'] }
+    search_values_dict = { 'Hyper' : lambda: ['True','False'] }
     searchable_columns = {
                           'Vendor'      : CpuColumn(col_type='string', column = model.Cpu.vendor),
                           'Processors'  : CpuColumn(col_type='numeric',column = model.Cpu.processors),

@@ -2,7 +2,7 @@ from turbogears.database import session
 from turbogears import controllers, expose, flash, widgets, validate, error_handler, validators, redirect, paginate, url
 from model import *
 from turbogears import identity, redirect, config
-import search_utility
+import search_utility as su
 import bkr
 import bkr.server.stdvars
 from bkr.server.power import PowerTypes
@@ -64,6 +64,7 @@ import cherrypy
 import md5
 import re
 import string
+import pkg_resources
 
 # for debugging
 import sys
@@ -207,6 +208,56 @@ class Devices:
                     object_count = devices.count(),
                     list = devices)
 
+class ReportProblemController(object):
+
+    form_widget = ReportProblemForm()
+
+    @expose(template='bkr.server.templates.form-post')
+    @identity.require(identity.not_anonymous())
+    def index(self, system_id, recipe_id=None, problem_description=None, tg_errors=None):
+        """
+        Allows users to report a problem with a system to the system's owner.
+        """
+        try:
+            system = System.by_id(system_id, identity.current.user)
+        except InvalidRequestError:
+            flash(_(u'Unable to find system with id of %s' % system_id))
+            redirect('/')
+        recipe = None
+        if recipe_id is not None:
+            try:
+                recipe = Recipe.by_id(recipe_id)
+            except InvalidRequestError:
+                pass
+        return dict(
+            title=_(u'Report a problem with %s') % system.fqdn,
+            form=self.form_widget,
+            method='post',
+            action='submit',
+            value={'system_id': system_id, 'recipe_id': recipe_id},
+            options={'system': system, 'recipe': recipe}
+        )
+
+    @expose()
+    @error_handler(index)
+    @validate(form=form_widget)
+    @identity.require(identity.not_anonymous())
+    def submit(self, system_id, problem_description, recipe_id=None):
+        system = System.by_id(system_id, identity.current.user)
+        recipe = None
+        if recipe_id is not None:
+            try:
+                recipe = Recipe.by_id(recipe_id)
+            except InvalidRequestError:
+                pass
+        mail.system_problem_report(system, problem_description,
+                recipe, identity.current.user)
+        activity = SystemActivity(identity.current.user, u'WEBUI', u'Reported problem',
+                u'Status', None, problem_description)
+        system.activity.append(activity)
+        flash(_(u'Your problem report has been forwarded to the system owner'))
+        redirect('/view/%s' % system.fqdn)
+
 class Root(RPCRoot): 
     powertypes = PowerTypes()
     keytypes = KeyTypes()
@@ -233,7 +284,14 @@ class Root(RPCRoot):
     reserveworkflow = ReserveWorkflow()
     watchdogs = Watchdogs()
     retentiontag = RetentionTagController()
-    
+    report_problem = ReportProblemController()
+
+    for entry_point in pkg_resources.iter_entry_points('bkr.controllers'):
+        controller = entry_point.load()
+        log.info('Attaching root extension controller %s as %s',
+                controller, entry_point.name)
+        locals()[entry_point.name] = controller
+
     id         = widgets.HiddenField(name='id')
     submit     = widgets.SubmitButton(name='submit')
 
@@ -263,17 +321,6 @@ class Root(RPCRoot):
         action = 'save_data',
         submit_text = _(u'Change'),
     )  
-    search_bar = SearchBar(name='systemsearch',
-                           label=_(u'System Search'), 
-                           enable_custom_columns = True,
-                           extra_selects = [ { 'name': 'keyvalue', 'column':'key/value','display':'none' , 'pos' : 2,'callback':url('/get_operators_keyvalue') }], 
-                           table=search_utility.System.search.create_search_table([{search_utility.System:{'all':[]}},
-                                                                                   {search_utility.Cpu:{'all':[]}},
-                                                                                   {search_utility.Device:{'all':[]}},
-                                                                                   {search_utility.Key:{'all':[]}} ] ),
-                           search_controller=url("/get_search_options"), 
-                           table_search_controllers = {'key/value':url('/get_keyvalue_search_options')},)
-                 
   
     system_form = SystemForm()
     power_form = PowerForm(name='power')
@@ -289,7 +336,6 @@ class Root(RPCRoot):
     system_provision = SystemProvision(name='provision')
     arches_form = SystemArches(name='arches') 
     task_form = TaskSearchForm(name='tasks')
-    report_problem_form = ReportProblemForm()
 
     @expose(format='json')
     def change_system_admin(self,system_id=None,group_id=None,cmd=None,**kw):
@@ -309,8 +355,8 @@ class Root(RPCRoot):
         if cmd == 'remove':
             group.admin_systems.remove(System.by_id(system_id,identity.current.user))
             return {'success' : 1 }
-            
-        
+
+
     @expose(format='json')
     def get_keyvalue_search_options(self,**kw):
         return_dict = {}
@@ -318,64 +364,41 @@ class Root(RPCRoot):
         return return_dict
 
     @expose(format='json')
-    def get_search_options_distros(self,table_field,**kw): 
-        field = table_field
-        search = search_utility.Distro.search.search_on(field) 
-        col_type = search_utility.Distro.search.field_type(field)
-        return SearchOptions.get_search_options_worker(search,col_type)
+    def get_search_options_distros(self,table_field,**kw):
+        return su.Distro.search.get_search_options(table_field, *args, **kw)
 
     @expose(format='json')
-    def get_search_options_recipe(self,table_field,**kw): 
-        field = table_field
-        search = search_utility.Recipe.search.search_on(field) 
-        col_type = search_utility.Recipe.search.field_type(field)
-        return SearchOptions.get_search_options_worker(search,col_type)
+    def get_search_options_recipe(self,table_field, *args, **kw):
+        return su.Recipe.search.get_search_options(table_field, *args, **kw)
 
     @expose(format='json')
     def get_search_options_job(self,table_field,**kw):
-        field = table_field
-        search = search_utility.Job.search.search_on(field)  
-        col_type = search_utility.Job.search.field_type(field)
-        return SearchOptions.get_search_options_worker(search,col_type)
+        return su.Job.search.get_search_options(table_field, *args, **kw)
 
     @expose(format='json')
-    def get_search_options_task(self,table_field,**kw):
-        field = table_field
-        search = search_utility.Task.search.search_on(field) 
-        col_type = search_utility.Task.search.field_type(field)
-        return SearchOptions.get_search_options_worker(search,col_type)
-    
+    def get_search_options_task(self,table_field, *args, **kw):
+        return su.Task.search.get_search_options(table_field, *args, **kw)
+
     @expose(format='json')
     def get_search_options_activity(self,table_field,**kw):
-        field = table_field
-        search = search_utility.Activity.search.search_on(field) 
-        col_type = search_utility.Activity.search.field_type(field)
-        return SearchOptions.get_search_options_worker(search,col_type)
- 
+        return su.Activity.search.get_search_options(table_field, *args, **kw)
+
     @expose(format='json')
-    def get_search_options_history(self,table_field,**kw):
-        field = table_field     
-        search = search_utility.History.search.search_on(field) 
-        col_type = search_utility.History.search.field_type(field)
-        return SearchOptions.get_search_options_worker(search,col_type)  
-    
-   
+    def get_search_options_history(self,table_field, *args, **kw):
+        return su.History.search.get_search_options(table_field, *args, **kw)
+
     @expose(format='json')
-    def get_operators_keyvalue(self,keyvalue_field,*args,**kw): 
+    def get_operators_keyvalue(self,keyvalue_field,*args,**kw):
+        return su.Key.search.get_search_options(keyvalue_field, *args, **kw)
+
+    @expose(format='json')
+    def get_search_options(self,table_field,**kw):
         return_dict = {}
-        search = search_utility.System.search.search_on_keyvalue(keyvalue_field)
-        search.sort()
-        return_dict['search_by'] = search
-        return return_dict
-         
-    @expose(format='json')
-    def get_search_options(self,table_field,**kw): 
-        return_dict = {}
-        search =  search_utility.System.search.search_on(table_field)  
+        search =  su.System.search.search_on(table_field)
       
         #Determine what field type we are dealing with. If it is Boolean, convert our values to 0 for False
         # and 1 for True
-        col_type = search_utility.System.search.field_type(table_field)
+        col_type = su.System.search.field_type(table_field)
        
         if col_type.lower() == 'boolean':
             search['values'] = { 0:'False', 1:'True'}
@@ -536,7 +559,7 @@ class Root(RPCRoot):
             redirect(url('/reserveworkflow',**kw))    
           
     def _history_search(self,activity,**kw):
-        history_search = search_utility.History.search(activity)
+        history_search = su.History.search(activity)
         for search in kw['historysearch']:
             col = search['table'] 
             history_search.append_results(search['value'],col,search['operation'],**kw)
@@ -546,7 +569,7 @@ class Root(RPCRoot):
         for search in kw['systemsearch']: 
 	        #clsinfo = System.get_dict()[search['table']] #Need to change this
             class_field_list = search['table'].split('/')
-            cls_ref = search_utility.System.search.translate_name(class_field_list[0])
+            cls_ref = su.System.search.translate_name(class_field_list[0])
             col = class_field_list[1]              
             #If value id False or True, let's convert them to
             if class_field_list[0] != 'Key':
@@ -578,6 +601,27 @@ class Root(RPCRoot):
         return return_dict
  
     def systems(self, systems, *args, **kw):
+        search_bar = SearchBar(name='systemsearch',
+                               label=_(u'System Search'),
+                               enable_custom_columns = True,
+                               extra_selects = [ { 'name': 'keyvalue',
+                                                   'column':'key/value',
+                                                   'display':'none',
+                                                   'pos' : 2,
+                                                   'callback':url('/get_operators_keyvalue') }],
+                               table=su.System.search.create_search_table(\
+                                   [{su.System:{'all':[]}},
+                                    {su.Cpu:{'all':[]}},
+                                    {su.Device:{'all':[]}},
+                                    {su.Key:{'all':[]}}]),
+                               complete_data = su.System.search.create_complete_search_table(\
+                                   [{su.System:{'all':[]}},
+                                    {su.Cpu:{'all':[]}},
+                                    {su.Device:{'all':[]}},
+                                    {su.Key:{'all':[]}}]),
+                               search_controller=url("/get_search_options"),
+                               table_search_controllers = {'key/value':url('/get_keyvalue_search_options')},)
+
         if 'quick_search' in kw:
             table,op,value = kw['quick_search'].split('-')
             kw['systemsearch'] = [{'table' : table,
@@ -612,7 +656,7 @@ class Root(RPCRoot):
 
         if kw.get("systemsearch"):
             searchvalue = kw['systemsearch']
-            sys_search = search_utility.System.search(systems)
+            sys_search = su.System.search(systems)
             columns = []
             for elem in kw:
                 if re.match('systemsearch_column_',elem):
@@ -627,7 +671,7 @@ class Root(RPCRoot):
             use_custom_columns = False
             for column in columns:
                 table,col = column.split('/')
-                if sys_search.translate_name(table) is not search_utility.System:
+                if sys_search.translate_name(table) is not su.System:
                     use_custom_columns = True     
                     break     
 
@@ -640,9 +684,13 @@ class Root(RPCRoot):
             else: 
                 my_fields = Utility.custom_systems_grid(system_columns_desc)
 
-            systems = systems.reset_joinpoint().outerjoin('user').distinct() 
+            systems = systems.reset_joinpoint().outerjoin('user')\
+                    .outerjoin('status').outerjoin('arch').outerjoin('type')\
+                    .distinct()
         else: 
-            systems = systems.reset_joinpoint().outerjoin('user').distinct() 
+            systems = systems.reset_joinpoint().outerjoin('user')\
+                    .outerjoin('status').outerjoin('arch').outerjoin('type')\
+                    .distinct()
             use_custom_columns = False
             columns = None
             searchvalue = None
@@ -664,7 +712,7 @@ class Root(RPCRoot):
                                                  'col_defaults' : col_data['default'],
                                                  'col_options' : col_data['options']},
                                      action = '.', 
-                                     search_bar = self.search_bar )
+                                     search_bar = search_bar )
                                                                         
 
     @expose(format='json')
@@ -876,7 +924,6 @@ class Root(RPCRoot):
         widgets = dict( 
                         labinfo   = self.labinfo_form,
                         details   = self.system_details,
-                        history   = self.system_activity,
                         exclude   = self.system_exclude,
                         keys      = self.system_keys,
                         notes     = self.system_notes,
@@ -899,6 +946,7 @@ class Root(RPCRoot):
             options         = options,
             history_data    = historical_data,
             task_widget     = self.task_form,
+            history_widget  = self.system_activity,
             widgets         = widgets,
             widgets_action  = dict( power     = '/save_power',
                                     history   = '/view/%s' % fqdn,
@@ -1071,6 +1119,65 @@ class Root(RPCRoot):
         session.save_or_update(system)
         flash( _(u"%s %s%s" % (status,system.fqdn,msg)) )
         redirect("/view/%s" % system.fqdn)
+
+    system_cc_form = widgets.TableForm(
+        'cc',
+        fields=[
+            id,
+            ExpandingForm(
+                name='cc',
+                label=_(u'Notify CC'),
+                fields=[
+                    widgets.TextField(name='email_address', label=_(u'E-mail address'),
+                        validator=validators.Email()),
+                ],
+            ),
+        ],
+        submit_text=_(u'Change'),
+    )
+
+    @expose(template='bkr.server.templates.form-post')
+    @identity.require(identity.not_anonymous())
+    def cc_change(self, system_id):
+        try:
+            system = System.by_id(system_id, identity.current.user)
+        except InvalidRequestError:
+            flash(_(u'Unable to find system with id of %s' % system_id))
+            redirect('/')
+        if not system.can_admin(identity.current.user):
+            flash(_(u'Insufficient permissions to edit CC list'))
+            redirect('/')
+        return dict(
+            title=_(u'Notify CC list for %s') % system.fqdn,
+            form=self.system_cc_form,
+            action='save_cc',
+            options=None,
+            value={'id': system.id, 'cc': system._system_ccs},
+        )
+
+    @error_handler(cc_change)
+    @expose()
+    @identity.require(identity.not_anonymous())
+    @validate(form=system_cc_form)
+    def save_cc(self, id, cc):
+        try:
+            system = System.by_id(id, identity.current.user)
+        except InvalidRequestError:
+            flash(_(u'Unable to find system with id of %s' % id))
+            redirect('/')
+        if not system.can_admin(identity.current.user):
+            flash(_(u'Insufficient permissions to edit CC list'))
+            redirect('/')
+        orig_value = list(system.cc)
+        new_value = [item['email_address']
+                for item in cc if item['email_address']]
+        system.cc = new_value
+        system.activity.append(SystemActivity(user=identity.current.user,
+                service=u'WEBUI', action=u'Changed', field_name=u'Cc',
+                old_value=u'; '.join(orig_value),
+                new_value=u'; '.join(new_value)))
+        flash(_(u'Notify CC list for system %s changed') % system.fqdn)
+        redirect('/view/%s' % system.fqdn)
 
     @error_handler(view)
     @expose()
@@ -1691,38 +1798,6 @@ class Root(RPCRoot):
                 provision.arch=arch
                 system.provisions[arch] = provision
         redirect("/view/%s" % system.fqdn)
-
-    @expose(template='bkr.server.templates.form-post')
-    @validate(form=report_problem_form)
-    def report_problem(self, system_id, recipe_id=None, problem_description=None):
-        """
-        Allows users to report a problem with a system to the system's owner.
-        """
-        try:
-            system = System.by_id(system_id, identity.current.user)
-        except InvalidRequestError:
-            flash(_(u'Unable to find system with id of %s' % system_id))
-            redirect('/')
-        try:
-            recipe = Recipe.by_id(recipe_id)
-        except InvalidRequestError:
-            recipe = None
-        if request.method == 'POST':
-            mail.system_problem_report(system, problem_description,
-                    recipe, identity.current.user)
-            activity = SystemActivity(identity.current.user, 'WEBUI', 'Reported problem',
-                    'Status', None, problem_description)
-            system.activity.append(activity)
-            flash(_(u'Your problem report has been forwarded to the system owner'))
-            redirect('/view/%s' % system.fqdn)
-        return dict(
-            title=_(u'Report a problem with %s') % system.fqdn,
-            form=self.report_problem_form,
-            method='post',
-            action='report_problem',
-            value={},
-            options={'system': system, 'recipe': recipe}
-        )
 
     @cherrypy.expose
     # Testing auth via xmlrpc

@@ -26,6 +26,7 @@ import turbogears.config
 from selenium import selenium
 import unittest
 import threading
+import bkr.server.test
 from bkr.server.bexceptions import BX
 
 log = logging.getLogger(__name__)
@@ -42,19 +43,18 @@ class SeleniumTestCase(unittest.TestCase):
     @classmethod
     def get_selenium(cls):
         cls.sel = selenium('localhost', 4444, '*chrome',
-                    'http://%s:%s/' % (os.environ.get('SERVER', 'localhost'),
-                    turbogears.config.get('server.socket_port')))
+                bkr.server.test.get_server_base())
         return cls.sel
 
     @classmethod
     def logout(cls):
         sel = getattr(cls,'sel',None)
         if sel is not None:
-            sel.open("/")
+            sel.open("")
             try:
                 sel.click("link=Logout")
             except Exception, e:
-                raise BX(_(e.unicode()))
+                raise BX(unicode(e))
             sel.wait_for_page_to_load("3000")
             return True 
         return False
@@ -67,7 +67,7 @@ class SeleniumTestCase(unittest.TestCase):
         
         sel = getattr(cls,'sel',None)
         if sel is not None:
-            sel.open("/")
+            sel.open("")
             try:
                 sel.click("link=Login")
             except Exception, e:
@@ -109,10 +109,6 @@ class Process(object):
         self.stop_signal = stop_signal
 
     def start(self):
-        if self.listen_port and check_listen(self.listen_port):
-            log.warning('Another process is already listening on %d, not starting %s',
-                    self.listen_port, self.name)
-            return
         log.info('Spawning %s: %s %r', self.name, ' '.join(self.args), self.env)
         env = dict(os.environ)
         if self.env:
@@ -176,10 +172,14 @@ def setup_package():
                 '/usr/local/share/selenium/selenium-server-1.0.3/selenium-server.jar',
                 '-log', 'selenium.log'], env={'DISPLAY': ':4'},
                 listen_port=4444),
-        Process('beaker', args=['./start-server.py', 'test.cfg'],
-                listen_port=turbogears.config.get('server.socket_port'),
-                stop_signal=signal.SIGINT)
     ])
+    if 'BEAKER_SERVER_BASE_URL' not in os.environ:
+        # need to start the server ourselves
+        processes.extend([
+            Process('beaker', args=['./start-server.py', bkr.server.test.CONFIG_FILE],
+                    listen_port=turbogears.config.get('server.socket_port'),
+                    stop_signal=signal.SIGINT)
+        ])
     try:
         for process in processes:
             process.start()

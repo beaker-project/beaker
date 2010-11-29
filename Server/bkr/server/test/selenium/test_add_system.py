@@ -6,6 +6,10 @@ from turbogears.database import session, get_engine
 
 class AddSystem(bkr.server.test.selenium.SeleniumTestCase):
     def setUp(self):
+        data_setup.create_labcontroller(fqdn=u'lab-devel.rhts.eng.bos.redhat.com')
+        data_setup.create_system(fqdn=u'preexisting-system')
+        session.flush()
+
         try:
             self.verificationErrors = []
             self.selenium = self.get_selenium()
@@ -36,7 +40,7 @@ class AddSystem(bkr.server.test.selenium.SeleniumTestCase):
         #                  type,private,shared,vendor,model,location,mac]
         try:
             sel = self.selenium
-            sel.open("/")
+            sel.open("")
             sel.wait_for_page_to_load("3000")
             sel.click("//div[@id='fedora-content']/a")
             sel.wait_for_page_to_load("3000")
@@ -73,7 +77,7 @@ class AddSystem(bkr.server.test.selenium.SeleniumTestCase):
         #                  type,private,shared,vendor,model,location,mac]
         try:
             sel = self.selenium
-            sel.open("/")
+            sel.open("")
             sel.wait_for_page_to_load("3000")
             sel.click("//div[@id='fedora-content']/a")
             sel.wait_for_page_to_load("3000")
@@ -107,7 +111,7 @@ class AddSystem(bkr.server.test.selenium.SeleniumTestCase):
         #                  type,private,shared,vendor,model,location,mac]
         try:
             sel = self.selenium 
-            sel.open("/")
+            sel.open("")
             sel.wait_for_page_to_load("3000")
             sel.click("//div[@id='fedora-content']/a")
             sel.wait_for_page_to_load("3000")
@@ -140,7 +144,7 @@ class AddSystem(bkr.server.test.selenium.SeleniumTestCase):
         #                  type,private,shared,vendor,model,location,mac]
         try:
             sel = self.selenium 
-            sel.open("/")
+            sel.open("")
             sel.wait_for_page_to_load("3000")
             sel.click("//div[@id='fedora-content']/a")
             sel.wait_for_page_to_load("3000")
@@ -157,7 +161,7 @@ class AddSystem(bkr.server.test.selenium.SeleniumTestCase):
         except Exception,e:self.verificationErrors.append(str(e))    
 
     def test_case_5(self):
-        system_details = dict(fqdn = 'test_system_1', #should fail as system is already in db
+        system_details = dict(fqdn = 'preexisting-system', #should fail as system is already in db
                               lender = 'lender',
                               serial = '444g!!!444',
                               status = 'Broken', 
@@ -174,18 +178,12 @@ class AddSystem(bkr.server.test.selenium.SeleniumTestCase):
         #                  type,private,shared,vendor,model,location,mac]
         try:
             sel = self.selenium 
-            sel.open("/")
+            sel.open("")
             sel.wait_for_page_to_load("3000")
             sel.click("//div[@id='fedora-content']/a")
             sel.wait_for_page_to_load("3000")
             self.add_system(**system_details)
-           
-            for i in range(60):
-                try:
-                    if sel.is_text_present("test_system_1 already exists!"): break
-                except: pass
-                time.sleep(1)
-            else: self.fail("time out waiting for error message when adding existing system name")
+            self.assert_(sel.is_text_present("preexisting-system already exists!"))
         except Exception,e:self.verificationErrors.append(str(e))
 
     def check_db(self,fqdn):
