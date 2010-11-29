@@ -173,6 +173,11 @@ class BeakerWorkflow(BeakerCommand):
             default=None,
             help="Boot arguments to supply (optional)"
         )
+        self.parser.add_option(
+            "--product",
+            default=None,
+            help="This should be a unique identifierf or a product"
+        )
 
     def getArches(self, *args, **kwargs):
         """ Get all arches that apply to either this distro or family/osmajor """
@@ -334,6 +339,8 @@ class BeakerRecipeSet(BeakerBase):
         self.node.setAttribute('priority', kwargs.get('priority', ''))
         if kwargs.get('retention_tag'):
             self.node.setAttribute('retention_tag', kwargs.get('retention_tag'))
+        if kwargs.get('product'):
+            self.node.setAttribute('product', kwargs.get('product'))
 
     def addRecipe(self, recipe):
         """ properly add a recipe to this recipeSet """

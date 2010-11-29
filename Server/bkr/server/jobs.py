@@ -20,19 +20,12 @@ from turbogears import controllers, expose, flash, widgets, validate, error_hand
 from turbogears import identity, redirect
 from cherrypy import request, response
 from kid import Element
-from bkr.server.widgets import myPaginateDataGrid
-from bkr.server.widgets import myDataGrid
-from bkr.server.widgets import AckPanel
-from bkr.server.widgets import JobQuickSearch
+from bkr.server.widgets import myPaginateDataGrid, myDataGrid, AckPanel, JobQuickSearch, \
+    RecipeWidget,RecipeTasksWidget, RecipeSetWidget, PriorityWidget, RetentionTagWidget, \
+    SearchBar, JobWhiteboard, ProductWidget
+
 from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.helpers import *
-from bkr.server.widgets import RecipeWidget
-from bkr.server.widgets import RecipeTasksWidget
-from bkr.server.widgets import RecipeSetWidget
-from bkr.server.widgets import PriorityWidget
-from bkr.server.widgets import RetentionTagWidget
-from bkr.server.widgets import SearchBar
-from bkr.server.widgets import JobWhiteboard
 from bkr.server import search_utility
 import datetime
 import pkg_resources
@@ -49,6 +42,7 @@ from bexceptions import *
 import xmltramp
 from jobxml import *
 import cgi
+from bkr.server.job_utilities import Utility
 
 log = logging.getLogger(__name__)
 
@@ -76,6 +70,7 @@ class Jobs(RPCRoot):
     recipeset_widget = RecipeSetWidget()
     recipe_widget = RecipeWidget()
     priority_widget = PriorityWidget() #FIXME I have a feeling we don't need this as the RecipeSet widget declares an instance of it
+    product_widget = ProductWidget()
     retention_tag_widget = RetentionTagWidget()
     recipe_tasks_widget = RecipeTasksWidget()
     job_type = { 'RS' : RecipeSet,
@@ -123,7 +118,7 @@ class Jobs(RPCRoot):
             value = kw,
         )
 
-    def _list(self, tags, days_complete_for, family, **kw):
+    def _list(self, tags, days_complete_for, family, product, **kw):
         query = None
         if days_complete_for:
             #This takes the same kw names as timedelta
@@ -133,16 +128,22 @@ class Jobs(RPCRoot):
                 OSMajor.by_name(family)
             except InvalidRequestError, e:
                 if '%s' % e == 'No rows returned for one()':
-                    raise ValueError('Family is invalid')
+                    raise BX(_('Family is invalid'))
             query = RecipeSet.has_family(family,query)
         if tags:
             if len(tags) == 1:
                 tags = tags[0]
-            query = RecipeSet.by_tag(tags,query)
+            try:
+                query = RecipeSet.by_tag(tags,query)
+            except InvalidRequestError, e:
+                if '%s' % e == 'No rows returned for one()':
+                    raise BX(_("Tag is invalid"))
+        if product:
+            query = RecipeSet.by_product(product,query)
         return query.all()
 
     @cherrypy.expose
-    def list(self, tags, days_complete_for, family, **kw):
+    def list(self, tags, days_complete_for, family, product, **kw):
         """
         Lists recipe sets, filtered by the given criteria.
 
@@ -159,7 +160,7 @@ class Jobs(RPCRoot):
         count of the number of recipe sets matched.
         """
         try:
-            recipesets = self._list(tags, days_complete_for, family, **kw)
+            recipesets = self._list(tags, days_complete_for, family, product, **kw)
         except ValueError, e:
             return 'Invalid arguments: %s' % e
         return_value = [rs.t_id for rs in recipesets]
@@ -308,7 +309,7 @@ class Jobs(RPCRoot):
         Handles the processing of recipesets into DB entries from their xml
         """
         recipeSet = RecipeSet(ttasks=0)
-        recipeset_priority = xmlrecipeSet.get_xml_attr('priority',unicode,None)
+        recipeset_priority = xmlrecipeSet.get_xml_attr('priority',unicode,None) 
         if recipeset_priority is not None:
             try:
                 my_priority = TaskPriority.query().filter_by(priority = recipeset_priority).one()
@@ -322,18 +323,8 @@ class Jobs(RPCRoot):
                 recipeSet.priority = TaskPriority.default_priority() 
         else:
             recipeSet.priority = TaskPriority.default_priority() 
-        
-        recipeset_retention = xmlrecipeSet.get_xml_attr('retention_tag',unicode,None) 
-        if recipeset_retention is None: #Set default value
-            tag = RetentionTag.get_default()
-        else:
-            try:
-                tag = RetentionTag.by_tag(recipeset_retention.lower())
-            except InvalidRequestError:
-                raise BX(_("Invalid retention_tag attribute passed. Needs to be one of %s. You gave: %s" % (','.join([x.tag for x in RetentionTag.get_all()]), recipeset_retention)))
-        recipeSet.retention_tag = tag
-        
-        for xmlrecipe in xmlrecipeSet.iter_recipes(): 
+
+        for xmlrecipe in xmlrecipeSet.iter_recipes():
             recipe = self.handleRecipe(xmlrecipe, user)
             recipe.ttasks = len(recipe.tasks)
             recipeSet.ttasks += recipe.ttasks
@@ -347,8 +338,45 @@ class Jobs(RPCRoot):
             raise BX(_('No Recipes! You can not have a recipeSet with no recipes!'))
         return recipeSet
 
+    def _process_job_tag_product(self, retention_tag=None, product=None, *args, **kw):
+        """
+        Process job retention_tag and product
+        """
+        retention_tag = retention_tag or RetentionTag.get_default().tag
+        try:
+            tag = RetentionTag.by_tag(retention_tag.lower())
+        except InvalidRequestError:
+            raise BX(_("Invalid retention_tag attribute passed. Needs to be one of %s. You gave: %s" % (','.join([x.tag for x in RetentionTag.get_all()]), retention_tag)))
+        if product is None and tag.requires_product():
+            raise BX(_("You've selected a tag which needs a product associated with it, \
+            alternatively you could use one of the following tags %s" % ','.join([x.tag for x in RetentionTag.get_all() if not x.requires_product()])))
+        elif product is not None and not tag.requires_product():
+            raise BX(_("Cannot specify a product with tag %s, please use %s as a tag " % (retention_tag,','.join([x.tag for x in RetentionTag.get_all() if x.requires_product()]))))
+        else:
+            pass
+
+        if tag.requires_product():
+            try:
+                product = Product.by_name(product)
+
+                return (tag, product)
+            except InvalidRequestError, e:
+                if '%s' % e == 'No rows returned for one()':
+                    raise BX(_("You entered an invalid product name: %s" % product))
+                else:
+                    raise
+        else:
+            return tag, None
+
     def process_xmljob(self, xmljob, user):
+
+        job_retention = xmljob.get_xml_attr('retention_tag',unicode,None)
+        job_product = xmljob.get_xml_attr('product',unicode,None)
+        tag, product = self._process_job_tag_product(retention_tag=job_retention, product=job_product)
         job = Job(whiteboard='%s' % xmljob.whiteboard, ttasks=0, owner=user)
+        job.product = product
+        job.retention_tag = tag
+
         job.cc.extend(xmljob.iter_cc())
         for xmlrecipeSet in xmljob.iter_recipeSets():
             recipe_set = self._handle_recipe_set(xmlrecipeSet, user)
@@ -451,35 +479,6 @@ class Jobs(RPCRoot):
         if not recipe.tasks:
             raise BX(_('No Tasks! You can not have a recipe with no tasks!'))
         return recipe
-
-    @expose('json')
-    def change_retentiontag_recipeset(self, retentiontag_id, recipeset_id):
-        user = identity.current.user
-        if not user:
-            return {'success' : None, 'msg' : 'Must be logged in' }
-
-        try:
-            recipeset = RecipeSet.by_id(recipeset_id)
-            old_retentiontag = recipeset.retention_tag.tag
-        except InvalidRequestError, e:
-            if '%s' % e == 'No rows returned for one()':
-                log.error('No rows returned for recipeset_id %s in change_retentiontag_recipeset' % (recipeset_id))
-            elif '%s' % e == 'Multiple rows returned for one()':
-                log.error('Multiple rows for recipeset_id %s in change_retentiontag_recipeset' % (recipeset_id))
-            return { 'success' : None, 'msg' : 'RecipeSet is not valid' }
-
-        try: 
-            new_retentiontag = RetentionTag.by_id(retentiontag_id)  # will throw an error here if retentiontag id is invalid 
-        except InvalidRequestError, (e):
-            log.error('No rows returned for retentiontag_id %s in change_retentiontag_recipeset:%s' % (priority_id,e)) 
-            return { 'success' : None, 'msg' : 'Retention Tag not found', 'current_retentiontag' : recipeset.retention_tag.id }
-         
-        activity = RecipeSetActivity(identity.current.user, 'WEBUI', 'Changed', 'RetentionTag', recipeset.retention_tag.tag, new_retentiontag.tag)
-        recipeset.retention_tag = new_retentiontag
-        session.save_or_update(recipeset)        
-        recipeset.activity.append(activity)
-        return {'success' : True } 
-
 
     @expose('json')
     def update_recipe_set_response(self,recipe_set_id,response_id):
@@ -634,22 +633,38 @@ class Jobs(RPCRoot):
 
     @identity.require(identity.not_anonymous())
     @expose(format='json')
-    def update(self, id, whiteboard=None):
-        session.begin()
+    def update(self, id, **kw):
         try:
+            job = Job.by_id(id)
+        except InvalidRequestError:
+            raise cherrypy.HTTPError(status=400, message='Invalid job id %s' % id)
+        if not job.can_admin(identity.current.user):
+            raise cherrypy.HTTPError(status=403,
+                    message="You don't have permission to update job id %s" % id)
+        returns = {'success' : True, 'vars':{}}
+        if 'retentiontag' in kw or 'product' in kw:
+            #convert them to int and  correct Job attribute name
+            if 'retentiontag' in kw:
+                kw['retention_tag_id'] = int(kw['retentiontag'])
+                del kw['retentiontag']
+            if 'product' in kw:
+                kw['product_id'] = int(kw['product'])
+                del kw['product']
+            retention_tag_id = kw.get('retention_tag_id')
+            product_id = kw.get('product_id')
+            #update_task_product should also ensure that our id's are valid
+            returns.update(Utility.update_task_product(id,retention_tag_id,product_id))
+            if returns['success'] is False:
+                return returns
+        #kw should be santised and correct by the time it gets here
+        for attr in kw:
             try:
-                job = Job.by_id(id)
-            except InvalidRequestError:
-                raise cherrypy.HTTPError(status=400, message='Invalid job id %s' % id)
-            if not job.can_admin(identity.current.user):
-                raise cherrypy.HTTPError(status=403,
-                        message="You don't have permission to update job id %s" % id)
-            job.whiteboard = whiteboard
-            session.commit()
-            return {'success': True}
-        except:
-            session.rollback()
-            raise
+                setattr(job, attr, kw[attr])
+            except AttributeError, e:
+                return {'success' : False }
+                # FIXME I think job_whiteboard will need a status non 200
+                # raised to catch an error 
+        return returns
 
     @expose(template="bkr.server.templates.job") 
     def default(self, id): 
@@ -680,8 +695,10 @@ class Jobs(RPCRoot):
         return dict(title   = 'Job',
                     user                 = identity.current.user,   #I think there is a TG var to use in the template so we dont need to pass this ?
                     priorities           = TaskPriority.query().all(), 
+                    hidden_id            = widgets.HiddenField(name='job_id',value=job.id),
                     retentiontags        = RetentionTag.query().all(),
-                    retentiontag_widget  = self.retention_tag_widget,
+                    product_widget       = self.product_widget,
+                    retention_tag_widget = self.retention_tag_widget,
                     priority_widget      = self.priority_widget, 
                     recipeset_widget     = self.recipeset_widget,
                     job_history          = recipe_set_data,

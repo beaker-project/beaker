@@ -1,4 +1,5 @@
 from turbogears import validators, url, config
+import time
 import turbogears as tg
 from turbojson import jsonify
 from turbogears.widgets.rpc import RPC
@@ -1281,7 +1282,7 @@ class RecipeSetWidget(CompoundWidget):
     css = []
     template = "bkr.server.templates.recipe_set"
     params = ['recipeset','show_priority','action','priorities_list']
-    member_widgets = ['priority_widget','retentiontag_widget','ack_panel_widget']
+    member_widgets = ['priority_widget','retentiontag_widget','ack_panel_widget', 'product_widget']
 
     def __init__(self, priorities_list=None, *args, **kw):
         self.priorities_list = priorities_list
@@ -1293,7 +1294,7 @@ class RecipeSetWidget(CompoundWidget):
         else:
             self.recipeset = None
 
-   
+
 class RecipeWidget(CompoundWidget):
     javascript = [
                   LocalJSLink('bkr','/static/javascript/jquery.js'),
@@ -1304,29 +1305,63 @@ class RecipeWidget(CompoundWidget):
     member_widgets = ['recipe_tasks_widget']
     recipe_tasks_widget = RecipeTasksWidget()
 
-class RetentionTagWidget(SingleSelectField): #FIXME perhaps I shoudl create a parent that both Retention and Priority inherit from
-    validator = validators.NotEmpty() 
-    params = ['default','controller']
+
+class ProductWidget(SingleSelectField, RPC):
+    javascript = [LocalJSLink('bkr', '/static/javascript/job_product.js')]
+    validator = validators.NotEmpty()
+    params = ['action', 'job_id']
+    action  = '/jobs/update'
+    before = 'job_product_before()'
+    on_complete = 'job_product_complete()'
+    on_success = 'job_product_save_success()'
+    on_failure = 'job_product_save_failure()'
+    validator = validators.NotEmpty()
+    product_deselected = 0
 
     def __init__(self, *args, **kw):
-       self.options = [] 
+       self.options = []
        self.field_class = 'singleselectfield'
 
-    def display(self,obj, value=None, **params):
-        params['options'] = [(elem.id,elem.tag) for elem in model.RetentionTag.query().all()]
+    def display(self,value=None, *args, **params):
+        params['options'] =[(self.product_deselected, 'No Product')] +  [(elem.id,elem.name) for elem in model.Product.query().all()]
+        return super(ProductWidget,self).display(value,**params)
 
-        if isinstance(obj,model.Job):
-            if 'id_prefix' in params:
-                params['attrs'] = {'id' : '%s_%s' % (params['id_prefix'],obj.id) }
-        elif obj:
-            if 'id_prefix' in params:
-                params['attrs'] = {'id' : '%s_%s' % (params['id_prefix'],obj.id) } 
-                try:
-                    value = obj.retention_tag.id 
-                except AttributeError,(e):
-                    log.error('Object %s passed to display does not have a valid retention_tag: %s' % (type(obj),e))
+    def update_params(self, d):
+        super(ProductWidget, self).update_params(d)
+        d['attrs']['id'] = 'job_product'
+        d['attrs']['onchange'] = "ProductChange('%s',%s, %s)" % (
+            d.get('action'),
+            jsonify.encode({'id': d.get('job_id')}),
+            jsonify.encode(self.get_options(d)),
+            )
 
-        return super(RetentionTagWidget,self).display(value or None,**params)
+class RetentionTagWidget(SingleSelectField, RPC): #FIXME perhaps I shoudl create a parent that both Retention and Priority inherit from
+    javascript = [LocalJSLink('bkr', '/static/javascript/job_retentiontag.js')]
+    validator = validators.NotEmpty()
+    params = ['action', 'job_id']
+    action  = '/jobs/update'
+    before = 'job_retentiontag_before()'
+    on_complete = 'job_retentiontag_complete()'
+    on_success = 'job_retentiontag_save_success()'
+    on_failure = 'job_retentiontag_save_failure()'
+
+    def __init__(self, *args, **kw):
+       self.options = []
+       self.field_class = 'singleselectfield'
+
+    def display(self,value=None, **params):
+        params['options'] = [(elem.id,elem.tag) for elem in model.RetentionTag.query().all()] 
+        return super(RetentionTagWidget,self).display(value, **params)
+
+    def update_params(self, d):
+        super(RetentionTagWidget, self).update_params(d)
+        d['attrs']['id'] = 'job_retentiontag'
+        d['attrs']['onchange'] = "RetentionTagChange('%s',%s, %s)" % (
+            d.get('action'),
+            jsonify.encode({'id': d.get('job_id')}),
+            jsonify.encode(self.get_options(d)),
+            )
+
 
 class PriorityWidget(SingleSelectField):   
    validator = validators.NotEmpty()
