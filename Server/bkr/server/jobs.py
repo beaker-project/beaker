@@ -143,7 +143,7 @@ class Jobs(RPCRoot):
         return query.all()
 
     @cherrypy.expose
-    def list(self, tags, days_complete_for, family, product **kw):
+    def list(self, tags, days_complete_for, family, product, **kw):
         """
         Lists recipe sets, filtered by the given criteria.
 
