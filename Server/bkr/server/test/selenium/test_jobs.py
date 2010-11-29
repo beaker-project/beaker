@@ -68,9 +68,9 @@ class TestNewJob(SeleniumTestCase):
         sel.wait_for_page_to_load('3000')
         xml_file = tempfile.NamedTemporaryFile()
         xml_file.write('''
-            <job>
+            <job retentiontag="scratch">
                 <whiteboard>job with invalid hostRequires</whiteboard>
-                <recipeSet retention_tag="scratch">
+                <recipeSet>
                     <recipe>
                         <distroRequires>
                             <distro_name op="=" value="BlueShoeLinux5-5" />

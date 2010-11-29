@@ -68,6 +68,7 @@ class Jobs(RPCRoot):
     recipeset_widget = RecipeSetWidget()
     recipe_widget = RecipeWidget()
     priority_widget = PriorityWidget() #FIXME I have a feeling we don't need this as the RecipeSet widget declares an instance of it
+    product_widget = ProductWidget()
     retention_tag_widget = RetentionTagWidget()
     recipe_tasks_widget = RecipeTasksWidget()
     job_type = { 'RS' : RecipeSet,
@@ -310,32 +311,35 @@ class Jobs(RPCRoot):
             raise BX(_('No Recipes! You can not have a recipeSet with no recipes!'))
         return recipeSet
 
-    def _process_job_tag_product(self, retention_tag=RetentionTag.get_default().tag, product=None, *args, **kw):
+    def _process_job_tag_product(self, retention_tag=None, product=None, *args, **kw):
         """
         Process job retention_tag and product
         """
+        retention_tag = retention_tag or RetentionTag.get_default().tag
         try:
             tag = RetentionTag.by_tag(retention_tag.lower())
         except InvalidRequestError:
             raise BX(_("Invalid retention_tag attribute passed. Needs to be one of %s. You gave: %s" % (','.join([x.tag for x in RetentionTag.get_all()]), retention_tag)))
-
-        if job_product is None and tag.requires_product():
+        if product is None and tag.requires_product():
             raise BX(_("You've selected a tag which needs a product associated with it, \
             alternatively you could use one of the following tags %s" % ','.join([x.tag for x in RetentionTag.get_all() if not x.requires_product()])))
-        elif job_product is not None and not tag.requires_product():
+        elif product is not None and not tag.requires_product():
             raise BX(_("Cannot specify a product with tag %s, please use %s as a tag " % (retention_tag,','.join([x.tag for x in RetentionTag.get_all() if x.requires_product()]))))
         else:
             pass
 
         if tag.requires_product():
             try:
-                product = Product.by_name(job_product)
-                return tag, product
+                product = Product.by_name(product)
+
+                return (tag, product)
             except InvalidRequestError, e:
                 if '%s' % e == 'No rows returned for one()':
-                    raise BX(_("You entered an invalid product name: %s" % job_product))
+                    raise BX(_("You entered an invalid product name: %s" % product))
                 else:
                     raise
+        else:
+            return tag, None
 
     def process_xmljob(self, xmljob, user):
 
@@ -600,37 +604,37 @@ class Jobs(RPCRoot):
     @identity.require(identity.not_anonymous())
     @expose(format='json')
     def update(self, id, **kw):
-
         try:
             job = Job.by_id(id)
         except InvalidRequestError:
             raise cherrypy.HTTPError(status=400, message='Invalid job id %s' % id)
         if not job.can_admin(identity.current.user):
             raise cherrypy.HTTPError(status=403,
-                    message="You don't have permission to update job id %s" % id) 
-
-        if 'retention_tag' in kw:
-            retention_tag_id = kw['retention_tag']
-            results = Utility.check_retentiontag_job(id, retention_tag_id)
-            if 'error' in results:
-                return {'success': False, 'msg' : results['error'] } 
-            kw['retention_tag'] = RetentionTag.by_id(retention_tag_id)
-
-        if 'product' in kw:
-            product_id = kw['product']
-            results = Utility.check_product_job(id, product_id)
-            if 'error' in results:
-                return { 'success': False, 'msg' : results['error'] }
-            kw['product'] = Product.by_id(product_id)
-
+                    message="You don't have permission to update job id %s" % id)
+        returns = {'success' : True, 'vars':{}}
+        if 'retentiontag' in kw or 'product' in kw:
+            #convert them to int and  correct Job attribute name
+            if 'retentiontag' in kw:
+                kw['retention_tag_id'] = int(kw['retentiontag'])
+                del kw['retentiontag']
+            if 'product' in kw:
+                kw['product_id'] = int(kw['product'])
+                del kw['product']
+            retention_tag_id = kw.get('retention_tag_id')
+            product_id = kw.get('product_id')
+            #update_task_product should also ensure that our id's are valid
+            returns.update(Utility.update_task_product(id,retention_tag_id,product_id))
+            if returns['success'] is False:
+                return returns
         #kw should be santised and correct by the time it gets here
-        try:
-            setattr(job, attr, value)
-        except AttributeError, e:
-            log.debug('%s is not a valid attribute of Job' % attr)
-            return {'success': False}
-
-        return {'success': True}
+        for attr in kw:
+            try:
+                setattr(job, attr, kw[attr])
+            except AttributeError, e:
+                return {'success' : False }
+                # FIXME I think job_whiteboard will need a status non 200
+                # raised to catch an error 
+        return returns
 
     @expose(template="bkr.server.templates.job") 
     def default(self, id): 
@@ -663,7 +667,7 @@ class Jobs(RPCRoot):
                     priorities           = TaskPriority.query().all(), 
                     hidden_id            = widgets.HiddenField(name='job_id',value=job.id),
                     retentiontags        = RetentionTag.query().all(),
-                    product_widget       = ProductWidget(),
+                    product_widget       = self.product_widget,
                     retention_tag_widget = self.retention_tag_widget,
                     priority_widget      = self.priority_widget, 
                     recipeset_widget     = self.recipeset_widget,

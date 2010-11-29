@@ -3379,7 +3379,7 @@ class Job(TaskBase):
     @classmethod
     def provision_system_job(cls, distro_id, **kw):
         """ Create a new reserve job, if system_id is defined schedule it too """
-        job = Job(ttasks=0, owner=identity.current.user)
+        job = Job(ttasks=0, owner=identity.current.user, retention_tag=RetentionTag.get_default())
         if kw.get('whiteboard'):
             job.whiteboard = kw.get('whiteboard') 
         if not isinstance(distro_id,list):
@@ -3498,9 +3498,9 @@ class Job(TaskBase):
             for email_address in self.cc:
                 notify.appendChild(self.node('cc', email_address))
             job.appendChild(notify)
-        if self.product:
-            job.setAttribute("product", "%s" % self.product.name)
         job.setAttribute("retention_tag", "%s" % self.retention_tag.tag)
+        if self.product:
+            job.setAttribute("product", "%s" % self.product.name) 
         job.appendChild(self.node("whiteboard", self.whiteboard or ''))
         for rs in self.recipesets:
             job.appendChild(rs.to_xml(clone))
@@ -3622,7 +3622,8 @@ class BeakerTag(object):
 
 class RetentionTag(BeakerTag):
 
-    def __init__(self, tag, is_default=False, *args, **kw):
+    def __init__(self, tag, is_default=False, needs_product=False, *args, **kw):
+        self.needs_product = needs_product
         self.set_default_val(is_default)
         super(RetentionTag, self).__init__(tag, **kw)
         session.flush()
@@ -3645,6 +3646,10 @@ class RetentionTag(BeakerTag):
     @classmethod
     def get_default(cls, *args, **kw):
         return cls.query().filter(cls.is_default==True).one()
+
+    @classmethod
+    def list_by_requires_product(cls, requires=True, *args, **kw):
+        return cls.query().filter(cls.needs_product == requires).all()
 
     @classmethod
     def list_by_tag(cls, tag, anywhere=True, *args, **kw):

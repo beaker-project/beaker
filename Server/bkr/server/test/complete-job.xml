@@ -1,4 +1,4 @@
-<job>
+<job product="the_product" retention_tag="audit">
     <notify>
         <cc>
             dan@example.com
@@ -10,7 +10,7 @@
     <whiteboard>
         valid job
     </whiteboard>
-    <recipeSet retention_tag="scratch">
+    <recipeSet>
         <recipe kernel_options="" kernel_options_post="" ks_meta="" role="None" whiteboard="">
             <guestrecipe guestargs="" guestname="" kernel_options="" kernel_options_post="" ks_meta="" role="None" whiteboard="">
                 <watchdog panic="None"/>

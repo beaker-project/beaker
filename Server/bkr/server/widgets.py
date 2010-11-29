@@ -1,4 +1,5 @@
 from turbogears import validators, url, config
+import time
 import turbogears as tg
 from turbojson import jsonify
 from turbogears.widgets.rpc import RPC
@@ -1286,27 +1287,38 @@ class RecipeWidget(CompoundWidget):
     recipe_tasks_widget = RecipeTasksWidget()
 
 
-class ProductWidget(SingleSelectField):
+class ProductWidget(SingleSelectField, RPC):
+    javascript = [LocalJSLink('bkr', '/static/javascript/job_product.js')]
     validator = validators.NotEmpty()
-    def display(self,obj,value=None, *args, **params):
-        params['options'] =[(0, None)] +  [(elem.id,elem.name) for elem in model.Product.query().all()]
+    params = ['action', 'job_id']
+    action  = '/jobs/update'
+    before = 'job_product_before()'
+    on_complete = 'job_product_complete()'
+    on_success = 'job_product_save_success()'
+    on_failure = 'job_product_save_failure()'
+    validator = validators.NotEmpty()
+    product_deselected = 0
 
-        if isinstance(obj,model.Job):
-            if 'id_prefix' in params:
-                params['attrs'] = {'id' : '%s_%s' % (params['id_prefix'],obj.id) }
-        elif obj:
-            if 'id_prefix' in params:
-                params['attrs'] = {'id' : '%s_%s' % (params['id_prefix'],obj.id) }
-                try:
-                    value = obj.product.id
-                except AttributeError,(e):
-                    log.error('Object %s passed to display does not have a valid product: %s' % (type(obj),e))
+    def __init__(self, *args, **kw):
+       self.options = []
+       self.field_class = 'singleselectfield'
 
+    def display(self,value=None, *args, **params):
+        params['options'] =[(self.product_deselected, 'No Product')] +  [(elem.id,elem.name) for elem in model.Product.query().all()]
         return super(ProductWidget,self).display(value,**params)
+
+    def update_params(self, d):
+        super(ProductWidget, self).update_params(d)
+        d['attrs']['id'] = 'job_product'
+        d['attrs']['onchange'] = "ProductChange('%s',%s, %s)" % (
+            d.get('action'),
+            jsonify.encode({'id': d.get('job_id')}),
+            jsonify.encode(self.get_options(d)),
+            )
 
 class RetentionTagWidget(SingleSelectField, RPC): #FIXME perhaps I shoudl create a parent that both Retention and Priority inherit from
     javascript = [LocalJSLink('bkr', '/static/javascript/job_retentiontag.js')]
-    validator = validators.NotEmpty() 
+    validator = validators.NotEmpty()
     params = ['action', 'job_id']
     action  = '/jobs/update'
     before = 'job_retentiontag_before()'
@@ -1318,20 +1330,20 @@ class RetentionTagWidget(SingleSelectField, RPC): #FIXME perhaps I shoudl create
        self.options = []
        self.field_class = 'singleselectfield'
 
-    def display(self,value, **params):
+    def display(self,value=None, **params):
         params['options'] = [(elem.id,elem.tag) for elem in model.RetentionTag.query().all()] 
-        return super(RetentionTagWidget,self).display(value or None,**params)
+        return super(RetentionTagWidget,self).display(value, **params)
 
     def update_params(self, d):
         super(RetentionTagWidget, self).update_params(d)
         d['attrs']['id'] = 'job_retentiontag'
-        d['attrs']['onchange'] = "return ! remoteRequest(self, '%s', 'job_retentiontag', %s, %s)" % (
+        d['attrs']['onchange'] = "RetentionTagChange('%s',%s, %s)" % (
             d.get('action'),
-            jsonify.encode(d.get('data')),
+            jsonify.encode({'id': d.get('job_id')}),
             jsonify.encode(self.get_options(d)),
             )
 
-          
+
 class PriorityWidget(SingleSelectField):   
    validator = validators.NotEmpty()
    params = ['default','controller'] 
