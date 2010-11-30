@@ -2231,6 +2231,9 @@ $SNIPPET("rhts_post")
     def reserve(self, service):
         if self.status != SystemStatus.by_name(u'Manual'):
             raise BX(_(u'Cannot reserve system with status %s') % self.status)
+        if self.user is not None and self.user == identity.current.user:
+            raise BX(_(u'User %s has already reserved system %s')
+                    % (identity.current.user, self))
         if not self.can_share(identity.current.user):
             raise BX(_(u'User %s cannot reserve system %s')
                     % (identity.current.user, self))
@@ -2246,6 +2249,8 @@ $SNIPPET("rhts_post")
             raise BX(_(u'System is already reserved'))
 
     def unreserve(self, service):
+        if self.user is None:
+            raise BX(_(u'System is not reserved'))
         if not self.current_user(identity.current.user):
             raise BX(_(u'System is reserved by a different user'))
         # Don't return a system with an active watchdog

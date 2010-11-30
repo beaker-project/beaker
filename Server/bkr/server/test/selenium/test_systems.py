@@ -404,6 +404,22 @@ class ReserveSystemXmlRpcTest(XmlRpcTestCase):
         self.assertEqual(reserved_activity.new_value, user.user_name)
         self.assertEqual(reserved_activity.service, 'XMLRPC')
 
+    def test_double_reserve(self):
+        user = data_setup.create_user(password=u'password')
+        system = data_setup.create_system(
+                owner=User.by_user_name(data_setup.ADMIN_USER),
+                status=u'Manual', shared=True)
+        self.assert_(system.user is None)
+        session.flush()
+        server = self.get_server()
+        server.auth.login_password(user.user_name, 'password')
+        server.systems.reserve(system.fqdn)
+        try:
+            server.systems.reserve(system.fqdn)
+            self.fail('should raise')
+        except xmlrpclib.Fault, e:
+            self.assert_('has already reserved system' in e.faultString)
+
 class ReleaseSystemXmlRpcTest(XmlRpcTestCase):
 
     def test_cannot_release_when_not_logged_in(self):
@@ -453,6 +469,22 @@ class ReleaseSystemXmlRpcTest(XmlRpcTestCase):
         self.assertEqual(released_activity.old_value, user.user_name)
         self.assertEqual(released_activity.new_value, '')
         self.assertEqual(released_activity.service, 'XMLRPC')
+
+    def test_double_release(self):
+        system = data_setup.create_system(
+                owner=User.by_user_name(data_setup.ADMIN_USER),
+                status=u'Manual', shared=True)
+        user = data_setup.create_user(password=u'password')
+        system.user = user
+        session.flush()
+        server = self.get_server()
+        server.auth.login_password(user.user_name, 'password')
+        server.systems.release(system.fqdn)
+        try:
+            server.systems.release(system.fqdn)
+            self.fail('should raise')
+        except xmlrpclib.Fault, e:
+            self.assert_('System is not reserved' in e.faultString)
 
 class SystemPowerXmlRpcTest(XmlRpcTestCase):
 
