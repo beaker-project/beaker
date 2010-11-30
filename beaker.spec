@@ -2,8 +2,8 @@
 %{!?pyver: %global pyver %(%{__python} -c "import sys ; print sys.version[:3]")}
 
 Name:           beaker
-Version:        0.5.62
-Release:        2%{?dist}
+Version:        0.5.63
+Release:        1%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -192,6 +192,16 @@ fi
 %attr(-,apache,root) %dir %{_localstatedir}/run/%{name}-lab-controller
 
 %changelog
+* Tue Nov 30 2010 Bill Peck <bpeck@redhat.com> 0.5.63-1
+- Merge branch 'bz590951' into develop (bpeck@redhat.com)
+- add --cc command line option to workflows. (bpeck@redhat.com)
+- read only tag/product for non owner/admin (rmancy@redhat.com)
+- bz654789 - Don't rely on the recipe ending.  Run every hour and transfer what
+  matches. (bpeck@redhat.com)
+- upgrade notes, moved from 62 to 63 (rmancy@redhat.com)
+- bz649483 - Job level product/retentiontag. All working (rmancy@redhat.com)
+- bz590951 - Using custom repo during system install (bpeck@redhat.com)
+
 * Thu Nov 25 2010 Raymond Mancy <rmancy@redhat.com> 0.5.62-2
 - with rmancy: TestTime with no suffix means seconds (dcallagh@redhat.com)
 - fix for reserveworkflow: my_cmp was in the wrong place (dcallagh@redhat.com)
