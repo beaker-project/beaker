@@ -288,8 +288,8 @@ class Watchdog(ProxyHelper):
 
     def transfer_logs(self):
         self.logger.info("Entering transfer_logs")
-        for recipe_id in self.hub.recipes.by_log_server(self.conf.get("ARCHIVE_SERVER")):
-            self.transfer_recipe_log(recipe_id)
+        for recipe_id in self.hub.recipes.by_log_server(self.server):
+            self.transfer_recipe_logs(recipe_id)
 
     def transfer_recipe_logs(self, recipe_id):
         """ If Cache is turned on then move the recipes logs to there final place
@@ -314,6 +314,7 @@ class Watchdog(ProxyHelper):
                     pass
             # rsync the logs to there new home
             rc = self.rsync('%s/' % tmpdir, '%s' % self.conf.get("ARCHIVE_RSYNC"))
+            self.logger.info("rsync rc=%s" % rc)
             if rc == 0:
                 # if the logs have been transfered then tell the server the new location
                 for mylog in trlogs:
@@ -327,8 +328,8 @@ class Watchdog(ProxyHelper):
                     except OSError:
                         # Its ok if it fails, dir may not be empty yet
                         pass
-                # get rid of our tmpdir.
-                shutil.rmtree(tmpdir)
+            # get rid of our tmpdir.
+            shutil.rmtree(tmpdir)
 
     def rm(self, src):
         """ remove src
