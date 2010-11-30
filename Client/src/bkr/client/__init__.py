@@ -153,6 +153,12 @@ class BeakerWorkflow(BeakerCommand):
             help="Specify Package to install, this will add /distribution/pkginstall.",
         )
         self.parser.add_option(
+            "--cc",
+            default=[],
+            action="append",
+            help="Specify additional email addresses to notify",
+        )
+        self.parser.add_option(
             "--dump",
             default=False,
             action="store_true",
@@ -309,6 +315,13 @@ class BeakerJob(BeakerBase):
         self.node = self.doc.createElement('job')
         whiteboard = self.doc.createElement('whiteboard')
         whiteboard.appendChild(self.doc.createTextNode(kwargs.get('whiteboard','')))
+        if kwargs.get('cc'):
+            notify = self.doc.createElement('notify')
+            for cc in kwargs.get('cc'):
+                ccnode = self.doc.createElement('cc')
+                ccnode.appendChild(self.doc.createTextNode(cc))
+                notify.appendChild(ccnode)
+            self.node.appendChild(notify)
         self.node.appendChild(whiteboard)
 
     def addRecipeSet(self, recipeSet):
