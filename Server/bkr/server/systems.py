@@ -78,7 +78,7 @@ class SystemsController(controllers.Controller):
         """
         system = System.by_fqdn(fqdn, identity.current.user)
         if not force and system.user is not None \
-                and not system.current_user(identity.current.user):
+                and system.user != identity.current.user:
             raise BX(_(u'System is in use'))
         system.action_power(action, wait=True, clear_netboot=clear_netboot)
         system.activity.append(SystemActivity(user=identity.current.user,
