@@ -1,8 +1,11 @@
 import sys
+import logging
 import xmlrpclib
 import cherrypy
 import turbogears
 from turbogears import controllers
+
+log = logging.getLogger(__name__)
 
 class RPCRoot(controllers.Controller):
 
@@ -26,22 +29,11 @@ class RPCRoot(controllers.Controller):
             response = obj(*params)
             response = xmlrpclib.dumps((response,), methodresponse=1, allow_none=True)
         except xmlrpclib.Fault, fault:
+            log.exception('Error handling XML-RPC method')
             # Can't marshal the result
             response = xmlrpclib.dumps(fault)
         except:
-            # Added by dmalcolm: dump the traceback server-side for ease 
-            # of debugging:
-            if True:
-                import traceback
-                (type, value, tb) = sys.exc_info()
-                try:
-                    print >> sys.stderr, "Exception type: %s"%type
-                    print >> sys.stderr, "Exception value: %s"%value
-                except: pass # survive failure in stringification of value                   
-                print >> sys.stderr, "Traceback:"
-                for line in traceback.format_tb(tb):
-                    print >> sys.stderr, line,
-
+            log.exception('Error handling XML-RPC method')
             # Some other error; send back some error info
             response = xmlrpclib.dumps(
                 xmlrpclib.Fault(1, "%s:%s" % (sys.exc_type, sys.exc_value))
