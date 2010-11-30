@@ -140,16 +140,18 @@ class InstallData(_install_data, object):
             else:
                 self.install_dir = self.temp_data
 
-def find_data_recursive(dest_dir, src_dir):
+def find_data_recursive(dest_dir, src_dir, exclude=frozenset()):
     if src_dir[-1] != '/':
         src_dir = src_dir + '/'
     for dirpath, dirnames, filenames in os.walk(src_dir):
         assert dirpath.startswith(src_dir)
         yield (os.path.join(dest_dir, dirpath[len(src_dir):]),
-               [os.path.join(dirpath, filename) for filename in filenames])
+               [os.path.join(dirpath, filename) for filename in filenames
+                if filename not in exclude])
 
 data_files = \
-    list(find_data_recursive('bkr/server/apidoc/html', 'build/sphinx/html/')) + \
+    list(find_data_recursive('bkr/server/apidoc/html', 'build/sphinx/html/',
+            exclude=['.buildinfo'])) + \
     list(find_data_recursive('bkr/server/static', 'bkr/server/static/')) + [
     ("/etc/beaker", ["server.cfg"]),
     ("/etc/httpd/conf.d", ["apache/beaker-server.conf"]),
