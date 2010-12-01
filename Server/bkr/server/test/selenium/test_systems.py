@@ -27,8 +27,6 @@ from bkr.server.test.assertions import assert_sorted
 
 class TestSystemView(SeleniumTestCase):
 
-    slow = True
-
     def setUp(self):
         self.system_owner = data_setup.create_user()
         self.system = data_setup.create_system(owner=self.system_owner)

@@ -16,8 +16,6 @@ DynamicAttributeImpl.accepts_scalar_loader = False
 
 class TestSystem(unittest.TestCase):
 
-    destructive = True
-
     def setUp(self):
         session.begin()
 
@@ -54,8 +52,6 @@ class TestSystem(unittest.TestCase):
 
 class TestSystemKeyValue(unittest.TestCase):
 
-    destructive = True
-
     def setUp(self):
         session.begin()
 
@@ -82,9 +78,6 @@ class TestSystemKeyValue(unittest.TestCase):
         self.assertEqual(reloaded_system.key_values_int, [])
 
 class TestBrokenSystemDetection(unittest.TestCase):
-
-    destructive = True
-    slow = True
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=637260
     # The 1-second sleeps here are so that the various timestamps
