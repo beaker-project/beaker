@@ -1986,24 +1986,11 @@ class Root(RPCRoot):
         return system.update(inventory)
 
     @expose(template="bkr.server.templates.login")
-    def login(self, forward_url=url("/"), previous_url=None, *args, **kw): 
+    def login(self, forward_url='/', **kwargs):
         if not identity.current.anonymous \
-            and identity.was_login_attempted() \
-            and not identity.get_identity_errors():     
-            #This stops an ISE if going directly to the /login URL
-            if 'Referer' in request.headers:
-            #The reason for this if clause is because when we are not using kerberos login dialog
-            #the referer will be a different value to when we are
-            #If not for this if clause, it would behave one way when using kerberos login and another way when not 
-                if re.match('^(.+)?/%s$' % self.login.__name__,request.headers['Referer']):
-                    raise redirect(forward_url)
-                else:
-                    raise redirect(request.headers.get("Referer",url("/")))
-            else:
-                redirect(forward_url)
-
-        forward_url=None
-        previous_url= request.path
+                and identity.was_login_attempted() \
+                and not identity.get_identity_errors():
+            redirect(forward_url, redirect_params=kwargs)
 
         if identity.was_login_attempted():
             msg=_("The credentials you supplied were not correct or "
@@ -2013,12 +2000,10 @@ class Root(RPCRoot):
                    "this resource.")
         else:
             msg=_("Please log in.")
-            forward_url= request.headers.get("Referer", url("/"))
             
         response.status=403
-        return dict(message=msg, previous_url=previous_url, logging_in=True,
-                    original_parameters=request.params,
-                    forward_url=forward_url)
+        return dict(message=msg, action=request.path, logging_in=True,
+                    original_parameters=kwargs, forward_url=forward_url)
 
     @expose()
     def logout(self):

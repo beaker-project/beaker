@@ -373,7 +373,7 @@ class ReserveSystemXmlRpcTest(XmlRpcTestCase):
             self.fail('should raise')
         except Exception, e:
             self.assert_(e.faultString.startswith(
-                    'turbogears.identity.exceptions.IdentityFailure'))
+                    'cherrypy._cperror.HTTPRedirect'))
 
     def test_cannot_reserve_automated_system(self):
         user = data_setup.create_user(password=u'password')
@@ -447,7 +447,7 @@ class ReleaseSystemXmlRpcTest(XmlRpcTestCase):
             self.fail('should raise')
         except Exception, e:
             self.assert_(e.faultString.startswith(
-                    'turbogears.identity.exceptions.IdentityFailure'))
+                    'cherrypy._cperror.HTTPRedirect'))
 
     def test_cannot_release_when_not_current_user(self):
         system = data_setup.create_system(
@@ -521,7 +521,7 @@ class SystemPowerXmlRpcTest(XmlRpcTestCase):
             self.fail('should raise')
         except xmlrpclib.Fault, e:
             self.assert_(e.faultString.startswith(
-                    'turbogears.identity.exceptions.IdentityFailure'))
+                    'cherrypy._cperror.HTTPRedirect'))
         self.assert_(not self.stub_cobbler_thread.cobbler.system_actions)
 
     def test_cannot_power_system_in_use(self):
@@ -619,7 +619,7 @@ class SystemProvisionXmlRpcTest(XmlRpcTestCase):
             self.fail('should raise')
         except xmlrpclib.Fault, e:
             self.assert_(e.faultString.startswith(
-                    'turbogears.identity.exceptions.IdentityFailure'))
+                    'cherrypy._cperror.HTTPRedirect'))
         self.assert_(not self.stub_cobbler_thread.cobbler.system_actions)
 
     def test_cannot_provision_automated_system(self):
