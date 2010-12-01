@@ -161,11 +161,14 @@ class CommunicateThread(threading.Thread):
 processes = []
 
 def setup_package():
+    if not os.path.exists('/tmp/selenium'):
+        os.mkdir('/tmp/selenium')
     processes.extend([
         Process('Xvfb', args=['Xvfb', ':4', '-fp', '/usr/share/X11/fonts/misc',
                 '-screen', '0', '1024x768x24']),
-        Process('selenium-server', args=['java', '-jar',
-                '/usr/local/share/selenium/selenium-server-1.0.3/selenium-server.jar',
+        Process('selenium-server', args=['java',
+                '-Djava.io.tmpdir=/tmp/selenium',
+                '-jar', '/usr/local/share/selenium/selenium-server-1.0.3/selenium-server.jar',
                 '-log', 'selenium.log'], env={'DISPLAY': ':4'},
                 listen_port=4444),
     ])
