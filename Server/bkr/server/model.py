@@ -2220,7 +2220,8 @@ $SNIPPET("rhts_post")
                 .join(system_table, onclause=recipe_table.c.system_id == system_table.c.id))\
             .where(and_(
                 system_table.c.id == self.id,
-                distro_tag_map.c.distro_tag_id == DistroTag.by_tag(reliable_distro_tag).id,
+                distro_tag_map.c.distro_tag_id ==
+                    DistroTag.by_tag(reliable_distro_tag.decode('utf8')).id,
                 recipe_table.c.start_time >
                     func.ifnull(status_change_subquery, system_added_subquery),
                 recipe_table.c.finish_time > nonaborted_recipe_subquery))
