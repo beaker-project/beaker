@@ -29,10 +29,10 @@ class JobSchemaTest(unittest.TestCase):
         schema = lxml.etree.RelaxNG(self.job_schema_doc)
         schema.assertValid(lxml.etree.fromstring(xml))
 
-    def assert_not_valid(self, xml, error_messages):
+    def assert_not_valid(self, xml, error_message):
         schema = lxml.etree.RelaxNG(self.job_schema_doc)
         self.assert_(not schema.validate(lxml.etree.fromstring(xml)))
-        self.assertEquals([e.message for e in schema.error_log], error_messages)
+        self.assert_(error_message in [str(e.message) for e in schema.error_log])
 
     def test_minimal_job(self):
         self.assert_valid('''
@@ -94,10 +94,7 @@ class JobSchemaTest(unittest.TestCase):
                 </recipeSet>
             </job>
             ''',
-            ['Extra element autopick in interleave',
-             'Invalid sequence in interleave',
-             'Element recipe failed to validate content',
-             'Element recipeSet failed to validate content'])
+            'Extra element autopick in interleave')
 
     def test_guestrecipe(self):
         self.assert_valid('''
