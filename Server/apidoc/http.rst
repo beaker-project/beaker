@@ -61,7 +61,7 @@ System inventory information
       index to group them. For example, to limit the list to systems 
       which belong to the "devel" group, pass these three parameters::
 
-        systemsearch-0.table=System/Group&
+        systemsearch-0.table=System%2FGroup&
         systemsearch-0.operation=is&
         systemsearch-0.value=devel
 
@@ -69,7 +69,7 @@ System inventory information
       with a different index. For example, to also limit the list to systems 
       with more than four logical CPUs, append these three parameters::
 
-        systemsearch-1.table=CPU/Processors&
+        systemsearch-1.table=CPU%2FProcessors&
         systemsearch-1.operation=greater+than&
         systemsearch-1.value=4
 
