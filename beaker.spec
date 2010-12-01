@@ -3,7 +3,7 @@
 
 Name:           beaker
 Version:        0.5.63
-Release:        2%{?dist}
+Release:        3%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -192,6 +192,10 @@ fi
 %attr(-,apache,root) %dir %{_localstatedir}/run/%{name}-lab-controller
 
 %changelog
+* Wed Dec 01 2010 Raymond Mancy <rmancy@redhat.com> 0.5.63-3
+- Needed to remove prod/tag from to_xml() in class RecipeSet
+  (rmancy@redhat.com)
+
 * Wed Dec 01 2010 Raymond Mancy <rmancy@redhat.com> 0.5.63-2
 - Updated product-update to not print out debug msg (rmancy@redhat.com)
 
