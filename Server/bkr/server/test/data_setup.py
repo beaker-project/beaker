@@ -50,7 +50,7 @@ def setup_model(override=True):
     log.info('Initialising model')
     init_db(user_name=ADMIN_USER, password=ADMIN_PASSWORD,
             user_email_address=ADMIN_EMAIL_ADDRESS)
-    Product(name='the_product')
+    Product(name=u'the_product')
 
 def create_labcontroller(fqdn=None):
     if fqdn is None:
