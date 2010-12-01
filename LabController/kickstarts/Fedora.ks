@@ -60,17 +60,6 @@ timezone  $getVar('timezone', 'America/New_York')
 # Install OS instead of upgrade
 install
 
-# Add Custom Repos
-#if $getVar('customrepos','') != ''
-#set $i = 0
-#for $repo in $getVar('customrepos','').split('|')
-#if $repo.find(",") != -1
-#set (reponame, repourl) = $repo.split(',', 1)
-repo --name=$reponame --baseurl=$repourl
-#end if
-#end for
-#end if
-
 $SNIPPET("rhts_devices")
 $SNIPPET("rhts_partitions")
 $SNIPPET("Fedora")
