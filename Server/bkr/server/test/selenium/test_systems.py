@@ -203,9 +203,9 @@ class TestSystemsAtomFeed(unittest.TestCase):
                 '%sview/%s?tg_format=turtle' % (get_server_base(), system.fqdn))
 
     def test_filter_by_group(self):
-        data_setup.create_system(fqdn='nogroup.system')
+        data_setup.create_system(fqdn=u'nogroup.system')
         self.group = data_setup.create_group()
-        data_setup.create_system(fqdn='grouped.system').groups.append(self.group)
+        data_setup.create_system(fqdn=u'grouped.system').groups.append(self.group)
         session.flush()
         feed_url = urljoin(get_server_base(), '?' + urlencode({
                 'tg_format': 'atom', 'list_tgp_order': '-date_modified',
