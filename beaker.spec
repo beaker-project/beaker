@@ -3,7 +3,7 @@
 
 Name:           beaker
 Version:        0.5.63
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -192,6 +192,11 @@ fi
 %attr(-,apache,root) %dir %{_localstatedir}/run/%{name}-lab-controller
 
 %changelog
+* Wed Dec 01 2010 Raymond Mancy <rmancy@redhat.com> 0.5.63-2
+- Updated product-update to not print out debug msg (rmancy@redhat.com)
+
+* Wed Dec 01 2010 Raymond Mancy <rmancy@redhat.com>
+- Updated product-update to not print out debug msg (rmancy@redhat.com)
 * Tue Nov 30 2010 Bill Peck <bpeck@redhat.com> 0.5.63-1
 - Merge branch 'bz590951' into develop (bpeck@redhat.com)
 - add --cc command line option to workflows. (bpeck@redhat.com)
