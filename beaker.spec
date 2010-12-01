@@ -192,6 +192,14 @@ fi
 %attr(-,apache,root) %dir %{_localstatedir}/run/%{name}-lab-controller
 
 %changelog
+* Wed Dec 01 2010 Bill Peck <bpeck@redhat.com> 0.5.63-5
+- Revert "bz590951 - Using custom repo during system install"
+  (bpeck@redhat.com)
+
+* Wed Dec 01 2010 Bill Peck <bpeck@redhat.com>
+- Revert "bz590951 - Using custom repo during system install"
+  (bpeck@redhat.com)
+
 * Wed Dec 01 2010 Bill Peck <bpeck@redhat.com> 0.5.63-4
 - must use outerjoins on logs, since a recipe may not have any sub-logs.
   (bpeck@redhat.com)
