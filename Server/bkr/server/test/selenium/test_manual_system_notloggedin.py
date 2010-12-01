@@ -19,3 +19,5 @@ class NotLoggedInManualSystem(bkr.server.test.selenium.SeleniumTestCase):
         sel = self.selenium
         sel.open(u'/view/%s' % self.system.fqdn) #Testing that this does not throw ISE
 
+    def tearDown(self):
+        self.selenium.stop()
