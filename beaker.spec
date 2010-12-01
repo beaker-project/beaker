@@ -207,16 +207,6 @@ fi
 - fix for reserveworkflow: my_cmp was in the wrong place (dcallagh@redhat.com)
 
 * Wed Nov 24 2010 Raymond Mancy <rmancy@redhat.com> 0.5.62-1
-
-
-
-
-
-
-
-
-
-
 - Experiencing xmlrpc timeouts when talking to cobbler.  - cobbler is stupid
   and doesn't honor the page, results_per_page options.    get_item_names still
   doesn't honor results_per_page but it only transfers the names.  - Of course
@@ -241,29 +231,6 @@ fi
 - bz651418 - fix system grid sorting (dcallagh@redhat.com)
 - bz645873 -  Job cancelled soon after creation doesn't terminate
   (bpeck@redhat.com)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 * Thu Nov 11 2010 Bill Peck <bpeck@redhat.com> 0.5.61-4
 - increase timeout from 20 seconds to 40 seconds. (bpeck@redhat.com)
