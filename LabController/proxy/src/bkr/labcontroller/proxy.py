@@ -286,6 +286,71 @@ class Watchdog(ProxyHelper):
 
     watchdogs = dict()
 
+    def transfer_logs(self):
+        self.logger.info("Entering transfer_logs")
+        for recipe_id in self.hub.recipes.by_log_server(self.server):
+            self.transfer_recipe_logs(recipe_id)
+
+    def transfer_recipe_logs(self, recipe_id):
+        """ If Cache is turned on then move the recipes logs to there final place
+        """
+        if self.conf.get("CACHE",False):
+            tmpdir = tempfile.mkdtemp(dir=self.basepath)
+            # Move logs to tmp directory layout
+            mylogs = self.hub.recipes.files(recipe_id)
+            trlogs = []
+            for mylog in mylogs:
+                server = '%s/%s' % (self.conf.get("ARCHIVE_SERVER"), mylog['filepath'])
+                basepath = '%s/%s' % (self.conf.get("ARCHIVE_BASEPATH"), mylog['filepath'])
+                mysrc = '%s/%s/%s' % (mylog['basepath'], mylog['path'], mylog['filename'])
+                mydst = '%s/%s/%s/%s' % (tmpdir, mylog['filepath'], 
+                                          mylog['path'], mylog['filename'])
+                if not os.path.exists(os.path.dirname(mydst)):
+                    os.makedirs(os.path.dirname(mydst))
+                try:
+                    os.link(mysrc,mydst)
+                    trlogs.append(mylog)
+                except OSError:
+                    pass
+            # rsync the logs to there new home
+            rc = self.rsync('%s/' % tmpdir, '%s' % self.conf.get("ARCHIVE_RSYNC"))
+            self.logger.info("rsync rc=%s" % rc)
+            if rc == 0:
+                # if the logs have been transfered then tell the server the new location
+                for mylog in trlogs:
+                    server = '%s/%s' % (self.conf.get("ARCHIVE_SERVER"), mylog['filepath'])
+                    basepath = '%s/%s' % (self.conf.get("ARCHIVE_BASEPATH"), mylog['filepath'])
+                    mysrc = '%s/%s/%s' % (mylog['basepath'], mylog['path'], mylog['filename'])
+                    self.hub.recipes.change_file(mylog['tid'], server, basepath)
+                    self.rm(mysrc)
+                    try:
+                        self.removedirs('%s/%s' % (mylog['basepath'], mylog['path']))
+                    except OSError:
+                        # Its ok if it fails, dir may not be empty yet
+                        pass
+            # get rid of our tmpdir.
+            shutil.rmtree(tmpdir)
+
+    def rm(self, src):
+        """ remove src
+        """
+        if os.path.exists(src):
+            return os.unlink(src)
+        return True
+
+    def removedirs(self, path):
+        """ remove empty dirs
+        """
+        if os.path.exists(path):
+            return os.removedirs(path)
+        return True
+
+    def rsync(self, src, dst):
+        """ Run system rsync command to move files
+        """
+        my_cmd = 'rsync %s %s %s' % (self.conf.get('RSYNC_FLAGS',''), src, dst)
+        return utils.subprocess_call(self.logger,my_cmd,shell=True)
+
     def expire_watchdogs(self):
         """Clear out expired watchdog entries"""
 
@@ -306,7 +371,6 @@ class Watchdog(ProxyHelper):
         # Remove Monitor if watchdog does not exist.
         for watchdog_system in self.watchdogs.copy():
             if watchdog_system not in active_watchdogs:
-                self.watchdogs[watchdog_system].finish()
                 del self.watchdogs[watchdog_system]
                 self.logger.info("Removed Monitor for %s" % watchdog_system)
 
@@ -360,65 +424,6 @@ class Monitor(ProxyHelper):
             if watchedFile.update():
                 updated = True
         return updated
-
-    def finish(self):
-        """ If Cache is turned on then move the recipes logs to there final place
-        """
-        if self.conf.get("CACHE",False):
-            tmpdir = tempfile.mkdtemp(dir=self.basepath)
-            # Move logs to tmp directory layout
-            mylogs = self.hub.recipes.files(self.watchdog['recipe_id'])
-            trlogs = []
-            for mylog in mylogs:
-                server = '%s/%s' % (self.conf.get("ARCHIVE_SERVER"), mylog['filepath'])
-                basepath = '%s/%s' % (self.conf.get("ARCHIVE_BASEPATH"), mylog['filepath'])
-                mysrc = '%s/%s/%s' % (mylog['basepath'], mylog['path'], mylog['filename'])
-                mydst = '%s/%s/%s/%s' % (tmpdir, mylog['filepath'], 
-                                          mylog['path'], mylog['filename'])
-                if not os.path.exists(os.path.dirname(mydst)):
-                    os.makedirs(os.path.dirname(mydst))
-                try:
-                    os.link(mysrc,mydst)
-                    trlogs.append(mylog)
-                except OSError:
-                    pass
-            # rsync the logs to there new home
-            rc = self.rsync('%s/' % tmpdir, '%s' % self.conf.get("ARCHIVE_RSYNC"))
-            if rc == 0:
-                # if the logs have been transfered then tell the server the new location
-                for mylog in trlogs:
-                    server = '%s/%s' % (self.conf.get("ARCHIVE_SERVER"), mylog['filepath'])
-                    basepath = '%s/%s' % (self.conf.get("ARCHIVE_BASEPATH"), mylog['filepath'])
-                    mysrc = '%s/%s/%s' % (mylog['basepath'], mylog['path'], mylog['filename'])
-                    self.hub.recipes.change_file(mylog['tid'], server, basepath)
-                    self.rm(mysrc)
-                    try:
-                        self.removedirs('%s/%s' % (mylog['basepath'], mylog['path']))
-                    except OSError:
-                        # Its ok if it fails, dir may not be empty yet
-                        pass
-                # get rid of our tmpdir.
-                shutil.rmtree(tmpdir)
-
-    def rm(self, src):
-        """ remove src
-        """
-        if os.path.exists(src):
-            return os.unlink(src)
-        return True
-
-    def removedirs(self, path):
-        """ remove empty dirs
-        """
-        if os.path.exists(path):
-            return os.removedirs(path)
-        return True
-
-    def rsync(self, src, dst):
-        """ Run system rsync command to move files
-        """
-        my_cmd = 'rsync %s %s %s' % (self.conf.get('RSYNC_FLAGS',''), src, dst)
-        return utils.subprocess_call(self.logger,my_cmd,shell=True)
 
         
 class Proxy(ProxyHelper):

@@ -34,7 +34,7 @@ class AddSystemGroupTest(bkr.server.test.selenium.SeleniumTestCase):
         sel.wait_for_page_to_load("30000")
         self.failUnless(sel.is_text_present("%s" % self.system.fqdn))
 
-def tearDown(self):
+    def tearDown(self):
         self.selenium.stop()
                                                                                                                 
 

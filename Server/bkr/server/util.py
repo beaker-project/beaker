@@ -86,6 +86,6 @@ def unicode_truncate(s, bytes_length, encoding='utf8'):
     Returns a copy of the given unicode string, truncated to fit within the 
     given number of bytes when encoded.
     """
-    if len(s) * 4 < bytes_length: return # fast path
+    if len(s) * 4 < bytes_length: return s # fast path
     encoded = s.encode(encoding)[:bytes_length]
     return encoded.decode(encoding, 'ignore')

@@ -7,8 +7,6 @@ from bkr.server.jobxml import XmlJob
 
 class TestAckJobXml(unittest.TestCase):
 
-    destructive = True
-
     def setUp(self):
         self.job = data_setup.create_completed_job()
     

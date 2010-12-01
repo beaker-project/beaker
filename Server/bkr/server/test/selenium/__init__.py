@@ -36,10 +36,6 @@ log = logging.getLogger(__name__)
 
 class SeleniumTestCase(unittest.TestCase):
 
-    # attributes for nose
-    destructive = True
-    slow = True
-
     BEAKER_LOGIN_USER = 'admin'
     BEAKER_LOGIN_PASSWORD = 'testing'
 
@@ -74,7 +70,7 @@ class SeleniumTestCase(unittest.TestCase):
             try:
                 sel.click("link=Login")
             except Exception, e:
-                raise BX(unicode(e))
+                raise BX(_(e))
             sel.wait_for_page_to_load("3000")
             sel.type("user_name", user)
             sel.type("password", password)

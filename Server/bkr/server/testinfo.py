@@ -345,13 +345,19 @@ class Parser:
             return
 
         # TestTime is an integer with an optional minute (m) or hour (h) suffix
-        m = re.match('^(\d+)', value)
+        m = re.match('^(\d+)(.*)$', value)
         if m:
             self.info.avg_test_time = int(m.group(1))
-            if re.match('.*m$', value):
+            suffix = m.group(2)
+            if suffix == '':
+                pass # no units means seconds
+            elif suffix == 'm':
                 self.info.avg_test_time *= 60
-            if re.match('.*h$', value):
+            elif suffix == 'h':
                 self.info.avg_test_time *= 3600
+            else:
+                self.handle_warning("TestTime unit is not valid, should be m (minutes) or h (hours)")
+                return
 
             if self.info.avg_test_time<60:
                 self.handle_warning("TestTime should not be less than a minute")

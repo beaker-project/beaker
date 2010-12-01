@@ -85,6 +85,17 @@ repo --name=$reponame --baseurl=http://$server/distros$repourl
 #end for
 #end if
 
+# Add Custom Repos
+#if $getVar('customrepos','') != ''
+#set $i = 0
+#for $repo in $getVar('customrepos','').split('|')
+#if $repo.find(",") != -1
+#set (reponame, repourl) = $repo.split(',', 1)
+repo --name=$reponame --baseurl=$repourl
+#end if
+#end for
+#end if
+
 $SNIPPET("rhts_scsi_ethdevices")
 $SNIPPET("rhts_partitions")
 $SNIPPET("RedHatEnterpriseLinuxClient5")

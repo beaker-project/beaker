@@ -9,8 +9,6 @@ from bkr.server.test import data_setup
 
 class TestJobsController(unittest.TestCase):
 
-    destructive = True
-
     def setUp(self):
         from bkr.server.jobs import Jobs
         self.controller = Jobs()

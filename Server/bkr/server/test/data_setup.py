@@ -27,7 +27,7 @@ from bkr.server.model import LabController, User, Group, Distro, Breed, Arch, \
         SystemType, SystemStatus, Recipe, RecipeTask, RecipeTaskResult, \
         Device, TaskResult, TaskStatus, Job, RecipeSet, TaskPriority, \
         LabControllerDistro, Power, PowerType, TaskExcludeArch, TaskExcludeOSMajor, \
-        Permission
+        Permission, RetentionTag, Product
 
 log = logging.getLogger(__name__)
 
@@ -50,6 +50,7 @@ def setup_model(override=True):
     log.info('Initialising model')
     init_db(user_name=ADMIN_USER, password=ADMIN_PASSWORD,
             user_email_address=ADMIN_EMAIL_ADDRESS)
+    Product(name='the_product')
 
 def create_labcontroller(fqdn=None):
     if fqdn is None:
@@ -58,7 +59,7 @@ def create_labcontroller(fqdn=None):
         lc = LabController.by_name(fqdn)  
     except sqlalchemy.exceptions.InvalidRequestError, e: #Doesn't exist ?
         if e.args[0] == 'No rows returned for one()':
-            lc = LabController(fqdn=fqdn)
+            lc = LabController.lazy_create(fqdn=fqdn)
             return lc
         else:
             raise
@@ -185,7 +186,7 @@ def create_job_for_recipes(recipes, owner=None, whiteboard=None, cc=None):
         owner = create_user()
     if whiteboard is None:
         whiteboard = u'job %d' % int(time.time() * 1000)
-    job = Job(whiteboard=whiteboard, ttasks=1, owner=owner)
+    job = Job(whiteboard=whiteboard, ttasks=1, owner=owner,retention_tag = RetentionTag.get_default())
     if cc is not None:
         job.cc = cc
     recipe_set = RecipeSet(ttasks=sum(r.ttasks for r in recipes),

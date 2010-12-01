@@ -2,3 +2,4 @@ Add the following configuration directive to the [global] section in
 /etc/beaker/server.cfg:
 
 beaker.reliable_distro_tag='RELEASED'
+
