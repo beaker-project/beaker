@@ -28,7 +28,7 @@ from turbogears.database import session
 from bkr.server.test.selenium import SeleniumTestCase, XmlRpcTestCase
 from bkr.server.test import data_setup, get_server_base, stub_cobbler
 from bkr.server.test.assertions import assert_sorted
-from bkr.server.model import User, Cpu
+from bkr.server.model import User, Cpu, Key, Key_Value_String
 
 def atom_xpath(expr):
     return lxml.etree.XPath(expr, namespaces={'atom': 'http://www.w3.org/2005/Atom'})
@@ -713,3 +713,112 @@ class SystemProvisionXmlRpcTest(XmlRpcTestCase):
                 None, None, None, None,
                 False) # this last one is reboot=False
         self.assert_(not self.stub_cobbler_thread.cobbler.system_actions)
+
+class LegacyPushXmlRpcTest(XmlRpcTestCase):
+
+    def setUp(self):
+        self.server = self.get_server()
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=658503
+    def test_system_activity_shows_changes(self):
+        system = data_setup.create_system()
+        system.key_values_string.append(
+                Key_Value_String(Key.by_name(u'PCIID'), '1022:2000'))
+        session.flush()
+        self.server.legacypush(system.fqdn,
+                {'PCIID': ['80ee:cafe', '80ee:beef']})
+        session.refresh(system)
+        self.assertEquals(system.activity[0].field_name, u'Key/Value')
+        self.assertEquals(system.activity[0].service, u'XMLRPC')
+        self.assertEquals(system.activity[0].action, u'Added')
+        self.assertEquals(system.activity[0].old_value, None)
+        self.assertEquals(system.activity[0].new_value, u'PCIID/80ee:beef')
+        self.assertEquals(system.activity[1].field_name, u'Key/Value')
+        self.assertEquals(system.activity[1].service, u'XMLRPC')
+        self.assertEquals(system.activity[1].action, u'Added')
+        self.assertEquals(system.activity[1].old_value, None)
+        self.assertEquals(system.activity[1].new_value, u'PCIID/80ee:cafe')
+        self.assertEquals(system.activity[2].field_name, u'Key/Value')
+        self.assertEquals(system.activity[2].service, u'XMLRPC')
+        self.assertEquals(system.activity[2].action, u'Removed')
+        self.assertEquals(system.activity[2].old_value, u'PCIID/1022:2000')
+        self.assertEquals(system.activity[2].new_value, None)
+
+class PushXmlRpcTest(XmlRpcTestCase):
+
+    def setUp(self):
+        self.server = self.get_server()
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=658503
+
+    def test_system_activity_shows_changes_for_simple_attributes(self):
+        system = data_setup.create_system()
+        system.vendor = None
+        system.model = None
+        system.memory = None
+        session.flush()
+        self.server.push(system.fqdn,
+                {'vendor': 'Acorn', 'model': 'Archimedes', 'memory': '16'})
+        session.refresh(system)
+        # no way to know in which order the changes will be recorded :-(
+        changes = system.activity[-3:]
+        for change in changes:
+            self.assertEquals(change.service, u'XMLRPC')
+            self.assertEquals(change.action, u'Changed')
+        changed_fields = set(change.field_name for change in changes)
+        self.assertEquals(changed_fields, set(['vendor', 'model', 'memory']))
+
+    def test_system_activity_shows_changes_for_arches(self):
+        system = data_setup.create_system()
+        session.flush()
+        self.server.push(system.fqdn, {'Arch': ['sparc32']})
+        session.refresh(system)
+        self.assertEquals(system.activity[-1].service, u'XMLRPC')
+        self.assertEquals(system.activity[-1].action, u'Added')
+        self.assertEquals(system.activity[-1].field_name, u'Arch')
+        self.assertEquals(system.activity[-1].old_value, None)
+        self.assertEquals(system.activity[-1].new_value, u'sparc32')
+
+    def test_system_activity_shows_changes_for_devices(self):
+        system = data_setup.create_system()
+        session.flush()
+        self.server.push(system.fqdn, {'Devices': [{
+            'type': 'IDE', 'bus': u'pci', 'driver': u'PIIX_IDE',
+            'vendorID': '8086', 'deviceID': '7111',
+            'description': u'82371AB/EB/MB PIIX4 IDE',
+            'subsysVendorID': '0000', 'subsysDeviceID': '0000',
+        }]})
+        session.refresh(system)
+        self.assertEquals(system.activity[-1].service, u'XMLRPC')
+        self.assertEquals(system.activity[-1].action, u'Added')
+        self.assertEquals(system.activity[-1].field_name, u'Device')
+        self.assertEquals(system.activity[-1].old_value, None)
+        # the new value will just be some random device id
+
+    def test_system_activity_shows_changes_for_cpu(self):
+        system = data_setup.create_system()
+        session.flush()
+        self.server.push(system.fqdn, {'Cpu': {
+            'modelName': 'Intel(R) Core(TM) i7 CPU       M 620  @ 2.67GHz',
+            'vendor': 'GenuineIntel', 'family': 6, 'stepping': 5, 'model': 37,
+            'processors': 4, 'cores': 4, 'sockets': 1, 'speed': 2659.708,
+            'CpuFlags': ['fpu', 'mmx', 'syscall', 'ssse3'],
+        }})
+        session.refresh(system)
+        self.assertEquals(system.activity[-1].service, u'XMLRPC')
+        self.assertEquals(system.activity[-1].action, u'Changed')
+        self.assertEquals(system.activity[-1].field_name, u'CPU')
+
+    def test_system_activity_shows_changes_for_numa(self):
+        system = data_setup.create_system()
+        session.flush()
+        self.server.push(system.fqdn, {'Cpu': {
+            'modelName': 'Intel(R) Core(TM) i7 CPU       M 620  @ 2.67GHz',
+            'vendor': 'GenuineIntel', 'family': 6, 'stepping': 5, 'model': 37,
+            'processors': 4, 'cores': 4, 'sockets': 1, 'speed': 2659.708,
+            'CpuFlags': ['fpu', 'mmx', 'syscall', 'ssse3'],
+        }})
+        session.refresh(system)
+        self.assertEquals(system.activity[-1].service, u'XMLRPC')
+        self.assertEquals(system.activity[-1].action, u'Changed')
+        self.assertEquals(system.activity[-1].field_name, u'CPU')
