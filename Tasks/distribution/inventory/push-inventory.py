@@ -195,11 +195,11 @@ def kernel_inventory():
     #exists otherwise nothing
     #filter out vbds and single device paths
     status, mpaths = commands.getstatusoutput("multipath -ll")
+    mp = False
     if status:
         print "MULTIPATH: multipath -ll failed with %d" % status
     else:
         count = 0
-        mp = False
         mpath_pat = re.compile(" dm-[0-9]* ")
         sd_pat = re.compile(" sd[a-z]")
         for line in mpaths.split('\n'):
