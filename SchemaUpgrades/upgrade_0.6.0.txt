@@ -1,0 +1,16 @@
+Add the following directive to /etc/httpd/conf.d/beaker-server.conf:
+
+  Alias /bkr/apidoc /usr/share/bkr/server/apidoc/html
+
+Update the <Location> section for authentication in 
+/etc/httpd/conf.d/beaker-server.conf as follows. If this section is commented 
+out or not present (i.e. if authentication is not handled by Apache) then this 
+update can be ignored.
+
+Change:
+  <Location ~ "\/(login|mine|available|free|labcontrollers|usersystems|groups|powertypes|keytypes)">
+
+to:
+  <Location /bkr/login>
+
+Remember to adjust the /bkr/ prefix as appropriate for the local installation.

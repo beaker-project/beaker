@@ -76,7 +76,7 @@
     <div id="loginBox">
         <h1>Login</h1>
         <p>${message}</p>
-        <form action="${previous_url}" method="POST">
+        <form action="${action}" method="POST">
             <table>
                 <tr>
                     <td class="label">

@@ -2,8 +2,10 @@
 %{!?pyver: %global pyver %(%{__python} -c "import sys ; print sys.version[:3]")}
 
 Name:           beaker
-Version:        0.5.62
-Release:        2%{?dist}
+# hacked version for external-scheduler-integration branch:
+# do not merge this change onto develop!
+Version:        0.5.999_esi
+Release:        1%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -14,6 +16,7 @@ BuildArch:      noarch
 BuildRequires:  python-setuptools
 BuildRequires:  python-setuptools-devel
 BuildRequires:  python2-devel
+BuildRequires:  python-sphinx10
 
 
 %package client
@@ -36,6 +39,7 @@ Requires:       python-decorator
 Requires:       python-xmltramp
 Requires:       python-lxml
 Requires:       python-ldap
+Requires:       python-rdflib >= 3.0.0
 Requires:       mod_wsgi
 Requires:       python-tgexpandingformwidget
 Requires:       httpd

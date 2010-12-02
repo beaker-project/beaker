@@ -26,6 +26,9 @@ import turbogears.config
 from selenium import selenium
 import unittest
 import threading
+import xmlrpclib
+from urlparse import urljoin
+import kobo.xmlrpc
 import bkr.server.test
 from bkr.server.bexceptions import BX
 
@@ -75,6 +78,17 @@ class SeleniumTestCase(unittest.TestCase):
             sel.wait_for_page_to_load("3000")
             return True
         return False
+
+class XmlRpcTestCase(unittest.TestCase):
+
+    @classmethod
+    def get_server(cls):
+        endpoint = urljoin(bkr.server.test.get_server_base(), 'RPC2')
+        transport = endpoint.startswith('https:') and \
+                kobo.xmlrpc.SafeCookieTransport() or \
+                kobo.xmlrpc.CookieTransport()
+        return xmlrpclib.ServerProxy(endpoint, transport=transport,
+                allow_none=True)
 
 def check_listen(port):
     """

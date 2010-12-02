@@ -1,27 +1,37 @@
 from turbogears.database import session
-from turbogears import controllers, expose, flash, widgets, validate, error_handler, validators, redirect, paginate
+from turbogears import controllers, expose, flash, widgets, validate, \
+        error_handler, validators, redirect, paginate, identity
 from turbogears.widgets import AutoCompleteField
-from turbogears import identity, redirect
+from turbogears.identity import IdentityException
+from turbogears.identity.saprovider import SqlAlchemyIdentity
 from cherrypy import request, response
 from tg_expanding_form_widget.tg_expanding_form_widget import ExpandingForm
 from kid import Element
 from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.helpers import *
+from bkr.server.model import *
 from xmlrpclib import ProtocolError
-from turbogears.identity import IdentityException
-
 import cherrypy
 import time
 import re
-
-# from bkr.server import json
-# import logging
-# log = logging.getLogger("bkr.server.controllers")
-#import model
-from model import *
+import logging
 import string
 
+log = logging.getLogger(__name__)
+
 __all__ = ['Auth']
+
+def proxy_identity(current_identity, proxy_user_name):
+    if 'proxy_auth' not in current_identity.permissions:
+        raise IdentityException('%s does not have proxy_auth permission' % user.user_name)
+    proxy_user = User.by_user_name(proxy_user_name)
+    if not proxy_user:
+        log.warning('Attempted to proxy as nonexistent user %s', proxy_user_name)
+        return None
+    log.info("Associating proxy user (%s) with visit (%s)",
+            proxy_user_name, current_identity.visit_key)
+    # XXX shouldn't assume a particular implementation class here:
+    return SqlAlchemyIdentity(current_identity.visit_key, proxy_user)
 
 class Auth(RPCRoot):
     # For XMLRPC methods in this class.
@@ -29,6 +39,17 @@ class Auth(RPCRoot):
 
     KRB_AUTH_PRINCIPAL = get("identity.krb_auth_principal")
     KRB_AUTH_KEYTAB = get("identity.krb_auth_keytab")
+
+    @cherrypy.expose
+    @identity.require(identity.not_anonymous())
+    def who_am_i(self):
+        """
+        Returns the username of the currently logged in user.
+        Provided for testing purposes.
+
+        .. versionadded:: 0.6
+        """
+        return identity.current.user.user_name
 
     @cherrypy.expose
     def renew_session(self, *args, **kw):
@@ -40,25 +61,41 @@ class Auth(RPCRoot):
         return False
 
     @cherrypy.expose
-    def login_password(self, username, password):
+    def login_password(self, username, password, proxy_user=None):
         """
         Authenticates the current session using the given username and password.
+
+        The caller may act as a proxy on behalf of another user by passing the 
+        *proxy_user* argument. This requires that the caller has 'proxy_auth' 
+        permission.
+
+        :param proxy_user: username on whose behalf the caller is proxying
+        :type proxy_user: string or None
         """
         visit_key = turbogears.visit.current().key
         user = identity.current_provider.validate_identity(username, password, visit_key)
         if user is None:
             raise IdentityException("Invalid username or password")
+        if proxy_user:
+            proxied_user = proxy_identity(user, proxy_user)
+            if proxied_user is None:
+                raise IdentityException('Failed to authenticate on behalf of %s' % proxy_user)
         return identity.current.visit_key
 
-    # TODO: proxy_user
     @cherrypy.expose
     def login_krbV(self, krb_request, proxy_user=None):
         """
         Authenticates the current session using Kerberos.
+
+        The caller may act as a proxy on behalf of another user by passing the 
+        *proxy_user* argument. This requires that the caller has 'proxy_auth' 
+        permission.
         
         :param krb_request: KRB_AP_REQ message containing client credentials, 
             as produced by :c:func:`krb5_mk_req`
         :type krb_request: base64-encoded string
+        :param proxy_user: username on whose behalf the caller is proxying
+        :type proxy_user: string or None
 
         This method is also available under the alias :meth:`auth.login_krbv`, 
         for compatibility with `Kobo`_.
@@ -82,10 +119,15 @@ class Auth(RPCRoot):
         # remove @REALM
         username = cprinc.name.split("@")[0]
         visit_key = turbogears.visit.current().key
-        user = identity.current_provider.validate_identity(username, 
-                                                    None, visit_key, True)
+        user = identity.current_provider.validate_identity(
+                user_name=username, password=None,
+                visit_key=visit_key, krb=True)
         if user is None:
             raise IdentityException()
+        if proxy_user:
+            proxied_identity = proxy_identity(user, proxy_user)
+            if proxied_identity is None:
+                raise IdentityException('Failed to authenticate on behalf of %s' % proxy_user)
         return identity.current.visit_key
 
     # Alias kerberos login

@@ -34,6 +34,7 @@ import errno
 import bkr.timeout_xmlrpclib
 import os
 import shutil
+import urllib
 
 from turbogears import identity
 
@@ -1061,8 +1062,13 @@ class Permission(object):
     """
     A relationship that determines what each Group can do
     """
-    pass
 
+    @classmethod
+    def by_name(cls, permission_name):
+        return cls.query.filter(cls.permission_name == permission_name).one()
+
+    def __init__(self, permission_name):
+        self.permission_name = permission_name
 
 class MappedObject(object):
 
@@ -1332,8 +1338,11 @@ class System(SystemObject):
 
 
                         
-            def power(self,action='reboot', wait=False):
+            def power(self,action='reboot', wait=False, clear_netboot=False):
                 system_id = self.get_system()
+                if clear_netboot:
+                    self.remote.modify_system(system_id,
+                            'netboot-enabled', False, self.token)
                 self.remote.modify_system(system_id, 'power_type', 
                                               self.system.power.power_type.name,
                                                    self.token)
@@ -1392,7 +1401,7 @@ class System(SystemObject):
                 if not profile_id:
                     raise BX(_("%s profile not found on %s" % (profile, self.system.lab_controller.fqdn)))
                 if ks_appends:
-                    ks_appends_text = '\n'.join([ks.ks_append for ks in ks_appends]).replace('$','\$')
+                    ks_appends_text = '#raw\n%s\n#end raw' % '\n'.join([ks.ks_append for ks in ks_appends])
                     ks_file = '/var/lib/cobbler/snippets/per_system/ks_appends/%s' % self.system.fqdn
                     if self.remote.read_or_write_snippet(ks_file,
                                                          False,
@@ -1415,48 +1424,13 @@ class System(SystemObject):
                                            kernel_options_post,
                                            self.token)
                 if kickstart:
-                    # Newer Kickstarts need %end after each section.
-                    if distro.osversion.osmajor.osmajor.startswith("Fedora"):
-                        end = "%end"
-                    else:
-                        end = ""
-                    # Escape any $ signs or cobbler will barf
-                    kickstart = kickstart.replace('$','\$')
-                    # add in cobbler packages snippet...
-                    packages_slot = 0
-                    nopackages = True
-                    for line in kickstart.split('\n'):
-                        # Add the length of line + newline
-                        packages_slot += len(line) + 1
-                        if line.find('%packages') == 0:
-                            nopackages = False
-                            break
-                    beforepackages = kickstart[:packages_slot-1]
-                    afterpackages = kickstart[packages_slot:]
-                    # if no %packages section then add it
-                    if nopackages:
-                        beforepackages = "%s\n%%packages --ignoremissing" % beforepackages
-                        if end:
-                            afterpackages = "%%end\n%s" % afterpackages
-                    # Fill in basic requirements for RHTS
-                    kicktemplate = """
-url --url=$tree
-%(beforepackages)s
-$SNIPPET("rhts_packages")
-%(afterpackages)s
-
-%%pre
-$SNIPPET("rhts_pre")
-%(end)s
-
-%%post
-$SNIPPET("rhts_post")
-%(end)s
-                   """
-                    kickstart = kicktemplate % dict(
-                                                beforepackages = beforepackages,
-                                                afterpackages = afterpackages,
-                                                end = end)
+                    # We always wrap the user-supplied kickstart with #raw/#end raw, 
+                    # so that users don't need to worry about escaping their 
+                    # kickstarts from Cobbler's cheetah. If a user really does 
+                    # want to do fancy Cobbler template stuff, they can put 
+                    # #end raw and #raw lines in the appropriate place in their 
+                    # kickstart.
+                    kickstart = 'url --url=$tree\n#raw\n%s\n#end raw' % kickstart
 
                     kickfile = '/var/lib/cobbler/kickstarts/%s.ks' % self.system.fqdn
         
@@ -2133,6 +2107,51 @@ $SNIPPET("rhts_post")
         results = self.install_options(distro, ks_meta,
                                                kernel_options,
                                                kernel_options_post)
+
+        # Newer Kickstarts need %end after each section.
+        if distro.osversion.osmajor.osmajor.startswith("Fedora"):
+            end = "%end"
+        else:
+            end = ""
+        # add in cobbler packages snippet...
+        packages_slot = 0
+        nopackages = True
+        for line in kickstart.split('\n'):
+            # Add the length of line + newline
+            packages_slot += len(line) + 1
+            if line.find('%packages') == 0:
+                nopackages = False
+                break
+        beforepackages = kickstart[:packages_slot-1]
+        afterpackages = kickstart[packages_slot:]
+        # if no %packages section then add it
+        if nopackages:
+            beforepackages = "%s\n%%packages --ignoremissing" % beforepackages
+            if end:
+                afterpackages = "%%end\n%s" % afterpackages
+        # Fill in basic requirements for RHTS
+        kicktemplate = """
+%(beforepackages)s
+#end raw
+$SNIPPET("rhts_packages")
+#raw
+%(afterpackages)s
+#end raw
+
+%%pre
+$SNIPPET("rhts_pre")
+%(end)s
+
+%%post
+$SNIPPET("rhts_post")
+%(end)s
+#raw
+       """
+        kickstart = kicktemplate % dict(
+                                    beforepackages = beforepackages,
+                                    afterpackages = afterpackages,
+                                    end = end)
+
         self.remote.provision(distro=distro,
                               kickstart=kickstart,
                               ks_appends=ks_appends,
@@ -2140,15 +2159,19 @@ $SNIPPET("rhts_post")
         if self.power:
             self.remote.power(action="reboot", wait=wait)
 
-    def action_power(self,
-                     action='reboot'):
+    def action_power(self, action='reboot', wait=False, clear_netboot=False):
         if self.remote and self.power:
-            self.remote.power(action)
+            self.remote.power(action, wait=wait, clear_netboot=clear_netboot)
         else:
             return False
 
     def __repr__(self):
         return self.fqdn
+
+    @property
+    def href(self):
+        """Returns a relative URL for this system's page."""
+        return urllib.quote((u'/view/%s' % self.fqdn).encode('utf8'))
 
     def link(self):
         """ Return a link to this system
@@ -2215,13 +2238,49 @@ $SNIPPET("rhts_post")
                     old_value=old_status,
                     new_value=self.status))
 
-    cc = association_proxy('_system_ccs', 'email_address')
-# for property in System.mapper.iterate_properties:
-#     print property.mapper.class_.__name__
-#     print property.key
-#
-# systems = session.query(System).join('status').join('type').join(['cpu','flags']).filter(CpuFlag.c.flag=='lm')
+    def reserve(self, service):
+        if self.status != SystemStatus.by_name(u'Manual'):
+            raise BX(_(u'Cannot reserve system with status %s') % self.status)
+        if self.user is not None and self.user == identity.current.user:
+            raise BX(_(u'User %s has already reserved system %s')
+                    % (identity.current.user, self))
+        if not self.can_share(identity.current.user):
+            raise BX(_(u'User %s cannot reserve system %s')
+                    % (identity.current.user, self))
+        # Atomic operation to reserve the system
+        if session.connection(System).execute(system_table.update(
+                and_(system_table.c.id == self.id,
+                     system_table.c.user_id == None)),
+                user_id=identity.current.user.user_id).rowcount == 1:
+            self.activity.append(SystemActivity(user=identity.current.user,
+                    service=service, action=u'Reserved', field_name=u'User',
+                    old_value=u'', new_value=identity.current.user))
+        else:
+            raise BX(_(u'System is already reserved'))
 
+    def unreserve(self, service):
+        if self.user is None:
+            raise BX(_(u'System is not reserved'))
+        if not self.current_user(identity.current.user):
+            raise BX(_(u'System is reserved by a different user'))
+        # Don't return a system with an active watchdog
+        if self.watchdog:
+            # This won't really happen anymore since the Manual/Automated split
+            raise BX(_(u'System has active recipe %s') % self.watchdog.recipe_id)
+        activity = SystemActivity(user=identity.current.user,
+                service=service, action=u'Returned', field_name=u'User',
+                old_value=self.user.user_name, new_value=u'')
+        try:
+            self.action_release()
+        except BX, e:
+            msg = "Error: %s Action: %s" % (error_msg,self.release_action)
+            self.activity.append(SystemActivity(user=identity.current.user,
+                    service=service, action=unicode(self.release_action),
+                    field_name=u'Return', old_value=u'', new_value=msg))
+            raise e
+        self.activity.append(activity)
+
+    cc = association_proxy('_system_ccs', 'email_address')
 
 class SystemCc(SystemObject):
 

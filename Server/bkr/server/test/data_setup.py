@@ -26,8 +26,8 @@ from bkr.server.model import LabController, User, Group, Distro, Breed, Arch, \
         OSMajor, OSVersion, SystemActivity, Task, MachineRecipe, System, \
         SystemType, SystemStatus, Recipe, RecipeTask, RecipeTaskResult, \
         Device, TaskResult, TaskStatus, Job, RecipeSet, TaskPriority, \
-        LabControllerDistro, Power, PowerType, RetentionTag,Product,TaskExcludeArch, TaskExcludeOSMajor
-
+        LabControllerDistro, Power, PowerType, TaskExcludeArch, TaskExcludeOSMajor, \
+        Permission, RetentionTag, Product
 
 log = logging.getLogger(__name__)
 
@@ -84,9 +84,11 @@ def create_user(user_name=None, password=None, display_name=None,
 def add_system_lab_controller(system,lc): 
     system.lab_controller = lc
 
-def create_group():
+def create_group(permissions=None):
     # tg_group.group_name column is VARCHAR(16)
     group = Group(group_name=u'group%s' % str(int(time.time() * 1000))[-11:])
+    if permissions:
+        group.permissions.extend(Permission.by_name(name) for name in permissions)
     return group
 
 def add_user_to_group(user,group):
@@ -119,15 +121,18 @@ def create_distro(name=u'DAN6-Server-U9', breed=u'Dan',
     return distro
 
 def create_system(arch=u'i386', type=u'Machine', status=u'Automated',
-        owner=None, fqdn=None, powertype=None, **kw):
+        owner=None, fqdn=None, shared=False, **kw):
     if owner is None:
         owner = create_user()
     if fqdn is None:
         fqdn = u'system%d.testdata' % int(time.time() * 1000)
+    if System.query().filter(System.fqdn == fqdn).count():
+        raise ValueError('Attempted to create duplicate system %s' % fqdn)
     system = System(fqdn=fqdn,type=SystemType.by_name(type), owner=owner, 
                 status=SystemStatus.by_name(status), **kw)
+    system.shared = shared
     system.arch.append(Arch.by_name(arch))
-    system.power = Power(power_type_id = PowerType.by_name('ilo').id,power_address='something',power_user='user',power_password='pass')
+    configure_system_power(system)
     log.debug('Created system %r', system)
     return system
 
@@ -143,7 +148,7 @@ def configure_system_power(system, power_type=u'ilo', address=None,
         power_id = '%d' % int(time.time() * 1000)
     system.power = Power(power_type=PowerType.by_name(power_type),
             power_address=address, power_id=power_id,
-            power_user=user, power_password=password)
+            power_user=user, power_passwd=password)
 
 def create_system_activity(user=None, **kw):
     if not user:

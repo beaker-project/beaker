@@ -34,6 +34,25 @@ subsequent requests which belong with this session.
 
 .. automethod:: auth.logout()
 
+.. automethod:: auth.who_am_i
+
+
+Systems
+-------
+
+These XML-RPC methods allow the caller to manipulate systems in Beaker's 
+inventory.
+
+.. currentmodule:: bkr.server.systems
+
+.. automethod:: systems.reserve
+
+.. automethod:: systems.release
+
+.. automethod:: systems.power
+
+.. automethod:: systems.provision
+
 
 Distros
 -------
