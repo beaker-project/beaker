@@ -176,12 +176,15 @@ def create_recipe(system=None, distro=None, task_name=u'/distribution/reservesys
     recipe.append_tasks(RecipeTask(task=create_task(name=task_name)))
     return recipe
 
-def create_job_for_recipes(recipes, owner=None, whiteboard=None, cc=None):
+def create_job_for_recipes(recipes, owner=None, whiteboard=None, cc=None,product=None,
+        retention_tag=None):
+    if retention_tag is None:
+        retention_tag = RetentionTag.get_default()
     if owner is None:
         owner = create_user()
     if whiteboard is None:
         whiteboard = u'job %d' % int(time.time() * 1000)
-    job = Job(whiteboard=whiteboard, ttasks=1, owner=owner,retention_tag = RetentionTag.get_default())
+    job = Job(whiteboard=whiteboard, ttasks=1, owner=owner,retention_tag = retention_tag)
     if cc is not None:
         job.cc = cc
     recipe_set = RecipeSet(ttasks=sum(r.ttasks for r in recipes),
@@ -191,13 +194,13 @@ def create_job_for_recipes(recipes, owner=None, whiteboard=None, cc=None):
     log.debug('Created %s', job.t_id)
     return job
 
-def create_job(owner=None, cc=None, distro=None,
-        task_name=u'/distribution/reservesys', whiteboard=None,
+def create_job(owner=None, cc=None, distro=None,product=None, 
+        retention_tag=None, task_name=u'/distribution/reservesys', whiteboard=None,
         recipe_whiteboard=None, **kwargs):
     recipe = create_recipe(distro=distro, task_name=task_name,
             whiteboard=recipe_whiteboard)
     return create_job_for_recipes([recipe], owner=owner,
-            whiteboard=whiteboard, cc=cc)
+            whiteboard=whiteboard, cc=cc, product=product)
 
 def create_completed_job(**kwargs):
     job = create_job(**kwargs)
