@@ -154,6 +154,7 @@ fi
 %{_bindir}/%{name}-init
 %{_bindir}/nag-mail
 %{_bindir}/product-update
+%{_bindir}/beaker-repo-update
 %{_bindir}/%{name}-cleanup-visits
 %{_sysconfdir}/init.d/%{name}d
 %config(noreplace) %{_sysconfdir}/cron.d/%{name}
