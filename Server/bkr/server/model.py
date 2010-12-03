@@ -2108,29 +2108,30 @@ class System(SystemObject):
                                                kernel_options,
                                                kernel_options_post)
 
-        # Newer Kickstarts need %end after each section.
-        if distro.osversion.osmajor.osmajor.startswith("Fedora"):
-            end = "%end"
-        else:
-            end = ""
-        # add in cobbler packages snippet...
-        packages_slot = 0
-        nopackages = True
-        for line in kickstart.split('\n'):
-            # Add the length of line + newline
-            packages_slot += len(line) + 1
-            if line.find('%packages') == 0:
-                nopackages = False
-                break
-        beforepackages = kickstart[:packages_slot-1]
-        afterpackages = kickstart[packages_slot:]
-        # if no %packages section then add it
-        if nopackages:
-            beforepackages = "%s\n%%packages --ignoremissing" % beforepackages
-            if end:
-                afterpackages = "%%end\n%s" % afterpackages
-        # Fill in basic requirements for RHTS
-        kicktemplate = """
+        if kickstart:
+            # Newer Kickstarts need %end after each section.
+            if distro.osversion.osmajor.osmajor.startswith("Fedora"):
+                end = "%end"
+            else:
+                end = ""
+            # add in cobbler packages snippet...
+            packages_slot = 0
+            nopackages = True
+            for line in kickstart.split('\n'):
+                # Add the length of line + newline
+                packages_slot += len(line) + 1
+                if line.find('%packages') == 0:
+                    nopackages = False
+                    break
+            beforepackages = kickstart[:packages_slot-1]
+            afterpackages = kickstart[packages_slot:]
+            # if no %packages section then add it
+            if nopackages:
+                beforepackages = "%s\n%%packages --ignoremissing" % beforepackages
+                if end:
+                    afterpackages = "%%end\n%s" % afterpackages
+            # Fill in basic requirements for RHTS
+            kicktemplate = """
 %(beforepackages)s
 #end raw
 $SNIPPET("rhts_packages")
@@ -2146,11 +2147,11 @@ $SNIPPET("rhts_pre")
 $SNIPPET("rhts_post")
 %(end)s
 #raw
-       """
-        kickstart = kicktemplate % dict(
-                                    beforepackages = beforepackages,
-                                    afterpackages = afterpackages,
-                                    end = end)
+           """
+            kickstart = kicktemplate % dict(
+                                        beforepackages = beforepackages,
+                                        afterpackages = afterpackages,
+                                        end = end)
 
         self.remote.provision(distro=distro,
                               kickstart=kickstart,
