@@ -37,6 +37,10 @@ def usage():
 def update_repos(baseurl, basepath, rflags):
     for osmajor in OSMajor.query():
         for arch in osmajor.osversion[0].arches:
+            repoarch = arch
+            # pick up i686 packages
+            if arch.arch == 'i386':
+                repoarch = 'i686'
             fd, fn = tempfile.mkstemp(prefix="bkr_repo", suffix="")
             repoid = os.path.basename(fn)
             tfile = os.fdopen(fd, 'w')
@@ -52,12 +56,12 @@ def update_repos(baseurl, basepath, rflags):
                                         --download_path=%s" % (rflags, 
                                                                fn,
                                                                arch,
-                                                               arch,
+                                                               repoarch,
                                                                dest)
             print cmd
             os.system(cmd)
             os.unlink(fn)
-            cmd = "pushd %s && createrepo -q ." % (dest)
+            cmd = "pushd %s/%s && createrepo -q ." % (dest, arch)
             print cmd
             os.system(cmd)
 

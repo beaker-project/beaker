@@ -47,6 +47,7 @@ Requires:       python-krbV
 Requires:	%{name} = %{version}-%{release}
 Requires:       python-TurboMail >= 3.0
 Requires:	createrepo
+Requires:	yum-utils
 
 
 %package lab-controller
