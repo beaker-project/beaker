@@ -47,6 +47,7 @@ Requires:       python-krbV
 Requires:	%{name} = %{version}-%{release}
 Requires:       python-TurboMail >= 3.0
 Requires:	createrepo
+Requires:	yum-utils
 
 
 %package lab-controller
@@ -154,6 +155,7 @@ fi
 %{_bindir}/%{name}-init
 %{_bindir}/nag-mail
 %{_bindir}/product-update
+%{_bindir}/beaker-repo-update
 %{_bindir}/%{name}-cleanup-visits
 %{_sysconfdir}/init.d/%{name}d
 %config(noreplace) %{_sysconfdir}/cron.d/%{name}

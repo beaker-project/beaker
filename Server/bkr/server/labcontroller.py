@@ -181,6 +181,8 @@ class LabControllers(RPCRoot):
                         session.save(arch)
                         session.flush([arch])
                     distro.arch = arch
+                    if arch not in distro.osversion.arches:
+                        distro.osversion.arches.append(arch)
                     distro.variant = variant
                     distro.method = method
                     distro.virt = virt
