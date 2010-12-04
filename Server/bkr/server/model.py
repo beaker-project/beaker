@@ -3345,7 +3345,7 @@ class LogRecipeTaskResult(Log):
 class TaskBase(MappedObject):
     finished = [TaskStatus.by_name(u'Completed'),
                 TaskStatus.by_name(u'Cancelled'),
-                TaskStatus.by_name(u'Aborted')]:
+                TaskStatus.by_name(u'Aborted')]
 
     queued = [TaskStatus.by_name(u'New'),
               TaskStatus.by_name(u'Processed'),
