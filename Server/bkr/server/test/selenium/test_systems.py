@@ -812,13 +812,8 @@ class PushXmlRpcTest(XmlRpcTestCase):
     def test_system_activity_shows_changes_for_numa(self):
         system = data_setup.create_system()
         session.flush()
-        self.server.push(system.fqdn, {'Cpu': {
-            'modelName': 'Intel(R) Core(TM) i7 CPU       M 620  @ 2.67GHz',
-            'vendor': 'GenuineIntel', 'family': 6, 'stepping': 5, 'model': 37,
-            'processors': 4, 'cores': 4, 'sockets': 1, 'speed': 2659.708,
-            'CpuFlags': ['fpu', 'mmx', 'syscall', 'ssse3'],
-        }})
+        self.server.push(system.fqdn, {'Numa': {'nodes': 321}})
         session.refresh(system)
         self.assertEquals(system.activity[-1].service, u'XMLRPC')
         self.assertEquals(system.activity[-1].action, u'Changed')
-        self.assertEquals(system.activity[-1].field_name, u'CPU')
+        self.assertEquals(system.activity[-1].field_name, u'NUMA')
