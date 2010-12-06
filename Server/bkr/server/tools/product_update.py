@@ -51,6 +51,7 @@ def update_products(xml_file):
                     continue
                 else:
                     raise
+        print 'These are the dupe errors: %s' % dupe_errors
         session.commit()
     finally:
         session.rollback()
