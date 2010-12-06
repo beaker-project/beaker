@@ -3600,8 +3600,7 @@ class Job(TaskBase):
         span.append(content)
         return span
 
-
-    def to_xml(self, clone=False):
+    def _create_job_elem(self,clone=False, *args, **kw):
         job = self.doc.createElement("job")
         if not clone:
             job.setAttribute("id", "%s" % self.id)
@@ -3615,8 +3614,12 @@ class Job(TaskBase):
             job.appendChild(notify)
         job.setAttribute("retention_tag", "%s" % self.retention_tag.tag)
         if self.product:
-            job.setAttribute("product", "%s" % self.product.name) 
+            job.setAttribute("product", "%s" % self.product.name)
         job.appendChild(self.node("whiteboard", self.whiteboard or ''))
+        return job
+
+    def to_xml(self, clone=False):
+        job = self._create_job_elem(clone)
         for rs in self.recipesets:
             job.appendChild(rs.to_xml(clone))
         return job
@@ -3855,14 +3858,8 @@ class RecipeSet(TaskBase):
         for r in self.recipes:
             if not isinstance(r,GuestRecipe):
                 recipeSet.appendChild(r.to_xml(clone, from_recipeset=True))
-
         if not from_job:
-            job = self.doc.createElement("job")
-            if not clone:
-                job.setAttribute("owner", "%s" % self.job.owner.email_address)
-            job.setAttribute("product", "%s" % self.job.product.name)
-            job.setAttribute("retention_tag", "%s" % self.job.retention_tag.tag)
-            job.appendChild(self.node("whiteboard", self.job.whiteboard or '')) 
+            job = self.job._create_job_elem(clone) 
             job.appendChild(recipeSet)
             return_node = job
         return return_node
