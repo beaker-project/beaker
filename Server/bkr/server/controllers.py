@@ -766,6 +766,7 @@ class Root(RPCRoot):
                     system.activity.append(activity)
         
         if removed:
+            system.date_modified = datetime.utcnow()
             flash(_(u"removed %s/%s" % (removed.key.key_name,removed.key_value)))
         else:
             flash(_(u"Key_Value_Id not Found"))
@@ -792,6 +793,7 @@ class Root(RPCRoot):
                    activity = SystemActivity(identity.current.user, 'WEBUI', 'Removed', 'Arch', arch.arch, "")
                    system.activity.append(activity)
         if removed:
+            system.date_modified = datetime.utcnow()
             flash(_(u"%s Removed" % removed.arch))
         else:
             flash(_(u"Arch ID not found"))
@@ -824,6 +826,7 @@ class Root(RPCRoot):
                    group.activity.append(gactivity)
                    system.activity.append(activity)
         if removed:
+            system.date_modified = datetime.utcnow()
             flash(_(u"%s Removed" % removed.display_name))
         else:
             flash(_(u"Group ID not found"))
@@ -1114,6 +1117,7 @@ class Root(RPCRoot):
         activity = SystemActivity(identity.current.user, 'WEBUI', 'Changed', 'Owner', '%s' % system.owner, '%s' % user)
         system.activity.append(activity)
         system.owner = user
+        system.date_modified = datetime.utcnow()
         flash( _(u"OK") )
         redirect("/")
 
@@ -1200,6 +1204,7 @@ class Root(RPCRoot):
                 service=u'WEBUI', action=u'Changed', field_name=u'Cc',
                 old_value=u'; '.join(orig_value),
                 new_value=u'; '.join(new_value)))
+        system.date_modified = datetime.utcnow()
         flash(_(u'Notify CC list for system %s changed') % system.fqdn)
         redirect('/view/%s' % system.fqdn)
 
@@ -1231,6 +1236,7 @@ class Root(RPCRoot):
                     setattr(labinfo, field, kw[field])
                     system.activity.append(activity) 
         system.labinfo = labinfo
+        system.date_modified = datetime.utcnow()
         flash( _(u"Saved Lab Info") )
         redirect("/view/%s" % system.fqdn)
 
@@ -1338,6 +1344,7 @@ class Root(RPCRoot):
                 power.power_id = kw['power_id']
             system.power = power
             flash( _(u"Saved Power") )
+        system.date_modified = datetime.utcnow()
         redirect("/view/%s" % system.fqdn)
 
     @expose()
@@ -1373,7 +1380,7 @@ class Root(RPCRoot):
 
 
         log_fields = [ 'fqdn', 'vendor', 'lender', 'model', 'serial', 'location', 
-                       'checksum','mac_address', 'status_reason', status_entry,lab_controller_entry,type_entry]
+                       'mac_address', 'status_reason', status_entry,lab_controller_entry,type_entry]
 
         for field in log_fields:
             if isinstance(field,SystemSaveForm.fk_log_entry): #check if we are a foreign key with mapper object and column name           
@@ -1471,6 +1478,15 @@ class Root(RPCRoot):
         else:
             system.lab_controller_id = kw['lab_controller_id']
         system.mac_address=kw['mac_address']
+
+        # We can't compute a new checksum, so let's just clear it so that it 
+        # always compares false
+        if system.checksum is not None:
+            system.activity.append(SystemActivity(user=identity.current.user,
+                    service=u'WEBUI', action=u'Changed', field_name=u'checksum',
+                    old_value=system.checksum, new_value=None))
+            system.checksum = None
+
         session.save_or_update(system)
         redirect("/view/%s" % system.fqdn)
 
@@ -1498,6 +1514,7 @@ class Root(RPCRoot):
                 system.key_values_string.append(key_value)
             activity = SystemActivity(identity.current.user, 'WEBUI', 'Added', 'Key/Value', "", "%s/%s" % (kw['key_name'],kw['key_value']) )
             system.activity.append(activity)
+            system.date_modified = datetime.utcnow()
         redirect("/view/%s" % system.fqdn)
 
     @expose()
@@ -1514,6 +1531,7 @@ class Root(RPCRoot):
             system.arch.append(arch)
             activity = SystemActivity(identity.current.user, 'WEBUI', 'Added', 'Arch', "", kw['arch']['text'])
             system.activity.append(activity)
+            system.date_modified = datetime.utcnow()
         redirect("/view/%s" % system.fqdn)
 
     @expose()
@@ -1536,6 +1554,7 @@ class Root(RPCRoot):
             gactivity = GroupActivity(identity.current.user, 'WEBUI', 'Added', 'System', "", system.fqdn)
             group.activity.append(gactivity)
             system.activity.append(activity)
+            system.date_modified = datetime.utcnow()
         redirect("/view/%s" % system.fqdn)
 
     @expose()
@@ -1674,6 +1693,7 @@ class Root(RPCRoot):
             system.notes.append(note)
             activity = SystemActivity(identity.current.user, 'WEBUI', 'Added', 'Note', "", kw['note'])
             system.activity.append(activity)
+            system.date_modified = datetime.utcnow()
         redirect("/view/%s" % system.fqdn)
 
     @expose()
@@ -1752,6 +1772,7 @@ class Root(RPCRoot):
         else:
             # remove arch option
             system.provisions[arch] = None
+        system.date_modified = datetime.utcnow()
         redirect("/view/%s" % system.fqdn)
 
     @expose()
@@ -1821,6 +1842,7 @@ class Root(RPCRoot):
                 provision.kernel_options_post=kw['prov_koptionspost']
                 provision.arch=arch
                 system.provisions[arch] = provision
+            system.date_modified = datetime.utcnow()
         redirect("/view/%s" % system.fqdn)
 
     @cherrypy.expose

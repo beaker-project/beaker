@@ -28,7 +28,7 @@ from turbogears.database import session
 from bkr.server.test.selenium import SeleniumTestCase, XmlRpcTestCase
 from bkr.server.test import data_setup, get_server_base, stub_cobbler
 from bkr.server.test.assertions import assert_sorted
-from bkr.server.model import User, Cpu
+from bkr.server.model import User, Cpu, Key, Key_Value_String, Key_Value_Int
 
 def atom_xpath(expr):
     return lxml.etree.XPath(expr, namespaces={'atom': 'http://www.w3.org/2005/Atom'})
@@ -216,11 +216,13 @@ class TestSystemsAtomFeed(unittest.TestCase):
         self.assert_(not self.feed_contains_system(feed, 'nogroup.system'))
         self.assert_(self.feed_contains_system(feed, 'grouped.system'))
 
-class TestSystemView(SeleniumTestCase):
+class SystemViewTest(SeleniumTestCase):
 
     def setUp(self):
         self.system_owner = data_setup.create_user()
         self.system = data_setup.create_system(owner=self.system_owner)
+        self.system.shared = True
+        self.system.lab_controller = data_setup.create_labcontroller()
         session.flush()
         self.selenium = self.get_selenium()
         self.selenium.start()
@@ -264,6 +266,206 @@ class TestSystemView(SeleniumTestCase):
         sel.wait_for_page_to_load('30000')
         self.assertEqual(self.selenium.get_title(),
                 'Notify CC list for %s' % self.system.fqdn)
+
+    def test_update_system(self):
+        orig_date_modified = self.system.date_modified
+        self.login()
+        sel = self.selenium
+        self.go_to_system_view()
+        changes = {
+            'vendor': 'Sinclair',
+            'model': 'ZX80',
+            'serial': '12345',
+            'mac_address': 'aa:bb:cc:dd:ee:ff',
+        }
+        for k, v in changes.iteritems():
+            sel.type(k, v)
+        sel.click('link=Save Changes')
+        sel.wait_for_page_to_load('30000')
+        for k, v in changes.iteritems():
+            self.assertEquals(sel.get_value(k), v)
+        session.refresh(self.system)
+        self.assert_(self.system.date_modified > orig_date_modified)
+
+    def test_add_arch(self):
+        orig_date_modified = self.system.date_modified
+        self.login()
+        sel = self.selenium
+        self.go_to_system_view()
+        sel.click('//ul[@class="tabbernav"]//a[text()="Arch(s)"]')
+        sel.type('arch.text', 's390')
+        sel.click('//form[@name="arches"]//a[text()="Add ( + )"]')
+        sel.wait_for_page_to_load('30000')
+        self.assertEquals(sel.get_xpath_count('//form[@name="arches"]'
+                '//td[normalize-space(text())="s390"]'), '1')
+        session.refresh(self.system)
+        self.assert_(self.system.date_modified > orig_date_modified)
+
+    def test_remove_arch(self):
+        orig_date_modified = self.system.date_modified
+        self.login()
+        sel = self.selenium
+        self.go_to_system_view()
+        sel.click('//ul[@class="tabbernav"]//a[text()="Arch(s)"]')
+        self.assertEquals(sel.get_xpath_count('//form[@name="arches"]'
+                '//td[normalize-space(text())="i386"]'), '1')
+        sel.click( # delete link inside cell beside "i386" cell
+                '//table[@class="list"]//td'
+                '[normalize-space(preceding-sibling::td[1]/text())="i386"]'
+                '/a[text()="Delete ( - )"]')
+        sel.wait_for_page_to_load('30000')
+        self.assertEquals(sel.get_text('css=.flash'), 'i386 Removed')
+        self.assertEquals(sel.get_xpath_count('//form[@name="arches"]'
+                '//td[normalize-space(text())="i386"]'), '0')
+        session.refresh(self.system)
+        self.assert_(self.system.date_modified > orig_date_modified)
+
+    def test_add_key_value(self):
+        orig_date_modified = self.system.date_modified
+        self.login()
+        sel = self.selenium
+        self.go_to_system_view()
+        sel.click('//ul[@class="tabbernav"]//a[text()="Key/Values"]')
+        sel.type('key_name', 'NR_DISKS')
+        sel.type('key_value', '100')
+        sel.click('//form[@name="keys"]//a[text()="Add ( + )"]')
+        sel.wait_for_page_to_load('30000')
+        self.assertEquals(sel.get_xpath_count('//form[@name="keys"]'
+                '//td[normalize-space(preceding-sibling::td[1]/text())="NR_DISKS" and '
+                'normalize-space(text())="100"]'), '1')
+        session.refresh(self.system)
+        self.assert_(self.system.date_modified > orig_date_modified)
+
+    def test_remove_key_value(self):
+        self.system.key_values_int.append(
+                Key_Value_Int(Key.by_name(u'NR_DISKS'), 100))
+        session.flush()
+        orig_date_modified = self.system.date_modified
+        self.login()
+        sel = self.selenium
+        self.go_to_system_view()
+        sel.click('//ul[@class="tabbernav"]//a[text()="Key/Values"]')
+        self.assertEquals(sel.get_xpath_count('//form[@name="keys"]'
+                '//td[normalize-space(preceding-sibling::td[1]/text())="NR_DISKS" and '
+                'normalize-space(text())="100"]'), '1')
+        sel.click( # delete link inside cell in row with NR_DISKS 100
+                '//table[@class="list"]//td['
+                'normalize-space(preceding-sibling::td[2]/text())="NR_DISKS" and '
+                'normalize-space(preceding-sibling::td[1]/text())="100"'
+                ']/a[text()="Delete ( - )"]')
+        sel.wait_for_page_to_load('30000')
+        self.assertEquals(sel.get_text('css=.flash'), 'removed NR_DISKS/100')
+        self.assertEquals(sel.get_xpath_count('//form[@name="keys"]'
+                '//td[normalize-space(preceding-sibling::td[1]/text())="NR_DISKS" and '
+                'normalize-space(text())="100"]'), '0')
+        session.refresh(self.system)
+        self.assert_(self.system.date_modified > orig_date_modified)
+
+    def test_add_group(self):
+        group = data_setup.create_group()
+        user_password = 'password'
+        user = data_setup.create_user(password=user_password)
+        data_setup.add_user_to_group(user, group)
+        session.flush()
+        orig_date_modified = self.system.date_modified
+
+        # as admin, assign the system to our test group
+        self.login()
+        sel = self.selenium
+        self.go_to_system_view()
+        sel.click('//ul[@class="tabbernav"]//a[text()="Groups"]')
+        sel.type("groups_group_text", group.group_name)
+        sel.click('//form[@name="groups"]//a[text()="Add ( + )"]')
+        sel.wait_for_page_to_load("30000")
+        self.assertEquals(sel.get_xpath_count('//form[@name="groups"]'
+                '//td[normalize-space(text())="%s"]' % group.group_name), '1')
+        session.refresh(self.system)
+        self.assert_(self.system.date_modified > orig_date_modified)
+
+        # as a user in the group, can we see it?
+        self.logout()
+        self.login(user.user_name, user_password)
+        sel.click("link=Available")
+        sel.wait_for_page_to_load("30000")
+        self.failUnless(sel.is_text_present(self.system.fqdn))
+
+    def test_remove_group(self):
+        group = data_setup.create_group()
+        self.system.groups.append(group)
+        session.flush()
+        orig_date_modified = self.system.date_modified
+        self.login()
+        sel = self.selenium
+        self.go_to_system_view()
+        sel.click('//ul[@class="tabbernav"]//a[text()="Groups"]')
+        self.assertEquals(sel.get_xpath_count('//form[@name="groups"]'
+                '//td[normalize-space(text())="%s"]' % group.group_name), '1')
+        sel.click( # delete link inside cell in row with group name
+                '//table[@class="list"]'
+                '//td[normalize-space(preceding-sibling::td[3]/text())="%s"]'
+                '/a[text()="Delete ( - )"]' % group.group_name)
+        sel.wait_for_page_to_load('30000')
+        self.assertEquals(sel.get_text('css=.flash'),
+                '%s Removed' % group.display_name)
+        self.assertEquals(sel.get_xpath_count('//form[@name="groups"]'
+                '//td[normalize-space(text())="%s"]' % group.group_name), '0')
+        session.refresh(self.system)
+        self.assert_(self.system.date_modified > orig_date_modified)
+
+    def test_update_power(self):
+        orig_date_modified = self.system.date_modified
+        self.login()
+        sel = self.selenium
+        self.go_to_system_view()
+        sel.click('//ul[@class="tabbernav"]//a[text()="Power"]')
+        sel.select('name=power_type_id', 'drac')
+        sel.type('name=power_address', 'nowhere.example.com')
+        sel.type('name=power_user', 'asdf')
+        sel.type('name=power_passwd', 'meh')
+        sel.type('name=power_id', '1234')
+        sel.click('link=Save Power Changes')
+        sel.wait_for_page_to_load('30000')
+        self.assertEquals(sel.get_text('css=.flash'), 'Updated Power')
+        session.refresh(self.system)
+        self.assert_(self.system.date_modified > orig_date_modified)
+
+    def test_add_install_options(self):
+        orig_date_modified = self.system.date_modified
+        self.login()
+        sel = self.selenium
+        self.go_to_system_view()
+        sel.click('//ul[@class="tabbernav"]//a[text()="Install Options"]')
+        sel.type('prov_ksmeta', 'skipx asdflol')
+        sel.type('prov_koptions', 'init=/bin/true')
+        sel.type('prov_koptionspost', 'vga=0x31b')
+        sel.click('//form[@name="installoptions"]//a[text()="Add ( + )"]')
+        sel.wait_for_page_to_load('30000')
+        session.refresh(self.system)
+        self.assert_(self.system.date_modified > orig_date_modified)
+
+    def test_update_labinfo(self):
+        orig_date_modified = self.system.date_modified
+        self.login()
+        sel = self.selenium
+        self.go_to_system_view()
+        sel.click('//ul[@class="tabbernav"]//a[text()="Lab Info"]')
+        changes = {
+            'orig_cost': '1,000.00',
+            'curr_cost': '500.00',
+            'dimensions': '1x1x1',
+            'weight': '50',
+            'wattage': '500',
+            'cooling': '1',
+        }
+        for k, v in changes.iteritems():
+            sel.type(k, v)
+        sel.click('link=Save Lab Info Changes')
+        sel.wait_for_page_to_load('30000')
+        self.assertEquals(sel.get_text('css=.flash'), 'Saved Lab Info')
+        for k, v in changes.iteritems():
+            self.assertEquals(sel.get_value(k), v)
+        session.refresh(self.system)
+        self.assert_(self.system.date_modified > orig_date_modified)
 
 class SystemCcTest(SeleniumTestCase):
 
@@ -713,3 +915,135 @@ class SystemProvisionXmlRpcTest(XmlRpcTestCase):
                 None, None, None, None,
                 False) # this last one is reboot=False
         self.assert_(not self.stub_cobbler_thread.cobbler.system_actions)
+
+class LegacyPushXmlRpcTest(XmlRpcTestCase):
+
+    def setUp(self):
+        self.server = self.get_server()
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=658503
+    def test_system_activity_shows_changes(self):
+        system = data_setup.create_system()
+        system.key_values_string.extend([
+            Key_Value_String(Key.by_name(u'PCIID'), '1022:2000'),
+            Key_Value_String(Key.by_name(u'PCIID'), '80ee:beef'),
+        ])
+        session.flush()
+        self.server.legacypush(system.fqdn,
+                {'PCIID': ['80ee:cafe', '80ee:beef']})
+        session.refresh(system)
+        self.assertEquals(system.activity[0].field_name, u'Key/Value')
+        self.assertEquals(system.activity[0].service, u'XMLRPC')
+        self.assertEquals(system.activity[0].action, u'Added')
+        self.assertEquals(system.activity[0].old_value, None)
+        self.assertEquals(system.activity[0].new_value, u'PCIID/80ee:cafe')
+        self.assertEquals(system.activity[1].field_name, u'Key/Value')
+        self.assertEquals(system.activity[1].service, u'XMLRPC')
+        self.assertEquals(system.activity[1].action, u'Removed')
+        self.assertEquals(system.activity[1].old_value, u'PCIID/1022:2000')
+        self.assertEquals(system.activity[1].new_value, None)
+
+    def test_bools_are_coerced_to_ints(self):
+        system = data_setup.create_system()
+        system.key_values_string.append(
+                Key_Value_String(Key.by_name(u'HVM'), '0'))
+        session.flush()
+
+        self.server.legacypush(system.fqdn, {'HVM': False})
+        session.refresh(system)
+        self.assertEquals(len(system.activity), 0) # nothing has changed, yet
+
+        self.server.legacypush(system.fqdn, {'HVM': True})
+        session.refresh(system)
+        self.assertEquals(system.activity[0].field_name, u'Key/Value')
+        self.assertEquals(system.activity[0].service, u'XMLRPC')
+        self.assertEquals(system.activity[0].action, u'Added')
+        self.assertEquals(system.activity[0].old_value, None)
+        self.assertEquals(system.activity[0].new_value, u'HVM/1')
+
+class PushXmlRpcTest(XmlRpcTestCase):
+
+    def setUp(self):
+        self.server = self.get_server()
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=658503
+
+    def test_system_activity_shows_changes_for_simple_attributes(self):
+        system = data_setup.create_system()
+        system.vendor = None
+        system.model = None
+        system.memory = None
+        session.flush()
+        self.server.push(system.fqdn,
+                {'vendor': 'Acorn', 'model': 'Archimedes', 'memory': '16'})
+        session.refresh(system)
+        # no way to know in which order the changes will be recorded :-(
+        changes = system.activity[:4]
+        for change in changes:
+            self.assertEquals(change.service, u'XMLRPC')
+            self.assertEquals(change.action, u'Changed')
+        changed_fields = set(change.field_name for change in changes)
+        self.assertEquals(changed_fields,
+                set(['checksum', 'vendor', 'model', 'memory']))
+
+    def test_system_activity_shows_changes_for_arches(self):
+        system = data_setup.create_system()
+        session.flush()
+        self.server.push(system.fqdn, {'Arch': ['sparc32']})
+        session.refresh(system)
+        self.assertEquals(system.activity[0].service, u'XMLRPC')
+        self.assertEquals(system.activity[0].action, u'Added')
+        self.assertEquals(system.activity[0].field_name, u'Arch')
+        self.assertEquals(system.activity[0].old_value, None)
+        self.assertEquals(system.activity[0].new_value, u'sparc32')
+        self.assertEquals(system.activity[1].service, u'XMLRPC')
+        self.assertEquals(system.activity[1].action, u'Changed')
+        self.assertEquals(system.activity[1].field_name, u'checksum')
+
+    def test_system_activity_shows_changes_for_devices(self):
+        system = data_setup.create_system()
+        session.flush()
+        self.server.push(system.fqdn, {'Devices': [{
+            'type': 'IDE', 'bus': u'pci', 'driver': u'PIIX_IDE',
+            'vendorID': '8086', 'deviceID': '7111',
+            'description': u'82371AB/EB/MB PIIX4 IDE',
+            'subsysVendorID': '0000', 'subsysDeviceID': '0000',
+        }]})
+        session.refresh(system)
+        self.assertEquals(system.activity[0].service, u'XMLRPC')
+        self.assertEquals(system.activity[0].action, u'Added')
+        self.assertEquals(system.activity[0].field_name, u'Device')
+        self.assertEquals(system.activity[0].old_value, None)
+        # the new value will just be some random device id
+        self.assertEquals(system.activity[1].service, u'XMLRPC')
+        self.assertEquals(system.activity[1].action, u'Changed')
+        self.assertEquals(system.activity[1].field_name, u'checksum')
+
+    def test_system_activity_shows_changes_for_cpu(self):
+        system = data_setup.create_system()
+        session.flush()
+        self.server.push(system.fqdn, {'Cpu': {
+            'modelName': 'Intel(R) Core(TM) i7 CPU       M 620  @ 2.67GHz',
+            'vendor': 'GenuineIntel', 'family': 6, 'stepping': 5, 'model': 37,
+            'processors': 4, 'cores': 4, 'sockets': 1, 'speed': 2659.708,
+            'CpuFlags': ['fpu', 'mmx', 'syscall', 'ssse3'],
+        }})
+        session.refresh(system)
+        self.assertEquals(system.activity[0].service, u'XMLRPC')
+        self.assertEquals(system.activity[0].action, u'Changed')
+        self.assertEquals(system.activity[0].field_name, u'CPU')
+        self.assertEquals(system.activity[1].service, u'XMLRPC')
+        self.assertEquals(system.activity[1].action, u'Changed')
+        self.assertEquals(system.activity[1].field_name, u'checksum')
+
+    def test_system_activity_shows_changes_for_numa(self):
+        system = data_setup.create_system()
+        session.flush()
+        self.server.push(system.fqdn, {'Numa': {'nodes': 321}})
+        session.refresh(system)
+        self.assertEquals(system.activity[0].service, u'XMLRPC')
+        self.assertEquals(system.activity[0].action, u'Changed')
+        self.assertEquals(system.activity[0].field_name, u'NUMA')
+        self.assertEquals(system.activity[1].service, u'XMLRPC')
+        self.assertEquals(system.activity[1].action, u'Changed')
+        self.assertEquals(system.activity[1].field_name, u'checksum')

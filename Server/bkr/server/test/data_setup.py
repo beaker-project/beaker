@@ -86,7 +86,8 @@ def add_system_lab_controller(system,lc):
 
 def create_group(permissions=None):
     # tg_group.group_name column is VARCHAR(16)
-    group = Group(group_name=u'group%s' % str(int(time.time() * 1000))[-11:])
+    suffix = str(int(time.time() * 1000))[-11:]
+    group = Group(group_name=u'group%s' % suffix, display_name=u'Group %s' % suffix)
     if permissions:
         group.permissions.extend(Permission.by_name(name) for name in permissions)
     return group
@@ -133,6 +134,7 @@ def create_system(arch=u'i386', type=u'Machine', status=u'Automated',
     system.shared = shared
     system.arch.append(Arch.by_name(arch))
     configure_system_power(system)
+    system.date_modified = datetime.datetime.utcnow()
     log.debug('Created system %r', system)
     return system
 

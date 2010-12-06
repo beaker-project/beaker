@@ -134,6 +134,13 @@ class TestBrokenSystemDetection(unittest.TestCase):
         self.abort_recipe()
         self.assertEqual(self.system.status, SystemStatus.by_name(u'Broken'))
 
+    def test_updates_modified_date(self):
+        orig_date_modified = self.system.date_modified
+        self.abort_recipe()
+        self.abort_recipe()
+        self.assertEqual(self.system.status, SystemStatus.by_name(u'Broken'))
+        self.assert_(self.system.date_modified > orig_date_modified)
+
 class TestJob(unittest.TestCase):
 
     def test_cc_property(self):

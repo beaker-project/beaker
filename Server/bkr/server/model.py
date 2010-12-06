@@ -1884,31 +1884,61 @@ class System(SystemObject):
         """
         Update Key/Value pairs for legacy RHTS
         """
-        #Remove any keys that will be added
-        for mykey in self.key_values_int[:]:
-            if mykey.key.key_name in inventory:
-                self.key_values_int.remove(mykey)
-        for mykey in self.key_values_string[:]:
-            if mykey.key.key_name in inventory:
-                self.key_values_string.remove(mykey)
-
-        #Add the uploaded keys
-        for key in inventory:
+        new_int_kvs = set()
+        new_string_kvs = set()
+        for key_name, values in inventory.items():
             try:
-                _key = Key.by_name(key)
+                key = Key.by_name(key_name)
             except InvalidRequestError:
                 continue
-            if isinstance(inventory[key], list):
-                for value in inventory[key]:
-                    if _key.numeric:
-                        self.key_values_int.append(Key_Value_Int(_key,value))
-                    else:
-                        self.key_values_string.append(Key_Value_String(_key,value))
-            else:
-                if _key.numeric:
-                    self.key_values_int.append(Key_Value_Int(_key,inventory[key]))
+            if not isinstance(values, list):
+                values = [values]
+            for value in values:
+                if isinstance(value, bool):
+                    # MySQL will int-ify these, so we do it here 
+                    # to make our comparisons accurate
+                    value = int(value)
+                if key.numeric:
+                    new_int_kvs.add((key, int(value)))
                 else:
-                    self.key_values_string.append(Key_Value_String(_key,inventory[key]))
+                    new_string_kvs.add((key, unicode(value)))
+
+        # Examine existing key-values to find what we already have, and what 
+        # needs to be removed
+        for kv in list(self.key_values_int):
+            if (kv.key, kv.key_value) in new_int_kvs:
+                new_int_kvs.remove((kv.key, kv.key_value))
+            else:
+                self.key_values_int.remove(kv)
+                self.activity.append(SystemActivity(user=identity.current.user,
+                        service=u'XMLRPC', action=u'Removed', field_name=u'Key/Value',
+                        old_value=u'%s/%s' % (kv.key.key_name, kv.key_value),
+                        new_value=None))
+        for kv in list(self.key_values_string):
+            if (kv.key, kv.key_value) in new_string_kvs:
+                new_string_kvs.remove((kv.key, kv.key_value))
+            else:
+                self.key_values_string.remove(kv)
+                self.activity.append(SystemActivity(user=identity.current.user,
+                        service=u'XMLRPC', action=u'Removed', field_name=u'Key/Value',
+                        old_value=u'%s/%s' % (kv.key.key_name, kv.key_value),
+                        new_value=None))
+
+        # Now we can just add the new ones
+        for key, value in new_int_kvs:
+            self.key_values_int.append(Key_Value_Int(key, value))
+            self.activity.append(SystemActivity(user=identity.current.user,
+                    service=u'XMLRPC', action=u'Added',
+                    field_name=u'Key/Value', old_value=None,
+                    new_value=u'%s/%s' % (key.key_name, value)))
+        for key, value in new_string_kvs:
+            self.key_values_string.append(Key_Value_String(key, value))
+            self.activity.append(SystemActivity(user=identity.current.user,
+                    service=u'XMLRPC', action=u'Added',
+                    field_name=u'Key/Value', old_value=None,
+                    new_value=u'%s/%s' % (key.key_name, value)))
+
+        self.date_modified = datetime.utcnow()
         return 0
                     
 
@@ -1921,11 +1951,19 @@ class System(SystemObject):
         md5sum = md5.new("%s" % inventory).hexdigest()
         if self.checksum == md5sum:
             return 0
+        self.activity.append(SystemActivity(user=identity.current.user,
+                service=u'XMLRPC', action=u'Changed', field_name=u'checksum',
+                old_value=self.checksum, new_value=md5sum))
         self.checksum = md5sum
         for key in inventory:
             if key in self.get_allowed_attr():
                 if not getattr(self, key, None):
                     setattr(self, key, inventory[key])
+                    self.activity.append(SystemActivity(
+                            user=identity.current.user,
+                            service=u'XMLRPC', action=u'Changed',
+                            field_name=key, old_value=None,
+                            new_value=inventory[key]))
             else:
                 try:
                     method = self.get_update_method(key)
@@ -1943,6 +1981,11 @@ class System(SystemObject):
                 new_arch = Arch(arch=arch)
             if new_arch not in self.arch:
                 self.arch.append(new_arch)
+                self.activity.append(SystemActivity(
+                        user=identity.current.user,
+                        service=u'XMLRPC', action=u'Added',
+                        field_name=u'Arch', old_value=None,
+                        new_value=new_arch.arch))
 
     def updateDevices(self, deviceinfo):
         currentDevices = []
@@ -1966,12 +2009,23 @@ class System(SystemObject):
                                      description    = device['description'])
                 session.save(mydevice)
                 session.flush([mydevice])
-            self.devices.append(mydevice)
+            if mydevice not in self.devices:
+                self.devices.append(mydevice)
+                self.activity.append(SystemActivity(
+                        user=identity.current.user,
+                        service=u'XMLRPC', action=u'Added',
+                        field_name=u'Device', old_value=None,
+                        new_value=mydevice.id))
             currentDevices.append(mydevice)
         # Remove any old entries
         for device in self.devices[:]:
             if device not in currentDevices:
                 self.devices.remove(device)
+                self.activity.append(SystemActivity(
+                        user=identity.current.user,
+                        service=u'XMLRPC', action=u'Removed',
+                        field_name=u'Device', old_value=device.id,
+                        new_value=None))
 
     def updateCpu(self, cpuinfo):
         # Remove all old CPU data
@@ -1993,12 +2047,22 @@ class System(SystemObject):
                   flags      = cpuinfo['CpuFlags'])
 
         self.cpu = cpu
+        self.activity.append(SystemActivity(
+                user=identity.current.user,
+                service=u'XMLRPC', action=u'Changed',
+                field_name=u'CPU', old_value=None,
+                new_value=None)) # XXX find a good way to record the actual changes
 
     def updateNuma(self, numainfo):
         if self.numa:
             session.delete(self.numa)
         if numainfo.get('nodes', None) is not None:
             self.numa = Numa(nodes=numainfo['nodes'])
+        self.activity.append(SystemActivity(
+                user=identity.current.user,
+                service=u'XMLRPC', action=u'Changed',
+                field_name=u'NUMA', old_value=None,
+                new_value=None)) # XXX find a good way to record the actual changes
 
     def excluded_osmajor_byarch(self, arch):
         """
@@ -2187,6 +2251,7 @@ $SNIPPET("rhts_post")
         """Sets the system status to Broken and notifies its owner."""
         log.warning('Marking system %s as broken' % self.fqdn)
         self.status = SystemStatus.by_name(u'Broken')
+        self.date_modified = datetime.utcnow()
         mail.broken_system_notify(self, reason, recipe)
 
     def suspicious_abort(self):
@@ -5589,8 +5654,8 @@ System.mapper = mapper(System, system_table,
                                       cascade="all, delete, delete-orphan",
                                                 backref='system'),
                      'activity':relation(SystemActivity,
-                                     order_by=[activity_table.c.created.desc()],
-                                               backref='object'),
+                        order_by=[activity_table.c.created.desc(), activity_table.c.id.desc()],
+                        backref='object'),
                      'release_action':relation(ReleaseAction, uselist=False),
                      'reprovision_distro':relation(Distro, uselist=False),
                       '_system_ccs': relation(SystemCc, backref='system',
@@ -5791,8 +5856,8 @@ mapper(RecipeSet, recipe_set_table,
                       'result':relation(TaskResult, uselist=False),
                       'status':relation(TaskStatus, uselist=False),
                       'activity':relation(RecipeSetActivity,
-                                     order_by=[activity_table.c.created.desc()],
-                                               backref='object'),
+                        order_by=[activity_table.c.created.desc(), activity_table.c.id.desc()],
+                        backref='object'),
                       'lab_controller':relation(LabController, uselist=False),
                       'nacked':relation(RecipeSetResponse,cascade="all, delete-orphan",uselist=False),
                       'deleted':recipe_set_table.c.delete_time
