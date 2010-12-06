@@ -92,7 +92,7 @@ class TestSystemGridSorting(SeleniumTestCase):
         cell_values = [sel.get_table('widget.%d.%d' % (row, column - 1)) # zero-indexed
                        for row in range(0, row_count)]
         self.assert_(len(set(cell_values)) > 1) # make sure we're checking something
-        assert_sorted(cell_values)
+        assert_sorted(cell_values, key=lambda x: x.lower())
 
     # We test both ordinary listing (i.e. with no search query) as well as 
     # searching, because they go through substantially different code paths
