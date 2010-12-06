@@ -1939,6 +1939,8 @@ class System(SystemObject):
                     service=u'XMLRPC', action=u'Added',
                     field_name=u'Key/Value', old_value=None,
                     new_value=u'%s/%s' % (key.key_name, value)))
+
+        self.date_modified = datetime.utcnow()
         return 0
                     
 
@@ -2251,6 +2253,7 @@ $SNIPPET("rhts_post")
         """Sets the system status to Broken and notifies its owner."""
         log.warning('Marking system %s as broken' % self.fqdn)
         self.status = SystemStatus.by_name(u'Broken')
+        self.date_modified = datetime.utcnow()
         mail.broken_system_notify(self, reason, recipe)
 
     def suspicious_abort(self):

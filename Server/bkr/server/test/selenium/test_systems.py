@@ -28,7 +28,7 @@ from turbogears.database import session
 from bkr.server.test.selenium import SeleniumTestCase, XmlRpcTestCase
 from bkr.server.test import data_setup, get_server_base, stub_cobbler
 from bkr.server.test.assertions import assert_sorted
-from bkr.server.model import User, Cpu, Key, Key_Value_String
+from bkr.server.model import User, Cpu, Key, Key_Value_String, Key_Value_Int
 
 def atom_xpath(expr):
     return lxml.etree.XPath(expr, namespaces={'atom': 'http://www.w3.org/2005/Atom'})
@@ -216,11 +216,13 @@ class TestSystemsAtomFeed(unittest.TestCase):
         self.assert_(not self.feed_contains_system(feed, 'nogroup.system'))
         self.assert_(self.feed_contains_system(feed, 'grouped.system'))
 
-class TestSystemView(SeleniumTestCase):
+class SystemViewTest(SeleniumTestCase):
 
     def setUp(self):
         self.system_owner = data_setup.create_user()
         self.system = data_setup.create_system(owner=self.system_owner)
+        self.system.shared = True
+        self.system.lab_controller = data_setup.create_labcontroller()
         session.flush()
         self.selenium = self.get_selenium()
         self.selenium.start()
@@ -264,6 +266,206 @@ class TestSystemView(SeleniumTestCase):
         sel.wait_for_page_to_load('30000')
         self.assertEqual(self.selenium.get_title(),
                 'Notify CC list for %s' % self.system.fqdn)
+
+    def test_update_system(self):
+        orig_date_modified = self.system.date_modified
+        self.login()
+        sel = self.selenium
+        self.go_to_system_view()
+        changes = {
+            'vendor': 'Sinclair',
+            'model': 'ZX80',
+            'serial': '12345',
+            'mac_address': 'aa:bb:cc:dd:ee:ff',
+        }
+        for k, v in changes.iteritems():
+            sel.type(k, v)
+        sel.click('link=Save Changes')
+        sel.wait_for_page_to_load('30000')
+        for k, v in changes.iteritems():
+            self.assertEquals(sel.get_value(k), v)
+        session.refresh(self.system)
+        self.assert_(self.system.date_modified > orig_date_modified)
+
+    def test_add_arch(self):
+        orig_date_modified = self.system.date_modified
+        self.login()
+        sel = self.selenium
+        self.go_to_system_view()
+        sel.click('//ul[@class="tabbernav"]//a[text()="Arch(s)"]')
+        sel.type('arch.text', 's390')
+        sel.click('//form[@name="arches"]//a[text()="Add ( + )"]')
+        sel.wait_for_page_to_load('30000')
+        self.assertEquals(sel.get_xpath_count('//form[@name="arches"]'
+                '//td[normalize-space(text())="s390"]'), '1')
+        session.refresh(self.system)
+        self.assert_(self.system.date_modified > orig_date_modified)
+
+    def test_remove_arch(self):
+        orig_date_modified = self.system.date_modified
+        self.login()
+        sel = self.selenium
+        self.go_to_system_view()
+        sel.click('//ul[@class="tabbernav"]//a[text()="Arch(s)"]')
+        self.assertEquals(sel.get_xpath_count('//form[@name="arches"]'
+                '//td[normalize-space(text())="i386"]'), '1')
+        sel.click( # delete link inside cell beside "i386" cell
+                '//table[@class="list"]//td'
+                '[normalize-space(preceding-sibling::td[1]/text())="i386"]'
+                '/a[text()="Delete ( - )"]')
+        sel.wait_for_page_to_load('30000')
+        self.assertEquals(sel.get_text('css=.flash'), 'i386 Removed')
+        self.assertEquals(sel.get_xpath_count('//form[@name="arches"]'
+                '//td[normalize-space(text())="i386"]'), '0')
+        session.refresh(self.system)
+        self.assert_(self.system.date_modified > orig_date_modified)
+
+    def test_add_key_value(self):
+        orig_date_modified = self.system.date_modified
+        self.login()
+        sel = self.selenium
+        self.go_to_system_view()
+        sel.click('//ul[@class="tabbernav"]//a[text()="Key/Values"]')
+        sel.type('key_name', 'NR_DISKS')
+        sel.type('key_value', '100')
+        sel.click('//form[@name="keys"]//a[text()="Add ( + )"]')
+        sel.wait_for_page_to_load('30000')
+        self.assertEquals(sel.get_xpath_count('//form[@name="keys"]'
+                '//td[normalize-space(preceding-sibling::td[1]/text())="NR_DISKS" and '
+                'normalize-space(text())="100"]'), '1')
+        session.refresh(self.system)
+        self.assert_(self.system.date_modified > orig_date_modified)
+
+    def test_remove_key_value(self):
+        self.system.key_values_int.append(
+                Key_Value_Int(Key.by_name(u'NR_DISKS'), 100))
+        session.flush()
+        orig_date_modified = self.system.date_modified
+        self.login()
+        sel = self.selenium
+        self.go_to_system_view()
+        sel.click('//ul[@class="tabbernav"]//a[text()="Key/Values"]')
+        self.assertEquals(sel.get_xpath_count('//form[@name="keys"]'
+                '//td[normalize-space(preceding-sibling::td[1]/text())="NR_DISKS" and '
+                'normalize-space(text())="100"]'), '1')
+        sel.click( # delete link inside cell in row with NR_DISKS 100
+                '//table[@class="list"]//td['
+                'normalize-space(preceding-sibling::td[2]/text())="NR_DISKS" and '
+                'normalize-space(preceding-sibling::td[1]/text())="100"'
+                ']/a[text()="Delete ( - )"]')
+        sel.wait_for_page_to_load('30000')
+        self.assertEquals(sel.get_text('css=.flash'), 'removed NR_DISKS/100')
+        self.assertEquals(sel.get_xpath_count('//form[@name="keys"]'
+                '//td[normalize-space(preceding-sibling::td[1]/text())="NR_DISKS" and '
+                'normalize-space(text())="100"]'), '0')
+        session.refresh(self.system)
+        self.assert_(self.system.date_modified > orig_date_modified)
+
+    def test_add_group(self):
+        group = data_setup.create_group()
+        user_password = 'password'
+        user = data_setup.create_user(password=user_password)
+        data_setup.add_user_to_group(user, group)
+        session.flush()
+        orig_date_modified = self.system.date_modified
+
+        # as admin, assign the system to our test group
+        self.login()
+        sel = self.selenium
+        self.go_to_system_view()
+        sel.click('//ul[@class="tabbernav"]//a[text()="Groups"]')
+        sel.type("groups_group_text", group.group_name)
+        sel.click('//form[@name="groups"]//a[text()="Add ( + )"]')
+        sel.wait_for_page_to_load("30000")
+        self.assertEquals(sel.get_xpath_count('//form[@name="groups"]'
+                '//td[normalize-space(text())="%s"]' % group.group_name), '1')
+        session.refresh(self.system)
+        self.assert_(self.system.date_modified > orig_date_modified)
+
+        # as a user in the group, can we see it?
+        self.logout()
+        self.login(user.user_name, user_password)
+        sel.click("link=Available")
+        sel.wait_for_page_to_load("30000")
+        self.failUnless(sel.is_text_present(self.system.fqdn))
+
+    def test_remove_group(self):
+        group = data_setup.create_group()
+        self.system.groups.append(group)
+        session.flush()
+        orig_date_modified = self.system.date_modified
+        self.login()
+        sel = self.selenium
+        self.go_to_system_view()
+        sel.click('//ul[@class="tabbernav"]//a[text()="Groups"]')
+        self.assertEquals(sel.get_xpath_count('//form[@name="groups"]'
+                '//td[normalize-space(text())="%s"]' % group.group_name), '1')
+        sel.click( # delete link inside cell in row with group name
+                '//table[@class="list"]'
+                '//td[normalize-space(preceding-sibling::td[3]/text())="%s"]'
+                '/a[text()="Delete ( - )"]' % group.group_name)
+        sel.wait_for_page_to_load('30000')
+        self.assertEquals(sel.get_text('css=.flash'),
+                '%s Removed' % group.display_name)
+        self.assertEquals(sel.get_xpath_count('//form[@name="groups"]'
+                '//td[normalize-space(text())="%s"]' % group.group_name), '0')
+        session.refresh(self.system)
+        self.assert_(self.system.date_modified > orig_date_modified)
+
+    def test_update_power(self):
+        orig_date_modified = self.system.date_modified
+        self.login()
+        sel = self.selenium
+        self.go_to_system_view()
+        sel.click('//ul[@class="tabbernav"]//a[text()="Power"]')
+        sel.select('name=power_type_id', 'drac')
+        sel.type('name=power_address', 'nowhere.example.com')
+        sel.type('name=power_user', 'asdf')
+        sel.type('name=power_passwd', 'meh')
+        sel.type('name=power_id', '1234')
+        sel.click('link=Save Power Changes')
+        sel.wait_for_page_to_load('30000')
+        self.assertEquals(sel.get_text('css=.flash'), 'Updated Power')
+        session.refresh(self.system)
+        self.assert_(self.system.date_modified > orig_date_modified)
+
+    def test_add_install_options(self):
+        orig_date_modified = self.system.date_modified
+        self.login()
+        sel = self.selenium
+        self.go_to_system_view()
+        sel.click('//ul[@class="tabbernav"]//a[text()="Install Options"]')
+        sel.type('prov_ksmeta', 'skipx asdflol')
+        sel.type('prov_koptions', 'init=/bin/true')
+        sel.type('prov_koptionspost', 'vga=0x31b')
+        sel.click('//form[@name="installoptions"]//a[text()="Add ( + )"]')
+        sel.wait_for_page_to_load('30000')
+        session.refresh(self.system)
+        self.assert_(self.system.date_modified > orig_date_modified)
+
+    def test_update_labinfo(self):
+        orig_date_modified = self.system.date_modified
+        self.login()
+        sel = self.selenium
+        self.go_to_system_view()
+        sel.click('//ul[@class="tabbernav"]//a[text()="Lab Info"]')
+        changes = {
+            'orig_cost': '1,000.00',
+            'curr_cost': '500.00',
+            'dimensions': '1x1x1',
+            'weight': '50',
+            'wattage': '500',
+            'cooling': '1',
+        }
+        for k, v in changes.iteritems():
+            sel.type(k, v)
+        sel.click('link=Save Lab Info Changes')
+        sel.wait_for_page_to_load('30000')
+        self.assertEquals(sel.get_text('css=.flash'), 'Saved Lab Info')
+        for k, v in changes.iteritems():
+            self.assertEquals(sel.get_value(k), v)
+        session.refresh(self.system)
+        self.assert_(self.system.date_modified > orig_date_modified)
 
 class SystemCcTest(SeleniumTestCase):
 
