@@ -79,9 +79,9 @@ class Recipes(RPCRoot):
        finished = [u'Completed',u'Aborted',u'Cancelled']
        recipes = Recipe\
                  .query().join(['status'])\
-                         .outerjoin(['logs'])\
-                         .outerjoin(['tasks','logs'])\
-                         .outerjoin(['tasks','results','logs'])\
+                         .join(['logs'])\
+                         .join(['tasks','logs'])\
+                         .join(['tasks','results','logs'])\
                          .filter(recipe_table.c.finish_time > timedifference)\
                          .filter(task_status_table.c.status.in_(finished))\
                          .filter(or_(log_recipe_table.c.server.like('%s%%' % server),
