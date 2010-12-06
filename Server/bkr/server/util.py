@@ -17,23 +17,10 @@ Random functions that don't fit elsewhere
 """
 
 import os
-import rpm
 import sys
 import logging
-import urllib2
-import tempfile
-import simplejson
-import subprocess
-import urlgrabber
 import turbogears
-
-from kid import Element
-from yum import repoMDObject
-from yum.misc import checksum
-from os.path import isdir, join, dirname, basename, isfile
-from datetime import datetime
-from decorator import decorator
-from turbogears import config, url, flash, redirect
+from turbogears import config, url
 
 log = logging.getLogger(__name__)
 
