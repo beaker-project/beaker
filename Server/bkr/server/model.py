@@ -1886,47 +1886,59 @@ class System(SystemObject):
         """
         Update Key/Value pairs for legacy RHTS
         """
-        #Remove any keys that will be added
-        for mykey in self.key_values_int[:]:
-            if mykey.key.key_name in inventory:
-                self.key_values_int.remove(mykey)
-                self.activity.append(SystemActivity(user=identity.current.user,
-                        service=u'XMLRPC', action=u'Removed', field_name=u'Key/Value',
-                        old_value=u'%s/%s' % (mykey.key.key_name, mykey.key_value),
-                        new_value=None))
-        for mykey in self.key_values_string[:]:
-            if mykey.key.key_name in inventory:
-                self.key_values_string.remove(mykey)
-                self.activity.append(SystemActivity(user=identity.current.user,
-                        service=u'XMLRPC', action=u'Removed', field_name=u'Key/Value',
-                        old_value=u'%s/%s' % (mykey.key.key_name, mykey.key_value),
-                        new_value=None))
-
-        #Add the uploaded keys
-        for key in inventory:
+        new_int_kvs = set()
+        new_string_kvs = set()
+        for key_name, values in inventory.items():
             try:
-                _key = Key.by_name(key)
+                key = Key.by_name(key_name)
             except InvalidRequestError:
                 continue
-            if isinstance(inventory[key], list):
-                for value in inventory[key]:
-                    if _key.numeric:
-                        self.key_values_int.append(Key_Value_Int(_key,value))
-                    else:
-                        self.key_values_string.append(Key_Value_String(_key,value))
-                    self.activity.append(SystemActivity(user=identity.current.user,
-                            service=u'XMLRPC', action=u'Added',
-                            field_name=u'Key/Value', old_value=None,
-                            new_value=u'%s/%s' % (key, value)))
-            else:
-                if _key.numeric:
-                    self.key_values_int.append(Key_Value_Int(_key,inventory[key]))
+            if not isinstance(values, list):
+                values = [values]
+            for value in values:
+                if isinstance(value, bool):
+                    # MySQL will int-ify these, so we do it here 
+                    # to make our comparisons accurate
+                    value = int(value)
+                if key.numeric:
+                    new_int_kvs.add((key, int(value)))
                 else:
-                    self.key_values_string.append(Key_Value_String(_key,inventory[key]))
+                    new_string_kvs.add((key, unicode(value)))
+
+        # Examine existing key-values to find what we already have, and what 
+        # needs to be removed
+        for kv in list(self.key_values_int):
+            if (kv.key, kv.key_value) in new_int_kvs:
+                new_int_kvs.remove((kv.key, kv.key_value))
+            else:
+                self.key_values_int.remove(kv)
                 self.activity.append(SystemActivity(user=identity.current.user,
-                        service=u'XMLRPC', action=u'Added',
-                        field_name=u'Key/Value', old_value=None,
-                        new_value=u'%s/%s' % (key, inventory[key])))
+                        service=u'XMLRPC', action=u'Removed', field_name=u'Key/Value',
+                        old_value=u'%s/%s' % (kv.key.key_name, kv.key_value),
+                        new_value=None))
+        for kv in list(self.key_values_string):
+            if (kv.key, kv.key_value) in new_string_kvs:
+                new_string_kvs.remove((kv.key, kv.key_value))
+            else:
+                self.key_values_string.remove(kv)
+                self.activity.append(SystemActivity(user=identity.current.user,
+                        service=u'XMLRPC', action=u'Removed', field_name=u'Key/Value',
+                        old_value=u'%s/%s' % (kv.key.key_name, kv.key_value),
+                        new_value=None))
+
+        # Now we can just add the new ones
+        for key, value in new_int_kvs:
+            self.key_values_int.append(Key_Value_Int(key, value))
+            self.activity.append(SystemActivity(user=identity.current.user,
+                    service=u'XMLRPC', action=u'Added',
+                    field_name=u'Key/Value', old_value=None,
+                    new_value=u'%s/%s' % (key.key_name, value)))
+        for key, value in new_string_kvs:
+            self.key_values_string.append(Key_Value_String(key, value))
+            self.activity.append(SystemActivity(user=identity.current.user,
+                    service=u'XMLRPC', action=u'Added',
+                    field_name=u'Key/Value', old_value=None,
+                    new_value=u'%s/%s' % (key.key_name, value)))
         return 0
                     
 

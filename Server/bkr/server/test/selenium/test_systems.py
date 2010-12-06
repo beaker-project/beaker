@@ -722,8 +722,10 @@ class LegacyPushXmlRpcTest(XmlRpcTestCase):
     # https://bugzilla.redhat.com/show_bug.cgi?id=658503
     def test_system_activity_shows_changes(self):
         system = data_setup.create_system()
-        system.key_values_string.append(
-                Key_Value_String(Key.by_name(u'PCIID'), '1022:2000'))
+        system.key_values_string.extend([
+            Key_Value_String(Key.by_name(u'PCIID'), '1022:2000'),
+            Key_Value_String(Key.by_name(u'PCIID'), '80ee:beef'),
+        ])
         session.flush()
         self.server.legacypush(system.fqdn,
                 {'PCIID': ['80ee:cafe', '80ee:beef']})
@@ -732,17 +734,30 @@ class LegacyPushXmlRpcTest(XmlRpcTestCase):
         self.assertEquals(system.activity[0].service, u'XMLRPC')
         self.assertEquals(system.activity[0].action, u'Added')
         self.assertEquals(system.activity[0].old_value, None)
-        self.assertEquals(system.activity[0].new_value, u'PCIID/80ee:beef')
+        self.assertEquals(system.activity[0].new_value, u'PCIID/80ee:cafe')
         self.assertEquals(system.activity[1].field_name, u'Key/Value')
         self.assertEquals(system.activity[1].service, u'XMLRPC')
-        self.assertEquals(system.activity[1].action, u'Added')
-        self.assertEquals(system.activity[1].old_value, None)
-        self.assertEquals(system.activity[1].new_value, u'PCIID/80ee:cafe')
-        self.assertEquals(system.activity[2].field_name, u'Key/Value')
-        self.assertEquals(system.activity[2].service, u'XMLRPC')
-        self.assertEquals(system.activity[2].action, u'Removed')
-        self.assertEquals(system.activity[2].old_value, u'PCIID/1022:2000')
-        self.assertEquals(system.activity[2].new_value, None)
+        self.assertEquals(system.activity[1].action, u'Removed')
+        self.assertEquals(system.activity[1].old_value, u'PCIID/1022:2000')
+        self.assertEquals(system.activity[1].new_value, None)
+
+    def test_bools_are_coerced_to_ints(self):
+        system = data_setup.create_system()
+        system.key_values_string.append(
+                Key_Value_String(Key.by_name(u'HVM'), '0'))
+        session.flush()
+
+        self.server.legacypush(system.fqdn, {'HVM': False})
+        session.refresh(system)
+        self.assertEquals(len(system.activity), 0) # nothing has changed, yet
+
+        self.server.legacypush(system.fqdn, {'HVM': True})
+        session.refresh(system)
+        self.assertEquals(system.activity[0].field_name, u'Key/Value')
+        self.assertEquals(system.activity[0].service, u'XMLRPC')
+        self.assertEquals(system.activity[0].action, u'Added')
+        self.assertEquals(system.activity[0].old_value, None)
+        self.assertEquals(system.activity[0].new_value, u'HVM/1')
 
 class PushXmlRpcTest(XmlRpcTestCase):
 
