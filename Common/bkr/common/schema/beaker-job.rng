@@ -117,7 +117,7 @@
         <ref name="packages"/>
       </optional>
       <optional>
-        <ref name="ks_appends"/>
+        <element name="ks_appends"><text/></element>
       </optional>
       <optional>
         <ref name="repos"/>
