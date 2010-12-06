@@ -3859,12 +3859,7 @@ class RecipeSet(TaskBase):
             if not isinstance(r,GuestRecipe):
                 recipeSet.appendChild(r.to_xml(clone, from_recipeset=True))
         if not from_job:
-            job = self.doc.createElement("job")
-            if not clone:
-                job.setAttribute("owner", "%s" % self.job.owner.email_address)
-            job.setAttribute("product", "%s" % self.job.product.name)
-            job.setAttribute("retention_tag", "%s" % self.job.retention_tag.tag)
-            job.appendChild(self.node("whiteboard", self.job.whiteboard or '')) 
+            job = self.job._create_job_elem(clone)
             job.appendChild(recipeSet)
             return_node = job
         return return_node
