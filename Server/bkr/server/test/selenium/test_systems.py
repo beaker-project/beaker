@@ -776,23 +776,27 @@ class PushXmlRpcTest(XmlRpcTestCase):
                 {'vendor': 'Acorn', 'model': 'Archimedes', 'memory': '16'})
         session.refresh(system)
         # no way to know in which order the changes will be recorded :-(
-        changes = system.activity[-3:]
+        changes = system.activity[:4]
         for change in changes:
             self.assertEquals(change.service, u'XMLRPC')
             self.assertEquals(change.action, u'Changed')
         changed_fields = set(change.field_name for change in changes)
-        self.assertEquals(changed_fields, set(['vendor', 'model', 'memory']))
+        self.assertEquals(changed_fields,
+                set(['checksum', 'vendor', 'model', 'memory']))
 
     def test_system_activity_shows_changes_for_arches(self):
         system = data_setup.create_system()
         session.flush()
         self.server.push(system.fqdn, {'Arch': ['sparc32']})
         session.refresh(system)
-        self.assertEquals(system.activity[-1].service, u'XMLRPC')
-        self.assertEquals(system.activity[-1].action, u'Added')
-        self.assertEquals(system.activity[-1].field_name, u'Arch')
-        self.assertEquals(system.activity[-1].old_value, None)
-        self.assertEquals(system.activity[-1].new_value, u'sparc32')
+        self.assertEquals(system.activity[0].service, u'XMLRPC')
+        self.assertEquals(system.activity[0].action, u'Added')
+        self.assertEquals(system.activity[0].field_name, u'Arch')
+        self.assertEquals(system.activity[0].old_value, None)
+        self.assertEquals(system.activity[0].new_value, u'sparc32')
+        self.assertEquals(system.activity[1].service, u'XMLRPC')
+        self.assertEquals(system.activity[1].action, u'Changed')
+        self.assertEquals(system.activity[1].field_name, u'checksum')
 
     def test_system_activity_shows_changes_for_devices(self):
         system = data_setup.create_system()
@@ -804,11 +808,14 @@ class PushXmlRpcTest(XmlRpcTestCase):
             'subsysVendorID': '0000', 'subsysDeviceID': '0000',
         }]})
         session.refresh(system)
-        self.assertEquals(system.activity[-1].service, u'XMLRPC')
-        self.assertEquals(system.activity[-1].action, u'Added')
-        self.assertEquals(system.activity[-1].field_name, u'Device')
-        self.assertEquals(system.activity[-1].old_value, None)
+        self.assertEquals(system.activity[0].service, u'XMLRPC')
+        self.assertEquals(system.activity[0].action, u'Added')
+        self.assertEquals(system.activity[0].field_name, u'Device')
+        self.assertEquals(system.activity[0].old_value, None)
         # the new value will just be some random device id
+        self.assertEquals(system.activity[1].service, u'XMLRPC')
+        self.assertEquals(system.activity[1].action, u'Changed')
+        self.assertEquals(system.activity[1].field_name, u'checksum')
 
     def test_system_activity_shows_changes_for_cpu(self):
         system = data_setup.create_system()
@@ -820,15 +827,21 @@ class PushXmlRpcTest(XmlRpcTestCase):
             'CpuFlags': ['fpu', 'mmx', 'syscall', 'ssse3'],
         }})
         session.refresh(system)
-        self.assertEquals(system.activity[-1].service, u'XMLRPC')
-        self.assertEquals(system.activity[-1].action, u'Changed')
-        self.assertEquals(system.activity[-1].field_name, u'CPU')
+        self.assertEquals(system.activity[0].service, u'XMLRPC')
+        self.assertEquals(system.activity[0].action, u'Changed')
+        self.assertEquals(system.activity[0].field_name, u'CPU')
+        self.assertEquals(system.activity[1].service, u'XMLRPC')
+        self.assertEquals(system.activity[1].action, u'Changed')
+        self.assertEquals(system.activity[1].field_name, u'checksum')
 
     def test_system_activity_shows_changes_for_numa(self):
         system = data_setup.create_system()
         session.flush()
         self.server.push(system.fqdn, {'Numa': {'nodes': 321}})
         session.refresh(system)
-        self.assertEquals(system.activity[-1].service, u'XMLRPC')
-        self.assertEquals(system.activity[-1].action, u'Changed')
-        self.assertEquals(system.activity[-1].field_name, u'NUMA')
+        self.assertEquals(system.activity[0].service, u'XMLRPC')
+        self.assertEquals(system.activity[0].action, u'Changed')
+        self.assertEquals(system.activity[0].field_name, u'NUMA')
+        self.assertEquals(system.activity[1].service, u'XMLRPC')
+        self.assertEquals(system.activity[1].action, u'Changed')
+        self.assertEquals(system.activity[1].field_name, u'checksum')

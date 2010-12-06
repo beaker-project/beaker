@@ -1951,6 +1951,9 @@ class System(SystemObject):
         md5sum = md5.new("%s" % inventory).hexdigest()
         if self.checksum == md5sum:
             return 0
+        self.activity.append(SystemActivity(user=identity.current.user,
+                service=u'XMLRPC', action=u'Changed', field_name=u'checksum',
+                old_value=self.checksum, new_value=md5sum))
         self.checksum = md5sum
         for key in inventory:
             if key in self.get_allowed_attr():

@@ -1373,7 +1373,7 @@ class Root(RPCRoot):
 
 
         log_fields = [ 'fqdn', 'vendor', 'lender', 'model', 'serial', 'location', 
-                       'checksum','mac_address', 'status_reason', status_entry,lab_controller_entry,type_entry]
+                       'mac_address', 'status_reason', status_entry,lab_controller_entry,type_entry]
 
         for field in log_fields:
             if isinstance(field,SystemSaveForm.fk_log_entry): #check if we are a foreign key with mapper object and column name           
@@ -1471,6 +1471,15 @@ class Root(RPCRoot):
         else:
             system.lab_controller_id = kw['lab_controller_id']
         system.mac_address=kw['mac_address']
+
+        # We can't compute a new checksum, so let's just clear it so that it 
+        # always compares false
+        if system.checksum is not None:
+            system.activity.append(SystemActivity(user=identity.current.user,
+                    service=u'WEBUI', action=u'Changed', field_name=u'checksum',
+                    old_value=system.checksum, new_value=None))
+            system.checksum = None
+
         session.save_or_update(system)
         redirect("/view/%s" % system.fqdn)
 
