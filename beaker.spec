@@ -198,40 +198,21 @@ fi
 %attr(-,apache,root) %dir %{_localstatedir}/run/%{name}-lab-controller
 
 %changelog
-* Wed Dec 01 2010 Bill Peck <bpeck@redhat.com> 0.5.63-5
-- Revert "bz590951 - Using custom repo during system install"
-  (bpeck@redhat.com)
-
-* Wed Dec 01 2010 Bill Peck <bpeck@redhat.com>
-- Revert "bz590951 - Using custom repo during system install"
-  (bpeck@redhat.com)
-
-* Wed Dec 01 2010 Bill Peck <bpeck@redhat.com> 0.5.63-4
-- must use outerjoins on logs, since a recipe may not have any sub-logs.
- (bpeck@redhat.com)
-
-* Wed Dec 01 2010 Raymond Mancy <rmancy@redhat.com> 0.5.63-3
-- Needed to remove prod/tag from to_xml() in class RecipeSet
- (rmancy@redhat.com)
-
-* Wed Dec 01 2010 Raymond Mancy <rmancy@redhat.com> 0.5.63-2
-- Updated product-update to not print out debug msg (rmancy@redhat.com)
-
-* Tue Nov 30 2010 Bill Peck <bpeck@redhat.com> 0.5.63-1
-- Merge branch 'bz590951' into develop (bpeck@redhat.com)
-- add --cc command line option to workflows. (bpeck@redhat.com)
-- read only tag/product for non owner/admin (rmancy@redhat.com)
-- bz654789 - Don't rely on the recipe ending.  Run every hour and transfer what
-  matches. (bpeck@redhat.com)
-- upgrade notes, moved from 62 to 63 (rmancy@redhat.com)
-- bz649483 - Job level product/retentiontag. All working (rmancy@redhat.com)
-- bz590951 - Using custom repo during system install (bpeck@redhat.com)
-
 * Thu Nov 25 2010 Raymond Mancy <rmancy@redhat.com> 0.5.62-2
 - with rmancy: TestTime with no suffix means seconds (dcallagh@redhat.com)
 - fix for reserveworkflow: my_cmp was in the wrong place (dcallagh@redhat.com)
 
 * Wed Nov 24 2010 Raymond Mancy <rmancy@redhat.com> 0.5.62-1
+
+
+
+
+
+
+
+
+
+
 - Experiencing xmlrpc timeouts when talking to cobbler.  - cobbler is stupid
   and doesn't honor the page, results_per_page options.    get_item_names still
   doesn't honor results_per_page but it only transfers the names.  - Of course
@@ -256,6 +237,29 @@ fi
 - bz651418 - fix system grid sorting (dcallagh@redhat.com)
 - bz645873 -  Job cancelled soon after creation doesn't terminate
   (bpeck@redhat.com)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 * Thu Nov 11 2010 Bill Peck <bpeck@redhat.com> 0.5.61-4
 - increase timeout from 20 seconds to 40 seconds. (bpeck@redhat.com)
