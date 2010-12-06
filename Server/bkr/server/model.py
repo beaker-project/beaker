@@ -3653,7 +3653,7 @@ class Job(TaskBase):
                     result          = "%s" % self.result,
                     is_finished     = self.is_finished(),
                     is_failed       = self.is_failed(),
-                    subtask_id_list = ["R:%s" % r.id for r in self.all_recipes]
+                    #subtask_id_list = ["R:%s" % r.id for r in self.all_recipes]
                    )
 
     def all_recipes(self):
@@ -4073,7 +4073,7 @@ class RecipeSet(TaskBase):
                     result          = "%s" % self.result,
                     is_finished     = self.is_finished(),
                     is_failed       = self.is_failed(),
-                    subtask_id_list = ["R:%s" % r.id for r in self.recipes]
+                    #subtask_id_list = ["R:%s" % r.id for r in self.recipes]
                    )
 
     def t_id(self):
@@ -5162,7 +5162,7 @@ class RecipeTask(TaskBase):
                     result          = "%s" % self.result,
                     is_finished     = self.is_finished(),
                     is_failed       = self.is_failed(),
-                    subtask_id_list = ["TR:%s" % tr.id for tr in self.results]
+                    #subtask_id_list = ["TR:%s" % tr.id for tr in self.results]
                    )
 
     def t_id(self):
