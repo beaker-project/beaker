@@ -18,24 +18,37 @@ class RPCRoot(controllers.Controller):
         '/client': {'identity.force_external_redirect': False},
     })
 
+    def process_rpc(self,method,params):
+        """
+        _process_rpc() handles a generic way of dissecting and calling
+        methods and params with params being a list and methods being a '.'
+        delimited string indicating the method to call
+
+        """
+        from bkr.server.controllers import Root
+        #Is there a better way to do this?
+        #I could perhaps use cherrypy.root, but this only works on prod
+        obj = Root
+        # Get the function and make sure it's exposed.
+        for name in method.split('.'):
+            obj = getattr(obj, name, None)
+            # Use the same error message to hide private method names
+            if obj is None or not getattr(obj, "exposed", False):
+                raise AssertionError("method %s does not exist" % name)
+
+        # Call the method, convert it into a 1-element tuple
+        # as expected by dumps
+        response = obj(*params)
+        return response
+
     @turbogears.expose()
-    def RPC2(self):
+    def RPC2(self, *args, **kw):
         params, method = xmlrpclib.loads(cherrypy.request.body.read())
         try:
             if method == "RPC2":
                 # prevent recursion
                 raise AssertionError("method cannot be 'RPC2'")
-            # Get the function and make sure it's exposed.
-            obj = self
-            for name in method.split('.'):
-            	obj = getattr(obj, name, None)
-            	# Use the same error message to hide private method names
-            	if obj is None or not getattr(obj, "exposed", False):
-                	raise AssertionError("method %s does not exist" % name)
-
-            # Call the method, convert it into a 1-element tuple
-            # as expected by dumps                       
-            response = obj(*params)
+            response = self.process_rpc(method,params)
             response = xmlrpclib.dumps((response,), methodresponse=1, allow_none=True)
         except IdentityFailure, e:
             response = xmlrpclib.dumps(xmlrpclib.Fault(1,

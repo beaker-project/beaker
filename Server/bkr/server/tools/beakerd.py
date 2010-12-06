@@ -520,6 +520,9 @@ def queued_recipes_loop(*args, **kwargs):
 
 def schedule():
     bkr.server.scheduler._start_scheduler()
+    if config.get('beaker.qpid_enabled') is True: 
+        from bkr.server.mrg import ServerBeakerBus
+        ServerBeakerBus().run()
     log.debug("starting new recipes Thread")
     # Create new_recipes Thread
     add_onetime_task(action=new_recipes_loop,
@@ -529,6 +532,7 @@ def schedule():
     add_onetime_task(action=processed_recipesets_loop,
                       args=[lambda:datetime.now()],
                       initialdelay=5)
+ 
     #log.debug("starting queued recipes Thread")
     # Create queued_recipes Thread
     #add_onetime_task(action=queued_recipes_loop,

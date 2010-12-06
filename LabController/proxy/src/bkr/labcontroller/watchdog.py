@@ -14,6 +14,7 @@ from kobo.exceptions import ShutdownException
 from kobo.process import daemonize
 from kobo.tback import Traceback, set_except_hook
 from bkr.log import add_stderr_logger, add_rotating_file_logger
+from bkr.labcontroller.message_bus import LabBeakerBus
 
 VERBOSE_LOG_FORMAT = "%(asctime)s [%(levelname)-8s] {%(process)5d} %(name)s.%(module)s:%(lineno)4d %(message)s"
 
@@ -52,22 +53,34 @@ def main_loop(conf=None, foreground=False):
 
     if foreground:
         add_stderr_logger(watchdog.logger)
-
     watchdog.hub._transport.timeout = 120 
     time_of_last_check = 0
+    hostname = socket.gethostname()
+    use_bus = config['MSG_BUS']
     while True:
         try:
             now = time.time()
-            # Poll the scheduler for watchdogs
+            # Poll for watchdogs
             if now - time_of_last_check > 60:
                 time_of_last_check = now
-                watchdog.hub._login()
-                watchdog.expire_watchdogs()
-                watchdog.active_watchdogs()
+                if use_bus:
+                    try:
+                        active_watchdogs = LabBeakerBus().send_action('service_queue', 'recipes.tasks.watchdogs', 'active', hostname)
+                        expired_watchdogs = LabBeakerBus().send_action('service_queue', 'recipes.tasks.watchdogs', 'expired', hostname)
+                    except Exception, e:
+                        logger.exception('Could not run watchdog over bus, falling back to RPC: %s'  % str(e))
+                        use_bus = False
+                        continue
+                else:
+                    watchdog.hub._login()
+                    active_watchdogs = self.hub.recipes.tasks.watchdogs('active')
+                    expired_watchdogs = self.hub.recipes.tasks.watchdogs('expired')
+
+                watchdog.expire_watchdogs(expired_watchdogs)
+                watchdog.active_watchdogs(active_watchdogs)
             if not watchdog.run():
                 watchdog.logger.debug(80 * '-')
                 watchdog.sleep()
-
             # FIXME: Check for recipes that match systems under
             #        this lab controller, if so take recipe and provision
             #        system.

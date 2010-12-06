@@ -351,19 +351,19 @@ class Watchdog(ProxyHelper):
         my_cmd = 'rsync %s %s %s' % (self.conf.get('RSYNC_FLAGS',''), src, dst)
         return utils.subprocess_call(self.logger,my_cmd,shell=True)
 
-    def expire_watchdogs(self):
+    def expire_watchdogs(self, watchdogs):
         """Clear out expired watchdog entries"""
 
         self.logger.info("Entering expire_watchdogs")
-        for watchdog in self.hub.recipes.tasks.watchdogs('expired'):
+        for watchdog in watchdogs:
             self.abort(watchdog)
 
-    def active_watchdogs(self):
+    def active_watchdogs(self, watchdogs):
         """Monitor active watchdog entries"""
 
         self.logger.info("Entering active_watchdogs")
         active_watchdogs = []
-        for watchdog in self.hub.recipes.tasks.watchdogs('active'):
+        for watchdog in watchdogs:
             watchdog_key = '%s:%s' % (watchdog['system'], watchdog['recipe_id'])
             active_watchdogs.append(watchdog_key)
             if watchdog_key not in self.watchdogs:

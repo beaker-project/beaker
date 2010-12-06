@@ -115,15 +115,19 @@ class RecipeTasks(RPCRoot):
                                       data)
 
     @cherrypy.expose
-    @identity.require(identity.not_anonymous())
-    def watchdogs(self, status='active'):
+    def watchdogs(self, status='active',lc=None):
         """ Return all active/expired tasks for this lab controller
             The lab controllers login with host/fqdn
         """
+        # TODO work on logic that determines whether or not originator
+        # was qpid or kobo ?
         try:
-            lab_controller = identity.current.user.user_name.split('/')[1]
+            if lc is None:
+                lab_controller = identity.current.user.user_name.split('/')[1]
+            else:
+                lab_controller = lc
         except IndexError:
-            raise BX(_('Invalid login: %s, must log in as lab controller' % identity.current.user))
+            raise BX(_('Invalid login: %s, must log in as lab controller if using kobo' % identity.current.user))
         try:
             labcontroller = LabController.by_name(lab_controller)
         except InvalidRequestError:
