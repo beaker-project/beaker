@@ -435,8 +435,11 @@ visits_table = Table('visit', metadata,
 
 
 visit_identity_table = Table('visit_identity', metadata,
-    Column('visit_key', String(40), primary_key=True),
-    Column('user_id', Integer, ForeignKey('tg_user.user_id'), index=True),
+    Column('visit_key', String(40), primary_key=True, unique=True),
+    Column('user_id', Integer, ForeignKey('tg_user.user_id'),
+            nullable=False, index=True),
+    Column('proxied_by_user_id', Integer, ForeignKey('tg_user.user_id'),
+            nullable=True),
     mysql_engine='InnoDB',
 )
 
@@ -5827,8 +5830,13 @@ mapper(DistroTag, distro_tag_table)
 
 mapper(Visit, visits_table)
 
-mapper(VisitIdentity, visit_identity_table,
-        properties=dict(users=relation(User, backref='visit_identity')))
+mapper(VisitIdentity, visit_identity_table, properties={
+    'user': relation(User,
+        primaryjoin=visit_identity_table.c.user_id == users_table.c.user_id,
+        backref='visit_identity'),
+    'proxied_by_user': relation(User,
+        primaryjoin=visit_identity_table.c.proxied_by_user_id == users_table.c.user_id),
+})
 
 mapper(User, users_table,
         properties=dict(_password=users_table.c.password))

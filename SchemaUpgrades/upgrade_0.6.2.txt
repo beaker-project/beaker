@@ -1,0 +1,4 @@
+ALTER TABLE visit_identity
+    MODIFY user_id INT NOT NULL,
+    ADD proxied_by_user_id INT NULL,
+    ADD FOREIGN KEY (proxied_by_user_id) REFERENCES tg_user (user_id);
