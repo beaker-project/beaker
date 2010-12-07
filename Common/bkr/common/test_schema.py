@@ -51,7 +51,7 @@ class JobSchemaTest(unittest.TestCase):
     def test_recipe_elements_in_different_order(self):
         self.assert_valid('''
             <job>
-                <recipeSet retention_tag="scratch">
+                <recipeSet>
                     <recipe kernel_options="" kernel_options_post="" ks_meta="" role="None" whiteboard="">
                         <partitions/>
                         <task name="/distribution/install" role="STANDALONE"/>
@@ -75,7 +75,7 @@ class JobSchemaTest(unittest.TestCase):
     def test_duplicate_elements(self):
         self.assert_not_valid('''
             <job>
-                <recipeSet retention_tag="scratch">
+                <recipeSet>
                     <recipe kernel_options="" kernel_options_post="" ks_meta="" role="None" whiteboard="">
                         <autopick random="true"/>
                         <autopick random="false"/>
@@ -102,7 +102,7 @@ class JobSchemaTest(unittest.TestCase):
     def test_guestrecipe(self):
         self.assert_valid('''
             <job>
-                <recipeSet retention_tag="scratch">
+                <recipeSet>
                     <recipe>
                         <guestrecipe guestname="asdf" guestargs="--lol">
                             <distroRequires>

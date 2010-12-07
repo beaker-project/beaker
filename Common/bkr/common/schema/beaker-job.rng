@@ -10,6 +10,12 @@
     <element name="job">
       <interleave>
         <optional>
+          <attribute name="retention_tag"/>
+        </optional>
+        <optional>
+          <attribute name="product"/>
+        </optional>
+        <optional>
           <ref name="notify"/>
         </optional>
         <optional>
@@ -28,9 +34,6 @@
               multihost testing. Otherwise, define only one recipe within the 
               recipeset.
             </a:documentation>
-            <optional>
-             <attribute name="retention_tag"/>
-            </optional>
             <oneOrMore>
               <ref name="recipe"/>
             </oneOrMore>

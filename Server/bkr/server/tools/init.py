@@ -173,10 +173,10 @@ def init_db(user_name=None, password=None, user_display_name=None, user_email_ad
 
     if RetentionTag.query().count() == 0:
         SCRATCH         = RetentionTag(tag=u'scratch', is_default=1)
-        SIXTYDAYS       = RetentionTag(tag=u'60days')
-        ONETWENTYDAYS   = RetentionTag(tag=u'120days')
-        ACTIVE          = RetentionTag(tag=u'active')
-        AUDIT           = RetentionTag(tag=u'audit')
+        SIXTYDAYS       = RetentionTag(tag=u'60days', needs_product=False)
+        ONETWENTYDAYS   = RetentionTag(tag=u'120days', needs_product=False)
+        ACTIVE          = RetentionTag(tag=u'active', needs_product=True)
+        AUDIT           = RetentionTag(tag=u'audit', needs_product=True)
         
     session.flush()
 

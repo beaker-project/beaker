@@ -70,6 +70,27 @@ class Recipes(RPCRoot):
 
     @cherrypy.expose
     @identity.require(identity.not_anonymous())
+    def by_log_server(self, server, days=1):
+       """
+       Return a list of recipes which have logs which start with server, default to 
+       last day
+       """
+       timedifference = datetime.utcnow() - timedelta(days=days)
+       finished = [u'Completed',u'Aborted',u'Cancelled']
+       recipes = Recipe\
+                 .query().join(['status'])\
+                         .outerjoin(['logs'])\
+                         .outerjoin(['tasks','logs'])\
+                         .outerjoin(['tasks','results','logs'])\
+                         .filter(recipe_table.c.finish_time > timedifference)\
+                         .filter(task_status_table.c.status.in_(finished))\
+                         .filter(or_(log_recipe_table.c.server.like('%s%%' % server),
+                                     log_recipe_task_table.c.server.like('%s%%' % server),
+                                     log_recipe_task_result_table.c.server.like('%s%%' % server)))
+       return [r.id for r in recipes]
+
+    @cherrypy.expose
+    @identity.require(identity.not_anonymous())
     def register_file(self, server, recipe_id, path, name, basepath):
         """
         register file and return path to store

@@ -153,6 +153,12 @@ class BeakerWorkflow(BeakerCommand):
             help="Specify Package to install, this will add /distribution/pkginstall.",
         )
         self.parser.add_option(
+            "--cc",
+            default=[],
+            action="append",
+            help="Specify additional email addresses to notify",
+        )
+        self.parser.add_option(
             "--dump",
             default=False,
             action="store_true",
@@ -172,6 +178,11 @@ class BeakerWorkflow(BeakerCommand):
             "--kernel_options",
             default=None,
             help="Boot arguments to supply (optional)"
+        )
+        self.parser.add_option(
+            "--product",
+            default=None,
+            help="This should be a unique identifierf or a product"
         )
 
     def getArches(self, *args, **kwargs):
@@ -304,6 +315,13 @@ class BeakerJob(BeakerBase):
         self.node = self.doc.createElement('job')
         whiteboard = self.doc.createElement('whiteboard')
         whiteboard.appendChild(self.doc.createTextNode(kwargs.get('whiteboard','')))
+        if kwargs.get('cc'):
+            notify = self.doc.createElement('notify')
+            for cc in kwargs.get('cc'):
+                ccnode = self.doc.createElement('cc')
+                ccnode.appendChild(self.doc.createTextNode(cc))
+                notify.appendChild(ccnode)
+            self.node.appendChild(notify)
         self.node.appendChild(whiteboard)
 
     def addRecipeSet(self, recipeSet):
@@ -334,6 +352,8 @@ class BeakerRecipeSet(BeakerBase):
         self.node.setAttribute('priority', kwargs.get('priority', ''))
         if kwargs.get('retention_tag'):
             self.node.setAttribute('retention_tag', kwargs.get('retention_tag'))
+        if kwargs.get('product'):
+            self.node.setAttribute('product', kwargs.get('product'))
 
     def addRecipe(self, recipe):
         """ properly add a recipe to this recipeSet """
