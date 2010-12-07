@@ -117,7 +117,7 @@
         <ref name="packages"/>
       </optional>
       <optional>
-        <element name="ks_appends"><text/></element>
+        <ref name="ks_appends"/>
       </optional>
       <optional>
         <ref name="repos"/>
@@ -172,6 +172,13 @@
       </optional>
     </element>
   </define>
+  <define name="ks_appends">
+    <element name="ks_appends">
+     <zeroOrMore>
+       <element name="ks_append"><text/></element>
+     </zeroOrMore>
+    </element>
+  </define> 
   <define name="packages">
     <element name="packages">
       <zeroOrMore>
