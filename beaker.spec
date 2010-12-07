@@ -2,8 +2,8 @@
 %{!?pyver: %global pyver %(%{__python} -c "import sys ; print sys.version[:3]")}
 
 Name:           beaker
-Version:        0.5.63
-Release:        6%{?dist}
+Version:        0.5.64
+Release:        1%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -192,6 +192,9 @@ fi
 %attr(-,apache,root) %dir %{_localstatedir}/run/%{name}-lab-controller
 
 %changelog
+* Tue Dec 07 2010 Bill Peck <bpeck@redhat.com> 0.5.64-1
+- bz660714 -  update log paths in one xmlrpc call (bpeck@redhat.com)
+
 * Wed Dec 01 2010 Bill Peck <bpeck@redhat.com> 0.5.63-5
 - Revert "bz590951 - Using custom repo during system install"
   (bpeck@redhat.com)
