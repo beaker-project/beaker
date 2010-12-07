@@ -59,16 +59,17 @@ class TestSystemGridSorting(SeleniumTestCase):
         try:
             session.begin()
             # ensure we have lots of systems
-            for vendor in (u'Acer', u'Dell', u'HP'):
-                for model in (u'slow model', u'fast model', u'big model'):
-                    for status in (u'Automated', u'Manual', u'Removed'):
-                        for type in (u'Machine', u'Virtual', u'Prototype'):
-                            for cores in (1, 4):
-                                system = data_setup.create_system(
-                                    vendor=vendor, model=model,
-                                    status=status, type=type)
-                                system.user = data_setup.create_user()
-                                system.cpu = Cpu(cores=cores)
+            for cores in [1, 2, 3]:
+                for vendor, model, status, type, user in zip(
+                        [u'Acer', u'Dell', u'HP'],
+                        [u'slow model', u'fast model', u'big model'],
+                        [u'Automated', u'Manual', u'Removed'],
+                        [u'Machine', u'Virtual', u'Prototype'],
+                        [data_setup.create_user() for _ in range(3)]):
+                    system = data_setup.create_system(vendor=vendor,
+                            model=model, status=status, type=type)
+                    system.user = data_setup.create_user()
+                    system.cpu = Cpu(cores=cores)
             session.commit()
         finally:
             session.close()
@@ -83,7 +84,6 @@ class TestSystemGridSorting(SeleniumTestCase):
 
     def check_column_sort(self, column):
         sel = self.selenium
-        sel.click('link=Show all')
         sel.wait_for_page_to_load('30000')
         sel.click('//table[@id="widget"]/thead/th[%d]//a[@href]' % column)
         sel.wait_for_page_to_load('30000')
