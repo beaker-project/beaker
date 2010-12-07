@@ -317,11 +317,10 @@ class Watchdog(ProxyHelper):
             self.logger.info("rsync rc=%s" % rc)
             if rc == 0:
                 # if the logs have been transfered then tell the server the new location
+                self.hub.recipes.change_files(recipe_id, self.conf.get("ARCHIVE_SERVER"),
+                                                         self.conf.get("ARCHIVE_BASEPATH"))
                 for mylog in trlogs:
-                    server = '%s/%s' % (self.conf.get("ARCHIVE_SERVER"), mylog['filepath'])
-                    basepath = '%s/%s' % (self.conf.get("ARCHIVE_BASEPATH"), mylog['filepath'])
                     mysrc = '%s/%s/%s' % (mylog['basepath'], mylog['path'], mylog['filename'])
-                    self.hub.recipes.change_file(mylog['tid'], server, basepath)
                     self.rm(mysrc)
                     try:
                         self.removedirs('%s/%s' % (mylog['basepath'], mylog['path']))
