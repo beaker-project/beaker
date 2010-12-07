@@ -16,7 +16,10 @@
                 <autopick random="true"/>
                 <watchdog panic="None"/>
                 <packages/>
-                <ks_appends/>
+                <ks_appends>
+                    <ks_append>
+<![CDATA[]]>                    </ks_append>
+                </ks_appends>
                 <repos/>
                 <distroRequires>
                     <distro_name op="=" value="BlueShoeLinux5-5"/>
@@ -33,7 +36,10 @@
             <autopick random="true"/>
             <watchdog panic="None"/>
             <packages/>
-            <ks_appends/>
+            <ks_appends>
+                <ks_append>
+<![CDATA[]]>                </ks_append>
+            </ks_appends>
             <repos/>
             <distroRequires>
                 <distro_name op="=" value="BlueShoeLinux5-5"/>
