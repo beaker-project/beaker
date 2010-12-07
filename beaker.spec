@@ -192,6 +192,12 @@ fi
 %attr(-,apache,root) %dir %{_localstatedir}/run/%{name}-lab-controller
 
 %changelog
+* Tue Dec 07 2010 Bill Peck <bpeck@redhat.com> 0.5.63-6
+- Revert "Automatic commit of package [beaker] release [0.5.64-1]." forgot the
+  --keep-version option to tito (bpeck@redhat.com)
+- Automatic commit of package [beaker] release [0.5.64-1]. (bpeck@redhat.com)
+- bz660714 -  update log paths in one xmlrpc call (bpeck@redhat.com)
+
 * Wed Dec 01 2010 Bill Peck <bpeck@redhat.com> 0.5.63-5
 - Revert "bz590951 - Using custom repo during system install"
   (bpeck@redhat.com)
