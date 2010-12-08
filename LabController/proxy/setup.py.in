@@ -10,6 +10,7 @@ setup(
 
     data_files = [('/etc/beaker/', ['proxy.conf']),
                   ('/etc/init.d', ['init.d/beaker-proxy',
+                                   'init.d/beaker-transfer',
                                    'init.d/beaker-watchdog'])],
     package_data = {
         'bkr.labcontroller': [
@@ -17,6 +18,7 @@ setup(
         ],
         '/etc/beaker': ['proxy.conf'],
         '/etc/init.d': ['init.d/beaker-proxy',
+                        'init.d/beaker-transfer',
                         'init.d/beaker-watchdog'],
     },
 
@@ -24,6 +26,7 @@ setup(
         'console_scripts': (
             'beaker-proxy    = bkr.labcontroller.main:main',
             'beaker-watchdog = bkr.labcontroller.watchdog:main',
+            'beaker-transfer = bkr.labcontroller.transfer:main',
         ),
     }
 )

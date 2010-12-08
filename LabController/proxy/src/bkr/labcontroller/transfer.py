@@ -34,40 +34,33 @@ def main_loop(conf=None, foreground=False):
     default_config = os.path.abspath(os.path.join(os.path.dirname(__file__), "default.conf"))
     config.load_from_file(default_config)
 
-    logger = logging.getLogger("Watchdog")
+    logger = logging.getLogger("LOG_TRANSFER")
     logger.setLevel(logging.DEBUG)
     log_level = logging._levelNames.get(config["LOG_LEVEL"].upper())
-    log_file = config["WATCHDOG_LOG_FILE"]
+    log_file = config["TRANSFER_LOG_FILE"]
     add_rotating_file_logger(logger,
                              log_file,
                              log_level=log_level,
                              format=VERBOSE_LOG_FORMAT)
 
     try:
-        watchdog = Watchdog(conf=conf, logger=logger)
+        transfer = Watchdog(conf=conf, logger=logger)
     except Exception, ex:
         sys.stderr.write("Error initializing Watchdog: %s\n" % ex)
         sys.exit(1)
 
     if foreground:
-        add_stderr_logger(watchdog.logger)
+        add_stderr_logger(transfer.logger)
 
-    expire_active = datetime.now()
+    now = datetime.now()
     while True:
         try:
             # Poll the scheduler for watchdogs
-            watchdog.hub._login()
-            if datetime.now() > expire_active:
-                expire_active = datetime.now() + timedelta(seconds=60)
-                watchdog.expire_watchdogs()
-                watchdog.active_watchdogs()
-            if not watchdog.run():
-                watchdog.logger.debug(80 * '-')
-                watchdog.sleep()
-
-            # FIXME: Check for recipes that match systems under
-            #        this lab controller, if so take recipe and provision
-            #        system.
+            transfer.hub._login()
+            if datetime.now() > now:
+                # Look for logs to transfer
+                now = datetime.now() + timedelta(minutes=30)
+                transfer.transfer_logs()
 
             # write to stdout / stderr
             sys.stdout.flush()
@@ -78,14 +71,14 @@ def main_loop(conf=None, foreground=False):
             signal.signal(signal.SIGINT, signal.SIG_IGN)
             signal.signal(signal.SIGTERM, signal.SIG_IGN)
 
-            watchdog.logger.info('Exiting...')
+            transfer.logger.info('Exiting...')
             break
 
         except:
             # this is a little extreme: log the exception and continue
             traceback = Traceback()
-            watchdog.logger.error(traceback.get_traceback())
-            watchdog.sleep()
+            transfer.logger.error(traceback.get_traceback())
+            transfer.sleep()
 
 
 
@@ -108,7 +101,7 @@ def main():
 
     pid_file = opts.pid_file
     if pid_file is None:
-        pid_file = conf.get("WPID_FILE", "/var/run/beaker-lab-controller/beaker-watchdog.pid")
+        pid_file = conf.get("WPID_FILE", "/var/run/beaker-lab-controller/beaker-transfer.pid")
 
     if opts.foreground:
         main_loop(conf=conf, foreground=True)
