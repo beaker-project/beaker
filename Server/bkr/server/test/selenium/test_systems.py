@@ -84,7 +84,10 @@ class TestSystemGridSorting(SeleniumTestCase):
 
     def check_column_sort(self, column):
         sel = self.selenium
-        sel.wait_for_page_to_load('30000')
+        try:
+            sel.click('link=Show all')
+            sel.wait_for_page_to_load('30000')
+        except: pass
         sel.click('//table[@id="widget"]/thead/th[%d]//a[@href]' % column)
         sel.wait_for_page_to_load('30000')
         row_count = int(sel.get_xpath_count(
