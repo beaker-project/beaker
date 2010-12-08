@@ -290,6 +290,7 @@ class Watchdog(ProxyHelper):
         self.logger.info("Entering transfer_logs")
         for recipe_id in self.hub.recipes.by_log_server(self.server):
             self.transfer_recipe_logs(recipe_id)
+        self.logger.info("Exiting transfer_logs")
 
     def transfer_recipe_logs(self, recipe_id):
         """ If Cache is turned on then move the recipes logs to there final place
