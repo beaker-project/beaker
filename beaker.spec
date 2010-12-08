@@ -108,6 +108,7 @@ ln -s Fedora.ks $RPM_BUILD_ROOT/%{_var}/lib/cobbler/kickstarts/Fedoradevelopment
 %post lab-controller
 /sbin/chkconfig --add beaker-proxy
 /sbin/chkconfig --add beaker-watchdog
+/sbin/chkconfig --add beaker-transfer
 
 %postun server
 if [ "$1" -ge "1" ]; then
@@ -118,6 +119,7 @@ fi
 if [ "$1" -ge "1" ]; then
         /sbin/service beaker-proxy condrestart >/dev/null 2>&1 || :
         /sbin/service beaker-watchdog condrestart >/dev/null 2>&1 || :
+        /sbin/service beaker-transfer condrestart >/dev/null 2>&1 || :
 fi
 
 %preun server
@@ -130,8 +132,10 @@ fi
 if [ "$1" -eq "0" ]; then
         /sbin/service beaker-proxy stop >/dev/null 2>&1 || :
         /sbin/service beaker-watchdog stop >/dev/null 2>&1 || :
+        /sbin/service beaker-transfer stop >/dev/null 2>&1 || :
         /sbin/chkconfig --del beaker-proxy || :
         /sbin/chkconfig --del beaker-watchdog || :
+        /sbin/chkconfig --del beaker-transfer || :
 fi
 
 %files
@@ -185,6 +189,7 @@ fi
 %{python_sitelib}/bkr.labcontroller-%{version}-py%{pyver}.egg-info/
 %{_bindir}/%{name}-proxy
 %{_bindir}/%{name}-watchdog
+%{_bindir}/%{name}-transfer
 %doc LabController/README
 %config(noreplace) %{_sysconfdir}/httpd/conf.d/%{name}-lab-controller.conf
 %{_sysconfdir}/cron.daily/expire_distros
@@ -195,6 +200,7 @@ fi
 %attr(-,apache,root) %dir %{_localstatedir}/log/%{name}
 %{_sysconfdir}/init.d/%{name}-proxy
 %{_sysconfdir}/init.d/%{name}-watchdog
+%{_sysconfdir}/init.d/%{name}-transfer
 %attr(-,apache,root) %dir %{_localstatedir}/run/%{name}-lab-controller
 
 %changelog
