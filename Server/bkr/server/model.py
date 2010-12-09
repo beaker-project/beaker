@@ -2303,8 +2303,6 @@ $SNIPPET("rhts_post")
                     new_value=self.status))
 
     def reserve(self, service):
-        if self.status != SystemStatus.by_name(u'Manual'):
-            raise BX(_(u'Cannot reserve system with status %s') % self.status)
         if self.user is not None and self.user == identity.current.user:
             raise BX(_(u'User %s has already reserved system %s')
                     % (identity.current.user, self))
