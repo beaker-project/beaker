@@ -29,9 +29,45 @@ try:
 except ImportError:
     krbV = None
 from bkr.server.test import data_setup
-from bkr.server.test.selenium import XmlRpcTestCase
+from bkr.server.test.selenium import SeleniumTestCase, XmlRpcTestCase
 
 log = logging.getLogger(__name__)
+
+class LoginTest(SeleniumTestCase):
+
+    def setUp(self):
+        self.selenium = self.get_selenium()
+        self.selenium.start()
+
+    def tearDown(self):
+        self.selenium.stop()
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=660527
+    def test_referer_redirect(self):
+        system = data_setup.create_system()
+        user = data_setup.create_user(password=u'password')
+        session.flush()
+
+        # Go to the system page
+        sel = self.selenium
+        sel.open('')
+        sel.type('simplesearch', system.fqdn)
+        sel.submit('systemsearch_simple')
+        sel.wait_for_page_to_load('3000')
+        sel.click('link=%s' % system.fqdn)
+        sel.wait_for_page_to_load('3000')
+        self.assertEquals(sel.get_title(), system.fqdn)
+
+        # Click log in, and fill in details
+        sel.click('link=Login')
+        sel.wait_for_page_to_load('3000')
+        sel.type('user_name', user.user_name)
+        sel.type('password', 'password')
+        sel.click('login')
+        sel.wait_for_page_to_load('3000')
+
+        # We should be back at the system page
+        self.assertEquals(sel.get_title(), system.fqdn)
 
 class XmlRpcLoginTest(XmlRpcTestCase):
 
