@@ -23,6 +23,7 @@ import logging
 import turbogears.config
 from turbogears.database import session
 import unittest
+import xmlrpclib
 from nose.plugins.skip import SkipTest
 try:
     import krbV
@@ -117,3 +118,14 @@ class XmlRpcLoginTest(XmlRpcTestCase):
         who_am_i = server.auth.who_am_i()
         self.assertEquals(who_am_i['username'], proxied_user.user_name)
         self.assertEquals(who_am_i['proxied_by_username'], user.user_name)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=660529
+    def test_login_required_message(self):
+        server = self.get_server()
+        try:
+            server.auth.who_am_i()
+            self.fail('should raise')
+        except xmlrpclib.Fault, e:
+            self.assertEquals(e.faultString,
+                    'turbogears.identity.exceptions.IdentityFailure: '
+                    'Please log in first')
