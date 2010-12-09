@@ -53,7 +53,7 @@ class TaskActions(RPCRoot):
         return task.task_info()
 
     @cherrypy.expose
-    def to_xml(self, taskid):
+    def to_xml(self, taskid,clone=False,from_job=True):
         """
         Returns an XML representation of the given job component, including its 
         current state.
@@ -67,7 +67,7 @@ class TaskActions(RPCRoot):
                 task = self.task_types[task_type.upper()].by_id(task_id)
             except InvalidRequestError, e:
                 raise BX(_("Invalid %s %s" % (task_type, task_id)))
-        return task.to_xml().toxml()
+        return task.to_xml(clone,from_job).toxml()
 
     @cherrypy.expose
     def stop(self, taskid, stop_type, msg):

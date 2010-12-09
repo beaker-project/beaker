@@ -3681,7 +3681,7 @@ class Job(TaskBase):
         job.appendChild(self.node("whiteboard", self.whiteboard or ''))
         return job
 
-    def to_xml(self, clone=False):
+    def to_xml(self, clone=False, *args, **kw):
         job = self._create_job_elem(clone)
         for rs in self.recipesets:
             job.appendChild(rs.to_xml(clone))
