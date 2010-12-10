@@ -3,7 +3,7 @@
 
 Name:           beaker
 Version:        0.6.0
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -202,6 +202,17 @@ fi
 %attr(-,apache,root) %dir %{_localstatedir}/run/%{name}-lab-controller
 
 %changelog
+* Fri Dec 10 2010 Raymond Mancy <rmancy@redhat.com> 0.6.0-2
+- Merge branch 'bz661665' into release-0.6.0 (rmancy@redhat.com)
+- bz661665 - fixes for job-result for tasks and a bad attempt at tests
+  (rmancy@redhat.com)
+- bz661652 - avoid creating orphan recipe_task rows (dcallagh@redhat.com)
+
+* Fri Dec 10 2010 Raymond Mancy <rmancy@redhat.com>
+- bz661665 - fixes for job-result for tasks and a bad attempt at tests
+  (rmancy@redhat.com)
+- bz661652 - avoid creating orphan recipe_task rows (dcallagh@redhat.com)
+
 * Tue Dec 09 2010 Raymond Mancy <rmancy@redhat.com> 0.6.0-1
 - bz661307 - beaker-watchdog run transfer_log in separate thread. (bpeck@redhat.com)
 - bz660714 -  update log paths in one xmlrpc call (bpeck@redhat.com)
