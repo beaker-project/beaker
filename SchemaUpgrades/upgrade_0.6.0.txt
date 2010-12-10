@@ -34,3 +34,9 @@ DELETE FROM recipe_task WHERE recipe_id IS NULL;
 ALTER TABLE recipe_task
     MODIFY recipe_id INT NOT NULL,
     MODIFY task_id INT NOT NULL;
+
+To roll back:
+
+ALTER TABLE recipe_task
+    MODIFY recipe_id INT NULL,
+    MODIFY task_id INT NULL;

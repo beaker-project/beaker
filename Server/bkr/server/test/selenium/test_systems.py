@@ -390,6 +390,9 @@ class SystemViewTest(SeleniumTestCase):
         self.login(user.user_name, user_password)
         sel.click("link=Available")
         sel.wait_for_page_to_load("30000")
+        sel.type('simplesearch', self.system.fqdn)
+        sel.submit('systemsearch_simple')
+        sel.wait_for_page_to_load("30000")
         self.failUnless(sel.is_text_present(self.system.fqdn))
 
     def test_remove_group(self):

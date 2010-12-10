@@ -26,10 +26,16 @@ class Job_Clone(BeakerCommand):
 
         submitted_jobs = []
         failed = False
+        clone = True
         self.set_hub(username, password)
         for task in args:
             try:
-                submitted_jobs.append(self.hub.jobs.upload(self.hub.taskactions.to_xml(task)))
+                task_type, task_id = task.split(":")
+                if task_type.upper() == 'RS':
+                    from_job = False
+                else:
+                    from_job = True
+                submitted_jobs.append(self.hub.jobs.upload(self.hub.taskactions.to_xml(task,clone,from_job)))
             except Exception, ex:
                 failed = True
                 print ex

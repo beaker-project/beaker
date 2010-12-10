@@ -86,7 +86,7 @@ class SystemGroupUserTake(bkr.server.test.selenium.SeleniumTestCase):
         sel.wait_for_page_to_load("30000")
         try: self.failUnless(sel.is_text_present("(Take)")) #Should have Take for this machine
         except AssertionError, e: self.verificationErrors.append('Take is not present on manual machine with no groups')
-
+        self._do_take(self.manual_system.fqdn)
 
     def test_system_has_group(self):
         #Automated machine
@@ -147,6 +147,15 @@ class SystemGroupUserTake(bkr.server.test.selenium.SeleniumTestCase):
             append('Take is not available to automated machine with system group pirvs' )
         self._do_schedule_provision(self.automated_system.fqdn)
 
+        # Now can I actually take it?
+        sel.open("")
+        sel.type("simplesearch", "%s" % self.automated_system.fqdn)
+        sel.click("search")
+        sel.wait_for_page_to_load("30000")
+        sel.click("link=%s" % self.automated_system.fqdn)
+        sel.wait_for_page_to_load("30000")
+        self._do_take(self.automated_system.fqdn)
+
         #Manual machine
         data_setup.add_group_to_system(self.manual_system, self.group) # Add systemgroup
         session.flush()
@@ -160,6 +169,24 @@ class SystemGroupUserTake(bkr.server.test.selenium.SeleniumTestCase):
         try: self.failUnless(sel.is_text_present("(Take)")) #Should be here
         except AssertionError, e: self.verificationErrors.append('Take is not here for manual machine with system group privs')
         self._do_schedule_provision(self.manual_system.fqdn)
+
+        # Now can I actually take it?
+        sel.open("")
+        sel.type("simplesearch", "%s" % self.manual_system.fqdn)
+        sel.click("search")
+        sel.wait_for_page_to_load("30000")
+        sel.click("link=%s" % self.manual_system.fqdn)
+        sel.wait_for_page_to_load("30000")
+        self._do_take(self.manual_system.fqdn)
+
+    def _do_take(self, system_fqdn):
+        sel = self.selenium
+        sel.click('link=(Take)')
+        sel.wait_for_page_to_load("30000")
+        try:
+            self.assertEquals(sel.get_text('css=.flash'), 'Reserved %s' % system_fqdn)
+        except AssertionError, e:
+            self.verificationErrors.append(e)
 
     def _do_schedule_provision(self,system_fqdn,reraise=False):
         #Check we can do a schedule provision as well

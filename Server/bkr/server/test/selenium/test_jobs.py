@@ -76,10 +76,11 @@ class TestViewJob(SeleniumTestCase):
         sel.open('jobs/%s' % job.id)
         self.assertEqual(new_whiteboard, sel.get_value('name=whiteboard'))
 
-class TestNewJob(SeleniumTestCase):
+class NewJobTest(SeleniumTestCase):
 
     def setUp(self):
-        data_setup.create_distro(name=u'BlueShoeLinux5-5')
+        data_setup.create_distro(name=u'BlueShoeLinux5-5', arch=u'i386')
+        data_setup.create_distro(name=u'BlueShoeLinux5-5', arch=u'ia64')
         data_setup.create_task(name=u'/distribution/install')
         session.flush()
         self.selenium = self.get_selenium()
@@ -96,7 +97,7 @@ class TestNewJob(SeleniumTestCase):
         sel.wait_for_page_to_load('3000')
         xml_file = tempfile.NamedTemporaryFile()
         xml_file.write('''
-            <job retentiontag="scratch">
+            <job>
                 <whiteboard>job with invalid hostRequires</whiteboard>
                 <recipeSet>
                     <recipe>
@@ -125,38 +126,6 @@ class TestNewJob(SeleniumTestCase):
         sel.wait_for_page_to_load('3000')
         self.assertEqual(sel.get_title(), 'My Jobs')
         self.assert_(sel.get_text('css=.flash').startswith('Success!'))
-
-    def test_cloning(self): 
-        job = data_setup.create_job()
-        job.retention_tag = RetentionTag.list_by_requires_product().pop()
-        job.product = Product('product_name')
-
-        job_2 = data_setup.create_job() 
-        session.flush()
-        self.login()
-        sel =  self.selenium
-        sel.open('/jobs/clone?job_id=%s' % job.id)
-        sel.wait_for_page_to_load('3000')
-        cloned_from_job = sel.get_text('//textarea[@id="job_textxml"]')
-        sel.open('/jobs/clone?recipeset_id=%s' % job.recipesets.pop().id)
-        sel.wait_for_page_to_load('3000')
-        cloned_from_rs = sel.get_text('//textarea[@id="job_textxml"]')
-        self.assertEqual(cloned_from_job,cloned_from_rs)
-
-        sel.open('/jobs/clone?job_id=%s' % job_2.id)
-        sel.wait_for_page_to_load('3000')
-        cloned_from_job_2 = sel.get_text('//textarea[@id="job_textxml"]')
-        sel.open('/jobs/clone?recipeset_id=%s' % job_2.recipesets.pop().id)
-        sel.wait_for_page_to_load('3000')
-        cloned_from_rs_2 = sel.get_text('//textarea[@id="job_textxml"]')
-        self.assertEqual(cloned_from_job_2,cloned_from_rs_2)
-
- 
-
-
-
-
-
 
     def test_refuses_to_accept_unparseable_xml(self):
         self.login()
@@ -192,3 +161,80 @@ class TestNewJob(SeleniumTestCase):
         sel.wait_for_page_to_load('3000')
         self.assertEqual(sel.get_title(), 'My Jobs')
         self.assert_(sel.get_text('css=.flash').startswith('Success!'))
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=661652
+    def test_job_with_excluded_task(self):
+        excluded_task = data_setup.create_task(exclude_arch=[u'ia64'])
+        session.flush()
+        self.login()
+        sel = self.selenium
+        sel.open('')
+        sel.click('link=New Job')
+        sel.wait_for_page_to_load('3000')
+        xml_file = tempfile.NamedTemporaryFile()
+        xml_file.write('''
+            <job>
+                <whiteboard>job with excluded task</whiteboard>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
+                            <distro_name op="=" value="BlueShoeLinux5-5" />
+                            <distro_arch op="=" value="ia64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" role="STANDALONE">
+                            <params/>
+                        </task>
+                        <task name="%s" role="STANDALONE">
+                            <params/>
+                        </task>
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''' % excluded_task.name)
+        xml_file.flush()
+        sel.type('jobs_filexml', xml_file.name)
+        sel.click('//input[@value="Submit Data"]')
+        sel.wait_for_page_to_load('3000')
+        sel.click('//input[@value="Queue"]')
+        sel.wait_for_page_to_load('3000')
+        flash = sel.get_text('css=.flash')
+        self.assert_(flash.startswith('Success!'), flash)
+        self.assertEqual(sel.get_title(), 'My Jobs')
+
+class CloneJobTest(SeleniumTestCase):
+
+    def setUp(self):
+        self.selenium = self.get_selenium()
+        self.selenium.start()
+
+    def tearDown(self):
+        self.selenium.stop()
+
+    def test_cloning_recipeset_from_job_with_product(self):
+        job = data_setup.create_job()
+        job.retention_tag = RetentionTag.list_by_requires_product()[0]
+        job.product = Product('product_name')
+        session.flush()
+        self.login()
+        sel =  self.selenium
+        sel.open('jobs/clone?job_id=%s' % job.id)
+        sel.wait_for_page_to_load('3000')
+        cloned_from_job = sel.get_text('//textarea[@id="job_textxml"]')
+        sel.open('jobs/clone?recipeset_id=%s' % job.recipesets[0].id)
+        sel.wait_for_page_to_load('3000')
+        cloned_from_rs = sel.get_text('//textarea[@id="job_textxml"]')
+        self.assertEqual(cloned_from_job,cloned_from_rs)
+
+    def test_cloning_recipeset(self):
+        job = data_setup.create_job()
+        session.flush()
+        self.login()
+        sel = self.selenium
+        sel.open('jobs/clone?job_id=%s' % job.id)
+        sel.wait_for_page_to_load('3000')
+        cloned_from_job = sel.get_text('//textarea[@id="job_textxml"]')
+        sel.open('jobs/clone?recipeset_id=%s' % job.recipesets[0].id)
+        sel.wait_for_page_to_load('3000')
+        cloned_from_rs = sel.get_text('//textarea[@id="job_textxml"]')
+        self.assertEqual(cloned_from_job, cloned_from_rs)
