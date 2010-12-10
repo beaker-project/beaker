@@ -2,7 +2,7 @@
 import logging
 from turbogears import expose, identity, controllers
 from bkr.server.bexceptions import BX
-from bkr.server.model import System, SystemActivity, Distro
+from bkr.server.model import System, SystemActivity, SystemStatus, Distro
 from bkr.server.xmlrpccontroller import RPCRoot
 
 log = logging.getLogger(__name__)
@@ -27,6 +27,8 @@ class SystemsController(controllers.Controller):
         .. versionadded:: 0.6
         """
         system = System.by_fqdn(fqdn, identity.current.user)
+        if system.status != SystemStatus.by_name(u'Manual'):
+            raise BX(_(u'Cannot reserve system with status %s') % system.status)
         system.reserve(service=u'XMLRPC')
         return system.fqdn # because turbogears makes us return something
 

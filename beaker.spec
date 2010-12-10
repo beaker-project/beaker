@@ -2,10 +2,8 @@
 %{!?pyver: %global pyver %(%{__python} -c "import sys ; print sys.version[:3]")}
 
 Name:           beaker
-# hacked version for external-scheduler-integration branch:
-# do not merge this change onto develop!
-Version:        0.5.999_esi
-Release:        1%{?dist}
+Version:        0.6.0
+Release:        2%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -204,11 +202,47 @@ fi
 %attr(-,apache,root) %dir %{_localstatedir}/run/%{name}-lab-controller
 
 %changelog
-* Wed Dec 01 2010 Bill Peck <bpeck@redhat.com> 0.5.63-5
-- Revert "bz590951 - Using custom repo during system install"
-  (bpeck@redhat.com)
+* Fri Dec 10 2010 Raymond Mancy <rmancy@redhat.com> 0.6.0-2
+- bz661665 - fixes for job-result for tasks and a bad attempt at tests
+  (rmancy@redhat.com)
+- bz661652 - avoid creating orphan recipe_task rows (dcallagh@redhat.com)
 
-* Wed Dec 01 2010 Bill Peck <bpeck@redhat.com>
+* Tue Dec 09 2010 Raymond Mancy <rmancy@redhat.com> 0.6.0-1
+- bz661307 - beaker-watchdog run transfer_log in separate thread. (bpeck@redhat.com)
+- bz660714 -  update log paths in one xmlrpc call (bpeck@redhat.com)
+- bz660339 - don't return sub-tasks for task_info (bpeck@redhat.com)
+- bz658503 - record changes made by inventory scripts in system history (dcallagh@redhat.com)
+- bz634965 - beaker-repo-update, creates/updates harness dir (bpeck@redhat.com)
+- bz659141 - Fix cloning RS, also test (rmancy@redhat.com)
+- bz658929 - prevent orphaned recipe_task rows (dcallagh@redhat.com)
+- bz583165 - install API docs and serve them from apache (dcallagh@redhat.com)
+- bz579812 - link to job in notification mail (dcallagh@redhat.com)
+- bz638092 - redirect back to /jobs/mine after cancelling a job (dcallagh@redhat.com)
+- bz644696 - XML-RPC interface to provision a system,
+           better handling of Cobbler template escaping in kickstarts (dcallagh@redhat.com)
+- bz644694 - XML-RPC interface to control system power,
+           clear_netboot option for systems.power() method (dcallagh@redhat.com)
+- bz654931 - edited rng to add ks_appends definition (rmancy@redhat.com)
+- bz644691 - XML-RPC interface to release a reserved system (dcallagh@redhat.com)
+- bz644689 - XML-RPC interface to reserve a system (dcallagh@redhat.com)
+- bz644701 - support "proxy authentication", whereby a user may log in as another user (dcallagh@redhat.com)
+- bz644687 - expose Atom feeds for system searches, expose RDF description for systems,
+             added API docs for system atom feeds and RDF descriptions (bz644687) (dcallagh@redhat.com)
+
+- must use outerjoins on logs, since a recipe may not have any sub-logs. (bpeck@redhat.com)
+- update system.date_modified when importing from CSV (dcallagh@redhat.com)
+- update system.date_modified everywhere (dcallagh@redhat.com)
+- fix handling of checksum (dcallagh@redhat.com)
+- slightly smarter logic for legacypush, to avoid spurious key-value entries in system history (dcallagh@redhat.com)
+- use external redirects for /login (dcallagh@redhat.com)
+- list-systems and system-details commands for bkr client (dcallagh@redhat.com)
+- system-power and system-provision commands for bkr client (dcallagh@redhat.com)
+- install inventory RDF schema definition (dcallagh@redhat.com)
+
+* Tue Dec 07 2010 Bill Peck <bpeck@redhat.com> 0.5.63-6
+- bz660714 -  update log paths in one xmlrpc call (bpeck@redhat.com)
+
+* Wed Dec 01 2010 Bill Peck <bpeck@redhat.com> 0.5.63-5
 - Revert "bz590951 - Using custom repo during system install"
   (bpeck@redhat.com)
 

@@ -2303,8 +2303,6 @@ $SNIPPET("rhts_post")
                     new_value=self.status))
 
     def reserve(self, service):
-        if self.status != SystemStatus.by_name(u'Manual'):
-            raise BX(_(u'Cannot reserve system with status %s') % self.status)
         if self.user is not None and self.user == identity.current.user:
             raise BX(_(u'User %s has already reserved system %s')
                     % (identity.current.user, self))
@@ -3497,7 +3495,6 @@ class TaskBase(MappedObject):
         except:
             return
 
-
 class Job(TaskBase):
     """
     Container to hold like recipe sets.
@@ -3591,7 +3588,7 @@ class Job(TaskBase):
                 recipe.kernel_options_post = kw.get('koptions_post')
             # Eventually we will want the option to add more tasks.
             # Add Install task
-            recipe.append_tasks(RecipeTask(task = Task.by_name(u'/distribution/install')))
+            recipe.tasks.append(RecipeTask(task = Task.by_name(u'/distribution/install')))
             # Add Reserve task
             reserveTask = RecipeTask(task = Task.by_name(u'/distribution/reservesys'))
             if kw.get('reservetime'):
@@ -3600,7 +3597,7 @@ class Job(TaskBase):
                                                                 value = kw.get('reservetime')
                                                             )
                                         )
-            recipe.append_tasks(reserveTask)
+            recipe.tasks.append(reserveTask)
             recipeSet.recipes.append(recipe)
             job.recipesets.append(recipeSet)
             job.ttasks += recipeSet.ttasks
@@ -3681,7 +3678,7 @@ class Job(TaskBase):
         job.appendChild(self.node("whiteboard", self.whiteboard or ''))
         return job
 
-    def to_xml(self, clone=False):
+    def to_xml(self, clone=False, *args, **kw):
         job = self._create_job_elem(clone)
         for rs in self.recipesets:
             job.appendChild(rs.to_xml(clone))
@@ -3906,7 +3903,7 @@ class RecipeSet(TaskBase):
             return True
         return False
 
-    def to_xml(self, clone=False, from_job=True):
+    def to_xml(self, clone=False, from_job=True, *args, **kw):
         recipeSet = self.doc.createElement("recipeSet")
         return_node = recipeSet 
 
@@ -4209,7 +4206,6 @@ class Recipe(TaskBase):
         How we delete a Recipe.
         At the moment only unlinking log files and deleting log table rows
         """
-
         full_recipe_logpath = '%s/%s' % (self.logspath, self.filepath)
         if dryrun is True:
             if not (os.access(full_recipe_logpath,os.R_OK)): #See if it exists
@@ -4703,15 +4699,15 @@ class Recipe(TaskBase):
                 for mylog in result.logs:
                     yield mylog.dict
 
-    def append_tasks(self, recipetask):
-        """ Before appending the task to this Recipe, make sure it applies.
+    def is_task_applicable(self, task):
+        """ Does the given task apply to this recipe?
             ie: not excluded for this distro family or arch.
         """
-        if self.distro.arch in [arch.arch for arch in recipetask.task.excluded_arch]:
-            return
-        if self.distro.osversion.osmajor in [osmajor.osmajor for osmajor in recipetask.task.excluded_osmajor]:
-            return
-        self.tasks.append(recipetask)
+        if self.distro.arch in [arch.arch for arch in task.excluded_arch]:
+            return False
+        if self.distro.osversion.osmajor in [osmajor.osmajor for osmajor in task.excluded_osmajor]:
+            return False
+        return True
 
     @classmethod
     def mine(cls, owner):
@@ -4937,7 +4933,7 @@ class RecipeTask(TaskBase):
                 recipe.id, self.id)
     filepath = property(filepath)
 
-    def to_xml(self, clone=False):
+    def to_xml(self, clone=False, *args, **kw):
         task = self.doc.createElement("task")
         task.setAttribute("name", "%s" % self.task.name)
         task.setAttribute("role", "%s" % self.role and self.role or 'STANDALONE')
