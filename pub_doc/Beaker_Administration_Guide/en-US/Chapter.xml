@@ -80,7 +80,7 @@ LoadModule wsgi_module modules/mod_wsgi.so
 			 First make sure apache is on and configured to run on startup. 
 <screen>
 $ <userinput>sudo chkconfig httpd on</userinput>
-$ <userinput>sudo /sbin/service/httpd start</userinput>
+$ <userinput>sudo /sbin/service httpd start</userinput>
 </screen>
 			 We need to switch SELinux off. 
 <screen>
