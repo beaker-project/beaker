@@ -3495,7 +3495,6 @@ class TaskBase(MappedObject):
         except:
             return
 
-
 class Job(TaskBase):
     """
     Container to hold like recipe sets.
@@ -3904,7 +3903,7 @@ class RecipeSet(TaskBase):
             return True
         return False
 
-    def to_xml(self, clone=False, from_job=True):
+    def to_xml(self, clone=False, from_job=True, *args, **kw):
         recipeSet = self.doc.createElement("recipeSet")
         return_node = recipeSet 
 
@@ -4207,7 +4206,6 @@ class Recipe(TaskBase):
         How we delete a Recipe.
         At the moment only unlinking log files and deleting log table rows
         """
-
         full_recipe_logpath = '%s/%s' % (self.logspath, self.filepath)
         if dryrun is True:
             if not (os.access(full_recipe_logpath,os.R_OK)): #See if it exists
@@ -4935,7 +4933,7 @@ class RecipeTask(TaskBase):
                 recipe.id, self.id)
     filepath = property(filepath)
 
-    def to_xml(self, clone=False):
+    def to_xml(self, clone=False, *args, **kw):
         task = self.doc.createElement("task")
         task.setAttribute("name", "%s" % self.task.name)
         task.setAttribute("role", "%s" % self.role and self.role or 'STANDALONE')
