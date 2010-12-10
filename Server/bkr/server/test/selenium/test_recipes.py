@@ -27,7 +27,6 @@ from bkr.server.test.assertions import assert_sorted
 
 class TestRecipesDataGrid(SeleniumTestCase):
 
-    slow = True
     log = logging.getLogger(__name__ + '.TestRecipesIndex')
 
     # tests in this class can safely share the same firefox session
@@ -113,8 +112,6 @@ class TestRecipesDataGrid(SeleniumTestCase):
         assert_sorted(cell_values)
 
 class TestRecipeView(SeleniumTestCase):
-
-    slow = True
 
     def setUp(self):
         self.user = user = data_setup.create_user(display_name=u'Bob Brown',

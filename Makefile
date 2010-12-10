@@ -6,10 +6,10 @@ PKGNAME=beaker
 SCM_REMOTEREPO_RE = ^ssh://(.*@)?git.fedorahosted.org/git/$(PKGNAME).git$
 UPLOAD_URL = ssh://fedorahosted.org/$(PKGNAME)
 
-SUBDIRS := Client LabController Server Common
+SUBDIRS := Common Client LabController Server
 
 build:
-	for i in $(SUBDIRS); do $(MAKE) -C $$i; done
+	for i in $(SUBDIRS); do $(MAKE) -C $$i build; done
 
 include rpmspec_rules.mk
 include git_rules.mk
@@ -43,7 +43,3 @@ rpm: clean $(PKGNAME)-$(PKGVERSION).tar.bz2
 	$(RPMBUILDOPTS) -tb $(PKGNAME)-$(PKGVERSION).tar.bz2
 
 rpms: rpm
-
-.PHONY: apidoc
-apidoc::
-	$(MAKE) -C pub_doc/api html

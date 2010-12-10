@@ -26,16 +26,15 @@ import turbogears.config
 from selenium import selenium
 import unittest
 import threading
+import xmlrpclib
+from urlparse import urljoin
+import kobo.xmlrpc
 import bkr.server.test
 from bkr.server.bexceptions import BX
 
 log = logging.getLogger(__name__)
 
 class SeleniumTestCase(unittest.TestCase):
-
-    # attributes for nose
-    destructive = True
-    slow = True
 
     BEAKER_LOGIN_USER = 'admin'
     BEAKER_LOGIN_PASSWORD = 'testing'
@@ -79,6 +78,17 @@ class SeleniumTestCase(unittest.TestCase):
             sel.wait_for_page_to_load("3000")
             return True
         return False
+
+class XmlRpcTestCase(unittest.TestCase):
+
+    @classmethod
+    def get_server(cls):
+        endpoint = urljoin(bkr.server.test.get_server_base(), 'RPC2')
+        transport = endpoint.startswith('https:') and \
+                kobo.xmlrpc.SafeCookieTransport() or \
+                kobo.xmlrpc.CookieTransport()
+        return xmlrpclib.ServerProxy(endpoint, transport=transport,
+                allow_none=True)
 
 def check_listen(port):
     """
@@ -165,11 +175,14 @@ class CommunicateThread(threading.Thread):
 processes = []
 
 def setup_package():
+    if not os.path.exists('/tmp/selenium'):
+        os.mkdir('/tmp/selenium')
     processes.extend([
         Process('Xvfb', args=['Xvfb', ':4', '-fp', '/usr/share/X11/fonts/misc',
                 '-screen', '0', '1024x768x24']),
-        Process('selenium-server', args=['java', '-jar',
-                '/usr/local/share/selenium/selenium-server-1.0.3/selenium-server.jar',
+        Process('selenium-server', args=['java',
+                '-Djava.io.tmpdir=/tmp/selenium',
+                '-jar', '/usr/local/share/selenium/selenium-server-1.0.3/selenium-server.jar',
                 '-log', 'selenium.log'], env={'DISPLAY': ':4'},
                 listen_port=4444),
     ])

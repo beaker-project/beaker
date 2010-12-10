@@ -23,7 +23,7 @@ from turbogears.database import session
 from bkr.server.test import data_setup, mail_capture, get_server_base
 import bkr.server.mail
 
-class MailTest(unittest.TestCase):
+class BrokenSystemNotificationTest(unittest.TestCase):
 
     def setUp(self):
         self.mail_capture = mail_capture.MailCaptureThread()
@@ -59,3 +59,55 @@ class MailTest(unittest.TestCase):
                 'Power address: pdu2.home-one\n'
                 'Power id: 42'
                 % get_server_base())
+
+class JobCompletionNotificationTest(unittest.TestCase):
+
+    def setUp(self):
+        self.mail_capture = mail_capture.MailCaptureThread()
+        self.mail_capture.start()
+
+    def tearDown(self):
+        self.mail_capture.stop()
+
+    def test_job_owner_is_notified(self):
+        job_owner = data_setup.create_user()
+        job = data_setup.create_job(owner=job_owner)
+        session.flush()
+        data_setup.mark_job_complete(job)
+
+        self.assertEqual(len(self.mail_capture.captured_mails), 1)
+        sender, rcpts, raw_msg = self.mail_capture.captured_mails[0]
+        msg = email.message_from_string(raw_msg)
+        self.assertEqual([job_owner.email_address], rcpts)
+        self.assertEqual(job_owner.email_address, msg['To'])
+        self.assert_('[Beaker Job Completion]' in msg['Subject'])
+
+    def test_job_cc_list_is_notified(self):
+        job_owner = data_setup.create_user()
+        job = data_setup.create_job(owner=job_owner,
+                cc=[u'dan@example.com', u'ray@example.com'])
+        session.flush()
+        data_setup.mark_job_complete(job)
+
+        self.assertEqual(len(self.mail_capture.captured_mails), 1)
+        sender, rcpts, raw_msg = self.mail_capture.captured_mails[0]
+        msg = email.message_from_string(raw_msg)
+        self.assertEqual([job_owner.email_address, 'dan@example.com',
+                'ray@example.com'], rcpts)
+        self.assertEqual(job_owner.email_address, msg['To'])
+        self.assertEqual('dan@example.com, ray@example.com', msg['Cc'])
+        self.assert_('[Beaker Job Completion]' in msg['Subject'])
+
+    def test_contains_job_hyperlink(self):
+        job = data_setup.create_job()
+        session.flush()
+        data_setup.mark_job_complete(job)
+
+        self.assertEqual(len(self.mail_capture.captured_mails), 1)
+        sender, rcpts, raw_msg = self.mail_capture.captured_mails[0]
+        msg = email.message_from_string(raw_msg)
+        job_link = u'<%sjobs/%d>' % (get_server_base(), job.id)
+        first_line = msg.get_payload(decode=True).splitlines()[0]
+        self.assert_(job_link in first_line,
+                'Job link %r should appear in first line %r'
+                    % (job_link, first_line))

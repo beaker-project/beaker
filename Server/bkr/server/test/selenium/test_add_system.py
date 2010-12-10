@@ -7,7 +7,6 @@ from turbogears.database import session, get_engine
 class AddSystem(bkr.server.test.selenium.SeleniumTestCase):
     def setUp(self):
         data_setup.create_labcontroller(fqdn=u'lab-devel.rhts.eng.bos.redhat.com')
-        data_setup.create_system(fqdn=u'preexisting-system')
         session.flush()
 
         try:
@@ -161,6 +160,8 @@ class AddSystem(bkr.server.test.selenium.SeleniumTestCase):
         except Exception,e:self.verificationErrors.append(str(e))    
 
     def test_case_5(self):
+        data_setup.create_system(fqdn=u'preexisting-system')
+        session.flush()
         system_details = dict(fqdn = 'preexisting-system', #should fail as system is already in db
                               lender = 'lender',
                               serial = '444g!!!444',

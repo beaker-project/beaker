@@ -1,3 +1,4 @@
+import pkg_resources
 from setuptools import setup, find_packages
 import glob
 import re
@@ -12,6 +13,10 @@ from distutils.command.install_data import install_data as _install_data
 from distutils.dep_util import newer
 from setuptools.command.install import install as _install
 from setuptools.command.install_lib import install_lib as _install_lib
+
+pkg_resources.require('Sphinx >= 1.0.4')
+from sphinx.setup_command import BuildDoc
+
 execfile(os.path.join("bkr/server", "release.py"))
 
 poFiles = filter(os.path.isfile, glob.glob('po/*.po'))
@@ -28,6 +33,10 @@ class Build(_build, object):
     # These are set in finalize_options()
     substitutions = {'@DATADIR@': None, '@LOCALEDIR@': None}
     subRE = re.compile('(' + '|'.join(substitutions.keys()) + ')+')
+
+    sub_commands = _build.sub_commands + [
+        ('build_sphinx', lambda self: True)
+    ]
 
     def initialize_options(self):
         self.install_data = None
@@ -131,16 +140,19 @@ class InstallData(_install_data, object):
             else:
                 self.install_dir = self.temp_data
 
-data_files = [
-    ('bkr/server/static', filter(os.path.isfile,glob.glob('bkr/server/static/*'))),
-    ('bkr/server/static/css', filter(os.path.isfile,glob.glob('bkr/server/static/css/*'))),
-    ('bkr/server/static/css/smoothness', filter(os.path.isfile,glob.glob('bkr/server/static/css/smoothness/*'))),
-   ('bkr/server/static/css/smoothness/images', filter(os.path.isfile,glob.glob('bkr/server/static/css/smoothness/images/*'))),
+def find_data_recursive(dest_dir, src_dir, exclude=frozenset()):
+    if src_dir[-1] != '/':
+        src_dir = src_dir + '/'
+    for dirpath, dirnames, filenames in os.walk(src_dir):
+        assert dirpath.startswith(src_dir)
+        yield (os.path.join(dest_dir, dirpath[len(src_dir):]),
+               [os.path.join(dirpath, filename) for filename in filenames
+                if filename not in exclude])
 
-    ('bkr/server/static/javascript', filter(os.path.isfile,
-                                 glob.glob('bkr/server/static/javascript/*'))),
-    ('bkr/server/static/images', filter(os.path.isfile,
-                                 glob.glob('bkr/server/static/images/*'))),
+data_files = \
+    list(find_data_recursive('bkr/server/apidoc/html', 'build/sphinx/html/',
+            exclude=['.buildinfo'])) + \
+    list(find_data_recursive('bkr/server/static', 'bkr/server/static/')) + [
     ("/etc/beaker", ["server.cfg"]),
     ("/etc/httpd/conf.d", ["apache/beaker-server.conf"]),
     ("/etc/init.d", ["init.d/beakerd"]),
@@ -167,7 +179,16 @@ setup(
     cmdclass = {
         'build': Build,
         'build_py': build_py_and_kid,
+        'build_sphinx': BuildDoc,
         'install_data': InstallData,
+    },
+    command_options={
+        'build_sphinx': {
+            #'project': ('setup.py', 'Beaker Server'),
+            'version': ('setup.py', '@VERSION@'),
+            'release': ('setup.py', '@VERSION@'),
+            'source_dir': ('setup.py', 'apidoc'),
+        },
     },
     install_requires=[
         "TurboGears >= 1.0.3.2",
@@ -207,7 +228,8 @@ setup(
             'product-update = bkr.server.tools.product_update:main',
             'beakerd = bkr.server.tools.beakerd:main',
             'nag-mail = bkr.server.tools.nag_email:main',
-            'beaker-cleanup-visits = bkr.server.tools.cleanup_visits:main'
+            'beaker-cleanup-visits = bkr.server.tools.cleanup_visits:main',
+            'beaker-repo-update = bkr.server.tools.repo_update:main',
         ),
     }
     )

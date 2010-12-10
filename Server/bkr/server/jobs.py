@@ -463,19 +463,20 @@ class Jobs(RPCRoot):
         for xmlksappend in xmlrecipe.iter_ksappends():
             recipe.ks_appends.append(RecipeKSAppend(ks_append=xmlksappend))
         for xmltask in xmlrecipe.iter_tasks():
-            recipetask = RecipeTask()
             try:
                 task = Task.by_name(xmltask.name)
             except:
                 raise BX(_('Invalid Task: %s' % xmltask.name))
+            if not recipe.is_task_applicable(task):
+                continue
+            recipetask = RecipeTask()
             recipetask.task = task
             recipetask.role = xmltask.role
             for xmlparam in xmltask.iter_params():
                 param = RecipeTaskParam( name=xmlparam.name, 
                                         value=xmlparam.value)
                 recipetask.params.append(param)
-            #FIXME Filter Tasks based on distro selected.
-            recipe.append_tasks(recipetask)
+            recipe.tasks.append(recipetask)
         if not recipe.tasks:
             raise BX(_('No Tasks! You can not have a recipe with no tasks!'))
         return recipe
@@ -606,7 +607,7 @@ class Jobs(RPCRoot):
             redirect(".")
         job.cancel(msg)
         flash(_(u"Successfully cancelled job %s" % id))
-        redirect(".")
+        redirect('/jobs/mine')
 
     @identity.require(identity.not_anonymous())
     @expose(template="bkr.server.templates.form")

@@ -1,19 +1,13 @@
+
 from turbogears.database import session
-from turbogears import controllers, expose, flash, widgets, validate, error_handler, validators, redirect, paginate
-from turbogears import identity, redirect
-from cherrypy import request, response
-from tg_expanding_form_widget.tg_expanding_form_widget import ExpandingForm
-from kid import Element
+from turbogears import expose, widgets, identity
 from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.helpers import *
 from tempfile import NamedTemporaryFile
 from cherrypy.lib.cptools import serve_file
-
-import cherrypy
-
-from model import *
-import string
+from bkr.server.model import *
 import csv
+import datetime
 import logging
 logger = logging.getLogger(__name__)
 
@@ -149,6 +143,8 @@ class CSV(RPCRoot):
             else:
                 log.append("Missing csv_type from record")
 
+        if log:
+            logger.debug('CSV import failed with errors: %r', log)
         return dict(log = log)
 
     @classmethod
@@ -182,7 +178,9 @@ class CSV(RPCRoot):
             csv_type = data['csv_type']
             # Remove csv_type now that we know what we want to do.
             data.pop('csv_type')
-            return csv_types[csv_type]._from_csv(system,data,csv_type,log)
+            retval = csv_types[csv_type]._from_csv(system,data,csv_type,log)
+            system.date_modified = datetime.datetime.utcnow()
+            return retval
         else:
             log.append("Invalid csv_type %s" % data['csv_type'])
         return False

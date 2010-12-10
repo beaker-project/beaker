@@ -53,7 +53,6 @@ def main_loop(conf=None, foreground=False):
         add_stderr_logger(watchdog.logger)
 
     expire_active = datetime.now()
-    transfer_logs = datetime.now()
     while True:
         try:
             # Poll the scheduler for watchdogs
@@ -62,10 +61,6 @@ def main_loop(conf=None, foreground=False):
                 expire_active = datetime.now() + timedelta(seconds=60)
                 watchdog.expire_watchdogs()
                 watchdog.active_watchdogs()
-            if datetime.now() > transfer_logs:
-                # Look for logs to transfer
-                transfer_logs = datetime.now() + timedelta(hours=1)
-                watchdog.transfer_logs()
             if not watchdog.run():
                 watchdog.logger.debug(80 * '-')
                 watchdog.sleep()

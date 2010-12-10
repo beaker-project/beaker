@@ -1,0 +1,42 @@
+API docs
+--------
+
+Add the following directive to /etc/httpd/conf.d/beaker-server.conf:
+
+  Alias /bkr/apidoc /usr/share/bkr/server/apidoc/html
+
+
+Login authentication
+--------------------
+
+Update the <Location> section for authentication in 
+/etc/httpd/conf.d/beaker-server.conf as follows. If this section is commented 
+out or not present (i.e. if authentication is not handled by Apache) then this 
+update can be ignored.
+
+Change:
+  <Location ~ "\/(login|mine|available|free|labcontrollers|usersystems|groups|powertypes|keytypes)">
+
+to:
+  <Location /bkr/login>
+
+Remember to adjust the /bkr/ prefix as appropriate for the local installation.
+
+
+recipe_task orphans
+-------------------
+
+Clean up orphaned recipe_task rows and prevent them from recurring:
+
+DELETE FROM recipe_task_param WHERE recipe_task_id IN
+    (SELECT id FROM recipe_task WHERE recipe_id IS NULL);
+DELETE FROM recipe_task WHERE recipe_id IS NULL;
+ALTER TABLE recipe_task
+    MODIFY recipe_id INT NOT NULL,
+    MODIFY task_id INT NOT NULL;
+
+To roll back:
+
+ALTER TABLE recipe_task
+    MODIFY recipe_id INT NULL,
+    MODIFY task_id INT NULL;

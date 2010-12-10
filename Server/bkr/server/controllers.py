@@ -21,6 +21,7 @@ from bkr.server.job_matrix import JobMatrix
 from bkr.server.reserve_workflow import ReserveWorkflow
 from bkr.server.retention_tags import RetentionTag as RetentionTagController
 from bkr.server.watchdog import Watchdogs
+from bkr.server.systems import SystemsController
 from bkr.server.widgets import myPaginateDataGrid
 from bkr.server.widgets import PowerTypeForm
 from bkr.server.widgets import PowerForm
@@ -47,6 +48,7 @@ from bkr.server.recipesets import RecipeSets
 from bkr.server.tasks import Tasks
 from bkr.server.task_actions import TaskActions
 from bkr.server.controller_utilities import Utility, SystemSaveForm, SearchOptions, SystemTab
+from bkr.server.bexceptions import *
 from cherrypy import request, response
 from cherrypy.lib.cptools import serve_file
 from tg_expanding_form_widget.tg_expanding_form_widget import ExpandingForm
@@ -55,8 +57,8 @@ from bkr.server.helpers import *
 from bkr.server.tools.init import dummy
 from bkr.server import mail
 from decimal import Decimal
-from bexceptions import *
 import bkr.server.recipes
+import bkr.server.rdf
 import random
 
 from kid import Element
@@ -65,6 +67,7 @@ import md5
 import re
 import string
 import pkg_resources
+import rdflib.graph
 
 # for debugging
 import sys
@@ -285,6 +288,7 @@ class Root(RPCRoot):
     watchdogs = Watchdogs()
     retentiontag = RetentionTagController()
     report_problem = ReportProblemController()
+    systems = SystemsController()
 
     for entry_point in pkg_resources.iter_entry_points('bkr.controllers'):
         controller = entry_point.load()
@@ -467,9 +471,11 @@ class Root(RPCRoot):
         return {'success' : True } 
 
     @expose(template='bkr.server.templates.grid_add')
+    @expose(template='bkr.server.templates.systems_feed', format='xml', as_format='atom',
+            content_type='application/atom+xml', accept_format='application/atom+xml')
     @paginate('list',default_order='fqdn',limit=20,max_limit=None)
     def index(self, *args, **kw): 
-        return_dict =  self.systems(systems = System.all(identity.current.user), *args, **kw) 
+        return_dict =  self._systems(systems = System.all(identity.current.user), *args, **kw) 
         return return_dict
 
     @expose(template='bkr.server.templates.form')
@@ -496,22 +502,28 @@ class Root(RPCRoot):
         redirect('/')
 
     @expose(template='bkr.server.templates.grid')
+    @expose(template='bkr.server.templates.systems_feed', format='xml', as_format='atom',
+            content_type='application/atom+xml', accept_format='application/atom+xml')
     @identity.require(identity.not_anonymous())
     @paginate('list',default_order='fqdn',limit=20,max_limit=None)
     def available(self, *args, **kw):
-        return self.systems(systems = System.available(identity.current.user), *args, **kw)
+        return self._systems(systems = System.available(identity.current.user), *args, **kw)
 
     @expose(template='bkr.server.templates.grid')
+    @expose(template='bkr.server.templates.systems_feed', format='xml', as_format='atom',
+            content_type='application/atom+xml', accept_format='application/atom+xml')
     @identity.require(identity.not_anonymous())
     @paginate('list',default_order='fqdn',limit=20,max_limit=None)
     def free(self, *args, **kw): 
-        return self.systems(systems = System.free(identity.current.user), *args, **kw)
+        return self._systems(systems = System.free(identity.current.user), *args, **kw)
 
     @expose(template='bkr.server.templates.grid')
+    @expose(template='bkr.server.templates.systems_feed', format='xml', as_format='atom',
+            content_type='application/atom+xml', accept_format='application/atom+xml')
     @identity.require(identity.not_anonymous())
     @paginate('list',limit=20,max_limit=None)
     def mine(self, *args, **kw):
-        return self.systems(systems = System.mine(identity.current.user), *args, **kw)
+        return self._systems(systems = System.mine(identity.current.user), *args, **kw)
 
       
     @expose(template='bkr.server.templates.grid') 
@@ -543,7 +555,7 @@ class Root(RPCRoot):
           
             getter = lambda x: reserve_link(x,distro.id)       
             direct_column = Utility.direct_column(title='Action',getter=getter)     
-            return_dict  = self.systems(systems=avail_systems_distro_query, direct_columns=[(8,direct_column)],warn_msg=warn, *args, **kw)
+            return_dict  = self._systems(systems=avail_systems_distro_query, direct_columns=[(8,direct_column)],warn_msg=warn, *args, **kw)
        
             return_dict['title'] = 'Reserve Systems'
             return_dict['warn_msg'] = warn
@@ -600,7 +612,7 @@ class Root(RPCRoot):
             return_dict.update({'searchvalue':searchvalue})
         return return_dict
  
-    def systems(self, systems, *args, **kw):
+    def _systems(self, systems, *args, **kw):
         search_bar = SearchBar(name='systemsearch',
                                label=_(u'System Search'),
                                enable_custom_columns = True,
@@ -712,8 +724,10 @@ class Root(RPCRoot):
                                                  'col_defaults' : col_data['default'],
                                                  'col_options' : col_data['options']},
                                      action = '.', 
-                                     search_bar = search_bar )
-                                                                        
+                                     search_bar = search_bar,
+                                     atom_url='?tg_format=atom&list_tgp_order=-date_modified&'
+                                        + cherrypy.request.query_string,
+                                     )
 
     @expose(format='json')
     def by_fqdn(self, input):
@@ -752,6 +766,7 @@ class Root(RPCRoot):
                     system.activity.append(activity)
         
         if removed:
+            system.date_modified = datetime.utcnow()
             flash(_(u"removed %s/%s" % (removed.key.key_name,removed.key_value)))
         else:
             flash(_(u"Key_Value_Id not Found"))
@@ -778,6 +793,7 @@ class Root(RPCRoot):
                    activity = SystemActivity(identity.current.user, 'WEBUI', 'Removed', 'Arch', arch.arch, "")
                    system.activity.append(activity)
         if removed:
+            system.date_modified = datetime.utcnow()
             flash(_(u"%s Removed" % removed.arch))
         else:
             flash(_(u"Arch ID not found"))
@@ -810,6 +826,7 @@ class Root(RPCRoot):
                    group.activity.append(gactivity)
                    system.activity.append(activity)
         if removed:
+            system.date_modified = datetime.utcnow()
             flash(_(u"%s Removed" % removed.display_name))
         else:
             flash(_(u"Group ID not found"))
@@ -848,7 +865,7 @@ class Root(RPCRoot):
 
     @expose(template="bkr.server.templates.system")
     @paginate('history_data',limit=30,default_order='-created', max_limit=None)
-    def view(self, fqdn=None, **kw): 
+    def _view_system_as_html(self, fqdn=None, **kw):
         if fqdn: 
             try:
                 system = System.by_fqdn(fqdn,identity.current.user)
@@ -990,6 +1007,31 @@ class Root(RPCRoot):
                                                      hidden = dict(system = 1)),
                                   ),
         )
+    _view_system_as_html.exposed = False # exposed indirectly by view()
+
+    def _view_system_as_rdf(self, fqdn, **kwargs):
+        try:
+            system = System.by_fqdn(fqdn, identity.current.user)
+        except InvalidRequestError:
+            raise cherrypy.NotFound(fqdn)
+        graph = rdflib.graph.Graph()
+        bkr.server.rdf.describe_system(system, graph)
+        bkr.server.rdf.bind_namespaces(graph)
+        if kwargs['tg_format'] == 'turtle':
+            cherrypy.response.headers['Content-Type'] = 'application/x-turtle'
+            return graph.serialize(format='turtle')
+        else:
+            cherrypy.response.headers['Content-Type'] = 'application/rdf+xml'
+            return graph.serialize(format='pretty-xml')
+
+    @cherrypy.expose
+    def view(self, fqdn=None, **kwargs):
+        # XXX content negotiation too?
+        tg_format = kwargs.get('tg_format', 'html')
+        if tg_format in ('rdfxml', 'turtle'):
+            return self._view_system_as_rdf(fqdn, **kwargs)
+        else:
+            return self._view_system_as_html(fqdn, **kwargs)
          
     @expose(template='bkr.server.templates.form')
     @identity.require(identity.not_anonymous())
@@ -1075,6 +1117,7 @@ class Root(RPCRoot):
         activity = SystemActivity(identity.current.user, 'WEBUI', 'Changed', 'Owner', '%s' % system.owner, '%s' % user)
         system.activity.append(activity)
         system.owner = user
+        system.date_modified = datetime.utcnow()
         flash( _(u"OK") )
         redirect("/")
 
@@ -1090,34 +1133,19 @@ class Root(RPCRoot):
             flash( _(u"Unable to find system with id of %s" % id) )
             redirect("/")
         if system.user:
-            if system.current_user(identity.current.user):
-                # Don't return a system with an active watchdog
-                if system.watchdog:
-                    flash(_(u"Can't return %s active recipe %s" % (system.fqdn, system.watchdog.recipe_id)))
-                    redirect("/recipes/%s" % system.watchdog.recipe_id)
-                else:
-                    status = "Returned"
-                    activity = SystemActivity(identity.current.user, "WEBUI", status, "User", '%s' % system.user, "")
-                    try:
-                        system.action_release()
-                    except BX, error_msg:
-                        msg = ", Error: %s Action: %s" % (error_msg,system.release_action)
-                        system.activity.append(SystemActivity(identity.current.user, "WEBUI", "%s" % system.release_action, "Return", "", msg))
+            try:
+                system.unreserve(service=u'WEBUI')
+                flash(_(u'Returned %s') % system.fqdn)
+            except BeakerException, e:
+                log.exception('Failed to return')
+                flash(_(u'Failed to return %s: %s') % (system.fqdn, e))
         else:
-            if system.can_share(identity.current.user):
-                # Atomic operation to reserve the system
-                if session.connection(System).execute(system_table.update(
-                     and_(system_table.c.id==system.id,
-                      system_table.c.user_id==None)),
-                      user_id=identity.current.user.user_id).rowcount == 1:
-                    status = "Reserved"
-                    activity = SystemActivity(identity.current.user, 'WEBUI', status, 'User', '', '%s' % system.user )
-                else:
-                    status = "Failed to Reserve:"
-                    msg = ", System is already reserved."
-        system.activity.append(activity)
-        session.save_or_update(system)
-        flash( _(u"%s %s%s" % (status,system.fqdn,msg)) )
+            try:
+                system.reserve(service=u'WEBUI')
+                flash(_(u'Reserved %s') % system.fqdn)
+            except BeakerException, e:
+                log.exception('Failed to reserve')
+                flash(_(u'Failed to reserve %s: %s') % (system.fqdn, e))
         redirect("/view/%s" % system.fqdn)
 
     system_cc_form = widgets.TableForm(
@@ -1176,6 +1204,7 @@ class Root(RPCRoot):
                 service=u'WEBUI', action=u'Changed', field_name=u'Cc',
                 old_value=u'; '.join(orig_value),
                 new_value=u'; '.join(new_value)))
+        system.date_modified = datetime.utcnow()
         flash(_(u'Notify CC list for system %s changed') % system.fqdn)
         redirect('/view/%s' % system.fqdn)
 
@@ -1207,6 +1236,7 @@ class Root(RPCRoot):
                     setattr(labinfo, field, kw[field])
                     system.activity.append(activity) 
         system.labinfo = labinfo
+        system.date_modified = datetime.utcnow()
         flash( _(u"Saved Lab Info") )
         redirect("/view/%s" % system.fqdn)
 
@@ -1314,6 +1344,7 @@ class Root(RPCRoot):
                 power.power_id = kw['power_id']
             system.power = power
             flash( _(u"Saved Power") )
+        system.date_modified = datetime.utcnow()
         redirect("/view/%s" % system.fqdn)
 
     @expose()
@@ -1349,7 +1380,7 @@ class Root(RPCRoot):
 
 
         log_fields = [ 'fqdn', 'vendor', 'lender', 'model', 'serial', 'location', 
-                       'checksum','mac_address', 'status_reason', status_entry,lab_controller_entry,type_entry]
+                       'mac_address', 'status_reason', status_entry,lab_controller_entry,type_entry]
 
         for field in log_fields:
             if isinstance(field,SystemSaveForm.fk_log_entry): #check if we are a foreign key with mapper object and column name           
@@ -1447,6 +1478,15 @@ class Root(RPCRoot):
         else:
             system.lab_controller_id = kw['lab_controller_id']
         system.mac_address=kw['mac_address']
+
+        # We can't compute a new checksum, so let's just clear it so that it 
+        # always compares false
+        if system.checksum is not None:
+            system.activity.append(SystemActivity(user=identity.current.user,
+                    service=u'WEBUI', action=u'Changed', field_name=u'checksum',
+                    old_value=system.checksum, new_value=None))
+            system.checksum = None
+
         session.save_or_update(system)
         redirect("/view/%s" % system.fqdn)
 
@@ -1474,6 +1514,7 @@ class Root(RPCRoot):
                 system.key_values_string.append(key_value)
             activity = SystemActivity(identity.current.user, 'WEBUI', 'Added', 'Key/Value', "", "%s/%s" % (kw['key_name'],kw['key_value']) )
             system.activity.append(activity)
+            system.date_modified = datetime.utcnow()
         redirect("/view/%s" % system.fqdn)
 
     @expose()
@@ -1490,6 +1531,7 @@ class Root(RPCRoot):
             system.arch.append(arch)
             activity = SystemActivity(identity.current.user, 'WEBUI', 'Added', 'Arch', "", kw['arch']['text'])
             system.activity.append(activity)
+            system.date_modified = datetime.utcnow()
         redirect("/view/%s" % system.fqdn)
 
     @expose()
@@ -1512,6 +1554,7 @@ class Root(RPCRoot):
             gactivity = GroupActivity(identity.current.user, 'WEBUI', 'Added', 'System', "", system.fqdn)
             group.activity.append(gactivity)
             system.activity.append(activity)
+            system.date_modified = datetime.utcnow()
         redirect("/view/%s" % system.fqdn)
 
     @expose()
@@ -1650,6 +1693,7 @@ class Root(RPCRoot):
             system.notes.append(note)
             activity = SystemActivity(identity.current.user, 'WEBUI', 'Added', 'Note', "", kw['note'])
             system.activity.append(activity)
+            system.date_modified = datetime.utcnow()
         redirect("/view/%s" % system.fqdn)
 
     @expose()
@@ -1728,6 +1772,7 @@ class Root(RPCRoot):
         else:
             # remove arch option
             system.provisions[arch] = None
+        system.date_modified = datetime.utcnow()
         redirect("/view/%s" % system.fqdn)
 
     @expose()
@@ -1797,6 +1842,7 @@ class Root(RPCRoot):
                 provision.kernel_options_post=kw['prov_koptionspost']
                 provision.arch=arch
                 system.provisions[arch] = provision
+            system.date_modified = datetime.utcnow()
         redirect("/view/%s" % system.fqdn)
 
     @cherrypy.expose
@@ -1962,24 +2008,11 @@ class Root(RPCRoot):
         return system.update(inventory)
 
     @expose(template="bkr.server.templates.login")
-    def login(self, forward_url=url("/"), previous_url=None, *args, **kw): 
+    def login(self, forward_url='/', **kwargs):
         if not identity.current.anonymous \
-            and identity.was_login_attempted() \
-            and not identity.get_identity_errors():     
-            #This stops an ISE if going directly to the /login URL
-            if 'Referer' in request.headers:
-            #The reason for this if clause is because when we are not using kerberos login dialog
-            #the referer will be a different value to when we are
-            #If not for this if clause, it would behave one way when using kerberos login and another way when not 
-                if re.match('^(.+)?/%s$' % self.login.__name__,request.headers['Referer']):
-                    raise redirect(forward_url)
-                else:
-                    raise redirect(request.headers.get("Referer",url("/")))
-            else:
-                redirect(forward_url)
-
-        forward_url=None
-        previous_url= request.path
+                and identity.was_login_attempted() \
+                and not identity.get_identity_errors():
+            redirect(forward_url, redirect_params=kwargs)
 
         if identity.was_login_attempted():
             msg=_("The credentials you supplied were not correct or "
@@ -1989,12 +2022,10 @@ class Root(RPCRoot):
                    "this resource.")
         else:
             msg=_("Please log in.")
-            forward_url= request.headers.get("Referer", url("/"))
             
         response.status=403
-        return dict(message=msg, previous_url=previous_url, logging_in=True,
-                    original_parameters=request.params,
-                    forward_url=forward_url)
+        return dict(message=msg, action=request.path, logging_in=True,
+                    original_parameters=kwargs, forward_url=forward_url)
 
     @expose()
     def logout(self):

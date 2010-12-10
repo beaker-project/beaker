@@ -14,3 +14,4 @@ bkr/__init__.py: bkr/__init__.py.in
 install: build py-install
 
 clean:	py-clean
+	rm bkr/__init__.py

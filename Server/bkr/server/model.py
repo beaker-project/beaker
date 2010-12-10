@@ -34,6 +34,7 @@ import errno
 import bkr.timeout_xmlrpclib
 import os
 import shutil
+import urllib
 
 from turbogears import identity
 
@@ -772,10 +773,8 @@ recipe_ksappend_table = Table('recipe_ksappend', metadata,
 
 recipe_task_table =Table('recipe_task',metadata,
         Column('id', Integer, primary_key=True),
-        Column('recipe_id',Integer,
-                ForeignKey('recipe.id')),
-        Column('task_id',Integer,
-                ForeignKey('task.id')),
+        Column('recipe_id', Integer, ForeignKey('recipe.id'), nullable=False),
+        Column('task_id', Integer, ForeignKey('task.id'), nullable=False),
         Column('start_time',DateTime),
         Column('finish_time',DateTime),
         Column('result_id', Integer,
@@ -1061,8 +1060,13 @@ class Permission(object):
     """
     A relationship that determines what each Group can do
     """
-    pass
 
+    @classmethod
+    def by_name(cls, permission_name):
+        return cls.query.filter(cls.permission_name == permission_name).one()
+
+    def __init__(self, permission_name):
+        self.permission_name = permission_name
 
 class MappedObject(object):
 
@@ -1332,8 +1336,11 @@ class System(SystemObject):
 
 
                         
-            def power(self,action='reboot', wait=False):
+            def power(self,action='reboot', wait=False, clear_netboot=False):
                 system_id = self.get_system()
+                if clear_netboot:
+                    self.remote.modify_system(system_id,
+                            'netboot-enabled', False, self.token)
                 self.remote.modify_system(system_id, 'power_type', 
                                               self.system.power.power_type.name,
                                                    self.token)
@@ -1392,7 +1399,7 @@ class System(SystemObject):
                 if not profile_id:
                     raise BX(_("%s profile not found on %s" % (profile, self.system.lab_controller.fqdn)))
                 if ks_appends:
-                    ks_appends_text = '\n'.join([ks.ks_append for ks in ks_appends]).replace('$','\$')
+                    ks_appends_text = '#raw\n%s\n#end raw' % '\n'.join([ks.ks_append for ks in ks_appends])
                     ks_file = '/var/lib/cobbler/snippets/per_system/ks_appends/%s' % self.system.fqdn
                     if self.remote.read_or_write_snippet(ks_file,
                                                          False,
@@ -1415,48 +1422,13 @@ class System(SystemObject):
                                            kernel_options_post,
                                            self.token)
                 if kickstart:
-                    # Newer Kickstarts need %end after each section.
-                    if distro.osversion.osmajor.osmajor.startswith("Fedora"):
-                        end = "%end"
-                    else:
-                        end = ""
-                    # Escape any $ signs or cobbler will barf
-                    kickstart = kickstart.replace('$','\$')
-                    # add in cobbler packages snippet...
-                    packages_slot = 0
-                    nopackages = True
-                    for line in kickstart.split('\n'):
-                        # Add the length of line + newline
-                        packages_slot += len(line) + 1
-                        if line.find('%packages') == 0:
-                            nopackages = False
-                            break
-                    beforepackages = kickstart[:packages_slot-1]
-                    afterpackages = kickstart[packages_slot:]
-                    # if no %packages section then add it
-                    if nopackages:
-                        beforepackages = "%s\n%%packages --ignoremissing" % beforepackages
-                        if end:
-                            afterpackages = "%%end\n%s" % afterpackages
-                    # Fill in basic requirements for RHTS
-                    kicktemplate = """
-url --url=$tree
-%(beforepackages)s
-$SNIPPET("rhts_packages")
-%(afterpackages)s
-
-%%pre
-$SNIPPET("rhts_pre")
-%(end)s
-
-%%post
-$SNIPPET("rhts_post")
-%(end)s
-                   """
-                    kickstart = kicktemplate % dict(
-                                                beforepackages = beforepackages,
-                                                afterpackages = afterpackages,
-                                                end = end)
+                    # We always wrap the user-supplied kickstart with #raw/#end raw, 
+                    # so that users don't need to worry about escaping their 
+                    # kickstarts from Cobbler's cheetah. If a user really does 
+                    # want to do fancy Cobbler template stuff, they can put 
+                    # #end raw and #raw lines in the appropriate place in their 
+                    # kickstart.
+                    kickstart = 'url --url=$tree\n#raw\n%s\n#end raw' % kickstart
 
                     kickfile = '/var/lib/cobbler/kickstarts/%s.ks' % self.system.fqdn
         
@@ -1912,31 +1884,61 @@ $SNIPPET("rhts_post")
         """
         Update Key/Value pairs for legacy RHTS
         """
-        #Remove any keys that will be added
-        for mykey in self.key_values_int[:]:
-            if mykey.key.key_name in inventory:
-                self.key_values_int.remove(mykey)
-        for mykey in self.key_values_string[:]:
-            if mykey.key.key_name in inventory:
-                self.key_values_string.remove(mykey)
-
-        #Add the uploaded keys
-        for key in inventory:
+        new_int_kvs = set()
+        new_string_kvs = set()
+        for key_name, values in inventory.items():
             try:
-                _key = Key.by_name(key)
+                key = Key.by_name(key_name)
             except InvalidRequestError:
                 continue
-            if isinstance(inventory[key], list):
-                for value in inventory[key]:
-                    if _key.numeric:
-                        self.key_values_int.append(Key_Value_Int(_key,value))
-                    else:
-                        self.key_values_string.append(Key_Value_String(_key,value))
-            else:
-                if _key.numeric:
-                    self.key_values_int.append(Key_Value_Int(_key,inventory[key]))
+            if not isinstance(values, list):
+                values = [values]
+            for value in values:
+                if isinstance(value, bool):
+                    # MySQL will int-ify these, so we do it here 
+                    # to make our comparisons accurate
+                    value = int(value)
+                if key.numeric:
+                    new_int_kvs.add((key, int(value)))
                 else:
-                    self.key_values_string.append(Key_Value_String(_key,inventory[key]))
+                    new_string_kvs.add((key, unicode(value)))
+
+        # Examine existing key-values to find what we already have, and what 
+        # needs to be removed
+        for kv in list(self.key_values_int):
+            if (kv.key, kv.key_value) in new_int_kvs:
+                new_int_kvs.remove((kv.key, kv.key_value))
+            else:
+                self.key_values_int.remove(kv)
+                self.activity.append(SystemActivity(user=identity.current.user,
+                        service=u'XMLRPC', action=u'Removed', field_name=u'Key/Value',
+                        old_value=u'%s/%s' % (kv.key.key_name, kv.key_value),
+                        new_value=None))
+        for kv in list(self.key_values_string):
+            if (kv.key, kv.key_value) in new_string_kvs:
+                new_string_kvs.remove((kv.key, kv.key_value))
+            else:
+                self.key_values_string.remove(kv)
+                self.activity.append(SystemActivity(user=identity.current.user,
+                        service=u'XMLRPC', action=u'Removed', field_name=u'Key/Value',
+                        old_value=u'%s/%s' % (kv.key.key_name, kv.key_value),
+                        new_value=None))
+
+        # Now we can just add the new ones
+        for key, value in new_int_kvs:
+            self.key_values_int.append(Key_Value_Int(key, value))
+            self.activity.append(SystemActivity(user=identity.current.user,
+                    service=u'XMLRPC', action=u'Added',
+                    field_name=u'Key/Value', old_value=None,
+                    new_value=u'%s/%s' % (key.key_name, value)))
+        for key, value in new_string_kvs:
+            self.key_values_string.append(Key_Value_String(key, value))
+            self.activity.append(SystemActivity(user=identity.current.user,
+                    service=u'XMLRPC', action=u'Added',
+                    field_name=u'Key/Value', old_value=None,
+                    new_value=u'%s/%s' % (key.key_name, value)))
+
+        self.date_modified = datetime.utcnow()
         return 0
                     
 
@@ -1949,11 +1951,19 @@ $SNIPPET("rhts_post")
         md5sum = md5.new("%s" % inventory).hexdigest()
         if self.checksum == md5sum:
             return 0
+        self.activity.append(SystemActivity(user=identity.current.user,
+                service=u'XMLRPC', action=u'Changed', field_name=u'checksum',
+                old_value=self.checksum, new_value=md5sum))
         self.checksum = md5sum
         for key in inventory:
             if key in self.get_allowed_attr():
                 if not getattr(self, key, None):
                     setattr(self, key, inventory[key])
+                    self.activity.append(SystemActivity(
+                            user=identity.current.user,
+                            service=u'XMLRPC', action=u'Changed',
+                            field_name=key, old_value=None,
+                            new_value=inventory[key]))
             else:
                 try:
                     method = self.get_update_method(key)
@@ -1971,6 +1981,11 @@ $SNIPPET("rhts_post")
                 new_arch = Arch(arch=arch)
             if new_arch not in self.arch:
                 self.arch.append(new_arch)
+                self.activity.append(SystemActivity(
+                        user=identity.current.user,
+                        service=u'XMLRPC', action=u'Added',
+                        field_name=u'Arch', old_value=None,
+                        new_value=new_arch.arch))
 
     def updateDevices(self, deviceinfo):
         currentDevices = []
@@ -1994,12 +2009,23 @@ $SNIPPET("rhts_post")
                                      description    = device['description'])
                 session.save(mydevice)
                 session.flush([mydevice])
-            self.devices.append(mydevice)
+            if mydevice not in self.devices:
+                self.devices.append(mydevice)
+                self.activity.append(SystemActivity(
+                        user=identity.current.user,
+                        service=u'XMLRPC', action=u'Added',
+                        field_name=u'Device', old_value=None,
+                        new_value=mydevice.id))
             currentDevices.append(mydevice)
         # Remove any old entries
         for device in self.devices[:]:
             if device not in currentDevices:
                 self.devices.remove(device)
+                self.activity.append(SystemActivity(
+                        user=identity.current.user,
+                        service=u'XMLRPC', action=u'Removed',
+                        field_name=u'Device', old_value=device.id,
+                        new_value=None))
 
     def updateCpu(self, cpuinfo):
         # Remove all old CPU data
@@ -2021,12 +2047,22 @@ $SNIPPET("rhts_post")
                   flags      = cpuinfo['CpuFlags'])
 
         self.cpu = cpu
+        self.activity.append(SystemActivity(
+                user=identity.current.user,
+                service=u'XMLRPC', action=u'Changed',
+                field_name=u'CPU', old_value=None,
+                new_value=None)) # XXX find a good way to record the actual changes
 
     def updateNuma(self, numainfo):
         if self.numa:
             session.delete(self.numa)
         if numainfo.get('nodes', None) is not None:
             self.numa = Numa(nodes=numainfo['nodes'])
+        self.activity.append(SystemActivity(
+                user=identity.current.user,
+                service=u'XMLRPC', action=u'Changed',
+                field_name=u'NUMA', old_value=None,
+                new_value=None)) # XXX find a good way to record the actual changes
 
     def excluded_osmajor_byarch(self, arch):
         """
@@ -2133,6 +2169,52 @@ $SNIPPET("rhts_post")
         results = self.install_options(distro, ks_meta,
                                                kernel_options,
                                                kernel_options_post)
+
+        if kickstart:
+            # Newer Kickstarts need %end after each section.
+            if distro.osversion.osmajor.osmajor.startswith("Fedora"):
+                end = "%end"
+            else:
+                end = ""
+            # add in cobbler packages snippet...
+            packages_slot = 0
+            nopackages = True
+            for line in kickstart.split('\n'):
+                # Add the length of line + newline
+                packages_slot += len(line) + 1
+                if line.find('%packages') == 0:
+                    nopackages = False
+                    break
+            beforepackages = kickstart[:packages_slot-1]
+            afterpackages = kickstart[packages_slot:]
+            # if no %packages section then add it
+            if nopackages:
+                beforepackages = "%s\n%%packages --ignoremissing" % beforepackages
+                if end:
+                    afterpackages = "%%end\n%s" % afterpackages
+            # Fill in basic requirements for RHTS
+            kicktemplate = """
+%(beforepackages)s
+#end raw
+$SNIPPET("rhts_packages")
+#raw
+%(afterpackages)s
+#end raw
+
+%%pre
+$SNIPPET("rhts_pre")
+%(end)s
+
+%%post
+$SNIPPET("rhts_post")
+%(end)s
+#raw
+           """
+            kickstart = kicktemplate % dict(
+                                        beforepackages = beforepackages,
+                                        afterpackages = afterpackages,
+                                        end = end)
+
         self.remote.provision(distro=distro,
                               kickstart=kickstart,
                               ks_appends=ks_appends,
@@ -2140,15 +2222,19 @@ $SNIPPET("rhts_post")
         if self.power:
             self.remote.power(action="reboot", wait=wait)
 
-    def action_power(self,
-                     action='reboot'):
+    def action_power(self, action='reboot', wait=False, clear_netboot=False):
         if self.remote and self.power:
-            self.remote.power(action)
+            self.remote.power(action, wait=wait, clear_netboot=clear_netboot)
         else:
             return False
 
     def __repr__(self):
         return self.fqdn
+
+    @property
+    def href(self):
+        """Returns a relative URL for this system's page."""
+        return urllib.quote((u'/view/%s' % self.fqdn).encode('utf8'))
 
     def link(self):
         """ Return a link to this system
@@ -2165,6 +2251,7 @@ $SNIPPET("rhts_post")
         """Sets the system status to Broken and notifies its owner."""
         log.warning('Marking system %s as broken' % self.fqdn)
         self.status = SystemStatus.by_name(u'Broken')
+        self.date_modified = datetime.utcnow()
         mail.broken_system_notify(self, reason, recipe)
 
     def suspicious_abort(self):
@@ -2197,7 +2284,8 @@ $SNIPPET("rhts_post")
                 .join(system_table, onclause=recipe_table.c.system_id == system_table.c.id))\
             .where(and_(
                 system_table.c.id == self.id,
-                distro_tag_map.c.distro_tag_id == DistroTag.by_tag(reliable_distro_tag).id,
+                distro_tag_map.c.distro_tag_id ==
+                    DistroTag.by_tag(reliable_distro_tag.decode('utf8')).id,
                 recipe_table.c.start_time >
                     func.ifnull(status_change_subquery, system_added_subquery),
                 recipe_table.c.finish_time > nonaborted_recipe_subquery))
@@ -2214,13 +2302,47 @@ $SNIPPET("rhts_post")
                     old_value=old_status,
                     new_value=self.status))
 
-    cc = association_proxy('_system_ccs', 'email_address')
-# for property in System.mapper.iterate_properties:
-#     print property.mapper.class_.__name__
-#     print property.key
-#
-# systems = session.query(System).join('status').join('type').join(['cpu','flags']).filter(CpuFlag.c.flag=='lm')
+    def reserve(self, service):
+        if self.user is not None and self.user == identity.current.user:
+            raise BX(_(u'User %s has already reserved system %s')
+                    % (identity.current.user, self))
+        if not self.can_share(identity.current.user):
+            raise BX(_(u'User %s cannot reserve system %s')
+                    % (identity.current.user, self))
+        # Atomic operation to reserve the system
+        if session.connection(System).execute(system_table.update(
+                and_(system_table.c.id == self.id,
+                     system_table.c.user_id == None)),
+                user_id=identity.current.user.user_id).rowcount == 1:
+            self.activity.append(SystemActivity(user=identity.current.user,
+                    service=service, action=u'Reserved', field_name=u'User',
+                    old_value=u'', new_value=identity.current.user))
+        else:
+            raise BX(_(u'System is already reserved'))
 
+    def unreserve(self, service):
+        if self.user is None:
+            raise BX(_(u'System is not reserved'))
+        if not self.current_user(identity.current.user):
+            raise BX(_(u'System is reserved by a different user'))
+        # Don't return a system with an active watchdog
+        if self.watchdog:
+            # This won't really happen anymore since the Manual/Automated split
+            raise BX(_(u'System has active recipe %s') % self.watchdog.recipe_id)
+        activity = SystemActivity(user=identity.current.user,
+                service=service, action=u'Returned', field_name=u'User',
+                old_value=self.user.user_name, new_value=u'')
+        try:
+            self.action_release()
+        except BX, e:
+            msg = "Error: %s Action: %s" % (error_msg,self.release_action)
+            self.activity.append(SystemActivity(user=identity.current.user,
+                    service=service, action=unicode(self.release_action),
+                    field_name=u'Return', old_value=u'', new_value=msg))
+            raise e
+        self.activity.append(activity)
+
+    cc = association_proxy('_system_ccs', 'email_address')
 
 class SystemCc(SystemObject):
 
@@ -3373,7 +3495,6 @@ class TaskBase(MappedObject):
         except:
             return
 
-
 class Job(TaskBase):
     """
     Container to hold like recipe sets.
@@ -3467,7 +3588,7 @@ class Job(TaskBase):
                 recipe.kernel_options_post = kw.get('koptions_post')
             # Eventually we will want the option to add more tasks.
             # Add Install task
-            recipe.append_tasks(RecipeTask(task = Task.by_name(u'/distribution/install')))
+            recipe.tasks.append(RecipeTask(task = Task.by_name(u'/distribution/install')))
             # Add Reserve task
             reserveTask = RecipeTask(task = Task.by_name(u'/distribution/reservesys'))
             if kw.get('reservetime'):
@@ -3476,7 +3597,7 @@ class Job(TaskBase):
                                                                 value = kw.get('reservetime')
                                                             )
                                         )
-            recipe.append_tasks(reserveTask)
+            recipe.tasks.append(reserveTask)
             recipeSet.recipes.append(recipe)
             job.recipesets.append(recipeSet)
             job.ttasks += recipeSet.ttasks
@@ -3539,8 +3660,7 @@ class Job(TaskBase):
         span.append(content)
         return span
 
-
-    def to_xml(self, clone=False):
+    def _create_job_elem(self,clone=False, *args, **kw):
         job = self.doc.createElement("job")
         if not clone:
             job.setAttribute("id", "%s" % self.id)
@@ -3554,8 +3674,12 @@ class Job(TaskBase):
             job.appendChild(notify)
         job.setAttribute("retention_tag", "%s" % self.retention_tag.tag)
         if self.product:
-            job.setAttribute("product", "%s" % self.product.name) 
+            job.setAttribute("product", "%s" % self.product.name)
         job.appendChild(self.node("whiteboard", self.whiteboard or ''))
+        return job
+
+    def to_xml(self, clone=False, *args, **kw):
+        job = self._create_job_elem(clone)
         for rs in self.recipesets:
             job.appendChild(rs.to_xml(clone))
         return job
@@ -3589,7 +3713,7 @@ class Job(TaskBase):
                     result          = "%s" % self.result,
                     is_finished     = self.is_finished(),
                     is_failed       = self.is_failed(),
-                    subtask_id_list = ["R:%s" % r.id for r in self.all_recipes]
+                    #subtask_id_list = ["R:%s" % r.id for r in self.all_recipes]
                    )
 
     def all_recipes(self):
@@ -3779,7 +3903,7 @@ class RecipeSet(TaskBase):
             return True
         return False
 
-    def to_xml(self, clone=False, from_job=True):
+    def to_xml(self, clone=False, from_job=True, *args, **kw):
         recipeSet = self.doc.createElement("recipeSet")
         return_node = recipeSet 
 
@@ -3794,14 +3918,8 @@ class RecipeSet(TaskBase):
         for r in self.recipes:
             if not isinstance(r,GuestRecipe):
                 recipeSet.appendChild(r.to_xml(clone, from_recipeset=True))
-
         if not from_job:
-            job = self.doc.createElement("job")
-            if not clone:
-                job.setAttribute("owner", "%s" % self.job.owner.email_address)
-            job.setAttribute("product", "%s" % self.job.product.name)
-            job.setAttribute("retention_tag", "%s" % self.job.retention_tag.tag)
-            job.appendChild(self.node("whiteboard", self.job.whiteboard or '')) 
+            job = self.job._create_job_elem(clone)
             job.appendChild(recipeSet)
             return_node = job
         return return_node
@@ -4015,7 +4133,7 @@ class RecipeSet(TaskBase):
                     result          = "%s" % self.result,
                     is_finished     = self.is_finished(),
                     is_failed       = self.is_failed(),
-                    subtask_id_list = ["R:%s" % r.id for r in self.recipes]
+                    #subtask_id_list = ["R:%s" % r.id for r in self.recipes]
                    )
 
     def t_id(self):
@@ -4088,7 +4206,6 @@ class Recipe(TaskBase):
         How we delete a Recipe.
         At the moment only unlinking log files and deleting log table rows
         """
-
         full_recipe_logpath = '%s/%s' % (self.logspath, self.filepath)
         if dryrun is True:
             if not (os.access(full_recipe_logpath,os.R_OK)): #See if it exists
@@ -4582,15 +4699,15 @@ class Recipe(TaskBase):
                 for mylog in result.logs:
                     yield mylog.dict
 
-    def append_tasks(self, recipetask):
-        """ Before appending the task to this Recipe, make sure it applies.
+    def is_task_applicable(self, task):
+        """ Does the given task apply to this recipe?
             ie: not excluded for this distro family or arch.
         """
-        if self.distro.arch in [arch.arch for arch in recipetask.task.excluded_arch]:
-            return
-        if self.distro.osversion.osmajor in [osmajor.osmajor for osmajor in recipetask.task.excluded_osmajor]:
-            return
-        self.tasks.append(recipetask)
+        if self.distro.arch in [arch.arch for arch in task.excluded_arch]:
+            return False
+        if self.distro.osversion.osmajor in [osmajor.osmajor for osmajor in task.excluded_osmajor]:
+            return False
+        return True
 
     @classmethod
     def mine(cls, owner):
@@ -4816,7 +4933,7 @@ class RecipeTask(TaskBase):
                 recipe.id, self.id)
     filepath = property(filepath)
 
-    def to_xml(self, clone=False):
+    def to_xml(self, clone=False, *args, **kw):
         task = self.doc.createElement("task")
         task.setAttribute("name", "%s" % self.task.name)
         task.setAttribute("role", "%s" % self.role and self.role or 'STANDALONE')
@@ -5104,7 +5221,7 @@ class RecipeTask(TaskBase):
                     result          = "%s" % self.result,
                     is_finished     = self.is_finished(),
                     is_failed       = self.is_failed(),
-                    subtask_id_list = ["TR:%s" % tr.id for tr in self.results]
+                    #subtask_id_list = ["TR:%s" % tr.id for tr in self.results]
                    )
 
     def t_id(self):
@@ -5533,8 +5650,8 @@ System.mapper = mapper(System, system_table,
                                       cascade="all, delete, delete-orphan",
                                                 backref='system'),
                      'activity':relation(SystemActivity,
-                                     order_by=[activity_table.c.created.desc()],
-                                               backref='object'),
+                        order_by=[activity_table.c.created.desc(), activity_table.c.id.desc()],
+                        backref='object'),
                      'release_action':relation(ReleaseAction, uselist=False),
                      'reprovision_distro':relation(Distro, uselist=False),
                       '_system_ccs': relation(SystemCc, backref='system',
@@ -5735,8 +5852,8 @@ mapper(RecipeSet, recipe_set_table,
                       'result':relation(TaskResult, uselist=False),
                       'status':relation(TaskStatus, uselist=False),
                       'activity':relation(RecipeSetActivity,
-                                     order_by=[activity_table.c.created.desc()],
-                                               backref='object'),
+                        order_by=[activity_table.c.created.desc(), activity_table.c.id.desc()],
+                        backref='object'),
                       'lab_controller':relation(LabController, uselist=False),
                       'nacked':relation(RecipeSetResponse,cascade="all, delete-orphan",uselist=False),
                       'deleted':recipe_set_table.c.delete_time

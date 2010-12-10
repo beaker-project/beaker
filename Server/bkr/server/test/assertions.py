@@ -21,9 +21,18 @@ def assert_sorted(things, key=None):
     """
     if len(things) == 0: return
     if key is not None:
-        things = map(things, key)
+        things = map(key, things)
     for n in xrange(1, len(things)):
         if things[n] < things[n - 1]:
             raise AssertionError('Not in sorted order, found %r after %r' %
                     (things[n], things[n - 1]))
 
+def assert_has_key_with_value(system, key_name, value):
+    for kv in system.key_values_int:
+        if kv.key.key_name == key_name and kv.key_value == value:
+            return
+    for kv in system.key_values_string:
+        if kv.key.key_name == key_name and kv.key_value == value:
+            return
+    raise AssertionError('No such key with name %r and value %r found on system %r'
+            % (key_name, value, system))
