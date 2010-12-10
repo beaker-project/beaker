@@ -3,7 +3,7 @@
 
 Name:           beaker
 Version:        0.5.63
-Release:        5%{?dist}
+Release:        6%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -192,11 +192,10 @@ fi
 %attr(-,apache,root) %dir %{_localstatedir}/run/%{name}-lab-controller
 
 %changelog
-* Wed Dec 01 2010 Bill Peck <bpeck@redhat.com> 0.5.63-5
-- Revert "bz590951 - Using custom repo during system install"
-  (bpeck@redhat.com)
+* Tue Dec 07 2010 Bill Peck <bpeck@redhat.com> 0.5.63-6
+- bz660714 -  update log paths in one xmlrpc call (bpeck@redhat.com)
 
-* Wed Dec 01 2010 Bill Peck <bpeck@redhat.com>
+* Wed Dec 01 2010 Bill Peck <bpeck@redhat.com> 0.5.63-5
 - Revert "bz590951 - Using custom repo during system install"
   (bpeck@redhat.com)
 

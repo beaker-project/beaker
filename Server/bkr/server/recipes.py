@@ -81,12 +81,10 @@ class Recipes(RPCRoot):
                  .query().join(['status'])\
                          .outerjoin(['logs'])\
                          .outerjoin(['tasks','logs'])\
-                         .outerjoin(['tasks','results','logs'])\
                          .filter(recipe_table.c.finish_time > timedifference)\
                          .filter(task_status_table.c.status.in_(finished))\
                          .filter(or_(log_recipe_table.c.server.like('%s%%' % server),
-                                     log_recipe_task_table.c.server.like('%s%%' % server),
-                                     log_recipe_task_result_table.c.server.like('%s%%' % server)))
+                                     log_recipe_task_table.c.server.like('%s%%' % server)))
        return [r.id for r in recipes]
 
     @cherrypy.expose
@@ -116,6 +114,23 @@ class Recipes(RPCRoot):
         except InvalidRequestError:
             raise BX(_('Invalid recipe ID: %s' % recipe_id))
         return [log for log in recipe.all_logs]
+
+    @cherrypy.expose
+    @identity.require(identity.not_anonymous())
+    def change_files(self, recipe_id, server, basepath):
+        """
+        Change the server and basepath where the log files lives, Usually
+         used to move from lab controller cache to archive storage.
+        """
+        try:
+            recipe = Recipe.by_id(recipe_id)
+        except InvalidRequestError:
+            raise BX(_('Invalid recipe ID: %s' % recipe_id))
+        for mylog in recipe.all_logs:
+            myserver = '%s/%s' % (server, mylog['filepath'])
+            mybasepath = '%s/%s' % (basepath, mylog['filepath'])
+            self.change_file(mylog['tid'], myserver, mybasepath)
+        return True
 
     @cherrypy.expose
     @identity.require(identity.not_anonymous())
