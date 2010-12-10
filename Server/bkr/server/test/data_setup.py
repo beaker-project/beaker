@@ -180,7 +180,7 @@ def create_recipe(system=None, distro=None, task_name=u'/distribution/reservesys
             </distro_variant><distro_family value="RedHatEnterpriseLinux6" op="="> \
             </distro_family> </and><distro_virt value="" op="="></distro_virt> \
             </distroRequires>'
-    recipe.append_tasks(RecipeTask(task=create_task(name=task_name)))
+    recipe.tasks.append(RecipeTask(task=create_task(name=task_name)))
     return recipe
 
 def create_job_for_recipes(recipes, owner=None, whiteboard=None, cc=None,product=None,
