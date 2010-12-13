@@ -53,11 +53,12 @@ def main_loop(conf=None, foreground=False):
         add_stderr_logger(watchdog.logger)
 
     expire_active = datetime.now()
+    watchdog.hub._login()
     while True:
         try:
             # Poll the scheduler for watchdogs
-            watchdog.hub._login()
             if datetime.now() > expire_active:
+                watchdog.hub._login()
                 expire_active = datetime.now() + timedelta(seconds=60)
                 watchdog.expire_watchdogs()
                 watchdog.active_watchdogs()
