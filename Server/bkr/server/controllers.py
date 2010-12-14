@@ -2008,7 +2008,9 @@ class Root(RPCRoot):
         return system.update(inventory)
 
     @expose(template="bkr.server.templates.login")
-    def login(self, forward_url='/', **kwargs):
+    def login(self, forward_url=None, **kwargs):
+        if not forward_url:
+            forward_url = request.headers.get('Referer', '/')
         if not identity.current.anonymous \
                 and identity.was_login_attempted() \
                 and not identity.get_identity_errors():
