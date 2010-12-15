@@ -67,6 +67,7 @@ $(METADATA): Makefile
 	@echo "RunFor:       $(PACKAGE_NAME)-server" >> $(METADATA)  
 	@echo "Requires:     $(PACKAGE_NAME)-server" >> $(METADATA)  
 	@echo "Requires:     python-nose" >> $(METADATA)  
+	@echo "Requires:     kobo" >> $(METADATA)
 	@echo "Requires:     java-1.6.0-openjdk" >> $(METADATA)  
 
 	rhts-lint $(METADATA)
