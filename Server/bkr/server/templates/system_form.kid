@@ -35,6 +35,7 @@ $(document).ready(function(){
        </th>
        <td class="list" colspan="3">
         ${display_field_for("fqdn")}
+        <br/><span py:if="error_for('fqdn')" class="fielderror" py:content="error_for('fqdn')" />
        </td>
       </tr>
       <tr class="list">
