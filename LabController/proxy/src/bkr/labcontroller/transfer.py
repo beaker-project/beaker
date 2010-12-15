@@ -13,7 +13,7 @@ import kobo.conf
 from kobo.exceptions import ShutdownException
 from kobo.process import daemonize
 from kobo.tback import Traceback, set_except_hook
-from kobo.log import add_stderr_logger, add_rotating_file_logger
+from bkr.log import add_stderr_logger, add_rotating_file_logger
 
 VERBOSE_LOG_FORMAT = "%(asctime)s [%(levelname)-8s] {%(process)5d} %(name)s.%(module)s:%(lineno)4d %(message)s"
 
