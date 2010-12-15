@@ -53,14 +53,17 @@ def main_loop(conf=None, foreground=False):
         add_stderr_logger(transfer.logger)
 
     now = datetime.now()
+    transfer.hub._login()
     while True:
         try:
-            # Poll the scheduler for watchdogs
-            transfer.hub._login()
             if datetime.now() > now:
+                transfer.hub._login()
                 # Look for logs to transfer
                 now = datetime.now() + timedelta(minutes=30)
                 transfer.transfer_logs()
+            else:
+                transfer.logger.debug(80 * '-')
+                transfer.sleep()
 
             # write to stdout / stderr
             sys.stdout.flush()

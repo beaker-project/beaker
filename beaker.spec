@@ -3,7 +3,7 @@
 
 Name:           beaker
 Version:        0.6.0
-Release:        2%{?dist}
+Release:        3%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -202,6 +202,9 @@ fi
 %attr(-,apache,root) %dir %{_localstatedir}/run/%{name}-lab-controller
 
 %changelog
+* Tue Dec 14 2010 Dan Callaghan <dcallagh@redhat.com> 0.6.0-3
+- bz662799 - beaker-transfer needlessly logins (bpeck@redhat.com)
+
 * Fri Dec 10 2010 Raymond Mancy <rmancy@redhat.com> 0.6.0-2
 - bz661665 - fixes for job-result for tasks and a bad attempt at tests
   (rmancy@redhat.com)
