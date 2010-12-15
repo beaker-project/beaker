@@ -16,7 +16,7 @@ import kobo.conf
 from kobo.exceptions import ShutdownException
 from kobo.process import daemonize
 from kobo.tback import Traceback, set_except_hook
-from kobo.log import add_stderr_logger
+from bkr.log import add_stderr_logger
 set_except_hook()
 
 class Authenticate(Thread):
