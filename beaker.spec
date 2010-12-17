@@ -206,7 +206,6 @@ fi
 
 %changelog
 * Fri Dec 17 2010 Dan Callaghan <dcallagh@redhat.com> 0.6.1-2
-  (dcallagh@redhat.com)
 - Bug 663111 - proxy.log being rotated with every line of output
   (bpeck@redhat.com)
 - Bug 662214 - Add timeout of 120 seconds to kobo.  Should keep us from
