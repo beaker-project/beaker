@@ -25,6 +25,11 @@ bootloader --location=mbr #slurp
 $getVar('mode', 'text')
 $SNIPPET("network")
 
+#if $getVar('os_version','').startswith('fedora')
+#set releasever=$os_version[6:]
+repo --name=myupdates --mirrorlist=https://mirrors.fedoraproject.org/metalink?repo=updates-released-f$releasever&arch=$arch
+#end if
+
 ## Firewall configuration
 ## firewall in kickstart metadata will enable the firewall
 ## firewall=22:tcp,80:tcp will enable the firewall with ports 22 and 80 open.
