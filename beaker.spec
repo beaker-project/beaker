@@ -2,8 +2,8 @@
 %{!?pyver: %global pyver %(%{__python} -c "import sys ; print sys.version[:3]")}
 
 Name:           beaker
-Version:        0.6.0
-Release:        3%{?dist}
+Version:        0.6.1
+Release:        2%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -205,6 +205,13 @@ fi
 %attr(-,apache,root) %dir %{_localstatedir}/run/%{name}-lab-controller
 
 %changelog
+* Fri Dec 17 2010 Dan Callaghan <dcallagh@redhat.com> 0.6.1-2
+  (dcallagh@redhat.com)
+- Bug 663111 - proxy.log being rotated with every line of output
+  (bpeck@redhat.com)
+- Bug 662214 - Add timeout of 120 seconds to kobo.  Should keep us from
+  hanging forever. (bpeck@redhat.com)
+
 * Tue Dec 14 2010 Dan Callaghan <dcallagh@redhat.com> 0.6.0-3
 - bz662799 - beaker-transfer needlessly logins (bpeck@redhat.com)
 
