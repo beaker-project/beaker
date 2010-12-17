@@ -63,10 +63,12 @@ Requires:       /sbin/fenced
 Requires:       telnet
 Requires:       python-cpio
 Requires:	%{name} = %{version}-%{release}
+Requires:       kobo >= 0.3.2
 Requires:	kobo-client
 Requires:	python-setuptools
 Requires:	python-xmltramp
 Requires:       python-krbV
+Requires:       python-concurrentloghandler
 
 %description
 Filesystem layout for beaker
