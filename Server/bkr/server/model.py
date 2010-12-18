@@ -3731,7 +3731,23 @@ class Job(TaskBase):
                 yield recipe
     all_recipes = property(all_recipes)
 
-    def update_status(self):
+    def _bubble_up(self):
+        """
+        Bubble Status updates up the chain.
+        """
+        self._update_status()
+
+    def _bubble_down(self):
+        """
+        Bubble Status updates down the chain.
+        """
+        for child in self.recipesets:
+            child._bubble_down()
+        self._update_status()
+
+    update_status = _bubble_down
+
+    def _update_status(self):
         """
         Update number of passes, failures, warns, panics..
         """
@@ -3742,7 +3758,6 @@ class Job(TaskBase):
         max_result = None
         min_status = TaskStatus.max()
         for recipeset in self.recipesets:
-            recipeset._update_status()
             self.ptasks += recipeset.ptasks
             self.wtasks += recipeset.wtasks
             self.ftasks += recipeset.ftasks
@@ -4074,7 +4089,26 @@ class RecipeSet(TaskBase):
         """
         Update number of passes, failures, warns, panics..
         """
-        self.job.update_status()
+        for child in self.recipes:
+            child._bubble_down()
+        self._update_status()
+        self.job._bubble_up()
+
+    def _bubble_up(self):
+        """
+        Bubble Status updates up the chain.
+        """
+        self._update_status()
+        # we should be able to add some logic to not call job._bubble_up() if our status+result didn't change.
+        self.job._bubble_up()
+
+    def _bubble_down(self):
+        """
+        Bubble Status updates down the chain.
+        """
+        for child in self.recipes:
+            child._bubble_down()
+        self._update_status()
 
     def _update_status(self):
         """
@@ -4087,7 +4121,6 @@ class RecipeSet(TaskBase):
         max_result = None
         min_status = TaskStatus.max()
         for recipe in self.recipes:
-            recipe._update_status()
             self.ptasks += recipe.ptasks
             self.wtasks += recipe.wtasks
             self.ftasks += recipe.ftasks
@@ -4585,7 +4618,26 @@ class Recipe(TaskBase):
         """
         Update number of passes, failures, warns, panics..
         """
-        self.recipeset.job.update_status()
+        for child in self.tasks:
+            child._bubble_down()
+        self._update_status()
+        self.recipeset._bubble_up()
+
+    def _bubble_up(self):
+        """
+        Bubble Status updates up the chain.
+        """
+        self._update_status()
+        # we should be able to add some logic to not call recipeset._bubble_up() if our status+result didn't change.
+        self.recipeset._bubble_up()
+
+    def _bubble_down(self):
+        """
+        Bubble Status updates down the chain.
+        """
+        for child in self.tasks:
+            child._bubble_down()
+        self._update_status()
 
     def _update_status(self):
         """
@@ -4602,8 +4654,8 @@ class Recipe(TaskBase):
 
         max_result = None
         min_status = TaskStatus.max()
+        # I think this loop could be replaced with some sql which would be more efficient.
         for task in self.tasks:
-            task._update_status()
             if task.is_finished():
                 if task.result == task_pass:
                     self.ptasks += 1
@@ -5004,11 +5056,21 @@ class RecipeTask(TaskBase):
         self._status = value
 
 
-    def update_status(self):
+    def _bubble_up(self):
         """
-        Update number of passes, failures, warns, panics..
+        Bubble Status updates up the chain.
         """
-        self.recipe.recipeset.job.update_status()
+        self._update_status()
+        # we should be able to add some logic to not call recipe._bubble_up() if our status+result didn't change.
+        self.recipe._bubble_up()
+
+    update_status = _bubble_up
+
+    def _bubble_down(self):
+        """
+        Bubble Status updates down the chain.
+        """
+        self._update_status()
 
     def _update_status(self):
         """
