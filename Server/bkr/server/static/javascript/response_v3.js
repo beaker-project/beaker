@@ -78,7 +78,7 @@ AckPanel.prototype.handle_comment_update_response = function (result) {
         update_result['success'] = false
         update_result['rs_id'] = result['rs_id']
         update_result['text'] = 'Error saving comment'
-        AckPanel.prototype..update_results(update_result)
+        AckPanel.prototype.update_results(update_result)
     }
 }
 
