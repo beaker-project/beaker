@@ -8,6 +8,7 @@ from threading import Thread
 
 import SocketServer
 import DocXMLRPCServer
+import socket
 
 from bkr.labcontroller.proxy import Proxy
 
@@ -15,27 +16,30 @@ import kobo.conf
 from kobo.exceptions import ShutdownException
 from kobo.process import daemonize
 from kobo.tback import Traceback, set_except_hook
-from kobo.log import add_stderr_logger
+from bkr.log import add_stderr_logger
 set_except_hook()
 
 class Authenticate(Thread):
     def __init__ (self,proxy):
       Thread.__init__(self)
       self.proxy = proxy
+      self.proxy.hub._transport.timeout = 120
       self.__serving = False
 
     def run(self):
         self.__serving = True
-        count = 0
+        time_of_last_check = 0
         while self.__serving:
-            count += 1
             # every minute check that we are logged in.
-            if count % 60 == 0:
-                count = 0
+            now = time.time()
+            if now - time_of_last_check > 60:
+                time_of_last_check = now
                 try:
                     self.proxy.hub._login(verbose=self.proxy.hub._conf.get("DEBUG_XMLRPC"))
                 except KeyboardInterrupt:
                     raise
+                except socket.sslerror:
+                    pass  #try again later 
                 except Exception, e:
                     raise
             time.sleep(1)

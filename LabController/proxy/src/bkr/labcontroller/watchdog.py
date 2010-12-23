@@ -3,7 +3,8 @@ import os
 import sys
 import signal
 import logging
-from datetime import datetime, timedelta
+import time
+import socket
 from optparse import OptionParser
 
 from bkr.labcontroller.proxy import Watchdog
@@ -12,7 +13,7 @@ import kobo.conf
 from kobo.exceptions import ShutdownException
 from kobo.process import daemonize
 from kobo.tback import Traceback, set_except_hook
-from kobo.log import add_stderr_logger, add_rotating_file_logger
+from bkr.log import add_stderr_logger, add_rotating_file_logger
 
 VERBOSE_LOG_FORMAT = "%(asctime)s [%(levelname)-8s] {%(process)5d} %(name)s.%(module)s:%(lineno)4d %(message)s"
 
@@ -52,13 +53,15 @@ def main_loop(conf=None, foreground=False):
     if foreground:
         add_stderr_logger(watchdog.logger)
 
-    expire_active = datetime.now()
+    watchdog.hub._transport.timeout = 120 
+    time_of_last_check = 0
     while True:
         try:
+            now = time.time()
             # Poll the scheduler for watchdogs
-            watchdog.hub._login()
-            if datetime.now() > expire_active:
-                expire_active = datetime.now() + timedelta(seconds=60)
+            if now - time_of_last_check > 60:
+                time_of_last_check = now
+                watchdog.hub._login()
                 watchdog.expire_watchdogs()
                 watchdog.active_watchdogs()
             if not watchdog.run():
@@ -73,6 +76,8 @@ def main_loop(conf=None, foreground=False):
             sys.stdout.flush()
             sys.stderr.flush()
 
+        except socket.sslerror:
+            pass # try again later
         except (ShutdownException, KeyboardInterrupt):
             # ignore keyboard interrupts and sigterm
             signal.signal(signal.SIGINT, signal.SIG_IGN)

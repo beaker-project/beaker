@@ -2,7 +2,7 @@
 %{!?pyver: %global pyver %(%{__python} -c "import sys ; print sys.version[:3]")}
 
 Name:           beaker
-Version:        0.6.0
+Version:        0.6.1
 Release:        2%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
@@ -63,10 +63,12 @@ Requires:       /sbin/fenced
 Requires:       telnet
 Requires:       python-cpio
 Requires:	%{name} = %{version}-%{release}
+Requires:       kobo >= 0.3.2
 Requires:	kobo-client
 Requires:	python-setuptools
 Requires:	python-xmltramp
 Requires:       python-krbV
+Requires:       python-concurrentloghandler
 
 %description
 Filesystem layout for beaker
@@ -142,6 +144,7 @@ fi
 %{python_sitelib}/bkr/timeout_xmlrpclib.py*
 %{python_sitelib}/bkr/common/
 %{python_sitelib}/bkr/upload.py*
+%{python_sitelib}/bkr/log.py*
 %{python_sitelib}/bkr-%{version}-*
 %{python_sitelib}/bkr-%{version}-py%{pyver}.egg-info/
 %doc COPYING
@@ -202,6 +205,15 @@ fi
 %attr(-,apache,root) %dir %{_localstatedir}/run/%{name}-lab-controller
 
 %changelog
+* Fri Dec 17 2010 Dan Callaghan <dcallagh@redhat.com> 0.6.1-2
+- Bug 663111 - proxy.log being rotated with every line of output
+  (bpeck@redhat.com)
+- Bug 662214 - Add timeout of 120 seconds to kobo.  Should keep us from
+  hanging forever. (bpeck@redhat.com)
+
+* Tue Dec 14 2010 Dan Callaghan <dcallagh@redhat.com> 0.6.0-3
+- bz662799 - beaker-transfer needlessly logins (bpeck@redhat.com)
+
 * Fri Dec 10 2010 Raymond Mancy <rmancy@redhat.com> 0.6.0-2
 - bz661665 - fixes for job-result for tasks and a bad attempt at tests
   (rmancy@redhat.com)
