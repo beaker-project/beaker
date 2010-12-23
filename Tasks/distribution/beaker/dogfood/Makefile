@@ -68,5 +68,9 @@ $(METADATA): Makefile
 	@echo "Requires:     $(PACKAGE_NAME)-server" >> $(METADATA)  
 	@echo "Requires:     python-nose" >> $(METADATA)  
 	@echo "Requires:     java-1.6.0-openjdk" >> $(METADATA)  
+	@echo "Environment:  BEAKER_SERVER_BASE_URL=http://localhost/bkr/" >> $(METADATA)
+	@echo "Environment:  BEAKER_SKIP_INIT_DB=1" >> $(METADATA)
+	@echo "Environment:  BEAKER_CONFIG_FILE=/etc/beaker/server.cfg" >> $(METADATA)
+	@echo "Environment:  NOSEARGS=bkr.server" >> $(METADATA)
 
 	rhts-lint $(METADATA)
