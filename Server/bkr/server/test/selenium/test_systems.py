@@ -815,7 +815,16 @@ class SystemProvisionXmlRpcTest(XmlRpcTestCase):
         self.stub_cobbler_thread.start()
         self.lab_controller = data_setup.create_labcontroller(
                 fqdn=u'localhost:%d' % self.stub_cobbler_thread.port)
-        self.distro = data_setup.create_distro()
+        self.distro = data_setup.create_distro(arch=u'i386')
+        self.usable_system = data_setup.create_system(arch=u'i386',
+                owner=User.by_user_name(data_setup.ADMIN_USER),
+                status=u'Manual', shared=True)
+        data_setup.configure_system_power(self.usable_system, power_type=u'drac',
+                address=u'nowhere.example.com', user=u'teh_powz0r',
+                password=u'onoffonoff', power_id=u'asdf')
+        self.usable_system.lab_controller = self.lab_controller
+        self.usable_system.user = data_setup.create_user(password=u'password')
+        session.flush()
         self.server = self.get_server()
 
     def tearDown(self):
@@ -867,17 +876,8 @@ class SystemProvisionXmlRpcTest(XmlRpcTestCase):
             kickstart lol!
             do some stuff etc
             '''
-        system = data_setup.create_system(
-                owner=User.by_user_name(data_setup.ADMIN_USER),
-                status=u'Manual', shared=True)
-        data_setup.configure_system_power(system, power_type=u'drac',
-                address=u'nowhere.example.com', user=u'teh_powz0r',
-                password=u'onoffonoff', power_id=u'asdf')
-        system.lab_controller = self.lab_controller
-        user = data_setup.create_user(password=u'password')
-        system.user = user
-        session.flush()
-        self.server.auth.login_password(user.user_name, 'password')
+        system = self.usable_system
+        self.server.auth.login_password(system.user.user_name, 'password')
         self.server.systems.provision(system.fqdn, self.distro.install_name,
                 {'method': 'nfs'},
                 'noapic',
@@ -906,21 +906,35 @@ class SystemProvisionXmlRpcTest(XmlRpcTestCase):
                 'reboot')
 
     def test_provision_without_reboot(self):
-        system = data_setup.create_system(
-                owner=User.by_user_name(data_setup.ADMIN_USER),
-                status=u'Manual', shared=True)
-        data_setup.configure_system_power(system, power_type=u'drac',
-                address=u'nowhere.example.com', user=u'teh_powz0r',
-                password=u'onoffonoff', power_id=u'asdf')
-        system.lab_controller = self.lab_controller
-        user = data_setup.create_user(password=u'password')
-        system.user = user
-        session.flush()
-        self.server.auth.login_password(user.user_name, 'password')
-        self.server.systems.provision(system.fqdn, self.distro.install_name,
-                None, None, None, None,
+        self.server.auth.login_password(self.usable_system.user.user_name,
+                'password')
+        self.server.systems.provision(self.usable_system.fqdn,
+                self.distro.install_name, None, None, None, None,
                 False) # this last one is reboot=False
         self.assert_(not self.stub_cobbler_thread.cobbler.system_actions)
+
+    def test_refuses_to_provision_distro_with_mismatched_arch(self):
+        distro = data_setup.create_distro(arch=u'x86_64')
+        session.flush()
+        self.server.auth.login_password(self.usable_system.user.user_name,
+                'password')
+        try:
+            self.server.systems.provision(self.usable_system.fqdn, distro.install_name)
+            self.fail('should raise')
+        except xmlrpclib.Fault, e:
+            self.assert_('cannot be provisioned on system' in e.faultString)
+
+    def test_refuses_to_provision_distro_not_in_lc(self):
+        for lca in self.distro.lab_controller_assocs:
+            session.delete(lca)
+        session.flush()
+        self.server.auth.login_password(self.usable_system.user.user_name,
+                'password')
+        try:
+            self.server.systems.provision(self.usable_system.fqdn, self.distro.install_name)
+            self.fail('should raise')
+        except xmlrpclib.Fault, e:
+            self.assert_('cannot be provisioned on system' in e.faultString)
 
 class LegacyPushXmlRpcTest(XmlRpcTestCase):
 

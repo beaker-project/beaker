@@ -118,6 +118,12 @@ class SystemsController(controllers.Controller):
         if not system.user == identity.current.user:
             raise BX(_(u'Reserve a system before provisioning'))
         distro = Distro.by_install_name(distro_install_name)
+
+        # sanity check: does the distro apply to this system?
+        if distro.systems().filter(System.id == system.id).count() < 1:
+            raise BX(_(u'Distro %s cannot be provisioned on %s')
+                    % (distro.install_name, system.fqdn))
+
         try:
             system.action_provision(distro=distro, ks_meta=ks_meta,
                     kernel_options=kernel_options,
@@ -134,6 +140,7 @@ class SystemsController(controllers.Controller):
                 service=u'XMLRPC', action=u'Provision',
                 field_name=u'Distro', old_value=u'',
                 new_value=u'Success: %s' % distro.install_name))
+
         if reboot:
             try:
                 system.remote.power(action='reboot')
@@ -147,6 +154,7 @@ class SystemsController(controllers.Controller):
             system.activity.append(SystemActivity(user=identity.current.user,
                     service=u'XMLRPC', action=u'Reboot',
                     field_name=u'Power', old_value=u'', new_value=u'Success'))
+
         return system.fqdn # because turbogears makes us return something
 
 # for sphinx
