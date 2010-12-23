@@ -282,14 +282,14 @@ class Tasks(RPCRoot):
                     ])
 
         search_bar = SearchBar(name='tasksearch',
-                           label=_(u'Task Search'),    
+                           label=_(u'Task Search'),
                            table = search_utility.Task.search.create_search_table(),
-                           search_controller=url("/get_search_options_task"), 
+                           search_controller=url("/get_search_options_task"),
                            )
-        return dict(title="Task Library", 
+        return dict(title="Task Library",
                     object_count=tasks.count(),
-                    grid=tasks_grid, 
-                    list=tasks, 
+                    grid=tasks_grid,
+                    list=tasks,
                     search_bar=search_bar,
                     action='.',
                     options=search_options,
@@ -298,10 +298,27 @@ class Tasks(RPCRoot):
     @expose(template='bkr.server.templates.task')
     def default(self, *args, **kw):
         try:
-            task = Task.by_id(args[0])
+            using_task_id = False
+            if len(args) == 1:
+                try:
+                    task_id = int(args[0])
+                    using_task_id = True
+                except ValueError:
+                    pass
+            if using_task_id:
+                task = Task.by_id(task_id)
+            else:
+                task = Task.by_name("/%s" % "/".join(args))
+                #Would rather not redirect but do_search expects task_id in URL
+                #This is the simplest way of dealing with it
+                redirect("/tasks/%s" % task.id)
         except InvalidRequestError:
-            flash(_(u'Invalid task id %s' % args[0] ))
-            redirect(".")
+            if using_task_id:
+                err_msg = u'Invalid task_id %s' % args[0]
+            else:
+                err_msg =  u'Invalid task /%s' % '/'.join(args)
+            flash(_(err_msg))
+            redirect("/tasks")
         return dict(task=task,
                     form = self.task_form,
                     value = dict(task_id = task.id),
