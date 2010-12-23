@@ -3,7 +3,8 @@ import os
 import sys
 import signal
 import logging
-from datetime import datetime, timedelta
+import time
+import socket
 from optparse import OptionParser
 
 from bkr.labcontroller.proxy import Watchdog
@@ -12,7 +13,7 @@ import kobo.conf
 from kobo.exceptions import ShutdownException
 from kobo.process import daemonize
 from kobo.tback import Traceback, set_except_hook
-from kobo.log import add_stderr_logger, add_rotating_file_logger
+from bkr.log import add_stderr_logger, add_rotating_file_logger
 
 VERBOSE_LOG_FORMAT = "%(asctime)s [%(levelname)-8s] {%(process)5d} %(name)s.%(module)s:%(lineno)4d %(message)s"
 
@@ -52,14 +53,15 @@ def main_loop(conf=None, foreground=False):
     if foreground:
         add_stderr_logger(transfer.logger)
 
-    now = datetime.now()
-    transfer.hub._login()
+    transfer.hub._transport.timeout = 120
+    time_of_last_check = 0
     while True:
         try:
-            if datetime.now() > now:
+            now = time.time()
+            # Look for logs to transfer every 30 minutes
+            if now - time_of_last_check > 1800:
+                time_of_last_check = now
                 transfer.hub._login()
-                # Look for logs to transfer
-                now = datetime.now() + timedelta(minutes=30)
                 transfer.transfer_logs()
             else:
                 transfer.logger.debug(80 * '-')
@@ -68,6 +70,9 @@ def main_loop(conf=None, foreground=False):
             # write to stdout / stderr
             sys.stdout.flush()
             sys.stderr.flush()
+
+        except socket.sslerror:
+            pass # will try again..
 
         except (ShutdownException, KeyboardInterrupt):
             # ignore keyboard interrupts and sigterm

@@ -20,7 +20,7 @@ from kobo.client import HubProxy
 from kobo.exceptions import ShutdownException
 
 from kobo.process import kill_process_group
-from kobo.log import add_rotating_file_logger
+from bkr.log import add_rotating_file_logger
 from bkr.upload import Uploader
 import utils
 
