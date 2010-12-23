@@ -22,7 +22,7 @@ class AddSystem(bkr.server.test.selenium.SeleniumTestCase):
 
 
     def test_case_1(self):
-        system_details = dict(fqdn = 'test_system_1',
+        system_details = dict(fqdn = 'test-system-1',
                               lender = 'lender',
                               serial = '44444444444',
                               status = 'Automated', 
@@ -59,7 +59,7 @@ class AddSystem(bkr.server.test.selenium.SeleniumTestCase):
         except Exception,e:self.verificationErrors.append(str(e))    
 
     def test_case_2(self):
-        system_details = dict(fqdn = 'test_system_2',
+        system_details = dict(fqdn = 'test-system-2',
                               lender = '',
                               serial = '44444444444',
                               status = 'Broken',
@@ -93,7 +93,7 @@ class AddSystem(bkr.server.test.selenium.SeleniumTestCase):
         except Exception,e:self.verificationErrors.append(str(e))
 
     def test_case_3(self):
-        system_details = dict(fqdn = 'test_system_3',
+        system_details = dict(fqdn = 'test-system-3',
                               lender = 'lender',
                               serial = '444gggg4444',
                               status = 'Automated', 
@@ -126,7 +126,7 @@ class AddSystem(bkr.server.test.selenium.SeleniumTestCase):
         except Exception,e:self.verificationErrors.append(str(e))    
 
     def test_case_4(self):
-        system_details = dict(fqdn = 'test_system_4',
+        system_details = dict(fqdn = 'test-system-4',
                               lender = 'lender',
                               serial = '444g!!!444',
                               status = 'Broken',

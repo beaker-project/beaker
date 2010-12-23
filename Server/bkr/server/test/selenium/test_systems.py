@@ -1,3 +1,6 @@
+
+# vim: set encoding=utf-8:
+
 # Beaker
 #
 # Copyright (C) 2010 dcallagh@redhat.com
@@ -276,6 +279,7 @@ class SystemViewTest(SeleniumTestCase):
         sel = self.selenium
         self.go_to_system_view()
         changes = {
+            'fqdn': 'zx80.example.com',
             'vendor': 'Sinclair',
             'model': 'ZX80',
             'serial': '12345',
@@ -289,6 +293,35 @@ class SystemViewTest(SeleniumTestCase):
             self.assertEquals(sel.get_value(k), v)
         session.refresh(self.system)
         self.assert_(self.system.date_modified > orig_date_modified)
+
+    def test_strips_surrounding_whitespace_from_fqdn(self):
+        self.login()
+        sel = self.selenium
+        self.go_to_system_view()
+        sel.type('fqdn', '    lol    ')
+        sel.click('link=Save Changes')
+        sel.wait_for_page_to_load('30000')
+        self.assertEquals(sel.get_value('fqdn'), 'lol')
+
+    def test_rejects_malformed_fqdn(self):
+        self.login()
+        sel = self.selenium
+        self.go_to_system_view()
+        sel.type('fqdn', 'lol...?')
+        sel.click('link=Save Changes')
+        sel.wait_for_page_to_load('30000')
+        self.assertEquals(sel.get_text('css=.fielderror'),
+                'The supplied value is not a valid hostname')
+
+    def test_rejects_non_ascii_chars_in_fqdn(self):
+        self.login()
+        sel = self.selenium
+        self.go_to_system_view()
+        sel.type('fqdn', u'lööööl')
+        sel.click('link=Save Changes')
+        sel.wait_for_page_to_load('30000')
+        self.assertEquals(sel.get_text('css=.fielderror'),
+                'The supplied value is not a valid hostname')
 
     def test_add_arch(self):
         orig_date_modified = self.system.date_modified

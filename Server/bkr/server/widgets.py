@@ -21,6 +21,16 @@ from bkr.server import search_utility
 import logging
 log = logging.getLogger(__name__)
 
+class Hostname(validators.Regex):
+    messages = {'invalid': 'The supplied value is not a valid hostname'}
+    def __init__(self):
+        super(Hostname, self).__init__(
+                # http://stackoverflow.com/questions/1418423/_/1420225#1420225
+                r'^(?=.{1,255}$)[0-9A-Za-z]'
+                r'(?:(?:[0-9A-Za-z]|\b-){0,61}[0-9A-Za-z])?'
+                r'(?:\.[0-9A-Za-z](?:(?:[0-9A-Za-z]|\b-){0,61}[0-9A-Za-z])?)*\.?$',
+                strip=True)
+
 class UtilJSON:
      @classmethod
      def dynamic_json(cls):
@@ -1187,7 +1197,7 @@ class SystemForm(Form):
                HiddenField(name='id'),
                TextField(name='fqdn', 
                          label=_(u'System Name'), 
-                         validator=validators.NotEmpty(),
+                         validator=Hostname(),
                          attrs={'maxlength':'255',
                                 'size':'60'}),
                SingleSelectField(name='status_id',
