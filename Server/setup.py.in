@@ -204,6 +204,8 @@ setup(
         'bkr.server.config': ['*.cfg'],
         'bkr.server.templates': ['*.kid'],
         'bkr.server.test': ['complete-job.xml'],
+        'bkr.server.test': ['job_35508.xml'],
+        'bkr.server.test': ['job_40214.xml'],
         'bkr.server.test.selenium': ['*.rpm', '*.csv'],
     },
     keywords=[
