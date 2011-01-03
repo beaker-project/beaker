@@ -32,6 +32,21 @@ def make_fake_link(name,id,text):
     a.text = '%s ' % text
     return a
 
+def cache(f):
+    the_cache = {}
+    def do_cache(*args):
+        args = tuple(args) 
+        #Make sure we have different cache vals for args
+        args_to_hash = args + (f,)
+        cache = the_cache
+        try:
+            return cache[args_to_hash]
+        except KeyError:
+            result = f(*args)
+            the_cache[args_to_hash] = result
+            return result
+    return do_cache
+
 def to_byte_string(encoding):
     """
     encode the dict/array/string returned by generators
