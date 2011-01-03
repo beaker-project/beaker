@@ -22,8 +22,9 @@ class SystemGroupUserTake(bkr.server.test.selenium.SeleniumTestCase):
         self.automated_system.shared = True
         self.manual_system = data_setup.create_system(status=u'Manual')
         self.manual_system.shared = True
-        self.group = data_setup.create_group()
+        self.group = data_setup.create_group() 
         self.user = data_setup.create_user(password='password')
+        self.wrong_group = data_setup.create_group()
         self.user2 = data_setup.create_user(password=u'password')
         lc = data_setup.create_labcontroller(u'test-lc')
         data_setup.add_system_lab_controller(self.automated_system,lc)
@@ -53,7 +54,7 @@ class SystemGroupUserTake(bkr.server.test.selenium.SeleniumTestCase):
         data_setup.add_user_to_group(self.user,self.group)
         data_setup.add_group_to_system(self.automated_system,self.group)
         session.flush()
-        self.logout()
+        self.logout() 
         self.login(user=self.user.user_name,password='password') # login as admin
         sel = self.selenium
         sel.open("/view/%s/" % self.automated_system.fqdn)
@@ -132,10 +133,26 @@ class SystemGroupUserTake(bkr.server.test.selenium.SeleniumTestCase):
     def test_system_group_user_group(self):
         #Automated machine
         #import pdb;pdb.set_trace()
-        data_setup.add_group_to_system(self.automated_system,self.group) # Add systemgroup
-        data_setup.add_user_to_group(self.user,self.group) # Add user to group
+        data_setup.add_group_to_system(self.automated_system, self.group) # Add systemgroup
+        data_setup.add_user_to_group(self.user, self.wrong_group) # Add user to group
         session.flush()
         sel = self.selenium
+        self.logout()
+        self.login(user=self.user.user_name, password='password')
+        sel.open("")
+        sel.type("simplesearch", "%s" % self.automated_system.fqdn)
+        sel.click("search")
+        sel.wait_for_page_to_load("30000")
+        sel.click("link=%s" % self.automated_system.fqdn) #this tests the click! 
+        sel.wait_for_page_to_load("30000")
+        self.assertEqual("%s" % self.automated_system.fqdn, sel.get_title()) #ensure the page has opened
+        try: self.failUnless(not sel.is_text_present("(Take)")) #Should be not here
+        except AssertionError, e: self.verificationErrors.\
+            append('Take is available to automated machine with system group privs' )
+
+
+        self.user.groups = [self.group]
+        session.flush()
         sel.open("")
         sel.type("simplesearch", "%s" % self.automated_system.fqdn)
         sel.click("search")
