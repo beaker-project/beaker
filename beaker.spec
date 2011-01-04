@@ -205,6 +205,16 @@ fi
 %attr(-,apache,root) %dir %{_localstatedir}/run/%{name}-lab-controller
 
 %changelog
+* Tue Jan 04 2011 Bill Peck <bpeck@redhat.com> 0.6.1-3
+- fix glob to grab all test data. (bpeck@redhat.com)
+- some fixes for correctly doing equality with the cached objects
+  (rmancy@redhat.com)
+- Previous update_status model will fall down with very large jobs.
+  (bpeck@redhat.com)
+- bz659804 - cache some results from sqla (rmancy@redhat.com)
+- Added test_update_status unit test. Also added some helpers to data_setup
+  Modified beaker/dogfood test to take optional arguments. (bpeck@redhat.com)
+
 * Fri Dec 17 2010 Dan Callaghan <dcallagh@redhat.com> 0.6.1-2
 - Bug 663111 - proxy.log being rotated with every line of output
   (bpeck@redhat.com)
