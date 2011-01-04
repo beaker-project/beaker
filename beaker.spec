@@ -205,6 +205,9 @@ fi
 %attr(-,apache,root) %dir %{_localstatedir}/run/%{name}-lab-controller
 
 %changelog
+* Tue Jan 04 2011 Bill Peck <bpeck@redhat.com> 0.6.1-4
+- disable cache due to session issues: (bpeck@redhat.com)
+
 * Tue Jan 04 2011 Bill Peck <bpeck@redhat.com> 0.6.1-3
 - fix glob to grab all test data. (bpeck@redhat.com)
 - some fixes for correctly doing equality with the cached objects
