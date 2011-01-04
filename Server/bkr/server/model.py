@@ -1047,19 +1047,24 @@ class User(object):
         return self.user_name
 
     def is_admin(self):
-        return u'admin' in [group.group_name for group in self.groups] 
+        return u'admin' in [group.group_name for group in self.groups]
 
     def in_group(self,check_groups):
         my_groups = [group.group_name for group in self.groups]
         for my_g in check_groups:
             if my_g in my_groups:
-                return True 
+                return True
         return False
 
 class Permission(object):
     """
     A relationship that determines what each Group can do
     """
+    def __eq__(self,other):
+        return isinstance(other,self.__class__) and self.id == other.id
+
+    def __ne__(self,other):
+        return isinstance(other,self.__class__) and self.id != other.id
 
     @classmethod
     @cache
@@ -1187,6 +1192,13 @@ class Group(object):
     """
     An ultra-simple group definition.
     """
+
+    def __eq__(self,other):
+        return isinstance(other,self.__class__) and self.id == other.id
+
+    def __ne__(self,other):
+        return isinstance(other,self.__class__) and self.id != other.id
+
     @classmethod
     @cache
     def by_name(cls, name):
@@ -1782,7 +1794,6 @@ class System(SystemObject):
             return True
         elif user is None:
             return False
-
         if self.status==SystemStatus.by_name('Manual'): #If it's manual then we us our original perm system.
             return self._has_regular_perms(user)
         return False
@@ -2359,6 +2370,12 @@ class SystemType(SystemObject):
     def __repr__(self):
         return self.type
 
+    def __eq__(self,other):
+        return isinstance(other,self.__class__) and self.id == other.id
+
+    def __ne__(self,other):
+        return isinstance(other,self.__class__) and self.id != other.id
+
     @classmethod
     def get_all_types(cls):
         """
@@ -2430,6 +2447,12 @@ class SystemStatus(SystemObject):
 
     def __repr__(self):
         return self.status
+
+    def __eq__(self,other):
+        return isinstance(other,self.__class__) and self.id == other.id
+
+    def __ne__(self,other):
+        return isinstance(other,self.__class__) and self.id != other.id
 
     @classmethod
     def get_all_status(cls):
@@ -3792,6 +3815,13 @@ class Product(object):
 
     def __init__(self, name):
         self.name = name
+
+    def __eq__(self,other):
+        return isinstance(other,self.__class__) and self.id == other.id
+
+    def __ne__(self,other):
+        return isinstance(other,self.__class__) and self.id != other.id
+
 
     @classmethod
     def by_id(cls, id):
@@ -5528,6 +5558,12 @@ class Task(MappedObject):
     Tasks that are available to schedule
     """
 
+    def __eq__(self,other):
+        return isinstance(other,self.__class__) and self.id == other.id
+
+    def __ne__(self,other):
+        return isinstance(other,self.__class__) and self.id != other.id
+
     @classmethod
     @cache
     def by_name(cls, name):
@@ -5636,6 +5672,11 @@ class TaskType(MappedObject):
     A task can be classified into serveral task types which can be used to
     select tasks for batch runs
     """
+    def __eq__(self,other):
+        return isinstance(other,self.__class__) and self.id == other.id
+
+    def __ne__(self,other):
+        return isinstance(other,self.__class__) and self.id != other.id
 
     @classmethod
     @cache
@@ -5647,6 +5688,11 @@ class TaskPackage(MappedObject):
     """
     A list of packages that a tasks should be run for.
     """
+    def __eq__(self,other):
+        return isinstance(other,self.__class__) and self.id == other.id
+
+    def __ne__(self,other):
+        return isinstance(other,self.__class__) and self.id != other.id
 
     @classmethod
     @cache

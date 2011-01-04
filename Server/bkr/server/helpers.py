@@ -35,15 +35,13 @@ def make_fake_link(name,id,text):
 def cache(f):
     the_cache = {}
     def do_cache(*args):
-        args = tuple(args) 
-        #Make sure we have different cache vals for args
-        args_to_hash = args + (f,)
-        cache = the_cache
+        args = tuple(args)
+        #Make sure we have different cache vals for args 
         try:
-            return cache[args_to_hash]
+            return the_cache[args]
         except KeyError:
             result = f(*args)
-            the_cache[args_to_hash] = result
+            the_cache[args] = result
             return result
     return do_cache
 

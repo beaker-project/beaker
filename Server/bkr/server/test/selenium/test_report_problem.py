@@ -85,6 +85,7 @@ class TestReportProblem(SeleniumTestCase):
         sel = self.selenium
         try:
             sel.open('report_problem?system_id=%s' % system.id)
+            sel.wait_for_page_to_load('3000')
             self.fail('Should raise 403')
         except Exception, e:
             self.assert_('Response_Code = 403' in e.args[0])
