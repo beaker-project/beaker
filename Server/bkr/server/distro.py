@@ -3,7 +3,6 @@ from turbogears import controllers, expose, flash, widgets, validate, error_hand
 from turbogears.widgets import AutoCompleteField, HiddenField
 from turbogears import identity, redirect
 from cherrypy import request, response
-from tg_expanding_form_widget.tg_expanding_form_widget import ExpandingForm
 from kid import Element
 from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.widgets import DistroTags, SearchBar

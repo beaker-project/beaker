@@ -20,6 +20,14 @@ BuildRequires:  python-sphinx >= 1.0
 %else
 BuildRequires:  python-sphinx10
 %endif
+# These server dependencies are needed in the build, because
+# sphinx imports bkr.server modules to generate API docs
+BuildRequires:  TurboGears
+BuildRequires:  python-xmltramp
+BuildRequires:  python-lxml
+BuildRequires:  python-ldap
+BuildRequires:  python-TurboMail >= 3.0
+BuildRequires:  rpm-python
 
 
 %package client

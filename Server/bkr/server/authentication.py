@@ -5,7 +5,6 @@ from turbogears.widgets import AutoCompleteField
 from turbogears.identity import IdentityException
 from turbogears.identity.saprovider import SqlAlchemyIdentity
 from cherrypy import request, response
-from tg_expanding_form_widget.tg_expanding_form_widget import ExpandingForm
 from kid import Element
 from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.helpers import *
