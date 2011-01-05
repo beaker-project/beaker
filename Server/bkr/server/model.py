@@ -1983,6 +1983,7 @@ class System(SystemObject):
         """
         Update Key/Value pairs for legacy RHTS
         """
+        keys_to_update = set()
         new_int_kvs = set()
         new_string_kvs = set()
         for key_name, values in inventory.items():
@@ -1990,6 +1991,7 @@ class System(SystemObject):
                 key = Key.by_name(key_name)
             except InvalidRequestError:
                 continue
+            keys_to_update.add(key)
             if not isinstance(values, list):
                 values = [values]
             for value in values:
@@ -2005,23 +2007,25 @@ class System(SystemObject):
         # Examine existing key-values to find what we already have, and what 
         # needs to be removed
         for kv in list(self.key_values_int):
-            if (kv.key, kv.key_value) in new_int_kvs:
-                new_int_kvs.remove((kv.key, kv.key_value))
-            else:
-                self.key_values_int.remove(kv)
-                self.activity.append(SystemActivity(user=identity.current.user,
-                        service=u'XMLRPC', action=u'Removed', field_name=u'Key/Value',
-                        old_value=u'%s/%s' % (kv.key.key_name, kv.key_value),
-                        new_value=None))
+            if kv.key in keys_to_update:
+                if (kv.key, kv.key_value) in new_int_kvs:
+                    new_int_kvs.remove((kv.key, kv.key_value))
+                else:
+                    self.key_values_int.remove(kv)
+                    self.activity.append(SystemActivity(user=identity.current.user,
+                            service=u'XMLRPC', action=u'Removed', field_name=u'Key/Value',
+                            old_value=u'%s/%s' % (kv.key.key_name, kv.key_value),
+                            new_value=None))
         for kv in list(self.key_values_string):
-            if (kv.key, kv.key_value) in new_string_kvs:
-                new_string_kvs.remove((kv.key, kv.key_value))
-            else:
-                self.key_values_string.remove(kv)
-                self.activity.append(SystemActivity(user=identity.current.user,
-                        service=u'XMLRPC', action=u'Removed', field_name=u'Key/Value',
-                        old_value=u'%s/%s' % (kv.key.key_name, kv.key_value),
-                        new_value=None))
+            if kv.key in keys_to_update:
+                if (kv.key, kv.key_value) in new_string_kvs:
+                    new_string_kvs.remove((kv.key, kv.key_value))
+                else:
+                    self.key_values_string.remove(kv)
+                    self.activity.append(SystemActivity(user=identity.current.user,
+                            service=u'XMLRPC', action=u'Removed', field_name=u'Key/Value',
+                            old_value=u'%s/%s' % (kv.key.key_name, kv.key_value),
+                            new_value=None))
 
         # Now we can just add the new ones
         for key, value in new_int_kvs:

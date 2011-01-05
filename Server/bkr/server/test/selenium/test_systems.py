@@ -1014,6 +1014,24 @@ class LegacyPushXmlRpcTest(XmlRpcTestCase):
         self.assertEquals(system.activity[0].old_value, None)
         self.assertEquals(system.activity[0].new_value, u'HVM/1')
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=665441
+    def test_existing_keys_are_untouched(self):
+        system = data_setup.create_system()
+        system.key_values_string.extend([
+            Key_Value_String(Key.by_name(u'PCIID'), '1022:2000'), # this one gets deleted
+            Key_Value_String(Key.by_name(u'HVM'), '0'), # this one gets updated
+            Key_Value_String(Key.by_name(u'VENDOR'), 'Bob'), # this one should not be touched
+        ])
+        session.flush()
+
+        self.server.legacypush(system.fqdn, {'PCIID': [], 'HVM': True})
+        session.refresh(system)
+        self.assertEquals(len(system.key_values_string), 2, system.key_values_string)
+        self.assertEquals(system.key_values_string[0].key.key_name, u'VENDOR')
+        self.assertEquals(system.key_values_string[0].key_value, u'Bob')
+        self.assertEquals(system.key_values_string[1].key.key_name, u'HVM')
+        self.assertEquals(system.key_values_string[1].key_value, u'1')
+
 class PushXmlRpcTest(XmlRpcTestCase):
 
     def setUp(self):
