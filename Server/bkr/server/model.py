@@ -5267,7 +5267,6 @@ class RecipeTask(TaskBase):
         # Flush the result to the DB so we can return the id.
         session.save(recipeTaskResult)
         session.flush([recipeTaskResult])
-        self.update_status()
         return recipeTaskResult.id
 
     def task_info(self):
