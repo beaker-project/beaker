@@ -27,7 +27,7 @@ BUILT_FILES=
 DOWNLOADED_FILES=selenium-remote-control-1.0.3.zip
 
 # data files, .c files, scripts anything needed to either compile the test and/or run it.
-FILES=$(METADATA) runtest.sh Makefile PURPOSE
+FILES=$(METADATA) runtest.sh Makefile PURPOSE $(DOWNLOADED_FILES)
 
 run: $(FILES) build \
      /usr/lib/python2.4/site-packages/selenium-2.0a5-py2.4.egg \
