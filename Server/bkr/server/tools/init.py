@@ -157,9 +157,9 @@ def init_db(user_name=None, password=None, user_display_name=None, user_email_ad
         #  Aborted.
         WAITING   = TaskStatus(status=u'Waiting', severity=7)
         RUNNING   = TaskStatus(status=u'Running', severity=5)
-        COMPLETED = TaskStatus(status=u'Completed', severity=50)
-        CANCELLED = TaskStatus(status=u'Cancelled', severity=60)
-        ABORTED   = TaskStatus(status=u'Aborted', severity=70)
+        ABORTED   = TaskStatus(status=u'Aborted', severity=60)
+        CANCELLED = TaskStatus(status=u'Cancelled', severity=70)
+        COMPLETED = TaskStatus(status=u'Completed', severity=80)
 
     #Setup Test Result
     if TaskResult.query().count() == 0:

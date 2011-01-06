@@ -3848,26 +3848,33 @@ class Job(TaskBase):
         """
         Update number of passes, failures, warns, panics..
         """
-        self.ptasks = 0
-        self.wtasks = 0
-        self.ftasks = 0
-        self.ktasks = 0
-        max_result = None
-        min_status = TaskStatus.max()
-        for recipeset in self.recipesets:
-            self.ptasks += recipeset.ptasks
-            self.wtasks += recipeset.wtasks
-            self.ftasks += recipeset.ftasks
-            self.ktasks += recipeset.ktasks
-            if recipeset.status < min_status:
-                min_status = recipeset.status
-            if recipeset.result > max_result:
-                max_result = recipeset.result
-        self.status = min_status
-        self.result = max_result
+        session.connection(Job).execute(job_table.update(
+                                        job_table.c.id==self.id
+                                                        ),
+                 status_id=select([task_status_table.c.id],
+                                  from_obj=[recipe_set_table.join(task_status_table)],
+                                  whereclause=recipe_set_table.c.job_id.__eq__(self.id)
+                                 ).group_by(task_status_table.c.severity)\
+                                  .having(func.min(task_status_table.c.severity)).scalar()
+                                       )
+        session.connection(Job).execute(job_table.update(
+                                        job_table.c.id==self.id
+                                                        ),
+                 result_id=select([task_result_table.c.id],
+                                  from_obj=[recipe_set_table.join(task_result_table)],
+                                  whereclause=recipe_set_table.c.job_id.__eq__(self.id)
+                                 ).group_by(task_result_table.c.severity)\
+                                  .having(func.max(task_result_table.c.severity)).scalar()
+                                       )
+        # Do I really need to do this?  seems sqlalchemy should do this for me.
+        session.flush()
+        session.refresh(self)
+
         if self.is_finished():
             # Send email notification
             mail.job_notify(self)
+
+        return
 
     def t_id(self):
         return "J:%s" % self.id
@@ -4162,7 +4169,6 @@ class RecipeSet(TaskBase):
         """
         Method to cancel all recipes in this recipe set.
         """
-        self.status = TaskStatus.by_name(u'Cancelled')
         for recipe in self.recipes:
             recipe._cancel(msg)
 
@@ -4177,7 +4183,6 @@ class RecipeSet(TaskBase):
         """
         Method to abort all recipes in this recipe set.
         """
-        self.status = TaskStatus.by_name(u'Aborted')
         for recipe in self.recipes:
             recipe._abort(msg)
 
@@ -4195,7 +4200,6 @@ class RecipeSet(TaskBase):
         Bubble Status updates up the chain.
         """
         self._update_status()
-        # we should be able to add some logic to not call job._bubble_up() if our status+result didn't change.
         self.job._bubble_up()
 
     def _bubble_down(self):
@@ -4210,28 +4214,36 @@ class RecipeSet(TaskBase):
         """
         Update number of passes, failures, warns, panics..
         """
-        self.ptasks = 0
-        self.wtasks = 0
-        self.ftasks = 0
-        self.ktasks = 0
-        max_result = None
-        min_status = TaskStatus.max()
-        for recipe in self.recipes:
-            self.ptasks += recipe.ptasks
-            self.wtasks += recipe.wtasks
-            self.ftasks += recipe.ftasks
-            self.ktasks += recipe.ktasks
-            if recipe.status < min_status:
-                min_status = recipe.status
-            if recipe.result > max_result:
-                max_result = recipe.result
-        self.status = min_status
-        self.result = max_result
+
+        session.connection(RecipeSet).execute(recipe_set_table.update(
+                                              recipe_set_table.c.id==self.id
+                                                              ),
+                 status_id=select([task_status_table.c.id],
+                                  from_obj=[recipe_table.join(task_status_table)],
+                                  whereclause=recipe_table.c.recipe_set_id.__eq__(self.id)
+                                 ).group_by(task_status_table.c.severity)\
+                                  .having(func.min(task_status_table.c.severity)).scalar()
+                                             )
+        session.connection(RecipeSet).execute(recipe_set_table.update(
+                                              recipe_set_table.c.id==self.id
+                                                              ),
+                 result_id=select([task_result_table.c.id],
+                                  from_obj=[recipe_table.join(task_result_table)],
+                                  whereclause=recipe_table.c.recipe_set_id.__eq__(self.id)
+                                 ).group_by(task_result_table.c.severity)\
+                                  .having(func.max(task_result_table.c.severity)).scalar()
+                                             )
+
+        # Do I really need to do this?  seems sqlalchemy should do this for me.
+        session.flush()
+        session.refresh(self)
 
         # Return systems if recipeSet finished
         if self.is_finished():
             for recipe in self.recipes:
                 recipe.release_system()
+
+        return
 
     def recipes_orderby(self, labcontroller):
         query = select([recipe_table.c.id, 
@@ -4567,18 +4579,14 @@ class Recipe(TaskBase):
         if session.connection(Recipe).execute(recipe_table.update(
           and_(recipe_table.c.id==self.id,
                recipe_table.c.status_id==TaskStatus.by_name(u'Processed').id)),
-          status_id=TaskStatus.by_name(u'Queued').id).rowcount == 1:
-            self._queue()
+          status_id=TaskStatus.by_name(u'Queued').id).rowcount == 1 and \
+           session.connection(RecipeTask).execute(recipe_task_table.update(
+          and_(recipe_task_table.c.recipe_id==self.id,
+               recipe_task_table.c.status_id==TaskStatus.by_name(u'Processed').id)),
+          status_id=TaskStatus.by_name(u'Queued').id).rowcount >= 1:
             self.update_status()
         else:
             raise BX(_('Invalid state transition for Recipe ID %s' % self.id))
-
-    def _queue(self):
-        """
-        Move from Processed -> Queued
-        """
-        for task in self.tasks:
-            task._queue()
 
     def process(self):
         """
@@ -4587,18 +4595,14 @@ class Recipe(TaskBase):
         if session.connection(Recipe).execute(recipe_table.update(
           and_(recipe_table.c.id==self.id,
                recipe_table.c.status_id==TaskStatus.by_name(u'New').id)),
-          status_id=TaskStatus.by_name(u'Processed').id).rowcount == 1:
-            self._process()
+          status_id=TaskStatus.by_name(u'Processed').id).rowcount == 1 and \
+           session.connection(RecipeTask).execute(recipe_task_table.update(
+          and_(recipe_task_table.c.recipe_id==self.id,
+               recipe_task_table.c.status_id==TaskStatus.by_name(u'New').id)),
+          status_id=TaskStatus.by_name(u'Processed').id).rowcount >= 1:
             self.update_status()
         else:
             raise BX(_('Invalid state transition for Recipe ID %s' % self.id))
-
-    def _process(self):
-        """
-        Move from New -> Processed
-        """
-        for task in self.tasks:
-            task._process()
 
     def createRepo(self):
         """
@@ -4643,18 +4647,14 @@ class Recipe(TaskBase):
         if session.connection(Recipe).execute(recipe_table.update(
           and_(recipe_table.c.id==self.id,
                recipe_table.c.status_id==TaskStatus.by_name(u'Queued').id)),
-          status_id=TaskStatus.by_name(u'Scheduled').id).rowcount == 1:
-            self._schedule()
+          status_id=TaskStatus.by_name(u'Scheduled').id).rowcount == 1 and \
+           session.connection(RecipeTask).execute(recipe_task_table.update(
+          and_(recipe_task_table.c.recipe_id==self.id,
+               recipe_task_table.c.status_id==TaskStatus.by_name(u'Queued').id)),
+          status_id=TaskStatus.by_name(u'Scheduled').id).rowcount >= 1:
             self.update_status()
         else:
             raise BX(_('Invalid state transition for Recipe ID %s' % self.id))
-
-    def _schedule(self):
-        """
-        Move from Processed -> Scheduled
-        """
-        for task in self.tasks:
-            task._schedule()
 
     def waiting(self):
         """
@@ -4663,18 +4663,14 @@ class Recipe(TaskBase):
         if session.connection(Recipe).execute(recipe_table.update(
           and_(recipe_table.c.id==self.id,
                recipe_table.c.status_id==TaskStatus.by_name(u'Scheduled').id)),
-          status_id=TaskStatus.by_name(u'Waiting').id).rowcount == 1:
-            self._waiting()
+          status_id=TaskStatus.by_name(u'Waiting').id).rowcount == 1 and \
+           session.connection(RecipeTask).execute(recipe_task_table.update(
+          and_(recipe_task_table.c.recipe_id==self.id,
+               recipe_task_table.c.status_id==TaskStatus.by_name(u'Scheduled').id)),
+          status_id=TaskStatus.by_name(u'Waiting').id).rowcount >= 1:
             self.update_status()
         else:
             raise BX(_('Invalid state transition for Recipe ID %s' % self.id))
-
-    def _waiting(self):
-        """
-        Move from Scheduled to Waiting
-        """
-        for task in self.tasks:
-            task._waiting()
 
     def cancel(self, msg=None):
         """
@@ -4687,7 +4683,6 @@ class Recipe(TaskBase):
         """
         Method to cancel all tasks in this recipe.
         """
-        self.status = TaskStatus.by_name(u'Cancelled')
         for task in self.tasks:
             task._cancel(msg)
 
@@ -4706,7 +4701,6 @@ class Recipe(TaskBase):
         """
         Method to abort all tasks in this recipe.
         """
-        self.status = TaskStatus.by_name(u'Aborted')
         for task in self.tasks:
             task._abort(msg)
 
@@ -4724,7 +4718,6 @@ class Recipe(TaskBase):
         Bubble Status updates up the chain.
         """
         self._update_status()
-        # we should be able to add some logic to not call recipeset._bubble_up() if our status+result didn't change.
         self.recipeset._bubble_up()
 
     def _bubble_down(self):
@@ -4737,36 +4730,31 @@ class Recipe(TaskBase):
 
     def _update_status(self):
         """
-        Update number of passes, failures, warns, panics..
+        Update status and result
         """
-        self.ptasks = 0
-        task_pass = TaskResult.by_name(u'Pass')
-        self.wtasks = 0
-        task_warn = TaskResult.by_name(u'Warn')
-        self.ftasks = 0
-        task_fail = TaskResult.by_name(u'Fail')
-        self.ktasks = 0
-        task_panic = TaskResult.by_name(u'Panic')
 
-        max_result = None
-        min_status = TaskStatus.max()
-        # I think this loop could be replaced with some sql which would be more efficient.
-        for task in self.tasks:
-            if task.is_finished():
-                if task.result == task_pass:
-                    self.ptasks += 1
-                if task.result == task_warn:
-                    self.wtasks += 1
-                if task.result == task_fail:
-                    self.ftasks += 1
-                if task.result == task_panic:
-                    self.ktasks += 1
-            if task.status < min_status:
-                min_status = task.status
-            if task.result > max_result:
-                max_result = task.result
-        self.status = min_status
-        self.result = max_result
+        session.connection(Recipe).execute(recipe_table.update(
+                                           recipe_table.c.id==self.id
+                                                              ),
+                 status_id=select([task_status_table.c.id],
+                                  from_obj=[recipe_task_table.join(task_status_table)],
+                                  whereclause=recipe_task_table.c.recipe_id.__eq__(self.id)
+                                 ).group_by(task_status_table.c.severity)\
+                                  .having(func.min(task_status_table.c.severity)).scalar()
+                                          )
+        session.connection(Recipe).execute(recipe_table.update(
+                                           recipe_table.c.id==self.id
+                                                              ),
+                 result_id=select([task_result_table.c.id],
+                                  from_obj=[recipe_task_table.join(task_result_table)],
+                                  whereclause=recipe_task_table.c.recipe_id.__eq__(self.id)
+                                 ).group_by(task_result_table.c.severity)\
+                                  .having(func.max(task_result_table.c.severity)).scalar()
+                                          )
+
+        # Do I really need to do this?  seems sqlalchemy should do this for me.
+        session.flush()
+        session.refresh(self)
 
         # Record the start of this Recipe.
         if not self.start_time \
@@ -4776,6 +4764,8 @@ class Recipe(TaskBase):
         if self.start_time and not self.finish_time and self.is_finished():
             # Record the completion of this Recipe.
             self.finish_time = datetime.utcnow()
+
+        return
 
     def release_system(self):
         """ Release the system and remove the watchdog
@@ -5070,6 +5060,11 @@ class RecipeTask(TaskBase):
     """
     result_types = ['pass_','warn','fail','panic']
     stop_types = ['stop','abort','cancel']
+    progress_types = dict(Pass  = 'ptasks',
+                          Warn  = 'wtasks',
+                          Fail  = 'ftasks',
+                          Panic = 'ktasks',
+                         )
 
     def delete(self): 
         self.logs = []
@@ -5157,10 +5152,11 @@ class RecipeTask(TaskBase):
         Bubble Status updates up the chain.
         """
         self._update_status()
-        # we should be able to add some logic to not call recipe._bubble_up() if our status+result didn't change.
         self.recipe._bubble_up()
 
-    update_status = _bubble_up
+    def update_status(self, status=None):
+        self._update_status(status=status)
+        self.recipe._bubble_up()
 
     def _bubble_down(self):
         """
@@ -5168,67 +5164,47 @@ class RecipeTask(TaskBase):
         """
         self._update_status()
 
-    def _update_status(self):
+    def _update_status(self, status=None):
         """
         Update number of passes, failures, warns, panics..
         """
-        max_result = None
-        for result in self.results:
-            if result.result > max_result:
-                max_result = result.result
-        self.result = max_result
 
-    def queue(self):
-        """
-        Moved from New -> Queued
-        """
-        self._queue()
-        self.update_status()
+        # RecipeTask is the lowest on the tree with a status.
+        if status is not None and not self.is_finished():
+            self.status = status
+            session.flush()
 
-    def _queue(self):
-        """
-        Moved from New -> Queued
-        """
-        self.status = TaskStatus.by_name(u'Queued')
+            # Once the task is finished report the results up..  but once the task is finished 
+            # Don't do it again. :-)
+            if self.results and self.is_finished():
 
-    def process(self):
-        """
-        Moved from Queued -> Processed
-        """
-        self._process()
-        self.update_status()
+                session.connection(RecipeTask).execute(recipe_task_table.update(
+                                                   recipe_task_table.c.id==self.id
+                                                                      ),
+                         result_id=select([task_result_table.c.id],
+                                   from_obj=[recipe_task_result_table.join(task_result_table)],
+                                   whereclause=recipe_task_result_table.c.recipe_task_id.__eq__(self.id)
+                                         ).group_by(task_result_table.c.severity)\
+                                          .having(func.max(task_result_table.c.severity)).scalar()
+                                                      )
 
-    def _process(self):
-        """
-        Moved from Queued -> Processed
-        """
-        self.status = TaskStatus.by_name(u'Processed')
-
-    def schedule(self):
-        """
-        Moved from Processed -> Scheduled
-        """
-        self._schedule()
-        self.update_status()
-
-    def _schedule(self):
-        """
-        Moved from Processed -> Scheduled
-        """
-        self.status = TaskStatus.by_name(u'Scheduled')
-
-    def waiting(self):
-        """
-        Moved from Scheduled -> Waiting
-        """
-        self._waiting()
-        self.update_status()
-
-    def _waiting(self):
-        """
-        Moved from Scheduled -> Waiting
-        """
-        self.status = TaskStatus.by_name(u'Waiting')
+                # Do I really need to do this?  seems sqlalchemy should do this for me.
+                session.flush()
+                session.refresh(self)
+                if self.result.result in self.progress_types:
+                    attr = '%s' % self.progress_types['%s' % self.result]
+                    # Increment Task Totals for Pass,Fail,Warn,Panic.
+                    setattr(self.recipe, 
+                            attr, 
+                            getattr(self.recipe, attr) + 1)
+                    setattr(self.recipe.recipeset, 
+                            attr, 
+                            getattr(self.recipe.recipeset, attr) + 1)
+                    setattr(self.recipe.recipeset.job, 
+                            attr, 
+                            getattr(self.recipe.recipeset.job, attr) + 1)
+    
+        return
 
     def start(self, watchdog_override=None):
         """
@@ -5241,7 +5217,6 @@ class RecipeTask(TaskBase):
             raise BX(_('No watchdog exists for recipe %s' % self.recipe.id))
         if not self.start_time:
             self.start_time = datetime.utcnow()
-        self.status = TaskStatus.by_name(u'Running')
 
         self.recipe.watchdog.recipetask = self
         if watchdog_override:
@@ -5250,7 +5225,7 @@ class RecipeTask(TaskBase):
             # add in 30 minutes at a minimum
             self.recipe.watchdog.kill_time = datetime.utcnow() + timedelta(
                                                     seconds=self.task.avg_time + 1800)
-        self.update_status()
+        self.update_status(status=TaskStatus.by_name(u'Running'))
         return True
 
     def extend(self, kill_time):
@@ -5283,8 +5258,7 @@ class RecipeTask(TaskBase):
             raise BX(_('recipe task %s was never started' % self.id))
         if self.start_time and not self.finish_time:
             self.finish_time = datetime.utcnow()
-        self.status = TaskStatus.by_name(u'Completed')
-        self.update_status()
+        self.update_status(status=TaskStatus.by_name(u'Completed'))
         return True
 
     def cancel(self, msg=None):
@@ -5298,7 +5272,7 @@ class RecipeTask(TaskBase):
         """
         Cancel this task
         """
-        return self._abort_cancel(u'Cancelled', msg)
+        return self._abort_cancel(TaskStatus.by_name(u'Cancelled'), msg)
 
     def abort(self, msg=None):
         """
@@ -5307,11 +5281,11 @@ class RecipeTask(TaskBase):
         self._abort(msg)
         self.update_status()
     
-    def _abort(self, msg=None):
+    def _abort(self,msg=None):
         """
         Abort this task
         """
-        return self._abort_cancel(u'Aborted', msg)
+        return self._abort_cancel(TaskStatus.by_name(u'Aborted'), msg)
     
     def _abort_cancel(self, status, msg=None):
         """
@@ -5323,12 +5297,12 @@ class RecipeTask(TaskBase):
         if not self.is_finished():
             if self.start_time:
                 self.finish_time = datetime.utcnow()
-            self.status = TaskStatus.by_name(status)
             self.results.append(RecipeTaskResult(recipetask=self,
                                        path=u'/',
                                        result=TaskResult.by_name(u'Warn'),
                                        score=0,
                                        log=msg))
+            self._update_status(status=status)
         return True
 
     def pass_(self, path, score, summary):
