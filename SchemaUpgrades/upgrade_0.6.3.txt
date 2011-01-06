@@ -1,0 +1,220 @@
+Run the following SQL, to make certain mandatory foreign key columns not 
+NULLable and have ON UPDATE DELETE ON CASCADE DELETE. Note that the foreign 
+key names given in the DROP clauses below are automatically generated names. 
+Use SHOW CREATE TABLE to verify that the correct foreign key is being dropped. 
+Expected run time is approximately 3 minutes.
+
+DELETE FROM provision_update_family WHERE provision_family_id IS NULL OR osversion_id IS NULL;
+ALTER TABLE provision_update_family
+    MODIFY provision_family_id INT NOT NULL,
+    MODIFY osversion_id INT NOT NULL,
+    DROP FOREIGN KEY provision_update_family_ibfk_1,
+    ADD FOREIGN KEY (provision_family_id) REFERENCES provision_family (id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+DELETE FROM provision_family WHERE provision_id IS NULL OR osmajor_id IS NULL;
+ALTER TABLE provision_family
+    MODIFY provision_id INT NOT NULL,
+    MODIFY osmajor_id INT NOT NULL,
+    DROP FOREIGN KEY provision_family_ibfk_1,
+    ADD FOREIGN KEY (provision_id) REFERENCES provision (id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+DELETE FROM provision WHERE system_id IS NULL OR arch_id IS NULL;
+ALTER TABLE provision
+    MODIFY system_id INT NOT NULL,
+    MODIFY arch_id INT NOT NULL,
+    DROP FOREIGN KEY provision_ibfk_1,
+    ADD FOREIGN KEY (system_id) REFERENCES system (id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+DELETE FROM exclude_osmajor WHERE system_id IS NULL OR arch_id IS NULL OR osmajor_id IS NULL;
+ALTER TABLE exclude_osmajor
+    MODIFY system_id INT NOT NULL,
+    MODIFY arch_id INT NOT NULL,
+    MODIFY osmajor_id INT NOT NULL,
+    DROP FOREIGN KEY exclude_osmajor_ibfk_1,
+    ADD FOREIGN KEY (system_id) REFERENCES system (id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+DELETE FROM exclude_osversion WHERE system_id IS NULL OR arch_id IS NULL OR osversion_id IS NULL;
+ALTER TABLE exclude_osversion
+    MODIFY system_id INT NOT NULL,
+    MODIFY arch_id INT NOT NULL,
+    MODIFY osversion_id INT NOT NULL,
+    DROP FOREIGN KEY exclude_osversion_ibfk_2,
+    ADD FOREIGN KEY (system_id) REFERENCES system (id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+DELETE FROM labinfo WHERE system_id IS NULL;
+ALTER TABLE labinfo
+    MODIFY system_id INT NOT NULL,
+    DROP FOREIGN KEY labinfo_ibfk_1,
+    ADD FOREIGN KEY (system_id) REFERENCES system (id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+DELETE FROM watchdog WHERE system_id IS NULL OR recipe_id IS NULL;
+ALTER TABLE watchdog
+    MODIFY system_id INT NOT NULL,
+    MODIFY recipe_id INT NOT NULL,
+    DROP FOREIGN KEY watchdog_ibfk_1,
+    ADD FOREIGN KEY (system_id) REFERENCES system (id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+DELETE FROM cpu_flag WHERE cpu_id IS NULL;
+ALTER TABLE cpu_flag
+    MODIFY cpu_id INT NOT NULL,
+    DROP FOREIGN KEY cpu_flag_ibfk_1,
+    ADD FOREIGN KEY (cpu_id) REFERENCES cpu (id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+DELETE FROM cpu WHERE system_id IS NULL;
+ALTER TABLE cpu
+    MODIFY system_id INT NOT NULL,
+    DROP FOREIGN KEY cpu_ibfk_1,
+    ADD FOREIGN KEY (system_id) REFERENCES system (id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+DELETE FROM numa WHERE system_id IS NULL;
+ALTER TABLE numa
+    MODIFY system_id INT NOT NULL,
+    DROP FOREIGN KEY numa_ibfk_1,
+    ADD FOREIGN KEY (system_id) REFERENCES system (id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+DELETE FROM power WHERE system_id IS NULL;
+ALTER TABLE power
+    MODIFY system_id INT NOT NULL,
+    DROP FOREIGN KEY power_ibfk_2,
+    ADD FOREIGN KEY (system_id) REFERENCES system (id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+DELETE FROM system_activity WHERE system_id IS NULL;
+ALTER TABLE system_activity
+    MODIFY system_id INT NOT NULL,
+    DROP FOREIGN KEY system_activity_ibfk_1,
+    ADD FOREIGN KEY (system_id) REFERENCES system (id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+DELETE FROM note WHERE system_id IS NULL;
+ALTER TABLE note
+    MODIFY system_id INT NOT NULL,
+    DROP FOREIGN KEY note_ibfk_2,
+    ADD FOREIGN KEY (system_id) REFERENCES system (id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+DELETE FROM key_value_string WHERE system_id IS NULL OR key_id IS NULL;
+ALTER TABLE key_value_string
+    MODIFY system_id INT NOT NULL,
+    MODIFY key_id INT NOT NULL,
+    DROP FOREIGN KEY key_value_string_ibfk_1,
+    ADD FOREIGN KEY (system_id) REFERENCES system (id) ON UPDATE CASCADE ON DELETE CASCADE,
+    DROP FOREIGN KEY key_value_string_ibfk_2,
+    ADD FOREIGN KEY (key_id) REFERENCES key_ (id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+DELETE FROM key_value_int WHERE system_id IS NULL OR key_id IS NULL;
+ALTER TABLE key_value_int
+    MODIFY system_id INT NOT NULL,
+    MODIFY key_id INT NOT NULL,
+    DROP FOREIGN KEY key_value_int_ibfk_1,
+    ADD FOREIGN KEY (system_id) REFERENCES system (id) ON UPDATE CASCADE ON DELETE CASCADE,
+    DROP FOREIGN KEY key_value_int_ibfk_2,
+    ADD FOREIGN KEY (key_id) REFERENCES key_ (id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+ALTER TABLE system_device_map
+    DROP FOREIGN KEY system_device_map_ibfk_1,
+    ADD FOREIGN KEY (system_id) REFERENCES system (id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+ALTER TABLE system_arch_map
+    DROP FOREIGN KEY system_arch_map_ibfk_1,
+    ADD FOREIGN KEY (system_id) REFERENCES system (id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+----
+
+To *roll back* the above changes, run the following SQL. As noted above, 
+foreign key names are automatically generated and may need to be verified 
+using SHOW CREATE TABLE. Expected run time is approximately 3 minutes.
+
+ALTER TABLE provision_update_family
+    MODIFY provision_family_id INT NULL,
+    MODIFY osversion_id INT NULL,
+    DROP FOREIGN KEY provision_update_family_ibfk_3,
+    ADD FOREIGN KEY (provision_family_id) REFERENCES provision_family (id);
+
+ALTER TABLE provision_family
+    MODIFY provision_id INT NULL,
+    MODIFY osmajor_id INT NULL,
+    DROP FOREIGN KEY provision_family_ibfk_3,
+    ADD FOREIGN KEY (provision_id) REFERENCES provision (id);
+
+ALTER TABLE provision
+    MODIFY system_id INT NULL,
+    MODIFY arch_id INT NULL,
+    DROP FOREIGN KEY provision_ibfk_3,
+    ADD FOREIGN KEY (system_id) REFERENCES system (id);
+
+ALTER TABLE exclude_osmajor
+    MODIFY system_id INT NULL,
+    MODIFY arch_id INT NULL,
+    MODIFY osmajor_id INT NULL,
+    DROP FOREIGN KEY exclude_osmajor_ibfk_4,
+    ADD FOREIGN KEY (system_id) REFERENCES system (id);
+
+ALTER TABLE exclude_osversion
+    MODIFY system_id INT NULL,
+    MODIFY arch_id INT NULL,
+    MODIFY osversion_id INT NULL,
+    DROP FOREIGN KEY exclude_osversion_ibfk_4,
+    ADD FOREIGN KEY (system_id) REFERENCES system (id);
+
+ALTER TABLE labinfo
+    MODIFY system_id INT NULL,
+    DROP FOREIGN KEY labinfo_ibfk_2,
+    ADD FOREIGN KEY (system_id) REFERENCES system (id);
+
+ALTER TABLE watchdog
+    MODIFY system_id INT NULL,
+    MODIFY recipe_id INT NULL,
+    DROP FOREIGN KEY watchdog_ibfk_4,
+    ADD FOREIGN KEY (system_id) REFERENCES system (id);
+
+ALTER TABLE cpu_flag
+    MODIFY cpu_id INT NULL,
+    DROP FOREIGN KEY cpu_flag_ibfk_2,
+    ADD FOREIGN KEY (cpu_id) REFERENCES cpu (id);
+
+ALTER TABLE cpu
+    MODIFY system_id INT NULL,
+    DROP FOREIGN KEY cpu_ibfk_2,
+    ADD FOREIGN KEY (system_id) REFERENCES system (id);
+
+ALTER TABLE numa
+    MODIFY system_id INT NULL,
+    DROP FOREIGN KEY numa_ibfk_2,
+    ADD FOREIGN KEY (system_id) REFERENCES system (id);
+
+ALTER TABLE power
+    MODIFY system_id INT NULL,
+    DROP FOREIGN KEY power_ibfk_3,
+    ADD FOREIGN KEY (system_id) REFERENCES system (id);
+
+ALTER TABLE system_activity
+    MODIFY system_id INT NULL,
+    DROP FOREIGN KEY system_activity_ibfk_3,
+    ADD FOREIGN KEY (system_id) REFERENCES system (id);
+
+ALTER TABLE note
+    MODIFY system_id INT NULL,
+    DROP FOREIGN KEY note_ibfk_3,
+    ADD FOREIGN KEY (system_id) REFERENCES system (id);
+
+ALTER TABLE key_value_string
+    MODIFY system_id INT NULL,
+    MODIFY key_id INT NULL,
+    DROP FOREIGN KEY key_value_string_ibfk_3,
+    ADD FOREIGN KEY (system_id) REFERENCES system (id),
+    DROP FOREIGN KEY key_value_string_ibfk_4,
+    ADD FOREIGN KEY (key_id) REFERENCES key_ (id);
+
+ALTER TABLE key_value_int
+    MODIFY system_id INT NULL,
+    MODIFY key_id INT NULL,
+    DROP FOREIGN KEY key_value_int_ibfk_3,
+    ADD FOREIGN KEY (system_id) REFERENCES system (id),
+    DROP FOREIGN KEY key_value_int_ibfk_4,
+    ADD FOREIGN KEY (key_id) REFERENCES key_ (id);
+
+ALTER TABLE system_device_map
+    DROP FOREIGN KEY system_device_map_ibfk_3,
+    ADD FOREIGN KEY (system_id) REFERENCES system (id);
+
+ALTER TABLE system_arch_map
+    DROP FOREIGN KEY system_arch_map_ibfk_3,
+    ADD FOREIGN KEY (system_id) REFERENCES system (id);
