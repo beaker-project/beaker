@@ -1,0 +1,352 @@
+<job result="Fail" status="Completed">
+	<whiteboard/>
+	<recipeSet>
+		<recipe result="Fail" status="Completed" whiteboard="">
+			<distroRequires>
+				<distro_name op="=" value="BlueShoeLinux5-5"/>
+			</distroRequires>
+			<hostRequires/>
+			<task name="/fake/Task/task0" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task1" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task2" result="Fail" status="Aborted"/>
+			<task name="/fake/Task/task3" result="Warn" status="Aborted"/>
+		</recipe>
+	</recipeSet>
+	<recipeSet>
+		<recipe result="Fail" status="Completed" whiteboard="">
+			<distroRequires>
+				<distro_name op="=" value="BlueShoeLinux5-5"/>
+			</distroRequires>
+			<hostRequires/>
+			<task name="/fake/Task/task0" result="Fail" status="Completed"/>
+			<task name="/fake/Task/task1" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task2" result="Fail" status="Aborted"/>
+			<task name="/fake/Task/task3" result="Warn" status="Aborted"/>
+		</recipe>
+	</recipeSet>
+	<recipeSet>
+		<recipe result="Fail" status="Completed" whiteboard="">
+			<distroRequires>
+				<distro_name op="=" value="BlueShoeLinux5-5"/>
+			</distroRequires>
+			<hostRequires/>
+			<task name="/fake/Task/task0" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task1" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task2" result="Fail" status="Aborted"/>
+			<task name="/fake/Task/task3" result="Warn" status="Aborted"/>
+		</recipe>
+	</recipeSet>
+	<recipeSet>
+		<recipe result="Fail" status="Completed" whiteboard="">
+			<distroRequires>
+				<distro_name op="=" value="BlueShoeLinux5-5"/>
+			</distroRequires>
+			<hostRequires/>
+			<task name="/fake/Task/task0" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task1" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task2" result="Fail" status="Aborted"/>
+			<task name="/fake/Task/task3" result="Warn" status="Aborted"/>
+		</recipe>
+	</recipeSet>
+	<recipeSet>
+		<recipe result="Fail" status="Completed" whiteboard="">
+			<distroRequires>
+				<distro_name op="=" value="BlueShoeLinux5-5"/>
+			</distroRequires>
+			<hostRequires/>
+			<task name="/fake/Task/task0" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task1" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task2" result="Fail" status="Aborted"/>
+			<task name="/fake/Task/task3" result="Warn" status="Aborted"/>
+		</recipe>
+	</recipeSet>
+	<recipeSet>
+		<recipe result="Fail" status="Completed" whiteboard="">
+			<distroRequires>
+				<distro_name op="=" value="BlueShoeLinux5-5"/>
+			</distroRequires>
+			<hostRequires/>
+			<task name="/fake/Task/task0" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task1" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task2" result="Fail" status="Aborted"/>
+			<task name="/fake/Task/task3" result="Warn" status="Aborted"/>
+		</recipe>
+	</recipeSet>
+	<recipeSet>
+		<recipe result="Fail" status="Completed" whiteboard="">
+			<distroRequires>
+				<distro_name op="=" value="BlueShoeLinux5-5"/>
+			</distroRequires>
+			<hostRequires/>
+			<task name="/fake/Task/task0" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task1" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task2" result="Fail" status="Aborted"/>
+			<task name="/fake/Task/task3" result="Warn" status="Aborted"/>
+		</recipe>
+	</recipeSet>
+	<recipeSet>
+		<recipe result="Fail" status="Completed" whiteboard="">
+			<distroRequires>
+				<distro_name op="=" value="BlueShoeLinux5-5"/>
+			</distroRequires>
+			<hostRequires/>
+			<task name="/fake/Task/task0" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task1" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task2" result="Fail" status="Aborted"/>
+			<task name="/fake/Task/task3" result="Warn" status="Aborted"/>
+		</recipe>
+	</recipeSet>
+	<recipeSet>
+		<recipe result="Fail" status="Completed" whiteboard="">
+			<distroRequires>
+				<distro_name op="=" value="BlueShoeLinux5-5"/>
+			</distroRequires>
+			<hostRequires/>
+			<task name="/fake/Task/task0" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task1" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task2" result="Fail" status="Aborted"/>
+			<task name="/fake/Task/task3" result="Warn" status="Aborted"/>
+		</recipe>
+	</recipeSet>
+	<recipeSet>
+		<recipe result="Fail" status="Completed" whiteboard="">
+			<distroRequires>
+				<distro_name op="=" value="BlueShoeLinux5-5"/>
+			</distroRequires>
+			<hostRequires/>
+			<task name="/fake/Task/task0" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task1" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task2" result="Fail" status="Aborted"/>
+			<task name="/fake/Task/task3" result="Warn" status="Aborted"/>
+		</recipe>
+	</recipeSet>
+	<recipeSet>
+		<recipe result="Fail" status="Completed" whiteboard="">
+			<distroRequires>
+				<distro_name op="=" value="BlueShoeLinux5-5"/>
+			</distroRequires>
+			<hostRequires/>
+			<task name="/fake/Task/task0" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task1" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task2" result="Fail" status="Aborted"/>
+			<task name="/fake/Task/task3" result="Warn" status="Aborted"/>
+		</recipe>
+	</recipeSet>
+	<recipeSet>
+		<recipe result="Fail" status="Completed" whiteboard="">
+			<distroRequires>
+				<distro_name op="=" value="BlueShoeLinux5-5"/>
+			</distroRequires>
+			<hostRequires/>
+			<task name="/fake/Task/task0" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task1" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task2" result="Fail" status="Aborted"/>
+			<task name="/fake/Task/task3" result="Warn" status="Aborted"/>
+		</recipe>
+	</recipeSet>
+	<recipeSet>
+		<recipe result="Fail" status="Completed" whiteboard="">
+			<distroRequires>
+				<distro_name op="=" value="BlueShoeLinux5-5"/>
+			</distroRequires>
+			<hostRequires/>
+			<task name="/fake/Task/task0" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task1" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task2" result="Fail" status="Aborted"/>
+			<task name="/fake/Task/task3" result="Warn" status="Aborted"/>
+		</recipe>
+	</recipeSet>
+	<recipeSet>
+		<recipe result="Fail" status="Completed" whiteboard="">
+			<distroRequires>
+				<distro_name op="=" value="BlueShoeLinux5-5"/>
+			</distroRequires>
+			<hostRequires/>
+			<task name="/fake/Task/task0" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task1" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task2" result="Fail" status="Aborted"/>
+			<task name="/fake/Task/task3" result="Warn" status="Aborted"/>
+		</recipe>
+	</recipeSet>
+	<recipeSet>
+		<recipe result="Fail" status="Completed" whiteboard="">
+			<distroRequires>
+				<distro_name op="=" value="BlueShoeLinux5-5"/>
+			</distroRequires>
+			<hostRequires/>
+			<task name="/fake/Task/task0" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task1" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task2" result="Fail" status="Aborted"/>
+			<task name="/fake/Task/task3" result="Warn" status="Aborted"/>
+		</recipe>
+	</recipeSet>
+	<recipeSet>
+		<recipe result="Fail" status="Completed" whiteboard="">
+			<distroRequires>
+				<distro_name op="=" value="BlueShoeLinux5-5"/>
+			</distroRequires>
+			<hostRequires/>
+			<task name="/fake/Task/task0" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task1" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task2" result="Fail" status="Aborted"/>
+			<task name="/fake/Task/task3" result="Warn" status="Aborted"/>
+		</recipe>
+	</recipeSet>
+	<recipeSet>
+		<recipe result="Fail" status="Completed" whiteboard="">
+			<distroRequires>
+				<distro_name op="=" value="BlueShoeLinux5-5"/>
+			</distroRequires>
+			<hostRequires/>
+			<task name="/fake/Task/task0" result="Fail" status="Completed"/>
+			<task name="/fake/Task/task1" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task2" result="Fail" status="Aborted"/>
+			<task name="/fake/Task/task3" result="Warn" status="Aborted"/>
+		</recipe>
+	</recipeSet>
+	<recipeSet>
+		<recipe result="Fail" status="Completed" whiteboard="">
+			<distroRequires>
+				<distro_name op="=" value="BlueShoeLinux5-5"/>
+			</distroRequires>
+			<hostRequires/>
+			<task name="/fake/Task/task0" result="Fail" status="Completed"/>
+			<task name="/fake/Task/task1" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task2" result="Fail" status="Aborted"/>
+			<task name="/fake/Task/task3" result="Warn" status="Aborted"/>
+		</recipe>
+	</recipeSet>
+	<recipeSet>
+		<recipe result="Fail" status="Completed" whiteboard="">
+			<distroRequires>
+				<distro_name op="=" value="BlueShoeLinux5-5"/>
+			</distroRequires>
+			<hostRequires/>
+			<task name="/fake/Task/task0" result="Fail" status="Completed"/>
+			<task name="/fake/Task/task1" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task2" result="Fail" status="Aborted"/>
+			<task name="/fake/Task/task3" result="Warn" status="Aborted"/>
+		</recipe>
+	</recipeSet>
+	<recipeSet>
+		<recipe result="Fail" status="Completed" whiteboard="">
+			<distroRequires>
+				<distro_name op="=" value="BlueShoeLinux5-5"/>
+			</distroRequires>
+			<hostRequires/>
+			<task name="/fake/Task/task0" result="Fail" status="Completed"/>
+			<task name="/fake/Task/task1" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task2" result="Fail" status="Aborted"/>
+			<task name="/fake/Task/task3" result="Warn" status="Aborted"/>
+		</recipe>
+	</recipeSet>
+	<recipeSet>
+		<recipe result="Warn" status="Cancelled" whiteboard="">
+			<distroRequires>
+				<distro_name op="=" value="BlueShoeLinux5-5"/>
+			</distroRequires>
+			<hostRequires/>
+			<task name="/fake/Task/task0" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task1" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task2" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task3" result="Warn" status="Cancelled"/>
+		</recipe>
+	</recipeSet>
+	<recipeSet>
+		<recipe result="Fail" status="Completed" whiteboard="">
+			<distroRequires>
+				<distro_name op="=" value="BlueShoeLinux5-5"/>
+			</distroRequires>
+			<hostRequires/>
+			<task name="/fake/Task/task0" result="Fail" status="Completed"/>
+			<task name="/fake/Task/task1" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task2" result="Fail" status="Aborted"/>
+			<task name="/fake/Task/task3" result="Warn" status="Aborted"/>
+		</recipe>
+	</recipeSet>
+	<recipeSet>
+		<recipe result="Fail" status="Completed" whiteboard="">
+			<distroRequires>
+				<distro_name op="=" value="BlueShoeLinux5-5"/>
+			</distroRequires>
+			<hostRequires/>
+			<task name="/fake/Task/task0" result="Fail" status="Completed"/>
+			<task name="/fake/Task/task1" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task2" result="Fail" status="Aborted"/>
+			<task name="/fake/Task/task3" result="Warn" status="Aborted"/>
+		</recipe>
+	</recipeSet>
+	<recipeSet>
+		<recipe result="Fail" status="Completed" whiteboard="">
+			<distroRequires>
+				<distro_name op="=" value="BlueShoeLinux5-5"/>
+			</distroRequires>
+			<hostRequires/>
+			<task name="/fake/Task/task0" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task1" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task2" result="Fail" status="Aborted"/>
+			<task name="/fake/Task/task3" result="Warn" status="Aborted"/>
+		</recipe>
+	</recipeSet>
+	<recipeSet>
+		<recipe result="Fail" status="Completed" whiteboard="">
+			<distroRequires>
+				<distro_name op="=" value="BlueShoeLinux5-5"/>
+			</distroRequires>
+			<hostRequires/>
+			<task name="/fake/Task/task0" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task1" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task2" result="Fail" status="Aborted"/>
+			<task name="/fake/Task/task3" result="Warn" status="Aborted"/>
+		</recipe>
+	</recipeSet>
+	<recipeSet>
+		<recipe result="Fail" status="Completed" whiteboard="">
+			<distroRequires>
+				<distro_name op="=" value="BlueShoeLinux5-5"/>
+			</distroRequires>
+			<hostRequires/>
+			<task name="/fake/Task/task0" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task1" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task2" result="Fail" status="Aborted"/>
+			<task name="/fake/Task/task3" result="Warn" status="Aborted"/>
+		</recipe>
+	</recipeSet>
+	<recipeSet>
+		<recipe result="Fail" status="Completed" whiteboard="">
+			<distroRequires>
+				<distro_name op="=" value="BlueShoeLinux5-5"/>
+			</distroRequires>
+			<hostRequires/>
+			<task name="/fake/Task/task0" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task1" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task2" result="Fail" status="Aborted"/>
+			<task name="/fake/Task/task3" result="Warn" status="Aborted"/>
+		</recipe>
+	</recipeSet>
+	<recipeSet>
+		<recipe result="Fail" status="Completed" whiteboard="">
+			<distroRequires>
+				<distro_name op="=" value="BlueShoeLinux5-5"/>
+			</distroRequires>
+			<hostRequires/>
+			<task name="/fake/Task/task0" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task1" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task2" result="Fail" status="Aborted"/>
+			<task name="/fake/Task/task3" result="Warn" status="Aborted"/>
+		</recipe>
+	</recipeSet>
+	<recipeSet>
+		<recipe result="Fail" status="Completed" whiteboard="">
+			<distroRequires>
+				<distro_name op="=" value="BlueShoeLinux5-5"/>
+			</distroRequires>
+			<hostRequires/>
+			<task name="/fake/Task/task0" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task1" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task2" result="Fail" status="Aborted"/>
+			<task name="/fake/Task/task3" result="Warn" status="Aborted"/>
+		</recipe>
+	</recipeSet>
+</job>
+

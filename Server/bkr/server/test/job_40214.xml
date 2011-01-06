@@ -1,0 +1,1433 @@
+<job result="Fail" status="Completed">
+	<whiteboard/>
+	<recipeSet>
+		<recipe result="Warn" status="Completed" whiteboard="">
+			<distroRequires>
+				<distro_name op="=" value="BlueShoeLinux5-5"/>
+			</distroRequires>
+			<hostRequires/>
+			<task name="/fake/Task/task0" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task1" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task2" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task3" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task4" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task5" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task6" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task7" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task8" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task9" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task10" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task11" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task12" result="Warn" status="Completed"/>
+			<task name="/fake/Task/task13" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task14" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task15" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task16" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task17" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task18" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task19" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task20" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task21" result="Warn" status="Cancelled"/>
+		</recipe>
+	</recipeSet>
+	<recipeSet>
+		<recipe result="Warn" status="Completed" whiteboard="">
+			<distroRequires>
+				<distro_name op="=" value="BlueShoeLinux5-5"/>
+			</distroRequires>
+			<hostRequires/>
+			<task name="/fake/Task/task0" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task22" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task1" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task2" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task3" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task4" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task5" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task6" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task7" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task8" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task9" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task10" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task11" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task12" result="Warn" status="Completed"/>
+			<task name="/fake/Task/task13" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task14" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task15" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task16" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task17" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task18" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task19" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task20" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task21" result="Warn" status="Cancelled"/>
+		</recipe>
+	</recipeSet>
+	<recipeSet>
+		<recipe result="Warn" status="Completed" whiteboard="">
+			<distroRequires>
+				<distro_name op="=" value="BlueShoeLinux5-5"/>
+			</distroRequires>
+			<hostRequires/>
+			<task name="/fake/Task/task0" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task22" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task1" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task2" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task3" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task4" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task5" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task6" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task7" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task8" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task9" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task10" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task11" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task12" result="Warn" status="Completed"/>
+			<task name="/fake/Task/task13" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task14" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task15" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task16" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task17" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task18" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task19" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task20" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task21" result="Warn" status="Cancelled"/>
+		</recipe>
+	</recipeSet>
+	<recipeSet>
+		<recipe result="Warn" status="Completed" whiteboard="">
+			<distroRequires>
+				<distro_name op="=" value="BlueShoeLinux5-5"/>
+			</distroRequires>
+			<hostRequires/>
+			<task name="/fake/Task/task0" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task22" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task1" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task2" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task3" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task4" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task5" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task6" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task7" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task8" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task9" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task10" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task11" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task12" result="Warn" status="Completed"/>
+			<task name="/fake/Task/task13" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task14" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task15" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task16" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task17" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task18" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task19" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task20" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task21" result="Warn" status="Cancelled"/>
+		</recipe>
+	</recipeSet>
+	<recipeSet>
+		<recipe result="Warn" status="Completed" whiteboard="">
+			<distroRequires>
+				<distro_name op="=" value="BlueShoeLinux5-5"/>
+			</distroRequires>
+			<hostRequires/>
+			<task name="/fake/Task/task0" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task22" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task1" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task2" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task3" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task4" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task5" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task6" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task7" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task8" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task9" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task10" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task11" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task12" result="Warn" status="Completed"/>
+			<task name="/fake/Task/task13" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task14" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task15" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task16" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task17" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task18" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task19" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task20" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task21" result="Warn" status="Cancelled"/>
+		</recipe>
+	</recipeSet>
+	<recipeSet>
+		<recipe result="Warn" status="Completed" whiteboard="">
+			<distroRequires>
+				<distro_name op="=" value="BlueShoeLinux5-5"/>
+			</distroRequires>
+			<hostRequires/>
+			<task name="/fake/Task/task0" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task22" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task1" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task2" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task3" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task4" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task5" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task6" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task7" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task8" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task9" result="Warn" status="Aborted"/>
+			<task name="/fake/Task/task10" result="Warn" status="Aborted"/>
+			<task name="/fake/Task/task11" result="Warn" status="Aborted"/>
+			<task name="/fake/Task/task12" result="Warn" status="Aborted"/>
+			<task name="/fake/Task/task13" result="Warn" status="Aborted"/>
+			<task name="/fake/Task/task14" result="Warn" status="Aborted"/>
+			<task name="/fake/Task/task15" result="Warn" status="Aborted"/>
+			<task name="/fake/Task/task16" result="Warn" status="Aborted"/>
+			<task name="/fake/Task/task17" result="Warn" status="Aborted"/>
+			<task name="/fake/Task/task18" result="Warn" status="Aborted"/>
+			<task name="/fake/Task/task19" result="Warn" status="Aborted"/>
+			<task name="/fake/Task/task20" result="Warn" status="Aborted"/>
+			<task name="/fake/Task/task21" result="Warn" status="Aborted"/>
+		</recipe>
+	</recipeSet>
+	<recipeSet>
+		<recipe result="Warn" status="Completed" whiteboard="">
+			<distroRequires>
+				<distro_name op="=" value="BlueShoeLinux5-5"/>
+			</distroRequires>
+			<hostRequires/>
+			<task name="/fake/Task/task0" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task22" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task1" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task2" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task3" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task4" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task5" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task6" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task7" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task8" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task9" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task10" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task11" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task12" result="Warn" status="Completed"/>
+			<task name="/fake/Task/task13" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task14" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task15" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task16" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task17" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task18" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task19" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task20" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task21" result="Warn" status="Cancelled"/>
+		</recipe>
+	</recipeSet>
+	<recipeSet>
+		<recipe result="Warn" status="Completed" whiteboard="">
+			<distroRequires>
+				<distro_name op="=" value="BlueShoeLinux5-5"/>
+			</distroRequires>
+			<hostRequires/>
+			<task name="/fake/Task/task0" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task22" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task1" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task2" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task3" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task4" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task5" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task6" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task7" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task8" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task9" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task10" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task11" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task12" result="Warn" status="Completed"/>
+			<task name="/fake/Task/task13" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task14" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task15" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task16" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task17" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task18" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task19" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task20" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task21" result="Warn" status="Cancelled"/>
+		</recipe>
+	</recipeSet>
+	<recipeSet>
+		<recipe result="Warn" status="Completed" whiteboard="">
+			<distroRequires>
+				<distro_name op="=" value="BlueShoeLinux5-5"/>
+			</distroRequires>
+			<hostRequires/>
+			<task name="/fake/Task/task0" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task22" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task1" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task2" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task3" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task4" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task5" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task6" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task7" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task8" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task9" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task10" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task11" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task12" result="Warn" status="Aborted"/>
+			<task name="/fake/Task/task13" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task14" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task15" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task16" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task17" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task18" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task19" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task20" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task21" result="Warn" status="Cancelled"/>
+		</recipe>
+	</recipeSet>
+	<recipeSet>
+		<recipe result="Warn" status="Completed" whiteboard="">
+			<distroRequires>
+				<distro_name op="=" value="BlueShoeLinux5-5"/>
+			</distroRequires>
+			<hostRequires/>
+			<task name="/fake/Task/task0" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task22" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task1" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task2" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task3" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task4" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task5" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task6" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task7" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task8" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task9" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task10" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task11" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task12" result="Warn" status="Completed"/>
+			<task name="/fake/Task/task13" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task14" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task15" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task16" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task17" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task18" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task19" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task20" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task21" result="Warn" status="Cancelled"/>
+		</recipe>
+	</recipeSet>
+	<recipeSet>
+		<recipe result="Warn" status="Completed" whiteboard="">
+			<distroRequires>
+				<distro_name op="=" value="BlueShoeLinux5-5"/>
+			</distroRequires>
+			<hostRequires/>
+			<task name="/fake/Task/task0" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task22" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task1" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task2" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task3" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task4" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task5" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task6" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task7" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task8" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task9" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task10" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task11" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task12" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task13" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task14" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task15" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task16" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task17" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task18" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task19" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task20" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task21" result="Warn" status="Cancelled"/>
+		</recipe>
+	</recipeSet>
+	<recipeSet>
+		<recipe result="Warn" status="Completed" whiteboard="">
+			<distroRequires>
+				<distro_name op="=" value="BlueShoeLinux5-5"/>
+			</distroRequires>
+			<hostRequires/>
+			<task name="/fake/Task/task0" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task22" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task1" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task2" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task3" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task4" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task5" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task6" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task7" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task8" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task9" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task10" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task11" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task12" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task13" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task14" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task15" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task16" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task17" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task18" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task19" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task20" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task21" result="Warn" status="Cancelled"/>
+		</recipe>
+	</recipeSet>
+	<recipeSet>
+		<recipe result="Fail" status="Completed" whiteboard="">
+			<distroRequires>
+				<distro_name op="=" value="BlueShoeLinux5-5"/>
+			</distroRequires>
+			<hostRequires/>
+			<guestrecipe result="Warn" status="Cancelled" whiteboard="">
+				<distroRequires>
+					<distro_name op="=" value="BlueShoeLinux5-5"/>
+				</distroRequires>
+				<hostRequires/>
+				<task name="/fake/Task/task0" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task1" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task2" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task3" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task4" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task5" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task6" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task7" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task8" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task9" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task10" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task11" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task12" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task13" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task14" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task15" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task16" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task17" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task18" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task19" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task20" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task21" result="Warn" status="Cancelled"/>
+			</guestrecipe>
+			<guestrecipe result="Warn" status="Cancelled" whiteboard="">
+				<distroRequires>
+					<distro_name op="=" value="BlueShoeLinux5-5"/>
+				</distroRequires>
+				<hostRequires/>
+				<task name="/fake/Task/task0" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task1" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task2" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task4" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task5" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task6" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task7" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task8" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task9" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task10" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task11" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task12" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task13" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task14" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task15" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task16" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task17" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task18" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task19" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task20" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task21" result="Warn" status="Cancelled"/>
+			</guestrecipe>
+			<task name="/fake/Task/task0" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task22" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task1" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task23" result="Fail" status="Completed"/>
+			<task name="/fake/Task/task24" result="Fail" status="Completed"/>
+		</recipe>
+	</recipeSet>
+	<recipeSet>
+		<recipe result="Fail" status="Completed" whiteboard="">
+			<distroRequires>
+				<distro_name op="=" value="BlueShoeLinux5-5"/>
+			</distroRequires>
+			<hostRequires/>
+			<guestrecipe result="Warn" status="Cancelled" whiteboard="">
+				<distroRequires>
+					<distro_name op="=" value="BlueShoeLinux5-5"/>
+				</distroRequires>
+				<hostRequires/>
+				<task name="/fake/Task/task0" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task1" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task2" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task3" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task4" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task5" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task6" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task7" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task8" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task9" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task10" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task11" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task12" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task13" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task14" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task15" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task16" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task17" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task18" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task19" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task20" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task21" result="Warn" status="Cancelled"/>
+			</guestrecipe>
+			<guestrecipe result="Warn" status="Cancelled" whiteboard="">
+				<distroRequires>
+					<distro_name op="=" value="BlueShoeLinux5-5"/>
+				</distroRequires>
+				<hostRequires/>
+				<task name="/fake/Task/task0" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task1" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task2" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task4" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task5" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task6" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task7" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task8" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task9" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task10" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task11" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task12" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task13" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task14" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task15" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task16" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task17" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task18" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task19" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task20" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task21" result="Warn" status="Cancelled"/>
+			</guestrecipe>
+			<task name="/fake/Task/task0" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task22" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task1" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task23" result="Fail" status="Completed"/>
+			<task name="/fake/Task/task24" result="Fail" status="Completed"/>
+		</recipe>
+	</recipeSet>
+	<recipeSet>
+		<recipe result="Warn" status="Completed" whiteboard="">
+			<distroRequires>
+				<distro_name op="=" value="BlueShoeLinux5-5"/>
+			</distroRequires>
+			<hostRequires/>
+			<task name="/fake/Task/task0" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task22" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task1" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task2" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task4" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task5" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task6" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task7" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task8" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task9" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task10" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task11" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task12" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task13" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task14" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task15" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task16" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task17" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task18" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task19" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task20" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task21" result="Warn" status="Cancelled"/>
+		</recipe>
+	</recipeSet>
+	<recipeSet>
+		<recipe result="Warn" status="Completed" whiteboard="">
+			<distroRequires>
+				<distro_name op="=" value="BlueShoeLinux5-5"/>
+			</distroRequires>
+			<hostRequires/>
+			<task name="/fake/Task/task0" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task22" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task1" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task2" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task4" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task5" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task6" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task7" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task8" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task9" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task10" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task11" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task12" result="Warn" status="Completed"/>
+			<task name="/fake/Task/task13" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task14" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task15" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task16" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task17" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task18" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task19" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task20" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task21" result="Warn" status="Cancelled"/>
+		</recipe>
+	</recipeSet>
+	<recipeSet>
+		<recipe result="Warn" status="Completed" whiteboard="">
+			<distroRequires>
+				<distro_name op="=" value="BlueShoeLinux5-5"/>
+			</distroRequires>
+			<hostRequires/>
+			<task name="/fake/Task/task0" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task22" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task1" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task2" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task4" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task5" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task6" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task7" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task8" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task9" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task10" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task11" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task12" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task13" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task14" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task15" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task16" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task17" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task18" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task19" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task20" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task21" result="Warn" status="Cancelled"/>
+		</recipe>
+	</recipeSet>
+	<recipeSet>
+		<recipe result="Warn" status="Completed" whiteboard="">
+			<distroRequires>
+				<distro_name op="=" value="BlueShoeLinux5-5"/>
+			</distroRequires>
+			<hostRequires/>
+			<task name="/fake/Task/task0" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task22" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task1" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task2" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task4" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task5" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task6" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task7" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task8" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task9" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task10" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task11" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task12" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task13" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task14" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task15" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task16" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task17" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task18" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task19" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task20" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task21" result="Warn" status="Cancelled"/>
+		</recipe>
+	</recipeSet>
+	<recipeSet>
+		<recipe result="Warn" status="Completed" whiteboard="">
+			<distroRequires>
+				<distro_name op="=" value="BlueShoeLinux5-5"/>
+			</distroRequires>
+			<hostRequires/>
+			<task name="/fake/Task/task0" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task22" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task1" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task2" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task4" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task5" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task6" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task7" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task8" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task9" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task10" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task11" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task12" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task13" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task14" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task15" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task16" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task17" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task18" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task19" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task20" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task21" result="Warn" status="Cancelled"/>
+		</recipe>
+	</recipeSet>
+	<recipeSet>
+		<recipe result="Warn" status="Completed" whiteboard="">
+			<distroRequires>
+				<distro_name op="=" value="BlueShoeLinux5-5"/>
+			</distroRequires>
+			<hostRequires/>
+			<task name="/fake/Task/task0" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task22" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task1" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task2" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task4" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task5" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task6" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task7" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task8" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task9" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task10" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task11" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task12" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task13" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task14" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task15" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task16" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task17" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task18" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task19" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task20" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task21" result="Warn" status="Cancelled"/>
+		</recipe>
+	</recipeSet>
+	<recipeSet>
+		<recipe result="Warn" status="Completed" whiteboard="">
+			<distroRequires>
+				<distro_name op="=" value="BlueShoeLinux5-5"/>
+			</distroRequires>
+			<hostRequires/>
+			<task name="/fake/Task/task0" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task22" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task1" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task2" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task4" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task5" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task6" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task7" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task8" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task9" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task10" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task11" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task12" result="Warn" status="Completed"/>
+			<task name="/fake/Task/task13" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task14" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task15" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task16" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task17" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task18" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task19" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task20" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task21" result="Warn" status="Cancelled"/>
+		</recipe>
+	</recipeSet>
+	<recipeSet>
+		<recipe result="Warn" status="Completed" whiteboard="">
+			<distroRequires>
+				<distro_name op="=" value="BlueShoeLinux5-5"/>
+			</distroRequires>
+			<hostRequires/>
+			<task name="/fake/Task/task0" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task22" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task1" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task2" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task4" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task5" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task6" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task7" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task8" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task9" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task10" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task11" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task12" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task13" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task14" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task15" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task16" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task17" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task18" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task19" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task20" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task21" result="Warn" status="Cancelled"/>
+		</recipe>
+	</recipeSet>
+	<recipeSet>
+		<recipe result="Fail" status="Completed" whiteboard="">
+			<distroRequires>
+				<distro_name op="=" value="BlueShoeLinux5-5"/>
+			</distroRequires>
+			<hostRequires/>
+			<guestrecipe result="Warn" status="Cancelled" whiteboard="">
+				<distroRequires>
+					<distro_name op="=" value="BlueShoeLinux5-5"/>
+				</distroRequires>
+				<hostRequires/>
+				<task name="/fake/Task/task0" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task1" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task2" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task3" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task4" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task5" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task6" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task7" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task8" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task9" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task10" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task11" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task12" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task13" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task14" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task15" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task16" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task17" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task18" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task19" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task20" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task21" result="Warn" status="Cancelled"/>
+			</guestrecipe>
+			<guestrecipe result="Fail" status="Completed" whiteboard="">
+				<distroRequires>
+					<distro_name op="=" value="BlueShoeLinux5-5"/>
+				</distroRequires>
+				<hostRequires/>
+				<task name="/fake/Task/task0" result="Pass" status="Completed"/>
+				<task name="/fake/Task/task1" result="Pass" status="Completed"/>
+				<task name="/fake/Task/task2" result="Pass" status="Completed"/>
+				<task name="/fake/Task/task4" result="Pass" status="Completed"/>
+				<task name="/fake/Task/task5" result="Pass" status="Completed"/>
+				<task name="/fake/Task/task6" result="Pass" status="Completed"/>
+				<task name="/fake/Task/task7" result="Pass" status="Completed"/>
+				<task name="/fake/Task/task8" result="Pass" status="Completed"/>
+				<task name="/fake/Task/task9" result="Fail" status="Cancelled"/>
+				<task name="/fake/Task/task10" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task11" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task12" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task13" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task14" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task15" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task16" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task17" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task18" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task19" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task20" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task21" result="Warn" status="Cancelled"/>
+			</guestrecipe>
+			<task name="/fake/Task/task0" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task22" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task1" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task23" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task24" result="Fail" status="Completed"/>
+		</recipe>
+	</recipeSet>
+	<recipeSet>
+		<recipe result="Fail" status="Completed" whiteboard="">
+			<distroRequires>
+				<distro_name op="=" value="BlueShoeLinux5-5"/>
+			</distroRequires>
+			<hostRequires/>
+			<guestrecipe result="Warn" status="Cancelled" whiteboard="">
+				<distroRequires>
+					<distro_name op="=" value="BlueShoeLinux5-5"/>
+				</distroRequires>
+				<hostRequires/>
+				<task name="/fake/Task/task0" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task1" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task2" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task3" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task4" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task5" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task6" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task7" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task8" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task9" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task10" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task11" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task12" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task13" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task14" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task15" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task16" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task17" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task18" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task19" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task20" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task21" result="Warn" status="Cancelled"/>
+			</guestrecipe>
+			<guestrecipe result="Warn" status="Completed" whiteboard="">
+				<distroRequires>
+					<distro_name op="=" value="BlueShoeLinux5-5"/>
+				</distroRequires>
+				<hostRequires/>
+				<task name="/fake/Task/task0" result="Pass" status="Completed"/>
+				<task name="/fake/Task/task1" result="Pass" status="Completed"/>
+				<task name="/fake/Task/task2" result="Pass" status="Completed"/>
+				<task name="/fake/Task/task4" result="Pass" status="Completed"/>
+				<task name="/fake/Task/task5" result="Pass" status="Completed"/>
+				<task name="/fake/Task/task6" result="Pass" status="Completed"/>
+				<task name="/fake/Task/task7" result="Pass" status="Completed"/>
+				<task name="/fake/Task/task8" result="Pass" status="Completed"/>
+				<task name="/fake/Task/task9" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task10" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task11" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task12" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task13" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task14" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task15" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task16" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task17" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task18" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task19" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task20" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task21" result="Warn" status="Cancelled"/>
+			</guestrecipe>
+			<task name="/fake/Task/task0" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task22" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task1" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task23" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task24" result="Fail" status="Completed"/>
+		</recipe>
+	</recipeSet>
+	<recipeSet>
+		<recipe result="Fail" status="Completed" whiteboard="">
+			<distroRequires>
+				<distro_name op="=" value="BlueShoeLinux5-5"/>
+			</distroRequires>
+			<hostRequires/>
+			<guestrecipe result="Warn" status="Completed" whiteboard="">
+				<distroRequires>
+					<distro_name op="=" value="BlueShoeLinux5-5"/>
+				</distroRequires>
+				<hostRequires/>
+				<task name="/fake/Task/task0" result="Pass" status="Completed"/>
+				<task name="/fake/Task/task1" result="Pass" status="Completed"/>
+				<task name="/fake/Task/task2" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task3" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task4" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task5" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task6" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task7" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task8" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task9" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task10" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task11" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task12" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task13" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task14" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task15" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task16" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task17" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task18" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task19" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task20" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task21" result="Warn" status="Cancelled"/>
+			</guestrecipe>
+			<guestrecipe result="Warn" status="Cancelled" whiteboard="">
+				<distroRequires>
+					<distro_name op="=" value="BlueShoeLinux5-5"/>
+				</distroRequires>
+				<hostRequires/>
+				<task name="/fake/Task/task0" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task1" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task2" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task4" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task5" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task6" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task7" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task8" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task9" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task10" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task11" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task12" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task13" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task14" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task15" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task16" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task17" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task18" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task19" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task20" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task21" result="Warn" status="Cancelled"/>
+			</guestrecipe>
+			<task name="/fake/Task/task0" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task22" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task1" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task23" result="Fail" status="Completed"/>
+			<task name="/fake/Task/task24" result="Pass" status="Completed"/>
+		</recipe>
+	</recipeSet>
+	<recipeSet>
+		<recipe result="Pass" status="Completed" whiteboard="">
+			<distroRequires>
+				<distro_name op="=" value="BlueShoeLinux5-5"/>
+			</distroRequires>
+			<hostRequires/>
+			<guestrecipe result="Warn" status="Completed" whiteboard="">
+				<distroRequires>
+					<distro_name op="=" value="BlueShoeLinux5-5"/>
+				</distroRequires>
+				<hostRequires/>
+				<task name="/fake/Task/task0" result="Pass" status="Completed"/>
+				<task name="/fake/Task/task1" result="Pass" status="Completed"/>
+				<task name="/fake/Task/task2" result="Pass" status="Completed"/>
+				<task name="/fake/Task/task3" result="Pass" status="Completed"/>
+				<task name="/fake/Task/task4" result="Pass" status="Completed"/>
+				<task name="/fake/Task/task5" result="Pass" status="Completed"/>
+				<task name="/fake/Task/task6" result="Pass" status="Completed"/>
+				<task name="/fake/Task/task7" result="Pass" status="Completed"/>
+				<task name="/fake/Task/task8" result="Pass" status="Completed"/>
+				<task name="/fake/Task/task9" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task10" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task11" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task12" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task13" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task14" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task15" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task16" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task17" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task18" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task19" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task20" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task21" result="Warn" status="Cancelled"/>
+			</guestrecipe>
+			<guestrecipe result="Warn" status="Completed" whiteboard="">
+				<distroRequires>
+					<distro_name op="=" value="BlueShoeLinux5-5"/>
+				</distroRequires>
+				<hostRequires/>
+				<task name="/fake/Task/task0" result="Pass" status="Completed"/>
+				<task name="/fake/Task/task1" result="Pass" status="Completed"/>
+				<task name="/fake/Task/task2" result="Pass" status="Completed"/>
+				<task name="/fake/Task/task4" result="Pass" status="Completed"/>
+				<task name="/fake/Task/task5" result="Pass" status="Completed"/>
+				<task name="/fake/Task/task6" result="Pass" status="Completed"/>
+				<task name="/fake/Task/task7" result="Pass" status="Completed"/>
+				<task name="/fake/Task/task8" result="Pass" status="Completed"/>
+				<task name="/fake/Task/task9" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task10" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task11" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task12" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task13" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task14" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task15" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task16" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task17" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task18" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task19" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task20" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task21" result="Warn" status="Cancelled"/>
+			</guestrecipe>
+			<task name="/fake/Task/task0" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task22" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task1" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task23" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task24" result="Pass" status="Completed"/>
+		</recipe>
+	</recipeSet>
+	<recipeSet>
+		<recipe result="Warn" status="Completed" whiteboard="">
+			<distroRequires>
+				<distro_name op="=" value="BlueShoeLinux5-5"/>
+			</distroRequires>
+			<hostRequires/>
+			<task name="/fake/Task/task0" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task22" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task1" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task2" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task4" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task5" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task6" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task7" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task8" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task9" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task11" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task12" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task13" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task14" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task15" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task16" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task17" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task18" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task19" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task20" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task21" result="Warn" status="Cancelled"/>
+		</recipe>
+	</recipeSet>
+	<recipeSet>
+		<recipe result="Warn" status="Completed" whiteboard="">
+			<distroRequires>
+				<distro_name op="=" value="BlueShoeLinux5-5"/>
+			</distroRequires>
+			<hostRequires/>
+			<task name="/fake/Task/task0" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task22" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task1" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task2" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task4" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task5" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task6" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task7" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task8" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task9" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task11" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task12" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task13" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task14" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task15" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task16" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task17" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task18" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task19" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task20" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task21" result="Warn" status="Cancelled"/>
+		</recipe>
+	</recipeSet>
+	<recipeSet>
+		<recipe result="Warn" status="Completed" whiteboard="">
+			<distroRequires>
+				<distro_name op="=" value="BlueShoeLinux5-5"/>
+			</distroRequires>
+			<hostRequires/>
+			<task name="/fake/Task/task0" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task22" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task1" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task2" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task4" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task5" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task6" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task7" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task8" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task9" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task11" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task12" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task13" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task14" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task15" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task16" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task17" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task18" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task19" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task20" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task21" result="Warn" status="Cancelled"/>
+		</recipe>
+	</recipeSet>
+	<recipeSet>
+		<recipe result="Warn" status="Completed" whiteboard="">
+			<distroRequires>
+				<distro_name op="=" value="BlueShoeLinux5-5"/>
+			</distroRequires>
+			<hostRequires/>
+			<task name="/fake/Task/task0" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task22" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task1" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task2" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task4" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task5" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task6" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task7" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task8" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task9" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task11" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task12" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task13" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task14" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task15" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task16" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task17" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task18" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task19" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task20" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task21" result="Warn" status="Cancelled"/>
+		</recipe>
+	</recipeSet>
+	<recipeSet>
+		<recipe result="Pass" status="Completed" whiteboard="">
+			<distroRequires>
+				<distro_name op="=" value="BlueShoeLinux5-5"/>
+			</distroRequires>
+			<hostRequires/>
+			<guestrecipe result="Warn" status="Cancelled" whiteboard="">
+				<distroRequires>
+					<distro_name op="=" value="BlueShoeLinux5-5"/>
+				</distroRequires>
+				<hostRequires/>
+				<task name="/fake/Task/task0" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task1" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task2" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task4" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task5" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task6" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task7" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task8" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task9" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task11" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task12" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task13" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task14" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task15" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task16" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task17" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task18" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task19" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task20" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task21" result="Warn" status="Cancelled"/>
+			</guestrecipe>
+			<guestrecipe result="Warn" status="Completed" whiteboard="">
+				<distroRequires>
+					<distro_name op="=" value="BlueShoeLinux5-5"/>
+				</distroRequires>
+				<hostRequires/>
+				<task name="/fake/Task/task0" result="Pass" status="Completed"/>
+				<task name="/fake/Task/task1" result="Pass" status="Completed"/>
+				<task name="/fake/Task/task2" result="Pass" status="Completed"/>
+				<task name="/fake/Task/task4" result="Pass" status="Completed"/>
+				<task name="/fake/Task/task5" result="Pass" status="Completed"/>
+				<task name="/fake/Task/task6" result="Pass" status="Completed"/>
+				<task name="/fake/Task/task7" result="Pass" status="Completed"/>
+				<task name="/fake/Task/task8" result="Pass" status="Completed"/>
+				<task name="/fake/Task/task9" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task11" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task12" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task13" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task14" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task15" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task16" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task17" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task18" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task19" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task20" result="Warn" status="Cancelled"/>
+				<task name="/fake/Task/task21" result="Warn" status="Cancelled"/>
+			</guestrecipe>
+			<task name="/fake/Task/task0" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task22" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task1" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task25" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task23" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task24" result="Pass" status="Completed"/>
+		</recipe>
+	</recipeSet>
+	<recipeSet>
+		<recipe result="Warn" status="Completed" whiteboard="">
+			<distroRequires>
+				<distro_name op="=" value="BlueShoeLinux5-5"/>
+			</distroRequires>
+			<hostRequires/>
+			<task name="/fake/Task/task0" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task1" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task2" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task4" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task5" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task6" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task7" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task8" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task9" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task10" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task11" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task12" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task13" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task14" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task15" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task16" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task17" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task18" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task19" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task20" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task21" result="Warn" status="Cancelled"/>
+		</recipe>
+	</recipeSet>
+	<recipeSet>
+		<recipe result="Warn" status="Completed" whiteboard="">
+			<distroRequires>
+				<distro_name op="=" value="BlueShoeLinux5-5"/>
+			</distroRequires>
+			<hostRequires/>
+			<task name="/fake/Task/task0" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task1" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task2" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task4" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task5" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task6" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task7" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task8" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task9" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task10" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task11" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task12" result="Warn" status="Completed"/>
+			<task name="/fake/Task/task13" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task14" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task15" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task16" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task17" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task18" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task19" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task20" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task21" result="Warn" status="Cancelled"/>
+		</recipe>
+	</recipeSet>
+	<recipeSet>
+		<recipe result="Warn" status="Completed" whiteboard="">
+			<distroRequires>
+				<distro_name op="=" value="BlueShoeLinux5-5"/>
+			</distroRequires>
+			<hostRequires/>
+			<task name="/fake/Task/task0" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task1" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task2" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task4" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task5" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task6" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task7" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task8" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task9" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task10" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task11" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task12" result="Warn" status="Completed"/>
+			<task name="/fake/Task/task13" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task14" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task15" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task16" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task17" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task18" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task19" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task20" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task21" result="Warn" status="Cancelled"/>
+		</recipe>
+	</recipeSet>
+	<recipeSet>
+		<recipe result="Warn" status="Completed" whiteboard="">
+			<distroRequires>
+				<distro_name op="=" value="BlueShoeLinux5-5"/>
+			</distroRequires>
+			<hostRequires/>
+			<task name="/fake/Task/task0" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task1" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task2" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task4" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task5" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task6" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task7" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task8" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task9" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task10" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task11" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task12" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task13" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task14" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task15" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task16" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task17" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task18" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task19" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task20" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task21" result="Warn" status="Cancelled"/>
+		</recipe>
+	</recipeSet>
+	<recipeSet>
+		<recipe result="Warn" status="Completed" whiteboard="">
+			<distroRequires>
+				<distro_name op="=" value="BlueShoeLinux5-5"/>
+			</distroRequires>
+			<hostRequires/>
+			<task name="/fake/Task/task0" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task1" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task2" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task4" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task5" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task6" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task7" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task8" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task9" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task10" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task11" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task12" result="Warn" status="Completed"/>
+			<task name="/fake/Task/task13" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task14" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task15" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task16" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task17" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task18" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task19" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task20" result="Warn" status="Cancelled"/>
+		</recipe>
+	</recipeSet>
+	<recipeSet>
+		<recipe result="Warn" status="Completed" whiteboard="">
+			<distroRequires>
+				<distro_name op="=" value="BlueShoeLinux5-5"/>
+			</distroRequires>
+			<hostRequires/>
+			<task name="/fake/Task/task0" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task1" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task2" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task4" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task5" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task6" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task7" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task8" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task9" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task10" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task11" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task12" result="Warn" status="Completed"/>
+			<task name="/fake/Task/task13" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task14" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task15" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task16" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task17" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task18" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task19" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task20" result="Warn" status="Cancelled"/>
+		</recipe>
+	</recipeSet>
+	<recipeSet>
+		<recipe result="Warn" status="Completed" whiteboard="">
+			<distroRequires>
+				<distro_name op="=" value="BlueShoeLinux5-5"/>
+			</distroRequires>
+			<hostRequires/>
+			<task name="/fake/Task/task0" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task1" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task2" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task4" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task5" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task6" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task7" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task8" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task9" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task10" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task11" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task12" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task13" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task14" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task15" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task16" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task17" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task18" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task19" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task20" result="Warn" status="Cancelled"/>
+		</recipe>
+	</recipeSet>
+	<recipeSet>
+		<recipe result="Warn" status="Completed" whiteboard="">
+			<distroRequires>
+				<distro_name op="=" value="BlueShoeLinux5-5"/>
+			</distroRequires>
+			<hostRequires/>
+			<task name="/fake/Task/task0" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task1" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task2" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task4" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task5" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task6" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task7" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task8" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task9" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task10" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task11" result="Pass" status="Completed"/>
+			<task name="/fake/Task/task12" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task13" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task14" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task15" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task16" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task17" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task18" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task19" result="Warn" status="Cancelled"/>
+			<task name="/fake/Task/task20" result="Warn" status="Cancelled"/>
+		</recipe>
+	</recipeSet>
+</job>
+

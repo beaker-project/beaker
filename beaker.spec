@@ -3,7 +3,7 @@
 
 Name:           beaker
 Version:        0.6.1
-Release:        2%{?dist}
+Release:        5%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -206,6 +206,25 @@ fi
 %attr(-,apache,root) %dir %{_localstatedir}/run/%{name}-lab-controller
 
 %changelog
+* Wed Jan 05 2011 Bill Peck <bpeck@redhat.com> 0.6.1-5
+- Don't call update_status() after every result reported.  Wait for the task to
+  finish before pushing the results up the tree. (bpeck@redhat.com)
+- Revert "some fixes for correctly doing equality with the cached objects"
+  (bpeck@redhat.com)
+
+* Tue Jan 04 2011 Bill Peck <bpeck@redhat.com> 0.6.1-4
+- disable cache due to session issues: (bpeck@redhat.com)
+
+* Tue Jan 04 2011 Bill Peck <bpeck@redhat.com> 0.6.1-3
+- fix glob to grab all test data. (bpeck@redhat.com)
+- some fixes for correctly doing equality with the cached objects
+  (rmancy@redhat.com)
+- Previous update_status model will fall down with very large jobs.
+  (bpeck@redhat.com)
+- bz659804 - cache some results from sqla (rmancy@redhat.com)
+- Added test_update_status unit test. Also added some helpers to data_setup
+  Modified beaker/dogfood test to take optional arguments. (bpeck@redhat.com)
+
 * Fri Dec 17 2010 Dan Callaghan <dcallagh@redhat.com> 0.6.1-2
 - Bug 663111 - proxy.log being rotated with every line of output
   (bpeck@redhat.com)

@@ -27,7 +27,7 @@ from bkr.server.model import LabController, User, Group, Distro, Breed, Arch, \
         SystemType, SystemStatus, Recipe, RecipeTask, RecipeTaskResult, \
         Device, TaskResult, TaskStatus, Job, RecipeSet, TaskPriority, \
         LabControllerDistro, Power, PowerType, TaskExcludeArch, TaskExcludeOSMajor, \
-        Permission, RetentionTag, Product
+        Permission, RetentionTag, Product, Watchdog
 
 log = logging.getLogger(__name__)
 
@@ -171,6 +171,13 @@ def create_task(name=None, exclude_arch=[],exclude_osmajor=[]):
         
     return task
 
+def create_tasks(xmljob):
+    # Add all tasks that the xml specifies
+    for recipeset in xmljob.iter_recipeSets():
+        for recipe in recipeset.iter_recipes():
+            for task in recipe.iter_tasks():
+                create_task(name=task.name)
+
 def create_recipe(system=None, distro=None, task_name=u'/distribution/reservesys',
         whiteboard=None):
     recipe = MachineRecipe(ttasks=1, system=system, whiteboard=whiteboard,
@@ -230,6 +237,41 @@ def mark_job_complete(job, result=u'Pass', system=None, **kwargs):
             recipe_task.results.append(rtr)
         recipe.update_status()
     log.debug('Marked %s as complete with result %s', job.t_id, result)
+
+def mark_job_waiting(job, user=None):
+    if user is None:
+        user = create_user()
+    for recipeset in job.recipesets:
+        for recipe in recipeset.recipes:
+            recipe.process()
+            recipe.queue()
+            recipe.schedule()
+            recipe.system = create_system()
+            recipe.system.user = user
+            recipe.watchdog = Watchdog(system=recipe.system)
+            recipe.waiting()
+
+def playback_task_results(task, xmltask):
+    # Start task
+    task.start()
+    # Record Result
+    task._result(xmltask.result,'/',0,'(%s)' % xmltask.result)
+    # Stop task
+    if xmltask.status == u'Aborted':
+        task.abort()
+    elif xmltask.status == u'Cancelled':
+        task.cancel()
+    else:
+        task.stop()
+
+def playback_job_results(job, xmljob):
+    for i, xmlrecipeset in enumerate(xmljob.iter_recipeSets()):
+        for j, xmlrecipe in enumerate(xmlrecipeset.iter_recipes()):
+            for l, xmlguest in enumerate(xmlrecipe.iter_guests()):
+                for k, xmltask in enumerate(xmlguest.iter_tasks()):
+                    playback_task_results(job.recipesets[i].recipes[j].guests[l].tasks[k], xmltask)
+            for k, xmltask in enumerate(xmlrecipe.iter_tasks()):
+                playback_task_results(job.recipesets[i].recipes[j].tasks[k], xmltask)
 
 def create_device(**kw):
     device = Device(**kw)
