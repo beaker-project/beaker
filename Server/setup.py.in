@@ -230,6 +230,7 @@ setup(
             'nag-mail = bkr.server.tools.nag_email:main',
             'beaker-cleanup-visits = bkr.server.tools.cleanup_visits:main',
             'beaker-repo-update = bkr.server.tools.repo_update:main',
+            'beaker-delete-system = bkr.server.tools.delete_system:main',
         ),
     }
     )

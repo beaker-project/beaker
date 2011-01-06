@@ -175,6 +175,7 @@ fi
 %{_bindir}/product-update
 %{_bindir}/beaker-repo-update
 %{_bindir}/%{name}-cleanup-visits
+%{_bindir}/%{name}-delete-system
 %{_sysconfdir}/init.d/%{name}d
 %config(noreplace) %{_sysconfdir}/cron.d/%{name}
 %attr(0755,root,root)%{_bindir}/%{name}d
