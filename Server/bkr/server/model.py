@@ -1146,20 +1146,19 @@ class User(object):
         return self.user_name
 
     def is_admin(self):
-        return u'admin' in [group.group_name for group in self.groups] 
+        return u'admin' in [group.group_name for group in self.groups]
 
     def in_group(self,check_groups):
         my_groups = [group.group_name for group in self.groups]
         for my_g in check_groups:
             if my_g in my_groups:
-                return True 
+                return True
         return False
 
 class Permission(object):
     """
     A relationship that determines what each Group can do
     """
-
     @classmethod
     def by_name(cls, permission_name):
         return cls.query.filter(cls.permission_name == permission_name).one()
@@ -1834,8 +1833,8 @@ class System(SystemObject):
             if identity.in_group('admin'): #first let's see if we are an _admin_
                 return True
         except AttributeError,e: pass #We may not be logged in...
-        
-        #If we are the owner.... 
+
+        #If we are the owner....
         if self.owner == User.by_id(user_id):
             return True
 
@@ -1870,7 +1869,7 @@ class System(SystemObject):
                 return True
         return False
 
-    def can_provision_now(self,user=None): 
+    def can_provision_now(self,user=None):
         if user is not None and self.is_admin(user_id=user.user_id):
             return True
         elif user is not None and self.loaned == user:
@@ -1879,7 +1878,6 @@ class System(SystemObject):
             return True
         elif user is None:
             return False
-
         if self.status==SystemStatus.by_name('Manual'): #If it's manual then we us our original perm system.
             return self._has_regular_perms(user)
         return False
@@ -1924,7 +1922,7 @@ class System(SystemObject):
                 if self.groups:
                     if self._user_in_systemgroup(user):
                         return True
-                else: 
+                else:
                     return True
         
     def can_share(self, user=None):
@@ -2394,7 +2392,7 @@ $SNIPPET("rhts_post")
                 recipe_table.c.finish_time > nonaborted_recipe_subquery))
         if session.execute(query).scalar() >= 2:
             # Broken!
-            reason = unicode(_(u'System has a run of aborted recipes '
+            reason = unicode(_(u'System has a run of aborted recipes ' 
                     'with reliable distros'))
             log.warn(reason)
             old_status = self.status
@@ -3392,6 +3390,7 @@ class TaskStatus(object):
         return cls.query().order_by(TaskStatus.severity.desc()).first()
 
     @classmethod
+    @sqla_cache
     def by_name(cls, status_name):
         return cls.query().filter_by(status=status_name).one()
 
@@ -4779,6 +4778,7 @@ class Recipe(TaskBase):
                 min_status = task.status
             if task.result > max_result:
                 max_result = task.result
+       
         self.status = min_status
         self.result = max_result
 
@@ -5632,7 +5632,6 @@ class Task(MappedObject):
     """
     Tasks that are available to schedule
     """
-
     @classmethod
     def by_name(cls, name):
         return cls.query.filter_by(name=name).one()
@@ -5740,7 +5739,6 @@ class TaskType(MappedObject):
     A task can be classified into serveral task types which can be used to
     select tasks for batch runs
     """
-
     @classmethod
     def by_name(cls, type):
         return cls.query.filter_by(type=type).one()
@@ -5750,7 +5748,6 @@ class TaskPackage(MappedObject):
     """
     A list of packages that a tasks should be run for.
     """
-
     @classmethod
     def by_name(cls, package):
         return cls.query.filter_by(package=package).one()

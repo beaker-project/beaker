@@ -279,5 +279,22 @@ def playback_job_results(job, xmljob):
             for k, xmltask in enumerate(xmlrecipe.iter_tasks()):
                 playback_task_results(job.recipesets[i].recipes[j].tasks[k], xmltask)
 
+def create_test_env(type):#FIXME not yet using different types
+    """
+    create_test_env() will populate the DB with no specific data.
+    Useful when sheer volume of data is needed or the specifics of the
+    actual data is not too important
+    """
+
+    arches = Arch.query().all()
+    system_type = SystemType.by_name(u'Machine') #This could be extended into a list and looped over
+    users = [create_user() for i in range(10)]
+    lc = create_labcontroller()
+    for arch in arches:
+        create_distro(arch=arch)
+        for user in users:
+            system = create_system(owner=user, arch=arch.arch, type=system_type.type, status=u'Automated', shared=True)
+            system.lab_controller = lc
+
 def create_device(**kw):
     device = Device(**kw)
