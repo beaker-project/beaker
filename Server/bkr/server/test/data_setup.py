@@ -50,7 +50,13 @@ def setup_model(override=True):
     log.info('Initialising model')
     init_db(user_name=ADMIN_USER, password=ADMIN_PASSWORD,
             user_email_address=ADMIN_EMAIL_ADDRESS)
-    Product(name=u'the_product')
+    Product(name=u'the_product') #FIXME, do we need this ??
+
+def create_product(product_name=None):
+    if product_name is None:
+        product_name  = u'product%d' % int(time.time() * 100000)
+    return Product(name=product_name)
+    
 
 def create_labcontroller(fqdn=None):
     if fqdn is None:

@@ -1333,7 +1333,8 @@ class ProductWidget(SingleSelectField, RPC):
        self.field_class = 'singleselectfield'
 
     def display(self,value=None, *args, **params):
-        params['options'] =[(self.product_deselected, 'No Product')] +  [(elem.id,elem.name) for elem in model.Product.query().all()]
+        params['options'] =[(self.product_deselected, 'No Product')] + \
+            [(elem.id,elem.name) for elem in model.Product.query().order_by(model.Product.name).all()]
         return super(ProductWidget,self).display(value,**params)
 
     def update_params(self, d):
