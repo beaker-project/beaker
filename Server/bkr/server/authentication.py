@@ -23,7 +23,7 @@ __all__ = ['Auth']
 
 def proxy_identity(current_identity, proxy_user_name):
     if 'proxy_auth' not in current_identity.permissions:
-        raise IdentityException('%s does not have proxy_auth permission' % user.user_name)
+        raise IdentityException('%s does not have proxy_auth permission' % current_identity.user_name)
     proxy_user = User.by_user_name(proxy_user_name)
     if not proxy_user:
         log.warning('Attempted to proxy as nonexistent user %s', proxy_user_name)

@@ -677,6 +677,26 @@ class ReserveSystemXmlRpcTest(XmlRpcTestCase):
         except xmlrpclib.Fault, e:
             self.assert_('has already reserved system' in e.faultString)
 
+    def test_reserve_via_external_service(self):
+        service_group = data_setup.create_group(permissions=[u'proxy_auth'])
+        service_user = data_setup.create_user(password=u'password')
+        data_setup.add_user_to_group(service_user, service_group)
+        user = data_setup.create_user(password=u'notused')
+        system = data_setup.create_system(
+                owner=User.by_user_name(data_setup.ADMIN_USER),
+                status=u'Manual', shared=True)
+        self.assert_(system.user is None)
+        session.flush()
+        server = self.get_server()
+        server.auth.login_password(service_user.user_name, 'password',
+                user.user_name)
+        server.systems.reserve(system.fqdn)
+        session.refresh(system)
+        self.assertEqual(system.user, user)
+        reserved_activity = system.activity[0]
+        self.assertEqual(reserved_activity.action, 'Reserved')
+        self.assertEqual(reserved_activity.service, service_user.user_name)
+
 class ReleaseSystemXmlRpcTest(XmlRpcTestCase):
 
     def test_cannot_release_when_not_logged_in(self):

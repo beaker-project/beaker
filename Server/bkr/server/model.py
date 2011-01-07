@@ -3238,8 +3238,18 @@ class Admin(object):
 class Activity(object):
     def __init__(self, user=None, service=None, action=None,
                  field_name=None, old_value=None, new_value=None):
+        """
+        The *service* argument should be a string such as 'Scheduler' or 
+        'XMLRPC', describing the means by which the change has been made. This 
+        constructor will override it with something more specific (such as the 
+        name of an external service) if appropriate.
+        """
         self.user = user
         self.service = service
+        try:
+            self.service = identity.current.visit_link.proxied_by_user.user_name
+        except (AttributeError, identity.exceptions.RequestRequiredException):
+            pass # probably running in beakerd or such
         self.field_name = field_name
         self.action = action
         # These values are likely to be truncated by MySQL, so let's make sure 
