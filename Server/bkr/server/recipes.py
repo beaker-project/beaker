@@ -317,47 +317,6 @@ class Recipes(RPCRoot):
                     options=search_options,
                     searchvalue=searchvalue)
 
-    @identity.require(identity.not_anonymous())
-    @expose()
-    def really_cancel(self, id, msg=None):
-        """
-        Confirm cancel recipe
-        """
-        try:
-            recipe = Recipe.by_id(id)
-        except InvalidRequestError:
-            flash(_(u"Invalid recipe id %s" % id))
-            redirect(".")
-        if not identity.current.user.is_admin() and recipe.recipeset.job.owner != identity.current.user:
-            flash(_(u"You don't have permission to cancel recipe id %s" % id))
-            redirect(".")
-        recipe.cancel(msg)
-        flash(_(u"Successfully cancelled recipe %s" % id))
-        redirect(".")
-
-    @identity.require(identity.not_anonymous())
-    @expose(template="bkr.server.templates.form")
-    def cancel(self, id):
-        """
-        Confirm cancel recipe
-        """
-        try:
-            recipe = Recipe.by_id(id)
-        except InvalidRequestError:
-            flash(_(u"Invalid recipe id %s" % id))
-            redirect(".")
-        if not identity.current.user.is_admin() and recipe.recipeset.job.owner != identity.current.user:
-            flash(_(u"You don't have permission to cancel recipe id %s" % id))
-            redirect(".")
-        return dict(
-            title = 'Cancel Recipe %s' % id,
-            form = self.cancel_form,
-            action = './really_cancel',
-            options = {},
-            value = dict(id = recipe.id,
-                         confirm = 'really cancel recipe %s?' % id),
-        )
-
     @expose(template="bkr.server.templates.recipe")
     def default(self, id):
         try:

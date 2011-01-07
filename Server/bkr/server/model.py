@@ -4300,9 +4300,18 @@ class RecipeSet(TaskBase):
         Return action links depending on status
         """
         div = Element('div')
+        if not self.is_finished():
+            div.append(make_link(url = self.cancel_link(),
+                            text = "Cancel"))
+            div.append(Element('br'))
         div.append(make_link(url = self.clone_link(),
                         text = "Clone"))
         return div
+
+    def cancel_link(self):
+        """ return link to cancel this recipe
+        """
+        return "/recipesets/cancel?id=%s" % self.id
 
     def clone_link(self):
         """ return link to clone this recipe
@@ -4326,11 +4335,6 @@ class Recipe(TaskBase):
         """ return link to clone this recipe
         """
         return "/jobs/clone?recipe_id=%s" % self.id
-
-    def cancel_link(self):
-        """ return link to cancel this recipe
-        """
-        return "/recipes/cancel?id=%s" % self.id
 
     @property
     def link(self):
@@ -4887,10 +4891,6 @@ class Recipe(TaskBase):
         Return action links depending on status
         """
         div = Element('div')
-        if not self.is_finished(): 
-            div.append(make_link(url = self.cancel_link(),
-                            text = "Cancel"))
-            div.append(Element('br'))
         if self.system:
             a = Element('a', {'class': 'list'},
                     href=self.system.report_problem_href(recipe_id=self.id))
