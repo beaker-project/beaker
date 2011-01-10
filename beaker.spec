@@ -15,7 +15,11 @@ BuildRequires:  python-setuptools
 BuildRequires:  python-setuptools-devel
 BuildRequires:  python2-devel
 BuildRequires:  python-kid
+%if (0%{?fedora} >= 14)
+BuildRequires:  python-sphinx >= 1.0
+%else
 BuildRequires:  python-sphinx10
+%endif
 
 
 %package client
