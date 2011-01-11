@@ -2,8 +2,8 @@
 %{!?pyver: %global pyver %(%{__python} -c "import sys ; print sys.version[:3]")}
 
 Name:           beaker
-Version:        0.6.1
-Release:        5%{?dist}
+Version:        0.6.2
+Release:        1%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -206,6 +206,27 @@ fi
 %attr(-,apache,root) %dir %{_localstatedir}/run/%{name}-lab-controller
 
 %changelog
+* Wed Jan 12 2011 Raymond Mancy <rmancy@redhat.com> 0.6.2-1
+- bz663114 - Move cancel features from Recipe to RecipeSet (rmancy@redhat.com)
+- bz662703 - Product list sorted and test (rmancy@redhat.com)
+- bz659804 - cache some results from sqla (rmancy@redhat.com)
+- bz660529 - better XML-RPC fault strings when login is required (dcallagh@redhat.com)
+- bz660491 - store proxying service's username as the service for activity records
+  store proxying service in the visit_identity row (dcallagh@redhat.com)
+- bz665441 - legacy_push: don't touch keys which were not pushed (dcallagh@redhat.com)
+- bz660527 - use Referer if forward_url parameter is not passed to /login
+  (dcallagh@redhat.com)
+- bz6200292 - Fixes endless redirect, as well as loading task page by task name
+  (rmancy@redhat.com)
+- bz620967 - Fix for comments to work in chrome (rmancy@redhat.com)
+- bz660488 - use ENGINE=InnoDB in MySQL (dcallagh@redhat.com)
+- bz660532 - check distro for suitability in systems.provision XML-RPC method
+  (dcallagh@redhat.com)
+- bz624857 - validate fqdn when updating system details (dcallagh@redhat.com)
+- force workflows to use nfs based distro.  this is only needed until we get
+  rid of the ftp and http imports in cobbler (bpeck@redhat.com)
+- add python-kid to BuildRequires (dcallagh@redhat.com)
+
 * Wed Jan 05 2011 Bill Peck <bpeck@redhat.com> 0.6.1-5
 - Don't call update_status() after every result reported.  Wait for the task to
   finish before pushing the results up the tree. (bpeck@redhat.com)
