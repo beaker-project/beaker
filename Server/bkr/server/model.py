@@ -4890,8 +4890,9 @@ class Recipe(TaskBase):
         """
         Return action links depending on status
         """
-        div = Element('div')
+        div = None
         if self.system:
+            div = Element('div')
             a = Element('a', {'class': 'list'},
                     href=self.system.report_problem_href(recipe_id=self.id))
             a.text = _(u'Report problem with system')
