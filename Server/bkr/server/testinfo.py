@@ -227,6 +227,7 @@ class Parser:
 
         self.valid_options = [
             'Compatible',
+            'CompatService',
             'StrongerAVC',
             ]
         
@@ -829,6 +830,11 @@ class RhtsOptionsFieldTests(unittest.TestCase):
         "Ensure RhtsOptions field is parsed correctly"
         ti = parse_string("RhtsOptions: Compatible", raise_errors=False)
         self.assertEquals(ti.options, ["Compatible"])
+
+    def test_multi_options(self):
+        "Ensure RhtsOptions field is parsed correctly"
+        ti = parse_string("RhtsOptions: Compatible -CompatService -StrongerAVC", raise_errors=False)
+        self.assertEquals(ti.options, ["Compatible", "-CompatService", "-StrongerAVC"])
 
     def test_rhtsoptions_minus(self):
         "Ensure RhtsOptions field parses options preceded with dash correctly"
