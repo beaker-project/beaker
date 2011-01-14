@@ -91,7 +91,10 @@ function InstallInventory_git()
 
 function InstallInventory_repo()
 {
-    yum install -y beaker-server
+    if [ -n "$version" ]; then
+        version="-$version"
+    fi
+    yum install -y beaker-server$version
 }
 
 function InstallLabController_git()

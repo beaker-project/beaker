@@ -3857,27 +3857,17 @@ class Job(TaskBase):
         """
         Update number of passes, failures, warns, panics..
         """
-        session.connection(Job).execute(job_table.update(
-                                        job_table.c.id==self.id
-                                                        ),
-                 status_id=select([task_status_table.c.id],
+        self.status = TaskStatus.query().from_statement(select([task_status_table.c.id],
                                   from_obj=[recipe_set_table.join(task_status_table)],
                                   whereclause=recipe_set_table.c.job_id.__eq__(self.id)
-                                 ).group_by(task_status_table.c.severity)\
-                                  .limit(1).scalar()
-                                       )
-        session.connection(Job).execute(job_table.update(
-                                        job_table.c.id==self.id
-                                                        ),
-                 result_id=select([task_result_table.c.id],
+                                 ).group_by(task_status_table.c.severity)
+                                                  ).first()
+        self.result = TaskResult.query().from_statement(select([task_result_table.c.id],
                                   from_obj=[recipe_set_table.join(task_result_table)],
                                   whereclause=recipe_set_table.c.job_id.__eq__(self.id)
-                                 ).group_by(task_result_table.c.severity.desc())\
-                                  .limit(1).scalar()
-                                       )
-        # Do I really need to do this?  seems sqlalchemy should do this for me.
-        session.flush()
-        session.refresh(self)
+                                 ).group_by(task_result_table.c.severity.desc())
+                                                  ).first()
+
 
         if self.is_finished():
             # Send email notification
@@ -4201,15 +4191,15 @@ class RecipeSet(TaskBase):
         """
         for child in self.recipes:
             child._bubble_down()
-        self._update_status()
-        self.job._bubble_up()
+        if self._update_status():
+            self.job._bubble_up()
 
     def _bubble_up(self):
         """
         Bubble Status updates up the chain.
         """
-        self._update_status()
-        self.job._bubble_up()
+        if self._update_status():
+            self.job._bubble_up()
 
     def _bubble_down(self):
         """
@@ -4223,36 +4213,35 @@ class RecipeSet(TaskBase):
         """
         Update number of passes, failures, warns, panics..
         """
-
-        session.connection(RecipeSet).execute(recipe_set_table.update(
-                                              recipe_set_table.c.id==self.id
-                                                              ),
-                 status_id=select([task_status_table.c.id],
+        modified = False
+        status = TaskStatus.query().from_statement(select([task_status_table.c.id],
                                   from_obj=[recipe_table.join(task_status_table)],
                                   whereclause=recipe_table.c.recipe_set_id.__eq__(self.id)
-                                 ).group_by(task_status_table.c.severity)\
-                                  .limit(1).scalar()
-                                             )
-        session.connection(RecipeSet).execute(recipe_set_table.update(
-                                              recipe_set_table.c.id==self.id
-                                                              ),
-                 result_id=select([task_result_table.c.id],
+                                 ).group_by(task_status_table.c.severity)
+                                                  ).first()
+        result = TaskResult.query().from_statement(select([task_result_table.c.id],
                                   from_obj=[recipe_table.join(task_result_table)],
                                   whereclause=recipe_table.c.recipe_set_id.__eq__(self.id)
-                                 ).group_by(task_result_table.c.severity.desc())\
-                                  .limit(1).scalar()
-                                             )
+                                 ).group_by(task_result_table.c.severity.desc())
+                                                  ).first()
 
-        # Do I really need to do this?  seems sqlalchemy should do this for me.
-        session.flush()
-        session.refresh(self)
+        if self.status != status:
+            self.status = status
+            modified = True
+
+        if self.result != result:
+            self.result = result
+            modified = True
 
         # Return systems if recipeSet finished
         if self.is_finished():
             for recipe in self.recipes:
                 recipe.release_system()
 
-        return
+        if modified:
+            session.flush()
+
+        return modified
 
     def recipes_orderby(self, labcontroller):
         query = select([recipe_table.c.id, 
@@ -4723,15 +4712,15 @@ class Recipe(TaskBase):
         """
         for child in self.tasks:
             child._bubble_down()
-        self._update_status()
-        self.recipeset._bubble_up()
+        if self._update_status():
+            self.recipeset._bubble_up()
 
     def _bubble_up(self):
         """
         Bubble Status updates up the chain.
         """
-        self._update_status()
-        self.recipeset._bubble_up()
+        if self._update_status():
+            self.recipeset._bubble_up()
 
     def _bubble_down(self):
         """
@@ -4746,28 +4735,24 @@ class Recipe(TaskBase):
         Update status and result
         """
 
-        session.connection(Recipe).execute(recipe_table.update(
-                                           recipe_table.c.id==self.id
-                                                              ),
-                 status_id=select([task_status_table.c.id],
+        modified = False
+        status = TaskStatus.query().from_statement(select([task_status_table.c.id],
                                   from_obj=[recipe_task_table.join(task_status_table)],
                                   whereclause=recipe_task_table.c.recipe_id.__eq__(self.id)
-                                 ).group_by(task_status_table.c.severity)\
-                                  .limit(1).scalar()
-                                          )
-        session.connection(Recipe).execute(recipe_table.update(
-                                           recipe_table.c.id==self.id
-                                                              ),
-                 result_id=select([task_result_table.c.id],
+                                 ).group_by(task_status_table.c.severity)
+                                                  ).first()
+        result = TaskResult.query().from_statement(select([task_result_table.c.id],
                                   from_obj=[recipe_task_table.join(task_result_table)],
                                   whereclause=recipe_task_table.c.recipe_id.__eq__(self.id)
-                                 ).group_by(task_result_table.c.severity.desc())\
-                                  .limit(1).scalar()
-                                          )
+                                 ).group_by(task_result_table.c.severity.desc())
+                                                  ).first()
+        if self.status != status:
+            self.status = status
+            modified = True
 
-        # Do I really need to do this?  seems sqlalchemy should do this for me.
-        session.flush()
-        session.refresh(self)
+        if self.result != result:
+            self.result = result
+            modified = True
 
         # Record the start of this Recipe.
         if not self.start_time \
@@ -4778,7 +4763,10 @@ class Recipe(TaskBase):
             # Record the completion of this Recipe.
             self.finish_time = datetime.utcnow()
 
-        return
+        if modified:
+            session.flush()
+
+        return modified
 
     def release_system(self):
         """ Release the system and remove the watchdog
@@ -5161,12 +5149,12 @@ class RecipeTask(TaskBase):
         """
         Bubble Status updates up the chain.
         """
-        self._update_status()
-        self.recipe._bubble_up()
+        if self._update_status():
+            self.recipe._bubble_up()
 
     def update_status(self, status=None):
-        self._update_status(status=status)
-        self.recipe._bubble_up()
+        if self._update_status(status=status):
+            self.recipe._bubble_up()
 
     def _bubble_down(self):
         """
@@ -5179,28 +5167,19 @@ class RecipeTask(TaskBase):
         Update number of passes, failures, warns, panics..
         """
 
+        modified = False
         # RecipeTask is the lowest on the tree with a status.
-        if status is not None and not self.is_finished():
+        if status is not None and not self.is_finished() and self.status != status:
+            modified = True
             self.status = status
-            session.flush()
-
             # Once the task is finished report the results up..  but once the task is finished 
             # Don't do it again. :-)
             if self.results and self.is_finished():
-
-                session.connection(RecipeTask).execute(recipe_task_table.update(
-                                                   recipe_task_table.c.id==self.id
-                                                                      ),
-                         result_id=select([task_result_table.c.id],
-                                   from_obj=[recipe_task_result_table.join(task_result_table)],
-                                   whereclause=recipe_task_result_table.c.recipe_task_id.__eq__(self.id)
-                                         ).group_by(task_result_table.c.severity.desc())\
-                                          .limit(1).scalar()
-                                                      )
-
-                # Do I really need to do this?  seems sqlalchemy should do this for me.
-                session.flush()
-                session.refresh(self)
+                self.result = TaskResult.query().from_statement(select([task_result_table.c.id],
+                                  from_obj=[recipe_task_result_table.join(task_result_table)],
+                                  whereclause=recipe_task_result_table.c.recipe_task_id.__eq__(self.id)
+                                 ).group_by(task_result_table.c.severity.desc())
+                                                  ).first()
                 if self.result.result in self.progress_types:
                     attr = '%s' % self.progress_types['%s' % self.result]
                     # Increment Task Totals for Pass,Fail,Warn,Panic.
@@ -5214,7 +5193,8 @@ class RecipeTask(TaskBase):
                             attr, 
                             getattr(self.recipe.recipeset.job, attr) + 1)
     
-        return
+            session.flush()
+        return modified
 
     def start(self, watchdog_override=None):
         """
