@@ -80,7 +80,7 @@ LoadModule wsgi_module modules/mod_wsgi.so
 			 First make sure apache is on and configured to run on startup. 
 <screen>
 $ <userinput>sudo chkconfig httpd on</userinput>
-$ <userinput>sudo /sbin/service/httpd start</userinput>
+$ <userinput>sudo /sbin/service httpd start</userinput>
 </screen>
 			 We need to switch SELinux off. 
 <screen>
@@ -88,7 +88,7 @@ $ <userinput>setenforce 0</userinput>
 </screen>
 			 Due to permission issues, we need to delete the log file before we start Beaker for the first time. Otherwise Beaker will not run properly. 
 <screen>
-$ <userinput>sudo rm /var/log/beaker/server*.log</userinput>
+$ <userinput>sudo rm /var/log/beaker/*.log</userinput>
 </screen>
 			 Start Beaker and configure it to run on startup. 
 <screen>

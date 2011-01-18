@@ -23,7 +23,7 @@ __all__ = ['Auth']
 
 def proxy_identity(current_identity, proxy_user_name):
     if 'proxy_auth' not in current_identity.permissions:
-        raise IdentityException('%s does not have proxy_auth permission' % user.user_name)
+        raise IdentityException('%s does not have proxy_auth permission' % current_identity.user_name)
     proxy_user = User.by_user_name(proxy_user_name)
     if not proxy_user:
         log.warning('Attempted to proxy as nonexistent user %s', proxy_user_name)
@@ -31,7 +31,9 @@ def proxy_identity(current_identity, proxy_user_name):
     log.info("Associating proxy user (%s) with visit (%s)",
             proxy_user_name, current_identity.visit_key)
     # XXX shouldn't assume a particular implementation class here:
-    return SqlAlchemyIdentity(current_identity.visit_key, proxy_user)
+    proxied_identity = SqlAlchemyIdentity(current_identity.visit_key, proxy_user)
+    proxied_identity.visit_link.proxied_by_user = current_identity.user
+    return proxied_identity
 
 class Auth(RPCRoot):
     # For XMLRPC methods in this class.
@@ -44,12 +46,18 @@ class Auth(RPCRoot):
     @identity.require(identity.not_anonymous())
     def who_am_i(self):
         """
-        Returns the username of the currently logged in user.
+        Returns an XML-RPC structure (dict) with information about the 
+        currently logged in user.
         Provided for testing purposes.
 
-        .. versionadded:: 0.6
+        .. versionadded:: 0.6.0
+        .. versionchanged:: 0.6.1
+           Formerly returned only the username.
         """
-        return identity.current.user.user_name
+        retval = {'username': identity.current.user.user_name}
+        if identity.current.visit_link.proxied_by_user is not None:
+            retval['proxied_by_username'] = identity.current.visit_link.proxied_by_user.user_name
+        return retval
 
     @cherrypy.expose
     def renew_session(self, *args, **kw):

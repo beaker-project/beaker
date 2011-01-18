@@ -407,6 +407,10 @@ class BeakerRecipeBase(BeakerBase):
             distroVariant.setAttribute('value', '%s' % variant)
             self.addDistroRequires(distroVariant)
         if method:
+            distroMethod = self.doc.createElement('distro_method')
+            distroMethod.setAttribute('op', '=')
+            distroMethod.setAttribute('value', 'nfs')
+            self.addDistroRequires(distroMethod)
             self.ks_meta = "method=%s" % method
         if kernel_options:
             self.kernel_options = kernel_options

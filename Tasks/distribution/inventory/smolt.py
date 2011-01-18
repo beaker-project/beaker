@@ -685,7 +685,11 @@ def read_cpuinfo():
         hwdict['platform'] = uname
         hwdict['count'] = count
         hwdict['model'] = get_entry(tmpdict, "cpu")
-        hwdict['model_ver'] = get_entry(tmpdict, 'revision')
+        revision = get_entry(tmpdict, 'revision') # 2.1 (pvr 003f 0201)
+        try:
+            hwdict['model_number'], hwdict['model_ver'] = revision.split()[0].split('.')[:2]
+        except (ValueError, IndexError):
+            pass
         hwdict['bogomips'] = get_entry(tmpdict, 'bogomips')
         hwdict['vendor'] = get_entry(tmpdict, 'machine')
         hwdict['type'] = get_entry(tmpdict, 'platform')

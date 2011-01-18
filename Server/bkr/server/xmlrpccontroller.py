@@ -1,13 +1,22 @@
 import sys
 import logging
 import xmlrpclib
-import cherrypy
+import cherrypy, cherrypy.config
 import turbogears
 from turbogears import controllers
+from turbogears.identity.exceptions import IdentityFailure
 
 log = logging.getLogger(__name__)
 
 class RPCRoot(controllers.Controller):
+
+    # We disable external /login redirects for XML-RPC locations,
+    # because they make it impossible for us to grab IdentityFailure exceptions 
+    # and report them nicely to the caller
+    cherrypy.config.update({
+        '/RPC2': {'identity.force_external_redirect': False},
+        '/client': {'identity.force_external_redirect': False},
+    })
 
     @turbogears.expose()
     def RPC2(self):
@@ -28,6 +37,9 @@ class RPCRoot(controllers.Controller):
             # as expected by dumps                       
             response = obj(*params)
             response = xmlrpclib.dumps((response,), methodresponse=1, allow_none=True)
+        except IdentityFailure, e:
+            response = xmlrpclib.dumps(xmlrpclib.Fault(1,
+                    '%s: Please log in first' % e.__class__))
         except xmlrpclib.Fault, fault:
             log.exception('Error handling XML-RPC method')
             # Can't marshal the result

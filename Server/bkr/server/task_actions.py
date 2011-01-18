@@ -28,12 +28,16 @@ __all__ = ['TaskActions']
 class TaskActions(RPCRoot):
     # For XMLRPC methods in this class.
     exposed = True
+    unstoppable_task_types = [Recipe, RecipeTaskResult]
 
     task_types = dict(J  = Job,
                       RS = RecipeSet,
                       R  = Recipe,
                       T  = RecipeTask,
                       TR = RecipeTaskResult)
+
+    stoppable_task_types = dict([(rep, obj) for rep,obj in task_types.iteritems() if obj not in unstoppable_task_types])
+
 
     @cherrypy.expose
     def task_info(self, taskid, flat=True):
@@ -85,11 +89,13 @@ class TaskActions(RPCRoot):
         :type msg: string
         """
         task_type, task_id = taskid.split(":")
-        if task_type.upper() in self.task_types.keys():
+        if task_type.upper() in self.stoppable_task_types.keys():
             try:
-                task = self.task_types[task_type.upper()].by_id(task_id)
+                task = self.stoppable_task_types[task_type.upper()].by_id(task_id)
             except InvalidRequestError, e:
                 raise BX(_("Invalid %s %s" % (task_type, task_id)))
+        else:
+            raise BX(_("Task type %s is not stoppable" % (task_type)))
         if stop_type not in task.stop_types:
             raise BX(_('Invalid stop_type: %s, must be one of %s' %
                              (stop_type, task.stop_types)))

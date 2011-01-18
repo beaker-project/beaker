@@ -1,3 +1,6 @@
+
+# vim: set encoding=utf-8:
+
 # Beaker
 #
 # Copyright (C) 2010 dcallagh@redhat.com
@@ -59,16 +62,17 @@ class TestSystemGridSorting(SeleniumTestCase):
         try:
             session.begin()
             # ensure we have lots of systems
-            for vendor in (u'Acer', u'Dell', u'HP'):
-                for model in (u'slow model', u'fast model', u'big model'):
-                    for status in (u'Automated', u'Manual', u'Removed'):
-                        for type in (u'Machine', u'Virtual', u'Prototype'):
-                            for cores in (1, 4):
-                                system = data_setup.create_system(
-                                    vendor=vendor, model=model,
-                                    status=status, type=type)
-                                system.user = data_setup.create_user()
-                                system.cpu = Cpu(cores=cores)
+            for cores in [1, 2, 3]:
+                for vendor, model, status, type, user in zip(
+                        [u'Acer', u'Dell', u'HP'],
+                        [u'slow model', u'fast model', u'big model'],
+                        [u'Automated', u'Manual', u'Removed'],
+                        [u'Machine', u'Virtual', u'Prototype'],
+                        [data_setup.create_user() for _ in range(3)]):
+                    system = data_setup.create_system(vendor=vendor,
+                            model=model, status=status, type=type)
+                    system.user = data_setup.create_user()
+                    system.cpu = Cpu(cores=cores)
             session.commit()
         finally:
             session.close()
@@ -83,8 +87,10 @@ class TestSystemGridSorting(SeleniumTestCase):
 
     def check_column_sort(self, column):
         sel = self.selenium
-        sel.click('link=Show all')
-        sel.wait_for_page_to_load('30000')
+        try:
+            sel.click('link=Show all')
+            sel.wait_for_page_to_load('30000')
+        except: pass
         sel.click('//table[@id="widget"]/thead/th[%d]//a[@href]' % column)
         sel.wait_for_page_to_load('30000')
         row_count = int(sel.get_xpath_count(
@@ -273,6 +279,7 @@ class SystemViewTest(SeleniumTestCase):
         sel = self.selenium
         self.go_to_system_view()
         changes = {
+            'fqdn': 'zx80.example.com',
             'vendor': 'Sinclair',
             'model': 'ZX80',
             'serial': '12345',
@@ -286,6 +293,35 @@ class SystemViewTest(SeleniumTestCase):
             self.assertEquals(sel.get_value(k), v)
         session.refresh(self.system)
         self.assert_(self.system.date_modified > orig_date_modified)
+
+    def test_strips_surrounding_whitespace_from_fqdn(self):
+        self.login()
+        sel = self.selenium
+        self.go_to_system_view()
+        sel.type('fqdn', '    lol    ')
+        sel.click('link=Save Changes')
+        sel.wait_for_page_to_load('30000')
+        self.assertEquals(sel.get_value('fqdn'), 'lol')
+
+    def test_rejects_malformed_fqdn(self):
+        self.login()
+        sel = self.selenium
+        self.go_to_system_view()
+        sel.type('fqdn', 'lol...?')
+        sel.click('link=Save Changes')
+        sel.wait_for_page_to_load('30000')
+        self.assertEquals(sel.get_text('css=.fielderror'),
+                'The supplied value is not a valid hostname')
+
+    def test_rejects_non_ascii_chars_in_fqdn(self):
+        self.login()
+        sel = self.selenium
+        self.go_to_system_view()
+        sel.type('fqdn', u'lööööl')
+        sel.click('link=Save Changes')
+        sel.wait_for_page_to_load('30000')
+        self.assertEquals(sel.get_text('css=.fielderror'),
+                'The supplied value is not a valid hostname')
 
     def test_add_arch(self):
         orig_date_modified = self.system.date_modified
@@ -578,7 +614,7 @@ class ReserveSystemXmlRpcTest(XmlRpcTestCase):
             self.fail('should raise')
         except Exception, e:
             self.assert_(e.faultString.startswith(
-                    'cherrypy._cperror.HTTPRedirect'))
+                    'turbogears.identity.exceptions.IdentityFailure'))
 
     def test_cannot_reserve_automated_system(self):
         user = data_setup.create_user(password=u'password')
@@ -641,6 +677,26 @@ class ReserveSystemXmlRpcTest(XmlRpcTestCase):
         except xmlrpclib.Fault, e:
             self.assert_('has already reserved system' in e.faultString)
 
+    def test_reserve_via_external_service(self):
+        service_group = data_setup.create_group(permissions=[u'proxy_auth'])
+        service_user = data_setup.create_user(password=u'password')
+        data_setup.add_user_to_group(service_user, service_group)
+        user = data_setup.create_user(password=u'notused')
+        system = data_setup.create_system(
+                owner=User.by_user_name(data_setup.ADMIN_USER),
+                status=u'Manual', shared=True)
+        self.assert_(system.user is None)
+        session.flush()
+        server = self.get_server()
+        server.auth.login_password(service_user.user_name, 'password',
+                user.user_name)
+        server.systems.reserve(system.fqdn)
+        session.refresh(system)
+        self.assertEqual(system.user, user)
+        reserved_activity = system.activity[0]
+        self.assertEqual(reserved_activity.action, 'Reserved')
+        self.assertEqual(reserved_activity.service, service_user.user_name)
+
 class ReleaseSystemXmlRpcTest(XmlRpcTestCase):
 
     def test_cannot_release_when_not_logged_in(self):
@@ -652,7 +708,7 @@ class ReleaseSystemXmlRpcTest(XmlRpcTestCase):
             self.fail('should raise')
         except Exception, e:
             self.assert_(e.faultString.startswith(
-                    'cherrypy._cperror.HTTPRedirect'))
+                    'turbogears.identity.exceptions.IdentityFailure'))
 
     def test_cannot_release_when_not_current_user(self):
         system = data_setup.create_system(
@@ -726,7 +782,7 @@ class SystemPowerXmlRpcTest(XmlRpcTestCase):
             self.fail('should raise')
         except xmlrpclib.Fault, e:
             self.assert_(e.faultString.startswith(
-                    'cherrypy._cperror.HTTPRedirect'))
+                    'turbogears.identity.exceptions.IdentityFailure'))
         self.assert_(not self.stub_cobbler_thread.cobbler.system_actions)
 
     def test_cannot_power_system_in_use(self):
@@ -812,7 +868,16 @@ class SystemProvisionXmlRpcTest(XmlRpcTestCase):
         self.stub_cobbler_thread.start()
         self.lab_controller = data_setup.create_labcontroller(
                 fqdn=u'localhost:%d' % self.stub_cobbler_thread.port)
-        self.distro = data_setup.create_distro()
+        self.distro = data_setup.create_distro(arch=u'i386')
+        self.usable_system = data_setup.create_system(arch=u'i386',
+                owner=User.by_user_name(data_setup.ADMIN_USER),
+                status=u'Manual', shared=True)
+        data_setup.configure_system_power(self.usable_system, power_type=u'drac',
+                address=u'nowhere.example.com', user=u'teh_powz0r',
+                password=u'onoffonoff', power_id=u'asdf')
+        self.usable_system.lab_controller = self.lab_controller
+        self.usable_system.user = data_setup.create_user(password=u'password')
+        session.flush()
         self.server = self.get_server()
 
     def tearDown(self):
@@ -824,7 +889,7 @@ class SystemProvisionXmlRpcTest(XmlRpcTestCase):
             self.fail('should raise')
         except xmlrpclib.Fault, e:
             self.assert_(e.faultString.startswith(
-                    'cherrypy._cperror.HTTPRedirect'))
+                    'turbogears.identity.exceptions.IdentityFailure'))
         self.assert_(not self.stub_cobbler_thread.cobbler.system_actions)
 
     def test_cannot_provision_automated_system(self):
@@ -864,17 +929,8 @@ class SystemProvisionXmlRpcTest(XmlRpcTestCase):
             kickstart lol!
             do some stuff etc
             '''
-        system = data_setup.create_system(
-                owner=User.by_user_name(data_setup.ADMIN_USER),
-                status=u'Manual', shared=True)
-        data_setup.configure_system_power(system, power_type=u'drac',
-                address=u'nowhere.example.com', user=u'teh_powz0r',
-                password=u'onoffonoff', power_id=u'asdf')
-        system.lab_controller = self.lab_controller
-        user = data_setup.create_user(password=u'password')
-        system.user = user
-        session.flush()
-        self.server.auth.login_password(user.user_name, 'password')
+        system = self.usable_system
+        self.server.auth.login_password(system.user.user_name, 'password')
         self.server.systems.provision(system.fqdn, self.distro.install_name,
                 {'method': 'nfs'},
                 'noapic',
@@ -903,21 +959,35 @@ class SystemProvisionXmlRpcTest(XmlRpcTestCase):
                 'reboot')
 
     def test_provision_without_reboot(self):
-        system = data_setup.create_system(
-                owner=User.by_user_name(data_setup.ADMIN_USER),
-                status=u'Manual', shared=True)
-        data_setup.configure_system_power(system, power_type=u'drac',
-                address=u'nowhere.example.com', user=u'teh_powz0r',
-                password=u'onoffonoff', power_id=u'asdf')
-        system.lab_controller = self.lab_controller
-        user = data_setup.create_user(password=u'password')
-        system.user = user
-        session.flush()
-        self.server.auth.login_password(user.user_name, 'password')
-        self.server.systems.provision(system.fqdn, self.distro.install_name,
-                None, None, None, None,
+        self.server.auth.login_password(self.usable_system.user.user_name,
+                'password')
+        self.server.systems.provision(self.usable_system.fqdn,
+                self.distro.install_name, None, None, None, None,
                 False) # this last one is reboot=False
         self.assert_(not self.stub_cobbler_thread.cobbler.system_actions)
+
+    def test_refuses_to_provision_distro_with_mismatched_arch(self):
+        distro = data_setup.create_distro(arch=u'x86_64')
+        session.flush()
+        self.server.auth.login_password(self.usable_system.user.user_name,
+                'password')
+        try:
+            self.server.systems.provision(self.usable_system.fqdn, distro.install_name)
+            self.fail('should raise')
+        except xmlrpclib.Fault, e:
+            self.assert_('cannot be provisioned on system' in e.faultString)
+
+    def test_refuses_to_provision_distro_not_in_lc(self):
+        for lca in self.distro.lab_controller_assocs:
+            session.delete(lca)
+        session.flush()
+        self.server.auth.login_password(self.usable_system.user.user_name,
+                'password')
+        try:
+            self.server.systems.provision(self.usable_system.fqdn, self.distro.install_name)
+            self.fail('should raise')
+        except xmlrpclib.Fault, e:
+            self.assert_('cannot be provisioned on system' in e.faultString)
 
 class LegacyPushXmlRpcTest(XmlRpcTestCase):
 
@@ -963,6 +1033,24 @@ class LegacyPushXmlRpcTest(XmlRpcTestCase):
         self.assertEquals(system.activity[0].action, u'Added')
         self.assertEquals(system.activity[0].old_value, None)
         self.assertEquals(system.activity[0].new_value, u'HVM/1')
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=665441
+    def test_existing_keys_are_untouched(self):
+        system = data_setup.create_system()
+        system.key_values_string.extend([
+            Key_Value_String(Key.by_name(u'PCIID'), '1022:2000'), # this one gets deleted
+            Key_Value_String(Key.by_name(u'HVM'), '0'), # this one gets updated
+            Key_Value_String(Key.by_name(u'VENDOR'), 'Bob'), # this one should not be touched
+        ])
+        session.flush()
+
+        self.server.legacypush(system.fqdn, {'PCIID': [], 'HVM': True})
+        session.refresh(system)
+        self.assertEquals(len(system.key_values_string), 2, system.key_values_string)
+        self.assertEquals(system.key_values_string[0].key.key_name, u'VENDOR')
+        self.assertEquals(system.key_values_string[0].key_value, u'Bob')
+        self.assertEquals(system.key_values_string[1].key.key_name, u'HVM')
+        self.assertEquals(system.key_values_string[1].key_value, u'1')
 
 class PushXmlRpcTest(XmlRpcTestCase):
 

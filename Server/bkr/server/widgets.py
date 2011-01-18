@@ -21,6 +21,16 @@ from bkr.server import search_utility
 import logging
 log = logging.getLogger(__name__)
 
+class Hostname(validators.Regex):
+    messages = {'invalid': 'The supplied value is not a valid hostname'}
+    def __init__(self):
+        super(Hostname, self).__init__(
+                # http://stackoverflow.com/questions/1418423/_/1420225#1420225
+                r'^(?=.{1,255}$)[0-9A-Za-z]'
+                r'(?:(?:[0-9A-Za-z]|\b-){0,61}[0-9A-Za-z])?'
+                r'(?:\.[0-9A-Za-z](?:(?:[0-9A-Za-z]|\b-){0,61}[0-9A-Za-z])?)*\.?$',
+                strip=True)
+
 class UtilJSON:
      @classmethod
      def dynamic_json(cls):
@@ -294,7 +304,7 @@ class AckPanel(RadioButtonList):
     javascript = [LocalJSLink('bkr','/static/javascript/jquery.js'),
                   LocalJSLink('bkr','/static/javascript/jquery-ui-1.7.3.custom.min.js'), 
                   LocalJSLink('bkr','/static/javascript/loader.js'),
-                  LocalJSLink('bkr','/static/javascript/response_v2.js')]
+                  LocalJSLink('bkr','/static/javascript/response_v3.js')]
 
     css =  [LocalCSSLink('bkr','/static/css/smoothness/jquery-ui-1.7.3.custom.css')] 
     params = ['widget_name','unreal_response','comment_id','comment_class']
@@ -1187,7 +1197,7 @@ class SystemForm(Form):
                HiddenField(name='id'),
                TextField(name='fqdn', 
                          label=_(u'System Name'), 
-                         validator=validators.NotEmpty(),
+                         validator=Hostname(),
                          attrs={'maxlength':'255',
                                 'size':'60'}),
                SingleSelectField(name='status_id',
@@ -1323,7 +1333,8 @@ class ProductWidget(SingleSelectField, RPC):
        self.field_class = 'singleselectfield'
 
     def display(self,value=None, *args, **params):
-        params['options'] =[(self.product_deselected, 'No Product')] +  [(elem.id,elem.name) for elem in model.Product.query().all()]
+        params['options'] =[(self.product_deselected, 'No Product')] + \
+            [(elem.id,elem.name) for elem in model.Product.query().order_by(model.Product.name).all()]
         return super(ProductWidget,self).display(value,**params)
 
     def update_params(self, d):

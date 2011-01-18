@@ -45,6 +45,55 @@ class RecipeSets(RPCRoot):
     # For XMLRPC methods in this class.
     exposed = True
 
+    hidden_id = widgets.HiddenField(name='id')
+    confirm = widgets.Label(name='confirm', default="Are you sure you want to cancel?")
+    message = widgets.TextArea(name='msg', label=_(u'Reason?'), help=_(u'Optional'))
+    cancel_form = widgets.TableForm(
+        'cancel_recipeset',
+        fields = [hidden_id, message, confirm],
+        action = 'really_cancel',
+        submit_text = _(u'Yes')
+    )
+    @identity.require(identity.not_anonymous())
+    @expose(template="bkr.server.templates.form")
+    def cancel(self, id):
+        """
+        Confirm cancel recipeset
+        """
+        try:
+            recipeset = RecipeSet.by_id(id)
+        except InvalidRequestError:
+            flash(_(u"Invalid recipeset id %s" % id))
+            redirect("/jobs/%s" % recipeset.job.id)
+        if not identity.current.user.is_admin() and recipeset.job.owner != identity.current.user:
+            flash(_(u"You don't have permission to cancel recipeset id %s" % id))
+            redirect("/jobs/%s" % recipeset.job.id)
+        return dict(
+            title = 'Cancel RecipeSet %s' % id,
+            form = self.cancel_form,
+            action = './really_cancel',
+            options = {},
+            value = dict(id = recipeset.id,
+                         confirm = 'really cancel recipeset %s?' % id),
+        )
+    @identity.require(identity.not_anonymous())
+    @expose()
+    def really_cancel(self, id, msg=None):
+        """
+        Confirm cancel recipeset
+        """
+        try:
+            recipeset = RecipeSet.by_id(id)
+        except InvalidRequestError:
+            flash(_(u"Invalid recipeset id %s" % id))
+            redirect("/jobs/%s" % recipeset.job.id)
+        if not identity.current.user.is_admin() and recipeset.job.owner != identity.current.user:
+            flash(_(u"You don't have permission to cancel recipeset id %s" % id))
+            redirect("/jobs/%s" % recipeset.job.id)
+        recipeset.cancel(msg)
+        flash(_(u"Successfully cancelled recipeset %s" % id))
+        redirect("/jobs/%s" % recipeset.job.id)
+
     @cherrypy.expose
     @identity.require(identity.not_anonymous())
     def stop(self, recipeset_id, stop_type, msg=None):

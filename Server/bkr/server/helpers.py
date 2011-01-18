@@ -1,5 +1,6 @@
 from kid import Element
 import turbogears
+from turbogears.database import session
 
 def make_link(url, text):
     # make an <a> element
@@ -31,6 +32,18 @@ def make_fake_link(name,id,text):
     a.attrib['id'] = id
     a.text = '%s ' % text
     return a
+
+def sqla_cache(f):
+    the_cache = {}
+    def do_cache(*args):
+        args = tuple(args)
+        if args in the_cache: #session merge puts object into session
+            return session.merge(the_cache[args],dont_load=True)
+        else:
+            result = f(*args)
+            the_cache[args] = result
+            return result
+    return do_cache
 
 def to_byte_string(encoding):
     """

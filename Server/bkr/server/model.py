@@ -83,12 +83,14 @@ system_table = Table('system', metadata,
            ForeignKey('release_action.id')),
     Column('reprovision_distro_id', Integer,
            ForeignKey('distro.id')),
+    mysql_engine='InnoDB',
 )
 
 system_cc_table = Table('system_cc', metadata,
         Column('system_id', Integer, ForeignKey('system.id', ondelete='CASCADE',
             onupdate='CASCADE'), primary_key=True),
         Column('email_address', Unicode(255), primary_key=True, index=True),
+        mysql_engine='InnoDB',
 )
 
 system_device_map = Table('system_device_map', metadata,
@@ -98,30 +100,35 @@ system_device_map = Table('system_device_map', metadata,
     Column('device_id', Integer,
            ForeignKey('device.id'),
            primary_key=True),
+    mysql_engine='InnoDB',
 )
 
 system_type_table = Table('system_type', metadata,
     Column('id', Integer, autoincrement=True,
            nullable=False, primary_key=True),
     Column('type', Unicode(100), nullable=False),
+    mysql_engine='InnoDB',
 )
 
 release_action_table = Table('release_action', metadata,
     Column('id', Integer, autoincrement=True,
            nullable=False, primary_key=True),
     Column('action', Unicode(100), nullable=False),
+    mysql_engine='InnoDB',
 )
 
 system_status_table = Table('system_status', metadata,
     Column('id', Integer, autoincrement=True,
            nullable=False, primary_key=True),
     Column('status', Unicode(100), nullable=False),
+    mysql_engine='InnoDB',
 )
 
 arch_table = Table('arch', metadata,
     Column('id', Integer, autoincrement=True,
            nullable=False, primary_key=True),
-    Column('arch', String(20), unique=True)
+    Column('arch', String(20), unique=True),
+    mysql_engine='InnoDB',
 )
 
 system_arch_map = Table('system_arch_map', metadata,
@@ -131,6 +138,7 @@ system_arch_map = Table('system_arch_map', metadata,
     Column('arch_id', Integer,
            ForeignKey('arch.id'),
            primary_key=True),
+    mysql_engine='InnoDB',
 )
 
 osversion_arch_map = Table('osversion_arch_map', metadata,
@@ -140,6 +148,7 @@ osversion_arch_map = Table('osversion_arch_map', metadata,
     Column('arch_id', Integer,
            ForeignKey('arch.id'),
            primary_key=True),
+    mysql_engine='InnoDB',
 )
 
 provision_table = Table('provision', metadata,
@@ -150,6 +159,7 @@ provision_table = Table('provision', metadata,
     Column('kernel_options', String(1024)),
     Column('kernel_options_post', String(1024)),
     Column('arch_id', Integer, ForeignKey('arch.id')),
+    mysql_engine='InnoDB',
 )
 
 provision_family_table = Table('provision_family', metadata,
@@ -160,6 +170,7 @@ provision_family_table = Table('provision_family', metadata,
     Column('ks_meta', String(1024)),
     Column('kernel_options', String(1024)),
     Column('kernel_options_post', String(1024)),
+    mysql_engine='InnoDB',
 )
 
 provision_family_update_table = Table('provision_update_family', metadata,
@@ -170,6 +181,7 @@ provision_family_update_table = Table('provision_update_family', metadata,
     Column('ks_meta', String(1024)),
     Column('kernel_options', String(1024)),
     Column('kernel_options_post', String(1024)),
+    mysql_engine='InnoDB',
 )
 
 exclude_osmajor_table = Table('exclude_osmajor', metadata,
@@ -178,6 +190,7 @@ exclude_osmajor_table = Table('exclude_osmajor', metadata,
     Column('system_id', Integer, ForeignKey('system.id')),
     Column('arch_id', Integer, ForeignKey('arch.id')),
     Column('osmajor_id', Integer, ForeignKey('osmajor.id')),
+    mysql_engine='InnoDB',
 )
 
 exclude_osversion_table = Table('exclude_osversion', metadata,
@@ -186,6 +199,7 @@ exclude_osversion_table = Table('exclude_osversion', metadata,
     Column('system_id', Integer, ForeignKey('system.id')),
     Column('arch_id', Integer, ForeignKey('arch.id')),
     Column('osversion_id', Integer, ForeignKey('osversion.id')),
+    mysql_engine='InnoDB',
 )
 
 task_exclude_arch_table = Table('task_exclude_arch', metadata,
@@ -193,6 +207,7 @@ task_exclude_arch_table = Table('task_exclude_arch', metadata,
            nullable=False, primary_key=True),
     Column('task_id', Integer, ForeignKey('task.id')),
     Column('arch_id', Integer, ForeignKey('arch.id')),
+    mysql_engine='InnoDB',
 )
 
 task_exclude_osmajor_table = Table('task_exclude_osmajor', metadata,
@@ -200,6 +215,7 @@ task_exclude_osmajor_table = Table('task_exclude_osmajor', metadata,
            nullable=False, primary_key=True),
     Column('task_id', Integer, ForeignKey('task.id')),
     Column('osmajor_id', Integer, ForeignKey('osmajor.id')),
+    mysql_engine='InnoDB',
 )
 
 labinfo_table = Table('labinfo', metadata,
@@ -212,6 +228,7 @@ labinfo_table = Table('labinfo', metadata,
     Column('weight', Numeric(asdecimal=False)),
     Column('wattage', Numeric(asdecimal=False)),
     Column('cooling', Numeric(asdecimal=False)),
+    mysql_engine='InnoDB',
 )
 
 watchdog_table = Table('watchdog', metadata,
@@ -222,6 +239,7 @@ watchdog_table = Table('watchdog', metadata,
     Column('recipetask_id', Integer, ForeignKey('recipe_task.id')),
     Column('subtask', Unicode(255)),
     Column('kill_time', DateTime),
+    mysql_engine='InnoDB',
 )
 
 cpu_table = Table('cpu', metadata,
@@ -238,13 +256,15 @@ cpu_table = Table('cpu', metadata,
     Column('cores',Integer),
     Column('sockets',Integer),
     Column('hyper',Boolean),
+    mysql_engine='InnoDB',
 )
 
 cpu_flag_table = Table('cpu_flag', metadata,
     Column('id', Integer, autoincrement=True,
            nullable=False, primary_key=True),
     Column('cpu_id', Integer, ForeignKey('cpu.id')),
-    Column('flag', String(10))
+    Column('flag', String(10)),
+    mysql_engine='InnoDB',
 )
 
 numa_table = Table('numa', metadata,
@@ -252,13 +272,15 @@ numa_table = Table('numa', metadata,
            nullable=False, primary_key=True),
     Column('system_id', Integer, ForeignKey('system.id')),
     Column('nodes',Integer),
+    mysql_engine='InnoDB',
 )
 
 device_class_table = Table('device_class', metadata,
     Column('id', Integer, autoincrement=True,
            nullable=False, primary_key=True),
     Column("device_class", VARCHAR(24)),
-    Column("description", TEXT)
+    Column("description", TEXT),
+    mysql_engine='InnoDB',
 )
 
 device_table = Table('device', metadata,
@@ -274,18 +296,21 @@ device_table = Table('device', metadata,
     Column('device_class_id', Integer,
            ForeignKey('device_class.id'), nullable=False),
     Column('date_added', DateTime, 
-           default=datetime.utcnow, nullable=False)
+           default=datetime.utcnow, nullable=False),
+    mysql_engine='InnoDB',
 )
 
 locked_table = Table('locked', metadata,
     Column('id', Integer, autoincrement=True,
            nullable=False, primary_key=True),
+    mysql_engine='InnoDB',
 )
 
 power_type_table = Table('power_type', metadata,
     Column('id', Integer, autoincrement=True,
            nullable=False, primary_key=True),
     Column('name', String(255), nullable=False),
+    mysql_engine='InnoDB',
 )
 
 power_table = Table('power', metadata,
@@ -298,21 +323,25 @@ power_table = Table('power', metadata,
     Column('power_user', String(255)),
     Column('power_passwd', String(255)),
     Column('power_id', String(255)),
+    mysql_engine='InnoDB',
 )
 
 serial_table = Table('serial', metadata,
     Column('id', Integer, autoincrement=True,
            nullable=False, primary_key=True),
+    mysql_engine='InnoDB',
 )
 
 serial_type_table = Table('serial_type', metadata,
     Column('id', Integer, autoincrement=True,
            nullable=False, primary_key=True),
+    mysql_engine='InnoDB',
 )
 
 install_table = Table('install', metadata,
     Column('id', Integer, autoincrement=True,
            nullable=False, primary_key=True),
+    mysql_engine='InnoDB',
 )
 
 #RHEL4-U8-re20081015.nightly_http-AS-x86_64   	redhat 	x86_64
@@ -336,12 +365,14 @@ distro_table = Table('distro', metadata,
     Column('method',Unicode(25)),
     Column('virt',Boolean),
     Column('date_created',DateTime),
+    mysql_engine='InnoDB',
 )
 
 lab_controller_distro_map = Table('distro_lab_controller_map', metadata,
     Column('distro_id', Integer, ForeignKey('distro.id'), primary_key=True),
     Column('lab_controller_id', Integer, ForeignKey('lab_controller.id'), primary_key=True),
     Column('tree_path', String(1024)),
+    mysql_engine='InnoDB',
 )
 
 lab_controller_table = Table('lab_controller', metadata,
@@ -352,6 +383,7 @@ lab_controller_table = Table('lab_controller', metadata,
     Column('password',Unicode(255)),
     Column('distros_md5', String(40)),
     Column('systems_md5', String(40)),
+    mysql_engine='InnoDB',
 )
 
 osmajor_table = Table('osmajor', metadata,
@@ -359,6 +391,7 @@ osmajor_table = Table('osmajor', metadata,
            nullable=False, primary_key=True),
     Column('osmajor', Unicode(255), unique=True),
     Column('alias', Unicode(25), unique=True),
+    mysql_engine='InnoDB',
 )
 
 osversion_table = Table('osversion', metadata,
@@ -366,18 +399,21 @@ osversion_table = Table('osversion', metadata,
            nullable=False, primary_key=True),
     Column('osmajor_id', Integer, ForeignKey('osmajor.id')),
     Column('osminor',Unicode(255)),
+    mysql_engine='InnoDB',
 )
 
 breed_table = Table('breed', metadata,
     Column('id', Integer, autoincrement=True,
            nullable=False, primary_key=True),
     Column('breed',Unicode(255), unique=True),
+    mysql_engine='InnoDB',
 )
 
 distro_tag_table = Table('distro_tag', metadata,
     Column('id', Integer, autoincrement=True,
            nullable=False, primary_key=True),
     Column('tag', Unicode(255), unique=True),
+    mysql_engine='InnoDB',
 )
 
 distro_tag_map = Table('distro_tag_map', metadata,
@@ -385,6 +421,7 @@ distro_tag_map = Table('distro_tag_map', metadata,
                                          primary_key=True),
     Column('distro_tag_id', Integer, ForeignKey('distro_tag.id'), 
                                          primary_key=True),
+    mysql_engine='InnoDB',
 )
 
 # the identity schema
@@ -392,20 +429,26 @@ distro_tag_map = Table('distro_tag_map', metadata,
 visits_table = Table('visit', metadata,
     Column('visit_key', String(40), primary_key=True),
     Column('created', DateTime, nullable=False, default=datetime.utcnow),
-    Column('expiry', DateTime)
+    Column('expiry', DateTime),
+    mysql_engine='InnoDB',
 )
 
 
 visit_identity_table = Table('visit_identity', metadata,
-    Column('visit_key', String(40), primary_key=True),
-    Column('user_id', Integer, ForeignKey('tg_user.user_id'), index=True)
+    Column('visit_key', String(40), primary_key=True, unique=True),
+    Column('user_id', Integer, ForeignKey('tg_user.user_id'),
+            nullable=False, index=True),
+    Column('proxied_by_user_id', Integer, ForeignKey('tg_user.user_id'),
+            nullable=True),
+    mysql_engine='InnoDB',
 )
 
 groups_table = Table('tg_group', metadata,
     Column('group_id', Integer, primary_key=True),
     Column('group_name', Unicode(16), unique=True),
     Column('display_name', Unicode(255)),
-    Column('created', DateTime, default=datetime.utcnow)
+    Column('created', DateTime, default=datetime.utcnow),
+    mysql_engine='InnoDB',
 )
 
 users_table = Table('tg_user', metadata,
@@ -414,13 +457,15 @@ users_table = Table('tg_user', metadata,
     Column('email_address', Unicode(255), unique=True),
     Column('display_name', Unicode(255)),
     Column('password', Unicode(40)),
-    Column('created', DateTime, default=datetime.utcnow)
+    Column('created', DateTime, default=datetime.utcnow),
+    mysql_engine='InnoDB',
 )
 
 permissions_table = Table('permission', metadata,
     Column('permission_id', Integer, primary_key=True),
     Column('permission_name', Unicode(16), unique=True),
-    Column('description', Unicode(255))
+    Column('description', Unicode(255)),
+    mysql_engine='InnoDB',
 )
 
 user_group_table = Table('user_group', metadata,
@@ -428,6 +473,7 @@ user_group_table = Table('user_group', metadata,
         onupdate='CASCADE', ondelete='CASCADE'), primary_key=True),
     Column('group_id', Integer, ForeignKey('tg_group.group_id',
         onupdate='CASCADE', ondelete='CASCADE'), primary_key=True),
+    mysql_engine='InnoDB',
 )
 
 system_group_table = Table('system_group', metadata,
@@ -435,6 +481,7 @@ system_group_table = Table('system_group', metadata,
         onupdate='CASCADE', ondelete='CASCADE'), primary_key=True),
     Column('group_id', Integer, ForeignKey('tg_group.group_id',
         onupdate='CASCADE', ondelete='CASCADE'), primary_key=True),
+    mysql_engine='InnoDB',
 )
 
 system_admin_map_table = Table('system_admin_map', metadata, 
@@ -442,6 +489,7 @@ system_admin_map_table = Table('system_admin_map', metadata,
         onupdate='CASCADE', ondelete='CASCADE'), primary_key=True),
     Column('group_id', Integer, ForeignKey('tg_group.group_id',
         onupdate='CASCADE', ondelete='CASCADE'), primary_key=True),
+    mysql_engine='InnoDB',
 )
 
 recipe_set_nacked_table = Table('recipe_set_nacked', metadata,
@@ -450,19 +498,22 @@ recipe_set_nacked_table = Table('recipe_set_nacked', metadata,
     Column('response_id', Integer, ForeignKey('response.id', 
         onupdate='CASCADE', ondelete='CASCADE'), nullable=False),
     Column('comment', Unicode(255),nullable=True),
-    Column('created',DateTime,nullable=False,default=datetime.utcnow)
+    Column('created',DateTime,nullable=False,default=datetime.utcnow),
+    mysql_engine='InnoDB',
 )
 
 beaker_tag_table = Table('beaker_tag', metadata,
     Column('id', Integer, primary_key=True, nullable = False),
     Column('tag', Unicode(20), primary_key=True, nullable = False),
-    Column('type', Unicode(40), nullable=False)
+    Column('type', Unicode(40), nullable=False),
+    mysql_engine='InnoDB',
 )
 
 retention_tag_table = Table('retention_tag', metadata,
     Column('id', Integer, ForeignKey('beaker_tag.id', onupdate='CASCADE', ondelete='CASCADE'),nullable=False, primary_key=True),
     Column('default_', Boolean),
-    Column('needs_product', Boolean)
+    Column('needs_product', Boolean),
+    mysql_engine='InnoDB',
 )
 
 product_table = Table('product', metadata,
@@ -470,11 +521,13 @@ product_table = Table('product', metadata,
         primary_key=True),
     Column('name', Unicode(100),unique=True, index=True, nullable=False),
     Column('created', DateTime, nullable=False, default=datetime.utcnow),
+    mysql_engine='InnoDB',
 )
 
 response_table = Table('response', metadata,
     Column('id', Integer, autoincrement=True, primary_key=True, nullable=False),
-    Column('response',Unicode(50), nullable=False)
+    Column('response',Unicode(50), nullable=False),
+    mysql_engine='InnoDB',
 )
 
 
@@ -483,6 +536,7 @@ group_permission_table = Table('group_permission', metadata,
         onupdate='CASCADE', ondelete='CASCADE'), primary_key=True),
     Column('permission_id', Integer, ForeignKey('permission.permission_id',
         onupdate='CASCADE', ondelete='CASCADE'), primary_key=True),
+    mysql_engine='InnoDB',
 )
 
 # activity schema
@@ -498,27 +552,32 @@ activity_table = Table('activity', metadata,
     Column('service', Unicode(100), nullable=False),
     Column('action', Unicode(40), nullable=False),
     Column('old_value', Unicode(60)),
-    Column('new_value', Unicode(60))
+    Column('new_value', Unicode(60)),
+    mysql_engine='InnoDB',
 )
 
 system_activity_table = Table('system_activity', metadata,
     Column('id', Integer, ForeignKey('activity.id'), primary_key=True),
-    Column('system_id', Integer, ForeignKey('system.id'))
+    Column('system_id', Integer, ForeignKey('system.id')),
+    mysql_engine='InnoDB',
 )
 
 recipeset_activity_table = Table('recipeset_activity', metadata,
     Column('id', Integer,ForeignKey('activity.id'), primary_key=True),
-    Column('recipeset_id', Integer, ForeignKey('recipe_set.id'))
+    Column('recipeset_id', Integer, ForeignKey('recipe_set.id')),
+    mysql_engine='InnoDB',
 )
 
 group_activity_table = Table('group_activity', metadata,
     Column('id', Integer, ForeignKey('activity.id'), primary_key=True),
-    Column('group_id', Integer, ForeignKey('tg_group.group_id'))
+    Column('group_id', Integer, ForeignKey('tg_group.group_id')),
+    mysql_engine='InnoDB',
 )
 
 distro_activity_table = Table('distro_activity', metadata,
     Column('id', Integer, ForeignKey('activity.id'), primary_key=True),
-    Column('distro_id', Integer, ForeignKey('distro.id'))
+    Column('distro_id', Integer, ForeignKey('distro.id')),
+    mysql_engine='InnoDB',
 )
 
 # note schema
@@ -528,7 +587,8 @@ note_table = Table('note', metadata,
     Column('system_id', Integer, ForeignKey('system.id'), index=True),
     Column('user_id', Integer, ForeignKey('tg_user.user_id'), index=True),
     Column('created', DateTime, nullable=False, default=datetime.utcnow),
-    Column('text',TEXT, nullable=False)
+    Column('text',TEXT, nullable=False),
+    mysql_engine='InnoDB',
 )
 
 key_table = Table('key_', metadata,
@@ -536,6 +596,7 @@ key_table = Table('key_', metadata,
            nullable=False, primary_key=True),
     Column('key_name', String(50), nullable=False, unique=True),
     Column('numeric', Boolean, default=False),
+    mysql_engine='InnoDB',
 )
 
 key_value_string_table = Table('key_value_string', metadata,
@@ -545,7 +606,8 @@ key_value_string_table = Table('key_value_string', metadata,
             onupdate='CASCADE', ondelete='CASCADE'), index=True),
     Column('key_id', Integer, ForeignKey('key_.id',
             onupdate='CASCADE', ondelete='CASCADE'), index=True),
-    Column('key_value',TEXT, nullable=False)
+    Column('key_value',TEXT, nullable=False),
+    mysql_engine='InnoDB',
 )
 
 key_value_int_table = Table('key_value_int', metadata,
@@ -555,24 +617,28 @@ key_value_int_table = Table('key_value_int', metadata,
             onupdate='CASCADE', ondelete='CASCADE'), index=True),
     Column('key_id', Integer, ForeignKey('key_.id',
             onupdate='CASCADE', ondelete='CASCADE'), index=True),
-    Column('key_value',Integer, nullable=False)
+    Column('key_value',Integer, nullable=False),
+    mysql_engine='InnoDB',
 )
 
 task_status_table = Table('task_status',metadata,
         Column('id', Integer, primary_key=True),
         Column('status', Unicode(20)),
-        Column('severity', Integer)
+        Column('severity', Integer),
+        mysql_engine='InnoDB',
 )
 
 task_result_table = Table('task_result',metadata,
         Column('id', Integer, primary_key=True),
         Column('result', Unicode(20)),
-        Column('severity', Integer)
+        Column('severity', Integer),
+        mysql_engine='InnoDB',
 )
 
 task_priority_table = Table('task_priority',metadata,
         Column('id', Integer, primary_key=True),
-        Column('priority', Unicode(20))
+        Column('priority', Unicode(20)),
+        mysql_engine='InnoDB',
 )
 
 job_table = Table('job',metadata,
@@ -596,12 +662,14 @@ job_table = Table('job',metadata,
         Column('ftasks', Integer, default=0),
         # Total Panic tasks
         Column('ktasks', Integer, default=0),
+        mysql_engine='InnoDB',
 )
 
 job_cc_table = Table('job_cc', metadata,
         Column('job_id', Integer, ForeignKey('job.id', ondelete='CASCADE',
             onupdate='CASCADE'), primary_key=True),
         Column('email_address', Unicode(255), primary_key=True, index=True),
+        mysql_engine='InnoDB',
 )
 
 recipe_set_table = Table('recipe_set',metadata,
@@ -628,6 +696,7 @@ recipe_set_table = Table('recipe_set',metadata,
         Column('ftasks', Integer, default=0),
         # Total Panic tasks
         Column('ktasks', Integer, default=0),
+        mysql_engine='InnoDB',
 )
 
 log_recipe_table = Table('log_recipe', metadata,
@@ -639,6 +708,7 @@ log_recipe_table = Table('log_recipe', metadata,
         Column('start_time',DateTime, default=datetime.utcnow),
 	Column('server', UnicodeText()),
 	Column('basepath', UnicodeText()),
+        mysql_engine='InnoDB',
 )
 
 log_recipe_task_table = Table('log_recipe_task', metadata,
@@ -650,6 +720,7 @@ log_recipe_task_table = Table('log_recipe_task', metadata,
         Column('start_time',DateTime, default=datetime.utcnow),
 	Column('server', UnicodeText()),
 	Column('basepath', UnicodeText()),
+        mysql_engine='InnoDB',
 )
 
 log_recipe_task_result_table = Table('log_recipe_task_result', metadata,
@@ -661,6 +732,7 @@ log_recipe_task_result_table = Table('log_recipe_task_result', metadata,
         Column('start_time',DateTime, default=datetime.utcnow),
 	Column('server', UnicodeText()),
 	Column('basepath', UnicodeText()),
+        mysql_engine='InnoDB',
 )
 
 recipe_table = Table('recipe',metadata,
@@ -700,16 +772,19 @@ recipe_table = Table('recipe',metadata,
         Column('panic', Unicode(20)),
         Column('_partitions',UnicodeText()),
         Column('autopick_random', Boolean, default=False),
+        mysql_engine='InnoDB',
 )
 
 machine_recipe_table = Table('machine_recipe', metadata,
-        Column('id', Integer, ForeignKey('recipe.id'), primary_key=True)
+        Column('id', Integer, ForeignKey('recipe.id'), primary_key=True),
+        mysql_engine='InnoDB',
 )
 
 guest_recipe_table = Table('guest_recipe', metadata,
         Column('id', Integer, ForeignKey('recipe.id'), primary_key=True),
         Column('guestname', UnicodeText()),
-        Column('guestargs', UnicodeText())
+        Column('guestargs', UnicodeText()),
+        mysql_engine='InnoDB',
 )
 
 machine_guest_map =Table('machine_guest_map',metadata,
@@ -719,6 +794,7 @@ machine_guest_map =Table('machine_guest_map',metadata,
         Column('guest_recipe_id', Integer,
                 ForeignKey('recipe.id', onupdate='CASCADE', ondelete='CASCADE'),
                 primary_key=True),
+        mysql_engine='InnoDB',
 )
 
 system_recipe_map = Table('system_recipe_map', metadata,
@@ -728,11 +804,13 @@ system_recipe_map = Table('system_recipe_map', metadata,
         Column('recipe_id', Integer,
                 ForeignKey('recipe.id', onupdate='CASCADE', ondelete='CASCADE'),
                 primary_key=True),
+        mysql_engine='InnoDB',
 )
 
 recipe_tag_table = Table('recipe_tag',metadata,
         Column('id', Integer, primary_key=True),
-        Column('tag', Unicode(255))
+        Column('tag', Unicode(255)),
+        mysql_engine='InnoDB',
 )
 
 recipe_tag_map = Table('recipe_tag_map', metadata,
@@ -742,6 +820,7 @@ recipe_tag_map = Table('recipe_tag_map', metadata,
         Column('recipe_id', Integer, 
                ForeignKey('recipe.id', onupdate='CASCADE', ondelete='CASCADE'),
                primary_key=True),
+        mysql_engine='InnoDB',
 )
 
 recipe_rpm_table =Table('recipe_rpm',metadata,
@@ -753,7 +832,8 @@ recipe_rpm_table =Table('recipe_rpm',metadata,
         Column('release',Unicode(255)),
         Column('epoch',Integer),
         Column('arch',Unicode(255)),
-        Column('running_kernel', Boolean)
+        Column('running_kernel', Boolean),
+        mysql_engine='InnoDB',
 )
 
 recipe_repo_table =Table('recipe_repo',metadata,
@@ -761,7 +841,8 @@ recipe_repo_table =Table('recipe_repo',metadata,
         Column('recipe_id', Integer,
                 ForeignKey('recipe.id'), nullable=False),
         Column('name',Unicode(255)),
-        Column('url',Unicode(1024))
+        Column('url',Unicode(1024)),
+        mysql_engine='InnoDB',
 )
 
 recipe_ksappend_table = Table('recipe_ksappend', metadata,
@@ -769,6 +850,7 @@ recipe_ksappend_table = Table('recipe_ksappend', metadata,
         Column('recipe_id', Integer,
                 ForeignKey('recipe.id'), nullable=False),
         Column('ks_append',UnicodeText()),
+        mysql_engine='InnoDB',
 )
 
 recipe_task_table =Table('recipe_task',metadata,
@@ -782,6 +864,7 @@ recipe_task_table =Table('recipe_task',metadata,
         Column('status_id', Integer,
                 ForeignKey('task_status.id'),default=select([task_status_table.c.id], limit=1).where(task_status_table.c.status==u'New').correlate(None)),
         Column('role', Unicode(255)),
+        mysql_engine='InnoDB',
 )
 
 recipe_role_table = Table('recipe_role', metadata,
@@ -791,6 +874,7 @@ recipe_role_table = Table('recipe_role', metadata,
         Column('role',Unicode(255)),
         Column('system_id', Integer,
                 ForeignKey('system.id')),
+        mysql_engine='InnoDB',
 )
 
 recipe_task_role_table = Table('recipe_task_role', metadata,
@@ -800,6 +884,7 @@ recipe_task_role_table = Table('recipe_task_role', metadata,
         Column('role',Unicode(255)),
         Column('system_id', Integer,
                 ForeignKey('system.id')),
+        mysql_engine='InnoDB',
 )
         
 recipe_task_param_table = Table('recipe_task_param', metadata,
@@ -807,7 +892,8 @@ recipe_task_param_table = Table('recipe_task_param', metadata,
         Column('recipe_task_id', Integer,
                 ForeignKey('recipe_task.id')),
         Column('name',Unicode(255)),
-        Column('value',UnicodeText())
+        Column('value',UnicodeText()),
+        mysql_engine='InnoDB',
 )
 
 recipe_task_comment_table = Table('recipe_task_comment',metadata,
@@ -817,14 +903,16 @@ recipe_task_comment_table = Table('recipe_task_comment',metadata,
         Column('comment', UnicodeText()),
         Column('created', DateTime),
         Column('user_id', Integer,
-                ForeignKey('tg_user.user_id'), index=True)
+                ForeignKey('tg_user.user_id'), index=True),
+        mysql_engine='InnoDB',
 )
 
 recipe_task_bugzilla_table = Table('recipe_task_bugzilla',metadata,
         Column('id', Integer, primary_key=True),
         Column('recipe_task_id', Integer,
                 ForeignKey('recipe_task.id')),
-        Column('bugzilla_id', Integer)
+        Column('bugzilla_id', Integer),
+        mysql_engine='InnoDB',
 )
 
 recipe_task_rpm_table =Table('recipe_task_rpm',metadata,
@@ -835,7 +923,8 @@ recipe_task_rpm_table =Table('recipe_task_rpm',metadata,
         Column('release',Unicode(255)),
         Column('epoch',Integer),
         Column('arch',Unicode(255)),
-        Column('running_kernel', Boolean)
+        Column('running_kernel', Boolean),
+        mysql_engine='InnoDB',
 )
 
 recipe_task_result_table = Table('recipe_task_result',metadata,
@@ -848,6 +937,7 @@ recipe_task_result_table = Table('recipe_task_result',metadata,
         Column('score', Numeric(10)),
         Column('log', UnicodeText()),
         Column('start_time',DateTime, default=datetime.utcnow),
+        mysql_engine='InnoDB',
 )
 
 task_table = Table('task',metadata,
@@ -870,7 +960,8 @@ task_table = Table('task',metadata,
                 ForeignKey('tg_user.user_id')),
         Column('version', Unicode(256)),
         Column('license', Unicode(256)),
-        Column('valid', Boolean)
+        Column('valid', Boolean),
+        mysql_engine='InnoDB',
 )
 
 task_bugzilla_table = Table('task_bugzilla',metadata,
@@ -878,6 +969,7 @@ task_bugzilla_table = Table('task_bugzilla',metadata,
         Column('bugzilla_id', Integer),
         Column('task_id', Integer,
                 ForeignKey('task.id')),
+        mysql_engine='InnoDB',
 )
 
 task_packages_runfor_map = Table('task_packages_runfor_map', metadata,
@@ -885,6 +977,7 @@ task_packages_runfor_map = Table('task_packages_runfor_map', metadata,
         ondelete='CASCADE'), primary_key=True),
     Column('package_id', Integer, ForeignKey('task_package.id',
         onupdate='CASCADE', ondelete='CASCADE'), primary_key=True),
+    mysql_engine='InnoDB',
 )
 
 task_packages_required_map = Table('task_packages_required_map', metadata,
@@ -892,6 +985,7 @@ task_packages_required_map = Table('task_packages_required_map', metadata,
         ondelete='CASCADE'), primary_key=True),
     Column('package_id', Integer, ForeignKey('task_package.id',
         onupdate='CASCADE', ondelete='CASCADE'), primary_key=True),
+    mysql_engine='InnoDB',
 )
 
 task_packages_custom_map = Table('task_packages_custom_map', metadata,
@@ -899,23 +993,27 @@ task_packages_custom_map = Table('task_packages_custom_map', metadata,
         ondelete='CASCADE'), primary_key=True),
     Column('package_id', Integer, ForeignKey('task_package.id',
         onupdate='CASCADE', ondelete='CASCADE'), primary_key=True),
+    mysql_engine='InnoDB',
 )
 
 task_property_needed_table = Table('task_property_needed', metadata,
         Column('id', Integer, primary_key=True),
         Column('task_id', Integer,
                 ForeignKey('task.id')),
-        Column('property', Unicode(2048))
+        Column('property', Unicode(2048)),
+        mysql_engine='InnoDB',
 )
 
 task_package_table = Table('task_package',metadata,
         Column('id', Integer, primary_key=True),
-        Column('package', Unicode(2048))
+        Column('package', Unicode(2048)),
+        mysql_engine='InnoDB',
 )
 
 task_type_table = Table('task_type',metadata,
         Column('id', Integer, primary_key=True),
-        Column('type', Unicode(256))
+        Column('type', Unicode(256)),
+        mysql_engine='InnoDB',
 )
 
 task_type_map = Table('task_type_map',metadata,
@@ -923,6 +1021,7 @@ task_type_map = Table('task_type_map',metadata,
         ondelete='CASCADE'), primary_key=True),
     Column('task_type_id', Integer, ForeignKey('task_type.id',
         onupdate='CASCADE', ondelete='CASCADE'), primary_key=True),
+    mysql_engine='InnoDB',
 )
 
 # the identity model
@@ -1047,20 +1146,19 @@ class User(object):
         return self.user_name
 
     def is_admin(self):
-        return u'admin' in [group.group_name for group in self.groups] 
+        return u'admin' in [group.group_name for group in self.groups]
 
     def in_group(self,check_groups):
         my_groups = [group.group_name for group in self.groups]
         for my_g in check_groups:
             if my_g in my_groups:
-                return True 
+                return True
         return False
 
 class Permission(object):
     """
     A relationship that determines what each Group can do
     """
-
     @classmethod
     def by_name(cls, permission_name):
         return cls.query.filter(cls.permission_name == permission_name).one()
@@ -1735,8 +1833,8 @@ class System(SystemObject):
             if identity.in_group('admin'): #first let's see if we are an _admin_
                 return True
         except AttributeError,e: pass #We may not be logged in...
-        
-        #If we are the owner.... 
+
+        #If we are the owner....
         if self.owner == User.by_id(user_id):
             return True
 
@@ -1771,7 +1869,7 @@ class System(SystemObject):
                 return True
         return False
 
-    def can_provision_now(self,user=None): 
+    def can_provision_now(self,user=None):
         if user is not None and self.is_admin(user_id=user.user_id):
             return True
         elif user is not None and self.loaned == user:
@@ -1780,7 +1878,6 @@ class System(SystemObject):
             return True
         elif user is None:
             return False
-
         if self.status==SystemStatus.by_name('Manual'): #If it's manual then we us our original perm system.
             return self._has_regular_perms(user)
         return False
@@ -1825,7 +1922,7 @@ class System(SystemObject):
                 if self.groups:
                     if self._user_in_systemgroup(user):
                         return True
-                else: 
+                else:
                     return True
         
     def can_share(self, user=None):
@@ -1884,6 +1981,7 @@ class System(SystemObject):
         """
         Update Key/Value pairs for legacy RHTS
         """
+        keys_to_update = set()
         new_int_kvs = set()
         new_string_kvs = set()
         for key_name, values in inventory.items():
@@ -1891,6 +1989,7 @@ class System(SystemObject):
                 key = Key.by_name(key_name)
             except InvalidRequestError:
                 continue
+            keys_to_update.add(key)
             if not isinstance(values, list):
                 values = [values]
             for value in values:
@@ -1906,23 +2005,25 @@ class System(SystemObject):
         # Examine existing key-values to find what we already have, and what 
         # needs to be removed
         for kv in list(self.key_values_int):
-            if (kv.key, kv.key_value) in new_int_kvs:
-                new_int_kvs.remove((kv.key, kv.key_value))
-            else:
-                self.key_values_int.remove(kv)
-                self.activity.append(SystemActivity(user=identity.current.user,
-                        service=u'XMLRPC', action=u'Removed', field_name=u'Key/Value',
-                        old_value=u'%s/%s' % (kv.key.key_name, kv.key_value),
-                        new_value=None))
+            if kv.key in keys_to_update:
+                if (kv.key, kv.key_value) in new_int_kvs:
+                    new_int_kvs.remove((kv.key, kv.key_value))
+                else:
+                    self.key_values_int.remove(kv)
+                    self.activity.append(SystemActivity(user=identity.current.user,
+                            service=u'XMLRPC', action=u'Removed', field_name=u'Key/Value',
+                            old_value=u'%s/%s' % (kv.key.key_name, kv.key_value),
+                            new_value=None))
         for kv in list(self.key_values_string):
-            if (kv.key, kv.key_value) in new_string_kvs:
-                new_string_kvs.remove((kv.key, kv.key_value))
-            else:
-                self.key_values_string.remove(kv)
-                self.activity.append(SystemActivity(user=identity.current.user,
-                        service=u'XMLRPC', action=u'Removed', field_name=u'Key/Value',
-                        old_value=u'%s/%s' % (kv.key.key_name, kv.key_value),
-                        new_value=None))
+            if kv.key in keys_to_update:
+                if (kv.key, kv.key_value) in new_string_kvs:
+                    new_string_kvs.remove((kv.key, kv.key_value))
+                else:
+                    self.key_values_string.remove(kv)
+                    self.activity.append(SystemActivity(user=identity.current.user,
+                            service=u'XMLRPC', action=u'Removed', field_name=u'Key/Value',
+                            old_value=u'%s/%s' % (kv.key.key_name, kv.key_value),
+                            new_value=None))
 
         # Now we can just add the new ones
         for key, value in new_int_kvs:
@@ -2291,7 +2392,7 @@ $SNIPPET("rhts_post")
                 recipe_table.c.finish_time > nonaborted_recipe_subquery))
         if session.execute(query).scalar() >= 2:
             # Broken!
-            reason = unicode(_(u'System has a run of aborted recipes '
+            reason = unicode(_(u'System has a run of aborted recipes ' 
                     'with reliable distros'))
             log.warn(reason)
             old_status = self.status
@@ -3135,8 +3236,18 @@ class Admin(object):
 class Activity(object):
     def __init__(self, user=None, service=None, action=None,
                  field_name=None, old_value=None, new_value=None):
+        """
+        The *service* argument should be a string such as 'Scheduler' or 
+        'XMLRPC', describing the means by which the change has been made. This 
+        constructor will override it with something more specific (such as the 
+        name of an external service) if appropriate.
+        """
         self.user = user
         self.service = service
+        try:
+            self.service = identity.current.visit_link.proxied_by_user.user_name
+        except (AttributeError, identity.exceptions.RequestRequiredException):
+            pass # probably running in beakerd or such
         self.field_name = field_name
         self.action = action
         # These values are likely to be truncated by MySQL, so let's make sure 
@@ -3279,6 +3390,7 @@ class TaskStatus(object):
         return cls.query().order_by(TaskStatus.severity.desc()).first()
 
     @classmethod
+    @sqla_cache
     def by_name(cls, status_name):
         return cls.query().filter_by(status=status_name).one()
 
@@ -3725,7 +3837,23 @@ class Job(TaskBase):
                 yield recipe
     all_recipes = property(all_recipes)
 
-    def update_status(self):
+    def _bubble_up(self):
+        """
+        Bubble Status updates up the chain.
+        """
+        self._update_status()
+
+    def _bubble_down(self):
+        """
+        Bubble Status updates down the chain.
+        """
+        for child in self.recipesets:
+            child._bubble_down()
+        self._update_status()
+
+    update_status = _bubble_down
+
+    def _update_status(self):
         """
         Update number of passes, failures, warns, panics..
         """
@@ -3736,7 +3864,6 @@ class Job(TaskBase):
         max_result = None
         min_status = TaskStatus.max()
         for recipeset in self.recipesets:
-            recipeset._update_status()
             self.ptasks += recipeset.ptasks
             self.wtasks += recipeset.wtasks
             self.ftasks += recipeset.ftasks
@@ -4067,7 +4194,26 @@ class RecipeSet(TaskBase):
         """
         Update number of passes, failures, warns, panics..
         """
-        self.job.update_status()
+        for child in self.recipes:
+            child._bubble_down()
+        self._update_status()
+        self.job._bubble_up()
+
+    def _bubble_up(self):
+        """
+        Bubble Status updates up the chain.
+        """
+        self._update_status()
+        # we should be able to add some logic to not call job._bubble_up() if our status+result didn't change.
+        self.job._bubble_up()
+
+    def _bubble_down(self):
+        """
+        Bubble Status updates down the chain.
+        """
+        for child in self.recipes:
+            child._bubble_down()
+        self._update_status()
 
     def _update_status(self):
         """
@@ -4080,7 +4226,6 @@ class RecipeSet(TaskBase):
         max_result = None
         min_status = TaskStatus.max()
         for recipe in self.recipes:
-            recipe._update_status()
             self.ptasks += recipe.ptasks
             self.wtasks += recipe.wtasks
             self.ftasks += recipe.ftasks
@@ -4154,9 +4299,18 @@ class RecipeSet(TaskBase):
         Return action links depending on status
         """
         div = Element('div')
+        if not self.is_finished():
+            div.append(make_link(url = self.cancel_link(),
+                            text = "Cancel"))
+            div.append(Element('br'))
         div.append(make_link(url = self.clone_link(),
                         text = "Clone"))
         return div
+
+    def cancel_link(self):
+        """ return link to cancel this recipe
+        """
+        return "/recipesets/cancel?id=%s" % self.id
 
     def clone_link(self):
         """ return link to clone this recipe
@@ -4180,11 +4334,6 @@ class Recipe(TaskBase):
         """ return link to clone this recipe
         """
         return "/jobs/clone?recipe_id=%s" % self.id
-
-    def cancel_link(self):
-        """ return link to cancel this recipe
-        """
-        return "/recipes/cancel?id=%s" % self.id
 
     @property
     def link(self):
@@ -4578,7 +4727,26 @@ class Recipe(TaskBase):
         """
         Update number of passes, failures, warns, panics..
         """
-        self.recipeset.job.update_status()
+        for child in self.tasks:
+            child._bubble_down()
+        self._update_status()
+        self.recipeset._bubble_up()
+
+    def _bubble_up(self):
+        """
+        Bubble Status updates up the chain.
+        """
+        self._update_status()
+        # we should be able to add some logic to not call recipeset._bubble_up() if our status+result didn't change.
+        self.recipeset._bubble_up()
+
+    def _bubble_down(self):
+        """
+        Bubble Status updates down the chain.
+        """
+        for child in self.tasks:
+            child._bubble_down()
+        self._update_status()
 
     def _update_status(self):
         """
@@ -4595,8 +4763,8 @@ class Recipe(TaskBase):
 
         max_result = None
         min_status = TaskStatus.max()
+        # I think this loop could be replaced with some sql which would be more efficient.
         for task in self.tasks:
-            task._update_status()
             if task.is_finished():
                 if task.result == task_pass:
                     self.ptasks += 1
@@ -4610,6 +4778,7 @@ class Recipe(TaskBase):
                 min_status = task.status
             if task.result > max_result:
                 max_result = task.result
+       
         self.status = min_status
         self.result = max_result
 
@@ -4721,12 +4890,9 @@ class Recipe(TaskBase):
         """
         Return action links depending on status
         """
-        div = Element('div')
-        if not self.is_finished(): 
-            div.append(make_link(url = self.cancel_link(),
-                            text = "Cancel"))
-            div.append(Element('br'))
+        div = None
         if self.system:
+            div = Element('div')
             a = Element('a', {'class': 'list'},
                     href=self.system.report_problem_href(recipe_id=self.id))
             a.text = _(u'Report problem with system')
@@ -4997,11 +5163,21 @@ class RecipeTask(TaskBase):
         self._status = value
 
 
-    def update_status(self):
+    def _bubble_up(self):
         """
-        Update number of passes, failures, warns, panics..
+        Bubble Status updates up the chain.
         """
-        self.recipe.recipeset.job.update_status()
+        self._update_status()
+        # we should be able to add some logic to not call recipe._bubble_up() if our status+result didn't change.
+        self.recipe._bubble_up()
+
+    update_status = _bubble_up
+
+    def _bubble_down(self):
+        """
+        Bubble Status updates down the chain.
+        """
+        self._update_status()
 
     def _update_status(self):
         """
@@ -5205,7 +5381,6 @@ class RecipeTask(TaskBase):
         # Flush the result to the DB so we can return the id.
         session.save(recipeTaskResult)
         session.flush([recipeTaskResult])
-        self.update_status()
         return recipeTaskResult.id
 
     def task_info(self):
@@ -5458,7 +5633,6 @@ class Task(MappedObject):
     """
     Tasks that are available to schedule
     """
-
     @classmethod
     def by_name(cls, name):
         return cls.query.filter_by(name=name).one()
@@ -5566,7 +5740,6 @@ class TaskType(MappedObject):
     A task can be classified into serveral task types which can be used to
     select tasks for batch runs
     """
-
     @classmethod
     def by_name(cls, type):
         return cls.query.filter_by(type=type).one()
@@ -5576,7 +5749,6 @@ class TaskPackage(MappedObject):
     """
     A list of packages that a tasks should be run for.
     """
-
     @classmethod
     def by_name(cls, package):
         return cls.query.filter_by(package=package).one()
@@ -5731,8 +5903,13 @@ mapper(DistroTag, distro_tag_table)
 
 mapper(Visit, visits_table)
 
-mapper(VisitIdentity, visit_identity_table,
-        properties=dict(users=relation(User, backref='visit_identity')))
+mapper(VisitIdentity, visit_identity_table, properties={
+    'user': relation(User,
+        primaryjoin=visit_identity_table.c.user_id == users_table.c.user_id,
+        backref='visit_identity'),
+    'proxied_by_user': relation(User,
+        primaryjoin=visit_identity_table.c.proxied_by_user_id == users_table.c.user_id),
+})
 
 mapper(User, users_table,
         properties=dict(_password=users_table.c.password))

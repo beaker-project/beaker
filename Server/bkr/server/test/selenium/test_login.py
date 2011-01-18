@@ -23,15 +23,52 @@ import logging
 import turbogears.config
 from turbogears.database import session
 import unittest
+import xmlrpclib
 from nose.plugins.skip import SkipTest
 try:
     import krbV
 except ImportError:
     krbV = None
 from bkr.server.test import data_setup
-from bkr.server.test.selenium import XmlRpcTestCase
+from bkr.server.test.selenium import SeleniumTestCase, XmlRpcTestCase
 
 log = logging.getLogger(__name__)
+
+class LoginTest(SeleniumTestCase):
+
+    def setUp(self):
+        self.selenium = self.get_selenium()
+        self.selenium.start()
+
+    def tearDown(self):
+        self.selenium.stop()
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=660527
+    def test_referer_redirect(self):
+        system = data_setup.create_system()
+        user = data_setup.create_user(password=u'password')
+        session.flush()
+
+        # Go to the system page
+        sel = self.selenium
+        sel.open('')
+        sel.type('simplesearch', system.fqdn)
+        sel.submit('systemsearch_simple')
+        sel.wait_for_page_to_load('3000')
+        sel.click('link=%s' % system.fqdn)
+        sel.wait_for_page_to_load('3000')
+        self.assertEquals(sel.get_title(), system.fqdn)
+
+        # Click log in, and fill in details
+        sel.click('link=Login')
+        sel.wait_for_page_to_load('3000')
+        sel.type('user_name', user.user_name)
+        sel.type('password', 'password')
+        sel.click('login')
+        sel.wait_for_page_to_load('3000')
+
+        # We should be back at the system page
+        self.assertEquals(sel.get_title(), system.fqdn)
 
 class XmlRpcLoginTest(XmlRpcTestCase):
 
@@ -67,7 +104,8 @@ class XmlRpcLoginTest(XmlRpcTestCase):
         session.flush()
         server = self.get_server()
         server.auth.login_password(user.user_name, u'lulz')
-        self.assertEquals(server.auth.who_am_i(), user.user_name)
+        who_am_i = server.auth.who_am_i()
+        self.assertEquals(who_am_i['username'], user.user_name)
 
     def test_password_proxy_login(self):
         group = data_setup.create_group(permissions=[u'proxy_auth'])
@@ -77,4 +115,17 @@ class XmlRpcLoginTest(XmlRpcTestCase):
         session.flush()
         server = self.get_server()
         server.auth.login_password(user.user_name, u'lulz', proxied_user.user_name)
-        self.assertEquals(server.auth.who_am_i(), proxied_user.user_name)
+        who_am_i = server.auth.who_am_i()
+        self.assertEquals(who_am_i['username'], proxied_user.user_name)
+        self.assertEquals(who_am_i['proxied_by_username'], user.user_name)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=660529
+    def test_login_required_message(self):
+        server = self.get_server()
+        try:
+            server.auth.who_am_i()
+            self.fail('should raise')
+        except xmlrpclib.Fault, e:
+            self.assertEquals(e.faultString,
+                    'turbogears.identity.exceptions.IdentityFailure: '
+                    'Please log in first')

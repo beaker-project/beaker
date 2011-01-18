@@ -7,6 +7,19 @@ from bkr.server.model import System, SystemStatus, SystemActivity, TaskStatus, \
         SystemType, Job, JobCc, Key, Key_Value_Int, Key_Value_String, \
         job_cc_table
 from bkr.server.test import data_setup
+from nose.plugins.skip import SkipTest
+
+class SchemaSanityTest(unittest.TestCase):
+
+    def test_all_tables_use_innodb(self):
+        engine = session.get_bind(System.mapper)
+        if engine.url.drivername != 'mysql':
+            raise SkipTest('not using MySQL')
+        for table in engine.table_names():
+            self.assertEquals(engine.scalar(
+                    'SELECT engine FROM information_schema.tables '
+                    'WHERE table_schema = DATABASE() AND table_name = %s',
+                    table), 'InnoDB')
 
 class TestSystem(unittest.TestCase):
 

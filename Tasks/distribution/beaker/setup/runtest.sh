@@ -376,6 +376,7 @@ function LabController()
     # We can start the proxies when our accounts have been created on the scheduler.
     service beaker-proxy start
     service beaker-watchdog start
+    service beaker-transfer start
     # Add some distros
     # NFS format HOSTNAME:DISTRONAME:NFSPATH
     if [ -z "$NFSDISTROS" ]; then

@@ -722,3 +722,8 @@ warn {
 #loading {
   background-image: url('/static/images/ajax-loader.gif'); 
 }
+
+.fielderror {
+    color: red;
+    font-weight: bold;
+}
