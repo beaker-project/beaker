@@ -1,5 +1,5 @@
 #!/usr/bin/python
-# vim: set encoding=utf-8 :
+# vim: set fileencoding=utf-8 :
 
 import bkr.server.test.selenium
 from bkr.server.test import data_setup

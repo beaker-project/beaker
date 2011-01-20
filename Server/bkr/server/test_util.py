@@ -1,5 +1,5 @@
 
-# vim: set encoding=utf-8 :
+# vim: set fileencoding=utf-8 :
 
 # Beaker
 #
