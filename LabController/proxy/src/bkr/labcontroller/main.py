@@ -6,6 +6,8 @@ import signal
 from optparse import OptionParser
 from threading import Thread
 
+from datetime import datetime
+
 import SocketServer
 import DocXMLRPCServer
 import socket
@@ -17,6 +19,9 @@ from kobo.exceptions import ShutdownException
 from kobo.process import daemonize
 from kobo.tback import Traceback, set_except_hook
 from bkr.log import add_stderr_logger
+import logging
+logger = logging.getLogger("Proxy")
+
 set_except_hook()
 
 class Authenticate(Thread):
@@ -52,6 +57,18 @@ class ForkingXMLRPCServer (SocketServer.ForkingMixIn,
                            DocXMLRPCServer.DocXMLRPCServer):
     allow_reuse_address = True
 
+    def _dispatch(self, method, params):
+        """ Custom _dispatch so we can log time used to execute method.
+        """
+        start = datetime.utcnow()
+        try:
+            result=DocXMLRPCServer.DocXMLRPCServer._dispatch(self, method, params)
+        except:
+            logger.debug('Time: %s %s %s', datetime.utcnow() - start, str(method), str(params))
+            raise
+        logger.debug('Time: %s %s %s', datetime.utcnow() - start, str(method), str(params))
+        return result
+        
 
 def daemon_shutdown(*args, **kwargs):
     login.stop()
