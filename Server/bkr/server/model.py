@@ -1754,7 +1754,7 @@ class System(SystemObject):
             return System.query().filter(System.arch.any(Arch.arch == arch))
 
     @classmethod
-    def reserved_via(cls, service='WEBUI'): 
+    def reserved_via(cls, service=u'WEBUI'): 
         activity_ids = cls._latest_reserved()
         taken = []
         for id in activity_ids:
@@ -1768,11 +1768,9 @@ class System(SystemObject):
     @classmethod
     def _latest_reserved(cls): 
         f_obj= system_table.join(system_activity_table).join(activity_table)
-        s = select([func.max(system_activity_table.c.id)],from_obj=f_obj,whereclause=and_(activity_table.c.action == 'Reserved',System.user != None)).group_by(system_table.c.id)
-        log.debug(s)
+        s = select([func.max(system_activity_table.c.id)],from_obj=f_obj,whereclause=and_(activity_table.c.action == u'Reserved',System.user != None)).group_by(system_table.c.id)
         result = s.execute()
         ids = [row[0] for row in result.fetchall()] 
-        log.debug(ids) 
         return ids
 
     def excluded_families(self):
