@@ -196,7 +196,7 @@ class Tasks(RPCRoot):
     
     @expose(template='bkr.server.templates.tasks')
     @validate(form=task_form)
-    @paginate('tasks',default_order='-id', limit=30, max_limit=None)
+    @paginate('tasks',default_order='-id', limit=30)
     def do_search(self, hidden={}, **kw):
         return self._do_search(hidden=hidden, **kw)
 
@@ -261,7 +261,7 @@ class Tasks(RPCRoot):
                     task_widget = self.task_widget)
 
     @expose(template='bkr.server.templates.grid')
-    @paginate('list',default_order='name', limit=30, max_limit=None)
+    @paginate('list',default_order='name', limit=30)
     def index(self, *args, **kw):
         tasks = session.query(Task)
         tasks_return = self._tasks(tasks,**kw)

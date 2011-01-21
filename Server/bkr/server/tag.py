@@ -56,7 +56,7 @@ class Tags(RPCRoot):
         return dict(tags=tags)
 
     @expose(template="bkr.server.templates.grid")
-    @paginate('list',default_order='tag',limit=50,max_limit=None)
+    @paginate('list',default_order='tag',limit=50)
     def index(self):
         tags = session.query(DistroTag)
         tags_grid = widgets.PaginateDataGrid(fields=[

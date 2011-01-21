@@ -10,9 +10,9 @@ class Search(bkr.server.test.selenium.SeleniumTestCase):
         self.selenium = self.get_selenium()
         self.arch_one = u'i386'
         self.osmajor_one = u'testosmajor'
-        self.task_one = data_setup.create_task(exclude_arch=[self.arch_one])
-        self.task_two = data_setup.create_task(exclude_arch=[self.arch_one])
-        self.task_three = data_setup.create_task(exclude_osmajor=[self.osmajor_one])
+        self.task_one = data_setup.create_task(name='/a/a/a', exclude_arch=[self.arch_one])
+        self.task_two = data_setup.create_task(name='/a/a/b', exclude_arch=[self.arch_one])
+        self.task_three = data_setup.create_task(name='/a/a/c', exclude_osmajor=[self.osmajor_one])
         session.flush()
         self.selenium.start()
 

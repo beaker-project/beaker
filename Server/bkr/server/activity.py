@@ -52,7 +52,7 @@ class Activities(RPCRoot):
         return activity_search.return_results()
 
     @expose(template="bkr.server.templates.grid")
-    @paginate('list',default_order='-created', limit=50,max_limit=None)
+    @paginate('list',default_order='-created', limit=50)
     def index(self,**kw):
         activity = SystemActivity.all().outerjoin('user')
         activities_return = self.activities(activity,**kw)

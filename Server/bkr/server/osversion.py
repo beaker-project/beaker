@@ -133,7 +133,7 @@ class OSVersions(AdminPage):
         return dict(matches=osmajors)
 
     @expose(template="bkr.server.templates.admin_grid")
-    @paginate('list',limit=50, default_order='osmajor.osmajor', max_limit=None)
+    @paginate('list',limit=50, default_order='osmajor.osmajor')
     def index(self,*args,**kw):
         osversions = self.process_search(*args,**kw) 
         list_by_letters = []

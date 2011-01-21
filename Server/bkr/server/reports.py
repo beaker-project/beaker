@@ -41,7 +41,7 @@ class Reports(RPCRoot):
         locals()[entry_point.name] = controller
 
     @expose(template="bkr.server.templates.grid")
-    @paginate('list',limit=50, default_order='created', max_limit=None)
+    @paginate('list',limit=50, default_order='created')
     def index(self, *args, **kw):
         return self.reserve(*args, **kw)
 
