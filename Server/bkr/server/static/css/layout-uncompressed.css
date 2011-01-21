@@ -723,6 +723,10 @@ warn {
   background-image: url('/static/images/ajax-loader.gif'); 
 }
 
+#motd {
+    text-align:center;
+}
+
 .fielderror {
     color: red;
     font-weight: bold;
