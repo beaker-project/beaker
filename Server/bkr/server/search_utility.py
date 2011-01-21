@@ -783,6 +783,7 @@ class System(SystemObject):
                           'Location'  : MyColumn(column=model.System.location, col_type='string'),
                           'Model'     : MyColumn(column=model.System.model,col_type='string'),
                           'Memory'    : MyColumn(column=model.System.memory,col_type='numeric'),
+                          'NumaNodes' : MyColumn(column=model.Numa.nodes, col_type='numeric', relations='numa'),
                           'User'      : MyColumn(column=model.User.user_name, col_type='string',has_alias=True, relations='user'),
                           'Owner'     : MyColumn(column=model.User.user_name, col_type='string',has_alias=True, relations='owner'),
                           'Status'    : MyColumn(column=model.SystemStatus.status, col_type='string', relations='status'),
