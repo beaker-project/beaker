@@ -82,7 +82,7 @@ class Users(AdminPage):
         redirect(".")
 
     @expose(template="bkr.server.templates.admin_grid")
-    @paginate('list', default_order='user_name', max_limit=None)
+    @paginate('list', default_order='user_name',limit=20)
     def index(self,*args,**kw): 
         users = session.query(User) 
         list_by_letters = set([elem.user_name[0].capitalize() for elem in users]) 

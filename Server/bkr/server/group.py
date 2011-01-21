@@ -199,13 +199,13 @@ class Groups(AdminPage):
 
 
     @expose(template="bkr.server.templates.grid")
-    @paginate('list', default_order='group_name', max_limit=None)
+    @paginate('list', default_order='group_name', limit=20)
     def index(self, *args, **kw):
         return self.groups(user=identity.current.user, *args, **kw)
    
     @expose(template="bkr.server.templates.admin_grid")
     @identity.require(identity.in_group('admin'))
-    @paginate('list', default_order='group_name', max_limit=None)
+    @paginate('list', default_order='group_name', limit=20)
     def admin(self, *args, **kw):
         groups = self.process_search(*args, **kw)
         template_data = self.groups(groups, identity.current.user, *args, **kw)
@@ -219,7 +219,7 @@ class Groups(AdminPage):
 
     @expose(template="bkr.server.templates.grid")
     @identity.require(identity.not_anonymous()) 
-    @paginate('list', default_order='group_name', max_limit=None) 
+    @paginate('list', default_order='group_name', limit=20)
     def mine(self,*args,**kw):
         current_user = identity.current.user
         my_groups = Group.by_user(current_user)
