@@ -2,7 +2,7 @@
 from bkr.server.model import Numa
 import bkr.server.test.selenium
 from bkr.server.test import data_setup
-import unittest, time, re, os
+import unittest, time, re, os, datetime
 from turbogears.database import session
 
 class Search(bkr.server.test.selenium.SeleniumTestCase):
@@ -77,6 +77,75 @@ class Search(bkr.server.test.selenium.SeleniumTestCase):
         except AssertionError, e: self.verificationErrors.append(str(6))
         try: self.failUnless(not sel.is_text_present("%s" % self.system_three.fqdn))
         except AssertionError, e: self.verificationErrors.append(str(7))
+
+        tomorrow_date = datetime.date.today() + datetime.timedelta(days=1)
+        tomorrow = tomorrow_date.isoformat()
+        yesterday_date = datetime.date.today() - datetime.timedelta(days=1)
+        yesterday = yesterday_date.isoformat()
+        sel.select("systemsearch_0_table", "label=System/Added")
+        sel.select("systemsearch_0_operation", "label=is")
+        sel.type("systemsearch_0_value", "%s" % datetime.date.today().isoformat() )
+        sel.click("Search")
+        sel.wait_for_page_to_load("30000")
+        try: self.failUnless(sel.is_text_present("%s" % self.system_one.fqdn))
+        except AssertionError, e: self.verificationErrors.append(str(8))
+        try: self.failUnless(sel.is_text_present("%s" % self.system_three.fqdn))
+        except AssertionError, e: self.verificationErrors.append(str(9))
+        try: self.failUnless(sel.is_text_present("%s" % self.system_three.fqdn))
+        except AssertionError, e: self.verificationErrors.append(str(10))
+
+        sel.select("systemsearch_0_table", "label=System/Added")
+        sel.select("systemsearch_0_operation", "label=before")
+        sel.type("systemsearch_0_value", "%s" % tomorrow)
+        sel.click("Search")
+        sel.wait_for_page_to_load("30000")
+        try: self.failUnless(sel.is_text_present("%s" % self.system_one.fqdn))
+        except AssertionError, e: self.verificationErrors.append(str(11))
+        try: self.failUnless(sel.is_text_present("%s" % self.system_three.fqdn))
+        except AssertionError, e: self.verificationErrors.append(str(12))
+        try: self.failUnless(sel.is_text_present("%s" % self.system_three.fqdn))
+        except AssertionError, e: self.verificationErrors.append(str(13))
+
+        sel.select("systemsearch_0_table", "label=System/Added")
+        sel.select("systemsearch_0_operation", "label=after")
+        sel.type("systemsearch_0_value", "%s" % tomorrow)
+        sel.click("Search")
+        sel.wait_for_page_to_load("30000")
+        self.assertTrue('Systems' in sel.get_title())
+        try: self.failUnless(not sel.is_text_present("%s" % self.system_one.fqdn))
+        except AssertionError, e: self.verificationErrors.append(str(14))
+        try: self.failUnless(not sel.is_text_present("%s" % self.system_three.fqdn))
+        except AssertionError, e: self.verificationErrors.append(str(15))
+        try: self.failUnless(not sel.is_text_present("%s" % self.system_three.fqdn))
+        except AssertionError, e: self.verificationErrors.append(str(16))
+
+        sel.select("systemsearch_0_table", "label=System/Added")
+        sel.select("systemsearch_0_operation", "label=after")
+        sel.type("systemsearch_0_value", "%s" % yesterday)
+        sel.click("Search")
+        sel.wait_for_page_to_load("30000")
+        try: self.failUnless(sel.is_text_present("%s" % self.system_one.fqdn))
+        except AssertionError, e: self.verificationErrors.append(str(17))
+        try: self.failUnless(sel.is_text_present("%s" % self.system_three.fqdn))
+        except AssertionError, e: self.verificationErrors.append(str(18))
+        try: self.failUnless(sel.is_text_present("%s" % self.system_three.fqdn))
+        except AssertionError, e: self.verificationErrors.append(str(19))
+
+        sel.select("systemsearch_0_table", "label=System/Added")
+        sel.select("systemsearch_0_operation", "label=after")
+        sel.type("systemsearch_0_value", "%s" % yesterday)
+        sel.click("doclink")
+        sel.select("systemsearch_1_table", "label=System/Added")
+        sel.select("systemsearch_1_operation", "label=before")
+        sel.type("systemsearch_1_value", "%s" % tomorrow)
+        sel.click("Search")
+        sel.wait_for_page_to_load("30000")
+        try: self.failUnless(sel.is_text_present("%s" % self.system_one.fqdn))
+        except AssertionError, e: self.verificationErrors.append(str(20))
+        try: self.failUnless(sel.is_text_present("%s" % self.system_three.fqdn))
+        except AssertionError, e: self.verificationErrors.append(str(21))
+        try: self.failUnless(sel.is_text_present("%s" % self.system_three.fqdn))
+        except AssertionError, e: self.verificationErrors.append(str(22))
 
     def test_can_search_by_numa_node_count(self):
         sel = self.selenium

@@ -127,8 +127,9 @@ class Modeller(object):
                           'boolean' : {'is' : lambda x,y: self.bool_equals(x,y),
                                        'is not' : lambda x,y: self.bool_not_equal(x,y), },  
                           
-                          'datetime' : {'before' : lambda x,y: self.less_than(x,y),
-                                        'after'  : lambda x,y: self.greater_than(x,y),},
+                          'date' : {'is' : lambda x,y: self.equals(x,y),
+                                    'after' : lambda x,y: self.greater_than(x,y),
+                                    'before' : lambda x,y: self.less_than(x,y),},
 
                           'generic' : {'is' : lambda x,y: self.equals(x,y) ,
                                        'is not': lambda x,y:  self.not_equal(x,y), },
@@ -781,6 +782,7 @@ class System(SystemObject):
                           'Name'      : MyColumn(column=model.System.fqdn,col_type='string'),
                           'Lender'    : MyColumn(column=model.System.lender,col_type='string'),
                           'Location'  : MyColumn(column=model.System.location, col_type='string'),
+                          'Added'     : MyColumn(column=model.System.date_added, col_type='date'),
                           'Model'     : MyColumn(column=model.System.model,col_type='string'),
                           'Memory'    : MyColumn(column=model.System.memory,col_type='numeric'),
                           'NumaNodes' : MyColumn(column=model.Numa.nodes, col_type='numeric', relations='numa'),
@@ -795,7 +797,13 @@ class System(SystemObject):
                          }  
     search_values_dict = {'Status' : lambda: model.SystemStatus.get_all_status_name(),
                           'Type' : lambda: model.SystemType.get_all_type_names() }   
-    
+    @classmethod
+    def added_is_filter(cls,col,val):
+        if not val:
+            return col == None
+        else:
+            return and_(col >= '%s 00:00:00' % val, col <= '%s 23:59:99' % val)
+
     @classmethod
     def arch_is_not_filter(cls,col,val):
         """

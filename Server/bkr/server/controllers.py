@@ -415,7 +415,6 @@ class Root(RPCRoot):
         search['operators'].sort()
         return_dict['search_by'] = search['operators'] 
         return_dict['search_vals'] = search['values'] 
-     
         return return_dict
 
     @expose(format='json')
@@ -616,7 +615,7 @@ class Root(RPCRoot):
         search_bar = SearchBar(name='systemsearch',
                                label=_(u'System Search'),
                                enable_custom_columns = True,
-                               extra_selects = [ { 'name': 'keyvalue',
+                               extra_selects = [ { 'name': 'keyvalue', 
                                                    'column':'key/value',
                                                    'display':'none',
                                                    'pos' : 2,
@@ -632,6 +631,7 @@ class Root(RPCRoot):
                                     {su.Device:{'all':[]}},
                                     {su.Key:{'all':[]}}]),
                                search_controller=url("/get_search_options"),
+                               date_picker = ['system/added'],
                                table_search_controllers = {'key/value':url('/get_keyvalue_search_options')},)
 
         if 'quick_search' in kw:

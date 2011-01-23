@@ -50,16 +50,16 @@ class TestJobMatrix(SeleniumTestCase):
         sel = self.selenium
         sel.open('')
         sel.click('link=Matrix')
-        sel.wait_for_page_to_load('3000')
+        sel.wait_for_page_to_load('30000')
         sel.type('remote_form_whiteboard_filter', self.job_whiteboard)
         sel.click('//input[@value="Generate"]')
-        sel.wait_for_page_to_load('3000')
+        sel.wait_for_page_to_load('30000')
         # why are both .select and .click necessary?? weird
         sel.select('whiteboard', 'label=%s' % self.job_whiteboard)
         sel.click('//select[@name="whiteboard"]//option[@value="%s"]'
                 % self.job_whiteboard)
         sel.click('//input[@value="Generate"]')
-        sel.wait_for_page_to_load('3000')
+        sel.wait_for_page_to_load('30000')
 
         self.assertEqual(sel.get_table('my_datagrid.0.0'), 'Task')
         self.assertEqual(sel.get_table('my_datagrid.0.1'), 'ia64')
