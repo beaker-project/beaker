@@ -1685,15 +1685,15 @@ url --url=$tree
             query = System.all(user)
 
         if type(system_status) is list:
-            whereclause_items = [System.status==k for k in system_status]
-            system_status_whereclause = or_(*whereclause_items)
-        elif type(system_status) is SystemStatus: 
-            system_status_whereclause = System.status==system_status 
+            query = query.filter(or_(*[System.status==k for k in system_status]))
+        elif type(system_status) is SystemStatus:
+            query = query.filter(System.status==system_status)
         else: #Possibly we are none or somthing else...
-            system_status_whereclause = or_(System.status==SystemStatus.by_name(u'Automated'),System.status==SystemStatus.by_name(u'Manual'))
+            query = query.filter(or_(System.status==SystemStatus.by_name(u'Automated'),
+                    System.status==SystemStatus.by_name(u'Manual')))
  
-        query = query.filter(and_(system_status_whereclause,
-                                or_(and_(System.owner==user,
+        if not user.is_admin():
+            query = query.filter(or_(and_(System.owner==user,
                                         System.loaned==None), 
                                     System.loaned==user,
                                     and_(System.shared==True, 
@@ -1706,7 +1706,6 @@ url --url=$tree
                                         )
                                     )
                                 )
-                            )
         return query
 
 
