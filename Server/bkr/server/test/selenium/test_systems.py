@@ -956,9 +956,8 @@ class SystemProvisionXmlRpcTest(XmlRpcTestCase):
         self.assertEqual(self.stub_cobbler_thread.cobbler.profiles[system.fqdn],
                 {'kickstart': kickstart_filename,
                  'parent': self.distro.install_name})
-        self.assertEqual(
-                self.stub_cobbler_thread.cobbler.kickstarts[kickstart_filename],
-                'url --url=$tree\n#raw\n%s\n#end raw' % kickstart)
+        self.assert_(kickstart in
+                self.stub_cobbler_thread.cobbler.kickstarts[kickstart_filename])
         self.assertEqual(
                 self.stub_cobbler_thread.cobbler.system_actions[system.fqdn],
                 'reboot')
