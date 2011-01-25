@@ -64,9 +64,9 @@ class ForkingXMLRPCServer (SocketServer.ForkingMixIn,
         try:
             result=DocXMLRPCServer.DocXMLRPCServer._dispatch(self, method, params)
         except:
-            logger.debug('Time: %s %s %s', datetime.utcnow() - start, str(method), str(params))
+            logger.debug('Time: %s %s %s', datetime.utcnow() - start, str(method), str(params)[0:50])
             raise
-        logger.debug('Time: %s %s %s', datetime.utcnow() - start, str(method), str(params))
+        logger.debug('Time: %s %s %s', datetime.utcnow() - start, str(method), str(params)[0:50])
         return result
         
 
