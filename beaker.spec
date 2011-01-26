@@ -2,7 +2,7 @@
 %{!?pyver: %global pyver %(%{__python} -c "import sys ; print sys.version[:3]")}
 
 Name:           beaker
-Version:        0.6.2
+Version:        0.6.3
 Release:        1%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
@@ -219,6 +219,30 @@ fi
 %attr(-,apache,root) %dir %{_localstatedir}/run/%{name}-lab-controller
 
 %changelog
+* Thu Jan 27 2011 Dan Callaghan <dcallagh@redhat.com> 0.6.3-1
+- bz613113 - Filter systems by added date (rmancy@redhat.com)
+- bz669736 - Remove show all links (rmancy@redhat.com)
+- bz654304 - beaker-delete-system script for sysadmins to delete system
+  rows (dcallagh@redhat.com)
+- make system_id foreign keys not NULLable and cascade
+  (dcallagh@redhat.com)
+- bz664998 - method in ks_meta doesn't seem to work for custom kickstart
+  (bpeck@redhat.com)
+- encoding is not allowed in Vim modelines since 7.3 (should be
+  fileencoding) (dcallagh@redhat.com)
+- bz671233 - record elapsed time spent executing method
+  (bpeck@redhat.com)
+- bz670868 - We can't set allow_none on the version of python we need to
+  support. (bpeck@redhat.com)
+- bz669427 - Added kernel_options_post to default workflow options.
+  (bpeck@redhat.com)
+- bz666981 - Dry run for nag email (rmancy@redhat.com)
+- bz668314 - add NUMA nodes to system search (dcallagh@redhat.com)
+- bz662909 - add server deps to BuildRequires, so that sphinx autodoc
+  works (dcallagh@redhat.com)
+- python-sphinx10 does not exist in Fedora 14 and higher
+  (dcallagh@redhat.com)
+
 * Wed Jan 12 2011 Raymond Mancy <rmancy@redhat.com> 0.6.2-1
 - bz663114 - Move cancel features from Recipe to RecipeSet (rmancy@redhat.com)
 - bz662703 - Product list sorted and test (rmancy@redhat.com)
