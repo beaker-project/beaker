@@ -3,7 +3,7 @@
 
 Name:           beaker
 Version:        0.6.3
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -219,6 +219,10 @@ fi
 %attr(-,apache,root) %dir %{_localstatedir}/run/%{name}-lab-controller
 
 %changelog
+* Fri Jan 28 2011 Raymond Mancy <rmancy@redhat.com> 0.6.3-2
+- Fix problem with randrange throwing errors when system.count() is <= 1
+  (rmancy@redhat.com)
+
 * Thu Jan 27 2011 Dan Callaghan <dcallagh@redhat.com> 0.6.3-1
 - bz613113 - Filter systems by added date (rmancy@redhat.com)
 - bz669736 - Remove show all links (rmancy@redhat.com)
