@@ -46,3 +46,4 @@ $(METADATA): Makefile
 	@echo "Requires:	unifdef"		>> $(METADATA)
 	@echo "Requires:	sendmail"		>> $(METADATA)
 	@echo "License:		GPLv2"	                >> $(METADATA)
+	@echo "RhtsOptions:	-Compatible -CompatService"	>> $(METADATA)
