@@ -57,7 +57,7 @@ reboot
 #Root password
 rootpw --iscrypted $getVar('password', $default_password_crypted)
 # SELinux configuration
-selinux --$getVar('selinux', 'disabled')
+selinux --$getVar('selinux', 'enforcing')
 
 #if $getVar('rhts_server','') != '' or $getVar('skipx','') != ''
 # Do not configure the X Window System for RHTS
