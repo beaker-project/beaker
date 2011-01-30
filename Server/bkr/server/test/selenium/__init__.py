@@ -18,6 +18,7 @@
 
 import sys
 import os
+import re
 import logging
 import subprocess
 import signal
@@ -172,9 +173,19 @@ class CommunicateThread(threading.Thread):
             if not data: break
             sys.stdout.write(data)
 
+def jvm_version():
+    popen = subprocess.Popen(['java', '-version'], stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT)
+    stdout, stderr = popen.communicate()
+    version_line = stdout.splitlines()[0]
+    m = re.match(r'java version "(\d)\.(\d)', version_line)
+    assert m is not None, version_line
+    return (int(m.group(1)), int(m.group(2)))
+
 processes = []
 
 def setup_package():
+    assert jvm_version() >= (1, 6), 'Selenium needs JVM >= 1.6'
     if not os.path.exists('/tmp/selenium'):
         os.mkdir('/tmp/selenium')
     processes.extend([
