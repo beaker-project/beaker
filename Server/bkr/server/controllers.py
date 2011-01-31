@@ -1658,7 +1658,8 @@ class Root(RPCRoot):
                                         kernel_options_post = koptions_post)
             else: #This shouldn't happen, maybe someone is trying to be funny
                 raise BX('User: %s has insufficent permissions to provision %s' % (user.user_name, system.fqdn))
-        except BX, msg: 
+        except Exception, msg:
+            log.exception('Failed to provision system %s', id)
             activity = SystemActivity(identity.current.user, 'WEBUI', 'Provision', 'Distro', "", "%s: %s" % (msg, distro.install_name))
             system.activity.append(activity)
             flash(_(u"%s" % msg))
