@@ -45,9 +45,9 @@ class TestViewJob(SeleniumTestCase):
         self.login(user=user.user_name, password='password')
         sel.open('')
         sel.click('link=My Jobs')
-        sel.wait_for_page_to_load('3000')
+        sel.wait_for_page_to_load('30000')
         sel.click('link=%s' % job.t_id)
-        sel.wait_for_page_to_load('3000')
+        sel.wait_for_page_to_load('30000')
         self.assert_(sel.get_title().startswith('Job %s' % job.t_id))
         self.assertEqual(
             # value of cell beside "CC" cell
