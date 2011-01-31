@@ -95,7 +95,7 @@ system_cc_table = Table('system_cc', metadata,
 
 system_device_map = Table('system_device_map', metadata,
     Column('system_id', Integer,
-           ForeignKey('system.id'),
+           ForeignKey('system.id', onupdate='CASCADE', ondelete='CASCADE'),
            primary_key=True),
     Column('device_id', Integer,
            ForeignKey('device.id'),
@@ -133,7 +133,7 @@ arch_table = Table('arch', metadata,
 
 system_arch_map = Table('system_arch_map', metadata,
     Column('system_id', Integer,
-           ForeignKey('system.id'),
+           ForeignKey('system.id', onupdate='CASCADE', ondelete='CASCADE'),
            primary_key=True),
     Column('arch_id', Integer,
            ForeignKey('arch.id'),
@@ -154,19 +154,21 @@ osversion_arch_map = Table('osversion_arch_map', metadata,
 provision_table = Table('provision', metadata,
     Column('id', Integer, autoincrement=True,
            nullable=False, primary_key=True),
-    Column('system_id', Integer, ForeignKey('system.id')),
+    Column('system_id', Integer, ForeignKey('system.id',
+           onupdate='CASCADE', ondelete='CASCADE'), nullable=False),
     Column('ks_meta', String(1024)),
     Column('kernel_options', String(1024)),
     Column('kernel_options_post', String(1024)),
-    Column('arch_id', Integer, ForeignKey('arch.id')),
+    Column('arch_id', Integer, ForeignKey('arch.id'), nullable=False),
     mysql_engine='InnoDB',
 )
 
 provision_family_table = Table('provision_family', metadata,
     Column('id', Integer, autoincrement=True,
            nullable=False, primary_key=True),
-    Column('provision_id', Integer, ForeignKey('provision.id')),
-    Column('osmajor_id', Integer, ForeignKey('osmajor.id')),
+    Column('provision_id', Integer, ForeignKey('provision.id',
+           onupdate='CASCADE', ondelete='CASCADE'), nullable=False),
+    Column('osmajor_id', Integer, ForeignKey('osmajor.id'), nullable=False),
     Column('ks_meta', String(1024)),
     Column('kernel_options', String(1024)),
     Column('kernel_options_post', String(1024)),
@@ -176,8 +178,9 @@ provision_family_table = Table('provision_family', metadata,
 provision_family_update_table = Table('provision_update_family', metadata,
     Column('id', Integer, autoincrement=True,
            nullable=False, primary_key=True),
-    Column('provision_family_id', Integer, ForeignKey('provision_family.id')),
-    Column('osversion_id', Integer, ForeignKey('osversion.id')),
+    Column('provision_family_id', Integer, ForeignKey('provision_family.id',
+           onupdate='CASCADE', ondelete='CASCADE'), nullable=False),
+    Column('osversion_id', Integer, ForeignKey('osversion.id'), nullable=False),
     Column('ks_meta', String(1024)),
     Column('kernel_options', String(1024)),
     Column('kernel_options_post', String(1024)),
@@ -187,18 +190,20 @@ provision_family_update_table = Table('provision_update_family', metadata,
 exclude_osmajor_table = Table('exclude_osmajor', metadata,
     Column('id', Integer, autoincrement=True,
            nullable=False, primary_key=True),
-    Column('system_id', Integer, ForeignKey('system.id')),
-    Column('arch_id', Integer, ForeignKey('arch.id')),
-    Column('osmajor_id', Integer, ForeignKey('osmajor.id')),
+    Column('system_id', Integer, ForeignKey('system.id',
+           onupdate='CASCADE', ondelete='CASCADE'), nullable=False),
+    Column('arch_id', Integer, ForeignKey('arch.id'), nullable=False),
+    Column('osmajor_id', Integer, ForeignKey('osmajor.id'), nullable=False),
     mysql_engine='InnoDB',
 )
 
 exclude_osversion_table = Table('exclude_osversion', metadata,
     Column('id', Integer, autoincrement=True,
            nullable=False, primary_key=True),
-    Column('system_id', Integer, ForeignKey('system.id')),
-    Column('arch_id', Integer, ForeignKey('arch.id')),
-    Column('osversion_id', Integer, ForeignKey('osversion.id')),
+    Column('system_id', Integer, ForeignKey('system.id',
+           onupdate='CASCADE', ondelete='CASCADE'), nullable=False),
+    Column('arch_id', Integer, ForeignKey('arch.id'), nullable=False),
+    Column('osversion_id', Integer, ForeignKey('osversion.id'), nullable=False),
     mysql_engine='InnoDB',
 )
 
@@ -221,7 +226,8 @@ task_exclude_osmajor_table = Table('task_exclude_osmajor', metadata,
 labinfo_table = Table('labinfo', metadata,
     Column('id', Integer, autoincrement=True,
            nullable=False, primary_key=True),
-    Column('system_id', Integer, ForeignKey('system.id')),
+    Column('system_id', Integer, ForeignKey('system.id',
+           onupdate='CASCADE', ondelete='CASCADE'), nullable=False),
     Column('orig_cost', Numeric(precision=16,length=2,asdecimal=True)),
     Column('curr_cost', Numeric(precision=16,length=2,asdecimal=True)),
     Column('dimensions', String(255)),
@@ -234,8 +240,9 @@ labinfo_table = Table('labinfo', metadata,
 watchdog_table = Table('watchdog', metadata,
     Column('id', Integer, autoincrement=True,
            nullable=False, primary_key=True),
-    Column('system_id', Integer, ForeignKey('system.id'), nullable=False),
-    Column('recipe_id', Integer, ForeignKey('recipe.id')),
+    Column('system_id', Integer, ForeignKey('system.id',
+           onupdate='CASCADE', ondelete='CASCADE'), nullable=False),
+    Column('recipe_id', Integer, ForeignKey('recipe.id'), nullable=False),
     Column('recipetask_id', Integer, ForeignKey('recipe_task.id')),
     Column('subtask', Unicode(255)),
     Column('kill_time', DateTime),
@@ -245,7 +252,8 @@ watchdog_table = Table('watchdog', metadata,
 cpu_table = Table('cpu', metadata,
     Column('id', Integer, autoincrement=True,
            nullable=False, primary_key=True),
-    Column('system_id', Integer, ForeignKey('system.id')),
+    Column('system_id', Integer, ForeignKey('system.id',
+           onupdate='CASCADE', ondelete='CASCADE'), nullable=False),
     Column('vendor',String(255)),
     Column('model',Integer),
     Column('model_name',String(255)),
@@ -262,7 +270,8 @@ cpu_table = Table('cpu', metadata,
 cpu_flag_table = Table('cpu_flag', metadata,
     Column('id', Integer, autoincrement=True,
            nullable=False, primary_key=True),
-    Column('cpu_id', Integer, ForeignKey('cpu.id')),
+    Column('cpu_id', Integer, ForeignKey('cpu.id',
+           onupdate='CASCADE', ondelete='CASCADE'), nullable=False),
     Column('flag', String(10)),
     mysql_engine='InnoDB',
 )
@@ -270,7 +279,8 @@ cpu_flag_table = Table('cpu_flag', metadata,
 numa_table = Table('numa', metadata,
     Column('id', Integer, autoincrement=True,
            nullable=False, primary_key=True),
-    Column('system_id', Integer, ForeignKey('system.id')),
+    Column('system_id', Integer, ForeignKey('system.id',
+           onupdate='CASCADE', ondelete='CASCADE'), nullable=False),
     Column('nodes',Integer),
     mysql_engine='InnoDB',
 )
@@ -318,7 +328,8 @@ power_table = Table('power', metadata,
            nullable=False, primary_key=True),
     Column('power_type_id', Integer, ForeignKey('power_type.id'),
            nullable=False),
-    Column('system_id', Integer, ForeignKey('system.id')),
+    Column('system_id', Integer, ForeignKey('system.id',
+           onupdate='CASCADE', ondelete='CASCADE'), nullable=False),
     Column('power_address', String(255), nullable=False),
     Column('power_user', String(255)),
     Column('power_passwd', String(255)),
@@ -558,7 +569,7 @@ activity_table = Table('activity', metadata,
 
 system_activity_table = Table('system_activity', metadata,
     Column('id', Integer, ForeignKey('activity.id'), primary_key=True),
-    Column('system_id', Integer, ForeignKey('system.id')),
+    Column('system_id', Integer, ForeignKey('system.id'), nullable=True),
     mysql_engine='InnoDB',
 )
 
@@ -584,7 +595,8 @@ distro_activity_table = Table('distro_activity', metadata,
 note_table = Table('note', metadata,
     Column('id', Integer, autoincrement=True,
            nullable=False, primary_key=True),
-    Column('system_id', Integer, ForeignKey('system.id'), index=True),
+    Column('system_id', Integer, ForeignKey('system.id', onupdate='CASCADE',
+           ondelete='CASCADE'), nullable=False, index=True),
     Column('user_id', Integer, ForeignKey('tg_user.user_id'), index=True),
     Column('created', DateTime, nullable=False, default=datetime.utcnow),
     Column('text',TEXT, nullable=False),
@@ -603,9 +615,9 @@ key_value_string_table = Table('key_value_string', metadata,
     Column('id', Integer, autoincrement=True,
            nullable=False, primary_key=True),
     Column('system_id', Integer, ForeignKey('system.id',
-            onupdate='CASCADE', ondelete='CASCADE'), index=True),
+            onupdate='CASCADE', ondelete='CASCADE'), nullable=False, index=True),
     Column('key_id', Integer, ForeignKey('key_.id',
-            onupdate='CASCADE', ondelete='CASCADE'), index=True),
+            onupdate='CASCADE', ondelete='CASCADE'), nullable=False, index=True),
     Column('key_value',TEXT, nullable=False),
     mysql_engine='InnoDB',
 )
@@ -614,9 +626,9 @@ key_value_int_table = Table('key_value_int', metadata,
     Column('id', Integer, autoincrement=True,
            nullable=False, primary_key=True),
     Column('system_id', Integer, ForeignKey('system.id',
-            onupdate='CASCADE', ondelete='CASCADE'), index=True),
+            onupdate='CASCADE', ondelete='CASCADE'), nullable=False, index=True),
     Column('key_id', Integer, ForeignKey('key_.id',
-            onupdate='CASCADE', ondelete='CASCADE'), index=True),
+            onupdate='CASCADE', ondelete='CASCADE'), nullable=False, index=True),
     Column('key_value',Integer, nullable=False),
     mysql_engine='InnoDB',
 )
@@ -1526,7 +1538,16 @@ class System(SystemObject):
                     # want to do fancy Cobbler template stuff, they can put 
                     # #end raw and #raw lines in the appropriate place in their 
                     # kickstart.
-                    kickstart = 'url --url=$tree\n#raw\n%s\n#end raw' % kickstart
+                    kickstart = """
+#if $varExists('method') and $mgmt_parameters.has_key("method_%%s" %% $method) and \
+ $tree.find("nfs://") != -1
+$SNIPPET("install_method")
+#else
+url --url=$tree
+#end if
+#raw
+%s
+#end raw""" % kickstart
 
                     kickfile = '/var/lib/cobbler/kickstarts/%s.ks' % self.system.fqdn
         
@@ -1754,7 +1775,7 @@ class System(SystemObject):
             return System.query().filter(System.arch.any(Arch.arch == arch))
 
     @classmethod
-    def reserved_via(cls, service='WEBUI'): 
+    def reserved_via(cls, service=u'WEBUI'): 
         activity_ids = cls._latest_reserved()
         taken = []
         for id in activity_ids:
@@ -1768,11 +1789,9 @@ class System(SystemObject):
     @classmethod
     def _latest_reserved(cls): 
         f_obj= system_table.join(system_activity_table).join(activity_table)
-        s = select([func.max(system_activity_table.c.id)],from_obj=f_obj,whereclause=and_(activity_table.c.action == 'Reserved',System.user != None)).group_by(system_table.c.id)
-        log.debug(s)
+        s = select([func.max(system_activity_table.c.id)],from_obj=f_obj,whereclause=and_(activity_table.c.action == u'Reserved',System.user != None)).group_by(system_table.c.id)
         result = s.execute()
         ids = [row[0] for row in result.fetchall()] 
-        log.debug(ids) 
         return ids
 
     def excluded_families(self):
@@ -5657,16 +5676,16 @@ class Task(MappedObject):
                     oldrpm = self.oldrpm,
                     path = self.path,
                     description = self.description,
-                    repo = self.repo,
+                    repo = '%s' % self.repo,
                     max_time = self.avg_time,
-                    destructive = self.destructive,
-                    nda = self.nda,
+                    destructive = self.destructive or False,
+                    nda = self.nda or False,
                     creation_date = '%s' % self.creation_date,
                     update_date = '%s' % self.update_date,
                     uploader = '%s' % self.owner,
                     version = self.version,
                     license = self.license,
-                    valid = self.valid,
+                    valid = self.valid or False,
                     types = ['%s' % type.type for type in self.types],
                     excluded_osmajor = ['%s' % osmajor.osmajor for osmajor in self.excluded_osmajor],
                     excluded_arch = ['%s' % arch.arch for arch in self.excluded_arch],
@@ -5794,16 +5813,18 @@ System.mapper = mapper(System, system_table,
                                         backref='system'),
                      'labinfo':relation(LabInfo, uselist=False,
                                         backref='system'),
-                     'cpu':relation(Cpu, uselist=False,backref='systems'),
-                     'numa':relation(Numa, uselist=False, backref='system'),
-                     'power':relation(Power, uselist=False,
-                                         backref='system'),
-                     'excluded_osmajor':relation(ExcludeOSMajor,
-                                                 backref='system'),
-                     'excluded_osversion':relation(ExcludeOSVersion,
-                                                 backref='system'),
+                     'cpu':relation(Cpu, uselist=False,backref='systems',
+                        cascade='all, delete, delete-orphan'),
+                     'numa':relation(Numa, uselist=False, backref='system',
+                        cascade='all, delete, delete-orphan'),
+                     'power':relation(Power, uselist=False, backref='system',
+                        cascade='all, delete, delete-orphan'),
+                     'excluded_osmajor':relation(ExcludeOSMajor, backref='system',
+                        cascade='all, delete, delete-orphan'),
+                     'excluded_osversion':relation(ExcludeOSVersion, backref='system',
+                        cascade='all, delete, delete-orphan'),
                      'provisions':relation(Provision, collection_class=attribute_mapped_collection('arch'),
-                                                 backref='system'),
+                                                 backref='system', cascade='all, delete, delete-orphan'),
                      'loaned':relation(User, uselist=False,
                           primaryjoin=system_table.c.loan_id==users_table.c.user_id,foreign_keys=system_table.c.loan_id),
                      'user':relation(User, uselist=False,
@@ -5823,7 +5844,7 @@ System.mapper = mapper(System, system_table,
                                                 backref='system'),
                      'activity':relation(SystemActivity,
                         order_by=[activity_table.c.created.desc(), activity_table.c.id.desc()],
-                        backref='object'),
+                        backref='object', cascade='all, delete, delete-orphan'),
                      'release_action':relation(ReleaseAction, uselist=False),
                      'reprovision_distro':relation(Distro, uselist=False),
                       '_system_ccs': relation(SystemCc, backref='system',
@@ -5832,10 +5853,10 @@ System.mapper = mapper(System, system_table,
 
 mapper(SystemCc, system_cc_table)
 
-Cpu.mapper = mapper(Cpu,cpu_table,properties = {
-                                                
-                                                 'flags':relation(CpuFlag), 
-                                                 'system':relation(System) } )
+Cpu.mapper = mapper(Cpu, cpu_table, properties={
+    'flags': relation(CpuFlag, cascade='all, delete, delete-orphan'),
+    'system': relation(System),
+})
 mapper(Arch, arch_table)
 mapper(SystemAdmin,system_admin_map_table,primary_key=[system_admin_map_table.c.system_id,system_admin_map_table.c.group_id])
 mapper(Provision, provision_table,

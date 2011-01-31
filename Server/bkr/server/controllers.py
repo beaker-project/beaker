@@ -172,7 +172,7 @@ class Arches:
 class Devices:
 
     @expose(template='bkr.server.templates.grid')
-    @paginate('list',default_order='fqdn',limit=10,max_limit=None)
+    @paginate('list',default_order='fqdn',limit=10)
     def view(self, id):
         device = session.query(Device).get(id)
         systems = System.all(identity.current.user).join('devices').filter_by(id=id).distinct()
@@ -187,7 +187,7 @@ class Devices:
                     list = systems)
 
     @expose(template='bkr.server.templates.grid')
-    @paginate('list',default_order='description',limit=50,max_limit=None)
+    @paginate('list',default_order='description',limit=50)
     def default(self, *args, **kw):
         args = list(args)
         if len(args) == 1:
@@ -415,7 +415,6 @@ class Root(RPCRoot):
         search['operators'].sort()
         return_dict['search_by'] = search['operators'] 
         return_dict['search_vals'] = search['values'] 
-     
         return return_dict
 
     @expose(format='json')
@@ -473,7 +472,7 @@ class Root(RPCRoot):
     @expose(template='bkr.server.templates.grid_add')
     @expose(template='bkr.server.templates.systems_feed', format='xml', as_format='atom',
             content_type='application/atom+xml', accept_format='application/atom+xml')
-    @paginate('list',default_order='fqdn',limit=20,max_limit=None)
+    @paginate('list',default_order='fqdn',limit=20)
     def index(self, *args, **kw): 
         return_dict =  self._systems(systems = System.all(identity.current.user), *args, **kw) 
         return return_dict
@@ -505,7 +504,7 @@ class Root(RPCRoot):
     @expose(template='bkr.server.templates.systems_feed', format='xml', as_format='atom',
             content_type='application/atom+xml', accept_format='application/atom+xml')
     @identity.require(identity.not_anonymous())
-    @paginate('list',default_order='fqdn',limit=20,max_limit=None)
+    @paginate('list',default_order='fqdn',limit=20)
     def available(self, *args, **kw):
         return self._systems(systems = System.available(identity.current.user), *args, **kw)
 
@@ -513,7 +512,7 @@ class Root(RPCRoot):
     @expose(template='bkr.server.templates.systems_feed', format='xml', as_format='atom',
             content_type='application/atom+xml', accept_format='application/atom+xml')
     @identity.require(identity.not_anonymous())
-    @paginate('list',default_order='fqdn',limit=20,max_limit=None)
+    @paginate('list',default_order='fqdn',limit=20)
     def free(self, *args, **kw): 
         return self._systems(systems = System.free(identity.current.user), *args, **kw)
 
@@ -521,14 +520,14 @@ class Root(RPCRoot):
     @expose(template='bkr.server.templates.systems_feed', format='xml', as_format='atom',
             content_type='application/atom+xml', accept_format='application/atom+xml')
     @identity.require(identity.not_anonymous())
-    @paginate('list',limit=20,max_limit=None)
+    @paginate('list',limit=20)
     def mine(self, *args, **kw):
         return self._systems(systems = System.mine(identity.current.user), *args, **kw)
 
       
     @expose(template='bkr.server.templates.grid') 
     @identity.require(identity.not_anonymous())
-    @paginate('list',default_order='fqdn', limit=20, max_limit=None)
+    @paginate('list',default_order='fqdn', limit=20)
     def reserve_system(self, *args,**kw):
         
         def reserve_link(x,distro):
@@ -616,7 +615,7 @@ class Root(RPCRoot):
         search_bar = SearchBar(name='systemsearch',
                                label=_(u'System Search'),
                                enable_custom_columns = True,
-                               extra_selects = [ { 'name': 'keyvalue',
+                               extra_selects = [ { 'name': 'keyvalue', 
                                                    'column':'key/value',
                                                    'display':'none',
                                                    'pos' : 2,
@@ -632,6 +631,7 @@ class Root(RPCRoot):
                                     {su.Device:{'all':[]}},
                                     {su.Key:{'all':[]}}]),
                                search_controller=url("/get_search_options"),
+                               date_picker = ['system/added'],
                                table_search_controllers = {'key/value':url('/get_keyvalue_search_options')},)
 
         if 'quick_search' in kw:
@@ -864,7 +864,7 @@ class Root(RPCRoot):
                      prov_install = [(distro.id, distro.install_name) for distro in system.distros()]))
 
     @expose(template="bkr.server.templates.system")
-    @paginate('history_data',limit=30,default_order='-created', max_limit=None)
+    @paginate('history_data',limit=30,default_order='-created')
     def _view_system_as_html(self, fqdn=None, **kw):
         if fqdn: 
             try:

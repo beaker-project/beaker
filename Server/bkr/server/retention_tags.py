@@ -80,7 +80,7 @@ class RetentionTag(AdminPage):
 
     @expose(template="bkr.server.templates.admin_grid")
     @identity.require(identity.in_group('admin'))
-    @paginate('list', default_order='tag', max_limit=None)
+    @paginate('list', default_order='tag', limit=20)
     def admin(self, *args, **kw):
         tags = self.process_search(*args, **kw)
         alpha_nav_data = set([elem.tag[0].capitalize() for elem in tags])
@@ -103,7 +103,7 @@ class RetentionTag(AdminPage):
         )
 
     @expose(template="bkr.server.templates.grid")
-    @paginate('list', default_order='tag', max_limit=None)
+    @paginate('list', default_order='tag', limit=20)
     def index(self, *args, **kw):
         return self.tags()
 

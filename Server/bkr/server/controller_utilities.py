@@ -180,6 +180,10 @@ class Utility:
         return lambda x:getattr(cls.get_correct_system_column(x),c.lower()) 
 
     @classmethod
+    def system_added_getter(cls):
+        return lambda x: x.date_added
+
+    @classmethod
     def system_loanedto_getter(cls):
         return lambda x: x.loaned
           

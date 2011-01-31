@@ -1,9 +1,14 @@
-  SearchBar = function (fields, searchController,operationvalue,
-    column_based_controllers,table_search_controllers,searchvalue,keyvaluevalue, search_object) { 
-    this.search_object = new SearchObject()
-    this.search_object.initialize(search_object)
-	this.operationvalue = operationvalue
-	this.searchvalue = searchvalue 
+    SearchBar = function (fields, searchController,operationvalue,
+        column_based_controllers,table_search_controllers,searchvalue,keyvaluevalue,
+        search_object, date_picker,clone) {
+        this.clone = clone
+        this.search_object = new SearchObject()
+        this.search_object.initialize(search_object)
+        this.operationvalue = operationvalue
+        this.searchvalue = searchvalue
+        if (date_picker) {
+            SearchBarForm.datepicker = date_picker
+        }
         this.keyvaluevalue = keyvaluevalue
         this.table_controllers = []
         this.column_controller = column_based_controllers
@@ -32,8 +37,8 @@
              this.table_controllers[index] = table_search_controllers[index]
         }
          
-	this.searchController = searchController; 
-	bindMethods(this);
+	    this.searchController = searchController;
+	    bindMethods(this);
 };
 
 
@@ -138,7 +143,7 @@ SearchBar.prototype.replaceValOptions = function(arg) {
             text = arg[1]; 
         }
     }
-   
+    
     if ( val == this.searchvalue ) {
         option = OPTION({"value": val,
                        "selected": true}, text);
@@ -180,53 +185,83 @@ SearchBar.prototype.replaceFields = function(result) {
    replaceChildNodes(this.operationid, map(this.replaceOperations, result.search_by));
 }
 
-SearchBar.prototype.updateSearchVals = function(vals) {
-  current = getElement(this.valueid)
-  current_attrs = current.attributes
-  par = current.parentNode 
+SearchBar.prototype.createValueField = function(current, vals) {
+    var current_attrs = current.attributes
+    var clone_attrs = {}
+    var current_attrs_length = current_attrs.length
+    for (index = 0;index < current_attrs_length ;index++) {
+        var node_name = current_attrs[index].nodeName
+        var node_val = current_attrs[index].nodeValue
+        if ( node_name != 'type' &&  node_name != 'class')
+            clone_attrs[node_name] =node_val
+    }
+    var table_value_lower = this.tableField.value.toLowerCase()
+    for (i in SearchBarForm.datepicker) {
+        if (table_value_lower == SearchBarForm.datepicker[i]) {
+            if(!clone_attrs['class']) {
+                clone_attrs['class'] = ['datepicker']
+            } else {
+                clone_attrs['class'].push('datepicker')
+            }
+        }
 
-  clone_attrs = {}
-  current_attrs_length = current_attrs.length
-  for (index = 0;index < current_attrs_length ;index++) {
-      node_name = current_attrs[index].nodeName
-      node_val = current_attrs[index].nodeValue
-      if ( node_name != 'type' &&  node_name != 'class') 
-          clone_attrs[node_name] =node_val
-  }
-  
-  if(vals) {//set up drop down menu
-      //Do we need to convert this to an array ?
-      //Yep, map needs an array
-      if (!isArray(vals)) {
-          vals = convertObjToArray(vals)
-      }
+    }
 
-      if (current.nodeName == 'SELECT') {
-          //update options and get out of here
-          replaceChildNodes(current,map(this.replaceValOptions,vals))
-          return
-      }
+    if(vals) {//set up drop down menu
+        if (!isArray(vals)) {
+            var vals = convertObjToArray(vals)
+        }
+        if (current.nodeName == 'SELECT') {
+            //update options and get out of here
+            replaceChildNodes(current,map(this.replaceValOptions,vals))
+            return [undefined, clone_attrs]
+        }
+        var new_dom = SELECT(null,map(this.replaceValOptions, vals))
+    } else {
+        //We don't want to put the value from out drop down box into our input field
+        if (current.nodeName == 'SELECT' || this.clone) {
+            delete(clone_attrs['value'])
+        } 
+        //set up text field
+        if (!clone_attrs['type']) {
+            clone_attrs['type'] = ['text']
+        } else {
+            clone_attrs['type'].push('text')
+        }
 
-      new_dom = SELECT(null,map(this.replaceValOptions, vals)) 
-      extra_attrs = {}
-     
-  } else {
-     //We don't want to put the value from out drop down box into our input field
-     delete(clone_attrs['value'])
-     //set up text field
-     if (current.nodeName == 'INPUT')
-         return //leave and walk away, we are already a text field 
-     new_dom = INPUT(clone_attrs)
-     extra_attrs = {'type': 'text','class':'textfield'}
-     
-  }
- 
-  merge(clone_attrs,extra_attrs)
-  updateNodeAttributes(new_dom,clone_attrs) 
-  replaceChildNodes(par,new_dom)
+        if (!clone_attrs['class']) {
+            clone_attrs['class'] = ['textfield']
+        } else {
+            clone_attrs['class'].push('textfield')
+        }
+        var new_dom = INPUT(clone_attrs)
+
+    }
+
+    return [new_dom, clone_attrs]
 }
 
-SearchBar.prototype.keyValueOnChange = function(event) { 
+SearchBar.prototype.updateSearchVals = function(vals) {
+    var current = getElement(this.valueid)
+    var value_field = new Array(2)
+    var value_field_data = this.createValueField(current, vals)
+    if (value_field_data != undefined && isArray(value_field_data)) {
+        var new_attrs = value_field_data.pop()
+        var classes_to_add = new_attrs['class']
+        delete new_attrs['class']
+        var new_dom = value_field_data.pop()
+        updateNodeAttributes(new_dom,new_attrs)
+        var par = current.parentNode
+        replaceChildNodes(par,new_dom)
+
+        //updateNodeAttributes does not work with classes
+        for(i in classes_to_add) {
+            addElementClass(new_dom,classes_to_add[i])
+        }
+    }
+}
+
+SearchBar.prototype.keyValueOnChange = function(event) {
     cached_data = this.search_object.keyvalue_value(this.keyvalueField.value)
     if (cached_data) {
         this.replaceFields(cached_data)
@@ -235,14 +270,13 @@ SearchBar.prototype.keyValueOnChange = function(event) {
     var params = {"tg_format"          : "json",
                   "tg_random"          : new Date().getTime(),
                   "keyvalue_field"     : this.keyvalueField.value};
-    
-    controller = this.column_controller['keyvalue'] 
-    
-   
+
+    controller = this.column_controller['keyvalue']
+
     var d = loadJSONDoc(controller + "?" + queryString(params));
     d.addCallback(this.replaceFields);
-
 }
+
 
 SearchBar.prototype.theOnChange = function(event) {
     var params = {"tg_format"          : "json",
@@ -261,32 +295,31 @@ SearchBar.prototype.theOnChange = function(event) {
         this.hide(field_to_hide)
     }
      
-    //table_field. Now what we need to do here is have a look at the 
+    //table_field. Now what we need to do here is have a look at the
     //tracking_column to see if this new table_field needs to switch any columns on
     table_value_lower = this.tableField.value.toLowerCase()
     tracked_column = SearchBarForm.tracking_columns[table_value_lower]
     if (tracked_column) {
-        table_field_id = this.tableField.id 
+        table_field_id = this.tableField.id
         parent_tr_id  = table_field_id.replace(/^(.+?_\d{1,})_(.+)$/,"$1")
         field_to_show = parent_tr_id+'_'+SearchBarForm.tracking_columns[table_value_lower]
-        this.show(field_to_show)    
+        this.show(field_to_show)
+
     }
-     
-  
+
     special_controller = this.table_controllers[table_value_lower]
     if (special_controller) {
         controller = special_controller
 
         /* If you want to specify a particular function to deal with the returned
          * results of the ajax call, do so here..
-         */  
+         */
         if (table_value_lower == 'key/value') {
-            params = {}  
+            params = {}
             callback = this.replaceKeyValueFields
-            
         }
-    } 
- 
+    }
+
     this.last_table_value = table_value_lower
     //Lets see if we have the value cached locally first
     cached_data = this.search_object.table_value(table_value_lower)
@@ -456,7 +489,9 @@ var SearchBarForm = {
         searchbar_instance = SearchBarForm.searchbar_instances.pop()
         SearchBarForm.searchbar_instances.push(searchbar_instance)  
 
-        new_search = new SearchBar(fields_for_newsearchbar, searchbar_instance.searchController,'', searchbar_instance.column_controller,searchbar_instance.table_controllers);
+        new_search = new SearchBar(fields_for_newsearchbar, searchbar_instance.searchController,'', 
+            searchbar_instance.column_controller,searchbar_instance.table_controllers,undefined,
+            undefined,undefined,undefined,true);
  
         new_search.initialize() 
   

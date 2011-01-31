@@ -294,8 +294,8 @@ def queued_recipes(*args):
                                       )
             if recipe.autopick_random:
                 try:
-                    system = systems[random.randrange(0,systems.count() - 1)]
-                except IndexError:
+                    system = systems[random.randrange(0,systems.count())]
+                except (IndexError, ValueError):
                     system = None
             else:
                 system = systems.first()

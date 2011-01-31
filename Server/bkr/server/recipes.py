@@ -259,7 +259,7 @@ class Recipes(RPCRoot):
         return return_dict
 
     @expose(template='bkr.server.templates.grid')
-    @paginate('list',default_order='-id', limit=50, max_limit=None)
+    @paginate('list',default_order='-id', limit=50)
     def index(self,*args,**kw):
         return self.recipes(recipes=session.query(MachineRecipe)
                 # need to join in case the user sorts by these related properties
@@ -269,7 +269,7 @@ class Recipes(RPCRoot):
 
     @identity.require(identity.not_anonymous())
     @expose(template='bkr.server.templates.grid')
-    @paginate('list',default_order='-id', limit=50, max_limit=None)
+    @paginate('list',default_order='-id', limit=50)
     def mine(self,*args,**kw):
         return self.recipes(recipes=MachineRecipe.mine(identity.current.user)
                 # need to join in case the user sorts by these related properties

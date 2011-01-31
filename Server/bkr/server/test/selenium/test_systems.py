@@ -1,5 +1,5 @@
 
-# vim: set encoding=utf-8:
+# vim: set fileencoding=utf-8:
 
 # Beaker
 #
@@ -87,17 +87,22 @@ class TestSystemGridSorting(SeleniumTestCase):
 
     def check_column_sort(self, column):
         sel = self.selenium
-        try:
-            sel.click('link=Show all')
-            sel.wait_for_page_to_load('30000')
-        except: pass
         sel.click('//table[@id="widget"]/thead/th[%d]//a[@href]' % column)
         sel.wait_for_page_to_load('30000')
-        row_count = int(sel.get_xpath_count(
-                '//table[@id="widget"]/tbody/tr/td[%d]' % column))
-        cell_values = [sel.get_table('widget.%d.%d' % (row, column - 1)) # zero-indexed
-                       for row in range(0, row_count)]
-        self.assert_(len(set(cell_values)) > 1) # make sure we're checking something
+
+        cell_values = []
+        while True:
+            row_count = int(sel.get_xpath_count('//table[@id="widget"]/tbody/tr/td[%d]' % column))
+            cell_values += [sel.get_table('widget.%d.%d' % (row, column - 1)) # zero-indexed 
+                           for row in range(0, row_count)]
+            # Keeping scrolling through pages until we have seen at least two distinct cell values
+            # (so that we can see that it is really sorted)
+            if len(set(cell_values)) > 1:
+                break
+            if sel.get_xpath_count('//div[@class="list"]//a[text()=">"]') != '1':
+                raise AssertionError('Tried all pages, but every cell had the same value!')
+            sel.click('//div[@class="list"]//a[text()=">"]')
+            sel.wait_for_page_to_load('30000')
         assert_sorted(cell_values, key=lambda x: x.lower())
 
     # We test both ordinary listing (i.e. with no search query) as well as 
@@ -241,9 +246,9 @@ class SystemViewTest(SeleniumTestCase):
         sel.open('')
         sel.type('simplesearch', self.system.fqdn)
         sel.click('search')
-        sel.wait_for_page_to_load('3000')
+        sel.wait_for_page_to_load('30000')
         sel.click('link=%s' % self.system.fqdn)
-        sel.wait_for_page_to_load('3000')
+        sel.wait_for_page_to_load('30000')
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=631421
     def test_page_title_shows_fqdn(self):
@@ -257,7 +262,7 @@ class SystemViewTest(SeleniumTestCase):
         sel = self.selenium
         self.go_to_system_view()
         sel.click('link=(Report problem)')
-        sel.wait_for_page_to_load('3000')
+        sel.wait_for_page_to_load('30000')
         self.assertEqual(self.selenium.get_title(),
                 'Report a problem with %s' % self.system.fqdn)
 

@@ -180,6 +180,11 @@ class BeakerWorkflow(BeakerCommand):
             help="Boot arguments to supply (optional)"
         )
         self.parser.add_option(
+            "--kernel_options_post",
+            default=None,
+            help="Boot arguments to supply post install (optional)"
+        )
+        self.parser.add_option(
             "--product",
             default=None,
             help="This should be a unique identifierf or a product"
@@ -386,6 +391,7 @@ class BeakerRecipeBase(BeakerBase):
         variant = kwargs.get("variant", None)
         method = kwargs.get("method", None)
         kernel_options = kwargs.get("kernel_options", '')
+        kernel_options_post = kwargs.get("kernel_options_post", '')
         tags = kwargs.get("tag", [])
         systype = kwargs.get("systype", None)
         machine = kwargs.get("machine", None)
@@ -414,6 +420,8 @@ class BeakerRecipeBase(BeakerBase):
             self.ks_meta = "method=%s" % method
         if kernel_options:
             self.kernel_options = kernel_options
+        if kernel_options_post:
+            self.kernel_options_post = kernel_options_post
         for i, repo in enumerate(repos):
             myrepo = self.doc.createElement('repo')
             myrepo.setAttribute('name', 'myrepo_%s' % i)

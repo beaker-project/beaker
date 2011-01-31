@@ -2,8 +2,8 @@
 %{!?pyver: %global pyver %(%{__python} -c "import sys ; print sys.version[:3]")}
 
 Name:           beaker
-Version:        0.6.2
-Release:        1%{?dist}
+Version:        0.6.3
+Release:        2%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -15,7 +15,19 @@ BuildRequires:  python-setuptools
 BuildRequires:  python-setuptools-devel
 BuildRequires:  python2-devel
 BuildRequires:  python-kid
+%if (0%{?fedora} >= 14)
+BuildRequires:  python-sphinx >= 1.0
+%else
 BuildRequires:  python-sphinx10
+%endif
+# These server dependencies are needed in the build, because
+# sphinx imports bkr.server modules to generate API docs
+BuildRequires:  TurboGears
+BuildRequires:  python-xmltramp
+BuildRequires:  python-lxml
+BuildRequires:  python-ldap
+BuildRequires:  python-TurboMail >= 3.0
+BuildRequires:  rpm-python
 
 
 %package client
@@ -163,6 +175,7 @@ fi
 %{_bindir}/product-update
 %{_bindir}/beaker-repo-update
 %{_bindir}/%{name}-cleanup-visits
+%{_bindir}/%{name}-delete-system
 %{_sysconfdir}/init.d/%{name}d
 %config(noreplace) %{_sysconfdir}/cron.d/%{name}
 %attr(0755,root,root)%{_bindir}/%{name}d
@@ -206,6 +219,34 @@ fi
 %attr(-,apache,root) %dir %{_localstatedir}/run/%{name}-lab-controller
 
 %changelog
+* Fri Jan 28 2011 Raymond Mancy <rmancy@redhat.com> 0.6.3-2
+- Fix problem with randrange throwing errors when system.count() is <= 1
+  (rmancy@redhat.com)
+
+* Thu Jan 27 2011 Dan Callaghan <dcallagh@redhat.com> 0.6.3-1
+- bz613113 - Filter systems by added date (rmancy@redhat.com)
+- bz669736 - Remove show all links (rmancy@redhat.com)
+- bz654304 - beaker-delete-system script for sysadmins to delete system
+  rows (dcallagh@redhat.com)
+- make system_id foreign keys not NULLable and cascade
+  (dcallagh@redhat.com)
+- bz664998 - method in ks_meta doesn't seem to work for custom kickstart
+  (bpeck@redhat.com)
+- encoding is not allowed in Vim modelines since 7.3 (should be
+  fileencoding) (dcallagh@redhat.com)
+- bz671233 - record elapsed time spent executing method
+  (bpeck@redhat.com)
+- bz670868 - We can't set allow_none on the version of python we need to
+  support. (bpeck@redhat.com)
+- bz669427 - Added kernel_options_post to default workflow options.
+  (bpeck@redhat.com)
+- bz666981 - Dry run for nag email (rmancy@redhat.com)
+- bz668314 - add NUMA nodes to system search (dcallagh@redhat.com)
+- bz662909 - add server deps to BuildRequires, so that sphinx autodoc
+  works (dcallagh@redhat.com)
+- python-sphinx10 does not exist in Fedora 14 and higher
+  (dcallagh@redhat.com)
+
 * Wed Jan 12 2011 Raymond Mancy <rmancy@redhat.com> 0.6.2-1
 - bz663114 - Move cancel features from Recipe to RecipeSet (rmancy@redhat.com)
 - bz662703 - Product list sorted and test (rmancy@redhat.com)

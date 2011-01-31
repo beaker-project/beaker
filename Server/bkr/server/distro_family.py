@@ -6,7 +6,7 @@ from bkr.server.widgets import myPaginateDataGrid
 class DistroFamily(OSVersions):
  
     @expose(template="bkr.server.templates.grid") 
-    @paginate('list',limit=50, default_order='osmajor.osmajor', max_limit=None)
+    @paginate('list',limit=50, default_order='osmajor.osmajor')
     def index(self,*args,**kw): 
         template_data = self.osversions(*args, **kw)
         template_data['search_bar'] = None

@@ -10,13 +10,14 @@ import search_utility
 from decimal import Decimal
 from itertools import chain
 from turbogears.widgets import (Form, TextField, SubmitButton, TextArea, Label,
-                                AutoCompleteField, SingleSelectField, CheckBox,
+                                AutoCompleteField, SingleSelectField, CheckBox, 
                                 HiddenField, RemoteForm, LinkRemoteFunction, CheckBoxList, JSLink,
                                 Widget, TableForm, FormField, CompoundFormField,
                                 static, PaginateDataGrid, DataGrid, RepeatingFormField,
                                 CompoundWidget, AjaxGrid, Tabber, CSSLink,
                                 RadioButtonList, MultipleSelectField, Button,
-                                RepeatingFieldSet, SelectionField,WidgetsList)
+                                RepeatingFieldSet, SelectionField, WidgetsList,)
+
 from bkr.server import search_utility
 import logging
 log = logging.getLogger(__name__)
@@ -40,8 +41,17 @@ class UtilJSON:
      def __return_array_of_json(cls,x):
          if x:
              jsonified_fields = [jsonify.encode(elem) for elem in x]
-             return ','.join(jsonified_fields) 
-                   
+             return ','.join(jsonified_fields)
+             """
+             FIXME Add in here support for non-lists, something like:
+             if isinstance(x, list):
+                 jsonified_fields = [jsonify.encode(elem) for elem in x]
+                 return_json = ','.join(jsonified_fields)
+             else:
+                 jsonified_fields = jsonify.encode(x)
+                 return_json = jsonified_fields
+             return return_json
+             """
 
 class LocalJSLink(JSLink):
     """
@@ -257,24 +267,22 @@ class InnerGrid(DataGrid):
 class myPaginateDataGrid(PaginateDataGrid):
     template = "bkr.server.templates.my_paginate_datagrid"
 
-
 class SingleSelectFieldJSON(SingleSelectField):
-    def __init__(self,*args,**kw):  
+    def __init__(self,*args,**kw):
         super(SingleSelectField,self).__init__(*args,**kw)
 
         if kw.has_key('for_column'):
             self.for_column = kw['for_column']
-       
+
     def __json__(self):
         return_dict = {}
         return_dict['field_id'] = self.field_id
         return_dict['name'] = self.name
         if hasattr(self,'for_column'):
             return_dict['column'] = self.for_column
-      
-        return return_dict   
-    
-   
+        return return_dict
+
+
 class TextFieldJSON(TextField):
     def __init__(self,*args,**kw):
         super(TextField,self).__init__(*args,**kw)
@@ -433,144 +441,12 @@ class JobMatrixReport(Form):
 
 class SearchBar(RepeatingFormField):
     """Search Bar""" 
+    css = [LocalCSSLink('bkr','/static/css/smoothness/jquery-ui-1.7.3.custom.css')] 
     javascript = [LocalJSLink('bkr', '/static/javascript/search_object.js'),
-                  LocalJSLink('bkr', '/static/javascript/searchbar_v6.js'), 
-                  LocalJSLink('bkr','/static/javascript/jquery.js')]
-    template = """
-    <div xmlns:py="http://purl.org/kid/ns#">
-    <a id="advancedsearch" href="#">Toggle Search</a>
-    <form
-      id="simpleform"
-      name="${name}_simple"
-      action="${action}"
-      method="${method}"
-      class="searchbar_form"
-      py:attrs="form_attrs" 
-      style="display:${simple}"
-    >
-    <span py:for="hidden in extra_hiddens or []">
-        <input type='hidden' id='${hidden[0]}' name='${hidden[0]}' value='${hidden[1]}' />
-    </span> 
-    <table>
-     <tr>
-      <td><input type="text" name="simplesearch" value="${simplesearch}" class="textfield"/>
-      </td>
-    <td><input type="submit" name="search" value="${simplesearch_label}"/>
-
-     <span style="margin:0 0.5em 0.5em 0.5em;" py:for="quickly_search in quickly_searches">
-        ${button_widget.display(value=quickly_search[1],options=dict(label=quickly_search[0]))}
-     </span>
-      </td>
-
-   
-     </tr>
-    </table> 
-    </form>
-    <form 
-      id="searchform"
-      name="${name}"
-      action="${action}"
-      method="${method}"
-      class="searchbar_form"
-      py:attrs="form_attrs"
-      style="display:${advanced}"
-    >
-
-    <span py:for="hidden in extra_hiddens or []">
-        <input type='hidden' id='${hidden[0]}' name='${hidden[0]}' value='${hidden[1]}' />
-    </span> 
-    <fieldset>
-     <legend>Search</legend>
-     <table>
-     <tr>
-     <td>
-     <table id="${field_id}">
-      <thead>
-       <tr> 
-        <th  py:for="field in fields"> 
-         <span class="fieldlabel" py:content="field.label" />
-        </th>
-       </tr>
-      </thead> 
-      <tbody>
-       <tr py:for="repetition in repetitions"
-           class="${field_class}"
-           id="${field_id}_${repetition}">
-        <script language="JavaScript" type="text/JavaScript">
-
-            ${field_id}_${repetition} = new SearchBar([${to_json(fields)}],'${search_controller}','${value_for(this_operations_field)}',${extra_callbacks_stringified},${table_search_controllers_stringified},'${value_for(this_searchvalue_field)}','${value_for(keyvaluevalue)}',${search_object});
-            addLoadEvent(${field_id}_${repetition}.initialize);
-        </script>
-        <td py:for="field in fields">
-                <span py:content="field.display(value_for(field),
-                      **params_for(field))" />
-                <span py:if="error_for(field)" class="fielderror"
-                      py:content="error_for(field)" />
-                <span py:if="field.help_text" class="fieldhelp"
-                      py:content="field_help_text" />
-        </td>
-        <td>
-           <a 
-           href="javascript:SearchBarForm.removeItem('${field_id}_${repetition}')">Remove (-)</a>
-        </td>
-       </tr>
-      </tbody>
-     </table></td><td>
-     <input type="submit" name="Search" value="Search"/> 
-     </td>
-   
-     </tr>
-     <tr>
-     <td colspan="2">
-     <a id="doclink" href="javascript:SearchBarForm.addItem('${field_id}');">Add ( + )</a>
-     </td>
-     </tr>
-     </table>
-    
-    <a py:if="enable_custom_columns" id="customcolumns" href="#">Toggle Result Columns</a> 
-    <div style='display:none'  id='selectablecolumns'>
-      <ul class="${field_class}" id="${field_id}">
-        <li py:if="col_options" py:for="value,desc in col_options">
-          <input py:if="col_defaults.get(value)" type="checkbox" name = "${field_id}_column_${value}" id="${field_id}_column_${value}" value="${value}" checked='checked' />
-          <input py:if="not col_defaults.get(value)" type="checkbox" name = "${field_id}_column_${value}" id="${field_id}_column_${value}" value="${value}" />
-          <label for="${field_id}_${value}" py:content="desc" />
-        </li>  
-      </ul>
-    <a style='margin-left:10px' id="selectnone" href="#">Select None</a>
-    <a style='margin-left:10px' id="selectall" href="#">Select All</a>
-    <a style='margin-left:10px' id="selectdefault" href="#">Select Default</a>
-    </div> 
-     </fieldset>  
-    </form>
-    <script type="text/javascript">
-    $(document).ready(function() {
-        $('#advancedsearch').click( function() { $('#searchform').toggle('slow');
-                                                 $('#simpleform').toggle('slow');});
-   
-
-  
-        $('#customcolumns').click( function() { $('#selectablecolumns').toggle('slow'); });
-        
-        $('#selectnone').click( function() { $("input[name *= 'systemsearch_column_']").removeAttr('checked'); }); 
-        $('#selectall').click( function() { $("input[name *= 'systemsearch_column_']").attr('checked',1); });
-        $('#selectdefault').click( function() { $("input[name *= 'systemsearch_column_']").each( function() { select_only_default($(this))}) });
-
-        function select_only_default(obj) {
-            var defaults = ${default_result_columns}
-            var current_item = obj.val()
-            var the_name = 'systemsearch_column_'+current_item
-             if (defaults[current_item] == 1) {
-                 $("input[name = '"+the_name+"']").attr('checked',1); 
-             } else {
-                 $("input[name = '"+the_name+"']").removeAttr('checked');  
-             }
-         }
-     });
-
-
-    </script>
-    </div>
-    """
+                  LocalJSLink('bkr', '/static/javascript/searchbar_v7.js'), 
+                  LocalJSLink('bkr','/static/javascript/jquery.js'),
+                  LocalJSLink('bkr','/static/javascript/jquery-ui-1.7.3.custom.min.js'),]
+    template = "bkr.server.templates.search_bar"
 
     params = ['repetitions', 'search_object', 'form_attrs', 'search_controller',
               'simplesearch','quickly_searches','button_widget',
@@ -578,7 +454,8 @@ class SearchBar(RepeatingFormField):
               'this_searchvalue_field','extra_hiddens',
               'extra_callbacks_stringified','table_search_controllers_stringified',
               'keyvaluevalue','simplesearch_label', 'result_columns','col_options',
-              'col_defaults','enable_custom_columns','default_result_columns']
+              'col_defaults','enable_custom_columns','default_result_columns', 
+              'date_picker']
 
     form_attrs = {}
     simplesearch = None
@@ -590,17 +467,18 @@ class SearchBar(RepeatingFormField):
         super(SearchBar,self).__init__(*args, **kw)
         self.enable_custom_columns = enable_custom_columns
         self.search_controller=search_controller
-        self.repetitions = 1 
+        self.repetitions = 1
         self.extra_hiddens = extra_hiddens
         self.default_result_columns = {}
         table_field = SingleSelectFieldJSON(name="table", options=table, validator=validators.NotEmpty()) 
         operation_field = SingleSelectFieldJSON(name="operation", options=[None], validator=validators.NotEmpty())
         value_field = TextFieldJSON(name="value")
+
         # We don't know where in the fields array the operation array will be, so we will put it here
         # to access in the template
         self.this_operations_field = operation_field
         self.this_searchvalue_field = value_field
-        self.fields = [table_field,operation_field,value_field]
+        self.fields = [table_field, operation_field, value_field]
         new_selects = []
         self.extra_callbacks = {} 
         self.search_object = jsonify.encode(complete_data)
@@ -610,10 +488,10 @@ class SearchBar(RepeatingFormField):
             for elem in extra_selects:
                 if elem.has_key('display'):
                     if elem['display'] == 'none':
-                        new_class.append('hide_parent') 
+                        new_class.append('hide_parent')
                 callback = elem.get('callback',None)
                 if callback:
-                    self.extra_callbacks[elem['name']] = callback    
+                    self.extra_callbacks[elem['name']] = callback 
                 new_select = SingleSelectFieldJSON(name=elem['name'],options=[None], css_classes = new_class, validator=validators.NotEmpty(),for_column=elem['column'] )
                 if elem['name'] == 'keyvalue':
                     self.keyvaluevalue = new_select
@@ -644,12 +522,10 @@ class SearchBar(RepeatingFormField):
                         log.error('Quick searches expects vals as <column>-<operation>-<value>. The following is incorrect: %s' % (elem)) 
                     else: 
                         self.quickly_searches.append((name, '%s-%s-%s' % (vals[0],vals[1],vals[2])))
-
-        controllers = kw.get('table_search_controllers',dict()) 
-         
+        self.date_picker = jsonify.encode(kw.get('date_picker',list()) )
+        controllers = kw.get('table_search_controllers',dict())  
         self.table_search_controllers_stringified = str(controllers)
         self.to_json = UtilJSON.dynamic_json()
-        
         self.extra_callbacks_stringified = str(self.extra_callbacks)
         self.fields.extend(new_inputs)
         self.fields.extend(new_selects) 
@@ -1182,7 +1058,7 @@ class SystemForm(Form):
     javascript = [LocalJSLink('bkr', '/static/javascript/jquery.js'),
                   LocalJSLink('bkr', '/static/javascript/provision.js'),
                   LocalJSLink('bkr','/static/javascript/system_admin.js'),
-                  LocalJSLink('bkr', '/static/javascript/searchbar_v6.js'),
+                  LocalJSLink('bkr', '/static/javascript/searchbar_v7.js'), 
                   JSLink(static,'ajax.js'),
                  ]
     template = "bkr.server.templates.system_form"

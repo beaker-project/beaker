@@ -3,7 +3,6 @@ from turbogears import controllers, expose, flash, widgets, validate, error_hand
 from turbogears.widgets import AutoCompleteField, HiddenField
 from turbogears import identity, redirect
 from cherrypy import request, response
-from tg_expanding_form_widget.tg_expanding_form_widget import ExpandingForm
 from kid import Element
 from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.widgets import DistroTags, SearchBar
@@ -161,12 +160,12 @@ class Distros(RPCRoot):
         return distro_search.return_results()
 
     @expose(template="bkr.server.templates.grid")
-    @paginate('list',default_order='-date_created', limit=50,max_limit=None)
+    @paginate('list',default_order='-date_created', limit=50)
     def index(self,*args,**kw):
         return self.distros(distros=session.query(Distro).join('breed').join('arch').join(['osversion','osmajor']),*args,**kw)
 
     @expose(template="bkr.server.templates.grid")
-    @paginate('list',default_order='-date_created', limit=50,max_limit=None)
+    @paginate('list',default_order='-date_created', limit=50)
     def name(self,*args,**kw):
         return self.distros(distros=session.query(Distro).join('breed').join('arch').join(['osversion','osmajor']).filter(distro_table.c.install_name.like('%s' % kw['name'])),action='./name')
 
