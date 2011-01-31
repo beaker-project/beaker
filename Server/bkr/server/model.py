@@ -1607,6 +1607,16 @@ url --url=$tree
                 if self.system.power and power:
                     self.power(action="off", wait=False)
 
+            def remove(self):
+                """ Removes this system's record from Cobbler. """
+                try:
+                    self.remote.remove_system(self.system.fqdn, self.token)
+                except xmlrpclib.Fault, e:
+                    # system record probably does not actually exist
+                    log.debug('Ignoring exception from Cobbler while removing %s: %s',
+                            self.system.fqdn, e)
+                    pass
+
         # remote methods are only available if we have a lab controller
         #  Here is where we would add other types of lab controllers
         #  right now we only support cobbler

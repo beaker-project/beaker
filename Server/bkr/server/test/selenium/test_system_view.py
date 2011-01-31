@@ -27,22 +27,27 @@ import rdflib.graph
 from turbogears.database import session
 
 from bkr.server.test.selenium import SeleniumTestCase
-from bkr.server.test import data_setup, get_server_base
+from bkr.server.test import data_setup, get_server_base, stub_cobbler
 from bkr.server.model import Key, Key_Value_String, Key_Value_Int
 
 class SystemViewTest(SeleniumTestCase):
 
     def setUp(self):
+        self.stub_cobbler_thread = stub_cobbler.StubCobblerThread()
+        self.stub_cobbler_thread.start()
+        self.lab_controller = data_setup.create_labcontroller(
+                fqdn=u'localhost:%d' % self.stub_cobbler_thread.port)
         self.system_owner = data_setup.create_user()
         self.system = data_setup.create_system(owner=self.system_owner)
         self.system.shared = True
-        self.system.lab_controller = data_setup.create_labcontroller()
+        self.system.lab_controller = self.lab_controller
         session.flush()
         self.selenium = self.get_selenium()
         self.selenium.start()
 
     def tearDown(self):
         self.selenium.stop()
+        self.stub_cobbler_thread.stop()
 
     def go_to_system_view(self):
         sel = self.selenium
@@ -130,6 +135,19 @@ class SystemViewTest(SeleniumTestCase):
         sel.wait_for_page_to_load('30000')
         self.assertEquals(sel.get_text('css=.fielderror'),
                 'The supplied value is not a valid hostname')
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=670912
+    def test_renaming_system_removes_from_cobbler(self):
+        self.login()
+        sel = self.selenium
+        self.go_to_system_view()
+        old_fqdn = self.system.fqdn
+        new_fqdn = 'commodore64.example.com'
+        sel.type('fqdn', new_fqdn)
+        sel.click('link=Save Changes')
+        sel.wait_for_page_to_load('30000')
+        self.assertEquals(sel.get_value('fqdn'), new_fqdn)
+        self.assert_(old_fqdn in self.stub_cobbler_thread.cobbler.removed_systems)
 
     def test_add_arch(self):
         orig_date_modified = self.system.date_modified
