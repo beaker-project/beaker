@@ -38,10 +38,14 @@ class LabControllers(RPCRoot):
     fqdn   = widgets.TextField(name='fqdn', label=_(u'FQDN'))
     username   = widgets.TextField(name='username', label=_(u'Username'))
     password   = widgets.PasswordField(name='password', label=_(u'Password'))
+    disabled   = widgets.CheckBox(name='disabled',
+                                  label=_(u'Disabled'),
+                                  default=False)
+
 
     labcontroller_form = widgets.TableForm(
         'LabController',
-        fields = [id, fqdn, username, password],
+        fields = [id, fqdn, username, password, disabled],
         action = 'save_data',
         submit_text = _(u'Save'),
         validator = LabControllerFormSchema()
@@ -80,6 +84,7 @@ class LabControllers(RPCRoot):
         labcontroller.fqdn = kw['fqdn']
         labcontroller.username = kw['username']
         labcontroller.password = kw['password']
+        labcontroller.disabled = kw['disabled']
         labcontroller.distros_md5 = '0.0'
 
         flash( _(u"%s saved" % labcontroller.fqdn) )
@@ -260,6 +265,7 @@ class LabControllers(RPCRoot):
         labcontrollers = session.query(LabController)
         labcontrollers_grid = myPaginateDataGrid(fields=[
                                   ('FQDN', lambda x: make_edit_link(x.fqdn,x.id)),
+                                  ('Disabled', lambda x: x.disabled),
                                   ('Timestamp', lambda x: x.distros_md5),
                                   (' ', lambda x: make_remove_link(x.id)),
                                   (' ', lambda x: make_scan_link(x.id)),
