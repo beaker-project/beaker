@@ -53,6 +53,7 @@ class StubCobbler(object):
 
     def __init__(self):
         self.systems = {}
+        self.removed_systems = set()
         self.system_actions = {} #: system fdqn -> most recent power action
         self.incomplete_tasks = set()
         self.profiles = {}
@@ -95,6 +96,13 @@ class StubCobbler(object):
         # do nothing
         log.info('%r system %s saved with values %r', self,
                 fqdn, self.systems[fqdn])
+        return True
+
+    def remove_system(self, fqdn, token):
+        assert token == 'logged_in'
+        if fqdn in self.systems:
+            del self.systems[fqdn]
+        self.removed_systems.add(fqdn)
         return True
 
     def clear_system_logs(self, system_handle, token):

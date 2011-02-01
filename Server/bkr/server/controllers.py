@@ -1464,6 +1464,8 @@ class Root(RPCRoot):
         system.serial=kw['serial']
         system.vendor=kw['vendor']
         system.lender=kw['lender']
+        if kw['fqdn'] != system.fqdn:
+            system.remote.remove()
         system.fqdn=kw['fqdn']
         system.status_reason = kw['status_reason']
         system.date_modified = datetime.utcnow()
