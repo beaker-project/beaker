@@ -270,6 +270,7 @@ def queued_recipes(*args):
             systems = recipe.dyn_systems.join(['lab_controller','_distros','distro']).\
                       filter(and_(System.user==None,
                                   Distro.id==recipe.distro_id,
+                                  LabController.disabled==False,
                                   System.status==automated))
             # Order systems by owner, then Group, finally shared for everyone.
             # FIXME Make this configurable, so that a user can specify their scheduling
