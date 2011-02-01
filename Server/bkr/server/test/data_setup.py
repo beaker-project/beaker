@@ -184,8 +184,8 @@ def create_tasks(xmljob):
             for task in recipe.iter_tasks():
                 create_task(name=task.name)
 
-def create_recipe(system=None, distro=None, task_name=u'/distribution/reservesys',
-        whiteboard=None):
+def create_recipe(system=None, distro=None, task_list=None, 
+    task_name=u'/distribution/reservesys', whiteboard=None):
     recipe = MachineRecipe(ttasks=1, system=system, whiteboard=whiteboard,
             distro=distro or Distro.query()[0])
     recipe._distro_requires=u'<distroRequires><and><distro_arch value="i386"  \
@@ -193,7 +193,11 @@ def create_recipe(system=None, distro=None, task_name=u'/distribution/reservesys
             </distro_variant><distro_family value="RedHatEnterpriseLinux6" op="="> \
             </distro_family> </and><distro_virt value="" op="="></distro_virt> \
             </distroRequires>'
-    recipe.tasks.append(RecipeTask(task=create_task(name=task_name)))
+    if task_list: #don't specify a task_list and a task_name...
+        for t in task_list:
+            recipe.tasks.append(RecipeTask(task=t))
+    else:
+        recipe.tasks.append(RecipeTask(task=create_task(name=task_name)))
     return recipe
 
 def create_job_for_recipes(recipes, owner=None, whiteboard=None, cc=None,product=None,

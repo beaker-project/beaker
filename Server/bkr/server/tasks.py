@@ -196,7 +196,7 @@ class Tasks(RPCRoot):
     
     @expose(template='bkr.server.templates.tasks')
     @validate(form=task_form)
-    @paginate('tasks',default_order='-id', limit=30)
+    @paginate('tasks',default_order='-id', limit=30, max_limit=None)
     def do_search(self, hidden={}, **kw):
         return self._do_search(hidden=hidden, **kw)
 
