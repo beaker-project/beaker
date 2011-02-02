@@ -39,6 +39,19 @@ SetUpInit()
     sed -i s/BOOTUP=color/BOOTUP=serial/ /etc/sysconfig/init
 }
 
+CHECKRECIPE()
+{
+    if [ -e "RECIPE.TXT" ]; then
+        # If RECIPE.TXT exists then verify that its our recipe id, otherwise abort.
+        EXISTINGID=$(cat RECIPE.TXT)
+        if [ "$RECIPEID" != "$(cat RECIPE.TXT)" ]; then
+            rhts-abort -t RECIPESET
+        fi
+    else
+        echo $RECIPEID > RECIPE.TXT
+    fi
+}
+
 MOTD()
 {
     FILE=/etc/motd
@@ -63,13 +76,6 @@ SYSLOGLVL()
     # Configure a default log level so we can send our own messages to console
     echo "local2.info      /dev/console" >> /etc/syslog.conf
     /sbin/service syslog restart
-}
-
-KA()
-{
-    wget http://jenner.boston.redhat.com/ka/ka-client.noarch.rpm
-    rpm -i ka-client.noarch.rpm
-    /usr/share/ka-client/bin/ka-results
 }
 
 SysReport ()
@@ -256,6 +262,8 @@ echo "***** Start of Install test *****" > $OUTPUTFILE
 
 FILEAREA=/mnt/testarea
 /bin/dmesg > $FILEAREA/boot.messages
+
+CHECKRECIPE 
 
 MOTD
 
