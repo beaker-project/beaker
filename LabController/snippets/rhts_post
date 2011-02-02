@@ -129,6 +129,11 @@ yum -y --disablerepo=* --enablerepo=rhts-noarch \
                        --enablerepo=distro* \
                        --enablerepo=customrepo*  install yum-utils
 
+# Record recipeid in /root/RECIPE.TXT if defined
+#if $getVar('recipeid','') != ''
+echo $recipeid >/root/RECIPE.TXT
+#end if
+
 # Get the RHTS job
 #if $getVar('runtest_url','') != ''
 wget -O /mnt/tests/runtests.sh http://$rhts_server/testlogs/$runtest_url
