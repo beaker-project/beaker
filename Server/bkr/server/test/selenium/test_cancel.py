@@ -8,18 +8,20 @@ from turbogears.database import session
 class Cancel(bkr.server.test.selenium.SeleniumTestCase):
 
     def setUp(self):
-        self.job = data_setup.create_job()
+        self.password = 'password'
+        self.user = data_setup.create_user(password=self.password)
+        self.job = data_setup.create_job(owner=self.user)
         session.flush()
         self.selenium = self.get_selenium()
         self.selenium.start()
 
     def test_cancel_recipeset(self):
         sel = self.selenium
-        self.login()
+        self.login(user=self.user, password=self.password)
         sel.open('jobs/%s' % self.job.id)
         sel.wait_for_page_to_load("30000")
         #sel.click("(//a[text()='Cancel'])[last()]")
-        sel.click("//div[@id='fedora-content']/div[3]/div[1]/div/table/tbody/tr/td[7]/div/a[1]")
+        sel.click("//div[@id='fedora-content']/div[3]/div[1]/div/table/tbody/tr/td[7]/div/a[2]")
         sel.wait_for_page_to_load("30000")
         sel.click("//input[@value='Yes']")
         sel.wait_for_page_to_load("30000")

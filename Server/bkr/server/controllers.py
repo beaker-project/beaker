@@ -325,7 +325,7 @@ class Root(RPCRoot):
         action = 'save_data',
         submit_text = _(u'Change'),
     )  
-  
+
     system_form = SystemForm()
     power_form = PowerForm(name='power')
     labinfo_form = LabInfoForm(name='labinfo')

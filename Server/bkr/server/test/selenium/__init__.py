@@ -88,7 +88,7 @@ class SeleniumTestCase(unittest.TestCase):
             try:
                 sel.click("link=Login")
             except Exception, e:
-                raise BX(_(e))
+                raise BX(_(unicode(e)))
             sel.wait_for_page_to_load("30000")
             sel.type("user_name", user)
             sel.type("password", password)

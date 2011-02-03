@@ -16,10 +16,7 @@
     </script>
    </span> 
    <td class="title"><b>Action</b></td>
-   <td class="value">${recipeset.action_link}</td>
-  </tr>
-  <tr py:if="recipeset.deleted is not None">
-  <td colspan='7' align='center'><msg class='warn'>Recipe and Task logs have been deleted: ${recipeset.deleted}</msg> </td>
+   <td class="value">${action_widget.display(recipeset)}</td>
   </tr>
  </table>
 </div>
