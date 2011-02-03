@@ -1,0 +1,315 @@
+.TH "bkr workflow-xslt" "8" "" "David Sommerseth" "Beaker"
+.SH "NAME"
+bkr workflow\-xslt \- XSLT based Beaker job generator
+.SH "SYNOPSIS"
+.B bkr workflow\-xslt
+[beaker args] [global job args] [job specific]
+.br
+.B Beaker arguments:
+.br
+.RI "[\-h | \-\-help]"
+.RI "[--username=<USERNAME>]"
+.RI "[--password=<PASSWORD>]"
+.RI "[\-\-defaults <FILENAME>]"
+.RI "[\-\-profile <PROFILE\-NAME>]"
+.RI "[\-\-job\-xml <FILENAME>]"
+.RI "[\-\-dry\-run]"
+.RI "[\-\-wait]"
+.br
+.B Global options:
+.br
+.RI "[\-\-xslt\-override=<FILENAME>]"
+.RI "[\-X <NAME> | \-\-xslt\-name=<NAME>]"
+.RI "[\-W <TEXT> | \-\-whiteboard=<TEXT>]"
+.RI "[\-\-save\-xml=<FILENAME>]"
+.RI "[\-\-save\-internal\-xml=<FILENAME>]"
+.br
+.B Job config specific options:
+.br
+These options are defined in the Job Configuration XML, and will be described with
+.B \-\-help
+.SH "DESCRIPTION"
+This program will use a Job Configuration XML file which defines variables useful in a kernel workflow.  It will use this information to process the generate a Beaker job XML document, as defined in the configured XSLT files.
+.SH "BEAKER ARGUMENTS"
+It is important that the arguments in this section comes before any other options.  These arguments define how the rest of the arguments should be processed and their default values.
+.TP
+.B \-\-username=<USERNAME>  \-\-password=<PASSWORD>
+Which username and password to use for submitting jobs to the Beaker scheduler.  This is not needed if using Kerberos authentication.
+.TP
+.B \-\-defaults=<FILENAME>
+Adds more default values in addition to what may be configured in
+.B ~/.beaker\-client/bks\-defaults
+and
+.B ./bks\-defaults
+.TP
+.B \-\-profile=<PROFILE\-NAME>
+The defaults files can be configured with different profiles for the same Job XML file.  This argument will define which profile set to use for default values.
+.TP
+.B \-\-job\-xml <FILENAME>
+Defines which Job XML Configuration file to load.  This argument is mandatory, unless configured in a defaults file.
+.TP
+.B \-\-dry\-run
+When this option is used, the job will not be sent to the Beaker scheduler at all.  If you don't use
+.B \-\-save-xml
+or
+.B \-\-save-internal-xml
+the generated Beaker job XML will be dumped to stdout.
+.TP
+.B \-\-wait
+This will cause the
+.B bkr workflow\-xslt
+operation to wait for the Beaker job to complete before exiting.
+.SH "GLOBAL JOB ARGUMENTS"
+The global options are specific to the
+.B bkr workflow\-xslt
+module, and will use the defaults as defined in the
+.B SETTINGS ARGUMENTS
+.  Short arguments may be overrided by the Job XML definition.
+.br
+.TP
+.B \-\-xslt\-override=<FILENAME>
+This will override the configured XSLT file defined in the Job Configuration.
+.TP
+.B \-X <NAME>, \-\-xslt\-name=<NAME>
+The Job Configuration can have several XSLT templates configured.  This option will define which XSLT to use.  If this option is not set, it will use the XSLT template which has no name configured.
+.TP
+.B \-W <TEXT>, \-\-whiteboard=<TEXT>
+Adds the given TEXT as a text for the Beaker job whiteboard.
+.TP
+.B \-\-save\-xml=<FILENAME>
+Saves the generated Beaker Job XML to the given FILENAME.
+.TP
+.B \-\-save\-internal\-xml=<FILENAME>
+Saves the internal XML document which is passed to the XSLT processor to the given FILENAME.  This is useful during debugging.
+.TP
+.SH "JOB XML CONFIGURATION"
+.LP
+A Job XML Configuration is needed to be able to generate XML files to the Beaker scheduler .  The purpose of the Job XML Configuration is to define which parameters and variables which are needed for the XSLT processing to work.  This configuration will also define parts of the XML document being sent to the XSLT processor.  This configuration file is also an XML document.
+.LP
+It will not be explained how to write the needed XSLT documents in this manual.
+.LP
+.B The structure
+    <JobConfig>
+        <name>{Descriptive name of the job configuration}</name>
+        <xslt>{Default XSLT file}</xslt>
+        [<xslt name="variant2">{Named XSLT file}</xslt>]
+        [...more <xslt/> tags...]
+        <arguments>
+            <arg section="recipe" type="string" [optional="1"]>
+                <name short="a">{long argument}</name>
+                <tag type="{tagtype}">{XML tag name}</tag>
+                [<default>{default value}</default>]
+                <description>{Argument description</description>
+                <metavar>{Descriptive value substitution<metavar>
+            </arg>
+            [...more <arg/> tags...]
+        </arguments>
+    </JobConfig>
+.LP
+.B Tag descriptions
+.TP
+.B <JobConfig/>
+The XML root node must be a <JobConfig/> tag.
+.TP
+.B <name/>
+The first <name/&gt in <JobConfig/> is a plain and short string describing the purpose of this Job Configuration.
+.TP
+.B <xslt [name="{XSLT\-NAME}"]/>
+This tag defines which XSLT templates this Job Configuration depends on.  It must be at least one <xslt/> present.  If no
+.B name
+attribute exists, it is defined as the default XSLT file.  When the
+.B name
+attribute is set, this XSLT file is used when using the
+.B \-\-xslt\-name
+option.
+.TP
+.B <arguments/>
+All variable options the defined XSLT template needs must be configured in separate <arg/> tags inside this tag.
+.TP
+.B <arg section="recipe" type="{string}">
+Each option individually is defined by <arg/> tags.  The
+.B section
+and
+.B type
+attributes are mandatory.  Currently only the
+.B recipe
+section is supported.  The
+.B type
+attribute defines the type of argument.  Only
+.B string
+is currently supported.  The
+.B optional
+attribute is optional.  If set to
+.B 1
+it will make this argument purely optional.  The default is to require the argument.
+.TP
+.B <name short="{short arg}"/>
+The <name/&gt defines the short and long option names.  The
+.B short
+attribute is mandatory and can only be one character.  If the same argument name is defined several times, the last defined argument will override all other conflicting arguments.
+.TP
+.B <tag type="{attribute|value}" [attrname="{Attribute name}"]/>
+This tag defines which XML tag name the internal XML tag the option value will be stored under.  The
+.B type
+attribute is mandatory and can be either
+.B attribute
+or
+.B value
+.  When set to
+.B value
+the option value given at the command line of
+.B bkr workflow\-xslt
+will be embraced by the defined tag name.  If
+.B type
+is set to
+.B attribute
+the option value from the command line will be placed as an attribute value to the defined XML tag name.  When using
+.B attribute
+the
+.B attrname
+attribute is mandatory.  This attribute defines the attribute name to be used in the internal XML.
+.TP
+.B <default/>
+This tag is optional.  It will set a default value if this option is not used on the command line.
+.TP
+.B <description/>
+This tag is used for the
+.B \-\-help
+screen, describing the command line option to
+.B bkr workflow\-xslt
+.
+.TP
+.B <metavar/>
+This is used for the
+.B \-\-help
+screen as well.  This is used as a substitute for the variable contents, purely for.  To make it obvious, it is recommended to put use capital letters.
+.SH "EXAMPLE"
+.LP
+Save the contents below as
+.B example\-job.xml
+   <?xml version="1.0"?>
+   <jobConfig>
+     <name>Example Job</name>
+     <xslt>example.xsl</xslt>
+     <arguments>
+       <arg section="recipe" type="string">
+         <name short="i">id</name>
+         <metavar>INTEGER</metavar>
+         <tag type="attribute" attrname="version">name</tag>
+         <description>Unique numeric ID</description>
+       </arg>
+       <arg section="recipe" type="string">
+         <name short="n">name</name>
+         <metavar>FULL\-NAME</metavar>
+         <tag type="value">name</tag>
+         <description>Full name</description>
+       </arg>
+       <arg section="recipe" type="string" optional="1">
+         <name short="g">group</name>
+         <metavar>GROUP\-NAME</metavar>
+         <tag type="attribute" attrname="group">name</tag>
+         <description>Group identifier</description>
+       </arg>
+     </arguments>
+   </jobConfig>
+.LP
+Save this dummy XSLT file as
+.B example.xsl
+   <?xml version="1.0"?>
+   <xsl:stylesheet version="1.0"
+           xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+      <xsl:output method="xml" version="1.0"
+              encoding="UTF\-8" indent="yes"/>
+   </xsl:stylesheet>
+.LP
+Run from a terminal the following command:
+   $ bkr workflow\-xslt \-\-dry\-run \-\-job-xml example\-job.xml \\
+         \-\-save\-internal\-xml example.xml \\
+         \-i 99 \-n "Example" \-g "Group1"
+.br
+   \-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-
+.br
+   Generating Beaker XML
+      Job config:    example\-job.xml
+      XSLT template: example.xsl
+      Job name:      Example Job
+      Whiteboard:    None
+      Job arguments:
+         \- group: Group1
+         \- id: 99
+         \- name: Example
+.br
+   \-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-
+   $ cat example.xml
+   <?xml version="1.0" encoding="UTF\-8"?>
+   <submit>
+      <whiteboard/>
+      <recipe>
+         <name group="Group1" version="99">Example</name>
+      </recipe>
+   </submit>
+   $
+.LP
+.SH "SETTING DEFAULTS"
+It is possible to define defaults in a separate file.  This is useful if you often use the same Job Configuration or have other arguments which do not change so often.  Two files are attempted read upon startup:
+.B ~/.beaker_client/bks\-defaults
+and
+.B ./bks\-defaults
+.LP
+The bks\-defaults file is an INI\-styled configuration file.  It requires a
+.B [defaults]
+section which has one parameter,
+.B jobxml
+.LP
+You can set individual default values depending on which Job XML Configuration you are using.  Use the Job XML Configuration filename as the section name.  The parameters uses the long options of the Job Configuration to define the default values.
+.LP
+.B EXAMPLE
+.br
+[defaults]
+.br
+jobxml: example\-job.xml
+.LP
+[example\-job.xml]
+.br
+group: Group1
+.br
+.LP
+.B DEFAULT PROFILES
+.br
+It is possible to define several sets of default values for the same Job XML Configuration.  This is used by appending
+.B :<profilename>
+to the section name.  Notice the 'colon'.
+.LP
+.B EXAMPLE
+.br
+This builds upon the example above
+.LP
+[example\-job.xml:setup2]
+.br
+group: Group2b
+.br
+.LP
+To run the example in the
+.B EXAMPLE
+section above, execute:
+.LP
+   $ bkr workflow\-xslt \-\-dry\-run \-\-save\-internal\-xml example.xml \\
+                         \-i 99 \-n "Example"
+
+This will use the value
+.B Group1
+as a default value in the
+.B group
+attribute.  If you instead do this:
+.LP
+   $ bkr workflow\-xslt \-\-dry\-run \fB\-\-profile setup2\fR \\
+                         \-\-save\-internal\-xml example.xml \\
+                         \-i 99 \-n "Example"
+
+the generated example.xml will have the value
+.B Group2b
+as a default value in the
+.B group
+attribute.
+.SH "AUTHOR"
+Written by David Sommerseth <davids@redhat.com>
