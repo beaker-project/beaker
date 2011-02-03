@@ -1150,7 +1150,7 @@ class TasksWidget(CompoundWidget):
     template = "bkr.server.templates.tasks_widget"
     params = ['tasks', 'hidden','action']
     member_widgets = ['link']
-    action = './do_search'
+    action = '/tasks/do_search'
     link = LinkRemoteFunction(name='link', before='task_search_before()', on_complete='task_search_complete()')
 
 class RecipeTasksWidget(TasksWidget):
