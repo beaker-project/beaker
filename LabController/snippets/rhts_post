@@ -167,5 +167,6 @@ chkconfig --add beah-fwd-backend
 #Add test user account
 useradd --password '\$6\$oIW3o2Mr\$XbWZKaM7nA.cQqudfDJScupXOia5h1u517t6Htx/Q/MgXm82Pc/OcytatTeI4ULNWOMJzvpCigWiL4xKP9PX4.' test
 $SNIPPET('post_koan')
+$SNIPPET('lab_env')
 $kickstart_done
 $SNIPPET('post_s390_reboot')
