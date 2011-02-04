@@ -20,6 +20,7 @@ from turbogears import controllers, expose, flash, widgets, validate, error_hand
 from turbogears import identity, redirect
 from cherrypy import request, response
 from kid import Element
+from sqlalchemy.exceptions import InvalidRequestError
 from bkr.server.widgets import myPaginateDataGrid, myDataGrid, AckPanel, JobQuickSearch, \
     RecipeWidget,RecipeTasksWidget, RecipeSetWidget, PriorityWidget, RetentionTagWidget, \
     SearchBar, JobWhiteboard, ProductWidget
@@ -214,18 +215,22 @@ class Jobs(RPCRoot):
     # XMLRPC method
     @cherrypy.expose
     @identity.require(identity.not_anonymous())
-    def upload(self, jobxml):
+    def upload(self, jobxml, ignore_missing_tasks=False):
         """
         Queues a new job.
 
         :param jobxml: XML description of job to be queued
         :type jobxml: string
+        :param ignore_missing_tasks: pass True for this parameter to cause 
+            unknown tasks to be silently discarded (default is False)
+        :type ignore_missing_tasks: bool
         """
         session.begin()
         xml = xmltramp.parse(jobxml)
         xmljob = XmlJob(xml)
         try:
-            job = self.process_xmljob(xmljob,identity.current.user)
+            job = self.process_xmljob(xmljob,identity.current.user,
+                    ignore_missing_tasks=ignore_missing_tasks)
             session.commit()
         except BeakerException, err:
             session.rollback()
@@ -306,7 +311,7 @@ class Jobs(RPCRoot):
         )
 
 
-    def _handle_recipe_set(self, xmlrecipeSet, user, *args, **kw):
+    def _handle_recipe_set(self, xmlrecipeSet, user, ignore_missing_tasks=False):
         """
         Handles the processing of recipesets into DB entries from their xml
         """
@@ -327,7 +332,8 @@ class Jobs(RPCRoot):
             recipeSet.priority = TaskPriority.default_priority() 
 
         for xmlrecipe in xmlrecipeSet.iter_recipes():
-            recipe = self.handleRecipe(xmlrecipe, user)
+            recipe = self.handleRecipe(xmlrecipe, user,
+                    ignore_missing_tasks=ignore_missing_tasks)
             recipe.ttasks = len(recipe.tasks)
             recipeSet.ttasks += recipe.ttasks
             recipeSet.recipes.append(recipe)
@@ -370,7 +376,7 @@ class Jobs(RPCRoot):
         else:
             return tag, None
 
-    def process_xmljob(self, xmljob, user):
+    def process_xmljob(self, xmljob, user, ignore_missing_tasks=False):
 
         job_retention = xmljob.get_xml_attr('retention_tag',unicode,None)
         job_product = xmljob.get_xml_attr('product',unicode,None)
@@ -381,7 +387,8 @@ class Jobs(RPCRoot):
 
         job.cc.extend(xmljob.iter_cc())
         for xmlrecipeSet in xmljob.iter_recipeSets():
-            recipe_set = self._handle_recipe_set(xmlrecipeSet, user)
+            recipe_set = self._handle_recipe_set(xmlrecipeSet, user,
+                    ignore_missing_tasks=ignore_missing_tasks)
             job.recipesets.append(recipe_set)
             job.ttasks += recipe_set.ttasks
 
@@ -423,11 +430,12 @@ class Jobs(RPCRoot):
             job_search.append_results(search['value'],col,search['operation'],**kw)
         return job_search.return_results()
 
-    def handleRecipe(self, xmlrecipe, user, guest=False):
+    def handleRecipe(self, xmlrecipe, user, guest=False, ignore_missing_tasks=False):
         if not guest:
             recipe = MachineRecipe(ttasks=0)
             for xmlguest in xmlrecipe.iter_guests():
-                guestrecipe = self.handleRecipe(xmlguest, user, guest=True)
+                guestrecipe = self.handleRecipe(xmlguest, user, guest=True,
+                        ignore_missing_tasks=ignore_missing_tasks)
                 recipe.guests.append(guestrecipe)
         else:
             recipe = GuestRecipe(ttasks=0)
@@ -467,8 +475,11 @@ class Jobs(RPCRoot):
         for xmltask in xmlrecipe.iter_tasks():
             try:
                 task = Task.by_name(xmltask.name)
-            except:
-                raise BX(_('Invalid Task: %s' % xmltask.name))
+            except InvalidRequestError, e:
+                if ignore_missing_tasks:
+                    continue
+                else:
+                    raise BX(_('Invalid Task: %s' % xmltask.name))
             if not recipe.is_task_applicable(task):
                 continue
             recipetask = RecipeTask()

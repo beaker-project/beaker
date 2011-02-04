@@ -39,8 +39,10 @@ class Job_Submit(BeakerCommand):
             action="store_true",
             help="wait on job completion",
         )
-
-
+        self.parser.add_option(
+            '--ignore-missing-tasks', default=False, action='store_true',
+            help='silently discard tasks which do not exist on the scheduler',
+        )
 
     def run(self, *args, **kwargs):
         username = kwargs.pop("username", None)
@@ -49,6 +51,7 @@ class Job_Submit(BeakerCommand):
         debug   = kwargs.pop("debug", False)
         dryrun  = kwargs.pop("dryrun", False)
         wait  = kwargs.pop("wait", False)
+        ignore_missing_tasks = kwargs.pop('ignore_missing_tasks', False)
 
         jobs = args
         job_schema = lxml.etree.RelaxNG(lxml.etree.parse(
@@ -72,7 +75,7 @@ class Job_Submit(BeakerCommand):
                 print >>sys.stderr, 'WARNING: job xml validation failed: %s' % e
             if not dryrun:
                 try:
-                    submitted_jobs.append(self.hub.jobs.upload(jobxml))
+                    submitted_jobs.append(self.hub.jobs.upload(jobxml, ignore_missing_tasks))
                 except Exception, ex:
                     failed = True
                     print ex
