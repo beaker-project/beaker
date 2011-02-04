@@ -111,9 +111,9 @@ $(document).ready(function() {
    <td class="value">${recipe.arch}</td>
    <td class="title"><b>Family</b></td>
    <td class="value">${recipe.distro.osversion}</td>
-
-   <td py:if="recipe.action_link is not None" class="title"><b>Action(s)</b></td>
-   <td py:if="recipe.action_link is not None" class="value">${recipe.action_link}</td>
+    <?py action_ = action_widget(task=recipe)?>
+   <td py:if="action_" class="title"><b>Action(s)</b></td>
+   <td py:if="action_" class="value">${action_}</td>
   </tr>
   <tr>
    <td class="title"><b>Queued</b></td>

@@ -24,6 +24,7 @@ from bkr.server.widgets import myPaginateDataGrid
 from bkr.server.widgets import RecipeWidget
 from bkr.server.widgets import RecipeTasksWidget
 from bkr.server.widgets import SearchBar
+from bkr.server.widgets import RecipeActionWidget
 from bkr.server import search_utility
 from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.helpers import *
@@ -44,7 +45,7 @@ log = logging.getLogger(__name__)
 class Recipes(RPCRoot):
     # For XMLRPC methods in this class.
     exposed = True
-
+    action_widget = RecipeActionWidget()
     hidden_id = widgets.HiddenField(name='id')
     confirm = widgets.Label(name='confirm', default="Are you sure you want to cancel?")
     message = widgets.TextArea(name='msg', label=_(u'Reason?'), help=_(u'Optional'))
@@ -278,6 +279,7 @@ class Recipes(RPCRoot):
                 action='./mine', *args, **kw)
 
     def recipes(self,recipes,action='.',*args, **kw): 
+        recipes = recipes.join(['recipeset','job']).filter(and_(Job.deleted == None, Job.to_delete == None))
         recipes_return = self._recipes(recipes,**kw)
         searchvalue = None
         search_options = {}
@@ -298,7 +300,7 @@ class Recipes(RPCRoot):
 		     widgets.PaginateDataGrid.Column(name='progress', getter=lambda x: x.progress_bar, title='Progress', options=dict(sortable=False)),
 		     widgets.PaginateDataGrid.Column(name='status.status', getter=lambda x:x.status, title='Status', options=dict(sortable=True)),
 		     widgets.PaginateDataGrid.Column(name='result.result', getter=lambda x:x.result, title='Result', options=dict(sortable=True)),
-                     widgets.PaginateDataGrid.Column(name='action', getter=lambda x:x.action_link, title='Action', options=dict(sortable=False)),
+                     widgets.PaginateDataGrid.Column(name='action', getter=lambda x:self.action_widget(task=x), title='Action', options=dict(sortable=False)),
                     ])
 
         search_bar = SearchBar(name='recipesearch',
@@ -323,6 +325,9 @@ class Recipes(RPCRoot):
             recipe = Recipe.by_id(id)
         except InvalidRequestError:
             flash(_(u"Invalid recipe id %s" % id))
+            redirect(".")
+        if recipe.is_deleted():
+            flash(_(u"Invalid %s, has been deleted" % recipe.t_id))
             redirect(".")
         return dict(title   = 'Recipe',
                     recipe_widget        = self.recipe_widget,

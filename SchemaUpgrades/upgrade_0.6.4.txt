@@ -1,0 +1,6 @@
+Please run this SQL, for ticket bz660480 
+use beaker;
+
+ALTER TABLE job ADD COLUMN (`deleted` datetime default NULL);
+ALTER TABLE job ADD COLUMN (`to_delete` datetime default NULL);
+ALTER TABLE recipe_set DROP COLUMN `delete_time`;

@@ -1,4 +1,4 @@
-# Logan - Logan is the scheduling piece of the Beaker project
+# - Logan is the scheduling piece of the Beaker project
 #
 # Copyright (C) 2008 bpeck@redhat.com
 #
@@ -23,7 +23,7 @@ from kid import Element
 from sqlalchemy.exceptions import InvalidRequestError
 from bkr.server.widgets import myPaginateDataGrid, myDataGrid, AckPanel, JobQuickSearch, \
     RecipeWidget,RecipeTasksWidget, RecipeSetWidget, PriorityWidget, RetentionTagWidget, \
-    SearchBar, JobWhiteboard, ProductWidget
+    SearchBar, JobWhiteboard, ProductWidget, JobActionWidget
 
 from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.helpers import *
@@ -68,6 +68,7 @@ class JobForm(widgets.Form):
 class Jobs(RPCRoot):
     # For XMLRPC methods in this class.
     exposed = True 
+    action_widget = JobActionWidget()
     recipeset_widget = RecipeSetWidget()
     recipe_widget = RecipeWidget()
     priority_widget = PriorityWidget() #FIXME I have a feeling we don't need this as the RecipeSet widget declares an instance of it
@@ -119,35 +120,36 @@ class Jobs(RPCRoot):
             value = kw,
         )
 
-    def _list(self, tags, days_complete_for, family, product, **kw):
-        query = None
-        if days_complete_for:
-            #This takes the same kw names as timedelta
-            query = RecipeSet.complete_delta({'days':int(days_complete_for)})
-        if family:
-            try:
-                OSMajor.by_name(family)
-            except InvalidRequestError, e:
-                if '%s' % e == 'No rows returned for one()':
-                    raise BX(_('Family is invalid'))
-            query = RecipeSet.has_family(family,query)
-        if tags:
-            if len(tags) == 1:
-                tags = tags[0]
-            try:
-                query = RecipeSet.by_tag(tags,query)
-            except InvalidRequestError, e:
-                if '%s' % e == 'No rows returned for one()':
-                    raise BX(_("Tag is invalid"))
-        if product:
-            query = RecipeSet.by_product(product,query)
-        return query.all()
+    @expose()
+    def delete_job(self, t_id, *args, **kw):
+        to_return = {'t_id' : t_id}
+        try:
+            job = TaskBase.get_by_t_id(t_id)
+        except BeakerException, e:
+            log.exception('Invalid t_id:%s' % t_id)
+            to_return['success'] = False
+            to_return['err_msg'] = str(e)  
+            return to_return
+
+        if not isinstance(job,Job):
+            to_return['success'] = False
+            to_return['err_msg'] = 'Incorrect task type passed %s' % t_id  
+
+        try:
+            deletable_job = Job.find_jobs_for_delete(jobs=[t_id])
+            for j in deletable_job:
+                j.soft_delete()
+            to_return['success'] = True
+        except Exception:
+            to_return['success'] = False
+            to_return['err_msg'] = 'Could not delete task %s at this time, please notify your administrator.' % t_id
+       
+        return to_return
 
     @cherrypy.expose
     def list(self, tags, days_complete_for, family, product, **kw):
         """
-        Lists recipe sets, filtered by the given criteria.
-
+        Lists Jobs, filtered by the given criteria.
         :param tags: limit to recipe sets which have one of these retention tags
         :type tags: string or array of strings
         :param days_complete_for: limit to recipe sets which completed at least this many days ago
@@ -156,61 +158,64 @@ class Jobs(RPCRoot):
         :type family: string
 
         Returns a two-element array. The first element is an array of recipe 
-        set IDs of the form ``'RS:123'``, suitable to be passed to the 
+        set IDs of the form ``'J:123'``, suitable to be passed to the 
         :meth:`jobs.delete_jobs` method. The second element is a human-readable 
-        count of the number of recipe sets matched.
+        count of the number of Jobs matched.
         """
-        try:
-            recipesets = self._list(tags, days_complete_for, family, product, **kw)
-        except ValueError, e:
-            return 'Invalid arguments: %s' % e
-        return_value = [rs.t_id for rs in recipesets]
+        jobs = Job.find_jobs(tag=tags, complete_days=days_complete_for, family=family, product=product, **kw)
+        return_value = [j.t_id for j in jobs]
         return return_value,'Count: %s' % len(return_value)
 
-    @cherrypy.expose
-    @identity.require(identity.in_group("admin"))
-    def delete_jobs(self, jobs=None, tag=None, complete_days=None, family=None, dryrun=False,**kw):
-        """
-        Deletes log data associated with jobs. Returns a human-readable 
-        description of files which have been deleted, and any errors 
-        encountered.
 
-        To select jobs by id, pass an array for the *jobs* argument. Elements 
-        of the array must be strings of the form ``'J:123'`` or ``'RS:123'``, 
-        to select jobs or recipe sets respectively.
-        Alternatively, pass some combination of the *tag*, *complete_days*, or 
-        *family* arguments to select jobs for deletion. These arguments behave 
+    @cherrypy.expose
+    @identity.require(identity.not_anonymous())
+    def delete_jobs(self, jobs=None, tag=None, complete_days=None, family=None, dryrun=False, product=None):
+        """
+        delete_jobs will mark the job to be deleted if user is non admin,
+        otherwise will perform the actual delete.
+
+        To select jobs by id, pass an array for the *jobs* argument. Elements
+        of the array must be strings of the form ``'J:123'``.
+        Alternatively, pass some combination of the *tag*, *complete_days*, or
+        *family* arguments to select jobs for deletion. These arguments behave
         as per the :meth:`jobs.list` method.
 
-        If *dryrun* is True, deletions will be reported but nothing will be 
-        deleted from the file system.
+        If *dryrun* is True, deletions will be reported but nothing will be
+        modified
 
-        At present, only Beaker administrators (in the 'admin' group) are 
-        permitted to call this method.
+        At present, only non admins can call this feature. Admin functionality
+        will be added to when we are using a message bus.
         """
-        deleted_paths = []
-        errors = []
-        if jobs:
-            for j in jobs:
-                type,id = j.split(":", 1)
-                try:
-                    model_class = self.job_type[type]
-                except KeyError, e:
-                    return 'Invalid Job type passed:%s' % j
-                try:
-                    model_obj = model_class.by_id(id)
-                except InvalidRequestError, e:
-                    return 'Invalid id passed: %s:%s' % (type,id)
-                newly_deleted_paths, new_errors = model_obj.delete(dryrun)
-                deleted_paths.extend(newly_deleted_paths)
-                errors.extend(new_errors)
-        else:
-            recipesets = self._list(tag, complete_days,family, **kw)
-            for rs in recipesets:
-                newly_deleted_paths, new_errors = rs.delete(dryrun)
-                deleted_paths.extend(newly_deleted_paths)
-                errors.extend(new_errors)
-        return 'Deleted paths:%s' % ','.join(deleted_paths), ' Errors: %s' % ','.join(errors)
+        #FIXME this should not barf no matter what is thrown at it
+        if identity.in_group('admin'):
+            return 'The admin deletion feature is currently not implemented'
+            # Waiting until we have a message bus, we will then push delete notifications over this
+            #newly_deleted_paths, new_errors = job.delete(dryrun)
+            #deleted_paths.extend(newly_deleted_paths)
+            #errors.extend(new_errors)
+            #return 'Deleted paths:%s' % ','.join(deleted_paths), ' Errors: %s' % ','.join(errors)
+
+        jobs = jobs or []
+        try:
+            try:
+                session.begin()
+                jobs_for_delete = Job.find_jobs_for_delete(jobs=jobs, tag=tag, complete_days=complete_days, family=family, product=product) or []
+                hidden_jobs = []
+                for job in jobs_for_delete:
+                    job.soft_delete()
+                    hidden_jobs.append(job.t_id)
+                if dryrun:
+                    session.rollback()
+                else:
+                    session.commit()
+            except Exception, e:
+                session.rollback()
+                err_msg = 'Error when user tried to delete jobs'
+                log.exception(err_msg)
+                return err_msg
+        finally:
+            session.close()
+        return 'Jobs deleted: %s' % hidden_jobs
 
     # XMLRPC method
     @cherrypy.expose
@@ -567,6 +572,7 @@ class Jobs(RPCRoot):
                 title=u'My Jobs', *args, **kw)
  
     def jobs(self,jobs,action='.', title=u'Jobs', *args, **kw):
+        jobs = jobs.filter(and_(Job.deleted == None, Job.to_delete == None))
         jobs_return = self._jobs(jobs,**kw) 
         searchvalue = None
         search_options = {}
@@ -577,7 +583,7 @@ class Jobs(RPCRoot):
                 searchvalue = jobs_return['searchvalue']
             if 'simplesearch' in jobs_return:
                 search_options['simplesearch'] = jobs_return['simplesearch']
-
+ 
         jobs_grid = myPaginateDataGrid(fields=[
 		     widgets.PaginateDataGrid.Column(name='id', getter=lambda x:make_link(url = './%s' % x.id, text = x.t_id), title='ID', options=dict(sortable=True)),
 		     widgets.PaginateDataGrid.Column(name='whiteboard', getter=lambda x:x.whiteboard, title='Whiteboard', options=dict(sortable=True)),
@@ -585,7 +591,7 @@ class Jobs(RPCRoot):
                      widgets.PaginateDataGrid.Column(name='progress', getter=lambda x: x.progress_bar, title='Progress', options=dict(sortable=False)),
 		     widgets.PaginateDataGrid.Column(name='status.status', getter=lambda x:x.status, title='Status', options=dict(sortable=True)),
 		     widgets.PaginateDataGrid.Column(name='result.result', getter=lambda x:x.result, title='Result', options=dict(sortable=True)),
-		     widgets.PaginateDataGrid.Column(name='action', getter=lambda x:x.action_link, title='Action', options=dict(sortable=False)),
+		     widgets.PaginateDataGrid.Column(name='action', getter=lambda x: self.action_widget.display(task=x, type_='joblist') , title='Action', options=dict(sortable=False)),
                     ])
 
         
@@ -650,6 +656,7 @@ class Jobs(RPCRoot):
                          confirm = 'really cancel job %s?' % id),
         )
 
+
     @identity.require(identity.not_anonymous())
     @expose(format='json')
     def update(self, id, **kw):
@@ -686,13 +693,17 @@ class Jobs(RPCRoot):
         return returns
 
     @expose(template="bkr.server.templates.job") 
-    def default(self, id): 
+    def default(self, id):
         try:
             job = Job.by_id(id)
         except InvalidRequestError:
             flash(_(u"Invalid job id %s" % id))
             redirect(".")
-    
+
+        if job.counts_as_deleted():
+            flash(_(u'Invalid %s, has been deleted' % job.t_id))
+            redirect(".")
+
         recipe_set_history = [RecipeSetActivity.query().with_parent(elem,"activity") for elem in job.recipesets]
         recipe_set_data = []
         for query in recipe_set_history:
@@ -710,22 +721,23 @@ class Jobs(RPCRoot):
                                widgets.DataGrid.Column(name='old_value', getter=lambda x: x.old_value, title='Old value', options=dict(sortable=True)),
                                widgets.DataGrid.Column(name='new_value', getter=lambda x: x.new_value, title='New value', options=dict(sortable=True)),])
 
-   
-        return dict(title   = 'Job',
-                    user                 = identity.current.user,   #I think there is a TG var to use in the template so we dont need to pass this ?
-                    priorities           = TaskPriority.query().all(), 
-                    hidden_id            = widgets.HiddenField(name='job_id',value=job.id),
-                    retentiontags        = RetentionTag.query().all(),
-                    product_widget       = self.product_widget,
-                    retention_tag_widget = self.retention_tag_widget,
-                    priority_widget      = self.priority_widget, 
-                    recipeset_widget     = self.recipeset_widget,
-                    job_history          = recipe_set_data,
-                    job_history_grid     = job_history_grid, 
-                    recipe_widget        = self.recipe_widget,
-                    recipe_tasks_widget  = self.recipe_tasks_widget,
-                    whiteboard_widget    = self.whiteboard_widget,
-                    job                  = job)
+        return_dict = dict(title = 'Job',
+                           redirect_job_delete = '/jobs/mine',
+                           recipeset_widget = self.recipeset_widget,
+                           recipe_widget = self.recipe_widget,
+                           hidden_id = widgets.HiddenField(name='job_id',value=job.id),
+                           job_history = recipe_set_data,
+                           job_history_grid = job_history_grid,
+                           whiteboard_widget = self.whiteboard_widget,
+                           action_widget = self.action_widget,
+                           job = job,
+                           product_widget = self.product_widget,
+                           retention_tag_widget = self.retention_tag_widget,
+                           #priorities = TaskPriority.query().all(), Don't think this is used?
+                           #retentiontags = RetentionTag.query().all(),  Don't think this is used?
+                           #priority_widget = self.priority_widget, Don't think this is used?
+                          )
+        return return_dict
 
 # for sphinx
 jobs = Jobs

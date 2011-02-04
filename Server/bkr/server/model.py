@@ -664,6 +664,8 @@ job_table = Table('job',metadata,
                 ForeignKey('task_result.id')),
         Column('status_id', Integer,
                 ForeignKey('task_status.id'), default=select([task_status_table.c.id], limit=1).where(task_status_table.c.status==u'New').correlate(None)),
+        Column('deleted', DateTime, default=None),
+        Column('to_delete', DateTime, default=None),
         # Total tasks
 	Column('ttasks', Integer, default=0),
         # Total Passing tasks
@@ -691,7 +693,6 @@ recipe_set_table = Table('recipe_set',metadata,
         Column('priority_id', Integer,
                 ForeignKey('task_priority.id'), default=select([task_priority_table.c.id], limit=1).where(task_priority_table.c.priority==u'Normal').correlate(None)),
         Column('queue_time',DateTime, nullable=False, default=datetime.utcnow),
-        Column('delete_time', DateTime, nullable=True),
         Column('result_id', Integer,
                 ForeignKey('task_result.id')),
         Column('status_id', Integer,
@@ -3544,6 +3545,29 @@ class LogRecipeTaskResult(Log):
     type = 'E'
 
 class TaskBase(MappedObject):
+    t_id_types = dict(T = 'RecipeTask',
+                    R = 'Recipe',
+                    RS = 'RecipeSet',
+                    J = 'Job')
+
+    @classmethod
+    def get_by_t_id(cls, t_id, *args, **kw):
+        """
+        Return an TaskBase object by it's shorthand i.e 'J:xx, RS:xx'
+        """
+        task_type,id = t_id.split(":")
+        try:
+            class_str = cls.t_id_types[task_type]
+        except KeyError, e:
+            raise BeakerException(_('You have have specified an invalid task type:%s' % task_type))
+
+        class_ref = globals()[class_str]
+        try:
+            obj_ref = class_ref.by_id(id)
+        except InvalidRequestError, e:
+            raise BeakerException(_('%s is not a valid %s id' % (id, class_str)))
+
+        return obj_ref
 
     def is_finished(self):
         """
@@ -3567,9 +3591,6 @@ class TaskBase(MappedObject):
             return True
         else:
             return False 
-
-           
-        
 
     def is_failed(self):
         """ 
@@ -3612,20 +3633,6 @@ class TaskBase(MappedObject):
         return div
     progress_bar = property(progress_bar)
     
-    @property
-    def action_link(self):
-        """
-        Return action links depending on status
-        """
-        div = Element('div')
-        div.append(make_link(url = self.clone_link(),
-                        text = "Clone"))
-        if not self.is_finished():
-            div.append(Element('br'))
-            div.append(make_link(url = self.cancel_link(),
-                            text = "Cancel"))
-        return div
-
     def access_rights(self,user):
         if not user:
             return
@@ -3687,6 +3694,43 @@ class Job(TaskBase):
         return current_nacks 
 
     @classmethod
+    def complete_delta(cls, delta, query):
+        delta = timedelta(**delta)
+        if not query:
+            query = cls.query()
+        query = query.join(['recipesets','recipes']).filter(and_(Recipe.finish_time < datetime.utcnow() - delta,
+            cls.status_id.in_(TaskStatus.by_name(u'Completed').id,TaskStatus.by_name(u'Aborted').id,TaskStatus.by_name(u'Cancelled').id)))
+        return query
+
+    @classmethod
+    def has_family(cls, family, query=None, **kw):
+        if query is None:
+            query = cls.query()
+        query = query.join(['recipesets','recipes','distro','osversion','osmajor']).filter(OSMajor.osmajor == family).reset_joinpoint()
+        return query
+
+    @classmethod
+    def by_tag(cls, tag, query=None):
+        if query is None:
+            query = cls.query()
+        if type(tag) is list:
+            tag_query = cls.retention_tag_id.in_([RetentionTag.by_tag(unicode(t)).id for t in tag])
+        else:
+            tag_query = cls.retention_tag==RetentionTag.by_tag(unicode(tag))
+        
+        return query.filter(tag_query)
+
+    @classmethod
+    def by_product(cls, product, query=None):
+        if query is None:
+            query=cls.query()
+        if type(product) is list:
+            product_query = cls.product.in_(*[Product.by_name(p) for p in product])
+        else:
+            product_query = cls.product == Product.by_name(product)
+        return query.join('product').filter(product_query)
+
+    @classmethod
     def by_whiteboard(cls,desc):
         res = Job.query().filter_by(whiteboard = desc)
         return res
@@ -3745,17 +3789,110 @@ class Job(TaskBase):
         session.flush()
         return job
 
+    @classmethod
+    def find_jobs(cls, query=None, tag=None, complete_days=None, family=None, product=None, **kw):
+        if not query:
+            query = cls.query()
+        if complete_days:
+            #This takes the same kw names as timedelta
+            query = cls.complete_delta({'days':int(complete_days)}, query)
+        if family:
+            try:
+                OSMajor.by_name(family)
+            except InvalidRequestError, e:
+                if '%s' % e == 'No rows returned for one()':
+                    err_msg = _(u'Family is invalid: %s') % family
+                    log.exception(err_msg)
+                    raise BX(err_msg)
+
+            query =cls.has_family(family, query)
+        if tag:
+            if len(tag) == 1:
+                tag = tag[0]
+            try:
+                query = cls.by_tag(tag, query)
+            except InvalidRequestError, e:
+                if '%s' % e == 'No rows returned for one()':
+                    err_msg = _('Tag is invalid: %s') % tag
+                    log.exception(err_msg)
+                    raise BX(err_msg)
+
+        if product:
+            if len(product) == 1:
+                product = product[0]
+            try:
+                query = cls.by_product(product,query)
+            except InvalidRequestError, e:
+                if '%s' % e == 'No rows returned for one()':
+                    err_msg = _('Product is invalid: %s') % product
+                    log.exception(err_msg)
+                    raise BX(err_msg)
+
+        return query.all()
+
+    @classmethod
+    def find_jobs_for_delete(cls, **kw):
+        if kw['jobs']:
+            jobs = kw['jobs']
+            actual_jobs = []
+            for t_id in jobs:
+                type,id = t_id.split(":", 1)
+                actual_jobs.append(cls.by_id(id))
+            jobs = actual_jobs
+            jobs_to_delete = cls._delete_criteria(jobs=jobs)
+        else:
+            query = cls.query()
+            query = cls._delete_criteria(query=query)
+            kw['query'] = query
+            jobs_to_delete = cls.find_jobs(**kw)
+        return jobs_to_delete
+
+    @classmethod
+    def _delete_criteria(cls, jobs=None, query=None):
+        try:
+            admin = 'admin' in identity.current.user.groups
+        except AttributeError: #not logged in
+            err_msg = u'User not logged in'
+            log.exception(err_msg)
+            return err_msg
+
+        if not jobs and not query:
+            raise BeakerException('Need to pas either list of jobs or a query to _delete_criteria')
+        valid_jobs = []
+        if jobs:
+            for j in jobs:
+                try:
+                    user = identity.current.user
+                    is_owner = user == j.owner
+                except AttributeError, e: #not logged in
+                    is_owner = False
+                if j.is_finished() and not j.counts_as_deleted():
+                    if admin:
+                        valid_jobs.append(j)
+                    elif is_owner:
+                        valid_jobs.append(j)
+            return valid_jobs
+        elif query:
+            query = query.filter(cls.status_id.in_([TaskStatus.by_name('Completed').id, TaskStatus.by_name('Aborted').id, TaskStatus.by_name('Cancelled').id]))
+            query = query.filter(and_(Job.to_delete == None, Job.deleted == None))
+            if admin:
+                pass
+            else:
+                query = query.filter(Job.owner==identity.current.user)
+            return query
+
+    def counts_as_deleted(self):
+        return self.deleted or self.to_delete
+
     def requires_product(self):
         return self.retention_tag.requires_product()
 
-    def delete(self,dryrun, *args, **kw):
-        paths = []
-        errors = []
-        for rs in self.recipesets:
-            paths_to_del, new_errors = rs.delete(dryrun)
-            paths.extend(paths_to_del)
-            errors.extend(new_errors)
-        return paths, errors
+    def soft_delete(self, *args, **kw):
+        if self.deleted:
+            raise BeakerException(u'%s has already been deleted, cannot delete it again' % self.t_id)
+        if self.to_delete:
+            raise BeakerException(u'%s is already marked to delete' % self.t_id)
+        self.to_delete = datetime.utcnow()
 
     def clone_link(self):
         """ return link to clone this job
@@ -3766,6 +3903,11 @@ class Job(TaskBase):
         """ return link to cancel this job
         """
         return "/jobs/cancel?id=%s" % self.id
+
+    def is_owner(self,user):
+        if self.owner == user:
+            return True
+        return False
 
     def priority_settings(self, prefix, colspan='1'):
         span = Element('span')
@@ -3990,8 +4132,8 @@ class RetentionTag(BeakerTag):
             q = cls.query().filter(cls.tag.like('%%%s%%' % tag))
         else:
             q = cls.query().filter(cls.tag.like('%s%%' % tag))
-        return q 
-        
+        return q
+
     def __repr__(self, *args, **kw):
         return self.tag
 
@@ -4079,38 +4221,6 @@ class RecipeSet(TaskBase):
             return_node = job
         return return_node
 
-    def delete(self, dryrun, *args, **kw):
-        errors = []
-        paths = []
-        def _del_recipes():
-            for r in self.recipes:
-                try:
-                    recipe_to_del = Recipe.by_id(r.id)
-                    new_path = recipe_to_del.delete(dryrun)
-                    if new_path is not None:
-                        paths.append(new_path)
-                except Exception,  e:
-                   errors.append('%s:  %s' % (self.t_id,unicode(e)))
-
-        if self.deleted is not None:
-            return paths,errors
-
-        if not dryrun:
-            session.begin()
-            try:
-                _del_recipes()
-                if len(errors) == 0:
-                    self.deleted = datetime.utcnow()
-                    session.commit()
-                else:
-                    session.rollback()
-            except:
-                session.rollback()
-        else:
-            _del_recipes()
-
-        return paths,errors
-
     @classmethod
     def allowed_priorities_initial(cls,user):
         if not user:
@@ -4136,26 +4246,6 @@ class RecipeSet(TaskBase):
             tag_query = cls.retention_tag==RetentionTag.by_tag(unicode(tag))
         
         return query.filter(tag_query)
-
-    @classmethod
-    def by_product(cls, product, query=None):
-        if query is None:
-            query=cls.query()
-        return query.join('product').filter(Product.name==product)
-
-    @classmethod
-    def has_family(cls,family,query=None, **kw):
-        if query is None:
-            query = cls.query()
-        query = query.join(['recipes','distro','osversion','osmajor']).filter(OSMajor.osmajor == family).reset_joinpoint()
-        return query
-
-    @classmethod
-    def complete_delta(cls,delta):
-        delta = timedelta(**delta)
-        query = cls.query().join('recipes').filter(and_(Recipe.finish_time < datetime.utcnow() - delta,
-            cls.status_id.in_(TaskStatus.by_name(u'Completed').id,TaskStatus.by_name(u'Aborted').id,TaskStatus.by_name(u'Cancelled').id)))
-        return query
 
     @classmethod
     def by_datestamp(cls, datestamp, query=None):
@@ -4320,20 +4410,7 @@ class RecipeSet(TaskBase):
             return TaskPriority.query().all()
         elif user == self.job.owner: 
             return TaskPriority.query.filter(TaskPriority.id <= self.priority.id)
-
-    @property
-    def action_link(self):
-        """
-        Return action links depending on status
-        """
-        div = Element('div')
-        if not self.is_finished():
-            div.append(make_link(url = self.cancel_link(),
-                            text = "Cancel"))
-            div.append(Element('br'))
-        div.append(make_link(url = self.clone_link(),
-                        text = "Clone"))
-        return div
+            
 
     def cancel_link(self):
         """ return link to cancel this recipe
@@ -4358,6 +4435,14 @@ class Recipe(TaskBase):
     rpmspath = get("basepath.rpms", "/var/www/beaker/rpms")
     repopath = get("basepath.repos", "/var/www/beaker/repos")
 
+    def is_owner(self,user):
+        return self.recipeset.job.owner == user
+
+    def is_deleted(self):
+        if self.recipeset.job.deleted or self.recipeset.job.to_delete:
+            return True
+        return False
+
     def clone_link(self):
         """ return link to clone this recipe
         """
@@ -4381,7 +4466,6 @@ class Recipe(TaskBase):
     def delete(self, dryrun, *args, **kw):
         """
         How we delete a Recipe.
-        At the moment only unlinking log files and deleting log table rows
         """
         full_recipe_logpath = '%s/%s' % (self.logspath, self.filepath)
         if dryrun is True:
@@ -4912,21 +4996,6 @@ class Recipe(TaskBase):
         A class method that can be used to search for Jobs that belong to a user
         """
         return cls.query.join(['recipeset','job','owner']).filter(Job.owner==owner)
-
-    @property
-    def action_link(self):
-        """
-        Return action links depending on status
-        """
-        div = None
-        if self.system:
-            div = Element('div')
-            a = Element('a', {'class': 'list'},
-                    href=self.system.report_problem_href(recipe_id=self.id))
-            a.text = _(u'Report problem with system')
-            div.append(a)
-            div.append(Element('br'))
-        return div
 
 
 class RecipeRoleListAdapter(object):
@@ -6063,7 +6132,6 @@ mapper(RecipeSet, recipe_set_table,
                         backref='object'),
                       'lab_controller':relation(LabController, uselist=False),
                       'nacked':relation(RecipeSetResponse,cascade="all, delete-orphan",uselist=False),
-                      'deleted':recipe_set_table.c.delete_time
                      })
 
 mapper(LogRecipe, log_recipe_table)
