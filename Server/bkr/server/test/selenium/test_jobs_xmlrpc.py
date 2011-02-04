@@ -19,6 +19,7 @@
 
 import unittest
 import logging
+import xmlrpclib
 from turbogears.database import session
 from bkr.server.test.selenium import XmlRpcTestCase
 from bkr.server.test import data_setup
@@ -63,3 +64,31 @@ class JobUploadTest(XmlRpcTestCase):
         self.assertEqual(recipe.tasks[0].task.name, u'/distribution/install')
         # /asdf/notexist is silently dropped
         self.assertEqual(recipe.tasks[1].task.name, u'/distribution/reservesys')
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=601170
+    def test_error_message_lists_all_invalid_tasks(self):
+        job_xml = '''
+            <job>
+                <whiteboard>job with multiple nonexistent tasks</whiteboard>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
+                            <distro_name op="=" value="BlueShoeLinux5-5" />
+                            <distro_arch op="=" value="i386" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                        <task name="/asdf/notexist1" />
+                        <task name="/asdf/notexist2" />
+                        <task name="/asdf/notexist3" />
+                        <task name="/distribution/reservesys" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            '''
+        try:
+            self.server.jobs.upload(job_xml)
+            self.fail('should raise')
+        except xmlrpclib.Fault, e:
+            self.assert_('/asdf/notexist1, /asdf/notexist2, /asdf/notexist3'
+                    in e.faultString)

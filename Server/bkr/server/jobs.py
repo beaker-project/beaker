@@ -472,14 +472,19 @@ class Jobs(RPCRoot):
             recipe.repos.append(RecipeRepo(name=xmlrepo.name, url=xmlrepo.url))
         for xmlksappend in xmlrecipe.iter_ksappends():
             recipe.ks_appends.append(RecipeKSAppend(ks_append=xmlksappend))
+        xmltasks = []
+        invalid_tasks = []
         for xmltask in xmlrecipe.iter_tasks():
             try:
-                task = Task.by_name(xmltask.name)
+                Task.by_name(xmltask.name)
             except InvalidRequestError, e:
-                if ignore_missing_tasks:
-                    continue
-                else:
-                    raise BX(_('Invalid Task: %s' % xmltask.name))
+                invalid_tasks.append(xmltask.name)
+            else:
+                xmltasks.append(xmltask)
+        if invalid_tasks and not ignore_missing_tasks:
+            raise BX(_('Invalid task(s): %s') % ', '.join(invalid_tasks))
+        for xmltask in xmltasks:
+            task = Task.by_name(xmltask.name)
             if not recipe.is_task_applicable(task):
                 continue
             recipetask = RecipeTask()
