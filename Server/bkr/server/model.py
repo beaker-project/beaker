@@ -394,6 +394,7 @@ lab_controller_table = Table('lab_controller', metadata,
     Column('password',Unicode(255)),
     Column('distros_md5', String(40)),
     Column('systems_md5', String(40)),
+    Column('disabled', Boolean, nullable=False, default=False),
     mysql_engine='InnoDB',
 )
 
