@@ -62,6 +62,12 @@ static int check_for_hvm(void)
     } else if ( !strcmp("XenVMMXenVMM", signature) ) {
        printf("Xen HVM guest.\n");
        return 1;
+    } else if ( !strcmp("Microsoft Hv", signature) ) {
+       printf("Microsoft Hv guest.\n");
+       return 1;
+    } else if ( !strcmp("VMwareVMware", signature) ) {
+       printf("VMWare guest.\n");
+       return 1;
     } else { 
       printf("No KVM or Xen HVM\n");
       return 0;
