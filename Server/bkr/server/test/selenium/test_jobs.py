@@ -62,7 +62,7 @@ class TestViewJob(SeleniumTestCase):
         self.login(user=user.user_name, password='asdf')
         sel = self.selenium
         sel.open('jobs/%s' % job.id)
-        sel.wait_for_page_to_load('3000')
+        sel.wait_for_page_to_load('30000')
         self.assert_(sel.is_editable('name=whiteboard'))
         new_whiteboard = 'new whiteboard value %s' % int(time.time())
         sel.type('name=whiteboard', new_whiteboard)
@@ -94,7 +94,7 @@ class NewJobTest(SeleniumTestCase):
         sel = self.selenium
         sel.open('')
         sel.click('link=New Job')
-        sel.wait_for_page_to_load('3000')
+        sel.wait_for_page_to_load('30000')
         xml_file = tempfile.NamedTemporaryFile()
         xml_file.write('''
             <job>
@@ -116,14 +116,14 @@ class NewJobTest(SeleniumTestCase):
         xml_file.flush()
         sel.type('jobs_filexml', xml_file.name)
         sel.click('//input[@value="Submit Data"]')
-        sel.wait_for_page_to_load('3000')
+        sel.wait_for_page_to_load('30000')
         sel.click('//input[@value="Queue"]')
-        sel.wait_for_page_to_load('3000')
+        sel.wait_for_page_to_load('30000')
         self.assertEqual(sel.get_text('css=.flash'),
                 'Job failed schema validation. Please confirm that you want to submit it.')
         self.assert_(int(sel.get_xpath_count('//ul[@class="xsd-error-list"]/li')) > 0)
         sel.click('//input[@value="Queue despite validation errors"]')
-        sel.wait_for_page_to_load('3000')
+        sel.wait_for_page_to_load('30000')
         self.assertEqual(sel.get_title(), 'My Jobs')
         self.assert_(sel.get_text('css=.flash').startswith('Success!'))
 
@@ -132,7 +132,7 @@ class NewJobTest(SeleniumTestCase):
         sel = self.selenium
         sel.open('')
         sel.click('link=New Job')
-        sel.wait_for_page_to_load('3000')
+        sel.wait_for_page_to_load('30000')
         xml_file = tempfile.NamedTemporaryFile()
         xml_file.write('''
             <job>
@@ -142,9 +142,9 @@ class NewJobTest(SeleniumTestCase):
         xml_file.flush()
         sel.type('jobs_filexml', xml_file.name)
         sel.click('//input[@value="Submit Data"]')
-        sel.wait_for_page_to_load('3000')
+        sel.wait_for_page_to_load('30000')
         sel.click('//input[@value="Queue"]')
-        sel.wait_for_page_to_load('3000')
+        sel.wait_for_page_to_load('30000')
         self.assert_('Failed to import job' in sel.get_text('css=.flash'))
 
     def test_valid_job_xml_doesnt_trigger_xsd_warning(self):
@@ -152,13 +152,13 @@ class NewJobTest(SeleniumTestCase):
         sel = self.selenium
         sel.open('')
         sel.click('link=New Job')
-        sel.wait_for_page_to_load('3000')
+        sel.wait_for_page_to_load('30000')
         sel.type('jobs_filexml', pkg_resources.resource_filename(
                 'bkr.server.test', 'complete-job.xml'))
         sel.click('//input[@value="Submit Data"]')
-        sel.wait_for_page_to_load('3000')
+        sel.wait_for_page_to_load('30000')
         sel.click('//input[@value="Queue"]')
-        sel.wait_for_page_to_load('3000')
+        sel.wait_for_page_to_load('30000')
         self.assertEqual(sel.get_title(), 'My Jobs')
         self.assert_(sel.get_text('css=.flash').startswith('Success!'))
 
@@ -170,7 +170,7 @@ class NewJobTest(SeleniumTestCase):
         sel = self.selenium
         sel.open('')
         sel.click('link=New Job')
-        sel.wait_for_page_to_load('3000')
+        sel.wait_for_page_to_load('30000')
         xml_file = tempfile.NamedTemporaryFile()
         xml_file.write('''
             <job>
@@ -195,9 +195,9 @@ class NewJobTest(SeleniumTestCase):
         xml_file.flush()
         sel.type('jobs_filexml', xml_file.name)
         sel.click('//input[@value="Submit Data"]')
-        sel.wait_for_page_to_load('3000')
+        sel.wait_for_page_to_load('30000')
         sel.click('//input[@value="Queue"]')
-        sel.wait_for_page_to_load('3000')
+        sel.wait_for_page_to_load('30000')
         flash = sel.get_text('css=.flash')
         self.assert_(flash.startswith('Success!'), flash)
         self.assertEqual(sel.get_title(), 'My Jobs')
@@ -219,10 +219,10 @@ class CloneJobTest(SeleniumTestCase):
         self.login()
         sel =  self.selenium
         sel.open('jobs/clone?job_id=%s' % job.id)
-        sel.wait_for_page_to_load('3000')
+        sel.wait_for_page_to_load('30000')
         cloned_from_job = sel.get_text('//textarea[@id="job_textxml"]')
         sel.open('jobs/clone?recipeset_id=%s' % job.recipesets[0].id)
-        sel.wait_for_page_to_load('3000')
+        sel.wait_for_page_to_load('30000')
         cloned_from_rs = sel.get_text('//textarea[@id="job_textxml"]')
         self.assertEqual(cloned_from_job,cloned_from_rs)
 
@@ -232,9 +232,9 @@ class CloneJobTest(SeleniumTestCase):
         self.login()
         sel = self.selenium
         sel.open('jobs/clone?job_id=%s' % job.id)
-        sel.wait_for_page_to_load('3000')
+        sel.wait_for_page_to_load('30000')
         cloned_from_job = sel.get_text('//textarea[@id="job_textxml"]')
         sel.open('jobs/clone?recipeset_id=%s' % job.recipesets[0].id)
-        sel.wait_for_page_to_load('3000')
+        sel.wait_for_page_to_load('30000')
         cloned_from_rs = sel.get_text('//textarea[@id="job_textxml"]')
         self.assertEqual(cloned_from_job, cloned_from_rs)
