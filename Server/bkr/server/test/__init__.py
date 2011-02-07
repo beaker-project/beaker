@@ -59,6 +59,9 @@ def setup_package():
         data_setup.create_labcontroller() #always need a labcontroller
         session.flush()
 
+    if not os.path.exists(turbogears.config.get('basepath.rpms')):
+        os.mkdir(turbogears.config.get('basepath.rpms'))
+
     turbomail.adapters.tg1.start_extension()
 
 def teardown_package():
