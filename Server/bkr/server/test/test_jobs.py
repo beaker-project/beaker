@@ -26,25 +26,30 @@ class TestJobsController(unittest.TestCase):
         self.assertRaises(BX, lambda: self.controller.process_xmljob(xmljob, self.user))
 
     def test_uploading_job_with_invalid_hostRequires_raises_exception(self):
-        xmljob = XmlJob(xmltramp.parse('''
-            <job>
-                <whiteboard>job with invalid hostRequires</whiteboard>
-                <recipeSet>
-                    <recipe>
-                        <distroRequires>
-                            <distro_name op="=" value="BlueShoeLinux5-5" />
-                        </distroRequires>
-                        <hostRequires>
-                            <memory op=">=" value="500MB" />
-                        </hostRequires>
-                        <task name="/distribution/install" role="STANDALONE">
-                            <params/>
-                        </task>
-                    </recipe>
-                </recipeSet>
-            </job>
-            '''))
-        self.assertRaises(BX, lambda: self.controller.process_xmljob(xmljob, self.user))
+        session.begin()
+        try:
+            xmljob = XmlJob(xmltramp.parse('''
+                <job>
+                    <whiteboard>job with invalid hostRequires</whiteboard>
+                    <recipeSet>
+                        <recipe>
+                            <distroRequires>
+                                <distro_name op="=" value="BlueShoeLinux5-5" />
+                            </distroRequires>
+                            <hostRequires>
+                                <memory op=">=" value="500MB" />
+                            </hostRequires>
+                            <task name="/distribution/install" role="STANDALONE">
+                                <params/>
+                            </task>
+                        </recipe>
+                    </recipeSet>
+                </job>
+                '''))
+            self.assertRaises(BX, lambda: self.controller.process_xmljob(xmljob, self.user))
+        finally:
+            session.rollback()
+            session.close()
 
     def test_job_xml_can_be_roundtripped(self):
         # Ideally the logic for parsing job XML into a Job instance would live in model code,
