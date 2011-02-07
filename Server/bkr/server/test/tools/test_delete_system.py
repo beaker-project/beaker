@@ -1,6 +1,6 @@
 
 import unittest
-from bkr.server.model import System
+from bkr.server.model import System, LabInfo
 from turbogears.database import session
 from bkr.server.test import data_setup
 from bkr.server.tools.delete_system import delete_system
@@ -9,6 +9,8 @@ class DeleteSystemTest(unittest.TestCase):
 
     def setUp(self):
         self.system = data_setup.create_system()
+        self.system.labinfo = LabInfo()
+        self.system.labinfo.weight = 1
         session.flush()
 
     def test_can_delete_system(self):
