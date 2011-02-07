@@ -128,7 +128,7 @@
    <td class="title"><b>Progress</b></td>
    <td class="value">${job.progress_bar}</td>
    <td class="title" rowspan="2"><b>Action(s)</b></td>
-   <td class="value" rowspan="2">${action_widget(task=job, type_='jobpage', redirect_to=redirect_job_delete)}</td>
+   <td class="value" rowspan="2">${action_widget(task=job, redirect_to=redirect_job_delete)}</td>
   </tr>
   <tr>
    <td class="title"><b>CC</b></td>

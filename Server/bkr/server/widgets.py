@@ -1362,21 +1362,24 @@ class RecipeActionWidget(TaskActionWidget):
             params['show_report'] = None
         return super(RecipeActionWidget,self).display(task, **params)
 
+
 class JobActionWidget(TaskActionWidget):
     template = 'bkr.server.templates.job_action'
-    params = ['type_', 'redirect_to']
+    params = ['redirect_to']
     action = '/jobs/delete_job'
+    javascript = [LocalJSLink('bkr', '/static/javascript/job_delete.js'),
+        LocalJSLink('bkr', '/static/javascript/job_row_delete.js')]
+
     def __init__(self, *args, **kw):
         super(JobActionWidget, self).__init__(*args, **kw)
 
-    def display(self, task, type_, action=None, **params): 
+    def display(self, task, action=None, **params): 
         t_id = task.t_id
         job_details={'id': 'delete_%s' % t_id,
             't_id' : t_id}
         params['job_details'] = job_details
         if action:
             params['action'] = action
-        params['type_'] = type_
         return super(JobActionWidget, self).display(task, **params)
 
     def update_params(self, d):
@@ -1386,3 +1389,12 @@ class JobActionWidget(TaskActionWidget):
             jsonify.encode({'t_id': d['job_details'].get('t_id')}),
             jsonify.encode(self.get_options(d)),
             )
+
+class JobPageActionWidget(JobActionWidget):
+    params = []
+    javascript = [LocalJSLink('bkr', '/static/javascript/job_delete.js'),
+        LocalJSLink('bkr', '/static/javascript/job_page_delete.js')]
+
+    def __init__(self, *args, **kw):
+        super(JobPageActionWidget, self).__init__(*args, **kw)
+

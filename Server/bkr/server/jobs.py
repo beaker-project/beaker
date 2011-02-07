@@ -23,7 +23,7 @@ from kid import Element
 from sqlalchemy.exceptions import InvalidRequestError
 from bkr.server.widgets import myPaginateDataGrid, myDataGrid, AckPanel, JobQuickSearch, \
     RecipeWidget,RecipeTasksWidget, RecipeSetWidget, PriorityWidget, RetentionTagWidget, \
-    SearchBar, JobWhiteboard, ProductWidget, JobActionWidget
+    SearchBar, JobWhiteboard, ProductWidget, JobActionWidget, JobPageActionWidget
 
 from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.helpers import *
@@ -68,7 +68,8 @@ class JobForm(widgets.Form):
 class Jobs(RPCRoot):
     # For XMLRPC methods in this class.
     exposed = True 
-    action_widget = JobActionWidget()
+    job_list_action_widget = JobActionWidget()
+    job_page_action_widget = JobPageActionWidget()
     recipeset_widget = RecipeSetWidget()
     recipe_widget = RecipeWidget()
     priority_widget = PriorityWidget() #FIXME I have a feeling we don't need this as the RecipeSet widget declares an instance of it
@@ -583,7 +584,7 @@ class Jobs(RPCRoot):
                 searchvalue = jobs_return['searchvalue']
             if 'simplesearch' in jobs_return:
                 search_options['simplesearch'] = jobs_return['simplesearch']
- 
+         
         jobs_grid = myPaginateDataGrid(fields=[
 		     widgets.PaginateDataGrid.Column(name='id', getter=lambda x:make_link(url = './%s' % x.id, text = x.t_id), title='ID', options=dict(sortable=True)),
 		     widgets.PaginateDataGrid.Column(name='whiteboard', getter=lambda x:x.whiteboard, title='Whiteboard', options=dict(sortable=True)),
@@ -591,7 +592,7 @@ class Jobs(RPCRoot):
                      widgets.PaginateDataGrid.Column(name='progress', getter=lambda x: x.progress_bar, title='Progress', options=dict(sortable=False)),
 		     widgets.PaginateDataGrid.Column(name='status.status', getter=lambda x:x.status, title='Status', options=dict(sortable=True)),
 		     widgets.PaginateDataGrid.Column(name='result.result', getter=lambda x:x.result, title='Result', options=dict(sortable=True)),
-		     widgets.PaginateDataGrid.Column(name='action', getter=lambda x: self.action_widget.display(task=x, type_='joblist') , title='Action', options=dict(sortable=False)),
+		     widgets.PaginateDataGrid.Column(name='action', getter=lambda x: self.job_list_action_widget.display(task=x, type_='joblist') , title='Action', options=dict(sortable=False)),
                     ])
 
         
@@ -608,7 +609,8 @@ class Jobs(RPCRoot):
         return dict(title=title,
                     object_count = jobs.count(),
                     grid=jobs_grid,
-                    list=jobs, 
+                    list=jobs,
+                    action_widget = self.job_list_action_widget,  #Hack,inserts JS for us.
                     search_bar=search_bar,
                     action=action,
                     options=search_options,
@@ -729,7 +731,7 @@ class Jobs(RPCRoot):
                            job_history = recipe_set_data,
                            job_history_grid = job_history_grid,
                            whiteboard_widget = self.whiteboard_widget,
-                           action_widget = self.action_widget,
+                           action_widget = self.job_page_action_widget,
                            job = job,
                            product_widget = self.product_widget,
                            retention_tag_widget = self.retention_tag_widget,
