@@ -3832,20 +3832,19 @@ class Job(TaskBase):
         return query.all()
 
     @classmethod
-    def find_jobs_for_delete(cls, **kw):
+    def delete_jobs(cls, **kw):
         if kw['jobs']:
-            jobs = kw['jobs']
-            actual_jobs = []
-            for t_id in jobs:
-                type,id = t_id.split(":", 1)
-                actual_jobs.append(cls.by_id(id))
-            jobs = actual_jobs
-            jobs_to_delete = cls._delete_criteria(jobs=jobs)
+            actual_jobs = kw['jobs']
+            jobs_to_delete = cls._delete_criteria(jobs=actual_jobs)
         else:
             query = cls.query()
             query = cls._delete_criteria(query=query)
             kw['query'] = query
             jobs_to_delete = cls.find_jobs(**kw)
+
+        for job in jobs_to_delete:
+            job.soft_delete()
+
         return jobs_to_delete
 
     @classmethod

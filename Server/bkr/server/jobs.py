@@ -122,30 +122,28 @@ class Jobs(RPCRoot):
         )
 
     @expose()
-    def delete_job(self, t_id, *args, **kw):
+    def delete_job_from_ui(self, t_id, *args, **kw):
         to_return = {'t_id' : t_id}
         try:
-            job = TaskBase.get_by_t_id(t_id)
-        except BeakerException, e:
-            log.exception('Invalid t_id:%s' % t_id)
-            to_return['success'] = False
-            to_return['err_msg'] = str(e)  
-            return to_return
-
-        if not isinstance(job,Job):
-            to_return['success'] = False
-            to_return['err_msg'] = 'Incorrect task type passed %s' % t_id  
-
-        try:
-            deletable_job = Job.find_jobs_for_delete(jobs=[t_id])
-            for j in deletable_job:
-                j.soft_delete()
+            self._delete_job(t_id)
             to_return['success'] = True
-        except Exception:
+        except Exception, e:
+            log.exception('Unable to delete t_id:%s' % t_id)
             to_return['success'] = False
-            to_return['err_msg'] = 'Could not delete task %s at this time, please notify your administrator.' % t_id
-       
+            to_return['err_msg'] = unicode(e)
+            session.rollback()
         return to_return
+
+    def _delete_job(self, t_id, *args, **kw):
+        if not isinstance(t_id,list):
+            t_id = [t_id]
+        jobs_to_try_to_del = []
+        for j_id in t_id:
+            job = TaskBase.get_by_t_id(j_id)
+            if not isinstance(job,Job):
+                raise BeakerException('Incorrect task type passed %s' % t_id )
+            jobs_to_try_to_del.append(job)
+        return Job.delete_jobs(jobs=jobs_to_try_to_del)
 
     @cherrypy.expose
     def list(self, tags, days_complete_for, family, product, **kw):
@@ -187,36 +185,10 @@ class Jobs(RPCRoot):
         At present, only non admins can call this feature. Admin functionality
         will be added to when we are using a message bus.
         """
-        #FIXME this should not barf no matter what is thrown at it
-        if identity.in_group('admin'):
-            return 'The admin deletion feature is currently not implemented'
-            # Waiting until we have a message bus, we will then push delete notifications over this
-            #newly_deleted_paths, new_errors = job.delete(dryrun)
-            #deleted_paths.extend(newly_deleted_paths)
-            #errors.extend(new_errors)
-            #return 'Deleted paths:%s' % ','.join(deleted_paths), ' Errors: %s' % ','.join(errors)
-
-        jobs = jobs or []
-        try:
-            try:
-                session.begin()
-                jobs_for_delete = Job.find_jobs_for_delete(jobs=jobs, tag=tag, complete_days=complete_days, family=family, product=product) or []
-                hidden_jobs = []
-                for job in jobs_for_delete:
-                    job.soft_delete()
-                    hidden_jobs.append(job.t_id)
-                if dryrun:
-                    session.rollback()
-                else:
-                    session.commit()
-            except Exception, e:
-                session.rollback()
-                err_msg = 'Error when user tried to delete jobs'
-                log.exception(err_msg)
-                return err_msg
-        finally:
-            session.close()
-        return 'Jobs deleted: %s' % hidden_jobs
+        deleted_jobs = self._delete_job(jobs, tag=tag, complete_days=complete_days, family=family, product=product)
+        if dryrun:
+            session.rollback()
+        return 'Jobs deleted: %s' % [j.t_id for j in deleted_jobs]
 
     # XMLRPC method
     @cherrypy.expose
