@@ -3,6 +3,7 @@ import unittest
 import xmltramp
 import pkg_resources
 from turbogears.database import session
+from bkr.server.model import TaskStatus, RecipeSet
 from bkr.server.jobxml import XmlJob
 from bkr.server.bexceptions import BX
 from bkr.server.test import data_setup
@@ -48,11 +49,15 @@ class TestLabController(unittest.TestCase):
         self.lc.disabled = True
         session.save_or_update(self.lc)
         session.flush()
-        self.assertEquals(beakerd.queued_recipes(), False)
+        beakerd.queued_recipes()
+        recipeset = RecipeSet.by_id(self.job.recipesets[0].id)
+        self.assert_(recipeset.status < TaskStatus.by_name(u'Scheduled'))
 
     def test_enable_lab_controller(self):
         self.lc.disabled = False
         session.save_or_update(self.lc)
         session.flush()
-        self.assertEquals(beakerd.queued_recipes(), True)
+        beakerd.queued_recipes()
+        recipeset = RecipeSet.by_id(self.job.recipesets[0].id)
+        self.assertEquals(recipeset.status, TaskStatus.by_name(u'Scheduled'))
 
