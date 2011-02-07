@@ -4430,11 +4430,26 @@ class Recipe(TaskBase):
     Also contains what tasks will be executed.
     """
     stop_types = ['abort','cancel']
-    servername = get("servername",socket.gethostname())
-    logspath = get("basepath.logs", "/var/www/beaker/logs")
-    harnesspath = get("basepath.harness", "/var/www/beaker/harness")
-    rpmspath = get("basepath.rpms", "/var/www/beaker/rpms")
-    repopath = get("basepath.repos", "/var/www/beaker/repos")
+
+    @property
+    def servername(self):
+        return get('servername', socket.gethostname())
+
+    @property
+    def logspath(self):
+        return get('basepath.logs', '/var/www/beaker/logs')
+
+    @property
+    def harnesspath(self):
+        return get('basepath.harness', '/var/www/beaker/harness')
+
+    @property
+    def rpmspath(self):
+        return get('basepath.rpms', '/var/www/beaker/rpms')
+
+    @property
+    def repopath(self):
+        return get('basepath.repos', '/var/www/beaker/repos')
 
     def is_owner(self,user):
         return self.recipeset.job.owner == user
