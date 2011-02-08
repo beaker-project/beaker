@@ -88,6 +88,7 @@ class TestReportProblem(SeleniumTestCase):
             self.fail('Should raise 403')
         except Exception, e:
             self.assert_('Response_Code = 403' in e.args[0])
+            sel.wait_for_page_to_load('30000')
         sel.type('user_name', problem_reporter.user_name)
         sel.type('password', 'password')
         sel.click('login')
