@@ -88,5 +88,5 @@ class Job_Delete(BeakerCommand):
         if args:
             for job in args:
                 jobs.append(job)
-        print self.hub.jobs.delete_job_from_shell(jobs,tag,complete_days,family,dryrun, product)
+        print self.hub.jobs.delete_jobs(jobs,tag,complete_days,family,dryrun, product)
 

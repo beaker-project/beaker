@@ -2,6 +2,7 @@
 import bkr.server.test.selenium
 from bkr.server.test import data_setup
 from turbogears.database import session
+from bkr.server.model import Group
 
 class JobDelete(bkr.server.test.selenium.SeleniumTestCase):
     
@@ -17,7 +18,19 @@ class JobDelete(bkr.server.test.selenium.SeleniumTestCase):
         cls.selenium = cls.get_selenium()
         cls.selenium.start()
 
-    def test_job_delete(self):
+    def test_admin(self):
+        self.user.groups.append(Group.by_name('admin'))
+        session.flush()
+        self.job_delete()
+        self.job_delete_jobpage()
+        self.user.groups.remove(Group.by_name('admin'))
+        session.flush()
+
+    def test_not_admin(self):
+        self.job_delete()
+        self.job_delete_jobpage()
+
+    def job_delete(self):
         sel = self.selenium
         try:
             self.logout()
@@ -30,15 +43,23 @@ class JobDelete(bkr.server.test.selenium.SeleniumTestCase):
         sel.type("jobsearch_0_value", "%s" % self.job_to_delete.id)
         sel.click("Search")
         sel.wait_for_page_to_load('3000')
-        sel.click("delete_J:%s" % self.job_to_delete.id)
-        self.wait_and_try(lambda: self.failUnless(sel.is_text_present("Are you sure")))
-        sel.click("//button[@type='button']")
-        self.wait_and_try(lambda: self.assert_(self.job_to_delete.t_id not in sel.get_text('//body')))
-        sel.open('recipes/%s' % self.recipe_to_delete.id)
-        sel.wait_for_page_to_load('3000')
-        self.assert_('Invalid R:%s, has been deleted' % self.recipe_to_delete.id in sel.get_text('//body'))
+        if self.user.is_admin():
+            try:
+                sel.click("delete_J:%s" % self.job_to_delete.id)
+            except Exception:
+                pass
+            else:
+                raise AssertionError('Admin has delete button on job list')
+        else:
+            sel.click("delete_J:%s" % self.job_to_delete.id)
+            self.wait_and_try(lambda: self.failUnless(sel.is_text_present("Are you sure")))
+            sel.click("//button[@type='button']")
+            self.wait_and_try(lambda: self.assert_(self.job_to_delete.t_id not in sel.get_text('//body')))
+            sel.open('recipes/%s' % self.recipe_to_delete.id)
+            sel.wait_for_page_to_load('3000')
+            self.assert_('Invalid R:%s, has been deleted' % self.recipe_to_delete.id in sel.get_text('//body'))
 
-    def test_job_delete_jobpage(self):
+    def job_delete_jobpage(self):
         sel = self.selenium
         try:
             self.logout()
@@ -47,10 +68,18 @@ class JobDelete(bkr.server.test.selenium.SeleniumTestCase):
         self.login(user=self.user, password=self.password)
         sel.open('jobs/%s' % self.job_to_delete_2.id)
         sel.wait_for_page_to_load('3000')
-        sel.click("delete_J:%s" % self.job_to_delete_2.id)
-        self.wait_and_try(lambda: self.failUnless(sel.is_text_present("Are you sure you want to perform delete?")))
-        self.wait_and_try(lambda: sel.click("//button[@type='button']"))
-        self.wait_and_try(lambda: self.failUnless(sel.is_text_present("Succesfully deleted J:%s" % self.job_to_delete_2.id)))
+        if self.user.is_admin():
+            try:
+                sel.click("delete_J:%s" % self.job_to_delete_2.id)
+            except Exception:
+                pass
+            else:
+                raise AssertionError('Admin has delete button on job list')
+        else:
+            sel.click("delete_J:%s" % self.job_to_delete_2.id)
+            self.wait_and_try(lambda: self.failUnless(sel.is_text_present("Are you sure you want to perform delete?")))
+            self.wait_and_try(lambda: sel.click("//button[@type='button']"))
+            self.wait_and_try(lambda: self.failUnless(sel.is_text_present("Succesfully deleted J:%s" % self.job_to_delete_2.id)))
  
 
     @classmethod

@@ -185,10 +185,13 @@ class Jobs(RPCRoot):
         At present, only non admins can call this feature. Admin functionality
         will be added to when we are using a message bus.
         """
-        deleted_jobs = self._delete_job(jobs, tag=tag, complete_days=complete_days, family=family, product=product)
-        if dryrun:
-            session.rollback()
-        return 'Jobs deleted: %s' % [j.t_id for j in deleted_jobs]
+        if not identity.current.user.is_admin():
+            deleted_jobs = self._delete_job(jobs, tag=tag, complete_days=complete_days, family=family, product=product)
+            if dryrun:
+                session.rollback()
+            return 'Jobs deleted: %s' % [j.t_id for j in deleted_jobs]
+        else:
+            return 'This feature is currently not implemented for admins'
 
     # XMLRPC method
     @cherrypy.expose
