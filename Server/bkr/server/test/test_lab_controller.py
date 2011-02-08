@@ -24,6 +24,7 @@ class TestLabController(unittest.TestCase):
                     <recipe>
                         <distroRequires>
                             <distro_name op="=" value="%s" />
+                            <distrolabcontroller op="=" value="%s" />
                         </distroRequires>
                         <hostRequires>
                             <hostname op="=" value="%s"/>
@@ -34,7 +35,7 @@ class TestLabController(unittest.TestCase):
                     </recipe>
                 </recipeSet>
             </job>
-                 ''' % (distro, system.fqdn)))
+                 ''' % (distro.name, self.lc.fqdn, system.fqdn)))
         controller = Jobs()
         system.lab_controller = self.lc
         data_setup.create_task(name=u'/distribution/install')
