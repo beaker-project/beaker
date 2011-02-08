@@ -1366,7 +1366,7 @@ class RecipeActionWidget(TaskActionWidget):
 class JobActionWidget(TaskActionWidget):
     template = 'bkr.server.templates.job_action'
     params = ['redirect_to']
-    action = '/jobs/delete_job'
+    action = url('/jobs/delete_job_from_ui')
     javascript = [LocalJSLink('bkr', '/static/javascript/job_delete.js'),
         LocalJSLink('bkr', '/static/javascript/job_row_delete.js')]
 

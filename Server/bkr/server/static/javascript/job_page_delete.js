@@ -9,7 +9,7 @@
         height:200,
         modal: true,
         open: function(event, ui) { 
-            $(this).oneTime(1000, function() {$(this).dialog("close");$(location).attr('href','${redirect_to}')}); 
+            $(this).oneTime(1000, function() {$(this).dialog("close");$(location).attr('href','./mine')}); 
             }
     });
 }
