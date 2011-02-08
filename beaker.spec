@@ -2,8 +2,8 @@
 %{!?pyver: %global pyver %(%{__python} -c "import sys ; print sys.version[:3]")}
 
 Name:           beaker
-Version:        0.6.3
-Release:        2%{?dist}
+Version:        0.6.4
+Release:        1%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -219,6 +219,24 @@ fi
 %attr(-,apache,root) %dir %{_localstatedir}/run/%{name}-lab-controller
 
 %changelog
+* Tue Feb 08 2011 Raymond Mancy <rmancy@redhat.com> 0.6.4-1
+- bz603982 - Small fix for task search on system page (rmancy@redhat.com)
+- bz660480 - deletion code, allowing users to delete jobs (rmancy@redhat.com)
+- bz667456 - message of the day (rmancy@redhat.com)
+- bz673698 - Fix regression with tasks not showing more than 30
+  (rmancy@redhat.com)
+- ignore_missing_tasks parameter in job submission (dcallagh@redhat.com)
+- report all missing tasks instead of just the first (dcallagh@redhat.com)
+- remove Cobbler record for systems when renaming (dcallagh@redhat.com)
+- admins should be able to schedule/reserve any system (dcallagh@redhat.com)
+- avoid leaking orphaned Recipe objects into the session (dcallagh@redhat.com)
+- cascade deletions from system to labinfo (dcallagh@redhat.com)
+- Allow lab controllers to be disabled. (bpeck@redhat.com)
+- Added detect support for Microsoft's Hyper V and VmWare. (bpeck@redhat.com)
+- Added lab_env snippet which can be customized for each lab.
+  (bpeck@redhat.com)
+- Added a XSLT based workflow - bkr workflow-xslt (davids@redhat.com)
+
 * Fri Jan 28 2011 Raymond Mancy <rmancy@redhat.com> 0.6.3-2
 - Fix problem with randrange throwing errors when system.count() is <= 1
   (rmancy@redhat.com)
