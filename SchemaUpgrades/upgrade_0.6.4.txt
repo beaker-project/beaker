@@ -4,3 +4,5 @@ use beaker;
 ALTER TABLE job ADD COLUMN (`deleted` datetime default NULL);
 ALTER TABLE job ADD COLUMN (`to_delete` datetime default NULL);
 ALTER TABLE recipe_set DROP COLUMN `delete_time`;
+
+ALTER TABLE lab_controller ADD COLUMN (`disabled` boolean default False);
