@@ -1,3 +1,4 @@
+from glob import glob
 from setuptools import setup, find_packages
 setup(
     name = "bkr.client",
@@ -8,10 +9,10 @@ setup(
 
     namespace_packages = ['bkr'],
 
-    data_files = [('/etc/beaker/', ['client.conf']),],
-    package_data = {
-        '/etc/beaker': ['client.conf'],
-    },
+    data_files = [
+        ('/etc/beaker/', ['client.conf']),
+        ('/usr/share/man/man1', glob('man/*.1')),
+    ],
 
     entry_points = {
         'console_scripts': (

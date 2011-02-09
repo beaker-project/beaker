@@ -195,6 +195,7 @@ fi
 %{python_sitelib}/bkr.client-%{version}-*
 %{python_sitelib}/bkr.client-%{version}-py%{pyver}.egg-info/
 %{_bindir}/bkr
+%{_mandir}/man1/*.1.gz
 
 %files lab-controller
 %defattr(-,root,root,-)
