@@ -39,6 +39,7 @@ Requires:	python-setuptools
 Requires:	%{name} = %{version}-%{release}
 Requires:       python-krbV
 Requires:       python-lxml
+Requires:       libxslt-python
 
 
 %package server
