@@ -847,7 +847,23 @@ class SystemArches(Form):
             d['readonly'] = d['options']['readonly']
         if 'arches' in d['options']:
             d['arches'] = d['options']['arches']
-        
+       
+class LabControllers(Form):
+    template = "bkr.server.templates.lab_controllers"
+    member_widgets = ["id", "lab_controller"]
+    params = ['options', 'readonly', 'lab_controllers']
+ 
+    def __init__(self, *args, **kw):
+	super(LabControllers, self).__init__(*args, **kw)
+	self.id    = HiddenField(name="id")
+
+    def update_params(self, d):
+        super(LabControllers, self).update_params(d)
+        if 'readonly' in d['options']:
+            d['readonly'] = d['options']['readonly']
+        if 'lab_controllers' in d['options']:
+            d['lab_controllers'] = d['options']['lab_controllers']
+
 class DistroTags(Form):
     template = "bkr.server.templates.distro_tags"
     member_widgets = ["id", "tag"]
