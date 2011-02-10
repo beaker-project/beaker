@@ -20,7 +20,7 @@ class ReserveSystem(bkr.server.test.selenium.SeleniumTestCase):
         self.selenium.start()
         self.lc = data_setup.create_labcontroller()
         self.system = data_setup.create_system(arch=u'i386')
-        self.distro = data_setup.create_distro(name=u'test_reserve_system_distro', arch=u'i386')
+        self.distro = data_setup.create_distro(arch=u'i386')
         data_setup.create_task(name=u'/distribution/install')
         data_setup.create_task(name=u'/distribution/reservesys')
         self.system.lab_controller = self.lc
@@ -39,8 +39,7 @@ class ReserveSystem(bkr.server.test.selenium.SeleniumTestCase):
         self.failUnless(sel.is_text_present("%s" % self.system.fqdn))
         click_reserve_now(sel, self.system)
         sel.wait_for_page_to_load("30000")
-        sel.type("form_whiteboard", "testing")
-        sel.type("form_whiteboard", "test_reserve_system_distro")
+        sel.type("form_whiteboard", self.distro.name)
         sel.click("//input[@value='Queue Job']")
         sel.wait_for_page_to_load("30000")
         try: self.failUnless(sel.is_text_present("Success"))

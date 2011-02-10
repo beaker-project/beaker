@@ -23,12 +23,13 @@ import xmlrpclib
 from turbogears.database import session
 from bkr.server.test.selenium import XmlRpcTestCase
 from bkr.server.test import data_setup
-from bkr.server.model import Job
+from bkr.server.model import Job, Distro
 
 class JobUploadTest(XmlRpcTestCase):
 
     def setUp(self):
-        data_setup.create_distro(name=u'BlueShoeLinux5-5', arch=u'i386')
+        if not Distro.by_name('BlueShoeLinux5-5'):
+            data_setup.create_distro(name=u'BlueShoeLinux5-5')
         data_setup.create_task(name=u'/distribution/install')
         data_setup.create_task(name=u'/distribution/reservesys')
         user = data_setup.create_user(password=u'password')
@@ -44,7 +45,6 @@ class JobUploadTest(XmlRpcTestCase):
                     <recipe>
                         <distroRequires>
                             <distro_name op="=" value="BlueShoeLinux5-5" />
-                            <distro_arch op="=" value="i386" />
                         </distroRequires>
                         <hostRequires/>
                         <task name="/distribution/install" />

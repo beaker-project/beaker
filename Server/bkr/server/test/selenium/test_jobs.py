@@ -25,7 +25,7 @@ from turbogears.database import session
 
 from bkr.server.test.selenium import SeleniumTestCase
 from bkr.server.test import data_setup
-from bkr.server.jobs import RetentionTag, Product
+from bkr.server.jobs import RetentionTag, Product, Distro
 
 class TestViewJob(SeleniumTestCase):
 
@@ -79,8 +79,8 @@ class TestViewJob(SeleniumTestCase):
 class NewJobTest(SeleniumTestCase):
 
     def setUp(self):
-        data_setup.create_distro(name=u'BlueShoeLinux5-5', arch=u'i386')
-        data_setup.create_distro(name=u'BlueShoeLinux5-5', arch=u'ia64')
+        if not Distro.by_name('BlueShoeLinux5-5'):
+            data_setup.create_distro(name=u'BlueShoeLinux5-5')
         data_setup.create_task(name=u'/distribution/install')
         session.flush()
         self.selenium = self.get_selenium()
@@ -164,6 +164,7 @@ class NewJobTest(SeleniumTestCase):
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=661652
     def test_job_with_excluded_task(self):
+        distro = data_setup.create_distro(arch='ia64')
         excluded_task = data_setup.create_task(exclude_arch=[u'ia64'])
         session.flush()
         self.login()
@@ -178,7 +179,7 @@ class NewJobTest(SeleniumTestCase):
                 <recipeSet>
                     <recipe>
                         <distroRequires>
-                            <distro_name op="=" value="BlueShoeLinux5-5" />
+                            <distro_name op="=" value="%s" />
                             <distro_arch op="=" value="ia64" />
                         </distroRequires>
                         <hostRequires/>
@@ -191,7 +192,7 @@ class NewJobTest(SeleniumTestCase):
                     </recipe>
                 </recipeSet>
             </job>
-            ''' % excluded_task.name)
+            ''' % (distro.name, excluded_task.name))
         xml_file.flush()
         sel.type('jobs_filexml', xml_file.name)
         sel.click('//input[@value="Submit Data"]')
