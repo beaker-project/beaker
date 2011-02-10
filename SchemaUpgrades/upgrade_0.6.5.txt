@@ -1,3 +1,10 @@
 Add index on activity.created (expected run time ~2mins):
 
 ALTER TABLE activity ADD INDEX ix_activity_created (created);
+
+Create 'tag_distro' permission object and grant it to admins:
+
+INSERT INTO permission (permission_name) VALUES ('tag_distro');
+INSERT INTO group_permission (group_id, permission_id) VALUES (
+    (SELECT group_id FROM tg_group WHERE group_name = 'admin'),
+    (SELECT permission_id FROM permission WHERE permission_name = 'tag_distro'));

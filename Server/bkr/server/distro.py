@@ -42,6 +42,7 @@ class Distros(RPCRoot):
         except InvalidRequestError:
             flash(_(u"Invalid distro id %s" % id))
             redirect(".")
+        is_admin = identity.current.user and identity.current.user.is_admin() or False
         return dict(title       = 'Distro',
                     value       = distro,
                     value_task  = dict(distro_id = distro.id),
@@ -51,10 +52,11 @@ class Distros(RPCRoot):
                     action      = './save_tag',
                     action_task = '/tasks/do_search',
                     options   = dict(tags = distro.tags,
-                                     lab_controllers = distro.lab_controller_assocs,
-                                     hidden = dict(distro  = 1,
-                                                   osmajor = 1,
-                                                   arch    = 1)))
+                                    readonly = not is_admin,
+                                    lab_controllers = distro.lab_controller_assocs,
+                                    hidden = dict(distro  = 1,
+                                                  osmajor = 1,
+                                                  arch    = 1)))
 
     @expose()
     def get_osmajors(self, active=None):
@@ -122,7 +124,7 @@ class Distros(RPCRoot):
         redirect("./view?id=%s" % id)
 
     @expose()
-    @identity.require(identity.not_anonymous())
+    @identity.require(identity.has_permission('tag_distro'))
     def save_tag(self, id=None, tag=None, *args, **kw):
         try:
             distro = Distro.by_id(id)
@@ -136,7 +138,7 @@ class Distros(RPCRoot):
         redirect("./view?id=%s" % id)
 
     @expose()
-    @identity.require(identity.not_anonymous())
+    @identity.require(identity.has_permission('tag_distro'))
     def tag_remove(self, id=None, tag=None, *args, **kw):
         try:
             distro = Distro.by_id(id)
@@ -382,7 +384,7 @@ class Distros(RPCRoot):
 
 
     @cherrypy.expose
-    @identity.require(identity.not_anonymous())
+    @identity.require(identity.has_permission('tag_distro'))
     def tag(self, name, arch, tag):
         """
         Applies the given tag to all matching distros.
@@ -415,7 +417,7 @@ class Distros(RPCRoot):
         return added
 
     @cherrypy.expose
-    @identity.require(identity.not_anonymous())
+    @identity.require(identity.has_permission('tag_distro'))
     def untag(self, name, arch, tag):
         """
         Like :meth:`distros.tag` but the opposite.

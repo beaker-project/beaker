@@ -74,6 +74,7 @@ def init_db(user_name=None, password=None, user_display_name=None, user_email_ad
 
     if Permission.query().count() == 0:
         Permission(u'proxy_auth')
+        admin.permissions.append(Permission(u'tag_distro'))
 
     #Setup SystemTypes Table
     if SystemType.query().count() == 0:
