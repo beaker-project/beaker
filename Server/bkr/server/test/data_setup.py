@@ -204,11 +204,14 @@ def create_job_for_recipes(recipes, owner=None, whiteboard=None, cc=None,product
         retention_tag=None):
     if retention_tag is None:
         retention_tag = RetentionTag.get_default()
+    else:
+        retention_tag = RetentionTag.by_name(retention_tag)
+    
     if owner is None:
         owner = create_user()
     if whiteboard is None:
         whiteboard = u'job %d' % int(time.time() * 1000)
-    job = Job(whiteboard=whiteboard, ttasks=1, owner=owner,retention_tag = retention_tag)
+    job = Job(whiteboard=whiteboard, ttasks=1, owner=owner,retention_tag = retention_tag, product=product)
     if cc is not None:
         job.cc = cc
     recipe_set = RecipeSet(ttasks=sum(r.ttasks for r in recipes),
@@ -224,7 +227,7 @@ def create_job(owner=None, cc=None, distro=None,product=None,
     recipe = create_recipe(distro=distro, task_name=task_name,
             whiteboard=recipe_whiteboard)
     return create_job_for_recipes([recipe], owner=owner,
-            whiteboard=whiteboard, cc=cc, product=product)
+            whiteboard=whiteboard, cc=cc, product=product,retention_tag=retention_tag)
 
 def create_completed_job(**kwargs):
     job = create_job(**kwargs)

@@ -143,7 +143,7 @@ class Jobs(RPCRoot):
             if not isinstance(job,Job):
                 raise BeakerException('Incorrect task type passed %s' % t_id )
             jobs_to_try_to_del.append(job)
-        return Job.delete_jobs(jobs=jobs_to_try_to_del)
+        return Job.delete_jobs(jobs=jobs_to_try_to_del, **kw)
 
     @cherrypy.expose
     def list(self, tags, days_complete_for, family, product, **kw):

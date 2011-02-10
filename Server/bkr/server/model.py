@@ -4103,6 +4103,10 @@ class RetentionTag(BeakerTag):
         super(RetentionTag, self).__init__(tag, **kw)
         session.flush()
 
+    @classmethod
+    def by_name(cls,tag):
+        return cls.query().filter_by(tag=tag).one()
+
     def requires_product(self):
         return self.needs_product
 
