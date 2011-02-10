@@ -3,7 +3,7 @@
 
 Name:           beaker
 Version:        0.6.4
-Release:        2%{?dist}
+Release:        3%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -221,6 +221,9 @@ fi
 %attr(-,apache,root) %dir %{_localstatedir}/run/%{name}-lab-controller
 
 %changelog
+* Thu Feb 10 2011 Raymond Mancy <rmancy@redhat.com> 0.6.4-3
+- Fix so job-delete works with tags/products/family etc (rmancy@redhat.com)
+
 * Sat Feb 09 2011 Dan Callaghan <dcallagh@redhat.com> 0.6.4-2
 - bkr workflow-xslt requires libxslt-python (dcallagh@redhat.com)
 - package man page for bkr-workflow-xslt (dcallagh@redhat.com)
