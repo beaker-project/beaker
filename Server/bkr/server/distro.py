@@ -133,7 +133,10 @@ class Distros(RPCRoot):
             redirect(".")
         if tag['text']:
             distro.tags.append(tag['text'])
-            Activity(identity.current.user,'WEBUI','Tagged',distro.install_name,None,tag['text'])
+            distro.activity.append(DistroActivity(
+                    user=identity.current.user, service=u'WEBUI',
+                    action=u'Added', field_name=u'Tag',
+                    old_value=None, new_value=tag['text']))
         flash(_(u"Added Tag %s" % tag['text']))
         redirect("./view?id=%s" % id)
 
@@ -149,7 +152,10 @@ class Distros(RPCRoot):
             for dtag in distro.tags:
                 if dtag == tag:
                     distro.tags.remove(dtag)
-                    Activity(identity.current.user,'WEBUI','UnTagged',distro.install_name,tag,None)
+                    distro.activity.append(DistroActivity(
+                            user=identity.current.user, service=u'WEBUI',
+                            action=u'Removed', field_name=u'Tag',
+                            old_value=tag, new_value=None))
                     flash(_(u"Removed Tag %s" % tag))
         redirect("./view?id=%s" % id)
 
@@ -410,7 +416,10 @@ class Distros(RPCRoot):
         for distro in distros:
             if tag not in distro.tags:
                 added.append('%s' % distro.install_name)
-                Activity(identity.current.user,'XMLRPC','Tagged',distro.install_name,None,tag)
+                distro.activity.append(DistroActivity(
+                        user=identity.current.user, service=u'WEBUI',
+                        action=u'Added', field_name=u'Tag',
+                        old_value=None, new_value=tag))
                 distro.tags.append(tag)
                 session.save_or_update(distro)
                 session.flush([distro])
@@ -432,7 +441,10 @@ class Distros(RPCRoot):
         for distro in distros:
             if tag in distro.tags:
                 removed.append('%s' % distro.install_name)
-                Activity(identity.current.user,'XMLRPC','UnTagged',distro.install_name,tag,None)
+                distro.activity.append(DistroActivity(
+                        user=identity.current.user, service=u'WEBUI',
+                        action=u'Removed', field_name=u'Tag',
+                        old_value=tag, new_value=None))
                 distro.tags.remove(tag)
         return removed
 

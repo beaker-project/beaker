@@ -8,3 +8,14 @@ INSERT INTO permission (permission_name) VALUES ('tag_distro');
 INSERT INTO group_permission (group_id, permission_id) VALUES (
     (SELECT group_id FROM tg_group WHERE group_name = 'admin'),
     (SELECT permission_id FROM permission WHERE permission_name = 'tag_distro'));
+
+Fix up old distro tagging history (expected run time ~30sec):
+
+INSERT INTO distro_activity (id, distro_id)
+    SELECT activity.id, distro.id
+    FROM activity INNER JOIN distro ON activity.field_name = distro.install_name
+    WHERE action IN ('Tagged', 'UnTagged');
+UPDATE activity SET type = 'distro_activity', field_name = 'Tag', action = 'Added'
+    WHERE action = 'Tagged' AND activity.id IN (SELECT id FROM distro_activity);
+UPDATE activity SET type = 'distro_activity', field_name = 'Tag', action = 'Removed'
+    WHERE action = 'UnTagged' AND activity.id IN (SELECT id FROM distro_activity);

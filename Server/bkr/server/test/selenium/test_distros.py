@@ -70,6 +70,40 @@ class DistroViewTest(SeleniumTestCase):
         except Exception, e:
             self.assert_('Response_Code = 403' in e.args[0])
 
+    def test_adding_tag_is_recorded_in_distro_activity(self):
+        self.login(data_setup.ADMIN_USER, data_setup.ADMIN_PASSWORD)
+        sel = self.selenium
+        go_to_distro_view(sel, self.distro)
+        sel.type('tags_tag_text', 'HAPPY')
+        sel.click('//form[@name="tags"]//a[text()="Add ( + )"]')
+        sel.wait_for_page_to_load('30000')
+        self.assertEquals(sel.get_text('css=.flash'), 'Added Tag HAPPY')
+        session.refresh(self.distro)
+        activity = self.distro.activity[0]
+        self.assertEquals(activity.field_name, u'Tag')
+        self.assertEquals(activity.service, u'WEBUI')
+        self.assertEquals(activity.action, u'Added')
+        self.assertEquals(activity.old_value, None)
+        self.assertEquals(activity.new_value, u'HAPPY')
+
+    def test_removing_tag_is_recorded_in_distro_activity(self):
+        self.login(data_setup.ADMIN_USER, data_setup.ADMIN_PASSWORD)
+        sel = self.selenium
+        go_to_distro_view(sel, self.distro)
+        sel.click( # delete link inside cell beside "SAD" cell
+                '//table[@class="list"]//td'
+                '[normalize-space(preceding-sibling::td[1]/text())="SAD"]'
+                '/a[text()="Delete ( - )"]')
+        sel.wait_for_page_to_load('30000')
+        self.assertEquals(sel.get_text('css=.flash'), 'Removed Tag SAD')
+        session.refresh(self.distro)
+        activity = self.distro.activity[0]
+        self.assertEquals(activity.field_name, u'Tag')
+        self.assertEquals(activity.service, u'WEBUI')
+        self.assertEquals(activity.action, u'Removed')
+        self.assertEquals(activity.old_value, u'SAD')
+        self.assertEquals(activity.new_value, None)
+
 class DistroXmlRpcTest(XmlRpcTestCase):
 
     def setUp(self):
@@ -108,3 +142,27 @@ class DistroXmlRpcTest(XmlRpcTestCase):
             self.fail('should raise')
         except xmlrpclib.Fault, e:
             self.assert_('IdentityFailure' in e.faultString)
+
+    def test_adding_tag_is_recorded_in_distro_activity(self):
+        self.server.auth.login_password(
+                data_setup.ADMIN_USER, data_setup.ADMIN_PASSWORD)
+        self.server.distros.tag(self.distro.name, None, 'HAPPY')
+        session.refresh(self.distro)
+        activity = self.distro.activity[0]
+        self.assertEquals(activity.field_name, u'Tag')
+        self.assertEquals(activity.service, u'WEBUI')
+        self.assertEquals(activity.action, u'Added')
+        self.assertEquals(activity.old_value, None)
+        self.assertEquals(activity.new_value, u'HAPPY')
+
+    def test_removing_tag_is_recorded_in_distro_activity(self):
+        self.server.auth.login_password(
+                data_setup.ADMIN_USER, data_setup.ADMIN_PASSWORD)
+        self.server.distros.untag(self.distro.name, None, 'SAD')
+        session.refresh(self.distro)
+        activity = self.distro.activity[0]
+        self.assertEquals(activity.field_name, u'Tag')
+        self.assertEquals(activity.service, u'WEBUI')
+        self.assertEquals(activity.action, u'Removed')
+        self.assertEquals(activity.old_value, u'SAD')
+        self.assertEquals(activity.new_value, None)
