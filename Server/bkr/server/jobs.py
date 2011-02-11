@@ -435,7 +435,7 @@ class Jobs(RPCRoot):
             recipe.distro.systems_filter(user, recipe.host_requires)
         except StandardError, e:
             raise BX(_('Error in hostRequires: %s' % e))
-        recipe.whiteboard = xmlrecipe.whiteboard
+        recipe.whiteboard = xmlrecipe.whiteboard or None #'' -> NULL for DB
         recipe.kickstart = xmlrecipe.kickstart
         if xmlrecipe.autopick:
             recipe.autopick_random = xmlrecipe.autopick.random

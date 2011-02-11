@@ -1,18 +1,14 @@
 ul.nacks > li { float: left; width: 10%; }
 ul.nacks > li:nth-child(10a + 1) { clear: left; }
 
+table {
+empty-cells:hide;
+
+}
+
 th.list {
   min-width:131px;  
 }
-
-td{
-  vertical-align:top
-}
-
-tr > td:first-child {
-  vertical-align:middle
-}
-
 
 input.submit-button {
   margin-left:20em;
@@ -27,20 +23,61 @@ input.submit-button {
   vertical-align:middle
 }
 
-#my_datagrid tbody tr:first-child > td:first-child {
-  vertical-align:bottom
+/* 'Task' header, saves fiddling about in the template */
+div#matrix-report > table > thead > tr > th:first-child {
+    text-align: left;
+    padding-left:25px;
 }
 
-.result-box { 
-  color: white;
-  font-size: 1.5em;
-  margin-top: 0.25em;
-  margin-bottom:0.25em
-} 
+/* Arch headers */
+div#matrix-report > table > thead > tr > th {
+    text-align: center;
+}
 
-.hidden_header {
-  visibility:hidden;
-  padding-left:0px;
+/*Keeps whiteboard text at the top*/
+div#matrix-report > table#my_datagrid:first-child > tbody > tr:first-child > td {
+
+    vertical-align:top;
+}
+
+/* first task name */
+div#matrix-report > table#my_datagrid:first-child > tbody > tr:first-child td:first-child {
+
+    vertical-align:middle;
+}
+
+.matrix-header {
+    background-color:#4F4F4F;
+    color:#FFFFFF;
+    padding-bottom:5px;
+    padding-top:5px;
+}
+
+.result-box {
+  color: white;
+  font-size: 0.9em;
+  margin-top: 0.25em;
+  margin-bottom:0.25em;
+  font-family:"Courier New";
+  font-weight:bold;
+}
+
+.whiteboard-header {
+    background-color:#F1F1F1;
+    color:#4F4F4F;
+    text-align:center;
+    min-width:131px;
+}
+
+.cell-border {
+    border-color: #000;
+    border-width:0 1px 0 0;
+    border-style:solid;
+
+}
+
+.border-white {
+    border-color:#FFF;
 }
 
 .inline {
@@ -66,3 +103,4 @@ input.submit-button {
 .panic {
   background-color:black
 }
+
