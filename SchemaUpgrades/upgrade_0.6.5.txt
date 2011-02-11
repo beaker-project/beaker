@@ -1,0 +1,3 @@
+Add index on activity.created (expected run time ~2mins):
+
+ALTER TABLE activity ADD INDEX ix_activity_created (created);
