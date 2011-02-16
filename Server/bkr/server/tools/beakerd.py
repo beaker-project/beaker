@@ -391,7 +391,8 @@ def scheduled_recipes(*args):
                                                                          recipe.id,
                                                                             e))
                     break
-                ks_meta = "packages=%s" % ":".join([p.package for p in recipe.packages])
+                ks_meta = "recipeid=%s packages=%s" % (recipe.id,
+                                                       ":".join([p.package for p in recipe.packages]))
                 harnessrepos="|".join(["%s,%s" % (r["name"], r["url"]) for r in recipe.harness_repos()])
                 customrepos= "|".join(["%s,%s" % (r.name, r.url) for r in recipe.repos])
                 ks_meta = "%s customrepos=%s harnessrepos=%s" % (ks_meta, customrepos, harnessrepos)
