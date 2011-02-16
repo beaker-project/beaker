@@ -6000,13 +6000,13 @@ mapper(Power, power_table,
 mapper(Serial, serial_table)
 mapper(SerialType, serial_type_table)
 mapper(Install, install_table)
-mapper(LabControllerDistro, lab_controller_distro_map , properties={
-    'distro':relation(Distro, backref='lab_controller_assocs')
-})
+mapper(LabControllerDistro, lab_controller_distro_map)
+
 mapper(LabController, lab_controller_table,
-        properties = {'_distros':relation(LabControllerDistro,
-                                          backref='lab_controller'),
-    })
+        properties = {'_distros':relation(LabControllerDistro, backref='lab_controller',
+                                          cascade='all, delete-orphan'),
+                     }
+      )
 
 mapper(Distro, distro_table,
         properties = {'osversion':relation(OSVersion, uselist=False,
@@ -6016,6 +6016,8 @@ mapper(Distro, distro_table,
                       '_tags':relation(DistroTag,
                                        secondary=distro_tag_map,
                                        backref='distros'),
+                      'lab_controller_assocs':relation(LabControllerDistro, backref='distro',
+                                                       cascade='all, delete-orphan'),
     })
 mapper(Breed, breed_table)
 mapper(DistroTag, distro_tag_table)

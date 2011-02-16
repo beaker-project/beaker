@@ -76,14 +76,8 @@
     </td>
    </tr>
   </table>
-
   <div><h2>Lab Controllers</h2>
-   <table class="list">
-    <tr py:for="labcontroller in value.lab_controller_assocs" class="list">
-     <th class="list">${labcontroller.lab_controller.fqdn}</th>
-     <td class="list">${labcontroller.tree_path}</td>
-    </tr>
-   </table>
+   ${form_lc.display(method='get', action=action, value=value, options=options)}
   </div>
   <div><h2>Tags</h2>
    ${form.display(method='get', action=action, value=value, options=options)}
