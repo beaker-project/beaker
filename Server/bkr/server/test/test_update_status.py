@@ -6,7 +6,13 @@ from turbogears.database import session
 from bkr.server.jobxml import XmlJob
 from bkr.server.bexceptions import BX
 from bkr.server.test import data_setup
-from bkr.server.model import TaskStatus, Watchdog
+from bkr.server.model import TaskStatus, Watchdog, RecipeSet
+
+def watchdogs_for_job(job):
+    return Watchdog.query().join(['recipe', 'recipeset', 'job'])\
+            .filter(RecipeSet.job == job).all() + \
+           Watchdog.query().join(['recipetask', 'recipe', 'recipeset', 'job'])\
+            .filter(RecipeSet.job == job).all()
 
 class TestUpdateStatus(unittest.TestCase):
 
@@ -94,7 +100,7 @@ class TestUpdateStatus(unittest.TestCase):
         session.flush()
 
         # watchdog's should exist 
-        self.assertNotEqual(Watchdog.query().count(), 0)
+        self.assertNotEqual(len(watchdogs_for_job(job)), 0)
 
         # Play back the original jobs results and status
         data_setup.playback_job_results(job, xmljob)
@@ -112,7 +118,7 @@ class TestUpdateStatus(unittest.TestCase):
                     self.assertEquals(task.result, job.recipesets[i].recipes[j].tasks[k].result.result)
 
         # No watchdog's should exist when the job is complete
-        self.assertEquals(Watchdog.query().count(), 0)
+        self.assertEquals(len(watchdogs_for_job(job)), 0)
 
     def test_update_status_can_be_roundtripped_40214(self):
         complete_job_xml = pkg_resources.resource_string('bkr.server.test', 'job_40214.xml')
@@ -129,7 +135,7 @@ class TestUpdateStatus(unittest.TestCase):
         session.flush()
 
         # watchdog's should exist 
-        self.assertNotEqual(Watchdog.query().count(), 0)
+        self.assertNotEqual(len(watchdogs_for_job(job)), 0)
 
         # Play back the original jobs results and status
         data_setup.playback_job_results(job, xmljob)
@@ -147,4 +153,4 @@ class TestUpdateStatus(unittest.TestCase):
                     self.assertEquals(task.result, job.recipesets[i].recipes[j].tasks[k].result.result)
 
         # No watchdog's should exist when the job is complete
-        self.assertEquals(Watchdog.query().count(), 0)
+        self.assertEquals(len(watchdogs_for_job(job)), 0)

@@ -205,6 +205,13 @@ from bkr.server.reports import Reports
     <div id="beaker-version">
         Version - ${tg.beaker_version()}
     </div>
+    <?python
+    from bkr.server import motd
+    ?>
+    <div id='motd' py:if="motd.the_motd">
+    <p style='font-weight:bold;display:inline'>Message of the day</p>
+    ${XML(motd.the_motd)}
+    </div>
     <!-- header END -->
     <div id="fedora-middle-one">
         <div class="fedora-corner-tr">&nbsp;</div>

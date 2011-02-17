@@ -61,7 +61,7 @@ class MailCaptureThread(threading.Thread):
                 # also clean up any orphaned SMTP channels
                 for dispatcher in asyncore.socket_map.values():
                     if isinstance(dispatcher, smtpd.SMTPChannel) \
-                            and dispatcher.__server is self:
+                            and dispatcher._SMTPChannel__server is self:
                         log.debug('%r: Forcing close of orphaned channel %r',
                                 self, dispatcher)
                         dispatcher.close()

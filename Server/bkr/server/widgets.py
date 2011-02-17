@@ -1150,7 +1150,7 @@ class TasksWidget(CompoundWidget):
     template = "bkr.server.templates.tasks_widget"
     params = ['tasks', 'hidden','action']
     member_widgets = ['link']
-    action = './do_search'
+    action = '/tasks/do_search'
     link = LinkRemoteFunction(name='link', before='task_search_before()', on_complete='task_search_complete()')
 
 class RecipeTasksWidget(TasksWidget):
@@ -1168,9 +1168,9 @@ class RecipeSetWidget(CompoundWidget):
     css = []
     template = "bkr.server.templates.recipe_set"
     params = ['recipeset','show_priority','action','priorities_list']
-    member_widgets = ['priority_widget','retentiontag_widget','ack_panel_widget', 'product_widget']
-
+    member_widgets = ['priority_widget','retentiontag_widget','ack_panel_widget', 'product_widget', 'action_widget']
     def __init__(self, priorities_list=None, *args, **kw):
+        self.action_widget = TaskActionWidget()
         self.priorities_list = priorities_list
         self.ack_panel_widget = AckPanel()
         self.priority_widget = PriorityWidget()
@@ -1188,8 +1188,13 @@ class RecipeWidget(CompoundWidget):
     css = []
     template = "bkr.server.templates.recipe_widget"
     params = ['recipe']
-    member_widgets = ['recipe_tasks_widget']
+    member_widgets = ['recipe_tasks_widget','action_widget']
     recipe_tasks_widget = RecipeTasksWidget()
+
+    def __init__(self, *args, **kw):
+        self.action_widget = RecipeActionWidget()
+        super(RecipeWidget,self).__init__(*args, **kw)
+    
 
 
 class ProductWidget(SingleSelectField, RPC):
@@ -1330,3 +1335,66 @@ class JobWhiteboard(RPC, CompoundWidget):
         super(JobWhiteboard, self).update_params(d)
         d['form_attrs']['onsubmit'] = "return !remoteFormRequest(this, null, %s);" % (
             jsonify.encode(self.get_options(d)))
+
+class TaskActionWidget(RPC):
+    template = 'bkr.server.templates.action'
+    """
+    TaskActionWidget will display the appropriate actions for a task
+    """
+    def __init__(self, *args, **kw):
+        super(TaskActionWidget,self).__init__(*args, **kw)
+    
+    def display(self, task, *args, **params): 
+        params['task'] = task
+        return super(TaskActionWidget, self).display(*args, **params)
+
+class RecipeActionWidget(TaskActionWidget):
+    template = 'bkr.server.templates.recipe_action'
+    params = ['show_report']
+
+    def __init__(self, *args, **kw):
+        super(RecipeActionWidget, self).__init__(*args, **kw)
+
+    def display(self, task, **params):
+        if task.system:
+            params['show_report'] = task.system.report_problem_href(recipe_id=task.id)
+        else:
+            params['show_report'] = None
+        return super(RecipeActionWidget,self).display(task, **params)
+
+
+class JobActionWidget(TaskActionWidget):
+    template = 'bkr.server.templates.job_action'
+    params = ['redirect_to']
+    action = url('/jobs/delete_job_from_ui')
+    javascript = [LocalJSLink('bkr', '/static/javascript/job_delete.js'),
+        LocalJSLink('bkr', '/static/javascript/job_row_delete.js')]
+
+    def __init__(self, *args, **kw):
+        super(JobActionWidget, self).__init__(*args, **kw)
+
+    def display(self, task, action=None, **params): 
+        t_id = task.t_id
+        job_details={'id': 'delete_%s' % t_id,
+            't_id' : t_id}
+        params['job_details'] = job_details
+        if action:
+            params['action'] = action
+        return super(JobActionWidget, self).display(task, **params)
+
+    def update_params(self, d):
+        super(JobActionWidget, self).update_params(d)
+        d['job_details']['onclick'] = "JobDelete('%s',%s, %s)" % (
+            d.get('action'),
+            jsonify.encode({'t_id': d['job_details'].get('t_id')}),
+            jsonify.encode(self.get_options(d)),
+            )
+
+class JobPageActionWidget(JobActionWidget):
+    params = []
+    javascript = [LocalJSLink('bkr', '/static/javascript/job_delete.js'),
+        LocalJSLink('bkr', '/static/javascript/job_page_delete.js')]
+
+    def __init__(self, *args, **kw):
+        super(JobPageActionWidget, self).__init__(*args, **kw)
+

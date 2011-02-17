@@ -128,7 +128,7 @@
    <td class="title"><b>Progress</b></td>
    <td class="value">${job.progress_bar}</td>
    <td class="title" rowspan="2"><b>Action(s)</b></td>
-   <td class="value" rowspan="2">${job.action_link}</td>
+   <td class="value" rowspan="2">${action_widget(task=job, redirect_to=redirect_job_delete)}</td>
   </tr>
   <tr>
    <td class="title"><b>CC</b></td>
@@ -136,19 +136,19 @@
   </tr>
   <tr>
    <td class="title"><b>Whiteboard</b></td>
-   <td class="value" colspan="3" style="vertical-align: top;">${whiteboard_widget(value=job.whiteboard, job_id=job.id, readonly=not job.can_admin(user))}</td>
+   <td class="value" colspan="3" style="vertical-align: top;">${whiteboard_widget(value=job.whiteboard, job_id=job.id, readonly=not job.can_admin(tg.identity.user))}</td>
   </tr> 
   <tr>
   <td class="title"><b>Retention Tag</b></td>
-  <td py:if="job.access_rights(user)" class='value' coslpan="3" style="vertical-align:top;">${retention_tag_widget.display(value=job.retention_tag.id, job_id=job.id)} </td>
- <td py:if=" not job.access_rights(user)" class='value' coslpan="3" style="vertical-align:top;">${retention_tag_widget.display(value=job.retention_tag.id, job_id=job.id,attrs=dict(disabled='1'))} </td>
+  <td py:if="job.access_rights(tg.identity.user)" class='value' coslpan="3" style="vertical-align:top;">${retention_tag_widget.display(value=job.retention_tag.id, job_id=job.id)} </td>
+ <td py:if=" not job.access_rights(tg.identity.user)" class='value' coslpan="3" style="vertical-align:top;">${retention_tag_widget.display(value=job.retention_tag.id, job_id=job.id,attrs=dict(disabled='1'))} </td>
   </tr>
   <tr>
   <td class="title"><b>Product</b></td>
-  <td py:if="job.access_rights(user)" class='value' coslpan="3" style="vertical-align:top;">${product_widget.display(value=getattr(job.product,'id',0), job_id=job.id)} <!--FIXME don't think I should have to pass my Job --></td>
-  <td py:if="not job.access_rights(user)" class='value' coslpan="3" style="vertical-align:top;">${product_widget.display(value=getattr(job.product,'id',0), job_id=job.id, attrs=dict(disabled='1'))} <!--FIXME don't think I should have to pass my Job --></td>
+  <td py:if="job.access_rights(tg.identity.user)" class='value' coslpan="3" style="vertical-align:top;">${product_widget.display(value=getattr(job.product,'id',0), job_id=job.id)} <!--FIXME don't think I should have to pass my Job --></td>
+  <td py:if="not job.access_rights(tg.identity.user)" class='value' coslpan="3" style="vertical-align:top;">${product_widget.display(value=getattr(job.product,'id',0), job_id=job.id, attrs=dict(disabled='1'))} <!--FIXME don't think I should have to pass my Job --></td>
   </tr>
-  <tr py:if="job.access_rights(user) and job.is_queued()">
+  <tr py:if="job.access_rights(tg.identity.user) and job.is_queued()">
   ${job.priority_settings(prefix=u'priority_job_', colspan='3')}
 
     <script type='text/javascript'>
@@ -159,7 +159,7 @@
  </table>
   <div py:for="recipeset in job.recipesets" class="recipeset">
     <?python 
-        allowed_priorities = recipeset.allowed_priorities(user) 
+        allowed_priorities = recipeset.allowed_priorities(tg.identity.user) 
         if allowed_priorities:
             priorities_list = [(elem.id,elem.priority) for elem in allowed_priorities]
         else: priorities_list = None

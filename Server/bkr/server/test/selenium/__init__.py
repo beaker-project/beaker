@@ -18,6 +18,7 @@
 
 import sys
 import os
+import re
 import logging
 import subprocess
 import signal
@@ -29,8 +30,10 @@ import threading
 import xmlrpclib
 from urlparse import urljoin
 import kobo.xmlrpc
+from datetime import datetime
 import bkr.server.test
 from bkr.server.bexceptions import BX
+from time import sleep
 
 log = logging.getLogger(__name__)
 
@@ -38,6 +41,21 @@ class SeleniumTestCase(unittest.TestCase):
 
     BEAKER_LOGIN_USER = 'admin'
     BEAKER_LOGIN_PASSWORD = 'testing'
+
+    def wait_and_try(self, f, wait_time=30):
+        start_time = datetime.now()
+        while True:
+            try:
+                f()
+                break
+            except AssertionError, e:
+                current_test_time = datetime.now()
+                delta = current_test_time - start_time
+                if delta.seconds > wait_time:
+                    raise
+                else:
+                    sleep(0.25)
+                    pass
 
     @classmethod
     def get_selenium(cls):
@@ -70,7 +88,7 @@ class SeleniumTestCase(unittest.TestCase):
             try:
                 sel.click("link=Login")
             except Exception, e:
-                raise BX(_(e))
+                raise BX(_(unicode(e)))
             sel.wait_for_page_to_load("30000")
             sel.type("user_name", user)
             sel.type("password", password)
@@ -172,9 +190,19 @@ class CommunicateThread(threading.Thread):
             if not data: break
             sys.stdout.write(data)
 
+def jvm_version():
+    popen = subprocess.Popen(['java', '-version'], stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT)
+    stdout, stderr = popen.communicate()
+    version_line = stdout.splitlines()[0]
+    m = re.match(r'java version "(\d)\.(\d)', version_line)
+    assert m is not None, version_line
+    return (int(m.group(1)), int(m.group(2)))
+
 processes = []
 
 def setup_package():
+    assert jvm_version() >= (1, 6), 'Selenium needs JVM >= 1.6'
     if not os.path.exists('/tmp/selenium'):
         os.mkdir('/tmp/selenium')
     processes.extend([

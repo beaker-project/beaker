@@ -1,0 +1,1 @@
+<span>Testing the motd</span>
