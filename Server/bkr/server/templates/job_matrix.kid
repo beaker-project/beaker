@@ -1,6 +1,4 @@
-<html xmlns="http://www.w3.org/1999/xhtml" xmlns:py="http://purl.org/kid/ns#">
-<body>
-<head>
+<div xmlns:py="http://purl.org/kid/ns#">
 <script type="text/javascript" src="${tg.url('/static/javascript/jquery.cookie.js')}"></script>
 <script type='text/javascript'>
 var matrix = new JobMatrix("${job_ids.field_id}","${whiteboard.field_id}","${whiteboard_filter.field_id}")
@@ -23,19 +21,6 @@ $(document).ready( function() {
                           
                         
         }) 
-/**
-    if ($.cookie('nacks_field')) {
-        switch ($.cookie('nacks_field'))
-        {
-            case 'hide': 
-                $('#nacks').css('display','none')
-            break;
-            case 'show':
-                $('#nacks').css('display','block')
-            break;
-        }
-    }
-**/
     $('#${whiteboard_filter.field_id}').blur(function () { matrix.filter_on_whiteboard()  } )
     $('#${whiteboard.field_id}').click(function () { 
         matrix.clicked_whiteboard() 
@@ -45,22 +30,11 @@ $(document).ready( function() {
         matrix.clicked_jobs() 
     } )
 
- /***   
-    $('#toggle_nacks').click(function () { 
-                $('#nacks').toggle()   
-                if ($('#nacks').css('display') == 'none') {
-                        $.cookie('nacks_field','hide')    
-                    } else {
-                        $.cookie('nacks_field','show')    
-                        } 
-                    } )
-   */
 })
 
 
 
 </script>
-</head>
 <div style='padding-left:2em'>
 <form action='${tg.url(action)}' name="${name}">   
      <div style='float:left'> 
@@ -81,23 +55,20 @@ $(document).ready( function() {
      
         <div style="clear:left"  class="margined"  id="nacks">
         <h5 style="display:inline">${nack_list.label}</h5>
-     <!--   <div clas="margined" py:content="nack_list.display(options=nacks, list_attrs={'class' : 'checkboxlist nacks'})" /> -->
             <input py:if="toggle_nacks_on" id="toggle_nacks_on" name="toggle_nacks_on" type="checkbox" checked="" /> 
             <input py:if="not toggle_nacks_on" id="toggle_nacks_on" name="toggle_nacks_on" type="checkbox" /> 
         </div>
 
 
-      <br style="clear:both" /> 
+      <br style="clear:both" />
        <!--<a py:if="toggle_nacks" id="toggle_nacks" style="font-size:x-small" href="#">Toggle Nacks </a> -->
       <input class='submit-button' type='submit' value='Generate' />
-   
-    <div py:if="grid"> 
-      ${grid.display(list)} 
+
+    <div id='matrix-report' py:if="grid">
+      ${grid.display(list)}
     </div>
 </form>
 </div>
-</body>
-</html>
-
+</div>
 
 

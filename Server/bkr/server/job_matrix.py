@@ -230,27 +230,29 @@ class JobMatrix:
         else:
            pass
 
-        recipes = model.Recipe.query().join(['distro','arch']).join(['recipeset','job']).filter(model.RecipeSet.job_id.in_(jobs)).add_column(model.Arch.arch)  
-        if 'toggle_nacks_on' in kw: #if we're here we are potentially trying to add/remove nacks
-            #exclude_recipe_sets = self._nack_handler(jobs,recipes,kw.get('nacks'))  
+        recipes = model.Recipe.query().join(['distro','arch']).join(['recipeset','job']).filter(model.RecipeSet.job_id.in_(jobs)).add_column(model.Arch.arch)
+        if 'toggle_nacks_on' in kw: #if we're here we are potentially trying to hide naked RS'
             exclude_recipe_sets = model.Job.get_nacks(jobs)
             recipes = recipes.filter(not_(model.RecipeSet.id.in_(exclude_recipe_sets)))
         else: #Likely this is the initial page load for these Jobs. No modifying the nack db.
             exclude_recipe_sets = [] 
             #recipes = recipes.filter(not_(model.RecipeSet.id.in_(exclude_recipe_sets))) 
-
-        for recipe,arch in recipes: 
-            if arch in whiteboard_data:    
+        """
+        Let's get all the tasks that will be run, and the arch/whiteboard
+        """
+        the_tasks = {}
+        for recipe,arch in recipes:
+            the_tasks.update(dict([(rt.task.name,{}) for rt in recipe.tasks]))
+            if arch in whiteboard_data:
                 if recipe.whiteboard not in whiteboard_data[arch]:
                     whiteboard_data[arch].append(recipe.whiteboard)
             else:
-                whiteboard_data[arch] = [recipe.whiteboard] 
-
+                whiteboard_data[arch] = [recipe.whiteboard]
         case0 = case([(model.task_result_table.c.result == u'New',1)],else_=0)
         case1 = case([(model.task_result_table.c.result == u'Pass',1)],else_=0)
         case2 = case([(model.task_result_table.c.result == u'Warn',1)],else_=0)
         case3 = case([(model.task_result_table.c.result == u'Fail',1)],else_=0)
-        case4 = case([(model.task_result_table.c.result == u'Panic',1)],else_=0) 
+        case4 = case([(model.task_result_table.c.result == u'Panic',1)],else_=0)
     
         arch_alias = model.arch_table.alias()
         recipe_table_alias = model.recipe_table.alias()
@@ -263,7 +265,7 @@ class JobMatrix:
                      case1.label('rc1'),
                      case2.label('rc2'),
                      case3.label('rc3'),
-                     case4.label('rc4')]
+                     case4.label('rc4'),]
                        
         my_from = [model.recipe_set_table.join(recipe_table_alias). 
                               join(model.distro_table, model.distro_table.c.id == recipe_table_alias.c.distro_id).
@@ -278,8 +280,6 @@ class JobMatrix:
         #eng = database.get_engine()
         #c = s2.compile(eng) 
         #eng.execute("CREATE VIEW foobar AS %s" % c)
-       
-        my_hash = {} 
         for arch_val,whiteboard_set in whiteboard_data.iteritems():
             for whiteboard_val in whiteboard_set:
                 if whiteboard_val is not None:
@@ -291,18 +291,16 @@ class JobMatrix:
                                    arch_alias.c.arch == bindparam('arch'), 
                                    recipe_table_alias.c.whiteboard==None]
 
-                
                 try:
                     ex = locals()['exclude_recipe_sets'] 
                     my_and.append(not_(model.recipe_set_table.c.id.in_(exclude_recipe_sets)))
                 except KeyError, e: pass
 
-                
                 s2 = select(my_select,from_obj=my_from,whereclause=and_(*my_and)).alias('foo')
                 s2 = s2.params(arch=arch_val)
                 if whiteboard_val is not None:
-                    s2 = s2.params(recipe_whiteboard=whiteboard_val) 
- 
+                    s2 = s2.params(recipe_whiteboard=whiteboard_val)
+
                 s1  = select([func.count(s2.c.result),
                               func.sum(s2.c.rc0).label('New'),
                               func.sum(s2.c.rc1).label('Pass'),
@@ -315,49 +313,38 @@ class JobMatrix:
                               model.task_table.c.name.label('task_name'),
                               s2.c.task_id.label('task_id_pk')],
                               s2.c.task_id == model.task_table.c.id,
-                     
                               from_obj=[model.task_table,s2]).group_by(model.task_table.c.name).order_by(model.task_table.c.name).alias()
-               
-                class InnerDynamo(object):
-                    pass
-                mapper(InnerDynamo,s1)
- 
-                dyn = InnerDynamo.query() 
-               
-                for d in dyn:
-                    self.arches_used[d.arch] = 1 #so we know how to build the datagrid columns
-                    if d.arch not in self.whiteboards_used: #so we know how to build inner grid columns
-                        self.whiteboards_used[d.arch] = [whiteboard_val]
-                    else:
-                        self.whiteboards_used[d.arch].append(whiteboard_val)
-                    if d.task_name not in my_hash:
-                        my_hash[d.task_name]= {d.arch : {  whiteboard_val: [d] } }
-                    else:  
-                        if d.arch in my_hash[d.task_name]:
-                            if whiteboard_val not in my_hash[d.task_name][d.arch]:
-                                my_hash[d.task_name][d.arch][whiteboard_val] = [d]
-                            else: 
-                                my_hash[d.task_name][d.arch][whiteboard_val].append(d)                          
+                results = s1.execute()
+                for task_details in results:
+                    if task_details.arch in the_tasks[task_details.task_name]:
+                        if (whiteboard_val not in
+                            the_tasks[task_details.task_name][task_details.arch]):
+                            (the_tasks[task_details.task_name][task_details.arch]
+                                [whiteboard_val]) = [task_details]
                         else:
-                            my_hash[d.task_name][d.arch] = { whiteboard_val : [d] } 
-        
+                            (the_tasks[task_details.task_name]
+                                [task_details.arch][whiteboard_val].
+                                append(task_details))
+                    else:
+                        the_tasks[task_details.task_name][task_details.arch] = \
+                            { whiteboard_val : [task_details] }
+
         # Here we append TaskR objects to an array. Each TaskR object
         # will have a nested dict accessable by a arch/whiteboard key, which will
         # return a InnerDynamo object. There should be one TaskR object for each
         # task name
+        self.whiteboards_used = whiteboard_data
+        self.arches_used = dict.fromkeys(whiteboard_data.keys(),1)
         result_data = []
-        sorted_hash = sorted(my_hash.items())
-        for task_name,arch_whiteboard_val in sorted_hash:
-            n = TaskR(task_name)     
-
+        sorted_tasks = sorted(the_tasks.items())
+        for task_name,arch_whiteboard_val in sorted_tasks:
+            n = TaskR(task_name)
             for arch,whiteboard_val in arch_whiteboard_val.items():
-               
-                for whiteboard,dynamo_objs in whiteboard_val.items(): 
+                for whiteboard,dynamo_objs in whiteboard_val.items():
                     n.add_result(arch,whiteboard,dynamo_objs)
-           
-            result_data.append(n) 
-        self.result_data = result_data           
-        return result_data 
+            result_data.append(n)
+        self.result_data = result_data
+        return result_data
 
     def _create_task_list_params(self,query_obj,result):
         """
