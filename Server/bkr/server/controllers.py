@@ -1529,7 +1529,11 @@ class Root(RPCRoot):
             redirect("/")
         # Add an Arch
         if kw.get('arch').get('text'):
-            arch = Arch.by_name(kw['arch']['text'])
+            try:
+                arch = Arch.by_name(kw['arch']['text'])
+            except InvalidRequestError:
+                flash(_(u'No such arch %s') % kw['arch']['text'])
+                redirect('/view/%s' % system.fqdn)
             system.arch.append(arch)
             activity = SystemActivity(identity.current.user, 'WEBUI', 'Added', 'Arch', "", kw['arch']['text'])
             system.activity.append(activity)

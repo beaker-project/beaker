@@ -163,6 +163,17 @@ class SystemViewTest(SeleniumTestCase):
         session.refresh(self.system)
         self.assert_(self.system.date_modified > orig_date_modified)
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=677951
+    def test_add_nonexistent_arch(self):
+        self.login()
+        sel = self.selenium
+        self.go_to_system_view()
+        sel.click('//ul[@class="tabbernav"]//a[text()="Arch(s)"]')
+        sel.type('arch.text', 'notexist')
+        sel.click('//form[@name="arches"]//a[text()="Add ( + )"]')
+        sel.wait_for_page_to_load('30000')
+        self.assertEquals(sel.get_text('css=.flash'), u'No such arch notexist')
+
     def test_remove_arch(self):
         orig_date_modified = self.system.date_modified
         self.login()
