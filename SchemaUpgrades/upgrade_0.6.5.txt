@@ -19,3 +19,10 @@ UPDATE activity SET type = 'distro_activity', field_name = 'Tag', action = 'Adde
     WHERE action = 'Tagged' AND activity.id IN (SELECT id FROM distro_activity);
 UPDATE activity SET type = 'distro_activity', field_name = 'Tag', action = 'Removed'
     WHERE action = 'UnTagged' AND activity.id IN (SELECT id FROM distro_activity);
+
+for bz678215, this is so in our matrix it does not show two empty whiteboard
+columns for the same arch (when we have a '' whiteboard and a None
+whiteboard):
+
+use beaker;
+UPDATE recipe SET whiteboard = NULL WHERE whiteboard = '';
