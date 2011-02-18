@@ -36,7 +36,11 @@ log = logging.getLogger(__name__)
 
 class LoginTest(SeleniumTestCase):
 
+    password = u'password'
+
     def setUp(self):
+        self.user = data_setup.create_user(password=self.password)
+        session.flush()
         self.selenium = self.get_selenium()
         self.selenium.start()
 
@@ -46,7 +50,6 @@ class LoginTest(SeleniumTestCase):
     # https://bugzilla.redhat.com/show_bug.cgi?id=660527
     def test_referer_redirect(self):
         system = data_setup.create_system()
-        user = data_setup.create_user(password=u'password')
         session.flush()
 
         # Go to the system page
@@ -62,13 +65,33 @@ class LoginTest(SeleniumTestCase):
         # Click log in, and fill in details
         sel.click('link=Login')
         sel.wait_for_page_to_load('3000')
-        sel.type('user_name', user.user_name)
-        sel.type('password', 'password')
+        sel.type('user_name', self.user.user_name)
+        sel.type('password', self.password)
         sel.click('login')
         sel.wait_for_page_to_load('3000')
 
         # We should be back at the system page
         self.assertEquals(sel.get_title(), system.fqdn)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=663277
+    def test_NestedVariablesFilter_redirect(self):
+        sel = self.selenium
+        # Open jobs/mine (which requires login) with some funky params
+        sel.open('jobs/mine?'
+                'jobsearch-0.table=Status&'
+                'jobsearch-0.operation=is+not&'
+                'jobsearch-0.value=Completed&'
+                'jobsearch-1.table=Status&'
+                'jobsearch-1.operation=is+not&'
+                'jobsearch-1.value=Cancelled',
+                ignoreResponseCode=True)
+        # Fill in the login form
+        sel.type('user_name', self.user.user_name)
+        sel.type('password', self.password)
+        sel.click('login')
+        sel.wait_for_page_to_load('3000')
+        # Did it work?
+        self.assertEquals(sel.get_title(), 'My Jobs')
 
 class XmlRpcLoginTest(XmlRpcTestCase):
 
