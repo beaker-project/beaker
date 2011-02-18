@@ -159,7 +159,7 @@ class SystemViewTest(SeleniumTestCase):
         sel.click('//form[@name="arches"]//a[text()="Add ( + )"]')
         sel.wait_for_page_to_load('30000')
         self.assertEquals(sel.get_xpath_count('//form[@name="arches"]'
-                '//td[normalize-space(text())="s390"]'), '1')
+                '//td[normalize-space(text())="s390"]'), 1)
         session.refresh(self.system)
         self.assert_(self.system.date_modified > orig_date_modified)
 
@@ -170,7 +170,7 @@ class SystemViewTest(SeleniumTestCase):
         self.go_to_system_view()
         sel.click('//ul[@class="tabbernav"]//a[text()="Arch(s)"]')
         self.assertEquals(sel.get_xpath_count('//form[@name="arches"]'
-                '//td[normalize-space(text())="i386"]'), '1')
+                '//td[normalize-space(text())="i386"]'), 1)
         sel.click( # delete link inside cell beside "i386" cell
                 '//table[@class="list"]//td'
                 '[normalize-space(preceding-sibling::td[1]/text())="i386"]'
@@ -178,7 +178,7 @@ class SystemViewTest(SeleniumTestCase):
         sel.wait_for_page_to_load('30000')
         self.assertEquals(sel.get_text('css=.flash'), 'i386 Removed')
         self.assertEquals(sel.get_xpath_count('//form[@name="arches"]'
-                '//td[normalize-space(text())="i386"]'), '0')
+                '//td[normalize-space(text())="i386"]'), 0)
         session.refresh(self.system)
         self.assert_(self.system.date_modified > orig_date_modified)
 
@@ -194,7 +194,7 @@ class SystemViewTest(SeleniumTestCase):
         sel.wait_for_page_to_load('30000')
         self.assertEquals(sel.get_xpath_count('//form[@name="keys"]'
                 '//td[normalize-space(preceding-sibling::td[1]/text())="NR_DISKS" and '
-                'normalize-space(text())="100"]'), '1')
+                'normalize-space(text())="100"]'), 1)
         session.refresh(self.system)
         self.assert_(self.system.date_modified > orig_date_modified)
 
@@ -209,7 +209,7 @@ class SystemViewTest(SeleniumTestCase):
         sel.click('//ul[@class="tabbernav"]//a[text()="Key/Values"]')
         self.assertEquals(sel.get_xpath_count('//form[@name="keys"]'
                 '//td[normalize-space(preceding-sibling::td[1]/text())="NR_DISKS" and '
-                'normalize-space(text())="100"]'), '1')
+                'normalize-space(text())="100"]'), 1)
         sel.click( # delete link inside cell in row with NR_DISKS 100
                 '//table[@class="list"]//td['
                 'normalize-space(preceding-sibling::td[2]/text())="NR_DISKS" and '
@@ -219,7 +219,7 @@ class SystemViewTest(SeleniumTestCase):
         self.assertEquals(sel.get_text('css=.flash'), 'removed NR_DISKS/100')
         self.assertEquals(sel.get_xpath_count('//form[@name="keys"]'
                 '//td[normalize-space(preceding-sibling::td[1]/text())="NR_DISKS" and '
-                'normalize-space(text())="100"]'), '0')
+                'normalize-space(text())="100"]'), 0)
         session.refresh(self.system)
         self.assert_(self.system.date_modified > orig_date_modified)
 
@@ -240,7 +240,7 @@ class SystemViewTest(SeleniumTestCase):
         sel.click('//form[@name="groups"]//a[text()="Add ( + )"]')
         sel.wait_for_page_to_load("30000")
         self.assertEquals(sel.get_xpath_count('//form[@name="groups"]'
-                '//td[normalize-space(text())="%s"]' % group.group_name), '1')
+                '//td[normalize-space(text())="%s"]' % group.group_name), 1)
         session.refresh(self.system)
         self.assert_(self.system.date_modified > orig_date_modified)
 
@@ -264,7 +264,7 @@ class SystemViewTest(SeleniumTestCase):
         self.go_to_system_view()
         sel.click('//ul[@class="tabbernav"]//a[text()="Groups"]')
         self.assertEquals(sel.get_xpath_count('//form[@name="groups"]'
-                '//td[normalize-space(text())="%s"]' % group.group_name), '1')
+                '//td[normalize-space(text())="%s"]' % group.group_name), 1)
         sel.click( # delete link inside cell in row with group name
                 '//table[@class="list"]'
                 '//td[normalize-space(preceding-sibling::td[3]/text())="%s"]'
@@ -273,7 +273,7 @@ class SystemViewTest(SeleniumTestCase):
         self.assertEquals(sel.get_text('css=.flash'),
                 '%s Removed' % group.display_name)
         self.assertEquals(sel.get_xpath_count('//form[@name="groups"]'
-                '//td[normalize-space(text())="%s"]' % group.group_name), '0')
+                '//td[normalize-space(text())="%s"]' % group.group_name), 0)
         session.refresh(self.system)
         self.assert_(self.system.date_modified > orig_date_modified)
 

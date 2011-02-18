@@ -34,6 +34,9 @@ from datetime import datetime
 import bkr.server.test
 from bkr.server.bexceptions import BX
 from time import sleep
+import pkg_resources
+
+pkg_resources.require('selenium >= 2.0b2')
 
 log = logging.getLogger(__name__)
 

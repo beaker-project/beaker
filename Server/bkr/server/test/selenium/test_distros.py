@@ -53,7 +53,8 @@ class DistroViewTest(SeleniumTestCase):
         self.assert_(not sel.is_element_present(
                '//form[@name="tags"]//a[text()="Add ( + )"]'))
         try:
-            sel.open('distros/save_tag?id=%s&tag.text=HAPPY' % self.distro.id)
+            sel.open('distros/save_tag?id=%s&tag.text=HAPPY' % self.distro.id,
+                    ignoreResponseCode=False)
             self.fail('should raise 403')
         except Exception, e:
             self.assert_('Response_Code = 403' in e.args[0])
@@ -65,7 +66,8 @@ class DistroViewTest(SeleniumTestCase):
         self.assert_(not sel.is_element_present(
                '//form[@name="tags"]//a[text()="Delete ( - )"]'))
         try:
-            sel.open('distros/tag_remove?id=%s&tag=SAD' % self.distro.id)
+            sel.open('distros/tag_remove?id=%s&tag=SAD' % self.distro.id,
+                    ignoreResponseCode=False)
             self.fail('should raise 403')
         except Exception, e:
             self.assert_('Response_Code = 403' in e.args[0])
