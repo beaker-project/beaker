@@ -76,3 +76,10 @@ def unicode_truncate(s, bytes_length, encoding='utf8'):
     if len(s) * 4 < bytes_length: return s # fast path
     encoded = s.encode(encoding)[:bytes_length]
     return encoded.decode(encoding, 'ignore')
+
+# This is a builtin in Python 2.5+
+def any(iterable):
+    for element in iterable:
+        if element:
+            return True
+    return False
