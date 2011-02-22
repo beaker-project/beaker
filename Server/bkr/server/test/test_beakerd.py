@@ -17,8 +17,9 @@ class TestBeakerd(unittest.TestCase):
 
     def setUp(self):
         self.jobs = list()
+        distro = data_setup.create_distro()
         for i in range(30):
-            job = data_setup.create_job(whiteboard=u'job_%s' % i)
+            job = data_setup.create_job(whiteboard=u'job_%s' % i, distro=distro)
             self.jobs.append(job)
         session.flush()
 
