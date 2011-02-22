@@ -85,14 +85,36 @@ def new_recipes(*args):
         try:
             recipe = Recipe.by_id(_recipe.id)
             if recipe.distro:
+                recipe.systems = []
+
+                # Do the query twice. 
+
+                # First query verifies that the distro
+                # exists in at least one lab that has a macthing system.
                 systems = recipe.distro.systems_filter(
                                             recipe.recipeset.job.owner,
-                                            recipe.host_requires
+                                            recipe.host_requires,
+                                            join=['lab_controller',
+                                                  '_distros',
+                                                  'distro'],
+                                                      )\
+                                       .filter(Distro.install_name==
+                                               recipe.distro.install_name)
+                # Second query picksup all possible systems so that as 
+                # distros appear in other labs those systems will be 
+                # available.
+                all_systems = recipe.distro.systems_filter(
+                                            recipe.recipeset.job.owner,
+                                            recipe.host_requires,
+                                            join=['lab_controller'],
                                                       )
-                recipe.systems = []
-                for system in systems:
-                    # Add matched systems to recipe.
-                    recipe.systems.append(system)
+                # based on above queries, condition on systems but add
+                # all_systems.
+                if systems.count():
+                    for system in all_systems:
+                        # Add matched systems to recipe.
+                        recipe.systems.append(system)
+
                 # If the recipe only matches one system then bump its priority.
                 if len(recipe.systems) == 1:
                     try:
@@ -232,6 +254,44 @@ def processed_recipesets(*args):
         session.close()
     log.debug("Exiting processed_recipes routine")
     return True
+
+def dead_recipes(*args):
+    recipes = Recipe.query()\
+                    .join('status')\
+                    .outerjoin(['systems'])\
+                    .outerjoin(['distro',
+                                'lab_controller_assocs',
+                                'lab_controller'])\
+                    .filter(
+                         or_(
+                         and_(Recipe.status==TaskStatus.by_name(u'Queued'),
+                              System.id==None,
+                             ),
+                         and_(Recipe.status==TaskStatus.by_name(u'Queued'),
+                              LabController.id==None,
+                             ),
+                            )
+                           )
+
+    log.debug("Entering dead_recipes routine")
+    for _recipe in recipes:
+        session.begin()
+        try:
+            recipe = Recipe.by_id(_recipe.id)
+            if len(recipe.systems) == 0:
+                msg = "R:%s does not match any systems, aborting." % recipe.id
+                log.info(msg)
+                recipe.recipeset.abort(msg)
+            if len(recipe.distro.lab_controller_assocs) == 0:
+                msg = "R:%s does not have a valid distro, aborting." % recipe.id
+                log.info(msg)
+                recipe.recipeset.abort(msg)
+            session.commit()
+        except exceptions.Exception, e:
+            session.rollback()
+            log.exception("Failed to commit due to :%s" % e)
+        session.close()
+    log.debug("Exiting dead_recipes routine")
 
 def queued_recipes(*args):
     automated = SystemStatus.by_name(u'Automated')
@@ -477,6 +537,7 @@ def schedule():
     log.debug("starting scheduled recipes Thread")
     # Run scheduled_recipes in this process
     while True:
+        dead_recipes()
         queued = queued_recipes()
         scheduled = scheduled_recipes()
         if not queued and not scheduled:
