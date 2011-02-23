@@ -223,8 +223,6 @@ fi
 %changelog
 
 * Wed Feb 23 2011 Raymond Mancy <rmancy@redhat.com> 0.6.5-2
-- commit of package [beaker] release [0.6.5-1] (rmancy@redhat.com)
-- Merge branch 'release-0.6.4' into release-0.6.5 (rmancy@redhat.com)
 - depend on our exact version of TurboGears (dcallagh@redhat.com)
 - show identity errors on the login form (dcallagh@redhat.com)
 
