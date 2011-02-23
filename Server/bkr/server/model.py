@@ -3898,12 +3898,12 @@ class Job(TaskBase):
     def clone_link(self):
         """ return link to clone this job
         """
-        return "/jobs/clone?job_id=%s" % self.id
+        return url("/jobs/clone?job_id=%s" % self.id)
 
     def cancel_link(self):
         """ return link to cancel this job
         """
-        return "/jobs/cancel?id=%s" % self.id
+        return url("/jobs/cancel?id=%s" % self.id)
 
     def is_owner(self,user):
         if self.owner == user:
@@ -4420,12 +4420,12 @@ class RecipeSet(TaskBase):
     def cancel_link(self):
         """ return link to cancel this recipe
         """
-        return "/recipesets/cancel?id=%s" % self.id
+        return url("/recipesets/cancel?id=%s" % self.id)
 
     def clone_link(self):
         """ return link to clone this recipe
         """
-        return "/jobs/clone?recipeset_id=%s" % self.id
+        return url("/jobs/clone?recipeset_id=%s" % self.id)
 
 
 class Recipe(TaskBase):
