@@ -3,7 +3,7 @@
 
 Name:           beaker
 Version:        0.6.5
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -221,6 +221,13 @@ fi
 %attr(-,apache,root) %dir %{_localstatedir}/run/%{name}-lab-controller
 
 %changelog
+
+* Wed Feb 23 2011 Raymond Mancy <rmancy@redhat.com> 0.6.5-2
+- commit of package [beaker] release [0.6.5-1] (rmancy@redhat.com)
+- Merge branch 'release-0.6.4' into release-0.6.5 (rmancy@redhat.com)
+- depend on our exact version of TurboGears (dcallagh@redhat.com)
+- show identity errors on the login form (dcallagh@redhat.com)
+
 * Wed Feb 23 2011 Raymond Mancy <rmancy@redhat.com>
 - 678215 SQL instructions for replaceing '' with NULL for recipe.whiteboard
 (rmancy@redhat.com)
