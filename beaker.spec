@@ -2,8 +2,8 @@
 %{!?pyver: %global pyver %(%{__python} -c "import sys ; print sys.version[:3]")}
 
 Name:           beaker
-Version:        0.6.4
-Release:        4%{?dist}
+Version:        0.6.5
+Release:        1%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -221,6 +221,51 @@ fi
 %attr(-,apache,root) %dir %{_localstatedir}/run/%{name}-lab-controller
 
 %changelog
+* Wed Feb 23 2011 Raymond Mancy <rmancy@redhat.com> 0.6.5-1
+- Merge branch 'release-0.6.4' into release-0.6.5 (rmancy@redhat.com)
+- Merge "bz678215 - SQL instructions for replaceing '' with NULL for
+  recipe.whiteboard" into develop (rmancy@redhat.com)
+- Merge "show all activity on activity page" into develop (dcallagh@redhat.com)
+- show friendly error for non-existent arch (dcallagh@redhat.com)
+- update selenium tests to work with selenium-2.0b2 (dcallagh@redhat.com)
+- bz678215 - SQL instructions for replaceing '' with NULL for recipe.whiteboard
+  (rmancy@redhat.com)
+- Merge "test case for login redirect with NestedVariablesFilter" into develop
+  (dcallagh@redhat.com)
+- show all activity on activity page (dcallagh@redhat.com)
+- record distro tagging activity properly (dcallagh@redhat.com)
+- only admins can add/remove distro tags (dcallagh@redhat.com)
+- auto-generate distro names in tests (dcallagh@redhat.com)
+- Merge "clean up server config files a bit" into develop (bpeck@redhat.com)
+- Merge "[RFE] bkr job-submit add --combine option to combine multiple jobs"
+  into develop (bpeck@redhat.com)
+- Merge "Fix matrix report view" into develop (rmancy@redhat.com)
+- Fix matrix report view (rmancy@redhat.com)
+- Merge "When /distribution/install is run check that we are running with
+  correct recipe and verify the distro requested was put down." into develop
+  (bpeck@redhat.com)
+- Merge "Retention_tag and Product can't be passed in on the command line" into
+  develop (bpeck@redhat.com)
+- Merge "fix login thread to keep trying, log any exceptions caught." into
+  develop (bpeck@redhat.com)
+- Merge "Only show distros that are on a lab controller. Allow admins to delete
+  distros from lab controllers." into develop (bpeck@redhat.com)
+- [RFE] bkr job-submit add --combine option to combine multiple jobs
+  (bpeck@redhat.com)
+- clean up server config files a bit (dcallagh@redhat.com)
+- Only show distros that are on a lab controller. Allow admins to delete
+  distros from lab controllers. (bpeck@redhat.com)
+- fix login thread to keep trying, log any exceptions caught.
+  (bpeck@redhat.com)
+- Support $VERSION in beaker/setup test (bpeck@redhat.com)
+- remove PAT CPU check. (jburke@bass.usersys.redhat.com)
+- add index on activity.created (dcallagh@redhat.com)
+- Retention_tag and Product can't be passed in on the command line
+  (bpeck@redhat.com)
+- test case for login redirect with NestedVariablesFilter (dcallagh@redhat.com)
+- When /distribution/install is run check that we are running with correct
+  recipe and verify the distro requested was put down. (bpeck@redhat.com)
+
 * Wed Feb 23 2011 Raymond Mancy <rmancy@redhat.com> 0.6.4-4
 - fix for cancel and clone links when mounted under /bkr (rmancy@redhat.com)
 
