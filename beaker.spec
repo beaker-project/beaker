@@ -3,7 +3,7 @@
 
 Name:           beaker
 Version:        0.6.4
-Release:        3%{?dist}
+Release:        4%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -221,6 +221,9 @@ fi
 %attr(-,apache,root) %dir %{_localstatedir}/run/%{name}-lab-controller
 
 %changelog
+* Wed Feb 23 2011 Raymond Mancy <rmancy@redhat.com> 0.6.4-4
+- fix for cancel and clone links when mounted under /bkr (rmancy@redhat.com)
+
 * Thu Feb 10 2011 Raymond Mancy <rmancy@redhat.com> 0.6.4-3
 - Fix so job-delete works with tags/products/family etc (rmancy@redhat.com)
 
