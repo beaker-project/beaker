@@ -2,6 +2,7 @@
 import unittest
 import xmltramp
 import pkg_resources
+from turbogears import testutil
 from turbogears.database import session
 from bkr.server.jobxml import XmlJob
 from bkr.server.bexceptions import BX
@@ -14,10 +15,14 @@ class TestJobsController(unittest.TestCase):
         from bkr.server.jobs import Jobs
         self.controller = Jobs()
         self.user = data_setup.create_user()
+        testutil.set_identity_user(self.user)
         if not Distro.by_name('BlueShoeLinux5-5'):
             data_setup.create_distro(name=u'BlueShoeLinux5-5')
         data_setup.create_task(name=u'/distribution/install')
         session.flush()
+
+    def tearDown(self):
+        testutil.set_identity_user(None)
 
     def test_uploading_job_without_recipeset_raises_exception(self):
         xmljob = XmlJob(xmltramp.parse('''
@@ -58,6 +63,6 @@ class TestJobsController(unittest.TestCase):
         # so that this test doesn't have to go through the web layer...
         complete_job_xml = pkg_resources.resource_string('bkr.server.test', 'complete-job.xml')
         xmljob = XmlJob(xmltramp.parse(complete_job_xml))
-        job = self.controller.process_xmljob(xmljob, self.user)
+        job = testutil.call(self.controller.process_xmljob, xmljob, self.user)
         roundtripped_xml = job.to_xml(clone=True).toprettyxml(indent='    ')
         self.assertEquals(roundtripped_xml, complete_job_xml)

@@ -4207,6 +4207,7 @@ class RecipeSet(TaskBase):
 
     def to_xml(self, clone=False, from_job=True, *args, **kw):
         recipeSet = self.doc.createElement("recipeSet")
+        recipeSet.setAttribute('priority', self.priority.priority)
         return_node = recipeSet 
 
         if not clone:
