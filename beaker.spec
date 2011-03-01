@@ -3,7 +3,7 @@
 
 Name:           beaker
 Version:        0.6.5
-Release:        2%{?dist}
+Release:        3%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -229,6 +229,8 @@ fi
 %attr(-,apache,root) %dir %{_localstatedir}/run/%{name}-lab-controller
 
 %changelog
+* Tue Mar 01 2011 Dan Callaghan <dcallagh@redhat.com> 0.6.5-3
+- we can only be picky about TurboGears version on RHEL (dcallagh@redhat.com)
 
 * Wed Feb 23 2011 Raymond Mancy <rmancy@redhat.com> 0.6.5-2
 - depend on our exact version of TurboGears (dcallagh@redhat.com)
