@@ -2,7 +2,7 @@ from turbogears.database import session
 from turbogears import controllers, expose, flash, widgets, validate, error_handler, validators, redirect, paginate, url
 from turbogears import identity, redirect
 from bkr.server.xmlrpccontroller import RPCRoot
-from bkr.server.widgets import myDataGrid, myPaginateDataGrid
+from bkr.server.widgets import myPaginateDataGrid
 from bkr.server.admin_page import AdminPage
 from bkr.server.model import RetentionTag as Tag
 from bkr.server.retention_tag_utility import RetentionTagUtility

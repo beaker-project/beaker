@@ -7,7 +7,7 @@ from tg_expanding_form_widget.tg_expanding_form_widget import ExpandingForm
 from kid import Element
 from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.helpers import *
-from bkr.server.widgets import myDataGrid, myPaginateDataGrid
+from bkr.server.widgets import BeakerDataGrid, myPaginateDataGrid
 from bkr.server.admin_page import AdminPage
 
 
@@ -120,7 +120,7 @@ class Groups(AdminPage):
         systems = System.by_group(group_id)
         system_link = ('System', lambda x: x.link)
         group = Group.by_id(group_id)
-        grid = myDataGrid(fields=[system_link])
+        grid = BeakerDataGrid(fields=[system_link])
         return dict(grid=grid,list=systems,title='Systems for group %s' % group.group_name,search_bar = None,object_count=systems.count())
     
     @expose(template='bkr.server.templates.group_users')

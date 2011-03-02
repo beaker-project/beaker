@@ -47,14 +47,6 @@ JobMatrix.prototype.filter_on_whiteboard = function(event) {
     d.addCallback(this.replace_whiteboard)
 } 
 
-JobMatrix.prototype.get_nack_comment = function (id) {
-    
-    var params = { 'tg_format' : 'json',
-                   'tg_random' : new Date().getTime(),
-                   'rs_id' : id }
-    var d = loadJSONDoc('./get_nack_comment?' + queryString(params)) 
-    d.addCallback(this.show_comment)
-}
 
 JobMatrix.prototype.show_comment = function (result) { 
     rs_id = result.rs_id

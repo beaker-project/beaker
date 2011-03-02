@@ -6,6 +6,7 @@ from turbogears.widgets.rpc import RPC
 from sqlalchemy import distinct
 import model
 import re
+import random
 import search_utility
 from decimal import Decimal
 from itertools import chain
@@ -19,6 +20,7 @@ from turbogears.widgets import (Form, TextField, SubmitButton, TextArea, Label,
                                 RepeatingFieldSet, SelectionField, WidgetsList,)
 
 from bkr.server import search_utility
+from bkr.server.bexceptions import BeakerException
 import logging
 log = logging.getLogger(__name__)
 
@@ -249,20 +251,92 @@ class MyButton(Widget):
                 params['name'] = params['options']['name']
         return super(MyButton,self).display(value,**params)
 
+class BeakerDataGrid(DataGrid):
+    template = "bkr.server.templates.beaker_datagrid"
+    name = "beaker_datagrid"
 
-class myDataGrid(DataGrid):
-    template = "bkr.server.templates.my_datagrid"
-    name = "my_datagrid"
-    
-class InnerGrid(DataGrid):
-    template = "bkr.server.templates.inner_grid" 
-    params = ['show_headers']
-    
-    def display(self,value=None,**params):
-        if 'options' in params:
-            if 'show_headers' in params['options']:
-                params['show_headers'] = params['options']['show_headers']
-        return super(InnerGrid,self).display(value,**params)
+
+class MatrixDataGrid(DataGrid):
+    template = "bkr.server.templates.matrix_datagrid"
+    name = "matrix_datagrid"
+    TASK_POS = 0
+    params = ['TASK_POS']
+
+    class Column(DataGrid.Column):
+        orders_used = []
+        def __init__(self,*args, **kw):
+            outer_header = None
+            type = None
+            if 'name' in kw:
+                #Make sure the random number is removed when displaying
+                kw['name'] =  "%s_%s" % (kw['name'], random.random())
+            if 'outer_header' in kw:
+                self.outer_header = kw['outer_header']
+                del kw['outer_header']
+            if 'type' in kw:
+                self.type = kw['type']
+                del kw['type']
+            if 'order' in kw:
+                order = kw['order']
+                try:
+                    
+                    self.orders_used.index(order)
+                    raise BeakerException('Order number %s has already been specified,it cannot be specified twice' % order)
+                except ValueError, e:
+                    self.order = order
+                    self.orders_used.append(self.order)
+                    del kw['order']
+            DataGrid.Column.__init__(self, *args, **kw) #Old style object
+
+    def _header_cmp(self,x,y):
+        x_order = x[2]
+        y_order = y[2]
+        #anything with order goes before
+        if x_order is not None and y_order is None:
+            return -1
+        elif x_order is None and y_order is not None:
+            return 1
+        elif x_order is None and y_order is None:
+            #if no order, order by header
+            x_header = x[0]
+            y_header = y[0]
+            if x_header < y_header:
+                return -1
+            else:
+                return 1
+
+    def update_params(self, d):
+        super(MatrixDataGrid,self).update_params(d)
+        headers = {}
+        header_order = {}
+        cant_use_header = False
+        must_use_header = False
+        for col in self.columns:
+            try:
+                header_order[col.outer_header] = getattr(col.outer_header, 'order', None)
+                must_use_header = True
+                if headers.get(col.outer_header):
+                    headers[col.outer_header] += 1
+                else:
+                    headers[col.outer_header] = 1
+            except AttributeError:
+                cant_use_header = True
+            else:
+                if cant_use_header and must_use_header:
+                    raise ValueError("All Columns must be \
+                        unified in their use of outer headers")
+        decorated_headers = [(header, occurance, header_order[header]) for header,occurance in headers.items()]
+        sorted_decorated_headers = sorted(decorated_headers, cmp=self._header_cmp)
+        d['outer_headers'] = [(header,occurance) for header,occurance,order in sorted_decorated_headers]
+        if must_use_header:
+            # Ensures that columns are sorted in the same manner as outer_headers
+            columns = [column_to_sort for column_to_sort in d['columns'] if \
+                getattr(column_to_sort,'outer_header', None) is None]
+            columns_to_sort = [column_to_sort for \
+                column_to_sort in d['columns'] if \
+                    getattr(column_to_sort,'outer_header', None) is not None]
+            columns += sorted(columns_to_sort, key=lambda col: col.outer_header)
+            d['columns'] = columns
 
 class myPaginateDataGrid(PaginateDataGrid):
     template = "bkr.server.templates.my_paginate_datagrid"
@@ -402,7 +476,7 @@ class JobMatrixReport(Form):
     template = 'bkr.server.templates.job_matrix' 
     member_widgets = ['whiteboard','job_ids','generate_button','nack_list']
     params = (['list','whiteboard_filter','whiteboard_options','job_ids_vals',
-        'nacks','selected_nacks','comments_field','toggle_nacks_on',])
+        'nacks','comments_field','toggle_nacks_on',])
     default_validator = validators.NotEmpty() 
     def __init__(self,*args,**kw): 
         super(JobMatrixReport,self).__init__(*args, **kw)       

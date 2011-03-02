@@ -21,7 +21,7 @@ from turbogears import identity, redirect
 from cherrypy import request, response
 from kid import Element
 from sqlalchemy.exceptions import InvalidRequestError
-from bkr.server.widgets import myPaginateDataGrid, myDataGrid, AckPanel, JobQuickSearch, \
+from bkr.server.widgets import myPaginateDataGrid, AckPanel, JobQuickSearch, \
     RecipeWidget,RecipeTasksWidget, RecipeSetWidget, PriorityWidget, RetentionTagWidget, \
     SearchBar, JobWhiteboard, ProductWidget, JobActionWidget, JobPageActionWidget
 
