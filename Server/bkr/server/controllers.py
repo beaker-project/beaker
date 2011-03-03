@@ -5,6 +5,7 @@ from turbogears import identity, redirect, config
 import search_utility as su
 import bkr
 import bkr.server.stdvars
+from bkr.server.model import TaskBase
 from bkr.server.power import PowerTypes
 from bkr.server.keytypes import KeyTypes
 from bkr.server.CSV_import_export import CSV
@@ -2007,6 +2008,29 @@ class Root(RPCRoot):
         except InvalidRequestError:
             system = System(fqdn=fqdn)
         return system.update_legacy(inventory)
+
+    @expose()
+    def to_xml(self, taskid, to_screen=False, pretty=True, *args, **kw):
+        try:
+            task = TaskBase.get_by_t_id(taskid)
+        except Exception, e:
+            flash(_('Invalid Task: %s' % taskid))
+            redirect(url('/'))
+        xml = task.to_xml()
+        if pretty:
+            xml_text = xml.toprettyxml()
+        else:
+            xml_text = xml.toxml()
+      
+        if to_screen: #used for testing contents of XML
+            cherrypy.response.headers['Content-Disposition'] = ''
+            cherrypy.response.headers['Content-Type'] = 'text/plain'
+        else:
+            cherrypy.response.headers['Content-Disposition'] = 'attachment; filename=%s.xml' % taskid
+            cherrypy.response.headers['Content-Type'] = 'text/xml'
+
+        return xml_text
+
 
     @cherrypy.expose
     def push(self, fqdn=None, inventory=None):

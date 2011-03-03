@@ -24,7 +24,6 @@ from sqlalchemy.exceptions import InvalidRequestError
 from bkr.server.widgets import myPaginateDataGrid, myDataGrid, AckPanel, JobQuickSearch, \
     RecipeWidget,RecipeTasksWidget, RecipeSetWidget, PriorityWidget, RetentionTagWidget, \
     SearchBar, JobWhiteboard, ProductWidget, JobActionWidget, JobPageActionWidget
-
 from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.helpers import *
 from bkr.server import search_utility
@@ -561,14 +560,28 @@ class Jobs(RPCRoot):
                 search_options['simplesearch'] = jobs_return['simplesearch']
          
         jobs_grid = myPaginateDataGrid(fields=[
-		     widgets.PaginateDataGrid.Column(name='id', getter=lambda x:make_link(url = './%s' % x.id, text = x.t_id), title='ID', options=dict(sortable=True)),
-		     widgets.PaginateDataGrid.Column(name='whiteboard', getter=lambda x:x.whiteboard, title='Whiteboard', options=dict(sortable=True)),
-		     widgets.PaginateDataGrid.Column(name='owner.email_address', getter=lambda x:x.owner.email_address, title='Owner', options=dict(sortable=True)),
-                     widgets.PaginateDataGrid.Column(name='progress', getter=lambda x: x.progress_bar, title='Progress', options=dict(sortable=False)),
-		     widgets.PaginateDataGrid.Column(name='status.status', getter=lambda x:x.status, title='Status', options=dict(sortable=True)),
-		     widgets.PaginateDataGrid.Column(name='result.result', getter=lambda x:x.result, title='Result', options=dict(sortable=True)),
-		     widgets.PaginateDataGrid.Column(name='action', getter=lambda x: self.job_list_action_widget.display(task=x, type_='joblist') , title='Action', options=dict(sortable=False)),
-                    ])
+            widgets.PaginateDataGrid.Column(name='id',
+                getter=lambda x:make_link(url = './%s' % x.id, text = x.t_id),
+                title='ID', options=dict(sortable=True)),
+		    widgets.PaginateDataGrid.Column(name='whiteboard',
+                getter=lambda x:x.whiteboard, title='Whiteboard',
+                options=dict(sortable=True)),
+		    widgets.PaginateDataGrid.Column(name='owner.email_address',
+                getter=lambda x:x.owner.email_address, title='Owner',
+                options=dict(sortable=True)),
+            widgets.PaginateDataGrid.Column(name='progress',
+                getter=lambda x: x.progress_bar, title='Progress',
+                options=dict(sortable=False)),
+		    widgets.PaginateDataGrid.Column(name='status.status',
+                getter=lambda x:x.status, title='Status',
+                options=dict(sortable=True)),
+		    widgets.PaginateDataGrid.Column(name='result.result',
+                getter=lambda x:x.result, title='Result',
+                options=dict(sortable=True)),
+		    widgets.PaginateDataGrid.Column(name='action',
+                getter=lambda x: self.job_list_action_widget.display(task=x, type_='joblist',
+                export=url('/to_xml?taskid=%s' % x.t_id) ,
+                title='Action', options=dict(sortable=False)))])
 
         
 

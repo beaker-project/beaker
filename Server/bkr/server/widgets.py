@@ -1395,6 +1395,8 @@ class JobActionWidget(TaskActionWidget):
         job_details={'id': 'delete_%s' % t_id,
             't_id' : t_id}
         params['job_details'] = job_details
+        if 'export' not in params:
+            params['export'] = None
         if action:
             params['action'] = action
         return super(JobActionWidget, self).display(task, **params)
