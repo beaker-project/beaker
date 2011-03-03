@@ -129,7 +129,7 @@ class JobMatrix:
             where = None
         s1 = select([model.job_table.c.whiteboard],whereclause=where,
                      group_by=[model.job_table.c.whiteboard,model.job_table.c.id],
-                     order_by=[model.job_table.c.id],distinct=True,limit=50) 
+                     order_by=[model.job_table.c.id.desc()],distinct=True,limit=50) 
         res = s1.execute()  
         filtered_whiteboards = [r[0] for r in res]
         return filtered_whiteboards 
