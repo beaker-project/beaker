@@ -14,13 +14,7 @@ function compareArray(a,b) {
 
 $(document).ready( function() {
     current_job_ids = $('#remote_form_job_ids').val().split(" ")
-    
-    $("span[id ^='comment_remote_form_nacks']").click(
-                function() { 
-                          matrix.get_nack_comment(1); //this is just testing!!!!!!!11
-                          
-                        
-        }) 
+
     $('#${whiteboard_filter.field_id}').blur(function () { matrix.filter_on_whiteboard()  } )
     $('#${whiteboard.field_id}').click(function () { 
         matrix.clicked_whiteboard() 
@@ -51,19 +45,13 @@ $(document).ready( function() {
         <h3 style="display:inline">${job_ids.label}</h3><br />
         <div class="margined" onclick="javascript:clicked_jobs()" py:content="job_ids.display(value=job_ids_vals)" /> 
     </div>
-
-     
+        <br style="clear:both" />
+       <input class='submit-button' type='submit' value='Generate' />
         <div style="clear:left"  class="margined"  id="nacks">
         <h5 style="display:inline">${nack_list.label}</h5>
-            <input py:if="toggle_nacks_on" id="toggle_nacks_on" name="toggle_nacks_on" type="checkbox" checked="" /> 
-            <input py:if="not toggle_nacks_on" id="toggle_nacks_on" name="toggle_nacks_on" type="checkbox" /> 
+            <input py:if="toggle_nacks_on" id="toggle_nacks_on" name="toggle_nacks_on" type="checkbox" checked="" />
+            <input py:if="not toggle_nacks_on" id="toggle_nacks_on" name="toggle_nacks_on" type="checkbox" />
         </div>
-
-
-      <br style="clear:both" />
-       <!--<a py:if="toggle_nacks" id="toggle_nacks" style="font-size:x-small" href="#">Toggle Nacks </a> -->
-      <input class='submit-button' type='submit' value='Generate' />
-
     <div id='matrix-report' py:if="grid">
       ${grid.display(list)}
     </div>
