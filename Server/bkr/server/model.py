@@ -5227,7 +5227,8 @@ class RecipeTask(TaskBase):
             task.setAttribute("result", "%s" % self.result)
             task.setAttribute("status", "%s" % self.status)
             rpm = self.doc.createElement("rpm")
-            rpm.setAttribute("name", "%s" % self.task.rpm)
+            name = self.task.rpm[:self.task.rpm.find('-%s' % self.task.version)]
+            rpm.setAttribute("name", name)
             rpm.setAttribute("path", "%s" % self.task.path)
             task.appendChild(rpm)
         if self.duration and not clone:
