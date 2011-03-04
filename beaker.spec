@@ -92,6 +92,15 @@ Requires:	python-xmltramp
 Requires:       python-krbV
 Requires:       python-concurrentloghandler
 
+%package lab-controller-addDistro
+Summary:        addDistro scripts for Lab Controller
+Group:          Applications/Internet
+Requires:       %{name} = %{version}-%{release}
+Requires:       %{name}-lab-controller = %{version}-%{release}
+Requires:       %{name}-client = %{version}-%{release}
+Provides:	beaker-redhat-support
+Obsoletes:	beaker-redhat-support
+
 %description
 Filesystem layout for beaker
 
@@ -108,6 +117,10 @@ To Be Filled in - Server Side..
 This is the interface to link Medusa and Cobbler together. Mostly provides
 snippets and kickstarts.
 
+
+%description lab-controller-addDistro
+addDistro.sh can be called after distros have been imported into beaker.
+Automatically launch jobs against newly imported distros.
 
 %prep
 %setup -q
@@ -227,6 +240,11 @@ fi
 %{_sysconfdir}/init.d/%{name}-watchdog
 %{_sysconfdir}/init.d/%{name}-transfer
 %attr(-,apache,root) %dir %{_localstatedir}/run/%{name}-lab-controller
+
+%files lab-controller-addDistro
+%defattr(-,root,root,-)
+%{_var}/lib/beaker/addDistro.sh
+%{_var}/lib/beaker/addDistro.d/*
 
 %changelog
 * Tue Mar 01 2011 Dan Callaghan <dcallagh@redhat.com> 0.6.5-3

@@ -1,0 +1,14 @@
+#!/bin/sh
+
+ARCH=$1
+FAMILY=$2
+DISTRO=$3
+VARIANT=$4
+DISTPATH=$5
+
+if [ "$VARIANT" = "AS" -o \
+     "$VARIANT" = "Server" -o \
+     "$FAMILY" != "RedHatEnterpriseLinux4" -a \
+     "$FAMILY" != "RedHatEnterpriseLinux6" ]; then
+    bkr workflow-simple --task /distribution/updateDistro --distro $DISTRO --arch $ARCH --variant "$VARIANT" --whiteboard "Add Distro Test $DISTRO $ARCH"
+fi
