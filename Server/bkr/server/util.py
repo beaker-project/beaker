@@ -19,6 +19,8 @@ Random functions that don't fit elsewhere
 import os
 import sys
 import logging
+import datetime
+import time
 import turbogears
 from turbogears import config, url
 
@@ -83,3 +85,7 @@ def any(iterable):
         if element:
             return True
     return False
+
+# xmlrpclib in Python 2.5+ can do this for us
+def parse_xmlrpc_datetime(s):
+    return datetime.datetime(*(time.strptime(s, '%Y%m%dT%H:%M:%S')[0:6]))
