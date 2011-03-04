@@ -1023,6 +1023,7 @@ task_package_table = Table('task_package',metadata,
         Column('id', Integer, primary_key=True),
         Column('package', Unicode(2048)),
         mysql_engine='InnoDB',
+        mysql_collate='utf8_bin',
 )
 
 task_type_table = Table('task_type',metadata,
