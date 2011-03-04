@@ -1184,7 +1184,7 @@ class RecipeSetWidget(CompoundWidget):
     javascript = []
     css = []
     template = "bkr.server.templates.recipe_set"
-    params = ['recipeset','show_priority','action','priorities_list']
+    params = ['recipeset','show_priority','action','priorities_list','can_ack_nak']
     member_widgets = ['priority_widget','retentiontag_widget','ack_panel_widget', 'product_widget', 'action_widget']
     def __init__(self, priorities_list=None, *args, **kw):
         self.action_widget = TaskActionWidget()
@@ -1196,6 +1196,19 @@ class RecipeSetWidget(CompoundWidget):
             self.recipeset = kw['recipeset']
         else:
             self.recipeset = None
+
+    def update_params(self, d):
+        super(RecipeSetWidget,self).update_params(d)
+        recipeset = d['recipeset']
+        owner_groups = [g.group_name for g in recipeset.job.owner.groups]
+        try:
+            can_ack_nak = recipeset.is_owner(tg.identity.current.user) or \
+            'admin' in tg.identity.current.groups or \
+            tg.identity.current.user.in_group(owner_groups)
+        except AttributeError, e:
+            #Can't ack if we don't fulfil these requirements
+            can_ack_nak = False
+        d['can_ack_nak'] = can_ack_nak
 
 
 class RecipeWidget(CompoundWidget):

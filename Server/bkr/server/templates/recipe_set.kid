@@ -3,7 +3,8 @@
  <a name="RS_${recipeset.id}" />
   <tr>
    <td class="title"><b>RecipeSet ID</b></td>
-   <td class="value">${recipeset.t_id}</td><td py:if="recipeset.is_owner(tg.identity.user) or 'admin' in tg.identity.groups" style='min-width:30em'>
+   <td class="value">${recipeset.t_id}</td><td py:if="can_ack_nak"
+       style='min-width:30em'>
      <span id="response_${recipeset.id}">
     ${ack_panel_widget.display(recipeset.id, name='response_box_%s' % recipeset.id)}
      </span>
