@@ -76,9 +76,6 @@
     <div id="loginBox">
         <h1>Login</h1>
         <p id="message">${message}</p>
-        <p py:if="reasons" id="reasons">
-            <span py:for="reason in reasons">${reason}<br /></span>
-        </p>
         <form action="${action}" method="POST">
             <table>
                 <tr>
