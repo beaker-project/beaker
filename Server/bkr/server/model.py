@@ -3012,7 +3012,7 @@ class Distro(MappedObject):
         distro_requires.appendChild(xmland)
         return distro_requires
 
-    def systems_filter(self, user, filter):
+    def systems_filter(self, user, filter, join=['lab_controller']):
         """
         Return Systems that match the following filter
         <host>
@@ -3035,7 +3035,7 @@ class Distro(MappedObject):
         """
         from needpropertyxml import ElementWrapper
         import xmltramp
-        systems = self.all_systems(user)
+        systems = self.all_systems(user, join)
         #FIXME Should validate XML before processing.
         queries = []
         joins = []
