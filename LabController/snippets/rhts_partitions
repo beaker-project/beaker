@@ -34,6 +34,9 @@ part swap --recommended --asprimary #slurp
 #if $getVar('ondisk', '') != ''
 --ondisk=$getVar('ondisk','')
 #end if
+#if $getVar('swapsize','') != ''
+--size $getVar('swapsize','')
+#end if
 
 ## Loop through partitions variable and create appropriate part commands
 ## partitions=rhel5_pv_guest.img:lvm:10;rhel5_hvm_guest.img:lvm:10
