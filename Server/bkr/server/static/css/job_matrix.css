@@ -27,6 +27,10 @@ outer-headers {
     text-align:left;
 }
 
+.whiteboard {
+    width:600px;
+}
+
 .matrix-header {
     background-color:#4F4F4F;
     color:#FFFFFF;

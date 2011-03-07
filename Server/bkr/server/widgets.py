@@ -263,7 +263,6 @@ class MatrixDataGrid(DataGrid):
     params = ['TASK_POS']
 
     class Column(DataGrid.Column):
-        orders_used = []
         def __init__(self,*args, **kw):
             outer_header = None
             type = None
@@ -278,14 +277,9 @@ class MatrixDataGrid(DataGrid):
                 del kw['type']
             if 'order' in kw:
                 order = kw['order']
-                try:
-                    
-                    self.orders_used.index(order)
-                    raise BeakerException('Order number %s has already been specified,it cannot be specified twice' % order)
-                except ValueError, e:
-                    self.order = order
-                    self.orders_used.append(self.order)
-                    del kw['order']
+                self.order = order
+                del kw['order']
+
             DataGrid.Column.__init__(self, *args, **kw) #Old style object
 
     def _header_cmp(self,x,y):
@@ -309,22 +303,34 @@ class MatrixDataGrid(DataGrid):
         super(MatrixDataGrid,self).update_params(d)
         headers = {}
         header_order = {}
+        orders_used = []
         cant_use_header = False
         must_use_header = False
         for col in self.columns:
             try:
-                header_order[col.outer_header] = getattr(col.outer_header, 'order', None)
+                order = col.order
+            except AttributeError:
+                order = None
+            else:
+                try:
+                    orders_used.index(order)
+                    raise BeakerException('Order number %s has already been specified,it cannot be specified twice' % order)
+                except ValueError, e:
+                    orders_used.append(order)
+            try:
+                header_order[col.outer_header] = order
+            except AttributeError:
+                cant_use_header = True
+            else:
                 must_use_header = True
                 if headers.get(col.outer_header):
                     headers[col.outer_header] += 1
                 else:
                     headers[col.outer_header] = 1
-            except AttributeError:
-                cant_use_header = True
-            else:
-                if cant_use_header and must_use_header:
-                    raise ValueError("All Columns must be \
-                        unified in their use of outer headers")
+            if cant_use_header and must_use_header:
+                raise ValueError("All Columns must be \
+                    unified in their use of outer headers")
+
         decorated_headers = [(header, occurance, header_order[header]) for header,occurance in headers.items()]
         sorted_decorated_headers = sorted(decorated_headers, cmp=self._header_cmp)
         d['outer_headers'] = [(header,occurance) for header,occurance,order in sorted_decorated_headers]
@@ -490,7 +496,7 @@ class JobMatrixReport(Form):
 
         self.nack_list = CheckBoxList("Hide naks",validator=self.default_validator)
         
-        self.whiteboard = SingleSelectField('whiteboard',label='Whiteboard',attrs={'size':5}, options=whiteboard_options, validator=self.default_validator) 
+        self.whiteboard = SingleSelectField('whiteboard',label='Whiteboard',attrs={'size':5, 'class':'whiteboard'}, options=whiteboard_options, validator=self.default_validator) 
         self.job_ids = TextArea('job_ids',label='Job ID', rows=7,cols=7, validator=self.default_validator) 
         self.whiteboard_filter = TextField('whiteboard_filter', label='Filter Whiteboard') 
 
