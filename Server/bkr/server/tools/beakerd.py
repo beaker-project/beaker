@@ -110,9 +110,9 @@ def new_recipes(*args):
             else:
                 recipe.recipeset.abort('Recipe ID %s does not have a distro' % recipe.id)
             session.commit()
-        except exceptions.Exception, e:
+        except exceptions.Exception:
             session.rollback()
-            log.error("Failed to commit due to :%s" % e)
+            log.exception("Failed to commit in new_recipes")
         session.close()
     log.debug("Exiting new_recipes routine")
     return True
@@ -226,9 +226,9 @@ def processed_recipesets(*args):
                         recipe.recipeset.abort('Recipe ID %s does not match any systems' % recipe.id)
                         
             session.commit()
-        except exceptions.Exception, e:
+        except exceptions.Exception:
             session.rollback()
-            log.error("Failed to commit due to :%s" % e)
+            log.exception("Failed to commit in processed_recipes")
         session.close()
     log.debug("Exiting processed_recipes routine")
     return True
@@ -332,9 +332,9 @@ def queued_recipes(*args):
                         # back into queued state and try again.
                         raise BX(_('System %s was stolen from underneath us. will try again.' % system))
             session.commit()
-        except exceptions.Exception, e:
+        except exceptions.Exception:
             session.rollback()
-            log.error("Failed to commit due to :%s" % e)
+            log.exception("Failed to commit in queued_recipes")
         session.close()
     log.debug("Exiting queued_recipes routine")
     return True
@@ -435,9 +435,9 @@ def scheduled_recipes(*args):
                                                                             e))
        
             session.commit()
-        except exceptions.Exception, e:
+        except exceptions.Exception:
             session.rollback()
-            log.error("Failed to commit due to :%s" % e)
+            log.exception("Failed to commit in scheduled_recipes")
         session.close()
     log.debug("Exiting scheduled_recipes routine")
     return True
