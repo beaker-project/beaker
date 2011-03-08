@@ -1001,7 +1001,7 @@ class Distro(SystemObject):
                             'Breed' : MyColumn(col_type='string',column=model.Breed.breed, relations=['breed']),
                             'Tag' : MyColumn(col_type='string', column=model.DistroTag.tag, relations=['_tags'])
                          }
-    search_values_dict = {'Tag' : lambda: [e.tag for e in model.DistroTag.list_by_tag('')]}
+    search_values_dict = {'Tag' : lambda: [e.tag for e in model.DistroTag.list_by_tag(u'')]}
 
     @classmethod
     def tag_is_not_filter(cls,col,val):

@@ -18,9 +18,9 @@ class TestBeakerd(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         # Create two unique labs
-        lab1 = data_setup.create_labcontroller(fqdn='lab_%d' %
+        lab1 = data_setup.create_labcontroller(fqdn=u'lab_%d' %
                                                int(time.time() * 1000))
-        lab2 = data_setup.create_labcontroller(fqdn='lab_%d' %
+        lab2 = data_setup.create_labcontroller(fqdn=u'lab_%d' %
                                                int(time.time() * 1000))
 
         # Create two distros and only put one in each lab.

@@ -28,7 +28,7 @@ from bkr.server.model import Job, Distro
 class JobUploadTest(XmlRpcTestCase):
 
     def setUp(self):
-        if not Distro.by_name('BlueShoeLinux5-5'):
+        if not Distro.by_name(u'BlueShoeLinux5-5'):
             data_setup.create_distro(name=u'BlueShoeLinux5-5')
         data_setup.create_task(name=u'/distribution/install')
         data_setup.create_task(name=u'/distribution/reservesys')

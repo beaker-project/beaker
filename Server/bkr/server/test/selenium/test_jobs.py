@@ -79,7 +79,7 @@ class TestViewJob(SeleniumTestCase):
 class NewJobTest(SeleniumTestCase):
 
     def setUp(self):
-        if not Distro.by_name('BlueShoeLinux5-5'):
+        if not Distro.by_name(u'BlueShoeLinux5-5'):
             data_setup.create_distro(name=u'BlueShoeLinux5-5')
         data_setup.create_task(name=u'/distribution/install')
         session.flush()
@@ -215,7 +215,7 @@ class CloneJobTest(SeleniumTestCase):
     def test_cloning_recipeset_from_job_with_product(self):
         job = data_setup.create_job()
         job.retention_tag = RetentionTag.list_by_requires_product()[0]
-        job.product = Product('product_name')
+        job.product = Product(u'product_name')
         session.flush()
         self.login()
         sel =  self.selenium

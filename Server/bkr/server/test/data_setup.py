@@ -156,7 +156,7 @@ def configure_system_power(system, power_type=u'ilo', address=None,
     if password is None:
         password = u'%s_power_password' % system.fqdn
     if power_id is None:
-        power_id = '%d' % int(time.time() * 1000)
+        power_id = u'%d' % int(time.time() * 1000)
     system.power = Power(power_type=PowerType.by_name(power_type),
             power_address=address, power_id=power_id,
             power_user=user, power_passwd=password)
@@ -164,13 +164,13 @@ def configure_system_power(system, power_type=u'ilo', address=None,
 def create_system_activity(user=None, **kw):
     if not user:
         user = create_user()
-    activity = SystemActivity(user, 'WEBUI', 'Changed', 'Loaned To', 'random_%d' % int(time.time() * 1000) , '%s' % user)
+    activity = SystemActivity(user, u'WEBUI', u'Changed', u'Loaned To', u'random_%d' % int(time.time() * 1000), user.user_name)
     return activity
 
 def create_task(name=None, exclude_arch=[],exclude_osmajor=[], version=u'1.0-1'):
     if name is None:
         name = u'/distribution/test_task_%d' % int(time.time() * 1000)
-    rpm = 'example%s-%s.noarch.rpm' % (name.replace('/', '-'), version)
+    rpm = u'example%s-%s.noarch.rpm' % (name.replace('/', '-'), version)
     task = Task.lazy_create(name=name, rpm=rpm, version=version)
     if exclude_arch:
        [TaskExcludeArch(arch_id=Arch.by_name(arch).id, task_id=task.id) for arch in exclude_arch]
@@ -284,7 +284,7 @@ def playback_task_results(task, xmltask):
     # Start task
     task.start()
     # Record Result
-    task._result(xmltask.result,'/',0,'(%s)' % xmltask.result)
+    task._result(xmltask.result, u'/', 0, u'(%s)' % xmltask.result)
     # Stop task
     if xmltask.status == u'Aborted':
         task.abort()

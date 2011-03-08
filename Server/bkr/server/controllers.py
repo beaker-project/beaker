@@ -950,6 +950,8 @@ class Root(RPCRoot):
 
     @cherrypy.expose
     def view(self, fqdn=None, **kwargs):
+        if isinstance(fqdn, str):
+            fqdn = fqdn.decode('utf8') # for virtual paths like /view/asdf.example.com
         # XXX content negotiation too?
         tg_format = kwargs.get('tg_format', 'html')
         if tg_format in ('rdfxml', 'turtle'):
@@ -1352,7 +1354,7 @@ class Root(RPCRoot):
                 except UnboundLocalError, e: pass # We probably weren't a fk_log_entry object
                    
                 
-                activity = SystemActivity(identity.current.user, 'WEBUI', 'Changed', field, current_val, new_val)
+                activity = SystemActivity(identity.current.user, u'WEBUI', u'Changed', unicode(field), current_val, new_val)
                 system.activity.append(activity)
         
         try: 
@@ -1365,21 +1367,21 @@ class Root(RPCRoot):
               shared and len(system.groups) == 0:
                 flash( _(u"You don't have permission to share without the system being in a group first " ) )
                 redirect("/view/%s" % system.fqdn)
-            current_val = str(system.shared and True or False) #give us the text 'True' or 'False'
-            new_val = str(shared and True) #give us the text 'True' or 'False'
-            activity = SystemActivity(identity.current.user, 'WEBUI', 'Changed', 'shared', current_val, new_val )
+            current_val = unicode(system.shared and True or False) #give us the text 'True' or 'False'
+            new_val = unicode(shared and True) #give us the text 'True' or 'False'
+            activity = SystemActivity(identity.current.user, u'WEBUI', u'Changed', u'shared', current_val, new_val )
             system.activity.append(activity)
             system.shared = shared
                 
         log_bool_fields = [ 'private' ]
         for field in log_bool_fields:
             try:
-                current_val = str(getattr(system,field) and True or False)
+                current_val = unicode(getattr(system,field) and True or False)
             except KeyError:
-                current_val = ""
-            new_val = str(kw.get(field) or False)
-            if str(current_val) != new_val:
-                activity = SystemActivity(identity.current.user, 'WEBUI', 'Changed', field, current_val, new_val )
+                current_val = u""
+            new_val = unicode(kw.get(field) or False)
+            if current_val != new_val:
+                activity = SystemActivity(identity.current.user, u'WEBUI', u'Changed', unicode(field), current_val, new_val )
                 system.activity.append(activity)
         system.status_id=kw['status_id']
         system.location=kw['location']

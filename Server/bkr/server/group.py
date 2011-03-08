@@ -104,7 +104,7 @@ class Groups(AdminPage):
         user_member = ('User Members', lambda x: x.display_name)
         
         if identity.in_group('admin'):
-            remove_link = (' ', lambda x: make_link('removeUser?group_id=%s&id=%s' % (id, x.user_id), 'Remove (-)'))
+            remove_link = (' ', lambda x: make_link('removeUser?group_id=%s&id=%s' % (id, x.user_id), u'Remove (-)'))
         
         user_fields = [user_member]
         if 'remove_link' in locals(): 
@@ -137,7 +137,7 @@ class Groups(AdminPage):
         usergrid = self.show_members(id) 
         systemgrid = widgets.DataGrid(fields=[
                                   ('System Members', lambda x: x.fqdn),
-                                  (' ', lambda x: make_link('removeSystem?group_id=%s&id=%s' % (id, x.id), 'Remove (-)')),
+                                  (' ', lambda x: make_link('removeSystem?group_id=%s&id=%s' % (id, x.id), u'Remove (-)')),
                               ])
         return dict(
             form = self.group_form,
@@ -162,7 +162,7 @@ class Groups(AdminPage):
             group = Group.by_id(kw['group_id'])
         else:
             group = Group()
-            activity = Activity(identity.current.user, 'WEBUI', 'Added', 'Group', "", kw['display_name'] )
+            activity = Activity(identity.current.user, u'WEBUI', u'Added', u'Group', u"", kw['display_name'] )
         group.display_name = kw['display_name']
         group.group_name = kw['group_name']
         flash( _(u"OK") )
@@ -175,8 +175,8 @@ class Groups(AdminPage):
         system = System.by_fqdn(kw['system']['text'],identity.current.user)
         group = Group.by_id(kw['group_id'])
         group.systems.append(system)
-        activity = GroupActivity(identity.current.user, 'WEBUI', 'Added', 'System', "", system.fqdn)
-        sactivity = SystemActivity(identity.current.user, 'WEBUI', 'Added', 'Group', "", group.display_name)
+        activity = GroupActivity(identity.current.user, u'WEBUI', u'Added', u'System', u"", system.fqdn)
+        sactivity = SystemActivity(identity.current.user, u'WEBUI', u'Added', u'Group', u"", group.display_name)
         group.activity.append(activity)
         system.activity.append(sactivity)
         flash( _(u"OK") )
@@ -192,7 +192,7 @@ class Groups(AdminPage):
             redirect("./edit?id=%s" % kw['group_id'])
         group = Group.by_id(kw['group_id'])
         group.users.append(user)
-        activity = GroupActivity(identity.current.user, 'WEBUI', 'Added', 'User', "", user.user_name)
+        activity = GroupActivity(identity.current.user, u'WEBUI', u'Added', u'User', u"", user.user_name)
         group.activity.append(activity)
         flash( _(u"OK") )
         redirect("./edit?id=%s" % kw['group_id'])
@@ -243,7 +243,7 @@ class Groups(AdminPage):
      
         def f(x):
             if len(x.systems):
-                return make_link('systems?group_id=%s' % x.group_id, 'System count: %s' % len(x.systems))
+                return make_link('systems?group_id=%s' % x.group_id, u'System count: %s' % len(x.systems))
             else:
                 return 'System count: 0' 
 
@@ -254,8 +254,7 @@ class Groups(AdminPage):
         actual_grid = [elem for elem in potential_grid if elem is not None]
    
         groups_grid = myPaginateDataGrid(fields=actual_grid)
-        search_group_form = widgets.TableForm('SearchGroup',fields=[self.search_groups],action='.',submit_test=_(u'Search'),)
-        return_dict = dict(title="Groups", 
+        return_dict = dict(title=u"Groups",
                            grid = groups_grid, 
                            object_count = groups.count(), 
                            search_bar = None,
@@ -273,7 +272,7 @@ class Groups(AdminPage):
             if user.user_id == int(id):
                 group.users.remove(user)
                 removed = user
-                activity = GroupActivity(identity.current.user, 'WEBUI', 'Removed', 'User', removed.user_name, "")
+                activity = GroupActivity(identity.current.user, u'WEBUI', u'Removed', u'User', removed.user_name, u"")
                 group.activity.append(activity)
         flash( _(u"%s Removed" % removed.display_name))
         raise redirect("./edit?id=%s" % group_id)
@@ -287,8 +286,8 @@ class Groups(AdminPage):
             if system.id == int(id):
                 group.systems.remove(system)
                 removed = system
-                activity = GroupActivity(identity.current.user, 'WEBUI', 'Removed', 'System', removed.fqdn, "")
-                sactivity = SystemActivity(identity.current.user, 'WEBUI', 'Removed', 'Group', group.display_name, "")
+                activity = GroupActivity(identity.current.user, u'WEBUI', u'Removed', u'System', removed.fqdn, u"")
+                sactivity = SystemActivity(identity.current.user, u'WEBUI', u'Removed', u'Group', group.display_name, u"")
                 group.activity.append(activity)
                 system.activity.append(sactivity)
         flash( _(u"%s Removed" % removed.fqdn))
@@ -299,7 +298,7 @@ class Groups(AdminPage):
     def remove(self, **kw):
         group = Group.by_id(kw['id'])
         session.delete(group)
-        activity = Activity(identity.current.user, 'WEBUI', 'Removed', 'Group', group.display_name, "" )
+        activity = Activity(identity.current.user, u'WEBUI', u'Removed', u'Group', group.display_name, u"")
         session.save_or_update(activity)
         flash( _(u"%s Deleted") % group.display_name )
         raise redirect(".")
