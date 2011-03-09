@@ -2,8 +2,8 @@
 %{!?pyver: %global pyver %(%{__python} -c "import sys ; print sys.version[:3]")}
 
 Name:           beaker
-Version:        0.6.5
-Release:        3%{?dist}
+Version:        0.6.6
+Release:        1%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -247,6 +247,25 @@ fi
 %{_var}/lib/beaker/addDistro.d/*
 
 %changelog
+* Wed Mar 09 2011 Raymond Mancy <rmancy@redhat.com> 0.6.6-1
+- 679398 freeze header and first column for matrix report (rmancy@redhat.com)
+- 676735 Whiteboard filter results are now displayed in desc order (rmancy@redhat.com)
+- 678033 Export action for jobs (rmancy@redhat.com)
+- 676834 Job Ack/Nak between members of the same group (rmancy@redhat.com)
+- 679678 fix up priority attribute on <recipeSet/> (dcallagh@redhat.com)
+- 679232 redirect to /forbidden when permissions are insufficient
+  (dcallagh@redhat.com)
+- 678651 include addDistro.sh in beaker-lab-controller package (bpeck@redhat.com)
+- 572833 [RFE] Allow $swapsize to define swapsize (bpeck@redhat.com)
+- 681143 make bkradd omits requirements/runfor in Makefile that differ in case
+  (bpeck@redhat.com)
+- 668473 Jobs left in queued state forever (bpeck@redhat.com)
+- 679835 Drop version-release from task rpm names received from Scheduler
+  (bpeck@redhat.com)
+
+- 677905 XML-RPC method to return system history (dcallagh@redhat.com)
+
+
 * Tue Mar 01 2011 Dan Callaghan <dcallagh@redhat.com> 0.6.5-3
 - we can only be picky about TurboGears version on RHEL (dcallagh@redhat.com)
 
