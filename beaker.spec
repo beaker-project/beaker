@@ -3,7 +3,7 @@
 
 Name:           beaker
 Version:        0.6.6
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -98,8 +98,8 @@ Group:          Applications/Internet
 Requires:       %{name} = %{version}-%{release}
 Requires:       %{name}-lab-controller = %{version}-%{release}
 Requires:       %{name}-client = %{version}-%{release}
-Provides:	beaker-redhat-support
-Obsoletes:	beaker-redhat-support
+Provides:	beaker-redhat-support-addDistro
+Obsoletes:	beaker-redhat-support-addDistro
 
 %description
 Filesystem layout for beaker
