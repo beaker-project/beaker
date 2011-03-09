@@ -247,6 +247,9 @@ fi
 %{_var}/lib/beaker/addDistro.d/*
 
 %changelog
+* Thu Mar 10 2011 Raymond Mancy <rmancy@redhat.com> 0.6.6-2
+- Fix typo in spec (rmancy@redhat.com)
+
 * Wed Mar 09 2011 Raymond Mancy <rmancy@redhat.com> 0.6.6-1
 - 679398 freeze header and first column for matrix report (rmancy@redhat.com)
 - 676735 Whiteboard filter results are now displayed in desc order (rmancy@redhat.com)
