@@ -27,6 +27,7 @@ import shutil
 import glob
 
 sys.path.append('.')
+sys.path.append("/usr/share/smolt/client")
 import smolt
 from disks import Disks
 

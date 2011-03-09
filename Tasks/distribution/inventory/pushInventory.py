@@ -22,6 +22,7 @@ import os
 import commands
 import pprint
 
+sys.path.append("/usr/share/smolt/client")
 import smolt
 import procfs
 
