@@ -23,34 +23,38 @@ class TestSubmitTask(bkr.server.test.selenium.SeleniumTestCase):
 
         # upload v1.1 first...
         sel.click('link=New Task')
-        sel.wait_for_page_to_load('3000')
+        sel.wait_for_page_to_load('30000')
         sel.type('task_task_rpm',
                 pkg_resources.resource_filename(self.__module__,
                 'tmp-distribution-beaker-task_test-1.1-0.noarch.rpm'))
         sel.click('//input[@value="Submit Data"]')
-        sel.wait_for_page_to_load('3000')
+        sel.wait_for_page_to_load('30000')
+        self.assert_(('%s Added/Updated' % test_package_name)
+                in sel.get_text('css=.flash'))
         # ...and make sure it worked...
         sel.type('simplesearch', test_package_name)
         sel.click('search')
-        sel.wait_for_page_to_load('3000')
+        sel.wait_for_page_to_load('30000')
         sel.click('link=%s' % test_package_name)
-        sel.wait_for_page_to_load('3000')
+        sel.wait_for_page_to_load('30000')
         self.assert_task_correct_v1_1()
 
         # ...then upload v2.0...
         sel.click('link=New Task')
-        sel.wait_for_page_to_load('3000')
+        sel.wait_for_page_to_load('30000')
         sel.type('task_task_rpm',
                 pkg_resources.resource_filename(self.__module__,
                 'tmp-distribution-beaker-task_test-2.0-2.noarch.rpm'))
         sel.click('//input[@value="Submit Data"]')
-        sel.wait_for_page_to_load('3000')
+        sel.wait_for_page_to_load('30000')
+        self.assert_(('%s Added/Updated' % test_package_name)
+                in sel.get_text('css=.flash'))
         # ...and make sure everything was updated
         sel.type('simplesearch', test_package_name)
         sel.click('search')
-        sel.wait_for_page_to_load('3000')
+        sel.wait_for_page_to_load('30000')
         sel.click('link=%s' % test_package_name)
-        sel.wait_for_page_to_load('3000')
+        sel.wait_for_page_to_load('30000')
         self.assert_task_correct_v2_0()
 
     def assert_task_correct_v1_1(self):
