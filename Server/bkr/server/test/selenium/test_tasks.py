@@ -4,6 +4,7 @@ from bkr.server.test import data_setup
 import unittest, time, re, os
 import pkg_resources
 from turbogears.database import session
+from bkr.server.model import TaskPackage
 
 class TestSubmitTask(bkr.server.test.selenium.SeleniumTestCase):
 
@@ -77,6 +78,33 @@ class TestSubmitTask(bkr.server.test.selenium.SeleniumTestCase):
         """Returns the value of a field in the task info table."""
         return self.selenium.get_text('//table[@class="show"]'
                 '//td[preceding-sibling::td[1]//text()="%s:"]' % field_label)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=681143
+    def test_task_package_names_are_case_sensitive(self):
+        test_package_name = '/distribution/beaker/dummy_for_bz681143'
+
+        # There is a pre-existing TaskPackage in all lowercase...
+        TaskPackage.lazy_create(package=u'opencryptoki')
+        session.flush()
+
+        # But the task we are uploading has RunFor: openCryptoki, 
+        # with uppercase C
+        sel = self.selenium
+        sel.open('')
+        sel.click('link=New Task')
+        sel.wait_for_page_to_load('30000')
+        sel.type('task_task_rpm',
+                pkg_resources.resource_filename(self.__module__,
+                'tmp-distribution-beaker-dummy_for_bz681143-1.0-1.noarch.rpm'))
+        sel.click('//input[@value="Submit Data"]')
+        sel.wait_for_page_to_load('30000')
+        sel.type('simplesearch', test_package_name)
+        sel.click('search')
+        sel.wait_for_page_to_load('30000')
+        sel.click('link=%s' % test_package_name)
+        sel.wait_for_page_to_load('30009')
+        # Should have openCryptoki in correct case:
+        self.assertEqual(self.get_task_info_field('Run For'), 'openCryptoki')
 
 if __name__ == "__main__":
     unittest.main()
