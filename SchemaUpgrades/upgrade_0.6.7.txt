@@ -4,3 +4,39 @@ Update all existing FQDNs to lowercase
 Run the following SQL statement (expected run time <5sec):
 
     UPDATE system SET fqdn = LOWER(fqdn);
+
+
+Populate the reservation table
+------------------------------
+
+After running beaker-init to create the reservation table, populate it with 
+historical data using this SQL statement (expected run time approx. 15 mins):
+
+    INSERT INTO reservation (system_id, user_id, start_time, finish_time, type)
+    SELECT
+        system_id,
+        user_id,
+        created AS start_time,
+        (SELECT MIN(created)
+         FROM activity
+         INNER JOIN system_activity ON activity.id = system_activity.id
+         WHERE system_id = outer_system_activity.system_id
+               AND ((created >= outer_activity.created AND action = 'Returned')
+                    OR (created > outer_activity.created AND action = 'Reserved'))
+        ) AS finish_time,
+        CASE service
+            WHEN 'Scheduler' THEN 'recipe'
+            ELSE 'manual'
+        END AS type
+    FROM activity outer_activity
+    INNER JOIN system_activity outer_system_activity ON outer_activity.id = outer_system_activity.id
+    WHERE action = 'Reserved'
+    GROUP BY start_time;
+
+As apache user, run the sanity checking script provided in this directory, to 
+verify that the reservation table has been populated correctly (expected run 
+time approx. 2 mins):
+
+    su -s /bin/sh -c 'python /usr/share/doc/beaker-server-0.6.7/upgrade_0.6.7_check_reservations.py' apache
+
+If the script produces any errors, seek advice from a Beaker developer.
