@@ -263,8 +263,9 @@ def mark_job_waiting(job, user=None):
             recipe.process()
             recipe.queue()
             recipe.schedule()
-            recipe.system = create_system()
-            recipe.system.user = user
+            recipe.system = create_system(owner=job.owner)
+            recipe.system.reserve(service=u'testdata', user=job.owner,
+                    reservation_type=u'recipe')
             recipe.watchdog = Watchdog(system=recipe.system)
             recipe.waiting()
 

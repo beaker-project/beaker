@@ -84,6 +84,9 @@ class ReserveSystemXmlRpcTest(XmlRpcTestCase):
         server.systems.reserve(system.fqdn)
         session.refresh(system)
         self.assertEqual(system.user, user)
+        self.assertEqual(system.reservations[0].type, u'manual')
+        self.assertEqual(system.reservations[0].user, user)
+        self.assert_(system.reservations[0].finish_time is None)
         reserved_activity = system.activity[-1]
         self.assertEqual(reserved_activity.action, 'Reserved')
         self.assertEqual(reserved_activity.field_name, 'User')
@@ -123,6 +126,9 @@ class ReserveSystemXmlRpcTest(XmlRpcTestCase):
         server.systems.reserve(system.fqdn)
         session.refresh(system)
         self.assertEqual(system.user, user)
+        self.assertEqual(system.reservations[0].type, u'manual')
+        self.assertEqual(system.reservations[0].user, user)
+        self.assert_(system.reservations[0].finish_time is None)
         reserved_activity = system.activity[0]
         self.assertEqual(reserved_activity.action, 'Reserved')
         self.assertEqual(reserved_activity.service, service_user.user_name)
@@ -146,7 +152,7 @@ class ReleaseSystemXmlRpcTest(XmlRpcTestCase):
                 status=u'Manual', shared=True)
         user = data_setup.create_user(password=u'password')
         other_user = data_setup.create_user()
-        system.user = other_user
+        system.reserve(service=u'testdata', user=other_user)
         session.flush()
         server = self.get_server()
         server.auth.login_password(user.user_name, 'password')
@@ -162,14 +168,19 @@ class ReleaseSystemXmlRpcTest(XmlRpcTestCase):
                 owner=User.by_user_name(data_setup.ADMIN_USER),
                 status=u'Manual', shared=True)
         user = data_setup.create_user(password=u'password')
-        system.user = user
+        system.reserve(service=u'testdata', user=user)
         session.flush()
         server = self.get_server()
         server.auth.login_password(user.user_name, 'password')
         server.systems.release(system.fqdn)
         session.refresh(system)
+        session.refresh(system.reservations[0])
         self.assert_(system.user is None)
-        released_activity = system.activity[-1]
+        self.assertEquals(system.reservations[0].user, user)
+        assert_datetime_within(system.reservations[0].finish_time,
+                tolerance=datetime.timedelta(seconds=10),
+                reference=datetime.datetime.utcnow())
+        released_activity = system.activity[0]
         self.assertEqual(released_activity.action, 'Returned')
         self.assertEqual(released_activity.field_name, 'User')
         self.assertEqual(released_activity.user, user)
@@ -182,7 +193,7 @@ class ReleaseSystemXmlRpcTest(XmlRpcTestCase):
                 owner=User.by_user_name(data_setup.ADMIN_USER),
                 status=u'Manual', shared=True)
         user = data_setup.create_user(password=u'password')
-        system.user = user
+        system.reserve(service=u'testdata', user=user)
         session.flush()
         server = self.get_server()
         server.auth.login_password(user.user_name, 'password')

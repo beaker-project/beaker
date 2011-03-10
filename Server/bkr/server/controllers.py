@@ -1065,7 +1065,7 @@ class Root(RPCRoot):
                 flash(_(u'Failed to return %s: %s') % (system.fqdn, e))
         else:
             try:
-                system.reserve(service=u'WEBUI')
+                system.reserve(service=u'WEBUI', reservation_type=u'manual')
                 flash(_(u'Reserved %s') % system.fqdn)
             except BeakerException, e:
                 log.exception('Failed to reserve')

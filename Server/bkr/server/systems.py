@@ -33,7 +33,7 @@ class SystemsController(controllers.Controller):
         system = System.by_fqdn(fqdn, identity.current.user)
         if system.status != SystemStatus.by_name(u'Manual'):
             raise BX(_(u'Cannot reserve system with status %s') % system.status)
-        system.reserve(service=u'XMLRPC')
+        system.reserve(service=u'XMLRPC', reservation_type=u'manual')
         return system.fqdn # because turbogears makes us return something
 
     @expose()
