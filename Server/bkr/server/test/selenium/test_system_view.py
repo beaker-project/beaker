@@ -136,6 +136,16 @@ class SystemViewTest(SeleniumTestCase):
         self.assertEquals(sel.get_text('css=.fielderror'),
                 'The supplied value is not a valid hostname')
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=683003
+    def test_forces_fqdn_to_lowercase(self):
+        self.login()
+        sel = self.selenium
+        self.go_to_system_view()
+        sel.type('fqdn', 'LooOOooL')
+        sel.click('link=Save Changes')
+        sel.wait_for_page_to_load('30000')
+        self.assertEquals(sel.get_value('fqdn'), 'looooool')
+
     # https://bugzilla.redhat.com/show_bug.cgi?id=670912
     def test_renaming_system_removes_from_cobbler(self):
         self.login()

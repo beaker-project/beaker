@@ -33,6 +33,10 @@ class Hostname(validators.Regex):
                 r'(?:(?:[0-9A-Za-z]|\b-){0,61}[0-9A-Za-z])?'
                 r'(?:\.[0-9A-Za-z](?:(?:[0-9A-Za-z]|\b-){0,61}[0-9A-Za-z])?)*\.?$',
                 strip=True)
+    def _to_python(self, value, state):
+        # Hostnames are case-insensitive, so let's force it to lowercase here 
+        # for consistency
+        return super(Hostname, self)._to_python(value, state).lower()
 
 class UtilJSON:
      @classmethod
