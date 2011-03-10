@@ -1,0 +1,6 @@
+Update all existing FQDNs to lowercase
+--------------------------------------
+
+Run the following SQL statement (expected run time <5sec):
+
+    UPDATE system SET fqdn = LOWER(fqdn);
