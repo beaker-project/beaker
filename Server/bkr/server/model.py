@@ -750,6 +750,19 @@ log_recipe_task_result_table = Table('log_recipe_task_result', metadata,
         mysql_engine='InnoDB',
 )
 
+reservation_table = Table('reservation', metadata,
+        Column('id', Integer, primary_key=True),
+        Column('system_id', Integer, ForeignKey('system.id'), nullable=False),
+        Column('user_id', Integer, ForeignKey('tg_user.user_id'),
+            nullable=False),
+        Column('start_time', DateTime, index=True, nullable=False,
+            default=datetime.utcnow),
+        Column('finish_time', DateTime, index=True),
+        # type = 'manual' or 'recipe'
+        Column('type', Unicode(30), index=True, nullable=False),
+        mysql_engine='InnoDB',
+)
+
 recipe_table = Table('recipe',metadata,
         Column('id', Integer, primary_key=True),
         Column('recipe_set_id', Integer,
@@ -1970,7 +1983,7 @@ url --url=$tree
         This represents the basic system perms,loanee, owner,  shared and in group or shared and no group
         """
         try:
-            if identity.in_group('admin'):
+            if u'admin' in user.groups:
                 return True
         except AttributeError, e: #not logged in ?
             return False
@@ -2264,7 +2277,6 @@ url --url=$tree
                 self.remote.release()
             except:
                 pass
-        self.user = None
 
     def action_provision(self, 
                          distro=None,
@@ -2435,36 +2447,61 @@ $SNIPPET("rhts_post")
                     old_value=old_status,
                     new_value=self.status))
 
-    def reserve(self, service):
-        if self.user is not None and self.user == identity.current.user:
+    def reserve(self, service, user=None, reservation_type=u'manual'):
+        if user is None:
+            user = identity.current.user
+        if self.user is not None and self.user == user:
             raise BX(_(u'User %s has already reserved system %s')
-                    % (identity.current.user, self))
-        if not self.can_share(identity.current.user):
+                    % (user, self))
+        if not self.can_share(user):
             raise BX(_(u'User %s cannot reserve system %s')
-                    % (identity.current.user, self))
+                    % (user, self))
         # Atomic operation to reserve the system
+        session.flush()
         if session.connection(System).execute(system_table.update(
                 and_(system_table.c.id == self.id,
                      system_table.c.user_id == None)),
-                user_id=identity.current.user.user_id).rowcount == 1:
-            self.activity.append(SystemActivity(user=identity.current.user,
-                    service=service, action=u'Reserved', field_name=u'User',
-                    old_value=u'', new_value=identity.current.user))
-        else:
-            raise BX(_(u'System is already reserved'))
+                user_id=user.user_id).rowcount != 1:
+            raise BX(_(u'System %r is already reserved') % self)
+        self.user = user # do it here too, so that the ORM is aware
+        self.reservations.append(Reservation(user=user, type=reservation_type))
+        self.activity.append(SystemActivity(user=user,
+                service=service, action=u'Reserved', field_name=u'User',
+                old_value=u'', new_value=user.user_name))
+        log.debug('Created reservation for system %r with type %r, service %r, user %r',
+                self, reservation_type, service, user)
 
-    def unreserve(self, service):
+    def unreserve(self, service, user=None, watchdog=None):
+        if user is None:
+            user = identity.current.user
+
+        # Some sanity checks
         if self.user is None:
             raise BX(_(u'System is not reserved'))
-        if not self.current_user(identity.current.user):
+        if not self.current_user(user):
             raise BX(_(u'System is reserved by a different user'))
-        # Don't return a system with an active watchdog
-        if self.watchdog:
-            # This won't really happen anymore since the Manual/Automated split
+
+        # Watchdog checking -- don't return a system with an active watchdog,
+        # unless the correct watchdog has been passed in to be cleared
+        if self.watchdog and self.watchdog == watchdog:
+            session.delete(self.watchdog)
+        elif self.watchdog and watchdog is None:
             raise BX(_(u'System has active recipe %s') % self.watchdog.recipe_id)
-        activity = SystemActivity(user=identity.current.user,
+        elif self.watchdog or watchdog:
+            raise BX(_(u'Mismatched watchdogs in unreserve: %r, %r')
+                    % (self.watchdog, watchdog)) # should never happen
+
+        # Update reservation atomically first, to avoid races
+        session.flush()
+        if session.connection(System).execute(reservation_table.update(
+                and_(reservation_table.c.system_id == self.id,
+                     reservation_table.c.finish_time == None)),
+                finish_time=datetime.utcnow()).rowcount != 1:
+            raise BX(_(u'System does not have an open reservation'))
+        activity = SystemActivity(user=user,
                 service=service, action=u'Returned', field_name=u'User',
                 old_value=self.user.user_name, new_value=u'')
+        self.user = None
         try:
             self.action_release()
         except BX, e:
@@ -4937,15 +4974,9 @@ class Recipe(TaskBase):
             log.debug("Remove watchdog for recipe %s" % self.id)
             if self.watchdog.system == self.system:
                 try:
-                    self.system.action_release()
                     log.debug("Return system %s for recipe %s" % (self.system, self.id))
-                    self.system.activity.append(
-                        SystemActivity(self.recipeset.job.owner, 
-                                       'Scheduler', 
-                                       'Returned', 
-                                       'User', 
-                                       '%s' % self.recipeset.job.owner, 
-                                       ''))
+                    self.system.unreserve(service=u'Scheduler',
+                            user=self.recipeset.job.owner, watchdog=self.watchdog)
                 except socket.gaierror, error:
                     #FIXME
                     pass
@@ -4954,7 +4985,6 @@ class Recipe(TaskBase):
                     pass
                 except AttributeError, error:
                     pass
-            del(self.watchdog)
 
     def task_info(self):
         """
@@ -5895,6 +5925,8 @@ class TaskBugzilla(MappedObject):
     """
     pass
 
+class Reservation(MappedObject): pass
+
 # set up mappers between identity tables and classes
 SystemType.mapper = mapper(SystemType, system_type_table)
 SystemStatus.mapper = mapper(SystemStatus, system_status_table)
@@ -6247,6 +6279,12 @@ mapper(RecipeTaskResult, recipe_task_result_table,
 mapper(TaskPriority, task_priority_table)
 mapper(TaskStatus, task_status_table)
 mapper(TaskResult, task_result_table)
+mapper(Reservation, reservation_table, properties={
+        'system': relation(System, backref=backref('reservations',
+            order_by=[reservation_table.c.start_time.desc()])),
+        'user': relation(User, backref=backref('reservations',
+            order_by=[reservation_table.c.start_time.desc()])),
+})
 
 ## Static list of device_classes -- used by master.kid
 global _device_classes

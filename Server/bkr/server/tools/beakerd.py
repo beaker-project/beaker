@@ -374,23 +374,15 @@ def queued_recipes(*args):
                 else:
                     recipe.schedule()
                     recipe.createRepo()
-                    if session.connection(Recipe).execute(system_table.update(
-                         and_(system_table.c.id==system.id,
-                          system_table.c.user_id==None)),
-                          user_id=recipe.recipeset.job.owner.user_id).rowcount == 1:
-                        recipe.system = system
-                        recipe.recipeset.lab_controller = system.lab_controller
-                        recipe.systems = []
-                        # Create the watchdog without an Expire time.
-                        log.debug("Created watchdog for recipe id: %s and system: %s" % (recipe.id, system))
-                        recipe.watchdog = Watchdog(system=recipe.system)
-                        activity = SystemActivity(recipe.recipeset.job.owner, "Scheduler", "Reserved", "User", "", "%s" % recipe.recipeset.job.owner )
-                        system.activity.append(activity)
-                        log.info("recipe ID %s moved from Queued to Scheduled" % recipe.id)
-                    else:
-                        # The system was taken from underneath us.  Put recipe
-                        # back into queued state and try again.
-                        raise BX(_('System %s was stolen from underneath us. will try again.' % system))
+                    system.reserve(service=u'Scheduler', user=recipe.recipeset.job.owner,
+                            reservation_type=u'recipe')
+                    recipe.system = system
+                    recipe.recipeset.lab_controller = system.lab_controller
+                    recipe.systems = []
+                    # Create the watchdog without an Expire time.
+                    log.debug("Created watchdog for recipe id: %s and system: %s" % (recipe.id, system))
+                    recipe.watchdog = Watchdog(system=recipe.system)
+                    log.info("recipe ID %s moved from Queued to Scheduled" % recipe.id)
             session.commit()
         except exceptions.Exception:
             session.rollback()
