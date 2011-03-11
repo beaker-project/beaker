@@ -1800,26 +1800,6 @@ url --url=$tree
         else:
             return System.query().filter(System.arch.any(Arch.arch == arch))
 
-    @classmethod
-    def reserved_via(cls, service=u'WEBUI'): 
-        activity_ids = cls._latest_reserved()
-        taken = []
-        for id in activity_ids:
-            try: 
-                take_activity = SystemActivity.query().join('object').filter(and_(SystemActivity.id==id,SystemActivity.service == service)).one()
-                taken.append(take_activity)
-            except InvalidRequestError,e:
-                pass
-        return taken
-   
-    @classmethod
-    def _latest_reserved(cls): 
-        f_obj= system_table.join(system_activity_table).join(activity_table)
-        s = select([func.max(system_activity_table.c.id)],from_obj=f_obj,whereclause=and_(activity_table.c.action == u'Reserved',System.user != None)).group_by(system_table.c.id)
-        result = s.execute()
-        ids = [row[0] for row in result.fetchall()] 
-        return ids
-
     def excluded_families(self):
         """
         massage excluded_osmajor for Checkbox values
