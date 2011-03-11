@@ -448,29 +448,6 @@ class Distros(RPCRoot):
                 distro.tags.remove(tag)
         return removed
 
-    @cherrypy.expose
-    def pick(self, xml):
-        """
-        Based on XML passed in filter distro selection
-        """
-        distros = Distro.by_filter(xml)
-        distros = distros.add_column('tree_path').join('lab_controller_assocs')
-        distros = distros.add_column('fqdn').join(['lab_controller_assocs','lab_controller'])
-        try:
-            distro, tree_path, fqdn = distros.first()
-        except TypeError:
-            return None
-        if distro:
-            return dict(distro         = distro.name,
-                        install_name   = distro.install_name,
-                        arch           = '%s' % distro.arch,
-                        family         = '%s' % distro.osversion,
-                        variant        = distro.variant,
-                        lab_controller = fqdn,
-                        tree_path      = tree_path)
-        else:
-            return None
-
     default = index
 
 # for sphinx
