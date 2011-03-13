@@ -6,7 +6,7 @@ from turbogears.database import session
 from bkr.server.jobxml import XmlJob
 from bkr.server.bexceptions import BX
 from bkr.server.test import data_setup
-from bkr.server.model import TaskStatus, Watchdog, RecipeSet
+from bkr.server.model import TaskStatus, Watchdog, RecipeSet, Distro
 
 def watchdogs_for_job(job):
     return Watchdog.query().join(['recipe', 'recipeset', 'job'])\
@@ -20,7 +20,8 @@ class TestUpdateStatus(unittest.TestCase):
         from bkr.server.jobs import Jobs
         self.controller = Jobs()
         self.user = data_setup.create_user()
-        data_setup.create_distro(name=u'BlueShoeLinux5-5')
+        if not Distro.by_name('BlueShoeLinux5-5'):
+            data_setup.create_distro(name=u'BlueShoeLinux5-5')
         data_setup.create_task(name=u'/distribution/install')
         session.flush()
 

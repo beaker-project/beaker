@@ -558,7 +558,8 @@ activity_table = Table('activity', metadata,
     Column('id', Integer, autoincrement=True,
            nullable=False, primary_key=True),
     Column('user_id', Integer, ForeignKey('tg_user.user_id'), index=True),
-    Column('created', DateTime, nullable=False, default=datetime.utcnow),
+    Column('created', DateTime, nullable=False, default=datetime.utcnow,
+           index=True),
     Column('type', Unicode(40), nullable=False),
     Column('field_name', Unicode(40), nullable=False),
     Column('service', Unicode(100), nullable=False),
@@ -3897,12 +3898,12 @@ class Job(TaskBase):
     def clone_link(self):
         """ return link to clone this job
         """
-        return "/jobs/clone?job_id=%s" % self.id
+        return url("/jobs/clone?job_id=%s" % self.id)
 
     def cancel_link(self):
         """ return link to cancel this job
         """
-        return "/jobs/cancel?id=%s" % self.id
+        return url("/jobs/cancel?id=%s" % self.id)
 
     def is_owner(self,user):
         if self.owner == user:
@@ -4419,12 +4420,12 @@ class RecipeSet(TaskBase):
     def cancel_link(self):
         """ return link to cancel this recipe
         """
-        return "/recipesets/cancel?id=%s" % self.id
+        return url("/recipesets/cancel?id=%s" % self.id)
 
     def clone_link(self):
         """ return link to clone this recipe
         """
-        return "/jobs/clone?recipeset_id=%s" % self.id
+        return url("/jobs/clone?recipeset_id=%s" % self.id)
 
 
 class Recipe(TaskBase):
@@ -5999,13 +6000,13 @@ mapper(Power, power_table,
 mapper(Serial, serial_table)
 mapper(SerialType, serial_type_table)
 mapper(Install, install_table)
-mapper(LabControllerDistro, lab_controller_distro_map , properties={
-    'distro':relation(Distro, backref='lab_controller_assocs')
-})
+mapper(LabControllerDistro, lab_controller_distro_map)
+
 mapper(LabController, lab_controller_table,
-        properties = {'_distros':relation(LabControllerDistro,
-                                          backref='lab_controller'),
-    })
+        properties = {'_distros':relation(LabControllerDistro, backref='lab_controller',
+                                          cascade='all, delete-orphan'),
+                     }
+      )
 
 mapper(Distro, distro_table,
         properties = {'osversion':relation(OSVersion, uselist=False,
@@ -6015,6 +6016,8 @@ mapper(Distro, distro_table,
                       '_tags':relation(DistroTag,
                                        secondary=distro_tag_map,
                                        backref='distros'),
+                      'lab_controller_assocs':relation(LabControllerDistro, backref='distro',
+                                                       cascade='all, delete-orphan'),
     })
 mapper(Breed, breed_table)
 mapper(DistroTag, distro_tag_table)

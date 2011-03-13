@@ -2,7 +2,7 @@
 %{!?pyver: %global pyver %(%{__python} -c "import sys ; print sys.version[:3]")}
 
 Name:           beaker
-Version:        0.6.4
+Version:        0.6.5
 Release:        3%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
@@ -22,7 +22,11 @@ BuildRequires:  python-sphinx10
 %endif
 # These server dependencies are needed in the build, because
 # sphinx imports bkr.server modules to generate API docs
+%if 0%{?rhel}
+BuildRequires:  TurboGears = 1.0.8-7.eso.1%{?dist}
+%else
 BuildRequires:  TurboGears
+%endif
 BuildRequires:  python-xmltramp
 BuildRequires:  python-lxml
 BuildRequires:  python-ldap
@@ -45,7 +49,11 @@ Requires:       libxslt-python
 %package server
 Summary:       Server component of Beaker
 Group:          Applications/Internet
+%if 0%{?rhel}
+Requires:       TurboGears = 1.0.8-7.eso.1%{?dist}
+%else
 Requires:       TurboGears
+%endif
 Requires:       intltool
 Requires:       python-decorator
 Requires:       python-xmltramp
@@ -221,6 +229,40 @@ fi
 %attr(-,apache,root) %dir %{_localstatedir}/run/%{name}-lab-controller
 
 %changelog
+* Tue Mar 01 2011 Dan Callaghan <dcallagh@redhat.com> 0.6.5-3
+- we can only be picky about TurboGears version on RHEL (dcallagh@redhat.com)
+
+* Wed Feb 23 2011 Raymond Mancy <rmancy@redhat.com> 0.6.5-2
+- depend on our exact version of TurboGears (dcallagh@redhat.com)
+- show identity errors on the login form (dcallagh@redhat.com)
+
+* Wed Feb 23 2011 Raymond Mancy <rmancy@redhat.com>
+- 678215 SQL instructions for replaceing '' with NULL for recipe.whiteboard
+(rmancy@redhat.com)
+- 676410 Fix matrix report view (rmancy@redhat.com)
+- 674566 show identity errors on the login form (dcallagh@redhat.com)
+- 677951 show friendly error for non-existent arch (dcallagh@redhat.com)
+- 676092 show all activity on activity page (dcallagh@redhat.com)
+- 676093 only admins can add/remove distro tags (dcallagh@redhat.com)
+- 663277 test case for login redirect with NestedVariablesFilter (dcallagh@redhat.com)
+- 676362 [RFE] bkr job-submit add --combine option to combine multiple jobs
+　(bpeck@redhat.com)
+- 676091 Only show distros that are on a lab controller. Allow admins to delete
+　distros from lab controllers. (bpeck@redhat.com)
+- 676947 fix login thread to keep trying, log any exceptions caught.
+　(bpeck@redhat.com)
+- 676067 Retention_tag and Product can't be passed in on the command line
+　(bpeck@redhat.com)
+- 602112 When /distribution/install is run check that we are running with correct
+　recipe and verify the distro requested was put down. (bpeck@redhat.com)
+
+- add index on activity.created (dcallagh@redhat.com)
+- update selenium tests to work with selenium-2.0b2 (dcallagh@redhat.com)
+- depend on our exact version of TurboGears (dcallagh@redhat.com)
+- remove PAT CPU check. (jburke@bass.usersys.redhat.com)
+* Wed Feb 23 2011 Raymond Mancy <rmancy@redhat.com> 0.6.4-4
+- fix for cancel and clone links when mounted under /bkr (rmancy@redhat.com)
+
 * Thu Feb 10 2011 Raymond Mancy <rmancy@redhat.com> 0.6.4-3
 - Fix so job-delete works with tags/products/family etc (rmancy@redhat.com)
 

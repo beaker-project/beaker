@@ -400,8 +400,9 @@ class JobMatrixReport(Form):
                   LocalJSLink('bkr', '/static/javascript/job_matrix.js')]
     css = [LocalCSSLink('bkr','/static/css/job_matrix.css'), LocalCSSLink('bkr','/static/css/smoothness/jquery-ui-1.7.3.custom.css')] 
     template = 'bkr.server.templates.job_matrix' 
-    member_widgets = ['whiteboard','job_ids','generate_button','nack_list'] 
-    params = ['list','whiteboard_filter','whiteboard_options','job_ids_vals','nacks','selected_nacks','comments_field','toggle_nacks_on'] 
+    member_widgets = ['whiteboard','job_ids','generate_button','nack_list']
+    params = (['list','whiteboard_filter','whiteboard_options','job_ids_vals',
+        'nacks','selected_nacks','comments_field','toggle_nacks_on',])
     default_validator = validators.NotEmpty() 
     def __init__(self,*args,**kw): 
         super(JobMatrixReport,self).__init__(*args, **kw)       
@@ -847,7 +848,23 @@ class SystemArches(Form):
             d['readonly'] = d['options']['readonly']
         if 'arches' in d['options']:
             d['arches'] = d['options']['arches']
-        
+       
+class LabControllers(Form):
+    template = "bkr.server.templates.lab_controllers"
+    member_widgets = ["id", "lab_controller"]
+    params = ['options', 'readonly', 'lab_controllers']
+ 
+    def __init__(self, *args, **kw):
+	super(LabControllers, self).__init__(*args, **kw)
+	self.id    = HiddenField(name="id")
+
+    def update_params(self, d):
+        super(LabControllers, self).update_params(d)
+        if 'readonly' in d['options']:
+            d['readonly'] = d['options']['readonly']
+        if 'lab_controllers' in d['options']:
+            d['lab_controllers'] = d['options']['lab_controllers']
+
 class DistroTags(Form):
     template = "bkr.server.templates.distro_tags"
     member_widgets = ["id", "tag"]

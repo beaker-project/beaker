@@ -39,6 +39,23 @@ SetUpInit()
     sed -i s/BOOTUP=color/BOOTUP=serial/ /etc/sysconfig/init
 }
 
+CHECKRECIPE()
+{
+    if [ -e "/root/RECIPE.TXT" ]; then
+        # If RECIPE.TXT exists then verify that its our recipe id, otherwise abort.
+        EXISTINGID=$(cat /root/RECIPE.TXT)
+        if [ "$RECIPEID" != "$EXISTINGID" ]; then
+            echo "Recipe ID $EXISTINGID on disk doesn't match ours! Install fail?" >> $OUTPUTFILE
+	    report_result $TEST/CheckRecipe FAIL
+            rhts-abort -t recipeset
+        fi
+    else
+        echo "No Recipe ID on disk! Install fail?" >> $OUTPUTFILE
+	report_result $TEST/CheckRecipe FAIL
+    fi
+    report_result $TEST/CheckRecipe PASS
+}
+
 MOTD()
 {
     FILE=/etc/motd
@@ -63,13 +80,6 @@ SYSLOGLVL()
     # Configure a default log level so we can send our own messages to console
     echo "local2.info      /dev/console" >> /etc/syslog.conf
     /sbin/service syslog restart
-}
-
-KA()
-{
-    wget http://jenner.boston.redhat.com/ka/ka-client.noarch.rpm
-    rpm -i ka-client.noarch.rpm
-    /usr/share/ka-client/bin/ka-results
 }
 
 SysReport ()
@@ -134,7 +144,6 @@ SysReport ()
     sysderror7=$(/bin/grep WARNING: $FILEAREA/boot.messages >> $FILEAREA/derror.log)
     sysderror8=$(/bin/grep -i "command not found" $FILEAREA/boot.messages >> $FILEAREA/derror.log)
     sysderror9=$(/bin/cat $FILEAREA/boot.messages | grep avc: | grep -v granted >> $FILEAREA/avcerror.log)
-    sysderror10=$(/bin/grep -ci "PAT not supported by CPU" $FILEAREA/boot.messages)
     if [ -e /root/install.log ]; then
 	cp /root/install.log $FILEAREA/install.log
 	sysierror=$(/bin/grep -i error: $FILEAREA/install.log >> $FILEAREA/ierror.log)
@@ -209,9 +218,6 @@ SysReport ()
 	echo "******** Potential Issues dmesg ********" >> $OUTPUTFILE
 	/bin/cat $FILEAREA/derror.log               >> $OUTPUTFILE
 	rhts_submit_log -S $RESULT_SERVER -T $TESTID -l $FILEAREA/boot.messages
-	if [ "$sysderror10" -ne 0 ]; then
-	    FAILURE=TRUE
-	fi
     fi
 
     # Submit proc meminfo log
@@ -256,6 +262,8 @@ echo "***** Start of Install test *****" > $OUTPUTFILE
 
 FILEAREA=/mnt/testarea
 /bin/dmesg > $FILEAREA/boot.messages
+
+CHECKRECIPE
 
 MOTD
 

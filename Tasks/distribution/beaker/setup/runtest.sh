@@ -91,7 +91,7 @@ function InstallInventory_git()
 
 function InstallInventory_repo()
 {
-    yum install -y beaker-server
+    yum install -y beaker-server$VERSION
 }
 
 function InstallLabController_git()
@@ -102,7 +102,7 @@ function InstallLabController_git()
 
 function InstallLabController_repo()
 {
-    yum install -y beaker-lab-controller
+    yum install -y beaker-lab-controller$VERSION
 }
 
 function CleanUp ()

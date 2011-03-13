@@ -16,9 +16,6 @@
     ${display_field_for("tag")}
    </td>
    <td class="list">
-    &nbsp;
-   </td>
-   <td class="list">
     ${display_field_for("id")}
     <a class="button" href="javascript:document.${name}.submit();">Add ( + )</a>
    </td>

@@ -43,10 +43,8 @@ class Authenticate(Thread):
                     self.proxy.hub._login(verbose=self.proxy.hub._conf.get("DEBUG_XMLRPC"))
                 except KeyboardInterrupt:
                     raise
-                except socket.sslerror:
-                    pass  #try again later 
                 except Exception, e:
-                    raise
+                    logger.exception("Authenticate: Failed to login")
             time.sleep(1)
 
     def stop(self):

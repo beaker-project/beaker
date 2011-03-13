@@ -1040,6 +1040,7 @@ class Activity(SystemObject):
                            'User' : MyColumn(col_type='string', column=model.User.user_name, relations='user'),
                            'Via' : MyColumn(col_type='string', column=model.Activity.service),
                            'System/Name' : MyColumn(col_type='string', column=model.System.fqdn, relations='object'), 
+                           'Distro/Name': MyColumn(col_type='string', column=model.Distro.name, relations='object'),
                            'Property': MyColumn(col_type='string', column=model.Activity.field_name),
                            'Action' : MyColumn(col_type='string', column=model.Activity.action),
                            'Old Value' : MyColumn(col_type='string', column=model.Activity.old_value),

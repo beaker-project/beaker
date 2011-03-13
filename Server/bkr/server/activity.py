@@ -9,7 +9,7 @@ from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.helpers import *
 from bkr.server.widgets import SearchBar
 from bkr.server import search_utility
-
+from bkr.server.util import any
 import cherrypy
 
 # from bkr.server import json
@@ -54,7 +54,15 @@ class Activities(RPCRoot):
     @expose(template="bkr.server.templates.grid")
     @paginate('list',default_order='-created', limit=50)
     def index(self,**kw):
-        activity = SystemActivity.all().outerjoin('user')
+        # This seems kind of dodgy...
+        if any(search['table'].startswith('System/')
+                for search in kw.get('activitysearch', [])):
+            activity = SystemActivity.all()
+        elif any(search['table'].startswith('Distro/')
+                for search in kw.get('activitysearch', [])):
+            activity = DistroActivity.all()
+        else:
+            activity = Activity.all()
         activities_return = self.activities(activity,**kw)
         searchvalue = None
         search_options = {}

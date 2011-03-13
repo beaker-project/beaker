@@ -60,7 +60,7 @@ from decimal import Decimal
 import bkr.server.recipes
 import bkr.server.rdf
 import random
-
+import urllib
 from kid import Element
 import cherrypy
 import md5
@@ -78,6 +78,13 @@ log = logging.getLogger("bkr.server.controllers")
 import breadcrumbs
 from datetime import datetime
 
+def identity_failure_url(errors):
+    reasons = [e for e in errors if e != 'Anonymous access denied']
+    if reasons:
+        return '/login?%s' % urllib.urlencode({'reason': reasons}, doseq=True)
+    else:
+        return '/login'
+config.update({'identity.failure_url': identity_failure_url})
 
 class Netboot:
     # For XMLRPC methods in this class.
@@ -1529,7 +1536,11 @@ class Root(RPCRoot):
             redirect("/")
         # Add an Arch
         if kw.get('arch').get('text'):
-            arch = Arch.by_name(kw['arch']['text'])
+            try:
+                arch = Arch.by_name(kw['arch']['text'])
+            except InvalidRequestError:
+                flash(_(u'No such arch %s') % kw['arch']['text'])
+                redirect('/view/%s' % system.fqdn)
             system.arch.append(arch)
             activity = SystemActivity(identity.current.user, 'WEBUI', 'Added', 'Arch', "", kw['arch']['text'])
             system.activity.append(activity)
@@ -2011,7 +2022,7 @@ class Root(RPCRoot):
         return system.update(inventory)
 
     @expose(template="bkr.server.templates.login")
-    def login(self, forward_url=None, **kwargs):
+    def login(self, forward_url=None, reason=None, **kwargs):
         if not forward_url:
             forward_url = request.headers.get('Referer', '/')
         if not identity.current.anonymous \
@@ -2019,17 +2030,16 @@ class Root(RPCRoot):
                 and not identity.get_identity_errors():
             redirect(forward_url, redirect_params=kwargs)
 
-        if identity.was_login_attempted():
-            msg=_("The credentials you supplied were not correct or "
-                   "did not grant access to this resource.")
-        elif identity.get_identity_errors():
-            msg=_("You must provide your credentials before accessing "
-                   "this resource.")
+        if not reason and not identity.was_login_attempted():
+            msg = _('Please log in.')
         else:
-            msg=_("Please log in.")
+            if reason and not isinstance(reason, list):
+                reason = [reason]
+            msg = _('The credentials you supplied were not correct or '
+                    'did not grant access to this resource.')
             
         response.status=403
-        return dict(message=msg, action=request.path, logging_in=True,
+        return dict(message=msg, reasons=reason, action=request.path, logging_in=True,
                     original_parameters=kwargs, forward_url=forward_url)
 
     @expose()

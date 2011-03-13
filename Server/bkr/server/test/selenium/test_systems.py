@@ -50,7 +50,7 @@ class TestSystemsGrid(SeleniumTestCase):
         sel.open('')
         self.assertEqual(sel.get_xpath_count('/html/head/link[@rel="feed" '
                 'and @title="Atom feed" and contains(@href, "tg_format=atom")]'),
-                '1')
+                1)
 
 class TestSystemGridSorting(SeleniumTestCase):
 
@@ -97,7 +97,7 @@ class TestSystemGridSorting(SeleniumTestCase):
             # (so that we can see that it is really sorted)
             if len(set(cell_values)) > 1:
                 break
-            if sel.get_xpath_count('//div[@class="list"]//a[text()=">"]') != '1':
+            if sel.get_xpath_count('//div[@class="list"]//a[text()=">"]') != 1:
                 raise AssertionError('Tried all pages, but every cell had the same value!')
             sel.click('//div[@class="list"]//a[text()=">"]')
             sel.wait_for_page_to_load('30000')

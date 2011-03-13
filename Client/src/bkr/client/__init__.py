@@ -328,6 +328,10 @@ class BeakerJob(BeakerBase):
                 notify.appendChild(ccnode)
             self.node.appendChild(notify)
         self.node.appendChild(whiteboard)
+        if kwargs.get('retention_tag'):
+            self.node.setAttribute('retention_tag', kwargs.get('retention_tag'))
+        if kwargs.get('product'):
+            self.node.setAttribute('product', kwargs.get('product'))
 
     def addRecipeSet(self, recipeSet):
         """ properly add a recipeSet to this job """
@@ -355,10 +359,6 @@ class BeakerRecipeSet(BeakerBase):
     def __init__(self, *args, **kwargs):
         self.node = self.doc.createElement('recipeSet')
         self.node.setAttribute('priority', kwargs.get('priority', ''))
-        if kwargs.get('retention_tag'):
-            self.node.setAttribute('retention_tag', kwargs.get('retention_tag'))
-        if kwargs.get('product'):
-            self.node.setAttribute('product', kwargs.get('product'))
 
     def addRecipe(self, recipe):
         """ properly add a recipe to this recipeSet """

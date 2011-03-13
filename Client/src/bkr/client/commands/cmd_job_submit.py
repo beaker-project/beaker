@@ -8,6 +8,18 @@ from optparse import OptionValueError
 import lxml.etree
 import pkg_resources
 import sys
+import xml.dom.minidom
+
+def combineTag(olddoc, newdoc, tag_name):
+    # Take the tag from the first olddoc and add it to the newdoc.
+    tags = olddoc.getElementsByTagName(tag_name)
+    if tags and not newdoc.getElementsByTagName(tag_name):
+        newdoc.appendChild(tags[0])
+
+def combineAttr(olddoc, newdoc, attr_name):
+    # Take the attr from the first olddoc and set it to the newdoc.
+    if attr_name not in newdoc._attrs and attr_name in olddoc._attrs:
+        newdoc.setAttribute(attr_name, olddoc.getAttribute(attr_name))
 
 class Job_Submit(BeakerCommand):
     """Submit job(s) to scheduler"""
@@ -34,6 +46,12 @@ class Job_Submit(BeakerCommand):
             help="convert from legacy rhts xml to beaker xml",
         )
         self.parser.add_option(
+            "--combine",
+            default=False,
+            action="store_true",
+            help="combine multiple jobs into one job",
+        )
+        self.parser.add_option(
             "--wait",
             default=False,
             action="store_true",
@@ -48,6 +66,7 @@ class Job_Submit(BeakerCommand):
         username = kwargs.pop("username", None)
         password = kwargs.pop("password", None)
         convert  = kwargs.pop("convert", False)
+        combine  = kwargs.pop("combine", False)
         debug   = kwargs.pop("debug", False)
         dryrun  = kwargs.pop("dryrun", False)
         wait  = kwargs.pop("wait", False)
@@ -60,11 +79,37 @@ class Job_Submit(BeakerCommand):
         self.set_hub(username, password)
         submitted_jobs = []
         failed = False
+
+        # Read in all jobs.
+        jobxmls = []
         for job in jobs:
             if job == '-':
-                jobxml = sys.stdin.read()
+                mystring = sys.stdin.read()
             else:
-                jobxml = open(job, "r").read()
+                mystring = open(job, "r").read()
+            # Wrap in <dummy/> so that multiple jobs in the same file works
+            doc = xml.dom.minidom.parseString("<dummy>%s</dummy>" % mystring)
+            # Split on jobs.
+            for jobxml in doc.getElementsByTagName("job"):
+                jobxmls.append(jobxml.toxml())
+
+        # Combine into one job if requested.
+        if combine:
+            combined = xml.dom.minidom.Document().createElement("job")
+            for jobxml in jobxmls:
+                doc = xml.dom.minidom.parseString(jobxml)
+                combineTag(doc,combined,"whiteboard")
+                combineTag(doc,combined,"notify")
+                combineAttr(doc.getElementsByTagName("job")[0], combined, "retention_tag")
+                combineAttr(doc.getElementsByTagName("job")[0], combined, "product")
+                # Add all recipeSet(s) to combined job.
+                for recipeSet in doc.getElementsByTagName("recipeSet"):
+                    combined.appendChild(recipeSet)
+            # Set jobxmls to combined job.
+            jobxmls = [combined.toxml()]
+
+        # submit each job to scheduler
+        for jobxml in jobxmls:
             if convert:
                 jobxml = Convert.rhts2beaker(jobxml)
             if debug:

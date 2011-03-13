@@ -104,14 +104,17 @@ def add_user_to_group(user,group):
 def add_group_to_system(system,group):
     system.groups.append(group)
 
-def create_distro(name=u'DAN6-Server-U9', breed=u'Dan',
-        osmajor=u'DansAwesomeLinuxServer6', osminor=u'9',
-        arch=u'i386', method=u'http', virt=False, tags=None):
-    install_name = u'%s-%d_%s-%s' % (name, int(time.time() * 1000), method, arch)
+def create_distro(name=None, breed=u'Dan',
+        osmajor=u'DansAwesomeLinux6', osminor=u'9',
+        arch=u'i386', variant=u'Server', method=u'http', virt=False, tags=None):
+    if not name:
+        name = u'DAN6.9-%d' % int(time.time() * 1000)
+    install_name = u'%s_%s-%s-%s' % (name, method, variant, arch)
     distro = Distro(install_name=install_name)
     distro.name = name
     distro.method = method
     distro.breed = Breed.lazy_create(breed=breed)
+    distro.variant = variant
     distro.virt = virt
     if tags:
         distro.tags.extend(tags)

@@ -30,7 +30,7 @@ class SystemGroupUserTake(bkr.server.test.selenium.SeleniumTestCase):
         data_setup.add_system_lab_controller(self.automated_system,lc)
         data_setup.add_system_lab_controller(self.manual_system,lc)
         session.flush()
-        self.distro = data_setup.create_distro(name=u"burette_distro")
+        self.distro = data_setup.create_distro()
         session.flush()
         data_setup.create_task(name=u'/distribution/install')
         data_setup.create_task(name=u'/distribution/reservesys')

@@ -5,7 +5,7 @@ from turbogears import identity, redirect
 from cherrypy import request, response
 from kid import Element
 from bkr.server.xmlrpccontroller import RPCRoot
-from bkr.server.widgets import DistroTags, SearchBar
+from bkr.server.widgets import DistroTags, SearchBar, LabControllers
 from bkr.server.widgets import TaskSearchForm
 from bkr.server.widgets import myPaginateDataGrid
 from bkr.server.model import System
@@ -33,6 +33,7 @@ class Distros(RPCRoot):
 
     task_form = TaskSearchForm()
     tag_form = DistroTags(name='tags')
+    lc_form = LabControllers(name='lab_controllers')
 
     @expose(template="bkr.server.templates.distro")
     def view(self, id=None, *args, **kw):
@@ -41,14 +42,18 @@ class Distros(RPCRoot):
         except InvalidRequestError:
             flash(_(u"Invalid distro id %s" % id))
             redirect(".")
+        is_admin = identity.current.user and identity.current.user.is_admin() or False
         return dict(title       = 'Distro',
                     value       = distro,
                     value_task  = dict(distro_id = distro.id),
                     form        = self.tag_form,
                     form_task   = self.task_form,
+                    form_lc     = self.lc_form,
                     action      = './save_tag',
                     action_task = '/tasks/do_search',
                     options   = dict(tags = distro.tags,
+                                    readonly = not is_admin,
+                                    lab_controllers = distro.lab_controller_assocs,
                                     hidden = dict(distro  = 1,
                                                   osmajor = 1,
                                                   arch    = 1)))
@@ -100,7 +105,26 @@ class Distros(RPCRoot):
         return arches
 
     @expose()
-    @identity.require(identity.not_anonymous())
+    @identity.require(identity.in_group("admin"))
+    def lab_controller_remove(self, id=None, lab_controller=None, *args, **kw):
+        try:
+            distro = Distro.by_id(id)
+        except InvalidRequestError:
+            flash(_(u"Invalid distro id %s" % id))
+            redirect(".")
+        try:
+            lab = LabController.by_name(lab_controller)
+        except InvalidRequestError:
+            flash(_(u"Invalid Lab Controller %s" % lab_controller))
+            redirect(".")
+        if lab in distro.lab_controllers:
+            distro.lab_controllers.remove(lab)   
+            Activity(identity.current.user,'WEBUI','Removed LabController',distro.install_name,None,lab_controller)
+        flash(_(u"Deleted Lab %s" % lab_controller))
+        redirect("./view?id=%s" % id)
+
+    @expose()
+    @identity.require(identity.has_permission('tag_distro'))
     def save_tag(self, id=None, tag=None, *args, **kw):
         try:
             distro = Distro.by_id(id)
@@ -109,12 +133,15 @@ class Distros(RPCRoot):
             redirect(".")
         if tag['text']:
             distro.tags.append(tag['text'])
-            Activity(identity.current.user,'WEBUI','Tagged',distro.install_name,None,tag['text'])
+            distro.activity.append(DistroActivity(
+                    user=identity.current.user, service=u'WEBUI',
+                    action=u'Added', field_name=u'Tag',
+                    old_value=None, new_value=tag['text']))
         flash(_(u"Added Tag %s" % tag['text']))
         redirect("./view?id=%s" % id)
 
     @expose()
-    @identity.require(identity.not_anonymous())
+    @identity.require(identity.has_permission('tag_distro'))
     def tag_remove(self, id=None, tag=None, *args, **kw):
         try:
             distro = Distro.by_id(id)
@@ -125,7 +152,10 @@ class Distros(RPCRoot):
             for dtag in distro.tags:
                 if dtag == tag:
                     distro.tags.remove(dtag)
-                    Activity(identity.current.user,'WEBUI','UnTagged',distro.install_name,tag,None)
+                    distro.activity.append(DistroActivity(
+                            user=identity.current.user, service=u'WEBUI',
+                            action=u'Removed', field_name=u'Tag',
+                            old_value=tag, new_value=None))
                     flash(_(u"Removed Tag %s" % tag))
         redirect("./view?id=%s" % id)
 
@@ -162,12 +192,12 @@ class Distros(RPCRoot):
     @expose(template="bkr.server.templates.grid")
     @paginate('list',default_order='-date_created', limit=50)
     def index(self,*args,**kw):
-        return self.distros(distros=session.query(Distro).join('breed').join('arch').join(['osversion','osmajor']),*args,**kw)
+        return self.distros(distros=session.query(Distro).join('breed').join('arch').join(['osversion','osmajor']).join('lab_controller_assocs'),*args,**kw)
 
     @expose(template="bkr.server.templates.grid")
     @paginate('list',default_order='-date_created', limit=50)
     def name(self,*args,**kw):
-        return self.distros(distros=session.query(Distro).join('breed').join('arch').join(['osversion','osmajor']).filter(distro_table.c.install_name.like('%s' % kw['name'])),action='./name')
+        return self.distros(distros=session.query(Distro).join('breed').join('arch').join(['osversion','osmajor']).join('lab_controller_assocs').filter(distro_table.c.install_name.like('%s' % kw['name'])),action='./name')
 
     def distros(self, distros,action='.',*args, **kw):
         distros_return = self._distros(distros,**kw) 
@@ -360,7 +390,7 @@ class Distros(RPCRoot):
 
 
     @cherrypy.expose
-    @identity.require(identity.not_anonymous())
+    @identity.require(identity.has_permission('tag_distro'))
     def tag(self, name, arch, tag):
         """
         Applies the given tag to all matching distros.
@@ -386,14 +416,17 @@ class Distros(RPCRoot):
         for distro in distros:
             if tag not in distro.tags:
                 added.append('%s' % distro.install_name)
-                Activity(identity.current.user,'XMLRPC','Tagged',distro.install_name,None,tag)
+                distro.activity.append(DistroActivity(
+                        user=identity.current.user, service=u'WEBUI',
+                        action=u'Added', field_name=u'Tag',
+                        old_value=None, new_value=tag))
                 distro.tags.append(tag)
                 session.save_or_update(distro)
                 session.flush([distro])
         return added
 
     @cherrypy.expose
-    @identity.require(identity.not_anonymous())
+    @identity.require(identity.has_permission('tag_distro'))
     def untag(self, name, arch, tag):
         """
         Like :meth:`distros.tag` but the opposite.
@@ -408,7 +441,10 @@ class Distros(RPCRoot):
         for distro in distros:
             if tag in distro.tags:
                 removed.append('%s' % distro.install_name)
-                Activity(identity.current.user,'XMLRPC','UnTagged',distro.install_name,tag,None)
+                distro.activity.append(DistroActivity(
+                        user=identity.current.user, service=u'WEBUI',
+                        action=u'Removed', field_name=u'Tag',
+                        old_value=tag, new_value=None))
                 distro.tags.remove(tag)
         return removed
 
