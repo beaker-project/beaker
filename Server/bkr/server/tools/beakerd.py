@@ -273,6 +273,8 @@ def dead_recipes(*args):
                             )
                            )
 
+    if not recipes.count():
+        return False
     log.debug("Entering dead_recipes routine")
     for _recipe in recipes:
         session.begin()
@@ -292,6 +294,7 @@ def dead_recipes(*args):
             log.exception("Failed to commit due to :%s" % e)
         session.close()
     log.debug("Exiting dead_recipes routine")
+    return True
 
 def queued_recipes(*args):
     automated = SystemStatus.by_name(u'Automated')
