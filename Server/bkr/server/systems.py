@@ -1,9 +1,13 @@
 
 import logging
+import xmlrpclib
+import datetime
+from sqlalchemy import and_
 from turbogears import expose, identity, controllers
 from bkr.server.bexceptions import BX
 from bkr.server.model import System, SystemActivity, SystemStatus, Distro
 from bkr.server.xmlrpccontroller import RPCRoot
+from bkr.server.util import parse_xmlrpc_datetime
 
 log = logging.getLogger(__name__)
 
@@ -156,6 +160,53 @@ class SystemsController(controllers.Controller):
                     field_name=u'Power', old_value=u'', new_value=u'Success'))
 
         return system.fqdn # because turbogears makes us return something
+
+    @expose()
+    def history(self, fqdn, since=None):
+        """
+        Returns the history for the given system.
+        If the *since* argument is given, all history entries between that 
+        timestamp and the present are returned. By default, history entries 
+        from the past 24 hours are returned.
+
+        History entries are returned as a list of structures (dicts), each of 
+        which has the following keys:
+
+            'created'
+                Timestamp of the activity
+            'user'
+                Username of the user who performed the action
+            'service'
+                Service by which the action was performed (e.g. 'XMLRPC')
+            'action'
+                Action which was performed (e.g. 'Changed')
+            'field_name'
+                Name of the field which was acted upon
+            'old_value'
+                Value of the field before the action (if any)
+            'new_value'
+                Value of the field after the action (if any)
+
+        Note that field names and actions are recorded in human-readable form, 
+        which might not be ideal for machine parsing.
+
+        All timestamps are expressed in UTC.
+
+        .. versionadded:: 0.6.6
+        """
+        if since is None:
+            since = datetime.datetime.utcnow() - datetime.timedelta(days=1)
+        else: # should be an instance of xmlrpclib.DateTime
+            since = parse_xmlrpc_datetime(since.value)
+        system = System.by_fqdn(fqdn, identity.current.user)
+        activities = SystemActivity.query().filter(and_(
+                SystemActivity.object == system,
+                SystemActivity.created >= since))
+        return [dict(created=xmlrpclib.DateTime(a.created.timetuple()),
+                     user=a.user.user_name, service=a.service, action=a.action,
+                     field_name=a.field_name, old_value=a.old_value,
+                     new_value=a.new_value)
+                for a in activities]
 
 # for sphinx
 systems = SystemsController

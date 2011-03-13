@@ -2,6 +2,7 @@ SNIPPETS = $(shell ls snippets/*)
 KICKSTARTS = $(shell ls kickstarts/*)
 INSTALL = install -D -m644
 INSTALL_EXEC = install -D -m755
+ADDDISTROD = $(shell cd addDistro; ls addDistro.d/*)
 
 SUBDIRS := proxy
 
@@ -22,6 +23,10 @@ install:
 	mkdir -p $(DESTDIR)/var/run/beaker-lab-controller
 	for kickstart in $(KICKSTARTS); do \
 		$(INSTALL) $$kickstart $(DESTDIR)/var/lib/cobbler/$$kickstart;\
+	done
+	install -D -m755 addDistro/addDistro.sh $(DESTDIR)/var/lib/beaker/addDistro.sh
+	for addDistro in $(ADDDISTROD); do \
+		install -D -m755 addDistro/$$addDistro $(DESTDIR)/var/lib/beaker/$$addDistro;\
 	done
 
 clean:

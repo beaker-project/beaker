@@ -1,0 +1,1 @@
+ALTER TABLE task_package MODIFY package varchar(2048) COLLATE utf8_bin;

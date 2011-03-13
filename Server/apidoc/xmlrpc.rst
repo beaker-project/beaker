@@ -40,8 +40,8 @@ subsequent requests which belong with this session.
 Systems
 -------
 
-These XML-RPC methods allow the caller to manipulate systems in Beaker's 
-inventory.
+These XML-RPC methods allow the caller to query and manipulate systems in 
+Beaker's inventory.
 
 .. currentmodule:: bkr.server.systems
 
@@ -52,6 +52,8 @@ inventory.
 .. automethod:: systems.power
 
 .. automethod:: systems.provision
+
+.. automethod:: systems.history
 
 
 Distros

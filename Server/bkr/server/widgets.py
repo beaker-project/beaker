@@ -6,6 +6,7 @@ from turbogears.widgets.rpc import RPC
 from sqlalchemy import distinct
 import model
 import re
+import random
 import search_utility
 from decimal import Decimal
 from itertools import chain
@@ -19,6 +20,7 @@ from turbogears.widgets import (Form, TextField, SubmitButton, TextArea, Label,
                                 RepeatingFieldSet, SelectionField, WidgetsList,)
 
 from bkr.server import search_utility
+from bkr.server.bexceptions import BeakerException
 import logging
 log = logging.getLogger(__name__)
 
@@ -249,20 +251,98 @@ class MyButton(Widget):
                 params['name'] = params['options']['name']
         return super(MyButton,self).display(value,**params)
 
+class BeakerDataGrid(DataGrid):
+    template = "bkr.server.templates.beaker_datagrid"
+    name = "beaker_datagrid"
 
-class myDataGrid(DataGrid):
-    template = "bkr.server.templates.my_datagrid"
-    name = "my_datagrid"
-    
-class InnerGrid(DataGrid):
-    template = "bkr.server.templates.inner_grid" 
-    params = ['show_headers']
-    
-    def display(self,value=None,**params):
-        if 'options' in params:
-            if 'show_headers' in params['options']:
-                params['show_headers'] = params['options']['show_headers']
-        return super(InnerGrid,self).display(value,**params)
+
+class MatrixDataGrid(DataGrid):
+    template = "bkr.server.templates.matrix_datagrid"
+    name = "matrix_datagrid"
+    TASK_POS = 0
+    params = ['TASK_POS']
+
+    class Column(DataGrid.Column):
+        def __init__(self,*args, **kw):
+            outer_header = None
+            type = None
+            if 'name' in kw:
+                #Make sure the random number is removed when displaying
+                kw['name'] =  "%s_%s" % (kw['name'], random.random())
+            if 'outer_header' in kw:
+                self.outer_header = kw['outer_header']
+                del kw['outer_header']
+            if 'type' in kw:
+                self.type = kw['type']
+                del kw['type']
+            if 'order' in kw:
+                order = kw['order']
+                self.order = order
+                del kw['order']
+
+            DataGrid.Column.__init__(self, *args, **kw) #Old style object
+
+    def _header_cmp(self,x,y):
+        x_order = x[2]
+        y_order = y[2]
+        #anything with order goes before
+        if x_order is not None and y_order is None:
+            return -1
+        elif x_order is None and y_order is not None:
+            return 1
+        elif x_order is None and y_order is None:
+            #if no order, order by header
+            x_header = x[0]
+            y_header = y[0]
+            if x_header < y_header:
+                return -1
+            else:
+                return 1
+
+    def update_params(self, d):
+        super(MatrixDataGrid,self).update_params(d)
+        headers = {}
+        header_order = {}
+        orders_used = []
+        cant_use_header = False
+        must_use_header = False
+        for col in self.columns:
+            try:
+                order = col.order
+            except AttributeError:
+                order = None
+            else:
+                try:
+                    orders_used.index(order)
+                    raise BeakerException('Order number %s has already been specified,it cannot be specified twice' % order)
+                except ValueError, e:
+                    orders_used.append(order)
+            try:
+                header_order[col.outer_header] = order
+            except AttributeError:
+                cant_use_header = True
+            else:
+                must_use_header = True
+                if headers.get(col.outer_header):
+                    headers[col.outer_header] += 1
+                else:
+                    headers[col.outer_header] = 1
+            if cant_use_header and must_use_header:
+                raise ValueError("All Columns must be \
+                    unified in their use of outer headers")
+
+        decorated_headers = [(header, occurance, header_order[header]) for header,occurance in headers.items()]
+        sorted_decorated_headers = sorted(decorated_headers, cmp=self._header_cmp)
+        d['outer_headers'] = [(header,occurance) for header,occurance,order in sorted_decorated_headers]
+        if must_use_header:
+            # Ensures that columns are sorted in the same manner as outer_headers
+            columns = [column_to_sort for column_to_sort in d['columns'] if \
+                getattr(column_to_sort,'outer_header', None) is None]
+            columns_to_sort = [column_to_sort for \
+                column_to_sort in d['columns'] if \
+                    getattr(column_to_sort,'outer_header', None) is not None]
+            columns += sorted(columns_to_sort, key=lambda col: col.outer_header)
+            d['columns'] = columns
 
 class myPaginateDataGrid(PaginateDataGrid):
     template = "bkr.server.templates.my_paginate_datagrid"
@@ -402,7 +482,7 @@ class JobMatrixReport(Form):
     template = 'bkr.server.templates.job_matrix' 
     member_widgets = ['whiteboard','job_ids','generate_button','nack_list']
     params = (['list','whiteboard_filter','whiteboard_options','job_ids_vals',
-        'nacks','selected_nacks','comments_field','toggle_nacks_on',])
+        'nacks','comments_field','toggle_nacks_on',])
     default_validator = validators.NotEmpty() 
     def __init__(self,*args,**kw): 
         super(JobMatrixReport,self).__init__(*args, **kw)       
@@ -416,7 +496,7 @@ class JobMatrixReport(Form):
 
         self.nack_list = CheckBoxList("Hide naks",validator=self.default_validator)
         
-        self.whiteboard = SingleSelectField('whiteboard',label='Whiteboard',attrs={'size':5}, options=whiteboard_options, validator=self.default_validator) 
+        self.whiteboard = SingleSelectField('whiteboard',label='Whiteboard',attrs={'size':5, 'class':'whiteboard'}, options=whiteboard_options, validator=self.default_validator) 
         self.job_ids = TextArea('job_ids',label='Job ID', rows=7,cols=7, validator=self.default_validator) 
         self.whiteboard_filter = TextField('whiteboard_filter', label='Filter Whiteboard') 
 
@@ -1184,7 +1264,7 @@ class RecipeSetWidget(CompoundWidget):
     javascript = []
     css = []
     template = "bkr.server.templates.recipe_set"
-    params = ['recipeset','show_priority','action','priorities_list']
+    params = ['recipeset','show_priority','action','priorities_list','can_ack_nak']
     member_widgets = ['priority_widget','retentiontag_widget','ack_panel_widget', 'product_widget', 'action_widget']
     def __init__(self, priorities_list=None, *args, **kw):
         self.action_widget = TaskActionWidget()
@@ -1196,6 +1276,19 @@ class RecipeSetWidget(CompoundWidget):
             self.recipeset = kw['recipeset']
         else:
             self.recipeset = None
+
+    def update_params(self, d):
+        super(RecipeSetWidget,self).update_params(d)
+        recipeset = d['recipeset']
+        owner_groups = [g.group_name for g in recipeset.job.owner.groups]
+        try:
+            can_ack_nak = recipeset.is_owner(tg.identity.current.user) or \
+            'admin' in tg.identity.current.groups or \
+            tg.identity.current.user.in_group(owner_groups)
+        except AttributeError, e:
+            #Can't ack if we don't fulfil these requirements
+            can_ack_nak = False
+        d['can_ack_nak'] = can_ack_nak
 
 
 class RecipeWidget(CompoundWidget):
@@ -1395,6 +1488,8 @@ class JobActionWidget(TaskActionWidget):
         job_details={'id': 'delete_%s' % t_id,
             't_id' : t_id}
         params['job_details'] = job_details
+        if 'export' not in params:
+            params['export'] = None
         if action:
             params['action'] = action
         return super(JobActionWidget, self).display(task, **params)

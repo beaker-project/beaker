@@ -5,6 +5,7 @@ from turbogears import identity, redirect, config
 import search_utility as su
 import bkr
 import bkr.server.stdvars
+from bkr.server.model import TaskBase
 from bkr.server.power import PowerTypes
 from bkr.server.keytypes import KeyTypes
 from bkr.server.CSV_import_export import CSV
@@ -79,11 +80,10 @@ import breadcrumbs
 from datetime import datetime
 
 def identity_failure_url(errors):
-    reasons = [e for e in errors if e != 'Anonymous access denied']
-    if reasons:
-        return '/login?%s' % urllib.urlencode({'reason': reasons}, doseq=True)
-    else:
+    if identity.current.anonymous:
         return '/login'
+    else:
+        return '/forbidden?%s' % urllib.urlencode({'reason': errors}, doseq=True)
 config.update({'identity.failure_url': identity_failure_url})
 
 class Netboot:
@@ -2008,6 +2008,29 @@ class Root(RPCRoot):
             system = System(fqdn=fqdn)
         return system.update_legacy(inventory)
 
+    @expose()
+    def to_xml(self, taskid, to_screen=False, pretty=True, *args, **kw):
+        try:
+            task = TaskBase.get_by_t_id(taskid)
+        except Exception, e:
+            flash(_('Invalid Task: %s' % taskid))
+            redirect(url('/'))
+        xml = task.to_xml()
+        if pretty:
+            xml_text = xml.toprettyxml()
+        else:
+            xml_text = xml.toxml()
+      
+        if to_screen: #used for testing contents of XML
+            cherrypy.response.headers['Content-Disposition'] = ''
+            cherrypy.response.headers['Content-Type'] = 'text/plain'
+        else:
+            cherrypy.response.headers['Content-Disposition'] = 'attachment; filename=%s.xml' % taskid
+            cherrypy.response.headers['Content-Type'] = 'text/xml'
+
+        return xml_text
+
+
     @cherrypy.expose
     def push(self, fqdn=None, inventory=None):
         if not fqdn:
@@ -2021,25 +2044,29 @@ class Root(RPCRoot):
             system = System(fqdn=fqdn)
         return system.update(inventory)
 
+    @expose(template='bkr.server.templates.forbidden')
+    def forbidden(self, reason=None, **kwargs):
+        if reason and not isinstance(reason, list):
+            reason = [reason]
+        response.status = 403
+        return dict(reasons=reason)
+
     @expose(template="bkr.server.templates.login")
-    def login(self, forward_url=None, reason=None, **kwargs):
+    def login(self, forward_url=None, **kwargs):
         if not forward_url:
             forward_url = request.headers.get('Referer', '/')
         if not identity.current.anonymous \
-                and identity.was_login_attempted() \
                 and not identity.get_identity_errors():
             redirect(forward_url, redirect_params=kwargs)
 
-        if not reason and not identity.was_login_attempted():
+        if not identity.was_login_attempted():
             msg = _('Please log in.')
         else:
-            if reason and not isinstance(reason, list):
-                reason = [reason]
             msg = _('The credentials you supplied were not correct or '
                     'did not grant access to this resource.')
             
-        response.status=403
-        return dict(message=msg, reasons=reason, action=request.path, logging_in=True,
+        response.status=403 # XXX shouldn't this be 401?
+        return dict(message=msg, action=request.path, logging_in=True,
                     original_parameters=kwargs, forward_url=forward_url)
 
     @expose()

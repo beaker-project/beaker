@@ -21,12 +21,17 @@
 
 import unittest
 import logging
+import time
+import datetime
 import xmlrpclib
 from turbogears.database import session
 
 from bkr.server.test.selenium import XmlRpcTestCase
+from bkr.server.test.assertions import assert_datetime_within
 from bkr.server.test import data_setup, stub_cobbler
-from bkr.server.model import User, Cpu, Key, Key_Value_String, Key_Value_Int
+from bkr.server.model import User, Cpu, Key, Key_Value_String, Key_Value_Int, \
+        SystemActivity
+from bkr.server.util import parse_xmlrpc_datetime
 
 class ReserveSystemXmlRpcTest(XmlRpcTestCase):
 
@@ -562,3 +567,46 @@ class PushXmlRpcTest(XmlRpcTestCase):
         self.assertEquals(system.activity[1].service, u'XMLRPC')
         self.assertEquals(system.activity[1].action, u'Changed')
         self.assertEquals(system.activity[1].field_name, u'checksum')
+
+class SystemHistoryXmlRpcTest(XmlRpcTestCase):
+
+    def setUp(self):
+        self.server = self.get_server()
+
+    def test_can_fetch_history(self):
+        owner = data_setup.create_user()
+        system = data_setup.create_system(owner=owner)
+        system.activity.append(SystemActivity(user=owner, service=u'WEBUI',
+                action=u'Changed', field_name=u'fqdn',
+                old_value=u'oldname.example.com', new_value=system.fqdn))
+        session.flush()
+        result = self.server.systems.history(system.fqdn)
+        self.assertEquals(len(result), 1)
+        assert_datetime_within(parse_xmlrpc_datetime(result[0]['created'].value),
+                datetime.timedelta(seconds=5),
+                reference=datetime.datetime.utcnow())
+        self.assertEquals(result[0]['user'], owner.user_name)
+        self.assertEquals(result[0]['service'], u'WEBUI')
+        self.assertEquals(result[0]['action'], u'Changed')
+        self.assertEquals(result[0]['field_name'], u'fqdn')
+        self.assertEquals(result[0]['old_value'], u'oldname.example.com')
+        self.assertEquals(result[0]['new_value'], system.fqdn)
+
+    def test_fetches_history_since_timestamp(self):
+        owner = data_setup.create_user()
+        system = data_setup.create_system(owner=owner)
+        # a recent one, which will be fetched
+        system.activity.append(SystemActivity(user=owner, service=u'WEBUI',
+                action=u'Changed', field_name=u'fqdn',
+                old_value=u'oldname.example.com', new_value=system.fqdn))
+        # an old one, which will not be fetched
+        system.activity.append(SystemActivity(user=owner,
+                service=u'WEBUI', action=u'Changed', field_name=u'fqdn',
+                old_value=u'evenoldername.example.com',
+                new_value=u'oldname.example.com'))
+        system.activity[-1].created = datetime.datetime(2005, 8, 16, 12, 23, 34)
+        session.flush()
+        result = self.server.systems.history(system.fqdn,
+                xmlrpclib.DateTime('20060101T00:00:00'))
+        self.assertEquals(len(result), 1)
+        self.assertEquals(result[0]['old_value'], u'oldname.example.com')

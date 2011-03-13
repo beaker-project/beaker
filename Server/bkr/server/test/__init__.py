@@ -20,11 +20,18 @@ import sys
 import os
 from StringIO import StringIO
 import logging, logging.config
+import cherrypy
 import turbogears
 from turbogears import update_config
 from turbogears.database import session
-import turbomail.adapters.tg1
+from bkr.server.controllers import Root
 from bkr.server.test import data_setup
+
+# hack to make turbogears.testutil not do dumb stuff at import time
+orig_cwd = os.getcwd()
+os.chdir('/tmp')
+import turbogears.testutil
+os.chdir(orig_cwd)
 
 # workaround for weird sqlalchemy-0.4 bug :-S
 # http://markmail.org/message/rnnzdebfzrjt3kmi
@@ -62,8 +69,8 @@ def setup_package():
     if not os.path.exists(turbogears.config.get('basepath.rpms')):
         os.mkdir(turbogears.config.get('basepath.rpms'))
 
-    turbomail.adapters.tg1.start_extension()
+    cherrypy.root = Root()
+    turbogears.testutil.start_cp()
 
 def teardown_package():
-    turbomail.adapters.tg1.shutdown_extension()
-
+    cherrypy.server.stop()

@@ -10,7 +10,7 @@
     <whiteboard>
         valid job
     </whiteboard>
-    <recipeSet>
+    <recipeSet priority="Normal">
         <recipe kernel_options="" kernel_options_post="" ks_meta="" role="None" whiteboard="">
             <guestrecipe guestargs="" guestname="" kernel_options="" kernel_options_post="" ks_meta="" role="None" whiteboard="">
                 <autopick random="true"/>

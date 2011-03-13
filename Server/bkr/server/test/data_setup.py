@@ -167,10 +167,11 @@ def create_system_activity(user=None, **kw):
     activity = SystemActivity(user, 'WEBUI', 'Changed', 'Loaned To', 'random_%d' % int(time.time() * 1000) , '%s' % user)
     return activity
 
-def create_task(name=None, exclude_arch=[],exclude_osmajor=[]):
+def create_task(name=None, exclude_arch=[],exclude_osmajor=[], version=u'1.0-1'):
     if name is None:
         name = u'/distribution/test_task_%d' % int(time.time() * 1000)
-    task = Task.lazy_create(name=name)
+    rpm = 'example%s-%s.noarch.rpm' % (name.replace('/', '-'), version)
+    task = Task.lazy_create(name=name, rpm=rpm, version=version)
     if exclude_arch:
        [TaskExcludeArch(arch_id=Arch.by_name(arch).id, task_id=task.id) for arch in exclude_arch]
     if exclude_osmajor:

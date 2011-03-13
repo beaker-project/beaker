@@ -15,6 +15,8 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
+import datetime
+
 def assert_sorted(things, key=None):
     """
     Asserts that the given sequence is in sorted order.
@@ -36,3 +38,18 @@ def assert_has_key_with_value(system, key_name, value):
             return
     raise AssertionError('No such key with name %r and value %r found on system %r'
             % (key_name, value, system))
+
+def assert_datetime_within(dt, tolerance, reference=None):
+    """
+    Asserts that the given datetime is within tolerance of reference. By 
+    default, the reference point is now.
+
+    :type dt: datetime.datetime
+    :type tolerance: datetime.timedelta
+    :type reference: datetime.datetime
+    """
+    if reference is None:
+        reference = datetime.datetime.now()
+    if abs(reference - dt) > tolerance:
+        raise AssertionError('%r is not within %r of reference %r'
+                % (dt, tolerance, reference))

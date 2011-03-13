@@ -1023,6 +1023,7 @@ task_package_table = Table('task_package',metadata,
         Column('id', Integer, primary_key=True),
         Column('package', Unicode(2048)),
         mysql_engine='InnoDB',
+        mysql_collate='utf8_bin',
 )
 
 task_type_table = Table('task_type',metadata,
@@ -3011,7 +3012,7 @@ class Distro(MappedObject):
         distro_requires.appendChild(xmland)
         return distro_requires
 
-    def systems_filter(self, user, filter):
+    def systems_filter(self, user, filter, join=['lab_controller']):
         """
         Return Systems that match the following filter
         <host>
@@ -3034,7 +3035,7 @@ class Distro(MappedObject):
         """
         from needpropertyxml import ElementWrapper
         import xmltramp
-        systems = self.all_systems(user)
+        systems = self.all_systems(user, join)
         #FIXME Should validate XML before processing.
         queries = []
         joins = []
@@ -4207,6 +4208,7 @@ class RecipeSet(TaskBase):
 
     def to_xml(self, clone=False, from_job=True, *args, **kw):
         recipeSet = self.doc.createElement("recipeSet")
+        recipeSet.setAttribute('priority', self.priority.priority)
         return_node = recipeSet 
 
         if not clone:
@@ -5226,7 +5228,8 @@ class RecipeTask(TaskBase):
             task.setAttribute("result", "%s" % self.result)
             task.setAttribute("status", "%s" % self.status)
             rpm = self.doc.createElement("rpm")
-            rpm.setAttribute("name", "%s" % self.task.rpm)
+            name = self.task.rpm[:self.task.rpm.find('-%s' % self.task.version)]
+            rpm.setAttribute("name", name)
             rpm.setAttribute("path", "%s" % self.task.path)
             task.appendChild(rpm)
         if self.duration and not clone:

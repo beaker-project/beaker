@@ -29,7 +29,7 @@ PriorityManager.prototype.RecipeSetChanged = function(new_priority_id,recipeset_
                   "priority_id" : new_priority_id,
                   "recipeset_id" : recipeset_id }
     AjaxLoader.prototype.add_loader('priority_recipeset_' + recipeset_id) 
-    var d = loadJSONDoc('/change_priority_recipeset' + "?" + queryString(params))
+    var d = loadJSONDoc('../change_priority_recipeset' + "?" + queryString(params))
     // I wish we could just pass the callback var to priorityChanged
     // Reason we can't is because it each call uses the same pointer value it seems! 
     d.addCallback(PriorityManager.prototype.priorityChanged,callback['function'],callback['args']['element_id'],callback['args']['value']) //mochikit's built in currying...

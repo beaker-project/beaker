@@ -95,16 +95,6 @@ class LoginTest(SeleniumTestCase):
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=674566
 
-    def check_forbidden_reason(self, url, expected_reason):
-        sel = self.selenium
-        try:
-            sel.open(url, ignoreResponseCode=False)
-            self.fail('Should raise 403')
-        except Exception, e:
-            if isinstance(e, AssertionError): raise
-            self.assert_('Response_Code = 403' in e.args[0], e)
-        self.assertEquals(sel.get_text('css=#reasons'), expected_reason)
-
     def test_message_when_not_logged_in(self):
         sel = self.selenium
         try:
@@ -113,8 +103,8 @@ class LoginTest(SeleniumTestCase):
         except Exception, e:
             if isinstance(e, AssertionError): raise
             self.assert_('Response_Code = 403' in e.args[0], e)
+        sel.wait_for_page_to_load('30000')
         self.assertEquals(sel.get_text('css=#message'), 'Please log in.')
-        self.assert_(not sel.is_element_present('css=#reasons'))
 
     def test_message_when_explicitly_logging_in(self):
         sel = self.selenium
@@ -122,7 +112,6 @@ class LoginTest(SeleniumTestCase):
         sel.click('link=Login')
         sel.wait_for_page_to_load('30000')
         self.assertEquals(sel.get_text('css=#message'), 'Please log in.')
-        self.assert_(not sel.is_element_present('css=#reasons'))
 
     def test_message_when_permissions_insufficient(self):
         self.login(self.user.user_name, self.password)
@@ -133,9 +122,8 @@ class LoginTest(SeleniumTestCase):
         except Exception, e:
             if isinstance(e, AssertionError): raise
             self.assert_('Response_Code = 403' in e.args[0], e)
-        self.assertEquals(sel.get_text('css=#message'),
-                'The credentials you supplied were not correct or '
-                'did not grant access to this resource.')
+        sel.wait_for_page_to_load('30000')
+        self.assertEquals(sel.get_title(), 'Forbidden')
         self.assertEquals(sel.get_text('css=#reasons'),
                 'Not member of group: admin')
 
@@ -145,7 +133,6 @@ class LoginTest(SeleniumTestCase):
         self.assertEquals(sel.get_text('css=#message'),
                 'The credentials you supplied were not correct or '
                 'did not grant access to this resource.')
-        self.assert_(not sel.is_element_present('css=#reasons'))
 
 class XmlRpcLoginTest(XmlRpcTestCase):
 
