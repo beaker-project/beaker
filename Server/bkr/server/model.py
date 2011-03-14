@@ -1963,7 +1963,7 @@ url --url=$tree
         This represents the basic system perms,loanee, owner,  shared and in group or shared and no group
         """
         try:
-            if u'admin' in user.groups:
+            if user.is_admin():
                 return True
         except AttributeError, e: #not logged in ?
             return False
@@ -3869,7 +3869,7 @@ class Job(TaskBase):
     @classmethod
     def _delete_criteria(cls, jobs=None, query=None):
         try:
-            admin = 'admin' in identity.current.user.groups
+            admin = identity.current.user.is_admin()
         except AttributeError: #not logged in
             err_msg = u'User not logged in'
             log.exception(err_msg)
