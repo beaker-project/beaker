@@ -257,6 +257,11 @@ def read_inventory():
     data['MODEL'] = "%s" % profile.host.systemModel
     data['FORMFACTOR'] = "%s" % profile.host.formfactor
 
+    if data['CPUMODELNUMBER'] == '':
+        data['CPUMODELNUMBER'] = 0
+    if data['CPUFAMILY'] == '':
+        data['CPUFAMILY'] = 0
+
     try:
         for cpuflag in cpu_info['other'].split(" "):
             data['CPUFLAGS'].append(cpuflag)
