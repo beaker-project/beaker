@@ -5982,6 +5982,9 @@ System.mapper = mapper(System, system_table,
                      'reprovision_distro':relation(Distro, uselist=False),
                       '_system_ccs': relation(SystemCc, backref='system',
                                       cascade="all, delete, delete-orphan"),
+                     'open_reservation': relation(Reservation, uselist=False, viewonly=True,
+                        primaryjoin=and_(system_table.c.id == reservation_table.c.system_id,
+                            reservation_table.c.finish_time == None)),
                      })
 
 mapper(SystemCc, system_cc_table)
