@@ -19,19 +19,22 @@ RELATIVE_PATH=dogfood
 export TESTVERSION=1.1
 export TEST=/$(TOPLEVEL_NAMESPACE)/$(PACKAGE_NAME)/$(RELATIVE_PATH)
 
+SELENIUM_SERVER_VERSION=1.0.3
+SELENIUM_PYTHON_VERSION=2.0b2
+
 .PHONY: all install download clean
 
 # executables to be built should be added here, they will be generated on the system under test.
 BUILT_FILES= 
 
-DOWNLOADED_FILES=selenium-remote-control-1.0.3.zip
+DOWNLOADED_FILES=selenium-remote-control-$(SELENIUM_SERVER_VERSION).zip
 
 # data files, .c files, scripts anything needed to either compile the test and/or run it.
 FILES=$(METADATA) runtest.sh Makefile PURPOSE
 
 run: $(FILES) build \
-     /usr/lib/python2.4/site-packages/selenium-2.0a5-py2.4.egg \
-     /usr/local/share/selenium/selenium-server-1.0.3
+     /usr/lib/python2.4/site-packages/selenium-$(SELENIUM_PYTHON_VERSION)-py2.4.egg \
+     /usr/local/share/selenium/selenium-server-$(SELENIUM_SERVER_VERSION)
 	./runtest.sh
 
 build: $(BUILT_FILES)
@@ -39,17 +42,17 @@ build: $(BUILT_FILES)
 
 download: $(DOWNLOADED_FILES)
 
-selenium-remote-control-1.0.3.zip:
+selenium-remote-control-$(SELENIUM_SERVER_VERSION).zip:
 	wget -nv http://selenium.googlecode.com/files/$@
 
 clean:
 	rm -f *~ *.rpm $(BUILT_FILES) $(DOWNLOADED_FILES)
 
-/usr/local/share/selenium/selenium-server-1.0.3: selenium-remote-control-1.0.3.zip
+/usr/local/share/selenium/selenium-server-$(SELENIUM_SERVER_VERSION): selenium-remote-control-$(SELENIUM_SERVER_VERSION).zip
 	unzip -o -d /usr/local/share/selenium $<
 
-/usr/lib/python2.4/site-packages/selenium-2.0a5-py2.4.egg:
-	easy_install 'selenium==2.0a5'
+/usr/lib/python2.4/site-packages/selenium-$(SELENIUM_PYTHON_VERSION)-py2.4.egg:
+	easy_install 'selenium==$(SELENIUM_PYTHON_VERSION)'
 
 # Include Common Makefile
 include /usr/share/rhts/lib/rhts-make.include
