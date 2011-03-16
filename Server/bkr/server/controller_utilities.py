@@ -180,6 +180,14 @@ class Utility:
         return lambda x:getattr(cls.get_correct_system_column(x),c.lower()) 
 
     @classmethod
+    def system_group_getter(cls):
+        return lambda x: ' '.join([group.group_name for group in x.groups])
+
+    @classmethod
+    def system_numanodes_getter(cls):
+        return lambda x: getattr(x.numa, 'nodes', 0)
+
+    @classmethod
     def system_added_getter(cls):
         return lambda x: x.date_added
 
@@ -215,7 +223,6 @@ class Utility:
             options = {}
             lower_column = column.lower()
             lower_table = table.lower()
-
             name_function_name = '%s_%s_name' % (lower_table, lower_column)
             custom_name = getattr(Utility,name_function_name,None)
 
