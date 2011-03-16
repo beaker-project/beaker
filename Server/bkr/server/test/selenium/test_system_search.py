@@ -5,6 +5,55 @@ from bkr.server.test import data_setup
 import unittest, time, re, os, datetime
 from turbogears.database import session
 
+class SearchColumns(bkr.server.test.selenium.SeleniumTestCase):
+
+    @classmethod
+    def setUpClass(cls): 
+        cls.group = data_setup.create_group()
+        cls.system_with_group = data_setup.create_system(shared=True)
+        cls.system_with_group.groups.append(cls.group)
+        cls.system_with_numa = data_setup.create_system(shared=True)
+        cls.system_with_numa.numa = Numa(nodes=2)
+        session.flush()
+        cls.selenium = cls.get_selenium()
+        cls.selenium.start()
+
+    def test_group_column(self):
+        sel = self.selenium
+        sel.open('')
+        sel.wait_for_page_to_load('3000')
+        sel.click("advancedsearch")
+        sel.select("systemsearch_0_table", "label=System/Group")
+        sel.select("systemsearch_0_operation", "label=is not")
+        sel.click("customcolumns")
+        sel.click("selectnone")
+        sel.click("systemsearch_column_System/Group")
+        sel.click("Search")
+        sel.wait_for_page_to_load("3000")
+        self.assertEqual(sel.get_title(), 'Systems')
+        self.failUnless(sel.is_text_present("%s" % self.system_with_group.groups[0].group_name))
+
+    def test_numa_column(self):
+        sel = self.selenium
+        sel.open('')
+        sel.wait_for_page_to_load('3000')
+        sel.click("advancedsearch")
+        sel.select("systemsearch_0_table", "label=System/NumaNodes")
+        sel.select("systemsearch_0_operation", "label=is not")
+        sel.click("customcolumns")
+        sel.click("selectnone")
+        sel.click("systemsearch_column_System/NumaNodes")
+        sel.click("Search")
+        sel.wait_for_page_to_load("3000")
+        self.assertEqual(sel.get_title(), 'Systems')
+        self.failUnless(sel.is_text_present(str(self.system_with_numa.numa)))
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.selenium.stop()
+
+
+
 class Search(bkr.server.test.selenium.SeleniumTestCase):
 
     @classmethod
@@ -84,7 +133,7 @@ class Search(bkr.server.test.selenium.SeleniumTestCase):
         yesterday = yesterday_date.isoformat()
         sel.select("systemsearch_0_table", "label=System/Added")
         sel.select("systemsearch_0_operation", "label=is")
-        sel.type("systemsearch_0_value", "%s" % datetime.date.today().isoformat() )
+        sel.type("systemsearch_0_value", "%s" % datetime.date.today().isoformat())
         sel.click("Search")
         sel.wait_for_page_to_load("30000")
         try: self.failUnless(sel.is_text_present("%s" % self.system_one.fqdn))

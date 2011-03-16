@@ -2845,7 +2845,7 @@ class Numa(SystemObject):
         self.nodes = nodes
 
     def __repr__(self):
-        return self.nodes
+        return str(self.nodes)
 
 
 class DeviceClass(SystemObject):
