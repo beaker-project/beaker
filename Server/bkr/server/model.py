@@ -4505,7 +4505,7 @@ class Recipe(TaskBase):
     def clone_link(self):
         """ return link to clone this recipe
         """
-        return "/jobs/clone?recipe_id=%s" % self.id
+        return url("/jobs/clone?recipeset_id=%s" % self.recipeset.id)
 
     @property
     def link(self):
