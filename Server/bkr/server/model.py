@@ -10,7 +10,7 @@ from sqlalchemy import (Table, Column, ForeignKey, UniqueConstraint,
                         UnicodeText, Boolean, Float, VARCHAR, TEXT, Numeric, 
                         or_, and_, not_, select, case, func)
 
-from sqlalchemy.orm import relation, backref, synonym, dynamic_loader,query 
+from sqlalchemy.orm import relation, backref, synonym, dynamic_loader,query
 from sqlalchemy.sql import exists
 from sqlalchemy.sql.expression import join
 from sqlalchemy.exceptions import InvalidRequestError
@@ -1700,7 +1700,7 @@ url --url=$tree
     def _available(self, user, system_status=None, systems=None):
         """
         Builds on all.  Only systems which this user has permission to reserve.
-          If a system is loaned then its only available for that person. Can take varying system_status' as args as well
+        Can take varying system_status' as args as well
         """
         if systems:
             try:
@@ -1720,15 +1720,11 @@ url --url=$tree
                     System.status==SystemStatus.by_name(u'Manual')))
  
         if not user.is_admin():
-            query = query.filter(or_(and_(System.owner==user,
-                                        System.loaned==None), 
-                                    System.loaned==user,
+            query = query.filter(or_(and_(System.owner==user), 
                                     and_(System.shared==True, 
                                          System.groups==None,
-                                         System.loaned==None
                                         ),
                                     and_(System.shared==True,
-                                         System.loaned==None,
                                          User.user_id==user.user_id
                                         )
                                     )
@@ -1960,8 +1956,6 @@ url --url=$tree
         is_available() will return true if this system is allowed to be used by the user.
         """
         if user:
-            if self.loaned and self.loaned == user:
-                return True
             if self.shared:
                 # If the user is in the Systems groups
                 if self.groups:
@@ -1969,6 +1963,10 @@ url --url=$tree
                         return True
                 else:
                     return True
+            elif self.loaned and self.loaned == user:
+                return True
+            elif self.owner == user:
+                return True
         
     def can_share(self, user=None):
         """
@@ -1999,7 +1997,6 @@ url --url=$tree
         if self.shared:
             # If the user is in the Systems groups
             return self._in_group(user)
-
 
     def _in_group(self, user=None, *args, **kw):
             if user is None:
