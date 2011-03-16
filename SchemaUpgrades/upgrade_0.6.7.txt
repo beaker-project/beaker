@@ -40,3 +40,15 @@ time approx. 2 mins):
     su -s /bin/sh -c 'python /usr/share/doc/beaker-server-0.6.7/upgrade_0.6.7_check_reservations.py' apache
 
 If the script produces any errors, seek advice from a Beaker developer.
+
+
+Changed options for nag-mail command
+------------------------------------
+
+The nag-mail command now accepts a --reservation-type (-r) option instead of 
+--service (-s). The valid values for this option are 'recipe', which matches 
+systems reserved for running a recipe, or 'manual', which matches systems 
+reserved for manual usage.
+
+If necessary, update any scripts or crontab entries to pass this new option to 
+the nag-mail command.
