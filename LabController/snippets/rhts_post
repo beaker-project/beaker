@@ -215,9 +215,6 @@ EOF
 /bin/sed -i 's/INTERFACE=localhost/INTERFACE=/' /etc/beah.conf
 /bin/sed -i 's/CONSOLE_LOG=.*/CONSOLE_LOG=True/' /etc/beah.conf
 
-chkconfig --add beah-srv
-chkconfig --add beah-beaker-backend
-chkconfig --add beah-fwd-backend
 chkconfig --level 345 beah-srv on
 chkconfig --level 345 beah-beaker-backend on
 chkconfig --level 345 beah-fwd-backend on
