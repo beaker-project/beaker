@@ -76,7 +76,7 @@ JobMatrix.prototype.replace_whiteboard = function(result) {
 }
 
 JobMatrix.prototype.replaceOptions = function(arg) {
-    option = OPTION({"value": arg}, arg)
+    option = OPTION({"value": arg[0]}, arg[0])
     return option
 }
 

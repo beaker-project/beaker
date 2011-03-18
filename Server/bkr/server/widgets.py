@@ -481,41 +481,35 @@ class AckPanel(RadioButtonList):
 class JobMatrixReport(Form):     
     javascript = [LocalJSLink('bkr','/static/javascript/jquery.js'),
                   LocalJSLink('bkr','/static/javascript/jquery-ui-1.7.3.custom.min.js'),
-                  LocalJSLink('bkr', '/static/javascript/job_matrix.js')]
+                  LocalJSLink('bkr', '/static/javascript/job_matrix_v2.js')]
     css = [LocalCSSLink('bkr','/static/css/job_matrix.css'), LocalCSSLink('bkr','/static/css/smoothness/jquery-ui-1.7.3.custom.css')] 
     template = 'bkr.server.templates.job_matrix' 
     member_widgets = ['whiteboard','job_ids','generate_button','nack_list']
     params = (['list','whiteboard_filter','whiteboard_options','job_ids_vals',
-        'nacks','comments_field','toggle_nacks_on',])
+        'nacks','comments_field','toggle_nacks_on'])
     default_validator = validators.NotEmpty() 
-    def __init__(self,*args,**kw): 
-        super(JobMatrixReport,self).__init__(*args, **kw)       
+    def __init__(self,*args,**kw):
+        super(JobMatrixReport,self).__init__(*args, **kw)
         self.class_name = self.__class__.__name__
-        if 'whiteboard_options' in kw:
-            whiteboard_options = kw['whiteboard_options']
-        else:
-            whiteboard_options = []
-
-        self.whiteboard_options = whiteboard_options
-
         self.nack_list = CheckBoxList("Hide naks",validator=self.default_validator)
-        
-        self.whiteboard = SingleSelectField('whiteboard',label='Whiteboard',attrs={'size':5, 'class':'whiteboard'}, options=whiteboard_options, validator=self.default_validator) 
-        self.job_ids = TextArea('job_ids',label='Job ID', rows=7,cols=7, validator=self.default_validator) 
-        self.whiteboard_filter = TextField('whiteboard_filter', label='Filter Whiteboard') 
-
-        self.name='remote_form' 
+        self.whiteboard = SingleSelectField('whiteboard', label='Whiteboard', attrs={'size':5, 'class':'whiteboard'}, validator=self.default_validator)
+        self.job_ids = TextArea('job_ids',label='Job ID', rows=7,cols=7, validator=self.default_validator)
+        self.whiteboard_filter = TextField('whiteboard_filter', label='Filter Whiteboard')
+        self.name='remote_form'
         self.action = '.'
-   
-    def display(self,**params): 
+
+    def display(self,**params):
         if 'options' in params:
             if 'whiteboard_options' in params['options']:
-                params['whiteboard_options'] = params['options']['whiteboard_options'] 
+                params['whiteboard_options'] = params['options']['whiteboard_options']
+            else:
+                params['whiteboard_options'] = []
+
             if 'job_ids_vals' in params['options']:
                 params['job_ids_vals'] = params['options']['job_ids_vals']
-            if 'grid' in params['options']:              
-                params['grid'] = params['options']['grid'] 
-            if 'list' in params['options']: 
+            if 'grid' in params['options']:
+                params['grid'] = params['options']['grid']
+            if 'list' in params['options']:
                 params['list'] = params['options']['list']
             if 'nacks' in params['options']:
                 params['nacks'] = params['options']['nacks']
