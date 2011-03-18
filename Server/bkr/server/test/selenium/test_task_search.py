@@ -18,7 +18,7 @@ class Search(bkr.server.test.selenium.SeleniumTestCase):
 
     def test_task_search(self):
         sel = self.selenium
-        sel.open('/tasks')
+        sel.open('tasks')
         sel.wait_for_page_to_load("30000")
         sel.select("tasksearch_0_table", "label=Arch")  
         sel.select("tasksearch_0_operation", "label=is")

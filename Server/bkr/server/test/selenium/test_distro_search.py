@@ -58,7 +58,7 @@ class Search(bkr.server.test.selenium.SeleniumTestCase):
         SimpleSearch 
         START
         """
-        sel.open("/distros/")
+        sel.open("distros/")
         sel.type("simplesearch", "%s" % self.distro_one.name)
         sel.click("search")
         sel.wait_for_page_to_load("30000")

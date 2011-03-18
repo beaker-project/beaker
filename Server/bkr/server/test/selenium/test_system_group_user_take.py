@@ -43,7 +43,7 @@ class SystemGroupUserTake(bkr.server.test.selenium.SeleniumTestCase):
         self.logout()
         self.login() # login as admin
         sel = self.selenium
-        sel.open("/view/%s/" % self.automated_system.fqdn)
+        sel.open("view/%s/" % self.automated_system.fqdn)
         sel.wait_for_page_to_load("30000")
         sel.click("link=Provision")
         try: self.failUnless(sel.is_text_present("Schedule provision"))
@@ -57,7 +57,7 @@ class SystemGroupUserTake(bkr.server.test.selenium.SeleniumTestCase):
         self.logout() 
         self.login(user=self.user.user_name,password='password') # login as admin
         sel = self.selenium
-        sel.open("/view/%s/" % self.automated_system.fqdn)
+        sel.open("view/%s/" % self.automated_system.fqdn)
         sel.wait_for_page_to_load("30000")
         sel.click("link=Provision")
         try: self.failUnless(sel.is_text_present("Schedule provision"))

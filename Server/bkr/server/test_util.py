@@ -25,9 +25,9 @@ from bkr.server.util import unicode_truncate
 class UnicodeTruncateTest(unittest.TestCase):
 
     def self_test_doesnt_mangle_short_values(self):
-        s = u'абвгд'
+        s = u'a\u044f\u044f\u044f\u044f'
         self.assertEqual(unicode_truncate(s, bytes_length=100), s)
 
     def self_test_truncates_on_character_boundaries(self):
-        s = u'aяяяяя'
-        self.assertEqual(unicode_truncate(s, bytes_length=4), u'aя')
+        s = u'a\u044f\u044f\u044f\u044f'
+        self.assertEqual(unicode_truncate(s, bytes_length=4), u'a\u044f')

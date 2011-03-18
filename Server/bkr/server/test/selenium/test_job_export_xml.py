@@ -22,13 +22,13 @@ class JobExportXML(bkr.server.test.selenium.SeleniumTestCase):
 
     def test_export_xml(self):
         sel = self.selenium
-        sel.open('/jobs')
+        sel.open('jobs')
         sel.type("simplesearch", "%s" % self.job_to_export.id)
         sel.click("//a[text()='Export']")
-        sel.open('/jobs/%s' % self.job_to_export.id)
+        sel.open('jobs/%s' % self.job_to_export.id)
         sel.click("//a[text()='Export']")
         #make sure it's not pretty print, otherwise it screws things up
-        sel.open('/to_xml?taskid=%s&to_screen=True&pretty=False' % self.job_to_export.t_id)
+        sel.open('to_xml?taskid=%s&to_screen=True&pretty=False' % self.job_to_export.t_id)
         sel.wait_for_page_to_load('3000')
         xml_export = sel.get_text('//body')
         session.clear()
