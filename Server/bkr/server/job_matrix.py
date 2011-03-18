@@ -52,9 +52,8 @@ class JobMatrix:
             filter = kw['whiteboard_filter']
         else:
             filter = None 
-       
-        matrix_options['whiteboard_options'] = self.get_whiteboard_options(filter)
-       
+
+        matrix_options['whiteboard_options'] = self.get_whiteboard_options(filter, kw.get('whiteboard', None))
         if ('job_ids' in kw) or ('whiteboard' in kw): 
             gen_results = self.generate(**kw) 
             matrix_options['grid'] = gen_results['grid']
@@ -64,7 +63,7 @@ class JobMatrix:
                 job_ids = [str(j.id) for j in jobs]
                 self.job_ids = job_ids
                 matrix_options['job_ids_vals'] = "\n".join(job_ids)
-            if 'job_ids' in kw: #Getting results by job id
+            elif 'job_ids' in kw: #Getting results by job id
                 self.job_ids = kw['job_ids'].split()
                 matrix_options['job_ids_vals'] = kw['job_ids']
             if 'toggle_nacks_on' in kw:
@@ -86,7 +85,7 @@ class JobMatrix:
         return_dict['options'] =  self.get_whiteboard_options(filter)
         return return_dict
 
-    def get_whiteboard_options(self,filter):
+    def get_whiteboard_options(self,filter, selected=None):
         """
         get_whiteboard_options() returns all whiteboards from the job_table
         if value is passed in for 'filter' it will perform an SQL 'like' operation 
@@ -100,8 +99,14 @@ class JobMatrix:
                      group_by=[model.job_table.c.whiteboard,model.job_table.c.id],
                      order_by=[model.job_table.c.id.desc()],distinct=True,limit=50) 
         res = s1.execute()  
-        filtered_whiteboards = [r[0] for r in res]
-        return filtered_whiteboards 
+        options = []
+        for r in res:
+            value = desc =  r[0]
+            option_list = [value, desc]
+            if r[0] == selected:
+                option_list.append({'selected' : 'selected' })
+            options.append(option_list)
+        return options 
  
     def display_whiteboard_results(self,whiteboard,arch):
         """Return func pointer to display result box
@@ -164,13 +169,13 @@ class JobMatrix:
         jobs = []
         self.arches_used = {}
         self.whiteboards_used = {}
-        whiteboard_data = {} 
-        if 'job_ids' in kw:
-            jobs = kw['job_ids'].split() 
-        elif 'whiteboard' in kw:
+        whiteboard_data = {}
+        if 'whiteboard' in kw:
             job_query = model.Job.query().filter(model.Job.whiteboard == kw['whiteboard'])
             for job in job_query:
-                jobs.append(job.id) 
+                jobs.append(job.id)
+        elif 'job_ids' in kw:
+            jobs = kw['job_ids'].split()
         else:
            pass
 

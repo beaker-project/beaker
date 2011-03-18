@@ -23,28 +23,53 @@ from bkr.server.test.selenium import SeleniumTestCase
 from bkr.server.test import data_setup
 
 class TestJobMatrix(SeleniumTestCase):
-
-    def setUp(self):
-        self.job_whiteboard = u'DanC says hi'
-        self.recipe_whiteboard = u'breakage lol \'#&^!<'
-        self.passed_job = data_setup.create_completed_job(
-                whiteboard=self.job_whiteboard, result=u'Pass',
-                recipe_whiteboard=self.recipe_whiteboard,
-                distro=data_setup.create_distro(name=u'Job-Matrix-Test6-9', arch=u'i386'))
-        self.warned_job = data_setup.create_completed_job(
-                whiteboard=self.job_whiteboard, result=u'Warn',
-                recipe_whiteboard=self.recipe_whiteboard,
-                distro=data_setup.create_distro(name=u'Job-Matrix-Test6-9', arch=u'ia64'))
-        self.failed_job = data_setup.create_completed_job(
-                whiteboard=self.job_whiteboard, result=u'Fail',
-                recipe_whiteboard=self.recipe_whiteboard,
-                distro=data_setup.create_distro(name=u'Job-Matrix-Test6-9', arch=u'x86_64'))
+    
+    @classmethod
+    def setupClass(cls):
+        cls.job_whiteboard = u'DanC says hi'
+        cls.recipe_whiteboard = u'breakage lol \'#&^!<'
+        cls.passed_job = data_setup.create_completed_job(
+                whiteboard=cls.job_whiteboard, result=u'Pass',
+                recipe_whiteboard=cls.recipe_whiteboard,
+                distro=data_setup.create_distro(arch=u'i386'))
+        cls.warned_job = data_setup.create_completed_job(
+                whiteboard=cls.job_whiteboard, result=u'Warn',
+                recipe_whiteboard=cls.recipe_whiteboard,
+                distro=data_setup.create_distro(arch=u'ia64'))
+        cls.failed_job = data_setup.create_completed_job(
+                whiteboard=cls.job_whiteboard, result=u'Fail',
+                recipe_whiteboard=cls.recipe_whiteboard,
+                distro=data_setup.create_distro(arch=u'x86_64'))
         session.flush()
-        self.selenium = self.get_selenium()
-        self.selenium.start()
+        cls.selenium = cls.get_selenium()
+        cls.selenium.start()
 
-    def tearDown(self):
-        self.selenium.stop()
+    @classmethod
+    def teardown(cls):
+        cls.selenium.stop()
+
+    def test_generate_by_whiteboard(self):
+        sel = self.selenium
+        sel.open('matrix')
+        sel.wait_for_page_to_load('30000')
+        sel.select('whiteboard', self.job_whiteboard)
+        sel.click('//select[@name="whiteboard"]//option[@value="%s"]'
+                % self.job_whiteboard)
+        sel.click('//input[@value="Generate"]')
+        sel.wait_for_page_to_load('30000')
+        body = sel.get_text('//body')
+        self.assert_('Pass: 1' in body)
+        new_job = data_setup.create_completed_job(
+            whiteboard=self.job_whiteboard, result=u'Pass',
+            recipe_whiteboard=self.recipe_whiteboard,
+            distro=data_setup.create_distro(arch=u'i386'))
+        session.flush()
+        sel.click('//input[@value="Generate"]')
+        sel.wait_for_page_to_load('30000')
+        body_2 = sel.get_text('//body')
+        self.assert_('Pass: 2' in body_2)
+        session.delete(new_job)
+        session.flush()
 
     def test_it(self):
         sel = self.selenium
