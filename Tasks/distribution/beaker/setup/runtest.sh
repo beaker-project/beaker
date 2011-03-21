@@ -290,7 +290,7 @@ handlers=['debug_out']
 level='INFO'
 handlers=['access_out', 'error_out']
 __EOF__
-    cat << __EOF__ > /etc/beaker/server.cfg
+    cat << __EOF__ > /etc/beaker/motd.txt
 <span>Integration tests are running against this server</span>
 __EOF__
 }
