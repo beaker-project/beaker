@@ -302,24 +302,23 @@ def queued_recipes(*args):
                     .join('status')\
                     .join(['systems','lab_controller','_distros','distro'])\
                     .join(['recipeset','priority'])\
+                    .join(['recipeset','job'])\
                     .join(['distro','lab_controller_assocs','lab_controller'])\
                     .filter(
-                         or_(
-                         and_(Recipe.status==TaskStatus.by_name(u'Queued'),
-                              System.user==None,
-                              System.status==automated,
-                              RecipeSet.lab_controller==None,
-                              Recipe.distro_id==Distro.id,
-                              LabController.disabled==False,
-                             ),
                          and_(Recipe.status==TaskStatus.by_name(u'Queued'),
                               System.user==None,
                               System.status==automated,
                               Recipe.distro_id==Distro.id,
-                              RecipeSet.lab_controller_id==System.lab_controller_id,
                               LabController.disabled==False,
+                              or_(
+                                  RecipeSet.lab_controller==None,
+                                  RecipeSet.lab_controller_id==System.lab_controller_id,
+                                 ),
+                              or_(
+                                  System.loan_id==None,
+                                  System.loan_id==Job.owner_id,
+                                 ),
                              )
-                            )
                            )
     # Order recipes by priority.
     # FIXME Add secondary order by number of matched systems.
