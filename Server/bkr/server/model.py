@@ -4083,7 +4083,7 @@ class JobCc(MappedObject):
         self.email_address = email_address
 
 
-class Product(object):
+class Product(MappedObject):
 
     def __init__(self, name):
         self.name = name

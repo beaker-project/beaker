@@ -18,7 +18,7 @@
 import unittest
 from decimal import Decimal
 from turbogears.database import session
-from bkr.server.test import data_setup
+from bkr.server.test import data_setup, get_server_base
 from bkr.server.model import Cpu, Arch
 from rdflib.term import URIRef, Literal
 from rdflib.graph import Graph
@@ -45,7 +45,7 @@ class SystemRDFTest(unittest.TestCase):
         session.flush()
         graph = self.describe(system)
         speed_literal = graph.value(
-                subject=URIRef('http://localhost:9090/view/cpu_speed_decimal.test_rdf#system'),
+                subject=URIRef(get_server_base() + 'view/cpu_speed_decimal.test_rdf#system'),
                 predicate=INV.cpuSpeed, any=False)
         self.assertEqual(speed_literal.datatype,
                 URIRef('http://www.w3.org/2001/XMLSchema#decimal'))
