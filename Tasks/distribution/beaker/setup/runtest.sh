@@ -200,7 +200,8 @@ mail.provider = 'smtp'
 mail.smtp.server = '127.0.0.1:19999'
 
 beaker_email='$SUBMITTER'
-
+beaker.reliable_distro_tag = 'RELEASED'
+beaker.motd = '/etc/beaker/motd.txt'
 
 # Authentication
 
@@ -288,6 +289,9 @@ handlers=['debug_out']
 [[[access]]]
 level='INFO'
 handlers=['access_out', 'error_out']
+__EOF__
+    cat << __EOF__ > /etc/beaker/server.cfg
+<span>Integration tests are running against this server</span>
 __EOF__
 }
 
