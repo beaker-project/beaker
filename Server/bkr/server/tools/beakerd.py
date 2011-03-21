@@ -128,9 +128,9 @@ def new_recipes(*args):
                     log.info("recipe ID %s moved from New to Processed" % recipe.id)
                 else:
                     log.info("recipe ID %s moved from New to Aborted" % recipe.id)
-                    recipe.recipeset.abort('Recipe ID %s does not match any systems' % recipe.id)
+                    recipe.recipeset.abort(u'Recipe ID %s does not match any systems' % recipe.id)
             else:
-                recipe.recipeset.abort('Recipe ID %s does not have a distro' % recipe.id)
+                recipe.recipeset.abort(u'Recipe ID %s does not have a distro' % recipe.id)
             session.commit()
         except exceptions.Exception:
             session.rollback()
@@ -245,7 +245,7 @@ def processed_recipesets(*args):
                     else:
                         # Set status to Aborted 
                         log.info("recipe ID %s moved from Processed to Aborted" % recipe.id)
-                        recipe.recipeset.abort('Recipe ID %s does not match any systems' % recipe.id)
+                        recipe.recipeset.abort(u'Recipe ID %s does not match any systems' % recipe.id)
                         
             session.commit()
         except exceptions.Exception:
@@ -281,11 +281,11 @@ def dead_recipes(*args):
         try:
             recipe = Recipe.by_id(_recipe.id)
             if len(recipe.systems) == 0:
-                msg = "R:%s does not match any systems, aborting." % recipe.id
+                msg = u"R:%s does not match any systems, aborting." % recipe.id
                 log.info(msg)
                 recipe.recipeset.abort(msg)
             if len(recipe.distro.lab_controller_assocs) == 0:
-                msg = "R:%s does not have a valid distro, aborting." % recipe.id
+                msg = u"R:%s does not have a valid distro, aborting." % recipe.id
                 log.info(msg)
                 recipe.recipeset.abort(msg)
             session.commit()
@@ -370,7 +370,7 @@ def queued_recipes(*args):
                 # Check to see if user still has proper permissions to use system
                 # Remember the mapping of available systems could have happend hours or even
                 # days ago and groups or loans could have been put in place since.
-                if not System.free(user).filter(System.fqdn == system).first():
+                if not System.free(user).filter(System.id == system.id).first():
                     log.debug("System : %s recipe: %s no longer has access. removing" % (system, 
                                                                                          recipe.id))
                     recipe.systems.remove(system)
@@ -467,11 +467,11 @@ def scheduled_recipes(*args):
                                                      wait=True)
                     recipe.system.activity.append(
                          SystemActivity(recipe.recipeset.job.owner, 
-                                        'Scheduler', 
-                                        'Provision', 
-                                        'Distro',
-                                        '',
-                                        '%s' % recipe.distro))
+                                        u'Scheduler',
+                                        u'Provision',
+                                        u'Distro',
+                                        u'',
+                                        unicode(recipe.distro)))
                 except CobblerTaskFailedException, e:
                     log.error('Cobbler task failed for recipe %s: %s' % (recipe.id, e))
                     old_status = recipe.system.status

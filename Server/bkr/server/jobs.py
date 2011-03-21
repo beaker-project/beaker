@@ -83,7 +83,7 @@ class Jobs(RPCRoot):
     upload = widgets.FileField(name='filexml', label='Job XML')
     hidden_id = widgets.HiddenField(name='id')
     confirm = widgets.Label(name='confirm', default="Are you sure you want to cancel?")
-    message = widgets.TextArea(name='msg', label=_(u'Reason?'), help=_(u'Optional'))
+    message = widgets.TextArea(name='msg', label=_(u'Reason?'), help_text=_(u'Optional'))
 
     form = widgets.TableForm(
         'jobs',
@@ -361,7 +361,7 @@ class Jobs(RPCRoot):
         job_retention = xmljob.get_xml_attr('retention_tag',unicode,None)
         job_product = xmljob.get_xml_attr('product',unicode,None)
         tag, product = self._process_job_tag_product(retention_tag=job_retention, product=job_product)
-        job = Job(whiteboard='%s' % xmljob.whiteboard, ttasks=0, owner=user)
+        job = Job(whiteboard=unicode(xmljob.whiteboard), ttasks=0, owner=user)
         job.product = product
         job.retention_tag = tag
 

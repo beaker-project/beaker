@@ -40,7 +40,7 @@ def main():
     parser = get_parser() 
     opts,args = parser.parse_args()
     threshold = opts.threshold
-    reservation_type = opts.reservation_type
+    reservation_type = opts.reservation_type.decode(sys.stdin.encoding or 'utf8')
     testing   = opts.testing
     configfile = opts.configfile
     load_config(configfile)

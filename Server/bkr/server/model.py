@@ -2424,8 +2424,8 @@ $SNIPPET("rhts_post")
             self.activity.append(
                     SystemActivity(service=u'Scheduler',
                     action=u'Changed', field_name=u'Status',
-                    old_value=old_status,
-                    new_value=self.status))
+                    old_value=unicode(old_status),
+                    new_value=unicode(self.status)))
 
     def reserve(self, service, user=None, reservation_type=u'manual'):
         if user is None:
@@ -6071,23 +6071,23 @@ mapper(RetentionTag, retention_tag_table, inherits=BeakerTag,
         polymorphic_identity=u'retention_tag')
 
 mapper(Activity, activity_table,
-        polymorphic_on=activity_table.c.type, polymorphic_identity='activity',
+        polymorphic_on=activity_table.c.type, polymorphic_identity=u'activity',
         properties=dict(user=relation(User, uselist=False,
                         backref='activity')))
 
 mapper(SystemActivity, system_activity_table, inherits=Activity,
-        polymorphic_identity='system_activity')
+        polymorphic_identity=u'system_activity')
 
 mapper(RecipeSetActivity, recipeset_activity_table, inherits=Activity,
-       polymorphic_identity='recipeset_activity')
+       polymorphic_identity=u'recipeset_activity')
 
 mapper(GroupActivity, group_activity_table, inherits=Activity,
-        polymorphic_identity='group_activity',
+        polymorphic_identity=u'group_activity',
         properties=dict(object=relation(Group, uselist=False,
                          backref='activity')))
 
 mapper(DistroActivity, distro_activity_table, inherits=Activity,
-       polymorphic_identity='distro_activity',
+       polymorphic_identity=u'distro_activity',
        properties=dict(object=relation(Distro, uselist=False,
                          backref='activity')))
 
@@ -6181,7 +6181,7 @@ mapper(LogRecipeTask, log_recipe_task_table)
 mapper(LogRecipeTaskResult, log_recipe_task_result_table)
 
 mapper(Recipe, recipe_table,
-        polymorphic_on=recipe_table.c.type, polymorphic_identity='recipe',
+        polymorphic_on=recipe_table.c.type, polymorphic_identity=u'recipe',
         properties = {'distro':relation(Distro, uselist=False,
                                         backref='recipes'),
                       'system':relation(System, uselist=False,
@@ -6212,9 +6212,9 @@ mapper(Recipe, recipe_table,
                      }
       )
 mapper(GuestRecipe, guest_recipe_table, inherits=Recipe,
-        polymorphic_identity='guest_recipe')
+        polymorphic_identity=u'guest_recipe')
 mapper(MachineRecipe, machine_recipe_table, inherits=Recipe,
-        polymorphic_identity='machine_recipe',
+        polymorphic_identity=u'machine_recipe',
         properties = {'guests':relation(Recipe, backref='hostmachine',
                                         secondary=machine_guest_map)})
 

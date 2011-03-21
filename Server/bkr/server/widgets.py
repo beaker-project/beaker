@@ -352,6 +352,7 @@ class myPaginateDataGrid(PaginateDataGrid):
     template = "bkr.server.templates.my_paginate_datagrid"
 
 class SingleSelectFieldJSON(SingleSelectField):
+    params = ['for_column']
     def __init__(self,*args,**kw):
         super(SingleSelectField,self).__init__(*args,**kw)
 
@@ -531,7 +532,8 @@ class SearchBar(RepeatingFormField):
               'simplesearch','quickly_searches','button_widget',
               'advanced', 'simple','to_json','this_operations_field',
               'this_searchvalue_field','extra_hiddens',
-              'extra_callbacks_stringified','table_search_controllers_stringified',
+              'extra_callbacks_stringified', 'table_search_controllers',
+              'table_search_controllers_stringified', 'quick_searches',
               'keyvaluevalue','simplesearch_label', 'result_columns','col_options',
               'col_defaults','enable_custom_columns','default_result_columns', 
               'date_picker']

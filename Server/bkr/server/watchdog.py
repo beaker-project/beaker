@@ -26,7 +26,8 @@ class Watchdogs(RPCRoot):
                                                 join(recipe_table, recipe_table.c.id == recipe_task_table.c.recipe_id).
                                                 join(recipe_set_table, recipe_set_table.c.id == recipe_table.c.recipe_set_id).
                                                 join(job_table, job_table.c.id == recipe_set_table.c.job_id).
-                                                join(task_table, task_table.c.id == recipe_task_table.c.task_id)])
+                                                join(task_table, task_table.c.id == recipe_task_table.c.task_id)])\
+                .alias('compound_watchdog')
 
         class WatchdogDetails(object):
             pass

@@ -19,11 +19,11 @@ class JobDelete(bkr.server.test.selenium.SeleniumTestCase):
         cls.selenium.start()
 
     def test_admin(self):
-        self.user.groups.append(Group.by_name('admin'))
+        self.user.groups.append(Group.by_name(u'admin'))
         session.flush()
         self.job_delete()
         self.job_delete_jobpage()
-        self.user.groups.remove(Group.by_name('admin'))
+        self.user.groups.remove(Group.by_name(u'admin'))
         session.flush()
 
     def test_not_admin(self):

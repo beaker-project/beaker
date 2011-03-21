@@ -130,7 +130,7 @@ class XmlRecipe(ElementWrapper):
     def iter_ksappends(self):
         for ks_appends in self.wrappedEl['ks_appends':]:
             for ks_append in ks_appends['ks_append':]:
-                yield ''.join([t for t in ks_append])
+                yield u''.join([t for t in ks_append])
 
     def iter_repos(self):
         for repos in self.wrappedEl['repos':]:
@@ -180,7 +180,7 @@ class XmlRecipe(ElementWrapper):
             return self.get_xml_attr('whiteboard', unicode, None)
         elif attrname == 'kickstart':
             try:
-                return ''.join([t for t in self.wrappedEl['kickstart']])
+                return u''.join([t for t in self.wrappedEl['kickstart']])
             except: 
                 return None
         elif attrname == 'role':
