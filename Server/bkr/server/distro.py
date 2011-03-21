@@ -162,7 +162,7 @@ class Distros(RPCRoot):
     @expose(format='json')
     def by_name(self, distro):
         distro = distro.lower()
-        return dict(distros=[(distro.install_name) for distro in Distro.query().filter(Distro.install_name.like('%s%%' % distro)).order_by('-date_created')])
+        return dict(distros=[(distro.install_name) for distro in Distro.query().filter(Distro.name.like('%s%%' % distro)).order_by('-date_created')])
     
     def _distros(self,distro,**kw):
         return_dict = {} 
@@ -197,7 +197,7 @@ class Distros(RPCRoot):
     @expose(template="bkr.server.templates.grid")
     @paginate('list',default_order='-date_created', limit=50)
     def name(self,*args,**kw):
-        return self.distros(distros=session.query(Distro).join('breed').join('arch').join(['osversion','osmajor']).join('lab_controller_assocs').filter(distro_table.c.install_name.like('%s' % kw['name'])),action='./name')
+        return self.distros(distros=session.query(Distro).join('breed').join('arch').join(['osversion','osmajor']).join('lab_controller_assocs').filter(distro_table.c.name.like('%s' % kw['name'])),action='./name')
 
     def distros(self, distros,action='.',*args, **kw):
         distros_return = self._distros(distros,**kw) 
@@ -213,8 +213,7 @@ class Distros(RPCRoot):
                 search_options['simplesearch'] = distros_return['simplesearch']
 
         distros_grid =  myPaginateDataGrid(fields=[
-                                  myPaginateDataGrid.Column(name='install_name', getter=lambda x: make_link(url  = '/distros/view?id=%s' % x.id,
-                                  text = x.install_name), title='Install Name', options=dict(sortable=True)),
+                                  myPaginateDataGrid.Column(name='id', getter=lambda x: make_link(url = '/distros/view?id=%s' % x.id, text = x.id), title='ID', options=dict(sortable=True)),
                                   myPaginateDataGrid.Column(name='name', getter=lambda x: x.name, title='Name', options=dict(sortable=True)),
                                   myPaginateDataGrid.Column(name='breed.breed', getter=lambda x: x.breed, title='Breed', options=dict(sortable=True)),
                                   myPaginateDataGrid.Column(name='osversion.osmajor.osmajor', getter=lambda x: x.osversion.osmajor, title='OS Major Version', options=dict(sortable=True)),
