@@ -205,7 +205,15 @@
     <element name="partitions">
       <zeroOrMore>
         <element name="partition">
-          <attribute name="fs"/>
+          <optional>
+            <attribute name="fs">
+              <a:documentation xml:lang="en">
+                Type of filesystem to be created on this partition. Defaults to 
+                'ext3' if not specified.
+              </a:documentation>
+              <text/>
+            </attribute>
+          </optional>
           <attribute name="name"/>
           <optional>
             <attribute name="type"/>
