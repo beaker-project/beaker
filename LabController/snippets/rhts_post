@@ -168,9 +168,6 @@ EOF
 chkconfig --add beah-srv
 chkconfig --add beah-beaker-backend
 chkconfig --add beah-fwd-backend
-chkconfig --level 345 beah-srv on
-chkconfig --level 345 beah-beaker-backend on
-chkconfig --level 345 beah-fwd-backend on
 
 #Add test user account
 useradd --password '\$6\$oIW3o2Mr\$XbWZKaM7nA.cQqudfDJScupXOia5h1u517t6Htx/Q/MgXm82Pc/OcytatTeI4ULNWOMJzvpCigWiL4xKP9PX4.' test
