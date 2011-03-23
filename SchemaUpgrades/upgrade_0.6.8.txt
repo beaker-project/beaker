@@ -9,3 +9,13 @@ run time approx. 4 mins):
 To roll back the creation of this new table, drop it:
 
     DROP TABLE system_status_duration;
+
+
+Fix ErrorDocument 401
+---------------------
+
+If /etc/httpd/conf.d/beaker-server.conf contains such a directive:
+
+    ErrorDocument 401 /static/errors/unauthorized.html
+
+remove it, as that file does not exist and is not needed.
