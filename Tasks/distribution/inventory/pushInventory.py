@@ -21,6 +21,7 @@ import string
 import os
 import commands
 import pprint
+import glob
 
 sys.path.append("/usr/share/smolt/client")
 import smolt
@@ -95,7 +96,10 @@ def read_inventory():
     data['model'] = "%s" % profile.host.systemModel
     #data['FORMFACTOR'] = "%s" % profile.host.formfactor
     data['memory'] = int(memory['ram'])
-    data['Numa'] = {'nodes': profile.host.numaNodes}
+    if hasattr(profile.host, 'numaNodes'):
+        data['Numa'] = {'nodes': profile.host.numaNodes}
+    else:
+        data['Numa'] = len(glob.glob('/sys/devices/system/node/node*')) #: number of NUMA nodes in the system, or 0 if not supported
 
     for VendorID, DeviceID, SubsysVendorID, SubsysDeviceID, Bus, Driver, Type, Description in profile.deviceIter():
         device = dict ( vendorID = "%04x" % (VendorID and VendorID or 0),
