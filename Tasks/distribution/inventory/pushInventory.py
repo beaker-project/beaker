@@ -52,46 +52,66 @@ def read_inventory():
     memory   = smolt.read_memory()
     profile  = smolt.Hardware()
 
-    try:
+    arch = smoltCpu['platform']
+
+    if arch in ["i386", "x86_64"]:
         for cpuflag in procCpu.tags['flags'].split(" "):
             flags.append(cpuflag)
-    except:
-        pass
-
-    try:
-        cpu = dict( vendor     = smoltCpu['type'],
-                    model      = int(procCpu.tags['model']),
-                    modelName  = smoltCpu['model'],
-                    speed      = float(procCpu.tags['cpu mhz']),
-                    processors = int(procCpu.nr_cpus),
-                    cores      = int(procCpu.nr_cores),
-                    sockets    = int(procCpu.nr_sockets),
-                    CpuFlags   = flags
+        cpu = dict(vendor     = smoltCpu['type'],
+                   model      = int(procCpu.tags['model']),
+                   modelName  = smoltCpu['model'],
+                   speed      = float(procCpu.tags['cpu mhz']),
+                   processors = int(procCpu.nr_cpus),
+                   cores      = int(procCpu.nr_cores),
+                   sockets    = int(procCpu.nr_sockets),
+                   CpuFlags   = flags,
+                   family     = int(smoltCpu['model_number']),
+                   stepping   = int(procCpu.tags['stepping']),
                   )
-        try:
-            cpu['family']    = int(smoltCpu['model_number'])
-            cpu['stepping']  = int(procCpu.tags['stepping'])
-        except:
-            cpu['family']    = int(smoltCpu['model_rev'])
-            cpu['stepping']  = 0
-            pass
-
-    except:
-	#POWERCASE Hack :(
-        cpu = dict( vendor     = "IBM",
-                    model      = str(procCpu.tags['machine']),
-                    modelName  = str(procCpu.tags['cpu']),
-                    speed      = str(procCpu.tags['clock']),
-                    processors = int(procCpu.nr_cpus),
-                    cores      = "N/A",
-                    sockets    = "N/A",
-                    CpuFlags   = flags,
-                    family     = str(procCpu.tags['revision']),
-                    stepping   = 0
+    elif arch in ["ppc", "ppc64"]:
+        cpu = dict(vendor     = "IBM",
+                   model      = str(procCpu.tags['machine']),
+                   modelName  = str(procCpu.tags['cpu']),
+                   speed      = str(procCpu.tags['clock']),
+                   processors = int(procCpu.nr_cpus),
+                   cores      = None,
+                   sockets    = None,
+                   CpuFlags   = flags,
+                   family     = str(procCpu.tags['revision']),
+                   stepping   = None,
+                 )
+    elif arch in ["s390", "s390x"]:
+        for cpuflag in procCpu.tags['features'].split(" "):
+            flags.append(cpuflag)
+        proc = dict([tuple(s.strip() for s in kv.split('=')) for kv in procCpu.tags['processor 0'].split(',')])
+        cpu = dict(vendor     = str(procCpu.tags['vendor_id']),
+                   model      = str(proc['machine']),
+                   modelName  = None,
+                   processors = int(procCpu.tags['# processors']),
+                   cores      = None,
+                   sockets    = None,
+                   CpuFlags   = flags,
+                   family     = None,
+                   speed      = None,
+                   stepping   = None,
                   )
-        pass
+    elif arch == "ia64":
+        for cpuflag in procCpu.tags['features'].split(","):
+            flags.append(cpuflag.strip())
+        cpu = dict(vendor     = smoltCpu['type'],
+                   model      = int(procCpu.tags['model']),
+                   modelName  = smoltCpu['model'],
+                   speed      = float(procCpu.tags['cpu mhz']),
+                   processors = int(procCpu.nr_cpus),
+                   cores      = int(procCpu.nr_cores),
+                   sockets    = int(procCpu.nr_sockets),
+                   CpuFlags   = flags,
+                   family     = int(smoltCpu['model_rev']),
+                   stepping   = None,
+                  )
+
     data['Cpu'] = cpu
-    data['Arch'] = [smoltCpu['platform']]
+    data['Arch'] = [arch]
     data['vendor'] = "%s" % profile.host.systemVendor
     data['model'] = "%s" % profile.host.systemModel
     #data['FORMFACTOR'] = "%s" % profile.host.formfactor
