@@ -13,10 +13,10 @@ class TestNagMail(unittest.TestCase):
 
     @classmethod
     def setupClass(cls):
-        cls.two_days_ago = datetime.datetime.now() - datetime.timedelta(days=2)
-        cls.three_days_ago = datetime.datetime.now() - datetime.timedelta(days=3)
+        cls.two_days_ago = datetime.datetime.utcnow() - datetime.timedelta(days=2)
+        cls.three_days_ago = datetime.datetime.utcnow() - datetime.timedelta(days=3)
 
-        cls.just_now = datetime.datetime.now()
+        cls.just_now = datetime.datetime.utcnow()
 
         cls.user_1 = data_setup.create_user()
         cls.user_2 = data_setup.create_user()
@@ -28,27 +28,18 @@ class TestNagMail(unittest.TestCase):
 
         #Shouldn't send
         #This tests that mail is not sent if user == owner
-        cls.system_1.user = cls.user_1
-        cls.system_1.activity.append(SystemActivity(user=cls.user_1,
-            service=u'WEBUI', action=u'Reserved', field_name=u'User', old_value=None,
-            new_value=cls.user_1))
-        cls.system_1.activity[-1].created = cls.two_days_ago
+        cls.system_1.reserve(service=u'testdata', user=cls.user_1)
+        cls.system_1.reservations[-1].start_time = cls.two_days_ago
 
         #Shouldn't send
         #This tests that threshold value is honoured
-        cls.system_2.user = cls.user_2
-        cls.system_2.activity.append(SystemActivity(user=cls.user_2,
-            service=u'WEBUI', action=u'Reserved', field_name=u'User',
-            old_value=None, new_value=cls.user_2))
-        cls.system_2.activity[-1].created = cls.just_now
+        cls.system_2.reserve(service=u'testdata', user=cls.user_2)
+        cls.system_2.reservations[-1].start_time = cls.just_now
 
         #Should send
         #This tests that with owner != user and taken > threshold, should send nag
-        cls.system_3.user = cls.user_1
-        cls.system_3.activity.append(SystemActivity(user=cls.user_1,
-            service=u'WEBUI', action=u'Reserved', field_name=u'User',
-            old_value=None, new_value=cls.user_1))
-        cls.system_3.activity[-1].created = cls.three_days_ago
+        cls.system_3.reserve(service=u'testdata', user=cls.user_1)
+        cls.system_3.reservations[-1].start_time = cls.three_days_ago
         session.flush()
 
     def setUp(self):
@@ -58,11 +49,11 @@ class TestNagMail(unittest.TestCase):
     def test_nag_email_dry_run(self):
         days_had_system_for = 1
         testing = True
-        service = u'WEBUI'
+        reservation_type = u'manual'
         f =  TemporaryFile()
         orig_out = sys.stdout
         sys.stdout = f
-        identify_nags(days_had_system_for, service, testing)
+        identify_nags(days_had_system_for, reservation_type, testing)
         f.seek(0)
         nag_output = f.read()
         f.close()
@@ -75,8 +66,8 @@ class TestNagMail(unittest.TestCase):
     def test_email_send(self):
         days_had_system_for = 1
         testing = False
-        service = u'WEBUI'
-        identify_nags(days_had_system_for, service, testing)
+        reservation_type = u'manual'
+        identify_nags(days_had_system_for, reservation_type, testing)
         self.assertEqual(len(self.mail_capture.captured_mails), 1)
         self.assert_('%s %s' % (self.subject_header, self.system_3.fqdn) in
             self.mail_capture.captured_mails[0][2])

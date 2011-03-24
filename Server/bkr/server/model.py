@@ -10,7 +10,7 @@ from sqlalchemy import (Table, Column, ForeignKey, UniqueConstraint,
                         UnicodeText, Boolean, Float, VARCHAR, TEXT, Numeric, 
                         or_, and_, not_, select, case, func)
 
-from sqlalchemy.orm import relation, backref, synonym, dynamic_loader,query 
+from sqlalchemy.orm import relation, backref, synonym, dynamic_loader,query
 from sqlalchemy.sql import exists
 from sqlalchemy.sql.expression import join
 from sqlalchemy.exceptions import InvalidRequestError
@@ -747,6 +747,19 @@ log_recipe_task_result_table = Table('log_recipe_task_result', metadata,
         Column('start_time',DateTime, default=datetime.utcnow),
 	Column('server', UnicodeText()),
 	Column('basepath', UnicodeText()),
+        mysql_engine='InnoDB',
+)
+
+reservation_table = Table('reservation', metadata,
+        Column('id', Integer, primary_key=True),
+        Column('system_id', Integer, ForeignKey('system.id'), nullable=False),
+        Column('user_id', Integer, ForeignKey('tg_user.user_id'),
+            nullable=False),
+        Column('start_time', DateTime, index=True, nullable=False,
+            default=datetime.utcnow),
+        Column('finish_time', DateTime, index=True),
+        # type = 'manual' or 'recipe'
+        Column('type', Unicode(30), index=True, nullable=False),
         mysql_engine='InnoDB',
 )
 
@@ -1687,7 +1700,7 @@ url --url=$tree
     def _available(self, user, system_status=None, systems=None):
         """
         Builds on all.  Only systems which this user has permission to reserve.
-          If a system is loaned then its only available for that person. Can take varying system_status' as args as well
+        Can take varying system_status' as args as well
         """
         if systems:
             try:
@@ -1707,15 +1720,11 @@ url --url=$tree
                     System.status==SystemStatus.by_name(u'Manual')))
  
         if not user.is_admin():
-            query = query.filter(or_(and_(System.owner==user,
-                                        System.loaned==None), 
-                                    System.loaned==user,
+            query = query.filter(or_(and_(System.owner==user), 
                                     and_(System.shared==True, 
                                          System.groups==None,
-                                         System.loaned==None
                                         ),
                                     and_(System.shared==True,
-                                         System.loaned==None,
                                          User.user_id==user.user_id
                                         )
                                     )
@@ -1786,26 +1795,6 @@ url --url=$tree
             return query.filter(System.arch.any(Arch.arch == arch))
         else:
             return System.query().filter(System.arch.any(Arch.arch == arch))
-
-    @classmethod
-    def reserved_via(cls, service=u'WEBUI'): 
-        activity_ids = cls._latest_reserved()
-        taken = []
-        for id in activity_ids:
-            try: 
-                take_activity = SystemActivity.query().join('object').filter(and_(SystemActivity.id==id,SystemActivity.service == service)).one()
-                taken.append(take_activity)
-            except InvalidRequestError,e:
-                pass
-        return taken
-   
-    @classmethod
-    def _latest_reserved(cls): 
-        f_obj= system_table.join(system_activity_table).join(activity_table)
-        s = select([func.max(system_activity_table.c.id)],from_obj=f_obj,whereclause=and_(activity_table.c.action == u'Reserved',System.user != None)).group_by(system_table.c.id)
-        result = s.execute()
-        ids = [row[0] for row in result.fetchall()] 
-        return ids
 
     def excluded_families(self):
         """
@@ -1947,8 +1936,6 @@ url --url=$tree
         is_available() will return true if this system is allowed to be used by the user.
         """
         if user:
-            if self.loaned and self.loaned == user:
-                return True
             if self.shared:
                 # If the user is in the Systems groups
                 if self.groups:
@@ -1956,6 +1943,10 @@ url --url=$tree
                         return True
                 else:
                     return True
+            elif self.loaned and self.loaned == user:
+                return True
+            elif self.owner == user:
+                return True
         
     def can_share(self, user=None):
         """
@@ -1970,7 +1961,7 @@ url --url=$tree
         This represents the basic system perms,loanee, owner,  shared and in group or shared and no group
         """
         try:
-            if identity.in_group('admin'):
+            if user.is_admin():
                 return True
         except AttributeError, e: #not logged in ?
             return False
@@ -1986,7 +1977,6 @@ url --url=$tree
         if self.shared:
             # If the user is in the Systems groups
             return self._in_group(user)
-
 
     def _in_group(self, user=None, *args, **kw):
             if user is None:
@@ -2264,7 +2254,6 @@ url --url=$tree
                 self.remote.release()
             except:
                 pass
-        self.user = None
 
     def action_provision(self, 
                          distro=None,
@@ -2432,39 +2421,64 @@ $SNIPPET("rhts_post")
             self.activity.append(
                     SystemActivity(service=u'Scheduler',
                     action=u'Changed', field_name=u'Status',
-                    old_value=old_status,
-                    new_value=self.status))
+                    old_value=unicode(old_status),
+                    new_value=unicode(self.status)))
 
-    def reserve(self, service):
-        if self.user is not None and self.user == identity.current.user:
+    def reserve(self, service, user=None, reservation_type=u'manual'):
+        if user is None:
+            user = identity.current.user
+        if self.user is not None and self.user == user:
             raise BX(_(u'User %s has already reserved system %s')
-                    % (identity.current.user, self))
-        if not self.can_share(identity.current.user):
+                    % (user, self))
+        if not self.can_share(user):
             raise BX(_(u'User %s cannot reserve system %s')
-                    % (identity.current.user, self))
+                    % (user, self))
         # Atomic operation to reserve the system
+        session.flush()
         if session.connection(System).execute(system_table.update(
                 and_(system_table.c.id == self.id,
                      system_table.c.user_id == None)),
-                user_id=identity.current.user.user_id).rowcount == 1:
-            self.activity.append(SystemActivity(user=identity.current.user,
-                    service=service, action=u'Reserved', field_name=u'User',
-                    old_value=u'', new_value=identity.current.user))
-        else:
-            raise BX(_(u'System is already reserved'))
+                user_id=user.user_id).rowcount != 1:
+            raise BX(_(u'System %r is already reserved') % self)
+        self.user = user # do it here too, so that the ORM is aware
+        self.reservations.append(Reservation(user=user, type=reservation_type))
+        self.activity.append(SystemActivity(user=user,
+                service=service, action=u'Reserved', field_name=u'User',
+                old_value=u'', new_value=user.user_name))
+        log.debug('Created reservation for system %r with type %r, service %r, user %r',
+                self, reservation_type, service, user)
 
-    def unreserve(self, service):
+    def unreserve(self, service, user=None, watchdog=None):
+        if user is None:
+            user = identity.current.user
+
+        # Some sanity checks
         if self.user is None:
             raise BX(_(u'System is not reserved'))
-        if not self.current_user(identity.current.user):
+        if not self.current_user(user):
             raise BX(_(u'System is reserved by a different user'))
-        # Don't return a system with an active watchdog
-        if self.watchdog:
-            # This won't really happen anymore since the Manual/Automated split
+
+        # Watchdog checking -- don't return a system with an active watchdog,
+        # unless the correct watchdog has been passed in to be cleared
+        if self.watchdog and self.watchdog == watchdog:
+            session.delete(self.watchdog)
+        elif self.watchdog and watchdog is None:
             raise BX(_(u'System has active recipe %s') % self.watchdog.recipe_id)
-        activity = SystemActivity(user=identity.current.user,
+        elif self.watchdog or watchdog:
+            raise BX(_(u'Mismatched watchdogs in unreserve: %r, %r')
+                    % (self.watchdog, watchdog)) # should never happen
+
+        # Update reservation atomically first, to avoid races
+        session.flush()
+        if session.connection(System).execute(reservation_table.update(
+                and_(reservation_table.c.system_id == self.id,
+                     reservation_table.c.finish_time == None)),
+                finish_time=datetime.utcnow()).rowcount != 1:
+            raise BX(_(u'System does not have an open reservation'))
+        activity = SystemActivity(user=user,
                 service=service, action=u'Returned', field_name=u'User',
                 old_value=self.user.user_name, new_value=u'')
+        self.user = None
         try:
             self.action_release()
         except BX, e:
@@ -2828,7 +2842,7 @@ class Numa(SystemObject):
         self.nodes = nodes
 
     def __repr__(self):
-        return self.nodes
+        return str(self.nodes)
 
 
 class DeviceClass(SystemObject):
@@ -3852,7 +3866,7 @@ class Job(TaskBase):
     @classmethod
     def _delete_criteria(cls, jobs=None, query=None):
         try:
-            admin = 'admin' in identity.current.user.groups
+            admin = identity.current.user.is_admin()
         except AttributeError: #not logged in
             err_msg = u'User not logged in'
             log.exception(err_msg)
@@ -4066,7 +4080,7 @@ class JobCc(MappedObject):
         self.email_address = email_address
 
 
-class Product(object):
+class Product(MappedObject):
 
     def __init__(self, name):
         self.name = name
@@ -4468,7 +4482,7 @@ class Recipe(TaskBase):
     def clone_link(self):
         """ return link to clone this recipe
         """
-        return "/jobs/clone?recipe_id=%s" % self.id
+        return url("/jobs/clone?recipeset_id=%s" % self.recipeset.id)
 
     @property
     def link(self):
@@ -4937,15 +4951,9 @@ class Recipe(TaskBase):
             log.debug("Remove watchdog for recipe %s" % self.id)
             if self.watchdog.system == self.system:
                 try:
-                    self.system.action_release()
                     log.debug("Return system %s for recipe %s" % (self.system, self.id))
-                    self.system.activity.append(
-                        SystemActivity(self.recipeset.job.owner, 
-                                       'Scheduler', 
-                                       'Returned', 
-                                       'User', 
-                                       '%s' % self.recipeset.job.owner, 
-                                       ''))
+                    self.system.unreserve(service=u'Scheduler',
+                            user=self.recipeset.job.owner, watchdog=self.watchdog)
                 except socket.gaierror, error:
                     #FIXME
                     pass
@@ -4954,7 +4962,6 @@ class Recipe(TaskBase):
                     pass
                 except AttributeError, error:
                     pass
-            del(self.watchdog)
 
     def task_info(self):
         """
@@ -5895,6 +5902,8 @@ class TaskBugzilla(MappedObject):
     """
     pass
 
+class Reservation(MappedObject): pass
+
 # set up mappers between identity tables and classes
 SystemType.mapper = mapper(SystemType, system_type_table)
 SystemStatus.mapper = mapper(SystemStatus, system_status_table)
@@ -5950,6 +5959,9 @@ System.mapper = mapper(System, system_table,
                      'reprovision_distro':relation(Distro, uselist=False),
                       '_system_ccs': relation(SystemCc, backref='system',
                                       cascade="all, delete, delete-orphan"),
+                     'open_reservation': relation(Reservation, uselist=False, viewonly=True,
+                        primaryjoin=and_(system_table.c.id == reservation_table.c.system_id,
+                            reservation_table.c.finish_time == None)),
                      })
 
 mapper(SystemCc, system_cc_table)
@@ -6056,23 +6068,23 @@ mapper(RetentionTag, retention_tag_table, inherits=BeakerTag,
         polymorphic_identity=u'retention_tag')
 
 mapper(Activity, activity_table,
-        polymorphic_on=activity_table.c.type, polymorphic_identity='activity',
+        polymorphic_on=activity_table.c.type, polymorphic_identity=u'activity',
         properties=dict(user=relation(User, uselist=False,
                         backref='activity')))
 
 mapper(SystemActivity, system_activity_table, inherits=Activity,
-        polymorphic_identity='system_activity')
+        polymorphic_identity=u'system_activity')
 
 mapper(RecipeSetActivity, recipeset_activity_table, inherits=Activity,
-       polymorphic_identity='recipeset_activity')
+       polymorphic_identity=u'recipeset_activity')
 
 mapper(GroupActivity, group_activity_table, inherits=Activity,
-        polymorphic_identity='group_activity',
+        polymorphic_identity=u'group_activity',
         properties=dict(object=relation(Group, uselist=False,
                          backref='activity')))
 
 mapper(DistroActivity, distro_activity_table, inherits=Activity,
-       polymorphic_identity='distro_activity',
+       polymorphic_identity=u'distro_activity',
        properties=dict(object=relation(Distro, uselist=False,
                          backref='activity')))
 
@@ -6166,7 +6178,7 @@ mapper(LogRecipeTask, log_recipe_task_table)
 mapper(LogRecipeTaskResult, log_recipe_task_result_table)
 
 mapper(Recipe, recipe_table,
-        polymorphic_on=recipe_table.c.type, polymorphic_identity='recipe',
+        polymorphic_on=recipe_table.c.type, polymorphic_identity=u'recipe',
         properties = {'distro':relation(Distro, uselist=False,
                                         backref='recipes'),
                       'system':relation(System, uselist=False,
@@ -6197,9 +6209,9 @@ mapper(Recipe, recipe_table,
                      }
       )
 mapper(GuestRecipe, guest_recipe_table, inherits=Recipe,
-        polymorphic_identity='guest_recipe')
+        polymorphic_identity=u'guest_recipe')
 mapper(MachineRecipe, machine_recipe_table, inherits=Recipe,
-        polymorphic_identity='machine_recipe',
+        polymorphic_identity=u'machine_recipe',
         properties = {'guests':relation(Recipe, backref='hostmachine',
                                         secondary=machine_guest_map)})
 
@@ -6247,6 +6259,12 @@ mapper(RecipeTaskResult, recipe_task_result_table,
 mapper(TaskPriority, task_priority_table)
 mapper(TaskStatus, task_status_table)
 mapper(TaskResult, task_result_table)
+mapper(Reservation, reservation_table, properties={
+        'system': relation(System, backref=backref('reservations',
+            order_by=[reservation_table.c.start_time.desc()])),
+        'user': relation(User, backref=backref('reservations',
+            order_by=[reservation_table.c.start_time.desc()])),
+})
 
 ## Static list of device_classes -- used by master.kid
 global _device_classes

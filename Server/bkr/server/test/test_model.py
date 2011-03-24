@@ -126,8 +126,8 @@ class TestBrokenSystemDetection(unittest.TestCase):
         self.system.status = SystemStatus.by_name(u'Automated')
         self.system.activity.append(SystemActivity(service=u'WEBUI',
                 action=u'Changed', field_name=u'Status',
-                old_value=SystemStatus.by_name(u'Broken'),
-                new_value=self.system.status))
+                old_value=u'Broken',
+                new_value=unicode(self.system.status)))
         session.flush()
         time.sleep(1)
         # another recipe aborts...

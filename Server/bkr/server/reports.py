@@ -5,6 +5,7 @@ from turbogears import identity, redirect
 from cherrypy import request, response
 from tg_expanding_form_widget.tg_expanding_form_widget import ExpandingForm
 from sqlalchemy.sql import func
+from sqlalchemy.orm import contains_eager
 from kid import Element
 from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.helpers import *
@@ -41,13 +42,14 @@ class Reports(RPCRoot):
         locals()[entry_point.name] = controller
 
     @expose(template="bkr.server.templates.grid")
-    @paginate('list',limit=50, default_order='created')
+    @paginate('list',limit=50, default_order='start_time')
     def index(self, *args, **kw):
         return self.reserve(*args, **kw)
 
     def reserve(self, action='.', *args, **kw): 
         searchvalue = None 
-        reserves = System.all(identity.current.user).filter(and_(System.user!=None, System.status!=SystemStatus.by_name('Removed')))
+        reserves = System.all(identity.current.user).join('open_reservation')\
+                .options(contains_eager(System.open_reservation))
         reserves_return = self._reserves(reserves, **kw)
         search_options = {}
         if reserves_return:
@@ -63,35 +65,22 @@ class Reports(RPCRoot):
                                table = search_utility.SystemReserve.search.create_search_table(),
                                search_controller=url("./get_search_options_reserve"),
                                )
-        activity = []
-        for system in reserves:
-            # Build a list of the last Reserve entry for each system
-            try:
-                sys_activity = SystemActivity.query().filter(
-                    and_(SystemActivity.object==system,
-                        SystemActivity.field_name=='User',
-                        SystemActivity.action=='Reserved'
-                        )).order_by(SystemActivity.created.desc())[0]
-                if sys_activity.service != 'VIA None': #If not reserved from externally
-                    activity.append(sys_activity)
-            except IndexError:
-                # due to an old bug, we may not have a Reserved action
-                pass 
+        reservations = [system.open_reservation for system in reserves]
                                
         reserve_grid = myPaginateDataGrid(fields=[
-                                  widgets.PaginateDataGrid.Column(name='object.fqdn', getter=lambda x: make_link(url  = '/view/%s' % x.object, text = x.object), title='System', options=dict(sortable=True)),
-                                  widgets.PaginateDataGrid.Column(name='created', getter=lambda x: x.created, title='Reserved Since', options=dict(sortable=True)),
-                                  widgets.PaginateDataGrid.Column(name='user', getter=lambda x: x.user, title='Current User', options=dict(sortable=True)),
+                                  widgets.PaginateDataGrid.Column(name='system.fqdn', getter=lambda x: make_link(url  = '/view/%s' % x.system.fqdn, text = x.system), title=u'System', options=dict(sortable=True)),
+                                  widgets.PaginateDataGrid.Column(name='start_time', getter=lambda x: x.start_time, title=u'Reserved Since', options=dict(sortable=True)),
+                                  widgets.PaginateDataGrid.Column(name='user', getter=lambda x: x.user, title=u'Current User', options=dict(sortable=True)),
                               ])
 
-        return dict(title="Reserve Report", 
+        return dict(title=u"Reserve Report",
                     grid = reserve_grid,
                     search_bar = search_bar,
                     options = search_options,
                     action=action, 
                     searchvalue = searchvalue,
-                    object_count=len(activity),
-                    list = activity) 
+                    object_count=len(reservations),
+                    list=reservations)
 
     def _reserves(self,reserve,**kw):
         return_dict = {} 

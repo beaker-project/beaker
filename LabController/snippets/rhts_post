@@ -159,6 +159,56 @@ LAB_CONTROLLER=http://$server:8000/server
 # # HOSTNAME: Pretend to be machine with given name:
 # #HOSTNAME=fake.hostname.com
 HOSTNAME=$name
+
+# LIMITS: hard and soft cap on filesize or amount of data uploaded.
+# Limit is specified in bytes and numeric value is expected. Use 0 or negative
+# value to specify no limit.
+# Files/Tasks reaching soft limit will result in warning, while file/task
+# reaching hard limit will raise a warning and also the file upload will be
+# stopped.
+# Size limit limits the file size, while upload limit limits the number of
+# bytes uploaded. These are not necessarily the same, as block may be send
+# multipe times, though this is not recomended as it will rewrite data.
+# Link limit sets the cap on number of files created by task/recipe.
+
+# FILE_SIZE_LIMIT, FILE_SIZE_SOFT_LIMIT: hard and soft cap on filesize.
+FILE_SIZE_SOFT_LIMIT=200000000
+#FILE_SIZE_LIMIT=0
+
+# TASK_SIZE_LIMIT, TASK_SIZE_LIMIT_SOFT: hard and soft cap on size of all
+# files per task.
+TASK_SIZE_LIMIT_SOFT=800000000
+#TASK_SIZE_LIMIT=0
+
+# RECIPE_SIZE_LIMIT, RECIPE_SIZE_LIMIT_SOFT: hard and soft cap on size of all
+# files per recipe.
+#RECIPE_SIZE_LIMIT_SOFT=0
+#RECIPE_SIZE_LIMIT=0
+
+# FILE_UPLOAD_LIMIT, FILE_UPLOAD_SOFT_LIMIT: hard and soft cap on upload per
+# file.
+#FILE_UPLOAD_SOFT_LIMIT=0
+#FILE_UPLOAD_LIMIT=0
+
+# TASK_UPLOAD_LIMIT, TASK_UPLOAD_SOFT_LIMIT: hard and soft cap on all uploads per
+# task.
+#TASK_UPLOAD_SOFT_LIMIT=0
+#TASK_UPLOAD_LIMIT=0
+
+# RECIPE_UPLOAD_LIMIT, RECIPE_UPLOAD_SOFT_LIMIT: hard and soft cap on all uploads
+# per recipe.
+#RECIPE_UPLOAD_SOFT_LIMIT=0
+#RECIPE_UPLOAD_LIMIT=0
+
+# TASK_LINK_LIMIT, TASK_LINK_SOFT_LIMIT: hard and soft cap on number of files per
+# task.
+#TASK_LINK_SOFT_LIMIT=0
+#TASK_LINK_LIMIT=0
+
+# RECIPE_LINK_LIMIT, RECIPE_LINK_SOFT_LIMIT: hard and soft cap on number of
+# files per recipe.
+#RECIPE_LINK_SOFT_LIMIT=0
+#RECIPE_LINK_LIMIT=0
 EOF
 # Turn on Debug logging
 /bin/sed -i 's/DEVEL=False/DEVEL=True/' /etc/beah.conf
@@ -168,6 +218,9 @@ EOF
 chkconfig --add beah-srv
 chkconfig --add beah-beaker-backend
 chkconfig --add beah-fwd-backend
+chkconfig --level 345 beah-srv on
+chkconfig --level 345 beah-beaker-backend on
+chkconfig --level 345 beah-fwd-backend on
 
 #Add test user account
 useradd --password '\$6\$oIW3o2Mr\$XbWZKaM7nA.cQqudfDJScupXOia5h1u517t6Htx/Q/MgXm82Pc/OcytatTeI4ULNWOMJzvpCigWiL4xKP9PX4.' test

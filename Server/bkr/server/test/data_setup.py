@@ -27,7 +27,7 @@ from bkr.server.model import LabController, User, Group, Distro, Breed, Arch, \
         SystemType, SystemStatus, Recipe, RecipeTask, RecipeTaskResult, \
         Device, TaskResult, TaskStatus, Job, RecipeSet, TaskPriority, \
         LabControllerDistro, Power, PowerType, TaskExcludeArch, TaskExcludeOSMajor, \
-        Permission, RetentionTag, Product, Watchdog
+        Permission, RetentionTag, Product, Watchdog, Reservation
 
 log = logging.getLogger(__name__)
 
@@ -50,12 +50,11 @@ def setup_model(override=True):
     log.info('Initialising model')
     init_db(user_name=ADMIN_USER, password=ADMIN_PASSWORD,
             user_email_address=ADMIN_EMAIL_ADDRESS)
-    Product(name=u'the_product') #FIXME, do we need this ??
 
 def create_product(product_name=None):
     if product_name is None:
         product_name  = u'product%d' % int(time.time() * 100000)
-    return Product(name=product_name)
+    return Product.lazy_create(name=product_name)
     
 
 def create_labcontroller(fqdn=None):
@@ -156,7 +155,7 @@ def configure_system_power(system, power_type=u'ilo', address=None,
     if password is None:
         password = u'%s_power_password' % system.fqdn
     if power_id is None:
-        power_id = '%d' % int(time.time() * 1000)
+        power_id = u'%d' % int(time.time() * 1000)
     system.power = Power(power_type=PowerType.by_name(power_type),
             power_address=address, power_id=power_id,
             power_user=user, power_passwd=password)
@@ -164,13 +163,13 @@ def configure_system_power(system, power_type=u'ilo', address=None,
 def create_system_activity(user=None, **kw):
     if not user:
         user = create_user()
-    activity = SystemActivity(user, 'WEBUI', 'Changed', 'Loaned To', 'random_%d' % int(time.time() * 1000) , '%s' % user)
+    activity = SystemActivity(user, u'WEBUI', u'Changed', u'Loaned To', u'random_%d' % int(time.time() * 1000), user.user_name)
     return activity
 
 def create_task(name=None, exclude_arch=[],exclude_osmajor=[], version=u'1.0-1'):
     if name is None:
         name = u'/distribution/test_task_%d' % int(time.time() * 1000)
-    rpm = 'example%s-%s.noarch.rpm' % (name.replace('/', '-'), version)
+    rpm = u'example%s-%s.noarch.rpm' % (name.replace('/', '-'), version)
     task = Task.lazy_create(name=name, rpm=rpm, version=version)
     if exclude_arch:
        [TaskExcludeArch(arch_id=Arch.by_name(arch).id, task_id=task.id) for arch in exclude_arch]
@@ -238,22 +237,33 @@ def create_completed_job(**kwargs):
     mark_job_complete(job, **kwargs)
     return job
 
-def mark_job_complete(job, result=u'Pass', system=None, **kwargs):
+def mark_recipe_complete(recipe, result=u'Pass', system=None,
+        start_time=None, finish_time=None, **kwargs):
+    if system is None:
+        recipe.system = create_system(arch=recipe.arch)
+    else:
+        recipe.system = system
+    if start_time:
+        recipe.start_time = start_time
+    reservation = Reservation(type=u'recipe',
+            user=recipe.recipeset.job.owner, start_time=start_time)
+    recipe.system.reservations.append(reservation)
+    for recipe_task in recipe.tasks:
+        recipe_task.status = TaskStatus.by_name(u'Running')
+    recipe.update_status()
+    for recipe_task in recipe.tasks:
+        rtr = RecipeTaskResult(recipetask=recipe_task,
+                result=TaskResult.by_name(result))
+        recipe_task.status = TaskStatus.by_name(u'Completed')
+        recipe_task.results.append(rtr)
+    if finish_time:
+        reservation.finish_time = finish_time
+    recipe.update_status()
+    log.debug('Marked %s as complete with result %s', recipe.t_id, result)
+
+def mark_job_complete(job, **kwargs):
     for recipe in job.all_recipes:
-        if system is None:
-            recipe.system = create_system(arch=recipe.arch)
-        else:
-            recipe.system = system
-        for recipe_task in recipe.tasks:
-            recipe_task.status = TaskStatus.by_name(u'Running')
-        recipe.update_status()
-        for recipe_task in recipe.tasks:
-            rtr = RecipeTaskResult(recipetask=recipe_task,
-                    result=TaskResult.by_name(result))
-            recipe_task.status = TaskStatus.by_name(u'Completed')
-            recipe_task.results.append(rtr)
-        recipe.update_status()
-    log.debug('Marked %s as complete with result %s', job.t_id, result)
+        mark_recipe_complete(recipe, **kwargs)
 
 def mark_job_waiting(job, user=None):
     if user is None:
@@ -263,8 +273,9 @@ def mark_job_waiting(job, user=None):
             recipe.process()
             recipe.queue()
             recipe.schedule()
-            recipe.system = create_system()
-            recipe.system.user = user
+            recipe.system = create_system(owner=job.owner)
+            recipe.system.reserve(service=u'testdata', user=job.owner,
+                    reservation_type=u'recipe')
             recipe.watchdog = Watchdog(system=recipe.system)
             recipe.waiting()
 
@@ -272,7 +283,7 @@ def playback_task_results(task, xmltask):
     # Start task
     task.start()
     # Record Result
-    task._result(xmltask.result,'/',0,'(%s)' % xmltask.result)
+    task._result(xmltask.result, u'/', 0, u'(%s)' % xmltask.result)
     # Stop task
     if xmltask.status == u'Aborted':
         task.abort()
@@ -289,6 +300,22 @@ def playback_job_results(job, xmljob):
                     playback_task_results(job.recipesets[i].recipes[j].guests[l].tasks[k], xmltask)
             for k, xmltask in enumerate(xmlrecipe.iter_tasks()):
                 playback_task_results(job.recipesets[i].recipes[j].tasks[k], xmltask)
+
+def create_manual_reservation(system, start, finish, user=None):
+    if user is None:
+        user = create_user()
+    system.reservations.append(Reservation(start_time=start,
+            finish_time=finish, type=u'manual', user=user))
+    activity = SystemActivity(user=user,
+            service=u'WEBUI', action=u'Reserved', field_name=u'User',
+            old_value=u'', new_value=user.user_name)
+    activity.created = start
+    system.activity.append(activity)
+    activity = SystemActivity(user=user,
+            service=u'WEBUI', action=u'Returned', field_name=u'User',
+            old_value=user.user_name, new_value=u'')
+    activity.created = finish
+    system.activity.append(activity)
 
 def create_test_env(type):#FIXME not yet using different types
     """

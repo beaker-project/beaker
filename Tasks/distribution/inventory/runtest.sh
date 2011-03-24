@@ -19,17 +19,15 @@ modprobe kvm
 modprobe kvm_amd
 modprobe kvm_intel
 
-hostname=$HOSTNAME
-if [ -z "$LAB_SERVER" ]; then
-    # Push to Inventory server
-    if [ -z "$server" ]; then
-        server=$(cat /etc/beah_beaker.conf |awk -F= '/^LAB_CONTROLLER=/ { print $2}')
-    fi
-    rhts-run-simple-test $TEST "./push-inventory.py --server $server -h $hostname"
-    rhts-run-simple-test $TEST "./pushInventory.py --server $server -h $hostname"
+if [ -z "$HOSTNAME" ]; then
+    hostname=$(hostname)
 else
-    # Push to Legacy Lab Controller
-    server="http://$LAB_SERVER"
-    rhts-run-simple-test $TEST "./push-inventory.py --legacy --server $server -h $hostname"
+    hostname=$HOSTNAME
 fi
 
+# Push to Inventory server
+if [ -z "$server" ]; then
+    server="http://$LAB_CONTROLLER:8000/server"
+fi
+rhts-run-simple-test $TEST "./push-inventory.py --server $server -h $hostname"
+rhts-run-simple-test $TEST "./pushInventory.py --server $server -h $hostname"

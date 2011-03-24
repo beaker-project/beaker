@@ -69,7 +69,7 @@ endif
 
 # data files, .c files, scripts anything needed to either compile the test and/or run it.
 FILES=$(METADATA) runtest.sh Makefile PURPOSE push-inventory.py \
-      smolt.py software.py i18n.py disks.py pushInventory.py procfs.py \
+      software.py i18n.py disks.py pushInventory.py procfs.py \
       utilist.py getdriver.sh
 
 run: $(FILES) build
@@ -100,12 +100,12 @@ $(METADATA): Makefile
 	@echo "TestVersion:  $(TESTVERSION)"	>> $(METADATA)
 	@echo "Description:  This refreshes the database with the hardware inventory of the machine its run on">> $(METADATA)
 	@echo "TestTime:     15m" >> $(METADATA)
-	@echo "Requires:     anaconda" >> $(METADATA)
 	@echo "Requires:     smolt" >> $(METADATA)
 	@echo "Requires:     kvm" >> $(METADATA)
 	@echo "Requires:     iasl" >> $(METADATA)
 	@echo "Requires:     gcc" >> $(METADATA)
 	@echo "Requires:     make" >> $(METADATA)
 	@echo "Requires:     device-mapper-multipath" >> $(METADATA)
+	@echo "Requires:     python-ctypes" >> $(METADATA)
 
 

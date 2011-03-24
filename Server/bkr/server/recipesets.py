@@ -47,7 +47,7 @@ class RecipeSets(RPCRoot):
 
     hidden_id = widgets.HiddenField(name='id')
     confirm = widgets.Label(name='confirm', default="Are you sure you want to cancel?")
-    message = widgets.TextArea(name='msg', label=_(u'Reason?'), help=_(u'Optional'))
+    message = widgets.TextArea(name='msg', label=_(u'Reason?'), help_text=_(u'Optional'))
     cancel_form = widgets.TableForm(
         'cancel_recipeset',
         fields = [hidden_id, message, confirm],

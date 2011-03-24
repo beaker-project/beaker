@@ -10,15 +10,15 @@ class Search(bkr.server.test.selenium.SeleniumTestCase):
         self.selenium = self.get_selenium()
         self.arch_one = u'i386'
         self.osmajor_one = u'testosmajor'
-        self.task_one = data_setup.create_task(name='/a/a/a', exclude_arch=[self.arch_one])
-        self.task_two = data_setup.create_task(name='/a/a/b', exclude_arch=[self.arch_one])
-        self.task_three = data_setup.create_task(name='/a/a/c', exclude_osmajor=[self.osmajor_one])
+        self.task_one = data_setup.create_task(name=u'/a/a/a', exclude_arch=[self.arch_one])
+        self.task_two = data_setup.create_task(name=u'/a/a/b', exclude_arch=[self.arch_one])
+        self.task_three = data_setup.create_task(name=u'/a/a/c', exclude_osmajor=[self.osmajor_one])
         session.flush()
         self.selenium.start()
 
     def test_task_search(self):
         sel = self.selenium
-        sel.open('/tasks')
+        sel.open('tasks')
         sel.wait_for_page_to_load("30000")
         sel.select("tasksearch_0_table", "label=Arch")  
         sel.select("tasksearch_0_operation", "label=is")
