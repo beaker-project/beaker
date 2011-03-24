@@ -2,7 +2,7 @@
 %{!?pyver: %global pyver %(%{__python} -c "import sys ; print sys.version[:3]")}
 
 Name:           beaker
-Version:        0.6.6
+Version:        0.6.7
 Release:        2%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
@@ -247,6 +247,33 @@ fi
 %{_var}/lib/beaker/addDistro.d/*
 
 %changelog
+* Thu Mar 23 2011 Raymond Mancy <rmancy@redhat.com> 0.6.7-1
+- 688122 - ks-templates: beah services usage (mcsontos@redhat.com)
+- 685085 Ensure matrix report data is generated from whiteboard (rmancy@redhat.com)
+- 680092 Return NumaNode and Group columns in system search (rmancy@redhat.com)
+- 683121 Don't expose Distro.install_name only to be used internally (bpeck@redhat.com)
+- 684788 Can't return the machine because of active recipe, which is already finished
+- 681871 bkr job-submit fails when input XML file contains the xml header (bpeck@redhat.com)
+- 659702 Loaned machines available to schedule Update beakerd to not touch loaned machines (bpeck@redhat.com)
+- 682313 WebUI missing clone button for recipe. (bpeck@redhat.com)
+- 629025 Implement a cap on size and number of files uploaded (bpeck@redhat.com)
+- 687995 remove legacy rhts support from /distribution/inventory (bpeck@redhat.com)
+- 683003 force hostnames to lowercase (bpeck@redhat.com)
+- 671474 Gather more sensible CPU info on S390, PPC, IA64.
+- 680324 Remove dependency on anaconda. (stl@redhat.com)
+- fix beaker setup task. (bpeck@redhat.com)
+- script to populate reservation table (dcallagh@redhat.com)
+- introduce a new reservation table (dcallagh@redhat.com)
+- remove XML-RPC methods for legacy RHTS (dcallagh@redhat.com)
+- test for bug 681143 (dcallagh@redhat.com)
+- /distribution/beaker/setup: add missing config entries (dcallagh@redhat.com)
+- /distribution/beaker/dogfood: install correct selenium bindings
+  (dcallagh@redhat.com)
+- cleain up various warnings (dcallagh@redhat.com)
+- Use a packaged version of smolt instead of our own. (stl@redhat.com)
+
+
+
 * Thu Mar 10 2011 Raymond Mancy <rmancy@redhat.com> 0.6.6-2
 - Fix typo in spec (rmancy@redhat.com)
 

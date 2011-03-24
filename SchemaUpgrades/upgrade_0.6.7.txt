@@ -5,6 +5,8 @@ Run the following SQL statement (expected run time <5sec):
 
     UPDATE system SET fqdn = LOWER(fqdn);
 
+    This cannot be rolled back (it won't make a difference anyway)
+
 
 Populate the reservation table
 ------------------------------
@@ -32,6 +34,9 @@ historical data using this SQL statement (expected run time approx. 15 mins):
     INNER JOIN system_activity outer_system_activity ON outer_activity.id = outer_system_activity.id
     WHERE action = 'Reserved'
     GROUP BY start_time;
+
+    To roll back:
+    DROP TABLE reservation;
 
 As apache user, run the sanity checking script provided in this directory, to 
 verify that the reservation table has been populated correctly (expected run 
