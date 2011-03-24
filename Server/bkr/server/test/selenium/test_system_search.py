@@ -1,5 +1,5 @@
 #!/usr/bin/python
-from bkr.server.model import Numa
+from bkr.server.model import Numa, User
 import bkr.server.test.selenium
 from bkr.server.test import data_setup
 import unittest, time, re, os, datetime
@@ -65,6 +65,7 @@ class Search(bkr.server.test.selenium.SeleniumTestCase):
                                     'status' : u'Automated',
                                     'owner' : data_setup.create_user(),}
         cls.system_one = data_setup.create_system(**cls.system_one_details)
+        cls.system_one.loaned = data_setup.create_user()
         cls.system_one.numa = Numa(nodes=2)
 
         cls.system_two_details = { 'fqdn' : u'a2',
@@ -90,6 +91,22 @@ class Search(bkr.server.test.selenium.SeleniumTestCase):
 
     def setUp(self):
         self.verificationErrors = []
+
+    def test_loaned_not_free(self):
+        sel = self.selenium
+        self.login()
+        sel.open('free')
+        sel.wait_for_page_to_load("30000")
+        self.assertEquals(sel.get_title(), 'Systems')
+        self.failUnless(not sel.is_text_present("%s" % self.system_one.fqdn))
+
+        self.system_one.loaned = User.by_user_name(self.BEAKER_LOGIN_USER)
+        session.flush()
+        sel.open('free')
+        sel.wait_for_page_to_load("30000")
+        self.assertEquals(sel.get_title(), 'Systems')
+        self.failUnless(sel.is_text_present("%s" % self.system_one.fqdn))
+
 
     def test_system_search(self):
         sel = self.selenium
