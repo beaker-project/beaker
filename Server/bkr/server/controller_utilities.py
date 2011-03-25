@@ -67,14 +67,12 @@ class SystemTab:
 class _SystemSaveFormHandler:
 
     @classmethod
-    def status_id_change_handler(cls,current_val,new_val,**kw): 
+    def status_change_handler(cls,current_val,new_val,**kw): 
         bad_status = ['broken','removed']
         good_status = ['automated','manual']
-        new_status = SystemStatus.by_id(new_val)
-        if new_status.status.lower() in good_status: 
+        if new_val.status.lower() in good_status: 
             if current_val:
-                old_status = SystemStatus.by_id(current_val)
-                if old_status.status.lower() in bad_status:
+                if current_val.status.lower() in bad_status:
                     kw['status_reason'] = None  #remove the status notes
         return kw 
 
