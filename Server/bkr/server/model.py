@@ -1685,9 +1685,9 @@ url --url=$tree
     @classmethod
     def free(cls, user, systems=None):
         """
-        Builds on available.  Only systems with no users.
+        Builds on available.  Only systems with no users, and not Loaned.
         """
-        return System.available(user,systems).filter(System.user==None)
+        return System.available(user,systems).filter(and_(System.user==None, or_(System.loaned==None, System.loaned==user)))
 
     @classmethod
     def available_for_schedule(cls, user, systems=None):
