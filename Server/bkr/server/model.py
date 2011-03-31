@@ -1721,6 +1721,7 @@ url --url=$tree
  
         if not user.is_admin():
             query = query.filter(or_(and_(System.owner==user), 
+                                    System.loaned == user,
                                     and_(System.shared==True, 
                                          System.groups==None,
                                         ),
