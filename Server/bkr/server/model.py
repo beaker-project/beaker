@@ -2545,6 +2545,7 @@ class SystemType(SystemObject):
         return [type.type for type in all_types]
 
     @classmethod
+    @sqla_cache
     def by_name(cls, systemtype):
         return cls.query.filter_by(type=systemtype).one()
 
@@ -2618,10 +2619,12 @@ class SystemStatus(SystemObject):
 
 
     @classmethod
+    @sqla_cache
     def by_name(cls, systemstatus):
         return cls.query.filter_by(status=systemstatus).one()
  
     @classmethod
+    @sqla_cache
     def by_id(cls,status_id):
         return cls.query.filter_by(id=status_id).one()
 
