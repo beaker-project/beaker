@@ -374,7 +374,6 @@ distro_table = Table('distro', metadata,
     Column('osversion_id', Integer, ForeignKey('osversion.id')),
     Column('arch_id', Integer, ForeignKey('arch.id')),
     Column('variant',Unicode(25)),
-    Column('method',Unicode(25)),
     Column('virt',Boolean),
     Column('date_created',DateTime),
     mysql_engine='InnoDB',
@@ -2981,11 +2980,6 @@ class Distro(MappedObject):
         self.install_name = install_name
  
     @classmethod
-    def all_methods(cls):
-        methods = [elem[0] for elem in select([distro_table.c.method],whereclause=distro_table.c.method != None,from_obj=distro_table,distinct=True).execute()]
-        return methods 
-
-    @classmethod
     def by_install_name(cls, install_name):
         return cls.query.filter_by(install_name=install_name).one()
 
@@ -3030,7 +3024,6 @@ class Distro(MappedObject):
         fields = dict(
                       distro_name    = 'name',
                       distro_arch    = ['arch','arch'],
-                      distro_method  = 'method',
                       distro_variant = 'variant',
                       distro_virt    = 'virt',
                       distro_family  = ['osversion','osmajor','osmajor'],
@@ -3110,16 +3103,14 @@ class Distro(MappedObject):
         """
         multiple_distro_systems() will return a list of distro's that are applicable for a certain criteria.
         The criteria can be
-        *method
         *arch
         *osmajor
         """
-        method = kw.get('method')
         arch = kw.get('arch')
         osmajor = kw.get('osmajor')
         tag = kw.get('tag')
 
-        if method is None and arch is None and osmajor is None:
+        if arch is None and osmajor is None:
             log.error('Nothing has been passed into mulitple_distro_systems')
             return
          
@@ -3140,7 +3131,7 @@ class Distro(MappedObject):
         if tag: 
             my_from = my_from.join(distro_tag_map).join(distro_tag_table)
             my_and.append(distro_tag_table.c.tag == tag) 
-        for var in (osmajor,method,tag) + tuple(sorted(local_arches)):
+        for var in (osmajor,tag) + tuple(sorted(local_arches)):
             if var:
                 cache_locator.append(var)
 
@@ -3155,7 +3146,7 @@ class Distro(MappedObject):
         future_arch_cache = {}
         for local_arch in local_arches:
             my_derived = select([distro_table.c.name,distro_table.c.install_name,distro_table.c.id.label('distro_id'),distro_table.c.date_created],
-                                whereclause= and_(*my_and + [arch_table.c.arch == local_arch,distro_table.c.method == method] ),
+                                whereclause= and_(*my_and + [arch_table.c.arch == local_arch] ),
                                 from_obj=my_from).alias(local_arch)
             
             if current_derived is None:
