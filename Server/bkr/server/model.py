@@ -3013,18 +3013,14 @@ class Distro(MappedObject):
         from needpropertyxml import ElementWrapper
         import xmltramp
         #FIXME Should validate XML before proceeding.
-        queries = []
-        joins = []
-        for child in ElementWrapper(xmltramp.parse(filter)):
-            if callable(getattr(child, 'filter', None)):
-                (join, query) = child.filter()
-                queries.append(query)
-                joins.extend(join)
         # Join on lab_controller_assocs or we may get a distro that is not on any 
         # lab controller anymore.
         distros = Distro.query().join('lab_controller_assocs')
-        if joins:
-            distros = distros.filter(and_(*joins))
+        queries = []
+        for child in ElementWrapper(xmltramp.parse(filter)):
+            if callable(getattr(child, 'filter', None)):
+                (distros, query) = child.filter(distros)
+                queries.append(query)
         if queries:
             distros = distros.filter(and_(*queries))
         return distros.order_by('-date_created')
@@ -3083,14 +3079,10 @@ class Distro(MappedObject):
         systems = self.all_systems(user, join)
         #FIXME Should validate XML before processing.
         queries = []
-        joins = []
         for child in ElementWrapper(xmltramp.parse(filter)):
             if callable(getattr(child, 'filter', None)):
-                (join, query) = child.filter()
+                (systems, query) = child.filter(systems)
                 queries.append(query)
-                joins.extend(join)
-        if joins:
-            systems = systems.filter(and_(*joins))
         if queries:
             systems = systems.filter(and_(*queries))
         return systems

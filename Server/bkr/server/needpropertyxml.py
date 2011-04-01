@@ -117,20 +117,20 @@ class XmlDistroArch(ElementWrapper):
     """
     Filer Distro based on Arch
     """
-    def filter(self):
+    def filter(self, joins):
         op = self.op_table[self.get_xml_attr('op', unicode, '==')]
         value = self.get_xml_attr('value', unicode, None)
         query = None
         if op and value:
             query = and_(distro_table.c.arch_id == arch_table.c.id,
                          getattr(arch_table.c.arch, op)(value))
-        return ([], query)
+        return (joins, query)
             
 class XmlDistroFamily(ElementWrapper):
     """
     Filter Distro based on Family
     """
-    def filter(self):
+    def filter(self, joins):
         op = self.op_table[self.get_xml_attr('op', unicode, '==')]
         value = self.get_xml_attr('value', unicode, None)
         query = None
@@ -138,13 +138,13 @@ class XmlDistroFamily(ElementWrapper):
             query = and_(distro_table.c.osversion_id == osversion_table.c.id,
                          osversion_table.c.osmajor_id == osmajor_table.c.id,
                          getattr(osmajor_table.c.osmajor, op)(value))
-        return ([], query)
+        return (joins, query)
 
 class XmlDistroTag(ElementWrapper):
     """
     Filter Distro based on Tag
     """
-    def filter(self):
+    def filter(self, joins):
         op = self.op_table[self.get_xml_attr('op', unicode, '==')]
         value = self.get_xml_attr('value', unicode, None)
         query = None
@@ -154,65 +154,64 @@ class XmlDistroTag(ElementWrapper):
                       distro_tag_table.c.id == distro_tag_map.c.distro_tag_id,
                       getattr(distro_tag_table.c.tag, op)(value)
                     )
-        return ([], query)
+        return (joins, query)
 
 class XmlDistroVariant(ElementWrapper):
     """
     Filter Distro based on Tag
     """
-    def filter(self):
+    def filter(self, joins):
         op = self.op_table[self.get_xml_attr('op', unicode, '==')]
         value = self.get_xml_attr('value', unicode, None)
         query = None
         if op and value:
             query = getattr(distro_table.c.variant, op)(value)
-        return ([], query)
+        return (joins, query)
 
 class XmlDistroName(ElementWrapper):
     """
     Filter Distro based on Tag
     """
-    def filter(self):
+    def filter(self, joins):
         op = self.op_table[self.get_xml_attr('op', unicode, '==')]
         value = self.get_xml_attr('value', unicode, None)
         query = None
         if op and value:
             query = getattr(distro_table.c.name, op)(value)
-        return ([], query)
+        return (joins, query)
 
 class XmlDistroVirt(ElementWrapper):
     """
     Filter Distro based on Virt
     """
-    def filter(self):
+    def filter(self, joins):
         op = self.op_table[self.get_xml_attr('op', unicode, '==')]
         value = self.get_xml_attr('value', bool, False)
         query = None
         if op:
             query = getattr(distro_table.c.virt, op)(value)
-        return ([], query)
+        return (joins, query)
 
 class XmlDistroMethod(ElementWrapper):
     """
     Filter Distro based on Install Method
     """
-    def filter(self):
+    def filter(self, joins):
         op = self.op_table[self.get_xml_attr('op', unicode, '==')]
         value = self.get_xml_attr('value', unicode, None)
         query = None
         if op:
 	    query = getattr(distro_table.c.method, op)(value)
-        return ([], query)
+        return (joins, query)
 
 class XmlSystem(ElementWrapper):
     """
     Filter 
     """
-    def filter(self):
+    def filter(self, joins):
         key = self.get_xml_attr('key', unicode, None)
         op = self.op_table[self.get_xml_attr('op', unicode, '==')]
         value = self.get_xml_attr('value', unicode, None)
-        joins = []
         query = None
         if key and op and value:
             # Filter using the operator we looked up
@@ -223,11 +222,10 @@ class XmlKeyValue(ElementWrapper):
     """
     Filter based on key_value
     """
-    def filter(self):
+    def filter(self, joins):
         key = self.get_xml_attr('key', unicode, None)
         op = self.op_table[self.get_xml_attr('op', unicode, '==')]
         value = self.get_xml_attr('value', unicode, None)
-        joins = []
         query = None
         try:
             _key = Key.by_name(key)
@@ -239,62 +237,64 @@ class XmlKeyValue(ElementWrapper):
                 table = key_value_int_table
             else:
                 table = key_value_string_table
-            alias = table.alias('key%i' % self.alias['key_value'])
+            alias = table.alias('key_value%i' % self.alias['key_value'])
             self.alias['key_value'] += 1
 
-            # Setup the joins
-            joins = [alias.c.system_id==system_table.c.id]
-
             # Filter using the operator we looked up
-            query = and_(alias.c.key_id==_key.id,
-                         getattr(alias.c.key_value, op)(value))
+            if op == '__ne__':
+                # Setup the joins
+                joins = joins.select_from(system_table.outerjoin(alias,
+                                      onclause=and_(alias.c.key_id==_key.id,
+                                             system_table.c.id==alias.c.system_id,
+                                                    alias.c.key_value==value)
+                                                                )
+                                         )
+                query = alias.c.key_value==None
+            else:
+                # Setup the joins
+                joins = joins.select_from(system_table.outerjoin(alias,
+                                      onclause=and_(alias.c.key_id==_key.id,
+                                             system_table.c.id==alias.c.system_id)
+                                                                )
+                                         )
+                query = getattr(alias.c.key_value, op)(value)
+
         return (joins, query)
 
 class XmlAnd(ElementWrapper):
     """
     Combine sub queries into and_ statements
     """
-    def filter(self):
+    def filter(self, joins):
         queries = []
-        joins = []
         for child in self:
             if callable(getattr(child, 'filter', None)):
-                (join, query) = child.filter()
+                (joins, query) = child.filter(joins)
                 queries.append(query)
-                joins.extend(join)
-        if queries:
-            return (joins, and_(*queries))
-        else:
-            return ([],None)
+        return (joins, and_(*queries))
 
 class XmlOr(ElementWrapper):
     """
     Combine sub queries into or_ statements
     """
-    def filter(self):
+    def filter(self, joins):
         queries = []
-        joins = []
         for child in self:
             if callable(getattr(child, 'filter', None)):
-                (join, query) = child.filter()
+                (joins, query) = child.filter(joins)
                 queries.append(query)
-                joins.extend(join)
-        if queries:
-            return (joins, or_(*queries))
-        else:
-            return ([],None)
+        return (joins, or_(*queries))
 
 class XmlAutoProv(ElementWrapper):
     """
     Verify that a system has the ability to power cycle and is connected to a 
     lab controller
     """
-    def filter(self):
+    def filter(self, joins):
         value = self.get_xml_attr('value', unicode, False)
-        joins = []
         query = None
         if value:
-            joins = [power_table.c.system_id == system_table.c.id]
+            joins = joins.select_from(system_table.join(power_table))
             query = system_table.c.lab_controller_id != None
         return (joins, query)
 
@@ -302,12 +302,11 @@ class XmlHostLabController(ElementWrapper):
     """
     Pick a system from this lab controller
     """
-    def filter(self):
+    def filter(self, joins):
         value = self.get_xml_attr('value', unicode, None)
-        joins = []
         query = None
         if value:
-            joins = [system_table.c.lab_controller_id == lab_controller_table.c.id]
+            joins = joins.select_from(system_table.join(lab_controller_table))
             query = lab_controller_table.c.fqdn == value
         return (joins, query)
 
@@ -315,13 +314,14 @@ class XmlDistroLabController(ElementWrapper):
     """
     Pick a system from this lab controller
     """
-    def filter(self):
+    def filter(self, joins):
         value = self.get_xml_attr('value', unicode, None)
-        joins = []
         query = None
         if value:
-            joins = [distro_table.c.id == lab_controller_distro_map.c.distro_id,
-                     lab_controller_table.c.id == lab_controller_distro_map.c.lab_controller_id]
+            joins = joins.select_from(
+                              distro_table.join(lab_controller_distro_map).\
+                                           join(lab_controller_table)
+                                     )
             query = lab_controller_table.c.fqdn == value
         return (joins, query)
 
@@ -329,12 +329,11 @@ class XmlSystemType(ElementWrapper):
     """
     Pick a system with the correct system type.
     """
-    def filter(self):
+    def filter(self, joins):
         value = self.get_xml_attr('value', unicode, None)
-        joins = []
         query = None
         if value:
-            joins = [system_table.c.type_id == system_type_table.c.id]
+            joins = joins.select_from(system_table.join(system_type_table))
             query = system_type_table.c.type == value
         return (joins, query)
 
@@ -342,10 +341,9 @@ class XmlHostName(ElementWrapper):
     """
     Pick a system wth the correct hostname.
     """
-    def filter(self):
+    def filter(self, joins):
         op = self.op_table[self.get_xml_attr('op', unicode, '==')]
         value = self.get_xml_attr('value', unicode, None)
-        joins = []
         query = None
         if value:
             query = getattr(system_table.c.fqdn, op)(value)
@@ -355,10 +353,9 @@ class XmlMemory(ElementWrapper):
     """
     Pick a system wth the correct amount of memory.
     """
-    def filter(self):
+    def filter(self, joins):
         op = self.op_table[self.get_xml_attr('op', unicode, '==')]
         value = self.get_xml_attr('value', int, None)
-        joins = []
         query = None
         if value:
             query = getattr(system_table.c.memory, op)(value)
@@ -368,13 +365,12 @@ class XmlCpuCount(ElementWrapper):
     """
     Pick a system with the correct amount of processors.
     """
-    def filter(self):
+    def filter(self, joins):
         op = self.op_table[self.get_xml_attr('op', unicode, '==')]
         value = self.get_xml_attr('value', int, None)
-        joins = []
         query = None
         if value:
-            joins = [system_table.c.id == cpu_table.c.system_id]
+            joins = joins.select_from(system_table.join(cpu_table))
             query = getattr(cpu_table.c.processors, op)(value)
         return (joins, query)
 
@@ -382,10 +378,9 @@ class XmlArch(ElementWrapper):
     """
     Pick a system with the correct arch
     """
-    def filter(self):
+    def filter(self, joins):
         op = self.op_table[self.get_xml_attr('op', unicode, '==')]
         value = self.get_xml_attr('value', unicode, None)
-        joins = []
         query = None
         # Only do one combination of Arch+Op
         arch_op = 'arch%s%s' % (value,op)
@@ -403,13 +398,12 @@ class XmlNumaNodeCount(ElementWrapper):
     """
     Pick a system with the correct number of NUMA nodes.
     """
-    def filter(self):
+    def filter(self, joins):
         op = self.op_table[self.get_xml_attr('op', unicode, '==')]
         value = self.get_xml_attr('value', int, None)
-        joins = []
         query = None
         if value:
-            joins = [system_table.c.id == numa_table.c.system_id]
+            joins = joins.select_from(system_table.join(numa_table))
             query = getattr(numa_table.c.nodes, op)(value)
         return (joins, query)
 
