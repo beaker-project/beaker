@@ -1,0 +1,11 @@
+Populate the system_status_duration table
+-----------------------------------------
+
+As apache user, run the population script provided in this directory (expected 
+run time approx. 4 mins):
+
+    su -s /bin/sh -c 'python /usr/share/doc/beaker-server-0.6.8/upgrade_0.6.8_system_status_duration.py' apache
+
+To roll back the creation of this new table, drop it:
+
+    DROP TABLE system_status_duration;

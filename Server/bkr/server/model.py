@@ -11,6 +11,7 @@ from sqlalchemy import (Table, Column, ForeignKey, UniqueConstraint,
                         or_, and_, not_, select, case, func)
 
 from sqlalchemy.orm import relation, backref, synonym, dynamic_loader,query
+from sqlalchemy.orm.interfaces import AttributeExtension
 from sqlalchemy.sql import exists
 from sqlalchemy.sql.expression import join
 from sqlalchemy.exceptions import InvalidRequestError
@@ -760,6 +761,18 @@ reservation_table = Table('reservation', metadata,
         Column('finish_time', DateTime, index=True),
         # type = 'manual' or 'recipe'
         Column('type', Unicode(30), index=True, nullable=False),
+        mysql_engine='InnoDB',
+)
+
+# this only really exists to make reporting efficient
+system_status_duration_table = Table('system_status_duration', metadata,
+        Column('id', Integer, primary_key=True),
+        Column('system_id', Integer, ForeignKey('system.id'), nullable=False),
+        Column('status_id', Integer, ForeignKey('system_status.id'),
+            nullable=False),
+        Column('start_time', DateTime, index=True, nullable=False,
+            default=datetime.utcnow),
+        Column('finish_time', DateTime, index=True),
         mysql_engine='InnoDB',
 )
 
@@ -2490,6 +2503,21 @@ $SNIPPET("rhts_post")
         self.activity.append(activity)
 
     cc = association_proxy('_system_ccs', 'email_address')
+
+class SystemStatusAttributeExtension(AttributeExtension):
+
+    def set(self, obj, child, oldchild, initiator):
+        log.debug('%r status changed from %r to %r', obj, oldchild, child)
+        if child == oldchild:
+            return
+        if oldchild is None:
+            assert not obj.status_durations
+        else:
+            assert obj.status_durations[0].finish_time is None
+            assert obj.status_durations[0].status == oldchild
+            obj.status_durations[0].finish_time = datetime.utcnow()
+        obj.status_durations.insert(0,
+                SystemStatusDuration(system=obj, status=child))
 
 class SystemCc(SystemObject):
 
@@ -5904,13 +5932,16 @@ class TaskBugzilla(MappedObject):
 
 class Reservation(MappedObject): pass
 
+class SystemStatusDuration(MappedObject): pass
+
 # set up mappers between identity tables and classes
 SystemType.mapper = mapper(SystemType, system_type_table)
 SystemStatus.mapper = mapper(SystemStatus, system_status_table)
 mapper(ReleaseAction, release_action_table)
 System.mapper = mapper(System, system_table,
                    properties = {
-                     'status':relation(SystemStatus,uselist=False),
+                     'status':relation(SystemStatus,uselist=False,
+                        attributeext=SystemStatusAttributeExtension()),
                      'devices':relation(Device,
                                         secondary=system_device_map,backref='systems'),
                      'type':relation(SystemType, uselist=False),
@@ -5962,9 +5993,15 @@ System.mapper = mapper(System, system_table,
                      'open_reservation': relation(Reservation, uselist=False, viewonly=True,
                         primaryjoin=and_(system_table.c.id == reservation_table.c.system_id,
                             reservation_table.c.finish_time == None)),
+                     'status_durations': relation(SystemStatusDuration, backref='system',
+                        cascade='all, delete, delete-orphan',
+                        order_by=[system_status_duration_table.c.start_time.desc()]),
                      })
 
 mapper(SystemCc, system_cc_table)
+mapper(SystemStatusDuration, system_status_duration_table, properties={
+        'status': relation(SystemStatus),
+})
 
 Cpu.mapper = mapper(Cpu, cpu_table, properties={
     'flags': relation(CpuFlag, cascade='all, delete, delete-orphan'),

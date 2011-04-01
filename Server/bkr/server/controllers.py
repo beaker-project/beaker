@@ -1295,27 +1295,18 @@ class Root(RPCRoot):
                 flash( _(u"%s already exists!" % kw['fqdn']) )
                 redirect("/")
             system = System(fqdn=kw['fqdn'],owner=identity.current.user)
-# TODO what happens if you log changes here but there is an issue and the actual change to the system fails?
-#      would be good to have the save wait until the system is updated
-# TODO log  group +/-
-        # Fields missing from kw have been set to NULL
-        # We want to store the logged info in a somewhat verbose manner, so if the column is in fact a FK to another table, put it in a fk_log_entry obj
-        status_entry = SystemSaveForm.fk_log_entry(form_field='status_id', mapper_class=SystemStatus, mapper_column_name='status', description='Status')
-        lab_controller_entry = SystemSaveForm.fk_log_entry(form_field='lab_controller_id', mapper_class=LabController, mapper_column_name='fqdn', description='LabController') 
-        type_entry = SystemSaveForm.fk_log_entry(form_field='type_id', mapper_class=SystemType, mapper_column_name='type',description='Type')
 
+        kw['status'] = SystemStatus.by_id(kw['status_id'])
+        if kw['lab_controller_id'] == 0:
+            kw['lab_controller'] = None
+        else:
+            kw['lab_controller'] = LabController.by_id(kw['lab_controller_id'])
+        kw['type'] = SystemType.by_id(kw['type_id'])
 
         log_fields = [ 'fqdn', 'vendor', 'lender', 'model', 'serial', 'location', 
-                       'mac_address', 'status_reason', status_entry,lab_controller_entry,type_entry]
+                       'mac_address', 'status', 'status_reason', 'lab_controller', 'type']
 
         for field in log_fields:
-            if isinstance(field,SystemSaveForm.fk_log_entry): #check if we are a foreign key with mapper object and column name           
-                fk_log_entry_obj = field
-                field = fk_log_entry_obj.form_field
-                mapper_class = fk_log_entry_obj.mapper_class
-                col_name = fk_log_entry_obj.mapper_column_name
-                description = fk_log_entry_obj.description 
-                       
             try:
                 current_val = getattr(system,field)
             except AttributeError:
@@ -1329,37 +1320,13 @@ class Root(RPCRoot):
                 field_change_handler = getattr(SystemSaveForm.handler,function_name,None)
                 if field_change_handler is not None:
                     kw = field_change_handler(current_val,new_val,**kw)
-
-                #The following try/except block trys to set the actual old/new values for the fields we are changing
-                # It tests for current and new values that are 'None' (i.e Changing from a valid lab controller to no lab controller)
-                # Except will trigger if the mapper_class has not been declared (i.e we are not a tuple), or if our mapper_column_name was invalid
-                # and will log a warning msg
-                try:
-                    if current_val: 
-                        current_sqla_obj = mapper_class.by_id(current_val)
-                        current_val = getattr(current_sqla_obj,col_name)
-                    if new_val: 
-                        new_sqla_obj = mapper_class.by_id(new_val)
-                        new_val = getattr(new_sqla_obj,col_name)
-
-                    field = description
-                except AttributeError,e:
-                    log.error(e)
-                    warn_msg =  "There was a problem logging the new value for %s" % (description)          
-                    try:
-                        unloggable_warn += "\n%s" % warn_msg
-                    except UnboundLocalError,e:
-                        unloggable_warn = warn_msg
-                    continue
-                except UnboundLocalError, e: pass # We probably weren't a fk_log_entry object
-                   
-                
+                if current_val:
+                    current_val = unicode(current_val)
+                if new_val:
+                    new_val = unicode(new_val)
                 activity = SystemActivity(identity.current.user, u'WEBUI', u'Changed', unicode(field), current_val, new_val)
                 system.activity.append(activity)
         
-        try: 
-            flash(unloggable_warn)
-        except UnboundLocalError,e: pass
         # We only want admins to be able to share systems to everyone.
         shared = kw.get('shared',False)
         if shared != system.shared:
@@ -1383,10 +1350,10 @@ class Root(RPCRoot):
             if current_val != new_val:
                 activity = SystemActivity(identity.current.user, u'WEBUI', u'Changed', unicode(field), current_val, new_val )
                 system.activity.append(activity)
-        system.status_id=kw['status_id']
+        system.status = kw['status']
         system.location=kw['location']
         system.model=kw['model']
-        system.type_id=kw['type_id']
+        system.type = kw['type']
         system.serial=kw['serial']
         system.vendor=kw['vendor']
         system.lender=kw['lender']
@@ -1401,10 +1368,7 @@ class Root(RPCRoot):
             system.private=False
 
         # Change Lab Controller
-        if kw['lab_controller_id'] == 0:
-            system.lab_controller_id = None
-        else:
-            system.lab_controller_id = kw['lab_controller_id']
+        system.lab_controller = kw['lab_controller']
         system.mac_address=kw['mac_address']
 
         # We can't compute a new checksum, so let's just clear it so that it 
