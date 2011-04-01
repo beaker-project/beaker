@@ -5,7 +5,8 @@ from bkr.server.model import TaskStatus, Job, System, User
 import sqlalchemy.orm
 from turbogears.database import session
 from bkr.server.test import data_setup
-from bkr.server.test.assertions import assert_datetime_within
+from bkr.server.test.assertions import assert_datetime_within, \
+        assert_durations_not_overlapping
 from bkr.server.tools import beakerd
 import threading
 
@@ -86,3 +87,4 @@ class TestBeakerd(unittest.TestCase):
                 tolerance=datetime.timedelta(seconds=60),
                 reference=datetime.datetime.utcnow())
         self.assert_(system.reservations[0].finish_time is None)
+        assert_durations_not_overlapping(system.reservations)
