@@ -1754,8 +1754,8 @@ url --url=$tree
         return cls._available(user, systems=systems)
 
     @classmethod
-    def available_order(cls, user):
-        return cls.available_for_schedule(user).order_by(case([(System.owner==user, 1),
+    def available_order(cls, user, systems=None):
+        return cls.available_for_schedule(user,systems=systems).order_by(case([(System.owner==user, 1),
                           (System.owner!=user and Group.systems==None, 2)],
                               else_=3))
 
@@ -3016,12 +3016,14 @@ class Distro(MappedObject):
         #FIXME Should validate XML before proceeding.
         # Join on lab_controller_assocs or we may get a distro that is not on any 
         # lab controller anymore.
-        distros = Distro.query().join('lab_controller_assocs')
+        distros_table = distro_table
         queries = []
         for child in ElementWrapper(xmltramp.parse(filter)):
             if callable(getattr(child, 'filter', None)):
-                (distros, query) = child.filter(distros)
+                (distros_table, query) = child.filter(distros_table)
                 queries.append(query)
+        distros = Distro.query().select_from(distros_table)\
+                        .join('lab_controller_assocs')
         if queries:
             distros = distros.filter(and_(*queries))
         return distros.order_by('-date_created')
@@ -3077,15 +3079,17 @@ class Distro(MappedObject):
         """
         from needpropertyxml import ElementWrapper
         import xmltramp
-        systems = self.all_systems(user, join)
+        systems_table = system_table
         #FIXME Should validate XML before processing.
         queries = []
         for child in ElementWrapper(xmltramp.parse(filter)):
             if callable(getattr(child, 'filter', None)):
-                (systems, query) = child.filter(systems)
+                (systems_table, query) = child.filter(systems_table)
                 queries.append(query)
+        systems = System.query().select_from(systems_table)
         if queries:
             systems = systems.filter(and_(*queries))
+        systems = self.all_systems(user, join, systems)
         return systems
 
     def tasks(self):
@@ -3227,15 +3231,15 @@ class Distro(MappedObject):
         return self.all_systems(user, join=['lab_controller','_distros','distro']).filter( \
                     Distro.install_name==self.install_name)
 
-    def all_systems(self, user=None, join=['lab_controller']):
+    def all_systems(self, user=None, join=['lab_controller'], systems=None):
         """
         List of systems that support this distro
         Will return all possible systems even if the distro is not on the lab controller yet.
         Limit to what is available to user if user passed in.
         """
         if user:
-            systems = System.available_order(user)
-        else:
+            systems = System.available_order(user, systems=systems)
+        elif not systems:
             systems = System.query()
         
         return systems.join(join).filter(
