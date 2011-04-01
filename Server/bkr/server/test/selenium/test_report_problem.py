@@ -42,6 +42,14 @@ class TestReportProblem(SeleniumTestCase):
                 email_address=u'picard@starfleet.gov')
         system = data_setup.create_system(fqdn=u'ncc1701d',
                 owner=system_owner)
+        lc = data_setup.create_labcontroller('testing_for_mail')
+        system.lab_controller = lc
+        lender = 'amd'
+        location = 'bne'
+        vendor = 'intel' 
+        system.lender = lender
+        system.location = location
+        system.vendor = vendor
         problem_reporter = data_setup.create_user(password=u'password',
                 display_name=u'Beverley Crusher',
                 email_address=u'crusher@starfleet.gov')
@@ -69,7 +77,13 @@ class TestReportProblem(SeleniumTestCase):
         self.assertEqual(msg['To'], 'picard@starfleet.gov')
         self.assertEqual(msg['Subject'], 'Problem reported for ncc1701d')
         self.assertEqual(msg['X-Beaker-Notification'], 'system-problem')
-        self.assertEqual(msg['X-Beaker-System'], 'ncc1701d')
+        self.assertEqual(msg['X-Lender'], system.lender)
+        self.assertEqual(msg['X-Owner'], system.owner.user_name)
+        self.assertEqual(msg['X-Location'], system.location)
+        self.assertEqual(msg['X-Lab-Controller'], system.lab_controller.fqdn)
+        self.assertEqual(msg['X-Vendor'], system.vendor)
+        self.assertEqual(msg['X-Type'], system.type.type)
+        self.assertEqual(msg['X-Arch'], system.arch.pop().arch)
         self.assertEqual(msg.get_payload(decode=True),
                 'A Beaker user has reported a problem with system \n'
                 'ncc1701d <%sview/ncc1701d>.\n\n'
