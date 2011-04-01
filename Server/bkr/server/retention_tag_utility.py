@@ -6,9 +6,9 @@ class RetentionTagUtility:
     """
     @classmethod
     def save_tag(cls, **kw):
+        tag = kw.get('tag')  
         is_default = bool(int(kw.get('default')))
-        tag = kw.get('tag') 
-        new_tag = RetentionTag(is_default,tag)
+        new_tag = RetentionTag(tag, is_default)
         return new_tag
 
     @classmethod

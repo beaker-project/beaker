@@ -203,6 +203,12 @@ def create_recipe(system=None, distro=None, task_list=None,
         recipe.tasks.append(RecipeTask(task=create_task(name=task_name)))
     return recipe
 
+def create_retention_tag(name=None, default=False, needs_product=False):
+    if name is None:
+        name = u'tag%s'  % int(time.time() * 1000)
+    new_tag = RetentionTag(name,is_default=default,needs_product=needs_product)
+    return new_tag
+
 def create_job_for_recipes(recipes, owner=None, whiteboard=None, cc=None,product=None,
         retention_tag=None):
     if retention_tag is None:
