@@ -27,6 +27,9 @@ import csv
 from cStringIO import StringIO
 import string
 import pkg_resources
+import logging
+
+log = logging.getLogger(__name__)
 
 def datetime_range(start, stop, step):
     dt = start
