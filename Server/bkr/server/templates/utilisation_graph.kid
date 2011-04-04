@@ -22,6 +22,9 @@
             height: 100%;
             vertical-align: middle;
         }
+        #graph-control fieldset {
+            display: inline;
+        }
         #graph-control span {
             padding-right: 1em;
         }
@@ -163,7 +166,8 @@
 <body class="flora">
 <h1>Utilisation graph</h1>
 <form id="graph-control" action="#">
-<p>
+<fieldset>
+    <legend>Graph options</legend>
     <span>
         <label for="arch_id">Arch:</label>
         <select id="arch_id" name="arch_id">
@@ -175,20 +179,19 @@
         <label for="shared_no_groups">Only shared systems with no groups</label>
     </span>
     <span><input type="submit" value="Update graph options" /></span>
-</p>
+</fieldset>
 </form>
+<p>Drag a region on the graph or on the timeline to zoom.
+You can <a class="csv-download">download this data as CSV</a>.</p>
 <div id="graph-legend" />
 <div id="graph" style="width: 1000px; height: 300px;"/>
 <div id="overview-graph" style="width: 800px; height: 75px; margin: 1em 100px 0 100px;"/>
-<p><a class="csv-download">Download this data as CSV</a></p>
 
 <div class="about">
 <h2>About this report</h2>
-<p>This graph shows historical data about the number of systems recorded in 
-Beaker and how they are being used. The y-axis represents the count of systems, 
-the x-axis represents time. Drag on the graph to select a time period to zoom in 
-on.</p>
-<p>The data series on the graph are defined as follows:</p>
+<p>This graph shows historical data about the number of systems in Beaker and 
+how they are being used. The data series on the graph are defined as 
+follows:</p>
 <dl>
     <dt>manual</dt>
     <dd>Systems which are manually reserved (by using "Take" in the web UI)</dd>
