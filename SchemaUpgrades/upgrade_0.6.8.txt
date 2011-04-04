@@ -19,3 +19,19 @@ If /etc/httpd/conf.d/beaker-server.conf contains such a directive:
     ErrorDocument 401 /static/errors/unauthorized.html
 
 remove it, as that file does not exist and is not needed.
+
+
+Add expire_days to retention_tags
+---------------------------------
+On beaker database run:
+    ALTER TABLE retention_tag ADD COLUMN (`expire_in_days` int(8) default 0);
+    UPDATE retention_tag SET expire_in_days = 120 WHERE id = (SELECT id FROM beaker_tag WHERE tag = '120days');
+    UPDATE retention_tag SET expire_in_days = 60 WHERE id = (SELECT id FROM beaker_tag WHERE tag = '60days');
+    UPDATE retention_tag SET expire_in_days = 30 WHERE id = (SELECT id FROM beaker_tag WHERE tag = 'scratch');
+
+To Roll back:
+
+    ALTER TABLE retention_tag DROP COLUMN expire_in_days;
+
+
+

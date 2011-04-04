@@ -4142,6 +4142,7 @@ class RetentionTag(BeakerTag):
 
     def __init__(self, tag, is_default=False, needs_product=False, *args, **kw):
         self.set_default_val(is_default)
+        self.needs_product = needs_product
         super(RetentionTag, self).__init__(tag, **kw)
 
     @classmethod
