@@ -23,6 +23,11 @@
         #graph-control span {
             padding-right: 1em;
         }
+        #graph-legend {
+            width: 10em;
+            position: absolute;
+            left: 1050px; /* XXX actually 1000px + 1.5em + padding */
+        }
 
         .about {
             max-width: 40em;
@@ -35,7 +40,8 @@
         }
     </style>
     <script type="text/javascript">
-        function UtilisationGraph(graph_div, overview_div, control_form) {
+        function UtilisationGraph(legend_div, graph_div, overview_div, control_form) {
+            this.legend_div = legend_div;
             this.graph_div = graph_div;
             this.overview_div = overview_div;
             this.control_form = control_form;
@@ -127,7 +133,8 @@
                      {data: result['idle_automated'], label: 'idle (automated)', lines: {show: true, fill: true}}],
                     {xaxis: {mode: 'time'},
                      series: {stack: true},
-                     selection: {mode: 'x'}});
+                     selection: {mode: 'x'},
+                     legend: {container: this.legend_div}});
         };
         UtilisationGraph.prototype._draw_overview = function (result) {
             $(this.overview_div).removeClass('loading-message');
@@ -142,7 +149,8 @@
                         {from: this.selection_start, to: this.selection_end}}, true);
         };
         $(function () {
-            graph = new UtilisationGraph($('#graph').get(0),
+            graph = new UtilisationGraph($('#graph-legend').get(0),
+                    $('#graph').get(0),
                     $('#overview-graph').get(0),
                     $('#graph-control').get(0));
         });
@@ -166,6 +174,7 @@
     <span><input type="submit" value="Update graph options" /></span>
 </p>
 </form>
+<div id="graph-legend" />
 <div id="graph" style="width: 1000px; height: 300px;"/>
 <div id="overview-graph" style="width: 800px; height: 75px; margin: 1em 100px 0 100px;"/>
 <p><a class="csv-download">Download this data as CSV</a></p>
