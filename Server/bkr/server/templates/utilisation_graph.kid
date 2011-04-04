@@ -8,6 +8,8 @@
     <script type="text/javascript" src="${tg.url('/static/javascript/jquery.flot-r323.js')}"></script>
     <script type="text/javascript" src="${tg.url('/static/javascript/jquery.flot-r323.stack.js')}"></script>
     <script type="text/javascript" src="${tg.url('/static/javascript/jquery.flot-r323.selection.js')}"></script>
+    <!-- until flot gains axis label support: http://code.google.com/p/flot/issues/detail?id=42 -->
+    <script type="text/javascript" src="${tg.url('/static/javascript/jquery.flot.axislabels-git.5ab8185b.js')}"></script>
     <style type="text/css">
         div#fedora-content {
             padding: 0 1.5em 1.5em 1.5em;
@@ -132,6 +134,7 @@
                      {data: result['idle_manual'], label: 'idle (manual)', lines: {show: true, fill: true}},
                      {data: result['idle_automated'], label: 'idle (automated)', lines: {show: true, fill: true}}],
                     {xaxis: {mode: 'time'},
+                     yaxis: {axisLabel: 'Number of systems'},
                      series: {stack: true},
                      selection: {mode: 'x'},
                      legend: {container: this.legend_div}});
