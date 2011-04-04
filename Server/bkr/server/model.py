@@ -519,6 +519,7 @@ beaker_tag_table = Table('beaker_tag', metadata,
     Column('id', Integer, primary_key=True, nullable = False),
     Column('tag', Unicode(20), primary_key=True, nullable = False),
     Column('type', Unicode(40), nullable=False),
+    UniqueConstraint('tag', 'type'),
     mysql_engine='InnoDB',
 )
 
@@ -4121,6 +4122,9 @@ class BeakerTag(object):
     def __init__(self, tag, *args, **kw):
         self.tag = tag
 
+    def can_delete(self):
+        raise NotImplementedError("Please implement 'can_delete'  on %s" % self.__class__.__name__)
+
     @classmethod
     def by_id(cls, id, *args, **kw):
         return cls.query().filter(cls.id==id).one()
@@ -4137,14 +4141,19 @@ class BeakerTag(object):
 class RetentionTag(BeakerTag):
 
     def __init__(self, tag, is_default=False, needs_product=False, *args, **kw):
-        self.needs_product = needs_product
         self.set_default_val(is_default)
         super(RetentionTag, self).__init__(tag, **kw)
-        session.flush()
 
     @classmethod
     def by_name(cls,tag):
         return cls.query().filter_by(tag=tag).one()
+
+    def can_delete(self):
+        if self.is_default:
+            return False
+        # At the moment only jobs use this tag, update this if that ever changes
+        # Only remove tags that haven't been used
+        return not bool(Job.query().filter(Job.retention_tag == self).count())
 
     def requires_product(self):
         return self.needs_product
