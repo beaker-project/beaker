@@ -137,7 +137,7 @@
                      {data: result['idle_manual'], label: 'idle (manual)', lines: {show: true, fill: true}},
                      {data: result['idle_automated'], label: 'idle (automated)', lines: {show: true, fill: true}}],
                     {xaxis: {mode: 'time'},
-                     yaxis: {axisLabel: 'Number of systems'},
+                     yaxis: {axisLabel: 'Systems'},
                      series: {stack: true},
                      selection: {mode: 'x'},
                      legend: {container: this.legend_div}});
@@ -147,7 +147,7 @@
             this.overview_plot = $.plot(this.overview_div,
                     [{data: result['cum_freqs']}],
                     {xaxis: {mode: 'time'},
-                     yaxis: {ticks: []},
+                     yaxis: {ticks: [], axisLabel: 'Systems'},
                      series: {lines: {show: true, lineWidth: 1}, shadowSize: 0},
                      selection: {mode: 'x'}});
             if (this.selection_start &amp;&amp; this.selection_end)
