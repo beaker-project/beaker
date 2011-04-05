@@ -34,4 +34,13 @@ To Roll back:
     ALTER TABLE retention_tag DROP COLUMN expire_in_days;
 
 
+Configure reports_engine
+------------------------
 
+Add the following lines to /etc/beaker/server.cfg, and configure as desired:
+
+    # If you want to send read-only report queries to a separate slave 
+    # database, configure it here. If not configured, report queries will 
+    # fall back to using the main Beaker database (above).
+    #reports_engine.dburi = 'mysql://beaker_ro:beaker_ro@dbslave/beaker'
+    #reports_engine.pool_recycle = 3600
