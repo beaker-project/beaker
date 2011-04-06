@@ -44,3 +44,14 @@ Add the following lines to /etc/beaker/server.cfg, and configure as desired:
     # fall back to using the main Beaker database (above).
     #reports_engine.dburi = 'mysql://beaker_ro:beaker_ro@dbslave/beaker'
     #reports_engine.pool_recycle = 3600
+
+
+Re-populate reservation table
+-----------------------------
+
+If you upgraded from an older version of Beaker to 0.6.7 prior to 2011-04-07, 
+repeat the instructions given under "Populate the reservation table" in 
+upgrade_0.6.7.txt. (Issue TRUNCATE TABLE reservation; before re-populating 
+it.)
+
+The upgrade notes for 0.6.7 contained an error which was corrected on 2011-04-07.
