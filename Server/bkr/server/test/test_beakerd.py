@@ -59,6 +59,26 @@ class TestBeakerd(unittest.TestCase):
         session.clear()
         self._check_job_status(jobs, u'Queued')
 
+
+    def test_loaned_machine_can_be_scheduled(self):
+        user = data_setup.create_user()
+        lc = data_setup.create_labcontroller()
+        distro = data_setup.create_distro()
+        system = data_setup.create_system(status=u'Automated', shared=True)
+        system.lab_controller = lc
+        # System has groups, which the user is not a member of, but is loaned to the user
+        system.loaned = user
+        data_setup.add_group_to_system(system, data_setup.create_group())
+        job = data_setup.create_job(owner=user, distro=distro)
+        job.recipesets[0].recipes[0]._host_requires = (
+                '<hostRequires><hostname op="=" value="%s"/></hostRequires>'
+                % system.fqdn)
+        session.flush()
+        session.clear()
+        beakerd.new_recipes()
+        job = Job.query().get(job.id)
+        self.assertEqual(job.status, TaskStatus.by_name(u'Processed'))
+
     def test_reservations_are_created(self):
         data_setup.create_task(name=u'/distribution/install')
         user = data_setup.create_user()
