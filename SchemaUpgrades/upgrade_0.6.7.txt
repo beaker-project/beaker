@@ -33,7 +33,7 @@ historical data using this SQL statement (expected run time approx. 15 mins):
     FROM activity outer_activity
     INNER JOIN system_activity outer_system_activity ON outer_activity.id = outer_system_activity.id
     WHERE action = 'Reserved'
-    GROUP BY start_time;
+    GROUP BY system_id, start_time;
 
     To roll back:
     DROP TABLE reservation;
