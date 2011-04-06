@@ -3,7 +3,7 @@
 
 Name:           beaker
 Version:        0.6.8
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -247,6 +247,10 @@ fi
 %{_var}/lib/beaker/addDistro.d/*
 
 %changelog
+* Wed Apr 06 2011 Dan Callaghan <dcallagh@redhat.com> 0.6.8-2
+- bz693869 - fix up 0.6.7 reservation table population script
+  (dcallagh@redhat.com)
+
 * Wed Apr 06 2011 Raymond Mancy <rmancy@redhat.com> 0.6.8-1
 - 680497 Graph machine usage over time (utilisation graphs) (dcallagh@redhat.com)
 - 651199 remove unneeded ErrorDocument directive from Apache config
