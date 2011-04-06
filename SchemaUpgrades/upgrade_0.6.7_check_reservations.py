@@ -6,6 +6,8 @@ from bkr.server.util import load_config
 from bkr.server.model import System
 
 def check_reservations(system):
+    if system.user is not None:
+        assert system.reservations[0].finish_time is None
     if not system.reservations: return
     prev = system.reservations[0]
     if prev.finish_time:
