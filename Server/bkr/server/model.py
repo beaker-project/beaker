@@ -2713,6 +2713,20 @@ class OSMajor(MappedObject):
     def get_all(cls):
         return [(0,"All")] + [(major.id, major.osmajor) for major in cls.query()]
 
+    def tasks(self):
+        """
+        List of tasks that support this OSMajor
+        """
+        return Task.query().filter(
+                not_(
+                     Task.id.in_(select([task_table.c.id]).
+                 where(task_table.c.id==task_exclude_osmajor_table.c.task_id).
+                 where(task_exclude_osmajor_table.c.osmajor_id==osmajor_table.c.id).
+                 where(osmajor_table.c.id==self.id)
+                                ),
+                    )
+        )
+
     def __repr__(self):
         return '%s' % self.osmajor
 

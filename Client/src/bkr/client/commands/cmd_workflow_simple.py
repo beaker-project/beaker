@@ -29,7 +29,7 @@ class Workflow_Simple(BeakerWorkflow):
         wait = kwargs.get("wait", False)
 	family = kwargs.get("family", None)
 	distro = kwargs.get("distro", None)
-	arches = kwargs.get("arch", [])
+	arches = kwargs.get("arches", [])
 	taskParams = kwargs.get("taskparam", [])
 
         if not family and not distro:
@@ -67,18 +67,24 @@ class Workflow_Simple(BeakerWorkflow):
                                                              requestedTasks,
                                                              taskParams=taskParams,
                                                              distroRequires=arch_node, 
-                                                             role='SERVERS', **kwargs))
+                                                             role='SERVERS',
+                                                             arch=arch,
+                                                             **kwargs))
                 for i in range(self.n_clients):
                     recipeSet.addRecipe(self.processTemplate(recipeTemplate, 
                                                              requestedTasks,
                                                              taskParams=taskParams,
                                                              distroRequires=arch_node, 
-                                                             role='CLIENTS', **kwargs))
+                                                             role='CLIENTS',
+                                                             arch=arch,
+                                                             **kwargs))
             else:
                 recipeSet.addRecipe(self.processTemplate(recipeTemplate,
                                                          requestedTasks,
                                                          taskParams=taskParams,
-                                                         distroRequires=arch_node, **kwargs))
+                                                         distroRequires=arch_node,
+                                                         arch=arch,
+                                                         **kwargs))
             job.addRecipeSet(recipeSet)
 
         # jobxml

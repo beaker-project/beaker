@@ -70,8 +70,8 @@ class Machine_Test(BeakerWorkflow):
         job = BeakerJob(*args, **kwargs)
 
         for family in families:
-            if kwargs['arch']:
-                arches = set(kwargs['arch']).intersection(set(self.getArches(family=family)))
+            if kwargs['arches']:
+                arches = set(kwargs['arches']).intersection(set(self.getArches(family=family)))
             else:
                arches = self.getArches(family=family)
             for arch in arches:
