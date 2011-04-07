@@ -3,7 +3,7 @@
 
 Name:           beaker
 Version:        0.6.8
-Release:        2%{?dist}
+Release:        3%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -247,6 +247,9 @@ fi
 %{_var}/lib/beaker/addDistro.d/*
 
 %changelog
+* Thu Apr 07 2011 Raymond Mancy <rmancy@redhat.com> 0.6.8-3
+- 694352 empty <and/> causes sqlachemy to produce invalid SQL (dcallagh@redhat.com)
+
 * Wed Apr 06 2011 Dan Callaghan <dcallagh@redhat.com> 0.6.8-2
 - bz693869 - fix up 0.6.7 reservation table population script
   (dcallagh@redhat.com)

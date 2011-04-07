@@ -88,7 +88,7 @@ class TestBeakerd(unittest.TestCase):
         system.lab_controller = lc
         job = data_setup.create_job(owner=user, distro=distro)
         job.recipesets[0].recipes[0]._host_requires = (
-                '<hostRequires><hostname op="=" value="%s"/></hostRequires>'
+                '<hostRequires><and><hostname op="=" value="%s"/></and></hostRequires>'
                 % system.fqdn)
         session.flush()
         session.clear()
@@ -108,3 +108,18 @@ class TestBeakerd(unittest.TestCase):
                 reference=datetime.datetime.utcnow())
         self.assert_(system.reservations[0].finish_time is None)
         assert_durations_not_overlapping(system.reservations)
+
+    def test_empty_and_element(self):
+        data_setup.create_task(name=u'/distribution/install')
+        user = data_setup.create_user()
+        distro = data_setup.create_distro()
+        job = data_setup.create_job(owner=user, distro=distro)
+        job.recipesets[0].recipes[0]._host_requires = (
+                '<hostRequires><and></and></hostRequires>')
+        session.flush()
+        session.clear()
+
+        beakerd.new_recipes()
+
+        job = Job.query().get(job.id)
+        self.assertEqual(job.status, TaskStatus.by_name(u'Processed'))
