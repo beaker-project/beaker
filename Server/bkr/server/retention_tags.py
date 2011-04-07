@@ -17,10 +17,11 @@ class RetentionTag(AdminPage):
     tag = widgets.TextField(name='tag', label=_(u'Tag'))
     default = widgets.SingleSelectField(name='default', label=(u'Default'), options=[(0,'False'),(1,'True')])
     id = widgets.HiddenField(name='id') 
+    needs_product = widgets.CheckBox('needs_product', label=u'Needs Product')
 
     tag_form = widgets.TableForm(
         'Retention Tag',
-        fields = [tag, default,id],
+        fields = [tag, default, needs_product, id],
         action = 'save_data',
         submit_text = _(u'Save'),
     )

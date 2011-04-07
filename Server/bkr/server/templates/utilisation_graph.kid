@@ -8,6 +8,8 @@
     <script type="text/javascript" src="${tg.url('/static/javascript/jquery.flot-r323.js')}"></script>
     <script type="text/javascript" src="${tg.url('/static/javascript/jquery.flot-r323.stack.js')}"></script>
     <script type="text/javascript" src="${tg.url('/static/javascript/jquery.flot-r323.selection.js')}"></script>
+    <!-- until flot gains axis label support: http://code.google.com/p/flot/issues/detail?id=42 -->
+    <script type="text/javascript" src="${tg.url('/static/javascript/jquery.flot.axislabels-git.5ab8185b.js')}"></script>
     <style type="text/css">
         div#fedora-content {
             padding: 0 1.5em 1.5em 1.5em;
@@ -20,8 +22,16 @@
             height: 100%;
             vertical-align: middle;
         }
+        #graph-control fieldset {
+            display: inline;
+        }
         #graph-control span {
             padding-right: 1em;
+        }
+        #graph-legend {
+            width: 10em;
+            position: absolute;
+            left: 1050px; /* XXX actually 1000px + 1.5em + padding */
         }
 
         .about {
@@ -35,7 +45,8 @@
         }
     </style>
     <script type="text/javascript">
-        function UtilisationGraph(graph_div, overview_div, control_form) {
+        function UtilisationGraph(legend_div, graph_div, overview_div, control_form) {
+            this.legend_div = legend_div;
             this.graph_div = graph_div;
             this.overview_div = overview_div;
             this.control_form = control_form;
@@ -126,15 +137,17 @@
                      {data: result['idle_manual'], label: 'idle (manual)', lines: {show: true, fill: true}},
                      {data: result['idle_automated'], label: 'idle (automated)', lines: {show: true, fill: true}}],
                     {xaxis: {mode: 'time'},
+                     yaxis: {axisLabel: 'Systems'},
                      series: {stack: true},
-                     selection: {mode: 'x'}});
+                     selection: {mode: 'x'},
+                     legend: {container: this.legend_div}});
         };
         UtilisationGraph.prototype._draw_overview = function (result) {
             $(this.overview_div).removeClass('loading-message');
             this.overview_plot = $.plot(this.overview_div,
                     [{data: result['cum_freqs']}],
                     {xaxis: {mode: 'time'},
-                     yaxis: {ticks: []},
+                     yaxis: {ticks: [], axisLabel: 'Systems'},
                      series: {lines: {show: true, lineWidth: 1}, shadowSize: 0},
                      selection: {mode: 'x'}});
             if (this.selection_start &amp;&amp; this.selection_end)
@@ -142,7 +155,8 @@
                         {from: this.selection_start, to: this.selection_end}}, true);
         };
         $(function () {
-            graph = new UtilisationGraph($('#graph').get(0),
+            graph = new UtilisationGraph($('#graph-legend').get(0),
+                    $('#graph').get(0),
                     $('#overview-graph').get(0),
                     $('#graph-control').get(0));
         });
@@ -152,7 +166,8 @@
 <body class="flora">
 <h1>Utilisation graph</h1>
 <form id="graph-control" action="#">
-<p>
+<fieldset>
+    <legend>Graph options</legend>
     <span>
         <label for="arch_id">Arch:</label>
         <select id="arch_id" name="arch_id">
@@ -164,19 +179,19 @@
         <label for="shared_no_groups">Only shared systems with no groups</label>
     </span>
     <span><input type="submit" value="Update graph options" /></span>
-</p>
+</fieldset>
 </form>
+<p>Drag a region on the graph or on the timeline to zoom.
+You can <a class="csv-download">download this data as CSV</a>.</p>
+<div id="graph-legend" />
 <div id="graph" style="width: 1000px; height: 300px;"/>
 <div id="overview-graph" style="width: 800px; height: 75px; margin: 1em 100px 0 100px;"/>
-<p><a class="csv-download">Download this data as CSV</a></p>
 
 <div class="about">
 <h2>About this report</h2>
-<p>This graph shows historical data about the number of systems recorded in 
-Beaker and how they are being used. The y-axis represents the count of systems, 
-the x-axis represents time. Drag on the graph to select a time period to zoom in 
-on.</p>
-<p>The data series on the graph are defined as follows:</p>
+<p>This graph shows historical data about the number of systems in Beaker and 
+how they are being used. The data series on the graph are defined as 
+follows:</p>
 <dl>
     <dt>manual</dt>
     <dd>Systems which are manually reserved (by using "Take" in the web UI)</dd>

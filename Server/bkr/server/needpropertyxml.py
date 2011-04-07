@@ -243,20 +243,18 @@ class XmlKeyValue(ElementWrapper):
             # Filter using the operator we looked up
             if op == '__ne__':
                 # Setup the joins
-                joins = joins.select_from(system_table.outerjoin(alias,
+                joins = joins.outerjoin(alias,
                                       onclause=and_(alias.c.key_id==_key.id,
                                              system_table.c.id==alias.c.system_id,
                                                     alias.c.key_value==value)
-                                                                )
-                                         )
+                                       )
                 query = alias.c.key_value==None
             else:
                 # Setup the joins
-                joins = joins.select_from(system_table.outerjoin(alias,
+                joins = joins.outerjoin(alias,
                                       onclause=and_(alias.c.key_id==_key.id,
                                              system_table.c.id==alias.c.system_id)
-                                                                )
-                                         )
+                                       )
                 query = getattr(alias.c.key_value, op)(value)
 
         return (joins, query)
@@ -271,6 +269,8 @@ class XmlAnd(ElementWrapper):
             if callable(getattr(child, 'filter', None)):
                 (joins, query) = child.filter(joins)
                 queries.append(query)
+        if not queries:
+            return (joins, None)
         return (joins, and_(*queries))
 
 class XmlOr(ElementWrapper):
@@ -283,6 +283,8 @@ class XmlOr(ElementWrapper):
             if callable(getattr(child, 'filter', None)):
                 (joins, query) = child.filter(joins)
                 queries.append(query)
+        if not queries:
+            return (joins, None)
         return (joins, or_(*queries))
 
 class XmlAutoProv(ElementWrapper):
@@ -294,7 +296,8 @@ class XmlAutoProv(ElementWrapper):
         value = self.get_xml_attr('value', unicode, False)
         query = None
         if value:
-            joins = joins.select_from(system_table.join(power_table))
+            if not joins.is_derived_from(power_table):
+                joins = joins.join(power_table)
             query = system_table.c.lab_controller_id != None
         return (joins, query)
 
@@ -306,7 +309,8 @@ class XmlHostLabController(ElementWrapper):
         value = self.get_xml_attr('value', unicode, None)
         query = None
         if value:
-            joins = joins.select_from(system_table.join(lab_controller_table))
+            if not joins.is_derived_from(lab_controller_table):
+                joins = joins.join(lab_controller_table)
             query = lab_controller_table.c.fqdn == value
         return (joins, query)
 
@@ -318,10 +322,9 @@ class XmlDistroLabController(ElementWrapper):
         value = self.get_xml_attr('value', unicode, None)
         query = None
         if value:
-            joins = joins.select_from(
-                              distro_table.join(lab_controller_distro_map).\
-                                           join(lab_controller_table)
-                                     )
+            if not joins.is_derived_from(lab_controller_table):
+                joins = joins.join(lab_controller_distro_map).\
+                              join(lab_controller_table)
             query = lab_controller_table.c.fqdn == value
         return (joins, query)
 
@@ -333,7 +336,8 @@ class XmlSystemType(ElementWrapper):
         value = self.get_xml_attr('value', unicode, None)
         query = None
         if value:
-            joins = joins.select_from(system_table.join(system_type_table))
+            if not joins.is_derived_from(system_type_table):
+                joins = joins.join(system_type_table)
             query = system_type_table.c.type == value
         return (joins, query)
 
@@ -370,7 +374,8 @@ class XmlCpuCount(ElementWrapper):
         value = self.get_xml_attr('value', int, None)
         query = None
         if value:
-            joins = joins.select_from(system_table.join(cpu_table))
+            if not joins.is_derived_from(cpu_table):
+                joins = joins.join(cpu_table)
             query = getattr(cpu_table.c.processors, op)(value)
         return (joins, query)
 
@@ -403,7 +408,8 @@ class XmlNumaNodeCount(ElementWrapper):
         value = self.get_xml_attr('value', int, None)
         query = None
         if value:
-            joins = joins.select_from(system_table.join(numa_table))
+            if not joins.is_derived_from(numa_table):
+                joins = joins.join(numa_table)
             query = getattr(numa_table.c.nodes, op)(value)
         return (joins, query)
 

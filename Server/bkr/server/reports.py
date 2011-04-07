@@ -1,12 +1,14 @@
 import datetime
-from turbogears.database import session
-from turbogears import controllers, expose, flash, widgets, validate, error_handler, validators, redirect, paginate, url
+from turbogears.database import session, get_engine
+from turbogears import controllers, expose, flash, widgets, validate, \
+        error_handler, validators, redirect, paginate, url, config
 from turbogears.widgets import AutoCompleteField
 from turbogears import identity, redirect
 from cherrypy import request, response
 from tg_expanding_form_widget.tg_expanding_form_widget import ExpandingForm
 from sqlalchemy.sql import func, and_, or_, not_, select
-from sqlalchemy.orm import contains_eager
+from sqlalchemy.orm import create_session, contains_eager
+from sqlalchemy import create_engine
 from kid import Element
 from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.helpers import *
@@ -27,6 +29,27 @@ import csv
 from cStringIO import StringIO
 import string
 import pkg_resources
+import logging
+
+log = logging.getLogger(__name__)
+
+_reports_engine = None
+def get_reports_engine():
+    global _reports_engine
+    if config.get('reports_engine.dburi'):
+        if not _reports_engine:
+            # same logic as in turbogears.database.get_engine
+            engine_args = dict()
+            for k, v in config.config.configMap['global'].iteritems():
+                if k.startswith('reports_engine.'):
+                    engine_args[k[len('reports_engine.'):]] = v
+            dburi = engine_args.pop('dburi')
+            log.debug('Creating reports_engine: %r %r', dburi, engine_args)
+            _reports_engine = create_engine(dburi, **engine_args)
+        return _reports_engine
+    else:
+        log.debug('Using default engine for reports_engine')
+        return get_engine()
 
 def datetime_range(start, stop, step):
     dt = start
@@ -150,37 +173,41 @@ class Reports(RPCRoot):
             raise cherrypy.HTTPError(status=400, message=repr(tg_errors))
         retval = dict(manual=[], recipe=[], idle_automated=[], idle_manual=[],
                 idle_broken=[], idle_removed=[])
-        systems = self._systems_for_timeseries(**kwargs)
-        if not start:
-            start = systems.min(System.date_added)
-        if not end:
-            end = datetime.datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
-        dts = list(dt.replace(microsecond=0) for dt in
-                datetime_range(start, end, step=(end - start) / resolution))
-        for dt in dts:
-            reserved_query = systems.join('reservations')\
-                    .filter(and_(
-                        Reservation.start_time <= dt,
-                        or_(Reservation.finish_time >= dt, Reservation.finish_time == None)))\
-                    .group_by(Reservation.type)\
-                    .values(Reservation.type, func.count(System.id))
-            reserved = dict(reserved_query)
-            for reservation_type in ['recipe', 'manual']:
-                retval[reservation_type].append(reserved.get(reservation_type, 0))
-            idle_query = systems\
-                    .filter(System.date_added <= dt)\
-                    .filter(not_(System.id.in_(select([Reservation.system_id]).where(and_(
-                        Reservation.start_time <= dt,
-                        or_(Reservation.finish_time >= dt, Reservation.finish_time == None))))))\
-                    .join('status_durations')\
-                    .filter(and_(
-                        SystemStatusDuration.start_time <= dt,
-                        or_(SystemStatusDuration.finish_time >= dt, SystemStatusDuration.finish_time == None)))\
-                    .group_by(SystemStatusDuration.status_id)\
-                    .values(SystemStatusDuration.status_id, func.count(System.id))
-            idle = dict(idle_query)
-            for status_id, status_name in SystemStatus.get_all_status():
-                retval['idle_%s' % status_name.lower()].append(idle.get(status_id, 0))
+        reports_session = create_session(bind=get_reports_engine())
+        try:
+            systems = self._systems_for_timeseries(reports_session, **kwargs)
+            if not start:
+                start = systems.min(System.date_added)
+            if not end:
+                end = datetime.datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+            dts = list(dt.replace(microsecond=0) for dt in
+                    datetime_range(start, end, step=(end - start) / resolution))
+            for dt in dts:
+                reserved_query = systems.join('reservations')\
+                        .filter(and_(
+                            Reservation.start_time <= dt,
+                            or_(Reservation.finish_time >= dt, Reservation.finish_time == None)))\
+                        .group_by(Reservation.type)\
+                        .values(Reservation.type, func.count(System.id))
+                reserved = dict(reserved_query)
+                for reservation_type in ['recipe', 'manual']:
+                    retval[reservation_type].append(reserved.get(reservation_type, 0))
+                idle_query = systems\
+                        .filter(System.date_added <= dt)\
+                        .filter(not_(System.id.in_(select([Reservation.system_id]).where(and_(
+                            Reservation.start_time <= dt,
+                            or_(Reservation.finish_time >= dt, Reservation.finish_time == None))))))\
+                        .join('status_durations')\
+                        .filter(and_(
+                            SystemStatusDuration.start_time <= dt,
+                            or_(SystemStatusDuration.finish_time >= dt, SystemStatusDuration.finish_time == None)))\
+                        .group_by(SystemStatusDuration.status_id)\
+                        .values(SystemStatusDuration.status_id, func.count(System.id))
+                idle = dict(idle_query)
+                for status_id, status_name in SystemStatus.get_all_status():
+                    retval['idle_%s' % status_name.lower()].append(idle.get(status_id, 0))
+        finally:
+            reports_session.close()
         if tg_format == 'json':
             cherrypy.response.headers['Content-Type'] = 'application/json'
             return jsonify.encode(dict((k, zip((js_datetime(dt) for dt in dts), v))
@@ -213,19 +240,23 @@ class Reports(RPCRoot):
         from this overview. So we need to accept the same system filtering 
         params as the utilisation_timeseries method, but no date range.
         """
-        systems = self._systems_for_timeseries(**kwargs)
-        # build a cumulative frequency type of thing
-        count = 0
-        cum_freqs = {}
-        for date_added, in systems.values(System.date_added):
-            count += 1
-            cum_freqs[js_datetime(date_added.replace(hour=0, minute=0, second=0, microsecond=0))] = count
-        cum_freqs[js_datetime(datetime.datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0))] = count
+        reports_session = create_session(bind=get_reports_engine())
+        try:
+            systems = self._systems_for_timeseries(reports_session, **kwargs)
+            # build a cumulative frequency type of thing
+            count = 0
+            cum_freqs = {}
+            for date_added, in systems.values(System.date_added):
+                count += 1
+                cum_freqs[js_datetime(date_added.replace(hour=0, minute=0, second=0, microsecond=0))] = count
+            cum_freqs[js_datetime(datetime.datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0))] = count
+        finally:
+            reports_session.close()
         return dict(cum_freqs=sorted(cum_freqs.items()))
 
-    def _systems_for_timeseries(self, arch_id=None, shared_no_groups=False):
+    def _systems_for_timeseries(self, reports_session, arch_id=None, shared_no_groups=False):
         arch_id = int(arch_id)
-        systems = System.query().filter(System.type_id == SystemType.by_name(u'Machine').id)
+        systems = reports_session.query(System).filter(System.type_id == SystemType.by_name(u'Machine').id)
         if arch_id:
             arch = Arch.query().get(arch_id)
             systems = systems.filter(System.arch.contains(arch))
