@@ -5,7 +5,7 @@ import email
 from turbogears.database import session
 from bkr.server.model import System, SystemStatus, SystemActivity, TaskStatus, \
         SystemType, Job, JobCc, Key, Key_Value_Int, Key_Value_String, \
-        job_cc_table
+        Cpu, Numa, job_cc_table
 from bkr.server.test import data_setup
 from nose.plugins.skip import SkipTest
 
@@ -171,6 +171,106 @@ class TestJob(unittest.TestCase):
             self.assertEquals(JobCc.query().filter_by(job_id=job.id).count(), 2)
         finally:
             session.rollback()
+
+class DistroSystemsFilterTest(unittest.TestCase):
+
+    def setUp(self):
+        self.lc = data_setup.create_labcontroller()
+        self.distro = data_setup.create_distro(arch=u'i386')
+        self.user = data_setup.create_user()
+        session.flush()
+
+    def test_cpu_count(self):
+        excluded = data_setup.create_system(arch=u'i386', shared=True)
+        excluded.lab_controller = self.lc
+        excluded.cpu = Cpu(processors=1)
+        included = data_setup.create_system(arch=u'i386', shared=True)
+        included.cpu = Cpu(processors=4)
+        included.lab_controller = self.lc
+        session.flush()
+        systems = list(self.distro.systems_filter(self.user, """
+            <hostRequires>
+                <and>
+                    <cpu_count op="=" value="4" />
+                </and>
+            </hostRequires>
+            """))
+        self.assert_(excluded not in systems)
+        self.assert_(included in systems)
+        systems = list(self.distro.systems_filter(self.user, """
+            <hostRequires>
+                <and>
+                    <cpu_count op="&gt;" value="2" />
+                    <cpu_count op="&lt;" value="5" />
+                </and>
+            </hostRequires>
+            """))
+        self.assert_(excluded not in systems)
+        self.assert_(included in systems)
+
+    def test_or_lab_controller(self):
+        lc1 = data_setup.create_labcontroller(fqdn=u'lab1')
+        lc2 = data_setup.create_labcontroller(fqdn=u'lab2')
+        lc3 = data_setup.create_labcontroller(fqdn=u'lab3')
+        distro = data_setup.create_distro()
+        included = data_setup.create_system(arch=u'i386', shared=True)
+        included.lab_controller = lc1
+        excluded = data_setup.create_system(arch=u'i386', shared=True)
+        excluded.lab_controller = lc3
+        session.flush()
+        systems = list(distro.systems_filter(self.user, """
+               <hostRequires>
+                <or>
+                 <hostlabcontroller op="=" value="lab1"/>
+                 <hostlabcontroller op="=" value="lab2"/>
+                </or>
+               </hostRequires>
+            """))
+        self.assert_(excluded not in systems)
+        self.assert_(included in systems)
+
+
+    def test_numa_node_count(self):
+        excluded = data_setup.create_system(arch=u'i386', shared=True)
+        excluded.lab_controller = self.lc
+        excluded.numa = Numa(nodes=1)
+        included = data_setup.create_system(arch=u'i386', shared=True)
+        included.numa = Numa(nodes=64)
+        included.lab_controller = self.lc
+        session.flush()
+        systems = list(self.distro.systems_filter(self.user, """
+            <hostRequires>
+                <and>
+                    <numa_node_count op=">=" value="32" />
+                </and>
+            </hostRequires>
+            """))
+        self.assert_(excluded not in systems)
+        self.assert_(included in systems)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=679879
+    def test_key_notequal(self):
+        module_key = Key.by_name(u'MODULE')
+        with_cciss = data_setup.create_system(arch=u'i386', shared=True)
+        with_cciss.lab_controller = self.lc
+        with_cciss.key_values_string.extend([
+                Key_Value_String(module_key, u'cciss'),
+                Key_Value_String(module_key, u'kvm')])
+        without_cciss = data_setup.create_system(arch=u'i386', shared=True)
+        without_cciss.lab_controller = self.lc
+        without_cciss.key_values_string.extend([
+                Key_Value_String(module_key, u'ida'),
+                Key_Value_String(module_key, u'kvm')])
+        session.flush()
+        systems = list(self.distro.systems_filter(self.user, """
+            <hostRequires>
+                <and>
+                    <key_value key="MODULE" op="!=" value="cciss"/>
+                </and>
+            </hostRequires>
+            """))
+        self.assert_(with_cciss not in systems)
+        self.assert_(without_cciss in systems)
 
 if __name__ == '__main__':
     unittest.main()

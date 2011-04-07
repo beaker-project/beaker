@@ -204,6 +204,41 @@ class NewJobTest(SeleniumTestCase):
         self.assert_(flash.startswith('Success!'), flash)
         self.assertEqual(sel.get_title(), 'My Jobs')
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=689344
+    def test_partition_without_fs_doesnt_trigger_validation_warning(self):
+        self.login()
+        sel = self.selenium
+        sel.open('')
+        sel.click('link=New Job')
+        sel.wait_for_page_to_load('30000')
+        xml_file = tempfile.NamedTemporaryFile()
+        xml_file.write('''
+            <job>
+                <whiteboard>job with partition without fs</whiteboard>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
+                            <distro_name op="=" value="BlueShoeLinux5-5" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <partitions>
+                            <partition name="/" size="4" type="part"/>
+                        </partitions>
+                        <task name="/distribution/install" role="STANDALONE"/>
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''')
+        xml_file.flush()
+        sel.type('jobs_filexml', xml_file.name)
+        sel.click('//input[@value="Submit Data"]')
+        sel.wait_for_page_to_load('30000')
+        sel.click('//input[@value="Queue"]')
+        sel.wait_for_page_to_load('30000')
+        flash = sel.get_text('css=.flash')
+        self.assert_(flash.startswith('Success!'), flash)
+        self.assertEqual(sel.get_title(), 'My Jobs')
+
 class CloneJobTest(SeleniumTestCase):
 
     def setUp(self):

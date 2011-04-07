@@ -27,7 +27,8 @@ import xmlrpclib
 from turbogears.database import session
 
 from bkr.server.test.selenium import XmlRpcTestCase
-from bkr.server.test.assertions import assert_datetime_within
+from bkr.server.test.assertions import assert_datetime_within, \
+        assert_durations_not_overlapping
 from bkr.server.test import data_setup, stub_cobbler
 from bkr.server.model import User, Cpu, Key, Key_Value_String, Key_Value_Int, \
         SystemActivity
@@ -87,6 +88,7 @@ class ReserveSystemXmlRpcTest(XmlRpcTestCase):
         self.assertEqual(system.reservations[0].type, u'manual')
         self.assertEqual(system.reservations[0].user, user)
         self.assert_(system.reservations[0].finish_time is None)
+        assert_durations_not_overlapping(system.reservations)
         reserved_activity = system.activity[-1]
         self.assertEqual(reserved_activity.action, 'Reserved')
         self.assertEqual(reserved_activity.field_name, 'User')
@@ -129,6 +131,7 @@ class ReserveSystemXmlRpcTest(XmlRpcTestCase):
         self.assertEqual(system.reservations[0].type, u'manual')
         self.assertEqual(system.reservations[0].user, user)
         self.assert_(system.reservations[0].finish_time is None)
+        assert_durations_not_overlapping(system.reservations)
         reserved_activity = system.activity[0]
         self.assertEqual(reserved_activity.action, 'Reserved')
         self.assertEqual(reserved_activity.service, service_user.user_name)
@@ -180,6 +183,7 @@ class ReleaseSystemXmlRpcTest(XmlRpcTestCase):
         assert_datetime_within(system.reservations[0].finish_time,
                 tolerance=datetime.timedelta(seconds=10),
                 reference=datetime.datetime.utcnow())
+        assert_durations_not_overlapping(system.reservations)
         released_activity = system.activity[0]
         self.assertEqual(released_activity.action, 'Returned')
         self.assertEqual(released_activity.field_name, 'User')

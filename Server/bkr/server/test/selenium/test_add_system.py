@@ -40,9 +40,9 @@ class AddSystem(bkr.server.test.selenium.SeleniumTestCase):
         try:
             sel = self.selenium
             sel.open("")
-            sel.wait_for_page_to_load("3000")
+            sel.wait_for_page_to_load("30000")
             sel.click("//div[@id='fedora-content']/a")
-            sel.wait_for_page_to_load("3000")
+            sel.wait_for_page_to_load("30000")
             self.add_system(**system_details)
             self.failUnless(sel.is_text_present("DetailsArch(s)Key/ValuesGroupsExcluded FamiliesPowerNotesInstall OptionsProvisionLab InfoHistoryTasks")) 
             self.assertEqual(system_details['fqdn'], sel.get_value("form_fqdn"))
@@ -77,9 +77,9 @@ class AddSystem(bkr.server.test.selenium.SeleniumTestCase):
         try:
             sel = self.selenium
             sel.open("")
-            sel.wait_for_page_to_load("3000")
+            sel.wait_for_page_to_load("30000")
             sel.click("//div[@id='fedora-content']/a")
-            sel.wait_for_page_to_load("3000")
+            sel.wait_for_page_to_load("30000")
             self.add_system(**system_details)
             self.failUnless(sel.is_text_present("DetailsArch(s)Key/ValuesGroupsExcluded FamiliesPowerNotesInstall OptionsProvisionLab InfoHistoryTasks")) 
             self.assertEqual(system_details['fqdn'], sel.get_value("form_fqdn"))
@@ -111,9 +111,9 @@ class AddSystem(bkr.server.test.selenium.SeleniumTestCase):
         try:
             sel = self.selenium 
             sel.open("")
-            sel.wait_for_page_to_load("3000")
+            sel.wait_for_page_to_load("30000")
             sel.click("//div[@id='fedora-content']/a")
-            sel.wait_for_page_to_load("3000")
+            sel.wait_for_page_to_load("30000")
             self.add_system(**system_details)
             self.failUnless(sel.is_text_present("DetailsArch(s)Key/ValuesGroupsExcluded FamiliesPowerNotesInstall OptionsProvisionLab InfoHistoryTasks")) 
             self.assertEqual(system_details['fqdn'], sel.get_value("form_fqdn"))
@@ -144,9 +144,9 @@ class AddSystem(bkr.server.test.selenium.SeleniumTestCase):
         try:
             sel = self.selenium 
             sel.open("")
-            sel.wait_for_page_to_load("3000")
+            sel.wait_for_page_to_load("30000")
             sel.click("//div[@id='fedora-content']/a")
-            sel.wait_for_page_to_load("3000")
+            sel.wait_for_page_to_load("30000")
             self.add_system(**system_details)
             self.failUnless(sel.is_text_present("DetailsArch(s)Key/ValuesGroupsExcluded FamiliesNotesInstall OptionsLab InfoHistoryTasks"))
             self.assertEqual(system_details['fqdn'], sel.get_value("form_fqdn"))
@@ -180,9 +180,9 @@ class AddSystem(bkr.server.test.selenium.SeleniumTestCase):
         try:
             sel = self.selenium 
             sel.open("")
-            sel.wait_for_page_to_load("3000")
+            sel.wait_for_page_to_load("30000")
             sel.click("//div[@id='fedora-content']/a")
-            sel.wait_for_page_to_load("3000")
+            sel.wait_for_page_to_load("30000")
             self.add_system(**system_details)
             self.assert_(sel.is_text_present("preexisting-system already exists!"))
         except Exception,e:self.verificationErrors.append(str(e))
@@ -219,7 +219,7 @@ class AddSystem(bkr.server.test.selenium.SeleniumTestCase):
         sel.type("form_location", location)
         sel.type("form_mac_address", mac)
         sel.click("link=Save Changes")
-        sel.wait_for_page_to_load("3000")
+        sel.wait_for_page_to_load("30000")
 
 
     def tearDown(self):

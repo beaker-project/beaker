@@ -11,6 +11,7 @@ from sqlalchemy import (Table, Column, ForeignKey, UniqueConstraint,
                         or_, and_, not_, select, case, func)
 
 from sqlalchemy.orm import relation, backref, synonym, dynamic_loader,query
+from sqlalchemy.orm.interfaces import AttributeExtension
 from sqlalchemy.sql import exists
 from sqlalchemy.sql.expression import join
 from sqlalchemy.exceptions import InvalidRequestError
@@ -518,6 +519,7 @@ beaker_tag_table = Table('beaker_tag', metadata,
     Column('id', Integer, primary_key=True, nullable = False),
     Column('tag', Unicode(20), primary_key=True, nullable = False),
     Column('type', Unicode(40), nullable=False),
+    UniqueConstraint('tag', 'type'),
     mysql_engine='InnoDB',
 )
 
@@ -760,6 +762,18 @@ reservation_table = Table('reservation', metadata,
         Column('finish_time', DateTime, index=True),
         # type = 'manual' or 'recipe'
         Column('type', Unicode(30), index=True, nullable=False),
+        mysql_engine='InnoDB',
+)
+
+# this only really exists to make reporting efficient
+system_status_duration_table = Table('system_status_duration', metadata,
+        Column('id', Integer, primary_key=True),
+        Column('system_id', Integer, ForeignKey('system.id'), nullable=False),
+        Column('status_id', Integer, ForeignKey('system_status.id'),
+            nullable=False),
+        Column('start_time', DateTime, index=True, nullable=False,
+            default=datetime.utcnow),
+        Column('finish_time', DateTime, index=True),
         mysql_engine='InnoDB',
 )
 
@@ -1685,9 +1699,9 @@ url --url=$tree
     @classmethod
     def free(cls, user, systems=None):
         """
-        Builds on available.  Only systems with no users.
+        Builds on available.  Only systems with no users, and not Loaned.
         """
-        return System.available(user,systems).filter(System.user==None)
+        return System.available(user,systems).filter(and_(System.user==None, or_(System.loaned==None, System.loaned==user)))
 
     @classmethod
     def available_for_schedule(cls, user, systems=None):
@@ -1721,6 +1735,7 @@ url --url=$tree
  
         if not user.is_admin():
             query = query.filter(or_(and_(System.owner==user), 
+                                    System.loaned == user,
                                     and_(System.shared==True, 
                                          System.groups==None,
                                         ),
@@ -1740,8 +1755,8 @@ url --url=$tree
         return cls._available(user, systems=systems)
 
     @classmethod
-    def available_order(cls, user):
-        return cls.available_for_schedule(user).order_by(case([(System.owner==user, 1),
+    def available_order(cls, user, systems=None):
+        return cls.available_for_schedule(user,systems=systems).order_by(case([(System.owner==user, 1),
                           (System.owner!=user and Group.systems==None, 2)],
                               else_=3))
 
@@ -2491,6 +2506,21 @@ $SNIPPET("rhts_post")
 
     cc = association_proxy('_system_ccs', 'email_address')
 
+class SystemStatusAttributeExtension(AttributeExtension):
+
+    def set(self, obj, child, oldchild, initiator):
+        log.debug('%r status changed from %r to %r', obj, oldchild, child)
+        if child == oldchild:
+            return
+        if oldchild is None:
+            assert not obj.status_durations
+        else:
+            assert obj.status_durations[0].finish_time is None
+            assert obj.status_durations[0].status == oldchild
+            obj.status_durations[0].finish_time = datetime.utcnow()
+        obj.status_durations.insert(0,
+                SystemStatusDuration(system=obj, status=child))
+
 class SystemCc(SystemObject):
 
     def __init__(self, email_address):
@@ -2517,6 +2547,7 @@ class SystemType(SystemObject):
         return [type.type for type in all_types]
 
     @classmethod
+    @sqla_cache
     def by_name(cls, systemtype):
         return cls.query.filter_by(type=systemtype).one()
 
@@ -2590,10 +2621,12 @@ class SystemStatus(SystemObject):
 
 
     @classmethod
+    @sqla_cache
     def by_name(cls, systemstatus):
         return cls.query.filter_by(status=systemstatus).one()
  
     @classmethod
+    @sqla_cache
     def by_id(cls,status_id):
         return cls.query.filter_by(id=status_id).one()
 
@@ -2982,18 +3015,16 @@ class Distro(MappedObject):
         from needpropertyxml import ElementWrapper
         import xmltramp
         #FIXME Should validate XML before proceeding.
-        queries = []
-        joins = []
-        for child in ElementWrapper(xmltramp.parse(filter)):
-            if callable(getattr(child, 'filter', None)):
-                (join, query) = child.filter()
-                queries.append(query)
-                joins.extend(join)
         # Join on lab_controller_assocs or we may get a distro that is not on any 
         # lab controller anymore.
-        distros = Distro.query().join('lab_controller_assocs')
-        if joins:
-            distros = distros.filter(and_(*joins))
+        distros_table = distro_table
+        queries = []
+        for child in ElementWrapper(xmltramp.parse(filter)):
+            if callable(getattr(child, 'filter', None)):
+                (distros_table, query) = child.filter(distros_table)
+                queries.append(query)
+        distros = Distro.query().select_from(distros_table)\
+                        .join('lab_controller_assocs')
         if queries:
             distros = distros.filter(and_(*queries))
         return distros.order_by('-date_created')
@@ -3049,19 +3080,17 @@ class Distro(MappedObject):
         """
         from needpropertyxml import ElementWrapper
         import xmltramp
-        systems = self.all_systems(user, join)
+        systems_table = system_table
         #FIXME Should validate XML before processing.
         queries = []
-        joins = []
         for child in ElementWrapper(xmltramp.parse(filter)):
             if callable(getattr(child, 'filter', None)):
-                (join, query) = child.filter()
+                (systems_table, query) = child.filter(systems_table)
                 queries.append(query)
-                joins.extend(join)
-        if joins:
-            systems = systems.filter(and_(*joins))
+        systems = System.query().select_from(systems_table)
         if queries:
             systems = systems.filter(and_(*queries))
+        systems = self.all_systems(user, join, systems)
         return systems
 
     def tasks(self):
@@ -3203,15 +3232,15 @@ class Distro(MappedObject):
         return self.all_systems(user, join=['lab_controller','_distros','distro']).filter( \
                     Distro.install_name==self.install_name)
 
-    def all_systems(self, user=None, join=['lab_controller']):
+    def all_systems(self, user=None, join=['lab_controller'], systems=None):
         """
         List of systems that support this distro
         Will return all possible systems even if the distro is not on the lab controller yet.
         Limit to what is available to user if user passed in.
         """
         if user:
-            systems = System.available_order(user)
-        else:
+            systems = System.available_order(user, systems=systems)
+        elif not systems:
             systems = System.query()
         
         return systems.join(join).filter(
@@ -4098,6 +4127,9 @@ class BeakerTag(object):
     def __init__(self, tag, *args, **kw):
         self.tag = tag
 
+    def can_delete(self):
+        raise NotImplementedError("Please implement 'can_delete'  on %s" % self.__class__.__name__)
+
     @classmethod
     def by_id(cls, id, *args, **kw):
         return cls.query().filter(cls.id==id).one()
@@ -4114,14 +4146,20 @@ class BeakerTag(object):
 class RetentionTag(BeakerTag):
 
     def __init__(self, tag, is_default=False, needs_product=False, *args, **kw):
-        self.needs_product = needs_product
         self.set_default_val(is_default)
+        self.needs_product = needs_product
         super(RetentionTag, self).__init__(tag, **kw)
-        session.flush()
 
     @classmethod
     def by_name(cls,tag):
         return cls.query().filter_by(tag=tag).one()
+
+    def can_delete(self):
+        if self.is_default:
+            return False
+        # At the moment only jobs use this tag, update this if that ever changes
+        # Only remove tags that haven't been used
+        return not bool(Job.query().filter(Job.retention_tag == self).count())
 
     def requires_product(self):
         return self.needs_product
@@ -5904,13 +5942,16 @@ class TaskBugzilla(MappedObject):
 
 class Reservation(MappedObject): pass
 
+class SystemStatusDuration(MappedObject): pass
+
 # set up mappers between identity tables and classes
 SystemType.mapper = mapper(SystemType, system_type_table)
 SystemStatus.mapper = mapper(SystemStatus, system_status_table)
 mapper(ReleaseAction, release_action_table)
 System.mapper = mapper(System, system_table,
                    properties = {
-                     'status':relation(SystemStatus,uselist=False),
+                     'status':relation(SystemStatus,uselist=False,
+                        attributeext=SystemStatusAttributeExtension()),
                      'devices':relation(Device,
                                         secondary=system_device_map,backref='systems'),
                      'type':relation(SystemType, uselist=False),
@@ -5962,9 +6003,15 @@ System.mapper = mapper(System, system_table,
                      'open_reservation': relation(Reservation, uselist=False, viewonly=True,
                         primaryjoin=and_(system_table.c.id == reservation_table.c.system_id,
                             reservation_table.c.finish_time == None)),
+                     'status_durations': relation(SystemStatusDuration, backref='system',
+                        cascade='all, delete, delete-orphan',
+                        order_by=[system_status_duration_table.c.start_time.desc()]),
                      })
 
 mapper(SystemCc, system_cc_table)
+mapper(SystemStatusDuration, system_status_duration_table, properties={
+        'status': relation(SystemStatus),
+})
 
 Cpu.mapper = mapper(Cpu, cpu_table, properties={
     'flags': relation(CpuFlag, cascade='all, delete, delete-orphan'),

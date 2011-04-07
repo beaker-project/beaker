@@ -2,8 +2,8 @@
 %{!?pyver: %global pyver %(%{__python} -c "import sys ; print sys.version[:3]")}
 
 Name:           beaker
-Version:        0.6.7
-Release:        2%{?dist}
+Version:        0.6.8
+Release:        4%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -247,6 +247,35 @@ fi
 %{_var}/lib/beaker/addDistro.d/*
 
 %changelog
+* Thu Apr 07 2011 Bill Peck <bpeck@redhat.com> 0.6.8-4
+- Regression in job scheduling when specifying multiple labcontrollers Bug:
+  694524 (bpeck@redhat.com)
+
+* Thu Apr 07 2011 Raymond Mancy <rmancy@redhat.com> 0.6.8-3
+- 694352 empty <and/> causes sqlachemy to produce invalid SQL (dcallagh@redhat.com)
+
+* Wed Apr 06 2011 Dan Callaghan <dcallagh@redhat.com> 0.6.8-2
+- bz693869 - fix up 0.6.7 reservation table population script
+  (dcallagh@redhat.com)
+
+* Wed Apr 06 2011 Raymond Mancy <rmancy@redhat.com> 0.6.8-1
+- 680497 Graph machine usage over time (utilisation graphs) (dcallagh@redhat.com)
+- 651199 remove unneeded ErrorDocument directive from Apache config
+  (dcallagh@redhat.com)
+- 689344 fs attribute in <partition/> should be optional (dcallagh@redhat.com)
+- 679879 Issue: testing using key/value for selection of test host is unreliable 
+  (bpeck@redhat.com)
+- 693777 ability to set RLIMIT_AS from config file setting (bpeck@redhat.com)
+- 678356 Ability to set recipe autopick random (bpeck@redhat.com)
+- 691445 Quote all variables or we fail when VARIANT is Empty. (bpeck@redhat.com)
+- 690342 /free no longer has loaned machines unless they are loaned to the current
+  user and are not currently in use (rmancy@redhat.com)
+- 688775 more headers in email for broken system (rmancy@redhat.com)
+- 691745 Adding/Removing retention tags actually works now (rmancy@redhat.com)
+- 691623 Fix regression introduced where a loaned machined could not be provisioned to
+  the loanee if the system has groups and the loanee is not a member of the
+  group (rmancy@redhat.com)
+
 * Thu Mar 23 2011 Raymond Mancy <rmancy@redhat.com> 0.6.7-1
 - 688122 - ks-templates: beah services usage (mcsontos@redhat.com)
 - 685085 Ensure matrix report data is generated from whiteboard (rmancy@redhat.com)

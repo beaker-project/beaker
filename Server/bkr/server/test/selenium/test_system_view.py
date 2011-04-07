@@ -20,6 +20,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 import unittest
+import datetime
 import logging
 from urlparse import urljoin
 from urllib import urlencode, quote
@@ -27,8 +28,9 @@ import rdflib.graph
 from turbogears.database import session
 
 from bkr.server.test.selenium import SeleniumTestCase
-from bkr.server.test import data_setup, get_server_base, stub_cobbler
-from bkr.server.model import Key, Key_Value_String, Key_Value_Int
+from bkr.server.test import data_setup, get_server_base, stub_cobbler, \
+        assertions
+from bkr.server.model import Key, Key_Value_String, Key_Value_Int, System
 
 class SystemViewTest(SeleniumTestCase):
 
@@ -38,7 +40,8 @@ class SystemViewTest(SeleniumTestCase):
         self.lab_controller = data_setup.create_labcontroller(
                 fqdn=u'localhost:%d' % self.stub_cobbler_thread.port)
         self.system_owner = data_setup.create_user()
-        self.system = data_setup.create_system(owner=self.system_owner)
+        self.system = data_setup.create_system(owner=self.system_owner,
+                status=u'Automated')
         self.system.shared = True
         self.system.lab_controller = self.lab_controller
         session.flush()
@@ -105,6 +108,31 @@ class SystemViewTest(SeleniumTestCase):
         for k, v in changes.iteritems():
             self.assertEquals(sel.get_value(k), v)
         session.refresh(self.system)
+        self.assert_(self.system.date_modified > orig_date_modified)
+
+    def test_change_status(self):
+        orig_date_modified = self.system.date_modified
+        self.login()
+        sel = self.selenium
+        self.go_to_system_view()
+        sel.select('status_id', u'Broken')
+        sel.click('link=Save Changes')
+        sel.wait_for_page_to_load('30000')
+        self.assertEqual(sel.get_selected_label('status_id'), u'Broken')
+        session.clear()
+        self.system = System.query().get(self.system.id)
+        self.assertEqual(self.system.status.status, u'Broken')
+        self.assertEqual(len(self.system.status_durations), 2)
+        self.assertEqual(self.system.status_durations[0].status.status,
+                u'Broken')
+        assertions.assert_datetime_within(
+                self.system.status_durations[0].start_time,
+                tolerance=datetime.timedelta(seconds=60),
+                reference=datetime.datetime.utcnow())
+        self.assert_(self.system.status_durations[0].finish_time is None)
+        self.assert_(self.system.status_durations[1].finish_time is not None)
+        assertions.assert_durations_not_overlapping(
+                self.system.status_durations)
         self.assert_(self.system.date_modified > orig_date_modified)
 
     def test_strips_surrounding_whitespace_from_fqdn(self):

@@ -6,7 +6,7 @@ from bkr.server.widgets import myPaginateDataGrid
 from bkr.server.admin_page import AdminPage
 from bkr.server.model import RetentionTag as Tag
 from bkr.server.retention_tag_utility import RetentionTagUtility
-from bkr.server.helpers import make_edit_link
+from bkr.server.helpers import make_edit_link, make_link
 
 import logging
 log = logging.getLogger(__name__)
@@ -17,10 +17,11 @@ class RetentionTag(AdminPage):
     tag = widgets.TextField(name='tag', label=_(u'Tag'))
     default = widgets.SingleSelectField(name='default', label=(u'Default'), options=[(0,'False'),(1,'True')])
     id = widgets.HiddenField(name='id') 
+    needs_product = widgets.CheckBox('needs_product', label=u'Needs Product')
 
     tag_form = widgets.TableForm(
         'Retention Tag',
-        fields = [tag, default,id],
+        fields = [tag, default, needs_product, id],
         action = 'save_data',
         submit_text = _(u'Save'),
     )
@@ -61,14 +62,15 @@ class RetentionTag(AdminPage):
     @expose()
     @validate(validators = { 'tag' : validators.UnicodeString(not_empty=True, max=20, strip=True) })
     @error_handler(new)
-    def save(self, **kw): 
+    def save(self, **kw):
         try:
             RetentionTagUtility.save_tag(**kw)
+            session.flush()
         except Exception, e:
             log.error('Error inserting tag: %s and default: %s' % (kw.get('tag'), kw.get('default_')))
             flash(_(u"Problem saving tag %s" % kw.get('tag')))
-            redirect("./admin")
-        flash(_(u"OK"))
+        else:
+            flash(_(u"OK"))
         redirect("./admin")
     
     @expose(format='json')
@@ -90,6 +92,17 @@ class RetentionTag(AdminPage):
         template_data['addable'] = True
         return template_data
 
+    @identity.require(identity.in_group('admin'))
+    @expose()
+    def delete(self, id):
+        tag = Tag.by_id(id)
+        if not tag.can_delete(): # Trying to be funny...
+            flash(u'%s is not applicable for deletion' % tag.tag)
+            redirect('/retentiontag/admin')
+        session.delete(tag)
+        flash(u'Succesfully deleted %s' % tag.tag)
+        redirect('/retentiontag/admin')
+
     @identity.require(identity.in_group("admin"))
     @expose(template='bkr.server.templates.tag_form')
     def edit(self, id, **kw):
@@ -107,10 +120,15 @@ class RetentionTag(AdminPage):
     def index(self, *args, **kw):
         return self.tags()
 
-    
     def tags(self, tags=None, user=None, *args, **kw):
         if tags is None:
             tags = Tag.get_all()
+
+        def show_delete(x):
+            if x.can_delete():
+                return make_link(url='./delete/%s' % x.id, text='Delete')
+            else:
+                return None
 
         def show_tag(x):
             if x.is_default: #If we are the default, we can't change to not default
@@ -119,16 +137,15 @@ class RetentionTag(AdminPage):
                 return make_edit_link(x.tag,x.id)
             else:  #no perms to edit
                 return x.tag
- 
+
         my_fields = [myPaginateDataGrid.Column(name='tag', title='Tags', getter=lambda x: show_tag(x),options=dict(sortable=True)),
-                     myPaginateDataGrid.Column(name='default', title='Default', getter=lambda x: x.default,options=dict(sortable=True))]
+                     myPaginateDataGrid.Column(name='default', title='Default', getter=lambda x: x.default,options=dict(sortable=True)),
+                     myPaginateDataGrid.Column(name='delete', title='Delete', getter=lambda x: show_delete(x))]
         tag_grid = myPaginateDataGrid(fields=my_fields)
-        
-        return_dict = dict(title='Tags', 
-                           grid = tag_grid, 
-                           object_count = tags.count(), 
-                           search_bar = None, 
+        return_dict = dict(title='Tags',
+                           grid = tag_grid,
+                           object_count = tags.count(),
+                           search_bar = None,
                            search_widget = self.search_widget_form,
                            list = tags)
-        
         return return_dict

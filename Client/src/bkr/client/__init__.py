@@ -189,6 +189,12 @@ class BeakerWorkflow(BeakerCommand):
             default=None,
             help="This should be a unique identifierf or a product"
         )
+        self.parser.add_option(
+            "--random",
+            default=False,
+            action="store_true",
+            help="Pick systems randomly (default is owned, in group, other)"
+        )
 
     def getArches(self, *args, **kwargs):
         """ Get all arches that apply to either this distro or family/osmajor """
@@ -397,6 +403,7 @@ class BeakerRecipeBase(BeakerBase):
         machine = kwargs.get("machine", None)
         keyvalues = kwargs.get("keyvalue", [])
         repos = kwargs.get("repo", [])
+        random = kwargs.get("random", False)
         if distro:
             distroName = self.doc.createElement('distro_name')
             distroName.setAttribute('op', '=')
@@ -457,6 +464,8 @@ class BeakerRecipeBase(BeakerBase):
             mykeyvalue.setAttribute('op', '%s' % op)
             mykeyvalue.setAttribute('value', '%s' % value)
             self.addHostRequires(mykeyvalue)
+        if random:
+            self.addAutopick(random)
 
     def addRepo(self, node):
         self.repos.appendChild(node)
@@ -508,6 +517,11 @@ class BeakerRecipeBase(BeakerBase):
         recipeKickstart = self.doc.createElement('kickstart')
         recipeKickstart.appendChild(self.doc.createCDATASection(kickstart))
         self.node.appendChild(recipeKickstart)
+
+    def addAutopick(self, random):
+        recipeAutopick = self.doc.createElement('autopick')
+        recipeAutopick.setAttribute('random', unicode(random).lower())
+        self.node.appendChild(recipeAutopick)
 
     def set_ks_meta(self, value):
         return self.node.setAttribute('ks_meta', value)
