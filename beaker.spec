@@ -247,6 +247,10 @@ fi
 %{_var}/lib/beaker/addDistro.d/*
 
 %changelog
+* Thu Apr 07 2011 Bill Peck <bpeck@redhat.com> 0.6.8-4
+- Regression in job scheduling when specifying multiple labcontrollers Bug:
+  694524 (bpeck@redhat.com)
+
 * Thu Apr 07 2011 Raymond Mancy <rmancy@redhat.com> 0.6.8-3
 - 694352 empty <and/> causes sqlachemy to produce invalid SQL (dcallagh@redhat.com)
 
