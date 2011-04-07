@@ -123,3 +123,34 @@ class TestBeakerd(unittest.TestCase):
 
         job = Job.query().get(job.id)
         self.assertEqual(job.status, TaskStatus.by_name(u'Processed'))
+
+    def test_or_lab_controller(self):
+        data_setup.create_task(name=u'/distribution/install')
+        user = data_setup.create_user()
+        distro = data_setup.create_distro()
+        lc1 = data_setup.create_labcontroller('lab1')
+        lc2 = data_setup.create_labcontroller('lab2')
+        lc3 = data_setup.create_labcontroller('lab3')
+        system1 = data_setup.create_system(arch=u'i386', shared=True)
+        system1.lab_controller = lc1
+        system2 = data_setup.create_system(arch=u'i386', shared=True)
+        system2.lab_controller = lc2
+        system3 = data_setup.create_system(arch=u'i386', shared=True)
+        system3.lab_controller = lc3
+        job = data_setup.create_job(owner=user, distro=distro)
+        job.recipesets[0].recipes[0]._host_requires = ("""
+               <hostRequires>
+                <or>
+                 <hostlabcontroller op="=" value="lab1"/>
+                 <hostlabcontroller op="=" value="lab2"/>
+                </or>
+               </hostRequires>
+                                                   """)
+        session.flush()
+        session.clear()
+
+        beakerd.new_recipes()
+
+        job = Job.query().get(job.id)
+        self.assertEqual(job.status, TaskStatus.by_name(u'Processed'))
+        self.assertEqual(len(job.systems), 2)

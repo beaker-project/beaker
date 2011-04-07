@@ -197,6 +197,38 @@ class DistroSystemsFilterTest(unittest.TestCase):
             """))
         self.assert_(excluded not in systems)
         self.assert_(included in systems)
+        systems = list(self.distro.systems_filter(self.user, """
+            <hostRequires>
+                <and>
+                    <cpu_count op="&gt;" value="2" />
+                    <cpu_count op="&lt;" value="5" />
+                </and>
+            </hostRequires>
+            """))
+        self.assert_(excluded not in systems)
+        self.assert_(included in systems)
+
+    def test_or_lab_controller(self):
+        lc1 = data_setup.create_labcontroller(fqdn=u'lab1')
+        lc2 = data_setup.create_labcontroller(fqdn=u'lab2')
+        lc3 = data_setup.create_labcontroller(fqdn=u'lab3')
+        distro = data_setup.create_distro()
+        included = data_setup.create_system(arch=u'i386', shared=True)
+        included.lab_controller = lc1
+        excluded = data_setup.create_system(arch=u'i386', shared=True)
+        excluded.lab_controller = lc3
+        session.flush()
+        systems = list(distro.systems_filter(self.user, """
+               <hostRequires>
+                <or>
+                 <hostlabcontroller op="=" value="lab1"/>
+                 <hostlabcontroller op="=" value="lab2"/>
+                </or>
+               </hostRequires>
+            """))
+        self.assert_(excluded not in systems)
+        self.assert_(included in systems)
+
 
     def test_numa_node_count(self):
         excluded = data_setup.create_system(arch=u'i386', shared=True)
