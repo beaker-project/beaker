@@ -115,7 +115,7 @@ class TestBeakerd(unittest.TestCase):
         distro = data_setup.create_distro()
         job = data_setup.create_job(owner=user, distro=distro)
         job.recipesets[0].recipes[0]._host_requires = (
-                '<hostRequires><and></and></hostRequires>')
+                u'<hostRequires><and></and></hostRequires>')
         session.flush()
         session.clear()
 
@@ -127,10 +127,10 @@ class TestBeakerd(unittest.TestCase):
     def test_or_lab_controller(self):
         data_setup.create_task(name=u'/distribution/install')
         user = data_setup.create_user()
-        distro = data_setup.create_distro()
         lc1 = data_setup.create_labcontroller('lab1')
         lc2 = data_setup.create_labcontroller('lab2')
         lc3 = data_setup.create_labcontroller('lab3')
+        distro = data_setup.create_distro()
         system1 = data_setup.create_system(arch=u'i386', shared=True)
         system1.lab_controller = lc1
         system2 = data_setup.create_system(arch=u'i386', shared=True)
@@ -138,19 +138,26 @@ class TestBeakerd(unittest.TestCase):
         system3 = data_setup.create_system(arch=u'i386', shared=True)
         system3.lab_controller = lc3
         job = data_setup.create_job(owner=user, distro=distro)
-        job.recipesets[0].recipes[0]._host_requires = ("""
+        job.recipesets[0].recipes[0]._host_requires = (u"""
                <hostRequires>
                 <or>
                  <hostlabcontroller op="=" value="lab1"/>
                  <hostlabcontroller op="=" value="lab2"/>
                 </or>
                </hostRequires>
-                                                   """)
+               """)
         session.flush()
         session.clear()
 
         beakerd.new_recipes()
 
         job = Job.query().get(job.id)
+        system1 = System.query().get(system1.id)
+        system2 = System.query().get(system2.id)
+        system3 = System.query().get(system3.id)
         self.assertEqual(job.status, TaskStatus.by_name(u'Processed'))
-        self.assertEqual(len(job.systems), 2)
+        candidate_systems = job.recipesets[0].recipes[0].systems
+        self.assertEqual(len(candidate_systems), 2)
+        self.assert_(system1 in candidate_systems)
+        self.assert_(system2 in candidate_systems)
+        self.assert_(system3 not in candidate_systems)
