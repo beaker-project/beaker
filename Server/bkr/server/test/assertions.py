@@ -66,5 +66,14 @@ def assert_durations_not_overlapping(durations):
         # we have already seen
         for seen in seen_durations:
             if duration.start_time >= seen.start_time \
-                    and duration.finish_time <= seen.finish_time:
+                    and (seen.finish_time is None
+                         or duration.start_time < seen.finish_time):
                 raise AssertionError('%r overlaps with %r' % (duration, seen))
+        seen_durations.append(duration)
+
+def assert_durations_contiguous(durations):
+    durations = sorted(durations, key=lambda d: d.start_time)
+    for i in range(1, len(durations)):
+        if durations[i - 1].finish_time != durations[i].start_time:
+            raise AssertionError('Gap found between %r and %r'
+                    % (durations[i - 1], durations[i]))

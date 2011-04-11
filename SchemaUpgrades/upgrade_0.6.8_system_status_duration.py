@@ -6,7 +6,8 @@ from turbogears.database import session
 from bkr.server.util import load_config
 from bkr.server.model import System, SystemStatus, SystemActivity, \
         SystemStatusDuration
-from bkr.server.test.assertions import assert_durations_not_overlapping
+from bkr.server.test.assertions import assert_durations_not_overlapping, \
+        assert_durations_contiguous
 
 def get_status(value):
     if value == u'Working':
@@ -17,6 +18,7 @@ def get_status(value):
         return SystemStatus.by_name(value)
 
 def populate_status_durations(system):
+    assert not system.status_durations
     # We don't know what the original status was, so let's set it to None for 
     # now and see if we can figure it out next
     start_time = system.date_added
@@ -40,15 +42,17 @@ def populate_status_durations(system):
         new_status = get_status(activity.new_value)
         # If the duration was non-zero, let's record it
         if changed_at > start_time and status != new_status:
-            system.status_durations.append(SystemStatusDuration(system=system,
+            system.status_durations.append(SystemStatusDuration(
                     status=status, start_time=start_time, finish_time=changed_at))
-        status = new_status
-        start_time = changed_at
+            status = new_status
+            start_time = changed_at
     if status is None:
         status = get_status(u'Broken')
-    system.status_durations.append(SystemStatusDuration(system=system,
+    system.status_durations.append(SystemStatusDuration(
             status=status, start_time=start_time, finish_time=None))
     assert_durations_not_overlapping(system.status_durations)
+    assert_durations_contiguous(system.status_durations)
+    assert system.date_added == system.status_durations[0].start_time
 
 if __name__ == '__main__':
     load_config()
