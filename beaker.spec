@@ -3,7 +3,7 @@
 
 Name:           beaker
 Version:        0.6.8
-Release:        4%{?dist}
+Release:        5%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -247,6 +247,10 @@ fi
 %{_var}/lib/beaker/addDistro.d/*
 
 %changelog
+* Tue Apr 12 2011 Dan Callaghan <dcallagh@redhat.com> 0.6.8-5
+- some test fixes (dcallagh@redhat.com)
+- fix bug in 0.6.8 system_status_duration upgrade script (dcallagh@redhat.com)
+
 * Thu Apr 07 2011 Bill Peck <bpeck@redhat.com> 0.6.8-4
 - Regression in job scheduling when specifying multiple labcontrollers Bug:
   694524 (bpeck@redhat.com)
