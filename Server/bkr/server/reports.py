@@ -15,7 +15,7 @@ from bkr.server.helpers import *
 from bkr.server.widgets import SearchBar, myPaginateDataGrid
 from bkr.server.controller_utilities import SearchOptions
 from bkr.server.model import System, Reservation, SystemStatus, SystemType, \
-        Arch, SystemStatusDuration
+        Arch, SystemStatusDuration, Group
 from bkr.server.util import absolute_url
 from bkr.server import search_utility
 from distro import Distros
@@ -159,7 +159,11 @@ class Reports(RPCRoot):
 
     @expose(template='bkr.server.templates.utilisation_graph')
     def utilisation_graph(self):
-        return {'all_arches': Arch.get_all()}
+        groups = Group.query().join('systems').order_by(Group.group_name)
+        return {
+            'all_arches': [(a.id, a.arch) for a in Arch.query()],
+            'all_groups': [(g.group_id, g.group_name) for g in groups],
+        }
 
     @cherrypy.expose
     @validate(validators={
@@ -177,7 +181,7 @@ class Reports(RPCRoot):
         try:
             systems = self._systems_for_timeseries(reports_session, **kwargs)
             if not start:
-                start = systems.min(System.date_added)
+                start = systems.min(System.date_added) or datetime.datetime(2009, 1, 1)
             if not end:
                 end = datetime.datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
             dts = list(dt.replace(microsecond=0) for dt in
@@ -254,12 +258,25 @@ class Reports(RPCRoot):
             reports_session.close()
         return dict(cum_freqs=sorted(cum_freqs.items()))
 
-    def _systems_for_timeseries(self, reports_session, arch_id=None, shared_no_groups=False):
-        arch_id = int(arch_id)
-        systems = reports_session.query(System).filter(System.type_id == SystemType.by_name(u'Machine').id)
+    def _systems_for_timeseries(self, reports_session, arch_id=[], group_id=[], only_shared=False):
+        if not isinstance(arch_id, list):
+            arch_id = [arch_id]
+        arch_id = [int(x) for x in arch_id]
+        if not isinstance(group_id, list):
+            group_id = [group_id]
+        group_id = [int(x) for x in group_id]
+        systems = reports_session.query(System)\
+                .filter(System.type_id == SystemType.by_name(u'Machine').id)
         if arch_id:
-            arch = Arch.query().get(arch_id)
-            systems = systems.filter(System.arch.contains(arch))
-        if shared_no_groups:
-            systems = systems.filter(System.shared == True).filter(System.groups == None)
+            arch_clauses = [System.arch.any(id=x) for x in arch_id]
+            systems = systems.filter(or_(*arch_clauses))
+        if group_id:
+            group_clauses = []
+            if -1 in group_id:
+                group_id.remove(-1)
+                group_clauses.append(System.groups == None)
+            group_clauses.extend(System.groups.any(group_id=x) for x in group_id)
+            systems = systems.filter(or_(*group_clauses))
+        if only_shared:
+            systems = systems.filter(System.shared == True)
         return systems
