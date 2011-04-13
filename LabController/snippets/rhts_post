@@ -18,24 +18,25 @@ echo 'OPTIONS="\$OPTIONS -x"' >>/etc/sysconfig/ntpd
 /bin/sed -i 's/^\(serial.*\)--unit=\S\+\(.*\)\$/\1--port=$grubport\2/' /boot/grub/grub.conf
 #end if
 
-#if $getVar('arch','') == 'ia64'
-BOOT=\$(/usr/sbin/efibootmgr -v | grep BootOrder | awk '{print \$2}' | awk -F, '{print \$1}')
-EFI=\$(/usr/sbin/efibootmgr -v | grep Boot\$BOOT | awk '{print \$NF}')
-PXE_SLOT=\$(/usr/sbin/efibootmgr -v | grep -i Netboot |cut -c5-8)
-#
-# If There is no Netboot Entry we can't continue
-# You have to manually setup a Netboot entry first
-# from EFI maint menu.
-#
-if [ ! -z \$PXE_SLOT ]; then
-   NEWBOOT=\$(echo \$BOOT| sed -e 's/\$PXE_SLOT,//')
-   # its cheesy. but it works.
-   NEWBOOT=\$(echo \$NEWBOOT| sed -e 's/,\$PXE_SLOT,//')
-   NEWBOOT=\$(echo \$NEWBOOT| sed -e 's/,\$PXE_SLOT//')
-   /usr/sbin/efibootmgr -o \$PXE_SLOT,\$NEWBOOT
-   /usr/sbin/efibootmgr -n \$BOOT
+# If efibootmgr exists then re-order boot options
+if [ -x '/usr/sbin/efibootmgr' ]; then
+    BOOT=\$(/usr/sbin/efibootmgr -v | grep BootOrder | awk '{print \$2}' | awk -F, '{print \$1}')
+    EFI=\$(/usr/sbin/efibootmgr -v | grep Boot\$BOOT | awk '{print \$NF}')
+    PXE_SLOT=\$(/usr/sbin/efibootmgr -v | grep -i Netboot |cut -c5-8)
+    #
+    # If There is no Netboot Entry we can't continue
+    # You have to manually setup a Netboot entry first
+    # from EFI maint menu.
+    #
+    if [ ! -z \$PXE_SLOT ]; then
+       NEWBOOT=\$(echo \$BOOT| sed -e 's/\$PXE_SLOT,//')
+       # its cheesy. but it works.
+       NEWBOOT=\$(echo \$NEWBOOT| sed -e 's/,\$PXE_SLOT,//')
+       NEWBOOT=\$(echo \$NEWBOOT| sed -e 's/,\$PXE_SLOT//')
+       /usr/sbin/efibootmgr -o \$PXE_SLOT,\$NEWBOOT
+       /usr/sbin/efibootmgr -n \$BOOT
+    fi
 fi
-#end if
 
 #set $yum = $getVar("yum","")
 #if $yum == ""
