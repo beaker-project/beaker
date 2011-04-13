@@ -28,6 +28,12 @@ class Machine_Test(BeakerWorkflow):
             default=[],
             help="Test machine with this family",
         )
+        self.parser.add_option(
+            "--inventory",
+            action="store_true",
+            default=False,
+            help="Run Inventory task as well"
+        )
         self.parser.usage = "%%prog %s [options]" % self.normalized_name
 
     def run(self, *args, **kwargs):
@@ -35,16 +41,16 @@ class Machine_Test(BeakerWorkflow):
         password = kwargs.get("password", None)
         self.set_hub(username, password)
 
-        # get all tasks requested
-        requestedTasks = ['/distribution/inventory']
-        requestedTasks.extend(self.getTasks(*args, **kwargs))
-
         debug  = kwargs.get("debug", False)
         dryrun = kwargs.get("dryrun", False)
         wait = kwargs.get("wait", False)
         machine = kwargs.get("machine", None)
 	families = kwargs.get("family", [])
 	taskParams = kwargs.get("taskparam", [])
+
+        # Add in Inventory if requested
+        if kwargs.get("inventory"):
+            kwargs['task'].append('/distribution/inventory')
 
         if not machine:
             sys.stderr.write("No Machine Specified\n")
@@ -70,6 +76,12 @@ class Machine_Test(BeakerWorkflow):
         job = BeakerJob(*args, **kwargs)
 
         for family in families:
+            kwargs['family'] = family
+            # Start with install task
+            requestedTasks = [dict(name='/distribution/install', arches=[])]
+
+            # get all tasks requested
+            requestedTasks.extend(self.getTasks(*args, **kwargs))
             if kwargs['arches']:
                 arches = set(kwargs['arches']).intersection(set(self.getArches(family=family)))
             else:

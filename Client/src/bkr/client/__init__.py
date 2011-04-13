@@ -315,7 +315,8 @@ class BeakerWorkflow(BeakerCommand):
                 recipe.addDistroRequires(copy.deepcopy(distroRequires))
             if hostRequires:
                 recipe.addHostRequires(copy.deepcopy(hostRequires))
-            if '/distribution/install' not in requestedTasks:
+            if dict(name='/distribution/install', arches=[]) not \
+               in requestedTasks:
                 recipe.addTask('/distribution/install')
             if install:
                 paramnode = self.doc.createElement('param')
