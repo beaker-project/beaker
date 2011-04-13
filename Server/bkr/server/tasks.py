@@ -176,15 +176,18 @@ class Tasks(RPCRoot):
         :type task_rpm_data: XML-RPC binary
         """
         rpm_file = "%s/%s" % (self.task_dir, task_rpm_name)
-        FH = open(rpm_file, "w")
-        FH.write(task_rpm_data.data)
-        FH.close()
-        try:
-            task = self.process_taskinfo(self.read_taskinfo(rpm_file))
-        except ValueError, err:
-            session.rollback()
-            return "Failed to import because of %s" % str(err)
-        return "Success"
+        if os.path.exists("%s" % rpm_file):
+            return "Failed to import because we already have %s" % task_rpm_name
+        else:
+            FH = open(rpm_file, "w")
+            FH.write(task_rpm_data.data)
+            FH.close()
+            try:
+                task = self.process_taskinfo(self.read_taskinfo(rpm_file))
+            except ValueError, err:
+                session.rollback()
+                return "Failed to import because of %s" % str(err)
+            return "Success"
 
     @expose()
     def save(self, task_rpm, *args, **kw):
@@ -193,20 +196,24 @@ class Tasks(RPCRoot):
         """
         rpm_file = "%s/%s" % (self.task_dir, task_rpm.filename)
 
-        rpm = task_rpm.file.read()
-        FH = open(rpm_file, "w")
-        FH.write(rpm)
-        FH.close()
-
-        try:
-            task = self.process_taskinfo(self.read_taskinfo(rpm_file))
-        except (ValueError,ParserError,ParserWarning), err:
-            session.rollback()
-            flash(_(u'Failed to import because of %s' % err ))
+        if os.path.exists("%s" % rpm_file):
+            flash(_(u'Failed to import because we already have %s' % 
+                                                     task_rpm.filename ))
             redirect(url("./new"))
+        else:
+            rpm = task_rpm.file.read()
+            FH = open(rpm_file, "w")
+            FH.write(rpm)
+            FH.close()
+            try:
+                task = self.process_taskinfo(self.read_taskinfo(rpm_file))
+            except (ValueError,ParserError,ParserWarning), err:
+                session.rollback()
+                flash(_(u'Failed to import because of %s' % err ))
+                redirect(url("./new"))
 
-        flash(_(u"%s Added/Updated at id:%s" % (task.name,task.id)))
-        redirect(".")
+            flash(_(u"%s Added/Updated at id:%s" % (task.name,task.id)))
+            redirect(".")
 
     @expose(template='bkr.server.templates.task_search')
     @validate(form=task_form)
@@ -354,9 +361,9 @@ class Tasks(RPCRoot):
         tinfo = testinfo.parse_string(raw_taskinfo['desc'])
 
         task = Task.lazy_create(name=tinfo.test_name)
-        # RPM is the same version we have. don't process
-        if task.rpm == raw_taskinfo['hdr']['rpm']:
-            return task
+        # RPM is the same version we have. don't process		
+        if task.version == raw_taskinfo['hdr']['ver']:
+            raise BX(_("Failed to import,  %s is the same version we already have" % task.version))
         # Keep N-1 versions of task rpms.  This allows currently running tasks to finish.
         if task.oldrpm and os.path.exists("%s/%s" % (self.task_dir, task.oldrpm)):
             try:
