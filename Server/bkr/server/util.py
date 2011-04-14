@@ -21,8 +21,10 @@ import sys
 import logging
 import datetime
 import time
+from sqlalchemy.orm import create_session
 import turbogears
 from turbogears import config, url
+from turbogears.database import get_engine
 
 log = logging.getLogger(__name__)
 
@@ -89,3 +91,21 @@ def any(iterable):
 # xmlrpclib in Python 2.5+ can do this for us
 def parse_xmlrpc_datetime(s):
     return datetime.datetime(*(time.strptime(s, '%Y%m%dT%H:%M:%S')[0:6]))
+
+_reports_engine = None
+def get_reports_engine():
+    global _reports_engine
+    if config.get('reports_engine.dburi'):
+        if not _reports_engine:
+            # same logic as in turbogears.database.get_engine
+            engine_args = dict()
+            for k, v in config.config.configMap['global'].iteritems():
+                if k.startswith('reports_engine.'):
+                    engine_args[k[len('reports_engine.'):]] = v
+            dburi = engine_args.pop('dburi')
+            log.debug('Creating reports_engine: %r %r', dburi, engine_args)
+            _reports_engine = create_engine(dburi, **engine_args)
+        return _reports_engine
+    else:
+        log.debug('Using default engine for reports_engine')
+        return get_engine()

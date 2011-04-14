@@ -1,5 +1,5 @@
 import datetime
-from turbogears.database import session, get_engine
+from turbogears.database import session
 from turbogears import controllers, expose, flash, widgets, validate, \
         error_handler, validators, redirect, paginate, url, config
 from turbogears.widgets import AutoCompleteField
@@ -8,7 +8,6 @@ from cherrypy import request, response
 from tg_expanding_form_widget.tg_expanding_form_widget import ExpandingForm
 from sqlalchemy.sql import func, and_, or_, not_, select
 from sqlalchemy.orm import create_session, contains_eager
-from sqlalchemy import create_engine
 from kid import Element
 from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.helpers import *
@@ -16,7 +15,7 @@ from bkr.server.widgets import SearchBar, myPaginateDataGrid
 from bkr.server.controller_utilities import SearchOptions
 from bkr.server.model import System, Reservation, SystemStatus, SystemType, \
         Arch, SystemStatusDuration, Group
-from bkr.server.util import absolute_url
+from bkr.server.util import absolute_url, get_reports_engine
 from bkr.server import search_utility
 from distro import Distros
 
@@ -32,24 +31,6 @@ import pkg_resources
 import logging
 
 log = logging.getLogger(__name__)
-
-_reports_engine = None
-def get_reports_engine():
-    global _reports_engine
-    if config.get('reports_engine.dburi'):
-        if not _reports_engine:
-            # same logic as in turbogears.database.get_engine
-            engine_args = dict()
-            for k, v in config.config.configMap['global'].iteritems():
-                if k.startswith('reports_engine.'):
-                    engine_args[k[len('reports_engine.'):]] = v
-            dburi = engine_args.pop('dburi')
-            log.debug('Creating reports_engine: %r %r', dburi, engine_args)
-            _reports_engine = create_engine(dburi, **engine_args)
-        return _reports_engine
-    else:
-        log.debug('Using default engine for reports_engine')
-        return get_engine()
 
 def datetime_range(start, stop, step):
     dt = start
