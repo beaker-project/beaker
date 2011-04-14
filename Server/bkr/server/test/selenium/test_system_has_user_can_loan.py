@@ -25,7 +25,7 @@ class SystemHasUserCanLoan(bkr.server.test.selenium.SeleniumTestCase):
         # This is the (Loan) link...
         sel.click("//div[@id='fedora-content']/div[1]/form/div/table/tbody/tr[9]/td[2]/a/span") 
         sel.wait_for_page_to_load("30000")
-        sel.type("Loan_user_text", "%s" % self.user.user_name) 
+        sel.type("Loan_user", "%s" % self.user.user_name)
         sel.click("//input[@value='Change']")
         sel.wait_for_page_to_load("30000")
         self.failUnless(sel.is_text_present("%s Loaned to %s" % (self.system.fqdn,self.user.user_name)))
