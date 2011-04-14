@@ -526,6 +526,7 @@ beaker_tag_table = Table('beaker_tag', metadata,
 retention_tag_table = Table('retention_tag', metadata,
     Column('id', Integer, ForeignKey('beaker_tag.id', onupdate='CASCADE', ondelete='CASCADE'),nullable=False, primary_key=True),
     Column('default_', Boolean),
+    Column('expire_in_days', Integer, default=0),
     Column('needs_product', Boolean),
     mysql_engine='InnoDB',
 )
@@ -2803,6 +2804,7 @@ class Watchdog(MappedObject):
         """
         return cls.query.filter_by(system=system).one()
 
+
     @classmethod
     def by_status(cls, labcontroller=None, status="active"):
         """ return a list of all watchdog entries that are either active 
@@ -3763,6 +3765,21 @@ class Job(TaskBase):
         return query
 
     @classmethod
+    def expired_logs(cls):
+        """Return log files for expired recipes
+        """
+        expired_logs = []
+        job_ids = [job.id for job in cls.marked_for_deletion()]
+        for tag in RetentionTag.get_transient():
+            expire_in = tag.expire_in_days
+            tag_name = tag.tag
+            job_ids.extend([job.id for job in cls.find_jobs(tags=tag_name, complete_days=expire_in)])
+        for job_id in job_ids:
+            job = Job.by_id(job_id)
+            expired_logs.append((job,job.get_logs()))
+        return expired_logs
+
+    @classmethod
     def has_family(cls, family, query=None, **kw):
         if query is None:
             query = cls.query()
@@ -3850,7 +3867,11 @@ class Job(TaskBase):
         return job
 
     @classmethod
-    def find_jobs(cls, query=None, tag=None, complete_days=None, family=None, product=None, **kw):
+    def marked_for_deletion(cls):
+        return cls.query().filter(and_(cls.to_delete!=None, cls.deleted==None)).all()
+
+    @classmethod
+    def find_jobs(cls, query=None, tag=None, complete_days=None, family=None, product=None,  **kw):
         if not query:
             query = cls.query()
         if complete_days:
@@ -3888,18 +3909,11 @@ class Job(TaskBase):
                     log.exception(err_msg)
                     raise BX(err_msg)
 
-        return query.all()
+        return query
 
     @classmethod
-    def delete_jobs(cls, **kw):
-        if kw['jobs']:
-            actual_jobs = kw['jobs']
-            jobs_to_delete = cls._delete_criteria(jobs=actual_jobs)
-        else:
-            query = cls.query()
-            query = cls._delete_criteria(query=query)
-            kw['query'] = query
-            jobs_to_delete = cls.find_jobs(**kw)
+    def delete_jobs(cls, jobs=None, query=None):
+        jobs_to_delete  = cls._delete_criteria(jobs,query)
 
         for job in jobs_to_delete:
             job.soft_delete()
@@ -3908,15 +3922,16 @@ class Job(TaskBase):
 
     @classmethod
     def _delete_criteria(cls, jobs=None, query=None):
-        try:
-            admin = identity.current.user.is_admin()
-        except AttributeError: #not logged in
-            err_msg = u'User not logged in'
-            log.exception(err_msg)
-            return err_msg
+        """Returns valid jobs for deletetion
 
+
+           takes either a list of Job objects or a query object, and returns
+           those that are valid for deletion
+
+
+        """
         if not jobs and not query:
-            raise BeakerException('Need to pas either list of jobs or a query to _delete_criteria')
+            raise BeakerException('Need to pass either list of jobs or a query to _delete_criteria')
         valid_jobs = []
         if jobs:
             for j in jobs:
@@ -3925,19 +3940,13 @@ class Job(TaskBase):
                     is_owner = user == j.owner
                 except AttributeError, e: #not logged in
                     is_owner = False
-                if j.is_finished() and not j.counts_as_deleted():
-                    if admin:
-                        valid_jobs.append(j)
-                    elif is_owner:
-                        valid_jobs.append(j)
+                if j.is_finished() and not j.counts_as_deleted() and is_owner:
+                    valid_jobs.append(j)
             return valid_jobs
         elif query:
             query = query.filter(cls.status_id.in_([TaskStatus.by_name('Completed').id, TaskStatus.by_name('Aborted').id, TaskStatus.by_name('Cancelled').id]))
             query = query.filter(and_(Job.to_delete == None, Job.deleted == None))
-            if admin:
-                pass
-            else:
-                query = query.filter(Job.owner==identity.current.user)
+            query = query.filter(Job.owner==identity.current.user)
             return query
 
     def counts_as_deleted(self):
@@ -3952,6 +3961,12 @@ class Job(TaskBase):
         if self.to_delete:
             raise BeakerException(u'%s is already marked to delete' % self.t_id)
         self.to_delete = datetime.utcnow()
+
+    def get_logs(self):
+        logs = []
+        for rs in self.recipesets:
+            logs.extend(rs.get_logs())
+        return logs
 
     def clone_link(self):
         """ return link to clone this job
@@ -4138,6 +4153,7 @@ class Product(MappedObject):
 
 class BeakerTag(object):
 
+
     def __init__(self, tag, *args, **kw):
         self.tag = tag
 
@@ -4159,7 +4175,9 @@ class BeakerTag(object):
 
 class RetentionTag(BeakerTag):
 
-    def __init__(self, tag, is_default=False, needs_product=False, *args, **kw):
+    def __init__(self, tag, is_default=False, needs_product=False, expire_in_days=None, *args, **kw):
+        self.needs_product = needs_product
+        self.expire_in_days = expire_in_days
         self.set_default_val(is_default)
         self.needs_product = needs_product
         super(RetentionTag, self).__init__(tag, **kw)
@@ -4205,6 +4223,10 @@ class RetentionTag(BeakerTag):
         else:
             q = cls.query().filter(cls.tag.like('%s%%' % tag))
         return q
+
+    @classmethod
+    def get_transient(cls):
+        return cls.query().filter(cls.expire_in_days != 0).all()
 
     def __repr__(self, *args, **kw):
         return self.tag
@@ -4261,12 +4283,18 @@ class RecipeSet(TaskBase):
     """
     A Collection of Recipes that must be executed at the same time.
     """
+    stop_types = ['abort','cancel']
 
     def __init__(self, ttasks=0, priority=None):
         self.ttasks = ttasks
         self.priority = priority
 
-    stop_types = ['abort','cancel']
+    def get_logs(self):
+        logs = []
+        for recipe in self.recipes:
+            logs.append(recipe.get_logs())
+        return logs
+
     def is_owner(self,user):
         if self.job.owner == user:
             return True
@@ -4550,6 +4578,15 @@ class Recipe(TaskBase):
                 self.recipeset.queue_time.month,
                 job.id // Log.MAX_ENTRIES_PER_DIRECTORY, job.id, self.id)
     filepath = property(filepath)
+
+    def get_logs(self):
+        logs = getattr(self, 'logs', None)
+        if logs:
+            server = logs[0].server # Surely they all use the same directory
+        else:
+            server = None
+        full_recipe_logpath = '%s/%s' % (self.logspath, self.filepath)
+        return server or full_recipe_logpath
 
     def delete(self, dryrun, *args, **kw):
         """

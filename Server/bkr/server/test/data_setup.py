@@ -249,8 +249,8 @@ def mark_recipe_complete(recipe, result=u'Pass', system=None,
         recipe.system = create_system(arch=recipe.arch)
     else:
         recipe.system = system
-    if start_time:
-        recipe.start_time = start_time
+    recipe.start_time = start_time or datetime.datetime.utcnow()
+    recipe.recipeset.queue_time = datetime.datetime.utcnow()
     reservation = Reservation(type=u'recipe',
             user=recipe.recipeset.job.owner, start_time=start_time)
     recipe.system.reservations.append(reservation)
@@ -262,9 +262,11 @@ def mark_recipe_complete(recipe, result=u'Pass', system=None,
                 result=TaskResult.by_name(result))
         recipe_task.status = TaskStatus.by_name(u'Completed')
         recipe_task.results.append(rtr)
+    recipe.update_status()
+
     if finish_time:
         reservation.finish_time = finish_time
-    recipe.update_status()
+        recipe.finish_time = finish_time
     log.debug('Marked %s as complete with result %s', recipe.t_id, result)
 
 def mark_job_complete(job, **kwargs):

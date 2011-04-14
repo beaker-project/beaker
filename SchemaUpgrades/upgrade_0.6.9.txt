@@ -19,3 +19,17 @@ Make the system.owner_id column not NULLable:
 To roll back:
 
     ALTER TABLE system MODIFY owner_id INT NULL;
+
+
+This is needed for the job delete update
+-----------------------------------------
+
+    ALTER TABLE retention_tag ADD COLUMN(`expire_in_days` int default 0);
+    UPDATE retention_tag SET expire_in_days = 30 WHERE id = (SELECT id FROM beaker_tag where tag='scratch');
+    UPDATE retention_tag SET expire_in_days = 60 WHERE id = (SELECT id FROM beaker_tag where tag='60days');
+    UPDATE retention_tag SET expire_in_days = 120 WHERE id = (SELECT id FROM beaker_tag where tag='120days');
+
+
+if you want to roll back:
+    ALTER TABLE retention_tag DROP expire_in_days;
+

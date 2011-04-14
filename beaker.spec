@@ -57,6 +57,7 @@ Requires:       TurboGears
 %endif
 Requires:       intltool
 Requires:       python-decorator
+Requires:       python-urllib2_kerberos
 Requires:       python-xmltramp
 Requires:       python-lxml
 Requires:       python-ldap
