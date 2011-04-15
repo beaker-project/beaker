@@ -164,14 +164,12 @@ class ReserveWorkflow(Form):
                  ] 
     template="bkr.server.templates.reserve_workflow"
     css = [LocalCSSLink('bkr','/static/css/reserve_workflow.css')] 
-    member_widgets = ['arch','distro','distro_family','method_','tag'] 
-    params = ['arch_value','method_value','tag_value','distro_family_value','all_arches',
-              'all_tags','all_methods','all_distro_familys','to_json','auto_pick','distro_rpc','system_rpc','system_many_rpc','reserve_href'] 
+    member_widgets = ['arch','distro','distro_family','tag'] 
+    params = ['arch_value','tag_value','distro_family_value','all_arches',
+              'all_tags','all_distro_familys','to_json','auto_pick','distro_rpc','system_rpc','system_many_rpc','reserve_href'] 
 
     def __init__(self,*args,**kw):
         super(ReserveWorkflow,self).__init__(*args, **kw)  
-        self.method_ = SingleSelectField(name='method', label='Method', options=[None], 
-            validator=validators.NotEmpty())
         self.distro = SingleSelectField(name='distro', label='Distro', 
                                         options=[('','None available')],validator=validators.NotEmpty())
         self.distro_family = SingleSelectField(name='distro_family', label='Distro Family', 
@@ -225,7 +223,6 @@ class ReserveWorkflow(Form):
                 del params['options'][k]
         params['all_arches'] = [[elem.arch,elem.arch] for elem in model.Arch.query()]
         params['all_tags'] = [['','None Selected']] + [[elem.tag,elem.tag] for elem in model.DistroTag.query()]
-        params['all_methods'] = [[elem,elem] for elem in model.Distro.all_methods()]
         e = [elem.osmajor for elem in model.OSMajor.query()]
         params['all_distro_familys'] = [('','None Selected')] + [[osmajor,osmajor] for osmajor in sorted(e,cmp=self.my_cmp )]
         return super(ReserveWorkflow,self).display(value,**params)
@@ -237,7 +234,6 @@ class ReserveWorkflow(Form):
                 d['arch_value'] = d['values']['arch'] 
                 d['distro_family_value'] = d['values']['distro_family']
                 d['tag_value'] = d['values']['tag']
-                d['method_value'] = d['values']['method']
 
 class MyButton(Widget):
     template="bkr.server.templates.my_button"

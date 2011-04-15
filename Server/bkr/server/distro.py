@@ -221,7 +221,6 @@ class Distros(RPCRoot):
                                   myPaginateDataGrid.Column(name='variant', getter=lambda x: x.variant, title='Variant', options=dict(sortable=True)),
                                   myPaginateDataGrid.Column(name='virt', getter=lambda x: x.virt, title='Virt', options=dict(sortable=True)),
                                   myPaginateDataGrid.Column(name='arch.arch', getter=lambda x: x.arch, title='Arch', options=dict(sortable=True)),
-                                  myPaginateDataGrid.Column(name='method', getter=lambda x: x.method, title='Method', options=dict(sortable=True)),
                                   myPaginateDataGrid.Column(name='date_created', getter=lambda x: x.date_created, title='Date Created', options=dict(sortable=True)),
                                   Utility.direct_column(title='Provision', getter=lambda x: _provision_system_link(x))
                               ])
@@ -285,7 +284,7 @@ class Distros(RPCRoot):
         maximum number of distros given by 'limit'). Each array element is an 
         array containing the following distro details:
 
-            (install name, name, arch, version, variant, install method, 
+            (install name, name, arch, version, variant, '', 
             supports virt?, list of tags, dict of (lab controller hostname -> 
             tree path))
         """
@@ -317,7 +316,7 @@ class Distros(RPCRoot):
         distros = distros.order_by(distro_table.c.date_created.desc())
         if limit:
             distros = distros[:limit]
-        return [(distro.install_name, distro.name, '%s' % distro.arch, '%s' % distro.osversion, distro.variant, distro.method, distro.virt, ['%s' % tag for tag in distro.tags], dict([(lc.lab_controller.fqdn, lc.tree_path) for lc in distro.lab_controller_assocs])) for distro in distros]
+        return [(distro.install_name, distro.name, '%s' % distro.arch, '%s' % distro.osversion, distro.variant, '', distro.virt, ['%s' % tag for tag in distro.tags], dict([(lc.lab_controller.fqdn, lc.tree_path) for lc in distro.lab_controller_assocs])) for distro in distros]
 
     #XMLRPC method for listing distros
     @cherrypy.expose
@@ -341,7 +340,7 @@ class Distros(RPCRoot):
             distros = distros.join('lab_controller_assocs')
             distros = distros.filter(lab_controller_distro_map.c.tree_path.like('%s' % treepath))
         distros = distros.order_by(distro_table.c.date_created.desc())
-        return [(distro.name, '%s' % distro.arch, '%s' % distro.osversion, distro.variant, distro.method, distro.virt) for distro in distros]
+        return [(distro.name, '%s' % distro.arch, '%s' % distro.osversion, distro.variant, distro.virt) for distro in distros]
 
     @cherrypy.expose
     @identity.require(identity.not_anonymous())

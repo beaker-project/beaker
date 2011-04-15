@@ -108,7 +108,6 @@ class LabControllers(RPCRoot):
             raise "Invalid Lab Controller"
         distros = []
         valid_variants = ['AS','ES','WS','Desktop']
-        valid_methods  = ['http','ftp','nfs']
         release = re.compile(r'family=([^\s]+)')
         arches_search = re.compile(r'arches=([^\s]+)')
         variant_search = re.compile(r'variant=([^\s]+)')
@@ -116,17 +115,12 @@ class LabControllers(RPCRoot):
             name = lc_distro['name'].split('_')[0]
             meta = string.join(lc_distro['name'].split('_')[1:],'_').split('-')
             variant = None
-            method = None
             virt = False
             arches = []
             
             for curr_variant in valid_variants:
                 if curr_variant in meta:
                     variant = curr_variant
-                    break
-            for curr_method in valid_methods:
-                if curr_method in meta:
-                    method = curr_method
                     break
             if 'xen' in meta:
                 virt = True
@@ -189,7 +183,6 @@ class LabControllers(RPCRoot):
                     if arch not in distro.osversion.arches:
                         distro.osversion.arches.append(arch)
                     distro.variant = variant
-                    distro.method = method
                     distro.virt = virt
                     distro.date_created = datetime.fromtimestamp(float(lc_distro['tree_build_time']))
                     activity = Activity(None,'XMLRPC','Added','Distro',None, lc_distro['name'])

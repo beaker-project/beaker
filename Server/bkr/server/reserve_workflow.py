@@ -81,36 +81,21 @@ class ReserveWorkflow:
             values['distro_family'] = kw['distro_family']
         if 'tag' in kw:
             values['tag'] = kw['tag']
-        if 'method' in kw:
-            values['method'] = kw['method']
  
         return dict(widget=self.widget,widget_options={'values' : values},title='Reserve Workflow')
 
 
     @expose(allow_json=True)
-    def get_arch_options(self,distro_family,method,tag):
-        """
-        get_arch_options() will return all arch's available for a particular distro_family,
-        method and tag
-        """   
-        arches = Arch.query().outerjoin(['distros','osversion','osmajor']).outerjoin(['distros','_tags']). \
-                                              filter(and_(OSMajor.osmajor == distro_family,
-                                                          Distro.method == method,
-                                                          DistroTag.tag == tag))
-        options = [elem.arch for elem in arches]
-        return {'options' : options }
-
-    @expose(allow_json=True)
-    def get_distro_options(self,arch=None,distro_family=None,method='nfs',tag=None):
+    def get_distro_options(self,arch=None,distro_family=None,tag=None):
         """
         get_distro_options() will return all the distros for a given arch,
-        distro_family,method and tag
+        distro_family and tag
         """
         if arch is None or distro_family is None:
             return {'options' : [] }
         arch = arch.split(',')  
         if len(arch) > 1:
-            results = Distro.multiple_systems_distro(method=method,arch=arch,osmajor=distro_family,tag=tag) 
+            results = Distro.multiple_systems_distro(arch=arch,osmajor=distro_family,tag=tag) 
             return {'options' : results }
 
         distro = Distro.query().join(['osversion','osmajor']).join('arch')
@@ -120,7 +105,6 @@ class ReserveWorkflow:
                 distro = distro.join('_tags') 
         arch = arch[0]
         distro = distro.filter(Arch.arch == arch)
-        my_and.append(Distro.method == method)
 
         distro = distro.filter(and_(*my_and))
         options = sorted([(elem.install_name,elem.date_created) for elem in distro], key = lambda e1: e1[1],reverse=True) #so we don't have to guess the install_name later
