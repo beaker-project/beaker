@@ -57,6 +57,26 @@ class TestSubmitTask(bkr.server.test.selenium.SeleniumTestCase):
         sel.wait_for_page_to_load('30000')
         self.assert_task_correct_v2_0()
 
+        # upload v1.1 again...
+        sel.click('link=New Task')
+        sel.wait_for_page_to_load('30000')
+        sel.type('task_task_rpm',
+                pkg_resources.resource_filename(self.__module__,
+                'tmp-distribution-beaker-task_test-1.1-0.noarch.rpm'))
+        sel.click('//input[@value="Submit Data"]')
+        sel.wait_for_page_to_load('30000')
+        self.assert_(('Failed to import because we already have tmp-distribution-beaker-task_test-1.1-0.noarch.rpm')
+                in sel.get_text('css=.flash'))
+        # ...and make sure the 2.0 task data is in place
+        sel.click('link=Task Library')
+        sel.wait_for_page_to_load('30000')
+        sel.type('simplesearch', test_package_name)
+        sel.click('search')
+        sel.wait_for_page_to_load('30000')
+        sel.click('link=%s' % test_package_name)
+        sel.wait_for_page_to_load('30000')
+        self.assert_task_correct_v2_0()
+
     def assert_task_correct_v1_1(self):
         self.assertEqual(self.get_task_info_field('Description'),
                 'Fake test for integration testing v1.1')
