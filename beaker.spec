@@ -196,6 +196,7 @@ fi
 %{_bindir}/start-%{name}
 %{_bindir}/%{name}-init
 %{_bindir}/nag-mail
+%{_bindir}/log-delete
 %{_bindir}/product-update
 %{_bindir}/beaker-repo-update
 %{_bindir}/%{name}-cleanup-visits
