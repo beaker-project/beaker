@@ -263,6 +263,10 @@ class BeakerWorkflow(BeakerCommand):
         if kwargs.get("task", None):
             tasks = self.hub.tasks.filter(dict(names=kwargs.get('task'),
                                                osmajor=filter['osmajor']))
+            for dropped_task in set(kwargs['task']).difference(
+                    set(task['name'] for task in tasks)):
+                print >>sys.stderr, 'WARNING: task %s not applicable ' \
+                        'for distro, ignoring' % dropped_task
 
         if self.n_clients or self.n_servers:
             self.multi_host = True
