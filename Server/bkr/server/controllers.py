@@ -224,7 +224,7 @@ class Root(RPCRoot):
     submit     = widgets.SubmitButton(name='submit')
 
     email      = widgets.TextField(name='email_address', label='Email Address') 
-    autoUsers  = widgets.AutoCompleteField(name='user',
+    autoUsers  = widgets.AutoCompleteTextField(name='user',
                                            search_controller=url("/users/by_name"),
                                            search_param="input",
                                            result_name="matches")
@@ -243,11 +243,15 @@ class Root(RPCRoot):
         submit_text = _(u'Change'),
     )
 
+    class OwnerFormValidatorSchema(validators.Schema):
+        user = validators.NotEmpty()
+
     owner_form    = widgets.TableForm(
         'Owner',
         fields = [id, autoUsers,],
         action = 'save_data',
         submit_text = _(u'Change'),
+        validator=OwnerFormValidatorSchema(),
     )  
 
     system_form = SystemForm()
@@ -1021,7 +1025,7 @@ class Root(RPCRoot):
         if not system.can_loan(identity.current.user):
             flash( _(u"Insufficient permissions to loan system"))
             redirect("/")
-        user = User.by_user_name(kw['user']['text'])
+        user = User.by_user_name(kw['user'])
         activity = SystemActivity(identity.current.user, 'WEBUI', 'Changed', 'Loaned To', 'None' , '%s' % user)
         system.activity.append(activity)
         system.loaned = user
@@ -1029,6 +1033,8 @@ class Root(RPCRoot):
         redirect("/view/%s" % system.fqdn)
     
     @expose()
+    @validate(form=owner_form)
+    @error_handler(owner_change)
     @identity.require(identity.not_anonymous())
     def save_owner(self, id, *args, **kw):
         try:
@@ -1039,8 +1045,9 @@ class Root(RPCRoot):
         if not system.can_admin(identity.current.user):
             flash( _(u"Insufficient permissions to change owner"))
             redirect("/")
-        user = User.by_user_name(kw['user']['text'])
-        activity = SystemActivity(identity.current.user, 'WEBUI', 'Changed', 'Owner', '%s' % system.owner, '%s' % user)
+        user = User.by_user_name(kw['user'])
+        activity = SystemActivity(identity.current.user, u'WEBUI', u'Changed',
+                u'Owner', unicode(system.owner), unicode(user))
         system.activity.append(activity)
         system.owner = user
         system.date_modified = datetime.utcnow()

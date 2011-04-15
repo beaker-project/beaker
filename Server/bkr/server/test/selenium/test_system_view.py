@@ -381,6 +381,44 @@ class SystemViewTest(SeleniumTestCase):
         session.refresh(self.system)
         self.assert_(self.system.date_modified > orig_date_modified)
 
+    def test_change_owner(self):
+        new_owner = data_setup.create_user()
+        session.flush()
+        self.login()
+        sel = self.selenium
+        self.go_to_system_view()
+        sel.click( # '(Change)' link inside cell beside 'Owner' cell
+                '//table[@class="list"]//td'
+                '[normalize-space(preceding-sibling::th[1]/label/text())="Owner"]'
+                '/a[normalize-space(span/text())="(Change)"]')
+        sel.wait_for_page_to_load('30000')
+        sel.type('Owner_user', new_owner.user_name)
+        sel.submit('Owner')
+        sel.wait_for_page_to_load('30000')
+        self.assertEquals(sel.get_title(), 'Systems')
+        self.assertEquals(sel.get_text('css=.flash'), 'OK')
+        session.refresh(self.system)
+        self.assertEquals(self.system.owner, new_owner)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=691796
+    def test_cannot_set_owner_to_none(self):
+        self.login()
+        sel = self.selenium
+        self.go_to_system_view()
+        sel.click( # '(Change)' link inside cell beside 'Owner' cell
+                '//table[@class="list"]//td'
+                '[normalize-space(preceding-sibling::th[1]/label/text())="Owner"]'
+                '/a[normalize-space(span/text())="(Change)"]')
+        sel.wait_for_page_to_load('30000')
+        sel.type('Owner_user', '')
+        sel.submit('Owner')
+        sel.wait_for_page_to_load('30000')
+        self.assert_(sel.get_title().startswith('Change Owner'), sel.get_title())
+        self.assert_(sel.is_element_present(
+                '//span[@class="fielderror" and text()="Please enter a value"]'))
+        session.refresh(self.system)
+        self.assertEquals(self.system.owner, self.system_owner)
+
 class SystemCcTest(SeleniumTestCase):
 
     def setUp(self):

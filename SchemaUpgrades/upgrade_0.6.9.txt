@@ -1,0 +1,21 @@
+Make system.owner_id not NULLable
+---------------------------------
+
+First verify that there are no systems without an owner:
+
+    SELECT * FROM system WHERE owner_id IS NULL;
+
+If there are any, assign them to an owner before proceeding. For example, to 
+assign all unowned systems to the admin user:
+
+    UPDATE system
+    SET owner_id = (SELECT user_id FROM tg_user WHERE user_name = 'admin')
+    WHERE owner_id IS NULL;
+
+Make the system.owner_id column not NULLable:
+
+    ALTER TABLE system MODIFY owner_id INT NOT NULL;
+
+To roll back:
+
+    ALTER TABLE system MODIFY owner_id INT NULL;
