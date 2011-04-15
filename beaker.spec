@@ -11,6 +11,7 @@ URL:            http://fedorahosted.org/beaker
 Source0:        http://fedorahosted.org/releases/b/e/%{name}-%{version}.tar.gz
 BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 BuildArch:      noarch
+BuildRequires:  make
 BuildRequires:  python-setuptools
 BuildRequires:  python-setuptools-devel
 BuildRequires:  python2-devel
