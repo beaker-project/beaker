@@ -25,8 +25,12 @@
         #graph-control fieldset {
             display: inline;
         }
-        #graph-control span {
-            padding-right: 1em;
+        #graph-control div select {
+            display: block;
+            margin: 0.5em 0 0.5em 2em;
+        }
+        #graph-control button {
+            margin-top: 0.5em;
         }
         #graph-legend {
             width: 10em;
@@ -159,6 +163,23 @@
                     $('#graph').get(0),
                     $('#overview-graph').get(0),
                     $('#graph-control').get(0));
+            $('form#graph-control input:checkbox[id^="enable_"]')
+                .each(function (i, elem) {
+                    var target = $('#' + elem.id.substring(7));
+                    $(elem).change(function () {
+                        if (elem.checked) {
+                            target.show('slow');
+                            target.removeAttr('disabled');
+                        } else {
+                            target.hide('fast');
+                            target.attr('disabled', true);
+                        }
+                    });
+                    if (!elem.checked) {
+                        target.hide();
+                        target.attr('disabled', true);
+                    }
+                });
         });
     </script>
 </head>
@@ -166,19 +187,29 @@
 <body class="flora">
 <h1>Utilisation graph</h1>
 <form id="graph-control" action="#">
+<!--! XXX re-use system search bar here instead? -->
 <fieldset>
-    <legend>Graph options</legend>
-    <span>
-        <label for="arch_id">Arch:</label>
-        <select id="arch_id" name="arch_id">
+    <legend>System filtering options</legend>
+    <div>
+        <input type="checkbox" id="enable_arch_id" />
+        <label for="enable_arch_id">Arch</label>
+        <select id="arch_id" name="arch_id" multiple="multiple" size="8">
             <option py:for="id, name in all_arches" value="${id}">${name}</option>
         </select>
-    </span>
-    <span>
-        <input type="checkbox" id="shared_no_groups" name="shared_no_groups" />
-        <label for="shared_no_groups">Only shared systems with no groups</label>
-    </span>
-    <span><input type="submit" value="Update graph options" /></span>
+    </div>
+    <div>
+        <input type="checkbox" id="enable_group_id" />
+        <label for="enable_group_id">Group</label>
+        <select id="group_id" name="group_id" multiple="multiple" size="8">
+            <option value="-1">(none)</option>
+            <option py:for="id, name in all_groups" value="${id}">${name}</option>
+        </select>
+    </div>
+    <div>
+        <input type="checkbox" id="only_shared" name="only_shared" />
+        <label for="only_shared">Only shared systems</label>
+    </div>
+    <div><button type="submit">Update graph options</button></div>
 </fieldset>
 </form>
 <p>Drag a region on the graph or on the timeline to zoom.
