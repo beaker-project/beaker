@@ -1,4 +1,4 @@
-import errno, shutil
+import errno, shutil, datetime
 from bkr import __version__ as bkr_version
 from optparse import OptionParser
 from bkr.server.model import Job
@@ -44,7 +44,7 @@ def log_delete(verb=False, dry=False, config=None):
         logs = job_log[1]
         try:
             session.begin()
-            job.deleted = True
+            job.deleted = datetime.datetime.utcnow()
             for log in logs:
                 if not dry:
                     if 'http' in log:
