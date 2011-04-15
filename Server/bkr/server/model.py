@@ -6051,12 +6051,16 @@ System.mapper = mapper(System, system_table,
                      'reprovision_distro':relation(Distro, uselist=False),
                       '_system_ccs': relation(SystemCc, backref='system',
                                       cascade="all, delete, delete-orphan"),
+                     'reservations': relation(Reservation, backref='system',
+                        order_by=[reservation_table.c.start_time.desc()]),
+                     'dyn_reservations': dynamic_loader(Reservation),
                      'open_reservation': relation(Reservation, uselist=False, viewonly=True,
                         primaryjoin=and_(system_table.c.id == reservation_table.c.system_id,
                             reservation_table.c.finish_time == None)),
                      'status_durations': relation(SystemStatusDuration, backref='system',
                         cascade='all, delete, delete-orphan',
                         order_by=[system_status_duration_table.c.start_time.desc()]),
+                     'dyn_status_durations': dynamic_loader(SystemStatusDuration),
                      })
 
 mapper(SystemCc, system_cc_table)
@@ -6358,8 +6362,6 @@ mapper(TaskPriority, task_priority_table)
 mapper(TaskStatus, task_status_table)
 mapper(TaskResult, task_result_table)
 mapper(Reservation, reservation_table, properties={
-        'system': relation(System, backref=backref('reservations',
-            order_by=[reservation_table.c.start_time.desc()])),
         'user': relation(User, backref=backref('reservations',
             order_by=[reservation_table.c.start_time.desc()])),
 })
