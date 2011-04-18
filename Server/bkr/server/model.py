@@ -3701,6 +3701,7 @@ class Job(TaskBase):
     """
 
     stop_types = ['abort','cancel']
+    max_by_whiteboard = 20
 
     @classmethod
     def mine(cls, owner):
@@ -3800,7 +3801,7 @@ class Job(TaskBase):
 
     @classmethod
     def by_whiteboard(cls,desc):
-        res = Job.query().filter_by(whiteboard = desc)
+        res = Job.query().filter_by(whiteboard = desc).limit(cls.max_by_whiteboard)
         return res
 
     @classmethod
