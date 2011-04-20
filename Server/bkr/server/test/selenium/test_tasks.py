@@ -1,20 +1,26 @@
 #!/usr/bin/python
 import bkr.server.test.selenium
 from bkr.server.test import data_setup
-import unittest, time, re, os
+import unittest, time, re, os, shutil, turbogears
 import pkg_resources
 from turbogears.database import session
 from bkr.server.model import TaskPackage
 
 class TestSubmitTask(bkr.server.test.selenium.SeleniumTestCase):
 
-    def setUp(self):
-        self.selenium = self.get_selenium()
-        self.selenium.start()
-        self.login()
+    @classmethod
+    def setupClass(cls):
+        cls.selenium = cls.get_selenium()
+        cls.selenium.start()
+        cls.login()
     
-    def tearDown(self):
-        self.selenium.stop()
+    @classmethod
+    def teardownClass(cls):
+        cls.selenium.stop()
+        basepath = (turbogears.config.get('basepath.rpms'))
+        os.remove(os.path.join(basepath, 'tmp-distribution-beaker-task_test-1.1-0.noarch.rpm'))
+        os.remove(os.path.join(basepath, 'tmp-distribution-beaker-task_test-2.0-2.noarch.rpm'))
+        os.remove(os.path.join(basepath, 'tmp-distribution-beaker-dummy_for_bz681143-1.0-1.noarch.rpm'))
 
     def test_submit_task(self):
         test_package_name = '/distribution/beaker/task_test'
