@@ -3753,7 +3753,7 @@ class Job(TaskBase):
         if not query:
             query = cls.query()
         query = query.join(['recipesets','recipes']).filter(and_(Recipe.finish_time < datetime.utcnow() - delta,
-            cls.status_id.in_(TaskStatus.by_name(u'Completed').id,TaskStatus.by_name(u'Aborted').id,TaskStatus.by_name(u'Cancelled').id)))
+            cls.status_id.in_([TaskStatus.by_name(u'Completed').id,TaskStatus.by_name(u'Aborted').id,TaskStatus.by_name(u'Cancelled').id])))
         return query
 
     @classmethod
@@ -3765,7 +3765,7 @@ class Job(TaskBase):
         for tag in RetentionTag.get_transient():
             expire_in = tag.expire_in_days
             tag_name = tag.tag
-            job_ids.extend([job.id for job in cls.find_jobs(tags=tag_name, complete_days=expire_in)])
+            job_ids.extend([job.id for job in cls.find_jobs(tag=tag_name, complete_days=expire_in)])
         for job_id in job_ids:
             job = Job.by_id(job_id)
             expired_logs.append((job,job.get_logs()))
