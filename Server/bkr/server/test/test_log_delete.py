@@ -31,7 +31,7 @@ class LogDelete(unittest.TestCase):
         job_not_delete = data_setup.create_completed_job(start_time=datetime.datetime.utcnow() - datetime.timedelta(days=60),
             finish_time=datetime.datetime.utcnow() - datetime.timedelta(days=29))
         session.flush()
-        job_not_delete.recipesets[0].recipes[0].logs.append(LogRecipe(filename='test.log'))
+        job_not_delete.recipesets[0].recipes[0].logs.append(LogRecipe(filename=u'test.log'))
         r_not_delete = job_not_delete.recipesets[0].recipes[0]
         dir_not_delete = os.path.join(r_not_delete.logspath ,r_not_delete.filepath)
         self.make_dir(dir_not_delete)
@@ -54,14 +54,13 @@ class LogDelete(unittest.TestCase):
         self.job_to_delete.owner = self.user
         session.flush()
 
-        job_to_delete.recipesets[0].recipes[0].logs.append(LogRecipe(filename='test.log'))
+        job_to_delete.recipesets[0].recipes[0].logs.append(LogRecipe(filename=u'test.log'))
 
         r_delete = job_to_delete.recipesets[0].recipes[0]
 
         dir_delete = os.path.join(r_delete.logspath ,r_delete.filepath)
 
         self.make_dir(dir_delete)
-
         fd = open(os.path.join(dir_delete,'test.log'), 'w')
         fd.close()
         session.flush()
@@ -72,7 +71,7 @@ class LogDelete(unittest.TestCase):
     def test_log_delete_to_delete(self):
         job_to_delete = self.job_to_delete
         job_to_delete.to_delete = datetime.datetime.utcnow()
-        job_to_delete.recipesets[0].recipes[0].logs.append(LogRecipe(filename='test.log'))
+        job_to_delete.recipesets[0].recipes[0].logs.append(LogRecipe(filename=u'test.log'))
         r_ = job_to_delete.recipesets[0].recipes[0]
         dir = os.path.join(r_.logspath ,r_.filepath)
         self.make_dir(dir)
