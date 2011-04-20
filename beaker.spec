@@ -2,8 +2,8 @@
 %{!?pyver: %global pyver %(%{__python} -c "import sys ; print sys.version[:3]")}
 
 Name:           beaker
-Version:        0.6.8
-Release:        5%{?dist}
+Version:        0.6.9
+Release:        1%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -250,6 +250,36 @@ fi
 %{_var}/lib/beaker/addDistro.d/*
 
 %changelog
+* Wed Apr 20 2011 Raymond Mancy <rmancy@redhat.com> 0.6.9-1
+- 695970 Limiting job via whiteboard retrieval to max 20. (rmancy@redhat.com)
+ 
+- 681584 make bkradd should fail if trying to upload the same version task. 
+  (bpeck@redhat.com)
+- 601952 RFE: add filtering by group to job specification XML (bpeck@redhat.com)
+- 682602 common utilisation code for reporting (dcallagh@redhat.com)
+- 682655 warn about excluded tasks in workflow-simple (dcallagh@redhat.com)
+- 691796 make owner mandatory for systems (dcallagh@redhat.com)
+    
+- 693582 more filter options for utilisation graph (dcallagh@redhat.com)
+- 696335 efibootmgr is not just for ia64 anymore (bpeck@redhat.com)
+- 692163 bkr machine-test fails due to recent inventory script updates 
+ (bpeck@redhat.com)
+- 663788 - add updates for Fedora kickstarts during install
+ (bpeck@redhat.com)
+- 683913 bkr workflow-simple does not handle empty recipes filtered by arch quite well
+  First step, move to pre-filter tasks based on arch and osmajor.  Second step,
+  turn off post-filtering on scheduler.  Whatever tasks are passed in is what
+  will be run (bpeck@redhat.com)
+              
+- 645662 Change the add distro process to not rely on distro name for method
+  (bpeck@redhat.com)
+- 688122 - ks-templates: beah services usage [3/3] (mcsontos@redhat.com)
+                
+- build requires make (dcallagh@redhat.com)
+- avoid using real hostnames in test data (dcallagh@redhat.com)
+- show crosshair on utilisation graph (dcallagh@redhat.com)
+- New beaker import task. (bpeck@redhat.com)
+- We now allow admins to delete their own jobs (rmancy@redhat.com)
 * Tue Apr 12 2011 Dan Callaghan <dcallagh@redhat.com> 0.6.8-5
 - some test fixes (dcallagh@redhat.com)
 - fix bug in 0.6.8 system_status_duration upgrade script (dcallagh@redhat.com)
