@@ -3,7 +3,7 @@ from bkr import __version__ as bkr_version
 from optparse import OptionParser
 from bkr.server.model import Job
 from turbogears.database import session
-from bkr.common.dav import BeakerRequest, DavDeleteErrorHandler
+from bkr.common.dav import BeakerRequest, DavDeleteErrorHandler, RedirectHandler
 import urllib2 as u2
 from urllib2_kerberos import HTTPKerberosAuthHandler
 
@@ -33,7 +33,9 @@ def log_delete(verb=False, dry=False, config=None):
     from bkr.server.util import load_config
     load_config(config)
     job_logs = Job.expired_logs()
-    opener= u2.build_opener()
+    # The only way to override default HTTPRedirectHandler
+    # is to pass it into build_opener(). Appending does not work
+    opener= u2.build_opener(RedirectHandler()) 
     opener.add_handler(HTTPKerberosAuthHandler())
     opener.add_handler(DavDeleteErrorHandler())
     u2.install_opener(opener)

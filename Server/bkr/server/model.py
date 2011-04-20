@@ -3765,7 +3765,7 @@ class Job(TaskBase):
         for tag in RetentionTag.get_transient():
             expire_in = tag.expire_in_days
             tag_name = tag.tag
-            job_ids.extend([job.id for job in cls.find_jobs(tag=tag_name, complete_days=expire_in)])
+            job_ids.extend([job.id for job in cls.find_jobs(tag=tag_name, complete_days=expire_in) if job.deleted is None])
         job_ids = set(job_ids)
         for job_id in job_ids:
             job = Job.by_id(job_id)
