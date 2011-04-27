@@ -1,0 +1,3 @@
+The purpose of this test is to verify that the distro requested actually 
+installs.  Upon successfull completion this test will make an xmlrpc call 
+back to the lab controller and add the tag INSTALLS.
