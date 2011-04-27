@@ -184,7 +184,9 @@ class Tasks(RPCRoot):
             FH.close()
             try:
                 task = self.process_taskinfo(self.read_taskinfo(rpm_file))
-            except ValueError, err:
+            except (ValueError,ParserError,ParserWarning,rpm.error), err:
+                # Delete invalid rpm
+                os.unlink(rpm_file)
                 session.rollback()
                 return "Failed to import because of %s" % str(err)
             return "Success"
@@ -201,13 +203,15 @@ class Tasks(RPCRoot):
                                                      task_rpm.filename ))
             redirect(url("./new"))
         else:
-            rpm = task_rpm.file.read()
+            myrpm = task_rpm.file.read()
             FH = open(rpm_file, "w")
-            FH.write(rpm)
+            FH.write(myrpm)
             FH.close()
             try:
                 task = self.process_taskinfo(self.read_taskinfo(rpm_file))
-            except (ValueError,ParserError,ParserWarning), err:
+            except (ValueError,ParserError,ParserWarning,rpm.error), err:
+                # Delete invalid rpm
+                os.unlink(rpm_file)
                 session.rollback()
                 flash(_(u'Failed to import because of %s' % err ))
                 redirect(url("./new"))
@@ -434,7 +438,9 @@ class Tasks(RPCRoot):
         return Task.by_name(name).to_dict()
 
     def read_taskinfo(self, rpm_file):
-        taskinfo = {}
+        taskinfo = dict(desc = '',
+                        hdr  = '',
+                       )
         taskinfo['hdr'] = self.get_rpm_info(rpm_file)
         taskinfo_file = None
 	for file in taskinfo['hdr']['files']:
