@@ -211,10 +211,12 @@ TASK_SIZE_LIMIT_SOFT=800000000
 #RECIPE_LINK_SOFT_LIMIT=0
 #RECIPE_LINK_LIMIT=0
 EOF
-# Turn on Debug logging
-/bin/sed -i 's/DEVEL=False/DEVEL=True/' /etc/beah.conf
-/bin/sed -i 's/INTERFACE=localhost/INTERFACE=/' /etc/beah.conf
-/bin/sed -i 's/CONSOLE_LOG=.*/CONSOLE_LOG=True/' /etc/beah.conf
+# To turn on debug logging uncomment the following line. Warning: this is
+# rather verbose! This also requires LOG to be Debug.
+#/bin/sed -i 's/^DEVEL=.*/DEVEL=True/' /etc/beah.conf
+/bin/sed -i 's/^LOG=.*/LOG=Info/' /etc/beah.conf
+/bin/sed -i 's/^INTERFACE=localhost/INTERFACE=/' /etc/beah.conf
+/bin/sed -i 's/^CONSOLE_LOG=.*/CONSOLE_LOG=Console/' /etc/beah.conf
 
 chkconfig --level 345 beah-srv on
 chkconfig --level 345 beah-beaker-backend on
