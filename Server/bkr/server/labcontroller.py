@@ -109,6 +109,7 @@ class LabControllers(RPCRoot):
         distros = []
         valid_variants = ['AS','ES','WS','Desktop']
         release = re.compile(r'family=([^\s]+)')
+        label_search = re.compile(r'label=([^\s]+)')
         arches_search = re.compile(r'arches=([^\s]+)')
         variant_search = re.compile(r'variant=([^\s]+)')
         for lc_distro in lc_distros:
@@ -145,12 +146,12 @@ class LabControllers(RPCRoot):
 
                 try:
                     distro = Distro.by_install_name(lc_distro['name'])
-                except: #FIXME
+                except InvalidRequestError:
                     distro = Distro(lc_distro['name'])
                     distro.name = name
                     try:
                         breed = Breed.by_name(lc_distro['breed'])
-                    except: #FIXME
+                    except InvalidRequestError:
                         breed = Breed(lc_distro['breed'])
                         session.save(breed)
                         session.flush([breed])
@@ -162,20 +163,30 @@ class LabControllers(RPCRoot):
                         lc_osminor = 0
                     try:
                         osmajor = OSMajor.by_name(lc_osmajor)
-                    except: #FIXME
+                    except InvalidRequestError:
                         osmajor = OSMajor(lc_osmajor)
                         session.save(osmajor)
                         session.flush([osmajor])
                     try:
                         osversion = OSVersion.by_name(osmajor,lc_osminor)
-                    except: #FIXME
+                    except InvalidRequestError:
                         osversion = OSVersion(osmajor,lc_osminor,arches)
                         session.save(osversion)
                         session.flush([osversion])
                     distro.osversion = osversion
+
+                    # Automatically tag the distro if label= exists
+                    if label_search.search(lc_distro['comment']):
+                        label = unicode(label_search.search(
+                                                    lc_distro['comment']
+                                                           ).group(1)
+                                       )
+                        if label not in distro.tags:
+                            distro.tags.append(label)
+
                     try:
                         arch = Arch.by_name(lc_distro['arch'])
-                    except: #FIXME
+                    except InvalidRequestError:
                         arch = Arch(lc_distro['arch'])
                         session.save(arch)
                         session.flush([arch])

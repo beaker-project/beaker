@@ -169,44 +169,6 @@ def update_comment(distro):
         return distro
     family = ""
     update = 0
-    data = glob.glob(os.path.join(paths['package_path'], "*release-*"))
-    data2 = []
-    for x in data:
-        b = os.path.basename(x)
-        if b.find("fedora") != -1 or \
-           b.find("redhat") != -1 or \
-           b.find("centos") != -1:
-            data2.append(x)
-    if not data2:
-        return distro
-    filename = data2[0]
-    cpio_object = tempfile.TemporaryFile()
-    try:
-        rpm2cpio(filename,cpio_object)
-        cpio_object.seek(0)
-        cpio = cpioarchive.CpioArchive(fileobj=cpio_object)
-        for entry in cpio:
-            if entry.name == './etc/fedora-release':
-                release = entry.read().split('\n')[0]
-                releaseregex = re.compile(r'(.*)\srelease\s(\d+).(\d*)')
-                if releaseregex.search(release):
-                    family = "%s%s" % (releaseregex.search(release).group(1),
-                                       releaseregex.search(release).group(2))
-                    if releaseregex.search(release).group(3):
-                        update = releaseregex.search(release).group(3)
-                    else:
-                        update = 0
-            if entry.name == './etc/redhat-release':
-                release = entry.read().split('\n')[0]
-                updateregex = re.compile(r'Update\s(\d+)')
-                releaseregex = re.compile(r'release\s\d+.(\d+)')
-                if updateregex.search(release):
-                    update = updateregex.search(release).group(1)
-                if releaseregex.search(release):
-                    update = releaseregex.search(release).group(1)
-        cpio_object.close()
-    except rpmUtils.RpmUtilsError, e:
-        print "Warning, %s" % e
     if os.path.exists("%s/../../.composeinfo" % paths['tree_path']):
         parser = ConfigParser.ConfigParser()
         parser.read("%s/../../.composeinfo" % paths['tree_path'])
@@ -217,6 +179,13 @@ def update_comment(distro):
     if os.path.exists("%s/.treeinfo" % paths['tree_path']):
         parser = ConfigParser.ConfigParser()
         parser.read("%s/.treeinfo" % paths['tree_path'])
+        try:
+            distro['comment'] = "%s\nlabel=%s" % (distro['comment'],
+                                                  parser.get('general','label'))
+        except ConfigParser.NoSectionError:
+            print "missing section general in %s/.treeinfo" % paths['tree_path']
+        except ConfigParser.NoOptionError:
+            print "missing option label in %s/.treeinfo" % paths['tree_path']
         try:
             family  = parser.get('general','family').replace(" ","")
         except ConfigParser.NoSectionError:
@@ -246,6 +215,46 @@ def update_comment(distro):
         if familyupdate.find('.') != -1:
             update = familyupdate.split(".")[1].replace(" ","")
         discinfo.close()
+    else:
+        data = glob.glob(os.path.join(paths['package_path'], "*release-*"))
+        data2 = []
+        for x in data:
+            b = os.path.basename(x)
+            if b.find("fedora") != -1 or \
+               b.find("redhat") != -1 or \
+               b.find("centos") != -1:
+                data2.append(x)
+        if data2:
+            filename = data2[0]
+            cpio_object = tempfile.TemporaryFile()
+            try:
+                rpm2cpio(filename,cpio_object)
+                cpio_object.seek(0)
+                cpio = cpioarchive.CpioArchive(fileobj=cpio_object)
+                for entry in cpio:
+                    if entry.name == './etc/fedora-release':
+                        release = entry.read().split('\n')[0]
+                        releaseregex = re.compile(r'(.*)\srelease\s(\d+).(\d*)')
+                        if releaseregex.search(release):
+                            family = "%s%s" % (
+                                           releaseregex.search(release).group(1),
+                                           releaseregex.search(release).group(2)
+                                              )
+                            if releaseregex.search(release).group(3):
+                                update = releaseregex.search(release).group(3)
+                            else:
+                                update = 0
+                    if entry.name == './etc/redhat-release':
+                        release = entry.read().split('\n')[0]
+                        updateregex = re.compile(r'Update\s(\d+)')
+                        releaseregex = re.compile(r'release\s\d+.(\d+)')
+                        if updateregex.search(release):
+                            update = updateregex.search(release).group(1)
+                        if releaseregex.search(release):
+                            update = releaseregex.search(release).group(1)
+                cpio_object.close()
+            except rpmUtils.RpmUtilsError, e:
+                print "Warning, %s" % e
 
     distro['comment'] = "%s\nfamily=%s.%s" % (distro['comment'], family, update)
     cobbler.modify_distro(distro['id'],'comment',distro['comment'],token)
