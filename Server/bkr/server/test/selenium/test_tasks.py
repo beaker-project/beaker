@@ -5,6 +5,7 @@ import unittest, time, re, os, shutil, turbogears
 import pkg_resources
 from turbogears.database import session
 from bkr.server.model import TaskPackage
+import turbogears as tg
 
 class TestSubmitTask(bkr.server.test.selenium.SeleniumTestCase):
 
@@ -135,6 +136,22 @@ class TestSubmitTask(bkr.server.test.selenium.SeleniumTestCase):
         sel.wait_for_page_to_load('30009')
         # Should have openCryptoki in correct case:
         self.assertEqual(self.get_task_info_field('Run For'), 'openCryptoki')
+
+    def test_task_invalid_file(self):
+        invalidtask = 'invalid-task_file'
+        sel = self.selenium
+        sel.open('')
+        sel.click('link=New Task')
+        sel.wait_for_page_to_load('30000')
+        sel.type('task_task_rpm',
+                pkg_resources.resource_filename(self.__module__,
+                invalidtask))
+        sel.click('//input[@value="Submit Data"]')
+        sel.wait_for_page_to_load('30000')
+        self.assert_(('Failed to import because of error reading package header')
+                in sel.get_text('css=.flash'))
+        rpms = tg.config.get('basepath.rpms')
+        self.assertEqual(os.path.exists('%s/%s' % (rpms,invalidtask)),False)
 
 if __name__ == "__main__":
     unittest.main()
