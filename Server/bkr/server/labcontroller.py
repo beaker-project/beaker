@@ -271,7 +271,6 @@ class LabControllers(RPCRoot):
                                   ('FQDN', lambda x: make_edit_link(x.fqdn,x.id)),
                                   ('Disabled', lambda x: x.disabled),
                                   ('Timestamp', lambda x: x.distros_md5),
-                                  (' ', lambda x: make_remove_link(x.id)),
                                   (' ', lambda x: make_scan_link(x.id)),
                               ])
         return dict(title="Lab Controllers", 
