@@ -16,42 +16,64 @@ class TestGroupXml(unittest.TestCase):
         self.user = data_setup.create_user()
         session.flush()
 
-    def test_group(self):
-        group = data_setup.create_group()
-        self.user.groups.append(group)
-        has_groups = data_setup.create_system(arch=u'i386', shared=True)
-        has_groups.lab_controller = self.lc
-        has_groups.groups.append(group)
-        no_groups = data_setup.create_system(arch=u'i386', shared=True)
-        no_groups.lab_controller = self.lc
+    def _test_group(self, test_op, test_name, matching_ids):
+        """
+        Check the group selector
+
+        Arguments:
+
+        test_op      - operator to use ("=", "==" or "!=")
+        test_name    - use group name as value when evaluates to True,
+                       empty string otherwise
+        matching_ids - list of system ids expected to match.
+                       Should be a subset of ("a", "b", "ab", "_")
+
+        """
+        group_a = data_setup.create_group()
+        self.user.groups.append(group_a)
+        system_a = data_setup.create_system(arch=u'i386', shared=True)
+        system_a.lab_controller = self.lc
+        system_a.groups.append(group_a)
+        system_0 = data_setup.create_system(arch=u'i386', shared=True)
+        system_0.lab_controller = self.lc
+        group_b = data_setup.create_group()
+        self.user.groups.append(group_b)
+        system_ab = data_setup.create_system(arch=u'i386', shared=True)
+        system_ab.lab_controller = self.lc
+        system_ab.groups.append(group_a)
+        system_ab.groups.append(group_b)
+        system_b = data_setup.create_system(arch=u'i386', shared=True)
+        system_b.lab_controller = self.lc
+        system_b.groups.append(group_b)
+        all_systems = dict(a=system_a, ab=system_ab, b=system_b, _=system_0)
         session.flush()
         systems = list(self.distro.systems_filter(self.user, """
             <hostRequires>
                 <and>
-                    <group op="==" value="%s" />
+                    <group op="%s" value="%s" />
                 </and>
             </hostRequires>
-            """ % group.group_name))
-        self.assert_(no_groups not in systems)
-        self.assert_(has_groups in systems)
+            """ % (test_op, (test_name and group_a.group_name or ""))))
+        for system_id in all_systems.keys():
+            if system_id in matching_ids:
+                self.assert_(all_systems[system_id] in systems)
+            else:
+                self.assert_(all_systems[system_id] not in systems)
+
+    def test_group(self):
+        """test <group = value/> case"""
+        self._test_group("=", "a", ("a", "ab"))
+
+    def test_not_in_group(self):
+        """test <group != value/> case"""
+        self._test_group("!=", "a", ("b", "_"))
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=601952
     def test_member_of_no_groups(self):
-        group = data_setup.create_group()
-        self.user.groups.append(group)
-        has_groups = data_setup.create_system(arch=u'i386', shared=True)
-        has_groups.lab_controller = self.lc
-        has_groups.groups.append(group)
-        no_groups = data_setup.create_system(arch=u'i386', shared=True)
-        no_groups.lab_controller = self.lc
-        session.flush()
-        systems = list(self.distro.systems_filter(self.user, """
-            <hostRequires>
-                <and>
-                    <group op="!="/>
-                </and>
-            </hostRequires>
-            """))
-        self.assert_(has_groups not in systems)
-        self.assert_(no_groups in systems)
+        """test <group == ""/> case"""
+        self._test_group("==", "", ("_",))
+
+    def test_member_of_any_group(self):
+        """test <group != ""/> case"""
+        self._test_group("!=", "", ("a", "ab", "b"))
 

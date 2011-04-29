@@ -242,13 +242,13 @@ class XmlGroup(ElementWrapper):
                                              alias.c.group_id==group.group_id))
                     query = alias.c.group_id==None
             else:
-                # - '==' - search for system which is member of any group
-                # - '!=' - search for system which is not member of any group
+                # - '!=' - search for system which is member of any group
+                # - '==' - search for system which is not member of any group
                 joins = joins.outerjoin(alias)
                 if op == '__eq__':
-                    query = alias.c.group_id!=None
-                else:
                     query = alias.c.group_id==None
+                else:
+                    query = alias.c.group_id!=None
         return (joins, query)
 
 
