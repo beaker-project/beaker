@@ -18,24 +18,25 @@ echo 'OPTIONS="\$OPTIONS -x"' >>/etc/sysconfig/ntpd
 /bin/sed -i 's/^\(serial.*\)--unit=\S\+\(.*\)\$/\1--port=$grubport\2/' /boot/grub/grub.conf
 #end if
 
-#if $getVar('arch','') == 'ia64'
-BOOT=\$(/usr/sbin/efibootmgr -v | grep BootOrder | awk '{print \$2}' | awk -F, '{print \$1}')
-EFI=\$(/usr/sbin/efibootmgr -v | grep Boot\$BOOT | awk '{print \$NF}')
-PXE_SLOT=\$(/usr/sbin/efibootmgr -v | grep -i Netboot |cut -c5-8)
-#
-# If There is no Netboot Entry we can't continue
-# You have to manually setup a Netboot entry first
-# from EFI maint menu.
-#
-if [ ! -z \$PXE_SLOT ]; then
-   NEWBOOT=\$(echo \$BOOT| sed -e 's/\$PXE_SLOT,//')
-   # its cheesy. but it works.
-   NEWBOOT=\$(echo \$NEWBOOT| sed -e 's/,\$PXE_SLOT,//')
-   NEWBOOT=\$(echo \$NEWBOOT| sed -e 's/,\$PXE_SLOT//')
-   /usr/sbin/efibootmgr -o \$PXE_SLOT,\$NEWBOOT
-   /usr/sbin/efibootmgr -n \$BOOT
+# If efibootmgr exists then re-order boot options
+if [ -x '/usr/sbin/efibootmgr' ]; then
+    BOOT=\$(/usr/sbin/efibootmgr -v | grep BootOrder | awk '{print \$2}' | awk -F, '{print \$1}')
+    EFI=\$(/usr/sbin/efibootmgr -v | grep Boot\$BOOT | awk '{print \$NF}')
+    PXE_SLOT=\$(/usr/sbin/efibootmgr -v | grep -i Netboot |cut -c5-8)
+    #
+    # If There is no Netboot Entry we can't continue
+    # You have to manually setup a Netboot entry first
+    # from EFI maint menu.
+    #
+    if [ ! -z \$PXE_SLOT ]; then
+       NEWBOOT=\$(echo \$BOOT| sed -e 's/\$PXE_SLOT,//')
+       # its cheesy. but it works.
+       NEWBOOT=\$(echo \$NEWBOOT| sed -e 's/,\$PXE_SLOT,//')
+       NEWBOOT=\$(echo \$NEWBOOT| sed -e 's/,\$PXE_SLOT//')
+       /usr/sbin/efibootmgr -o \$PXE_SLOT,\$NEWBOOT
+       /usr/sbin/efibootmgr -n \$BOOT
+    fi
 fi
-#end if
 
 #set $yum = $getVar("yum","")
 #if $yum == ""
@@ -215,12 +216,13 @@ EOF
 /bin/sed -i 's/INTERFACE=localhost/INTERFACE=/' /etc/beah.conf
 /bin/sed -i 's/CONSOLE_LOG=.*/CONSOLE_LOG=True/' /etc/beah.conf
 
-chkconfig --add beah-srv
-chkconfig --add beah-beaker-backend
-chkconfig --add beah-fwd-backend
 chkconfig --level 345 beah-srv on
 chkconfig --level 345 beah-beaker-backend on
 chkconfig --level 345 beah-fwd-backend on
+
+# turn on rhts-compat by default (it will save us one reboot):
+chkconfig --add rhts-compat
+chkconfig --level 345 rhts-compat on
 
 #Add test user account
 useradd --password '\$6\$oIW3o2Mr\$XbWZKaM7nA.cQqudfDJScupXOia5h1u517t6Htx/Q/MgXm82Pc/OcytatTeI4ULNWOMJzvpCigWiL4xKP9PX4.' test

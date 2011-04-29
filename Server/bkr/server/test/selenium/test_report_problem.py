@@ -42,11 +42,11 @@ class TestReportProblem(SeleniumTestCase):
                 email_address=u'picard@starfleet.gov')
         system = data_setup.create_system(fqdn=u'ncc1701d',
                 owner=system_owner)
-        lc = data_setup.create_labcontroller('testing_for_mail')
+        lc = data_setup.create_labcontroller(u'testing_for_mail')
         system.lab_controller = lc
-        lender = 'amd'
-        location = 'bne'
-        vendor = 'intel' 
+        lender = u'amd'
+        location = u'bne'
+        vendor = u'intel'
         system.lender = lender
         system.location = location
         system.vendor = vendor

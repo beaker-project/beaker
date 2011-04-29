@@ -42,8 +42,8 @@ log = logging.getLogger(__name__)
 
 class SeleniumTestCase(unittest.TestCase):
 
-    BEAKER_LOGIN_USER = 'admin'
-    BEAKER_LOGIN_PASSWORD = 'testing'
+    BEAKER_LOGIN_USER = u'admin'
+    BEAKER_LOGIN_PASSWORD = u'testing'
 
     def wait_and_try(self, f, wait_time=30):
         start_time = datetime.now()

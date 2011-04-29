@@ -84,6 +84,12 @@ class Tasks(RPCRoot):
             'install_name'
                 Distro install name. Include only tasks which are compatible 
                 with this distro.
+            'osmajor'
+                OSVersion OSMajor, like RedHatEnterpriseLinux6.  Include only
+                tasks which are compatible with this OSMajor.
+            'names'
+                Task name. Include only tasks that are named. useful when
+                combined with osmajor or install_name.
             'packages'
                 List of package names. Include only tasks which have a Run-For 
                 entry matching any of these packages.
@@ -91,8 +97,10 @@ class Tasks(RPCRoot):
                 List of task types. Include only tasks which have one or more 
                 of these types.
 
-        The return value is an array of names of the matching tasks. Call 
-        :meth:`tasks.to_dict` to fetch metadata for a particular task.
+        The return value is an array of dicts, which are name and arches. 
+          name is the name of the matching tasks.
+          arches is an array of arches which this task does not apply for.
+        Call :meth:`tasks.to_dict` to fetch metadata for a particular task.
         """
         if 'install_name' in filter and filter['install_name']:
             try:
@@ -100,8 +108,25 @@ class Tasks(RPCRoot):
             except InvalidRequestError, err:
                 raise BX(_('Invalid Distro: %s ' % filter['install_name']))   
             tasks = distro.tasks()
+        elif 'osmajor' in filter and filter['osmajor']:
+            try:
+                osmajor = OSMajor.by_name(filter['osmajor'])
+            except InvalidRequestError, err:
+                raise BX(_('Invalid OSMajor: %s' % filter['osmajor']))
+            tasks = osmajor.tasks()
         else:
             tasks = Task.query()
+
+        # Filter by name if specified
+        # /distribution/install, /distribution/reservesys
+        if 'names' in filter and filter['names']:
+            # if not a list, make it into a list.
+            if isinstance(filter['names'], str):
+                filter['names'] = [filter['names']]
+            or_names = []
+            for tname in filter['names']:
+                or_names.append(Task.name==tname)
+            tasks = tasks.filter(or_(*or_names))
 
         # Filter by packages if specified
         # apache, kernel, mysql, etc..
@@ -137,7 +162,7 @@ class Tasks(RPCRoot):
             tasks = tasks.filter(or_(*or_types))
 
         # Return all task names
-        return [task.name for task in tasks]
+        return [dict(name = task.name, arches = [str(arch.arch) for arch in task.excluded_arch]) for task in tasks]
 
     @cherrypy.expose
     def upload(self, task_rpm_name, task_rpm_data):
@@ -151,15 +176,18 @@ class Tasks(RPCRoot):
         :type task_rpm_data: XML-RPC binary
         """
         rpm_file = "%s/%s" % (self.task_dir, task_rpm_name)
-        FH = open(rpm_file, "w")
-        FH.write(task_rpm_data.data)
-        FH.close()
-        try:
-            task = self.process_taskinfo(self.read_taskinfo(rpm_file))
-        except ValueError, err:
-            session.rollback()
-            return "Failed to import because of %s" % str(err)
-        return "Success"
+        if os.path.exists("%s" % rpm_file):
+            return "Failed to import because we already have %s" % task_rpm_name
+        else:
+            FH = open(rpm_file, "w")
+            FH.write(task_rpm_data.data)
+            FH.close()
+            try:
+                task = self.process_taskinfo(self.read_taskinfo(rpm_file))
+            except ValueError, err:
+                session.rollback()
+                return "Failed to import because of %s" % str(err)
+            return "Success"
 
     @expose()
     def save(self, task_rpm, *args, **kw):
@@ -168,20 +196,24 @@ class Tasks(RPCRoot):
         """
         rpm_file = "%s/%s" % (self.task_dir, task_rpm.filename)
 
-        rpm = task_rpm.file.read()
-        FH = open(rpm_file, "w")
-        FH.write(rpm)
-        FH.close()
-
-        try:
-            task = self.process_taskinfo(self.read_taskinfo(rpm_file))
-        except (ValueError,ParserError,ParserWarning), err:
-            session.rollback()
-            flash(_(u'Failed to import because of %s' % err ))
+        if os.path.exists("%s" % rpm_file):
+            flash(_(u'Failed to import because we already have %s' % 
+                                                     task_rpm.filename ))
             redirect(url("./new"))
+        else:
+            rpm = task_rpm.file.read()
+            FH = open(rpm_file, "w")
+            FH.write(rpm)
+            FH.close()
+            try:
+                task = self.process_taskinfo(self.read_taskinfo(rpm_file))
+            except (ValueError,ParserError,ParserWarning), err:
+                session.rollback()
+                flash(_(u'Failed to import because of %s' % err ))
+                redirect(url("./new"))
 
-        flash(_(u"%s Added/Updated at id:%s" % (task.name,task.id)))
-        redirect(".")
+            flash(_(u"%s Added/Updated at id:%s" % (task.name,task.id)))
+            redirect(".")
 
     @expose(template='bkr.server.templates.task_search')
     @validate(form=task_form)
@@ -329,9 +361,9 @@ class Tasks(RPCRoot):
         tinfo = testinfo.parse_string(raw_taskinfo['desc'])
 
         task = Task.lazy_create(name=tinfo.test_name)
-        # RPM is the same version we have. don't process
-        if task.rpm == raw_taskinfo['hdr']['rpm']:
-            return task
+        # RPM is the same version we have. don't process		
+        if task.version == raw_taskinfo['hdr']['ver']:
+            raise BX(_("Failed to import,  %s is the same version we already have" % task.version))
         # Keep N-1 versions of task rpms.  This allows currently running tasks to finish.
         if task.oldrpm and os.path.exists("%s/%s" % (self.task_dir, task.oldrpm)):
             try:

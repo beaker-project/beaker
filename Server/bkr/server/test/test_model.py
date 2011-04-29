@@ -30,17 +30,25 @@ class TestSystem(unittest.TestCase):
         session.rollback()
 
     def test_create_system_params(self):
-        new_system = System(fqdn=u'test_fqdn', contact=u'test@email.com',
-                            location=u'Brisbane', model=u'Proliant', serial=u'4534534',
-                            vendor=u'Dell', type=SystemType.by_name(u'Machine'),
-                            status=SystemStatus.by_name(u'Automated'))
-        session.flush()
-        self.assertEqual(new_system.fqdn, 'test_fqdn')
-        self.assertEqual(new_system.contact, 'test@email.com')
-        self.assertEqual(new_system.location, 'Brisbane')
-        self.assertEqual(new_system.model, 'Proliant')
-        self.assertEqual(new_system.serial, '4534534')
-        self.assertEqual(new_system.vendor, 'Dell')
+        try:
+            session.begin()
+            owner = data_setup.create_user()
+            new_system = System(fqdn=u'test_fqdn', contact=u'test@email.com',
+                                location=u'Brisbane', model=u'Proliant', serial=u'4534534',
+                                vendor=u'Dell', type=SystemType.by_name(u'Machine'),
+                                status=SystemStatus.by_name(u'Automated'),
+                                owner=owner)
+            session.flush()
+            self.assertEqual(new_system.fqdn, 'test_fqdn')
+            self.assertEqual(new_system.contact, 'test@email.com')
+            self.assertEqual(new_system.location, 'Brisbane')
+            self.assertEqual(new_system.model, 'Proliant')
+            self.assertEqual(new_system.serial, '4534534')
+            self.assertEqual(new_system.vendor, 'Dell')
+            self.assertEqual(new_system.owner, owner)
+        finally:
+            session.rollback()
+            session.close()
     
     def test_add_user_to_system(self): 
         user = data_setup.create_user()

@@ -383,61 +383,6 @@ function LabController()
     service beaker-proxy start
     service beaker-watchdog start
     service beaker-transfer start
-    # Add some distros
-    # NFS format HOSTNAME:DISTRONAME:NFSPATH
-    if [ -z "$NFSDISTROS" ]; then
-        echo "Missing NFS Distros to test with" | tee -a $OUTPUTFILE
-        report_result $TEST Warn
-        exit 1
-    fi
-    ln -s /fakenet /var/www/html/fakenet
-    for distro in $NFSDISTROS; do
-        NFSSERVER=$(echo $distro| awk -F: '{print $1}')
-        DISTRONAME=$(echo $distro| awk -F: '{print $2}')
-        NFSPATH=$(echo $distro| awk -F: '{print $3}')
-        NFSDIR=$(dirname $NFSPATH)
-        mkdir -p /fakenet/${NFSSERVER}${NFSDIR}
-        mount ${NFSSERVER}:${NFSDIR} /fakenet/${NFSSERVER}${NFSDIR}
-        result="FAIL"
-        echo cobbler import --path=/fakenet/${NFSSERVER}${NFSPATH} \
-                       --name=${DISTRONAME}_nfs \
-                       --available-as=nfs://${NFSSERVER}:${NFSPATH}
-        cobbler import --path=/fakenet/${NFSSERVER}${NFSPATH} \
-                       --name=${DISTRONAME}_nfs \
-                       --available-as=nfs://${NFSSERVER}:${NFSPATH}
-        score=$?
-        if [ "$score" -eq "0" ]; then
-            result="PASS"
-        fi
-        report_result $TEST/ADD_DISTRO/${DISTRONAME}_NFS $result $score
-    done
-    # Import Rawhide
-    if [ -n "$RAWHIDE_NFS" ]; then
-        NFSSERVER=$(echo $RAWHIDE_NFS| awk -F: '{print $1}')
-        NFSDIR=$(echo $RAWHIDE_NFS| awk -F: '{print $2}')
-        mkdir -p /fakenet/${NFSSERVER}${NFSDIR}
-        mount ${NFSSERVER}:${NFSDIR} /fakenet/${NFSSERVER}${NFSDIR}
-        for distro in $(find /fakenet/${NFSSERVER}${NFSDIR} -maxdepth 1 -name rawhide\* -type d); do 
-            DISTRO=$(basename $distro)
-            DISTRONAME=Fedora-$(basename $distro)
-            result="FAIL"
-            echo cobbler import \
-                           --path=/fakenet/${NFSSERVER}${NFSDIR}/${DISTRO} \
-                           --name=${DISTRONAME}_nfs \
-                           --available-as=nfs://${NFSSERVER}:${NFSDIR}/${DISTRO}
-            cobbler import --path=/fakenet/${NFSSERVER}${NFSDIR}/${DISTRO} \
-                           --name=${DISTRONAME}_nfs \
-                           --available-as=nfs://${NFSSERVER}:${NFSDIR}/${DISTRO}
-            score=$?
-            if [ "$score" -eq "0" ]; then
-                result="PASS"
-            fi
-            report_result $TEST/ADD_DISTRO/${DISTRONAME}_NFS $result $score
-        done
-    fi
-    cobbler distro report
-    /var/lib/cobbler/triggers/sync/post/osversion.trigger | tee -a $OUTPUTFILE
-    estatus_fail "**** Failed to run osversion.trigger ****"
     rhts-sync-set -s DONE
     result_pass 
 }

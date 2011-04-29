@@ -58,6 +58,7 @@ class ElementWrapper(object):
             self.alias = { 'key_value'  : 0,
                            'arch'       : {},
                            'distro_tag' : 0,
+                           'system_group' : 0,
                          }
 
 
@@ -192,18 +193,6 @@ class XmlDistroVirt(ElementWrapper):
             query = getattr(distro_table.c.virt, op)(value)
         return (joins, query)
 
-class XmlDistroMethod(ElementWrapper):
-    """
-    Filter Distro based on Install Method
-    """
-    def filter(self, joins):
-        op = self.op_table[self.get_xml_attr('op', unicode, '==')]
-        value = self.get_xml_attr('value', unicode, None)
-        query = None
-        if op:
-	    query = getattr(distro_table.c.method, op)(value)
-        return (joins, query)
-
 class XmlSystem(ElementWrapper):
     """
     Filter 
@@ -217,6 +206,51 @@ class XmlSystem(ElementWrapper):
             # Filter using the operator we looked up
             query = getattr(getattr(system_table.c,key), op)(value)
         return (joins, query)
+
+
+class XmlGroup(ElementWrapper):
+    """
+    Filter based on group
+    """
+
+    op_table = { '=' : '__eq__',
+                 '==' : '__eq__',
+                 '!=' : '__ne__'}
+
+    def filter(self, joins):
+        op = self.op_table[self.get_xml_attr('op', unicode, '==')]
+        value = self.get_xml_attr('value', unicode, None)
+        query = None
+        if op:
+            table = system_group_table
+            # Alias since we may join on ourselves
+            alias = table.alias('system_group%i' % self.alias['system_group'])
+            self.alias['system_group'] += 1
+            if value:
+                # - '==' - search for system which is member of given group
+                # - '!=' - search for system which is not member of given group
+                try:
+                    group = Group.by_name(value)
+                except InvalidRequestError:
+                    return (joins, False)
+                if op == '__eq__':
+                    joins = joins.join(alias)
+                    query = alias.c.group_id==group.group_id
+                else:
+                    joins = joins.outerjoin(alias,
+                               onclause=and_(system_table.c.id==alias.c.system_id,
+                                             alias.c.group_id==group.group_id))
+                    query = alias.c.group_id==None
+            else:
+                # - '==' - search for system which is member of any group
+                # - '!=' - search for system which is not member of any group
+                joins = joins.outerjoin(alias)
+                if op == '__eq__':
+                    query = alias.c.group_id!=None
+                else:
+                    query = alias.c.group_id==None
+        return (joins, query)
+
 
 class XmlKeyValue(ElementWrapper):
     """
@@ -426,7 +460,6 @@ subclassDict = {
     'distro_name'         : XmlDistroName,
     'distro_tag'          : XmlDistroTag,
     'distro_virt'         : XmlDistroVirt,
-    'distro_method'       : XmlDistroMethod,
     'hostlabcontroller'   : XmlHostLabController,
     'distrolabcontroller' : XmlDistroLabController,
     'system_type'         : XmlSystemType,
@@ -436,6 +469,7 @@ subclassDict = {
     'hostname'            : XmlHostName,
     'arch'                : XmlArch,
     'numa_node_count'     : XmlNumaNodeCount,
+    'group'               : XmlGroup,
     }
 
 if __name__=='__main__':

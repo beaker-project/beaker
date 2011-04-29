@@ -63,7 +63,7 @@ system_table = Table('system', metadata,
     Column('model', Unicode(255)),
     Column('lender', Unicode(255)),
     Column('owner_id', Integer,
-           ForeignKey('tg_user.user_id')),
+           ForeignKey('tg_user.user_id'), nullable=False),
     Column('user_id', Integer,
            ForeignKey('tg_user.user_id')),
     Column('type_id', Integer,
@@ -374,7 +374,6 @@ distro_table = Table('distro', metadata,
     Column('osversion_id', Integer, ForeignKey('osversion.id')),
     Column('arch_id', Integer, ForeignKey('arch.id')),
     Column('variant',Unicode(25)),
-    Column('method',Unicode(25)),
     Column('virt',Boolean),
     Column('date_created',DateTime),
     mysql_engine='InnoDB',
@@ -526,6 +525,7 @@ beaker_tag_table = Table('beaker_tag', metadata,
 retention_tag_table = Table('retention_tag', metadata,
     Column('id', Integer, ForeignKey('beaker_tag.id', onupdate='CASCADE', ondelete='CASCADE'),nullable=False, primary_key=True),
     Column('default_', Boolean),
+    Column('expire_in_days', Integer, default=0),
     Column('needs_product', Boolean),
     mysql_engine='InnoDB',
 )
@@ -2713,6 +2713,20 @@ class OSMajor(MappedObject):
     def get_all(cls):
         return [(0,"All")] + [(major.id, major.osmajor) for major in cls.query()]
 
+    def tasks(self):
+        """
+        List of tasks that support this OSMajor
+        """
+        return Task.query().filter(
+                not_(
+                     Task.id.in_(select([task_table.c.id]).
+                 where(task_table.c.id==task_exclude_osmajor_table.c.task_id).
+                 where(task_exclude_osmajor_table.c.osmajor_id==osmajor_table.c.id).
+                 where(osmajor_table.c.id==self.id)
+                                ),
+                    )
+        )
+
     def __repr__(self):
         return '%s' % self.osmajor
 
@@ -2788,6 +2802,7 @@ class Watchdog(MappedObject):
         """ Find a watchdog based on the system name
         """
         return cls.query.filter_by(system=system).one()
+
 
     @classmethod
     def by_status(cls, labcontroller=None, status="active"):
@@ -2983,11 +2998,6 @@ class Distro(MappedObject):
         self.install_name = install_name
  
     @classmethod
-    def all_methods(cls):
-        methods = [elem[0] for elem in select([distro_table.c.method],whereclause=distro_table.c.method != None,from_obj=distro_table,distinct=True).execute()]
-        return methods 
-
-    @classmethod
     def by_install_name(cls, install_name):
         return cls.query.filter_by(install_name=install_name).one()
 
@@ -3034,7 +3044,6 @@ class Distro(MappedObject):
         fields = dict(
                       distro_name    = 'name',
                       distro_arch    = ['arch','arch'],
-                      distro_method  = 'method',
                       distro_variant = 'variant',
                       distro_virt    = 'virt',
                       distro_family  = ['osversion','osmajor','osmajor'],
@@ -3116,16 +3125,14 @@ class Distro(MappedObject):
         """
         multiple_distro_systems() will return a list of distro's that are applicable for a certain criteria.
         The criteria can be
-        *method
         *arch
         *osmajor
         """
-        method = kw.get('method')
         arch = kw.get('arch')
         osmajor = kw.get('osmajor')
         tag = kw.get('tag')
 
-        if method is None and arch is None and osmajor is None:
+        if arch is None and osmajor is None:
             log.error('Nothing has been passed into mulitple_distro_systems')
             return
          
@@ -3146,7 +3153,7 @@ class Distro(MappedObject):
         if tag: 
             my_from = my_from.join(distro_tag_map).join(distro_tag_table)
             my_and.append(distro_tag_table.c.tag == tag) 
-        for var in (osmajor,method,tag) + tuple(sorted(local_arches)):
+        for var in (osmajor,tag) + tuple(sorted(local_arches)):
             if var:
                 cache_locator.append(var)
 
@@ -3161,7 +3168,7 @@ class Distro(MappedObject):
         future_arch_cache = {}
         for local_arch in local_arches:
             my_derived = select([distro_table.c.name,distro_table.c.install_name,distro_table.c.id.label('distro_id'),distro_table.c.date_created],
-                                whereclause= and_(*my_and + [arch_table.c.arch == local_arch,distro_table.c.method == method] ),
+                                whereclause= and_(*my_and + [arch_table.c.arch == local_arch] ),
                                 from_obj=my_from).alias(local_arch)
             
             if current_derived is None:
@@ -3694,6 +3701,7 @@ class Job(TaskBase):
     """
 
     stop_types = ['abort','cancel']
+    max_by_whiteboard = 20
 
     @classmethod
     def mine(cls, owner):
@@ -3745,8 +3753,24 @@ class Job(TaskBase):
         if not query:
             query = cls.query()
         query = query.join(['recipesets','recipes']).filter(and_(Recipe.finish_time < datetime.utcnow() - delta,
-            cls.status_id.in_(TaskStatus.by_name(u'Completed').id,TaskStatus.by_name(u'Aborted').id,TaskStatus.by_name(u'Cancelled').id)))
+            cls.status_id.in_([TaskStatus.by_name(u'Completed').id,TaskStatus.by_name(u'Aborted').id,TaskStatus.by_name(u'Cancelled').id])))
         return query
+
+    @classmethod
+    def expired_logs(cls):
+        """Return log files for expired recipes
+        """
+        expired_logs = []
+        job_ids = [job.id for job in cls.marked_for_deletion()]
+        for tag in RetentionTag.get_transient():
+            expire_in = tag.expire_in_days
+            tag_name = tag.tag
+            job_ids.extend([job.id for job in cls.find_jobs(tag=tag_name, complete_days=expire_in) if job.deleted is None])
+        job_ids = set(job_ids)
+        for job_id in job_ids:
+            job = Job.by_id(job_id)
+            expired_logs.append((job,job.get_logs()))
+        return expired_logs
 
     @classmethod
     def has_family(cls, family, query=None, **kw):
@@ -3778,7 +3802,7 @@ class Job(TaskBase):
 
     @classmethod
     def by_whiteboard(cls,desc):
-        res = Job.query().filter_by(whiteboard = desc)
+        res = Job.query().filter_by(whiteboard = desc).limit(cls.max_by_whiteboard)
         return res
 
     @classmethod
@@ -3836,7 +3860,11 @@ class Job(TaskBase):
         return job
 
     @classmethod
-    def find_jobs(cls, query=None, tag=None, complete_days=None, family=None, product=None, **kw):
+    def marked_for_deletion(cls):
+        return cls.query().filter(and_(cls.to_delete!=None, cls.deleted==None)).all()
+
+    @classmethod
+    def find_jobs(cls, query=None, tag=None, complete_days=None, family=None, product=None,  **kw):
         if not query:
             query = cls.query()
         if complete_days:
@@ -3874,18 +3902,11 @@ class Job(TaskBase):
                     log.exception(err_msg)
                     raise BX(err_msg)
 
-        return query.all()
+        return query
 
     @classmethod
-    def delete_jobs(cls, **kw):
-        if kw['jobs']:
-            actual_jobs = kw['jobs']
-            jobs_to_delete = cls._delete_criteria(jobs=actual_jobs)
-        else:
-            query = cls.query()
-            query = cls._delete_criteria(query=query)
-            kw['query'] = query
-            jobs_to_delete = cls.find_jobs(**kw)
+    def delete_jobs(cls, jobs=None, query=None):
+        jobs_to_delete  = cls._delete_criteria(jobs,query)
 
         for job in jobs_to_delete:
             job.soft_delete()
@@ -3894,15 +3915,16 @@ class Job(TaskBase):
 
     @classmethod
     def _delete_criteria(cls, jobs=None, query=None):
-        try:
-            admin = identity.current.user.is_admin()
-        except AttributeError: #not logged in
-            err_msg = u'User not logged in'
-            log.exception(err_msg)
-            return err_msg
+        """Returns valid jobs for deletetion
 
+
+           takes either a list of Job objects or a query object, and returns
+           those that are valid for deletion
+
+
+        """
         if not jobs and not query:
-            raise BeakerException('Need to pas either list of jobs or a query to _delete_criteria')
+            raise BeakerException('Need to pass either list of jobs or a query to _delete_criteria')
         valid_jobs = []
         if jobs:
             for j in jobs:
@@ -3911,19 +3933,13 @@ class Job(TaskBase):
                     is_owner = user == j.owner
                 except AttributeError, e: #not logged in
                     is_owner = False
-                if j.is_finished() and not j.counts_as_deleted():
-                    if admin:
-                        valid_jobs.append(j)
-                    elif is_owner:
-                        valid_jobs.append(j)
+                if j.is_finished() and not j.counts_as_deleted() and is_owner:
+                    valid_jobs.append(j)
             return valid_jobs
         elif query:
             query = query.filter(cls.status_id.in_([TaskStatus.by_name('Completed').id, TaskStatus.by_name('Aborted').id, TaskStatus.by_name('Cancelled').id]))
             query = query.filter(and_(Job.to_delete == None, Job.deleted == None))
-            if admin:
-                pass
-            else:
-                query = query.filter(Job.owner==identity.current.user)
+            query = query.filter(Job.owner==identity.current.user)
             return query
 
     def counts_as_deleted(self):
@@ -3938,6 +3954,12 @@ class Job(TaskBase):
         if self.to_delete:
             raise BeakerException(u'%s is already marked to delete' % self.t_id)
         self.to_delete = datetime.utcnow()
+
+    def get_logs(self):
+        logs = []
+        for rs in self.recipesets:
+            logs.extend(rs.get_logs())
+        return logs
 
     def clone_link(self):
         """ return link to clone this job
@@ -4124,6 +4146,7 @@ class Product(MappedObject):
 
 class BeakerTag(object):
 
+
     def __init__(self, tag, *args, **kw):
         self.tag = tag
 
@@ -4145,7 +4168,9 @@ class BeakerTag(object):
 
 class RetentionTag(BeakerTag):
 
-    def __init__(self, tag, is_default=False, needs_product=False, *args, **kw):
+    def __init__(self, tag, is_default=False, needs_product=False, expire_in_days=None, *args, **kw):
+        self.needs_product = needs_product
+        self.expire_in_days = expire_in_days
         self.set_default_val(is_default)
         self.needs_product = needs_product
         super(RetentionTag, self).__init__(tag, **kw)
@@ -4191,6 +4216,10 @@ class RetentionTag(BeakerTag):
         else:
             q = cls.query().filter(cls.tag.like('%s%%' % tag))
         return q
+
+    @classmethod
+    def get_transient(cls):
+        return cls.query().filter(cls.expire_in_days != 0).all()
 
     def __repr__(self, *args, **kw):
         return self.tag
@@ -4247,12 +4276,18 @@ class RecipeSet(TaskBase):
     """
     A Collection of Recipes that must be executed at the same time.
     """
+    stop_types = ['abort','cancel']
 
     def __init__(self, ttasks=0, priority=None):
         self.ttasks = ttasks
         self.priority = priority
 
-    stop_types = ['abort','cancel']
+    def get_logs(self):
+        logs = []
+        for recipe in self.recipes:
+            logs.append(recipe.get_logs())
+        return logs
+
     def is_owner(self,user):
         if self.job.owner == user:
             return True
@@ -4536,6 +4571,15 @@ class Recipe(TaskBase):
                 self.recipeset.queue_time.month,
                 job.id // Log.MAX_ENTRIES_PER_DIRECTORY, job.id, self.id)
     filepath = property(filepath)
+
+    def get_logs(self):
+        logs = getattr(self, 'logs', None)
+        if logs:
+            server = logs[0].server # Surely they all use the same directory
+        else:
+            server = None
+        full_recipe_logpath = '%s/%s' % (self.logspath, self.filepath)
+        return server or full_recipe_logpath
 
     def delete(self, dryrun, *args, **kw):
         """
@@ -6000,12 +6044,16 @@ System.mapper = mapper(System, system_table,
                      'reprovision_distro':relation(Distro, uselist=False),
                       '_system_ccs': relation(SystemCc, backref='system',
                                       cascade="all, delete, delete-orphan"),
+                     'reservations': relation(Reservation, backref='system',
+                        order_by=[reservation_table.c.start_time.desc()]),
+                     'dyn_reservations': dynamic_loader(Reservation),
                      'open_reservation': relation(Reservation, uselist=False, viewonly=True,
                         primaryjoin=and_(system_table.c.id == reservation_table.c.system_id,
                             reservation_table.c.finish_time == None)),
                      'status_durations': relation(SystemStatusDuration, backref='system',
                         cascade='all, delete, delete-orphan',
                         order_by=[system_status_duration_table.c.start_time.desc()]),
+                     'dyn_status_durations': dynamic_loader(SystemStatusDuration),
                      })
 
 mapper(SystemCc, system_cc_table)
@@ -6307,8 +6355,6 @@ mapper(TaskPriority, task_priority_table)
 mapper(TaskStatus, task_status_table)
 mapper(TaskResult, task_result_table)
 mapper(Reservation, reservation_table, properties={
-        'system': relation(System, backref=backref('reservations',
-            order_by=[reservation_table.c.start_time.desc()])),
         'user': relation(User, backref=backref('reservations',
             order_by=[reservation_table.c.start_time.desc()])),
 })

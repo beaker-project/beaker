@@ -45,6 +45,7 @@ class BeakerWorkflow(BeakerCommand):
         self.parser.add_option(
             "--arch",
             action="append",
+            dest="arches",
             default=[],
             help="Include this Arch in job",
         )
@@ -159,10 +160,16 @@ class BeakerWorkflow(BeakerCommand):
             help="Specify additional email addresses to notify",
         )
         self.parser.add_option(
-            "--dump",
+            "--kdump",
             default=False,
             action="store_true",
-            help="Turn on ndnc/kdump. (which one depends on the family)",
+            help="Turn on kdump.",
+        )
+        self.parser.add_option(
+            "--ndump",
+            default=False,
+            action="store_true",
+            help="Turn on ndnc.",
         )
         self.parser.add_option(
             "--method",
@@ -242,21 +249,33 @@ class BeakerWorkflow(BeakerCommand):
         password = kwargs.get("password", None)
         types    = kwargs.get("type", None)
         packages = kwargs.get("package", None)
-        tasks    = kwargs.get("task", [])
         self.n_clients = kwargs.get("clients", None)
         self.n_servers = kwargs.get("servers", None)
+
+        if not hasattr(self,'hub'):
+            self.set_hub(username, password)
+
+        filter = dict()
+        # Pre Filter based on osmajor
+        filter['osmajor'] = self.getFamily(*args, **kwargs)
+
+        tasks = []
+        if kwargs.get("task", None):
+            tasks = self.hub.tasks.filter(dict(names=kwargs.get('task'),
+                                               osmajor=filter['osmajor']))
+            for dropped_task in set(kwargs['task']).difference(
+                    set(task['name'] for task in tasks)):
+                print >>sys.stderr, 'WARNING: task %s not applicable ' \
+                        'for distro, ignoring' % dropped_task
 
         if self.n_clients or self.n_servers:
             self.multi_host = True
 
-        filter = dict()
         if types:
             filter['types'] = types
         if packages:
             filter['packages'] = packages
-        
-        if not hasattr(self,'hub'):
-            self.set_hub(username, password)
+
         if types or packages:
             ntasks = self.hub.tasks.filter(filter)
 
@@ -281,32 +300,41 @@ class BeakerWorkflow(BeakerCommand):
                          distroRequires=None,
                          hostRequires=None,
                          role='STANDALONE',
+                         arch=None,
                          whiteboard=None,
                          install=None,
-                         dump=None,
                          **kwargs):
         """ add tasks and additional requires to our template """
-        # Copy basic requirements
-        recipe = copy.deepcopy(recipeTemplate)
-        if whiteboard:
-            recipe.whiteboard = whiteboard
-        if distroRequires:
-            recipe.addDistroRequires(copy.deepcopy(distroRequires))
-        if hostRequires:
-            recipe.addHostRequires(copy.deepcopy(hostRequires))
-        if '/distribution/install' not in requestedTasks:
-            recipe.addTask('/distribution/install')
-        if install:
-            paramnode = self.doc.createElement('param')
-            paramnode.setAttribute('name' , 'PKGARGNAME')
-            paramnode.setAttribute('value' , ' '.join(install))
-            recipe.addTask('/distribution/pkginstall', paramNodes=[paramnode])
-        if dump:
-            # Add both, One is for RHEL5 and newer, the Scheduler will filter out the wrong one.
-            recipe.addTask('/kernel/networking/ndnc')
-            recipe.addTask('/kernel/networking/kdump')
+        actualTasks = []
         for task in requestedTasks:
-            recipe.addTask(task, role=role, taskParams=taskParams)
+            if arch not in task['arches']:
+                actualTasks.append(task['name'])
+        # Don't create empty recipes
+        if actualTasks:
+            # Copy basic requirements
+            recipe = copy.deepcopy(recipeTemplate)
+            if whiteboard:
+                recipe.whiteboard = whiteboard
+            if distroRequires:
+                recipe.addDistroRequires(copy.deepcopy(distroRequires))
+            if hostRequires:
+                recipe.addHostRequires(copy.deepcopy(hostRequires))
+            if dict(name='/distribution/install', arches=[]) not \
+               in requestedTasks:
+                recipe.addTask('/distribution/install')
+            if install:
+                paramnode = self.doc.createElement('param')
+                paramnode.setAttribute('name' , 'PKGARGNAME')
+                paramnode.setAttribute('value' , ' '.join(install))
+                recipe.addTask('/distribution/pkginstall', paramNodes=[paramnode])
+            if kwargs.get("ndump"):
+                recipe.addTask('/kernel/networking/ndnc')
+            if kwargs.get("kdump"):
+                recipe.addTask('/kernel/networking/kdump')
+            for task in actualTasks:
+                recipe.addTask(task, role=role, taskParams=taskParams)
+        else:
+            recipe = None
         return recipe
 
 
@@ -339,42 +367,48 @@ class BeakerJob(BeakerBase):
         if kwargs.get('product'):
             self.node.setAttribute('product', kwargs.get('product'))
 
-    def addRecipeSet(self, recipeSet):
+    def addRecipeSet(self, recipeSet=None):
         """ properly add a recipeSet to this job """
-        if isinstance(recipeSet, BeakerRecipeSet):
-            self.node.appendChild(recipeSet.node)
-        elif isinstance(recipeSet, xml.dom.minidom.Element):
-            recipeSet.appendChild(recipeSet)
-        else:
-            #FIXME raise error here.
-            sys.stderr.write("invalid object\n")
+        if recipeSet:
+            if isinstance(recipeSet, BeakerRecipeSet):
+                node = recipeSet.node
+            elif isinstance(recipeSet, xml.dom.minidom.Element):
+                node = recipeSet
+            else:
+                raise
+            if len(node.getElementsByTagName('recipe')) > 0:
+                self.node.appendChild(node)
 
-    def addRecipe(self, recipe):
+    def addRecipe(self, recipe=None):
         """ properly add a recipe to this job """
-        recipeSet = self.doc.createElement('recipeSet')
-        if isinstance(recipe, BeakerRecipe):
-            recipeSet.appendChild(recipe.node)
-        elif isinstance(recipe, xml.dom.minidom.Element):
-            recipeSet.appendChild(recipe)
-        else:
-            #FIXME raise error here.
-            sys.stderr.write("invalid object\n")
-        self.node.appendChild(recipeSet)
+        if recipe:
+            if isinstance(recipe, BeakerRecipe):
+                node = recipe.node
+            elif isinstance(recipe, xml.dom.minidom.Element):
+                node = recipe
+            else:
+                raise
+            if len(node.getElementsByTagName('task')) > 0:
+                recipeSet = self.doc.createElement('recipeSet')
+                recipeSet.appendChild(node)
+                self.node.appendChild(recipeSet)
 
 class BeakerRecipeSet(BeakerBase):
     def __init__(self, *args, **kwargs):
         self.node = self.doc.createElement('recipeSet')
         self.node.setAttribute('priority', kwargs.get('priority', ''))
 
-    def addRecipe(self, recipe):
+    def addRecipe(self, recipe=None):
         """ properly add a recipe to this recipeSet """
-        if isinstance(recipe, BeakerRecipe):
-            self.node.appendChild(recipe.node)
-        elif isinstance(recipe, xml.dom.minidom.Element):
-            self.node.appendChild(recipe)
-        else:
-            #FIXME raise error here.
-            sys.stderr.write("invalid object\n")
+        if recipe:
+            if isinstance(recipe, BeakerRecipe):
+                node = recipe.node
+            elif isinstance(recipe, xml.dom.minidom.Element):
+                node = recipe
+            else:
+                raise
+            if len(node.getElementsByTagName('task')) > 0:
+                self.node.appendChild(node)
 
 class BeakerRecipeBase(BeakerBase):
     def __init__(self, *args, **kwargs):

@@ -997,7 +997,6 @@ class Distro(SystemObject):
                             'OSMajor' : MyColumn(col_type='string',column=model.OSMajor.osmajor,relations=['osversion','osmajor']),
                             'Arch' : MyColumn(col_type='string',column=model.Arch.arch,relations='arch'),
                             'Virt' : MyColumn(col_type='boolean',column=model.Distro.virt),
-                            'Method' : MyColumn(col_type='string',column=model.Distro.method),
                             'Breed' : MyColumn(col_type='string',column=model.Breed.breed, relations=['breed']),
                             'Tag' : MyColumn(col_type='string', column=model.DistroTag.tag, relations=['_tags'])
                          }

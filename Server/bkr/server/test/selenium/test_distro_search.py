@@ -205,37 +205,6 @@ class Search(bkr.server.test.selenium.SeleniumTestCase):
             unicode('15.Failed to find %s when searching for Breed %s' % \
             (self.distro_three.name, self.distro_one.breed)))
         #END
-        
-        """
-        Method -> is -> http
-        START
-        """
-        sel.select("distrosearch_0_table", "label=Method")
-        sel.select("distrosearch_0_operation", "label=is")
-        sel.type("distrosearch_0_value", "http")
-        sel.click("Search")
-        sel.wait_for_page_to_load("30000")
-        try: 
-            self.failUnless(sel.is_text_present("%s" % self.distro_one.name))
-        except AssertionError, e: 
-            self.verificationErrors.append(\
-            unicode('Searched by http, did not find %' % \
-            self.distro_one.name))
-
-        try: 
-            self.failUnless(sel.is_text_present("%s" % self.distro_two.name))
-        except AssertionError, e: 
-            self.verificationErrors.append(\
-            unicode('Searched by http, did not find %' % \
-            self.distro_two.name))
-
-        try: 
-            self.failUnless(sel.is_text_present("%s" % self.distro_three.name))
-        except AssertionError, e: 
-            self.verificationErrors.append(\
-            unicode('Searched by http, did not find %' % \
-            self.distro_three.name))
-        #END
 
         sel.select("distrosearch_0_table", "label=Virt")
         sel.select("distrosearch_0_operation", "label=is")
