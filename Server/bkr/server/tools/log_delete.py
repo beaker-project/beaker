@@ -2,6 +2,7 @@ import errno, shutil, datetime
 from bkr import __version__ as bkr_version
 from optparse import OptionParser
 from bkr.server.model import Job
+from bkr.server.util import load_config
 from turbogears.database import session
 from bkr.common.dav import BeakerRequest, DavDeleteErrorHandler, RedirectHandler
 import urllib2 as u2
@@ -25,13 +26,12 @@ def main():
                 and do not actually delete files')
     parser.set_defaults(verbose=False, dry_run=False)
     options, args = parser.parse_args()
-    log_delete(options.verbose, options.dry_run, options.config)
+    load_config(options.config)
+    log_delete(options.verbose, options.dry_run)
 
 
 
-def log_delete(verb=False, dry=False, config=None):
-    from bkr.server.util import load_config
-    load_config(config)
+def log_delete(verb=False, dry=False):
     job_logs = Job.expired_logs()
     # The only way to override default HTTPRedirectHandler
     # is to pass it into build_opener(). Appending does not work
