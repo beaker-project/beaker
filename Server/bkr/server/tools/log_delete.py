@@ -35,10 +35,9 @@ def log_delete(verb=False, dry=False, config=None):
     job_logs = Job.expired_logs()
     # The only way to override default HTTPRedirectHandler
     # is to pass it into build_opener(). Appending does not work
-    opener= u2.build_opener(RedirectHandler()) 
+    opener = u2.build_opener(RedirectHandler()) 
     opener.add_handler(HTTPKerberosAuthHandler())
     opener.add_handler(DavDeleteErrorHandler())
-    u2.install_opener(opener)
     if dry:
         print 'Dry run only'
     for job_log in job_logs:
@@ -52,7 +51,7 @@ def log_delete(verb=False, dry=False, config=None):
                     if 'http' in log:
                         url = log
                         req = BeakerRequest('DELETE', url=url)
-                        u2.urlopen(req)
+                        opener.open(req)
                     else:
                         try:
                             shutil.rmtree(log)
