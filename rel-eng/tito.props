@@ -1,3 +1,4 @@
 [globalconfig]
 default_builder = tito.builder.Builder
-default_tagger = tito.tagger.VersionTagger
+default_tagger = beakertito.BeakerVersionTagger
+lib_dir = rel-eng/lib
