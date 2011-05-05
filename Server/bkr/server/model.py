@@ -3769,8 +3769,8 @@ class Job(TaskBase):
         job_ids = set(job_ids)
         for job_id in job_ids:
             job = Job.by_id(job_id)
-            expired_logs.append((job,job.get_logs()))
-        return expired_logs
+            yield (job, job.get_logs())
+        return
 
     @classmethod
     def has_family(cls, family, query=None, **kw):
@@ -4576,6 +4576,11 @@ class Recipe(TaskBase):
         logs = getattr(self, 'logs', None)
         if logs:
             server = logs[0].server # Surely they all use the same directory
+            # We should have a trailing slash on a directory
+            # This is needed by apache, and should be good practice in general
+            if server:
+                if server[-1] != '/':
+                    server += '/'
         else:
             server = None
         full_recipe_logpath = '%s/%s' % (self.logspath, self.filepath)
