@@ -3,7 +3,7 @@
 
 Name:           beaker
 Version:        0.6.10
-Release:        3%{?dist}
+Release:        4%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -250,6 +250,9 @@ fi
 %{_var}/lib/beaker/addDistro.d/*
 
 %changelog
+* Thu May 05 2011 Raymond Mancy <rmancy@redhat.com> 0.6.10-4
+- and for commit().... (rmancy@redhat.com)
+
 * Thu May 05 2011 Raymond Mancy <rmancy@redhat.com> 0.6.10-3
 - rollback() does not clear the job objects from the session, close() does
   (rmancy@redhat.com)
