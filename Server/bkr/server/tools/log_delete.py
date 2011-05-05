@@ -32,17 +32,16 @@ def main():
 
 
 def log_delete(verb=False, dry=False):
-    job_logs = Job.expired_logs()
     # The only way to override default HTTPRedirectHandler
     # is to pass it into build_opener(). Appending does not work
-    opener = u2.build_opener(RedirectHandler()) 
+    opener = u2.build_opener(RedirectHandler())
     opener.add_handler(HTTPKerberosAuthHandler())
     opener.add_handler(DavDeleteErrorHandler())
     if dry:
         print 'Dry run only'
-    for job_log in job_logs:
-        job = job_log[0]
-        logs = job_log[1]
+    if verb:
+        print 'Getting expired jobs'
+    for job, logs in Job.expired_logs():
         try:
             session.begin()
             job.deleted = datetime.datetime.utcnow()

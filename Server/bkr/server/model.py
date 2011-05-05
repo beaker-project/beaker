@@ -3769,8 +3769,8 @@ class Job(TaskBase):
         job_ids = set(job_ids)
         for job_id in job_ids:
             job = Job.by_id(job_id)
-            expired_logs.append((job,job.get_logs()))
-        return expired_logs
+            yield (job, job.get_logs())
+        return
 
     @classmethod
     def has_family(cls, family, query=None, **kw):
