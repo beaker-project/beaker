@@ -61,13 +61,13 @@ def log_delete(verb=False, dry=False):
                     print log
 
         except Exception:
-            session.rollback()
+            session.close()
             raise
         else:
             if not dry:
                 session.commit()
             else:
-                session.rollback()
+                session.close()
 
 if __name__ == '__main__':
     main()
