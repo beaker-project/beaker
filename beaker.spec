@@ -3,7 +3,7 @@
 
 Name:           beaker
 Version:        0.6.10
-Release:        2%{?dist}
+Release:        3%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -250,6 +250,10 @@ fi
 %{_var}/lib/beaker/addDistro.d/*
 
 %changelog
+* Thu May 05 2011 Raymond Mancy <rmancy@redhat.com> 0.6.10-3
+- rollback() does not clear the job objects from the session, close() does
+  (rmancy@redhat.com)
+
 * Thu May 05 2011 Raymond Mancy <rmancy@redhat.com> 0.6.10-2
 - expired_logs() is now a generator, holding 60k+ Job objects in memory was not
   agreeable (rmancy@redhat.com)
