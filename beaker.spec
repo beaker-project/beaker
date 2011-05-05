@@ -3,7 +3,7 @@
 
 Name:           beaker
 Version:        0.6.10
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -250,6 +250,10 @@ fi
 %{_var}/lib/beaker/addDistro.d/*
 
 %changelog
+* Thu May 05 2011 Raymond Mancy <rmancy@redhat.com> 0.6.10-2
+- expired_logs() is now a generator, holding 60k+ Job objects in memory was not
+  agreeable (rmancy@redhat.com)
+
 * Wed May 04 2011 Raymond Mancy <rmancy@redhat.com> 0.6.10-1
 - 698752 osversion.trigger should prefer .treeinfo (bpeck@redhat.com)
 - 699935 motd change to .xml instead of .txt. Needs an update in the config
