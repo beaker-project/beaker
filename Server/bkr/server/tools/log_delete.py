@@ -66,6 +66,7 @@ def log_delete(verb=False, dry=False):
         else:
             if not dry:
                 session.commit()
+                session.close()
             else:
                 session.close()
 
