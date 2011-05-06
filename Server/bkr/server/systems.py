@@ -8,6 +8,7 @@ from bkr.server.bexceptions import BX
 from bkr.server.model import System, SystemActivity, SystemStatus, Distro
 from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.util import parse_xmlrpc_datetime
+from bkr.server.cobbler_utils import hash_to_string
 
 log = logging.getLogger(__name__)
 
@@ -100,20 +101,30 @@ class SystemsController(controllers.Controller):
         """
         Provisions a system with the given distro and options.
 
+        The *ks_meta*, *kernel_options*, and *kernel_options_post* arguments 
+        override the default values configured for the system. For example, if 
+        the default kernel options for the system/distro are
+        'console=ttyS0 ksdevice=eth0', and the caller passes 'ksdevice=eth1' 
+        for *kernel_options*, the kernel options used will be
+        'console=ttyS0 ksdevice=eth1'.
+
         :param distro_install_name: install name of distro to be provisioned
         :type distro_install_name: str
         :param ks_meta: kickstart options
-        :type ks_meta: dict
+        :type ks_meta: str
         :param kernel_options: kernel options for installation
         :type kernel_options: str
         :param kernel_options_post: kernel options for after installation
         :type kernel_options_post: str
-        :param kickstart: complete kickstart template
+        :param kickstart: complete kickstart
         :type kickstart: str
         :param reboot: whether to reboot the system after applying Cobbler changes
         :type reboot: bool
 
         .. versionadded:: 0.6
+
+        .. versionchanged:: 0.6.10
+           System-specific kickstart/kernel options are now obeyed.
         """
         system = System.by_fqdn(fqdn, identity.current.user)
         if not system.can_provision_now(identity.current.user):
@@ -128,11 +139,15 @@ class SystemsController(controllers.Controller):
             raise BX(_(u'Distro %s cannot be provisioned on %s')
                     % (distro.install_name, system.fqdn))
 
+        # ensure system-specific defaults are used
+        # (overriden by this method's arguments)
+        options = system.install_options(distro,
+                ks_meta=ks_meta or '',
+                kernel_options=kernel_options or '',
+                kernel_options_post=kernel_options_post or '')
         try:
-            system.action_provision(distro=distro, ks_meta=ks_meta,
-                    kernel_options=kernel_options,
-                    kernel_options_post=kernel_options_post,
-                    kickstart=kickstart)
+            system.action_provision(distro=distro,
+                    kickstart=kickstart, **options)
         except Exception, e:
             log.exception('Failed to provision')
             system.activity.append(SystemActivity(user=identity.current.user,
