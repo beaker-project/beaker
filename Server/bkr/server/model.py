@@ -4624,13 +4624,11 @@ class Recipe(TaskBase):
         """
         repos = []
         if self.distro:
-            if os.path.exists("%s/%s/%s" % (self.harnesspath,
-                                            self.distro.osversion.osmajor,
-                                            self.distro.arch)):
+            if os.path.exists("%s/%s" % (self.harnesspath,
+                                            self.distro.osversion.osmajor)):
                 repo = dict(name = "beaker-harness",
-                             url  = "http://%s/harness/%s/%s" % (self.servername,
-                                                                      self.distro.osversion.osmajor,
-                                                                      self.distro.arch))
+                             url  = "http://%s/harness/%s/" % (self.servername,
+                                                               self.distro.osversion.osmajor))
                 repos.append(repo)
             repo = dict(name = "beaker-tasks",
                         url  = "http://%s/repos/%s" % (self.servername, self.id))
