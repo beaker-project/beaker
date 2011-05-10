@@ -5029,24 +5029,11 @@ class Recipe(TaskBase):
         """
         if self.system and self.watchdog:
             self.destroyRepo()
-            ## FIXME Should we actually remove the watchdog?
-            ##       Maybe we should set the status of the watchdog to reclaim
-            ##       so that the lab controller returns the system instead.
-            # Remove this recipes watchdog
             log.debug("Remove watchdog for recipe %s" % self.id)
             if self.watchdog.system == self.system:
-                try:
-                    log.debug("Return system %s for recipe %s" % (self.system, self.id))
-                    self.system.unreserve(service=u'Scheduler',
-                            user=self.recipeset.job.owner, watchdog=self.watchdog)
-                except socket.gaierror, error:
-                    #FIXME
-                    pass
-                except xmlrpclib.Fault, error:
-                    #FIXME
-                    pass
-                except AttributeError, error:
-                    pass
+                log.debug("Return system %s for recipe %s" % (self.system, self.id))
+                self.system.unreserve(service=u'Scheduler',
+                        user=self.recipeset.job.owner, watchdog=self.watchdog)
 
     def task_info(self):
         """
