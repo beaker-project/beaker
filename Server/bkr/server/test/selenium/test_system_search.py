@@ -14,6 +14,8 @@ class SearchColumns(bkr.server.test.selenium.SeleniumTestCase):
         cls.system_with_group.groups.append(cls.group)
         cls.system_with_numa = data_setup.create_system(shared=True)
         cls.system_with_numa.numa = Numa(nodes=2)
+        cls.system_with_serial = data_setup.create_system()
+        cls.system_with_serial.serial = u'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
         session.flush()
         cls.selenium = cls.get_selenium()
         cls.selenium.start()
@@ -47,6 +49,22 @@ class SearchColumns(bkr.server.test.selenium.SeleniumTestCase):
         sel.wait_for_page_to_load("3000")
         self.assertEqual(sel.get_title(), 'Systems')
         self.failUnless(sel.is_text_present(str(self.system_with_numa.numa)))
+
+    def test_serial_number_column(self):
+        sel = self.selenium
+        sel.open('')
+        sel.wait_for_page_to_load('30000')
+        sel.click('advancedsearch')
+        sel.select('systemsearch_0_table', 'label=System/SerialNumber')
+        sel.select('systemsearch_0_operation', 'label=is')
+        sel.type('systemsearch_0_value', self.system_with_serial.serial)
+        sel.click('customcolumns')
+        sel.click('selectnone')
+        sel.click('systemsearch_column_System/SerialNumber')
+        sel.click('Search')
+        sel.wait_for_page_to_load('30000')
+        self.assertEqual(sel.get_title(), 'Systems')
+        self.failUnless(sel.is_text_present(self.system_with_serial.serial))
 
     @classmethod
     def tearDownClass(cls):

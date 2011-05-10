@@ -174,6 +174,10 @@ class Utility:
         return 'power.power_type.name'
 
     @classmethod
+    def system_serialnumber_name(cls):
+        return 'serial'
+
+    @classmethod
     def get_attr(cls,c):        
         return lambda x:getattr(cls.get_correct_system_column(x),c.lower()) 
 
@@ -209,6 +213,10 @@ class Utility:
     @classmethod
     def system_name_getter(cls):
         return lambda x: make_link("/view/%s" % cls.get_correct_system_column(x).fqdn, cls.get_correct_system_column(x).fqdn)
+
+    @classmethod
+    def system_serialnumber_getter(cls):
+        return lambda x: cls.get_correct_system_column(x).serial
 
     @classmethod
     def get_attr_other(cls,index):
