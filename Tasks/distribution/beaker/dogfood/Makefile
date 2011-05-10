@@ -74,6 +74,8 @@ $(METADATA): Makefile
 	@echo "Requires:     java-1.6.0-openjdk" >> $(METADATA)  
 	@echo "Requires:     Xvfb" >> $(METADATA)  
 	@echo "Requires:     firefox" >> $(METADATA)  
+	@echo "Requires:     @base-x" >> $(METADATA)  
+	@echo "Requires:     @graphical-internet" >> $(METADATA)  
 	@echo "Environment:  BEAKER_SERVER_BASE_URL=http://localhost/bkr/" >> $(METADATA)
 #	@echo "Environment:  BEAKER_SKIP_INIT_DB=1" >> $(METADATA)
 	@echo "Environment:  BEAKER_CONFIG_FILE=/etc/beaker/server.cfg" >> $(METADATA)
