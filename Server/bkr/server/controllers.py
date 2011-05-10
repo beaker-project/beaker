@@ -1763,9 +1763,9 @@ class Root(RPCRoot):
             return (0,"No inventory data provided")
 
         try:
-            system = System.query.filter(System.fqdn == fqdn).one()
+            system = System.query.filter(System.fqdn == fqdn.decode('ascii')).one()
         except InvalidRequestError:
-            system = System(fqdn=fqdn)
+            raise BX(_('No such system %s') % fqdn)
         return system.update_legacy(inventory)
 
     @expose()
@@ -1798,10 +1798,9 @@ class Root(RPCRoot):
         if not inventory:
             return (0,"No inventory data provided")
         try:
-            system = System.query.filter(System.fqdn == fqdn).one()
+            system = System.query.filter(System.fqdn == fqdn.decode('ascii')).one()
         except InvalidRequestError:
-            # New system, add it.
-            system = System(fqdn=fqdn)
+            raise BX(_('No such system %s') % fqdn)
         return system.update(inventory)
 
     @expose(template='bkr.server.templates.forbidden')
