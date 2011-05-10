@@ -39,11 +39,6 @@ firewall #slurp
 #end if
 #end if
 
-#if $getVar('rhts_server', '') != ''
-# Don't Run the Setup Agent on first boot
-firstboot --disable
-#end if
-
 # System keyboard
 keyboard $getVar('keyboard', 'us')
 # System language
@@ -59,10 +54,7 @@ selinux $getVar('selinux','--enforcing')
 #if $getVar('skipx','') != ''
 skipx
 #else
-#if $getVar('rhts_server', '') != ''
-skipx
-#end if
-#if $getVar('rhts_server', '') == '' and not $getVar('arch','').startswith('s390')
+#if not $getVar('arch','').startswith('s390')
 xconfig --startxonboot
 #end if
 #end if
