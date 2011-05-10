@@ -119,7 +119,9 @@ def read_inventory():
     if hasattr(profile.host, 'numaNodes'):
         data['Numa'] = {'nodes': profile.host.numaNodes}
     else:
-        data['Numa'] = len(glob.glob('/sys/devices/system/node/node*')) #: number of NUMA nodes in the system, or 0 if not supported
+        data['Numa'] = {
+            'nodes': len(glob.glob('/sys/devices/system/node/node*')), #: number of NUMA nodes in the system, or 0 if not supported
+        }
 
     for VendorID, DeviceID, SubsysVendorID, SubsysDeviceID, Bus, Driver, Type, Description in profile.deviceIter():
         device = dict ( vendorID = "%04x" % (VendorID and VendorID or 0),
