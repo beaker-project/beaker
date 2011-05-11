@@ -25,6 +25,7 @@ from bkr.server.widgets import myPaginateDataGrid
 from bkr.server.widgets import TasksWidget
 from bkr.server.widgets import TaskSearchForm
 from bkr.server.widgets import SearchBar
+from bkr.server.widgets import TaskActionWidget
 from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.helpers import make_link
 from bkr.server import testinfo
@@ -50,9 +51,10 @@ class Tasks(RPCRoot):
     # For XMLRPC methods in this class.
     exposed = True
 
+    task_list_action_widget = TaskActionWidget()
     task_form = TaskSearchForm()
     task_widget = TasksWidget()
-    task_dir = config.get("basepath.rpms", "/tmp")
+    task_dir = config.get("basepath.rpms", "/var/www/beaker/rpms")
 
     upload = widgets.FileField(name='task_rpm', label='Task rpm')
     form = widgets.TableForm(
@@ -96,6 +98,8 @@ class Tasks(RPCRoot):
             'types'
                 List of task types. Include only tasks which have one or more 
                 of these types.
+            'valid'
+                bool 0 or 1. Include only tasks which are valid or not.
 
         The return value is an array of dicts, which are name and arches. 
           name is the name of the matching tasks.
@@ -116,6 +120,10 @@ class Tasks(RPCRoot):
             tasks = osmajor.tasks()
         else:
             tasks = Task.query()
+
+        # Filter by valid task if requested
+        if 'valid' in filter:
+            tasks = tasks.filter(Task.valid==bool(filter['valid']))
 
         # Filter by name if specified
         # /distribution/install, /distribution/reservesys
@@ -296,10 +304,41 @@ class Tasks(RPCRoot):
                     hidden = hidden,
                     task_widget = self.task_widget)
 
+    @identity.require(identity.in_group('admin'))
+    @expose()
+    def disable_from_ui(self, t_id, *args, **kw):
+        to_return = dict( t_id = t_id )
+        try:
+            self._disable(t_id)
+            to_return['success'] = True
+        except Exception, e:
+            log.exception('Unable to disable task:%s' % t_id)
+            to_return['success'] = False
+            to_return['err_msg'] = unicode(e)
+            session.rollback()
+        return to_return
+
+    def _disable(self, t_id, *args, **kw):
+        """
+        disable task
+         task.valid=False
+         remove task rpms from filesystem
+        """
+        task = Task.by_id(t_id)
+        return task.disable()
+
     @expose(template='bkr.server.templates.grid')
     @paginate('list',default_order='name', limit=30)
     def index(self, *args, **kw):
         tasks = session.query(Task)
+        # FIXME What we really want is some default search options
+        # For now we won't show deleted/invalid tasks in the grid
+        # but for data integrity reasons we will allow you to view
+        # the task directly.  Ideally we would have a default search
+        # option of valid=True which the user could change to false
+        # to see all "deleted" tasks
+        tasks = tasks.filter(Task.valid==True)
+
         tasks_return = self._tasks(tasks,**kw)
         searchvalue = None
         search_options = {}
@@ -315,6 +354,7 @@ class Tasks(RPCRoot):
 		     widgets.PaginateDataGrid.Column(name='name', getter=lambda x: make_link("./%s" % x.id, x.name), title='Name', options=dict(sortable=True)),
 		     widgets.PaginateDataGrid.Column(name='description', getter=lambda x:x.description, title='Description', options=dict(sortable=True)),
 		     widgets.PaginateDataGrid.Column(name='version', getter=lambda x:x.version, title='Version', options=dict(sortable=True)),
+                     widgets.PaginateDataGrid.Column(name='action', getter=lambda x: self.task_list_action_widget.display(task=x, type_='tasklist', title='Action', options=dict(soratble=False))),
                     ])
 
         search_bar = SearchBar(name='tasksearch',
@@ -328,6 +368,7 @@ class Tasks(RPCRoot):
                     list=tasks,
                     search_bar=search_bar,
                     action='.',
+                    action_widget = self.task_list_action_widget,  #Hack,inserts JS for us.
                     options=search_options,
                     searchvalue=searchvalue)
 
@@ -422,6 +463,7 @@ class Tasks(RPCRoot):
         for need in tinfo.needs:
             task.needs.append(TaskPropertyNeeded(property=need))
         task.license = tinfo.license
+        task.valid = True
 
         return task
 

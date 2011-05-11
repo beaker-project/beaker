@@ -469,7 +469,7 @@ class Jobs(RPCRoot):
         invalid_tasks = []
         for xmltask in xmlrecipe.iter_tasks():
             try:
-                Task.by_name(xmltask.name)
+                Task.by_name(xmltask.name, valid=1)
             except InvalidRequestError, e:
                 invalid_tasks.append(xmltask.name)
             else:
