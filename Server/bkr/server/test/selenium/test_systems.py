@@ -52,6 +52,20 @@ class TestSystemsGrid(SeleniumTestCase):
                 'and @title="Atom feed" and contains(@href, "tg_format=atom")]'),
                 1)
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=704082
+    def test_show_all_columns_works(self):
+        sel = self.selenium
+        sel.open('')
+        sel.click('advancedsearch')
+        sel.select('systemsearch_0_table', 'label=System/Name')
+        sel.click('customcolumns')
+        sel.click('selectall')
+        sel.submit('searchform')
+        sel.wait_for_page_to_load('30000')
+        self.assertEqual(sel.get_title(), 'Systems')
+        # check number of columns in the table
+        self.assertEqual(sel.get_xpath_count('//table[@id="widget"]//th'), 26)
+
 class TestSystemGridSorting(SeleniumTestCase):
 
     # tests in this class can safely share the same firefox session
