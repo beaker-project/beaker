@@ -350,6 +350,18 @@ class Root(RPCRoot):
         return dict( fields = System.get_fields(table_name))
   
     @expose(format='json')
+    def get_osversions(self, osmajor_id=None):
+        osversions = [(0,u'All')]
+        try:
+            osmajor = OSMajor.by_id(osmajor_id)
+            osversions.extend([(osversion.id,
+                           osversion.osminor
+                          ) for osversion in osmajor.osminor])
+        except InvalidRequestError:
+            pass
+        return dict(osversions = osversions)
+    
+    @expose(format='json')
     def get_installoptions(self, system_id=None, distro_id=None):
         try:
             system = System.by_id(system_id,identity.current.user)

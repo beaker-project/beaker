@@ -1035,6 +1035,7 @@ class SystemProvision(Form):
                 d['power_enabled'] = True
 
 class SystemInstallOptions(Form):
+    javascript = [LocalJSLink('bkr', '/static/javascript/install_options.js')]
     template = "bkr.server.templates.system_installoptions"
     member_widgets = ["id", "prov_arch", "prov_osmajor", "prov_osversion",
                        "prov_ksmeta", "prov_koptions", "prov_koptionspost"]
@@ -1053,7 +1054,7 @@ class SystemInstallOptions(Form):
                                  validator=validators.NotEmpty())
         self.prov_osversion    = SingleSelectField(name='prov_osversion',
                                  label=_(u'Update'),
-                                 options=model.OSVersion.get_all,
+                                 options=[(0,u'All')],
                                  validator=validators.NotEmpty())
         self.prov_ksmeta       = TextField(name='prov_ksmeta', 
                                      label=_(u'Kickstart Metadata'))
@@ -1150,6 +1151,7 @@ class SystemHistory(CompoundWidget):
 class SystemForm(Form):
     javascript = [LocalJSLink('bkr', '/static/javascript/jquery.js'),
                   LocalJSLink('bkr', '/static/javascript/provision.js'),
+                  LocalJSLink('bkr', '/static/javascript/install_options.js'),
                   LocalJSLink('bkr','/static/javascript/system_admin.js'),
                   LocalJSLink('bkr', '/static/javascript/searchbar_v7.js'), 
                   JSLink(static,'ajax.js'),
