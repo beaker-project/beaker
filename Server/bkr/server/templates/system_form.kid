@@ -43,13 +43,13 @@ $(document).ready(function(){
         ${label_for('date_added')}
        </th>
        <td class="list">
-        ${value_for("date_added")}
+        <span class="datetime">${value_for("date_added")}</span>
        </td>
        <th class="list">
         ${label_for('date_modified')}
        </th>
        <td class="list">
-        ${value_for("date_modified")}
+        <span class="datetime">${value_for("date_modified")}</span>
        </td>
       </tr>
       <tr class="list">
@@ -57,7 +57,7 @@ $(document).ready(function(){
         ${label_for('date_lastcheckin')}
        </th>
        <td class="list">
-        ${value_for("date_lastcheckin")}
+        <span class="datetime">${value_for("date_lastcheckin")}</span>
        </td>
        <th class="list">
         ${label_for('vendor')}

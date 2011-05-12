@@ -1125,7 +1125,9 @@ class SystemHistory(CompoundWidget):
         #filter_column_options = model.Activity.distinct_field_names() 
         self.grid  = myPaginateDataGrid(fields = [PaginateDataGrid.Column(name='user',title='User',getter=lambda x: x.user,options=dict(sortable=True)),
                                                   PaginateDataGrid.Column(name='service', title='Service', getter=lambda x: x.service, options=dict(sortable=True)),
-                                                  PaginateDataGrid.Column(name='created', title='Created', getter=lambda x: x.created, options = dict(sortable=True)),
+                                                  PaginateDataGrid.Column(name='created', title='Created',
+                                                    getter=lambda x: x.created,
+                                                    options=dict(sortable=True, datetime=True)),
                                                   PaginateDataGrid.Column(name='field_name', title='Field Name', getter=lambda x: x.field_name, options=dict(sortable=True)),
                                                   PaginateDataGrid.Column(name='action', title='Action', getter=lambda x: x.action, options=dict(sortable=True)),
                                                   PaginateDataGrid.Column(name='old_value',title='Old Value', getter=lambda x: x.old_value,options=dict(sortable=True)), 

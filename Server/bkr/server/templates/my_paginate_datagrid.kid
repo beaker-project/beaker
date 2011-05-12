@@ -25,7 +25,9 @@
     </thead>
     <tr py:for="i, row in enumerate(value)" class="${i%2 and 'odd' or 'even'}">
       <td py:for="col in columns" class="list">
-        ${col.get_field(row)}
+        <span class="datetime" py:strip="not col.get_option('datetime', False)">
+            ${col.get_field(row)}
+        </span>
       </td>
     </tr>
   </table>
