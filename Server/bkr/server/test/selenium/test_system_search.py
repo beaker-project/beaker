@@ -150,7 +150,7 @@ class Search(bkr.server.test.selenium.SeleniumTestCase):
         yesterday = yesterday_date.isoformat()
         sel.select("systemsearch_0_table", "label=System/Added")
         sel.select("systemsearch_0_operation", "label=is")
-        sel.type("systemsearch_0_value", "%s" % datetime.date.today().isoformat())
+        sel.type("systemsearch_0_value", "%s" % datetime.datetime.utcnow().date().isoformat())
         sel.click("Search")
         sel.wait_for_page_to_load("30000")
         try: self.failUnless(sel.is_text_present("%s" % self.system_one.fqdn))
