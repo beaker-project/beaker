@@ -1002,7 +1002,7 @@ task_table = Table('task',metadata,
                 ForeignKey('tg_user.user_id')),
         Column('version', Unicode(256)),
         Column('license', Unicode(256)),
-        Column('valid', Boolean),
+        Column('valid', Boolean, default=True),
         mysql_engine='InnoDB',
 )
 
@@ -4538,7 +4538,7 @@ class Recipe(TaskBase):
 
     @property
     def rpmspath(self):
-        return get('basepath.rpms', '/var/www/beaker/rpms')
+        return Task.task_dir()
 
     @property
     def repopath(self):
@@ -5845,9 +5845,23 @@ class Task(MappedObject):
     """
     Tasks that are available to schedule
     """
+    @property
+    def task_dir(self):
+        return get("basepath.rpms", "/var/www/beaker/rpms")
+
     @classmethod
-    def by_name(cls, name):
-        return cls.query.filter_by(name=name).one()
+    def by_name(cls, name, valid=None):
+        query = cls.query.filter(Task.name==name)
+        if valid:
+            query = query.filter(Task.valid==bool(valid))
+        return query.one()
+
+    @classmethod
+    def by_id(cls, id, valid=None):
+        query = cls.query.filter(Task.id==id)
+        if valid:
+            query = query.filter(Task.valid==bool(valid))
+        return query.one()
 
     @classmethod
     def by_type(cls, type, query=None):
@@ -5918,6 +5932,17 @@ class Task(MappedObject):
                 break
 
         return separator.join(time)
+
+    def disable(self):
+        """
+        Disable task so it can't be used.
+        """
+        for rpm in [self.oldrpm, self.rpm]:
+            rpm_path = "%s/%s" % (self.task_dir, rpm)
+            if os.path.exists(rpm_path):
+                os.unlink(rpm_path)
+        self.valid=False
+        return
 
 
 class TaskExcludeOSMajor(MappedObject):

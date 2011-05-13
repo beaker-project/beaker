@@ -1,0 +1,8 @@
+Make task.valid default True
+---------------------------------
+UPDATE task set valid = True;
+ALTER TABLE task MODIFY valid TINYINT DEFAULT 1;
+
+To roll back:
+   Nothing is needed, it doesn't hurt to leave the task valid=true.
+

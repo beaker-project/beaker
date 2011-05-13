@@ -51,6 +51,7 @@ types = types.replace('&', '&amp;')
 <table class="show">
     <tr py:for="field in (
         ['Description',       task.description],
+        ['Valid',             task.valid],
         ['Path',              task.path],
         ['Expected Time',     task.elapsed_time()],
         ['Creation Date',     task.creation_date],

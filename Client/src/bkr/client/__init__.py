@@ -255,7 +255,9 @@ class BeakerWorkflow(BeakerCommand):
         if not hasattr(self,'hub'):
             self.set_hub(username, password)
 
-        filter = dict()
+        # We only want valid tasks
+        filter = dict(valid=1)
+
         # Pre Filter based on osmajor
         filter['osmajor'] = self.getFamily(*args, **kwargs)
 

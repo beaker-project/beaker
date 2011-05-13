@@ -1265,7 +1265,7 @@ class RecipeSetWidget(CompoundWidget):
     params = ['recipeset','show_priority','action','priorities_list','can_ack_nak']
     member_widgets = ['priority_widget','retentiontag_widget','ack_panel_widget', 'product_widget', 'action_widget']
     def __init__(self, priorities_list=None, *args, **kw):
-        self.action_widget = TaskActionWidget()
+        self.action_widget = RecipeTaskActionWidget()
         self.priorities_list = priorities_list
         self.ack_panel_widget = AckPanel()
         self.priority_widget = PriorityWidget()
@@ -1444,19 +1444,19 @@ class JobWhiteboard(RPC, CompoundWidget):
         d['form_attrs']['onsubmit'] = "return !remoteFormRequest(this, null, %s);" % (
             jsonify.encode(self.get_options(d)))
 
-class TaskActionWidget(RPC):
+class RecipeTaskActionWidget(RPC):
     template = 'bkr.server.templates.action'
     """
-    TaskActionWidget will display the appropriate actions for a task
+    RecipeTaskActionWidget will display the appropriate actions for a task
     """
     def __init__(self, *args, **kw):
-        super(TaskActionWidget,self).__init__(*args, **kw)
+        super(RecipeTaskActionWidget,self).__init__(*args, **kw)
     
     def display(self, task, *args, **params): 
         params['task'] = task
-        return super(TaskActionWidget, self).display(*args, **params)
+        return super(RecipeTaskActionWidget, self).display(*args, **params)
 
-class RecipeActionWidget(TaskActionWidget):
+class RecipeActionWidget(RecipeTaskActionWidget):
     template = 'bkr.server.templates.recipe_action'
     params = ['show_report']
 
@@ -1471,7 +1471,33 @@ class RecipeActionWidget(TaskActionWidget):
         return super(RecipeActionWidget,self).display(task, **params)
 
 
-class JobActionWidget(TaskActionWidget):
+class TaskActionWidget(RPC):
+    template = 'bkr.server.templates.task_action'
+    params = ['redirect_to']
+    action = url('/tasks/disable_from_ui')
+    javascript = [LocalJSLink('bkr', '/static/javascript/task_disable.js')]
+
+    def __init__(self, *args, **kw):
+        super(TaskActionWidget, self).__init__(*args, **kw)
+
+    def display(self, task, action=None, **params):
+        id = task.id
+        task_details={'id': 'disable_%s' % id,
+            't_id' : id}
+        params['task_details'] = task_details
+        if action:
+            params['action'] = action
+        return super(TaskActionWidget, self).display(task, **params)
+
+    def update_params(self, d):
+        super(TaskActionWidget, self).update_params(d)
+        d['task_details']['onclick'] = "TaskDisable('%s',%s, %s)" % (
+            d.get('action'),
+            jsonify.encode({'t_id': d['task_details'].get('t_id')}),
+            jsonify.encode(self.get_options(d)),
+            )
+
+class JobActionWidget(RecipeTaskActionWidget):
     template = 'bkr.server.templates.job_action'
     params = ['redirect_to']
     action = url('/jobs/delete_job_from_ui')
