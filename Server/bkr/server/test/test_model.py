@@ -5,7 +5,7 @@ import email
 from turbogears.database import session
 from bkr.server.model import System, SystemStatus, SystemActivity, TaskStatus, \
         SystemType, Job, JobCc, Key, Key_Value_Int, Key_Value_String, \
-        Cpu, Numa, job_cc_table
+        Cpu, Numa, Provision, job_cc_table
 from bkr.server.test import data_setup
 from nose.plugins.skip import SkipTest
 
@@ -28,27 +28,23 @@ class TestSystem(unittest.TestCase):
 
     def tearDown(self):
         session.rollback()
+        session.close()
 
     def test_create_system_params(self):
-        try:
-            session.begin()
-            owner = data_setup.create_user()
-            new_system = System(fqdn=u'test_fqdn', contact=u'test@email.com',
-                                location=u'Brisbane', model=u'Proliant', serial=u'4534534',
-                                vendor=u'Dell', type=SystemType.by_name(u'Machine'),
-                                status=SystemStatus.by_name(u'Automated'),
-                                owner=owner)
-            session.flush()
-            self.assertEqual(new_system.fqdn, 'test_fqdn')
-            self.assertEqual(new_system.contact, 'test@email.com')
-            self.assertEqual(new_system.location, 'Brisbane')
-            self.assertEqual(new_system.model, 'Proliant')
-            self.assertEqual(new_system.serial, '4534534')
-            self.assertEqual(new_system.vendor, 'Dell')
-            self.assertEqual(new_system.owner, owner)
-        finally:
-            session.rollback()
-            session.close()
+        owner = data_setup.create_user()
+        new_system = System(fqdn=u'test_fqdn', contact=u'test@email.com',
+                            location=u'Brisbane', model=u'Proliant', serial=u'4534534',
+                            vendor=u'Dell', type=SystemType.by_name(u'Machine'),
+                            status=SystemStatus.by_name(u'Automated'),
+                            owner=owner)
+        session.flush()
+        self.assertEqual(new_system.fqdn, 'test_fqdn')
+        self.assertEqual(new_system.contact, 'test@email.com')
+        self.assertEqual(new_system.location, 'Brisbane')
+        self.assertEqual(new_system.model, 'Proliant')
+        self.assertEqual(new_system.serial, '4534534')
+        self.assertEqual(new_system.vendor, 'Dell')
+        self.assertEqual(new_system.owner, owner)
     
     def test_add_user_to_system(self): 
         user = data_setup.create_user()
@@ -64,6 +60,16 @@ class TestSystem(unittest.TestCase):
         system.user = None
         session.flush()
         self.assert_(system.user is None)
+
+    def test_install_options_override(self):
+        distro = data_setup.create_distro()
+        system = data_setup.create_system()
+        system.provisions[distro.arch] = Provision(
+                kernel_options='console=ttyS0 ksdevice=eth0')
+        opts = system.install_options(distro, kernel_options='ksdevice=eth1')
+        # ksdevice should be overriden but console should be inherited
+        self.assertEqual(opts['kernel_options'],
+                dict(console='ttyS0', ksdevice='eth1'))
 
 class TestSystemKeyValue(unittest.TestCase):
 
