@@ -395,6 +395,7 @@ lab_controller_table = Table('lab_controller', metadata,
     Column('distros_md5', String(40)),
     Column('systems_md5', String(40)),
     Column('disabled', Boolean, nullable=False, default=False),
+    Column('removed', DateTime, nullable=True, default=None),
     mysql_engine='InnoDB',
 )
 
@@ -2783,11 +2784,13 @@ class LabController(SystemObject):
         return cls.query.filter_by(fqdn=name).one()
 
     @classmethod
-    def get_all(cls):
+    def get_all(cls, valid=False):
         """
         Desktop, Server, Virtual
         """
         all = cls.query()
+        if valid:
+            all = cls.query().filter_by(removed=None)
         return [(lc.id, lc.fqdn) for lc in all]
 
     distros = association_proxy('_distros', 'distro')
@@ -6130,6 +6133,7 @@ mapper(LabControllerDistro, lab_controller_distro_map)
 mapper(LabController, lab_controller_table,
         properties = {'_distros':relation(LabControllerDistro, backref='lab_controller',
                                           cascade='all, delete-orphan'),
+                      'dyn_systems' : dynamic_loader(System),
                      }
       )
 

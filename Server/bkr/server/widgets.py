@@ -349,6 +349,11 @@ class MatrixDataGrid(DataGrid):
 class myPaginateDataGrid(PaginateDataGrid):
     template = "bkr.server.templates.my_paginate_datagrid"
 
+class LabControllerDataGrid(myPaginateDataGrid):
+    javascript = [LocalJSLink('bkr','/static/javascript/lab_controller_remove.js'),
+                  LocalJSLink('bkr', '/static/javascript/jquery-ui-1.7.3.custom.min.js'),]
+    css =  [LocalCSSLink('bkr','/static/css/smoothness/jquery-ui-1.7.3.custom.css')] 
+
 class SingleSelectFieldJSON(SingleSelectField):
     params = ['for_column']
     def __init__(self,*args,**kw):
@@ -1178,7 +1183,7 @@ class SystemForm(Form):
                TextArea(name='status_reason', label=_(u'Condition Report'),attrs={'rows':3,'cols':27},validator=validators.MaxLength(255)),
                SingleSelectField(name='lab_controller_id',
                                  label=_(u'Lab Controller'),
-                                 options=lambda: [(0,"None")] + model.LabController.get_all(),
+                                 options=lambda: [(0,"None")] + model.LabController.get_all(valid=True),
                                  validator=validators.Int()),
                TextField(name='vendor', label=_(u'Vendor')),
                TextField(name='model', label=_(u'Model')),
