@@ -183,19 +183,19 @@ class Utility:
 
     @classmethod
     def system_group_getter(cls):
-        return lambda x: ' '.join([group.group_name for group in x.groups])
+        return lambda x: ' '.join([group.group_name for group in cls.get_correct_system_column(x).groups])
 
     @classmethod
     def system_numanodes_getter(cls):
-        return lambda x: getattr(x.numa, 'nodes', 0)
+        return lambda x: getattr(cls.get_correct_system_column(x).numa, 'nodes', 0)
 
     @classmethod
     def system_added_getter(cls):
-        return lambda x: x.date_added
+        return lambda x: cls.get_correct_system_column(x).date_added
 
     @classmethod
     def system_loanedto_getter(cls):
-        return lambda x: x.loaned
+        return lambda x: cls.get_correct_system_column(x).loaned
           
     @classmethod
     def system_powertype_getter(cls):
