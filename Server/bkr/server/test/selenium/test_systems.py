@@ -171,13 +171,18 @@ class TestSystemsAtomFeed(unittest.TestCase):
         xpath = atom_xpath('/atom:feed/atom:entry/atom:title[text()="%s"]' % fqdn)
         return len(xpath(feed))
 
+    def system_count(self, feed):
+        xpath = atom_xpath('count(/atom:feed/atom:entry)')
+        return int(xpath(feed))
+
     def test_all_systems(self):
-        systems = [data_setup.create_system() for _ in range(3)]
+        systems = [data_setup.create_system() for _ in range(25)]
         session.flush()
         feed_url = urljoin(get_server_base(), '?' + urlencode({
                 'tg_format': 'atom', 'list_tgp_order': '-date_modified',
                 'list_tgp_limit': '0'}))
         feed = lxml.etree.parse(urlopen(feed_url)).getroot()
+        self.assert_(self.system_count(feed) >= 25, self.system_count(feed))
         for system in systems:
             self.assert_(self.feed_contains_system(feed, system.fqdn))
 

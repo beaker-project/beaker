@@ -412,7 +412,7 @@ class Root(RPCRoot):
     @expose(template='bkr.server.templates.grid_add')
     @expose(template='bkr.server.templates.systems_feed', format='xml', as_format='atom',
             content_type='application/atom+xml', accept_format='application/atom+xml')
-    @paginate('list',default_order='fqdn',limit=20)
+    @paginate('list', default_order='fqdn', limit=20, max_limit=None)
     def index(self, *args, **kw): 
         return_dict =  self._systems(systems = System.all(identity.current.user), *args, **kw) 
         return return_dict
@@ -444,7 +444,7 @@ class Root(RPCRoot):
     @expose(template='bkr.server.templates.systems_feed', format='xml', as_format='atom',
             content_type='application/atom+xml', accept_format='application/atom+xml')
     @identity.require(identity.not_anonymous())
-    @paginate('list',default_order='fqdn',limit=20)
+    @paginate('list', default_order='fqdn', limit=20, max_limit=None)
     def available(self, *args, **kw):
         return self._systems(systems = System.available(identity.current.user), *args, **kw)
 
@@ -452,7 +452,7 @@ class Root(RPCRoot):
     @expose(template='bkr.server.templates.systems_feed', format='xml', as_format='atom',
             content_type='application/atom+xml', accept_format='application/atom+xml')
     @identity.require(identity.not_anonymous())
-    @paginate('list',default_order='fqdn',limit=20)
+    @paginate('list', default_order='fqdn', limit=20, max_limit=None)
     def free(self, *args, **kw): 
         return self._systems(systems = System.free(identity.current.user), *args, **kw)
 
@@ -460,7 +460,7 @@ class Root(RPCRoot):
     @expose(template='bkr.server.templates.systems_feed', format='xml', as_format='atom',
             content_type='application/atom+xml', accept_format='application/atom+xml')
     @identity.require(identity.not_anonymous())
-    @paginate('list',limit=20)
+    @paginate('list', default_order='fqdn', limit=20, max_limit=None)
     def mine(self, *args, **kw):
         return self._systems(systems = System.mine(identity.current.user), *args, **kw)
 
