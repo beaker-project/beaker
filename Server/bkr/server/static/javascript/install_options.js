@@ -30,8 +30,8 @@ InstallOptions.prototype.replaceFields = function(result) {
         this.osversionfield.options[0] = null;
     }
     for ( i = 0; i < osversions.length; i++ ) {
-        this.osversionfield.append(
-             $('<option></option>').val(osversions[0]).html(osversions[1])
+        $(this.osversionfield).append(
+             $('<option></option>').val(osversions[i][0]).html(osversions[i][1])
                                   );
     }
 }
