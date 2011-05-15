@@ -4538,7 +4538,7 @@ class Recipe(TaskBase):
 
     @property
     def rpmspath(self):
-        return Task.task_dir()
+        return get('basepath.rpms', '/var/www/beaker/rpms')
 
     @property
     def repopath(self):
