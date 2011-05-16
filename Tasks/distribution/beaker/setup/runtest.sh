@@ -243,8 +243,6 @@ tg.strict_parameters = True
 # if it is set to True and the proxy adds the header correctly.
 # base_url_filter.base_url = "http://www.example.com"
 
-tg.include_widgets = ['turbogears.mochikit']
-
 [/static]
 static_filter.on = True
 static_filter.dir = "/usr/share/bkr/server/static"
