@@ -221,7 +221,10 @@ class Distros(RPCRoot):
                                   myPaginateDataGrid.Column(name='variant', getter=lambda x: x.variant, title='Variant', options=dict(sortable=True)),
                                   myPaginateDataGrid.Column(name='virt', getter=lambda x: x.virt, title='Virt', options=dict(sortable=True)),
                                   myPaginateDataGrid.Column(name='arch.arch', getter=lambda x: x.arch, title='Arch', options=dict(sortable=True)),
-                                  myPaginateDataGrid.Column(name='date_created', getter=lambda x: x.date_created, title='Date Created', options=dict(sortable=True)),
+                                  myPaginateDataGrid.Column(name='date_created',
+                                    getter=lambda x: x.date_created,
+                                    title='Date Created',
+                                    options=dict(sortable=True, datetime=True)),
                                   Utility.direct_column(title='Provision', getter=lambda x: _provision_system_link(x))
                               ])
 

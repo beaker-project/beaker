@@ -46,8 +46,8 @@ class Watchdogs(RPCRoot):
                   col(name='system_name', getter=lambda x: make_link(url= '/view/%s' % x.system_name,text=x.system_name), title="System"),
                   col(name='lab_controller', getter=lambda x: x.lab_controller, title="Lab Controller"),
                   col(name='task_name', getter=lambda x: make_link(url='/tasks/%s' % x.task_id, text=x.task_name), title="Task Name"),
-                  col(name='kill_time', getter=lambda x: x.kill_time,title="Kill Time")]
-                 
+                  col(name='kill_time', getter=lambda x: x.kill_time,
+                      title="Kill Time", options=dict(datetime=True))]
 
         watchdog_grid = myPaginateDataGrid(fields=fields)
         return dict(title="Watchdog",

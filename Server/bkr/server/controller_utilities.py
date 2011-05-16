@@ -222,6 +222,10 @@ class Utility:
     def get_attr_other(cls,index):
         return lambda x: x[index]
 
+    @classmethod
+    def system_added_options(cls):
+        return dict(datetime=True)
+
     @classmethod 
     def custom_systems_grid(cls,systems,others=None):
    
@@ -234,6 +238,9 @@ class Utility:
 
             getter_function_name = '%s_%s_getter' % (table.lower(), column.lower())
             custom_getter = getattr(Utility, getter_function_name,None)
+
+            options_function_name = '%s_%s_options' % (table.lower(), column.lower())
+            custom_options = getattr(Utility, options_function_name, None)
 
             if custom_name:
                 lower_column = custom_name()
@@ -256,7 +263,10 @@ class Utility:
             else:
                 options['sortable'] = False 
                 name_string = '%s.%s' % (lower_table,lower_column)
-         
+
+            if custom_options:
+                options.update(custom_options())
+
             return name_string,title_string,options,my_getter
 
         fields = []

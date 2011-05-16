@@ -93,7 +93,10 @@ class Reports(RPCRoot):
                                
         reserve_grid = myPaginateDataGrid(fields=[
                                   widgets.PaginateDataGrid.Column(name='system.fqdn', getter=lambda x: make_link(url  = '/view/%s' % x.system.fqdn, text = x.system), title=u'System', options=dict(sortable=True)),
-                                  widgets.PaginateDataGrid.Column(name='start_time', getter=lambda x: x.start_time, title=u'Reserved Since', options=dict(sortable=True)),
+                                  widgets.PaginateDataGrid.Column(name='start_time',
+                                    getter=lambda x: x.start_time,
+                                    title=u'Reserved Since',
+                                    options=dict(sortable=True, datetime=True)),
                                   widgets.PaginateDataGrid.Column(name='user', getter=lambda x: x.user, title=u'Current User', options=dict(sortable=True)),
                               ])
 

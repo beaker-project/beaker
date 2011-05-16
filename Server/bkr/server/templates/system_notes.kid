@@ -16,7 +16,7 @@
     <th class="list">User</th>
     <td class="list">${note.user}</td>
     <th class="list">Created</th>
-    <td class="list">${note.created}</td>
+    <td class="list"><span class="datetime">${note.created}</span></td>
    </tr>
    <tr>
     <th class="list">Note</th>
