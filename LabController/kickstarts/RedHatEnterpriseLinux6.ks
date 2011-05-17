@@ -84,11 +84,18 @@ $SNIPPET("system")
 --default
 #else
 
-#end if
-$SNIPPET("rhts_packages")
+## If packages variable is set add additional packages to this install
+## packages=httpd:selinux:kernel
+#set _packages = $getVar('packages','').split(':')
+#for $package in $_packages:
+$package
+#end for
+#end if ## if packages
 
-#end if
-#end if
+#end if ## manual
+
+#end if ## sysprofile snippet
+
 %pre
 $SNIPPET("rhts_pre")
 $SNIPPET("RedHatEnterpriseLinux6_pre")

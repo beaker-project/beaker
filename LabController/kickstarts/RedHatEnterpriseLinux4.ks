@@ -65,6 +65,16 @@ $SNIPPET("RedHatEnterpriseLinux4")
 $SNIPPET("system")
 
 %packages --resolvedeps --ignoremissing
+## If packages variable is set add additional packages to this install
+## packages=httpd:selinux:kernel
+#if $getVar('packages', '') != ''
+#set _packages = $getVar('packages','').split(':')
+#for $package in $_packages:
+$package
+#end for
+#else
+@development-tools
+@development-libs
 @ office
 @ dialup
 @ sound-and-video
@@ -80,10 +90,12 @@ $SNIPPET("system")
 @ compat-arch-support
 e2fsprogs
 lvm2
-$SNIPPET("rhts_packages")
+#end if ## %packages
 
-#end if
-#end if
+#end if ## manual
+
+#end if ## sysprofile snippet
+
 %pre
 $SNIPPET("rhts_pre")
 $SNIPPET("RedHatEnterpriseLinux4_pre")

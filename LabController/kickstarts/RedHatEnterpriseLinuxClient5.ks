@@ -80,6 +80,16 @@ $SNIPPET("RedHatEnterpriseLinuxClient5")
 $SNIPPET("system")
 
 %packages --resolvedeps --ignoremissing
+## If packages variable is set add additional packages to this install
+## packages=httpd:selinux:kernel
+#if $getVar('packages', '') != ''
+#set _packages = $getVar('packages','').split(':')
+#for $package in $_packages:
+$package
+#end for
+#else
+@development-tools
+@development-libs
 @admin-tools
 @base
 @base-x
@@ -105,10 +115,12 @@ nash
 rmt
 tzdata
 xkeyboard-config
-$SNIPPET("rhts_packages")
+#end if ## %packages
 
-#end if
-#end if
+#end if ## manual
+
+#end if ## sysprofile snippet
+
 %pre
 $SNIPPET("rhts_pre")
 $SNIPPET("RedHatEnterpriseLinuxClient5_pre")
