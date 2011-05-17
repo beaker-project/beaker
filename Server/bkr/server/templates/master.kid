@@ -44,6 +44,8 @@
                 $('.datetime').each(function (i, elem) {
                     try {
                         var d = new Date($(elem).text().replace(/-/g, '/') + ' +00:00');
+                        if (isNaN(d.getTime()))
+                            return; // skip it and keep going
                         $(elem).text(iso8601(d));
                     } catch (e) {
                         console.log(e); // and keep going
