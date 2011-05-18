@@ -1075,7 +1075,7 @@ class History(SystemObject):
                          }  
        
 class Key(SystemObject):
-    searchable_columns = {'Value': KeyColumn(relations=[['key_values_int','key'],['key_values_string','key']])}
+    searchable_columns = {'Value': KeyColumn(relations=[['key_values_int'],['key_values_string']])}
     search = KeySearch
     
     @classmethod
