@@ -2597,10 +2597,11 @@ $SNIPPET("rhts_post")
 
 class SystemStatusAttributeExtension(AttributeExtension):
 
-    def set(self, obj, child, oldchild, initiator):
+    def set(self, state, child, oldchild, initiator):
+        obj = state.obj()
         log.debug('%r status changed from %r to %r', obj, oldchild, child)
         if child == oldchild:
-            return
+            return child
         if oldchild is None:
             assert not obj.status_durations
         else:
@@ -2609,6 +2610,7 @@ class SystemStatusAttributeExtension(AttributeExtension):
             obj.status_durations[0].finish_time = datetime.utcnow()
         obj.status_durations.insert(0,
                 SystemStatusDuration(system=obj, status=child))
+        return child
 
 class SystemCc(SystemObject):
 
@@ -6203,7 +6205,7 @@ mapper(ReleaseAction, release_action_table)
 System.mapper = mapper(System, system_table,
                    properties = {
                      'status':relation(SystemStatus,uselist=False,
-                        attributeext=SystemStatusAttributeExtension()),
+                        extension=SystemStatusAttributeExtension()),
                      'devices':relation(Device,
                                         secondary=system_device_map,backref='systems'),
                      'type':relation(SystemType, uselist=False),
