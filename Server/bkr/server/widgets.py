@@ -65,6 +65,7 @@ class LocalJSLink(JSLink):
     """
     Link to local Javascript files
     """
+    order = 10
     def update_params(self, d): 
         super(JSLink, self).update_params(d)
         d["link"] = url(self.name)
@@ -79,7 +80,8 @@ class LocalCSSLink(CSSLink):
         d["link"] = self.name
 
 
-jquery = LocalJSLink('bkr', '/static/javascript/jquery-1.5.1.min.js')
+jquery = LocalJSLink('bkr', '/static/javascript/jquery-1.5.1.min.js',
+        order=1) # needs to come after MochiKit
 
 local_datetime = LocalJSLink('bkr', '/static/javascript/local_datetime.js')
 
