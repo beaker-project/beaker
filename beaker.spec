@@ -2,8 +2,8 @@
 %{!?pyver: %global pyver %(%{__python} -c "import sys ; print sys.version[:3]")}
 
 Name:           beaker
-Version:        0.6.10
-Release:        4%{?dist}
+Version:        0.6.11
+Release:        1%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -250,6 +250,40 @@ fi
 %{_var}/lib/beaker/addDistro.d/*
 
 %changelog
+* Wed May 18 2011 Raymond Mancy <rmancy@redhat.com> 0.6.11-1
+- 694107 - remove paginate limit for systems (dcallagh@redhat.com)
+- 572835 Test program interface to install debuginfo.
+  (bpeck@redhat.com)
+- 701414 - obey system provision options in XML-RPC (dcallagh@redhat.com)
+- 702106 - update for new repo layout on repos.fedorapeople.org
+  (dcallagh@redhat.com)
+- 702082 - push/legacypush should not attempt to create new systems and  
+  /distribution/inventory: fix Numa info when not supplied by smolt (dcallagh@redhat.com)
+- 599701 - allow searching by system serial number (dcallagh@redhat.com)
+- 703497 - remove lagacy rhts support from kickstarts (bpeck@redhat.com)
+- 645873 - Job cancelled soon after creation doesn't terminate
+  (bpeck@redhat.com)
+- 541291 - Can't add per-minor-release install options (bpeck@redhat.com)
+- 704374 - AlphaNavBar widget should sort letters (dcallagh@redhat.com)
+- 590033 - [RFE] removing tasks from task library (bpeck@redhat.com)
+- 702665 - bkr workflow-simple tasks can get out of order (bpeck@redhat.com)
+- 658515 - javascript to adjust datetimes to local timezone
+  (dcallagh@redhat.com)
+- 692935 - Remove lab controllers (rmancy@redhat.com)
+- 636565 - RFE: needs install machine only with @base group
+  (bpeck@redhat.com)
+- 705428 - repo_update.py: bypass local cache for package files
+  (dcallagh@redhat.com)
+
+- show a less scary message when motd does not exist (dcallagh@redhat.com)
+- Disable CHECKRECIPE until kickstarts are fixed. (bpeck@redhat.com)
+- remove tg.include_widgets from server.cfg. (bpeck@redhat.com)
+- fix osversion install options js (dcallagh@redhat.com)
+- Add Xvfb to Requires. (bpeck@redhat.com)
+- Add firefox to Requires as well. (bpeck@redhat.com)
+- still more Requires (bpeck@redhat.com)
+- Set-up logging to console. (mcsontos@redhat.com)
+
 * Thu May 05 2011 Raymond Mancy <rmancy@redhat.com> 0.6.10-4
 - and for commit().... (rmancy@redhat.com)
 
