@@ -69,8 +69,10 @@ class RepoSyncer(yum.YumBase):
                 print 'Skipping %s' % dest
                 continue
             print 'Fetching %s' % dest
+            package.localpath = dest
             cached_package = repo.getPackage(package)
-            shutil.copy2(cached_package, dest)
+            if not os.path.samefile(cached_package, dest):
+                shutil.copy2(cached_package, dest)
 
 def update_repos(baseurl, basepath):
     for osmajor in OSMajor.query():
