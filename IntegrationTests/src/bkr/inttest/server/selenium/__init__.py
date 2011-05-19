@@ -135,7 +135,7 @@ def setup_package():
     if not os.path.exists('/tmp/selenium'):
         os.mkdir('/tmp/selenium')
     processes.extend([
-        Process('Xvfb', args=['Xvfb', ':4', '-fp', '/usr/share/X11/fonts/misc',
+        Process('Xvfb', args=['Xvfb', ':4', '-extension', 'GLX',
                 '-screen', '0', '1024x768x24']),
         Process('selenium-server', args=['java',
                 '-Djava.io.tmpdir=/tmp/selenium',
