@@ -64,7 +64,7 @@ class JobMatrix:
             matrix_options['grid'] = gen_results['grid']
             matrix_options['list'] = gen_results['data'] 
             if whiteboard: # Getting results by whiteboard
-                s = select([func.count(model.Job.c.id).label('job_count')], whereclause=model.Job.c.whiteboard.in_(whiteboard))
+                s = select([func.count(model.Job.id).label('job_count')], whereclause=model.Job.whiteboard.in_(whiteboard))
                 res = s.execute()
                 for r in res: #Should only loop once
                     count = r.job_count

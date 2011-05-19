@@ -10,7 +10,8 @@ from sqlalchemy import (Table, Column, Index, ForeignKey, UniqueConstraint,
                         UnicodeText, Boolean, Float, VARCHAR, TEXT, Numeric,
                         or_, and_, not_, select, case, func)
 
-from sqlalchemy.orm import relation, backref, synonym, dynamic_loader,query
+from sqlalchemy.orm import relation, backref, synonym, dynamic_loader, \
+        query, object_mapper
 from sqlalchemy.orm.interfaces import AttributeExtension
 from sqlalchemy.sql import exists
 from sqlalchemy.sql.expression import join
@@ -3402,10 +3403,10 @@ class Activity(object):
         # we don't end up with invalid UTF-8 chars at the end
         if old_value and isinstance(old_value, unicode):
             old_value = unicode_truncate(old_value,
-                bytes_length=self.c.old_value.type.length)
+                bytes_length=object_mapper(self).c.old_value.type.length)
         if new_value and isinstance(new_value, unicode):
             new_value = unicode_truncate(new_value,
-                bytes_length=self.c.new_value.type.length)
+                bytes_length=object_mapper(self).c.new_value.type.length)
         self.old_value = old_value
         self.new_value = new_value
 
