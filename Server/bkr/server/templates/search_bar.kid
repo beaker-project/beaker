@@ -59,7 +59,7 @@
         id="${field_id}_${repetition}">
     <script language="JavaScript" type="text/JavaScript">
 
-        ${field_id}_${repetition} = new SearchBar([${to_json(fields)}],'${search_controller}','${value_for(this_operations_field)}',${extra_callbacks_stringified},${table_search_controllers_stringified},'${value_for(this_searchvalue_field)}','${value_for(keyvaluevalue)}',${search_object}, ${date_picker},false);
+        ${field_id}_${repetition} = new SearchBar([${to_json(fields)}],'${search_controller}','${value_for('operations')}',${extra_callbacks_stringified},${table_search_controllers_stringified},'${value_for('value')}','${value_for('keyvalue')}',${search_object}, ${date_picker},false);
         addLoadEvent(${field_id}_${repetition}.initialize);
 
     </script>
