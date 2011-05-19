@@ -22,8 +22,6 @@
 import sys
 import os
 import random
-import pkg_resources
-pkg_resources.require("SQLAlchemy>=0.3.10")
 from bkr.server.bexceptions import BX, CobblerTaskFailedException
 from bkr.server.model import *
 from bkr.server.util import load_config, log_traceback

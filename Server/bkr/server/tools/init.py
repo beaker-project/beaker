@@ -20,8 +20,6 @@
 # -*- coding: utf-8 -*-
 
 import sys
-import pkg_resources
-pkg_resources.require("SQLAlchemy>=0.3.10")
 from bkr.server.model import *
 from bkr.server.commands import ConfigurationError
 from bkr.server.util import load_config, log_to_stream

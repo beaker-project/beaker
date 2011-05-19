@@ -21,8 +21,6 @@
 import xmltramp
 import os
 import sys
-import pkg_resources
-pkg_resources.require("SQLAlchemy>=0.3.10")
 from bkr.server.model import *
 from turbogears.database import session
 import turbogears

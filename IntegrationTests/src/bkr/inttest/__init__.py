@@ -16,6 +16,10 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
+import pkg_resources
+pkg_resources.require('SQLAlchemy >= 0.6')
+pkg_resources.require('TurboGears >= 1.1')
+
 import sys
 import os
 import time
