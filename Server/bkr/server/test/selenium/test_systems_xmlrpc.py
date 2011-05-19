@@ -29,7 +29,8 @@ from turbogears.database import session
 from bkr.server.test.selenium import XmlRpcTestCase
 from bkr.server.test.assertions import assert_datetime_within, \
         assert_durations_not_overlapping
-from bkr.server.test import data_setup, stub_cobbler
+from bkr.server.test import data_setup
+from bkr.common import stub_cobbler
 from bkr.server.model import User, Cpu, Key, Key_Value_String, Key_Value_Int, \
         SystemActivity
 from bkr.server.util import parse_xmlrpc_datetime

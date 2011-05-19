@@ -7,4 +7,9 @@ setup(
     packages=find_packages('.'),
     package_dir = {'':'.'},
     package_data={'': ['schema/*.rng', 'schema/*.ttl']},
+    entry_points =  { 
+        'console_scripts': (
+            'beaker-stub-cobbler = bkr.common.stub_cobbler_load:main'
+        ),
+    }
 )

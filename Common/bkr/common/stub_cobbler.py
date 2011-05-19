@@ -26,7 +26,6 @@ import threading
 import socket
 from SimpleXMLRPCServer import SimpleXMLRPCServer
 from SimpleXMLRPCServer import SimpleXMLRPCRequestHandler
-from bkr.server.test.beah_dummy import BeahDummy
 import logging
 import time
 
@@ -191,13 +190,13 @@ class _StubCobblerRequestHandler(SimpleXMLRPCRequestHandler):
 
 class StubCobblerThread(threading.Thread):
 
-    def __init__(self, cobbler=None):
+    def __init__(self, cobbler=None, addr='localhost'):
         super(StubCobblerThread, self).__init__()
         self.daemon = True
         self.cobbler = cobbler or StubCobbler()
         self._running = True
         self.port = 9010
-        self.server = NicerXMLRPCServer(('localhost', self.port),requestHandler=_StubCobblerRequestHandler)
+        self.server = NicerXMLRPCServer((addr, self.port),requestHandler=_StubCobblerRequestHandler)
         self.server.register_introspection_functions()
         self.server.register_instance(self.cobbler)
 
