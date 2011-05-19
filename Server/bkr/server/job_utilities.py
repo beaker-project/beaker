@@ -18,6 +18,7 @@
 from bkr.server.model import Job, RetentionTag, Product
 from bkr.server.widgets import ProductWidget
 from sqlalchemy.exceptions import InvalidRequestError
+from sqlalchemy.orm.exc import NoResultFound
 
 import logging
 log = logging.getLogger(__name__)
@@ -134,8 +135,8 @@ class Utility:
 
         try:
             new_product = Product.by_id(product_id)  # will throw an error here if product id is invalid 
-        except InvalidRequestError, (e):
-            if '%s' % e == 'No rows returned for one()' and product_id != ProductWidget.product_deselected:
+        except NoResultFound, e:
+            if product_id != ProductWidget.product_deselected:
                 log.error('%s' % e) 
                 return {'success':False, 'msg':'Could not find that product'}
           

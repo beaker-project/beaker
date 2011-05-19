@@ -408,9 +408,7 @@ class Tasks(RPCRoot):
 
         try:
             task = Task.by_name(tinfo.test_name)
-        except InvalidRequestError, e:
-            if str(e) != 'No rows returned for one()':
-                raise
+        except NoResultFound:
             task = Task(name=tinfo.test_name)
         # RPM is the same version we have. don't process		
         if task.version == raw_taskinfo['hdr']['ver']:

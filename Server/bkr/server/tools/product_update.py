@@ -5,7 +5,7 @@ from bkr.server.util import load_config, log_to_stream
 from lxml import etree
 from optparse import OptionParser
 from turbogears.database import session
-from sqlalchemy.exceptions import InvalidRequestError, IntegrityError
+from sqlalchemy.orm.exc import NoResultFound
 
 __version__ = '0.1'
 __description__ = 'Script to update product table with cpe'
@@ -46,12 +46,9 @@ def update_products(xml_file):
         for cpe_to_add in to_add:
             try:
                 prod = Product.by_name(u'%s' % cpe_to_add)
-            except InvalidRequestError, e: 
-                if '%s' % e == 'No rows returned for one()':
-                    session.add(Product(u'%s' % cpe_to_add))
-                    continue
-                else:
-                    raise
+            except NoResultFound:
+                session.add(Product(u'%s' % cpe_to_add))
+                continue
         session.commit()
     finally:
         session.rollback()

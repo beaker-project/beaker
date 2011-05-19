@@ -16,6 +16,7 @@ from sqlalchemy.orm.interfaces import AttributeExtension
 from sqlalchemy.sql import exists
 from sqlalchemy.sql.expression import join
 from sqlalchemy.exceptions import InvalidRequestError
+from sqlalchemy.orm.exc import NoResultFound
 from identity import LdapSqlAlchemyIdentityProvider
 from cobbler_utils import consolidate, string_to_hash
 from sqlalchemy.orm.collections import attribute_mapped_collection, MappedCollection, collection
@@ -1286,13 +1287,10 @@ class MappedObject(object):
         item = None
         try:
             item = cls.query.filter_by(**kwargs).one()
-        except InvalidRequestError, e:
-            if '%s' % e == 'Multiple rows returned for one()':
-                log.error('Mutlitple rows returned for %s' % kwargs)
-            elif '%s' % e == 'No rows returned for one()':
-                item = cls(**kwargs)
-                session.add(item)
-                session.flush([item])
+        except NoResultFound:
+            item = cls(**kwargs)
+            session.add(item)
+            session.flush([item])
         return item
 
     def node(self, element, value):
@@ -4020,11 +4018,10 @@ class Job(TaskBase):
         if family:
             try:
                 OSMajor.by_name(family)
-            except InvalidRequestError, e:
-                if '%s' % e == 'No rows returned for one()':
-                    err_msg = _(u'Family is invalid: %s') % family
-                    log.exception(err_msg)
-                    raise BX(err_msg)
+            except NoResultFound:
+                err_msg = _(u'Family is invalid: %s') % family
+                log.exception(err_msg)
+                raise BX(err_msg)
 
             query =cls.has_family(family, query)
         if tag:
@@ -4032,22 +4029,20 @@ class Job(TaskBase):
                 tag = tag[0]
             try:
                 query = cls.by_tag(tag, query)
-            except InvalidRequestError, e:
-                if '%s' % e == 'No rows returned for one()':
-                    err_msg = _('Tag is invalid: %s') % tag
-                    log.exception(err_msg)
-                    raise BX(err_msg)
+            except NoResultFound:
+                err_msg = _('Tag is invalid: %s') % tag
+                log.exception(err_msg)
+                raise BX(err_msg)
 
         if product:
             if len(product) == 1:
                 product = product[0]
             try:
                 query = cls.by_product(product,query)
-            except InvalidRequestError, e:
-                if '%s' % e == 'No rows returned for one()':
-                    err_msg = _('Product is invalid: %s') % product
-                    log.exception(err_msg)
-                    raise BX(err_msg)
+            except NoResultFound:
+                err_msg = _('Product is invalid: %s') % product
+                log.exception(err_msg)
+                raise BX(err_msg)
 
         return query
 

@@ -21,6 +21,7 @@ from turbogears import identity, redirect
 from cherrypy import request, response
 from kid import Element
 from sqlalchemy.exceptions import InvalidRequestError
+from sqlalchemy.orm.exc import NoResultFound
 from bkr.server.widgets import myPaginateDataGrid, AckPanel, JobQuickSearch, \
     RecipeWidget,RecipeTasksWidget, RecipeSetWidget, PriorityWidget, RetentionTagWidget, \
     SearchBar, JobWhiteboard, ProductWidget, JobActionWidget, JobPageActionWidget
@@ -350,11 +351,8 @@ class Jobs(RPCRoot):
                 product = Product.by_name(product)
 
                 return (tag, product)
-            except InvalidRequestError, e:
-                if '%s' % e == 'No rows returned for one()':
-                    raise BX(_("You entered an invalid product name: %s" % product))
-                else:
-                    raise
+            except NoResultFound:
+                raise BX(_("You entered an invalid product name: %s" % product))
         else:
             return tag, None
 

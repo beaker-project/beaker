@@ -22,8 +22,7 @@ import os
 import time
 import datetime
 import itertools
-import sqlalchemy
-from sqlalchemy.exceptions import InvalidRequestError
+from sqlalchemy.orm.exc import NoResultFound
 import turbogears.config, turbogears.database
 from turbogears.database import session
 from bkr.server.model import LabController, User, Group, Distro, Breed, Arch, \
@@ -78,20 +77,17 @@ def create_labcontroller(fqdn=None, user=None):
         fqdn = unique_name(u'lab%s.testdata.invalid')
     try:
         lc = LabController.by_name(fqdn)  
-    except sqlalchemy.exceptions.InvalidRequestError, e: #Doesn't exist ?
-        if e.args[0] == 'No rows returned for one()':
-            if user is None:
-                user = create_user()
-                session.flush()
-            lc = LabController.lazy_create(fqdn=fqdn, user=user)
-            # username/password to login into stub_cobbler
-            # Doesn't matter what it is, just can't be None or we 
-            # Will get cannot marshal none errors.
-            lc.username = u"foo"
-            lc.password = u"bar"
-            return lc
-        else:
-            raise
+    except NoResultFound:
+        if user is None:
+            user = create_user()
+            session.flush()
+        lc = LabController.lazy_create(fqdn=fqdn, user=user)
+        # username/password to login into stub_cobbler
+        # Doesn't matter what it is, just can't be None or we 
+        # Will get cannot marshal none errors.
+        lc.username = u"foo"
+        lc.password = u"bar"
+        return lc
     log.debug('labcontroller %s already exists' % fqdn)
     return lc
 
@@ -149,7 +145,7 @@ def create_distro(name=None, breed=u'Dan',
     osmajor = OSMajor.lazy_create(osmajor=osmajor)
     try:
         distro.osversion = OSVersion.by_name(osmajor, osminor)
-    except sqlalchemy.exceptions.InvalidRequestError:
+    except NoResultFound:
         distro.osversion = OSVersion(osmajor, osminor, arches=[distro.arch])
     # make it available in all lab controllers
     for lc in LabController.query():
@@ -218,9 +214,7 @@ def create_task(name=None, exclude_arch=[],exclude_osmajor=[], version=u'1.0-1',
     rpm = u'example%s-%s.noarch.rpm' % (name.replace('/', '-'), version)
     try:
         task = Task.by_name(name)
-    except InvalidRequestError, e:
-        if str(e) != 'No rows returned for one()':
-            raise
+    except NoResultFound:
         task = Task(name=name)
     task.rpm = rpm
     task.version = version
