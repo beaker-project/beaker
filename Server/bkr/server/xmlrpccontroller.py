@@ -55,6 +55,9 @@ class RPCRoot(controllers.Controller):
             response = xmlrpclib.dumps((response,), methodresponse=1, allow_none=True)
         except IdentityFailure, e:
             session.rollback()
+            # IdentityFailure constructor fiddles with the response code,
+            # so let's set it back
+            cherrypy.response.status = 200
             response = xmlrpclib.dumps(xmlrpclib.Fault(1,
                     '%s: Please log in first' % e.__class__))
         except xmlrpclib.Fault, fault:
