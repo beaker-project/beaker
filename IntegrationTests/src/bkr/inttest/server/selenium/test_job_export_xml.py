@@ -31,7 +31,7 @@ class JobExportXML(SeleniumTestCase):
         sel.open('to_xml?taskid=%s&to_screen=True&pretty=False' % self.job_to_export.t_id)
         sel.wait_for_page_to_load('3000')
         xml_export = sel.get_text('//body')
-        session.clear()
+        session.expunge_all()
         job = Job.by_id(self.job_to_export.id)
         xml_export = job.to_xml().toxml()
         xml_export_tree = lxml.etree.parse(StringIO(xml_export))

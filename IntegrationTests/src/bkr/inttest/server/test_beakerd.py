@@ -89,14 +89,14 @@ class TestBeakerd(unittest.TestCase):
         thread_new_recipe.start()
         thread_new_recipe.join()
         self.assertTrue(thread_new_recipe.success)
-        session.clear()
+        session.expunge_all()
         self._check_job_status(jobs, u'Processed')
 
         thread_processed_recipe = Do(target=beakerd.processed_recipesets)
         thread_processed_recipe.start()
         thread_processed_recipe.join()
         self.assertTrue(thread_processed_recipe.success)
-        session.clear()
+        session.expunge_all()
         self._check_job_status(jobs, u'Queued')
 
 
@@ -114,7 +114,7 @@ class TestBeakerd(unittest.TestCase):
                 '<hostRequires><hostname op="=" value="%s"/></hostRequires>'
                 % system.fqdn)
         session.flush()
-        session.clear()
+        session.expunge_all()
         beakerd.new_recipes()
         job = Job.query().get(job.id)
         self.assertEqual(job.status, TaskStatus.by_name(u'Processed'))
@@ -131,7 +131,7 @@ class TestBeakerd(unittest.TestCase):
                 '<hostRequires><and><hostname op="=" value="%s"/></and></hostRequires>'
                 % system.fqdn)
         session.flush()
-        session.clear()
+        session.expunge_all()
 
         beakerd.new_recipes()
         beakerd.processed_recipesets()
@@ -157,7 +157,7 @@ class TestBeakerd(unittest.TestCase):
         job.recipesets[0].recipes[0]._host_requires = (
                 u'<hostRequires><and></and></hostRequires>')
         session.flush()
-        session.clear()
+        session.expunge_all()
 
         beakerd.new_recipes()
 
@@ -187,7 +187,7 @@ class TestBeakerd(unittest.TestCase):
                </hostRequires>
                """)
         session.flush()
-        session.clear()
+        session.expunge_all()
 
         beakerd.new_recipes()
 
@@ -209,7 +209,7 @@ class TestBeakerd(unittest.TestCase):
                 '<hostRequires><hostname op="=" value="%s"/></hostRequires>'
                 % self.system_3.fqdn)
         session.flush()
-        session.clear()
+        session.expunge_all()
         beakerd.new_recipes()
         job = Job.query().get(job.id)
         self.assertEqual(job.status, TaskStatus.by_name(u'Aborted'))
@@ -221,7 +221,7 @@ class TestBeakerd(unittest.TestCase):
                 '<hostRequires><hostname op="=" value="%s"/></hostRequires>'
                 % self.system_3.fqdn)
         session.flush()
-        session.clear()
+        session.expunge_all()
         beakerd.new_recipes()
         job = Job.query().get(job.id)
         self.assertEqual(job.status, TaskStatus.by_name(u'Processed'))
@@ -233,7 +233,7 @@ class TestBeakerd(unittest.TestCase):
                 '<hostRequires><hostname op="=" value="%s"/></hostRequires>'
                 % self.system_3.fqdn)
         session.flush()
-        session.clear()
+        session.expunge_all()
         beakerd.new_recipes()
         job = Job.query().get(job.id)
         self.assertEqual(job.status, TaskStatus.by_name(u'Aborted'))
@@ -245,7 +245,7 @@ class TestBeakerd(unittest.TestCase):
                 '<hostRequires><hostname op="=" value="%s"/></hostRequires>'
                 % self.system_1.fqdn)
         session.flush()
-        session.clear()
+        session.expunge_all()
         beakerd.new_recipes()
         job = Job.query().get(job.id)
         self.assertEqual(job.status, TaskStatus.by_name(u'Processed'))
@@ -257,7 +257,7 @@ class TestBeakerd(unittest.TestCase):
                 '<hostRequires><hostname op="=" value="%s"/></hostRequires>'
                 % self.system_1.fqdn)
         session.flush()
-        session.clear()
+        session.expunge_all()
         beakerd.new_recipes()
         job = Job.query().get(job.id)
         self.assertEqual(job.status, TaskStatus.by_name(u'Processed'))
@@ -269,7 +269,7 @@ class TestBeakerd(unittest.TestCase):
                 '<hostRequires><hostname op="=" value="%s"/></hostRequires>'
                 % self.system_2.fqdn)
         session.flush()
-        session.clear()
+        session.expunge_all()
         beakerd.new_recipes()
         job = Job.query().get(job.id)
         self.assertEqual(job.status, TaskStatus.by_name(u'Aborted'))
@@ -281,7 +281,7 @@ class TestBeakerd(unittest.TestCase):
                 '<hostRequires><hostname op="=" value="%s"/></hostRequires>'
                 % self.system_2.fqdn)
         session.flush()
-        session.clear()
+        session.expunge_all()
         beakerd.new_recipes()
         job = Job.query().get(job.id)
         self.assertEqual(job.status, TaskStatus.by_name(u'Processed'))
@@ -293,7 +293,7 @@ class TestBeakerd(unittest.TestCase):
                 '<hostRequires><hostname op="=" value="%s"/></hostRequires>'
                 % self.system_2.fqdn)
         session.flush()
-        session.clear()
+        session.expunge_all()
         beakerd.new_recipes()
         job = Job.query().get(job.id)
         self.assertEqual(job.status, TaskStatus.by_name(u'Aborted'))
@@ -305,7 +305,7 @@ class TestBeakerd(unittest.TestCase):
                 '<hostRequires><hostname op="=" value="%s"/></hostRequires>'
                 % self.system_2.fqdn)
         session.flush()
-        session.clear()
+        session.expunge_all()
         beakerd.new_recipes()
         job = Job.query().get(job.id)
         self.assertEqual(job.status, TaskStatus.by_name(u'Processed'))
@@ -317,7 +317,7 @@ class TestBeakerd(unittest.TestCase):
                 '<hostRequires><hostname op="=" value="%s"/></hostRequires>'
                 % self.system_4.fqdn)
         session.flush()
-        session.clear()
+        session.expunge_all()
         beakerd.new_recipes()
         job = Job.query().get(job.id)
         self.assertEqual(job.status, TaskStatus.by_name(u'Aborted'))
@@ -331,7 +331,7 @@ class TestBeakerd(unittest.TestCase):
                 '<hostRequires><hostname op="=" value="%s"/></hostRequires>'
                 % self.system_4.fqdn)
         session.flush()
-        session.clear()
+        session.expunge_all()
         beakerd.new_recipes()
         job = Job.query().get(job.id)
         self.assertEqual(job.status, TaskStatus.by_name(u'Processed'))
@@ -355,7 +355,7 @@ class TestBeakerd(unittest.TestCase):
                 '<hostRequires><hostname op="=" value="%s"/></hostRequires>'
                 % self.system_4.fqdn)
         session.flush()
-        session.clear()
+        session.expunge_all()
         beakerd.new_recipes()
         job = Job.query().get(job.id)
         self.assertEqual(job.status, TaskStatus.by_name(u'Aborted'))
@@ -367,7 +367,7 @@ class TestBeakerd(unittest.TestCase):
                 '<hostRequires><hostname op="=" value="%s"/></hostRequires>'
                 % self.system_4.fqdn)
         session.flush()
-        session.clear()
+        session.expunge_all()
         # user_3 is the owner of the system so they have access, when the
         # loan is returned their job will be able to run.
         beakerd.new_recipes()
@@ -469,10 +469,9 @@ class TestPowerFailures(unittest.TestCase):
                                                     status = SystemStatus.by_name(u'Automated'))
         automated_system.reserve(u'Scheduler', user)
         session.flush()
-        session.clear()
         automated_system.unreserve(u'Scheduler', user)
-        # Needed for queued_commands to pick it up
         session.flush()
+        session.expunge_all()
         beakerd.queued_commands()
         beakerd.running_commands()
         automated_system = System.query().get(automated_system.id)
@@ -486,7 +485,7 @@ class TestPowerFailures(unittest.TestCase):
                                                     status = SystemStatus.by_name(u'Automated'))
         automated_system.action_power(u'on')
         session.flush()
-        session.clear()
+        session.expunge_all()
         beakerd.queued_commands()
         beakerd.running_commands()
         automated_system = System.query().get(automated_system.id)
@@ -502,7 +501,7 @@ class TestPowerFailures(unittest.TestCase):
                                                  status = SystemStatus.by_name(u'Manual'))
         manual_system.action_power(u'on')
         session.flush()
-        session.clear()
+        session.expunge_all()
         beakerd.queued_commands()
         beakerd.running_commands()
         manual_system = System.query().get(manual_system.id)
@@ -515,7 +514,7 @@ class TestPowerFailures(unittest.TestCase):
         system = data_setup.create_system(status = SystemStatus.by_name(u'Automated'))
         system.mark_broken(reason = "Attacked by cyborgs")
         session.flush()
-        session.clear()
+        session.expunge_all()
         system = System.query().get(system.id)
         system_activity = system.dyn_activity.filter(SystemActivity.field_name == u'Status').first()
         self.assertEqual(system_activity.old_value, u'Automated')
