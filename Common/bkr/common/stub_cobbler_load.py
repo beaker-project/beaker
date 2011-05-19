@@ -1,5 +1,5 @@
-from bkr.server.test.stub_cobbler import StubCobbler, StubCobblerThread
-from bkr.server.test.beah_dummy import BeahDummy
+from bkr.common.stub_cobbler import StubCobbler, StubCobblerThread
+from bkr.common.beah_dummy import BeahDummy
 import logging
 from socket import gethostname
 

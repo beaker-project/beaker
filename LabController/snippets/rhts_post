@@ -73,6 +73,7 @@ name=$reponame
 baseurl=http://$server/distros$repourl
 enabled=1
 gpgcheck=0
+skip_if_unavailable=1
 EOF
 #end for
 #end if
@@ -108,40 +109,9 @@ name=$reponame
 baseurl=$repourl
 enabled=1
 gpgcheck=0
+skip_if_unavailable=1
 EOF
 #end for
-#end if
-
-#if $getVar('rhts_server','') != ''
-# Add RHTS Test Repo
-cat << EOF > /etc/yum.repos.d/rhts-tests.repo
-[rhts-noarch]
-name=rhts tests $testrepo
-baseurl=http://$rhts_server/rpms/$testrepo/noarch/noarch
-enabled=1
-gpgcheck=0
-EOF
-
-# Install RHTS RPMS
-yum -y --disablerepo=* --enablerepo=rhts-noarch \
-                       --enablerepo=distro* \
-                       --enablerepo=customrepo* install rhts-test-env-lab rhts-legacy
-yum -y --disablerepo=* --enablerepo=rhts-noarch \
-                       --enablerepo=distro* \
-                       --enablerepo=customrepo*  install yum-utils
-
-# Record recipeid in /root/RECIPE.TXT if defined
-#if $getVar('recipeid','') != ''
-echo $recipeid >/root/RECIPE.TXT
-#end if
-
-# Get the RHTS job
-#if $getVar('runtest_url','') != ''
-wget -O /mnt/tests/runtests.sh http://$rhts_server/testlogs/$runtest_url
-#else
-wget -O /mnt/tests/runtests.sh http://$rhts_server/testlogs/recipes/$recipeid/runtests.sh
-#end if
-chmod 755 /mnt/tests/runtests.sh
 #end if
 
 # Install old rhts commands
@@ -211,10 +181,12 @@ TASK_SIZE_LIMIT_SOFT=800000000
 #RECIPE_LINK_SOFT_LIMIT=0
 #RECIPE_LINK_LIMIT=0
 EOF
-# Turn on Debug logging
-/bin/sed -i 's/DEVEL=False/DEVEL=True/' /etc/beah.conf
-/bin/sed -i 's/INTERFACE=localhost/INTERFACE=/' /etc/beah.conf
-/bin/sed -i 's/CONSOLE_LOG=.*/CONSOLE_LOG=True/' /etc/beah.conf
+# To turn on debug logging uncomment the following line. Warning: this is
+# rather verbose! This also requires LOG to be Debug.
+#/bin/sed -i 's/^DEVEL=.*/DEVEL=True/' /etc/beah.conf
+/bin/sed -i 's/^LOG=.*/LOG=Info/' /etc/beah.conf
+/bin/sed -i 's/^INTERFACE=localhost/INTERFACE=/' /etc/beah.conf
+/bin/sed -i 's/^CONSOLE_LOG=.*/CONSOLE_LOG=Console/' /etc/beah.conf
 
 chkconfig --level 345 beah-srv on
 chkconfig --level 345 beah-beaker-backend on

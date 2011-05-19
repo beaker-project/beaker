@@ -22,6 +22,40 @@
     <style type="text/css" media="screen">
 @import "${tg.url('/static/css/layout-uncompressed.css')}";
 </style>
+    <script type="text/javascript">
+        //<![CDATA[
+        (function ($) {
+            var pad = function (n) { return n < 10 ? '0' + n : n; };
+            var offset_hours = function (d) {
+                var offset_mins = d.getTimezoneOffset();
+                if (offset_mins == 0) return '+00:00';
+                return (offset_mins > 0 ? '-' : '+') + pad(Math.abs(offset_mins) / 60)
+                        + ':' + pad(Math.abs(offset_mins) % 60);
+            };
+            var iso8601 = function (d) {
+                // poor man's version, from
+                // https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Date
+                return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-'
+                        + pad(d.getDate()) + ' ' + pad(d.getHours()) + ':'
+                        + pad(d.getMinutes()) + ':' + pad(d.getSeconds())
+                        + ' ' + offset_hours(d);
+            };
+            var localise_datetimes = function () {
+                $('.datetime').each(function (i, elem) {
+                    try {
+                        var d = new Date($(elem).text().replace(/-/g, '/') + ' +00:00');
+                        if (isNaN(d.getTime()))
+                            return; // skip it and keep going
+                        $(elem).text(iso8601(d));
+                    } catch (e) {
+                        console.log(e); // and keep going
+                    }
+                });
+            };
+            $(document).ready(localise_datetimes);
+        })(jQuery);
+        //]]>
+    </script>
 </head>
 
 <body py:match="item.tag=='{http://www.w3.org/1999/xhtml}body'" py:attrs="item.items()">

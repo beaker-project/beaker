@@ -243,8 +243,6 @@ tg.strict_parameters = True
 # if it is set to True and the proxy adds the header correctly.
 # base_url_filter.base_url = "http://www.example.com"
 
-tg.include_widgets = ['turbogears.mochikit']
-
 [/static]
 static_filter.on = True
 static_filter.dir = "/usr/share/bkr/server/static"
@@ -359,7 +357,6 @@ function LabController()
      perl -pi -e "s|^anamon_enabled: 0|anamon_enabled: 1|g" /etc/cobbler/settings
      perl -pi -e "s|^anamon_enabled: 0|anamon_enabled: 1|g" /etc/cobbler/settings
      perl -pi -e "s|^redhat_management_server: .*|redhat_management_server: \"$SERVER_URL\"|g" /etc/cobbler/settings
-    echo "rcm: \"http://rcm-xmlrpc.build.bos.redhat.com/rcm\"" >> /etc/cobbler/settings
     #FIXME edit /etc/cobbler/modules.conf
     # enable testing auth module
     perl -pi -e "s|^module = authn_denyall|module = authn_testing|g" /etc/cobbler/modules.conf

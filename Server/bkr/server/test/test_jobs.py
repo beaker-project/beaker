@@ -19,7 +19,7 @@ class TestJobsController(unittest.TestCase):
         if not Distro.by_name(u'BlueShoeLinux5-5'):
             data_setup.create_distro(name=u'BlueShoeLinux5-5')
         data_setup.create_task(name=u'/distribution/install')
-        data_setup.create_product(product_name='the_product')
+        data_setup.create_product(product_name=u'the_product')
         session.flush()
 
     def tearDown(self):

@@ -355,6 +355,7 @@ class SystemViewTest(SeleniumTestCase):
         sel.type('prov_koptionspost', 'vga=0x31b')
         sel.click('//form[@name="installoptions"]//a[text()="Add ( + )"]')
         sel.wait_for_page_to_load('30000')
+        self.assertEqual(sel.get_title(), self.system.fqdn)
         session.refresh(self.system)
         self.assert_(self.system.date_modified > orig_date_modified)
 

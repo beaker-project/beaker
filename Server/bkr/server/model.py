@@ -395,6 +395,7 @@ lab_controller_table = Table('lab_controller', metadata,
     Column('distros_md5', String(40)),
     Column('systems_md5', String(40)),
     Column('disabled', Boolean, nullable=False, default=False),
+    Column('removed', DateTime, nullable=True, default=None),
     mysql_engine='InnoDB',
 )
 
@@ -1002,7 +1003,7 @@ task_table = Table('task',metadata,
                 ForeignKey('tg_user.user_id')),
         Column('version', Unicode(256)),
         Column('license', Unicode(256)),
-        Column('valid', Boolean),
+        Column('valid', Boolean, default=True),
         mysql_engine='InnoDB',
 )
 
@@ -2783,11 +2784,13 @@ class LabController(SystemObject):
         return cls.query.filter_by(fqdn=name).one()
 
     @classmethod
-    def get_all(cls):
+    def get_all(cls, valid=False):
         """
         Desktop, Server, Virtual
         """
         all = cls.query()
+        if valid:
+            all = cls.query().filter_by(removed=None)
         return [(lc.id, lc.fqdn) for lc in all]
 
     distros = association_proxy('_distros', 'distro')
@@ -3753,7 +3756,7 @@ class Job(TaskBase):
         if not query:
             query = cls.query()
         query = query.join(['recipesets','recipes']).filter(and_(Recipe.finish_time < datetime.utcnow() - delta,
-            cls.status_id.in_(TaskStatus.by_name(u'Completed').id,TaskStatus.by_name(u'Aborted').id,TaskStatus.by_name(u'Cancelled').id)))
+            cls.status_id.in_([TaskStatus.by_name(u'Completed').id,TaskStatus.by_name(u'Aborted').id,TaskStatus.by_name(u'Cancelled').id])))
         return query
 
     @classmethod
@@ -3765,11 +3768,12 @@ class Job(TaskBase):
         for tag in RetentionTag.get_transient():
             expire_in = tag.expire_in_days
             tag_name = tag.tag
-            job_ids.extend([job.id for job in cls.find_jobs(tags=tag_name, complete_days=expire_in)])
+            job_ids.extend([job.id for job in cls.find_jobs(tag=tag_name, complete_days=expire_in) if job.deleted is None])
+        job_ids = set(job_ids)
         for job_id in job_ids:
             job = Job.by_id(job_id)
-            expired_logs.append((job,job.get_logs()))
-        return expired_logs
+            yield (job, job.get_logs())
+        return
 
     @classmethod
     def has_family(cls, family, query=None, **kw):
@@ -4575,6 +4579,11 @@ class Recipe(TaskBase):
         logs = getattr(self, 'logs', None)
         if logs:
             server = logs[0].server # Surely they all use the same directory
+            # We should have a trailing slash on a directory
+            # This is needed by apache, and should be good practice in general
+            if server:
+                if server[-1] != '/':
+                    server += '/'
         else:
             server = None
         full_recipe_logpath = '%s/%s' % (self.logspath, self.filepath)
@@ -4618,13 +4627,11 @@ class Recipe(TaskBase):
         """
         repos = []
         if self.distro:
-            if os.path.exists("%s/%s/%s" % (self.harnesspath,
-                                            self.distro.osversion.osmajor,
-                                            self.distro.arch)):
+            if os.path.exists("%s/%s" % (self.harnesspath,
+                                            self.distro.osversion.osmajor)):
                 repo = dict(name = "beaker-harness",
-                             url  = "http://%s/harness/%s/%s" % (self.servername,
-                                                                      self.distro.osversion.osmajor,
-                                                                      self.distro.arch))
+                             url  = "http://%s/harness/%s/" % (self.servername,
+                                                               self.distro.osversion.osmajor))
                 repos.append(repo)
             repo = dict(name = "beaker-tasks",
                         url  = "http://%s/repos/%s" % (self.servername, self.id))
@@ -5025,24 +5032,11 @@ class Recipe(TaskBase):
         """
         if self.system and self.watchdog:
             self.destroyRepo()
-            ## FIXME Should we actually remove the watchdog?
-            ##       Maybe we should set the status of the watchdog to reclaim
-            ##       so that the lab controller returns the system instead.
-            # Remove this recipes watchdog
             log.debug("Remove watchdog for recipe %s" % self.id)
             if self.watchdog.system == self.system:
-                try:
-                    log.debug("Return system %s for recipe %s" % (self.system, self.id))
-                    self.system.unreserve(service=u'Scheduler',
-                            user=self.recipeset.job.owner, watchdog=self.watchdog)
-                except socket.gaierror, error:
-                    #FIXME
-                    pass
-                except xmlrpclib.Fault, error:
-                    #FIXME
-                    pass
-                except AttributeError, error:
-                    pass
+                log.debug("Return system %s for recipe %s" % (self.system, self.id))
+                self.system.unreserve(service=u'Scheduler',
+                        user=self.recipeset.job.owner, watchdog=self.watchdog)
 
     def task_info(self):
         """
@@ -5841,9 +5835,23 @@ class Task(MappedObject):
     """
     Tasks that are available to schedule
     """
+    @property
+    def task_dir(self):
+        return get("basepath.rpms", "/var/www/beaker/rpms")
+
     @classmethod
-    def by_name(cls, name):
-        return cls.query.filter_by(name=name).one()
+    def by_name(cls, name, valid=None):
+        query = cls.query.filter(Task.name==name)
+        if valid:
+            query = query.filter(Task.valid==bool(valid))
+        return query.one()
+
+    @classmethod
+    def by_id(cls, id, valid=None):
+        query = cls.query.filter(Task.id==id)
+        if valid:
+            query = query.filter(Task.valid==bool(valid))
+        return query.one()
 
     @classmethod
     def by_type(cls, type, query=None):
@@ -5914,6 +5922,17 @@ class Task(MappedObject):
                 break
 
         return separator.join(time)
+
+    def disable(self):
+        """
+        Disable task so it can't be used.
+        """
+        for rpm in [self.oldrpm, self.rpm]:
+            rpm_path = "%s/%s" % (self.task_dir, rpm)
+            if os.path.exists(rpm_path):
+                os.unlink(rpm_path)
+        self.valid=False
+        return
 
 
 class TaskExcludeOSMajor(MappedObject):
@@ -6114,6 +6133,7 @@ mapper(LabControllerDistro, lab_controller_distro_map)
 mapper(LabController, lab_controller_table,
         properties = {'_distros':relation(LabControllerDistro, backref='lab_controller',
                                           cascade='all, delete-orphan'),
+                      'dyn_systems' : dynamic_loader(System),
                      }
       )
 

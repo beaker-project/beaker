@@ -212,9 +212,9 @@ def create_retention_tag(name=None, default=False, needs_product=False):
 def create_job_for_recipes(recipes, owner=None, whiteboard=None, cc=None,product=None,
         retention_tag=None):
     if retention_tag is None:
-        retention_tag = RetentionTag.get_default()
+        retention_tag = RetentionTag.by_tag(u'scratch') # Don't use default, unpredictable
     else:
-        retention_tag = RetentionTag.by_name(retention_tag)
+        retention_tag = RetentionTag.by_tag(retention_tag)
     
     if owner is None:
         owner = create_user()
