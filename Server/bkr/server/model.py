@@ -3580,6 +3580,7 @@ class TaskStatus(object):
 
 class TaskResult(object):
     @classmethod
+    @sqla_cache
     def by_name(cls, result_name):
         return cls.query().filter_by(result=result_name).one()
 
