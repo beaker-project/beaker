@@ -166,7 +166,7 @@ class Reports(RPCRoot):
         try:
             systems = self._systems_for_timeseries(reports_session, **kwargs)
             if not start:
-                start = systems.min(System.date_added) or datetime.datetime(2009, 1, 1)
+                start = systems.value(func.min(System.date_added)) or datetime.datetime(2009, 1, 1)
             if not end:
                 end = datetime.datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
             dts = list(dt.replace(microsecond=0) for dt in
