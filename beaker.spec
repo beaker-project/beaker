@@ -3,7 +3,7 @@
 
 Name:           beaker
 Version:        0.6.11
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -250,6 +250,10 @@ fi
 %{_var}/lib/beaker/addDistro.d/*
 
 %changelog
+* Fri May 20 2011 Dan Callaghan <dcallagh@redhat.com> 0.6.11-2
+- 706150 do not activate InstallOptions js when widget is read-only
+  (dcallagh@redhat.com)
+
 * Wed May 18 2011 Raymond Mancy <rmancy@redhat.com> 0.6.11-1
 - 694107 - remove paginate limit for systems (dcallagh@redhat.com)
 - 572835 Test program interface to install debuginfo.
