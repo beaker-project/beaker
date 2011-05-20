@@ -6,6 +6,7 @@ import threading
 import logging
 from lxml import etree
 from StringIO import StringIO
+from socket import gethostname
 
 log = logging.getLogger(__name__)
 
@@ -17,26 +18,17 @@ class BeahDummy(threading.Thread):
     _file_size = 512000 # bytes
     _install_time = 30
 
-    def __init__(self, machine_name, proxy_addr, *args, **kw):
+    def __init__(self, machine_name, proxy_addr=None, *args, **kw):
         super(BeahDummy,self).__init__(*args, **kw)
         self.machine_name = machine_name
         if not proxy_addr:
-            f = open('/etc/beaker/proxy.conf')
-            for line in f.readline():
-                if 'HUB_URL' in line:
-                    match = re.match('.+=(.+$)',line)
-                    proxy_addr = match.group(0).strip()
-                    #proxy_addr = re.sub('"|https?://','',g.group(1).strip())
-                    break
-            else:
-                raise ValueError('Could not find proxy server in proxy.conf')
-    
-        self.rpc2 = xmlrpclib.ServerProxy('%s:8000/RPC2' % proxy_addr)
+            proxy_addr = gethostname()
+        self.rpc2 = xmlrpclib.ServerProxy('http://%s:8000/RPC2' % proxy_addr)
 
     def run(self):
         self.rpc2.install_start(self.machine_name)
-        log.info('Seeping for %s seconds' % self._install)
-        time.sleep(30) #install time
+        log.info('Seeping for %s seconds' % self._install_time)
+        time.sleep(self._install_time) #install time
         recipe = self.rpc2.get_recipe(self.machine_name)
         tree = etree.parse(StringIO(recipe))
         for task in tree.findall('//task'):

@@ -31,6 +31,6 @@ class StubCobblerLoad(StubCobbler):
         beah.start()
 
 def main():
-    stub_cobbler_thread = StubCobblerThread(addr=gethostname())
+    stub_cobbler_thread = StubCobblerLoadThread(addr=gethostname())
     stub_cobbler_thread.start()
 
