@@ -2,6 +2,10 @@
  name="${name}"
  action="${tg.url(action)}"
  method="${method}" width="100%">
+ <script language="JavaScript" type="text/JavaScript" py:if="not readonly">
+    ${name}_0 = new InstallOptions('${prov_osmajor.field_id}', '${prov_osversion.field_id}', '${tg.url('/get_osversions')}');
+    addLoadEvent(${name}_0.initialize);
+ </script>
  <p>All options are space separated</p>
  <p>Kickstart Metadata are variables passed to cobblers kickstart template engine.  You should check with cobbler for what variables are available</p>
  <p>Kernel Options are passed at the command line for installations.  ksdevice=bootif is an example along with console=ttyS0.</p>

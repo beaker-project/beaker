@@ -127,9 +127,9 @@ class TestBeakerd(unittest.TestCase):
     def test_or_lab_controller(self):
         data_setup.create_task(name=u'/distribution/install')
         user = data_setup.create_user()
-        lc1 = data_setup.create_labcontroller('lab1')
-        lc2 = data_setup.create_labcontroller('lab2')
-        lc3 = data_setup.create_labcontroller('lab3')
+        lc1 = data_setup.create_labcontroller(u'lab1')
+        lc2 = data_setup.create_labcontroller(u'lab2')
+        lc3 = data_setup.create_labcontroller(u'lab3')
         distro = data_setup.create_distro()
         system1 = data_setup.create_system(arch=u'i386', shared=True)
         system1.lab_controller = lc1

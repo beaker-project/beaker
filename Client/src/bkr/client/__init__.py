@@ -255,18 +255,25 @@ class BeakerWorkflow(BeakerCommand):
         if not hasattr(self,'hub'):
             self.set_hub(username, password)
 
-        filter = dict()
+        # We only want valid tasks
+        filter = dict(valid=1)
+
         # Pre Filter based on osmajor
         filter['osmajor'] = self.getFamily(*args, **kwargs)
 
         tasks = []
+        valid_tasks = dict()
         if kwargs.get("task", None):
-            tasks = self.hub.tasks.filter(dict(names=kwargs.get('task'),
-                                               osmajor=filter['osmajor']))
-            for dropped_task in set(kwargs['task']).difference(
-                    set(task['name'] for task in tasks)):
-                print >>sys.stderr, 'WARNING: task %s not applicable ' \
-                        'for distro, ignoring' % dropped_task
+            for task in self.hub.tasks.filter(dict(names=kwargs.get('task'),
+                                               osmajor=filter['osmajor'])):
+                valid_tasks[task['name']] = task
+            for name in kwargs['task']:
+                task = valid_tasks.get(name, None)
+                if task:
+                    tasks.append(task)
+                else:
+                    print >>sys.stderr, 'WARNING: task %s not applicable ' \
+                            'for distro, ignoring' % name
 
         if self.n_clients or self.n_servers:
             self.multi_host = True

@@ -350,6 +350,18 @@ class Root(RPCRoot):
         return dict( fields = System.get_fields(table_name))
   
     @expose(format='json')
+    def get_osversions(self, osmajor_id=None):
+        osversions = [(0,u'All')]
+        try:
+            osmajor = OSMajor.by_id(osmajor_id)
+            osversions.extend([(osversion.id,
+                           osversion.osminor
+                          ) for osversion in osmajor.osminor])
+        except InvalidRequestError:
+            pass
+        return dict(osversions = osversions)
+    
+    @expose(format='json')
     def get_installoptions(self, system_id=None, distro_id=None):
         try:
             system = System.by_id(system_id,identity.current.user)
@@ -400,7 +412,7 @@ class Root(RPCRoot):
     @expose(template='bkr.server.templates.grid_add')
     @expose(template='bkr.server.templates.systems_feed', format='xml', as_format='atom',
             content_type='application/atom+xml', accept_format='application/atom+xml')
-    @paginate('list',default_order='fqdn',limit=20)
+    @paginate('list', default_order='fqdn', limit=20, max_limit=None)
     def index(self, *args, **kw): 
         return_dict =  self._systems(systems = System.all(identity.current.user), *args, **kw) 
         return return_dict
@@ -432,7 +444,7 @@ class Root(RPCRoot):
     @expose(template='bkr.server.templates.systems_feed', format='xml', as_format='atom',
             content_type='application/atom+xml', accept_format='application/atom+xml')
     @identity.require(identity.not_anonymous())
-    @paginate('list',default_order='fqdn',limit=20)
+    @paginate('list', default_order='fqdn', limit=20, max_limit=None)
     def available(self, *args, **kw):
         return self._systems(systems = System.available(identity.current.user), *args, **kw)
 
@@ -440,7 +452,7 @@ class Root(RPCRoot):
     @expose(template='bkr.server.templates.systems_feed', format='xml', as_format='atom',
             content_type='application/atom+xml', accept_format='application/atom+xml')
     @identity.require(identity.not_anonymous())
-    @paginate('list',default_order='fqdn',limit=20)
+    @paginate('list', default_order='fqdn', limit=20, max_limit=None)
     def free(self, *args, **kw): 
         return self._systems(systems = System.free(identity.current.user), *args, **kw)
 
@@ -448,7 +460,7 @@ class Root(RPCRoot):
     @expose(template='bkr.server.templates.systems_feed', format='xml', as_format='atom',
             content_type='application/atom+xml', accept_format='application/atom+xml')
     @identity.require(identity.not_anonymous())
-    @paginate('list',limit=20)
+    @paginate('list', default_order='fqdn', limit=20, max_limit=None)
     def mine(self, *args, **kw):
         return self._systems(systems = System.mine(identity.current.user), *args, **kw)
 
@@ -1763,9 +1775,9 @@ class Root(RPCRoot):
             return (0,"No inventory data provided")
 
         try:
-            system = System.query.filter(System.fqdn == fqdn).one()
+            system = System.query.filter(System.fqdn == fqdn.decode('ascii')).one()
         except InvalidRequestError:
-            system = System(fqdn=fqdn)
+            raise BX(_('No such system %s') % fqdn)
         return system.update_legacy(inventory)
 
     @expose()
@@ -1798,10 +1810,9 @@ class Root(RPCRoot):
         if not inventory:
             return (0,"No inventory data provided")
         try:
-            system = System.query.filter(System.fqdn == fqdn).one()
+            system = System.query.filter(System.fqdn == fqdn.decode('ascii')).one()
         except InvalidRequestError:
-            # New system, add it.
-            system = System(fqdn=fqdn)
+            raise BX(_('No such system %s') % fqdn)
         return system.update(inventory)
 
     @expose(template='bkr.server.templates.forbidden')

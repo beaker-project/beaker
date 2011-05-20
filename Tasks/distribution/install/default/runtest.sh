@@ -263,7 +263,7 @@ echo "***** Start of Install test *****" > $OUTPUTFILE
 FILEAREA=/mnt/testarea
 /bin/dmesg > $FILEAREA/boot.messages
 
-CHECKRECIPE
+#CHECKRECIPE
 
 MOTD
 

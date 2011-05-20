@@ -73,6 +73,7 @@ name=$reponame
 baseurl=http://$server/distros$repourl
 enabled=1
 gpgcheck=0
+skip_if_unavailable=1
 EOF
 #end for
 #end if
@@ -108,40 +109,9 @@ name=$reponame
 baseurl=$repourl
 enabled=1
 gpgcheck=0
+skip_if_unavailable=1
 EOF
 #end for
-#end if
-
-#if $getVar('rhts_server','') != ''
-# Add RHTS Test Repo
-cat << EOF > /etc/yum.repos.d/rhts-tests.repo
-[rhts-noarch]
-name=rhts tests $testrepo
-baseurl=http://$rhts_server/rpms/$testrepo/noarch/noarch
-enabled=1
-gpgcheck=0
-EOF
-
-# Install RHTS RPMS
-yum -y --disablerepo=* --enablerepo=rhts-noarch \
-                       --enablerepo=distro* \
-                       --enablerepo=customrepo* install rhts-test-env-lab rhts-legacy
-yum -y --disablerepo=* --enablerepo=rhts-noarch \
-                       --enablerepo=distro* \
-                       --enablerepo=customrepo*  install yum-utils
-
-# Record recipeid in /root/RECIPE.TXT if defined
-#if $getVar('recipeid','') != ''
-echo $recipeid >/root/RECIPE.TXT
-#end if
-
-# Get the RHTS job
-#if $getVar('runtest_url','') != ''
-wget -O /mnt/tests/runtests.sh http://$rhts_server/testlogs/$runtest_url
-#else
-wget -O /mnt/tests/runtests.sh http://$rhts_server/testlogs/recipes/$recipeid/runtests.sh
-#end if
-chmod 755 /mnt/tests/runtests.sh
 #end if
 
 # Install old rhts commands

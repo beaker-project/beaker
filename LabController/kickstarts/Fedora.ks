@@ -71,7 +71,16 @@ $SNIPPET("Fedora")
 $SNIPPET("system")
 
 %packages --ignoremissing
-$SNIPPET("rhts_packages")
+#if $getVar('packages', '') != ''
+#set _packages = $getVar('packages','').split(':')
+#for $package in $_packages:
+$package
+#end for
+#else
+@development
+@desktop-platform-devel
+@server-platform-devel
+#end if
 %end
 
 #end if

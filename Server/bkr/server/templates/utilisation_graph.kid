@@ -5,7 +5,6 @@
     <meta content="text/html; charset=UTF-8" http-equiv="content-type" py:replace="''"/>
     <title>Utilisation graph</title>
     <script type="text/javascript" src="${tg.url('/static/javascript/date.f-0.5.0.js')}"></script>
-    <script type="text/javascript" src="${tg.url('/static/javascript/jquery-1.5.1.min.js')}"></script>
     <script type="text/javascript" src="${tg.url('/static/javascript/jquery.flot-r323.js')}"></script>
     <script type="text/javascript" src="${tg.url('/static/javascript/jquery.flot-r323.stack.js')}"></script>
     <script type="text/javascript" src="${tg.url('/static/javascript/jquery.flot-r323.selection.js')}"></script>

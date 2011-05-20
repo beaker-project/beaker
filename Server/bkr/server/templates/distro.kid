@@ -32,7 +32,7 @@
       <b>Date Created</b>
     </th>
     <td class="list" colspan="3">
-     ${value.date_created}
+     <span class="datetime">${value.date_created}</span>
     </td>
    </tr>
    <tr class="list">

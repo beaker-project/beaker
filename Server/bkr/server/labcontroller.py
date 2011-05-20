@@ -7,11 +7,12 @@ from tg_expanding_form_widget.tg_expanding_form_widget import ExpandingForm
 from kid import Element
 from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.helpers import *
-from bkr.server.widgets import myPaginateDataGrid
+from bkr.server.widgets import LabControllerDataGrid
 from xmlrpclib import ProtocolError
 
 import cherrypy
 import time
+import datetime
 import re
 
 from BasicAuthTransport import BasicAuthTransport
@@ -262,16 +263,35 @@ class LabControllers(RPCRoot):
             flash( _(u"No Lab Controller id passed!"))
         redirect(".")
 
+    def make_lc_remove_link(self, lc):
+        if lc.removed is not None:
+            return make_link(url  = 'unremove?id=%s' % lc.id,
+                text = 'Re-Add (+)')
+        else:
+            a = Element('a', {'class': 'list'}, href='#')
+            a.text = 'Remove (-)'
+            a.attrib.update({'onclick' : "has_watchdog('%s')" % lc.id})
+            return a
+
+    def make_lc_scan_link(self, lc):
+        if lc.removed:
+            return
+        return make_scan_link(lc.id)
+            
+            
     @identity.require(identity.in_group("admin"))
     @expose(template="bkr.server.templates.grid_add")
     @paginate('list')
     def index(self):
         labcontrollers = session.query(LabController)
-        labcontrollers_grid = myPaginateDataGrid(fields=[
+
+        labcontrollers_grid = LabControllerDataGrid(fields=[
                                   ('FQDN', lambda x: make_edit_link(x.fqdn,x.id)),
                                   ('Disabled', lambda x: x.disabled),
+                                  ('Removed', lambda x: x.removed),
                                   ('Timestamp', lambda x: x.distros_md5),
-                                  (' ', lambda x: make_scan_link(x.id)),
+                                  (' ', lambda x: self.make_lc_remove_link(x)),
+                                  (' ', lambda x: self.make_lc_scan_link(x)),
                               ])
         return dict(title="Lab Controllers", 
                     grid = labcontrollers_grid,
@@ -279,10 +299,41 @@ class LabControllers(RPCRoot):
                     object_count = labcontrollers.count(),
                     list = labcontrollers)
 
+
     @identity.require(identity.in_group("admin"))
     @expose()
-    def remove(self, **kw):
-        labcontroller = LabController.by_id(kw['id'])
-        session.delete(labcontroller)
-        flash( _(u"%s Deleted") % labcontroller.fqdn )
+    def unremove(self, id):
+        labcontroller = LabController.by_id(id)
+        labcontroller.removed = None
+        labcontroller.disabled = False
+        flash('Succesfully re-added %s' % labcontroller.fqdn)
+        redirect(url('.'))
+
+    @expose('json')
+    def has_active_recipes(self, id):
+        labcontroller = LabController.by_id(id)
+        count = labcontroller.dyn_systems.filter(System.watchdog != None).count()
+        if count:
+            return {'has_active_recipes' : True}
+        else:
+            return {'has_active_recipes' : False}
+
+    @identity.require(identity.in_group("admin"))
+    @expose()
+    def remove(self, id, *args, **kw):
+        try:
+            labcontroller = LabController.by_id(id)
+            labcontroller.removed = datetime.utcnow()
+            system_table.update().where(system_table.c.lab_controller_id == id).\
+                values(lab_controller_id=None).execute()
+            watchdogs = Watchdog.by_status(labcontroller=labcontroller, 
+                status='active')
+            for w in watchdogs:
+                w.recipe.recipeset.job.cancel(msg='LabController %s has been deleted' % labcontroller.fqdn)
+            labcontroller.disabled = True
+            session.commit()
+        finally:
+            session.close()
+
+        flash( _(u"%s Removed") % labcontroller.fqdn )
         raise redirect(".")

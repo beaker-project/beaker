@@ -174,24 +174,28 @@ class Utility:
         return 'power.power_type.name'
 
     @classmethod
+    def system_serialnumber_name(cls):
+        return 'serial'
+
+    @classmethod
     def get_attr(cls,c):        
         return lambda x:getattr(cls.get_correct_system_column(x),c.lower()) 
 
     @classmethod
     def system_group_getter(cls):
-        return lambda x: ' '.join([group.group_name for group in x.groups])
+        return lambda x: ' '.join([group.group_name for group in cls.get_correct_system_column(x).groups])
 
     @classmethod
     def system_numanodes_getter(cls):
-        return lambda x: getattr(x.numa, 'nodes', 0)
+        return lambda x: getattr(cls.get_correct_system_column(x).numa, 'nodes', 0)
 
     @classmethod
     def system_added_getter(cls):
-        return lambda x: x.date_added
+        return lambda x: cls.get_correct_system_column(x).date_added
 
     @classmethod
     def system_loanedto_getter(cls):
-        return lambda x: x.loaned
+        return lambda x: cls.get_correct_system_column(x).loaned
           
     @classmethod
     def system_powertype_getter(cls):
@@ -211,8 +215,16 @@ class Utility:
         return lambda x: make_link("/view/%s" % cls.get_correct_system_column(x).fqdn, cls.get_correct_system_column(x).fqdn)
 
     @classmethod
+    def system_serialnumber_getter(cls):
+        return lambda x: cls.get_correct_system_column(x).serial
+
+    @classmethod
     def get_attr_other(cls,index):
         return lambda x: x[index]
+
+    @classmethod
+    def system_added_options(cls):
+        return dict(datetime=True)
 
     @classmethod 
     def custom_systems_grid(cls,systems,others=None):
@@ -226,6 +238,9 @@ class Utility:
 
             getter_function_name = '%s_%s_getter' % (table.lower(), column.lower())
             custom_getter = getattr(Utility, getter_function_name,None)
+
+            options_function_name = '%s_%s_options' % (table.lower(), column.lower())
+            custom_options = getattr(Utility, options_function_name, None)
 
             if custom_name:
                 lower_column = custom_name()
@@ -248,7 +263,10 @@ class Utility:
             else:
                 options['sortable'] = False 
                 name_string = '%s.%s' % (lower_table,lower_column)
-         
+
+            if custom_options:
+                options.update(custom_options())
+
             return name_string,title_string,options,my_getter
 
         fields = []

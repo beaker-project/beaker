@@ -77,6 +77,9 @@ class LocalCSSLink(CSSLink):
         d["link"] = self.name
 
 
+jquery = LocalJSLink('bkr', '/static/javascript/jquery-1.5.1.min.js')
+
+
 class PowerTypeForm(CompoundFormField):
     """Dynmaically modifies power arguments based on Power Type Selection"""
     javascript = [LocalJSLink('bkr', '/static/javascript/power.js')]
@@ -160,7 +163,6 @@ class ReserveSystem(TableForm):
 class ReserveWorkflow(Form): 
     javascript = [LocalJSLink('bkr', '/static/javascript/loader.js'),
                   LocalJSLink('bkr', '/static/javascript/reserve_workflow_v4.js'),
-                  LocalJSLink('bkr','/static/javascript/jquery.js'),
                  ] 
     template="bkr.server.templates.reserve_workflow"
     css = [LocalCSSLink('bkr','/static/css/reserve_workflow.css')] 
@@ -347,6 +349,11 @@ class MatrixDataGrid(DataGrid):
 class myPaginateDataGrid(PaginateDataGrid):
     template = "bkr.server.templates.my_paginate_datagrid"
 
+class LabControllerDataGrid(myPaginateDataGrid):
+    javascript = [LocalJSLink('bkr','/static/javascript/lab_controller_remove.js'),
+                  LocalJSLink('bkr', '/static/javascript/jquery-ui-1.7.3.custom.min.js'),]
+    css =  [LocalCSSLink('bkr','/static/css/smoothness/jquery-ui-1.7.3.custom.css')] 
+
 class SingleSelectFieldJSON(SingleSelectField):
     params = ['for_column']
     def __init__(self,*args,**kw):
@@ -390,8 +397,7 @@ class JobQuickSearch(CompoundWidget):
 
 class AckPanel(RadioButtonList): 
 
-    javascript = [LocalJSLink('bkr','/static/javascript/jquery.js'),
-                  LocalJSLink('bkr','/static/javascript/jquery-ui-1.7.3.custom.min.js'), 
+    javascript = [LocalJSLink('bkr','/static/javascript/jquery-ui-1.7.3.custom.min.js'),
                   LocalJSLink('bkr','/static/javascript/loader.js'),
                   LocalJSLink('bkr','/static/javascript/response_v3.js')]
 
@@ -476,8 +482,7 @@ class AckPanel(RadioButtonList):
         return super(AckPanel,self).display(value,*args,**params)
  
 class JobMatrixReport(Form):     
-    javascript = [LocalJSLink('bkr','/static/javascript/jquery.js'),
-                  LocalJSLink('bkr','/static/javascript/jquery-ui-1.7.3.custom.min.js'),
+    javascript = [LocalJSLink('bkr','/static/javascript/jquery-ui-1.7.3.custom.min.js'),
                   LocalJSLink('bkr', '/static/javascript/job_matrix_v2.js')]
     css = [LocalCSSLink('bkr','/static/css/job_matrix.css'), LocalCSSLink('bkr','/static/css/smoothness/jquery-ui-1.7.3.custom.css')] 
     template = 'bkr.server.templates.job_matrix' 
@@ -520,7 +525,6 @@ class SearchBar(RepeatingFormField):
     css = [LocalCSSLink('bkr','/static/css/smoothness/jquery-ui-1.7.3.custom.css')] 
     javascript = [LocalJSLink('bkr', '/static/javascript/search_object.js'),
                   LocalJSLink('bkr', '/static/javascript/searchbar_v7.js'), 
-                  LocalJSLink('bkr','/static/javascript/jquery.js'),
                   LocalJSLink('bkr','/static/javascript/jquery-ui-1.7.3.custom.min.js'),]
     template = "bkr.server.templates.search_bar"
 
@@ -698,7 +702,7 @@ class TaskSearchForm(RemoteForm):
 
     def __init__(self, *args, **kw):
         super(TaskSearchForm,self).__init__(*args,**kw)
-        self.javascript.extend([LocalJSLink('bkr', '/static/javascript/loader.js'),LocalJSLink('bkr','/static/javascript/jquery.js')])
+        self.javascript.extend([LocalJSLink('bkr', '/static/javascript/loader.js')])
 
     def update_params(self, d):
         super(TaskSearchForm, self).update_params(d)
@@ -1035,6 +1039,7 @@ class SystemProvision(Form):
                 d['power_enabled'] = True
 
 class SystemInstallOptions(Form):
+    javascript = [LocalJSLink('bkr', '/static/javascript/install_options.js')]
     template = "bkr.server.templates.system_installoptions"
     member_widgets = ["id", "prov_arch", "prov_osmajor", "prov_osversion",
                        "prov_ksmeta", "prov_koptions", "prov_koptionspost"]
@@ -1053,7 +1058,7 @@ class SystemInstallOptions(Form):
                                  validator=validators.NotEmpty())
         self.prov_osversion    = SingleSelectField(name='prov_osversion',
                                  label=_(u'Update'),
-                                 options=model.OSVersion.get_all,
+                                 options=[(0,u'All')],
                                  validator=validators.NotEmpty())
         self.prov_ksmeta       = TextField(name='prov_ksmeta', 
                                      label=_(u'Kickstart Metadata'))
@@ -1124,7 +1129,9 @@ class SystemHistory(CompoundWidget):
         #filter_column_options = model.Activity.distinct_field_names() 
         self.grid  = myPaginateDataGrid(fields = [PaginateDataGrid.Column(name='user',title='User',getter=lambda x: x.user,options=dict(sortable=True)),
                                                   PaginateDataGrid.Column(name='service', title='Service', getter=lambda x: x.service, options=dict(sortable=True)),
-                                                  PaginateDataGrid.Column(name='created', title='Created', getter=lambda x: x.created, options = dict(sortable=True)),
+                                                  PaginateDataGrid.Column(name='created', title='Created',
+                                                    getter=lambda x: x.created,
+                                                    options=dict(sortable=True, datetime=True)),
                                                   PaginateDataGrid.Column(name='field_name', title='Field Name', getter=lambda x: x.field_name, options=dict(sortable=True)),
                                                   PaginateDataGrid.Column(name='action', title='Action', getter=lambda x: x.action, options=dict(sortable=True)),
                                                   PaginateDataGrid.Column(name='old_value',title='Old Value', getter=lambda x: x.old_value,options=dict(sortable=True)), 
@@ -1148,8 +1155,8 @@ class SystemHistory(CompoundWidget):
     
 
 class SystemForm(Form):
-    javascript = [LocalJSLink('bkr', '/static/javascript/jquery.js'),
-                  LocalJSLink('bkr', '/static/javascript/provision.js'),
+    javascript = [LocalJSLink('bkr', '/static/javascript/provision.js'),
+                  LocalJSLink('bkr', '/static/javascript/install_options.js'),
                   LocalJSLink('bkr','/static/javascript/system_admin.js'),
                   LocalJSLink('bkr', '/static/javascript/searchbar_v7.js'), 
                   JSLink(static,'ajax.js'),
@@ -1176,7 +1183,7 @@ class SystemForm(Form):
                TextArea(name='status_reason', label=_(u'Condition Report'),attrs={'rows':3,'cols':27},validator=validators.MaxLength(255)),
                SingleSelectField(name='lab_controller_id',
                                  label=_(u'Lab Controller'),
-                                 options=lambda: [(0,"None")] + model.LabController.get_all(),
+                                 options=lambda: [(0,"None")] + model.LabController.get_all(valid=True),
                                  validator=validators.Int()),
                TextField(name='vendor', label=_(u'Vendor')),
                TextField(name='model', label=_(u'Model')),
@@ -1263,7 +1270,7 @@ class RecipeSetWidget(CompoundWidget):
     params = ['recipeset','show_priority','action','priorities_list','can_ack_nak']
     member_widgets = ['priority_widget','retentiontag_widget','ack_panel_widget', 'product_widget', 'action_widget']
     def __init__(self, priorities_list=None, *args, **kw):
-        self.action_widget = TaskActionWidget()
+        self.action_widget = RecipeTaskActionWidget()
         self.priorities_list = priorities_list
         self.ack_panel_widget = AckPanel()
         self.priority_widget = PriorityWidget()
@@ -1288,9 +1295,6 @@ class RecipeSetWidget(CompoundWidget):
 
 
 class RecipeWidget(CompoundWidget):
-    javascript = [
-                  LocalJSLink('bkr','/static/javascript/jquery.js'),
-                 ]
     css = []
     template = "bkr.server.templates.recipe_widget"
     params = ['recipe']
@@ -1417,7 +1421,6 @@ class JobWhiteboard(RPC, CompoundWidget):
     Widget for displaying/updating a job's whiteboard. Saves asynchronously using js.
     """
 
-    javascript = [LocalJSLink('bkr', '/static/javascript/jquery.js')]
     template = 'bkr.server.templates.job_whiteboard'
     hidden_id = HiddenField(name='id')
     field = TextField(name='whiteboard')
@@ -1442,19 +1445,19 @@ class JobWhiteboard(RPC, CompoundWidget):
         d['form_attrs']['onsubmit'] = "return !remoteFormRequest(this, null, %s);" % (
             jsonify.encode(self.get_options(d)))
 
-class TaskActionWidget(RPC):
+class RecipeTaskActionWidget(RPC):
     template = 'bkr.server.templates.action'
     """
-    TaskActionWidget will display the appropriate actions for a task
+    RecipeTaskActionWidget will display the appropriate actions for a task
     """
     def __init__(self, *args, **kw):
-        super(TaskActionWidget,self).__init__(*args, **kw)
+        super(RecipeTaskActionWidget,self).__init__(*args, **kw)
     
     def display(self, task, *args, **params): 
         params['task'] = task
-        return super(TaskActionWidget, self).display(*args, **params)
+        return super(RecipeTaskActionWidget, self).display(*args, **params)
 
-class RecipeActionWidget(TaskActionWidget):
+class RecipeActionWidget(RecipeTaskActionWidget):
     template = 'bkr.server.templates.recipe_action'
     params = ['show_report']
 
@@ -1469,7 +1472,33 @@ class RecipeActionWidget(TaskActionWidget):
         return super(RecipeActionWidget,self).display(task, **params)
 
 
-class JobActionWidget(TaskActionWidget):
+class TaskActionWidget(RPC):
+    template = 'bkr.server.templates.task_action'
+    params = ['redirect_to']
+    action = url('/tasks/disable_from_ui')
+    javascript = [LocalJSLink('bkr', '/static/javascript/task_disable.js')]
+
+    def __init__(self, *args, **kw):
+        super(TaskActionWidget, self).__init__(*args, **kw)
+
+    def display(self, task, action=None, **params):
+        id = task.id
+        task_details={'id': 'disable_%s' % id,
+            't_id' : id}
+        params['task_details'] = task_details
+        if action:
+            params['action'] = action
+        return super(TaskActionWidget, self).display(task, **params)
+
+    def update_params(self, d):
+        super(TaskActionWidget, self).update_params(d)
+        d['task_details']['onclick'] = "TaskDisable('%s',%s, %s)" % (
+            d.get('action'),
+            jsonify.encode({'t_id': d['task_details'].get('t_id')}),
+            jsonify.encode(self.get_options(d)),
+            )
+
+class JobActionWidget(RecipeTaskActionWidget):
     template = 'bkr.server.templates.job_action'
     params = ['redirect_to']
     action = url('/jobs/delete_job_from_ui')
