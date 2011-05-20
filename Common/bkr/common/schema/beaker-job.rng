@@ -282,9 +282,7 @@
       <element name="auto_prov"><ref name="req"/></element>
       <element name="group">
         <ref name="equality_op"/>
-        <optional>
-         <attribute name="value"/>
-        </optional>
+        <attribute name="value"/>
       </element>
       <element name="key_value">
         <attribute name="key"/>
@@ -313,7 +311,7 @@
     </attribute>
   </define>
   <define name="equality_op">
-   <attribute name="equality_op">
+   <attribute name="op">
     <choice>
         <value>!=</value>
         <value>==</value>
