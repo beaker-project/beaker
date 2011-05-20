@@ -1826,7 +1826,7 @@ url --url=$tree
     @classmethod
     def available_order(cls, user, systems=None):
         return cls.available_for_schedule(user,systems=systems).order_by(case([(System.owner==user, 1),
-                          (System.owner!=user and Group.systems==None, 2)],
+                          (and_(System.owner!=user, Group.systems==None), 2)],
                               else_=3))
 
     @classmethod
