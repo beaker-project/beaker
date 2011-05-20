@@ -47,7 +47,7 @@ class BeahDummy(threading.Thread):
         string_to_send = self._dummy_string * 66 # testing with this chunk size
         chunk_size = len(string_to_send)
         total_size_sent_task_log = 0
-        offset_task_log = 1
+        offset_task_log = 0
         self.rpc2.task_start(task_id)
         _md5 = hashlib.md5()
         _md5.update(string_to_send)
