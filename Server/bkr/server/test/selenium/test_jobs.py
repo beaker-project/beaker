@@ -37,7 +37,7 @@ class TestViewJob(SeleniumTestCase):
         self.selenium.stop()
 
     def test_cc_list(self):
-        user = data_setup.create_user(password='password')
+        user = data_setup.create_user(password=u'password')
         job = data_setup.create_job(owner=user,
                 cc=[u'laika@mir.su', u'tereshkova@kosmonavt.su'])
         session.flush()
@@ -56,7 +56,7 @@ class TestViewJob(SeleniumTestCase):
             'laika@mir.su; tereshkova@kosmonavt.su')
 
     def test_edit_job_whiteboard(self):
-        user = data_setup.create_user(password='asdf')
+        user = data_setup.create_user(password=u'asdf')
         job = data_setup.create_job(owner=user)
         session.flush()
         self.login(user=user.user_name, password='asdf')
@@ -67,12 +67,8 @@ class TestViewJob(SeleniumTestCase):
         new_whiteboard = 'new whiteboard value %s' % int(time.time())
         sel.type('name=whiteboard', new_whiteboard)
         sel.click('//form[@id="job_whiteboard_form"]//button[@type="submit"]')
-        for i in range(100):
-            try:
-                if sel.is_element_present('//form[@id="job_whiteboard_form"]//div[@class="msg success"]'): break
-            except: pass
-            time.sleep(0.2)
-        else: self.fail('timed out looking for save success message')
+        self.wait_for_condition(lambda: sel.is_element_present(
+                '//form[@id="job_whiteboard_form"]//div[@class="msg success"]'))
         sel.open('jobs/%s' % job.id)
         self.assertEqual(new_whiteboard, sel.get_value('name=whiteboard'))
 
@@ -165,7 +161,7 @@ class NewJobTest(SeleniumTestCase):
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=661652
     def test_job_with_excluded_task(self):
-        distro = data_setup.create_distro(arch='ia64')
+        distro = data_setup.create_distro(arch=u'ia64')
         excluded_task = data_setup.create_task(exclude_arch=[u'ia64'])
         session.flush()
         self.login()
