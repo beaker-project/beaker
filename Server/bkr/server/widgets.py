@@ -79,6 +79,8 @@ class LocalCSSLink(CSSLink):
 
 jquery = LocalJSLink('bkr', '/static/javascript/jquery-1.5.1.min.js')
 
+local_datetime = LocalJSLink('bkr', '/static/javascript/local_datetime.js')
+
 
 class PowerTypeForm(CompoundFormField):
     """Dynmaically modifies power arguments based on Power Type Selection"""

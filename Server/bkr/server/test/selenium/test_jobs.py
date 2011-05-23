@@ -19,6 +19,7 @@
 import unittest
 import logging
 import time
+import re
 import tempfile
 import pkg_resources
 from turbogears.database import session
@@ -71,6 +72,57 @@ class TestViewJob(SeleniumTestCase):
                 '//form[@id="job_whiteboard_form"]//div[@class="msg success"]'))
         sel.open('jobs/%s' % job.id)
         self.assertEqual(new_whiteboard, sel.get_value('name=whiteboard'))
+
+    def test_datetimes_are_localised(self):
+        job = data_setup.create_completed_job()
+        session.flush()
+        sel = self.selenium
+        sel.open('jobs/%s' % job.id)
+        sel.wait_for_page_to_load('30000')
+        self.check_datetime_localised(
+                sel.get_text('//table[@class="show"]//td'
+                '[preceding-sibling::td[1]/b/text() = "Queued"]'))
+        self.check_datetime_localised(
+                sel.get_text('//table[@class="show"]//td'
+                '[preceding-sibling::td[1]/b/text() = "Started"]'))
+        self.check_datetime_localised(
+                sel.get_text('//table[@class="show"]//td'
+                '[preceding-sibling::td[1]/b/text() = "Finished"]'))
+
+    def test_invalid_datetimes_arent_localised(self):
+        job = data_setup.create_job()
+        session.flush()
+        sel = self.selenium
+        sel.open('jobs/%s' % job.id)
+        sel.wait_for_page_to_load('30000')
+        self.assertEquals(
+                sel.get_text('//table[@class="show"]//td'
+                '[preceding-sibling::td[1]/b/text() = "Finished"]'),
+                '')
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=706435
+    def test_task_result_datetimes_are_localised(self):
+        job = data_setup.create_completed_job()
+        session.flush()
+        sel = self.selenium
+        sel.open('jobs/%s' % job.id)
+        sel.wait_for_page_to_load('30000')
+        recipe_id = job.recipesets[0].recipes[0].id
+        sel.click('all_recipe_%d' % recipe_id)
+        self.wait_for_condition(lambda: sel.is_element_present(
+                '//div[@id="task_items_%d"]//table[@class="list"]' % recipe_id))
+        recipe_task_start, recipe_task_finish, _ = \
+                sel.get_text('//div[@id="task_items_%d"]//table[@class="list"]'
+                    '/tbody/tr[2]/td[3]' % recipe_id).splitlines()
+        self.check_datetime_localised(recipe_task_start.strip())
+        self.check_datetime_localised(recipe_task_finish.strip())
+        self.check_datetime_localised(
+                sel.get_text('//div[@id="task_items_%d"]//table[@class="list"]'
+                    '/tbody/tr[3]/td[3]' % recipe_id))
+
+    def check_datetime_localised(self, dt):
+        self.assert_(re.match(r'\d\d\d\d-\d\d-\d\d \d\d:\d\d:\d\d [-+]\d\d:\d\d$', dt),
+                '%r does not look like a localised datetime' % dt)
 
 class NewJobTest(SeleniumTestCase):
 
