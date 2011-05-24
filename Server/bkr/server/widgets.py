@@ -1236,7 +1236,7 @@ class SystemForm(Form):
             d["loan_change"] = d["options"]["loan_change"]
         if d["options"].has_key("loan_text"):
             d["loan_text"] = d["options"]["loan_text"]
-            
+        d['show_cc'] = d['options'].get('show_cc', False)
         d["id"] = d["value_for"]("id")
 
         if d["options"]["readonly"]:

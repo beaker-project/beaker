@@ -442,6 +442,13 @@ class SystemViewTest(SeleniumTestCase):
         self.assertEqual(sel.get_value('koptions'), 'some_kernel_option=1')
         self.assertEqual(sel.get_value('koptions_post'), 'some_kernel_option=2')
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=703548
+    def test_cc_not_visible_to_random_noobs(self):
+        self.login(self.unprivileged_user.user_name, 'password')
+        sel = self.selenium
+        self.go_to_system_view()
+        self.assert_(not sel.is_text_present('Notify CC'))
+
 class SystemCcTest(SeleniumTestCase):
 
     def setUp(self):
