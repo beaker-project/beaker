@@ -2512,8 +2512,8 @@ $SNIPPET("rhts_post")
                 distro_tag_map.c.distro_tag_id ==
                     DistroTag.by_tag(reliable_distro_tag.decode('utf8')).id,
                 recipe_table.c.start_time >
-                    func.ifnull(status_change_subquery, system_added_subquery),
-                recipe_table.c.finish_time > nonaborted_recipe_subquery))
+                    func.ifnull(status_change_subquery.as_scalar(), system_added_subquery.as_scalar()),
+                recipe_table.c.finish_time > nonaborted_recipe_subquery.as_scalar()))
         if session.execute(query).scalar() >= 2:
             # Broken!
             reason = unicode(_(u'System has a run of aborted recipes ' 
