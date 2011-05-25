@@ -7,10 +7,9 @@ from datetime import timedelta
 from cobbler import utils
 
 if __name__ == '__main__':
-    cobbler = xmlrpclib.ServerProxy('http://127.0.0.1/cobbler_api')
+    cobbler = xmlrpclib.ServerProxy('http://localhost/cobbler_api')
     token = cobbler.login("", utils.get_shared_secret())
-    settings = cobbler.get_settings(token)
-    inventory = xmlrpclib.ServerProxy('%s/RPC2' % settings['redhat_management_server'], allow_none=True)
+    proxy = xmlrpclib.ServerProxy('http://localhost:8000', allow_none=True)
     distros = cobbler.get_distros()
     rdistros = []
     for distro in distros:
@@ -23,7 +22,7 @@ if __name__ == '__main__':
         for distro in rdistros:
             print "Removing distro %s" % distro
             cobbler.remove_distro(distro, token, True)
-        inventory.labcontrollers.removeDistros(settings['server'], rdistros)
+            proxy.removeDistro(distro)
     else:
         print "All distros are missing! Please check nfs mounts"
         sys.exit(1)

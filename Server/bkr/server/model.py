@@ -412,6 +412,8 @@ lab_controller_table = Table('lab_controller', metadata,
     Column('systems_md5', String(40)),
     Column('disabled', Boolean, nullable=False, default=False),
     Column('removed', DateTime, nullable=True, default=None),
+    Column('user_id', Integer,
+           ForeignKey('tg_user.user_id'), nullable=False),
     mysql_engine='InnoDB',
 )
 
@@ -2843,7 +2845,6 @@ class LabControllerDistro(SystemObject):
 
 
 class LabController(SystemObject):
-
     def __repr__(self):
         return "%s" % (self.fqdn)
 
@@ -6277,6 +6278,7 @@ mapper(LabController, lab_controller_table,
         properties = {'_distros':relation(LabControllerDistro, backref='lab_controller',
                                           cascade='all, delete-orphan'),
                       'dyn_systems' : dynamic_loader(System),
+                      'user'        : relation(User, uselist=False),
                      }
       )
 
@@ -6305,7 +6307,10 @@ mapper(VisitIdentity, visit_identity_table, properties={
 })
 
 mapper(User, users_table,
-        properties=dict(_password=users_table.c.password))
+        properties={
+      '_password' : users_table.c.password,
+      'lab_controller' : relation(LabController, uselist=False),
+})
 
 Group.mapper = mapper(Group, groups_table,
         properties=dict(users=relation(User,uselist=True, secondary=user_group_table, backref='groups'),

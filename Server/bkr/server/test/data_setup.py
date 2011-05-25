@@ -23,6 +23,7 @@ import datetime
 import itertools
 import sqlalchemy
 import turbogears.config, turbogears.database
+from turbogears.database import session
 from bkr.server.model import LabController, User, Group, Distro, Breed, Arch, \
         OSMajor, OSVersion, SystemActivity, Task, MachineRecipe, System, \
         SystemType, SystemStatus, Recipe, RecipeTask, RecipeTaskResult, \
@@ -70,14 +71,17 @@ def create_product(product_name=None):
     return Product.lazy_create(name=product_name)
     
 
-def create_labcontroller(fqdn=None):
+def create_labcontroller(fqdn=None, user=None):
     if fqdn is None:
         fqdn=u'lab.testdata.invalid'
     try:
         lc = LabController.by_name(fqdn)  
     except sqlalchemy.exceptions.InvalidRequestError, e: #Doesn't exist ?
         if e.args[0] == 'No rows returned for one()':
-            lc = LabController.lazy_create(fqdn=fqdn)
+            if user is None:
+                user = create_user()
+                session.flush()
+            lc = LabController.lazy_create(fqdn=fqdn, user=user)
             return lc
         else:
             raise

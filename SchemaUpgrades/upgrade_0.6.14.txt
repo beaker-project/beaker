@@ -14,3 +14,33 @@ To roll back:
     ALTER TABLE system
         DROP FOREIGN KEY system_hypervisor_id,
         DROP COLUMN hypervisor_id;
+
+Simpler Setup of lab controller (bug 714974)
+--------------------------------------------
+
+# Add user_id to lab_controller table
+
+    ALTER TABLE lab_controller 
+        ADD COLUMN (user_id int(11)),
+        ADD CONSTRAINT lab_controller_user_id
+            FOREIGN KEY (user_id) REFERENCES tg_user (user_id)
+            ON UPDATE CASCADE ON DELETE CASCADE;
+
+# Assign current user to lab_controller.  If you used a different login name
+# than host/labcontrollerFQDN then you need to do this manually.
+
+    UPDATE lab_controller SET user_id = (SELECT user_id FROM tg_user WHERE user_name = CONCAT('host/', lab_controller.fqdn));
+
+# Add lab_controller users to lab_controller group.
+    INSERT INTO user_group (user_id, group_id)
+        SELECT user_id, (SELECT group_id FROM tg_group WHERE group_name = 'lab_controller') FROM lab_controller;
+
+# Make the lab_controller.user_id column not NULLable:
+
+    ALTER TABLE lab_controller MODIFY user_id INT NOT NULL;
+
+# To roll back:
+    ALTER TABLE lab_controller
+        DROP FOREIGN KEY lab_controller_user_id,
+        DROP COLUMN user_id;
+

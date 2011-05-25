@@ -59,6 +59,12 @@ def init_db(user_name=None, password=None, user_display_name=None, user_email_ad
         admin = Group.by_name(u'admin')
     except InvalidRequestError:
         admin     = Group(group_name=u'admin',display_name=u'Admin')
+
+    try:
+        lab_controller = Group.by_name(u'lab_controller')
+    except InvalidRequestError:
+        lab_controller = Group(group_name=u'lab_controller',
+                               display_name=u'Lab Controller')
     
     #Setup User account
     if user_name:

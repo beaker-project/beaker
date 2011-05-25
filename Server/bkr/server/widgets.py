@@ -17,7 +17,8 @@ from turbogears.widgets import (Form, TextField, SubmitButton, TextArea, Label,
                                 static, PaginateDataGrid, DataGrid, RepeatingFormField,
                                 CompoundWidget, AjaxGrid, Tabber, CSSLink,
                                 RadioButtonList, MultipleSelectField, Button,
-                                RepeatingFieldSet, SelectionField, WidgetsList,)
+                                RepeatingFieldSet, SelectionField, WidgetsList,
+                                PasswordField)
 
 from bkr.server import search_utility
 from bkr.server.bexceptions import BeakerException
@@ -380,6 +381,42 @@ class TextFieldJSON(TextField):
         return {
                 'field_id' : self.field_id,             
                }
+
+
+class LabControllerFormSchema(validators.Schema):
+    fqdn = validators.UnicodeString(not_empty=True, max=256, strip=True)
+    lusername = validators.UnicodeString(not_empty=True)
+    email = validators.UnicodeString(not_empty=True)
+
+
+class LabControllerForm(TableForm):
+    action = 'save_data'
+    submit_text = _(u'Save')
+    fields = [
+              HiddenField(name='id'),
+              TextField(name='fqdn', label=_(u'FQDN')),
+              TextField(name='lusername',
+                       label=_(u'Username')),
+              PasswordField(name='lpassword',
+                            label=_(u'Password')),
+              TextField(name='email', 
+                        label=_(u'Lab Controller Email Address')),
+              TextField(name='username',
+                        label=_(u'Cobbler Username')),
+              PasswordField(name='password',
+                            label=_(u'Cobbler Password')),
+              CheckBox(name='disabled',
+                       label=_(u'Disabled'),
+                       default=False),
+             ]
+    validator = LabControllerFormSchema()
+
+    def update_params(self, d):
+        super(LabControllerForm, self).update_params(d)
+        if 'user' in d['options']:
+            d['value']['lusername'] = d['options']['user'].user_name
+            d['value']['email'] = d['options']['user'].email_address
+            
 
 class NestedGrid(CompoundWidget):
     template = "bkr.server.templates.inner_grid" 

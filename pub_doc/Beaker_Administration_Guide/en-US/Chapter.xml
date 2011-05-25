@@ -114,7 +114,7 @@ $ <userinput>sudo /sbin/service beakerd start</userinput>
 						<term>Username</term>
 						<listitem>
 							<para>
-								This is the login name we will use for xmlrpc, for the purposes of this document will use the login name <literal>testing</literal>
+								This is the login name that the lab controller will use to login to beaker.  Because this is a machine account we recommend prepending it with host/, so for example host/lab_controller.example.com
 							</para>
 						</listitem>
 					</varlistentry>
@@ -122,47 +122,35 @@ $ <userinput>sudo /sbin/service beakerd start</userinput>
 						<term>Password</term>
 						<listitem>
 							<para>
-								This is the password that goes along with the username, again we will use : testing
+								This is the password that goes along with the username, if you use kerberos you don't need to set this.
+							</para>
+						</listitem>
+					</varlistentry>
+					<varlistentry>
+						<term>Lab Controller Email Address</term>
+						<listitem>
+							<para>
+								All user accounts require a unique email address, you can use root@FQDN of lab controller.
+							</para>
+						</listitem>
+					</varlistentry>
+					<varlistentry>
+						<term>Cobbler Username</term>
+						<listitem>
+							<para>
+								This is the login name we will use to communicate with the lab controller, for the purposes of this document will use the login name <literal>testing</literal>
+							</para>
+						</listitem>
+					</varlistentry>
+					<varlistentry>
+						<term>Cobbler Password</term>
+						<listitem>
+							<para>
+								This is the password that goes along with the cobbler username, again we will use : testing
 							</para>
 						</listitem>
 					</varlistentry>
 				</variablelist>
-				 The new lab controller also needs a user account. Login at http://BeakerServer.example.com/bkr/users/new. 
-				<variablelist>
-					<varlistentry>
-						<term>Login</term>
-						<listitem>
-							<para>
-								Should be the host/<replaceable>FQDN</replaceable> (<replaceable>FQDN</replaceable> is the fully qualified domain of the lab controller).
-							</para>
-						</listitem>
-					</varlistentry>
-					<varlistentry>
-						<term>Display Name</term>
-						<listitem>
-							<para>
-								Should be just <replaceable>FQDN</replaceable>.
-							</para>
-						</listitem>
-					</varlistentry>
-					<varlistentry>
-						<term>Email adrress</term>
-						<listitem>
-							<para>
-								The email address should be root@<replaceable>FQDN</replaceable>.
-							</para>
-						</listitem>
-					</varlistentry>
-					<varlistentry>
-						<term>Password</term>
-						<listitem>
-							<para>
-								If you are not using Kerberos authentication, you will need a password here.
-							</para>
-						</listitem>
-					</varlistentry>
-				</variablelist>
-				 Save the form and we are done with the Inventory side for now.
 			</para>
 		</formalpara>
 	</section>

@@ -7,7 +7,7 @@ from tg_expanding_form_widget.tg_expanding_form_widget import ExpandingForm
 from kid import Element
 from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.helpers import *
-from bkr.server.widgets import LabControllerDataGrid
+from bkr.server.widgets import LabControllerDataGrid, LabControllerForm
 from xmlrpclib import ProtocolError
 
 import cherrypy
@@ -26,31 +26,11 @@ import bkr.timeout_xmlrpclib
 from model import *
 import string
 
-# Validation Schemas
-
-class LabControllerFormSchema(validators.Schema):
-    fqdn = validators.UnicodeString(not_empty=True, max=256, strip=True)
-
 class LabControllers(RPCRoot):
     # For XMLRPC methods in this class.
     exposed = True
 
-    id     = widgets.HiddenField(name='id')
-    fqdn   = widgets.TextField(name='fqdn', label=_(u'FQDN'))
-    username   = widgets.TextField(name='username', label=_(u'Username'))
-    password   = widgets.PasswordField(name='password', label=_(u'Password'))
-    disabled   = widgets.CheckBox(name='disabled',
-                                  label=_(u'Disabled'),
-                                  default=False)
-
-
-    labcontroller_form = widgets.TableForm(
-        'LabController',
-        fields = [id, fqdn, username, password, disabled],
-        action = 'save_data',
-        submit_text = _(u'Save'),
-        validator = LabControllerFormSchema()
-    )
+    labcontroller_form = LabControllerForm()
 
     @identity.require(identity.in_group("admin"))
     @expose(template='bkr.server.templates.form')
@@ -69,7 +49,7 @@ class LabControllers(RPCRoot):
         return dict(
             form = self.labcontroller_form,
             action = './save',
-            options = {},
+            options = {'user': labcontroller.user},
             value = labcontroller,
         )
 
@@ -83,156 +63,213 @@ class LabControllers(RPCRoot):
         else:
             labcontroller =  LabController()
         labcontroller.fqdn = kw['fqdn']
+        # labcontroller.username and password is used to login to 
+        # the lab controller
         labcontroller.username = kw['username']
         labcontroller.password = kw['password']
+
+        # labcontroller.user is used by the lab controller to login here
+        try:
+            # pick up an existing user if it exists.
+            luser = User.query.filter_by(user_name=kw['lusername']).one()
+        except InvalidRequestError:
+            # Nope, create from scratch
+            luser = User()
+        if labcontroller.user != luser:
+            labcontroller.user = luser
+
+        # Make sure user is a member of lab_controller group
+        group = Group.by_name(u'lab_controller')
+        if group not in luser.groups:
+            luser.groups.append(group)
+        # Verify email address is unique.
+        try:
+            ouser = User.by_email_address(kw['email'])
+        except InvalidRequestError:
+            ouser = None
+        if ouser and ouser != luser:
+            session.rollback()
+            flash( _(u"%s not saved, Duplicate email address" % labcontroller.fqdn) )
+            redirect(".")
+        
+        luser.display_name = kw['fqdn']
+        luser.email_address = kw['email']
+        luser.user_name = kw['lusername']
+        if kw['lpassword']:
+            luser.password = kw['lpassword']
         labcontroller.disabled = kw['disabled']
+
         labcontroller.distros_md5 = '0.0'
 
         flash( _(u"%s saved" % labcontroller.fqdn) )
         redirect(".")
 
     @cherrypy.expose
-    def addDistros(self, lc_name, lc_distros):
+    @identity.require(identity.in_group("lab_controller"))
+    def addDistro(self, new_distro):
+        distro = self._addDistro(identity.current.user.lab_controller,
+                               new_distro)
+        if distro:
+            activity = Activity(identity.current.user,'XMLRPC','Added LabController',distro.install_name,None,identity.current.user.lab_controller.fqdn)
+            return distro.install_name
+        else:
+            return None
+
+    @cherrypy.expose
+    def addDistros(self, lab_controller_name, new_distros):
         """
+        DEPRECATED
         XMLRPC Push method for adding distros
         """
-        distros = self._addDistros(lc_name, lc_distros)
+        distros = self._addDistros(lab_controller_name, new_distros)
         return [distro.install_name for distro in distros]
 
-    def _addDistros(self, lc_name, lc_distros):
+    def _addDistros(self, lab_controller_name, new_distros):
         """
+        DEPRECATED
         Internal Push method for adding distros
         """
         try:
-            labcontroller = LabController.by_name(lc_name)
+            lab_controller = LabController.by_name(lab_controller_name)
         except InvalidRequestError:
             raise "Invalid Lab Controller"
         distros = []
-        valid_variants = ['AS','ES','WS','Desktop']
-        release = re.compile(r'family=([^\s]+)')
-        label_search = re.compile(r'label=([^\s]+)')
-        arches_search = re.compile(r'arches=([^\s]+)')
-        variant_search = re.compile(r'variant=([^\s]+)')
-        for lc_distro in lc_distros:
-            name = lc_distro['name'].split('_')[0]
-            meta = string.join(lc_distro['name'].split('_')[1:],'_').split('-')
-            variant = None
-            virt = False
-            arches = []
-            
-            for curr_variant in valid_variants:
-                if curr_variant in meta:
-                    variant = curr_variant
-                    break
-            if 'xen' in meta:
-                virt = True
-
-            if 'comment' in lc_distro:
-                if release.search(lc_distro['comment']):
-                    lc_os_version = release.search(lc_distro['comment']).group(1)
-                else:
-                    continue
-
-                if arches_search.search(lc_distro['comment']):
-                    arch_names = arches_search.search(lc_distro['comment']).group(1).split(',')
-                    for arch_name in arch_names:
-                        try:
-                           arches.append(Arch.by_name(arch_name))
-                        except InvalidRequestError:
-                           pass
-
-                # If variant is specified in comment then use it.
-                if variant_search.search(lc_distro['comment']):
-                    variant = variant_search.search(lc_distro['comment']).group(1)
-
-                try:
-                    distro = Distro.by_install_name(lc_distro['name'])
-                except InvalidRequestError:
-                    distro = Distro(lc_distro['name'])
-                    distro.name = name
-                    try:
-                        breed = Breed.by_name(lc_distro['breed'])
-                    except InvalidRequestError:
-                        breed = Breed(lc_distro['breed'])
-                        session.save(breed)
-                        session.flush([breed])
-                    distro.breed = breed
-                    lc_osmajor = lc_os_version.split('.')[0]
-                    try:
-                        lc_osminor = lc_os_version.split('.')[1]
-                    except:
-                        lc_osminor = 0
-                    try:
-                        osmajor = OSMajor.by_name(lc_osmajor)
-                    except InvalidRequestError:
-                        osmajor = OSMajor(lc_osmajor)
-                        session.save(osmajor)
-                        session.flush([osmajor])
-                    try:
-                        osversion = OSVersion.by_name(osmajor,lc_osminor)
-                    except InvalidRequestError:
-                        osversion = OSVersion(osmajor,lc_osminor,arches)
-                        session.save(osversion)
-                        session.flush([osversion])
-                    distro.osversion = osversion
-
-                    # Automatically tag the distro if label= exists
-                    if label_search.search(lc_distro['comment']):
-                        label = unicode(label_search.search(
-                                                    lc_distro['comment']
-                                                           ).group(1)
-                                       )
-                        if label not in distro.tags:
-                            distro.tags.append(label)
-
-                    try:
-                        arch = Arch.by_name(lc_distro['arch'])
-                    except InvalidRequestError:
-                        arch = Arch(lc_distro['arch'])
-                        session.save(arch)
-                        session.flush([arch])
-                    distro.arch = arch
-                    if arch not in distro.osversion.arches:
-                        distro.osversion.arches.append(arch)
-                    distro.variant = variant
-                    distro.virt = virt
-                    distro.date_created = datetime.fromtimestamp(float(lc_distro['tree_build_time']))
-                    activity = Activity(None,'XMLRPC','Added','Distro',None, lc_distro['name'])
-                if distro not in labcontroller.distros:
-                    #FIXME Distro Activity Add
-                    lcd = LabControllerDistro()
-                    lcd.distro = distro
-                    if 'tree' in lc_distro['ks_meta']:
-                        lcd.tree_path = lc_distro['ks_meta']['tree']
-                    labcontroller._distros.append(lcd)
+        for new_distro in new_distros:
+            distro = self._addDistro(lab_controller, new_distro)
+            if distro:
+                activity = Activity(identity.current.user,'XMLRPC','Added LabController',distro.install_name,None,lab_controller.fqdn)
                 distros.append(distro)
         return distros
 
-    @cherrypy.expose
-    def removeDistros(self, lc_name, distro_names):
-        """
-        Push method for removing distros
-        """
-        distros = []
-        deleteddistros = []
+    def _addDistro(self, lab_controller, new_distro):
+        arches = []
+
+        # Try and look up the distro by the install name
         try:
-            labcontroller = LabController.by_name(lc_name)
+            distro = Distro.by_install_name(new_distro['name'])
+        except InvalidRequestError:
+            distro = Distro(new_distro['name'])
+            distro.name = new_distro['treename']
+
+        # All the arches this distro's osmajor applies to
+        if 'arches' in new_distro:
+            for arch_name in new_distro['arches']:
+                try:
+                   arches.append(Arch.by_name(arch_name))
+                except InvalidRequestError:
+                   pass
+
+        # osmajor is required
+        if 'osmajor' in new_distro:
+            try:
+                osmajor = OSMajor.by_name(new_distro['osmajor'])
+            except InvalidRequestError:
+                osmajor = OSMajor(new_distro['osmajor'])
+                session.save(osmajor)
+                session.flush([osmajor])
+        else:
+            return
+
+        if 'osminor' in new_distro:
+            try:
+                osversion = OSVersion.by_name(osmajor,new_distro['osminor'])
+            except InvalidRequestError:
+                osversion = OSVersion(osmajor,new_distro['osminor'],arches)
+                session.save(osversion)
+                session.flush([osversion])
+            distro.osversion = osversion
+        else:
+            return
+
+        # If variant is specified in comment then use it.
+        if 'variant' in new_distro:
+            distro.variant = new_distro['variant']
+
+        if 'breed' in new_distro:
+            try:
+                breed = Breed.by_name(new_distro['breed'])
+            except InvalidRequestError:
+                breed = Breed(new_distro['breed'])
+                session.save(breed)
+                session.flush([breed])
+            distro.breed = breed
+
+        # Automatically tag the distro if tags exists
+        if 'tags' in new_distro:
+            for tag in new_distro['tags']:
+                if tag not in distro.tags:
+                    distro.tags.append(tag)
+
+        try:
+            arch = Arch.by_name(new_distro['arch'])
+        except InvalidRequestError:
+            arch = Arch(new_distro['arch'])
+            session.save(arch)
+            session.flush([arch])
+        distro.arch = arch
+        if arch not in distro.osversion.arches:
+            distro.osversion.arches.append(arch)
+        distro.virt = False
+        distro.date_created = datetime.fromtimestamp(float(new_distro['tree_build_time']))
+        if distro not in lab_controller.distros:
+            lcd = LabControllerDistro()
+            lcd.distro = distro
+            if 'tree' in new_distro['ks_meta']:
+                lcd.tree_path = new_distro['ks_meta']['tree']
+            lab_controller._distros.append(lcd)
+        return distro
+
+    @cherrypy.expose
+    @identity.require(identity.in_group("lab_controller"))
+    def removeDistro(self, old_distro):
+        distro = self._removeDistro(identity.current.user.lab_controller,
+                                  old_distro)
+        if distro:
+            activity = Activity(identity.current.user,'XMLRPC','Removed LabController',distro.install_name,None,identity.current.user.lab_controller.fqdn)
+            return distro.install_name
+        else:
+            return None
+
+    @cherrypy.expose
+    def removeDistros(self, lab_controller_name, old_distros):
+        """
+        DEPRECATED
+        XMLRPC Push method for adding distros
+        """
+        distros = self._removeDistros(lab_controller_name, old_distros)
+        return [distro.install_name for distro in distros]
+
+    def _removeDistros(self, lab_controller_name, old_distros):
+        """
+        DEPRECATED
+        Internal Push method for adding distros
+        """
+        try:
+            lab_controller = LabController.by_name(lab_controller_name)
         except InvalidRequestError:
             raise "Invalid Lab Controller"
-        for distro_name in distro_names:
-            try:
-                distro = Distro.by_install_name(distro_name)
-            except InvalidRequestError:
-                continue
-            distros.append(distro)
+        distros = []
+        for old_distro in old_distros:
+            distro = self._removeDistro(lab_controller, old_distro)
+            if distro:
+                activity = Activity(identity.current.user,'XMLRPC','Removed LabController',distro.install_name,None,lab_controller.fqdn)
+                distros.append(distro)
+        return distros
 
-        for i in xrange(len(labcontroller._distros)-1,-1,-1):
-            distro = labcontroller._distros[i].distro
-            if distro in distros:
-                deleteddistros.append(distro.install_name)
-                activity = Activity(None,'XMLRPC','Removed','Distro',distro.install_name,None)
-                session.delete(labcontroller._distros[i])
-        return None
+    def _removeDistro(self, lab_controller, old_distro):
+        """
+        Push method for removing distro
+        """
+        try:
+            distro = Distro.by_install_name(old_distro)
+        except InvalidRequestError:
+            pass
+
+        if lab_controller in distro.lab_controllers:
+            distro.lab_controllers.remove(lab_controller)
+            return distro
+        else:
+            return None
 
     @identity.require(identity.in_group("admin"))
     @expose()
