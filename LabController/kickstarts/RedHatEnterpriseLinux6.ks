@@ -96,12 +96,12 @@ $package
 
 #end if ## sysprofile snippet
 
-%pre
+%pre --log=/dev/console
 $SNIPPET("rhts_pre")
 $SNIPPET("RedHatEnterpriseLinux6_pre")
 $SNIPPET("system_pre")
 
-%post
+%post --log=/dev/console
 $SNIPPET("rhts_post")
 $SNIPPET("RedHatEnterpriseLinux6_post")
 $SNIPPET("system_post")
