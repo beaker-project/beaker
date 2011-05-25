@@ -16,7 +16,8 @@ class BeahDummy(threading.Thread):
     _dummy_string = 'thisisdummydata'
 
     _file_size = 512000 # bytes
-    _install_time = 30
+    _install_time = 30 #seconds
+    _task_duration = 900 # seconds
 
     def __init__(self, machine_name, proxy_addr=None, *args, **kw):
         super(BeahDummy,self).__init__(*args, **kw)
@@ -38,10 +39,8 @@ class BeahDummy(threading.Thread):
 
     def run_task(self, task_id, task_name):
         """
-
-        i.e duration = 1 hour
-        files = 10
-        size = 20k
+        Start the task, send some logs, sleep a bit for the runtime, the send pass result
+        and stop the task
 
         """
         string_to_send = self._dummy_string * 66 # testing with this chunk size
@@ -62,7 +61,8 @@ class BeahDummy(threading.Thread):
         #final chunk
         self.rpc2.task_upload_file(task_id, 'load_test', 'name_%s' % task_id, 
             chunk_size, _md5.hexdigest(), -1, data)
-       
+        #Simulate some run time
+        time.sleep(self._task_duration)
         #send result
         result_id = self.rpc2.task_result(task_id, 'pass_', task_name, '1079',
             '(Pass)')
