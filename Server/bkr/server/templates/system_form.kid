@@ -106,7 +106,7 @@ $(document).ready(function(){
         ${label_for('owner')}
        </th>
        <td class="list">
-        ${value_for("owner")}
+        ${owner_email_link}
         <a py:if="owner_change_text" href="${tg.url(owner_change)}?id=${id}">
          <span py:content="owner_change_text"/>
         </a>
@@ -133,7 +133,7 @@ $(document).ready(function(){
         ${label_for('user')}
        </th>
        <td class="list">
-        ${value_for("user")}
+        ${user_email_link}
         <a py:if="user_change_text" href="${tg.url(user_change)}?id=${id}">
          <span py:content="user_change_text"/>
         </a>
@@ -150,7 +150,7 @@ $(document).ready(function(){
         ${label_for('loaned')}
        </th>
        <td class="list">
-        ${value_for("loaned")}
+        ${loaned_email_link}
         <a py:if="loan_text" href="${tg.url(loan_change)}?id=${id}">
          <span py:content="loan_text"/>
         </a>
