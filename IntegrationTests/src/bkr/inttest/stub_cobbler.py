@@ -24,7 +24,7 @@ that Beaker is calling Cobbler correctly.
 
 import threading
 import socket
-from SimpleXMLRPCServer import SimpleXMLRPCServer
+from SimpleXMLRPCServer import SimpleXMLRPCServer, SimpleXMLRPCRequestHandler
 import logging
 import time
 
@@ -220,8 +220,8 @@ class StubCobbler(object):
 
 class NicerXMLRPCServer(SimpleXMLRPCServer):
     
-    def __init__(self, addr):
-        SimpleXMLRPCServer.__init__(self, addr, logRequests=False)
+    def __init__(self, *args, **kwargs):
+        SimpleXMLRPCServer.__init__(self, *args, logRequests=False, **kwargs)
         self.timeout = 0.5
         self._running = True
 
@@ -238,6 +238,9 @@ class NicerXMLRPCServer(SimpleXMLRPCServer):
             except socket.timeout:
                 pass
 
+class StubCobblerRequestHandler(SimpleXMLRPCRequestHandler):
+    rpc_paths = ('/cobbler_api',)
+
 class StubCobblerThread(threading.Thread):
 
     def __init__(self, cobbler=None, addr='localhost'):
@@ -249,7 +252,8 @@ class StubCobblerThread(threading.Thread):
             self.cobbler = cobbler
         self._running = True
         self.port = 9010
-        self.server = NicerXMLRPCServer((addr, self.port))
+        self.server = NicerXMLRPCServer((addr, self.port),
+                requestHandler=StubCobblerRequestHandler)
         self.server.register_introspection_functions()
         self.server.register_instance(self.cobbler)
 
