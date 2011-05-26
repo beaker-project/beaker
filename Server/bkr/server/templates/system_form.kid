@@ -177,10 +177,10 @@ $(document).ready(function(){
        <td class="list">
         ${display_field_for("type_id")}
        </td>
-       <th class="list">
+       <th class="list" py:if="show_cc or not readonly">
         ${label_for('cc')}
        </th>
-       <td class="list">
+       <td class="list" py:if="show_cc or not readonly">
         ${'; '.join(value_for("cc") or [])}
         <a py:if="not readonly" href="${tg.url('/cc_change', system_id=id)}">(Change)</a>
        </td>
