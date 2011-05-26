@@ -120,6 +120,7 @@ def main():
     else:
         daemonize(main_loop, 
                   daemon_pid_file=pid_file,
+                  daemon_start_dir="/",
                   conf=conf, 
                   foreground=False)
 

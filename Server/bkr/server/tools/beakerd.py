@@ -546,7 +546,7 @@ def schedule():
         if not queued and not scheduled:
             time.sleep(20)
 
-def daemonize(daemon_func, daemon_pid_file=None, daemon_start_dir=".", daemon_out_log="/dev/null", daemon_err_log="/dev/null", *args, **kwargs):
+def daemonize(daemon_func, daemon_pid_file=None, daemon_start_dir="/", daemon_out_log="/dev/null", daemon_err_log="/dev/null", *args, **kwargs):
     """Robustly turn into a UNIX daemon, running in daemon_start_dir."""
 
     if daemon_pid_file and os.path.exists(daemon_pid_file):
