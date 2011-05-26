@@ -300,16 +300,17 @@ def dead_recipes(*args):
 def queued_recipes(*args):
     automated = SystemStatus.by_name(u'Automated')
     recipes = Recipe.query()\
-                    .join('status')\
-                    .join(['systems','lab_controller','_distros','distro'])\
-                    .join(['recipeset','priority'])\
-                    .join(['recipeset','job'])\
-                    .join(['distro','lab_controller_assocs','lab_controller'])\
+                    .join(Recipe.recipeset, RecipeSet.job)\
+                    .join(Recipe.systems)\
+                    .join(Recipe.distro)\
+                    .join(Distro.lab_controller_assocs,
+                        (LabController, and_(
+                            LabControllerDistro.lab_controller_id == LabController.id,
+                            System.lab_controller_id == LabController.id)))\
                     .filter(
                          and_(Recipe.status==TaskStatus.by_name(u'Queued'),
                               System.user==None,
                               System.status==automated,
-                              Recipe.distro_id==Distro.id,
                               LabController.disabled==False,
                               or_(
                                   RecipeSet.lab_controller==None,
@@ -324,7 +325,8 @@ def queued_recipes(*args):
     # Order recipes by priority.
     # FIXME Add secondary order by number of matched systems.
     if True:
-        recipes = recipes.order_by(TaskPriority.id.desc())
+        recipes = recipes.join(Recipe.recipeset, RecipeSet.priority)\
+                .order_by(TaskPriority.id.desc())
     if not recipes.count():
         return False
     log.debug("Entering queued_recipes routine")
@@ -333,9 +335,9 @@ def queued_recipes(*args):
         try:
             recipe = Recipe.by_id(_recipe.id)
             systems = recipe.dyn_systems\
-                       .join(['lab_controller',
-                              '_distros',
-                              'distro'])\
+                       .join(System.lab_controller,
+                             LabController._distros,
+                             LabControllerDistro.distro)\
                        .filter(and_(System.user==None,
                                   Distro.id==recipe.distro_id,
                                   LabController.disabled==False,
@@ -360,7 +362,7 @@ def queued_recipes(*args):
             user = recipe.recipeset.job.owner
             if True: #FIXME if pools are defined add them here in the order requested.
                 systems = systems.order_by(case([(System.owner==user, 1),
-                          (and_(System.owner!=user, Group.systems==None), 2)],
+                          (and_(System.owner!=user, System.groups != None), 2)],
                               else_=3))
             if recipe.recipeset.lab_controller:
                 # First recipe of a recipeSet determines the lab_controller

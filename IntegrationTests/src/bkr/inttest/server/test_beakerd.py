@@ -11,51 +11,50 @@ from bkr.server.tools import beakerd
 
 class TestBeakerd(unittest.TestCase):
 
-    @classmethod
-    def setUpClass(cls):
+    def setUp(self):
         data_setup.create_test_env('min')
-        cls.stub_cobbler_thread = stub_cobbler.StubCobblerThread()
-        cls.stub_cobbler_thread.start()
+        self.stub_cobbler_thread = stub_cobbler.StubCobblerThread()
+        self.stub_cobbler_thread.start()
 
         # create users
-        cls.user_1 = data_setup.create_user()
-        cls.user_2 = data_setup.create_user()
-        cls.user_3 = data_setup.create_user()
+        self.user_1 = data_setup.create_user()
+        self.user_2 = data_setup.create_user()
+        self.user_3 = data_setup.create_user()
 
         # create admin users
-        cls.admin_1 = data_setup.create_user()
-        cls.admin_1.groups.append(Group.by_name(u'admin'))
-        cls.admin_2 = data_setup.create_user()
-        cls.admin_2.groups.append(Group.by_name(u'admin'))
+        self.admin_1 = data_setup.create_user()
+        self.admin_1.groups.append(Group.by_name(u'admin'))
+        self.admin_2 = data_setup.create_user()
+        self.admin_2.groups.append(Group.by_name(u'admin'))
 
         # create systems
-        cls.system_1 = data_setup.create_system(shared=True)
-        cls.system_2 = data_setup.create_system(shared=True)
-        cls.system_3 = data_setup.create_system(shared=False,
-                                                 owner=cls.user_3)
-        cls.system_4 = data_setup.create_system(shared=False,
-                                                 owner=cls.user_3)
+        self.system_1 = data_setup.create_system(shared=True)
+        self.system_2 = data_setup.create_system(shared=True)
+        self.system_3 = data_setup.create_system(shared=False,
+                                                 owner=self.user_3)
+        self.system_4 = data_setup.create_system(shared=False,
+                                                 owner=self.user_3)
 
         # create group and add users/systems to it
-        cls.group_1 = data_setup.create_group()
-        cls.user_3.groups.append(cls.group_1)
-        cls.admin_2.groups.append(cls.group_1)
-        cls.system_2.groups.append(cls.group_1)
+        self.group_1 = data_setup.create_group()
+        self.user_3.groups.append(self.group_1)
+        self.admin_2.groups.append(self.group_1)
+        self.system_2.groups.append(self.group_1)
 
         # loan system_4 to user_1
-        cls.system_4.loaned = cls.user_1
+        self.system_4.loaned = self.user_1
 
-        lc = data_setup.create_labcontroller()
-        cls.system_1.lab_controller = lc
-        cls.system_2.lab_controller = lc
-        cls.system_3.lab_controller = lc
-        cls.system_4.lab_controller = lc
+        self.lab_controller = data_setup.create_labcontroller(
+                fqdn=u'localhost:%d' % self.stub_cobbler_thread.port)
+        self.system_1.lab_controller = self.lab_controller
+        self.system_2.lab_controller = self.lab_controller
+        self.system_3.lab_controller = self.lab_controller
+        self.system_4.lab_controller = self.lab_controller
 
         session.flush()
 
-    @classmethod
-    def tearDownClass(cls):
-        cls.stub_cobbler_thread.stop()
+    def tearDown(self):
+        self.stub_cobbler_thread.stop()
 
     def _check_job_status(self, jobs, status):
         for j in jobs:
@@ -102,10 +101,9 @@ class TestBeakerd(unittest.TestCase):
 
     def test_loaned_machine_can_be_scheduled(self):
         user = data_setup.create_user()
-        lc = data_setup.create_labcontroller()
         distro = data_setup.create_distro()
-        system = data_setup.create_system(status=u'Automated', shared=True)
-        system.lab_controller = lc
+        system = data_setup.create_system(status=u'Automated', shared=True,
+                lab_controller=self.lab_controller)
         # System has groups, which the user is not a member of, but is loaned to the user
         system.loaned = user
         data_setup.add_group_to_system(system, data_setup.create_group())
@@ -122,10 +120,9 @@ class TestBeakerd(unittest.TestCase):
     def test_reservations_are_created(self):
         data_setup.create_task(name=u'/distribution/install')
         user = data_setup.create_user()
-        lc = data_setup.create_labcontroller()
         distro = data_setup.create_distro()
-        system = data_setup.create_system(owner=user, status=u'Automated', shared=True)
-        system.lab_controller = lc
+        system = data_setup.create_system(owner=user, status=u'Automated',
+                shared=True, lab_controller=self.lab_controller)
         job = data_setup.create_job(owner=user, distro=distro)
         job.recipesets[0].recipes[0]._host_requires = (
                 '<hostRequires><and><hostname op="=" value="%s"/></and></hostRequires>'
@@ -385,13 +382,11 @@ class TestBeakerd(unittest.TestCase):
         self.assertEqual(system.user, None)
     
     def test_fail_harness_repo(self):
-
-        lc = data_setup.create_labcontroller(fqdn=u'localhost:%d' % self.stub_cobbler_thread.port)
         data_setup.create_task(name=u'/distribution/install')
         user = data_setup.create_user()
         distro = data_setup.create_distro()
-        system = data_setup.create_system(owner=user, status=u'Automated', shared=True)
-        system.lab_controller = lc
+        system = data_setup.create_system(owner=user, status=u'Automated', shared=True,
+                lab_controller=self.lab_controller)
         job = data_setup.create_job(owner=user, distro=distro)
         recipe = job.recipesets[0].recipes[0]
         recipe._host_requires = (
@@ -410,7 +405,7 @@ class TestBeakerd(unittest.TestCase):
 
             for r in Recipe.query():
                 if r.system:
-                    r.system.lab_controller = lc
+                    r.system.lab_controller = self.lab_controller
             beakerd.scheduled_recipes()
             job = Job.by_id(job.id)
             self.assertEqual(job.status, TaskStatus.by_name(u'Aborted'))
@@ -419,13 +414,11 @@ class TestBeakerd(unittest.TestCase):
                 os.mkdir(harness_dir)
     
     def test_success_harness_repo(self):
-
-        lc = data_setup.create_labcontroller(fqdn=u'localhost:%d' % self.stub_cobbler_thread.port)
         data_setup.create_task(name=u'/distribution/install')
         user = data_setup.create_user()
         distro = data_setup.create_distro()
-        system = data_setup.create_system(owner=user, status=u'Automated', shared=True)
-        system.lab_controller = lc
+        system = data_setup.create_system(owner=user, status=u'Automated',
+                shared=True, lab_controller=self.lab_controller)
         job = data_setup.create_job(owner=user, distro=distro)
         recipe = job.recipesets[0].recipes[0]
         recipe._host_requires = (
@@ -441,13 +434,36 @@ class TestBeakerd(unittest.TestCase):
         beakerd.new_recipes()
         beakerd.processed_recipesets()
         beakerd.queued_recipes()
-        lc = LabController.by_id(lc.id)
         for r in Recipe.query():
             if r.system:
-                r.system.lab_controller = lc
+                r.system.lab_controller = self.lab_controller
         beakerd.scheduled_recipes()
         job = Job.by_id(job.id)
         self.assertEqual(job.status, TaskStatus.by_name(u'Running'))
+
+    def test_successful_recipe_start(self):
+        distro = data_setup.create_distro()
+        system = data_setup.create_system(shared=True,
+                lab_controller=self.lab_controller)
+        job = data_setup.create_job(distro=distro)
+        job.recipesets[0].recipes[0]._host_requires = (u"""
+            <hostRequires>
+                <hostname op="=" value="%s" />
+            </hostRequires>
+            """ % system.fqdn)
+        session.flush()
+
+        beakerd.new_recipes()
+        beakerd.processed_recipesets()
+        beakerd.queued_recipes()
+        beakerd.scheduled_recipes()
+        beakerd.queued_commands()
+
+        session.expunge_all()
+        job = Job.query().get(job.id)
+        self.assertEqual(job.status, TaskStatus.by_name(u'Running'))
+        self.assertEqual(self.stub_cobbler_thread.cobbler\
+                .system_actions[system.fqdn], 'reboot')
 
 class TestPowerFailures(unittest.TestCase):
 
