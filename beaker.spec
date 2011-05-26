@@ -23,7 +23,7 @@ BuildRequires:  python-sphinx10
 %endif
 # These server dependencies are needed in the build, because
 # sphinx imports bkr.server modules to generate API docs
-%if 0%{?rhel}
+%if 0%{?rhel} == 5
 BuildRequires:  TurboGears = 1.0.8-7.eso.1%{?dist}
 %else
 BuildRequires:  TurboGears
@@ -50,7 +50,7 @@ Requires:       libxslt-python
 %package server
 Summary:       Server component of Beaker
 Group:          Applications/Internet
-%if 0%{?rhel}
+%if 0%{?rhel} == 5
 Requires:       TurboGears = 1.0.8-7.eso.1%{?dist}
 %else
 Requires:       TurboGears
