@@ -94,7 +94,7 @@ class TestSystemKeyValue(unittest.TestCase):
         session.flush()
 
         session.clear()
-        reloaded_system = session.get(System, system.id)
+        reloaded_system = System.query().get(system.id)
         self.assertEqual(reloaded_system.key_values_string, [])
         self.assertEqual(reloaded_system.key_values_int, [])
 
