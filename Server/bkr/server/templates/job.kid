@@ -124,7 +124,7 @@
   </tr>
   <tr>
    <td class="title"><b>Owner</b></td>
-   <td class="value">${job.owner}</td>
+   <td class="value">${job.owner.email_link}</td>
    <td class="title"><b>Progress</b></td>
    <td class="value">${job.progress_bar}</td>
    <td class="title" rowspan="2"><b>Action(s)</b></td>

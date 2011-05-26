@@ -1114,6 +1114,12 @@ class User(object):
 
     by_email_address = classmethod(by_email_address)
 
+    def email_link(self):
+        a = Element('a', {'href': 'mailto:%s' % self.email_address})
+        a.text = self.user_name
+        return a
+    email_link = property(email_link)
+
     @classmethod
     def by_id(cls, user_id):
         """
