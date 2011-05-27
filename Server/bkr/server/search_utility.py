@@ -282,14 +282,14 @@ class Search:
                 #to the query
                 #cls_ref.joins.add_join(col_string = str(column),join=mycolumn.join)
                 relations = mycolumn.relations
-                if type(relations) == type(''):
+                if not isinstance(relations, list):
                     self.queri = self.queri.outerjoin(relations,aliased=True)    
                 else:
                     for relation in relations:
-                        if type(relation) == type([]):
-                            self.queri = self.queri.outerjoin(relation,aliased=True) 
+                        if isinstance(relation, list):
+                            self.queri = self.queri.outerjoin(*relation, aliased=True)
                         else:
-                            self.queri = self.queri.outerjoin(relations,aliased=True)
+                            self.queri = self.queri.outerjoin(*relations, aliased=True)
                             break
             except TypeError, (error):
                 log.error('Column %s has not specified joins validly:%s' % (column, error))                                                               
@@ -547,13 +547,13 @@ class SystemSearch(Search):
                 #cls_ref.joins.add_join(col_string = str(column),join=mycolumn.join)
                 system_relations = mycolumn.relations
                 is_alias = mycolumn.has_alias
-                if type(system_relations) == type(''):
+                if not isinstance(system_relations, list):
                     if id is not None:
                         self.queri = self.queri.outerjoin(system_relations,aliased=is_alias,id=id)    
                     self.queri = self.queri.outerjoin(system_relations,aliased=is_alias)    
                 else:    
                     for relations in system_relations:
-                        if type(relations) == type([]):
+                        if isinstance(relations, list):
                             if id is not None: 
   				self.queri = self.queri.outerjoin(relations,aliased=is_alias,id=id)    
                             self.queri = self.queri.outerjoin(relations,aliased=False)    
@@ -826,13 +826,18 @@ class System(SystemObject):
 class Recipe(SystemObject):
     search = RecipeSearch
     searchable_columns = {
-                            'Id' : MyColumn(col_type='numeric', column=model.Recipe.id),
+                            'Id' : MyColumn(col_type='numeric', column=model.MachineRecipe.id),
                             'Whiteboard' : MyColumn(col_type='string', column=model.Recipe.whiteboard),
-                            'System' : MyColumn(col_type='string', column=model.System.fqdn, relations='system'),
-                            'Arch' : MyColumn(col_type='string', column=model.Arch.arch, relations=['distro', 'arch']),
-                            'Distro' : MyColumn(col_type='string', column=model.Distro.name, relations='distro'),
-                            'Status' : MyColumn(col_type='string', column=model.TaskStatus.status, relations='status'),
-                            'Result' : MyColumn(col_type='string', column=model.TaskResult.result, relations='result'),
+                            'System' : MyColumn(col_type='string', column=model.System.fqdn,
+                                relations=[model.Recipe.system]),
+                            'Arch' : MyColumn(col_type='string', column=model.Arch.arch,
+                                relations=[model.Recipe.distro, model.Distro.arch]),
+                            'Distro' : MyColumn(col_type='string', column=model.Distro.name,
+                                relations=[model.Recipe.distro]),
+                            'Status' : MyColumn(col_type='string', column=model.TaskStatus.status,
+                                relations=[model.Recipe.status]),
+                            'Result' : MyColumn(col_type='string', column=model.TaskResult.result,
+                                relations=[model.Recipe.result]),
                          }
 
     search_values_dict = {'Status' : lambda: model.TaskStatus.get_all_status(),
