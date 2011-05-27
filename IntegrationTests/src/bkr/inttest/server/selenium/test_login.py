@@ -190,6 +190,4 @@ class XmlRpcLoginTest(XmlRpcTestCase):
             server.auth.who_am_i()
             self.fail('should raise')
         except xmlrpclib.Fault, e:
-            self.assertEquals(e.faultString,
-                    'turbogears.identity.exceptions.IdentityFailure: '
-                    'Please log in first')
+            self.assert_('Please log in first' in e.faultString, e.faultString)
