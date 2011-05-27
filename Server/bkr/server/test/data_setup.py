@@ -255,11 +255,13 @@ def mark_recipe_complete(recipe, result=u'Pass', system=None,
             user=recipe.recipeset.job.owner, start_time=start_time)
     recipe.system.reservations.append(reservation)
     for recipe_task in recipe.tasks:
+        recipe_task.start_time = start_time or datetime.datetime.utcnow()
         recipe_task.status = TaskStatus.by_name(u'Running')
     recipe.update_status()
     for recipe_task in recipe.tasks:
         rtr = RecipeTaskResult(recipetask=recipe_task,
                 result=TaskResult.by_name(result))
+        recipe_task.finish_time = finish_time or datetime.datetime.utcnow()
         recipe_task.status = TaskStatus.by_name(u'Completed')
         recipe_task.results.append(rtr)
     recipe.update_status()
