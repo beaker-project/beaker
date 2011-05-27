@@ -60,7 +60,7 @@ class TestReportProblem(SeleniumTestCase):
         self.assertEqual(sel.get_title(), 'Report a problem with ncc1701d')
         self.assertEqual(
                 # value of cell beside "Problematic system" cell
-                sel.get_text('//form[@name="report_problem"]//table//td'
+                sel.get_text('//form[@id="report_problem"]//table//td'
                     '[preceding-sibling::th[1]/text() = "Problematic system"]'),
                 system.fqdn)
         sel.type('report_problem_problem_description', 'Make it so!')
