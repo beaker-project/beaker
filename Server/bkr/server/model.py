@@ -1201,7 +1201,7 @@ class User(object):
                 user.user_name = user_name
                 user.display_name = objects[0][1]['cn'][0]
 	        user.email_address = objects[0][1]['mail'][0]
-                session.save(user)
+                session.add(user)
                 session.flush([user])
         return user
 
@@ -1290,7 +1290,7 @@ class MappedObject(object):
                 log.error('Mutlitple rows returned for %s' % kwargs)
             elif '%s' % e == 'No rows returned for one()':
                 item = cls(**kwargs)
-                session.save(item)
+                session.add(item)
                 session.flush([item])
         return item
 
@@ -2225,7 +2225,7 @@ url --url=$tree
                                      driver         = device['driver'],
                                      device_class   = device['type'],
                                      description    = device['description'])
-                session.save(mydevice)
+                session.add(mydevice)
                 session.flush([mydevice])
             if mydevice not in self.devices:
                 self.devices.append(mydevice)
@@ -3024,7 +3024,7 @@ class Device(SystemObject):
             dc = DeviceClass.query.filter_by(device_class = device_class).one()
         except InvalidRequestError:
             dc = DeviceClass(device_class = device_class)
-            session.save(dc)
+            session.add(dc)
             session.flush([dc])
         self.vendor_id = vendor_id
         self.device_id = device_id
@@ -3109,7 +3109,7 @@ def _create_tag(tag):
         tag = DistroTag.by_tag(tag)
     except InvalidRequestError:
         tag = DistroTag(tag=tag)
-        session.save(tag)
+        session.add(tag)
         session.flush([tag])
     return tag
 
@@ -3998,7 +3998,7 @@ class Job(TaskBase):
             recipeSet.recipes.append(recipe)
             job.recipesets.append(recipeSet)
             job.ttasks += recipeSet.ttasks
-        session.save(job)
+        session.add(job)
         session.flush()
         return job
 
@@ -5744,7 +5744,7 @@ class RecipeTask(TaskBase):
                                    log=summary)
         self.results.append(recipeTaskResult)
         # Flush the result to the DB so we can return the id.
-        session.save(recipeTaskResult)
+        session.add(recipeTaskResult)
         session.flush([recipeTaskResult])
         return recipeTaskResult.id
 

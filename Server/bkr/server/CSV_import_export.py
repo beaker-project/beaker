@@ -127,7 +127,7 @@ class CSV(RPCRoot):
                         else:
                             # Save out our system.  If we created it above we
                             # want to make sure its found on subsequent lookups
-                            session.save_or_update(system)
+                            session.add(system)
                             session.flush([system])
                     else:
                         log.append("You are not the owner of %s" % system.fqdn)
@@ -455,7 +455,7 @@ class CSV_LabInfo(CSV):
                 new_data[c_type] = data[c_type]
        
         system.labinfo = LabInfo(**new_data)
-        session.save_or_update(system)
+        session.add(system)
         session.flush([system])
         
 
@@ -746,7 +746,7 @@ class CSV_KeyValue(CSV):
                 activity = SystemActivity(identity.current.user, 'CSV', 'Added', 'Key/Value', '', '%s/%s' % (data['key'],data['key_value']))
                 system.activity.append(activity)
                 system_key_values.append(key_value)
-        session.save_or_update(key_value)
+        session.add(key_value)
         session.flush([key_value])
         return True
 
@@ -777,7 +777,7 @@ class CSV_GroupUser(CSV):
             except InvalidRequestError:
                group = Group(group_name=data['group'],
                              display_name=data['group'])
-               session.save(group)
+               session.add(group)
                session.flush([group])
             deleted = False
             if 'deleted' in data:
@@ -821,7 +821,7 @@ class CSV_GroupSystem(CSV):
             except InvalidRequestError:
                group = Group(group_name=data['group'],
                              display_name=data['group'])
-               session.save(group)
+               session.add(group)
                session.flush([group])
             deleted = False
             if 'deleted' in data:

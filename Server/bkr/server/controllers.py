@@ -420,7 +420,7 @@ class Root(RPCRoot):
 
         activity = RecipeSetActivity(identity.current.user, 'WEBUI', 'Changed', 'Priority', recipeset.priority.id,priority_id)
         recipeset.priority = priority_query
-        session.save_or_update(recipeset)        
+        session.add(recipeset)
         recipeset.activity.append(activity)
         return {'success' : True } 
 
@@ -1492,7 +1492,7 @@ class Root(RPCRoot):
                     old_value=system.checksum, new_value=None))
             system.checksum = None
 
-        session.save_or_update(system)
+        session.add(system)
         redirect("/view/%s" % system.fqdn)
 
     @expose()

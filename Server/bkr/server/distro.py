@@ -432,7 +432,6 @@ class Distros(RPCRoot):
                         action=u'Added', field_name=u'Tag',
                         old_value=None, new_value=tag))
                 distro.tags.append(tag)
-                session.save_or_update(distro)
                 session.flush([distro])
         return added
 

@@ -48,7 +48,7 @@ def update_products(xml_file):
                 prod = Product.by_name(u'%s' % cpe_to_add)
             except InvalidRequestError, e: 
                 if '%s' % e == 'No rows returned for one()':
-                    session.save(Product(u'%s' % cpe_to_add))
+                    session.add(Product(u'%s' % cpe_to_add))
                     continue
                 else:
                     raise

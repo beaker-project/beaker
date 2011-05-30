@@ -270,7 +270,7 @@ class Jobs(RPCRoot):
                         )
                 xmljob = XmlJob(xmltramp.parse(textxml))
                 job = self.process_xmljob(xmljob,identity.current.user)
-                session.save(job)
+                session.add(job)
                 session.flush()
             except Exception,err:
                 session.rollback()

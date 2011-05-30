@@ -165,7 +165,7 @@ class LabControllers(RPCRoot):
                 osmajor = OSMajor.by_name(new_distro['osmajor'])
             except InvalidRequestError:
                 osmajor = OSMajor(new_distro['osmajor'])
-                session.save(osmajor)
+                session.add(osmajor)
                 session.flush([osmajor])
         else:
             return
@@ -175,7 +175,7 @@ class LabControllers(RPCRoot):
                 osversion = OSVersion.by_name(osmajor,new_distro['osminor'])
             except InvalidRequestError:
                 osversion = OSVersion(osmajor,new_distro['osminor'],arches)
-                session.save(osversion)
+                session.add(osversion)
                 session.flush([osversion])
             distro.osversion = osversion
         else:
@@ -190,7 +190,7 @@ class LabControllers(RPCRoot):
                 breed = Breed.by_name(new_distro['breed'])
             except InvalidRequestError:
                 breed = Breed(new_distro['breed'])
-                session.save(breed)
+                session.add(breed)
                 session.flush([breed])
             distro.breed = breed
 
@@ -204,7 +204,7 @@ class LabControllers(RPCRoot):
             arch = Arch.by_name(new_distro['arch'])
         except InvalidRequestError:
             arch = Arch(new_distro['arch'])
-            session.save(arch)
+            session.add(arch)
             session.flush([arch])
         distro.arch = arch
         if arch not in distro.osversion.arches:

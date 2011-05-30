@@ -48,7 +48,6 @@ class TestLabController(unittest.TestCase):
 
     def test_disable_lab_controller(self):
         self.lc.disabled = True
-        session.save_or_update(self.lc)
         session.flush()
         beakerd.queued_recipes()
         recipeset = RecipeSet.by_id(self.job.recipesets[0].id)
@@ -56,7 +55,6 @@ class TestLabController(unittest.TestCase):
 
     def test_enable_lab_controller(self):
         self.lc.disabled = False
-        session.save_or_update(self.lc)
         session.flush()
         beakerd.queued_recipes()
         recipeset = RecipeSet.by_id(self.job.recipesets[0].id)
