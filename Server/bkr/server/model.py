@@ -1,13 +1,13 @@
-import sys 
-
+import sys
 import re
 from turbogears.database import metadata, mapper, session
 from turbogears.config import get
 from turbogears import url
+from copy import copy
 import ldap
 from sqlalchemy import (Table, Column, ForeignKey, UniqueConstraint,
                         String, Unicode, Integer, DateTime,
-                        UnicodeText, Boolean, Float, VARCHAR, TEXT, Numeric, 
+                        UnicodeText, Boolean, Float, VARCHAR, TEXT, Numeric,
                         or_, and_, not_, select, case, func)
 
 from sqlalchemy.orm import relation, backref, synonym, dynamic_loader,query
@@ -3553,18 +3553,39 @@ class Log(MappedObject):
 
     result = property(result)
 
+    def full_log_directory(self):
+        if self.server:
+            return self.log_directory()
+        else:
+            return '%s/%s' % (self.parent.logspath, self.log_directory())
+
+    def log_directory(self):
+        # if server is defined then the logs are stored elsewhere
+        if self.server:
+            dir = '%s/%s' % (self.server, self.path or '')
+            servermatch = re.search('(^https?://.+?)(/.+)$', dir) # split the server from the path
+            server = servermatch.group(1)
+            path = servermatch.group(2)
+            dir = '%s%s' % (server, re.sub('/{2,}','/', dir))
+        else:
+            dir = '%s/%s' % (self.parent.filepath, self.path or '')
+            dir = re.sub('/{2,}','/', dir)
+
+        return dir
+
+    def log_url(self):
+        if self.server:
+            url = '%s/%s' % (self.log_directory(), self.filename)
+        else:
+            url = '/logs/%s/%s' % (self.log_directory(), self.filename)
+        return url
+
     def link(self):
         """ Return a link to this Log
         """
         text = "%s/%s" % (self.path != '/' and self.path or '', self.filename)
         text = text[-50:]
-        # if server is defined then the logs are stored elsewhere.
-        if self.server:
-            url = '%s/%s/%s' % (self.server, self.path, self.filename)
-        else:
-            url = '/logs/%s/%s/%s' % (self.parent.filepath,
-                                                   self.path, 
-                                                   self.filename)
+        url = self.log_url()
         return make_link(url = url,
                          text = text)
     link = property(link)
@@ -3611,6 +3632,10 @@ class TaskBase(MappedObject):
                     R = 'Recipe',
                     RS = 'RecipeSet',
                     J = 'Job')
+
+    @property
+    def logspath(self):
+        return get('basepath.logs', '/var/www/beaker/logs')
 
     @classmethod
     def get_by_t_id(cls, t_id, *args, **kw):
@@ -3766,6 +3791,22 @@ class Job(TaskBase):
         return query
 
     @classmethod
+    def _remove_descendants(cls, list_of_logs):
+        """Return a list of paths with common descendants removed
+        """
+        set_of_logs = set(list_of_logs)
+        logs_A = copy(set_of_logs)
+        logs_to_return = copy(set_of_logs)
+
+        # This is a simple way to remove descendants,
+        # as long as our list of logs doesn't get too large
+        for log_A in logs_A:
+            for log_B in set_of_logs:
+                if log_B.startswith(log_A) and log_A != log_B:
+                    logs_to_return.remove(log_B)
+        return logs_to_return
+
+    @classmethod
     def expired_logs(cls):
         """Return log files for expired recipes
         """
@@ -3778,7 +3819,10 @@ class Job(TaskBase):
         job_ids = set(job_ids)
         for job_id in job_ids:
             job = Job.by_id(job_id)
-            yield (job, job.get_logs())
+            logs = job.get_log_dirs()
+            if logs:
+                logs = cls._remove_descendants(logs)
+            yield (job, logs)
         return
 
     @classmethod
@@ -3964,10 +4008,12 @@ class Job(TaskBase):
             raise BeakerException(u'%s is already marked to delete' % self.t_id)
         self.to_delete = datetime.utcnow()
 
-    def get_logs(self):
+    def get_log_dirs(self):
         logs = []
         for rs in self.recipesets:
-            logs.extend(rs.get_logs())
+            rs_logs = rs.get_log_dirs()
+            if rs_logs:
+                logs.extend(rs_logs)
         return logs
 
     def clone_link(self):
@@ -4291,10 +4337,12 @@ class RecipeSet(TaskBase):
         self.ttasks = ttasks
         self.priority = priority
 
-    def get_logs(self):
+    def get_log_dirs(self):
         logs = []
         for recipe in self.recipes:
-            logs.append(recipe.get_logs())
+            r_logs = recipe.get_log_dirs()
+            if r_logs:
+                logs.extend(r_logs)
         return logs
 
     def is_owner(self,user):
@@ -4538,10 +4586,6 @@ class Recipe(TaskBase):
         return get('servername', socket.gethostname())
 
     @property
-    def logspath(self):
-        return get('basepath.logs', '/var/www/beaker/logs')
-
-    @property
     def harnesspath(self):
         return get('basepath.harness', '/var/www/beaker/harness')
 
@@ -4581,19 +4625,14 @@ class Recipe(TaskBase):
                 job.id // Log.MAX_ENTRIES_PER_DIRECTORY, job.id, self.id)
     filepath = property(filepath)
 
-    def get_logs(self):
-        logs = getattr(self, 'logs', None)
-        if logs:
-            server = logs[0].server # Surely they all use the same directory
-            # We should have a trailing slash on a directory
-            # This is needed by apache, and should be good practice in general
-            if server:
-                if server[-1] != '/':
-                    server += '/'
-        else:
-            server = None
-        full_recipe_logpath = '%s/%s' % (self.logspath, self.filepath)
-        return server or full_recipe_logpath
+    def get_log_dirs(self):
+        logs_to_return = [log.full_log_directory() for log in self.logs]
+
+        for task in self.tasks:
+            rt_log = task.get_log_dirs()
+            if rt_log:
+                logs_to_return.extend(rt_log)
+        return logs_to_return
 
     def delete(self, dryrun, *args, **kw):
         """
@@ -5306,6 +5345,14 @@ class RecipeTask(TaskBase):
                 recipe.id, self.id)
     filepath = property(filepath)
 
+    def get_log_dirs(self):
+        logs_to_return = [log.full_log_directory() for log in self.logs]
+        for result in self.results:
+            rtr_log = result.get_log_dirs()
+            if rtr_log:
+                logs_to_return.extend(rtr_log)
+        return logs_to_return
+
     def to_xml(self, clone=False, *args, **kw):
         task = self.doc.createElement("task")
         task.setAttribute("name", "%s" % self.task.name)
@@ -5796,6 +5843,9 @@ class RecipeTaskResult(TaskBase):
         result.appendChild(self.doc.createTextNode("%s" % self.log))
         #FIXME Append any binary logs as URI's
         return result
+
+    def get_log_dirs(self):
+        return [log.full_log_directory() for log in self.logs]
 
     def task_info(self):
         """
