@@ -1,6 +1,5 @@
 import model
 import re
-import random
 import sqlalchemy
 from turbogears import flash, identity
 from sqlalchemy import or_, and_, not_
@@ -523,7 +522,7 @@ class SystemSearch(Search):
         self.queri = self.queri.filter(filter_final())
 
 
-    def __do_join(self,cls_ref,col_name=None,mycolumn=None,results_from_pre=None,id=None): 
+    def __do_join(self,cls_ref,col_name=None,mycolumn=None,results_from_pre=None):
             if not mycolumn and not col_name:
                 raise ValueError('Need to specify either a myColumn type or column name') 
             if not mycolumn:
@@ -548,18 +547,12 @@ class SystemSearch(Search):
                 system_relations = mycolumn.relations
                 is_alias = mycolumn.has_alias
                 if not isinstance(system_relations, list):
-                    if id is not None:
-                        self.queri = self.queri.outerjoin(system_relations,aliased=is_alias,id=id)    
                     self.queri = self.queri.outerjoin(system_relations,aliased=is_alias)    
                 else:    
                     for relations in system_relations:
                         if isinstance(relations, list):
-                            if id is not None: 
-  				self.queri = self.queri.outerjoin(relations,aliased=is_alias,id=id)    
                             self.queri = self.queri.outerjoin(relations,aliased=False)    
                         else:
-                            if id is not None: 
-                                self.queri = self.queri.outerjoin(system_relations,aliased=is_alias,id=id)
                             self.queri = self.queri.outerjoin(system_relations,aliased=is_alias)
                             break     
                          
@@ -575,9 +568,8 @@ class SystemSearch(Search):
                 elif col_ref is not None: 
                     self.extra_columns_desc.append(elem)
                     self.adding_columns = True 
-                    rand_id = random.random()
-                    self.__do_join(cls_ref,col_name=col,id=rand_id)
-                    self.queri = self.queri.add_column(col_ref,id=rand_id)         
+                    self.__do_join(cls_ref,col_name=col)
+                    self.queri = self.queri.add_column(col_ref)
  
     def return_results(self): 
         return self.queri        
