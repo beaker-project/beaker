@@ -9,7 +9,6 @@ from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.helpers import *
 from bkr.server.widgets import SearchBar, myPaginateDataGrid
 from bkr.server import search_utility
-from bkr.server.util import any
 import cherrypy
 
 # from bkr.server import json
