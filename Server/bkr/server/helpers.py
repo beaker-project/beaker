@@ -38,7 +38,7 @@ def sqla_cache(f):
     def do_cache(*args):
         args = tuple(args)
         if args in the_cache: #session merge puts object into session
-            return session.merge(the_cache[args],dont_load=True)
+            return session.merge(the_cache[args], load=False)
         else:
             result = f(*args)
             the_cache[args] = result
