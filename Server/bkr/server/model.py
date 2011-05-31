@@ -3566,7 +3566,7 @@ class Log(MappedObject):
             servermatch = re.search('(^https?://.+?)(/.+)$', dir) # split the server from the path
             server = servermatch.group(1)
             path = servermatch.group(2)
-            dir = '%s%s' % (server, re.sub('/{2,}','/', dir))
+            dir = '%s%s' % (server, re.sub('/{2,}','/', path))
         else:
             dir = '%s/%s' % (self.parent.filepath, self.path or '')
             dir = re.sub('/{2,}','/', dir)
