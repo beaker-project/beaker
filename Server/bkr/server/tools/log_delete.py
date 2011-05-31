@@ -11,6 +11,11 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+stream_handler = logging.StreamHandler()
+stream_handler.setFormatter(logging.Formatter('%(asctime)s %(name)s %(levelname)s %(message)s'))
+logger.addHandler(stream_handler)
+logger.setLevel(logging.ERROR)
+
 __description__ = 'Script to delete expired log files'
 
 def main():

@@ -3803,7 +3803,10 @@ class Job(TaskBase):
         for log_A in logs_A:
             for log_B in set_of_logs:
                 if log_B.startswith(log_A) and log_A != log_B:
-                    logs_to_return.remove(log_B)
+                    try:
+                        logs_to_return.remove(log_B)
+                    except KeyError, e:
+                        pass # Possibly already removed
         return logs_to_return
 
     @classmethod
