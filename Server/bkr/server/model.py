@@ -44,9 +44,7 @@ import posixpath
 from turbogears import identity
 
 from datetime import timedelta, date, datetime
-
-import md5
-
+from hashlib import md5
 import xml.dom.minidom
 from xml.dom.minidom import Node, parseString
 
@@ -2146,7 +2144,7 @@ url --url=$tree
         # Update last checkin even if we don't change anything.
         self.date_lastcheckin = datetime.utcnow()
 
-        md5sum = md5.new("%s" % inventory).hexdigest()
+        md5sum = md5("%s" % inventory).hexdigest()
         if self.checksum == md5sum:
             return 0
         self.activity.append(SystemActivity(user=identity.current.user,

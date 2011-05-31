@@ -65,7 +65,6 @@ import random
 import urllib
 from kid import Element
 import cherrypy
-import md5
 import re
 import string
 import pkg_resources
