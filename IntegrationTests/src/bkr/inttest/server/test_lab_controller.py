@@ -3,7 +3,7 @@ import unittest
 import xmltramp
 import pkg_resources
 from turbogears.database import session
-from bkr.server.model import TaskStatus, RecipeSet
+from bkr.server.model import TaskStatus, RecipeSet, LabController
 from bkr.server.jobxml import XmlJob
 from bkr.server.bexceptions import BX
 from bkr.inttest import data_setup
@@ -13,9 +13,10 @@ class TestLabController(unittest.TestCase):
 
     def setUp(self):
         from bkr.server.jobs import Jobs
-        self.lc = data_setup.create_labcontroller(fqdn=u'lab.domain.com')
+        self.lc_fqdn = u'lab.domain.com'
+        lc = data_setup.create_labcontroller(fqdn=self.lc_fqdn)
         user = data_setup.create_user()
-        system = data_setup.create_system(owner=user)
+        system = data_setup.create_system(owner=user, lab_controller=lc)
         distro = data_setup.create_distro()
         xmljob = XmlJob(xmltramp.parse('''
             <job>
@@ -35,9 +36,8 @@ class TestLabController(unittest.TestCase):
                     </recipe>
                 </recipeSet>
             </job>
-                 ''' % (distro.name, self.lc.fqdn, system.fqdn)))
+                 ''' % (distro.name, self.lc_fqdn, system.fqdn)))
         controller = Jobs()
-        system.lab_controller = self.lc
         data_setup.create_task(name=u'/distribution/install')
         session.flush()
         self.job = controller.process_xmljob(xmljob, user)
@@ -47,14 +47,14 @@ class TestLabController(unittest.TestCase):
         
 
     def test_disable_lab_controller(self):
-        self.lc.disabled = True
+        LabController.by_name(self.lc_fqdn).disabled = True
         session.flush()
         beakerd.queued_recipes()
         recipeset = RecipeSet.by_id(self.job.recipesets[0].id)
         self.assert_(recipeset.status < TaskStatus.by_name(u'Scheduled'))
 
     def test_enable_lab_controller(self):
-        self.lc.disabled = False
+        LabController.by_name(self.lc_fqdn).disabled = False
         session.flush()
         beakerd.queued_recipes()
         recipeset = RecipeSet.by_id(self.job.recipesets[0].id)
