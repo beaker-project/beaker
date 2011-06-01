@@ -45,7 +45,7 @@ class RPCRoot(controllers.Controller):
 
     @turbogears.expose()
     def RPC2(self, *args, **kw):
-        params, method = xmlrpclib.loads(cherrypy.request.body.read())
+        params, method = xmlrpclib.loads(cherrypy.request.body.read(), use_datetime=True)
         start = datetime.utcnow()
         try:
             if method == "RPC2":

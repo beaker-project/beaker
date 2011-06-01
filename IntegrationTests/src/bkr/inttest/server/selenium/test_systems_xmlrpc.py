@@ -32,7 +32,6 @@ from bkr.inttest.assertions import assert_datetime_within, \
 from bkr.inttest import data_setup, stub_cobbler
 from bkr.server.model import User, Cpu, Key, Key_Value_String, Key_Value_Int, \
         System, SystemActivity, Provision, Hypervisor, SSHPubKey
-from bkr.server.util import parse_xmlrpc_datetime
 from bkr.server.tools import beakerd
 
 class ReserveSystemXmlRpcTest(XmlRpcTestCase):
@@ -671,7 +670,7 @@ class SystemHistoryXmlRpcTest(XmlRpcTestCase):
         session.flush()
         result = self.server.systems.history(system.fqdn)
         self.assertEquals(len(result), 1)
-        assert_datetime_within(parse_xmlrpc_datetime(result[0]['created'].value),
+        assert_datetime_within(result[0]['created'],
                 datetime.timedelta(seconds=5),
                 reference=datetime.datetime.utcnow())
         self.assertEquals(result[0]['user'], owner.user_name)
