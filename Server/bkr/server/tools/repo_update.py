@@ -78,7 +78,7 @@ class RepoSyncer(yum.YumBase):
             shutil.copy2(cached_package, dest)
 
 def update_repos(baseurl, basepath):
-    for osmajor in OSMajor.query():
+    for osmajor in OSMajor.query:
         dest = "%s/%s" % (basepath,osmajor)
         syncer = RepoSyncer('beaker-repo-update-harness-%s' % osmajor,
                 urlparse.urljoin(baseurl, '%s/' % osmajor), dest)

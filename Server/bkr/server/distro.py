@@ -62,7 +62,7 @@ class Distros(RPCRoot):
     def get_osmajors(self, active=None):
        """ Return all osmajors, limit to active ones if requested.
        """ 
-       osmajors = OSMajor.query()
+       osmajors = OSMajor.query
        if active:
            osmajors = osmajors.join(['osversion',
                                      'distros',
@@ -162,7 +162,7 @@ class Distros(RPCRoot):
     @expose(format='json')
     def by_name(self, distro):
         distro = distro.lower()
-        return dict(distros=[(distro.install_name) for distro in Distro.query().filter(Distro.name.like('%s%%' % distro)).order_by('-date_created')])
+        return dict(distros=[(distro.install_name) for distro in Distro.query.filter(Distro.name.like('%s%%' % distro)).order_by('-date_created')])
     
     def _distros(self,distro,**kw):
         return_dict = {} 

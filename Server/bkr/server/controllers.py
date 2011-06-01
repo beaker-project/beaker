@@ -533,11 +533,11 @@ class Root(RPCRoot):
         try:
             try: 
                 distro_install_name = kw['distro'] #this should be the distro install_name, throw KeyError is expected and caught
-                distro = Distro.query().filter(Distro.install_name == distro_install_name).one()
+                distro = Distro.query.filter(Distro.install_name == distro_install_name).one()
             except KeyError:
                 try: 
                     distro_id = kw['distro_id']
-                    distro = Distro.query().filter(Distro.id == distro_id).one()
+                    distro = Distro.query.filter(Distro.id == distro_id).one()
                 except KeyError:
                     raise
             # I don't like duplicating this code in find_systems_for_distro() but it dies on trying to jsonify a Query object... 
@@ -870,7 +870,7 @@ class Root(RPCRoot):
                 redirect("/")
 
             #Let's deal with a history search here
-            histories_return = self.histories(SystemActivity.query().with_parent(system,"activity"), **kw) 
+            histories_return = self.histories(SystemActivity.query.with_parent(system,"activity"), **kw)
             history_options = {}
             if 'searchvalue' in histories_return:
                 history_options['searchvalue'] = histories_return['searchvalue']
@@ -935,7 +935,7 @@ class Root(RPCRoot):
         #Excluded Family options
         options['excluded_families'] = []
         for arch in system.arch:
-            options['excluded_families'].append((arch.arch, [(osmajor.id, osmajor.osmajor, [(osversion.id, '%s' % osversion, attrs) for osversion in osmajor.osversion],attrs) for osmajor in OSMajor.query()]))
+            options['excluded_families'].append((arch.arch, [(osmajor.id, osmajor.osmajor, [(osversion.id, '%s' % osversion, attrs) for osversion in osmajor.osversion],attrs) for osmajor in OSMajor.query]))
         try:
             can_admin = system.can_admin(user = identity.current.user)
         except AttributeError,e:
@@ -1379,7 +1379,7 @@ class Root(RPCRoot):
     def save(self, **kw):
         if kw.get('id'):
             try:
-                query = System.query().filter(System.fqdn ==kw['fqdn'])
+                query = System.query.filter(System.fqdn ==kw['fqdn'])
                 for sys_object in query:
                     if str(sys_object.id) != str(kw['id']):
                         flash( _(u"%s already exists!" % kw['fqdn']))
@@ -1390,7 +1390,7 @@ class Root(RPCRoot):
                 redirect("/")
            
         else:
-            if System.query().filter(System.fqdn == kw['fqdn']).count() != 0:   
+            if System.query.filter(System.fqdn == kw['fqdn']).count() != 0:
                 flash( _(u"%s already exists!" % kw['fqdn']) )
                 redirect("/")
             system = System(fqdn=kw['fqdn'],owner=identity.current.user)
@@ -1837,7 +1837,7 @@ class Root(RPCRoot):
     # Testing auth via xmlrpc
     #@identity.require(identity.in_group("admin"))
     def lab_controllers(self, *args):
-        return [lc.fqdn for lc in LabController.query()]
+        return [lc.fqdn for lc in LabController.query]
 
     @cherrypy.expose
     def legacypush(self, fqdn=None, inventory=None):

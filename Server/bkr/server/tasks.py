@@ -122,7 +122,7 @@ class Tasks(RPCRoot):
                 raise BX(_('Invalid OSMajor: %s' % filter['osmajor']))
             tasks = osmajor.tasks()
         else:
-            tasks = Task.query()
+            tasks = Task.query
 
         # Filter by valid task if requested
         if 'valid' in filter:
@@ -246,7 +246,7 @@ class Tasks(RPCRoot):
         return self._do_search(hidden=hidden, **kw)
 
     def _do_search(self, hidden={}, **kw):
-        tasks = RecipeTask.query().join(['recipe', 'recipeset','job']).filter(and_(Job.to_delete==None, Job.deleted==None))
+        tasks = RecipeTask.query.join(['recipe', 'recipeset','job']).filter(and_(Job.to_delete==None, Job.deleted==None))
         if 'recipe_id' in kw: #most likely we are coming here from a LinkRemoteFunction in recipe_widgets
             tasks = tasks.join(['recipe']).filter(Recipe.id == kw['recipe_id'])
 
@@ -330,7 +330,7 @@ class Tasks(RPCRoot):
     @expose(template='bkr.server.templates.grid')
     @paginate('list',default_order='name', limit=30)
     def index(self, *args, **kw):
-        tasks = Task.query()
+        tasks = Task.query
         # FIXME What we really want is some default search options
         # For now we won't show deleted/invalid tasks in the grid
         # but for data integrity reasons we will allow you to view
@@ -444,13 +444,13 @@ class Tasks(RPCRoot):
                     includeFamily.append(OSMajor.by_name_alias(family).osmajor)
                 except InvalidRequestError:
                     pass
-        families = set([ '%s' % family.osmajor for family in OSMajor.query()])
+        families = set([ '%s' % family.osmajor for family in OSMajor.query])
         if includeFamily:
             for family in families.difference(set(includeFamily)):
                 if family not in task.excluded_osmajor:
                     task.excluded_osmajor.append(TaskExcludeOSMajor(osmajor=OSMajor.by_name_alias(family)))
         if tinfo.test_archs:
-            arches = set([ '%s' % arch.arch for arch in Arch.query()])
+            arches = set([ '%s' % arch.arch for arch in Arch.query])
             for arch in arches.difference(set(tinfo.test_archs)):
                 if arch not in task.excluded_arch:
                     task.excluded_arch.append(TaskExcludeArch(arch=Arch.by_name(arch)))
@@ -478,7 +478,7 @@ class Tasks(RPCRoot):
     @expose(format='json')
     def by_name(self, task):
         task = task.lower()
-        return dict(tasks=[(task.name) for task in Task.query().filter(Task.name.like('%s%%' % task))])
+        return dict(tasks=[(task.name) for task in Task.query.filter(Task.name.like('%s%%' % task))])
 
     @cherrypy.expose
     def to_dict(self, name, valid=None):

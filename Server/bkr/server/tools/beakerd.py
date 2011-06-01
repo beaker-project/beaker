@@ -76,7 +76,7 @@ def get_parser():
 
 
 def new_recipes(*args):
-    recipes = Recipe.query().filter(
+    recipes = Recipe.query.filter(
             Recipe.status==TaskStatus.by_name(u'New'))
     if not recipes.count():
         return False
@@ -141,7 +141,7 @@ def new_recipes(*args):
     return True
 
 def processed_recipesets(*args):
-    recipesets = RecipeSet.query()\
+    recipesets = RecipeSet.query\
                        .join(['status'])\
                        .filter(RecipeSet.status==TaskStatus.by_name(u'Processed'))
     if not recipesets.count():
@@ -158,7 +158,7 @@ def processed_recipesets(*args):
                 recipeset.recipes[0].queue()
             else:
                 # Find all the lab controllers that this recipeset may run.
-                rsl_controllers = set(LabController.query()\
+                rsl_controllers = set(LabController.query\
                                               .join(['systems',
                                                      'queued_recipes',
                                                      'recipeset'])\
@@ -169,7 +169,7 @@ def processed_recipesets(*args):
                 # from any recipes.  For multi-host all recipes must be schedulable
                 # on one lab controller
                 for recipe in recipeset.recipes:
-                    rl_controllers = set(LabController.query()\
+                    rl_controllers = set(LabController.query\
                                                .join(['systems',
                                                       'queued_recipes'])\
                                                .filter(Recipe.id==recipe.id).all())
@@ -257,7 +257,7 @@ def processed_recipesets(*args):
     return True
 
 def dead_recipes(*args):
-    recipes = Recipe.query()\
+    recipes = Recipe.query\
                     .join('status')\
                     .outerjoin(['systems'])\
                     .outerjoin(['distro',
@@ -299,7 +299,7 @@ def dead_recipes(*args):
 
 def queued_recipes(*args):
     automated = SystemStatus.by_name(u'Automated')
-    recipes = Recipe.query()\
+    recipes = Recipe.query\
                     .join(Recipe.recipeset, RecipeSet.job)\
                     .join(Recipe.systems)\
                     .join(Recipe.distro)\
@@ -417,7 +417,7 @@ def scheduled_recipes(*args):
     if All recipes in a recipeSet are in Scheduled state then move them to
      Running.
     """
-    recipesets = RecipeSet.query().from_statement(
+    recipesets = RecipeSet.query.from_statement(
                         select([recipe_set_table.c.id, 
                                 func.min(recipe_table.c.status_id)],
                                from_obj=[recipe_set_table.join(recipe_table)])\
@@ -537,7 +537,7 @@ def scheduled_recipes(*args):
 
 COMMAND_TIMEOUT = 600
 def running_commands(*args):
-    commands = CommandActivity.query()\
+    commands = CommandActivity.query\
                               .filter(CommandActivity.status==CommandStatus.by_name(u'Running'))\
                               .order_by(CommandActivity.updated.asc())
     if not commands.count():
@@ -545,7 +545,7 @@ def running_commands(*args):
     log.debug('Entering running_commands routine')
     for cmd_id, in commands.values(CommandActivity.id):
         session.begin()
-        cmd = CommandActivity.query().get(cmd_id)
+        cmd = CommandActivity.query.get(cmd_id)
         if not cmd:
             log.error('Command %d get() failed. Deleted?' % (cmd_id))
         else:
@@ -585,7 +585,7 @@ def running_commands(*args):
     return True
 
 def queued_commands(*args):
-    commands = CommandActivity.query()\
+    commands = CommandActivity.query\
                               .filter(CommandActivity.status==CommandStatus.by_name(u'Queued'))\
                               .order_by(CommandActivity.created.asc())
     if not commands.count():
@@ -594,14 +594,14 @@ def queued_commands(*args):
     for command in commands:
         log.debug("command.system=%s" % command.system)
         # Skip queued commands if something is already running on that system
-        if CommandActivity.query().filter(and_(CommandActivity.status==CommandStatus.by_name(u'Running'),
+        if CommandActivity.query.filter(and_(CommandActivity.status==CommandStatus.by_name(u'Running'),
                                                CommandActivity.system==command.system))\
                                 .count():
             log.info('Skipping power %s (command %d), command already running on machine: %s' %
                      (command.action, command.id, command.system))
             continue
         session.begin()
-        cmd = CommandActivity.query().get(command.id)
+        cmd = CommandActivity.query.get(command.id)
         log.debug("cmd=%s" % cmd)
         # if get() is given an invalid id it will return None.
         # I'm not sure how this would happen since id came from the above

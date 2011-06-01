@@ -52,7 +52,7 @@ def main():
     identify_nags(threshold, reservation_type, testing)
 
 def identify_nags(threshold, reservation_type, testing):
-    query = System.query().options(joinedload(System.user))\
+    query = System.query.options(joinedload(System.user))\
             .join(System.open_reservation).filter(and_(
             Reservation.start_time <= datetime.datetime.utcnow()
                 - datetime.timedelta(days=threshold),

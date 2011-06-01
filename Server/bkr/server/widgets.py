@@ -228,9 +228,9 @@ class ReserveWorkflow(Form):
             for k in params['options'].keys():
                 params[k] = params['options'][k]
                 del params['options'][k]
-        params['all_arches'] = [[elem.arch,elem.arch] for elem in model.Arch.query()]
-        params['all_tags'] = [['','None Selected']] + [[elem.tag,elem.tag] for elem in model.DistroTag.query()]
-        e = [elem.osmajor for elem in model.OSMajor.query()]
+        params['all_arches'] = [[elem.arch,elem.arch] for elem in model.Arch.query]
+        params['all_tags'] = [['','None Selected']] + [[elem.tag,elem.tag] for elem in model.DistroTag.query]
+        e = [elem.osmajor for elem in model.OSMajor.query]
         params['all_distro_familys'] = [('','None Selected')] + [[osmajor,osmajor] for osmajor in sorted(e,cmp=self.my_cmp )]
         return super(ReserveWorkflow,self).display(value,**params)
 
@@ -1406,7 +1406,7 @@ class ProductWidget(SingleSelectField, RPC):
 
     def display(self,value=None, *args, **params):
         params['options'] =[(self.product_deselected, 'No Product')] + \
-            [(elem.id,elem.name) for elem in model.Product.query().order_by(model.Product.name).all()]
+            [(elem.id,elem.name) for elem in model.Product.query.order_by(model.Product.name).all()]
         return super(ProductWidget,self).display(value,**params)
 
     def update_params(self, d):
@@ -1433,7 +1433,7 @@ class RetentionTagWidget(SingleSelectField, RPC): #FIXME perhaps I shoudl create
        self.field_class = 'singleselectfield'
 
     def display(self,value=None, **params):
-        params['options'] = [(elem.id,elem.tag) for elem in model.RetentionTag.query().all()] 
+        params['options'] = [(elem.id,elem.tag) for elem in model.RetentionTag.query.all()]
         return super(RetentionTagWidget,self).display(value, **params)
 
     def update_params(self, d):
@@ -1457,7 +1457,7 @@ class PriorityWidget(SingleSelectField):
        if 'priorities' in params: 
            params['options'] =  params['priorities']       
        else:
-           params['options'] = [(elem.id,elem.priority) for elem in TaskPriority.query().all()]
+           params['options'] = [(elem.id,elem.priority) for elem in TaskPriority.query.all()]
        if isinstance(obj,model.Job):
            if 'id_prefix' in params:
                params['attrs'] = {'id' : '%s_%s' % (params['id_prefix'],obj.id) }

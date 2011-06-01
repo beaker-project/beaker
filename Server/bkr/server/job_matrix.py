@@ -82,7 +82,7 @@ class JobMatrix:
             else:
                 matrix_options['toggle_nacks_on'] = False
 
-            all_rs_queri = model.RecipeSet.query().join(['job']).filter(model.Job.id.in_(self.job_ids))
+            all_rs_queri = model.RecipeSet.query.join(['job']).filter(model.Job.id.in_(self.job_ids))
             all_ids = [elem.id for elem in all_rs_queri]
         else:
             matrix_options['toggle_nacks_on'] = False
@@ -193,7 +193,7 @@ class JobMatrix:
         else:
            pass
 
-        recipes = model.Recipe.query().join(['distro','arch']).join(['recipeset','job']).filter(model.RecipeSet.job_id.in_(jobs)).add_column(model.Arch.arch)
+        recipes = model.Recipe.query.join(['distro','arch']).join(['recipeset','job']).filter(model.RecipeSet.job_id.in_(jobs)).add_column(model.Arch.arch)
         if 'toggle_nacks_on' in kw: #if we're here we are potentially trying to hide naked RS'
             exclude_recipe_sets = model.Job.get_nacks(jobs)
             recipes = recipes.filter(not_(model.RecipeSet.id.in_(exclude_recipe_sets)))

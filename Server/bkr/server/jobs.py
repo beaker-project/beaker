@@ -302,7 +302,7 @@ class Jobs(RPCRoot):
         recipeset_priority = xmlrecipeSet.get_xml_attr('priority',unicode,None) 
         if recipeset_priority is not None:
             try:
-                my_priority = TaskPriority.query().filter_by(priority = recipeset_priority).one()
+                my_priority = TaskPriority.query.filter_by(priority = recipeset_priority).one()
             except InvalidRequestError, (e):
                 raise BX(_('You have specified an invalid recipeSet priority:%s' % recipeset_priority))
             allowed_priorities = RecipeSet.allowed_priorities_initial(identity.current.user)
@@ -696,7 +696,7 @@ class Jobs(RPCRoot):
             flash(_(u'Invalid %s, has been deleted' % job.t_id))
             redirect(".")
 
-        recipe_set_history = [RecipeSetActivity.query().with_parent(elem,"activity") for elem in job.recipesets]
+        recipe_set_history = [RecipeSetActivity.query.with_parent(elem,"activity") for elem in job.recipesets]
         recipe_set_data = []
         for query in recipe_set_history:
             for d in query: 

@@ -114,7 +114,7 @@ class TestBeakerd(unittest.TestCase):
         session.flush()
         session.expunge_all()
         beakerd.new_recipes()
-        job = Job.query().get(job.id)
+        job = Job.query.get(job.id)
         self.assertEqual(job.status, TaskStatus.by_name(u'Processed'))
 
     def test_reservations_are_created(self):
@@ -134,9 +134,9 @@ class TestBeakerd(unittest.TestCase):
         beakerd.processed_recipesets()
         beakerd.queued_recipes()
 
-        job = Job.query().get(job.id)
-        system = System.query().get(system.id)
-        user = User.query().get(user.user_id)
+        job = Job.query.get(job.id)
+        system = System.query.get(system.id)
+        user = User.query.get(user.user_id)
         self.assertEqual(job.status, TaskStatus.by_name(u'Scheduled'))
         self.assertEqual(system.reservations[0].type, u'recipe')
         self.assertEqual(system.reservations[0].user, user)
@@ -158,7 +158,7 @@ class TestBeakerd(unittest.TestCase):
 
         beakerd.new_recipes()
 
-        job = Job.query().get(job.id)
+        job = Job.query.get(job.id)
         self.assertEqual(job.status, TaskStatus.by_name(u'Processed'))
 
     def test_or_lab_controller(self):
@@ -188,10 +188,10 @@ class TestBeakerd(unittest.TestCase):
 
         beakerd.new_recipes()
 
-        job = Job.query().get(job.id)
-        system1 = System.query().get(system1.id)
-        system2 = System.query().get(system2.id)
-        system3 = System.query().get(system3.id)
+        job = Job.query.get(job.id)
+        system1 = System.query.get(system1.id)
+        system2 = System.query.get(system2.id)
+        system3 = System.query.get(system3.id)
         self.assertEqual(job.status, TaskStatus.by_name(u'Processed'))
         candidate_systems = job.recipesets[0].recipes[0].systems
         self.assertEqual(len(candidate_systems), 2)
@@ -208,7 +208,7 @@ class TestBeakerd(unittest.TestCase):
         session.flush()
         session.expunge_all()
         beakerd.new_recipes()
-        job = Job.query().get(job.id)
+        job = Job.query.get(job.id)
         self.assertEqual(job.status, TaskStatus.by_name(u'Aborted'))
 
     def test_nonshared_system_3_user_3(self):
@@ -220,7 +220,7 @@ class TestBeakerd(unittest.TestCase):
         session.flush()
         session.expunge_all()
         beakerd.new_recipes()
-        job = Job.query().get(job.id)
+        job = Job.query.get(job.id)
         self.assertEqual(job.status, TaskStatus.by_name(u'Processed'))
 
     def test_nonshared_system_3_admin_1(self):
@@ -232,7 +232,7 @@ class TestBeakerd(unittest.TestCase):
         session.flush()
         session.expunge_all()
         beakerd.new_recipes()
-        job = Job.query().get(job.id)
+        job = Job.query.get(job.id)
         self.assertEqual(job.status, TaskStatus.by_name(u'Aborted'))
 
     def test_shared_system_1_user_1(self):
@@ -244,7 +244,7 @@ class TestBeakerd(unittest.TestCase):
         session.flush()
         session.expunge_all()
         beakerd.new_recipes()
-        job = Job.query().get(job.id)
+        job = Job.query.get(job.id)
         self.assertEqual(job.status, TaskStatus.by_name(u'Processed'))
 
     def test_shared_system_1_admin_1(self):
@@ -256,7 +256,7 @@ class TestBeakerd(unittest.TestCase):
         session.flush()
         session.expunge_all()
         beakerd.new_recipes()
-        job = Job.query().get(job.id)
+        job = Job.query.get(job.id)
         self.assertEqual(job.status, TaskStatus.by_name(u'Processed'))
 
     def test_shared_group_system_2_user_1(self):
@@ -268,7 +268,7 @@ class TestBeakerd(unittest.TestCase):
         session.flush()
         session.expunge_all()
         beakerd.new_recipes()
-        job = Job.query().get(job.id)
+        job = Job.query.get(job.id)
         self.assertEqual(job.status, TaskStatus.by_name(u'Aborted'))
 
     def test_shared_group_system_2_user_3(self):
@@ -280,7 +280,7 @@ class TestBeakerd(unittest.TestCase):
         session.flush()
         session.expunge_all()
         beakerd.new_recipes()
-        job = Job.query().get(job.id)
+        job = Job.query.get(job.id)
         self.assertEqual(job.status, TaskStatus.by_name(u'Processed'))
 
     def test_shared_group_system_2_admin_1(self):
@@ -292,7 +292,7 @@ class TestBeakerd(unittest.TestCase):
         session.flush()
         session.expunge_all()
         beakerd.new_recipes()
-        job = Job.query().get(job.id)
+        job = Job.query.get(job.id)
         self.assertEqual(job.status, TaskStatus.by_name(u'Aborted'))
 
     def test_shared_group_system_2_admin_2(self):
@@ -304,7 +304,7 @@ class TestBeakerd(unittest.TestCase):
         session.flush()
         session.expunge_all()
         beakerd.new_recipes()
-        job = Job.query().get(job.id)
+        job = Job.query.get(job.id)
         self.assertEqual(job.status, TaskStatus.by_name(u'Processed'))
 
     def test_loaned_system_4_admin_1(self):
@@ -316,7 +316,7 @@ class TestBeakerd(unittest.TestCase):
         session.flush()
         session.expunge_all()
         beakerd.new_recipes()
-        job = Job.query().get(job.id)
+        job = Job.query.get(job.id)
         self.assertEqual(job.status, TaskStatus.by_name(u'Aborted'))
 
     def test_loaned_system_4_user_1(self):
@@ -330,15 +330,15 @@ class TestBeakerd(unittest.TestCase):
         session.flush()
         session.expunge_all()
         beakerd.new_recipes()
-        job = Job.query().get(job.id)
+        job = Job.query.get(job.id)
         self.assertEqual(job.status, TaskStatus.by_name(u'Processed'))
         beakerd.processed_recipesets()
-        job = Job.query().get(job.id)
+        job = Job.query.get(job.id)
         self.assertEqual(job.status, TaskStatus.by_name(u'Queued'))
         beakerd.queued_recipes()
-        job = Job.query().get(job.id)
+        job = Job.query.get(job.id)
         self.assertEqual(job.status, TaskStatus.by_name(u'Scheduled'))
-        system = System.query().get(self.system_4.id)
+        system = System.query.get(self.system_4.id)
         self.assertEqual(system.user.user_id, self.user_1.user_id)
         # force the return of the system so that other tests will run 
         # correctly.
@@ -354,7 +354,7 @@ class TestBeakerd(unittest.TestCase):
         session.flush()
         session.expunge_all()
         beakerd.new_recipes()
-        job = Job.query().get(job.id)
+        job = Job.query.get(job.id)
         self.assertEqual(job.status, TaskStatus.by_name(u'Aborted'))
 
     def test_loaned_system_4_user_3(self):
@@ -368,17 +368,17 @@ class TestBeakerd(unittest.TestCase):
         # user_3 is the owner of the system so they have access, when the
         # loan is returned their job will be able to run.
         beakerd.new_recipes()
-        job = Job.query().get(job.id)
+        job = Job.query.get(job.id)
         self.assertEqual(job.status, TaskStatus.by_name(u'Processed'))
         beakerd.processed_recipesets()
-        job = Job.query().get(job.id)
+        job = Job.query.get(job.id)
         self.assertEqual(job.status, TaskStatus.by_name(u'Queued'))
         # Even though the system is free the job should stay queued while
         # the loan is in place.
         beakerd.queued_recipes()
-        job = Job.query().get(job.id)
+        job = Job.query.get(job.id)
         self.assertEqual(job.status, TaskStatus.by_name(u'Queued'))
-        system = System.query().get(self.system_4.id)
+        system = System.query.get(self.system_4.id)
         self.assertEqual(system.user, None)
     
     def test_fail_harness_repo(self):
@@ -403,7 +403,7 @@ class TestBeakerd(unittest.TestCase):
             beakerd.processed_recipesets()
             beakerd.queued_recipes()
 
-            for r in Recipe.query():
+            for r in Recipe.query:
                 if r.system:
                     r.system.lab_controller = self.lab_controller
             beakerd.scheduled_recipes()
@@ -434,7 +434,7 @@ class TestBeakerd(unittest.TestCase):
         beakerd.new_recipes()
         beakerd.processed_recipesets()
         beakerd.queued_recipes()
-        for r in Recipe.query():
+        for r in Recipe.query:
             if r.system:
                 r.system.lab_controller = self.lab_controller
         beakerd.scheduled_recipes()
@@ -460,7 +460,7 @@ class TestBeakerd(unittest.TestCase):
         beakerd.queued_commands()
 
         session.expunge_all()
-        job = Job.query().get(job.id)
+        job = Job.query.get(job.id)
         self.assertEqual(job.status, TaskStatus.by_name(u'Running'))
         self.assertEqual(self.stub_cobbler_thread.cobbler\
                 .system_actions[system.fqdn], 'reboot')
@@ -490,7 +490,7 @@ class TestPowerFailures(unittest.TestCase):
         session.expunge_all()
         beakerd.queued_commands()
         beakerd.running_commands()
-        automated_system = System.query().get(automated_system.id)
+        automated_system = System.query.get(automated_system.id)
         system_activity = automated_system.activity[0]
         self.assertEqual(system_activity.action, 'off')
         self.assertTrue(system_activity.new_value.startswith('Failed'))
@@ -504,7 +504,7 @@ class TestPowerFailures(unittest.TestCase):
         session.expunge_all()
         beakerd.queued_commands()
         beakerd.running_commands()
-        automated_system = System.query().get(automated_system.id)
+        automated_system = System.query.get(automated_system.id)
         self.assertEqual(automated_system.status, SystemStatus.by_name(u'Broken'))
         system_activity = automated_system.activity[0]
         self.assertEqual(system_activity.action, 'on')
@@ -520,7 +520,7 @@ class TestPowerFailures(unittest.TestCase):
         session.expunge_all()
         beakerd.queued_commands()
         beakerd.running_commands()
-        manual_system = System.query().get(manual_system.id)
+        manual_system = System.query.get(manual_system.id)
         self.assertEqual(manual_system.status, SystemStatus.by_name(u'Manual'))
         system_activity = manual_system.activity[0]
         self.assertEqual(system_activity.action, 'on')
@@ -531,7 +531,7 @@ class TestPowerFailures(unittest.TestCase):
         system.mark_broken(reason = "Attacked by cyborgs")
         session.flush()
         session.expunge_all()
-        system = System.query().get(system.id)
+        system = System.query.get(system.id)
         system_activity = system.dyn_activity.filter(SystemActivity.field_name == u'Status').first()
         self.assertEqual(system_activity.old_value, u'Automated')
         self.assertEqual(system_activity.new_value, u'Broken')

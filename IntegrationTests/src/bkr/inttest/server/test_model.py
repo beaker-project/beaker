@@ -94,7 +94,7 @@ class TestSystemKeyValue(unittest.TestCase):
         session.flush()
 
         session.expunge_all()
-        reloaded_system = System.query().get(system.id)
+        reloaded_system = System.query.get(system.id)
         self.assertEqual(reloaded_system.key_values_string, [])
         self.assertEqual(reloaded_system.key_values_int, [])
 
@@ -182,7 +182,7 @@ class TestJob(unittest.TestCase):
 
             job.cc.append(u'korolev@nauk.su')
             session.flush()
-            self.assertEquals(JobCc.query().filter_by(job_id=job.id).count(), 2)
+            self.assertEquals(JobCc.query.filter_by(job_id=job.id).count(), 2)
         finally:
             session.rollback()
 

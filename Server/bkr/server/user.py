@@ -170,7 +170,7 @@ class Users(AdminPage):
     def _disable(self, user, method, 
                  msg='Your account has been temporarily disabled'):
         # cancel all queued and running jobs
-        jobs = Job.query().filter(and_(Job.owner==user,
+        jobs = Job.query.filter(and_(Job.owner==user,
                                     or_(Job.status==TaskStatus.by_name(u'Queued'),
                                         Job.status==TaskStatus.by_name(u'Running')
                                            ),
@@ -183,7 +183,7 @@ class Users(AdminPage):
         # Return all systems in use by this user
         if user == identity.current.user:
             raise BX(_('You can''t remove yourself'))
-        for system in System.query().filter(System.user==user):
+        for system in System.query.filter(System.user==user):
             msg = ''
             try:
                 system.unreserve(service=method, user=user)
@@ -192,11 +192,11 @@ class Users(AdminPage):
                 system.activity.append(SystemActivity(identity.current.user, method, '%s' % system.release_action, 'Return', '', msg))
                 system.activity.append(SystemActivity(identity.current.user, method, 'Returned', 'User', '%s' % user, ''))
         # Return all loaned systems in use by this user
-        for system in System.query().filter(System.loaned==user):
+        for system in System.query.filter(System.loaned==user):
             system.activity.append(SystemActivity(identity.current.user, method, 'Changed', 'Loaned To', '%s' % system.loaned, 'None'))
             system.loaned = None
         # Change the owner to the caller
-        for system in System.query().filter(System.owner==user):
+        for system in System.query.filter(System.owner==user):
             system.owner = identity.current.user
             system.activity.append(SystemActivity(identity.current.user, method, 'Changed', 'Owner', '%s' % user, '%s' % identity.current.user))
         # Finally remove the user

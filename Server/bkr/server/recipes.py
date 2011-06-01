@@ -79,8 +79,8 @@ class Recipes(RPCRoot):
        """
        finished = [u'Completed',u'Aborted',u'Cancelled']
        recipes = Recipe\
-                 .query().filter(recipe_table.c.finish_time != None)\
-                         .filter(recipe_table.c.log_server == server)\
+                 .query.filter(Recipe.finish_time != None)\
+                       .filter(Recipe.log_server == server)\
                  .limit(limit)
        return [r.id for r in recipes]
 

@@ -148,7 +148,7 @@ def create_distro(name=None, breed=u'Dan',
     except NoResultFound:
         distro.osversion = OSVersion(osmajor, osminor, arches=[distro.arch])
     # make it available in all lab controllers
-    for lc in LabController.query():
+    for lc in LabController.query:
         distro.lab_controller_assocs.append(LabControllerDistro(lab_controller=lc))
     log.debug('Created distro %r', distro)
     harness_dir = os.path.join(turbogears.config.get('basepath.harness'), distro.osversion.osmajor.osmajor)
@@ -163,7 +163,7 @@ def create_system(arch=u'i386', type=u'Machine', status=u'Automated',
         owner = create_user()
     if fqdn is None:
         fqdn = unique_name(u'system%s.testdata')
-    if System.query().filter(System.fqdn == fqdn).count():
+    if System.query.filter(System.fqdn == fqdn).count():
         raise ValueError('Attempted to create duplicate system %s' % fqdn)
     system = System(fqdn=fqdn,type=SystemType.by_name(type), owner=owner, 
                 status=SystemStatus.by_name(status), **kw)
@@ -244,7 +244,7 @@ def create_tasks(xmljob):
 def create_recipe(system=None, distro=None, task_list=None, 
     task_name=u'/distribution/reservesys', whiteboard=None, server_log=False):
     recipe = MachineRecipe(ttasks=1, system=system, whiteboard=whiteboard,
-            distro=distro or Distro.query()[0])
+            distro=distro or Distro.query.first())
     recipe.distro_requires = recipe.distro.to_xml().toxml()
 
     if not server_log:
@@ -411,7 +411,7 @@ def create_test_env(type):#FIXME not yet using different types
     actual data is not too important
     """
 
-    arches = Arch.query().all()
+    arches = Arch.query.all()
     system_type = SystemType.by_name(u'Machine') #This could be extended into a list and looped over
     users = [create_user() for i in range(10)]
     lc = create_labcontroller()

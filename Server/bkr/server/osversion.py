@@ -31,7 +31,7 @@ class OSVersions(AdminPage):
     id      = widgets.HiddenField(name="id")
     alias   = widgets.TextField(name="alias")
     arches  = widgets.CheckBoxList(name="arches", label="Arches",
-                                      options=lambda: [(arch.id, arch.arch) for arch in Arch.query()],
+                                      options=lambda: [(arch.id, arch.arch) for arch in Arch.query],
                                       validator=validators.Int())
 
     osmajor_form = widgets.TableForm(

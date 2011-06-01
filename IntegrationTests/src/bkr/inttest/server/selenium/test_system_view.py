@@ -158,7 +158,7 @@ class SystemViewTest(SeleniumTestCase):
         sel.wait_for_page_to_load('30000')
         self.assertEqual(sel.get_selected_label('status_id'), u'Broken')
         session.expunge_all()
-        self.system = System.query().get(self.system.id)
+        self.system = System.query.get(self.system.id)
         self.assertEqual(self.system.status.status, u'Broken')
         self.assertEqual(len(self.system.status_durations), 2)
         self.assertEqual(self.system.status_durations[0].status.status,

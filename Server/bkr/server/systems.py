@@ -203,7 +203,7 @@ class SystemsController(controllers.Controller):
         else: # should be an instance of xmlrpclib.DateTime
             since = parse_xmlrpc_datetime(since.value)
         system = System.by_fqdn(fqdn, identity.current.user)
-        activities = SystemActivity.query().filter(and_(
+        activities = SystemActivity.query.filter(and_(
                 SystemActivity.object == system,
                 SystemActivity.created >= since))
         return [dict(created=xmlrpclib.DateTime(a.created.timetuple()),
