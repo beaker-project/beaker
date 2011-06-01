@@ -315,7 +315,7 @@ class Distros(RPCRoot):
         if treepath:
             distros = distros.filter(lab_controller_distro_map.c.tree_path.like('%s' % treepath))
         # join on lab controllers, we only want distros that are active in at least one lab controller
-        distros = distros.join('lab_controller_assocs')
+        distros = distros.filter(Distro.lab_controller_assocs.any())
         distros = distros.order_by(distro_table.c.date_created.desc())
         if limit:
             distros = distros[:limit]
