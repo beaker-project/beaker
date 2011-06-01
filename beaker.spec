@@ -2,8 +2,8 @@
 %{!?pyver: %global pyver %(%{__python} -c "import sys ; print sys.version[:3]")}
 
 Name:           beaker
-Version:        0.6.11
-Release:        2%{?dist}
+Version:        0.6.12
+Release:        1%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -250,6 +250,21 @@ fi
 %{_var}/lib/beaker/addDistro.d/*
 
 %changelog
+* Wed Jun 01 2011 Raymond Mancy <rmancy@redhat.com> 0.6.12-1
+- 706435 - apply datetime localisation to DOM elements inserted by jQuery
+  (dcallagh@redhat.com)
+- 703548 - hide system cc field from non-owners (dcallagh@redhat.com)
+- 705401 - Not detecting Panic on Xen systems (bpeck@redhat.com)
+- 704948 - beaker-proxy init script is half broken (bpeck@redhat.com)
+- 703841 - bkr workflow-simple --prettyxml should imply --debug
+  (bpeck@redhat.com)
+- 700790 - no way how to get email associated with user (bpeck@redhat.com)
+- 704563 - Changed log_delete tobe able to handle random exceptions, as well
+  as ensuring that it can delete all the right directories even if they are in
+  unexpected locations (rmancy@redhat.com)
+- Adding xmlrpc logging to the server ala proxy (rmancy@redhat.com)
+- Log kickstart pre/post to console (mcsontos@redhat.com)
+
 * Fri May 20 2011 Dan Callaghan <dcallagh@redhat.com> 0.6.11-2
 - 706150 do not activate InstallOptions js when widget is read-only
   (dcallagh@redhat.com)
