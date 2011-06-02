@@ -1,6 +1,6 @@
 #!/usr/bin/python
 #
-#   rhts-wizard - tool to ease the creation of a new RHTS test
+#   beaker-wizard - tool to ease the creation of a new Beaker test
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #
 #   Copyright (c) 2009 Red Hat, Inc. All rights reserved.
@@ -27,6 +27,7 @@ from optparse import OptionParser, OptionGroup, IndentedHelpFormatter
 from xml.dom.minidom import parse, parseString
 from datetime import date
 from time import sleep
+import subprocess
 import textwrap
 import pwd
 import sys
@@ -37,7 +38,7 @@ import os
 WizardVersion = "2.3.0"
 
 # Regular expressions
-RegExpPackage    = re.compile("^(?![._-])[.a-zA-Z0-9_-]+(?<![._-])$")
+RegExpPackage    = re.compile("^(?![._+-])[.a-zA-Z0-9_+-]+(?<![._-])$")
 RegExpPath       = re.compile("^(?![/-])[a-zA-Z0-9/_-]+(?<![/-])$")
 RegExpTestName   = re.compile("^(?!-)[a-zA-Z0-9-_]+(?<!-)$")
 RegExpBug        = re.compile("^\d+$")
@@ -49,7 +50,7 @@ RegExpCVEPrefix  = re.compile("^CVE-")
 RegExpAuthor     = re.compile("^[a-zA-Z]+\.?( [a-zA-Z]+\.?){1,2}$")
 RegExpEmail      = re.compile("^[a-z._-]+@[a-z.-]+$")
 RegExpYes        = re.compile("Everything OK|y|ye|jo|ju|ja|ano|da", re.I)
-RegExpReproducer = re.compile("repr|test|expl|poc", re.I)
+RegExpReproducer = re.compile("repr|test|expl|poc|demo", re.I)
 RegExpScript     = re.compile("\.(sh|py|pl)$")
 RegExpMetadata   = re.compile("(\$\(METADATA\):\s+Makefile.*)$", re.S)
 RegExpTest       = re.compile("TEST=(\S+)", re.S)
@@ -67,6 +68,9 @@ if not RegExpEmail.match(GuessAuthorEmail):
 if not RegExpAuthor.match(GuessAuthorName):
     GuessAuthorName = "Your Name"
 
+# Commands
+GitCommand="cvs add".split()
+
 # Constants
 MaxLengthSuggestedDesc = 50
 MaxLenghtTestName = 50
@@ -75,7 +79,7 @@ MakefileLineWidth = 17
 VimDictionary = "# vim: dict=/usr/share/beakerlib/dictionary.vim cpt=.,w,b,u,t,i,k"
 BugzillaUrl = 'https://bugzilla.redhat.com/show_bug.cgi?id='
 BugzillaXmlrpc = 'https://bugzilla.redhat.com/xmlrpc.cgi'
-PreferencesDir = os.getenv('HOME') + "/.rhts"
+PreferencesDir = os.getenv('HOME') + "/.beaker_client"
 PreferencesFile = PreferencesDir + "/wizard"
 PreferencesTemplate = """<?xml version="1.0" ?>
 
@@ -145,6 +149,13 @@ def shortenText(text, max = 50):
     # remove last non complete word
     text = re.sub(" [^ ]*$", "", text)
     return text
+
+def unique(seq):
+    """ Remove duplicates from the supplied sequence """
+    dictionary = {}
+    for i in seq:
+        dictionary[i] = 1
+    return dictionary.keys()
 
 def hr(width = 70):
     """ Return simple ascii horizontal rule """
@@ -245,7 +256,7 @@ class Preferences:
             exec("self.%s = findNode(self.author, '%s')" % (node, node))
             # if the node cannot be found get the default from template
             if not eval("self." + node):
-                print "Could nod find <%s> in preferences, using default" % node
+                print "Could not find <%s> in preferences, using default" % node
                 exec("self.%s = findNode(self.template, '%s').cloneNode(True)"
                         % (node, node))
                 exec("self.author.appendChild(self.%s)" % node)
@@ -256,7 +267,7 @@ class Preferences:
             exec("self.%s = findNode(self.test, '%s')" % (node, node))
             # if the node cannot be found get the default from template
             if not eval("self." + node):
-                print "Could nod find <%s> in preferences, using default" % node
+                print "Could not find <%s> in preferences, using default" % node
                 exec("self.%s = findNode(self.template, '%s').cloneNode(True)" % (node, node))
                 exec("self.test.appendChild(self.%s)" % node)
 
@@ -359,26 +370,26 @@ class Help:
                 sys.exit(0)
 
     def usage(self):
-        return "rhts-wizard [options] [TESTNAME] [BUG/CVE...] or rhts-wizard Makefile"
+        return "beaker-wizard [options] [TESTNAME] [BUG/CVE...] or beaker-wizard Makefile"
 
     def version(self):
-        return "rhts-wizard %s" % WizardVersion
+        return "beaker-wizard %s" % WizardVersion
 
     def description(self):
-        return dedentText("""RHTS Wizard is a tool which can transform that
+        return dedentText("""Beaker Wizard is a tool which can transform that
             create-all-the-necessary-files-with-correct-names-values-and-paths
             boring phase of every test creation into one line joy. For power
             users there is a lot of inspiration in the extra help page. For
             quick start just cd to your test package directory and simply type:
-            "rhts-wizard".""")
+            "beaker-wizard".""")
 
     def expert(self):
         return dedentText("""
             NAME:
-                rhts-wizard - tool to ease the creation of a new RHTS test
+                beaker-wizard - tool to ease the creation of a new Beaker test
 
             SYNOPSIS:
-                rhts-wizard [options] [TESTNAME] [BUG/CVE ...]
+                beaker-wizard [options] [TESTNAME] [BUG/CVE ...]
 
                 where TESTNAME is specified as:
                     [[[NAMESPACE/]PACKAGE/]TYPE/][PATH/]NAME
@@ -392,34 +403,34 @@ class Help:
                     NAMESPACE/PACKAGE/TYPE/NAME
                     NAMESPACE/PACKAGE/TYPE/PATH/NAME
 
-                rhts-wizard [path/to/]Makefile
+                beaker-wizard [path/to/]Makefile
 
                 will run the Wizard in the Makefile edit mode which allows to
                 quickly & simply update metadata of an already existing test
                 while trying to keep the rest of the Makefile untouched.
 
             EXAMPLES:
-                rhts-wizard overload-performance 379791
+                beaker-wizard overload-performance 379791
                     regression test with specified bug and name
                     -> /CoreOS/perl/Regression/bz379791-overload-performance
 
-                rhts-wizard buffer-overflow 2008-1071 -a i386
+                beaker-wizard buffer-overflow 2008-1071 -a i386
                     security test with specified CVE and name, i386 arch only
                     -> /CoreOS/perl/Security/CVE-2008-1071-buffer-overflow
 
-                rhts-wizard Sanity/options -y -a?
+                beaker-wizard Sanity/options -y -a?
                     sanity test with given name, ask just for architecture
                     -> /CoreOS/perl/Sanity/options
 
-                rhts-wizard Sanity/server/smoke
+                beaker-wizard Sanity/server/smoke
                     add an optional path under test type directory
                     -> /CoreOS/perl/Sanity/server/smoke
 
-                rhts-wizard -by 1234
+                beaker-wizard -by 1234
                     contact bugzilla for details, no questions, just review
                     -> /CoreOS/installer/Regression/bz1234-Swap-partition-Installer
 
-                rhts-wizard -byf 2007-0455
+                beaker-wizard -byf 2007-0455
                     security test, no questions, no review, overwrite existing files
                     -> /CoreOS/gd/Security/CVE-2007-0455-gd-buffer-overrun
 
@@ -432,7 +443,7 @@ class Help:
                 available options and a prompt to type your choice in.
 
             PREFERENCES:
-                All commonly used preferences can be saved into ~/.rhts/wizard file.
+                All commonly used preferences can be saved into ~/.beaker_client/wizard.
                 Use "write" command to save current settings when reviewing gathered
                 test data or edit the file with you favourite editor.
 
@@ -455,22 +466,22 @@ class Help:
                     * skeleton author email
 
             LINKS:
-                RHTS Wizard Project Page
-                https://wiki.test.redhat.com/BaseOs/Projects/RhtsWizard
+                Beaker Wizard Project Page
+                https://fedorahosted.org/beaker/wiki/BeakerWizard
 
-                RHTS Documentation:
-                https://engineering.redhat.com/trac/rhts
+                Beaker Documentation:
+                https://fedorahosted.org/beaker/wiki/BeakerUserGuide
 
                 Makefile Format:
-                https://engineering.redhat.com/trac/rhts/wiki/TestMakefile
+                https://fedorahosted.org/beaker/wiki/TestMakefile
 
                 BeakerLib
-                https://fedorahosted.org/beaker/wiki/BeakerLib
+                https://fedorahosted.org/beakerlib
 
             BUGS:
                 If you find a bug or have an idea for enhancement, do not hesitate
                 to contact me on the address below. Or, even better, file a new bug at:
-                https://bugzilla.redhat.com/enter_bug.cgi?product=Red%20Hat%20Test%20System&component=rhts-wizard
+                https://bugzilla.redhat.com/enter_bug.cgi?product=Red%20Hat%20QA%20Process&component=beaker-wizard
 
             AUTHOR:
                 Petr Splichal <psplicha@redhat.com>
@@ -532,13 +543,14 @@ class Makefile:
         # parse info from metadata line by line
         print "Parsing the individual metadata..."
         for line in self.metadata.split("\n"):
-            m = re.search("echo\s+[\"'](\w+):\s*([^\"']*)", line)
+            m = re.search("echo\s+[\"'](\w+):\s*(.*)[\"']", line)
             # skip non-@echo lines
             if not m: continue
             # read the key & value pair
             try: key = map[m.group(1).lower()]
             except: key = m.group(1).lower()
-            value = m.group(2)
+            # get the value, unescape escaped double quotes
+            value = re.sub("\\\\\"", "\"", m.group(2))
             # skip fields known to contain variables
             if key in ("name", "testversion", "path"): continue
             # save known fields into options
@@ -650,11 +662,15 @@ class Options:
         groupCreate.add_option("-w", "--write",
             dest="write",
             action="store_true",
-            help="write preferences to ~/.rhts/wizard")
+            help="write preferences to ~/.beaker_client/wizard")
         groupCreate.add_option("-b", "--bugzilla",
             dest="bugzilla",
             action="store_true",
             help="contact bugzilla to get bug details")
+        groupCreate.add_option("-g", "--git",
+            dest="git",
+            action="store_true",
+            help="add created files to cvs (hopefully git soon :-)")
 
         # setup default to correctly display in help
         defaultEverything = defaultCommon = defaultNothing = ""
@@ -952,7 +968,7 @@ class Inquisitor:
         if not (self.value() or value): return ""
         return '\n            	@echo "%s%s" >> $(METADATA)' % (
                 ((name or self.name) + ":").ljust(MakefileLineWidth),
-                value or self.value())
+                re.sub("\"", "\\\"", value or self.value()))
 
     def valid(self):
         """ Return true when provided value is a valid answer """
@@ -1129,9 +1145,9 @@ class MultipleChoice(SingleChoice):
             result.extend(re.split('[ ,]+', item))
         self.data = result
 
-        # let's make data uniq and sorted
+        # let's make data unique and sorted
         if self.sort:
-            self.data = list(set((self.data)))
+            self.data = unique(self.data)
             self.data.sort()
 
     def normalize(self):
@@ -1367,7 +1383,8 @@ class Namespace(SingleChoice):
         self.name = "Namespace"
         self.question = "Namespace"
         self.description = "Provide a root namespace for the test."
-        self.list = "distribution kernel desktop tools CoreOS examples".split()
+        self.list = """distribution installation kernel desktop tools CoreOS
+                cluster rhn examples performance ISV virt""".split()
         if self.options: self.default(self.options.namespace())
 
     def match(self):
@@ -1407,6 +1424,13 @@ class Type(SingleChoice):
     def match(self):
         """ Return regular expression matching valid data """
         return "(" + "|".join(self.list) + ")"
+
+    def suggestSkeleton(self):
+        """ For multihost tests suggest proper skeleton """
+        if self.data == "Multihost":
+            return "multihost"
+        else:
+            return None
 
 
 class Path(Inquisitor):
@@ -1530,16 +1554,11 @@ class Bugs(MultipleChoice):
         if self.bug:
             return re.sub("CVE-\d{4}-\d{4}\s*", "", self.bug.summary)
 
-    def getDescription(self):
-        """ Return bug description fetched from bugzilla """
-        if self.bug:
-            return self.bug.longdescs[0]["body"]
-
     def getComponent(self):
         """ Return bug component fetched from bugzilla """
         # ... and ignore generic CVE component "vulnerability"
-        if self.bug and self.bug.component != 'vulnerability':
-            return self.bug.component
+        if self.bug and self.bug.component[0] != 'vulnerability':
+            return self.bug.component[0]
 
     def getLink(self):
         """ Return URL of the first bug """
@@ -1580,8 +1599,8 @@ class Bugs(MultipleChoice):
         if not self.bug:
             return ""
         else:
-            return "Bug summary: %s\nBugzilla link: %s\n\nDescription:\n\n%s\n" % (
-                    self.getSummary(), self.getLink(), self.getDescription())
+            return "Bug summary: %s\nBugzilla link: %s\n" % (
+                    self.getSummary(), self.getLink())
 
 
 class Name(Inquisitor):
@@ -1594,7 +1613,7 @@ class Name(Inquisitor):
             what the test does. Special chars will be automatically
             converted to dashes."""
         self.default(self.options.name())
-        self.data = dashifyText(self.data)
+        self.data = dashifyText(self.data, allowExtraChars="_")
         self.bugs = Bugs(self.options)
         self.bugs.fetchBugDetails()
         # suggest test name (except when supplied on command line)
@@ -1736,7 +1755,7 @@ class Skeleton(SingleChoice):
         self.name = "Skeleton"
         self.question = "Skeleton to be used for creating the runtest.sh"
         self.description = """There are several runtest.sh skeletons available:
-                rhts (general RHTS template),
+                beaker (general Beaker template),
                 beakerlib (BeakerLib structure),
                 simple (creates separate script with test logic),
                 empty (populates runtest.sh just with header and license) and
@@ -1744,7 +1763,7 @@ class Skeleton(SingleChoice):
         self.skeletons = parseString("""
     <skeletons>
         <skeleton name="beakerlib">
-            # Include rhts environment
+            # Include Beaker environment
             . /usr/bin/rhts-environment.sh
             . /usr/lib/beakerlib/beakerlib.sh
 
@@ -1770,8 +1789,8 @@ class Skeleton(SingleChoice):
             rlJournalPrintText
             rlJournalEnd
         </skeleton>
-        <skeleton name="rhts">
-            # Include rhts environment
+        <skeleton name="beaker">
+            # Include Beaker environment
             . /usr/bin/rhts-environment.sh
 
             PACKAGE="<package/>"
@@ -1812,7 +1831,7 @@ class Skeleton(SingleChoice):
             report_result $TEST/cleanup $result $score
         </skeleton>
         <skeleton name="multihost">
-            # Include rhts environment
+            # Include Beaker environment
             . /usr/bin/rhts-environment.sh
             . /usr/lib/beakerlib/beakerlib.sh
 
@@ -2045,9 +2064,9 @@ class Test(SingleChoice):
         # possibly print first time welcome message
         if self.options.pref.firstRun:
             print dedentText("""
-                Welcome to RHTS wizard!
+                Welcome to The Beaker Wizard!
                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-                It seems, you're running the rhts-wizard for the first time.
+                It seems, you're running the beaker-wizard for the first time.
                 I'll try to be a little bit more verbose. Should you need
                 any help in the future, just try using the "?" character.
                 """, count = 16)
@@ -2075,7 +2094,8 @@ class Test(SingleChoice):
         self.destructive = Destructive(self.options)
         self.license = License(self.options)
 
-        self.skeleton = Skeleton(self.options)
+        self.skeleton = Skeleton(self.options,
+                suggest = self.type.suggestSkeleton())
         self.author = Author(self.options)
         self.email = Email(self.options)
 
@@ -2145,8 +2165,8 @@ class Test(SingleChoice):
 
         # check all fields for matching string (and edit if not checking only)
         for field in self.testname, self.package, self.namespace, self.runfor, \
-                self.requires, self.type, self.package, self.type, self.releases, \
-                self.version, self.time, self.desc, self.destructive, self.archs, \
+                self.requires, self.package, self.releases, self.version, \
+                self.time, self.desc, self.destructive, self.archs, \
                 self.path, self.priority, self.confidential, self.license, \
                 self.skeleton, self.author, self.email, self.testname.prefix, \
                 self.testname.bugs.reproducers:
@@ -2154,8 +2174,14 @@ class Test(SingleChoice):
                 if not checkOnly: field.edit()
                 return True
 
-        # bugs have special treatment
-        if self.testname.bugs.matchName(self.data):
+        # bugs & type have special treatment
+        if self.type.matchName(self.data):
+            if not checkOnly and self.type.edit():
+                # if type has changed suggest a new skeleton
+                self.skeleton = Skeleton(self.options,
+                        suggest = self.type.suggestSkeleton())
+            return True
+        elif self.testname.bugs.matchName(self.data):
             if not checkOnly and self.testname.bugs.edit():
                 # if bugs changed, suggest new name & desc & reproducers
                 if self.testname.bugs.fetchBugDetails():
@@ -2239,13 +2265,31 @@ class Test(SingleChoice):
         if force or self.options.pref.firstRun or self.options.write():
             self.options.pref.save()
 
+    def addToGit(self, path):
+        """ Add a file or a directory to Git """
+
+        try:
+            process = subprocess.Popen(GitCommand + [path],
+                    stdout=subprocess.PIPE, stderr=subprocess.PIPE,)
+            out, err = process.communicate()
+            if process.wait():
+                print "Sorry, failed to add %s to cvs :-(" % path
+                print out, err
+                sys.exit(1)
+        except OSError:
+            print("Unable to run %s, is %s installed?"
+                    % (" ".join(GitCommand), GitCommand[0]))
+            sys.exit(1)
+
     def createFile(self, filename, content):
         """ Create single test file with specified content """
         fullpath = self.relativePath() + "/" + filename
+        addedToGit = ""
 
         # overwrite existing?
         if os.path.exists(fullpath):
-            print fullpath + " already exists, ",
+            existed = True
+            sys.stdout.write(fullpath + " already exists, ")
             if self.options.force():
                 print "force on -> overwriting"
             else:
@@ -2254,17 +2298,24 @@ class Test(SingleChoice):
                 if not re.match("y", answer, re.I):
                     print "Ok skipping. Next time use -f if you want to overwrite files."
                     return
+        else:
+            existed = False
 
         # let's write it
         try:
             file = open(fullpath, "w")
-        except:
+            file.write(content.encode("utf-8"))
+            file.close()
+
+            # and, optionally, add to Git
+            if self.options.opt.git and not existed:
+                self.addToGit(fullpath)
+                addedToGit = ", added to " + GitCommand[0]
+        except IOError:
             print "Cannot write to %s" % fullpath
             sys.exit(3)
         else:
-            file.write(content.encode("utf-8"))
-            file.close()
-            print "File", fullpath, "written"
+            print "File", fullpath, "written" + addedToGit
 
     def create(self):
         """ Create all necessary test files """
@@ -2277,19 +2328,34 @@ class Test(SingleChoice):
         # set file vars
         test = self.testname.value()
         path = self.relativePath()
+        dirs = path.split("/")
         fullpath = self.fullPath()
+        addedToGit = ""
 
         # create test directory
+        class AlreadyExists(Exception): pass
         try:
-            os.makedirs(path)
+            # nothing to do if already exists
+            if os.path.isdir(path):
+                raise AlreadyExists
+
+            # for each subdirectory create and possibly add to Git
+            for dir in ["/".join(dirs[0:i+1]) for i in range(len(dirs))]:
+                # create the directory unless exists
+                if not os.path.isdir(dir):
+                    os.mkdir(dir)
+                    # and optionally add to cvs
+                    if self.options.opt.git:
+                        self.addToGit(dir)
+                        addedToGit = ", added to " + GitCommand[0]
+
         except OSError, e:
-            if e.errno == 17:
-                print "Well, directory %s already exists, let's see..." % path
-            else:
-                print "Bad, cannot create test directory %s :-(" % path
-                sys.exit(1)
+            print "Bad, cannot create test directory %s :-(" % path
+            sys.exit(1)
+        except AlreadyExists:
+            print "Well, directory %s already exists, let's see..." % path
         else:
-            print "Directory %s created" % path
+            print "Directory %s created%s" % (path, addedToGit)
 
         # PURPOSE
         self.createFile("PURPOSE", content =
@@ -2304,6 +2370,7 @@ class Test(SingleChoice):
             comment(self.license.get(), top = False) + "\n" +
             self.skeleton.getRuntest(self)
             )
+        os.chmod(os.path.join(path, "runtest.sh"), 0755)
 
         # Makefile
         self.createFile("Makefile", content = self.formatMakefile())
