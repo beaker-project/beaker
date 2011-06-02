@@ -1,6 +1,7 @@
 #!/usr/bin/python
 import bkr.server.test.selenium
 from bkr.server.test import data_setup
+from bkr.server.model import Arch, ExcludeOSMajor
 import unittest, time, re, os
 from turbogears.database import session
 
@@ -26,9 +27,23 @@ class ReserveSystem(bkr.server.test.selenium.SeleniumTestCase):
         self.system.lab_controller = self.lc
         self.system.shared = True
         session.flush()
+        self.login()
+
+    def test_exluded_distro_system_not_there(self):
+        sel = self.selenium
+        self.system.excluded_osmajor.append(ExcludeOSMajor(osmajor=self.distro.osversion.osmajor, arch=self.system.arch[0]))
+        session.flush()
+        sel.open("reserve_system?arch=%s&distro_family=%s&tag=&distro=%s&search=Show+Systems" % (self.distro.arch, self.distro.osversion.osmajor, self.distro.install_name ))
+        sel.wait_for_page_to_load(3000)
+        self.assert_(self.system.fqdn not in sel.get_body_text())
+
+        self.system.arch.append(Arch.by_name(u'x86_64')) # Make sure it still works with two archs
+        session.flush()
+        sel.open("reserve_system?arch=%s&distro_family=%s&tag=&distro=%s&search=Show+Systems" % (self.distro.arch, self.distro.osversion.osmajor, self.distro.install_name ))
+        sel.wait_for_page_to_load(3000)
+        self.assert_(self.system.fqdn not in sel.get_body_text())
     
     def test_by_distro(self):
-        self.login()
         sel = self.selenium
         sel.open("distros/")
         sel.type("simplesearch", "%s" % self.distro.name)
@@ -51,7 +66,6 @@ class ReserveSystem(bkr.server.test.selenium.SeleniumTestCase):
         group_system.lab_controller = self.lc
         group_system.groups.append(data_setup.create_group())
         session.flush()
-        self.login(data_setup.ADMIN_USER, data_setup.ADMIN_PASSWORD)
         sel = self.selenium
         sel.open('distros/')
         sel.type('simplesearch', self.distro.name)
