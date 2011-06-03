@@ -28,8 +28,21 @@ class Tags(RPCRoot):
     # For XMLRPC methods in this class.
     exposed = True
 
+    #deprecated.
     @expose(format='json')
     def install_tag(self, distro, arch, *args, **kw):
+        return self._updateDistro(distro, arch)
+
+    @cherrypy.expose
+    def updateDistro(self, distro, arch):
+        tagged = self._updateDistro(distro,arch)
+        # xmlrpc doesn't like None, and older xmlrpc clients
+        # don't support allow_none=True.
+        return dict(installs=tagged['installs'] or '',
+                      stable=tagged['stable']   or '',
+                   )
+
+    def _updateDistro(self, distro, arch, *args, **kw):
         tagged_stable = []
         tagged_installs = Distros()._tag(distro, arch, 'INSTALLS')
         if arch == 'ppc':

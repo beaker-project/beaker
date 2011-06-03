@@ -7,11 +7,12 @@ from tg_expanding_form_widget.tg_expanding_form_widget import ExpandingForm
 from kid import Element
 from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.helpers import *
-from bkr.server.widgets import myPaginateDataGrid
+from bkr.server.widgets import LabControllerDataGrid
 from xmlrpclib import ProtocolError
 
 import cherrypy
 import time
+import datetime
 import re
 
 from BasicAuthTransport import BasicAuthTransport
@@ -108,25 +109,20 @@ class LabControllers(RPCRoot):
             raise "Invalid Lab Controller"
         distros = []
         valid_variants = ['AS','ES','WS','Desktop']
-        valid_methods  = ['http','ftp','nfs']
         release = re.compile(r'family=([^\s]+)')
+        label_search = re.compile(r'label=([^\s]+)')
         arches_search = re.compile(r'arches=([^\s]+)')
         variant_search = re.compile(r'variant=([^\s]+)')
         for lc_distro in lc_distros:
             name = lc_distro['name'].split('_')[0]
             meta = string.join(lc_distro['name'].split('_')[1:],'_').split('-')
             variant = None
-            method = None
             virt = False
             arches = []
             
             for curr_variant in valid_variants:
                 if curr_variant in meta:
                     variant = curr_variant
-                    break
-            for curr_method in valid_methods:
-                if curr_method in meta:
-                    method = curr_method
                     break
             if 'xen' in meta:
                 virt = True
@@ -151,12 +147,12 @@ class LabControllers(RPCRoot):
 
                 try:
                     distro = Distro.by_install_name(lc_distro['name'])
-                except: #FIXME
+                except InvalidRequestError:
                     distro = Distro(lc_distro['name'])
                     distro.name = name
                     try:
                         breed = Breed.by_name(lc_distro['breed'])
-                    except: #FIXME
+                    except InvalidRequestError:
                         breed = Breed(lc_distro['breed'])
                         session.save(breed)
                         session.flush([breed])
@@ -168,20 +164,30 @@ class LabControllers(RPCRoot):
                         lc_osminor = 0
                     try:
                         osmajor = OSMajor.by_name(lc_osmajor)
-                    except: #FIXME
+                    except InvalidRequestError:
                         osmajor = OSMajor(lc_osmajor)
                         session.save(osmajor)
                         session.flush([osmajor])
                     try:
                         osversion = OSVersion.by_name(osmajor,lc_osminor)
-                    except: #FIXME
+                    except InvalidRequestError:
                         osversion = OSVersion(osmajor,lc_osminor,arches)
                         session.save(osversion)
                         session.flush([osversion])
                     distro.osversion = osversion
+
+                    # Automatically tag the distro if label= exists
+                    if label_search.search(lc_distro['comment']):
+                        label = unicode(label_search.search(
+                                                    lc_distro['comment']
+                                                           ).group(1)
+                                       )
+                        if label not in distro.tags:
+                            distro.tags.append(label)
+
                     try:
                         arch = Arch.by_name(lc_distro['arch'])
-                    except: #FIXME
+                    except InvalidRequestError:
                         arch = Arch(lc_distro['arch'])
                         session.save(arch)
                         session.flush([arch])
@@ -189,7 +195,6 @@ class LabControllers(RPCRoot):
                     if arch not in distro.osversion.arches:
                         distro.osversion.arches.append(arch)
                     distro.variant = variant
-                    distro.method = method
                     distro.virt = virt
                     distro.date_created = datetime.fromtimestamp(float(lc_distro['tree_build_time']))
                     activity = Activity(None,'XMLRPC','Added','Distro',None, lc_distro['name'])
@@ -258,17 +263,35 @@ class LabControllers(RPCRoot):
             flash( _(u"No Lab Controller id passed!"))
         redirect(".")
 
+    def make_lc_remove_link(self, lc):
+        if lc.removed is not None:
+            return make_link(url  = 'unremove?id=%s' % lc.id,
+                text = 'Re-Add (+)')
+        else:
+            a = Element('a', {'class': 'list'}, href='#')
+            a.text = 'Remove (-)'
+            a.attrib.update({'onclick' : "has_watchdog('%s')" % lc.id})
+            return a
+
+    def make_lc_scan_link(self, lc):
+        if lc.removed:
+            return
+        return make_scan_link(lc.id)
+            
+            
     @identity.require(identity.in_group("admin"))
     @expose(template="bkr.server.templates.grid_add")
     @paginate('list')
     def index(self):
         labcontrollers = session.query(LabController)
-        labcontrollers_grid = myPaginateDataGrid(fields=[
+
+        labcontrollers_grid = LabControllerDataGrid(fields=[
                                   ('FQDN', lambda x: make_edit_link(x.fqdn,x.id)),
                                   ('Disabled', lambda x: x.disabled),
+                                  ('Removed', lambda x: x.removed),
                                   ('Timestamp', lambda x: x.distros_md5),
-                                  (' ', lambda x: make_remove_link(x.id)),
-                                  (' ', lambda x: make_scan_link(x.id)),
+                                  (' ', lambda x: self.make_lc_remove_link(x)),
+                                  (' ', lambda x: self.make_lc_scan_link(x)),
                               ])
         return dict(title="Lab Controllers", 
                     grid = labcontrollers_grid,
@@ -276,10 +299,41 @@ class LabControllers(RPCRoot):
                     object_count = labcontrollers.count(),
                     list = labcontrollers)
 
+
     @identity.require(identity.in_group("admin"))
     @expose()
-    def remove(self, **kw):
-        labcontroller = LabController.by_id(kw['id'])
-        session.delete(labcontroller)
-        flash( _(u"%s Deleted") % labcontroller.fqdn )
+    def unremove(self, id):
+        labcontroller = LabController.by_id(id)
+        labcontroller.removed = None
+        labcontroller.disabled = False
+        flash('Succesfully re-added %s' % labcontroller.fqdn)
+        redirect(url('.'))
+
+    @expose('json')
+    def has_active_recipes(self, id):
+        labcontroller = LabController.by_id(id)
+        count = labcontroller.dyn_systems.filter(System.watchdog != None).count()
+        if count:
+            return {'has_active_recipes' : True}
+        else:
+            return {'has_active_recipes' : False}
+
+    @identity.require(identity.in_group("admin"))
+    @expose()
+    def remove(self, id, *args, **kw):
+        try:
+            labcontroller = LabController.by_id(id)
+            labcontroller.removed = datetime.utcnow()
+            system_table.update().where(system_table.c.lab_controller_id == id).\
+                values(lab_controller_id=None).execute()
+            watchdogs = Watchdog.by_status(labcontroller=labcontroller, 
+                status='active')
+            for w in watchdogs:
+                w.recipe.recipeset.job.cancel(msg='LabController %s has been deleted' % labcontroller.fqdn)
+            labcontroller.disabled = True
+            session.commit()
+        finally:
+            session.close()
+
+        flash( _(u"%s Removed") % labcontroller.fqdn )
         raise redirect(".")

@@ -26,7 +26,8 @@ class Watchdogs(RPCRoot):
                                                 join(recipe_table, recipe_table.c.id == recipe_task_table.c.recipe_id).
                                                 join(recipe_set_table, recipe_set_table.c.id == recipe_table.c.recipe_set_id).
                                                 join(job_table, job_table.c.id == recipe_set_table.c.job_id).
-                                                join(task_table, task_table.c.id == recipe_task_table.c.task_id)])
+                                                join(task_table, task_table.c.id == recipe_task_table.c.task_id)])\
+                .alias('compound_watchdog')
 
         class WatchdogDetails(object):
             pass
@@ -45,8 +46,8 @@ class Watchdogs(RPCRoot):
                   col(name='system_name', getter=lambda x: make_link(url= '/view/%s' % x.system_name,text=x.system_name), title="System"),
                   col(name='lab_controller', getter=lambda x: x.lab_controller, title="Lab Controller"),
                   col(name='task_name', getter=lambda x: make_link(url='/tasks/%s' % x.task_id, text=x.task_name), title="Task Name"),
-                  col(name='kill_time', getter=lambda x: x.kill_time,title="Kill Time")]
-                 
+                  col(name='kill_time', getter=lambda x: x.kill_time,
+                      title="Kill Time", options=dict(datetime=True))]
 
         watchdog_grid = myPaginateDataGrid(fields=fields)
         return dict(title="Watchdog",

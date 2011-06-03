@@ -15,21 +15,31 @@
 #
 # Author: Bill Peck, Gurhan Ozen
 
-modprobe kvm
-modprobe kvm_amd
-modprobe kvm_intel
+. /usr/bin/rhts-environment.sh
+. /usr/share/beakerlib/beakerlib.sh
 
-hostname=$HOSTNAME
-if [ -z "$LAB_SERVER" ]; then
-    # Push to Inventory server
-    if [ -z "$server" ]; then
-        server=$(cat /etc/beah_beaker.conf |awk -F= '/^LAB_CONTROLLER=/ { print $2}')
-    fi
-    rhts-run-simple-test $TEST "./push-inventory.py --server $server -h $hostname"
-    rhts-run-simple-test $TEST "./pushInventory.py --server $server -h $hostname"
+if [ -z "$HOSTNAME" ]; then
+    hostname=$(hostname)
 else
-    # Push to Legacy Lab Controller
-    server="http://$LAB_SERVER"
-    rhts-run-simple-test $TEST "./push-inventory.py --legacy --server $server -h $hostname"
+    hostname=$HOSTNAME
+fi
+if [ -z "$server" ]; then
+    server="http://$LAB_CONTROLLER:8000/server"
 fi
 
+rlJournalStart
+    rlPhaseStartSetup
+        rlRun "modprobe kvm" 
+        # Its ok for the vendor specific  modprobes to fail..
+	rlRun "modprobe kvm_amd" 0,1
+	rlRun "modprobe kvm_intel" 0,1
+	rlRun "yum -y install smolt"
+	rlAssertRpm "smolt"
+    rlPhaseEnd
+
+    rlPhaseStartTest
+	rlRun "./push-inventory.py --server $server -h $hostname"
+	rlRun "./pushInventory.py --server $server -h $hostname"
+    rlPhaseEnd
+rlJournalPrintText
+rlJournalEnd

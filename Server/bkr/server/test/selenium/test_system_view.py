@@ -20,6 +20,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 import unittest
+import datetime
 import logging
 from urlparse import urljoin
 from urllib import urlencode, quote
@@ -27,8 +28,10 @@ import rdflib.graph
 from turbogears.database import session
 
 from bkr.server.test.selenium import SeleniumTestCase
-from bkr.server.test import data_setup, get_server_base, stub_cobbler
-from bkr.server.model import Key, Key_Value_String, Key_Value_Int
+from bkr.server.test import data_setup, get_server_base, stub_cobbler, \
+        assertions
+from bkr.server.model import Key, Key_Value_String, Key_Value_Int, System, \
+        Provision
 
 class SystemViewTest(SeleniumTestCase):
 
@@ -38,8 +41,15 @@ class SystemViewTest(SeleniumTestCase):
         self.lab_controller = data_setup.create_labcontroller(
                 fqdn=u'localhost:%d' % self.stub_cobbler_thread.port)
         self.system_owner = data_setup.create_user()
-        self.system = data_setup.create_system(owner=self.system_owner)
+        self.unprivileged_user = data_setup.create_user(password=u'password')
+        self.distro = data_setup.create_distro()
+        self.system = data_setup.create_system(owner=self.system_owner,
+                status=u'Automated')
         self.system.shared = True
+        self.system.provisions[self.distro.arch] = Provision(
+                arch=self.distro.arch, ks_meta=u'some_ks_meta_var',
+                kernel_options=u'some_kernel_option=1',
+                kernel_options_post=u'some_kernel_option=2')
         self.system.lab_controller = self.lab_controller
         session.flush()
         self.selenium = self.get_selenium()
@@ -107,6 +117,31 @@ class SystemViewTest(SeleniumTestCase):
         session.refresh(self.system)
         self.assert_(self.system.date_modified > orig_date_modified)
 
+    def test_change_status(self):
+        orig_date_modified = self.system.date_modified
+        self.login()
+        sel = self.selenium
+        self.go_to_system_view()
+        sel.select('status_id', u'Broken')
+        sel.click('link=Save Changes')
+        sel.wait_for_page_to_load('30000')
+        self.assertEqual(sel.get_selected_label('status_id'), u'Broken')
+        session.clear()
+        self.system = System.query().get(self.system.id)
+        self.assertEqual(self.system.status.status, u'Broken')
+        self.assertEqual(len(self.system.status_durations), 2)
+        self.assertEqual(self.system.status_durations[0].status.status,
+                u'Broken')
+        assertions.assert_datetime_within(
+                self.system.status_durations[0].start_time,
+                tolerance=datetime.timedelta(seconds=60),
+                reference=datetime.datetime.utcnow())
+        self.assert_(self.system.status_durations[0].finish_time is None)
+        self.assert_(self.system.status_durations[1].finish_time is not None)
+        assertions.assert_durations_not_overlapping(
+                self.system.status_durations)
+        self.assert_(self.system.date_modified > orig_date_modified)
+
     def test_strips_surrounding_whitespace_from_fqdn(self):
         self.login()
         sel = self.selenium
@@ -135,6 +170,16 @@ class SystemViewTest(SeleniumTestCase):
         sel.wait_for_page_to_load('30000')
         self.assertEquals(sel.get_text('css=.fielderror'),
                 'The supplied value is not a valid hostname')
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=683003
+    def test_forces_fqdn_to_lowercase(self):
+        self.login()
+        sel = self.selenium
+        self.go_to_system_view()
+        sel.type('fqdn', 'LooOOooL')
+        sel.click('link=Save Changes')
+        sel.wait_for_page_to_load('30000')
+        self.assertEquals(sel.get_value('fqdn'), 'looooool')
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=670912
     def test_renaming_system_removes_from_cobbler(self):
@@ -316,6 +361,7 @@ class SystemViewTest(SeleniumTestCase):
         sel.type('prov_koptionspost', 'vga=0x31b')
         sel.click('//form[@name="installoptions"]//a[text()="Add ( + )"]')
         sel.wait_for_page_to_load('30000')
+        self.assertEqual(sel.get_title(), self.system.fqdn)
         session.refresh(self.system)
         self.assert_(self.system.date_modified > orig_date_modified)
 
@@ -342,6 +388,66 @@ class SystemViewTest(SeleniumTestCase):
             self.assertEquals(sel.get_value(k), v)
         session.refresh(self.system)
         self.assert_(self.system.date_modified > orig_date_modified)
+
+    def test_change_owner(self):
+        new_owner = data_setup.create_user()
+        session.flush()
+        self.login()
+        sel = self.selenium
+        self.go_to_system_view()
+        sel.click( # '(Change)' link inside cell beside 'Owner' cell
+                '//table[@class="list"]//td'
+                '[normalize-space(preceding-sibling::th[1]/label/text())="Owner"]'
+                '/a[normalize-space(span/text())="(Change)"]')
+        sel.wait_for_page_to_load('30000')
+        sel.type('Owner_user', new_owner.user_name)
+        sel.submit('Owner')
+        sel.wait_for_page_to_load('30000')
+        self.assertEquals(sel.get_title(), 'Systems')
+        self.assertEquals(sel.get_text('css=.flash'), 'OK')
+        session.refresh(self.system)
+        self.assertEquals(self.system.owner, new_owner)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=691796
+    def test_cannot_set_owner_to_none(self):
+        self.login()
+        sel = self.selenium
+        self.go_to_system_view()
+        sel.click( # '(Change)' link inside cell beside 'Owner' cell
+                '//table[@class="list"]//td'
+                '[normalize-space(preceding-sibling::th[1]/label/text())="Owner"]'
+                '/a[normalize-space(span/text())="(Change)"]')
+        sel.wait_for_page_to_load('30000')
+        sel.type('Owner_user', '')
+        sel.submit('Owner')
+        sel.wait_for_page_to_load('30000')
+        self.assert_(sel.get_title().startswith('Change Owner'), sel.get_title())
+        self.assert_(sel.is_element_present(
+                '//span[@class="fielderror" and text()="Please enter a value"]'))
+        session.refresh(self.system)
+        self.assertEquals(self.system.owner, self.system_owner)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=706150
+    def test_install_options_populated_on_provision_tab(self):
+        self.login(self.unprivileged_user.user_name, 'password')
+        sel = self.selenium
+        self.go_to_system_view()
+        sel.click('//ul[@class="tabbernav"]//a[text()="Provision"]')
+        sel.select('prov_install', self.distro.install_name)
+        self.wait_and_try(self.check_install_options)
+
+    def check_install_options(self):
+        sel = self.selenium
+        self.assertEqual(sel.get_value('ks_meta'), 'some_ks_meta_var')
+        self.assertEqual(sel.get_value('koptions'), 'some_kernel_option=1')
+        self.assertEqual(sel.get_value('koptions_post'), 'some_kernel_option=2')
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=703548
+    def test_cc_not_visible_to_random_noobs(self):
+        self.login(self.unprivileged_user.user_name, 'password')
+        sel = self.selenium
+        self.go_to_system_view()
+        self.assert_(not sel.is_text_present('Notify CC'))
 
 class SystemCcTest(SeleniumTestCase):
 

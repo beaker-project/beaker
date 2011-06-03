@@ -1,16 +1,17 @@
-import sys 
-
+import sys
 import re
 from turbogears.database import metadata, mapper, session
 from turbogears.config import get
 from turbogears import url
+from copy import copy
 import ldap
 from sqlalchemy import (Table, Column, ForeignKey, UniqueConstraint,
                         String, Unicode, Integer, DateTime,
-                        UnicodeText, Boolean, Float, VARCHAR, TEXT, Numeric, 
+                        UnicodeText, Boolean, Float, VARCHAR, TEXT, Numeric,
                         or_, and_, not_, select, case, func)
 
-from sqlalchemy.orm import relation, backref, synonym, dynamic_loader,query 
+from sqlalchemy.orm import relation, backref, synonym, dynamic_loader,query
+from sqlalchemy.orm.interfaces import AttributeExtension
 from sqlalchemy.sql import exists
 from sqlalchemy.sql.expression import join
 from sqlalchemy.exceptions import InvalidRequestError
@@ -62,7 +63,7 @@ system_table = Table('system', metadata,
     Column('model', Unicode(255)),
     Column('lender', Unicode(255)),
     Column('owner_id', Integer,
-           ForeignKey('tg_user.user_id')),
+           ForeignKey('tg_user.user_id'), nullable=False),
     Column('user_id', Integer,
            ForeignKey('tg_user.user_id')),
     Column('type_id', Integer,
@@ -373,7 +374,6 @@ distro_table = Table('distro', metadata,
     Column('osversion_id', Integer, ForeignKey('osversion.id')),
     Column('arch_id', Integer, ForeignKey('arch.id')),
     Column('variant',Unicode(25)),
-    Column('method',Unicode(25)),
     Column('virt',Boolean),
     Column('date_created',DateTime),
     mysql_engine='InnoDB',
@@ -395,6 +395,7 @@ lab_controller_table = Table('lab_controller', metadata,
     Column('distros_md5', String(40)),
     Column('systems_md5', String(40)),
     Column('disabled', Boolean, nullable=False, default=False),
+    Column('removed', DateTime, nullable=True, default=None),
     mysql_engine='InnoDB',
 )
 
@@ -518,12 +519,14 @@ beaker_tag_table = Table('beaker_tag', metadata,
     Column('id', Integer, primary_key=True, nullable = False),
     Column('tag', Unicode(20), primary_key=True, nullable = False),
     Column('type', Unicode(40), nullable=False),
+    UniqueConstraint('tag', 'type'),
     mysql_engine='InnoDB',
 )
 
 retention_tag_table = Table('retention_tag', metadata,
     Column('id', Integer, ForeignKey('beaker_tag.id', onupdate='CASCADE', ondelete='CASCADE'),nullable=False, primary_key=True),
     Column('default_', Boolean),
+    Column('expire_in_days', Integer, default=0),
     Column('needs_product', Boolean),
     mysql_engine='InnoDB',
 )
@@ -747,6 +750,31 @@ log_recipe_task_result_table = Table('log_recipe_task_result', metadata,
         Column('start_time',DateTime, default=datetime.utcnow),
 	Column('server', UnicodeText()),
 	Column('basepath', UnicodeText()),
+        mysql_engine='InnoDB',
+)
+
+reservation_table = Table('reservation', metadata,
+        Column('id', Integer, primary_key=True),
+        Column('system_id', Integer, ForeignKey('system.id'), nullable=False),
+        Column('user_id', Integer, ForeignKey('tg_user.user_id'),
+            nullable=False),
+        Column('start_time', DateTime, index=True, nullable=False,
+            default=datetime.utcnow),
+        Column('finish_time', DateTime, index=True),
+        # type = 'manual' or 'recipe'
+        Column('type', Unicode(30), index=True, nullable=False),
+        mysql_engine='InnoDB',
+)
+
+# this only really exists to make reporting efficient
+system_status_duration_table = Table('system_status_duration', metadata,
+        Column('id', Integer, primary_key=True),
+        Column('system_id', Integer, ForeignKey('system.id'), nullable=False),
+        Column('status_id', Integer, ForeignKey('system_status.id'),
+            nullable=False),
+        Column('start_time', DateTime, index=True, nullable=False,
+            default=datetime.utcnow),
+        Column('finish_time', DateTime, index=True),
         mysql_engine='InnoDB',
 )
 
@@ -975,7 +1003,7 @@ task_table = Table('task',metadata,
                 ForeignKey('tg_user.user_id')),
         Column('version', Unicode(256)),
         Column('license', Unicode(256)),
-        Column('valid', Boolean),
+        Column('valid', Boolean, default=True),
         mysql_engine='InnoDB',
 )
 
@@ -1085,6 +1113,12 @@ class User(object):
         return cls.query.filter_by(email_address=email).one()
 
     by_email_address = classmethod(by_email_address)
+
+    def email_link(self):
+        a = Element('a', {'href': 'mailto:%s' % self.email_address})
+        a.text = self.user_name
+        return a
+    email_link = property(email_link)
 
     @classmethod
     def by_id(cls, user_id):
@@ -1672,9 +1706,9 @@ url --url=$tree
     @classmethod
     def free(cls, user, systems=None):
         """
-        Builds on available.  Only systems with no users.
+        Builds on available.  Only systems with no users, and not Loaned.
         """
-        return System.available(user,systems).filter(System.user==None)
+        return System.available(user,systems).filter(and_(System.user==None, or_(System.loaned==None, System.loaned==user)))
 
     @classmethod
     def available_for_schedule(cls, user, systems=None):
@@ -1687,7 +1721,7 @@ url --url=$tree
     def _available(self, user, system_status=None, systems=None):
         """
         Builds on all.  Only systems which this user has permission to reserve.
-          If a system is loaned then its only available for that person. Can take varying system_status' as args as well
+        Can take varying system_status' as args as well
         """
         if systems:
             try:
@@ -1707,15 +1741,12 @@ url --url=$tree
                     System.status==SystemStatus.by_name(u'Manual')))
  
         if not user.is_admin():
-            query = query.filter(or_(and_(System.owner==user,
-                                        System.loaned==None), 
-                                    System.loaned==user,
+            query = query.filter(or_(and_(System.owner==user), 
+                                    System.loaned == user,
                                     and_(System.shared==True, 
                                          System.groups==None,
-                                         System.loaned==None
                                         ),
                                     and_(System.shared==True,
-                                         System.loaned==None,
                                          User.user_id==user.user_id
                                         )
                                     )
@@ -1731,8 +1762,8 @@ url --url=$tree
         return cls._available(user, systems=systems)
 
     @classmethod
-    def available_order(cls, user):
-        return cls.available_for_schedule(user).order_by(case([(System.owner==user, 1),
+    def available_order(cls, user, systems=None):
+        return cls.available_for_schedule(user,systems=systems).order_by(case([(System.owner==user, 1),
                           (System.owner!=user and Group.systems==None, 2)],
                               else_=3))
 
@@ -1786,26 +1817,6 @@ url --url=$tree
             return query.filter(System.arch.any(Arch.arch == arch))
         else:
             return System.query().filter(System.arch.any(Arch.arch == arch))
-
-    @classmethod
-    def reserved_via(cls, service=u'WEBUI'): 
-        activity_ids = cls._latest_reserved()
-        taken = []
-        for id in activity_ids:
-            try: 
-                take_activity = SystemActivity.query().join('object').filter(and_(SystemActivity.id==id,SystemActivity.service == service)).one()
-                taken.append(take_activity)
-            except InvalidRequestError,e:
-                pass
-        return taken
-   
-    @classmethod
-    def _latest_reserved(cls): 
-        f_obj= system_table.join(system_activity_table).join(activity_table)
-        s = select([func.max(system_activity_table.c.id)],from_obj=f_obj,whereclause=and_(activity_table.c.action == u'Reserved',System.user != None)).group_by(system_table.c.id)
-        result = s.execute()
-        ids = [row[0] for row in result.fetchall()] 
-        return ids
 
     def excluded_families(self):
         """
@@ -1947,8 +1958,6 @@ url --url=$tree
         is_available() will return true if this system is allowed to be used by the user.
         """
         if user:
-            if self.loaned and self.loaned == user:
-                return True
             if self.shared:
                 # If the user is in the Systems groups
                 if self.groups:
@@ -1956,6 +1965,10 @@ url --url=$tree
                         return True
                 else:
                     return True
+            elif self.loaned and self.loaned == user:
+                return True
+            elif self.owner == user:
+                return True
         
     def can_share(self, user=None):
         """
@@ -1970,7 +1983,7 @@ url --url=$tree
         This represents the basic system perms,loanee, owner,  shared and in group or shared and no group
         """
         try:
-            if identity.in_group('admin'):
+            if user.is_admin():
                 return True
         except AttributeError, e: #not logged in ?
             return False
@@ -1986,7 +1999,6 @@ url --url=$tree
         if self.shared:
             # If the user is in the Systems groups
             return self._in_group(user)
-
 
     def _in_group(self, user=None, *args, **kw):
             if user is None:
@@ -2264,7 +2276,6 @@ url --url=$tree
                 self.remote.release()
             except:
                 pass
-        self.user = None
 
     def action_provision(self, 
                          distro=None,
@@ -2432,39 +2443,64 @@ $SNIPPET("rhts_post")
             self.activity.append(
                     SystemActivity(service=u'Scheduler',
                     action=u'Changed', field_name=u'Status',
-                    old_value=old_status,
-                    new_value=self.status))
+                    old_value=unicode(old_status),
+                    new_value=unicode(self.status)))
 
-    def reserve(self, service):
-        if self.user is not None and self.user == identity.current.user:
+    def reserve(self, service, user=None, reservation_type=u'manual'):
+        if user is None:
+            user = identity.current.user
+        if self.user is not None and self.user == user:
             raise BX(_(u'User %s has already reserved system %s')
-                    % (identity.current.user, self))
-        if not self.can_share(identity.current.user):
+                    % (user, self))
+        if not self.can_share(user):
             raise BX(_(u'User %s cannot reserve system %s')
-                    % (identity.current.user, self))
+                    % (user, self))
         # Atomic operation to reserve the system
+        session.flush()
         if session.connection(System).execute(system_table.update(
                 and_(system_table.c.id == self.id,
                      system_table.c.user_id == None)),
-                user_id=identity.current.user.user_id).rowcount == 1:
-            self.activity.append(SystemActivity(user=identity.current.user,
-                    service=service, action=u'Reserved', field_name=u'User',
-                    old_value=u'', new_value=identity.current.user))
-        else:
-            raise BX(_(u'System is already reserved'))
+                user_id=user.user_id).rowcount != 1:
+            raise BX(_(u'System %r is already reserved') % self)
+        self.user = user # do it here too, so that the ORM is aware
+        self.reservations.append(Reservation(user=user, type=reservation_type))
+        self.activity.append(SystemActivity(user=user,
+                service=service, action=u'Reserved', field_name=u'User',
+                old_value=u'', new_value=user.user_name))
+        log.debug('Created reservation for system %r with type %r, service %r, user %r',
+                self, reservation_type, service, user)
 
-    def unreserve(self, service):
+    def unreserve(self, service, user=None, watchdog=None):
+        if user is None:
+            user = identity.current.user
+
+        # Some sanity checks
         if self.user is None:
             raise BX(_(u'System is not reserved'))
-        if not self.current_user(identity.current.user):
+        if not self.current_user(user):
             raise BX(_(u'System is reserved by a different user'))
-        # Don't return a system with an active watchdog
-        if self.watchdog:
-            # This won't really happen anymore since the Manual/Automated split
+
+        # Watchdog checking -- don't return a system with an active watchdog,
+        # unless the correct watchdog has been passed in to be cleared
+        if self.watchdog and self.watchdog == watchdog:
+            session.delete(self.watchdog)
+        elif self.watchdog and watchdog is None:
             raise BX(_(u'System has active recipe %s') % self.watchdog.recipe_id)
-        activity = SystemActivity(user=identity.current.user,
+        elif self.watchdog or watchdog:
+            raise BX(_(u'Mismatched watchdogs in unreserve: %r, %r')
+                    % (self.watchdog, watchdog)) # should never happen
+
+        # Update reservation atomically first, to avoid races
+        session.flush()
+        if session.connection(System).execute(reservation_table.update(
+                and_(reservation_table.c.system_id == self.id,
+                     reservation_table.c.finish_time == None)),
+                finish_time=datetime.utcnow()).rowcount != 1:
+            raise BX(_(u'System does not have an open reservation'))
+        activity = SystemActivity(user=user,
                 service=service, action=u'Returned', field_name=u'User',
                 old_value=self.user.user_name, new_value=u'')
+        self.user = None
         try:
             self.action_release()
         except BX, e:
@@ -2476,6 +2512,21 @@ $SNIPPET("rhts_post")
         self.activity.append(activity)
 
     cc = association_proxy('_system_ccs', 'email_address')
+
+class SystemStatusAttributeExtension(AttributeExtension):
+
+    def set(self, obj, child, oldchild, initiator):
+        log.debug('%r status changed from %r to %r', obj, oldchild, child)
+        if child == oldchild:
+            return
+        if oldchild is None:
+            assert not obj.status_durations
+        else:
+            assert obj.status_durations[0].finish_time is None
+            assert obj.status_durations[0].status == oldchild
+            obj.status_durations[0].finish_time = datetime.utcnow()
+        obj.status_durations.insert(0,
+                SystemStatusDuration(system=obj, status=child))
 
 class SystemCc(SystemObject):
 
@@ -2503,6 +2554,7 @@ class SystemType(SystemObject):
         return [type.type for type in all_types]
 
     @classmethod
+    @sqla_cache
     def by_name(cls, systemtype):
         return cls.query.filter_by(type=systemtype).one()
 
@@ -2576,10 +2628,12 @@ class SystemStatus(SystemObject):
 
 
     @classmethod
+    @sqla_cache
     def by_name(cls, systemstatus):
         return cls.query.filter_by(status=systemstatus).one()
  
     @classmethod
+    @sqla_cache
     def by_id(cls,status_id):
         return cls.query.filter_by(id=status_id).one()
 
@@ -2666,6 +2720,20 @@ class OSMajor(MappedObject):
     def get_all(cls):
         return [(0,"All")] + [(major.id, major.osmajor) for major in cls.query()]
 
+    def tasks(self):
+        """
+        List of tasks that support this OSMajor
+        """
+        return Task.query().filter(
+                not_(
+                     Task.id.in_(select([task_table.c.id]).
+                 where(task_table.c.id==task_exclude_osmajor_table.c.task_id).
+                 where(task_exclude_osmajor_table.c.osmajor_id==osmajor_table.c.id).
+                 where(osmajor_table.c.id==self.id)
+                                ),
+                    )
+        )
+
     def __repr__(self):
         return '%s' % self.osmajor
 
@@ -2722,11 +2790,13 @@ class LabController(SystemObject):
         return cls.query.filter_by(fqdn=name).one()
 
     @classmethod
-    def get_all(cls):
+    def get_all(cls, valid=False):
         """
         Desktop, Server, Virtual
         """
         all = cls.query()
+        if valid:
+            all = cls.query().filter_by(removed=None)
         return [(lc.id, lc.fqdn) for lc in all]
 
     distros = association_proxy('_distros', 'distro')
@@ -2741,6 +2811,7 @@ class Watchdog(MappedObject):
         """ Find a watchdog based on the system name
         """
         return cls.query.filter_by(system=system).one()
+
 
     @classmethod
     def by_status(cls, labcontroller=None, status="active"):
@@ -2828,7 +2899,7 @@ class Numa(SystemObject):
         self.nodes = nodes
 
     def __repr__(self):
-        return self.nodes
+        return str(self.nodes)
 
 
 class DeviceClass(SystemObject):
@@ -2936,11 +3007,6 @@ class Distro(MappedObject):
         self.install_name = install_name
  
     @classmethod
-    def all_methods(cls):
-        methods = [elem[0] for elem in select([distro_table.c.method],whereclause=distro_table.c.method != None,from_obj=distro_table,distinct=True).execute()]
-        return methods 
-
-    @classmethod
     def by_install_name(cls, install_name):
         return cls.query.filter_by(install_name=install_name).one()
 
@@ -2968,18 +3034,16 @@ class Distro(MappedObject):
         from needpropertyxml import ElementWrapper
         import xmltramp
         #FIXME Should validate XML before proceeding.
-        queries = []
-        joins = []
-        for child in ElementWrapper(xmltramp.parse(filter)):
-            if callable(getattr(child, 'filter', None)):
-                (join, query) = child.filter()
-                queries.append(query)
-                joins.extend(join)
         # Join on lab_controller_assocs or we may get a distro that is not on any 
         # lab controller anymore.
-        distros = Distro.query().join('lab_controller_assocs')
-        if joins:
-            distros = distros.filter(and_(*joins))
+        distros_table = distro_table
+        queries = []
+        for child in ElementWrapper(xmltramp.parse(filter)):
+            if callable(getattr(child, 'filter', None)):
+                (distros_table, query) = child.filter(distros_table)
+                queries.append(query)
+        distros = Distro.query().select_from(distros_table)\
+                        .join('lab_controller_assocs')
         if queries:
             distros = distros.filter(and_(*queries))
         return distros.order_by('-date_created')
@@ -2989,7 +3053,6 @@ class Distro(MappedObject):
         fields = dict(
                       distro_name    = 'name',
                       distro_arch    = ['arch','arch'],
-                      distro_method  = 'method',
                       distro_variant = 'variant',
                       distro_virt    = 'virt',
                       distro_family  = ['osversion','osmajor','osmajor'],
@@ -3035,19 +3098,17 @@ class Distro(MappedObject):
         """
         from needpropertyxml import ElementWrapper
         import xmltramp
-        systems = self.all_systems(user, join)
+        systems_table = system_table
         #FIXME Should validate XML before processing.
         queries = []
-        joins = []
         for child in ElementWrapper(xmltramp.parse(filter)):
             if callable(getattr(child, 'filter', None)):
-                (join, query) = child.filter()
+                (systems_table, query) = child.filter(systems_table)
                 queries.append(query)
-                joins.extend(join)
-        if joins:
-            systems = systems.filter(and_(*joins))
+        systems = System.query().select_from(systems_table)
         if queries:
             systems = systems.filter(and_(*queries))
+        systems = self.all_systems(user, join, systems)
         return systems
 
     def tasks(self):
@@ -3073,16 +3134,14 @@ class Distro(MappedObject):
         """
         multiple_distro_systems() will return a list of distro's that are applicable for a certain criteria.
         The criteria can be
-        *method
         *arch
         *osmajor
         """
-        method = kw.get('method')
         arch = kw.get('arch')
         osmajor = kw.get('osmajor')
         tag = kw.get('tag')
 
-        if method is None and arch is None and osmajor is None:
+        if arch is None and osmajor is None:
             log.error('Nothing has been passed into mulitple_distro_systems')
             return
          
@@ -3103,7 +3162,7 @@ class Distro(MappedObject):
         if tag: 
             my_from = my_from.join(distro_tag_map).join(distro_tag_table)
             my_and.append(distro_tag_table.c.tag == tag) 
-        for var in (osmajor,method,tag) + tuple(sorted(local_arches)):
+        for var in (osmajor,tag) + tuple(sorted(local_arches)):
             if var:
                 cache_locator.append(var)
 
@@ -3118,7 +3177,7 @@ class Distro(MappedObject):
         future_arch_cache = {}
         for local_arch in local_arches:
             my_derived = select([distro_table.c.name,distro_table.c.install_name,distro_table.c.id.label('distro_id'),distro_table.c.date_created],
-                                whereclause= and_(*my_and + [arch_table.c.arch == local_arch,distro_table.c.method == method] ),
+                                whereclause= and_(*my_and + [arch_table.c.arch == local_arch] ),
                                 from_obj=my_from).alias(local_arch)
             
             if current_derived is None:
@@ -3189,15 +3248,15 @@ class Distro(MappedObject):
         return self.all_systems(user, join=['lab_controller','_distros','distro']).filter( \
                     Distro.install_name==self.install_name)
 
-    def all_systems(self, user=None, join=['lab_controller']):
+    def all_systems(self, user=None, join=['lab_controller'], systems=None):
         """
         List of systems that support this distro
         Will return all possible systems even if the distro is not on the lab controller yet.
         Limit to what is available to user if user passed in.
         """
         if user:
-            systems = System.available_order(user)
-        else:
+            systems = System.available_order(user, systems=systems)
+        elif not systems:
             systems = System.query()
         
         return systems.join(join).filter(
@@ -3494,18 +3553,39 @@ class Log(MappedObject):
 
     result = property(result)
 
+    def full_log_directory(self):
+        if self.server:
+            return self.log_directory()
+        else:
+            return '%s/%s' % (self.parent.logspath, self.log_directory())
+
+    def log_directory(self):
+        # if server is defined then the logs are stored elsewhere
+        if self.server:
+            dir = '%s/%s' % (self.server, self.path or '')
+            servermatch = re.search('(^https?://.+?)(/.+)$', dir) # split the server from the path
+            server = servermatch.group(1)
+            path = servermatch.group(2)
+            dir = '%s%s' % (server, re.sub('/{2,}','/', path))
+        else:
+            dir = '%s/%s' % (self.parent.filepath, self.path or '')
+            dir = re.sub('/{2,}','/', dir)
+
+        return dir
+
+    def log_url(self):
+        if self.server:
+            url = '%s/%s' % (self.log_directory(), self.filename)
+        else:
+            url = '/logs/%s/%s' % (self.log_directory(), self.filename)
+        return url
+
     def link(self):
         """ Return a link to this Log
         """
         text = "%s/%s" % (self.path != '/' and self.path or '', self.filename)
         text = text[-50:]
-        # if server is defined then the logs are stored elsewhere.
-        if self.server:
-            url = '%s/%s/%s' % (self.server, self.path, self.filename)
-        else:
-            url = '/logs/%s/%s/%s' % (self.parent.filepath,
-                                                   self.path, 
-                                                   self.filename)
+        url = self.log_url()
         return make_link(url = url,
                          text = text)
     link = property(link)
@@ -3552,6 +3632,10 @@ class TaskBase(MappedObject):
                     R = 'Recipe',
                     RS = 'RecipeSet',
                     J = 'Job')
+
+    @property
+    def logspath(self):
+        return get('basepath.logs', '/var/www/beaker/logs')
 
     @classmethod
     def get_by_t_id(cls, t_id, *args, **kw):
@@ -3667,6 +3751,7 @@ class Job(TaskBase):
     """
 
     stop_types = ['abort','cancel']
+    max_by_whiteboard = 20
 
     @classmethod
     def mine(cls, owner):
@@ -3718,8 +3803,46 @@ class Job(TaskBase):
         if not query:
             query = cls.query()
         query = query.join(['recipesets','recipes']).filter(and_(Recipe.finish_time < datetime.utcnow() - delta,
-            cls.status_id.in_(TaskStatus.by_name(u'Completed').id,TaskStatus.by_name(u'Aborted').id,TaskStatus.by_name(u'Cancelled').id)))
+            cls.status_id.in_([TaskStatus.by_name(u'Completed').id,TaskStatus.by_name(u'Aborted').id,TaskStatus.by_name(u'Cancelled').id])))
         return query
+
+    @classmethod
+    def _remove_descendants(cls, list_of_logs):
+        """Return a list of paths with common descendants removed
+        """
+        set_of_logs = set(list_of_logs)
+        logs_A = copy(set_of_logs)
+        logs_to_return = copy(set_of_logs)
+
+        # This is a simple way to remove descendants,
+        # as long as our list of logs doesn't get too large
+        for log_A in logs_A:
+            for log_B in set_of_logs:
+                if log_B.startswith(log_A) and log_A != log_B:
+                    try:
+                        logs_to_return.remove(log_B)
+                    except KeyError, e:
+                        pass # Possibly already removed
+        return logs_to_return
+
+    @classmethod
+    def expired_logs(cls):
+        """Return log files for expired recipes
+        """
+        expired_logs = []
+        job_ids = [job.id for job in cls.marked_for_deletion()]
+        for tag in RetentionTag.get_transient():
+            expire_in = tag.expire_in_days
+            tag_name = tag.tag
+            job_ids.extend([job.id for job in cls.find_jobs(tag=tag_name, complete_days=expire_in) if job.deleted is None])
+        job_ids = set(job_ids)
+        for job_id in job_ids:
+            job = Job.by_id(job_id)
+            logs = job.get_log_dirs()
+            if logs:
+                logs = cls._remove_descendants(logs)
+            yield (job, logs)
+        return
 
     @classmethod
     def has_family(cls, family, query=None, **kw):
@@ -3751,7 +3874,7 @@ class Job(TaskBase):
 
     @classmethod
     def by_whiteboard(cls,desc):
-        res = Job.query().filter_by(whiteboard = desc)
+        res = Job.query().filter_by(whiteboard = desc).limit(cls.max_by_whiteboard)
         return res
 
     @classmethod
@@ -3809,7 +3932,11 @@ class Job(TaskBase):
         return job
 
     @classmethod
-    def find_jobs(cls, query=None, tag=None, complete_days=None, family=None, product=None, **kw):
+    def marked_for_deletion(cls):
+        return cls.query().filter(and_(cls.to_delete!=None, cls.deleted==None)).all()
+
+    @classmethod
+    def find_jobs(cls, query=None, tag=None, complete_days=None, family=None, product=None,  **kw):
         if not query:
             query = cls.query()
         if complete_days:
@@ -3847,18 +3974,11 @@ class Job(TaskBase):
                     log.exception(err_msg)
                     raise BX(err_msg)
 
-        return query.all()
+        return query
 
     @classmethod
-    def delete_jobs(cls, **kw):
-        if kw['jobs']:
-            actual_jobs = kw['jobs']
-            jobs_to_delete = cls._delete_criteria(jobs=actual_jobs)
-        else:
-            query = cls.query()
-            query = cls._delete_criteria(query=query)
-            kw['query'] = query
-            jobs_to_delete = cls.find_jobs(**kw)
+    def delete_jobs(cls, jobs=None, query=None):
+        jobs_to_delete  = cls._delete_criteria(jobs,query)
 
         for job in jobs_to_delete:
             job.soft_delete()
@@ -3867,15 +3987,16 @@ class Job(TaskBase):
 
     @classmethod
     def _delete_criteria(cls, jobs=None, query=None):
-        try:
-            admin = 'admin' in identity.current.user.groups
-        except AttributeError: #not logged in
-            err_msg = u'User not logged in'
-            log.exception(err_msg)
-            return err_msg
+        """Returns valid jobs for deletetion
 
+
+           takes either a list of Job objects or a query object, and returns
+           those that are valid for deletion
+
+
+        """
         if not jobs and not query:
-            raise BeakerException('Need to pas either list of jobs or a query to _delete_criteria')
+            raise BeakerException('Need to pass either list of jobs or a query to _delete_criteria')
         valid_jobs = []
         if jobs:
             for j in jobs:
@@ -3884,19 +4005,13 @@ class Job(TaskBase):
                     is_owner = user == j.owner
                 except AttributeError, e: #not logged in
                     is_owner = False
-                if j.is_finished() and not j.counts_as_deleted():
-                    if admin:
-                        valid_jobs.append(j)
-                    elif is_owner:
-                        valid_jobs.append(j)
+                if j.is_finished() and not j.counts_as_deleted() and is_owner:
+                    valid_jobs.append(j)
             return valid_jobs
         elif query:
             query = query.filter(cls.status_id.in_([TaskStatus.by_name('Completed').id, TaskStatus.by_name('Aborted').id, TaskStatus.by_name('Cancelled').id]))
             query = query.filter(and_(Job.to_delete == None, Job.deleted == None))
-            if admin:
-                pass
-            else:
-                query = query.filter(Job.owner==identity.current.user)
+            query = query.filter(Job.owner==identity.current.user)
             return query
 
     def counts_as_deleted(self):
@@ -3917,6 +4032,14 @@ class Job(TaskBase):
         if self.to_delete:
             raise BeakerException(u'%s is already marked to delete' % self.t_id)
         self.to_delete = datetime.utcnow()
+
+    def get_log_dirs(self):
+        logs = []
+        for rs in self.recipesets:
+            rs_logs = rs.get_log_dirs()
+            if rs_logs:
+                logs.extend(rs_logs)
+        return logs
 
     def clone_link(self):
         """ return link to clone this job
@@ -4088,7 +4211,7 @@ class JobCc(MappedObject):
         self.email_address = email_address
 
 
-class Product(object):
+class Product(MappedObject):
 
     def __init__(self, name):
         self.name = name
@@ -4103,8 +4226,12 @@ class Product(object):
 
 class BeakerTag(object):
 
+
     def __init__(self, tag, *args, **kw):
         self.tag = tag
+
+    def can_delete(self):
+        raise NotImplementedError("Please implement 'can_delete'  on %s" % self.__class__.__name__)
 
     @classmethod
     def by_id(cls, id, *args, **kw):
@@ -4121,15 +4248,23 @@ class BeakerTag(object):
 
 class RetentionTag(BeakerTag):
 
-    def __init__(self, tag, is_default=False, needs_product=False, *args, **kw):
+    def __init__(self, tag, is_default=False, needs_product=False, expire_in_days=None, *args, **kw):
         self.needs_product = needs_product
+        self.expire_in_days = expire_in_days
         self.set_default_val(is_default)
+        self.needs_product = needs_product
         super(RetentionTag, self).__init__(tag, **kw)
-        session.flush()
 
     @classmethod
     def by_name(cls,tag):
         return cls.query().filter_by(tag=tag).one()
+
+    def can_delete(self):
+        if self.is_default:
+            return False
+        # At the moment only jobs use this tag, update this if that ever changes
+        # Only remove tags that haven't been used
+        return not bool(Job.query().filter(Job.retention_tag == self).count())
 
     def requires_product(self):
         return self.needs_product
@@ -4161,6 +4296,10 @@ class RetentionTag(BeakerTag):
         else:
             q = cls.query().filter(cls.tag.like('%s%%' % tag))
         return q
+
+    @classmethod
+    def get_transient(cls):
+        return cls.query().filter(cls.expire_in_days != 0).all()
 
     def __repr__(self, *args, **kw):
         return self.tag
@@ -4219,10 +4358,17 @@ class RecipeSet(TaskBase):
     """
     stop_types = ['abort','cancel']
 
-
     def __init__(self, ttasks=0, priority=None):
         self.ttasks = ttasks
         self.priority = priority
+
+    def get_log_dirs(self):
+        logs = []
+        for recipe in self.recipes:
+            r_logs = recipe.get_log_dirs()
+            if r_logs:
+                logs.extend(r_logs)
+        return logs
 
     def is_owner(self,user):
         if self.job.owner == user:
@@ -4471,10 +4617,6 @@ class Recipe(TaskBase):
         return get('servername', socket.gethostname())
 
     @property
-    def logspath(self):
-        return get('basepath.logs', '/var/www/beaker/logs')
-
-    @property
     def harnesspath(self):
         return get('basepath.harness', '/var/www/beaker/harness')
 
@@ -4503,7 +4645,7 @@ class Recipe(TaskBase):
     def clone_link(self):
         """ return link to clone this recipe
         """
-        return "/jobs/clone?recipe_id=%s" % self.id
+        return url("/jobs/clone?recipeset_id=%s" % self.recipeset.id)
 
     @property
     def link(self):
@@ -4519,6 +4661,15 @@ class Recipe(TaskBase):
                 self.recipeset.queue_time.month,
                 job.id // Log.MAX_ENTRIES_PER_DIRECTORY, job.id, self.id)
     filepath = property(filepath)
+
+    def get_log_dirs(self):
+        logs_to_return = [log.full_log_directory() for log in self.logs]
+
+        for task in self.tasks:
+            rt_log = task.get_log_dirs()
+            if rt_log:
+                logs_to_return.extend(rt_log)
+        return logs_to_return
 
     def delete(self, dryrun, *args, **kw):
         """
@@ -4558,13 +4709,11 @@ class Recipe(TaskBase):
         """
         repos = []
         if self.distro:
-            if os.path.exists("%s/%s/%s" % (self.harnesspath,
-                                            self.distro.osversion.osmajor,
-                                            self.distro.arch)):
+            if os.path.exists("%s/%s" % (self.harnesspath,
+                                            self.distro.osversion.osmajor)):
                 repo = dict(name = "beaker-harness",
-                             url  = "http://%s/harness/%s/%s" % (self.servername,
-                                                                      self.distro.osversion.osmajor,
-                                                                      self.distro.arch))
+                             url  = "http://%s/harness/%s/" % (self.servername,
+                                                               self.distro.osversion.osmajor))
                 repos.append(repo)
             repo = dict(name = "beaker-tasks",
                         url  = "http://%s/repos/%s" % (self.servername, self.id))
@@ -4965,31 +5114,11 @@ class Recipe(TaskBase):
         """
         if self.system and self.watchdog:
             self.destroyRepo()
-            ## FIXME Should we actually remove the watchdog?
-            ##       Maybe we should set the status of the watchdog to reclaim
-            ##       so that the lab controller returns the system instead.
-            # Remove this recipes watchdog
             log.debug("Remove watchdog for recipe %s" % self.id)
             if self.watchdog.system == self.system:
-                try:
-                    self.system.action_release()
-                    log.debug("Return system %s for recipe %s" % (self.system, self.id))
-                    self.system.activity.append(
-                        SystemActivity(self.recipeset.job.owner, 
-                                       'Scheduler', 
-                                       'Returned', 
-                                       'User', 
-                                       '%s' % self.recipeset.job.owner, 
-                                       ''))
-                except socket.gaierror, error:
-                    #FIXME
-                    pass
-                except xmlrpclib.Fault, error:
-                    #FIXME
-                    pass
-                except AttributeError, error:
-                    pass
-            del(self.watchdog)
+                log.debug("Return system %s for recipe %s" % (self.system, self.id))
+                self.system.unreserve(service=u'Scheduler',
+                        user=self.recipeset.job.owner, watchdog=self.watchdog)
 
     def task_info(self):
         """
@@ -5255,6 +5384,14 @@ class RecipeTask(TaskBase):
 
     def build_ancestors(self, *args, **kw):
         return (self.recipe.recipeset.job.t_id, self.recipe.recipeset.t_id, self.recipe.t_id)
+
+    def get_log_dirs(self):
+        logs_to_return = [log.full_log_directory() for log in self.logs]
+        for result in self.results:
+            rtr_log = result.get_log_dirs()
+            if rtr_log:
+                logs_to_return.extend(rtr_log)
+        return logs_to_return
 
     def to_xml(self, clone=False, *args, **kw):
         task = self.doc.createElement("task")
@@ -5747,6 +5884,9 @@ class RecipeTaskResult(TaskBase):
         #FIXME Append any binary logs as URI's
         return result
 
+    def get_log_dirs(self):
+        return [log.full_log_directory() for log in self.logs]
+
     def task_info(self):
         """
         Method for exporting RecipeTaskResult status for TaskWatcher
@@ -5791,9 +5931,23 @@ class Task(MappedObject):
     """
     Tasks that are available to schedule
     """
+    @property
+    def task_dir(self):
+        return get("basepath.rpms", "/var/www/beaker/rpms")
+
     @classmethod
-    def by_name(cls, name):
-        return cls.query.filter_by(name=name).one()
+    def by_name(cls, name, valid=None):
+        query = cls.query.filter(Task.name==name)
+        if valid:
+            query = query.filter(Task.valid==bool(valid))
+        return query.one()
+
+    @classmethod
+    def by_id(cls, id, valid=None):
+        query = cls.query.filter(Task.id==id)
+        if valid:
+            query = query.filter(Task.valid==bool(valid))
+        return query.one()
 
     @classmethod
     def by_type(cls, type, query=None):
@@ -5865,6 +6019,17 @@ class Task(MappedObject):
 
         return separator.join(time)
 
+    def disable(self):
+        """
+        Disable task so it can't be used.
+        """
+        for rpm in [self.oldrpm, self.rpm]:
+            rpm_path = "%s/%s" % (self.task_dir, rpm)
+            if os.path.exists(rpm_path):
+                os.unlink(rpm_path)
+        self.valid=False
+        return
+
 
 class TaskExcludeOSMajor(MappedObject):
     """
@@ -5933,13 +6098,18 @@ class TaskBugzilla(MappedObject):
     """
     pass
 
+class Reservation(MappedObject): pass
+
+class SystemStatusDuration(MappedObject): pass
+
 # set up mappers between identity tables and classes
 SystemType.mapper = mapper(SystemType, system_type_table)
 SystemStatus.mapper = mapper(SystemStatus, system_status_table)
 mapper(ReleaseAction, release_action_table)
 System.mapper = mapper(System, system_table,
                    properties = {
-                     'status':relation(SystemStatus,uselist=False),
+                     'status':relation(SystemStatus,uselist=False,
+                        attributeext=SystemStatusAttributeExtension()),
                      'devices':relation(Device,
                                         secondary=system_device_map,backref='systems'),
                      'type':relation(SystemType, uselist=False),
@@ -5988,9 +6158,22 @@ System.mapper = mapper(System, system_table,
                      'reprovision_distro':relation(Distro, uselist=False),
                       '_system_ccs': relation(SystemCc, backref='system',
                                       cascade="all, delete, delete-orphan"),
+                     'reservations': relation(Reservation, backref='system',
+                        order_by=[reservation_table.c.start_time.desc()]),
+                     'dyn_reservations': dynamic_loader(Reservation),
+                     'open_reservation': relation(Reservation, uselist=False, viewonly=True,
+                        primaryjoin=and_(system_table.c.id == reservation_table.c.system_id,
+                            reservation_table.c.finish_time == None)),
+                     'status_durations': relation(SystemStatusDuration, backref='system',
+                        cascade='all, delete, delete-orphan',
+                        order_by=[system_status_duration_table.c.start_time.desc()]),
+                     'dyn_status_durations': dynamic_loader(SystemStatusDuration),
                      })
 
 mapper(SystemCc, system_cc_table)
+mapper(SystemStatusDuration, system_status_duration_table, properties={
+        'status': relation(SystemStatus),
+})
 
 Cpu.mapper = mapper(Cpu, cpu_table, properties={
     'flags': relation(CpuFlag, cascade='all, delete, delete-orphan'),
@@ -6046,6 +6229,7 @@ mapper(LabControllerDistro, lab_controller_distro_map)
 mapper(LabController, lab_controller_table,
         properties = {'_distros':relation(LabControllerDistro, backref='lab_controller',
                                           cascade='all, delete-orphan'),
+                      'dyn_systems' : dynamic_loader(System),
                      }
       )
 
@@ -6094,23 +6278,23 @@ mapper(RetentionTag, retention_tag_table, inherits=BeakerTag,
         polymorphic_identity=u'retention_tag')
 
 mapper(Activity, activity_table,
-        polymorphic_on=activity_table.c.type, polymorphic_identity='activity',
+        polymorphic_on=activity_table.c.type, polymorphic_identity=u'activity',
         properties=dict(user=relation(User, uselist=False,
                         backref='activity')))
 
 mapper(SystemActivity, system_activity_table, inherits=Activity,
-        polymorphic_identity='system_activity')
+        polymorphic_identity=u'system_activity')
 
 mapper(RecipeSetActivity, recipeset_activity_table, inherits=Activity,
-       polymorphic_identity='recipeset_activity')
+       polymorphic_identity=u'recipeset_activity')
 
 mapper(GroupActivity, group_activity_table, inherits=Activity,
-        polymorphic_identity='group_activity',
+        polymorphic_identity=u'group_activity',
         properties=dict(object=relation(Group, uselist=False,
                          backref='activity')))
 
 mapper(DistroActivity, distro_activity_table, inherits=Activity,
-       polymorphic_identity='distro_activity',
+       polymorphic_identity=u'distro_activity',
        properties=dict(object=relation(Distro, uselist=False,
                          backref='activity')))
 
@@ -6204,7 +6388,7 @@ mapper(LogRecipeTask, log_recipe_task_table)
 mapper(LogRecipeTaskResult, log_recipe_task_result_table)
 
 mapper(Recipe, recipe_table,
-        polymorphic_on=recipe_table.c.type, polymorphic_identity='recipe',
+        polymorphic_on=recipe_table.c.type, polymorphic_identity=u'recipe',
         properties = {'distro':relation(Distro, uselist=False,
                                         backref='recipes'),
                       'system':relation(System, uselist=False,
@@ -6235,9 +6419,9 @@ mapper(Recipe, recipe_table,
                      }
       )
 mapper(GuestRecipe, guest_recipe_table, inherits=Recipe,
-        polymorphic_identity='guest_recipe')
+        polymorphic_identity=u'guest_recipe')
 mapper(MachineRecipe, machine_recipe_table, inherits=Recipe,
-        polymorphic_identity='machine_recipe',
+        polymorphic_identity=u'machine_recipe',
         properties = {'guests':relation(Recipe, backref='hostmachine',
                                         secondary=machine_guest_map)})
 
@@ -6285,6 +6469,10 @@ mapper(RecipeTaskResult, recipe_task_result_table,
 mapper(TaskPriority, task_priority_table)
 mapper(TaskStatus, task_status_table)
 mapper(TaskResult, task_result_table)
+mapper(Reservation, reservation_table, properties={
+        'user': relation(User, backref=backref('reservations',
+            order_by=[reservation_table.c.start_time.desc()])),
+})
 
 ## Static list of device_classes -- used by master.kid
 global _device_classes

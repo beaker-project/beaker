@@ -162,7 +162,7 @@ class Distros(RPCRoot):
     @expose(format='json')
     def by_name(self, distro):
         distro = distro.lower()
-        return dict(distros=[(distro.install_name) for distro in Distro.query().filter(Distro.install_name.like('%s%%' % distro)).order_by('-date_created')])
+        return dict(distros=[(distro.install_name) for distro in Distro.query().filter(Distro.name.like('%s%%' % distro)).order_by('-date_created')])
     
     def _distros(self,distro,**kw):
         return_dict = {} 
@@ -197,7 +197,7 @@ class Distros(RPCRoot):
     @expose(template="bkr.server.templates.grid")
     @paginate('list',default_order='-date_created', limit=50)
     def name(self,*args,**kw):
-        return self.distros(distros=session.query(Distro).join('breed').join('arch').join(['osversion','osmajor']).join('lab_controller_assocs').filter(distro_table.c.install_name.like('%s' % kw['name'])),action='./name')
+        return self.distros(distros=session.query(Distro).join('breed').join('arch').join(['osversion','osmajor']).join('lab_controller_assocs').filter(distro_table.c.name.like('%s' % kw['name'])),action='./name')
 
     def distros(self, distros,action='.',*args, **kw):
         distros_return = self._distros(distros,**kw) 
@@ -213,8 +213,7 @@ class Distros(RPCRoot):
                 search_options['simplesearch'] = distros_return['simplesearch']
 
         distros_grid =  myPaginateDataGrid(fields=[
-                                  myPaginateDataGrid.Column(name='install_name', getter=lambda x: make_link(url  = '/distros/view?id=%s' % x.id,
-                                  text = x.install_name), title='Install Name', options=dict(sortable=True)),
+                                  myPaginateDataGrid.Column(name='id', getter=lambda x: make_link(url = '/distros/view?id=%s' % x.id, text = x.id), title='ID', options=dict(sortable=True)),
                                   myPaginateDataGrid.Column(name='name', getter=lambda x: x.name, title='Name', options=dict(sortable=True)),
                                   myPaginateDataGrid.Column(name='breed.breed', getter=lambda x: x.breed, title='Breed', options=dict(sortable=True)),
                                   myPaginateDataGrid.Column(name='osversion.osmajor.osmajor', getter=lambda x: x.osversion.osmajor, title='OS Major Version', options=dict(sortable=True)),
@@ -222,8 +221,10 @@ class Distros(RPCRoot):
                                   myPaginateDataGrid.Column(name='variant', getter=lambda x: x.variant, title='Variant', options=dict(sortable=True)),
                                   myPaginateDataGrid.Column(name='virt', getter=lambda x: x.virt, title='Virt', options=dict(sortable=True)),
                                   myPaginateDataGrid.Column(name='arch.arch', getter=lambda x: x.arch, title='Arch', options=dict(sortable=True)),
-                                  myPaginateDataGrid.Column(name='method', getter=lambda x: x.method, title='Method', options=dict(sortable=True)),
-                                  myPaginateDataGrid.Column(name='date_created', getter=lambda x: x.date_created, title='Date Created', options=dict(sortable=True)),
+                                  myPaginateDataGrid.Column(name='date_created',
+                                    getter=lambda x: x.date_created,
+                                    title='Date Created',
+                                    options=dict(sortable=True, datetime=True)),
                                   Utility.direct_column(title='Provision', getter=lambda x: _provision_system_link(x))
                               ])
 
@@ -286,7 +287,7 @@ class Distros(RPCRoot):
         maximum number of distros given by 'limit'). Each array element is an 
         array containing the following distro details:
 
-            (install name, name, arch, version, variant, install method, 
+            (install name, name, arch, version, variant, '', 
             supports virt?, list of tags, dict of (lab controller hostname -> 
             tree path))
         """
@@ -318,7 +319,7 @@ class Distros(RPCRoot):
         distros = distros.order_by(distro_table.c.date_created.desc())
         if limit:
             distros = distros[:limit]
-        return [(distro.install_name, distro.name, '%s' % distro.arch, '%s' % distro.osversion, distro.variant, distro.method, distro.virt, ['%s' % tag for tag in distro.tags], dict([(lc.lab_controller.fqdn, lc.tree_path) for lc in distro.lab_controller_assocs])) for distro in distros]
+        return [(distro.install_name, distro.name, '%s' % distro.arch, '%s' % distro.osversion, distro.variant, '', distro.virt, ['%s' % tag for tag in distro.tags], dict([(lc.lab_controller.fqdn, lc.tree_path) for lc in distro.lab_controller_assocs])) for distro in distros]
 
     #XMLRPC method for listing distros
     @cherrypy.expose
@@ -342,7 +343,7 @@ class Distros(RPCRoot):
             distros = distros.join('lab_controller_assocs')
             distros = distros.filter(lab_controller_distro_map.c.tree_path.like('%s' % treepath))
         distros = distros.order_by(distro_table.c.date_created.desc())
-        return [(distro.name, '%s' % distro.arch, '%s' % distro.osversion, distro.variant, distro.method, distro.virt) for distro in distros]
+        return [(distro.name, '%s' % distro.arch, '%s' % distro.osversion, distro.variant, distro.virt) for distro in distros]
 
     @cherrypy.expose
     @identity.require(identity.not_anonymous())
@@ -447,29 +448,6 @@ class Distros(RPCRoot):
                         old_value=tag, new_value=None))
                 distro.tags.remove(tag)
         return removed
-
-    @cherrypy.expose
-    def pick(self, xml):
-        """
-        Based on XML passed in filter distro selection
-        """
-        distros = Distro.by_filter(xml)
-        distros = distros.add_column('tree_path').join('lab_controller_assocs')
-        distros = distros.add_column('fqdn').join(['lab_controller_assocs','lab_controller'])
-        try:
-            distro, tree_path, fqdn = distros.first()
-        except TypeError:
-            return None
-        if distro:
-            return dict(distro         = distro.name,
-                        install_name   = distro.install_name,
-                        arch           = '%s' % distro.arch,
-                        family         = '%s' % distro.osversion,
-                        variant        = distro.variant,
-                        lab_controller = fqdn,
-                        tree_path      = tree_path)
-        else:
-            return None
 
     default = index
 

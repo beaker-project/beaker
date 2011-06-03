@@ -7,7 +7,7 @@ from tg_expanding_form_widget.tg_expanding_form_widget import ExpandingForm
 from kid import Element
 from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.helpers import *
-from bkr.server.widgets import SearchBar
+from bkr.server.widgets import SearchBar, myPaginateDataGrid
 from bkr.server import search_utility
 from bkr.server.util import any
 import cherrypy
@@ -74,10 +74,12 @@ class Activities(RPCRoot):
             if 'simplesearch' in activities_return:
                 search_options['simplesearch'] = activities_return['simplesearch']
           
-        activity_grid = widgets.PaginateDataGrid(fields=[
+        activity_grid = myPaginateDataGrid(fields=[
                                   widgets.PaginateDataGrid.Column(name='user.user_name', getter=lambda x: x.user, title='User', options=dict(sortable=True)),
                                   widgets.PaginateDataGrid.Column(name='service', getter=lambda x: x.service, title='Via', options=dict(sortable=True)),
-                                  widgets.PaginateDataGrid.Column(name='created', getter=lambda x: x.created, title='Date', options=dict(sortable=True)),
+                                  widgets.PaginateDataGrid.Column(name='created',
+                                    getter=lambda x: x.created, title='Date',
+                                    options=dict(sortable=True, datetime=True)),
                                   widgets.PaginateDataGrid.Column(name='object_name', getter=lambda x: x.object_name(), title='Object', options=dict(sortable=False)),
                                   widgets.PaginateDataGrid.Column(name='field_name', getter=lambda x: x.field_name, title='Property', options=dict(sortable=True)),
                                   widgets.PaginateDataGrid.Column(name='action', getter=lambda x: x.action, title='Action', options=dict(sortable=True)),

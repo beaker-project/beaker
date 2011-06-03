@@ -21,10 +21,6 @@ bootloader --location=mbr #slurp
     --append="$kernel_options_post"
 #end if
 
-#if $getVar('rhts_server', '') != ''
-# Use text mode install
-text
-#end if
 $getVar('mode', '')
 
 $SNIPPET("network")
@@ -42,11 +38,6 @@ firewall #slurp
 #end if
 #end if
 
-#if $getVar('rhts_server', '') != ''
-# Don't Run the Setup Agent on first boot
-firstboot --disable
-#end if
-
 # System keyboard
 keyboard $getVar('keyboard', 'us')
 # System language
@@ -59,8 +50,7 @@ rootpw --iscrypted $getVar('password', $default_password_crypted)
 # SELinux configuration
 selinux --$getVar('selinux', 'enforcing')
 
-#if $getVar('rhts_server','') != '' or $getVar('skipx','') != ''
-# Do not configure the X Window System for RHTS
+#if $getVar('skipx','') != ''
 skipx
 #end if
 
@@ -75,7 +65,16 @@ $SNIPPET("RedHatEnterpriseLinux4")
 $SNIPPET("system")
 
 %packages --resolvedeps --ignoremissing
-#if $getVar('rhts_server','') == ''
+## If packages variable is set add additional packages to this install
+## packages=httpd:selinux:kernel
+#if $getVar('packages', '') != ''
+#set _packages = $getVar('packages','').split(':')
+#for $package in $_packages:
+$package
+#end for
+#else
+@development-tools
+@development-libs
 @ office
 @ dialup
 @ sound-and-video
@@ -91,17 +90,18 @@ $SNIPPET("system")
 @ compat-arch-support
 e2fsprogs
 lvm2
-#end if
-$SNIPPET("rhts_packages")
+#end if ## %packages
 
-#end if
-#end if
-%pre
+#end if ## manual
+
+#end if ## sysprofile snippet
+
+%pre --log=/dev/console
 $SNIPPET("rhts_pre")
 $SNIPPET("RedHatEnterpriseLinux4_pre")
 $SNIPPET("system_pre")
 
-%post
+%post --log=/dev/console
 $SNIPPET("rhts_post")
 $SNIPPET("RedHatEnterpriseLinux4_post")
 $SNIPPET("system_post")

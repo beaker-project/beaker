@@ -52,6 +52,20 @@ class TestSystemsGrid(SeleniumTestCase):
                 'and @title="Atom feed" and contains(@href, "tg_format=atom")]'),
                 1)
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=704082
+    def test_show_all_columns_works(self):
+        sel = self.selenium
+        sel.open('')
+        sel.click('advancedsearch')
+        sel.select('systemsearch_0_table', 'label=System/Name')
+        sel.click('customcolumns')
+        sel.click('selectall')
+        sel.submit('searchform')
+        sel.wait_for_page_to_load('30000')
+        self.assertEqual(sel.get_title(), 'Systems')
+        # check number of columns in the table
+        self.assertEqual(sel.get_xpath_count('//table[@id="widget"]//th'), 27)
+
 class TestSystemGridSorting(SeleniumTestCase):
 
     # tests in this class can safely share the same firefox session
@@ -171,13 +185,18 @@ class TestSystemsAtomFeed(unittest.TestCase):
         xpath = atom_xpath('/atom:feed/atom:entry/atom:title[text()="%s"]' % fqdn)
         return len(xpath(feed))
 
+    def system_count(self, feed):
+        xpath = atom_xpath('count(/atom:feed/atom:entry)')
+        return int(xpath(feed))
+
     def test_all_systems(self):
-        systems = [data_setup.create_system() for _ in range(3)]
+        systems = [data_setup.create_system() for _ in range(25)]
         session.flush()
         feed_url = urljoin(get_server_base(), '?' + urlencode({
                 'tg_format': 'atom', 'list_tgp_order': '-date_modified',
                 'list_tgp_limit': '0'}))
         feed = lxml.etree.parse(urlopen(feed_url)).getroot()
+        self.assert_(self.system_count(feed) >= 25, self.system_count(feed))
         for system in systems:
             self.assert_(self.feed_contains_system(feed, system.fqdn))
 

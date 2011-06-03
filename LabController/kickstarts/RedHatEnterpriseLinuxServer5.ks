@@ -23,10 +23,6 @@ bootloader --location=mbr #slurp
     --append="$kernel_options_post"
 #end if
 
-#if $getVar('rhts_server', '') != ''
-# Use text mode install
-text
-#end if
 $getVar('mode', '')
 
 $SNIPPET("network")
@@ -44,11 +40,6 @@ firewall #slurp
 #end if
 #end if
 
-#if $getVar('rhts_server', '') != ''
-# Don't Run the Setup Agent on first boot
-firstboot --disable
-#end if
-
 # System keyboard
 keyboard $getVar('keyboard', 'us')
 # System language
@@ -64,10 +55,7 @@ selinux $getVar('selinux','--enforcing')
 #if $getVar('skipx','') != ''
 skipx
 #else
-#if $getVar('rhts_server', '') != ''
-skipx
-#end if
-#if $getVar('rhts_server', '') == '' and not $getVar('arch','').startswith('s390')
+#if not $getVar('arch','').startswith('s390')
 xconfig --startxonboot
 #end if
 #end if
@@ -93,7 +81,16 @@ $SNIPPET("RedHatEnterpriseLinuxServer5")
 $SNIPPET("system")
 
 %packages --resolvedeps --ignoremissing
-#if $getVar('rhts_server', '') == ''
+## If packages variable is set add additional packages to this install
+## packages=httpd:selinux:kernel
+#if $getVar('packages', '') != ''
+#set _packages = $getVar('packages','').split(':')
+#for $package in $_packages:
+$package
+#end for
+#else
+@development-tools
+@development-libs
 @admin-tools
 @base
 @base-x
@@ -119,17 +116,18 @@ nash
 rmt
 tzdata
 xkeyboard-config
-#end if
-$SNIPPET("rhts_packages")
+#end if ## %packages
 
-#end if
-#end if
-%pre
+#end if ## manual
+
+#end if ## sysprofile snippet
+
+%pre --log=/dev/console
 $SNIPPET("rhts_pre")
 $SNIPPET("RedHatEnterpriseLinuxServer5_pre")
 $SNIPPET("system_pre")
 
-%post
+%post --log=/dev/console
 $SNIPPET("rhts_post")
 $SNIPPET("RedHatEnterpriseLinuxServer5_post")
 $SNIPPET("system_post")

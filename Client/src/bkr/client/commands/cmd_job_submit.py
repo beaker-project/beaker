@@ -87,8 +87,10 @@ class Job_Submit(BeakerCommand):
                 mystring = sys.stdin.read()
             else:
                 mystring = open(job, "r").read()
-            # Wrap in <dummy/> so that multiple jobs in the same file works
-            doc = xml.dom.minidom.parseString("<dummy>%s</dummy>" % mystring)
+            try:
+                doc = xml.dom.minidom.parseString(mystring)
+            except xml.parsers.expat.ExpatError:
+                doc = xml.dom.minidom.parseString("<dummy>%s</dummy>" % mystring)
             # Split on jobs.
             for jobxml in doc.getElementsByTagName("job"):
                 jobxmls.append(jobxml.toxml())

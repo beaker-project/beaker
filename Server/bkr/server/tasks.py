@@ -25,6 +25,7 @@ from bkr.server.widgets import myPaginateDataGrid
 from bkr.server.widgets import TasksWidget
 from bkr.server.widgets import TaskSearchForm
 from bkr.server.widgets import SearchBar
+from bkr.server.widgets import TaskActionWidget
 from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.helpers import make_link
 from bkr.server import testinfo
@@ -50,9 +51,10 @@ class Tasks(RPCRoot):
     # For XMLRPC methods in this class.
     exposed = True
 
+    task_list_action_widget = TaskActionWidget()
     task_form = TaskSearchForm()
     task_widget = TasksWidget()
-    task_dir = config.get("basepath.rpms", "/tmp")
+    task_dir = config.get("basepath.rpms", "/var/www/beaker/rpms")
 
     upload = widgets.FileField(name='task_rpm', label='Task rpm')
     form = widgets.TableForm(
@@ -84,15 +86,25 @@ class Tasks(RPCRoot):
             'install_name'
                 Distro install name. Include only tasks which are compatible 
                 with this distro.
+            'osmajor'
+                OSVersion OSMajor, like RedHatEnterpriseLinux6.  Include only
+                tasks which are compatible with this OSMajor.
+            'names'
+                Task name. Include only tasks that are named. useful when
+                combined with osmajor or install_name.
             'packages'
                 List of package names. Include only tasks which have a Run-For 
                 entry matching any of these packages.
             'types'
                 List of task types. Include only tasks which have one or more 
                 of these types.
+            'valid'
+                bool 0 or 1. Include only tasks which are valid or not.
 
-        The return value is an array of names of the matching tasks. Call 
-        :meth:`tasks.to_dict` to fetch metadata for a particular task.
+        The return value is an array of dicts, which are name and arches. 
+          name is the name of the matching tasks.
+          arches is an array of arches which this task does not apply for.
+        Call :meth:`tasks.to_dict` to fetch metadata for a particular task.
         """
         if 'install_name' in filter and filter['install_name']:
             try:
@@ -100,8 +112,29 @@ class Tasks(RPCRoot):
             except InvalidRequestError, err:
                 raise BX(_('Invalid Distro: %s ' % filter['install_name']))   
             tasks = distro.tasks()
+        elif 'osmajor' in filter and filter['osmajor']:
+            try:
+                osmajor = OSMajor.by_name(filter['osmajor'])
+            except InvalidRequestError, err:
+                raise BX(_('Invalid OSMajor: %s' % filter['osmajor']))
+            tasks = osmajor.tasks()
         else:
             tasks = Task.query()
+
+        # Filter by valid task if requested
+        if 'valid' in filter:
+            tasks = tasks.filter(Task.valid==bool(filter['valid']))
+
+        # Filter by name if specified
+        # /distribution/install, /distribution/reservesys
+        if 'names' in filter and filter['names']:
+            # if not a list, make it into a list.
+            if isinstance(filter['names'], str):
+                filter['names'] = [filter['names']]
+            or_names = []
+            for tname in filter['names']:
+                or_names.append(Task.name==tname)
+            tasks = tasks.filter(or_(*or_names))
 
         # Filter by packages if specified
         # apache, kernel, mysql, etc..
@@ -137,7 +170,7 @@ class Tasks(RPCRoot):
             tasks = tasks.filter(or_(*or_types))
 
         # Return all task names
-        return [task.name for task in tasks]
+        return [dict(name = task.name, arches = [str(arch.arch) for arch in task.excluded_arch]) for task in tasks]
 
     @cherrypy.expose
     def upload(self, task_rpm_name, task_rpm_data):
@@ -151,15 +184,20 @@ class Tasks(RPCRoot):
         :type task_rpm_data: XML-RPC binary
         """
         rpm_file = "%s/%s" % (self.task_dir, task_rpm_name)
-        FH = open(rpm_file, "w")
-        FH.write(task_rpm_data.data)
-        FH.close()
-        try:
-            task = self.process_taskinfo(self.read_taskinfo(rpm_file))
-        except ValueError, err:
-            session.rollback()
-            return "Failed to import because of %s" % str(err)
-        return "Success"
+        if os.path.exists("%s" % rpm_file):
+            return "Failed to import because we already have %s" % task_rpm_name
+        else:
+            FH = open(rpm_file, "w")
+            FH.write(task_rpm_data.data)
+            FH.close()
+            try:
+                task = self.process_taskinfo(self.read_taskinfo(rpm_file))
+            except (ValueError,ParserError,ParserWarning,rpm.error), err:
+                # Delete invalid rpm
+                os.unlink(rpm_file)
+                session.rollback()
+                return "Failed to import because of %s" % str(err)
+            return "Success"
 
     @expose()
     def save(self, task_rpm, *args, **kw):
@@ -168,20 +206,26 @@ class Tasks(RPCRoot):
         """
         rpm_file = "%s/%s" % (self.task_dir, task_rpm.filename)
 
-        rpm = task_rpm.file.read()
-        FH = open(rpm_file, "w")
-        FH.write(rpm)
-        FH.close()
-
-        try:
-            task = self.process_taskinfo(self.read_taskinfo(rpm_file))
-        except (ValueError,ParserError,ParserWarning), err:
-            session.rollback()
-            flash(_(u'Failed to import because of %s' % err ))
+        if os.path.exists("%s" % rpm_file):
+            flash(_(u'Failed to import because we already have %s' % 
+                                                     task_rpm.filename ))
             redirect(url("./new"))
+        else:
+            myrpm = task_rpm.file.read()
+            FH = open(rpm_file, "w")
+            FH.write(myrpm)
+            FH.close()
+            try:
+                task = self.process_taskinfo(self.read_taskinfo(rpm_file))
+            except (ValueError,ParserError,ParserWarning,rpm.error), err:
+                # Delete invalid rpm
+                os.unlink(rpm_file)
+                session.rollback()
+                flash(_(u'Failed to import because of %s' % err ))
+                redirect(url("./new"))
 
-        flash(_(u"%s Added/Updated at id:%s" % (task.name,task.id)))
-        redirect(".")
+            flash(_(u"%s Added/Updated at id:%s" % (task.name,task.id)))
+            redirect(".")
 
     @expose(template='bkr.server.templates.task_search')
     @validate(form=task_form)
@@ -260,10 +304,41 @@ class Tasks(RPCRoot):
                     hidden = hidden,
                     task_widget = self.task_widget)
 
+    @identity.require(identity.in_group('admin'))
+    @expose()
+    def disable_from_ui(self, t_id, *args, **kw):
+        to_return = dict( t_id = t_id )
+        try:
+            self._disable(t_id)
+            to_return['success'] = True
+        except Exception, e:
+            log.exception('Unable to disable task:%s' % t_id)
+            to_return['success'] = False
+            to_return['err_msg'] = unicode(e)
+            session.rollback()
+        return to_return
+
+    def _disable(self, t_id, *args, **kw):
+        """
+        disable task
+         task.valid=False
+         remove task rpms from filesystem
+        """
+        task = Task.by_id(t_id)
+        return task.disable()
+
     @expose(template='bkr.server.templates.grid')
     @paginate('list',default_order='name', limit=30)
     def index(self, *args, **kw):
-        tasks = Task.query()
+        tasks = session.query(Task)
+        # FIXME What we really want is some default search options
+        # For now we won't show deleted/invalid tasks in the grid
+        # but for data integrity reasons we will allow you to view
+        # the task directly.  Ideally we would have a default search
+        # option of valid=True which the user could change to false
+        # to see all "deleted" tasks
+        tasks = tasks.filter(Task.valid==True)
+
         tasks_return = self._tasks(tasks,**kw)
         searchvalue = None
         search_options = {}
@@ -279,11 +354,13 @@ class Tasks(RPCRoot):
 		     widgets.PaginateDataGrid.Column(name='name', getter=lambda x: make_link("./%s" % x.id, x.name), title='Name', options=dict(sortable=True)),
 		     widgets.PaginateDataGrid.Column(name='description', getter=lambda x:x.description, title='Description', options=dict(sortable=True)),
 		     widgets.PaginateDataGrid.Column(name='version', getter=lambda x:x.version, title='Version', options=dict(sortable=True)),
+                     widgets.PaginateDataGrid.Column(name='action', getter=lambda x: self.task_list_action_widget.display(task=x, type_='tasklist', title='Action', options=dict(soratble=False))),
                     ])
 
         search_bar = SearchBar(name='tasksearch',
                            label=_(u'Task Search'),
                            table = search_utility.Task.search.create_search_table(),
+                           complete_data=search_utility.Task.search.create_complete_search_table(),
                            search_controller=url("/get_search_options_task"),
                            )
         return dict(title="Task Library",
@@ -292,6 +369,7 @@ class Tasks(RPCRoot):
                     list=tasks,
                     search_bar=search_bar,
                     action='.',
+                    action_widget = self.task_list_action_widget,  #Hack,inserts JS for us.
                     options=search_options,
                     searchvalue=searchvalue)
 
@@ -329,9 +407,9 @@ class Tasks(RPCRoot):
         tinfo = testinfo.parse_string(raw_taskinfo['desc'])
 
         task = Task.lazy_create(name=tinfo.test_name)
-        # RPM is the same version we have. don't process
-        if task.rpm == raw_taskinfo['hdr']['rpm']:
-            return task
+        # RPM is the same version we have. don't process		
+        if task.version == raw_taskinfo['hdr']['ver']:
+            raise BX(_("Failed to import,  %s is the same version we already have" % task.version))
         # Keep N-1 versions of task rpms.  This allows currently running tasks to finish.
         if task.oldrpm and os.path.exists("%s/%s" % (self.task_dir, task.oldrpm)):
             try:
@@ -386,6 +464,7 @@ class Tasks(RPCRoot):
         for need in tinfo.needs:
             task.needs.append(TaskPropertyNeeded(property=need))
         task.license = tinfo.license
+        task.valid = True
 
         return task
 
@@ -402,7 +481,9 @@ class Tasks(RPCRoot):
         return Task.by_name(name).to_dict()
 
     def read_taskinfo(self, rpm_file):
-        taskinfo = {}
+        taskinfo = dict(desc = '',
+                        hdr  = '',
+                       )
         taskinfo['hdr'] = self.get_rpm_info(rpm_file)
         taskinfo_file = None
 	for file in taskinfo['hdr']['files']:

@@ -27,11 +27,9 @@ import shutil
 import glob
 
 sys.path.append('.')
-sys.path.append("/usr/lib/anaconda")
+sys.path.append("/usr/share/smolt/client")
 import smolt
-import network
 from disks import Disks
-import isys
 
 USAGE_TEXT = """
 Usage:  push-inventory.py [-d] [[-h <HOSTNAME>] [-S server]]
@@ -259,6 +257,11 @@ def read_inventory():
     data['MODEL'] = "%s" % profile.host.systemModel
     data['FORMFACTOR'] = "%s" % profile.host.formfactor
 
+    if data['CPUMODELNUMBER'] == '':
+        data['CPUMODELNUMBER'] = 0
+    if data['CPUFAMILY'] == '':
+        data['CPUFAMILY'] = 0
+
     try:
         for cpuflag in cpu_info['other'].split(" "):
             data['CPUFLAGS'].append(cpuflag)
@@ -305,15 +308,13 @@ def read_inventory():
     data['NR_DISKS'] = disks.nr_disks
 
     # finding out eth and ib interfaces...
-    eth_pat = re.compile ('^eth\d+$')
-    ib_pat  = re.compile ('^ib\d+$')
-    net = network.Network()
-    for intname in net.available().keys():
-        if isys.getLinkStatus(intname):
-            if eth_pat.match(intname):
-               data['NR_ETH'] += 1
-            elif ib_pat.match(intname):
-               data['NR_IB'] += 1
+    eth_pat = re.compile ('^ *eth\d+:')
+    ib_pat  = re.compile ('^ *ib\d+:')
+    for line in open("/proc/net/dev", "r"):
+        if eth_pat.match(line):
+           data['NR_ETH'] += 1
+        elif ib_pat.match(line):
+           data['NR_IB'] += 1
 
     # checking for whether or not the machine is hvm-enabled.
     caps = ""

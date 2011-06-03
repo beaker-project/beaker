@@ -98,68 +98,54 @@ def update_repos(distro):
         return distro
 
     repo_path_re = re.compile(r'(%s.*)/repodata' % paths['path'])
-    tree_repos = None
+    tree_repos = []
 
+    # If rcm is defined we can ask what repos are defined for this tree
     if rcm is not None:
         distro_path = paths['path']
+        prepos = []
         while distro_path != '':
             distro_path = '/'.join(distro_path.split('/')[1:])
             if not distro_path:
                 break
-            prepos = None
             try:
                 prepos = rcm.tree_repos(distro_path)
                 break
             except xmlrpclib.ResponseError:
                 pass
-        if prepos:
-            repos = []
-            for prepo in prepos:
-                repo = os.path.join(paths['tree_path'],prepos[prepo],"repodata")
-                if os.path.exists(repo) and repo_path_re.search(repo):
-                    repos.append('beaker-%s,%s' % (prepo, repo_path_re.search(repo).group(1)))
-            tree_repos = ':'.join(repos)
-
-    # Catch Fedora Repos
-    repo = os.path.join(paths['tree_path'],"repodata")
-    if not tree_repos and os.path.exists(repo): 
-        if repo_path_re.search(repo):
-            tree_repos = repo_path_re.search(repo).group(1)
-
-    if not tree_repos:
-        # Catch RHEL5 Repos
-        try:
-            repos = glob.glob(os.path.join(paths['tree_path'],"*/repodata"))
-            if repos:
-                for i, repo in enumerate(repos):
-                    if repo_path_re.search(repos[i]):
-                        repos[i] = repo_path_re.search(repos[i]).group(1)
-        except TypeError:
-            return distro
-        tree_repos = string.join(repos,':')
-
-    if not tree_repos:
-        # Look for RHEL4/3 Repos
-        arch_variant_re = re.compile(r'[^-]+-([^-/]+)/*$')
-        if arch_variant_re.search(paths['tree_path']):
-            variant = arch_variant_re.search(paths['tree_path']).group(1)
-            repo = os.path.join(paths['tree_path'], "../repo-%s/repodata" % variant)
-            if os.path.exists(repo):
-                if repo_path_re.search(repo):
-                    tree_repos = repo_path_re.search(repo).group(1)
+        for prepo in prepos:
+            repo = os.path.join(paths['tree_path'],prepos[prepo],"repodata")
+            if os.path.exists(repo) and repo_path_re.search(repo):
+                tree_repos.append('beaker-%s,%s' % (
+                                         prepo, 
+                                         repo_path_re.search(repo).group(1),
+                                                   )
+                                 )
+    # rcm is not avaialble, fall back to glob...
+    else:
         variant_arch_re = re.compile(r'([^/]+)/([^/]+)/tree$')
         if variant_arch_re.search(paths['tree_path']):
             variant = variant_arch_re.search(paths['tree_path']).group(1)
-            arch = variant_arch_re.search(paths['tree_path']).group(2)
-            repo = os.path.join(paths['tree_path'], "../repo-%s-%s/repodata" % (variant,arch))
-            if os.path.exists(repo):
-                if repo_path_re.search(repo):
-                    tree_repos = repo_path_re.search(repo).group(1)
+        else:
+            variant = ''
+        tree_repos = ['beaker-%s,%s' % 
+                             (os.path.basename(os.path.dirname(repo)),
+                              repo_path_re.search(repo).group(1),
+                             ) for repo in \
+                     glob.glob(os.path.join(paths['tree_path'],
+                                   "*/repodata")
+                              ) + \
+                     glob.glob(os.path.join(paths['tree_path'], 
+                                   "../repo-*%s*/repodata" % variant)
+                              ) + \
+                     glob.glob(os.path.join(paths['tree_path'], 
+                                   "../debug*/repodata")
+                              )
+                     ]
 
-    if not tree_repos:
-        return distro
-    distro['ks_meta']['tree_repos'] = tree_repos
-    cobbler.modify_distro(distro['id'],'ksmeta',distro['ks_meta'],token)
+    if tree_repos:
+        distro['ks_meta']['tree_repos'] = ':'.join(tree_repos)
+        cobbler.modify_distro(distro['id'],'ksmeta',distro['ks_meta'],token)
     return distro
 
 def update_comment(distro):
@@ -169,44 +155,6 @@ def update_comment(distro):
         return distro
     family = ""
     update = 0
-    data = glob.glob(os.path.join(paths['package_path'], "*release-*"))
-    data2 = []
-    for x in data:
-        b = os.path.basename(x)
-        if b.find("fedora") != -1 or \
-           b.find("redhat") != -1 or \
-           b.find("centos") != -1:
-            data2.append(x)
-    if not data2:
-        return distro
-    filename = data2[0]
-    cpio_object = tempfile.TemporaryFile()
-    try:
-        rpm2cpio(filename,cpio_object)
-        cpio_object.seek(0)
-        cpio = cpioarchive.CpioArchive(fileobj=cpio_object)
-        for entry in cpio:
-            if entry.name == './etc/fedora-release':
-                release = entry.read().split('\n')[0]
-                releaseregex = re.compile(r'(.*)\srelease\s(\d+).(\d*)')
-                if releaseregex.search(release):
-                    family = "%s%s" % (releaseregex.search(release).group(1),
-                                       releaseregex.search(release).group(2))
-                    if releaseregex.search(release).group(3):
-                        update = releaseregex.search(release).group(3)
-                    else:
-                        update = 0
-            if entry.name == './etc/redhat-release':
-                release = entry.read().split('\n')[0]
-                updateregex = re.compile(r'Update\s(\d+)')
-                releaseregex = re.compile(r'release\s\d+.(\d+)')
-                if updateregex.search(release):
-                    update = updateregex.search(release).group(1)
-                if releaseregex.search(release):
-                    update = releaseregex.search(release).group(1)
-        cpio_object.close()
-    except rpmUtils.RpmUtilsError, e:
-        print "Warning, %s" % e
     if os.path.exists("%s/../../.composeinfo" % paths['tree_path']):
         parser = ConfigParser.ConfigParser()
         parser.read("%s/../../.composeinfo" % paths['tree_path'])
@@ -217,6 +165,13 @@ def update_comment(distro):
     if os.path.exists("%s/.treeinfo" % paths['tree_path']):
         parser = ConfigParser.ConfigParser()
         parser.read("%s/.treeinfo" % paths['tree_path'])
+        try:
+            distro['comment'] = "%s\nlabel=%s" % (distro['comment'],
+                                                  parser.get('general','label'))
+        except ConfigParser.NoSectionError:
+            print "missing section general in %s/.treeinfo" % paths['tree_path']
+        except ConfigParser.NoOptionError:
+            print "missing option label in %s/.treeinfo" % paths['tree_path']
         try:
             family  = parser.get('general','family').replace(" ","")
         except ConfigParser.NoSectionError:
@@ -246,6 +201,46 @@ def update_comment(distro):
         if familyupdate.find('.') != -1:
             update = familyupdate.split(".")[1].replace(" ","")
         discinfo.close()
+    else:
+        data = glob.glob(os.path.join(paths['package_path'], "*release-*"))
+        data2 = []
+        for x in data:
+            b = os.path.basename(x)
+            if b.find("fedora") != -1 or \
+               b.find("redhat") != -1 or \
+               b.find("centos") != -1:
+                data2.append(x)
+        if data2:
+            filename = data2[0]
+            cpio_object = tempfile.TemporaryFile()
+            try:
+                rpm2cpio(filename,cpio_object)
+                cpio_object.seek(0)
+                cpio = cpioarchive.CpioArchive(fileobj=cpio_object)
+                for entry in cpio:
+                    if entry.name == './etc/fedora-release':
+                        release = entry.read().split('\n')[0]
+                        releaseregex = re.compile(r'(.*)\srelease\s(\d+).(\d*)')
+                        if releaseregex.search(release):
+                            family = "%s%s" % (
+                                           releaseregex.search(release).group(1),
+                                           releaseregex.search(release).group(2)
+                                              )
+                            if releaseregex.search(release).group(3):
+                                update = releaseregex.search(release).group(3)
+                            else:
+                                update = 0
+                    if entry.name == './etc/redhat-release':
+                        release = entry.read().split('\n')[0]
+                        updateregex = re.compile(r'Update\s(\d+)')
+                        releaseregex = re.compile(r'release\s\d+.(\d+)')
+                        if updateregex.search(release):
+                            update = updateregex.search(release).group(1)
+                        if releaseregex.search(release):
+                            update = releaseregex.search(release).group(1)
+                cpio_object.close()
+            except rpmUtils.RpmUtilsError, e:
+                print "Warning, %s" % e
 
     distro['comment'] = "%s\nfamily=%s.%s" % (distro['comment'], family, update)
     cobbler.modify_distro(distro['id'],'comment',distro['comment'],token)

@@ -1,9 +1,76 @@
 #!/usr/bin/python
-from bkr.server.model import Numa
+from bkr.server.model import Numa, User
 import bkr.server.test.selenium
 from bkr.server.test import data_setup
 import unittest, time, re, os, datetime
 from turbogears.database import session
+
+class SearchColumns(bkr.server.test.selenium.SeleniumTestCase):
+
+    @classmethod
+    def setUpClass(cls): 
+        cls.group = data_setup.create_group()
+        cls.system_with_group = data_setup.create_system(shared=True)
+        cls.system_with_group.groups.append(cls.group)
+        cls.system_with_numa = data_setup.create_system(shared=True)
+        cls.system_with_numa.numa = Numa(nodes=2)
+        cls.system_with_serial = data_setup.create_system()
+        cls.system_with_serial.serial = u'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+        session.flush()
+        cls.selenium = cls.get_selenium()
+        cls.selenium.start()
+
+    def test_group_column(self):
+        sel = self.selenium
+        sel.open('')
+        sel.wait_for_page_to_load('3000')
+        sel.click("advancedsearch")
+        sel.select("systemsearch_0_table", "label=System/Group")
+        sel.select("systemsearch_0_operation", "label=is not")
+        sel.click("customcolumns")
+        sel.click("selectnone")
+        sel.click("systemsearch_column_System/Group")
+        sel.click("Search")
+        sel.wait_for_page_to_load("3000")
+        self.assertEqual(sel.get_title(), 'Systems')
+        self.failUnless(sel.is_text_present("%s" % self.system_with_group.groups[0].group_name))
+
+    def test_numa_column(self):
+        sel = self.selenium
+        sel.open('')
+        sel.wait_for_page_to_load('3000')
+        sel.click("advancedsearch")
+        sel.select("systemsearch_0_table", "label=System/NumaNodes")
+        sel.select("systemsearch_0_operation", "label=is not")
+        sel.click("customcolumns")
+        sel.click("selectnone")
+        sel.click("systemsearch_column_System/NumaNodes")
+        sel.click("Search")
+        sel.wait_for_page_to_load("3000")
+        self.assertEqual(sel.get_title(), 'Systems')
+        self.failUnless(sel.is_text_present(str(self.system_with_numa.numa)))
+
+    def test_serial_number_column(self):
+        sel = self.selenium
+        sel.open('')
+        sel.wait_for_page_to_load('30000')
+        sel.click('advancedsearch')
+        sel.select('systemsearch_0_table', 'label=System/SerialNumber')
+        sel.select('systemsearch_0_operation', 'label=is')
+        sel.type('systemsearch_0_value', self.system_with_serial.serial)
+        sel.click('customcolumns')
+        sel.click('selectnone')
+        sel.click('systemsearch_column_System/SerialNumber')
+        sel.click('Search')
+        sel.wait_for_page_to_load('30000')
+        self.assertEqual(sel.get_title(), 'Systems')
+        self.failUnless(sel.is_text_present(self.system_with_serial.serial))
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.selenium.stop()
+
+
 
 class Search(bkr.server.test.selenium.SeleniumTestCase):
 
@@ -16,6 +83,7 @@ class Search(bkr.server.test.selenium.SeleniumTestCase):
                                     'status' : u'Automated',
                                     'owner' : data_setup.create_user(),}
         cls.system_one = data_setup.create_system(**cls.system_one_details)
+        cls.system_one.loaned = data_setup.create_user()
         cls.system_one.numa = Numa(nodes=2)
 
         cls.system_two_details = { 'fqdn' : u'a2',
@@ -41,6 +109,22 @@ class Search(bkr.server.test.selenium.SeleniumTestCase):
 
     def setUp(self):
         self.verificationErrors = []
+
+    def test_loaned_not_free(self):
+        sel = self.selenium
+        self.login()
+        sel.open('free')
+        sel.wait_for_page_to_load("30000")
+        self.assertEquals(sel.get_title(), 'Systems')
+        self.failUnless(not sel.is_text_present("%s" % self.system_one.fqdn))
+
+        self.system_one.loaned = User.by_user_name(self.BEAKER_LOGIN_USER)
+        session.flush()
+        sel.open('free')
+        sel.wait_for_page_to_load("30000")
+        self.assertEquals(sel.get_title(), 'Systems')
+        self.failUnless(sel.is_text_present("%s" % self.system_one.fqdn))
+
 
     def test_system_search(self):
         sel = self.selenium
@@ -84,7 +168,7 @@ class Search(bkr.server.test.selenium.SeleniumTestCase):
         yesterday = yesterday_date.isoformat()
         sel.select("systemsearch_0_table", "label=System/Added")
         sel.select("systemsearch_0_operation", "label=is")
-        sel.type("systemsearch_0_value", "%s" % datetime.date.today().isoformat() )
+        sel.type("systemsearch_0_value", "%s" % datetime.datetime.utcnow().date().isoformat())
         sel.click("Search")
         sel.wait_for_page_to_load("30000")
         try: self.failUnless(sel.is_text_present("%s" % self.system_one.fqdn))

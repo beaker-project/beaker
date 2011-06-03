@@ -83,7 +83,7 @@ class Jobs(RPCRoot):
     upload = widgets.FileField(name='filexml', label='Job XML')
     hidden_id = widgets.HiddenField(name='id')
     confirm = widgets.Label(name='confirm', default="Are you sure you want to cancel?")
-    message = widgets.TextArea(name='msg', label=_(u'Reason?'), help=_(u'Optional'))
+    message = widgets.TextArea(name='msg', label=_(u'Reason?'), help_text=_(u'Optional'))
 
     form = widgets.TableForm(
         'jobs',
@@ -144,6 +144,7 @@ class Jobs(RPCRoot):
             jobs_to_try_to_del.append(job)
         return Job.delete_jobs(jobs=jobs_to_try_to_del, **kw)
 
+
     @cherrypy.expose
     def list(self, tags, days_complete_for, family, product, **kw):
         """
@@ -155,12 +156,12 @@ class Jobs(RPCRoot):
         :param family: limit to recipe sets which used distros with this family name
         :type family: string
 
-        Returns a two-element array. The first element is an array of recipe 
-        set IDs of the form ``'J:123'``, suitable to be passed to the 
+        Returns a two-element array. The first element is an array of JobIDs 
+        of the form ``'J:123'``, suitable to be passed to the 
         :meth:`jobs.delete_jobs` method. The second element is a human-readable 
         count of the number of Jobs matched.
         """
-        jobs = Job.find_jobs(tag=tags, complete_days=days_complete_for, family=family, product=product, **kw)
+        jobs = Job.find_jobs(tag=tags, complete_days=days_complete_for, family=family, product=product, **kw).all()
         return_value = [j.t_id for j in jobs]
         return return_value,'Count: %s' % len(return_value)
 
@@ -169,8 +170,7 @@ class Jobs(RPCRoot):
     @identity.require(identity.not_anonymous())
     def delete_jobs(self, jobs=None, tag=None, complete_days=None, family=None, dryrun=False, product=None):
         """
-        delete_jobs will mark the job to be deleted if user is non admin,
-        otherwise will perform the actual delete.
+        delete_jobs will mark the job to be deleted
 
         To select jobs by id, pass an array for the *jobs* argument. Elements
         of the array must be strings of the form ``'J:123'``.
@@ -184,13 +184,26 @@ class Jobs(RPCRoot):
         At present, only non admins can call this feature. Admin functionality
         will be added to when we are using a message bus.
         """
-        if not identity.current.user.is_admin():
-            deleted_jobs = self._delete_job(jobs, tag=tag, complete_days=complete_days, family=family, product=product)
-            if dryrun:
-                session.rollback()
-            return 'Jobs deleted: %s' % [j.t_id for j in deleted_jobs]
+        if jobs: #Turn them into job objects
+            if not isinstance(jobs,list):
+                jobs = [jobs]
+            jobs_to_try_to_del = []
+            for j_id in jobs:
+                job = TaskBase.get_by_t_id(j_id)
+                if not isinstance(job,Job):
+                    raise BeakerException('Incorrect task type passed %s' % j_id )
+                jobs_to_try_to_del.append(job)
+            delete_jobs_kw = dict(jobs=jobs_to_try_to_del)
         else:
-            return 'This feature is currently not implemented for admins'
+            delete_jobs_kw = dict(query=Job.find_jobs(tag=tag, complete_days=complete_days, family=family, product=product))
+
+        deleted_jobs = Job.delete_jobs(**delete_jobs_kw)
+        
+        msg = 'Jobs deleted'
+        if dryrun:
+            session.rollback()
+            msg = 'Dryrun only. %s' % (msg)
+        return '%s: %s' % (msg, [j.t_id for j in deleted_jobs])
 
     # XMLRPC method
     @cherrypy.expose
@@ -361,7 +374,7 @@ class Jobs(RPCRoot):
         job_retention = xmljob.get_xml_attr('retention_tag',unicode,None)
         job_product = xmljob.get_xml_attr('product',unicode,None)
         tag, product = self._process_job_tag_product(retention_tag=job_retention, product=job_product)
-        job = Job(whiteboard='%s' % xmljob.whiteboard, ttasks=0, owner=user)
+        job = Job(whiteboard=unicode(xmljob.whiteboard), ttasks=0, owner=user)
         job.product = product
         job.retention_tag = tag
 
@@ -456,7 +469,7 @@ class Jobs(RPCRoot):
         invalid_tasks = []
         for xmltask in xmlrecipe.iter_tasks():
             try:
-                Task.by_name(xmltask.name)
+                Task.by_name(xmltask.name, valid=1)
             except InvalidRequestError, e:
                 invalid_tasks.append(xmltask.name)
             else:
@@ -566,8 +579,8 @@ class Jobs(RPCRoot):
 		    widgets.PaginateDataGrid.Column(name='whiteboard',
                 getter=lambda x:x.whiteboard, title='Whiteboard',
                 options=dict(sortable=True)),
-		    widgets.PaginateDataGrid.Column(name='owner.email_address',
-                getter=lambda x:x.owner.email_address, title='Owner',
+		    widgets.PaginateDataGrid.Column(name='owner',
+                getter=lambda x:x.owner.email_link, title='Owner',
                 options=dict(sortable=True)),
             widgets.PaginateDataGrid.Column(name='progress',
                 getter=lambda x: x.progress_bar, title='Progress',

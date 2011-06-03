@@ -1,0 +1,35 @@
+Make system.owner_id not NULLable
+---------------------------------
+
+First verify that there are no systems without an owner:
+
+    SELECT * FROM system WHERE owner_id IS NULL;
+
+If there are any, assign them to an owner before proceeding. For example, to 
+assign all unowned systems to the admin user:
+
+    UPDATE system
+    SET owner_id = (SELECT user_id FROM tg_user WHERE user_name = 'admin')
+    WHERE owner_id IS NULL;
+
+Make the system.owner_id column not NULLable:
+
+    ALTER TABLE system MODIFY owner_id INT NOT NULL;
+
+To roll back:
+
+    ALTER TABLE system MODIFY owner_id INT NULL;
+
+
+This is needed for the job delete update
+-----------------------------------------
+
+    ALTER TABLE retention_tag ADD COLUMN(`expire_in_days` int default 0);
+    UPDATE retention_tag SET expire_in_days = 30 WHERE id = (SELECT id FROM beaker_tag where tag='scratch');
+    UPDATE retention_tag SET expire_in_days = 60 WHERE id = (SELECT id FROM beaker_tag where tag='60days');
+    UPDATE retention_tag SET expire_in_days = 120 WHERE id = (SELECT id FROM beaker_tag where tag='120days');
+
+
+if you want to roll back:
+    ALTER TABLE retention_tag DROP expire_in_days;
+

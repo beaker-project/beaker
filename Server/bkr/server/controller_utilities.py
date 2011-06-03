@@ -67,14 +67,12 @@ class SystemTab:
 class _SystemSaveFormHandler:
 
     @classmethod
-    def status_id_change_handler(cls,current_val,new_val,**kw): 
+    def status_change_handler(cls,current_val,new_val,**kw): 
         bad_status = ['broken','removed']
         good_status = ['automated','manual']
-        new_status = SystemStatus.by_id(new_val)
-        if new_status.status.lower() in good_status: 
+        if new_val.status.lower() in good_status: 
             if current_val:
-                old_status = SystemStatus.by_id(current_val)
-                if old_status.status.lower() in bad_status:
+                if current_val.status.lower() in bad_status:
                     kw['status_reason'] = None  #remove the status notes
         return kw 
 
@@ -176,16 +174,28 @@ class Utility:
         return 'power.power_type.name'
 
     @classmethod
+    def system_serialnumber_name(cls):
+        return 'serial'
+
+    @classmethod
     def get_attr(cls,c):        
         return lambda x:getattr(cls.get_correct_system_column(x),c.lower()) 
 
     @classmethod
+    def system_group_getter(cls):
+        return lambda x: ' '.join([group.group_name for group in cls.get_correct_system_column(x).groups])
+
+    @classmethod
+    def system_numanodes_getter(cls):
+        return lambda x: getattr(cls.get_correct_system_column(x).numa, 'nodes', 0)
+
+    @classmethod
     def system_added_getter(cls):
-        return lambda x: x.date_added
+        return lambda x: cls.get_correct_system_column(x).date_added
 
     @classmethod
     def system_loanedto_getter(cls):
-        return lambda x: x.loaned
+        return lambda x: cls.get_correct_system_column(x).loaned
           
     @classmethod
     def system_powertype_getter(cls):
@@ -205,8 +215,16 @@ class Utility:
         return lambda x: make_link("/view/%s" % cls.get_correct_system_column(x).fqdn, cls.get_correct_system_column(x).fqdn)
 
     @classmethod
+    def system_serialnumber_getter(cls):
+        return lambda x: cls.get_correct_system_column(x).serial
+
+    @classmethod
     def get_attr_other(cls,index):
         return lambda x: x[index]
+
+    @classmethod
+    def system_added_options(cls):
+        return dict(datetime=True)
 
     @classmethod 
     def custom_systems_grid(cls,systems,others=None):
@@ -215,12 +233,14 @@ class Utility:
             options = {}
             lower_column = column.lower()
             lower_table = table.lower()
-
             name_function_name = '%s_%s_name' % (lower_table, lower_column)
             custom_name = getattr(Utility,name_function_name,None)
 
             getter_function_name = '%s_%s_getter' % (table.lower(), column.lower())
             custom_getter = getattr(Utility, getter_function_name,None)
+
+            options_function_name = '%s_%s_options' % (table.lower(), column.lower())
+            custom_options = getattr(Utility, options_function_name, None)
 
             if custom_name:
                 lower_column = custom_name()
@@ -243,7 +263,10 @@ class Utility:
             else:
                 options['sortable'] = False 
                 name_string = '%s.%s' % (lower_table,lower_column)
-         
+
+            if custom_options:
+                options.update(custom_options())
+
             return name_string,title_string,options,my_getter
 
         fields = []

@@ -200,7 +200,8 @@ mail.provider = 'smtp'
 mail.smtp.server = '127.0.0.1:19999'
 
 beaker_email='$SUBMITTER'
-
+beaker.reliable_distro_tag = 'RELEASED'
+beaker.motd = '/etc/beaker/motd.txt'
 
 # Authentication
 
@@ -241,8 +242,6 @@ tg.strict_parameters = True
 # (Note: This will be overridden by the use_x_forwarded_host option
 # if it is set to True and the proxy adds the header correctly.
 # base_url_filter.base_url = "http://www.example.com"
-
-tg.include_widgets = ['turbogears.mochikit']
 
 [/static]
 static_filter.on = True
@@ -288,6 +287,9 @@ handlers=['debug_out']
 [[[access]]]
 level='INFO'
 handlers=['access_out', 'error_out']
+__EOF__
+    cat << __EOF__ > /etc/beaker/motd.txt
+<span>Integration tests are running against this server</span>
 __EOF__
 }
 
@@ -355,7 +357,6 @@ function LabController()
      perl -pi -e "s|^anamon_enabled: 0|anamon_enabled: 1|g" /etc/cobbler/settings
      perl -pi -e "s|^anamon_enabled: 0|anamon_enabled: 1|g" /etc/cobbler/settings
      perl -pi -e "s|^redhat_management_server: .*|redhat_management_server: \"$SERVER_URL\"|g" /etc/cobbler/settings
-    echo "rcm: \"http://rcm-xmlrpc.build.bos.redhat.com/rcm\"" >> /etc/cobbler/settings
     #FIXME edit /etc/cobbler/modules.conf
     # enable testing auth module
     perl -pi -e "s|^module = authn_denyall|module = authn_testing|g" /etc/cobbler/modules.conf
@@ -379,61 +380,6 @@ function LabController()
     service beaker-proxy start
     service beaker-watchdog start
     service beaker-transfer start
-    # Add some distros
-    # NFS format HOSTNAME:DISTRONAME:NFSPATH
-    if [ -z "$NFSDISTROS" ]; then
-        echo "Missing NFS Distros to test with" | tee -a $OUTPUTFILE
-        report_result $TEST Warn
-        exit 1
-    fi
-    ln -s /fakenet /var/www/html/fakenet
-    for distro in $NFSDISTROS; do
-        NFSSERVER=$(echo $distro| awk -F: '{print $1}')
-        DISTRONAME=$(echo $distro| awk -F: '{print $2}')
-        NFSPATH=$(echo $distro| awk -F: '{print $3}')
-        NFSDIR=$(dirname $NFSPATH)
-        mkdir -p /fakenet/${NFSSERVER}${NFSDIR}
-        mount ${NFSSERVER}:${NFSDIR} /fakenet/${NFSSERVER}${NFSDIR}
-        result="FAIL"
-        echo cobbler import --path=/fakenet/${NFSSERVER}${NFSPATH} \
-                       --name=${DISTRONAME}_nfs \
-                       --available-as=nfs://${NFSSERVER}:${NFSPATH}
-        cobbler import --path=/fakenet/${NFSSERVER}${NFSPATH} \
-                       --name=${DISTRONAME}_nfs \
-                       --available-as=nfs://${NFSSERVER}:${NFSPATH}
-        score=$?
-        if [ "$score" -eq "0" ]; then
-            result="PASS"
-        fi
-        report_result $TEST/ADD_DISTRO/${DISTRONAME}_NFS $result $score
-    done
-    # Import Rawhide
-    if [ -n "$RAWHIDE_NFS" ]; then
-        NFSSERVER=$(echo $RAWHIDE_NFS| awk -F: '{print $1}')
-        NFSDIR=$(echo $RAWHIDE_NFS| awk -F: '{print $2}')
-        mkdir -p /fakenet/${NFSSERVER}${NFSDIR}
-        mount ${NFSSERVER}:${NFSDIR} /fakenet/${NFSSERVER}${NFSDIR}
-        for distro in $(find /fakenet/${NFSSERVER}${NFSDIR} -maxdepth 1 -name rawhide\* -type d); do 
-            DISTRO=$(basename $distro)
-            DISTRONAME=Fedora-$(basename $distro)
-            result="FAIL"
-            echo cobbler import \
-                           --path=/fakenet/${NFSSERVER}${NFSDIR}/${DISTRO} \
-                           --name=${DISTRONAME}_nfs \
-                           --available-as=nfs://${NFSSERVER}:${NFSDIR}/${DISTRO}
-            cobbler import --path=/fakenet/${NFSSERVER}${NFSDIR}/${DISTRO} \
-                           --name=${DISTRONAME}_nfs \
-                           --available-as=nfs://${NFSSERVER}:${NFSDIR}/${DISTRO}
-            score=$?
-            if [ "$score" -eq "0" ]; then
-                result="PASS"
-            fi
-            report_result $TEST/ADD_DISTRO/${DISTRONAME}_NFS $result $score
-        done
-    fi
-    cobbler distro report
-    /var/lib/cobbler/triggers/sync/post/osversion.trigger | tee -a $OUTPUTFILE
-    estatus_fail "**** Failed to run osversion.trigger ****"
     rhts-sync-set -s DONE
     result_pass 
 }

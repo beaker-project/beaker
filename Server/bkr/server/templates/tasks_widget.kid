@@ -65,9 +65,9 @@
      ${task.recipe.system == None and ' ' or task.recipe.system.link}
     </td>
     <td class="list task" style="white-space:nowrap;" py:if="not hidden.has_key('start')">
-      <br>${task.start_time}</br>
-      <br>${task.finish_time}</br>
-      <br>${task.duration}</br>
+      <span class="datetime">${task.start_time}</span><br/>
+      <span class="datetime">${task.finish_time}</span><br/>
+      ${task.duration}
     </td>
     <td class="list task" py:if="not hidden.has_key('logs')">
      <br py:for="log in task.logs">${log.link}</br>
@@ -103,7 +103,7 @@
      &nbsp;
     </td>
     <td class="list task" style="white-space:nowrap;" py:if="not hidden.has_key('start')">
-      ${task_result.start_time}
+      <span class="datetime">${task_result.start_time}</span>
     </td>
     <td class="list result" py:if="not hidden.has_key('logs')">
      <br py:for="log in task_result.logs">${log.link}</br>

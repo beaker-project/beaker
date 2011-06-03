@@ -8,38 +8,6 @@
     <title>Task ${task.name}</title>
 </head>
 
-<?python
-from cgi import escape
-
-runfor = ''
-required = ''
-needs = ''
-bugzillas = ''
-types = ''
-excluded_osmajors = '<br/>'.join(['%s' % osmajor.osmajor for osmajor in task.excluded_osmajor])
-excluded_arches  = '<br/>'.join(['%s' % arch.arch for arch in task.excluded_arch])
-
-for need in task.needs:
-    needs += '%s<br/>' % need.property
-needs = needs.replace('&', '&amp;')
-
-for package in task.runfor:
-    runfor += '<a href="/package/%s">%s</a><br/>' % (package,package)
-runfor = runfor.replace('&', '&amp;')
-
-for bug in task.bugzillas:
-    bugzillas += '<a href="http://bugzilla.redhat.com/show_bug.cgi?id=%s">%s</a><br/>' % (bug.bugzilla_id,bug.bugzilla_id)
-bugzillas = bugzillas.replace('&', '&amp;')
-
-for package in task.required:
-    required += '%s<br/>' % package
-required = required.replace('&', '&amp;')
-
-for type in task.types:
-    types += '%s<br/>' % type.type
-types = types.replace('&', '&amp;')
-?>
-
 <body class="flora">
 <table width="97%">
     <tr>
@@ -49,27 +17,89 @@ types = types.replace('&', '&amp;')
     </tr>
 </table>
 <table class="show">
-    <tr py:for="field in (
-        ['Description',       task.description],
-        ['Path',              task.path],
-        ['Expected Time',     task.elapsed_time()],
-        ['Creation Date',     task.creation_date],
-        ['Updated Date',      task.update_date],
-        ['Version',           task.version],
-        ['License',           task.license],
-        ['RPM',               task.rpm],
-        ['Needs',             (needs) and XML(needs) or ''],
-        ['Bugzillas',         (bugzillas) and XML(bugzillas) or ''],
-        ['Types',             (types) and XML(types) or ''],
-        ['Run For',           (runfor) and XML(runfor) or ''],
-        ['Requires',          (required) and XML(required) or ''],
-        ['Excluded OSMajors', (excluded_osmajors) and XML(excluded_osmajors) or ''],
-        ['Excluded Arches',   (excluded_arches) and XML(excluded_arches) or ''],
-    )">
-        <span py:if="field[1] != None and field[1] != ''">
-            <td class="title"><b>${field[0]}:</b></td>
-            <td class="value">${field[1]}</td>
-        </span>
+    <tr py:if="task.description">
+        <td class="title"><b>Description:</b></td>
+        <td class="value">${task.description}</td>
+    </tr>
+    <tr py:if="task.valid">
+        <td class="title"><b>Valid:</b></td>
+        <td class="value">${task.valid}</td>
+    </tr>
+    <tr py:if="task.path">
+        <td class="title"><b>Path:</b></td>
+        <td class="value">${task.path}</td>
+    </tr>
+    <tr>
+        <td class="title"><b>Expected Time:</b></td>
+        <td class="value">${task.elapsed_time()}</td>
+    </tr>
+    <tr py:if="task.creation_date">
+        <td class="title"><b>Creation Date:</b></td>
+        <td class="value"><span class="datetime">${task.creation_date}</span></td>
+    </tr>
+    <tr py:if="task.update_date">
+        <td class="title"><b>Updated Date:</b></td>
+        <td class="value"><span class="datetime">${task.update_date}</span></td>
+    </tr>
+    <tr py:if="task.version">
+        <td class="title"><b>Version:</b></td>
+        <td class="value">${task.version}</td>
+    </tr>
+    <tr py:if="task.license">
+        <td class="title"><b>License:</b></td>
+        <td class="value">${task.license}</td>
+    </tr>
+    <tr py:if="task.rpm">
+        <td class="title"><b>RPM:</b></td>
+        <td class="value">${task.rpm}</td>
+    </tr>
+    <tr py:if="task.needs">
+        <td class="title"><b>Needs:</b></td>
+        <td class="value">
+            <span py:for="need in task.needs">${need.property}<br/></span>
+        </td>
+    </tr>
+    <tr py:if="task.bugzillas">
+        <td class="title"><b>Bugzillas:</b></td>
+        <td class="value">
+            <span py:for="bug in task.bugzillas">
+                <a href="https://bugzilla.redhat.com/show_bug.cgi?id=${bug.bugzilla_id}">${bug.bugzilla_id}</a>
+                <br/>
+            </span>
+        </td>
+    </tr>
+    <tr py:if="task.types">
+        <td class="title"><b>Types:</b></td>
+        <td class="value">
+            <span py:for="type in task.types">${type.type}<br/></span>
+        </td>
+    </tr>
+    <tr py:if="task.runfor">
+        <td class="title"><b>Run For:</b></td>
+        <td class="value">
+            <span py:for="package in task.runfor">
+                <a href="${tg.url(u'/package/%s' % package)}">${package}</a>
+                <br/>
+            </span>
+        </td>
+    </tr>
+    <tr py:if="task.required">
+        <td class="title"><b>Requires:</b></td>
+        <td class="value">
+            <span py:for="package in task.required">${package}<br/></span>
+        </td>
+    </tr>
+    <tr py:if="task.excluded_osmajor">
+        <td class="title"><b>Excluded OSMajors:</b></td>
+        <td class="value">
+            <span py:for="osmajor in task.excluded_osmajor">${osmajor.osmajor}<br/></span>
+        </td>
+    </tr>
+    <tr py:if="task.excluded_arch">
+        <td class="title"><b>Excluded Arches:</b></td>
+        <td class="value">
+            <span py:for="arch in task.excluded_arch">${arch.arch}<br/></span>
+        </td>
     </tr>
 </table>
 <div>

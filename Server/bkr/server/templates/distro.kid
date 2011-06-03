@@ -4,7 +4,7 @@
 
  <head>
   <meta content="text/html; charset=UTF-8" http-equiv="content-type" py:replace="''"/>
-  <title>${title} ${value.install_name}</title>
+  <title>${title} ${value.id}:${value.name}</title>
  </head>
 
 
@@ -13,10 +13,10 @@
   <table class="list">
    <tr class="list">
     <th class="list">
-      <b>Install Name</b>
+      <b>ID</b>
     </th>
     <td class="list" colspan="3">
-     ${value.install_name}
+     ${value.id}
     </td>
    </tr>
    <tr class="list">
@@ -32,7 +32,7 @@
       <b>Date Created</b>
     </th>
     <td class="list" colspan="3">
-     ${value.date_created}
+     <span class="datetime">${value.date_created}</span>
     </td>
    </tr>
    <tr class="list">

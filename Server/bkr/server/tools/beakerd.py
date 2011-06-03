@@ -128,13 +128,13 @@ def new_recipes(*args):
                     log.info("recipe ID %s moved from New to Processed" % recipe.id)
                 else:
                     log.info("recipe ID %s moved from New to Aborted" % recipe.id)
-                    recipe.recipeset.abort('Recipe ID %s does not match any systems' % recipe.id)
+                    recipe.recipeset.abort(u'Recipe ID %s does not match any systems' % recipe.id)
             else:
-                recipe.recipeset.abort('Recipe ID %s does not have a distro' % recipe.id)
+                recipe.recipeset.abort(u'Recipe ID %s does not have a distro' % recipe.id)
             session.commit()
-        except exceptions.Exception, e:
+        except exceptions.Exception:
             session.rollback()
-            log.error("Failed to commit due to :%s" % e)
+            log.exception("Failed to commit in new_recipes")
         session.close()
     log.debug("Exiting new_recipes routine")
     return True
@@ -245,12 +245,12 @@ def processed_recipesets(*args):
                     else:
                         # Set status to Aborted 
                         log.info("recipe ID %s moved from Processed to Aborted" % recipe.id)
-                        recipe.recipeset.abort('Recipe ID %s does not match any systems' % recipe.id)
+                        recipe.recipeset.abort(u'Recipe ID %s does not match any systems' % recipe.id)
                         
             session.commit()
-        except exceptions.Exception, e:
+        except exceptions.Exception:
             session.rollback()
-            log.error("Failed to commit due to :%s" % e)
+            log.exception("Failed to commit in processed_recipes")
         session.close()
     log.debug("Exiting processed_recipes routine")
     return True
@@ -273,17 +273,19 @@ def dead_recipes(*args):
                             )
                            )
 
+    if not recipes.count():
+        return False
     log.debug("Entering dead_recipes routine")
     for _recipe in recipes:
         session.begin()
         try:
             recipe = Recipe.by_id(_recipe.id)
             if len(recipe.systems) == 0:
-                msg = "R:%s does not match any systems, aborting." % recipe.id
+                msg = u"R:%s does not match any systems, aborting." % recipe.id
                 log.info(msg)
                 recipe.recipeset.abort(msg)
             if len(recipe.distro.lab_controller_assocs) == 0:
-                msg = "R:%s does not have a valid distro, aborting." % recipe.id
+                msg = u"R:%s does not have a valid distro, aborting." % recipe.id
                 log.info(msg)
                 recipe.recipeset.abort(msg)
             session.commit()
@@ -292,6 +294,7 @@ def dead_recipes(*args):
             log.exception("Failed to commit due to :%s" % e)
         session.close()
     log.debug("Exiting dead_recipes routine")
+    return True
 
 def queued_recipes(*args):
     automated = SystemStatus.by_name(u'Automated')
@@ -299,24 +302,23 @@ def queued_recipes(*args):
                     .join('status')\
                     .join(['systems','lab_controller','_distros','distro'])\
                     .join(['recipeset','priority'])\
+                    .join(['recipeset','job'])\
                     .join(['distro','lab_controller_assocs','lab_controller'])\
                     .filter(
-                         or_(
-                         and_(Recipe.status==TaskStatus.by_name(u'Queued'),
-                              System.user==None,
-                              System.status==automated,
-                              RecipeSet.lab_controller==None,
-                              Recipe.distro_id==Distro.id,
-                              LabController.disabled==False,
-                             ),
                          and_(Recipe.status==TaskStatus.by_name(u'Queued'),
                               System.user==None,
                               System.status==automated,
                               Recipe.distro_id==Distro.id,
-                              RecipeSet.lab_controller_id==System.lab_controller_id,
                               LabController.disabled==False,
+                              or_(
+                                  RecipeSet.lab_controller==None,
+                                  RecipeSet.lab_controller_id==System.lab_controller_id,
+                                 ),
+                              or_(
+                                  System.loan_id==None,
+                                  System.loan_id==Job.owner_id,
+                                 ),
                              )
-                            )
                            )
     # Order recipes by priority.
     # FIXME Add secondary order by number of matched systems.
@@ -329,11 +331,20 @@ def queued_recipes(*args):
         session.begin()
         try:
             recipe = Recipe.by_id(_recipe.id)
-            systems = recipe.dyn_systems.join(['lab_controller','_distros','distro']).\
-                      filter(and_(System.user==None,
+            systems = recipe.dyn_systems\
+                       .join(['lab_controller',
+                              '_distros',
+                              'distro'])\
+                       .filter(and_(System.user==None,
                                   Distro.id==recipe.distro_id,
                                   LabController.disabled==False,
-                                  System.status==automated))
+                                  System.status==automated,
+                                  or_(
+                                      System.loan_id==None,
+                                      System.loan_id==recipe.recipeset.job.owner_id,
+                                     ),
+                                   )
+                              )
             # Order systems by owner, then Group, finally shared for everyone.
             # FIXME Make this configurable, so that a user can specify their scheduling
             # Implemented order, still need to do pool
@@ -367,34 +378,26 @@ def queued_recipes(*args):
                 # Check to see if user still has proper permissions to use system
                 # Remember the mapping of available systems could have happend hours or even
                 # days ago and groups or loans could have been put in place since.
-                if not System.free(user).filter(System.fqdn == system).first():
+                if not System.free(user).filter(System.id == system.id).first():
                     log.debug("System : %s recipe: %s no longer has access. removing" % (system, 
                                                                                          recipe.id))
                     recipe.systems.remove(system)
                 else:
                     recipe.schedule()
                     recipe.createRepo()
-                    if session.connection(Recipe).execute(system_table.update(
-                         and_(system_table.c.id==system.id,
-                          system_table.c.user_id==None)),
-                          user_id=recipe.recipeset.job.owner.user_id).rowcount == 1:
-                        recipe.system = system
-                        recipe.recipeset.lab_controller = system.lab_controller
-                        recipe.systems = []
-                        # Create the watchdog without an Expire time.
-                        log.debug("Created watchdog for recipe id: %s and system: %s" % (recipe.id, system))
-                        recipe.watchdog = Watchdog(system=recipe.system)
-                        activity = SystemActivity(recipe.recipeset.job.owner, "Scheduler", "Reserved", "User", "", "%s" % recipe.recipeset.job.owner )
-                        system.activity.append(activity)
-                        log.info("recipe ID %s moved from Queued to Scheduled" % recipe.id)
-                    else:
-                        # The system was taken from underneath us.  Put recipe
-                        # back into queued state and try again.
-                        raise BX(_('System %s was stolen from underneath us. will try again.' % system))
+                    system.reserve(service=u'Scheduler', user=recipe.recipeset.job.owner,
+                            reservation_type=u'recipe')
+                    recipe.system = system
+                    recipe.recipeset.lab_controller = system.lab_controller
+                    recipe.systems = []
+                    # Create the watchdog without an Expire time.
+                    log.debug("Created watchdog for recipe id: %s and system: %s" % (recipe.id, system))
+                    recipe.watchdog = Watchdog(system=recipe.system)
+                    log.info("recipe ID %s moved from Queued to Scheduled" % recipe.id)
             session.commit()
-        except exceptions.Exception, e:
+        except exceptions.Exception:
             session.rollback()
-            log.error("Failed to commit due to :%s" % e)
+            log.exception("Failed to commit in queued_recipes")
         session.close()
     log.debug("Exiting queued_recipes routine")
     return True
@@ -476,12 +479,12 @@ def scheduled_recipes(*args):
                                                      recipe.ks_appends,
                                                      wait=True)
                     recipe.system.activity.append(
-                         SystemActivity(recipe.recipeset.job.owner,
-                                        'Scheduler',
-                                        'Provision',
-                                        'Distro',
-                                        '',
-                                        '%s' % recipe.distro))
+                         SystemActivity(recipe.recipeset.job.owner, 
+                                        u'Scheduler',
+                                        u'Provision',
+                                        u'Distro',
+                                        u'',
+                                        unicode(recipe.distro)))
                 except CobblerTaskFailedException, e:
                     log.error('Cobbler task failed for recipe %s: %s' % (recipe.id, e))
                     old_status = recipe.system.status
@@ -501,9 +504,9 @@ def scheduled_recipes(*args):
                                                                             e))
        
             session.commit()
-        except exceptions.Exception, e:
+        except exceptions.Exception:
             session.rollback()
-            log.error("Failed to commit due to :%s" % e)
+            log.exception("Failed to commit in scheduled_recipes")
         session.close()
     log.debug("Exiting scheduled_recipes routine")
     return True
@@ -552,7 +555,7 @@ def schedule():
         if not queued and not scheduled:
             time.sleep(20)
 
-def daemonize(daemon_func, daemon_pid_file=None, daemon_start_dir=".", daemon_out_log="/dev/null", daemon_err_log="/dev/null", *args, **kwargs):
+def daemonize(daemon_func, daemon_pid_file=None, daemon_start_dir="/", daemon_out_log="/dev/null", daemon_err_log="/dev/null", *args, **kwargs):
     """Robustly turn into a UNIX daemon, running in daemon_start_dir."""
 
     if daemon_pid_file and os.path.exists(daemon_pid_file):

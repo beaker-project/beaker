@@ -39,11 +39,6 @@ firewall #slurp
 #end if
 #end if
 
-#if $getVar('rhts_server', '') != ''
-# Don't Run the Setup Agent on first boot
-firstboot --disable
-#end if
-
 # System keyboard
 keyboard $getVar('keyboard', 'us')
 # System language
@@ -59,10 +54,7 @@ selinux $getVar('selinux','--enforcing')
 #if $getVar('skipx','') != ''
 skipx
 #else
-#if $getVar('rhts_server', '') != ''
-skipx
-#end if
-#if $getVar('rhts_server', '') == '' and not $getVar('arch','').startswith('s390')
+#if not $getVar('arch','').startswith('s390')
 xconfig --startxonboot
 #end if
 #end if
@@ -92,17 +84,24 @@ $SNIPPET("system")
 --default
 #else
 
-#end if
-$SNIPPET("rhts_packages")
+## If packages variable is set add additional packages to this install
+## packages=httpd:selinux:kernel
+#set _packages = $getVar('packages','').split(':')
+#for $package in $_packages:
+$package
+#end for
+#end if ## if packages
 
-#end if
-#end if
-%pre
+#end if ## manual
+
+#end if ## sysprofile snippet
+
+%pre --log=/dev/console
 $SNIPPET("rhts_pre")
 $SNIPPET("RedHatEnterpriseLinux6_pre")
 $SNIPPET("system_pre")
 
-%post
+%post --log=/dev/console
 $SNIPPET("rhts_post")
 $SNIPPET("RedHatEnterpriseLinux6_post")
 $SNIPPET("system_post")

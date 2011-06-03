@@ -27,10 +27,11 @@ import xmlrpclib
 from turbogears.database import session
 
 from bkr.server.test.selenium import XmlRpcTestCase
-from bkr.server.test.assertions import assert_datetime_within
+from bkr.server.test.assertions import assert_datetime_within, \
+        assert_durations_not_overlapping
 from bkr.server.test import data_setup, stub_cobbler
 from bkr.server.model import User, Cpu, Key, Key_Value_String, Key_Value_Int, \
-        SystemActivity
+        SystemActivity, Provision
 from bkr.server.util import parse_xmlrpc_datetime
 
 class ReserveSystemXmlRpcTest(XmlRpcTestCase):
@@ -84,6 +85,10 @@ class ReserveSystemXmlRpcTest(XmlRpcTestCase):
         server.systems.reserve(system.fqdn)
         session.refresh(system)
         self.assertEqual(system.user, user)
+        self.assertEqual(system.reservations[0].type, u'manual')
+        self.assertEqual(system.reservations[0].user, user)
+        self.assert_(system.reservations[0].finish_time is None)
+        assert_durations_not_overlapping(system.reservations)
         reserved_activity = system.activity[-1]
         self.assertEqual(reserved_activity.action, 'Reserved')
         self.assertEqual(reserved_activity.field_name, 'User')
@@ -123,6 +128,10 @@ class ReserveSystemXmlRpcTest(XmlRpcTestCase):
         server.systems.reserve(system.fqdn)
         session.refresh(system)
         self.assertEqual(system.user, user)
+        self.assertEqual(system.reservations[0].type, u'manual')
+        self.assertEqual(system.reservations[0].user, user)
+        self.assert_(system.reservations[0].finish_time is None)
+        assert_durations_not_overlapping(system.reservations)
         reserved_activity = system.activity[0]
         self.assertEqual(reserved_activity.action, 'Reserved')
         self.assertEqual(reserved_activity.service, service_user.user_name)
@@ -146,7 +155,7 @@ class ReleaseSystemXmlRpcTest(XmlRpcTestCase):
                 status=u'Manual', shared=True)
         user = data_setup.create_user(password=u'password')
         other_user = data_setup.create_user()
-        system.user = other_user
+        system.reserve(service=u'testdata', user=other_user)
         session.flush()
         server = self.get_server()
         server.auth.login_password(user.user_name, 'password')
@@ -162,14 +171,20 @@ class ReleaseSystemXmlRpcTest(XmlRpcTestCase):
                 owner=User.by_user_name(data_setup.ADMIN_USER),
                 status=u'Manual', shared=True)
         user = data_setup.create_user(password=u'password')
-        system.user = user
+        system.reserve(service=u'testdata', user=user)
         session.flush()
         server = self.get_server()
         server.auth.login_password(user.user_name, 'password')
         server.systems.release(system.fqdn)
         session.refresh(system)
+        session.refresh(system.reservations[0])
         self.assert_(system.user is None)
-        released_activity = system.activity[-1]
+        self.assertEquals(system.reservations[0].user, user)
+        assert_datetime_within(system.reservations[0].finish_time,
+                tolerance=datetime.timedelta(seconds=10),
+                reference=datetime.datetime.utcnow())
+        assert_durations_not_overlapping(system.reservations)
+        released_activity = system.activity[0]
         self.assertEqual(released_activity.action, 'Returned')
         self.assertEqual(released_activity.field_name, 'User')
         self.assertEqual(released_activity.user, user)
@@ -182,7 +197,7 @@ class ReleaseSystemXmlRpcTest(XmlRpcTestCase):
                 owner=User.by_user_name(data_setup.ADMIN_USER),
                 status=u'Manual', shared=True)
         user = data_setup.create_user(password=u'password')
-        system.user = user
+        system.reserve(service=u'testdata', user=user)
         session.flush()
         server = self.get_server()
         server.auth.login_password(user.user_name, 'password')
@@ -295,7 +310,6 @@ class SystemProvisionXmlRpcTest(XmlRpcTestCase):
 
     def setUp(self):
         self.stub_cobbler_thread = stub_cobbler.StubCobblerThread()
-        self.stub_cobbler_thread.start()
         self.lab_controller = data_setup.create_labcontroller(
                 fqdn=u'localhost:%d' % self.stub_cobbler_thread.port)
         self.distro = data_setup.create_distro(arch=u'i386')
@@ -307,7 +321,11 @@ class SystemProvisionXmlRpcTest(XmlRpcTestCase):
                 password=u'onoffonoff', power_id=u'asdf')
         self.usable_system.lab_controller = self.lab_controller
         self.usable_system.user = data_setup.create_user(password=u'password')
+        self.usable_system.provisions[self.distro.arch] = Provision(
+                arch=self.distro.arch,
+                kernel_options='ksdevice=eth0 console=ttyS0')
         session.flush()
+        self.stub_cobbler_thread.start()
         self.server = self.get_server()
 
     def tearDown(self):
@@ -362,7 +380,7 @@ class SystemProvisionXmlRpcTest(XmlRpcTestCase):
         system = self.usable_system
         self.server.auth.login_password(system.user.user_name, 'password')
         self.server.systems.provision(system.fqdn, self.distro.install_name,
-                {'method': 'nfs'},
+                'method=nfs',
                 'noapic',
                 'noapic runlevel=3',
                 kickstart)
@@ -373,8 +391,8 @@ class SystemProvisionXmlRpcTest(XmlRpcTestCase):
                  'power_pass': 'onoffonoff',
                  'power_id': 'asdf',
                  'ksmeta': {'method': 'nfs'},
-                 'kopts': 'noapic',
-                 'kopts_post': 'noapic runlevel=3',
+                 'kopts': {'ksdevice': 'eth0', 'noapic': None, 'console': 'ttyS0'},
+                 'kopts_post': {'noapic': None, 'runlevel': '3'},
                  'profile': system.fqdn,
                  'netboot-enabled': True})
         kickstart_filename = '/var/lib/cobbler/kickstarts/%s.ks' % system.fqdn
@@ -417,6 +435,15 @@ class SystemProvisionXmlRpcTest(XmlRpcTestCase):
             self.fail('should raise')
         except xmlrpclib.Fault, e:
             self.assert_('cannot be provisioned on system' in e.faultString)
+
+    def test_kernel_options_inherited_from_defaults(self):
+        system = self.usable_system
+        self.server.auth.login_password(system.user.user_name, 'password')
+        self.server.systems.provision(system.fqdn, self.distro.install_name,
+                None, 'ksdevice=eth1')
+        # console=ttyS0 comes from arch default, created in setUp()
+        kopts = self.stub_cobbler_thread.cobbler.systems[system.fqdn]['kopts']
+        self.assertEqual(kopts, {'ksdevice': 'eth1', 'console': 'ttyS0'})
 
 class LegacyPushXmlRpcTest(XmlRpcTestCase):
 

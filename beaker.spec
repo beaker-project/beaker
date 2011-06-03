@@ -2,8 +2,8 @@
 %{!?pyver: %global pyver %(%{__python} -c "import sys ; print sys.version[:3]")}
 
 Name:           beaker
-Version:        0.6.5
-Release:        3%{?dist}
+Version:        0.6.12
+Release:        1%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -11,6 +11,7 @@ URL:            http://fedorahosted.org/beaker
 Source0:        http://fedorahosted.org/releases/b/e/%{name}-%{version}.tar.gz
 BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 BuildArch:      noarch
+BuildRequires:  make
 BuildRequires:  python-setuptools
 BuildRequires:  python-setuptools-devel
 BuildRequires:  python2-devel
@@ -22,7 +23,7 @@ BuildRequires:  python-sphinx10
 %endif
 # These server dependencies are needed in the build, because
 # sphinx imports bkr.server modules to generate API docs
-%if 0%{?rhel}
+%if 0%{?rhel} == 5
 BuildRequires:  TurboGears = 1.0.8-7.eso.1%{?dist}
 %else
 BuildRequires:  TurboGears
@@ -49,13 +50,14 @@ Requires:       libxslt-python
 %package server
 Summary:       Server component of Beaker
 Group:          Applications/Internet
-%if 0%{?rhel}
+%if 0%{?rhel} == 5
 Requires:       TurboGears = 1.0.8-7.eso.1%{?dist}
 %else
 Requires:       TurboGears
 %endif
 Requires:       intltool
 Requires:       python-decorator
+Requires:       python-urllib2_kerberos
 Requires:       python-xmltramp
 Requires:       python-lxml
 Requires:       python-ldap
@@ -98,8 +100,8 @@ Group:          Applications/Internet
 Requires:       %{name} = %{version}-%{release}
 Requires:       %{name}-lab-controller = %{version}-%{release}
 Requires:       %{name}-client = %{version}-%{release}
-Provides:	beaker-redhat-support
-Obsoletes:	beaker-redhat-support
+Provides:	beaker-redhat-support-addDistro
+Obsoletes:	beaker-redhat-support-addDistro
 
 %description
 Filesystem layout for beaker
@@ -194,6 +196,7 @@ fi
 %{_bindir}/start-%{name}
 %{_bindir}/%{name}-init
 %{_bindir}/nag-mail
+%{_bindir}/log-delete
 %{_bindir}/product-update
 %{_bindir}/beaker-repo-update
 %{_bindir}/%{name}-cleanup-visits
@@ -247,6 +250,200 @@ fi
 %{_var}/lib/beaker/addDistro.d/*
 
 %changelog
+* Wed Jun 01 2011 Raymond Mancy <rmancy@redhat.com> 0.6.12-1
+- 706435 - apply datetime localisation to DOM elements inserted by jQuery
+  (dcallagh@redhat.com)
+- 703548 - hide system cc field from non-owners (dcallagh@redhat.com)
+- 705401 - Not detecting Panic on Xen systems (bpeck@redhat.com)
+- 704948 - beaker-proxy init script is half broken (bpeck@redhat.com)
+- 703841 - bkr workflow-simple --prettyxml should imply --debug
+  (bpeck@redhat.com)
+- 700790 - no way how to get email associated with user (bpeck@redhat.com)
+- 704563 - Changed log_delete tobe able to handle random exceptions, as well
+  as ensuring that it can delete all the right directories even if they are in
+  unexpected locations (rmancy@redhat.com)
+- Adding xmlrpc logging to the server ala proxy (rmancy@redhat.com)
+- Log kickstart pre/post to console (mcsontos@redhat.com)
+
+* Fri May 20 2011 Dan Callaghan <dcallagh@redhat.com> 0.6.11-2
+- 706150 do not activate InstallOptions js when widget is read-only
+  (dcallagh@redhat.com)
+
+* Wed May 18 2011 Raymond Mancy <rmancy@redhat.com> 0.6.11-1
+- 694107 - remove paginate limit for systems (dcallagh@redhat.com)
+- 572835 Test program interface to install debuginfo.
+  (bpeck@redhat.com)
+- 701414 - obey system provision options in XML-RPC (dcallagh@redhat.com)
+- 702106 - update for new repo layout on repos.fedorapeople.org
+  (dcallagh@redhat.com)
+- 702082 - push/legacypush should not attempt to create new systems and  
+  /distribution/inventory: fix Numa info when not supplied by smolt (dcallagh@redhat.com)
+- 599701 - allow searching by system serial number (dcallagh@redhat.com)
+- 703497 - remove lagacy rhts support from kickstarts (bpeck@redhat.com)
+- 645873 - Job cancelled soon after creation doesn't terminate
+  (bpeck@redhat.com)
+- 541291 - Can't add per-minor-release install options (bpeck@redhat.com)
+- 704374 - AlphaNavBar widget should sort letters (dcallagh@redhat.com)
+- 590033 - [RFE] removing tasks from task library (bpeck@redhat.com)
+- 702665 - bkr workflow-simple tasks can get out of order (bpeck@redhat.com)
+- 658515 - javascript to adjust datetimes to local timezone
+  (dcallagh@redhat.com)
+- 692935 - Remove lab controllers (rmancy@redhat.com)
+- 636565 - RFE: needs install machine only with @base group
+  (bpeck@redhat.com)
+- 705428 - repo_update.py: bypass local cache for package files
+  (dcallagh@redhat.com)
+
+- show a less scary message when motd does not exist (dcallagh@redhat.com)
+- Disable CHECKRECIPE until kickstarts are fixed. (bpeck@redhat.com)
+- remove tg.include_widgets from server.cfg. (bpeck@redhat.com)
+- fix osversion install options js (dcallagh@redhat.com)
+- Add Xvfb to Requires. (bpeck@redhat.com)
+- Add firefox to Requires as well. (bpeck@redhat.com)
+- still more Requires (bpeck@redhat.com)
+- Set-up logging to console. (mcsontos@redhat.com)
+
+* Thu May 05 2011 Raymond Mancy <rmancy@redhat.com> 0.6.10-4
+- and for commit().... (rmancy@redhat.com)
+
+* Thu May 05 2011 Raymond Mancy <rmancy@redhat.com> 0.6.10-3
+- rollback() does not clear the job objects from the session, close() does
+  (rmancy@redhat.com)
+
+* Thu May 05 2011 Raymond Mancy <rmancy@redhat.com> 0.6.10-2
+- expired_logs() is now a generator, holding 60k+ Job objects in memory was not
+  agreeable (rmancy@redhat.com)
+
+* Wed May 04 2011 Raymond Mancy <rmancy@redhat.com> 0.6.10-1
+- 698752 osversion.trigger should prefer .treeinfo (bpeck@redhat.com)
+- 699935 motd change to .xml instead of .txt. Needs an update in the config
+  as well (rmancy@redhat.com)
+- 700186 fix updateDistro to not talk directly to scheduler (bpeck@redhat.com)
+- 700161 Failure to import task rpm should unlink bad rpm Bug: 700161 Change-Id:
+  If0027694c5f5f740ed7e16dd78732a0336ef62cb (bpeck@redhat.com)
+- 700675 Take away the Remove link in the LC page for the time being
+  (rmancy@redhat.com)
+- 700751 Fixed counterintuitive group filter (mcsontos@redhat.com)
+- 700761 Set-up logging to console. (mcsontos@redhat.com)
+
+- Ensure recipe log paths have trailing slashes, WebDAV works correctly with this.
+  (rmancy@redhat.com)
+- We now allow admins to delete their own jobs (rmancy@redhat.com)
+- Fix warning generated by log_delete(), also use correct kw arg to find_jobs()
+  (rmancy@redhat.com)
+
+* Wed Apr 20 2011 Raymond Mancy <rmancy@redhat.com> 0.6.9-1
+- 695970 Limiting job via whiteboard retrieval to max 20. (rmancy@redhat.com)
+ 
+- 681584 make bkradd should fail if trying to upload the same version task. 
+  (bpeck@redhat.com)
+- 601952 RFE: add filtering by group to job specification XML (bpeck@redhat.com)
+- 682602 common utilisation code for reporting (dcallagh@redhat.com)
+- 682655 warn about excluded tasks in workflow-simple (dcallagh@redhat.com)
+- 691796 make owner mandatory for systems (dcallagh@redhat.com)
+    
+- 693582 more filter options for utilisation graph (dcallagh@redhat.com)
+- 696335 efibootmgr is not just for ia64 anymore (bpeck@redhat.com)
+- 692163 bkr machine-test fails due to recent inventory script updates 
+ (bpeck@redhat.com)
+- 663788 - add updates for Fedora kickstarts during install
+ (bpeck@redhat.com)
+- 683913 bkr workflow-simple does not handle empty recipes filtered by arch quite well
+  First step, move to pre-filter tasks based on arch and osmajor.  Second step,
+  turn off post-filtering on scheduler.  Whatever tasks are passed in is what
+  will be run (bpeck@redhat.com)
+              
+- 645662 Change the add distro process to not rely on distro name for method
+  (bpeck@redhat.com)
+- 688122 - ks-templates: beah services usage [3/3] (mcsontos@redhat.com)
+                
+- build requires make (dcallagh@redhat.com)
+- avoid using real hostnames in test data (dcallagh@redhat.com)
+- show crosshair on utilisation graph (dcallagh@redhat.com)
+- New beaker import task. (bpeck@redhat.com)
+- We now allow admins to delete their own jobs (rmancy@redhat.com)
+* Tue Apr 12 2011 Dan Callaghan <dcallagh@redhat.com> 0.6.8-5
+- some test fixes (dcallagh@redhat.com)
+- fix bug in 0.6.8 system_status_duration upgrade script (dcallagh@redhat.com)
+
+* Thu Apr 07 2011 Bill Peck <bpeck@redhat.com> 0.6.8-4
+- Regression in job scheduling when specifying multiple labcontrollers Bug:
+  694524 (bpeck@redhat.com)
+
+* Thu Apr 07 2011 Raymond Mancy <rmancy@redhat.com> 0.6.8-3
+- 694352 empty <and/> causes sqlachemy to produce invalid SQL (dcallagh@redhat.com)
+
+* Wed Apr 06 2011 Dan Callaghan <dcallagh@redhat.com> 0.6.8-2
+- bz693869 - fix up 0.6.7 reservation table population script
+  (dcallagh@redhat.com)
+
+* Wed Apr 06 2011 Raymond Mancy <rmancy@redhat.com> 0.6.8-1
+- 680497 Graph machine usage over time (utilisation graphs) (dcallagh@redhat.com)
+- 651199 remove unneeded ErrorDocument directive from Apache config
+  (dcallagh@redhat.com)
+- 689344 fs attribute in <partition/> should be optional (dcallagh@redhat.com)
+- 679879 Issue: testing using key/value for selection of test host is unreliable 
+  (bpeck@redhat.com)
+- 693777 ability to set RLIMIT_AS from config file setting (bpeck@redhat.com)
+- 678356 Ability to set recipe autopick random (bpeck@redhat.com)
+- 691445 Quote all variables or we fail when VARIANT is Empty. (bpeck@redhat.com)
+- 690342 /free no longer has loaned machines unless they are loaned to the current
+  user and are not currently in use (rmancy@redhat.com)
+- 688775 more headers in email for broken system (rmancy@redhat.com)
+- 691745 Adding/Removing retention tags actually works now (rmancy@redhat.com)
+- 691623 Fix regression introduced where a loaned machined could not be provisioned to
+  the loanee if the system has groups and the loanee is not a member of the
+  group (rmancy@redhat.com)
+
+* Thu Mar 23 2011 Raymond Mancy <rmancy@redhat.com> 0.6.7-1
+- 688122 - ks-templates: beah services usage (mcsontos@redhat.com)
+- 685085 Ensure matrix report data is generated from whiteboard (rmancy@redhat.com)
+- 680092 Return NumaNode and Group columns in system search (rmancy@redhat.com)
+- 683121 Don't expose Distro.install_name only to be used internally (bpeck@redhat.com)
+- 684788 Can't return the machine because of active recipe, which is already finished
+- 681871 bkr job-submit fails when input XML file contains the xml header (bpeck@redhat.com)
+- 659702 Loaned machines available to schedule Update beakerd to not touch loaned machines (bpeck@redhat.com)
+- 682313 WebUI missing clone button for recipe. (bpeck@redhat.com)
+- 629025 Implement a cap on size and number of files uploaded (bpeck@redhat.com)
+- 687995 remove legacy rhts support from /distribution/inventory (bpeck@redhat.com)
+- 683003 force hostnames to lowercase (bpeck@redhat.com)
+- 671474 Gather more sensible CPU info on S390, PPC, IA64.
+- 680324 Remove dependency on anaconda. (stl@redhat.com)
+- fix beaker setup task. (bpeck@redhat.com)
+- script to populate reservation table (dcallagh@redhat.com)
+- introduce a new reservation table (dcallagh@redhat.com)
+- remove XML-RPC methods for legacy RHTS (dcallagh@redhat.com)
+- test for bug 681143 (dcallagh@redhat.com)
+- /distribution/beaker/setup: add missing config entries (dcallagh@redhat.com)
+- /distribution/beaker/dogfood: install correct selenium bindings
+  (dcallagh@redhat.com)
+- cleain up various warnings (dcallagh@redhat.com)
+- Use a packaged version of smolt instead of our own. (stl@redhat.com)
+
+
+
+* Thu Mar 10 2011 Raymond Mancy <rmancy@redhat.com> 0.6.6-2
+- Fix typo in spec (rmancy@redhat.com)
+
+* Wed Mar 09 2011 Raymond Mancy <rmancy@redhat.com> 0.6.6-1
+- 679398 freeze header and first column for matrix report (rmancy@redhat.com)
+- 676735 Whiteboard filter results are now displayed in desc order (rmancy@redhat.com)
+- 678033 Export action for jobs (rmancy@redhat.com)
+- 676834 Job Ack/Nak between members of the same group (rmancy@redhat.com)
+- 679678 fix up priority attribute on <recipeSet/> (dcallagh@redhat.com)
+- 679232 redirect to /forbidden when permissions are insufficient
+  (dcallagh@redhat.com)
+- 678651 include addDistro.sh in beaker-lab-controller package (bpeck@redhat.com)
+- 572833 [RFE] Allow $swapsize to define swapsize (bpeck@redhat.com)
+- 681143 make bkradd omits requirements/runfor in Makefile that differ in case
+  (bpeck@redhat.com)
+- 668473 Jobs left in queued state forever (bpeck@redhat.com)
+- 679835 Drop version-release from task rpm names received from Scheduler
+  (bpeck@redhat.com)
+
+- 677905 XML-RPC method to return system history (dcallagh@redhat.com)
+
+
 * Tue Mar 01 2011 Dan Callaghan <dcallagh@redhat.com> 0.6.5-3
 - we can only be picky about TurboGears version on RHEL (dcallagh@redhat.com)
 

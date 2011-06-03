@@ -25,6 +25,11 @@ bootloader --location=mbr #slurp
 $getVar('mode', 'text')
 $SNIPPET("network")
 
+#if $getVar('os_version','').startswith('fedora')
+#set releasever=$os_version[6:]
+repo --name=myupdates --mirrorlist=https://mirrors.fedoraproject.org/metalink?repo=updates-released-f$releasever&arch=$arch
+#end if
+
 ## Firewall configuration
 ## firewall in kickstart metadata will enable the firewall
 ## firewall=22:tcp,80:tcp will enable the firewall with ports 22 and 80 open.
@@ -66,19 +71,28 @@ $SNIPPET("Fedora")
 $SNIPPET("system")
 
 %packages --ignoremissing
-$SNIPPET("rhts_packages")
+#if $getVar('packages', '') != ''
+#set _packages = $getVar('packages','').split(':')
+#for $package in $_packages:
+$package
+#end for
+#else
+@development
+@desktop-platform-devel
+@server-platform-devel
+#end if
 %end
 
 #end if
 #end if
-%pre
+%pre --log=/dev/console
 $SNIPPET("rhts_pre")
 $SNIPPET("Fedora_pre")
 $SNIPPET("system_pre")
 %end
 
 
-%post
+%post --log=/dev/console
 $SNIPPET("rhts_post")
 $SNIPPET("Fedora_post")
 $SNIPPET("system_post")

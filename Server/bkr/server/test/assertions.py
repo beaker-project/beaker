@@ -53,3 +53,27 @@ def assert_datetime_within(dt, tolerance, reference=None):
     if abs(reference - dt) > tolerance:
         raise AssertionError('%r is not within %r of reference %r'
                 % (dt, tolerance, reference))
+
+def assert_durations_not_overlapping(durations):
+    """
+    Given an iterable of anything with start_time and finish_time attributes, 
+    asserts that there are no overlaps in the durations.
+    """
+    # XXX this is inefficient, only suitable for small collections
+    seen_durations = []
+    for duration in durations:
+        # the start time must not be enclosed by any duration which 
+        # we have already seen
+        for seen in seen_durations:
+            if duration.start_time >= seen.start_time \
+                    and (seen.finish_time is None
+                         or duration.start_time < seen.finish_time):
+                raise AssertionError('%r overlaps with %r' % (duration, seen))
+        seen_durations.append(duration)
+
+def assert_durations_contiguous(durations):
+    durations = sorted(durations, key=lambda d: d.start_time)
+    for i in range(1, len(durations)):
+        if durations[i - 1].finish_time != durations[i].start_time:
+            raise AssertionError('Gap found between %r and %r'
+                    % (durations[i - 1], durations[i]))

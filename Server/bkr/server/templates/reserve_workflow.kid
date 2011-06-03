@@ -1,9 +1,9 @@
 <div xmlns:py="http://purl.org/kid/ns#">
 <script type='text/javascript'>
-var rw = new ReserveWorkflow("${arch.field_id}","${distro_family.field_id}","${method_.field_id}",
+var rw = new ReserveWorkflow("${arch.field_id}","${distro_family.field_id}",
                                 "${tag.field_id}","${distro.field_id}","${submit.field_id}","${auto_pick.field_id}",
-                                "${arch_value}","${distro_family_value}","${tag_value}","${method_value}",
-                                [${to_json(all_arches)}],[${to_json(all_distro_familys)}],[${to_json(all_tags)}],[${to_json(all_methods)}])
+                                "${arch_value}","${distro_family_value}","${tag_value}",
+                                [${to_json(all_arches)}],[${to_json(all_distro_familys)}],[${to_json(all_tags)}])
 rw.set_remotes("${tg.url(distro_rpc)}","${tg.url(system_rpc)}","${tg.url(system_many_rpc)}","${tg.url(reserve_href)}")
 addLoadEvent(rw.initialize)
 $(document).ready(function() {
@@ -25,10 +25,6 @@ $(document).ready(function() {
             rw.get_distros()
     })
 
-    $("#${method_.field_id}").change(function() {
-        rw.get_distros()
-    })
-
     $("#${tag.field_id}").change(function() {
         rw.get_distros()
     })
@@ -44,10 +40,6 @@ $(document).ready(function() {
 
     <div id="distro_family_input">
         <label>${distro_family.label}</label>${distro_family.display()}
-    </div>
-
-    <div id="method_input">
-        <label>${method_.label}</label>${method_.display(attrs=dict(style="margin-left:3.4em"))}
     </div>
 
     <div id="tag_input">

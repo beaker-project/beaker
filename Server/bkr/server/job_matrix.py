@@ -1,6 +1,6 @@
 from sqlalchemy import select, distinct, Table, Column, Integer, String
 from sqlalchemy.sql.expression import case, func, and_, bindparam, not_
-from turbogears import controllers, identity, expose, url, database
+from turbogears import controllers, identity, expose, url, database, flash
 from turbogears.widgets import DataGrid
 from turbogears.database import session, metadata, mapper
 from kid import Element, SubElement
@@ -36,6 +36,7 @@ class TaskR:
             return []
 
 class JobMatrix:
+    MAX_JOBS_FROM_WHITEBOARD = 20
     default_whiteboard_title = ''
     job_matrix_widget = JobMatrixWidget() 
     arches_used = {} 
@@ -52,19 +53,24 @@ class JobMatrix:
             filter = kw['whiteboard_filter']
         else:
             filter = None 
-       
-        matrix_options['whiteboard_options'] = self.get_whiteboard_options(filter)
-       
+
+        matrix_options['whiteboard_options'] = self.get_whiteboard_options(filter, kw.get('whiteboard', None))
         if ('job_ids' in kw) or ('whiteboard' in kw): 
             gen_results = self.generate(**kw) 
             matrix_options['grid'] = gen_results['grid']
             matrix_options['list'] = gen_results['data'] 
             if 'whiteboard' in kw: # Getting results by whiteboard
-                jobs = model.Job.by_whiteboard(kw['whiteboard'])  
+                s = select([func.count(model.Job.c.id).label('job_count')], whereclause=model.Job.c.whiteboard == kw['whiteboard'])
+                res = s.execute()
+                for r in res: #Should only loop once
+                    count = r.job_count
+                    if count > 20:
+                        flash(_('Your whiteboard contains %s jobs, only %s will be used' % (count, model.Job.max_by_whiteboard)))
+                jobs = model.Job.by_whiteboard(kw['whiteboard']) 
                 job_ids = [str(j.id) for j in jobs]
                 self.job_ids = job_ids
                 matrix_options['job_ids_vals'] = "\n".join(job_ids)
-            if 'job_ids' in kw: #Getting results by job id
+            elif 'job_ids' in kw: #Getting results by job id
                 self.job_ids = kw['job_ids'].split()
                 matrix_options['job_ids_vals'] = kw['job_ids']
             if 'toggle_nacks_on' in kw:
@@ -86,7 +92,7 @@ class JobMatrix:
         return_dict['options'] =  self.get_whiteboard_options(filter)
         return return_dict
 
-    def get_whiteboard_options(self,filter):
+    def get_whiteboard_options(self,filter, selected=None):
         """
         get_whiteboard_options() returns all whiteboards from the job_table
         if value is passed in for 'filter' it will perform an SQL 'like' operation 
@@ -100,8 +106,14 @@ class JobMatrix:
                      group_by=[model.job_table.c.whiteboard,model.job_table.c.id],
                      order_by=[model.job_table.c.id.desc()],distinct=True,limit=50) 
         res = s1.execute()  
-        filtered_whiteboards = [r[0] for r in res]
-        return filtered_whiteboards 
+        options = []
+        for r in res:
+            value = desc =  r[0]
+            option_list = [value, desc]
+            if r[0] == selected:
+                option_list.append({'selected' : 'selected' })
+            options.append(option_list)
+        return options 
  
     def display_whiteboard_results(self,whiteboard,arch):
         """Return func pointer to display result box
@@ -164,13 +176,13 @@ class JobMatrix:
         jobs = []
         self.arches_used = {}
         self.whiteboards_used = {}
-        whiteboard_data = {} 
+        whiteboard_data = {}
         if 'whiteboard' in kw:
-            job_query = model.Job.query().filter(model.Job.whiteboard == kw['whiteboard'])
+            job_query = model.Job.by_whiteboard(kw['whiteboard'])
             for job in job_query:
-                jobs.append(job.id) 
+                jobs.append(job.id)
         elif 'job_ids' in kw:
-            jobs = kw['job_ids'].split() 
+            jobs = kw['job_ids'].split()
         else:
            pass
 

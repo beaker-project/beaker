@@ -1,0 +1,24 @@
+Make task.valid default True
+---------------------------------
+UPDATE task set valid = True;
+ALTER TABLE task MODIFY valid TINYINT DEFAULT 1;
+
+To roll back:
+   Nothing is needed, it doesn't hurt to leave the task valid=true.
+
+
+Remove tg.include_widgets directive from /etc/beaker/server.cfg
+---------------------------------------------------------------
+
+If /etc/beaker/server.cfg includes the tg.include_widgets directive, delete 
+it. This option is not site-specific, and is configured correctly in 
+$SITE_PACKAGES/bkr/server/config/app.cfg.
+
+To enable removal of Lab controllers bz692935
+---------------------------------------------
+
+  ALTER TABLE lab_controller ADD COLUMN(removed datetime default NULL);
+
+
+
+

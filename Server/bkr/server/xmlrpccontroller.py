@@ -1,6 +1,7 @@
 import sys
 import logging
 import xmlrpclib
+from datetime import datetime
 import cherrypy, cherrypy.config
 import turbogears
 from turbogears import controllers
@@ -44,6 +45,7 @@ class RPCRoot(controllers.Controller):
     @turbogears.expose()
     def RPC2(self, *args, **kw):
         params, method = xmlrpclib.loads(cherrypy.request.body.read())
+        start = datetime.utcnow()
         try:
             if method == "RPC2":
                 # prevent recursion
@@ -64,6 +66,7 @@ class RPCRoot(controllers.Controller):
                 xmlrpclib.Fault(1, "%s:%s" % (sys.exc_type, sys.exc_value))
                 )
 
+        log.debug('Time: %s %s %s', datetime.utcnow() - start, str(method), str(params)[0:50])
         cherrypy.response.headers["Content-Type"] = "text/xml"
         return response
 

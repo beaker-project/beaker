@@ -42,8 +42,8 @@ log = logging.getLogger(__name__)
 
 class SeleniumTestCase(unittest.TestCase):
 
-    BEAKER_LOGIN_USER = 'admin'
-    BEAKER_LOGIN_PASSWORD = 'testing'
+    BEAKER_LOGIN_USER = u'admin'
+    BEAKER_LOGIN_PASSWORD = u'testing'
 
     def wait_and_try(self, f, wait_time=30):
         start_time = datetime.now()
@@ -59,6 +59,18 @@ class SeleniumTestCase(unittest.TestCase):
                 else:
                     sleep(0.25)
                     pass
+
+    def wait_for_condition(self, cond, wait_time=30):
+        start_time = time.time()
+        while True:
+            if cond():
+                break
+            current_test_time = time.time()
+            if time.time() - start_time > wait_time:
+                raise AssertionError('Condition %r not satisfied within %d seconds'
+                        % (cond, wait_time))
+            else:
+                sleep(0.25)
 
     @classmethod
     def get_selenium(cls):

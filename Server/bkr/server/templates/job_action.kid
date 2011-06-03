@@ -5,7 +5,7 @@
 <span py:if="('admin' in tg.identity.groups or task.is_owner(tg.identity.user)) and not task.is_finished()">
 <a class='list' href="${task.cancel_link()}">Cancel</a><br/>
 </span>
-<span py:if="'admin' not in tg.identity.groups and task.is_owner(tg.identity.user) and task.is_finished()">
+<span py:if="task.is_owner(tg.identity.user) and task.is_finished()">
 <a class='list' style='cursor:pointer;color: #22437f;' py:attrs='job_details'>Delete</a><br/>
 </span>
 <a py:if="export" class='list' href="${export}">Export</a><br/>

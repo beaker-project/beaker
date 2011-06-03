@@ -1,0 +1,57 @@
+Populate the system_status_duration table
+-----------------------------------------
+
+As apache user, run the population script provided in this directory (expected 
+run time approx. 4 mins):
+
+    su -s /bin/sh -c 'python /usr/share/doc/beaker-server-0.6.8/upgrade_0.6.8_system_status_duration.py' apache
+
+To roll back the creation of this new table, drop it:
+
+    DROP TABLE system_status_duration;
+
+
+Fix ErrorDocument 401
+---------------------
+
+If /etc/httpd/conf.d/beaker-server.conf contains such a directive:
+
+    ErrorDocument 401 /static/errors/unauthorized.html
+
+remove it, as that file does not exist and is not needed.
+
+
+Add expire_days to retention_tags
+---------------------------------
+On beaker database run:
+    ALTER TABLE retention_tag ADD COLUMN (`expire_in_days` int(8) default 0);
+    UPDATE retention_tag SET expire_in_days = 120 WHERE id = (SELECT id FROM beaker_tag WHERE tag = '120days');
+    UPDATE retention_tag SET expire_in_days = 60 WHERE id = (SELECT id FROM beaker_tag WHERE tag = '60days');
+    UPDATE retention_tag SET expire_in_days = 30 WHERE id = (SELECT id FROM beaker_tag WHERE tag = 'scratch');
+
+To Roll back:
+
+    ALTER TABLE retention_tag DROP COLUMN expire_in_days;
+
+
+Configure reports_engine
+------------------------
+
+Add the following lines to /etc/beaker/server.cfg, and configure as desired:
+
+    # If you want to send read-only report queries to a separate slave 
+    # database, configure it here. If not configured, report queries will 
+    # fall back to using the main Beaker database (above).
+    #reports_engine.dburi = 'mysql://beaker_ro:beaker_ro@dbslave/beaker'
+    #reports_engine.pool_recycle = 3600
+
+
+Re-populate reservation table
+-----------------------------
+
+If you upgraded from an older version of Beaker to 0.6.7 prior to 2011-04-07, 
+repeat the instructions given under "Populate the reservation table" in 
+upgrade_0.6.7.txt. (Issue TRUNCATE TABLE reservation; before re-populating 
+it.)
+
+The upgrade notes for 0.6.7 contained an error which was corrected on 2011-04-07.

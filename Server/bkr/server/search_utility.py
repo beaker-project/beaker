@@ -784,6 +784,7 @@ class System(SystemObject):
                           'Location'  : MyColumn(column=model.System.location, col_type='string'),
                           'Added'     : MyColumn(column=model.System.date_added, col_type='date'),
                           'Model'     : MyColumn(column=model.System.model,col_type='string'),
+                          'SerialNumber': MyColumn(column=model.System.serial, col_type='string'),
                           'Memory'    : MyColumn(column=model.System.memory,col_type='numeric'),
                           'NumaNodes' : MyColumn(column=model.Numa.nodes, col_type='numeric', relations='numa'),
                           'User'      : MyColumn(column=model.User.user_name, col_type='string',has_alias=True, relations='user'),
@@ -997,11 +998,10 @@ class Distro(SystemObject):
                             'OSMajor' : MyColumn(col_type='string',column=model.OSMajor.osmajor,relations=['osversion','osmajor']),
                             'Arch' : MyColumn(col_type='string',column=model.Arch.arch,relations='arch'),
                             'Virt' : MyColumn(col_type='boolean',column=model.Distro.virt),
-                            'Method' : MyColumn(col_type='string',column=model.Distro.method),
                             'Breed' : MyColumn(col_type='string',column=model.Breed.breed, relations=['breed']),
                             'Tag' : MyColumn(col_type='string', column=model.DistroTag.tag, relations=['_tags'])
                          }
-    search_values_dict = {'Tag' : lambda: [e.tag for e in model.DistroTag.list_by_tag('')]}
+    search_values_dict = {'Tag' : lambda: [e.tag for e in model.DistroTag.list_by_tag(u'')]}
 
     @classmethod
     def tag_is_not_filter(cls,col,val):

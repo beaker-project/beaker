@@ -1,0 +1,2 @@
+This is not an rpm file. And importing it should fail without an ISE 500.
+Also, the server should delete the uploaded file.

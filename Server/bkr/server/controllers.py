@@ -86,88 +86,6 @@ def identity_failure_url(errors):
         return '/forbidden?%s' % urllib.urlencode({'reason': errors}, doseq=True)
 config.update({'identity.failure_url': identity_failure_url})
 
-class Netboot:
-    # For XMLRPC methods in this class.
-    exposed = True
-
-    # path for Legacy RHTS
-    @cherrypy.expose
-    def system_return(self, *args):
-        return Root().system_return(*args)
-
-    @cherrypy.expose
-    def commandBoot(self, commands):
-        """
-        NetBoot Compat layer for old RHTS Scheduler
-        """
-        repos = []
-        bootargs = None
-        kickstart = None
-        packages = []
-        runtest_url = None
-        testrepo = None
-        hostname = None
-        distro_name = None
-        partitions = None
-        SETENV = re.compile(r'SetEnvironmentVar\s+([^\s]+)\s+"*([^"]+)')
-        BOOTARGS = re.compile(r'BootArgs\s+(.*)')
-        KICKSTART = re.compile(r'Kickstart\s+(.*)')
-        ADDREPO = re.compile(r'AddRepo\s+([^\s]+)')
-        TESTREPO = re.compile(r'TestRepo\s+([^\s]+)')
-        INSTALLPACKAGE = re.compile(r'InstallPackage\s+([^\s]+)')
-        KICKPART = re.compile(r'KickPart\s+([^\s]+)')
-
-        for command in commands.split('\n'):
-            if SETENV.match(command):
-                if SETENV.match(command).group(1) == "RESULT_SERVER":
-                    rhts_server = SETENV.match(command).group(2)
-                if SETENV.match(command).group(1) == "RECIPEID":
-                    recipeid = SETENV.match(command).group(2)
-                if SETENV.match(command).group(1) == "RUNTEST_URL":
-                    runtest_url = SETENV.match(command).group(2)
-                if SETENV.match(command).group(1) == "HOSTNAME":
-                    hostname = SETENV.match(command).group(2)
-                if SETENV.match(command).group(1) == "INSTALL_NAME":
-                    distro_name = SETENV.match(command).group(2)
-            if KICKPART.match(command):
-                partitions = KICKPART.match(command).group(1)
-            if INSTALLPACKAGE.match(command):
-                packages.append(INSTALLPACKAGE.match(command).group(1))
-            if BOOTARGS.match(command):
-                bootargs = BOOTARGS.match(command).group(1)
-            if KICKSTART.match(command):
-                kickstart = string.join(KICKSTART.match(command).group(1).split("RHTSNEWLINE"), "\n")
-            if ADDREPO.match(command):
-                repos.append(ADDREPO.match(command).group(1))
-            if TESTREPO.match(command):
-                testrepo = TESTREPO.match(command).group(1)
-            
-        ks_meta = "rhts_server=%s testrepo=%s recipeid=%s packages=%s" % (rhts_server, testrepo, recipeid, string.join(packages,":"))
-        if config.get('test_password'):
-            ks_meta = '%s password=%s' % (ks_meta, config.get('test_password'))
-        if runtest_url:
-            ks_meta = "%s runtest_url=%s" % (ks_meta, runtest_url)
-        if repos:
-            ks_meta = "%s customrepos=%s" % (ks_meta, string.join(repos,"|"))
-        if partitions:
-            ks_meta = "%s partitions=%s" % (ks_meta, partitions)
-        if distro_name:
-            distro = Distro.by_install_name(distro_name)
-        else:
-            raise BX(_("distro not defined"))
-        if hostname:
-            system = System.query().filter(System.fqdn == hostname).one()
-            system.activity.append(SystemActivity(system.user, 'VIA %s' % None, 'Reserved', 'User', "", "%s" % system.user))
-            system.action_auto_provision(distro, 
-                                         ks_meta, 
-                                         bootargs, 
-                                         None, 
-                                         kickstart)
-            system.activity.append(SystemActivity(system.user, 'VIA %s' % None, 'Provision', 'Distro', "", "Success: %s" % distro.install_name))
-        else:
-            raise BX(_("hostname not defined"))
-        return 0
-
 class Arches:
     @expose(format='json')
     def by_name(self,name):
@@ -281,7 +199,6 @@ class Root(RPCRoot):
     activity = Activities()
     users = Users()
     arches = Arches()
-    netboot = Netboot()
     auth = Auth()
     csv = CSV()
     jobs = Jobs()
@@ -307,7 +224,7 @@ class Root(RPCRoot):
     submit     = widgets.SubmitButton(name='submit')
 
     email      = widgets.TextField(name='email_address', label='Email Address') 
-    autoUsers  = widgets.AutoCompleteField(name='user',
+    autoUsers  = widgets.AutoCompleteTextField(name='user',
                                            search_controller=url("/users/by_name"),
                                            search_param="input",
                                            result_name="matches")
@@ -326,11 +243,15 @@ class Root(RPCRoot):
         submit_text = _(u'Change'),
     )
 
+    class OwnerFormValidatorSchema(validators.Schema):
+        user = validators.NotEmpty()
+
     owner_form    = widgets.TableForm(
         'Owner',
         fields = [id, autoUsers,],
         action = 'save_data',
         submit_text = _(u'Change'),
+        validator=OwnerFormValidatorSchema(),
     )  
 
     system_form = SystemForm()
@@ -429,6 +350,18 @@ class Root(RPCRoot):
         return dict( fields = System.get_fields(table_name))
   
     @expose(format='json')
+    def get_osversions(self, osmajor_id=None):
+        osversions = [(0,u'All')]
+        try:
+            osmajor = OSMajor.by_id(osmajor_id)
+            osversions.extend([(osversion.id,
+                           osversion.osminor
+                          ) for osversion in osmajor.osminor])
+        except InvalidRequestError:
+            pass
+        return dict(osversions = osversions)
+    
+    @expose(format='json')
     def get_installoptions(self, system_id=None, distro_id=None):
         try:
             system = System.by_id(system_id,identity.current.user)
@@ -479,7 +412,7 @@ class Root(RPCRoot):
     @expose(template='bkr.server.templates.grid_add')
     @expose(template='bkr.server.templates.systems_feed', format='xml', as_format='atom',
             content_type='application/atom+xml', accept_format='application/atom+xml')
-    @paginate('list',default_order='fqdn',limit=20)
+    @paginate('list', default_order='fqdn', limit=20, max_limit=None)
     def index(self, *args, **kw): 
         return_dict =  self._systems(systems = System.all(identity.current.user), *args, **kw) 
         return return_dict
@@ -511,7 +444,7 @@ class Root(RPCRoot):
     @expose(template='bkr.server.templates.systems_feed', format='xml', as_format='atom',
             content_type='application/atom+xml', accept_format='application/atom+xml')
     @identity.require(identity.not_anonymous())
-    @paginate('list',default_order='fqdn',limit=20)
+    @paginate('list', default_order='fqdn', limit=20, max_limit=None)
     def available(self, *args, **kw):
         return self._systems(systems = System.available(identity.current.user), *args, **kw)
 
@@ -519,7 +452,7 @@ class Root(RPCRoot):
     @expose(template='bkr.server.templates.systems_feed', format='xml', as_format='atom',
             content_type='application/atom+xml', accept_format='application/atom+xml')
     @identity.require(identity.not_anonymous())
-    @paginate('list',default_order='fqdn',limit=20)
+    @paginate('list', default_order='fqdn', limit=20, max_limit=None)
     def free(self, *args, **kw): 
         return self._systems(systems = System.free(identity.current.user), *args, **kw)
 
@@ -527,7 +460,7 @@ class Root(RPCRoot):
     @expose(template='bkr.server.templates.systems_feed', format='xml', as_format='atom',
             content_type='application/atom+xml', accept_format='application/atom+xml')
     @identity.require(identity.not_anonymous())
-    @paginate('list',limit=20)
+    @paginate('list', default_order='fqdn', limit=20, max_limit=None)
     def mine(self, *args, **kw):
         return self._systems(systems = System.mine(identity.current.user), *args, **kw)
 
@@ -905,6 +838,7 @@ class Root(RPCRoot):
             currently_held = system.user == our_user
             if system.can_admin(user=our_user): 
                 options['owner_change_text'] = ' (Change)'
+                options['show_cc'] = True
             else:
                 readonly = True
             if system.can_loan(our_user):
@@ -1033,6 +967,8 @@ class Root(RPCRoot):
 
     @cherrypy.expose
     def view(self, fqdn=None, **kwargs):
+        if isinstance(fqdn, str):
+            fqdn = fqdn.decode('utf8') # for virtual paths like /view/asdf.example.com
         # XXX content negotiation too?
         tg_format = kwargs.get('tg_format', 'html')
         if tg_format in ('rdfxml', 'turtle'):
@@ -1102,7 +1038,7 @@ class Root(RPCRoot):
         if not system.can_loan(identity.current.user):
             flash( _(u"Insufficient permissions to loan system"))
             redirect("/")
-        user = User.by_user_name(kw['user']['text'])
+        user = User.by_user_name(kw['user'])
         activity = SystemActivity(identity.current.user, 'WEBUI', 'Changed', 'Loaned To', 'None' , '%s' % user)
         system.activity.append(activity)
         system.loaned = user
@@ -1110,6 +1046,8 @@ class Root(RPCRoot):
         redirect("/view/%s" % system.fqdn)
     
     @expose()
+    @validate(form=owner_form)
+    @error_handler(owner_change)
     @identity.require(identity.not_anonymous())
     def save_owner(self, id, *args, **kw):
         try:
@@ -1120,8 +1058,9 @@ class Root(RPCRoot):
         if not system.can_admin(identity.current.user):
             flash( _(u"Insufficient permissions to change owner"))
             redirect("/")
-        user = User.by_user_name(kw['user']['text'])
-        activity = SystemActivity(identity.current.user, 'WEBUI', 'Changed', 'Owner', '%s' % system.owner, '%s' % user)
+        user = User.by_user_name(kw['user'])
+        activity = SystemActivity(identity.current.user, u'WEBUI', u'Changed',
+                u'Owner', unicode(system.owner), unicode(user))
         system.activity.append(activity)
         system.owner = user
         system.date_modified = datetime.utcnow()
@@ -1148,7 +1087,7 @@ class Root(RPCRoot):
                 flash(_(u'Failed to return %s: %s') % (system.fqdn, e))
         else:
             try:
-                system.reserve(service=u'WEBUI')
+                system.reserve(service=u'WEBUI', reservation_type=u'manual')
                 flash(_(u'Reserved %s') % system.fqdn)
             except BeakerException, e:
                 log.exception('Failed to reserve')
@@ -1376,27 +1315,18 @@ class Root(RPCRoot):
                 flash( _(u"%s already exists!" % kw['fqdn']) )
                 redirect("/")
             system = System(fqdn=kw['fqdn'],owner=identity.current.user)
-# TODO what happens if you log changes here but there is an issue and the actual change to the system fails?
-#      would be good to have the save wait until the system is updated
-# TODO log  group +/-
-        # Fields missing from kw have been set to NULL
-        # We want to store the logged info in a somewhat verbose manner, so if the column is in fact a FK to another table, put it in a fk_log_entry obj
-        status_entry = SystemSaveForm.fk_log_entry(form_field='status_id', mapper_class=SystemStatus, mapper_column_name='status', description='Status')
-        lab_controller_entry = SystemSaveForm.fk_log_entry(form_field='lab_controller_id', mapper_class=LabController, mapper_column_name='fqdn', description='LabController') 
-        type_entry = SystemSaveForm.fk_log_entry(form_field='type_id', mapper_class=SystemType, mapper_column_name='type',description='Type')
 
+        kw['status'] = SystemStatus.by_id(kw['status_id'])
+        if kw['lab_controller_id'] == 0:
+            kw['lab_controller'] = None
+        else:
+            kw['lab_controller'] = LabController.by_id(kw['lab_controller_id'])
+        kw['type'] = SystemType.by_id(kw['type_id'])
 
         log_fields = [ 'fqdn', 'vendor', 'lender', 'model', 'serial', 'location', 
-                       'mac_address', 'status_reason', status_entry,lab_controller_entry,type_entry]
+                       'mac_address', 'status', 'status_reason', 'lab_controller', 'type']
 
         for field in log_fields:
-            if isinstance(field,SystemSaveForm.fk_log_entry): #check if we are a foreign key with mapper object and column name           
-                fk_log_entry_obj = field
-                field = fk_log_entry_obj.form_field
-                mapper_class = fk_log_entry_obj.mapper_class
-                col_name = fk_log_entry_obj.mapper_column_name
-                description = fk_log_entry_obj.description 
-                       
             try:
                 current_val = getattr(system,field)
             except AttributeError:
@@ -1410,37 +1340,13 @@ class Root(RPCRoot):
                 field_change_handler = getattr(SystemSaveForm.handler,function_name,None)
                 if field_change_handler is not None:
                     kw = field_change_handler(current_val,new_val,**kw)
-
-                #The following try/except block trys to set the actual old/new values for the fields we are changing
-                # It tests for current and new values that are 'None' (i.e Changing from a valid lab controller to no lab controller)
-                # Except will trigger if the mapper_class has not been declared (i.e we are not a tuple), or if our mapper_column_name was invalid
-                # and will log a warning msg
-                try:
-                    if current_val: 
-                        current_sqla_obj = mapper_class.by_id(current_val)
-                        current_val = getattr(current_sqla_obj,col_name)
-                    if new_val: 
-                        new_sqla_obj = mapper_class.by_id(new_val)
-                        new_val = getattr(new_sqla_obj,col_name)
-
-                    field = description
-                except AttributeError,e:
-                    log.error(e)
-                    warn_msg =  "There was a problem logging the new value for %s" % (description)          
-                    try:
-                        unloggable_warn += "\n%s" % warn_msg
-                    except UnboundLocalError,e:
-                        unloggable_warn = warn_msg
-                    continue
-                except UnboundLocalError, e: pass # We probably weren't a fk_log_entry object
-                   
-                
-                activity = SystemActivity(identity.current.user, 'WEBUI', 'Changed', field, current_val, new_val)
+                if current_val:
+                    current_val = unicode(current_val)
+                if new_val:
+                    new_val = unicode(new_val)
+                activity = SystemActivity(identity.current.user, u'WEBUI', u'Changed', unicode(field), current_val, new_val)
                 system.activity.append(activity)
         
-        try: 
-            flash(unloggable_warn)
-        except UnboundLocalError,e: pass
         # We only want admins to be able to share systems to everyone.
         shared = kw.get('shared',False)
         if shared != system.shared:
@@ -1448,26 +1354,26 @@ class Root(RPCRoot):
               shared and len(system.groups) == 0:
                 flash( _(u"You don't have permission to share without the system being in a group first " ) )
                 redirect("/view/%s" % system.fqdn)
-            current_val = str(system.shared and True or False) #give us the text 'True' or 'False'
-            new_val = str(shared and True) #give us the text 'True' or 'False'
-            activity = SystemActivity(identity.current.user, 'WEBUI', 'Changed', 'shared', current_val, new_val )
+            current_val = unicode(system.shared and True or False) #give us the text 'True' or 'False'
+            new_val = unicode(shared and True) #give us the text 'True' or 'False'
+            activity = SystemActivity(identity.current.user, u'WEBUI', u'Changed', u'shared', current_val, new_val )
             system.activity.append(activity)
             system.shared = shared
                 
         log_bool_fields = [ 'private' ]
         for field in log_bool_fields:
             try:
-                current_val = str(getattr(system,field) and True or False)
+                current_val = unicode(getattr(system,field) and True or False)
             except KeyError:
-                current_val = ""
-            new_val = str(kw.get(field) or False)
-            if str(current_val) != new_val:
-                activity = SystemActivity(identity.current.user, 'WEBUI', 'Changed', field, current_val, new_val )
+                current_val = u""
+            new_val = unicode(kw.get(field) or False)
+            if current_val != new_val:
+                activity = SystemActivity(identity.current.user, u'WEBUI', u'Changed', unicode(field), current_val, new_val )
                 system.activity.append(activity)
-        system.status_id=kw['status_id']
+        system.status = kw['status']
         system.location=kw['location']
         system.model=kw['model']
-        system.type_id=kw['type_id']
+        system.type = kw['type']
         system.serial=kw['serial']
         system.vendor=kw['vendor']
         system.lender=kw['lender']
@@ -1482,10 +1388,7 @@ class Root(RPCRoot):
             system.private=False
 
         # Change Lab Controller
-        if kw['lab_controller_id'] == 0:
-            system.lab_controller_id = None
-        else:
-            system.lab_controller_id = kw['lab_controller_id']
+        system.lab_controller = kw['lab_controller']
         system.mac_address=kw['mac_address']
 
         # We can't compute a new checksum, so let's just clear it so that it 
@@ -1864,136 +1767,6 @@ class Root(RPCRoot):
     #@identity.require(identity.in_group("admin"))
     def lab_controllers(self, *args):
         return [lc.fqdn for lc in LabController.query()]
-    
-    def pick_common(self, distro=None, user=None, xml=None):
-        distro = Distro.by_install_name(distro)
-        systems = distro.systems(user)
-        #FIXME Should validate XML before processing.
-        queries = []
-        joins = []
-        for child in ElementWrapper(xmltramp.parse(xml)):
-            if callable(getattr(child, 'filter')):
-                (join, query) = child.filter()
-                queries.append(query)
-                joins.extend(join)
-        if joins:
-            systems = systems.filter(and_(*joins))
-        if queries:
-            systems = systems.filter(and_(*queries))
-        return systems
-        
-    @cherrypy.expose
-    def system_pick(self, distro=None, username=None, xml=None):
-        if not distro:
-            return (None,"You must supply a distro")
-        if not username:
-            return (None,"You must supply a user name")
-        if not xml:
-            return (None,"No xml query provided")
-
-        user = None
-        try:
-            # some systems use Bugzilla as auth.
-            # This is only temporary and will go away.
-            user = User.by_email_address(username)
-        except InvalidRequestError:
-            username = username.split('@')[0]
-            user = User.by_user_name(username)
-        if not user:
-            return (None, -1)
-        systems = self.pick_common(distro, user, xml)
-
-        hit = False
-        systems_list = systems.all()
-        size = len(systems_list)
-        while size:
-            size = size - 1
-            index = random.randint(0, size)
-            system = systems_list[index]
-            systems_list[index] = systems_list[size]
-   
-            # If the system doesn't have a current user then take it
-            if session.connection(System).execute(system_table.update(
-                     and_(system_table.c.id==system.id,
-                          system_table.c.user_id==None)), 
-                           user_id=user.user_id).rowcount == 1:
-                hit = True
-                break
-
-        if hit:
-            # We have a match and its available!
-            return (dict(fqdn    = system.fqdn,
-                         mac_address = '%s' % system.mac_address), 1)
-        elif systems.count():
-            # We have matches but none are available right now
-            system = systems.first()
-            return (dict(fqdn    = system.fqdn,
-                         mac_address = '%s' % system.mac_address), 0)
-        else:
-            # Nothing matches what the user requested.
-            return (None, -1)
-
-    @cherrypy.expose
-    def system_validate(self, distro=None, username=None, xml=None):
-        if not distro:
-            return (None,"You must supply a distro")
-        if not username:
-            return (None,"You must supply a user name")
-        if not xml:
-            return (None,"No xml query provided")
-
-        user = None
-        try:
-            # some systems use Bugzilla as auth.
-            # This is only temporary and will go away.
-            user = User.by_email_address(username)
-        except InvalidRequestError:
-            username = username.split('@')[0]
-            user = User.by_user_name(username)
-        if not user:
-            return (None, -1)
-        systems = self.pick_common(distro, user, xml)
-
-        if systems.count():
-            # We have matches 
-            system = systems.first()
-            return (dict(fqdn    = system.fqdn,
-                         mac_address = '%s' % system.mac_address), 0)
-        else:
-            # Nothing matches what the user requested.
-            return (None, -1)
-            
-    @cherrypy.expose
-    def system_return(self, fqdn=None, full_name=None, mylog=True):
-        if not fqdn:
-            return (0,"You must supply a system")
-        if not full_name:
-            return (0,"You must supply a user name")
-
-        user = None
-        try:
-            # some systems use Bugzilla as auth.
-            # This is only temporary and will go away.
-            user = User.by_email_address(full_name)
-        except InvalidRequestError:
-            full_name = full_name.split('@')[0]
-            user = User.by_user_name(full_name)
-        try:
-            system = System.by_fqdn(fqdn,user)
-        except InvalidRequestError:
-            return (0, "Invalid system")
-        if system.user == user:
-            if mylog:
-                system.activity.append(SystemActivity(system.user, "VIA %s" % identity.current.user, "Returned", "User", "%s" % system.user, ''))
-                try:
-                    system.action_release()
-                except BX, error:
-                    msg = "Failed to power off system: %s" % error
-                    system.activity.append(SystemActivity(system.user, "VIA %s" % identity.current.user, "Off", "Power", "", msg))
-            else:
-                system.user = None
-        return
-        
 
     @cherrypy.expose
     def legacypush(self, fqdn=None, inventory=None):
@@ -2003,9 +1776,9 @@ class Root(RPCRoot):
             return (0,"No inventory data provided")
 
         try:
-            system = System.query.filter(System.fqdn == fqdn).one()
+            system = System.query.filter(System.fqdn == fqdn.decode('ascii')).one()
         except InvalidRequestError:
-            system = System(fqdn=fqdn)
+            raise BX(_('No such system %s') % fqdn)
         return system.update_legacy(inventory)
 
     @expose()
@@ -2038,10 +1811,9 @@ class Root(RPCRoot):
         if not inventory:
             return (0,"No inventory data provided")
         try:
-            system = System.query.filter(System.fqdn == fqdn).one()
+            system = System.query.filter(System.fqdn == fqdn.decode('ascii')).one()
         except InvalidRequestError:
-            # New system, add it.
-            system = System(fqdn=fqdn)
+            raise BX(_('No such system %s') % fqdn)
         return system.update(inventory)
 
     @expose(template='bkr.server.templates.forbidden')

@@ -18,19 +18,12 @@ fi
 FAMILY=$(echo $FAMILYUPDATE | awk -F. '{print $1}')
 UPDATE=$(echo $FAMILYUPDATE | awk -F. '{print $2}')
 
-# Add distro to RHTS Scheduler.
-
-VARIANTOPT=""
-if [ -n "$VARIANT" ]; then
-VARIANTOPT="--variant=$VARIANT"
-fi
-
 if [ -n "$rhts_redhat_com" ]; then
  pushd /var/lib/beaker/addDistro.d
  for PLUGIN in *
  do
-    echo ./$PLUGIN $ARCH $FAMILY $DIST $VARIANT $DISTPATH
-    ./$PLUGIN $ARCH $FAMILY $DIST $VARIANT $DISTPATH
+    echo ./$PLUGIN "$ARCH" "$FAMILY" "$DIST" "$VARIANT" "$DISTPATH"
+    ./$PLUGIN "$ARCH" "$FAMILY" "$DIST" "$VARIANT" "$DISTPATH"
  done
  popd
 fi

@@ -582,3 +582,14 @@ class Proxy(ProxyHelper):
         """ Push legacy inventory data to Scheduler
         """
         return self.hub.legacypush(fqdn, inventory)
+
+    def updateDistro(self, distro, arch):
+        """ This proxy method allows the installed machine
+            to report that the distro was successfully installed
+            The Scheduler will add an INSTALLS tag to this
+            distro/arch, and if all distro/arch combo's
+            contain an INSTALLS tag then it will also add
+            a STABLE tag signifying that it successfully installed
+            on all applicable arches.
+        """
+        return self.hub.tags.updateDistro(distro, arch)
