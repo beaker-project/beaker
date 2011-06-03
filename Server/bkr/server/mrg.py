@@ -5,10 +5,12 @@ from qpid.log import enable, DEBUG, WARN
 from bkr.server.bexceptions import BeakerException
 import bkr.server.model as bkr_model
 from bkr.server.model import TaskBase, LabController
+from bkr.server.recipetasks import RecipeTasks
 from bkr.server import scheduler
 from turbogears import config
 from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.common.message_bus import BeakerBus
+from bkr.common.helpers import thread
 from time import sleep
 
 import logging
@@ -17,12 +19,29 @@ log = logging.getLogger("bkr.server.mrg")
 VALID_AMQP_TYPES=[list,dict,bool,int,long,float,unicode,dict,list,str,type(None)]
 
 
-
-
 class ServerBeakerBus(BeakerBus):
 
+
     class SendHandlers(object):
-        error_suffix = 'Cannot send message' 
+        error_suffix = 'Cannot send message'
+
+        @classmethod
+        def watchdog_notify(cls, session, status, watchdog, lc_fqdn, **kw):
+            """Notify of watchdog change
+
+            Will send a msg notifying of either a newly activated or newly expired watchdog
+
+            """
+            try:
+                msg_kw = {}
+                msg_kw['content'] = {'watchdog' : watchdog, 'status' : status }
+                msg = Message(**msg_kw)
+                lc_fqdn = 'lab.rhts.englab.bne.redhat.com:9010' #FIXME testing
+                snd = session.sender("lab-watchdog-%s" % lc_fqdn)
+                snd.send(msg)
+                log.info('Sent msg %s' % msg)
+            except Exception, e:
+                raise Exception(("%s, %s" % (str(e), cls.error_suffix)))
     
         @classmethod
         def task_update(cls,session, *args, **kw):
@@ -42,8 +61,8 @@ class ServerBeakerBus(BeakerBus):
                 msg_kw['subject'] = 'TaskUpdate.%s' % sub_subject #FIXME append task_id, get if from the args/kw
                 content = kw #FIXME perhaps we don't need all the elements of the dict?
                 msg_kw['content'] = content
-                msg = Message(**msg_kw)        #FIXME Do I need to add an unique id ??
-                snd = session.sender(ServerBeakerBus.events_exchange) 
+                msg = Message(**msg_kw) 
+                snd = session.sender(ServerBeakerBus.topic_exchange) 
                 snd.send(msg)
                 log.info('Sent msg %s' % msg_kw['subject'])
             except BeakerException, e:
@@ -55,6 +74,7 @@ class ServerBeakerBus(BeakerBus):
         rpc = RPCRoot()
     
         @classmethod
+        @thread
         def _koji_task_state_change(cls, ssn, *args, **kw):
             queue_name = 'tmp.koji-events-client-' + str(datatypes.uuid4())
             try:
@@ -72,6 +92,7 @@ class ServerBeakerBus(BeakerBus):
                 ssn.acknowledge()
 
         @classmethod
+        @thread
         def _service_request(cls,ssn, *args, **kw):
             queue_name='tmp.beaker-service-queue'
             try:
@@ -82,7 +103,7 @@ class ServerBeakerBus(BeakerBus):
                                     'x-bindings: [ {  queue: "' + queue_name + '", } ] } }')
 
                 while True:
-                    log.debug('Wating to receive in _service_request')
+                    log.debug('Waiting to receive in _service_request')
                     msg = receiver.fetch()
                     method = msg.properties['method']
                     method_args = msg.properties['args']
@@ -92,6 +113,7 @@ class ServerBeakerBus(BeakerBus):
                         val_to_return = cls.rpc.process_rpc(method,method_args)
                         msg_kw['content'] = val_to_return
                     except Exception, e:
+                        log.error(str(e))
                         msg_kw.setdefault('properties',{'error' : 1 })
                         msg_kw['content'] = str(e)
                     msg = Message(**msg_kw) #FIXME Do I need to add an unique id ??
@@ -105,14 +127,26 @@ class ServerBeakerBus(BeakerBus):
             except NotFound, e:
                 log.error(e)
 
+        @classmethod
+        @thread
+        def _expired_watchdogs(cls, ssn):
+            rt = RecipeTasks()
+            log.debug('Called _expired_watchdogs')
+            while True:
+                for lc_id, lc_fqdn in bkr_model.LabController.get_all():
+                    watchdog = rt.watchdogs(lc=lc_fqdn, status='expired')
+                    if watchdog:
+                        log.info('Sending watchdog %s for lc %s' % (watchdog, lc_fqdn))
+                        ServerBeakerBus().send_action('watchdog_notify', 'expired', watchdog, lc_fqdn)
+                sleep(60)
+
 
     def __init__(self, *args, **kw):
-        super(ServerBeakerBus,self).__init__(*args, **kw)
-        self.thread_handlers.update( 
-            {'koji':
-                { 'TaskStateChanged' : self.ListenHandlers._koji_task_state_change, },
-            'beaker' :
-                {'service_queue' : self.ListenHandlers._service_request, },
+        super(ServerBeakerBus, self).__init__(*args, **kw)
+        self.thread_handlers.update(
+            {'beaker' :
+                {'service_queue' : self.ListenHandlers._service_request, 
+                 'expired_watchdogs' : self.ListenHandlers._expired_watchdogs,},
             }
         )
 
@@ -124,11 +158,10 @@ class ServerBeakerBus(BeakerBus):
             try:
                 action_pointer = thread_handlers[service][type]
             except KeyError, e:
-                raise BeakerException(_('No action handler specified for %s'
+                log.exception(_('No action handler specified for %s'
                 % service_msgtype))
             new_session = self.conn.session()
-            scheduler.add_onetime_task(action=action_pointer,
-                args=[new_session])
+            action_pointer(new_session)
 
     def _open_connection(self, *args, **kw):
         try:

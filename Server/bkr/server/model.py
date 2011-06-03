@@ -3582,8 +3582,8 @@ class TaskBase(MappedObject):
             self.status = new_status
             #Send msg that task has status has been updated
             if get('beaker.qpid_enabled') is True:
-                from bkr.server.mrg import BeakerBus
-                BeakerBus().send_action('task_update', **self.task_info())
+                from bkr.server.mrg import ServerBeakerBus
+                ServerBeakerBus().send_action('task_update', **self.task_info())
             return True
         else:
             return False

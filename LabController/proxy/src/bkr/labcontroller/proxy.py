@@ -16,7 +16,7 @@ from cStringIO import StringIO
 from socket import gethostname
 
 import kobo.conf
-from kobo.client import HubProxy
+from kobo.client import HubProxy 
 from kobo.exceptions import ShutdownException
 
 from kobo.process import kill_process_group
@@ -30,6 +30,7 @@ except ImportError:
     from md5 import new as md5_constructor
 
 VERBOSE_LOG_FORMAT = "%(asctime)s [%(levelname)-8s] {%(process)5d} %(name)s.%(module)s:%(lineno)4d %(message)s"
+
 
 class ProxyHelper(object):
 

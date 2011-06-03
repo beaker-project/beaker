@@ -444,9 +444,14 @@ def scheduled_recipes(*args):
                 # Start the first task in the recipe
                 try:
                     recipe.tasks[0].start()
+                    # If we start ok, we need to send event active watchdog event
+                    if config.get('beaker.qpid_enabled'):
+                        from bkr.server.mrg import ServerBeakerBus
+                        ServerBeakerBus().send_action('watchdog_notify', 'active',
+                            [{'recipe_id' : recipe.id, 'system' : recipe.system.fqdn}], recipe.system.lab_controller.fqdn)
                 except exceptions.Exception, e:
                     log.error("Failed to Start recipe %s, due to %s" % (recipe.id,e))
-                    recipe.recipeset.abort(u"Failed to provision recipeid %s, %s" % 
+                    recipe.recipeset.abort(u"Failed to provision recipeid %s, %s" %
                                                                              (
                                                                          recipe.id,
                                                                             e))
@@ -471,9 +476,9 @@ def scheduled_recipes(*args):
                                                      recipe.ks_appends,
                                                      wait=True)
                     recipe.system.activity.append(
-                         SystemActivity(recipe.recipeset.job.owner, 
-                                        'Scheduler', 
-                                        'Provision', 
+                         SystemActivity(recipe.recipeset.job.owner,
+                                        'Scheduler',
+                                        'Provision',
                                         'Distro',
                                         '',
                                         '%s' % recipe.distro))
@@ -518,7 +523,7 @@ def queued_recipes_loop(*args, **kwargs):
         if not queued_recipes():
             time.sleep(20)
 
-def schedule():
+def schedule(): 
     bkr.server.scheduler._start_scheduler()
     if config.get('beaker.qpid_enabled') is True: 
         from bkr.server.mrg import ServerBeakerBus

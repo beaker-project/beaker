@@ -263,7 +263,7 @@ class Tasks(RPCRoot):
     @expose(template='bkr.server.templates.grid')
     @paginate('list',default_order='name', limit=30)
     def index(self, *args, **kw):
-        tasks = session.query(Task)
+        tasks = Task.query()
         tasks_return = self._tasks(tasks,**kw)
         searchvalue = None
         search_options = {}

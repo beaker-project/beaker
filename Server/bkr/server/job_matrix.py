@@ -165,12 +165,12 @@ class JobMatrix:
         self.arches_used = {}
         self.whiteboards_used = {}
         whiteboard_data = {} 
-        if 'job_ids' in kw:
-            jobs = kw['job_ids'].split() 
-        elif 'whiteboard' in kw:
+        if 'whiteboard' in kw:
             job_query = model.Job.query().filter(model.Job.whiteboard == kw['whiteboard'])
             for job in job_query:
                 jobs.append(job.id) 
+        elif 'job_ids' in kw:
+            jobs = kw['job_ids'].split() 
         else:
            pass
 

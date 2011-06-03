@@ -482,7 +482,7 @@ class JobMatrixReport(Form):
     template = 'bkr.server.templates.job_matrix' 
     member_widgets = ['whiteboard','job_ids','generate_button','nack_list']
     params = (['list','whiteboard_filter','whiteboard_options','job_ids_vals',
-        'nacks','comments_field','toggle_nacks_on',])
+        'nacks','comments_field','toggle_nacks_on', 'whiteboard_attrs'])
     default_validator = validators.NotEmpty() 
     def __init__(self,*args,**kw): 
         super(JobMatrixReport,self).__init__(*args, **kw)       

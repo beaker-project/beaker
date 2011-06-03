@@ -20,7 +20,6 @@ class BeakerBus(object):
     topic_exchange = config.get('global', 'topic_exchange')
     service_queue_name = config.get('global', 'service_queue')
 
-
     class ListenHandlers(object):
         pass
 
@@ -66,12 +65,12 @@ class BeakerBus(object):
             self._shared_dict['thread_handlers'] = {}
             self.__dict__ = self._shared_dict
 
-    def send_action(self, method_name, *args):
+    def send_action(self, method_name, *args, **kw):
         send_action = getattr(self.SendHandlers, method_name, None)
         if send_action is None:
             return BeakerException(_('%s is not a valid handler' % method_name))
         new_session = self.conn.session()
-        return send_action(new_session, *args)
+        return send_action(new_session, *args, **kw)
 
     def listen_action(self, method_name, **args):
         send_action = getattr(ListenHandlers, method_name, None)
@@ -93,5 +92,42 @@ class BeakerBus(object):
                 pass
             else:
                 raise
+
+class RPCInterface:
+
+    """ Provides a way of calling RPC as attributes
+    """
+
+    def __init__(self, conf=None, *args, **kw):
+        self.bus = BeakerBus()
+
+    def __getattr__(self, name):
+        return _Method(curry(self.bus.send_action, 'service_queue'), name)
+
+
+class _Method:
+
+
+    """A class that enables RPCs to be accessed as attributes ala xmlrpclib.ServerProxy
+       Inspired/ripped from xmlrpclib.ServerProxy
+    """
+
+    def __init__(self, send, name):
+        self.__send = send
+        self.__name = name
+
+    def __getattr__(self, name):
+        return _Method(self.__send, "%s.%s" % (self.__name, name))
+
+    def __call__(self, *args):
+        return self.__send(self.__name, *args)
+
+
+def curry(f, *arg, **kw):
+    # XXX should probably put this is a general helper module
+    # Taken from Python CookBook
+    def curried(*more_args, **more_kw):
+        return f(*(arg + more_args), **dict(kw, **more_kw))
+    return curried
 
 

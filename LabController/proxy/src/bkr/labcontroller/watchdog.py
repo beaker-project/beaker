@@ -53,57 +53,48 @@ def main_loop(conf=None, foreground=False):
 
     if foreground:
         add_stderr_logger(watchdog.logger)
-    watchdog.hub._transport.timeout = 120 
+    watchdog.hub._transport.timeout = 120
     time_of_last_check = 0
-    hostname = socket.gethostname()
-    use_bus = config['MSG_BUS']
-    while True:
-        try:
-            now = time.time()
-            # Poll for watchdogs
-            if now - time_of_last_check > 60:
-                time_of_last_check = now
-                if use_bus:
-                    try:
-                        active_watchdogs = LabBeakerBus().send_action('service_queue', 'recipes.tasks.watchdogs', 'active', hostname)
-                        expired_watchdogs = LabBeakerBus().send_action('service_queue', 'recipes.tasks.watchdogs', 'expired', hostname)
-                    except Exception, e:
-                        logger.exception('Could not run watchdog over bus, falling back to RPC: %s'  % str(e))
-                        use_bus = False
-                        continue
-                else:
-                    watchdog.hub._login()
-                    active_watchdogs = self.hub.recipes.tasks.watchdogs('active')
-                    expired_watchdogs = self.hub.recipes.tasks.watchdogs('expired')
-
-                watchdog.expire_watchdogs(expired_watchdogs)
-                watchdog.active_watchdogs(active_watchdogs)
-            if not watchdog.run():
-                watchdog.logger.debug(80 * '-')
-                watchdog.sleep()
-            # FIXME: Check for recipes that match systems under
-            #        this lab controller, if so take recipe and provision
-            #        system.
-
-            # write to stdout / stderr
-            sys.stdout.flush()
-            sys.stderr.flush()
-
-        except socket.sslerror:
-            pass # try again later
-        except (ShutdownException, KeyboardInterrupt):
-            # ignore keyboard interrupts and sigterm
-            signal.signal(signal.SIGINT, signal.SIG_IGN)
-            signal.signal(signal.SIGTERM, signal.SIG_IGN)
-
-            watchdog.logger.info('Exiting...')
-            break
-
-        except:
-            # this is a little extreme: log the exception and continue
-            traceback = Traceback()
-            watchdog.logger.error(traceback.get_traceback())
-            watchdog.sleep()
+    #hostname = socket.gethostname()
+    #FIXME just for testing
+    hostname = 'lab.rhts.englab.bne.redhat.com:9010'
+    try:
+        if config['MSG_BUS']:
+            LabBeakerBus().run('beaker.watchdog', hostname)
+        else:
+            watchdog.hub._login()
+            while True:
+                try:
+                    now = time.time()
+                    # Poll for watchdogs
+                    if now - time_of_last_check > 60:
+                        time_of_last_check = now
+                        active_watchdogs = self.hub.recipes.tasks.watchdogs('active')
+                        expired_watchdogs = self.hub.recipes.tasks.watchdogs('expired')
+                        watchdog.expire_watchdogs(expired_watchdogs)
+                        watchdog.active_watchdogs(active_watchdogs)
+                    if not watchdog.run():
+                        watchdog.logger.debug(80 * '-')
+                        watchdog.sleep()
+                    # FIXME: Check for recipes that match systems under
+                    #        this lab controller, if so take recipe and provision
+                    #        system.
+                    # write to stdout / stderr
+                    sys.stdout.flush()
+                    sys.stderr.flush()
+                except socket.sslerror:
+                    pass # try again later
+                except (ShutdownException, KeyboardInterrupt):
+                    # ignore keyboard interrupts and sigterm
+                    signal.signal(signal.SIGINT, signal.SIG_IGN)
+                    signal.signal(signal.SIGTERM, signal.SIG_IGN)
+                    watchdog.logger.info('Exiting...')
+                    break
+    except:
+        # this is a little extreme: log the exception and continue
+        traceback = Traceback()
+        watchdog.logger.error(traceback.get_traceback())
+        watchdog.sleep()
 
 
 
@@ -135,6 +126,7 @@ def main():
                   daemon_pid_file=pid_file,
                   conf=conf, 
                   foreground=False)
+    print 'exiting program'
 
 if __name__ == '__main__':
     main()
