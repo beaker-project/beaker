@@ -1895,15 +1895,14 @@ class Skeleton(SingleChoice):
 
             BUILT_FILES=
 
-            FILES=$(METADATA) runtest.sh Makefile PURPOSE%s
+            FILES=$(METADATA) %s
 
             .PHONY: all install download clean
 
             run: $(FILES) build
             	./runtest.sh
 
-            build: $(BUILT_FILES)
-            	chmod a+x runtest.sh%s
+            build: $(BUILT_FILES)%s
 
             clean:
             	rm -f *~ $(BUILT_FILES)
@@ -1974,20 +1973,22 @@ class Skeleton(SingleChoice):
 
     def getMakefile(self, testname, version, author, reproducers, meta):
         """ Return Makefile skeleton """
-        files = build = ""
+        files = ["runtest.sh", "Makefile", "PURPOSE"]
+        build = ["runtest.sh"]
         # add "test" file when creating simple test
         if self.data == "simple":
-            files += " test"
-            build += " test"
+            files.append("test")
+            build.append("test")
         # include the reproducers in the lists as well
         if reproducers:
             for reproducer in reproducers:
-                files += " " + reproducer
+                files.append(reproducer)
                 # add script-like reproducers to build tag
                 if RegExpScript.search(reproducer):
-                    build += " " + reproducer
-        return dedentText(self.makefile % (testname, version, files,
-                build, author, meta))
+                    build.append(reproducer)
+        chmod = "\n            	test -x %s || chmod a+x %s"
+        return dedentText(self.makefile % (testname, version, " ".join(files),
+                "".join([chmod % (file, file) for file in build]), author, meta))
 
     def getVimHeader(self):
         """ Insert the vim completion header if it's an beakerlib skeleton """
