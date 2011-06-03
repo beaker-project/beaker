@@ -1,5 +1,5 @@
 import unittest, datetime, os, errno, shutil
-from bkr.server.model import LogRecipe
+from bkr.server.model import LogRecipe, TaskBase
 from bkr.server.test import data_setup
 from bkr.server.tools import log_delete
 from turbogears.database import session
@@ -57,7 +57,6 @@ class LogDelete(unittest.TestCase):
         job_to_delete.recipesets[0].recipes[0].logs.append(LogRecipe(filename=u'test.log'))
 
         r_delete = job_to_delete.recipesets[0].recipes[0]
-
         dir_delete = os.path.join(r_delete.logspath ,r_delete.filepath)
 
         self.make_dir(dir_delete)
@@ -65,13 +64,13 @@ class LogDelete(unittest.TestCase):
         fd.close()
         session.flush()
         log_delete.log_delete()
-
         self.check_dir_not_there(dir_delete)
 
     def test_log_delete_to_delete(self):
         job_to_delete = self.job_to_delete
         job_to_delete.to_delete = datetime.datetime.utcnow()
         job_to_delete.recipesets[0].recipes[0].logs.append(LogRecipe(filename=u'test.log'))
+
         r_ = job_to_delete.recipesets[0].recipes[0]
         dir = os.path.join(r_.logspath ,r_.filepath)
         self.make_dir(dir)

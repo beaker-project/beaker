@@ -16,7 +16,7 @@
 # Author: Bill Peck, Gurhan Ozen
 
 . /usr/bin/rhts-environment.sh
-. /usr/lib/beakerlib/beakerlib.sh
+. /usr/share/beakerlib/beakerlib.sh
 
 if [ -z "$HOSTNAME" ]; then
     hostname=$(hostname)

@@ -85,14 +85,14 @@ $package
 
 #end if
 #end if
-%pre
+%pre --log=/dev/console
 $SNIPPET("rhts_pre")
 $SNIPPET("Fedora_pre")
 $SNIPPET("system_pre")
 %end
 
 
-%post
+%post --log=/dev/console
 $SNIPPET("rhts_post")
 $SNIPPET("Fedora_post")
 $SNIPPET("system_post")

@@ -21,6 +21,7 @@ import logging
 import re
 from turbogears.database import session
 
+from bkr.server.model import Job
 from bkr.server.test.selenium import SeleniumTestCase
 from bkr.server.test import data_setup
 from bkr.server.test.assertions import assert_sorted
@@ -62,7 +63,6 @@ class TestRecipesDataGrid(SeleniumTestCase):
         cls.selenium.stop()
 
     # see https://bugzilla.redhat.com/show_bug.cgi?id=629147
-
     def check_column_sort(self, column):
         sel = self.selenium
         sel.open('recipes/mine')
@@ -119,7 +119,7 @@ class TestRecipeView(SeleniumTestCase):
         self.system_owner = data_setup.create_user()
         self.system = data_setup.create_system(owner=self.system_owner, arch=u'x86_64')
         distro = data_setup.create_distro(arch=u'x86_64')
-        self.job = data_setup.create_completed_job(owner=user, distro=distro)
+        self.job = data_setup.create_completed_job(owner=user, distro=distro, server_log=True)
         for recipe in self.job.all_recipes:
             recipe.system = self.system
         session.flush()
@@ -129,11 +129,11 @@ class TestRecipeView(SeleniumTestCase):
         # log in
         sel.open('')
         sel.click('link=Login')
-        sel.wait_for_page_to_load('3000')
+        sel.wait_for_page_to_load('30000')
         sel.type('user_name', user.user_name)
         sel.type('password', 'password')
         sel.click('login')
-        sel.wait_for_page_to_load('3000')
+        sel.wait_for_page_to_load('30000')
 
     def tearDown(self):
         self.selenium.stop()
@@ -150,3 +150,20 @@ class TestRecipeView(SeleniumTestCase):
         sel.wait_for_page_to_load('3000')
         self.assertEqual(self.selenium.get_title(),
                 'Report a problem with %s' % self.system.fqdn)
+
+    def test_log_url_looks_right(self):
+        sel = self.selenium
+        some_job = self.job
+        r = some_job.recipesets[0].recipes[0]
+        sel.open('recipes/%s' % r.id)
+        sel.wait_for_page_to_load(3000)
+        sel.click("all_recipe_%s" % r.id)
+        from time import sleep
+        sleep(2)
+        rt_log_server_link = sel.get_attribute("//tr[@class='even pass_recipe_%s recipe_%s']//td[position()=4]//a@href" % (r.id, r.id))
+        rt_log = r.tasks[0].logs[0]
+        self.assert_(rt_log_server_link == rt_log.server + '//' + rt_log.filename)
+        sel.click("logs_button_%s" % r.id)
+        sleep(2)
+        r_server_link = sel.get_attribute("//table[@class='show']/tbody//tr[position()=6]/td/a@href")
+        self.assert_(r_server_link == r.logs[0].server + '//' + r.logs[0].filename)

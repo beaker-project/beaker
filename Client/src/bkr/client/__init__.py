@@ -11,6 +11,11 @@ from kobo.client import ClientCommand
 class BeakerCommand(ClientCommand):
     enabled = False
 
+def prettyxml(option, opt_str, value, parser):
+    # prettyxml implies debug as well.
+    parser.values.prettyxml = True
+    parser.values.debug = True
+
 class BeakerWorkflow(BeakerCommand):
     doc = xml.dom.minidom.Document()
 
@@ -26,8 +31,9 @@ class BeakerWorkflow(BeakerCommand):
 
         self.parser.add_option(
             "--prettyxml",
+            action="callback", 
+            callback=prettyxml,
             default=False,
-            action="store_true",
             help="print the xml in pretty format",
         )
         self.parser.add_option(

@@ -19,6 +19,7 @@
 import unittest
 import logging
 import time
+import re
 import tempfile
 import pkg_resources
 from turbogears.database import session
@@ -37,7 +38,7 @@ class TestViewJob(SeleniumTestCase):
         self.selenium.stop()
 
     def test_cc_list(self):
-        user = data_setup.create_user(password='password')
+        user = data_setup.create_user(password=u'password')
         job = data_setup.create_job(owner=user,
                 cc=[u'laika@mir.su', u'tereshkova@kosmonavt.su'])
         session.flush()
@@ -56,7 +57,7 @@ class TestViewJob(SeleniumTestCase):
             'laika@mir.su; tereshkova@kosmonavt.su')
 
     def test_edit_job_whiteboard(self):
-        user = data_setup.create_user(password='asdf')
+        user = data_setup.create_user(password=u'asdf')
         job = data_setup.create_job(owner=user)
         session.flush()
         self.login(user=user.user_name, password='asdf')
@@ -67,14 +68,61 @@ class TestViewJob(SeleniumTestCase):
         new_whiteboard = 'new whiteboard value %s' % int(time.time())
         sel.type('name=whiteboard', new_whiteboard)
         sel.click('//form[@id="job_whiteboard_form"]//button[@type="submit"]')
-        for i in range(100):
-            try:
-                if sel.is_element_present('//form[@id="job_whiteboard_form"]//div[@class="msg success"]'): break
-            except: pass
-            time.sleep(0.2)
-        else: self.fail('timed out looking for save success message')
+        self.wait_for_condition(lambda: sel.is_element_present(
+                '//form[@id="job_whiteboard_form"]//div[@class="msg success"]'))
         sel.open('jobs/%s' % job.id)
         self.assertEqual(new_whiteboard, sel.get_value('name=whiteboard'))
+
+    def test_datetimes_are_localised(self):
+        job = data_setup.create_completed_job()
+        session.flush()
+        sel = self.selenium
+        sel.open('jobs/%s' % job.id)
+        sel.wait_for_page_to_load('30000')
+        self.check_datetime_localised(
+                sel.get_text('//table[@class="show"]//td'
+                '[preceding-sibling::td[1]/b/text() = "Queued"]'))
+        self.check_datetime_localised(
+                sel.get_text('//table[@class="show"]//td'
+                '[preceding-sibling::td[1]/b/text() = "Started"]'))
+        self.check_datetime_localised(
+                sel.get_text('//table[@class="show"]//td'
+                '[preceding-sibling::td[1]/b/text() = "Finished"]'))
+
+    def test_invalid_datetimes_arent_localised(self):
+        job = data_setup.create_job()
+        session.flush()
+        sel = self.selenium
+        sel.open('jobs/%s' % job.id)
+        sel.wait_for_page_to_load('30000')
+        self.assertEquals(
+                sel.get_text('//table[@class="show"]//td'
+                '[preceding-sibling::td[1]/b/text() = "Finished"]'),
+                '')
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=706435
+    def test_task_result_datetimes_are_localised(self):
+        job = data_setup.create_completed_job()
+        session.flush()
+        sel = self.selenium
+        sel.open('jobs/%s' % job.id)
+        sel.wait_for_page_to_load('30000')
+        recipe_id = job.recipesets[0].recipes[0].id
+        sel.click('all_recipe_%d' % recipe_id)
+        self.wait_for_condition(lambda: sel.is_element_present(
+                '//div[@id="task_items_%d"]//table[@class="list"]' % recipe_id))
+        recipe_task_start, recipe_task_finish, _ = \
+                sel.get_text('//div[@id="task_items_%d"]//table[@class="list"]'
+                    '/tbody/tr[2]/td[3]' % recipe_id).splitlines()
+        self.check_datetime_localised(recipe_task_start.strip())
+        self.check_datetime_localised(recipe_task_finish.strip())
+        self.check_datetime_localised(
+                sel.get_text('//div[@id="task_items_%d"]//table[@class="list"]'
+                    '/tbody/tr[3]/td[3]' % recipe_id))
+
+    def check_datetime_localised(self, dt):
+        self.assert_(re.match(r'\d\d\d\d-\d\d-\d\d \d\d:\d\d:\d\d [-+]\d\d:\d\d$', dt),
+                '%r does not look like a localised datetime' % dt)
 
 class NewJobTest(SeleniumTestCase):
 
@@ -165,7 +213,7 @@ class NewJobTest(SeleniumTestCase):
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=661652
     def test_job_with_excluded_task(self):
-        distro = data_setup.create_distro(arch='ia64')
+        distro = data_setup.create_distro(arch=u'ia64')
         excluded_task = data_setup.create_task(exclude_arch=[u'ia64'])
         session.flush()
         self.login()
