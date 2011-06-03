@@ -472,16 +472,13 @@ class Help:
                 Beaker Documentation:
                 https://fedorahosted.org/beaker/wiki/BeakerUserGuide
 
-                Makefile Format:
-                https://fedorahosted.org/beaker/wiki/TestMakefile
-
                 BeakerLib
                 https://fedorahosted.org/beakerlib
 
             BUGS:
                 If you find a bug or have an idea for enhancement, do not hesitate
-                to contact me on the address below. Or, even better, file a new bug at:
-                https://bugzilla.redhat.com/enter_bug.cgi?product=Red%20Hat%20QA%20Process&component=beaker-wizard
+                to contact me on the address below. Or, even better, file a new bug:
+                https://fedorahosted.org/beaker/wiki/BeakerWizard#Bugs
 
             AUTHOR:
                 Petr Splichal <psplicha@redhat.com>
