@@ -1664,7 +1664,7 @@ url --url=$tree
     remote = property(remote)
 
     @classmethod
-    def all(cls, user=None,system = None): 
+    def all(cls, user=None, system=None): 
         """
         Only systems that the current user has permission to see
         
@@ -1723,15 +1723,8 @@ url --url=$tree
         Builds on all.  Only systems which this user has permission to reserve.
         Can take varying system_status' as args as well
         """
-        if systems:
-            try:
-                query = systems.outerjoin(['groups','users'], aliased=True)
-            except AttributeError, (e):
-                log.error('A non Query object has been passed into the available method, using default query instead: %s' % e)
-                query = cls.query().outerjoin(['groups','users'], aliased=True)
-        else:
-            query = System.all(user)
 
+        query = System.all(user, system=systems)
         if type(system_status) is list:
             query = query.filter(or_(*[System.status==k for k in system_status]))
         elif type(system_status) is SystemStatus:
@@ -3260,8 +3253,7 @@ class Distro(MappedObject):
             systems = System.query()
         
         return systems.join(join).filter(
-             and_(
-                  System.arch.contains(self.arch),
+             and_( 
                 not_(or_(System.id.in_(select([system_table.c.id]).
                   where(system_table.c.id==system_arch_map.c.system_id).
                   where(arch_table.c.id==system_arch_map.c.arch_id).
@@ -3279,7 +3271,8 @@ class Distro(MappedObject):
                   where(ExcludeOSVersion.arch==self.arch)
                                       )
                         )
-                    )
+                    ),
+                 system_arch_map.c.arch_id == self.arch.id,
                  )
         )
 
