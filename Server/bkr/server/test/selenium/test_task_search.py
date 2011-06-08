@@ -16,6 +16,34 @@ class Search(bkr.server.test.selenium.SeleniumTestCase):
         session.flush()
         self.selenium.start()
 
+    def test_task_deleted(self):
+
+        user = data_setup.create_user(password=u'password')
+        r = data_setup.create_recipe(task_name=self.task_three.name)
+        j = data_setup.create_job_for_recipes((r,), owner=user)
+        session.flush()
+
+        sel = self.selenium
+        self.login(user=user.user_name, password=u'password')
+        sel.open(u'tasks%s' % self.task_three.name)
+        sel.wait_for_page_to_load('3000')
+        sel.click("//input[@type='submit']")
+        self.wait_and_try(lambda: self.assert_(sel.is_text_present(u"T:%s" % r.tasks[0].id)), wait_time=10)
+
+        j.soft_delete()
+        session.flush()
+        sel.open(u'tasks%s' % self.task_three.name)
+        sel.wait_for_page_to_load('3000')
+        sel.click("//input[@type='submit']")
+        try:
+            self.wait_and_try(lambda: self.assert_(sel.is_text_present(u"T:%s" % r.tasks[0].id)), wait_time=10)
+        except AssertionError:
+            pass
+        else:
+            raise AssertionError(u'Found task %s where it was deleted and should not be viewable' % self.task_three.id)
+
+
+
     def test_task_search(self):
         sel = self.selenium
         sel.open('tasks')
