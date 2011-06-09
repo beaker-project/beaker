@@ -4381,7 +4381,7 @@ class RecipeSet(TaskBase):
     def by_status(cls, status, query=None):
         if not query:
             query=cls.query
-        return query.join('status').filter(Status.status==status)
+        return query.join('status').filter(TaskStatus.status==status)
 
     @classmethod
     def by_tag(cls, tag, query=None):
