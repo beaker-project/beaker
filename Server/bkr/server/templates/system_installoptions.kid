@@ -2,7 +2,7 @@
  name="${name}"
  action="${tg.url(action)}"
  method="${method}" width="100%">
- <script language="JavaScript" type="text/JavaScript">
+ <script language="JavaScript" type="text/JavaScript" py:if="not readonly">
     ${name}_0 = new InstallOptions('${prov_osmajor.field_id}', '${prov_osversion.field_id}', '${tg.url('/get_osversions')}');
     addLoadEvent(${name}_0.initialize);
  </script>

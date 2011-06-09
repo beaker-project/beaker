@@ -2,8 +2,8 @@
 %{!?pyver: %global pyver %(%{__python} -c "import sys ; print sys.version[:3]")}
 
 Name:           beaker
-Version:        0.6.10
-Release:        4%{?dist}
+Version:        0.6.12
+Release:        1%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -23,7 +23,7 @@ BuildRequires:  python-sphinx10
 %endif
 # These server dependencies are needed in the build, because
 # sphinx imports bkr.server modules to generate API docs
-%if 0%{?rhel}
+%if 0%{?rhel} == 5
 BuildRequires:  TurboGears = 1.0.8-7.eso.1%{?dist}
 %else
 BuildRequires:  TurboGears
@@ -50,7 +50,7 @@ Requires:       libxslt-python
 %package server
 Summary:       Server component of Beaker
 Group:          Applications/Internet
-%if 0%{?rhel}
+%if 0%{?rhel} == 5
 Requires:       TurboGears = 1.0.8-7.eso.1%{?dist}
 %else
 Requires:       TurboGears
@@ -251,6 +251,59 @@ fi
 %{_var}/lib/beaker/addDistro.d/*
 
 %changelog
+* Wed Jun 01 2011 Raymond Mancy <rmancy@redhat.com> 0.6.12-1
+- 706435 - apply datetime localisation to DOM elements inserted by jQuery
+  (dcallagh@redhat.com)
+- 703548 - hide system cc field from non-owners (dcallagh@redhat.com)
+- 705401 - Not detecting Panic on Xen systems (bpeck@redhat.com)
+- 704948 - beaker-proxy init script is half broken (bpeck@redhat.com)
+- 703841 - bkr workflow-simple --prettyxml should imply --debug
+  (bpeck@redhat.com)
+- 700790 - no way how to get email associated with user (bpeck@redhat.com)
+- 704563 - Changed log_delete tobe able to handle random exceptions, as well
+  as ensuring that it can delete all the right directories even if they are in
+  unexpected locations (rmancy@redhat.com)
+- Adding xmlrpc logging to the server ala proxy (rmancy@redhat.com)
+- Log kickstart pre/post to console (mcsontos@redhat.com)
+
+* Fri May 20 2011 Dan Callaghan <dcallagh@redhat.com> 0.6.11-2
+- 706150 do not activate InstallOptions js when widget is read-only
+  (dcallagh@redhat.com)
+
+* Wed May 18 2011 Raymond Mancy <rmancy@redhat.com> 0.6.11-1
+- 694107 - remove paginate limit for systems (dcallagh@redhat.com)
+- 572835 Test program interface to install debuginfo.
+  (bpeck@redhat.com)
+- 701414 - obey system provision options in XML-RPC (dcallagh@redhat.com)
+- 702106 - update for new repo layout on repos.fedorapeople.org
+  (dcallagh@redhat.com)
+- 702082 - push/legacypush should not attempt to create new systems and  
+  /distribution/inventory: fix Numa info when not supplied by smolt (dcallagh@redhat.com)
+- 599701 - allow searching by system serial number (dcallagh@redhat.com)
+- 703497 - remove lagacy rhts support from kickstarts (bpeck@redhat.com)
+- 645873 - Job cancelled soon after creation doesn't terminate
+  (bpeck@redhat.com)
+- 541291 - Can't add per-minor-release install options (bpeck@redhat.com)
+- 704374 - AlphaNavBar widget should sort letters (dcallagh@redhat.com)
+- 590033 - [RFE] removing tasks from task library (bpeck@redhat.com)
+- 702665 - bkr workflow-simple tasks can get out of order (bpeck@redhat.com)
+- 658515 - javascript to adjust datetimes to local timezone
+  (dcallagh@redhat.com)
+- 692935 - Remove lab controllers (rmancy@redhat.com)
+- 636565 - RFE: needs install machine only with @base group
+  (bpeck@redhat.com)
+- 705428 - repo_update.py: bypass local cache for package files
+  (dcallagh@redhat.com)
+
+- show a less scary message when motd does not exist (dcallagh@redhat.com)
+- Disable CHECKRECIPE until kickstarts are fixed. (bpeck@redhat.com)
+- remove tg.include_widgets from server.cfg. (bpeck@redhat.com)
+- fix osversion install options js (dcallagh@redhat.com)
+- Add Xvfb to Requires. (bpeck@redhat.com)
+- Add firefox to Requires as well. (bpeck@redhat.com)
+- still more Requires (bpeck@redhat.com)
+- Set-up logging to console. (mcsontos@redhat.com)
+
 * Thu May 05 2011 Raymond Mancy <rmancy@redhat.com> 0.6.10-4
 - and for commit().... (rmancy@redhat.com)
 

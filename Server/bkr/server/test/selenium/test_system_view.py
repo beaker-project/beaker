@@ -30,8 +30,9 @@ from turbogears.database import session
 from bkr.server.test.selenium import SeleniumTestCase
 from bkr.server.test import data_setup, get_server_base, \
         assertions
-from bkr.server.model import Key, Key_Value_String, Key_Value_Int, System
 from bkr.common import stub_cobbler
+from bkr.server.model import Key, Key_Value_String, Key_Value_Int, System, \
+        Provision,
 
 class SystemViewTest(SeleniumTestCase):
 
@@ -41,9 +42,15 @@ class SystemViewTest(SeleniumTestCase):
         self.lab_controller = data_setup.create_labcontroller(
                 fqdn=u'localhost:%d' % self.stub_cobbler_thread.port)
         self.system_owner = data_setup.create_user()
+        self.unprivileged_user = data_setup.create_user(password=u'password')
+        self.distro = data_setup.create_distro()
         self.system = data_setup.create_system(owner=self.system_owner,
                 status=u'Automated')
         self.system.shared = True
+        self.system.provisions[self.distro.arch] = Provision(
+                arch=self.distro.arch, ks_meta=u'some_ks_meta_var',
+                kernel_options=u'some_kernel_option=1',
+                kernel_options_post=u'some_kernel_option=2')
         self.system.lab_controller = self.lab_controller
         session.flush()
         self.selenium = self.get_selenium()
@@ -420,6 +427,28 @@ class SystemViewTest(SeleniumTestCase):
                 '//span[@class="fielderror" and text()="Please enter a value"]'))
         session.refresh(self.system)
         self.assertEquals(self.system.owner, self.system_owner)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=706150
+    def test_install_options_populated_on_provision_tab(self):
+        self.login(self.unprivileged_user.user_name, 'password')
+        sel = self.selenium
+        self.go_to_system_view()
+        sel.click('//ul[@class="tabbernav"]//a[text()="Provision"]')
+        sel.select('prov_install', self.distro.install_name)
+        self.wait_and_try(self.check_install_options)
+
+    def check_install_options(self):
+        sel = self.selenium
+        self.assertEqual(sel.get_value('ks_meta'), 'some_ks_meta_var')
+        self.assertEqual(sel.get_value('koptions'), 'some_kernel_option=1')
+        self.assertEqual(sel.get_value('koptions_post'), 'some_kernel_option=2')
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=703548
+    def test_cc_not_visible_to_random_noobs(self):
+        self.login(self.unprivileged_user.user_name, 'password')
+        sel = self.selenium
+        self.go_to_system_view()
+        self.assert_(not sel.is_text_present('Notify CC'))
 
 class SystemCcTest(SeleniumTestCase):
 

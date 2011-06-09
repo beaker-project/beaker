@@ -82,16 +82,20 @@ $package
 #end if ## snippetprofile
 
 %pre
+(
 PATH=/usr/bin:$PATH
 $SNIPPET("rhts_pre")
 $SNIPPET("RedHatEnterpriseLinux3_pre")
 $SNIPPET("system_pre")
+) 2>&1 | /usr/bin/tee /dev/console
 
 %post
+(
 PATH=/usr/bin:$PATH
 $SNIPPET("rhts_post")
 $SNIPPET("RedHatEnterpriseLinux3_post")
 $SNIPPET("system_post")
+) 2>&1 | /usr/bin/tee /dev/console
 
 #if $getVar('ks_appends', '') != '':
 $SNIPPET("ks_appends")

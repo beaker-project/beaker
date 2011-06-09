@@ -122,12 +122,12 @@ xkeyboard-config
 
 #end if ## sysprofile snippet
 
-%pre
+%pre --log=/dev/console
 $SNIPPET("rhts_pre")
 $SNIPPET("RedHatEnterpriseLinuxServer5_pre")
 $SNIPPET("system_pre")
 
-%post
+%post --log=/dev/console
 $SNIPPET("rhts_post")
 $SNIPPET("RedHatEnterpriseLinuxServer5_post")
 $SNIPPET("system_post")

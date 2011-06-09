@@ -838,6 +838,7 @@ class Root(RPCRoot):
             currently_held = system.user == our_user
             if system.can_admin(user=our_user): 
                 options['owner_change_text'] = ' (Change)'
+                options['show_cc'] = True
             else:
                 readonly = True
             if system.can_loan(our_user):

@@ -27,7 +27,8 @@ from bkr.server.model import LabController, User, Group, Distro, Breed, Arch, \
         SystemType, SystemStatus, Recipe, RecipeTask, RecipeTaskResult, \
         Device, TaskResult, TaskStatus, Job, RecipeSet, TaskPriority, \
         LabControllerDistro, Power, PowerType, TaskExcludeArch, TaskExcludeOSMajor, \
-        Permission, RetentionTag, Product, Watchdog, Reservation
+        Permission, RetentionTag, Product, Watchdog, Reservation, LogRecipe, \
+        LogRecipeTask
 
 log = logging.getLogger(__name__)
 
@@ -188,19 +189,34 @@ def create_tasks(xmljob):
                 create_task(name=task.name)
 
 def create_recipe(system=None, distro=None, task_list=None, 
-    task_name=u'/distribution/reservesys', whiteboard=None):
+    task_name=u'/distribution/reservesys', whiteboard=None, server_log=False):
     recipe = MachineRecipe(ttasks=1, system=system, whiteboard=whiteboard,
             distro=distro or Distro.query()[0])
+    if not server_log:
+        recipe.logs = [LogRecipe(path=u'/recipe_path',filename=u'dummy.txt', basepath=u'/beaker')]
+    else:
+        recipe.logs = [LogRecipe(server=u'http://dummy-archive-server/beaker/recipe_path', filename=u'dummy.txt' )]
+
     recipe._distro_requires=u'<distroRequires><and><distro_arch value="i386"  \
             op="="></distro_arch><distro_variant value="Workstation" op="="> \
             </distro_variant><distro_family value="RedHatEnterpriseLinux6" op="="> \
             </distro_family> </and><distro_virt value="" op="="></distro_virt> \
             </distroRequires>'
+
+    if not server_log:
+        rt_log = LogRecipeTask(path=u'/tasks', filename=u'dummy.txt', basepath='/')
+    else:
+        rt_log = LogRecipeTask(server=u'http://dummy-archive-server/beaker/recipe_path/tasks', filename=u'dummy.txt')
     if task_list: #don't specify a task_list and a task_name...
         for t in task_list:
-            recipe.tasks.append(RecipeTask(task=t))
+            rt = RecipeTask(task=t)
+            rt.logs = [rt_log]
+            recipe.tasks.append(rt)
+
     else:
-        recipe.tasks.append(RecipeTask(task=create_task(name=task_name)))
+        rt = RecipeTask(task=create_task(name=task_name))
+        rt.logs = [rt_log]
+        recipe.tasks.append(rt)
     return recipe
 
 def create_retention_tag(name=None, default=False, needs_product=False):
@@ -232,9 +248,9 @@ def create_job_for_recipes(recipes, owner=None, whiteboard=None, cc=None,product
 
 def create_job(owner=None, cc=None, distro=None,product=None, 
         retention_tag=None, task_name=u'/distribution/reservesys', whiteboard=None,
-        recipe_whiteboard=None, **kwargs):
+        recipe_whiteboard=None, server_log=False, **kwargs):
     recipe = create_recipe(distro=distro, task_name=task_name,
-            whiteboard=recipe_whiteboard)
+            whiteboard=recipe_whiteboard, server_log=server_log)
     return create_job_for_recipes([recipe], owner=owner,
             whiteboard=whiteboard, cc=cc, product=product,retention_tag=retention_tag)
 
@@ -255,11 +271,13 @@ def mark_recipe_complete(recipe, result=u'Pass', system=None,
             user=recipe.recipeset.job.owner, start_time=start_time)
     recipe.system.reservations.append(reservation)
     for recipe_task in recipe.tasks:
+        recipe_task.start_time = start_time or datetime.datetime.utcnow()
         recipe_task.status = TaskStatus.by_name(u'Running')
     recipe.update_status()
     for recipe_task in recipe.tasks:
         rtr = RecipeTaskResult(recipetask=recipe_task,
                 result=TaskResult.by_name(result))
+        recipe_task.finish_time = finish_time or datetime.datetime.utcnow()
         recipe_task.status = TaskStatus.by_name(u'Completed')
         recipe_task.results.append(rtr)
     recipe.update_status()

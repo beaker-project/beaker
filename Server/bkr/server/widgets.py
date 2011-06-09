@@ -79,6 +79,8 @@ class LocalCSSLink(CSSLink):
 
 jquery = LocalJSLink('bkr', '/static/javascript/jquery-1.5.1.min.js')
 
+local_datetime = LocalJSLink('bkr', '/static/javascript/local_datetime.js')
+
 
 class PowerTypeForm(CompoundFormField):
     """Dynmaically modifies power arguments based on Power Type Selection"""
@@ -1236,8 +1238,20 @@ class SystemForm(Form):
             d["loan_change"] = d["options"]["loan_change"]
         if d["options"].has_key("loan_text"):
             d["loan_text"] = d["options"]["loan_text"]
-            
+        d['show_cc'] = d['options'].get('show_cc', False)
         d["id"] = d["value_for"]("id")
+        if d["value"] and "owner" in d["value"] and d["value"]["owner"]:
+            d["owner_email_link"] = d["value"]["owner"].email_link
+        else:
+            d["owner_email_link"] = ""
+        if d["value"] and "user" in d["value"] and d["value"]["user"]:
+            d["user_email_link"] = d["value"]["user"].email_link
+        else:
+            d["user_email_link"] = ""
+        if d["value"] and "loaned" in d["value"] and d["value"]["loaned"]:
+            d["loaned_email_link"] = d["value"]["loaned"].email_link
+        else:
+            d["loaned_email_link"] = ""
 
         if d["options"]["readonly"]:
 	    d["readonly"] = True
