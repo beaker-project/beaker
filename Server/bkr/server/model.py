@@ -4179,7 +4179,9 @@ class Job(TaskBase):
 
     def can_admin(self, user=None):
         """Returns True iff the given user can administer this Job."""
-        return bool(user) and (self.owner == user or user.is_admin())
+        if user:
+            return self.owner == user or user.is_admin() or self.owner.in_group([g.group_name for g in user.groups])
+        return False
 
     cc = association_proxy('_job_ccs', 'email_address')
 
