@@ -1859,7 +1859,12 @@ url --url=$tree
                             kernel_options_post = kernel_options_post)
 
     def is_free(self):
-        if not self.user:
+        try:
+            user = identity.current.user
+        except:
+            user = None
+
+        if not self.user and (not self.loaned or self.loaned == user):
             return True
         else:
             return False
