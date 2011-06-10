@@ -233,6 +233,22 @@ from bkr.server.reports import Reports
      </p>
     </div>
     <!-- End of main_content -->
+<span py:if="tg.config('piwik.base_url') and tg.config('piwik.site_id')" py:strip="True">
+<!-- Piwik -->
+<script type="text/javascript">
+var pkBaseURL = (("https:" == document.location.protocol) ? "https:${tg.config('piwik.base_url')}" : "http:${tg.config('piwik.base_url')}");
+document.write(unescape("%3Cscript src='" + pkBaseURL + "piwik.js' type='text/javascript'%3E%3C/script%3E"));
+</script>
+<script type="text/javascript">
+try {
+var piwikTracker = Piwik.getTracker(pkBaseURL + "piwik.php", ${tg.config('piwik.site_id')});
+piwikTracker.setCustomVariable(1, 'beaker_user', '${tg.identity.user}');
+piwikTracker.trackPageView();
+piwikTracker.enableLinkTracking();
+} catch( err ) {}
+</script><noscript><p><img src="${tg.config('piwik.base_url')}piwik.php?idsite=${tg.config('piwik.site_id')}" style="border:0" alt="" /></p></noscript>
+<!-- End Piwik Tracking Code -->
+</span>
 </body>
 
 </html>
