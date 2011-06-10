@@ -122,4 +122,11 @@ def broken_system_notify(system, reason, recipe=None):
             '\n'.join(body),
             cc=system.cc,
             headers=[('X-Beaker-Notification', 'system-broken'),
-                     ('X-Beaker-System', system.fqdn)])
+                     ('X-Beaker-System', system.fqdn),
+                     ('X-Lender', system.lender or ''),
+                     ('X-Owner', system.owner),
+                     ('X-Location', system.location or ''),
+                     ('X-Lab-Controller', system.lab_controller or ''),
+                     ('X-Vendor', system.vendor or ''),
+                     ('X-Type', system.type)] +
+                    [('X-Arch', arch) for arch in system.arch])
