@@ -2004,10 +2004,8 @@ url --url=$tree
                 # If the system has no groups
                 return True
 
-        
-    def get_allowed_attr(self):
-        attributes = ['vendor','model','memory']
-        return attributes
+    ALLOWED_ATTRS = ['vendor', 'model', 'memory'] #: attributes which the inventory scripts may set
+    PRESERVED_ATTRS = ['vendor', 'model'] #: attributes which should only be set when empty
 
     def get_update_method(self,obj_str):
         methods = dict ( Cpu = self.updateCpu, Arch = self.updateArch, 
@@ -2094,14 +2092,15 @@ url --url=$tree
                 old_value=self.checksum, new_value=md5sum))
         self.checksum = md5sum
         for key in inventory:
-            if key in self.get_allowed_attr():
-                if not getattr(self, key, None):
-                    setattr(self, key, inventory[key])
-                    self.activity.append(SystemActivity(
-                            user=identity.current.user,
-                            service=u'XMLRPC', action=u'Changed',
-                            field_name=key, old_value=None,
-                            new_value=inventory[key]))
+            if key in self.ALLOWED_ATTRS:
+                if key in self.PRESERVED_ATTRS and getattr(self, key, None):
+                    continue
+                setattr(self, key, inventory[key])
+                self.activity.append(SystemActivity(
+                        user=identity.current.user,
+                        service=u'XMLRPC', action=u'Changed',
+                        field_name=key, old_value=None,
+                        new_value=inventory[key]))
             else:
                 try:
                     method = self.get_update_method(key)
