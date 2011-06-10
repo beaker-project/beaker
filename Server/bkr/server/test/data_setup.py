@@ -28,7 +28,7 @@ from bkr.server.model import LabController, User, Group, Distro, Breed, Arch, \
         Device, TaskResult, TaskStatus, Job, RecipeSet, TaskPriority, \
         LabControllerDistro, Power, PowerType, TaskExcludeArch, TaskExcludeOSMajor, \
         Permission, RetentionTag, Product, Watchdog, Reservation, LogRecipe, \
-        LogRecipeTask
+        LogRecipeTask, ExcludeOSMajor, ExcludeOSVersion
 
 log = logging.getLogger(__name__)
 
@@ -131,7 +131,8 @@ def create_distro(name=None, breed=u'Dan',
     return distro
 
 def create_system(arch=u'i386', type=u'Machine', status=u'Automated',
-        owner=None, fqdn=None, shared=False, **kw):
+        owner=None, fqdn=None, shared=False, exclude_osmajor=[],
+        exclude_osversion=[], **kw):
     if owner is None:
         owner = create_user()
     if fqdn is None:
@@ -143,6 +144,10 @@ def create_system(arch=u'i386', type=u'Machine', status=u'Automated',
     system.shared = shared
     system.arch.append(Arch.by_name(arch))
     configure_system_power(system)
+    system.excluded_osmajor.extend(ExcludeOSMajor(arch=Arch.by_name(arch),
+            osmajor=osmajor) for osmajor in exclude_osmajor)
+    system.excluded_osversion.extend(ExcludeOSVersion(arch=Arch.by_name(arch),
+            osversion=osversion) for osversion in exclude_osversion)
     system.date_modified = datetime.datetime.utcnow()
     log.debug('Created system %r', system)
     return system

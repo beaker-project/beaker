@@ -5,7 +5,7 @@ import email
 from turbogears.database import session
 from bkr.server.model import System, SystemStatus, SystemActivity, TaskStatus, \
         SystemType, Job, JobCc, Key, Key_Value_Int, Key_Value_String, \
-        Cpu, Numa, Provision, job_cc_table
+        Cpu, Numa, Provision, job_cc_table, Arch
 from bkr.server.test import data_setup
 from nose.plugins.skip import SkipTest
 
@@ -185,6 +185,47 @@ class TestJob(unittest.TestCase):
             self.assertEquals(JobCc.query().filter_by(job_id=job.id).count(), 2)
         finally:
             session.rollback()
+
+class DistroTest(unittest.TestCase):
+
+    def setUp(self):
+        self.distro = data_setup.create_distro(arch=u'i386')
+        self.lc = data_setup.create_labcontroller()
+        session.flush()
+
+    def test_all_systems_obeys_osmajor_exclusions(self):
+        included_system = data_setup.create_system(arch=u'i386',
+                lab_controller=self.lc)
+        excluded_system = data_setup.create_system(arch=u'i386',
+                lab_controller=self.lc,
+                exclude_osmajor=[self.distro.osversion.osmajor])
+        excluded_system.arch.append(Arch.by_name(u'x86_64'))
+        session.flush()
+        systems = self.distro.all_systems().all()
+        self.assert_(included_system in systems and
+                excluded_system not in systems, systems)
+
+    def test_all_systems_obeys_osversion_exclusions(self):
+        included_system = data_setup.create_system(arch=u'i386',
+                lab_controller=self.lc)
+        excluded_system = data_setup.create_system(arch=u'i386',
+                lab_controller=self.lc,
+                exclude_osversion=[self.distro.osversion])
+        excluded_system.arch.append(Arch.by_name(u'x86_64'))
+        session.flush()
+        systems = self.distro.all_systems().all()
+        self.assert_(included_system in systems and
+                excluded_system not in systems, systems)
+
+    def test_all_systems_matches_arch(self):
+        included_system = data_setup.create_system(arch=u'i386',
+                lab_controller=self.lc)
+        excluded_system = data_setup.create_system(arch=u'ppc64',
+                lab_controller=self.lc)
+        session.flush()
+        systems = self.distro.all_systems().all()
+        self.assert_(included_system in systems and
+                excluded_system not in systems, systems)
 
 class DistroSystemsFilterTest(unittest.TestCase):
 

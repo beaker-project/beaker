@@ -3259,29 +3259,15 @@ class Distro(MappedObject):
         elif not systems:
             systems = System.query()
         
-        return systems.join(join).filter(
-             and_( 
-                not_(or_(System.id.in_(select([system_table.c.id]).
-                  where(system_table.c.id==system_arch_map.c.system_id).
-                  where(arch_table.c.id==system_arch_map.c.arch_id).
-                  where(system_table.c.id==exclude_osmajor_table.c.system_id).
-                  where(arch_table.c.id==exclude_osmajor_table.c.arch_id).
-                  where(ExcludeOSMajor.osmajor==self.osversion.osmajor).
-                  where(ExcludeOSMajor.arch==self.arch)
-                                      ),
-                         System.id.in_(select([system_table.c.id]).
-                  where(system_table.c.id==system_arch_map.c.system_id).
-                  where(arch_table.c.id==system_arch_map.c.arch_id).
-                  where(system_table.c.id==exclude_osversion_table.c.system_id).
-                  where(arch_table.c.id==exclude_osversion_table.c.arch_id).
-                  where(ExcludeOSVersion.osversion==self.osversion).
-                  where(ExcludeOSVersion.arch==self.arch)
-                                      )
-                        )
-                    ),
-                 system_arch_map.c.arch_id == self.arch.id,
-                 )
-        )
+        return systems.join(join).filter(and_(
+                System.arch.contains(self.arch),
+                not_(System.excluded_osmajor.any(and_(
+                        ExcludeOSMajor.osmajor == self.osversion.osmajor,
+                        ExcludeOSMajor.arch == self.arch))),
+                not_(System.excluded_osversion.any(and_(
+                        ExcludeOSVersion.osversion == self.osversion,
+                        ExcludeOSVersion.arch == self.arch))),
+                ))
 
     def link(self):
         """ Returns a hyper link to this distro
