@@ -20,6 +20,7 @@ import sys
 import email
 import unittest
 from turbogears.database import session
+from bkr.server.model import Arch
 from bkr.server.test import data_setup, mail_capture, get_server_base
 import bkr.server.mail
 
@@ -34,7 +35,11 @@ class BrokenSystemNotificationTest(unittest.TestCase):
 
     def test_broken_system_notification(self):
         owner = data_setup.create_user(email_address=u'ackbar@calamari.gov')
-        system = data_setup.create_system(fqdn=u'home-one', owner=owner)
+        lc = data_setup.create_labcontroller()
+        system = data_setup.create_system(fqdn=u'home-one', owner=owner,
+                lender=u"Uncle Bob's Dodgy Shop", location=u'shed out the back',
+                lab_controller=lc, vendor=u'Acorn', arch=u'i386')
+        system.arch.append(Arch.by_name(u'x86_64'))
         data_setup.configure_system_power(system, power_type=u'drac',
                 address=u'pdu2.home-one', power_id=u'42')
         session.flush()
@@ -49,6 +54,12 @@ class BrokenSystemNotificationTest(unittest.TestCase):
                 'System home-one automatically marked broken')
         self.assertEqual(msg['X-Beaker-Notification'], 'system-broken')
         self.assertEqual(msg['X-Beaker-System'], 'home-one')
+        self.assertEqual(msg['X-Lender'], "Uncle Bob's Dodgy Shop")
+        self.assertEqual(msg['X-Location'], 'shed out the back')
+        self.assertEqual(msg['X-Lab-Controller'], lc.fqdn)
+        self.assertEqual(msg['X-Vendor'], 'Acorn')
+        self.assertEqual(msg['X-Type'], 'Machine')
+        self.assertEqual(msg.get_all('X-Arch'), ['i386', 'x86_64'])
         self.assertEqual(msg.get_payload(decode=True),
                 'Beaker has automatically marked system \n'
                 'home-one <%sview/home-one> \n'

@@ -1380,7 +1380,7 @@ class System(SystemObject):
 
     def __init__(self, fqdn=None, status=None, contact=None, location=None,
                        model=None, type=None, serial=None, vendor=None,
-                       owner=None):
+                       owner=None, lab_controller=None, lender=None):
         self.fqdn = fqdn
         self.status = status
         self.contact = contact
@@ -1390,6 +1390,8 @@ class System(SystemObject):
         self.serial = serial
         self.vendor = vendor
         self.owner = owner
+        self.lab_controller = lab_controller
+        self.lender = lender
     
     def to_xml(self, clone=False):
         """ Return xml describing this system """
