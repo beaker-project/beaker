@@ -471,6 +471,8 @@ users_table = Table('tg_user', metadata,
     Column('display_name', Unicode(255)),
     Column('password', Unicode(40)),
     Column('created', DateTime, default=datetime.utcnow),
+    Column('disabled', Boolean, nullable=False, default=False),
+    Column('removed', DateTime, nullable=True, default=None),
     mysql_engine='InnoDB',
 )
 
@@ -1136,16 +1138,16 @@ class User(object):
         """
         # Try to look up the user via local DB first.
         user = cls.query.filter_by(user_name=user_name).first()
-        if user:
-            return user
         # If user doesn't exist in DB check ldap if enabled.
-        if cls.ldapenabled:
+        if not user and cls.ldapenabled:
             filter = "(uid=%s)" % user_name
             ldapcon = ldap.initialize(cls.uri)
             rc = ldapcon.search(cls.basedn, ldap.SCOPE_SUBTREE, filter)
             objects = ldapcon.result(rc)[1]
+            # no match
             if(len(objects) == 0):
                 return None
+            # need exact match
             elif(len(objects) > 1):
                 return None
             if cls.autocreate:
@@ -1155,10 +1157,6 @@ class User(object):
 	        user.email_address = objects[0][1]['mail'][0]
                 session.save(user)
                 session.flush([user])
-            else:
-                return None
-        else:
-            return None
         return user
 
     @classmethod
@@ -1174,6 +1172,9 @@ class User(object):
             f = User.user_name.like('%%%s%%' % username)
         else:
             f = User.user_name.like('%s%%' % username)
+        # Don't return Removed Users
+        # They may still be listed in ldap though.
+        f = f.filter(User.removed==None)
         db_users = [user.user_name for user in cls.query().filter(f)]
         return list(set(db_users + ldap_users))
         

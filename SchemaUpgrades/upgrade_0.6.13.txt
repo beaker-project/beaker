@@ -57,3 +57,11 @@ following SQL statements:
             AND system_status_duration.finish_time IS NULL
         WHERE system.status_id != system_status_duration.status_id
     );
+
+# To Support disabling and removing Users
+ALTER TABLE tg_user ADD COLUMN (disabled boolean default False);
+ALTER TABLE tg_user ADD COLUMN (removed datetime default NULL);
+
+# To Roll Back
+ALTER TABLE tg_user DROP COLUMN disabled ;
+ALTER TABLE tg_user DROP COLUMN removed ;

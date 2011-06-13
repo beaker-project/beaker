@@ -27,10 +27,13 @@ class Users(AdminPage):
     display_name = widgets.TextField(name='display_name', label=_(u'Display Name'))
     email_address = widgets.TextField(name='email_address', label=_(u'Email Address'))
     password     = widgets.PasswordField(name='password', label=_(u'Password'))
+    disabled = widgets.CheckBox(name='disabled', label=_(u'Disabled'))
 
     user_form = widgets.TableForm(
         'User',
-        fields = [user_id, user_name, display_name, email_address, password],
+        fields = [user_id, user_name, display_name, 
+                  email_address, password, disabled
+                 ],
         action = 'save_data',
         submit_text = _(u'Save'),
     )
@@ -75,11 +78,24 @@ class Users(AdminPage):
         user.display_name = kw['display_name']
         user.user_name = kw['user_name']
         user.email_address = kw['email_address']
+        if kw.get('disabled') != user.disabled:
+            user.disabled = kw.get('disabled')
+            if user.disabled:
+                self._disable(user, method="WEBUI")
         if kw['password'] != user.password:
             user.password = kw['password']
 
         flash( _(u"%s saved" % user.display_name) )
         redirect(".")
+
+    def make_remove_link(self, user):
+        if user.removed is not None:
+            link =  make_link(url = 'unremove?id=%s' % user.user_id,
+                              text = 'Re-Add (+)')
+        else:
+            link =  make_link(url = 'remove?id=%s' % user.user_id,
+                              text = 'Remove (-)')
+        return link
 
     @expose(template="bkr.server.templates.admin_grid")
     @paginate('list', default_order='user_name',limit=20)
@@ -92,9 +108,11 @@ class Users(AdminPage):
         
        
         users_grid = myPaginateDataGrid(fields=[
-                                  ('Login', lambda x: make_edit_link(x.user_name,x.user_id)),
+                                  ('Login', lambda x: make_edit_link(x.user_name,
+                                                                     x.user_id)),
                                   ('Display Name', lambda x: x.display_name),
-                                  (' ', lambda x: make_remove_link(x.user_id)),
+                                  ('Disabled', lambda x: x.disabled),
+                                  ('', lambda x: self.make_remove_link(x)),
                               ])
         return dict(title="Users",
                     grid = users_grid,
@@ -112,8 +130,30 @@ class Users(AdminPage):
         except InvalidRequestError:
             flash(_(u'Invalid user id %s' % id))
             raise redirect('.')
-        flash( _(u'%s Deleted') % user.display_name )
-        self._remove(user=user, method='WEBUI')
+        flash( _(u'%s Removed') % user.display_name )
+        try:
+            self._remove(user=user, method='WEBUI')
+        except BX, e:
+            flash( _(u'Failed to Remove User %s, due to %s' % (user.user_name,
+                                                               e
+                                                              )
+                    )
+                 )
+        raise redirect('.')
+
+    @identity.require(identity.in_group("admin"))
+    @expose()
+    def unremove(self, id, **kw):
+        try:
+            user = User.by_id(id)
+        except InvalidRequestError:
+            flash(_(u'Invalid user id %s' % id))
+            raise redirect('.')
+        flash( _(u'%s Re-Added') % user.display_name )
+        try:
+            self._unremove(user=user)
+        except BX, e:
+            flash( _(u'Failed to Re-Add User %s, due to %s' % e))
         raise redirect('.')
 
     @cherrypy.expose
@@ -125,8 +165,22 @@ class Users(AdminPage):
             raise BX(_('Invalid User %s ' % username))
         self._remove(user=user, method='XMLRPC')
 
+    def _disable(self, user, method, 
+                 msg='Your account has been temporarily disabled'):
+        # cancel all queued and running jobs
+        jobs = Job.query().filter(and_(Job.owner==user,
+                                    or_(Job.status==TaskStatus.by_name(u'Queued'),
+                                        Job.status==TaskStatus.by_name(u'Running')
+                                           ),
+                                       ),
+                                  )
+        for job in jobs:
+            job.cancel(msg=msg)
+
     def _remove(self, user, method, **kw):
         # Return all systems in use by this user
+        if user == identity.current.user:
+            raise BX(_('You can''t remove yourself'))
         for system in System.query().filter(System.user==user):
             msg = ''
             try:
@@ -143,8 +197,12 @@ class Users(AdminPage):
         for system in System.query().filter(System.owner==user):
             system.owner = identity.current.user
             system.activity.append(SystemActivity(identity.current.user, method, 'Changed', 'Owner', '%s' % user, '%s' % identity.current.user))
-        # Finally delete the user
-        session.delete(user)
+        # Finally remove the user
+        user.removed=datetime.utcnow()
+
+    def _unremove(self, user):
+        user.removed = None
+        return
 
     @expose(format='json')
     def by_name(self, input,anywhere=False,ldap=True):

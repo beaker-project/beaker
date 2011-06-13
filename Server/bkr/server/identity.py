@@ -50,6 +50,12 @@ class LdapSqlAlchemyIdentityProvider(SqlAlchemyIdentityProvider):
         if not user:
             log.warning("No such user: %s", user_name)
             return None
+        if user.disabled:
+            log.warning("User %s has been disabled", user_name)
+            return None
+        if user.removed:
+            log.warning("User %s has been removed", user_name)
+            return None
         if not krb and not self.validate_password(user, user_name, password):
             log.warning("Passwords don't match for user: %s", user_name)
             return None
