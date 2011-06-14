@@ -207,6 +207,17 @@ class Recipes(RPCRoot):
         return recipexml
 
     @cherrypy.expose
+    def get_from_job(self, job_id=None):
+        if not job_id:
+            raise BX(_("Missing job id!"))
+        j = Job.by_id(job_id)
+        r_ids = []
+        for rs in j.recipesets:
+            for r in rs.recipes:
+                r_ids.append(r.id)
+        return r_ids
+
+    @cherrypy.expose
     def to_xml(self, recipe_id=None):
         """ 
             Pass in recipe id and you'll get that recipe's xml

@@ -168,6 +168,14 @@ class RecipeTasks(RPCRoot):
         return task.status_watchdog()
 
     @cherrypy.expose
+    def get_from_recipe(self, recipe_id=None):
+        rt_ids = []
+        recipe = Recipe.by_id(recipe_id)
+        for rt in recipe.tasks:
+            rt_ids.append(rt.id)
+        return rt_ids
+
+    @cherrypy.expose
     @identity.require(identity.not_anonymous())
     def stop(self, task_id, stop_type, msg=None):
         """

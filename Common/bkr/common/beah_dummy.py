@@ -17,7 +17,7 @@ class BeahDummy(threading.Thread):
 
     _file_size = 512000 # bytes
     _install_time = 30 #seconds
-    _task_duration = 900 # seconds
+    _task_duration = 120 # seconds
 
     def __init__(self, machine_name, proxy_addr=None, *args, **kw):
         super(BeahDummy,self).__init__(*args, **kw)
