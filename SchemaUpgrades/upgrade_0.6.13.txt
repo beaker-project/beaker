@@ -58,10 +58,14 @@ following SQL statements:
         WHERE system.status_id != system_status_duration.status_id
     );
 
-# To Support disabling and removing Users
-ALTER TABLE tg_user ADD COLUMN (disabled boolean default False);
-ALTER TABLE tg_user ADD COLUMN (removed datetime default NULL);
 
-# To Roll Back
-ALTER TABLE tg_user DROP COLUMN disabled ;
-ALTER TABLE tg_user DROP COLUMN removed ;
+Support disabling and removing users
+------------------------------------
+
+    ALTER TABLE tg_user ADD COLUMN (disabled boolean default False);
+    ALTER TABLE tg_user ADD COLUMN (removed datetime default NULL);
+
+To roll back:
+
+    ALTER TABLE tg_user DROP COLUMN disabled ;
+    ALTER TABLE tg_user DROP COLUMN removed ;
