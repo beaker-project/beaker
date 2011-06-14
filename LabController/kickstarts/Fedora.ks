@@ -98,6 +98,19 @@ $SNIPPET("Fedora_post")
 $SNIPPET("system_post")
 %end
 
+# Disable rhts-compat for Fedora15 and newer.
+#if $getVar('os_version','').startswith('fedora')
+#set releasever=$os_version[6:]
+#if int($releasever) >= 15:
+%post --log=/dev/console
+cat >> /etc/profile.d/task-overrides-rhts.sh <<END
+export RHTS_OPTION_COMPATIBLE=
+export RHTS_OPTION_COMPAT_SERVICE=
+END
+%end
+#end if
+#end if
+
 #if $getVar('ks_appends', '') != '':
 $SNIPPET("ks_appends")
 #end if
