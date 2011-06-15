@@ -69,3 +69,9 @@ To roll back:
 
     ALTER TABLE tg_user DROP COLUMN disabled ;
     ALTER TABLE tg_user DROP COLUMN removed ;
+
+
+Change identity in config
+-------------------------
+If it exists, please remove the line "identity.provider = 'ldapsa' " from the site wide beaker config,
+this config setting now lives in bkr/config/app.cfg
