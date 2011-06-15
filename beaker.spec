@@ -3,7 +3,7 @@
 
 Name:           beaker
 Version:        0.6.13
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -250,6 +250,10 @@ fi
 %{_var}/lib/beaker/addDistro.d/*
 
 %changelog
+* Wed Jun 15 2011 Raymond Mancy <rmancy@redhat.com> 0.6.13-2
+- Add upgrade note to remove cfg line, and remove line from dev.cfg
+  (rmancy@redhat.com)
+
 * Wed Jun 15 2011 Raymond Mancy <rmancy@redhat.com> 0.6.13-1
 - 708172 - allow inventory to update memory even when it is already set
   (dcallagh@redhat.com)
