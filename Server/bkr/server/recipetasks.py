@@ -115,6 +115,7 @@ class RecipeTasks(RPCRoot):
                                       data)
 
     @cherrypy.expose
+    @expose('json')
     def watchdogs(self, status='active',lc=None):
         """ Return all active/expired tasks for this lab controller
             The lab controllers login with host/fqdn
@@ -189,6 +190,7 @@ class RecipeTasks(RPCRoot):
 
     @cherrypy.expose
     @identity.require(identity.not_anonymous())
+    @expose('json')
     def result(self, task_id, result_type, path=None, score=None, summary=None):
         """
         Record a Result

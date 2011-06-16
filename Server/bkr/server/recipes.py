@@ -88,7 +88,8 @@ class Recipes(RPCRoot):
                                      log_recipe_task_table.c.server.like('%s%%' % server)))
        return [r.id for r in recipes]
 
-    @cherrypy.expose
+    #@cherrypy.expose
+    @turbogears.expose('json')
     @identity.require(identity.not_anonymous())
     def register_file(self, server, recipe_id, path, name, basepath):
         """

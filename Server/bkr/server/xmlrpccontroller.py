@@ -1,11 +1,12 @@
 import sys
 import logging
 import xmlrpclib
+import jsonrpclib
 from datetime import datetime
 import cherrypy, cherrypy.config
 import turbogears
 from turbogears import controllers
-from turbogears.identity.exceptions import IdentityFailure
+from turbogears.identity.exceptions import IdentityFailure, IdentityException
 
 log = logging.getLogger(__name__)
 
@@ -42,33 +43,83 @@ class RPCRoot(controllers.Controller):
         response = obj(*params)
         return response
 
+
     @turbogears.expose()
     def RPC2(self, *args, **kw):
-        params, method = xmlrpclib.loads(cherrypy.request.body.read())
+        request_body = cherrypy.request.body.read()
+        rpclib = GenericHTTPRPC()
+        params, method, rpcid = rpclib.loads(request_body)
         start = datetime.utcnow()
         try:
             if method == "RPC2":
                 # prevent recursion
                 raise AssertionError("method cannot be 'RPC2'")
-            response = self.process_rpc(method,params)
-            response = xmlrpclib.dumps((response,), methodresponse=1, allow_none=True)
-        except IdentityFailure, e:
-            response = xmlrpclib.dumps(xmlrpclib.Fault(1,
+            response = self.process_rpc(method,params) # XXX This should probbaly be moved into GenericHTTPRPC
+            response = rpclib.dumps((response,), methodresponse=True, allow_none=True, rpcid=rpcid)
+        except (IdentityFailure, IdentityException), e:
+            response = rpclib.dumps(rpclib.Fault(1,
                     '%s: Please log in first' % e.__class__))
-        except xmlrpclib.Fault, fault:
-            log.exception('Error handling XML-RPC method')
+        except (xmlrpclib.Fault, jsonrpclib.Fault), fault: # XXX not ideal
+            log.exception('Error handling RPC method')
             # Can't marshal the result
-            response = xmlrpclib.dumps(fault)
+            response = rpclib.dumps(fault)
         except:
-            log.exception('Error handling XML-RPC method')
+            log.exception('Error handling RPC method')
             # Some other error; send back some error info
-            response = xmlrpclib.dumps(
-                xmlrpclib.Fault(1, "%s:%s" % (sys.exc_type, sys.exc_value))
+            response = rpclib.dumps(
+                rpclib.Fault(1, "%s:%s" % (sys.exc_type, sys.exc_value))
                 )
 
         log.debug('Time: %s %s %s', datetime.utcnow() - start, str(method), str(params)[0:50])
-        cherrypy.response.headers["Content-Type"] = "text/xml"
+        rpclib.set_response_header()
         return response
 
     # Compat with kobo client
     client = RPC2
+
+
+class GenericHTTPRPC:
+
+    _json_type = 1;
+    _xml_type = 2;
+
+    def __init__(self, *args, **kw):
+        content_type = cherrypy.request.headers.get('Content-Type').split('/')[1:].pop()
+        if 'xml' in content_type:
+            self.lib = xmlrpclib
+            self._type = self._xml_type
+        elif 'json' in content_type:
+            self.lib = jsonrpclib
+            self._type = self._json_type
+        else:
+            raise ValueError('Content type of %s is unrecognized' % content_type)
+
+    def set_response_header(self):
+        if self._type == self._json_type:
+            cherrypy.response.headers["Content-Type"] = "application/json"
+        else:
+            cherrypy.response.headers["Content-Type"] = "text/xml"
+
+    def loads(self, body):
+        if self.lib is jsonrpclib:
+            return self._json_loads(body)
+        else:
+            params, method = self.lib.loads(body)
+            return (params, method, None)
+
+    def dumps(self, *args, **kw):
+        if self._type == self._xml_type:
+            if 'rpcid' in kw: # this is a jsonrpc thing only
+                del kw['rpcid']
+        return self.lib.dumps(*args, **kw)
+
+    def __getattr__(self,name):
+        return getattr(self.lib, name)
+
+    @classmethod
+    def _json_loads(cls, body):
+        data = jsonrpclib.loads(body)
+        method = data['method']
+        params = data.get('params', {})
+        rpcid = data['id']
+        return (params, method, rpcid)
