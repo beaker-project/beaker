@@ -250,6 +250,9 @@ fi
 %{_var}/lib/beaker/addDistro.d/*
 
 %changelog
+* Thu Jun 16 2011 Bill Peck <bpeck@redhat.com> 0.6.13-3
+- HotFix for looking up users. (bpeck@redhat.com)
+
 * Wed Jun 15 2011 Raymond Mancy <rmancy@redhat.com> 0.6.13-2
 - Add upgrade note to remove cfg line, and remove line from dev.cfg
   (rmancy@redhat.com)
