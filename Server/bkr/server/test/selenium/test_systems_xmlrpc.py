@@ -595,6 +595,15 @@ class PushXmlRpcTest(XmlRpcTestCase):
         self.assertEquals(system.activity[1].action, u'Changed')
         self.assertEquals(system.activity[1].field_name, u'checksum')
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=708172
+    def test_memory_is_updated(self):
+        system = data_setup.create_system()
+        system.memory = 4096
+        session.flush()
+        self.server.push(system.fqdn, {'memory': '1024'})
+        session.refresh(system)
+        self.assertEquals(system.memory, 1024)
+
 class SystemHistoryXmlRpcTest(XmlRpcTestCase):
 
     def setUp(self):

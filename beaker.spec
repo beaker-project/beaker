@@ -2,8 +2,8 @@
 %{!?pyver: %global pyver %(%{__python} -c "import sys ; print sys.version[:3]")}
 
 Name:           beaker
-Version:        0.6.12
-Release:        1%{?dist}
+Version:        0.6.13
+Release:        2%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -250,6 +250,32 @@ fi
 %{_var}/lib/beaker/addDistro.d/*
 
 %changelog
+* Wed Jun 15 2011 Raymond Mancy <rmancy@redhat.com> 0.6.13-2
+- Add upgrade note to remove cfg line, and remove line from dev.cfg
+  (rmancy@redhat.com)
+
+* Wed Jun 15 2011 Raymond Mancy <rmancy@redhat.com> 0.6.13-1
+- 708172 - allow inventory to update memory even when it is already set
+  (dcallagh@redhat.com)
+- 709883 - Stops systems with exluded arch's being listed on reserve page.
+  (rmancy@redhat.com)
+- 710182 - upgrade notes for fixing inconsistent system_status_durations
+  (dcallagh@redhat.com)
+- 711218 - Don't show recipe tasks from deleted jobs (rmancy@redhat.com)
+- 590033 - don't show invalid tasks in bkr task-list (dcallagh@redhat.com)
+- 709364 - add Piwik javascript (dcallagh@redhat.com)
+- 699974 - Enable groups to edit product and retention tag
+  (rmancy@redhat.com)
+- 697385 - include more X- headers in broken system notifications
+  (dcallagh@redhat.com)
+- 709853 - Loaned machine sno longer show up as 'Reserve Now'
+  (rmancy@redhat.com)
+- 703885 - RFE: Temporarily disable specific Beaker users (bpeck@redhat.com)
+- 709883 - simplify and fix Distro.all_systems (dcallagh@redhat.com)
+- 709815 - bkr distros-list --limit 10 does not always show 10
+  (bpeck@redhat.com)
+- 711674 - rhts-compat not working on Fedora 15 (bpeck@redhat.com)
+
 * Wed Jun 01 2011 Raymond Mancy <rmancy@redhat.com> 0.6.12-1
 - 706435 - apply datetime localisation to DOM elements inserted by jQuery
   (dcallagh@redhat.com)

@@ -471,6 +471,8 @@ users_table = Table('tg_user', metadata,
     Column('display_name', Unicode(255)),
     Column('password', Unicode(40)),
     Column('created', DateTime, default=datetime.utcnow),
+    Column('disabled', Boolean, nullable=False, default=False),
+    Column('removed', DateTime, nullable=True, default=None),
     mysql_engine='InnoDB',
 )
 
@@ -1136,16 +1138,16 @@ class User(object):
         """
         # Try to look up the user via local DB first.
         user = cls.query.filter_by(user_name=user_name).first()
-        if user:
-            return user
         # If user doesn't exist in DB check ldap if enabled.
-        if cls.ldapenabled:
+        if not user and cls.ldapenabled:
             filter = "(uid=%s)" % user_name
             ldapcon = ldap.initialize(cls.uri)
             rc = ldapcon.search(cls.basedn, ldap.SCOPE_SUBTREE, filter)
             objects = ldapcon.result(rc)[1]
+            # no match
             if(len(objects) == 0):
                 return None
+            # need exact match
             elif(len(objects) > 1):
                 return None
             if cls.autocreate:
@@ -1155,10 +1157,6 @@ class User(object):
 	        user.email_address = objects[0][1]['mail'][0]
                 session.save(user)
                 session.flush([user])
-            else:
-                return None
-        else:
-            return None
         return user
 
     @classmethod
@@ -1174,6 +1172,9 @@ class User(object):
             f = User.user_name.like('%%%s%%' % username)
         else:
             f = User.user_name.like('%s%%' % username)
+        # Don't return Removed Users
+        # They may still be listed in ldap though.
+        f = f.filter(User.removed==None)
         db_users = [user.user_name for user in cls.query().filter(f)]
         return list(set(db_users + ldap_users))
         
@@ -1380,7 +1381,7 @@ class System(SystemObject):
 
     def __init__(self, fqdn=None, status=None, contact=None, location=None,
                        model=None, type=None, serial=None, vendor=None,
-                       owner=None):
+                       owner=None, lab_controller=None, lender=None):
         self.fqdn = fqdn
         self.status = status
         self.contact = contact
@@ -1390,6 +1391,8 @@ class System(SystemObject):
         self.serial = serial
         self.vendor = vendor
         self.owner = owner
+        self.lab_controller = lab_controller
+        self.lender = lender
     
     def to_xml(self, clone=False):
         """ Return xml describing this system """
@@ -1664,7 +1667,7 @@ url --url=$tree
     remote = property(remote)
 
     @classmethod
-    def all(cls, user=None,system = None): 
+    def all(cls, user=None, system=None): 
         """
         Only systems that the current user has permission to see
         
@@ -1723,15 +1726,8 @@ url --url=$tree
         Builds on all.  Only systems which this user has permission to reserve.
         Can take varying system_status' as args as well
         """
-        if systems:
-            try:
-                query = systems.outerjoin(['groups','users'], aliased=True)
-            except AttributeError, (e):
-                log.error('A non Query object has been passed into the available method, using default query instead: %s' % e)
-                query = cls.query().outerjoin(['groups','users'], aliased=True)
-        else:
-            query = System.all(user)
 
+        query = System.all(user, system=systems)
         if type(system_status) is list:
             query = query.filter(or_(*[System.status==k for k in system_status]))
         elif type(system_status) is SystemStatus:
@@ -1866,7 +1862,12 @@ url --url=$tree
                             kernel_options_post = kernel_options_post)
 
     def is_free(self):
-        if not self.user:
+        try:
+            user = identity.current.user
+        except:
+            user = None
+
+        if not self.user and (not self.loaned or self.loaned == user):
             return True
         else:
             return False
@@ -2011,10 +2012,8 @@ url --url=$tree
                 # If the system has no groups
                 return True
 
-        
-    def get_allowed_attr(self):
-        attributes = ['vendor','model','memory']
-        return attributes
+    ALLOWED_ATTRS = ['vendor', 'model', 'memory'] #: attributes which the inventory scripts may set
+    PRESERVED_ATTRS = ['vendor', 'model'] #: attributes which should only be set when empty
 
     def get_update_method(self,obj_str):
         methods = dict ( Cpu = self.updateCpu, Arch = self.updateArch, 
@@ -2101,14 +2100,15 @@ url --url=$tree
                 old_value=self.checksum, new_value=md5sum))
         self.checksum = md5sum
         for key in inventory:
-            if key in self.get_allowed_attr():
-                if not getattr(self, key, None):
-                    setattr(self, key, inventory[key])
-                    self.activity.append(SystemActivity(
-                            user=identity.current.user,
-                            service=u'XMLRPC', action=u'Changed',
-                            field_name=key, old_value=None,
-                            new_value=inventory[key]))
+            if key in self.ALLOWED_ATTRS:
+                if key in self.PRESERVED_ATTRS and getattr(self, key, None):
+                    continue
+                setattr(self, key, inventory[key])
+                self.activity.append(SystemActivity(
+                        user=identity.current.user,
+                        service=u'XMLRPC', action=u'Changed',
+                        field_name=key, old_value=None,
+                        new_value=inventory[key]))
             else:
                 try:
                     method = self.get_update_method(key)
@@ -3259,29 +3259,15 @@ class Distro(MappedObject):
         elif not systems:
             systems = System.query()
         
-        return systems.join(join).filter(
-             and_(
-                  System.arch.contains(self.arch),
-                not_(or_(System.id.in_(select([system_table.c.id]).
-                  where(system_table.c.id==system_arch_map.c.system_id).
-                  where(arch_table.c.id==system_arch_map.c.arch_id).
-                  where(system_table.c.id==exclude_osmajor_table.c.system_id).
-                  where(arch_table.c.id==exclude_osmajor_table.c.arch_id).
-                  where(ExcludeOSMajor.osmajor==self.osversion.osmajor).
-                  where(ExcludeOSMajor.arch==self.arch)
-                                      ),
-                         System.id.in_(select([system_table.c.id]).
-                  where(system_table.c.id==system_arch_map.c.system_id).
-                  where(arch_table.c.id==system_arch_map.c.arch_id).
-                  where(system_table.c.id==exclude_osversion_table.c.system_id).
-                  where(arch_table.c.id==exclude_osversion_table.c.arch_id).
-                  where(ExcludeOSVersion.osversion==self.osversion).
-                  where(ExcludeOSVersion.arch==self.arch)
-                                      )
-                        )
-                    )
-                 )
-        )
+        return systems.join(join).filter(and_(
+                System.arch.contains(self.arch),
+                not_(System.excluded_osmajor.any(and_(
+                        ExcludeOSMajor.osmajor == self.osversion.osmajor,
+                        ExcludeOSMajor.arch == self.arch))),
+                not_(System.excluded_osversion.any(and_(
+                        ExcludeOSVersion.osversion == self.osversion,
+                        ExcludeOSVersion.arch == self.arch))),
+                ))
 
     def link(self):
         """ Returns a hyper link to this distro
@@ -4179,7 +4165,9 @@ class Job(TaskBase):
 
     def can_admin(self, user=None):
         """Returns True iff the given user can administer this Job."""
-        return bool(user) and (self.owner == user or user.is_admin())
+        if user:
+            return self.owner == user or user.is_admin() or self.owner.in_group([g.group_name for g in user.groups])
+        return False
 
     cc = association_proxy('_job_ccs', 'email_address')
 
@@ -4388,7 +4376,7 @@ class RecipeSet(TaskBase):
     def by_status(cls, status, query=None):
         if not query:
             query=cls.query
-        return query.join('status').filter(Status.status==status)
+        return query.join('status').filter(TaskStatus.status==status)
 
     @classmethod
     def by_tag(cls, tag, query=None):

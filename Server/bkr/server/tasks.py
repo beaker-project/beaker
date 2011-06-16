@@ -245,20 +245,19 @@ class Tasks(RPCRoot):
         return self._do_search(hidden=hidden, **kw)
 
     def _do_search(self, hidden={}, **kw):
+        tasks = RecipeTask.query().join(['recipe', 'recipeset','job']).filter(and_(Job.to_delete==None, Job.deleted==None))
         if 'recipe_id' in kw: #most likely we are coming here from a LinkRemoteFunction in recipe_widgets
-            tasks = RecipeTask.query().join(['recipe']).filter(Recipe.id == kw['recipe_id'])
+            tasks = tasks.join(['recipe']).filter(Recipe.id == kw['recipe_id'])
 
             hidden = dict(distro = 1,
                           osmajor = 1,
                           arch = 1,
                           system = 1)
-                         
             return dict(tasks=tasks,hidden=hidden,task_widget=self.task_widget)
 
-        tasks = RecipeTask.query() 
         if kw.get('distro_id'):
             try:
-                tasks = RecipeTask.query().join(['recipe','distro']).filter(Distro.id==kw.get('distro_id'))
+                tasks = tasks.join(['recipe','distro']).filter(Distro.id==kw.get('distro_id'))
                 hidden = dict(distro = 1,
                               osmajor = 1,
                               arch = 1,
@@ -267,20 +266,20 @@ class Tasks(RPCRoot):
                 return "<div>Invalid data:<br>%r</br></div>" % kw
         if kw.get('task_id'):
             try:
-                tasks = RecipeTask.query().join('task').filter(Task.id==kw.get('task_id'))
+                tasks = tasks.join('task').filter(Task.id==kw.get('task_id'))
                 hidden = dict(task = 1,
                              )
             except InvalidRequestError:
                 return "<div>Invalid data:<br>%r</br></div>" % kw
         if kw.get('system_id'):
             try:
-                tasks = RecipeTask.query().join(['recipe','system']).filter(System.id==kw.get('system_id')).order_by(recipe_task_table.c.id.desc())
+                tasks = tasks.join(['recipe','system']).filter(System.id==kw.get('system_id')).order_by(recipe_task_table.c.id.desc())
                 hidden = dict(system = 1,
                              )
             except InvalidRequestError:
                 return "<div>Invalid data:<br>%r</br></div>" % kw
         if kw.get('job_id'):
-            tasks = RecipeTask.query().join(['recipe','recipeset','job']).filter(Job.id.in_(kw.get('job_id')))
+            tasks = tasks.join(['recipe','recipeset','job']).filter(Job.id.in_(kw.get('job_id')))
             # build
         if kw.get('system'):
             tasks = tasks.join(['recipe','system']).filter(System.fqdn.like('%%%s%%' % kw.get('system')))
@@ -330,7 +329,7 @@ class Tasks(RPCRoot):
     @expose(template='bkr.server.templates.grid')
     @paginate('list',default_order='name', limit=30)
     def index(self, *args, **kw):
-        tasks = session.query(Task)
+        tasks = Task.query()
         # FIXME What we really want is some default search options
         # For now we won't show deleted/invalid tasks in the grid
         # but for data integrity reasons we will allow you to view
@@ -360,6 +359,7 @@ class Tasks(RPCRoot):
         search_bar = SearchBar(name='tasksearch',
                            label=_(u'Task Search'),
                            table = search_utility.Task.search.create_search_table(),
+                           complete_data=search_utility.Task.search.create_complete_search_table(),
                            search_controller=url("/get_search_options_task"),
                            )
         return dict(title="Task Library",

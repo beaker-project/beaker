@@ -1,0 +1,77 @@
+Configure Piwik
+---------------
+
+Add the following lines in the [global] section of /etc/beaker/server.cfg:
+
+    # If both of these options are set, the Piwik tracking javascript snippet will
+    # be embedded in all pages, reporting statistics back to the given Piwik
+    # installation.
+    # Make sure that piwik.base_url is a protocol-relative URL starting with //
+    #piwik.base_url = "//analytics.example.invalid/piwik/"
+    #piwik.site_id = 123
+
+Uncomment and configure as desired.
+
+
+Fix system_status_duration inconsistencies (bug 710182)
+-------------------------------------------------------
+
+Under certain circumstances it is possible that the script for populating the 
+system_status_duration table (part of the 0.6.8 upgrade notes) may have left 
+rows which are not consistent with the current state of the system table.
+
+The following query can be used to find rows which have this problem:
+
+    SELECT system.id
+    FROM system
+    LEFT OUTER JOIN system_status_duration
+        ON system.id = system_status_duration.system_id
+        AND system_status_duration.finish_time IS NULL
+    WHERE system.status_id != system_status_duration.status_id;
+
+If any problematic systems are found, they can be corrected by executing the 
+following SQL statements:
+
+    SET @now = UTC_TIMESTAMP();
+
+    UPDATE system_status_duration
+    SET finish_time = @now
+    WHERE finish_time IS NULL
+        AND system_id IN (
+            SELECT system.id
+            FROM system
+            LEFT OUTER JOIN system_status_duration
+                ON system.id = system_status_duration.system_id
+                AND system_status_duration.finish_time IS NULL
+            WHERE system.status_id != system_status_duration.status_id
+        );
+
+    INSERT INTO system_status_duration (system_id, status_id, start_time, finish_time)
+    SELECT id, status_id, @now, NULL
+    FROM system
+    WHERE id IN (
+        SELECT system.id
+        FROM system
+        LEFT OUTER JOIN system_status_duration
+            ON system.id = system_status_duration.system_id
+            AND system_status_duration.finish_time IS NULL
+        WHERE system.status_id != system_status_duration.status_id
+    );
+
+
+Support disabling and removing users
+------------------------------------
+
+    ALTER TABLE tg_user ADD COLUMN (disabled boolean default False);
+    ALTER TABLE tg_user ADD COLUMN (removed datetime default NULL);
+
+To roll back:
+
+    ALTER TABLE tg_user DROP COLUMN disabled ;
+    ALTER TABLE tg_user DROP COLUMN removed ;
+
+
+Change identity in config
+-------------------------
+If it exists, please remove the line "identity.provider = 'ldapsa' " from the site wide beaker config,
+this config setting now lives in bkr/config/app.cfg

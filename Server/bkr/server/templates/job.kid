@@ -140,15 +140,15 @@
   </tr> 
   <tr>
   <td class="title"><b>Retention Tag</b></td>
-  <td py:if="job.access_rights(tg.identity.user)" class='value' coslpan="3" style="vertical-align:top;">${retention_tag_widget.display(value=job.retention_tag.id, job_id=job.id)} </td>
- <td py:if=" not job.access_rights(tg.identity.user)" class='value' coslpan="3" style="vertical-align:top;">${retention_tag_widget.display(value=job.retention_tag.id, job_id=job.id,attrs=dict(disabled='1'))} </td>
+  <td py:if="job.can_admin(tg.identity.user)" class='value' coslpan="3" style="vertical-align:top;">${retention_tag_widget.display(value=job.retention_tag.id, job_id=job.id)} </td>
+ <td py:if=" not job.can_admin(tg.identity.user)" class='value' coslpan="3" style="vertical-align:top;">${retention_tag_widget.display(value=job.retention_tag.id, job_id=job.id,attrs=dict(disabled='1'))} </td>
   </tr>
   <tr>
   <td class="title"><b>Product</b></td>
-  <td py:if="job.access_rights(tg.identity.user)" class='value' coslpan="3" style="vertical-align:top;">${product_widget.display(value=getattr(job.product,'id',0), job_id=job.id)} <!--FIXME don't think I should have to pass my Job --></td>
-  <td py:if="not job.access_rights(tg.identity.user)" class='value' coslpan="3" style="vertical-align:top;">${product_widget.display(value=getattr(job.product,'id',0), job_id=job.id, attrs=dict(disabled='1'))} <!--FIXME don't think I should have to pass my Job --></td>
+  <td py:if="job.can_admin(tg.identity.user)" class='value' coslpan="3" style="vertical-align:top;">${product_widget.display(value=getattr(job.product,'id',0), job_id=job.id)}</td>
+  <td py:if="not job.can_admin(tg.identity.user)" class='value' coslpan="3" style="vertical-align:top;">${product_widget.display(value=getattr(job.product,'id',0), job_id=job.id, attrs=dict(disabled='1'))}</td>
   </tr>
-  <tr py:if="job.access_rights(tg.identity.user) and job.is_queued()">
+  <tr py:if="(job.access_rights(tg.identity.user) or job.can_admin(tg.identity.user)) and job.is_queued()">
   ${job.priority_settings(prefix=u'priority_job_', colspan='3')}
 
     <script type='text/javascript'>

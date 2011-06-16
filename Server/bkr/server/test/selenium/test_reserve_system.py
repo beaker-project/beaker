@@ -1,6 +1,7 @@
 #!/usr/bin/python
 import bkr.server.test.selenium
 from bkr.server.test import data_setup
+from bkr.server.model import Arch, ExcludeOSMajor
 import unittest, time, re, os
 from turbogears.database import session
 
@@ -26,9 +27,49 @@ class ReserveSystem(bkr.server.test.selenium.SeleniumTestCase):
         self.system.lab_controller = self.lc
         self.system.shared = True
         session.flush()
+        self.login()
+
+    def test_exluded_distro_system_not_there(self):
+        sel = self.selenium
+        self.system.excluded_osmajor.append(ExcludeOSMajor(osmajor=self.distro.osversion.osmajor, arch=self.system.arch[0]))
+        session.flush()
+        sel.open("reserve_system?arch=%s&distro_family=%s&tag=&distro=%s&search=Show+Systems" % (self.distro.arch, self.distro.osversion.osmajor, self.distro.install_name ))
+        sel.wait_for_page_to_load(3000)
+        self.assert_(self.system.fqdn not in sel.get_body_text())
+
+        self.system.arch.append(Arch.by_name(u'x86_64')) # Make sure it still works with two archs
+        session.flush()
+        sel.open("reserve_system?arch=%s&distro_family=%s&tag=&distro=%s&search=Show+Systems" % (self.distro.arch, self.distro.osversion.osmajor, self.distro.install_name ))
+        sel.wait_for_page_to_load(3000)
+        self.assert_(self.system.fqdn not in sel.get_body_text())
+
+
+    def test_loaned_not_used_system_not_shown(self):
+
+        def _get_reserve_val():
+            sel.open("reserve_system?distro=%s&simplesearch=%s&search=Search" % (self.distro.install_name, self.system.fqdn))
+            sel.wait_for_page_to_load('30000')
+            return sel.get_table("//table[@id='widget'].0.7")
+
+
+        pass_ ='password'
+        user_1 = data_setup.create_user(password=pass_)
+        user_2 = data_setup.create_user(password=pass_)
+        self.system.loaned = user_1
+        session.flush()
+        sel = self.selenium
+        self.logout()
+        self.login(user=user_1.user_name, password=pass_)
+        can_reserve_now = _get_reserve_val()
+        self.assert_(can_reserve_now == 'Reserve Now')
+
+        self.logout()
+        self.login(user=user_2.user_name, password=pass_)
+        queue_reservation = _get_reserve_val()
+        self.assert_(queue_reservation == 'Queue Reservation')
+        
     
     def test_by_distro(self):
-        self.login()
         sel = self.selenium
         sel.open("distros/")
         sel.type("simplesearch", "%s" % self.distro.name)
@@ -51,7 +92,6 @@ class ReserveSystem(bkr.server.test.selenium.SeleniumTestCase):
         group_system.lab_controller = self.lc
         group_system.groups.append(data_setup.create_group())
         session.flush()
-        self.login(data_setup.ADMIN_USER, data_setup.ADMIN_PASSWORD)
         sel = self.selenium
         sel.open('distros/')
         sel.type('simplesearch', self.distro.name)

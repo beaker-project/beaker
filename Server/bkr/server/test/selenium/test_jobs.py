@@ -23,6 +23,7 @@ import re
 import tempfile
 import pkg_resources
 from turbogears.database import session
+from sqlalchemy import and_
 
 from bkr.server.test.selenium import SeleniumTestCase
 from bkr.server.test import data_setup
@@ -286,6 +287,93 @@ class NewJobTest(SeleniumTestCase):
         flash = sel.get_text('css=.flash')
         self.assert_(flash.startswith('Success!'), flash)
         self.assertEqual(sel.get_title(), 'My Jobs')
+
+class JobAttributeChange(SeleniumTestCase):
+
+    def setUp(self):
+        self.password = 'password'
+        self.the_group = data_setup.create_group()
+
+        self.user_one = data_setup.create_user(password=self.password)
+        self.user_two = data_setup.create_user(password=self.password)
+        self.user_three = data_setup.create_user(password=self.password)
+
+        self.user_one.groups.append(self.the_group)
+        self.user_two.groups.append(self.the_group)
+        self.the_job  = data_setup.create_job(owner=self.user_one)
+        session.flush()
+        self.selenium = self.get_selenium()
+        self.selenium.start()
+
+    def tearDown(self):
+        self.selenium.stop()
+
+    def test_change_product(self):
+        p1 = Product(u'first_product')
+        p2 = Product(u'second_product')
+
+        self.the_job.product = p1
+        self.the_job.retention_tag = RetentionTag.query().filter(
+            RetentionTag.needs_product==True).first()
+        session.flush()
+
+        #With Owner
+        sel = self.selenium
+        self.login(user=self.user_one.user_name, password=self.password)
+        sel.open('jobs/%s' % self.the_job.id)
+        sel.wait_for_page_to_load('3000')
+        sel.select("job_product", "label=%s" % p2.name )
+        self.wait_and_try(lambda: self.assert_(sel.is_text_present("Product has been updated")), wait_time=10)
+
+        #With Group member
+        self.logout()
+        self.login(user=self.user_two.user_name, password=self.password)
+        sel.open('jobs/%s' % self.the_job.id)
+        sel.wait_for_page_to_load('3000')
+        sel.select("job_product", "label=%s" % p1.name )
+        self.wait_and_try(lambda: self.assert_(sel.is_text_present("Product has been updated")), wait_time=10)
+
+        # With Non group member
+        self.logout()
+        self.login(user=self.user_three.user_name, password=self.password)
+        sel.open('jobs/%s' % self.the_job.id)
+        sel.wait_for_page_to_load('3000')
+        disabled_product = sel.get_text("//select[@id='job_product' and @disabled]")
+        self.assert_(disabled_product is not None)
+
+
+    def test_change_retention_tag(self):
+        sel = self.selenium
+
+        #With Owner
+        self.login(user=self.user_one.user_name, password=self.password)
+        sel.open('jobs/%s' % self.the_job.id)
+        sel.wait_for_page_to_load('3000')
+        current_tag = sel.get_text("//select[@id='job_retentiontag']/option[@selected='']")
+        new_tag = RetentionTag.query().filter(and_(RetentionTag.tag != current_tag,
+            RetentionTag.needs_product==False)).first()
+        sel.select("job_retentiontag", "label=%s" % new_tag.tag)
+        self.wait_and_try(lambda: self.assert_(sel.is_text_present("Tag has been updated")), wait_time=10)
+
+        #With Group member
+        self.logout()
+        self.login(user=self.user_two.user_name, password=self.password)
+        sel.open('jobs/%s' % self.the_job.id)
+        sel.wait_for_page_to_load('3000')
+        current_tag = sel.get_text("//select[@id='job_retentiontag']/option[@selected='']")
+        new_tag = RetentionTag.query().filter(and_(RetentionTag.tag != current_tag,
+            RetentionTag.needs_product==False)).first()
+        sel.select("job_retentiontag", "label=%s" % new_tag.tag)
+        self.wait_and_try(lambda: self.assert_(sel.is_text_present("Tag has been updated")), wait_time=10)
+
+        #With Non Group member
+        self.logout()
+        self.login(user=self.user_three.user_name, password=self.password)
+        sel.open('jobs/%s' % self.the_job.id)
+        sel.wait_for_page_to_load('3000')
+        disabled_tag = sel.get_text("//select[@id='job_retentiontag' and @disabled]")
+        self.assert_(disabled_tag is not None)
+ 
 
 class CloneJobTest(SeleniumTestCase):
 

@@ -51,6 +51,7 @@ class Task_List(BeakerCommand):
         filter['types'] = kwargs.pop("type", None)
         filter['packages'] = kwargs.pop("package", None)
         filter['install_name'] = kwargs.pop("install_name", None)
+        filter['valid'] = True
         params = kwargs.pop("params", [])
         xml = kwargs.pop("xml")
 
