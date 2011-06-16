@@ -1,11 +1,12 @@
-
+import cherrypy
 import logging
 import xmlrpclib
 import datetime
 from sqlalchemy import and_
 from turbogears import expose, identity, controllers
 from bkr.server.bexceptions import BX
-from bkr.server.model import System, SystemActivity, SystemStatus, Distro
+from bkr.server.model import System, SystemActivity, SystemStatus, Distro, \
+    Recipe
 from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.util import parse_xmlrpc_datetime
 from bkr.server.cobbler_utils import hash_to_string
@@ -222,6 +223,12 @@ class SystemsController(controllers.Controller):
                      field_name=a.field_name, old_value=a.old_value,
                      new_value=a.new_value)
                 for a in activities]
+
+    @cherrypy.expose
+    def get_from_recipe(self, recipe_id):
+        recipe = Recipe.by_id(recipe_id)
+        return recipe.system.fqdn
+
 
 # for sphinx
 systems = SystemsController

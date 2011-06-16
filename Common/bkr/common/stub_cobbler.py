@@ -25,10 +25,13 @@ that Beaker is calling Cobbler correctly.
 import threading
 import socket
 from SimpleXMLRPCServer import SimpleXMLRPCServer
+from SimpleXMLRPCServer import SimpleXMLRPCRequestHandler
 import logging
 import time
 
 log = logging.getLogger(__name__)
+log.setLevel(logging.DEBUG)
+log.addHandler(logging.StreamHandler())
 
 class StubCobbler(object):
 
@@ -52,12 +55,14 @@ class StubCobbler(object):
     ])
 
     def __init__(self):
+        log.debug('initializing StubCobbler')
         self.systems = {}
         self.removed_systems = set()
         self.system_actions = {} #: system fdqn -> most recent power action
         self.incomplete_tasks = set()
         self.profiles = {}
         self.kickstarts = {}
+        self.current_system = None
 
     def version(self):
         return 2.0 # why is it a float? weird!
@@ -70,6 +75,7 @@ class StubCobbler(object):
         if fqdn not in self.systems:
             # pretend we had it all along
             self.systems[fqdn] = {}
+        self.current_system = fqdn
         return 'StubCobblerSystem:%s' % fqdn
 
     def get_profile_handle(self, name, token):
@@ -160,8 +166,8 @@ class StubCobbler(object):
 
 class NicerXMLRPCServer(SimpleXMLRPCServer):
     
-    def __init__(self, addr):
-        SimpleXMLRPCServer.__init__(self, addr, logRequests=False)
+    def __init__(self, addr, *args, **kw):
+        SimpleXMLRPCServer.__init__(self, addr, logRequests=True, *args, **kw) #FIXME turn logRequest back to False
         self.timeout = 0.5
         self._running = True
 
@@ -178,15 +184,19 @@ class NicerXMLRPCServer(SimpleXMLRPCServer):
             except socket.timeout:
                 pass
 
+
+class _StubCobblerRequestHandler(SimpleXMLRPCRequestHandler):
+    rpc_paths = ('/cobbler_api','/')
+
 class StubCobblerThread(threading.Thread):
 
-    def __init__(self):
+    def __init__(self, cobbler=None, addr='localhost'):
         super(StubCobblerThread, self).__init__()
         self.daemon = True
-        self.cobbler = StubCobbler()
+        self.cobbler = cobbler or StubCobbler()
         self._running = True
         self.port = 9010
-        self.server = NicerXMLRPCServer(('localhost', self.port))
+        self.server = NicerXMLRPCServer((addr, self.port),requestHandler=_StubCobblerRequestHandler)
         self.server.register_introspection_functions()
         self.server.register_instance(self.cobbler)
 

@@ -184,6 +184,7 @@ fi
 %{python_sitelib}/bkr/log.py*
 %{python_sitelib}/bkr-%{version}-*
 %{python_sitelib}/bkr-%{version}-py%{pyver}.egg-info/
+%{_bindir}/beaker-stub-cobbler
 %doc COPYING
 
 %files server

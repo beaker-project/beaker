@@ -28,10 +28,11 @@ import rdflib.graph
 from turbogears.database import session
 
 from bkr.server.test.selenium import SeleniumTestCase
-from bkr.server.test import data_setup, get_server_base, stub_cobbler, \
+from bkr.server.test import data_setup, get_server_base, \
         assertions
+from bkr.common import stub_cobbler
 from bkr.server.model import Key, Key_Value_String, Key_Value_Int, System, \
-        Provision
+        Provision,
 
 class SystemViewTest(SeleniumTestCase):
 
