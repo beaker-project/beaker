@@ -21,7 +21,6 @@ from turbogears import expose
 from bkr.server.model import *
 from bkr.server.bexceptions import BX
 from bkr.server.xmlrpccontroller import RPCRoot
-from bkr.server.helpers import sanitize_amqp
 import cherrypy
 
 __all__ = ['TaskActions']
@@ -40,7 +39,6 @@ class TaskActions(RPCRoot):
     stoppable_task_types = dict([(rep, obj) for rep,obj in task_types.iteritems() if obj not in unstoppable_task_types])
 
     @cherrypy.expose
-    @sanitize_amqp
     def task_info(self, taskid,flat=True):
         """
         Returns an XML-RPC structure (dict) describing the current state of the 
