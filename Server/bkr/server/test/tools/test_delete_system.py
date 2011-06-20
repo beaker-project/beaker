@@ -1,6 +1,7 @@
 
 import unittest
-from bkr.server.model import System, LabInfo
+from bkr.server.model import System, LabInfo, Provision, \
+        ProvisionFamily, ProvisionFamilyUpdate
 from turbogears.database import session
 from bkr.server.test import data_setup
 from bkr.server.tools.delete_system import delete_system
@@ -11,6 +12,16 @@ class DeleteSystemTest(unittest.TestCase):
         self.system = data_setup.create_system()
         self.system.labinfo = LabInfo()
         self.system.labinfo.weight = 1
+        distro = data_setup.create_distro()
+        self.system.provisions[distro.arch] = \
+                Provision(arch=distro.arch, ks_meta=u'lol1')
+        self.system.provisions[distro.arch]\
+            .provision_families[distro.osversion.osmajor] = \
+                ProvisionFamily(osmajor=distro.osversion.osmajor, ks_meta=u'lol2')
+        self.system.provisions[distro.arch]\
+            .provision_families[distro.osversion.osmajor]\
+            .provision_family_updates[distro.osversion] = \
+                ProvisionFamilyUpdate(osversion=distro.osversion, ks_meta=u'lol3')
         session.flush()
 
     def test_can_delete_system(self):

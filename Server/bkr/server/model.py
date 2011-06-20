@@ -6133,10 +6133,14 @@ Cpu.mapper = mapper(Cpu, cpu_table, properties={
 mapper(Arch, arch_table)
 mapper(SystemAdmin,system_admin_map_table,primary_key=[system_admin_map_table.c.system_id,system_admin_map_table.c.group_id])
 mapper(Provision, provision_table,
-       properties = {'provision_families':relation(ProvisionFamily, collection_class=attribute_mapped_collection('osmajor')),
+       properties = {'provision_families':relation(ProvisionFamily,
+            collection_class=attribute_mapped_collection('osmajor'),
+            cascade='all, delete, delete-orphan'),
                      'arch':relation(Arch)})
 mapper(ProvisionFamily, provision_family_table,
-       properties = {'provision_family_updates':relation(ProvisionFamilyUpdate, collection_class=attribute_mapped_collection('osversion')),
+       properties = {'provision_family_updates':relation(ProvisionFamilyUpdate,
+            collection_class=attribute_mapped_collection('osversion'),
+            cascade='all, delete, delete-orphan'),
                      'osmajor':relation(OSMajor)})
 mapper(ProvisionFamilyUpdate, provision_family_update_table,
        properties = {'osversion':relation(OSVersion)})
