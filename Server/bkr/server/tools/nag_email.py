@@ -3,7 +3,7 @@ import datetime
 from sqlalchemy.sql import and_
 from sqlalchemy.orm import contains_eager
 from bkr.server.model import System, Reservation
-from bkr.server.util import load_config
+from bkr.server.util import load_config, log_to_stream
 from turbogears import config
 from turbogears.database import session, get_engine
 from turbomail.control import interface
@@ -44,6 +44,7 @@ def main():
     testing   = opts.testing
     configfile = opts.configfile
     load_config(configfile)
+    log_to_stream(sys.stderr)
     interface.start(config)
     get_engine()
     if testing:
