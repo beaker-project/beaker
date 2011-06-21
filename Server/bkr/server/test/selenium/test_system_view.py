@@ -31,7 +31,7 @@ from bkr.server.test.selenium import SeleniumTestCase
 from bkr.server.test import data_setup, get_server_base, stub_cobbler, \
         assertions
 from bkr.server.model import Key, Key_Value_String, Key_Value_Int, System, \
-        Provision, ProvisionFamily, ProvisionFamilyUpdate
+        Provision, ProvisionFamily, ProvisionFamilyUpdate, Hypervisor
 
 class SystemViewTest(SeleniumTestCase):
 
@@ -490,6 +490,18 @@ class SystemViewTest(SeleniumTestCase):
                 '(return the system first)')
         self.assertEqual(sel.get_selected_label('lab_controller_id'),
                 self.lab_controller.fqdn)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=714974
+    def test_change_hypervisor(self):
+        self.login()
+        sel = self.selenium
+        self.go_to_system_view()
+        sel.select('hypervisor_id', 'KVM')
+        sel.click('link=Save Changes')
+        sel.wait_for_page_to_load('30000')
+        self.assertEquals(sel.get_selected_label('hypervisor_id'), 'KVM')
+        session.refresh(self.system)
+        self.assertEqual(self.system.hypervisor, Hypervisor.by_name(u'KVM'))
 
 class SystemCcTest(SeleniumTestCase):
 

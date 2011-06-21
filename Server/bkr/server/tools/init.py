@@ -84,6 +84,13 @@ def init_db(user_name=None, password=None, user_display_name=None, user_email_ad
         laptop    = SystemType(u'Laptop')
         prototype = SystemType(u'Prototype')
 
+    #Setup Hypervisors Table
+    if Hypervisor.query().count() == 0:
+        kvm       = Hypervisor(hypervisor=u'KVM')
+        xen       = Hypervisor(hypervisor=u'Xen')
+        hyperv    = Hypervisor(hypervisor=u'HyperV')
+        vmware    = Hypervisor(hypervisor=u'VMWare')
+
     #Setup base Architectures
     if Arch.query().count() == 0:
         i386   = Arch(u'i386')

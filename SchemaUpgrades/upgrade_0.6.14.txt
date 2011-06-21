@@ -1,0 +1,16 @@
+System hypervisor column (bug 714974)
+-------------------------------------
+
+Add new column hypervisor_id:
+
+    ALTER TABLE system
+        ADD COLUMN (hypervisor_id int(11)),
+        ADD CONSTRAINT system_hypervisor_id
+            FOREIGN KEY (hypervisor_id) REFERENCES hypervisor (id)
+            ON UPDATE CASCADE ON DELETE CASCADE;
+
+To roll back:
+
+    ALTER TABLE system
+        DROP FOREIGN KEY system_hypervisor_id,
+        DROP COLUMN hypervisor_id;

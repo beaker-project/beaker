@@ -49,6 +49,13 @@ from xml.dom.minidom import Node, parseString
 import logging
 log = logging.getLogger(__name__)
 
+hypervisor_table = Table('hypervisor', metadata,
+    Column('id', Integer, autoincrement=True,
+           nullable=False, primary_key=True),
+    Column('hypervisor', Unicode(100), nullable=False),
+    mysql_engine='InnoDB',
+)
+
 system_table = Table('system', metadata,
     Column('id', Integer, autoincrement=True,
            nullable=False, primary_key=True),
@@ -84,6 +91,8 @@ system_table = Table('system', metadata,
            ForeignKey('release_action.id')),
     Column('reprovision_distro_id', Integer,
            ForeignKey('distro.id')),
+    Column('hypervisor_id', Integer,
+           ForeignKey('hypervisor.id')),
     mysql_engine='InnoDB',
 )
 
@@ -1381,7 +1390,8 @@ class System(SystemObject):
 
     def __init__(self, fqdn=None, status=None, contact=None, location=None,
                        model=None, type=None, serial=None, vendor=None,
-                       owner=None, lab_controller=None, lender=None):
+                       owner=None, lab_controller=None, lender=None,
+                       hypervisor=None):
         self.fqdn = fqdn
         self.status = status
         self.contact = contact
@@ -1393,6 +1403,7 @@ class System(SystemObject):
         self.owner = owner
         self.lab_controller = lab_controller
         self.lender = lender
+        self.hypervisor = hypervisor
     
     def to_xml(self, clone=False):
         """ Return xml describing this system """
@@ -2017,7 +2028,8 @@ url --url=$tree
 
     def get_update_method(self,obj_str):
         methods = dict ( Cpu = self.updateCpu, Arch = self.updateArch, 
-                         Devices = self.updateDevices, Numa = self.updateNuma )
+                         Devices = self.updateDevices, Numa = self.updateNuma,
+                         Hypervisor = self.updateHypervisor, )
         return methods[obj_str]
 
     def update_legacy(self, inventory):
@@ -2117,6 +2129,19 @@ url --url=$tree
                    raise
         self.date_modified = datetime.utcnow()
         return 0
+
+    def updateHypervisor(self, hypervisor):
+        try:
+            hvisor = Hypervisor.by_name(hypervisor)
+        except InvalidRequestError:
+            raise BX(_('Invalid Hypervisor: %s' % hypervisor))
+        if self.hypervisor != hvisor:
+            self.activity.append(SystemActivity(
+                    user=identity.current.user,
+                    service=u'XMLRPC', action=u'Changed',
+                    field_name=u'Hypervisor', old_value=self.hypervisor,
+                    new_value=hvisor))
+            self.hypervisor = hvisor
 
     def updateArch(self, archinfo):
         for arch in archinfo:
@@ -2532,7 +2557,24 @@ class SystemCc(SystemObject):
 
     def __init__(self, email_address):
         self.email_address = email_address
-  
+
+class Hypervisor(SystemObject):
+
+    def __repr__(self):
+        return self.hypervisor
+
+    @classmethod
+    def get_all_types(cls):
+        """
+        return an array of tuples containing id, hypervisor
+        """
+        return [(hvisor.id, hvisor.hypervisor) for hvisor in cls.query()]
+
+    @classmethod
+    @sqla_cache
+    def by_name(cls, hvisor):
+        return cls.query.filter_by(hypervisor=hvisor).one()
+
 class SystemType(SystemObject):
 
     def __init__(self, type=None):
@@ -6055,6 +6097,7 @@ class SystemStatusDuration(MappedObject): pass
 
 # set up mappers between identity tables and classes
 SystemType.mapper = mapper(SystemType, system_type_table)
+Hypervisor.mapper = mapper(Hypervisor, hypervisor_table)
 SystemStatus.mapper = mapper(SystemStatus, system_status_table)
 mapper(ReleaseAction, release_action_table)
 System.mapper = mapper(System, system_table,
@@ -6064,7 +6107,6 @@ System.mapper = mapper(System, system_table,
                      'devices':relation(Device,
                                         secondary=system_device_map,backref='systems'),
                      'type':relation(SystemType, uselist=False),
-                    
                      'arch':relation(Arch,
                                      order_by=[arch_table.c.arch],
                                         secondary=system_arch_map,
@@ -6119,6 +6161,7 @@ System.mapper = mapper(System, system_table,
                         cascade='all, delete, delete-orphan',
                         order_by=[system_status_duration_table.c.start_time.desc()]),
                      'dyn_status_durations': dynamic_loader(SystemStatusDuration),
+                     'hypervisor':relation(Hypervisor, uselist=False),
                      })
 
 mapper(SystemCc, system_cc_table)

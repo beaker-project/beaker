@@ -1218,6 +1218,10 @@ class SystemForm(Form):
                                       result_name="groups"),
                TextField(name='mac_address', label=_(u'Mac Address')),
                TextField(name='cc', label=_(u'Notify CC')),
+               SingleSelectField(name='hypervisor_id',
+                                 label=_(u'Hypervisor'),
+                                 options=lambda: [(0, 'None')] + model.Hypervisor.get_all_types(),
+                                 validator=validators.Int()),
     ]
 
     def display_value(self, item, hidden_fields, value=None):
