@@ -474,6 +474,23 @@ class SystemViewTest(SeleniumTestCase):
         self.go_to_system_view()
         self.assert_(not sel.is_text_present('Notify CC'))
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=664482
+    def test_cannot_change_lab_controller_while_system_in_use(self):
+        data_setup.create_manual_reservation(self.system,
+                start=datetime.datetime.utcnow(), finish=None)
+        session.flush()
+        self.login()
+        sel = self.selenium
+        self.go_to_system_view()
+        sel.select('lab_controller_id', 'None')
+        sel.click('link=Save Changes')
+        sel.wait_for_page_to_load('30000')
+        self.assertEqual(sel.get_text('css=.flash'),
+                'Unable to change lab controller while system is in use '
+                '(return the system first)')
+        self.assertEqual(sel.get_selected_label('lab_controller_id'),
+                self.lab_controller.fqdn)
+
 class SystemCcTest(SeleniumTestCase):
 
     def setUp(self):
