@@ -8,10 +8,11 @@ import turbogears
 from turbogears import controllers
 from turbogears.identity.exceptions import IdentityFailure, IdentityException
 
+
 log = logging.getLogger(__name__)
 
-class RPCRoot(controllers.Controller):
 
+class RPCRoot(controllers.Controller):
     # We disable external /login redirects for XML-RPC locations,
     # because they make it impossible for us to grab IdentityFailure exceptions 
     # and report them nicely to the caller
@@ -36,7 +37,7 @@ class RPCRoot(controllers.Controller):
             obj = getattr(obj, name, None)
             # Use the same error message to hide private method names
             if obj is None or not getattr(obj, "exposed", False):
-                raise AssertionError("method %s does not exist" % name)
+                raise AssertionError("method %s does not exist in %s" % (name, obj))
 
         # Call the method, convert it into a 1-element tuple
         # as expected by dumps
@@ -69,7 +70,6 @@ class RPCRoot(controllers.Controller):
             response = rpclib.dumps(
                 rpclib.Fault(1, "%s:%s" % (sys.exc_type, sys.exc_value))
                 )
-
         log.debug('Time: %s %s %s', datetime.utcnow() - start, str(method), str(params)[0:50])
         rpclib.set_response_header()
         return response
@@ -100,6 +100,7 @@ class GenericHTTPRPC:
         else:
             cherrypy.response.headers["Content-Type"] = "text/xml"
 
+
     def loads(self, body):
         if self.lib is jsonrpclib:
             return self._json_loads(body)
@@ -107,19 +108,29 @@ class GenericHTTPRPC:
             params, method = self.lib.loads(body)
             return (params, method, None)
 
-    def dumps(self, *args, **kw):
+    def dumps(self, response, *args, **kw):
         if self._type == self._xml_type:
             if 'rpcid' in kw: # this is a jsonrpc thing only
                 del kw['rpcid']
-        return self.lib.dumps(*args, **kw)
+        else:
+            response = response[0]
+        response = self.lib.dumps(response, *args, **kw)
+	return response
 
     def __getattr__(self,name):
         return getattr(self.lib, name)
+
+    def _xml_loads(self, body):
+        return self.lib.loads(body)
 
     @classmethod
     def _json_loads(cls, body):
         data = jsonrpclib.loads(body)
         method = data['method']
-        params = data.get('params', {})
+        params = data.get('params', [])
+        if params:
+            if type(params[0]) is type([]): #it does not do list expansion for us
+		        params = params[0]
+		
         rpcid = data['id']
         return (params, method, rpcid)
