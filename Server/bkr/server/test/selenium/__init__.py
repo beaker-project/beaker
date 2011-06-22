@@ -196,7 +196,6 @@ class CommunicateThread(threading.Thread):
 
     def __init__(self, popen, **kwargs):
         super(CommunicateThread, self).__init__(**kwargs)
-        self.daemon = True
         self.popen = popen
 
     def run(self):
