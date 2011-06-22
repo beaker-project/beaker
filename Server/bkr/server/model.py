@@ -1174,8 +1174,8 @@ class User(object):
             f = User.user_name.like('%s%%' % username)
         # Don't return Removed Users
         # They may still be listed in ldap though.
-        f = f.filter(User.removed==None)
-        db_users = [user.user_name for user in cls.query().filter(f)]
+        db_users = [user.user_name for user in cls.query().filter(f).\
+                    filter(User.removed==None)]
         return list(set(db_users + ldap_users))
         
     def _set_password(self, password):
