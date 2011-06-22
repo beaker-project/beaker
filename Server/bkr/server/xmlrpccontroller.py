@@ -5,6 +5,7 @@ from datetime import datetime
 import cherrypy, cherrypy.config
 import turbogears
 from turbogears import controllers
+from turbogears.database import session
 from turbogears.identity.exceptions import IdentityFailure
 
 log = logging.getLogger(__name__)
@@ -40,13 +41,16 @@ class RPCRoot(controllers.Controller):
             response = obj(*params)
             response = xmlrpclib.dumps((response,), methodresponse=1, allow_none=True)
         except IdentityFailure, e:
+            session.rollback()
             response = xmlrpclib.dumps(xmlrpclib.Fault(1,
                     '%s: Please log in first' % e.__class__))
         except xmlrpclib.Fault, fault:
+            session.rollback()
             log.exception('Error handling XML-RPC method')
             # Can't marshal the result
             response = xmlrpclib.dumps(fault)
         except:
+            session.rollback()
             log.exception('Error handling XML-RPC method')
             # Some other error; send back some error info
             response = xmlrpclib.dumps(
