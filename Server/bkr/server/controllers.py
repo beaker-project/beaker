@@ -1323,6 +1323,13 @@ class Root(RPCRoot):
             kw['lab_controller'] = LabController.by_id(kw['lab_controller_id'])
         kw['type'] = SystemType.by_id(kw['type_id'])
 
+        # Don't change lab controller while the system is in use
+        if system.lab_controller != kw['lab_controller'] and \
+                system.open_reservation is not None:
+            flash(_(u'Unable to change lab controller while system is in use '
+                    '(return the system first)'))
+            redirect('/view/%s' % system.fqdn)
+
         log_fields = [ 'fqdn', 'vendor', 'lender', 'model', 'serial', 'location', 
                        'mac_address', 'status', 'status_reason', 'lab_controller', 'type']
 
