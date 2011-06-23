@@ -70,12 +70,14 @@ class TestReportProblem(SeleniumTestCase):
                 'Your problem report has been forwarded to the system owner')
         self.assertEqual(len(self.mail_capture.captured_mails), 1)
         sender, rcpts, raw_msg = self.mail_capture.captured_mails[0]
-        self.assertEqual(rcpts, [system_owner.email_address])
+        self.assertEqual(rcpts, [system_owner.email_address,
+                problem_reporter.email_address])
         msg = email.message_from_string(raw_msg)
         self.assertEqual(msg['From'],
                 r'"Beverley Crusher \(via Beaker\)" <crusher@starfleet.gov>')
         self.assertEqual(msg['To'], 'picard@starfleet.gov')
         self.assertEqual(msg['Subject'], 'Problem reported for ncc1701d')
+        self.assertEqual(msg['Cc'], problem_reporter.email_address)
         self.assertEqual(msg['X-Beaker-Notification'], 'system-problem')
         self.assertEqual(msg['X-Lender'], system.lender)
         self.assertEqual(msg['X-Owner'], system.owner.user_name)
@@ -122,3 +124,25 @@ class TestReportProblem(SeleniumTestCase):
         sel.wait_for_page_to_load('20000')
         self.assertEqual(sel.get_text('css=div.flash'),
                 'Your problem report has been forwarded to the system owner')
+
+    def test_reporter_and_system_cc_list_are_cced(self):
+        interested_party_email = u'interestedparty1@example.invalid'
+        system = data_setup.create_system()
+        system.cc = [interested_party_email]
+        problem_reporter = data_setup.create_user(password=u'assword')
+        session.flush()
+        self.login(problem_reporter.user_name, u'assword')
+        sel = self.selenium
+        sel.open('report_problem?system_id=%s' % system.id)
+        sel.type('report_problem_problem_description', u'I broke it')
+        sel.submit('report_problem')
+        sel.wait_for_page_to_load('30000')
+        self.assertEqual(sel.get_text('css=div.flash'),
+                'Your problem report has been forwarded to the system owner')
+        self.assertEqual(len(self.mail_capture.captured_mails), 1)
+        sender, rcpts, raw_msg = self.mail_capture.captured_mails[0]
+        self.assertEqual(rcpts, [system.owner.email_address,
+                problem_reporter.email_address, interested_party_email])
+        msg = email.message_from_string(raw_msg)
+        self.assertEqual(msg['Cc'], '%s, %s' % (problem_reporter.email_address,
+                interested_party_email))
