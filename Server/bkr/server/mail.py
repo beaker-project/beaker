@@ -100,7 +100,7 @@ def system_problem_report(system, description, recipe=None, reporter=None):
     headers.extend(arch_headers)
     send_mail(sender, system.owner.email_address,
             _(u'Problem reported for %s') % system.fqdn, '\n'.join(body),
-            cc=system.cc, headers=headers)
+            cc=[reporter.email_address] + system.cc, headers=headers)
 
 def broken_system_notify(system, reason, recipe=None):
     sender = config.get('beaker_email')
