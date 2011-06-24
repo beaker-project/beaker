@@ -1322,6 +1322,10 @@ class Root(RPCRoot):
         else:
             kw['lab_controller'] = LabController.by_id(kw['lab_controller_id'])
         kw['type'] = SystemType.by_id(kw['type_id'])
+        if kw['hypervisor_id'] == 0:
+            kw['hypervisor'] = None
+        else:
+            kw['hypervisor'] = Hypervisor.by_id(kw['hypervisor_id'])
 
         # Don't change lab controller while the system is in use
         if system.lab_controller != kw['lab_controller'] and \
@@ -1331,7 +1335,8 @@ class Root(RPCRoot):
             redirect('/view/%s' % system.fqdn)
 
         log_fields = [ 'fqdn', 'vendor', 'lender', 'model', 'serial', 'location', 
-                       'mac_address', 'status', 'status_reason', 'lab_controller', 'type']
+                       'mac_address', 'status', 'status_reason', 
+                       'lab_controller', 'type', 'hypervisor']
 
         for field in log_fields:
             try:
@@ -1384,6 +1389,7 @@ class Root(RPCRoot):
         system.serial=kw['serial']
         system.vendor=kw['vendor']
         system.lender=kw['lender']
+        system.hypervisor=kw['hypervisor']
         if kw['fqdn'] != system.fqdn:
             system.remote.remove()
         system.fqdn=kw['fqdn']

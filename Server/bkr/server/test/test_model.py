@@ -327,5 +327,36 @@ class DistroSystemsFilterTest(unittest.TestCase):
         self.assert_(with_cciss not in systems)
         self.assert_(without_cciss in systems)
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=714974
+    def test_hypervisor(self):
+        baremetal = data_setup.create_system(arch=u'i386', shared=True,
+                lab_controller=self.lc, hypervisor=None)
+        kvm = data_setup.create_system(arch=u'i386', shared=True,
+                lab_controller=self.lc, hypervisor=u'KVM')
+        session.flush()
+        systems = list(self.distro.systems_filter(self.user, """
+            <hostRequires>
+                <and>
+                    <hypervisor op="=" value="KVM" />
+                </and>
+            </hostRequires>
+            """))
+        self.assert_(baremetal not in systems)
+        self.assert_(kvm in systems)
+        systems = list(self.distro.systems_filter(self.user, """
+            <hostRequires>
+                <and>
+                    <hypervisor op="=" value="" />
+                </and>
+            </hostRequires>
+            """))
+        self.assert_(baremetal in systems)
+        self.assert_(kvm not in systems)
+        systems = list(self.distro.systems_filter(self.user, """
+            <hostRequires/>
+            """))
+        self.assert_(baremetal in systems)
+        self.assert_(kvm in systems)
+
 if __name__ == '__main__':
     unittest.main()
