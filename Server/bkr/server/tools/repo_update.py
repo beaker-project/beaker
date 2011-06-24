@@ -1,6 +1,6 @@
 #!/usr/bin/python
 from bkr.server.model import OSMajor
-from bkr.server.util import load_config
+from bkr.server.util import load_config, log_to_stream
 from optparse import OptionParser
 from turbogears.database import session
 from turbogears.config import get
@@ -96,6 +96,7 @@ def main():
     configfile = opts.configfile
     baseurl = opts.baseurl
     load_config(configfile)
+    log_to_stream(sys.stderr)
     if opts.basepath:
         basepath = opts.basepath
     else:

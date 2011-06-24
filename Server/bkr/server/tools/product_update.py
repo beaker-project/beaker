@@ -1,6 +1,7 @@
 #!/usr/bin/python
+import sys
 from bkr.server.model import Product
-from bkr.server.util import load_config
+from bkr.server.util import load_config, log_to_stream
 from lxml import etree
 from optparse import OptionParser
 from turbogears.database import session
@@ -61,6 +62,7 @@ def main():
     configfile = opts.configfile
     xml_file = opts.productfile
     load_config(configfile)
+    log_to_stream(sys.stderr)
     update_products(xml_file)
 
 if __name__ == '__main__':

@@ -57,8 +57,9 @@ def main():
     if len(args) < 1:
         parser.error('Specify at least one system to delete')
 
-    from bkr.server.util import load_config
+    from bkr.server.util import load_config, log_to_stream
     load_config(options.config)
+    log_to_stream(sys.stderr)
 
     if options.verbose:
         logger = logging.getLogger('sqlalchemy.engine')

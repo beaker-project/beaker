@@ -24,7 +24,7 @@ import pkg_resources
 pkg_resources.require("SQLAlchemy>=0.3.10")
 from bkr.server.model import *
 from bkr.server.commands import ConfigurationError
-from bkr.server.util import load_config
+from bkr.server.util import load_config, log_to_stream
 from turbogears.database import session
 from os.path import dirname, exists, join
 from os import getcwd
@@ -208,6 +208,7 @@ def main():
     parser = get_parser()
     opts, args = parser.parse_args()
     load_config(opts.configfile)
+    log_to_stream(sys.stderr)
     init_db(user_name=opts.user_name, password=opts.password,
             user_display_name=opts.display_name,
             user_email_address=opts.email_address)

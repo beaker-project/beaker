@@ -22,6 +22,7 @@
 __version__ = '0.1'
 __description__ = 'Cleans up stale records from the Beaker visit table'
 
+import sys
 import datetime
 from optparse import OptionParser
 
@@ -54,8 +55,9 @@ def main():
     parser.set_defaults(keep=7)
     options, args = parser.parse_args()
 
-    from bkr.server.util import load_config
+    from bkr.server.util import load_config, log_to_stream
     load_config(options.config)
+    log_to_stream(sys.stderr)
 
     cleanup_visits(options.keep)
 
