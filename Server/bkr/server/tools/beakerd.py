@@ -37,6 +37,7 @@ import bkr.server.scheduler
 from bkr.server.scheduler import add_onetime_task
 from socket import gethostname
 import exceptions
+from datetime import datetime, timedelta
 import time
 
 import logging
@@ -471,8 +472,7 @@ def scheduled_recipes(*args):
                                                      recipe.kernel_options,
                                                      recipe.kernel_options_post,
                                                      recipe.kickstart,
-                                                     recipe.ks_appends,
-                                                     wait=True)
+                                                     recipe.ks_appends)
                     recipe.system.activity.append(
                          SystemActivity(recipe.recipeset.job.owner, 
                                         u'Scheduler',
@@ -506,6 +506,63 @@ def scheduled_recipes(*args):
     log.debug("Exiting scheduled_recipes routine")
     return True
 
+
+COMMAND_TIMEOUT = 300
+def command_queue(*args):
+    running_commands = CommandActivity.query()\
+                                      .filter(CommandActivity.status==CommandStatus.by_name(u'Running'))\
+                                      .order_by(CommandActivity.updated.asc()).values(CommandActivity.id)
+    for cmd_id, in running_commands:
+        session.begin()
+        cmd = CommandActivity.query().get(cmd_id)
+        try:
+            for line in cmd.system.remote.get_event_log(cmd.task_id).split('\n'):
+                if line.find("### TASK COMPLETE ###") != -1:
+                    cmd.status = CommandStatus.by_name(u'Completed')
+                    break
+                if line.find("### TASK FAILED ###") != -1:
+                    log.error('Cobbler power task failed for machine: %s' % (cmd.system))
+                    cmd.status = CommandStatus.by_name(u'Failed')
+                    cmd.system.mark_broken(reason='Cobbler power task failed')
+                    break
+            if (cmd.status == CommandStatus.by_name(u'Running')) and \
+               (datetime.utcnow() >= cmd.updated + timedelta(seconds=COMMAND_TIMEOUT)):
+                    cmd.status = CommandStatus.by_name(u'Aborted')
+                    log.error('Cobbler power task timed out on machine: %s' % (cmd.system))
+        except Exception, msg:
+            cmd.status = CommandStatus.by_name(u'Failed')
+            cmd.new_value = unicode(msg)
+            log.error('Cobbler power exception for machine %s: %s' % (cmd.system, msg))
+        session.commit()
+        session.close()
+
+    queued_commands = CommandActivity.query()\
+                                     .filter(CommandActivity.status==CommandStatus.by_name(u'Queued'))\
+                                     .order_by(CommandActivity.created.asc())
+    for command in queued_commands:
+        # Skip queued commands if something is already running on that system
+        if CommandActivity.query().filter(and_(CommandActivity.status==CommandStatus.by_name(u'Running'),
+                                               CommandActivity.system==command.system))\
+                                .count():
+            continue
+        session.begin()
+        cmd = CommandActivity.query().get(command.id)
+        if not cmd.system.remote or not cmd.system.power:
+            cmd.status = CommandStatus.by_name(u'Aborted')
+            log.error('Power control not available for machine: %s' % (cmd.system))
+        try:
+            cmd.task_id = cmd.system.remote.power(cmd.action)
+            cmd.updated = datetime.utcnow()
+            cmd.status = CommandStatus.by_name(u'Running')
+        except Exception, msg:
+            cmd.new_value = unicode(msg)
+            cmd.status = CommandStatus.by_name(u'Failed')
+            log.error('Cobbler power exception submitting \'%s\' command for machine %s: %s' %
+                      (cmd.action, cmd.system, msg))
+        session.commit()
+        session.close()
+
+
 def new_recipes_loop(*args, **kwargs):
     while True:
         if not new_recipes():
@@ -521,6 +578,11 @@ def queued_recipes_loop(*args, **kwargs):
         if not queued_recipes():
             time.sleep(20)
 
+def command_queue_loop(*args, **kwargs):
+    while True:
+        command_queue()
+        time.sleep(20)
+
 def schedule():
     bkr.server.scheduler._start_scheduler()
     log.debug("starting new recipes Thread")
@@ -532,6 +594,11 @@ def schedule():
     add_onetime_task(action=processed_recipesets_loop,
                       args=[lambda:datetime.now()],
                       initialdelay=5)
+    log.debug("starting power commands Thread")
+    # Create command_queue Thread
+    add_onetime_task(action=command_queue_loop,
+                      args=[lambda:datetime.now()],
+                      initialdelay=10)
     #log.debug("starting queued recipes Thread")
     # Create queued_recipes Thread
     #add_onetime_task(action=queued_recipes_loop,

@@ -347,6 +347,13 @@ power_table = Table('power', metadata,
     mysql_engine='InnoDB',
 )
 
+command_status_table = Table('command_status', metadata,
+    Column('id', Integer, autoincrement=True,
+           nullable=False, primary_key=True),
+    Column('status', Unicode(255), nullable=False),
+    mysql_engine='InnoDB',
+)
+
 serial_table = Table('serial', metadata,
     Column('id', Integer, autoincrement=True,
            nullable=False, primary_key=True),
@@ -604,6 +611,17 @@ group_activity_table = Table('group_activity', metadata,
 distro_activity_table = Table('distro_activity', metadata,
     Column('id', Integer, ForeignKey('activity.id'), primary_key=True),
     Column('distro_id', Integer, ForeignKey('distro.id')),
+    mysql_engine='InnoDB',
+)
+
+command_queue_table = Table('command_queue', metadata,
+    Column('id', Integer, ForeignKey('activity.id'), primary_key=True),
+    Column('system_id', Integer, ForeignKey('system.id',
+           onupdate='CASCADE', ondelete='CASCADE'), nullable=False),
+    Column('status_id', Integer,
+           ForeignKey('command_status.id'), nullable=False),
+    Column('task_id', String(255)),
+    Column('updated', DateTime, default=datetime.utcnow),
     mysql_engine='InnoDB',
 )
 
@@ -1498,11 +1516,8 @@ class System(SystemObject):
 
 
                         
-            def power(self,action='reboot', wait=False, clear_netboot=False):
+            def power(self,action='reboot', wait=False):
                 system_id = self.get_system()
-                if clear_netboot:
-                    self.remote.modify_system(system_id,
-                            'netboot-enabled', False, self.token)
                 self.remote.modify_system(system_id, 'power_type', 
                                               self.system.power.power_type.name,
                                                    self.token)
@@ -1527,7 +1542,7 @@ class System(SystemObject):
                         if wait:
                             return self.wait_for_event(task_id)
                         else:
-                            return True
+                            return task_id
                     except xmlrpclib.Fault, msg:
                         raise BX(_('Failed to %s system %s' % (action,self.system.fqdn)))
                 else:
@@ -1646,6 +1661,12 @@ url --url=$tree
                 except xmlrpclib.Fault, msg:
                     raise BX(_("Failed to clear %s logs" % self.system.fqdn))
 
+            def clear_netboot(self, service=None):
+                """ Clear the system's Cobbler netboot configuration. """
+                # XXX we should actually add this to the command queue
+                system_id = self.get_system()
+                self.remote.modify_system(system_id, 'netboot-enabled', False, self.token)
+
             def release(self, power=True):
                 """ Turn off netboot and turn off system by default
                 """
@@ -1657,7 +1678,7 @@ url --url=$tree
                 self.remote.save_system(system_id, 
                                         self.token)
                 if self.system.power and power:
-                    self.power(action="off", wait=False)
+                    self.system.action_power(action="off")
 
             def remove(self):
                 """ Removes this system's record from Cobbler. """
@@ -2296,11 +2317,8 @@ url --url=$tree
                 pass
             except xmlrpclib.Fault:
                 pass
-        else:
-            try:
-                self.remote.release()
-            except:
-                pass
+        elif self.remote:
+            self.remote.release()
 
     def action_provision(self, 
                          distro=None,
@@ -2330,8 +2348,7 @@ url --url=$tree
                              kernel_options=None,
                              kernel_options_post=None,
                              kickstart=None,
-                             ks_appends=None,
-                             wait=False):
+                             ks_appends=None):
         if not self.remote:
             return False
 
@@ -2389,11 +2406,18 @@ $SNIPPET("rhts_post")
                               ks_appends=ks_appends,
                               **results)
         if self.power:
-            self.remote.power(action="reboot", wait=wait)
+            self.action_power(service=u'Scheduler', action=u'reboot')
 
-    def action_power(self, action='reboot', wait=False, clear_netboot=False):
+    def action_power(self, action=u'reboot', service=u'Scheduler'):
+        try:
+            user = identity.current.user
+        except:
+            user = None
+
         if self.remote and self.power:
-            self.remote.power(action, wait=wait, clear_netboot=clear_netboot)
+            status = CommandStatus.by_name(u'Queued')
+            activity = CommandActivity(user, service, action, status)
+            self.command_queue.append(activity)
         else:
             return False
 
@@ -2633,12 +2657,12 @@ class ReleaseAction(SystemObject):
     def PowerOff(self, system):
         """ Turn off system
         """
-        system.remote.power(action='off')
+        system.action_power(action='off')
 
     def LeaveOn(self, system):
         """ Leave system running
         """
-        system.remote.power(action='on')
+        system.action_power(action='on')
 
     def ReProvision(self, system):
         """ re-provision the system 
@@ -3011,6 +3035,20 @@ class PowerType(object):
 
 class Power(SystemObject):
     pass
+
+
+class CommandStatus(object):
+
+    def __init__(self, status=None):
+        self.status = status
+
+    def __repr__(self):
+        return self.status
+
+    @classmethod
+    @sqla_cache
+    def by_name(cls, name):
+        return cls.query().filter_by(status=name).one()
 
 
 class Serial(object):
@@ -3400,11 +3438,17 @@ class GroupActivity(Activity):
     def object_name(self):
         return "Group: %s" % self.object.display_name
 
-
 class DistroActivity(Activity):
     def object_name(self):
         return "Distro: %s" % self.object.install_name
 
+class CommandActivity(Activity):
+    def __init__(self, user, service, action, status):
+        Activity.__init__(self, user, service, action, 'Command', '', '')
+        self.status = status
+
+    def object_name(self):
+        return "Command: %s %s" % (self.object.fqdn, self.action)
 
 # note model
 class Note(object):
@@ -6147,6 +6191,9 @@ System.mapper = mapper(System, system_table,
                      'activity':relation(SystemActivity,
                         order_by=[activity_table.c.created.desc(), activity_table.c.id.desc()],
                         backref='object', cascade='all, delete, delete-orphan'),
+                     'command_queue':relation(CommandActivity,
+                        order_by=[activity_table.c.created.desc(), activity_table.c.id.desc()],
+                        backref='object', cascade='all, delete, delete-orphan'),
                      'release_action':relation(ReleaseAction, uselist=False),
                      'reprovision_distro':relation(Distro, uselist=False),
                       '_system_ccs': relation(SystemCc, backref='system',
@@ -6219,6 +6266,8 @@ mapper(Power, power_table,
         properties = {'power_type':relation(PowerType,
                                            backref='power_control')
     })
+mapper(CommandStatus, command_status_table)
+
 mapper(Serial, serial_table)
 mapper(SerialType, serial_type_table)
 mapper(Install, install_table)
@@ -6295,6 +6344,12 @@ mapper(DistroActivity, distro_activity_table, inherits=Activity,
        polymorphic_identity=u'distro_activity',
        properties=dict(object=relation(Distro, uselist=False,
                          backref='activity')))
+
+mapper(CommandActivity, command_queue_table, inherits=Activity,
+       polymorphic_identity=u'command_activity',
+       properties={'status':relation(CommandStatus),
+                   'system':relation(System, uselist=False),
+                  })
 
 mapper(Note, note_table,
         properties=dict(user=relation(User, uselist=False,
