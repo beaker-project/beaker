@@ -68,9 +68,8 @@ class SystemsController(controllers.Controller):
         with their usage. Callers may pass True for the *force* argument to 
         override this safety check.
 
-        This method does not return until Cobbler has reported that the power 
-        control was succesful. An exception will be raised if there is an error 
-        communicating with Cobbler, or if Cobbler reports a failure.
+        This method does not wait for Cobbler to report whether the power 
+        control was succesful.
 
         :param action: 'on', 'off', or 'reboot'
         :type action: string
@@ -82,16 +81,17 @@ class SystemsController(controllers.Controller):
         :type force: boolean
 
         .. versionadded:: 0.6
+        .. versionchanged:: 0.6.14
+           No longer waits for completion of Cobbler power task.
         """
         system = System.by_fqdn(fqdn, identity.current.user)
         if not force and system.user is not None \
                 and system.user != identity.current.user:
             raise BX(_(u'System is in use'))
-        system.action_power(action, wait=True, clear_netboot=clear_netboot)
-        system.activity.append(SystemActivity(user=identity.current.user,
-                service=u'XMLRPC', action=action, field_name=u'Power',
-                old_value=u'', new_value=u'Success'))
-        return action # because turbogears makes us return something
+        if clear_netboot:
+            system.remote.clear_netboot(service=u'XMLRPC')
+        system.action_power(action, service=u'XMLRPC')
+        return system.fqdn # because turbogears makes us return something
 
     @expose()
     @identity.require(identity.not_anonymous())
@@ -161,18 +161,7 @@ class SystemsController(controllers.Controller):
                 new_value=u'Success: %s' % distro.install_name))
 
         if reboot:
-            try:
-                system.remote.power(action='reboot')
-            except Exception, e:
-                log.exception('Failed to reboot')
-                system.activity.append(SystemActivity(user=identity.current.user,
-                        service=u'XMLRPC', action=u'Reboot',
-                        field_name=u'Power', old_value=u'',
-                        new_value=unicode(e)))
-                raise
-            system.activity.append(SystemActivity(user=identity.current.user,
-                    service=u'XMLRPC', action=u'Reboot',
-                    field_name=u'Power', old_value=u'', new_value=u'Success'))
+            system.action_power(action='reboot', service=u'XMLRPC')
 
         return system.fqdn # because turbogears makes us return something
 

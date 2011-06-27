@@ -48,6 +48,10 @@
      <legend>Power Action</legend>
       ${widgets['power_action'].display(method='get', action=widgets_action['power_action'], value=value, options=widgets_options['power_action'])}
     </fieldset>
+    <fieldset>
+     <legend>Recent Power Commands</legend>
+     ${widgets['power_history'].display(list=widgets_options['power_history'], title='Recent Power Commands')}
+    </fieldset>
    </div>
    <div py:if="widgets.has_key('console')" class="tabbertab"><h2>Console</h2>
    </div> 

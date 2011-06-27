@@ -31,8 +31,9 @@ from bkr.server.test.assertions import assert_datetime_within, \
         assert_durations_not_overlapping
 from bkr.server.test import data_setup, stub_cobbler
 from bkr.server.model import User, Cpu, Key, Key_Value_String, Key_Value_Int, \
-        SystemActivity, Provision
+        System, SystemActivity, Provision
 from bkr.server.util import parse_xmlrpc_datetime
+from bkr.server.tools import beakerd
 
 class ReserveSystemXmlRpcTest(XmlRpcTestCase):
 
@@ -256,8 +257,9 @@ class SystemPowerXmlRpcTest(XmlRpcTestCase):
         self.server.auth.login_password(user.user_name, 'password')
         self.server.systems.power(action, system.fqdn)
         self.assertEqual(
-                self.stub_cobbler_thread.cobbler.system_actions[system.fqdn],
+                System.by_fqdn(system.fqdn, user).command_queue[0].action,
                 action)
+        beakerd.command_queue()
         self.assertEqual(self.stub_cobbler_thread.cobbler.systems[system.fqdn],
                 {'power_type': 'drac',
                  'power_address': 'nowhere.example.com',
@@ -287,8 +289,9 @@ class SystemPowerXmlRpcTest(XmlRpcTestCase):
         self.server.auth.login_password(user.user_name, 'password')
         self.server.systems.power('on', system.fqdn, False, True)
         self.assertEqual(
-                self.stub_cobbler_thread.cobbler.system_actions[system.fqdn],
+                System.by_fqdn(system.fqdn, user).command_queue[0].action,
                 'on')
+        beakerd.command_queue()
 
     def test_clear_netboot(self):
         user = data_setup.create_user(password=u'password')
@@ -300,8 +303,9 @@ class SystemPowerXmlRpcTest(XmlRpcTestCase):
         self.server.auth.login_password(user.user_name, 'password')
         self.server.systems.power('reboot', system.fqdn, True)
         self.assertEqual(
-                self.stub_cobbler_thread.cobbler.system_actions[system.fqdn],
+                System.by_fqdn(system.fqdn, user).command_queue[0].action,
                 'reboot')
+        beakerd.command_queue()
         self.assertEqual(
                 self.stub_cobbler_thread.cobbler.systems[system.fqdn]['netboot-enabled'],
                 False)
@@ -384,6 +388,7 @@ class SystemProvisionXmlRpcTest(XmlRpcTestCase):
                 'noapic',
                 'noapic runlevel=3',
                 kickstart)
+        beakerd.command_queue()
         self.assertEqual(self.stub_cobbler_thread.cobbler.systems[system.fqdn],
                 {'power_type': 'drac',
                  'power_address': 'nowhere.example.com',

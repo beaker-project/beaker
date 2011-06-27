@@ -678,7 +678,26 @@ class PowerActionForm(Form):
                 kw['is_user'] = kw['options']['is_user']
         return super(PowerActionForm,self).display(value,*args,**kw)
 
-    
+class PowerActionHistory(CompoundWidget):
+    template = "bkr.server.templates.power_history_grid"
+    member_widgets = ['grid']
+    def __init__(self):
+        self.grid  = BeakerDataGrid(fields = [DataGrid.Column(name='user',title='User',
+                                                                          getter=lambda x: x.user),
+                                                  DataGrid.Column(name='service', title='Service',
+                                                                          getter=lambda x: x.service),
+                                                  DataGrid.Column(name='created', title='Submitted',
+                                                                          getter=lambda x: x.created,
+                                                                          options=dict(datetime=True)),
+                                                  DataGrid.Column(name='action', title='Action',
+                                                                          getter=lambda x: x.action),
+                                                  DataGrid.Column(name='status',title='Status',
+                                                                          getter=lambda x: x.status),
+                                                  DataGrid.Column(name='new_value',title='Message',
+                                                                          getter=lambda x: x.new_value)])
+
+
+
 class TaskSearchForm(RemoteForm): 
     template = "bkr.server.templates.task_search_form"
     member_widgets = ['system_id', 'system', 'task', 'distro', 'family', 'arch', 'start', 'finish', 'status', 'result']

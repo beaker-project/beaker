@@ -117,6 +117,14 @@ def init_db(user_name=None, password=None, user_display_name=None, user_email_ad
         virsh       = PowerType(u'virsh')
         wti         = PowerType(u'wti')
 
+    #Setup CommandStatus Table
+    if CommandStatus.query().count() == 0:
+        queued    = CommandStatus(u'Queued')
+        running   = CommandStatus(u'Running')
+        completed = CommandStatus(u'Completed')
+        failed    = CommandStatus(u'Failed')
+        aborted   = CommandStatus(u'Aborted')
+
     #Setup key types
     if Key.query().count() == 0:
         DISKSPACE       = Key('DISKSPACE',True)

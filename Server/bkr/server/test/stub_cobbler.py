@@ -200,3 +200,15 @@ class StubCobblerThread(threading.Thread):
             self.server.serve_forever()
         finally:
             self.server.server_close()
+
+if __name__ == "__main__":
+    log.setLevel(logging.INFO)
+    ch = logging.StreamHandler()
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    ch.setFormatter(formatter)
+    log.addHandler(ch)
+    sc = StubCobblerThread()
+    try:
+        sc.run()
+    except KeyboardInterrupt:
+        pass
