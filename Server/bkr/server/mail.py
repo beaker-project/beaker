@@ -98,9 +98,13 @@ def system_problem_report(system, description, recipe=None, reporter=None):
         ('X-Type', system.type)]
     arch_headers = [('X-Arch', arch) for arch in system.arch]
     headers.extend(arch_headers)
+    cc = []
+    if reporter is not None:
+        cc.append(reporter.email_address)
+    cc.extend(system.cc)
     send_mail(sender, system.owner.email_address,
             _(u'Problem reported for %s') % system.fqdn, '\n'.join(body),
-            cc=[reporter.email_address] + system.cc, headers=headers)
+            cc=cc, headers=headers)
 
 def broken_system_notify(system, reason, recipe=None):
     sender = config.get('beaker_email')
