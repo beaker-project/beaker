@@ -27,7 +27,8 @@ class Users(AdminPage):
     display_name = widgets.TextField(name='display_name', label=_(u'Display Name'))
     email_address = widgets.TextField(name='email_address', label=_(u'Email Address'))
     password     = widgets.PasswordField(name='password', label=_(u'Password'))
-    disabled = widgets.CheckBox(name='disabled', label=_(u'Disabled'))
+    disabled = widgets.CheckBox(name='disabled', label=_(u'Disabled'),
+                                validator=validators.StringBool(if_empty=False))
 
     user_form = widgets.TableForm(
         'User',
@@ -69,6 +70,7 @@ class Users(AdminPage):
 
     @identity.require(identity.in_group("admin"))
     @expose()
+    @validate(user_form)
     @error_handler(edit)
     def save(self, **kw):
         if kw.get('user_id'):
