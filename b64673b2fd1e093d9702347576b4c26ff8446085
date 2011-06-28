@@ -1,0 +1,8 @@
+Change-Id: Ib64673b2fd1e093d9702347576b4c26ff8446085
+Code-Review+2: Dan Callaghan <dcallagh@redhat.com>
+Verified+1: Raymond Mancy <rmancy@redhat.com>
+Submitted-by: Raymond Mancy <rmancy@redhat.com>
+Submitted-at: Wed, 29 Jun 2011 09:40:25 +1000
+Reviewed-on: http://beaker-gerrit.app.eng.bne.redhat.com/463
+Project: beaker
+Branch: refs/heads/develop
