@@ -2,8 +2,8 @@
 %{!?pyver: %global pyver %(%{__python} -c "import sys ; print sys.version[:3]")}
 
 Name:           beaker
-Version:        0.6.13
-Release:        3%{?dist}
+Version:        0.6.14
+Release:        1%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -250,6 +250,32 @@ fi
 %{_var}/lib/beaker/addDistro.d/*
 
 %changelog
+* Wed Jun 29 2011 Raymond Mancy <rmancy@redhat.com> 0.6.14-1
+- 711960 - log to stderr in server command-line tools (dcallagh@redhat.com)
+- 713254 - make the ORM cascade Provision(Family) deletions to child rows
+  (dcallagh@redhat.com)
+- 664482 - prevent changing lab controller while a system is in use
+  (dcallagh@redhat.com)
+- 715243 - include reporter in cc list for system problem reports
+  (dcallagh@redhat.com)
+- 714974 - Add Hypervisor to System (bpeck@redhat.com)
+- 618278 - Create a queue for system commands (stl@redhat.com)
+- 715136 - Simpler setup of lab controller (bpeck@redhat.com)
+
+- 715133 - can't access system.id attribute after it is detached,
+  sqlalchemy won't accept strings for Boolean columns anymore,
+  session.get() is removed,
+  manual transaction management not necessary here,
+  ensure we roll back any changes on XML-RPC failure,
+  avoid leaking half-populated recipes into the database,
+  avoid leaking recipes without a recipeset during tests
+  (dcallagh@redhat.com)
+
+- Using our new patched TG (rmancy@redhat.com)
+- Update selenium version (bpeck@redhat.com)
+- pass bool values instead of strings to the database for User.disabled
+  (dcallagh@redhat.com)
+- handle reporter=None in system_problem_report() (dcallagh@redhat.com)
 * Thu Jun 16 2011 Bill Peck <bpeck@redhat.com> 0.6.13-3
 - HotFix for looking up users. (bpeck@redhat.com)
 
