@@ -60,17 +60,27 @@ acpidump: $(TARGET)
 acpixtract: $(TARGET)
 	cp $(TARGET)/acpixtract/acpixtract .
 
+BINFILE=hvm_detect
+hvm_detect: hvm_detect.c
+	if which gcc; then \
+		gcc $(BINFILE).c -o ./$(BINFILE) ;\
+		chmod a+x ./$(BINFILE) ;\
+	fi;
+
 # executables to be built should be added here, they will be generated on the system under test.
 ifeq ("$(ACPI_SUPPORT)", "yes")
   BUILT_FILES=acpidump acpixtract
 else
   BUILT_FILES=
 endif
+ifeq ($(shell arch),x86_64)
+  BUILT_FILES+=hvm_detect
+endif
 
 # data files, .c files, scripts anything needed to either compile the test and/or run it.
 FILES=$(METADATA) runtest.sh Makefile PURPOSE push-inventory.py \
       software.py i18n.py disks.py pushInventory.py procfs.py \
-      utilist.py getdriver.sh
+      utilist.py getdriver.sh hvm_detect.c
 
 run: $(FILES) build
 	./runtest.sh
