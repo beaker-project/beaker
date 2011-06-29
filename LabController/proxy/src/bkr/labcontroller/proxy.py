@@ -18,7 +18,8 @@ from socket import gethostname
 import kobo.conf
 from kobo.client import HubProxy
 from kobo.exceptions import ShutdownException
-
+from kobo.xmlrpc import retry_request_decorator, CookieTransport, \
+        SafeCookieTransport
 from kobo.process import kill_process_group
 from bkr.log import add_rotating_file_logger
 from bkr.upload import Uploader
@@ -66,7 +67,12 @@ class ProxyHelper(object):
                                      format=VERBOSE_LOG_FORMAT)
 
         # self.hub is created here
-        self.hub = HubProxy(logger=self.logger, conf=self.conf, **kwargs)
+        if self.conf['HUB_URL'].startswith('https://'):
+            TransportClass = retry_request_decorator(SafeCookieTransport)
+        else:
+            TransportClass = retry_request_decorator(CookieTransport)
+        self.hub = HubProxy(logger=self.logger, conf=self.conf,
+                transport=TransportClass(timeout=120), **kwargs)
         self.server = self.conf.get("SERVER", "http://%s/beaker/logs" % gethostname())
         self.basepath = None
         self.upload = None

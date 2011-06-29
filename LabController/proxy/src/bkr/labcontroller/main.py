@@ -28,7 +28,6 @@ class Authenticate(Thread):
     def __init__ (self,proxy):
       Thread.__init__(self)
       self.proxy = proxy
-      self.proxy.hub._transport.timeout = 120
       self.__serving = False
 
     def run(self):
