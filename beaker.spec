@@ -250,6 +250,9 @@ fi
 %{_var}/lib/beaker/addDistro.d/*
 
 %changelog
+* Thu Jun 30 2011 Bill Peck <bpeck@redhat.com> 0.6.14-4
+- KeyError: 'tags' fixed in osversion.trigger (bpeck@redhat.com)
+
 * Thu Jun 30 2011 Bill Peck <bpeck@redhat.com> 0.6.14-3
 - Can't return None with xmlrpc. (bpeck@redhat.com)
 
