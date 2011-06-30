@@ -31,7 +31,7 @@ from bkr.server.test.assertions import assert_datetime_within, \
         assert_durations_not_overlapping
 from bkr.server.test import data_setup, stub_cobbler
 from bkr.server.model import User, Cpu, Key, Key_Value_String, Key_Value_Int, \
-        System, SystemActivity, Provision
+        System, SystemActivity, Provision, Hypervisor
 from bkr.server.util import parse_xmlrpc_datetime
 from bkr.server.tools import beakerd
 
@@ -608,6 +608,30 @@ class PushXmlRpcTest(XmlRpcTestCase):
         self.server.push(system.fqdn, {'memory': '1024'})
         session.refresh(system)
         self.assertEquals(system.memory, 1024)
+
+    def test_hypervisor_none(self):
+        system = data_setup.create_system()
+        system.hypervisor = Hypervisor.by_name(u'KVM')
+        session.flush()
+        self.server.push(system.fqdn, {'Hypervisor': None})
+        session.refresh(system)
+        self.assertEquals(system.hypervisor, None)
+        self.assertEquals(system.activity[0].service, u'XMLRPC')
+        self.assertEquals(system.activity[0].action, u'Changed')
+        self.assertEquals(system.activity[0].field_name, u'Hypervisor')
+        self.assertEquals(system.activity[0].old_value, u'KVM')
+        self.assertEquals(system.activity[0].new_value, None)
+        self.assertEquals(system.activity[1].service, u'XMLRPC')
+        self.assertEquals(system.activity[1].action, u'Changed')
+        self.assertEquals(system.activity[1].field_name, u'checksum')
+
+    def test_hypervisor_kvm(self):
+        system = data_setup.create_system()
+        system.hypervisor = None
+        session.flush()
+        self.server.push(system.fqdn, {'Hypervisor': u'KVM'})
+        session.refresh(system)
+        self.assertEquals(system.hypervisor.hypervisor, u'KVM')
 
 class SystemHistoryXmlRpcTest(XmlRpcTestCase):
 

@@ -2154,10 +2154,13 @@ url --url=$tree
         return 0
 
     def updateHypervisor(self, hypervisor):
-        try:
-            hvisor = Hypervisor.by_name(hypervisor)
-        except InvalidRequestError:
-            raise BX(_('Invalid Hypervisor: %s' % hypervisor))
+        if hypervisor:
+            try:
+                hvisor = Hypervisor.by_name(hypervisor)
+            except InvalidRequestError:
+                raise BX(_('Invalid Hypervisor: %s' % hypervisor))
+        else:
+            hvisor = None
         if self.hypervisor != hvisor:
             self.activity.append(SystemActivity(
                     user=identity.current.user,
