@@ -113,7 +113,7 @@ class LabControllers(RPCRoot):
             activity = Activity(identity.current.user,'XMLRPC','Added LabController',distro.install_name,None,identity.current.user.lab_controller.fqdn)
             return distro.install_name
         else:
-            return None
+            return ""
 
     @cherrypy.expose
     def addDistros(self, lab_controller_name, new_distros):
@@ -228,7 +228,7 @@ class LabControllers(RPCRoot):
             activity = Activity(identity.current.user,'XMLRPC','Removed LabController',distro.install_name,None,identity.current.user.lab_controller.fqdn)
             return distro.install_name
         else:
-            return None
+            return ""
 
     @cherrypy.expose
     def removeDistros(self, lab_controller_name, old_distros):
