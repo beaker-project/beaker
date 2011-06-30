@@ -250,6 +250,10 @@ fi
 %{_var}/lib/beaker/addDistro.d/*
 
 %changelog
+* Thu Jun 30 2011 Bill Peck <bpeck@redhat.com> 0.6.14-6
+- don't assume tree_name is defined, add extra checks for addDistro command
+  (bpeck@redhat.com)
+
 * Thu Jun 30 2011 Bill Peck <bpeck@redhat.com> 0.6.14-5
 - paper bag release (bpeck@redhat.com)
 
