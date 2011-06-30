@@ -373,13 +373,13 @@ if __name__ == '__main__':
                     #addDistro.sh "rel-eng" RHEL6.0-20090626.2 RedHatEnterpriseLinux6.0 x86_64 "Default"
                     if distro['osmajor'] and distro['osminor']:
                         cmd = '%s "%s" %s %s %s "%s"' % (addDistroCmd, 
-                                                       ','.join(distro.get('tags',[])]),
+                                                       ','.join(distro.get('tags',[])),
                                                        distro['treename'],
                                                        '%s.%s' % (
                                                          distro['osmajor'], 
                                                          distro['osminor']),
                                                        distro['arch'],
-                                                       distro['variant'])
+                                                       distro.get('variant'))
                         print cmd
                         os.system(cmd)
         else:
