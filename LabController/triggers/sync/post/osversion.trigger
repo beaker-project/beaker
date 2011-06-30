@@ -359,8 +359,9 @@ if __name__ == '__main__':
             # xmlrpc can't marshal set
             distro['keys'] = list(distro['keys'])
 
-            # Add the distro to inventory
-            proxy.addDistro(distro)
+            # Add the distro to inventory only if treename exists
+            if distro.get('treename'):
+                proxy.addDistro(distro)
 
             # Record in cobbler that we PUSHED it
             distro['pushed'] = True
@@ -368,20 +369,22 @@ if __name__ == '__main__':
 
             # Kick off jobs automatically
             addDistroCmd = '/var/lib/beaker/addDistro.sh'
-            if os.path.exists(addDistroCmd):
-                if 'tree' in distro['ks_meta']:
-                    #addDistro.sh "rel-eng" RHEL6.0-20090626.2 RedHatEnterpriseLinux6.0 x86_64 "Default"
-                    if distro['osmajor'] and distro['osminor']:
-                        cmd = '%s "%s" %s %s %s "%s"' % (addDistroCmd, 
-                                                       ','.join(distro.get('tags',[])),
-                                                       distro['treename'],
-                                                       '%s.%s' % (
-                                                         distro['osmajor'], 
-                                                         distro['osminor']),
-                                                       distro['arch'],
-                                                       distro.get('variant'))
-                        print cmd
-                        os.system(cmd)
+            if os.path.exists(addDistroCmd) and \
+               distro.get('ks_meta').get('tree') and \
+               distro.get('osmajor') and \
+               distro.get('osminor') and \
+               distro.get('treename'):
+               #addDistro.sh "rel-eng" RHEL6.0-20090626.2 RedHatEnterpriseLinux6.0 x86_64 "Default"
+                    cmd = '%s "%s" %s %s %s "%s"' % (addDistroCmd, 
+                                                   ','.join(distro.get('tags',[])),
+                                                   distro.get('treename'),
+                                                   '%s.%s' % (
+                                                     distro.get('osmajor'), 
+                                                     distro.get('osminor')),
+                                                   distro.get('arch'),
+                                                   distro.get('variant',''))
+                    print cmd
+                    os.system(cmd)
         else:
             print "Already pushed %s, set comment pushed True to False to re-push" % distro['name']
 
