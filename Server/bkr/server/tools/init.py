@@ -24,7 +24,7 @@ import pkg_resources
 pkg_resources.require("SQLAlchemy>=0.3.10")
 from bkr.server.model import *
 from bkr.server.commands import ConfigurationError
-from bkr.server.util import load_config
+from bkr.server.util import load_config, log_to_stream
 from turbogears.database import session
 from os.path import dirname, exists, join
 from os import getcwd
@@ -59,6 +59,12 @@ def init_db(user_name=None, password=None, user_display_name=None, user_email_ad
         admin = Group.by_name(u'admin')
     except InvalidRequestError:
         admin     = Group(group_name=u'admin',display_name=u'Admin')
+
+    try:
+        lab_controller = Group.by_name(u'lab_controller')
+    except InvalidRequestError:
+        lab_controller = Group(group_name=u'lab_controller',
+                               display_name=u'Lab Controller')
     
     #Setup User account
     if user_name:
@@ -83,6 +89,13 @@ def init_db(user_name=None, password=None, user_display_name=None, user_email_ad
         resource  = SystemType(u'Resource')
         laptop    = SystemType(u'Laptop')
         prototype = SystemType(u'Prototype')
+
+    #Setup Hypervisors Table
+    if Hypervisor.query().count() == 0:
+        kvm       = Hypervisor(hypervisor=u'KVM')
+        xen       = Hypervisor(hypervisor=u'Xen')
+        hyperv    = Hypervisor(hypervisor=u'HyperV')
+        vmware    = Hypervisor(hypervisor=u'VMWare')
 
     #Setup base Architectures
     if Arch.query().count() == 0:
@@ -109,6 +122,14 @@ def init_db(user_name=None, password=None, user_display_name=None, user_email_ad
         rsa         = PowerType(u'rsa')
         virsh       = PowerType(u'virsh')
         wti         = PowerType(u'wti')
+
+    #Setup CommandStatus Table
+    if CommandStatus.query().count() == 0:
+        queued    = CommandStatus(u'Queued')
+        running   = CommandStatus(u'Running')
+        completed = CommandStatus(u'Completed')
+        failed    = CommandStatus(u'Failed')
+        aborted   = CommandStatus(u'Aborted')
 
     #Setup key types
     if Key.query().count() == 0:
@@ -208,6 +229,7 @@ def main():
     parser = get_parser()
     opts, args = parser.parse_args()
     load_config(opts.configfile)
+    log_to_stream(sys.stderr)
     init_db(user_name=opts.user_name, password=opts.password,
             user_display_name=opts.display_name,
             user_email_address=opts.email_address)

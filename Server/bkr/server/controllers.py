@@ -26,6 +26,7 @@ from bkr.server.systems import SystemsController
 from bkr.server.widgets import myPaginateDataGrid
 from bkr.server.widgets import PowerTypeForm
 from bkr.server.widgets import PowerForm
+from bkr.server.widgets import PowerActionHistory
 from bkr.server.widgets import LabInfoForm
 from bkr.server.widgets import PowerActionForm
 from bkr.server.widgets import ReportProblemForm
@@ -258,6 +259,7 @@ class Root(RPCRoot):
     power_form = PowerForm(name='power')
     labinfo_form = LabInfoForm(name='labinfo')
     power_action_form = PowerActionForm(name='power_action')
+    power_history = PowerActionHistory()
     system_details = SystemDetails()
     system_activity = SystemHistory()
     system_exclude = SystemExclude(name='excluded_families')
@@ -893,6 +895,7 @@ class Root(RPCRoot):
             widgets['provision'] = self.system_provision
             widgets['power'] = self.power_form
             widgets['power_action'] = self.power_action_form
+            widgets['power_history'] = self.power_history
 
         return dict(
             title           = title,
@@ -920,6 +923,7 @@ class Root(RPCRoot):
                                     tasks     = '/tasks/do_search',
                                   ),
             widgets_options = dict(power     = options,
+                                   power_history = system.command_queue[:10], # XXX filter to power commands
                                    history   = history_options or {},
                                    labinfo   = options,
                                    exclude   = options,
@@ -1322,9 +1326,21 @@ class Root(RPCRoot):
         else:
             kw['lab_controller'] = LabController.by_id(kw['lab_controller_id'])
         kw['type'] = SystemType.by_id(kw['type_id'])
+        if kw['hypervisor_id'] == 0:
+            kw['hypervisor'] = None
+        else:
+            kw['hypervisor'] = Hypervisor.by_id(kw['hypervisor_id'])
+
+        # Don't change lab controller while the system is in use
+        if system.lab_controller != kw['lab_controller'] and \
+                system.open_reservation is not None:
+            flash(_(u'Unable to change lab controller while system is in use '
+                    '(return the system first)'))
+            redirect('/view/%s' % system.fqdn)
 
         log_fields = [ 'fqdn', 'vendor', 'lender', 'model', 'serial', 'location', 
-                       'mac_address', 'status', 'status_reason', 'lab_controller', 'type']
+                       'mac_address', 'status', 'status_reason', 
+                       'lab_controller', 'type', 'hypervisor']
 
         for field in log_fields:
             try:
@@ -1377,6 +1393,7 @@ class Root(RPCRoot):
         system.serial=kw['serial']
         system.vendor=kw['vendor']
         system.lender=kw['lender']
+        system.hypervisor=kw['hypervisor']
         if kw['fqdn'] != system.fqdn:
             system.remote.remove()
         system.fqdn=kw['fqdn']
@@ -1481,22 +1498,9 @@ class Root(RPCRoot):
         except InvalidRequestError:
             flash( _(u"Unable to look up system id:%s via your login" % id) )
             redirect("/")
-        try:
-            system.action_power(action)
-        except xmlrpclib.Fault, msg:
-            flash(_(u"Failed to %s %s, XMLRPC error: %s" % (action, system.fqdn, msg)))
-            activity = SystemActivity(identity.current.user, 'WEBUI', action, 'Power', "", "%s" % msg)
-            system.activity.append(activity)
-            redirect("/view/%s" % system.fqdn)
-        except BX, msg:
-            flash(_(u"Failed to %s %s, error: %s" % (action, system.fqdn, msg)))
-            activity = SystemActivity(identity.current.user, 'WEBUI', action, 'Power', "", "%s" % msg)
-            system.activity.append(activity)
-            redirect("/view/%s" % system.fqdn)
 
-        activity = SystemActivity(identity.current.user, 'WEBUI', action, 'Power', "", "Success")
-        system.activity.append(activity)
-        flash(_(u"%s %s" % (system.fqdn, action)))
+        system.action_power(service='WEBUI', action=action)
+        flash(_(u"%s power %s command enqueued" % (system.fqdn, action)))
         redirect("/view/%s" % system.fqdn)
 
     @expose()
@@ -1583,16 +1587,8 @@ class Root(RPCRoot):
         system.activity.append(activity)
 
         if reboot:
-            try:
-                system.remote.power(action="reboot")
-            except BX, msg:
-                activity = SystemActivity(identity.current.user, 'WEBUI', 'Reboot', 'Power', "", "%s" % msg)
-                system.activity.append(activity)
-                flash(_(u"%s" % msg))
-                redirect("/view/%s" % system.fqdn)
+            system.action_power(action='reboot', service='WEBUI')
 
-        activity = SystemActivity(identity.current.user, 'WEBUI', 'Reboot', 'Power', "", "Success")
-        system.activity.append(activity)
         flash(_(u"Successfully Provisioned %s with %s" % (system.fqdn,distro.install_name)))
         redirect("/view/%s" % system.fqdn)
 

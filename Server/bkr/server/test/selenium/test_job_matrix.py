@@ -24,29 +24,27 @@ from bkr.server.test import data_setup
 
 class TestJobMatrix(SeleniumTestCase):
     
-    @classmethod
-    def setupClass(cls):
-        cls.job_whiteboard = u'DanC says hi'
-        cls.recipe_whiteboard = u'breakage lol \'#&^!<'
-        cls.passed_job = data_setup.create_completed_job(
-                whiteboard=cls.job_whiteboard, result=u'Pass',
-                recipe_whiteboard=cls.recipe_whiteboard,
+    def setUp(self):
+        self.job_whiteboard = u'DanC says hi %d' % int(time.time() * 1000)
+        self.recipe_whiteboard = u'breakage lol \'#&^!<'
+        self.passed_job = data_setup.create_completed_job(
+                whiteboard=self.job_whiteboard, result=u'Pass',
+                recipe_whiteboard=self.recipe_whiteboard,
                 distro=data_setup.create_distro(arch=u'i386'))
-        cls.warned_job = data_setup.create_completed_job(
-                whiteboard=cls.job_whiteboard, result=u'Warn',
-                recipe_whiteboard=cls.recipe_whiteboard,
+        self.warned_job = data_setup.create_completed_job(
+                whiteboard=self.job_whiteboard, result=u'Warn',
+                recipe_whiteboard=self.recipe_whiteboard,
                 distro=data_setup.create_distro(arch=u'ia64'))
-        cls.failed_job = data_setup.create_completed_job(
-                whiteboard=cls.job_whiteboard, result=u'Fail',
-                recipe_whiteboard=cls.recipe_whiteboard,
+        self.failed_job = data_setup.create_completed_job(
+                whiteboard=self.job_whiteboard, result=u'Fail',
+                recipe_whiteboard=self.recipe_whiteboard,
                 distro=data_setup.create_distro(arch=u'x86_64'))
         session.flush()
-        cls.selenium = cls.get_selenium()
-        cls.selenium.start()
+        self.selenium = self.get_selenium()
+        self.selenium.start()
 
-    @classmethod
-    def teardown(cls):
-        cls.selenium.stop()
+    def tearDown(self):
+        self.selenium.stop()
 
     def test_generate_by_whiteboard(self):
         sel = self.selenium
@@ -68,8 +66,6 @@ class TestJobMatrix(SeleniumTestCase):
         sel.wait_for_page_to_load('30000')
         body_2 = sel.get_text('//body')
         self.assert_('Pass: 2' in body_2)
-        session.delete(new_job)
-        session.flush()
 
     def test_it(self):
         sel = self.selenium

@@ -31,7 +31,7 @@ from bkr.server.test.selenium import SeleniumTestCase
 from bkr.server.test import data_setup, get_server_base, stub_cobbler, \
         assertions
 from bkr.server.model import Key, Key_Value_String, Key_Value_Int, System, \
-        Provision
+        Provision, ProvisionFamily, ProvisionFamilyUpdate, Hypervisor
 
 class SystemViewTest(SeleniumTestCase):
 
@@ -44,12 +44,23 @@ class SystemViewTest(SeleniumTestCase):
         self.unprivileged_user = data_setup.create_user(password=u'password')
         self.distro = data_setup.create_distro()
         self.system = data_setup.create_system(owner=self.system_owner,
-                status=u'Automated')
+                status=u'Automated', arch=u'i386')
         self.system.shared = True
         self.system.provisions[self.distro.arch] = Provision(
-                arch=self.distro.arch, ks_meta=u'some_ks_meta_var',
+                arch=self.distro.arch, ks_meta=u'some_ks_meta_var=1',
                 kernel_options=u'some_kernel_option=1',
                 kernel_options_post=u'some_kernel_option=2')
+        self.system.provisions[self.distro.arch]\
+            .provision_families[self.distro.osversion.osmajor] = \
+                ProvisionFamily(osmajor=self.distro.osversion.osmajor,
+                    ks_meta=u'some_ks_meta_var=2', kernel_options=u'some_kernel_option=3',
+                    kernel_options_post=u'some_kernel_option=4')
+        self.system.provisions[self.distro.arch]\
+            .provision_families[self.distro.osversion.osmajor]\
+            .provision_family_updates[self.distro.osversion] = \
+                ProvisionFamilyUpdate(osversion=self.distro.osversion,
+                    ks_meta=u'some_ks_meta_var=3', kernel_options=u'some_kernel_option=5',
+                    kernel_options_post=u'some_kernel_option=6')
         self.system.lab_controller = self.lab_controller
         session.flush()
         self.selenium = self.get_selenium()
@@ -365,6 +376,20 @@ class SystemViewTest(SeleniumTestCase):
         session.refresh(self.system)
         self.assert_(self.system.date_modified > orig_date_modified)
 
+    def test_delete_install_options(self):
+        orig_date_modified = self.system.date_modified
+        self.login()
+        sel = self.selenium
+        self.go_to_system_view()
+        sel.click('//ul[@class="tabbernav"]//a[text()="Install Options"]')
+        sel.click('//form[@name="installoptions"]//tr[th/text()="Architecture"]'
+                '//a[text()="Delete ( - )"]')
+        sel.wait_for_page_to_load('30000')
+        self.assertEqual(sel.get_title(), self.system.fqdn)
+        session.refresh(self.system)
+        self.assert_(self.system.date_modified > orig_date_modified)
+        self.assert_(self.distro.arch not in self.system.provisions)
+
     def test_update_labinfo(self):
         orig_date_modified = self.system.date_modified
         self.login()
@@ -438,9 +463,9 @@ class SystemViewTest(SeleniumTestCase):
 
     def check_install_options(self):
         sel = self.selenium
-        self.assertEqual(sel.get_value('ks_meta'), 'some_ks_meta_var')
-        self.assertEqual(sel.get_value('koptions'), 'some_kernel_option=1')
-        self.assertEqual(sel.get_value('koptions_post'), 'some_kernel_option=2')
+        self.assertEqual(sel.get_value('ks_meta'), 'some_ks_meta_var=3')
+        self.assertEqual(sel.get_value('koptions'), 'some_kernel_option=5')
+        self.assertEqual(sel.get_value('koptions_post'), 'some_kernel_option=6')
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=703548
     def test_cc_not_visible_to_random_noobs(self):
@@ -448,6 +473,35 @@ class SystemViewTest(SeleniumTestCase):
         sel = self.selenium
         self.go_to_system_view()
         self.assert_(not sel.is_text_present('Notify CC'))
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=664482
+    def test_cannot_change_lab_controller_while_system_in_use(self):
+        data_setup.create_manual_reservation(self.system,
+                start=datetime.datetime.utcnow(), finish=None)
+        session.flush()
+        self.login()
+        sel = self.selenium
+        self.go_to_system_view()
+        sel.select('lab_controller_id', 'None')
+        sel.click('link=Save Changes')
+        sel.wait_for_page_to_load('30000')
+        self.assertEqual(sel.get_text('css=.flash'),
+                'Unable to change lab controller while system is in use '
+                '(return the system first)')
+        self.assertEqual(sel.get_selected_label('lab_controller_id'),
+                self.lab_controller.fqdn)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=714974
+    def test_change_hypervisor(self):
+        self.login()
+        sel = self.selenium
+        self.go_to_system_view()
+        sel.select('hypervisor_id', 'KVM')
+        sel.click('link=Save Changes')
+        sel.wait_for_page_to_load('30000')
+        self.assertEquals(sel.get_selected_label('hypervisor_id'), 'KVM')
+        session.refresh(self.system)
+        self.assertEqual(self.system.hypervisor, Hypervisor.by_name(u'KVM'))
 
 class SystemCcTest(SeleniumTestCase):
 

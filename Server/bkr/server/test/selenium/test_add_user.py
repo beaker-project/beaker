@@ -86,8 +86,7 @@ class AddUser(bkr.server.test.selenium.SeleniumTestCase):
         sel.click("//input[@value='Save']")
         sel.wait_for_page_to_load("3000")
         #Test Saved message came up
-        try: self.failUnless(sel.is_text_present("saved"))
-        except AssertionError, e: self.verificationErrors.append(str(e))
+        self.failUnless(sel.is_text_present("saved"))
         self.logout()
 
         # First verify you can login as user.
@@ -98,8 +97,7 @@ class AddUser(bkr.server.test.selenium.SeleniumTestCase):
         sel.type("password", self.BEAKER_DISABLE_PASSWORD)
         sel.click("login")
         sel.wait_for_page_to_load("3000")
-        try: self.failUnless(sel.is_text_present("%s" % self.BEAKER_DISABLE_USER))
-        except AssertionError, e: self.verificationErrors.append(str(e)) 
+        self.failUnless(sel.is_text_present("%s" % self.BEAKER_DISABLE_USER))
         self.logout()
 
         # Login as admin and disable user TEST 1
@@ -127,8 +125,7 @@ class AddUser(bkr.server.test.selenium.SeleniumTestCase):
         sel.type("password", self.BEAKER_DISABLE_PASSWORD)
         sel.click("login")
         sel.wait_for_page_to_load("3000")
-        try: self.failUnless(sel.is_text_present("The credentials you supplied were not correct or did not grant access to this resource" ))
-        except AssertionError, e: self.verificationErrors.append(str(e)) 
+        self.failUnless(sel.is_text_present("The credentials you supplied were not correct or did not grant access to this resource" ))
 
 
     def tearDown(self):

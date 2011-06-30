@@ -185,6 +185,14 @@ $(document).ready(function(){
         <a py:if="not readonly" href="${tg.url('/cc_change', system_id=id)}">(Change)</a>
        </td>
       </tr>
+      <tr class="list">
+       <th class="list">
+        ${label_for('hypervisor_id')}
+       </th>
+       <td class="list">
+        ${display_field_for("hypervisor_id")}
+       </td>
+      </tr>
       <tr py:if="not readonly">
        <td colspan="4">
         <a class="button" href="javascript:document.${name}.submit();">Save Changes</a>

@@ -49,11 +49,6 @@ $ <userinput>sudo yum install beaker-lab-controller</userinput>
 						<literal>anamon_enabled</literal>: 1.
 					</para>
 				</listitem>
-				<listitem>
-					<para>
-						<literal>redhat_management_server</literal>: <literal>https://<replaceable>login</replaceable>:<replaceable>password</replaceable>@BeakerServer.example.com/bkr</literal>. login would be admin, password would be testing, and BeakerServer would be the HOSTNAME of the Beaker/Server you installed earlier. If your Lab Controller is on the same machine as your Beaker server, the values should be <literal>https://login:password@BeakerServer/bkr</literal>
-					</para>
-				</listitem>
 			</itemizedlist>
 			 You will need to enable an auth method in <literal>/etc/cobbler/modules.conf</literal>
 			<itemizedlist>

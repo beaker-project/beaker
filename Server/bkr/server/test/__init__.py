@@ -25,6 +25,7 @@ import turbogears
 from turbogears import update_config
 from turbogears.database import session
 from bkr.server.controllers import Root
+from bkr.server.util import log_to_stream
 from bkr.server.test import data_setup
 
 # hack to make turbogears.testutil not do dumb stuff at import time
@@ -53,12 +54,7 @@ def setup_package():
 
     # Override loaded logging config, in case we are using the server's config file
     # (we really always want our tests' logs to go to stdout, not /var/log/beaker/)
-    stream_handler = logging.StreamHandler(sys.stdout)
-    stream_handler.setFormatter(logging.Formatter('%(asctime)s %(name)s %(levelname)s %(message)s'))
-    # XXX terrible hack, but there is no better way in Python 2.4 :-(
-    for logger in logging.Logger.manager.loggerDict.itervalues():
-        if getattr(logger, 'handlers', None):
-            logger.handlers = [stream_handler]
+    log_to_stream(sys.stdout, level=logging.NOTSET)
 
     if not 'BEAKER_SKIP_INIT_DB' in os.environ:
         data_setup.setup_model()

@@ -218,22 +218,11 @@ class Jobs(RPCRoot):
             unknown tasks to be silently discarded (default is False)
         :type ignore_missing_tasks: bool
         """
-        session.begin()
         xml = xmltramp.parse(jobxml)
         xmljob = XmlJob(xml)
-        try:
-            job = self.process_xmljob(xmljob,identity.current.user,
-                    ignore_missing_tasks=ignore_missing_tasks)
-            session.commit()
-        except BeakerException, err:
-            session.rollback()
-            raise
-        except ValueError, err:
-            session.rollback()
-            raise
-        # With transactions we shouldn't need save or flush. remove when verified.
-        #session.save(job)
-        #session.flush()
+        job = self.process_xmljob(xmljob,identity.current.user,
+                ignore_missing_tasks=ignore_missing_tasks)
+        session.flush() # so that we get an id
         return "j:%s" % job.id
 
     @identity.require(identity.not_anonymous())

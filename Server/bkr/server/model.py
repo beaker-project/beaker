@@ -49,6 +49,13 @@ from xml.dom.minidom import Node, parseString
 import logging
 log = logging.getLogger(__name__)
 
+hypervisor_table = Table('hypervisor', metadata,
+    Column('id', Integer, autoincrement=True,
+           nullable=False, primary_key=True),
+    Column('hypervisor', Unicode(100), nullable=False),
+    mysql_engine='InnoDB',
+)
+
 system_table = Table('system', metadata,
     Column('id', Integer, autoincrement=True,
            nullable=False, primary_key=True),
@@ -84,6 +91,8 @@ system_table = Table('system', metadata,
            ForeignKey('release_action.id')),
     Column('reprovision_distro_id', Integer,
            ForeignKey('distro.id')),
+    Column('hypervisor_id', Integer,
+           ForeignKey('hypervisor.id')),
     mysql_engine='InnoDB',
 )
 
@@ -338,6 +347,13 @@ power_table = Table('power', metadata,
     mysql_engine='InnoDB',
 )
 
+command_status_table = Table('command_status', metadata,
+    Column('id', Integer, autoincrement=True,
+           nullable=False, primary_key=True),
+    Column('status', Unicode(255), nullable=False),
+    mysql_engine='InnoDB',
+)
+
 serial_table = Table('serial', metadata,
     Column('id', Integer, autoincrement=True,
            nullable=False, primary_key=True),
@@ -396,6 +412,8 @@ lab_controller_table = Table('lab_controller', metadata,
     Column('systems_md5', String(40)),
     Column('disabled', Boolean, nullable=False, default=False),
     Column('removed', DateTime, nullable=True, default=None),
+    Column('user_id', Integer,
+           ForeignKey('tg_user.user_id'), nullable=False),
     mysql_engine='InnoDB',
 )
 
@@ -598,6 +616,17 @@ distro_activity_table = Table('distro_activity', metadata,
     mysql_engine='InnoDB',
 )
 
+command_queue_table = Table('command_queue', metadata,
+    Column('id', Integer, ForeignKey('activity.id'), primary_key=True),
+    Column('system_id', Integer, ForeignKey('system.id',
+           onupdate='CASCADE', ondelete='CASCADE'), nullable=False),
+    Column('status_id', Integer,
+           ForeignKey('command_status.id'), nullable=False),
+    Column('task_id', String(255)),
+    Column('updated', DateTime, default=datetime.utcnow),
+    mysql_engine='InnoDB',
+)
+
 # note schema
 note_table = Table('note', metadata,
     Column('id', Integer, autoincrement=True,
@@ -696,7 +725,7 @@ job_cc_table = Table('job_cc', metadata,
 recipe_set_table = Table('recipe_set',metadata,
         Column('id', Integer, primary_key=True),
         Column('job_id', Integer,
-                ForeignKey('job.id')),
+                ForeignKey('job.id'), nullable=False),
         Column('priority_id', Integer,
                 ForeignKey('task_priority.id'), default=select([task_priority_table.c.id], limit=1).where(task_priority_table.c.priority==u'Normal').correlate(None)),
         Column('queue_time',DateTime, nullable=False, default=datetime.utcnow),
@@ -783,7 +812,7 @@ system_status_duration_table = Table('system_status_duration', metadata,
 recipe_table = Table('recipe',metadata,
         Column('id', Integer, primary_key=True),
         Column('recipe_set_id', Integer,
-                ForeignKey('recipe_set.id')),
+                ForeignKey('recipe_set.id'), nullable=False),
         Column('distro_id', Integer,
                 ForeignKey('distro.id')),
         Column('system_id', Integer,
@@ -1381,7 +1410,8 @@ class System(SystemObject):
 
     def __init__(self, fqdn=None, status=None, contact=None, location=None,
                        model=None, type=None, serial=None, vendor=None,
-                       owner=None, lab_controller=None, lender=None):
+                       owner=None, lab_controller=None, lender=None,
+                       hypervisor=None):
         self.fqdn = fqdn
         self.status = status
         self.contact = contact
@@ -1393,6 +1423,7 @@ class System(SystemObject):
         self.owner = owner
         self.lab_controller = lab_controller
         self.lender = lender
+        self.hypervisor = hypervisor
     
     def to_xml(self, clone=False):
         """ Return xml describing this system """
@@ -1487,11 +1518,8 @@ class System(SystemObject):
 
 
                         
-            def power(self,action='reboot', wait=False, clear_netboot=False):
+            def power(self,action='reboot', wait=False):
                 system_id = self.get_system()
-                if clear_netboot:
-                    self.remote.modify_system(system_id,
-                            'netboot-enabled', False, self.token)
                 self.remote.modify_system(system_id, 'power_type', 
                                               self.system.power.power_type.name,
                                                    self.token)
@@ -1516,7 +1544,7 @@ class System(SystemObject):
                         if wait:
                             return self.wait_for_event(task_id)
                         else:
-                            return True
+                            return task_id
                     except xmlrpclib.Fault, msg:
                         raise BX(_('Failed to %s system %s' % (action,self.system.fqdn)))
                 else:
@@ -1635,6 +1663,12 @@ url --url=$tree
                 except xmlrpclib.Fault, msg:
                     raise BX(_("Failed to clear %s logs" % self.system.fqdn))
 
+            def clear_netboot(self, service=None):
+                """ Clear the system's Cobbler netboot configuration. """
+                # XXX we should actually add this to the command queue
+                system_id = self.get_system()
+                self.remote.modify_system(system_id, 'netboot-enabled', False, self.token)
+
             def release(self, power=True):
                 """ Turn off netboot and turn off system by default
                 """
@@ -1646,7 +1680,7 @@ url --url=$tree
                 self.remote.save_system(system_id, 
                                         self.token)
                 if self.system.power and power:
-                    self.power(action="off", wait=False)
+                    self.system.action_power(action="off")
 
             def remove(self):
                 """ Removes this system's record from Cobbler. """
@@ -2017,7 +2051,8 @@ url --url=$tree
 
     def get_update_method(self,obj_str):
         methods = dict ( Cpu = self.updateCpu, Arch = self.updateArch, 
-                         Devices = self.updateDevices, Numa = self.updateNuma )
+                         Devices = self.updateDevices, Numa = self.updateNuma,
+                         Hypervisor = self.updateHypervisor, )
         return methods[obj_str]
 
     def update_legacy(self, inventory):
@@ -2117,6 +2152,22 @@ url --url=$tree
                    raise
         self.date_modified = datetime.utcnow()
         return 0
+
+    def updateHypervisor(self, hypervisor):
+        if hypervisor:
+            try:
+                hvisor = Hypervisor.by_name(hypervisor)
+            except InvalidRequestError:
+                raise BX(_('Invalid Hypervisor: %s' % hypervisor))
+        else:
+            hvisor = None
+        if self.hypervisor != hvisor:
+            self.activity.append(SystemActivity(
+                    user=identity.current.user,
+                    service=u'XMLRPC', action=u'Changed',
+                    field_name=u'Hypervisor', old_value=self.hypervisor,
+                    new_value=hvisor))
+            self.hypervisor = hvisor
 
     def updateArch(self, archinfo):
         for arch in archinfo:
@@ -2271,11 +2322,8 @@ url --url=$tree
                 pass
             except xmlrpclib.Fault:
                 pass
-        else:
-            try:
-                self.remote.release()
-            except:
-                pass
+        elif self.remote:
+            self.remote.release()
 
     def action_provision(self, 
                          distro=None,
@@ -2305,8 +2353,7 @@ url --url=$tree
                              kernel_options=None,
                              kernel_options_post=None,
                              kickstart=None,
-                             ks_appends=None,
-                             wait=False):
+                             ks_appends=None):
         if not self.remote:
             return False
 
@@ -2364,11 +2411,18 @@ $SNIPPET("rhts_post")
                               ks_appends=ks_appends,
                               **results)
         if self.power:
-            self.remote.power(action="reboot", wait=wait)
+            self.action_power(service=u'Scheduler', action=u'reboot')
 
-    def action_power(self, action='reboot', wait=False, clear_netboot=False):
+    def action_power(self, action=u'reboot', service=u'Scheduler'):
+        try:
+            user = identity.current.user
+        except:
+            user = None
+
         if self.remote and self.power:
-            self.remote.power(action, wait=wait, clear_netboot=clear_netboot)
+            status = CommandStatus.by_name(u'Queued')
+            activity = CommandActivity(user, service, action, status)
+            self.command_queue.append(activity)
         else:
             return False
 
@@ -2532,7 +2586,24 @@ class SystemCc(SystemObject):
 
     def __init__(self, email_address):
         self.email_address = email_address
-  
+
+class Hypervisor(SystemObject):
+
+    def __repr__(self):
+        return self.hypervisor
+
+    @classmethod
+    def get_all_types(cls):
+        """
+        return an array of tuples containing id, hypervisor
+        """
+        return [(hvisor.id, hvisor.hypervisor) for hvisor in cls.query()]
+
+    @classmethod
+    @sqla_cache
+    def by_name(cls, hvisor):
+        return cls.query.filter_by(hypervisor=hvisor).one()
+
 class SystemType(SystemObject):
 
     def __init__(self, type=None):
@@ -2591,12 +2662,12 @@ class ReleaseAction(SystemObject):
     def PowerOff(self, system):
         """ Turn off system
         """
-        system.remote.power(action='off')
+        system.action_power(action='off')
 
     def LeaveOn(self, system):
         """ Leave system running
         """
-        system.remote.power(action='on')
+        system.action_power(action='on')
 
     def ReProvision(self, system):
         """ re-provision the system 
@@ -2777,7 +2848,6 @@ class LabControllerDistro(SystemObject):
 
 
 class LabController(SystemObject):
-
     def __repr__(self):
         return "%s" % (self.fqdn)
 
@@ -2969,6 +3039,20 @@ class PowerType(object):
 
 class Power(SystemObject):
     pass
+
+
+class CommandStatus(object):
+
+    def __init__(self, status=None):
+        self.status = status
+
+    def __repr__(self):
+        return self.status
+
+    @classmethod
+    @sqla_cache
+    def by_name(cls, name):
+        return cls.query().filter_by(status=name).one()
 
 
 class Serial(object):
@@ -3358,11 +3442,17 @@ class GroupActivity(Activity):
     def object_name(self):
         return "Group: %s" % self.object.display_name
 
-
 class DistroActivity(Activity):
     def object_name(self):
         return "Distro: %s" % self.object.install_name
 
+class CommandActivity(Activity):
+    def __init__(self, user, service, action, status):
+        Activity.__init__(self, user, service, action, 'Command', '', '')
+        self.status = status
+
+    def object_name(self):
+        return "Command: %s %s" % (self.object.fqdn, self.action)
 
 # note model
 class Note(object):
@@ -6055,6 +6145,7 @@ class SystemStatusDuration(MappedObject): pass
 
 # set up mappers between identity tables and classes
 SystemType.mapper = mapper(SystemType, system_type_table)
+Hypervisor.mapper = mapper(Hypervisor, hypervisor_table)
 SystemStatus.mapper = mapper(SystemStatus, system_status_table)
 mapper(ReleaseAction, release_action_table)
 System.mapper = mapper(System, system_table,
@@ -6064,7 +6155,6 @@ System.mapper = mapper(System, system_table,
                      'devices':relation(Device,
                                         secondary=system_device_map,backref='systems'),
                      'type':relation(SystemType, uselist=False),
-                    
                      'arch':relation(Arch,
                                      order_by=[arch_table.c.arch],
                                         secondary=system_arch_map,
@@ -6105,6 +6195,9 @@ System.mapper = mapper(System, system_table,
                      'activity':relation(SystemActivity,
                         order_by=[activity_table.c.created.desc(), activity_table.c.id.desc()],
                         backref='object', cascade='all, delete, delete-orphan'),
+                     'command_queue':relation(CommandActivity,
+                        order_by=[activity_table.c.created.desc(), activity_table.c.id.desc()],
+                        backref='object', cascade='all, delete, delete-orphan'),
                      'release_action':relation(ReleaseAction, uselist=False),
                      'reprovision_distro':relation(Distro, uselist=False),
                       '_system_ccs': relation(SystemCc, backref='system',
@@ -6119,6 +6212,7 @@ System.mapper = mapper(System, system_table,
                         cascade='all, delete, delete-orphan',
                         order_by=[system_status_duration_table.c.start_time.desc()]),
                      'dyn_status_durations': dynamic_loader(SystemStatusDuration),
+                     'hypervisor':relation(Hypervisor, uselist=False),
                      })
 
 mapper(SystemCc, system_cc_table)
@@ -6133,10 +6227,14 @@ Cpu.mapper = mapper(Cpu, cpu_table, properties={
 mapper(Arch, arch_table)
 mapper(SystemAdmin,system_admin_map_table,primary_key=[system_admin_map_table.c.system_id,system_admin_map_table.c.group_id])
 mapper(Provision, provision_table,
-       properties = {'provision_families':relation(ProvisionFamily, collection_class=attribute_mapped_collection('osmajor')),
+       properties = {'provision_families':relation(ProvisionFamily,
+            collection_class=attribute_mapped_collection('osmajor'),
+            cascade='all, delete, delete-orphan'),
                      'arch':relation(Arch)})
 mapper(ProvisionFamily, provision_family_table,
-       properties = {'provision_family_updates':relation(ProvisionFamilyUpdate, collection_class=attribute_mapped_collection('osversion')),
+       properties = {'provision_family_updates':relation(ProvisionFamilyUpdate,
+            collection_class=attribute_mapped_collection('osversion'),
+            cascade='all, delete, delete-orphan'),
                      'osmajor':relation(OSMajor)})
 mapper(ProvisionFamilyUpdate, provision_family_update_table,
        properties = {'osversion':relation(OSVersion)})
@@ -6172,6 +6270,8 @@ mapper(Power, power_table,
         properties = {'power_type':relation(PowerType,
                                            backref='power_control')
     })
+mapper(CommandStatus, command_status_table)
+
 mapper(Serial, serial_table)
 mapper(SerialType, serial_type_table)
 mapper(Install, install_table)
@@ -6181,6 +6281,7 @@ mapper(LabController, lab_controller_table,
         properties = {'_distros':relation(LabControllerDistro, backref='lab_controller',
                                           cascade='all, delete-orphan'),
                       'dyn_systems' : dynamic_loader(System),
+                      'user'        : relation(User, uselist=False),
                      }
       )
 
@@ -6209,7 +6310,10 @@ mapper(VisitIdentity, visit_identity_table, properties={
 })
 
 mapper(User, users_table,
-        properties=dict(_password=users_table.c.password))
+        properties={
+      '_password' : users_table.c.password,
+      'lab_controller' : relation(LabController, uselist=False),
+})
 
 Group.mapper = mapper(Group, groups_table,
         properties=dict(users=relation(User,uselist=True, secondary=user_group_table, backref='groups'),
@@ -6248,6 +6352,12 @@ mapper(DistroActivity, distro_activity_table, inherits=Activity,
        polymorphic_identity=u'distro_activity',
        properties=dict(object=relation(Distro, uselist=False,
                          backref='activity')))
+
+mapper(CommandActivity, command_queue_table, inherits=Activity,
+       polymorphic_identity=u'command_activity',
+       properties={'status':relation(CommandStatus),
+                   'system':relation(System, uselist=False),
+                  })
 
 mapper(Note, note_table,
         properties=dict(user=relation(User, uselist=False,

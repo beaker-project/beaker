@@ -41,7 +41,11 @@ class TestTasks(unittest.TestCase):
         self.controller.process_xmljob(self.xmljob, self.user)
         
     def test_disable_task(self):
-        self.task.valid=False
-        session.flush()
-        self.assertRaises(BX, lambda: self.controller.process_xmljob(self.xmljob, self.user))
-        
+        try:
+            session.begin()
+            self.task.valid=False
+            session.flush()
+            self.assertRaises(BX, lambda: self.controller.process_xmljob(self.xmljob, self.user))
+        finally:
+            session.rollback()
+            session.close()

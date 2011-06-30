@@ -592,3 +592,15 @@ class Proxy(ProxyHelper):
             on all applicable arches.
         """
         return self.hub.tags.updateDistro(distro, arch)
+
+    def addDistro(self, distro):
+        """ This proxy method allows the lab controller to add new
+            distros to the Scheduler/Inventory server.
+        """
+        return self.hub.labcontrollers.addDistro(distro)
+
+    def removeDistro(self, distro):
+        """ This proxy method allows the lab controller to remove
+            distros from the Scheduler/Inventory server.
+        """
+        return self.hub.labcontrollers.removeDistro(distro)

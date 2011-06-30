@@ -1,8 +1,10 @@
+
+import sys
 import errno, shutil, datetime
 from bkr import __version__ as bkr_version
 from optparse import OptionParser
 from bkr.server.model import Job
-from bkr.server.util import load_config
+from bkr.server.util import load_config, log_to_stream
 from turbogears.database import session
 from bkr.common.dav import BeakerRequest, DavDeleteErrorHandler, RedirectHandler
 import urllib2 as u2
@@ -10,11 +12,6 @@ from urllib2_kerberos import HTTPKerberosAuthHandler
 import logging
 
 logger = logging.getLogger(__name__)
-
-stream_handler = logging.StreamHandler()
-stream_handler.setFormatter(logging.Formatter('%(asctime)s %(name)s %(levelname)s %(message)s'))
-logger.addHandler(stream_handler)
-logger.setLevel(logging.ERROR)
 
 __description__ = 'Script to delete expired log files'
 
@@ -34,6 +31,7 @@ def main():
     parser.set_defaults(verbose=False, dry_run=False)
     options, args = parser.parse_args()
     load_config(options.config)
+    log_to_stream(sys.stderr)
     log_delete(options.verbose, options.dry_run)
 
 def log_delete(verb=False, dry=False):

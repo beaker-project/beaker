@@ -362,6 +362,20 @@ class XmlDistroLabController(ElementWrapper):
             query = lab_controller_table.c.fqdn == value
         return (joins, query)
 
+class XmlHypervisor(ElementWrapper):
+    """ 
+    Pick a system based on the hypervisor.
+    """
+    def filter(self, joins):
+        op = self.op_table[self.get_xml_attr('op', unicode, '==')]
+        value = self.get_xml_attr('value', unicode, None) or None
+        query = None
+        if op:
+            if not joins.is_derived_from(hypervisor_table):
+                joins = joins.outerjoin(hypervisor_table)
+            query = getattr(hypervisor_table.c.hypervisor, op)(value)
+        return (joins, query)
+
 class XmlSystemType(ElementWrapper):
     """
     Pick a system with the correct system type.
@@ -470,6 +484,7 @@ subclassDict = {
     'arch'                : XmlArch,
     'numa_node_count'     : XmlNumaNodeCount,
     'group'               : XmlGroup,
+    'hypervisor'          : XmlHypervisor,
     }
 
 if __name__=='__main__':

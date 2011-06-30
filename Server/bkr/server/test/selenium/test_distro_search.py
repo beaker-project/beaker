@@ -12,7 +12,7 @@ class Search(bkr.server.test.selenium.SeleniumTestCase):
         self.distro_one_breed = u'breedtest1'
         self.distro_one_osmajor = u'osmajortest1'
         self.distro_one_osminor = u'1'
-        self.distro_one_virt = u'True'
+        self.distro_one_virt = True
         self.distro_one_arch = u'ia64'
         self.distro_one_tags = None
 
@@ -26,7 +26,7 @@ class Search(bkr.server.test.selenium.SeleniumTestCase):
         self.distro_two_breed = u'breedtest2'
         self.distro_two_osmajor = u'osmajortest2'
         self.distro_two_osminor = u'2'
-        self.distro_two_virt = u'True'
+        self.distro_two_virt = True
         self.distro_two_arch = u'i386'
         self.distro_two_tags = None
 
@@ -39,7 +39,7 @@ class Search(bkr.server.test.selenium.SeleniumTestCase):
         self.distro_three_breed = u'breedtest3'
         self.distro_three_osmajor = u'osmajortest3'
         self.distro_three_osminor = u'3'
-        self.distro_three_virt = u'False'
+        self.distro_three_virt = False
         self.distro_three_arch = u's390'
         self.distro_three_tags = None
 
@@ -215,7 +215,7 @@ class Search(bkr.server.test.selenium.SeleniumTestCase):
         except AssertionError, e: self.verificationErrors.append(str(e))
         try: self.failUnless(sel.is_text_present("%s" % self.distro_two.name))
         except AssertionError, e: self.verificationErrors.append(str(e))
-        try: self.failUnless(sel.is_text_present("%s" % self.distro_three.name))
+        try: self.failUnless(not sel.is_text_present("%s" % self.distro_three.name))
         except AssertionError, e: self.verificationErrors.append(str(e))
 
     def tearDown(self):

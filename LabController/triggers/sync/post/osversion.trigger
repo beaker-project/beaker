@@ -14,6 +14,25 @@ from cobbler import utils
 import ConfigParser
 import getopt
 
+class MyConfigParser(object):
+    def __init__(self, config):
+        self.parser = None
+        if os.path.exists(config):
+            self.parser = ConfigParser.ConfigParser()
+            try:
+                self.parser.read(config)
+            except ConfigParser.MissingSectionHeaderError, e:
+                self.parser = None
+                print e
+                
+    def get(self, section, key, default=''):
+        if self.parser:
+            try:
+                default = self.parser.get(section, key)
+            except (ConfigParser.NoSectionError,ConfigParser.NoOptionError), e:
+                print e
+        return default
+
 def rpm2cpio(rpm_file, out=sys.stdout, bufsize=2048):
     """Performs roughly the equivalent of rpm2cpio(8).
        Reads the package from fdno, and dumps the cpio payload to out,
@@ -95,7 +114,7 @@ def update_repos(distro):
     paths = get_paths(distro)
 
     if not paths:
-        return distro
+        return 
 
     repo_path_re = re.compile(r'(%s.*)/repodata' % paths['path'])
     tree_repos = []
@@ -146,51 +165,63 @@ def update_repos(distro):
     if tree_repos:
         distro['ks_meta']['tree_repos'] = ':'.join(tree_repos)
         cobbler.modify_distro(distro['id'],'ksmeta',distro['ks_meta'],token)
+    return
+
+
+def read_data(distro):
+    # If data={} exists in comment field eval it "safely"
+    # This allows for caching and for overriding values we would
+    # get from here.
+    comment_search = re.compile(r'(data=({.*}))')
+    search = comment_search.search(distro['comment'])
+    if search:
+        results = search.group(1)
+        try:
+            data = eval(search.group(2),{},{})
+            # Remove data=... from comment in case parts are updated
+            distro['comment'] = '%s' % distro['comment'].replace(search.group(1),'')
+            distro['keys'] = set(data.keys())
+            for key in list(distro['keys']):
+                distro[key] = data[key]
+        except SyntaxError:
+            pass
+    # If its the first time we won't have a pushed entry..
+    if 'pushed' not in distro:
+        distro['pushed'] = False
+        if 'keys' not in distro:
+            distro['keys'] = set()
+        distro['keys'].add('pushed')
     return distro
 
 def update_comment(distro):
     paths = get_paths(distro)
-
     if not paths:
         return distro
     family = ""
     update = 0
-    if os.path.exists("%s/../../.composeinfo" % paths['tree_path']):
-        parser = ConfigParser.ConfigParser()
-        parser.read("%s/../../.composeinfo" % paths['tree_path'])
-        try:
-            distro['comment'] = "%s\narches=%s" % (distro['comment'], parser.get('tree','arches'))
-        except ConfigParser.NoSectionError:
-            print "missing section tree in %s/../../.composeinfo" % paths['tree_path']
-    if os.path.exists("%s/.treeinfo" % paths['tree_path']):
-        parser = ConfigParser.ConfigParser()
-        parser.read("%s/.treeinfo" % paths['tree_path'])
-        try:
-            distro['comment'] = "%s\nlabel=%s" % (distro['comment'],
-                                                  parser.get('general','label'))
-        except ConfigParser.NoSectionError:
-            print "missing section general in %s/.treeinfo" % paths['tree_path']
-        except ConfigParser.NoOptionError:
-            print "missing option label in %s/.treeinfo" % paths['tree_path']
-        try:
-            family  = parser.get('general','family').replace(" ","")
-        except ConfigParser.NoSectionError:
-            print "missing section general in %s/.treeinfo" % paths['tree_path']
-        except ConfigParser.NoOptionError:
-            print "missing option family in %s/.treeinfo" % paths['tree_path']
-        try:
-            version = parser.get('general', 'version').replace("-",".")
-        except ConfigParser.NoSectionError:
-            print "missing section general in %s/.treeinfo" % paths['tree_path']
-        except ConfigParser.NoOptionError:
-            print "missing option version in %s/.treeinfo" % paths['tree_path']
-        try:
-            distro['comment'] = "%s\nvariant=%s" % (distro['comment'],
-                                                    parser.get('general', 'variant'))
-        except ConfigParser.NoSectionError:
-            print "missing section general in %s/.treeinfo" % paths['tree_path']
-        except ConfigParser.NoOptionError:
-            print "missing option variant in %s/.treeinfo" % paths['tree_path']
+    myparser = MyConfigParser("%s/../../.composeinfo" % paths['tree_path'])
+    # Use the name of the tree from .composeinfo if it exists.
+    distro['treename'] = distro.get('treename') or \
+                                     myparser.get('tree','name', 
+                                     distro['name'].split('_')[0])
+    distro['keys'].add('treename')
+
+    distro['arches'] = distro.get('arches') or \
+                                  map(string.strip, 
+                                  myparser.get('tree','arches').split(','))
+    distro['keys'].add('arches')
+
+    myparser = MyConfigParser("%s/.treeinfo" % paths['tree_path'])
+    if myparser.parser:
+        distro['tags'] = distro.get('tags') or \
+                                     map(string.strip,
+                                     myparser.get('general','label').split(','))
+        distro['keys'].add('tags')
+        family  = myparser.get('general','family').replace(" ","")
+        version = myparser.get('general', 'version').replace("-",".")
+        distro['variant'] = distro.get('variant') or \
+                                        myparser.get('general', 'variant')
+        distro['keys'].add('variant')
         family = "%s%s" % ( family, version.split('.')[0] )
         if version.find('.') != -1:
             update = version.split('.')[1]
@@ -242,14 +273,28 @@ def update_comment(distro):
             except rpmUtils.RpmUtilsError, e:
                 print "Warning, %s" % e
 
-    distro['comment'] = "%s\nfamily=%s.%s" % (distro['comment'], family, update)
-    cobbler.modify_distro(distro['id'],'comment',distro['comment'],token)
-    kickstart = findKickstart(distro['arch'], family, update)
+    distro['osmajor'] = distro.get('osmajor') or family
+    distro['keys'].add('osmajor')
+    distro['osminor'] = distro.get('osminor') or update
+    distro['keys'].add('osminor')
+    kickstart = findKickstart(distro['arch'], 
+                              distro.get('osmajor'),
+                              distro.get('osminor')
+                             )
+
     if kickstart:
         profile_id = cobbler.get_profile_handle(distro['name'],token)
         cobbler.modify_profile(profile_id,'kickstart',kickstart,token)
         cobbler.save_profile(profile_id,token)
     return distro
+
+def save_data(distro):
+    data = dict()
+    for key in list(distro['keys']):
+        data[key] = distro[key]
+    comments = '%sdata=%s' % (distro['comment'], data)
+    cobbler.modify_distro(distro['id'],'comment',comments, token)
+    cobbler.save_distro(distro['id'],token)
 
 def findKickstart(arch, family, update):
     kickbase = "/var/lib/cobbler/kickstarts"
@@ -295,63 +340,51 @@ if __name__ == '__main__':
         last_run = float(open(filename).readline())
     else:
         last_run = 0.0
+
     distros = cobbler.get_distros_since(last_run)
-    push_distros = []
+    proxy = xmlrpclib.ServerProxy('http://localhost:8000', 
+                                   allow_none=True)
 
     for distro in distros:
+        distro = read_data(distro)
         # If we haven't pushed this distro to Inventory yet, then its the first
         # time importing it, look for repos and specific family.
-        if distro['comment'].find("PUSHED") == -1 or force:
+        if distro['pushed'] == False or force:
             distro['id'] = cobbler.get_distro_handle(distro['name'],token)
             print "Update TreeRepos for %s" % distro['name']
-            distro = update_repos(distro)
+            update_repos(distro)
             print "Update Family for %s" % distro['name']
             distro = update_comment(distro)
-            push_distros.append(distro)
-    if push_distros:
-        inventory = xmlrpclib.ServerProxy('%s/RPC2' % settings['redhat_management_server'], allow_none=True)
-        distros = inventory.labcontrollers.addDistros(settings['server'], push_distros)
-        for distro in push_distros:
-            comment = "%s\nPUSHED" % distro['comment']
-            cobbler.modify_distro(distro['id'],'comment',comment,token)
-            cobbler.save_distro(distro['id'],token)
-        FH = open(filename, "w")
-        FH.write('%s' % new_run)
-        FH.close()
-        # Needed for legacy RHTS
-        addDistroCmd = '/var/lib/beaker/addDistro.sh'
-        if os.path.exists(addDistroCmd):
-            valid_variants = ['AS', 'ES', 'WS', 'Desktop']
-            release = re.compile(r'family=([^\s]+)')
-            variant_search = re.compile(r'variant=([^\s]+)')
-            for distro in push_distros:
-                # Only process nfs distros and skip xen distros too
-                if distro['name'].find('_nfs-') == -1 or \
-                   distro['name'].find('-xen-') != -1:
-                    continue
-                VARIANT=''
-                FAMILYUPDATE=None
-                DISTPATH='nightly'
+
+            # xmlrpc can't marshal set
+            distro['keys'] = list(distro['keys'])
+
+            # Add the distro to inventory
+            proxy.addDistro(distro)
+
+            # Record in cobbler that we PUSHED it
+            distro['pushed'] = True
+            save_data(distro)
+
+            # Kick off jobs automatically
+            addDistroCmd = '/var/lib/beaker/addDistro.sh'
+            if os.path.exists(addDistroCmd):
                 if 'tree' in distro['ks_meta']:
-                    if distro['ks_meta']['tree'].find('/rel-eng/') != -1:
-                        DISTPATH='rel-eng'
-                    if distro['ks_meta']['tree'].find('/released/') != -1:
-                        DISTPATH='released'
-                    DIST=distro['name'].split('_')[0]
-                    meta = string.join(distro['name'].split('_')[1:],'_').split('-')
-                    for curr_variant in valid_variants:
-                        if curr_variant in meta:
-                            VARIANT = curr_variant
-                            break
-                    TPATH = DISTPATH + ''.join(distro['ks_meta']['tree'].split(DISTPATH,1)[1:])
-                    if release.search(distro['comment']):
-                        FAMILYUPDATE=release.search(distro['comment']).group(1)
-                    if variant_search.search(distro['comment']):
-                        VARIANT = variant_search.search(distro['comment']).group(1)
-                    #addDistro.sh rel-eng RHEL6.0-20090626.2 RedHatEnterpriseLinux6.0 x86_64 Default rel-eng/RHEL6.0-20090626.2/6/x86_64/os
-                    if FAMILYUPDATE:
-                        cmd = '%s %s %s %s %s "%s" %s' % (addDistroCmd, DISTPATH, DIST,
-                                                        FAMILYUPDATE, distro['arch'],
-                                                        VARIANT, TPATH)
+                    #addDistro.sh "rel-eng" RHEL6.0-20090626.2 RedHatEnterpriseLinux6.0 x86_64 "Default"
+                    if distro['osmajor'] and distro['osminor']:
+                        cmd = '%s "%s" %s %s %s "%s"' % (addDistroCmd, 
+                                                       ','.join(distro['tags']),
+                                                       distro['treename'],
+                                                       '%s.%s' % (
+                                                         distro['osmajor'], 
+                                                         distro['osminor']),
+                                                       distro['arch'],
+                                                       distro['variant'])
                         print cmd
                         os.system(cmd)
+        else:
+            print "Already pushed %s, set comment pushed True to False to re-push" % distro['name']
+
+    FH = open(filename, "w")
+    FH.write('%s' % new_run)
+    FH.close()

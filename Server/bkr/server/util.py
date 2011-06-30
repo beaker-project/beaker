@@ -49,6 +49,24 @@ def load_config(configfile=None):
     log.debug("Loading configuration: %s" % configfile)
     turbogears.update_config(configfile=configfile, modulename="bkr.server.config")
 
+def log_to_stream(stream, level=logging.WARNING):
+    """
+    Configures the logging module to send messages to the given stream (for
+    example, sys.stderr). By default only WARNING and ERROR level messages are
+    logged; pass the level argument to override this. All existing logging
+    config is replaced.
+
+    Suitable for use in command-line programs which shouldn't write to server
+    log files.
+    """
+    stream_handler = logging.StreamHandler(stream)
+    stream_handler.setLevel(level)
+    stream_handler.setFormatter(logging.Formatter('%(asctime)s %(name)s %(levelname)s %(message)s'))
+    # XXX terrible hack, but there is no better way in Python 2.4 :-(
+    for logger in logging.Logger.manager.loggerDict.itervalues():
+        if getattr(logger, 'handlers', None):
+            logger.handlers = [stream_handler]
+
 def to_unicode(obj, encoding='utf-8'):
     if isinstance(obj, basestring):
         if not isinstance(obj, unicode):

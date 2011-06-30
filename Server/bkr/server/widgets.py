@@ -17,7 +17,8 @@ from turbogears.widgets import (Form, TextField, SubmitButton, TextArea, Label,
                                 static, PaginateDataGrid, DataGrid, RepeatingFormField,
                                 CompoundWidget, AjaxGrid, Tabber, CSSLink,
                                 RadioButtonList, MultipleSelectField, Button,
-                                RepeatingFieldSet, SelectionField, WidgetsList,)
+                                RepeatingFieldSet, SelectionField, WidgetsList,
+                                PasswordField)
 
 from bkr.server import search_utility
 from bkr.server.bexceptions import BeakerException
@@ -381,6 +382,42 @@ class TextFieldJSON(TextField):
                 'field_id' : self.field_id,             
                }
 
+
+class LabControllerFormSchema(validators.Schema):
+    fqdn = validators.UnicodeString(not_empty=True, max=256, strip=True)
+    lusername = validators.UnicodeString(not_empty=True)
+    email = validators.UnicodeString(not_empty=True)
+
+
+class LabControllerForm(TableForm):
+    action = 'save_data'
+    submit_text = _(u'Save')
+    fields = [
+              HiddenField(name='id'),
+              TextField(name='fqdn', label=_(u'FQDN')),
+              TextField(name='lusername',
+                       label=_(u'Username')),
+              PasswordField(name='lpassword',
+                            label=_(u'Password')),
+              TextField(name='email', 
+                        label=_(u'Lab Controller Email Address')),
+              TextField(name='username',
+                        label=_(u'Cobbler Username')),
+              PasswordField(name='password',
+                            label=_(u'Cobbler Password')),
+              CheckBox(name='disabled',
+                       label=_(u'Disabled'),
+                       default=False),
+             ]
+    validator = LabControllerFormSchema()
+
+    def update_params(self, d):
+        super(LabControllerForm, self).update_params(d)
+        if 'user' in d['options']:
+            d['value']['lusername'] = d['options']['user'].user_name
+            d['value']['email'] = d['options']['user'].email_address
+            
+
 class NestedGrid(CompoundWidget):
     template = "bkr.server.templates.inner_grid" 
     params = ['inner_list']
@@ -678,7 +715,26 @@ class PowerActionForm(Form):
                 kw['is_user'] = kw['options']['is_user']
         return super(PowerActionForm,self).display(value,*args,**kw)
 
-    
+class PowerActionHistory(CompoundWidget):
+    template = "bkr.server.templates.power_history_grid"
+    member_widgets = ['grid']
+    def __init__(self):
+        self.grid  = BeakerDataGrid(fields = [DataGrid.Column(name='user',title='User',
+                                                                          getter=lambda x: x.user),
+                                                  DataGrid.Column(name='service', title='Service',
+                                                                          getter=lambda x: x.service),
+                                                  DataGrid.Column(name='created', title='Submitted',
+                                                                          getter=lambda x: x.created,
+                                                                          options=dict(datetime=True)),
+                                                  DataGrid.Column(name='action', title='Action',
+                                                                          getter=lambda x: x.action),
+                                                  DataGrid.Column(name='status',title='Status',
+                                                                          getter=lambda x: x.status),
+                                                  DataGrid.Column(name='new_value',title='Message',
+                                                                          getter=lambda x: x.new_value)])
+
+
+
 class TaskSearchForm(RemoteForm): 
     template = "bkr.server.templates.task_search_form"
     member_widgets = ['system_id', 'system', 'task', 'distro', 'family', 'arch', 'start', 'finish', 'status', 'result']
@@ -1218,6 +1274,10 @@ class SystemForm(Form):
                                       result_name="groups"),
                TextField(name='mac_address', label=_(u'Mac Address')),
                TextField(name='cc', label=_(u'Notify CC')),
+               SingleSelectField(name='hypervisor_id',
+                                 label=_(u'Hypervisor'),
+                                 options=lambda: [(0, 'None')] + model.Hypervisor.get_all_types(),
+                                 validator=validators.Int()),
     ]
 
     def display_value(self, item, hidden_fields, value=None):

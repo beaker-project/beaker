@@ -20,15 +20,17 @@ import logging
 import re
 import time
 import datetime
+import itertools
 import sqlalchemy
 import turbogears.config, turbogears.database
+from turbogears.database import session
 from bkr.server.model import LabController, User, Group, Distro, Breed, Arch, \
         OSMajor, OSVersion, SystemActivity, Task, MachineRecipe, System, \
         SystemType, SystemStatus, Recipe, RecipeTask, RecipeTaskResult, \
         Device, TaskResult, TaskStatus, Job, RecipeSet, TaskPriority, \
         LabControllerDistro, Power, PowerType, TaskExcludeArch, TaskExcludeOSMajor, \
         Permission, RetentionTag, Product, Watchdog, Reservation, LogRecipe, \
-        LogRecipeTask, ExcludeOSMajor, ExcludeOSVersion
+        LogRecipeTask, ExcludeOSMajor, ExcludeOSVersion, Hypervisor
 
 log = logging.getLogger(__name__)
 
@@ -52,20 +54,34 @@ def setup_model(override=True):
     init_db(user_name=ADMIN_USER, password=ADMIN_PASSWORD,
             user_email_address=ADMIN_EMAIL_ADDRESS)
 
+_counter = itertools.count()
+def unique_name(pattern):
+    """
+    Pass a %-format pattern, such as 'user%s', to generate a name that is 
+    unique within this test run.
+    """
+    # time.time() * 1000 is no good, KVM guest wall clock is too dodgy
+    # so we just use a global counter instead
+    # http://29a.ch/2009/2/20/atomic-get-and-increment-in-python
+    return pattern % _counter.next()
+
 def create_product(product_name=None):
     if product_name is None:
-        product_name  = u'product%d' % int(time.time() * 100000)
+        product_name = unique_name(u'product%s')
     return Product.lazy_create(name=product_name)
     
 
-def create_labcontroller(fqdn=None):
+def create_labcontroller(fqdn=None, user=None):
     if fqdn is None:
         fqdn=u'lab.testdata.invalid'
     try:
         lc = LabController.by_name(fqdn)  
     except sqlalchemy.exceptions.InvalidRequestError, e: #Doesn't exist ?
         if e.args[0] == 'No rows returned for one()':
-            lc = LabController.lazy_create(fqdn=fqdn)
+            if user is None:
+                user = create_user()
+                session.flush()
+            lc = LabController.lazy_create(fqdn=fqdn, user=user)
             return lc
         else:
             raise
@@ -75,7 +91,7 @@ def create_labcontroller(fqdn=None):
 def create_user(user_name=None, password=None, display_name=None,
         email_address=None):
     if user_name is None:
-        user_name = u'user%d' % int(time.time() * 100000)
+        user_name = unique_name(u'user%s')
     if display_name is None:
         display_name = user_name
     if email_address is None:
@@ -92,7 +108,7 @@ def add_system_lab_controller(system,lc):
 
 def create_group(permissions=None):
     # tg_group.group_name column is VARCHAR(16)
-    suffix = str(int(time.time() * 1000))[-11:]
+    suffix = unique_name('%s')
     group = Group(group_name=u'group%s' % suffix, display_name=u'Group %s' % suffix)
     if permissions:
         group.permissions.extend(Permission.by_name(name) for name in permissions)
@@ -108,7 +124,7 @@ def create_distro(name=None, breed=u'Dan',
         osmajor=u'DansAwesomeLinux6', osminor=u'9',
         arch=u'i386', variant=u'Server', method=u'http', virt=False, tags=None):
     if not name:
-        name = u'DAN6.9-%d' % int(time.time() * 1000)
+        name = unique_name(u'DAN6.9-%s')
     install_name = u'%s_%s-%s-%s' % (name, method, variant, arch)
     distro = Distro(install_name=install_name)
     distro.name = name
@@ -132,11 +148,11 @@ def create_distro(name=None, breed=u'Dan',
 
 def create_system(arch=u'i386', type=u'Machine', status=u'Automated',
         owner=None, fqdn=None, shared=False, exclude_osmajor=[],
-        exclude_osversion=[], **kw):
+        exclude_osversion=[], hypervisor=None, **kw):
     if owner is None:
         owner = create_user()
     if fqdn is None:
-        fqdn = u'system%d.testdata' % int(time.time() * 1000)
+        fqdn = unique_name(u'system%s.testdata')
     if System.query().filter(System.fqdn == fqdn).count():
         raise ValueError('Attempted to create duplicate system %s' % fqdn)
     system = System(fqdn=fqdn,type=SystemType.by_name(type), owner=owner, 
@@ -148,6 +164,8 @@ def create_system(arch=u'i386', type=u'Machine', status=u'Automated',
             osmajor=osmajor) for osmajor in exclude_osmajor)
     system.excluded_osversion.extend(ExcludeOSVersion(arch=Arch.by_name(arch),
             osversion=osversion) for osversion in exclude_osversion)
+    if hypervisor:
+        system.hypervisor = Hypervisor.by_name(hypervisor)
     system.date_modified = datetime.datetime.utcnow()
     log.debug('Created system %r', system)
     return system
@@ -161,7 +179,7 @@ def configure_system_power(system, power_type=u'ilo', address=None,
     if password is None:
         password = u'%s_power_password' % system.fqdn
     if power_id is None:
-        power_id = u'%d' % int(time.time() * 1000)
+        power_id = unique_name(u'%s')
     system.power = Power(power_type=PowerType.by_name(power_type),
             power_address=address, power_id=power_id,
             power_user=user, power_passwd=password)
@@ -169,12 +187,13 @@ def configure_system_power(system, power_type=u'ilo', address=None,
 def create_system_activity(user=None, **kw):
     if not user:
         user = create_user()
-    activity = SystemActivity(user, u'WEBUI', u'Changed', u'Loaned To', u'random_%d' % int(time.time() * 1000), user.user_name)
+    activity = SystemActivity(user, u'WEBUI', u'Changed', u'Loaned To',
+            unique_name(u'random_%s'), user.user_name)
     return activity
 
 def create_task(name=None, exclude_arch=[],exclude_osmajor=[], version=u'1.0-1'):
     if name is None:
-        name = u'/distribution/test_task_%d' % int(time.time() * 1000)
+        name = unique_name(u'/distribution/test_task_%s')
     rpm = u'example%s-%s.noarch.rpm' % (name.replace('/', '-'), version)
     task = Task.lazy_create(name=name, rpm=rpm, version=version)
     if exclude_arch:
@@ -226,7 +245,7 @@ def create_recipe(system=None, distro=None, task_list=None,
 
 def create_retention_tag(name=None, default=False, needs_product=False):
     if name is None:
-        name = u'tag%s'  % int(time.time() * 1000)
+        name = unique_name(u'tag%s')
     new_tag = RetentionTag(name,is_default=default,needs_product=needs_product)
     return new_tag
 
@@ -240,7 +259,7 @@ def create_job_for_recipes(recipes, owner=None, whiteboard=None, cc=None,product
     if owner is None:
         owner = create_user()
     if whiteboard is None:
-        whiteboard = u'job %d' % int(time.time() * 1000)
+        whiteboard = unique_name(u'job %s')
     job = Job(whiteboard=whiteboard, ttasks=1, owner=owner,retention_tag = retention_tag, product=product)
     if cc is not None:
         job.cc = cc

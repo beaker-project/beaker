@@ -330,7 +330,6 @@ function Inventory()
     # Add the lab controller(s)
     for CLIENT in $CLIENTS; do
         ./add_labcontroller.py -l $CLIENT
-        ./add_user.py -u host/$CLIENT -p testing
     done
     estatus_fail "**** Failed to add lab controller ****"
     generate_rsync_cfg
@@ -356,7 +355,6 @@ function LabController()
      perl -pi -e "s|^pxe_just_once: 0|pxe_just_once: 1|g" /etc/cobbler/settings
      perl -pi -e "s|^anamon_enabled: 0|anamon_enabled: 1|g" /etc/cobbler/settings
      perl -pi -e "s|^anamon_enabled: 0|anamon_enabled: 1|g" /etc/cobbler/settings
-     perl -pi -e "s|^redhat_management_server: .*|redhat_management_server: \"$SERVER_URL\"|g" /etc/cobbler/settings
     #FIXME edit /etc/cobbler/modules.conf
     # enable testing auth module
     perl -pi -e "s|^module = authn_denyall|module = authn_testing|g" /etc/cobbler/modules.conf
