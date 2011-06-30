@@ -3,7 +3,7 @@
 
 Name:           beaker
 Version:        0.6.14
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -250,6 +250,9 @@ fi
 %{_var}/lib/beaker/addDistro.d/*
 
 %changelog
+* Thu Jun 30 2011 Dan Callaghan 0.6.14-2
+- handle hypervisor=None from inventory scripts (dcallagh@redhat.com)
+
 * Wed Jun 29 2011 Raymond Mancy <rmancy@redhat.com> 0.6.14-1
 - 711960 - log to stderr in server command-line tools (dcallagh@redhat.com)
 - 713254 - make the ORM cascade Provision(Family) deletions to child rows
