@@ -3,7 +3,7 @@
 
 Name:           beaker
 Version:        0.6.14
-Release:        2%{?dist}
+Release:        6%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -250,6 +250,19 @@ fi
 %{_var}/lib/beaker/addDistro.d/*
 
 %changelog
+* Thu Jun 30 2011 Bill Peck <bpeck@redhat.com> 0.6.14-6
+- don't assume tree_name is defined, add extra checks for addDistro command
+  (bpeck@redhat.com)
+
+* Thu Jun 30 2011 Bill Peck <bpeck@redhat.com> 0.6.14-5
+- paper bag release (bpeck@redhat.com)
+
+* Thu Jun 30 2011 Bill Peck <bpeck@redhat.com> 0.6.14-4
+- KeyError: 'tags' fixed in osversion.trigger (bpeck@redhat.com)
+
+* Thu Jun 30 2011 Bill Peck <bpeck@redhat.com> 0.6.14-3
+- Can't return None with xmlrpc. (bpeck@redhat.com)
+
 * Thu Jun 30 2011 Dan Callaghan 0.6.14-2
 - handle hypervisor=None from inventory scripts (dcallagh@redhat.com)
 
