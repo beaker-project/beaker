@@ -173,9 +173,23 @@ class ProxyHelper(object):
 
     def get_recipe(self, system_name=None):
         """ return the active recipe for this system """
+        # Deprecated
         if system_name:
             self.logger.info("get_recipe %s" % system_name)
             return self.hub.recipes.system_xml(system_name)
+
+    def get_my_recipe(self, request):
+        """ Accepts a dict with either system_name or recipe_id
+                if system_name is defined return active recipe for that system
+                if recipe_id is defined return the recipe for that id
+            Returns a recipe XML document.
+        """
+        if 'recipe_id' in request:
+            self.logger.info("get_recipe recipe_id:%s" % request['recipe_id'])
+            return self.hub.recipes.to_xml(request['recipe_id'])
+        if 'system_name' in request:
+            self.logger.info("get_recipe system_name:%s" % request['system_name'])
+            return self.hub.recipes.system_xml(request['system_name'])
 
     def extend_watchdog(self, task_id, kill_time):
         """ tell the scheduler to extend the watchdog by kill_time seconds

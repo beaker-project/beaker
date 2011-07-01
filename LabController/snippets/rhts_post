@@ -1,3 +1,6 @@
+#if $getVar('recipeid','') != ''
+echo $recipeid > /root/RECIPE.TXT
+#end if
 $yum_config_stanza
 # End yum configuration
 #$SNIPPET('post_install_kernel_options') # this no longer works with RHEL6
@@ -130,6 +133,9 @@ LAB_CONTROLLER=http://$server:8000/server
 # # HOSTNAME: Pretend to be machine with given name:
 # #HOSTNAME=fake.hostname.com
 HOSTNAME=$name
+#if $getVar('recipeid','') != ''
+RECIPEID=$recipeid
+#end if
 
 # LIMITS: hard and soft cap on filesize or amount of data uploaded.
 # Limit is specified in bytes and numeric value is expected. Use 0 or negative
