@@ -213,9 +213,10 @@ def update_comment(distro):
 
     myparser = MyConfigParser("%s/.treeinfo" % paths['tree_path'])
     if myparser.parser:
+        labels = myparser.get('general','label')
         distro['tags'] = distro.get('tags') or \
                                      map(string.strip,
-                                     myparser.get('general','label').split(','))
+                                     labels and labels.split(',') or [])
         distro['keys'].add('tags')
         family  = myparser.get('general','family').replace(" ","")
         version = myparser.get('general', 'version').replace("-",".")
