@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>4.6. Chronological Overview</title><link rel="stylesheet" href="Common_Content/css/default.css" type="text/css" /><link rel="stylesheet" media="print" href="Common_Content/css/print.css" type="text/css" /><meta name="generator" content="publican 2.5" /><meta name="package" content="Beaker-Deployment_Guide-0.5-en-US-1-9" /><link rel="home" href="index.html" title="Deployment Guide" /><link rel="up" href="Administration.html" title="Chapter 4. Administration Guide" /><link rel="prev" href="Administration-Database.html" title="4.5. Database" /><link rel="next" href="Administration-Server_And_Target_Host_Relationship.html" title="4.7. Server And Target Host Relationship" /></head><body><p id="title"><a class="left" href="https://fedorahosted.org/publican"><img src="Common_Content/images/image_left.png" alt="Product Site" /></a><a class="right" href="https://fedorahosted.org/publican"><img src="Common_Content/images/image_right.png" alt="Documentation Site" /></a></p><ul class="docnav"><li class="previous"><a accesskey="p" href="Administration-Database.html"><strong>Prev</strong></a></li><li class="next"><a accesskey="n" href="Administration-Server_And_Target_Host_Relationship.html"><strong>Next</strong></a></li></ul><div class="section" id="Administration-Chronological_Overview"><div class="titlepage"><div><div><h2 class="title" id="Administration-Chronological_Overview">4.6. Chronological Overview </h2></div></div></div><div class="para">
+			This section describes how a user creates a script and integrates it into the Beaker environment: 
+			<div class="itemizedlist"><ul><li class="listitem"><div class="para">
+						On a workstation, a user writes a script and then tests the code.
+					</div></li><li class="listitem"><div class="para">
+						The user builds an RPM and submits it to the repository (If they are using one).
+					</div></li><li class="listitem"><div class="para">
+						They add their test to Beaker's task library.
+					</div></li><li class="listitem"><div class="para">
+						They create a job that uses the task.
+					</div></li><li class="listitem"><div class="para">
+						The scheduler then sends the data to the target host lab controller, which installs the operating systems and developer tests onto the target hosts.
+					</div></li><li class="listitem"><div class="para">
+						These target hosts boot into the respective operating system and runs the test(s)
+					</div></li><li class="listitem"><div class="para">
+						The test results are sent back to the scheduler for reporting.
+					</div></li><li class="listitem"><div class="para">
+						Lastly, the scheduler uses email to notify the users' of their test results.
+					</div></li></ul></div>
+
+		</div><div class="mediaobject"><img src="./images/chronological_overview.png" width="444" /><div class="caption"><div class="para">
+				Chronological Overview
+			</div></div></div></div><ul class="docnav"><li class="previous"><a accesskey="p" href="Administration-Database.html"><strong>Prev</strong>4.5. Database </a></li><li class="up"><a accesskey="u" href="#"><strong>Up</strong></a></li><li class="home"><a accesskey="h" href="index.html"><strong>Home</strong></a></li><li class="next"><a accesskey="n" href="Administration-Server_And_Target_Host_Relationship.html"><strong>Next</strong>4.7. Server And Target Host Relationship</a></li></ul></body></html>

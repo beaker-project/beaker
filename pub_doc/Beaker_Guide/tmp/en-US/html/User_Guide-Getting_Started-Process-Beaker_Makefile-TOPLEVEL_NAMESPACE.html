@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>3.2.1.2.2. TOPLEVEL NAMESPACE</title><link rel="stylesheet" href="Common_Content/css/default.css" type="text/css" /><link rel="stylesheet" media="print" href="Common_Content/css/print.css" type="text/css" /><meta name="generator" content="publican 2.5" /><meta name="package" content="Beaker-Deployment_Guide-0.5-en-US-1-9" /><link rel="home" href="index.html" title="Deployment Guide" /><link rel="up" href="User_Guide-Getting_Started-Process-Beaker_Makefile.html" title="3.2.1.2. Beaker Makefile" /><link rel="prev" href="User_Guide-Getting_Started-Process-Beaker_Makefile-Package_Name.html" title="3.2.1.2.1. PACKAGE NAME" /><link rel="next" href="User_Guide-Getting_Started-Process-Beaker_Makefile-RELATIVE_PATH.html" title="3.2.1.2.3. RELATIVE PATH" /></head><body><p id="title"><a class="left" href="https://fedorahosted.org/publican"><img src="Common_Content/images/image_left.png" alt="Product Site" /></a><a class="right" href="https://fedorahosted.org/publican"><img src="Common_Content/images/image_right.png" alt="Documentation Site" /></a></p><ul class="docnav"><li class="previous"><a accesskey="p" href="User_Guide-Getting_Started-Process-Beaker_Makefile-Package_Name.html"><strong>Prev</strong></a></li><li class="next"><a accesskey="n" href="User_Guide-Getting_Started-Process-Beaker_Makefile-RELATIVE_PATH.html"><strong>Next</strong></a></li></ul><div class="section" id="User_Guide-Getting_Started-Process-Beaker_Makefile-TOPLEVEL_NAMESPACE"><div class="titlepage"><div><div><h5 class="title" id="User_Guide-Getting_Started-Process-Beaker_Makefile-TOPLEVEL_NAMESPACE">3.2.1.2.2. TOPLEVEL NAMESPACE</h5></div></div></div><pre class="screen"># The toplevel namespace within which the test lives.
+    TOPLEVEL_NAMESPACE=CoreOS
+</pre><div class="para">
+			The <span class="application"><strong>Makefile</strong></span> contains three hierarchies resembling file systems, each with their own collections of paths. In order to ensure consistency between test creators and tests, the provided <span class="application"><strong>Makefile</strong></span> should be used to manage these hierarchies. Thus, the scheme in the <span class="application"><strong>Makefile</strong></span> template does all the work.
+		</div><div class="para">
+			For clarity, it is worth noting the hierarchies at this time: 
+			<div class="itemizedlist"><ul><li class="listitem"><div class="para">
+						<span class="emphasis"><em>installation</em></span> tests are built as packages for clean deployment on test machines. More than one test can be run on a given machine, so there is a hierarchy below /mnt/tests which keeps the files of the individual tests separate from each other. This is set in each test's Makefile.
+					</div></li><li class="listitem"><div class="para">
+						<span class="emphasis"><em>result namespace</em></span> a hierarchical namespace for results. For example, tests relating to the kernel report their results somewhere within the /kernel subtree, and tests relating to the NFS file system (as a part of the kernel) report their results inside /kernel/filesystems/nfs/. Each test "owns" a subtree of the namespace, specified by the Name: field of the metadata. Many tests report only a single result, but it is possible for a test to write out a complex hierarchy of results below its subtree.
+					</div></li></ul></div>
+
+		</div><div class="para">
+			The following top level reporting namespaces are predefined and should used to ensure consistent reporting of test results. These are the only valid accepted namespaces. 
+			<div class="itemizedlist"><ul><li class="listitem"><div class="para">
+						<span class="application"><strong>distribution</strong></span> contains tests that involve the distribution as a whole, or a large number of packages, for example<span class="application"><strong> /distribution/standards/posixtestsuite</strong></span>
+					</div></li><li class="listitem"><div class="para">
+						<span class="application"><strong>kernel</strong></span> contains tests results relating to the kernel, for example <span class="application"><strong>/kernel/xen/xm/dmesg</strong></span> <div class="itemizedlist"><ul><li class="listitem"><div class="para">
+									The <span class="application"><strong>kernel</strong></span> namespace is unique in that it is also the name of a package. In this case it is usually best to define the<span class="application"><strong> TOPLEVEL_NAMESPACE</strong></span> like this: 
+<pre class="screen"># The toplevel namespace definition for kernel tests
+              TOPLEVEL_NAMESPACE=$(PACKAGE_NAME)
+</pre>
+
+								</div></li></ul></div>
+
+					</div></li><li class="listitem"><div class="para">
+						<span class="application"><strong>Desktop</strong></span> contains tests results relating to desktop packages, for example<span class="application"><strong> /desktop/evolution/first-time-wizard-password-settings</strong></span>, which is a specific test relating to evolution
+					</div></li><li class="listitem"><div class="para">
+						<span class="application"><strong>Tools</strong></span> contains tests results relating to the tool chain, for example <span class="application"><strong>/tools/gcc/testsuite/3.4</strong></span>
+					</div></li><li class="listitem"><div class="para">
+						<span class="application"><strong>CoreOS</strong></span> all test results relating to user-space packages not covered by any of the above namespaces
+					</div></li><li class="listitem"><div class="para">
+						<span class="application"><strong>Examples</strong></span> example tests that illustrate usage and functionality and are not activly maintained. This is a good place to experiment when you are getting hang of Beaker or to place simple examples to help others.
+					</div></li></ul></div>
+
+		</div></div><ul class="docnav"><li class="previous"><a accesskey="p" href="User_Guide-Getting_Started-Process-Beaker_Makefile-Package_Name.html"><strong>Prev</strong>3.2.1.2.1. PACKAGE NAME</a></li><li class="up"><a accesskey="u" href="#"><strong>Up</strong></a></li><li class="home"><a accesskey="h" href="index.html"><strong>Home</strong></a></li><li class="next"><a accesskey="n" href="User_Guide-Getting_Started-Process-Beaker_Makefile-RELATIVE_PATH.html"><strong>Next</strong>3.2.1.2.3. RELATIVE PATH</a></li></ul></body></html>

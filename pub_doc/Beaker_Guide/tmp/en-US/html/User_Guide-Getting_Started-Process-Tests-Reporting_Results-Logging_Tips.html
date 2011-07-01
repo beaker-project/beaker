@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>3.2.1.4.4.1. Logging Tips</title><link rel="stylesheet" href="Common_Content/css/default.css" type="text/css" /><link rel="stylesheet" media="print" href="Common_Content/css/print.css" type="text/css" /><meta name="generator" content="publican 2.5" /><meta name="package" content="Beaker-Deployment_Guide-0.5-en-US-1-9" /><link rel="home" href="index.html" title="Deployment Guide" /><link rel="up" href="User_Guide-Getting_Started-Process-Tests-Reporting_Results.html" title="3.2.1.4.4. Reporting Results" /><link rel="prev" href="User_Guide-Getting_Started-Process-Tests-Reporting_Results.html" title="3.2.1.4.4. Reporting Results" /><link rel="next" href="User_Guide-Getting_Started-Process-Tests-Reporting_Results-Passing_Parameters_to_Tests.html" title="3.2.1.4.4.2. Passing Parameters to Tasks" /></head><body><p id="title"><a class="left" href="https://fedorahosted.org/publican"><img src="Common_Content/images/image_left.png" alt="Product Site" /></a><a class="right" href="https://fedorahosted.org/publican"><img src="Common_Content/images/image_right.png" alt="Documentation Site" /></a></p><ul class="docnav"><li class="previous"><a accesskey="p" href="User_Guide-Getting_Started-Process-Tests-Reporting_Results.html"><strong>Prev</strong></a></li><li class="next"><a accesskey="n" href="User_Guide-Getting_Started-Process-Tests-Reporting_Results-Passing_Parameters_to_Tests.html"><strong>Next</strong></a></li></ul><div class="section" id="User_Guide-Getting_Started-Process-Tests-Reporting_Results-Logging_Tips"><div class="titlepage"><div><div><h6 class="title" id="User_Guide-Getting_Started-Process-Tests-Reporting_Results-Logging_Tips">3.2.1.4.4.1. Logging Tips</h6></div></div></div><div class="para">
+			Indicate failure-causing conditions in the log clearly, with "FAIL" in upper case to make it easier to grep for.
+		</div><div class="para">
+			Good log messages should contain three things: # what it is that you are attempting to do (e.g. checking to see what ls reports for the permission bits that are set on file foo) # what it is that you expect to happen (e.g. an expectation of seeing "-rw-r--r--" ) # what the actual result was an example of a test log showing success might look like:
+		</div><pre class="screen">
+            Checking ls output: "foo" ought to have permissions "-rw-r--r--"
+                Success:  "foo" has permissions: "-rw-r--r--"
+</pre><div class="para">
+			An example of a failure might look like:
+		</div><pre class="screen">
+         Checking ls output: "foo" ought to have permissions "-rw-r--r--"
+             FAIL:  ls exit status 2   
+</pre><div class="para">
+			For multihost tests, time stamp all your logs, so you can interleave them.
+		</div><div class="para">
+			Use of tee is also helpful to ensure that the output at the terminal as you debug a test is comparable to that logged from OUTPUTFILE in the lab environment.
+		</div><div class="para">
+			Past experiences has shown problems where people confuse overwriting versus appending when writing out each line of a log file. Use tee -a $OUTPUT rather than tee &gt; $OUTPUT or tee &gt;&gt; $OUTPUT.
+		</div><div class="para">
+			Include a final message in the log, stating that this is the last line, and (for a single-result test) whether the result is a success or failure; for example:
+		</div><pre class="screen">
+             echo "----- Test complete: result=$RESULT -----" | tee -a $OUTPUTFILE
+</pre><div class="para">
+			Finish your runtest.sh: (after the report_result) to indicate that the final line was reached; for example:
+		</div><pre class="screen">
+             echo "***** End of runtest.sh *****"
+</pre></div><ul class="docnav"><li class="previous"><a accesskey="p" href="User_Guide-Getting_Started-Process-Tests-Reporting_Results.html"><strong>Prev</strong>3.2.1.4.4. Reporting Results</a></li><li class="up"><a accesskey="u" href="#"><strong>Up</strong></a></li><li class="home"><a accesskey="h" href="index.html"><strong>Home</strong></a></li><li class="next"><a accesskey="n" href="User_Guide-Getting_Started-Process-Tests-Reporting_Results-Passing_Parameters_to_Tests.html"><strong>Next</strong>3.2.1.4.4.2. Passing Parameters to Tasks</a></li></ul></body></html>

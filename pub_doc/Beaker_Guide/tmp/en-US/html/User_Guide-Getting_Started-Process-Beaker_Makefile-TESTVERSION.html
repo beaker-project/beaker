@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>3.2.1.2.4. TESTVERSION</title><link rel="stylesheet" href="Common_Content/css/default.css" type="text/css" /><link rel="stylesheet" media="print" href="Common_Content/css/print.css" type="text/css" /><meta name="generator" content="publican 2.5" /><meta name="package" content="Beaker-Deployment_Guide-0.5-en-US-1-9" /><link rel="home" href="index.html" title="Deployment Guide" /><link rel="up" href="User_Guide-Getting_Started-Process-Beaker_Makefile.html" title="3.2.1.2. Beaker Makefile" /><link rel="prev" href="User_Guide-Getting_Started-Process-Beaker_Makefile-RELATIVE_PATH.html" title="3.2.1.2.3. RELATIVE PATH" /><link rel="next" href="User_Guide-Getting_Started-Process-Beaker_Makefile-TEST.html" title="3.2.1.2.5. TEST" /></head><body><p id="title"><a class="left" href="https://fedorahosted.org/publican"><img src="Common_Content/images/image_left.png" alt="Product Site" /></a><a class="right" href="https://fedorahosted.org/publican"><img src="Common_Content/images/image_right.png" alt="Documentation Site" /></a></p><ul class="docnav"><li class="previous"><a accesskey="p" href="User_Guide-Getting_Started-Process-Beaker_Makefile-RELATIVE_PATH.html"><strong>Prev</strong></a></li><li class="next"><a accesskey="n" href="User_Guide-Getting_Started-Process-Beaker_Makefile-TEST.html"><strong>Next</strong></a></li></ul><div class="section" id="User_Guide-Getting_Started-Process-Beaker_Makefile-TESTVERSION"><div class="titlepage"><div><div><h5 class="title" id="User_Guide-Getting_Started-Process-Beaker_Makefile-TESTVERSION">3.2.1.2.4. TESTVERSION</h5></div></div></div><pre class="screen">
+               # Version of the Test. Used with make tag.
+                export TESTVERSION=1.0
+</pre><div class="para">
+			This is used when building a package of a test, and provides the "version" component of the RPM name-version-release triplet. 
+			<div class="itemizedlist"><ul><li class="listitem"><div class="para">
+						The value must be valid as an RPM version string.
+					</div></li><li class="listitem"><div class="para">
+						It may consist of numbers, letters, and the dot symbol.
+					</div></li><li class="listitem"><div class="para">
+						It may not include a dash symbol this is used by RPM to delimit the version string within the name-version-release triplet.
+					</div></li></ul></div>
+
+		</div><div class="para">
+			When writing a test from scratch, use 0.1 and increment gradually until the test has reached a level of robustness to merit a "1.0" release. When wrapping a test from an upstream location, use the upstream version string here, as closely as possibly given the restrictions on valid characters. The version should be incremented each time a change is made to the <span class="application"><strong>Makefile</strong></span> or test files and a RPM is created from these files to be publicly consumed in a test review or submission to a lab scheduler.
+		</div></div><ul class="docnav"><li class="previous"><a accesskey="p" href="User_Guide-Getting_Started-Process-Beaker_Makefile-RELATIVE_PATH.html"><strong>Prev</strong>3.2.1.2.3. RELATIVE PATH</a></li><li class="up"><a accesskey="u" href="#"><strong>Up</strong></a></li><li class="home"><a accesskey="h" href="index.html"><strong>Home</strong></a></li><li class="next"><a accesskey="n" href="User_Guide-Getting_Started-Process-Beaker_Makefile-TEST.html"><strong>Next</strong>3.2.1.2.5. TEST</a></li></ul></body></html>

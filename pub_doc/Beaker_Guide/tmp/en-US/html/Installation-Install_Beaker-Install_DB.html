@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>2.1.2. Install DB</title><link rel="stylesheet" href="Common_Content/css/default.css" type="text/css" /><link rel="stylesheet" media="print" href="Common_Content/css/print.css" type="text/css" /><meta name="generator" content="publican 2.5" /><meta name="package" content="Beaker-Deployment_Guide-0.5-en-US-1-9" /><link rel="home" href="index.html" title="Deployment Guide" /><link rel="up" href="Installation-Install_Beaker.html" title="2.1. Install Beaker" /><link rel="prev" href="Installation-Install_Beaker-Disabling_Repos.html" title="2.1.1. Disabling Repos" /><link rel="next" href="Installation-Install_Beaker-Start_Beaker.html" title="2.1.3. Start Beaker" /></head><body><p id="title"><a class="left" href="https://fedorahosted.org/publican"><img src="Common_Content/images/image_left.png" alt="Product Site" /></a><a class="right" href="https://fedorahosted.org/publican"><img src="Common_Content/images/image_right.png" alt="Documentation Site" /></a></p><ul class="docnav"><li class="previous"><a accesskey="p" href="Installation-Install_Beaker-Disabling_Repos.html"><strong>Prev</strong></a></li><li class="next"><a accesskey="n" href="Installation-Install_Beaker-Start_Beaker.html"><strong>Next</strong></a></li></ul><div class="section" id="Installation-Install_Beaker-Install_DB"><div class="titlepage"><div><div><h3 class="title" id="Installation-Install_Beaker-Install_DB">2.1.2. Install DB</h3></div></div></div><div class="para">
+				Beaker supports MySQL,MSSQL,Oracle,MaxDB,PostgreSQL, and SQLite. For this tutorial,we will use MySQL. First, make sure MySQL server is installed, and configure the daemon to run at startup. 
+<pre class="screen">$ yum install -y mysql-server MySQL-python
+$ chkconfig mysqld on
+$ service mysqld start
+</pre>
+
+			</div><div class="para">
+				Create a database, and grant access to beaker user. You can put the database on the local machine, or on a remote machine. In the example below, the database is hosted on the local machine. 
+<pre class="screen">
+    $ echo "create database beaker;" | mysql
+    $ echo "grant all on beaker.* to 'beaker'@'localhost' IDENTIFIED BY 'beaker';"| mysql
+</pre>
+
+			</div><div class="para">
+				Now let's initialise our DB with tables. We'll also create an admin account called <span class="emphasis"><em>admin</em></span> with password <span class="emphasis"><em>testing</em></span>.
+			</div></div><ul class="docnav"><li class="previous"><a accesskey="p" href="Installation-Install_Beaker-Disabling_Repos.html"><strong>Prev</strong>2.1.1. Disabling Repos</a></li><li class="up"><a accesskey="u" href="#"><strong>Up</strong></a></li><li class="home"><a accesskey="h" href="index.html"><strong>Home</strong></a></li><li class="next"><a accesskey="n" href="Installation-Install_Beaker-Start_Beaker.html"><strong>Next</strong>2.1.3. Start Beaker</a></li></ul></body></html>

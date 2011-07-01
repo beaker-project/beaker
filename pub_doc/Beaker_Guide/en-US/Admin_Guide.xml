@@ -1,0 +1,192 @@
+﻿<?xml version='1.0' encoding='UTF-8' ?>
+<!DOCTYPE chapter PUBLIC "-//OASIS//DTD DocBook XML V4.5//EN" "http://www.oasis-open.org/docbook/xml/4.5/docbookx.dtd" [
+]>
+<chapter id="Administration">
+<title>Administration Guide</title>
+		<section id="Administration-Scope_of_Document">
+		  <title>Scope of Document</title>
+		  <para>
+		    The document is aimed at experienced system administrators with basic understanding of Linux based testing tools. This section provides general Beaker overview information. Here you will find descriptions of the Beaker components, Beaker architecture, Beaker server and target host comparisons, and platform requirements. 
+		  </para>
+    </section>
+    <section id="Administration-Beaker_Architecture">
+      <title>Beaker Architecture </title>
+        <para>
+         Beaker is an automated software testing application that allows users to create and manage customized 'tests'. A task is  a script that performs a specific task (or multiple tasks) and presents these task results to the user. These tasks consist of code, data, meta data, shell scripts, hooks to other code, and additional packages (or dependencies). Beaker uses an interactive user environment that is composed of API libraries, template files, and various tools.  
+        </para>
+        <para>
+        Beaker is composed of several components, but the Beaker environment is what users employ to create and run the tests. Software developers may compose tests remotely, and then use Beaker to deploy the test scripts in a test lab environment, where they will ultimately run on a dedicated test host(s). The developer uses the command line to configure Beaker and the generated output data collects to the <application>stdout</application> stream. Beaker stores the generated output data into a repository which users can can view via the Beaker GUI application.
+        </para>
+        <para>
+        Software developers can deploy their tests into several automatic testing environments. They can run the tests in a real lab environment. They can run tests on their development machine's fake chroot tree. They should run their tests in a typical test lab environment, since this allows for automatic test scheduling and advanced test results collection (on many different operating systems and architectures). Also, the test lab environment is more likely to detect, report, and catalog system errors. This guide describes how to compose tests in a Beaker test lab environment.  
+        </para>
+        <para>
+          After developers create a new test, they can package it as a typical RPM file and submit it to the repository, where other users may download it. The Beaker file organization is very flexible, and this allows them to create highly complex tests. This flexibility allows developers to include more shell scripts, source code, or data files into their tests. 
+        </para>
+    </section>
+    <section id="Administration-Test_Scheduler ">
+      <title>Test Scheduler </title>
+        <para>
+        The Beaker test scheduler coordinates the target host machines that run the tests. This Beaker component manages machine selection. The Beaker test scheduler manages tests that requires multiple hosts to  communicate. This Beaker component determines when and how the tests are launched. 
+        </para>
+    </section>
+    <section id="Administration-Audience">
+      <title>Audience</title>
+        <para>
+        The Beaker test scheduler coordinates the target host machines that run the tests. This Beaker component manages all test execution functions including machine selection, distribution installation, and fencing. The Beaker test scheduler manages tests that requires multiple hosts to communicate. This Beaker component determines when and how the tests are launched.  
+        </para>
+           </section>
+     <section id="Administration-Database ">
+      <title>Database </title>
+        <para>
+        The Beaker database coordinates all Beaker functions that require storage. This Beaker component allows users to manage an unlimited number of tests they can create and deploy on your organization's target hosts. An installation program installs the database on the Beaker server, and the db sends the test system data to the Beaker GUI (Graphical User Interface) application where it is viewable in the respective area. Beaker uses the open source MySQL database.
+        </para>
+    </section>
+    <section id="Administration-Chronological_Overview">
+      <title>Chronological Overview </title>
+        <para>
+        This section describes how a user creates a script and integrates it into the Beaker environment: 
+          <itemizedlist>
+            <listitem>
+              <para>On a workstation, a user writes a script and then tests the code. 
+              </para>
+            </listitem>
+            <listitem>
+              <para>The user builds an RPM and submits it to the repository (If they are using one).
+              </para>
+            </listitem>
+            <listitem>
+              <para>They add their test to Beaker's task library.
+              </para>
+            </listitem>
+            <listitem>
+              <para>They create a job that uses the task.
+              </para>
+            </listitem>
+            <listitem>
+              <para>The scheduler then sends the data to the target host lab controller, which installs the operating systems and developer tests onto the target hosts.
+              </para>
+            </listitem>
+            <listitem>
+              <para>These target hosts boot into the respective operating system and runs the test(s)
+              </para>
+            </listitem>
+            <listitem>
+              <para>The test results are sent back to the scheduler for reporting. 
+              </para>
+            </listitem>
+            <listitem>
+              <para>Lastly, the scheduler uses email to notify the users' of their test results.
+              </para>
+            </listitem>
+          </itemizedlist>
+        </para>
+        <mediaobject>
+										<imageobject>
+											<imagedata fileref="./images/chronological_overview.png" format="PNG" scalefit="1" width="444" />
+										</imageobject>
+										<caption><para>Chronological Overview</para></caption>
+								</mediaobject>
+    </section>
+    <section id="Administration-Server_And_Target_Host_Relationship">
+      <title>Server And Target Host Relationship</title>
+        <para>
+       The Beaker RPMs installs the packages to the Beaker server and to as many target hosts as your organization requires. The Beaker server side contains software components that control server and host operations. The Beaker server hosts the MySQL database, the test scheduler, and the repository. The Beaker server also hosts the Beaker GUI application. The Beaker server uses the database to manage the user accounts and store the test results. Software developers can write tests scripts from their workstation, and use the Beaker server's tools to deploy their test scripts as RPMs. 
+        </para>
+        <mediaobject>
+										<imageobject>
+											<imagedata fileref="./images/beaker_server_host.png" format="PNG" scalefit="1" width="444" />
+										</imageobject>
+										<caption><para>Server And Target Host Relationship</para></caption>
+								</mediaobject>
+        <para>
+        However, the server does not run the tests. They are actually run on the target hosts. When a test is run, the target host reports the results back to the Beaker server. Users can have multiple target hosts, as each is treated as a clean system. The target host must be a dedicated machine with no other jobs pending. There is no permanent storage on the target hosts because each host installation overwrites all existing content on that machine. 
+        </para>
+    </section>
+    <section id="Administration-System_Requirements">
+      <title>System Requirements</title>
+        <para>
+        There are separate system requirements for the Beaker server and target hosts. Due to the large number of test files that users can store in the database, Beaker requires a multiple terabyte disk storage system.
+        </para>
+        <para>
+       Your Beaker server should have:
+          <itemizedlist>
+            <listitem>
+              <para>Red Hat Enterprise Linux 5 or latest Fedora operating system. 
+              </para>
+            </listitem>
+            <listitem>
+              <para>200 or more gigabytes hard disk space. 
+              </para>
+            </listitem>
+            <listitem>
+              <para>4 or more gigabytes of RAM. 
+              </para>
+            </listitem>
+            <listitem>
+              <para>4 or more CPUS running at 2.5Ghz or higher. 
+              </para>
+            </listitem>
+            <listitem>
+              <para>2 or more terabytes tree storage requirement. 
+              </para>
+            </listitem>
+          </itemizedlist>
+        </para>
+        <note>
+          <para>
+          If your site already has an existing repository of Red Hat install trees, you do not have to meet the tree storage requirement above. 
+          </para>
+        </note>
+        <para>
+        Your target hosts are required to have: 
+          <itemizedlist>
+            <listitem>
+              <para>Network connectivity to a system running a DHCP server.
+              </para>
+            </listitem>
+            <listitem>
+              <para>Network booting capability (like PXE or Netboot). 
+              </para>
+            </listitem>
+            <listitem>
+              <para>Serial console logging support using a Target Host's management adapter or a terminal server such as the Avocent ACS series.
+              </para>
+            </listitem>
+            <listitem>
+              <para>KVM support. 
+              </para>
+            </listitem>
+          </itemizedlist>
+        </para>
+        <para>
+        Your target hosts to need include a power controller. Here are some the most common compatible controllers that are available: 
+          <itemizedlist>
+            <listitem>
+              <para>HP iLO 
+              </para>
+            </listitem>
+            <listitem>
+              <para>Dell DRAC 
+              </para>
+            </listitem>
+            <listitem>
+              <para>WTI Boot bars 
+              </para>
+            </listitem>
+            <listitem>
+              <para>IPMI 1.5 (or higher) 
+              </para>
+            </listitem>
+            <listitem>
+              <para>APC 
+              </para>
+            </listitem>
+          </itemizedlist>
+        </para>
+        <para>
+        You may mix and match any of these controllers on the target hosts, but you must include at least one of per machine. Beaker supports the cman package's fence component. Beaker supports any device that you control from the Red Hat Enterprise Linux 5 command line. 
+        </para>
+    </section>
+    
+    </chapter>

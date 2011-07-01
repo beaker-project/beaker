@@ -1,0 +1,136 @@
+﻿<?xml version='1.0'?>
+<!DOCTYPE section PUBLIC "-//OASIS//DTD DocBook XML V4.5//EN" "http://www.oasis-open.org/docbook/xml/4.5/docbookx.dtd" [
+]>
+
+                    <section id="User_Guide-Getting_Started-Process-Tests-Provision_a_System">
+                      <title>Provisioning a system</title>
+                        <para>
+                          If you would like to use one of these System you will need to provision it. Provisioning a System means to have the system loaded with an Operating System and reserved for the user. There are a couple of ways of doing this, which are outlined below. 
+                          </para>
+                          <section id="User_Guide-Getting_Started-Process-Tests-Provision_a_System-Provision_by_System">
+                            <title> Provision by System</title>
+                              <para>
+                                Go to the System details page (see Section 5.1.3, “System Details Tabs”) of a System that is free (see Section 5.1.1, “System Searching”) and click on Take in the Current User field. After successfully taking the System, click the Provision tab of the System details page to provision the System. 
+                              </para>
+                              <note>
+                                <title>Returning a System</title>
+                                  <para>
+                                    After provisioning a System, you can manually return it by going to the above mentioned System details page, clicking on the Return link in the Current User field. 
+                                  </para>
+                              </note>
+                              <mediaobject>
+                                 <imageobject>
+                                  <imagedata fileref="./images/system_provision_by_system.png" format="PNG" scalefit="1" width="444" />
+                                </imageobject>
+                                <caption>Provision by System</caption>
+                              </mediaobject>
+                          </section>
+                          <section id="User_Guide-Getting_Started-Process-Tests-Provision_a_System-Provision_by_Distro">
+                            <title>Provision by Distro</title>
+                              <para>Go to the Distro search page(Section 5.2.1, “Distro Searching”) and search for a Distro you would like to provision onto a System. Once you have found the Distro you require, click Provision System, which is located in the far right column of your search results. If the <application>Provision System</application> link is not there, it's because there is no suitable System available to use with that Distro. 
+                              </para>
+                              <para>The resulting page lists the Systems you can use. Systems with <application>Reserve Now</application>in the far right column mean that no on else is using them and you can reserve them immediately, otherwise you will see Queue Reservation<application>Queue Reservation</application>; which means that someone is currently using the System but you can be appended to the queue of people wanting to use this System. 
+                              </para>
+                              <para>
+                                After choosing your System and clicking on the the aforementioned links, you will be presented with a form with the following fields:
+                                  <itemizedlist>
+                                    <listitem>
+                                      <para><application>System To Provision</application>
+                                        This is our System we will provision. 
+                                      </para>
+                                    </listitem>
+                                    <listitem>
+                                      <para><application>Distro To Provision</application>
+                                             The Distro we will be installing on the System. 
+                                      </para>
+                                    </listitem>
+                                    <listitem>
+                                      <para><application>Job Whiteboard</application>
+                                        This is a reference that will be displayed in Jobs list. You can enter anything in here.
+                                      </para>
+                                    </listitem>
+                                    <listitem>
+                                      <para><application>KickStartMetaData</application>
+                                        Arguments passed to the KickStart script. 
+                                      </para>
+                                    </listitem>
+                                    <listitem>
+                                      <para><application>Kernel Options (install)</application>
+                                      </para>
+                                    </listitem>
+                                    <listitem>
+                                      <para><application>Kernel Options(Post)</application>
+                                      </para>
+                                    </listitem>
+                                  </itemizedlist>
+                              </para>
+                              <para>
+                                Pressing the <application>Queue Job</application> button will submit this provisioning as a Job and redirect us to the details of the newly created Job.
+                              </para>
+                          </section>
+                          <section id="User_Guide-Getting_Started-Process-Tests-Provision_a_System-Reserve_Workflow">
+                            <title>Reserve Workflow</title>
+                              <para>
+                                The Reserve Workflow page is accessed from the top menu by going to<application>Scheduler&gt;Reserve</application>. The Reserve Workflow process allows the ability to select which System and Distro is to be provisioned based on the following: 
+                                  <itemizedlist>
+                                    <listitem>
+                                      <para>
+                                        <application>Arch</application>Architecture of the System we want to provision. 
+                                      </para>
+                                    </listitem>
+                                    <listitem>
+                                      <para>
+                                        <application>Distro Family</application>The family of Distro we want installed. 
+                                      </para>
+                                    </listitem>
+                                    <listitem>
+                                      <para>
+                                        <application>Method</application>How we want the distro to be installed. 
+                                      </para>
+                                    </listitem>
+                                    <listitem>
+                                      <para>
+                                        <application>Tag</application>The Distro's tag. 
+                                      </para>
+                                    </listitem>
+                                    <listitem>
+                                      <para>
+                                        <application>Distro</application>Based on the above refinements we will be presented with a list of Distro's available to be installed. 
+                                      </para>
+                                    </listitem>
+                                  </itemizedlist>
+                              </para>
+                              <para>
+                                Selecting values for the above items should be done in a top to bottom fashion, staring at <application>Arch</application> and ending with <application>Distro</application>. 
+                              </para>
+                              <para>
+                                Once the Distro to be installed is selected you have the option of showing a list of System's that you are able to provision (<application>Show Systems</application> button), or you can have Beaker automatically pick a system for you (<application>Auto pick</application> System). If you choose <application>Show Systems</application> you will be presented with a list of Systems you are able to provision. Ones that are available now show the link <application>Reserve now</application> beside them. This indicates the System is available to be provisioned immediately. If the System is currenty in use it will have the link <application>Queue Reservation</application> instead. This indicates that the System is currently in use, but can be provisioned for a later time. 
+                              </para>
+                              <para>
+                                Whether you choose to automatically pick a system or to pick one yourself, you will be presented with a page that asks you for the following options:
+                                  <itemizedlist>
+                                    <listitem>
+                                      <para>
+                                        <application>Job Whiteboard</application> See <xref linkend="User_Guide-Getting_Started-Process-Tests-Provision_a_System-Provision_by_Distro"></xref>
+                                      </para>
+                                    </listitem>
+                                    <listitem>
+                                      <para>
+                                        <application>KickStart MetaData</application> See <xref linkend="User_Guide-Getting_Started-Process-Tests-Provision_a_System-Provision_by_Distro"></xref>
+                                      </para>
+                                    </listitem>
+                                    <listitem>
+                                      <para>
+                                        <application>Kernel Options (Install)</application> See <xref linkend="User_Guide-Getting_Started-Process-Tests-Provision_a_System-Provision_by_Distro"></xref>
+                                      </para>
+                                    </listitem>
+                                    <listitem>
+                                      <para>
+                                        <application>Kernel Options (Post)</application> See <xref linkend="User_Guide-Getting_Started-Process-Tests-Provision_a_System-Provision_by_Distro"></xref>
+                                      </para>
+                                    </listitem>
+                                  </itemizedlist> 
+                              </para>
+                               <para> Once you are ready you can provision your System with your selected Distro by pressing <application>Queue Job</application>.</para>
+                           </section>
+                          </section>

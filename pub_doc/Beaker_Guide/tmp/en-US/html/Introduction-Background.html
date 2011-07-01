@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>1.3. Background</title><link rel="stylesheet" href="Common_Content/css/default.css" type="text/css" /><link rel="stylesheet" media="print" href="Common_Content/css/print.css" type="text/css" /><meta name="generator" content="publican 2.5" /><meta name="package" content="Beaker-Deployment_Guide-0.5-en-US-1-9" /><link rel="home" href="index.html" title="Deployment Guide" /><link rel="up" href="Introduction.html" title="Chapter 1. Introduction" /><link rel="prev" href="Introduction-Introduction.html" title="1.2. Introduction" /><link rel="next" href="Introduction-Beaker_Overview.html" title="1.4. Beaker Overview" /></head><body><p id="title"><a class="left" href="https://fedorahosted.org/publican"><img src="Common_Content/images/image_left.png" alt="Product Site" /></a><a class="right" href="https://fedorahosted.org/publican"><img src="Common_Content/images/image_right.png" alt="Documentation Site" /></a></p><ul class="docnav"><li class="previous"><a accesskey="p" href="Introduction-Introduction.html"><strong>Prev</strong></a></li><li class="next"><a accesskey="n" href="Introduction-Beaker_Overview.html"><strong>Next</strong></a></li></ul><div class="section" id="Introduction-Background"><div class="titlepage"><div><div><h2 class="title" id="Introduction-Background">1.3. Background</h2></div></div></div><div class="para">
+			Beaker is a new-project written in python which aims to achieve separation of concerns between inventory management and test execution. 
+			<div class="itemizedlist"><ul><li class="listitem"><div class="para">
+						Beaker provides an automated software testing system that should appeal to a variety of audiences for a variety of purposes. It provides a programming interface for developing automated unit tests, bug reproducers, hardware enablement, and regression tests. Beaker is composed of several components, but the most primary are the Beaker framework for writing the tests and the tests themselves.
+					</div></li><li class="listitem"><div class="para">
+						Most developers create new tests in a standalone environments (such as a workstation) first and later deploy them in the automated test lab where they are run on machines dedicated for testing. Many types of automated environments are possible: 
+						<div class="itemizedlist"><ul><li class="listitem"><div class="para">
+									running on a farm of real machines in some kind of lab situation
+								</div></li><li class="listitem"><div class="para">
+									running as part of a continuous checkout/build/test "tinderbox"-style environment
+								</div></li><li class="listitem"><div class="para">
+									running inside a fake "chroot" tree on your development machine
+								</div></li></ul></div>
+
+					</div></li><li class="listitem"><div class="para">
+						When tests are developed in accordance with the Beaker framework, they can be run either standalone or in a lab test environment without modification. The Beaker framework defines both an API and the format of required files that contain meta data. When run locally from a command line, the results are reported to <code class="code">stdout</code>. When deployed in the automated test lab, the results can be stored in a repository and viewed via a UI.
+					</div></li><li class="listitem"><div class="para">
+						This section will first describe how to write tests within the Beaker framework. Later, once a new test is written and tested, it can be packaged, as a conventional RPM package from its source files.
+					</div></li><li class="listitem"><div class="para">
+						A test lab has the advantage of being able to automatically schedule the test and collect test results on a variety of architectures and releases. The lab environment is also able to detect certain types of failure. For example, if a dedicated test machine goes into an infinite loop, the test is automatically killed and a failure is reported.
+					</div></li></ul></div>
+
+		</div></div><ul class="docnav"><li class="previous"><a accesskey="p" href="Introduction-Introduction.html"><strong>Prev</strong>1.2. Introduction</a></li><li class="up"><a accesskey="u" href="#"><strong>Up</strong></a></li><li class="home"><a accesskey="h" href="index.html"><strong>Home</strong></a></li><li class="next"><a accesskey="n" href="Introduction-Beaker_Overview.html"><strong>Next</strong>1.4. Beaker Overview</a></li></ul></body></html>

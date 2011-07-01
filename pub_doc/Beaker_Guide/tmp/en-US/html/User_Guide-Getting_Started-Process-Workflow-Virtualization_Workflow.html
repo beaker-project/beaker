@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>3.2.1.3.2. Virtualization Workflow</title><link rel="stylesheet" href="Common_Content/css/default.css" type="text/css" /><link rel="stylesheet" media="print" href="Common_Content/css/print.css" type="text/css" /><meta name="generator" content="publican 2.5" /><meta name="package" content="Beaker-Deployment_Guide-0.5-en-US-1-9" /><link rel="home" href="index.html" title="Deployment Guide" /><link rel="up" href="User_Guide-Getting_Started-Process-Workflow.html" title="3.2.1.3. Workflow" /><link rel="prev" href="User_Guide-Getting_Started-Process-Workflow-Submitting_and_Reviewing_a_Job_Workflow.html" title="3.2.1.3.1. Submitting and Reviewing a Job Workflow" /><link rel="next" href="User_Guide-Getting_Started-Process-Workflow-Virtualization_Workflow-KVM_vs_XEN_Guests.html" title="3.2.1.3.2.1. KVM vs XEN GUESTS" /></head><body><p id="title"><a class="left" href="https://fedorahosted.org/publican"><img src="Common_Content/images/image_left.png" alt="Product Site" /></a><a class="right" href="https://fedorahosted.org/publican"><img src="Common_Content/images/image_right.png" alt="Documentation Site" /></a></p><ul class="docnav"><li class="previous"><a accesskey="p" href="User_Guide-Getting_Started-Process-Workflow-Submitting_and_Reviewing_a_Job_Workflow.html"><strong>Prev</strong></a></li><li class="next"><a accesskey="n" href="User_Guide-Getting_Started-Process-Workflow-Virtualization_Workflow-KVM_vs_XEN_Guests.html"><strong>Next</strong></a></li></ul><div xml:lang="en-US" class="section" id="User_Guide-Getting_Started-Process-Workflow-Virtualization_Workflow" lang="en-US"><div class="titlepage"><div><div><h5 class="title" id="User_Guide-Getting_Started-Process-Workflow-Virtualization_Workflow">3.2.1.3.2. Virtualization Workflow</h5></div></div></div><div class="para">
+		Virtualization workflow is designed to take advantage all Beaker offers to be used for virtualization testing. The audience of this tutorial is expected to have basic familiarity with Beaker.
+	</div><div class="para">
+		Virtualization testing framework in Beaker utilizes libvirt tools, particularly virt-install program to have a framework abstracted from the underlying virtualization technology of the OS. The crux of virtualization test framework is guestrecipe. Each virtual machine is defined in its own guestrecipe and guestrecipes are a part of the host's (dom0) recipe. To illustrate, let's say, we would like to create a job that will create a host and 2 guests, named guest1 and guest2 respectively. The skeleton of the recipe will look like this:
+	</div><pre class="screen">&lt;recipe&gt;
+        ...
+        (dom0 test recipe)
+        ...
+        &lt;guestrecipe guestname=guest1 ...&gt;
+          ...
+          (guest1 test recipe)
+          ...
+        &lt;/guestrecipe&gt;
+        &lt;guestrecipe guestname=guest2 ...&gt;
+          ...
+          (guest2 test recipe)
+          ...
+        &lt;/guestrecipe&gt;
+
+     &lt;/recipe&gt;</pre><div class="para">
+		Here is a sample xml that can be passed into Beaker to get a system reserved.
+	</div><pre class="screen">- Request a host with the following:
+- CPU Vendor GenuineIntel
+- &gt; 3 CPUs
+- Supports KVM
+-&gt; 4096Mb of Ram
+- &gt; 75000Mb of Diskspace
+- x86_64 Arch
+
+- The that will be built is the following:
+- KVM guest
+- 1024Mb ram
+- 1 CPU
+- File System size 20Mb
+
+All that you need to do is replace ##USERNAMEHERE## with your real kerberos username. Then use bkr to submit it.
+</pre><div class="para">
+		Anything that can be described inside a recipe can also be described inside a guestrecipe. This allows the testers to run any existing Beaker test inside the guest just like it'd be run inside a baremetal machine.
+	</div><div class="para">
+		When Beaker encounters a guestrecipe it does create an environmental variable to be passed on to virtinstall test. The tester-supplied elements of this variable all come from the guestrecipe element. Consequently, it's vital that the tester fully understand the properties of this element. guestrecipe element guestname and guestargs elements. guestname is the name of the guest you would like to give and is optional. If you omit this property then the Beaker will assign the hostname of the guest as the name of the guest. guestargs is where you define your guest. The values given here will be same as what one would pass to virt-install program with the following exceptions: 
+		<div class="itemizedlist"><ul><li class="listitem"><div class="para">
+					Name argument must not be passed on inside guestargs. As mentioned above, it should be passed with guestname property..
+				</div></li><li class="listitem"><div class="para">
+					Other than name , -mac, -location, -cdrom (-c) , and -extra-args ks= must not be passed. Beaker does those based on distro information passed inside the guestrecipe.
+				</div></li><li class="listitem"><div class="para">
+					In addition to what can be passed to virt-install, extra arguments -lvm or -part or -kvm can also be passed to guestargs, to indicate lvm-based or partition- based guests or kvm guests (instead of xen guests).
+				</div></li><li class="listitem"><div class="para">
+					If neither one of -lvm or -part options are given, then a filebased guest will be installed. If -kvm option is not given then xen guests will be installed. See below for lvm-,partition-based guests section for more info on this topic.
+				</div></li><li class="listitem"><div class="para">
+					The virtinstall test is very forgiving for the missed arguments, it'll use some default when it can. Currently these arguments can be omitted: 
+					<div class="itemizedlist"><ul><li class="listitem"><div class="para">
+								-ram or -r , a default of 512 is used
+							</div></li><li class="listitem"><div class="para">
+								1.-nographics or -vnc, if the guest is a paravirtualized guest, then -nographics option will be used, if the guest is an hvm guest, then -vnc option will be used.
+							</div></li><li class="listitem"><div class="para">
+								1.-file-size or -s, a default of 10 will be used.
+							</div></li><li class="listitem"><div class="para">
+								-file or -f, if the guest is a filebased guest, then the default will be /var/lib/xen/images/${guestname}.img . For lvm-based and block-device based guest, this option MUST be provided.
+							</div></li></ul></div>
+
+				</div></li></ul></div>
+
+	</div></div><ul class="docnav"><li class="previous"><a accesskey="p" href="User_Guide-Getting_Started-Process-Workflow-Submitting_and_Reviewing_a_Job_Workflow.html"><strong>Prev</strong>3.2.1.3.1. Submitting and Reviewing a Job Workflow</a></li><li class="up"><a accesskey="u" href="#"><strong>Up</strong></a></li><li class="home"><a accesskey="h" href="index.html"><strong>Home</strong></a></li><li class="next"><a accesskey="n" href="User_Guide-Getting_Started-Process-Workflow-Virtualization_Workflow-KVM_vs_XEN_Guests.html"><strong>Next</strong>3.2.1.3.2.1. KVM vs XEN GUESTS</a></li></ul></body></html>

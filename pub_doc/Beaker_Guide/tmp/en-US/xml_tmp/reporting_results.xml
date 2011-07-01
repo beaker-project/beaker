@@ -1,0 +1,127 @@
+﻿<?xml version='1.0'?>
+<!DOCTYPE section PUBLIC "-//OASIS//DTD DocBook XML V4.5//EN" "http://www.oasis-open.org/docbook/xml/4.5/docbookx.dtd" [
+]>
+
+                    <section id="User_Guide-Getting_Started-Process-Tests-Reporting_Results">
+                      <title>Reporting Results</title>
+                      <para>The philosophy of Beaker is that the engineers operating the system will want to quickly survey large numbers of tests, and thus the report should be as simple and clear as possible. "PASS" indicates that everything completed as expected. "FAIL" indicates that something unexpected occurred. 
+                        </para>
+                        <para>In general, a test will perform some setup (perhaps compiling code or configuring services), attempt to perform some actions, and then report on how well those actions were carried out. Some of these actions are your responsibility to capture or generate in your script: 
+                          <itemizedlist>
+                            <listitem>
+                              <para>a PASS or FAIL and optionally a value indicating a test-specific metric, such as a performance figure.
+                              </para>
+                            </listitem>
+                            <listitem>
+                              <para>a debug log of information &amp; mdash;invaluable when troubleshooting an unexpected test result. A test can have a single log file and report it into the root node of your results tree, or gather multiple logs, reporting each within the appropriate child node. 
+                              </para>
+                            </listitem>
+                          </itemizedlist>
+                        </para>
+                        <para>Other components of the result can be provided automatically by the framework when in a test lab environment: 
+                          <itemizedlist>
+                            <listitem>
+                              <para>the content of the kernel ring buffer (from dmesg). Each report clears the ring buffer, so that if your test reports multiple results, each will contain any messages logged by the kernel since the last report was made. 
+                              </para>
+                            </listitem>
+                            <listitem>
+                              <para>a list of all packages installed on the machine under test (at the time immediately before testing began), including name, version/release, and architecture. 
+                              </para>
+                            </listitem>
+                            <listitem>
+                              <para>a separate report of the packages listed in the RunFor of the metadata including name, version/release, and architecture (since these versions are most pertinent to the test run). 
+                              </para>
+                            </listitem>
+                            <listitem>
+                              <para>if a kernel panic occurs on the machine under test, this is detected for you from the console log output, and will cause a Panic result in place of a PASS or FAIL for that test. 
+                              </para>
+                            </listitem>
+                          </itemizedlist>
+                        </para>
+                        <para>In addition, the Beaker framework provides a hierarchical namespace of results, and each test is responsible for a subtree of this namespace. Many simple tests will only return one result (the node they own), but a complex test can return an entire subtree of results as desired. The location in the namespace is determined by the value of variables defined in the Makefile. These variables will be discussed in the Packaging section. 
+                        </para>
+                        <para>A test may be testing a number of related things with a common setup (e.g. a setup phase of a server package onto localhost, followed by a collection of tests as a client). Some of these things may not work across every version/architecture combination. This will produce a list of "subresults", each of which could be classified as one of: 
+                        <itemizedlist>
+                          <listitem>
+                            <para>expected success: will lead to a PASS if nothing else fails
+                            </para>
+                          </listitem>
+                          <listitem>
+                            <para>expected failure: should be as a PASS (as you were expecting it). 
+                            </para>
+                          </listitem>
+                          <listitem>
+                            <para>unexpected success: can be treated as a PASS (since it's a success), or a FAIL (since you were not expecting it).
+                            </para>
+                          </listitem>
+                          <listitem>
+                            <para>unexpected failure: should always be a FAIL 
+                            </para>
+                          </listitem>
+                        </itemizedlist>
+                        </para>
+                        <para>Given that there may be more than one result, the question arises as to how to determine if the whole test passes or fails. One way to verify regression tests is to write a script that compares a set of outputs to an expected "gold" set of outputs which grants PASS or FAIL based on the comparison. 
+                        </para>
+                        <para>It is possible to write a script that silently handles unexpected successes, but it is equally valid for a script to report a FAIL on an unexpected success, since this warrants further investigation (and possible updating of the script). 
+                        </para>
+                        <para>To complicate matters further, expected success/failure may vary between versions of the package under test, and architecture of the test machine. 
+                        </para>
+                        <para>If the test is checking multiple bugs, some of which are known to work, and some of which are due to be fixed in various successive (Fedora) updates, ensure that the test checks everything that ought to work, reporting PASS and FAIL accordingly. If the whole test is reporting a single result, it will typically report this by ensuring that all expected things work; as bugs are fixed, more and more of the test is expected to work and can cause an overall FAIL. 
+                        </para>
+                        <para>If it is reporting the test using a hierarchy of results, the test can have similar logic for the root node, and can avoid reporting a result for a subtree node for a known failure until the bug is fixed in the underlying packages, and avoid affecting the overall result until the bug(s) is fixed. 
+                        </para>
+                        <para>As a general Beaker rule of thumb, a FAIL anywhere within the result subtree of the test will lead to the result for the overall test being a FAIL.
+                        </para>
+                        <section id="User_Guide-Getting_Started-Process-Tests-Reporting_Results-Logging_Tips">
+                          <title>Logging Tips</title>
+                          <para>Indicate failure-causing conditions in the log clearly, with "FAIL" in upper case to make it easier to grep for. 
+                          </para>
+                          <para>Good log messages should contain three things: # what it is that you are attempting to do (e.g. checking to see what ls reports for the permission bits that are set on file foo) # what it is that you expect to happen (e.g. an expectation of seeing "-rw-r--r--" ) # what the actual result was an example of a test log showing success might look like:
+                          </para>
+                          <screen>
+            Checking ls output: "foo" ought to have permissions "-rw-r--r--"
+                Success:  "foo" has permissions: "-rw-r--r--"
+                          </screen>
+                          <para>An example of a failure might look like: 
+                          </para>
+                          <screen>
+         Checking ls output: "foo" ought to have permissions "-rw-r--r--"
+             FAIL:  ls exit status 2   
+                          </screen>
+                          <para>
+                          For multihost tests, time stamp all your logs, so you can interleave them.
+                          </para>
+                          <para>
+                          Use of tee is also helpful to ensure that the output at the terminal as you debug a test is comparable to that logged from OUTPUTFILE in the lab environment. 
+                          </para>
+                          <para>
+                          Past experiences has shown problems where people confuse overwriting versus appending when writing out each line of a log file. Use tee -a $OUTPUT rather than tee > $OUTPUT or tee >> $OUTPUT. 
+                          </para>
+                          <para>
+                          Include a final message in the log, stating that this is the last line, and (for a single-result test) whether the result is a success or failure; for example: 
+                          </para>
+                          <screen>
+             echo "----- Test complete: result=$RESULT -----" | tee -a $OUTPUTFILE
+                          </screen>
+                          <para>
+                          Finish your runtest.sh: (after the report_result) to indicate that the final line was reached; for example: 
+                          </para>
+                          <screen>
+             echo "***** End of runtest.sh *****"
+                          </screen>
+                        </section>
+                        <section id="User_Guide-Getting_Started-Process-Tests-Reporting_Results-Passing_Parameters_to_Tests">
+                        <title>Passing Parameters to Tasks</title>
+                          <para>When you need a test to perform different steps in some specific situations there is an option available through Simple Workflow command line interface called --test-params which allows you to pass the supplied parameter to runtest.sh where you can access it by TEST_PARAM_NAME=value.
+                          </para>
+                          <para>For example you can launch the single workflow with a commandline like this: 
+                          </para>
+                          <screen>bkr workflow-simple --arch=i386 --family=RedHatEnterpriseLinuxServer5 --task=/distribution/install --taskparam="SUBMITTED_FROM=CLIENT"
+                          </screen>
+                          <para>And then make use of the passed parameter inside the runtest.sh script: 
+                          </para>
+                          <screen>
+		if [[ TEST_PARAM_PAR1 == 1 ]] ; then do something; fi
+                          </screen>
+                        </section>
+                    </section>

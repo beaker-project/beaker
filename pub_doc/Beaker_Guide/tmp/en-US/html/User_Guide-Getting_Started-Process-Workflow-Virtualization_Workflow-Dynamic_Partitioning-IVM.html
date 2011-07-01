@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>3.2.1.3.2.4. Dynamic Partitioning/IVM</title><link rel="stylesheet" href="Common_Content/css/default.css" type="text/css" /><link rel="stylesheet" media="print" href="Common_Content/css/print.css" type="text/css" /><meta name="generator" content="publican 2.5" /><meta name="package" content="Beaker-Deployment_Guide-0.5-en-US-1-9" /><link rel="home" href="index.html" title="Deployment Guide" /><link rel="up" href="User_Guide-Getting_Started-Process-Workflow-Virtualization_Workflow.html" title="3.2.1.3.2. Virtualization Workflow" /><link rel="prev" href="User_Guide-Getting_Started-Process-Workflow-Virtualization_Workflow-Other_Uses_of_PARTITIONS_and_LVM_Volumes.html" title="3.2.1.3.2.3. Other Uses of PARTITIONS and LVM Volumes" /><link rel="next" href="User_Guide-Getting_Started-Process-Workflow-Virtualization_Workflow-Helper_Programs_Installed_with_Virtinstall.html" title="3.2.1.3.2.5. Helper Programs Installed with Virtinstall" /></head><body><p id="title"><a class="left" href="https://fedorahosted.org/publican"><img src="Common_Content/images/image_left.png" alt="Product Site" /></a><a class="right" href="https://fedorahosted.org/publican"><img src="Common_Content/images/image_right.png" alt="Documentation Site" /></a></p><ul class="docnav"><li class="previous"><a accesskey="p" href="User_Guide-Getting_Started-Process-Workflow-Virtualization_Workflow-Other_Uses_of_PARTITIONS_and_LVM_Volumes.html"><strong>Prev</strong></a></li><li class="next"><a accesskey="n" href="User_Guide-Getting_Started-Process-Workflow-Virtualization_Workflow-Helper_Programs_Installed_with_Virtinstall.html"><strong>Next</strong></a></li></ul><div class="section" id="User_Guide-Getting_Started-Process-Workflow-Virtualization_Workflow-Dynamic_Partitioning-IVM"><div class="titlepage"><div><div><h6 class="title" id="User_Guide-Getting_Started-Process-Workflow-Virtualization_Workflow-Dynamic_Partitioning-IVM">3.2.1.3.2.4. Dynamic Partitioning/IVM</h6></div></div></div><div class="formalpara"><h5 class="formalpara" id="id2864255">Telling Beaker to create partitions/lvm</h5>
+				On Beaker, each machine has its own kickstart for each OS family it supports. In it the partitioning area is marked so that it can be overwritten to allow having dynamic partitions/lvms in your tests.
+			</div><div class="para">
+			The easiest way to specify dynamic partitions is to use the xml workflow and specify it in your xml file. Syntax of the partition tags is below:
+		</div><pre class="screen">&lt;partition&gt;
+  &lt;type&gt; type &lt;/type&gt;             &lt;!- required -&gt;
+  &lt;name&gt; name &lt;/name&gt;             &lt;!- required -&gt;
+  &lt;size&gt; size in GB &lt;/size&gt;       &lt;!- required -&gt;
+  &lt;fs&gt; filesystem to format &lt;/fs&gt; &lt;!- optional, defaulted to ext3 -&gt;
+&lt;/partition&gt;
+</pre><div class="para">
+			&lt;partition&gt; is the xml element for the partitioning. You can have multiple partition elements in a recipe. It has type, name, size and fs text contents all of which except for fs is required. Detailed information for each are: 
+			<div class="itemizedlist"><ul><li class="listitem"><div class="para">
+						<span class="application"><strong>type:</strong></span> Type of partition you'd like to use. This can be either part of lvm .
+					</div></li><li class="listitem"><div class="para">
+						<span class="application"><strong>name:</strong></span> If the type is part, then this will be the mount point of the partition. For example, if you would like the partition to be mounted to /mnt/temppartition then just put it in here. For the lvm type, this will be the name of the volume and all custom volumes will go under its own group, prefixed with TestVolumeGroup? . For example, if you name your lvm type as "mytestvolume", it's go into /TestVolumeGroup??/mytestvolume.
+					</div></li><li class="listitem"><div class="para">
+						<span class="application"><strong>size:</strong></span> The size of the partition or volume in GBs .
+					</div></li><li class="listitem"><div class="para">
+						<span class="application"><strong>fs:</strong></span>This will be the filesystem the partition will be formatted in. If omitted, the partition will be formatted with ext3. By default, anaconda mounts all partitions. If you need the partition to be unmounted at the time of the test, you can use the blockdevice utility which is a test that lives on /distribution/utils/blockdevice . This test unmounts the specified partitions/volumes and lets users manage custom partitions thru its own scripts.
+					</div></li><li class="listitem"><div class="para">
+						<span class="application"><strong>getdevice</strong></span> <div class="itemizedlist"><ul><li class="listitem"><div class="para">
+									Usage: getdevice &lt;lvm|partition&gt; &lt;minimum size in GB&gt;&gt;
+								</div></li><li class="listitem"><div class="para">
+									Description: returns a free device that has enough space
+								</div></li><li class="listitem"><div class="para">
+									Returns: string with device name and return code 0 on success, error string
+								</div></li><li class="listitem"><div class="para">
+									and return code 1 on failure
+								</div></li></ul></div>
+
+					</div></li><li class="listitem"><div class="para">
+						<span class="application"><strong>freedevice</strong></span> <div class="itemizedlist"><ul><li class="listitem"><div class="para">
+									Usage: freedevice &lt;devicename&gt;
+								</div></li><li class="listitem"><div class="para">
+									Descriptions: Marks the device can free so it can be reused.
+								</div></li><li class="listitem"><div class="para">
+									Returns: return code zero on success or error string and return code 1 on failure.
+								</div></li></ul></div>
+
+					</div></li></ul></div>
+
+		</div><div class="para">
+			When running blockdevice test-util, you need to provide testing an environmental variable named BLOCKDB_ARGS, telling the test what partitions/lvms you have intended to be used in test script. The format of $BLOCKDB_ARGS is name,type,size;name,type,size; for each block device. For example suppose you have these partitions in your job:
+		</div><pre class="screen">
+     &lt;partition&gt;
+        &lt;type&gt;part&lt;/type&gt;
+        &lt;name&gt;/mnt/block1&lt;/name&gt;
+        &lt;size&gt;1&lt;/size&gt; &lt;!-- 1 gig --&gt;
+     &lt;/partition&gt;
+    &lt;partition&gt;
+        &lt;type&gt;lvm&lt;/type&gt;
+        &lt;name&gt;mylvm&lt;/name&gt;
+        &lt;size&gt;5&lt;/size&gt;
+     &lt;/partition&gt;
+    &lt;partition&gt;
+        &lt;type&gt;part&lt;/type&gt;
+        &lt;name&gt;/mnt/block4ext4&lt;/name&gt;
+        &lt;size&gt;1&lt;/size&gt; &lt;!-- 1 gig --&gt;
+        &lt;fs&gt;ext4dev&lt;/fs&gt;
+     &lt;/partition&gt;
+    &lt;partition&gt;
+        &lt;type&gt;lvm&lt;/type&gt;
+        &lt;name&gt;mylvm4ext4&lt;/name&gt;
+        &lt;size&gt;5&lt;/size&gt;
+        &lt;fs&gt;ext4dev&lt;/fs&gt;
+     &lt;/partition&gt;</pre><div class="para">
+			as in:
+		</div><pre class="screen">
+&lt;test role='STANDALONE' name='/distribution/utils/blockdevice'&gt;
+    &lt;params&gt;
+     &lt;param name='BLOCKDB_ARGS' value='/mnt/block1:part:1;mylvm:lvm:5;/mnt/block4ext4:part:1:ext4dev;mylvm4ext4:lvm:5:ext4dev'/&gt;
+    &lt;/params&gt;
+&lt;/test&gt;
+</pre><div class="para">
+			If you utilize blockdevices test, you should ensure that: 
+			<div class="itemizedlist"><ul><li class="listitem"><div class="para">
+						blockdevice is called before any of your scripts
+					</div></li><li class="listitem"><div class="para">
+						freedevice must be called after the testing on the space is done.
+					</div></li></ul></div>
+
+		</div><div class="section" id="User_Guide-Getting_Started-Process-Workflow-Virtualization_Workflow-Dynamic_Partitioning-IVM-Dynamic_Partitioning_from_Your_Workflow"><div class="titlepage"><div><div><h6 class="title" id="User_Guide-Getting_Started-Process-Workflow-Virtualization_Workflow-Dynamic_Partitioning-IVM-Dynamic_Partitioning_from_Your_Workflow">3.2.1.3.2.4.1. Dynamic Partitioning from Your Workflow </h6></div></div></div><div class="para">
+				If you are using a different workflow and would like to add dynamic partitioning capability, you can do it by utilizing kickPart() call to the recipe object. The string you have to pass is exactly same format as the BLOCKDB_ARGS argument mentioned above. An example can be :
+			</div><pre class="screen">part_str = "/mnt/block1:part:1;mylvm:lvm:5;/mnt/block4ext4:part:1:ext4dev;mylvm4ext4:lvm:5:ext4dev"
+     rec = Recipe(scheduler=rhts_sched)
+     rec.kickPart(part_str)</pre></div></div><ul class="docnav"><li class="previous"><a accesskey="p" href="User_Guide-Getting_Started-Process-Workflow-Virtualization_Workflow-Other_Uses_of_PARTITIONS_and_LVM_Volumes.html"><strong>Prev</strong>3.2.1.3.2.3. Other Uses of PARTITIONS and LVM Vol...</a></li><li class="up"><a accesskey="u" href="#"><strong>Up</strong></a></li><li class="home"><a accesskey="h" href="index.html"><strong>Home</strong></a></li><li class="next"><a accesskey="n" href="User_Guide-Getting_Started-Process-Workflow-Virtualization_Workflow-Helper_Programs_Installed_with_Virtinstall.html"><strong>Next</strong>3.2.1.3.2.5. Helper Programs Installed with Virti...</a></li></ul></body></html>

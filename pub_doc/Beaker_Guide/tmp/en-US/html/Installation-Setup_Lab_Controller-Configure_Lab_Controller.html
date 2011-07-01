@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>2.2.2. Configure Lab Controller</title><link rel="stylesheet" href="Common_Content/css/default.css" type="text/css" /><link rel="stylesheet" media="print" href="Common_Content/css/print.css" type="text/css" /><meta name="generator" content="publican 2.5" /><meta name="package" content="Beaker-Deployment_Guide-0.5-en-US-1-9" /><link rel="home" href="index.html" title="Deployment Guide" /><link rel="up" href="Installation-Setup_Lab_Controller.html" title="2.2. Setup Lab Controller" /><link rel="prev" href="Installation-Setup_Lab_Controller-Install_Lab_Controller.html" title="2.2.1. Install Lab Controller" /><link rel="next" href="Installation-Beaker_Client.html" title="2.3. Beaker Client" /></head><body><p id="title"><a class="left" href="https://fedorahosted.org/publican"><img src="Common_Content/images/image_left.png" alt="Product Site" /></a><a class="right" href="https://fedorahosted.org/publican"><img src="Common_Content/images/image_right.png" alt="Documentation Site" /></a></p><ul class="docnav"><li class="previous"><a accesskey="p" href="Installation-Setup_Lab_Controller-Install_Lab_Controller.html"><strong>Prev</strong></a></li><li class="next"><a accesskey="n" href="Installation-Beaker_Client.html"><strong>Next</strong></a></li></ul><div class="section" id="Installation-Setup_Lab_Controller-Configure_Lab_Controller"><div class="titlepage"><div><div><h3 class="title" id="Installation-Setup_Lab_Controller-Configure_Lab_Controller">2.2.2. Configure Lab Controller</h3></div></div></div><div class="para">
+				Cobbler is one of the dependencies that is installed with the Lab Controller. You'll need to edit the <span class="emphasis"><em>/etc/cobbler/settings</em></span> file. 
+				<div class="itemizedlist"><ul><li class="listitem"><div class="para">
+							<span class="application"><strong>server</strong></span>: This needs to be set to the Lab Controllers Fully qualified domain name.
+						</div></li><li class="listitem"><div class="para">
+							<span class="application"><strong>next_server</strong></span>: If you use cobbler as your dhcp server this needs to be the ip address of the Lab Controller.
+						</div></li><li class="listitem"><div class="para">
+							<span class="application"><strong>pxe_just_once</strong></span>: 1
+						</div></li><li class="listitem"><div class="para">
+							<span class="application"><strong>anamon_enabled</strong></span>: 1
+						</div></li></ul></div>
+
+			</div><div class="para">
+				You will need to enable an auth method in /etc/cobbler/modules.conf 
+				<div class="itemizedlist"><ul><li class="listitem"><div class="para">
+							Change module = auth_denyall to module = authn_testing
+						</div></li><li class="listitem"><div class="para">
+							authn_testing gives a login of testing password testing
+						</div></li><li class="listitem"><div class="para">
+							If you create proper accounts, make sure they match what you entered in <a href="http://BeakerServer/labcontrollers/new">http://BeakerServer/labcontrollers/new</a>
+						</div></li></ul></div>
+
+			</div><div class="para">
+				If you are using SELinux, do the following. 
+<pre class="screen">
+    $ sudo setsebool -P httpd_can_network_connect true
+    $ sudo semanage fcontext -a -t public_content_t "/var/lib/tftpboot/.*"
+    $ sudo semanage fcontext -a -t public_content_t "/var/www/cobbler/images/.*"
+</pre>
+
+			</div><div class="para">
+				Turn on http 
+<pre class="screen">
+    $ sudo chkconfig httpd on
+    $ sudo service httpd start
+</pre>
+
+			</div><div class="para">
+				Turn on tftp 
+<pre class="screen">
+    $ sudo chkconfig xinetd on
+    $ sudo chkconfig tftp on
+    $ sudo service xinetd start
+</pre>
+
+			</div><div class="para">
+				Turn on cobbler 
+<pre class="screen">
+    $ sudo chkconfig cobblerd on
+    $ sudo service cobblerd start
+</pre>
+
+			</div><div class="para">
+				Enable and turn on beaker watchdog proxy 
+<pre class="screen">
+    $ sudo chkconfig beaker-watchdog on
+    $ sudo chkconfig beaker-proxy on
+    $ sudo service beaker-watchdog start
+    $ sudo service beaker-proxy start
+</pre>
+
+			</div><div class="para">
+				Cobbler should now be running.
+			</div><div class="para">
+				You'll need to import some distros. You can use the following command (whilst replacing the variables). 
+<pre class="screen">$ cobbler import --path=/net/${NFSSERVER}/${NFSPATH} \ --name=$DISTRONAME \ --available-as=nfs://${NFSSERVER}:/${NFSPATH}</pre>
+
+			</div><div class="para">
+				Beaker/Server needs a little more info than cobbler normally stores about a distro in order to use it. Thats why beaker-lab-controller provides a script in /var/lib/cobbler/triggers/sync/post/osversion.trigger which needs to be run after you import a new distro. It looks up the distros full family.update and looks for any yum repos that may be in the distro path. It also adds the cobbler distros into the Beaker server. 
+<pre class="screen">
+  $ /var/lib/cobbler/triggers/sync/post/osversion.trigger
+</pre>
+
+			</div><div class="para">
+				Check that the Disto was added succesfully by going to <a href="https://BeakerServer.example.com/bkr/distros">https://BeakerServer.example.com/bkr/distros</a>.You'll need to configure the /etc/beaker/proxy.conf file with the following settings. 
+<pre class="screen">
+  # Hub xml-rpc address.
+  HUB_URL = "https://BeakerServer.example.com/bkr"
+  #HUB_URL = "http://localhost:8080"
+  
+  # Hub authentication method. Example: krbv, password, worker_key
+  AUTH_METHOD = "password"
+  #AUTH_METHOD = "krbv"
+  
+  # Username and password
+  USERNAME = "host/lab.example.com"  # This needs to match the account your created on the Beaker Scheduler
+  PASSWORD = "testing"  # Again, only if you are not using kerberos does this need to be set.
+  
+  # Kerberos service prefix. Example: host, HTTP
+  KRB_SERVICE = "HTTP"
+  
+  # Kerberos realm. If commented, last two parts of domain name are used. Example: MYDOMAIN.COM.
+  KRB_REALM = "EXAMPLE.COM"
+</pre>
+
+			</div></div><ul class="docnav"><li class="previous"><a accesskey="p" href="Installation-Setup_Lab_Controller-Install_Lab_Controller.html"><strong>Prev</strong>2.2.1. Install Lab Controller </a></li><li class="up"><a accesskey="u" href="#"><strong>Up</strong></a></li><li class="home"><a accesskey="h" href="index.html"><strong>Home</strong></a></li><li class="next"><a accesskey="n" href="Installation-Beaker_Client.html"><strong>Next</strong>2.3. Beaker Client</a></li></ul></body></html>

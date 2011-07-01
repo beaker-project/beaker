@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>4.8. System Requirements</title><link rel="stylesheet" href="Common_Content/css/default.css" type="text/css" /><link rel="stylesheet" media="print" href="Common_Content/css/print.css" type="text/css" /><meta name="generator" content="publican 2.5" /><meta name="package" content="Beaker-Deployment_Guide-0.5-en-US-1-9" /><link rel="home" href="index.html" title="Deployment Guide" /><link rel="up" href="Administration.html" title="Chapter 4. Administration Guide" /><link rel="prev" href="Administration-Server_And_Target_Host_Relationship.html" title="4.7. Server And Target Host Relationship" /></head><body><p id="title"><a class="left" href="https://fedorahosted.org/publican"><img src="Common_Content/images/image_left.png" alt="Product Site" /></a><a class="right" href="https://fedorahosted.org/publican"><img src="Common_Content/images/image_right.png" alt="Documentation Site" /></a></p><ul class="docnav"><li class="previous"><a accesskey="p" href="Administration-Server_And_Target_Host_Relationship.html"><strong>Prev</strong></a></li><li class="next"></li></ul><div class="section" id="Administration-System_Requirements"><div class="titlepage"><div><div><h2 class="title" id="Administration-System_Requirements">4.8. System Requirements</h2></div></div></div><div class="para">
+			There are separate system requirements for the Beaker server and target hosts. Due to the large number of test files that users can store in the database, Beaker requires a multiple terabyte disk storage system.
+		</div><div class="para">
+			Your Beaker server should have: 
+			<div class="itemizedlist"><ul><li class="listitem"><div class="para">
+						Red Hat Enterprise Linux 5 or latest Fedora operating system.
+					</div></li><li class="listitem"><div class="para">
+						200 or more gigabytes hard disk space.
+					</div></li><li class="listitem"><div class="para">
+						4 or more gigabytes of RAM.
+					</div></li><li class="listitem"><div class="para">
+						4 or more CPUS running at 2.5Ghz or higher.
+					</div></li><li class="listitem"><div class="para">
+						2 or more terabytes tree storage requirement.
+					</div></li></ul></div>
+
+		</div><div class="note"><div class="admonition_header"><h2>Note</h2></div><div class="admonition"><div class="para">
+				If your site already has an existing repository of Red Hat install trees, you do not have to meet the tree storage requirement above.
+			</div></div></div><div class="para">
+			Your target hosts are required to have: 
+			<div class="itemizedlist"><ul><li class="listitem"><div class="para">
+						Network connectivity to a system running a DHCP server.
+					</div></li><li class="listitem"><div class="para">
+						Network booting capability (like PXE or Netboot).
+					</div></li><li class="listitem"><div class="para">
+						Serial console logging support using a Target Host's management adapter or a terminal server such as the Avocent ACS series.
+					</div></li><li class="listitem"><div class="para">
+						KVM support.
+					</div></li></ul></div>
+
+		</div><div class="para">
+			Your target hosts to need include a power controller. Here are some the most common compatible controllers that are available: 
+			<div class="itemizedlist"><ul><li class="listitem"><div class="para">
+						HP iLO
+					</div></li><li class="listitem"><div class="para">
+						Dell DRAC
+					</div></li><li class="listitem"><div class="para">
+						WTI Boot bars
+					</div></li><li class="listitem"><div class="para">
+						IPMI 1.5 (or higher)
+					</div></li><li class="listitem"><div class="para">
+						APC
+					</div></li></ul></div>
+
+		</div><div class="para">
+			You may mix and match any of these controllers on the target hosts, but you must include at least one of per machine. Beaker supports the cman package's fence component. Beaker supports any device that you control from the Red Hat Enterprise Linux 5 command line.
+		</div></div><ul class="docnav"><li class="previous"><a accesskey="p" href="Administration-Server_And_Target_Host_Relationship.html"><strong>Prev</strong>4.7. Server And Target Host Relationship</a></li><li class="up"><a accesskey="u" href="#"><strong>Up</strong></a></li><li class="home"><a accesskey="h" href="index.html"><strong>Home</strong></a></li></ul></body></html>

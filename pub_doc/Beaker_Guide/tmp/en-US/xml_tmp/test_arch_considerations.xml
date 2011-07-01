@@ -1,0 +1,95 @@
+﻿<?xml version='1.0'?>
+<!DOCTYPE section PUBLIC "-//OASIS//DTD DocBook XML V4.5//EN" "http://www.oasis-open.org/docbook/xml/4.5/docbookx.dtd" [
+]>
+
+                    <section id="User_Guide-Getting_Started-Process-Tests-Test_Architecture_Considerations">
+                      <title>Test Architecture Considerations</title>
+                      <para>If you want your test to be smart, that intelligence must be in the test; the Beaker API can help. A test running in an automated environment does not have intelligence, hunches, or the ability to notice unusual activity. This intelligence must be programmed into the test. Naturally the return on investment for time required to add this intelligence should be considered, however the more intelligence a test has to handle false failures and false passes, the more valuable the automation is to the entity running it. Contrasted with manual testing where tests are run on a local workstation and suspicious results can be investigated easily, many organizations find that well written tests which can be trusted save time that can be used for any number of other activities. 
+                        </para>
+                        <para><application>Questions to consider</application>
+                          <itemizedlist>
+                            <listitem>
+                              <para>What is needed for a test run to return PASS? 
+                              </para>
+                            </listitem>
+                            <listitem>
+                              <para>What is needed for a test run to return FAIL? 
+                              </para>
+                            </listitem>
+                            <listitem>
+                              <para>How will PASS and FAIL conditions be determined pragmatically? 
+                              </para>
+                            </listitem>
+                            <listitem>
+                              <para>If it is not possible for a test to ever FAIL, does it make sense to automate it? 
+                              </para>
+                            </listitem>
+                          </itemizedlist>
+                        </para>
+                        <para><application>Things to Keep in Mind</application>
+                          <itemizedlist>
+                            <listitem>
+                              <para>Assume that nothing works: 
+                              <itemizedlist>
+                            <listitem>
+                              <para>The test could be running in an unstable test environment. 
+                              </para>
+                            </listitem>
+                            <listitem>
+                              <para>The package under test might be broken. 
+                              </para>
+                            </listitem>
+                            <listitem>
+                              <para>An apparently-unrelated component might cause your test to fail in an unexpected way. 
+                              </para>
+                            </listitem>
+                            <listitem>
+                              <para>The system might not be configured in the manner in which you expect. 
+                              </para>
+                            </listitem>
+                            <listitem>
+                              <para>The test may be buggy, reporting false positives or false negatives. 
+                              </para>
+                            </listitem>
+                          </itemizedlist>
+                              </para>
+                            </listitem>
+                            <listitem>
+                              <para>Identifying potential problem sections in a test can save someone, possibly you, hours of debugging time.
+                              </para>
+                            </listitem>
+                          </itemizedlist>
+                        </para>
+                        <para><application>Writing Good Test Code</application>
+                          <itemizedlist>
+                            <listitem>
+                              <para>Check everything: all exit statuses, return values from function calls, etc. Unfortunately there are plenty of programs which return success codes even when a failure occurs. 
+                              </para>
+                            </listitem>
+                            <listitem>
+                              <para>Capture all debug output that might indicate an error; it may give clues as to what is going wrong when a test fails. 
+                              </para>
+                            </listitem>
+                            <listitem>
+                              <para>Comment your tests; good comments should describe the intent of what you are doing, along with caveats being followed, rather than simply parroting the code back as pseudo code. 
+                              </para>
+                            </listitem>
+                            <listitem>
+                              <para>In most (ideally all) situations a test should report true PASS and FAIL results, but test code is still code, and will invariably contain bugs. 
+                              </para>
+                            </listitem>
+                            <listitem>
+                              <para>Program defensively so that errors in test code report false FAIL results rather than false PASSes. For example, initialize a result variable to FAIL and only set it to PASS if no errors are detected. 
+                              </para>
+                            </listitem>
+                            <listitem>
+                              <para>Do not initialize a variable to PASS which fails only on a specific error &amp; mdash;what if you missed another error? What if the shell function you called failed to execute? 
+                              </para>
+                            </listitem>
+                            <listitem>
+                              <para>It is easier to investigate and fix a failed test than a test that always passes (which it should not be). 
+                              </para>
+                            </listitem>
+                          </itemizedlist>
+                        </para>
+                    </section>
