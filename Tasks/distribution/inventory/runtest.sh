@@ -29,8 +29,8 @@ fi
 
 rlJournalStart
     rlPhaseStartSetup
-        rlRun "modprobe kvm" 
-        # Its ok for the vendor specific  modprobes to fail..
+        # kvm modules not available on all architectures
+        rlRun "modprobe kvm" 0,1
 	rlRun "modprobe kvm_amd" 0,1
 	rlRun "modprobe kvm_intel" 0,1
 	rlRun "yum -y install smolt"
