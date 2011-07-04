@@ -80,6 +80,7 @@ def create_labcontroller(fqdn=None, user=None):
         if e.args[0] == 'No rows returned for one()':
             if user is None:
                 user = create_user()
+                user.groups.append(Group.by_name(u'lab_controller'))
                 session.flush()
             lc = LabController.lazy_create(fqdn=fqdn, user=user)
             return lc

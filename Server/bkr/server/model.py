@@ -414,6 +414,7 @@ lab_controller_table = Table('lab_controller', metadata,
     Column('removed', DateTime, nullable=True, default=None),
     Column('user_id', Integer,
            ForeignKey('tg_user.user_id'), nullable=False),
+    Column('primary_mirror', Boolean, nullable=False, default=False),
     mysql_engine='InnoDB',
 )
 
