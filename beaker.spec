@@ -202,6 +202,7 @@ fi
 
 %files
 %defattr(-,root,root,-)
+%config(noreplace) %{_sysconfdir}/beaker/message_bus.conf
 %{python_sitelib}/bkr/__init__.py*
 %{python_sitelib}/bkr/timeout_xmlrpclib.py*
 %{python_sitelib}/bkr/common/
@@ -255,7 +256,7 @@ fi
 
 %files lab-controller
 %defattr(-,root,root,-)
-%config(noreplace) %{_sysconfdir}/beaker/proxy.conf
+%config(noreplace) %{_sysconfdir}/beaker/labcontroller.conf
 %{python_sitelib}/bkr/labcontroller/
 %{python_sitelib}/bkr.labcontroller-%{version}-*
 %{python_sitelib}/bkr.labcontroller-%{version}-py%{pyver}.egg-info/

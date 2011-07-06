@@ -1,0 +1,100 @@
+proxy.conf -> labcontroller.conf
+--------------------------------
+In this release we have changed /etc/beaker/proxy.conf to /etc/beaker/labcontroller.conf, please
+ensure that your up to date config options are in this file.
+
+
+Using qpid
+----------
+
+# Enabling QPID in beaker configurations.
+
+0.7 introduces the ability to use message bus within beaker.
+
+To turn it on in the lab controller add the following to /etc/beaker/labcontroller.conf
+
+    QPID_BUS=True
+    QPID_LISTEN_TO = ['beaker.watchdog']
+
+To turn on the qpid service in beaker server add the following to /etc/beaker/server.cfg
+
+    beaker.qpid_enabled=True
+    beaker.qpid_listen_to=['beaker.service_queue', 'beaker.expired_watchdogs']
+
+Both of these values are in the same vein as those on the watchdog.
+
+If using kerberos authentication to the qpid broker you will also need the
+following set the valid values.
+
+    identity.krb_auth_qpid_principal='beaker-server/example.com@DOMAIN.COM'
+    identity.krb_auth_qpid_keytab='/etc/beaker/beaker-server.keytab'
+
+    identity.krb_auth_beakerd_principal='beakerd/example.com@DOMAIN.COM'
+    identity.krb_auth_beakerd_keytab='/etc/beaker/beakerd.keytab'
+
+    identity.krb_auth_server_principal='beaker-server/example.com@DOMAIN.COM'
+    identity.krb_auth_server_keytab='/etc/beaker/beaker-server.keytab'
+
+
+
+To turn on qpid service in the beaker client, put the following var in the client config,
+with valid values for the QPID_ variables.
+
+    QPID_BUS = True
+    QPID_BROKER="localhost.localdomain"
+    QPID_HEADERS_EXCHANGE="amqp.headers"
+    QPID_TOPIC_EXCHANGE="amqp.topic"
+    QPID_SERVICE_QUEUE='tmp.beaker-service-queue'
+
+
+#Configuring QPID broker options
+
+To use QPID with beaker you will also need to independently install and
+configure a qpid broker (or already have one).
+
+Both the lab controller and the server have an /etc/beaker/message_bus.conf
+file which will hold information beaker needs to connect to the qpid broker.
+Here is an example configuration:-
+
+    [global]
+    topic_exchange=amqp.topic
+    headers_exchange=amqp.headers
+    service_queue=tmp.beaker-service-queue
+    broker=localhost.localdomain
+    krb_auth=True
+
+If using QPID from your beaker client you will need something similar to
+this in your config file.
+
+    QPID_BROKER="localhost.localdomain"
+    QPID_HEADERS_EXCHANGE="amqp.headers"
+    QPID_TOPIC_EXCHANGE="amqp.topic"
+    QPID_SERVICE_QUEUE='tmp.beaker-service-queue'
+
+For further help in configuring beaker for QPID, please see the Beaker
+documentation in https://fedorahosted.org/beaker/
+
+
+
+Rollback
+--------
+
+To rollback to a yum downgrade and ensure that the the labcontrollers config in /etc/beaker/proxy.conf
+is up to date.
+
+Ensure that the following are removed from the /etc/beaker/server.cfg in beaker-server
+
+    beaker.qpid_enabled=True
+    beaker.qpid_listen_to=['beaker.service_queue', 'beaker.expired_watchdogs']
+
+    identity.krb_auth_qpid_principal='beaker-server/example.com@DOMAIN.COM'
+    identity.krb_auth_qpid_keytab='/etc/beaker/beaker-server.keytab'
+
+    identity.krb_auth_beakerd_principal='beakerd/example.com@DOMAIN.COM'
+    identity.krb_auth_beakerd_keytab='/etc/beaker/beakerd.keytab'
+
+    identity.krb_auth_server_principal='beaker-server/example.com@DOMAIN.COM'
+    identity.krb_auth_server_keytab='/etc/beaker/beaker-server.keytab'
+
+
+

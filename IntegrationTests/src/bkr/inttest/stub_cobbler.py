@@ -76,6 +76,7 @@ class StubCobbler(object):
         if fqdn not in self.systems:
             # pretend we had it all along
             self.systems[fqdn] = {}
+        self.current_system = fqdn
         return 'StubCobblerSystem:%s' % fqdn
 
     def get_profile_handle(self, name, token):
@@ -230,13 +231,16 @@ class NicerXMLRPCServer(SimpleXMLRPCServer):
 
 class StubCobblerThread(threading.Thread):
 
-    def __init__(self):
+    def __init__(self, cobbler=None, addr='localhost'):
         super(StubCobblerThread, self).__init__()
         self.daemon = True
-        self.cobbler = StubCobbler()
+        if cobbler is None:
+            self.cobbler = StubCobbler()
+        else:
+            self.cobbler = cobbler
         self._running = True
         self.port = 9010
-        self.server = NicerXMLRPCServer(('localhost', self.port))
+        self.server = NicerXMLRPCServer((addr, self.port))
         self.server.register_introspection_functions()
         self.server.register_instance(self.cobbler)
 

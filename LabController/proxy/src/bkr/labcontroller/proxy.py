@@ -16,10 +16,11 @@ from cStringIO import StringIO
 from socket import gethostname
 
 import kobo.conf
-from kobo.client import HubProxy
+from kobo.client import HubProxy 
 from kobo.exceptions import ShutdownException
 from kobo.xmlrpc import retry_request_decorator, CookieTransport, \
         SafeCookieTransport
+from bkr.labcontroller.config import get_conf
 from kobo.process import kill_process_group
 from bkr.log import add_rotating_file_logger
 from bkr.upload import Uploader
@@ -30,17 +31,13 @@ try:
 except ImportError:
     from md5 import new as md5_constructor
 
-VERBOSE_LOG_FORMAT = "%(asctime)s [%(levelname)-8s] {%(process)5d} %(name)s.%(module)s:%(lineno)4d %(message)s"
+
 
 class ProxyHelper(object):
 
 
     def __init__(self, logger=None, conf=None, **kwargs):
-        self.conf = kobo.conf.PyConfigParser()
-
-        # load default config
-        default_config = os.path.abspath(os.path.join(os.path.dirname(__file__), "default.conf"))
-        self.conf.load_from_file(default_config)
+        self.conf = get_conf()
 
         # update data from another config
         if conf is not None:
@@ -58,13 +55,14 @@ class ProxyHelper(object):
             self.logger = logger
         else:
             self.logger = logging.getLogger("Proxy")
-            self.logger.setLevel(logging.DEBUG)
-            log_level = logging._levelNames.get(self.conf["LOG_LEVEL"].upper())
+            log_level_string = self.conf["LOG_LEVEL"]
+            log_level = getattr(logging, log_level_string.upper(), logging.DEBUG)
+            self.logger.setLevel(log_level)
             log_file = self.conf["LOG_FILE"]
-            add_rotating_file_logger(self.logger, 
-                                     log_file, 
-                                     log_level=log_level,
-                                     format=VERBOSE_LOG_FORMAT)
+            add_rotating_file_logger(self.logger,
+                             log_file,
+                             log_level=log_level,
+                             format=self.conf["VERBOSE_LOG_FORMAT"])
 
         # self.hub is created here
         if self.conf['HUB_URL'].startswith('https://'):
@@ -371,39 +369,43 @@ class Watchdog(ProxyHelper):
         my_cmd = 'rsync %s %s %s' % (self.conf.get('RSYNC_FLAGS',''), src, dst)
         return utils.subprocess_call(self.logger,my_cmd,shell=True)
 
-    def expire_watchdogs(self):
+    def purge_old_watchdog(self, watchdog_systems):
+        try:
+            del self.watchdogs[watchdog_systems]
+        except KeyError, e:
+            self.logger.error('Trying to remove a watchdog that is already removed')
+
+    def expire_watchdogs(self, watchdogs):
         """Clear out expired watchdog entries"""
 
         self.logger.info("Entering expire_watchdogs")
-        for watchdog in self.hub.recipes.tasks.watchdogs('expired'):
+        for watchdog in watchdogs:
             try:
                 self.abort(watchdog)
             except xmlrpclib.Fault:
                 # Catch xmlrpc.Fault's here so we keep iterating the loop
                 self.logger.exception('Failed to abort expired watchdog')
 
-    def active_watchdogs(self):
+    def active_watchdogs(self, watchdogs, purge=True):
         """Monitor active watchdog entries"""
 
         self.logger.info("Entering active_watchdogs")
         active_watchdogs = []
-        for watchdog in self.hub.recipes.tasks.watchdogs('active'):
+        for watchdog in watchdogs:
             watchdog_key = '%s:%s' % (watchdog['system'], watchdog['recipe_id'])
             active_watchdogs.append(watchdog_key)
             if watchdog_key not in self.watchdogs:
                 self.watchdogs[watchdog_key] = Monitor(watchdog, self)
         # Remove Monitor if watchdog does not exist.
-        for watchdog_system in self.watchdogs.copy():
-            if watchdog_system not in active_watchdogs:
-                del self.watchdogs[watchdog_system]
-                self.logger.info("Removed Monitor for %s" % watchdog_system)
+        if purge is True:
+            for watchdog_system in self.watchdogs.copy():
+                if watchdog_system not in active_watchdogs:
+                    self.purge_old_watchdog(watchdog_system)
+                    self.logger.info("Removed Monitor for %s" % watchdog_system)
 
     def run(self):
-        updated = False
-        for monitor in self.watchdogs:
-            if self.watchdogs[monitor].run():
-                updated = True
-        return updated
+        updated = [1 for monitor in self.watchdogs.values() if monitor.run()]
+        return bool(updated)
 
     def sleep(self):
         # Sleep between polling

@@ -59,6 +59,7 @@ See also
 
 
 from bkr.client import BeakerCommand
+from bkr.client.message_bus import ClientBeakerBus
 from optparse import OptionValueError
 from bkr.client.task_watcher import *
 
@@ -75,12 +76,34 @@ class Job_Watch(BeakerCommand):
             help="Don't wait on job completion",
         )
 
+        self.parser.add_option(
+            "-v",
+            action='count',
+            dest='verbosity',
+            help="the number of verbose indicates to how many subtasks down it will listen \
+                  Ignored if not using message bus. Must be lower than task watching.\
+                  Undetermined behaviour when listening on multiple tasks",
+        )
+
 
     def run(self, *args, **kwargs):
         username = kwargs.pop("username", None)
         password = kwargs.pop("password", None)
         nowait   = kwargs.pop("nowait", None)
+        if not args:
+            self.parser.error('Please specify one or more tasks')
 
-        self.set_hub(username, password)
-        if not nowait:
-            TaskWatcher.watch_tasks(self.hub, args)
+        if self.conf.get('QPID_BUS') is True:
+            if self.conf.get('AUTH_METHOD') != 'krbv':
+                self.parser.error('Please set AUTH_METHOD to \'krbv\' when using message bus')
+            listendepth = kwargs.get('verbosity') or 0
+            task_args = list(args)
+            task_type = [task.split(':')[0] for task in task_args]
+            failed = [t for t in task_type if t not in TaskBus.task_depth_order]
+            if len(failed) > 0:
+                self.parser.error('%s are not valid task types' % ','.join(failed))
+            watch_bus_tasks(int(listendepth), task_args)
+        else:
+            self.set_hub(username, password)
+            if not nowait:
+                watch_tasks(self.hub, args)
