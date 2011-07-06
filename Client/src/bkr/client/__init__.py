@@ -1,11 +1,28 @@
 # -*- coding: utf-8 -*-
 
-import os
 import xml.dom.minidom
-import sys
-import re
+import re, errno, sys, os
 from kobo.client import ClientCommand
+import kobo.conf
 
+config_file = os.environ.get("BEAKER_CLIENT_CONF", None)
+if not config_file:
+    user_conf = os.path.expanduser('~/.beaker_client/config')
+    old_conf = os.path.expanduser('~/.beaker')
+    if os.path.exists(user_conf):
+        config_file = user_conf
+    elif os.path.exists(old_conf):
+        config_file = old_conf
+        sys.stderr.write("%s is deprecated for config, please use %s instead\n" % (old_conf, user_conf))
+    elif os.path.exists('/etc/beaker/client.conf'):
+        config_file = "/etc/beaker/client.conf"
+        sys.stderr.write("%s not found, using %s\n" % (user_conf, config_file))
+    else:
+        pass
+
+conf = kobo.conf.PyConfigParser()
+if config_file:
+    conf.load_from_file(config_file)
 
 class BeakerCommand(ClientCommand):
     enabled = False

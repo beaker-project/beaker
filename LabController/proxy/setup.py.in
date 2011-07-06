@@ -8,7 +8,7 @@ setup(
 
     namespace_packages = ['bkr'],
 
-    data_files = [('/etc/beaker/', ['proxy.conf']),
+    data_files = [('/etc/beaker/', ['labcontroller.conf']),
                   ('/etc/init.d', ['init.d/beaker-proxy',
                                    'init.d/beaker-transfer',
                                    'init.d/beaker-watchdog'])],
@@ -16,7 +16,7 @@ setup(
         'bkr.labcontroller': [
             'default.conf',
         ],
-        '/etc/beaker': ['proxy.conf'],
+        '/etc/beaker': ['labcontroller.conf'],
         '/etc/init.d': ['init.d/beaker-proxy',
                         'init.d/beaker-transfer',
                         'init.d/beaker-watchdog'],

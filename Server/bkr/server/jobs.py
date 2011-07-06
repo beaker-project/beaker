@@ -223,7 +223,7 @@ class Jobs(RPCRoot):
         job = self.process_xmljob(xmljob,identity.current.user,
                 ignore_missing_tasks=ignore_missing_tasks)
         session.flush() # so that we get an id
-        return "j:%s" % job.id
+        return "J:%s" % job.id
 
     @identity.require(identity.not_anonymous())
     @expose(template="bkr.server.templates.form-post")

@@ -21,6 +21,7 @@ from turbogears import expose
 from bkr.server.model import *
 from bkr.server.bexceptions import BX
 from bkr.server.xmlrpccontroller import RPCRoot
+from bkr.server.helpers import sanitize_amqp
 import cherrypy
 
 __all__ = ['TaskActions']
@@ -38,9 +39,9 @@ class TaskActions(RPCRoot):
 
     stoppable_task_types = dict([(rep, obj) for rep,obj in task_types.iteritems() if obj not in unstoppable_task_types])
 
-
     @cherrypy.expose
-    def task_info(self, taskid, flat=True):
+    @sanitize_amqp
+    def task_info(self, taskid,flat=True):
         """
         Returns an XML-RPC structure (dict) describing the current state of the 
         given job component.
@@ -48,13 +49,7 @@ class TaskActions(RPCRoot):
         :param taskid: see above
         :type taskid: string
         """
-        task_type, task_id = taskid.split(":")
-        if task_type.upper() in self.task_types.keys():
-            try:
-                task = self.task_types[task_type.upper()].by_id(task_id)
-            except InvalidRequestError, e:
-                raise BX(_("Invalid %s %s" % (task_type, task_id)))
-        return task.task_info()
+        return TaskBase.get_by_t_id(taskid).task_info()
 
     @cherrypy.expose
     def to_xml(self, taskid,clone=False,from_job=True):

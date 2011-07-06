@@ -27,6 +27,8 @@ pkg_resources.require("SQLAlchemy>=0.3.10")
 from bkr.server.bexceptions import BX, CobblerTaskFailedException
 from bkr.server.model import *
 from bkr.server.util import load_config, log_traceback
+from bkr.server.recipetasks import RecipeTasks
+from bkr.server.message_bus import ServerBeakerBus
 from turbogears.database import session
 from turbogears import config
 from turbomail.control import interface
@@ -394,6 +396,13 @@ def queued_recipes(*args):
                     # Create the watchdog without an Expire time.
                     log.debug("Created watchdog for recipe id: %s and system: %s" % (recipe.id, system))
                     recipe.watchdog = Watchdog(system=recipe.system)
+                    # If we start ok, we need to send event active watchdog event
+                    if config.get('beaker.qpid_enabled'):
+                        bb = ServerBeakerBus()
+                        bb.send_action('watchdog_notify', 'active',
+                            [{'recipe_id' : recipe.id, 
+                            'system' : recipe.watchdog.system.fqdn}], 
+                            recipe.watchdog.system.lab_controller.fqdn)
                     log.info("recipe ID %s moved from Queued to Scheduled" % recipe.id)
             session.commit()
         except exceptions.Exception:
@@ -467,7 +476,7 @@ def scheduled_recipes(*args):
                     recipe.tasks[0].start()
                 except exceptions.Exception, e:
                     log.error("Failed to Start recipe %s, due to %s" % (recipe.id,e))
-                    recipe.recipeset.abort(u"Failed to provision recipeid %s, %s" % 
+                    recipe.recipeset.abort(u"Failed to provision recipeid %s, %s" %
                                                                              (
                                                                          recipe.id,
                                                                             e))
@@ -650,6 +659,9 @@ def main_loop():
 
 def schedule():
     bkr.server.scheduler._start_scheduler()
+    if config.get('beaker.qpid_enabled') is True: 
+       bb = ServerBeakerBus()
+       bb.run()
     log.debug("starting new recipes Thread")
     # Create new_recipes Thread
     add_onetime_task(action=new_recipes_loop,
@@ -747,6 +759,9 @@ def main():
     load_config(opts.configfile)
 
     interface.start(config)
+
+    config.update({'identity.krb_auth_qpid_principal' : config.get('identity.krb_auth_beakerd_principal') })
+    config.update({'identity.krb_auth_qpid_keytab' : config.get('identity.krb_auth_beakerd_keytab') } )
 
     pid_file = opts.pid_file
     if pid_file is None:

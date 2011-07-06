@@ -6,5 +6,6 @@ setup(
 
     packages=find_packages('.'),
     package_dir = {'':'.'},
-    package_data={'': ['schema/*.rng', 'schema/*.ttl']},
-)
+    data_files = [('/etc/beaker/', ['message_bus.conf'])],
+    package_data={'bkr.common': ['schema/*.rng', 'schema/*.ttl']},
+    )
