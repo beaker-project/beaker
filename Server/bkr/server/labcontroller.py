@@ -209,7 +209,8 @@ class LabControllers(RPCRoot):
         distro.arch = arch
         if arch not in distro.osversion.arches:
             distro.osversion.arches.append(arch)
-        distro.virt = False
+        # XXX temporary hotfix
+        distro.virt = '-xen-' in new_distro['name']
         distro.date_created = datetime.fromtimestamp(float(new_distro['tree_build_time']))
         if distro not in lab_controller.distros:
             lcd = LabControllerDistro()
