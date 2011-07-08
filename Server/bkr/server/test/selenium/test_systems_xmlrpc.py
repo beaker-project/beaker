@@ -259,7 +259,7 @@ class SystemPowerXmlRpcTest(XmlRpcTestCase):
         self.assertEqual(
                 System.by_fqdn(system.fqdn, user).command_queue[0].action,
                 action)
-        beakerd.command_queue()
+        beakerd.queued_commands()
         self.assertEqual(self.stub_cobbler_thread.cobbler.systems[system.fqdn],
                 {'power_type': 'drac',
                  'power_address': 'nowhere.example.com',
@@ -291,7 +291,7 @@ class SystemPowerXmlRpcTest(XmlRpcTestCase):
         self.assertEqual(
                 System.by_fqdn(system.fqdn, user).command_queue[0].action,
                 'on')
-        beakerd.command_queue()
+        beakerd.queued_commands()
 
     def test_clear_netboot(self):
         user = data_setup.create_user(password=u'password')
@@ -305,7 +305,7 @@ class SystemPowerXmlRpcTest(XmlRpcTestCase):
         self.assertEqual(
                 System.by_fqdn(system.fqdn, user).command_queue[0].action,
                 'reboot')
-        beakerd.command_queue()
+        beakerd.queued_commands()
         self.assertEqual(
                 self.stub_cobbler_thread.cobbler.systems[system.fqdn]['netboot-enabled'],
                 False)
@@ -388,7 +388,7 @@ class SystemProvisionXmlRpcTest(XmlRpcTestCase):
                 'noapic',
                 'noapic runlevel=3',
                 kickstart)
-        beakerd.command_queue()
+        beakerd.queued_commands()
         self.assertEqual(self.stub_cobbler_thread.cobbler.systems[system.fqdn],
                 {'power_type': 'drac',
                  'power_address': 'nowhere.example.com',

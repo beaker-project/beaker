@@ -508,59 +508,80 @@ def scheduled_recipes(*args):
 
 
 COMMAND_TIMEOUT = 300
-def command_queue(*args):
-    running_commands = CommandActivity.query()\
-                                      .filter(CommandActivity.status==CommandStatus.by_name(u'Running'))\
-                                      .order_by(CommandActivity.updated.asc()).values(CommandActivity.id)
-    for cmd_id, in running_commands:
+def running_commands(*args):
+    commands = CommandActivity.query()\
+                              .filter(CommandActivity.status==CommandStatus.by_name(u'Running'))\
+                              .order_by(CommandActivity.updated.asc())
+    if not commands.count():
+        return False
+    log.debug('Entering running_commands routine')
+    for cmd_id, in commands.values(CommandActivity.id):
         session.begin()
         cmd = CommandActivity.query().get(cmd_id)
         try:
             for line in cmd.system.remote.get_event_log(cmd.task_id).split('\n'):
                 if line.find("### TASK COMPLETE ###") != -1:
+                    log.info('Power %s command (%d) completed on machine: %s' %
+                             (cmd.action, cmd.id, cmd.system))
                     cmd.status = CommandStatus.by_name(u'Completed')
                     break
                 if line.find("### TASK FAILED ###") != -1:
-                    log.error('Cobbler power task failed for machine: %s' % (cmd.system))
+                    log.error('Cobbler power task %s (command %d) failed for machine: %s' %
+                              (cmd.task_id, cmd.id, cmd.system))
                     cmd.status = CommandStatus.by_name(u'Failed')
                     cmd.system.mark_broken(reason='Cobbler power task failed')
                     break
             if (cmd.status == CommandStatus.by_name(u'Running')) and \
                (datetime.utcnow() >= cmd.updated + timedelta(seconds=COMMAND_TIMEOUT)):
                     cmd.status = CommandStatus.by_name(u'Aborted')
-                    log.error('Cobbler power task timed out on machine: %s' % (cmd.system))
+                    log.error('Cobbler power task %s (command %d) timed out on machine: %s' %
+                              (cmd.task_id, cmd.id, cmd.system))
         except Exception, msg:
             cmd.status = CommandStatus.by_name(u'Failed')
             cmd.new_value = unicode(msg)
-            log.error('Cobbler power exception for machine %s: %s' % (cmd.system, msg))
+            log.error('Cobbler power exception processing command %d for machine %s: %s' %
+                      (cmd.id, cmd.system, msg))
         session.commit()
         session.close()
+    log.debug('Exiting running_commands routine')
+    return True
 
-    queued_commands = CommandActivity.query()\
-                                     .filter(CommandActivity.status==CommandStatus.by_name(u'Queued'))\
-                                     .order_by(CommandActivity.created.asc())
-    for command in queued_commands:
+def queued_commands(*args):
+    commands = CommandActivity.query()\
+                              .filter(CommandActivity.status==CommandStatus.by_name(u'Queued'))\
+                              .order_by(CommandActivity.created.asc())
+    if not commands.count():
+        return False
+    log.debug('Entering queued_commands routine')
+    for command in commands:
         # Skip queued commands if something is already running on that system
         if CommandActivity.query().filter(and_(CommandActivity.status==CommandStatus.by_name(u'Running'),
                                                CommandActivity.system==command.system))\
                                 .count():
+            log.info('Skipping power %s (command %d), command already running on machine: %s' %
+                     (command.action, command.id, command.system))
             continue
         session.begin()
         cmd = CommandActivity.query().get(command.id)
         if not cmd.system.remote or not cmd.system.power:
             cmd.status = CommandStatus.by_name(u'Aborted')
-            log.error('Power control not available for machine: %s' % (cmd.system))
+            log.error('Command %d aborted, power control not available for machine: %s' %
+                      (cmd.id, cmd.system))
         try:
+            log.info('Executing power %s command (%d) on machine: %s' %
+                     (cmd.action, cmd.id, cmd.system))
             cmd.task_id = cmd.system.remote.power(cmd.action)
             cmd.updated = datetime.utcnow()
             cmd.status = CommandStatus.by_name(u'Running')
         except Exception, msg:
             cmd.new_value = unicode(msg)
             cmd.status = CommandStatus.by_name(u'Failed')
-            log.error('Cobbler power exception submitting \'%s\' command for machine %s: %s' %
-                      (cmd.action, cmd.system, msg))
+            log.error('Cobbler power exception submitting \'%s\' command (%d) for machine %s: %s' %
+                      (cmd.action, cmd.id, cmd.system, msg))
         session.commit()
         session.close()
+    log.debug('Exiting queued_commands routine')
+    return True
 
 
 def new_recipes_loop(*args, **kwargs):
@@ -580,7 +601,8 @@ def queued_recipes_loop(*args, **kwargs):
 
 def command_queue_loop(*args, **kwargs):
     while True:
-        command_queue()
+        running_commands()
+        queued_commands()
         time.sleep(20)
 
 def schedule():
