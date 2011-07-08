@@ -1,0 +1,29 @@
+[checksums]
+images/boot.iso = sha256:cb00730aaceb22a09cb31b05ede452ad9df2d896724b034374a04e8e7ac29eeb
+images/netboot/ppc64.img = sha256:4ea359eae6f0043830b0d7c1ee004d25c6bc657bc272de09f56a521aa12ab651
+images/install.img = sha256:cf86761cf401d9751960245dd6a41d1e988488a27c86a117704e5cec8bf3b1a6
+
+[stage2]
+mainimage = images/install.img
+
+[variant-Server]
+addons = 
+repository = Server/repodata
+identity = Server/Server.cert
+
+[images-ppc64]
+initrd = ppc/ppc64/ramdisk.image.gz
+zimage = images/netboot/ppc64.img
+kernel = ppc/ppc64/vmlinuz
+
+[general]
+family = Red Hat Enterprise Linux
+timestamp = 1285192093.430930
+variant = Server
+totaldiscs = 1
+version = 6.0
+discnum = 1
+packagedir = Packages
+variants = Server
+arch = ppc64
+

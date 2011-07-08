@@ -317,6 +317,7 @@ fi
 %{_bindir}/%{name}-proxy
 %{_bindir}/%{name}-watchdog
 %{_bindir}/%{name}-transfer
+%{_bindir}/%{name}-osversion
 %doc LabController/README
 %config(noreplace) %{_sysconfdir}/httpd/conf.d/%{name}-lab-controller.conf
 %{_sysconfdir}/cron.hourly/cobbler_expire_distros
