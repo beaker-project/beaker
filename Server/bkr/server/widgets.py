@@ -387,6 +387,7 @@ class LabControllerFormSchema(validators.Schema):
     fqdn = validators.UnicodeString(not_empty=True, max=256, strip=True)
     lusername = validators.UnicodeString(not_empty=True)
     email = validators.UnicodeString(not_empty=True)
+    primary_mirror = validators.StringBool(if_empty=False)
 
 
 class LabControllerForm(TableForm):
@@ -405,6 +406,7 @@ class LabControllerForm(TableForm):
                         label=_(u'Cobbler Username')),
               PasswordField(name='password',
                             label=_(u'Cobbler Password')),
+              CheckBox(name='primary_mirror', label=_(u'Primary Mirror')),
               CheckBox(name='disabled',
                        label=_(u'Disabled'),
                        default=False),
