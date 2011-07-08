@@ -113,7 +113,7 @@ class LabControllers(RPCRoot):
             activity = Activity(identity.current.user,'XMLRPC','Added LabController',distro.install_name,None,identity.current.user.lab_controller.fqdn)
             return distro.install_name
         else:
-            return None
+            return ""
 
     @cherrypy.expose
     def addDistros(self, lab_controller_name, new_distros):
@@ -209,7 +209,8 @@ class LabControllers(RPCRoot):
         distro.arch = arch
         if arch not in distro.osversion.arches:
             distro.osversion.arches.append(arch)
-        distro.virt = False
+        # XXX temporary hotfix
+        distro.virt = '-xen-' in new_distro['name']
         distro.date_created = datetime.fromtimestamp(float(new_distro['tree_build_time']))
         if distro not in lab_controller.distros:
             lcd = LabControllerDistro()
@@ -228,7 +229,7 @@ class LabControllers(RPCRoot):
             activity = Activity(identity.current.user,'XMLRPC','Removed LabController',distro.install_name,None,identity.current.user.lab_controller.fqdn)
             return distro.install_name
         else:
-            return None
+            return ""
 
     @cherrypy.expose
     def removeDistros(self, lab_controller_name, old_distros):
