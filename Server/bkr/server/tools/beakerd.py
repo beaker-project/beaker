@@ -554,6 +554,7 @@ def queued_commands(*args):
         return False
     log.debug('Entering queued_commands routine')
     for command in commands:
+        log.debug("command.system=%s" % command.system)
         # Skip queued commands if something is already running on that system
         if CommandActivity.query().filter(and_(CommandActivity.status==CommandStatus.by_name(u'Running'),
                                                CommandActivity.system==command.system))\
@@ -563,6 +564,12 @@ def queued_commands(*args):
             continue
         session.begin()
         cmd = CommandActivity.query().get(command.id)
+        log.debug("cmd=%s" % cmd)
+        # if get() is given an invalid id it will return None.
+        # I'm not sure how this would happen since id came from the above
+        # query, maybe a race condition?
+        if not cmd:
+            continue
         if not cmd.system.remote or not cmd.system.power:
             cmd.status = CommandStatus.by_name(u'Aborted')
             log.error('Command %d aborted, power control not available for machine: %s' %
