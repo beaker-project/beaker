@@ -3,7 +3,7 @@
 
 Name:           beaker
 Version:        0.6.14
-Release:        7%{?dist}
+Release:        8%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -250,6 +250,9 @@ fi
 %{_var}/lib/beaker/addDistro.d/*
 
 %changelog
+* Mon Jul 11 2011 Steven Lawrance <stl@redhat.com> 0.6.14-8
+- Better logging for command queue processing (stl@redhat.com)
+
 * Tue Jul 05 2011 Dan Callaghan <dcallagh@redhat.com> 0.6.14-7
 - 718902 set distro.virt=True for xen distros (dcallagh@redhat.com)
 
