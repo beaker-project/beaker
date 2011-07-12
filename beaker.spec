@@ -3,7 +3,7 @@
 
 Name:           beaker
 Version:        0.6.14
-Release:        9%{?dist}
+Release:        10%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
