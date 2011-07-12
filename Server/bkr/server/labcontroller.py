@@ -98,7 +98,6 @@ class LabControllers(RPCRoot):
         if kw['lpassword']:
             luser.password = kw['lpassword']
         labcontroller.disabled = kw['disabled']
-        labcontroller.primary_mirror = kw['primary_mirror']
 
         labcontroller.distros_md5 = '0.0'
 
@@ -267,10 +266,7 @@ class LabControllers(RPCRoot):
         except InvalidRequestError:
             pass
 
-        if lab_controller.primary_mirror:
-            distro.lab_controllers[:] = []
-            return distro
-        elif lab_controller in distro.lab_controllers:
+        if lab_controller in distro.lab_controllers:
             distro.lab_controllers.remove(lab_controller)
             return distro
         else:
@@ -329,7 +325,6 @@ class LabControllers(RPCRoot):
 
         labcontrollers_grid = LabControllerDataGrid(fields=[
                                   ('FQDN', lambda x: make_edit_link(x.fqdn,x.id)),
-                                  ('Primary Mirror', lambda x: x.primary_mirror),
                                   ('Disabled', lambda x: x.disabled),
                                   ('Removed', lambda x: x.removed),
                                   ('Timestamp', lambda x: x.distros_md5),
