@@ -3,7 +3,7 @@
 
 Name:           beaker
 Version:        0.6.15
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -250,6 +250,9 @@ fi
 %{_var}/lib/beaker/addDistro.d/*
 
 %changelog
+* Wed Jul 13 2011 Raymond Mancy <rmancy@redhat.com> 0.6.15-2
+- Automatic commit of package [beaker] release [0.6.15-1]. (rmancy@redhat.com)
+
 * Wed Jul 13 2011 Raymond Mancy <rmancy@redhat.com> 0.6.15-1
 - bz717500 - apply timeout to all ProxyHelper subclasses (dcallagh@redhat.com)
 - bz718234 - ignore xen distros (bpeck@redhat.com)
