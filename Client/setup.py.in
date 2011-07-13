@@ -1,5 +1,21 @@
+import sys
 from glob import glob
 from setuptools import setup, find_packages
+from distutils.command.build import build as _build
+
+class build(_build):
+    sub_commands = _build.sub_commands + [('build_sphinx', lambda self: True)]
+
+import pkg_resources
+pkg_resources.require('Sphinx >= 1.0.4')
+from sphinx.setup_command import BuildDoc
+
+class BuildDocWithPath(BuildDoc):
+    def run(self):
+        sys.path.insert(0, self.distribution.get_command_obj('build').build_lib)
+        import bkr # lameness due to namespace packages, I think
+        BuildDoc.run(self)
+
 setup(
     name = "bkr.client",
     version = "@VERSION@",
@@ -11,12 +27,25 @@ setup(
 
     data_files = [
         ('/etc/beaker/', ['client.conf']),
-        ('/usr/share/man/man1', glob('man/*.1')),
+        ('/usr/share/man/man1', glob('build/sphinx/man/*.1')),
     ],
 
     entry_points = {
         'console_scripts': (
             'bkr = bkr.client.main:main',
         ),
-    }
+    },
+
+    cmdclass = {
+        'build': build,
+        'build_sphinx': BuildDocWithPath,
+    },
+    command_options={
+        'build_sphinx': {
+            'builder': ('setup.py', 'man'),
+            'version': ('setup.py', '@VERSION@'),
+            'release': ('setup.py', '@VERSION@'),
+            'source_dir': ('setup.py', 'doc'),
+        },
+    },
 )

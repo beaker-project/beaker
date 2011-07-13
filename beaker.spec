@@ -16,6 +16,7 @@ BuildRequires:  python-setuptools
 BuildRequires:  python-setuptools-devel
 BuildRequires:  python2-devel
 BuildRequires:  python-kid
+BuildRequires:  python-docutils >= 0.6
 %if (0%{?fedora} >= 14)
 BuildRequires:  python-sphinx >= 1.0
 %else
@@ -33,6 +34,11 @@ BuildRequires:  python-lxml
 BuildRequires:  python-ldap
 BuildRequires:  python-TurboMail >= 3.0
 BuildRequires:  rpm-python
+# As above, these client dependencies are needed in build because of sphinx
+BuildRequires:  kobo-client >= 0.3
+BuildRequires:  python-krbV
+BuildRequires:  python-lxml
+BuildRequires:  libxslt-python
 
 
 %package client

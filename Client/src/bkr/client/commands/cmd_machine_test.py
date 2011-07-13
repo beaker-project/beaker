@@ -1,5 +1,56 @@
 # -*- coding: utf-8 -*-
 
+"""
+Generate Beaker job to test a system
+====================================
+
+.. program:: bkr machine-test
+
+Synopsis
+--------
+
+:program:`bkr machine-test` --machine=<fqdn> [--inventory] [*workflow options*] [*options*]
+
+Description
+-----------
+
+Generates a Beaker job to test the system identified by <fqdn>.
+
+Options
+-------
+
+.. option:: --inventory
+
+   Include the /distribution/inventory task in the generated job, in order to 
+   update the system's details in Beaker.
+
+Common workflow options are described in the :ref:`Workflow options 
+<workflow-options>` section of :manpage:`bkr(1)`.
+
+Common :program:`bkr` options are described in the :ref:`Options 
+<common-options>` section of :manpage:`bkr(1)`.
+
+Exit status
+-----------
+
+Non-zero on error, otherwise zero.
+
+Examples
+--------
+
+Test a particular system on RHEL5 and RHEL6, including running the inventory 
+task::
+
+    bkr machine-test --machine=system1.example.invalid --inventory \\
+            --family RedHatEnterpriseLinuxServer5 \\
+            --family RedHatEnterpriseLinux6
+
+See also
+--------
+
+:manpage:`bkr(1)`
+"""
+
 
 from bkr.client.task_watcher import *
 from bkr.client import BeakerCommand, BeakerWorkflow, BeakerJob, BeakerRecipeSet, BeakerRecipe

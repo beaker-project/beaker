@@ -1,5 +1,52 @@
 # -*- coding: utf-8 -*-
 
+"""
+Simple workflow to generate Beaker jobs
+=======================================
+
+.. program:: bkr workflow-simple
+
+Synopsis
+--------
+
+:program:`bkr workflow-simple` [*workflow options*] [*options*]
+
+Description
+-----------
+
+Generates a Beaker job using the (not-so-simple) options available for all 
+workflows.
+
+Options
+-------
+
+Common workflow options are described in the :ref:`Workflow options 
+<workflow-options>` section of :manpage:`bkr(1)`.
+
+Common :program:`bkr` options are described in the :ref:`Options 
+<common-options>` section of :manpage:`bkr(1)`.
+
+Exit status
+-----------
+
+Non-zero on error, otherwise zero.
+
+Examples
+--------
+
+Schedule a job on RHEL6 Server containing all tests for the ``apache`` and 
+``tomcat6`` packages on a random x86_64 machine::
+
+    bkr workflow-simple --arch x86_64 --random \\
+            --family RedHatEnterpriseLinux6 --variant Server \\
+            --package apache --package tomcat6
+
+See also
+--------
+
+:manpage:`bkr(1)`
+"""
+
 
 from bkr.client.task_watcher import *
 from bkr.client import BeakerCommand, BeakerWorkflow, BeakerJob, BeakerRecipeSet, BeakerRecipe

@@ -1,4 +1,47 @@
 
+"""
+Export RDF/XML description of a Beaker system
+=============================================
+
+.. program:: bkr system-details
+
+Synopsis
+--------
+
+:program:`bkr system-details` [*options*] <fqdn>
+
+Description
+-----------
+
+Prints to stdout an RDF/XML description of the given system.
+
+A copy of the Beaker RDF schema definition is installed as 
+:file:`/usr/lib/python2.{x}/bkr/common/schema/beaker-inventory.ttl`.
+
+Options
+-------
+
+Common :program:`bkr` options are described in the :ref:`Options 
+<common-options>` section of :manpage:`bkr(1)`.
+
+Exit status
+-----------
+
+Non-zero on error, otherwise zero.
+
+Examples
+--------
+
+Export RDF/XML for a particular system::
+
+    bkr system-details system1.example.invalid
+
+See also
+--------
+
+:manpage:`bkr-list-systems(1)`, :manpage:`bkr(1)`
+"""
+
 import sys
 import urllib
 import urllib2

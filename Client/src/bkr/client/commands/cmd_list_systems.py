@@ -1,4 +1,82 @@
 
+"""
+List Beaker systems
+===================
+
+.. program:: bkr list-systems
+
+Synopsis
+--------
+
+| :program:`bkr list-systems` [*options*]
+|       [--available | --free | --mine]
+|       [--type=<type>] [--status=<status>] [--group=<group>]
+
+Description
+-----------
+
+Prints to stdout a list of all matching systems in Beaker.
+
+Options
+-------
+
+.. option:: --available
+
+   Limit to systems which would be available to be scheduled by the current 
+   user. This will exclude any systems whose access controls (group membership, 
+   shared setting, etc) prevent the current user from running jobs on them.
+
+   Note that this does *not* exclude systems which are currently occupied by 
+   other users. Use :option:`--free` for that.
+
+.. option:: --free
+
+   Like :option:`--available`, but only includes which can be scheduled *right 
+   now*.
+
+.. option:: --mine
+
+   Limit to systems which are owned by the current user.
+
+The :option:`--available`, :option:`--free`, and :option:`--mine` options are 
+mutually exclusive.
+
+.. option:: --type <type>
+
+   Limit to systems of type <type>. Most users will want to filter for the 
+   ``Machine`` type.
+
+.. option:: --status <status>
+
+   Limit to systems whose status is <status>, for example ``Automated``, 
+   ``Manual``, or ``Broken``.
+
+.. option:: --group <group>
+
+   Limit to systems which are in <group>.
+
+Common :program:`bkr` options are described in the :ref:`Options 
+<common-options>` section of :manpage:`bkr(1)`.
+
+Exit status
+-----------
+
+1 if no systems match, otherwise zero.
+
+Examples
+--------
+
+List automated systems which belong to the kernel group and are not currently 
+in use::
+
+    bkr list-systems --free --type=Machine --status=Automated --group=kernel
+
+See also
+--------
+
+:manpage:`bkr(1)`
+"""
+
 import sys
 import urllib
 import urllib2

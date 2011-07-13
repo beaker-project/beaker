@@ -1,5 +1,56 @@
 # -*- coding: utf-8 -*-
 
+"""
+Export Beaker job results as XML
+================================
+
+.. program:: bkr job-results
+
+Synopsis
+--------
+
+:program:`bkr job-results` [--prettyxml] [*options*] <taskspec>...
+
+Description
+-----------
+
+Specify one or more <taskspec> arguments to be exported. An XML dump of the 
+results for each argument will be printed to stdout.
+
+The <taskspec> arguments follow the same format as in other :program:`bkr` 
+subcommands (for example, ``J:1234``). See :ref:`Specifying tasks <taskspec>` 
+in :manpage:`bkr(1)`.
+
+Options
+-------
+
+.. option:: --prettyxml
+
+   Pretty-print the XML (with indentation and line breaks, suitable for human 
+   consumption).
+
+Common :program:`bkr` options are described in the :ref:`Options 
+<common-options>` section of :manpage:`bkr(1)`.
+
+Exit status
+-----------
+
+Non-zero on error, otherwise zero.
+
+Examples
+--------
+
+Display results for job 12345 in human-readable form (assuming the human can 
+read XML)::
+
+    bkr job-results --prettyxml J:12345
+
+See also
+--------
+
+:manpage:`bkr(1)`
+"""
+
 
 from bkr.client import BeakerCommand
 from optparse import OptionValueError

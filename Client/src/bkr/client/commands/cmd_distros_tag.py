@@ -1,5 +1,60 @@
 # -*- coding: utf-8 -*-
 
+"""
+Tag Beaker distros
+==================
+
+.. program:: bkr distros-tag
+
+Synopsis
+--------
+
+:program:`bkr distros-tag` [*options*] [--name=<name>] [--arch=<arch>] <tag>
+
+Description
+-----------
+
+Applies the given tag to all matching distros in Beaker. Prints to stdout 
+a list of the distros which were tagged.
+
+Options
+-------
+
+.. option:: --name <name>
+
+   Limit to distros with the given name. <name> is interpreted as a SQL LIKE 
+   pattern (the % character matches any substring).
+
+.. option:: --arch <arch>
+
+   Limit to distros for the given arch.
+
+Common :program:`bkr` options are described in the :ref:`Options 
+<common-options>` section of :manpage:`bkr(1)`.
+
+Exit status
+-----------
+
+Non-zero on error, otherwise zero.
+
+Examples
+--------
+
+Tags all RHEL5.6 Server nightly trees from a particular date with the "INSTALLS" tag::
+
+    bkr distros-tag --name RHEL5.6-Server-20101110% INSTALLS
+
+Notes
+-----
+
+This command is only available to Beaker administrators.
+
+See also
+--------
+
+:manpage:`bkr-distros-untag(1)`, :manpage:`bkr(1)`
+"""
+
 
 from bkr.client import BeakerCommand
 
