@@ -67,7 +67,7 @@ popd
 #set $base = ""
 #else
 #set $split = ":"
-#set $base = "http://$server/distros"
+#set $base = "http://%s/distros" % $server
 #end if
 #set $i = 0
 #for $repo in $getVar('tree_repos','').split($split)
