@@ -2,8 +2,8 @@
 %{!?pyver: %global pyver %(%{__python} -c "import sys ; print sys.version[:3]")}
 
 Name:           beaker
-Version:        0.6.14
-Release:        8%{?dist}
+Version:        0.6.15
+Release:        1%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -250,6 +250,25 @@ fi
 %{_var}/lib/beaker/addDistro.d/*
 
 %changelog
+* Wed Jul 13 2011 Raymond Mancy <rmancy@redhat.com> 0.6.15-1
+- bz717500 - apply timeout to all ProxyHelper subclasses (dcallagh@redhat.com)
+- bz718234 - ignore xen distros (bpeck@redhat.com)
+- bz718251 - osversion.trigger adds empty tags (bpeck@redhat.com)
+- bz717718 - rhts_post snipped for adding Distro repo has bugs
+  (bpeck@redhat.com)
+- bz717424 - remove distro from all lab controllers when removed from primary
+  mirror (dcallagh@redhat.com)
+- bz718313 - harness can run next recipe on the previous install
+  (bpeck@redhat.com)
+- bz720103 - Power command queue thread dying (stl@redhat.com)
+
+- fix cached package check in repo_update.py (dcallagh@redhat.com)
+- Better logging for command queue processing (stl@redhat.com)
+- Disable re-scan on lab controllers until bz720715  is fixed.
+  (bpeck@redhat.com)
+- <hostRequires/> is not optional (dcallagh@redhat.com)
+- kvm kernel module isn't always available, resulting in inventory task failure
+  (stl@redhat.com)
 * Mon Jul 11 2011 Steven Lawrance <stl@redhat.com> 0.6.14-8
 - Better logging for command queue processing (stl@redhat.com)
 
