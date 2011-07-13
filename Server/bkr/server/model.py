@@ -2419,7 +2419,7 @@ $SNIPPET("rhts_post")
         except:
             user = None
 
-        if self.remote and self.power:
+        if self.lab_controller and self.power:
             status = CommandStatus.by_name(u'Queued')
             activity = CommandActivity(user, service, action, status)
             self.command_queue.append(activity)
