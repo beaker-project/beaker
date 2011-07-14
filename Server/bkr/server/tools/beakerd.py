@@ -26,7 +26,7 @@ import pkg_resources
 pkg_resources.require("SQLAlchemy>=0.3.10")
 from bkr.server.bexceptions import BX, CobblerTaskFailedException
 from bkr.server.model import *
-from bkr.server.util import load_config
+from bkr.server.util import load_config, log_traceback
 from turbogears.database import session
 from turbogears import config
 from turbomail.control import interface
@@ -589,22 +589,28 @@ def queued_commands(*args):
     log.debug('Exiting queued_commands routine')
     return True
 
+# These functions are run in separate threads, so we want to log any uncaught 
+# exceptions instead of letting them be written to stderr and lost to the ether
 
+@log_traceback(log)
 def new_recipes_loop(*args, **kwargs):
     while True:
         if not new_recipes():
             time.sleep(20)
 
+@log_traceback(log)
 def processed_recipesets_loop(*args, **kwargs):
     while True:
         if not processed_recipesets():
             time.sleep(20)
 
+@log_traceback(log)
 def queued_recipes_loop(*args, **kwargs):
     while True:
         if not queued_recipes():
             time.sleep(20)
 
+@log_traceback(log)
 def command_queue_loop(*args, **kwargs):
     while True:
         running_commands()
