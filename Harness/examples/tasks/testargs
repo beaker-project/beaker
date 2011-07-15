@@ -1,3 +1,0 @@
-#!/bin/bash
-
-python -m beah.tasks.rhts_xmlrpc $(beah-data-dir /examples/tests/testargs)
