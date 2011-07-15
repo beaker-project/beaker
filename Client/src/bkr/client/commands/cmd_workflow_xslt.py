@@ -45,15 +45,18 @@ class JobArguments(object):
         "Constructor"
         self.arguments = {}
         self.current = None
+        self.current_node = None
         self.re_tag = re.compile('(.*)(\[@(.*)=(.*)\])')
         self.jobxml_parsed = False
 
-    def AddArgument(self, name, tagname, tagvaltype, tagvalname, value, optional):
+    def AddArgument(self, name, tagname, tagvaltype, tagvalname, tagnamelmnt,
+                    value, optional):
         "Registers a new argument with a unique name"
         self.arguments[name] = {'optional': optional,
                                 'tagname': tagname,
                                 'tagvaluetype': tagvaltype,
                                 'tagvaluename': tagvalname,
+                                'tagname_childs': tagnamelmnt,
                                 'value': value,
                                 'processed': False}
 
@@ -91,7 +94,17 @@ returns the tag name and the created xmlNode."""
         else:
             tagnode = libxml2.newNode(tagname)
 
+        self.current_node = tagnode;
         return (tagname, tagnode)
+
+
+    def CreateChildTag(self, key):
+        """Create a child node for a node created by CreateTag(), used by lists"""
+
+        tagname = self.arguments[key]['tagname_childs']
+        tagnode = libxml2.newNode(tagname)
+        self.current_node.addChild(tagnode)
+        return tagnode
 
 
     def IsValid(self, key):
@@ -235,6 +248,7 @@ class JobConfig(object):
             argdefault  = None
             tagname     = None
             tagvaltype  = None
+            tagnamelmnt = None
             descr       = None
 
             # Parse the <arg/> children nodes
@@ -261,6 +275,9 @@ class JobConfig(object):
                     tagname = node.get_content().strip()
                     tagvaltype = node.hasProp('type') and node.prop('type').strip() or None
                     tagvalname = node.hasProp('attrname') and node.prop('attrname').strip() or None
+                    tagnamelmnt = None
+                    if tagvaltype == "list":
+                        tagnamelmnt = node.hasProp('element_tag') and node.prop('element_tag') or 'value'
                 elif node.name == 'description':
                     # <description/>
                     # - Describes the option in plain English, used by the --help screen
@@ -287,10 +304,10 @@ class JobConfig(object):
                 raise Exception("The <tag/> tag on '%s' must be present with a "
                                 "value and must have a 'type' attribute" % arglong)
 
-            # Make sure tag-value-type is either 'value' or 'attribute'
-            if tagvaltype != 'value' and tagvaltype != 'attribute':
+            # Make sure tag-value-type is of a known type
+            if tagvaltype != 'value' and tagvaltype != 'attribute' and tagvaltype != 'list':
                 raise Exception("The <tag/> type attribute on '%s' must be either "
-                                "'value' or 'attribute'" % arglong)
+                                "'value', 'attribute' or 'list'" % arglong)
 
             # If 'attribute' we need an attribute name too
             if tagvaltype == 'attribute' and tagvalname is None:
@@ -324,7 +341,8 @@ class JobConfig(object):
                                          )
 
             # Save some important information about this option
-            self.jobargs.AddArgument(arglong, tagname, tagvaltype, tagvalname, argdefault, argoptional)
+            self.jobargs.AddArgument(arglong, tagname, tagvaltype, tagvalname, tagnamelmnt,
+                                     argdefault, argoptional)
 
         parser.add_option_group(self.grparser)
         self.jobxml_parsed = True
@@ -436,9 +454,14 @@ class JobConfig(object):
                         tagnode.addChild(libxml2.newText(arg['value']))
                     elif arg['tagvaluetype'] == 'attribute':
                         tagnode.newProp(arg['tagvaluename'], arg['value'])
+                    elif arg['tagvaluetype'] == "list":
+                        for listval in arg["value"].split(","):
+                            tagchild_n = self.jobargs.CreateChildTag(key)
+                            tagchild_n.addChild(libxml2.newText(listval))
                     else:
                         raise Exception("Unknown <tag/> type '%s' found in '%s'"
                                         % (arg['tagvaluetype'], key))
+
                 self.jobargs.SetProcessed()
                 arg = self.jobargs.GetNextArgumentOnTag(tagname)
 
