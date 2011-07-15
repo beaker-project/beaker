@@ -3,7 +3,7 @@
 
 Name:           beaker
 Version:        0.6.14
-Release:        8%{?dist}
+Release:        10%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -250,6 +250,13 @@ fi
 %{_var}/lib/beaker/addDistro.d/*
 
 %changelog
+* Tue Jul 12 2011 Bill Peck <bpeck@redhat.com> 0.6.14-10
+- Disable re-scan link until bz720715 is fixed. (bpeck@redhat.com)
+
+* Mon Jul 11 2011 Bill Peck <bpeck@redhat.com> 0.6.14-9
+- Additional logging for power queue and possible fix for traceback.
+  (bpeck@redhat.com)
+
 * Mon Jul 11 2011 Steven Lawrance <stl@redhat.com> 0.6.14-8
 - Better logging for command queue processing (stl@redhat.com)
 
