@@ -16,4 +16,7 @@ Client/build
 Client/setup.py
 LabController/proxy/build
 LabController/proxy/setup.py
+IntegrationTests/build
+IntegrationTests/setup.py
 *.diff
+selenium.log

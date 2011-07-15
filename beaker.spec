@@ -72,6 +72,19 @@ Requires:	createrepo
 Requires:	yum-utils
 
 
+%package integration-tests
+Summary:        Integration tests for Beaker
+Group:          Applications/Internet
+Requires:       %{name} = %{version}-%{release}
+Requires:       %{name}-server = %{version}-%{release}
+Requires:       %{name}-client = %{version}-%{release}
+Requires:       python-nose >= 0.10
+Requires:       kobo
+Requires:       java-1.6.0-openjdk
+Requires:       Xvfb
+Requires:       firefox
+
+
 %package lab-controller
 Summary:        Lab Controller xmlrpc server
 Group:          Applications/Internet
@@ -113,6 +126,11 @@ This is the command line interface used to interact with the Beaker Server.
 
 %description server
 To Be Filled in - Server Side..
+
+
+%description integration-tests
+This package contains integration tests for Beaker, which require a running 
+database and Beaker server.
 
 
 %description lab-controller
@@ -212,6 +230,12 @@ fi
 %attr(-,apache,root) %dir %{_localstatedir}/www/%{name}/rpms
 %attr(-,apache,root) %dir %{_localstatedir}/www/%{name}/repos
 %attr(-,apache,root) %dir %{_localstatedir}/run/%{name}
+
+%files integration-tests
+%defattr(-,root,root,-)
+%{python_sitelib}/bkr/inttest/
+%{python_sitelib}/bkr.inttest-%{version}-*
+%{python_sitelib}/bkr.inttest-%{version}-py%{pyver}.egg-info/
 
 %files client
 %defattr(-,root,root,-)

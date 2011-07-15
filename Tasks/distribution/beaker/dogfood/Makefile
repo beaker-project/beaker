@@ -68,7 +68,7 @@ $(METADATA): Makefile
 	@echo "Description:  Runs Beaker's internal test suite" >> $(METADATA)
 	@echo "TestTime:     4h" >> $(METADATA)
 	@echo "RunFor:       $(PACKAGE_NAME)-server" >> $(METADATA)  
-	@echo "Requires:     $(PACKAGE_NAME)-server" >> $(METADATA)  
+	@echo "Requires:     $(PACKAGE_NAME)-integration-tests" >> $(METADATA)
 	@echo "Requires:     python-nose" >> $(METADATA)  
 	@echo "Requires:     kobo" >> $(METADATA)
 	@echo "Requires:     java-1.6.0-openjdk" >> $(METADATA)  
@@ -79,6 +79,6 @@ $(METADATA): Makefile
 	@echo "Environment:  BEAKER_SERVER_BASE_URL=http://localhost/bkr/" >> $(METADATA)
 #	@echo "Environment:  BEAKER_SKIP_INIT_DB=1" >> $(METADATA)
 	@echo "Environment:  BEAKER_CONFIG_FILE=/etc/beaker/server.cfg" >> $(METADATA)
-	@echo "Environment:  NOSEARGS=bkr.server" >> $(METADATA)
+	@echo "Environment:  NOSEARGS=bkr" >> $(METADATA)
 
 	rhts-lint $(METADATA)
