@@ -1,21 +1,21 @@
-import unittest
-import datetime
+import unittest, datetime, os, threading
 from time import sleep
 from bkr.server.model import TaskStatus, Job, System, User, \
-        Group, SystemStatus, SystemActivity
+        Group, SystemStatus, SystemActivity, Recipe, LabController
 import sqlalchemy.orm
 from turbogears.database import session
 from bkr.inttest import data_setup, stub_cobbler
 from bkr.inttest.assertions import assert_datetime_within, \
         assert_durations_not_overlapping
 from bkr.server.tools import beakerd
-import threading
 
 class TestBeakerd(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
         data_setup.create_test_env('min')
+        cls.stub_cobbler_thread = stub_cobbler.StubCobblerThread()
+        cls.stub_cobbler_thread.start()
 
         # create users
         cls.user_1 = data_setup.create_user()
@@ -52,6 +52,10 @@ class TestBeakerd(unittest.TestCase):
         cls.system_4.lab_controller = lc
 
         session.flush()
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.stub_cobbler_thread.stop()
 
     def _check_job_status(self, jobs, status):
         for j in jobs:
@@ -379,6 +383,71 @@ class TestBeakerd(unittest.TestCase):
         self.assertEqual(job.status, TaskStatus.by_name(u'Queued'))
         system = System.query().get(self.system_4.id)
         self.assertEqual(system.user, None)
+    
+    def test_fail_harness_repo(self):
+
+        lc = data_setup.create_labcontroller(fqdn=u'localhost:%d' % self.stub_cobbler_thread.port)
+        data_setup.create_task(name=u'/distribution/install')
+        user = data_setup.create_user()
+        distro = data_setup.create_distro()
+        system = data_setup.create_system(owner=user, status=u'Automated', shared=True)
+        system.lab_controller = lc
+        job = data_setup.create_job(owner=user, distro=distro)
+        recipe = job.recipesets[0].recipes[0]
+        recipe._host_requires = (
+                u'<hostRequires><and><hostname op="=" value="%s"/></and></hostRequires>'
+                % system.fqdn)
+
+        harness_dir = '%s/%s' % (recipe.harnesspath, \
+            recipe.distro.osversion.osmajor)
+        try:
+            if os.path.exists(harness_dir):
+                os.rmdir(harness_dir)
+            session.flush()
+            beakerd.new_recipes()
+            beakerd.processed_recipesets()
+            beakerd.queued_recipes()
+
+            for r in Recipe.query():
+                if r.system:
+                    r.system.lab_controller = lc
+            beakerd.scheduled_recipes()
+            job = Job.by_id(job.id)
+            self.assertEqual(job.status, TaskStatus.by_name(u'Aborted'))
+        finally:
+            if not os.path.exists(harness_dir):
+                os.mkdir(harness_dir)
+    
+    def test_success_harness_repo(self):
+
+        lc = data_setup.create_labcontroller(fqdn=u'localhost:%d' % self.stub_cobbler_thread.port)
+        data_setup.create_task(name=u'/distribution/install')
+        user = data_setup.create_user()
+        distro = data_setup.create_distro()
+        system = data_setup.create_system(owner=user, status=u'Automated', shared=True)
+        system.lab_controller = lc
+        job = data_setup.create_job(owner=user, distro=distro)
+        recipe = job.recipesets[0].recipes[0]
+        recipe._host_requires = (
+                '<hostRequires><and><hostname op="=" value="%s"/></and></hostRequires>'
+                % system.fqdn)
+
+        harness_dir = '%s/%s' % (recipe.harnesspath, \
+            recipe.distro.osversion.osmajor)
+
+        if not os.path.exists(harness_dir):
+            os.mkdir(harness_dir)
+        session.flush()
+        beakerd.new_recipes()
+        beakerd.processed_recipesets()
+        beakerd.queued_recipes()
+        lc = LabController.by_id(lc.id)
+        for r in Recipe.query():
+            if r.system:
+                r.system.lab_controller = lc
+        beakerd.scheduled_recipes()
+        job = Job.by_id(job.id)
+        self.assertEqual(job.status, TaskStatus.by_name(u'Running'))
 
 class TestPowerFailures(unittest.TestCase):
 

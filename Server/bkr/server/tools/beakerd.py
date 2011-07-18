@@ -445,6 +445,23 @@ def scheduled_recipes(*args):
                                 # We have uneven tasks
                                 pass
       
+                harness_repo_details = recipe.harness_repo()
+                task_repo_details = recipe.task_repo()
+                repo_fail = []
+                if not harness_repo_details:
+                    repo_fail.append(u'harness')
+                if not task_repo_details:
+                    repo_fail.append(u'task')
+
+                if repo_fail:
+                    repo_fail_msg ='Failed to find repo for %s' % ','.join(repo_fail)
+                    log.error(repo_fail_msg)
+                    recipe.recipeset.abort(repo_fail_msg)
+                    break
+                else:
+                    harnessrepo = '%s,%s' % harness_repo_details
+                    taskrepo = '%s,%s' % task_repo_details
+
                 # Start the first task in the recipe
                 try:
                     recipe.tasks[0].start()
@@ -455,11 +472,11 @@ def scheduled_recipes(*args):
                                                                          recipe.id,
                                                                             e))
                     break
+
                 ks_meta = "recipeid=%s packages=%s" % (recipe.id,
                                                        ":".join([p.package for p in recipe.packages]))
-                harnessrepos="|".join(["%s,%s" % (r["name"], r["url"]) for r in recipe.harness_repos()])
                 customrepos= "|".join(["%s,%s" % (r.name, r.url) for r in recipe.repos])
-                ks_meta = "%s customrepos=%s harnessrepos=%s" % (ks_meta, customrepos, harnessrepos)
+                ks_meta = "%s customrepos=%s harnessrepo=%s taskrepo=%s" % (ks_meta, customrepos, harnessrepo, taskrepo)
                 # If ks_meta is defined from recipe pass it along.
                 # add it last to allow for overriding previous settings.
                 if recipe.ks_meta:
