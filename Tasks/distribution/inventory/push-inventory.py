@@ -299,8 +299,11 @@ def read_inventory():
         if line.find('0.0.0.0') == 0:
             iface = line.split()[-1:][0] #eth0, eth1, etc..
     if iface:
-        driver = commands.getstatusoutput('./getdriver.sh %s' % iface)[1].split('\n')[1:][0]
-        data['NETWORK'] = driver
+        drivers = commands.getstatusoutput('./getdriver.sh %s' % iface)[1].split('\n')
+        if len(drivers) == 1:
+            data['NETWORK'] = drivers[0]
+        else:
+            data['NETWORK'] = drivers[1:][0]
 
     disks = Disks()
     data['DISK'] = disks.disks
