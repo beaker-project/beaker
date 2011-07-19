@@ -68,11 +68,11 @@ class Task_List(BeakerCommand):
             xmlparam.setAttribute('name', '%s' % key)
             xmlparam.setAttribute('value', '%s' % value)
             xmlparams.appendChild(xmlparam)
-        for task in self.hub.tasks.filter(filter):
+        for task_dict in self.hub.tasks.filter(filter):
             if xml:
                 xmltask = doc.createElement('task')
-                xmltask.setAttribute('name', task)
+                xmltask.setAttribute('name', task_dict['name'])
                 xmltask.appendChild(xmlparams)
                 print xmltask.toprettyxml()
             else:
-                print task
+                print task_dict['name']
