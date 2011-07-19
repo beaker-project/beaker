@@ -633,6 +633,12 @@ class PushXmlRpcTest(XmlRpcTestCase):
         session.refresh(system)
         self.assertEquals(system.hypervisor.hypervisor, u'KVM')
 
+    # just check we don't raise an exception
+    def test_set_bogus_property(self):
+        system = data_setup.create_system()
+        session.flush()
+        self.server.push(system.fqdn, {'Bothria': 8})
+
 class SystemHistoryXmlRpcTest(XmlRpcTestCase):
 
     def setUp(self):

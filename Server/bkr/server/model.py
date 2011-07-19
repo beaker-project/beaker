@@ -2147,9 +2147,11 @@ url --url=$tree
             else:
                 try:
                     method = self.get_update_method(key)
+                except KeyError:
+                    log.warning('Attempted to update unknown inventory property \'%s\' on %s' %
+                                (key, self.fqdn))
+                else:
                     method(inventory[key])
-                except:
-                   raise
         self.date_modified = datetime.utcnow()
         return 0
 
