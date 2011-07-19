@@ -51,7 +51,7 @@
     </tr>
     <tr py:if="task.rpm">
         <td class="title"><b>RPM:</b></td>
-        <td class="value">${task.rpm}</td>
+        <td class="value"><a href="/rpms/${task.rpm}">${task.rpm}</a></td>
     </tr>
     <tr py:if="task.needs">
         <td class="title"><b>Needs:</b></td>

@@ -91,6 +91,10 @@ class TestSubmitTask(bkr.server.test.selenium.SeleniumTestCase):
         self.assertEqual(self.get_task_info_field('Version'), '1.1-1')
         self.assertEqual(self.get_task_info_field('License'), 'GPLv2')
         self.assertEqual(self.get_task_info_field('Types'), 'Regression')
+        self.assertEqual(self.get_task_info_field('RPM'), 'tmp-distribution-beaker-task_test-1.1-0.noarch.rpm')
+        self.assertEqual(self.get_task_info_field_href('RPM'),
+                # no /bkr prefix for /rpms served by Apache
+                '/rpms/tmp-distribution-beaker-task_test-1.1-0.noarch.rpm')
         self.assertEqual(self.get_task_info_field('Run For'), 'beaker')
         self.assertEqual(self.get_task_info_field('Requires'), 'beaker')
 
@@ -101,6 +105,10 @@ class TestSubmitTask(bkr.server.test.selenium.SeleniumTestCase):
         self.assertEqual(self.get_task_info_field('Version'), '2.0-2')
         self.assertEqual(self.get_task_info_field('License'), 'GPLv2')
         self.assertEqual(self.get_task_info_field('Types'), 'Multihost')
+        self.assertEqual(self.get_task_info_field('RPM'), 'tmp-distribution-beaker-task_test-2.0-2.noarch.rpm')
+        self.assertEqual(self.get_task_info_field_href('RPM'),
+                # no /bkr prefix for /rpms served by Apache
+                '/rpms/tmp-distribution-beaker-task_test-2.0-2.noarch.rpm')
         self.assertEqual(self.get_task_info_field('Run For'), 'beaker')
         self.assertEqual(self.get_task_info_field('Requires'),
                 '\n'.join(['beaker', 'rpm', 'coreutils']))
@@ -109,6 +117,11 @@ class TestSubmitTask(bkr.server.test.selenium.SeleniumTestCase):
         """Returns the value of a field in the task info table."""
         return self.selenium.get_text('//table[@class="show"]'
                 '//td[preceding-sibling::td[1]//text()="%s:"]' % field_label)
+
+    def get_task_info_field_href(self, field_label):
+        """Returns the href of a link in the task info table."""
+        return self.selenium.get_attribute('//table[@class="show"]'
+                '//td[preceding-sibling::td[1]//text()="%s:"]/a@href' % field_label)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=681143
     def test_task_package_names_are_case_sensitive(self):
