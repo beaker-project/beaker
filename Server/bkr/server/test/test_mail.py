@@ -122,3 +122,15 @@ class JobCompletionNotificationTest(unittest.TestCase):
         self.assert_(job_link in first_line,
                 'Job link %r should appear in first line %r'
                     % (job_link, first_line))
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=720041
+    def test_subject_contains_whiteboard(self):
+        whiteboard = u'final space shuttle launch'
+        job = data_setup.create_job(whiteboard=whiteboard)
+        session.flush()
+        data_setup.mark_job_complete(job)
+
+        self.assertEqual(len(self.mail_capture.captured_mails), 1)
+        sender, rcpts, raw_msg = self.mail_capture.captured_mails[0]
+        msg = email.message_from_string(raw_msg)
+        self.assert_(whiteboard in msg['Subject'])
