@@ -156,8 +156,8 @@ RECIPEID=$recipeid
 # multipe times, though this is not recomended as it will rewrite data.
 # Link limit sets the cap on number of files created by task/recipe.
 
-# FILE_SIZE_LIMIT, FILE_SIZE_SOFT_LIMIT: hard and soft cap on filesize.
-FILE_SIZE_SOFT_LIMIT=200000000
+# FILE_SIZE_LIMIT, FILE_SIZE_LIMIT_SOFT: hard and soft cap on filesize.
+FILE_SIZE_LIMIT_SOFT=200000000
 #FILE_SIZE_LIMIT=0
 
 # TASK_SIZE_LIMIT, TASK_SIZE_LIMIT_SOFT: hard and soft cap on size of all
@@ -170,29 +170,29 @@ TASK_SIZE_LIMIT_SOFT=800000000
 #RECIPE_SIZE_LIMIT_SOFT=0
 #RECIPE_SIZE_LIMIT=0
 
-# FILE_UPLOAD_LIMIT, FILE_UPLOAD_SOFT_LIMIT: hard and soft cap on upload per
+# FILE_UPLOAD_LIMIT, FILE_UPLOAD_LIMIT_SOFT: hard and soft cap on upload per
 # file.
-#FILE_UPLOAD_SOFT_LIMIT=0
+#FILE_UPLOAD_LIMIT_SOFT=0
 #FILE_UPLOAD_LIMIT=0
 
-# TASK_UPLOAD_LIMIT, TASK_UPLOAD_SOFT_LIMIT: hard and soft cap on all uploads per
+# TASK_UPLOAD_LIMIT, TASK_UPLOAD_LIMIT_SOFT: hard and soft cap on all uploads per
 # task.
-#TASK_UPLOAD_SOFT_LIMIT=0
+#TASK_UPLOAD_LIMIT_SOFT=0
 #TASK_UPLOAD_LIMIT=0
 
-# RECIPE_UPLOAD_LIMIT, RECIPE_UPLOAD_SOFT_LIMIT: hard and soft cap on all uploads
+# RECIPE_UPLOAD_LIMIT, RECIPE_UPLOAD_LIMIT_SOFT: hard and soft cap on all uploads
 # per recipe.
-#RECIPE_UPLOAD_SOFT_LIMIT=0
+#RECIPE_UPLOAD_LIMIT_SOFT=0
 #RECIPE_UPLOAD_LIMIT=0
 
-# TASK_LINK_LIMIT, TASK_LINK_SOFT_LIMIT: hard and soft cap on number of files per
+# TASK_LINK_LIMIT, TASK_LINK_LIMIT_SOFT: hard and soft cap on number of files per
 # task.
-#TASK_LINK_SOFT_LIMIT=0
+#TASK_LINK_LIMIT_SOFT=0
 #TASK_LINK_LIMIT=0
 
-# RECIPE_LINK_LIMIT, RECIPE_LINK_SOFT_LIMIT: hard and soft cap on number of
+# RECIPE_LINK_LIMIT, RECIPE_LINK_LIMIT_SOFT: hard and soft cap on number of
 # files per recipe.
-#RECIPE_LINK_SOFT_LIMIT=0
+#RECIPE_LINK_LIMIT_SOFT=0
 #RECIPE_LINK_LIMIT=0
 EOF
 # To turn on debug logging uncomment the following line. Warning: this is
