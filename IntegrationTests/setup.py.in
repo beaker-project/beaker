@@ -12,4 +12,10 @@ setup(
         'server/selenium/invalid-task_file',
     ]},
     namespace_packages=['bkr'],
+    install_requires=[
+        'bkr.server',
+        'bkr.client',
+        'selenium',
+        'kobo',
+    ],
 )
