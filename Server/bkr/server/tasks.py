@@ -353,7 +353,7 @@ class Tasks(RPCRoot):
 		     widgets.PaginateDataGrid.Column(name='name', getter=lambda x: make_link("./%s" % x.id, x.name), title='Name', options=dict(sortable=True)),
 		     widgets.PaginateDataGrid.Column(name='description', getter=lambda x:x.description, title='Description', options=dict(sortable=True)),
 		     widgets.PaginateDataGrid.Column(name='version', getter=lambda x:x.version, title='Version', options=dict(sortable=True)),
-                     widgets.PaginateDataGrid.Column(name='action', getter=lambda x: self.task_list_action_widget.display(task=x, type_='tasklist', title='Action', options=dict(soratble=False))),
+                     widgets.PaginateDataGrid.Column(name='action', getter=lambda x: self.task_list_action_widget.display(task=x, type_='tasklist', title='Action', options=dict(sortable=False))),
                     ])
 
         search_bar = SearchBar(name='tasksearch',
