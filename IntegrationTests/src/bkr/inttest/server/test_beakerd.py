@@ -1,7 +1,7 @@
 import unittest
 import datetime
 from time import sleep
-from bkr.server.model import TaskStatus, Job, System, User
+from bkr.server.model import TaskStatus, Job, System, User, Group
 import sqlalchemy.orm
 from turbogears.database import session
 from bkr.inttest import data_setup
@@ -15,6 +15,41 @@ class TestBeakerd(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         data_setup.create_test_env('min')
+
+        # create users
+        cls.user_1 = data_setup.create_user()
+        cls.user_2 = data_setup.create_user()
+        cls.user_3 = data_setup.create_user()
+
+        # create admin users
+        cls.admin_1 = data_setup.create_user()
+        cls.admin_1.groups.append(Group.by_name(u'admin'))
+        cls.admin_2 = data_setup.create_user()
+        cls.admin_2.groups.append(Group.by_name(u'admin'))
+
+        # create systems
+        cls.system_1 = data_setup.create_system(shared=True)
+        cls.system_2 = data_setup.create_system(shared=True)
+        cls.system_3 = data_setup.create_system(shared=False,
+                                                 owner=cls.user_3)
+        cls.system_4 = data_setup.create_system(shared=False,
+                                                 owner=cls.user_3)
+
+        # create group and add users/systems to it
+        cls.group_1 = data_setup.create_group()
+        cls.user_3.groups.append(cls.group_1)
+        cls.admin_2.groups.append(cls.group_1)
+        cls.system_2.groups.append(cls.group_1)
+
+        # loan system_4 to user_1
+        cls.system_4.loaned = cls.user_1
+
+        lc = data_setup.create_labcontroller()
+        cls.system_1.lab_controller = lc
+        cls.system_2.lab_controller = lc
+        cls.system_3.lab_controller = lc
+        cls.system_4.lab_controller = lc
+
         session.flush()
 
     def _check_job_status(self, jobs, status):
@@ -161,3 +196,185 @@ class TestBeakerd(unittest.TestCase):
         self.assert_(system1 in candidate_systems)
         self.assert_(system2 in candidate_systems)
         self.assert_(system3 not in candidate_systems)
+
+    def test_nonshared_system_3_user_1(self):
+        distro = data_setup.create_distro()
+        job = data_setup.create_job(owner=self.user_1, distro=distro)
+        job.recipesets[0].recipes[0]._host_requires = (
+                '<hostRequires><hostname op="=" value="%s"/></hostRequires>'
+                % self.system_3.fqdn)
+        session.flush()
+        session.clear()
+        beakerd.new_recipes()
+        job = Job.query().get(job.id)
+        self.assertEqual(job.status, TaskStatus.by_name(u'Aborted'))
+
+    def test_nonshared_system_3_user_3(self):
+        distro = data_setup.create_distro()
+        job = data_setup.create_job(owner=self.user_3, distro=distro)
+        job.recipesets[0].recipes[0]._host_requires = (
+                '<hostRequires><hostname op="=" value="%s"/></hostRequires>'
+                % self.system_3.fqdn)
+        session.flush()
+        session.clear()
+        beakerd.new_recipes()
+        job = Job.query().get(job.id)
+        self.assertEqual(job.status, TaskStatus.by_name(u'Processed'))
+
+    def test_nonshared_system_3_admin_1(self):
+        distro = data_setup.create_distro()
+        job = data_setup.create_job(owner=self.admin_1, distro=distro)
+        job.recipesets[0].recipes[0]._host_requires = (
+                '<hostRequires><hostname op="=" value="%s"/></hostRequires>'
+                % self.system_3.fqdn)
+        session.flush()
+        session.clear()
+        beakerd.new_recipes()
+        job = Job.query().get(job.id)
+        self.assertEqual(job.status, TaskStatus.by_name(u'Aborted'))
+
+    def test_shared_system_1_user_1(self):
+        distro = data_setup.create_distro()
+        job = data_setup.create_job(owner=self.user_1, distro=distro)
+        job.recipesets[0].recipes[0]._host_requires = (
+                '<hostRequires><hostname op="=" value="%s"/></hostRequires>'
+                % self.system_1.fqdn)
+        session.flush()
+        session.clear()
+        beakerd.new_recipes()
+        job = Job.query().get(job.id)
+        self.assertEqual(job.status, TaskStatus.by_name(u'Processed'))
+
+    def test_shared_system_1_admin_1(self):
+        distro = data_setup.create_distro()
+        job = data_setup.create_job(owner=self.admin_1, distro=distro)
+        job.recipesets[0].recipes[0]._host_requires = (
+                '<hostRequires><hostname op="=" value="%s"/></hostRequires>'
+                % self.system_1.fqdn)
+        session.flush()
+        session.clear()
+        beakerd.new_recipes()
+        job = Job.query().get(job.id)
+        self.assertEqual(job.status, TaskStatus.by_name(u'Processed'))
+
+    def test_shared_group_system_2_user_1(self):
+        distro = data_setup.create_distro()
+        job = data_setup.create_job(owner=self.user_1, distro=distro)
+        job.recipesets[0].recipes[0]._host_requires = (
+                '<hostRequires><hostname op="=" value="%s"/></hostRequires>'
+                % self.system_2.fqdn)
+        session.flush()
+        session.clear()
+        beakerd.new_recipes()
+        job = Job.query().get(job.id)
+        self.assertEqual(job.status, TaskStatus.by_name(u'Aborted'))
+
+    def test_shared_group_system_2_user_3(self):
+        distro = data_setup.create_distro()
+        job = data_setup.create_job(owner=self.user_3, distro=distro)
+        job.recipesets[0].recipes[0]._host_requires = (
+                '<hostRequires><hostname op="=" value="%s"/></hostRequires>'
+                % self.system_2.fqdn)
+        session.flush()
+        session.clear()
+        beakerd.new_recipes()
+        job = Job.query().get(job.id)
+        self.assertEqual(job.status, TaskStatus.by_name(u'Processed'))
+
+    def test_shared_group_system_2_admin_1(self):
+        distro = data_setup.create_distro()
+        job = data_setup.create_job(owner=self.admin_1, distro=distro)
+        job.recipesets[0].recipes[0]._host_requires = (
+                '<hostRequires><hostname op="=" value="%s"/></hostRequires>'
+                % self.system_2.fqdn)
+        session.flush()
+        session.clear()
+        beakerd.new_recipes()
+        job = Job.query().get(job.id)
+        self.assertEqual(job.status, TaskStatus.by_name(u'Aborted'))
+
+    def test_shared_group_system_2_admin_2(self):
+        distro = data_setup.create_distro()
+        job = data_setup.create_job(owner=self.admin_2, distro=distro)
+        job.recipesets[0].recipes[0]._host_requires = (
+                '<hostRequires><hostname op="=" value="%s"/></hostRequires>'
+                % self.system_2.fqdn)
+        session.flush()
+        session.clear()
+        beakerd.new_recipes()
+        job = Job.query().get(job.id)
+        self.assertEqual(job.status, TaskStatus.by_name(u'Processed'))
+
+    def test_loaned_system_4_admin_1(self):
+        distro = data_setup.create_distro()
+        job = data_setup.create_job(owner=self.admin_1, distro=distro)
+        job.recipesets[0].recipes[0]._host_requires = (
+                '<hostRequires><hostname op="=" value="%s"/></hostRequires>'
+                % self.system_4.fqdn)
+        session.flush()
+        session.clear()
+        beakerd.new_recipes()
+        job = Job.query().get(job.id)
+        self.assertEqual(job.status, TaskStatus.by_name(u'Aborted'))
+
+    def test_loaned_system_4_user_1(self):
+        print "user = %s" % self.user_1
+        print "system = %s" % self.system_4
+        distro = data_setup.create_distro()
+        job = data_setup.create_job(owner=self.user_1, distro=distro)
+        job.recipesets[0].recipes[0]._host_requires = (
+                '<hostRequires><hostname op="=" value="%s"/></hostRequires>'
+                % self.system_4.fqdn)
+        session.flush()
+        session.clear()
+        beakerd.new_recipes()
+        job = Job.query().get(job.id)
+        self.assertEqual(job.status, TaskStatus.by_name(u'Processed'))
+        beakerd.processed_recipesets()
+        job = Job.query().get(job.id)
+        self.assertEqual(job.status, TaskStatus.by_name(u'Queued'))
+        beakerd.queued_recipes()
+        job = Job.query().get(job.id)
+        self.assertEqual(job.status, TaskStatus.by_name(u'Scheduled'))
+        system = System.query().get(self.system_4.id)
+        self.assertEqual(system.user.user_id, self.user_1.user_id)
+        # force the return of the system so that other tests will run 
+        # correctly.
+        system.user = None
+        session.flush()
+
+    def test_loaned_system_4_user_2(self):
+        distro = data_setup.create_distro()
+        job = data_setup.create_job(owner=self.user_2, distro=distro)
+        job.recipesets[0].recipes[0]._host_requires = (
+                '<hostRequires><hostname op="=" value="%s"/></hostRequires>'
+                % self.system_4.fqdn)
+        session.flush()
+        session.clear()
+        beakerd.new_recipes()
+        job = Job.query().get(job.id)
+        self.assertEqual(job.status, TaskStatus.by_name(u'Aborted'))
+
+    def test_loaned_system_4_user_3(self):
+        distro = data_setup.create_distro()
+        job = data_setup.create_job(owner=self.user_3, distro=distro)
+        job.recipesets[0].recipes[0]._host_requires = (
+                '<hostRequires><hostname op="=" value="%s"/></hostRequires>'
+                % self.system_4.fqdn)
+        session.flush()
+        session.clear()
+        # user_3 is the owner of the system so they have access, when the
+        # loan is returned their job will be able to run.
+        beakerd.new_recipes()
+        job = Job.query().get(job.id)
+        self.assertEqual(job.status, TaskStatus.by_name(u'Processed'))
+        beakerd.processed_recipesets()
+        job = Job.query().get(job.id)
+        self.assertEqual(job.status, TaskStatus.by_name(u'Queued'))
+        # Even though the system is free the job should stay queued while
+        # the loan is in place.
+        beakerd.queued_recipes()
+        job = Job.query().get(job.id)
+        self.assertEqual(job.status, TaskStatus.by_name(u'Queued'))
+        system = System.query().get(self.system_4.id)
+        self.assertEqual(system.user, None)

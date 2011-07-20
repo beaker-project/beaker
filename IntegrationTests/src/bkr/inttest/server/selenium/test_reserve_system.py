@@ -86,8 +86,8 @@ class ReserveSystem(SeleniumTestCase):
         try: self.failUnless(sel.is_text_present("Success"))
         except AssertionError, e: self.verificationErrors.append(str(e))
 
-    # https://bugzilla.redhat.com/show_bug.cgi?id=672134
-    def test_admin_can_reserve_any_system(self):
+    # https://bugzilla.redhat.com/show_bug.cgi?id=722321
+    def test_admin_cannot_reserve_any_system(self):
         group_system = data_setup.create_system(shared=True)
         group_system.lab_controller = self.lc
         group_system.groups.append(data_setup.create_group())
@@ -99,12 +99,7 @@ class ReserveSystem(SeleniumTestCase):
         sel.wait_for_page_to_load('30000')
         sel.click('link=Pick System')
         sel.wait_for_page_to_load('30000')
-        self.failUnless(sel.is_text_present(group_system.fqdn))
-        click_reserve_now(sel, group_system)
-        sel.wait_for_page_to_load('30000')
-        sel.click('//input[@value="Queue Job"]')
-        sel.wait_for_page_to_load('30000')
-        self.failUnless(sel.is_text_present('Success'))
+        self.failUnless(not sel.is_text_present(group_system.fqdn))
     
     def tearDown(self):
         self.selenium.stop()
