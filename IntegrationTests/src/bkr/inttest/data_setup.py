@@ -216,16 +216,12 @@ def create_recipe(system=None, distro=None, task_list=None,
     task_name=u'/distribution/reservesys', whiteboard=None, server_log=False):
     recipe = MachineRecipe(ttasks=1, system=system, whiteboard=whiteboard,
             distro=distro or Distro.query()[0])
+    recipe.distro_requires = recipe.distro.to_xml().toxml()
+
     if not server_log:
         recipe.logs = [LogRecipe(path=u'/recipe_path',filename=u'dummy.txt', basepath=u'/beaker')]
     else:
         recipe.logs = [LogRecipe(server=u'http://dummy-archive-server/beaker/recipe_path', filename=u'dummy.txt' )]
-
-    recipe._distro_requires=u'<distroRequires><and><distro_arch value="i386"  \
-            op="="></distro_arch><distro_variant value="Workstation" op="="> \
-            </distro_variant><distro_family value="RedHatEnterpriseLinux6" op="="> \
-            </distro_family> </and><distro_virt value="" op="="></distro_virt> \
-            </distroRequires>'
 
     if not server_log:
         rt_log = LogRecipeTask(path=u'/tasks', filename=u'dummy.txt', basepath='/')
