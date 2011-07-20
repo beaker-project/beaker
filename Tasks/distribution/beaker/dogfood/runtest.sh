@@ -16,4 +16,5 @@
 # Author: Dan Callaghan <dcallagh@redhat.com>
 
 rhts-run-simple-test $TEST/beakerd_stop "/sbin/service beakerd stop"
+rhts-run-simple-test $TEST/yum_install "yum install -y beaker-integration-tests$VERSION"
 rhts-run-simple-test $TEST "nosetests -v $NOSEARGS"
