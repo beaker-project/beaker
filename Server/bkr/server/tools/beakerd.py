@@ -591,44 +591,42 @@ def queued_commands(*args):
     if not commands.count():
         return False
     log.debug('Entering queued_commands routine')
-    for command in commands:
-        log.debug("command.system=%s" % command.system)
-        # Skip queued commands if something is already running on that system
-        if CommandActivity.query.filter(and_(CommandActivity.status==CommandStatus.by_name(u'Running'),
-                                               CommandActivity.system==command.system))\
-                                .count():
-            log.info('Skipping power %s (command %d), command already running on machine: %s' %
-                     (command.action, command.id, command.system))
-            continue
-        session.begin()
-        cmd = CommandActivity.query.get(command.id)
-        log.debug("cmd=%s" % cmd)
-        # if get() is given an invalid id it will return None.
-        # I'm not sure how this would happen since id came from the above
-        # query, maybe a race condition?
-        if not cmd:
-            log.error('Command %d get() failed. Deleted? Machine: %s' % (command.id, command.system))
-        elif not cmd.system.lab_controller or not cmd.system.power:
-            log.error('Command %d aborted, power control not available for machine: %s' %
-                      (cmd.id, cmd.system))
-            cmd.status = CommandStatus.by_name(u'Aborted')
-            cmd.new_value = u'Power control unavailable'
-            cmd.log_to_system_history()
-        else:
-            try:
-                log.info('Executing power %s command (%d) on machine: %s' %
+    for cmd_id, in commands.values(CommandActivity.id):
+        with session.begin():
+            cmd = CommandActivity.query.get(cmd_id)
+            log.debug("cmd=%s" % cmd)
+            # if get() is given an invalid id it will return None.
+            # I'm not sure how this would happen since id came from the above
+            # query, maybe a race condition?
+            if not cmd:
+                log.error('Command %d get() failed. Deleted?', cmd_id)
+                continue
+            # Skip queued commands if something is already running on that system
+            if CommandActivity.query.filter(and_(CommandActivity.status==CommandStatus.by_name(u'Running'),
+                                                   CommandActivity.system==cmd.system))\
+                                    .count():
+                log.info('Skipping power %s (command %d), command already running on machine: %s' %
                          (cmd.action, cmd.id, cmd.system))
-                cmd.task_id = cmd.system.remote.power(cmd.action)
-                cmd.updated = datetime.utcnow()
-                cmd.status = CommandStatus.by_name(u'Running')
-            except Exception, msg:
-                log.error('Cobbler power exception submitting \'%s\' command (%d) for machine %s: %s' %
-                          (cmd.action, cmd.id, cmd.system, msg))
-                cmd.new_value = unicode(msg)
-                cmd.status = CommandStatus.by_name(u'Failed')
+                continue
+            if not cmd.system.lab_controller or not cmd.system.power:
+                log.error('Command %d aborted, power control not available for machine: %s' %
+                          (cmd.id, cmd.system))
+                cmd.status = CommandStatus.by_name(u'Aborted')
+                cmd.new_value = u'Power control unavailable'
                 cmd.log_to_system_history()
-        session.commit()
-        session.close()
+            else:
+                try:
+                    log.info('Executing power %s command (%d) on machine: %s' %
+                             (cmd.action, cmd.id, cmd.system))
+                    cmd.task_id = cmd.system.remote.power(cmd.action)
+                    cmd.updated = datetime.utcnow()
+                    cmd.status = CommandStatus.by_name(u'Running')
+                except Exception, msg:
+                    log.error('Cobbler power exception submitting \'%s\' command (%d) for machine %s: %s' %
+                              (cmd.action, cmd.id, cmd.system, msg))
+                    cmd.new_value = unicode(msg)
+                    cmd.status = CommandStatus.by_name(u'Failed')
+                    cmd.log_to_system_history()
     log.debug('Exiting queued_commands routine')
     return True
 
