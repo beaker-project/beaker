@@ -156,8 +156,8 @@ def setup_package():
     if not os.path.exists(turbogears.config.get('basepath.rpms')):
         os.mkdir(turbogears.config.get('basepath.rpms'))
 
-    cherrypy.root = Root()
-    turbogears.testutil.start_cp()
+    turbogears.testutil.make_app(Root)
+    turbogears.testutil.start_server()
 
     if 'BEAKER_SERVER_BASE_URL' not in os.environ:
         # need to start the server ourselves
@@ -179,4 +179,4 @@ def teardown_package():
     for process in processes:
         process.stop()
 
-    cherrypy.server.stop()
+    turbogears.testutil.stop_server()
