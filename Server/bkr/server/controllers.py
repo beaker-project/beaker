@@ -69,6 +69,7 @@ import re
 import string
 import pkg_resources
 import rdflib.graph
+import formencode.variabledecode
 
 # for debugging
 import sys
@@ -1896,11 +1897,14 @@ class Root(RPCRoot):
 
     @expose(template="bkr.server.templates.login")
     def login(self, forward_url=None, **kwargs):
+        # need to undo the work of NestedVariablesFilter
+        original_parameters = formencode.variabledecode.variable_encode(kwargs)
+
         if not forward_url:
             forward_url = request.headers.get('Referer', '/')
         if not identity.current.anonymous \
                 and not identity.get_identity_errors():
-            redirect(forward_url, redirect_params=kwargs)
+            redirect(forward_url, redirect_params=original_parameters)
 
         if not identity.was_login_attempted():
             msg = _('Please log in.')
@@ -1910,7 +1914,8 @@ class Root(RPCRoot):
             
         response.status=403 # XXX shouldn't this be 401?
         return dict(message=msg, action=request.path, logging_in=True,
-                    original_parameters=kwargs, forward_url=forward_url)
+                    original_parameters=original_parameters,
+                    forward_url=forward_url)
 
     @expose()
     def logout(self):
