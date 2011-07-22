@@ -81,10 +81,10 @@ def new_recipes(*args):
     if not recipes.count():
         return False
     log.debug("Entering new_recipes routine")
-    for _recipe in recipes:
+    for recipe_id, in recipes.values(Recipe.id):
         session.begin()
         try:
-            recipe = Recipe.by_id(_recipe.id)
+            recipe = Recipe.by_id(recipe_id)
             if recipe.distro:
                 recipe.systems = []
 
@@ -147,10 +147,10 @@ def processed_recipesets(*args):
     if not recipesets.count():
         return False
     log.debug("Entering processed_recipes routine")
-    for _recipeset in recipesets:
+    for rs_id, in recipesets.values(RecipeSet.id):
         session.begin()
         try:
-            recipeset = RecipeSet.by_id(_recipeset.id)
+            recipeset = RecipeSet.by_id(rs_id)
             bad_l_controllers = set()
             # We only need to do this processing on multi-host recipes
             if len(recipeset.recipes) == 1:
@@ -277,10 +277,10 @@ def dead_recipes(*args):
     if not recipes.count():
         return False
     log.debug("Entering dead_recipes routine")
-    for _recipe in recipes:
+    for recipe_id, in recipes.values(Recipe.id):
         session.begin()
         try:
-            recipe = Recipe.by_id(_recipe.id)
+            recipe = Recipe.by_id(recipe_id)
             if len(recipe.systems) == 0:
                 msg = u"R:%s does not match any systems, aborting." % recipe.id
                 log.info(msg)
@@ -330,10 +330,10 @@ def queued_recipes(*args):
     if not recipes.count():
         return False
     log.debug("Entering queued_recipes routine")
-    for _recipe in recipes:
+    for recipe_id, in recipes.values(Recipe.id):
         session.begin()
         try:
-            recipe = Recipe.by_id(_recipe.id)
+            recipe = Recipe.by_id(recipe_id)
             systems = recipe.dyn_systems\
                        .join(System.lab_controller,
                              LabController._distros,
@@ -417,21 +417,18 @@ def scheduled_recipes(*args):
     if All recipes in a recipeSet are in Scheduled state then move them to
      Running.
     """
-    recipesets = RecipeSet.query.from_statement(
-                        select([recipe_set_table.c.id, 
-                                func.min(recipe_table.c.status_id)],
-                               from_obj=[recipe_set_table.join(recipe_table)])\
-                               .group_by(RecipeSet.id)\
-                               .having(func.min(recipe_table.c.status_id) == TaskStatus.by_name(u'Scheduled').id)).all()
-   
-    if not recipesets:
+    recipesets = RecipeSet.query.join(RecipeSet.recipes)\
+            .group_by(RecipeSet.id)\
+            .having(func.min(Recipe.status_id) ==
+                TaskStatus.by_name(u'Scheduled').id)
+    if not recipesets.count():
         return False
     log.debug("Entering scheduled_recipes routine")
-    for _recipeset in recipesets:
-        log.info("scheduled_recipes: RS:%s" % _recipeset.id)
+    for rs_id, in recipesets.values(RecipeSet.id):
+        log.info("scheduled_recipes: RS:%s" % rs_id)
         session.begin()
         try:
-            recipeset = RecipeSet.by_id(_recipeset.id)
+            recipeset = RecipeSet.by_id(rs_id)
             # Go through each recipe in the recipeSet
             for recipe in recipeset.recipes:
                 # If one of the recipes gets aborted then don't try and run
