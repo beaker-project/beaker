@@ -1,4 +1,61 @@
 
+"""
+Control power for a Beaker system
+=================================
+
+.. program:: bkr system-power
+
+Synopsis
+--------
+
+| :program:`bkr system-power` [*options*]
+|       [--action=<action>] [--clear-netboot] [--force] <fqdn>
+
+Description
+-----------
+
+Controls power for a Beaker system using its remote power management interface 
+(if one is available).
+
+Options
+-------
+
+.. option:: --action <action>
+
+   Perform the given power action. Valid actions are ``on``, ``off``, 
+   and ``reboot``. The default is ``reboot``.
+
+.. option:: --clear-netboot
+
+   Clear any existing netboot configuration before performing this action. This 
+   will ensure the system falls back to booting from its local hard disk.
+
+.. option:: --force
+
+   Normally this command will refuse to run if another user is using the 
+   system. Pass this option to perform the power action anyway.
+
+Common :program:`bkr` options are described in the :ref:`Options 
+<common-options>` section of :manpage:`bkr(1)`.
+
+Exit status
+-----------
+
+Non-zero on error, otherwise zero.
+
+Examples
+--------
+
+Power off a particular system::
+
+    bkr system-power --action off system2.example.invalid
+
+See also
+--------
+
+:manpage:`bkr-system-provision(1)`, :manpage:`bkr(1)`
+"""
+
 from bkr.client import BeakerCommand
 
 class System_Power(BeakerCommand):

@@ -1,3 +1,64 @@
+
+"""
+List Beaker jobs
+================
+
+.. program:: bkr job-list
+
+Synopsis
+--------
+
+| :program:`bkr job-list` [*options*]
+|       [--family=<family>] [--tag=<tag>] [--product=<cpeid>] [--completeDays=<days>]
+
+Description
+-----------
+
+Prints to stdout a list of matching Beaker jobs.
+
+.. _job-list-options:
+
+Options
+-------
+
+.. option:: --family <family>
+
+   Limit to jobs which ran with distro belonging to <family>, for example 
+   ``RedHatEnterpriseLinuxServer5``.
+
+.. option:: --completeDays <days>
+
+   Limit to jobs which finished at least <days> ago.
+
+.. option:: --tag <tag>
+
+   Limit to jobs which have retention tag <tag>, for example ``scratch``.
+
+.. option:: --product <cpeid>
+
+   Limit to jobs which were testing the product identified by <cpeid>.
+
+Common :program:`bkr` options are described in the :ref:`Options 
+<common-options>` section of :manpage:`bkr(1)`.
+
+Exit status
+-----------
+
+Non-zero on error, otherwise zero.
+
+Examples
+--------
+
+List all scratch jobs which finished 30 or more days ago:
+
+    bkr job-list --tag scratch --completeDays 30
+
+See also
+--------
+
+:manpage:`bkr(1)`
+"""
+
 from bkr.client import BeakerCommand
 from optparse import OptionValueError
 
@@ -24,13 +85,13 @@ class Job_List(BeakerCommand):
             "-t",
             "--tag",
             action="append",
-            help="RecipeSets with a particular Tag"
+            help="Jobs with a particular tag"
         )
 
         self.parser.add_option(
             "-p",
             "--product", 
-            help="RecipeSets with a particular product"
+            help="Jobs for a particular product"
         )
 
     def run(self,*args, **kwargs):

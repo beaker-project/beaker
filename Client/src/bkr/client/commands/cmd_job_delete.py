@@ -1,3 +1,65 @@
+
+"""
+Delete Beaker jobs
+==================
+
+.. program:: bkr job-delete
+
+Synopsis
+--------
+
+Delete specific jobs:
+
+| :program:`bkr job-delete` [*options*] [--dryrun] <taskspec>...
+
+Delete by criteria:
+
+| :program:`bkr job-delete` [*options*] [--dryrun]
+|       [--family=<family>] [--tag=<tag>] [--product=<cpeid>] [--completeDays=<days>]
+
+Description
+-----------
+
+Specify one or more <taskspec> arguments to be deleted.
+
+The <taskspec> arguments follow the same format as in other :program:`bkr` 
+subcommands (for example, ``J:1234``). See :ref:`Specifying tasks <taskspec>` 
+in :manpage:`bkr(1)`.
+
+Only jobs may be deleted.
+
+Options
+-------
+
+This command accepts the same options for selecting jobs as :program:`bkr 
+job-list` does. See the :ref:`Options <job-list-options>` section of 
+:manpage:`bkr-job-list(1)`.
+
+.. option:: --dryrun
+
+   Do not perform any deletions.
+
+Common :program:`bkr` options are described in the :ref:`Options 
+<common-options>` section of :manpage:`bkr(1)`.
+
+Exit status
+-----------
+
+Non-zero on error, otherwise zero.
+
+Examples
+--------
+
+Delete all scratch jobs which finished 30 or more days ago:
+
+    bkr job-delete --tag scratch --completeDays 30
+
+See also
+--------
+
+:manpage:`bkr(1)`
+"""
+
 from bkr.client import BeakerCommand
 from optparse import OptionValueError
 
@@ -47,7 +109,7 @@ class Job_Delete(BeakerCommand):
         self.parser.add_option(
             "-c",
             "--completeDays",
-            help="NUmber of days it's been complete for"
+            help="Number of days it's been complete for"
         )
 
         """

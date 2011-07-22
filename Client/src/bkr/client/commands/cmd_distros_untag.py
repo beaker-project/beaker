@@ -1,5 +1,60 @@
 # -*- coding: utf-8 -*-
 
+"""
+Untag Beaker distros
+====================
+
+.. program:: bkr distros-untag
+
+Synopsis
+--------
+
+:program:`bkr distros-untag` [*options*] [--name=<name>] [--arch=<arch>] <tag>
+
+Description
+-----------
+
+Removes the given tag from all matching distros in Beaker. Prints to stdout 
+a list of the distros which were untagged.
+
+Options
+-------
+
+.. option:: --name <name>
+
+   Limit to distros with the given name. <name> is interpreted as a SQL LIKE 
+   pattern (the % character matches any substring).
+
+.. option:: --arch <arch>
+
+   Limit to distros for the given arch.
+
+Common :program:`bkr` options are described in the :ref:`Options 
+<common-options>` section of :manpage:`bkr(1)`.
+
+Exit status
+-----------
+
+Non-zero on error, otherwise zero.
+
+Examples
+--------
+
+Removes the "STABLE" tag from all RHEL5.6 Server nightly trees from a particular date::
+
+    bkr distros-untag --name RHEL5.6-Server-20101110% STABLE
+
+Notes
+-----
+
+This command is only available to Beaker administrators.
+
+See also
+--------
+
+:manpage:`bkr-distros-tag(1)`, :manpage:`bkr(1)`
+"""
+
 
 from bkr.client import BeakerCommand
 

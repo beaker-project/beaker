@@ -3720,6 +3720,7 @@ class TaskBase(MappedObject):
         """
         Return an TaskBase object by it's shorthand i.e 'J:xx, RS:xx'
         """
+        # Keep Client/doc/bkr.rst in sync with this
         task_type,id = t_id.split(":")
         try:
             class_str = cls.t_id_types[task_type]

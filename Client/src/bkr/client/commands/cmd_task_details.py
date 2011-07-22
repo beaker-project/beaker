@@ -1,5 +1,48 @@
 # -*- coding: utf-8 -*-
 
+"""
+Export details of a Beaker task
+===============================
+
+.. program:: bkr task-details
+
+Synopsis
+--------
+
+:program:`bkr task-details` [*options*] <task>...
+
+Description
+-----------
+
+Prints to stdout details about each of the given tasks from Beaker's task 
+library, one task per line.
+
+This information is also available on the task page in the Beaker web UI.
+
+Options
+-------
+
+Common :program:`bkr` options are described in the :ref:`Options 
+<common-options>` section of :manpage:`bkr(1)`.
+
+Exit status
+-----------
+
+Non-zero on error, otherwise zero.
+
+Examples
+--------
+
+Fetch details of the /distribution/beaker/dogfood task::
+
+    bkr task-details /distribution/beaker/dogfood
+
+See also
+--------
+
+:manpage:`bkr(1)`
+"""
+
 
 from bkr.client.task_watcher import *
 from bkr.client import BeakerCommand
