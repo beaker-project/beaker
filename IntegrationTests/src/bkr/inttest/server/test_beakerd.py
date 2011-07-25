@@ -1,10 +1,11 @@
 import unittest
 import datetime
 from time import sleep
-from bkr.server.model import TaskStatus, Job, System, User, Group
+from bkr.server.model import TaskStatus, Job, System, User, \
+        Group, SystemStatus
 import sqlalchemy.orm
 from turbogears.database import session
-from bkr.inttest import data_setup
+from bkr.inttest import data_setup, stub_cobbler
 from bkr.inttest.assertions import assert_datetime_within, \
         assert_durations_not_overlapping
 from bkr.server.tools import beakerd
@@ -378,3 +379,40 @@ class TestBeakerd(unittest.TestCase):
         self.assertEqual(job.status, TaskStatus.by_name(u'Queued'))
         system = System.query().get(self.system_4.id)
         self.assertEqual(system.user, None)
+
+class TestPowerFailures(unittest.TestCase):
+
+    def setUp(self):
+        self.stub_cobbler_thread = stub_cobbler.StubCobblerThread()
+        self.stub_cobbler_thread.start()
+        self.lab_controller = data_setup.create_labcontroller(
+                fqdn=u'localhost:%d' % self.stub_cobbler_thread.port)
+        session.flush()
+
+    def tearDown(self):
+        self.stub_cobbler_thread.stop()
+
+    def test_automated_system_marked_broken(self):
+        automated_system = data_setup.create_system(fqdn='broken1.example.org',
+                                                    lab_controller=self.lab_controller,
+                                                    status = SystemStatus.by_name(u'Automated'))
+        automated_system.action_power('on')
+        session.flush()
+        session.clear()
+        beakerd.queued_commands()
+        beakerd.running_commands()
+        automated_system = System.query().get(automated_system.id)
+        self.assertEqual(automated_system.status, SystemStatus.by_name(u'Broken'))
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=720672
+    def test_manual_system_status_not_changed(self):
+        manual_system = data_setup.create_system(fqdn = 'broken2.example.org',
+                                                 lab_controller = self.lab_controller,
+                                                 status = SystemStatus.by_name(u'Manual'))
+        manual_system.action_power('on')
+        session.flush()
+        session.clear()
+        beakerd.queued_commands()
+        beakerd.running_commands()
+        manual_system = System.query().get(manual_system.id)
+        self.assertEqual(manual_system.status, SystemStatus.by_name(u'Manual'))
