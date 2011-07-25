@@ -118,20 +118,27 @@ class StubCobbler(object):
         fqdns = d['systems']
         action = d['power']
         assert action in self.ACCEPTED_POWER_ACTIONS
+        broken = False
         for fqdn in fqdns:
             assert fqdn in self.systems
             self.system_actions[fqdn] = action
+            if "broken" in fqdn:
+                broken = True
             log.info('%r power %s system %s', self, action, fqdn)
-        task_handle = 'StubCobblerTask:%d' % int(time.time() * 1000)
+        task_handle = '%sStubCobblerTask:%d' % (broken and "Broken" or "",
+                                                int(time.time() * 1000))
         assert task_handle not in self.incomplete_tasks
         self.incomplete_tasks.add(task_handle)
         return task_handle
 
     def get_event_log(self, task_handle):
         assert task_handle in self.incomplete_tasks
-        # always complete instantly, successfully
+        # always complete instantly, successfully unless name contains "broken"
         self.incomplete_tasks.remove(task_handle)
-        return '\n'.join(['### TASK COMPLETE ###', 'Stub cobbler did nothing'])
+        if task_handle.startswith("Broken"):
+            return '\n'.join(['### TASK FAILED ###', 'Stub cobbler failed to do nothing'])
+        else:
+            return '\n'.join(['### TASK COMPLETE ###', 'Stub cobbler did nothing'])
 
     def read_or_write_kickstart_template(self, filename, read, contents, token):
         assert token == 'logged_in'

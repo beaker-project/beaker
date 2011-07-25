@@ -533,7 +533,8 @@ def running_commands(*args):
                                   (cmd.task_id, cmd.id, cmd.system))
                         cmd.status = CommandStatus.by_name(u'Failed')
                         cmd.new_value = u'Cobbler task failed'
-                        cmd.system.mark_broken(reason='Cobbler power task failed')
+                        if cmd.system.status == SystemStatus.by_name(u'Automated'):
+                            cmd.system.mark_broken(reason='Cobbler power task failed')
                         break
                 if (cmd.status == CommandStatus.by_name(u'Running')) and \
                    (datetime.utcnow() >= cmd.updated + timedelta(seconds=COMMAND_TIMEOUT)):
