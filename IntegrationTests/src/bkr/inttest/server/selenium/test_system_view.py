@@ -76,8 +76,10 @@ class SystemViewTest(SeleniumTestCase):
         sel.type('simplesearch', self.system.fqdn)
         sel.click('search')
         sel.wait_for_page_to_load('30000')
+        self.assertEqual(sel.get_title(), 'Systems')
         sel.click('link=%s' % self.system.fqdn)
         sel.wait_for_page_to_load('30000')
+        self.assertEqual(sel.get_title(), self.system.fqdn)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=631421
     def test_page_title_shows_fqdn(self):

@@ -136,6 +136,7 @@ class TestSystemGridSorting(SeleniumTestCase):
         sel.type('systemsearch_1_value', 'bob')
         sel.click('Search')
         sel.wait_for_page_to_load('30000')
+        self.assertEqual(sel.get_title(), 'Systems')
 
     def test_can_sort_listing_by_status(self):
         self.go_to_listing()
