@@ -142,12 +142,12 @@ def setup_package():
     # (we really always want our tests' logs to go to stdout, not /var/log/beaker/)
     log_to_stream(sys.stdout, level=logging.NOTSET)
 
+    from bkr.inttest import data_setup
     if not 'BEAKER_SKIP_INIT_DB' in os.environ:
-        from bkr.inttest import data_setup
         data_setup.setup_model()
         data_setup.create_labcontroller() #always need a labcontroller
-        data_setup.create_distro()
-        session.flush()
+    data_setup.create_distro()
+    session.flush()
 
     if not os.path.exists(turbogears.config.get('basepath.rpms')):
         os.mkdir(turbogears.config.get('basepath.rpms'))
