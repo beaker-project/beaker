@@ -197,6 +197,10 @@ if [ -z "$RESERVETIME" ]; then
     SLEEPTIME=24h
 else
     SLEEPTIME=$RESERVETIME
+    # Verify the max amount of time a system can be reserved
+    if [ $SLEEPTIME -gt 356400 ]; then
+	SLEEPTIME=356400
+    fi
 fi
 
 if [ -n "$RESERVEBY" ]; then
