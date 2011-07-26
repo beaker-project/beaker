@@ -134,12 +134,12 @@ def create_distro(name=None, breed=u'Dan',
     distro.virt = virt
     if tags:
         distro.tags.extend(tags)
+    distro.arch = Arch.by_name(arch)
     osmajor = OSMajor.lazy_create(osmajor=osmajor)
     try:
         distro.osversion = OSVersion.by_name(osmajor, osminor)
     except sqlalchemy.exceptions.InvalidRequestError:
-        distro.osversion = OSVersion(osmajor, osminor, arches=[])
-    distro.arch = Arch.by_name(arch)
+        distro.osversion = OSVersion(osmajor, osminor, arches=[distro.arch])
     # make it available in all lab controllers
     for lc in LabController.query():
         distro.lab_controller_assocs.append(LabControllerDistro(lab_controller=lc))

@@ -37,7 +37,9 @@ Common :program:`bkr` options are described in the :ref:`Options
 Exit status
 -----------
 
-1 if there was an error cloning any of the arguments, otherwise zero.
+Non-zero on error, otherwise zero.
+A failure in cloning *any* of the arguments is considered to be an error, and 
+the exit status will be 1.
 
 Examples
 --------

@@ -39,7 +39,7 @@ Common :program:`bkr` options are described in the :ref:`Options
 Exit status
 -----------
 
-XXX FIXME always 0 :-(
+Non-zero on error, otherwise zero.
 
 Examples
 --------
@@ -74,10 +74,14 @@ class Job_Cancel(BeakerCommand):
 
 
     def run(self, *args, **kwargs):
+        if len(args) < 1:
+            self.parser.error('Please specify a taskspec to cancel')
+
         username = kwargs.pop("username", None)
         password = kwargs.pop("password", None)
         msg = kwargs.pop("msg", None)
 
         self.set_hub(username, password)
         for task in args:
-            print self.hub.taskactions.stop(task, 'cancel', msg)
+            self.hub.taskactions.stop(task, 'cancel', msg)
+            print 'Cancelled %s' % task

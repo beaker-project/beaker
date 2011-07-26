@@ -90,7 +90,8 @@ class Distros_Untag(BeakerCommand):
         tag = args[0]
 
         self.set_hub(username, password)
+        distros = self.hub.distros.untag(name, arch, tag)
         print "Removed Tag %s from the following distros:" % tag
         print "------------------------------------------------------"
-        for distro in self.hub.distros.untag(name, arch, tag):
+        for distro in distros:
             print distro

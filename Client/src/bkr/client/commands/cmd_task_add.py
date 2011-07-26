@@ -29,7 +29,7 @@ Common :program:`bkr` options are described in the :ref:`Options
 Exit status
 -----------
 
-XXX FIXME always 0
+Non-zero on error, otherwise zero.
 
 Examples
 --------
@@ -67,11 +67,18 @@ class Task_Add(BeakerCommand):
         tasks = args
 
         self.set_hub(username, password)
+        failed = False
         for task in tasks:
             task_name = os.path.basename(task)
             task_binary = xmlrpclib.Binary(open(task, "r").read())
             print task_name
             try:
                 print self.hub.tasks.upload(task_name, task_binary)
+            except (KeyboardInterrupt, SystemExit):
+                raise
             except Exception, ex:
-                print ex
+                failed = True
+                sys.stderr.write('Exception: %s\n' % ex)
+
+        if failed:
+            sys.exit(1)

@@ -167,7 +167,7 @@ class Machine_Test(BeakerWorkflow):
                 submitted_jobs.append(self.hub.jobs.upload(jobxml))
             except Exception, ex:
                 failed = True
-                print ex
+                print >>sys.stderr, ex
         if not dryrun:
             print "Submitted: %s" % submitted_jobs
             if wait:

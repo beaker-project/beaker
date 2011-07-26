@@ -194,13 +194,15 @@ class Job_Submit(BeakerCommand):
             try:
                 job_schema.assertValid(lxml.etree.fromstring(jobxml))
             except Exception, e:
-                print >>sys.stderr, 'WARNING: job xml validation failed: %s' % e
+                sys.stderr.write('WARNING: job xml validation failed: %s\n' % e)
             if not dryrun:
                 try:
                     submitted_jobs.append(self.hub.jobs.upload(jobxml, ignore_missing_tasks))
+                except (KeyboardInterrupt, SystemExit):
+                    raise
                 except Exception, ex:
                     failed = True
-                    print ex
+                    sys.stderr.write('Exception: %s\n' % ex)
         if not dryrun:
             print "Submitted: %s" % submitted_jobs
             if wait:

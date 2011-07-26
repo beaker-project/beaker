@@ -90,7 +90,8 @@ class Distros_Tag(BeakerCommand):
         tag = args[0]
 
         self.set_hub(username, password)
+        distros = self.hub.distros.tag(name, arch, tag)
         print "Tagged the following distros with tag: %s" % tag
         print "------------------------------------------------------"
-        for distro in self.hub.distros.tag(name, arch, tag):
+        for distro in distros:
             print distro

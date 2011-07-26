@@ -61,7 +61,9 @@ Common :program:`bkr` options are described in the :ref:`Options
 Exit status
 -----------
 
-1 if no systems match, otherwise zero.
+Non-zero on error, otherwise zero.
+If no systems match the given criteria this is considered to be an error, and 
+the exit status will be 1.
 
 Examples
 --------
