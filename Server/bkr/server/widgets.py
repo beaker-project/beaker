@@ -1406,7 +1406,7 @@ class ProductWidget(SingleSelectField, RPC):
         super(ProductWidget, self).update_params(d)
         d['attrs']['id'] = 'job_product'
         d['attrs']['onchange'] = "ProductChange('%s',%s, %s)" % (
-            d.get('action'),
+            url(d.get('action')),
             jsonify.encode({'id': d.get('job_id')}),
             jsonify.encode(self.get_options(d)),
             )
@@ -1433,7 +1433,7 @@ class RetentionTagWidget(SingleSelectField, RPC): #FIXME perhaps I shoudl create
         super(RetentionTagWidget, self).update_params(d)
         d['attrs']['id'] = 'job_retentiontag'
         d['attrs']['onchange'] = "RetentionTagChange('%s',%s, %s)" % (
-            d.get('action'),
+            url(d.get('action')),
             jsonify.encode({'id': d.get('job_id')}),
             jsonify.encode(self.get_options(d)),
             )
