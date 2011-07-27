@@ -3,7 +3,6 @@
 import os
 import xml.dom.minidom
 import sys
-import copy
 import re
 from kobo.client import ClientCommand
 
@@ -325,13 +324,13 @@ class BeakerWorkflow(BeakerCommand):
         # Don't create empty recipes
         if actualTasks:
             # Copy basic requirements
-            recipe = copy.deepcopy(recipeTemplate)
+            recipe = recipeTemplate.clone()
             if whiteboard:
                 recipe.whiteboard = whiteboard
             if distroRequires:
-                recipe.addDistroRequires(copy.deepcopy(distroRequires))
+                recipe.addDistroRequires(distroRequires)
             if hostRequires:
-                recipe.addHostRequires(copy.deepcopy(hostRequires))
+                recipe.addHostRequires(hostRequires)
             if dict(name='/distribution/install', arches=[]) not \
                in requestedTasks:
                 recipe.addTask('/distribution/install')
@@ -353,6 +352,11 @@ class BeakerWorkflow(BeakerCommand):
 
 class BeakerBase(object):
     doc = xml.dom.minidom.Document()
+
+    def clone(self):
+        cloned = self.__class__()
+        cloned.node = self.node.cloneNode(True)
+        return cloned
 
     def toxml(self, prettyxml=False, **kwargs):
         """ return xml of job """
@@ -390,7 +394,7 @@ class BeakerJob(BeakerBase):
             else:
                 raise
             if len(node.getElementsByTagName('recipe')) > 0:
-                self.node.appendChild(node)
+                self.node.appendChild(node.cloneNode(True))
 
     def addRecipe(self, recipe=None):
         """ properly add a recipe to this job """
@@ -403,7 +407,7 @@ class BeakerJob(BeakerBase):
                 raise
             if len(node.getElementsByTagName('task')) > 0:
                 recipeSet = self.doc.createElement('recipeSet')
-                recipeSet.appendChild(node)
+                recipeSet.appendChild(node.cloneNode(True))
                 self.node.appendChild(recipeSet)
 
 class BeakerRecipeSet(BeakerBase):
@@ -421,21 +425,21 @@ class BeakerRecipeSet(BeakerBase):
             else:
                 raise
             if len(node.getElementsByTagName('task')) > 0:
-                self.node.appendChild(node)
+                self.node.appendChild(node.cloneNode(True))
 
 class BeakerRecipeBase(BeakerBase):
     def __init__(self, *args, **kwargs):
         self.node.setAttribute('whiteboard','')
-        self.andDistroRequires = self.doc.createElement('and')
-        self.andHostRequires = self.doc.createElement('and')
+        andDistroRequires = self.doc.createElement('and')
+        andHostRequires = self.doc.createElement('and')
         distroRequires = self.doc.createElement('distroRequires')
         hostRequires = self.doc.createElement('hostRequires')
-        self.repos = self.doc.createElement('repos')
-        distroRequires.appendChild(self.andDistroRequires)
-        hostRequires.appendChild(self.andHostRequires)
+        repos = self.doc.createElement('repos')
+        distroRequires.appendChild(andDistroRequires)
+        hostRequires.appendChild(andHostRequires)
         self.node.appendChild(distroRequires)
         self.node.appendChild(hostRequires)
-        self.node.appendChild(self.repos)
+        self.node.appendChild(repos)
 
     def addBaseRequires(self, *args, **kwargs):
         """ Add base requires """
@@ -515,7 +519,7 @@ class BeakerRecipeBase(BeakerBase):
             self.addAutopick(random)
 
     def addRepo(self, node):
-        self.repos.appendChild(node)
+        self.repos.appendChild(node.cloneNode(True))
 
     def addHostRequires(self, nodes):
         """ Accepts either xml, dom.Element or a list of dom.Elements """
@@ -529,7 +533,7 @@ class BeakerRecipeBase(BeakerBase):
         if isinstance(nodes, list):
             for node in nodes:
                 if isinstance(node, xml.dom.minidom.Element):
-                    self.andHostRequires.appendChild(node)
+                    self.andHostRequires.appendChild(node.cloneNode(True))
 
     def addDistroRequires(self, nodes):
         """ Accepts either xml, dom.Element or a list of dom.Elements """
@@ -543,7 +547,7 @@ class BeakerRecipeBase(BeakerBase):
         if isinstance(nodes, list):
             for node in nodes:
                 if isinstance(node, xml.dom.minidom.Element):
-                    self.andDistroRequires.appendChild(node)
+                    self.andDistroRequires.appendChild(node.cloneNode(True))
 
     def addTask(self, task, role='STANDALONE', paramNodes=[], taskParams=[]):
         recipeTask = self.doc.createElement('task')
@@ -602,6 +606,22 @@ class BeakerRecipeBase(BeakerBase):
 
     whiteboard = property(get_whiteboard, set_whiteboard)
 
+    def get_andDistroRequires(self):
+        return self.node\
+                .getElementsByTagName('distroRequires')[0]\
+                .getElementsByTagName('and')[0]
+    andDistroRequires = property(get_andDistroRequires)
+
+    def get_andHostRequires(self):
+        return self.node\
+                .getElementsByTagName('hostRequires')[0]\
+                .getElementsByTagName('and')[0]
+    andHostRequires = property(get_andHostRequires)
+
+    def get_repos(self):
+        return self.node.getElementsByTagName('repos')[0]
+    repos = property(get_repos)
+
 
 class BeakerRecipe(BeakerRecipeBase):
     def __init__(self, *args, **kwargs):
@@ -611,10 +631,10 @@ class BeakerRecipe(BeakerRecipeBase):
     def addGuestRecipe(self, guestrecipe):
         """ properly add a guest recipe to this recipe """
         if isinstance(guestrecipe, BeakerGuestRecipe):
-            self.node.appendChild(guestrecipe.node)
+            self.node.appendChild(guestrecipe.node.cloneNode(True))
         elif isinstance(guestrecipe, xml.dom.minidom.Element) and \
              guestrecipe.tagName == 'guestrecipe':
-            self.node.appendChild(guestrecipe)
+            self.node.appendChild(guestrecipe.cloneNode(True))
         else:
             #FIXME raise error here.
             sys.stderr.write("invalid object\n")
