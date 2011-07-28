@@ -1,5 +1,49 @@
 # -*- coding: utf-8 -*-
 
+"""
+Upload tasks to Beaker's task library
+=====================================
+
+.. program:: bkr task-add
+
+Synopsis
+--------
+
+:program:`bkr task-add` [*options*] <taskrpm>...
+
+Description
+-----------
+
+Uploads one or more task RPM packages to Beaker's task library. These tasks 
+will be available for jobs queued with the Beaker scheduler.
+
+If updating an existing task in Beaker, the RPM version of the new package must 
+be greater than the version currently in Beaker.
+
+Options
+-------
+
+Common :program:`bkr` options are described in the :ref:`Options 
+<common-options>` section of :manpage:`bkr(1)`.
+
+Exit status
+-----------
+
+XXX FIXME always 0
+
+Examples
+--------
+
+Upload a new version of the /distribution/beaker/dogfood task::
+
+    bkr task-add beaker-distribution-beaker-dogfood-2.0-1.rpm
+
+See also
+--------
+
+:manpage:`bkr(1)`
+"""
+
 
 from bkr.client.task_watcher import *
 from bkr.client import BeakerCommand

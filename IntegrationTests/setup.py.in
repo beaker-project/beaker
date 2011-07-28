@@ -1,0 +1,21 @@
+from glob import glob
+from setuptools import setup, find_packages
+setup(
+    name='bkr.inttest',
+    version='@VERSION@',
+    packages=find_packages('src'),
+    package_dir={'': 'src'},
+    package_data={'': [
+        '*.xml',
+        'server/motd.xml',
+        'server/selenium/*.rpm',
+        'server/selenium/invalid-task_file',
+    ]},
+    namespace_packages=['bkr'],
+    install_requires=[
+        'bkr.server',
+        'bkr.client',
+        'selenium',
+        'kobo',
+    ],
+)

@@ -1,9 +1,0 @@
-PURPOSE of /examples/beakerlib/Sanity/apache
-Description: Apache example test
-Author: Petr Splichal <psplicha@redhat.com>
-
-This is an example BeakerLib test. It presents the most essential
-BeakerLib functions and concepts on a basic Apache sanity test.
-
-Have a look at the code to get an initial overview and inspiration
-before you start writing your first BeakerLib test ;-)

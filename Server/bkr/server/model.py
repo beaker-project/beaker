@@ -1770,17 +1770,16 @@ url --url=$tree
             query = query.filter(or_(System.status==SystemStatus.by_name(u'Automated'),
                     System.status==SystemStatus.by_name(u'Manual')))
  
-        if not user.is_admin():
-            query = query.filter(or_(and_(System.owner==user), 
-                                    System.loaned == user,
-                                    and_(System.shared==True, 
-                                         System.groups==None,
-                                        ),
-                                    and_(System.shared==True,
-                                         User.user_id==user.user_id
-                                        )
+        query = query.filter(or_(and_(System.owner==user), 
+                                System.loaned == user,
+                                and_(System.shared==True, 
+                                     System.groups==None,
+                                    ),
+                                and_(System.shared==True,
+                                     User.user_id==user.user_id
                                     )
                                 )
+                            )
         return query
 
 
@@ -1948,9 +1947,7 @@ url --url=$tree
         return False
 
     def can_provision_now(self,user=None):
-        if user is not None and self.is_admin(user_id=user.user_id):
-            return True
-        elif user is not None and self.loaned == user:
+        if user is not None and self.loaned == user:
             return True
         elif user is not None and self._user_in_systemgroup(user):
             return True
@@ -2017,12 +2014,9 @@ url --url=$tree
         """
         This represents the basic system perms,loanee, owner,  shared and in group or shared and no group
         """
-        try:
-            if user.is_admin():
-                return True
-        except AttributeError, e: #not logged in ?
+        # If user is None then probably not logged in.
+        if not user:
             return False
-
         if self.loaned:
             if user == self.loaned:
                 return True
@@ -2147,9 +2141,11 @@ url --url=$tree
             else:
                 try:
                     method = self.get_update_method(key)
+                except KeyError:
+                    log.warning('Attempted to update unknown inventory property \'%s\' on %s' %
+                                (key, self.fqdn))
+                else:
                     method(inventory[key])
-                except:
-                   raise
         self.date_modified = datetime.utcnow()
         return 0
 
@@ -3718,6 +3714,7 @@ class TaskBase(MappedObject):
         """
         Return an TaskBase object by it's shorthand i.e 'J:xx, RS:xx'
         """
+        # Keep Client/doc/bkr.rst in sync with this
         task_type,id = t_id.split(":")
         try:
             class_str = cls.t_id_types[task_type]

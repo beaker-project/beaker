@@ -1,5 +1,59 @@
 # -*- coding: utf-8 -*-
 
+"""
+Cancel running Beaker jobs
+==========================
+
+.. program:: bkr job-cancel
+
+Synopsis
+--------
+
+:program:`bkr job-cancel` [--msg <message>] [*options*] <taskspec>...
+
+Description
+-----------
+
+Specify one or more <taskspec> arguments to be cancelled.
+
+The <taskspec> arguments follow the same format as in other :program:`bkr` 
+subcommands (for example, ``J:1234``). See :ref:`Specifying tasks <taskspec>` 
+in :manpage:`bkr(1)`.
+
+Only jobs and recipe sets may be cancelled. It does not make sense to cancel 
+individual recipes within a recipe set, or tasks within a recipe, so Beaker 
+does not permit this.
+
+Options
+-------
+
+.. option:: --msg <message>
+
+   Optionally you can provide a message describing the reason for the 
+   cancellation. This message will be recorded against all outstanding tasks in 
+   the cancelled recipe set, and will be visible in the Beaker web UI.
+
+Common :program:`bkr` options are described in the :ref:`Options 
+<common-options>` section of :manpage:`bkr(1)`.
+
+Exit status
+-----------
+
+XXX FIXME always 0 :-(
+
+Examples
+--------
+
+Cancel job 1234 with a helpful message::
+
+    bkr job-cancel --msg "Selected wrong distro, resubmitting job" J:1234
+
+See also
+--------
+
+:manpage:`bkr(1)`
+"""
+
 
 from bkr.client import BeakerCommand
 from optparse import OptionValueError

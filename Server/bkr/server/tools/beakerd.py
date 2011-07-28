@@ -26,7 +26,7 @@ import pkg_resources
 pkg_resources.require("SQLAlchemy>=0.3.10")
 from bkr.server.bexceptions import BX, CobblerTaskFailedException
 from bkr.server.model import *
-from bkr.server.util import load_config
+from bkr.server.util import load_config, log_traceback
 from turbogears.database import session
 from turbogears import config
 from turbomail.control import interface
@@ -507,7 +507,7 @@ def scheduled_recipes(*args):
     return True
 
 
-COMMAND_TIMEOUT = 300
+COMMAND_TIMEOUT = 600
 def running_commands(*args):
     commands = CommandActivity.query()\
                               .filter(CommandActivity.status==CommandStatus.by_name(u'Running'))\
@@ -518,29 +518,35 @@ def running_commands(*args):
     for cmd_id, in commands.values(CommandActivity.id):
         session.begin()
         cmd = CommandActivity.query().get(cmd_id)
-        try:
-            for line in cmd.system.remote.get_event_log(cmd.task_id).split('\n'):
-                if line.find("### TASK COMPLETE ###") != -1:
-                    log.info('Power %s command (%d) completed on machine: %s' %
-                             (cmd.action, cmd.id, cmd.system))
-                    cmd.status = CommandStatus.by_name(u'Completed')
-                    break
-                if line.find("### TASK FAILED ###") != -1:
-                    log.error('Cobbler power task %s (command %d) failed for machine: %s' %
-                              (cmd.task_id, cmd.id, cmd.system))
-                    cmd.status = CommandStatus.by_name(u'Failed')
-                    cmd.system.mark_broken(reason='Cobbler power task failed')
-                    break
-            if (cmd.status == CommandStatus.by_name(u'Running')) and \
-               (datetime.utcnow() >= cmd.updated + timedelta(seconds=COMMAND_TIMEOUT)):
-                    cmd.status = CommandStatus.by_name(u'Aborted')
-                    log.error('Cobbler power task %s (command %d) timed out on machine: %s' %
-                              (cmd.task_id, cmd.id, cmd.system))
-        except Exception, msg:
-            cmd.status = CommandStatus.by_name(u'Failed')
-            cmd.new_value = unicode(msg)
-            log.error('Cobbler power exception processing command %d for machine %s: %s' %
-                      (cmd.id, cmd.system, msg))
+        if not cmd:
+            log.error('Command %d get() failed. Deleted?' % (cmd_id))
+        else:
+            try:
+                for line in cmd.system.remote.get_event_log(cmd.task_id).split('\n'):
+                    if line.find("### TASK COMPLETE ###") != -1:
+                        log.info('Power %s command (%d) completed on machine: %s' %
+                                 (cmd.action, cmd.id, cmd.system))
+                        cmd.status = CommandStatus.by_name(u'Completed')
+                        break
+                    if line.find("### TASK FAILED ###") != -1:
+                        log.error('Cobbler power task %s (command %d) failed for machine: %s' %
+                                  (cmd.task_id, cmd.id, cmd.system))
+                        cmd.status = CommandStatus.by_name(u'Failed')
+                        cmd.new_value = u'Cobbler task failed'
+                        if cmd.system.status == SystemStatus.by_name(u'Automated'):
+                            cmd.system.mark_broken(reason='Cobbler power task failed')
+                        break
+                if (cmd.status == CommandStatus.by_name(u'Running')) and \
+                   (datetime.utcnow() >= cmd.updated + timedelta(seconds=COMMAND_TIMEOUT)):
+                        log.error('Cobbler power task %s (command %d) timed out on machine: %s' %
+                                  (cmd.task_id, cmd.id, cmd.system))
+                        cmd.status = CommandStatus.by_name(u'Aborted')
+                        cmd.new_value = u'Timeout of %d seconds exceeded' % COMMAND_TIMEOUT
+            except Exception, msg:
+                log.error('Cobbler power exception processing command %d for machine %s: %s' %
+                          (cmd.id, cmd.system, msg))
+                cmd.status = CommandStatus.by_name(u'Failed')
+                cmd.new_value = unicode(msg)
         session.commit()
         session.close()
     log.debug('Exiting running_commands routine')
@@ -569,43 +575,51 @@ def queued_commands(*args):
         # I'm not sure how this would happen since id came from the above
         # query, maybe a race condition?
         if not cmd:
-            continue
-        if not cmd.system.remote or not cmd.system.power:
-            cmd.status = CommandStatus.by_name(u'Aborted')
+            log.error('Command %d get() failed. Deleted? Machine: %s' % (command.id, command.system))
+        elif not cmd.system.lab_controller or not cmd.system.power:
             log.error('Command %d aborted, power control not available for machine: %s' %
                       (cmd.id, cmd.system))
-        try:
-            log.info('Executing power %s command (%d) on machine: %s' %
-                     (cmd.action, cmd.id, cmd.system))
-            cmd.task_id = cmd.system.remote.power(cmd.action)
-            cmd.updated = datetime.utcnow()
-            cmd.status = CommandStatus.by_name(u'Running')
-        except Exception, msg:
-            cmd.new_value = unicode(msg)
-            cmd.status = CommandStatus.by_name(u'Failed')
-            log.error('Cobbler power exception submitting \'%s\' command (%d) for machine %s: %s' %
-                      (cmd.action, cmd.id, cmd.system, msg))
+            cmd.status = CommandStatus.by_name(u'Aborted')
+            cmd.new_value = u'Power control unavailable'
+        else:
+            try:
+                log.info('Executing power %s command (%d) on machine: %s' %
+                         (cmd.action, cmd.id, cmd.system))
+                cmd.task_id = cmd.system.remote.power(cmd.action)
+                cmd.updated = datetime.utcnow()
+                cmd.status = CommandStatus.by_name(u'Running')
+            except Exception, msg:
+                log.error('Cobbler power exception submitting \'%s\' command (%d) for machine %s: %s' %
+                          (cmd.action, cmd.id, cmd.system, msg))
+                cmd.new_value = unicode(msg)
+                cmd.status = CommandStatus.by_name(u'Failed')
         session.commit()
         session.close()
     log.debug('Exiting queued_commands routine')
     return True
 
+# These functions are run in separate threads, so we want to log any uncaught 
+# exceptions instead of letting them be written to stderr and lost to the ether
 
+@log_traceback(log)
 def new_recipes_loop(*args, **kwargs):
     while True:
         if not new_recipes():
             time.sleep(20)
 
+@log_traceback(log)
 def processed_recipesets_loop(*args, **kwargs):
     while True:
         if not processed_recipesets():
             time.sleep(20)
 
+@log_traceback(log)
 def queued_recipes_loop(*args, **kwargs):
     while True:
         if not queued_recipes():
             time.sleep(20)
 
+@log_traceback(log)
 def command_queue_loop(*args, **kwargs):
     while True:
         running_commands()

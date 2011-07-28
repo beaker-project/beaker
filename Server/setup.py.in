@@ -193,9 +193,6 @@ setup(
     install_requires=[
         "TurboGears >= 1.0.3.2",
     ],
-    tests_require=[
-        'selenium',
-    ],
     scripts=[],
     zip_safe=False,
     data_files = data_files,
@@ -203,8 +200,6 @@ setup(
     package_data={
         'bkr.server.config': ['*.cfg'],
         'bkr.server.templates': ['*.kid'],
-        'bkr.server.test': ['*.xml'],
-        'bkr.server.test.selenium': ['*.rpm', '*.csv'],
     },
     keywords=[
         'turbogears.app',

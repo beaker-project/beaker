@@ -2,13 +2,8 @@
 %{!?pyver: %global pyver %(%{__python} -c "import sys ; print sys.version[:3]")}
 
 Name:           beaker
-<<<<<<< HEAD:beaker.spec
-Version:        0.6.14
-Release:        10%{?dist}
-=======
-Version:        0.6.15
+Version:        0.6.16
 Release:        1%{?dist}
->>>>>>> release-0.6.15:beaker.spec
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -21,6 +16,7 @@ BuildRequires:  python-setuptools
 BuildRequires:  python-setuptools-devel
 BuildRequires:  python2-devel
 BuildRequires:  python-kid
+BuildRequires:  python-docutils >= 0.6
 %if (0%{?fedora} >= 14)
 BuildRequires:  python-sphinx >= 1.0
 %else
@@ -38,6 +34,11 @@ BuildRequires:  python-lxml
 BuildRequires:  python-ldap
 BuildRequires:  python-TurboMail >= 3.0
 BuildRequires:  rpm-python
+# As above, these client dependencies are needed in build because of sphinx
+BuildRequires:  kobo-client >= 0.3
+BuildRequires:  python-krbV
+BuildRequires:  python-lxml
+BuildRequires:  libxslt-python
 
 
 %package client
@@ -75,6 +76,19 @@ Requires:	%{name} = %{version}-%{release}
 Requires:       python-TurboMail >= 3.0
 Requires:	createrepo
 Requires:	yum-utils
+
+
+%package integration-tests
+Summary:        Integration tests for Beaker
+Group:          Applications/Internet
+Requires:       %{name} = %{version}-%{release}
+Requires:       %{name}-server = %{version}-%{release}
+Requires:       %{name}-client = %{version}-%{release}
+Requires:       python-nose >= 0.10
+Requires:       kobo
+Requires:       java-1.6.0-openjdk
+Requires:       Xvfb
+Requires:       firefox
 
 
 %package lab-controller
@@ -118,6 +132,11 @@ This is the command line interface used to interact with the Beaker Server.
 
 %description server
 To Be Filled in - Server Side..
+
+
+%description integration-tests
+This package contains integration tests for Beaker, which require a running 
+database and Beaker server.
 
 
 %description lab-controller
@@ -218,6 +237,12 @@ fi
 %attr(-,apache,root) %dir %{_localstatedir}/www/%{name}/repos
 %attr(-,apache,root) %dir %{_localstatedir}/run/%{name}
 
+%files integration-tests
+%defattr(-,root,root,-)
+%{python_sitelib}/bkr/inttest/
+%{python_sitelib}/bkr.inttest-%{version}-*
+%{python_sitelib}/bkr.inttest-%{version}-py%{pyver}.egg-info/
+
 %files client
 %defattr(-,root,root,-)
 %config(noreplace) %{_sysconfdir}/beaker/client.conf
@@ -255,6 +280,29 @@ fi
 %{_var}/lib/beaker/addDistro.d/*
 
 %changelog
+* Wed Jul 27 2011 Raymond Mancy <rmancy@redhat.com> 0.6.16-1
+- 720890 - log uncaught exceptions in beakerd worker threads
+  (dcallagh@redhat.com)
+- 720248 - link to rpm on task page (dcallagh@redhat.com)
+- 720041 - include whiteboard in subject of job completion notifications
+  (dcallagh@redhat.com)
+- 722387 - soft limits ignored (mcsontos@redhat.com)
+- 589036 - man pages for bkr client (dcallagh@redhat.com)
+- 720559 - update bkr task-list to handle dict returned from tasks.filter
+  (dcallagh@redhat.com)
+- 722321 - Beaker scheduler should honor acl's even on admin jobs.
+  (bpeck@redhat.com)
+- 720044 - Only mark a system broken once (stl@redhat.com)
+
+- Max out the number of time for both the script and argument passed in.
+  (jburke@redhat.com)
+- Avoid IndexError if getdriver.sh returns only one line (stl@redhat.com)
+- move integration tests into their own subpackage (dcallagh@redhat.com)
+- move existing client tests to integration tests package (dcallagh@redhat.com)
+- Newer RHEL5 automount works correctly now.  No need to use fakenet anymore.
+  (bpeck@redhat.com)
+- Don't raise an exception on unrecognised attributes from inventory script
+  (stl@redhat.com)
 * Wed Jul 13 2011 Raymond Mancy <rmancy@redhat.com> 0.6.15-1
 - bz717500 - apply timeout to all ProxyHelper subclasses (dcallagh@redhat.com)
 - bz718234 - ignore xen distros (bpeck@redhat.com)

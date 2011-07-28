@@ -127,3 +127,22 @@ def get_reports_engine():
     else:
         log.debug('Using default engine for reports_engine')
         return get_engine()
+
+# Based on a similar decorator from kobo.decorators
+def log_traceback(logger):
+    """
+    A decorator which will log uncaught exceptions to the given logger, before
+    re-raising them.
+    """
+    def decorator(func):
+        def decorated(*args, **kwargs):
+            try:
+                func(*args, **kwargs)
+            except:
+                logger.exception('Uncaught exception in %s', func.__name__)
+                raise
+        decorated.__name__ = func.__name__
+        decorated.__doc__ = func.__doc__
+        decorated.__dict__.update(func.__dict__)
+        return decorated
+    return decorator

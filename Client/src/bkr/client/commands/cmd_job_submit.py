@@ -1,5 +1,80 @@
 # -*- coding: utf-8 -*-
 
+"""
+Submit job XML to Beaker
+========================
+
+.. program:: bkr job-submit
+
+Synopsis
+--------
+
+| :program:`bkr job-submit` [*options*]
+|       [--debug] [--convert] [--combine] [--ignore-missing-tasks]
+|       [--dryrun | --wait] <jobxml>...
+
+Description
+-----------
+
+Specify one or more <jobxml> filenames to be submitted to Beaker. Pass '-' to 
+read from stdin.
+
+Options
+-------
+
+.. option:: --debug
+
+   Print the job XML before submitting it.
+
+.. option:: --convert
+
+   Attempt to convert legacy RHTS XML to Beaker XML. Use this with 
+   :option:`--debug` and :option:`--dryrun` to grab the converted XML without 
+   submitting it.
+
+.. option:: --combine
+
+   If more than one job XML argument is given, the recipe sets from each job 
+   are extracted and combined into a single job before submission.
+
+.. option:: --ignore-missing-tasks
+
+   If the job refers to tasks which are not known to the scheduler, silently 
+   discard these from the recipe. Normally this is a fatal error which prevents 
+   submission of the job.
+
+.. option:: --dryrun
+
+   Do not submit the job(s) to Beaker. Use this with :option:`--debug` to see 
+   what would be submitted.
+
+.. option:: --wait
+
+   Watch the newly submitted jobs for state changes and print them to stdout. 
+   The command will not exit until all submitted jobs have finished. See 
+   :manpage:`bkr-job-watch(1)`.
+
+Common :program:`bkr` options are described in the :ref:`Options 
+<common-options>` section of :manpage:`bkr(1)`.
+
+Exit status
+-----------
+
+1 if any jobs failed submission, otherwise zero.
+
+Examples
+--------
+
+Submit a job and watch its progress on stdout::
+
+    bkr job-submit --wait my-beaker-job.xml
+
+See also
+--------
+
+:manpage:`bkr(1)`
+"""
+
 
 from bkr.client.task_watcher import *
 from bkr.client.convert import Convert
