@@ -22,6 +22,7 @@ import os
 import commands
 import pprint
 import glob
+from subprocess import Popen, PIPE
 
 sys.path.append("/usr/share/smolt/client")
 import smolt
@@ -122,6 +123,16 @@ def read_inventory():
         data['Numa'] = {
             'nodes': len(glob.glob('/sys/devices/system/node/node*')), #: number of NUMA nodes in the system, or 0 if not supported
         }
+
+    if os.path.exists('./hvm_detect'):
+        hypervisor = Popen(['./hvm_detect'], stdout=PIPE).communicate()[0]
+        hvm_map = {"No KVM or Xen HVM\n"    : None,
+                   "KVM guest.\n"           : u'KVM',
+                   "Xen HVM guest.\n"       : u'Xen',
+                   "Microsoft Hv guest.\n"  : u'HyperV',
+                   "VMWare guest.\n"        : u'VMWare',
+                  }
+        data['Hypervisor'] = hvm_map[hypervisor]
 
     for VendorID, DeviceID, SubsysVendorID, SubsysDeviceID, Bus, Driver, Type, Description in profile.deviceIter():
         device = dict ( vendorID = "%04x" % (VendorID and VendorID or 0),

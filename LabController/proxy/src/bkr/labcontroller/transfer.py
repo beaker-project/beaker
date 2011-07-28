@@ -53,7 +53,6 @@ def main_loop(conf=None, foreground=False):
     if foreground:
         add_stderr_logger(transfer.logger)
 
-    transfer.hub._transport.timeout = 120
     time_of_last_check = 0
     while True:
         try:

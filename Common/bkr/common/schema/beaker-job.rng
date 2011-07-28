@@ -133,15 +133,13 @@
         </a:documentation>
         <zeroOrMore><ref name="distroreq"/></zeroOrMore>
       </element>
-      <optional>
-        <element name="hostRequires">
-          <a:documentation xml:lang="en">
-            This element is a container for expressing contraints on the 
-            system which will be selected to run this recipe.
-          </a:documentation>
-          <zeroOrMore><ref name="hostreq"/></zeroOrMore>
-        </element>
-      </optional>
+      <element name="hostRequires">
+        <a:documentation xml:lang="en">
+          This element is a container for expressing contraints on the 
+          system which will be selected to run this recipe.
+        </a:documentation>
+        <zeroOrMore><ref name="hostreq"/></zeroOrMore>
+      </element>
       <optional>
         <ref name="partitions"/>
       </optional>

@@ -1,0 +1,220 @@
+﻿<?xml version='1.0'?>
+<!DOCTYPE section PUBLIC "-//OASIS//DTD DocBook XML V4.5//EN" "http://www.oasis-open.org/docbook/xml/4.5/docbookx.dtd" [
+]>
+<section id="User_Guide-Getting_Started-Checklist_Discussed">
+                    <title>Checklist Discussed</title>
+                    <section id="User_Guide-Getting_Started-Checklist_Discussed-Quality_of_Code">
+                    <title>Quality of code</title>
+                    <para>Check for the following:
+                    <itemizedlist>
+                      <listitem>
+                        <para><application>Commenting</application>: Test code is commented and complex routines sufficiently documented. 
+                        </para>
+                      </listitem>
+                      <listitem>
+                        <para><application>PURPOSE file</application>: Test code directory contains a plain text file called PURPOSE which explains what the test addresses along with any other information useful for troubleshooting or understanding it better. 
+                        </para>
+                      </listitem>
+                      <listitem>
+                        <para><application>Language-Review</application>: Optional, but preferred: review by someone with language-of-implementation knowledge.
+                        </para>
+                      </listitem>
+                      <listitem>
+                        <para><application>Functional-Review</application>: Optional, but preferred: functionality peer-reviewed (i.e. by someone else) with knowledge of the given domain. 
+                        </para>
+                      </listitem>
+                    </itemizedlist>
+                    </para>
+                    </section>
+                    <section id="User_Guide-Getting_Started-Checklist_Discussed-Quality_of_Logs">
+                    <title>Quality of Logs</title>
+                      <para>Check the following attributes to ensure the quality of logs:
+                        <itemizedlist>
+                          <listitem>
+                            <para><application>Detail of logging</application>
+                            <itemizedlist>
+                              <listitem>
+                                <para>Test logs should be verbose logging activity for both successful and unsuccessful operations. At a minimum these conditions should be recorded: 
+                                 <itemizedlist>
+                                  <listitem>
+                                    <para>Name of Test (or subtest; something unique) 
+                                    </para>
+                                  </listitem>
+                                  <listitem>
+                                    <para>Expected Result 
+                                    </para>
+                                  </listitem>
+                                  <listitem>
+                                    <para>Actual Result 
+                                    </para>
+                                  </listitem>
+                                  <listitem>
+                                    <para>Whether items 2 and 3 constitute a PASS or a FAIL.
+                                    </para>
+                                  </listitem>
+                                </itemizedlist> 
+                                </para>
+                              </listitem>
+                              <listitem>
+                                 <para>This should help with questions such as: 
+                                  <itemizedlist>
+                                    <listitem>
+                                      <para>How many tests ran? 
+                                      </para>
+                                    </listitem>
+                                    <listitem>
+                                      <para>What went wrong on FAILed cases? 
+                                      </para>
+                                    </listitem>
+                                    <listitem>
+                                      <para>How many PASSes/FAILs were there? 
+                                      </para>
+                                    </listitem>
+                                  </itemizedlist>
+                                </para>
+                            </listitem>
+                            </itemizedlist>
+                            </para>
+                          </listitem>
+                          <listitem>
+                            <para>And, associating the Name+Result with prior runs: 
+                               <itemizedlist>
+                                  <listitem>
+                                    <para>How well are we doing? 
+                                    </para>
+                                  </listitem>
+                                </itemizedlist>
+                            </para>
+                          </listitem>
+                        </itemizedlist>
+                      </para>
+                    </section>
+                  <section id="User_Guide-Getting_Started-Checklist_Discussed-Correctness">
+                      <title>Correctness</title>
+                        <para>Correctness has following parameters:
+                          <itemizedlist>
+                            <listitem>
+                                <para><application>True PASS and true FAIL results</application>
+                                  <itemizedlist>
+                                   <listitem>
+                                      <para>The test runs and generates true PASS and true FAIL results as appropriate. It is permissible for a test to FAIL even if the expected result is PASS if the software under test has a known defect that has been reported. The applicable bug number should be referenced in the error message so that it is easy to research the failure.
+                                      </para>
+                                    </listitem>
+                                  </itemizedlist>
+                                 </para>
+                            </listitem>
+                            <listitem>
+                                <para><application>Watch for bogus success values</application>
+                                  <itemizedlist>
+                                    <listitem>
+                                       <para>The test verifies PASS and FAIL results (versus returning the success or failure from a particular shell command... many shell commands return success because they successfully ran, not that they returned expected data. This usually requires user verification) 
+                                        </para>
+                                      </listitem>
+                                    </itemizedlist>
+                                  </para>
+                              </listitem>
+                              <listitem>
+                                  <para><application>Security review</application>
+                                      <itemizedlist>
+                                        <listitem>
+                                          <para>A cursory review of the code should be performed to make sure it does not contain obviously malicious or suspicious routines which appear more focused on damaging or casing the testing infrastructure versus performing a valid test.
+                                          </para>
+                                        </listitem>
+                                      </itemizedlist>
+                                    </para>
+                              </listitem>
+                        </itemizedlist>
+                      </para>
+                    </section>
+                    <section id="User_Guide-Getting_Started-Checklist_Discussed-Packaging">
+                      <title>Packaging</title>
+                      <para>Check the following attributes to ensure the correctness of Packaging:
+                         <itemizedlist>
+                            <listitem>
+                              <para><application>Makefile</application>
+                                <itemizedlist>
+                                  <listitem>
+                                   <para><application>make package</application> works correctly, generating an <application>RPM</application> with the expected payload. The <application>RPM</application> should successfully install correctly without any errors or dependency problems.
+                                    </para>
+                                  </listitem>
+                                   <listitem>
+                                      <para><application>make clean</application> should clean up all generated files that will not be stored in source control
+                                      </para>
+                                    </listitem>
+                                    <listitem>
+                                      <para>All unneeded comments and unused variable should be removed from the <application>Makefile. </application>The Makefile template contains lots of<application> FIXME </application>comments indicating what to put where. These comments should be removed from the final Makefile 
+                                      </para>
+                                    </listitem>
+                                    <listitem>
+                                      <para>Metadata section of <application>Makefile </application>should have these fields filled properly: 
+                                        <itemizedlist>
+                                          <listitem>
+                                            <para>Releases (only few tests can correctly run on everything from RHEL-2.1 to F8)
+                                            </para>
+                                          </listitem>
+                                          <listitem>
+                                            <para>RunFor (some tests stresses a lot of RHEL components, so they could be all here)
+                                            </para>
+                                          </listitem>
+                                          <listitem>
+                                            <para>Bug (lot of tests tests specific bug number, it is not enough to have it in test name) 
+                                            </para>
+                                          </listitem>
+                                        </itemizedlist>
+                                      </para>
+                                    </listitem>
+                                    <listitem>
+                                      <para><application>Permissions</application>: File permissions should be set approriately on built packages and verified by running<code> rpm -qplv</code> [package name]. For example:
+                                        <screen>File permissions should be set approriately on built packages and verified by running rpm -qplv [package name]. For example: </screen>
+                                          <itemizedlist>
+                                            <listitem>
+                                              <para><application>runtest.sh</application> should be executable by all users 
+                                              </para>
+                                            </listitem>
+                                            <listitem>
+                                              <para>any other executables should be executable by all users 
+                                              </para>
+                                            </listitem>
+                                            <listitem>
+                                              <para><application>PURPOSE</application> and generated <code>testinfo.desc</code> should be 644 
+                                              </para>
+                                            </listitem>
+                                          </itemizedlist>
+                                      </para>
+                                    </listitem>
+                                    <listitem>
+                                      <para><application>Correct namespace</application>For Correct namespace, double check the following:
+                                        <itemizedlist>
+                                          <listitem>
+                                            <para>Confirm that the test is included in the correct namespace and has followed the proper naming conventions. Refer to the [TOPLEVEL_NAMESPACE] to make sure that the underlying package being tested is reporting results in the correct namespace. 
+                                            </para>
+                                          </listitem>
+                                          <listitem>
+                                            <para>The Makefile variables and testnames should also correspond to the correct path in source control. For example: 
+                                            <screen>[grover@dhcp83-5 smoke-high-load]# pwd
+/home/grover/rhts/tests/bind/smoke-high-load
+                                            </screen>
+                                            </para>
+                                          </listitem>
+                                        </itemizedlist>
+                                      </para>
+                                    </listitem>
+                                  </itemizedlist>
+                                </para>
+                              </listitem>
+                          </itemizedlist>
+                        </para>
+                        <para>Here are the applicable variables from the Makefile: 
+                        </para>
+                        <screen># The toplevel namespace within which the test lives.
+TOPLEVEL_NAMESPACE=CoreOS
+
+# The name of the package under test:
+PACKAGE_NAME=bind
+
+# The path of the test below the package:
+RELATIVE_PATH=smoke-high-load
+                        </screen>
+                      </section>
+                  </section>
+                  

@@ -18,7 +18,8 @@ from socket import gethostname
 import kobo.conf
 from kobo.client import HubProxy
 from kobo.exceptions import ShutdownException
-
+from kobo.xmlrpc import retry_request_decorator, CookieTransport, \
+        SafeCookieTransport
 from kobo.process import kill_process_group
 from bkr.log import add_rotating_file_logger
 from bkr.upload import Uploader
@@ -66,7 +67,12 @@ class ProxyHelper(object):
                                      format=VERBOSE_LOG_FORMAT)
 
         # self.hub is created here
-        self.hub = HubProxy(logger=self.logger, conf=self.conf, **kwargs)
+        if self.conf['HUB_URL'].startswith('https://'):
+            TransportClass = retry_request_decorator(SafeCookieTransport)
+        else:
+            TransportClass = retry_request_decorator(CookieTransport)
+        self.hub = HubProxy(logger=self.logger, conf=self.conf,
+                transport=TransportClass(timeout=120), **kwargs)
         self.server = self.conf.get("SERVER", "http://%s/beaker/logs" % gethostname())
         self.basepath = None
         self.upload = None
@@ -173,9 +179,23 @@ class ProxyHelper(object):
 
     def get_recipe(self, system_name=None):
         """ return the active recipe for this system """
+        # Deprecated
         if system_name:
             self.logger.info("get_recipe %s" % system_name)
             return self.hub.recipes.system_xml(system_name)
+
+    def get_my_recipe(self, request):
+        """ Accepts a dict with either system_name or recipe_id
+                if system_name is defined return active recipe for that system
+                if recipe_id is defined return the recipe for that id
+            Returns a recipe XML document.
+        """
+        if 'recipe_id' in request:
+            self.logger.info("get_recipe recipe_id:%s" % request['recipe_id'])
+            return self.hub.recipes.to_xml(request['recipe_id'])
+        if 'system_name' in request:
+            self.logger.info("get_recipe system_name:%s" % request['system_name'])
+            return self.hub.recipes.system_xml(request['system_name'])
 
     def extend_watchdog(self, task_id, kill_time):
         """ tell the scheduler to extend the watchdog by kill_time seconds

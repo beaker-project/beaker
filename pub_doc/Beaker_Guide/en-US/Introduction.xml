@@ -1,0 +1,184 @@
+﻿<?xml version='1.0' encoding='UTF-8' ?>
+<!DOCTYPE chapter PUBLIC "-//OASIS//DTD DocBook XML V4.5//EN" "http://www.oasis-open.org/docbook/xml/4.5/docbookx.dtd" [
+]>
+<chapter id="Introduction">
+	<title>Introduction</title>
+		<section id="Introduction-Abstract">
+	  <title>Abstract</title>
+	    <itemizedlist>
+	      <listitem>
+	        <para>This is a short introduction to Beaker, designed for quick-learning the essential skills for automated test case running.
+	        </para>
+	      </listitem>
+	      <listitem>
+	        <para>It will provide you with all the necessary steps to create and manage customized 'tests', while keeping the instructions as brief as possible. 
+	        </para>
+	      </listitem>
+	      <listitem>
+	        <para>By the end you will probably realize that creating a new Beaker test is much easier than you might expect. 
+	        </para>
+	      </listitem>
+	     </itemizedlist>
+	   	</section>
+	   	<section id="Introduction-Introduction">
+	   	<title>Introduction</title>
+	   	<formalpara>
+    <title>Purpose of Beaker</title><para>There are many reasons why you might want to use Beaker Perhaps you:
+      <itemizedlist>
+        <listitem>
+          <para>are a developer and want to create regression tests for packages you maintain
+			          </para>
+		          </listitem>
+		          <listitem>
+		            <para>want to automatically run a particular test on different architectures and versions of RHEL and see if the results are the same
+		            </para>
+		          </listitem>
+		          <listitem>
+		            <para>are a quality engineer with testing responsibility for a particular package, RHEL/Fedora release.
+		            </para>
+		          </listitem>
+		          
+          </itemizedlist>
+          </para>
+	      </formalpara>
+      </section>
+	  <section id="Introduction-Background">
+		<title>Background</title>
+		<para>
+			Beaker is a new-project written in python which aims to achieve separation of concerns between inventory management and test execution.
+		  <itemizedlist>
+		    <listitem>
+		      <para>
+		      Beaker provides an automated software testing system that should appeal to a variety of audiences for a variety of purposes. It provides a programming interface for developing automated unit tests, bug reproducers, hardware enablement, and regression tests. Beaker is composed of several components, but the most primary are the Beaker framework for writing the tests and the tests themselves. 
+		      </para>
+		    </listitem>
+		    <listitem>
+		      <para>
+		Most developers create new tests in a standalone environments (such as a workstation) first and later deploy them in the automated test lab where they are run on machines dedicated for testing. Many types of automated environments are possible:
+          <itemizedlist>
+            <listitem>
+              <para>running on a farm of real machines in some kind of lab situation
+              </para>
+            </listitem>
+            <listitem>
+              <para>running as part of a continuous checkout/build/test "tinderbox"-style environment
+              </para>
+            </listitem>
+            <listitem>
+              <para>running inside a fake "chroot" tree on your development machine 
+              </para>
+            </listitem>
+          </itemizedlist>
+		    </para>
+      </listitem>
+      <listitem>
+		    <para>
+		      When tests are developed in accordance with the Beaker framework, they can be run either standalone or in a lab test environment without modification. The Beaker framework defines both an API and the format of required files that contain meta data. When run locally from a command line, the results are reported to     <code>stdout</code>. When deployed in the automated test lab, the results can be stored in a repository and viewed via a UI.
+		    </para>
+		  </listitem>
+		  <listitem>
+		  <para>
+		This section will first describe how to write tests within the Beaker framework. Later, once a new test is written and tested, it can be packaged, as a conventional RPM package from its source files.
+		  </para>
+		</listitem>
+		<listitem>
+		  <para>
+		A test lab has the advantage of being able to automatically schedule the test and collect test results on a variety of architectures and releases. The lab environment is also able to detect certain types of failure. For example, if a dedicated test machine goes into an infinite loop, the test is automatically killed and a failure is reported.
+		   </para>
+      </listitem>
+    </itemizedlist>
+  </para>
+  </section>
+	<section id="Introduction-Beaker_Overview">
+		<title>Beaker Overview</title>
+     <para>
+	    Beaker is the primary test harness and test deck used to test RHEL. It can be divided into two parts: a task scheduler and individual tests. 
+	    	     </para>
+	    <formalpara><title>Tasks</title>
+	      <para>At its most basic level, a Beaker task is a program that attempts to perform a task or a series of tasks, and upon completion, determines success or failure and reports the results provided by hooks in the API. Care should be taken when creating the task to make sure all task outcomes are reported properly. A task can consist of code, data and meta data, as well as defining dependencies on other packages (if necessary).The Beaker framework is provided by a series of packages where tools, API libraries, and template files will be installed to the local workstation.
+	      </para>
+	    </formalpara>
+      <formalpara><title>Task scheduler</title> 
+        <para>The task scheduler manages the complex job of coordinating the farm machines set aside to run individual tasks. It handles all aspects of task execution, ranging from machine selection, distribution installation, fencing (rebooting and reinstalling hosts that have exceeded their scheduled time), and coordinating tasks which require multiple hosts to participate with each other. The scheduler also coordinates how tasks are launched.</para>
+      </formalpara>
+      <formalpara><title>Individual Tasks</title>
+        <para>Tasks make up one of the most important components of s/RHTS/Beaker. Individual tasks are written in a format understood by the scheduler so that they can be automatically run by the scheduler on a variety of distributions, for example, RHEL3, RHEL4, RHEL5, and Fedora; and architectures, for example, i386, ia64, ppc, s390, s390x, and x86_64.
+        </para>
+      </formalpara>
+	  <para>Tasks written in the Beaker format can be launched from a lab controller or from a command line if the rhts-devel packages are installed on a local workstation.
+  </para>
+ 			<para>
+			Beaker has two major sub-divisions:
+			  <itemizedlist>
+			    <listitem>
+			      <para>Components
+			      </para>
+			    </listitem>
+			    <listitem>
+			    <para>Topology
+			    </para>
+			    </listitem>
+			  </itemizedlist>
+		</para>
+		<section id="Introduction-Beaker_Overview-Components">
+		<title>Components</title>
+		<para>
+			Beaker is an Open Source automated testing framework, consisting of the following core parts:
+			<itemizedlist>
+			  <listitem>
+			    <para><application>Lab Controller</application>:   The Lab Controller maintains inventory data about distros available to install and machines to install on. It can be used by itself or in conjunction with the Beaker server. The Lab Controller is the only conduit of communication between the Lab Machines and the Beaker Server. The Lab Controller is built on top of several existing tools:
+			      <itemizedlist>
+                <listitem>
+                  <para><application>Cobbler</application>: Does the actul interations with the test systems (install distro etc).
+                  </para>
+                </listitem>
+                <listitem>
+                  <para><application>Conserver</application>: Provides console logging
+                  </para>
+                </listitem>
+                <listitem>
+                  <para><application>Fence-agents</application>: Power cycles machines to start PXE installs and to recover.
+                  </para>
+                </listitem>
+                <listitem>
+                  <para><application>Smolt</application>: Provides the inventory data. That is, the hardware data of the test systems.
+                  </para>
+                </listitem>
+              </itemizedlist>
+			      </para>
+          </listitem>
+          <listitem>
+          <para><application>Beaker server</application>
+        The Beaker server is the central point at which all Job related activity occurs. System inventory as well as the ability to provision Systems is also controlled from here. It also holds the repository of Tasks.
+        </para>
+          </listitem>
+          <listitem>
+             <para><application>Beaker Client</application>
+        The shell based client (CLI) provides users with a subset of functions available in the Beaker web app, plus a few functions that the Beaker web app does not provide. 
+            </para>
+          </listitem>
+          <listitem>
+            <para><application>Beah test harness</application>
+Beaker needs a test harness to be responsible for executing the tasks on the system, currently it uses Beah, although theoretically any test harness could be used. It runs locally on the provisioned Systems.
+      </para>
+          </listitem>
+			</itemizedlist>
+    </para>
+</section>
+<section id="Introduction-Beaker_Overview-Topology">
+		<title>Topology</title>
+		<para>
+		Beaker's topology is relatively simple. The Beaker server acts as the interface through which all user actions are performed. Some of the requests are performed local to the Beaker server (such as scheduling Jobs and creating reports), but other requests are forwarded to the provisioned System (i.e running of tasks). This communication between the Beaker server and the System occurs via the Lab Controller. After a Job is submitted to Beaker, the scheduler will process the contents of the Job to select suitably potential Systems on which each recipe within the Job can run. Once all machines needed to run a Recipe set become available and the beaker scheduler deems it is now at the front of the queue, the process of provisioning the machine for that Recipe begins. This entails sending commands to the lab controller to provision the machine with a given distro. At this point any custom Kickstart options are also sent to the lab controller. After the kickstart has been run, the harness is installed and started. The harness will then start downloading the first task specified in the recipe, run it, then download the second and so on and so forth untill all the jobs have been processed.
+		</para>
+		<figure float="0" id="Introduction-Beaker_Overview-beaker_network_topology">
+			<title>High level network topology of Beaker's components</title>
+			<mediaobject>
+				<imageobject>
+					<imagedata fileref="images/beaker_network_topology.png" format="PNG" />
+				</imageobject>
+			</mediaobject>
+		</figure>
+	</section>
+  </section>
+  </chapter>
+

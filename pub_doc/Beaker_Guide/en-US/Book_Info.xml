@@ -1,17 +1,18 @@
-<?xml version='1.0' encoding='utf-8' ?>
+﻿<?xml version='1.0' encoding='UTF-8' ?>
 <!DOCTYPE bookinfo PUBLIC "-//OASIS//DTD DocBook XML V4.5//EN" "http://www.oasis-open.org/docbook/xml/4.5/docbookx.dtd" [
-<!ENTITY % BOOK_ENTITIES SYSTEM "Administration_Guide.ent">
+<!ENTITY % BOOK_ENTITIES SYSTEM "Deployment_Guide.ent">
 %BOOK_ENTITIES;
 ]>
-<bookinfo id="book-Administration_Guide-Administration_Guide" lang="en-US">
-	<title>Administration Guide</title>
-	<subtitle>Setting up Beaker</subtitle>
+<bookinfo id="book-Beaker_guide-Beaker_guide">
+	<title>Deployment Guide</title>
+	<subtitle>A Guide to Beaker Testing System</subtitle>
 	<productname>Beaker</productname>
 	<productnumber>0.5</productnumber>
-	<edition>0</edition>
-	<pubsnumber>3</pubsnumber>
+	<edition>1</edition>
+	<pubsnumber>9</pubsnumber>
 	<abstract>
 		<para>
+			This Book covers all topics related to Beaker and its use	
 		</para>
 	</abstract>
 	<corpauthor>

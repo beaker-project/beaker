@@ -1,3 +1,6 @@
+#if $getVar('recipeid','') != ''
+echo $recipeid > /root/RECIPE.TXT
+#end if
 $yum_config_stanza
 # End yum configuration
 #$SNIPPET('post_install_kernel_options') # this no longer works with RHEL6
@@ -57,9 +60,17 @@ popd
 #end if
 
 # Add Distro Repos
-#if $getVar('tree_repos','') != ''
+#set $tree_repos = $getVar('tree_repos','')
+#if $tree_repos != ''
+#if $tree_repos.find("http://") != -1
+#set $split = "|"
+#set $base = ""
+#else
+#set $split = ":"
+#set $base = "http://%s/distros" % $server
+#end if
 #set $i = 0
-#for $repo in $getVar('tree_repos','').split(':')
+#for $repo in $getVar('tree_repos','').split($split)
 #set $i = $i + 1
 #if $repo.find(",") != -1
 #set (reponame, repourl) = $repo.split(',',1)
@@ -70,7 +81,7 @@ popd
 cat << EOF > /etc/yum.repos.d/${reponame}.repo
 [$reponame]
 name=$reponame
-baseurl=http://$server/distros$repourl
+baseurl=$base$repourl
 enabled=1
 gpgcheck=0
 skip_if_unavailable=1
@@ -130,6 +141,9 @@ LAB_CONTROLLER=http://$server:8000/server
 # # HOSTNAME: Pretend to be machine with given name:
 # #HOSTNAME=fake.hostname.com
 HOSTNAME=$name
+#if $getVar('recipeid','') != ''
+RECIPEID=$recipeid
+#end if
 
 # LIMITS: hard and soft cap on filesize or amount of data uploaded.
 # Limit is specified in bytes and numeric value is expected. Use 0 or negative

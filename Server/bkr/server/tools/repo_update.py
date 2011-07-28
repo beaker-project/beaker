@@ -71,8 +71,11 @@ class RepoSyncer(yum.YumBase):
             print 'Fetching %s' % dest
             package.localpath = dest
             cached_package = repo.getPackage(package)
-            if not os.path.samefile(cached_package, dest):
-                shutil.copy2(cached_package, dest)
+            # Based on some confusing cache configuration, yum may or may not 
+            # have fetched the package to the right place for us already
+            if os.path.exists(dest) and os.path.samefile(cached_package, dest):
+                continue
+            shutil.copy2(cached_package, dest)
 
 def update_repos(baseurl, basepath):
     for osmajor in OSMajor.query():

@@ -32,7 +32,8 @@ class JobSchemaTest(unittest.TestCase):
     def assert_not_valid(self, xml, error_message):
         schema = lxml.etree.RelaxNG(self.job_schema_doc)
         self.assert_(not schema.validate(lxml.etree.fromstring(xml)))
-        self.assert_(error_message in [str(e.message) for e in schema.error_log])
+        messages = [str(e.message) for e in schema.error_log]
+        self.assert_(error_message in messages, messages)
 
     def test_minimal_job(self):
         self.assert_valid('''
@@ -42,6 +43,7 @@ class JobSchemaTest(unittest.TestCase):
                         <distroRequires>
                             <distro_name op="=" value="BlueShoeLinux5-5"/>
                         </distroRequires>
+                        <hostRequires/>
                         <task name="/distribution/install" role="STANDALONE"/>
                     </recipe>
                 </recipeSet>
@@ -105,8 +107,24 @@ class JobSchemaTest(unittest.TestCase):
                             <distroRequires>
                                 <distro_name op="=" value="BlueShoeLinux5-5"/>
                             </distroRequires>
+                            <hostRequires/>
                             <task name="/distribution/install" role="STANDALONE"/>
                         </guestrecipe>
+                        <distroRequires>
+                            <distro_name op="=" value="BlueShoeLinux5-5"/>
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" role="STANDALONE"/>
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''')
+
+    def test_hostRequires_not_optional(self):
+        self.assert_not_valid('''
+            <job>
+                <recipeSet>
+                    <recipe>
                         <distroRequires>
                             <distro_name op="=" value="BlueShoeLinux5-5"/>
                         </distroRequires>
@@ -114,4 +132,5 @@ class JobSchemaTest(unittest.TestCase):
                     </recipe>
                 </recipeSet>
             </job>
-            ''')
+            ''',
+            'Expecting an element hostRequires, got nothing')

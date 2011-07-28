@@ -330,6 +330,7 @@ class LabControllers(RPCRoot):
                                   ('Timestamp', lambda x: x.distros_md5),
                                   (' ', lambda x: self.make_lc_remove_link(x)),
                               ])
+# Disable re-scan link until bz720715 is fixed.
 #                                  (' ', lambda x: self.make_lc_scan_link(x)),
         return dict(title="Lab Controllers", 
                     grid = labcontrollers_grid,

@@ -213,9 +213,10 @@ def update_comment(distro):
 
     myparser = MyConfigParser("%s/.treeinfo" % paths['tree_path'])
     if myparser.parser:
+        labels = myparser.get('general','label')
         distro['tags'] = distro.get('tags') or \
                                      map(string.strip,
-                                     myparser.get('general','label').split(','))
+                                     labels and labels.split(',') or [])
         distro['keys'].add('tags')
         family  = myparser.get('general','family').replace(" ","")
         version = myparser.get('general', 'version').replace("-",".")
@@ -351,40 +352,46 @@ if __name__ == '__main__':
         # time importing it, look for repos and specific family.
         if distro['pushed'] == False or force:
             distro['id'] = cobbler.get_distro_handle(distro['name'],token)
-            print "Update TreeRepos for %s" % distro['name']
-            update_repos(distro)
             print "Update Family for %s" % distro['name']
             distro = update_comment(distro)
 
-            # xmlrpc can't marshal set
-            distro['keys'] = list(distro['keys'])
-
             # Add the distro to inventory only if treename exists
             if distro.get('treename'):
+
+                # Skip xen Distros
+                if distro.get('name').find('-xen-') != -1:
+                    print "Skipping Xen distro %s" % distro.get('name')
+                    continue
+
+                print "Update TreeRepos for %s" % distro['name']
+                update_repos(distro)
+
+                # xmlrpc can't marshal set
+                distro['keys'] = list(distro['keys'])
+
                 proxy.addDistro(distro)
 
-            # Record in cobbler that we PUSHED it
-            distro['pushed'] = True
-            save_data(distro)
+                # Kick off jobs automatically
+                addDistroCmd = '/var/lib/beaker/addDistro.sh'
+                if os.path.exists(addDistroCmd) and \
+                   distro.get('ks_meta').get('tree') and \
+                   distro.get('osmajor') and \
+                   distro.get('osminor'):
+                   #addDistro.sh "rel-eng" RHEL6.0-20090626.2 RedHatEnterpriseLinux6.0 x86_64 "Default"
+                        cmd = '%s "%s" %s %s %s "%s"' % (addDistroCmd, 
+                                                       ','.join(distro.get('tags',[])),
+                                                       distro.get('treename'),
+                                                       '%s.%s' % (
+                                                         distro.get('osmajor'), 
+                                                         distro.get('osminor')),
+                                                       distro.get('arch'),
+                                                       distro.get('variant',''))
+                        print cmd
+                        os.system(cmd)
 
-            # Kick off jobs automatically
-            addDistroCmd = '/var/lib/beaker/addDistro.sh'
-            if os.path.exists(addDistroCmd) and \
-               distro.get('ks_meta').get('tree') and \
-               distro.get('osmajor') and \
-               distro.get('osminor') and \
-               distro.get('treename'):
-               #addDistro.sh "rel-eng" RHEL6.0-20090626.2 RedHatEnterpriseLinux6.0 x86_64 "Default"
-                    cmd = '%s "%s" %s %s %s "%s"' % (addDistroCmd, 
-                                                   ','.join(distro.get('tags',[])),
-                                                   distro.get('treename'),
-                                                   '%s.%s' % (
-                                                     distro.get('osmajor'), 
-                                                     distro.get('osminor')),
-                                                   distro.get('arch'),
-                                                   distro.get('variant',''))
-                    print cmd
-                    os.system(cmd)
+                # Record in cobbler that we PUSHED it
+                distro['pushed'] = True
+                save_data(distro)
         else:
             print "Already pushed %s, set comment pushed True to False to re-push" % distro['name']
 

@@ -1,0 +1,54 @@
+﻿<?xml version='1.0' encoding='UTF-8' ?>
+<!DOCTYPE chapter PUBLIC "-//OASIS//DTD DocBook XML V4.5//EN" "http://www.oasis-open.org/docbook/xml/4.5/docbookx.dtd" [
+]>
+<chapter id="User_Guide">
+	<title>User Guide</title>
+	<para>
+	This user guide contains both written guide and the associated images that is intended to give assistance to people using Beaker.
+	</para>
+	<xi:include href="introduction.xml" xmlns:xi="http://www.w3.org/2001/XInclude" />
+	<section id="User_Guide-Getting_Started">
+		<title>Getting Started</title>
+			<para>
+				This section gets you started using Beaker. There are three basic steps that a user needs to know before using Beaker. 
+				<itemizedlist>
+					<listitem>
+						<para><application>Installation</application>: See <xref linkend="Installation"></xref> for instructions on installation.
+						</para>
+					</listitem>
+					<listitem>
+						<para><application>Process</application>: comprises of description of procedures, workflows, componenets, architecture, test cases, etc.
+						</para>
+					</listitem>
+					<listitem>
+						<para><application>Checklist</application>: It's a list of steps in the workflow in order to have accurate test results.
+						</para>
+					</listitem>
+				</itemizedlist>
+			</para>
+			<section id="User_Guide-Getting_Started-Process">
+				<title>Process</title>
+				<para>
+				  This section has a detailed description of all the components and procedures involved in Beaker Test Environment.
+				</para>
+			  <xi:include href="Beaker_Interface.xml" xmlns:xi="http://www.w3.org/2001/XInclude" />
+				<xi:include href="beaker_makefile.xml" xmlns:xi="http://www.w3.org/2001/XInclude" />
+				<section id="User_Guide-Getting_Started-Process-Workflow">
+				  <title>Workflow</title>
+				  <xi:include href="submitting_job_workflow.xml" xmlns:xi="http://www.w3.org/2001/XInclude" />
+				  <xi:include href="virtualization_workflow.xml" xmlns:xi="http://www.w3.org/2001/XInclude" />
+				 <xi:include href="Workflow_XML.xml" xmlns:xi="http://www.w3.org/2001/XInclude" />
+				 <xi:include href="provisioning_a_system.xml" xmlns:xi="http://www.w3.org/2001/XInclude" />
+				</section>
+				<section id="User_Guide-Getting_Started-Process-Tests">
+				  <title>Tests</title>
+				     <xi:include href="test_arch_considerations.xml" xmlns:xi="http://www.w3.org/2001/XInclude" />
+            <xi:include href="writing_and_running_multihost_tests.xml" xmlns:xi="http://www.w3.org/2001/XInclude" />
+           <!-- <xi:include href="multihost_testing.xml" xmlns:xi="http://www.w3.org/2001/XInclude" />-->
+            <xi:include href="unassimilated_or_unfinished_content.xml" xmlns:xi="http://www.w3.org/2001/XInclude" />
+				    <xi:include href="reporting_results.xml" xmlns:xi="http://www.w3.org/2001/XInclude" />
+				</section>
+				</section>
+      <xi:include href="Checklist.xml" xmlns:xi="http://www.w3.org/2001/XInclude" />
+    </section>
+</chapter>
