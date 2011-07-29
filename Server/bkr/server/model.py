@@ -4824,13 +4824,13 @@ class Recipe(TaskBase):
             recipe.appendChild(dr)
         hostRequires = self.doc.createElement("hostRequires")
         for hr in hrs.getElementsByTagName("hostRequires"):
-            for child in hr.childNodes:
+            for child in hr.childNodes[:]:
                 hostRequires.appendChild(child)
         recipe.appendChild(hostRequires)
         prs = xml.dom.minidom.parseString(self.partitions)
         partitions = self.doc.createElement("partitions")
         for pr in prs.getElementsByTagName("partitions"):
-            for child in pr.childNodes:
+            for child in pr.childNodes[:]:
                 partitions.appendChild(child)
         recipe.appendChild(partitions)
         for t in self.tasks:
