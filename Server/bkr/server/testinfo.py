@@ -141,6 +141,20 @@ class RegexValidator(Validator):
     def message(self):
         return self.msg
 
+# This is specified in RFC2822 Section 3.4, 
+# we accept only the most common variations
+class NameAddrValidator(RegexValidator):
+
+    ATOM_CHARS = r"\w!#$%&'*+-/=?^_`{|}~"
+    PHRASE = r' *[%s][%s ]*' % (ATOM_CHARS, ATOM_CHARS)
+    ADDR_SPEC = r'[%s.]+@[%s.]+' % (ATOM_CHARS, ATOM_CHARS)
+    NAME_ADDR = r'%s<%s> *' % (PHRASE, ADDR_SPEC)
+
+    def __init__(self):
+        RegexValidator.__init__(self, self.NAME_ADDR,
+                'should be a valid RFC2822 name_addr, '
+                'such as John Doe <jdoe@somedomain.org>')
+
 class ListValidator(Validator):
     def __init__(self, validValues):
         self.validValues = validValues
@@ -354,7 +368,7 @@ class Parser:
     def handle_owner(self, key, value):
         # Required one-only email addresses "John Doe <someone@some.domain.org>"
         # In theory this could be e.g. memo-list@redhat.com; too expensive to check for that here
-        self.__unique_field(key, 'owner', value, RegexValidator(r'([A-Za-z ]*) <([-a-z\._]*)@[-a-z\.]*>', 'should be of the form "John Doe <jdoe@somedomain.org>"'))
+        self.__unique_field(key, 'owner', value, NameAddrValidator())
 
     def handle_testversion(self, key, value):
         self.__unique_field(key, 'testversion', value, RegexValidator(r'^([A-Za-z0-9\.]*)$', 'can only contain numbers, letters and the dot symbol'))
@@ -879,6 +893,12 @@ class OwnerFieldTests(unittest.TestCase):
         "Ensure that other Owner fields are parsed correctly"
         ti = parse_string("Owner: Jane Doe <jdoe@fedoraproject.org>", raise_errors=False)
         self.assertEquals(ti.owner, "Jane Doe <jdoe@fedoraproject.org>")
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=723159
+    def test_owner_with_hyphen(self):
+        parser = StrictParser(raise_errors=True)
+        parser.handle_owner('Owner', 'Endre Balint-Nagy <endre@redhat.com>')
+        self.assertEquals(parser.info.owner, 'Endre Balint-Nagy <endre@redhat.com>')
 
 class PriorityFieldTests(unittest.TestCase):
     def test_priority(self):
