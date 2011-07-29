@@ -1770,7 +1770,7 @@ class Skeleton(SingleChoice):
             rlJournalStart
                 rlPhaseStartSetup
                     rlAssertRpm $PACKAGE
-                    rlRun "TmpDir=\`mktemp -d\`" 0 "Creating tmp directory"
+                    rlRun "TmpDir=\$(mktemp -d)" 0 "Creating tmp directory"
                     rlRun "pushd $TmpDir"
                 rlPhaseEnd
 
@@ -1799,7 +1799,7 @@ class Skeleton(SingleChoice):
             # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
             score=0
             rpm -q $PACKAGE || ((score++))
-            TmpDir=`mktemp -d` || ((score++))
+            TmpDir=$(mktemp -d) || ((score++))
             pushd $TmpDir || ((score++))
             ((score == 0)) &amp;&amp; result=PASS || result=FAIL
             echo "Setup finished, result: $result, score: $score"
@@ -1860,7 +1860,7 @@ class Skeleton(SingleChoice):
                     rlAssertRpm $PACKAGE
                     rlLog "Server: $SERVERS"
                     rlLog "Client: $CLIENTS"
-                    rlRun "TmpDir=\`mktemp -d\`" 0 "Creating tmp directory"
+                    rlRun "TmpDir=\$(mktemp -d)" 0 "Creating tmp directory"
                     rlRun "pushd $TmpDir"
                 rlPhaseEnd
 
