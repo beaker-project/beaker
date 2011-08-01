@@ -611,17 +611,20 @@ def processed_recipesets_loop(*args, **kwargs):
             time.sleep(20)
 
 @log_traceback(log)
-def queued_recipes_loop(*args, **kwargs):
-    while True:
-        if not queued_recipes():
-            time.sleep(20)
-
-@log_traceback(log)
 def command_queue_loop(*args, **kwargs):
     while True:
         running_commands()
         queued_commands()
         time.sleep(20)
+
+@log_traceback(log)
+def main_loop():
+    while True:
+        dead_recipes()
+        queued = queued_recipes()
+        scheduled = scheduled_recipes()
+        if not queued and not scheduled:
+            time.sleep(20)
 
 def schedule():
     bkr.server.scheduler._start_scheduler()
@@ -639,19 +642,7 @@ def schedule():
     add_onetime_task(action=command_queue_loop,
                       args=[lambda:datetime.now()],
                       initialdelay=10)
-    #log.debug("starting queued recipes Thread")
-    # Create queued_recipes Thread
-    #add_onetime_task(action=queued_recipes_loop,
-    #                  args=[lambda:datetime.now()],
-    #                  initialdelay=10)
-    log.debug("starting scheduled recipes Thread")
-    # Run scheduled_recipes in this process
-    while True:
-        dead_recipes()
-        queued = queued_recipes()
-        scheduled = scheduled_recipes()
-        if not queued and not scheduled:
-            time.sleep(20)
+    main_loop()
 
 def daemonize(daemon_func, daemon_pid_file=None, daemon_start_dir="/", daemon_out_log="/dev/null", daemon_err_log="/dev/null", *args, **kwargs):
     """Robustly turn into a UNIX daemon, running in daemon_start_dir."""
