@@ -263,7 +263,7 @@ fi
 %{_bindir}/%{name}-transfer
 %doc LabController/README
 %config(noreplace) %{_sysconfdir}/httpd/conf.d/%{name}-lab-controller.conf
-%{_sysconfdir}/cron.daily/expire_distros
+%{_sysconfdir}/cron.hourly/cobbler_expire_distros
 %{_var}/lib/cobbler/triggers/sync/post/osversion.trigger
 %{_var}/lib/cobbler/snippets/*
 %{_var}/lib/cobbler/kickstarts/*
