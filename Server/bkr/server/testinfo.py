@@ -621,6 +621,7 @@ class Parser:
         self.__mandatory_field('TestTime', 'avg_test_time')
         self.__mandatory_field('TestVersion', 'testversion')
         self.__mandatory_field('License', 'license')
+        self.__mandatory_field('Owner', 'owner')
 
 #
 #	my $expected_path_under_mnt_tests = $test{test_name_under_root_ns};
