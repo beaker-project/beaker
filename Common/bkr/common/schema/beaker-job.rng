@@ -278,6 +278,7 @@
       <element name="hostname"><ref name="req"/></element>
       <element name="arch"><ref name="req"/></element>
       <element name="auto_prov"><ref name="req"/></element>
+      <element name="hypervisor"><ref name="req"/></element>
       <element name="group">
         <ref name="equality_op"/>
         <attribute name="value"/>
