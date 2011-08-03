@@ -180,6 +180,7 @@ class Tasks(RPCRoot):
         return [dict(name = task.name, arches = [str(arch.arch) for arch in task.excluded_arch]) for task in tasks]
 
     @cherrypy.expose
+    @identity.require(identity.not_anonymous())
     def upload(self, task_rpm_name, task_rpm_data):
         """
         Uploads a new task RPM.
@@ -206,6 +207,7 @@ class Tasks(RPCRoot):
             return "Success"
 
     @expose()
+    @identity.require(identity.not_anonymous())
     def save(self, task_rpm, *args, **kw):
         """
         TurboGears method to upload task rpm package
@@ -411,7 +413,12 @@ class Tasks(RPCRoot):
     def process_taskinfo(self, raw_taskinfo):
         tinfo = testinfo.parse_string(raw_taskinfo['desc'])
 
-        task = Task.lazy_create(name=tinfo.test_name)
+        try:
+            task = Task.by_name(tinfo.test_name)
+        except InvalidRequestError, e:
+            if str(e) != 'No rows returned for one()':
+                raise
+            task = Task(name=tinfo.test_name)
         # RPM is the same version we have. don't process		
         if task.version == raw_taskinfo['hdr']['ver']:
             raise BX(_("Failed to import,  %s is the same version we already have" % task.version))
@@ -469,6 +476,11 @@ class Tasks(RPCRoot):
         for need in tinfo.needs:
             task.needs.append(TaskPropertyNeeded(property=need))
         task.license = tinfo.license
+        # older versions of rhts-devel permitted absent Owner
+        if not tinfo.owner:
+            raise BX(_('Owner field must be present in testinfo.desc'))
+        task.owner = tinfo.owner
+        task.uploader = identity.current.user
         task.valid = True
 
         return task
@@ -496,7 +508,7 @@ class Tasks(RPCRoot):
                 taskinfo_file = file
         if taskinfo_file:
             p1 = Popen(["rpm2cpio", rpm_file], stdout=PIPE)
-            p2 = Popen(["cpio", "--extract" , "--to-stdout", ".%s" % taskinfo_file], stdin=p1.stdout, stdout=PIPE)
+            p2 = Popen(["cpio", "--quiet", "--extract" , "--to-stdout", ".%s" % taskinfo_file], stdin=p1.stdout, stdout=PIPE)
             taskinfo['desc'] = p2.communicate()[0]
         return taskinfo
 

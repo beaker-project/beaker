@@ -23,6 +23,7 @@ import time
 import datetime
 import itertools
 import sqlalchemy
+from sqlalchemy.exceptions import InvalidRequestError
 import turbogears.config, turbogears.database
 from turbogears.database import session
 from bkr.server.model import LabController, User, Group, Distro, Breed, Arch, \
@@ -102,8 +103,12 @@ def create_user(user_name=None, password=None, display_name=None,
         display_name = user_name
     if email_address is None:
         email_address = u'%s@example.com' % user_name
-    user = User(user_name=user_name, display_name=display_name,
-            email_address=email_address)
+    # XXX use User.lazy_create
+    user = User.by_user_name(user_name)
+    if user is None:
+        user = User(user_name=user_name)
+    user.display_name = display_name
+    user.email_address = email_address
     if password:
         user.password = password
     log.debug('Created user %r', user)
@@ -200,11 +205,25 @@ def create_system_activity(user=None, **kw):
             unique_name(u'random_%s'), user.user_name)
     return activity
 
-def create_task(name=None, exclude_arch=[],exclude_osmajor=[], version=u'1.0-1'):
+def create_task(name=None, exclude_arch=[],exclude_osmajor=[], version=u'1.0-1',
+        uploader=None, owner=None):
     if name is None:
         name = unique_name(u'/distribution/test_task_%s')
+    if uploader is None:
+        uploader = create_user(user_name=u'task-uploader%s' % name.replace('/', '-'))
+    if owner is None:
+        owner = u'task-owner%s@example.invalid' % name.replace('/', '-')
     rpm = u'example%s-%s.noarch.rpm' % (name.replace('/', '-'), version)
-    task = Task.lazy_create(name=name, rpm=rpm, version=version)
+    try:
+        task = Task.by_name(name)
+    except InvalidRequestError, e:
+        if str(e) != 'No rows returned for one()':
+            raise
+        task = Task(name=name)
+    task.rpm = rpm
+    task.version = version
+    task.uploader = uploader
+    task.owner = owner
     if exclude_arch:
        [TaskExcludeArch(arch_id=Arch.by_name(arch).id, task_id=task.id) for arch in exclude_arch]
     if exclude_osmajor:
@@ -216,10 +235,13 @@ def create_task(name=None, exclude_arch=[],exclude_osmajor=[], version=u'1.0-1')
 
 def create_tasks(xmljob):
     # Add all tasks that the xml specifies
+    names = set()
     for recipeset in xmljob.iter_recipeSets():
         for recipe in recipeset.iter_recipes():
             for task in recipe.iter_tasks():
-                create_task(name=task.name)
+                names.add(task.name)
+    for name in names:
+        create_task(name=name)
 
 def create_recipe(system=None, distro=None, task_list=None, 
     task_name=u'/distribution/reservesys', whiteboard=None, server_log=False):

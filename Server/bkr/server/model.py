@@ -5,7 +5,7 @@ from turbogears.config import get
 from turbogears import url
 from copy import copy
 import ldap
-from sqlalchemy import (Table, Column, ForeignKey, UniqueConstraint,
+from sqlalchemy import (Table, Column, Index, ForeignKey, UniqueConstraint,
                         String, Unicode, Integer, DateTime,
                         UnicodeText, Boolean, Float, VARCHAR, TEXT, Numeric,
                         or_, and_, not_, select, case, func)
@@ -1030,8 +1030,9 @@ task_table = Table('task',metadata,
 
         Column('creation_date', DateTime, default=datetime.utcnow),
         Column('update_date', DateTime, onupdate=datetime.utcnow),
-        Column('owner_id', Integer,
-                ForeignKey('tg_user.user_id')),
+        Column('uploader_id', Integer,
+                ForeignKey('tg_user.user_id'), nullable=False),
+        Column('owner', Unicode(255), index=True),
         Column('version', Unicode(256)),
         Column('license', Unicode(256)),
         Column('valid', Boolean, default=True),
@@ -5974,6 +5975,11 @@ class Task(MappedObject):
     """
     Tasks that are available to schedule
     """
+
+    def __init__(self, **kwargs):
+        for k, v in kwargs.iteritems():
+            setattr(self, k, v)
+
     @property
     def task_dir(self):
         return get("basepath.rpms", "/var/www/beaker/rpms")
@@ -6394,7 +6400,7 @@ mapper(Task, task_table,
                       'needs':relation(TaskPropertyNeeded),
                       'bugzillas':relation(TaskBugzilla, backref='task',
                                             cascade='all, delete-orphan'),
-                      'owner':relation(User, uselist=False, backref='tasks'),
+                      'uploader':relation(User, uselist=False, backref='tasks'),
                      }
       )
 

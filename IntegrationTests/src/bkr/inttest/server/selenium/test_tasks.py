@@ -11,9 +11,11 @@ class TestSubmitTask(SeleniumTestCase):
 
     @classmethod
     def setupClass(cls):
+        cls.uploader = data_setup.create_user(password=u'upload')
+        session.flush()
         cls.selenium = cls.get_selenium()
         cls.selenium.start()
-        cls.login()
+        cls.login(user=cls.uploader.user_name, password=u'upload')
     
     @classmethod
     def teardownClass(cls):
@@ -45,6 +47,9 @@ class TestSubmitTask(SeleniumTestCase):
         sel.click('link=%s' % test_package_name)
         sel.wait_for_page_to_load('30000')
         self.assert_task_correct_v1_1()
+        self.assertEqual(self.get_task_info_field('Uploader'), self.uploader.user_name)
+        self.assertEqual(self.get_task_info_field_href('Uploader'),
+                'mailto:%s' % self.uploader.email_address)
 
         # ...then upload v2.0...
         sel.click('link=New Task')
@@ -88,6 +93,7 @@ class TestSubmitTask(SeleniumTestCase):
         self.assertEqual(self.get_task_info_field('Description'),
                 'Fake test for integration testing v1.1')
         self.assertEqual(self.get_task_info_field('Expected Time'), '5 minutes')
+        self.assertEqual(self.get_task_info_field('Owner'), 'Nobody <nobody@example.com>')
         self.assertEqual(self.get_task_info_field('Version'), '1.1-1')
         self.assertEqual(self.get_task_info_field('License'), 'GPLv2')
         self.assertEqual(self.get_task_info_field('Types'), 'Regression')
@@ -102,6 +108,7 @@ class TestSubmitTask(SeleniumTestCase):
         self.assertEqual(self.get_task_info_field('Description'),
                 'Fake test for integration testing v2.0')
         self.assertEqual(self.get_task_info_field('Expected Time'), '30 minutes')
+        self.assertEqual(self.get_task_info_field('Owner'), 'Nobody <nobody@example.com>')
         self.assertEqual(self.get_task_info_field('Version'), '2.0-2')
         self.assertEqual(self.get_task_info_field('License'), 'GPLv2')
         self.assertEqual(self.get_task_info_field('Types'), 'Multihost')
