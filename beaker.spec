@@ -85,6 +85,7 @@ Requires:       %{name} = %{version}-%{release}
 Requires:       %{name}-server = %{version}-%{release}
 Requires:       %{name}-client = %{version}-%{release}
 Requires:       python-nose >= 0.10
+Requires:       python-selenium >= 2.0
 Requires:       kobo
 Requires:       java-1.6.0-openjdk
 Requires:       Xvfb
