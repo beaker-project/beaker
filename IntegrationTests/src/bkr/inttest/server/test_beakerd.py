@@ -403,6 +403,9 @@ class TestPowerFailures(unittest.TestCase):
         beakerd.running_commands()
         automated_system = System.query().get(automated_system.id)
         self.assertEqual(automated_system.status, SystemStatus.by_name(u'Broken'))
+        system_activity = automated_system.activity[0]
+        self.assertEqual(system_activity.action, 'on')
+        self.assertTrue(system_activity.new_value.startswith('Failed'))
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=720672
     def test_manual_system_status_not_changed(self):
@@ -416,3 +419,6 @@ class TestPowerFailures(unittest.TestCase):
         beakerd.running_commands()
         manual_system = System.query().get(manual_system.id)
         self.assertEqual(manual_system.status, SystemStatus.by_name(u'Manual'))
+        system_activity = manual_system.activity[0]
+        self.assertEqual(system_activity.action, 'on')
+        self.assertTrue(system_activity.new_value.startswith('Failed'))
