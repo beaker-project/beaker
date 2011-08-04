@@ -74,7 +74,7 @@ def create_product(product_name=None):
 
 def create_labcontroller(fqdn=None, user=None):
     if fqdn is None:
-        fqdn=u'lab.testdata.invalid'
+        fqdn = unique_name(u'lab%s.testdata.invalid')
     try:
         lc = LabController.by_name(fqdn)  
     except sqlalchemy.exceptions.InvalidRequestError, e: #Doesn't exist ?
