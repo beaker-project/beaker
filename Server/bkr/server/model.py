@@ -3450,6 +3450,12 @@ class CommandActivity(Activity):
     def object_name(self):
         return "Command: %s %s" % (self.object.fqdn, self.action)
 
+    def log_to_system_history(self):
+        sa = SystemActivity(self.user, self.service, self.action, u'Power', u'',
+                            self.new_value and self.status.status + ": " + self.new_value \
+                            or self.status.status)
+        self.system.activity.append(sa)
+
 # note model
 class Note(object):
     def __init__(self, user=None, text=None):

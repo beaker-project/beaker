@@ -527,6 +527,7 @@ def running_commands(*args):
                         log.info('Power %s command (%d) completed on machine: %s' %
                                  (cmd.action, cmd.id, cmd.system))
                         cmd.status = CommandStatus.by_name(u'Completed')
+                        cmd.log_to_system_history()
                         break
                     if line.find("### TASK FAILED ###") != -1:
                         log.error('Cobbler power task %s (command %d) failed for machine: %s' %
@@ -535,6 +536,7 @@ def running_commands(*args):
                         cmd.new_value = u'Cobbler task failed'
                         if cmd.system.status == SystemStatus.by_name(u'Automated'):
                             cmd.system.mark_broken(reason='Cobbler power task failed')
+                        cmd.log_to_system_history()
                         break
                 if (cmd.status == CommandStatus.by_name(u'Running')) and \
                    (datetime.utcnow() >= cmd.updated + timedelta(seconds=COMMAND_TIMEOUT)):
@@ -542,11 +544,13 @@ def running_commands(*args):
                                   (cmd.task_id, cmd.id, cmd.system))
                         cmd.status = CommandStatus.by_name(u'Aborted')
                         cmd.new_value = u'Timeout of %d seconds exceeded' % COMMAND_TIMEOUT
+                        cmd.log_to_system_history()
             except Exception, msg:
                 log.error('Cobbler power exception processing command %d for machine %s: %s' %
                           (cmd.id, cmd.system, msg))
                 cmd.status = CommandStatus.by_name(u'Failed')
                 cmd.new_value = unicode(msg)
+                cmd.log_to_system_history()
         session.commit()
         session.close()
     log.debug('Exiting running_commands routine')
@@ -576,6 +580,7 @@ def queued_commands(*args):
                       (cmd.id, cmd.system))
             cmd.status = CommandStatus.by_name(u'Aborted')
             cmd.new_value = u'Power control unavailable'
+            cmd.log_to_system_history()
         else:
             try:
                 log.info('Executing power %s command (%d) on machine: %s' %
@@ -588,6 +593,7 @@ def queued_commands(*args):
                           (cmd.action, cmd.id, cmd.system, msg))
                 cmd.new_value = unicode(msg)
                 cmd.status = CommandStatus.by_name(u'Failed')
+                cmd.log_to_system_history()
         session.commit()
         session.close()
     log.debug('Exiting queued_commands routine')
