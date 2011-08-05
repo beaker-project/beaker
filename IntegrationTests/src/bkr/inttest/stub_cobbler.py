@@ -50,6 +50,11 @@ class StubCobbler(object):
         'kickstart',
         'parent',
     ])
+    ACCEPTED_DISTRO_KEYS = frozenset([
+        'name',
+        'kernel',
+        'initrd',
+    ])
 
     def __init__(self):
         self.systems = {}
@@ -58,6 +63,7 @@ class StubCobbler(object):
         self.incomplete_tasks = set()
         self.profiles = {}
         self.kickstarts = {}
+        self.distros = {}
 
     def version(self):
         return 2.0 # why is it a float? weird!
@@ -78,6 +84,13 @@ class StubCobbler(object):
              # pretend we had it all along
              self.profiles[name] = {}
         return 'StubCobblerProfile:%s' % name
+
+    def get_distro_handle(self, name, token):
+        assert token == 'logged_in'
+        if name not in self.distros:
+             # pretend we had it all along
+             self.distros[name] = dict(name=name)
+        return 'StubCobblerDistro:%s' % name
 
     def modify_system(self, system_handle, key, value, token):
         assert token == 'logged_in'
@@ -164,6 +177,36 @@ class StubCobbler(object):
         log.info('%r profile %s saved with values %r', self,
                 name, self.profiles[name])
         return True
+
+    def modify_distro(self, distro_handle, key, value, token):
+        assert token == 'logged_in'
+        assert distro_handle.startswith('StubCobblerDistro:')
+        name = distro_handle[len('StubCobblerDistro:'):]
+        assert name in self.distros
+        assert key in self.ACCEPTED_DISTRO_KEYS
+        self.distros[name][key] = value
+        return True
+
+    def save_distro(self, distro_handle, token):
+        assert token == 'logged_in'
+        assert distro_hanlde.startswith('StubCobblerDistro:')
+        name = distro_hanldle[len('StubCobblerDistro:'):]
+        assert name in self.distros
+        # do nothing
+        log.info('%r distro %s save with values %r', self,
+                 name, self.distros[name])
+        return True
+
+    def remove_distro(self, distro_handle, token):
+        assert token == 'logged_in'
+        assert distro_handle.startswith('StubCobblerDistro:')
+        name = distro_handle[len('StubCobblerDistro:'):]
+        if name in self.distros:
+            del self.distros[name]
+        return True
+
+    def get_distros(self):
+        return [self.distros[x] for x in self.distros]
 
 class NicerXMLRPCServer(SimpleXMLRPCServer):
     

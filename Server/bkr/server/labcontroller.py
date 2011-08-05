@@ -275,6 +275,11 @@ class LabControllers(RPCRoot):
     @identity.require(identity.in_group("admin"))
     @expose()
     def rescan(self, **kw):
+        """ Rescan really only verifies that the distros exist on the 
+            lab-controller, if they don't it will remove them from our index.
+            It does not add any missing distros, those would need to be pushed
+            from the lab-controller.
+        """
         if kw.get('id'):
             labcontroller = LabController.by_id(kw['id'])
             now = time.time()
@@ -286,13 +291,11 @@ class LabControllers(RPCRoot):
             except xmlrpclib.Fault, msg:
                 flash( _(u"Failed to login: %s" % msg))
                 
-            lc_distros = remote.get_distros()
-
-            distros = self._addDistros(labcontroller.fqdn, lc_distros)
+            distros = [distro['name'] for distro in remote.get_distros()]
 
             for i in xrange(len(labcontroller._distros)-1,-1,-1):
                 distro = labcontroller._distros[i].distro
-                if distro not in distros:
+                if distro.install_name not in distros:
                     activity = Activity(None,'XMLRPC','Removed','Distro',distro.install_name,None)
                     session.delete(labcontroller._distros[i])
                     
@@ -328,10 +331,9 @@ class LabControllers(RPCRoot):
                                   ('Disabled', lambda x: x.disabled),
                                   ('Removed', lambda x: x.removed),
                                   ('Timestamp', lambda x: x.distros_md5),
+                                  (' ', lambda x: self.make_lc_scan_link(x)),
                                   (' ', lambda x: self.make_lc_remove_link(x)),
                               ])
-# Disable re-scan link until bz720715 is fixed.
-#                                  (' ', lambda x: self.make_lc_scan_link(x)),
         return dict(title="Lab Controllers", 
                     grid = labcontrollers_grid,
                     search_bar = None,
