@@ -2809,7 +2809,8 @@ class OSVersion(MappedObject):
     def __init__(self, osmajor, osminor, arches=None):
         self.osmajor = osmajor
         self.osminor = osminor
-        self.arches = arches
+        if arches:
+            self.arches = arches
 
     @classmethod
     def by_id(cls, id):

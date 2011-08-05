@@ -31,7 +31,7 @@ Common :program:`bkr` options are described in the :ref:`Options
 Exit status
 -----------
 
-XXX FIXME always 0 :-(
+Non-zero on error, otherwise zero.
 
 Examples
 --------
@@ -80,7 +80,8 @@ class Distros_Edit_Version(BeakerCommand):
         version = args[0]
 
         self.set_hub(username, password)
+        distros = self.hub.distros.edit_version(name, version)
         print "Updated the following distros with Version: %s" % version
         print "------------------------------------------------------"
-        for distro in self.hub.distros.edit_version(name, version):
+        for distro in distros:
             print distro

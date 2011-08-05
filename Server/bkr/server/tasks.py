@@ -185,18 +185,17 @@ class Tasks(RPCRoot):
         """
         rpm_file = "%s/%s" % (self.task_dir, task_rpm_name)
         if os.path.exists("%s" % rpm_file):
-            return "Failed to import because we already have %s" % task_rpm_name
+            raise BX(_(u'Cannot import duplicate task %s') % task_rpm_name)
         else:
             FH = open(rpm_file, "w")
             FH.write(task_rpm_data.data)
             FH.close()
             try:
                 task = self.process_taskinfo(self.read_taskinfo(rpm_file))
-            except (ValueError,ParserError,ParserWarning,rpm.error), err:
+            except Exception, e:
                 # Delete invalid rpm
                 os.unlink(rpm_file)
-                session.rollback()
-                return "Failed to import because of %s" % str(err)
+                raise
             return "Success"
 
     @expose()

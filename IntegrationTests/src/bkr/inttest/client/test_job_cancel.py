@@ -11,7 +11,11 @@ class JobCancelTest(unittest.TestCase):
         session.flush()
 
     def test_cannot_cancel_recipe(self):
-        # XXX should exit with non-zero
-        out = run_client(['bkr', 'job-cancel',
-                self.job.recipesets[0].recipes[0].t_id])
-        self.assert_('Task type R is not stoppable' in out, out)
+        try:
+            run_client(['bkr', 'job-cancel',
+                    self.job.recipesets[0].recipes[0].t_id])
+            fail('should raise')
+        except ClientError, e:
+            self.assertEquals(e.status, 1)
+            self.assert_('Task type R is not stoppable'
+                    in e.stderr_output, e.stderr_output)
