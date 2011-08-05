@@ -482,11 +482,7 @@ def scheduled_recipes(*args):
                                         unicode(recipe.distro)))
                 except CobblerTaskFailedException, e:
                     log.error('Cobbler task failed for recipe %s: %s' % (recipe.id, e))
-                    old_status = recipe.system.status
                     recipe.system.mark_broken(reason=str(e), recipe=recipe)
-                    recipe.system.activity.append(SystemActivity(service='Scheduler',
-                            action='Changed', field_name='Status',
-                            old_value=old_status, new_value=recipe.system.status))
                     recipe.recipeset.abort(_(u'Cobbler task failed for recipe %s: %s')
                             % (recipe.id, e))
                 except Exception, e:

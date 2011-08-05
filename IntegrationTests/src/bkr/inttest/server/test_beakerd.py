@@ -2,7 +2,7 @@ import unittest
 import datetime
 from time import sleep
 from bkr.server.model import TaskStatus, Job, System, User, \
-        Group, SystemStatus
+        Group, SystemStatus, SystemActivity
 import sqlalchemy.orm
 from turbogears.database import session
 from bkr.inttest import data_setup, stub_cobbler
@@ -393,10 +393,10 @@ class TestPowerFailures(unittest.TestCase):
         self.stub_cobbler_thread.stop()
 
     def test_automated_system_marked_broken(self):
-        automated_system = data_setup.create_system(fqdn='broken1.example.org',
+        automated_system = data_setup.create_system(fqdn=u'broken1.example.org',
                                                     lab_controller=self.lab_controller,
                                                     status = SystemStatus.by_name(u'Automated'))
-        automated_system.action_power('on')
+        automated_system.action_power(u'on')
         session.flush()
         session.clear()
         beakerd.queued_commands()
@@ -409,10 +409,10 @@ class TestPowerFailures(unittest.TestCase):
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=720672
     def test_manual_system_status_not_changed(self):
-        manual_system = data_setup.create_system(fqdn = 'broken2.example.org',
+        manual_system = data_setup.create_system(fqdn = u'broken2.example.org',
                                                  lab_controller = self.lab_controller,
                                                  status = SystemStatus.by_name(u'Manual'))
-        manual_system.action_power('on')
+        manual_system.action_power(u'on')
         session.flush()
         session.clear()
         beakerd.queued_commands()
@@ -422,3 +422,13 @@ class TestPowerFailures(unittest.TestCase):
         system_activity = manual_system.activity[0]
         self.assertEqual(system_activity.action, 'on')
         self.assertTrue(system_activity.new_value.startswith('Failed'))
+
+    def test_mark_broken_updates_history(self):
+        system = data_setup.create_system(status = SystemStatus.by_name(u'Automated'))
+        system.mark_broken(reason = "Attacked by cyborgs")
+        session.flush()
+        session.clear()
+        system = System.query().get(system.id)
+        system_activity = system.dyn_activity.filter(SystemActivity.field_name == u'Status').first()
+        self.assertEqual(system_activity.old_value, u'Automated')
+        self.assertEqual(system_activity.new_value, u'Broken')
