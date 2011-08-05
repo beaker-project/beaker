@@ -11,7 +11,7 @@ import glob
 import re
 import shutil
 import tempfile
-from xmlrpclib import Fault, ProtocolError
+import xmlrpclib
 from cStringIO import StringIO
 from socket import gethostname
 
@@ -380,7 +380,11 @@ class Watchdog(ProxyHelper):
 
         self.logger.info("Entering expire_watchdogs")
         for watchdog in self.hub.recipes.tasks.watchdogs('expired'):
-            self.abort(watchdog)
+            try:
+                self.abort(watchdog)
+            except xmlrpclib.Fault:
+                # Catch xmlrpc.Fault's here so we keep iterating the loop
+                self.logger.exception('Failed to abort expired watchdog')
 
     def active_watchdogs(self):
         """Monitor active watchdog entries"""

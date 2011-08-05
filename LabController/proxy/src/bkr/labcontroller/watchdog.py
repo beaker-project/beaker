@@ -14,6 +14,7 @@ from kobo.exceptions import ShutdownException
 from kobo.process import daemonize
 from kobo.tback import Traceback, set_except_hook
 from bkr.log import add_stderr_logger, add_rotating_file_logger
+import xmlrpclib
 
 VERBOSE_LOG_FORMAT = "%(asctime)s [%(levelname)-8s] {%(process)5d} %(name)s.%(module)s:%(lineno)4d %(message)s"
 
@@ -66,8 +67,18 @@ def main_loop(conf=None, foreground=False):
             if now - time_of_last_check > 60:
                 time_of_last_check = now
                 watchdog.hub._login()
-                watchdog.expire_watchdogs()
-                watchdog.active_watchdogs()
+                try:
+                    watchdog.expire_watchdogs()
+                except xmlrpclib.Fault:
+                    # catch any xmlrpc errors
+                    traceback = Traceback()
+                    watchdog.logger.error(traceback.get_traceback())
+                try:
+                    watchdog.active_watchdogs()
+                except xmlrpclib.Fault:
+                    # catch any xmlrpc errors
+                    traceback = Traceback()
+                    watchdog.logger.error(traceback.get_traceback())
             if not watchdog.run():
                 watchdog.logger.debug(80 * '-')
                 watchdog.sleep()
