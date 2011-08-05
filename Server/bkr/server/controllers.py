@@ -416,8 +416,8 @@ class Root(RPCRoot):
             content_type='application/atom+xml', accept_format='application/atom+xml')
     @paginate('list', default_order='fqdn', limit=20, max_limit=None)
     def index(self, *args, **kw): 
-        return_dict =  self._systems(systems = System.all(identity.current.user), *args, **kw) 
-        return return_dict
+        return self._systems(systems=System.all(identity.current.user),
+                title=u'Systems', *args, **kw)
 
     @expose(template='bkr.server.templates.form')
     @identity.require(identity.not_anonymous())
@@ -448,7 +448,8 @@ class Root(RPCRoot):
     @identity.require(identity.not_anonymous())
     @paginate('list', default_order='fqdn', limit=20, max_limit=None)
     def available(self, *args, **kw):
-        return self._systems(systems = System.available(identity.current.user), *args, **kw)
+        return self._systems(systems=System.available(identity.current.user),
+                title=u'Available Systems', *args, **kw)
 
     @expose(template='bkr.server.templates.grid')
     @expose(template='bkr.server.templates.systems_feed', format='xml', as_format='atom',
@@ -456,7 +457,8 @@ class Root(RPCRoot):
     @identity.require(identity.not_anonymous())
     @paginate('list', default_order='fqdn', limit=20, max_limit=None)
     def free(self, *args, **kw): 
-        return self._systems(systems = System.free(identity.current.user), *args, **kw)
+        return self._systems(systems=System.free(identity.current.user),
+                title=u'Free Systems', *args, **kw)
 
     @expose(template='bkr.server.templates.grid')
     @expose(template='bkr.server.templates.systems_feed', format='xml', as_format='atom',
@@ -464,7 +466,8 @@ class Root(RPCRoot):
     @identity.require(identity.not_anonymous())
     @paginate('list', default_order='fqdn', limit=20, max_limit=None)
     def mine(self, *args, **kw):
-        return self._systems(systems = System.mine(identity.current.user), *args, **kw)
+        return self._systems(systems=System.mine(identity.current.user),
+                title=u'My Systems', *args, **kw)
 
       
     @expose(template='bkr.server.templates.grid') 
@@ -496,9 +499,9 @@ class Root(RPCRoot):
           
             getter = lambda x: reserve_link(x,distro.id)       
             direct_column = Utility.direct_column(title='Action',getter=getter)     
-            return_dict  = self._systems(systems=avail_systems_distro_query, direct_columns=[(8,direct_column)],warn_msg=warn, *args, **kw)
-       
-            return_dict['title'] = 'Reserve Systems'
+            return_dict = self._systems(systems=avail_systems_distro_query,
+                    title=u'Reserve Systems', direct_columns=[(8, direct_column)],
+                    *args, **kw)
             return_dict['warn_msg'] = warn
             return_dict['tg_template'] = "bkr.server.templates.reserve_grid"
             return_dict['action'] = '/reserve_system'
@@ -553,7 +556,7 @@ class Root(RPCRoot):
             return_dict.update({'searchvalue':searchvalue})
         return return_dict
  
-    def _systems(self, systems, *args, **kw):
+    def _systems(self, systems, title, *args, **kw):
         search_bar = SearchBar(name='systemsearch',
                                label=_(u'System Search'),
                                enable_custom_columns = True,
@@ -657,19 +660,20 @@ class Root(RPCRoot):
         display_grid = myPaginateDataGrid(fields=my_fields)
         col_data = Utility.result_columns(columns)   
         #systems_count = len(systems)     
-        return dict(title="Systems", grid = display_grid,
-                                     list = systems, 
-                                     object_count = systems.count(),
-                                     searchvalue = searchvalue,                                    
-                                     options =  {'simplesearch' : simplesearch,'columns':col_data,
-                                                 'result_columns' : default_result_columns,
-                                                 'col_defaults' : col_data['default'],
-                                                 'col_options' : col_data['options']},
-                                     action = '.', 
-                                     search_bar = search_bar,
-                                     atom_url='?tg_format=atom&list_tgp_order=-date_modified&'
-                                        + cherrypy.request.query_string,
-                                     )
+        return dict(title=title,
+                    grid = display_grid,
+                    list = systems,
+                    object_count = systems.count(),
+                    searchvalue = searchvalue,
+                    options =  {'simplesearch' : simplesearch,'columns':col_data,
+                                'result_columns' : default_result_columns,
+                                'col_defaults' : col_data['default'],
+                                'col_options' : col_data['options']},
+                    action = '',
+                    search_bar = search_bar,
+                    atom_url='?tg_format=atom&list_tgp_order=-date_modified&'
+                       + cherrypy.request.query_string,
+                    )
 
     @expose(format='json')
     def by_fqdn(self, input):
