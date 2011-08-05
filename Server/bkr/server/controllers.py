@@ -24,6 +24,7 @@ from bkr.server.retention_tags import RetentionTag as RetentionTagController
 from bkr.server.watchdog import Watchdogs
 from bkr.server.systems import SystemsController
 from bkr.server.widgets import myPaginateDataGrid
+from bkr.server.widgets import LoanWidget
 from bkr.server.widgets import PowerTypeForm
 from bkr.server.widgets import PowerForm
 from bkr.server.widgets import PowerActionHistory
@@ -847,11 +848,15 @@ class Root(RPCRoot):
                 options['show_cc'] = True
             else:
                 readonly = True
-            if system.can_loan(our_user):
-                options['loan_text'] = ' (Loan)'
-            if system.current_loan(our_user):
-                options['loan_text'] = ' (Return)'
-             
+
+            options['loan_widget'] = LoanWidget() 
+            if system.current_loan(our_user) and system.is_admin():
+                options['loan_type'] = LoanWidget.RETURN_CHANGE
+            elif system.current_loan(our_user):
+                options['loan_type'] = LoanWidget.RETURN
+            elif system.can_loan(our_user):
+                options['loan_type'] = LoanWidget.LOAN
+
             if system.can_share(our_user) and system.can_provision_now(our_user): #Has privs and machine is available, can take
                 options['user_change_text'] = ' (Take)'
 
@@ -862,11 +867,11 @@ class Root(RPCRoot):
             self.provision_now_rights,self.will_provision,self.provision_action = \
                 SystemTab.get_provision_perms(system, our_user, currently_held)
 
-        if 'activities_found' in histories_return: 
+        if 'activities_found' in histories_return:
             historical_data = histories_return['activities_found']
-        else: 
+        else:
             historical_data = system.activity[:150]
-            
+
         if readonly:
             attrs = dict(readonly = 'True')
         else:
@@ -986,13 +991,31 @@ class Root(RPCRoot):
          
     @expose(template='bkr.server.templates.form')
     @identity.require(identity.not_anonymous())
-    def loan_change(self, id):
+    def loan_change(self, id, switch_user=False):
+        def user_change_form():
+            return dict(
+                title   = "Loan system %s" % system.fqdn,
+                form = self.loan_form,
+                action = '/save_loan',
+                options = None,
+                value = {'id': system.id},
+            )
+
         try:
             system = System.by_id(id,identity.current.user)
         except InvalidRequestError:
             flash( _(u"Unable to find system with id of %s" % id) )
             redirect("/")
+
         if system.loaned:
+            if switch_user:
+                # This implies a Change
+                if system.is_admin():
+                    return user_change_form()
+                else:
+                   flash( _(u"Insufficient permissions to change loanee of system"))
+                   redirect("/")
+            # This implies a Return
             if system.current_loan(identity.current.user):
                 activity = SystemActivity(identity.current.user, 'WEBUI', 'Changed', 'Loaned To', '%s' % system.loaned, 'None')
                 system.activity.append(activity)
@@ -1006,13 +1029,8 @@ class Root(RPCRoot):
             if not system.can_loan(identity.current.user):
                 flash( _(u"Insufficient permissions to loan system"))
                 redirect("/")
-        return dict(
-            title   = "Loan system %s" % system.fqdn,
-            form = self.loan_form,
-            action = '/save_loan',
-            options = None,
-            value = {'id': system.id},
-        )
+            #This implies a Loan
+            return user_change_form()
 
     @expose(template='bkr.server.templates.form')
     @identity.require(identity.not_anonymous())
@@ -1043,11 +1061,11 @@ class Root(RPCRoot):
             flash( _(u"Unable to find system with id of %s" % id) )
             redirect("/")
 
-        if not system.can_loan(identity.current.user):
+        if not system.is_admin():
             flash( _(u"Insufficient permissions to loan system"))
             redirect("/")
         user = User.by_user_name(kw['user'])
-        activity = SystemActivity(identity.current.user, 'WEBUI', 'Changed', 'Loaned To', 'None' , '%s' % user)
+        activity = SystemActivity(identity.current.user, 'WEBUI', 'Changed', 'Loaned To', '%s' % system.loaned , '%s' % user)
         system.activity.append(activity)
         system.loaned = user
         flash( _(u"%s Loaned to %s" % (system.fqdn, user) ))
