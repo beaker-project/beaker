@@ -61,10 +61,14 @@ class ProxyHelper(object):
             self.logger.setLevel(logging.DEBUG)
             log_level = logging._levelNames.get(self.conf["LOG_LEVEL"].upper())
             log_file = self.conf["LOG_FILE"]
+            maxBytes = self.conf.get("LOG_MAXBYTES", 10*(1024**2))
+            backupCount = self.conf.get("LOG_BACKUPCOUNT", 5)
             add_rotating_file_logger(self.logger, 
                                      log_file, 
                                      log_level=log_level,
-                                     format=VERBOSE_LOG_FORMAT)
+                                     format=VERBOSE_LOG_FORMAT,
+                                     maxBytes=maxBytes,
+                                     backupCount=backupCount)
 
         # self.hub is created here
         if self.conf['HUB_URL'].startswith('https://'):
