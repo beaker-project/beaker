@@ -18,6 +18,7 @@
 
 import logging
 import re
+import os
 import time
 import datetime
 import itertools
@@ -144,6 +145,9 @@ def create_distro(name=None, breed=u'Dan',
     for lc in LabController.query():
         distro.lab_controller_assocs.append(LabControllerDistro(lab_controller=lc))
     log.debug('Created distro %r', distro)
+    harness_dir = os.path.join(turbogears.config.get('basepath.harness'), distro.osversion.osmajor.osmajor)
+    if not os.path.exists(harness_dir):
+        os.mkdir(harness_dir)
     return distro
 
 def create_system(arch=u'i386', type=u'Machine', status=u'Automated',

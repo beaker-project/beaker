@@ -4751,22 +4751,20 @@ class Recipe(TaskBase):
                 task_to_delete.delete()
             return return_val
 
-    def harness_repos(self):
+    def task_repo(self):
+        if self.distro:
+            return ("beaker-tasks","http://%s/repos/%s" % (self.servername, self.id))
+
+
+    def harness_repo(self):
         """
         return repos needed for harness and task install
         """
-        repos = []
         if self.distro:
             if os.path.exists("%s/%s" % (self.harnesspath,
                                             self.distro.osversion.osmajor)):
-                repo = dict(name = "beaker-harness",
-                             url  = "http://%s/harness/%s/" % (self.servername,
+                return ("beaker-harness", "http://%s/harness/%s/" % (self.servername,
                                                                self.distro.osversion.osmajor))
-                repos.append(repo)
-            repo = dict(name = "beaker-tasks",
-                        url  = "http://%s/repos/%s" % (self.servername, self.id))
-            repos.append(repo)
-        return repos
 
     def to_xml(self, recipe, clone=False, from_recipeset=False, from_machine=False):
         if not clone:
