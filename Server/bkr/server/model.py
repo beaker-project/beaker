@@ -2441,9 +2441,15 @@ $SNIPPET("rhts_post")
     def report_problem_href(self, **kwargs):
         return url('/report_problem', system_id=self.id, **kwargs)
 
-    def mark_broken(self, reason, recipe=None):
+    def mark_broken(self, reason, recipe=None, service=u'Scheduler'):
         """Sets the system status to Broken and notifies its owner."""
+        try:
+            user = identity.current.user
+        except:
+            user = None
         log.warning('Marking system %s as broken' % self.fqdn)
+        sa = SystemActivity(user, service, u'Changed', u'Status', unicode(self.status), u'Broken')
+        self.activity.append(sa)
         self.status = SystemStatus.by_name(u'Broken')
         self.date_modified = datetime.utcnow()
         mail.broken_system_notify(self, reason, recipe)
@@ -2488,13 +2494,7 @@ $SNIPPET("rhts_post")
             reason = unicode(_(u'System has a run of aborted recipes ' 
                     'with reliable distros'))
             log.warn(reason)
-            old_status = self.status
             self.mark_broken(reason=reason)
-            self.activity.append(
-                    SystemActivity(service=u'Scheduler',
-                    action=u'Changed', field_name=u'Status',
-                    old_value=unicode(old_status),
-                    new_value=unicode(self.status)))
 
     def reserve(self, service, user=None, reservation_type=u'manual'):
         if user is None:
@@ -6199,6 +6199,8 @@ System.mapper = mapper(System, system_table,
                      'activity':relation(SystemActivity,
                         order_by=[activity_table.c.created.desc(), activity_table.c.id.desc()],
                         backref='object', cascade='all, delete, delete-orphan'),
+                     'dyn_activity': dynamic_loader(SystemActivity,
+                        order_by=[activity_table.c.created.desc(), activity_table.c.id.desc()]),
                      'command_queue':relation(CommandActivity,
                         order_by=[activity_table.c.created.desc(), activity_table.c.id.desc()],
                         backref='object', cascade='all, delete, delete-orphan'),
