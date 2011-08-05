@@ -100,6 +100,9 @@ class Tasks(RPCRoot):
                 of these types.
             'valid'
                 bool 0 or 1. Include only tasks which are valid or not.
+            'destructive'
+                bool 0 or 1. set to 0 for only non-destructive tasks
+                             set to 1 for only destructive tasks
 
         The return value is an array of dicts, which are name and arches. 
           name is the name of the matching tasks.
@@ -124,6 +127,10 @@ class Tasks(RPCRoot):
         # Filter by valid task if requested
         if 'valid' in filter:
             tasks = tasks.filter(Task.valid==bool(filter['valid']))
+
+        # Filter by destructive if requested
+        if 'destructive' in filter:
+            tasks = tasks.filter(Task.destructive==bool(filter['destructive']))
 
         # Filter by name if specified
         # /distribution/install, /distribution/reservesys

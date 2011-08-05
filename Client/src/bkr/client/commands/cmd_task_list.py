@@ -40,6 +40,14 @@ Options
    is applied. That is, a task will be listed if it applies to any of the 
    given packages.
 
+.. option:: --destructive
+
+   Limit to tasks which are destructive.
+
+.. option:: --non-destructive
+
+   Limit to tasks which are non-destructive.
+
 .. option:: --install_name <name>
 
    Limit to tasks which apply to distro with install name <name>.
@@ -122,6 +130,16 @@ class Task_List(BeakerCommand):
             action="store_true",
             help="print as xml",
         )
+        self.parser.add_option(
+            "--destructive",
+            action="store_true",
+            help="Only include destructive tasks",
+        )
+        self.parser.add_option(
+            "--non-destructive",
+            action="store_true",
+            help="Only include non-destructive tasks",
+        )
 
 
     def run(self, *args, **kwargs):
@@ -132,6 +150,12 @@ class Task_List(BeakerCommand):
         filter['packages'] = kwargs.pop("package", None)
         filter['install_name'] = kwargs.pop("install_name", None)
         filter['valid'] = True
+        # Make sure they didn't specify both destructive and non_destructive.
+        if not kwargs.get("destructive") or not kwargs.get("non_destructive"):
+            if kwargs.get("destructive", None):
+                filter['destructive'] = 1
+            if kwargs.get("non_destructive", None):
+                filter['destructive'] = 0
         params = kwargs.pop("params", [])
         xml = kwargs.pop("xml")
 
