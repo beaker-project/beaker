@@ -26,6 +26,11 @@ import turbogears
 from turbogears import config, url
 from turbogears.database import get_engine
 
+# Importing ConcurrentRotatingFileHandler will result in 
+# it adding itself into the logging.handlers __dict__,
+# thus allowing it to be found in turbogears.update_config()
+from cloghandler import ConcurrentRotatingFileHandler
+
 log = logging.getLogger(__name__)
 
 def load_config(configfile=None):
@@ -47,6 +52,7 @@ def load_config(configfile=None):
         log.error("Unable to find configuration to load!")
         return
     log.debug("Loading configuration: %s" % configfile)
+
     turbogears.update_config(configfile=configfile, modulename="bkr.server.config")
 
 def log_to_stream(stream, level=logging.WARNING):
