@@ -323,6 +323,7 @@ function Inventory()
     fi
     # Add in Kerberos config
     generate_beaker_cfg
+    mkdir -p /var/www/beaker/harness # in lieu of running beaker-repo-update
 
     beaker-init -u admin -p testing -e $SUBMITTER
     estatus_fail "**** Failed to initialize beaker DB ****"
