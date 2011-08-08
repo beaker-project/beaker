@@ -99,7 +99,6 @@ baseurl=$repourl
 enabled=1
 gpgcheck=0
 EOF
-#end for
 #end if
 
 
@@ -113,7 +112,6 @@ baseurl=$repourl
 enabled=1
 gpgcheck=0
 EOF
-#end for
 #end if
 
 # Add Custom Repos
