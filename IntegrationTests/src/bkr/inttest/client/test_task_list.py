@@ -36,7 +36,7 @@ class TaskListTest(unittest.TestCase):
         task2 = data_setup.create_task()
         task2.destructive = False
         session.flush()
-        out = run_client(['bkr', 'task-list', '--non_destructive'])
+        out = run_client(['bkr', 'task-list', '--non-destructive'])
         self.assert_(task1.name not in out.splitlines(), out)
         self.assert_(task2.name in out.splitlines(), out)
 
