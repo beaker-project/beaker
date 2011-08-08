@@ -165,9 +165,9 @@ class Search(SeleniumTestCase):
         try: self.failUnless(not sel.is_text_present("%s" % self.system_three.fqdn))
         except AssertionError, e: self.verificationErrors.append(str(7))
 
-        tomorrow_date = datetime.date.today() + datetime.timedelta(days=1)
+        tomorrow_date = datetime.datetime.utcnow().date() + datetime.timedelta(days=1)
         tomorrow = tomorrow_date.isoformat()
-        yesterday_date = datetime.date.today() - datetime.timedelta(days=1)
+        yesterday_date = datetime.datetime.utcnow().date() - datetime.timedelta(days=1)
         yesterday = yesterday_date.isoformat()
         sel.select("systemsearch_0_table", "label=System/Added")
         sel.select("systemsearch_0_operation", "label=is")
