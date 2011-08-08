@@ -175,8 +175,11 @@ function generate_beaker_cfg()
 sqlalchemy.dburi="mysql://beaker:beaker@localhost/beaker"
 sqlalchemy.pool_recycle = 3600
 
-basepath.rpms = '/var/www/beaker/rpms'
-basepath.repos = '/var/www/beaker/repos'
+# File Locations
+basepath.logs='/var/www/beaker/logs'
+basepath.rpms='/var/www/beaker/rpms'
+basepath.repos='/var/www/beaker/repos'
+basepath.harness='/var/www/beaker/harness'
 
 # if you are using a database or table type without transactions
 # (MySQL default, for example), you should turn off transactions
