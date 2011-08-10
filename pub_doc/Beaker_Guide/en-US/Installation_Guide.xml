@@ -45,7 +45,10 @@ $ service mysqld start
     </screen>
     </para>
     <para>
-    Now let's initialise our DB with tables. We'll also create an admin account called <emphasis>admin</emphasis> with password <emphasis>testing</emphasis>. 
+    Now let's initialise our DB with tables. We'll also create an admin account called <emphasis>admin</emphasis> with password <emphasis>testing</emphasis>, and email <emphasis>root@localhost</emphasis>. 
+    <screen>
+    $ beaker-init -u admin -p testing -e root@localhost
+    </screen>
     </para>
   </section>
   <section id="Installation-Install_Beaker-Start_Beaker">
