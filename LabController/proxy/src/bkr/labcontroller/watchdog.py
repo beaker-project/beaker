@@ -40,15 +40,10 @@ def main_loop(conf=None, foreground=False):
     logger.setLevel(logging.DEBUG)
     log_level = logging._levelNames.get(config["LOG_LEVEL"].upper())
     log_file = config["WATCHDOG_LOG_FILE"]
-    maxBytes = config.get("LOG_MAXBYTES", 10*(1024**2))
-    backupCount = config.get("LOG_BACKUPCOUNT", 5)
-
     add_rotating_file_logger(logger,
                              log_file,
                              log_level=log_level,
-                             format=VERBOSE_LOG_FORMAT,
-                             maxBytes=maxBytes,
-                             backupCount=backupCount)
+                             format=VERBOSE_LOG_FORMAT)
 
     try:
         watchdog = Watchdog(conf=conf, logger=logger)

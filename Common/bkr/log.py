@@ -107,7 +107,7 @@ def add_file_logger(logger, logfile, log_level=None, format=None, mode="a"):
     logger.addHandler(handler)
 
 
-def add_rotating_file_logger(logger, logfile, log_level=None, format=None, mode="a", maxBytes=10*(1024**2), backupCount=5):
+def add_rotating_file_logger(logger, logfile, log_level=None, format=None, mode="a"):
     """Add a rotating file logger to the logger."""
     log_level = log_level or logging.DEBUG
     format = format or BRIEF_LOG_FORMAT
@@ -128,7 +128,7 @@ def add_rotating_file_logger(logger, logfile, log_level=None, format=None, mode=
     if not os.access(logfile, os.W_OK):
         return
 
-    handler = RFHandler(logfile, maxBytes=maxBytes, backupCount=backupCount, mode=mode)
+    handler = RFHandler(logfile, maxBytes=10*(1024**2), backupCount=5, mode=mode)
     handler.setFormatter(logging.Formatter(format, datefmt="%Y-%m-%d %H:%M:%S"))
     handler.setLevel(log_level)
     logger.addHandler(handler)
