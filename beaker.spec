@@ -2,7 +2,7 @@
 %{!?pyver: %global pyver %(%{__python} -c "import sys ; print sys.version[:3]")}
 
 Name:           beaker
-Version:        0.6.16
+Version:        0.6.18
 Release:        1%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
@@ -281,6 +281,73 @@ fi
 %{_var}/lib/beaker/addDistro.d/*
 
 %changelog
+* Wed Aug 10 2011 Raymond Mancy <rmancy@redhat.com> 0.6.18-1
+- 723753 - system search submits to wrong URL on /available, /free, /mine
+- 727692 - Re-added beaker-init command into docs (rmancy@redhat.com)
+  (dcallagh@redhat.com)
+- 723789 - avoid using deepcopy on xml.dom.minidom nodes
+  (dcallagh@redhat.com)
+- 655837 - fix cloning multiple child nodes in <hostRequires/> and
+  <partitions/> (dcallagh@redhat.com)
+- 725807 - move expire_distros from cron.daily to cron.hourly
+  (bpeck@redhat.com)
+- 572842 - Test program interface to access console logs (bpeck@redhat.com)
+- 720715 - re-scan lab controller distros will delete all distros
+  (bpeck@redhat.com)
+- 720046 - Show power commands in system history tab (stl@redhat.com)
+- 725465 - Filter tasks by destructiveness (bpeck@redhat.com)
+- 720591 - ensure all bkr subcommands exit with non-zero status on error
+  (dcallagh@redhat.com)
+- 728110 - Log an entry to system history upon being marked broken
+  (stl@redhat.com)
+- 722367 - Abort when no harness repo exists. (rmancy@redhat.com)
+- 723573 - Change Loan feature (rmancy@redhat.com)
+- 723283 - beaker-watchdog should handle exceptions better (bpeck@redhat.com)
+
+- /distribution/beaker/setup: MYSQL_EXTRA_CONFIG env var (dcallagh@redhat.com)
+- /distribution/beaker/setup: basepath.harness missing from config
+  (dcallagh@redhat.com)
+- /distribution/beaker/setup: need harness dir to exist (dcallagh@redhat.com)
+- report Warn when reserve limit is exceeded. (bpeck@redhat.com)
+- fix uncaught exception handling in beakerd (dcallagh@redhat.com)
+- include pmtools in inventory rpm (bpeck@redhat.com)
+- fix typo in tests (dcallagh@redhat.com)
+- s/mkdir/makedirs/ to create parent dirs also (dcallagh@redhat.com)
+- need to use UTC today instead of local today (dcallagh@redhat.com)
+
+* Wed Aug 10 2011 Raymond Mancy <rmancy@redhat.com>
+- 723753 - system search submits to wrong URL on /available, /free, /mine
+  (dcallagh@redhat.com)
+- 723789 - avoid using deepcopy on xml.dom.minidom nodes
+- 727692 - Re-added beaker-init command into docs (rmancy@redhat.com)
+  (dcallagh@redhat.com)
+- 655837 - fix cloning multiple child nodes in <hostRequires/> and
+  <partitions/> (dcallagh@redhat.com)
+- 725807 - move expire_distros from cron.daily to cron.hourly
+  (bpeck@redhat.com)
+- 572842 - Test program interface to access console logs (bpeck@redhat.com)
+- 720715 - re-scan lab controller distros will delete all distros
+  (bpeck@redhat.com)
+- 720046 - Show power commands in system history tab (stl@redhat.com)
+- 725465 - Filter tasks by destructiveness (bpeck@redhat.com)
+- 720591 - ensure all bkr subcommands exit with non-zero status on error
+  (dcallagh@redhat.com)
+- 728110 - Log an entry to system history upon being marked broken
+  (stl@redhat.com)
+- 722367 - Abort when no harness repo exists. (rmancy@redhat.com)
+- 723573 - Change Loan feature (rmancy@redhat.com)
+- 723283 - beaker-watchdog should handle exceptions better (bpeck@redhat.com)
+
+- fix uncaught exception handling in beakerd (dcallagh@redhat.com)
+- report Warn when reserve limit is exceeded. (bpeck@redhat.com)
+- /distribution/beaker/setup: basepath.harness missing from config
+  (dcallagh@redhat.com)
+- /distribution/beaker/setup: need harness dir to exist (dcallagh@redhat.com)
+- s/mkdir/makedirs/ to create parent dirs also (dcallagh@redhat.com)
+- need to use UTC today instead of local today (dcallagh@redhat.com)
+- include pmtools in inventory rpm (bpeck@redhat.com)
+- /distribution/beaker/setup: MYSQL_EXTRA_CONFIG env var (dcallagh@redhat.com)
+
 * Wed Jul 27 2011 Raymond Mancy <rmancy@redhat.com> 0.6.16-1
 - 720890 - log uncaught exceptions in beakerd worker threads
   (dcallagh@redhat.com)
