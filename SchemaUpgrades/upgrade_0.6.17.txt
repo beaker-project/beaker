@@ -1,0 +1,8 @@
+We have some new config options for the labcontroller logging handlers: -
+
+LOG_MAXBYTES
+LOG_BACKUPCOUNT
+
+
+Their default values are 10 * (1024**2), and 5 respectively, you can 
+change these in /etc/beaker/proxy.conf if you feel the need
