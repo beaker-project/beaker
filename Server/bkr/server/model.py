@@ -1414,7 +1414,7 @@ class System(SystemObject):
     def __init__(self, fqdn=None, status=None, contact=None, location=None,
                        model=None, type=None, serial=None, vendor=None,
                        owner=None, lab_controller=None, lender=None,
-                       hypervisor=None, loaned=None):
+                       hypervisor=None, loaned=None, memory=None):
         self.fqdn = fqdn
         self.status = status
         self.contact = contact
@@ -1428,6 +1428,7 @@ class System(SystemObject):
         self.lender = lender
         self.hypervisor = hypervisor
         self.loaned = loaned
+        self.memory = memory
     
     def to_xml(self, clone=False):
         """ Return xml describing this system """
@@ -3108,30 +3109,11 @@ class Distro(MappedObject):
 
     @classmethod
     def by_filter(cls, filter):
-        """
-        <distro>
-         <And>
-           <Require name='ARCH' operator='=' value='i386'/>
-           <Require name='FAMILY' operator='=' value='rhelserver5'/>
-           <Require name='TAG' operator='=' value='released'/>
-         </And>
-        </distro>
-        """
-        from needpropertyxml import ElementWrapper
-        import xmltramp
-        #FIXME Should validate XML before proceeding.
+        from bkr.server.needpropertyxml import apply_filter
         # Join on lab_controller_assocs or we may get a distro that is not on any 
         # lab controller anymore.
-        distros_table = distro_table
-        queries = []
-        for child in ElementWrapper(xmltramp.parse(filter)):
-            if callable(getattr(child, 'filter', None)):
-                (distros_table, query) = child.filter(distros_table)
-                queries.append(query)
-        distros = Distro.query().select_from(distros_table)\
-                        .join('lab_controller_assocs')
-        if queries:
-            distros = distros.filter(and_(*queries))
+        distros = Distro.query().join('lab_controller_assocs')
+        distros = apply_filter(filter, distros)
         return distros.order_by('-date_created')
 
     def to_xml(self, clone=False):
@@ -3162,38 +3144,9 @@ class Distro(MappedObject):
         return distro_requires
 
     def systems_filter(self, user, filter, join=['lab_controller']):
-        """
-        Return Systems that match the following filter
-        <host>
-         <And>
-           <Require name='MACHINE' operator='!=' value='dell-pe700-01.rhts.bos.redhat.com'/>
-           <Require name='ARCH' operator='=' value='i386'/>
-           <Require name='MEMORY' operator='>=' value='2048'/>
-           <Require name='POWER' operator='=' value='True'/>
-         </And>
-        </host>
-        System.query.\
-           join('key_values',aliased=True).\ 
-                filter_by(key_name='MEMORY').\
-                filter(key_value_table.c.key_value > 2048).\
-           join('key_values',aliased=True).\
-                filter_by(key_name='CPUFLAGS').\
-                filter(key_value_table.c.key_value == 'lm').\
-              all()
-        [hp-xw8600-02.rhts.bos.redhat.com]
-        """
-        from needpropertyxml import ElementWrapper
-        import xmltramp
-        systems_table = system_table
-        #FIXME Should validate XML before processing.
-        queries = []
-        for child in ElementWrapper(xmltramp.parse(filter)):
-            if callable(getattr(child, 'filter', None)):
-                (systems_table, query) = child.filter(systems_table)
-                queries.append(query)
-        systems = System.query().select_from(systems_table)
-        if queries:
-            systems = systems.filter(and_(*queries))
+        from bkr.server.needpropertyxml import apply_filter
+        systems = System.query()
+        systems = apply_filter(filter, systems)
         systems = self.all_systems(user, join, systems)
         return systems
 

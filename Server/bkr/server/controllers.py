@@ -55,7 +55,6 @@ from bkr.server.bexceptions import *
 from cherrypy import request, response
 from cherrypy.lib.cptools import serve_file
 from tg_expanding_form_widget.tg_expanding_form_widget import ExpandingForm
-from bkr.server.needpropertyxml import *
 from bkr.server.helpers import *
 from bkr.server.tools.init import dummy
 from bkr.server import mail
