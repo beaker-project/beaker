@@ -7,12 +7,12 @@
 	<title>Deployment Guide</title>
 	<subtitle>A Guide to Beaker Testing System</subtitle>
 	<productname>Beaker</productname>
-	<productnumber>0.5</productnumber>
+	<productnumber>0</productnumber>
 	<edition>1</edition>
-	<pubsnumber>9</pubsnumber>
+	<pubsnumber>1</pubsnumber>
 	<abstract>
 		<para>
-			This Book covers all topics related to Beaker and its use	
+			This Book covers all topics related to Beaker and its use
 		</para>
 	</abstract>
 	<corpauthor>
