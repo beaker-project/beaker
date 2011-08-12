@@ -445,6 +445,23 @@ def scheduled_recipes(*args):
                                 # We have uneven tasks
                                 pass
       
+                harness_repo_details = recipe.harness_repo()
+                task_repo_details = recipe.task_repo()
+                repo_fail = []
+                if not harness_repo_details:
+                    repo_fail.append(u'harness')
+                if not task_repo_details:
+                    repo_fail.append(u'task')
+
+                if repo_fail:
+                    repo_fail_msg ='Failed to find repo for %s' % ','.join(repo_fail)
+                    log.error(repo_fail_msg)
+                    recipe.recipeset.abort(repo_fail_msg)
+                    break
+                else:
+                    harnessrepo = '%s,%s' % harness_repo_details
+                    taskrepo = '%s,%s' % task_repo_details
+
                 # Start the first task in the recipe
                 try:
                     recipe.tasks[0].start()
@@ -455,11 +472,11 @@ def scheduled_recipes(*args):
                                                                          recipe.id,
                                                                             e))
                     break
+
                 ks_meta = "recipeid=%s packages=%s" % (recipe.id,
                                                        ":".join([p.package for p in recipe.packages]))
-                harnessrepos="|".join(["%s,%s" % (r["name"], r["url"]) for r in recipe.harness_repos()])
                 customrepos= "|".join(["%s,%s" % (r.name, r.url) for r in recipe.repos])
-                ks_meta = "%s customrepos=%s harnessrepos=%s" % (ks_meta, customrepos, harnessrepos)
+                ks_meta = "%s customrepos=%s harnessrepo=%s taskrepo=%s" % (ks_meta, customrepos, harnessrepo, taskrepo)
                 # If ks_meta is defined from recipe pass it along.
                 # add it last to allow for overriding previous settings.
                 if recipe.ks_meta:
@@ -482,11 +499,7 @@ def scheduled_recipes(*args):
                                         unicode(recipe.distro)))
                 except CobblerTaskFailedException, e:
                     log.error('Cobbler task failed for recipe %s: %s' % (recipe.id, e))
-                    old_status = recipe.system.status
                     recipe.system.mark_broken(reason=str(e), recipe=recipe)
-                    recipe.system.activity.append(SystemActivity(service='Scheduler',
-                            action='Changed', field_name='Status',
-                            old_value=old_status, new_value=recipe.system.status))
                     recipe.recipeset.abort(_(u'Cobbler task failed for recipe %s: %s')
                             % (recipe.id, e))
                 except Exception, e:
@@ -527,6 +540,7 @@ def running_commands(*args):
                         log.info('Power %s command (%d) completed on machine: %s' %
                                  (cmd.action, cmd.id, cmd.system))
                         cmd.status = CommandStatus.by_name(u'Completed')
+                        cmd.log_to_system_history()
                         break
                     if line.find("### TASK FAILED ###") != -1:
                         log.error('Cobbler power task %s (command %d) failed for machine: %s' %
@@ -535,6 +549,7 @@ def running_commands(*args):
                         cmd.new_value = u'Cobbler task failed'
                         if cmd.system.status == SystemStatus.by_name(u'Automated'):
                             cmd.system.mark_broken(reason='Cobbler power task failed')
+                        cmd.log_to_system_history()
                         break
                 if (cmd.status == CommandStatus.by_name(u'Running')) and \
                    (datetime.utcnow() >= cmd.updated + timedelta(seconds=COMMAND_TIMEOUT)):
@@ -542,11 +557,13 @@ def running_commands(*args):
                                   (cmd.task_id, cmd.id, cmd.system))
                         cmd.status = CommandStatus.by_name(u'Aborted')
                         cmd.new_value = u'Timeout of %d seconds exceeded' % COMMAND_TIMEOUT
+                        cmd.log_to_system_history()
             except Exception, msg:
                 log.error('Cobbler power exception processing command %d for machine %s: %s' %
                           (cmd.id, cmd.system, msg))
                 cmd.status = CommandStatus.by_name(u'Failed')
                 cmd.new_value = unicode(msg)
+                cmd.log_to_system_history()
         session.commit()
         session.close()
     log.debug('Exiting running_commands routine')
@@ -581,6 +598,7 @@ def queued_commands(*args):
                       (cmd.id, cmd.system))
             cmd.status = CommandStatus.by_name(u'Aborted')
             cmd.new_value = u'Power control unavailable'
+            cmd.log_to_system_history()
         else:
             try:
                 log.info('Executing power %s command (%d) on machine: %s' %
@@ -593,6 +611,7 @@ def queued_commands(*args):
                           (cmd.action, cmd.id, cmd.system, msg))
                 cmd.new_value = unicode(msg)
                 cmd.status = CommandStatus.by_name(u'Failed')
+                cmd.log_to_system_history()
         session.commit()
         session.close()
     log.debug('Exiting queued_commands routine')
@@ -614,17 +633,20 @@ def processed_recipesets_loop(*args, **kwargs):
             time.sleep(20)
 
 @log_traceback(log)
-def queued_recipes_loop(*args, **kwargs):
-    while True:
-        if not queued_recipes():
-            time.sleep(20)
-
-@log_traceback(log)
 def command_queue_loop(*args, **kwargs):
     while True:
         running_commands()
         queued_commands()
         time.sleep(20)
+
+@log_traceback(log)
+def main_loop():
+    while True:
+        dead_recipes()
+        queued = queued_recipes()
+        scheduled = scheduled_recipes()
+        if not queued and not scheduled:
+            time.sleep(20)
 
 def schedule():
     bkr.server.scheduler._start_scheduler()
@@ -642,19 +664,7 @@ def schedule():
     add_onetime_task(action=command_queue_loop,
                       args=[lambda:datetime.now()],
                       initialdelay=10)
-    #log.debug("starting queued recipes Thread")
-    # Create queued_recipes Thread
-    #add_onetime_task(action=queued_recipes_loop,
-    #                  args=[lambda:datetime.now()],
-    #                  initialdelay=10)
-    log.debug("starting scheduled recipes Thread")
-    # Run scheduled_recipes in this process
-    while True:
-        dead_recipes()
-        queued = queued_recipes()
-        scheduled = scheduled_recipes()
-        if not queued and not scheduled:
-            time.sleep(20)
+    main_loop()
 
 def daemonize(daemon_func, daemon_pid_file=None, daemon_start_dir="/", daemon_out_log="/dev/null", daemon_err_log="/dev/null", *args, **kwargs):
     """Robustly turn into a UNIX daemon, running in daemon_start_dir."""

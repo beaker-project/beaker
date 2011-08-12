@@ -13,8 +13,8 @@ def create_client_config(username, password):
         # Kobo wigs out if HUB_URL ends with a trailing slash, not sure why..
         'HUB_URL = "%s"' % get_server_base().rstrip('/'),
         'AUTH_METHOD = "password"',
-        'USERNAME = "%s"' % data_setup.ADMIN_USER,
-        'PASSWORD = "%s"' % data_setup.ADMIN_PASSWORD
+        'USERNAME = "%s"' % username,
+        'PASSWORD = "%s"' % password,
     ]))
     config.flush()
     return config
@@ -24,6 +24,7 @@ class ClientError(Exception):
     def __init__(self, command, status, stderr_output):
         Exception.__init__(self, 'Client command %r failed '
                 'with exit status %s:\n%s' % (command, status, stderr_output))
+        self.status = status
         self.stderr_output = stderr_output
 
 # If running against installed beaker-client, BEAKER_CLIENT_COMMAND=bkr should 
@@ -32,14 +33,19 @@ class ClientError(Exception):
 client_command = os.environ.get('BEAKER_CLIENT_COMMAND',
         os.path.join(os.path.dirname(__file__), '..', '..', '..', '..', 'run-client.sh'))
 
-def run_client(args):
-    config_filename = default_client_config.name
-    log.debug('Running client %r as %r with BEAKER_CLIENT_CONF=%s',
-            client_command, args, config_filename)
-    p = subprocess.Popen(args, executable=client_command,
+def start_client(args, config=None):
+    if config is None:
+        global default_client_config
+        config = default_client_config
+    log.debug('Starting client %r as %r with BEAKER_CLIENT_CONF=%s',
+            client_command, args, config.name)
+    return subprocess.Popen(args, executable=client_command,
             stdout=subprocess.PIPE, stderr=subprocess.PIPE,
             env=dict(os.environ.items() +
-                [('BEAKER_CLIENT_CONF', config_filename)]))
+                [('BEAKER_CLIENT_CONF', config.name)]))
+
+def run_client(args, config=None):
+    p = start_client(args, config)
     out, err = p.communicate()
     if p.returncode:
         raise ClientError(args, p.returncode, err)

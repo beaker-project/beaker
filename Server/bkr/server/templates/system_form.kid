@@ -151,9 +151,9 @@ $(document).ready(function(){
        </th>
        <td class="list">
         ${loaned_email_link}
-        <a py:if="loan_text" href="${tg.url(loan_change)}?id=${id}">
-         <span py:content="loan_text"/>
-        </a>
+        <span py:if="loan_type">
+            ${loan_widget.display(loan_type, id)}
+        </span>
        </td>
       </tr>
       <tr class="list">

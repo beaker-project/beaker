@@ -100,6 +100,9 @@ class Tasks(RPCRoot):
                 of these types.
             'valid'
                 bool 0 or 1. Include only tasks which are valid or not.
+            'destructive'
+                bool 0 or 1. set to 0 for only non-destructive tasks
+                             set to 1 for only destructive tasks
 
         The return value is an array of dicts, which are name and arches. 
           name is the name of the matching tasks.
@@ -124,6 +127,10 @@ class Tasks(RPCRoot):
         # Filter by valid task if requested
         if 'valid' in filter:
             tasks = tasks.filter(Task.valid==bool(filter['valid']))
+
+        # Filter by destructive if requested
+        if 'destructive' in filter:
+            tasks = tasks.filter(Task.destructive==bool(filter['destructive']))
 
         # Filter by name if specified
         # /distribution/install, /distribution/reservesys
@@ -185,18 +192,17 @@ class Tasks(RPCRoot):
         """
         rpm_file = "%s/%s" % (self.task_dir, task_rpm_name)
         if os.path.exists("%s" % rpm_file):
-            return "Failed to import because we already have %s" % task_rpm_name
+            raise BX(_(u'Cannot import duplicate task %s') % task_rpm_name)
         else:
             FH = open(rpm_file, "w")
             FH.write(task_rpm_data.data)
             FH.close()
             try:
                 task = self.process_taskinfo(self.read_taskinfo(rpm_file))
-            except (ValueError,ParserError,ParserWarning,rpm.error), err:
+            except Exception, e:
                 # Delete invalid rpm
                 os.unlink(rpm_file)
-                session.rollback()
-                return "Failed to import because of %s" % str(err)
+                raise
             return "Success"
 
     @expose()

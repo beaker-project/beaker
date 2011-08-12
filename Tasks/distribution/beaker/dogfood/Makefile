@@ -20,7 +20,6 @@ export TESTVERSION=1.1
 export TEST=/$(TOPLEVEL_NAMESPACE)/$(PACKAGE_NAME)/$(RELATIVE_PATH)
 
 SELENIUM_SERVER_VERSION=1.0.3
-SELENIUM_PYTHON_VERSION=2.1.0
 
 .PHONY: all install download clean
 
@@ -33,7 +32,6 @@ DOWNLOADED_FILES=selenium-remote-control-$(SELENIUM_SERVER_VERSION).zip
 FILES=$(METADATA) runtest.sh Makefile PURPOSE
 
 run: $(FILES) build \
-     /usr/lib/python2.4/site-packages/selenium-$(SELENIUM_PYTHON_VERSION)-py2.4.egg \
      /usr/local/share/selenium/selenium-server-$(SELENIUM_SERVER_VERSION)
 	./runtest.sh
 
@@ -50,9 +48,6 @@ clean:
 
 /usr/local/share/selenium/selenium-server-$(SELENIUM_SERVER_VERSION): selenium-remote-control-$(SELENIUM_SERVER_VERSION).zip
 	unzip -o -d /usr/local/share/selenium $<
-
-/usr/lib/python2.4/site-packages/selenium-$(SELENIUM_PYTHON_VERSION)-py2.4.egg:
-	easy_install 'selenium==$(SELENIUM_PYTHON_VERSION)'
 
 # Include Common Makefile
 include /usr/share/rhts/lib/rhts-make.include

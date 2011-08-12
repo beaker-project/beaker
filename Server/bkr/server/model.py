@@ -2441,9 +2441,15 @@ $SNIPPET("rhts_post")
     def report_problem_href(self, **kwargs):
         return url('/report_problem', system_id=self.id, **kwargs)
 
-    def mark_broken(self, reason, recipe=None):
+    def mark_broken(self, reason, recipe=None, service=u'Scheduler'):
         """Sets the system status to Broken and notifies its owner."""
+        try:
+            user = identity.current.user
+        except:
+            user = None
         log.warning('Marking system %s as broken' % self.fqdn)
+        sa = SystemActivity(user, service, u'Changed', u'Status', unicode(self.status), u'Broken')
+        self.activity.append(sa)
         self.status = SystemStatus.by_name(u'Broken')
         self.date_modified = datetime.utcnow()
         mail.broken_system_notify(self, reason, recipe)
@@ -2488,13 +2494,7 @@ $SNIPPET("rhts_post")
             reason = unicode(_(u'System has a run of aborted recipes ' 
                     'with reliable distros'))
             log.warn(reason)
-            old_status = self.status
             self.mark_broken(reason=reason)
-            self.activity.append(
-                    SystemActivity(service=u'Scheduler',
-                    action=u'Changed', field_name=u'Status',
-                    old_value=unicode(old_status),
-                    new_value=unicode(self.status)))
 
     def reserve(self, service, user=None, reservation_type=u'manual'):
         if user is None:
@@ -2809,7 +2809,8 @@ class OSVersion(MappedObject):
     def __init__(self, osmajor, osminor, arches=None):
         self.osmajor = osmajor
         self.osminor = osminor
-        self.arches = arches
+        if arches:
+            self.arches = arches
 
     @classmethod
     def by_id(cls, id):
@@ -3449,6 +3450,12 @@ class CommandActivity(Activity):
 
     def object_name(self):
         return "Command: %s %s" % (self.object.fqdn, self.action)
+
+    def log_to_system_history(self):
+        sa = SystemActivity(self.user, self.service, self.action, u'Power', u'',
+                            self.new_value and self.status.status + ": " + self.new_value \
+                            or self.status.status)
+        self.system.activity.append(sa)
 
 # note model
 class Note(object):
@@ -4744,22 +4751,20 @@ class Recipe(TaskBase):
                 task_to_delete.delete()
             return return_val
 
-    def harness_repos(self):
+    def task_repo(self):
+        if self.distro:
+            return ("beaker-tasks","http://%s/repos/%s" % (self.servername, self.id))
+
+
+    def harness_repo(self):
         """
         return repos needed for harness and task install
         """
-        repos = []
         if self.distro:
             if os.path.exists("%s/%s" % (self.harnesspath,
                                             self.distro.osversion.osmajor)):
-                repo = dict(name = "beaker-harness",
-                             url  = "http://%s/harness/%s/" % (self.servername,
+                return ("beaker-harness", "http://%s/harness/%s/" % (self.servername,
                                                                self.distro.osversion.osmajor))
-                repos.append(repo)
-            repo = dict(name = "beaker-tasks",
-                        url  = "http://%s/repos/%s" % (self.servername, self.id))
-            repos.append(repo)
-        return repos
 
     def to_xml(self, recipe, clone=False, from_recipeset=False, from_machine=False):
         if not clone:
@@ -4824,13 +4829,13 @@ class Recipe(TaskBase):
             recipe.appendChild(dr)
         hostRequires = self.doc.createElement("hostRequires")
         for hr in hrs.getElementsByTagName("hostRequires"):
-            for child in hr.childNodes:
+            for child in hr.childNodes[:]:
                 hostRequires.appendChild(child)
         recipe.appendChild(hostRequires)
         prs = xml.dom.minidom.parseString(self.partitions)
         partitions = self.doc.createElement("partitions")
         for pr in prs.getElementsByTagName("partitions"):
-            for child in pr.childNodes:
+            for child in pr.childNodes[:]:
                 partitions.appendChild(child)
         recipe.appendChild(partitions)
         for t in self.tasks:
@@ -6192,6 +6197,8 @@ System.mapper = mapper(System, system_table,
                      'activity':relation(SystemActivity,
                         order_by=[activity_table.c.created.desc(), activity_table.c.id.desc()],
                         backref='object', cascade='all, delete, delete-orphan'),
+                     'dyn_activity': dynamic_loader(SystemActivity,
+                        order_by=[activity_table.c.created.desc(), activity_table.c.id.desc()]),
                      'command_queue':relation(CommandActivity,
                         order_by=[activity_table.c.created.desc(), activity_table.c.id.desc()],
                         backref='object', cascade='all, delete, delete-orphan'),

@@ -27,8 +27,12 @@
                 </distroRequires>
                 <hostRequires>
                     <system_type value="Machine"/>
+                    <hypervisor op="=" value=""/>
                 </hostRequires>
-                <partitions/>
+                <partitions>
+                    <partition fs="btrfs" name="/mnt/testarea" size="18" type="part"/>
+                    <partition fs="btrfs" name="/usr/local" size="8" type="part"/>
+                </partitions>
                 <task name="/distribution/install" role="STANDALONE">
                     <params/>
                 </task>

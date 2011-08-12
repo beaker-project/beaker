@@ -175,8 +175,11 @@ function generate_beaker_cfg()
 sqlalchemy.dburi="mysql://beaker:beaker@localhost/beaker"
 sqlalchemy.pool_recycle = 3600
 
-basepath.rpms = '/var/www/beaker/rpms'
-basepath.repos = '/var/www/beaker/repos'
+# File Locations
+basepath.logs='/var/www/beaker/logs'
+basepath.rpms='/var/www/beaker/rpms'
+basepath.repos='/var/www/beaker/repos'
+basepath.harness='/var/www/beaker/harness'
 
 # if you are using a database or table type without transactions
 # (MySQL default, for example), you should turn off transactions
@@ -301,7 +304,13 @@ function Inventory()
     InstallInventory$SOURCE
     # Backup /etc/my.cnf and make INNODB the default engine.
     cp /etc/my.cnf /etc/my.cnf-orig
-    cat /etc/my.cnf-orig | awk '{print $1}; /\[mysqld\]/ {print "default-storage-engine=INNODB"}' | awk '{print$1}; /\[mysqld\]/ {print "max_allowed_packet=50M" }' > /etc/my.cnf
+    cat /etc/my.cnf-orig | awk '
+        {print $1};
+        /\[mysqld\]/ {
+            print "default-storage-engine=INNODB";
+            print "max_allowed_packet=50M";
+            print ENVIRON["MYSQL_EXTRA_CONFIG"];
+        }' > /etc/my.cnf
     #
     service mysqld start
     estatus_fail "**** Failed to start mysqld ****"
@@ -314,6 +323,7 @@ function Inventory()
     fi
     # Add in Kerberos config
     generate_beaker_cfg
+    mkdir -p /var/www/beaker/harness # in lieu of running beaker-repo-update
 
     beaker-init -u admin -p testing -e $SUBMITTER
     estatus_fail "**** Failed to initialize beaker DB ****"

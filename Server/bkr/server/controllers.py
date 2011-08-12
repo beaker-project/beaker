@@ -24,6 +24,7 @@ from bkr.server.retention_tags import RetentionTag as RetentionTagController
 from bkr.server.watchdog import Watchdogs
 from bkr.server.systems import SystemsController
 from bkr.server.widgets import myPaginateDataGrid
+from bkr.server.widgets import LoanWidget
 from bkr.server.widgets import PowerTypeForm
 from bkr.server.widgets import PowerForm
 from bkr.server.widgets import PowerActionHistory
@@ -416,8 +417,8 @@ class Root(RPCRoot):
             content_type='application/atom+xml', accept_format='application/atom+xml')
     @paginate('list', default_order='fqdn', limit=20, max_limit=None)
     def index(self, *args, **kw): 
-        return_dict =  self._systems(systems = System.all(identity.current.user), *args, **kw) 
-        return return_dict
+        return self._systems(systems=System.all(identity.current.user),
+                title=u'Systems', *args, **kw)
 
     @expose(template='bkr.server.templates.form')
     @identity.require(identity.not_anonymous())
@@ -448,7 +449,8 @@ class Root(RPCRoot):
     @identity.require(identity.not_anonymous())
     @paginate('list', default_order='fqdn', limit=20, max_limit=None)
     def available(self, *args, **kw):
-        return self._systems(systems = System.available(identity.current.user), *args, **kw)
+        return self._systems(systems=System.available(identity.current.user),
+                title=u'Available Systems', *args, **kw)
 
     @expose(template='bkr.server.templates.grid')
     @expose(template='bkr.server.templates.systems_feed', format='xml', as_format='atom',
@@ -456,7 +458,8 @@ class Root(RPCRoot):
     @identity.require(identity.not_anonymous())
     @paginate('list', default_order='fqdn', limit=20, max_limit=None)
     def free(self, *args, **kw): 
-        return self._systems(systems = System.free(identity.current.user), *args, **kw)
+        return self._systems(systems=System.free(identity.current.user),
+                title=u'Free Systems', *args, **kw)
 
     @expose(template='bkr.server.templates.grid')
     @expose(template='bkr.server.templates.systems_feed', format='xml', as_format='atom',
@@ -464,7 +467,8 @@ class Root(RPCRoot):
     @identity.require(identity.not_anonymous())
     @paginate('list', default_order='fqdn', limit=20, max_limit=None)
     def mine(self, *args, **kw):
-        return self._systems(systems = System.mine(identity.current.user), *args, **kw)
+        return self._systems(systems=System.mine(identity.current.user),
+                title=u'My Systems', *args, **kw)
 
       
     @expose(template='bkr.server.templates.grid') 
@@ -496,9 +500,9 @@ class Root(RPCRoot):
           
             getter = lambda x: reserve_link(x,distro.id)       
             direct_column = Utility.direct_column(title='Action',getter=getter)     
-            return_dict  = self._systems(systems=avail_systems_distro_query, direct_columns=[(8,direct_column)],warn_msg=warn, *args, **kw)
-       
-            return_dict['title'] = 'Reserve Systems'
+            return_dict = self._systems(systems=avail_systems_distro_query,
+                    title=u'Reserve Systems', direct_columns=[(8, direct_column)],
+                    *args, **kw)
             return_dict['warn_msg'] = warn
             return_dict['tg_template'] = "bkr.server.templates.reserve_grid"
             return_dict['action'] = '/reserve_system'
@@ -553,7 +557,7 @@ class Root(RPCRoot):
             return_dict.update({'searchvalue':searchvalue})
         return return_dict
  
-    def _systems(self, systems, *args, **kw):
+    def _systems(self, systems, title, *args, **kw):
         search_bar = SearchBar(name='systemsearch',
                                label=_(u'System Search'),
                                enable_custom_columns = True,
@@ -657,19 +661,20 @@ class Root(RPCRoot):
         display_grid = myPaginateDataGrid(fields=my_fields)
         col_data = Utility.result_columns(columns)   
         #systems_count = len(systems)     
-        return dict(title="Systems", grid = display_grid,
-                                     list = systems, 
-                                     object_count = systems.count(),
-                                     searchvalue = searchvalue,                                    
-                                     options =  {'simplesearch' : simplesearch,'columns':col_data,
-                                                 'result_columns' : default_result_columns,
-                                                 'col_defaults' : col_data['default'],
-                                                 'col_options' : col_data['options']},
-                                     action = '.', 
-                                     search_bar = search_bar,
-                                     atom_url='?tg_format=atom&list_tgp_order=-date_modified&'
-                                        + cherrypy.request.query_string,
-                                     )
+        return dict(title=title,
+                    grid = display_grid,
+                    list = systems,
+                    object_count = systems.count(),
+                    searchvalue = searchvalue,
+                    options =  {'simplesearch' : simplesearch,'columns':col_data,
+                                'result_columns' : default_result_columns,
+                                'col_defaults' : col_data['default'],
+                                'col_options' : col_data['options']},
+                    action = '',
+                    search_bar = search_bar,
+                    atom_url='?tg_format=atom&list_tgp_order=-date_modified&'
+                       + cherrypy.request.query_string,
+                    )
 
     @expose(format='json')
     def by_fqdn(self, input):
@@ -843,11 +848,15 @@ class Root(RPCRoot):
                 options['show_cc'] = True
             else:
                 readonly = True
-            if system.can_loan(our_user):
-                options['loan_text'] = ' (Loan)'
-            if system.current_loan(our_user):
-                options['loan_text'] = ' (Return)'
-             
+
+            options['loan_widget'] = LoanWidget() 
+            if system.current_loan(our_user) and system.is_admin():
+                options['loan_type'] = LoanWidget.RETURN_CHANGE
+            elif system.current_loan(our_user):
+                options['loan_type'] = LoanWidget.RETURN
+            elif system.can_loan(our_user):
+                options['loan_type'] = LoanWidget.LOAN
+
             if system.can_share(our_user) and system.can_provision_now(our_user): #Has privs and machine is available, can take
                 options['user_change_text'] = ' (Take)'
 
@@ -858,11 +867,11 @@ class Root(RPCRoot):
             self.provision_now_rights,self.will_provision,self.provision_action = \
                 SystemTab.get_provision_perms(system, our_user, currently_held)
 
-        if 'activities_found' in histories_return: 
+        if 'activities_found' in histories_return:
             historical_data = histories_return['activities_found']
-        else: 
+        else:
             historical_data = system.activity[:150]
-            
+
         if readonly:
             attrs = dict(readonly = 'True')
         else:
@@ -982,13 +991,31 @@ class Root(RPCRoot):
          
     @expose(template='bkr.server.templates.form')
     @identity.require(identity.not_anonymous())
-    def loan_change(self, id):
+    def loan_change(self, id, switch_user=False):
+        def user_change_form():
+            return dict(
+                title   = "Loan system %s" % system.fqdn,
+                form = self.loan_form,
+                action = '/save_loan',
+                options = None,
+                value = {'id': system.id},
+            )
+
         try:
             system = System.by_id(id,identity.current.user)
         except InvalidRequestError:
             flash( _(u"Unable to find system with id of %s" % id) )
             redirect("/")
+
         if system.loaned:
+            if switch_user:
+                # This implies a Change
+                if system.is_admin():
+                    return user_change_form()
+                else:
+                   flash( _(u"Insufficient permissions to change loanee of system"))
+                   redirect("/")
+            # This implies a Return
             if system.current_loan(identity.current.user):
                 activity = SystemActivity(identity.current.user, 'WEBUI', 'Changed', 'Loaned To', '%s' % system.loaned, 'None')
                 system.activity.append(activity)
@@ -1002,13 +1029,8 @@ class Root(RPCRoot):
             if not system.can_loan(identity.current.user):
                 flash( _(u"Insufficient permissions to loan system"))
                 redirect("/")
-        return dict(
-            title   = "Loan system %s" % system.fqdn,
-            form = self.loan_form,
-            action = '/save_loan',
-            options = None,
-            value = {'id': system.id},
-        )
+            #This implies a Loan
+            return user_change_form()
 
     @expose(template='bkr.server.templates.form')
     @identity.require(identity.not_anonymous())
@@ -1039,11 +1061,11 @@ class Root(RPCRoot):
             flash( _(u"Unable to find system with id of %s" % id) )
             redirect("/")
 
-        if not system.can_loan(identity.current.user):
+        if not system.is_admin():
             flash( _(u"Insufficient permissions to loan system"))
             redirect("/")
         user = User.by_user_name(kw['user'])
-        activity = SystemActivity(identity.current.user, 'WEBUI', 'Changed', 'Loaned To', 'None' , '%s' % user)
+        activity = SystemActivity(identity.current.user, 'WEBUI', 'Changed', 'Loaned To', '%s' % system.loaned , '%s' % user)
         system.activity.append(activity)
         system.loaned = user
         flash( _(u"%s Loaned to %s" % (system.fqdn, user) ))

@@ -18,6 +18,7 @@
 
 import logging
 import re
+import os
 import time
 import datetime
 import itertools
@@ -82,6 +83,11 @@ def create_labcontroller(fqdn=None, user=None):
                 user = create_user()
                 session.flush()
             lc = LabController.lazy_create(fqdn=fqdn, user=user)
+            # username/password to login into stub_cobbler
+            # Doesn't matter what it is, just can't be None or we 
+            # Will get cannot marshal none errors.
+            lc.username = "foo"
+            lc.password = "bar"
             return lc
         else:
             raise
@@ -134,16 +140,19 @@ def create_distro(name=None, breed=u'Dan',
     distro.virt = virt
     if tags:
         distro.tags.extend(tags)
+    distro.arch = Arch.by_name(arch)
     osmajor = OSMajor.lazy_create(osmajor=osmajor)
     try:
         distro.osversion = OSVersion.by_name(osmajor, osminor)
     except sqlalchemy.exceptions.InvalidRequestError:
-        distro.osversion = OSVersion(osmajor, osminor, arches=[])
-    distro.arch = Arch.by_name(arch)
+        distro.osversion = OSVersion(osmajor, osminor, arches=[distro.arch])
     # make it available in all lab controllers
     for lc in LabController.query():
         distro.lab_controller_assocs.append(LabControllerDistro(lab_controller=lc))
     log.debug('Created distro %r', distro)
+    harness_dir = os.path.join(turbogears.config.get('basepath.harness'), distro.osversion.osmajor.osmajor)
+    if not os.path.exists(harness_dir):
+        os.makedirs(harness_dir)
     return distro
 
 def create_system(arch=u'i386', type=u'Machine', status=u'Automated',

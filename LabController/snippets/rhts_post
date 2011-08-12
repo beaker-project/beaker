@@ -89,10 +89,9 @@ EOF
 #end for
 #end if
 
-# Add Harness Repos
-#if $getVar('harnessrepos','') != ''
-#for $repo in $getVar('harnessrepos','').split('|')
-#set (reponame, repourl) = $repo.split(',', 1)
+#Add Task Repo
+#if $getVar('taskrepo','') != ''
+#set (reponame, repourl) = $getVar('taskrepo').split(',', 1)
 cat << EOF >/etc/yum.repos.d/${reponame}.repo
 [$reponame]
 name=$reponame
@@ -100,7 +99,19 @@ baseurl=$repourl
 enabled=1
 gpgcheck=0
 EOF
-#end for
+#end if
+
+
+# Add Harness Repo
+#if $getVar('harnessrepo','') != ''
+#set (reponame, repourl) = $getVar('harnessrepo').split(',', 1)
+cat << EOF >/etc/yum.repos.d/${reponame}.repo
+[$reponame]
+name=$reponame
+baseurl=$repourl
+enabled=1
+gpgcheck=0
+EOF
 #end if
 
 # Add Custom Repos

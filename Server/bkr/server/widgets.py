@@ -1,4 +1,5 @@
 from turbogears import validators, url, config
+from kid import Element
 import time
 import turbogears as tg
 from turbojson import jsonify
@@ -1222,7 +1223,7 @@ class SystemForm(Form):
     template = "bkr.server.templates.system_form"
     params = ['id','readonly',
               'user_change','user_change_text',
-              'loan_change', 'loan_text',
+              'loan_change', 'loan_type', 'loan_wodget',
               'owner_change', 'owner_change_text']
     user_change = '/user_change'
     owner_change = '/owner_change'
@@ -1296,8 +1297,10 @@ class SystemForm(Form):
             d["user_change_text"] = d["options"]["user_change_text"]
         if d["options"].has_key("loan_change"):
             d["loan_change"] = d["options"]["loan_change"]
-        if d["options"].has_key("loan_text"):
-            d["loan_text"] = d["options"]["loan_text"]
+        if d["options"].has_key("loan_type"):
+            d["loan_type"] = d["options"]["loan_type"]
+        if d["options"].has_key("loan_widget"):
+            d["loan_widget"] = d["options"]["loan_widget"]
         d['show_cc'] = d['options'].get('show_cc', False)
         d["id"] = d["value_for"]("id")
         if d["value"] and "owner" in d["value"] and d["value"]["owner"]:
@@ -1518,6 +1521,41 @@ class JobWhiteboard(RPC, CompoundWidget):
         super(JobWhiteboard, self).update_params(d)
         d['form_attrs']['onsubmit'] = "return !remoteFormRequest(this, null, %s);" % (
             jsonify.encode(self.get_options(d)))
+
+class LoanWidget(Widget):
+
+
+    RETURN_CHANGE = 1
+    RETURN = 2
+    LOAN = 3
+    params =['actions']
+
+    template = """
+          <span xmlns:py="http://purl.org/kid/ns#" py:for="a in actions" py:strip="1">
+           ${a}
+          </span>
+        """
+
+    def display(self, value, id, *args, **params):
+        types = []
+        if value is self.RETURN:
+            a = Element('a', {'href' : url('/loan_change?id=%s' % id) })
+            a.text=" (Return)"
+            types.append(a)
+        if value is self.LOAN:
+            a = Element('a', {'href' : url('/loan_change?id=%s' % id) })
+            a.text=" (Loan)"
+            types.append(a)
+        if value is self.RETURN_CHANGE:
+            a = Element('a', {'href' : url('/loan_change?id=%s' % id) })
+            a.text=" (Return)"
+            a2 = Element('a', {'href' : url('/loan_change?id=%s&switch_user=1' % id) })
+            a2.text=" (Change)"
+            types.extend([a,a2])
+        params['actions'] = types
+        return super(LoanWidget, self).display(*args, **params)
+
+
 
 class RecipeTaskActionWidget(RPC):
     template = 'bkr.server.templates.action'

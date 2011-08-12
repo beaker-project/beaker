@@ -199,6 +199,7 @@ else
     SLEEPTIME=$RESERVETIME
     # Verify the max amount of time a system can be reserved
     if [ $SLEEPTIME -gt 356400 ]; then
+        RprtRslt $TEST/watchdog_exceeds_limit Warn $SLEEPTIME
 	SLEEPTIME=356400
     fi
 fi
