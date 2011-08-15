@@ -786,6 +786,7 @@ class System(SystemObject):
                           'Model'     : MyColumn(column=model.System.model,col_type='string'),
                           'SerialNumber': MyColumn(column=model.System.serial, col_type='string'),
                           'Memory'    : MyColumn(column=model.System.memory,col_type='numeric'),
+                          'Hypervisor': MyColumn(column=model.Hypervisor.hypervisor, col_type='string', relations='hypervisor'),
                           'NumaNodes' : MyColumn(column=model.Numa.nodes, col_type='numeric', relations='numa'),
                           'User'      : MyColumn(column=model.User.user_name, col_type='string',has_alias=True, relations='user'),
                           'Owner'     : MyColumn(column=model.User.user_name, col_type='string',has_alias=True, relations='owner'),
@@ -796,8 +797,10 @@ class System(SystemObject):
                           'LoanedTo'  : MyColumn(column=model.User.user_name,col_type='string',has_alias=True, relations='loaned'),
                           'Group'     : MyColumn(column=model.Group.group_name, col_type='string',has_alias=True, relations ='groups')
                          }  
-    search_values_dict = {'Status' : lambda: model.SystemStatus.get_all_status_name(),
-                          'Type' : lambda: model.SystemType.get_all_type_names() }   
+    search_values_dict = {'Status'    : lambda: model.SystemStatus.get_all_status_name(),
+                          'Type'      : lambda: model.SystemType.get_all_type_names(),
+                          'Hypervisor': lambda: [''] + model.Hypervisor.get_all_names(),
+                         }
     @classmethod
     def added_is_filter(cls,col,val):
         if not val:

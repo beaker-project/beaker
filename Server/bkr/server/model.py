@@ -1411,7 +1411,7 @@ class System(SystemObject):
     def __init__(self, fqdn=None, status=None, contact=None, location=None,
                        model=None, type=None, serial=None, vendor=None,
                        owner=None, lab_controller=None, lender=None,
-                       hypervisor=None):
+                       hypervisor=None, loaned=None):
         self.fqdn = fqdn
         self.status = status
         self.contact = contact
@@ -1424,6 +1424,7 @@ class System(SystemObject):
         self.lab_controller = lab_controller
         self.lender = lender
         self.hypervisor = hypervisor
+        self.loaned = loaned
     
     def to_xml(self, clone=False):
         """ Return xml describing this system """
@@ -2594,6 +2595,10 @@ class Hypervisor(SystemObject):
         return an array of tuples containing id, hypervisor
         """
         return [(hvisor.id, hvisor.hypervisor) for hvisor in cls.query()]
+
+    @classmethod
+    def get_all_names(cls):
+        return [h.hypervisor for h in cls.query()]
 
     @classmethod
     @sqla_cache
