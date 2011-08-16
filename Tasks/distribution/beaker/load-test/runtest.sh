@@ -27,4 +27,4 @@ __EOF__
 }
 
 ClientCfg
-rhts-run-simple-test $TEST "funnel --profile load.xml --graphite-server $GRAPHITE_SERVER --load-server $BEAKER_LOAD_SERVER"
+rhts-run-simple-test $TEST "funnel --profile load.xml --graphite-server $GRAPHITE_SERVER --load-server $BEAKER_LOAD_SERVER --ssl"
