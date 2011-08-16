@@ -17,10 +17,11 @@
 
 function ClientCfg()
 {
-    cat << __EOF__ > /etc/beaker/client.conf
+    mkdir -p ~/.beaker_config
+    cat << __EOF__ > ~/.beaker_config/client
 HUB_URL = "https://$BEAKER_LOAD_SERVER/"
 AUTH_METHOD = "password"
-USERNAME = "admin"
+USERNAME = "load"
 PASSWORD = "testing"
 MSG_BUS = False
 __EOF__
