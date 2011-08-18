@@ -21,6 +21,7 @@ def populate(task):
         task.owner = tinfo.owner.decode('utf8')
     if tinfo.priority:
         task.priority = tinfo.priority.decode('utf8')
+    task.destructive = tinfo.destructive
 
 if __name__ == '__main__':
     load_config()

@@ -95,6 +95,10 @@
         <td class="title"><b>Priority:</b></td>
         <td class="value">${task.priority}</td>
     </tr>
+    <tr py:if="task.destructive">
+        <td class="title"><b>Destructive:</b></td>
+        <td class="value">${task.destructive}</td>
+    </tr>
     <tr py:if="task.required">
         <td class="title"><b>Requires:</b></td>
         <td class="value">

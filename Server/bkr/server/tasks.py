@@ -472,6 +472,7 @@ class Tasks(RPCRoot):
         for runfor in tinfo.runfor:
             task.runfor.append(TaskPackage.lazy_create(package=runfor))
         task.priority = tinfo.priority
+        task.destructive = tinfo.destructive
         for require in tinfo.requires:
             task.required.append(TaskPackage.lazy_create(package=require))
         for need in tinfo.needs:
