@@ -1,0 +1,99 @@
+<job retention_tag="scratch">
+    <whiteboard>
+            Load test 2RS,4R,10RT
+                </whiteboard>
+<recipeSet priority="Urgent">
+<recipe kernel_options="" kernel_options_post="" ks_meta="" role="RECIPE_MEMBERS" whiteboard="">
+<autopick random="false"/>
+<watchdog panic="ignore"/>
+<packages/>
+<ks_appends/>
+<repos/>
+<distroRequires>
+<and>
+<distro_family op="=" value="Fedora14"/>
+<distro_virt op="=" value=""/>
+<distro_variant op="=" value="Fedora"/>
+<distro_name op="=" value="Fedora-14"/>
+<distro_arch op="=" value="i386"/>
+</and>
+</distroRequires>
+<hostRequires>
+<and>
+<system_type op="=" value="Machine"/>
+</and>
+</hostRequires>
+<partitions/>
+<task name="/distribution/install" role="STANDALONE">
+<params/>
+</task>
+<task name="/distribution/reservesys" role="STANDALONE">
+<params/>
+</task>
+<task name="/distribution/reservesys" role="STANDALONE">
+<params/>
+</task>
+<task name="/distribution/reservesys" role="STANDALONE">
+<params/>
+</task>
+<task name="/distribution/reservesys" role="STANDALONE">
+<params>                                                                                                                                                                                                                                  
+<param name="RESERVETIME" value="3700"/>
+</params>
+
+</task>
+
+</recipe>
+
+
+
+
+
+
+<recipe kernel_options="" kernel_options_post="" ks_meta="" role="RECIPE_MEMBERS" whiteboard="">
+<autopick random="false"/>
+<watchdog panic="ignore"/>
+<packages/>
+<ks_appends/>
+<repos/>
+<distroRequires>
+<and>
+<distro_family op="=" value="Fedora14"/>
+<distro_virt op="=" value=""/>
+<distro_variant op="=" value="Fedora"/>
+<distro_name op="=" value="Fedora-14"/>
+<distro_arch op="=" value="i386"/>
+</and>
+</distroRequires>
+<hostRequires>
+<and>
+<system_type op="=" value="Machine"/>
+</and>
+</hostRequires>
+<partitions/>
+<task name="/distribution/install" role="STANDALONE">
+<params/>
+</task>
+<task name="/distribution/reservesys" role="STANDALONE">
+<params/>
+</task>
+<task name="/distribution/reservesys" role="STANDALONE">
+<params/>
+</task>
+<task name="/distribution/reservesys" role="STANDALONE">
+<params/>
+</task>
+<task name="/distribution/reservesys" role="STANDALONE">
+
+<params>                                                                                                                                                                                                                                  
+<param name="RESERVETIME" value="3700"/>
+</params>
+</task>
+</recipe>
+
+
+
+
+</recipeSet>
+
+</job>

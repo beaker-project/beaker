@@ -1,0 +1,18 @@
+<root>
+  <config>
+    <xmlproxy value="/RPC2" />
+    <baseload session='create_jobs' requests='1' unit='hour'/>
+    <baseload session='job_watch' requests='83'/> <!-- This equates to roughly 10k an hour -->
+  </config>
+
+  <load>
+    <user duration='1' unit='minute' session='create_jobs' load-level='1'/>
+
+    <user duration='20' unit='minute' session='job_watch' load-level='1' run-once='1'/>
+
+    <user delay='20' duration='20' unit='minute' session='job_watch' load-level='3' run-once='1'/>
+
+    <user delay='40' duration='20' unit='minute' session='job_watch' load-level='10' run-once='1'/>
+  </load>
+</root>
+
