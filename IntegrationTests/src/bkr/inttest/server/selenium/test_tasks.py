@@ -22,7 +22,7 @@ class TestSubmitTask(SeleniumTestCase):
         cls.selenium.stop()
         basepath = (turbogears.config.get('basepath.rpms'))
         os.remove(os.path.join(basepath, 'tmp-distribution-beaker-task_test-1.1-0.noarch.rpm'))
-        os.remove(os.path.join(basepath, 'tmp-distribution-beaker-task_test-2.0-2.noarch.rpm'))
+        os.remove(os.path.join(basepath, 'tmp-distribution-beaker-task_test-2.0-3.noarch.rpm'))
         os.remove(os.path.join(basepath, 'tmp-distribution-beaker-dummy_for_bz681143-1.0-1.noarch.rpm'))
 
     def test_submit_task(self):
@@ -56,7 +56,7 @@ class TestSubmitTask(SeleniumTestCase):
         sel.wait_for_page_to_load('30000')
         sel.type('task_task_rpm',
                 pkg_resources.resource_filename(self.__module__,
-                'tmp-distribution-beaker-task_test-2.0-2.noarch.rpm'))
+                'tmp-distribution-beaker-task_test-2.0-3.noarch.rpm'))
         sel.click('//input[@value="Submit Data"]')
         sel.wait_for_page_to_load('30000')
         self.assert_(('%s Added/Updated' % test_package_name)
@@ -109,14 +109,15 @@ class TestSubmitTask(SeleniumTestCase):
                 'Fake test for integration testing v2.0')
         self.assertEqual(self.get_task_info_field('Expected Time'), '30 minutes')
         self.assertEqual(self.get_task_info_field('Owner'), 'Nobody <nobody@example.com>')
-        self.assertEqual(self.get_task_info_field('Version'), '2.0-2')
+        self.assertEqual(self.get_task_info_field('Version'), '2.0-3')
         self.assertEqual(self.get_task_info_field('License'), 'GPLv2')
         self.assertEqual(self.get_task_info_field('Types'), 'Multihost')
-        self.assertEqual(self.get_task_info_field('RPM'), 'tmp-distribution-beaker-task_test-2.0-2.noarch.rpm')
+        self.assertEqual(self.get_task_info_field('RPM'), 'tmp-distribution-beaker-task_test-2.0-3.noarch.rpm')
         self.assertEqual(self.get_task_info_field_href('RPM'),
                 # no /bkr prefix for /rpms served by Apache
-                '/rpms/tmp-distribution-beaker-task_test-2.0-2.noarch.rpm')
+                '/rpms/tmp-distribution-beaker-task_test-2.0-3.noarch.rpm')
         self.assertEqual(self.get_task_info_field('Run For'), 'beaker')
+        self.assertEqual(self.get_task_info_field('Priority'), 'Low')
         self.assertEqual(self.get_task_info_field('Requires'),
                 '\n'.join(['beaker', 'rpm', 'coreutils']))
 

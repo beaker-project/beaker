@@ -1,5 +1,5 @@
-Record owner and uploader of tasks (bug 617274)
------------------------------------------------
+Record owner, uploader, and priority of tasks (bugs 617274 and 624417)
+----------------------------------------------------------------------
 
 Create the new columns:
 
@@ -10,14 +10,17 @@ Create the new columns:
         ADD CONSTRAINT task_uploader_id_fk
             FOREIGN KEY (uploader_id) REFERENCES tg_user (user_id),
         ADD COLUMN owner TEXT NULL AFTER uploader_id,
-        ADD INDEX (owner(255));
+        ADD INDEX (owner(256)),
+        ADD COLUMN priority VARCHAR(256) NULL AFTER destructive,
+        ADD INDEX (priority);
 
-As apache user, run the upgrade_0.7.1_populate_task_owner.py script to populate
-the owner column for existing tasks.
+As apache user, run the upgrade_0.7.1_populate_task_metadata.py script to
+populate the new columns for existing tasks.
 
 To roll back:
 
     ALTER TABLE task
+        DROP COLUMN priority,
         DROP FOREIGN KEY task_uploader_id_fk,
         DROP COLUMN uploader_id,
         DROP COLUMN owner,

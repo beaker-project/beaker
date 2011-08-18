@@ -206,7 +206,7 @@ def create_system_activity(user=None, **kw):
     return activity
 
 def create_task(name=None, exclude_arch=[],exclude_osmajor=[], version=u'1.0-1',
-        uploader=None, owner=None):
+        uploader=None, owner=None, priority=u'Manual'):
     if name is None:
         name = unique_name(u'/distribution/test_task_%s')
     if uploader is None:
@@ -224,6 +224,7 @@ def create_task(name=None, exclude_arch=[],exclude_osmajor=[], version=u'1.0-1',
     task.version = version
     task.uploader = uploader
     task.owner = owner
+    task.priority = priority
     if exclude_arch:
        [TaskExcludeArch(arch_id=Arch.by_name(arch).id, task_id=task.id) for arch in exclude_arch]
     if exclude_osmajor:

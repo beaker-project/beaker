@@ -471,6 +471,7 @@ class Tasks(RPCRoot):
         task.path = tinfo.test_path
         for runfor in tinfo.runfor:
             task.runfor.append(TaskPackage.lazy_create(package=runfor))
+        task.priority = tinfo.priority
         for require in tinfo.requires:
             task.required.append(TaskPackage.lazy_create(package=require))
         for need in tinfo.needs:

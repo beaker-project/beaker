@@ -91,6 +91,10 @@
             </span>
         </td>
     </tr>
+    <tr py:if="task.priority">
+        <td class="title"><b>Priority:</b></td>
+        <td class="value">${task.priority}</td>
+    </tr>
     <tr py:if="task.required">
         <td class="title"><b>Requires:</b></td>
         <td class="value">
