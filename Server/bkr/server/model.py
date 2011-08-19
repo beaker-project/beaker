@@ -3938,8 +3938,11 @@ class Job(TaskBase):
 
     @classmethod
     def by_whiteboard(cls,desc):
-        res = Job.query().filter_by(whiteboard = desc).limit(cls.max_by_whiteboard)
-        return res
+        if type(desc) is list:
+            res = Job.query().filter(Job.whiteboard.in_(desc))
+        else:
+            res = Job.query().filter_by(whiteboard=desc)
+        return res.limit(cls.max_by_whiteboard)
 
     @classmethod
     def provision_system_job(cls, distro_id, **kw):

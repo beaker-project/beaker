@@ -234,25 +234,26 @@ class ReserveWorkflow(Form):
         return super(ReserveWorkflow,self).display(value,**params)
 
     def update_params(self,d):
-        super(ReserveWorkflow,self).update_params(d) 
+        super(ReserveWorkflow,self).update_params(d)
         if 'values' in d:
             if d['values']:
-                d['arch_value'] = d['values']['arch'] 
+                d['arch_value'] = d['values']['arch']
                 d['distro_family_value'] = d['values']['distro_family']
                 d['tag_value'] = d['values']['tag']
 
-class MyButton(Widget):
+class MyButton(Button):
     template="bkr.server.templates.my_button"
-    params = ['submit','button_label','name']
-    def __init__(self,name,submit=True,*args,**kw): 
-        self.submit = submit 
+    params = ['type', 'button_label', 'name']
+    def __init__(self, name, type="submit", *args, **kw):
+        super(MyButton,self).__init__(*args, **kw)
+        self.type = type
         self.name = name
         self.button_label = None
 
-    def display(self,value,**params):
+    def display(self,value=None,**params):
         if 'options' in params:
             if 'label' in params['options']:
-                params['button_label'] = params['options']['label']       
+                params['button_label'] = params['options']['label']
             if 'name' in params['options']:
                 params['name'] = params['options']['name']
         return super(MyButton,self).display(value,**params)
@@ -528,15 +529,16 @@ class JobMatrixReport(Form):
     template = 'bkr.server.templates.job_matrix' 
     member_widgets = ['whiteboard','job_ids','generate_button','nack_list']
     params = (['list','whiteboard_filter','whiteboard_options','job_ids_vals',
-        'nacks','comments_field','toggle_nacks_on'])
+        'nacks','comments_field','toggle_nacks_on', 'whiteboard_filter_button'])
     default_validator = validators.NotEmpty() 
     def __init__(self,*args,**kw):
         super(JobMatrixReport,self).__init__(*args, **kw)
         self.class_name = self.__class__.__name__
         self.nack_list = CheckBoxList("Hide naks",validator=self.default_validator)
-        self.whiteboard = SingleSelectField('whiteboard', label='Whiteboard', attrs={'size':5, 'class':'whiteboard'}, validator=self.default_validator)
+        self.whiteboard = MultipleSelectField('whiteboard', label='Whiteboard', attrs={'size':5, 'class':'whiteboard'}, validator=self.default_validator)
         self.job_ids = TextArea('job_ids',label='Job ID', rows=7,cols=7, validator=self.default_validator)
-        self.whiteboard_filter = TextField('whiteboard_filter', label='Filter Whiteboard')
+        self.whiteboard_filter = TextField('whiteboard_filter', label='Filter by')
+        self.whiteboard_filter_button = MyButton(name='do_filter', type='button')
         self.name='remote_form'
         self.action = '.'
 

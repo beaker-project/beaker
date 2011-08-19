@@ -48,25 +48,29 @@ class JobMatrix:
         self.col_call = 0
         self.max_cols = 0
         self.job_ids = []
-        matrix_options = {} 
+        matrix_options = {}
         if 'whiteboard_filter' in kw:
             filter = kw['whiteboard_filter']
         else:
             filter = None 
 
-        matrix_options['whiteboard_options'] = self.get_whiteboard_options(filter, kw.get('whiteboard', None))
-        if ('job_ids' in kw) or ('whiteboard' in kw): 
+        whiteboard = None
+        if 'whiteboard' in kw: # Let's deal with whiteboard as a list, just easier
+            whiteboard = type(kw['whiteboard']) == type([]) and kw['whiteboard'] or [kw['whiteboard']]
+
+        matrix_options['whiteboard_options'] = self.get_whiteboard_options(filter, selected=whiteboard)
+        if ('job_ids' in kw) or whiteboard: 
             gen_results = self.generate(**kw) 
             matrix_options['grid'] = gen_results['grid']
             matrix_options['list'] = gen_results['data'] 
-            if 'whiteboard' in kw: # Getting results by whiteboard
-                s = select([func.count(model.Job.c.id).label('job_count')], whereclause=model.Job.c.whiteboard == kw['whiteboard'])
+            if whiteboard: # Getting results by whiteboard
+                s = select([func.count(model.Job.c.id).label('job_count')], whereclause=model.Job.c.whiteboard.in_(whiteboard))
                 res = s.execute()
                 for r in res: #Should only loop once
                     count = r.job_count
                     if count > 20:
                         flash(_('Your whiteboard contains %s jobs, only %s will be used' % (count, model.Job.max_by_whiteboard)))
-                jobs = model.Job.by_whiteboard(kw['whiteboard']) 
+                jobs = model.Job.by_whiteboard(whiteboard) 
                 job_ids = [str(j.id) for j in jobs]
                 self.job_ids = job_ids
                 matrix_options['job_ids_vals'] = "\n".join(job_ids)
@@ -98,6 +102,9 @@ class JobMatrix:
         if value is passed in for 'filter' it will perform an SQL 'like' operation 
         against whiteboard
         """
+        if selected is None:
+            selected = []
+
         if filter: 
             where = model.job_table.c.whiteboard.like('%%%s%%' % filter)   
         else:
@@ -110,7 +117,7 @@ class JobMatrix:
         for r in res:
             value = desc =  r[0]
             option_list = [value, desc]
-            if r[0] == selected:
+            if r[0] in selected:
                 option_list.append({'selected' : 'selected' })
             options.append(option_list)
         return options 
