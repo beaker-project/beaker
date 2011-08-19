@@ -453,18 +453,25 @@ div.recipe {
 div.dd { 
    /*position: relative; /* IE is dumb */
     display: block;                 
-    float: left;     
     width: 100px; 
-    height: 16px; 
+    height: 4px; 
     margin: 0 0 2px; 
     background: #fff; 
-    border: 1px solid #333;
+}
+
+tr.even div.dd { 
+    background: #f1f1f1; 
+}
+
+div.progressPercentage {
+    width: 100px;
+    text-align: center;
 }
 
 div.dd div.green { 
     /*position: relative; */
     background: #0f0; 
-    height: 16px; 
+    height: 4px; 
     width: 75%; 
     text-align:right; 
     display:block;
@@ -474,7 +481,7 @@ div.dd div.green {
 div.dd div.orange { 
     /*position: relative; */
     background: #F88017; 
-    height: 16px; 
+    height: 4px; 
     width: 75%; 
     text-align:right; 
     display:block;
@@ -484,7 +491,7 @@ div.dd div.orange {
 div.dd div.red { 
     /*position: relative; */
     background: #f00; 
-    height: 16px; 
+    height: 4px; 
     width: 75%; 
     text-align:right; 
     display:block;
@@ -494,7 +501,7 @@ div.dd div.red {
 div.dd div.blue { 
     /*position: relative; */
     background: #00f; 
-    height: 16px; 
+    height: 4px; 
     width: 75%; 
     text-align:right; 
     display:block;
