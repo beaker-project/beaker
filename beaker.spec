@@ -2,7 +2,7 @@
 %{!?pyver: %global pyver %(%{__python} -c "import sys ; print sys.version[:3]")}
 
 Name:           beaker
-Version:        0.6.17
+Version:        0.7.0
 Release:        1%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
@@ -282,6 +282,14 @@ fi
 %{_var}/lib/beaker/addDistro.d/*
 
 %changelog
+* Mon Aug 22 2011 Raymond Mancy <rmancy@redhat.com> 0.7.0-1
+- This change adds the basic infrastructure into beaker to work with qpid. It
+  does this by creating a service that listens on address that can be defined
+  in the message_bus module and by creating classes that make it easy to send
+  msgs to predefined address. These address (for both listening and sending
+  services) are easily added to the code and then inserted/removed into the
+  config as they are needed. (rmancy@redhat.com)
+
 
 * Wed Aug 10 2011 Raymond Mancy <rmancy@redhat.com> 0.6.17-1
 - 723753 - system search submits to wrong URL on /available, /free, /mine
