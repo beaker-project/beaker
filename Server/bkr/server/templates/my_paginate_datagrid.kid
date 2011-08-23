@@ -31,5 +31,21 @@
       </td>
     </tr>
   </table>
+  <div class="list">
+    <span py:if="tg.paginate.href_prev">
+        <a href="${tg.paginate.href_first}">&lt;&lt;</a>
+        <a href="${tg.paginate.href_prev}">&lt;</a>
+    </span>
+    <span py:if="tg.paginate.page_count > 1" py:for="page in tg.paginate.pages">
+      <span py:if="page == tg.paginate.current_page" py:replace="page"/>
+      <span py:if="page != tg.paginate.current_page">
+         <a href="${tg.paginate.get_href(page)}">${page}</a>
+      </span>
+    </span>
+    <span py:if="tg.paginate.href_next">
+      <a href="${tg.paginate.href_next}">&gt;</a>
+      <a href="${tg.paginate.href_last}">&gt;&gt;</a>
+    </span>
+  </div>
 </div>
 
