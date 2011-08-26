@@ -8,17 +8,14 @@ import socket
 from optparse import OptionParser
 
 from bkr.labcontroller.proxy import Watchdog
+from bkr.labcontroller.config import get_conf
 
-import kobo.conf
 from kobo.exceptions import ShutdownException
 from kobo.process import daemonize
 from kobo.tback import Traceback, set_except_hook
 from bkr.log import add_stderr_logger, add_rotating_file_logger
 
-VERBOSE_LOG_FORMAT = "%(asctime)s [%(levelname)-8s] {%(process)5d} %(name)s.%(module)s:%(lineno)4d %(message)s"
-
 set_except_hook()
-
 
 def daemon_shutdown(*args, **kwargs):
     raise ShutdownException()
@@ -28,21 +25,16 @@ def main_loop(conf=None, foreground=False):
 
     # define custom signal handlers
     signal.signal(signal.SIGTERM, daemon_shutdown)
+    logger = logging.getLogger("Transfer")
+    log_level_string = conf.get("TRANSFER_LOG_LEVEL") or conf["LOG_LEVEL"]
+    log_level = getattr(logging, log_level_string.upper(), logging.DEBUG)
+    logger.setLevel(log_level)
+    log_file = conf["TRANSFER_LOG_FILE"]
 
-    config = kobo.conf.PyConfigParser()
-
-    # load default config
-    default_config = os.path.abspath(os.path.join(os.path.dirname(__file__), "default.conf"))
-    config.load_from_file(default_config)
-
-    logger = logging.getLogger("LOG_TRANSFER")
-    logger.setLevel(logging.DEBUG)
-    log_level = logging._levelNames.get(config["LOG_LEVEL"].upper())
-    log_file = config["TRANSFER_LOG_FILE"]
     add_rotating_file_logger(logger,
                              log_file,
                              log_level=log_level,
-                             format=VERBOSE_LOG_FORMAT)
+                             format=conf['VERBOSE_LOG_FORMAT'])
 
     try:
         transfer = Watchdog(conf=conf, logger=logger)
@@ -99,12 +91,11 @@ def main():
                       help="specify a pid file")
     (opts, args) = parser.parse_args()
 
-    conf = kobo.conf.PyConfigParser()
+    conf = get_conf()
     config = opts.config
-    if config is None:
-        config = "/etc/beaker/proxy.conf"
+    if config is not None:
+        conf.load_from_file(config)
 
-    conf.load_from_file(config)
 
     pid_file = opts.pid_file
     if pid_file is None:

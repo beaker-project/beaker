@@ -56,7 +56,7 @@ class JobUploadTest(XmlRpcTestCase):
             ''',
             True # ignore_missing_tasks
         )
-        self.assert_(job_tid.startswith('j:'))
+        self.assert_(job_tid.startswith('J:'))
         job = Job.by_id(int(job_tid[2:]))
         self.assertEqual(job.ttasks, 2) # not 3
         recipe = job.recipesets[0].recipes[0]

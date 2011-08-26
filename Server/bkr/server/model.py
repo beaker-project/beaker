@@ -2533,6 +2533,11 @@ $SNIPPET("rhts_post")
         # Watchdog checking -- don't return a system with an active watchdog,
         # unless the correct watchdog has been passed in to be cleared
         if self.watchdog and self.watchdog == watchdog:
+            if get('beaker.qpid_enabled'):
+                from bkr.server.message_bus import ServerBeakerBus
+                bb = ServerBeakerBus()
+                bb.send_action('watchdog_notify', 'removed',
+                    [{'recipe_id' : self.watchdog.recipe_id, 'system' : self.watchdog.system.fqdn}], self.watchdog.system.lab_controller.fqdn)
             session.delete(self.watchdog)
         elif self.watchdog and watchdog is None:
             raise BX(_(u'System has active recipe %s') % self.watchdog.recipe_id)
@@ -3736,6 +3741,23 @@ class TaskBase(MappedObject):
 
         return obj_ref
 
+    def _change_status(self, new_status, **kw):
+        """
+        _change_status will update the status if needed
+        Returns True when status is changed
+        """
+        current_status = self.status
+        if current_status != new_status:
+            self.status = new_status
+            #Send msg that task has status has been updated
+            if get('beaker.qpid_enabled') is True:
+                from bkr.server.message_bus import ServerBeakerBus
+                bb = ServerBeakerBus()
+                bb.send_action('task_update', **self.task_info())
+            return True
+        else:
+            return False
+
     def is_finished(self):
         """
         Simply state if the task is finished or not
@@ -4081,6 +4103,12 @@ class Job(TaskBase):
     def counts_as_deleted(self):
         return self.deleted or self.to_delete
 
+    def build_ancestors(self, *args, **kw):
+        """
+        I have no ancestors
+        """
+        return ()
+
     def requires_product(self):
         return self.retention_tag.requires_product()
 
@@ -4247,7 +4275,7 @@ class Job(TaskBase):
                 min_status = recipeset.status
             if recipeset.result > max_result:
                 max_result = recipeset.result
-        self.status = min_status
+        self._change_status(min_status)
         self.result = max_result
         if self.is_finished():
             # Send email notification
@@ -4409,7 +4437,7 @@ class RecipeSetResponse(MappedObject):
             for elem in queri:
                 results[elem.recipe_set_id] = elem.comment
             return results
-     
+ 
         except: raise
 
 class RecipeSet(TaskBase):
@@ -4434,6 +4462,12 @@ class RecipeSet(TaskBase):
         if self.job.owner == user:
             return True
         return False
+
+    def build_ancestors(self, *args, **kw):
+        """
+        return a tuple of strings containing the Recipes RS and J
+        """
+        return (self.job.t_id,)
 
     def to_xml(self, clone=False, from_job=True, *args, **kw):
         recipeSet = self.doc.createElement("recipeSet")
@@ -4524,8 +4558,8 @@ class RecipeSet(TaskBase):
     def _cancel(self, msg=None):
         """
         Method to cancel all recipes in this recipe set.
-        """
-        self.status = TaskStatus.by_name(u'Cancelled')
+        """ 
+        self._change_status(TaskStatus.by_name(u'Cancelled'))
         for recipe in self.recipes:
             recipe._cancel(msg)
 
@@ -4540,7 +4574,7 @@ class RecipeSet(TaskBase):
         """
         Method to abort all recipes in this recipe set.
         """
-        self.status = TaskStatus.by_name(u'Aborted')
+        self._change_status(TaskStatus.by_name(u'Aborted'))
         for recipe in self.recipes:
             recipe._abort(msg)
 
@@ -4588,7 +4622,7 @@ class RecipeSet(TaskBase):
                 min_status = recipe.status
             if recipe.result > max_result:
                 max_result = recipe.result
-        self.status = min_status
+        self._change_status(min_status)
         self.result = max_result
 
         # Return systems if recipeSet finished
@@ -4689,6 +4723,12 @@ class Recipe(TaskBase):
         if self.recipeset.job.deleted or self.recipeset.job.to_delete:
             return True
         return False
+
+    def build_ancestors(self, *args, **kw):
+        """
+        return a tuple of strings containing the Recipes RS and J
+        """
+        return (self.recipeset.job.t_id, self.recipeset.t_id)
 
     def clone_link(self):
         """ return link to clone this recipe
@@ -5064,7 +5104,7 @@ class Recipe(TaskBase):
         """
         Method to cancel all tasks in this recipe.
         """
-        self.status = TaskStatus.by_name(u'Cancelled')
+        self._change_status(TaskStatus.by_name(u'Cancelled'))
         for task in self.tasks:
             task._cancel(msg)
 
@@ -5083,7 +5123,7 @@ class Recipe(TaskBase):
         """
         Method to abort all tasks in this recipe.
         """
-        self.status = TaskStatus.by_name(u'Aborted')
+        self._change_status(TaskStatus.by_name(u'Aborted'))
         for task in self.tasks:
             task._abort(msg)
 
@@ -5142,8 +5182,7 @@ class Recipe(TaskBase):
                 min_status = task.status
             if task.result > max_result:
                 max_result = task.result
-       
-        self.status = min_status
+        self._change_status(min_status)
         self.result = max_result
 
         # Record the start of this Recipe.
@@ -5154,6 +5193,7 @@ class Recipe(TaskBase):
         if self.start_time and not self.finish_time and self.is_finished():
             # Record the completion of this Recipe.
             self.finish_time = datetime.utcnow()
+
 
     def release_system(self):
         """ Release the system and remove the watchdog
@@ -5428,6 +5468,9 @@ class RecipeTask(TaskBase):
                 recipe.id, self.id)
     filepath = property(filepath)
 
+    def build_ancestors(self, *args, **kw):
+        return (self.recipe.recipeset.job.t_id, self.recipe.recipeset.t_id, self.recipe.t_id)
+
     def get_log_dirs(self):
         logs_to_return = [log.full_log_directory() for log in self.logs]
         for result in self.results:
@@ -5538,7 +5581,7 @@ class RecipeTask(TaskBase):
         """
         Moved from New -> Queued
         """
-        self.status = TaskStatus.by_name(u'Queued')
+        self._change_status(TaskStatus.by_name(u'Queued'))
 
     def process(self):
         """
@@ -5551,7 +5594,7 @@ class RecipeTask(TaskBase):
         """
         Moved from Queued -> Processed
         """
-        self.status = TaskStatus.by_name(u'Processed')
+        self._change_status(TaskStatus.by_name(u'Processed'))
 
     def schedule(self):
         """
@@ -5564,7 +5607,7 @@ class RecipeTask(TaskBase):
         """
         Moved from Processed -> Scheduled
         """
-        self.status = TaskStatus.by_name(u'Scheduled')
+        self._change_status(TaskStatus.by_name(u'Scheduled'))
 
     def waiting(self):
         """
@@ -5577,7 +5620,7 @@ class RecipeTask(TaskBase):
         """
         Moved from Scheduled -> Waiting
         """
-        self.status = TaskStatus.by_name(u'Waiting')
+        self._change_status(TaskStatus.by_name(u'Waiting'))
 
     def start(self, watchdog_override=None):
         """
@@ -5590,8 +5633,7 @@ class RecipeTask(TaskBase):
             raise BX(_('No watchdog exists for recipe %s' % self.recipe.id))
         if not self.start_time:
             self.start_time = datetime.utcnow()
-        self.status = TaskStatus.by_name(u'Running')
-
+        self._change_status(TaskStatus.by_name(u'Running'))
         self.recipe.watchdog.recipetask = self
         if watchdog_override:
             self.recipe.watchdog.kill_time = watchdog_override
@@ -5632,7 +5674,7 @@ class RecipeTask(TaskBase):
             raise BX(_('recipe task %s was never started' % self.id))
         if self.start_time and not self.finish_time:
             self.finish_time = datetime.utcnow()
-        self.status = TaskStatus.by_name(u'Completed')
+        self._change_status(TaskStatus.by_name(u'Completed'))
         self.update_status()
         return True
 
@@ -5672,7 +5714,7 @@ class RecipeTask(TaskBase):
         if not self.is_finished():
             if self.start_time:
                 self.finish_time = datetime.utcnow()
-            self.status = TaskStatus.by_name(status)
+            self._change_status(TaskStatus.by_name(status))
             self.results.append(RecipeTaskResult(recipetask=self,
                                        path=u'/',
                                        result=TaskResult.by_name(u'Warn'),

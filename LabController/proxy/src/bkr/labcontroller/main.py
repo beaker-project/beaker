@@ -13,8 +13,7 @@ import DocXMLRPCServer
 import socket
 
 from bkr.labcontroller.proxy import Proxy
-
-import kobo.conf
+from bkr.labcontroller.config import get_conf
 from kobo.exceptions import ShutdownException
 from kobo.process import daemonize
 from kobo.tback import Traceback, set_except_hook
@@ -23,6 +22,7 @@ import logging
 logger = logging.getLogger("Proxy")
 
 set_except_hook()
+
 
 class Authenticate(Thread):
     def __init__ (self,proxy):
@@ -107,17 +107,15 @@ def main():
                       help="specify a pid file")
     (opts, args) = parser.parse_args()
 
-    conf = kobo.conf.PyConfigParser()
+    conf = get_conf()
     config = opts.config
-    if config is None:
-        config = "/etc/beaker/proxy.conf"
-
-    conf.load_from_file(config)
+    if config is not None:
+        conf.load_from_file(config)
 
     pid_file = opts.pid_file
     if pid_file is None:
-        pid_file = conf.get("PID_FILE", "/var/run/beaker-lab-controller/beaker-proxy.pid")
-    
+        pid_file = conf.get("PROXY_PID_FILE", "/var/run/beaker-lab-controller/beaker-proxy.pid")
+     
     if opts.foreground:
         main_loop(conf=conf, foreground=True)
     else:

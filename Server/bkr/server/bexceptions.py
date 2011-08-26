@@ -20,16 +20,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 02110-1301  USA
 """
 
-class BeakerException(Exception):
-
-   def __init__(self, value, *args):
-       self.value = value % args
-
-   def __str__(self):
-       return repr(self.value)
-
-class BX(BeakerException):
-   pass
+from bkr.common.bexceptions import *
 
 class CobblerTaskFailedException(BeakerException):
     """
