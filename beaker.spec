@@ -76,6 +76,7 @@ Requires:	%{name} = %{version}-%{release}
 Requires:       python-TurboMail >= 3.0
 Requires:	createrepo
 Requires:	yum-utils
+Requires:       python-concurrentloghandler
 
 
 %package integration-tests
