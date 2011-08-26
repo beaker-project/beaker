@@ -32,8 +32,8 @@ class ServerBeakerBus(BeakerBus):
     @classmethod
     def do_krb_auth(cls):
         from bkr.common.krb_auth import AuthManager
-        principal = tg_config.get('identity.krb_auth_beakerd_principal')
-        keytab = tg_config.get('identity.krb_auth_beakerd_keytab')
+        principal = tg_config.get('identity.krb_auth_qpid_principal')
+        keytab = tg_config.get('identity.krb_auth_qpid_keytab')
         cls._auth_mgr = AuthManager(primary_principal=principal, keytab=keytab)
 
     def __init__(self, *args, **kw):
