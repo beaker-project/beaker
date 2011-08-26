@@ -41,6 +41,20 @@ class SystemLoanTest(SeleniumTestCase):
         self.failUnless(sel.is_text_present("%s Loaned to %s" %
                 (self.system.fqdn, user.user_name)))
 
+    def test_owner_can_loan_to_themself(self):
+        p_word='password'
+        user = data_setup.create_user(password=p_word)
+        self.system.owner = user
+        session.flush()
+        self.login(user=user.user_name, password=p_word)
+        self.go_to_loan_page()
+        sel = self.selenium
+        sel.type("Loan_user", user.user_name)
+        sel.click("//input[@value='Change']")
+        sel.wait_for_page_to_load("30000")
+        self.failUnless(sel.is_text_present("%s Loaned to %s" %
+                (self.system.fqdn, user.user_name)))
+
     def test_can_not_change_loan_when_system_has_loanee_and_not_admin(self):
         p_word = 'password'
         user = data_setup.create_user(password=p_word)

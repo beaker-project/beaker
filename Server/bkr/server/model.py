@@ -1358,6 +1358,9 @@ class SystemObject(MappedObject):
     get_fields = classmethod(get_fields)
 
 class SystemAdmin(MappedObject):
+    # XXX We should get rid of this class all together
+    # and just query on System.admins or Group.admin_systems
+    # Needs to be fixed in Group.can_admin_system()
     pass
 
 class Group(object):
@@ -1905,44 +1908,36 @@ url --url=$tree
         else:
             return False
 
-    def is_admin(self,group_id=None,user_id=None,groups=None,*args,**kw):
-        try:
-            if identity.in_group('admin'): #first let's see if we are an _admin_
-                return True
-        except AttributeError,e: pass #We may not be logged in...
+    def is_admin(self, user=None, *args, **kw):
+        # We are either using a passed in user, or the current user, not both
+        if not user:
+            try:
+                user = identity.current.user
+            except AttributeError, e: pass #May not be logged in
 
-        #If we are the owner....
-        if self.owner == User.by_id(user_id):
+        if not user: #Can't verify anything
+            return False
+
+        if user.is_admin(): #first let's see if we are an _admin_
             return True
 
-        if group_id: #Let's try this next as this will be the quicker query
-            try:
-                if self.admins.query().filter(SystemAdmin.group_id==group_id).one():
-                    return True
-            except InvalidRequestError, e:
-                return False
+        #If we are the owner....
+        if self.owner == user:
+            return True
 
-        if user_id: 
-                group_q = Group.query().join('users').filter_by(user_id=user_id)
-                g_ids = [e.group_id for e in group_q] 
-                admin_q = self.query().join(['admins']).filter(and_(SystemAdmin.group_id.in_(g_ids),SystemAdmin.system_id == self.id))
-             
-                if admin_q.count() > 0: 
-                    log.debug('We have a count of more than 1!!')
-                    return True
-                else:
-                    return False 
+        user_groups = user.groups
+        if user_groups:
+            admins = self.query().filter(System.admins.any(
+                and_(Group.group_id.in_([g.group_id for g in user_groups]),
+                System.id == self.id )))
+            if admins.count():
+                return True
 
-        #let's try the currently logged in user
-        groups = identity.current.user.groups
-        for group in groups:
-            if group.can_admin_system(self.id):
-                return True 
         return False
 
-    def can_admin(self,user=None,group_id=None): 
+    def can_admin(self,user=None):
         if user:
-            if user == self.owner or user.is_admin() or self.is_admin(group_id=group_id,user_id=user.user_id): 
+            if user == self.owner or user.is_admin() or self.is_admin(user=user):
                 return True
         return False
 
@@ -6271,7 +6266,7 @@ Cpu.mapper = mapper(Cpu, cpu_table, properties={
     'system': relation(System),
 })
 mapper(Arch, arch_table)
-mapper(SystemAdmin,system_admin_map_table,primary_key=[system_admin_map_table.c.system_id,system_admin_map_table.c.group_id])
+mapper(SystemAdmin, system_admin_map_table, primary_key=[system_admin_map_table.c.system_id, system_admin_map_table.c.group_id])
 mapper(Provision, provision_table,
        properties = {'provision_families':relation(ProvisionFamily,
             collection_class=attribute_mapped_collection('osmajor'),
@@ -6361,11 +6356,11 @@ mapper(User, users_table,
       'lab_controller' : relation(LabController, uselist=False),
 })
 
-Group.mapper = mapper(Group, groups_table,
-        properties=dict(users=relation(User,uselist=True, secondary=user_group_table, backref='groups'),
-                        systems=relation(System,secondary=system_group_table, backref='groups'),
-                        admin_systems=relation(System,secondary=system_admin_map_table,backref='admins')))
-                        
+mapper(Group, groups_table,
+    properties=dict(users=relation(User, uselist=True, secondary=user_group_table, backref='groups'),
+        systems=relation(System, secondary=system_group_table, backref='groups'),
+        admin_systems=relation(System, secondary=system_admin_map_table,
+            backref='admins')))
 
 mapper(Permission, permissions_table,
         properties=dict(groups=relation(Group,
