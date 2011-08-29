@@ -94,8 +94,6 @@ class Job_Watch(BeakerCommand):
             self.parser.error('Please specify one or more tasks')
 
         if self.conf.get('QPID_BUS') is True:
-            if self.conf.get('AUTH_METHOD') != 'krbv':
-                self.parser.error('Please set AUTH_METHOD to \'krbv\' when using message bus')
             listendepth = kwargs.get('verbosity') or 0
             task_args = list(args)
             task_type = [task.split(':')[0] for task in task_args]

@@ -15,6 +15,11 @@ class ClientBeakerBus(BeakerBus):
 
     _broker = conf.get('QPID_BROKER')
 
+    if conf.get('QPID_KRB') is True:
+        krb_auth = True
+    else:
+        krb_auth = False
+
     @classmethod
     def do_krb_auth(cls):
         from bkr.common.krb_auth import AuthManager

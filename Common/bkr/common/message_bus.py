@@ -50,6 +50,7 @@ class BeakerBus(object):
         headers_exchange = config.get('global', 'headers_exchange')
         service_queue_name = config.get('global', 'service_queue')
         _broker = config.get('global','broker')
+        krb_auth = config.get('global', 'krb_auth')
 
     _connection = None
     _reconnect = True
@@ -57,8 +58,6 @@ class BeakerBus(object):
     _auth_mgr = None
 
     _fetch_timeout=60
-
-    krb_auth = True
 
     @classmethod
     def do_krb_auth(cls):
