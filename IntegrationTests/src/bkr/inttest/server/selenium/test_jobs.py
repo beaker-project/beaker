@@ -27,7 +27,7 @@ from sqlalchemy import and_
 
 from bkr.inttest.server.selenium import SeleniumTestCase
 from bkr.inttest import data_setup
-from bkr.server.jobs import RetentionTag, Product, Distro
+from bkr.server.model import RetentionTag, Product, Distro, Job
 
 class TestViewJob(SeleniumTestCase):
 
@@ -287,6 +287,46 @@ class NewJobTest(SeleniumTestCase):
         flash = sel.get_text('css=.flash')
         self.assert_(flash.startswith('Success!'), flash)
         self.assertEqual(sel.get_title(), 'My Jobs')
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=730983
+    def test_duplicate_notify_cc_addresses_are_merged(self):
+        user = data_setup.create_user(password=u'hornet')
+        session.flush()
+        self.login(user.user_name, u'hornet')
+        sel = self.selenium
+        sel.open('')
+        sel.click('link=New Job')
+        sel.wait_for_page_to_load('30000')
+        xml_file = tempfile.NamedTemporaryFile()
+        xml_file.write('''
+            <job>
+                <whiteboard>job with duplicate notify cc addresses</whiteboard>
+                <notify>
+                    <cc>person@example.invalid</cc>
+                    <cc>person@example.invalid</cc>
+                </notify>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
+                            <distro_name op="=" value="BlueShoeLinux5-5" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" role="STANDALONE"/>
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''')
+        xml_file.flush()
+        sel.type('jobs_filexml', xml_file.name)
+        sel.click('//input[@value="Submit Data"]')
+        sel.wait_for_page_to_load('30000')
+        sel.click('//input[@value="Queue"]')
+        sel.wait_for_page_to_load('30000')
+        flash = sel.get_text('css=.flash')
+        self.assert_(flash.startswith('Success!'), flash)
+        self.assertEqual(sel.get_title(), 'My Jobs')
+        job = Job.query.filter(Job.owner == user).order_by(Job.id.desc()).first()
+        self.assertEqual(job.cc, ['person@example.invalid'])
 
 class JobAttributeChange(SeleniumTestCase):
 
