@@ -42,16 +42,6 @@ class BeakerBus(object):
 
         __str__ = __repr__
 
-    config = ConfigParser.ConfigParser()
-    if os.path.exists('/etc/beaker/message_bus.conf'):
-        default_config = os.path.abspath("/etc/beaker/message_bus.conf")
-        config.readfp(open(default_config))
-        topic_exchange = config.get('global', 'topic_exchange')
-        headers_exchange = config.get('global', 'headers_exchange')
-        service_queue_name = config.get('global', 'service_queue')
-        _broker = config.get('global','broker')
-        krb_auth = config.get('global', 'krb_auth')
-
     _connection = None
     _reconnect = True
     _reconnect_interval = 5
@@ -60,28 +50,27 @@ class BeakerBus(object):
     _fetch_timeout=60
 
     @classmethod
-    def do_krb_auth(cls):
-        raise NotImplementedError('Configured to use kerberos auth but not implemented by class %s' % cls.__name__)
+    def do_krb_auth(self):
+        raise NotImplementedError('Configured to use kerberos auth but not implemented by class %s' % self.__name__)
 
-    @classmethod
-    def get_qpid_connection(cls):
+    def get_qpid_connection(self):
         global can_use_qpid
         if not can_use_qpid:
             global qpid_import_error
             raise ImportError(str(qpid_import_error))
 
-        if cls._connection is None:
-            connection_params = [[cls._broker], {'reconnect' : cls._reconnect, 'reconnect_interval' : cls._reconnect_interval, }]
-            if cls.krb_auth:
+        if self._connection is None:
+            connection_params = [[self._broker], {'reconnect' : self._reconnect, 'reconnect_interval' : self._reconnect_interval, 'reconnect_timeout' :10 }]
+            if self.krb_auth:
                 connection_params[1].update({'sasl_mechanisms' : 'GSSAPI'})
-                cls.do_krb_auth()
-            cls._connection = Connection(*connection_params[0], **connection_params[1])
+                self.do_krb_auth()
+            self._connection = Connection(*connection_params[0], **connection_params[1])
             try:
-                cls._connection.open()
+                self._connection.open()
             except Exception, e:
-                cls._connection = None
+                self._connection = None
                 raise
-        return cls._connection
+        return self._connection
 
     def __init__(self, connection=None, *args, **kw):
         if connection is None:

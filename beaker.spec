@@ -203,7 +203,6 @@ fi
 
 %files
 %defattr(-,root,root,-)
-%config(noreplace) %{_sysconfdir}/beaker/message_bus.conf
 %{python_sitelib}/bkr/__init__.py*
 %{python_sitelib}/bkr/timeout_xmlrpclib.py*
 %{python_sitelib}/bkr/common/
