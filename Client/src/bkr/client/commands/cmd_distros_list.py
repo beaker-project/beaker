@@ -36,6 +36,11 @@ Options
    Limit to distros with the given tree path. <url> is interpreted as a SQL LIKE 
    pattern (the % character matches any substring).
 
+.. option:: --labcontroller <fqdn>
+
+   Limit to distros which are available on the given lab controller. <fqdn> is 
+   interpreted as a SQL LIKE pattern (the % character matches any substring).
+
 .. option:: --family <family>
 
    Limit to distros of the given family (major version), for example 
@@ -107,6 +112,11 @@ class Distros_List(BeakerCommand):
             help="filter by treepath, use % for wildcard",
         )
         self.parser.add_option(
+            "--labcontroller",
+            default=None,
+            help="filter by lab controller, use % for wildcard",
+        )
+        self.parser.add_option(
             "--family",
             default=None,
             help="filter by family",
@@ -124,6 +134,7 @@ class Distros_List(BeakerCommand):
         filter = dict( limit    = kwargs.pop("limit", None),
                        name     = kwargs.pop("name", None),
                        treepath = kwargs.pop("treepath", None),
+                       labcontroller = kwargs.pop("labcontroller", None),
                        family   = kwargs.pop("family", None),
                        arch     = kwargs.pop("arch", None),
                        tags     = kwargs.pop("tag", []),
