@@ -7,7 +7,8 @@ from bkr.inttest import get_server_base, data_setup
 
 log = logging.getLogger(__name__)
 
-def create_client_config(username, password):
+def create_client_config(username=data_setup.ADMIN_USER,
+    password=data_setup.ADMIN_PASSWORD, qpid_broker='localhost',qpid_krb=False):
     config = tempfile.NamedTemporaryFile(prefix='bkr-inttest-client-conf-')
     config.write('\n'.join([
         # Kobo wigs out if HUB_URL ends with a trailing slash, not sure why..
@@ -15,6 +16,10 @@ def create_client_config(username, password):
         'AUTH_METHOD = "password"',
         'USERNAME = "%s"' % username,
         'PASSWORD = "%s"' % password,
+        'QPID_TOPIC_EXCHANGE = "amqp.topic"',
+        'QPID_HEADERS_EXCHANGE = "amqp.headers"',
+        'QPID_BROKER = "%s"' % qpid_broker,
+        'QPID_KRB = %s' % qpid_krb,
     ]))
     config.flush()
     return config
@@ -56,8 +61,7 @@ default_client_config = None
 
 def setup_package():
     global default_client_config
-    default_client_config = create_client_config(username=data_setup.ADMIN_USER,
-            password=data_setup.ADMIN_PASSWORD)
+    default_client_config = create_client_config()
     log.debug('Default client config written to %s', default_client_config.name)
 
 def teardown_package():

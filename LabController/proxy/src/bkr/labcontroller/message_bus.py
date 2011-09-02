@@ -34,6 +34,11 @@ class LabBeakerBus(BeakerBus):
     lc = socket.gethostname()
     global conf
     __conf = conf
+    topic_exchange = __conf.get('QPID_TOPIC_EXCHANGE')
+    headers_exchange = __conf.get('QPID_HEADERS_EXCHANGE')
+    service_queue_name = __conf.get('QPID_SERVER_QUEUE')
+    _broker = __conf.get('QPID_BROKER')
+    krb_auth = __conf.get('QPID_KRB_AUTH')
 
     @classmethod
     def do_krb_auth(cls):
