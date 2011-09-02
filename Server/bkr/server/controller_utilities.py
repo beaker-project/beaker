@@ -5,7 +5,6 @@ import bkr
 import bkr.server.stdvars
 from bkr.server.widgets import myPaginateDataGrid
 from cherrypy import request, response
-from bkr.server.needpropertyxml import *
 from bkr.server.helpers import *
 from bexceptions import *
 import re
