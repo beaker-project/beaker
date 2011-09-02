@@ -1704,7 +1704,6 @@ url --url=$tree
         #  right now we only support cobbler
         if self.lab_controller:
             return CobblerAPI(self)
-
     remote = property(remote)
 
     @classmethod
@@ -2309,7 +2308,8 @@ url --url=$tree
     def action_release(self):
         # Attempt to remove Netboot entry
         # and turn off machine, but don't fail if we can't
-        if self.release_action:
+        # It's possible that our LC has been removed
+        if self.remote and self.release_action:
             try:
                 self.remote.release(power=False)
                 self.release_action.do(self)
