@@ -1,0 +1,8 @@
+Change-Id: Icd6600154386efacec23b974c2811d1334836fe2
+Code-Review+2: Dan Callaghan <dcallagh@redhat.com>
+Verified+1: Raymond Mancy <rmancy@redhat.com>
+Submitted-by: Raymond Mancy <rmancy@redhat.com>
+Submitted-at: Fri, 02 Sep 2011 16:35:49 +1000
+Reviewed-on: http://beaker-gerrit.app.eng.bne.redhat.com/630
+Project: beaker
+Branch: refs/heads/develop
