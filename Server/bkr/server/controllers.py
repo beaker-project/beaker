@@ -1090,7 +1090,7 @@ class Root(RPCRoot):
         system.owner = user
         system.date_modified = datetime.utcnow()
         flash( _(u"OK") )
-        redirect("/")
+        redirect("/view/%s" % system.fqdn)
 
     @expose()
     @identity.require(identity.not_anonymous())
