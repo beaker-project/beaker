@@ -156,16 +156,20 @@ Tag descriptions
         attribute is mandatory and can only be one character. If the same 
         argument name is defined several times, the last defined argument will 
         override all other conflicting arguments.
-    <tag type="{attribute|value}" [attrname="{Attribute name}"]/>
+    <tag type="{attribute|value|list}" [attrname="{Attribute name}"] [element_tag="{list element tag name}"]/>
         This tag defines which XML tag name the internal XML tag the option 
         value will be stored under. The ``type`` attribute is mandatory and can 
-        be either ``attribute`` or ``value``. When set to ``value`` the option 
-        value given at the command line of :program:`bkr workflow-xslt` will be 
-        embraced by the defined tag name. If ``type`` is set to ``attribute`` 
+        be either ``attribute``, ``value`` or ``list``. When set to ``value`` the
+        option value given at the command line of :program:`bkr workflow-xslt`
+        will be embraced by the defined tag name. If ``type`` is set to ``attribute`` 
         the option value from the command line will be placed as an attribute 
-        value to the defined XML tag name. When using ``attribute`` the 
-        ``attrname`` attribute is mandatory. This attribute defines the 
-        attribute name to be used in the internal XML.
+        value to the defined XML tag name. When using ``attribute`` the ``attrname``
+        attribute is mandatory. This attribute defines the attribute name to be used
+        in the internal XML.  If ``type`` is set to ``list``, it will create a list of
+        XML tags based on the value string.  The default value for the children of the
+        tag name is 'value', unless the ``element_tag`` is set.  The value string will
+        be split into separate tokens using comma (,) as the separator.
+        
     <default/>
         This tag is optional. It will set a default value if this option is not 
         used on the command line.
@@ -205,6 +209,12 @@ Save the contents below as :file:`example-job.xml`::
           <tag type="attribute" attrname="group">name</tag>
           <description>Group identifier</description>
         </arg>
+        <arg section="recipe" type="string" optional="1">
+          <name>phone-numbers</name>
+          <metavar>PHONE\-NUMBERS</metavar>
+          <tag type="list" element_tag="number">phones</tag>
+          <description>List of phone numbers, comma separated</description>
+       </arg>
       </arguments>
     </jobConfig>
 
@@ -221,7 +231,7 @@ Run from a terminal the following command::
 
     $ bkr workflow-xslt --dry-run --job-xml example-job.xml \\
          --save-internal-xml example.xml \\
-         -i 99 -n "Example" -g "Group1"
+         -i 99 -n "Example" -g "Group1" --phone-numbers 123,456,789
     ----------------------------------------------------
     Generating Beaker XML
        Job config:    example-job.xml
@@ -238,7 +248,12 @@ Run from a terminal the following command::
     <submit>
        <whiteboard/>
        <recipe>
-          <name group="Group1" version="99">Example</name>
+         <phones>
+            <number>123</number>
+            <number>456</number>
+            <number>789</number>
+         </phones>
+         <name group="Group1" version="99">Example</name>
        </recipe>
     </submit>
 
