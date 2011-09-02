@@ -367,7 +367,7 @@ class Jobs(RPCRoot):
         job.product = product
         job.retention_tag = tag
 
-        job.cc.extend(xmljob.iter_cc())
+        job.cc.extend(set(xmljob.iter_cc()))
         for xmlrecipeSet in xmljob.iter_recipeSets():
             recipe_set = self._handle_recipe_set(xmlrecipeSet, user,
                     ignore_missing_tasks=ignore_missing_tasks)
