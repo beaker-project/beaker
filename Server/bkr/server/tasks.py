@@ -149,16 +149,8 @@ class Tasks(RPCRoot):
             # if not a list, make it into a list.
             if isinstance(filter['packages'], str):
                 filter['packages'] = [filter['packages']]
-            tasks = tasks.join('runfor')
-            or_runfor = []
-            for package in filter['packages']:
-                try:
-                    taskpackage = TaskPackage.by_name(package)
-                    or_runfor.append(TaskPackage.id==taskpackage.id)
-                except InvalidRequestError, err:
-                    # ignore invalid packages
-                    pass
-            tasks = tasks.filter(or_(*or_runfor))
+            tasks = tasks.filter(Task.runfor.any(or_(
+                    *[TaskPackage.package == package for package in filter['packages']])))
 
         # Filter by type if specified
         # Tier1, Regression, KernelTier1, etc..

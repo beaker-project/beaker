@@ -49,3 +49,8 @@ class TaskListTest(unittest.TestCase):
         out = run_client(['bkr', 'task-list'])
         self.assert_(task1.name in out.splitlines(), out)
         self.assert_(task2.name in out.splitlines(), out)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=728227
+    def test_nonexistent_package(self):
+        out = run_client(['bkr', 'task-list', '--package', 'notexist'])
+        self.assertEquals(out, '')
