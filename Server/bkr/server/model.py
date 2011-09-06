@@ -6020,7 +6020,7 @@ class Task(MappedObject):
                     creation_date = '%s' % self.creation_date,
                     update_date = '%s' % self.update_date,
                     owner = self.owner,
-                    uploader = self.uploader.user_name,
+                    uploader = self.uploader and self.uploader.user_name,
                     version = self.version,
                     license = self.license,
                     priority = self.priority,

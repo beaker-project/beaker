@@ -15,3 +15,21 @@ class TaskDetailsTest(unittest.TestCase):
         details = eval(out[len(task.name) + 1:]) # XXX dodgy
         self.assertEquals(details['owner'], u'besitzer@leo.org')
         self.assertEquals(details['priority'], u'Low')
+
+    def test_details_without_owner(self):
+        # We no longer permit empty Owner but older tasks may still lack it
+        task = data_setup.create_task()
+        task.owner = None
+        session.flush()
+        out = run_client(['bkr', 'task-details', task.name])
+        details = eval(out[len(task.name) + 1:]) # XXX dodgy
+        self.assertEquals(details['owner'], None)
+
+    def test_details_without_uploader(self):
+        # We now always record Uploader, but older tasks may lack it
+        task = data_setup.create_task()
+        task.uploader = None
+        session.flush()
+        out = run_client(['bkr', 'task-details', task.name])
+        details = eval(out[len(task.name) + 1:]) # XXX dodgy
+        self.assertEquals(details['uploader'], None)
