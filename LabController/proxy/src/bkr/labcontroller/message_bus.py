@@ -36,7 +36,7 @@ class LabBeakerBus(BeakerBus):
     __conf = conf
     topic_exchange = __conf.get('QPID_TOPIC_EXCHANGE')
     headers_exchange = __conf.get('QPID_HEADERS_EXCHANGE')
-    service_queue_name = __conf.get('QPID_SERVER_QUEUE')
+    service_queue_name = __conf.get('QPID_SERVICE_QUEUE')
     _broker = __conf.get('QPID_BROKER')
     krb_auth = __conf.get('QPID_KRB_AUTH')
 
