@@ -18,6 +18,7 @@
 
 import sys
 import email
+import re
 import unittest
 from turbogears.database import session
 from bkr.server.model import Arch
@@ -144,4 +145,6 @@ class JobCompletionNotificationTest(unittest.TestCase):
         self.assertEqual(len(self.mail_capture.captured_mails), 1)
         sender, rcpts, raw_msg = self.mail_capture.captured_mails[0]
         msg = email.message_from_string(raw_msg)
-        self.assert_(whiteboard in msg['Subject'])
+        # Subject header might be split across multiple lines
+        subject = re.sub(r'\s+', ' ', msg['Subject'])
+        self.assert_(whiteboard in subject, subject)
