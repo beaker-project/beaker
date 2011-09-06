@@ -217,11 +217,12 @@ class Tasks(RPCRoot):
             FH.close()
             try:
                 task = self.process_taskinfo(self.read_taskinfo(rpm_file))
-            except (ValueError,ParserError,ParserWarning,rpm.error), err:
+            except Exception, err:
                 # Delete invalid rpm
                 os.unlink(rpm_file)
                 session.rollback()
-                flash(_(u'Failed to import because of %s' % err ))
+                log.exception('Failed to import %s', task_rpm.filename)
+                flash(_(u'Failed to import task: %s' % err))
                 redirect(url("./new"))
 
             flash(_(u"%s Added/Updated at id:%s" % (task.name,task.id)))

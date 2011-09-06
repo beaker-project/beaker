@@ -170,10 +170,24 @@ class TestSubmitTask(SeleniumTestCase):
                 invalidtask))
         sel.click('//input[@value="Submit Data"]')
         sel.wait_for_page_to_load('30000')
-        self.assert_(('Failed to import because of error reading package header')
-                in sel.get_text('css=.flash'))
+        self.assertEquals(sel.get_text('css=.flash'), 'Failed to import task: '
+                'error reading package header')
         rpms = tg.config.get('basepath.rpms')
         self.assertEqual(os.path.exists('%s/%s' % (rpms,invalidtask)),False)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=617274
+    def test_task_without_owner_is_not_accepted(self):
+        sel = self.selenium
+        sel.open('')
+        sel.click('link=New Task')
+        sel.wait_for_page_to_load('30000')
+        sel.type('task_task_rpm',
+                pkg_resources.resource_filename(self.__module__,
+                'tmp-distribution-beaker-dummy_for_bz617274-1.0-1.noarch.rpm'))
+        sel.click('//input[@value="Submit Data"]')
+        sel.wait_for_page_to_load('30000')
+        self.assertEquals(sel.get_text('css=.flash'), 'Failed to import task: '
+                "'Owner field must be present in testinfo.desc'")
 
 if __name__ == "__main__":
     unittest.main()
