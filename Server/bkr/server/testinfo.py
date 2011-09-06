@@ -147,15 +147,18 @@ class BoolValidator(Validator):
     def __init__(self):
         pass
 
-    def is_valid(self, value):
+    def convert(self, value):
         if re.match("y|yes|1", value):
             return True
 
         if re.match("n|no|0", value):
-            return True
+            return False
 
-        return False
-    
+        return None
+
+    def is_valid(self, value):
+        return self.convert(value) is not None
+
     def message(self):
         return "boolean value expected"
 
@@ -259,6 +262,14 @@ class Parser:
             if not validator.is_valid(value):
                 self.handle_error('"%s" is not a valid %s field (%s)'%(value, fileFieldName, validator.message()))
 
+    def __bool_field(self, fileFieldName, dictFieldName, raw_value):
+        validator = BoolValidator()
+        if not validator.is_valid(raw_value):
+            self.handle_error('"%s" is not a valid %s field (%s)'
+                    % (raw_value, fileFieldName, validator.message()))
+        value = validator.convert(raw_value)
+        self.__unique_field(fileFieldName, dictFieldName, value)
+
     def handle_name(self, key, value):
         self.__unique_field(key, 'test_name', value)
 
@@ -334,10 +345,10 @@ class Parser:
         self.__unique_field(key, 'priority', value, ListValidator(self.valid_priorities))
 
     def handle_destructive(self, key, value):
-        self.__unique_field(key, 'destructive', value, BoolValidator())
+        self.__bool_field(key, 'destructive', value)
 
     def handle_confidential(self, key, value):
-        self.__unique_field(key, 'confidential', value, BoolValidator())
+        self.__bool_field(key, 'confidential', value)
 
     def handle_testtime(self, key, value):
         if self.info.avg_test_time:
@@ -875,6 +886,11 @@ class NeedPropertyFieldTests(unittest.TestCase):
         """, raise_errors=False)
         self.assertEquals(ti.need_properties, [("CAKE", "=", "CHOCOLATE"), ("SLICES", ">", "3")])
 
+class DestructiveFieldTests(unittest.TestCase):
+    def test_destructive(self):
+        ti = parse_string("Destructive: yes", raise_errors=False)
+        self.assertEquals(ti.destructive, True)
+
 class SiteConfigDeclarationTests(unittest.TestCase):
     """Unit tests for the SiteConfig declaration"""
     
@@ -973,6 +989,7 @@ Description:  This test ensures that md5sums are generated and validated correct
 TestTime:     1m
 TestVersion:  1.1
 License:      GPL
+Destructive:  yes
 RunFor:       coreutils
 Requires:     coreutils python
 NeedProperty: CAKE = CHOCOLATE
@@ -1003,6 +1020,7 @@ SiteConfig(/stable-servers/ldap/hostname): Location of stable LDAP server to use
         self.assertEquals(ti2.avg_test_time, 60)
         self.assertEquals(ti2.testversion, "1.1")
         self.assertEquals(ti2.license, "GPL")
+        self.assertEquals(ti2.destructive, True)
         self.assertEquals(ti2.runfor, ["coreutils"])
         self.assertEquals(ti2.requires, ["coreutils", "python"])
         self.assertEquals(ti2.need_properties, [('CAKE', '=', 'CHOCOLATE'), ('SLICES', '>', '3')])

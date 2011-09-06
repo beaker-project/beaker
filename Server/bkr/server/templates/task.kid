@@ -95,7 +95,7 @@
         <td class="title"><b>Priority:</b></td>
         <td class="value">${task.priority}</td>
     </tr>
-    <tr py:if="task.destructive">
+    <tr py:if="task.destructive is not None">
         <td class="title"><b>Destructive:</b></td>
         <td class="value">${task.destructive}</td>
     </tr>
