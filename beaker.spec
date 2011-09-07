@@ -2,7 +2,7 @@
 %{!?pyver: %global pyver %(%{__python} -c "import sys ; print sys.version[:3]")}
 
 Name:           beaker
-Version:        0.7.0
+Version:        0.7.1
 Release:        1%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
@@ -282,6 +282,43 @@ fi
 %{_var}/lib/beaker/addDistro.d/*
 
 %changelog
+* Wed Sep 07 2011 Raymond Mancy <rmancy@redhat.com> 0.7.1-1
+- 721383 - Beaker displays many duplicate distro families in Excluded
+  Families tab. (bpeck@redhat.com)
+- 694351 - Add rotating log files to beaker-server (rmancy@redhat.com)
+- 729173 - Redirect to system page after changing owner (stl@redhat.com)
+- 730188 - system search by hypervisor (dcallagh@redhat.com)
+- 730858 - Instructions for using addDistro (rmancy@redhat.com)
+- 617274 - record owner and uploader for tasks (dcallagh@redhat.com)
+- 624417 - record task priority, and return owner and priority in
+  Task.to_dict() (dcallagh@redhat.com)
+- 729750 - Workaround for RHEL5.3 EUS support (bpeck@redhat.com)
+- 733546 - Fix apache from using beakerd principal (rmancy@redhat.com)
+- 730321 - Owners can self loan systems again, and take. (rmancy@redhat.com)
+- 734525 - default.conf has wrong default value (bpeck@redhat.com)
+- 733968 - Get krb_auth value from config, rather han have it hardcoded to
+  True. (rmancy@redhat.com)
+- 731691 - don't catch exceptions in bkr (dcallagh@redhat.com)
+- 730983 - handle duplicate notify cc addresses in job xml
+  (dcallagh@redhat.com)
+- 728227 - bkr task-list fails for nonexistent package (dcallagh@redhat.com)
+- 726363 - Change Job complete mail subject format. Add related test case.
+  (ryang@redhat.com)
+- 729156 - clean up joins in needpropertyxml (dcallagh@redhat.com)
+
+- 728022 - add ability to filter distros that belong to a specific lab
+  controller (dcallagh@redhat.com)
+- 734669 - message_bus now uses the config from it's own service, not
+  message_bus.conf (rmancy@redhat.com)
+- 732789 - Return system that has no LC (rmancy@redhat.com)
+- 617274 - catch all exceptions when uploading tasks (dcallagh@redhat.com)
+- 729257 - fix parsing of Destructive field in testinfo, 
+  populate destructive flag for tasks (dcallagh@redhat.com)
+- 624417 - correctly handle missing uploader in Task.to_dict()
+  (dcallagh@redhat.com)
+- 710524 - remove --nowait option.  Doesn't make sense. (bpeck@redhat.com)
+
+- workflow-xslt: Added support for tag lists (davids@redhat.com)
 * Mon Aug 22 2011 Raymond Mancy <rmancy@redhat.com> 0.7.0-1
 - This change adds the basic infrastructure into beaker to work with qpid. It
   does this by creating a service that listens on address that can be defined
