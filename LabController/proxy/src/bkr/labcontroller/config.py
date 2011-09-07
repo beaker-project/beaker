@@ -2,7 +2,7 @@ import copy
 import os
 import kobo.conf
 
-_all_ = ['get_conf']
+__all__ = ['get_conf']
 
 _conf = kobo.conf.PyConfigParser()
 default_config = os.path.abspath(os.path.join(os.path.dirname(__file__), "default.conf"))
