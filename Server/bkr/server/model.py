@@ -430,6 +430,7 @@ osversion_table = Table('osversion', metadata,
            nullable=False, primary_key=True),
     Column('osmajor_id', Integer, ForeignKey('osmajor.id')),
     Column('osminor',Unicode(255)),
+    UniqueConstraint('osmajor_id', 'osminor', name='osversion_uix_1'),
     mysql_engine='InnoDB',
 )
 
