@@ -471,9 +471,6 @@ class Tasks(RPCRoot):
         for need in tinfo.needs:
             task.needs.append(TaskPropertyNeeded(property=need))
         task.license = tinfo.license
-        # older versions of rhts-devel permitted absent Owner
-        if not tinfo.owner:
-            raise BX(_('Owner field must be present in testinfo.desc'))
         task.owner = tinfo.owner
         task.uploader = identity.current.user
         task.valid = True

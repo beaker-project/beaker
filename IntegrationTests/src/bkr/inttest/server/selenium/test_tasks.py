@@ -187,7 +187,7 @@ class TestSubmitTask(SeleniumTestCase):
         sel.click('//input[@value="Submit Data"]')
         sel.wait_for_page_to_load('30000')
         self.assertEquals(sel.get_text('css=.flash'), 'Failed to import task: '
-                "'Owner field must be present in testinfo.desc'")
+                'Owner field not defined')
 
 if __name__ == "__main__":
     unittest.main()
