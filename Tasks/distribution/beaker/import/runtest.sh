@@ -93,6 +93,8 @@ function Inventory()
 {
     rhts-sync-set -s SERVERREADY
     rhts-sync-block -s DONE -s ABORT $CLIENTS
+    beaker-repo-update
+    estatus_fail "**** Failed to run beaker-repo-update ****"
     result_pass 
 }
 
