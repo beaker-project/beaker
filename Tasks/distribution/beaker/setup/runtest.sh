@@ -138,7 +138,7 @@ __EOF__
 
 function generate_proxy_cfg()
 {
-    cat << __EOF__ > /etc/beaker/proxy.conf
+    cat << __EOF__ > /etc/beaker/labcontroller.conf
 HUB_URL = "https://$SERVER/bkr/"
 AUTH_METHOD = "password"
 USERNAME = "host/$HOSTNAME"
@@ -147,7 +147,8 @@ CACHE = True
 ARCHIVE_SERVER = "http://$SERVER/beaker-logs"
 ARCHIVE_BASEPATH = "/var/www/html/beaker"
 ARCHIVE_RSYNC = "rsync://$SERVER/beaker-logs"
-RSYNC_FLAGS = "-arv"
+RSYNC_FLAGS = "-arv --timeout 300"
+QPID_BUS=False
 __EOF__
 }
 
