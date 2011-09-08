@@ -34,13 +34,13 @@ class ReserveSystem(SeleniumTestCase):
         self.system.excluded_osmajor.append(ExcludeOSMajor(osmajor=self.distro.osversion.osmajor, arch=self.system.arch[0]))
         session.flush()
         sel.open("reserve_system?arch=%s&distro_family=%s&tag=&distro=%s&search=Show+Systems" % (self.distro.arch, self.distro.osversion.osmajor, self.distro.install_name ))
-        sel.wait_for_page_to_load(3000)
+        sel.wait_for_page_to_load('30000')
         self.assert_(self.system.fqdn not in sel.get_body_text())
 
         self.system.arch.append(Arch.by_name(u'x86_64')) # Make sure it still works with two archs
         session.flush()
         sel.open("reserve_system?arch=%s&distro_family=%s&tag=&distro=%s&search=Show+Systems" % (self.distro.arch, self.distro.osversion.osmajor, self.distro.install_name ))
-        sel.wait_for_page_to_load(3000)
+        sel.wait_for_page_to_load('30000')
         self.assert_(self.system.fqdn not in sel.get_body_text())
 
 
@@ -74,9 +74,9 @@ class ReserveSystem(SeleniumTestCase):
         sel.open("distros/")
         sel.type("simplesearch", "%s" % self.distro.name)
         sel.click("search")
-        sel.wait_for_page_to_load("3000")
+        sel.wait_for_page_to_load('30000')
         sel.click("link=Pick System")
-        sel.wait_for_page_to_load("3000")
+        sel.wait_for_page_to_load('30000')
         self.failUnless(sel.is_text_present("%s" % self.system.fqdn))
         click_reserve_now(sel, self.system)
         sel.wait_for_page_to_load("30000")
