@@ -49,10 +49,11 @@ class JobArguments(object):
         self.re_tag = re.compile('(.*)(\[@(.*)=(.*)\])')
         self.jobxml_parsed = False
 
-    def AddArgument(self, name, tagname, tagvaltype, tagvalname, tagnamelmnt,
+    def AddArgument(self, name, argtype, tagname, tagvaltype, tagvalname, tagnamelmnt,
                     value, optional):
         "Registers a new argument with a unique name"
-        self.arguments[name] = {'optional': optional,
+        self.arguments[name] = {'argtype': argtype,
+                                'optional': optional,
                                 'tagname': tagname,
                                 'tagvaluetype': tagvaltype,
                                 'tagvaluename': tagvalname,
@@ -317,12 +318,16 @@ class JobConfig(object):
             if jobdefaults.has_key(arglong):
                 argdefault = jobdefaults[arglong]
 
+            # If argument type is 'bool', remove type flag
+            # as 'store_true' cannot have type flag in optparse
+            op_argtype = (argtype != 'bool' and argtype or None)
+
             # Register the entry as a command line argument
             if argshort is not None and len(argshort) > 0:
                 self.grparser.add_option('-%s' % argshort,
                                          '--%s' % arglong,
                                          dest=arglong,
-                                         type=argtype,
+                                         type=op_argtype,
                                          default=argdefault,
                                          metavar=argmetavar,
                                          action=argaction,
@@ -332,7 +337,7 @@ class JobConfig(object):
             else:
                 self.grparser.add_option('--%s' % arglong,
                                          dest=arglong,
-                                         type=argtype,
+                                         type=op_argtype,
                                          default=argdefault,
                                          metavar=argmetavar,
                                          action=argaction,
@@ -341,7 +346,7 @@ class JobConfig(object):
                                          )
 
             # Save some important information about this option
-            self.jobargs.AddArgument(arglong, tagname, tagvaltype, tagvalname, tagnamelmnt,
+            self.jobargs.AddArgument(arglong, argtype, tagname, tagvaltype, tagvalname, tagnamelmnt,
                                      argdefault, argoptional)
 
         parser.add_option_group(self.grparser)
@@ -422,6 +427,17 @@ class JobConfig(object):
             raise e
 
 
+    def __format_xml_value(self, argtype, argvalue):
+        "Private method: Formats an argument value for XML tags according to the argument type"
+
+        if argtype == 'bool':
+            # Convert Python True/False value to 'true' or 'false' string
+            return argvalue is True and 'true' or 'false'
+        else:
+            # Pass through on all other types, using the native type
+            return argvalue
+
+
     def __generate_internal_xml(self):
         "Private method: Generates the internal XML needed for XSLT template"
 
@@ -451,9 +467,9 @@ class JobConfig(object):
                 if arg['value']:
                     recipe_node.addChild(tagnode)
                     if arg['tagvaluetype'] == 'value':
-                        tagnode.addChild(libxml2.newText(arg['value']))
+                        tagnode.addChild(libxml2.newText(self.__format_xml_value(arg['argtype'], arg['value'])))
                     elif arg['tagvaluetype'] == 'attribute':
-                        tagnode.newProp(arg['tagvaluename'], arg['value'])
+                        tagnode.newProp(arg['tagvaluename'], self.__format_xml_value(arg['argtype'], arg['value']))
                     elif arg['tagvaluetype'] == "list":
                         for listval in arg["value"].split(","):
                             tagchild_n = self.jobargs.CreateChildTag(key)
