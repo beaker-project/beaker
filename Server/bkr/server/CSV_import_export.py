@@ -486,8 +486,8 @@ class CSV_Exclude(CSV):
 
         if data['update'] and data['family']:
             try:
-                osversion = OSVersion.by_name(OSMajor.by_name(data['family']),
-                                                            data['update'])
+                osversion = OSVersion.by_name(OSMajor.by_name(str(data['family'])),
+                                                            str(data['update']))
             except InvalidRequestError:
                 log.append("%s: Invalid Family %s Update %s" % (system.fqdn,
                                                         data['family'],
@@ -586,7 +586,7 @@ class CSV_Install(CSV):
                     log.append("%s: Error! You must specify Family along with Update" % system.fqdn)
                     return False
                 try:
-                    update = OSVersion.by_name(family, update)
+                    update = OSVersion.by_name(family, str(update))
                 except InvalidRequestError:
                     log.append("%s: Error! Invalid update %s" % (system.fqdn,
                                                              data['update']))
