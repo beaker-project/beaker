@@ -3,7 +3,7 @@
 
 Name:           beaker
 Version:        0.7.1
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -282,6 +282,10 @@ fi
 %{_var}/lib/beaker/addDistro.d/*
 
 %changelog
+* Wed Sep 14 2011 Bill Peck <bpeck@redhat.com> 0.7.1-2
+- 738319 when importing distros osminor doesn't enforce a string
+  (bpeck@redhat.com)
+
 * Wed Sep 07 2011 Raymond Mancy <rmancy@redhat.com> 0.7.1-1
 - 721383 - Beaker displays many duplicate distro families in Excluded
   Families tab. (bpeck@redhat.com)
