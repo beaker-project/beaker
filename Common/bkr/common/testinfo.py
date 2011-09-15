@@ -58,6 +58,8 @@ class TestInfo:
         self.needs = []
         self.need_properties = []
         self.siteconfig = []
+        self.options = []
+        self.environment = {}
 
     def output_string_field(self, file, fileFieldName, dictFieldName):
         value = self.__dict__[dictFieldName]
@@ -68,6 +70,13 @@ class TestInfo:
         value = self.__dict__[dictFieldName]
         if value:
             file.write('%s: %s\n'%(fileFieldName, ' '.join(value)))
+
+    def output_string_dict_field(self, file, fileFieldName, dictFieldName):
+        value = self.__dict__[dictFieldName]
+        if value:
+            for key, val in value.items():
+                if val:
+                    file.write('%s: %s=%s\n'%(fileFieldName, key, val))
 
     def output_bool_field(self, file, fileFieldName, dictFieldName):        
         value = self.__dict__[dictFieldName]
@@ -99,6 +108,8 @@ class TestInfo:
         self.output_string_list_field(file, 'RunFor', 'runfor')
         self.output_string_list_field(file, 'Bugs', 'bugs')
         self.output_string_list_field(file, 'Type', 'types')
+        self.output_string_list_field(file, 'RhtsOptions', 'options')
+        self.output_string_dict_field(file, 'Environment', 'environment')
         for (name, op, value) in self.need_properties:
             file.write('NeedProperty: %s %s %s\n'%(name, op, value))
         file.write(self.generate_siteconfig_lines())
@@ -130,6 +141,20 @@ class RegexValidator(Validator):
     def message(self):
         return self.msg
 
+# This is specified in RFC2822 Section 3.4, 
+# we accept only the most common variations
+class NameAddrValidator(RegexValidator):
+
+    ATOM_CHARS = r"\w!#$%&'*+-/=?^_`{|}~"
+    PHRASE = r' *[%s][%s ]*' % (ATOM_CHARS, ATOM_CHARS)
+    ADDR_SPEC = r'[%s.]+@[%s.]+' % (ATOM_CHARS, ATOM_CHARS)
+    NAME_ADDR = r'%s<%s> *' % (PHRASE, ADDR_SPEC)
+
+    def __init__(self):
+        RegexValidator.__init__(self, self.NAME_ADDR,
+                'should be a valid RFC2822 name_addr, '
+                'such as John Doe <jdoe@somedomain.org>')
+
 class ListValidator(Validator):
     def __init__(self, validValues):
         self.validValues = validValues
@@ -142,6 +167,15 @@ class ListValidator(Validator):
         for value in self.validValues:
             errorMsg += ' "%s"'%value
         return errorMsg
+
+class DashListValidator(ListValidator):
+    def is_valid(self, value):
+        if value.startswith('-'):
+            value = value[1:]
+        return ListValidator.is_valid(self, value)
+
+    def message(self):
+        return ListValidator.message(self) + " optionally prefixed with '-'"
 
 class BoolValidator(Validator):
     def __init__(self):
@@ -203,6 +237,12 @@ class Parser:
             'Normal', 
             'High', 
             'Manual'
+            ]
+
+        self.valid_options = [
+            'Compatible',
+            'CompatService',
+            'StrongerAVC',
             ]
         
         self.valid_properties = [
@@ -270,6 +310,39 @@ class Parser:
         value = validator.convert(raw_value)
         self.__unique_field(fileFieldName, dictFieldName, value)
 
+    def _handle_dict(self, fileFieldName, dictFieldName, value, validator=None, key_validator=None):
+        kv = value.split("=", 1)
+        if len(kv) < 2:
+            self.handle_error("Malformed %s field not matching KEY=VALUE pattern" % fileFieldName)
+            return
+        k, v = kv
+        d = getattr(self.info, dictFieldName)
+        if d.has_key(k):
+            self.handle_error("%s: Duplicate entry for %r" % (fileFieldName, k))
+            return
+        if key_validator and not key_validator.is_valid(k):
+            self.handle_error('"%s" is not a valid key for %s field (%s)'%(k, fileFieldName, key_validator.message()))
+            return
+        if validator and not validator.is_valid(v):
+            self.handle_error('"%s" is not a valid %s field (%s)'%(v, fileFieldName, validator.message()))
+            return
+        d[k] = kv[1]
+
+    def _handle_unique_list(self, fileFieldName, dictFieldName, value, validator=None, split_at=" "):
+        l = getattr(self.info, dictFieldName)
+        if l:
+            self.handle_error("%s field already defined"%fileFieldName)
+            return
+        items = value.split(split_at)
+        if validator:
+            for item in items:
+                if not validator.is_valid(item):
+                    self.handle_error('"%s" is not a valid %s field (%s)'%(item, fileFieldName, validator.message()))
+                    continue
+                l.append(item)
+        else:
+            l.extend(items)
+
     def handle_name(self, key, value):
         self.__unique_field(key, 'test_name', value)
 
@@ -295,7 +368,7 @@ class Parser:
     def handle_owner(self, key, value):
         # Required one-only email addresses "John Doe <someone@some.domain.org>"
         # In theory this could be e.g. memo-list@redhat.com; too expensive to check for that here
-        self.__unique_field(key, 'owner', value, RegexValidator(r'([A-Za-z ]*) <([-a-z\._]*)@[-a-z\.]*>', 'should be of the form "John Doe <jdoe@somedomain.org>"'))
+        self.__unique_field(key, 'owner', value, NameAddrValidator())
 
     def handle_testversion(self, key, value):
         self.__unique_field(key, 'testversion', value, RegexValidator(r'^([A-Za-z0-9\.]*)$', 'can only contain numbers, letters and the dot symbol'))
@@ -340,6 +413,12 @@ class Parser:
             self.error_if_not_in_array("Architecture", arch, self.valid_architectures)
             archs.append(arch)
         self.info.test_archs = archs
+
+    def handle_options(self, key, value):
+        self._handle_unique_list(key, 'options', value, DashListValidator(self.valid_options))
+
+    def handle_environment(self, key, value):
+        self._handle_dict(key, 'environment', value, key_validator=RegexValidator(r'^([A-Za-z_][A-Za-z0-9_]*)$', 'Can contain only letters, numbers and underscore.'))
 
     def handle_priority(self, key, value):
         self.__unique_field(key, 'priority', value, ListValidator(self.valid_priorities))
@@ -437,10 +516,9 @@ class Parser:
             self.info.need_properties.append((m.group(1), m.group(2), m.group(3)))
         else:
             self.handle_error('"%s" is not a valid %s field; %s'%(value, key, "must be of the form PROPERTYNAME {=|>|>=|<|<=} PROPERTYVALUE"))
-        
 
     def handle_deprecated_for_needproperty(self, key, value):
-        self.handle_error("%s field is deprecated.  Use WantProperty instead"%key)
+        self.handle_error("%s field is deprecated.  Use NeedProperty instead"%key)
 
     def __handle_siteconfig(self, arg, value):
         if re.match('^/.*', arg):
@@ -475,6 +553,8 @@ class Parser:
                   'License' : self.handle_license,
                   'Releases': self.handle_releases,
                   'Architectures': self.handle_archs,
+                  'RhtsOptions': self.handle_options,
+                  'Environment': self.handle_environment,
                   'Priority': self.handle_priority,
                   'Destructive': self.handle_destructive,
                   'Confidential': self.handle_confidential,
@@ -509,7 +589,7 @@ class Parser:
                 continue
 
             # Handle declarations e.g. "SiteConfig(server):  hostname of server"
-            m = re.match('(.*)\((.*)\):(.*)', line)
+            m = re.match('([^:]*)\((.*)\):(.*)', line)
             if m:
                 (decl, arg, value) = (m.group(1), m.group(2), m.group(3))
 
@@ -541,6 +621,7 @@ class Parser:
         self.__mandatory_field('TestTime', 'avg_test_time')
         self.__mandatory_field('TestVersion', 'testversion')
         self.__mandatory_field('License', 'license')
+        self.__mandatory_field('Owner', 'owner')
 
 #
 #	my $expected_path_under_mnt_tests = $test{test_name_under_root_ns};
@@ -759,6 +840,45 @@ class ArchitecturesFieldTests(unittest.TestCase):
         self.assertEquals(ti.releases, ['FC5', 'FC6'])
         self.assertEquals(ti.test_archs, ["i386", "x86_64"])
 
+class RhtsOptionsFieldTests(unittest.TestCase):
+    def test_rhtsoptions(self):
+        "Ensure RhtsOptions field is parsed correctly"
+        ti = parse_string("RhtsOptions: Compatible", raise_errors=False)
+        self.assertEquals(ti.options, ["Compatible"])
+
+    def test_multi_options(self):
+        "Ensure RhtsOptions field is parsed correctly"
+        ti = parse_string("RhtsOptions: Compatible -CompatService -StrongerAVC", raise_errors=False)
+        self.assertEquals(ti.options, ["Compatible", "-CompatService", "-StrongerAVC"])
+
+    def test_rhtsoptions_minus(self):
+        "Ensure RhtsOptions field parses options preceded with dash correctly"
+        ti = parse_string("RhtsOptions: -Compatible", raise_errors=False)
+        self.assertEquals(ti.options, ["-Compatible"])
+
+    def test_rhtsoption_bad_value(self):
+        "Ensure RhtsOptions field captures bad input"
+        self.assertRaises(ParserError, parse_string, "RhtsOptions: Compat", raise_errors=True)
+
+    def test_rhtsoption_duplicate(self):
+        "Ensure RhtsOptions field captures duplicate entries"
+        self.assertRaises(ParserError, parse_string, "RhtsOptions: Compatible\nRhtsOptions: -Compatible", raise_errors=True)
+
+class EnvironmentFieldTests(unittest.TestCase):
+    def test_environment(self):
+        "Ensure Environment field is parsed correctly"
+        ti = parse_string("Environment: VAR1=VAL1\nEnvironment: VAR2=Value with spaces - 2", raise_errors=False)
+        self.assertEquals(ti.environment["VAR1"], "VAL1")
+        self.assertEquals(ti.environment["VAR2"], "Value with spaces - 2")
+
+    def test_environment_duplicate_key(self):
+        "Ensure Environment field captures duplicate keys"
+        self.assertRaises(ParserError, parse_string, "Environment: VAR1=VAL1\nEnvironment: VAR1=Value with spaces - 2", raise_errors=True)
+
+    def test_environment_bad_key(self):
+        "Ensure Environment field captures bad keys"
+        self.assertRaises(ParserError, parse_string, "Environment: VAR =VAL1", raise_errors=True)
+
 class NotifyFieldTests(unittest.TestCase):
     def test_notify(self):
         "Ensure Notify field is deprecated"
@@ -774,6 +894,12 @@ class OwnerFieldTests(unittest.TestCase):
         "Ensure that other Owner fields are parsed correctly"
         ti = parse_string("Owner: Jane Doe <jdoe@fedoraproject.org>", raise_errors=False)
         self.assertEquals(ti.owner, "Jane Doe <jdoe@fedoraproject.org>")
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=723159
+    def test_owner_with_hyphen(self):
+        parser = StrictParser(raise_errors=True)
+        parser.handle_owner('Owner', 'Endre Balint-Nagy <endre@redhat.com>')
+        self.assertEquals(parser.info.owner, 'Endre Balint-Nagy <endre@redhat.com>')
 
 class PriorityFieldTests(unittest.TestCase):
     def test_priority(self):

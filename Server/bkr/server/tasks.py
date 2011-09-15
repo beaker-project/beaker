@@ -28,8 +28,8 @@ from bkr.server.widgets import SearchBar
 from bkr.server.widgets import TaskActionWidget
 from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.helpers import make_link
-from bkr.server import testinfo
-from bkr.server.testinfo import ParserError, ParserWarning
+from bkr.common import testinfo
+from bkr.common.testinfo import ParserError, ParserWarning
 from sqlalchemy import exceptions
 from subprocess import *
 
@@ -471,9 +471,6 @@ class Tasks(RPCRoot):
         for need in tinfo.needs:
             task.needs.append(TaskPropertyNeeded(property=need))
         task.license = tinfo.license
-        # older versions of rhts-devel permitted absent Owner
-        if not tinfo.owner:
-            raise BX(_('Owner field must be present in testinfo.desc'))
         task.owner = tinfo.owner
         task.uploader = identity.current.user
         task.valid = True
