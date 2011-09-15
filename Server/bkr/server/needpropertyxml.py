@@ -24,12 +24,10 @@ import sys
 import pkg_resources
 pkg_resources.require("SQLAlchemy>=0.3.10")
 from bkr.server.model import *
-from commands import ConfigurationError
 from turbogears.database import session
-from os.path import dirname, exists, join
-from os import getcwd
 import turbogears
 from sqlalchemy import or_, and_
+from sqlalchemy.exceptions import InvalidRequestError
 
 class ElementWrapper(object):
     # Operator translation table
@@ -123,10 +121,10 @@ class XmlDistroArch(ElementWrapper):
         value = self.get_xml_attr('value', unicode, None)
         query = None
         if op and value:
-            query = and_(distro_table.c.arch_id == arch_table.c.id,
-                         getattr(arch_table.c.arch, op)(value))
+            joins = joins.join(Distro.arch)
+            query = getattr(Arch.arch, op)(value)
         return (joins, query)
-            
+
 class XmlDistroFamily(ElementWrapper):
     """
     Filter Distro based on Family
@@ -136,49 +134,52 @@ class XmlDistroFamily(ElementWrapper):
         value = self.get_xml_attr('value', unicode, None)
         query = None
         if op and value:
-            query = and_(distro_table.c.osversion_id == osversion_table.c.id,
-                         osversion_table.c.osmajor_id == osmajor_table.c.id,
-                         getattr(osmajor_table.c.osmajor, op)(value))
+            joins = joins.join([Distro.osversion, OSVersion.osmajor])
+            query = getattr(OSMajor.osmajor, op)(value)
         return (joins, query)
 
 class XmlDistroTag(ElementWrapper):
     """
     Filter Distro based on Tag
     """
+
+    op_table = { '=' : '__eq__',
+                 '==' : '__eq__',
+                 '!=' : '__ne__'}
+
     def filter(self, joins):
         op = self.op_table[self.get_xml_attr('op', unicode, '==')]
         value = self.get_xml_attr('value', unicode, None)
         query = None
-        if op and value:
-            query = and_(
-                      distro_table.c.id == distro_tag_map.c.distro_id,
-                      distro_tag_table.c.id == distro_tag_map.c.distro_tag_id,
-                      getattr(distro_tag_table.c.tag, op)(value)
-                    )
+        if value:
+            if op == '__ne__':
+                query = not_(Distro._tags.any(DistroTag.tag == value))
+            else:
+                query = Distro._tags.any(getattr(DistroTag.tag, op)(value))
         return (joins, query)
 
 class XmlDistroVariant(ElementWrapper):
     """
-    Filter Distro based on Tag
+    Filter Distro based on variant
     """
     def filter(self, joins):
         op = self.op_table[self.get_xml_attr('op', unicode, '==')]
         value = self.get_xml_attr('value', unicode, None)
         query = None
         if op and value:
-            query = getattr(distro_table.c.variant, op)(value)
+            query = getattr(Distro.variant, op)(value)
         return (joins, query)
 
 class XmlDistroName(ElementWrapper):
     """
-    Filter Distro based on Tag
+    Filter Distro based on name
     """
     def filter(self, joins):
         op = self.op_table[self.get_xml_attr('op', unicode, '==')]
         value = self.get_xml_attr('value', unicode, None)
         query = None
         if op and value:
-            query = getattr(distro_table.c.name, op)(value)
+            query = getattr(Distro.name, op)(value)
         return (joins, query)
 
 class XmlDistroVirt(ElementWrapper):
@@ -190,7 +191,7 @@ class XmlDistroVirt(ElementWrapper):
         value = self.get_xml_attr('value', bool, False)
         query = None
         if op:
-            query = getattr(distro_table.c.virt, op)(value)
+            query = getattr(Distro.virt, op)(value)
         return (joins, query)
 
 class XmlSystem(ElementWrapper):
@@ -204,7 +205,7 @@ class XmlSystem(ElementWrapper):
         query = None
         if key and op and value:
             # Filter using the operator we looked up
-            query = getattr(getattr(system_table.c,key), op)(value)
+            query = getattr(getattr(System, key), op)(value)
         return (joins, query)
 
 
@@ -220,35 +221,24 @@ class XmlGroup(ElementWrapper):
     def filter(self, joins):
         op = self.op_table[self.get_xml_attr('op', unicode, '==')]
         value = self.get_xml_attr('value', unicode, None)
-        query = None
-        if op:
-            table = system_group_table
-            # Alias since we may join on ourselves
-            alias = table.alias('system_group%i' % self.alias['system_group'])
-            self.alias['system_group'] += 1
-            if value:
-                # - '==' - search for system which is member of given group
-                # - '!=' - search for system which is not member of given group
-                try:
-                    group = Group.by_name(value)
-                except InvalidRequestError:
-                    return (joins, False)
-                if op == '__eq__':
-                    joins = joins.join(alias)
-                    query = alias.c.group_id==group.group_id
-                else:
-                    joins = joins.outerjoin(alias,
-                               onclause=and_(system_table.c.id==alias.c.system_id,
-                                             alias.c.group_id==group.group_id))
-                    query = alias.c.group_id==None
+        if value:
+            # - '==' - search for system which is member of given group
+            # - '!=' - search for system which is not member of given group
+            try:
+                group = Group.by_name(value)
+            except InvalidRequestError: # NoResultFound
+                return (joins, None)
+            if op == '__eq__':
+                query = System.groups.contains(group)
             else:
-                # - '!=' - search for system which is member of any group
-                # - '==' - search for system which is not member of any group
-                joins = joins.outerjoin(alias)
-                if op == '__eq__':
-                    query = alias.c.group_id==None
-                else:
-                    query = alias.c.group_id!=None
+                query = not_(System.groups.contains(group))
+        else:
+            # - '!=' - search for system which is member of any group
+            # - '==' - search for system which is not member of any group
+            if op == '__eq__':
+                query = System.groups == None
+            else:
+                query = System.groups != None
         return (joins, query)
 
 
@@ -263,34 +253,23 @@ class XmlKeyValue(ElementWrapper):
         query = None
         try:
             _key = Key.by_name(key)
-        except InvalidRequestError:
-            return (joins, False)
+        except InvalidRequestError: # NoResultFound
+            return (joins, None)
         if key and op and value:
-            # Alias since we may join on ourselves
             if _key.numeric:
-                table = key_value_int_table
+                key_value_cls = Key_Value_Int
+                collection = System.key_values_int
             else:
-                table = key_value_string_table
-            alias = table.alias('key_value%i' % self.alias['key_value'])
-            self.alias['key_value'] += 1
-
-            # Filter using the operator we looked up
+                key_value_cls = Key_Value_String
+                collection = System.key_values_string
             if op == '__ne__':
-                # Setup the joins
-                joins = joins.outerjoin(alias,
-                                      onclause=and_(alias.c.key_id==_key.id,
-                                             system_table.c.id==alias.c.system_id,
-                                                    alias.c.key_value==value)
-                                       )
-                query = alias.c.key_value==None
+                query = not_(collection.any(and_(
+                        key_value_cls.key == _key,
+                        key_value_cls.key_value == value)))
             else:
-                # Setup the joins
-                joins = joins.outerjoin(alias,
-                                      onclause=and_(alias.c.key_id==_key.id,
-                                             system_table.c.id==alias.c.system_id)
-                                       )
-                query = getattr(alias.c.key_value, op)(value)
-
+                query = collection.any(and_(
+                        key_value_cls.key == _key,
+                        getattr(key_value_cls.key_value, op)(value)))
         return (joins, query)
 
 class XmlAnd(ElementWrapper):
@@ -330,9 +309,8 @@ class XmlAutoProv(ElementWrapper):
         value = self.get_xml_attr('value', unicode, False)
         query = None
         if value:
-            if not joins.is_derived_from(power_table):
-                joins = joins.join(power_table)
-            query = system_table.c.lab_controller_id != None
+            joins = joins.join(System.power)
+            query = System.lab_controller != None
         return (joins, query)
 
 class XmlHostLabController(ElementWrapper):
@@ -343,23 +321,22 @@ class XmlHostLabController(ElementWrapper):
         value = self.get_xml_attr('value', unicode, None)
         query = None
         if value:
-            if not joins.is_derived_from(lab_controller_table):
-                joins = joins.join(lab_controller_table)
-            query = lab_controller_table.c.fqdn == value
+            joins = joins.join(System.lab_controller)
+            query = LabController.fqdn == value
         return (joins, query)
 
 class XmlDistroLabController(ElementWrapper):
     """
-    Pick a system from this lab controller
+    Pick a distro available on this lab controller
     """
     def filter(self, joins):
         value = self.get_xml_attr('value', unicode, None)
         query = None
         if value:
-            if not joins.is_derived_from(lab_controller_table):
-                joins = joins.join(lab_controller_distro_map).\
-                              join(lab_controller_table)
-            query = lab_controller_table.c.fqdn == value
+            query = exists([1],
+                    from_obj=[lab_controller_distro_map.join(lab_controller_table)])\
+                    .where(LabControllerDistro.distro_id == Distro.id)\
+                    .where(LabController.fqdn == value)
         return (joins, query)
 
 class XmlHypervisor(ElementWrapper):
@@ -371,9 +348,8 @@ class XmlHypervisor(ElementWrapper):
         value = self.get_xml_attr('value', unicode, None) or None
         query = None
         if op:
-            if not joins.is_derived_from(hypervisor_table):
-                joins = joins.outerjoin(hypervisor_table)
-            query = getattr(hypervisor_table.c.hypervisor, op)(value)
+            joins = joins.outerjoin(System.hypervisor)
+            query = getattr(Hypervisor.hypervisor, op)(value)
         return (joins, query)
 
 class XmlSystemType(ElementWrapper):
@@ -384,9 +360,8 @@ class XmlSystemType(ElementWrapper):
         value = self.get_xml_attr('value', unicode, None)
         query = None
         if value:
-            if not joins.is_derived_from(system_type_table):
-                joins = joins.join(system_type_table)
-            query = system_type_table.c.type == value
+            joins = joins.join(System.type)
+            query = SystemType.type == value
         return (joins, query)
 
 class XmlHostName(ElementWrapper):
@@ -398,7 +373,7 @@ class XmlHostName(ElementWrapper):
         value = self.get_xml_attr('value', unicode, None)
         query = None
         if value:
-            query = getattr(system_table.c.fqdn, op)(value)
+            query = getattr(System.fqdn, op)(value)
         return (joins, query)
 
 class XmlMemory(ElementWrapper):
@@ -410,7 +385,7 @@ class XmlMemory(ElementWrapper):
         value = self.get_xml_attr('value', int, None)
         query = None
         if value:
-            query = getattr(system_table.c.memory, op)(value)
+            query = getattr(System.memory, op)(value)
         return (joins, query)
 
 class XmlCpuCount(ElementWrapper):
@@ -422,29 +397,35 @@ class XmlCpuCount(ElementWrapper):
         value = self.get_xml_attr('value', int, None)
         query = None
         if value:
-            if not joins.is_derived_from(cpu_table):
-                joins = joins.join(cpu_table)
-            query = getattr(cpu_table.c.processors, op)(value)
+            joins = joins.join(System.cpu)
+            query = getattr(Cpu.processors, op)(value)
         return (joins, query)
 
 class XmlArch(ElementWrapper):
     """
     Pick a system with the correct arch
     """
+
+    op_table = { '=' : '__eq__',
+                 '==' : '__eq__',
+                 '!=' : '__ne__'}
+
     def filter(self, joins):
         op = self.op_table[self.get_xml_attr('op', unicode, '==')]
         value = self.get_xml_attr('value', unicode, None)
         query = None
-        # Only do one combination of Arch+Op
-        arch_op = 'arch%s%s' % (value,op)
-        if not self.alias['arch'].get(arch_op):
-            arch_alias = arch_table.alias(arch_op)
-            system_arch_alias = system_arch_map.alias('system_%s' % arch_op)
-            self.alias['arch'][arch_op] = True
-            if value:
-                query = and_(system_table.c.id == system_arch_alias.c.system_id,
-                             arch_alias.c.id   == system_arch_alias.c.arch_id,
-                             getattr(arch_alias.c.arch, op)(value))
+        if value:
+            # As per XmlGroup above,
+            # - '==' - search for system which has given arch
+            # - '!=' - search for system which does not have given arch
+            try:
+                arch = Arch.by_name(value)
+            except InvalidRequestError: # NoResultFound
+                return (joins, None)
+            if op == '__eq__':
+                query = System.arch.contains(arch)
+            else:
+                query = not_(System.arch.contains(arch))
         return (joins, query)
 
 class XmlNumaNodeCount(ElementWrapper):
@@ -456,9 +437,8 @@ class XmlNumaNodeCount(ElementWrapper):
         value = self.get_xml_attr('value', int, None)
         query = None
         if value:
-            if not joins.is_derived_from(numa_table):
-                joins = joins.join(numa_table)
-            query = getattr(numa_table.c.nodes, op)(value)
+            joins = joins.join(System.numa)
+            query = getattr(Numa.nodes, op)(value)
         return (joins, query)
 
 subclassDict = {
@@ -487,60 +467,15 @@ subclassDict = {
     'hypervisor'          : XmlHypervisor,
     }
 
-if __name__=='__main__':
-    setupdir = dirname(dirname(__file__))
-    curdir = getcwd()
-    if exists(join(setupdir, "setup.py")):
-        configfile = join(setupdir, "dev.cfg")
-    elif exists(join(curdir, "prod.cfg")):
-        configfile = join(curdir, "prod.cfg")
-    else:
-        try:
-            configfile = pkg_resources.resource_filename(
-              pkg_resources.Requirement.parse("beaker"),
-                "config/default.cfg")
-        except pkg_resources.DistributionNotFound:
-            raise ConfigurationError("Could not find default configuration.")
-
-    turbogears.update_config(configfile=configfile,
-        modulename="bkr.server.config")
-
-    file = sys.argv[1]
-    FH = open(file,"r")
-    xml = FH.read()
-    FH.close()
-
-    myRequires = xmltramp.parse(xml)
-    distros    = ElementWrapper(myRequires.distro)
-
-    queries = []
-    joins   = []
-    for child in distros:
-        if callable(getattr(child, 'filter')):
-            (join, query) = child.filter()
-            queries.append(query)
-            joins.extend(join)
-    distro = Distro.query()
-    if joins:
-        distro = distro.filter(and_(*joins))
-    if queries:
-        distro = distro.filter(and_(*queries))
-    distro = distro.first()
-
-    user = User.query()[0]
-    system = distro.systems(user)
-
-
-    queries = []
-    joins   = []
-    systems    = ElementWrapper(myRequires.host)
-    for child in systems:
-        if callable(getattr(child, 'filter')):
-            (join, query) = child.filter()
-            queries.append(query)
-            joins.extend(join)
-    if joins:
-        system = system.filter(and_(*joins))
-    if queries:
-        system = system.filter(and_(*queries))
-    print system.all()
+def apply_filter(filter, query):
+    if isinstance(filter, basestring):
+        filter = ElementWrapper(xmltramp.parse(filter))
+    clauses = []
+    for child in filter:
+        if callable(getattr(child, 'filter', None)):
+            (query, clause) = child.filter(query)
+            if clause is not None:
+                clauses.append(clause)
+    if clauses:
+        query = query.filter(and_(*clauses))
+    return query

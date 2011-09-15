@@ -1,8 +1,8 @@
 from bkr.server.bexceptions import BeakerException
-import bkr.server.model as bkr_model
-from bkr.server.model import TaskBase, LabController
 from bkr.server.recipetasks import RecipeTasks
 from bkr.server import scheduler
+import bkr.server.model as bkr_model
+from bkr.server.model import TaskBase, LabController
 from turbogears import config as tg_config
 from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.common.message_bus import BeakerBus
@@ -29,14 +29,20 @@ class ServerBeakerBus(BeakerBus):
     send_error_suffix = 'Cannot send message'
     rpcroot = RPCRoot()
 
+
     @classmethod
     def do_krb_auth(cls):
         from bkr.common.krb_auth import AuthManager
-        principal = tg_config.get('identity.krb_auth_beakerd_principal')
-        keytab = tg_config.get('identity.krb_auth_beakerd_keytab')
+        principal = tg_config.get('identity.krb_auth_qpid_principal')
+        keytab = tg_config.get('identity.krb_auth_qpid_keytab')
         cls._auth_mgr = AuthManager(primary_principal=principal, keytab=keytab)
 
     def __init__(self, *args, **kw):
+        self.topic_exchange = tg_config.get('beaker.qpid_topic_exchange')
+        self.headers_exchange =  tg_config.get('beaker.qpid_headers_exchange')
+        self.service_queue_name = tg_config.get('beaker.qpid_service_queue')
+        self._broker = tg_config.get('beaker.qpid_broker')
+        self.krb_auth = tg_config.get('beaker.qpid_krb_auth')
         super(ServerBeakerBus, self).__init__(*args, **kw)
         self.thread_handlers.update({'beaker' : {'service_queue' : self._service_request_listener,  'expired_watchdogs' : self._expired_watchdogs_listener,},})
 

@@ -1,0 +1,41 @@
+Record owner, uploader, and priority of tasks (bugs 617274 and 624417)
+----------------------------------------------------------------------
+
+Create the new columns:
+
+    ALTER TABLE task
+        DROP FOREIGN KEY task_ibfk_1,
+        DROP COLUMN owner_id,
+        ADD COLUMN uploader_id INT NULL AFTER update_date,
+        ADD CONSTRAINT task_uploader_id_fk
+            FOREIGN KEY (uploader_id) REFERENCES tg_user (user_id),
+        ADD COLUMN owner TEXT NULL AFTER uploader_id,
+        ADD INDEX (owner(256)),
+        ADD COLUMN priority VARCHAR(256) NULL AFTER destructive,
+        ADD INDEX (priority);
+
+As apache user, run the upgrade_0.7.1_populate_task_metadata.py script to
+populate the new columns for existing tasks.
+
+To roll back:
+
+    ALTER TABLE task
+        DROP COLUMN priority,
+        DROP FOREIGN KEY task_uploader_id_fk,
+        DROP COLUMN uploader_id,
+        DROP COLUMN owner,
+        ADD COLUMN owner_id INT NULL AFTER update_date,
+        ADD CONSTRAINT task_owner_id_fk
+            FOREIGN KEY (owner_id) REFERENCES tg_user (user_id);
+=======
+
+
+Not using message_bus.conf anymore for qpid
+--------------------------------------------
+
+/etc/beaker/message_bus.conf is no longer used.
+Please remove it.
+
+All of the qpid options have now moved to each services config file
+(i.e /etc/beaker/labcontroller.conf on the LCs and /etc/beaker/server.cfg on the server)
+

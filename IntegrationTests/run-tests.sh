@@ -16,5 +16,8 @@ if [ $(pwd) != $(readlink -f $(dirname "$0") ) ] ; then
 fi
 
 set -x
-env PYTHONPATH=../Common:../Server:../Client/src:../IntegrationTests/src${PYTHONPATH:+:$PYTHONPATH} \
-    nosetests ${*:--v bkr}
+#If you want to run unittests for beaker client, in your env set BEAKER_CLIENT_TEST_QPID=1,
+# and also set BEAKER_CLIENT_TEST_QPID_BROKER to something reasonable
+#
+env BEAKER_LABCONTROLLER_CONFIG_FILE=labcontroller-test.cfg \
+  PYTHONPATH=../Common:../Server:../Client/src:../IntegrationTests/src${PYTHONPATH:+:$PYTHONPATH} nosetests ${*:--v bkr}

@@ -3,6 +3,7 @@ import xmlrpclib
 from turbogears.database import session
 from bkr.inttest.server.selenium import SeleniumTestCase, XmlRpcTestCase
 from bkr.inttest import data_setup, stub_cobbler
+from bkr.server.model import LabControllerDistro
 
 def go_to_distro_view(sel, distro):
     sel.open('distros/view?id=%s' % distro.id)
@@ -162,7 +163,7 @@ class DistroViewTest(SeleniumTestCase):
         self.assertEquals(activity.old_value, u'SAD')
         self.assertEquals(activity.new_value, None)
 
-class DistroXmlRpcTest(XmlRpcTestCase):
+class DistroTaggingXmlRpcTest(XmlRpcTestCase):
 
     def setUp(self):
         self.distro = data_setup.create_distro()
@@ -224,3 +225,22 @@ class DistroXmlRpcTest(XmlRpcTestCase):
         self.assertEquals(activity.action, u'Removed')
         self.assertEquals(activity.old_value, u'SAD')
         self.assertEquals(activity.new_value, None)
+
+class DistroFilterXmlRpcTest(XmlRpcTestCase):
+
+    def setUp(self):
+        self.server = self.get_server()
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=728022
+    def test_filtering_by_lab_controller(self):
+        good_lc = data_setup.create_labcontroller()
+        bad_lc = data_setup.create_labcontroller()
+        distro_in = data_setup.create_distro()
+        distro_out = data_setup.create_distro()
+        session.flush() # grumble
+        distro_in.lab_controller_assocs[:] = [LabControllerDistro(lab_controller=good_lc)]
+        distro_out.lab_controller_assocs[:] = [LabControllerDistro(lab_controller=bad_lc)]
+        session.flush()
+        distros = self.server.distros.filter({'labcontroller': good_lc.fqdn})
+        self.assert_(distro_in.install_name in [d[0] for d in distros], distros)
+        self.assert_(distro_out.install_name not in [d[0] for d in distros], distros)

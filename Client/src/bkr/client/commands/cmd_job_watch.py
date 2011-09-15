@@ -70,13 +70,6 @@ class Job_Watch(BeakerCommand):
     def options(self):
         self.parser.usage = "%%prog %s [options] <taskspec>..." % self.normalized_name
         self.parser.add_option(
-            "--nowait",
-            default=False,
-            action="store_true",
-            help="Don't wait on job completion",
-        )
-
-        self.parser.add_option(
             "-v",
             action='count',
             dest='verbosity',
@@ -89,13 +82,10 @@ class Job_Watch(BeakerCommand):
     def run(self, *args, **kwargs):
         username = kwargs.pop("username", None)
         password = kwargs.pop("password", None)
-        nowait   = kwargs.pop("nowait", None)
         if not args:
             self.parser.error('Please specify one or more tasks')
 
         if self.conf.get('QPID_BUS') is True:
-            if self.conf.get('AUTH_METHOD') != 'krbv':
-                self.parser.error('Please set AUTH_METHOD to \'krbv\' when using message bus')
             listendepth = kwargs.get('verbosity') or 0
             task_args = list(args)
             task_type = [task.split(':')[0] for task in task_args]
@@ -105,5 +95,4 @@ class Job_Watch(BeakerCommand):
             watch_bus_tasks(int(listendepth), task_args)
         else:
             self.set_hub(username, password)
-            if not nowait:
-                watch_tasks(self.hub, args)
+            watch_tasks(self.hub, args)

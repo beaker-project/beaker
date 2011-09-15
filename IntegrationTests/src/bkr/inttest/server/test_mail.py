@@ -18,6 +18,7 @@
 
 import sys
 import email
+import re
 import unittest
 from turbogears.database import session
 from bkr.server.model import Arch
@@ -80,6 +81,17 @@ class JobCompletionNotificationTest(unittest.TestCase):
     def tearDown(self):
         self.mail_capture.stop()
 
+    def test_subject_format(self):
+        job_owner = data_setup.create_user()
+        job = data_setup.create_job(owner=job_owner)
+        session.flush()
+        data_setup.mark_job_complete(job)
+
+        self.assertEqual(len(self.mail_capture.captured_mails), 1)
+        sender, rcpts, raw_msg = self.mail_capture.captured_mails[0]
+        msg = email.message_from_string(raw_msg)
+        self.assert_('[Beaker Job Completion] [Completed/Pass]' in msg['Subject'])
+
     def test_job_owner_is_notified(self):
         job_owner = data_setup.create_user()
         job = data_setup.create_job(owner=job_owner)
@@ -133,4 +145,6 @@ class JobCompletionNotificationTest(unittest.TestCase):
         self.assertEqual(len(self.mail_capture.captured_mails), 1)
         sender, rcpts, raw_msg = self.mail_capture.captured_mails[0]
         msg = email.message_from_string(raw_msg)
-        self.assert_(whiteboard in msg['Subject'])
+        # Subject header might be split across multiple lines
+        subject = re.sub(r'\s+', ' ', msg['Subject'])
+        self.assert_(whiteboard in subject, subject)

@@ -41,6 +41,14 @@
         <td class="title"><b>Updated Date:</b></td>
         <td class="value"><span class="datetime">${task.update_date}</span></td>
     </tr>
+    <tr py:if="task.owner">
+        <td class="title"><b>Owner:</b></td>
+        <td class="value">${task.owner}</td>
+    </tr>
+    <tr py:if="task.uploader">
+        <td class="title"><b>Uploader:</b></td>
+        <td class="value">${task.uploader.email_link}</td>
+    </tr>
     <tr py:if="task.version">
         <td class="title"><b>Version:</b></td>
         <td class="value">${task.version}</td>
@@ -82,6 +90,14 @@
                 <br/>
             </span>
         </td>
+    </tr>
+    <tr py:if="task.priority">
+        <td class="title"><b>Priority:</b></td>
+        <td class="value">${task.priority}</td>
+    </tr>
+    <tr py:if="task.destructive is not None">
+        <td class="title"><b>Destructive:</b></td>
+        <td class="value">${task.destructive}</td>
     </tr>
     <tr py:if="task.required">
         <td class="title"><b>Requires:</b></td>

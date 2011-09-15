@@ -280,6 +280,9 @@ class Distros(RPCRoot):
             'treepath'
                 Tree path (on any lab controller). May include % SQL wildcards, for 
                 example ``'nfs://nfs.example.com:%'``.
+            'labcontroller'
+                FQDN of lab controller. Show distros in this lab controller only.
+                May include % SQL wildcards.
             'limit'
                 Integer limit to number of distros returned.
 
@@ -297,6 +300,7 @@ class Distros(RPCRoot):
         tags = filter.get('tags', [])
         arch = filter.get('arch', None)
         treepath = filter.get('treepath', None)
+        labcontroller = filter.get('labcontroller', None)
         limit = filter.get('limit', None)
         if tags:
             sqltags = []
@@ -314,6 +318,11 @@ class Distros(RPCRoot):
             distros = distros.filter(arch_table.c.arch=='%s' % arch)
         if treepath:
             distros = distros.filter(lab_controller_distro_map.c.tree_path.like('%s' % treepath))
+        if labcontroller:
+            distros = distros.filter(exists([1],
+                    from_obj=[lab_controller_distro_map.join(lab_controller_table)])
+                    .where(LabControllerDistro.distro_id == Distro.id)
+                    .where(LabController.fqdn.like(labcontroller)))
         # join on lab controllers, we only want distros that are active in at least one lab controller
         distros = distros.filter(Distro.lab_controller_assocs.any())
         distros = distros.order_by(distro_table.c.date_created.desc())
@@ -367,7 +376,7 @@ class Distros(RPCRoot):
         try:
             os_minor = version.split('.')[1]
         except IndexError:
-            os_minor = 0
+            os_minor = '0'
 
         # Try and find OSMajor
         try:

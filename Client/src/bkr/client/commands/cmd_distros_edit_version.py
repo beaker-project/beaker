@@ -77,7 +77,7 @@ class Distros_Edit_Version(BeakerCommand):
         username = kwargs.pop("username", None)
         password = kwargs.pop("password", None)
         name = kwargs.pop("name", None)
-        version = args[0]
+        version = str(args[0])
 
         self.set_hub(username, password)
         distros = self.hub.distros.edit_version(name, version)

@@ -277,6 +277,41 @@ $ service mysqld start
   </screen>
   </para>
   </section>  
+ <section id="Installation-Setup_Lab_Controller-AddDistro_Jobs">
+  <title>Automate Jobs for new distros</title>
+  <para>
+  Whenever we run an the <emphasis>osversion.trigger</emphasis> script(See <xref linkend="Installation-Setup_Lab_Controller-Configure_Lab_Controller"></xref>), we
+  have the ability to run automated Jobs on these newly imported distros. To do this we need to install the
+  <emphasis>beaker-labcontroller-addDistro</emphasis> package.
+  <screen>
+    $ yum install beaker-lab-controller-addDistro
+  </screen>
+  You can now place a script into the <emphasis>/var/lib/beaker/addDistro.d</emphasis> directory, that will be run each time the osversion.trigger script is   called for newly imported distros.
+  </para>
+
+  <para>
+  By default, <emphasis>/var/lib/beaker/addDistro.d/udpateDistro</emphasis> is installed, which contains the following bash code:-
+  <screen>
+  #!/bin/sh
+
+  ARCH=$1
+  FAMILY=$2
+  DISTRO=$3
+  VARIANT=$4
+  DISTPATH=$5
+
+  if [ "$VARIANT" = "AS" -o \
+       "$VARIANT" = "Server" -o \
+        "$FAMILY" != "RedHatEnterpriseLinux4" -a \
+        "$FAMILY" != "RedHatEnterpriseLinux6" ]; then
+        bkr workflow-simple --task /distribution/updateDistro --distro $DISTRO --arch $ARCH --variant "$VARIANT" --whiteboard "Add Distro Test $DISTRO $ARCH"
+  fi
+  </screen>
+  For each newly imported distro this will run the <emphasis>/distribution/updateDistro</emphasis> task. Use this as a guide for creating more specific
+  jobs that you might find useful.
+  </para>
+
+  </section>
   </section>
   <section id="Installation-Beaker_Client">
     <title>Beaker Client</title>

@@ -67,7 +67,7 @@ class RPCRoot(controllers.Controller):
             log.exception('Error handling XML-RPC method')
             # Some other error; send back some error info
             response = xmlrpclib.dumps(
-                xmlrpclib.Fault(1, "%s:%s" % (sys.exc_type, sys.exc_value))
+                xmlrpclib.Fault(1, "%s:%s" % sys.exc_info()[:2])
                 )
 
         log.debug('Time: %s %s %s', datetime.utcnow() - start, str(method), str(params)[0:50])

@@ -91,6 +91,7 @@ class TestUpdateStatus(unittest.TestCase):
         xmljob = XmlJob(xmltramp.parse(complete_job_xml))
 
         data_setup.create_tasks(xmljob)
+        session.flush()
         
         # Import the job xml
         job = self.controller.process_xmljob(xmljob, self.user)
@@ -126,6 +127,7 @@ class TestUpdateStatus(unittest.TestCase):
         xmljob = XmlJob(xmltramp.parse(complete_job_xml))
 
         data_setup.create_tasks(xmljob)
+        session.flush()
         
         # Import the job xml
         job = self.controller.process_xmljob(xmljob, self.user)

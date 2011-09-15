@@ -4,6 +4,41 @@ from turbogears.database import session
 from bkr.inttest import data_setup
 import unittest, time, os
 
+
+class SystemOwnerTake(SeleniumTestCase):
+
+    def setUp(self):
+        self.selenium = self.get_selenium()
+        self.selenium.start()
+
+        self.manual_system = data_setup.create_system(status=u'Manual')
+        self.manual_system.shared = True
+        self.user = data_setup.create_user(password='password')
+        self.manual_system.owner = self.user
+        lc = data_setup.create_labcontroller(u'test-lc')
+        data_setup.add_system_lab_controller(self.manual_system,lc)
+        session.flush()
+        self.distro = data_setup.create_distro()
+        session.flush()
+        self.login(user=self.user.user_name,password='password')
+
+    def tearDown(self):
+        self.selenium.stop()
+
+    def test_owner_manual_system(self):
+        sel = self.selenium
+        sel.open("")
+        sel.type("simplesearch", "%s" % self.manual_system.fqdn)
+        sel.click("search")
+        sel.wait_for_page_to_load("30000")
+        sel.click("link=%s" % self.manual_system.fqdn)
+        sel.wait_for_page_to_load("30000")
+        self.assert_(sel.is_text_present("(Take)"))
+        sel.click("link=(Take)")
+        sel.wait_for_page_to_load("3000")
+        self.assert_("Reserved %s" % self.manual_system.fqdn in sel.get_text('//body'))
+
+
 class SystemGroupUserTake(SeleniumTestCase):
 
     """

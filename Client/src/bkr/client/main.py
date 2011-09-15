@@ -42,16 +42,11 @@ def main():
     # This is parser.run(), but with more sensible error handling
     cmd, cmd_opts, cmd_args = parser.parse_args()
     try:
-        cmd.run(*cmd_args, **cmd_opts.__dict__)
-    except (SystemExit, KeyboardInterrupt):
-        raise
+        return cmd.run(*cmd_args, **cmd_opts.__dict__)
     except xmlrpclib.Fault, e:
         sys.stderr.write('XML-RPC fault: %s\n' % e.faultString)
-        sys.exit(1)
-    except Exception, e:
-        sys.stderr.write('Exception: %s\n' % e)
-        sys.exit(1)
+        return 1
 
 
 if __name__ == '__main__':
-    main()
+    sys.exit(main())

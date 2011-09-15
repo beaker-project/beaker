@@ -263,3 +263,61 @@ class Search(SeleniumTestCase):
 
     def tearDown(self):
         self.assertEqual([], self.verificationErrors)
+
+class HypervisorSearchTest(SeleniumTestCase):
+
+    def setUp(self):
+        self.user = data_setup.create_user(password=u'hypervisin')
+        self.kvm = data_setup.create_system(loaned=self.user, hypervisor=u'KVM')
+        self.xen = data_setup.create_system(loaned=self.user, hypervisor=u'Xen')
+        self.phys = data_setup.create_system(loaned=self.user, hypervisor=None)
+        session.flush()
+        self.selenium = self.get_selenium()
+        self.selenium.start()
+        self.login(user=self.user.user_name, password=u'hypervisin')
+
+    def tearDown(self):
+        self.selenium.stop()
+
+    def test_search_hypervisor_is(self):
+        sel = self.selenium
+        sel.open('mine')
+        sel.select('systemsearch_0_table', 'label=System/Hypervisor')
+        self.wait_for_condition(lambda: sel.is_element_present('//select[@id="systemsearch_0_value"]'))
+        sel.select('systemsearch_0_operation', 'label=is')
+        sel.select('systemsearch_0_value', 'KVM')
+        sel.click('Search')
+        sel.wait_for_page_to_load('30000')
+        self.assertEqual(sel.get_title(), 'My Systems')
+        row_count = int(sel.get_xpath_count('//table[@id="widget"]/tbody/tr'))
+        self.assertEquals(row_count, 1)
+        self.assertEquals(sel.get_table('widget.0.0'), self.kvm.fqdn)
+
+    def test_search_hypervisor_is_not(self):
+        sel = self.selenium
+        sel.open('mine')
+        sel.select('systemsearch_0_table', 'label=System/Hypervisor')
+        self.wait_for_condition(lambda: sel.is_element_present('//select[@id="systemsearch_0_value"]'))
+        sel.select('systemsearch_0_operation', 'label=is not')
+        sel.select('systemsearch_0_value', 'KVM')
+        sel.click('Search')
+        sel.wait_for_page_to_load('30000')
+        self.assertEqual(sel.get_title(), 'My Systems')
+        row_count = int(sel.get_xpath_count('//table[@id="widget"]/tbody/tr'))
+        self.assertEquals(row_count, 2)
+        self.assertEquals(sel.get_table('widget.0.0'), self.xen.fqdn)
+        self.assertEquals(sel.get_table('widget.1.0'), self.phys.fqdn)
+
+    def test_search_hypervisor_is_blank(self):
+        sel = self.selenium
+        sel.open('mine')
+        sel.select('systemsearch_0_table', 'label=System/Hypervisor')
+        self.wait_for_condition(lambda: sel.is_element_present('//select[@id="systemsearch_0_value"]'))
+        sel.select('systemsearch_0_operation', 'label=is')
+        sel.select('systemsearch_0_value', '')
+        sel.click('Search')
+        sel.wait_for_page_to_load('30000')
+        self.assertEqual(sel.get_title(), 'My Systems')
+        row_count = int(sel.get_xpath_count('//table[@id="widget"]/tbody/tr'))
+        self.assertEquals(row_count, 1)
+        self.assertEquals(sel.get_table('widget.0.0'), self.phys.fqdn)

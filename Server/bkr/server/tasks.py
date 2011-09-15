@@ -149,16 +149,8 @@ class Tasks(RPCRoot):
             # if not a list, make it into a list.
             if isinstance(filter['packages'], str):
                 filter['packages'] = [filter['packages']]
-            tasks = tasks.join('runfor')
-            or_runfor = []
-            for package in filter['packages']:
-                try:
-                    taskpackage = TaskPackage.by_name(package)
-                    or_runfor.append(TaskPackage.id==taskpackage.id)
-                except InvalidRequestError, err:
-                    # ignore invalid packages
-                    pass
-            tasks = tasks.filter(or_(*or_runfor))
+            tasks = tasks.filter(Task.runfor.any(or_(
+                    *[TaskPackage.package == package for package in filter['packages']])))
 
         # Filter by type if specified
         # Tier1, Regression, KernelTier1, etc..
@@ -180,6 +172,7 @@ class Tasks(RPCRoot):
         return [dict(name = task.name, arches = [str(arch.arch) for arch in task.excluded_arch]) for task in tasks]
 
     @cherrypy.expose
+    @identity.require(identity.not_anonymous())
     def upload(self, task_rpm_name, task_rpm_data):
         """
         Uploads a new task RPM.
@@ -206,6 +199,7 @@ class Tasks(RPCRoot):
             return "Success"
 
     @expose()
+    @identity.require(identity.not_anonymous())
     def save(self, task_rpm, *args, **kw):
         """
         TurboGears method to upload task rpm package
@@ -223,11 +217,12 @@ class Tasks(RPCRoot):
             FH.close()
             try:
                 task = self.process_taskinfo(self.read_taskinfo(rpm_file))
-            except (ValueError,ParserError,ParserWarning,rpm.error), err:
+            except Exception, err:
                 # Delete invalid rpm
                 os.unlink(rpm_file)
                 session.rollback()
-                flash(_(u'Failed to import because of %s' % err ))
+                log.exception('Failed to import %s', task_rpm.filename)
+                flash(_(u'Failed to import task: %s' % err))
                 redirect(url("./new"))
 
             flash(_(u"%s Added/Updated at id:%s" % (task.name,task.id)))
@@ -411,7 +406,12 @@ class Tasks(RPCRoot):
     def process_taskinfo(self, raw_taskinfo):
         tinfo = testinfo.parse_string(raw_taskinfo['desc'])
 
-        task = Task.lazy_create(name=tinfo.test_name)
+        try:
+            task = Task.by_name(tinfo.test_name)
+        except InvalidRequestError, e:
+            if str(e) != 'No rows returned for one()':
+                raise
+            task = Task(name=tinfo.test_name)
         # RPM is the same version we have. don't process		
         if task.version == raw_taskinfo['hdr']['ver']:
             raise BX(_("Failed to import,  %s is the same version we already have" % task.version))
@@ -464,11 +464,18 @@ class Tasks(RPCRoot):
         task.path = tinfo.test_path
         for runfor in tinfo.runfor:
             task.runfor.append(TaskPackage.lazy_create(package=runfor))
+        task.priority = tinfo.priority
+        task.destructive = tinfo.destructive
         for require in tinfo.requires:
             task.required.append(TaskPackage.lazy_create(package=require))
         for need in tinfo.needs:
             task.needs.append(TaskPropertyNeeded(property=need))
         task.license = tinfo.license
+        # older versions of rhts-devel permitted absent Owner
+        if not tinfo.owner:
+            raise BX(_('Owner field must be present in testinfo.desc'))
+        task.owner = tinfo.owner
+        task.uploader = identity.current.user
         task.valid = True
 
         return task
@@ -496,7 +503,7 @@ class Tasks(RPCRoot):
                 taskinfo_file = file
         if taskinfo_file:
             p1 = Popen(["rpm2cpio", rpm_file], stdout=PIPE)
-            p2 = Popen(["cpio", "--extract" , "--to-stdout", ".%s" % taskinfo_file], stdin=p1.stdout, stdout=PIPE)
+            p2 = Popen(["cpio", "--quiet", "--extract" , "--to-stdout", ".%s" % taskinfo_file], stdin=p1.stdout, stdout=PIPE)
             taskinfo['desc'] = p2.communicate()[0]
         return taskinfo
 

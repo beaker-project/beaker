@@ -5,7 +5,7 @@ from turbogears.config import get
 from turbogears import url
 from copy import copy
 import ldap
-from sqlalchemy import (Table, Column, ForeignKey, UniqueConstraint,
+from sqlalchemy import (Table, Column, Index, ForeignKey, UniqueConstraint,
                         String, Unicode, Integer, DateTime,
                         UnicodeText, Boolean, Float, VARCHAR, TEXT, Numeric,
                         or_, and_, not_, select, case, func)
@@ -430,6 +430,7 @@ osversion_table = Table('osversion', metadata,
            nullable=False, primary_key=True),
     Column('osmajor_id', Integer, ForeignKey('osmajor.id')),
     Column('osminor',Unicode(255)),
+    UniqueConstraint('osmajor_id', 'osminor', name='osversion_uix_1'),
     mysql_engine='InnoDB',
 )
 
@@ -1030,10 +1031,11 @@ task_table = Table('task',metadata,
 
         Column('creation_date', DateTime, default=datetime.utcnow),
         Column('update_date', DateTime, onupdate=datetime.utcnow),
-        Column('owner_id', Integer,
-                ForeignKey('tg_user.user_id')),
+        Column('uploader_id', Integer, ForeignKey('tg_user.user_id')),
+        Column('owner', Unicode(255), index=True),
         Column('version', Unicode(256)),
         Column('license', Unicode(256)),
+        Column('priority', Unicode(256)),
         Column('valid', Boolean, default=True),
         mysql_engine='InnoDB',
 )
@@ -1358,6 +1360,9 @@ class SystemObject(MappedObject):
     get_fields = classmethod(get_fields)
 
 class SystemAdmin(MappedObject):
+    # XXX We should get rid of this class all together
+    # and just query on System.admins or Group.admin_systems
+    # Needs to be fixed in Group.can_admin_system()
     pass
 
 class Group(object):
@@ -1411,7 +1416,7 @@ class System(SystemObject):
     def __init__(self, fqdn=None, status=None, contact=None, location=None,
                        model=None, type=None, serial=None, vendor=None,
                        owner=None, lab_controller=None, lender=None,
-                       hypervisor=None):
+                       hypervisor=None, loaned=None, memory=None):
         self.fqdn = fqdn
         self.status = status
         self.contact = contact
@@ -1424,6 +1429,8 @@ class System(SystemObject):
         self.lab_controller = lab_controller
         self.lender = lender
         self.hypervisor = hypervisor
+        self.loaned = loaned
+        self.memory = memory
     
     def to_xml(self, clone=False):
         """ Return xml describing this system """
@@ -1697,7 +1704,6 @@ url --url=$tree
         #  right now we only support cobbler
         if self.lab_controller:
             return CobblerAPI(self)
-
     remote = property(remote)
 
     @classmethod
@@ -1905,44 +1911,36 @@ url --url=$tree
         else:
             return False
 
-    def is_admin(self,group_id=None,user_id=None,groups=None,*args,**kw):
-        try:
-            if identity.in_group('admin'): #first let's see if we are an _admin_
-                return True
-        except AttributeError,e: pass #We may not be logged in...
+    def is_admin(self, user=None, *args, **kw):
+        # We are either using a passed in user, or the current user, not both
+        if not user:
+            try:
+                user = identity.current.user
+            except AttributeError, e: pass #May not be logged in
 
-        #If we are the owner....
-        if self.owner == User.by_id(user_id):
+        if not user: #Can't verify anything
+            return False
+
+        if user.is_admin(): #first let's see if we are an _admin_
             return True
 
-        if group_id: #Let's try this next as this will be the quicker query
-            try:
-                if self.admins.query().filter(SystemAdmin.group_id==group_id).one():
-                    return True
-            except InvalidRequestError, e:
-                return False
+        #If we are the owner....
+        if self.owner == user:
+            return True
 
-        if user_id: 
-                group_q = Group.query().join('users').filter_by(user_id=user_id)
-                g_ids = [e.group_id for e in group_q] 
-                admin_q = self.query().join(['admins']).filter(and_(SystemAdmin.group_id.in_(g_ids),SystemAdmin.system_id == self.id))
-             
-                if admin_q.count() > 0: 
-                    log.debug('We have a count of more than 1!!')
-                    return True
-                else:
-                    return False 
+        user_groups = user.groups
+        if user_groups:
+            admins = self.query().filter(System.admins.any(
+                and_(Group.group_id.in_([g.group_id for g in user_groups]),
+                System.id == self.id )))
+            if admins.count():
+                return True
 
-        #let's try the currently logged in user
-        groups = identity.current.user.groups
-        for group in groups:
-            if group.can_admin_system(self.id):
-                return True 
         return False
 
-    def can_admin(self,user=None,group_id=None): 
+    def can_admin(self,user=None):
         if user:
-            if user == self.owner or user.is_admin() or self.is_admin(group_id=group_id,user_id=user.user_id): 
+            if user == self.owner or user.is_admin() or self.is_admin(user=user):
                 return True
         return False
 
@@ -2310,7 +2308,8 @@ url --url=$tree
     def action_release(self):
         # Attempt to remove Netboot entry
         # and turn off machine, but don't fail if we can't
-        if self.release_action:
+        # It's possible that our LC has been removed
+        if self.remote and self.release_action:
             try:
                 self.remote.release(power=False)
                 self.release_action.do(self)
@@ -2599,6 +2598,10 @@ class Hypervisor(SystemObject):
         return an array of tuples containing id, hypervisor
         """
         return [(hvisor.id, hvisor.hypervisor) for hvisor in cls.query()]
+
+    @classmethod
+    def get_all_names(cls):
+        return [h.hypervisor for h in cls.query()]
 
     @classmethod
     @sqla_cache
@@ -3108,30 +3111,11 @@ class Distro(MappedObject):
 
     @classmethod
     def by_filter(cls, filter):
-        """
-        <distro>
-         <And>
-           <Require name='ARCH' operator='=' value='i386'/>
-           <Require name='FAMILY' operator='=' value='rhelserver5'/>
-           <Require name='TAG' operator='=' value='released'/>
-         </And>
-        </distro>
-        """
-        from needpropertyxml import ElementWrapper
-        import xmltramp
-        #FIXME Should validate XML before proceeding.
+        from bkr.server.needpropertyxml import apply_filter
         # Join on lab_controller_assocs or we may get a distro that is not on any 
         # lab controller anymore.
-        distros_table = distro_table
-        queries = []
-        for child in ElementWrapper(xmltramp.parse(filter)):
-            if callable(getattr(child, 'filter', None)):
-                (distros_table, query) = child.filter(distros_table)
-                queries.append(query)
-        distros = Distro.query().select_from(distros_table)\
-                        .join('lab_controller_assocs')
-        if queries:
-            distros = distros.filter(and_(*queries))
+        distros = Distro.query().join('lab_controller_assocs')
+        distros = apply_filter(filter, distros)
         return distros.order_by('-date_created')
 
     def to_xml(self, clone=False):
@@ -3162,38 +3146,9 @@ class Distro(MappedObject):
         return distro_requires
 
     def systems_filter(self, user, filter, join=['lab_controller']):
-        """
-        Return Systems that match the following filter
-        <host>
-         <And>
-           <Require name='MACHINE' operator='!=' value='dell-pe700-01.rhts.bos.redhat.com'/>
-           <Require name='ARCH' operator='=' value='i386'/>
-           <Require name='MEMORY' operator='>=' value='2048'/>
-           <Require name='POWER' operator='=' value='True'/>
-         </And>
-        </host>
-        System.query.\
-           join('key_values',aliased=True).\ 
-                filter_by(key_name='MEMORY').\
-                filter(key_value_table.c.key_value > 2048).\
-           join('key_values',aliased=True).\
-                filter_by(key_name='CPUFLAGS').\
-                filter(key_value_table.c.key_value == 'lm').\
-              all()
-        [hp-xw8600-02.rhts.bos.redhat.com]
-        """
-        from needpropertyxml import ElementWrapper
-        import xmltramp
-        systems_table = system_table
-        #FIXME Should validate XML before processing.
-        queries = []
-        for child in ElementWrapper(xmltramp.parse(filter)):
-            if callable(getattr(child, 'filter', None)):
-                (systems_table, query) = child.filter(systems_table)
-                queries.append(query)
-        systems = System.query().select_from(systems_table)
-        if queries:
-            systems = systems.filter(and_(*queries))
+        from bkr.server.needpropertyxml import apply_filter
+        systems = System.query()
+        systems = apply_filter(filter, systems)
         systems = self.all_systems(user, join, systems)
         return systems
 
@@ -6016,6 +5971,11 @@ class Task(MappedObject):
     """
     Tasks that are available to schedule
     """
+
+    def __init__(self, **kwargs):
+        for k, v in kwargs.iteritems():
+            setattr(self, k, v)
+
     @property
     def task_dir(self):
         return get("basepath.rpms", "/var/www/beaker/rpms")
@@ -6060,9 +6020,11 @@ class Task(MappedObject):
                     nda = self.nda or False,
                     creation_date = '%s' % self.creation_date,
                     update_date = '%s' % self.update_date,
-                    uploader = '%s' % self.owner,
+                    owner = self.owner,
+                    uploader = self.uploader and self.uploader.user_name,
                     version = self.version,
                     license = self.license,
+                    priority = self.priority,
                     valid = self.valid or False,
                     types = ['%s' % type.type for type in self.types],
                     excluded_osmajor = ['%s' % osmajor.osmajor for osmajor in self.excluded_osmajor],
@@ -6271,7 +6233,7 @@ Cpu.mapper = mapper(Cpu, cpu_table, properties={
     'system': relation(System),
 })
 mapper(Arch, arch_table)
-mapper(SystemAdmin,system_admin_map_table,primary_key=[system_admin_map_table.c.system_id,system_admin_map_table.c.group_id])
+mapper(SystemAdmin, system_admin_map_table, primary_key=[system_admin_map_table.c.system_id, system_admin_map_table.c.group_id])
 mapper(Provision, provision_table,
        properties = {'provision_families':relation(ProvisionFamily,
             collection_class=attribute_mapped_collection('osmajor'),
@@ -6361,11 +6323,11 @@ mapper(User, users_table,
       'lab_controller' : relation(LabController, uselist=False),
 })
 
-Group.mapper = mapper(Group, groups_table,
-        properties=dict(users=relation(User,uselist=True, secondary=user_group_table, backref='groups'),
-                        systems=relation(System,secondary=system_group_table, backref='groups'),
-                        admin_systems=relation(System,secondary=system_admin_map_table,backref='admins')))
-                        
+mapper(Group, groups_table,
+    properties=dict(users=relation(User, uselist=True, secondary=user_group_table, backref='groups'),
+        systems=relation(System, secondary=system_group_table, backref='groups'),
+        admin_systems=relation(System, secondary=system_admin_map_table,
+            backref='admins')))
 
 mapper(Permission, permissions_table,
         properties=dict(groups=relation(Group,
@@ -6436,7 +6398,7 @@ mapper(Task, task_table,
                       'needs':relation(TaskPropertyNeeded),
                       'bugzillas':relation(TaskBugzilla, backref='task',
                                             cascade='all, delete-orphan'),
-                      'owner':relation(User, uselist=False, backref='tasks'),
+                      'uploader':relation(User, uselist=False, backref='tasks'),
                      }
       )
 

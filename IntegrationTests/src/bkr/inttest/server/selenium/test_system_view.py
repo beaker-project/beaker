@@ -430,7 +430,7 @@ class SystemViewTest(SeleniumTestCase):
         sel.type('Owner_user', new_owner.user_name)
         sel.submit('Owner')
         sel.wait_for_page_to_load('30000')
-        self.assertEquals(sel.get_title(), 'Systems')
+        self.assertEquals(sel.get_title(), self.system.fqdn)
         self.assertEquals(sel.get_text('css=.flash'), 'OK')
         session.refresh(self.system)
         self.assertEquals(self.system.owner, new_owner)
