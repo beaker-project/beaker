@@ -19,5 +19,4 @@ set -x
 #If you want to run unittests for beaker client, in your env set BEAKER_CLIENT_TEST_QPID=1,
 # and also set BEAKER_CLIENT_TEST_QPID_BROKER to something reasonable
 #
-env BEAKER_LABCONTROLLER_CONFIG_FILE=labcontroller-test.cfg \
-  PYTHONPATH=../Common:../Server:../Client/src:../IntegrationTests/src${PYTHONPATH:+:$PYTHONPATH} nosetests ${*:--v bkr}
+env PYTHONPATH=../Common:../Server:../LabController/proxy/src:../Client/src:../IntegrationTests/src${PYTHONPATH:+:$PYTHONPATH} nosetests ${*:--v bkr}
