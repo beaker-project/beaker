@@ -376,7 +376,7 @@ class Distros(RPCRoot):
         try:
             os_minor = version.split('.')[1]
         except IndexError:
-            os_minor = 0
+            os_minor = '0'
 
         # Try and find OSMajor
         try:

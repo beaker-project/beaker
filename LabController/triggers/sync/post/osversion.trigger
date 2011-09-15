@@ -197,8 +197,8 @@ def update_comment(distro):
     paths = get_paths(distro)
     if not paths:
         return distro
-    family = ""
-    update = 0
+    family = ''
+    update = '0'
     myparser = MyConfigParser("%s/../../.composeinfo" % paths['tree_path'])
     # Use the name of the tree from .composeinfo if it exists.
     distro['treename'] = distro.get('treename') or \
@@ -261,7 +261,7 @@ def update_comment(distro):
                             if releaseregex.search(release).group(3):
                                 update = releaseregex.search(release).group(3)
                             else:
-                                update = 0
+                                update = '0'
                     if entry.name == './etc/redhat-release':
                         release = entry.read().split('\n')[0]
                         updateregex = re.compile(r'Update\s(\d+)')
