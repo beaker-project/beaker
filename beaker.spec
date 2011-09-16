@@ -2,8 +2,8 @@
 %{!?pyver: %global pyver %(%{__python} -c "import sys ; print sys.version[:3]")}
 
 Name:           beaker
-Version:        0.7.1
-Release:        2%{?dist}
+Version:        0.7.2
+Release:        1%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -283,6 +283,27 @@ fi
 %{_var}/lib/beaker/addDistro.d/*
 
 %changelog
+* Fri Sep 16 2011 Raymond Mancy <rmancy@redhat.com> 0.7.2-1
+- 640395  -  make bkradd does not work (bpeck@redhat.com)
+- 617274 - Owner field should be mandatory (dcallagh@redhat.com)
+- 736989 - fix bkr distros-list --treepath (dcallagh@redhat.com)
+- 734535 - beaker-transfer query used on scheduler is inefficient.
+  (bpeck@redhat.com)
+- 734850 - beaker-watchdog run method doesn't handle exceptions
+  (bpeck@redhat.com)
+- 569909 - Add user SSH public keys (stl@redhat.com)
+- 728394 - bkr client command for testing harness installation
+  (dcallagh@redhat.com)
+- 713578 - Filter matrix job by multiple whiteboards. (rmancy@redhat.com)
+- 733966 - Initial version of check script for beaker server
+  (rmancy@redhat.com)
+
+- Added: Environment and RhtsOptions to metadata (mcsontos@redhat.com)
+- workflow-xslt: Implement support for boolean arguments (davids@redhat.com)
+- after importing distros run beaker-repo-update (bpeck@redhat.com)
+- fix for beaker labcontroller task (bpeck@redhat.com)
+- Enhanced ausearch. (mcsontos@redhat.com)
+- Added: CompatService to RhtsOptions (mcsontos@redhat.com)
 * Wed Sep 14 2011 Bill Peck <bpeck@redhat.com> 0.7.1-2
 - 738319 when importing distros osminor doesn't enforce a string
   (bpeck@redhat.com)
