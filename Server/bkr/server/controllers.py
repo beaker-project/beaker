@@ -233,7 +233,7 @@ class Root(RPCRoot):
     prefs_form   = widgets.TableForm(
         'UserPrefs',
         fields = [email],
-        action = 'save_data',
+        action = 'save_prefs',
         submit_text = _(u'Change'),
     )
 
@@ -254,6 +254,19 @@ class Root(RPCRoot):
         submit_text = _(u'Change'),
         validator=OwnerFormValidatorSchema(),
     )  
+
+    sshkey     = widgets.TextArea(name='ssh_pub_key', label='Public SSH Key') 
+
+    class SSHKeyAddFormValidatorSchema(validators.Schema):
+        pubkey = validators.NotEmpty()
+
+    ssh_key_add_form = widgets.TableForm(
+        'SSH Public Key',
+        fields = [sshkey],
+        action = 'ssh_key_add',
+        submit_text = _(u'Add'),
+        validator=SSHKeyAddFormValidatorSchema(),
+    )
 
     system_form = SystemForm()
     power_form = PowerForm(name='power')
@@ -419,15 +432,16 @@ class Root(RPCRoot):
         return self._systems(systems=System.all(identity.current.user),
                 title=u'Systems', *args, **kw)
 
-    @expose(template='bkr.server.templates.form')
+    @expose(template='bkr.server.templates.prefs')
     @identity.require(identity.not_anonymous())
     def prefs(self, *args, **kw):
         user = identity.current.user
         return dict(
             title    = 'User Prefs',
-            form     = self.prefs_form,
+            forms    = [self.prefs_form, self.ssh_key_add_form],
             widgets  = {},
             action   = '/save_prefs',
+            ssh_keys = user.sshpubkeys,
             value    = user,
             options  = None)
 
@@ -440,7 +454,44 @@ class Root(RPCRoot):
         if email and email != identity.current.user.email_address:
             flash(_(u"Email Address Changed"))
             identity.current.user.email_address = email
-        redirect('/')
+        redirect('/prefs')
+
+    @expose()
+    @identity.require(identity.not_anonymous())
+    def ssh_key_add(self, *args, **kw):
+        user = identity.current.user
+        pubkey = kw.get('ssh_pub_key', None) 
+        
+        try:
+            keytype, keyval, keyident = pubkey.split()
+        except ValueError:
+            flash(_(u"Invalid SSH key"))
+            redirect('/prefs')
+            
+        k = SSHPubKey(keytype, keyval, keyident)
+        user.sshpubkeys.append(k)
+        flash(_(u"SSH public key added"))
+        redirect('/prefs')
+
+    @expose()
+    @identity.require(identity.not_anonymous())
+    def ssh_key_remove(self, *args, **kw):
+        user = identity.current.user
+        keyid = kw.get('id', None) 
+        
+        try:
+            key = SSHPubKey.by_id(keyid)
+        except InvalidRequestError:
+            flash(_(u"SSH key not found"))
+            redirect('/prefs')
+
+        if user != key.user:
+            flash(_(u"May not remove another user's keys"))
+            redirect('/prefs')
+
+        session.delete(key)
+        flash(_(u"SSH public key removed"))
+        redirect('/prefs')
 
     @expose(template='bkr.server.templates.grid')
     @expose(template='bkr.server.templates.systems_feed', format='xml', as_format='atom',
