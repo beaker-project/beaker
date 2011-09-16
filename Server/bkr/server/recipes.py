@@ -33,6 +33,7 @@ from socket import gethostname
 from bkr.upload import Uploader
 import exceptions
 import time
+import urlparse
 
 import cherrypy
 
@@ -71,26 +72,25 @@ class Recipes(RPCRoot):
 
     @cherrypy.expose
     @identity.require(identity.not_anonymous())
-    def by_log_server(self, server, days=1):
+    def by_log_server(self, server, limit=50):
        """
-       Return a list of recipes which have logs which start with server, default to 
-       last day
+       Return a list of recipes which have logs which belong to server
+       default limit of 50 at a time.
        """
-       timedifference = datetime.utcnow() - timedelta(days=days)
        finished = [u'Completed',u'Aborted',u'Cancelled']
        recipes = Recipe\
                  .query().join(['status'])\
                          .outerjoin(['logs'])\
                          .outerjoin(['tasks','logs'])\
-                         .filter(recipe_table.c.finish_time > timedifference)\
-                         .filter(task_status_table.c.status.in_(finished))\
-                         .filter(or_(log_recipe_table.c.server.like('%s%%' % server),
-                                     log_recipe_task_table.c.server.like('%s%%' % server)))
+                         .filter(recipe_table.c.finish_time != None)\
+                         .filter(or_(log_recipe_table.c.server == server,
+                                     log_recipe_task_table.c.server == server))\
+                 .limit(limit)
        return [r.id for r in recipes]
 
     @cherrypy.expose
     @identity.require(identity.not_anonymous())
-    def register_file(self, server, recipe_id, path, name, basepath):
+    def register_file(self, server_url, recipe_id, path, name, basepath):
         """
         register file and return path to store
         """
@@ -101,7 +101,10 @@ class Recipes(RPCRoot):
 
         # Add the log to the DB if it hasn't been recorded yet.
         if LogRecipe(path,name) not in recipe.logs:
-            recipe.logs.append(LogRecipe(path, name, server, basepath))
+            # Pull server out of server_url.
+            server = urlparse.urlparse(server_url)[1]
+            recipe.logs.append(LogRecipe(path, name, server_url, 
+                                         server, basepath))
         return '%s' % recipe.filepath
 
     @cherrypy.expose
@@ -118,7 +121,7 @@ class Recipes(RPCRoot):
 
     @cherrypy.expose
     @identity.require(identity.not_anonymous())
-    def change_files(self, recipe_id, server, basepath):
+    def change_files(self, recipe_id, server_url, basepath):
         """
         Change the server and basepath where the log files lives, Usually
          used to move from lab controller cache to archive storage.
@@ -128,14 +131,14 @@ class Recipes(RPCRoot):
         except InvalidRequestError:
             raise BX(_('Invalid recipe ID: %s' % recipe_id))
         for mylog in recipe.all_logs:
-            myserver = '%s/%s' % (server, mylog['filepath'])
+            myserver = '%s/%s' % (server_url, mylog['filepath'])
             mybasepath = '%s/%s' % (basepath, mylog['filepath'])
             self.change_file(mylog['tid'], myserver, mybasepath)
         return True
 
     @cherrypy.expose
     @identity.require(identity.not_anonymous())
-    def change_file(self, tid, server, basepath):
+    def change_file(self, tid, server_url, basepath):
         """
         Change the server and basepath where the log file lives, Usually
          used to move from lab controller cache to archive storage.
@@ -146,7 +149,9 @@ class Recipes(RPCRoot):
                 mylog = self.log_types[log_type.upper()].by_id(log_id)
             except InvalidRequestError, e:
                 raise BX(_("Invalid %s" % tid))
+        server = urlparse.urlparse(server_url)[1]
         mylog.server = server
+        mylog.server_url = server_url
         mylog.basepath = basepath
         return True
 

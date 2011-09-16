@@ -25,6 +25,7 @@ from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.helpers import *
 from bexceptions import *
 from bkr.upload import Uploader
+from urlparse import urlparse
 #from turbogears.scheduler import add_interval_task
 
 import cherrypy
@@ -40,7 +41,7 @@ class RecipeTasks(RPCRoot):
 
     @cherrypy.expose
     @identity.require(identity.not_anonymous())
-    def register_file(self, server, task_id, path, name, basepath):
+    def register_file(self, server_url, task_id, path, name, basepath):
         """
         register file and return path to store
         """
@@ -51,7 +52,8 @@ class RecipeTasks(RPCRoot):
 
        # Add the log to the DB if it hasn't been recorded yet.
         if LogRecipeTask(path,name) not in recipetask.logs:
-            recipetask.logs.append(LogRecipeTask(path, name, server, basepath))
+            server = urlparse(server_url)[1]
+            recipetask.logs.append(LogRecipeTask(path, name, server_url, server, basepath))
         return '%s' % recipetask.filepath
 
     @cherrypy.expose
@@ -78,7 +80,7 @@ class RecipeTasks(RPCRoot):
 
     @cherrypy.expose
     @identity.require(identity.not_anonymous())
-    def register_result_file(self, server, result_id, path, name, basepath):
+    def register_result_file(self, server_url, result_id, path, name, basepath):
         """
         register file and return path to store
         """
@@ -89,7 +91,8 @@ class RecipeTasks(RPCRoot):
 
        # Add the log to the DB if it hasn't been recorded yet.
         if LogRecipeTaskResult(path,name) not in result.logs:
-            result.logs.append(LogRecipeTaskResult(path, name, server, basepath))
+            server = urlparse(server_url)[1]
+            result.logs.append(LogRecipeTaskResult(path, name, server_url, server, basepath))
         return '%s' % result.filepath
 
     @cherrypy.expose

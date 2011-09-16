@@ -36,6 +36,8 @@ import bkr.timeout_xmlrpclib
 import os
 import shutil
 import urllib
+import urlparse
+import posixpath
 
 from turbogears import identity
 
@@ -767,7 +769,8 @@ log_recipe_table = Table('log_recipe', metadata,
         Column('path', UnicodeText()),
         Column('filename', UnicodeText(), nullable=False),
         Column('start_time',DateTime, default=datetime.utcnow),
-	Column('server', UnicodeText()),
+	Column('server', Unicode(256), index=True),
+	Column('server_url', UnicodeText()),
 	Column('basepath', UnicodeText()),
         mysql_engine='InnoDB',
 )
@@ -779,7 +782,8 @@ log_recipe_task_table = Table('log_recipe_task', metadata,
         Column('path', UnicodeText()),
         Column('filename', UnicodeText(), nullable=False),
         Column('start_time',DateTime, default=datetime.utcnow),
-	Column('server', UnicodeText()),
+	Column('server', Unicode(256), index=True),
+	Column('server_url', UnicodeText()),
 	Column('basepath', UnicodeText()),
         mysql_engine='InnoDB',
 )
@@ -791,7 +795,8 @@ log_recipe_task_result_table = Table('log_recipe_task_result', metadata,
         Column('path', UnicodeText()),
         Column('filename', UnicodeText(), nullable=False),
         Column('start_time',DateTime, default=datetime.utcnow),
-	Column('server', UnicodeText()),
+	Column('server', Unicode(256), index=True),
+	Column('server_url', UnicodeText()),
 	Column('basepath', UnicodeText()),
         mysql_engine='InnoDB',
 )
@@ -3611,10 +3616,12 @@ class Log(MappedObject):
 
     MAX_ENTRIES_PER_DIRECTORY = 100
 
-    def __init__(self, path=None, filename=None, server=None, basepath=None):
+    def __init__(self, path=None, filename=None, server_url=None, 
+                 server=None, basepath=None):
         self.path = path
         self.filename = filename
         self.server = server
+        self.server_url = server_url
         self.basepath = basepath
 
     def result(self):
@@ -3623,39 +3630,38 @@ class Log(MappedObject):
     result = property(result)
 
     def full_log_directory(self):
-        if self.server:
+        if self.server_url:
             return self.log_directory()
         else:
             return '%s/%s' % (self.parent.logspath, self.log_directory())
 
     def log_directory(self):
-        # if server is defined then the logs are stored elsewhere
-        if self.server:
-            dir = '%s/%s' % (self.server, self.path or '')
-            servermatch = re.search('(^https?://.+?)(/.+)$', dir) # split the server from the path
-            server = servermatch.group(1)
-            path = servermatch.group(2)
-            dir = '%s%s' % (server, re.sub('/{2,}','/', path))
+        # if url is defined then the logs are stored elsewhere
+        if self.server_url:
+            dir = '%s/%s' % (self.server_url, self.path or '')
+            presult = urlparse.urlparse(dir)
+            server_url = '%s://%s' % (presult[0], presult[1])
+            dir = '%s%s' % (server_url, posixpath.normpath(presult[2]))
         else:
             dir = '%s/%s' % (self.parent.filepath, self.path or '')
-            dir = re.sub('/{2,}','/', dir)
+            dir = posixpath.normpath(dir)
 
         return dir
 
     def log_url(self):
-        if self.server:
-            url = '%s/%s' % (self.log_directory(), self.filename)
+        if self.server_url:
+            server_url = '%s/%s' % (self.log_directory(), self.filename)
         else:
-            url = '/logs/%s/%s' % (self.log_directory(), self.filename)
-        return url
+            server_url = '/logs/%s/%s' % (self.log_directory(), self.filename)
+        return server_url
 
     def link(self):
         """ Return a link to this Log
         """
         text = "%s/%s" % (self.path != '/' and self.path or '', self.filename)
         text = text[-50:]
-        url = self.log_url()
-        return make_link(url = url,
+        server_url = self.log_url()
+        return make_link(url = server_url,
                          text = text)
     link = property(link)
 
@@ -3663,12 +3669,13 @@ class Log(MappedObject):
     def dict(self):
         """ Return a dict describing this log
         """
-        return dict(server   = self.server,
-                    path     = self.path,
-                    filename = self.filename,
-                    tid      = '%s:%s' % (self.type, self.id),
-                    filepath = self.parent.filepath,
-                    basepath = self.basepath,
+        return dict(server     = self.server,
+                    server_url = self.server_url,
+                    path       = self.path,
+                    filename   = self.filename,
+                    tid        = '%s:%s' % (self.type, self.id),
+                    filepath   = self.parent.filepath,
+                    basepath   = self.basepath,
                    )
 
     @classmethod 
