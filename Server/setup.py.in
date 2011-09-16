@@ -224,6 +224,7 @@ setup(
             'beakerd = bkr.server.tools.beakerd:main',
             'nag-mail = bkr.server.tools.nag_email:main',
             'log-delete = bkr.server.tools.log_delete:main',
+            'beaker-check = bkr.server.tools.check_beaker:main',
             'beaker-cleanup-visits = bkr.server.tools.cleanup_visits:main',
             'beaker-repo-update = bkr.server.tools.repo_update:main',
             'beaker-delete-system = bkr.server.tools.delete_system:main',

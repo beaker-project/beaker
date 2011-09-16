@@ -223,6 +223,7 @@ fi
 %{_bindir}/%{name}-init
 %{_bindir}/nag-mail
 %{_bindir}/log-delete
+%{_bindir}/beaker-check
 %{_bindir}/product-update
 %{_bindir}/beaker-repo-update
 %{_bindir}/%{name}-cleanup-visits
