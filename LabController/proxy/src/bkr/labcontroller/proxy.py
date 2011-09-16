@@ -404,7 +404,12 @@ class Watchdog(ProxyHelper):
                     self.logger.info("Removed Monitor for %s" % watchdog_system)
 
     def run(self):
-        updated = [1 for monitor in self.watchdogs.values() if monitor.run()]
+        updated = False
+        for monitor in self.watchdogs.values():
+            try:
+                updated |= monitor.run()
+            except (xmlrpclib.Fault, OSError):
+                self.logger.exception('Failed to run monitor for %s' % monitor.watchdog['system'])
         return bool(updated)
 
     def sleep(self):
