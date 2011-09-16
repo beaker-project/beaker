@@ -15,7 +15,7 @@ function compareArray(a,b) {
 $(document).ready( function() {
     current_job_ids = $('#remote_form_job_ids').val().split(" ")
 
-    $('#${whiteboard_filter.field_id}').blur(function () { matrix.filter_on_whiteboard()  } )
+    $('#${whiteboard_filter_button.field_id}').click(function () { matrix.filter_on_whiteboard()  } )
     $('#${whiteboard.field_id}').click(function () { 
         matrix.clicked_whiteboard() 
     } )
@@ -34,10 +34,11 @@ $(document).ready( function() {
      <div style='float:left'> 
     
          <h3 style="display:inline"> ${whiteboard.label}</h3><br />
-         <div class='margined' onclick="javascript:JobMatrix.clicked_whiteboard()" py:content="whiteboard.display(options=whiteboard_options)" />   
+         <div class='margined' onclick="javascript:matrix.clicked_whiteboard()" py:content="whiteboard.display(options=whiteboard_options)" />
 
          <strong class='smallfont'>${whiteboard_filter.label}</strong>
          <span style='display:inline'  py:content='whiteboard_filter.display()' />
+         <span style='display:inline' py:content="whiteboard_filter_button.display(options={'label' : 'Filter'})" />
          <span id='loading' class='hidden'>&nbsp;&nbsp;&nbsp;&nbsp;</span>
     </div>
       

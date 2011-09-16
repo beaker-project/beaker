@@ -27,6 +27,7 @@ class TestJobMatrix(SeleniumTestCase):
     def setUp(self):
         self.job_whiteboard = u'DanC says hi %d' % int(time.time() * 1000)
         self.recipe_whiteboard = u'breakage lol \'#&^!<'
+        self.job_whiteboard_2 = u'rmancy says bye %d' % int(time.time() * 1000)
         self.passed_job = data_setup.create_completed_job(
                 whiteboard=self.job_whiteboard, result=u'Pass',
                 recipe_whiteboard=self.recipe_whiteboard,
@@ -45,6 +46,15 @@ class TestJobMatrix(SeleniumTestCase):
 
     def tearDown(self):
         self.selenium.stop()
+
+    def test_filter_button(self):
+        sel = self.selenium
+        sel.open('matrix')
+        sel.wait_for_page_to_load('30000')
+        sel.type("remote_form_whiteboard_filter", self.job_whiteboard[:int(len(self.job_whiteboard) /2)])
+        sel.click("remote_form_do_filter")
+        self.wait_and_try(lambda: self.assert_(self.job_whiteboard in sel.get_text('//select[@id="remote_form_whiteboard"]')))
+        
 
     def test_generate_by_whiteboard(self):
         sel = self.selenium
@@ -66,6 +76,21 @@ class TestJobMatrix(SeleniumTestCase):
         sel.wait_for_page_to_load('30000')
         body_2 = sel.get_text('//body')
         self.assert_('Pass: 2' in body_2)
+
+        #Try with multiple whiteboards
+        another_new_job = data_setup.create_completed_job(
+            whiteboard=self.job_whiteboard_2, result=u'Pass',
+            recipe_whiteboard=self.recipe_whiteboard,
+            distro=data_setup.create_distro(arch=u'i386'))
+        session.flush()
+        sel.open('matrix')
+        sel.wait_for_page_to_load('30000')
+        sel.add_selection("whiteboard", "label=%s" % self.job_whiteboard)
+        sel.add_selection("whiteboard", "label=%s" % self.job_whiteboard_2)
+        sel.click('//input[@value="Generate"]')
+        sel.wait_for_page_to_load('30000')
+        body = sel.get_text('//body')
+        self.assert_('Pass: 3' in body)
 
     def test_it(self):
         sel = self.selenium
