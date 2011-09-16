@@ -510,6 +510,17 @@ user_group_table = Table('user_group', metadata,
     mysql_engine='InnoDB',
 )
 
+sshpubkey_table = Table('sshpubkey', metadata,
+    Column('id', Integer, autoincrement=True, nullable=False,
+        primary_key=True),
+    Column('user_id', Integer, ForeignKey('tg_user.user_id',
+        onupdate='CASCADE', ondelete='CASCADE'), nullable=False),
+    Column('keytype', Unicode(16), nullable=False),
+    Column('pubkey', UnicodeText(), nullable=False),
+    Column('ident', Unicode(63), nullable=False),
+    mysql_engine='InnoDB',
+)
+
 system_group_table = Table('system_group', metadata,
     Column('system_id', Integer, ForeignKey('system.id',
         onupdate='CASCADE', ondelete='CASCADE'), primary_key=True),
@@ -1237,6 +1248,19 @@ class User(object):
                 return True
         return False
 
+    def ssh_keys_ks(self, end=False):
+        end = end and "%end\n" or ""
+        if self.sshpubkeys:
+            key_ks_text = "\n".join("echo %s >> /root/.ssh/authorized_keys" % ssh_key\
+                                    for ssh_key in self.sshpubkeys)
+            key_ks_text = "%%post\nmkdir -p /root/.ssh\n%s\nrestorecon -R /root/.ssh\n"\
+                          "chmod go-w /root /root/.ssh /root/.ssh/authorized_keys\n%s"\
+                        % (key_ks_text, end)
+            return key_ks_text
+        else:
+            return None
+
+
 class Permission(object):
     """
     A relationship that determines what each Group can do
@@ -1585,7 +1609,7 @@ class System(SystemObject):
                 if not profile_id:
                     raise BX(_("%s profile not found on %s" % (profile, self.system.lab_controller.fqdn)))
                 if ks_appends:
-                    ks_appends_text = '#raw\n%s\n#end raw' % '\n'.join([ks.ks_append for ks in ks_appends])
+                    ks_appends_text = '#raw\n%s\n#end raw' % '\n'.join([ks for ks in ks_appends])
                     ks_file = '/var/lib/cobbler/snippets/per_system/ks_appends/%s' % self.system.fqdn
                     if self.remote.read_or_write_snippet(ks_file,
                                                          False,
@@ -2333,6 +2357,12 @@ url --url=$tree
         except AttributeError, e: #Anonymous can't provision now
             return False
 
+        if identity.current.user.sshpubkeys:
+            end = distro and distro.osversion.osmajor.osmajor.startswith("Fedora")
+            if not ks_appends:
+                ks_appends = []
+            ks_appends = ks_appends + [identity.current.user.ssh_keys_ks(end)]
+
         if not self.remote:
             return False
         self.remote.provision(distro=distro, 
@@ -2340,7 +2370,7 @@ url --url=$tree
                               kernel_options=kernel_options,
                               kernel_options_post=kernel_options_post,
                               kickstart=kickstart,
-                              ks_appends=None)
+                              ks_appends=ks_appends)
 
     def action_auto_provision(self, 
                              distro=None,
@@ -5862,6 +5892,8 @@ class RecipeKSAppend(MappedObject):
         ks_append.appendChild(text)
         return ks_append
 
+    def __repr__(self):
+        return self.ks_append
 
 class RecipeTaskComment(MappedObject):
     """
@@ -6148,6 +6180,20 @@ class TaskBugzilla(MappedObject):
 class Reservation(MappedObject): pass
 
 class SystemStatusDuration(MappedObject): pass
+
+class SSHPubKey(MappedObject):
+    def __init__(self, keytype, pubkey, ident):
+        self.keytype = keytype
+        self.pubkey = pubkey
+        self.ident = ident
+
+    def __repr__(self):
+        return "%s %s %s" % (self.keytype, self.pubkey, self.ident)
+
+    @classmethod
+    def by_id(cls, id):
+        return cls.query.filter_by(id=id).one()
+
 
 # set up mappers between identity tables and classes
 SystemType.mapper = mapper(SystemType, system_type_table)
@@ -6542,6 +6588,8 @@ mapper(Reservation, reservation_table, properties={
         'user': relation(User, backref=backref('reservations',
             order_by=[reservation_table.c.start_time.desc()])),
 })
+mapper(SSHPubKey, sshpubkey_table,
+        properties=dict(user=relation(User, uselist=False, backref='sshpubkeys')))
 
 ## Static list of device_classes -- used by master.kid
 global _device_classes

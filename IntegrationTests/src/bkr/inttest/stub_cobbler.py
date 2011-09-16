@@ -63,6 +63,7 @@ class StubCobbler(object):
         self.incomplete_tasks = set()
         self.profiles = {}
         self.kickstarts = {}
+        self.snippets = {}
         self.distros = {}
 
     def version(self):
@@ -158,6 +159,12 @@ class StubCobbler(object):
         assert token == 'logged_in'
         assert not read
         self.kickstarts[filename] = contents
+        return True
+
+    def read_or_write_snippet(self, filename, read, contents, token):
+        assert token == 'logged_in'
+        assert not read
+        self.snippets[filename] = contents
         return True
 
     def modify_profile(self, profile_handle, key, value, token):
