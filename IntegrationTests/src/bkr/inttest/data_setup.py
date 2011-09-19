@@ -357,6 +357,17 @@ def mark_job_waiting(job, user=None):
             recipe.watchdog = Watchdog(system=recipe.system)
             recipe.waiting()
 
+def mark_job_running(job, user=None):
+    mark_job_waiting(job, user=user)
+    for recipe in job.all_recipes:
+        for rt in recipe.tasks:
+            rt.start()
+
+def mark_job_queued(job):
+    for recipe in job.all_recipes:
+        recipe.process()
+        recipe.queue()
+
 def playback_task_results(task, xmltask):
     # Start task
     task.start()
