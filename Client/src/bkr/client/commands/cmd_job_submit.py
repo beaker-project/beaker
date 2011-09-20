@@ -24,12 +24,16 @@ Options
 
 .. option:: --debug
 
+   Legacy option, replaced by '--xml'
+
+.. option:: --xml
+
    Print the job XML before submitting it.
 
 .. option:: --convert
 
    Attempt to convert legacy RHTS XML to Beaker XML. Use this with 
-   :option:`--debug` and :option:`--dryrun` to grab the converted XML without 
+   :option:`--xml` and :option:`--dryrun` to grab the converted XML without 
    submitting it.
 
 .. option:: --combine
@@ -45,7 +49,7 @@ Options
 
 .. option:: --dryrun
 
-   Do not submit the job(s) to Beaker. Use this with :option:`--debug` to see 
+   Do not submit the job(s) to Beaker. Use this with :option:`--xml` to see 
    what would be submitted.
 
 .. option:: --wait
@@ -102,8 +106,15 @@ class Job_Submit(BeakerCommand):
 
     def options(self):
         self.parser.usage = "%%prog %s [options] <jobxml>..." % self.normalized_name
+        # This is now just legacy, --xml is the more accurate term
         self.parser.add_option(
             "--debug",
+            default=False,
+            action="store_true",
+            help="Alias for the --xml option",
+        )
+        self.parser.add_option(
+            "--xml",
             default=False,
             action="store_true",
             help="print the jobxml that it would submit",
@@ -143,6 +154,7 @@ class Job_Submit(BeakerCommand):
         convert  = kwargs.pop("convert", False)
         combine  = kwargs.pop("combine", False)
         debug   = kwargs.pop("debug", False)
+        print_xml = kwargs.pop("xml", False)
         dryrun  = kwargs.pop("dryrun", False)
         wait  = kwargs.pop("wait", False)
         ignore_missing_tasks = kwargs.pop('ignore_missing_tasks', False)
@@ -189,7 +201,7 @@ class Job_Submit(BeakerCommand):
         for jobxml in jobxmls:
             if convert:
                 jobxml = Convert.rhts2beaker(jobxml)
-            if debug:
+            if debug or print_xml:
                 print jobxml
             try:
                 job_schema.assertValid(lxml.etree.fromstring(jobxml))

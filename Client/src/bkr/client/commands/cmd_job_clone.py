@@ -9,7 +9,8 @@ Clone existing Beaker jobs
 Synopsis
 --------
 
-:program:`bkr job-clone` [--wait] [*options*] <taskspec>...
+| :program:`bkr job-clone` [*options*]
+|       [--wait] [--dryrun] [--xml] [--prettyxml] <taskspec>...
 
 Description
 -----------
@@ -30,6 +31,20 @@ Options
 
    When this option is given, the command will not terminate until the clone 
    job has finished running.
+
+.. option:: --xml
+
+   Print the job XML before submitting it.
+
+.. option:: --prettyxml
+
+   Print the job XML in a easily readable format before submitting it.
+
+.. option:: --dryrun
+
+   Run through the job-clone process without actually submitting the cloned job
+
+
 
 Common :program:`bkr` options are described in the :ref:`Options 
 <common-options>` section of :manpage:`bkr(1)`.
@@ -58,6 +73,7 @@ import sys
 from bkr.client import BeakerCommand
 from optparse import OptionValueError
 from bkr.client.task_watcher import *
+from xml.dom.minidom import parseString
 
 class Job_Clone(BeakerCommand):
     """Clone Jobs/RecipeSets"""
@@ -71,12 +87,32 @@ class Job_Clone(BeakerCommand):
             action="store_true",
             help="wait on job completion",
         )
-
+        self.parser.add_option(
+            "--dryrun",
+            default=False,
+            action="store_true",
+            help="Test the likely output of job-clone without cloning anything",
+        )
+        self.parser.add_option(
+            "--xml",
+            default=False,
+            action="store_true",
+            help="print the jobxml that it would submit",
+        )
+        self.parser.add_option(
+            "--prettyxml",
+            action="store_true",
+            default=False,
+            help="print the jobxml that it would submit, in pretty format",
+        )
 
     def run(self, *args, **kwargs):
         username = kwargs.pop("username", None)
         password = kwargs.pop("password", None)
         wait = kwargs.pop("wait", None)
+        xml = kwargs.pop("xml", None)
+        pretty = kwargs.pop("prettyxml", None)
+        dryrun = kwargs.pop("dryrun", None)
 
         submitted_jobs = []
         failed = False
@@ -89,12 +125,19 @@ class Job_Clone(BeakerCommand):
                     from_job = False
                 else:
                     from_job = True
-                submitted_jobs.append(self.hub.jobs.upload(self.hub.taskactions.to_xml(task,clone,from_job)))
+                jobxml = self.hub.taskactions.to_xml(task,clone,from_job)
+                if pretty:
+                    print parseString(jobxml).toprettyxml()
+                elif xml:
+                    print parseString(jobxml).toxml()
+                if not dryrun:
+                    submitted_jobs.append(self.hub.jobs.upload(jobxml))
             except Exception, ex:
                 failed = True
                 print ex
-        print "Submitted: %s" % submitted_jobs
-        if wait:
-            TaskWatcher.watch_tasks(self.hub, submitted_jobs)
+        if not dryrun:
+            print "Submitted: %s" % submitted_jobs
+            if wait:
+                TaskWatcher.watch_tasks(self.hub, submitted_jobs)
         if failed:
             sys.exit(1)
