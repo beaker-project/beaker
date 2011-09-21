@@ -3,7 +3,7 @@
 
 Name:           beaker
 Version:        0.7.2
-Release:        2%{?dist}
+Release:        3%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -283,7 +283,7 @@ fi
 %{_var}/lib/beaker/addDistro.d/*
 
 %changelog
-* Fri Sep 16 2011 Raymond Mancy <rmancy@redhat.com> 0.7.2-2
+* Fri Sep 16 2011 Raymond Mancy <rmancy@redhat.com> 0.7.2-3
 - 640395  -  make bkradd does not work (bpeck@redhat.com)
 - 617274 - Owner field should be mandatory (dcallagh@redhat.com)
 - 736989 - fix bkr distros-list --treepath (dcallagh@redhat.com)
