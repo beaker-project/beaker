@@ -449,6 +449,7 @@ class BeakerRecipeBase(BeakerBase):
         self.node.setAttribute('whiteboard','')
         andDistroRequires = self.doc.createElement('and')
         andHostRequires = self.doc.createElement('and')
+        partitions = self.doc.createElement('partitions')
         distroRequires = self.doc.createElement('distroRequires')
         hostRequires = self.doc.createElement('hostRequires')
         repos = self.doc.createElement('repos')
@@ -457,6 +458,7 @@ class BeakerRecipeBase(BeakerBase):
         self.node.appendChild(distroRequires)
         self.node.appendChild(hostRequires)
         self.node.appendChild(repos)
+        self.node.appendChild(partitions)
 
     def addBaseRequires(self, *args, **kwargs):
         """ Add base requires """
@@ -581,6 +583,24 @@ class BeakerRecipeBase(BeakerBase):
         recipeTask.appendChild(params)
         self.node.appendChild(recipeTask)
 
+    def addPartition(self,name=None, type=None, fs=None, size=None):
+        """ add a partition node
+        """
+        if name:
+            partition = self.doc.createElement('partition')
+            partition.setAttribute('name', str(name))
+        else:
+            raise ValueError(u'You must specify name when adding a partition')
+        if size:
+            partition.setAttribute('size', str(size))
+        else:
+            raise ValueError(u'You must specify size when adding a partition')
+        if type:
+            partition.setAttribute('type', str(type))
+        if fs:
+            partition.setAttribute('fs', str(fs))
+        self.partitions.appendChild(partition)
+
     def addKickstart(self, kickstart):
         recipeKickstart = self.doc.createElement('kickstart')
         recipeKickstart.appendChild(self.doc.createCDATASection(kickstart))
@@ -638,6 +658,10 @@ class BeakerRecipeBase(BeakerBase):
     def get_repos(self):
         return self.node.getElementsByTagName('repos')[0]
     repos = property(get_repos)
+
+    def get_partitions(self):
+        return self.node.getElementsByTagName('partitions')[0]
+    partitions = property(get_partitions)
 
 
 class BeakerRecipe(BeakerRecipeBase):
