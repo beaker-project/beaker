@@ -1,15 +1,18 @@
 Please run for bz734535:
-    ALTER TABLE log_recipe CHANGE server server_url text;
-    ALTER TABLE log_recipe ADD COLUMN server varchar(256);
-    ALTER TABLE log_recipe ADD INDEX `log_recipe_server` (server);
+    ALTER TABLE log_recipe
+        CHANGE server server_url text,
+        ADD COLUMN server varchar(256),
+        ADD INDEX `log_recipe_server` (server);
 
-    ALTER TABLE log_recipe_task CHANGE server server_url text;
-    ALTER TABLE log_recipe_task ADD COLUMN server varchar(256);
-    ALTER TABLE log_recipe_task ADD INDEX `log_recipe_task_server` (server);
+    ALTER TABLE log_recipe_task
+        CHANGE server server_url text,
+        ADD COLUMN server varchar(256),
+        ADD INDEX `log_recipe_task_server` (server);
 
-    ALTER TABLE log_recipe_task_result CHANGE server server_url text;
-    ALTER TABLE log_recipe_task_result ADD COLUMN server varchar(256);
-    ALTER TABLE log_recipe_task_result ADD INDEX `log_recipe_task_result_server` (server);
+    ALTER TABLE log_recipe_task_result
+        CHANGE server server_url text,
+        ADD COLUMN server varchar(256),
+        ADD INDEX `log_recipe_task_result_server` (server);
 
     # For every lab controller you have, This could take a while..
     UPDATE log_recipe SET server = 'lab.example.com' WHERE server_url like '%lab.example.com%';
@@ -18,14 +21,18 @@ Please run for bz734535:
 
 
 Rollback:
-    # For every lab controller you have, do the UPDATE step below
+    ALTER TABLE log_recipe
+        DROP INDEX `log_recipe_server`,
+        DROP COLUMN server,
+        CHANGE server_url server text;
 
-    DROP INDEX `log_recipe_server` ON log_recipe;
-    ALTER TABLE log_recipe DROP COLUMN server, CHANGE server_url server text;
+    ALTER TABLE log_recipe_task
+        DROP INDEX `log_recipe_task_server`,
+        DROP COLUMN server,
+        CHANGE server_url server text;
 
-    DROP INDEX `log_recipe_task_server` ON log_recipe_task;
-    ALTER TABLE log_recipe_task DROP COLUMN server, CHANGE server_url server text;
-
-    DROP INDEX `log_recipe_task_result_server` ON log_recipe_task_result;
-    ALTER TABLE log_recipe_task_result DROP COLUMN server, CHANGE server_url server text;
+    ALTER TABLE log_recipe_task_result
+        DROP INDEX `log_recipe_task_result_server`,
+        DROP COLUMN server,
+        CHANGE server_url server text;
 
