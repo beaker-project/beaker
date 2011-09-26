@@ -1,4 +1,17 @@
 import subprocess
+from bkr.labcontroller.config import get_conf
+from bkr.log import add_rotating_file_logger as arfl
+
+def add_rotating_file_logger(*args, **kw):
+    conf = get_conf()
+    max_bytes = conf.get('LOG_MAXBYTES')
+    backup_count = conf.get('LOG_BACKUPCOUNT')
+    file_logger_kw = kw
+    if backup_count:
+        file_logger_kw.update({'backupCount' : backup_count})
+    if max_bytes:
+        file_logger_kw.update({'maxBytes' : max_bytes})
+    return arfl(*args, **file_logger_kw)
 
 def die(logger, msg):
 

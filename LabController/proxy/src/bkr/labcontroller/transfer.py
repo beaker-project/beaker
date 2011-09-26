@@ -13,7 +13,8 @@ from bkr.labcontroller.config import get_conf
 from kobo.exceptions import ShutdownException
 from kobo.process import daemonize
 from kobo.tback import Traceback, set_except_hook
-from bkr.log import add_stderr_logger, add_rotating_file_logger
+from bkr.log import add_stderr_logger
+from bkr.labcontroller.utils import add_rotating_file_logger
 
 set_except_hook()
 

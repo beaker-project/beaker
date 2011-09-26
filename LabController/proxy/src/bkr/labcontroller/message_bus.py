@@ -7,7 +7,8 @@ except ImportError:
 
 
 from threading import Thread
-from bkr.log import add_stderr_logger, add_rotating_file_logger
+from bkr.log import add_stderr_logger
+from bkr.labcontroller.utils import add_rotating_file_logger
 from xmlrpclib import Fault as xmlrpclibFault
 
 import ConfigParser, os, socket
