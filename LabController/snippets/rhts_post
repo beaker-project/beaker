@@ -160,9 +160,9 @@ HOSTNAME=$name
 RECIPEID=$recipeid
 #end if
 
-# Turn on soft limits on upload sizes:
-FILE_SIZE_LIMIT_SOFT=200000000
-TASK_SIZE_LIMIT_SOFT=800000000
+# Turn on hard limits on upload sizes:
+FILE_SIZE_LIMIT=200000000
+TASK_SIZE_LIMIT=800000000
 
 EOF
 
