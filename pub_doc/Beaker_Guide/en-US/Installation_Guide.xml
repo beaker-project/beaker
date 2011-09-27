@@ -73,6 +73,7 @@ $ service mysqld start
        Due to permission issues, we need to delete the log file before we start Beaker for the first time. Otherwise Beaker will not run properly. 
        <screen>
        $ sudo rm /var/log/beaker/server*.log
+       $ sudo rm /var/log/beaker/server*.lock
        </screen>
        </para>
        <para>
