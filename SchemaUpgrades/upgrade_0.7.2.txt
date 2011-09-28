@@ -1,2 +1,38 @@
-Please run the SQL found in bz734535.sql
+Please run for bz734535:
+    ALTER TABLE log_recipe
+        CHANGE server server_url text,
+        ADD COLUMN server varchar(256),
+        ADD INDEX `log_recipe_server` (server);
+
+    ALTER TABLE log_recipe_task
+        CHANGE server server_url text,
+        ADD COLUMN server varchar(256),
+        ADD INDEX `log_recipe_task_server` (server);
+
+    ALTER TABLE log_recipe_task_result
+        CHANGE server server_url text,
+        ADD COLUMN server varchar(256),
+        ADD INDEX `log_recipe_task_result_server` (server);
+
+    # For every lab controller you have, This could take a while..
+    UPDATE log_recipe SET server = 'lab.example.com' WHERE server_url like '%lab.example.com%';
+    UPDATE log_recipe_task SET server = 'lab.example.com' WHERE server_url like '%lab.example.com%';
+    UPDATE log_recipe_task_result SET server = 'lab.example.com' WHERE server_url like '%lab.example.com%';
+
+
+Rollback:
+    ALTER TABLE log_recipe
+        DROP INDEX `log_recipe_server`,
+        DROP COLUMN server,
+        CHANGE server_url server text;
+
+    ALTER TABLE log_recipe_task
+        DROP INDEX `log_recipe_task_server`,
+        DROP COLUMN server,
+        CHANGE server_url server text;
+
+    ALTER TABLE log_recipe_task_result
+        DROP INDEX `log_recipe_task_result_server`,
+        DROP COLUMN server,
+        CHANGE server_url server text;
 

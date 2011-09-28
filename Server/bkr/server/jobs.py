@@ -379,30 +379,32 @@ class Jobs(RPCRoot):
         return job
 
     def _jobs(self,job,**kw):
-        return_dict = {} 
+        return_dict = {}
         # We can do a quick search, or a regular simple search. If we have done neither of these,
-        # it will fall back to an advanced search and look in the 'jobsearch' 
-        if 'quick_search' in kw:
-            table,op,value = kw['quick_search'].split('-')
-            kw['jobsearch'] = [{'table' : table,
-                                'operation' : op,
-                                'value' : value}]
-            simplesearch = kw['simplesearch']
-        elif 'simplesearch' in kw:
-            simplesearch = kw['simplesearch']
-            kw['jobsearch'] = [{'table' : 'Id',   
-                                 'operation' : 'is', 
-                                 'value' : kw['simplesearch']}]                    
-        else:
-            simplesearch = None
+        # it will fall back to an advanced search and look in the 'jobsearch'
 
-        return_dict.update({'simplesearch':simplesearch})
+        # simplesearch set to None will display the advanced search, otherwise in the simplesearch
+        # textfield it will display the value assigned to it
+        simplesearch = None
+        if kw.get('simplesearch'):
+            value = kw['simplesearch']
+            kw['jobsearch'] = [{'table' : 'Id',
+                                 'operation' : 'is',
+                                 'value' : value}]
+            simplesearch = value
         if kw.get("jobsearch"):
+            if 'quick_search' in kw['jobsearch']:
+                table,op,value = kw['jobsearch']['quick_search'].split('-')
+                kw['jobsearch'] = [{'table' : table,
+                                    'operation' : op,
+                                    'value' : value}]
+                simplesearch = ''
             log.debug(kw['jobsearch'])
             searchvalue = kw['jobsearch']
             jobs_found = self._job_search(job,**kw)
-            return_dict.update({'jobs_found':jobs_found})               
+            return_dict.update({'jobs_found':jobs_found})
             return_dict.update({'searchvalue':searchvalue})
+            return_dict.update({'simplesearch':simplesearch})
         return return_dict
 
     def _job_search(self,task,**kw):

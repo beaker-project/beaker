@@ -25,7 +25,7 @@ from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.helpers import *
 from bexceptions import *
 from bkr.upload import Uploader
-from urlparse import urlparse
+import urlparse
 #from turbogears.scheduler import add_interval_task
 
 import cherrypy
@@ -52,7 +52,7 @@ class RecipeTasks(RPCRoot):
 
        # Add the log to the DB if it hasn't been recorded yet.
         if LogRecipeTask(path,name) not in recipetask.logs:
-            server = urlparse(server_url)[1]
+            server = urlparse.urlparse(server_url)[1]
             recipetask.logs.append(LogRecipeTask(path, name, server_url, server, basepath))
         return '%s' % recipetask.filepath
 
@@ -91,7 +91,7 @@ class RecipeTasks(RPCRoot):
 
        # Add the log to the DB if it hasn't been recorded yet.
         if LogRecipeTaskResult(path,name) not in result.logs:
-            server = urlparse(server_url)[1]
+            server = urlparse.urlparse(server_url)[1]
             result.logs.append(LogRecipeTaskResult(path, name, server_url, server, basepath))
         return '%s' % result.filepath
 
