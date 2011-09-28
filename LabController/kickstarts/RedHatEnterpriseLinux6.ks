@@ -84,12 +84,7 @@ $SNIPPET("system")
 --default
 #else
 
-## If packages variable is set add additional packages to this install
-## packages=httpd:selinux:kernel
-#set _packages = $getVar('packages','').split(':')
-#for $package in $_packages:
-$package
-#end for
+$SNIPPET("rhts_packages")
 #end if ## if packages
 
 #end if ## manual

@@ -72,10 +72,7 @@ $SNIPPET("system")
 
 %packages --ignoremissing
 #if $getVar('packages', '') != ''
-#set _packages = $getVar('packages','').split(':')
-#for $package in $_packages:
-$package
-#end for
+$SNIPPET("rhts_packages")
 #else
 @development
 @desktop-platform-devel
