@@ -2335,17 +2335,10 @@ url --url=$tree
         return distros
 
     def action_release(self):
-        # Attempt to remove Netboot entry
-        # and turn off machine, but don't fail if we can't
-        # It's possible that our LC has been removed
+        # Attempt to remove Netboot entry and turn off machine
         if self.remote and self.release_action:
-            try:
-                self.remote.release(power=False)
-                self.release_action.do(self)
-            except BX, error:
-                pass
-            except xmlrpclib.Fault:
-                pass
+            self.remote.release(power=False)
+            self.release_action.do(self)
         elif self.remote:
             self.remote.release()
 
@@ -2592,12 +2585,11 @@ $SNIPPET("rhts_post")
         self.user = None
         try:
             self.action_release()
-        except BX, e:
+        except (BX, xmlrpclib.Fault), error_msg:
             msg = "Error: %s Action: %s" % (error_msg,self.release_action)
             self.activity.append(SystemActivity(user=identity.current.user,
                     service=service, action=unicode(self.release_action),
                     field_name=u'Return', old_value=u'', new_value=msg))
-            raise e
         self.activity.append(activity)
 
     cc = association_proxy('_system_ccs', 'email_address')
