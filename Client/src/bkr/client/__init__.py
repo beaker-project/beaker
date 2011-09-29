@@ -134,6 +134,12 @@ class BeakerWorkflow(BeakerCommand):
             help="Specify the System Type (Machine, Laptop, etc..)",
         )
         self.parser.add_option(
+            "--hostrequire",
+            action="append",
+            default=[],
+            help="Specify a system that matches this require Example: hostlabcontroller=lab.example.com ",
+        )
+        self.parser.add_option(
             "--keyvalue",
             action="append",
             default=[],
@@ -472,6 +478,7 @@ class BeakerRecipeBase(BeakerBase):
         systype = kwargs.get("systype", None)
         machine = kwargs.get("machine", None)
         keyvalues = kwargs.get("keyvalue", [])
+        requires = kwargs.get("hostrequire", [])
         repos = kwargs.get("repo", [])
         random = kwargs.get("random", False)
         if distro:
@@ -534,6 +541,13 @@ class BeakerRecipeBase(BeakerBase):
             mykeyvalue.setAttribute('op', '%s' % op)
             mykeyvalue.setAttribute('value', '%s' % value)
             self.addHostRequires(mykeyvalue)
+        for require in requires:
+            key, op, value = p2.split(require,3)
+            myrequire = self.doc.createElement('%s' % key)
+            myrequire.setAttribute('op', '%s' % op)
+            myrequire.setAttribute('value', '%s' % value)
+            self.addHostRequires(myrequire)
+        
         if random:
             self.addAutopick(random)
 

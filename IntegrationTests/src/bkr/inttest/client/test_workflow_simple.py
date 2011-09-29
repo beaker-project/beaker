@@ -19,3 +19,12 @@ class WorkflowSimpleTest(unittest.TestCase):
                 '--family', self.distro.osversion.osmajor.osmajor,
                 '--task', self.task.name])
         self.assert_(out.startswith('Submitted:'), out)
+
+    def test_hostrequire(self):
+        out = run_client(['bkr', 'workflow-simple',
+                '--dryrun', '--prettyxml',
+                '--hostrequire', 'hostlabcontroller=lab.example.com',
+                '--arch', self.distro.arch.arch,
+                '--family', self.distro.osversion.osmajor.osmajor,
+                '--task', self.task.name])
+        self.assert_('<hostlabcontroller op="=" value="lab.example.com"/>' in out, out)
