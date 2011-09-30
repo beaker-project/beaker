@@ -206,13 +206,15 @@ def create_system_activity(user=None, **kw):
     return activity
 
 def create_task(name=None, exclude_arch=[],exclude_osmajor=[], version=u'1.0-1',
-        uploader=None, owner=None, priority=u'Manual'):
+        uploader=None, owner=None, priority=u'Manual', valid=None):
     if name is None:
         name = unique_name(u'/distribution/test_task_%s')
     if uploader is None:
         uploader = create_user(user_name=u'task-uploader%s' % name.replace('/', '-'))
     if owner is None:
         owner = u'task-owner%s@example.invalid' % name.replace('/', '-')
+    if valid is None:
+        valid = True
     rpm = u'example%s-%s.noarch.rpm' % (name.replace('/', '-'), version)
     try:
         task = Task.by_name(name)
@@ -225,6 +227,7 @@ def create_task(name=None, exclude_arch=[],exclude_osmajor=[], version=u'1.0-1',
     task.uploader = uploader
     task.owner = owner
     task.priority = priority
+    task.valid = valid
     if exclude_arch:
        [TaskExcludeArch(arch_id=Arch.by_name(arch).id, task_id=task.id) for arch in exclude_arch]
     if exclude_osmajor:

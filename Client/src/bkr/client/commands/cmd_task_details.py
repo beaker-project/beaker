@@ -22,6 +22,10 @@ This information is also available on the task page in the Beaker web UI.
 Options
 -------
 
+.. option:: --invalid
+
+   Print invalid task detail.
+
 Common :program:`bkr` options are described in the :ref:`Options 
 <common-options>` section of :manpage:`bkr(1)`.
 
@@ -64,14 +68,22 @@ class Task_Details(BeakerCommand):
             action="store_true",
             help="print as xml",
         )
-
+        self.parser.add_option(
+            "--invalid",
+            default=False,
+            action="store_true",
+            help="show invalid task",
+        )
 
     def run(self, *args, **kwargs):
         filter = dict()
         username = kwargs.pop("username", None)
         password = kwargs.pop("password", None)
         xml = kwargs.pop("xml")
+        valid = True
+        if kwargs.get("invalid"):
+            valid = None
 
         self.set_hub(username, password)
         for task in args:
-            print "%s %s" % (task, self.hub.tasks.to_dict(task))
+            print "%s %s" % (task, self.hub.tasks.to_dict(task,valid))

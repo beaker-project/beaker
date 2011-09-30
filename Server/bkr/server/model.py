@@ -6020,14 +6020,14 @@ class Task(MappedObject):
     @classmethod
     def by_name(cls, name, valid=None):
         query = cls.query.filter(Task.name==name)
-        if valid:
+        if valid is not None:
             query = query.filter(Task.valid==bool(valid))
         return query.one()
 
     @classmethod
     def by_id(cls, id, valid=None):
         query = cls.query.filter(Task.id==id)
-        if valid:
+        if valid is not None:
             query = query.filter(Task.valid==bool(valid))
         return query.one()
 
