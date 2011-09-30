@@ -15,6 +15,6 @@ def setup_package():
     conf = PyConfigParser()
     conf.load_from_file(config_file)
 
-    user = data_setup.create_user(user_name=conf.get('USERNAME'), password=conf.get('PASSWORD'))
+    user = data_setup.create_user(user_name=conf.get('USERNAME').decode('utf8'), password=conf.get('PASSWORD'))
     session.flush()
     lc = data_setup.create_labcontroller(user=user)

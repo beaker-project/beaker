@@ -22,7 +22,7 @@ from kobo.xmlrpc import retry_request_decorator, CookieTransport, \
         SafeCookieTransport
 from bkr.labcontroller.config import get_conf
 from kobo.process import kill_process_group
-from bkr.log import add_rotating_file_logger
+from bkr.labcontroller.utils import add_rotating_file_logger
 from bkr.upload import Uploader
 import utils
 

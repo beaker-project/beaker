@@ -87,8 +87,8 @@ def create_labcontroller(fqdn=None, user=None):
             # username/password to login into stub_cobbler
             # Doesn't matter what it is, just can't be None or we 
             # Will get cannot marshal none errors.
-            lc.username = "foo"
-            lc.password = "bar"
+            lc.username = u"foo"
+            lc.password = u"bar"
             return lc
         else:
             raise
