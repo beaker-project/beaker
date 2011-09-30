@@ -1,0 +1,14 @@
+For bz630863.
+------------
+
+  ALTER TABLE recipe ADD COLUMN (reservation_id int default NULL);
+  ALTER TABLE recipe ADD CONSTRAINT `recipe_reservation_id_fk` FOREIGN KEY (`reservation_id`) REFERENCES `reservation` (`id`);
+  UPDATE reservation
+    INNER JOIN system ON reservation.system_id = system.id
+    INNER JOIN recipe ON recipe.system_id = system.id
+    INNER JOIN
+      (SELECT max(r2.id) AS max_id FROM recipe AS r2 INNER JOIN system AS s2 ON r2.system_id = s2.id GROUP BY s2.id) as inn2
+        ON inn2.max_id = recipe.id
+    SET recipe.reservation_id = reservation.id WHERE reservation.finish_time IS NULL and reservation.type = 'recipe'
+
+

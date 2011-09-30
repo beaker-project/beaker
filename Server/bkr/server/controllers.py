@@ -913,6 +913,10 @@ class Root(RPCRoot):
             if system.current_user(our_user):
                 options['user_change_text'] = ' (Return)'
                 is_user = True
+            if system.open_reservation is not None and\
+                system.open_reservation.recipe:
+                job_id = system.open_reservation.recipe.recipeset.job.id
+                options['running_job'] = '/jobs/%s' % job_id
 
             self.provision_now_rights,self.will_provision,self.provision_action = \
                 SystemTab.get_provision_perms(system, our_user, currently_held)

@@ -860,7 +860,8 @@ recipe_table = Table('recipe',metadata,
         Column('panic', Unicode(20)),
         Column('_partitions',UnicodeText()),
         Column('autopick_random', Boolean, default=False),
-	Column('log_server', Unicode(256), index=True),
+	    Column('log_server', Unicode(256), index=True),
+        Column('reservation_id', Integer, ForeignKey('reservation.id'), default=None),
         mysql_engine='InnoDB',
 )
 
@@ -2521,7 +2522,9 @@ $SNIPPET("rhts_post")
             log.warn(reason)
             self.mark_broken(reason=reason)
 
-    def reserve(self, service, user=None, reservation_type=u'manual'):
+    def reserve(self, service, user=None, reservation_type=u'manual', recipe=None):
+        if reservation_type == 'recipe' and recipe is None:
+            raise BX(_(u'Reservations of type \'recipe\' must be passed a recipe'))
         if user is None:
             user = identity.current.user
         if self.user is not None and self.user == user:
@@ -2538,7 +2541,7 @@ $SNIPPET("rhts_post")
                 user_id=user.user_id).rowcount != 1:
             raise BX(_(u'System %r is already reserved') % self)
         self.user = user # do it here too, so that the ORM is aware
-        self.reservations.append(Reservation(user=user, type=reservation_type))
+        self.reservations.append(Reservation(user=user, type=reservation_type, recipe=recipe))
         self.activity.append(SystemActivity(user=user,
                 service=service, action=u'Reserved', field_name=u'User',
                 old_value=u'', new_value=user.user_name))
@@ -6584,6 +6587,7 @@ mapper(TaskResult, task_result_table)
 mapper(Reservation, reservation_table, properties={
         'user': relation(User, backref=backref('reservations',
             order_by=[reservation_table.c.start_time.desc()])),
+        'recipe': relation(Recipe, backref='reservation', uselist=False),
 })
 mapper(SSHPubKey, sshpubkey_table,
         properties=dict(user=relation(User, uselist=False, backref='sshpubkeys')))
