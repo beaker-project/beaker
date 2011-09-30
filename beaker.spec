@@ -33,6 +33,7 @@ BuildRequires:  python-xmltramp
 BuildRequires:  python-lxml
 BuildRequires:  python-ldap
 BuildRequires:  python-TurboMail >= 3.0
+BuildRequires:  python-concurrentloghandler
 BuildRequires:  rpm-python
 # As above, these client dependencies are needed in build because of sphinx
 BuildRequires:  kobo-client >= 0.3

@@ -12,7 +12,12 @@ include ../py_rules.mk
 .PHONY: build
 build: $(_SETUP_PY)
 	env PYTHONPATH=../Common$${PYTHONPATH:+:$$PYTHONPATH} \
-	    python $(SETUP_PY) build
+	    python $(SETUP_PY) build \
+	    | tee build.out
+	@if grep -q ImportError build.out ; then \
+	    echo "ImportErrors in build output, did Sphinx autodoc fail?" ; \
+	    exit 1 ; \
+	fi
 
 install:	py-install
 
