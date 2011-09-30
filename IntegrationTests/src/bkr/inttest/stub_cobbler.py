@@ -137,6 +137,8 @@ class StubCobbler(object):
         for fqdn in fqdns:
             assert fqdn in self.systems
             self.system_actions[fqdn] = action
+            if "raise" in fqdn:
+                raise Exception("Fail")
             if "broken" in fqdn:
                 broken = True
             log.info('%r power %s system %s', self, action, fqdn)

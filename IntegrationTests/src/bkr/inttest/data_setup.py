@@ -299,6 +299,7 @@ def create_job_for_recipes(recipes, owner=None, whiteboard=None, cc=None,product
     recipe_set.recipes.extend(recipes)
     job.recipesets.append(recipe_set)
     log.debug('Created %s', job.t_id)
+    session.flush()
     return job
 
 def create_job(owner=None, cc=None, distro=None,product=None, 
