@@ -769,8 +769,7 @@ log_recipe_table = Table('log_recipe', metadata,
         Column('path', UnicodeText()),
         Column('filename', UnicodeText(), nullable=False),
         Column('start_time',DateTime, default=datetime.utcnow),
-	Column('server', Unicode(256), index=True),
-	Column('server_url', UnicodeText()),
+	Column('server', UnicodeText()),
 	Column('basepath', UnicodeText()),
         mysql_engine='InnoDB',
 )
@@ -782,8 +781,7 @@ log_recipe_task_table = Table('log_recipe_task', metadata,
         Column('path', UnicodeText()),
         Column('filename', UnicodeText(), nullable=False),
         Column('start_time',DateTime, default=datetime.utcnow),
-	Column('server', Unicode(256), index=True),
-	Column('server_url', UnicodeText()),
+	Column('server', UnicodeText()),
 	Column('basepath', UnicodeText()),
         mysql_engine='InnoDB',
 )
@@ -795,8 +793,7 @@ log_recipe_task_result_table = Table('log_recipe_task_result', metadata,
         Column('path', UnicodeText()),
         Column('filename', UnicodeText(), nullable=False),
         Column('start_time',DateTime, default=datetime.utcnow),
-	Column('server', Unicode(256), index=True),
-	Column('server_url', UnicodeText()),
+	Column('server', UnicodeText()),
 	Column('basepath', UnicodeText()),
         mysql_engine='InnoDB',
 )
@@ -863,6 +860,7 @@ recipe_table = Table('recipe',metadata,
         Column('panic', Unicode(20)),
         Column('_partitions',UnicodeText()),
         Column('autopick_random', Boolean, default=False),
+	Column('log_server', Unicode(256), index=True),
         mysql_engine='InnoDB',
 )
 
@@ -3616,12 +3614,10 @@ class Log(MappedObject):
 
     MAX_ENTRIES_PER_DIRECTORY = 100
 
-    def __init__(self, path=None, filename=None, server_url=None, 
-                 server=None, basepath=None):
+    def __init__(self, path=None, filename=None, server=None, basepath=None):
         self.path = path
         self.filename = filename
         self.server = server
-        self.server_url = server_url
         self.basepath = basepath
 
     def result(self):
@@ -3630,15 +3626,15 @@ class Log(MappedObject):
     result = property(result)
 
     def full_log_directory(self):
-        if self.server_url:
+        if self.server:
             return self.log_directory()
         else:
             return '%s/%s' % (self.parent.logspath, self.log_directory())
 
     def log_directory(self):
-        # if url is defined then the logs are stored elsewhere
-        if self.server_url:
-            dir = '%s/%s' % (self.server_url, self.path or '')
+        # if server is defined then the logs are stored elsewhere
+        if self.server:
+            dir = '%s/%s' % (self.server, self.path or '')
             presult = urlparse.urlparse(dir)
             server_url = '%s://%s' % (presult[0], presult[1])
             dir = '%s%s' % (server_url, posixpath.normpath(presult[2]))
@@ -3649,7 +3645,7 @@ class Log(MappedObject):
         return dir
 
     def log_url(self):
-        if self.server_url:
+        if self.server:
             server_url = '%s/%s' % (self.log_directory(), self.filename)
         else:
             server_url = '/logs/%s/%s' % (self.log_directory(), self.filename)
@@ -3669,13 +3665,12 @@ class Log(MappedObject):
     def dict(self):
         """ Return a dict describing this log
         """
-        return dict(server     = self.server,
-                    server_url = self.server_url,
-                    path       = self.path,
-                    filename   = self.filename,
-                    tid        = '%s:%s' % (self.type, self.id),
-                    filepath   = self.parent.filepath,
-                    basepath   = self.basepath,
+        return dict( server  = self.server,
+                    path     = self.path,
+                    filename = self.filename,
+                    tid      = '%s:%s' % (self.type, self.id),
+                    filepath = self.parent.filepath,
+                    basepath = self.basepath,
                    )
 
     @classmethod 

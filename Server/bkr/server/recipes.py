@@ -79,18 +79,14 @@ class Recipes(RPCRoot):
        """
        finished = [u'Completed',u'Aborted',u'Cancelled']
        recipes = Recipe\
-                 .query().join(['status'])\
-                         .outerjoin(['logs'])\
-                         .outerjoin(['tasks','logs'])\
-                         .filter(recipe_table.c.finish_time != None)\
-                         .filter(or_(log_recipe_table.c.server == server,
-                                     log_recipe_task_table.c.server == server))\
+                 .query().filter(recipe_table.c.finish_time != None)\
+                         .filter(recipe_table.c.log_server == server)\
                  .limit(limit)
        return [r.id for r in recipes]
 
     @cherrypy.expose
     @identity.require(identity.not_anonymous())
-    def register_file(self, server_url, recipe_id, path, name, basepath):
+    def register_file(self, server, recipe_id, path, name, basepath):
         """
         register file and return path to store
         """
@@ -101,10 +97,9 @@ class Recipes(RPCRoot):
 
         # Add the log to the DB if it hasn't been recorded yet.
         if LogRecipe(path,name) not in recipe.logs:
-            # Pull server out of server_url.
-            server = urlparse.urlparse(server_url)[1]
-            recipe.logs.append(LogRecipe(path, name, server_url, 
-                                         server, basepath))
+            # Pull log_server out of server_url.
+            recipe.log_server = urlparse.urlparse(server)[1]
+            recipe.logs.append(LogRecipe(path, name, server, basepath))
         return '%s' % recipe.filepath
 
     @cherrypy.expose
@@ -121,7 +116,7 @@ class Recipes(RPCRoot):
 
     @cherrypy.expose
     @identity.require(identity.not_anonymous())
-    def change_files(self, recipe_id, server_url, basepath):
+    def change_files(self, recipe_id, server, basepath):
         """
         Change the server and basepath where the log files lives, Usually
          used to move from lab controller cache to archive storage.
@@ -131,14 +126,15 @@ class Recipes(RPCRoot):
         except InvalidRequestError:
             raise BX(_('Invalid recipe ID: %s' % recipe_id))
         for mylog in recipe.all_logs:
-            myserver = '%s/%s' % (server_url, mylog['filepath'])
+            myserver = '%s/%s' % (server, mylog['filepath'])
             mybasepath = '%s/%s' % (basepath, mylog['filepath'])
             self.change_file(mylog['tid'], myserver, mybasepath)
+        recipe.log_server = urlparse.urlparse(myserver)[1]
         return True
 
     @cherrypy.expose
     @identity.require(identity.not_anonymous())
-    def change_file(self, tid, server_url, basepath):
+    def change_file(self, tid, server, basepath):
         """
         Change the server and basepath where the log file lives, Usually
          used to move from lab controller cache to archive storage.
@@ -149,9 +145,7 @@ class Recipes(RPCRoot):
                 mylog = self.log_types[log_type.upper()].by_id(log_id)
             except InvalidRequestError, e:
                 raise BX(_("Invalid %s" % tid))
-        server = urlparse.urlparse(server_url)[1]
         mylog.server = server
-        mylog.server_url = server_url
         mylog.basepath = basepath
         return True
 
