@@ -95,7 +95,7 @@ $ service mysqld start
        Log in at <ulink 
        url="http://BeakerServer.example.com/bkr/labcontrollers/new"/>. Use the 
        username and password above from the <command>beaker-init</command> 
-       command. The new lab controller form requires 3 fields:
+       command. The new lab controller form requires the following fields:
         <itemizedlist>
           <listitem>
             <para>
@@ -134,30 +134,6 @@ $ service mysqld start
         </itemizedlist>
        </para>
        </formalpara>
-       <para>
-       The new lab controller also needs a user account. Login at:
-        <screen>
-        http://BeakerServer.example.com/bkr/users/new
-        </screen>
-        <itemizedlist>
-          <listitem>
-            <para><application>Login</application>: Should be the host/FQDN (FQDN is the fully qualified domain of the lab controller). 
-           </para>
-          </listitem>
-           <listitem>
-            <para><application>Display Name</application>: Should be just FQDN. 
-           </para>
-          </listitem>
-           <listitem>
-            <para><application>Email adrress</application>: The email address should be root@FQDN. 
-           </para>
-          </listitem>
-           <listitem>
-            <para><application>Password</application>: If you are not using Kerberos authentication, you will need a password here. 
-           </para>
-          </listitem>
-        </itemizedlist>
-       </para>
        <para>Save the form and we are done with the Inventory side for now. 
        </para>
   </section>
