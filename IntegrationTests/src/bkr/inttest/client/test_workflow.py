@@ -41,6 +41,7 @@ class WorkflowTest(unittest.TestCase):
 		<and/>
 	</hostRequires>
 	<repos/>
+	<partitions/>
 	<task name="/distribution/install" role="STANDALONE">
 		<params/>
 	</task>
