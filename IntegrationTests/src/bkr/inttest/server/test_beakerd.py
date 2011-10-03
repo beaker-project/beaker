@@ -491,7 +491,8 @@ class TestPowerFailures(unittest.TestCase):
         beakerd.queued_commands()
         beakerd.running_commands()
         automated_system = System.query.get(automated_system.id)
-        system_activity = automated_system.activity[0]
+        system_activity = automated_system.dyn_activity\
+                .filter(SystemActivity.field_name == u'Power').first()
         self.assertEqual(system_activity.action, 'off')
         self.assertTrue(system_activity.new_value.startswith('Failed'))
 
