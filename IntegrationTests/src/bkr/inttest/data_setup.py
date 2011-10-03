@@ -256,12 +256,12 @@ def create_recipe(system=None, distro=None, task_list=None,
     if not server_log:
         recipe.logs = [LogRecipe(path=u'/recipe_path',filename=u'dummy.txt', basepath=u'/beaker')]
     else:
-        recipe.logs = [LogRecipe(server_url=u'http://dummy-archive-server/beaker/recipe_path', filename=u'dummy.txt' )]
+        recipe.logs = [LogRecipe(server=u'http://dummy-archive-server/beaker/recipe_path', filename=u'dummy.txt' )]
 
     if not server_log:
         rt_log = LogRecipeTask(path=u'/tasks', filename=u'dummy.txt', basepath='/')
     else:
-        rt_log = LogRecipeTask(server_url=u'http://dummy-archive-server/beaker/recipe_path/tasks', filename=u'dummy.txt')
+        rt_log = LogRecipeTask(server=u'http://dummy-archive-server/beaker/recipe_path/tasks', filename=u'dummy.txt')
     if task_list: #don't specify a task_list and a task_name...
         for t in task_list:
             rt = RecipeTask(task=t)
@@ -357,7 +357,7 @@ def mark_job_waiting(job, user=None):
             recipe.schedule()
             recipe.system = create_system(owner=job.owner)
             recipe.system.reserve(service=u'testdata', user=job.owner,
-                    reservation_type=u'recipe')
+                    reservation_type=u'recipe', recipe=recipe)
             recipe.watchdog = Watchdog(system=recipe.system)
             recipe.waiting()
 
