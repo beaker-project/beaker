@@ -4,6 +4,7 @@ import logging
 import os
 from glob import glob
 from bkr.labcontroller.utils import add_rotating_file_logger
+from bkr.labcontroller.config import get_conf
 from bkr.inttest.data_setup import unique_name
 
 # This number (300) has been tested to work with
@@ -13,8 +14,7 @@ _log_print_count = 300
 class TestLogs(unittest.TestCase):
 
     def setUp(self):
-        from bkr.inttest.labcontroller import conf
-        self.conf = conf
+        self.conf = get_conf()
         self.logger = logging.getLogger("Watchdog")
         self.logger.setLevel(logging.DEBUG)
         prefix = unique_name(u'watchdogtest%s')
