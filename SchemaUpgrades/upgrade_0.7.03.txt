@@ -11,4 +11,22 @@ For bz630863.
         ON inn2.max_id = recipe.id
     SET recipe.reservation_id = reservation.id WHERE reservation.finish_time IS NULL and reservation.type = 'recipe'
 
+Rollback:
+
+  ALTER TABLE recipe DROP COLUMN reservation_id, DROP FOREIGN KEY recipe_reservation_id_fk;
+
+
+----------
+ALTER TABLE recipe ADD COLUMN log_server varchar(256),
+            ADD INDEX `recipe_log_server` (log_server);
+
+# For every lab controller you have,  (5 min per lab approx) 
+UPDATE recipe r JOIN log_recipe lr ON r.id = lr.recipe_id SET log_server = 'lab.example.com' WHERE lr.server like '%lab.example.com%'; 
+UPDATE recipe r JOIN recipe_task rt ON r.id = rt.recipe_id JOIN log_recipe_task lrt ON rt.id = lrt.recipe_task_id SET log_server = 'lab.example.com' WHERE lrt.server like '%lab.example.com%';
+
+
+Rollback:
+ALTER TABLE recipe DROP INDEX `recipe_log_server`,
+         DROP COLUMN log_server;
+
 
