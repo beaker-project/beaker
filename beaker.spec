@@ -3,7 +3,7 @@
 
 Name:           beaker
 Version:        0.7.3
-Release:        3%{?dist}
+Release:        4%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -287,7 +287,7 @@ fi
 %{_var}/lib/beaker/addDistro.d/*
 
 %changelog
-* Fri Sep 30 2011 Raymond Mancy <rmancy@redhat.com> 0.7.3-1
+* Fri Sep 30 2011 Raymond Mancy <rmancy@redhat.com> 0.7.3-4
 - 739893 - Client option to print xml of existing job
   (j-nomura@ce.jp.nec.com)
 - 729654 - Requires from Makefile are not installed during kickstart
