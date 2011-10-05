@@ -2586,7 +2586,7 @@ $SNIPPET("rhts_post")
         self.user = None
         try:
             self.action_release()
-        except (BX, xmlrpclib.Fault), error_msg:
+        except Exception, error_msg:
             msg = "Error: %s Action: %s" % (error_msg,self.release_action)
             self.activity.append(SystemActivity(user=identity.current.user,
                     service=service, action=unicode(self.release_action),
