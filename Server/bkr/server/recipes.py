@@ -231,31 +231,32 @@ class Recipes(RPCRoot):
         return recipe_search.return_results()
 
     def _recipes(self,recipe,**kw):
-        return_dict = {} 
-        if 'quick_search' in kw:
-            table,op,value = kw['quick_search'].split('-')
-            kw['recipesearch'] = [{'table' : table,
-                                    'operation' : op,
-                                    'keyvalue': None,
-                                    'value' : value}]
-            try:
-                simplesearch = kw['simplesearch']
-            except KeyError, e: simplesearch = None
-        elif 'simplesearch' in kw:
-            simplesearch = kw['simplesearch']
-            kw['recipesearch'] = [{'table' : 'Id',   
-                                   'operation' : 'is', 
-                                   'value' : kw['simplesearch']}]                    
-        else:
-            simplesearch = None
-
-        return_dict.update({'simplesearch':simplesearch})
-
+        return_dict = {}
+        # We can do a quick search, or a regular simple search. 
+        # If we have done neither of these, it will fall back to 
+        # an advanced search and look in the 'recipesearch'
+        # simplesearch set to None will display the advanced search, 
+        # otherwise in the simplesearch textfield it will display 
+        # the value assigned to it
+        simplesearch = None
+        if kw.get('simplesearch'):
+            value = kw['simplesearch']
+            kw['recipesearch'] = [{'table' : 'Id',
+                                   'operation' : 'is',
+                                   'value' : value}]
+            simplesearch = value
         if kw.get("recipesearch"):
+            if 'quick_search' in kw['recipesearch']:
+                table,op,value = kw['recipesearch']['quick_search'].split('-')
+                kw['recipesearch'] = [{'table' : table,
+                                       'operation' : op,
+                                       'value' : value}]
+                simplesearch = ''
             searchvalue = kw['recipesearch']
             recipes_found = self._recipe_search(recipe,**kw)
             return_dict.update({'recipes_found':recipes_found})
             return_dict.update({'searchvalue':searchvalue})
+            return_dict.update({'simplesearch':simplesearch})
         return return_dict
 
     @expose(template='bkr.server.templates.grid')
