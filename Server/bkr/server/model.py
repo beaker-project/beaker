@@ -1613,7 +1613,7 @@ class System(SystemObject):
                 if not profile_id:
                     raise BX(_("%s profile not found on %s" % (profile, self.system.lab_controller.fqdn)))
                 if ks_appends:
-                    ks_appends_text = '#raw\n%s\n#end raw' % '\n'.join([ks for ks in ks_appends])
+                    ks_appends_text = '#raw\n%s\n#end raw' % '\n'.join(["%s" % ks for ks in ks_appends])
                     ks_file = '/var/lib/cobbler/snippets/per_system/ks_appends/%s' % self.system.fqdn
                     if self.remote.read_or_write_snippet(ks_file,
                                                          False,
@@ -2586,7 +2586,7 @@ $SNIPPET("rhts_post")
         self.user = None
         try:
             self.action_release()
-        except (BX, xmlrpclib.Fault), error_msg:
+        except Exception, error_msg:
             msg = "Error: %s Action: %s" % (error_msg,self.release_action)
             self.activity.append(SystemActivity(user=identity.current.user,
                     service=service, action=unicode(self.release_action),

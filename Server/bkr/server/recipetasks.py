@@ -52,7 +52,7 @@ class RecipeTasks(RPCRoot):
 
        # Add the log to the DB if it hasn't been recorded yet.
         if LogRecipeTask(path,name) not in recipetask.logs:
-            recipetask.recipe.log_server = urlparse(server)[1]
+            recipetask.recipe.log_server = urlparse.urlparse(server)[1]
             recipetask.logs.append(LogRecipeTask(path, name, server, basepath))
         return '%s' % recipetask.filepath
 
@@ -91,7 +91,7 @@ class RecipeTasks(RPCRoot):
 
        # Add the log to the DB if it hasn't been recorded yet.
         if LogRecipeTaskResult(path,name) not in result.logs:
-            result.recipetask.recipe.log_server = urlparse(server)[1]
+            result.recipetask.recipe.log_server = urlparse.urlparse(server)[1]
             result.logs.append(LogRecipeTaskResult(path, name, server, basepath))
         return '%s' % result.filepath
 

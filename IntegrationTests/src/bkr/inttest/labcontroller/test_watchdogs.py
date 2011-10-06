@@ -5,6 +5,7 @@ from nose.plugins.skip import SkipTest
 from bkr.inttest import data_setup
 from bkr.labcontroller.proxy import Watchdog
 from bkr.labcontroller.message_bus import LabBeakerBus
+from bkr.labcontroller.config import get_conf
 from bkr.server.model import RetentionTag
 from bkr.inttest.message_bus import TestServerBeakerBus
 from time import sleep
@@ -14,7 +15,7 @@ class TestWatchdog(unittest.TestCase):
 
     @classmethod
     def setupClass(cls):
-        from bkr.inttest.labcontroller import conf
+        conf = get_conf()
         cls.using_qpid = conf.get('QPID_BUS')
         cls.watchdog = Watchdog(conf=conf)
         cls.watchdog.hub._login()
