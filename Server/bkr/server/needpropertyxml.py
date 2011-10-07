@@ -21,13 +21,11 @@
 import xmltramp
 import os
 import sys
-import pkg_resources
-pkg_resources.require("SQLAlchemy>=0.3.10")
 from bkr.server.model import *
 from turbogears.database import session
 import turbogears
 from sqlalchemy import or_, and_
-from sqlalchemy.exceptions import InvalidRequestError
+from sqlalchemy.orm.exc import NoResultFound
 
 class ElementWrapper(object):
     # Operator translation table
@@ -226,7 +224,7 @@ class XmlGroup(ElementWrapper):
             # - '!=' - search for system which is not member of given group
             try:
                 group = Group.by_name(value)
-            except InvalidRequestError: # NoResultFound
+            except NoResultFound:
                 return (joins, None)
             if op == '__eq__':
                 query = System.groups.contains(group)
@@ -253,7 +251,7 @@ class XmlKeyValue(ElementWrapper):
         query = None
         try:
             _key = Key.by_name(key)
-        except InvalidRequestError: # NoResultFound
+        except NoResultFound:
             return (joins, None)
         if key and op and value:
             if _key.numeric:
@@ -420,7 +418,7 @@ class XmlArch(ElementWrapper):
             # - '!=' - search for system which does not have given arch
             try:
                 arch = Arch.by_name(value)
-            except InvalidRequestError: # NoResultFound
+            except NoResultFound:
                 return (joins, None)
             if op == '__eq__':
                 query = System.arch.contains(arch)

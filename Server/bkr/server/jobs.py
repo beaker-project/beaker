@@ -21,6 +21,7 @@ from turbogears import identity, redirect
 from cherrypy import request, response
 from kid import Element
 from sqlalchemy.exceptions import InvalidRequestError
+from sqlalchemy.orm.exc import NoResultFound
 from bkr.server.widgets import myPaginateDataGrid, AckPanel, JobQuickSearch, \
     RecipeWidget,RecipeTasksWidget, RecipeSetWidget, PriorityWidget, RetentionTagWidget, \
     SearchBar, JobWhiteboard, ProductWidget, JobActionWidget, JobPageActionWidget
@@ -270,7 +271,7 @@ class Jobs(RPCRoot):
                         )
                 xmljob = XmlJob(xmltramp.parse(textxml))
                 job = self.process_xmljob(xmljob,identity.current.user)
-                session.save(job)
+                session.add(job)
                 session.flush()
             except Exception,err:
                 session.rollback()
@@ -301,7 +302,7 @@ class Jobs(RPCRoot):
         recipeset_priority = xmlrecipeSet.get_xml_attr('priority',unicode,None) 
         if recipeset_priority is not None:
             try:
-                my_priority = TaskPriority.query().filter_by(priority = recipeset_priority).one()
+                my_priority = TaskPriority.query.filter_by(priority = recipeset_priority).one()
             except InvalidRequestError, (e):
                 raise BX(_('You have specified an invalid recipeSet priority:%s' % recipeset_priority))
             allowed_priorities = RecipeSet.allowed_priorities_initial(identity.current.user)
@@ -350,11 +351,8 @@ class Jobs(RPCRoot):
                 product = Product.by_name(product)
 
                 return (tag, product)
-            except InvalidRequestError, e:
-                if '%s' % e == 'No rows returned for one()':
-                    raise BX(_("You entered an invalid product name: %s" % product))
-                else:
-                    raise
+            except NoResultFound:
+                raise BX(_("You entered an invalid product name: %s" % product))
         else:
             return tag, None
 
@@ -698,7 +696,7 @@ class Jobs(RPCRoot):
             flash(_(u'Invalid %s, has been deleted' % job.t_id))
             redirect(".")
 
-        recipe_set_history = [RecipeSetActivity.query().with_parent(elem,"activity") for elem in job.recipesets]
+        recipe_set_history = [RecipeSetActivity.query.with_parent(elem,"activity") for elem in job.recipesets]
         recipe_set_data = []
         for query in recipe_set_history:
             for d in query: 

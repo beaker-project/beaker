@@ -98,7 +98,7 @@ class ReserveWorkflow:
             results = Distro.multiple_systems_distro(arch=arch,osmajor=distro_family,tag=tag) 
             return {'options' : results }
 
-        distro = Distro.query().join(['osversion','osmajor']).join('arch')
+        distro = Distro.query.join(['osversion','osmajor']).join('arch')
         my_and = [OSMajor.osmajor == distro_family]
         if tag:
                 my_and.append(DistroTag.tag == tag)                       
@@ -120,7 +120,7 @@ class ReserveWorkflow:
         systems_queries, distro_ids = [],[] 
         for install_name in all_distro_names:
             try:
-                distro = Distro.query().filter(Distro.install_name == install_name).one()
+                distro = Distro.query.filter(Distro.install_name == install_name).one()
                 distro_ids.append(distro.id)
             except InvalidRequestError:
                 log.error(u'Could not find distro %s, continuing with other distros' % install_name)
@@ -135,7 +135,7 @@ class ReserveWorkflow:
     @expose(allow_json=True) 
     def find_systems_for_distro(self,distro_install_name,*args,**kw): 
         try: 
-            distro = Distro.query().filter(Distro.install_name == distro_install_name).one()
+            distro = Distro.query.filter(Distro.install_name == distro_install_name).one()
         except InvalidRequestError,(e):
             return { 'count' : 0 } 
                  

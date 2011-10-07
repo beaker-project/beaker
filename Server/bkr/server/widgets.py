@@ -65,6 +65,7 @@ class LocalJSLink(JSLink):
     """
     Link to local Javascript files
     """
+    order = 10
     def update_params(self, d): 
         super(JSLink, self).update_params(d)
         d["link"] = url(self.name)
@@ -79,7 +80,8 @@ class LocalCSSLink(CSSLink):
         d["link"] = self.name
 
 
-jquery = LocalJSLink('bkr', '/static/javascript/jquery-1.5.1.min.js')
+jquery = LocalJSLink('bkr', '/static/javascript/jquery-1.5.1.min.js',
+        order=1) # needs to come after MochiKit
 
 local_datetime = LocalJSLink('bkr', '/static/javascript/local_datetime.js')
 
@@ -170,9 +172,9 @@ class ReserveWorkflow(Form):
                  ] 
     template="bkr.server.templates.reserve_workflow"
     css = [LocalCSSLink('bkr','/static/css/reserve_workflow.css')] 
-    member_widgets = ['arch','distro','distro_family','tag'] 
+    member_widgets = ['arch','distro','distro_family','tag', 'auto_pick']
     params = ['arch_value','tag_value','distro_family_value','all_arches',
-              'all_tags','all_distro_familys','to_json','auto_pick','distro_rpc','system_rpc','system_many_rpc','reserve_href'] 
+              'all_tags','all_distro_familys', 'distro_rpc','system_rpc','system_many_rpc','reserve_href']
 
     def __init__(self,*args,**kw):
         super(ReserveWorkflow,self).__init__(*args, **kw)  
@@ -184,7 +186,6 @@ class ReserveWorkflow(Form):
         self.arch = SingleSelectField(name='arch', label='Arch', options=[None],
             validator=validators.NotEmpty())
 
-        self.to_json = UtilJSON.dynamic_json()
         self.system_rpc = './find_systems_for_distro'
         self.system_many_rpc= './find_systems_for_multiple_distros'
         self.distro_rpc = './get_distro_options'
@@ -227,14 +228,15 @@ class ReserveWorkflow(Form):
             for k in params['options'].keys():
                 params[k] = params['options'][k]
                 del params['options'][k]
-        params['all_arches'] = [[elem.arch,elem.arch] for elem in model.Arch.query()]
-        params['all_tags'] = [['','None Selected']] + [[elem.tag,elem.tag] for elem in model.DistroTag.query()]
-        e = [elem.osmajor for elem in model.OSMajor.query()]
+        params['all_arches'] = [[elem.arch,elem.arch] for elem in model.Arch.query]
+        params['all_tags'] = [['','None Selected']] + [[elem.tag,elem.tag] for elem in model.DistroTag.query]
+        e = [elem.osmajor for elem in model.OSMajor.query]
         params['all_distro_familys'] = [('','None Selected')] + [[osmajor,osmajor] for osmajor in sorted(e,cmp=self.my_cmp )]
         return super(ReserveWorkflow,self).display(value,**params)
 
     def update_params(self,d):
         super(ReserveWorkflow,self).update_params(d)
+        d['to_json'] = UtilJSON.dynamic_json()
         if 'values' in d:
             if d['values']:
                 d['arch_value'] = d['values']['arch']
@@ -527,9 +529,10 @@ class JobMatrixReport(Form):
                   LocalJSLink('bkr', '/static/javascript/job_matrix_v2.js')]
     css = [LocalCSSLink('bkr','/static/css/job_matrix.css'), LocalCSSLink('bkr','/static/css/smoothness/jquery-ui-1.7.3.custom.css')] 
     template = 'bkr.server.templates.job_matrix' 
-    member_widgets = ['whiteboard','job_ids','generate_button','nack_list']
-    params = (['list','whiteboard_filter','whiteboard_options','job_ids_vals',
-        'nacks','comments_field','toggle_nacks_on', 'whiteboard_filter_button'])
+    member_widgets = ['whiteboard','job_ids','generate_button','nack_list', 'whiteboard_filter',
+        'whiteboard_filter_button']
+    params = (['list', 'whiteboard_options','job_ids_vals',
+        'nacks','comments_field','toggle_nacks_on'])
     default_validator = validators.NotEmpty() 
     def __init__(self,*args,**kw):
         super(JobMatrixReport,self).__init__(*args, **kw)
@@ -571,12 +574,12 @@ class SearchBar(RepeatingFormField):
     template = "bkr.server.templates.search_bar"
 
     params = ['repetitions', 'search_object', 'form_attrs', 'search_controller',
-              'simplesearch','quickly_searches','button_widget',
-              'advanced', 'simple','to_json','this_operations_field',
-              'this_searchvalue_field','extra_hiddens',
+              'simplesearch','quickly_searches',
+              'advanced', 'simple',
+              'extra_hiddens',
               'extra_callbacks_stringified', 'table_search_controllers',
               'table_search_controllers_stringified', 'quick_searches',
-              'keyvaluevalue','simplesearch_label', 'result_columns','col_options',
+              'simplesearch_label', 'result_columns','col_options',
               'col_defaults','enable_custom_columns','default_result_columns', 
               'date_picker']
 
@@ -597,10 +600,6 @@ class SearchBar(RepeatingFormField):
         operation_field = SingleSelectFieldJSON(name="operation", options=[None], validator=validators.NotEmpty())
         value_field = TextFieldJSON(name="value")
 
-        # We don't know where in the fields array the operation array will be, so we will put it here
-        # to access in the template
-        self.this_operations_field = operation_field
-        self.this_searchvalue_field = value_field
         self.fields = [table_field, operation_field, value_field]
         new_selects = []
         self.extra_callbacks = {} 
@@ -635,7 +634,6 @@ class SearchBar(RepeatingFormField):
         else:
             self.simplesearch_label = 'Search'
 
-        self.button_widget = MyButton(name='quick_search')
         self.quickly_searches = []
         if 'quick_searches' in kw:
             if kw['quick_searches'] is not None: 
@@ -648,7 +646,6 @@ class SearchBar(RepeatingFormField):
         self.date_picker = jsonify.encode(kw.get('date_picker',list()) )
         controllers = kw.get('table_search_controllers',dict())  
         self.table_search_controllers_stringified = str(controllers)
-        self.to_json = UtilJSON.dynamic_json()
         self.extra_callbacks_stringified = str(self.extra_callbacks)
         self.fields.extend(new_inputs)
         self.fields.extend(new_selects) 
@@ -689,8 +686,11 @@ class SearchBar(RepeatingFormField):
         if value and isinstance(value, list) and len(value) > 1:
             params['repetitions'] = len(value)
         return super(SearchBar, self).display(value, **params)
-      
-     
+
+    def update_params(self, d):
+        super(SearchBar, self).update_params(d)
+        d['to_json'] = UtilJSON.dynamic_json()
+        d['button_widget'] = MyButton(name='quick_search')
 
 class ProvisionForm(RepeatingFormField):
     pass
@@ -1183,8 +1183,8 @@ class SystemDetails(Widget):
 
 class SystemHistory(CompoundWidget): 
     template = "bkr.server.templates.system_activity"
-    member_widgets = ['search_bar']
-    params = ['list','grid','searchvalue','all_history'] 
+    member_widgets = ['grid', 'search_bar']
+    params = ['searchvalue', 'all_history']
     
     def __init__(self):
         #filter_column_options = model.Activity.distinct_field_names() 
@@ -1225,7 +1225,7 @@ class SystemForm(Form):
     template = "bkr.server.templates.system_form"
     params = ['id','readonly',
               'user_change','user_change_text', 'running_job',
-              'loan_change', 'loan_type', 'loan_wodget',
+              'loan_change', 'loan_type',
               'owner_change', 'owner_change_text']
     user_change = '/user_change'
     owner_change = '/owner_change'
@@ -1406,7 +1406,7 @@ class ProductWidget(SingleSelectField, RPC):
 
     def display(self,value=None, *args, **params):
         params['options'] =[(self.product_deselected, 'No Product')] + \
-            [(elem.id,elem.name) for elem in model.Product.query().order_by(model.Product.name).all()]
+            [(elem.id,elem.name) for elem in model.Product.query.order_by(model.Product.name).all()]
         return super(ProductWidget,self).display(value,**params)
 
     def update_params(self, d):
@@ -1433,7 +1433,7 @@ class RetentionTagWidget(SingleSelectField, RPC): #FIXME perhaps I shoudl create
        self.field_class = 'singleselectfield'
 
     def display(self,value=None, **params):
-        params['options'] = [(elem.id,elem.tag) for elem in model.RetentionTag.query().all()] 
+        params['options'] = [(elem.id,elem.tag) for elem in model.RetentionTag.query.all()]
         return super(RetentionTagWidget,self).display(value, **params)
 
     def update_params(self, d):
@@ -1457,7 +1457,7 @@ class PriorityWidget(SingleSelectField):
        if 'priorities' in params: 
            params['options'] =  params['priorities']       
        else:
-           params['options'] = [(elem.id,elem.priority) for elem in TaskPriority.query().all()]
+           params['options'] = [(elem.id,elem.priority) for elem in TaskPriority.query.all()]
        if isinstance(obj,model.Job):
            if 'id_prefix' in params:
                params['attrs'] = {'id' : '%s_%s' % (params['id_prefix'],obj.id) }

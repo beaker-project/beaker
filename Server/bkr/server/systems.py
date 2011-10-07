@@ -7,7 +7,6 @@ from turbogears import expose, identity, controllers
 from bkr.server.bexceptions import BX
 from bkr.server.model import System, SystemActivity, SystemStatus, Distro
 from bkr.server.xmlrpccontroller import RPCRoot
-from bkr.server.util import parse_xmlrpc_datetime
 from bkr.server.cobbler_utils import hash_to_string
 
 log = logging.getLogger(__name__)
@@ -200,13 +199,14 @@ class SystemsController(controllers.Controller):
         """
         if since is None:
             since = datetime.datetime.utcnow() - datetime.timedelta(days=1)
-        else: # should be an instance of xmlrpclib.DateTime
-            since = parse_xmlrpc_datetime(since.value)
+        else:
+            if not isinstance(since, datetime.datetime):
+                raise TypeError("'since' must be an XML-RPC datetime")
         system = System.by_fqdn(fqdn, identity.current.user)
-        activities = SystemActivity.query().filter(and_(
+        activities = SystemActivity.query.filter(and_(
                 SystemActivity.object == system,
                 SystemActivity.created >= since))
-        return [dict(created=xmlrpclib.DateTime(a.created.timetuple()),
+        return [dict(created=a.created,
                      user=a.user.user_name, service=a.service, action=a.action,
                      field_name=a.field_name, old_value=a.old_value,
                      new_value=a.new_value)

@@ -299,7 +299,7 @@ class Groups(AdminPage):
         group = Group.by_id(kw['id'])
         session.delete(group)
         activity = Activity(identity.current.user, u'WEBUI', u'Removed', u'Group', group.display_name, u"")
-        session.save_or_update(activity)
+        session.add(activity)
         flash( _(u"%s Deleted") % group.display_name )
         raise redirect(".")
 

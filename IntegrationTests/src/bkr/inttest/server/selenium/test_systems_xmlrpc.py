@@ -32,7 +32,6 @@ from bkr.inttest.assertions import assert_datetime_within, \
 from bkr.inttest import data_setup, stub_cobbler
 from bkr.server.model import User, Cpu, Key, Key_Value_String, Key_Value_Int, \
         System, SystemActivity, Provision, Hypervisor, SSHPubKey
-from bkr.server.util import parse_xmlrpc_datetime
 from bkr.server.tools import beakerd
 
 class ReserveSystemXmlRpcTest(XmlRpcTestCase):
@@ -45,8 +44,8 @@ class ReserveSystemXmlRpcTest(XmlRpcTestCase):
             server.systems.reserve(system.fqdn)
             self.fail('should raise')
         except Exception, e:
-            self.assert_(e.faultString.startswith(
-                    'turbogears.identity.exceptions.IdentityFailure'))
+            self.assert_('turbogears.identity.exceptions.IdentityFailure'
+                    in e.faultString, e.faultString)
 
     def test_cannot_reserve_automated_system(self):
         user = data_setup.create_user(password=u'password')
@@ -72,7 +71,8 @@ class ReserveSystemXmlRpcTest(XmlRpcTestCase):
             server.systems.reserve(system.fqdn)
             self.fail('should raise')
         except xmlrpclib.Fault, e:
-            self.assert_(e.faultString.startswith('bkr.common.bexceptions.BX'))
+            self.assert_('bkr.common.bexceptions.BX' in e.faultString,
+                    e.faultString)
 
     def test_reserve_system(self):
         user = data_setup.create_user(password=u'password')
@@ -147,8 +147,8 @@ class ReleaseSystemXmlRpcTest(XmlRpcTestCase):
             server.systems.release(system.fqdn)
             self.fail('should raise')
         except Exception, e:
-            self.assert_(e.faultString.startswith(
-                    'turbogears.identity.exceptions.IdentityFailure'))
+            self.assert_('turbogears.identity.exceptions.IdentityFailure'
+                    in e.faultString, e.faultString)
 
     def test_cannot_release_when_not_current_user(self):
         system = data_setup.create_system(
@@ -227,8 +227,8 @@ class SystemPowerXmlRpcTest(XmlRpcTestCase):
             self.server.systems.power('on', 'fqdn')
             self.fail('should raise')
         except xmlrpclib.Fault, e:
-            self.assert_(e.faultString.startswith(
-                    'turbogears.identity.exceptions.IdentityFailure'))
+            self.assert_('turbogears.identity.exceptions.IdentityFailure'
+                    in e.faultString, e.faultString)
         self.assert_(not self.stub_cobbler_thread.cobbler.system_actions)
 
     def test_cannot_power_system_in_use(self):
@@ -340,8 +340,8 @@ class SystemProvisionXmlRpcTest(XmlRpcTestCase):
             self.server.systems.provision('fqdn', 'distro')
             self.fail('should raise')
         except xmlrpclib.Fault, e:
-            self.assert_(e.faultString.startswith(
-                    'turbogears.identity.exceptions.IdentityFailure'))
+            self.assert_('turbogears.identity.exceptions.IdentityFailure'
+                    in e.faultString, e.faultString)
         self.assert_(not self.stub_cobbler_thread.cobbler.system_actions)
 
     def test_cannot_provision_automated_system(self):
@@ -670,7 +670,7 @@ class SystemHistoryXmlRpcTest(XmlRpcTestCase):
         session.flush()
         result = self.server.systems.history(system.fqdn)
         self.assertEquals(len(result), 1)
-        assert_datetime_within(parse_xmlrpc_datetime(result[0]['created'].value),
+        assert_datetime_within(result[0]['created'],
                 datetime.timedelta(seconds=5),
                 reference=datetime.datetime.utcnow())
         self.assertEquals(result[0]['user'], owner.user_name)

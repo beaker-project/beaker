@@ -114,10 +114,10 @@ class XmlRpcTestCase(unittest.TestCase):
     def get_server(cls):
         endpoint = urljoin(get_server_base(), 'RPC2')
         transport = endpoint.startswith('https:') and \
-                kobo.xmlrpc.SafeCookieTransport() or \
-                kobo.xmlrpc.CookieTransport()
+                kobo.xmlrpc.SafeCookieTransport(use_datetime=True) or \
+                kobo.xmlrpc.CookieTransport(use_datetime=True)
         return xmlrpclib.ServerProxy(endpoint, transport=transport,
-                allow_none=True)
+                allow_none=True, use_datetime=True)
 
 def jvm_version():
     popen = subprocess.Popen(['java', '-version'], stdout=subprocess.PIPE,
@@ -135,7 +135,7 @@ def setup_package():
     if not os.path.exists('/tmp/selenium'):
         os.mkdir('/tmp/selenium')
     processes.extend([
-        Process('Xvfb', args=['Xvfb', ':4', '-fp', '/usr/share/X11/fonts/misc',
+        Process('Xvfb', args=['Xvfb', ':4', '-extension', 'GLX',
                 '-screen', '0', '1024x768x24']),
         Process('selenium-server', args=['java',
                 '-Djava.io.tmpdir=/tmp/selenium',

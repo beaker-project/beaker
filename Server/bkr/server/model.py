@@ -1,6 +1,6 @@
 import sys
 import re
-from turbogears.database import metadata, mapper, session
+from turbogears.database import metadata, session
 from turbogears.config import get
 from turbogears import url
 from copy import copy
@@ -10,11 +10,13 @@ from sqlalchemy import (Table, Column, Index, ForeignKey, UniqueConstraint,
                         UnicodeText, Boolean, Float, VARCHAR, TEXT, Numeric,
                         or_, and_, not_, select, case, func)
 
-from sqlalchemy.orm import relation, backref, synonym, dynamic_loader,query
+from sqlalchemy.orm import relation, backref, synonym, dynamic_loader, \
+        query, object_mapper, mapper
 from sqlalchemy.orm.interfaces import AttributeExtension
 from sqlalchemy.sql import exists
 from sqlalchemy.sql.expression import join
 from sqlalchemy.exceptions import InvalidRequestError
+from sqlalchemy.orm.exc import NoResultFound
 from identity import LdapSqlAlchemyIdentityProvider
 from cobbler_utils import consolidate, string_to_hash
 from sqlalchemy.orm.collections import attribute_mapped_collection, MappedCollection, collection
@@ -42,14 +44,19 @@ import posixpath
 from turbogears import identity
 
 from datetime import timedelta, date, datetime
-
-import md5
-
+from hashlib import md5
 import xml.dom.minidom
 from xml.dom.minidom import Node, parseString
 
 import logging
 log = logging.getLogger(__name__)
+
+xmldoc = xml.dom.minidom.Document()
+
+def node(element, value):
+    node = xmldoc.createElement(element)
+    node.appendChild(xmldoc.createTextNode(value))
+    return node
 
 hypervisor_table = Table('hypervisor', metadata,
     Column('id', Integer, autoincrement=True,
@@ -240,8 +247,8 @@ labinfo_table = Table('labinfo', metadata,
            nullable=False, primary_key=True),
     Column('system_id', Integer, ForeignKey('system.id',
            onupdate='CASCADE', ondelete='CASCADE'), nullable=False),
-    Column('orig_cost', Numeric(precision=16,length=2,asdecimal=True)),
-    Column('curr_cost', Numeric(precision=16,length=2,asdecimal=True)),
+    Column('orig_cost', Numeric(precision=16, scale=2, asdecimal=True)),
+    Column('curr_cost', Numeric(precision=16, scale=2, asdecimal=True)),
     Column('dimensions', String(255)),
     Column('weight', Numeric(asdecimal=False)),
     Column('wattage', Numeric(asdecimal=False)),
@@ -1116,8 +1123,44 @@ task_type_map = Table('task_type_map',metadata,
     mysql_engine='InnoDB',
 )
 
+class MappedObject(object):
+
+    query = session.query_property()
+
+    @classmethod
+    def lazy_create(cls, **kwargs):
+        item = None
+        try:
+            item = cls.query.filter_by(**kwargs).one()
+        except NoResultFound:
+            item = cls(**kwargs)
+            session.add(item)
+            session.flush([item])
+        return item
+
+    def __init__(self, **kwargs):
+        for k, v in kwargs.iteritems():
+            setattr(self, k, v)
+        session.add(self)
+
+    def __repr__(self):
+        # pretty-print the attributes, so we can see what's getting autoloaded for us:
+        attrStr = ""
+        numAttrs = 0
+        for attr in self.__dict__:
+            if attr[0] != '_':
+                if numAttrs>0:
+                    attrStr += ', '
+                attrStr += '%s=%s' % (attr, repr(self.__dict__[attr]))
+                numAttrs += 1
+        return "%s(%s)" % (self.__class__.__name__, attrStr)
+
+    @classmethod
+    def by_id(cls, id):
+        return cls.query.filter_by(id=id).one()
+
 # the identity model
-class Visit(object):
+class Visit(MappedObject):
     """
     A visit to your site
     """
@@ -1126,14 +1169,14 @@ class Visit(object):
     lookup_visit = classmethod(lookup_visit)
 
 
-class VisitIdentity(object):
+class VisitIdentity(MappedObject):
     """
     A Visit that is link to a User object
     """
     pass
 
 
-class User(object):
+class User(MappedObject):
     """
     Reasonably basic User definition.
     Probably would want additional attributes.
@@ -1201,7 +1244,7 @@ class User(object):
                 user.user_name = user_name
                 user.display_name = objects[0][1]['cn'][0]
 	        user.email_address = objects[0][1]['mail'][0]
-                session.save(user)
+                session.add(user)
                 session.flush([user])
         return user
 
@@ -1220,7 +1263,7 @@ class User(object):
             f = User.user_name.like('%s%%' % username)
         # Don't return Removed Users
         # They may still be listed in ldap though.
-        db_users = [user.user_name for user in cls.query().filter(f).\
+        db_users = [user.user_name for user in cls.query.filter(f).\
                     filter(User.removed==None)]
         return list(set(db_users + ldap_users))
         
@@ -1265,7 +1308,7 @@ class User(object):
             return None
 
 
-class Permission(object):
+class Permission(MappedObject):
     """
     A relationship that determines what each Group can do
     """
@@ -1274,48 +1317,8 @@ class Permission(object):
         return cls.query.filter(cls.permission_name == permission_name).one()
 
     def __init__(self, permission_name):
+        super(Permission, self).__init__()
         self.permission_name = permission_name
-
-class MappedObject(object):
-
-    doc = xml.dom.minidom.Document()
-
-    @classmethod
-    def lazy_create(cls, **kwargs):
-        item = None
-        try:
-            item = cls.query.filter_by(**kwargs).one()
-        except InvalidRequestError, e:
-            if '%s' % e == 'Multiple rows returned for one()':
-                log.error('Mutlitple rows returned for %s' % kwargs)
-            elif '%s' % e == 'No rows returned for one()':
-                item = cls(**kwargs)
-                session.save(item)
-                session.flush([item])
-        return item
-
-    def node(self, element, value):
-        node = self.doc.createElement(element)
-        node.appendChild(self.doc.createTextNode(value))
-        return node
-
-    def __repr__(self):
-        # pretty-print the attributes, so we can see what's getting autoloaded for us:
-        attrStr = ""
-        numAttrs = 0
-        for attr in self.__dict__:
-            if attr[0] != '_':
-                if numAttrs>0:
-                    attrStr += ', '
-                attrStr += '%s=%s' % (attr, repr(self.__dict__[attr]))
-                numAttrs += 1
-        return "%s(%s)" % (self.__class__.__name__, attrStr)
-        #return "%s()" % (self.__class__.__name__)
-
-    @classmethod
-    def by_id(cls, id):
-        return cls.query.filter_by(id=id).one()
-
 
 class SystemObject(MappedObject):
     @classmethod
@@ -1393,7 +1396,7 @@ class SystemAdmin(MappedObject):
     # Needs to be fixed in Group.can_admin_system()
     pass
 
-class Group(object):
+class Group(MappedObject):
     """
     An ultra-simple group definition.
     """
@@ -1410,7 +1413,7 @@ class Group(object):
             log.debug('can_admin_system called with no system_id')
             return False
         try:
-            self.query().join(['admin_systems']).filter(and_(SystemAdmin.system_id == system_id,SystemAdmin.group_id == self.group_id)).one() 
+            self.query.join(['admin_systems']).filter(and_(SystemAdmin.system_id == system_id,SystemAdmin.group_id == self.group_id)).one()
             return True 
         except InvalidRequestError,e: 
             return False
@@ -1425,15 +1428,15 @@ class Group(object):
         based on the group_name
         """
         if find_anywhere:
-            q = cls.query().filter(Group.group_name.like('%%%s%%' % name))
+            q = cls.query.filter(Group.group_name.like('%%%s%%' % name))
         else:
-            q = cls.query().filter(Group.group_name.like('%s%%' % name))
+            q = cls.query.filter(Group.group_name.like('%s%%' % name))
         return q
 
     @classmethod
     def by_user(cls,user):
         try:
-            groups = Group.query().join('users').filter(User.user_id == user.user_id)
+            groups = Group.query.join('users').filter(User.user_id == user.user_id)
             return groups
         except Exception, e: 
             log.error(e)
@@ -1445,6 +1448,7 @@ class System(SystemObject):
                        model=None, type=None, serial=None, vendor=None,
                        owner=None, lab_controller=None, lender=None,
                        hypervisor=None, loaned=None, memory=None):
+        super(System, self).__init__()
         self.fqdn = fqdn
         self.status = status
         self.contact = contact
@@ -1467,10 +1471,10 @@ class System(SystemObject):
                       system_type = ['type','type'],
                      )
                       
-        host_requires = self.doc.createElement('hostRequires')
-        xmland = self.doc.createElement('and')
+        host_requires = xmldoc.createElement('hostRequires')
+        xmland = xmldoc.createElement('and')
         for key in fields.keys():
-            require = self.doc.createElement(key)
+            require = xmldoc.createElement(key)
             require.setAttribute('op', '=')
             if isinstance(fields[key], list):
                 obj = self
@@ -1741,13 +1745,13 @@ url --url=$tree
         
         """
         if system is None:
-            query = cls.query().outerjoin(['groups','users'], aliased=True)
+            query = cls.query.outerjoin(['groups','users'], aliased=True)
         else:
             try: 
                 query = system.outerjoin(['groups','users'], aliased=True)
             except AttributeError, (e):
                 log.error('A non Query object has been passed into the all method, using default query instead: %s' % e)        
-                query = cls.query().outerjoin(['groups','users'], aliased=True)
+                query = cls.query.outerjoin(['groups','users'], aliased=True)
 
         return cls.permissable_systems(query,user)
 
@@ -1827,7 +1831,7 @@ url --url=$tree
     @classmethod
     def available_order(cls, user, systems=None):
         return cls.available_for_schedule(user,systems=systems).order_by(case([(System.owner==user, 1),
-                          (System.owner!=user and Group.systems==None, 2)],
+                          (and_(System.owner!=user, Group.systems==None), 2)],
                               else_=3))
 
     @classmethod
@@ -1861,7 +1865,7 @@ url --url=$tree
 
     @classmethod
     def by_group(cls,group_id,*args,**kw):
-        return System.query().join(['groups']).filter(Group.group_id == group_id)
+        return System.query.join(['groups']).filter(Group.group_id == group_id)
     
     @classmethod
     def by_type(cls,type,user=None,systems=None):
@@ -1879,7 +1883,7 @@ url --url=$tree
         if query:
             return query.filter(System.arch.any(Arch.arch == arch))
         else:
-            return System.query().filter(System.arch.any(Arch.arch == arch))
+            return System.query.filter(System.arch.any(Arch.arch == arch))
 
     def excluded_families(self):
         """
@@ -1958,7 +1962,7 @@ url --url=$tree
 
         user_groups = user.groups
         if user_groups:
-            admins = self.query().filter(System.admins.any(
+            admins = self.query.filter(System.admins.any(
                 and_(Group.group_id.in_([g.group_id for g in user_groups]),
                 System.id == self.id )))
             if admins.count():
@@ -2147,7 +2151,7 @@ url --url=$tree
         # Update last checkin even if we don't change anything.
         self.date_lastcheckin = datetime.utcnow()
 
-        md5sum = md5.new("%s" % inventory).hexdigest()
+        md5sum = md5("%s" % inventory).hexdigest()
         if self.checksum == md5sum:
             return 0
         self.activity.append(SystemActivity(user=identity.current.user,
@@ -2209,7 +2213,7 @@ url --url=$tree
         currentDevices = []
         for device in deviceinfo:
             try:
-                mydevice = Device.query().filter_by(vendor_id = device['vendorID'],
+                mydevice = Device.query.filter_by(vendor_id = device['vendorID'],
                                    device_id = device['deviceID'],
                                    subsys_vendor_id = device['subsysVendorID'],
                                    subsys_device_id = device['subsysDeviceID'],
@@ -2225,7 +2229,7 @@ url --url=$tree
                                      driver         = device['driver'],
                                      device_class   = device['type'],
                                      description    = device['description'])
-                session.save(mydevice)
+                session.add(mydevice)
                 session.flush([mydevice])
             if mydevice not in self.devices:
                 self.devices.append(mydevice)
@@ -2286,7 +2290,7 @@ url --url=$tree
         """
         List excluded osmajor for system by arch
         """
-        excluded = ExcludeOSMajor.query().join('system').\
+        excluded = ExcludeOSMajor.query.join('system').\
                     join('arch').filter(and_(System.id==self.id,
                                              Arch.id==arch.id))
         return excluded
@@ -2295,7 +2299,7 @@ url --url=$tree
         """
         List excluded osversion for system by arch
         """
-        excluded = ExcludeOSVersion.query().join('system').\
+        excluded = ExcludeOSVersion.query.join('system').\
                     join('arch').filter(and_(System.id==self.id,
                                              Arch.id==arch.id))
         return excluded
@@ -2304,7 +2308,7 @@ url --url=$tree
         """
         List of distros that support this system
         """
-        distros = Distro.query().join(['arch','systems']).filter(
+        distros = Distro.query.join(['arch','systems']).filter(
               and_(System.id==self.id,
                    System.lab_controller_id==LabController.id,
                    lab_controller_distro_map.c.distro_id==Distro.id,
@@ -2513,8 +2517,8 @@ $SNIPPET("rhts_post")
                 distro_tag_map.c.distro_tag_id ==
                     DistroTag.by_tag(reliable_distro_tag.decode('utf8')).id,
                 recipe_table.c.start_time >
-                    func.ifnull(status_change_subquery, system_added_subquery),
-                recipe_table.c.finish_time > nonaborted_recipe_subquery))
+                    func.ifnull(status_change_subquery.as_scalar(), system_added_subquery.as_scalar()),
+                recipe_table.c.finish_time > nonaborted_recipe_subquery.as_scalar()))
         if session.execute(query).scalar() >= 2:
             # Broken!
             reason = unicode(_(u'System has a run of aborted recipes ' 
@@ -2597,10 +2601,11 @@ $SNIPPET("rhts_post")
 
 class SystemStatusAttributeExtension(AttributeExtension):
 
-    def set(self, obj, child, oldchild, initiator):
+    def set(self, state, child, oldchild, initiator):
+        obj = state.obj()
         log.debug('%r status changed from %r to %r', obj, oldchild, child)
         if child == oldchild:
-            return
+            return child
         if oldchild is None:
             assert not obj.status_durations
         else:
@@ -2609,10 +2614,12 @@ class SystemStatusAttributeExtension(AttributeExtension):
             obj.status_durations[0].finish_time = datetime.utcnow()
         obj.status_durations.insert(0,
                 SystemStatusDuration(system=obj, status=child))
+        return child
 
 class SystemCc(SystemObject):
 
     def __init__(self, email_address):
+        super(SystemCc, self).__init__()
         self.email_address = email_address
 
 class Hypervisor(SystemObject):
@@ -2625,11 +2632,11 @@ class Hypervisor(SystemObject):
         """
         return an array of tuples containing id, hypervisor
         """
-        return [(hvisor.id, hvisor.hypervisor) for hvisor in cls.query()]
+        return [(hvisor.id, hvisor.hypervisor) for hvisor in cls.query]
 
     @classmethod
     def get_all_names(cls):
-        return [h.hypervisor for h in cls.query()]
+        return [h.hypervisor for h in cls.query]
 
     @classmethod
     @sqla_cache
@@ -2639,6 +2646,7 @@ class Hypervisor(SystemObject):
 class SystemType(SystemObject):
 
     def __init__(self, type=None):
+        super(SystemType, self).__init__()
         self.type = type
 
     def __repr__(self):
@@ -2649,11 +2657,11 @@ class SystemType(SystemObject):
         """
         Desktop, Server, Virtual
         """
-        all_types = cls.query()
+        all_types = cls.query
         return [(type.id, type.type) for type in all_types]
     @classmethod
     def get_all_type_names(cls):
-        all_types = cls.query()
+        all_types = cls.query
         return [type.type for type in all_types]
 
     @classmethod
@@ -2665,6 +2673,7 @@ class SystemType(SystemObject):
 class ReleaseAction(SystemObject):
 
     def __init__(self, action=None):
+        super(ReleaseAction, self).__init__()
         self.action = action
 
     def __repr__(self):
@@ -2675,7 +2684,7 @@ class ReleaseAction(SystemObject):
         """
         PowerOff, LeaveOn or ReProvision
         """
-        all_actions = cls.query()
+        all_actions = cls.query
         return [(raction.id, raction.action) for raction in all_actions]
 
     @classmethod
@@ -2711,6 +2720,7 @@ class ReleaseAction(SystemObject):
 class SystemStatus(SystemObject):
 
     def __init__(self, status=None):
+        super(SystemStatus, self).__init__()
         self.status = status
 
     def __repr__(self):
@@ -2721,12 +2731,12 @@ class SystemStatus(SystemObject):
         """
         Available, InUse, Offline
         """
-        all_status = cls.query()
+        all_status = cls.query
         return [(status.id, status.status) for status in all_status]
 
     @classmethod
     def get_all_status_name(cls):
-       all_status_name = cls.query()
+       all_status_name = cls.query
        return [status_name.status for status_name in all_status_name]      
 
 
@@ -2744,6 +2754,7 @@ class SystemStatus(SystemObject):
 
 class Arch(MappedObject):
     def __init__(self, arch=None):
+        super(Arch, self).__init__()
         self.arch = arch
 
     def __repr__(self):
@@ -2751,7 +2762,7 @@ class Arch(MappedObject):
 
     @classmethod
     def get_all(cls):
-        return [(0,"All")] + [(arch.id, arch.arch) for arch in cls.query()]
+        return [(0,"All")] + [(arch.id, arch.arch) for arch in cls.query]
 
     @classmethod
     def by_id(cls, id):
@@ -2767,7 +2778,7 @@ class Arch(MappedObject):
         A class method that can be used to search arches
         based on the name
         """
-        return cls.query().filter(Arch.arch.like('%s%%' % name))
+        return cls.query.filter(Arch.arch.like('%s%%' % name))
 
 
 class Provision(SystemObject):
@@ -2792,6 +2803,7 @@ class ExcludeOSVersion(SystemObject):
 
 class Breed(SystemObject):
     def __init__(self, breed):
+        super(Breed, self).__init__()
         self.breed = breed
 
     @classmethod
@@ -2804,6 +2816,7 @@ class Breed(SystemObject):
 
 class OSMajor(MappedObject):
     def __init__(self, osmajor):
+        super(OSMajor, self).__init__()
         self.osmajor = osmajor
 
     @classmethod
@@ -2821,13 +2834,13 @@ class OSMajor(MappedObject):
 
     @classmethod
     def get_all(cls):
-        return [(0,"All")] + [(major.id, major.osmajor) for major in cls.query()]
+        return [(0,"All")] + [(major.id, major.osmajor) for major in cls.query]
 
     def tasks(self):
         """
         List of tasks that support this OSMajor
         """
-        return Task.query().filter(
+        return Task.query.filter(
                 not_(
                      Task.id.in_(select([task_table.c.id]).
                  where(task_table.c.id==task_exclude_osmajor_table.c.task_id).
@@ -2843,6 +2856,7 @@ class OSMajor(MappedObject):
 
 class OSVersion(MappedObject):
     def __init__(self, osmajor, osminor, arches=None):
+        super(OSVersion, self).__init__()
         self.osmajor = osmajor
         self.osminor = osminor
         if arches:
@@ -2858,15 +2872,15 @@ class OSVersion(MappedObject):
 
     @classmethod
     def get_all(cls):
-        all = cls.query()
+        all = cls.query
         return [(0,"All")] + [(version.id, version.osminor) for version in all]
 
     @classmethod
     def list_osmajor_by_name(cls,name,find_anywhere=False):
         if find_anywhere:
-            q = cls.query().join(['osmajor']).filter(OSMajor.osmajor.like('%%%s%%' % name))
+            q = cls.query.join(['osmajor']).filter(OSMajor.osmajor.like('%%%s%%' % name))
         else:
-            q = cls.query().join(['osmajor']).filter(OSMajor.osmajor.like('%s%%' % name))
+            q = cls.query.join(['osmajor']).filter(OSMajor.osmajor.like('%s%%' % name))
         return q
     
 
@@ -2897,9 +2911,9 @@ class LabController(SystemObject):
         """
         Desktop, Server, Virtual
         """
-        all = cls.query()
+        all = cls.query
         if valid:
-            all = cls.query().filter_by(removed=None)
+            all = cls.query.filter_by(removed=None)
         return [(lc.id, lc.fqdn) for lc in all]
 
     distros = association_proxy('_distros', 'distro')
@@ -2954,7 +2968,7 @@ class Watchdog(MappedObject):
                 )
 
         if op and fop:
-            return cls.query().join('system').join(['recipe','recipeset']).filter(my_filter)
+            return cls.query.join('system').join(['recipe','recipeset']).filter(my_filter)
                                                                                  
 
 class LabInfo(SystemObject):
@@ -2963,6 +2977,7 @@ class LabInfo(SystemObject):
 
 class Cpu(SystemObject):
     def __init__(self, vendor=None, model=None, model_name=None, family=None, stepping=None,speed=None,processors=None,cores=None,sockets=None,flags=None):
+        super(Cpu, self).__init__()
         self.vendor = vendor
         self.model = model
         self.model_name = model_name
@@ -2986,6 +3001,7 @@ class Cpu(SystemObject):
 
 class CpuFlag(SystemObject):
     def __init__(self, flag=None):
+        super(CpuFlag, self).__init__()
         self.flag = flag
 
     def __repr__(self):
@@ -2999,6 +3015,7 @@ class CpuFlag(SystemObject):
 
 class Numa(SystemObject):
     def __init__(self, nodes=None):
+        super(Numa, self).__init__()
         self.nodes = nodes
 
     def __repr__(self):
@@ -3007,6 +3024,7 @@ class Numa(SystemObject):
 
 class DeviceClass(SystemObject):
     def __init__(self, device_class=None, description=None):
+        super(DeviceClass, self).__init__()
         if not device_class:
             device_class = "NONE"
         self.device_class = device_class
@@ -3018,13 +3036,14 @@ class DeviceClass(SystemObject):
 
 class Device(SystemObject):
     def __init__(self, vendor_id=None, device_id=None, subsys_device_id=None, subsys_vendor_id=None, bus=None, driver=None, device_class=None, description=None):
+        super(Device, self).__init__()
         if not device_class:
             device_class = "NONE"
         try:
             dc = DeviceClass.query.filter_by(device_class = device_class).one()
         except InvalidRequestError:
             dc = DeviceClass(device_class = device_class)
-            session.save(dc)
+            session.add(dc)
             session.flush([dc])
         self.vendor_id = vendor_id
         self.device_id = device_id
@@ -3036,14 +3055,16 @@ class Device(SystemObject):
         self.device_class = dc
 
 
-class Locked(object):
+class Locked(MappedObject):
     def __init__(self, name=None):
+        super(Locked, self).__init__()
         self.name = name
 
 
-class PowerType(object):
+class PowerType(MappedObject):
 
     def __init__(self, name=None):
+        super(PowerType, self).__init__()
         self.name = name
 
     @classmethod
@@ -3051,7 +3072,7 @@ class PowerType(object):
         """
         Apc, wti, etc..
         """
-        all_types = cls.query()
+        all_types = cls.query
         return [(0, "None")] + [(type.id, type.name) for type in all_types]
 
     @classmethod
@@ -3065,18 +3086,19 @@ class PowerType(object):
     @classmethod
     def list_by_name(cls,name,find_anywhere=False):
         if find_anywhere:
-            q = cls.query().filter(PowerType.name.like('%%%s%%' % name))
+            q = cls.query.filter(PowerType.name.like('%%%s%%' % name))
         else:
-            q = cls.query().filter(PowerType.name.like('%s%%' % name))
+            q = cls.query.filter(PowerType.name.like('%s%%' % name))
         return q
 
 class Power(SystemObject):
     pass
 
 
-class CommandStatus(object):
+class CommandStatus(MappedObject):
 
     def __init__(self, status=None):
+        super(CommandStatus, self).__init__()
         self.status = status
 
     def __repr__(self):
@@ -3085,21 +3107,24 @@ class CommandStatus(object):
     @classmethod
     @sqla_cache
     def by_name(cls, name):
-        return cls.query().filter_by(status=name).one()
+        return cls.query.filter_by(status=name).one()
 
 
-class Serial(object):
+class Serial(MappedObject):
     def __init__(self, name=None):
+        super(Serial, self).__init__()
         self.name = name
 
 
-class SerialType(object):
+class SerialType(MappedObject):
     def __init__(self, name=None):
+        super(SerialType, self).__init__()
         self.name = name
 
 
-class Install(object):
+class Install(MappedObject):
     def __init__(self, name=None):
+        super(Install, self).__init__()
         self.name = name
 
 
@@ -3109,7 +3134,7 @@ def _create_tag(tag):
         tag = DistroTag.by_tag(tag)
     except InvalidRequestError:
         tag = DistroTag(tag=tag)
-        session.save(tag)
+        session.add(tag)
         session.flush([tag])
     return tag
 
@@ -3121,6 +3146,7 @@ class Distro(MappedObject):
     _EXCLUDE_OVER_MULTIPLE_ARCHES = 'PAE'
 
     def __init__(self, install_name=None):
+        super(Distro, self).__init__()
         self.install_name = install_name
  
     @classmethod
@@ -3142,7 +3168,7 @@ class Distro(MappedObject):
         from bkr.server.needpropertyxml import apply_filter
         # Join on lab_controller_assocs or we may get a distro that is not on any 
         # lab controller anymore.
-        distros = Distro.query().join('lab_controller_assocs')
+        distros = Distro.query.join('lab_controller_assocs')
         distros = apply_filter(filter, distros)
         return distros.order_by('-date_created')
 
@@ -3156,10 +3182,10 @@ class Distro(MappedObject):
                       distro_family  = ['osversion','osmajor','osmajor'],
                      )
                       
-        distro_requires = self.doc.createElement('distroRequires')
-        xmland = self.doc.createElement('and')
+        distro_requires = xmldoc.createElement('distroRequires')
+        xmland = xmldoc.createElement('and')
         for key in fields.keys():
-            require = self.doc.createElement(key)
+            require = xmldoc.createElement(key)
             require.setAttribute('op', '=')
             if isinstance(fields[key], list):
                 obj = self
@@ -3175,7 +3201,7 @@ class Distro(MappedObject):
 
     def systems_filter(self, user, filter, join=['lab_controller']):
         from bkr.server.needpropertyxml import apply_filter
-        systems = System.query()
+        systems = System.query
         systems = apply_filter(filter, systems)
         systems = self.all_systems(user, join, systems)
         return systems
@@ -3184,7 +3210,7 @@ class Distro(MappedObject):
         """
         List of tasks that support this distro
         """
-        return Task.query().filter(
+        return Task.query.filter(
                 not_(or_(Task.id.in_(select([task_table.c.id]).
                  where(task_table.c.id==task_exclude_arch_table.c.task_id).
                  where(task_exclude_arch_table.c.arch_id==arch_table.c.id).
@@ -3326,7 +3352,7 @@ class Distro(MappedObject):
         if user:
             systems = System.available_order(user, systems=systems)
         elif not systems:
-            systems = System.query()
+            systems = System.query
         
         return systems.join(join).filter(and_(
                 System.arch.contains(self.arch),
@@ -3352,8 +3378,9 @@ class Distro(MappedObject):
     lab_controllers = association_proxy('lab_controller_assocs', 'lab_controller')
 
 
-class DistroTag(object):
+class DistroTag(MappedObject):
     def __init__(self, tag=None):
+        super(DistroTag, self).__init__()
         self.tag = tag
 
     def __repr__(self):
@@ -3364,22 +3391,23 @@ class DistroTag(object):
         """
         A class method to lookup tags
         """
-        return cls.query().filter(DistroTag.tag == tag).one()
+        return cls.query.filter(DistroTag.tag == tag).one()
 
     @classmethod
     def list_by_tag(cls, tag):
         """
         A class method that can be used to search tags
         """
-        return cls.query().filter(DistroTag.tag.like('%s%%' % tag))
+        return cls.query.filter(DistroTag.tag.like('%s%%' % tag))
 
-class Admin(object):
+class Admin(MappedObject):
     def __init__(self,system_id,group_id):
+        super(Admin, self).__init__()
         self.system_id = system_id
         self.group_id = group_id
 
 # Activity model
-class Activity(object):
+class Activity(MappedObject):
     def __init__(self, user=None, service=None, action=None,
                  field_name=None, old_value=None, new_value=None):
         """
@@ -3388,6 +3416,7 @@ class Activity(object):
         constructor will override it with something more specific (such as the 
         name of an external service) if appropriate.
         """
+        super(Activity, self).__init__()
         self.user = user
         self.service = service
         try:
@@ -3400,16 +3429,16 @@ class Activity(object):
         # we don't end up with invalid UTF-8 chars at the end
         if old_value and isinstance(old_value, unicode):
             old_value = unicode_truncate(old_value,
-                bytes_length=self.c.old_value.type.length)
+                bytes_length=object_mapper(self).c.old_value.type.length)
         if new_value and isinstance(new_value, unicode):
             new_value = unicode_truncate(new_value,
-                bytes_length=self.c.new_value.type.length)
+                bytes_length=object_mapper(self).c.new_value.type.length)
         self.old_value = old_value
         self.new_value = new_value
 
     @classmethod
     def all(cls):
-        return cls.query()
+        return cls.query
 
     def object_name(self):
         return None
@@ -3446,25 +3475,26 @@ class CommandActivity(Activity):
         self.system.activity.append(sa)
 
 # note model
-class Note(object):
+class Note(MappedObject):
     def __init__(self, user=None, text=None):
+        super(Note, self).__init__()
         self.user = user
         self.text = text
 
     @classmethod
     def all(cls):
-        return cls.query()
+        return cls.query
 
 
 class Key(SystemObject):
     @classmethod
     def get_all_keys(cls):
-       all_keys = cls.query()     
+       all_keys = cls.query
        return [key.key_name for key in all_keys]
 
     @classmethod
     def by_name(cls, key_name):
-        return cls.query().filter_by(key_name=key_name).one()
+        return cls.query.filter_by(key_name=key_name).one()
 
 
     @classmethod
@@ -3474,16 +3504,17 @@ class Key(SystemObject):
         based on the key_name
         """
         if find_anywhere:
-            q = cls.query().filter(Key.key_name.like('%%%s%%' % name))
+            q = cls.query.filter(Key.key_name.like('%%%s%%' % name))
         else:
-            q = cls.query().filter(Key.key_name.like('%s%%' % name))
+            q = cls.query.filter(Key.key_name.like('%s%%' % name))
         return q
 
     @classmethod
     def by_id(cls, id):
-        return cls.query().filter_by(id=id).one()
+        return cls.query.filter_by(id=id).one()
 
     def __init__(self, key_name=None, numeric=False):
+        super(Key, self).__init__()
         self.key_name = key_name
         self.numeric = numeric
 
@@ -3492,11 +3523,12 @@ class Key(SystemObject):
 
 
 # key_value model
-class Key_Value_String(object):
+class Key_Value_String(MappedObject):
 
     key_type = 'string'
 
     def __init__(self, key, key_value, system=None):
+        super(Key_Value_String, self).__init__()
         self.system = system
         self.key = key
         self.key_value = key_value
@@ -3506,16 +3538,17 @@ class Key_Value_String(object):
 
     @classmethod
     def by_key_value(cls, system, key, value):
-        return cls.query().filter(and_(Key_Value_String.key==key, 
+        return cls.query.filter(and_(Key_Value_String.key==key,
                                   Key_Value_String.key_value==value,
                                   Key_Value_String.system==system)).one()
 
 
-class Key_Value_Int(object):
+class Key_Value_Int(MappedObject):
 
     key_type = 'int'
 
     def __init__(self, key, key_value, system=None):
+        super(Key_Value_Int, self).__init__()
         self.system = system
         self.key = key
         self.key_value = key_value
@@ -3525,40 +3558,40 @@ class Key_Value_Int(object):
 
     @classmethod
     def by_key_value(cls, system, key, value):
-        return cls.query().filter(and_(Key_Value_Int.key==key, 
+        return cls.query.filter(and_(Key_Value_Int.key==key,
                                   Key_Value_Int.key_value==value,
                                   Key_Value_Int.system==system)).one()
 
 
 
-class TaskPriority(object):   
+class TaskPriority(MappedObject):
 
     @classmethod
     def default_priority(cls):
-        return cls.query().filter_by(id=3).one()
+        return cls.query.filter_by(id=3).one()
 
     @classmethod
     def by_id(cls,id):
-      return cls.query().filter_by(id=id).one()
+      return cls.query.filter_by(id=id).one()
 
-class TaskStatus(object):
+class TaskStatus(MappedObject):
 
     @classmethod
     def max(cls):
-        return cls.query().order_by(TaskStatus.severity.desc()).first()
+        return cls.query.order_by(TaskStatus.severity.desc()).first()
 
     @classmethod
     @sqla_cache
     def by_name(cls, status_name):
-        return cls.query().filter_by(status=status_name).one()
+        return cls.query.filter_by(status=status_name).one()
 
     @classmethod
     def get_all(cls):
-        return [(0,"All")] + [(status.id, status.status) for status in cls.query()]
+        return [(0,"All")] + [(status.id, status.status) for status in cls.query]
 
     @classmethod
     def get_all_status(cls):
-        all = cls.query()
+        all = cls.query
         return [elem.status for elem in all]
 
     def __cmp__(self, other):
@@ -3575,22 +3608,23 @@ class TaskStatus(object):
         return "%s" % (self.status)
 
 
-class TaskResult(object):
+class TaskResult(MappedObject):
     @classmethod
+    @sqla_cache
     def by_name(cls, result_name):
-        return cls.query().filter_by(result=result_name).one()
+        return cls.query.filter_by(result=result_name).one()
 
     @classmethod
     def get_results(cls):
-        return [(result.id,result.result) for result in cls.query()] 
+        return [(result.id,result.result) for result in cls.query]
 
     @classmethod
     def get_all(cls):
-        return [(0,"All")] + [(result.id, result.result) for result in cls.query()]
+        return [(0,"All")] + [(result.id, result.result) for result in cls.query]
 
     @classmethod
     def get_all_results(cls):
-        return [elem.result for elem in cls.query()]
+        return [elem.result for elem in cls.query]
 
     def __cmp__(self, other):
         if hasattr(other,'severity'):
@@ -3610,6 +3644,7 @@ class Log(MappedObject):
     MAX_ENTRIES_PER_DIRECTORY = 100
 
     def __init__(self, path=None, filename=None, server=None, basepath=None):
+        super(Log, self).__init__()
         self.path = path
         self.filename = filename
         self.server = server
@@ -3670,7 +3705,7 @@ class Log(MappedObject):
 
     @classmethod 
     def by_id(cls,id): 
-       return cls.query().filter_by(id=id).one()
+       return cls.query.filter_by(id=id).one()
 
     def __cmp__(self, other):
         """ Used to compare logs that are already stored. Log(path,filename) in Recipe.logs  == True
@@ -3869,7 +3904,7 @@ class Job(TaskBase):
     def complete_delta(cls, delta, query):
         delta = timedelta(**delta)
         if not query:
-            query = cls.query()
+            query = cls.query
         query = query.join(['recipesets','recipes']).filter(and_(Recipe.finish_time < datetime.utcnow() - delta,
             cls.status_id.in_([TaskStatus.by_name(u'Completed').id,TaskStatus.by_name(u'Aborted').id,TaskStatus.by_name(u'Cancelled').id])))
         return query
@@ -3915,14 +3950,14 @@ class Job(TaskBase):
     @classmethod
     def has_family(cls, family, query=None, **kw):
         if query is None:
-            query = cls.query()
+            query = cls.query
         query = query.join(['recipesets','recipes','distro','osversion','osmajor']).filter(OSMajor.osmajor == family).reset_joinpoint()
         return query
 
     @classmethod
     def by_tag(cls, tag, query=None):
         if query is None:
-            query = cls.query()
+            query = cls.query
         if type(tag) is list:
             tag_query = cls.retention_tag_id.in_([RetentionTag.by_tag(unicode(t)).id for t in tag])
         else:
@@ -3933,7 +3968,7 @@ class Job(TaskBase):
     @classmethod
     def by_product(cls, product, query=None):
         if query is None:
-            query=cls.query()
+            query=cls.query
         if type(product) is list:
             product_query = cls.product.in_(*[Product.by_name(p) for p in product])
         else:
@@ -3943,9 +3978,9 @@ class Job(TaskBase):
     @classmethod
     def by_whiteboard(cls,desc):
         if type(desc) is list:
-            res = Job.query().filter(Job.whiteboard.in_(desc))
+            res = Job.query.filter(Job.whiteboard.in_(desc))
         else:
-            res = Job.query().filter_by(whiteboard=desc)
+            res = Job.query.filter_by(whiteboard=desc)
         return res.limit(cls.max_by_whiteboard)
 
     @classmethod
@@ -3998,29 +4033,28 @@ class Job(TaskBase):
             recipeSet.recipes.append(recipe)
             job.recipesets.append(recipeSet)
             job.ttasks += recipeSet.ttasks
-        session.save(job)
+        session.add(job)
         session.flush()
         return job
 
     @classmethod
     def marked_for_deletion(cls):
-        return cls.query().filter(and_(cls.to_delete!=None, cls.deleted==None)).all()
+        return cls.query.filter(and_(cls.to_delete!=None, cls.deleted==None)).all()
 
     @classmethod
     def find_jobs(cls, query=None, tag=None, complete_days=None, family=None, product=None,  **kw):
         if not query:
-            query = cls.query()
+            query = cls.query
         if complete_days:
             #This takes the same kw names as timedelta
             query = cls.complete_delta({'days':int(complete_days)}, query)
         if family:
             try:
                 OSMajor.by_name(family)
-            except InvalidRequestError, e:
-                if '%s' % e == 'No rows returned for one()':
-                    err_msg = _(u'Family is invalid: %s') % family
-                    log.exception(err_msg)
-                    raise BX(err_msg)
+            except NoResultFound:
+                err_msg = _(u'Family is invalid: %s') % family
+                log.exception(err_msg)
+                raise BX(err_msg)
 
             query =cls.has_family(family, query)
         if tag:
@@ -4028,22 +4062,20 @@ class Job(TaskBase):
                 tag = tag[0]
             try:
                 query = cls.by_tag(tag, query)
-            except InvalidRequestError, e:
-                if '%s' % e == 'No rows returned for one()':
-                    err_msg = _('Tag is invalid: %s') % tag
-                    log.exception(err_msg)
-                    raise BX(err_msg)
+            except NoResultFound:
+                err_msg = _('Tag is invalid: %s') % tag
+                log.exception(err_msg)
+                raise BX(err_msg)
 
         if product:
             if len(product) == 1:
                 product = product[0]
             try:
                 query = cls.by_product(product,query)
-            except InvalidRequestError, e:
-                if '%s' % e == 'No rows returned for one()':
-                    err_msg = _('Product is invalid: %s') % product
-                    log.exception(err_msg)
-                    raise BX(err_msg)
+            except NoResultFound:
+                err_msg = _('Product is invalid: %s') % product
+                log.exception(err_msg)
+                raise BX(err_msg)
 
         return query
 
@@ -4134,7 +4166,7 @@ class Job(TaskBase):
         title.text = "Set all RecipeSet priorities"        
         content = Element('td')
         content.attrib['colspan'] = colspan
-        priorities = TaskPriority.query().all()
+        priorities = TaskPriority.query.all()
         for p in priorities:
             id = '%s%s' % (prefix, self.id)
             a_href = make_fake_link(unicode(p.id), id, p.priority)
@@ -4151,7 +4183,7 @@ class Job(TaskBase):
         title.text = "Set all RecipeSet tags"        
         content = Element('td')
         content.attrib['colspan'] = colspan
-        tags = RetentionTag.query().all()
+        tags = RetentionTag.query.all()
         for t in tags:
             id = '%s%s' % (u'retentiontag_job_', self.id)
             a_href = make_fake_link(unicode(t.id), id, t.tag)
@@ -4161,21 +4193,21 @@ class Job(TaskBase):
         return span
 
     def _create_job_elem(self,clone=False, *args, **kw):
-        job = self.doc.createElement("job")
+        job = xmldoc.createElement("job")
         if not clone:
             job.setAttribute("id", "%s" % self.id)
             job.setAttribute("owner", "%s" % self.owner.email_address)
             job.setAttribute("result", "%s" % self.result)
             job.setAttribute("status", "%s" % self.status)
         if self.cc:
-            notify = self.doc.createElement('notify')
+            notify = xmldoc.createElement('notify')
             for email_address in self.cc:
-                notify.appendChild(self.node('cc', email_address))
+                notify.appendChild(node('cc', email_address))
             job.appendChild(notify)
         job.setAttribute("retention_tag", "%s" % self.retention_tag.tag)
         if self.product:
             job.setAttribute("product", "%s" % self.product.name)
-        job.appendChild(self.node("whiteboard", self.whiteboard or ''))
+        job.appendChild(node("whiteboard", self.whiteboard or ''))
         return job
 
     def to_xml(self, clone=False, *args, **kw):
@@ -4281,26 +4313,29 @@ class Job(TaskBase):
 class JobCc(MappedObject):
 
     def __init__(self, email_address):
+        super(JobCc, self).__init__()
         self.email_address = email_address
 
 
 class Product(MappedObject):
 
     def __init__(self, name):
+        super(Product, self).__init__()
         self.name = name
 
     @classmethod
     def by_id(cls, id):
-        return cls.query().filter(cls.id == id).one()
+        return cls.query.filter(cls.id == id).one()
 
     @classmethod
     def by_name(cls, name):
-        return cls.query().filter(cls.name == name).one()
+        return cls.query.filter(cls.name == name).one()
 
-class BeakerTag(object):
+class BeakerTag(MappedObject):
 
 
     def __init__(self, tag, *args, **kw):
+        super(BeakerTag, self).__init__()
         self.tag = tag
 
     def can_delete(self):
@@ -4308,15 +4343,15 @@ class BeakerTag(object):
 
     @classmethod
     def by_id(cls, id, *args, **kw):
-        return cls.query().filter(cls.id==id).one()
+        return cls.query.filter(cls.id==id).one()
 
     @classmethod
     def by_tag(cls, tag, *args, **kw):
-        return cls.query().filter(cls.tag==tag).one()
+        return cls.query.filter(cls.tag==tag).one()
 
     @classmethod
     def get_all(cls, *args, **kw):
-        return cls.query()
+        return cls.query
 
 
 class RetentionTag(BeakerTag):
@@ -4330,14 +4365,14 @@ class RetentionTag(BeakerTag):
 
     @classmethod
     def by_name(cls,tag):
-        return cls.query().filter_by(tag=tag).one()
+        return cls.query.filter_by(tag=tag).one()
 
     def can_delete(self):
         if self.is_default:
             return False
         # At the moment only jobs use this tag, update this if that ever changes
         # Only remove tags that haven't been used
-        return not bool(Job.query().filter(Job.retention_tag == self).count())
+        return not bool(Job.query.filter(Job.retention_tag == self).count())
 
     def requires_product(self):
         return self.needs_product
@@ -4356,23 +4391,23 @@ class RetentionTag(BeakerTag):
         
     @classmethod
     def get_default(cls, *args, **kw):
-        return cls.query().filter(cls.is_default==True).one()
+        return cls.query.filter(cls.is_default==True).one()
 
     @classmethod
     def list_by_requires_product(cls, requires=True, *args, **kw):
-        return cls.query().filter(cls.needs_product == requires).all()
+        return cls.query.filter(cls.needs_product == requires).all()
 
     @classmethod
     def list_by_tag(cls, tag, anywhere=True, *args, **kw):
         if anywhere is True:
-            q = cls.query().filter(cls.tag.like('%%%s%%' % tag))
+            q = cls.query.filter(cls.tag.like('%%%s%%' % tag))
         else:
-            q = cls.query().filter(cls.tag.like('%s%%' % tag))
+            q = cls.query.filter(cls.tag.like('%s%%' % tag))
         return q
 
     @classmethod
     def get_transient(cls):
-        return cls.query().filter(cls.expire_in_days != 0).all()
+        return cls.query.filter(cls.expire_in_days != 0).all()
 
     def __repr__(self, *args, **kw):
         return self.tag
@@ -4381,11 +4416,11 @@ class Response(MappedObject):
 
     @classmethod
     def get_all(cls,*args,**kw):
-        return cls.query()
+        return cls.query
 
     @classmethod
     def by_response(cls,response,*args,**kw):
-        return cls.query().filter_by(response = response).one()
+        return cls.query.filter_by(response = response).one()
 
     def __repr__(self):
         return self.response
@@ -4396,6 +4431,7 @@ class RecipeSetResponse(MappedObject):
     """
     
     def __init__(self,type=None,response_id=None,comment=None):
+        super(RecipeSetResponse, self).__init__()
         if response_id is not None:
             res = Response.by_id(response_id)
         elif type is not None:
@@ -4405,7 +4441,7 @@ class RecipeSetResponse(MappedObject):
 
     @classmethod 
     def by_id(cls,id): 
-       return cls.query().filter_by(recipe_set_id=id).one()
+       return cls.query.filter_by(recipe_set_id=id).one()
 
     @classmethod
     def by_jobs(cls,job_ids):
@@ -4417,7 +4453,7 @@ class RecipeSetResponse(MappedObject):
                 clause = Job.id == job_id
             else:
                 raise BeakerException('job_ids needs to be either type \'int\' or \'list\'. Found %s' % job_ids_type)
-            queri = cls.query().outerjoin(['recipesets','job']).filter(clause)
+            queri = cls.query.outerjoin(['recipesets','job']).filter(clause)
             results = {}
             for elem in queri:
                 results[elem.recipe_set_id] = elem.comment
@@ -4432,6 +4468,7 @@ class RecipeSet(TaskBase):
     stop_types = ['abort','cancel']
 
     def __init__(self, ttasks=0, priority=None):
+        super(RecipeSet, self).__init__()
         self.ttasks = ttasks
         self.priority = priority
 
@@ -4455,7 +4492,7 @@ class RecipeSet(TaskBase):
         return (self.job.t_id,)
 
     def to_xml(self, clone=False, from_job=True, *args, **kw):
-        recipeSet = self.doc.createElement("recipeSet")
+        recipeSet = xmldoc.createElement("recipeSet")
         recipeSet.setAttribute('priority', self.priority.priority)
         return_node = recipeSet 
 
@@ -4481,9 +4518,9 @@ class RecipeSet(TaskBase):
         if not user:
             return
         if user.in_group(['admin','queue_admin']):
-            return TaskPriority.query().all()
+            return TaskPriority.query.all()
         default_id = TaskPriority.default_priority().id
-        return TaskPriority.query().filter(TaskPriority.id < default_id)
+        return TaskPriority.query.filter(TaskPriority.id < default_id)
         
     @classmethod
     def by_status(cls, status, query=None):
@@ -4494,7 +4531,7 @@ class RecipeSet(TaskBase):
     @classmethod
     def by_tag(cls, tag, query=None):
         if query is None:
-            query = cls.query()
+            query = cls.query
         if type(tag) is list:
             tag_query = cls.retention_tag_id.in_([RetentionTag.by_tag(unicode(t)).id for t in tag])
         else:
@@ -4510,12 +4547,12 @@ class RecipeSet(TaskBase):
 
     @classmethod 
     def by_id(cls,id): 
-       return cls.query().filter_by(id=id).one()
+       return cls.query.filter_by(id=id).one()
 
     @classmethod
     def by_job_id(cls,job_id):
         try:
-            queri = RecipeSet.query().outerjoin(['job']).filter(Job.id == job_id)
+            queri = RecipeSet.query.outerjoin(['job']).filter(Job.id == job_id)
             return queri
         except: raise 
      
@@ -4632,7 +4669,7 @@ class RecipeSet(TaskBase):
                                                             labcontroller.id),
                         group_by=[Recipe.id],
                         order_by='count')
-        return map(lambda x: Recipe.query().filter_by(id=x[0]).first(), session.connection(RecipeSet).execute(query).fetchall())
+        return map(lambda x: Recipe.query.filter_by(id=x[0]).first(), session.connection(RecipeSet).execute(query).fetchall())
 
     def get_response(self):
         response = getattr(self.nacked,'response',None)
@@ -4662,7 +4699,7 @@ class RecipeSet(TaskBase):
         if not user:
             return [] 
         if user.in_group(['admin','queue_admin']):
-            return TaskPriority.query().all()
+            return TaskPriority.query.all()
         elif user == self.job.owner: 
             return TaskPriority.query.filter(TaskPriority.id <= self.priority.id)
             
@@ -4796,14 +4833,14 @@ class Recipe(TaskBase):
             recipe.setAttribute("id", "%s" % self.id)
             recipe.setAttribute("job_id", "%s" % self.recipeset.job_id)
             recipe.setAttribute("recipe_set_id", "%s" % self.recipe_set_id)
-        autopick = self.doc.createElement("autopick")
+        autopick = xmldoc.createElement("autopick")
         autopick.setAttribute("random", "%s" % unicode(self.autopick_random).lower())
         recipe.appendChild(autopick)
         recipe.setAttribute("whiteboard", "%s" % self.whiteboard and self.whiteboard or '')
         recipe.setAttribute("role", "%s" % self.role and self.role or 'RECIPE_MEMBERS')
         if self.kickstart:
-            kickstart = self.doc.createElement("kickstart")
-            text = self.doc.createCDATASection('%s' % self.kickstart)
+            kickstart = xmldoc.createElement("kickstart")
+            text = xmldoc.createCDATASection('%s' % self.kickstart)
             kickstart.appendChild(text)
             recipe.appendChild(kickstart)
         recipe.setAttribute("ks_meta", "%s" % self.ks_meta and self.ks_meta or '')
@@ -4821,30 +4858,30 @@ class Recipe(TaskBase):
             recipe.setAttribute("arch", "%s" % self.distro.arch)
             recipe.setAttribute("family", "%s" % self.distro.osversion.osmajor)
             recipe.setAttribute("variant", "%s" % self.distro.variant)
-        watchdog = self.doc.createElement("watchdog")
+        watchdog = xmldoc.createElement("watchdog")
         if self.panic:
             watchdog.setAttribute("panic", "%s" % self.panic)
         recipe.appendChild(watchdog)
         if self.system and not clone:
             recipe.setAttribute("system", "%s" % self.system)
-        packages = self.doc.createElement("packages")
+        packages = xmldoc.createElement("packages")
         if self.custom_packages:
             for package in self.custom_packages:
                 packages.appendChild(package.to_xml())
         recipe.appendChild(packages)
 
-        ks_appends = self.doc.createElement("ks_appends")
+        ks_appends = xmldoc.createElement("ks_appends")
         if self.ks_appends:
             for ks_append in self.ks_appends:
                 ks_appends.appendChild(ks_append.to_xml())
         recipe.appendChild(ks_appends)
             
         if self.roles and not clone:
-            roles = self.doc.createElement("roles")
+            roles = xmldoc.createElement("roles")
             for role in self.roles.to_xml():
                 roles.appendChild(role)
             recipe.appendChild(roles)
-        repos = self.doc.createElement("repos")
+        repos = xmldoc.createElement("repos")
         for repo in self.repos:
             repos.appendChild(repo.to_xml())
         recipe.appendChild(repos)
@@ -4852,13 +4889,13 @@ class Recipe(TaskBase):
         hrs = xml.dom.minidom.parseString(self.host_requires)
         for dr in drs.getElementsByTagName("distroRequires"):
             recipe.appendChild(dr)
-        hostRequires = self.doc.createElement("hostRequires")
+        hostRequires = xmldoc.createElement("hostRequires")
         for hr in hrs.getElementsByTagName("hostRequires"):
             for child in hr.childNodes[:]:
                 hostRequires.appendChild(child)
         recipe.appendChild(hostRequires)
         prs = xml.dom.minidom.parseString(self.partitions)
-        partitions = self.doc.createElement("partitions")
+        partitions = xmldoc.createElement("partitions")
         for pr in prs.getElementsByTagName("partitions"):
             for child in pr.childNodes[:]:
                 partitions.appendChild(child)
@@ -4866,12 +4903,12 @@ class Recipe(TaskBase):
         for t in self.tasks:
             recipe.appendChild(t.to_xml(clone))
         if not from_recipeset and not from_machine:
-            recipeSet = self.doc.createElement("recipeSet")
+            recipeSet = xmldoc.createElement("recipeSet")
             recipeSet.appendChild(recipe)
-            job = self.doc.createElement("job")
+            job = xmldoc.createElement("job")
             if not clone:
                 job.setAttribute("owner", "%s" % self.recipeset.job.owner.email_address)
-            job.appendChild(self.node("whiteboard", self.recipeset.job.whiteboard or ''))
+            job.appendChild(node("whiteboard", self.recipeset.job.whiteboard or ''))
             job.appendChild(recipeSet)
             return job
         return recipe
@@ -4905,15 +4942,15 @@ class Recipe(TaskBase):
         try:
             hrs = xml.dom.minidom.parseString(self._host_requires)
         except TypeError:
-            hrs = self.doc.createElement("hostRequires")
+            hrs = xmldoc.createElement("hostRequires")
         except xml.parsers.expat.ExpatError:
-            hrs = self.doc.createElement("hostRequires")
+            hrs = xmldoc.createElement("hostRequires")
         if not hrs.getElementsByTagName("system_type"):
-            hostRequires = self.doc.createElement("hostRequires")
+            hostRequires = xmldoc.createElement("hostRequires")
             for hr in hrs.getElementsByTagName("hostRequires"):
                 for child in hr.childNodes[:]:
                     hostRequires.appendChild(child)
-            system_type = self.doc.createElement("system_type")
+            system_type = xmldoc.createElement("system_type")
             system_type.setAttribute("value", "%s" % self.systemtype)
             hostRequires.appendChild(system_type)
             return hostRequires.toxml()
@@ -4930,9 +4967,9 @@ class Recipe(TaskBase):
         try:
             prs = xml.dom.minidom.parseString(self._partitions)
         except TypeError:
-            prs = self.doc.createElement("partitions")
+            prs = xmldoc.createElement("partitions")
         except xml.parsers.expat.ExpatError:
-            prs = self.doc.createElement("partitions")
+            prs = xmldoc.createElement("partitions")
         return prs.toxml()
 
     def _set_partitions(self, value):
@@ -4947,9 +4984,9 @@ class Recipe(TaskBase):
         try:
             prs = xml.dom.minidom.parseString(self.partitions)
         except TypeError:
-            prs = self.doc.createElement("partitions")
+            prs = xmldoc.createElement("partitions")
         except xml.parsers.expat.ExpatError:
-            prs = self.doc.createElement("partitions")
+            prs = xmldoc.createElement("partitions")
         for partition in prs.getElementsByTagName("partition"):
             fs = partition.getAttribute('fs')
             name = partition.getAttribute('name')
@@ -5252,7 +5289,8 @@ class Recipe(TaskBase):
         """
         A class method that can be used to search for Jobs that belong to a user
         """
-        return cls.query.join(['recipeset','job','owner']).filter(Job.owner==owner)
+        return cls.query.join(Recipe.recipeset, RecipeSet.job, Job.owner)\
+                .filter(Job.owner == owner)
 
 
 class RecipeRoleListAdapter(object):
@@ -5300,7 +5338,7 @@ class RecipeRoleDictAdapterAttribute(object):
     def __get__(self, instance, owner):
         if instance is None:
             return self
-        class RecipeRoleDictAdapter(MappedObject):
+        class RecipeRoleDictAdapter(object):
             def __getitem__(self, role):
                 return RecipeRoleListAdapter(instance, role)
             def keys(self):
@@ -5313,10 +5351,10 @@ class RecipeRoleDictAdapterAttribute(object):
                 """ For each key return an xml dom
                 """
                 for key in self.keys():
-                    role = self.doc.createElement("role")
+                    role = xmldoc.createElement("role")
                     role.setAttribute("value", "%s" % key)
                     for s in RecipeRoleListAdapter(instance, key):
-                        system = self.doc.createElement("system")
+                        system = xmldoc.createElement("system")
                         system.setAttribute("value", "%s" % s)
                         role.appendChild(system)
                     yield(role)
@@ -5339,19 +5377,20 @@ class RecipeRole(MappedObject):
     """ Holds the roles for every Recipe
     """
     def __init__(self, role, system):
+        super(RecipeRole, self).__init__()
         self.role = role
         self.system = system
 
 class GuestRecipe(Recipe):
     systemtype = 'Virtual'
     def to_xml(self, clone=False, from_recipeset=False, from_machine=False):
-        recipe = self.doc.createElement("guestrecipe")
+        recipe = xmldoc.createElement("guestrecipe")
         recipe.setAttribute("guestname", "%s" % self.guestname)
         recipe.setAttribute("guestargs", "%s" % self.guestargs)
         if self.system and not clone:
             recipe.setAttribute("mac_address", "%s" % self.system.mac_address)
         if self.distro and self.system and not clone:
-            location = LabControllerDistro.query().filter(
+            location = LabControllerDistro.query.filter(
                             and_(
                                LabControllerDistro.distro == self.distro,
                                LabControllerDistro.lab_controller == self.system.lab_controller
@@ -5365,16 +5404,16 @@ class GuestRecipe(Recipe):
         try:
             drs = xml.dom.minidom.parseString(self._distro_requires)
         except TypeError:
-            drs = self.doc.createElement("distroRequires")
+            drs = xmldoc.createElement("distroRequires")
         except xml.parsers.expat.ExpatError:
-            drs = self.doc.createElement("distroRequires")
+            drs = xmldoc.createElement("distroRequires")
         # If no distro_virt is asked for default to Virt
         if not drs.getElementsByTagName("distro_virt"):
-            distroRequires = self.doc.createElement("distroRequires")
+            distroRequires = xmldoc.createElement("distroRequires")
             for dr in drs.getElementsByTagName("distroRequires"):
                 for child in dr.childNodes[:]:
                     distroRequires.appendChild(child)
-            distro_virt = self.doc.createElement("distro_virt")
+            distro_virt = xmldoc.createElement("distro_virt")
             distro_virt.setAttribute("op", "=")
             distro_virt.setAttribute("value", "")
             distroRequires.appendChild(distro_virt)
@@ -5394,7 +5433,7 @@ class MachineRecipe(Recipe):
     """
     systemtype = 'Machine'
     def to_xml(self, clone=False, from_recipeset=False):
-        recipe = self.doc.createElement("recipe")
+        recipe = xmldoc.createElement("recipe")
         for guest in self.guests:
             recipe.appendChild(guest.to_xml(clone, from_machine=True))
         return Recipe.to_xml(self, recipe, clone, from_recipeset)
@@ -5403,11 +5442,11 @@ class MachineRecipe(Recipe):
         drs = xml.dom.minidom.parseString(self._distro_requires)
         # If no distro_virt is asked for default to No Virt
         if not drs.getElementsByTagName("distro_virt"):
-            distroRequires = self.doc.createElement("distroRequires")
+            distroRequires = xmldoc.createElement("distroRequires")
             for dr in drs.getElementsByTagName("distroRequires"):
                 for child in dr.childNodes[:]:
                     distroRequires.appendChild(child)
-            distro_virt = self.doc.createElement("distro_virt")
+            distro_virt = xmldoc.createElement("distro_virt")
             distro_virt.setAttribute("op", "=")
             distro_virt.setAttribute("value", "")
             distroRequires.appendChild(distro_virt)
@@ -5465,7 +5504,7 @@ class RecipeTask(TaskBase):
         return logs_to_return
 
     def to_xml(self, clone=False, *args, **kw):
-        task = self.doc.createElement("task")
+        task = xmldoc.createElement("task")
         task.setAttribute("name", "%s" % self.task.name)
         task.setAttribute("role", "%s" % self.role and self.role or 'STANDALONE')
         if not clone:
@@ -5473,7 +5512,7 @@ class RecipeTask(TaskBase):
             task.setAttribute("avg_time", "%s" % self.task.avg_time)
             task.setAttribute("result", "%s" % self.result)
             task.setAttribute("status", "%s" % self.status)
-            rpm = self.doc.createElement("rpm")
+            rpm = xmldoc.createElement("rpm")
             name = self.task.rpm[:self.task.rpm.find('-%s' % self.task.version)]
             rpm.setAttribute("name", name)
             rpm.setAttribute("path", "%s" % self.task.path)
@@ -5481,16 +5520,16 @@ class RecipeTask(TaskBase):
         if self.duration and not clone:
             task.setAttribute("duration", "%s" % self.duration)
         if self.roles and not clone:
-            roles = self.doc.createElement("roles")
+            roles = xmldoc.createElement("roles")
             for role in self.roles.to_xml():
                 roles.appendChild(role)
             task.appendChild(roles)
-        params = self.doc.createElement("params")
+        params = xmldoc.createElement("params")
         for p in self.params:
             params.appendChild(p.to_xml())
         task.appendChild(params)
         if self.results and not clone:
-            results = self.doc.createElement("results")
+            results = xmldoc.createElement("results")
             for result in self.results:
                 results.appendChild(result.to_xml())
             task.appendChild(results)
@@ -5744,7 +5783,7 @@ class RecipeTask(TaskBase):
                                    log=summary)
         self.results.append(recipeTaskResult)
         # Flush the result to the DB so we can return the id.
-        session.save(recipeTaskResult)
+        session.add(recipeTaskResult)
         session.flush([recipeTaskResult])
         return recipeTaskResult.id
 
@@ -5818,7 +5857,7 @@ class RecipeTaskRoleDictAdapterAttribute(object):
     def __get__(self, instance, owner):
         if instance is None:
             return self
-        class RecipeTaskRoleDictAdapter(MappedObject):
+        class RecipeTaskRoleDictAdapter(object):
             def __getitem__(self, role):
                 return RecipeTaskRoleListAdapter(instance, role)
             def keys(self):
@@ -5831,10 +5870,10 @@ class RecipeTaskRoleDictAdapterAttribute(object):
                 """ For each key return an xml dom
                 """
                 for key in self.keys():
-                    role = self.doc.createElement("role")
+                    role = xmldoc.createElement("role")
                     role.setAttribute("value", "%s" % key)
                     for s in RecipeTaskRoleListAdapter(instance, key):
-                        system = self.doc.createElement("system")
+                        system = xmldoc.createElement("system")
                         system.setAttribute("value", "%s" % s)
                         role.appendChild(system)
                     yield(role)
@@ -5857,6 +5896,7 @@ class RecipeTaskRole(MappedObject):
     """ Holds the roles for every task
     """
     def __init__(self, role, system):
+        super(RecipeTaskRole, self).__init__()
         self.role = role
         self.system = system
 
@@ -5865,7 +5905,7 @@ class RecipeTaskParam(MappedObject):
     Parameters for task execution.
     """
     def to_xml(self):
-        param = self.doc.createElement("param")
+        param = xmldoc.createElement("param")
         param.setAttribute("name", "%s" % self.name)
         param.setAttribute("value", "%s" % self.value)
         return param
@@ -5876,7 +5916,7 @@ class RecipeRepo(MappedObject):
     Custom repos 
     """
     def to_xml(self):
-        repo = self.doc.createElement("repo")
+        repo = xmldoc.createElement("repo")
         repo.setAttribute("name", "%s" % self.name)
         repo.setAttribute("url", "%s" % self.url)
         return repo
@@ -5887,8 +5927,8 @@ class RecipeKSAppend(MappedObject):
     Kickstart appends
     """
     def to_xml(self):
-        ks_append = self.doc.createElement("ks_append")
-        text = self.doc.createCDATASection('%s' % self.ks_append)
+        ks_append = xmldoc.createElement("ks_append")
+        text = xmldoc.createCDATASection('%s' % self.ks_append)
         ks_append.appendChild(text)
         return ks_append
 
@@ -5947,12 +5987,12 @@ class RecipeTaskResult(TaskBase):
         """
         Return result in xml
         """
-        result = self.doc.createElement("result")
+        result = xmldoc.createElement("result")
         result.setAttribute("id", "%s" % self.id)
         result.setAttribute("path", "%s" % self.path)
         result.setAttribute("result", "%s" % self.result)
         result.setAttribute("score", "%s" % self.score)
-        result.appendChild(self.doc.createTextNode("%s" % self.log))
+        result.appendChild(xmldoc.createTextNode("%s" % self.log))
         #FIXME Append any binary logs as URI's
         return result
 
@@ -6003,10 +6043,6 @@ class Task(MappedObject):
     """
     Tasks that are available to schedule
     """
-
-    def __init__(self, **kwargs):
-        for k, v in kwargs.iteritems():
-            setattr(self, k, v)
 
     @property
     def task_dir(self):
@@ -6159,7 +6195,7 @@ class TaskPackage(MappedObject):
         return self.package
 
     def to_xml(self):
-        package = self.doc.createElement("package")
+        package = xmldoc.createElement("package")
         package.setAttribute("name", "%s" % self.package)
         return package
 
@@ -6203,7 +6239,7 @@ mapper(ReleaseAction, release_action_table)
 System.mapper = mapper(System, system_table,
                    properties = {
                      'status':relation(SystemStatus,uselist=False,
-                        attributeext=SystemStatusAttributeExtension()),
+                        extension=SystemStatusAttributeExtension()),
                      'devices':relation(Device,
                                         secondary=system_device_map,backref='systems'),
                      'type':relation(SystemType, uselist=False),

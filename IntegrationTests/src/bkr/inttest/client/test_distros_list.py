@@ -4,7 +4,6 @@ from turbogears.database import session
 from bkr.inttest import data_setup
 from bkr.inttest.client import run_client, ClientError
 from bkr.server.model import LabControllerDistro
-from bkr.server.util import any
 
 class DistrosListTest(unittest.TestCase):
 

@@ -85,19 +85,19 @@ class SystemViewTest(SeleniumTestCase):
     def test_current_job(self):
         sel = self.selenium
         self.login()
-        job = data_setup.create_job(owner=self.system.owner, distro=self.distro)
-        job.recipesets[0].recipes[0]._host_requires = (
-                '<hostRequires><hostname op="=" value="%s"/></hostRequires>'
-                % self.system.fqdn)
-        session.flush()
-        session.clear()
+        with session.begin():
+            job = data_setup.create_job(owner=self.system.owner, distro=self.distro)
+            job.recipesets[0].recipes[0]._host_requires = (
+                    '<hostRequires><hostname op="=" value="%s"/></hostRequires>'
+                    % self.system.fqdn)
+            job_id = job.id
         beakerd.new_recipes()
         beakerd.processed_recipesets()
         beakerd.queued_recipes()
         self.go_to_system_view()
         sel.click('link=(Current Job)')
         sel.wait_for_page_to_load('30000')
-        self.assert_('J:%s' % job.id in sel.get_title())
+        self.assert_('J:%s' % job_id in sel.get_title())
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=631421
     def test_page_title_shows_fqdn(self):
@@ -157,8 +157,8 @@ class SystemViewTest(SeleniumTestCase):
         sel.click('link=Save Changes')
         sel.wait_for_page_to_load('30000')
         self.assertEqual(sel.get_selected_label('status_id'), u'Broken')
-        session.clear()
-        self.system = System.query().get(self.system.id)
+        session.expunge_all()
+        self.system = System.query.get(self.system.id)
         self.assertEqual(self.system.status.status, u'Broken')
         self.assertEqual(len(self.system.status_durations), 2)
         self.assertEqual(self.system.status_durations[0].status.status,

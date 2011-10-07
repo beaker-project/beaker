@@ -64,7 +64,7 @@ class JobMatrix:
             matrix_options['grid'] = gen_results['grid']
             matrix_options['list'] = gen_results['data'] 
             if whiteboard: # Getting results by whiteboard
-                s = select([func.count(model.Job.c.id).label('job_count')], whereclause=model.Job.c.whiteboard.in_(whiteboard))
+                s = select([func.count(model.Job.id).label('job_count')], whereclause=model.Job.whiteboard.in_(whiteboard))
                 res = s.execute()
                 for r in res: #Should only loop once
                     count = r.job_count
@@ -82,7 +82,7 @@ class JobMatrix:
             else:
                 matrix_options['toggle_nacks_on'] = False
 
-            all_rs_queri = model.RecipeSet.query().join(['job']).filter(model.Job.id.in_(self.job_ids))
+            all_rs_queri = model.RecipeSet.query.join(['job']).filter(model.Job.id.in_(self.job_ids))
             all_ids = [elem.id for elem in all_rs_queri]
         else:
             matrix_options['toggle_nacks_on'] = False
@@ -193,7 +193,7 @@ class JobMatrix:
         else:
            pass
 
-        recipes = model.Recipe.query().join(['distro','arch']).join(['recipeset','job']).filter(model.RecipeSet.job_id.in_(jobs)).add_column(model.Arch.arch)
+        recipes = model.Recipe.query.join(['distro','arch']).join(['recipeset','job']).filter(model.RecipeSet.job_id.in_(jobs)).add_column(model.Arch.arch)
         if 'toggle_nacks_on' in kw: #if we're here we are potentially trying to hide naked RS'
             exclude_recipe_sets = model.Job.get_nacks(jobs)
             recipes = recipes.filter(not_(model.RecipeSet.id.in_(exclude_recipe_sets)))

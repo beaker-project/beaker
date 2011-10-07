@@ -49,10 +49,10 @@ class Tags(RPCRoot):
             tagged_installs.extend(Distros()._tag(distro, 'ppc64', 'INSTALLS'))
 
         # Tag Stable if we have all expected arches and they are all tagged INSTALLS
-        distro_obj = Distro.query().filter(distro_table.c.name.like(distro)).first()
+        distro_obj = Distro.query.filter(distro_table.c.name.like(distro)).first()
         if distro_obj:
             for arch in distro_obj.osversion.arches:
-                if not Distro.query().filter(distro_table.c.name.like(distro)).join('arch').filter(arch_table.c.arch==arch.arch).count():
+                if not Distro.query.filter(distro_table.c.name.like(distro)).join('arch').filter(arch_table.c.arch==arch.arch).count():
                     break
             else:
                 distros  = set(Distros().list(distro, None, None, None, None))

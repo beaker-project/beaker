@@ -1,6 +1,5 @@
 import model
 import re
-import random
 import sqlalchemy
 from turbogears import flash, identity
 from sqlalchemy import or_, and_, not_
@@ -282,14 +281,14 @@ class Search:
                 #to the query
                 #cls_ref.joins.add_join(col_string = str(column),join=mycolumn.join)
                 relations = mycolumn.relations
-                if type(relations) == type(''):
+                if not isinstance(relations, list):
                     self.queri = self.queri.outerjoin(relations,aliased=True)    
                 else:
                     for relation in relations:
-                        if type(relation) == type([]):
-                            self.queri = self.queri.outerjoin(relation,aliased=True) 
+                        if isinstance(relation, list):
+                            self.queri = self.queri.outerjoin(*relation, aliased=True)
                         else:
-                            self.queri = self.queri.outerjoin(relations,aliased=True)
+                            self.queri = self.queri.outerjoin(*relations, aliased=True)
                             break
             except TypeError, (error):
                 log.error('Column %s has not specified joins validly:%s' % (column, error))                                                               
@@ -523,7 +522,7 @@ class SystemSearch(Search):
         self.queri = self.queri.filter(filter_final())
 
 
-    def __do_join(self,cls_ref,col_name=None,mycolumn=None,results_from_pre=None,id=None): 
+    def __do_join(self,cls_ref,col_name=None,mycolumn=None,results_from_pre=None):
             if not mycolumn and not col_name:
                 raise ValueError('Need to specify either a myColumn type or column name') 
             if not mycolumn:
@@ -547,19 +546,13 @@ class SystemSearch(Search):
                 #cls_ref.joins.add_join(col_string = str(column),join=mycolumn.join)
                 system_relations = mycolumn.relations
                 is_alias = mycolumn.has_alias
-                if type(system_relations) == type(''):
-                    if id is not None:
-                        self.queri = self.queri.outerjoin(system_relations,aliased=is_alias,id=id)    
+                if not isinstance(system_relations, list):
                     self.queri = self.queri.outerjoin(system_relations,aliased=is_alias)    
                 else:    
                     for relations in system_relations:
-                        if type(relations) == type([]):
-                            if id is not None: 
-  				self.queri = self.queri.outerjoin(relations,aliased=is_alias,id=id)    
+                        if isinstance(relations, list):
                             self.queri = self.queri.outerjoin(relations,aliased=False)    
                         else:
-                            if id is not None: 
-                                self.queri = self.queri.outerjoin(system_relations,aliased=is_alias,id=id)
                             self.queri = self.queri.outerjoin(system_relations,aliased=is_alias)
                             break     
                          
@@ -575,9 +568,8 @@ class SystemSearch(Search):
                 elif col_ref is not None: 
                     self.extra_columns_desc.append(elem)
                     self.adding_columns = True 
-                    rand_id = random.random()
-                    self.__do_join(cls_ref,col_name=col,id=rand_id)
-                    self.queri = self.queri.add_column(col_ref,id=rand_id)         
+                    self.__do_join(cls_ref,col_name=col)
+                    self.queri = self.queri.add_column(col_ref)
  
     def return_results(self): 
         return self.queri        
@@ -818,7 +810,7 @@ class System(SystemObject):
            return or_(col != None, col != val) 
         else:
             #If anyone knows of a better way to do this, by all means...
-            query = model.System.query().filter(model.System.arch.any(model.Arch.arch == val))       
+            query = model.System.query.filter(model.System.arch.any(model.Arch.arch == val))
           
         ids = [r.id for r in query]  
         return not_(model.system_table.c.id.in_(ids)) 
@@ -826,13 +818,18 @@ class System(SystemObject):
 class Recipe(SystemObject):
     search = RecipeSearch
     searchable_columns = {
-                            'Id' : MyColumn(col_type='numeric', column=model.Recipe.id),
+                            'Id' : MyColumn(col_type='numeric', column=model.MachineRecipe.id),
                             'Whiteboard' : MyColumn(col_type='string', column=model.Recipe.whiteboard),
-                            'System' : MyColumn(col_type='string', column=model.System.fqdn, relations='system'),
-                            'Arch' : MyColumn(col_type='string', column=model.Arch.arch, relations=['distro', 'arch']),
-                            'Distro' : MyColumn(col_type='string', column=model.Distro.name, relations='distro'),
-                            'Status' : MyColumn(col_type='string', column=model.TaskStatus.status, relations='status'),
-                            'Result' : MyColumn(col_type='string', column=model.TaskResult.result, relations='result'),
+                            'System' : MyColumn(col_type='string', column=model.System.fqdn,
+                                relations=[model.Recipe.system]),
+                            'Arch' : MyColumn(col_type='string', column=model.Arch.arch,
+                                relations=[model.Recipe.distro, model.Distro.arch]),
+                            'Distro' : MyColumn(col_type='string', column=model.Distro.name,
+                                relations=[model.Recipe.distro]),
+                            'Status' : MyColumn(col_type='string', column=model.TaskStatus.status,
+                                relations=[model.Recipe.status]),
+                            'Result' : MyColumn(col_type='string', column=model.TaskResult.result,
+                                relations=[model.Recipe.result]),
                          }
 
     search_values_dict = {'Status' : lambda: model.TaskStatus.get_all_status(),
@@ -853,17 +850,17 @@ class Task(SystemObject):
 
     @classmethod
     def distro_is_filter(cls,x,y): 
-        queri = model.Task.query().outerjoin(['excluded_osmajor','osmajor'])
+        queri = model.Task.query.outerjoin(['excluded_osmajor','osmajor'])
         wildcard_y = re.sub('\*','%',y)
         if wildcard_y != y: #looks like we found a wildcard
-            osmajors = model.OSMajor.query().filter(model.OSMajor.osmajor.like(wildcard_y))
+            osmajors = model.OSMajor.query.filter(model.OSMajor.osmajor.like(wildcard_y))
             osmajor_ids = [osmajor.id for osmajor in osmajors]
             if not osmajor_ids:
                 return 'False'
             queri = queri.filter(model.OSMajor.osmajor.like(wildcard_y)) 
         else:
             try:
-                model.OSMajor.query().filter(model.OSMajor.osmajor == y).one()
+                model.OSMajor.query.filter(model.OSMajor.osmajor == y).one()
                 wildcard = False
             except:
                 return 'False'
@@ -875,7 +872,7 @@ class Task(SystemObject):
         #at least for sake of consistency.
         if not y:
             table = model.task_table.join(model.task_exclude_osmajor_table).join(model.osmajor_table)
-            osmajor_queri = model.OSMajor.query()
+            osmajor_queri = model.OSMajor.query
             osmajor_ids = [r.id for r in osmajor_queri]
             last_teo_alias  = None
             for id in osmajor_ids:
@@ -894,10 +891,10 @@ class Task(SystemObject):
 
     @classmethod
     def arch_is_filter(cls,x,y): 
-        queri = model.Task.query().outerjoin(['excluded_arch','arch'])
+        queri = model.Task.query.outerjoin(['excluded_arch','arch'])
         wildcard_y = re.sub('\*','%',y)
         if wildcard_y != y: #looks like we found a wildcard
-            arches = model.Arch.query().filter(model.Arch.arch.like(wildcard_y))
+            arches = model.Arch.query.filter(model.Arch.arch.like(wildcard_y))
             arch_ids = [arch.id for arch in arches]
             if not arch_ids:
                 return 'False'
@@ -905,7 +902,7 @@ class Task(SystemObject):
             #return not_(x.like(wildcard_y))
         else:
             try:
-                valid_arch = model.Arch.query().filter(model.Arch.arch == y).one()
+                valid_arch = model.Arch.query.filter(model.Arch.arch == y).one()
             except:
                 return 'False'
             queri = queri.filter(model.Arch.arch == y)
@@ -917,7 +914,7 @@ class Task(SystemObject):
         #at least for sake of consistency.
         if not y:
             table = model.task_table.join(model.task_exclude_arch_table).join(model.arch_table)
-            arch_queri = model.Arch.query()
+            arch_queri = model.Arch.query
             arch_ids = [r.id for r in arch_queri]
             last_tea_alias  = None
             for id in arch_ids:
@@ -937,7 +934,7 @@ class Task(SystemObject):
     def arch_is_not_filter(cls,x,y):
         wildcard_y = re.sub('\*','%',y)
         if wildcard_y != y: #looks like we found a wildcard 
-            arches = model.Arch.query().filter(model.Arch.arch.like(wildcard_y))
+            arches = model.Arch.query.filter(model.Arch.arch.like(wildcard_y))
             arch_ids = [arch.id for arch in arches]
             if not arch_ids:
                 return 'True'
@@ -946,7 +943,7 @@ class Task(SystemObject):
         else:
         
             try:
-                valid_arch = model.Arch.query().filter(model.Arch.arch == y).one()
+                valid_arch = model.Arch.query.filter(model.Arch.arch == y).one()
                 wildcard = False
             except:
                 return 'True'
@@ -956,7 +953,7 @@ class Task(SystemObject):
     def distro_is_not_filter(cls,x,y):
         wildcard_y = re.sub('\*','%',y)
         if wildcard_y != y: #looks like we found a wildcard 
-            osmajors = model.OSMajor.query().filter(model.OSMajor.osmajor.like(wildcard_y))
+            osmajors = model.OSMajor.query.filter(model.OSMajor.osmajor.like(wildcard_y))
             osmajor_ids = [osmajor.id for osmajor in osmajors]
             if not osmajor_ids:
                 return 'True'
@@ -964,7 +961,7 @@ class Task(SystemObject):
             y = wildcard_y
         else:
             try:
-                model.OSMajor.query().filter(model.OSMajor.osmajor == y).one()
+                model.OSMajor.query.filter(model.OSMajor.osmajor == y).one()
                 wildcard = False
             except:
                 return 'True'
@@ -988,7 +985,7 @@ class Task(SystemObject):
 
     @classmethod
     def _opposites_contains_filter(cls,col,val): 
-        queri = model.Task.query().outerjoin(['excluded_arch','arch']).filter(model.Arch.arch.like('%%%s%%' % val))
+        queri = model.Task.query.outerjoin(['excluded_arch','arch']).filter(model.Arch.arch.like('%%%s%%' % val))
         ids = [r.id for r in queri]
         return not_(model.Task.id.in_(ids))
 
@@ -1015,7 +1012,7 @@ class Distro(SystemObject):
            return or_(col != None, col != val) 
         else:
             #If anyone knows of a better way to do this, by all means...
-            query = model.Distro.query().filter(model.Distro._tags.any(model.DistroTag.tag == val))       
+            query = model.Distro.query.filter(model.Distro._tags.any(model.DistroTag.tag == val))
           
         ids = [r.id for r in query]  
         return not_(model.distro_table.c.id.in_(ids)) 
@@ -1058,7 +1055,7 @@ class Activity(SystemObject):
         if not val: 
            return or_(col != None, col != val) 
         else: 
-            query = model.SystemActivity.query().join(['object','arch']).filter(model.Arch.arch == val)          
+            query = model.SystemActivity.query.join(['object','arch']).filter(model.Arch.arch == val)
         ids = [r.id for r in query]  
         return not_(model.activity_table.c.id.in_(ids)) 
         
@@ -1075,7 +1072,7 @@ class History(SystemObject):
                          }  
        
 class Key(SystemObject):
-    searchable_columns = {'Value': KeyColumn(relations=[['key_values_int','key'],['key_values_string','key']])}
+    searchable_columns = {'Value': KeyColumn(relations=[['key_values_int'],['key_values_string']])}
     search = KeySearch
     
     @classmethod
@@ -1214,7 +1211,7 @@ class Cpu(SystemObject):
         if not val:
             return col != val
         else:
-            query = model.Cpu.query().filter(model.Cpu.flags.any(model.CpuFlag.flag == val))
+            query = model.Cpu.query.filter(model.Cpu.flags.any(model.CpuFlag.flag == val))
             ids = [r.id for r in query]
             return or_(not_(model.cpu_table.c.id.in_(ids)), col == None) 
          
@@ -1230,7 +1227,7 @@ class Device(SystemObject):
         if not val:
             return or_(col != None, col != val)
         else:
-            query = model.System.query().filter(model.System.devices.any(model.Device.driver == val))
+            query = model.System.query.filter(model.System.devices.any(model.Device.driver == val))
     
         ids = [r.id for r in query]  
         return not_(model.system_table.c.id.in_(ids))   

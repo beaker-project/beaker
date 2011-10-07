@@ -79,8 +79,8 @@ class Recipes(RPCRoot):
        """
        finished = [u'Completed',u'Aborted',u'Cancelled']
        recipes = Recipe\
-                 .query().filter(recipe_table.c.finish_time != None)\
-                         .filter(recipe_table.c.log_server == server)\
+                 .query.filter(Recipe.finish_time != None)\
+                       .filter(Recipe.log_server == server)\
                  .limit(limit)
        return [r.id for r in recipes]
 
@@ -264,8 +264,10 @@ class Recipes(RPCRoot):
     def index(self,*args,**kw):
         return self.recipes(recipes=session.query(MachineRecipe)
                 # need to join in case the user sorts by these related properties
-                .outerjoin('status').outerjoin('result').outerjoin('system')
-                .outerjoin('distro').outerjoin(['distro', 'arch']),
+                .outerjoin(Recipe.status)
+                .outerjoin(Recipe.result)
+                .outerjoin(Recipe.system)
+                .outerjoin(Recipe.distro, Distro.arch),
                 *args, **kw)
 
     @identity.require(identity.not_anonymous())
@@ -274,12 +276,15 @@ class Recipes(RPCRoot):
     def mine(self,*args,**kw):
         return self.recipes(recipes=MachineRecipe.mine(identity.current.user)
                 # need to join in case the user sorts by these related properties
-                .outerjoin('status').outerjoin('result').outerjoin('system')
-                .outerjoin('distro').outerjoin(['distro', 'arch']),
+                .outerjoin(Recipe.status)
+                .outerjoin(Recipe.result)
+                .outerjoin(Recipe.system)
+                .outerjoin(Recipe.distro, Distro.arch),
                 action='./mine', *args, **kw)
 
     def recipes(self,recipes,action='.',*args, **kw): 
-        recipes = recipes.join(['recipeset','job']).filter(and_(Job.deleted == None, Job.to_delete == None))
+        recipes = recipes.join(Recipe.recipeset, RecipeSet.job)\
+                .filter(and_(Job.deleted == None, Job.to_delete == None))
         recipes_return = self._recipes(recipes,**kw)
         searchvalue = None
         search_options = {}

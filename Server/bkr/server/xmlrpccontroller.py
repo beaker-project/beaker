@@ -45,7 +45,7 @@ class RPCRoot(controllers.Controller):
 
     @turbogears.expose()
     def RPC2(self, *args, **kw):
-        params, method = xmlrpclib.loads(cherrypy.request.body.read())
+        params, method = xmlrpclib.loads(cherrypy.request.body.read(), use_datetime=True)
         start = datetime.utcnow()
         try:
             if method == "RPC2":
@@ -55,6 +55,9 @@ class RPCRoot(controllers.Controller):
             response = xmlrpclib.dumps((response,), methodresponse=1, allow_none=True)
         except IdentityFailure, e:
             session.rollback()
+            # IdentityFailure constructor fiddles with the response code,
+            # so let's set it back
+            cherrypy.response.status = 200
             response = xmlrpclib.dumps(xmlrpclib.Fault(1,
                     '%s: Please log in first' % e.__class__))
         except xmlrpclib.Fault, fault:

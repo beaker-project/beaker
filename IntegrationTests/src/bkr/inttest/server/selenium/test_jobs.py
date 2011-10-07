@@ -353,7 +353,7 @@ class JobAttributeChange(SeleniumTestCase):
         p2 = Product(u'second_product')
 
         self.the_job.product = p1
-        self.the_job.retention_tag = RetentionTag.query().filter(
+        self.the_job.retention_tag = RetentionTag.query.filter(
             RetentionTag.needs_product==True).first()
         session.flush()
 
@@ -390,7 +390,7 @@ class JobAttributeChange(SeleniumTestCase):
         sel.open('jobs/%s' % self.the_job.id)
         sel.wait_for_page_to_load('3000')
         current_tag = sel.get_text("//select[@id='job_retentiontag']/option[@selected='']")
-        new_tag = RetentionTag.query().filter(and_(RetentionTag.tag != current_tag,
+        new_tag = RetentionTag.query.filter(and_(RetentionTag.tag != current_tag,
             RetentionTag.needs_product==False)).first()
         sel.select("job_retentiontag", "label=%s" % new_tag.tag)
         self.wait_and_try(lambda: self.assert_(sel.is_text_present("Tag has been updated")), wait_time=10)
@@ -401,7 +401,7 @@ class JobAttributeChange(SeleniumTestCase):
         sel.open('jobs/%s' % self.the_job.id)
         sel.wait_for_page_to_load('3000')
         current_tag = sel.get_text("//select[@id='job_retentiontag']/option[@selected='']")
-        new_tag = RetentionTag.query().filter(and_(RetentionTag.tag != current_tag,
+        new_tag = RetentionTag.query.filter(and_(RetentionTag.tag != current_tag,
             RetentionTag.needs_product==False)).first()
         sel.select("job_retentiontag", "label=%s" % new_tag.tag)
         self.wait_and_try(lambda: self.assert_(sel.is_text_present("Tag has been updated")), wait_time=10)

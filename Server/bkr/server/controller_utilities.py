@@ -143,7 +143,7 @@ class Utility:
       
     @classmethod
     def get_correct_system_column(cls,x):
-        if type(x) == type(()):
+        if isinstance(x, tuple):
             return x[0] 
         else:
             return x
