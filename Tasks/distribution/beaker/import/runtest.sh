@@ -101,8 +101,24 @@ function Inventory()
 function LabController()
 {
     # Add some distros
+    if [ -n "$NFSPATHS" ]; then
+        for NFSPATH in $NFSPATHS; do
+            NFSSERVER=$(echo $NFSPATH| awk -F/ '{print $3}')
+            NFSSERVERPATH=$(echo $NFSPATH | sed -e "s/.*$NFSSERVER//")
+            pushd $NFSPATH || exit 1
+            for distro in $(find . -maxdepth 4 -name .composeinfo | sed -e 's/.composeinfo//'); do
+                DISTRONAME=$(echo $distro |sed -e 's/^\.\///; s/\/$//; s/\//-/g')
+                echo cobbler import --path=${PWD}/$distro \
+                               --name=${DISTRONAME} \
+                               --available-as=nfs://${NFSSERVER}:${NFSSERVERPATH}/$distro
+                cobbler import --path=${PWD}/$distro \
+                               --name=${DISTRONAME} \
+                               --available-as=nfs://${NFSSERVER}:${NFSSERVERPATH}/$distro
+            done
+            popd
+        done
     # NFS format HOSTNAME:DISTRONAME:NFSPATH
-    if [ -z "$NFSDISTROS" ]; then
+    elif [ -z "$NFSDISTROS" ]; then
         echo "Missing NFS Distros to test with" | tee -a $OUTPUTFILE
         report_result $TEST Warn
         exit 1

@@ -111,7 +111,7 @@ class TestSystemGridSorting(SeleniumTestCase):
             # (so that we can see that it is really sorted)
             if len(set(cell_values)) > 1:
                 break
-            if sel.get_xpath_count('//div[@class="list"]//a[text()=">"]') != 1:
+            if sel.get_xpath_count('//div[@class="list"]//a[text()=">"]') != 2:
                 raise AssertionError('Tried all pages, but every cell had the same value!')
             sel.click('//div[@class="list"]//a[text()=">"]')
             sel.wait_for_page_to_load('30000')

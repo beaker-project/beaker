@@ -483,11 +483,11 @@ class Tasks(RPCRoot):
         return dict(tasks=[(task.name) for task in Task.query().filter(Task.name.like('%s%%' % task))])
 
     @cherrypy.expose
-    def to_dict(self, name):
+    def to_dict(self, name, valid=None):
         """
         Returns an XML-RPC structure (dict) with details about the given task.
         """
-        return Task.by_name(name).to_dict()
+        return Task.by_name(name, valid).to_dict()
 
     def read_taskinfo(self, rpm_file):
         taskinfo = dict(desc = '',

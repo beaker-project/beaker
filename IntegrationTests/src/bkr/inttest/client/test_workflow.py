@@ -8,6 +8,25 @@ class WorkflowTest(unittest.TestCase):
     def setUp(self):
         self.command = BeakerWorkflow(None)
 
+    def test_processPartitions(self):
+        recipe = BeakerRecipe()
+        recipe.addPartition(name='/mnt/block1',type='part', fs='ext3', size=1024)
+        xml = recipe.toxml(prettyxml=True)
+        self.assertEquals(xml.strip(), """
+<recipe whiteboard="">
+	<distroRequires>
+		<and/>
+	</distroRequires>
+	<hostRequires>
+		<and/>
+	</hostRequires>
+	<repos/>
+	<partitions>
+		<partition fs="ext3" name="/mnt/block1" size="1024" type="part"/>
+	</partitions>
+</recipe>
+        """.strip())
+
     def test_processTemplate_minimal_recipe(self):
         recipeTemplate = BeakerRecipe()
         recipe = self.command.processTemplate(recipeTemplate,
@@ -22,6 +41,7 @@ class WorkflowTest(unittest.TestCase):
 		<and/>
 	</hostRequires>
 	<repos/>
+	<partitions/>
 	<task name="/distribution/install" role="STANDALONE">
 		<params/>
 	</task>

@@ -87,8 +87,8 @@ def create_labcontroller(fqdn=None, user=None):
             # username/password to login into stub_cobbler
             # Doesn't matter what it is, just can't be None or we 
             # Will get cannot marshal none errors.
-            lc.username = "foo"
-            lc.password = "bar"
+            lc.username = u"foo"
+            lc.password = u"bar"
             return lc
         else:
             raise
@@ -206,13 +206,15 @@ def create_system_activity(user=None, **kw):
     return activity
 
 def create_task(name=None, exclude_arch=[],exclude_osmajor=[], version=u'1.0-1',
-        uploader=None, owner=None, priority=u'Manual'):
+        uploader=None, owner=None, priority=u'Manual', valid=None):
     if name is None:
         name = unique_name(u'/distribution/test_task_%s')
     if uploader is None:
         uploader = create_user(user_name=u'task-uploader%s' % name.replace('/', '-'))
     if owner is None:
         owner = u'task-owner%s@example.invalid' % name.replace('/', '-')
+    if valid is None:
+        valid = True
     rpm = u'example%s-%s.noarch.rpm' % (name.replace('/', '-'), version)
     try:
         task = Task.by_name(name)
@@ -225,6 +227,7 @@ def create_task(name=None, exclude_arch=[],exclude_osmajor=[], version=u'1.0-1',
     task.uploader = uploader
     task.owner = owner
     task.priority = priority
+    task.valid = valid
     if exclude_arch:
        [TaskExcludeArch(arch_id=Arch.by_name(arch).id, task_id=task.id) for arch in exclude_arch]
     if exclude_osmajor:
@@ -253,12 +256,12 @@ def create_recipe(system=None, distro=None, task_list=None,
     if not server_log:
         recipe.logs = [LogRecipe(path=u'/recipe_path',filename=u'dummy.txt', basepath=u'/beaker')]
     else:
-        recipe.logs = [LogRecipe(server_url=u'http://dummy-archive-server/beaker/recipe_path', filename=u'dummy.txt' )]
+        recipe.logs = [LogRecipe(server=u'http://dummy-archive-server/beaker/recipe_path', filename=u'dummy.txt' )]
 
     if not server_log:
         rt_log = LogRecipeTask(path=u'/tasks', filename=u'dummy.txt', basepath='/')
     else:
-        rt_log = LogRecipeTask(server_url=u'http://dummy-archive-server/beaker/recipe_path/tasks', filename=u'dummy.txt')
+        rt_log = LogRecipeTask(server=u'http://dummy-archive-server/beaker/recipe_path/tasks', filename=u'dummy.txt')
     if task_list: #don't specify a task_list and a task_name...
         for t in task_list:
             rt = RecipeTask(task=t)
@@ -296,6 +299,7 @@ def create_job_for_recipes(recipes, owner=None, whiteboard=None, cc=None,product
     recipe_set.recipes.extend(recipes)
     job.recipesets.append(recipe_set)
     log.debug('Created %s', job.t_id)
+    session.flush()
     return job
 
 def create_job(owner=None, cc=None, distro=None,product=None, 
@@ -353,7 +357,7 @@ def mark_job_waiting(job, user=None):
             recipe.schedule()
             recipe.system = create_system(owner=job.owner)
             recipe.system.reserve(service=u'testdata', user=job.owner,
-                    reservation_type=u'recipe')
+                    reservation_type=u'recipe', recipe=recipe)
             recipe.watchdog = Watchdog(system=recipe.system)
             recipe.waiting()
 

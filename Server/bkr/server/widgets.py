@@ -1206,9 +1206,9 @@ class SystemHistory(CompoundWidget):
                            )
 
     def display(self,value=None,**params):
-        if 'options' in params: 
+        if 'options' in params:
             if 'searchvalue' in params['options']:
-                params['searchvalue'] = params['options']['searchvalue'] 
+                params['searchvalue'] = params['options']['searchvalue']
         if 'action' in params:
             params['all_history'] = params['action']
         return super(SystemHistory, self).display(value,**params)
@@ -1219,12 +1219,12 @@ class SystemForm(Form):
     javascript = [LocalJSLink('bkr', '/static/javascript/provision.js'),
                   LocalJSLink('bkr', '/static/javascript/install_options.js'),
                   LocalJSLink('bkr','/static/javascript/system_admin.js'),
-                  LocalJSLink('bkr', '/static/javascript/searchbar_v7.js'), 
+                  LocalJSLink('bkr', '/static/javascript/searchbar_v7.js'),
                   JSLink(static,'ajax.js'),
                  ]
     template = "bkr.server.templates.system_form"
     params = ['id','readonly',
-              'user_change','user_change_text',
+              'user_change','user_change_text', 'running_job',
               'loan_change', 'loan_type', 'loan_wodget',
               'owner_change', 'owner_change_text']
     user_change = '/user_change'
@@ -1232,8 +1232,8 @@ class SystemForm(Form):
     loan_change = '/loan_change'
     fields = [
                HiddenField(name='id'),
-               TextField(name='fqdn', 
-                         label=_(u'System Name'), 
+               TextField(name='fqdn',
+                         label=_(u'System Name'),
                          validator=Hostname(),
                          attrs={'maxlength':'255',
                                 'size':'60'}),
@@ -1303,6 +1303,8 @@ class SystemForm(Form):
             d["loan_type"] = d["options"]["loan_type"]
         if d["options"].has_key("loan_widget"):
             d["loan_widget"] = d["options"]["loan_widget"]
+        if d["options"].has_key("running_job"):
+            d["running_job"] = d["options"]["running_job"]
         d['show_cc'] = d['options'].get('show_cc', False)
         d["id"] = d["value_for"]("id")
         if d["value"] and "owner" in d["value"] and d["value"]["owner"]:

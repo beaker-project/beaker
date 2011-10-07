@@ -33,3 +33,11 @@ class TaskDetailsTest(unittest.TestCase):
         out = run_client(['bkr', 'task-details', task.name])
         details = eval(out[len(task.name) + 1:]) # XXX dodgy
         self.assertEquals(details['uploader'], None)
+
+    def test_details_invalid_tasks(self):
+        task = data_setup.create_task(name='invalid_task', valid=False)
+        task.uploader = None
+        session.flush()
+        out = run_client(['bkr', 'task-details', '--invalid', task.name])
+        details = eval(out[len(task.name) + 1:]) # XXX dodgy
+        self.assertEquals(details['name'], 'invalid_task')

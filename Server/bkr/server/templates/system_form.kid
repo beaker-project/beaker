@@ -137,6 +137,9 @@ $(document).ready(function(){
         <a py:if="user_change_text" href="${tg.url(user_change)}?id=${id}">
          <span py:content="user_change_text"/>
         </a>
+        <a py:if="running_job" href="${tg.url(running_job)}">
+          (Current Job)
+        </a>
        </td>
       </tr>
       <tr class="list">

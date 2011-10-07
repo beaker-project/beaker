@@ -134,6 +134,12 @@ class BeakerWorkflow(BeakerCommand):
             help="Specify the System Type (Machine, Laptop, etc..)",
         )
         self.parser.add_option(
+            "--hostrequire",
+            action="append",
+            default=[],
+            help="Specify a system that matches this require Example: hostlabcontroller=lab.example.com ",
+        )
+        self.parser.add_option(
             "--keyvalue",
             action="append",
             default=[],
@@ -449,6 +455,7 @@ class BeakerRecipeBase(BeakerBase):
         self.node.setAttribute('whiteboard','')
         andDistroRequires = self.doc.createElement('and')
         andHostRequires = self.doc.createElement('and')
+        partitions = self.doc.createElement('partitions')
         distroRequires = self.doc.createElement('distroRequires')
         hostRequires = self.doc.createElement('hostRequires')
         repos = self.doc.createElement('repos')
@@ -457,6 +464,7 @@ class BeakerRecipeBase(BeakerBase):
         self.node.appendChild(distroRequires)
         self.node.appendChild(hostRequires)
         self.node.appendChild(repos)
+        self.node.appendChild(partitions)
 
     def addBaseRequires(self, *args, **kwargs):
         """ Add base requires """
@@ -470,6 +478,7 @@ class BeakerRecipeBase(BeakerBase):
         systype = kwargs.get("systype", None)
         machine = kwargs.get("machine", None)
         keyvalues = kwargs.get("keyvalue", [])
+        requires = kwargs.get("hostrequire", [])
         repos = kwargs.get("repo", [])
         random = kwargs.get("random", False)
         if distro:
@@ -532,6 +541,13 @@ class BeakerRecipeBase(BeakerBase):
             mykeyvalue.setAttribute('op', '%s' % op)
             mykeyvalue.setAttribute('value', '%s' % value)
             self.addHostRequires(mykeyvalue)
+        for require in requires:
+            key, op, value = p2.split(require,3)
+            myrequire = self.doc.createElement('%s' % key)
+            myrequire.setAttribute('op', '%s' % op)
+            myrequire.setAttribute('value', '%s' % value)
+            self.addHostRequires(myrequire)
+        
         if random:
             self.addAutopick(random)
 
@@ -580,6 +596,24 @@ class BeakerRecipeBase(BeakerBase):
             params.appendChild(param)
         recipeTask.appendChild(params)
         self.node.appendChild(recipeTask)
+
+    def addPartition(self,name=None, type=None, fs=None, size=None):
+        """ add a partition node
+        """
+        if name:
+            partition = self.doc.createElement('partition')
+            partition.setAttribute('name', str(name))
+        else:
+            raise ValueError(u'You must specify name when adding a partition')
+        if size:
+            partition.setAttribute('size', str(size))
+        else:
+            raise ValueError(u'You must specify size when adding a partition')
+        if type:
+            partition.setAttribute('type', str(type))
+        if fs:
+            partition.setAttribute('fs', str(fs))
+        self.partitions.appendChild(partition)
 
     def addKickstart(self, kickstart):
         recipeKickstart = self.doc.createElement('kickstart')
@@ -638,6 +672,10 @@ class BeakerRecipeBase(BeakerBase):
     def get_repos(self):
         return self.node.getElementsByTagName('repos')[0]
     repos = property(get_repos)
+
+    def get_partitions(self):
+        return self.node.getElementsByTagName('partitions')[0]
+    partitions = property(get_partitions)
 
 
 class BeakerRecipe(BeakerRecipeBase):

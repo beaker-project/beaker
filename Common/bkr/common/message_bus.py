@@ -18,8 +18,14 @@ import logging
 log = logging.getLogger(__name__)
 
 VALID_AMQP_TYPES=[list,dict,bool,int,long,float,unicode,dict,list,str,type(None)]
+_connection = None
 
 class BeakerBus(object):
+
+    _reconnect = True
+    _reconnect_interval = 5
+    _auth_mgr = None
+    _fetch_timeout=60
 
     class RPCInterface:
 
@@ -42,35 +48,28 @@ class BeakerBus(object):
 
         __str__ = __repr__
 
-    _connection = None
-    _reconnect = True
-    _reconnect_interval = 5
-    _auth_mgr = None
-
-    _fetch_timeout=60
 
     @classmethod
     def do_krb_auth(self):
         raise NotImplementedError('Configured to use kerberos auth but not implemented by class %s' % self.__name__)
 
     def get_qpid_connection(self):
-        global can_use_qpid
+        global can_use_qpid, _connection
         if not can_use_qpid:
             global qpid_import_error
             raise ImportError(str(qpid_import_error))
-
-        if self._connection is None:
+        if _connection is None:
             connection_params = [[self._broker], {'reconnect' : self._reconnect, 'reconnect_interval' : self._reconnect_interval, 'reconnect_timeout' :10 }]
             if self.krb_auth:
                 connection_params[1].update({'sasl_mechanisms' : 'GSSAPI'})
                 self.do_krb_auth()
-            self._connection = Connection(*connection_params[0], **connection_params[1])
+            _connection = Connection(*connection_params[0], **connection_params[1])
             try:
-                self._connection.open()
+                _connection.open()
             except Exception, e:
-                self._connection = None
+                _connection = None
                 raise
-        return self._connection
+        return _connection
 
     def __init__(self, connection=None, *args, **kw):
         if connection is None:
@@ -91,6 +90,7 @@ class BeakerBus(object):
         service_queue_name = self.service_queue_name
         snd = session.sender(service_queue_name)
         snd.send(msg)
+        log.debug('sent %s on to %s' % (msg, service_queue_name))
         try:
             message_response = new_receiver.fetch(timeout=self._fetch_timeout)
         except exceptions.Empty:

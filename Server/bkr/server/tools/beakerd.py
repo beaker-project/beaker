@@ -389,7 +389,7 @@ def queued_recipes(*args):
                     recipe.schedule()
                     recipe.createRepo()
                     system.reserve(service=u'Scheduler', user=recipe.recipeset.job.owner,
-                            reservation_type=u'recipe')
+                            reservation_type=u'recipe', recipe=recipe)
                     recipe.system = system
                     recipe.recipeset.lab_controller = system.lab_controller
                     recipe.systems = []

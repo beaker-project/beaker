@@ -1,0 +1,36 @@
+NOTE:If you are upgrading from 0.7.2, please run the rollback commands
+from upgrade_0.7.2.txt
+------------------------------------------------------------------------
+
+For bz630863.
+------------
+
+  ALTER TABLE recipe ADD COLUMN (reservation_id int default NULL);
+  ALTER TABLE recipe ADD CONSTRAINT `recipe_reservation_id_fk` FOREIGN KEY (`reservation_id`) REFERENCES `reservation` (`id`);
+  UPDATE reservation
+    INNER JOIN system ON reservation.system_id = system.id
+    INNER JOIN recipe ON recipe.system_id = system.id
+    INNER JOIN
+      (SELECT max(r2.id) AS max_id FROM recipe AS r2 INNER JOIN system AS s2 ON r2.system_id = s2.id GROUP BY s2.id) as inn2
+        ON inn2.max_id = recipe.id
+    SET recipe.reservation_id = reservation.id WHERE reservation.finish_time IS NULL and reservation.type = 'recipe'
+
+Rollback:
+
+  ALTER TABLE recipe DROP COLUMN reservation_id, DROP FOREIGN KEY recipe_reservation_id_fk;
+
+
+----------
+ALTER TABLE recipe ADD COLUMN log_server varchar(256),
+            ADD INDEX `recipe_log_server` (log_server);
+
+# For every lab controller you have,  (5 min per lab approx) 
+UPDATE recipe r JOIN log_recipe lr ON r.id = lr.recipe_id SET log_server = 'lab.example.com' WHERE lr.server like '%lab.example.com%'; 
+UPDATE recipe r JOIN recipe_task rt ON r.id = rt.recipe_id JOIN log_recipe_task lrt ON rt.id = lrt.recipe_task_id SET log_server = 'lab.example.com' WHERE lrt.server like '%lab.example.com%';
+
+
+Rollback:
+ALTER TABLE recipe DROP INDEX `recipe_log_server`,
+         DROP COLUMN log_server;
+
+

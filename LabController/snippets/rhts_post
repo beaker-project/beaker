@@ -144,74 +144,45 @@ yum -y --disablerepo=* --enablerepo=beaker-* install koan
 yum -y --disablerepo=* --enablerepo=beaker-* install beah
 # This may fail if you are outside of Red Hat..
 yum -y --disablerepo=* --enablerepo=beaker-* install beakerlib-redhat
+
+cp /etc/beah_beaker.conf{,.default}
 cat << EOF > /etc/beah_beaker.conf
+# see /etc/beah_beaker.conf.default for commented configuration
+
 [DEFAULT]
 # LAB_CONTROLLER: URI of Beaker's XML-RPC handler
 LAB_CONTROLLER=http://$server:8000/server
 #
-# # HOSTNAME: Pretend to be machine with given name:
-# #HOSTNAME=fake.hostname.com
+# HOSTNAME: Pretend to be machine with given name.
+# NOTE: This is mostly pointless as usually correct name is assigned by DHCP.
 HOSTNAME=$name
 #if $getVar('recipeid','') != ''
 RECIPEID=$recipeid
 #end if
 
-# LIMITS: hard and soft cap on filesize or amount of data uploaded.
-# Limit is specified in bytes and numeric value is expected. Use 0 or negative
-# value to specify no limit.
-# Files/Tasks reaching soft limit will result in warning, while file/task
-# reaching hard limit will raise a warning and also the file upload will be
-# stopped.
-# Size limit limits the file size, while upload limit limits the number of
-# bytes uploaded. These are not necessarily the same, as block may be send
-# multipe times, though this is not recomended as it will rewrite data.
-# Link limit sets the cap on number of files created by task/recipe.
+# Turn on hard limits on upload sizes:
+FILE_SIZE_LIMIT=200000000
+TASK_SIZE_LIMIT=800000000
 
-# FILE_SIZE_LIMIT, FILE_SIZE_LIMIT_SOFT: hard and soft cap on filesize.
-FILE_SIZE_LIMIT_SOFT=200000000
-#FILE_SIZE_LIMIT=0
-
-# TASK_SIZE_LIMIT, TASK_SIZE_LIMIT_SOFT: hard and soft cap on size of all
-# files per task.
-TASK_SIZE_LIMIT_SOFT=800000000
-#TASK_SIZE_LIMIT=0
-
-# RECIPE_SIZE_LIMIT, RECIPE_SIZE_LIMIT_SOFT: hard and soft cap on size of all
-# files per recipe.
-#RECIPE_SIZE_LIMIT_SOFT=0
-#RECIPE_SIZE_LIMIT=0
-
-# FILE_UPLOAD_LIMIT, FILE_UPLOAD_LIMIT_SOFT: hard and soft cap on upload per
-# file.
-#FILE_UPLOAD_LIMIT_SOFT=0
-#FILE_UPLOAD_LIMIT=0
-
-# TASK_UPLOAD_LIMIT, TASK_UPLOAD_LIMIT_SOFT: hard and soft cap on all uploads per
-# task.
-#TASK_UPLOAD_LIMIT_SOFT=0
-#TASK_UPLOAD_LIMIT=0
-
-# RECIPE_UPLOAD_LIMIT, RECIPE_UPLOAD_LIMIT_SOFT: hard and soft cap on all uploads
-# per recipe.
-#RECIPE_UPLOAD_LIMIT_SOFT=0
-#RECIPE_UPLOAD_LIMIT=0
-
-# TASK_LINK_LIMIT, TASK_LINK_LIMIT_SOFT: hard and soft cap on number of files per
-# task.
-#TASK_LINK_LIMIT_SOFT=0
-#TASK_LINK_LIMIT=0
-
-# RECIPE_LINK_LIMIT, RECIPE_LINK_LIMIT_SOFT: hard and soft cap on number of
-# files per recipe.
-#RECIPE_LINK_LIMIT_SOFT=0
-#RECIPE_LINK_LIMIT=0
 EOF
+
+cp /etc/beah.conf{,.default}
+cat << EOF > /etc/beah.conf
+# see /etc/beah.conf.default for commented configuration
+
+[DEFAULT]
+# Turn on more verbose logging and redirect to console. This is useful for
+# debugging harness' problems.
+LOG=Info
+CONSOLE_LOG=Console
 # To turn on debug logging uncomment the following line. Warning: this is
 # rather verbose! This also requires LOG to be Debug.
-#/bin/sed -i 's/^DEVEL=.*/DEVEL=True/' /etc/beah.conf
-/bin/sed -i 's/^LOG=.*/LOG=Info/' /etc/beah.conf
-/bin/sed -i 's/^INTERFACE=localhost/INTERFACE=/' /etc/beah.conf
-/bin/sed -i 's/^CONSOLE_LOG=.*/CONSOLE_LOG=Console/' /etc/beah.conf
+#DEVEL=True
+
+[TASK]
+INTERFACE=
+
+EOF
 
 chkconfig --level 345 beah-srv on
 chkconfig --level 345 beah-beaker-backend on

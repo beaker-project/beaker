@@ -769,8 +769,7 @@ log_recipe_table = Table('log_recipe', metadata,
         Column('path', UnicodeText()),
         Column('filename', UnicodeText(), nullable=False),
         Column('start_time',DateTime, default=datetime.utcnow),
-	Column('server', Unicode(256), index=True),
-	Column('server_url', UnicodeText()),
+	Column('server', UnicodeText()),
 	Column('basepath', UnicodeText()),
         mysql_engine='InnoDB',
 )
@@ -782,8 +781,7 @@ log_recipe_task_table = Table('log_recipe_task', metadata,
         Column('path', UnicodeText()),
         Column('filename', UnicodeText(), nullable=False),
         Column('start_time',DateTime, default=datetime.utcnow),
-	Column('server', Unicode(256), index=True),
-	Column('server_url', UnicodeText()),
+	Column('server', UnicodeText()),
 	Column('basepath', UnicodeText()),
         mysql_engine='InnoDB',
 )
@@ -795,8 +793,7 @@ log_recipe_task_result_table = Table('log_recipe_task_result', metadata,
         Column('path', UnicodeText()),
         Column('filename', UnicodeText(), nullable=False),
         Column('start_time',DateTime, default=datetime.utcnow),
-	Column('server', Unicode(256), index=True),
-	Column('server_url', UnicodeText()),
+	Column('server', UnicodeText()),
 	Column('basepath', UnicodeText()),
         mysql_engine='InnoDB',
 )
@@ -863,6 +860,8 @@ recipe_table = Table('recipe',metadata,
         Column('panic', Unicode(20)),
         Column('_partitions',UnicodeText()),
         Column('autopick_random', Boolean, default=False),
+	    Column('log_server', Unicode(256), index=True),
+        Column('reservation_id', Integer, ForeignKey('reservation.id'), default=None),
         mysql_engine='InnoDB',
 )
 
@@ -1614,7 +1613,7 @@ class System(SystemObject):
                 if not profile_id:
                     raise BX(_("%s profile not found on %s" % (profile, self.system.lab_controller.fqdn)))
                 if ks_appends:
-                    ks_appends_text = '#raw\n%s\n#end raw' % '\n'.join([ks for ks in ks_appends])
+                    ks_appends_text = '#raw\n%s\n#end raw' % '\n'.join(["%s" % ks for ks in ks_appends])
                     ks_file = '/var/lib/cobbler/snippets/per_system/ks_appends/%s' % self.system.fqdn
                     if self.remote.read_or_write_snippet(ks_file,
                                                          False,
@@ -2335,17 +2334,10 @@ url --url=$tree
         return distros
 
     def action_release(self):
-        # Attempt to remove Netboot entry
-        # and turn off machine, but don't fail if we can't
-        # It's possible that our LC has been removed
+        # Attempt to remove Netboot entry and turn off machine
         if self.remote and self.release_action:
-            try:
-                self.remote.release(power=False)
-                self.release_action.do(self)
-            except BX, error:
-                pass
-            except xmlrpclib.Fault:
-                pass
+            self.remote.release(power=False)
+            self.release_action.do(self)
         elif self.remote:
             self.remote.release()
 
@@ -2530,7 +2522,9 @@ $SNIPPET("rhts_post")
             log.warn(reason)
             self.mark_broken(reason=reason)
 
-    def reserve(self, service, user=None, reservation_type=u'manual'):
+    def reserve(self, service, user=None, reservation_type=u'manual', recipe=None):
+        if reservation_type == 'recipe' and recipe is None:
+            raise BX(_(u'Reservations of type \'recipe\' must be passed a recipe'))
         if user is None:
             user = identity.current.user
         if self.user is not None and self.user == user:
@@ -2547,7 +2541,7 @@ $SNIPPET("rhts_post")
                 user_id=user.user_id).rowcount != 1:
             raise BX(_(u'System %r is already reserved') % self)
         self.user = user # do it here too, so that the ORM is aware
-        self.reservations.append(Reservation(user=user, type=reservation_type))
+        self.reservations.append(Reservation(user=user, type=reservation_type, recipe=recipe))
         self.activity.append(SystemActivity(user=user,
                 service=service, action=u'Reserved', field_name=u'User',
                 old_value=u'', new_value=user.user_name))
@@ -2592,12 +2586,11 @@ $SNIPPET("rhts_post")
         self.user = None
         try:
             self.action_release()
-        except BX, e:
+        except Exception, error_msg:
             msg = "Error: %s Action: %s" % (error_msg,self.release_action)
             self.activity.append(SystemActivity(user=identity.current.user,
                     service=service, action=unicode(self.release_action),
                     field_name=u'Return', old_value=u'', new_value=msg))
-            raise e
         self.activity.append(activity)
 
     cc = association_proxy('_system_ccs', 'email_address')
@@ -3616,12 +3609,10 @@ class Log(MappedObject):
 
     MAX_ENTRIES_PER_DIRECTORY = 100
 
-    def __init__(self, path=None, filename=None, server_url=None, 
-                 server=None, basepath=None):
+    def __init__(self, path=None, filename=None, server=None, basepath=None):
         self.path = path
         self.filename = filename
         self.server = server
-        self.server_url = server_url
         self.basepath = basepath
 
     def result(self):
@@ -3630,15 +3621,15 @@ class Log(MappedObject):
     result = property(result)
 
     def full_log_directory(self):
-        if self.server_url:
+        if self.server:
             return self.log_directory()
         else:
             return '%s/%s' % (self.parent.logspath, self.log_directory())
 
     def log_directory(self):
-        # if url is defined then the logs are stored elsewhere
-        if self.server_url:
-            dir = '%s/%s' % (self.server_url, self.path or '')
+        # if server is defined then the logs are stored elsewhere
+        if self.server:
+            dir = '%s/%s' % (self.server, self.path or '')
             presult = urlparse.urlparse(dir)
             server_url = '%s://%s' % (presult[0], presult[1])
             dir = '%s%s' % (server_url, posixpath.normpath(presult[2]))
@@ -3649,7 +3640,7 @@ class Log(MappedObject):
         return dir
 
     def log_url(self):
-        if self.server_url:
+        if self.server:
             server_url = '%s/%s' % (self.log_directory(), self.filename)
         else:
             server_url = '/logs/%s/%s' % (self.log_directory(), self.filename)
@@ -3669,13 +3660,12 @@ class Log(MappedObject):
     def dict(self):
         """ Return a dict describing this log
         """
-        return dict(server     = self.server,
-                    server_url = self.server_url,
-                    path       = self.path,
-                    filename   = self.filename,
-                    tid        = '%s:%s' % (self.type, self.id),
-                    filepath   = self.parent.filepath,
-                    basepath   = self.basepath,
+        return dict( server  = self.server,
+                    path     = self.path,
+                    filename = self.filename,
+                    tid      = '%s:%s' % (self.type, self.id),
+                    filepath = self.parent.filepath,
+                    basepath = self.basepath,
                    )
 
     @classmethod 
@@ -6025,14 +6015,14 @@ class Task(MappedObject):
     @classmethod
     def by_name(cls, name, valid=None):
         query = cls.query.filter(Task.name==name)
-        if valid:
+        if valid is not None:
             query = query.filter(Task.valid==bool(valid))
         return query.one()
 
     @classmethod
     def by_id(cls, id, valid=None):
         query = cls.query.filter(Task.id==id)
-        if valid:
+        if valid is not None:
             query = query.filter(Task.valid==bool(valid))
         return query.one()
 
@@ -6597,6 +6587,7 @@ mapper(TaskResult, task_result_table)
 mapper(Reservation, reservation_table, properties={
         'user': relation(User, backref=backref('reservations',
             order_by=[reservation_table.c.start_time.desc()])),
+        'recipe': relation(Recipe, backref='reservation', uselist=False),
 })
 mapper(SSHPubKey, sshpubkey_table,
         properties=dict(user=relation(User, uselist=False, backref='sshpubkeys')))

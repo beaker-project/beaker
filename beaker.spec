@@ -2,8 +2,8 @@
 %{!?pyver: %global pyver %(%{__python} -c "import sys ; print sys.version[:3]")}
 
 Name:           beaker
-Version:        0.7.2
-Release:        3%{?dist}
+Version:        0.7.3
+Release:        5%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -33,6 +33,10 @@ BuildRequires:  python-xmltramp
 BuildRequires:  python-lxml
 BuildRequires:  python-ldap
 BuildRequires:  python-TurboMail >= 3.0
+# This conditional is only a temporary hack to get builds going in dist-f14
+%if 0%{?rhel}
+BuildRequires:  python-concurrentloghandler
+%endif
 BuildRequires:  rpm-python
 # As above, these client dependencies are needed in build because of sphinx
 BuildRequires:  kobo-client >= 0.3
@@ -283,6 +287,32 @@ fi
 %{_var}/lib/beaker/addDistro.d/*
 
 %changelog
+* Fri Sep 30 2011 Raymond Mancy <rmancy@redhat.com> 0.7.3-5
+- 739893 - Client option to print xml of existing job
+  (j-nomura@ce.jp.nec.com)
+- 729654 - Requires from Makefile are not installed during kickstart
+  (bpeck@redhat.com)
+- 725537 - Add configurability to the lab controller's rotating file logger.
+  (rmancy@redhat.com)
+- 737933 - Make bkr task-details only list valid == True task as default
+  (ryang@redhat.com)
+- 738006 - recipe.kickPart documented but not implemented? (bpeck@redhat.com)
+- 676713 - Page scrolling links at bottom of page (atodorov@redhat.com)
+- 742115 - fix sphinx autodoc failure, and catch any future ones
+  (dcallagh@redhat.com)
+- 734535 - drop server from each log entry and store log_server in recipe.
+  (bpeck@redhat.com)
+- 693403 - [RFE] add way how to specify hostRequires in `bkr workflow-simple`
+  (bpeck@redhat.com)
+- 738423 - abort and cancel should ignore release_action failures
+  (bpeck@redhat.com)
+- 630863 - Show link to current running job in system form
+  (rmancy@redhat.com)
+
+- Turn soft limits into hard ones (mcsontos@redhat.com)
+- test for qpid bug https://bugzilla.redhat.com/show_bug.cgi?id=733543
+  (rmancy@redhat.com)
+
 * Fri Sep 16 2011 Raymond Mancy <rmancy@redhat.com> 0.7.2-3
 - 640395  -  make bkradd does not work (bpeck@redhat.com)
 - 617274 - Owner field should be mandatory (dcallagh@redhat.com)

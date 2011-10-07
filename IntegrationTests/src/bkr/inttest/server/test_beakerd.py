@@ -461,6 +461,25 @@ class TestPowerFailures(unittest.TestCase):
     def tearDown(self):
         self.stub_cobbler_thread.stop()
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=738423
+    def test_unreserve(self):
+        user = data_setup.create_user()
+        automated_system = data_setup.create_system(fqdn=u'raise1.example.org',
+                                                    lab_controller=self.lab_controller,owner = user,
+                                                    status = SystemStatus.by_name(u'Automated'))
+        automated_system.reserve(u'Scheduler', user)
+        session.flush()
+        session.clear()
+        automated_system.unreserve(u'Scheduler', user)
+        # Needed for queued_commands to pick it up
+        session.flush()
+        beakerd.queued_commands()
+        beakerd.running_commands()
+        automated_system = System.query().get(automated_system.id)
+        system_activity = automated_system.activity[0]
+        self.assertEqual(system_activity.action, 'off')
+        self.assertTrue(system_activity.new_value.startswith('Failed'))
+
     def test_automated_system_marked_broken(self):
         automated_system = data_setup.create_system(fqdn=u'broken1.example.org',
                                                     lab_controller=self.lab_controller,

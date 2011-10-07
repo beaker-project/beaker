@@ -24,11 +24,8 @@ except ImportError, e:
 
 class ServerBeakerBus(BeakerBus):
 
-
-
     send_error_suffix = 'Cannot send message'
     rpcroot = RPCRoot()
-
 
     @classmethod
     def do_krb_auth(cls):
@@ -65,7 +62,6 @@ class ServerBeakerBus(BeakerBus):
             Send msg on Bus with subject 'TaskUpdate.Jx.RSx.Rx.Tx' only as far as the current task.
             i.e if we're updating a Recipe the subject will not include any tasks
             """
-    
             try:
                 task_id = kw.get('id',None)
                 if task_id is None:
@@ -78,7 +74,7 @@ class ServerBeakerBus(BeakerBus):
                 content = kw #FIXME perhaps we don't need all the elements of the dict?
                 msg_kw['content'] = content
                 msg = Message(**msg_kw) 
-                snd = session.sender(ServerBeakerBus.topic_exchange) 
+                snd = session.sender(self.topic_exchange) 
                 snd.send(msg)
                 log.info('Sent msg %s' % msg_kw['subject'])
             except BeakerException, e:
@@ -86,41 +82,48 @@ class ServerBeakerBus(BeakerBus):
             except Exception, e:
                 raise Exception(("%s, %s" % (str(e), self.send_error_suffix)))
 
+    def _service_queue_worker_logic(self, msg):
+        method = msg.properties['method']
+        method_args = msg.properties['args']
+        reply_to = msg.reply_to
+        msg_kw = {}
+        try:
+            val_to_return = self.rpcroot.process_rpc(method,method_args)
+            msg_kw['content'] = val_to_return
+        except Exception, e:
+            log.error(str(e))
+            msg_kw.setdefault('properties',{'error' : 1 })
+            msg_kw['content'] = str(e)
+        return (msg_kw, reply_to)
 
     def _service_queue_worker(self):
             tp = BkrThreadPool.get('service-queue')
             while True:
                 try:
                     msg = tp.in_queue.get()
-                    method = msg.properties['method']
-                    method_args = msg.properties['args']
-                    reply_to = msg.reply_to
-                    msg_kw = {}
-                    try:
-                        val_to_return = self.rpcroot.process_rpc(method,method_args)
-                        msg_kw['content'] = val_to_return
-                    except Exception, e:
-                        log.error(str(e))
-                        msg_kw.setdefault('properties',{'error' : 1 })
-                        msg_kw['content'] = str(e)
-                    tp.out_queue.put((msg_kw, reply_to))
+                    response = self._service_queue_worker_logic(msg)
+                    tp.out_queue.put(response)
                     log.debug('Put response onto service_queue_out')
                 except Exception, e:
                     log.exception(str(e))
                     continue
 
+    def _create_service_receiver(self,ssn):
+        log.debug('Creating service-queue receiver')
+        queue_name= self.service_queue_name
+        try:
+            receiver = ssn.receiver(queue_name + '; { create: always, ' +
+                '      node: { type: queue, durable: True, ' +
+                ' x-declare: { auto-delete: False }, ' +
+                'x-bindings: [ {  queue: "' + queue_name + '", } ] } }')
+
+        except NotFound, e:
+            log.error(e)
+        return receiver
+
+
     def _service_request_listener(self, ssn, *args, **kw):
-            log.debug('Creating service-queue receiver')
-            queue_name= self.config.get('global', 'service_queue')
-            try:
-                receiver = ssn.receiver(queue_name + '; { create: always, ' +
-                    '      node: { type: queue, durable: True, ' +
-                    ' x-declare: { auto-delete: False }, ' +
-                    'x-bindings: [ {  queue: "' + queue_name + '", } ] } }')
-
-            except NotFound, e:
-                log.error(e)
-
+            receiver = self._create_service_receiver(ssn)
             #Start main workers
             tpool = BkrThreadPool.create_and_run('service-queue', target_f=self._service_queue_worker, target_args=[])
 
@@ -132,6 +135,12 @@ class ServerBeakerBus(BeakerBus):
             #Start single receiver
             self._fetch_service_request(receiver, ssn, *args, **kw)
 
+    def _send_service_response_logic(self, msg_kw, address, ssn):
+        msg = Message(**msg_kw)
+        snd = ssn.sender(address)
+        log.debug('Sent msg %s' %  msg_kw['content'])
+        snd.send(msg)
+
     def _send_service_response(self, ssn):
             tp = BkrThreadPool.get('service-queue')
             while True:
@@ -139,10 +148,7 @@ class ServerBeakerBus(BeakerBus):
                     log.debug('Waiting to get from service_queue_out')
                     msg_kw, address = tp.out_queue.get()
                     log.debug('Got from service_queue_out')
-                    msg = Message(**msg_kw)
-                    snd = ssn.sender(address)
-                    log.debug('Sent msg %s' %  msg_kw['content'])
-                    snd.send(msg)
+                    self._send_service_response_logic(msg_kw, address, ssn)
                 except Exception, e:
                     log.exception(str(e))
                     continue
@@ -154,12 +160,12 @@ class ServerBeakerBus(BeakerBus):
                 try:
                     log.debug('Waiting to receive in _service_request')
                     msg = receiver.fetch()
+                    log.debug('Fetched msg from receiver')
                     tp.in_queue.put(msg)
                     ssn.acknowledge()
                 except Exception, e:
                     log.exception(str(e))
                     continue
-
 
     def _expired_watchdogs_listener(self, ssn):
         rt = RecipeTasks()
@@ -200,4 +206,3 @@ class ServerBeakerBus(BeakerBus):
             action_t = Thread(target=action_pointer, args=(new_session,))
             action_t.setDaemon(False)
             action_t.start()
-
