@@ -45,16 +45,11 @@ def main_loop(conf=None, foreground=False):
     if foreground:
         add_stderr_logger(transfer.logger)
 
-    time_of_last_check = 0
     while True:
         try:
-            now = time.time()
-            # Look for logs to transfer every 30 minutes
-            if now - time_of_last_check > 1800:
-                time_of_last_check = now
-                transfer.hub._login()
-                transfer.transfer_logs()
-            else:
+            transfer.hub._login()
+            # Look for logs to transfer if none transfered then sleep
+            if not transfer.transfer_logs():
                 transfer.logger.debug(80 * '-')
                 transfer.sleep()
 

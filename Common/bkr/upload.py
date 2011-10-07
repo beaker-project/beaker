@@ -65,7 +65,8 @@ class Uploader:
         try:
             st = os.lstat(fn)
         except OSError, e:
-            if e.errno == errno.ENOENT:
+            # Only offset 0 should be allowed to create a file.
+            if e.errno == errno.ENOENT and offset == 0:
                 pass
             else:
                 raise

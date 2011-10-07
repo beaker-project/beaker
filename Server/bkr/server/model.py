@@ -36,6 +36,8 @@ import bkr.timeout_xmlrpclib
 import os
 import shutil
 import urllib
+import urlparse
+import posixpath
 
 from turbogears import identity
 
@@ -510,6 +512,17 @@ user_group_table = Table('user_group', metadata,
     mysql_engine='InnoDB',
 )
 
+sshpubkey_table = Table('sshpubkey', metadata,
+    Column('id', Integer, autoincrement=True, nullable=False,
+        primary_key=True),
+    Column('user_id', Integer, ForeignKey('tg_user.user_id',
+        onupdate='CASCADE', ondelete='CASCADE'), nullable=False),
+    Column('keytype', Unicode(16), nullable=False),
+    Column('pubkey', UnicodeText(), nullable=False),
+    Column('ident', Unicode(63), nullable=False),
+    mysql_engine='InnoDB',
+)
+
 system_group_table = Table('system_group', metadata,
     Column('system_id', Integer, ForeignKey('system.id',
         onupdate='CASCADE', ondelete='CASCADE'), primary_key=True),
@@ -756,7 +769,8 @@ log_recipe_table = Table('log_recipe', metadata,
         Column('path', UnicodeText()),
         Column('filename', UnicodeText(), nullable=False),
         Column('start_time',DateTime, default=datetime.utcnow),
-	Column('server', UnicodeText()),
+	Column('server', Unicode(256), index=True),
+	Column('server_url', UnicodeText()),
 	Column('basepath', UnicodeText()),
         mysql_engine='InnoDB',
 )
@@ -768,7 +782,8 @@ log_recipe_task_table = Table('log_recipe_task', metadata,
         Column('path', UnicodeText()),
         Column('filename', UnicodeText(), nullable=False),
         Column('start_time',DateTime, default=datetime.utcnow),
-	Column('server', UnicodeText()),
+	Column('server', Unicode(256), index=True),
+	Column('server_url', UnicodeText()),
 	Column('basepath', UnicodeText()),
         mysql_engine='InnoDB',
 )
@@ -780,7 +795,8 @@ log_recipe_task_result_table = Table('log_recipe_task_result', metadata,
         Column('path', UnicodeText()),
         Column('filename', UnicodeText(), nullable=False),
         Column('start_time',DateTime, default=datetime.utcnow),
-	Column('server', UnicodeText()),
+	Column('server', Unicode(256), index=True),
+	Column('server_url', UnicodeText()),
 	Column('basepath', UnicodeText()),
         mysql_engine='InnoDB',
 )
@@ -1237,6 +1253,19 @@ class User(object):
                 return True
         return False
 
+    def ssh_keys_ks(self, end=False):
+        end = end and "%end\n" or ""
+        if self.sshpubkeys:
+            key_ks_text = "\n".join("echo %s >> /root/.ssh/authorized_keys" % ssh_key\
+                                    for ssh_key in self.sshpubkeys)
+            key_ks_text = "%%post\nmkdir -p /root/.ssh\n%s\nrestorecon -R /root/.ssh\n"\
+                          "chmod go-w /root /root/.ssh /root/.ssh/authorized_keys\n%s"\
+                        % (key_ks_text, end)
+            return key_ks_text
+        else:
+            return None
+
+
 class Permission(object):
     """
     A relationship that determines what each Group can do
@@ -1585,7 +1614,7 @@ class System(SystemObject):
                 if not profile_id:
                     raise BX(_("%s profile not found on %s" % (profile, self.system.lab_controller.fqdn)))
                 if ks_appends:
-                    ks_appends_text = '#raw\n%s\n#end raw' % '\n'.join([ks.ks_append for ks in ks_appends])
+                    ks_appends_text = '#raw\n%s\n#end raw' % '\n'.join([ks for ks in ks_appends])
                     ks_file = '/var/lib/cobbler/snippets/per_system/ks_appends/%s' % self.system.fqdn
                     if self.remote.read_or_write_snippet(ks_file,
                                                          False,
@@ -2333,6 +2362,12 @@ url --url=$tree
         except AttributeError, e: #Anonymous can't provision now
             return False
 
+        if identity.current.user.sshpubkeys:
+            end = distro and distro.osversion.osmajor.osmajor.startswith("Fedora")
+            if not ks_appends:
+                ks_appends = []
+            ks_appends = ks_appends + [identity.current.user.ssh_keys_ks(end)]
+
         if not self.remote:
             return False
         self.remote.provision(distro=distro, 
@@ -2340,7 +2375,7 @@ url --url=$tree
                               kernel_options=kernel_options,
                               kernel_options_post=kernel_options_post,
                               kickstart=kickstart,
-                              ks_appends=None)
+                              ks_appends=ks_appends)
 
     def action_auto_provision(self, 
                              distro=None,
@@ -3581,10 +3616,12 @@ class Log(MappedObject):
 
     MAX_ENTRIES_PER_DIRECTORY = 100
 
-    def __init__(self, path=None, filename=None, server=None, basepath=None):
+    def __init__(self, path=None, filename=None, server_url=None, 
+                 server=None, basepath=None):
         self.path = path
         self.filename = filename
         self.server = server
+        self.server_url = server_url
         self.basepath = basepath
 
     def result(self):
@@ -3593,39 +3630,38 @@ class Log(MappedObject):
     result = property(result)
 
     def full_log_directory(self):
-        if self.server:
+        if self.server_url:
             return self.log_directory()
         else:
             return '%s/%s' % (self.parent.logspath, self.log_directory())
 
     def log_directory(self):
-        # if server is defined then the logs are stored elsewhere
-        if self.server:
-            dir = '%s/%s' % (self.server, self.path or '')
-            servermatch = re.search('(^https?://.+?)(/.+)$', dir) # split the server from the path
-            server = servermatch.group(1)
-            path = servermatch.group(2)
-            dir = '%s%s' % (server, re.sub('/{2,}','/', path))
+        # if url is defined then the logs are stored elsewhere
+        if self.server_url:
+            dir = '%s/%s' % (self.server_url, self.path or '')
+            presult = urlparse.urlparse(dir)
+            server_url = '%s://%s' % (presult[0], presult[1])
+            dir = '%s%s' % (server_url, posixpath.normpath(presult[2]))
         else:
             dir = '%s/%s' % (self.parent.filepath, self.path or '')
-            dir = re.sub('/{2,}','/', dir)
+            dir = posixpath.normpath(dir)
 
         return dir
 
     def log_url(self):
-        if self.server:
-            url = '%s/%s' % (self.log_directory(), self.filename)
+        if self.server_url:
+            server_url = '%s/%s' % (self.log_directory(), self.filename)
         else:
-            url = '/logs/%s/%s' % (self.log_directory(), self.filename)
-        return url
+            server_url = '/logs/%s/%s' % (self.log_directory(), self.filename)
+        return server_url
 
     def link(self):
         """ Return a link to this Log
         """
         text = "%s/%s" % (self.path != '/' and self.path or '', self.filename)
         text = text[-50:]
-        url = self.log_url()
-        return make_link(url = url,
+        server_url = self.log_url()
+        return make_link(url = server_url,
                          text = text)
     link = property(link)
 
@@ -3633,12 +3669,13 @@ class Log(MappedObject):
     def dict(self):
         """ Return a dict describing this log
         """
-        return dict(server   = self.server,
-                    path     = self.path,
-                    filename = self.filename,
-                    tid      = '%s:%s' % (self.type, self.id),
-                    filepath = self.parent.filepath,
-                    basepath = self.basepath,
+        return dict(server     = self.server,
+                    server_url = self.server_url,
+                    path       = self.path,
+                    filename   = self.filename,
+                    tid        = '%s:%s' % (self.type, self.id),
+                    filepath   = self.parent.filepath,
+                    basepath   = self.basepath,
                    )
 
     @classmethod 
@@ -3915,8 +3952,11 @@ class Job(TaskBase):
 
     @classmethod
     def by_whiteboard(cls,desc):
-        res = Job.query().filter_by(whiteboard = desc).limit(cls.max_by_whiteboard)
-        return res
+        if type(desc) is list:
+            res = Job.query().filter(Job.whiteboard.in_(desc))
+        else:
+            res = Job.query().filter_by(whiteboard=desc)
+        return res.limit(cls.max_by_whiteboard)
 
     @classmethod
     def provision_system_job(cls, distro_id, **kw):
@@ -5862,6 +5902,8 @@ class RecipeKSAppend(MappedObject):
         ks_append.appendChild(text)
         return ks_append
 
+    def __repr__(self):
+        return self.ks_append
 
 class RecipeTaskComment(MappedObject):
     """
@@ -6148,6 +6190,20 @@ class TaskBugzilla(MappedObject):
 class Reservation(MappedObject): pass
 
 class SystemStatusDuration(MappedObject): pass
+
+class SSHPubKey(MappedObject):
+    def __init__(self, keytype, pubkey, ident):
+        self.keytype = keytype
+        self.pubkey = pubkey
+        self.ident = ident
+
+    def __repr__(self):
+        return "%s %s %s" % (self.keytype, self.pubkey, self.ident)
+
+    @classmethod
+    def by_id(cls, id):
+        return cls.query.filter_by(id=id).one()
+
 
 # set up mappers between identity tables and classes
 SystemType.mapper = mapper(SystemType, system_type_table)
@@ -6542,6 +6598,8 @@ mapper(Reservation, reservation_table, properties={
         'user': relation(User, backref=backref('reservations',
             order_by=[reservation_table.c.start_time.desc()])),
 })
+mapper(SSHPubKey, sshpubkey_table,
+        properties=dict(user=relation(User, uselist=False, backref='sshpubkeys')))
 
 ## Static list of device_classes -- used by master.kid
 global _device_classes

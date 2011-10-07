@@ -816,11 +816,17 @@ drwxr-x--- 24 root root 12288 Jun  2 14:57 ..
                             </imageobject>
                           <caption>Generating a Matrix report from the Job's Whiteboard</caption>
                       </mediaobject>
-                      <para>There are two ways of defining what Job results to display. You can select the Job by its <application>Whiteboard</application>, or by its <application>Job ID</application>. To show a Job's Matrix report from its Whiteboard, click on the Whiteboard text in the <application>Whiteboard</application> select box. If you wish to select the Job by its ID, enter the Job ID into the <application>Job ID</application>  text area. The Job Whiteboard and the Job ID are mutually exclusive when generating the Matrix report. To change between the two, click on their respective input areas. Click the <application>Generate</application>  button to create the report. 
+                      <para>There are two ways of defining what Job results to display. You can select the Job by its <application>Whiteboard</application>, or by its <application>Job ID</application>.
+                            To show a Job's Matrix report from its Whiteboard, click on the Whiteboard text in the <application>Whiteboard</application> select box
+                            (or select multiple whiteboards with the <emphasis>Ctrl</emphasis> key). If you wish to select the Job by its ID, enter the Job ID into the <application>Job ID</application>  text area.
+                            The Job Whiteboard and the Job ID are mutually exclusive when generating the Matrix report. To change between the two, click on their respective input areas.
+                            Click the <application>Generate</application> button to create the report.
                       </para>
                       <note>
                         <title>Filtering Whiteboards</title>
-                          <para>You can filter what is displayed in the <application>Whiteboard </application> select box by typing text into the <application>Filter Whiteboard</application> field, and then clicking anywhere outside the field. </para>
+                          <para>You can filter what is displayed in the <application>Whiteboard</application> select box by typing text into the <application>Filter by</application> field, and then clicking the
+                            <emphasis>Filter</emphasis> button
+                          </para>
                       </note>
                       <note>
                         <title>Displaying reports of any combination of Jobs</title>

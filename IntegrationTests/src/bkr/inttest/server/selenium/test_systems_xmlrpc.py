@@ -31,7 +31,7 @@ from bkr.inttest.assertions import assert_datetime_within, \
         assert_durations_not_overlapping
 from bkr.inttest import data_setup, stub_cobbler
 from bkr.server.model import User, Cpu, Key, Key_Value_String, Key_Value_Int, \
-        System, SystemActivity, Provision, Hypervisor
+        System, SystemActivity, Provision, Hypervisor, SSHPubKey
 from bkr.server.util import parse_xmlrpc_datetime
 from bkr.server.tools import beakerd
 
@@ -449,6 +449,23 @@ class SystemProvisionXmlRpcTest(XmlRpcTestCase):
         # console=ttyS0 comes from arch default, created in setUp()
         kopts = self.stub_cobbler_thread.cobbler.systems[system.fqdn]['kopts']
         self.assertEqual(kopts, {'ksdevice': 'eth1', 'console': 'ttyS0'})
+
+    def test_provision_user_ssh_keys(self):
+        system = self.usable_system
+        user = system.user
+        k = SSHPubKey(u'ssh-rsa',
+                      u'AAAAB3NzaC1yc2EAAAADAQABAAAAgQDX92WltLUTlGgRngO4k68cE8fH88cpJPpXRE'\
+                      'hXthaIoooFds7MeAOu3+UU5wYmmpz/q4FykmBc1PFP2M7aS2i4X/sGZmP57il5yfUK'\
+                      'SJtlhJamBPwgoeg/PBvERbIdRtbAq8NMO7mAt+zuU9fWCs/fYEJDva3D0UZsY/Qpt+'\
+                      '4mBw==', u'man@moon')
+        user.sshpubkeys.append(k)
+        session.flush()
+        self.server.auth.login_password(user.user_name, 'password')
+        self.server.systems.provision(system.fqdn, self.distro.install_name,
+                'method=nfs', 'noapic', 'noapic runlevel=3', '')
+        snippet_filename = '/var/lib/cobbler/snippets/per_system/ks_appends/%s' % system.fqdn
+        self.assert_('man@moon' in
+                self.stub_cobbler_thread.cobbler.snippets[snippet_filename])
 
 class LegacyPushXmlRpcTest(XmlRpcTestCase):
 

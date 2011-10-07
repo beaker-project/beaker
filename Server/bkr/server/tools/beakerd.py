@@ -492,13 +492,19 @@ def scheduled_recipes(*args):
                     ks_meta = "%s %s" % (ks_meta, recipe.ks_meta)
                 if recipe.partitionsKSMeta:
                     ks_meta = "%s partitions=%s" % (ks_meta, recipe.partitionsKSMeta)
+                user = recipe.recipeset.job.owner
+                if user.sshpubkeys:
+                    end = recipe.distro and recipe.distro.osversion.osmajor.osmajor.startswith("Fedora")
+                    key_ks = [user.ssh_keys_ks(end)]
+                else:
+                    key_ks = []
                 try:
                     recipe.system.action_auto_provision(recipe.distro,
                                                      ks_meta,
                                                      recipe.kernel_options,
                                                      recipe.kernel_options_post,
                                                      recipe.kickstart,
-                                                     recipe.ks_appends)
+                                                     recipe.ks_appends + key_ks)
                     recipe.system.activity.append(
                          SystemActivity(recipe.recipeset.job.owner, 
                                         u'Scheduler',

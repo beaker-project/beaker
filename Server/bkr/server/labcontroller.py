@@ -264,7 +264,7 @@ class LabControllers(RPCRoot):
         try:
             distro = Distro.by_install_name(old_distro)
         except InvalidRequestError:
-            pass
+            return None
 
         if lab_controller in distro.lab_controllers:
             distro.lab_controllers.remove(lab_controller)

@@ -16,6 +16,7 @@ is installed on your system. See :manpage:`bkr(1)`.
    bkr-distros-tag
    bkr-distros-untag
    bkr-distros-verify
+   bkr-harness-test
    bkr-job-cancel
    bkr-job-clone
    bkr-job-delete

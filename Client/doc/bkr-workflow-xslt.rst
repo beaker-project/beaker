@@ -116,7 +116,7 @@ The structure
         [<xslt name="variant2">{Named XSLT file}</xslt>]
         [...more <xslt/> tags...]
         <arguments>
-            <arg section="recipe" type="string" [optional="1"]>
+            <arg section="recipe" type="{string|bool}" [optional="1"]>
                 <name short="a">{long argument}</name>
                 <tag type="{tagtype}">{XML tag name}</tag>
                 [<default>{default value}</default>]
@@ -144,13 +144,16 @@ Tag descriptions
     <arguments/>
         All variable options the defined XSLT template needs must be configured 
         in separate <arg/> tags inside this tag.
-    <arg section="recipe" type="{string}">
+    <arg section="recipe" type="{string|bool}">
         Each option individually is defined by <arg/> tags. The ``section`` 
         and ``type`` attributes are mandatory. Currently only the ``recipe`` 
         section is supported. The ``type`` attribute defines the type of 
-        argument. Only ``string`` is currently supported. The ``optional`` 
-        attribute is optional. If set to 1 it will make this argument purely 
-        optional. The default is to require the argument.
+        argument.  If the ``type`` attribute is set to ``bool`` it will define
+        a command line argument which takes no arguments.  If this argument is
+        given to ``bkr workflow-xslt``, it will result in the tag or attribute
+        value being set to ``true``.  The ``optional`` attribute is optional.
+        If set to ``1`` it will make this argument purely optional. The default
+        is to require the argument.
     <name short="{short arg}"/>
         The <name/> defines the short and long option names. The ``short`` 
         attribute is mandatory and can only be one character. If the same 

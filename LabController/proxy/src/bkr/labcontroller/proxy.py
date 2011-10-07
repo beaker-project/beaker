@@ -306,9 +306,13 @@ class Watchdog(ProxyHelper):
 
     def transfer_logs(self):
         self.logger.info("Entering transfer_logs")
-        for recipe_id in self.hub.recipes.by_log_server(self.server):
+        transfered = False
+        server = self.conf.get("SERVER", gethostname())
+        for recipe_id in self.hub.recipes.by_log_server(server):
+            transfered = True
             self.transfer_recipe_logs(recipe_id)
         self.logger.info("Exiting transfer_logs")
+        return transfered
 
     def transfer_recipe_logs(self, recipe_id):
         """ If Cache is turned on then move the recipes logs to there final place
@@ -404,7 +408,12 @@ class Watchdog(ProxyHelper):
                     self.logger.info("Removed Monitor for %s" % watchdog_system)
 
     def run(self):
-        updated = [1 for monitor in self.watchdogs.values() if monitor.run()]
+        updated = False
+        for monitor in self.watchdogs.values():
+            try:
+                updated |= monitor.run()
+            except (xmlrpclib.Fault, OSError):
+                self.logger.exception('Failed to run monitor for %s' % monitor.watchdog['system'])
         return bool(updated)
 
     def sleep(self):

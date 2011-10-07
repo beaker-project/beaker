@@ -38,3 +38,18 @@ class DistrosListTest(unittest.TestCase):
         output = run_client(['bkr', 'distros-list', '--labcontroller', good_lc.fqdn])
         self.assert_(any(distro_in.install_name in line for line in output.splitlines()))
         self.assert_(not any(distro_out.install_name in line for line in output.splitlines()))
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=736989
+    def test_filtering_by_treepath(self):
+        lc = data_setup.create_labcontroller()
+        distro_in = data_setup.create_distro()
+        distro_out = data_setup.create_distro()
+        session.flush()
+        distro_in.lab_controller_assocs[:] = [LabControllerDistro(lab_controller=lc,
+                tree_path='nfs://example.com/somewhere/')]
+        distro_out.lab_controller_assocs[:] = [LabControllerDistro(lab_controller=lc,
+                tree_path='nfs://example.com/nowhere/')]
+        session.flush()
+        output = run_client(['bkr', 'distros-list', '--treepath', '%somewhere%'])
+        self.assert_(any(distro_in.install_name in line for line in output.splitlines()))
+        self.assert_(not any(distro_out.install_name in line for line in output.splitlines()))

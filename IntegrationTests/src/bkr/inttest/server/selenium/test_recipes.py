@@ -162,8 +162,8 @@ class TestRecipeView(SeleniumTestCase):
         sleep(2)
         rt_log_server_link = sel.get_attribute("//tr[@class='even pass_recipe_%s recipe_%s']//td[position()=4]//a@href" % (r.id, r.id))
         rt_log = r.tasks[0].logs[0]
-        self.assert_(rt_log_server_link == rt_log.server + '//' + rt_log.filename)
+        self.assert_(rt_log_server_link == rt_log.server_url + '/' + rt_log.filename)
         sel.click("logs_button_%s" % r.id)
         sleep(2)
         r_server_link = sel.get_attribute("//table[@class='show']/tbody//tr[position()=6]/td/a@href")
-        self.assert_(r_server_link == r.logs[0].server + '//' + r.logs[0].filename)
+        self.assert_(r_server_link == r.logs[0].server_url + '/' + r.logs[0].filename)

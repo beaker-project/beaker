@@ -21,6 +21,7 @@ own man page. This man page is reserved for common options and features.
 * :manpage:`bkr-distros-tag(1)` - Tag Beaker distros
 * :manpage:`bkr-distros-untag(1)` - Untag Beaker distros
 * :manpage:`bkr-distros-verify(1)` - Check Beaker distros for problems
+* :manpage:`bkr-harness-test(1)` - Generate Beaker job to test harness installation
 * :manpage:`bkr-job-cancel(1)` - Cancel running Beaker jobs
 * :manpage:`bkr-job-clone(1)` - Clone existing Beaker jobs
 * :manpage:`bkr-job-delete(1)` - Delete Beaker jobs
