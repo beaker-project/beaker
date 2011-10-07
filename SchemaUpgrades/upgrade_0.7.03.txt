@@ -1,3 +1,7 @@
+NOTE:If you are upgrading from 0.7.2, please run the rollback commands
+from upgrade_0.7.2.txt
+------------------------------------------------------------------------
+
 For bz630863.
 ------------
 
