@@ -1,3 +1,8 @@
+***************************************************************************
+NOTICE: the upgrade notes below were originally provided for version 0.7.2
+but they are NOT necessary for version 0.7.3 and beyond. Do not apply them!
+***************************************************************************
+
 Please run for bz734535:
     ALTER TABLE log_recipe
         CHANGE server server_url text,
