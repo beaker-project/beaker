@@ -1,6 +1,19 @@
 %{!?python_sitelib: %global python_sitelib %(%{__python} -c "from distutils.sysconfig import get_python_lib; print get_python_lib()")}
 %{!?pyver: %global pyver %(%{__python} -c "import sys ; print sys.version[:3]")}
 
+# The server, lab controller, and integration test subpackages can be conditionally built.
+# They are only enabled on RHEL >= 6 and Fedora >= 16.
+# Use rpmbuild --with/--without to override.
+%if 0%{?rhel} >= 6 || 0%{?fedora} >= 16
+%bcond_without server
+%bcond_without labcontroller
+%bcond_without inttests
+%else
+%bcond_with server
+%bcond_with labcontroller
+%bcond_with inttests
+%endif
+
 Name:           beaker
 Version:        0.7.3
 Release:        5%{?dist}
@@ -15,13 +28,15 @@ BuildRequires:  make
 BuildRequires:  python-setuptools
 BuildRequires:  python-setuptools-devel
 BuildRequires:  python2-devel
-BuildRequires:  python-kid
 BuildRequires:  python-docutils >= 0.6
 %if (0%{?fedora} >= 14)
 BuildRequires:  python-sphinx >= 1.0
 %else
 BuildRequires:  python-sphinx10
 %endif
+
+%if %{with server}
+BuildRequires:  python-kid
 # These server dependencies are needed in the build, because
 # sphinx imports bkr.server modules to generate API docs
 BuildRequires:  TurboGears >= 1.1.3
@@ -35,6 +50,8 @@ BuildRequires:  python-TurboMail >= 3.0
 BuildRequires:  python-concurrentloghandler
 %endif
 BuildRequires:  rpm-python
+%endif
+
 # As above, these client dependencies are needed in build because of sphinx
 BuildRequires:  kobo-client >= 0.3
 BuildRequires:  python-krbV
@@ -54,6 +71,7 @@ Requires:       python-lxml
 Requires:       libxslt-python
 
 
+%if %{with server}
 %package server
 Summary:       Server component of Beaker
 Group:          Applications/Internet
@@ -75,8 +93,10 @@ Requires:       python-TurboMail >= 3.0
 Requires:	createrepo
 Requires:	yum-utils
 Requires:       python-concurrentloghandler
+%endif
 
 
+%if %{with inttests}
 %package integration-tests
 Summary:        Integration tests for Beaker
 Group:          Applications/Internet
@@ -89,8 +109,10 @@ Requires:       kobo
 Requires:       java-1.6.0-openjdk
 Requires:       Xvfb
 Requires:       firefox
+%endif
 
 
+%if %{with labcontroller}
 %package lab-controller
 Summary:        Lab Controller xmlrpc server
 Group:          Applications/Internet
@@ -121,6 +143,8 @@ Requires:       %{name}-lab-controller = %{version}-%{release}
 Requires:       %{name}-client = %{version}-%{release}
 Provides:	beaker-redhat-support-addDistro
 Obsoletes:	beaker-redhat-support-addDistro
+%endif
+
 
 %description
 Filesystem layout for beaker
@@ -130,65 +154,90 @@ Filesystem layout for beaker
 This is the command line interface used to interact with the Beaker Server.
 
 
+%if %{with server}
 %description server
 To Be Filled in - Server Side..
+%endif
 
 
+%if %{with inttests}
 %description integration-tests
 This package contains integration tests for Beaker, which require a running 
 database and Beaker server.
+%endif
 
 
+%if %{with labcontroller}
 %description lab-controller
 This is the interface to link Medusa and Cobbler together. Mostly provides
 snippets and kickstarts.
 
-
 %description lab-controller-addDistro
 addDistro.sh can be called after distros have been imported into beaker.
 Automatically launch jobs against newly imported distros.
+%endif
 
 %prep
 %setup -q
 
 %build
 [ "$RPM_BUILD_ROOT" != "/" ] && [ -d $RPM_BUILD_ROOT ] && rm -rf $RPM_BUILD_ROOT;
-DESTDIR=$RPM_BUILD_ROOT make
+DESTDIR=$RPM_BUILD_ROOT make \
+    %{?with_server:WITH_SERVER=1} \
+    %{?with_labcontroller:WITH_LABCONTROLLER=1} \
+    %{?with_inttests:WITH_INTTESTS=1}
 
 %install
-DESTDIR=$RPM_BUILD_ROOT make install
+DESTDIR=$RPM_BUILD_ROOT make \
+    %{?with_server:WITH_SERVER=1} \
+    %{?with_labcontroller:WITH_LABCONTROLLER=1} \
+    %{?with_inttests:WITH_INTTESTS=1} \
+    install
+%if %{with labcontroller}
 ln -s RedHatEnterpriseLinux6.ks $RPM_BUILD_ROOT/%{_var}/lib/cobbler/kickstarts/redhat6.ks
 ln -s Fedora.ks $RPM_BUILD_ROOT/%{_var}/lib/cobbler/kickstarts/Fedoradevelopment.ks
+%endif
 
 %clean
 %{__rm} -rf %{buildroot}
 
+%if %{with server}
 %post server
 /sbin/chkconfig --add beakerd
+%endif
 
+%if %{with labcontroller}
 %post lab-controller
 /sbin/chkconfig --add beaker-proxy
 /sbin/chkconfig --add beaker-watchdog
 /sbin/chkconfig --add beaker-transfer
+%endif
 
+%if %{with server}
 %postun server
 if [ "$1" -ge "1" ]; then
         /sbin/service beakerd condrestart >/dev/null 2>&1 || :
 fi
+%endif
 
+%if %{with labcontroller}
 %postun lab-controller
 if [ "$1" -ge "1" ]; then
         /sbin/service beaker-proxy condrestart >/dev/null 2>&1 || :
         /sbin/service beaker-watchdog condrestart >/dev/null 2>&1 || :
         /sbin/service beaker-transfer condrestart >/dev/null 2>&1 || :
 fi
+%endif
 
+%if %{with server}
 %preun server
 if [ "$1" -eq "0" ]; then
         /sbin/service beakerd stop >/dev/null 2>&1 || :
         /sbin/chkconfig --del beakerd || :
 fi
+%endif
 
+%if %{with labcontroller}
 %preun lab-controller
 if [ "$1" -eq "0" ]; then
         /sbin/service beaker-proxy stop >/dev/null 2>&1 || :
@@ -198,6 +247,7 @@ if [ "$1" -eq "0" ]; then
         /sbin/chkconfig --del beaker-watchdog || :
         /sbin/chkconfig --del beaker-transfer || :
 fi
+%endif
 
 %files
 %defattr(-,root,root,-)
@@ -210,6 +260,7 @@ fi
 %{python_sitelib}/bkr-%{version}-py%{pyver}.egg-info/
 %doc COPYING
 
+%if %{with server}
 %files server
 %defattr(-,root,root,-)
 %doc Server/README
@@ -237,12 +288,15 @@ fi
 %attr(-,apache,root) %dir %{_localstatedir}/www/%{name}/rpms
 %attr(-,apache,root) %dir %{_localstatedir}/www/%{name}/repos
 %attr(-,apache,root) %dir %{_localstatedir}/run/%{name}
+%endif
 
+%if %{with inttests}
 %files integration-tests
 %defattr(-,root,root,-)
 %{python_sitelib}/bkr/inttest/
 %{python_sitelib}/bkr.inttest-%{version}-*
 %{python_sitelib}/bkr.inttest-%{version}-py%{pyver}.egg-info/
+%endif
 
 %files client
 %defattr(-,root,root,-)
@@ -253,6 +307,7 @@ fi
 %{_bindir}/bkr
 %{_mandir}/man1/*.1.gz
 
+%if %{with labcontroller}
 %files lab-controller
 %defattr(-,root,root,-)
 %config(noreplace) %{_sysconfdir}/beaker/labcontroller.conf
@@ -279,6 +334,7 @@ fi
 %defattr(-,root,root,-)
 %{_var}/lib/beaker/addDistro.sh
 %{_var}/lib/beaker/addDistro.d/*
+%endif
 
 %changelog
 * Fri Sep 30 2011 Raymond Mancy <rmancy@redhat.com> 0.7.3-5
