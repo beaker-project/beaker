@@ -15,8 +15,8 @@
 %endif
 
 Name:           beaker
-Version:        0.7.3
-Release:        5%{?dist}
+Version:        0.8.0
+Release:        1%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -337,6 +337,12 @@ fi
 %endif
 
 %changelog
+* Mon Oct 10 2011 Dan Callaghan <dcallagh@redhat.com> 0.8.0-1
+- upgrade to sqlalchemy 0.6, TurboGears 1.1, Python 2.6 for server and lab
+  controller (dcallagh@redhat.com)
+- 743852 Filter buttons in Recipe view not working (Queued, Running recipes)
+  (bpeck@redhat.com)
+
 * Fri Sep 30 2011 Raymond Mancy <rmancy@redhat.com> 0.7.3-5
 - 739893 - Client option to print xml of existing job
   (j-nomura@ce.jp.nec.com)
