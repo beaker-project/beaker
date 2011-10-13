@@ -110,6 +110,11 @@ def create_user(user_name=None, password=None, display_name=None,
     log.debug('Created user %r', user)
     return user
 
+def create_admin(**kwargs):
+    user = create_user(**kwargs)
+    user.groups.append(Group.by_name(u'admin'))
+    return user
+
 def add_system_lab_controller(system,lc): 
     system.lab_controller = lc
 
