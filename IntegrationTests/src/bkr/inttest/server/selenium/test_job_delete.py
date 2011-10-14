@@ -61,7 +61,7 @@ class JobDelete(SeleniumTestCase):
         sel.open('jobs/%s' % self.job_to_delete_2.id)
         sel.wait_for_page_to_load('3000')
         sel.click("delete_J:%s" % self.job_to_delete_2.id)
-        self.wait_and_try(lambda: self.failUnless(sel.is_text_present("Are you sure you want to perform delete?")))
+        self.wait_and_try(lambda: self.failUnless(sel.is_text_present("Are you sure you want to delete this?")))
         self.wait_and_try(lambda: sel.click("//button[@type='button']"))
         self.wait_and_try(lambda: self.failUnless(sel.is_text_present("Succesfully deleted J:%s" % self.job_to_delete_2.id)))
  

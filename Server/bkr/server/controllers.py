@@ -1042,7 +1042,23 @@ class Root(RPCRoot):
             return self._view_system_as_rdf(fqdn, **kwargs)
         else:
             return self._view_system_as_html(fqdn, **kwargs)
-         
+
+    @cherrypy.expose
+    def delete_note(self, id=None):
+        id = int(id)
+        try:
+            system = System.query.join(System.notes).filter(Note.id == id).one()
+        except InvalidRequestError, e:
+            log.exception(e)
+            return ('0',)
+        if not system.can_admin(turbogears.identity.current.user):
+            log.error('User does not have the correct permission to delete this note')
+            return ('0',)
+        note = Note.query.filter_by(id=id).one()
+        note.deleted = datetime.utcnow()
+        session.flush()
+        return ('1',)
+
     @expose(template='bkr.server.templates.form')
     @identity.require(identity.not_anonymous())
     def loan_change(self, id, switch_user=False):
