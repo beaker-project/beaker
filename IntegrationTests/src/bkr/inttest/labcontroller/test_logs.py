@@ -10,6 +10,8 @@ from bkr.inttest.data_setup import unique_name
 # This number (300) has been tested to work with
 # 1024 and 2 as the maxbytes and backupcount
 _log_print_count = 300
+_log_maxbytes = 1024
+_log_backupcount = 2
 
 class TestLogs(unittest.TestCase):
 
@@ -28,6 +30,8 @@ class TestLogs(unittest.TestCase):
         self.logger.handlers[:] = []
 
     def test_log_size(self):
+	self.conf['LOG_MAXBYTES'] = _log_maxbytes
+	self.conf['LOG_BACKUPCOUNT'] = _log_backupcount
         test_string = 'testingsize'
         for i in range(_log_print_count):
             self.logger.debug(test_string)
