@@ -155,11 +155,10 @@ def main():
 
     lab_server = None
     hostname = None
-    server = None
     debug = 0
 
     if ('LAB_SERVER' in os.environ.keys()):
-        server = os.environ['LAB_SERVER']
+        lab_server = os.environ['LAB_SERVER']
     if ('HOSTNAME' in os.environ.keys()):
         hostname = os.environ['HOSTNAME']
 
@@ -174,17 +173,16 @@ def main():
         if opt in ('-h', '--hostname'):
             hostname = val
         if opt in ('-S', '--server'):
-            server = val
+            lab_server = val
 
     if not hostname:
         print "You must sepcify a hostname with the -h switch"
         sys.exit(1)
 
-    if not server:
+    if not lab_server:
         print "You must sepcify a lab_server with the -S switch"
         sys.exit(1)
 
-    lab_server = "%s/RPC2" % (server)
     inventory = read_inventory()
     if debug:
         print inventory

@@ -339,20 +339,18 @@ def main():
     global lab_server, hostname, method
 
     lab_server = None
-    server = None
     hostname = None
     debug = 0
     method = "legacypush"
-    rpc = "RPC2"
 
     if ('LAB_SERVER' in os.environ.keys()):
-        server = os.environ['LAB_SERVER']
+        lab_server = os.environ['LAB_SERVER']
     if ('HOSTNAME' in os.environ.keys()):
         hostname = os.environ['HOSTNAME']
 
     args = sys.argv[1:]
     try:
-        opts, args = getopt.getopt(args, 'dh:S:l', ['server=','legacy'])
+        opts, args = getopt.getopt(args, 'dh:S', ['server='])
     except:
         usage()
     for opt, val in opts:
@@ -364,9 +362,8 @@ def main():
         if opt in ('-h', '--hostname'):
             hostname = val
         if opt in ('-S', '--server'):
-            server = val
+            lab_server = val
 
-    lab_server = "%s/%s" % (server, rpc)
     inventory = read_inventory()
     inventory.update(kernel_inventory())
     if debug:
