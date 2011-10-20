@@ -3,7 +3,7 @@
 
 Name:           beaker
 Version:        0.7.3
-Release:        5%{?dist}
+Release:        6%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -287,6 +287,10 @@ fi
 %{_var}/lib/beaker/addDistro.d/*
 
 %changelog
+* Tue Oct 18 2011 Dan Callaghan <dcallagh@redhat.com> 0.7.3-6
+- 746774 correctly handle multiple status changes within the same second
+  (dcallagh@redhat.com)
+
 * Fri Sep 30 2011 Raymond Mancy <rmancy@redhat.com> 0.7.3-5
 - 739893 - Client option to print xml of existing job
   (j-nomura@ce.jp.nec.com)

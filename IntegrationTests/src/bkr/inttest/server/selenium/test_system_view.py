@@ -31,7 +31,8 @@ from bkr.inttest.server.selenium import SeleniumTestCase
 from bkr.inttest import data_setup, get_server_base, stub_cobbler, \
         assertions
 from bkr.server.model import Key, Key_Value_String, Key_Value_Int, System, \
-        Provision, ProvisionFamily, ProvisionFamilyUpdate, Hypervisor
+        Provision, ProvisionFamily, ProvisionFamilyUpdate, Hypervisor, \
+        SystemStatus
 from bkr.server.tools import beakerd
 
 class SystemViewTest(SeleniumTestCase):
@@ -172,6 +173,24 @@ class SystemViewTest(SeleniumTestCase):
         assertions.assert_durations_not_overlapping(
                 self.system.status_durations)
         self.assert_(self.system.date_modified > orig_date_modified)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=746774
+    def test_change_status_with_same_timestamps(self):
+        # create two SystemStatusDuration rows with the same timestamp
+        # (that is, within the same second)
+        self.system.status = SystemStatus.by_name(u'Removed')
+        session.flush()
+        self.system.status = SystemStatus.by_name(u'Automated')
+        session.flush()
+        self.login()
+        sel = self.selenium
+        self.go_to_system_view()
+        self.go_to_system_view()
+        sel.select('status_id', u'Broken')
+        sel.click('link=Save Changes')
+        sel.wait_for_page_to_load('30000')
+        self.assertEqual(sel.get_title(), self.system.fqdn)
+        self.assertEqual(sel.get_selected_label('status_id'), u'Broken')
 
     def test_strips_surrounding_whitespace_from_fqdn(self):
         self.login()
