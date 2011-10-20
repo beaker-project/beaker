@@ -893,7 +893,7 @@ class Root(RPCRoot):
             title = system.fqdn
             our_user = identity.current.user #simple optimisation
             currently_held = system.user == our_user
-            if system.can_admin(user=our_user): 
+            if system.can_admin(user=our_user):
                 options['owner_change_text'] = ' (Change)'
                 options['show_cc'] = True
             else:
@@ -1153,25 +1153,28 @@ class Root(RPCRoot):
         msg = ""
         status = None
         activity = None
+        current_identity = identity.current.user
         try:
-            system = System.by_id(id,identity.current.user)
+            system = System.by_id(id, current_identity)
         except InvalidRequestError:
             flash( _(u"Unable to find system with id of %s" % id) )
             redirect("/")
-        if system.user:
+        if system.current_user(current_identity):
             try:
                 system.unreserve(service=u'WEBUI')
                 flash(_(u'Returned %s') % system.fqdn)
             except BeakerException, e:
                 log.exception('Failed to return')
                 flash(_(u'Failed to return %s: %s') % (system.fqdn, e))
-        else:
+        elif system.can_share(current_identity) and system.can_provision_now(current_identity):
             try:
                 system.reserve(service=u'WEBUI', reservation_type=u'manual')
                 flash(_(u'Reserved %s') % system.fqdn)
             except BeakerException, e:
                 log.exception('Failed to reserve')
                 flash(_(u'Failed to reserve %s: %s') % (system.fqdn, e))
+        else:
+            flash(_(u'You were unable to change the user for %s' % system.fqdn))
         redirect("/view/%s" % system.fqdn)
 
     system_cc_form = widgets.TableForm(
