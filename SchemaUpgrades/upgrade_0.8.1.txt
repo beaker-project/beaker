@@ -1,0 +1,8 @@
+Fix log_server column length
+----------------------------
+
+    ALTER TABLE recipe MODIFY log_server VARCHAR(255) NULL;
+
+To roll back:
+
+    ALTER TABLE recipe MODIFY log_server VARCHAR(256) NULL;
