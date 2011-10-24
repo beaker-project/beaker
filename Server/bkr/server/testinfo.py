@@ -16,7 +16,7 @@
 
 import re
 import unittest
-import os
+import tempfile
 import sys
 
 namespaces = [ ('desktop', ['evolution', 'openoffice.org', 'poppler', 'shared-mime-info']),
@@ -1131,13 +1131,12 @@ SiteConfig(tls/username): Username to use for TLS auth
 SiteConfig(tls/password): Password to use for TLS auth
 SiteConfig(/stable-servers/ldap/hostname): Location of stable LDAP server to use
         """, raise_errors=True)
-        filename = os.tmpnam()
-        file = open(filename, 'w')
+        file = tempfile.NamedTemporaryFile(mode='w')
         ti1.output(file)
-        file.close()
+        file.flush()
 
         p = StrictParser(raise_errors=True)
-        p.parse(open(filename, "r").readlines())
+        p.parse(open(file.name, "r").readlines())
         ti2= p.info
         self.assertEquals(ti2.owner, "Jane Doe <jdoe@redhat.com>")
         self.assertEquals(ti2.test_name, "/examples/coreutils/example-simple-test")
