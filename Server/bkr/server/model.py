@@ -1665,6 +1665,13 @@ url --url=$tree
                                                              self.token)
                     except:
                         pid = self.remote.new_subprofile(self.token)
+                        # Set our custom profile comment to "ignore"
+                        # to keep osversion from touching it and adding
+                        # it as an installable profile in beaker.
+                        self.remote.modify_profile(pid,
+                                                   "comment",
+                                                   "ignore",
+                                                   self.token)
                         self.remote.modify_profile(pid, 
                                               "name",
                                               self.system.fqdn,
