@@ -22,13 +22,14 @@ import re
 import logging
 import subprocess
 import time
-from selenium import selenium
+from selenium import selenium, webdriver
+from selenium.webdriver.common.action_chains import ActionChains
 import unittest
 import xmlrpclib
 from urlparse import urljoin
 import kobo.xmlrpc
 from datetime import datetime
-from bkr.inttest import get_server_base, Process
+from bkr.inttest import data_setup, get_server_base, Process
 from bkr.server.bexceptions import BX
 from time import sleep
 import pkg_resources
@@ -108,6 +109,35 @@ class SeleniumTestCase(unittest.TestCase):
             return True
         return False
 
+class WebDriverTestCase(unittest.TestCase):
+
+    @classmethod
+    def get_browser(cls):
+        b = webdriver.Firefox()
+        b.implicitly_wait(10) # XXX is this really what we want???
+        return b
+
+    def login(self, user=None, password=None):
+        if user is None and password is None:
+            user = data_setup.ADMIN_USER
+            password = data_setup.ADMIN_PASSWORD
+        b = self.browser
+        b.get(get_server_base())
+        b.find_element_by_link_text('Login').click()
+        b.find_element_by_name('user_name').send_keys(user)
+        b.find_element_by_name('password').send_keys(password)
+        b.find_element_by_name('login').click()
+
+    def click_submenu_item(self, menu_item, submenu_item):
+        """
+        Clicks on an item within a submenu, such as Reports -> CSV.
+        WebDriver makes this trickier than you might think...
+        """
+        b = self.browser
+        ActionChains(b).move_to_element(b.find_element_by_xpath(
+                '//ul[@id="menu"]/li[normalize-space(text())="%s"]' % menu_item)).perform()
+        b.find_element_by_link_text(submenu_item).click()
+
 class XmlRpcTestCase(unittest.TestCase):
 
     @classmethod
@@ -150,7 +180,9 @@ def setup_package():
         for process in processes:
             process.stop()
         raise
+    os.environ['DISPLAY'] = ':4' # for WebDriver
 
 def teardown_package():
+    del os.environ['DISPLAY']
     for process in processes:
         process.stop()
