@@ -74,7 +74,7 @@ $(METADATA): Makefile
 	@echo "Environment:  BEAKER_SERVER_BASE_URL=http://localhost/bkr/" >> $(METADATA)
 #	@echo "Environment:  BEAKER_SKIP_INIT_DB=1" >> $(METADATA)
 	@echo "Environment:  BEAKER_CONFIG_FILE=/etc/beaker/server.cfg" >> $(METADATA)
-	@echo "Environment:  BEAKER_LABCONTROLLER_CONFIG_FILE=/etc/beaker/labcontroller.cfg" >> $(METADATA)
+	@echo "Environment:  BEAKER_LABCONTROLLER_CONFIG_FILE=/etc/beaker/labcontroller.conf" >> $(METADATA)
 	@echo "Environment:  BEAKER_CLIENT_COMMAND=bkr" >> $(METADATA)
 	@echo "Environment:  NOSEARGS=bkr" >> $(METADATA)
 
