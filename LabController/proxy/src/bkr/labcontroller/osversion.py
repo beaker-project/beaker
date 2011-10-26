@@ -562,10 +562,12 @@ class LabProxy(object):
             # Skip trees without treename
             if not profile.has_rcm_treename:
                 print "\tSkipping, no treename"
+                continue
 
             # Skip ignored Distros
             if profile.is_ignore:
                 print "\tProfile['comment'] == 'ignore', Skipping."
+                continue
 
             # Skip xen Distros
             if profile.is_xen:
