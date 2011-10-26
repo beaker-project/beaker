@@ -867,7 +867,7 @@ recipe_table = Table('recipe',metadata,
         Column('panic', Unicode(20)),
         Column('_partitions',UnicodeText()),
         Column('autopick_random', Boolean, default=False),
-	    Column('log_server', Unicode(256), index=True),
+        Column('log_server', Unicode(255), index=True),
         Column('reservation_id', Integer, ForeignKey('reservation.id'), default=None),
         mysql_engine='InnoDB',
 )
