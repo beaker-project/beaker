@@ -1,4 +1,3 @@
 #!/bin/sh
 
-mkdir osversion_data
-beaker-osversion --test-output-dir=./osversion_data $*
+beaker-osversion --test-output-dir=/var/lib/beaker/osversion_data $*

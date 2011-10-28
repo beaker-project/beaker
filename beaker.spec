@@ -16,7 +16,7 @@
 
 Name:           beaker
 Version:        0.8.0
-Release:        4%{?dist}
+Release:        5%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -321,6 +321,7 @@ fi
 %doc LabController/README
 %config(noreplace) %{_sysconfdir}/httpd/conf.d/%{name}-lab-controller.conf
 %{_sysconfdir}/cron.hourly/cobbler_expire_distros
+%{_sysconfdir}/cron.daily/beaker_expire_osversion
 %{_var}/lib/cobbler/triggers/sync/post/osversion.trigger
 %{_var}/lib/cobbler/snippets/*
 %{_var}/lib/cobbler/kickstarts/*
@@ -330,6 +331,7 @@ fi
 %{_sysconfdir}/init.d/%{name}-watchdog
 %{_sysconfdir}/init.d/%{name}-transfer
 %attr(-,apache,root) %dir %{_localstatedir}/run/%{name}-lab-controller
+%{_var}/lib/beaker/osversion_data
 
 %files lab-controller-addDistro
 %defattr(-,root,root,-)
@@ -338,7 +340,7 @@ fi
 %endif
 
 %changelog
-* Mon Oct 10 2011 Dan Callaghan <dcallagh@redhat.com> 0.8.0-4
+* Mon Oct 10 2011 Dan Callaghan <dcallagh@redhat.com> 0.8.0-5
 - upgrade to sqlalchemy 0.6, TurboGears 1.1, Python 2.6 for server and lab
   controller (dcallagh@redhat.com)
 - 749242 removed log-delete deprecation error
