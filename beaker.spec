@@ -16,7 +16,7 @@
 
 Name:           beaker
 Version:        0.8.0
-Release:        3%{?dist}
+Release:        4%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -338,9 +338,10 @@ fi
 %endif
 
 %changelog
-* Mon Oct 10 2011 Dan Callaghan <dcallagh@redhat.com> 0.8.0-3
+* Mon Oct 10 2011 Dan Callaghan <dcallagh@redhat.com> 0.8.0-4
 - upgrade to sqlalchemy 0.6, TurboGears 1.1, Python 2.6 for server and lab
   controller (dcallagh@redhat.com)
+- 749242 removed log-delete deprecation error
 - 743852 Filter buttons in Recipe view not working (Queued, Running recipes)
   (bpeck@redhat.com)
 - 718119 new osversion.trigger (bpeck@redhat.com)
