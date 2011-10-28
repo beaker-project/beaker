@@ -1,0 +1,7 @@
+Verified+1: Raymond Mancy <rmancy@redhat.com>
+Code-Review+2: Steven Lawrance <stl@redhat.com>
+Submitted-by: Raymond Mancy <rmancy@redhat.com>
+Submitted-at: Fri, 28 Oct 2011 16:57:13 +1000
+Reviewed-on: http://beaker-gerrit.app.eng.bne.redhat.com/783
+Project: beaker
+Branch: refs/heads/release-0.8.0
