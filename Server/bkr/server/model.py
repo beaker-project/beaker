@@ -651,6 +651,7 @@ command_queue_table = Table('command_queue', metadata,
            ForeignKey('command_status.id'), nullable=False),
     Column('task_id', String(255)),
     Column('updated', DateTime, default=datetime.utcnow),
+    Column('callback', String(255)),
     mysql_engine='InnoDB',
 )
 
@@ -2522,9 +2523,10 @@ $SNIPPET("rhts_post")
                               ks_appends=ks_appends,
                               **results)
         if self.power:
-            self.action_power(service=u'Scheduler', action=u'reboot')
+            self.action_power(service=u'Scheduler', action=u'reboot',
+                              callback="bkr.server.model.auto_power_cmd_handler")
 
-    def action_power(self, action=u'reboot', service=u'Scheduler'):
+    def action_power(self, action=u'reboot', service=u'Scheduler', callback=None):
         try:
             user = identity.current.user
         except:
@@ -2532,7 +2534,7 @@ $SNIPPET("rhts_post")
 
         if self.lab_controller and self.power:
             status = CommandStatus.by_name(u'Queued')
-            activity = CommandActivity(user, service, action, status)
+            activity = CommandActivity(user, service, action, status, callback)
             self.command_queue.append(activity)
         else:
             return False
@@ -3541,9 +3543,10 @@ class DistroActivity(Activity):
         return "Distro: %s" % self.object.install_name
 
 class CommandActivity(Activity):
-    def __init__(self, user, service, action, status):
+    def __init__(self, user, service, action, status, callback=None):
         Activity.__init__(self, user, service, action, 'Command', '', '')
         self.status = status
+        self.callback = callback
 
     def object_name(self):
         return "Command: %s %s" % (self.object.fqdn, self.action)
@@ -6314,6 +6317,19 @@ class SSHPubKey(MappedObject):
     def by_id(cls, id):
         return cls.query.filter_by(id=id).one()
 
+class CallbackAttributeExtension(AttributeExtension):
+    def set(self, state, value, oldvalue, initiator):
+        instance = state.obj()
+        if instance.callback:
+            try:
+                modname, _dot, funcname = instance.callback.rpartition(".")
+                module = import_module(modname)
+                cb = getattr(module, funcname)
+                cb(instance, value)
+            except Exception, e:
+                log.error("command callback failed: %s" % e)
+        return value
+
 
 # set up mappers between identity tables and classes
 SystemType.mapper = mapper(SystemType, system_type_table)
@@ -6532,7 +6548,7 @@ mapper(DistroActivity, distro_activity_table, inherits=Activity,
 
 mapper(CommandActivity, command_queue_table, inherits=Activity,
        polymorphic_identity=u'command_activity',
-       properties={'status':relation(CommandStatus),
+       properties={'status':relation(CommandStatus, extension=CallbackAttributeExtension()),
                    'system':relation(System, uselist=False),
                   })
 
@@ -6733,3 +6749,14 @@ def system_types():
         _system_types = SystemType.query.all()
     for system_type in _system_types:
         yield system_type
+
+# available in python 2.7+ importlib
+def import_module(modname):
+     __import__(modname)
+     return sys.modules[modname]
+
+def auto_power_cmd_handler(command, new_status):
+    if (new_status == CommandStatus.by_name(u'Failed') or \
+        new_status == CommandStatus.by_name(u'Aborted')) \
+       and command.system.open_reservation:
+        command.system.open_reservation.recipe.abort("Power command failed")

@@ -18,9 +18,9 @@ To roll back:
     ALTER TABLE note DROP COLUMN deleted;
 
 Add password field to user profile (bug 541280)
-----------------------------------------------
+-----------------------------------------------
 
-Add the database column:
+Add the database columns:
 
     ALTER TABLE tg_user
         ADD COLUMN(`root_password` VARCHAR(255) DEFAULT NULL),
@@ -30,3 +30,14 @@ To roll back:
 
     ALTER TABLE tg_user DROP COLUMN root_password,
                         DROP COLUMN rootpw_changed;
+
+Add column for power command callbacks (bug 743666)
+---------------------------------------------------
+
+    ALTER TABLE command_queue
+        ADD COLUMN callback varchar(255);
+
+To roll back:
+
+    ALTER TABLE command_queue
+        DROP COLUMN callback;

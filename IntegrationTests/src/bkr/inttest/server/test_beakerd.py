@@ -465,3 +465,32 @@ class TestPowerFailures(unittest.TestCase):
         system_activity = system.dyn_activity.filter(SystemActivity.field_name == u'Status').first()
         self.assertEqual(system_activity.old_value, u'Automated')
         self.assertEqual(system_activity.new_value, u'Broken')
+
+    def test_broken_power_aborts_recipe(self):
+        system = data_setup.create_system(fqdn = u'broken.dreams.example.org',
+                                          lab_controller = self.lab_controller,
+                                          status = SystemStatus.by_name(u'Automated'),
+                                          shared = True)
+        distro = data_setup.create_distro()
+        job = data_setup.create_job(distro=distro)
+        job.recipesets[0].recipes[0]._host_requires = (u"""
+            <hostRequires>
+                <hostname op="=" value="%s" />
+            </hostRequires>
+            """ % system.fqdn)
+        session.flush()
+
+        beakerd.new_recipes()
+        beakerd.processed_recipesets()
+        beakerd.queued_recipes()
+        beakerd.scheduled_recipes()
+        beakerd.queued_commands()
+
+        session.expunge_all()
+        job = Job.query.get(job.id)
+        self.assertEqual(job.status, TaskStatus.by_name(u'Running'))
+
+        beakerd.running_commands()
+        job = Job.query.get(job.id)
+        self.assertEqual(job.recipesets[0].recipes[0].status,
+                         TaskStatus.by_name(u'Aborted'))
