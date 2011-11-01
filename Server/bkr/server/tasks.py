@@ -28,8 +28,8 @@ from bkr.server.widgets import SearchBar
 from bkr.server.widgets import TaskActionWidget
 from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.helpers import make_link
-from bkr.server import testinfo
-from bkr.server.testinfo import ParserError, ParserWarning
+from rhts import testinfo
+from rhts.testinfo import ParserError, ParserWarning
 from sqlalchemy import exceptions
 from subprocess import *
 
