@@ -32,4 +32,10 @@ if cherrypy.server.state == 0:
     atexit.register(cherrypy.server.stop)
     cherrypy.server.start(init_only=True, server_class=None)
 
+# workaround for TGMochiKit initialisation
+# https://sourceforge.net/p/turbogears1/tickets/34/
+import tgmochikit
+from turbogears.widgets.base import register_static_directory
+tgmochikit.init(register_static_directory, config)
+
 application = cherrypy._cpwsgi.wsgiApp
