@@ -166,7 +166,10 @@ class Profile(object):
         return self.lab.cobbler.get_profile_handle(profile_name)
 
     def get_distro(self, distro_name):
-        return self.lab.cobbler.get_distro(distro_name)
+        distro = self.lab.cobbler.get_distro(distro_name)
+        if distro == '~':
+            raise ProfileDecodeError("Invalid Distro %s" % distro_name)
+        return distro
 
     def modify_profile(self, profile_id, profile_key, profile_value):
         self.has_changed = True
@@ -255,7 +258,7 @@ class Profile(object):
         Accepts distro dictionary
         Returns the path where .treeinfo lives or None
         """
- 
+
         kerneldir = self.distro.get('kernel')
         while kerneldir != '/' and kerneldir != '':
             if os.path.exists('%s/.treeinfo' % kerneldir):
