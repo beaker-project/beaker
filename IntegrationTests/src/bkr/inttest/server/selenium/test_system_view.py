@@ -542,6 +542,19 @@ class SystemViewTest(SeleniumTestCase):
         session.refresh(self.system)
         self.assertEqual(self.system.hypervisor, Hypervisor.by_name(u'KVM'))
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=749441
+    def test_mac_address_with_unicode(self):
+        bad_mac_address = u'aяяяяяяяяяяяяяяяяя'
+        self.login()
+        sel = self.selenium
+        self.go_to_system_view()
+        sel.type('mac_address', bad_mac_address)
+        sel.click('link=Save Changes')
+        sel.wait_for_page_to_load('30000')
+        self.assertEquals(sel.get_value('mac_address'), bad_mac_address)
+        session.refresh(self.system)
+        self.assertEqual(self.system.mac_address, bad_mac_address)
+
 class SystemCcTest(SeleniumTestCase):
 
     def setUp(self):
