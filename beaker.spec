@@ -16,7 +16,7 @@
 
 Name:           beaker
 Version:        0.8.0
-Release:        6%{?dist}
+Release:        7%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -341,6 +341,11 @@ fi
 %endif
 
 %changelog
+* Thu Nov 03 2011 Bill Peck <bpeck@redhat.com> 0.8.0-7
+- 750428 workaround to force TGMochiKit to be always initialised
+  (dcallagh@redhat.com)
+- beaker-osversion will die on inherited profiles (bpeck@redhat.com)
+
 * Mon Oct 10 2011 Dan Callaghan <dcallagh@redhat.com> 0.8.0-6
 - upgrade to sqlalchemy 0.6, TurboGears 1.1, Python 2.6 for server and lab
   controller (dcallagh@redhat.com)
