@@ -15,7 +15,7 @@
 %endif
 
 Name:           beaker
-Version:        0.7.3
+Version:        0.8.0
 Release:        6%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
@@ -103,6 +103,7 @@ Group:          Applications/Internet
 Requires:       %{name} = %{version}-%{release}
 Requires:       %{name}-server = %{version}-%{release}
 Requires:       %{name}-client = %{version}-%{release}
+Requires:       %{name}-lab-controller = %{version}-%{release}
 Requires:       python-nose >= 0.10
 Requires:       python-selenium >= 2.0
 Requires:       kobo
@@ -317,9 +318,11 @@ fi
 %{_bindir}/%{name}-proxy
 %{_bindir}/%{name}-watchdog
 %{_bindir}/%{name}-transfer
+%{_bindir}/%{name}-osversion
 %doc LabController/README
 %config(noreplace) %{_sysconfdir}/httpd/conf.d/%{name}-lab-controller.conf
 %{_sysconfdir}/cron.hourly/cobbler_expire_distros
+%{_sysconfdir}/cron.daily/beaker_expire_osversion
 %{_var}/lib/cobbler/triggers/sync/post/osversion.trigger
 %{_var}/lib/cobbler/snippets/*
 %{_var}/lib/cobbler/kickstarts/*
@@ -329,6 +332,7 @@ fi
 %{_sysconfdir}/init.d/%{name}-watchdog
 %{_sysconfdir}/init.d/%{name}-transfer
 %attr(-,apache,root) %dir %{_localstatedir}/run/%{name}-lab-controller
+%{_var}/lib/beaker/osversion_data
 
 %files lab-controller-addDistro
 %defattr(-,root,root,-)
@@ -337,6 +341,15 @@ fi
 %endif
 
 %changelog
+* Mon Oct 10 2011 Dan Callaghan <dcallagh@redhat.com> 0.8.0-6
+- upgrade to sqlalchemy 0.6, TurboGears 1.1, Python 2.6 for server and lab
+  controller (dcallagh@redhat.com)
+- 749242 removed log-delete deprecation error
+- 743852 Filter buttons in Recipe view not working (Queued, Running recipes)
+  (bpeck@redhat.com)
+- 718119 new osversion.trigger (bpeck@redhat.com)
+- 746683 bkr whoami command added (bpeck@redhat.com)
+
 * Tue Oct 18 2011 Dan Callaghan <dcallagh@redhat.com> 0.7.3-6
 - 746774 correctly handle multiple status changes within the same second
   (dcallagh@redhat.com)

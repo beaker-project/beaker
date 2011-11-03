@@ -1,0 +1,43 @@
+## Old way..  this should not be used for new distros..
+#if $getVar('tree_repos','') != ''
+#for $repo in $getVar('tree_repos','').split(':')
+#if $repo.find(",") != -1
+#set (reponame, repourl) = $repo.split(',',1)
+repo --name=$reponame --cost=100 --baseurl=http://$server/distros$repourl
+#end if
+#end for
+#end if
+## New way.. 
+#   os_repos, debug_repos should be defined at the distro level
+#                                  can be turned off from the recipe by
+#                                  passing ks_meta="!debug_repos"
+#   optional_repos can be passed in via ks_metA
+#
+#   repo --baseurl will accept nfs://SERVER:/PATH or http://PATH
+## Add OS repos
+#if $getVar('os_repos','') != ''
+#for $repo in $getVar('os_repos','').split('|')
+#if $repo.find(',') != -1
+#set (reponame, repourl) = $repo.split(',',1)
+repo --name=$reponame --cost=100 --baseurl=$repourl
+#end if
+#end for
+#end if
+## Add Debuginfo repos
+#if $getVar('debug_repos','') != ''
+#for $repo in $getVar('debug_repos','').split('|')
+#if $repo.find(',') != -1
+#set (reponame, repourl) = $repo.split(',',1)
+repo --name=$reponame --cost=100 --baseurl=$repourl
+#end if
+#end for
+#end if
+## Add Optional repos
+#if $getVar('optional_repos','') != ''
+#for $repo in $getVar('optional_repos','').split('|')
+#if $repo.find(',') != -1
+#set (reponame, repourl) = $repo.split(',',1)
+repo --name=$reponame --cost=100 --baseurl=$repourl
+#end if
+#end for
+#end if

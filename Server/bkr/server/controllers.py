@@ -44,7 +44,7 @@ from bkr.server.widgets import SystemArches
 from bkr.server.widgets import TaskSearchForm
 from bkr.server.authentication import Auth
 from bkr.server.xmlrpccontroller import RPCRoot
-from bkr.server.cobbler_utils import hash_to_string
+from bkr.server.cobbler_utils import hash_to_string, string_to_hash
 from bkr.server.jobs import Jobs
 from bkr.server.recipes import Recipes
 from bkr.server.recipesets import RecipeSets
@@ -1646,10 +1646,9 @@ class Root(RPCRoot):
         try:
             can_provision_now = system.can_provision_now(user) #Check perms
             if can_provision_now:
-                system.action_provision(distro = distro,
-                                        ks_meta = ks_meta,
-                                        kernel_options = koptions,
-                                        kernel_options_post = koptions_post)
+                system.action_provision(distro = distro, ks_meta = string_to_hash(ks_meta),
+                                                         kernel_options = string_to_hash(koptions),
+                                                         kernel_options_post = string_to_hash(koptions_post))
             else: #This shouldn't happen, maybe someone is trying to be funny
                 raise BX('User: %s has insufficent permissions to provision %s' % (user.user_name, system.fqdn))
         except Exception, msg:

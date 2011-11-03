@@ -49,10 +49,17 @@ class Authenticate(Thread):
     def stop(self):
         """Stops the thread"""
         self.__serving = False
+
+class XMLRPCRequestHandler(DocXMLRPCServer.DocXMLRPCRequestHandler):
+    rpc_paths = ('/', '/RPC2', '/server')
             
 class ForkingXMLRPCServer (SocketServer.ForkingMixIn,
                            DocXMLRPCServer.DocXMLRPCServer):
     allow_reuse_address = True
+
+    def __init__(self, *args, **kwargs):
+        DocXMLRPCServer.DocXMLRPCServer.__init__(self, *args,
+                requestHandler=XMLRPCRequestHandler, **kwargs)
 
     def _dispatch(self, method, params):
         """ Custom _dispatch so we can log time used to execute method.

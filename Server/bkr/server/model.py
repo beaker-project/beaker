@@ -1665,6 +1665,13 @@ url --url=$tree
                                                              self.token)
                     except:
                         pid = self.remote.new_subprofile(self.token)
+                        # Set our custom profile comment to "ignore"
+                        # to keep osversion from touching it and adding
+                        # it as an installable profile in beaker.
+                        self.remote.modify_profile(pid,
+                                                   "comment",
+                                                   "ignore",
+                                                   self.token)
                         self.remote.modify_profile(pid, 
                                               "name",
                                               self.system.fqdn,
@@ -3905,7 +3912,7 @@ class Job(TaskBase):
         delta = timedelta(**delta)
         if not query:
             query = cls.query
-        query = query.join(['recipesets','recipes']).filter(and_(Recipe.finish_time < datetime.utcnow() - delta,
+        query = query.join(cls.recipesets, RecipeSet.recipes).filter(and_(Recipe.finish_time < datetime.utcnow() - delta,
             cls.status_id.in_([TaskStatus.by_name(u'Completed').id,TaskStatus.by_name(u'Aborted').id,TaskStatus.by_name(u'Cancelled').id])))
         return query
 
@@ -3951,7 +3958,7 @@ class Job(TaskBase):
     def has_family(cls, family, query=None, **kw):
         if query is None:
             query = cls.query
-        query = query.join(['recipesets','recipes','distro','osversion','osmajor']).filter(OSMajor.osmajor == family).reset_joinpoint()
+        query = query.join(cls.recipesets, RecipeSet.recipes, Recipe.distro, Distro.osversion, OSVersion.osmajor).filter(OSMajor.osmajor == family).reset_joinpoint()
         return query
 
     @classmethod

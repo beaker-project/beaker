@@ -59,6 +59,31 @@ pushd /root
 popd
 #end if
 
+# Add Repos
+#set potential_repos = ['os_repos','debug_repos','optional_repos', 'customrepos']
+#for potential_repo in $potential_repos
+#if $getVar($potential_repo,'') != ''
+#for $repo in $getVar($potential_repo,'').split('|')
+#if $repo.find(',') != -1
+#set (reponame, repourl) = $repo.split(',',1)
+#if $repourl.find('nfs://') != -1
+## If repo begins with nfs we remap it to http://$server/net/....
+#set (nfsserver, path) = repourl[6:].split(':')
+#set repourl = 'http://%s/net/%s%s' % ($server,$nfsserver, path)
+#end if ## nfs
+cat << EOF >/etc/yum.repos.d/${reponame}.repo
+[$reponame]
+name=$reponame
+baseurl=$repourl
+enabled=1
+gpgcheck=0
+skip_if_unavailable=1
+EOF
+#end if ## ,
+#end for ## repo
+#end if ## potential_repo
+#end for ## potential_repo
+
 # Add Distro Repos
 #set $tree_repos = $getVar('tree_repos','')
 #if $tree_repos != ''
@@ -114,28 +139,6 @@ gpgcheck=0
 EOF
 #end if
 
-# Add Custom Repos
-#if $getVar('customrepos','') != ''
-#set $i = 0
-#for $repo in $getVar('customrepos','').split('|')
-#set $i = $i + 1
-#if $repo.find(",") != -1
-#set (reponame, repourl) = $repo.split(',', 1)
-#else
-#set $reponame = "customrepo%s" % i
-#set $repourl = $repo
-#end if
-cat << EOF >/etc/yum.repos.d/${reponame}.repo
-[$reponame]
-name=$reponame
-baseurl=$repourl
-enabled=1
-gpgcheck=0
-skip_if_unavailable=1
-EOF
-#end for
-#end if
-
 # Install old rhts commands
 yum -y --disablerepo=* --enablerepo=beaker-* install rhts-test-env-lab rhts-legacy
 ## If koan is available install it.  This allows for easy re-installs
@@ -151,7 +154,7 @@ cat << EOF > /etc/beah_beaker.conf
 
 [DEFAULT]
 # LAB_CONTROLLER: URI of Beaker's XML-RPC handler
-LAB_CONTROLLER=http://$server:8000/server
+LAB_CONTROLLER=http://$server:8000
 #
 # HOSTNAME: Pretend to be machine with given name.
 # NOTE: This is mostly pointless as usually correct name is assigned by DHCP.
