@@ -346,7 +346,7 @@ fi
   (dcallagh@redhat.com)
 - beaker-osversion will die on inherited profiles (bpeck@redhat.com)
 
-* Mon Oct 10 2011 Dan Callaghan <dcallagh@redhat.com> 0.8.0-6
+* Wed Nov 02 2011 Raymond Mancy <rmancy@redhat.com> 0.8.0-6
 - upgrade to sqlalchemy 0.6, TurboGears 1.1, Python 2.6 for server and lab
   controller (dcallagh@redhat.com)
 - 749242 removed log-delete deprecation error
