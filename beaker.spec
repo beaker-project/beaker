@@ -1204,7 +1204,7 @@ fi
 - can catch multiple exception classes, instead of repeating the except clause
   (dcallagh@redhat.com)
 - some additions to .gitignore (dcallagh@redhat.com)
-- use %(package_dir)s for static locations, so that we can run from a working
+- use %%(package_dir)s for static locations, so that we can run from a working
   copy or a system-wide install (dcallagh@redhat.com)
 - change selenium install location to /usr/local/share/selenium
   (dcallagh@redhat.com)
@@ -1407,7 +1407,7 @@ fi
 
 * Wed Aug 04 2010 Bill Peck <bpeck@redhat.com> 0.5.52-2
 - bump minor release (bpeck@redhat.com)
-- revert --default option on %packages.  Seems to ignore all remaining
+- revert --default option on %%packages.  Seems to ignore all remaining
   packages. (bpeck@redhat.com)
 
 * Tue Aug 03 2010 Bill Peck <bpeck@redhat.com> 0.5.52-1
@@ -1421,7 +1421,7 @@ fi
   can still pass in an  xml node too. (bpeck@redhat.com)
 - bz595642 - RecipeSets can now be cloned instead of Recipes. Also using
   RecipeSetWidget now (rmancy@redhat.com)
-- bz610259 - add the ability to provide %post...%end to kickstartd from job xml
+- bz610259 - add the ability to provide %%post...%%end to kickstartd from job xml
   (bpeck@redhat.com)
 - add whiteboard handlers (bpeck@redhat.com)
 - Add missing #slurp to bootloader line. (bpeck@redhat.com)
@@ -1544,8 +1544,8 @@ fi
 
 * Tue Jun 29 2010 Bill Peck <bpeck@redhat.com> - 0.5.46-0
 - bz608621 added sane defaults to bkr distro-list (limit 10)
-- use %packages --default for RHEL6 kickstart
-- bz607558 - relax check for %packages, before we stopped if we saw %post or %pre.
+- use %%packages --default for RHEL6 kickstart
+- bz607558 - relax check for %%packages, before we stopped if we saw %%post or %%pre.
 
 * Wed Jun 22 2010 Bill Peck <bpeck@redhat.com> - 0.5.45-1
 - fix string compare
@@ -1824,7 +1824,7 @@ fi
 - Fix for rt#58689 when importing anything but an nfs distro we get the location 
   of the repos wrong.
 - Fix bz#555551 - missing location for search and custom columns
-- Fix bz#559656 - unable to handle commented %packages in kickstart
+- Fix bz#559656 - unable to handle commented %%packages in kickstart
 - Merged AccountClosure code.
 * Tue Jan 26 2010 Bill Peck <bpeck@redhat.com> - 0.4.80-0
 - added support for variants being read from .treeinfo
