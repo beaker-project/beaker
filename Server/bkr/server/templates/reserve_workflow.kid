@@ -39,7 +39,7 @@ $(document).ready(function() {
     </div>
 
     <div id="distro_family_input">
-        <label>${distro_family.label}</label>${distro_family.display()}
+        <label>${distro_family.label}</label>${distro_family.display(attrs=dict(style="margin-left:1.2em"))}
     </div>
 
     <div id="tag_input">
@@ -54,6 +54,8 @@ $(document).ready(function() {
     <br /><br />
     ${submit.display()}
 
-    ${auto_pick.display()}&nbsp;<warn id="reserve_error" class="rounded-side-pad" style='display:none'>No Systems compatible for that distro</warn>
+    ${auto_pick.display()}&nbsp;<warn id="reserve_error_system" class="rounded-side-pad" style='display:none'>No Systems compatible for that distro</warn>
+    <warn id="reserve_error" class="rounded-side-pad" style='display:none'></warn>
+
 </form>
 </div>
