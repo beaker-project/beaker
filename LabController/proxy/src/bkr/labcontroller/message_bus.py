@@ -18,11 +18,10 @@ from bkr.labcontroller.proxy import Watchdog
 from bkr.labcontroller.config import get_conf
 
 import logging
-log = logging.getLogger("Bus")
+log = logging.getLogger(__name__)
 conf = get_conf()
 log_level_string = conf.get("QPID_BUS_LOG_LEVEL") or conf["LOG_LEVEL"]
 log_level = getattr(logging, log_level_string.upper(), logging.DEBUG)
-log.setLevel(log_level)
 log_file = conf["QPID_BUS_LOG_FILE"]
 
 add_rotating_file_logger(log,

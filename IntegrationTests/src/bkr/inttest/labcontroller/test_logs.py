@@ -17,7 +17,8 @@ class TestLogs(unittest.TestCase):
 
     def setUp(self):
         self.conf = get_conf()
-        self.logger = logging.getLogger("Watchdog")
+        self.logger = logging.getLogger(self.__class__.__name__)
+        self.logger.propagate = False
         self.logger.setLevel(logging.DEBUG)
         prefix = unique_name(u'watchdogtest%s')
         self.log_file = tempfile.NamedTemporaryFile(prefix=prefix)

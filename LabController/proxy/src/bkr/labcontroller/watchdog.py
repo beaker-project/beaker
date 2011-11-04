@@ -21,6 +21,7 @@ from bkr.labcontroller.message_bus import LabBeakerBus
 
 set_except_hook()
 
+logger = logging.getLogger(__name__)
 
 def daemon_shutdown(*args, **kwargs):
     raise ShutdownException()
@@ -31,24 +32,23 @@ def main_loop(conf=None, foreground=False):
     # define custom signal handlers
     signal.signal(signal.SIGTERM, daemon_shutdown)
 
-    logger = logging.getLogger("Watchdog")
-    log_level_string = conf.get("WATCHDOG_LOG_LEVEL") or conf["LOG_LEVEL"]
-    log_level = getattr(logging, log_level_string.upper(), logging.DEBUG)
-    logger.setLevel(log_level)
-    log_file = conf["WATCHDOG_LOG_FILE"]
-    add_rotating_file_logger(logger,
-                             log_file,
-                             log_level=log_level,
-                             format=conf["VERBOSE_LOG_FORMAT"])
+    # set up logging
+    if foreground:
+        add_stderr_logger(logging.getLogger())
+    else:
+        log_level_string = conf.get("WATCHDOG_LOG_LEVEL") or conf["LOG_LEVEL"]
+        log_level = getattr(logging, log_level_string.upper(), logging.DEBUG)
+        logging.getLogger().setLevel(log_level)
+        log_file = conf["WATCHDOG_LOG_FILE"]
+        add_rotating_file_logger(logging.getLogger(), log_file,
+                log_level=log_level, format=conf["VERBOSE_LOG_FORMAT"])
 
     try:
-        watchdog = Watchdog(conf=conf, logger=logger)
+        watchdog = Watchdog(conf=conf)
     except Exception, ex:
         sys.stderr.write("Error initializing Watchdog: %s\n" % ex)
         sys.exit(1)
 
-    if foreground:
-        add_stderr_logger(watchdog.logger)
     try:
         """
         As watchdog expire_recipe calls recipes.stop on the server
@@ -68,13 +68,13 @@ def main_loop(conf=None, foreground=False):
                     # To avoid a polling style scenario here we would need the harness to be updating
                     # us when the monitered files change size
                     if not watchdog.run():
-                        watchdog.logger.debug(80 * '-')
+                        logger.debug(80 * '-')
                         watchdog.sleep()
                 except (ShutdownException, KeyboardInterrupt):
                     # ignore keyboard interrupts and sigterm
                     signal.signal(signal.SIGINT, signal.SIG_IGN)
                     signal.signal(signal.SIGTERM, signal.SIG_IGN)
-                    watchdog.logger.info('Exiting...')
+                    logger.info('Exiting...')
                     break
 
         else:
@@ -91,18 +91,18 @@ def main_loop(conf=None, foreground=False):
                         except xmlrpclib.Fault:
                             # catch any xmlrpc errors
                             traceback = Traceback()
-                            watchdog.logger.error(traceback.get_traceback())
+                            logger.error(traceback.get_traceback())
                         try:
                             expired_watchdogs = watchdog.hub.recipes.tasks.watchdogs('expired')
                         except xmlrpclib.Fault:
                             # catch any xmlrpc errors
                             traceback = Traceback()
-                            watchdog.logger.error(traceback.get_traceback())
+                            logger.error(traceback.get_traceback())
 
                         watchdog.expire_watchdogs(expired_watchdogs)
                         watchdog.active_watchdogs(active_watchdogs)
                     if not watchdog.run():
-                        watchdog.logger.debug(80 * '-')
+                        logger.debug(80 * '-')
                         watchdog.sleep()
                     # FIXME: Check for recipes that match systems under
                     #        this lab controller, if so take recipe and provision
@@ -116,12 +116,12 @@ def main_loop(conf=None, foreground=False):
                     # ignore keyboard interrupts and sigterm
                     signal.signal(signal.SIGINT, signal.SIG_IGN)
                     signal.signal(signal.SIGTERM, signal.SIG_IGN)
-                    watchdog.logger.info('Exiting...')
+                    logger.info('Exiting...')
                     break
     except:
         # this is a little extreme: log the exception and continue
         traceback = Traceback()
-        watchdog.logger.error(traceback.get_traceback())
+        logger.error(traceback.get_traceback())
         watchdog.sleep()
 
 def main():
