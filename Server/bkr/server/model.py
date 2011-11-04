@@ -2503,30 +2503,25 @@ $SNIPPET("rhts_post")
         # uninterrupted run of aborted recipes leading up to this one, with 
         # at least two different STABLE distros?
         # XXX this query is stupidly big, I need to do something about it
-        status_change_subquery = select([func.max(activity_table.c.created)],
-            from_obj=activity_table.join(system_activity_table))\
-            .where(and_(
-                system_activity_table.c.system_id == self.id,
-                activity_table.c.field_name == u'Status',
-                activity_table.c.action == u'Changed'))
-        system_added_subquery = select([system_table.c.date_added])\
-            .where(system_table.c.id == self.id)
-        nonaborted_recipe_subquery = select([func.max(recipe_table.c.finish_time)],
-            from_obj=recipe_table.join(system_table))\
-            .where(and_(
-                recipe_table.c.status_id != TaskStatus.by_name(u'Aborted').id,
-                recipe_table.c.system_id == self.id))
-        query = select([func.count(recipe_table.c.distro_id.distinct())],
-            from_obj=recipe_table.join(distro_table).join(distro_tag_map)
-                .join(system_table, onclause=recipe_table.c.system_id == system_table.c.id))\
-            .where(and_(
-                system_table.c.id == self.id,
-                distro_tag_map.c.distro_tag_id ==
-                    DistroTag.by_tag(reliable_distro_tag.decode('utf8')).id,
-                recipe_table.c.start_time >
-                    func.ifnull(status_change_subquery.as_scalar(), system_added_subquery.as_scalar()),
-                recipe_table.c.finish_time > nonaborted_recipe_subquery.as_scalar()))
-        if session.execute(query).scalar() >= 2:
+        status_change_subquery = session.query(func.max(SystemActivity.created))\
+            .filter(and_(
+                SystemActivity.system_id == self.id,
+                SystemActivity.field_name == u'Status',
+                SystemActivity.action == u'Changed'))\
+            .subquery()
+        nonaborted_recipe_subquery = session.query(func.max(Recipe.finish_time))\
+            .filter(and_(
+                Recipe.status != TaskStatus.by_name(u'Aborted'),
+                Recipe.system == self))\
+            .subquery()
+        count = self.dyn_recipes.join(Recipe.distro)\
+            .filter(and_(
+                Distro.tags.contains(reliable_distro_tag.decode('utf8')),
+                Recipe.start_time >
+                    func.ifnull(status_change_subquery.as_scalar(), self.date_added),
+                Recipe.finish_time > nonaborted_recipe_subquery.as_scalar()))\
+            .value(func.count(Distro.id.distinct()))
+        if count >= 2:
             # Broken!
             reason = unicode(_(u'System has a run of aborted recipes ' 
                     'with reliable distros'))
@@ -6311,6 +6306,7 @@ System.mapper = mapper(System, system_table,
                                   system_status_duration_table.c.id.desc()]),
                      'dyn_status_durations': dynamic_loader(SystemStatusDuration),
                      'hypervisor':relation(Hypervisor, uselist=False),
+                     'dyn_recipes': dynamic_loader(Recipe),
                      })
 
 mapper(SystemCc, system_cc_table)
