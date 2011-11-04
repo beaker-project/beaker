@@ -94,7 +94,7 @@ Requires:       python-TurboMail >= 3.0
 Requires:	createrepo
 Requires:	yum-utils
 Requires:       python-concurrentloghandler
-Requires:       rhts-test-env
+Requires:       rhts-test-env >= 4.42
 %endif
 
 
