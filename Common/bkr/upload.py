@@ -3,11 +3,14 @@ import os
 import stat
 import errno
 import fcntl
+import logging
 
 try:
     from hashlib import md5 as md5_constructor
 except ImportError:
     from md5 import new as md5_constructor
+
+logger = logging.getLogger(__name__)
 
 def decode_int(n):
     """If n is not an integer, attempt to convert it"""
@@ -58,6 +61,7 @@ class Uploader:
         # SECURITY - ensure path remains under uploadpath
         path = os.path.normpath(path)
         if path.startswith('..'):
+            logger.warn('Upload path not allowed: %s' % path)
             raise BX(_("Upload path not allowed: %s" % path))
         udir = "%s/%s" % (uploadpath,path)
         ensuredir(udir)
@@ -69,9 +73,11 @@ class Uploader:
             if e.errno == errno.ENOENT and offset == 0:
                 pass
             else:
+                logger.warn('attempted to append to nonexistent file: %s' % fn)
                 raise
         else:
             if not stat.S_ISREG(st.st_mode):
+                logger.warn('destination not a file: %s' % fn)
                 raise BX(_("destination not a file: %s" % fn))
         fd = os.open(fn, os.O_RDWR | os.O_CREAT, 0666)
         # log_error("fd=%r" %fd)
@@ -118,6 +124,7 @@ class Uploader:
                         if md5sum != sum.hexdigest():
                             # log_error("md5sum did not match")
                             #os.close(fd)
+                            logger.warn('md5sum did not match for %s' % fn)
                             return False
                     finally:
                         fcntl.lockf(fd, fcntl.LOCK_UN)
