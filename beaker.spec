@@ -50,6 +50,7 @@ BuildRequires:  python-TurboMail >= 3.0
 BuildRequires:  python-concurrentloghandler
 %endif
 BuildRequires:  rpm-python
+BuildRequires:  rhts-test-env
 %endif
 
 # As above, these client dependencies are needed in build because of sphinx
@@ -93,6 +94,7 @@ Requires:       python-TurboMail >= 3.0
 Requires:	createrepo
 Requires:	yum-utils
 Requires:       python-concurrentloghandler
+Requires:       rhts-test-env
 %endif
 
 
