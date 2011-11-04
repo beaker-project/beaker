@@ -18,6 +18,8 @@ from bkr.labcontroller.utils import add_rotating_file_logger
 
 set_except_hook()
 
+logger = logging.getLogger(__name__)
+
 def daemon_shutdown(*args, **kwargs):
     raise ShutdownException()
 
@@ -26,32 +28,30 @@ def main_loop(conf=None, foreground=False):
 
     # define custom signal handlers
     signal.signal(signal.SIGTERM, daemon_shutdown)
-    logger = logging.getLogger("Transfer")
-    log_level_string = conf.get("TRANSFER_LOG_LEVEL") or conf["LOG_LEVEL"]
-    log_level = getattr(logging, log_level_string.upper(), logging.DEBUG)
-    logger.setLevel(log_level)
-    log_file = conf["TRANSFER_LOG_FILE"]
 
-    add_rotating_file_logger(logger,
-                             log_file,
-                             log_level=log_level,
-                             format=conf['VERBOSE_LOG_FORMAT'])
+    # set up logging
+    if foreground:
+        add_stderr_logger(logging.getLogger())
+    else:
+        log_level_string = conf.get("TRANSFER_LOG_LEVEL") or conf["LOG_LEVEL"]
+        log_level = getattr(logging, log_level_string.upper(), logging.DEBUG)
+        logging.getLogger().setLevel(log_level)
+        log_file = conf["TRANSFER_LOG_FILE"]
+        add_rotating_file_logger(logging.getLogger(), log_file,
+                log_level=log_level, format=conf["VERBOSE_LOG_FORMAT"])
 
     try:
-        transfer = Watchdog(conf=conf, logger=logger)
+        transfer = Watchdog(conf=conf)
     except Exception, ex:
         sys.stderr.write("Error initializing Watchdog: %s\n" % ex)
         sys.exit(1)
-
-    if foreground:
-        add_stderr_logger(transfer.logger)
 
     while True:
         try:
             transfer.hub._login()
             # Look for logs to transfer if none transfered then sleep
             if not transfer.transfer_logs():
-                transfer.logger.debug(80 * '-')
+                logger.debug(80 * '-')
                 transfer.sleep()
 
             # write to stdout / stderr
@@ -66,13 +66,13 @@ def main_loop(conf=None, foreground=False):
             signal.signal(signal.SIGINT, signal.SIG_IGN)
             signal.signal(signal.SIGTERM, signal.SIG_IGN)
 
-            transfer.logger.info('Exiting...')
+            logger.info('Exiting...')
             break
 
         except:
             # this is a little extreme: log the exception and continue
             traceback = Traceback()
-            transfer.logger.error(traceback.get_traceback())
+            logger.error(traceback.get_traceback())
             transfer.sleep()
 
 
