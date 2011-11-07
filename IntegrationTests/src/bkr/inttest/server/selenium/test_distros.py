@@ -50,9 +50,9 @@ class DistroRescanTest(SeleniumTestCase):
 
         # re-scan
         sel.open("labcontrollers/")
-        sel.wait_for_page_to_load(3000)
+        sel.wait_for_page_to_load('30000')
         sel.click("//a[@href='rescan?id=%s']" % self.lab_controller.id)
-        sel.wait_for_page_to_load(3000)
+        sel.wait_for_page_to_load('30000')
 
         # Verify that we still have the distros we should and the removed
         # one has been removed.

@@ -131,24 +131,24 @@ class TestJobMatrix(SeleniumTestCase):
         self.assertEqual(sel.get_table("//div[@class='dataTables_scrollHeadInner']/table.1.3"),
             '%s' % self.recipe_whiteboard)
         sel.click('link=Pass: 1')
-        sel.wait_for_page_to_load('3000')
+        sel.wait_for_page_to_load('30000')
         self.assertEqual(sel.get_title(), 'Executed Tasks')
         self.assertEqual(sel.get_value('whiteboard'), self.recipe_whiteboard)
         self.assertEqual(sel.get_table('css=.list.1.0'),
                 self.passed_job.recipesets[0].recipes[0].tasks[0].t_id)
         sel.go_back()
-        sel.wait_for_page_to_load('3000')
+        sel.wait_for_page_to_load('30000')
         sel.click('link=Warn: 1')
-        sel.wait_for_page_to_load('3000')
+        sel.wait_for_page_to_load('30000')
         self.assertEqual(sel.get_title(), 'Executed Tasks')
         self.assertEqual(sel.get_value('whiteboard'), self.recipe_whiteboard)
         self.assertEqual(sel.get_table('css=.list.1.0'),
                 self.warned_job.recipesets[0].recipes[0].tasks[0].t_id)
         sel.go_back()
-        sel.wait_for_page_to_load('3000')
+        sel.wait_for_page_to_load('30000')
 
         sel.click('link=Fail: 1')
-        sel.wait_for_page_to_load('3000')
+        sel.wait_for_page_to_load('30000')
         self.assertEqual(sel.get_title(), 'Executed Tasks')
         self.assertEqual(sel.get_value('whiteboard'), self.recipe_whiteboard)
         self.assertEqual(sel.get_table('css=.list.1.0'),

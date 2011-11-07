@@ -35,7 +35,7 @@ class SystemOwnerTake(SeleniumTestCase):
         sel.wait_for_page_to_load("30000")
         self.assert_(sel.is_text_present("(Take)"))
         sel.click("link=(Take)")
-        sel.wait_for_page_to_load("3000")
+        sel.wait_for_page_to_load('30000')
         self.assert_("Reserved %s" % self.manual_system.fqdn in sel.get_text('//body'))
 
 

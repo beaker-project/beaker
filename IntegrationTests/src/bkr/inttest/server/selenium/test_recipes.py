@@ -52,11 +52,11 @@ class TestRecipesDataGrid(SeleniumTestCase):
         # log in
         sel.open('')
         sel.click('link=Login')
-        sel.wait_for_page_to_load('3000')
+        sel.wait_for_page_to_load('30000')
         sel.type('user_name', user.user_name)
         sel.type('password', 'password')
         sel.click('login')
-        sel.wait_for_page_to_load('3000')
+        sel.wait_for_page_to_load('30000')
 
     @classmethod
     def tearDownClass(cls):
@@ -145,9 +145,9 @@ class TestRecipeView(SeleniumTestCase):
         sel.open('recipes/mine')
         recipe = list(self.job.all_recipes)[0]
         sel.click('link=R:%s' % recipe.id)
-        sel.wait_for_page_to_load('3000')
+        sel.wait_for_page_to_load('30000')
         sel.click('link=Report problem with system')
-        sel.wait_for_page_to_load('3000')
+        sel.wait_for_page_to_load('30000')
         self.assertEqual(self.selenium.get_title(),
                 'Report a problem with %s' % self.system.fqdn)
 
@@ -156,7 +156,7 @@ class TestRecipeView(SeleniumTestCase):
         some_job = self.job
         r = some_job.recipesets[0].recipes[0]
         sel.open('recipes/%s' % r.id)
-        sel.wait_for_page_to_load(3000)
+        sel.wait_for_page_to_load('30000')
         sel.click("all_recipe_%s" % r.id)
         from time import sleep
         sleep(2)

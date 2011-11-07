@@ -361,7 +361,7 @@ class JobAttributeChange(SeleniumTestCase):
         sel = self.selenium
         self.login(user=self.user_one.user_name, password=self.password)
         sel.open('jobs/%s' % self.the_job.id)
-        sel.wait_for_page_to_load('3000')
+        sel.wait_for_page_to_load('30000')
         sel.select("job_product", "label=%s" % p2.name )
         self.wait_and_try(lambda: self.assert_(sel.is_text_present("Product has been updated")), wait_time=10)
 
@@ -369,7 +369,7 @@ class JobAttributeChange(SeleniumTestCase):
         self.logout()
         self.login(user=self.user_two.user_name, password=self.password)
         sel.open('jobs/%s' % self.the_job.id)
-        sel.wait_for_page_to_load('3000')
+        sel.wait_for_page_to_load('30000')
         sel.select("job_product", "label=%s" % p1.name )
         self.wait_and_try(lambda: self.assert_(sel.is_text_present("Product has been updated")), wait_time=10)
 
@@ -377,7 +377,7 @@ class JobAttributeChange(SeleniumTestCase):
         self.logout()
         self.login(user=self.user_three.user_name, password=self.password)
         sel.open('jobs/%s' % self.the_job.id)
-        sel.wait_for_page_to_load('3000')
+        sel.wait_for_page_to_load('30000')
         disabled_product = sel.get_text("//select[@id='job_product' and @disabled]")
         self.assert_(disabled_product is not None)
 
@@ -388,7 +388,7 @@ class JobAttributeChange(SeleniumTestCase):
         #With Owner
         self.login(user=self.user_one.user_name, password=self.password)
         sel.open('jobs/%s' % self.the_job.id)
-        sel.wait_for_page_to_load('3000')
+        sel.wait_for_page_to_load('30000')
         current_tag = sel.get_text("//select[@id='job_retentiontag']/option[@selected='']")
         new_tag = RetentionTag.query.filter(and_(RetentionTag.tag != current_tag,
             RetentionTag.needs_product==False)).first()
@@ -399,7 +399,7 @@ class JobAttributeChange(SeleniumTestCase):
         self.logout()
         self.login(user=self.user_two.user_name, password=self.password)
         sel.open('jobs/%s' % self.the_job.id)
-        sel.wait_for_page_to_load('3000')
+        sel.wait_for_page_to_load('30000')
         current_tag = sel.get_text("//select[@id='job_retentiontag']/option[@selected='']")
         new_tag = RetentionTag.query.filter(and_(RetentionTag.tag != current_tag,
             RetentionTag.needs_product==False)).first()
@@ -410,7 +410,7 @@ class JobAttributeChange(SeleniumTestCase):
         self.logout()
         self.login(user=self.user_three.user_name, password=self.password)
         sel.open('jobs/%s' % self.the_job.id)
-        sel.wait_for_page_to_load('3000')
+        sel.wait_for_page_to_load('30000')
         disabled_tag = sel.get_text("//select[@id='job_retentiontag' and @disabled]")
         self.assert_(disabled_tag is not None)
  
