@@ -83,7 +83,7 @@ class LocalCSSLink(CSSLink):
 jquery = LocalJSLink('bkr', '/static/javascript/jquery-1.5.1.min.js',
         order=1) # needs to come after MochiKit
 
-local_datetime = LocalJSLink('bkr', '/static/javascript/local_datetime.js')
+local_datetime = LocalJSLink('bkr', '/static/javascript/local_datetime_v2.js')
 
 
 class PowerTypeForm(CompoundFormField):
