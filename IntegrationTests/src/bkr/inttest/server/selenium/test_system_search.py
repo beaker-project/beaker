@@ -23,7 +23,7 @@ class SearchColumns(SeleniumTestCase):
     def test_group_column(self):
         sel = self.selenium
         sel.open('')
-        sel.wait_for_page_to_load('3000')
+        sel.wait_for_page_to_load('30000')
         sel.click("advancedsearch")
         sel.select("systemsearch_0_table", "label=System/Group")
         sel.select("systemsearch_0_operation", "label=is not")
@@ -31,14 +31,14 @@ class SearchColumns(SeleniumTestCase):
         sel.click("selectnone")
         sel.click("systemsearch_column_System/Group")
         sel.click("Search")
-        sel.wait_for_page_to_load("3000")
+        sel.wait_for_page_to_load('30000')
         self.assertEqual(sel.get_title(), 'Systems')
         self.failUnless(sel.is_text_present("%s" % self.system_with_group.groups[0].group_name))
 
     def test_numa_column(self):
         sel = self.selenium
         sel.open('')
-        sel.wait_for_page_to_load('3000')
+        sel.wait_for_page_to_load('30000')
         sel.click("advancedsearch")
         sel.select("systemsearch_0_table", "label=System/NumaNodes")
         sel.select("systemsearch_0_operation", "label=is not")
@@ -46,7 +46,7 @@ class SearchColumns(SeleniumTestCase):
         sel.click("selectnone")
         sel.click("systemsearch_column_System/NumaNodes")
         sel.click("Search")
-        sel.wait_for_page_to_load("3000")
+        sel.wait_for_page_to_load('30000')
         self.assertEqual(sel.get_title(), 'Systems')
         self.failUnless(sel.is_text_present(str(self.system_with_numa.numa)))
 

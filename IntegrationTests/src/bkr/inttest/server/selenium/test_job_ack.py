@@ -25,7 +25,7 @@ class JobAckTest(SeleniumTestCase):
             pass
         self.login(user=self.user_1, password=self.password)
         sel.open('jobs/%s' % self.job.id)
-        sel.wait_for_page_to_load('3000')
+        sel.wait_for_page_to_load('30000')
         sel.click("widget_1") #This tests that the ack is there for owner
 
         try:
@@ -34,7 +34,7 @@ class JobAckTest(SeleniumTestCase):
             pass
         self.login(user=self.user_2, password=self.password)
         sel.open('jobs/%s' % self.job.id)
-        sel.wait_for_page_to_load('3000')
+        sel.wait_for_page_to_load('30000')
         try:
             sel.click("widget_1") #Tests that it's not available for non owner
             raise AssertionError('Non owner and non group membetr can ack')
@@ -45,7 +45,7 @@ class JobAckTest(SeleniumTestCase):
         data_setup.add_user_to_group(self.user_2,self.group)
         session.flush()
         sel.open('jobs/%s' % self.job.id)
-        sel.wait_for_page_to_load('3000')
+        sel.wait_for_page_to_load('30000')
         sel.click("widget_1") #This tests that the ack is there group memeber
 
 

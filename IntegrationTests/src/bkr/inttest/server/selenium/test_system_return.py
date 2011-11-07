@@ -21,24 +21,24 @@ class SystemReturnTest(SeleniumTestCase):
         sel = self.selenium
         self.login(user=self.user.user_name, password='password')
         sel.open('view/%s' % self.system.fqdn)
-        sel.wait_for_page_to_load(3000)
+        sel.wait_for_page_to_load('30000')
         sel.click('link=(Take)')
-        sel.wait_for_page_to_load(3000)
+        sel.wait_for_page_to_load('30000')
 
         # Let's remove the LC
         self.logout()
         self.login()
         sel.open("labcontrollers/")
-        sel.wait_for_page_to_load(3000)
+        sel.wait_for_page_to_load('30000')
         sel.click("//a[@onclick=\"has_watchdog('%s')\"]" % self.lc.id)
         sel.wait_for_page_to_load("30000")
 
         self.logout()
         self.login(user=self.user.user_name, password='password')
         sel.open('view/%s' % self.system.fqdn)
-        sel.wait_for_page_to_load(3000)
+        sel.wait_for_page_to_load('30000')
         sel.click('link=(Return)')
-        sel.wait_for_page_to_load(3000)
+        sel.wait_for_page_to_load('30000')
         text = sel.get_text('//body')
         self.assert_('Returned %s' % self.system.fqdn in text)
 

@@ -25,13 +25,13 @@ class CSVImportTest(SeleniumTestCase):
         sel.open("")
         self.login()
         sel.click("link=Import")
-        sel.wait_for_page_to_load("3000")
+        sel.wait_for_page_to_load('30000')
         csv_file = NamedTemporaryFile(prefix=self.__module__)
         csv_file.write(contents)
         csv_file.flush()
         sel.type("import_csv_file", csv_file.name)
         sel.click("//input[@value='Import CSV']")
-        sel.wait_for_page_to_load("3000")
+        sel.wait_for_page_to_load('30000')
 
     def test_system(self):
         orig_date_modified = self.system.date_modified

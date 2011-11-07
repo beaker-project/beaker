@@ -26,14 +26,14 @@ class Search(SeleniumTestCase):
         sel = self.selenium
         self.login(user=user.user_name, password=u'password')
         sel.open(u'tasks%s' % self.task_three.name)
-        sel.wait_for_page_to_load('3000')
+        sel.wait_for_page_to_load('30000')
         sel.click("//input[@type='submit']")
         self.wait_and_try(lambda: self.assert_(sel.is_text_present(u"T:%s" % r.tasks[0].id)), wait_time=10)
 
         j.soft_delete()
         session.flush()
         sel.open(u'tasks%s' % self.task_three.name)
-        sel.wait_for_page_to_load('3000')
+        sel.wait_for_page_to_load('30000')
         sel.click("//input[@type='submit']")
         try:
             self.wait_and_try(lambda: self.assert_(sel.is_text_present(u"T:%s" % r.tasks[0].id)), wait_time=10)
