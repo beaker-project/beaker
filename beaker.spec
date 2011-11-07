@@ -355,6 +355,10 @@ fi
 - 718119 new osversion.trigger (bpeck@redhat.com)
 - 746683 bkr whoami command added (bpeck@redhat.com)
 
+* Tue Oct 18 2011 Dan Callaghan <dcallagh@redhat.com> 0.7.3-6
+- 746774 correctly handle multiple status changes within the same second
+  (dcallagh@redhat.com)
+
 * Fri Sep 30 2011 Raymond Mancy <rmancy@redhat.com> 0.7.3-5
 - 739893 - Client option to print xml of existing job
   (j-nomura@ce.jp.nec.com)
