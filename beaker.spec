@@ -16,7 +16,7 @@
 
 Name:           beaker
 Version:        0.8.0
-Release:        7%{?dist}
+Release:        8%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -341,6 +341,10 @@ fi
 %endif
 
 %changelog
+* Mon Nov 07 2011 Dan Callaghan <dcallagh@redhat.com> 0.8.0-8
+- 746774 correctly handle multiple status changes within the same second
+  (dcallagh@redhat.com)
+
 * Thu Nov 03 2011 Bill Peck <bpeck@redhat.com> 0.8.0-7
 - 750428 workaround to force TGMochiKit to be always initialised
   (dcallagh@redhat.com)
