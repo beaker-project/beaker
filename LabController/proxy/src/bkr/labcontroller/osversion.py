@@ -24,10 +24,7 @@ class SchedulerProxy(object):
                                            allow_none=True)
 
     def add_distro(self, distro):
-        if distro.has_changed or self.force:
-            return self.proxy.addDistro(distro.flatten)
-        else:
-            return False
+        return self.proxy.addDistro(distro.flatten)
 
     def run_distro_test_job(self, distro):
         if self.is_add_distro_cmd and \
