@@ -75,6 +75,7 @@ class SystemViewTest(SeleniumTestCase):
     def go_to_system_view(self):
         sel = self.selenium
         sel.open('')
+        sel.wait_for_page_to_load('30000')
         sel.type('simplesearch', self.system.fqdn)
         sel.click('search')
         sel.wait_for_page_to_load('30000')
@@ -573,6 +574,7 @@ class SystemCcTest(SeleniumTestCase):
         session.flush()
         sel = self.selenium
         sel.open('cc_change?system_id=%s' % self.system.id)
+        sel.wait_for_page_to_load('30000')
         assert not sel.get_value('cc_cc_0_email_address'), 'should be empty'
         sel.type('cc_cc_0_email_address', 'roy.baty@pkd.com')
         sel.click('doclink') # why the hell is it called this?
@@ -595,6 +597,7 @@ class SystemCcTest(SeleniumTestCase):
         session.flush()
         sel = self.selenium
         sel.open('cc_change?system_id=%s' % self.system.id)
+        sel.wait_for_page_to_load('30000')
         sel.click('//tr[@id="cc_cc_1"]//a[text()="Remove (-)"]')
         #sel.click('//tr[@id="cc_cc_0"]//a[text()="Remove (-)"]')
         # The tg_expanding_widget javascript doesn't let us remove the last element,
@@ -617,6 +620,7 @@ class SystemCcTest(SeleniumTestCase):
         session.flush()
         sel = self.selenium
         sel.open('cc_change?system_id=%s' % self.system.id)
+        sel.wait_for_page_to_load('30000')
         sel.type('cc_cc_0_email_address', 'deckard@police.gov')
         sel.click('//input[@value="Change"]')
         sel.wait_for_page_to_load('30000')
