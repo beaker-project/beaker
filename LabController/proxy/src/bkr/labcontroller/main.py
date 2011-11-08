@@ -14,12 +14,13 @@ import socket
 
 from bkr.labcontroller.proxy import Proxy
 from bkr.labcontroller.config import get_conf
+from bkr.labcontroller.utils import add_rotating_file_logger
 from kobo.exceptions import ShutdownException
 from kobo.process import daemonize
 from kobo.tback import Traceback, set_except_hook
 from bkr.log import add_stderr_logger
 import logging
-logger = logging.getLogger("Proxy")
+logger = logging.getLogger(__name__)
 
 set_except_hook()
 
@@ -83,6 +84,17 @@ def main_loop(conf=None, foreground=False):
 
     # define custom signal handlers
     signal.signal(signal.SIGTERM, daemon_shutdown)
+
+    # set up logging
+    if foreground:
+        add_stderr_logger(logging.getLogger())
+    else:
+        log_level_string = conf["LOG_LEVEL"]
+        log_level = getattr(logging, log_level_string.upper(), logging.DEBUG)
+        logging.getLogger().setLevel(log_level)
+        log_file = conf["LOG_FILE"]
+        add_rotating_file_logger(logging.getLogger(), log_file,
+                log_level=log_level, format=conf["VERBOSE_LOG_FORMAT"])
 
     # initialize Proxy
     try:
