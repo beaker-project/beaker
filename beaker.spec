@@ -16,7 +16,7 @@
 
 Name:           beaker
 Version:        0.8.0
-Release:        8%{?dist}
+Release:        9%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -341,6 +341,12 @@ fi
 %endif
 
 %changelog
+* Tue Nov 08 2011 Bill Peck <bpeck@redhat.com> 0.8.0-9
+- add --quiet option to bkr workflows to not print ignored tasks
+  (bpeck@redhat.com)
+- 751868 osversion.trigger can fail to add a new distro (bpeck@redhat.com)
+- Don't iterate ignored profiles. (bpeck@redhat.com)
+
 * Mon Nov 07 2011 Dan Callaghan <dcallagh@redhat.com> 0.8.0-8
 - 746774 correctly handle multiple status changes within the same second
   (dcallagh@redhat.com)
