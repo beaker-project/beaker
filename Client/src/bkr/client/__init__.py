@@ -230,6 +230,12 @@ class BeakerWorkflow(BeakerCommand):
             action="store_true",
             help="Pick systems randomly (default is owned, in group, other)"
         )
+        self.parser.add_option(
+            "--quiet",
+            default=False,
+            action="store_true",
+            help="Be quiet, don't print warnings",
+        )
 
     def getArches(self, *args, **kwargs):
         """ Get all arches that apply to either this distro or family/osmajor """
@@ -279,6 +285,7 @@ class BeakerWorkflow(BeakerCommand):
         packages = kwargs.get("package", None)
         self.n_clients = kwargs.get("clients", None)
         self.n_servers = kwargs.get("servers", None)
+        quiet = kwargs.get("quiet", False)
 
         if not hasattr(self,'hub'):
             self.set_hub(username, password)
@@ -299,7 +306,7 @@ class BeakerWorkflow(BeakerCommand):
                 task = valid_tasks.get(name, None)
                 if task:
                     tasks.append(task)
-                else:
+                elif not quiet:
                     print >>sys.stderr, 'WARNING: task %s not applicable ' \
                             'for distro, ignoring' % name
 
