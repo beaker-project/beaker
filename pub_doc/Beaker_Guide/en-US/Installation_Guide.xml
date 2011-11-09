@@ -34,6 +34,21 @@ $ yum -y install mod_wsgi python-decorator python-tgexpandingformwidget python-x
     Beaker supports MySQL,MSSQL,Oracle,MaxDB,PostgreSQL, and SQLite. For this tutorial,we will use MySQL. First, make sure MySQL server is installed, and configure the daemon to run at startup. 
       <screen>$ yum install -y mysql-server MySQL-python
 $ chkconfig mysqld on
+      </screen>
+    </para>
+    <para>
+    For Unicode support in Beaker, it is recommended to configure MySQL to store strings as 
+    UTF-8. This is controlled by the <literal>character-set-server</literal> option in 
+    <filename>/etc/my.cnf</filename>:
+      <screen>
+[mysqld]
+...
+character-set-server=utf8
+      </screen>
+    </para>
+    <para>
+    Now start the MySQL server:
+      <screen>
 $ service mysqld start
       </screen>
     </para>

@@ -310,6 +310,7 @@ function Inventory()
         /\[mysqld\]/ {
             print "default-storage-engine=INNODB";
             print "max_allowed_packet=50M";
+            print "character-set-server=utf8";
             print ENVIRON["MYSQL_EXTRA_CONFIG"];
         }' > /etc/my.cnf
     #
