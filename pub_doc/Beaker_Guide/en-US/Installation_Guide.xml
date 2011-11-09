@@ -31,7 +31,14 @@ $ yum -y install mod_wsgi python-decorator python-tgexpandingformwidget python-x
     <section id="Installation-Install_Beaker-Install_DB">
     <title>Install DB</title>
     <para>
-    Beaker supports MySQL,MSSQL,Oracle,MaxDB,PostgreSQL, and SQLite. For this tutorial,we will use MySQL. First, make sure MySQL server is installed, and configure the daemon to run at startup. 
+    Beaker uses the <ulink url="http://www.sqlalchemy.org/">sqlalchemy</ulink> 
+    database library, which supports a large number of databases (including 
+    MySQL, PostgreSQL, SQLite, Oracle, and Microsoft SQL Server) provided that 
+    a suitable client driver is installed. However Beaker is only tested 
+    against MySQL, so it is recommended to use that.
+    </para>
+    <para>
+    For this tutorial, we will use MySQL. First, make sure MySQL server is installed, and configure the daemon to run at startup. 
       <screen>$ yum install -y mysql-server MySQL-python
 $ chkconfig mysqld on
       </screen>

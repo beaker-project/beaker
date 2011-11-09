@@ -1,3 +1,4 @@
 *.py    diff=python whitespace=tab-in-indent
 *.txt   whitespace=-trailing-space
 *.rst   whitespace=-trailing-space
+/pub_doc/*/*/*.xml   whitespace=-trailing-space
