@@ -173,25 +173,37 @@ $ service mysqld start
   </section>
   <section id="Installation-Setup_Lab_Controller-Configure_Lab_Controller">
   <title>Configure Lab Controller</title>
-  <para>Cobbler is one of the dependencies that is installed with the Lab Controller. You'll need to edit the <emphasis>/etc/cobbler/settings</emphasis> file. 
+  <para>Cobbler is one of the dependencies that is installed with the Lab Controller. You'll need to edit the <filename>/etc/cobbler/settings</filename> file. 
     <itemizedlist>
      <listitem>
-      <para><application>server</application>: This needs to be set to the Lab Controllers Fully qualified domain name. 
+      <para><option>server</option>: This needs to be set to the Lab Controller's fully qualified domain name. 
       </para>
       </listitem>
       <listitem>
-      <para><application>next_server</application>:  If you use cobbler as your dhcp server this needs to be the ip address of the Lab Controller. 
+      <para><option>next_server</option>:  If you use cobbler as your dhcp server this needs to be the IP address of the Lab Controller. 
       </para>
       </listitem>
       <listitem>
-      <para><application>pxe_just_once</application>: 1
+      <para><option>pxe_just_once</option>: 1
       </para>
       </listitem>
       <listitem>
-      <para><application>anamon_enabled</application>: 1
+      <para><option>anamon_enabled</option>: 1
       </para>
       </listitem>
     </itemizedlist>
+  </para>
+  <para>
+    If you wish to support HTTP and FTP installations of distros stored on an 
+    NFS server, you will also need to set <option>method_http</option> and 
+    <option>method_ftp</option> under <option>mgmt_parameters</option>:
+    <programlisting>
+mgmt_parameters:
+    method_http: "http://download.example.com"
+    method_ftp: "ftp://download.example.com"
+    </programlisting>
+    The HTTP and FTP servers must serve the same directory tree that is 
+    available on your NFS server.
   </para>
   <para>You will need to enable an auth method in /etc/cobbler/modules.conf 
   <itemizedlist>
