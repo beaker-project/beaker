@@ -173,7 +173,7 @@ function generate_beaker_cfg()
 # If you have sqlite, here's a simple default to get you started
 # in development
 #sqlalchemy.dburi="sqlite:///devdata.sqlite"
-sqlalchemy.dburi="mysql://beaker:beaker@localhost/beaker"
+sqlalchemy.dburi="mysql://beaker:beaker@localhost/beaker?charset=utf8"
 sqlalchemy.pool_recycle = 3600
 
 # File Locations
