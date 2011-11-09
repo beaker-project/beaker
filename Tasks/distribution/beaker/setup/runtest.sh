@@ -326,8 +326,14 @@ function Inventory()
     # Add in Kerberos config
     generate_beaker_cfg
     mkdir -p /var/www/beaker/harness # in lieu of running beaker-repo-update
-
-    beaker-init -u admin -p testing -e $SUBMITTER
+    if [ -n "$IMPORT_DB"]
+    then
+        wget $IMPORT_DB
+        DB_FILE=echo $IMPORT_DB | perl -pe 's|.+/(.+\.xz)$|\1|'
+        xzcat $DB_FILE | mysql
+    else
+        beaker-init -u admin -p testing -e $SUBMITTER
+    fi
     estatus_fail "**** Failed to initialize beaker DB ****"
     # beaker-init creates the server.log as root.  this prevents apache from 
     #  working since it can't write to it.
