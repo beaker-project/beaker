@@ -8,7 +8,7 @@ import socket
 import xmlrpclib
 from optparse import OptionParser
 
-from bkr.labcontroller.proxy import Watchdog
+from bkr.labcontroller.proxy import Watchdog, RepeatTimer
 from bkr.labcontroller.config import get_conf
 
 from kobo.exceptions import ShutdownException
@@ -58,6 +58,10 @@ def main_loop(conf=None, foreground=False):
         """
         if conf['QPID_BUS']:
             watchdog.hub._login()
+            auth_renew = RepeatTimer(conf['RENEW_SESSION_INTERVAL'],
+                    watchdog.hub._login, stop_on_exception=False)
+            auth_renew.daemon = True
+            auth_renew.start()
             lbb = LabBeakerBus(watchdog=watchdog)
             active_watchdogs = lbb.rpc.recipes.tasks.watchdogs('active', lbb.lc)
             watchdog.active_watchdogs(active_watchdogs, purge=False)
@@ -72,6 +76,7 @@ def main_loop(conf=None, foreground=False):
                         watchdog.sleep()
                 except (ShutdownException, KeyboardInterrupt):
                     # ignore keyboard interrupts and sigterm
+                    auth_renew.stop()
                     signal.signal(signal.SIGINT, signal.SIG_IGN)
                     signal.signal(signal.SIGTERM, signal.SIG_IGN)
                     logger.info('Exiting...')

@@ -14,6 +14,7 @@ import tempfile
 import xmlrpclib
 from cStringIO import StringIO
 from socket import gethostname
+from threading import Thread, Event
 
 import kobo.conf
 from kobo.client import HubProxy 
@@ -618,3 +619,37 @@ class Proxy(ProxyHelper):
             distros from the Scheduler/Inventory server.
         """
         return self.hub.labcontrollers.removeDistro(distro)
+
+
+class RepeatTimer(Thread):
+
+    def __init__(self, interval, function, stop_on_exception=True, args=[], kwargs={}):
+        Thread.__init__(self)
+        self.interval = interval
+        self.function = function
+        self.args = args
+        self.kwargs = kwargs
+        self.stop_on_exception = stop_on_exception
+        self.finished = Event()
+
+    def stop(self):
+        self.done = True
+        self.finished.set()
+
+    def run(self):
+        self.done = False
+        while True:
+            self.finished.wait(self.interval)
+            if self.done:
+                self.finished.clear()
+                break
+            if not self.finished.is_set():
+                try:
+                    self.function(*self.args, **self.kwargs)
+                except Exception, e:
+                    # Log it so we don't lose it
+                    logger.exception()
+                    if self.stop_on_exception:
+                        self.finished.clear()
+                        raise
+            self.finished.clear()
