@@ -15,7 +15,7 @@ from sqlalchemy.orm import relation, backref, synonym, dynamic_loader, \
 from sqlalchemy.orm.interfaces import AttributeExtension
 from sqlalchemy.sql import exists
 from sqlalchemy.sql.expression import join
-from sqlalchemy.exceptions import InvalidRequestError
+from sqlalchemy.exceptions import InvalidRequestError, IntegrityError
 from sqlalchemy.orm.exc import NoResultFound
 from identity import LdapSqlAlchemyIdentityProvider
 from cobbler_utils import consolidate, string_to_hash
@@ -1133,9 +1133,15 @@ class MappedObject(object):
         try:
             item = cls.query.filter_by(**kwargs).one()
         except NoResultFound:
-            item = cls(**kwargs)
-            session.add(item)
-            session.flush([item])
+            try:
+                item = cls(**kwargs)
+                session.add(item)
+                session.flush([item])
+            # small race condition where its been created in between 
+            # us querying it.
+            except IntegrityError:
+                # if we fail again then let the traceback propagate
+                item = cls.query.filter_by(**kwargs).one()
         return item
 
     def __init__(self, **kwargs):
