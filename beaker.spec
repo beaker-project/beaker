@@ -16,7 +16,7 @@
 
 Name:           beaker
 Version:        0.8.0
-Release:        9%{?dist}
+Release:        10%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -341,6 +341,13 @@ fi
 %endif
 
 %changelog
+* Fri Nov 11 2011 Dan Callaghan <dcallagh@redhat.com> 0.8.0-10
+- 752869 race condition when adding distros (bpeck@redhat.com)
+- clean up lab controller logging (dcallagh@redhat.com)
+- timed handling of session renewal for qpid (rmancy@redhat.com)
+- 749551 try except handling in wrong place for beaker-watchdog
+  (bpeck@redhat.com)
+
 * Tue Nov 08 2011 Bill Peck <bpeck@redhat.com> 0.8.0-9
 - add --quiet option to bkr workflows to not print ignored tasks
   (bpeck@redhat.com)
