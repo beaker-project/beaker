@@ -258,18 +258,18 @@ def create_recipe(system=None, distro=None, task_list=None,
         recipe.logs = [LogRecipe(server=u'http://dummy-archive-server/beaker/recipe_path', filename=u'dummy.txt' )]
 
     if not server_log:
-        rt_log = LogRecipeTask(path=u'/tasks', filename=u'dummy.txt', basepath='/')
+        rt_log = lambda: LogRecipeTask(path=u'/tasks', filename=u'dummy.txt', basepath='/')
     else:
-        rt_log = LogRecipeTask(server=u'http://dummy-archive-server/beaker/recipe_path/tasks', filename=u'dummy.txt')
+        rt_log = lambda: LogRecipeTask(server=u'http://dummy-archive-server/beaker/recipe_path/tasks', filename=u'dummy.txt')
     if task_list: #don't specify a task_list and a task_name...
         for t in task_list:
             rt = RecipeTask(task=t)
-            rt.logs = [rt_log]
+            rt.logs = [rt_log()]
             recipe.tasks.append(rt)
 
     else:
         rt = RecipeTask(task=create_task(name=task_name))
-        rt.logs = [rt_log]
+        rt.logs = [rt_log()]
         recipe.tasks.append(rt)
     return recipe
 

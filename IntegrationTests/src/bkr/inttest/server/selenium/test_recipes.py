@@ -21,9 +21,10 @@ import logging
 import re
 from turbogears.database import session
 
-from bkr.server.model import Job
-from bkr.inttest.server.selenium import SeleniumTestCase
-from bkr.inttest import data_setup
+from bkr.server.model import Job, TaskResult, RecipeTaskResult
+from bkr.inttest.server.selenium import SeleniumTestCase, WebDriverTestCase
+from bkr.inttest.server.webdriver_utils import login, is_text_present
+from bkr.inttest import data_setup, get_server_base
 from bkr.inttest.assertions import assert_sorted
 
 class TestRecipesDataGrid(SeleniumTestCase):
@@ -111,7 +112,7 @@ class TestRecipesDataGrid(SeleniumTestCase):
             cell_values.append(int(m.group(1)))
         assert_sorted(cell_values)
 
-class TestRecipeView(SeleniumTestCase):
+class TestRecipeView(WebDriverTestCase):
 
     def setUp(self):
         self.user = user = data_setup.create_user(display_name=u'Bob Brown',
@@ -123,47 +124,69 @@ class TestRecipeView(SeleniumTestCase):
         for recipe in self.job.all_recipes:
             recipe.system = self.system
         session.flush()
-        self.selenium = sel = self.get_selenium()
-        self.selenium.start()
-
-        # log in
-        sel.open('')
-        sel.click('link=Login')
-        sel.wait_for_page_to_load('30000')
-        sel.type('user_name', user.user_name)
-        sel.type('password', 'password')
-        sel.click('login')
-        sel.wait_for_page_to_load('30000')
+        self.browser = self.get_browser()
+        login(self.browser, user=user.user_name, password='password')
 
     def tearDown(self):
-        self.selenium.stop()
+        self.browser.quit()
+
+    def go_to_recipe_view(self, recipe):
+        b = self.browser
+        b.get(get_server_base() + 'recipes/mine')
+        b.find_element_by_link_text(recipe.t_id).click()
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=623603
     # see also TestSystemView.test_can_report_problem
     def test_can_report_problem(self):
-        sel = self.selenium
-        sel.open('recipes/mine')
+        b = self.browser
         recipe = list(self.job.all_recipes)[0]
-        sel.click('link=R:%s' % recipe.id)
-        sel.wait_for_page_to_load('30000')
-        sel.click('link=Report problem with system')
-        sel.wait_for_page_to_load('30000')
-        self.assertEqual(self.selenium.get_title(),
+        self.go_to_recipe_view(recipe)
+        b.find_element_by_link_text('Report problem with system').click()
+        self.assertEqual(b.title,
                 'Report a problem with %s' % self.system.fqdn)
 
     def test_log_url_looks_right(self):
-        sel = self.selenium
+        b = self.browser
         some_job = self.job
         r = some_job.recipesets[0].recipes[0]
-        sel.open('recipes/%s' % r.id)
-        sel.wait_for_page_to_load('30000')
-        sel.click("all_recipe_%s" % r.id)
-        from time import sleep
-        sleep(2)
-        rt_log_server_link = sel.get_attribute("//tr[@class='even pass_recipe_%s recipe_%s']//td[position()=4]//a@href" % (r.id, r.id))
+        self.go_to_recipe_view(r)
+        b.find_element_by_id("all_recipe_%s" % r.id).click()
+        rt_log_server_link = b.find_element_by_xpath("//tr[@class='even pass_recipe_%s recipe_%s']//td[position()=4]//a" % (r.id, r.id)).get_attribute('href')
         rt_log = r.tasks[0].logs[0]
         self.assert_(rt_log_server_link == rt_log.server + '/' + rt_log.filename)
-        sel.click("logs_button_%s" % r.id)
-        sleep(2)
-        r_server_link = sel.get_attribute("//table[@class='show']/tbody//tr[position()=6]/td/a@href")
+        b.find_element_by_id("logs_button_%s" % r.id).click()
+        r_server_link = b.find_element_by_xpath("//table[@class='show']/tbody//tr[position()=6]/td/a").get_attribute('href')
         self.assert_(r_server_link == r.logs[0].server + '/' + r.logs[0].filename)
+
+    def test_task_pagination(self):
+        num_of_tasks = 35
+        the_tasks = [data_setup.create_task() for t in range(num_of_tasks)]
+        the_recipe = data_setup.create_recipe(task_list=the_tasks)
+        the_job = data_setup.create_job_for_recipes([the_recipe], owner=self.user)
+        session.flush()
+
+        b = self.browser
+        self.go_to_recipe_view(the_recipe)
+        b.find_element_by_id("all_recipe_%s" % the_recipe.id).click()
+        for t in the_job.recipesets[0].recipes[0].tasks:
+            self.assertTrue(is_text_present(b, "T:%s" %t.id))
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=751330
+    def test_fetching_large_results_is_not_too_slow(self):
+        tasks = [data_setup.create_task() for _ in range(700)]
+        recipe = data_setup.create_recipe(task_list=tasks)
+        pass_ = TaskResult.by_name(u'Pass')
+        for rt in recipe.tasks:
+            rt.results = [RecipeTaskResult(path=u'result_%d' % i,
+                    result=pass_, score=i) for i in range(10)]
+        job = data_setup.create_job_for_recipes([recipe], owner=self.user)
+        session.flush()
+
+        b = self.browser
+        self.go_to_recipe_view(recipe)
+        b.find_element_by_id('all_recipe_%s' % recipe.id).click()
+        # Let's set a wait time of 30 seconds and try to find the results table.
+        # If the server is taking too long to return our results,
+        # we will get a NoSuchElementException below.
+        b.implicitly_wait(30)
+        b.find_element_by_xpath('//div[@id="task_items_%s"]//table' % recipe.id)

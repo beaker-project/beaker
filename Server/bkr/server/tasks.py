@@ -31,6 +31,7 @@ from bkr.server.helpers import make_link
 from rhts import testinfo
 from rhts.testinfo import ParserError, ParserWarning
 from sqlalchemy import exceptions
+from sqlalchemy.orm import joinedload, joinedload_all
 from subprocess import *
 
 import rpm
@@ -246,9 +247,13 @@ class Tasks(RPCRoot):
         return self._do_search(hidden=hidden, **kw)
 
     def _do_search(self, hidden={}, **kw):
-        tasks = RecipeTask.query.join(['recipe', 'recipeset','job']).filter(and_(Job.to_delete==None, Job.deleted==None))
+        tasks = RecipeTask.query\
+                .join(RecipeTask.recipe, Recipe.recipeset, RecipeSet.job)\
+                .filter(and_(Job.to_delete == None, Job.deleted == None))\
+                .options(joinedload(RecipeTask.task), joinedload(RecipeTask.logs),
+                    joinedload_all(RecipeTask.results, RecipeTaskResult.logs))
         if 'recipe_id' in kw: #most likely we are coming here from a LinkRemoteFunction in recipe_widgets
-            tasks = tasks.join(['recipe']).filter(Recipe.id == kw['recipe_id'])
+            tasks = tasks.filter(Recipe.id == kw['recipe_id'])
 
             hidden = dict(distro = 1,
                           osmajor = 1,
