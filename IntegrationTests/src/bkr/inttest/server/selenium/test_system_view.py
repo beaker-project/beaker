@@ -131,25 +131,19 @@ class SystemViewTest(SeleniumTestCase):
         self.assertEqual(self.selenium.get_title(),
                 'Notify CC list for %s' % self.system.fqdn)
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=747086
     def test_update_system_no_lc(self):
-        orig_date_modified = self.system.date_modified
         system = data_setup.create_system()
         system.labcontroller = None
         session.flush()
         self.login()
         sel = self.selenium
         self.go_to_system_view(system=system)
-        changes = {
-            'fqdn': 'zx80.example.com',
-        }
-        for k, v in changes.iteritems():
-            sel.type(k, v)
+        new_fqdn = 'zx81.example.com'
+        sel.type('fqdn', new_fqdn)
         sel.click('link=Save Changes')
         sel.wait_for_page_to_load('30000')
-        for k, v in changes.iteritems():
-            self.assertEquals(sel.get_value(k), v)
-        session.refresh(system)
-        self.assert_(system.date_modified > orig_date_modified)
+        self.assertEquals(sel.get_value('fqdn'), new_fqdn)
 
     def test_update_system(self):
         orig_date_modified = self.system.date_modified
