@@ -346,9 +346,7 @@ def mark_job_complete(job, **kwargs):
     for recipe in job.all_recipes:
         mark_recipe_complete(recipe, **kwargs)
 
-def mark_job_waiting(job, user=None):
-    if user is None:
-        user = create_user()
+def mark_job_waiting(job):
     for recipeset in job.recipesets:
         for recipe in recipeset.recipes:
             recipe.process()
@@ -359,12 +357,14 @@ def mark_job_waiting(job, user=None):
                     reservation_type=u'recipe', recipe=recipe)
             recipe.watchdog = Watchdog(system=recipe.system)
             recipe.waiting()
+            log.debug('Marked %s as waiting with system %s', recipe.t_id, recipe.system)
 
-def mark_job_running(job, user=None):
-    mark_job_waiting(job, user=user)
+def mark_job_running(job):
+    mark_job_waiting(job)
     for recipe in job.all_recipes:
         for rt in recipe.tasks:
             rt.start()
+            log.debug('Started %s', rt.t_id)
 
 def mark_job_queued(job):
     for recipe in job.all_recipes:

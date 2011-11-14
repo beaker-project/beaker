@@ -98,7 +98,7 @@ class TestUpdateStatus(unittest.TestCase):
         session.flush()
 
         # Mark job waiting
-        data_setup.mark_job_waiting(job, self.user)
+        data_setup.mark_job_waiting(job)
         session.flush()
 
         # watchdog's should exist 
@@ -134,7 +134,7 @@ class TestUpdateStatus(unittest.TestCase):
         session.flush()
 
         # Mark job waiting
-        data_setup.mark_job_waiting(job, self.user)
+        data_setup.mark_job_waiting(job)
         session.flush()
 
         # watchdog's should exist 
