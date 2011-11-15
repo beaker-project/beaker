@@ -16,7 +16,7 @@
 
 Name:           beaker
 Version:        0.8.0
-Release:        13%{?dist}
+Release:        14%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -341,6 +341,9 @@ fi
 %endif
 
 %changelog
+* Tue Nov 15 2011 Bill Peck <bpeck@redhat.com> 0.8.0-14
+- rename rhts_lab_import to beaker_lab_import (bpeck@redhat.com)
+
 * Tue Nov 15 2011 Bill Peck <bpeck@redhat.com> 0.8.0-13
 - 754133 RHEL5 kickstarts don't support --cost option to repo command
   (bpeck@redhat.com)
