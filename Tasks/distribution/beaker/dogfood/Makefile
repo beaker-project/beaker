@@ -19,20 +19,20 @@ RELATIVE_PATH=dogfood
 export TESTVERSION=1.1
 export TEST=/$(TOPLEVEL_NAMESPACE)/$(PACKAGE_NAME)/$(RELATIVE_PATH)
 
-SELENIUM_SERVER_VERSION=1.0.3
+SELENIUM_SERVER_VERSION=2.12.0
 
 .PHONY: all install download clean
 
 # executables to be built should be added here, they will be generated on the system under test.
 BUILT_FILES= 
 
-DOWNLOADED_FILES=selenium-remote-control-$(SELENIUM_SERVER_VERSION).zip
+DOWNLOADED_FILES=selenium-server-standalone-$(SELENIUM_SERVER_VERSION).jar
 
 # data files, .c files, scripts anything needed to either compile the test and/or run it.
-FILES=$(METADATA) runtest.sh Makefile PURPOSE
+FILES=$(METADATA) runtest.sh Makefile PURPOSE $(DOWNLOADED_FILES)
 
 run: $(FILES) build \
-     /usr/local/share/selenium/selenium-server-$(SELENIUM_SERVER_VERSION)
+     /usr/local/share/selenium/selenium-server-standalone-$(SELENIUM_SERVER_VERSION).jar
 	./runtest.sh
 
 build: $(BUILT_FILES)
@@ -40,14 +40,15 @@ build: $(BUILT_FILES)
 
 download: $(DOWNLOADED_FILES)
 
-selenium-remote-control-$(SELENIUM_SERVER_VERSION).zip:
-	wget -nv http://selenium.googlecode.com/files/$@
+selenium-server-standalone-$(SELENIUM_SERVER_VERSION).jar:
+	wget http://selenium.googlecode.com/files/$@
 
 clean:
 	rm -f *~ *.rpm $(BUILT_FILES) $(DOWNLOADED_FILES)
 
-/usr/local/share/selenium/selenium-server-$(SELENIUM_SERVER_VERSION): selenium-remote-control-$(SELENIUM_SERVER_VERSION).zip
-	unzip -o -d /usr/local/share/selenium $<
+/usr/local/share/selenium/selenium-server-standalone-$(SELENIUM_SERVER_VERSION).jar: selenium-server-standalone-$(SELENIUM_SERVER_VERSION).jar
+	mkdir -p $(@D)
+	cp -p $< $@
 
 # Include Common Makefile
 include /usr/share/rhts/lib/rhts-make.include
