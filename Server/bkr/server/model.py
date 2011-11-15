@@ -2599,7 +2599,7 @@ $SNIPPET("rhts_post")
             self.action_release()
         except Exception, error_msg:
             msg = "Error: %s Action: %s" % (error_msg,self.release_action)
-            self.activity.append(SystemActivity(user=identity.current.user,
+            self.activity.append(SystemActivity(user=user,
                     service=service, action=unicode(self.release_action),
                     field_name=u'Return', old_value=u'', new_value=msg))
         self.activity.append(activity)
