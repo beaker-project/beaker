@@ -43,13 +43,14 @@ export TEST=/$(TOPLEVEL_NAMESPACE)/$(PACKAGE_NAME)/$(RELATIVE_PATH)
 BUILT_FILES= 
 
 # data files, .c files, scripts anything needed to either compile the test and/or run it.
-FILES=$(METADATA) runtest.sh Makefile PURPOSE add_labcontroller.py add_user.py
+FILES=$(METADATA) runtest.sh Makefile PURPOSE add-labcontroller.py
 
 run: $(FILES) build
 	./runtest.sh
 
 build: $(BUILT_FILES)
 	chmod a+x ./runtest.sh
+	chmod a+x ./add-labcontroller.py
 
 clean:
 	rm -f *~ *.rpm $(BUILT_FILES)
