@@ -144,9 +144,12 @@ class LabControllers(RPCRoot):
     def _addDistro(self, lab_controller, new_distro):
         arches = []
 
-        # Look up the distro by the install name
-        distro = Distro.lazy_create(install_name=new_distro['name'])
-        distro.name = new_distro['treename']
+        # Try and look up the distro by the install name
+        try:
+            distro = Distro.by_install_name(new_distro['name'])
+        except InvalidRequestError:
+            distro = Distro(new_distro['name'])
+            distro.name = new_distro['treename']
 
         # All the arches this distro's osmajor applies to
         if 'arches' in new_distro:
