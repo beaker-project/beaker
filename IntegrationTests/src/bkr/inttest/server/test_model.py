@@ -21,6 +21,37 @@ class SchemaSanityTest(unittest.TestCase):
                     'WHERE table_schema = DATABASE() AND table_name = %s',
                     table), 'InnoDB')
 
+class MappedObjectTest(unittest.TestCase):
+
+    def setUp(self):
+        session.begin()
+
+    def tearDown(self):
+        session.rollback()
+
+    def test_lazy_create_inserts_rows(self):
+        install_name = data_setup.unique_name(u'lazy_created_distro%s')
+        distro = Distro.lazy_create(install_name=install_name)
+        self.assert_(distro.id is not None)
+        self.assertEquals(Distro.query.filter_by(install_name=install_name).count(), 1)
+
+    def test_lazy_create_doesnt_cause_duplicate_keys(self):
+        install_name = data_setup.unique_name(u'already_existing_distro%s')
+        existing_distro = Distro(install_name=install_name)
+        session.flush()
+        new_distro = Distro.lazy_create(install_name=install_name)
+        self.assert_(new_distro is existing_distro)
+        self.assertEquals(Distro.query.filter_by(install_name=install_name).count(), 1)
+
+        # Same deal, but different scenario -- approximates a race between two 
+        # transactions lazy_create'ing the same row
+        install_name = data_setup.unique_name(u'already_existing_distro%s')
+        first_distro = Distro.lazy_create(install_name=install_name)
+        second_distro = Distro.lazy_create(install_name=install_name)
+        session.flush()
+        self.assert_(first_distro is second_distro)
+        self.assertEquals(Distro.query.filter_by(install_name=install_name).count(), 1)
+
 class TestSystem(unittest.TestCase):
 
     def setUp(self):
