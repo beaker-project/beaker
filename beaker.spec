@@ -16,7 +16,7 @@
 
 Name:           beaker
 Version:        0.8.0
-Release:        11%{?dist}
+Release:        12%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -341,6 +341,10 @@ fi
 %endif
 
 %changelog
+* Tue Nov 15 2011 Bill Peck <bpeck@redhat.com> 0.8.0-12
+- 753976 beakerd cannot abort recipes: RequestRequiredException
+  (bpeck@redhat.com)
+
 * Tue Nov 15 2011 Dan Callaghan <dcallagh@redhat.com> 0.8.0-11
 - Revert fix for bug 752869: "race condition when adding distros"
   (dcallagh@redhat.com)
