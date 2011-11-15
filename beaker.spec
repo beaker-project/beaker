@@ -16,7 +16,7 @@
 
 Name:           beaker
 Version:        0.8.0
-Release:        10%{?dist}
+Release:        11%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -341,6 +341,10 @@ fi
 %endif
 
 %changelog
+* Tue Nov 15 2011 Dan Callaghan <dcallagh@redhat.com> 0.8.0-11
+- Revert fix for bug 752869: "race condition when adding distros"
+  (dcallagh@redhat.com)
+
 * Fri Nov 11 2011 Dan Callaghan <dcallagh@redhat.com> 0.8.0-10
 - 752869 race condition when adding distros (bpeck@redhat.com)
 - clean up lab controller logging (dcallagh@redhat.com)
