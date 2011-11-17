@@ -2970,7 +2970,7 @@ class Watchdog(MappedObject):
                 )
 
         if op and fop:
-            return cls.query.join('system').join(['recipe','recipeset']).filter(my_filter)
+            return cls.query.join(Watchdog.system).join(Watchdog.recipe, Recipe.recipeset).filter(my_filter)
                                                                                  
 
 class LabInfo(SystemObject):
@@ -4303,6 +4303,10 @@ class Job(TaskBase):
     def t_id(self):
         return "J:%s" % self.id
     t_id = property(t_id)
+
+    @property
+    def link(self):
+        return make_link(url='/jobs/%s' % self.id, text=self.t_id)
 
     def can_admin(self, user=None):
         """Returns True iff the given user can administer this Job."""
