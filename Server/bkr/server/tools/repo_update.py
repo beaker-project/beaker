@@ -92,7 +92,7 @@ def update_repos(baseurl, basepath):
         except Exception, e:
             print >>sys.stderr, str(e)
             continue
-        cmd = "pushd %s && createrepo -q ." % dest
+        cmd = "pushd %s && createrepo -q --checksum sha ." % dest
         print cmd
         os.system(cmd)
 

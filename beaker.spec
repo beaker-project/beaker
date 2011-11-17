@@ -16,7 +16,7 @@
 
 Name:           beaker
 Version:        0.8.0
-Release:        6%{?dist}
+Release:        15%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -344,6 +344,50 @@ fi
 %endif
 
 %changelog
+* Thu Nov 17 2011 Dan Callaghan <dcallagh@redhat.com> 0.8.0-15
+- 754553 beaker-repo-update creates repos that won't work on rhel5
+  (bpeck@redhat.com)
+- 746752 beaker-transfer ignores os.link errors (bpeck@redhat.com)
+- 746752 add logging to upload.py (bpeck@redhat.com)
+- 752869 avoid races in MappedObject.lazy_create (dcallagh@redhat.com)
+
+* Tue Nov 15 2011 Bill Peck <bpeck@redhat.com> 0.8.0-14
+- rename rhts_lab_import to beaker_lab_import (bpeck@redhat.com)
+
+* Tue Nov 15 2011 Bill Peck <bpeck@redhat.com> 0.8.0-13
+- 754133 RHEL5 kickstarts don't support --cost option to repo command
+  (bpeck@redhat.com)
+
+* Tue Nov 15 2011 Bill Peck <bpeck@redhat.com> 0.8.0-12
+- 753976 beakerd cannot abort recipes: RequestRequiredException
+  (bpeck@redhat.com)
+
+* Tue Nov 15 2011 Dan Callaghan <dcallagh@redhat.com> 0.8.0-11
+- Revert fix for bug 752869: "race condition when adding distros"
+  (dcallagh@redhat.com)
+
+* Fri Nov 11 2011 Dan Callaghan <dcallagh@redhat.com> 0.8.0-10
+- 752869 race condition when adding distros (bpeck@redhat.com)
+- clean up lab controller logging (dcallagh@redhat.com)
+- timed handling of session renewal for qpid (rmancy@redhat.com)
+- 749551 try except handling in wrong place for beaker-watchdog
+  (bpeck@redhat.com)
+
+* Tue Nov 08 2011 Bill Peck <bpeck@redhat.com> 0.8.0-9
+- add --quiet option to bkr workflows to not print ignored tasks
+  (bpeck@redhat.com)
+- 751868 osversion.trigger can fail to add a new distro (bpeck@redhat.com)
+- Don't iterate ignored profiles. (bpeck@redhat.com)
+
+* Mon Nov 07 2011 Dan Callaghan <dcallagh@redhat.com> 0.8.0-8
+- 746774 correctly handle multiple status changes within the same second
+  (dcallagh@redhat.com)
+
+* Thu Nov 03 2011 Bill Peck <bpeck@redhat.com> 0.8.0-7
+- 750428 workaround to force TGMochiKit to be always initialised
+  (dcallagh@redhat.com)
+- beaker-osversion will die on inherited profiles (bpeck@redhat.com)
+
 * Wed Nov 02 2011 Raymond Mancy <rmancy@redhat.com> 0.8.0-6
 - upgrade to sqlalchemy 0.6, TurboGears 1.1, Python 2.6 for server and lab
   controller (dcallagh@redhat.com)

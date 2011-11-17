@@ -24,10 +24,7 @@ class SchedulerProxy(object):
                                            allow_none=True)
 
     def add_distro(self, distro):
-        if distro.has_changed or self.force:
-            return self.proxy.addDistro(distro.flatten)
-        else:
-            return False
+        return self.proxy.addDistro(distro.flatten)
 
     def run_distro_test_job(self, distro):
         if self.is_add_distro_cmd and \
@@ -147,10 +144,6 @@ class Profile(object):
         return False
 
     @property
-    def is_ignore(self):
-        return self.profile.get('comment','').find('ignore') != -1
-
-    @property
     def is_xen(self):
         return self.distro.get('name').find('-xen-') != -1
 
@@ -166,7 +159,10 @@ class Profile(object):
         return self.lab.cobbler.get_profile_handle(profile_name)
 
     def get_distro(self, distro_name):
-        return self.lab.cobbler.get_distro(distro_name)
+        distro = self.lab.cobbler.get_distro(distro_name)
+        if distro == '~':
+            raise ProfileDecodeError("Invalid Distro %s" % distro_name)
+        return distro
 
     def modify_profile(self, profile_id, profile_key, profile_value):
         self.has_changed = True
@@ -255,7 +251,7 @@ class Profile(object):
         Accepts distro dictionary
         Returns the path where .treeinfo lives or None
         """
- 
+
         kerneldir = self.distro.get('kernel')
         while kerneldir != '/' and kerneldir != '':
             if os.path.exists('%s/.treeinfo' % kerneldir):
@@ -440,11 +436,12 @@ class Profiles(object):
     def __iter__(self):
         if self.profiles:
             for profile in self.profiles:
+                if 'ignore' in profile.get('comment', ''):
+                    continue
                 try:
                     yield Profile(profile, self.lab)
                 except ProfileDecodeError, e:
                     sys.stderr.write("WARN: Profile %s, %s\n" % (profile.get('name'),e))
-
 
 class CaptureProfile(object):
     def __init__(self, test_output_dir):
@@ -562,11 +559,6 @@ class LabProxy(object):
             # Skip trees without treename
             if not profile.has_rcm_treename:
                 print "\tSkipping, no treename"
-                continue
-
-            # Skip ignored Distros
-            if profile.is_ignore:
-                print "\tProfile['comment'] == 'ignore', Skipping."
                 continue
 
             # Skip xen Distros

@@ -64,7 +64,6 @@ timezone  $getVar('timezone', 'America/New_York')
 # Install OS instead of upgrade
 install
 
-$SNIPPET("anaconda_repos")
 $SNIPPET("rhts_scsi_ethdevices")
 $SNIPPET("rhts_partitions")
 $SNIPPET("RedHatEnterpriseLinuxClient5")
