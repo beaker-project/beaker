@@ -16,7 +16,7 @@
 
 Name:           beaker
 Version:        0.8.0
-Release:        14%{?dist}
+Release:        15%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -341,6 +341,13 @@ fi
 %endif
 
 %changelog
+* Thu Nov 17 2011 Dan Callaghan <dcallagh@redhat.com> 0.8.0-15
+- 754553 beaker-repo-update creates repos that won't work on rhel5
+  (bpeck@redhat.com)
+- 746752 beaker-transfer ignores os.link errors (bpeck@redhat.com)
+- 746752 add logging to upload.py (bpeck@redhat.com)
+- 752869 avoid races in MappedObject.lazy_create (dcallagh@redhat.com)
+
 * Tue Nov 15 2011 Bill Peck <bpeck@redhat.com> 0.8.0-14
 - rename rhts_lab_import to beaker_lab_import (bpeck@redhat.com)
 
