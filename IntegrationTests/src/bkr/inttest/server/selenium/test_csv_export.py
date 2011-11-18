@@ -4,6 +4,7 @@
 from turbogears.database import session
 from bkr.inttest import data_setup, get_server_base
 from bkr.inttest.server.selenium import WebDriverTestCase
+from bkr.inttest.server.webdriver_utils import login, click_submenu_item
 from bkr.server.model import Provision, ProvisionFamily, ProvisionFamilyUpdate
 import csv
 import requests
@@ -17,8 +18,8 @@ class CSVExportTest(WebDriverTestCase):
         self.browser.quit()
 
     def get_csv(self, csv_type):
-        self.click_submenu_item('Reports', 'CSV')
         b = self.browser
+        click_submenu_item(b, 'Reports', 'CSV')
         b.find_element_by_xpath('//input[@name="csv_type" and @value="%s"]' % csv_type).click()
         # XXX We can't actually submit the form here, because the browser will 
         # show us a download dialog which WebDriver can't handle. So we just 
@@ -50,7 +51,7 @@ class CSVExportTest(WebDriverTestCase):
                     kernel_options_post=u'some_kernel_option=6')
         session.flush()
 
-        self.login()
+        login(self.browser)
         csv_request = self.get_csv('install')
         csv_rows = [row for row in csv.DictReader(csv_request) if row['fqdn'] == system.fqdn]
         self.assertEquals(csv_rows[0]['arch'], 'i386')
@@ -91,7 +92,7 @@ class CSVExportTest(WebDriverTestCase):
                     kernel_options_post=u'some_kernel_option=8')
         session.flush()
 
-        self.login()
+        login(self.browser)
         csv_request = self.get_csv('install')
         csv_rows = [row for row in csv.DictReader(csv_request) if row['fqdn'] == system.fqdn]
         self.assertEquals(csv_rows[0]['arch'], 'i386')
@@ -116,7 +117,7 @@ class CSVExportTest(WebDriverTestCase):
     def test_export_systems_unicode(self):
         system = data_setup.create_system(lender=u'Möbius')
         session.flush()
-        self.login()
+        login(self.browser)
         csv_request = self.get_csv('system')
         csv_rows = [row for row in csv.DictReader(csv_request) if row['fqdn'] == system.fqdn]
         self.assertEquals(csv_rows[0]['lender'].decode('utf8'), u'Möbius')
