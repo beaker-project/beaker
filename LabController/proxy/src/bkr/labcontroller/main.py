@@ -59,12 +59,12 @@ def main_loop(conf=None, foreground=False):
     signal.signal(signal.SIGTERM, daemon_shutdown)
 
     # set up logging
+    log_level_string = conf["LOG_LEVEL"]
+    log_level = getattr(logging, log_level_string.upper(), logging.DEBUG)
+    logging.getLogger().setLevel(log_level)
     if foreground:
-        add_stderr_logger(logging.getLogger())
+        add_stderr_logger(logging.getLogger(), log_level=log_level)
     else:
-        log_level_string = conf["LOG_LEVEL"]
-        log_level = getattr(logging, log_level_string.upper(), logging.DEBUG)
-        logging.getLogger().setLevel(log_level)
         log_file = conf["LOG_FILE"]
         add_rotating_file_logger(logging.getLogger(), log_file,
                 log_level=log_level, format=conf["VERBOSE_LOG_FORMAT"])
