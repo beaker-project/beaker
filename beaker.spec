@@ -16,7 +16,7 @@
 
 Name:           beaker
 Version:        0.8.0
-Release:        15%{?dist}
+Release:        16%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -341,6 +341,10 @@ fi
 %endif
 
 %changelog
+* Tue Nov 22 2011 Bill Peck <bpeck@redhat.com> 0.8.0-16
+- Revert "avoid races in MappedObject.lazy_create" (dcallagh@redhat.com)
+- 752869 work around race condition in Distro.lazy_create (dcallagh@redhat.com)
+
 * Thu Nov 17 2011 Dan Callaghan <dcallagh@redhat.com> 0.8.0-15
 - 754553 beaker-repo-update creates repos that won't work on rhel5
   (bpeck@redhat.com)
