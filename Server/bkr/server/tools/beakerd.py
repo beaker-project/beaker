@@ -483,13 +483,15 @@ def scheduled_recipes(*args):
                                                        ":".join([p.package for p in recipe.packages]))
                 customrepos= "|".join(["%s,%s" % (r.name, r.url) for r in recipe.repos])
                 ks_meta = "%s customrepos=%s harnessrepo=%s taskrepo=%s" % (ks_meta, customrepos, harnessrepo, taskrepo)
+                user = recipe.recipeset.job.owner
+                if user.root_password:
+                    ks_meta = "password=%s %s" % (user.root_password, ks_meta)
                 # If ks_meta is defined from recipe pass it along.
                 # add it last to allow for overriding previous settings.
                 if recipe.ks_meta:
                     ks_meta = "%s %s" % (ks_meta, recipe.ks_meta)
                 if recipe.partitionsKSMeta:
                     ks_meta = "%s partitions=%s" % (ks_meta, recipe.partitionsKSMeta)
-                user = recipe.recipeset.job.owner
                 if user.sshpubkeys:
                     end = recipe.distro and recipe.distro.osversion.osmajor.osmajor.startswith("Fedora")
                     key_ks = [user.ssh_keys_ks(end)]

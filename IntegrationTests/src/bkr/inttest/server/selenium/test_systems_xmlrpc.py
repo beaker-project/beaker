@@ -24,6 +24,7 @@ import logging
 import time
 import datetime
 import xmlrpclib
+import crypt
 from turbogears.database import session
 
 from bkr.inttest.server.selenium import XmlRpcTestCase
@@ -466,6 +467,18 @@ class SystemProvisionXmlRpcTest(XmlRpcTestCase):
         snippet_filename = '/var/lib/cobbler/snippets/per_system/ks_appends/%s' % system.fqdn
         self.assert_('man@moon' in
                 self.stub_cobbler_thread.cobbler.snippets[snippet_filename])
+
+    def test_provision_root_password(self):
+        system = self.usable_system
+        user = system.user
+        user.root_password = 'gyfrinachol'
+        session.flush()
+        self.server.auth.login_password(user.user_name, 'password')
+        self.server.systems.provision(system.fqdn, self.distro.install_name,
+                'method=nfs', 'noapic', 'noapic runlevel=3', '')
+        self.assert_(crypt.crypt('gyfrinachol', user.root_password) ==
+                     self.stub_cobbler_thread.cobbler.systems[system.fqdn]['ksmeta']['password'])
+
 
 class LegacyPushXmlRpcTest(XmlRpcTestCase):
 

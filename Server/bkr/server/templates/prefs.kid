@@ -11,7 +11,7 @@
 <body class="flora">
 
 <div py:for="form in forms">
-  <p py:content="form(method='GET', action=tg.url(form.action), value=value, options=options)">Form goes here</p>
+  <p py:content="form(method='POST', action=tg.url(form.action), value=value, options=options)">Form goes here</p>
 </div>
 
 <div>

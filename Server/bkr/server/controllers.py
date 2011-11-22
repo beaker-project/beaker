@@ -61,10 +61,10 @@ from bkr.server import mail
 from decimal import Decimal
 import bkr.server.recipes
 import bkr.server.rdf
-import random
 import urllib
 from kid import Element
 import cherrypy
+from hashlib import md5
 import re
 import string
 import pkg_resources
@@ -224,15 +224,16 @@ class Root(RPCRoot):
     id         = widgets.HiddenField(name='id')
     submit     = widgets.SubmitButton(name='submit')
 
-    email      = widgets.TextField(name='email_address', label='Email Address') 
+    email      = widgets.TextField(name='email_address', label='Email Address')
+    root_password = widgets.TextField(name='root_password', label='Root Password')
     autoUsers  = widgets.AutoCompleteTextField(name='user',
                                            search_controller=url("/users/by_name"),
                                            search_param="input",
                                            result_name="matches")
-    
+
     prefs_form   = widgets.TableForm(
         'UserPrefs',
-        fields = [email],
+        fields = [email, root_password],
         action = 'save_prefs',
         submit_text = _(u'Change'),
     )
@@ -253,9 +254,9 @@ class Root(RPCRoot):
         action = 'save_data',
         submit_text = _(u'Change'),
         validator=OwnerFormValidatorSchema(),
-    )  
+    )
 
-    sshkey     = widgets.TextArea(name='ssh_pub_key', label='Public SSH Key') 
+    sshkey     = widgets.TextArea(name='ssh_pub_key', label='Public SSH Key')
 
     class SSHKeyAddFormValidatorSchema(validators.Schema):
         pubkey = validators.NotEmpty()
@@ -449,11 +450,23 @@ class Root(RPCRoot):
     @expose()
     @identity.require(identity.not_anonymous())
     def save_prefs(self, *args, **kw):
-        email = kw.get('email_address',None) 
+        email = kw.get('email_address', None) 
+        root_password = kw.get('root_password', None) 
+        changes = []
         
         if email and email != identity.current.user.email_address:
-            flash(_(u"Email Address Changed"))
+            changes.append("Email address changed")
             identity.current.user.email_address = email
+
+        if identity.current.user.root_password and not root_password:
+            identity.current.user.root_password = None
+            changes.append("Test host root password cleared")
+        elif root_password and root_password != identity.current.user.root_password:
+            identity.current.user.root_password = root_password
+            changes.append("Test host root password hash changed")
+
+        if changes:
+            flash(_(u', '.join(changes)))
         redirect('/prefs')
 
     @expose()

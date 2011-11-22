@@ -16,3 +16,17 @@ Add deleted entry for note table
 To roll back:
 
     ALTER TABLE note DROP COLUMN deleted;
+
+Add password field to user profile (bug 541280)
+----------------------------------------------
+
+Add the database column:
+
+    ALTER TABLE tg_user
+        ADD COLUMN(`root_password` VARCHAR(255) DEFAULT NULL),
+        ADD COLUMN(`rootpw_changed` DATETIME DEFAULT NULL);
+
+To roll back:
+
+    ALTER TABLE tg_user DROP COLUMN root_password,
+                        DROP COLUMN rootpw_changed;

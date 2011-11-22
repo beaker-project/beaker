@@ -41,6 +41,9 @@ import shutil
 import urllib
 import urlparse
 import posixpath
+import crypt
+import random
+import string
 
 from turbogears import identity
 
@@ -499,6 +502,8 @@ users_table = Table('tg_user', metadata,
     Column('email_address', Unicode(255), unique=True),
     Column('display_name', Unicode(255)),
     Column('password', Unicode(40)),
+    Column('root_password', String(255), nullable=True, default=None),
+    Column('rootpw_changed', DateTime, nullable=True, default=None),
     Column('created', DateTime, default=datetime.utcnow),
     Column('disabled', Boolean, nullable=False, default=False),
     Column('removed', DateTime, nullable=True, default=None),
@@ -1335,6 +1340,25 @@ class User(MappedObject):
         return self._password
 
     password = property(_get_password, _set_password)
+
+    def _set_root_password(self, password):
+        "Set the password to be used for root on provisioned systems, hashing if necessary"
+        if password:
+            if len(password.split('$')) != 4:
+                salt = ''.join([random.choice(string.digits + string.ascii_letters)
+                                for i in range(8)])
+                self._root_password = crypt.crypt(password, "$1$%s$" % salt)
+            else:
+                self._root_password = password
+            self.rootpw_changed = datetime.utcnow()
+        else:
+            self._root_password = None
+            self.rootpw_changed = None
+
+    def _get_root_password(self):
+        return self._root_password
+
+    root_password = property(_get_root_password, _set_root_password)
 
     def __repr__(self):
         return self.user_name
@@ -6464,6 +6488,7 @@ mapper(VisitIdentity, visit_identity_table, properties={
 mapper(User, users_table,
         properties={
       '_password' : users_table.c.password,
+      '_root_password' : users_table.c.root_password,
       'lab_controller' : relation(LabController, uselist=False),
 })
 
