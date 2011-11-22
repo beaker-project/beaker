@@ -2868,6 +2868,8 @@ class OSVersion(MappedObject):
         self.osminor = osminor
         if arches:
             self.arches = arches
+        else:
+            self.arches = []
 
     @classmethod
     def by_id(cls, id):
@@ -6393,6 +6395,9 @@ mapper(Distro, distro_table,
                                        backref='distros'),
                       'lab_controller_assocs':relation(LabControllerDistro, backref='distro',
                                                        cascade='all, delete-orphan'),
+                      'activity': relation(DistroActivity,
+                        order_by=[activity_table.c.created.desc(), activity_table.c.id.desc()],
+                        backref='object',),
     })
 mapper(Breed, breed_table)
 mapper(DistroTag, distro_tag_table)
@@ -6447,9 +6452,7 @@ mapper(GroupActivity, group_activity_table, inherits=Activity,
                          backref='activity')))
 
 mapper(DistroActivity, distro_activity_table, inherits=Activity,
-       polymorphic_identity=u'distro_activity',
-       properties=dict(object=relation(Distro, uselist=False,
-                         backref='activity')))
+       polymorphic_identity=u'distro_activity')
 
 mapper(CommandActivity, command_queue_table, inherits=Activity,
        polymorphic_identity=u'command_activity',

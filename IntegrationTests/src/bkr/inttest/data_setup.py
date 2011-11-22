@@ -82,6 +82,7 @@ def create_labcontroller(fqdn=None, user=None):
             user = create_user()
             session.flush()
         lc = LabController.lazy_create(fqdn=fqdn, user=user)
+        user.groups.append(Group.by_name(u'lab_controller'))
         # username/password to login into stub_cobbler
         # Doesn't matter what it is, just can't be None or we 
         # Will get cannot marshal none errors.

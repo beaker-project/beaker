@@ -24,7 +24,16 @@ class SchedulerProxy(object):
                                            allow_none=True)
 
     def add_distro(self, distro):
-        return self.proxy.addDistro(distro.flatten)
+        try:
+            self.proxy.register_distro(distro.flatten['name'])
+        except xmlrpclib.Fault, e:
+            # This is a hack to work around a race condition in Distro.lazy_create.
+            # Remove this hack when that method is fixed.
+            if 'IntegrityError' in e.faultString:
+                pass
+            else:
+                raise
+        return self.proxy.add_distro(distro.flatten)
 
     def run_distro_test_job(self, distro):
         if self.is_add_distro_cmd and \
