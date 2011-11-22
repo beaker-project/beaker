@@ -1620,6 +1620,7 @@ class JobActionWidget(RecipeTaskActionWidget):
     params = ['redirect_to']
     action = url('/jobs/delete_job_from_ui')
     javascript = [LocalJSLink('bkr', '/static/javascript/job_delete.js'),
+        LocalJSLink('bkr', '/static/javascript/util.js'),
         LocalJSLink('bkr', '/static/javascript/job_row_delete.js')]
 
     def __init__(self, *args, **kw):
@@ -1647,6 +1648,7 @@ class JobActionWidget(RecipeTaskActionWidget):
 class JobPageActionWidget(JobActionWidget):
     params = []
     javascript = [LocalJSLink('bkr', '/static/javascript/job_delete.js'),
+        LocalJSLink('bkr', '/static/javascript/util.js'),
         LocalJSLink('bkr', '/static/javascript/job_page_delete.js')]
 
     def __init__(self, *args, **kw):

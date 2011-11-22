@@ -156,7 +156,9 @@
                                     <para><application>Notes</application>
                                     <itemizedlist>
                                        <listitem>
-                                        <para>These are default options which will be used when a system is provisioned. You can create different options per Arch/Distro combination.
+                                        <para>
+                                          Any info about the system that you want others to see and doesn't fit in anywhere else. If you have admin rights over the system
+                                          you will be able to add and delete notes, as well as show previously deleted notes.
                                         </para>
                                        </listitem>
                                       </itemizedlist>
@@ -166,7 +168,7 @@
                                     <para><application>Install Options</application>
                                      <itemizedlist>
                                        <listitem>
-                                        <para>Any info about the system that you want others to see and doesn't fit in anywhere else. 
+                                        <para>These are default options which will be used when a system is provisioned. You can create different options per Arch/Distro combination.
                                         </para>
                                        </listitem>
                                       </itemizedlist>
