@@ -8,7 +8,6 @@ class ListLabcontrollersTest(unittest.TestCase):
 
     def setUp(self):
         self.lc = data_setup.create_labcontroller()
-        session.flush()
 
     def test_list_lab_controller(self):
         out = run_client(['bkr', 'list-labcontrollers'])
