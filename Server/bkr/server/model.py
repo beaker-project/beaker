@@ -729,8 +729,8 @@ job_table = Table('job',metadata,
                 ForeignKey('task_result.id')),
         Column('status_id', Integer,
                 ForeignKey('task_status.id'), default=select([task_status_table.c.id], limit=1).where(task_status_table.c.status==u'New').correlate(None)),
-        Column('deleted', DateTime, default=None),
-        Column('to_delete', DateTime, default=None),
+        Column('deleted', DateTime, default=None, index=True),
+        Column('to_delete', DateTime, default=None, index=True),
         # Total tasks
 	Column('ttasks', Integer, default=0),
         # Total Passing tasks

@@ -41,3 +41,17 @@ To roll back:
 
     ALTER TABLE command_queue
         DROP COLUMN callback;
+
+
+Index job.deleted and job.to_delete columns
+-------------------------------------------
+
+    ALTER TABLE job
+        ADD INDEX ix_job_deleted (deleted),
+        ADD INDEX ix_job_to_delete (to_delete);
+
+To roll back:
+
+    ALTER TABLE job
+        DROP INDEX ix_job_deleted,
+        DROP INDEX ix_job_to_delete;
