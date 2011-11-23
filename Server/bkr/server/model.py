@@ -813,8 +813,8 @@ recipe_set_table = Table('recipe_set',metadata,
 
 log_recipe_table = Table('log_recipe', metadata,
         Column('id', Integer, primary_key=True),
-        Column('recipe_id', Integer,
-                ForeignKey('recipe.id')),
+        Column('recipe_id', Integer, ForeignKey('recipe.id'),
+            nullable=False),
         Column('path', UnicodeText()),
         Column('filename', UnicodeText(), nullable=False),
         Column('start_time',DateTime, default=datetime.utcnow),
@@ -825,8 +825,8 @@ log_recipe_table = Table('log_recipe', metadata,
 
 log_recipe_task_table = Table('log_recipe_task', metadata,
         Column('id', Integer, primary_key=True),
-        Column('recipe_task_id', Integer,
-                ForeignKey('recipe_task.id')),
+        Column('recipe_task_id', Integer, ForeignKey('recipe_task.id'),
+            nullable=False),
         Column('path', UnicodeText()),
         Column('filename', UnicodeText(), nullable=False),
         Column('start_time',DateTime, default=datetime.utcnow),
@@ -838,7 +838,7 @@ log_recipe_task_table = Table('log_recipe_task', metadata,
 log_recipe_task_result_table = Table('log_recipe_task_result', metadata,
         Column('id', Integer, primary_key=True),
         Column('recipe_task_result_id', Integer,
-                ForeignKey('recipe_task_result.id')),
+                ForeignKey('recipe_task_result.id'), nullable=False),
         Column('path', UnicodeText()),
         Column('filename', UnicodeText(), nullable=False),
         Column('start_time',DateTime, default=datetime.utcnow),
@@ -3936,6 +3936,20 @@ class Job(TaskBase):
             query = query.filter(Job.owner==identity.current.user)
             return query
 
+    def delete(self):
+        """Deletes entries relating to a Job and it's children
+
+            currently only removes log entries of a job and child tasks and marks
+            the job as deleted.
+            It does not delete other mapped relations or the job row itself.
+            it does not remove log FS entries
+
+
+        """
+        for rs in self.recipesets:
+            rs.delete()
+        self.deleted = datetime.utcnow()
+
     def counts_as_deleted(self):
         return self.deleted or self.to_delete
 
@@ -4335,6 +4349,10 @@ class RecipeSet(TaskBase):
             return_node = job
         return return_node
 
+    def delete(self):
+        for r in self.recipes:
+            r.delete()
+
     @classmethod
     def allowed_priorities_initial(cls,user):
         if not user:
@@ -4584,37 +4602,13 @@ class Recipe(TaskBase):
                 logs_to_return.extend(rt_log)
         return logs_to_return
 
-    def delete(self, dryrun, *args, **kw):
+    def delete(self):
         """
         How we delete a Recipe.
         """
-        full_recipe_logpath = '%s/%s' % (self.logspath, self.filepath)
-        if dryrun is True:
-            if not (os.access(full_recipe_logpath,os.R_OK)): #See if it exists
-                return None
-            elif not (os.access(full_recipe_logpath,os.W_OK)): #See if we can write it
-                raise BX(_(u'Incorrect perms to delete %s:' % full_recipe_logpath))
-            else:
-                return full_recipe_logpath #success
-        else:
-            try:
-                shutil.rmtree(full_recipe_logpath)
-                return_val = full_recipe_logpath
-            except OSError, e:
-                if e.errno == errno.ENOENT: #File/Dir does not exist
-                    pass #Maybe the logs don't exist?? Carry on...
-                    return_val = None
-                elif e.errno == errno.EACCES: #Incorrect perms
-                    raise BX(_(u'Incorrect perms to delete %s:' % full_recipe_logpath))
-                else:
-                    raise BX(_(u'Received unexpected error: %s' % e.errstr))
-
-            self.logs = []
-
-            for task in self.tasks:
-                task_to_delete = RecipeTask.by_id(task.id)
-                task_to_delete.delete()
-            return return_val
+        self.logs = []
+        for task in self.tasks:
+            task.delete()
 
     def task_repo(self):
         if self.distro:
@@ -6428,7 +6422,7 @@ mapper(Recipe, recipe_table,
                                       backref='recipes'),
                       'repos':relation(RecipeRepo),
                       'rpms':relation(RecipeRpm, backref='recipe'),
-                      'logs':relation(LogRecipe, backref='parent'),
+                      'logs':relation(LogRecipe, backref='parent', cascade='delete, delete-orphan'),
                       '_roles':relation(RecipeRole),
                       'custom_packages':relation(TaskPackage,
                                         secondary=task_packages_custom_map),
@@ -6458,7 +6452,7 @@ mapper(RecipeTask, recipe_task_table,
                                            backref='recipetask'),
                       'task':relation(Task, uselist=False, backref='runs'),
                       '_roles':relation(RecipeTaskRole),
-                      'logs':relation(LogRecipeTask, backref='parent'),
+                      'logs':relation(LogRecipeTask, backref='parent', cascade='delete, delete-orphan'),
                       'watchdog':relation(Watchdog, uselist=False),
                      }
       )
@@ -6477,7 +6471,8 @@ mapper(RecipeTaskComment, recipe_task_comment_table,
 mapper(RecipeTaskBugzilla, recipe_task_bugzilla_table)
 mapper(RecipeTaskRpm, recipe_task_rpm_table)
 mapper(RecipeTaskResult, recipe_task_result_table,
-        properties = {'logs':relation(LogRecipeTaskResult, backref='parent'),
+        properties = {'logs':relation(LogRecipeTaskResult, backref='parent',
+                           cascade='delete, delete-orphan'),
                      }
       )
 mapper(Reservation, reservation_table, properties={

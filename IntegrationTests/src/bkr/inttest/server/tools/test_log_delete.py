@@ -1,5 +1,5 @@
 import unittest, datetime, os, errno, shutil
-from bkr.server.model import LogRecipe, TaskBase
+from bkr.server.model import LogRecipe, TaskBase, Job
 from bkr.inttest import data_setup, with_transaction
 from bkr.server.tools import log_delete
 from turbogears.database import session
@@ -26,6 +26,15 @@ class LogDelete(unittest.TestCase):
             else:
                 raise
 
+    def _assert_logs_not_in_db(self, job):
+        for rs in job.recipesets:
+            for r in rs.recipes:
+                self.assert_(r.logs == [])
+                for rt in r.tasks:
+                    self.assert_(rt.logs == [])
+                    for rtr in rt.results:
+                        self.assert_(rtr.logs == [])
+
     def test_log_not_delete(self):
         # Job that is not within it's expiry time
         with session.begin():
@@ -38,9 +47,9 @@ class LogDelete(unittest.TestCase):
         self.make_dir(dir_not_delete)
         ft = open(os.path.join(dir_not_delete,'test.log'), 'w')
         ft.close()
-
+        session.flush()
         log_delete.log_delete()
-
+        self.assertRaises(AssertionError, self._assert_logs_not_in_db, self.job_to_delete)
         try:
             self.check_dir_not_there(dir_not_delete)
             raise Exception('%s was deleted when it shold not have been' % dir_not_delete)
@@ -52,11 +61,8 @@ class LogDelete(unittest.TestCase):
             job_to_delete = data_setup.create_completed_job(
                     start_time=datetime.datetime.utcnow() - datetime.timedelta(days=60),
                     finish_time=datetime.datetime.utcnow() - datetime.timedelta(days=31))
-
             self.job_to_delete.owner = self.user
-
             job_to_delete.recipesets[0].recipes[0].logs.append(LogRecipe(filename=u'test.log'))
-
             r_delete = job_to_delete.recipesets[0].recipes[0]
             dir_delete = os.path.join(r_delete.logspath ,r_delete.filepath)
 
@@ -64,6 +70,7 @@ class LogDelete(unittest.TestCase):
         fd = open(os.path.join(dir_delete,'test.log'), 'w')
         fd.close()
         log_delete.log_delete()
+        self._assert_logs_not_in_db(Job.by_id(job_to_delete.id))
         self.check_dir_not_there(dir_delete)
 
     def test_log_delete_to_delete(self):
@@ -78,5 +85,6 @@ class LogDelete(unittest.TestCase):
         f = open(os.path.join(dir,'test.log'), 'w')
         f.close()
         log_delete.log_delete()
+        self._assert_logs_not_in_db(Job.by_id(job_to_delete.id))
         self.check_dir_not_there(dir)
 
