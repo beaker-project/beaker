@@ -6,3 +6,13 @@ Fix log_server column length
 To roll back:
 
     ALTER TABLE recipe MODIFY log_server VARCHAR(256) NULL;
+
+
+Add deleted entry for note table
+--------------------------------
+
+    ALTER TABLE note ADD COLUMN (deleted datetime default NULL);
+
+To roll back:
+
+    ALTER TABLE note DROP COLUMN deleted;
