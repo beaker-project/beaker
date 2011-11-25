@@ -1430,7 +1430,13 @@ class Permission(MappedObject):
     A relationship that determines what each Group can do
     """
     @classmethod
-    def by_name(cls, permission_name):
+    def by_id(cls, id):
+      return cls.query.filter_by(permission_id=id).one()
+
+    @classmethod
+    def by_name(cls, permission_name, anywhere=False):
+        if anywhere:
+            return cls.query.filter(cls.permission_name.like('%%%s%%' % permission_name)).all()
         return cls.query.filter(cls.permission_name == permission_name).one()
 
     def __init__(self, permission_name):

@@ -132,6 +132,11 @@ def create_group(permissions=None):
         group.permissions.extend(Permission.by_name(name) for name in permissions)
     return group
 
+def create_permission(name=None):
+    if not name:
+        name = unique_name('permission%s')
+    return Permission(name)
+
 def add_user_to_group(user,group):
     user.groups.append(group)
 
