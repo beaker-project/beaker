@@ -462,8 +462,11 @@ class Root(RPCRoot):
             identity.current.user.root_password = None
             changes.append("Test host root password cleared")
         elif root_password and root_password != identity.current.user.root_password:
-            identity.current.user.root_password = root_password
-            changes.append("Test host root password hash changed")
+            try:
+                identity.current.user.root_password = root_password
+                changes.append("Test host root password hash changed")
+            except ValueError, msg:
+                changes.append("Root password not changed: %s" % msg)
 
         if changes:
             flash(_(u', '.join(changes)))

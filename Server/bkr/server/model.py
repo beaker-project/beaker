@@ -43,6 +43,7 @@ import posixpath
 import crypt
 import random
 import string
+import cracklib
 
 from turbogears import identity
 
@@ -1295,7 +1296,7 @@ class User(MappedObject):
             if len(password.split('$')) != 4:
                 salt = ''.join([random.choice(string.digits + string.ascii_letters)
                                 for i in range(8)])
-                self._root_password = crypt.crypt(password, "$1$%s$" % salt)
+                self._root_password = crypt.crypt(cracklib.VeryFascistCheck(password), "$1$%s$" % salt)
             else:
                 self._root_password = password
             self.rootpw_changed = datetime.utcnow()

@@ -623,5 +623,19 @@ class DistroSystemsFilterTest(unittest.TestCase):
         self.assert_(baremetal in systems)
         self.assert_(kvm in systems)
 
+class UserTest(unittest.TestCase):
+
+    def setUp(self):
+        self.user = data_setup.create_user()
+        session.flush()
+
+    def test_dictionary_password_rejected(self):
+        user = data_setup.create_user()
+        try:
+            user.root_password = "password"
+            self.fail('should raise')
+        except ValueError:
+            pass
+
 if __name__ == '__main__':
     unittest.main()

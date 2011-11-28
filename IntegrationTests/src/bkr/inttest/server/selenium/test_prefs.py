@@ -12,6 +12,7 @@ class UserPrefs(SeleniumTestCase):
         self.selenium.start()
         self.clear_password = 'gyfrinachol'
         self.hashed_password = '$1$NaCl$O34mAzBXtER6obhoIodu8.'
+        self.simple_password = 's3cr3t'
 
     def test_set_plaintext_password(self):
         sel = self.selenium
@@ -39,6 +40,17 @@ class UserPrefs(SeleniumTestCase):
         self.failUnless('root password hash changed' in sel.get_text('css=.flash'))
         new_hash = sel.get_value('//input[@id="UserPrefs_root_password"]')
         self.failUnless(crypt.crypt(self.clear_password, new_hash) == self.hashed_password)
+
+    def test_dictionary_password_rejected(self):
+        sel = self.selenium
+        sel.open("")
+        self.login()
+        sel.click("link=Preferences")
+        sel.wait_for_page_to_load("3000")
+        sel.type("UserPrefs_root_password", "%s" % self.simple_password)
+        sel.click("//input[@value='Change']")
+        sel.wait_for_page_to_load("3000")
+        self.failUnless('Root password not changed' in sel.get_text('css=.flash'))
 
     def tearDown(self):
         self.selenium.stop()
