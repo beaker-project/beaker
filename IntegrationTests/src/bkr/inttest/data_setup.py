@@ -81,7 +81,8 @@ def create_labcontroller(fqdn=None, user=None):
         if user is None:
             user = create_user()
             session.flush()
-        lc = LabController(fqdn=fqdn, user=user)
+        lc = LabController.lazy_create(fqdn=fqdn, user=user)
+        user.groups.append(Group.by_name(u'lab_controller'))
         # username/password to login into stub_cobbler
         # Doesn't matter what it is, just can't be None or we 
         # Will get cannot marshal none errors.
@@ -99,7 +100,10 @@ def create_user(user_name=None, password=None, display_name=None,
         display_name = user_name
     if email_address is None:
         email_address = u'%s@example.com' % user_name
-    user = User.lazy_create(user_name=user_name)
+    # XXX use User.lazy_create
+    user = User.by_user_name(user_name)
+    if user is None:
+        user = User(user_name=user_name)
     user.display_name = display_name
     user.email_address = email_address
     if password:
@@ -150,7 +154,6 @@ def create_distro(name=None, breed=u'Dan',
     except NoResultFound:
         distro.osversion = OSVersion(osmajor, osminor, arches=[distro.arch])
     # make it available in all lab controllers
-    session.flush()
     for lc in LabController.query:
         distro.lab_controller_assocs.append(LabControllerDistro(lab_controller=lc))
     log.debug('Created distro %r', distro)

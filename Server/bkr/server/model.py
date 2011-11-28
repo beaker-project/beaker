@@ -11,10 +11,10 @@ from sqlalchemy import (Table, Column, Index, ForeignKey, UniqueConstraint,
                         or_, and_, not_, select, case, func)
 
 from sqlalchemy.orm import relation, backref, synonym, dynamic_loader, \
-        query, object_mapper, mapper, class_mapper, aliased
+        query, object_mapper, mapper
 from sqlalchemy.orm.interfaces import AttributeExtension
-from sqlalchemy.sql import exists, bindparam
-from sqlalchemy.sql.expression import join, Executable, ClauseElement
+from sqlalchemy.sql import exists
+from sqlalchemy.sql.expression import join
 from sqlalchemy.exceptions import InvalidRequestError
 from sqlalchemy.orm.exc import NoResultFound
 from identity import LdapSqlAlchemyIdentityProvider
@@ -22,7 +22,6 @@ from cobbler_utils import consolidate, string_to_hash
 from sqlalchemy.orm.collections import attribute_mapped_collection, MappedCollection, collection
 from sqlalchemy.util import OrderedDict
 from sqlalchemy.ext.associationproxy import association_proxy
-from sqlalchemy.ext.compiler import compiles
 import socket
 from xmlrpclib import ProtocolError
 import time
@@ -1131,72 +1130,20 @@ task_type_map = Table('task_type_map',metadata,
     mysql_engine='InnoDB',
 )
 
-# sqlalchemy doesn't support INSERT INTO ... SELECT, we have to define it ourselves :-(
-# http://www.sqlalchemy.org/docs/core/compiler.html#compiling-sub-elements-of-a-custom-expression-construct
-
-class InsertFromSelect(Executable, ClauseElement):
-    _execution_options = Executable._execution_options.union({'autocommit': True})
-    def __init__(self, table, columns, select):
-        self.table = table
-        self.columns = columns
-        self.select = select
-
-@compiles(InsertFromSelect)
-def _visit_insert_from_select(element, compiler, **kw):
-    return 'INSERT INTO %s (%s) %s' % (
-        compiler.process(element.table, asfrom=True),
-        ', '.join(compiler.preparer.format_column(column) for column in element.columns),
-        compiler.process(element.select),
-    )
-
-def insert_if_not_exists(table, column_values):
-    """
-    Returns a statement which will (atomically) insert a row with the given 
-    values if there is not already a matching row, or else do nothing if there 
-    is a matching row.
-
-    For column_values pass a list of (column, value) pairs.
-    """
-    # Some databases have non-standard syntax which can accomplish this, 
-    # but for portability we do it by inserting from a SELECT that produces 
-    # either zero or one rows, depending on whether a matching row exists:
-    #
-    #   INSERT INTO distro (install_name)
-    #   SELECT 'RHEL-6.0-Server-x86_64'
-    #       FROM distro AS whatever
-    #       LEFT OUTER JOIN distro
-    #           ON distro.install_name = 'RHEL-6.0-Server-x86_64'
-    #       WHERE distro.install_name IS NULL
-    #       LIMIT 1
-    #
-    # The table on the left-hand side of the join is irrelevant, but it must 
-    # have at least one row. Oracle has DUAL for this but that isn't portable. 
-    # We use the system_status table below, only because we can rely on it 
-    # being populated by beaker-init.
-    aliased_table = table.alias()
-    query = select([bindparam(column.name, value) for column, value in column_values],
-            from_obj=system_status_table.outerjoin(aliased_table, onclause=and_(
-                *[aliased_table.corresponding_column(column) == value
-                  for column, value in column_values])))\
-            .where(and_(*[aliased_table.corresponding_column(column) == None
-                          for column, value in column_values]))\
-            .limit(1)
-    return InsertFromSelect(table, [column for column, value in column_values], query)
-
 class MappedObject(object):
 
     query = session.query_property()
 
     @classmethod
     def lazy_create(cls, **kwargs):
-        """
-        Returns the instance identified by the given uniquely-identifying 
-        attributes. If it doesn't exist yet, it is inserted first.
-        """
-        insert_statement = insert_if_not_exists(class_mapper(cls).mapped_table,
-            [(getattr(cls, k).property.columns[0], v) for k, v in kwargs.iteritems()])
-        session.execute(insert_statement, mapper=class_mapper(cls))
-        return cls.query.filter_by(**kwargs).one()
+        item = None
+        try:
+            item = cls.query.filter_by(**kwargs).one()
+        except NoResultFound:
+            item = cls(**kwargs)
+            session.add(item)
+            session.flush([item])
+        return item
 
     def __init__(self, **kwargs):
         for k, v in kwargs.iteritems():
@@ -2943,6 +2890,8 @@ class OSVersion(MappedObject):
         self.osminor = osminor
         if arches:
             self.arches = arches
+        else:
+            self.arches = []
 
     @classmethod
     def by_id(cls, id):
@@ -6487,6 +6436,9 @@ mapper(Distro, distro_table,
                                        backref='distros'),
                       'lab_controller_assocs':relation(LabControllerDistro, backref='distro',
                                                        cascade='all, delete-orphan'),
+                      'activity': relation(DistroActivity,
+                        order_by=[activity_table.c.created.desc(), activity_table.c.id.desc()],
+                        backref='object',),
     })
 mapper(Breed, breed_table)
 mapper(DistroTag, distro_tag_table)
@@ -6542,9 +6494,7 @@ mapper(GroupActivity, group_activity_table, inherits=Activity,
                          backref='activity')))
 
 mapper(DistroActivity, distro_activity_table, inherits=Activity,
-       polymorphic_identity=u'distro_activity',
-       properties=dict(object=relation(Distro, uselist=False,
-                         backref='activity')))
+       polymorphic_identity=u'distro_activity')
 
 mapper(CommandActivity, command_queue_table, inherits=Activity,
        polymorphic_identity=u'command_activity',
