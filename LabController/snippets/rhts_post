@@ -10,6 +10,7 @@ $SNIPPET('koan_environment')
 $SNIPPET('redhat_register')
 # Enable post-install boot notification
 $SNIPPET('post_anamon')
+$SNIPPET('readahead_sysconfig')
 
 ## Turn on ntpd
 /sbin/chkconfig ntpdate on

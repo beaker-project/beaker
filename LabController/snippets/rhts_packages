@@ -1,3 +1,5 @@
+$SNIPPET('readahead_packages')
+
 ## If packages variable is set add additional packages to this install
 ## packages=httpd:selinux:kernel
 #set _packages = $getVar('packages','').split(':')
