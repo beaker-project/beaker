@@ -3,6 +3,7 @@ import time
 import re
 import glob
 import xmlrpclib
+from xmlrpclib import ServerProxy
 import string
 import ConfigParser
 import getopt
@@ -66,9 +67,8 @@ class SchedulerProxy(object):
         return False
 
 
-class RcmProxy(object):
-    def __init__(self, rcm_xmlrpc_host):
-	return xmlrpclib.ServerProxy(rcm_xmlrpc_host)
+class RcmProxy(ServerProxy):
+    pass
 
 
 class CobblerProxy(object):
@@ -290,12 +290,17 @@ class Profile(object):
 
         repos = self._read_repos()
 
+        os_repos = '|'.join(repos.get('os',[]))
+        debug_repos = '|'.join(repos.get('debug',[]))
+
         updated_repos = False
-        if repos.get('os') and not self.profile['ks_meta'].get('os_repos'):
-            self.profile['ks_meta']['os_repos'] = '|'.join(repos['os'])
+        if os_repos and \
+           os_repos != self.profile['ks_meta'].get('os_repos'):
+            self.profile['ks_meta']['os_repos'] = os_repos
             updated_repos = True
-        if repos.get('debug') and not self.profile['ks_meta'].get('debug_repos'):
-            self.profile['ks_meta']['debug_repos'] = '|'.join(repos['debug'])
+        if debug_repos and \
+           debug_repos != self.profile['ks_meta'].get('debug_repos'):
+            self.profile['ks_meta']['debug_repos'] = debug_repos
             updated_repos = True
 
         if updated_repos:
@@ -311,11 +316,30 @@ class Profile(object):
         if not self.tree_path:
             return dict()
 
-        os_repos = []
-        debug_repos = []
         repo_path_re = re.compile(r'%s/(.*)/repodata' % self.tree_path)
 
 
+        os_repos = ['beaker-%s,%s' %
+                             (os.path.basename(os.path.dirname(repo)),
+                              os.path.join(self.distro['ks_meta']['tree'],
+                                           repo_path_re.search(repo).group(1)),
+                             ) for repo in \
+                     glob.glob(os.path.join(self.tree_path,
+                                   "*/repodata")
+                              ) + \
+                     glob.glob(os.path.join(self.tree_path,
+                                   "../repo-*%s*/repodata" % self.xtras['variant'])
+                              )
+                   ]
+        debug_repos = ['beaker-%s,%s' %
+                             (os.path.basename(os.path.dirname(repo)),
+                              os.path.join(self.distro['ks_meta']['tree'],
+                                           repo_path_re.search(repo).group(1)),
+                             ) for repo in \
+                           glob.glob(os.path.join(self.tree_path,
+                                   "../debug*/repodata")
+                              )
+                      ]
         # If rcm is defined we can ask what repos are defined for this tree
         if self.lab.rcm is not None:
             distro_path = self.tree_path
@@ -329,12 +353,15 @@ class Profile(object):
                     break
                 except xmlrpclib.ResponseError:
                     pass
-            prepos.sort()
+            # if rcm came back with a list of repos use them instead.
+            if prepos:
+                os_repos = []
+                debug_repos = []
             for prepo in prepos:
                 repo = os.path.join(self.tree_path, prepos[prepo], 'repodata')
                 if os.path.exists(repo):
                     if 'debug' in repo:
-                        debuginfo_repos.append('beaker-%s,%s' %
+                        debug_repos.append('beaker-%s,%s' %
                                         (prepo,
                                          os.path.join(self.distro['ks_meta']['tree'],
                                          repo_path_re.search(repo).group(1),
@@ -349,31 +376,8 @@ class Profile(object):
                                                      )
                                         )
                                        )
-        # rcm is not avaialble, fall back to glob...
-        else:
-            os_repos = ['beaker-%s,%s' %
-                                 (os.path.basename(os.path.dirname(repo)),
-                                  os.path.join(self.distro['ks_meta']['tree'],
-                                               repo_path_re.search(repo).group(1)),
-                                 ) for repo in \
-                         glob.glob(os.path.join(self.tree_path,
-                                       "*/repodata")
-                                  ) + \
-                         glob.glob(os.path.join(self.tree_path,
-                                       "../repo-*%s*/repodata" % self.xtras['variant'])
-                                  )
-                       ]
-            os_repos.sort()
-            debug_repos = ['beaker-%s,%s' %
-                                 (os.path.basename(os.path.dirname(repo)),
-                                  os.path.join(self.distro['ks_meta']['tree'],
-                                               repo_path_re.search(repo).group(1)),
-                                 ) for repo in \
-                               glob.glob(os.path.join(self.tree_path,
-                                       "../debug*/repodata")
-                                  )
-                          ]
-            debug_repos.sort()
+        debug_repos.sort()
+        os_repos.sort()
         return dict(os = os_repos, debug = debug_repos)
 
     def save_data(self):
@@ -544,7 +548,7 @@ class LabProxy(object):
         self.rcm = None
         self.options = options
         self.cobbler = CobblerProxy(options)
-        rcm_xmlrpc_host = self.cobbler.settings.get('rcm_xmlrpc_host')
+        rcm_xmlrpc_host = self.cobbler.settings.get('rcm')
         if rcm_xmlrpc_host:
             self.rcm = RcmProxy(rcm_xmlrpc_host)
         self.scheduler = SchedulerProxy(options)
