@@ -16,7 +16,7 @@
 
 Name:           beaker
 Version:        0.8.0
-Release:        16%{?dist}
+Release:        17%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -341,6 +341,9 @@ fi
 %endif
 
 %changelog
+* Thu Dec 01 2011 Bill Peck <bpeck@redhat.com> 0.8.0-17
+- Failed to query rcm for repos (bpeck@redhat.com)
+
 * Tue Nov 22 2011 Bill Peck <bpeck@redhat.com> 0.8.0-16
 - Revert "avoid races in MappedObject.lazy_create" (dcallagh@redhat.com)
 - 752869 work around race condition in Distro.lazy_create (dcallagh@redhat.com)
