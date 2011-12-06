@@ -1,5 +1,5 @@
 from bkr.inttest.server.selenium import SeleniumTestCase
-from bkr.inttest import data_setup
+from bkr.inttest import data_setup, with_transaction
 from bkr.server.model import Job
 from turbogears.database import session
 
@@ -7,6 +7,7 @@ from turbogears.database import session
 class MaxWhiteboard(SeleniumTestCase):
 
     @classmethod
+    @with_transaction
     def setupClass(cls):
         max = Job.max_by_whiteboard
         c = 0
@@ -14,7 +15,6 @@ class MaxWhiteboard(SeleniumTestCase):
         while c <= max:
             data_setup.create_completed_job(whiteboard=cls.whiteboard)
             c += 1
-        session.flush()
         cls.selenium = cls.get_selenium()
         cls.selenium.start()
 

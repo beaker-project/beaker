@@ -3,11 +3,12 @@ import unittest
 from bkr.server.model import System, LabInfo, Provision, \
         ProvisionFamily, ProvisionFamilyUpdate
 from turbogears.database import session
-from bkr.inttest import data_setup
+from bkr.inttest import data_setup, with_transaction
 from bkr.server.tools.delete_system import delete_system
 
 class DeleteSystemTest(unittest.TestCase):
 
+    @with_transaction
     def setUp(self):
         self.system = data_setup.create_system()
         self.system.labinfo = LabInfo()
@@ -22,7 +23,6 @@ class DeleteSystemTest(unittest.TestCase):
             .provision_families[distro.osversion.osmajor]\
             .provision_family_updates[distro.osversion] = \
                 ProvisionFamilyUpdate(osversion=distro.osversion, ks_meta=u'lol3')
-        session.flush()
         self.system_id = self.system.id
 
     def test_can_delete_system(self):
@@ -34,9 +34,9 @@ class DeleteSystemTest(unittest.TestCase):
         self.assert_(System.query.get(self.system_id) is not None)
 
     def test_cannot_delete_system_which_has_been_used_for_recipes(self):
-        job = data_setup.create_job()
-        data_setup.mark_job_complete(job, system=self.system)
-        session.flush()
+        with session.begin():
+            job = data_setup.create_job()
+            data_setup.mark_job_complete(job, system=self.system)
 
         try:
             delete_system(self.system.fqdn)

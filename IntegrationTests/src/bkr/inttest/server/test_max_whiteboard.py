@@ -1,13 +1,14 @@
 import unittest
 from bkr.server.model import Job
 from turbogears.database import session
-from bkr.inttest import data_setup
+from bkr.inttest import data_setup, with_transaction
 
 class MaxWhiteboard(unittest.TestCase):
 
     def setUp(self):
         pass
 
+    @with_transaction
     def test_max_whiteboard(self):
         max = Job.max_by_whiteboard
         jobs = []

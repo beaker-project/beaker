@@ -1,10 +1,12 @@
 #!/usr/bin/python
 from bkr.inttest.server.selenium import SeleniumTestCase
-from bkr.inttest import data_setup
+from bkr.inttest import data_setup, with_transaction
 import unittest, time, re, os
 from turbogears.database import session
 
 class ItemCount(SeleniumTestCase):
+
+    @with_transaction
     def setUp(self):
         self.verificationErrors = []
         self.selenium = self.get_selenium()
@@ -16,7 +18,6 @@ class ItemCount(SeleniumTestCase):
         system = data_setup.create_system()
         system.shared = True
         system.activity.append(data_setup.create_system_activity())
-        session.flush()
     
     def test_itemcount(self):
         sel = self.selenium

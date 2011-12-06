@@ -1,13 +1,14 @@
 #!/usr/bin/python
 from bkr.server.model import Numa, User
 from bkr.inttest.server.selenium import SeleniumTestCase
-from bkr.inttest import data_setup
+from bkr.inttest import data_setup, with_transaction
 import unittest, time, re, os, datetime
 from turbogears.database import session
 
 class SearchColumns(SeleniumTestCase):
 
     @classmethod
+    @with_transaction
     def setUpClass(cls): 
         cls.group = data_setup.create_group()
         cls.system_with_group = data_setup.create_system(shared=True)
@@ -16,7 +17,6 @@ class SearchColumns(SeleniumTestCase):
         cls.system_with_numa.numa = Numa(nodes=2)
         cls.system_with_serial = data_setup.create_system()
         cls.system_with_serial.serial = u'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
-        session.flush()
         cls.selenium = cls.get_selenium()
         cls.selenium.start()
 
@@ -75,6 +75,7 @@ class SearchColumns(SeleniumTestCase):
 class Search(SeleniumTestCase):
 
     @classmethod
+    @with_transaction
     def setUpClass(cls):
         cls.selenium = cls.get_selenium()
         cls.system_one_details = { 'fqdn' : u'a1',
@@ -100,7 +101,6 @@ class Search(SeleniumTestCase):
                                     'owner' : data_setup.create_user(),}
         cls.system_three = data_setup.create_system(**cls.system_three_details)
         cls.system_three.numa = Numa(nodes=1)
-        session.flush()
         cls.selenium.start()
 
     @classmethod
@@ -118,8 +118,8 @@ class Search(SeleniumTestCase):
         self.assertEquals(sel.get_title(), 'Free Systems')
         self.failUnless(not sel.is_text_present("%s" % self.system_one.fqdn))
 
-        self.system_one.loaned = User.by_user_name(self.BEAKER_LOGIN_USER)
-        session.flush()
+        with session.begin():
+            self.system_one.loaned = User.by_user_name(self.BEAKER_LOGIN_USER)
         sel.open('free')
         sel.wait_for_page_to_load("30000")
         self.assertEquals(sel.get_title(), 'Free Systems')
@@ -267,11 +267,11 @@ class Search(SeleniumTestCase):
 class HypervisorSearchTest(SeleniumTestCase):
 
     def setUp(self):
-        self.user = data_setup.create_user(password=u'hypervisin')
-        self.kvm = data_setup.create_system(loaned=self.user, hypervisor=u'KVM')
-        self.xen = data_setup.create_system(loaned=self.user, hypervisor=u'Xen')
-        self.phys = data_setup.create_system(loaned=self.user, hypervisor=None)
-        session.flush()
+        with session.begin():
+            self.user = data_setup.create_user(password=u'hypervisin')
+            self.kvm = data_setup.create_system(loaned=self.user, hypervisor=u'KVM')
+            self.xen = data_setup.create_system(loaned=self.user, hypervisor=u'Xen')
+            self.phys = data_setup.create_system(loaned=self.user, hypervisor=None)
         self.selenium = self.get_selenium()
         self.selenium.start()
         self.login(user=self.user.user_name, password=u'hypervisin')

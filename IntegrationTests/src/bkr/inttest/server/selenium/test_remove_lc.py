@@ -1,14 +1,14 @@
 from bkr.inttest.server.selenium import SeleniumTestCase
-from bkr.inttest import data_setup
+from bkr.inttest import data_setup, with_transaction
 from turbogears.database import session
 
 class RemoveLabController(SeleniumTestCase):
 
+    @with_transaction
     def setUp(self):
         self.system = data_setup.create_system()
         self.lc = data_setup.create_labcontroller(fqdn=u'1111')
         self.system.lab_controller = self.lc
-        session.flush()
         self.selenium = self.get_selenium()
         self.selenium.start()
         self.login()
@@ -25,8 +25,9 @@ class RemoveLabController(SeleniumTestCase):
         sel.wait_for_page_to_load("30000")
 
         self.failUnless(sel.is_text_present("exact:%s Removed" % self.lc))
-        session.refresh(self.system)
-        self.assert_(self.system.lab_controller is None)
+        with session.begin():
+            session.refresh(self.system)
+            self.assert_(self.system.lab_controller is None)
         #Re add
         sel.open("labcontrollers/")
         sel.wait_for_page_to_load('30000')
@@ -53,8 +54,9 @@ class RemoveLabController(SeleniumTestCase):
         sel.wait_for_page_to_load('30000')
         lcs = sel.get_text('//form//table/tbody/tr[10]')
         self.failUnless('%s' % self.lc.fqdn not in lcs)
-        session.refresh(self.system)
-        self.failUnless(not self.system.lab_controller)
+        with session.begin():
+            session.refresh(self.system)
+            self.failUnless(not self.system.lab_controller)
 
         # Re add it
         sel.open("labcontrollers/")
@@ -66,5 +68,6 @@ class RemoveLabController(SeleniumTestCase):
         sel.select("form_lab_controller_id", "label=%s" % self.lc.fqdn)
         sel.click("link=Save Changes")
         sel.wait_for_page_to_load('30000')
-        session.refresh(self.system)
-        self.assert_(self.system.lab_controller is self.lc)
+        with session.begin():
+            session.refresh(self.system)
+            self.assert_(self.system.lab_controller is self.lc)

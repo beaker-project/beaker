@@ -1,10 +1,12 @@
 #!/usr/bin/python
 from bkr.inttest.server.selenium import SeleniumTestCase
-from bkr.inttest import data_setup
+from bkr.inttest import data_setup, with_transaction
 import unittest, time, re, os
 from turbogears.database import session
 
 class Search(SeleniumTestCase):
+
+    @with_transaction
     def setUp(self):
         self.verificationErrors = []
         self.selenium = self.get_selenium()
@@ -47,11 +49,9 @@ class Search(SeleniumTestCase):
             osmajor=self.distro_three_osmajor, osminor = self.distro_three_osminor,
             arch=self.distro_three_arch, virt=self.distro_three_virt,
             tags =self.distro_three_tags)
-        session.flush()
         self.selenium.start()
 
     def test_distro_search(self):
-        sel = self.selenium
         sel = self.selenium
 
         """

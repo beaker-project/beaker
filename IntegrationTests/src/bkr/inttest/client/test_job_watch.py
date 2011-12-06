@@ -10,12 +10,12 @@ class JobWatchTest(unittest.TestCase):
 
     def test_watch_job(self):
         raise SkipTest('too slow (>30 sec)')
-        job = data_setup.create_job()
-        session.flush()
+        with session.begin():
+            job = data_setup.create_job()
         p = start_client(['bkr', 'job-watch', job.t_id])
         time.sleep(1) # XXX better would be to read the client's stdout
-        data_setup.mark_job_complete(job)
-        session.flush()
+        with session.begin():
+            data_setup.mark_job_complete(job)
         out, err = p.communicate()
         self.assertEquals(p.returncode, 0)
         self.assert_(out.startswith('Watching tasks'), out)

@@ -11,15 +11,15 @@ class SystemOwnerTake(SeleniumTestCase):
         self.selenium = self.get_selenium()
         self.selenium.start()
 
-        self.manual_system = data_setup.create_system(status=u'Manual')
-        self.manual_system.shared = True
-        self.user = data_setup.create_user(password='password')
-        self.manual_system.owner = self.user
-        lc = data_setup.create_labcontroller(u'test-lc')
-        data_setup.add_system_lab_controller(self.manual_system,lc)
-        session.flush()
-        self.distro = data_setup.create_distro()
-        session.flush()
+        with session.begin():
+            self.manual_system = data_setup.create_system(status=u'Manual')
+            self.manual_system.shared = True
+            self.user = data_setup.create_user(password='password')
+            self.manual_system.owner = self.user
+            lc = data_setup.create_labcontroller(u'test-lc')
+            data_setup.add_system_lab_controller(self.manual_system,lc)
+            session.flush()
+            self.distro = data_setup.create_distro()
         self.login(user=self.user.user_name,password='password')
 
     def tearDown(self):
@@ -53,28 +53,27 @@ class SystemGroupUserTake(SeleniumTestCase):
         self.selenium = self.get_selenium()
         self.selenium.start()
 
-        self.automated_system = data_setup.create_system()
-        self.automated_system.shared = True
-        self.manual_system = data_setup.create_system(status=u'Manual')
-        self.manual_system.shared = True
-        self.group = data_setup.create_group() 
-        self.user = data_setup.create_user(password='password')
-        self.wrong_group = data_setup.create_group()
-        self.user2 = data_setup.create_user(password=u'password')
-        lc = data_setup.create_labcontroller(u'test-lc')
-        data_setup.add_system_lab_controller(self.automated_system,lc)
-        data_setup.add_system_lab_controller(self.manual_system,lc)
-        session.flush()
-        self.distro = data_setup.create_distro()
-        session.flush()
-        data_setup.create_task(name=u'/distribution/install')
-        data_setup.create_task(name=u'/distribution/reservesys')
+        with session.begin():
+            self.automated_system = data_setup.create_system()
+            self.automated_system.shared = True
+            self.manual_system = data_setup.create_system(status=u'Manual')
+            self.manual_system.shared = True
+            self.group = data_setup.create_group() 
+            self.user = data_setup.create_user(password='password')
+            self.wrong_group = data_setup.create_group()
+            self.user2 = data_setup.create_user(password=u'password')
+            lc = data_setup.create_labcontroller(u'test-lc')
+            data_setup.add_system_lab_controller(self.automated_system,lc)
+            data_setup.add_system_lab_controller(self.manual_system,lc)
+            session.flush()
+            self.distro = data_setup.create_distro()
+            data_setup.create_task(name=u'/distribution/install')
+            data_setup.create_task(name=u'/distribution/reservesys')
         self.login(user=self.user.user_name,password='password')
-        #TODO need to login
 
     def test_schedule_provision_system_has_user(self):
-        self.automated_system.user = self.user2
-        session.flush()
+        with session.begin():
+            self.automated_system.user = self.user2
         self.logout()
         self.login() # login as admin
         sel = self.selenium
@@ -85,10 +84,10 @@ class SystemGroupUserTake(SeleniumTestCase):
         except AssertionError, e: self.verificationErrors.append('Admin has no schedule provision option when system is in use')
 
     def test_schedule_provision_system_has_user_with_group(self): 
-        self.automated_system.user = self.user2
-        data_setup.add_user_to_group(self.user,self.group)
-        data_setup.add_group_to_system(self.automated_system,self.group)
-        session.flush()
+        with session.begin():
+            self.automated_system.user = self.user2
+            data_setup.add_user_to_group(self.user,self.group)
+            data_setup.add_group_to_system(self.automated_system,self.group)
         self.logout() 
         self.login(user=self.user.user_name,password='password') # login as admin
         sel = self.selenium
@@ -101,7 +100,6 @@ class SystemGroupUserTake(SeleniumTestCase):
 
     def test_system_no_group(self):
         #Auto Machine
-        session.flush()
         sel = self.selenium
         sel.open("")
         sel.type("simplesearch", "%s" % self.automated_system.fqdn)
@@ -126,8 +124,8 @@ class SystemGroupUserTake(SeleniumTestCase):
 
     def test_system_has_group(self):
         #Automated machine
-        data_setup.add_group_to_system(self.automated_system,self.group) # Add systemgroup
-        session.flush()
+        with session.begin():
+            data_setup.add_group_to_system(self.automated_system,self.group) # Add systemgroup
         sel = self.selenium
         sel.open("")
         sel.type("simplesearch", "%s" % self.automated_system.fqdn)
@@ -146,8 +144,8 @@ class SystemGroupUserTake(SeleniumTestCase):
             schedule provision option for not group members')
 
         #Manual machine
-        data_setup.add_group_to_system(self.manual_system, self.group) # Add systemgroup
-        session.flush()
+        with session.begin():
+            data_setup.add_group_to_system(self.manual_system, self.group) # Add systemgroup
         sel = self.selenium
         sel.open("")
         sel.type("simplesearch", "%s" % self.manual_system.fqdn)
@@ -167,10 +165,9 @@ class SystemGroupUserTake(SeleniumTestCase):
 
     def test_system_group_user_group(self):
         #Automated machine
-        #import pdb;pdb.set_trace()
-        data_setup.add_group_to_system(self.automated_system, self.group) # Add systemgroup
-        data_setup.add_user_to_group(self.user, self.wrong_group) # Add user to group
-        session.flush()
+        with session.begin():
+            data_setup.add_group_to_system(self.automated_system, self.group) # Add systemgroup
+            data_setup.add_user_to_group(self.user, self.wrong_group) # Add user to group
         sel = self.selenium
         self.logout()
         self.login(user=self.user.user_name, password='password')
@@ -185,9 +182,8 @@ class SystemGroupUserTake(SeleniumTestCase):
         except AssertionError, e: self.verificationErrors.\
             append('Take is available to automated machine with system group privs' )
 
-
-        self.user.groups = [self.group]
-        session.flush()
+        with session.begin():
+            self.user.groups = [self.group]
         sel.open("")
         sel.type("simplesearch", "%s" % self.automated_system.fqdn)
         sel.click("search")
@@ -209,8 +205,8 @@ class SystemGroupUserTake(SeleniumTestCase):
         self._do_take(self.automated_system.fqdn)
 
         #Manual machine
-        data_setup.add_group_to_system(self.manual_system, self.group) # Add systemgroup
-        session.flush()
+        with session.begin():
+            data_setup.add_group_to_system(self.manual_system, self.group) # Add systemgroup
         sel = self.selenium
         sel.open("")
         sel.type("simplesearch", "%s" % self.manual_system.fqdn)

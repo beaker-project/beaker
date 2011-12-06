@@ -1,16 +1,16 @@
 #!/usr/bin/python
 from bkr.inttest.server.selenium import SeleniumTestCase
-from bkr.inttest import data_setup
+from bkr.inttest import data_setup, with_transaction
 import unittest, time, re, os
 from turbogears.database import session
 
 class TaskByName(SeleniumTestCase):
 
+    @with_transaction
     def setUp(self):
         self.my_task = data_setup.create_task()
         self.selenium = self.get_selenium()
         self.selenium.start()
-        session.flush()
 
     def test_task_redirect(self):
         sel = self.selenium

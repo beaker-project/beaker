@@ -37,12 +37,14 @@ def sqla_cache(f):
     the_cache = {}
     def do_cache(*args):
         args = tuple(args)
-        if args in the_cache: #session merge puts object into session
-            return session.merge(the_cache[args], load=False)
-        else:
+        if args not in the_cache:
             result = f(*args)
+            # Need to expunge the cached instance, so that it's not affected by 
+            # a subsequent rollback of the current session.
+            session.expunge(result)
             the_cache[args] = result
-            return result
+        # Return a copy which has been merged into the current session.
+        return session.merge(the_cache[args], load=False)
     return do_cache
 
 def _sanitize_list(list):

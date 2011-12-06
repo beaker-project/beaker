@@ -20,10 +20,11 @@ import tempfile
 from turbogears.database import session
 
 from bkr.inttest.server.selenium import SeleniumTestCase
-from bkr.inttest import data_setup
+from bkr.inttest import data_setup, with_transaction
 
 class TestJobMatrix(SeleniumTestCase):
-    
+
+    @with_transaction
     def setUp(self):
         self.job_whiteboard = u'DanC says hi %d' % int(time.time() * 1000)
         self.recipe_whiteboard = u'breakage lol \'#&^!<'
@@ -40,7 +41,6 @@ class TestJobMatrix(SeleniumTestCase):
                 whiteboard=self.job_whiteboard, result=u'Fail',
                 recipe_whiteboard=self.recipe_whiteboard,
                 distro=data_setup.create_distro(arch=u'x86_64'))
-        session.flush()
         self.selenium = self.get_selenium()
         self.selenium.start()
 
@@ -67,22 +67,22 @@ class TestJobMatrix(SeleniumTestCase):
         sel.wait_for_page_to_load('30000')
         body = sel.get_text('//body')
         self.assert_('Pass: 1' in body)
-        new_job = data_setup.create_completed_job(
-            whiteboard=self.job_whiteboard, result=u'Pass',
-            recipe_whiteboard=self.recipe_whiteboard,
-            distro=data_setup.create_distro(arch=u'i386'))
-        session.flush()
+        with session.begin():
+            new_job = data_setup.create_completed_job(
+                whiteboard=self.job_whiteboard, result=u'Pass',
+                recipe_whiteboard=self.recipe_whiteboard,
+                distro=data_setup.create_distro(arch=u'i386'))
         sel.click('//input[@value="Generate"]')
         sel.wait_for_page_to_load('30000')
         body_2 = sel.get_text('//body')
         self.assert_('Pass: 2' in body_2)
 
         #Try with multiple whiteboards
-        another_new_job = data_setup.create_completed_job(
-            whiteboard=self.job_whiteboard_2, result=u'Pass',
-            recipe_whiteboard=self.recipe_whiteboard,
-            distro=data_setup.create_distro(arch=u'i386'))
-        session.flush()
+        with session.begin():
+            another_new_job = data_setup.create_completed_job(
+                whiteboard=self.job_whiteboard_2, result=u'Pass',
+                recipe_whiteboard=self.recipe_whiteboard,
+                distro=data_setup.create_distro(arch=u'i386'))
         sel.open('matrix')
         sel.wait_for_page_to_load('30000')
         sel.add_selection("whiteboard", "label=%s" % self.job_whiteboard)
