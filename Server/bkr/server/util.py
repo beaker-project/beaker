@@ -25,6 +25,7 @@ from sqlalchemy.orm import create_session
 import turbogears
 from turbogears import config, url
 from turbogears.database import get_engine
+import socket
 
 # Importing ConcurrentRotatingFileHandler will result in 
 # it adding itself into the logging.handlers __dict__,
@@ -90,9 +91,8 @@ def absolute_url(tgpath, tgparams=None, **kw):
     theurl = url(tgpath, tgparams, **kw)
     assert theurl.startswith('/')
     scheme = config.get('tg.url_scheme', 'http')
-    host_port = config.get('tg.url_domain',
-            '%s:%s' % (config.get('server.socket_host', 'localhost'),
-                config.get('socket_port', '8080')))
+    host_port = config.get('tg.url_domain', config.get('servername',
+                                            socket.getfqdn()))
     return '%s://%s%s' % (scheme, host_port, theurl)
 
 # http://stackoverflow.com/questions/1809531/_/1820949#1820949

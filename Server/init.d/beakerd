@@ -2,7 +2,7 @@
 #
 # beakerd:	Start the Beaker scheduler daemon
 #
-# chkconfig: 345 99 99
+# chkconfig: - 99 99
 # description:  This service is the core of the Beaker Scheduler
 #	
 #

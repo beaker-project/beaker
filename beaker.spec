@@ -201,6 +201,8 @@ DESTDIR=$RPM_BUILD_ROOT make \
     install
 %if %{with labcontroller}
 ln -s RedHatEnterpriseLinux6.ks $RPM_BUILD_ROOT/%{_var}/lib/cobbler/kickstarts/redhat6.ks
+ln -s RedHatEnterpriseLinux6.ks $RPM_BUILD_ROOT/%{_var}/lib/cobbler/kickstarts/CentOS6.ks
+ln -s RedHatEnterpriseLinuxServer5.ks $RPM_BUILD_ROOT/%{_var}/lib/cobbler/kickstarts/CentOS5.ks
 ln -s Fedora.ks $RPM_BUILD_ROOT/%{_var}/lib/cobbler/kickstarts/Fedoradevelopment.ks
 %endif
 
