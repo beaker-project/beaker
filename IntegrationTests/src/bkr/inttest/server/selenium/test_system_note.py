@@ -24,7 +24,7 @@ class SystemNoteTests(SeleniumTestCase):
     def _test_add_note(self):
         sel = self.selenium
         sel.open('view/%s' % self.system.fqdn)
-        sel.wait_for_page_to_load(3000)
+        sel.wait_for_page_to_load(30000)
         sel.click("link=Notes")
         note = data_setup.unique_name('note%s')
         try:
@@ -32,7 +32,7 @@ class SystemNoteTests(SeleniumTestCase):
         except Exception, e:
             raise AssertionError(str(e))
         sel.click("//form[@name='notes']/div/a")
-        sel.wait_for_page_to_load(3000)
+        sel.wait_for_page_to_load(30000)
         note_text = sel.get_text('//form[@name="notes"]//table/tbody/tr[2]/td')
         self.assert_(note in note_text)
         return note
@@ -54,7 +54,7 @@ class SystemNoteTests(SeleniumTestCase):
         self.wait_and_try(lambda: self.assert_(note in sel.get_text("//form[@name='notes']//table")), 10)
 
         sel.open('view/%s' % self.system.fqdn)
-        sel.wait_for_page_to_load(3000)
+        sel.wait_for_page_to_load(30000)
         sel.click("link=Notes")
         # Test existing deleted notes are hidden
         self.assert_(note not in sel.get_text("//form[@name='notes']//table"))
@@ -106,7 +106,7 @@ class SystemNoteTests(SeleniumTestCase):
 
         #Try to delete the first added note
         sel.open('view/%s' % self.system.fqdn)
-        sel.wait_for_page_to_load(3000)
+        sel.wait_for_page_to_load(30000)
         sel.click("link=Notes")
         try:
             sel.click("link=(Delete this note)")
@@ -132,7 +132,7 @@ class SystemNoteTests(SeleniumTestCase):
 
         #Try to delete the first added note
         sel.open('view/%s' % self.system.fqdn)
-        sel.wait_for_page_to_load(3000)
+        sel.wait_for_page_to_load(30000)
         sel.click("link=Notes")
         try:
             sel.click("link=(Delete this note)")
