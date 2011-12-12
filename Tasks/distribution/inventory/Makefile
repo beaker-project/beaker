@@ -78,7 +78,7 @@ ifeq ($(shell arch),x86_64)
 endif
 
 # data files, .c files, scripts anything needed to either compile the test and/or run it.
-FILES=$(METADATA) runtest.sh Makefile PURPOSE push-inventory.py \
+FILES=$(METADATA) runtest.sh Makefile PURPOSE \
       software.py i18n.py disks.py pushInventory.py procfs.py \
       utilist.py getdriver.sh hvm_detect.c $(TARGET).tar.gz
 
