@@ -629,7 +629,7 @@ def main():
                       help="Command to run to add a new distro")
     parser.add_option("-t", "--test-output-dir",
                       help="Capture distro data for unit tests. Argument is where on the filesystem to store the data")
-    parser.add_option("-s", "--skip-jobs",
+    parser.add_option("-j", "--skip-jobs",
                       action='store_true',
                       default=False,
                       help="Do not run automated Jobs")
@@ -637,7 +637,7 @@ def main():
                       action='store_true',
                       default=False,
                       help="Do not register distro with beaker")
-    parser.add_option("-s", "--only-beaker",
+    parser.add_option("-o", "--only-beaker",
                       action='store_true',
                       default=False,
                       help="Only register distro with beaker")
