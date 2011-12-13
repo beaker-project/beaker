@@ -16,7 +16,7 @@
 
 Name:           beaker
 Version:        0.8.0
-Release:        17%{?dist}
+Release:        19%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -346,6 +346,12 @@ fi
 %endif
 
 %changelog
+* Tue Dec 13 2011 Bill Peck <bpeck@redhat.com> 0.8.0-19
+- duplicate short options (bpeck@redhat.com)
+
+* Tue Dec 13 2011 Bill Peck <bpeck@redhat.com> 0.8.0-18
+- add options to beaker-osversion (bpeck@redhat.com)
+
 * Thu Dec 01 2011 Bill Peck <bpeck@redhat.com> 0.8.0-17
 - Failed to query rcm for repos (bpeck@redhat.com)
 

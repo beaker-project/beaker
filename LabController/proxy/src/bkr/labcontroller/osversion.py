@@ -585,18 +585,22 @@ class LabProxy(object):
                 self.capture_profile.to_filesystem(profile, profile.obfuscate())
                 self.capture_profile.all_to_datastruct(profile.obfuscate(), 'pre')
 
-            print "\tUpdate Kickstart: %s" % profile.update_cobbler_kickstart()
-            print "\tUpdate Repos: %s" % profile.update_repos()
+            if not self.options.only_beaker:
+                print "\tUpdate Kickstart: %s" % profile.update_cobbler_kickstart()
+            if not self.options.only_beaker:
+                print "\tUpdate Repos: %s" % profile.update_repos()
 
             # Add distro to Beaker
-            print "\tAdding to Beaker: %s" % self.scheduler.add_distro(profile)
+            if not self.options.skip_beaker:
+                print "\tAdding to Beaker: %s" % self.scheduler.add_distro(profile)
             # If capture_profile is defined then capture what we processed
             # to be used for expected results in unit tests
             if self.capture_profile:
                 self.capture_profile.to_filesystem_post(profile.obfuscate())
                 self.capture_profile.all_to_datastruct(profile.obfuscate(), 'post')
             # Run any automated jobs
-            print "\tAutomated Job: %s" % self.scheduler.run_distro_test_job(profile)
+            if not self.options.skip_jobs:
+                print "\tAutomated Job: %s" % self.scheduler.run_distro_test_job(profile)
 
             profile.save_data()
             processed_profiles.append(profile)
@@ -625,6 +629,18 @@ def main():
                       help="Command to run to add a new distro")
     parser.add_option("-t", "--test-output-dir",
                       help="Capture distro data for unit tests. Argument is where on the filesystem to store the data")
+    parser.add_option("-j", "--skip-jobs",
+                      action='store_true',
+                      default=False,
+                      help="Do not run automated Jobs")
+    parser.add_option("-s", "--skip-beaker",
+                      action='store_true',
+                      default=False,
+                      help="Do not register distro with beaker")
+    parser.add_option("-o", "--only-beaker",
+                      action='store_true',
+                      default=False,
+                      help="Only register distro with beaker")
     (opts, args) = parser.parse_args()
 
     new_run = time.time()
