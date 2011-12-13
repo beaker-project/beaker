@@ -5,12 +5,13 @@ import sys
 from tempfile import TemporaryFile
 from turbogears.database import session
 from bkr.server.model import SystemActivity
-from bkr.inttest import data_setup, mail_capture
+from bkr.inttest import data_setup, mail_capture, with_transaction
 from bkr.server.tools.nag_email import identify_nags
 
 class TestNagMail(unittest.TestCase):
 
     @classmethod
+    @with_transaction
     def setupClass(cls):
         cls.two_days_ago = datetime.datetime.utcnow() - datetime.timedelta(days=2)
         cls.three_days_ago = datetime.datetime.utcnow() - datetime.timedelta(days=3)
@@ -39,7 +40,6 @@ class TestNagMail(unittest.TestCase):
         #This tests that with owner != user and taken > threshold, should send nag
         cls.system_3.reserve(service=u'testdata', user=cls.user_1)
         cls.system_3.reservations[-1].start_time = cls.three_days_ago
-        session.flush()
 
     def setUp(self):
         self.mail_capture = mail_capture.MailCaptureThread()

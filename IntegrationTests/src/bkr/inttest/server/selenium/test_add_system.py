@@ -6,8 +6,8 @@ from turbogears.database import session, get_engine
 
 class AddSystem(SeleniumTestCase):
     def setUp(self):
-        data_setup.create_labcontroller(fqdn=u'lab-devel.rhts.eng.bos.redhat.com')
-        session.flush()
+        with session.begin():
+            data_setup.create_labcontroller(fqdn=u'lab-devel.rhts.eng.bos.redhat.com')
 
         try:
             self.verificationErrors = []

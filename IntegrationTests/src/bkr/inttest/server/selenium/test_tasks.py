@@ -11,8 +11,8 @@ class TestSubmitTask(SeleniumTestCase):
 
     @classmethod
     def setupClass(cls):
-        cls.uploader = data_setup.create_user(password=u'upload')
-        session.flush()
+        with session.begin():
+            cls.uploader = data_setup.create_user(password=u'upload')
         cls.selenium = cls.get_selenium()
         cls.selenium.start()
         cls.login(user=cls.uploader.user_name, password=u'upload')
@@ -137,8 +137,8 @@ class TestSubmitTask(SeleniumTestCase):
         test_package_name = '/distribution/beaker/dummy_for_bz681143'
 
         # There is a pre-existing TaskPackage in all lowercase...
-        TaskPackage.lazy_create(package=u'opencryptoki')
-        session.flush()
+        with session.begin():
+            TaskPackage.lazy_create(package=u'opencryptoki')
 
         # But the task we are uploading has RunFor: openCryptoki, 
         # with uppercase C
