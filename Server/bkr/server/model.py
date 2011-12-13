@@ -3610,6 +3610,7 @@ class TaskPriority(MappedObject):
 class TaskStatus(MappedObject):
 
     @classmethod
+    @sqla_cache
     def max(cls):
         return cls.query.order_by(TaskStatus.severity.desc()).first()
 
