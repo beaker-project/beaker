@@ -1770,15 +1770,8 @@ url --url=$tree
         
         """
         if system is None:
-            query = cls.query.outerjoin(['groups','users'], aliased=True)
-        else:
-            try: 
-                query = system.outerjoin(['groups','users'], aliased=True)
-            except AttributeError, (e):
-                log.error('A non Query object has been passed into the all method, using default query instead: %s' % e)        
-                query = cls.query.outerjoin(['groups','users'], aliased=True)
-
-        return cls.permissable_systems(query,user)
+            system = cls.query
+        return cls.permissable_systems(query=system, user=user)
 
     @classmethod
     def permissable_systems(cls, query, user=None, *arg, **kw):
@@ -1793,10 +1786,9 @@ url --url=$tree
             if not user.is_admin():
                 query = query.filter(
                             or_(System.private==False,
-                              and_(System.private==True,
-                                   or_(User.user_id==user.user_id,
-                                       System.owner==user,
-                                        System.user==user))))
+                                System.groups.any(Group.users.contains(user)),
+                                System.owner == user,
+                                System.user == user))
         else:
             query = query.filter(System.private==False)
          
@@ -1839,7 +1831,7 @@ url --url=$tree
                                      System.groups==None,
                                     ),
                                 and_(System.shared==True,
-                                     User.user_id==user.user_id
+                                     System.groups.any(Group.users.contains(user)),
                                     )
                                 )
                             )
@@ -1856,7 +1848,7 @@ url --url=$tree
     @classmethod
     def available_order(cls, user, systems=None):
         return cls.available_for_schedule(user,systems=systems).order_by(case([(System.owner==user, 1),
-                          (and_(System.owner!=user, Group.systems==None), 2)],
+                          (and_(System.owner!=user, System.groups.any()), 2)],
                               else_=3))
 
     @classmethod
