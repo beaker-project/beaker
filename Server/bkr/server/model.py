@@ -1893,7 +1893,7 @@ url --url=$tree
                 query = System.all(user)
             else:
                 query = System.all()
-        return query.filter(System.type.has(SystemType.type == type))
+        return query.join(System.type).filter(SystemType.type == type)
 
     @classmethod
     def by_arch(cls,arch,query=None):

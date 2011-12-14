@@ -557,9 +557,9 @@ class Root(RPCRoot):
                     distro = Distro.query.filter(Distro.id == distro_id).one()
                 except KeyError:
                     raise
-            # I don't like duplicating this code in find_systems_for_distro() but it dies on trying to jsonify a Query object... 
-            systems_distro_query = distro.systems()
-            avail_systems_distro_query = System.available_for_schedule(identity.current.user,systems=systems_distro_query)
+            avail_systems_distro_query = System.by_type(type=u'Machine',
+                    systems=distro.systems(user=identity.current.user))\
+                    .order_by(None)
             warn = None
             if avail_systems_distro_query.count() < 1: 
                 warn = 'No Systems compatible with distro %s' % distro.install_name

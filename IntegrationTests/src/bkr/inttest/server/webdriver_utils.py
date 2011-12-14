@@ -14,6 +14,10 @@ def login(browser, user=None, password=None):
     browser.find_element_by_name('password').send_keys(password)
     browser.find_element_by_name('login').click()
 
+def logout(browser):
+    browser.get(get_server_base())
+    browser.find_element_by_link_text('Logout').click()
+
 def is_text_present(browser, text):
     return bool(browser.find_elements_by_xpath(
             '//*[contains(text(), "%s")]' % text.replace('"', r'\"')))
