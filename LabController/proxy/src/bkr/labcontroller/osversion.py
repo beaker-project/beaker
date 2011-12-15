@@ -239,7 +239,7 @@ class Profile(object):
             self.xtras['osminor'] = self.xtras.get('osminor') or \
                                        version.split('.')[1]
         else:
-            self.xtras['osminor'] = self.xtras.get('osminor') or 0
+            self.xtras['osminor'] = self.xtras.get('osminor') or '0'
 
 
         # Use the name of the tree from .composeinfo if it exists.
