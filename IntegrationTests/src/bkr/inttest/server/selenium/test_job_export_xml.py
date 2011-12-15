@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
 from bkr.inttest.server.selenium import SeleniumTestCase
-from bkr.inttest import data_setup, with_transaction
+from bkr.inttest import data_setup
 from turbogears.database import session
 from bkr.server.model import Job
 import lxml.etree
@@ -11,11 +11,12 @@ class JobExportXML(SeleniumTestCase):
 
 
     @classmethod
-    @with_transaction
     def setupClass(cls):
+
         cls.password = 'password'
         cls.user = data_setup.create_user(password=cls.password)
         cls.job_to_export = data_setup.create_completed_job(owner=cls.user)
+        session.flush()
         cls.selenium = cls.get_selenium() 
         cls.selenium.start()
 
@@ -30,12 +31,12 @@ class JobExportXML(SeleniumTestCase):
         sel.open('to_xml?taskid=%s&to_screen=True&pretty=False' % self.job_to_export.t_id)
         sel.wait_for_page_to_load('30000')
         xml_export = sel.get_text('//body')
-        with session.begin():
-            job = Job.by_id(self.job_to_export.id)
-            xml_export = job.to_xml().toxml()
-            xml_export_tree = lxml.etree.parse(StringIO(xml_export))
-            pretty_xml = lxml.etree.tostring(xml_export_tree, pretty_print=False)
-            self.assert_(pretty_xml == xml_export)
+        session.expunge_all()
+        job = Job.by_id(self.job_to_export.id)
+        xml_export = job.to_xml().toxml()
+        xml_export_tree = lxml.etree.parse(StringIO(xml_export))
+        pretty_xml = lxml.etree.tostring(xml_export_tree, pretty_print=False)
+        self.assert_(pretty_xml == xml_export)
 
 
     @classmethod

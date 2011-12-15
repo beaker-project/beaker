@@ -29,7 +29,7 @@ from turbogears.database import session
 
 from bkr.inttest.server.selenium import SeleniumTestCase
 from bkr.inttest import data_setup, get_server_base, stub_cobbler, \
-        assertions, with_transaction
+        assertions
 from bkr.server.model import Key, Key_Value_String, Key_Value_Int, System, \
         Provision, ProvisionFamily, ProvisionFamilyUpdate, Hypervisor, \
         SystemStatus
@@ -37,7 +37,6 @@ from bkr.server.tools import beakerd
 
 class SystemViewTest(SeleniumTestCase):
 
-    @with_transaction
     def setUp(self):
         self.stub_cobbler_thread = stub_cobbler.StubCobblerThread()
         self.stub_cobbler_thread.start()
@@ -65,6 +64,7 @@ class SystemViewTest(SeleniumTestCase):
                     ks_meta=u'some_ks_meta_var=3', kernel_options=u'some_kernel_option=5',
                     kernel_options_post=u'some_kernel_option=6')
         self.system.lab_controller = self.lab_controller
+        session.flush()
         self.selenium = self.get_selenium()
         self.selenium.start()
 
@@ -133,9 +133,9 @@ class SystemViewTest(SeleniumTestCase):
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=747086
     def test_update_system_no_lc(self):
-        with session.begin():
-            system = data_setup.create_system()
-            system.labcontroller = None
+        system = data_setup.create_system()
+        system.labcontroller = None
+        session.flush()
         self.login()
         sel = self.selenium
         self.go_to_system_view(system=system)
@@ -163,9 +163,8 @@ class SystemViewTest(SeleniumTestCase):
         sel.wait_for_page_to_load('30000')
         for k, v in changes.iteritems():
             self.assertEquals(sel.get_value(k), v)
-        with session.begin():
-            session.refresh(self.system)
-            self.assert_(self.system.date_modified > orig_date_modified)
+        session.refresh(self.system)
+        self.assert_(self.system.date_modified > orig_date_modified)
 
     def test_change_status(self):
         orig_date_modified = self.system.date_modified
@@ -176,30 +175,30 @@ class SystemViewTest(SeleniumTestCase):
         sel.click('link=Save Changes')
         sel.wait_for_page_to_load('30000')
         self.assertEqual(sel.get_selected_label('status_id'), u'Broken')
-        with session.begin():
-            session.refresh(self.system)
-            self.assertEqual(self.system.status.status, u'Broken')
-            self.assertEqual(len(self.system.status_durations), 2)
-            self.assertEqual(self.system.status_durations[0].status.status,
-                    u'Broken')
-            assertions.assert_datetime_within(
-                    self.system.status_durations[0].start_time,
-                    tolerance=datetime.timedelta(seconds=60),
-                    reference=datetime.datetime.utcnow())
-            self.assert_(self.system.status_durations[0].finish_time is None)
-            self.assert_(self.system.status_durations[1].finish_time is not None)
-            assertions.assert_durations_not_overlapping(
-                    self.system.status_durations)
-            self.assert_(self.system.date_modified > orig_date_modified)
+        session.expunge_all()
+        self.system = System.query.get(self.system.id)
+        self.assertEqual(self.system.status.status, u'Broken')
+        self.assertEqual(len(self.system.status_durations), 2)
+        self.assertEqual(self.system.status_durations[0].status.status,
+                u'Broken')
+        assertions.assert_datetime_within(
+                self.system.status_durations[0].start_time,
+                tolerance=datetime.timedelta(seconds=60),
+                reference=datetime.datetime.utcnow())
+        self.assert_(self.system.status_durations[0].finish_time is None)
+        self.assert_(self.system.status_durations[1].finish_time is not None)
+        assertions.assert_durations_not_overlapping(
+                self.system.status_durations)
+        self.assert_(self.system.date_modified > orig_date_modified)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=746774
     def test_change_status_with_same_timestamps(self):
         # create two SystemStatusDuration rows with the same timestamp
         # (that is, within the same second)
-        with session.begin():
-            self.system.status = SystemStatus.by_name(u'Removed')
-            session.flush()
-            self.system.status = SystemStatus.by_name(u'Automated')
+        self.system.status = SystemStatus.by_name(u'Removed')
+        session.flush()
+        self.system.status = SystemStatus.by_name(u'Automated')
+        session.flush()
         self.login()
         sel = self.selenium
         self.go_to_system_view()
@@ -273,9 +272,8 @@ class SystemViewTest(SeleniumTestCase):
         sel.wait_for_page_to_load('30000')
         self.assertEquals(sel.get_xpath_count('//form[@name="arches"]'
                 '//td[normalize-space(text())="s390"]'), 1)
-        with session.begin():
-            session.refresh(self.system)
-            self.assert_(self.system.date_modified > orig_date_modified)
+        session.refresh(self.system)
+        self.assert_(self.system.date_modified > orig_date_modified)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=677951
     def test_add_nonexistent_arch(self):
@@ -304,9 +302,8 @@ class SystemViewTest(SeleniumTestCase):
         self.assertEquals(sel.get_text('css=.flash'), 'i386 Removed')
         self.assertEquals(sel.get_xpath_count('//form[@name="arches"]'
                 '//td[normalize-space(text())="i386"]'), 0)
-        with session.begin():
-            session.refresh(self.system)
-            self.assert_(self.system.date_modified > orig_date_modified)
+        session.refresh(self.system)
+        self.assert_(self.system.date_modified > orig_date_modified)
 
     def test_add_key_value(self):
         orig_date_modified = self.system.date_modified
@@ -321,14 +318,13 @@ class SystemViewTest(SeleniumTestCase):
         self.assertEquals(sel.get_xpath_count('//form[@name="keys"]'
                 '//td[normalize-space(preceding-sibling::td[1]/text())="NR_DISKS" and '
                 'normalize-space(text())="100"]'), 1)
-        with session.begin():
-            session.refresh(self.system)
-            self.assert_(self.system.date_modified > orig_date_modified)
+        session.refresh(self.system)
+        self.assert_(self.system.date_modified > orig_date_modified)
 
     def test_remove_key_value(self):
-        with session.begin():
-            self.system.key_values_int.append(
-                    Key_Value_Int(Key.by_name(u'NR_DISKS'), 100))
+        self.system.key_values_int.append(
+                Key_Value_Int(Key.by_name(u'NR_DISKS'), 100))
+        session.flush()
         orig_date_modified = self.system.date_modified
         self.login()
         sel = self.selenium
@@ -347,17 +343,16 @@ class SystemViewTest(SeleniumTestCase):
         self.assertEquals(sel.get_xpath_count('//form[@name="keys"]'
                 '//td[normalize-space(preceding-sibling::td[1]/text())="NR_DISKS" and '
                 'normalize-space(text())="100"]'), 0)
-        with session.begin():
-            session.refresh(self.system)
-            self.assert_(self.system.date_modified > orig_date_modified)
+        session.refresh(self.system)
+        self.assert_(self.system.date_modified > orig_date_modified)
 
     def test_add_group(self):
-        with session.begin():
-            group = data_setup.create_group()
-            user_password = 'password'
-            user = data_setup.create_user(password=user_password)
-            data_setup.add_user_to_group(user, group)
-            orig_date_modified = self.system.date_modified
+        group = data_setup.create_group()
+        user_password = 'password'
+        user = data_setup.create_user(password=user_password)
+        data_setup.add_user_to_group(user, group)
+        session.flush()
+        orig_date_modified = self.system.date_modified
 
         # as admin, assign the system to our test group
         self.login()
@@ -369,9 +364,8 @@ class SystemViewTest(SeleniumTestCase):
         sel.wait_for_page_to_load("30000")
         self.assertEquals(sel.get_xpath_count('//form[@name="groups"]'
                 '//td[normalize-space(text())="%s"]' % group.group_name), 1)
-        with session.begin():
-            session.refresh(self.system)
-            self.assert_(self.system.date_modified > orig_date_modified)
+        session.refresh(self.system)
+        self.assert_(self.system.date_modified > orig_date_modified)
 
         # as a user in the group, can we see it?
         self.logout()
@@ -384,9 +378,9 @@ class SystemViewTest(SeleniumTestCase):
         self.failUnless(sel.is_text_present(self.system.fqdn))
 
     def test_remove_group(self):
-        with session.begin():
-            group = data_setup.create_group()
-            self.system.groups.append(group)
+        group = data_setup.create_group()
+        self.system.groups.append(group)
+        session.flush()
         orig_date_modified = self.system.date_modified
         self.login()
         sel = self.selenium
@@ -403,9 +397,8 @@ class SystemViewTest(SeleniumTestCase):
                 '%s Removed' % group.display_name)
         self.assertEquals(sel.get_xpath_count('//form[@name="groups"]'
                 '//td[normalize-space(text())="%s"]' % group.group_name), 0)
-        with session.begin():
-            session.refresh(self.system)
-            self.assert_(self.system.date_modified > orig_date_modified)
+        session.refresh(self.system)
+        self.assert_(self.system.date_modified > orig_date_modified)
 
     def test_update_power(self):
         orig_date_modified = self.system.date_modified
@@ -421,9 +414,8 @@ class SystemViewTest(SeleniumTestCase):
         sel.click('link=Save Power Changes')
         sel.wait_for_page_to_load('30000')
         self.assertEquals(sel.get_text('css=.flash'), 'Updated Power')
-        with session.begin():
-            session.refresh(self.system)
-            self.assert_(self.system.date_modified > orig_date_modified)
+        session.refresh(self.system)
+        self.assert_(self.system.date_modified > orig_date_modified)
 
     def test_add_install_options(self):
         orig_date_modified = self.system.date_modified
@@ -437,9 +429,8 @@ class SystemViewTest(SeleniumTestCase):
         sel.click('//form[@name="installoptions"]//a[text()="Add ( + )"]')
         sel.wait_for_page_to_load('30000')
         self.assertEqual(sel.get_title(), self.system.fqdn)
-        with session.begin():
-            session.refresh(self.system)
-            self.assert_(self.system.date_modified > orig_date_modified)
+        session.refresh(self.system)
+        self.assert_(self.system.date_modified > orig_date_modified)
 
     def test_delete_install_options(self):
         orig_date_modified = self.system.date_modified
@@ -451,10 +442,9 @@ class SystemViewTest(SeleniumTestCase):
                 '//a[text()="Delete ( - )"]')
         sel.wait_for_page_to_load('30000')
         self.assertEqual(sel.get_title(), self.system.fqdn)
-        with session.begin():
-            session.refresh(self.system)
-            self.assert_(self.system.date_modified > orig_date_modified)
-            self.assert_(self.distro.arch not in self.system.provisions)
+        session.refresh(self.system)
+        self.assert_(self.system.date_modified > orig_date_modified)
+        self.assert_(self.distro.arch not in self.system.provisions)
 
     def test_update_labinfo(self):
         orig_date_modified = self.system.date_modified
@@ -477,13 +467,12 @@ class SystemViewTest(SeleniumTestCase):
         self.assertEquals(sel.get_text('css=.flash'), 'Saved Lab Info')
         for k, v in changes.iteritems():
             self.assertEquals(sel.get_value(k), v)
-        with session.begin():
-            session.refresh(self.system)
-            self.assert_(self.system.date_modified > orig_date_modified)
+        session.refresh(self.system)
+        self.assert_(self.system.date_modified > orig_date_modified)
 
     def test_change_owner(self):
-        with session.begin():
-            new_owner = data_setup.create_user()
+        new_owner = data_setup.create_user()
+        session.flush()
         self.login()
         sel = self.selenium
         self.go_to_system_view()
@@ -497,9 +486,8 @@ class SystemViewTest(SeleniumTestCase):
         sel.wait_for_page_to_load('30000')
         self.assertEquals(sel.get_title(), self.system.fqdn)
         self.assertEquals(sel.get_text('css=.flash'), 'OK')
-        with session.begin():
-            session.refresh(self.system)
-            self.assertEquals(self.system.owner, new_owner)
+        session.refresh(self.system)
+        self.assertEquals(self.system.owner, new_owner)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=691796
     def test_cannot_set_owner_to_none(self):
@@ -517,9 +505,8 @@ class SystemViewTest(SeleniumTestCase):
         self.assert_(sel.get_title().startswith('Change Owner'), sel.get_title())
         self.assert_(sel.is_element_present(
                 '//span[@class="fielderror" and text()="Please enter a value"]'))
-        with session.begin():
-            session.refresh(self.system)
-            self.assertEquals(self.system.owner, self.system_owner)
+        session.refresh(self.system)
+        self.assertEquals(self.system.owner, self.system_owner)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=706150
     def test_install_options_populated_on_provision_tab(self):
@@ -545,9 +532,9 @@ class SystemViewTest(SeleniumTestCase):
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=664482
     def test_cannot_change_lab_controller_while_system_in_use(self):
-        with session.begin():
-            data_setup.create_manual_reservation(self.system,
-                    start=datetime.datetime.utcnow(), finish=None)
+        data_setup.create_manual_reservation(self.system,
+                start=datetime.datetime.utcnow(), finish=None)
+        session.flush()
         self.login()
         sel = self.selenium
         self.go_to_system_view()
@@ -569,9 +556,8 @@ class SystemViewTest(SeleniumTestCase):
         sel.click('link=Save Changes')
         sel.wait_for_page_to_load('30000')
         self.assertEquals(sel.get_selected_label('hypervisor_id'), 'KVM')
-        with session.begin():
-            session.refresh(self.system)
-            self.assertEqual(self.system.hypervisor, Hypervisor.by_name(u'KVM'))
+        session.refresh(self.system)
+        self.assertEqual(self.system.hypervisor, Hypervisor.by_name(u'KVM'))
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=749441
     def test_mac_address_with_unicode(self):
@@ -583,16 +569,15 @@ class SystemViewTest(SeleniumTestCase):
         sel.click('link=Save Changes')
         sel.wait_for_page_to_load('30000')
         self.assertEquals(sel.get_value('mac_address'), bad_mac_address)
-        with session.begin():
-            session.refresh(self.system)
-            self.assertEqual(self.system.mac_address, bad_mac_address)
+        session.refresh(self.system)
+        self.assertEqual(self.system.mac_address, bad_mac_address)
 
 class SystemCcTest(SeleniumTestCase):
 
     def setUp(self):
-        with session.begin():
-            user = data_setup.create_user(password=u'swordfish')
-            self.system = data_setup.create_system(owner=user)
+        user = data_setup.create_user(password=u'swordfish')
+        self.system = data_setup.create_system(owner=user)
+        session.flush()
         self.selenium = self.get_selenium()
         self.selenium.start()
         self.login(user=user.user_name, password='swordfish')
@@ -601,8 +586,8 @@ class SystemCcTest(SeleniumTestCase):
         self.selenium.stop()
 
     def test_add_email_addresses(self):
-        with session.begin():
-            self.system.cc = []
+        self.system.cc = []
+        session.flush()
         sel = self.selenium
         sel.open('cc_change?system_id=%s' % self.system.id)
         sel.wait_for_page_to_load('30000')
@@ -612,21 +597,20 @@ class SystemCcTest(SeleniumTestCase):
         sel.type('cc_cc_1_email_address', 'deckard@police.gov')
         sel.click('//input[@value="Change"]')
         sel.wait_for_page_to_load('30000')
-        with session.begin():
-            session.refresh(self.system)
-            self.assertEquals(set(self.system.cc),
-                    set([u'roy.baty@pkd.com', u'deckard@police.gov']))
-            activity = self.system.activity[-1]
-            self.assertEquals(activity.field_name, u'Cc')
-            self.assertEquals(activity.service, u'WEBUI')
-            self.assertEquals(activity.action, u'Changed')
-            self.assertEquals(activity.old_value, u'')
-            self.assertEquals(activity.new_value,
-                    u'roy.baty@pkd.com; deckard@police.gov')
+        session.refresh(self.system)
+        self.assertEquals(set(self.system.cc),
+                set([u'roy.baty@pkd.com', u'deckard@police.gov']))
+        activity = self.system.activity[-1]
+        self.assertEquals(activity.field_name, u'Cc')
+        self.assertEquals(activity.service, u'WEBUI')
+        self.assertEquals(activity.action, u'Changed')
+        self.assertEquals(activity.old_value, u'')
+        self.assertEquals(activity.new_value,
+                u'roy.baty@pkd.com; deckard@police.gov')
 
     def test_remove_email_addresses(self):
-        with session.begin():
-            self.system.cc = [u'roy.baty@pkd.com', u'deckard@police.gov']
+        self.system.cc = [u'roy.baty@pkd.com', u'deckard@police.gov']
+        session.flush()
         sel = self.selenium
         sel.open('cc_change?system_id=%s' % self.system.id)
         sel.wait_for_page_to_load('30000')
@@ -637,42 +621,40 @@ class SystemCcTest(SeleniumTestCase):
         sel.type('cc_cc_0_email_address', '')
         sel.click('//input[@value="Change"]')
         sel.wait_for_page_to_load('30000')
-        with session.begin():
-            session.refresh(self.system)
-            self.assertEquals(self.system.cc, [])
-            activity = self.system.activity[-1]
-            self.assertEquals(activity.field_name, u'Cc')
-            self.assertEquals(activity.service, u'WEBUI')
-            self.assertEquals(activity.action, u'Changed')
-            self.assertEquals(activity.old_value,
-                    u'deckard@police.gov; roy.baty@pkd.com')
-            self.assertEquals(activity.new_value, u'')
+        session.refresh(self.system)
+        self.assertEquals(self.system.cc, [])
+        activity = self.system.activity[-1]
+        self.assertEquals(activity.field_name, u'Cc')
+        self.assertEquals(activity.service, u'WEBUI')
+        self.assertEquals(activity.action, u'Changed')
+        self.assertEquals(activity.old_value,
+                u'deckard@police.gov; roy.baty@pkd.com')
+        self.assertEquals(activity.new_value, u'')
 
     def test_replace_existing_email_address(self):
-        with session.begin():
-            self.system.cc = [u'roy.baty@pkd.com']
+        self.system.cc = [u'roy.baty@pkd.com']
+        session.flush()
         sel = self.selenium
         sel.open('cc_change?system_id=%s' % self.system.id)
         sel.wait_for_page_to_load('30000')
         sel.type('cc_cc_0_email_address', 'deckard@police.gov')
         sel.click('//input[@value="Change"]')
         sel.wait_for_page_to_load('30000')
-        with session.begin():
-            session.refresh(self.system)
-            self.assertEquals(self.system.cc, [u'deckard@police.gov'])
-            activity = self.system.activity[-1]
-            self.assertEquals(activity.field_name, u'Cc')
-            self.assertEquals(activity.service, u'WEBUI')
-            self.assertEquals(activity.action, u'Changed')
-            self.assertEquals(activity.old_value, u'roy.baty@pkd.com')
-            self.assertEquals(activity.new_value, u'deckard@police.gov')
+        session.refresh(self.system)
+        self.assertEquals(self.system.cc, [u'deckard@police.gov'])
+        activity = self.system.activity[-1]
+        self.assertEquals(activity.field_name, u'Cc')
+        self.assertEquals(activity.service, u'WEBUI')
+        self.assertEquals(activity.action, u'Changed')
+        self.assertEquals(activity.old_value, u'roy.baty@pkd.com')
+        self.assertEquals(activity.new_value, u'deckard@police.gov')
 
 class TestSystemViewRDF(unittest.TestCase):
 
-    @with_transaction
     def setUp(self):
         self.system_owner = data_setup.create_user()
         self.system = data_setup.create_system(owner=self.system_owner)
+        session.flush()
 
     def test_turtle(self):
         rdf_url = urljoin(get_server_base(),

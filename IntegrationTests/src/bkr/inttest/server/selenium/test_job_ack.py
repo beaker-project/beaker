@@ -1,19 +1,19 @@
 
 from turbogears.database import session
 from bkr.inttest.server.selenium import SeleniumTestCase
-from bkr.inttest import data_setup, with_transaction
+from bkr.inttest import data_setup
 from bkr.server.model import User, DistroActivity, SystemActivity
 
 class JobAckTest(SeleniumTestCase):
     
     @classmethod
-    @with_transaction
     def setupClass(cls):
         cls.password = 'password'
         cls.user_1 = data_setup.create_user(password=cls.password)
         cls.user_2 = data_setup.create_user(password=cls.password)
         cls.job = data_setup.create_completed_job(owner=cls.user_1)
         cls.group = data_setup.create_group()
+        session.flush()
         cls.selenium = cls.get_selenium()
         cls.selenium.start()
 
@@ -41,9 +41,9 @@ class JobAckTest(SeleniumTestCase):
         except Exception:
             pass
 
-        with session.begin():
-            data_setup.add_user_to_group(self.user_1,self.group)
-            data_setup.add_user_to_group(self.user_2,self.group)
+        data_setup.add_user_to_group(self.user_1,self.group)
+        data_setup.add_user_to_group(self.user_2,self.group)
+        session.flush()
         sel.open('jobs/%s' % self.job.id)
         sel.wait_for_page_to_load('30000')
         sel.click("widget_1") #This tests that the ack is there group memeber

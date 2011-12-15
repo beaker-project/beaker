@@ -1,10 +1,10 @@
 from bkr.inttest.server.selenium import SeleniumTestCase
-from bkr.inttest import data_setup, with_transaction
+from bkr.inttest import data_setup
 from turbogears.database import session
 
 class SystemNoteTests(SeleniumTestCase):
 
-    @with_transaction
+
     def setUp(self):
         self.system = data_setup.create_system()
         self.owner = data_setup.create_user(password='password')
@@ -14,6 +14,7 @@ class SystemNoteTests(SeleniumTestCase):
         self.admin_group.users.append(self.user)
         self.system.admins.append(self.admin_group)
         self.nobody = data_setup.create_user(password='password')
+        session.flush()
         self.selenium = self.get_selenium()
         self.selenium.start()
 

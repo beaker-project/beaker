@@ -1,5 +1,5 @@
 from bkr.inttest.server.selenium import SeleniumTestCase
-from bkr.inttest import data_setup, with_transaction
+from bkr.inttest import data_setup
 from turbogears.database import session
 
 
@@ -7,13 +7,16 @@ class SearchJobs(SeleniumTestCase):
 
 
     @classmethod
-    @with_transaction
     def setUpClass(cls):
         cls.running_job = data_setup.create_job()
+        session.flush()
         cls.queued_job = data_setup.create_job()
+        session.flush()
         cls.completed_job = data_setup.create_completed_job()
+        session.flush()
         data_setup.mark_job_queued(cls.queued_job)
         data_setup.mark_job_running(cls.running_job)
+        session.flush()
         cls.selenium = cls.get_selenium()
         cls.selenium.start()
 

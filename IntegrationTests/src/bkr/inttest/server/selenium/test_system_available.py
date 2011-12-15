@@ -1,12 +1,11 @@
 from bkr.inttest.server.selenium import SeleniumTestCase
-from bkr.inttest import data_setup, with_transaction
+from bkr.inttest import data_setup
 from bkr.server.model import Group
 import unittest, time, re, os
 from turbogears.database import session
 
 class SystemAvailable(SeleniumTestCase):
  
-    @with_transaction
     def setUp(self):
         self.selenium = self.get_selenium()
         self.password = 'password'
@@ -38,7 +37,7 @@ class SystemAvailable(SeleniumTestCase):
         self.system_1.lab_controller = lc
         self.system_2.lab_controller = lc
         self.system_3.lab_controller = lc
-
+        session.flush()
         self.selenium.start()
 
     def test_avilable_with_no_loan(self):
@@ -76,8 +75,8 @@ class SystemAvailable(SeleniumTestCase):
         self.logout()
 
     def test_avilable_with_loan(self):
-        with session.begin():
-            self.system_1.loaned=self.user_2
+        self.system_1.loaned=self.user_2
+        session.flush()
         self.login(user=self.user_1,password=self.password)
         sel = self.selenium
         sel.open('available/')
@@ -92,10 +91,13 @@ class SystemAvailable(SeleniumTestCase):
         sel.open("view/%s" % self.system_1.fqdn)
         sel.click("link=Provision")
         self.failUnless(sel.is_text_present("Schedule provision"))
+        self.system_1.loaned=None
+        session.flush()
+        self.logout()
 
     def test_free_with_loan(self):
-        with session.begin():
-            self.system_1.loaned=self.user_2
+        self.system_1.loaned=self.user_2
+        session.flush()
         self.login(user=self.user_1,password=self.password)
         sel = self.selenium
         sel.open('free/')
@@ -110,6 +112,9 @@ class SystemAvailable(SeleniumTestCase):
         sel.open("view/%s" % self.system_1.fqdn)
         sel.click("link=Provision")
         self.failUnless(sel.is_text_present("Schedule provision"))
+        self.system_1.loaned=None
+        session.flush()
+        self.logout()
 
     def test_not_available_system_2(self):
         self.login(user=self.user_1,password=self.password)

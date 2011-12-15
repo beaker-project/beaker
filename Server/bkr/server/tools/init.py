@@ -40,7 +40,6 @@ def dummy():
 def init_db(user_name=None, password=None, user_display_name=None, user_email_address=None):
     get_engine()
     metadata.create_all()
-    session.begin()
 
     #Setup ReleaseAction Table
     if ReleaseAction.query.count() == 0:
@@ -202,8 +201,7 @@ def init_db(user_name=None, password=None, user_display_name=None, user_email_ad
         ACTIVE          = RetentionTag(tag=u'active', needs_product=True)
         AUDIT           = RetentionTag(tag=u'audit', needs_product=True)
         
-    session.commit()
-    session.close()
+    session.flush()
 
 def get_parser():
     usage = "usage: %prog [options]"

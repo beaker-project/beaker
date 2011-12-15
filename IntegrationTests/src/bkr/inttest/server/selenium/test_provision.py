@@ -11,15 +11,15 @@ class SystemManualProvisionTest(SeleniumTestCase):
         self.selenium = self.get_selenium()
         self.selenium.start()
         self.stub_cobbler_thread = stub_cobbler.StubCobblerThread()
-        with session.begin():
-            self.lab_controller = data_setup.create_labcontroller(
-                    fqdn=u'localhost:%d' % self.stub_cobbler_thread.port)
-            self.user = data_setup.create_user(password=u'password')
-            self.distro = data_setup.create_distro(arch=u'i386')
-            self.system = data_setup.create_system(arch=u'i386',
-                    owner=self.user, status=u'Manual', shared=True)
-            self.system.lab_controller = self.lab_controller
-            self.system.user = self.user
+        self.lab_controller = data_setup.create_labcontroller(
+                fqdn=u'localhost:%d' % self.stub_cobbler_thread.port)
+        self.user = data_setup.create_user(password=u'password')
+        self.distro = data_setup.create_distro(arch=u'i386')
+        self.system = data_setup.create_system(arch=u'i386',
+                owner=self.user, status=u'Manual', shared=True)
+        self.system.lab_controller = self.lab_controller
+        self.system.user = self.user
+        session.flush()
         self.stub_cobbler_thread.start()
         self.login(user=self.user.user_name,password='password')
 
@@ -30,9 +30,9 @@ class SystemManualProvisionTest(SeleniumTestCase):
     def test_manual_provision_with_ssh_keys(self):
         sel = self.selenium
         system = self.system
-        with session.begin():
-            user = system.user
-            user.sshpubkeys.append(SSHPubKey(u'ssh-rsa', u'AAAAvalidkeyyeah', u'user@host'))
+        user = system.user
+        user.sshpubkeys.append(SSHPubKey(u'ssh-rsa', u'AAAAvalidkeyyeah', u'user@host'))
+        session.flush()
         sel.open("")
         sel.type("simplesearch", "%s" % system.fqdn)
         sel.click("search")

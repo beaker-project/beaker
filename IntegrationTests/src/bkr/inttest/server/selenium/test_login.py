@@ -29,7 +29,7 @@ try:
     import krbV
 except ImportError:
     krbV = None
-from bkr.inttest import data_setup, with_transaction
+from bkr.inttest import data_setup
 from bkr.inttest.server.selenium import SeleniumTestCase, XmlRpcTestCase
 
 log = logging.getLogger(__name__)
@@ -38,9 +38,9 @@ class LoginTest(SeleniumTestCase):
 
     password = u'password'
 
-    @with_transaction
     def setUp(self):
         self.user = data_setup.create_user(password=self.password)
+        session.flush()
         self.selenium = self.get_selenium()
         self.selenium.start()
 
@@ -49,8 +49,8 @@ class LoginTest(SeleniumTestCase):
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=660527
     def test_referer_redirect(self):
-        with session.begin():
-            system = data_setup.create_system()
+        system = data_setup.create_system()
+        session.flush()
 
         # Go to the system page
         sel = self.selenium
@@ -164,19 +164,19 @@ class XmlRpcLoginTest(XmlRpcTestCase):
         server.auth.login_krbv(encoded_req)
 
     def test_password_login(self):
-        with session.begin():
-            user = data_setup.create_user(password=u'lulz')
+        user = data_setup.create_user(password=u'lulz')
+        session.flush()
         server = self.get_server()
         server.auth.login_password(user.user_name, u'lulz')
         who_am_i = server.auth.who_am_i()
         self.assertEquals(who_am_i['username'], user.user_name)
 
     def test_password_proxy_login(self):
-        with session.begin():
-            group = data_setup.create_group(permissions=[u'proxy_auth'])
-            user = data_setup.create_user(password=u'lulz')
-            proxied_user = data_setup.create_user(password=u'not_used')
-            data_setup.add_user_to_group(user, group)
+        group = data_setup.create_group(permissions=[u'proxy_auth'])
+        user = data_setup.create_user(password=u'lulz')
+        proxied_user = data_setup.create_user(password=u'not_used')
+        data_setup.add_user_to_group(user, group)
+        session.flush()
         server = self.get_server()
         server.auth.login_password(user.user_name, u'lulz', proxied_user.user_name)
         who_am_i = server.auth.who_am_i()

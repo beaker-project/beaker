@@ -6,7 +6,7 @@ import time
 from bkr.server.model import TaskStatus, Job, LabControllerDistro, Distro
 import sqlalchemy.orm
 from turbogears.database import session
-from bkr.inttest import data_setup, with_transaction
+from bkr.inttest import data_setup
 from bkr.server.tools import beakerd
 from bkr.server.jobxml import XmlJob
 from bkr.server.jobs import Jobs
@@ -16,7 +16,6 @@ import threading
 class TestBeakerd(unittest.TestCase):
 
     @classmethod
-    @with_transaction
     def setUpClass(cls):
         # Create two unique labs
         lab1 = data_setup.create_labcontroller(fqdn=u'lab_%d' %
@@ -47,7 +46,6 @@ class TestBeakerd(unittest.TestCase):
         system2.lab_controller = lab1
 
         data_setup.create_task(name=u'/distribution/install')
-        session.flush()
 
         # Create two jobs, one requiring distro1 and one requiring distro2
         job = '''
@@ -71,23 +69,27 @@ class TestBeakerd(unittest.TestCase):
 
         cls.job1 = Jobs().process_xmljob(xmljob1, user)
         cls.job2 = Jobs().process_xmljob(xmljob2, user)
+        session.flush()
 
     def test_01_invalid_system_distro_combo(self):
         beakerd.new_recipes()
-        with session.begin():
-            self.assertEqual(Job.by_id(self.job1.id).status, TaskStatus.by_name(u'Aborted'))
-            self.assertEqual(Job.by_id(self.job2.id).status, TaskStatus.by_name(u'Processed'))
+        self.assertEqual(Job.by_id(self.job1.id).status, TaskStatus.by_name(u'Aborted'))
+        self.assertEqual(Job.by_id(self.job2.id).status, TaskStatus.by_name(u'Processed'))
 
 
     def test_02_dead_recipes(self):
         beakerd.new_recipes()
         beakerd.processed_recipesets()
-        with session.begin():
-            self.assertEqual(Job.by_id(self.job2.id).status, TaskStatus.by_name(u'Queued'))
-            # Remove distro2 from lab1, should cause remaining recipe to abort.
-            distro = Distro.by_id(self.distro2.id)
-            for lab in distro.lab_controllers[:]:
-                distro.lab_controllers.remove(lab)
+        self.assertEqual(Job.by_id(self.job2.id).status, TaskStatus.by_name(u'Queued'))
+        # Remove distro2 from lab1, should cause remaining recipe to abort.
+        distro = Distro.by_id(self.distro2.id)
+        for lab in distro.lab_controllers[:]:
+            distro.lab_controllers.remove(lab)
+        session.flush()
         beakerd.dead_recipes()
-        with session.begin():
-            self.assertEqual(Job.by_id(self.job2.id).status, TaskStatus.by_name(u'Aborted'))
+        self.assertEqual(Job.by_id(self.job2.id).status, TaskStatus.by_name(u'Aborted'))
+        
+
+    @classmethod
+    def teardownClass(cls):
+        pass

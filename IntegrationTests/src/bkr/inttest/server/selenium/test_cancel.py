@@ -1,17 +1,17 @@
 #!/usr/bin/python
 
 from bkr.inttest.server.selenium import SeleniumTestCase
-from bkr.inttest import data_setup, with_transaction
+from bkr.inttest import data_setup
 import unittest, time, re, os
 from turbogears.database import session
 
 class Cancel(SeleniumTestCase):
 
-    @with_transaction
     def setUp(self):
         self.password = 'password'
         self.user = data_setup.create_user(password=self.password)
         self.job = data_setup.create_job(owner=self.user)
+        session.flush()
         self.selenium = self.get_selenium()
         self.selenium.start()
 

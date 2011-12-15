@@ -27,7 +27,7 @@ class TestSystem(unittest.TestCase):
         session.begin()
 
     def tearDown(self):
-        session.commit()
+        session.rollback()
         session.close()
 
     def test_create_system_params(self):
@@ -62,9 +62,9 @@ class TestSystem(unittest.TestCase):
         self.assert_(system.user is None)
 
     def test_install_options_override(self):
-        distro = data_setup.create_distro(arch=u'i386')
-        system = data_setup.create_system(arch=u'i386')
-        system.provisions[distro.arch] = Provision(arch=Arch.by_name(u'i386'),
+        distro = data_setup.create_distro()
+        system = data_setup.create_system()
+        system.provisions[distro.arch] = Provision(
                 kernel_options='console=ttyS0 ksdevice=eth0')
         opts = system.install_options(distro, kernel_options='ksdevice=eth1')
         # ksdevice should be overriden but console should be inherited
@@ -77,7 +77,7 @@ class TestSystemKeyValue(unittest.TestCase):
         session.begin()
 
     def tearDown(self):
-        session.commit()
+        session.rollback()
 
     def test_removing_key_type_cascades_to_key_value(self):
         # https://bugzilla.redhat.com/show_bug.cgi?id=647566
@@ -105,15 +105,11 @@ class TestBrokenSystemDetection(unittest.TestCase):
     # don't end up within the same second
 
     def setUp(self):
-        session.begin()
         self.system = data_setup.create_system()
         self.system.status = SystemStatus.by_name(u'Automated')
         data_setup.create_completed_job(system=self.system)
         session.flush()
         time.sleep(1)
-
-    def tearDown(self):
-        session.commit()
 
     def abort_recipe(self, distro=None):
         if distro is None:
@@ -174,31 +170,23 @@ class TestBrokenSystemDetection(unittest.TestCase):
 
 class TestJob(unittest.TestCase):
 
-    def setUp(self):
-        session.begin()
-
-    def tearDown(self):
-        session.commit()
-
     def test_cc_property(self):
-        job = data_setup.create_job()
-        session.flush()
-        session.execute(job_cc_table.insert(values={'job_id': job.id,
-                'email_address': u'person@nowhere.example.com'}))
-        session.refresh(job)
-        self.assertEquals(job.cc, ['person@nowhere.example.com'])
+        session.begin()
+        try:
+            job = data_setup.create_job()
+            session.flush()
+            session.execute(job_cc_table.insert(values={'job_id': job.id,
+                    'email_address': u'person@nowhere.example.com'}))
+            session.refresh(job)
+            self.assertEquals(job.cc, ['person@nowhere.example.com'])
 
-        job.cc.append(u'korolev@nauk.su')
-        session.flush()
-        self.assertEquals(JobCc.query.filter_by(job_id=job.id).count(), 2)
+            job.cc.append(u'korolev@nauk.su')
+            session.flush()
+            self.assertEquals(JobCc.query.filter_by(job_id=job.id).count(), 2)
+        finally:
+            session.rollback()
 
 class DistroByFilterTest(unittest.TestCase):
-
-    def setUp(self):
-        session.begin()
-
-    def tearDown(self):
-        session.commit()
 
     def test_arch(self):
         excluded = data_setup.create_distro(arch=u'x86_64')
@@ -302,13 +290,9 @@ class DistroByFilterTest(unittest.TestCase):
 class DistroTest(unittest.TestCase):
 
     def setUp(self):
-        session.begin()
         self.distro = data_setup.create_distro(arch=u'i386')
         self.lc = data_setup.create_labcontroller()
         session.flush()
-
-    def tearDown(self):
-        session.commit()
 
     def test_all_systems_obeys_osmajor_exclusions(self):
         included_system = data_setup.create_system(arch=u'i386',
@@ -347,14 +331,10 @@ class DistroTest(unittest.TestCase):
 class DistroSystemsFilterTest(unittest.TestCase):
 
     def setUp(self):
-        session.begin()
         self.lc = data_setup.create_labcontroller()
         self.distro = data_setup.create_distro(arch=u'i386')
         self.user = data_setup.create_user()
         session.flush()
-
-    def tearDown(self):
-        session.commit()
 
     def test_system_vendor(self):
         excluded = data_setup.create_system(arch=u'i386', shared=True,
@@ -646,12 +626,8 @@ class DistroSystemsFilterTest(unittest.TestCase):
 class UserTest(unittest.TestCase):
 
     def setUp(self):
-        session.begin()
         self.user = data_setup.create_user()
         session.flush()
-
-    def tearDown(self):
-        session.commit()
 
     def test_dictionary_password_rejected(self):
         user = data_setup.create_user()

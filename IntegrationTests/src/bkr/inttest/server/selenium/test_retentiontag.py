@@ -15,12 +15,12 @@ class RetentionTagTest(SeleniumTestCase):
         cls.selenium.stop()
 
     def test_tag_delete(self):
-        with session.begin():
-            default_tag = data_setup.create_retention_tag(default=True)
-            tag_with_job = data_setup.create_retention_tag(default=False)
-            new_job = data_setup.create_job()
-            new_job.retention_tag = tag_with_job
-            non_default_tag = data_setup.create_retention_tag(default=False)
+        default_tag = data_setup.create_retention_tag(default=True)
+        tag_with_job = data_setup.create_retention_tag(default=False)
+        new_job = data_setup.create_job()
+        new_job.retention_tag = tag_with_job
+        non_default_tag = data_setup.create_retention_tag(default=False)
+        session.flush()
         try:
             self.login()
         except: pass

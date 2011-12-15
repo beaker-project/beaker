@@ -1,12 +1,12 @@
 #!/usr/bin/python
 from bkr.inttest.server.selenium import SeleniumTestCase
-from bkr.inttest import data_setup, with_transaction
+from bkr.inttest import data_setup
 from turbogears.database import session
 from bkr.server.model import Group
 
 class JobDelete(SeleniumTestCase):
-
-    @with_transaction
+    
+    
     def setUp(self):
         self.password = 'password'
         self.user = data_setup.create_user(password=self.password)
@@ -14,14 +14,17 @@ class JobDelete(SeleniumTestCase):
         self.recipe_to_delete = self.job_to_delete.recipesets[0].recipes[0]
         self.job_to_delete_2 = data_setup.create_completed_job(owner=self.user)
         self.recipe_to_delete_2 = self.job_to_delete_2
+        session.flush()
         self.selenium = self.get_selenium()
         self.selenium.start()
 
     def test_admin(self):
-        with session.begin():
-            self.user.groups.append(Group.by_name(u'admin'))
+        self.user.groups.append(Group.by_name(u'admin'))
+        session.flush()
         self.job_delete()
         self.job_delete_jobpage()
+        self.user.groups.remove(Group.by_name(u'admin'))
+        session.flush()
 
     def test_not_admin(self):
         self.job_delete()

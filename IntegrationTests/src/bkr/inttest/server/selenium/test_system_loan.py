@@ -1,16 +1,15 @@
 
 from bkr.inttest.server.selenium import SeleniumTestCase
-from bkr.inttest import data_setup, with_transaction
+from bkr.inttest import data_setup
 import unittest, time, re, os
 from turbogears.database import session
 
 class SystemLoanTest(SeleniumTestCase):
-
-    @with_transaction
     def setUp(self):
         self.selenium = self.get_selenium()
         self.selenium.start()
         self.system = data_setup.create_system()
+        session.flush()
 
     def tearDown(self):
         self.selenium.stop()
@@ -30,9 +29,9 @@ class SystemLoanTest(SeleniumTestCase):
         sel.wait_for_page_to_load("30000")
 
     def test_can_loan_when_system_has_user(self):
-        with session.begin():
-            user = data_setup.create_user()
-            self.system.user = user
+        user = data_setup.create_user()
+        self.system.user = user
+        session.flush()
         self.login()
         self.go_to_loan_page()
         sel = self.selenium
@@ -44,9 +43,9 @@ class SystemLoanTest(SeleniumTestCase):
 
     def test_owner_can_loan_to_themself(self):
         p_word='password'
-        with session.begin():
-            user = data_setup.create_user(password=p_word)
-            self.system.owner = user
+        user = data_setup.create_user(password=p_word)
+        self.system.owner = user
+        session.flush()
         self.login(user=user.user_name, password=p_word)
         self.go_to_loan_page()
         sel = self.selenium
@@ -58,10 +57,10 @@ class SystemLoanTest(SeleniumTestCase):
 
     def test_can_not_change_loan_when_system_has_loanee_and_not_admin(self):
         p_word = 'password'
-        with session.begin():
-            user = data_setup.create_user(password=p_word)
-            self.system.user = user
-            self.system.loaned = user
+        user = data_setup.create_user(password=p_word)
+        self.system.user = user
+        self.system.loaned = user
+        session.flush()
         self.login(user=user.user_name, password=p_word)
         try:
             self.go_to_change_loan_page()
@@ -71,11 +70,11 @@ class SystemLoanTest(SeleniumTestCase):
                 raise
 
     def test_can_change_loan_when_system_has_loanee(self):
-        with session.begin():
-            user = data_setup.create_user()
-            user2 = data_setup.create_user()
-            self.system.user = user
-            self.system.loaned = user
+        user = data_setup.create_user()
+        user2 = data_setup.create_user()
+        self.system.user = user
+        self.system.loaned = user
+        session.flush()
         self.login()
         self.go_to_change_loan_page()
         sel = self.selenium
@@ -84,18 +83,16 @@ class SystemLoanTest(SeleniumTestCase):
         sel.wait_for_page_to_load("30000")
         self.failUnless(sel.is_text_present("%s Loaned to %s" %
                 (self.system.fqdn, user2.user_name)))
-        with session.begin():
-            session.refresh(self.system)
-            reserved_activity = self.system.activity[-1]
-            self.assertEqual(reserved_activity.action, 'Changed')
-            self.assertEqual(reserved_activity.field_name, 'Loaned To')
-            self.assertEqual(reserved_activity.old_value, user.user_name)
-            self.assertEqual(reserved_activity.new_value, user2.user_name)
-            self.assertEqual(reserved_activity.service, 'WEBUI')
+        reserved_activity = self.system.activity[-1]
+        self.assertEqual(reserved_activity.action, 'Changed')
+        self.assertEqual(reserved_activity.field_name, 'Loaned To')
+        self.assertEqual(reserved_activity.old_value, user.user_name)
+        self.assertEqual(reserved_activity.new_value, user2.user_name)
+        self.assertEqual(reserved_activity.service, 'WEBUI')
 
     def test_loan_username_autocomplete_works(self):
-        with session.begin():
-            user = data_setup.create_user(user_name=u'distinctiveusername')
+        user = data_setup.create_user(user_name=u'distinctiveusername')
+        session.flush()
         self.login()
         self.go_to_loan_page()
         sel = self.selenium

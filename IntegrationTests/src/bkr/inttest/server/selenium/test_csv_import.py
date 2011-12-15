@@ -2,7 +2,7 @@
 # vim: set fileencoding=utf-8 :
 
 from bkr.inttest.server.selenium import SeleniumTestCase
-from bkr.inttest import data_setup, with_transaction
+from bkr.inttest import data_setup
 from bkr.inttest.assertions import assert_has_key_with_value
 from bkr.server.model import Arch
 from turbogears.database import session
@@ -11,9 +11,9 @@ from tempfile import NamedTemporaryFile
 
 class CSVImportTest(SeleniumTestCase):
 
-    @with_transaction
     def setUp(self):
         self.system = data_setup.create_system()
+        session.flush()
         self.selenium = self.get_selenium()
         self.selenium.start()
 
@@ -40,11 +40,10 @@ class CSVImportTest(SeleniumTestCase):
                 .encode('utf8'))
         sel = self.selenium
         self.failUnless(sel.is_text_present("No Errors"))
-        with session.begin():
-            session.refresh(self.system)
-            self.assertEquals(self.system.location, u'Under my desk')
-            self.assert_(Arch.by_name(u'ia64') in self.system.arch)
-            self.assert_(self.system.date_modified > orig_date_modified)
+        session.refresh(self.system)
+        self.assertEquals(self.system.location, u'Under my desk')
+        self.assert_(Arch.by_name(u'ia64') in self.system.arch)
+        self.assert_(self.system.date_modified > orig_date_modified)
 
     def test_keyvalue(self):
         orig_date_modified = self.system.date_modified
@@ -53,10 +52,9 @@ class CSVImportTest(SeleniumTestCase):
                 .encode('utf8'))
         sel = self.selenium
         self.failUnless(sel.is_text_present("No Errors"))
-        with session.begin():
-            session.refresh(self.system)
-            assert_has_key_with_value(self.system, 'COMMENT', u'UTF 8 –')
-            self.assert_(self.system.date_modified > orig_date_modified)
+        session.refresh(self.system)
+        assert_has_key_with_value(self.system, 'COMMENT', u'UTF 8 –')
+        self.assert_(self.system.date_modified > orig_date_modified)
 
 if __name__ == "__main__":
     unittest.main()

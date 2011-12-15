@@ -11,18 +11,14 @@ class TestJobDelete(XmlRpcTestCase):
 
     @classmethod
     def setupClass(cls):
-        with session.begin():
-            cls.product_one = data_setup.create_product()
-            cls.product_two = data_setup.create_product()
-            cls.distro = data_setup.create_distro(osmajor=u'customosmajor')
-            cls.password = u'password'
-            cls.user = data_setup.create_user(password=cls.password)
-            cls.scratch_job = data_setup.create_completed_job(
-                    retention_tag=u'scratch', owner=cls.user,
-                    product=cls.product_one, distro=cls.distro)
-            cls.sixty_days_job = data_setup.create_completed_job(
-                    retention_tag=u'60Days', product=cls.product_two,
-                    owner=cls.user)
+        cls.product_one = data_setup.create_product()
+        cls.product_two = data_setup.create_product()
+        cls.distro = data_setup.create_distro(osmajor=u'customosmajor')
+        cls.password = u'password'
+        cls.user = data_setup.create_user(password=cls.password)
+        cls.scratch_job = data_setup.create_completed_job(retention_tag = u'scratch',owner = cls.user,product=cls.product_one, distro = cls.distro)
+        cls.sixty_days_job = data_setup.create_completed_job(retention_tag = u'60Days', product=cls.product_two, owner= cls.user)
+        session.flush()
         cls.server = cls.get_server()
         cls.server.auth.login_password(cls.user.user_name, cls.password)
 

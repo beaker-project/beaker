@@ -1,12 +1,10 @@
 #!/usr/bin/python
 from bkr.inttest.server.selenium import SeleniumTestCase
-from bkr.inttest import data_setup, with_transaction
+from bkr.inttest import data_setup
 import unittest, time, re, os
 from turbogears.database import session
 
 class Search(SeleniumTestCase):
-
-    @with_transaction
     def setUp(self):
         self.verificationErrors = []
         self.selenium = self.get_selenium()
@@ -15,13 +13,15 @@ class Search(SeleniumTestCase):
         self.task_one = data_setup.create_task(name=u'/a/a/a', exclude_arch=[self.arch_one])
         self.task_two = data_setup.create_task(name=u'/a/a/b', exclude_arch=[self.arch_one])
         self.task_three = data_setup.create_task(name=u'/a/a/c', exclude_osmajor=[self.osmajor_one])
+        session.flush()
         self.selenium.start()
 
     def test_task_deleted(self):
-        with session.begin():
-            user = data_setup.create_user(password=u'password')
-            r = data_setup.create_recipe(task_name=self.task_three.name)
-            j = data_setup.create_job_for_recipes((r,), owner=user)
+
+        user = data_setup.create_user(password=u'password')
+        r = data_setup.create_recipe(task_name=self.task_three.name)
+        j = data_setup.create_job_for_recipes((r,), owner=user)
+        session.flush()
 
         sel = self.selenium
         self.login(user=user.user_name, password=u'password')
@@ -30,8 +30,8 @@ class Search(SeleniumTestCase):
         sel.click("//input[@type='submit']")
         self.wait_and_try(lambda: self.assert_(sel.is_text_present(u"T:%s" % r.tasks[0].id)), wait_time=10)
 
-        with session.begin():
-            j.soft_delete()
+        j.soft_delete()
+        session.flush()
         sel.open(u'tasks%s' % self.task_three.name)
         sel.wait_for_page_to_load('30000')
         sel.click("//input[@type='submit']")

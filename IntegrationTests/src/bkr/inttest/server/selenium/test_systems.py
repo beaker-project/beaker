@@ -27,7 +27,7 @@ import lxml.etree
 from turbogears.database import session
 
 from bkr.inttest.server.selenium import SeleniumTestCase
-from bkr.inttest import data_setup, get_server_base, with_transaction
+from bkr.inttest import data_setup, get_server_base
 from bkr.inttest.assertions import assert_sorted
 from bkr.server.model import Cpu
 
@@ -36,9 +36,9 @@ def atom_xpath(expr):
 
 class TestSystemsGrid(SeleniumTestCase):
 
-    @with_transaction
     def setUp(self):
         data_setup.create_system()
+        session.flush()
         self.selenium = self.get_selenium()
         self.selenium.start()
 
@@ -71,7 +71,8 @@ class TestSystemGridSorting(SeleniumTestCase):
     # tests in this class can safely share the same firefox session
     @classmethod
     def setUpClass(cls):
-        with session.begin():
+        try:
+            session.begin()
             # ensure we have lots of systems
             for cores in [1, 2, 3]:
                 for vendor, model, status, type, user in zip(
@@ -84,6 +85,9 @@ class TestSystemGridSorting(SeleniumTestCase):
                             model=model, status=status, type=type)
                     system.user = data_setup.create_user()
                     system.cpu = Cpu(cores=cores)
+            session.commit()
+        finally:
+            session.close()
         cls.selenium = sel = cls.get_selenium()
         sel.start()
 
@@ -187,8 +191,8 @@ class TestSystemsAtomFeed(unittest.TestCase):
         return int(xpath(feed))
 
     def test_all_systems(self):
-        with session.begin():
-            systems = [data_setup.create_system() for _ in range(25)]
+        systems = [data_setup.create_system() for _ in range(25)]
+        session.flush()
         feed_url = urljoin(get_server_base(), '?' + urlencode({
                 'tg_format': 'atom', 'list_tgp_order': '-date_modified',
                 'list_tgp_limit': '0'}))
@@ -198,8 +202,8 @@ class TestSystemsAtomFeed(unittest.TestCase):
             self.assert_(self.feed_contains_system(feed, system.fqdn))
 
     def test_link_to_rdfxml(self):
-        with session.begin():
-            system = data_setup.create_system()
+        system = data_setup.create_system()
+        session.flush()
         feed_url = urljoin(get_server_base(), '?' + urlencode({
                 'tg_format': 'atom', 'list_tgp_order': '-date_modified',
                 'list_tgp_limit': '0'}))
@@ -213,8 +217,8 @@ class TestSystemsAtomFeed(unittest.TestCase):
                 '%sview/%s?tg_format=rdfxml' % (get_server_base(), system.fqdn))
 
     def test_link_to_turtle(self):
-        with session.begin():
-            system = data_setup.create_system()
+        system = data_setup.create_system()
+        session.flush()
         feed_url = urljoin(get_server_base(), '?' + urlencode({
                 'tg_format': 'atom', 'list_tgp_order': '-date_modified',
                 'list_tgp_limit': '0'}))
@@ -228,10 +232,10 @@ class TestSystemsAtomFeed(unittest.TestCase):
                 '%sview/%s?tg_format=turtle' % (get_server_base(), system.fqdn))
 
     def test_filter_by_group(self):
-        with session.begin():
-            data_setup.create_system(fqdn=u'nogroup.system')
-            self.group = data_setup.create_group()
-            data_setup.create_system(fqdn=u'grouped.system').groups.append(self.group)
+        data_setup.create_system(fqdn=u'nogroup.system')
+        self.group = data_setup.create_group()
+        data_setup.create_system(fqdn=u'grouped.system').groups.append(self.group)
+        session.flush()
         feed_url = urljoin(get_server_base(), '?' + urlencode({
                 'tg_format': 'atom', 'list_tgp_order': '-date_modified',
                 'systemsearch-0.table': 'System/Group',

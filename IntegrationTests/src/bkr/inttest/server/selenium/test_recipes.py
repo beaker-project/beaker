@@ -35,17 +35,18 @@ class TestRecipesDataGrid(SeleniumTestCase):
     @classmethod
     def setUpClass(cls):
         # create a bunch of jobs
-        with session.begin():
-            cls.user = user = data_setup.create_user(password='password')
-            arches = [u'i386', u'x86_64', u'ia64']
-            distro_names = [u'DAN5-Server-U5', u'DAN5-Client-U5',
-                    u'DAN6-Server-U1', u'DAN6-Server-RC3']
-            for arch in arches:
-                for distro_name in distro_names:
-                    distro = data_setup.create_distro(name=distro_name, arch=arch)
-                    data_setup.create_job(owner=user, distro=distro)
-                    data_setup.create_completed_job(owner=user, distro=distro)
+        cls.user = user = data_setup.create_user(password='password')
+        arches = [u'i386', u'x86_64', u'ia64']
+        distro_names = [u'DAN5-Server-U5', u'DAN5-Client-U5',
+                u'DAN6-Server-U1', u'DAN6-Server-RC3']
+        for arch in arches:
+            for distro_name in distro_names:
+                distro = data_setup.create_distro(name=distro_name, arch=arch)
+                data_setup.create_job(owner=user, distro=distro)
+                data_setup.create_completed_job(owner=user, distro=distro)
+        session.flush()
 
+        # XXX we could save a *lot* of time by reusing Firefox instances across tests
         cls.selenium = sel = cls.get_selenium()
         sel.start()
 
@@ -114,15 +115,15 @@ class TestRecipesDataGrid(SeleniumTestCase):
 class TestRecipeView(WebDriverTestCase):
 
     def setUp(self):
-        with session.begin():
-            self.user = user = data_setup.create_user(display_name=u'Bob Brown',
-                    password='password')
-            self.system_owner = data_setup.create_user()
-            self.system = data_setup.create_system(owner=self.system_owner, arch=u'x86_64')
-            distro = data_setup.create_distro(arch=u'x86_64')
-            self.job = data_setup.create_completed_job(owner=user, distro=distro, server_log=True)
-            for recipe in self.job.all_recipes:
-                recipe.system = self.system
+        self.user = user = data_setup.create_user(display_name=u'Bob Brown',
+                password='password')
+        self.system_owner = data_setup.create_user()
+        self.system = data_setup.create_system(owner=self.system_owner, arch=u'x86_64')
+        distro = data_setup.create_distro(arch=u'x86_64')
+        self.job = data_setup.create_completed_job(owner=user, distro=distro, server_log=True)
+        for recipe in self.job.all_recipes:
+            recipe.system = self.system
+        session.flush()
         self.browser = self.get_browser()
         login(self.browser, user=user.user_name, password='password')
 
@@ -158,11 +159,11 @@ class TestRecipeView(WebDriverTestCase):
         self.assert_(r_server_link == r.logs[0].server + '/' + r.logs[0].filename)
 
     def test_task_pagination(self):
-        with session.begin():
-            num_of_tasks = 35
-            the_tasks = [data_setup.create_task() for t in range(num_of_tasks)]
-            the_recipe = data_setup.create_recipe(task_list=the_tasks)
-            the_job = data_setup.create_job_for_recipes([the_recipe], owner=self.user)
+        num_of_tasks = 35
+        the_tasks = [data_setup.create_task() for t in range(num_of_tasks)]
+        the_recipe = data_setup.create_recipe(task_list=the_tasks)
+        the_job = data_setup.create_job_for_recipes([the_recipe], owner=self.user)
+        session.flush()
 
         b = self.browser
         self.go_to_recipe_view(the_recipe)
@@ -172,14 +173,14 @@ class TestRecipeView(WebDriverTestCase):
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=751330
     def test_fetching_large_results_is_not_too_slow(self):
-        with session.begin():
-            tasks = [data_setup.create_task() for _ in range(700)]
-            recipe = data_setup.create_recipe(task_list=tasks)
-            pass_ = TaskResult.by_name(u'Pass')
-            for rt in recipe.tasks:
-                rt.results = [RecipeTaskResult(path=u'result_%d' % i,
-                        result=pass_, score=i) for i in range(10)]
-            job = data_setup.create_job_for_recipes([recipe], owner=self.user)
+        tasks = [data_setup.create_task() for _ in range(700)]
+        recipe = data_setup.create_recipe(task_list=tasks)
+        pass_ = TaskResult.by_name(u'Pass')
+        for rt in recipe.tasks:
+            rt.results = [RecipeTaskResult(path=u'result_%d' % i,
+                    result=pass_, score=i) for i in range(10)]
+        job = data_setup.create_job_for_recipes([recipe], owner=self.user)
+        session.flush()
 
         b = self.browser
         self.go_to_recipe_view(recipe)

@@ -15,7 +15,7 @@ from sqlalchemy.orm import relation, backref, synonym, dynamic_loader, \
 from sqlalchemy.orm.interfaces import AttributeExtension
 from sqlalchemy.sql import exists
 from sqlalchemy.sql.expression import join
-from sqlalchemy.exceptions import InvalidRequestError, IntegrityError
+from sqlalchemy.exceptions import InvalidRequestError
 from sqlalchemy.orm.exc import NoResultFound
 from identity import LdapSqlAlchemyIdentityProvider
 from cobbler_utils import consolidate, string_to_hash
@@ -1137,17 +1137,13 @@ class MappedObject(object):
 
     @classmethod
     def lazy_create(cls, **kwargs):
-        """
-        Returns the instance identified by the given uniquely-identifying 
-        attributes. If it doesn't exist yet, it is inserted first.
-        """
-        session.begin_nested()
+        item = None
         try:
-            item = cls(**kwargs)
-            session.commit()
-        except IntegrityError:
-            session.rollback()
             item = cls.query.filter_by(**kwargs).one()
+        except NoResultFound:
+            item = cls(**kwargs)
+            session.add(item)
+            session.flush([item])
         return item
 
     def __init__(self, **kwargs):

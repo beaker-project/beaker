@@ -8,12 +8,6 @@ from bkr.inttest import data_setup
 
 class SystemUtilisationTest(unittest.TestCase):
 
-    def setUp(self):
-        session.begin()
-
-    def tearDown(self):
-        session.commit()
-
     def test_durations(self):
         system = data_setup.create_system()
 

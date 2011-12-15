@@ -35,18 +35,17 @@ class BrokenSystemNotificationTest(unittest.TestCase):
         self.mail_capture.stop()
 
     def test_broken_system_notification(self):
-        with session.begin():
-            owner = data_setup.create_user(email_address=u'ackbar@calamari.gov')
-            lc = data_setup.create_labcontroller()
-            system = data_setup.create_system(fqdn=u'home-one', owner=owner,
-                    lender=u"Uncle Bob's Dodgy Shop", location=u'shed out the back',
-                    lab_controller=lc, vendor=u'Acorn', arch=u'i386')
-            system.arch.append(Arch.by_name(u'x86_64'))
-            data_setup.configure_system_power(system, power_type=u'drac',
-                    address=u'pdu2.home-one', power_id=u'42')
+        owner = data_setup.create_user(email_address=u'ackbar@calamari.gov')
+        lc = data_setup.create_labcontroller()
+        system = data_setup.create_system(fqdn=u'home-one', owner=owner,
+                lender=u"Uncle Bob's Dodgy Shop", location=u'shed out the back',
+                lab_controller=lc, vendor=u'Acorn', arch=u'i386')
+        system.arch.append(Arch.by_name(u'x86_64'))
+        data_setup.configure_system_power(system, power_type=u'drac',
+                address=u'pdu2.home-one', power_id=u'42')
+        session.flush()
 
-        with session.begin():
-            bkr.server.mail.broken_system_notify(system, reason="It's a tarp!")
+        bkr.server.mail.broken_system_notify(system, reason="It's a tarp!")
         self.assertEqual(len(self.mail_capture.captured_mails), 1)
         sender, rcpts, raw_msg = self.mail_capture.captured_mails[0]
         self.assertEqual(rcpts, ['ackbar@calamari.gov'])
@@ -83,11 +82,10 @@ class JobCompletionNotificationTest(unittest.TestCase):
         self.mail_capture.stop()
 
     def test_subject_format(self):
-        with session.begin():
-            job_owner = data_setup.create_user()
-            job = data_setup.create_job(owner=job_owner)
-            session.flush()
-            data_setup.mark_job_complete(job)
+        job_owner = data_setup.create_user()
+        job = data_setup.create_job(owner=job_owner)
+        session.flush()
+        data_setup.mark_job_complete(job)
 
         self.assertEqual(len(self.mail_capture.captured_mails), 1)
         sender, rcpts, raw_msg = self.mail_capture.captured_mails[0]
@@ -95,11 +93,10 @@ class JobCompletionNotificationTest(unittest.TestCase):
         self.assert_('[Beaker Job Completion] [Completed/Pass]' in msg['Subject'])
 
     def test_job_owner_is_notified(self):
-        with session.begin():
-            job_owner = data_setup.create_user()
-            job = data_setup.create_job(owner=job_owner)
-            session.flush()
-            data_setup.mark_job_complete(job)
+        job_owner = data_setup.create_user()
+        job = data_setup.create_job(owner=job_owner)
+        session.flush()
+        data_setup.mark_job_complete(job)
 
         self.assertEqual(len(self.mail_capture.captured_mails), 1)
         sender, rcpts, raw_msg = self.mail_capture.captured_mails[0]
@@ -109,12 +106,11 @@ class JobCompletionNotificationTest(unittest.TestCase):
         self.assert_('[Beaker Job Completion]' in msg['Subject'])
 
     def test_job_cc_list_is_notified(self):
-        with session.begin():
-            job_owner = data_setup.create_user()
-            job = data_setup.create_job(owner=job_owner,
-                    cc=[u'dan@example.com', u'ray@example.com'])
-            session.flush()
-            data_setup.mark_job_complete(job)
+        job_owner = data_setup.create_user()
+        job = data_setup.create_job(owner=job_owner,
+                cc=[u'dan@example.com', u'ray@example.com'])
+        session.flush()
+        data_setup.mark_job_complete(job)
 
         self.assertEqual(len(self.mail_capture.captured_mails), 1)
         sender, rcpts, raw_msg = self.mail_capture.captured_mails[0]
@@ -126,10 +122,9 @@ class JobCompletionNotificationTest(unittest.TestCase):
         self.assert_('[Beaker Job Completion]' in msg['Subject'])
 
     def test_contains_job_hyperlink(self):
-        with session.begin():
-            job = data_setup.create_job()
-            session.flush()
-            data_setup.mark_job_complete(job)
+        job = data_setup.create_job()
+        session.flush()
+        data_setup.mark_job_complete(job)
 
         self.assertEqual(len(self.mail_capture.captured_mails), 1)
         sender, rcpts, raw_msg = self.mail_capture.captured_mails[0]
@@ -142,11 +137,10 @@ class JobCompletionNotificationTest(unittest.TestCase):
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=720041
     def test_subject_contains_whiteboard(self):
-        with session.begin():
-            whiteboard = u'final space shuttle launch'
-            job = data_setup.create_job(whiteboard=whiteboard)
-            session.flush()
-            data_setup.mark_job_complete(job)
+        whiteboard = u'final space shuttle launch'
+        job = data_setup.create_job(whiteboard=whiteboard)
+        session.flush()
+        data_setup.mark_job_complete(job)
 
         self.assertEqual(len(self.mail_capture.captured_mails), 1)
         sender, rcpts, raw_msg = self.mail_capture.captured_mails[0]
