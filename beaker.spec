@@ -46,10 +46,7 @@ BuildRequires:  python-lxml
 BuildRequires:  python-ldap
 BuildRequires:  python-TurboMail >= 3.0
 BuildRequires:  cracklib-python
-# This conditional is only a temporary hack to get builds going in dist-f14
-%if 0%{?rhel}
 BuildRequires:  python-concurrentloghandler
-%endif
 BuildRequires:  rpm-python
 BuildRequires:  rhts-test-env
 %endif
