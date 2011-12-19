@@ -4,7 +4,7 @@
 from turbogears.database import session
 from bkr.inttest import data_setup, get_server_base
 from bkr.inttest.server.selenium import WebDriverTestCase
-from bkr.inttest.server.webdriver_utils import login, click_submenu_item
+from bkr.inttest.server.webdriver_utils import login
 from bkr.server.model import Provision, ProvisionFamily, ProvisionFamilyUpdate
 import csv
 import requests
@@ -19,7 +19,7 @@ class CSVExportTest(WebDriverTestCase):
 
     def get_csv(self, csv_type):
         b = self.browser
-        click_submenu_item(b, 'Reports', 'CSV')
+        b.get(get_server_base() + 'csv/')
         b.find_element_by_xpath('//input[@name="csv_type" and @value="%s"]' % csv_type).click()
         # XXX We can't actually submit the form here, because the browser will 
         # show us a download dialog which WebDriver can't handle. So we just 
