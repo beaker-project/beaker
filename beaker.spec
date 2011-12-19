@@ -16,7 +16,7 @@
 
 Name:           beaker
 Version:        0.8.0
-Release:        20%{?dist}
+Release:        21%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -341,6 +341,9 @@ fi
 %endif
 
 %changelog
+* Mon Dec 19 2011 Bill Peck <bpeck@redhat.com> 0.8.0-21
+- fix for beaker-transfer (bpeck@redhat.com)
+
 * Thu Dec 15 2011 Bill Peck <bpeck@redhat.com> 0.8.0-20
 - cast osminor to a char so when we do the db compare its done correctly.
   (bpeck@redhat.com)
