@@ -2,7 +2,7 @@
 #
 # beakerd:	Start the Beaker proxy daemon
 #
-# chkconfig: 345 99 99
+# chkconfig: - 99 99
 # description:  This service proxies unauthenticated requests from the lab
 #               network to the Beaker Scheduler.  Communication to the 
 #               scheduler is done via authenticated https.

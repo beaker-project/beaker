@@ -2,7 +2,7 @@
 #
 # beakerd:	Start the Beaker watchdog daemon
 #
-# chkconfig: 345 99 99
+# chkconfig: - 99 99
 # description:  This service handles watchdogs
 #               active watchdogs are monitored for errors
 #               expired watchdogs are then aborted

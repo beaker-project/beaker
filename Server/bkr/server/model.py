@@ -4762,7 +4762,7 @@ class Recipe(TaskBase):
 
     @property
     def servername(self):
-        return get('servername', socket.gethostname())
+        return get('tg.url_domain', get('servername', socket.getfqdn()))
 
     @property
     def harnesspath(self):
