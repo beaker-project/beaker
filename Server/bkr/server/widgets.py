@@ -1459,7 +1459,7 @@ class RetentionTagWidget(SingleSelectField, RPC): #FIXME perhaps I shoudl create
 
 
 class PriorityWidget(SingleSelectField):   
-   validator = validators.NotEmpty()
+   validator = ValidEnumValue(model.TaskPriority)
    params = ['default','controller'] 
    def __init__(self,*args,**kw): 
        self.options = [] 
@@ -1467,19 +1467,16 @@ class PriorityWidget(SingleSelectField):
 
    def display(self,obj,value=None,**params):           
        if 'priorities' in params: 
-           params['options'] =  params['priorities']       
+           params['options'] = [(pri, pri.value) for pri in params['priorities']]
        else:
-           params['options'] = [(elem.id,elem.priority) for elem in TaskPriority.query.all()]
+           params['options'] = [(pri, pri.value) for pri in model.TaskPriority]
        if isinstance(obj,model.Job):
            if 'id_prefix' in params:
                params['attrs'] = {'id' : '%s_%s' % (params['id_prefix'],obj.id) }
        elif obj:
            if 'id_prefix' in params:
                params['attrs'] = {'id' : '%s_%s' % (params['id_prefix'],obj.id) } 
-           try:
-               value = obj.priority.id 
-           except AttributeError,(e):
-               log.error('Object %s passed to display does not have a valid priority: %s' % (type(obj),e))
+           value = obj.priority
        return super(PriorityWidget,self).display(value or None,**params)
 
 class AlphaNavBar(Widget):

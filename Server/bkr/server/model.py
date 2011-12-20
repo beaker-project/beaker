@@ -92,6 +92,20 @@ class TaskResult(DeclEnum):
     def min(cls):
         return min(cls, key=lambda r: r.severity)
 
+class TaskPriority(DeclEnum):
+
+    symbols = [
+        ('low',    u'Low',    dict()),
+        ('medium', u'Medium', dict()),
+        ('normal', u'Normal', dict()),
+        ('high',   u'High',   dict()),
+        ('urgent', u'Urgent', dict()),
+    ]
+
+    @classmethod
+    def default_priority(cls):
+        return cls.normal
+
 xmldoc = xml.dom.minidom.Document()
 
 def node(element, value):
@@ -728,12 +742,6 @@ key_value_int_table = Table('key_value_int', metadata,
     mysql_engine='InnoDB',
 )
 
-task_priority_table = Table('task_priority',metadata,
-        Column('id', Integer, primary_key=True),
-        Column('priority', Unicode(20)),
-        mysql_engine='InnoDB',
-)
-
 job_table = Table('job',metadata,
         Column('id', Integer, primary_key=True),
         Column('owner_id', Integer,
@@ -771,8 +779,8 @@ recipe_set_table = Table('recipe_set',metadata,
         Column('id', Integer, primary_key=True),
         Column('job_id', Integer,
                 ForeignKey('job.id'), nullable=False),
-        Column('priority_id', Integer,
-                ForeignKey('task_priority.id'), default=select([task_priority_table.c.id], limit=1).where(task_priority_table.c.priority==u'Normal').correlate(None)),
+        Column('priority', TaskPriority.db_type(), nullable=False,
+                default=TaskPriority.default_priority()),
         Column('queue_time',DateTime, nullable=False, default=datetime.utcnow),
         Column('result', TaskResult.db_type(), nullable=False,
                 default=TaskResult.new),
@@ -3487,17 +3495,6 @@ class Key_Value_Int(MappedObject):
                                   Key_Value_Int.system==system)).one()
 
 
-
-class TaskPriority(MappedObject):
-
-    @classmethod
-    def default_priority(cls):
-        return cls.query.filter_by(id=3).one()
-
-    @classmethod
-    def by_id(cls,id):
-      return cls.query.filter_by(id=id).one()
-
 class Log(MappedObject):
 
     MAX_ENTRIES_PER_DIRECTORY = 100
@@ -4049,10 +4046,9 @@ class Job(TaskBase):
         title.text = "Set all RecipeSet priorities"        
         content = Element('td')
         content.attrib['colspan'] = colspan
-        priorities = TaskPriority.query.all()
-        for p in priorities:
+        for p in TaskPriority:
             id = '%s%s' % (prefix, self.id)
-            a_href = make_fake_link(unicode(p.id), id, p.priority)
+            a_href = make_fake_link(p.value, id, p.value)
             content.append(a_href)
         
         span.append(title)
@@ -4380,7 +4376,7 @@ class RecipeSet(TaskBase):
 
     def to_xml(self, clone=False, from_job=True, *args, **kw):
         recipeSet = xmldoc.createElement("recipeSet")
-        recipeSet.setAttribute('priority', self.priority.priority)
+        recipeSet.setAttribute('priority', unicode(self.priority))
         return_node = recipeSet 
 
         if not clone:
@@ -4405,9 +4401,10 @@ class RecipeSet(TaskBase):
         if not user:
             return
         if user.in_group(['admin','queue_admin']):
-            return TaskPriority.query.all()
-        default_id = TaskPriority.default_priority().id
-        return TaskPriority.query.filter(TaskPriority.id < default_id)
+            return [pri for pri in TaskPriority]
+        default = TaskPriority.default_priority()
+        return [pri for pri in TaskPriority
+                if TaskPriority.index(pri) < TaskPriority.index(default)]
 
     @classmethod
     def by_tag(cls, tag, query=None):
@@ -4566,10 +4563,10 @@ class RecipeSet(TaskBase):
         if not user:
             return [] 
         if user.in_group(['admin','queue_admin']):
-            return TaskPriority.query.all()
+            return [pri for pri in TaskPriority]
         elif user == self.job.owner: 
-            return TaskPriority.query.filter(TaskPriority.id <= self.priority.id)
-            
+            return [pri for pri in TaskPriority
+                    if TaskPriority.index(pri) <= TaskPriority.index(self.priority)]
 
     def cancel_link(self):
         """ return link to cancel this recipe
@@ -6402,7 +6399,6 @@ mapper(Response,response_table)
 
 mapper(RecipeSet, recipe_set_table,
         properties = {'recipes':relation(Recipe, backref='recipeset'),
-                      'priority':relation(TaskPriority, uselist=False),
                       'activity':relation(RecipeSetActivity,
                         order_by=[activity_table.c.created.desc(), activity_table.c.id.desc()],
                         backref='object'),
@@ -6490,7 +6486,6 @@ mapper(RecipeTaskResult, recipe_task_result_table,
         properties = {'logs':relation(LogRecipeTaskResult, backref='parent'),
                      }
       )
-mapper(TaskPriority, task_priority_table)
 mapper(Reservation, reservation_table, properties={
         'user': relation(User, backref=backref('reservations',
             order_by=[reservation_table.c.start_time.desc()])),

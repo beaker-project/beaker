@@ -398,33 +398,29 @@ class Root(RPCRoot):
                     kernel_options_post = kernel_options_post)
 
     @expose(format='json')
-    def change_priority_recipeset(self,priority_id,recipeset_id): 
+    def change_priority_recipeset(self, priority, recipeset_id):
         user = identity.current.user
         if not user:
             return {'success' : None, 'msg' : 'Must be logged in' }
 
         try:
             recipeset = RecipeSet.by_id(recipeset_id)
-            old_priority = recipeset.priority.priority
+            old_priority = recipeset.priority
         except:
             log.error('No rows returned for recipeset_id %s in change_priority_recipeset:%s' % (recipeset_id,e))
             return { 'success' : None, 'msg' : 'RecipeSet is not valid' }
 
         try: 
-            priority_query = TaskPriority.by_id(priority_id)  # will throw an error here if priorty id is invalid 
-        except InvalidRequestError, (e):
-            log.error('No rows returned for priority_id %s in change_priority_recipeset:%s' % (priority_id,e)) 
-            return { 'success' : None, 'msg' : 'Priority not found', 'current_priority' : recipeset.priority.id }
-         
-        allowed_priority_ids = [elem.id for elem in recipeset.allowed_priorities(user)]
-       
-        if long(priority_id) not in allowed_priority_ids:
-            return {'success' : None, 'msg' : 'Insufficient privileges for that priority', 'current_priority' : recipeset.priority.id }
-         
+            priority = TaskPriority.from_string(priority)
+        except ValueError:
+            log.exception('Invalid priority')
+            return { 'success' : None, 'msg' : 'Priority not found', 'current_priority' : recipeset.priority.value }
 
-        activity = RecipeSetActivity(identity.current.user, 'WEBUI', 'Changed', 'Priority', recipeset.priority.id,priority_id)
-        recipeset.priority = priority_query
-        session.add(recipeset)
+        if priority not in recipeset.allowed_priorities(user):
+            return {'success' : None, 'msg' : 'Insufficient privileges for that priority', 'current_priority' : recipeset.priority.value }
+
+        activity = RecipeSetActivity(identity.current.user, 'WEBUI', 'Changed', 'Priority', recipeset.priority.value,priority.value)
+        recipeset.priority = priority
         recipeset.activity.append(activity)
         return {'success' : True } 
 

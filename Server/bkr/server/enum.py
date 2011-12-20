@@ -76,6 +76,14 @@ class DeclEnum(object):
     def __init__(self):
         raise TypeError('DeclEnum subclasses are not instantiable')
 
+    @classmethod
+    def index(cls, symbol):
+        return cls._symbols.index(symbol)
+
+    @classmethod
+    def by_index(cls, index):
+        return cls._symbols[index]
+
 class DeclEnumType(SchemaType, TypeDecorator):
 
     def __init__(self, enum):

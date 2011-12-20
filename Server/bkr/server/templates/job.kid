@@ -5,7 +5,7 @@
 <head>
     <meta content="text/html; charset=UTF-8" http-equiv="content-type" py:replace="''"/>
     <script type="text/javascript" src="${tg.url('/static/javascript/master_slave_v2.js')}"></script>
-    <script type="text/javascript" src="${tg.url('/static/javascript/priority_manager_v3.js')}"></script>
+    <script type="text/javascript" src="${tg.url('/static/javascript/priority_manager_v4.js')}"></script>
     <script type="text/javascript" src="${tg.url('/static/javascript/rettag_manager_v2.js')}"></script>
     <script type="text/javascript" src="${tg.url('/static/javascript/jquery.timers-1.2.js')}"></script>
     <script type="text/javascript" src="${tg.url('/static/javascript/jquery.cookie.js')}"></script>
@@ -160,11 +160,8 @@
   <div py:for="recipeset in job.recipesets" class="recipeset">
     <?python 
         allowed_priorities = recipeset.allowed_priorities(tg.identity.user) 
-        if allowed_priorities:
-            priorities_list = [(elem.id,elem.priority) for elem in allowed_priorities]
-        else: priorities_list = None
     ?>   
- <div py:content="recipeset_widget(recipeset=recipeset,priorities_list=priorities_list)">RecipeSet goes here</div>
+ <div py:content="recipeset_widget(recipeset=recipeset,priorities_list=allowed_priorities)">RecipeSet goes here</div>
    <div py:for="recipe in recipeset.recipes" class="recipe">
     <div py:content="recipe_widget(recipe=recipe)">Recipe goes here</div>
    </div>

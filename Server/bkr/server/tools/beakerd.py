@@ -121,8 +121,9 @@ def new_recipes(*args):
                 if len(recipe.systems) == 1:
                     try:
                         log.info("recipe ID %s matches one system, bumping priority" % recipe.id)
-                        recipe.recipeset.priority = TaskPriority.by_id(recipe.recipeset.priority.id + 1)
-                    except InvalidRequestError:
+                        recipe.recipeset.priority = TaskPriority.by_index(
+                                TaskPriority.index(recipe.recipeset.priority) + 1)
+                    except IndexError:
                         # We may already be at the highest priority
                         pass
                 if recipe.systems:
@@ -323,8 +324,8 @@ def queued_recipes(*args):
     # Order recipes by priority.
     # FIXME Add secondary order by number of matched systems.
     if True:
-        recipes = recipes.join(Recipe.recipeset, RecipeSet.priority)\
-                .order_by(TaskPriority.id.desc())
+        recipes = recipes.join(Recipe.recipeset)\
+                .order_by(RecipeSet.priority.desc())
     if not recipes.count():
         return False
     log.debug("Entering queued_recipes routine")

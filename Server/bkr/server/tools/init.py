@@ -158,13 +158,6 @@ def init_db(user_name=None, password=None, user_display_name=None, user_email_ad
         VENDOR		= Key('VENDOR')
         XENCERT		= Key('XENCERT')
 
-    if TaskPriority.query.count() == 0:
-        low             = TaskPriority(priority=u'Low')
-        medium          = TaskPriority(priority=u'Medium')
-        normal          = TaskPriority(priority=u'Normal')
-        high            = TaskPriority(priority=u'High')
-        urgent          = TaskPriority(priority=u'Urgent')
-
     #Setup ack/nak reposnses
     if Response.query.count() == 0:
         ACK      = Response(response=u'ack')
