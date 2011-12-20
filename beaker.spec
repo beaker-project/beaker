@@ -16,7 +16,7 @@
 
 Name:           beaker
 Version:        0.8.0
-Release:        21%{?dist}
+Release:        22%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -341,6 +341,9 @@ fi
 %endif
 
 %changelog
+* Tue Dec 20 2011 Bill Peck <bpeck@redhat.com> 0.8.0-22
+- update find_kickstart to ignore sample_end.ks as well. (bpeck@redhat.com)
+
 * Mon Dec 19 2011 Bill Peck <bpeck@redhat.com> 0.8.0-21
 - fix for beaker-transfer (bpeck@redhat.com)
 
