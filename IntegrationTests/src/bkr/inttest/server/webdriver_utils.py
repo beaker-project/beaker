@@ -12,15 +12,6 @@ def login(browser, user=None, password=None):
     browser.find_element_by_name('password').send_keys(password)
     browser.find_element_by_name('login').click()
 
-def click_submenu_item(browser, menu_item, submenu_item):
-    """
-    Clicks on an item within a submenu, such as Reports -> CSV.
-    WebDriver makes this trickier than you might think...
-    """
-    webdriver.ActionChains(browser).move_to_element(browser.find_element_by_xpath(
-            '//ul[@id="menu"]/li[normalize-space(text())="%s"]' % menu_item)).perform()
-    browser.find_element_by_link_text(submenu_item).click()
-
 def is_text_present(browser, text):
     return bool(browser.find_elements_by_xpath(
             '//*[contains(text(), "%s")]' % text.replace('"', r'\"')))
