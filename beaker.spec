@@ -16,7 +16,7 @@
 
 Name:           beaker
 Version:        0.8.0
-Release:        22%{?dist}
+Release:        23%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -341,6 +341,9 @@ fi
 %endif
 
 %changelog
+* Wed Dec 21 2011 Bill Peck <bpeck@redhat.com> 0.8.0-23
+- anaconda doesn't handle nfs:// repos that are relative. (bpeck@redhat.com)
+
 * Tue Dec 20 2011 Bill Peck <bpeck@redhat.com> 0.8.0-22
 - update find_kickstart to ignore sample_end.ks as well. (bpeck@redhat.com)
 
