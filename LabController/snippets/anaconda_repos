@@ -15,29 +15,19 @@ repo --name=$reponame --cost=100 --baseurl=http://$server/distros$repourl
 #
 #   repo --baseurl will accept nfs://SERVER:/PATH or http://PATH
 ## Add OS repos
-#if $getVar('os_repos','') != ''
-#for $repo in $getVar('os_repos','').split('|')
+#set potential_repos = ['os_repos','debug_repos','optional_repos']
+#for potential_repo in $potential_repos
+#if $getVar($potential_repo,'') != ''
+#for $repo in $getVar($potential_repo,'').split('|')
 #if $repo.find(',') != -1
 #set (reponame, repourl) = $repo.split(',',1)
+#if $repourl.find('nfs://') != -1
+## If repo begins with nfs we remap it to http://$server/net/....
+#set (nfsserver, path) = repourl[6:].split(':',1)
+#set repourl = 'http://%s/net/%s%s' % ($server,$nfsserver, path)
+#end if ## nfs
 repo --name=$reponame --cost=100 --baseurl=$repourl
-#end if
-#end for
-#end if
-## Add Debuginfo repos
-#if $getVar('debug_repos','') != ''
-#for $repo in $getVar('debug_repos','').split('|')
-#if $repo.find(',') != -1
-#set (reponame, repourl) = $repo.split(',',1)
-repo --name=$reponame --cost=100 --baseurl=$repourl
-#end if
-#end for
-#end if
-## Add Optional repos
-#if $getVar('optional_repos','') != ''
-#for $repo in $getVar('optional_repos','').split('|')
-#if $repo.find(',') != -1
-#set (reponame, repourl) = $repo.split(',',1)
-repo --name=$reponame --cost=100 --baseurl=$repourl
-#end if
-#end for
-#end if
+#end if ## ,
+#end for ## repo
+#end if ## potential_repo
+#end for ## potential_repo
