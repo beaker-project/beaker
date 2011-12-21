@@ -1423,7 +1423,6 @@ class Root(RPCRoot):
                 redirect("/")
             system = System(fqdn=kw['fqdn'],owner=identity.current.user)
 
-        kw['status'] = SystemStatus.by_id(kw['status_id'])
         if kw['lab_controller_id'] == 0:
             kw['lab_controller'] = None
         else:

@@ -37,7 +37,7 @@ class SystemReturnTest(SeleniumTestCase):
 
 
     def test_return_with_no_lc(self):
-        self.system.status = SystemStatus.by_name(u'Manual')
+        self.system.status = SystemStatus.manual
         session.flush()
         sel = self.selenium
         self.login(user=self.user.user_name, password='password')

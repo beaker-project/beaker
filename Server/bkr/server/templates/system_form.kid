@@ -1,17 +1,16 @@
 <div xmlns:py="http://purl.org/kid/ns#">
 <script type='text/javascript'>
 $(document).ready(function(){ 
-    $("#form_status_id").change(function() 
-    { 
-        if ($('#form_status_id :selected').text() == 'Broken' || $('#form_status_id :selected').text() == 'Removed') {
+    $("#form_status").change(function() {
+        if ($('#form_status :selected').text() == 'Broken' || $('#form_status :selected').text() == 'Removed') {
              $('#condition_report_row').removeClass('hidden')
         };
-        if ($('#form_status_id :selected').text() == 'Manual' || $('#form_status_id :selected').text() == 'Automated') {
+        if ($('#form_status :selected').text() == 'Manual' || $('#form_status :selected').text() == 'Automated') {
              $('#condition_report_row').addClass('hidden')
         } 
     });
 
-    if ($('#form_status_id :selected').text() == 'Manual' || $('#form_status_id :selected').text() == 'Automated') {
+    if ($('#form_status :selected').text() == 'Manual' || $('#form_status :selected').text() == 'Automated') {
          $('#condition_report_row').addClass('hidden')
     } 
 });
@@ -96,10 +95,10 @@ $(document).ready(function(){
       </tr>
       <tr class="list">
        <th class="list">
-        ${label_for('status_id')}
+        ${label_for('status')}
        </th>
        <td class="list">
-        ${display_field_for("status_id")}
+        ${display_field_for("status")}
         <a href="${tg.url('/report_problem/', system_id=id)}">(Report problem)</a>
        </td>
        <th class="list">

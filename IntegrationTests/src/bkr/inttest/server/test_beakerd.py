@@ -369,7 +369,7 @@ class TestPowerFailures(unittest.TestCase):
         user = data_setup.create_user()
         automated_system = data_setup.create_system(fqdn=u'raise1.example.org',
                                                     lab_controller=self.lab_controller,owner = user,
-                                                    status = SystemStatus.by_name(u'Automated'))
+                                                    status = SystemStatus.automated)
         automated_system.reserve(u'Scheduler', user)
         session.flush()
         automated_system.unreserve(u'Scheduler', user)
@@ -386,14 +386,14 @@ class TestPowerFailures(unittest.TestCase):
     def test_automated_system_marked_broken(self):
         automated_system = data_setup.create_system(fqdn=u'broken1.example.org',
                                                     lab_controller=self.lab_controller,
-                                                    status = SystemStatus.by_name(u'Automated'))
+                                                    status = SystemStatus.automated)
         automated_system.action_power(u'on')
         session.flush()
         session.expunge_all()
         beakerd.queued_commands()
         beakerd.running_commands()
         automated_system = System.query.get(automated_system.id)
-        self.assertEqual(automated_system.status, SystemStatus.by_name(u'Broken'))
+        self.assertEqual(automated_system.status, SystemStatus.broken)
         system_activity = automated_system.activity[0]
         self.assertEqual(system_activity.action, 'on')
         self.assertTrue(system_activity.new_value.startswith('Failed'))
@@ -402,20 +402,20 @@ class TestPowerFailures(unittest.TestCase):
     def test_manual_system_status_not_changed(self):
         manual_system = data_setup.create_system(fqdn = u'broken2.example.org',
                                                  lab_controller = self.lab_controller,
-                                                 status = SystemStatus.by_name(u'Manual'))
+                                                 status = SystemStatus.manual)
         manual_system.action_power(u'on')
         session.flush()
         session.expunge_all()
         beakerd.queued_commands()
         beakerd.running_commands()
         manual_system = System.query.get(manual_system.id)
-        self.assertEqual(manual_system.status, SystemStatus.by_name(u'Manual'))
+        self.assertEqual(manual_system.status, SystemStatus.manual)
         system_activity = manual_system.activity[0]
         self.assertEqual(system_activity.action, 'on')
         self.assertTrue(system_activity.new_value.startswith('Failed'))
 
     def test_mark_broken_updates_history(self):
-        system = data_setup.create_system(status = SystemStatus.by_name(u'Automated'))
+        system = data_setup.create_system(status = SystemStatus.automated)
         system.mark_broken(reason = "Attacked by cyborgs")
         session.flush()
         session.expunge_all()
@@ -427,7 +427,7 @@ class TestPowerFailures(unittest.TestCase):
     def test_broken_power_aborts_recipe(self):
         system = data_setup.create_system(fqdn = u'broken.dreams.example.org',
                                           lab_controller = self.lab_controller,
-                                          status = SystemStatus.by_name(u'Automated'),
+                                          status = SystemStatus.automated,
                                           shared = True)
         distro = data_setup.create_distro()
         job = data_setup.create_job(distro=distro)

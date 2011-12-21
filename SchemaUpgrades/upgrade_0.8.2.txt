@@ -274,3 +274,54 @@ and run beaker-init to create and populate the task_priority table. Then:
         ADD CONSTRAINT recipe_set_priority_id_fk
             FOREIGN KEY (priority_id) REFERENCES task_priority (id),
         DROP COLUMN priority;
+
+
+Convert system_status to an ENUM
+--------------------------------
+
+TODO: merge these instructions with the ones above
+
+    ALTER TABLE system
+        ADD COLUMN status ENUM ('Automated', 'Broken', 'Manual', 'Removed')
+            NOT NULL AFTER status_id;
+    UPDATE system
+        INNER JOIN system_status ON system.status_id = system_status.id
+        SET system.status = system_status.status;
+    ALTER TABLE system
+        DROP FOREIGN KEY system_ibfk_4, -- foreign key for status_id
+        DROP COLUMN status_id;
+
+    ALTER TABLE system_status_duration
+        ADD COLUMN status ENUM ('Automated', 'Broken', 'Manual', 'Removed')
+            NOT NULL AFTER status_id;
+    UPDATE system_status_duration
+        INNER JOIN system_status ON system_status_duration.status_id = system_status.id
+        SET system_status_duration.status = system_status.status;
+    ALTER TABLE system_status_duration
+        DROP FOREIGN KEY system_status_duration_ibfk_2, -- foreign key for status_id
+        DROP COLUMN status_id;
+
+    DROP TABLE system_status;
+
+To roll back, first downgrade the beaker-server package to the desired version
+and run beaker-init to create and populate the system_status table. Then:
+
+    ALTER TABLE system
+        ADD COLUMN status_id INT NULL AFTER status;
+    UPDATE system SET status_id =
+        (SELECT id FROM system_status WHERE system_status.status = system.status);
+    ALTER TABLE system
+        MODIFY status_id INT NOT NULL,
+        ADD CONSTRAINT system_status_id_fk
+            FOREIGN KEY (status_id) REFERENCES system_status (id),
+        DROP COLUMN status;
+
+    ALTER TABLE system_status_duration
+        ADD COLUMN status_id INT NULL AFTER status;
+    UPDATE system_status_duration SET status_id =
+        (SELECT id FROM system_status WHERE system_status.status = system_status_duration.status);
+    ALTER TABLE system_status_duration
+        MODIFY status_id INT NOT NULL,
+        ADD CONSTRAINT system_status_duration_status_id_fk
+            FOREIGN KEY (status_id) REFERENCES system_status (id),
+        DROP COLUMN status;

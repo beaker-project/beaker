@@ -47,12 +47,6 @@ def init_db(user_name=None, password=None, user_display_name=None, user_email_ad
         leaveon     = ReleaseAction(u'LeaveOn')
         reprovision = ReleaseAction(u'ReProvision')
 
-    #Setup SystemStatus Table
-    if SystemStatus.query.count() == 0:
-        automated   = SystemStatus(u'Automated')
-        broken      = SystemStatus(u'Broken')
-        removed     = SystemStatus(u'Removed')
-        manual      = SystemStatus(u'Manual')
     try:
         admin = Group.by_name(u'admin')
     except InvalidRequestError:

@@ -297,7 +297,6 @@ def dead_recipes(*args):
     return True
 
 def queued_recipes(*args):
-    automated = SystemStatus.by_name(u'Automated')
     recipes = Recipe.query\
                     .join(Recipe.recipeset, RecipeSet.job)\
                     .join(Recipe.systems)\
@@ -309,7 +308,7 @@ def queued_recipes(*args):
                     .filter(
                          and_(Recipe.status==TaskStatus.queued,
                               System.user==None,
-                              System.status==automated,
+                              System.status==SystemStatus.automated,
                               LabController.disabled==False,
                               or_(
                                   RecipeSet.lab_controller==None,
@@ -340,7 +339,7 @@ def queued_recipes(*args):
                        .filter(and_(System.user==None,
                                   Distro.id==recipe.distro_id,
                                   LabController.disabled==False,
-                                  System.status==automated,
+                                  System.status==SystemStatus.automated,
                                   or_(
                                       System.loan_id==None,
                                       System.loan_id==recipe.recipeset.job.owner_id,
@@ -559,7 +558,7 @@ def running_commands(*args):
                                   (cmd.task_id, cmd.id, cmd.system))
                         cmd.status = CommandStatus.by_name(u'Failed')
                         cmd.new_value = u'Cobbler task failed'
-                        if cmd.system.status == SystemStatus.by_name(u'Automated'):
+                        if cmd.system.status == SystemStatus.automated:
                             cmd.system.mark_broken(reason='Cobbler power task failed')
                         cmd.log_to_system_history()
                         break

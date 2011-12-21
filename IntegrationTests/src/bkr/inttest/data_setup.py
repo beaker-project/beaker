@@ -167,7 +167,7 @@ def create_distro(name=None, breed=u'Dan',
         os.makedirs(harness_dir)
     return distro
 
-def create_system(arch=u'i386', type=u'Machine', status=u'Automated',
+def create_system(arch=u'i386', type=u'Machine', status=SystemStatus.automated,
         owner=None, fqdn=None, shared=False, exclude_osmajor=[],
         exclude_osversion=[], hypervisor=None, **kw):
     if owner is None:
@@ -177,7 +177,7 @@ def create_system(arch=u'i386', type=u'Machine', status=u'Automated',
     if System.query.filter(System.fqdn == fqdn).count():
         raise ValueError('Attempted to create duplicate system %s' % fqdn)
     system = System(fqdn=fqdn,type=SystemType.by_name(type), owner=owner, 
-                status=SystemStatus.by_name(status), **kw)
+                status=status, **kw)
     system.shared = shared
     system.arch.append(Arch.by_name(arch))
     configure_system_power(system)

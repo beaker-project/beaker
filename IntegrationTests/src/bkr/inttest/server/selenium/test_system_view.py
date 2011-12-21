@@ -171,16 +171,16 @@ class SystemViewTest(SeleniumTestCase):
         self.login()
         sel = self.selenium
         self.go_to_system_view()
-        sel.select('status_id', u'Broken')
+        sel.select('status', u'Broken')
         sel.click('link=Save Changes')
         sel.wait_for_page_to_load('30000')
-        self.assertEqual(sel.get_selected_label('status_id'), u'Broken')
+        self.assertEqual(sel.get_selected_label('status'), u'Broken')
         session.expunge_all()
         self.system = System.query.get(self.system.id)
-        self.assertEqual(self.system.status.status, u'Broken')
+        self.assertEqual(self.system.status, SystemStatus.broken)
         self.assertEqual(len(self.system.status_durations), 2)
-        self.assertEqual(self.system.status_durations[0].status.status,
-                u'Broken')
+        self.assertEqual(self.system.status_durations[0].status,
+                SystemStatus.broken)
         assertions.assert_datetime_within(
                 self.system.status_durations[0].start_time,
                 tolerance=datetime.timedelta(seconds=60),
@@ -195,19 +195,19 @@ class SystemViewTest(SeleniumTestCase):
     def test_change_status_with_same_timestamps(self):
         # create two SystemStatusDuration rows with the same timestamp
         # (that is, within the same second)
-        self.system.status = SystemStatus.by_name(u'Removed')
+        self.system.status = SystemStatus.removed
         session.flush()
-        self.system.status = SystemStatus.by_name(u'Automated')
+        self.system.status = SystemStatus.automated
         session.flush()
         self.login()
         sel = self.selenium
         self.go_to_system_view()
         self.go_to_system_view()
-        sel.select('status_id', u'Broken')
+        sel.select('status', u'Broken')
         sel.click('link=Save Changes')
         sel.wait_for_page_to_load('30000')
         self.assertEqual(sel.get_title(), self.system.fqdn)
-        self.assertEqual(sel.get_selected_label('status_id'), u'Broken')
+        self.assertEqual(sel.get_selected_label('status'), u'Broken')
 
     def test_strips_surrounding_whitespace_from_fqdn(self):
         self.login()

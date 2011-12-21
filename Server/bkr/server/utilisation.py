@@ -9,7 +9,7 @@ def update_status_durations_in_period(tally, status_durations, start, end):
         if sd.start_time < end and (sd.finish_time or end) > start:
             duration = min(sd.finish_time or end, end) - max(sd.start_time, start)
             assert duration >= datetime.timedelta(0)
-            tally['idle_%s' % sd.status.status.lower()] += duration
+            tally['idle_%s' % sd.status.value.lower()] += duration
 
 def system_utilisation(system, start, end):
     retval = dict((k, datetime.timedelta(0)) for k in

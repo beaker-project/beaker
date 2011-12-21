@@ -11,7 +11,7 @@ from sqlalchemy import (Table, Column, Index, ForeignKey, UniqueConstraint,
                         or_, and_, not_, select, case, func)
 
 from sqlalchemy.orm import relation, backref, synonym, dynamic_loader, \
-        query, object_mapper, mapper
+        query, object_mapper, mapper, column_property
 from sqlalchemy.orm.interfaces import AttributeExtension
 from sqlalchemy.sql import exists
 from sqlalchemy.sql.expression import join
@@ -106,6 +106,19 @@ class TaskPriority(DeclEnum):
     def default_priority(cls):
         return cls.normal
 
+class SystemStatus(DeclEnum):
+
+    # Changing a system from a "bad" status to a "good" status will cause its 
+    # status_reason to be cleared, see 
+    # bkr.server.controller_utilities._SystemSaveFormHandler
+
+    symbols = [
+        ('automated', u'Automated', dict(bad=False)),
+        ('broken',    u'Broken',    dict(bad=True)),
+        ('manual',    u'Manual',    dict(bad=False)),
+        ('removed',   u'Removed',   dict(bad=True)),
+    ]
+
 xmldoc = xml.dom.minidom.Document()
 
 def node(element, value):
@@ -139,8 +152,7 @@ system_table = Table('system', metadata,
            ForeignKey('tg_user.user_id')),
     Column('type_id', Integer,
            ForeignKey('system_type.id'), nullable=False),
-    Column('status_id', Integer,
-           ForeignKey('system_status.id'), nullable=False),
+    Column('status', SystemStatus.db_type(), nullable=False),
     Column('status_reason',Unicode(255)),
     Column('shared', Boolean, default=False),
     Column('private', Boolean, default=False),
@@ -188,13 +200,6 @@ release_action_table = Table('release_action', metadata,
     Column('id', Integer, autoincrement=True,
            nullable=False, primary_key=True),
     Column('action', Unicode(100), nullable=False),
-    mysql_engine='InnoDB',
-)
-
-system_status_table = Table('system_status', metadata,
-    Column('id', Integer, autoincrement=True,
-           nullable=False, primary_key=True),
-    Column('status', Unicode(100), nullable=False),
     mysql_engine='InnoDB',
 )
 
@@ -854,8 +859,7 @@ reservation_table = Table('reservation', metadata,
 system_status_duration_table = Table('system_status_duration', metadata,
         Column('id', Integer, primary_key=True),
         Column('system_id', Integer, ForeignKey('system.id'), nullable=False),
-        Column('status_id', Integer, ForeignKey('system_status.id'),
-            nullable=False),
+        Column('status', SystemStatus.db_type(), nullable=False),
         Column('start_time', DateTime, index=True, nullable=False,
             default=datetime.utcnow),
         Column('finish_time', DateTime, index=True),
@@ -1800,7 +1804,7 @@ url --url=$tree
         """ 
         Will return systems that are available to user for scheduling
         """
-        return cls._available(user, systems=systems, system_status=SystemStatus.by_name(u'Automated'))
+        return cls._available(user, systems=systems, system_status=SystemStatus.automated)
 
     @classmethod
     def _available(self, user, system_status=None, systems=None):
@@ -1810,14 +1814,14 @@ url --url=$tree
         """
 
         query = System.all(user, system=systems)
-        if type(system_status) is list:
+        if system_status is None:
+            query = query.filter(or_(System.status==SystemStatus.automated,
+                    System.status==SystemStatus.manual))
+        elif isinstance(system_status, list):
             query = query.filter(or_(*[System.status==k for k in system_status]))
-        elif type(system_status) is SystemStatus:
+        else:
             query = query.filter(System.status==system_status)
-        else: #Possibly we are none or somthing else...
-            query = query.filter(or_(System.status==SystemStatus.by_name(u'Automated'),
-                    System.status==SystemStatus.by_name(u'Manual')))
- 
+
         query = query.filter(or_(and_(System.owner==user), 
                                 System.loaned == user,
                                 and_(System.shared==True, 
@@ -1991,7 +1995,7 @@ url --url=$tree
             return True
         elif user is None:
             return False
-        if self.status==SystemStatus.by_name('Manual'): #If it's manual then we us our original perm system.
+        if self.status==SystemStatus.manual: #If it's manual then we us our original perm system.
             return self._has_regular_perms(user)
         return False
 
@@ -2491,12 +2495,12 @@ $SNIPPET("rhts_post")
         log.warning('Marking system %s as broken' % self.fqdn)
         sa = SystemActivity(user, service, u'Changed', u'Status', unicode(self.status), u'Broken')
         self.activity.append(sa)
-        self.status = SystemStatus.by_name(u'Broken')
+        self.status = SystemStatus.broken
         self.date_modified = datetime.utcnow()
         mail.broken_system_notify(self, reason, recipe)
 
     def suspicious_abort(self):
-        if self.status == SystemStatus.by_name(u'Broken'):
+        if self.status == SystemStatus.broken:
             return # nothing to do
         if self.type != SystemType.by_name(u'Machine'):
             return # prototypes get more leeway, and virtual machines can't really "break"...
@@ -2728,41 +2732,6 @@ class ReleaseAction(SystemObject):
         """
         if system.reprovision_distro:
             system.action_auto_provision(distro=system.reprovision_distro)
-
-
-class SystemStatus(SystemObject):
-
-    def __init__(self, status=None):
-        super(SystemStatus, self).__init__()
-        self.status = status
-
-    def __repr__(self):
-        return self.status
-
-    @classmethod
-    def get_all_status(cls):
-        """
-        Available, InUse, Offline
-        """
-        all_status = cls.query
-        return [(status.id, status.status) for status in all_status]
-
-    @classmethod
-    def get_all_status_name(cls):
-       all_status_name = cls.query
-       return [status_name.status for status_name in all_status_name]      
-
-
-    @classmethod
-    @sqla_cache
-    def by_name(cls, systemstatus):
-        return cls.query.filter_by(status=systemstatus).one()
- 
-    @classmethod
-    @sqla_cache
-    def by_id(cls,status_id):
-        return cls.query.filter_by(id=status_id).one()
-
 
 
 class Arch(MappedObject):
@@ -6107,11 +6076,10 @@ class CallbackAttributeExtension(AttributeExtension):
 # set up mappers between identity tables and classes
 SystemType.mapper = mapper(SystemType, system_type_table)
 Hypervisor.mapper = mapper(Hypervisor, hypervisor_table)
-SystemStatus.mapper = mapper(SystemStatus, system_status_table)
 mapper(ReleaseAction, release_action_table)
 System.mapper = mapper(System, system_table,
                    properties = {
-                     'status':relation(SystemStatus,uselist=False,
+                     'status': column_property(system_table.c.status,
                         extension=SystemStatusAttributeExtension()),
                      'devices':relation(Device,
                                         secondary=system_device_map,backref='systems'),
@@ -6181,9 +6149,7 @@ System.mapper = mapper(System, system_table,
                      })
 
 mapper(SystemCc, system_cc_table)
-mapper(SystemStatusDuration, system_status_duration_table, properties={
-        'status': relation(SystemStatus),
-})
+mapper(SystemStatusDuration, system_status_duration_table)
 
 Cpu.mapper = mapper(Cpu, cpu_table, properties={
     'flags': relation(CpuFlag, cascade='all, delete, delete-orphan'),

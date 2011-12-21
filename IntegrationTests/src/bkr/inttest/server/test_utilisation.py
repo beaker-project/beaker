@@ -18,11 +18,11 @@ class SystemUtilisationTest(unittest.TestCase):
         #   2010-01-04 12:00:00 to 00:00:00 running a recipe
         system.date_added = datetime.datetime(2009, 1, 1, 0, 0, 0)
         system.status_durations.append(SystemStatusDuration(
-                status=SystemStatus.by_name(u'Broken'),
+                status=SystemStatus.broken,
                 start_time=datetime.datetime(2009, 12, 31, 0, 0, 0),
                 finish_time=datetime.datetime(2010, 1, 2, 0, 0, 0)))
         system.status_durations.append(SystemStatusDuration(
-                status=SystemStatus.by_name(u'Automated'),
+                status=SystemStatus.automated,
                 start_time=datetime.datetime(2010, 1, 2, 0, 0, 0)))
         data_setup.create_manual_reservation(system,
                 start=datetime.datetime(2010, 1, 3, 0, 0, 0),
@@ -49,7 +49,7 @@ class SystemUtilisationTest(unittest.TestCase):
         system = data_setup.create_system()
         system.date_added = datetime.datetime(2009, 1, 1, 0, 0, 0)
         system.status_durations.append(SystemStatusDuration(
-                status=SystemStatus.by_name(u'Automated'),
+                status=SystemStatus.automated,
                 start_time=datetime.datetime(2009, 1, 1, 0, 0, 0)))
         session.flush()
 
@@ -61,7 +61,7 @@ class SystemUtilisationTest(unittest.TestCase):
         system = data_setup.create_system()
         system.date_added = datetime.datetime(2010, 1, 3, 0, 0, 0)
         system.status_durations.append(SystemStatusDuration(
-                status=SystemStatus.by_name(u'Automated'),
+                status=SystemStatus.automated,
                 start_time=datetime.datetime(2010, 1, 3, 0, 0, 0)))
         session.flush()
 
@@ -75,11 +75,11 @@ class SystemUtilisationTest(unittest.TestCase):
         system = data_setup.create_system()
         system.date_added = datetime.datetime(2009, 1, 1, 0, 0, 0)
         system.status_durations.append(SystemStatusDuration(
-                status=SystemStatus.by_name(u'Automated'),
+                status=SystemStatus.automated,
                 start_time=datetime.datetime(2009, 1, 1, 0, 0, 0),
                 finish_time=datetime.datetime(2010, 1, 3, 0, 0, 0)))
         system.status_durations.append(SystemStatusDuration(
-                status=SystemStatus.by_name(u'Removed'),
+                status=SystemStatus.removed,
                 start_time=datetime.datetime(2010, 1, 3, 0, 0, 0)))
         session.flush()
 

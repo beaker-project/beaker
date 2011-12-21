@@ -190,11 +190,11 @@ class Reports(RPCRoot):
                         .filter(and_(
                             SystemStatusDuration.start_time <= dt,
                             or_(SystemStatusDuration.finish_time >= dt, SystemStatusDuration.finish_time == None)))\
-                        .group_by(SystemStatusDuration.status_id)\
-                        .values(SystemStatusDuration.status_id, func.count(System.id))
+                        .group_by(SystemStatusDuration.status)\
+                        .values(SystemStatusDuration.status, func.count(System.id))
                 idle = dict(idle_query)
-                for status_id, status_name in SystemStatus.get_all_status():
-                    retval['idle_%s' % status_name.lower()].append(idle.get(status_id, 0))
+                for status in SystemStatus:
+                    retval['idle_%s' % status.value.lower()].append(idle.get(status, 0))
         finally:
             reports_session.close()
         if tg_format == 'json':

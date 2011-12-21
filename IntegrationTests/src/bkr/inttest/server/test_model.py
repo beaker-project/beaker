@@ -35,7 +35,7 @@ class TestSystem(unittest.TestCase):
         new_system = System(fqdn=u'test_fqdn', contact=u'test@email.com',
                             location=u'Brisbane', model=u'Proliant', serial=u'4534534',
                             vendor=u'Dell', type=SystemType.by_name(u'Machine'),
-                            status=SystemStatus.by_name(u'Automated'),
+                            status=SystemStatus.automated,
                             owner=owner)
         session.flush()
         self.assertEqual(new_system.fqdn, 'test_fqdn')
@@ -106,7 +106,7 @@ class TestBrokenSystemDetection(unittest.TestCase):
 
     def setUp(self):
         self.system = data_setup.create_system()
-        self.system.status = SystemStatus.by_name(u'Automated')
+        self.system.status = SystemStatus.automated
         data_setup.create_completed_job(system=self.system)
         session.flush()
         time.sleep(1)
@@ -126,18 +126,18 @@ class TestBrokenSystemDetection(unittest.TestCase):
     def test_multiple_suspicious_aborts_triggers_broken_system(self):
         # first aborted recipe shouldn't trigger it
         self.abort_recipe()
-        self.assertNotEqual(self.system.status, SystemStatus.by_name(u'Broken'))
+        self.assertNotEqual(self.system.status, SystemStatus.broken)
         # another recipe with a different stable distro *should* trigger it
         self.abort_recipe()
-        self.assertEqual(self.system.status, SystemStatus.by_name(u'Broken'))
+        self.assertEqual(self.system.status, SystemStatus.broken)
 
     def test_status_change_is_respected(self):
         # two aborted recipes should trigger it...
         self.abort_recipe()
         self.abort_recipe()
-        self.assertEqual(self.system.status, SystemStatus.by_name(u'Broken'))
+        self.assertEqual(self.system.status, SystemStatus.broken)
         # then the owner comes along and marks it as fixed...
-        self.system.status = SystemStatus.by_name(u'Automated')
+        self.system.status = SystemStatus.automated
         self.system.activity.append(SystemActivity(service=u'WEBUI',
                 action=u'Changed', field_name=u'Status',
                 old_value=u'Broken',
@@ -146,9 +146,9 @@ class TestBrokenSystemDetection(unittest.TestCase):
         time.sleep(1)
         # another recipe aborts...
         self.abort_recipe()
-        self.assertNotEqual(self.system.status, SystemStatus.by_name(u'Broken')) # not broken! yet
+        self.assertNotEqual(self.system.status, SystemStatus.broken) # not broken! yet
         self.abort_recipe()
-        self.assertEqual(self.system.status, SystemStatus.by_name(u'Broken')) # now it is
+        self.assertEqual(self.system.status, SystemStatus.broken) # now it is
 
     def test_counts_distinct_stable_distros(self):
         first_distro = data_setup.create_distro()
@@ -156,16 +156,16 @@ class TestBrokenSystemDetection(unittest.TestCase):
         # two aborted recipes for the same distro shouldn't trigger it
         self.abort_recipe(distro=first_distro)
         self.abort_recipe(distro=first_distro)
-        self.assertNotEqual(self.system.status, SystemStatus.by_name(u'Broken'))
+        self.assertNotEqual(self.system.status, SystemStatus.broken)
         # .. but a different distro should
         self.abort_recipe()
-        self.assertEqual(self.system.status, SystemStatus.by_name(u'Broken'))
+        self.assertEqual(self.system.status, SystemStatus.broken)
 
     def test_updates_modified_date(self):
         orig_date_modified = self.system.date_modified
         self.abort_recipe()
         self.abort_recipe()
-        self.assertEqual(self.system.status, SystemStatus.by_name(u'Broken'))
+        self.assertEqual(self.system.status, SystemStatus.broken)
         self.assert_(self.system.date_modified > orig_date_modified)
 
 class TestJob(unittest.TestCase):

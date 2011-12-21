@@ -107,7 +107,7 @@ class CSV(RPCRoot):
                         system = System(fqdn=data['fqdn'],
                                         owner=identity.current.user,
                                         type=SystemType.by_name('Machine'),
-                                        status=SystemStatus.by_name('Broken'))
+                                        status=SystemStatus.broken)
                     if system.can_admin(identity.current.user):
                         # Remove fqdn, can't change that via csv.
                         data.pop('fqdn')
@@ -307,8 +307,8 @@ class CSV_System(CSV):
                 log.append("%s: Invalid Status None" % system.fqdn)
                 return False
             try:
-                systemstatus = SystemStatus.by_name(data['status'])
-            except InvalidRequestError:
+                systemstatus = SystemStatus.from_string(data['status'])
+            except ValueError:
                 log.append("%s: Invalid Status %s" % (system.fqdn,
                                                       data['status']))
                 return False
