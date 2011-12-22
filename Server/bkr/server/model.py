@@ -119,6 +119,14 @@ class SystemStatus(DeclEnum):
         ('removed',   u'Removed',   dict(bad=True)),
     ]
 
+class ReleaseAction(DeclEnum):
+
+    symbols = [
+        ('power_off',   u'PowerOff',    dict()),
+        ('leave_on',    u'LeaveOn',     dict()),
+        ('reprovision', u'ReProvision', dict()),
+    ]
+
 xmldoc = xml.dom.minidom.Document()
 
 def node(element, value):
@@ -163,8 +171,7 @@ system_table = Table('system', metadata,
     Column('mac_address',String(18)),
     Column('loan_id', Integer,
            ForeignKey('tg_user.user_id')),
-    Column('release_action_id', Integer,
-           ForeignKey('release_action.id')),
+    Column('release_action', ReleaseAction.db_type()),
     Column('reprovision_distro_id', Integer,
            ForeignKey('distro.id')),
     Column('hypervisor_id', Integer,
@@ -193,13 +200,6 @@ system_type_table = Table('system_type', metadata,
     Column('id', Integer, autoincrement=True,
            nullable=False, primary_key=True),
     Column('type', Unicode(100), nullable=False),
-    mysql_engine='InnoDB',
-)
-
-release_action_table = Table('release_action', metadata,
-    Column('id', Integer, autoincrement=True,
-           nullable=False, primary_key=True),
-    Column('action', Unicode(100), nullable=False),
     mysql_engine='InnoDB',
 )
 
@@ -2353,7 +2353,15 @@ url --url=$tree
         # Attempt to remove Netboot entry and turn off machine
         if self.remote and self.release_action:
             self.remote.release(power=False)
-            self.release_action.do(self)
+            if self.release_action == ReleaseAction.power_off:
+                self.action_power(action=u'off')
+            elif action == ReleaseAction.leave_on:
+                self.action_power(action=u'on')
+            elif action == ReleaseAction.reprovision:
+                if self.reprovision_distro:
+                    self.action_auto_provision(distro=self.reprovision_distro)
+            else:
+                raise ValueError('Not a valid ReleaseAction: %r' % self.release_action)
         elif self.remote:
             self.remote.release()
 
@@ -2685,53 +2693,6 @@ class SystemType(SystemObject):
     @sqla_cache
     def by_name(cls, systemtype):
         return cls.query.filter_by(type=systemtype).one()
-
-
-class ReleaseAction(SystemObject):
-
-    def __init__(self, action=None):
-        super(ReleaseAction, self).__init__()
-        self.action = action
-
-    def __repr__(self):
-        return self.action
-
-    @classmethod
-    def get_all(cls):
-        """
-        PowerOff, LeaveOn or ReProvision
-        """
-        all_actions = cls.query
-        return [(raction.id, raction.action) for raction in all_actions]
-
-    @classmethod
-    def by_id(cls, id):
-        """ 
-        Look up ReleaseAction by id.
-        """
-        return cls.query.filter_by(id=id).one()
-
-    def do(self, *args, **kwargs):
-        try:
-            getattr(self, self.action)(*args, **kwargs)
-        except Exception ,msg:
-            raise BX(_('%s' % msg))
-
-    def PowerOff(self, system):
-        """ Turn off system
-        """
-        system.action_power(action='off')
-
-    def LeaveOn(self, system):
-        """ Leave system running
-        """
-        system.action_power(action='on')
-
-    def ReProvision(self, system):
-        """ re-provision the system 
-        """
-        if system.reprovision_distro:
-            system.action_auto_provision(distro=system.reprovision_distro)
 
 
 class Arch(MappedObject):
@@ -6076,7 +6037,6 @@ class CallbackAttributeExtension(AttributeExtension):
 # set up mappers between identity tables and classes
 SystemType.mapper = mapper(SystemType, system_type_table)
 Hypervisor.mapper = mapper(Hypervisor, hypervisor_table)
-mapper(ReleaseAction, release_action_table)
 System.mapper = mapper(System, system_table,
                    properties = {
                      'status': column_property(system_table.c.status,
@@ -6129,7 +6089,6 @@ System.mapper = mapper(System, system_table,
                      'command_queue':relation(CommandActivity,
                         order_by=[activity_table.c.created.desc(), activity_table.c.id.desc()],
                         backref='object', cascade='all, delete, delete-orphan'),
-                     'release_action':relation(ReleaseAction, uselist=False),
                      'reprovision_distro':relation(Distro, uselist=False),
                       '_system_ccs': relation(SystemCc, backref='system',
                                       cascade="all, delete, delete-orphan"),

@@ -91,19 +91,19 @@
    </tr>
    <tr>
     <td><label class="fieldlabel"
-               for="${release_action_id.field_id}"
-               py:content="release_action_id.label"/>
+               for="${release_action.field_id}"
+               py:content="release_action.label"/>
     </td>
     <td>
      <font color="red">
-      <span py:if="error_for(release_action_id)"
+      <span py:if="error_for(release_action)"
             class="fielderror"
-            py:content="error_for(release_action_id)" />
+            py:content="error_for(release_action)" />
      </font>
-     ${release_action_id.display(value_for(release_action_id), **params_for(release_action_id))}
-     <span py:if="release_action_id.help_text"
+     ${release_action.display(value_for(release_action), **params_for(release_action))}
+     <span py:if="release_action.help_text"
            class="fieldhelp"
-           py:content="release_action_id.help_text" />
+           py:content="release_action.help_text" />
     </td>
    </tr>
    <tr>

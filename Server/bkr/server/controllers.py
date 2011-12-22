@@ -1300,7 +1300,7 @@ class Root(RPCRoot):
                    id,
                    power_address,
                    power_type_id,
-                   release_action_id,
+                   release_action,
                    **kw):
         try:
             system = System.by_id(id,identity.current.user)
@@ -1322,16 +1322,14 @@ class Root(RPCRoot):
                 system.reprovision_distro = reprovision_distro
 
         try:
-            release_action = ReleaseAction.by_id(release_action_id)
-        except InvalidRequestError:
+            release_action = ReleaseAction.from_string(release_action)
+        except ValueError:
             release_action = None
-        if system.release_action and system.release_action != release_action:
-            system.activity.append(SystemActivity(identity.current.user, 'WEBUI', 'Changed', 'release_action', '%s' % system.release_action, '%s' % release_action ))
-            system.release_action = release_action
-        else:
-            system.activity.append(SystemActivity(identity.current.user, 'WEBUI', 'Changed', 'release_action', '%s' % system.release_action, '%s' % release_action ))
-            system.release_action = release_action
-            
+        system.activity.append(SystemActivity(identity.current.user, 'WEBUI',
+                'Changed', 'release_action',
+                '%s' % system.release_action, '%s' % release_action))
+        system.release_action = release_action
+
         if system.power:
             if power_address != system.power.power_address:
                 #Power Address Changed

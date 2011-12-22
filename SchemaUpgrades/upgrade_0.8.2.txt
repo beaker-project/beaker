@@ -325,3 +325,33 @@ and run beaker-init to create and populate the system_status table. Then:
         ADD CONSTRAINT system_status_duration_status_id_fk
             FOREIGN KEY (status_id) REFERENCES system_status (id),
         DROP COLUMN status;
+
+
+Convert release_action to an ENUM
+---------------------------------
+
+TODO: merge these instructions with the ones above
+
+    ALTER TABLE system
+        ADD COLUMN release_action ENUM ('PowerOff', 'LeaveOn', 'ReProvision')
+            AFTER release_action_id;
+    UPDATE system
+        INNER JOIN release_action ON system.release_action_id = release_action.id
+        SET system.release_action = release_action.action;
+    ALTER TABLE system
+        DROP FOREIGN KEY system_ibfk_8, -- foreign key for release_action_id
+        DROP COLUMN release_action_id;
+
+    DROP TABLE release_action;
+
+To roll back, first downgrade the beaker-server package to the desired version
+and run beaker-init to create and populate the release_action table. Then:
+
+    ALTER TABLE system
+        ADD COLUMN release_action_id INT NULL AFTER release_action,
+        ADD CONSTRAINT system_release_action_id_fk
+            FOREIGN KEY (release_action_id) REFERENCES release_action (id);
+    UPDATE system SET release_action_id =
+        (SELECT id FROM release_action WHERE release_action.action = system.release_action);
+    ALTER TABLE system
+        DROP COLUMN release_action;

@@ -41,12 +41,6 @@ def init_db(user_name=None, password=None, user_display_name=None, user_email_ad
     get_engine()
     metadata.create_all()
 
-    #Setup ReleaseAction Table
-    if ReleaseAction.query.count() == 0:
-        poweroff    = ReleaseAction(u'PowerOff')
-        leaveon     = ReleaseAction(u'LeaveOn')
-        reprovision = ReleaseAction(u'ReProvision')
-
     try:
         admin = Group.by_name(u'admin')
     except InvalidRequestError:
