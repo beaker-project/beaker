@@ -68,7 +68,7 @@ popd
 #set (reponame, repourl) = $repo.split(',',1)
 #if $repourl.find('nfs://') != -1
 ## If repo begins with nfs we remap it to http://$server/net/....
-#set (nfsserver, path) = repourl[6:].split(':')
+#set (nfsserver, path) = repourl[6:].split(':',1)
 #set repourl = 'http://%s/net/%s%s' % ($server,$nfsserver, path)
 #end if ## nfs
 cat << EOF >/etc/yum.repos.d/${reponame}.repo

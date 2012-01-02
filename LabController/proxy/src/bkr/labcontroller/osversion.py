@@ -184,6 +184,7 @@ class Profile(object):
         # pointing to sample.ks or legacy.ks
         pkickstart = self.profile.get('kickstart','')
         if pkickstart.endswith('sample.ks') or \
+           pkickstart.endswith('sample_end.ks') or \
            pkickstart.endswith('legacy.ks') or \
            pkickstart == '':
             kickstart = self._find_kickstart(

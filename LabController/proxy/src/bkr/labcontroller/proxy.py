@@ -320,8 +320,8 @@ class Watchdog(ProxyHelper):
                         try:
                             os.link(mysrc,mydst)
                             trlogs.append(mylog)
-                        except OSError:
-                            logger.error('unable to hardlink %s to %s', mysrc, mydist)
+                        except OSError, e:
+                            logger.error('unable to hardlink %s to %s, %s', mysrc, mydst, e)
                             return
                     else:
                             logger.warn('file missing: %s', mysrc)
