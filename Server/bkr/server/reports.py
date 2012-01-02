@@ -251,7 +251,7 @@ class Reports(RPCRoot):
             group_id = [group_id]
         group_id = [int(x) for x in group_id]
         systems = reports_session.query(System)\
-                .filter(System.type_id == SystemType.by_name(u'Machine').id)
+                .filter(System.type == SystemType.machine)
         if arch_id:
             arch_clauses = [System.arch.any(id=x) for x in arch_id]
             systems = systems.filter(or_(*arch_clauses))

@@ -119,6 +119,16 @@ class SystemStatus(DeclEnum):
         ('removed',   u'Removed',   dict(bad=True)),
     ]
 
+class SystemType(DeclEnum):
+
+    symbols = [
+        ('laptop',    u'Laptop',    dict()),
+        ('machine',   u'Machine',   dict()),
+        ('prototype', u'Prototype', dict()),
+        ('resource',  u'Resource',  dict()),
+        ('virtual',   u'Virtual',   dict()),
+    ]
+
 class ReleaseAction(DeclEnum):
 
     symbols = [
@@ -158,8 +168,7 @@ system_table = Table('system', metadata,
            ForeignKey('tg_user.user_id'), nullable=False),
     Column('user_id', Integer,
            ForeignKey('tg_user.user_id')),
-    Column('type_id', Integer,
-           ForeignKey('system_type.id'), nullable=False),
+    Column('type', SystemType.db_type(), nullable=False),
     Column('status', SystemStatus.db_type(), nullable=False),
     Column('status_reason',Unicode(255)),
     Column('shared', Boolean, default=False),
@@ -193,13 +202,6 @@ system_device_map = Table('system_device_map', metadata,
     Column('device_id', Integer,
            ForeignKey('device.id'),
            primary_key=True),
-    mysql_engine='InnoDB',
-)
-
-system_type_table = Table('system_type', metadata,
-    Column('id', Integer, autoincrement=True,
-           nullable=False, primary_key=True),
-    Column('type', Unicode(100), nullable=False),
     mysql_engine='InnoDB',
 )
 
@@ -1510,7 +1512,7 @@ class System(SystemObject):
         """ Return xml describing this system """
         fields = dict(
                       hostname    = 'fqdn',
-                      system_type = ['type','type'],
+                      system_type = 'type',
                      )
                       
         host_requires = xmldoc.createElement('hostRequires')
@@ -1518,13 +1520,8 @@ class System(SystemObject):
         for key in fields.keys():
             require = xmldoc.createElement(key)
             require.setAttribute('op', '=')
-            if isinstance(fields[key], list):
-                obj = self
-                for field in fields[key]:
-                    obj = getattr(obj, field, None)
-                require.setAttribute('value', obj or '')
-            else:
-                require.setAttribute('value', getattr(self, fields[key], None) or '')
+            value = getattr(self, fields[key], None) or u''
+            require.setAttribute('value', unicode(value))
             xmland.appendChild(require)
         host_requires.appendChild(xmland)
         return host_requires
@@ -1890,7 +1887,7 @@ url --url=$tree
                 query = System.all(user)
             else:
                 query = System.all()
-        return query.join(System.type).filter(SystemType.type == type)
+        return query.filter(System.type == type)
 
     @classmethod
     def by_arch(cls,arch,query=None):
@@ -2345,7 +2342,7 @@ url --url=$tree
                     )
                   )
         )
-        if self.type.type != 'Virtual':
+        if self.type != SystemType.virtual:
             distros = distros.filter(distro_table.c.virt==False)
         return distros
 
@@ -2510,7 +2507,7 @@ $SNIPPET("rhts_post")
     def suspicious_abort(self):
         if self.status == SystemStatus.broken:
             return # nothing to do
-        if self.type != SystemType.by_name(u'Machine'):
+        if self.type != SystemType.machine:
             return # prototypes get more leeway, and virtual machines can't really "break"...
         reliable_distro_tag = get('beaker.reliable_distro_tag', None)
         if not reliable_distro_tag:
@@ -2667,32 +2664,6 @@ class Hypervisor(SystemObject):
     @sqla_cache
     def by_name(cls, hvisor):
         return cls.query.filter_by(hypervisor=hvisor).one()
-
-class SystemType(SystemObject):
-
-    def __init__(self, type=None):
-        super(SystemType, self).__init__()
-        self.type = type
-
-    def __repr__(self):
-        return self.type
-
-    @classmethod
-    def get_all_types(cls):
-        """
-        Desktop, Server, Virtual
-        """
-        all_types = cls.query
-        return [(type.id, type.type) for type in all_types]
-    @classmethod
-    def get_all_type_names(cls):
-        all_types = cls.query
-        return [type.type for type in all_types]
-
-    @classmethod
-    @sqla_cache
-    def by_name(cls, systemtype):
-        return cls.query.filter_by(type=systemtype).one()
 
 
 class Arch(MappedObject):
@@ -6035,7 +6006,6 @@ class CallbackAttributeExtension(AttributeExtension):
 
 
 # set up mappers between identity tables and classes
-SystemType.mapper = mapper(SystemType, system_type_table)
 Hypervisor.mapper = mapper(Hypervisor, hypervisor_table)
 System.mapper = mapper(System, system_table,
                    properties = {
@@ -6043,7 +6013,6 @@ System.mapper = mapper(System, system_table,
                         extension=SystemStatusAttributeExtension()),
                      'devices':relation(Device,
                                         secondary=system_device_map,backref='systems'),
-                     'type':relation(SystemType, uselist=False),
                      'arch':relation(Arch,
                                      order_by=[arch_table.c.arch],
                                         secondary=system_arch_map,
@@ -6428,15 +6397,6 @@ def device_classes():
         _device_classes = DeviceClass.query.all()
     for device_class in _device_classes:
         yield device_class
-
-global _system_types
-_system_types = None
-def system_types():
-    global _system_types
-    if not _system_types:
-        _system_types = SystemType.query.all()
-    for system_type in _system_types:
-        yield system_type
 
 # available in python 2.7+ importlib
 def import_module(modname):

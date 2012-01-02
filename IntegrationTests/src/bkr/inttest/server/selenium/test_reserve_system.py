@@ -235,7 +235,7 @@ class ReserveSystem(WebDriverTestCase):
     def test_reserve_workflow_does_not_list_virtual_systems(self):
         with session.begin():
             virtual_system = data_setup.create_system(shared=True,
-                    lab_controller=self.lc, type=u'Virtual')
+                    lab_controller=self.lc, type=SystemType.virtual)
         login(self.browser)
         b = self.browser
         go_to_reserve_systems(b, self.distro)

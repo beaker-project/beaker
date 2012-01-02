@@ -358,8 +358,7 @@ class XmlSystemType(ElementWrapper):
         value = self.get_xml_attr('value', unicode, None)
         query = None
         if value:
-            joins = joins.join(System.type)
-            query = SystemType.type == value
+            query = System.type == value
         return (joins, query)
 
 class XmlHostName(ElementWrapper):

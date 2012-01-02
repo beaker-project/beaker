@@ -1260,10 +1260,10 @@ class SystemForm(Form):
                TextField(name='date_modified', label=_(u'Last Modification')),
                TextField(name='date_lastcheckin', label=_(u'Last Checkin')),
                TextField(name='serial', label=_(u'Serial Number')),
-               SingleSelectField(name='type_id',
+               SingleSelectField(name='type',
                                  label=_(u'Type'),
-                                 options=model.SystemType.get_all_types,
-                                 validator=validators.NotEmpty()),
+                                 options=[(type, unicode(type)) for type in model.SystemType],
+                                 validator=ValidEnumValue(model.SystemType)),
                TextField(name='location', label=_(u'Location')),
                TextField(name='lender', label=_(u'Lender'),
                          help_text=_(u'Name of the organisation which has '

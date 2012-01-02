@@ -34,7 +34,7 @@ class TestSystem(unittest.TestCase):
         owner = data_setup.create_user()
         new_system = System(fqdn=u'test_fqdn', contact=u'test@email.com',
                             location=u'Brisbane', model=u'Proliant', serial=u'4534534',
-                            vendor=u'Dell', type=SystemType.by_name(u'Machine'),
+                            vendor=u'Dell', type=SystemType.machine,
                             status=SystemStatus.automated,
                             owner=owner)
         session.flush()
@@ -372,7 +372,7 @@ class DistroSystemsFilterTest(unittest.TestCase):
 
     def test_system_type(self):
         excluded = data_setup.create_system(arch=u'i386', shared=True,
-                lab_controller=self.lc, type=u'Virtual')
+                lab_controller=self.lc, type=SystemType.virtual)
         included = data_setup.create_system(arch=u'i386', shared=True,
                 lab_controller=self.lc)
         session.flush()

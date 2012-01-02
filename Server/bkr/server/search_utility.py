@@ -784,13 +784,13 @@ class System(SystemObject):
                           'Owner'     : MyColumn(column=model.User.user_name, col_type='string',has_alias=True, relations='owner'),
                           'Status'    : MyColumn(column=model.System.status, col_type='string'),
                           'Arch'      : MyColumn(column=model.Arch.arch, col_type='string', relations='arch'),
-                          'Type'      : MyColumn(column=model.SystemType.type, col_type='string', relations='type'),
+                          'Type'      : MyColumn(column=model.System.type, col_type='string'),
                           'PowerType' : MyColumn(column=model.PowerType.name, col_type='string', relations=['power','power_type']),
                           'LoanedTo'  : MyColumn(column=model.User.user_name,col_type='string',has_alias=True, relations='loaned'),
                           'Group'     : MyColumn(column=model.Group.group_name, col_type='string',has_alias=True, relations=['group_assocs', 'group'])
                          }  
     search_values_dict = {'Status'    : lambda: model.SystemStatus.values(),
-                          'Type'      : lambda: model.SystemType.get_all_type_names(),
+                          'Type'      : lambda: model.SystemType.values(),
                           'Hypervisor': lambda: [''] + model.Hypervisor.get_all_names(),
                          }
     @classmethod
@@ -1020,7 +1020,7 @@ class SystemReserve(System):
     search = SystemReserveSearch
     searchable_columns =  {
                             'Name'      : MyColumn(column=model.System.fqdn,col_type='string'),
-                            'Type'      : MyColumn(column=model.SystemType.type, col_type='string', relations='type'), 
+                            'Type'      : MyColumn(column=model.System.type, col_type='string'),
                             'Owner'     : MyColumn(column=model.User.user_name, col_type='string', has_alias=True, relations='owner'),
                             'Shared'    : MyColumn(column=model.System.shared, col_type='boolean'),
                             'User'      : MyColumn(column=model.User.user_name, col_type='string', has_alias=True, relations='user'),

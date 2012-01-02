@@ -28,7 +28,6 @@
 
 <?python
 from bkr.server.model import device_classes
-from bkr.server.model import system_types
 from bkr.server.reports import Reports
 ?>
 <div id="fedora-header">

@@ -556,7 +556,7 @@ class Root(RPCRoot):
                     distro = Distro.query.filter(Distro.id == distro_id).one()
                 except KeyError:
                     raise
-            avail_systems_distro_query = System.by_type(type=u'Machine',
+            avail_systems_distro_query = System.by_type(type=SystemType.machine,
                     systems=distro.systems(user=identity.current.user))\
                     .order_by(None)
             warn = None
@@ -962,7 +962,7 @@ class Root(RPCRoot):
                         install   = self.system_installoptions,
                         arches    = self.arches_form 
                       )
-        if system.type != SystemType.by_name(u'Virtual'):
+        if system.type != SystemType.virtual:
             widgets['provision'] = self.system_provision
             widgets['power'] = self.power_form
             widgets['power_action'] = self.power_action_form
@@ -1425,7 +1425,6 @@ class Root(RPCRoot):
             kw['lab_controller'] = None
         else:
             kw['lab_controller'] = LabController.by_id(kw['lab_controller_id'])
-        kw['type'] = SystemType.by_id(kw['type_id'])
         if kw['hypervisor_id'] == 0:
             kw['hypervisor'] = None
         else:

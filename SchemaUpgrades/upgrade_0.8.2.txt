@@ -355,3 +355,34 @@ and run beaker-init to create and populate the release_action table. Then:
         (SELECT id FROM release_action WHERE release_action.action = system.release_action);
     ALTER TABLE system
         DROP COLUMN release_action;
+
+
+Convert system_type to an ENUM
+------------------------------
+
+TODO: merge these instructions with the ones above
+
+    ALTER TABLE system
+        ADD COLUMN type ENUM ('Machine', 'Virtual', 'Resource', 'Laptop', 'Prototype')
+            NOT NULL AFTER type_id;
+    UPDATE system
+        INNER JOIN system_type ON system.type_id = system_type.id
+        SET system.type = system_type.type;
+    ALTER TABLE system
+        DROP FOREIGN KEY system_ibfk_3, -- foreign key for type_id
+        DROP COLUMN type_id;
+
+    DROP TABLE system_type;
+
+To roll back, first downgrade the beaker-server package to the desired version
+and run beaker-init to create and populate the system_type table. Then:
+
+    ALTER TABLE system
+        ADD COLUMN type_id INT NULL AFTER type;
+    UPDATE system SET type_id =
+        (SELECT id FROM system_type WHERE system_type.type = system.type);
+    ALTER TABLE system
+        MODIFY type_id INT NOT NULL,
+        ADD CONSTRAINT system_type_id_fk
+            FOREIGN KEY (type_id) REFERENCES system_type (id),
+        DROP COLUMN type;

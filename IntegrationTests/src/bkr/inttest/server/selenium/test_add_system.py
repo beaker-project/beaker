@@ -189,9 +189,8 @@ class AddSystem(SeleniumTestCase):
 
     def check_db(self,fqdn):
         conn = get_engine().connect()
-        result = conn.execute("SELECT status,l.fqdn, t.type \
+        result = conn.execute("SELECT status,l.fqdn, type \
                         FROM system \
-                            INNER JOIN system_type AS t ON t.id = system.type_id\
                             INNER JOIN lab_controller AS l ON system.lab_controller_id = l.id\
                         WHERE system.fqdn = %s", fqdn).fetchone()
         if not result:
@@ -211,7 +210,7 @@ class AddSystem(SeleniumTestCase):
         if status == 'Broken':
             sel.type("form_status_reason", self.condition_report)
         sel.select("form_lab_controller_id", "label=%s" % lab_controller)
-        sel.select("form_type_id", "label=%s" % type)
+        sel.select("form_type", "label=%s" % type)
         sel.type("form_serial", serial)
         sel.type("form_vendor", vendor)
         sel.type("form_model", model)

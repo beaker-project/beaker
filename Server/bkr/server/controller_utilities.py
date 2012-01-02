@@ -157,10 +157,6 @@ class Utility:
         return 'user.user_name'
 
     @classmethod
-    def system_type_name(cls):
-        return 'type.type'
-
-    @classmethod
     def system_powertype_name(cls):
         return 'power.power_type.name'
 

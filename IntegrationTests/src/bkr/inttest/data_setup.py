@@ -167,7 +167,7 @@ def create_distro(name=None, breed=u'Dan',
         os.makedirs(harness_dir)
     return distro
 
-def create_system(arch=u'i386', type=u'Machine', status=SystemStatus.automated,
+def create_system(arch=u'i386', type=SystemType.machine, status=SystemStatus.automated,
         owner=None, fqdn=None, shared=False, exclude_osmajor=[],
         exclude_osversion=[], hypervisor=None, **kw):
     if owner is None:
@@ -176,7 +176,7 @@ def create_system(arch=u'i386', type=u'Machine', status=SystemStatus.automated,
         fqdn = unique_name(u'system%s.testdata')
     if System.query.filter(System.fqdn == fqdn).count():
         raise ValueError('Attempted to create duplicate system %s' % fqdn)
-    system = System(fqdn=fqdn,type=SystemType.by_name(type), owner=owner, 
+    system = System(fqdn=fqdn,type=type, owner=owner,
                 status=status, **kw)
     system.shared = shared
     system.arch.append(Arch.by_name(arch))
@@ -422,13 +422,13 @@ def create_test_env(type):#FIXME not yet using different types
     """
 
     arches = Arch.query.all()
-    system_type = SystemType.by_name(u'Machine') #This could be extended into a list and looped over
+    system_type = SystemType.machine #This could be extended into a list and looped over
     users = [create_user() for i in range(10)]
     lc = create_labcontroller()
     for arch in arches:
         create_distro(arch=arch)
         for user in users:
-            system = create_system(owner=user, arch=arch.arch, type=system_type.type, status=u'Automated', shared=True)
+            system = create_system(owner=user, arch=arch.arch, type=system_type, status=u'Automated', shared=True)
             system.lab_controller = lc
 
 def create_device(**kw):

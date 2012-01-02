@@ -174,10 +174,10 @@ $(document).ready(function(){
       </tr> 
       <tr class="list">
        <th class="list">
-        ${label_for('type_id')}
+        ${label_for('type')}
        </th>
        <td class="list">
-        ${display_field_for("type_id")}
+        ${display_field_for("type")}
        </td>
        <th class="list" py:if="show_cc or not readonly">
         ${label_for('cc')}

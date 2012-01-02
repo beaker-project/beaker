@@ -84,7 +84,7 @@ class TestReportProblem(SeleniumTestCase):
         self.assertEqual(msg['X-Location'], system.location)
         self.assertEqual(msg['X-Lab-Controller'], system.lab_controller.fqdn)
         self.assertEqual(msg['X-Vendor'], system.vendor)
-        self.assertEqual(msg['X-Type'], system.type.type)
+        self.assertEqual(msg['X-Type'], system.type.value)
         self.assertEqual(msg['X-Arch'], system.arch.pop().arch)
         self.assertEqual(msg.get_payload(decode=True),
                 'A Beaker user has reported a problem with system \n'

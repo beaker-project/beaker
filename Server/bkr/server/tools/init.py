@@ -68,14 +68,6 @@ def init_db(user_name=None, password=None, user_display_name=None, user_email_ad
         Permission(u'proxy_auth')
         admin.permissions.append(Permission(u'tag_distro'))
 
-    #Setup SystemTypes Table
-    if SystemType.query.count() == 0:
-        machine   = SystemType(u'Machine')
-        virtual   = SystemType(u'Virtual')
-        resource  = SystemType(u'Resource')
-        laptop    = SystemType(u'Laptop')
-        prototype = SystemType(u'Prototype')
-
     #Setup Hypervisors Table
     if Hypervisor.query.count() == 0:
         kvm       = Hypervisor(hypervisor=u'KVM')
