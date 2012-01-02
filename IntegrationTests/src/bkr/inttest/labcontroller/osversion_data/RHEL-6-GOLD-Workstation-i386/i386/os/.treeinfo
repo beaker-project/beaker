@@ -1,0 +1,34 @@
+[images-i386]
+initrd = images/pxeboot/initrd.img
+boot.iso = images/boot.iso
+kernel = images/pxeboot/vmlinuz
+
+[general]
+family = Red Hat Enterprise Linux
+timestamp = 1285191626.980428
+variant = Workstation
+totaldiscs = 1
+version = 6.0
+discnum = 1
+packagedir = Packages
+variants = Workstation
+arch = i386
+
+[images-xen]
+initrd = images/pxeboot/initrd.img
+kernel = images/pxeboot/vmlinuz
+
+[checksums]
+images/boot.iso = sha256:4996e972df7fe9cd22d54567f8ace076f6df053806d8e7152df3b11c76347885
+images/pxeboot/vmlinuz = sha256:c13362aecdca914d2537da415ca151023eb3b1f55686ed0b45cb36e19d73e48c
+images/pxeboot/initrd.img = sha256:ec5991d19ba2f7d450bdde46b884fcd0b96f3dc48696217c1b7c969421cbe855
+images/install.img = sha256:f0604ed88987ea876fc77b5b7b3aac6def508010ca44c7cd98ed732cbbb55ab3
+
+[stage2]
+mainimage = images/install.img
+
+[variant-Workstation]
+addons = 
+repository = Workstation/repodata
+identity = Workstation/Workstation.cert
+

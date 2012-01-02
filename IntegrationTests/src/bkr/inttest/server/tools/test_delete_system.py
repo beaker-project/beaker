@@ -27,11 +27,11 @@ class DeleteSystemTest(unittest.TestCase):
 
     def test_can_delete_system(self):
         delete_system(self.system.fqdn)
-        self.assert_(System.query().get(self.system_id) is None)
+        self.assert_(System.query.get(self.system_id) is None)
 
     def test_dry_run_rolls_back(self):
         delete_system(self.system.fqdn, dry_run=True)
-        self.assert_(System.query().get(self.system_id) is not None)
+        self.assert_(System.query.get(self.system_id) is not None)
 
     def test_cannot_delete_system_which_has_been_used_for_recipes(self):
         job = data_setup.create_job()
@@ -43,4 +43,4 @@ class DeleteSystemTest(unittest.TestCase):
             self.fail('should raise')
         except ValueError:
             pass
-        self.assert_(System.query().get(self.system_id) is not None)
+        self.assert_(System.query.get(self.system_id) is not None)

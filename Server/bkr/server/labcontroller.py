@@ -106,93 +106,46 @@ class LabControllers(RPCRoot):
 
     @cherrypy.expose
     @identity.require(identity.in_group("lab_controller"))
-    def addDistro(self, new_distro):
-        distro = self._addDistro(identity.current.user.lab_controller,
-                               new_distro)
-        if distro:
-            activity = Activity(identity.current.user,'XMLRPC','Added LabController',distro.install_name,None,identity.current.user.lab_controller.fqdn)
-            return distro.install_name
-        else:
-            return ""
+    def register_distro(self, install_name):
+        distro = Distro.lazy_create(install_name=install_name)
+        return distro.install_name
 
     @cherrypy.expose
-    def addDistros(self, lab_controller_name, new_distros):
-        """
-        DEPRECATED
-        XMLRPC Push method for adding distros
-        """
-        distros = self._addDistros(lab_controller_name, new_distros)
-        return [distro.install_name for distro in distros]
+    @identity.require(identity.in_group("lab_controller"))
+    def add_distro(self, new_distro):
+        lab_controller = identity.current.user.lab_controller
 
-    def _addDistros(self, lab_controller_name, new_distros):
-        """
-        DEPRECATED
-        Internal Push method for adding distros
-        """
-        try:
-            lab_controller = LabController.by_name(lab_controller_name)
-        except InvalidRequestError:
-            raise "Invalid Lab Controller"
-        distros = []
-        for new_distro in new_distros:
-            distro = self._addDistro(lab_controller, new_distro)
-            if distro:
-                activity = Activity(identity.current.user,'XMLRPC','Added LabController',distro.install_name,None,lab_controller.fqdn)
-                distros.append(distro)
-        return distros
-
-    def _addDistro(self, lab_controller, new_distro):
-        arches = []
-
-        # Try and look up the distro by the install name
-        try:
-            distro = Distro.by_install_name(new_distro['name'])
-        except InvalidRequestError:
-            distro = Distro(new_distro['name'])
-            distro.name = new_distro['treename']
-
-        # All the arches this distro's osmajor applies to
-        if 'arches' in new_distro:
-            for arch_name in new_distro['arches']:
-                try:
-                   arches.append(Arch.by_name(arch_name))
-                except InvalidRequestError:
-                   pass
+        # Look up the distro by the install name
+        distro = Distro.by_install_name(new_distro['name'])
+        distro.name = new_distro['treename']
 
         # osmajor is required
         if 'osmajor' in new_distro:
-            try:
-                osmajor = OSMajor.by_name(new_distro['osmajor'])
-            except InvalidRequestError:
-                osmajor = OSMajor(new_distro['osmajor'])
-                session.save(osmajor)
-                session.flush([osmajor])
+            osmajor = OSMajor.lazy_create(osmajor=new_distro['osmajor'])
         else:
-            return
+            return ''
 
         if 'osminor' in new_distro:
-            try:
-                osversion = OSVersion.by_name(osmajor,new_distro['osminor'])
-            except InvalidRequestError:
-                osversion = OSVersion(osmajor,new_distro['osminor'],arches)
-                session.save(osversion)
-                session.flush([osversion])
+            osversion = OSVersion.lazy_create(osmajor=osmajor, osminor=new_distro['osminor'])
             distro.osversion = osversion
         else:
-            return
+            return ''
+
+        if 'arches' in new_distro:
+            for arch_name in new_distro['arches']:
+                try:
+                   arch = Arch.by_name(arch_name)
+                   if arch not in distro.osversion.arches:
+                       osversion.arches.append(arch)
+                except InvalidRequestError:
+                   pass
 
         # If variant is specified in comment then use it.
         if 'variant' in new_distro:
             distro.variant = new_distro['variant']
 
         if 'breed' in new_distro:
-            try:
-                breed = Breed.by_name(new_distro['breed'])
-            except InvalidRequestError:
-                breed = Breed(new_distro['breed'])
-                session.save(breed)
-                session.flush([breed])
-            distro.breed = breed
+            distro.breed = Breed.lazy_create(breed=new_distro['breed'])
 
         # Automatically tag the distro if tags exists
         if 'tags' in new_distro:
@@ -200,12 +153,7 @@ class LabControllers(RPCRoot):
                 if tag not in distro.tags:
                     distro.tags.append(tag)
 
-        try:
-            arch = Arch.by_name(new_distro['arch'])
-        except InvalidRequestError:
-            arch = Arch(new_distro['arch'])
-            session.save(arch)
-            session.flush([arch])
+        arch = Arch.lazy_create(arch=new_distro['arch'])
         distro.arch = arch
         if arch not in distro.osversion.arches:
             distro.osversion.arches.append(arch)
@@ -218,7 +166,12 @@ class LabControllers(RPCRoot):
             if 'tree' in new_distro['ks_meta']:
                 lcd.tree_path = new_distro['ks_meta']['tree']
             lab_controller._distros.append(lcd)
-        return distro
+
+        distro.activity.append(DistroActivity(user=identity.current.user,
+                service=u'XMLRPC', action=u'Added', field_name=u'lab_controllers',
+                old_value=None, new_value=lab_controller.fqdn))
+
+        return distro.install_name
 
     @cherrypy.expose
     @identity.require(identity.in_group("lab_controller"))

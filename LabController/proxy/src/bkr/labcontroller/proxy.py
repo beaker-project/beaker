@@ -14,6 +14,7 @@ import tempfile
 import xmlrpclib
 from cStringIO import StringIO
 from socket import gethostname
+from threading import Thread, Event
 
 import kobo.conf
 from kobo.client import HubProxy 
@@ -22,7 +23,6 @@ from kobo.xmlrpc import retry_request_decorator, CookieTransport, \
         SafeCookieTransport
 from bkr.labcontroller.config import get_conf
 from kobo.process import kill_process_group
-from bkr.labcontroller.utils import add_rotating_file_logger
 from bkr.upload import Uploader
 import utils
 
@@ -31,12 +31,13 @@ try:
 except ImportError:
     from md5 import new as md5_constructor
 
+logger = logging.getLogger(__name__)
 
 
 class ProxyHelper(object):
 
 
-    def __init__(self, logger=None, conf=None, **kwargs):
+    def __init__(self, conf=None, **kwargs):
         self.conf = get_conf()
 
         # update data from another config
@@ -50,26 +51,12 @@ class ProxyHelper(object):
 
         self.conf.load_from_dict(kwargs)
 
-        # setup logger
-        if logger is not None:
-            self.logger = logger
-        else:
-            self.logger = logging.getLogger("Proxy")
-            log_level_string = self.conf["LOG_LEVEL"]
-            log_level = getattr(logging, log_level_string.upper(), logging.DEBUG)
-            self.logger.setLevel(log_level)
-            log_file = self.conf["LOG_FILE"]
-            add_rotating_file_logger(self.logger,
-                             log_file,
-                             log_level=log_level,
-                             format=self.conf["VERBOSE_LOG_FORMAT"])
-
         # self.hub is created here
         if self.conf['HUB_URL'].startswith('https://'):
             TransportClass = retry_request_decorator(SafeCookieTransport)
         else:
             TransportClass = retry_request_decorator(CookieTransport)
-        self.hub = HubProxy(logger=self.logger, conf=self.conf,
+        self.hub = HubProxy(logger=logging.getLogger('kobo.client.HubProxy'), conf=self.conf,
                 transport=TransportClass(timeout=120), **kwargs)
         self.server = self.conf.get("SERVER", "http://%s/beaker/logs" % gethostname())
         self.basepath = None
@@ -98,10 +85,8 @@ class ProxyHelper(object):
             indicates where the chunk belongs
             the special offset -1 is used to indicate the final chunk
         """
-        self.logger.info("recipe_upload_file recipe_id:%s name:%s offset:%s size:%s" % (recipe_id, 
-                                                                                        name,
-                                                                                        offset,
-                                                                                        size))
+        logger.debug("recipe_upload_file recipe_id:%s name:%s offset:%s size:%s",
+                recipe_id, name, offset, size)
         if self.conf.get("CACHE",False):
             if int(offset) == 0:
                 self.hub.recipes.register_file('%s/recipes/%s' % (self.server, recipe_id),
@@ -129,7 +114,7 @@ class ProxyHelper(object):
                     result_score=None,
                     result_summary=None):
         """ report a result to the scheduler """
-        self.logger.info("task_result %s" % task_id)
+        logger.debug("task_result %s", task_id)
         return self.hub.recipes.tasks.result(task_id,
                                              result_type,
                                              result_path,
@@ -139,7 +124,7 @@ class ProxyHelper(object):
     def task_info(self,
                   qtask_id):
         """ accepts qualified task_id J:213 RS:1234 R:312 T:1234 etc.. Returns dict with status """
-        self.logger.info("task_info %s" % qtask_id)
+        logger.debug("task_info %s", qtask_id)
         return self.hub.taskactions.task_info(qtask_id)
 
     def recipe_stop(self,
@@ -150,7 +135,7 @@ class ProxyHelper(object):
             stop_type = ['abort', 'cancel']
             msg to record
         """
-        self.logger.info("recipe_stop %s" % recipe_id)
+        logger.debug("recipe_stop %s", recipe_id)
         return self.hub.recipes.stop(recipe_id, stop_type, msg)
 
     def recipeset_stop(self,
@@ -161,7 +146,7 @@ class ProxyHelper(object):
             stop_type = ['abort', 'cancel']
             msg to record
         """
-        self.logger.info("recipeset_stop %s" % recipeset_id)
+        logger.debug("recipeset_stop %s", recipeset_id)
         return self.hub.recipesets.stop(recipeset_id, stop_type, msg)
 
     def job_stop(self,
@@ -172,14 +157,14 @@ class ProxyHelper(object):
             stop_type = ['abort', 'cancel']
             msg to record 
         """
-        self.logger.info("job_stop %s" % job_id)
+        logger.debug("job_stop %s", job_id)
         return self.hub.jobs.stop(job_id, stop_type, msg)
 
     def get_recipe(self, system_name=None):
         """ return the active recipe for this system """
         # Deprecated
         if system_name:
-            self.logger.info("get_recipe %s" % system_name)
+            logger.debug("get_recipe %s", system_name)
             return self.hub.recipes.system_xml(system_name)
 
     def get_my_recipe(self, request):
@@ -189,16 +174,16 @@ class ProxyHelper(object):
             Returns a recipe XML document.
         """
         if 'recipe_id' in request:
-            self.logger.info("get_recipe recipe_id:%s" % request['recipe_id'])
+            logger.debug("get_recipe recipe_id:%s", request['recipe_id'])
             return self.hub.recipes.to_xml(request['recipe_id'])
         if 'system_name' in request:
-            self.logger.info("get_recipe system_name:%s" % request['system_name'])
+            logger.debug("get_recipe system_name:%s", request['system_name'])
             return self.hub.recipes.system_xml(request['system_name'])
 
     def extend_watchdog(self, task_id, kill_time):
         """ tell the scheduler to extend the watchdog by kill_time seconds
         """
-        self.logger.info("extend_watchdog %s %s", task_id, kill_time)
+        logger.debug("extend_watchdog %s %s", task_id, kill_time)
         return self.hub.recipes.tasks.extend(task_id, kill_time)
 
     def task_to_dict(self, task_name):
@@ -258,7 +243,7 @@ class WatchFile(object):
                 # The regex is stored in /etc/beaker/proxy.conf
                 panic = self.panic.search(line)
                 if panic:
-                    self.proxy.logger.info("Panic detected for system: %s" % self.watchdog['system'])
+                    logger.info("Panic detected for system: %s", self.watchdog['system'])
                     recipeset = xmltramp.parse(self.proxy.get_recipe(self.watchdog['system'])).recipeSet
                     try:
                         recipe = recipeset.recipe
@@ -267,7 +252,7 @@ class WatchFile(object):
                     watchdog = recipe.watchdog()
                     if 'panic' in watchdog and watchdog['panic'] == 'ignore':
                         # Don't Report the panic
-                        self.proxy.logger.info("Not reporting panic, recipe set to ignore")
+                        logger.info("Not reporting panic, recipe set to ignore")
                     else:
                         # Report the panic
                         # Look for active task, worst case it records it on the last task
@@ -305,13 +290,13 @@ class Watchdog(ProxyHelper):
     watchdogs = dict()
 
     def transfer_logs(self):
-        self.logger.info("Entering transfer_logs")
+        logger.info("Entering transfer_logs")
         transfered = False
         server = self.conf.get("SERVER", gethostname())
         for recipe_id in self.hub.recipes.by_log_server(server):
             transfered = True
             self.transfer_recipe_logs(recipe_id)
-        self.logger.info("Exiting transfer_logs")
+        logger.info("Exiting transfer_logs")
         return transfered
 
     def transfer_recipe_logs(self, recipe_id):
@@ -319,39 +304,45 @@ class Watchdog(ProxyHelper):
         """
         if self.conf.get("CACHE",False):
             tmpdir = tempfile.mkdtemp(dir=self.basepath)
-            # Move logs to tmp directory layout
-            mylogs = self.hub.recipes.files(recipe_id)
-            trlogs = []
-            for mylog in mylogs:
-                server = '%s/%s' % (self.conf.get("ARCHIVE_SERVER"), mylog['filepath'])
-                basepath = '%s/%s' % (self.conf.get("ARCHIVE_BASEPATH"), mylog['filepath'])
-                mysrc = '%s/%s/%s' % (mylog['basepath'], mylog['path'], mylog['filename'])
-                mydst = '%s/%s/%s/%s' % (tmpdir, mylog['filepath'], 
-                                          mylog['path'], mylog['filename'])
-                if not os.path.exists(os.path.dirname(mydst)):
-                    os.makedirs(os.path.dirname(mydst))
-                try:
-                    os.link(mysrc,mydst)
-                    trlogs.append(mylog)
-                except OSError:
-                    pass
-            # rsync the logs to there new home
-            rc = self.rsync('%s/' % tmpdir, '%s' % self.conf.get("ARCHIVE_RSYNC"))
-            self.logger.info("rsync rc=%s" % rc)
-            if rc == 0:
-                # if the logs have been transfered then tell the server the new location
-                self.hub.recipes.change_files(recipe_id, self.conf.get("ARCHIVE_SERVER"),
-                                                         self.conf.get("ARCHIVE_BASEPATH"))
-                for mylog in trlogs:
+            try:
+                # Move logs to tmp directory layout
+                mylogs = self.hub.recipes.files(recipe_id)
+                trlogs = []
+                for mylog in mylogs:
+                    server = '%s/%s' % (self.conf.get("ARCHIVE_SERVER"), mylog['filepath'])
+                    basepath = '%s/%s' % (self.conf.get("ARCHIVE_BASEPATH"), mylog['filepath'])
                     mysrc = '%s/%s/%s' % (mylog['basepath'], mylog['path'], mylog['filename'])
-                    self.rm(mysrc)
-                    try:
-                        self.removedirs('%s/%s' % (mylog['basepath'], mylog['path']))
-                    except OSError:
-                        # Its ok if it fails, dir may not be empty yet
-                        pass
-            # get rid of our tmpdir.
-            shutil.rmtree(tmpdir)
+                    mydst = '%s/%s/%s/%s' % (tmpdir, mylog['filepath'], 
+                                              mylog['path'], mylog['filename'])
+                    if os.path.exists(mysrc):
+                        if not os.path.exists(os.path.dirname(mydst)):
+                            os.makedirs(os.path.dirname(mydst))
+                        try:
+                            os.link(mysrc,mydst)
+                            trlogs.append(mylog)
+                        except OSError, e:
+                            logger.error('unable to hardlink %s to %s, %s', mysrc, mydst, e)
+                            return
+                    else:
+                            logger.warn('file missing: %s', mysrc)
+                # rsync the logs to there new home
+                rc = self.rsync('%s/' % tmpdir, '%s' % self.conf.get("ARCHIVE_RSYNC"))
+                logger.debug("rsync rc=%s", rc)
+                if rc == 0:
+                    # if the logs have been transfered then tell the server the new location
+                    self.hub.recipes.change_files(recipe_id, self.conf.get("ARCHIVE_SERVER"),
+                                                             self.conf.get("ARCHIVE_BASEPATH"))
+                    for mylog in trlogs:
+                        mysrc = '%s/%s/%s' % (mylog['basepath'], mylog['path'], mylog['filename'])
+                        self.rm(mysrc)
+                        try:
+                            self.removedirs('%s/%s' % (mylog['basepath'], mylog['path']))
+                        except OSError:
+                            # Its ok if it fails, dir may not be empty yet
+                            pass
+            finally:
+                # get rid of our tmpdir.
+                shutil.rmtree(tmpdir)
 
     def rm(self, src):
         """ remove src
@@ -371,29 +362,29 @@ class Watchdog(ProxyHelper):
         """ Run system rsync command to move files
         """
         my_cmd = 'rsync %s %s %s' % (self.conf.get('RSYNC_FLAGS',''), src, dst)
-        return utils.subprocess_call(self.logger,my_cmd,shell=True)
+        return utils.subprocess_call(my_cmd,shell=True)
 
     def purge_old_watchdog(self, watchdog_systems):
         try:
             del self.watchdogs[watchdog_systems]
         except KeyError, e:
-            self.logger.error('Trying to remove a watchdog that is already removed')
+            logger.error('Trying to remove a watchdog that is already removed')
 
     def expire_watchdogs(self, watchdogs):
         """Clear out expired watchdog entries"""
 
-        self.logger.info("Entering expire_watchdogs")
+        logger.info("Entering expire_watchdogs")
         for watchdog in watchdogs:
             try:
                 self.abort(watchdog)
             except xmlrpclib.Fault:
                 # Catch xmlrpc.Fault's here so we keep iterating the loop
-                self.logger.exception('Failed to abort expired watchdog')
+                logger.exception('Failed to abort expired watchdog')
 
     def active_watchdogs(self, watchdogs, purge=True):
         """Monitor active watchdog entries"""
 
-        self.logger.info("Entering active_watchdogs")
+        logger.info("Entering active_watchdogs")
         active_watchdogs = []
         for watchdog in watchdogs:
             watchdog_key = '%s:%s' % (watchdog['system'], watchdog['recipe_id'])
@@ -405,7 +396,7 @@ class Watchdog(ProxyHelper):
             for watchdog_system in self.watchdogs.copy():
                 if watchdog_system not in active_watchdogs:
                     self.purge_old_watchdog(watchdog_system)
-                    self.logger.info("Removed Monitor for %s" % watchdog_system)
+                    logger.info("Removed Monitor for %s", watchdog_system)
 
     def run(self):
         updated = False
@@ -413,7 +404,7 @@ class Watchdog(ProxyHelper):
             try:
                 updated |= monitor.run()
             except (xmlrpclib.Fault, OSError):
-                self.logger.exception('Failed to run monitor for %s' % monitor.watchdog['system'])
+                logger.exception('Failed to run monitor for %s', monitor.watchdog['system'])
         return bool(updated)
 
     def sleep(self):
@@ -423,7 +414,7 @@ class Watchdog(ProxyHelper):
     def abort(self, watchdog):
         """ Abort expired watchdog entry
         """
-        self.logger.info("External Watchdog Expired for %s" % watchdog['system'])
+        logger.info("External Watchdog Expired for %s", watchdog['system'])
         self.recipe_stop(watchdog['recipe_id'],
                          'abort', 
                          'External Watchdog Expired')
@@ -437,13 +428,12 @@ class Monitor(ProxyHelper):
         """ Monitor system
         """
         self.watchdog = watchdog
-        self.logger = obj.logger
         self.conf = obj.conf
         self.hub = obj.hub
         self.server = obj.server
         self.upload = obj.upload
         self.basepath = obj.basepath
-        self.logger.debug("Initialize monitor for system: %s" % self.watchdog['system'])
+        logger.info("Initialize monitor for system: %s", self.watchdog['system'])
         self.watchedFiles = [WatchFile("%s/%s" % (self.conf["CONSOLE_LOGS"], self.watchdog["system"]),self.watchdog,self, self.conf["PANIC_REGEX"])]
 
     def run(self):
@@ -482,10 +472,8 @@ class Proxy(ProxyHelper):
             indicates where the chunk belongs
             the special offset -1 is used to indicate the final chunk
         """
-        self.logger.info("task_upload_file task_id:%s name:%s offset:%s size:%s" % (task_id,
-                                                                                    name,
-                                                                                    offset,
-                                                                                    size))
+        logger.debug("task_upload_file task_id:%s name:%s offset:%s size:%s",
+                task_id, name, offset, size)
         if self.conf.get("CACHE",False):
             if int(offset) == 0:
                 self.hub.recipes.tasks.register_file('%s/tasks/%s' % (self.server, task_id), 
@@ -512,7 +500,7 @@ class Proxy(ProxyHelper):
                    kill_time=None):
         """ tell the scheduler that we are starting a task
             default watchdog time can be overridden with kill_time seconds """
-        self.logger.info("task_start %s" % task_id)
+        logger.debug("task_start %s", task_id)
         return self.hub.recipes.tasks.start(task_id, kill_time)
 
 
@@ -522,7 +510,7 @@ class Proxy(ProxyHelper):
         This is a little ugly.. but better than putting this logic in
         kickstart
         """
-        self.logger.info("install_start")
+        logger.debug("install_start")
         # extend watchdog by 3 hours 60 * 60 * 3
         kill_time = 10800
         # look up system recipe based on hostname...
@@ -534,9 +522,9 @@ class Proxy(ProxyHelper):
             task = recipeset.guestrecipe.task()
         # Only do this if first task is Running
         if task['status'] == 'Running':
-            self.logger.info("Extending watchdog for task %s" % task['id'])
+            logger.debug("Extending watchdog for task %s", task['id'])
             self.hub.recipes.tasks.extend(task['id'], kill_time)
-            self.logger.info("Recording /start for task %s" % task['id'])
+            logger.debug("Recording /start for task %s", task['id'])
             self.hub.recipes.tasks.result(task['id'],
                                           'pass_',
                                           '/start',
@@ -548,7 +536,7 @@ class Proxy(ProxyHelper):
     def status_watchdog(self, task_id):
         """ Ask the scheduler how many seconds are left on a watchdog for this task
         """
-        self.logger.info("status_watchdog %s %s", task_id)
+        logger.debug("status_watchdog %s %s", task_id)
         return self.hub.recipes.tasks.watchdog(task_id)
 
     def task_stop(self,
@@ -558,7 +546,7 @@ class Proxy(ProxyHelper):
         """ tell the scheduler that we are stoping a task
             stop_type = ['stop', 'abort', 'cancel']
             msg to record if issuing Abort or Cancel """
-        self.logger.info("task_stop %s" % task_id)
+        logger.debug("task_stop %s", task_id)
         return self.hub.recipes.tasks.stop(task_id, stop_type, msg)
 
     def result_upload_file(self, 
@@ -581,10 +569,8 @@ class Proxy(ProxyHelper):
             indicates where the chunk belongs
             the special offset -1 is used to indicate the final chunk
         """
-        self.logger.info("result_upload_file result_id:%s name:%s offset:%s size:%s" % (result_id,
-                                                                                        name,
-                                                                                        offset,
-                                                                                        size))
+        logger.debug("result_upload_file result_id:%s name:%s offset:%s size:%s",
+                result_id, name, offset, size)
         if self.conf.get("CACHE",False):
             if int(offset) == 0:
                 self.hub.recipes.tasks.register_result_file('%s/results/%s' % (self.server,result_id),
@@ -628,14 +614,51 @@ class Proxy(ProxyHelper):
         """
         return self.hub.tags.updateDistro(distro, arch)
 
-    def addDistro(self, distro):
+    def register_distro(self, name):
+        return self.hub.labcontrollers.register_distro(name)
+
+    def add_distro(self, distro):
         """ This proxy method allows the lab controller to add new
             distros to the Scheduler/Inventory server.
         """
-        return self.hub.labcontrollers.addDistro(distro)
+        return self.hub.labcontrollers.add_distro(distro)
 
     def removeDistro(self, distro):
         """ This proxy method allows the lab controller to remove
             distros from the Scheduler/Inventory server.
         """
         return self.hub.labcontrollers.removeDistro(distro)
+
+
+class RepeatTimer(Thread):
+
+    def __init__(self, interval, function, stop_on_exception=True, args=[], kwargs={}):
+        Thread.__init__(self)
+        self.interval = interval
+        self.function = function
+        self.args = args
+        self.kwargs = kwargs
+        self.stop_on_exception = stop_on_exception
+        self.finished = Event()
+
+    def stop(self):
+        self.done = True
+        self.finished.set()
+
+    def run(self):
+        self.done = False
+        while True:
+            self.finished.wait(self.interval)
+            if self.done:
+                self.finished.clear()
+                break
+            if not self.finished.is_set():
+                try:
+                    self.function(*self.args, **self.kwargs)
+                except Exception, e:
+                    # Log it so we don't lose it
+                    logger.exception()
+                    if self.stop_on_exception:
+                        self.finished.clear()
+                        raise
+            self.finished.clear()

@@ -22,8 +22,6 @@
 import sys
 import os
 import random
-import pkg_resources
-pkg_resources.require("SQLAlchemy>=0.3.10")
 from bkr.server.bexceptions import BX, CobblerTaskFailedException
 from bkr.server.model import *
 from bkr.server.util import load_config, log_traceback
@@ -78,15 +76,15 @@ def get_parser():
 
 
 def new_recipes(*args):
-    recipes = Recipe.query().filter(
+    recipes = Recipe.query.filter(
             Recipe.status==TaskStatus.by_name(u'New'))
     if not recipes.count():
         return False
     log.debug("Entering new_recipes routine")
-    for _recipe in recipes:
+    for recipe_id, in recipes.values(Recipe.id):
         session.begin()
         try:
-            recipe = Recipe.by_id(_recipe.id)
+            recipe = Recipe.by_id(recipe_id)
             if recipe.distro:
                 recipe.systems = []
 
@@ -143,16 +141,16 @@ def new_recipes(*args):
     return True
 
 def processed_recipesets(*args):
-    recipesets = RecipeSet.query()\
+    recipesets = RecipeSet.query\
                        .join(['status'])\
                        .filter(RecipeSet.status==TaskStatus.by_name(u'Processed'))
     if not recipesets.count():
         return False
     log.debug("Entering processed_recipes routine")
-    for _recipeset in recipesets:
+    for rs_id, in recipesets.values(RecipeSet.id):
         session.begin()
         try:
-            recipeset = RecipeSet.by_id(_recipeset.id)
+            recipeset = RecipeSet.by_id(rs_id)
             bad_l_controllers = set()
             # We only need to do this processing on multi-host recipes
             if len(recipeset.recipes) == 1:
@@ -160,7 +158,7 @@ def processed_recipesets(*args):
                 recipeset.recipes[0].queue()
             else:
                 # Find all the lab controllers that this recipeset may run.
-                rsl_controllers = set(LabController.query()\
+                rsl_controllers = set(LabController.query\
                                               .join(['systems',
                                                      'queued_recipes',
                                                      'recipeset'])\
@@ -171,7 +169,7 @@ def processed_recipesets(*args):
                 # from any recipes.  For multi-host all recipes must be schedulable
                 # on one lab controller
                 for recipe in recipeset.recipes:
-                    rl_controllers = set(LabController.query()\
+                    rl_controllers = set(LabController.query\
                                                .join(['systems',
                                                       'queued_recipes'])\
                                                .filter(Recipe.id==recipe.id).all())
@@ -259,7 +257,7 @@ def processed_recipesets(*args):
     return True
 
 def dead_recipes(*args):
-    recipes = Recipe.query()\
+    recipes = Recipe.query\
                     .join('status')\
                     .outerjoin(['systems'])\
                     .outerjoin(['distro',
@@ -279,10 +277,10 @@ def dead_recipes(*args):
     if not recipes.count():
         return False
     log.debug("Entering dead_recipes routine")
-    for _recipe in recipes:
+    for recipe_id, in recipes.values(Recipe.id):
         session.begin()
         try:
-            recipe = Recipe.by_id(_recipe.id)
+            recipe = Recipe.by_id(recipe_id)
             if len(recipe.systems) == 0:
                 msg = u"R:%s does not match any systems, aborting." % recipe.id
                 log.info(msg)
@@ -301,17 +299,18 @@ def dead_recipes(*args):
 
 def queued_recipes(*args):
     automated = SystemStatus.by_name(u'Automated')
-    recipes = Recipe.query()\
-                    .join('status')\
-                    .join(['systems','lab_controller','_distros','distro'])\
-                    .join(['recipeset','priority'])\
-                    .join(['recipeset','job'])\
-                    .join(['distro','lab_controller_assocs','lab_controller'])\
+    recipes = Recipe.query\
+                    .join(Recipe.recipeset, RecipeSet.job)\
+                    .join(Recipe.systems)\
+                    .join(Recipe.distro)\
+                    .join(Distro.lab_controller_assocs,
+                        (LabController, and_(
+                            LabControllerDistro.lab_controller_id == LabController.id,
+                            System.lab_controller_id == LabController.id)))\
                     .filter(
                          and_(Recipe.status==TaskStatus.by_name(u'Queued'),
                               System.user==None,
                               System.status==automated,
-                              Recipe.distro_id==Distro.id,
                               LabController.disabled==False,
                               or_(
                                   RecipeSet.lab_controller==None,
@@ -326,18 +325,19 @@ def queued_recipes(*args):
     # Order recipes by priority.
     # FIXME Add secondary order by number of matched systems.
     if True:
-        recipes = recipes.order_by(TaskPriority.id.desc())
+        recipes = recipes.join(Recipe.recipeset, RecipeSet.priority)\
+                .order_by(TaskPriority.id.desc())
     if not recipes.count():
         return False
     log.debug("Entering queued_recipes routine")
-    for _recipe in recipes:
+    for recipe_id, in recipes.values(Recipe.id):
         session.begin()
         try:
-            recipe = Recipe.by_id(_recipe.id)
+            recipe = Recipe.by_id(recipe_id)
             systems = recipe.dyn_systems\
-                       .join(['lab_controller',
-                              '_distros',
-                              'distro'])\
+                       .join(System.lab_controller,
+                             LabController._distros,
+                             LabControllerDistro.distro)\
                        .filter(and_(System.user==None,
                                   Distro.id==recipe.distro_id,
                                   LabController.disabled==False,
@@ -362,7 +362,7 @@ def queued_recipes(*args):
             user = recipe.recipeset.job.owner
             if True: #FIXME if pools are defined add them here in the order requested.
                 systems = systems.order_by(case([(System.owner==user, 1),
-                          (System.owner!=user and Group.systems==None, 2)],
+                          (and_(System.owner!=user, System.groups != None), 2)],
                               else_=3))
             if recipe.recipeset.lab_controller:
                 # First recipe of a recipeSet determines the lab_controller
@@ -417,21 +417,18 @@ def scheduled_recipes(*args):
     if All recipes in a recipeSet are in Scheduled state then move them to
      Running.
     """
-    recipesets = RecipeSet.query().from_statement(
-                        select([recipe_set_table.c.id, 
-                                func.min(recipe_table.c.status_id)],
-                               from_obj=[recipe_set_table.join(recipe_table)])\
-                               .group_by(RecipeSet.id)\
-                               .having(func.min(recipe_table.c.status_id) == TaskStatus.by_name(u'Scheduled').id)).all()
-   
-    if not recipesets:
+    recipesets = RecipeSet.query.join(RecipeSet.recipes)\
+            .group_by(RecipeSet.id)\
+            .having(func.min(Recipe.status_id) ==
+                TaskStatus.by_name(u'Scheduled').id)
+    if not recipesets.count():
         return False
     log.debug("Entering scheduled_recipes routine")
-    for _recipeset in recipesets:
-        log.info("scheduled_recipes: RS:%s" % _recipeset.id)
+    for rs_id, in recipesets.values(RecipeSet.id):
+        log.info("scheduled_recipes: RS:%s" % rs_id)
         session.begin()
         try:
-            recipeset = RecipeSet.by_id(_recipeset.id)
+            recipeset = RecipeSet.by_id(rs_id)
             # Go through each recipe in the recipeSet
             for recipe in recipeset.recipes:
                 # If one of the recipes gets aborted then don't try and run
@@ -537,7 +534,7 @@ def scheduled_recipes(*args):
 
 COMMAND_TIMEOUT = 600
 def running_commands(*args):
-    commands = CommandActivity.query()\
+    commands = CommandActivity.query\
                               .filter(CommandActivity.status==CommandStatus.by_name(u'Running'))\
                               .order_by(CommandActivity.updated.asc())
     if not commands.count():
@@ -545,7 +542,7 @@ def running_commands(*args):
     log.debug('Entering running_commands routine')
     for cmd_id, in commands.values(CommandActivity.id):
         session.begin()
-        cmd = CommandActivity.query().get(cmd_id)
+        cmd = CommandActivity.query.get(cmd_id)
         if not cmd:
             log.error('Command %d get() failed. Deleted?' % (cmd_id))
         else:
@@ -585,50 +582,48 @@ def running_commands(*args):
     return True
 
 def queued_commands(*args):
-    commands = CommandActivity.query()\
+    commands = CommandActivity.query\
                               .filter(CommandActivity.status==CommandStatus.by_name(u'Queued'))\
                               .order_by(CommandActivity.created.asc())
     if not commands.count():
         return False
     log.debug('Entering queued_commands routine')
-    for command in commands:
-        log.debug("command.system=%s" % command.system)
-        # Skip queued commands if something is already running on that system
-        if CommandActivity.query().filter(and_(CommandActivity.status==CommandStatus.by_name(u'Running'),
-                                               CommandActivity.system==command.system))\
-                                .count():
-            log.info('Skipping power %s (command %d), command already running on machine: %s' %
-                     (command.action, command.id, command.system))
-            continue
-        session.begin()
-        cmd = CommandActivity.query().get(command.id)
-        log.debug("cmd=%s" % cmd)
-        # if get() is given an invalid id it will return None.
-        # I'm not sure how this would happen since id came from the above
-        # query, maybe a race condition?
-        if not cmd:
-            log.error('Command %d get() failed. Deleted? Machine: %s' % (command.id, command.system))
-        elif not cmd.system.lab_controller or not cmd.system.power:
-            log.error('Command %d aborted, power control not available for machine: %s' %
-                      (cmd.id, cmd.system))
-            cmd.status = CommandStatus.by_name(u'Aborted')
-            cmd.new_value = u'Power control unavailable'
-            cmd.log_to_system_history()
-        else:
-            try:
-                log.info('Executing power %s command (%d) on machine: %s' %
+    for cmd_id, in commands.values(CommandActivity.id):
+        with session.begin():
+            cmd = CommandActivity.query.get(cmd_id)
+            log.debug("cmd=%s" % cmd)
+            # if get() is given an invalid id it will return None.
+            # I'm not sure how this would happen since id came from the above
+            # query, maybe a race condition?
+            if not cmd:
+                log.error('Command %d get() failed. Deleted?', cmd_id)
+                continue
+            # Skip queued commands if something is already running on that system
+            if CommandActivity.query.filter(and_(CommandActivity.status==CommandStatus.by_name(u'Running'),
+                                                   CommandActivity.system==cmd.system))\
+                                    .count():
+                log.info('Skipping power %s (command %d), command already running on machine: %s' %
                          (cmd.action, cmd.id, cmd.system))
-                cmd.task_id = cmd.system.remote.power(cmd.action)
-                cmd.updated = datetime.utcnow()
-                cmd.status = CommandStatus.by_name(u'Running')
-            except Exception, msg:
-                log.error('Cobbler power exception submitting \'%s\' command (%d) for machine %s: %s' %
-                          (cmd.action, cmd.id, cmd.system, msg))
-                cmd.new_value = unicode(msg)
-                cmd.status = CommandStatus.by_name(u'Failed')
+                continue
+            if not cmd.system.lab_controller or not cmd.system.power:
+                log.error('Command %d aborted, power control not available for machine: %s' %
+                          (cmd.id, cmd.system))
+                cmd.status = CommandStatus.by_name(u'Aborted')
+                cmd.new_value = u'Power control unavailable'
                 cmd.log_to_system_history()
-        session.commit()
-        session.close()
+            else:
+                try:
+                    log.info('Executing power %s command (%d) on machine: %s' %
+                             (cmd.action, cmd.id, cmd.system))
+                    cmd.task_id = cmd.system.remote.power(cmd.action)
+                    cmd.updated = datetime.utcnow()
+                    cmd.status = CommandStatus.by_name(u'Running')
+                except Exception, msg:
+                    log.error('Cobbler power exception submitting \'%s\' command (%d) for machine %s: %s' %
+                              (cmd.action, cmd.id, cmd.system, msg))
+                    cmd.new_value = unicode(msg)
+                    cmd.status = CommandStatus.by_name(u'Failed')
+                    cmd.log_to_system_history()
     log.debug('Exiting queued_commands routine')
     return True
 

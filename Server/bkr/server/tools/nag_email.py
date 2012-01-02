@@ -1,7 +1,7 @@
 import sys
 import datetime
 from sqlalchemy.sql import and_
-from sqlalchemy.orm import contains_eager
+from sqlalchemy.orm import contains_eager, joinedload
 from bkr.server.model import System, Reservation
 from bkr.server.util import load_config, log_to_stream
 from turbogears import config
@@ -52,16 +52,15 @@ def main():
     identify_nags(threshold, reservation_type, testing)
 
 def identify_nags(threshold, reservation_type, testing):
-    query = System.query().join('reservations').filter(and_(
-            Reservation.finish_time == None,
+    query = System.query.options(joinedload(System.user))\
+            .join(System.open_reservation).filter(and_(
             Reservation.start_time <= datetime.datetime.utcnow()
                 - datetime.timedelta(days=threshold),
             Reservation.type == reservation_type,
             # Only get those systems are not owner==user, and are shared
             System.shared == True,
             Reservation.user_id != System.owner_id))\
-            .join(['reservations', 'user'])\
-            .options(contains_eager(Reservation.user))
+            .options(contains_eager(System.open_reservation))
     for system in query:
         recipient =  system.user.email_address
         subject = "[Beaker Reminder]: System %s" % system.fqdn

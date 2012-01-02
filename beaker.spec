@@ -1,9 +1,22 @@
 %{!?python_sitelib: %global python_sitelib %(%{__python} -c "from distutils.sysconfig import get_python_lib; print get_python_lib()")}
 %{!?pyver: %global pyver %(%{__python} -c "import sys ; print sys.version[:3]")}
 
+# The server, lab controller, and integration test subpackages can be conditionally built.
+# They are only enabled on RHEL >= 6 and Fedora >= 16.
+# Use rpmbuild --with/--without to override.
+%if 0%{?rhel} >= 6 || 0%{?fedora} >= 16
+%bcond_without server
+%bcond_without labcontroller
+%bcond_without inttests
+%else
+%bcond_with server
+%bcond_with labcontroller
+%bcond_with inttests
+%endif
+
 Name:           beaker
-Version:        0.7.3
-Release:        6%{?dist}
+Version:        0.8.0
+Release:        23%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -15,20 +28,19 @@ BuildRequires:  make
 BuildRequires:  python-setuptools
 BuildRequires:  python-setuptools-devel
 BuildRequires:  python2-devel
-BuildRequires:  python-kid
 BuildRequires:  python-docutils >= 0.6
 %if (0%{?fedora} >= 14)
 BuildRequires:  python-sphinx >= 1.0
 %else
 BuildRequires:  python-sphinx10
 %endif
+
+%if %{with server}
+BuildRequires:  python-kid
 # These server dependencies are needed in the build, because
 # sphinx imports bkr.server modules to generate API docs
-%if 0%{?rhel} == 5
-BuildRequires:  TurboGears = 1.0.8-7.eso.2%{?dist}
-%else
-BuildRequires:  TurboGears
-%endif
+BuildRequires:  TurboGears >= 1.1.3
+BuildRequires:  python-sqlalchemy >= 0.6
 BuildRequires:  python-xmltramp
 BuildRequires:  python-lxml
 BuildRequires:  python-ldap
@@ -38,6 +50,8 @@ BuildRequires:  python-TurboMail >= 3.0
 BuildRequires:  python-concurrentloghandler
 %endif
 BuildRequires:  rpm-python
+%endif
+
 # As above, these client dependencies are needed in build because of sphinx
 BuildRequires:  kobo-client >= 0.3
 BuildRequires:  python-krbV
@@ -57,14 +71,12 @@ Requires:       python-lxml
 Requires:       libxslt-python
 
 
+%if %{with server}
 %package server
 Summary:       Server component of Beaker
 Group:          Applications/Internet
-%if 0%{?rhel} == 5
-Requires:       TurboGears = 1.0.8-7.eso.2%{?dist}
-%else
-Requires:       TurboGears
-%endif
+Requires:       TurboGears >= 1.1.3
+Requires:       python-sqlalchemy >= 0.6
 Requires:       intltool
 Requires:       python-decorator
 Requires:       python-urllib2_kerberos
@@ -81,22 +93,27 @@ Requires:       python-TurboMail >= 3.0
 Requires:	createrepo
 Requires:	yum-utils
 Requires:       python-concurrentloghandler
+%endif
 
 
+%if %{with inttests}
 %package integration-tests
 Summary:        Integration tests for Beaker
 Group:          Applications/Internet
 Requires:       %{name} = %{version}-%{release}
 Requires:       %{name}-server = %{version}-%{release}
 Requires:       %{name}-client = %{version}-%{release}
+Requires:       %{name}-lab-controller = %{version}-%{release}
 Requires:       python-nose >= 0.10
 Requires:       python-selenium >= 2.0
 Requires:       kobo
 Requires:       java-1.6.0-openjdk
 Requires:       Xvfb
 Requires:       firefox
+%endif
 
 
+%if %{with labcontroller}
 %package lab-controller
 Summary:        Lab Controller xmlrpc server
 Group:          Applications/Internet
@@ -127,6 +144,8 @@ Requires:       %{name}-lab-controller = %{version}-%{release}
 Requires:       %{name}-client = %{version}-%{release}
 Provides:	beaker-redhat-support-addDistro
 Obsoletes:	beaker-redhat-support-addDistro
+%endif
+
 
 %description
 Filesystem layout for beaker
@@ -136,65 +155,90 @@ Filesystem layout for beaker
 This is the command line interface used to interact with the Beaker Server.
 
 
+%if %{with server}
 %description server
 To Be Filled in - Server Side..
+%endif
 
 
+%if %{with inttests}
 %description integration-tests
 This package contains integration tests for Beaker, which require a running 
 database and Beaker server.
+%endif
 
 
+%if %{with labcontroller}
 %description lab-controller
 This is the interface to link Medusa and Cobbler together. Mostly provides
 snippets and kickstarts.
 
-
 %description lab-controller-addDistro
 addDistro.sh can be called after distros have been imported into beaker.
 Automatically launch jobs against newly imported distros.
+%endif
 
 %prep
 %setup -q
 
 %build
 [ "$RPM_BUILD_ROOT" != "/" ] && [ -d $RPM_BUILD_ROOT ] && rm -rf $RPM_BUILD_ROOT;
-DESTDIR=$RPM_BUILD_ROOT make
+DESTDIR=$RPM_BUILD_ROOT make \
+    %{?with_server:WITH_SERVER=1} \
+    %{?with_labcontroller:WITH_LABCONTROLLER=1} \
+    %{?with_inttests:WITH_INTTESTS=1}
 
 %install
-DESTDIR=$RPM_BUILD_ROOT make install
+DESTDIR=$RPM_BUILD_ROOT make \
+    %{?with_server:WITH_SERVER=1} \
+    %{?with_labcontroller:WITH_LABCONTROLLER=1} \
+    %{?with_inttests:WITH_INTTESTS=1} \
+    install
+%if %{with labcontroller}
 ln -s RedHatEnterpriseLinux6.ks $RPM_BUILD_ROOT/%{_var}/lib/cobbler/kickstarts/redhat6.ks
 ln -s Fedora.ks $RPM_BUILD_ROOT/%{_var}/lib/cobbler/kickstarts/Fedoradevelopment.ks
+%endif
 
 %clean
 %{__rm} -rf %{buildroot}
 
+%if %{with server}
 %post server
 /sbin/chkconfig --add beakerd
+%endif
 
+%if %{with labcontroller}
 %post lab-controller
 /sbin/chkconfig --add beaker-proxy
 /sbin/chkconfig --add beaker-watchdog
 /sbin/chkconfig --add beaker-transfer
+%endif
 
+%if %{with server}
 %postun server
 if [ "$1" -ge "1" ]; then
         /sbin/service beakerd condrestart >/dev/null 2>&1 || :
 fi
+%endif
 
+%if %{with labcontroller}
 %postun lab-controller
 if [ "$1" -ge "1" ]; then
         /sbin/service beaker-proxy condrestart >/dev/null 2>&1 || :
         /sbin/service beaker-watchdog condrestart >/dev/null 2>&1 || :
         /sbin/service beaker-transfer condrestart >/dev/null 2>&1 || :
 fi
+%endif
 
+%if %{with server}
 %preun server
 if [ "$1" -eq "0" ]; then
         /sbin/service beakerd stop >/dev/null 2>&1 || :
         /sbin/chkconfig --del beakerd || :
 fi
+%endif
 
+%if %{with labcontroller}
 %preun lab-controller
 if [ "$1" -eq "0" ]; then
         /sbin/service beaker-proxy stop >/dev/null 2>&1 || :
@@ -204,6 +248,7 @@ if [ "$1" -eq "0" ]; then
         /sbin/chkconfig --del beaker-watchdog || :
         /sbin/chkconfig --del beaker-transfer || :
 fi
+%endif
 
 %files
 %defattr(-,root,root,-)
@@ -216,6 +261,7 @@ fi
 %{python_sitelib}/bkr-%{version}-py%{pyver}.egg-info/
 %doc COPYING
 
+%if %{with server}
 %files server
 %defattr(-,root,root,-)
 %doc Server/README
@@ -243,12 +289,15 @@ fi
 %attr(-,apache,root) %dir %{_localstatedir}/www/%{name}/rpms
 %attr(-,apache,root) %dir %{_localstatedir}/www/%{name}/repos
 %attr(-,apache,root) %dir %{_localstatedir}/run/%{name}
+%endif
 
+%if %{with inttests}
 %files integration-tests
 %defattr(-,root,root,-)
 %{python_sitelib}/bkr/inttest/
 %{python_sitelib}/bkr.inttest-%{version}-*
 %{python_sitelib}/bkr.inttest-%{version}-py%{pyver}.egg-info/
+%endif
 
 %files client
 %defattr(-,root,root,-)
@@ -259,6 +308,7 @@ fi
 %{_bindir}/bkr
 %{_mandir}/man1/*.1.gz
 
+%if %{with labcontroller}
 %files lab-controller
 %defattr(-,root,root,-)
 %config(noreplace) %{_sysconfdir}/beaker/labcontroller.conf
@@ -268,9 +318,11 @@ fi
 %{_bindir}/%{name}-proxy
 %{_bindir}/%{name}-watchdog
 %{_bindir}/%{name}-transfer
+%{_bindir}/%{name}-osversion
 %doc LabController/README
 %config(noreplace) %{_sysconfdir}/httpd/conf.d/%{name}-lab-controller.conf
 %{_sysconfdir}/cron.hourly/cobbler_expire_distros
+%{_sysconfdir}/cron.daily/beaker_expire_osversion
 %{_var}/lib/cobbler/triggers/sync/post/osversion.trigger
 %{_var}/lib/cobbler/snippets/*
 %{_var}/lib/cobbler/kickstarts/*
@@ -280,13 +332,94 @@ fi
 %{_sysconfdir}/init.d/%{name}-watchdog
 %{_sysconfdir}/init.d/%{name}-transfer
 %attr(-,apache,root) %dir %{_localstatedir}/run/%{name}-lab-controller
+%{_var}/lib/beaker/osversion_data
 
 %files lab-controller-addDistro
 %defattr(-,root,root,-)
 %{_var}/lib/beaker/addDistro.sh
 %{_var}/lib/beaker/addDistro.d/*
+%endif
 
 %changelog
+* Wed Dec 21 2011 Bill Peck <bpeck@redhat.com> 0.8.0-23
+- anaconda doesn't handle nfs:// repos that are relative. (bpeck@redhat.com)
+
+* Tue Dec 20 2011 Bill Peck <bpeck@redhat.com> 0.8.0-22
+- update find_kickstart to ignore sample_end.ks as well. (bpeck@redhat.com)
+
+* Mon Dec 19 2011 Bill Peck <bpeck@redhat.com> 0.8.0-21
+- fix for beaker-transfer (bpeck@redhat.com)
+
+* Thu Dec 15 2011 Bill Peck <bpeck@redhat.com> 0.8.0-20
+- cast osminor to a char so when we do the db compare its done correctly.
+  (bpeck@redhat.com)
+
+* Tue Dec 13 2011 Bill Peck <bpeck@redhat.com> 0.8.0-19
+- duplicate short options (bpeck@redhat.com)
+
+* Tue Dec 13 2011 Bill Peck <bpeck@redhat.com> 0.8.0-18
+- add options to beaker-osversion (bpeck@redhat.com)
+
+* Thu Dec 01 2011 Bill Peck <bpeck@redhat.com> 0.8.0-17
+- Failed to query rcm for repos (bpeck@redhat.com)
+
+* Tue Nov 22 2011 Bill Peck <bpeck@redhat.com> 0.8.0-16
+- Revert "avoid races in MappedObject.lazy_create" (dcallagh@redhat.com)
+- 752869 work around race condition in Distro.lazy_create (dcallagh@redhat.com)
+
+* Thu Nov 17 2011 Dan Callaghan <dcallagh@redhat.com> 0.8.0-15
+- 754553 beaker-repo-update creates repos that won't work on rhel5
+  (bpeck@redhat.com)
+- 746752 beaker-transfer ignores os.link errors (bpeck@redhat.com)
+- 746752 add logging to upload.py (bpeck@redhat.com)
+- 752869 avoid races in MappedObject.lazy_create (dcallagh@redhat.com)
+
+* Tue Nov 15 2011 Bill Peck <bpeck@redhat.com> 0.8.0-14
+- rename rhts_lab_import to beaker_lab_import (bpeck@redhat.com)
+
+* Tue Nov 15 2011 Bill Peck <bpeck@redhat.com> 0.8.0-13
+- 754133 RHEL5 kickstarts don't support --cost option to repo command
+  (bpeck@redhat.com)
+
+* Tue Nov 15 2011 Bill Peck <bpeck@redhat.com> 0.8.0-12
+- 753976 beakerd cannot abort recipes: RequestRequiredException
+  (bpeck@redhat.com)
+
+* Tue Nov 15 2011 Dan Callaghan <dcallagh@redhat.com> 0.8.0-11
+- Revert fix for bug 752869: "race condition when adding distros"
+  (dcallagh@redhat.com)
+
+* Fri Nov 11 2011 Dan Callaghan <dcallagh@redhat.com> 0.8.0-10
+- 752869 race condition when adding distros (bpeck@redhat.com)
+- clean up lab controller logging (dcallagh@redhat.com)
+- timed handling of session renewal for qpid (rmancy@redhat.com)
+- 749551 try except handling in wrong place for beaker-watchdog
+  (bpeck@redhat.com)
+
+* Tue Nov 08 2011 Bill Peck <bpeck@redhat.com> 0.8.0-9
+- add --quiet option to bkr workflows to not print ignored tasks
+  (bpeck@redhat.com)
+- 751868 osversion.trigger can fail to add a new distro (bpeck@redhat.com)
+- Don't iterate ignored profiles. (bpeck@redhat.com)
+
+* Mon Nov 07 2011 Dan Callaghan <dcallagh@redhat.com> 0.8.0-8
+- 746774 correctly handle multiple status changes within the same second
+  (dcallagh@redhat.com)
+
+* Thu Nov 03 2011 Bill Peck <bpeck@redhat.com> 0.8.0-7
+- 750428 workaround to force TGMochiKit to be always initialised
+  (dcallagh@redhat.com)
+- beaker-osversion will die on inherited profiles (bpeck@redhat.com)
+
+* Wed Nov 02 2011 Raymond Mancy <rmancy@redhat.com> 0.8.0-6
+- upgrade to sqlalchemy 0.6, TurboGears 1.1, Python 2.6 for server and lab
+  controller (dcallagh@redhat.com)
+- 749242 removed log-delete deprecation error
+- 743852 Filter buttons in Recipe view not working (Queued, Running recipes)
+  (bpeck@redhat.com)
+- 718119 new osversion.trigger (bpeck@redhat.com)
+- 746683 bkr whoami command added (bpeck@redhat.com)
+
 * Tue Oct 18 2011 Dan Callaghan <dcallagh@redhat.com> 0.7.3-6
 - 746774 correctly handle multiple status changes within the same second
   (dcallagh@redhat.com)

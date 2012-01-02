@@ -61,7 +61,7 @@ $ service mysqld start
     <para>First make sure apache is on and configured to run on startup. 
       <screen>
       $ sudo chkconfig httpd on
-      $ sudo /sbin/service/httpd start
+      $ sudo /sbin/service httpd start
       </screen>
     </para>
     <para>We need to switch SELinux off. 
@@ -84,12 +84,18 @@ $ service mysqld start
        </screen>
        </para>
        <para>
-       To make sure Beaker is running go to <ulink url="http://BeakerServer.example.com/bkr/ in your browser"></ulink>
+       To make sure Beaker is running go to <ulink 
+       url="http://BeakerServer.example.com/bkr/"/> in your browser.
        </para>
        <formalpara>
        <title>Add Lab Controller details</title>
        <para>
-       One more step that we need to do is add the Lab Controller that we are yet to configure<xref linkend="Installation-Setup_Lab_Controller"></xref>. Login in at<ulink url="http://BeakerServer.example.com/bkr/labcontrollers/new"></ulink> . Use the username and password above from the beaker-init command. The new lab controller form requires 3 fields 
+       One more step that we need to do is add the Lab Controller that we are 
+       yet to configure in <xref linkend="Installation-Setup_Lab_Controller"/>. 
+       Log in at <ulink 
+       url="http://BeakerServer.example.com/bkr/labcontrollers/new"/>. Use the 
+       username and password above from the <command>beaker-init</command> 
+       command. The new lab controller form requires the following fields:
         <itemizedlist>
           <listitem>
             <para>
@@ -128,30 +134,6 @@ $ service mysqld start
         </itemizedlist>
        </para>
        </formalpara>
-       <para>
-       The new lab controller also needs a user account. Login at:
-        <screen>
-        http://BeakerServer.example.com/bkr/users/new
-        </screen>
-        <itemizedlist>
-          <listitem>
-            <para><application>Login</application>: Should be the host/FQDN (FQDN is the fully qualified domain of the lab controller). 
-           </para>
-          </listitem>
-           <listitem>
-            <para><application>Display Name</application>: Should be just FQDN. 
-           </para>
-          </listitem>
-           <listitem>
-            <para><application>Email adrress</application>: The email address should be root@FQDN. 
-           </para>
-          </listitem>
-           <listitem>
-            <para><application>Password</application>: If you are not using Kerberos authentication, you will need a password here. 
-           </para>
-          </listitem>
-        </itemizedlist>
-       </para>
        <para>Save the form and we are done with the Inventory side for now. 
        </para>
   </section>

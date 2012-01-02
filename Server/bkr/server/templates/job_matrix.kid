@@ -44,7 +44,7 @@ $(document).ready( function() {
       
     <div style="float:left;padding-bottom:3em;">
         <h3 style="display:inline">${job_ids.label}</h3><br />
-        <div class="margined" onclick="javascript:clicked_jobs()" py:content="job_ids.display(value=job_ids_vals)" /> 
+        <div class="margined" onclick="javascript:matrix.clicked_jobs()" py:content="job_ids.display(value=job_ids_vals)" />
     </div>
         <br style="clear:both" />
        <input class='submit-button' type='submit' value='Generate' />

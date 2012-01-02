@@ -6,7 +6,16 @@ PKGNAME=beaker
 SCM_REMOTEREPO_RE = ^ssh://(.*@)?git.fedorahosted.org/git/$(PKGNAME).git$
 UPLOAD_URL = ssh://fedorahosted.org/$(PKGNAME)
 
-SUBDIRS := Common Client LabController Server IntegrationTests
+SUBDIRS := Common Client
+ifdef WITH_SERVER
+    SUBDIRS += Server
+endif
+ifdef WITH_LABCONTROLLER
+    SUBDIRS += LabController
+endif
+ifdef WITH_INTTESTS
+    SUBDIRS += IntegrationTests
+endif
 
 build:
 	for i in $(SUBDIRS); do $(MAKE) -C $$i build; done

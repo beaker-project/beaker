@@ -27,6 +27,7 @@ setup(
             'beaker-proxy    = bkr.labcontroller.main:main',
             'beaker-watchdog = bkr.labcontroller.watchdog:main',
             'beaker-transfer = bkr.labcontroller.transfer:main',
+            'beaker-osversion = bkr.labcontroller.osversion:main',
         ),
     }
 )

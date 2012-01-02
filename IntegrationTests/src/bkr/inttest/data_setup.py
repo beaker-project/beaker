@@ -22,8 +22,7 @@ import os
 import time
 import datetime
 import itertools
-import sqlalchemy
-from sqlalchemy.exceptions import InvalidRequestError
+from sqlalchemy.orm.exc import NoResultFound
 import turbogears.config, turbogears.database
 from turbogears.database import session
 from bkr.server.model import LabController, User, Group, Distro, Breed, Arch, \
@@ -78,20 +77,18 @@ def create_labcontroller(fqdn=None, user=None):
         fqdn = unique_name(u'lab%s.testdata.invalid')
     try:
         lc = LabController.by_name(fqdn)  
-    except sqlalchemy.exceptions.InvalidRequestError, e: #Doesn't exist ?
-        if e.args[0] == 'No rows returned for one()':
-            if user is None:
-                user = create_user()
-                session.flush()
-            lc = LabController.lazy_create(fqdn=fqdn, user=user)
-            # username/password to login into stub_cobbler
-            # Doesn't matter what it is, just can't be None or we 
-            # Will get cannot marshal none errors.
-            lc.username = u"foo"
-            lc.password = u"bar"
-            return lc
-        else:
-            raise
+    except NoResultFound:
+        if user is None:
+            user = create_user()
+            session.flush()
+        lc = LabController.lazy_create(fqdn=fqdn, user=user)
+        user.groups.append(Group.by_name(u'lab_controller'))
+        # username/password to login into stub_cobbler
+        # Doesn't matter what it is, just can't be None or we 
+        # Will get cannot marshal none errors.
+        lc.username = u"foo"
+        lc.password = u"bar"
+        return lc
     log.debug('labcontroller %s already exists' % fqdn)
     return lc
 
@@ -149,10 +146,10 @@ def create_distro(name=None, breed=u'Dan',
     osmajor = OSMajor.lazy_create(osmajor=osmajor)
     try:
         distro.osversion = OSVersion.by_name(osmajor, osminor)
-    except sqlalchemy.exceptions.InvalidRequestError:
+    except NoResultFound:
         distro.osversion = OSVersion(osmajor, osminor, arches=[distro.arch])
     # make it available in all lab controllers
-    for lc in LabController.query():
+    for lc in LabController.query:
         distro.lab_controller_assocs.append(LabControllerDistro(lab_controller=lc))
     log.debug('Created distro %r', distro)
     harness_dir = os.path.join(turbogears.config.get('basepath.harness'), distro.osversion.osmajor.osmajor)
@@ -167,7 +164,7 @@ def create_system(arch=u'i386', type=u'Machine', status=u'Automated',
         owner = create_user()
     if fqdn is None:
         fqdn = unique_name(u'system%s.testdata')
-    if System.query().filter(System.fqdn == fqdn).count():
+    if System.query.filter(System.fqdn == fqdn).count():
         raise ValueError('Attempted to create duplicate system %s' % fqdn)
     system = System(fqdn=fqdn,type=SystemType.by_name(type), owner=owner, 
                 status=SystemStatus.by_name(status), **kw)
@@ -218,9 +215,7 @@ def create_task(name=None, exclude_arch=[],exclude_osmajor=[], version=u'1.0-1',
     rpm = u'example%s-%s.noarch.rpm' % (name.replace('/', '-'), version)
     try:
         task = Task.by_name(name)
-    except InvalidRequestError, e:
-        if str(e) != 'No rows returned for one()':
-            raise
+    except NoResultFound:
         task = Task(name=name)
     task.rpm = rpm
     task.version = version
@@ -250,7 +245,7 @@ def create_tasks(xmljob):
 def create_recipe(system=None, distro=None, task_list=None, 
     task_name=u'/distribution/reservesys', whiteboard=None, server_log=False):
     recipe = MachineRecipe(ttasks=1, system=system, whiteboard=whiteboard,
-            distro=distro or Distro.query()[0])
+            distro=distro or Distro.query.first())
     recipe.distro_requires = recipe.distro.to_xml().toxml()
 
     if not server_log:
@@ -417,7 +412,7 @@ def create_test_env(type):#FIXME not yet using different types
     actual data is not too important
     """
 
-    arches = Arch.query().all()
+    arches = Arch.query.all()
     system_type = SystemType.by_name(u'Machine') #This could be extended into a list and looped over
     users = [create_user() for i in range(10)]
     lc = create_labcontroller()

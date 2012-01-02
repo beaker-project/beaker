@@ -191,7 +191,8 @@ setup(
         },
     },
     install_requires=[
-        "TurboGears >= 1.0.3.2",
+        'TurboGears >= 1.1',
+        'sqlalchemy >= 0.6',
     ],
     scripts=[],
     zip_safe=False,

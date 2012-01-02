@@ -127,7 +127,7 @@ class CSV(RPCRoot):
                         else:
                             # Save out our system.  If we created it above we
                             # want to make sure its found on subsequent lookups
-                            session.save_or_update(system)
+                            session.add(system)
                             session.flush([system])
                     else:
                         log.append("You are not the owner of %s" % system.fqdn)
@@ -226,7 +226,7 @@ class CSV_System(CSV):
 
     @classmethod
     def query(cls):
-        for system in System.permissable_systems(System.query().outerjoin('user')):
+        for system in System.permissable_systems(System.query.outerjoin('user')):
             yield CSV_System(system)
 
     @classmethod
@@ -414,7 +414,7 @@ class CSV_Power(CSV):
 
     @classmethod
     def query(cls):
-        for power in System.permissable_systems(Power.query().outerjoin(['system','user'])):
+        for power in System.permissable_systems(Power.query.outerjoin(['system','user'])):
             if power.system:
                 yield CSV_Power(power)
 
@@ -433,7 +433,7 @@ class CSV_LabInfo(CSV):
 
     @classmethod
     def query(cls):
-        for labinfo in System.permissable_systems(LabInfo.query().outerjoin(['system','user'])):
+        for labinfo in System.permissable_systems(LabInfo.query.outerjoin(['system','user'])):
             if labinfo.system:
                 yield CSV_LabInfo(labinfo)
 
@@ -455,7 +455,7 @@ class CSV_LabInfo(CSV):
                 new_data[c_type] = data[c_type]
        
         system.labinfo = LabInfo(**new_data)
-        session.save_or_update(system)
+        session.add(system)
         session.flush([system])
         
 
@@ -465,10 +465,10 @@ class CSV_Exclude(CSV):
 
     @classmethod
     def query(cls):
-        for exclude in System.permissable_systems(ExcludeOSMajor.query().outerjoin(['system','user'])):
+        for exclude in System.permissable_systems(ExcludeOSMajor.query.outerjoin(['system','user'])):
             if exclude.system:
                 yield CSV_Exclude(exclude)
-        for exclude in System.permissable_systems(ExcludeOSVersion.query().outerjoin(['system','user'])):
+        for exclude in System.permissable_systems(ExcludeOSVersion.query.outerjoin(['system','user'])):
             if exclude.system:
                 yield CSV_Exclude(exclude)
 
@@ -546,7 +546,7 @@ class CSV_Install(CSV):
 
     @classmethod
     def query(cls):
-        for install in System.permissable_systems(Provision.query().outerjoin(['system','user'])):
+        for install in System.permissable_systems(Provision.query.outerjoin(['system','user'])):
             if install.system:
                 yield CSV_Install(install)
 
@@ -688,10 +688,10 @@ class CSV_KeyValue(CSV):
 
     @classmethod
     def query(cls):        
-        for key_int in System.permissable_systems(Key_Value_Int.query().outerjoin(['system','user'])):
+        for key_int in System.permissable_systems(Key_Value_Int.query.outerjoin(['system','user'])):
             if key_int.system:
                 yield CSV_KeyValue(key_int)
-        for key_string in System.permissable_systems(Key_Value_String.query().outerjoin(['system','user'])):
+        for key_string in System.permissable_systems(Key_Value_String.query.outerjoin(['system','user'])):
             if key_string.system:
                 yield CSV_KeyValue(key_string)
 
@@ -746,7 +746,7 @@ class CSV_KeyValue(CSV):
                 activity = SystemActivity(identity.current.user, 'CSV', 'Added', 'Key/Value', '', '%s/%s' % (data['key'],data['key_value']))
                 system.activity.append(activity)
                 system_key_values.append(key_value)
-        session.save_or_update(key_value)
+        session.add(key_value)
         session.flush([key_value])
         return True
 
@@ -762,7 +762,7 @@ class CSV_GroupUser(CSV):
 
     @classmethod
     def query(cls):
-        for user in User.query():
+        for user in User.query:
             for group in user.groups:
                 yield CSV_GroupUser(user, group)
 
@@ -777,7 +777,7 @@ class CSV_GroupUser(CSV):
             except InvalidRequestError:
                group = Group(group_name=data['group'],
                              display_name=data['group'])
-               session.save(group)
+               session.add(group)
                session.flush([group])
             deleted = False
             if 'deleted' in data:
@@ -806,7 +806,7 @@ class CSV_GroupSystem(CSV):
 
     @classmethod
     def query(cls):
-        for system in System.permissable_systems(System.query().outerjoin('user')):
+        for system in System.permissable_systems(System.query.outerjoin('user')):
             for group in system.groups:
                 yield CSV_GroupSystem(system, group)
 
@@ -821,7 +821,7 @@ class CSV_GroupSystem(CSV):
             except InvalidRequestError:
                group = Group(group_name=data['group'],
                              display_name=data['group'])
-               session.save(group)
+               session.add(group)
                session.flush([group])
             deleted = False
             if 'deleted' in data:

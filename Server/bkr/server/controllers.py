@@ -44,7 +44,7 @@ from bkr.server.widgets import SystemArches
 from bkr.server.widgets import TaskSearchForm
 from bkr.server.authentication import Auth
 from bkr.server.xmlrpccontroller import RPCRoot
-from bkr.server.cobbler_utils import hash_to_string
+from bkr.server.cobbler_utils import hash_to_string, string_to_hash
 from bkr.server.jobs import Jobs
 from bkr.server.recipes import Recipes
 from bkr.server.recipesets import RecipeSets
@@ -65,11 +65,11 @@ import random
 import urllib
 from kid import Element
 import cherrypy
-import md5
 import re
 import string
 import pkg_resources
 import rdflib.graph
+import formencode.variabledecode
 
 # for debugging
 import sys
@@ -420,7 +420,7 @@ class Root(RPCRoot):
 
         activity = RecipeSetActivity(identity.current.user, 'WEBUI', 'Changed', 'Priority', recipeset.priority.id,priority_id)
         recipeset.priority = priority_query
-        session.save_or_update(recipeset)        
+        session.add(recipeset)
         recipeset.activity.append(activity)
         return {'success' : True } 
 
@@ -534,11 +534,11 @@ class Root(RPCRoot):
         try:
             try: 
                 distro_install_name = kw['distro'] #this should be the distro install_name, throw KeyError is expected and caught
-                distro = Distro.query().filter(Distro.install_name == distro_install_name).one()
+                distro = Distro.query.filter(Distro.install_name == distro_install_name).one()
             except KeyError:
                 try: 
                     distro_id = kw['distro_id']
-                    distro = Distro.query().filter(Distro.id == distro_id).one()
+                    distro = Distro.query.filter(Distro.id == distro_id).one()
                 except KeyError:
                     raise
             # I don't like duplicating this code in find_systems_for_distro() but it dies on trying to jsonify a Query object... 
@@ -871,7 +871,7 @@ class Root(RPCRoot):
                 redirect("/")
 
             #Let's deal with a history search here
-            histories_return = self.histories(SystemActivity.query().with_parent(system,"activity"), **kw) 
+            histories_return = self.histories(SystemActivity.query.with_parent(system,"activity"), **kw)
             history_options = {}
             if 'searchvalue' in histories_return:
                 history_options['searchvalue'] = histories_return['searchvalue']
@@ -936,7 +936,7 @@ class Root(RPCRoot):
         #Excluded Family options
         options['excluded_families'] = []
         for arch in system.arch:
-            options['excluded_families'].append((arch.arch, [(osmajor.id, osmajor.osmajor, [(osversion.id, '%s' % osversion, attrs) for osversion in osmajor.osversion],attrs) for osmajor in OSMajor.query()]))
+            options['excluded_families'].append((arch.arch, [(osmajor.id, osmajor.osmajor, [(osversion.id, '%s' % osversion, attrs) for osversion in osmajor.osversion],attrs) for osmajor in OSMajor.query]))
         try:
             can_admin = system.can_admin(user = identity.current.user)
         except AttributeError,e:
@@ -1380,7 +1380,7 @@ class Root(RPCRoot):
     def save(self, **kw):
         if kw.get('id'):
             try:
-                query = System.query().filter(System.fqdn ==kw['fqdn'])
+                query = System.query.filter(System.fqdn ==kw['fqdn'])
                 for sys_object in query:
                     if str(sys_object.id) != str(kw['id']):
                         flash( _(u"%s already exists!" % kw['fqdn']))
@@ -1391,7 +1391,7 @@ class Root(RPCRoot):
                 redirect("/")
            
         else:
-            if System.query().filter(System.fqdn == kw['fqdn']).count() != 0:   
+            if System.query.filter(System.fqdn == kw['fqdn']).count() != 0:
                 flash( _(u"%s already exists!" % kw['fqdn']) )
                 redirect("/")
             system = System(fqdn=kw['fqdn'],owner=identity.current.user)
@@ -1492,7 +1492,7 @@ class Root(RPCRoot):
                     old_value=system.checksum, new_value=None))
             system.checksum = None
 
-        session.save_or_update(system)
+        session.add(system)
         redirect("/view/%s" % system.fqdn)
 
     @expose()
@@ -1646,10 +1646,9 @@ class Root(RPCRoot):
         try:
             can_provision_now = system.can_provision_now(user) #Check perms
             if can_provision_now:
-                system.action_provision(distro = distro,
-                                        ks_meta = ks_meta,
-                                        kernel_options = koptions,
-                                        kernel_options_post = koptions_post)
+                system.action_provision(distro = distro, ks_meta = string_to_hash(ks_meta),
+                                                         kernel_options = string_to_hash(koptions),
+                                                         kernel_options_post = string_to_hash(koptions_post))
             else: #This shouldn't happen, maybe someone is trying to be funny
                 raise BX('User: %s has insufficent permissions to provision %s' % (user.user_name, system.fqdn))
         except Exception, msg:
@@ -1838,7 +1837,7 @@ class Root(RPCRoot):
     # Testing auth via xmlrpc
     #@identity.require(identity.in_group("admin"))
     def lab_controllers(self, *args):
-        return [lc.fqdn for lc in LabController.query()]
+        return [lc.fqdn for lc in LabController.query]
 
     @cherrypy.expose
     def legacypush(self, fqdn=None, inventory=None):
@@ -1897,11 +1896,14 @@ class Root(RPCRoot):
 
     @expose(template="bkr.server.templates.login")
     def login(self, forward_url=None, **kwargs):
+        # need to undo the work of NestedVariablesFilter
+        original_parameters = formencode.variabledecode.variable_encode(kwargs)
+
         if not forward_url:
             forward_url = request.headers.get('Referer', '/')
         if not identity.current.anonymous \
                 and not identity.get_identity_errors():
-            redirect(forward_url, redirect_params=kwargs)
+            redirect(forward_url, redirect_params=original_parameters)
 
         if not identity.was_login_attempted():
             msg = _('Please log in.')
@@ -1911,7 +1913,8 @@ class Root(RPCRoot):
             
         response.status=403 # XXX shouldn't this be 401?
         return dict(message=msg, action=request.path, logging_in=True,
-                    original_parameters=kwargs, forward_url=forward_url)
+                    original_parameters=original_parameters,
+                    forward_url=forward_url)
 
     @expose()
     def logout(self):

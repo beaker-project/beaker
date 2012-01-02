@@ -33,7 +33,7 @@ class Watchdogs(RPCRoot):
             pass
         mapper(WatchdogDetails,s)
 
-        queri = WatchdogDetails.query()    
+        queri = WatchdogDetails.query
         watchdog = Watchdog.by_status(status='active').join(['recipe','recipeset','job'])
         ids = [elem.id for elem in watchdog]
         queri = queri.filter(WatchdogDetails.id.in_(ids))

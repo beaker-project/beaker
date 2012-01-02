@@ -12,47 +12,28 @@ import SocketServer
 import DocXMLRPCServer
 import socket
 
-from bkr.labcontroller.proxy import Proxy
+from bkr.labcontroller.proxy import Proxy, RepeatTimer
 from bkr.labcontroller.config import get_conf
+from bkr.labcontroller.utils import add_rotating_file_logger
 from kobo.exceptions import ShutdownException
 from kobo.process import daemonize
 from kobo.tback import Traceback, set_except_hook
 from bkr.log import add_stderr_logger
 import logging
-logger = logging.getLogger("Proxy")
+logger = logging.getLogger(__name__)
 
 set_except_hook()
 
-
-class Authenticate(Thread):
-    def __init__ (self,proxy):
-      Thread.__init__(self)
-      self.proxy = proxy
-      self.__serving = False
-
-    def run(self):
-        self.__serving = True
-        time_of_last_check = 0
-        while self.__serving:
-            # every minute check that we are logged in.
-            now = time.time()
-            if now - time_of_last_check > 60:
-                time_of_last_check = now
-                try:
-                    self.proxy.hub._login(verbose=self.proxy.hub._conf.get("DEBUG_XMLRPC"))
-                except KeyboardInterrupt:
-                    raise
-                except Exception, e:
-                    logger.exception("Authenticate: Failed to login")
-            time.sleep(1)
-
-    def stop(self):
-        """Stops the thread"""
-        self.__serving = False
+class XMLRPCRequestHandler(DocXMLRPCServer.DocXMLRPCRequestHandler):
+    rpc_paths = ('/', '/RPC2', '/server')
             
 class ForkingXMLRPCServer (SocketServer.ForkingMixIn,
                            DocXMLRPCServer.DocXMLRPCServer):
     allow_reuse_address = True
+
+    def __init__(self, *args, **kwargs):
+        DocXMLRPCServer.DocXMLRPCServer.__init__(self, *args,
+                requestHandler=XMLRPCRequestHandler, **kwargs)
 
     def _dispatch(self, method, params):
         """ Custom _dispatch so we can log time used to execute method.
@@ -77,6 +58,17 @@ def main_loop(conf=None, foreground=False):
     # define custom signal handlers
     signal.signal(signal.SIGTERM, daemon_shutdown)
 
+    # set up logging
+    if foreground:
+        add_stderr_logger(logging.getLogger())
+    else:
+        log_level_string = conf["LOG_LEVEL"]
+        log_level = getattr(logging, log_level_string.upper(), logging.DEBUG)
+        logging.getLogger().setLevel(log_level)
+        log_file = conf["LOG_FILE"]
+        add_rotating_file_logger(logging.getLogger(), log_file,
+                log_level=log_level, format=conf["VERBOSE_LOG_FORMAT"])
+
     # initialize Proxy
     try:
         proxy = Proxy(conf=conf)
@@ -84,7 +76,9 @@ def main_loop(conf=None, foreground=False):
         sys.stderr.write("Error initializing Proxy: %s\n" % ex)
         sys.exit(1)
 
-    login = Authenticate(proxy)
+    login = RepeatTimer(conf['RENEW_SESSION_INTERVAL'], proxy.hub._login,
+        stop_on_exception=False)
+    login.daemon = True
     login.start()
     server = ForkingXMLRPCServer(("", 8000))
     server.register_instance(proxy)

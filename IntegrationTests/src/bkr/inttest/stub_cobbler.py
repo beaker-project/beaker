@@ -24,7 +24,7 @@ that Beaker is calling Cobbler correctly.
 
 import threading
 import socket
-from SimpleXMLRPCServer import SimpleXMLRPCServer
+from SimpleXMLRPCServer import SimpleXMLRPCServer, SimpleXMLRPCRequestHandler
 import logging
 import time
 
@@ -218,25 +218,16 @@ class StubCobbler(object):
     def get_distros(self):
         return [self.distros[x] for x in self.distros]
 
-class NicerXMLRPCServer(SimpleXMLRPCServer):
-    
-    def __init__(self, addr):
-        SimpleXMLRPCServer.__init__(self, addr, logRequests=False)
-        self.timeout = 0.5
-        self._running = True
+class StubCobblerRequestHandler(SimpleXMLRPCRequestHandler):
+    rpc_paths = ('/cobbler_api',)
 
-    def server_bind(self):
-        self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        SimpleXMLRPCServer.server_bind(self)
+class StubCobblerXMLRPCServer(SimpleXMLRPCServer):
+    allow_reuse_address = True
 
-    # This is not necessary with Python 2.6:
-    def serve_forever(self):
-        self.socket.settimeout(self.timeout)
-        while self._running:
-            try:
-                self.handle_request()
-            except socket.timeout:
-                pass
+    def __init__(self, *args, **kwargs):
+        SimpleXMLRPCServer.__init__(self, *args,
+                logRequests=False, requestHandler=StubCobblerRequestHandler,
+                **kwargs)
 
 class StubCobblerThread(threading.Thread):
 
@@ -249,12 +240,12 @@ class StubCobblerThread(threading.Thread):
             self.cobbler = cobbler
         self._running = True
         self.port = 9010
-        self.server = NicerXMLRPCServer((addr, self.port))
+        self.server = StubCobblerXMLRPCServer((addr, self.port))
         self.server.register_introspection_functions()
         self.server.register_instance(self.cobbler)
 
     def stop(self):
-        self.server._running = False
+        self.server.shutdown()
         self.join()
 
     def run(self):

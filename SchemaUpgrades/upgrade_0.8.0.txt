@@ -1,0 +1,10 @@
+Fix up old distro activity rows (bug 752869)
+--------------------------------------------
+
+INSERT INTO distro_activity (id, distro_id)
+    SELECT activity.id, distro.id
+    FROM activity INNER JOIN distro ON activity.field_name = distro.install_name
+    WHERE action = 'Added LabController';
+UPDATE activity INNER JOIN distro_activity ON activity.id = distro_activity.id
+    SET type = 'distro_activity', field_name = 'lab_controllers', action = 'Added'
+    WHERE action = 'Added LabController';

@@ -11,14 +11,14 @@ VARIANT=$5
 TPATH=$6
 
 # Override the above settings in this file.
-if [ -e "/etc/sysconfig/rhts_lab_import" ]; then
- . /etc/sysconfig/rhts_lab_import
+if [ -e "/etc/sysconfig/beaker_lab_import" ]; then
+ . /etc/sysconfig/beaker_lab_import
 fi
 
 FAMILY=$(echo $FAMILYUPDATE | awk -F. '{print $1}')
 UPDATE=$(echo $FAMILYUPDATE | awk -F. '{print $2}')
 
-if [ -n "$rhts_redhat_com" ]; then
+if [ -n "$add_distro" ]; then
  pushd /var/lib/beaker/addDistro.d
  for PLUGIN in *
  do

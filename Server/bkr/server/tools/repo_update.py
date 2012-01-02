@@ -11,6 +11,7 @@ import traceback
 import urlparse
 import shutil
 import yum, yum.misc, yum.packages
+import urllib
 
 __version__ = '0.1'
 __description__ = 'Script to update harness repos'
@@ -78,10 +79,12 @@ class RepoSyncer(yum.YumBase):
             shutil.copy2(cached_package, dest)
 
 def update_repos(baseurl, basepath):
-    for osmajor in OSMajor.query():
+    for osmajor in OSMajor.query:
+        # urlgrabber < 3.9.1 doesn't handle unicode urls
+        osmajor = unicode(osmajor).encode('utf8')
         dest = "%s/%s" % (basepath,osmajor)
         syncer = RepoSyncer('beaker-repo-update-harness-%s' % osmajor,
-                urlparse.urljoin(baseurl, '%s/' % osmajor), dest)
+                urlparse.urljoin(baseurl, '%s/' % urllib.quote(osmajor)), dest)
         try:
             syncer.sync()
         except KeyboardInterrupt:
@@ -89,7 +92,7 @@ def update_repos(baseurl, basepath):
         except Exception, e:
             print >>sys.stderr, str(e)
             continue
-        cmd = "pushd %s && createrepo -q ." % dest
+        cmd = "pushd %s && createrepo -q --checksum sha ." % dest
         print cmd
         os.system(cmd)
 

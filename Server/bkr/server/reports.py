@@ -144,9 +144,9 @@ class Reports(RPCRoot):
 
     @expose(template='bkr.server.templates.utilisation_graph')
     def utilisation_graph(self):
-        groups = Group.query().join('systems').order_by(Group.group_name)
+        groups = Group.query.join('systems').order_by(Group.group_name)
         return {
-            'all_arches': [(a.id, a.arch) for a in Arch.query()],
+            'all_arches': [(a.id, a.arch) for a in Arch.query],
             'all_groups': [(g.group_id, g.group_name) for g in groups],
         }
 
@@ -166,7 +166,7 @@ class Reports(RPCRoot):
         try:
             systems = self._systems_for_timeseries(reports_session, **kwargs)
             if not start:
-                start = systems.min(System.date_added) or datetime.datetime(2009, 1, 1)
+                start = systems.value(func.min(System.date_added)) or datetime.datetime(2009, 1, 1)
             if not end:
                 end = datetime.datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
             dts = list(dt.replace(microsecond=0) for dt in

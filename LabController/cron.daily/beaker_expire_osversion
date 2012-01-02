@@ -1,0 +1,3 @@
+#! /bin/sh
+flags=-m
+/usr/sbin/tmpwatch "$flags" 10d /var/lib/beaker/osversion_data
