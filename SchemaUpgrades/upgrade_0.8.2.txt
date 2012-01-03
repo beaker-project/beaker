@@ -26,155 +26,96 @@ recreate the system_admin_map table. Then run the following SQL to populate it:
     DROP admin;
 
 
-Convert task_status to an ENUM
-------------------------------
+Convert reference tables to enums
+---------------------------------
+
+Run the following SQL statements to convert to enums:
 
     -- job table
     ALTER TABLE job
         ADD COLUMN status ENUM (
             'New', 'Processed', 'Queued', 'Scheduled', 'Waiting', 'Running',
             'Completed', 'Cancelled', 'Aborted'
-        ) NOT NULL DEFAULT 'New' AFTER status_id;
+        ) NOT NULL DEFAULT 'New' AFTER status_id,
+        ADD COLUMN result ENUM ('New', 'Pass', 'Warn', 'Fail', 'Panic')
+            NOT NULL DEFAULT 'New' AFTER result_id;
     UPDATE job
         INNER JOIN task_status ON job.status_id = task_status.id
         SET job.status = task_status.status;
-    ALTER TABLE job
-        DROP FOREIGN KEY job_ibfk_4, -- foreign key for status_id
-        DROP COLUMN status_id;
-
-    -- recipe_set table
-    ALTER TABLE recipe_set
-        ADD COLUMN status ENUM (
-            'New', 'Processed', 'Queued', 'Scheduled', 'Waiting', 'Running',
-            'Completed', 'Cancelled', 'Aborted'
-        ) NOT NULL DEFAULT 'New' AFTER status_id;
-    UPDATE recipe_set
-        INNER JOIN task_status ON recipe_set.status_id = task_status.id
-        SET recipe_set.status = task_status.status;
-    ALTER TABLE recipe_set
-        DROP FOREIGN KEY recipe_set_ibfk_4, -- foreign key for status_id
-        DROP COLUMN status_id;
-
-    -- recipe table
-    ALTER TABLE recipe
-        ADD COLUMN status ENUM (
-            'New', 'Processed', 'Queued', 'Scheduled', 'Waiting', 'Running',
-            'Completed', 'Cancelled', 'Aborted'
-        ) NOT NULL DEFAULT 'New' AFTER status_id;
-    UPDATE recipe
-        INNER JOIN task_status ON recipe.status_id = task_status.id
-        SET recipe.status = task_status.status;
-    ALTER TABLE recipe
-        DROP FOREIGN KEY recipe_ibfk_2, -- foreign key for status_id
-        DROP COLUMN status_id;
-
-    -- recipe_task table
-    ALTER TABLE recipe_task
-        ADD COLUMN status ENUM (
-            'New', 'Processed', 'Queued', 'Scheduled', 'Waiting', 'Running',
-            'Completed', 'Cancelled', 'Aborted'
-        ) NOT NULL DEFAULT 'New' AFTER status_id;
-    UPDATE recipe_task
-        INNER JOIN task_status ON recipe_task.status_id = task_status.id
-        SET recipe_task.status = task_status.status;
-    ALTER TABLE recipe_task
-        DROP FOREIGN KEY recipe_task_ibfk_2, -- foreign key for status_id
-        DROP COLUMN status_id;
-
-    -- clean up task_status
-    DROP TABLE task_status;
-
-To roll back, first downgrade the beaker-server package to the desired version
-and run beaker-init to create and populate the task_status table. Then:
-
-    -- job table
-    ALTER TABLE job
-        ADD COLUMN status_id INT NOT NULL DEFAULT 1 AFTER status,
-        ADD CONSTRAINT job_status_id_fk
-            FOREIGN KEY (status_id) REFERENCES task_status (id);
-    UPDATE job SET status_id =
-        (SELECT id FROM task_status WHERE task_status.status = job.status);
-    ALTER TABLE job
-        DROP COLUMN status;
-
-    -- recipe_set table
-    ALTER TABLE recipe_set
-        ADD COLUMN status_id INT NOT NULL DEFAULT 1 AFTER status,
-        ADD CONSTRAINT recipe_set_status_id_fk
-            FOREIGN KEY (status_id) REFERENCES task_status (id);
-    UPDATE recipe_set SET status_id =
-        (SELECT id FROM task_status WHERE task_status.status = recipe_set.status);
-    ALTER TABLE recipe_set
-        DROP COLUMN status;
-
-    -- recipe table
-    ALTER TABLE recipe
-        ADD COLUMN status_id INT NOT NULL DEFAULT 1 AFTER status,
-        ADD CONSTRAINT recipe_status_id_fk
-            FOREIGN KEY (status_id) REFERENCES task_status (id);
-    UPDATE recipe SET status_id =
-        (SELECT id FROM task_status WHERE task_status.status = recipe.status);
-    ALTER TABLE recipe
-        DROP COLUMN status;
-
-    -- recipe_task table
-    ALTER TABLE recipe_task
-        ADD COLUMN status_id INT NOT NULL DEFAULT 1 AFTER status,
-        ADD CONSTRAINT recipe_task_status_id_fk
-            FOREIGN KEY (status_id) REFERENCES task_status (id);
-    UPDATE recipe_task SET status_id =
-        (SELECT id FROM task_status WHERE task_status.status = recipe_task.status);
-    ALTER TABLE recipe_task
-        DROP COLUMN status;
-
-
-Convert task_result to an ENUM
-------------------------------
-
-TODO: merge these instructions with task_status above
-
-    -- job table
-    ALTER TABLE job
-        ADD COLUMN result ENUM ('New', 'Pass', 'Warn', 'Fail', 'Panic')
-            NOT NULL DEFAULT 'New' AFTER result_id;
     UPDATE job
         INNER JOIN task_result ON job.result_id = task_result.id
         SET job.result = task_result.result;
     ALTER TABLE job
         DROP FOREIGN KEY job_ibfk_3, -- foreign key for result_id
+        DROP FOREIGN KEY job_ibfk_4, -- foreign key for status_id
+        DROP COLUMN status_id,
         DROP COLUMN result_id;
 
     -- recipe_set table
     ALTER TABLE recipe_set
+        ADD COLUMN status ENUM (
+            'New', 'Processed', 'Queued', 'Scheduled', 'Waiting', 'Running',
+            'Completed', 'Cancelled', 'Aborted'
+        ) NOT NULL DEFAULT 'New' AFTER status_id,
         ADD COLUMN result ENUM ('New', 'Pass', 'Warn', 'Fail', 'Panic')
-            NOT NULL DEFAULT 'New' AFTER result_id;
+            NOT NULL DEFAULT 'New' AFTER result_id,
+        ADD COLUMN priority ENUM ('Low', 'Medium', 'Normal', 'High', 'Urgent')
+            NOT NULL DEFAULT 'Normal' AFTER priority_id;
+    UPDATE recipe_set
+        INNER JOIN task_status ON recipe_set.status_id = task_status.id
+        SET recipe_set.status = task_status.status;
     UPDATE recipe_set
         INNER JOIN task_result ON recipe_set.result_id = task_result.id
         SET recipe_set.result = task_result.result;
+    UPDATE recipe_set
+        INNER JOIN task_priority ON recipe_set.priority_id = task_priority.id
+        SET recipe_set.priority = task_priority.priority;
     ALTER TABLE recipe_set
+        DROP FOREIGN KEY recipe_set_ibfk_1, -- foreign key for priority_id
         DROP FOREIGN KEY recipe_set_ibfk_3, -- foreign key for result_id
-        DROP COLUMN result_id;
+        DROP FOREIGN KEY recipe_set_ibfk_4, -- foreign key for status_id
+        DROP COLUMN status_id,
+        DROP COLUMN result_id,
+        DROP COLUMN priority_id;
 
     -- recipe table
     ALTER TABLE recipe
+        ADD COLUMN status ENUM (
+            'New', 'Processed', 'Queued', 'Scheduled', 'Waiting', 'Running',
+            'Completed', 'Cancelled', 'Aborted'
+        ) NOT NULL DEFAULT 'New' AFTER status_id,
         ADD COLUMN result ENUM ('New', 'Pass', 'Warn', 'Fail', 'Panic')
             NOT NULL DEFAULT 'New' AFTER result_id;
+    UPDATE recipe
+        INNER JOIN task_status ON recipe.status_id = task_status.id
+        SET recipe.status = task_status.status;
     UPDATE recipe
         INNER JOIN task_result ON recipe.result_id = task_result.id
         SET recipe.result = task_result.result;
     ALTER TABLE recipe
+        DROP FOREIGN KEY recipe_ibfk_2, -- foreign key for status_id
         DROP FOREIGN KEY recipe_ibfk_5, -- foreign key for result_id
+        DROP COLUMN status_id,
         DROP COLUMN result_id;
 
     -- recipe_task table
     ALTER TABLE recipe_task
+        ADD COLUMN status ENUM (
+            'New', 'Processed', 'Queued', 'Scheduled', 'Waiting', 'Running',
+            'Completed', 'Cancelled', 'Aborted'
+        ) NOT NULL DEFAULT 'New' AFTER status_id,
         ADD COLUMN result ENUM ('New', 'Pass', 'Warn', 'Fail', 'Panic')
             NOT NULL DEFAULT 'New' AFTER result_id;
+    UPDATE recipe_task
+        INNER JOIN task_status ON recipe_task.status_id = task_status.id
+        SET recipe_task.status = task_status.status;
     UPDATE recipe_task
         INNER JOIN task_result ON recipe_task.result_id = task_result.id
         SET recipe_task.result = task_result.result;
     ALTER TABLE recipe_task
+        DROP FOREIGN KEY recipe_task_ibfk_2, -- foreign key for status_id
         DROP FOREIGN KEY recipe_task_ibfk_3, -- foreign key for result_id
+        DROP COLUMN status_id,
         DROP COLUMN result_id;
 
     -- recipe_task_result table
@@ -188,50 +129,129 @@ TODO: merge these instructions with task_status above
         DROP FOREIGN KEY recipe_task_result_ibfk_2, -- foreign key for result_id
         DROP COLUMN result_id;
 
-    -- clean up old table
+    -- system table
+    ALTER TABLE system
+        ADD COLUMN status ENUM ('Automated', 'Broken', 'Manual', 'Removed')
+            NOT NULL AFTER status_id,
+        ADD COLUMN release_action ENUM ('PowerOff', 'LeaveOn', 'ReProvision')
+            AFTER release_action_id,
+        ADD COLUMN type ENUM ('Machine', 'Virtual', 'Resource', 'Laptop', 'Prototype')
+            NOT NULL AFTER type_id;
+    UPDATE system
+        INNER JOIN system_status ON system.status_id = system_status.id
+        SET system.status = system_status.status;
+    UPDATE system
+        INNER JOIN release_action ON system.release_action_id = release_action.id
+        SET system.release_action = release_action.action;
+    UPDATE system
+        INNER JOIN system_type ON system.type_id = system_type.id
+        SET system.type = system_type.type;
+    ALTER TABLE system
+        DROP FOREIGN KEY system_ibfk_3, -- foreign key for type_id
+        DROP FOREIGN KEY system_ibfk_4, -- foreign key for status_id
+        DROP FOREIGN KEY system_ibfk_8, -- foreign key for release_action_id
+        DROP COLUMN status_id,
+        DROP COLUMN release_action_id,
+        DROP COLUMN type_id;
+
+    -- system_status_duration table
+    ALTER TABLE system_status_duration
+        ADD COLUMN status ENUM ('Automated', 'Broken', 'Manual', 'Removed')
+            NOT NULL AFTER status_id;
+    UPDATE system_status_duration
+        INNER JOIN system_status ON system_status_duration.status_id = system_status.id
+        SET system_status_duration.status = system_status.status;
+    ALTER TABLE system_status_duration
+        DROP FOREIGN KEY system_status_duration_ibfk_2, -- foreign key for status_id
+        DROP COLUMN status_id;
+
+    -- command_queue table
+    ALTER TABLE command_queue
+        ADD COLUMN status ENUM ('Queued', 'Running', 'Completed', 'Failed', 'Aborted')
+            NOT NULL AFTER status_id;
+    UPDATE command_queue
+        INNER JOIN command_status ON command_queue.status_id = command_status.id
+        SET command_queue.status = command_status.status;
+    ALTER TABLE command_queue
+        DROP FOREIGN KEY command_queue_ibfk_2, -- foreign key for status_id
+        DROP COLUMN status_id;
+
+    -- clean up old tables
+    DROP TABLE task_status;
     DROP TABLE task_result;
+    DROP TABLE task_priority;
+    DROP TABLE system_status;
+    DROP TABLE release_action;
+    DROP TABLE system_type;
+    DROP TABLE command_status;
 
 To roll back, first downgrade the beaker-server package to the desired version
-and run beaker-init to create and populate the task_result table. Then:
+and run beaker-init to create and populate the reference tables. Then:
 
     -- job table
     ALTER TABLE job
+        ADD COLUMN status_id INT NOT NULL DEFAULT 1 AFTER status,
+        ADD CONSTRAINT job_status_id_fk
+            FOREIGN KEY (status_id) REFERENCES task_status (id),
         ADD COLUMN result_id INT NOT NULL DEFAULT 1 AFTER result,
         ADD CONSTRAINT job_result_id_fk
             FOREIGN KEY (result_id) REFERENCES task_result (id);
-    UPDATE job SET result_id =
-        (SELECT id FROM task_result WHERE task_result.result = job.result);
+    UPDATE job SET
+        status_id = (SELECT id FROM task_status WHERE task_status.status = job.status),
+        result_id = (SELECT id FROM task_result WHERE task_result.result = job.result);
     ALTER TABLE job
+        DROP COLUMN status,
         DROP COLUMN result;
 
     -- recipe_set table
     ALTER TABLE recipe_set
+        ADD COLUMN status_id INT NOT NULL DEFAULT 1 AFTER status,
+        ADD CONSTRAINT recipe_set_status_id_fk
+            FOREIGN KEY (status_id) REFERENCES task_status (id),
         ADD COLUMN result_id INT NOT NULL DEFAULT 1 AFTER result,
         ADD CONSTRAINT recipe_set_result_id_fk
-            FOREIGN KEY (result_id) REFERENCES task_result (id);
-    UPDATE recipe_set SET result_id =
-        (SELECT id FROM task_result WHERE task_result.result = recipe_set.result);
+            FOREIGN KEY (result_id) REFERENCES task_result (id),
+        ADD COLUMN priority_id INT NULL AFTER priority;
+    UPDATE recipe_set SET
+        status_id = (SELECT id FROM task_status WHERE task_status.status = recipe_set.status),
+        result_id = (SELECT id FROM task_result WHERE task_result.result = recipe_set.result),
+        priority_id = (SELECT id FROM task_priority WHERE task_priority.priority = recipe_set.priority);
     ALTER TABLE recipe_set
-        DROP COLUMN result;
+        DROP COLUMN status,
+        DROP COLUMN result,
+        MODIFY priority_id INT NOT NULL,
+        ADD CONSTRAINT recipe_set_priority_id_fk
+            FOREIGN KEY (priority_id) REFERENCES task_priority (id),
+        DROP COLUMN priority;
 
     -- recipe table
     ALTER TABLE recipe
+        ADD COLUMN status_id INT NOT NULL DEFAULT 1 AFTER status,
+        ADD CONSTRAINT recipe_status_id_fk
+            FOREIGN KEY (status_id) REFERENCES task_status (id),
         ADD COLUMN result_id INT NOT NULL DEFAULT 1 AFTER result,
         ADD CONSTRAINT recipe_result_id_fk
             FOREIGN KEY (result_id) REFERENCES task_result (id);
-    UPDATE recipe SET result_id =
-        (SELECT id FROM task_result WHERE task_result.result = recipe.result);
+    UPDATE recipe SET
+        status_id = (SELECT id FROM task_status WHERE task_status.status = recipe.status),
+        result_id = (SELECT id FROM task_result WHERE task_result.result = recipe.result);
     ALTER TABLE recipe
+        DROP COLUMN status,
         DROP COLUMN result;
 
     -- recipe_task table
     ALTER TABLE recipe_task
+        ADD COLUMN status_id INT NOT NULL DEFAULT 1 AFTER status,
+        ADD CONSTRAINT recipe_task_status_id_fk
+            FOREIGN KEY (status_id) REFERENCES task_status (id),
         ADD COLUMN result_id INT NOT NULL DEFAULT 1 AFTER result,
         ADD CONSTRAINT recipe_task_result_id_fk
             FOREIGN KEY (result_id) REFERENCES task_result (id);
-    UPDATE recipe_task SET result_id =
-        (SELECT id FROM task_result WHERE task_result.result = recipe_task.result);
+    UPDATE recipe_task SET
+        status_id = (SELECT id FROM task_status WHERE task_status.status = recipe_task.status),
+        result_id = (SELECT id FROM task_result WHERE task_result.result = recipe_task.result);
     ALTER TABLE recipe_task
+        DROP COLUMN status,
         DROP COLUMN result;
 
     -- recipe_task_result table
@@ -244,78 +264,29 @@ and run beaker-init to create and populate the task_result table. Then:
     ALTER TABLE recipe_task_result
         DROP COLUMN result;
 
-
-Convert task_priority to an ENUM
---------------------------------
-
-TODO: merge these instructions with the ones above
-
-    ALTER TABLE recipe_set
-        ADD COLUMN priority ENUM ('Low', 'Medium', 'Normal', 'High', 'Urgent')
-            NOT NULL DEFAULT 'Normal' AFTER priority_id;
-    UPDATE recipe_set
-        INNER JOIN task_priority ON recipe_set.priority_id = task_priority.id
-        SET recipe_set.priority = task_priority.priority;
-    ALTER TABLE recipe_set
-        DROP FOREIGN KEY recipe_set_ibfk_1, -- foreign key for priority_id
-        DROP COLUMN priority_id;
-
-    DROP TABLE task_priority;
-
-To roll back, first downgrade the beaker-server package to the desired version
-and run beaker-init to create and populate the task_priority table. Then:
-
-    ALTER TABLE recipe_set
-        ADD COLUMN priority_id INT NULL AFTER priority;
-    UPDATE recipe_set SET priority_id =
-        (SELECT id FROM task_priority WHERE task_priority.priority = recipe_set.priority);
-    ALTER TABLE recipe_set
-        MODIFY priority_id INT NOT NULL,
-        ADD CONSTRAINT recipe_set_priority_id_fk
-            FOREIGN KEY (priority_id) REFERENCES task_priority (id),
-        DROP COLUMN priority;
-
-
-Convert system_status to an ENUM
---------------------------------
-
-TODO: merge these instructions with the ones above
-
+    -- system table
     ALTER TABLE system
-        ADD COLUMN status ENUM ('Automated', 'Broken', 'Manual', 'Removed')
-            NOT NULL AFTER status_id;
-    UPDATE system
-        INNER JOIN system_status ON system.status_id = system_status.id
-        SET system.status = system_status.status;
-    ALTER TABLE system
-        DROP FOREIGN KEY system_ibfk_4, -- foreign key for status_id
-        DROP COLUMN status_id;
-
-    ALTER TABLE system_status_duration
-        ADD COLUMN status ENUM ('Automated', 'Broken', 'Manual', 'Removed')
-            NOT NULL AFTER status_id;
-    UPDATE system_status_duration
-        INNER JOIN system_status ON system_status_duration.status_id = system_status.id
-        SET system_status_duration.status = system_status.status;
-    ALTER TABLE system_status_duration
-        DROP FOREIGN KEY system_status_duration_ibfk_2, -- foreign key for status_id
-        DROP COLUMN status_id;
-
-    DROP TABLE system_status;
-
-To roll back, first downgrade the beaker-server package to the desired version
-and run beaker-init to create and populate the system_status table. Then:
-
-    ALTER TABLE system
-        ADD COLUMN status_id INT NULL AFTER status;
-    UPDATE system SET status_id =
-        (SELECT id FROM system_status WHERE system_status.status = system.status);
+        ADD COLUMN status_id INT NULL AFTER status,
+        ADD COLUMN release_action_id INT NULL AFTER release_action,
+        ADD CONSTRAINT system_release_action_id_fk
+            FOREIGN KEY (release_action_id) REFERENCES release_action (id),
+        ADD COLUMN type_id INT NULL AFTER type;
+    UPDATE system SET
+        status_id = (SELECT id FROM system_status WHERE system_status.status = system.status),
+        release_action_id = (SELECT id FROM release_action WHERE release_action.action = system.release_action),
+        type_id = (SELECT id FROM system_type WHERE system_type.type = system.type);
     ALTER TABLE system
         MODIFY status_id INT NOT NULL,
         ADD CONSTRAINT system_status_id_fk
             FOREIGN KEY (status_id) REFERENCES system_status (id),
-        DROP COLUMN status;
+        DROP COLUMN status,
+        DROP COLUMN release_action,
+        MODIFY type_id INT NOT NULL,
+        ADD CONSTRAINT system_type_id_fk
+            FOREIGN KEY (type_id) REFERENCES system_type (id),
+        DROP COLUMN type;
 
+    -- system_status_duration table
     ALTER TABLE system_status_duration
         ADD COLUMN status_id INT NULL AFTER status;
     UPDATE system_status_duration SET status_id =
@@ -326,88 +297,7 @@ and run beaker-init to create and populate the system_status table. Then:
             FOREIGN KEY (status_id) REFERENCES system_status (id),
         DROP COLUMN status;
 
-
-Convert release_action to an ENUM
----------------------------------
-
-TODO: merge these instructions with the ones above
-
-    ALTER TABLE system
-        ADD COLUMN release_action ENUM ('PowerOff', 'LeaveOn', 'ReProvision')
-            AFTER release_action_id;
-    UPDATE system
-        INNER JOIN release_action ON system.release_action_id = release_action.id
-        SET system.release_action = release_action.action;
-    ALTER TABLE system
-        DROP FOREIGN KEY system_ibfk_8, -- foreign key for release_action_id
-        DROP COLUMN release_action_id;
-
-    DROP TABLE release_action;
-
-To roll back, first downgrade the beaker-server package to the desired version
-and run beaker-init to create and populate the release_action table. Then:
-
-    ALTER TABLE system
-        ADD COLUMN release_action_id INT NULL AFTER release_action,
-        ADD CONSTRAINT system_release_action_id_fk
-            FOREIGN KEY (release_action_id) REFERENCES release_action (id);
-    UPDATE system SET release_action_id =
-        (SELECT id FROM release_action WHERE release_action.action = system.release_action);
-    ALTER TABLE system
-        DROP COLUMN release_action;
-
-
-Convert system_type to an ENUM
-------------------------------
-
-TODO: merge these instructions with the ones above
-
-    ALTER TABLE system
-        ADD COLUMN type ENUM ('Machine', 'Virtual', 'Resource', 'Laptop', 'Prototype')
-            NOT NULL AFTER type_id;
-    UPDATE system
-        INNER JOIN system_type ON system.type_id = system_type.id
-        SET system.type = system_type.type;
-    ALTER TABLE system
-        DROP FOREIGN KEY system_ibfk_3, -- foreign key for type_id
-        DROP COLUMN type_id;
-
-    DROP TABLE system_type;
-
-To roll back, first downgrade the beaker-server package to the desired version
-and run beaker-init to create and populate the system_type table. Then:
-
-    ALTER TABLE system
-        ADD COLUMN type_id INT NULL AFTER type;
-    UPDATE system SET type_id =
-        (SELECT id FROM system_type WHERE system_type.type = system.type);
-    ALTER TABLE system
-        MODIFY type_id INT NOT NULL,
-        ADD CONSTRAINT system_type_id_fk
-            FOREIGN KEY (type_id) REFERENCES system_type (id),
-        DROP COLUMN type;
-
-
-Convert command_status to an ENUM
----------------------------------
-
-TODO: merge these instructions with the ones above
-
-    ALTER TABLE command_queue
-        ADD COLUMN status ENUM ('Queued', 'Running', 'Completed', 'Failed', 'Aborted')
-            NOT NULL AFTER status_id;
-    UPDATE command_queue
-        INNER JOIN command_status ON command_queue.status_id = command_status.id
-        SET command_queue.status = command_status.status;
-    ALTER TABLE command_queue
-        DROP FOREIGN KEY command_queue_ibfk_2, -- foreign key for status_id
-        DROP COLUMN status_id;
-
-    DROP TABLE command_status;
-
-To roll back, first downgrade the beaker-server package to the desired version
-and run beaker-init to create and populate the command_status table. Then:
-
+    -- command_queue table
     ALTER TABLE command_queue
         ADD COLUMN status_id INT NULL AFTER status;
     UPDATE command_queue SET status_id =
