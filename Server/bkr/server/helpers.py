@@ -33,18 +33,6 @@ def make_fake_link(name,id,text):
     a.text = '%s ' % text
     return a
 
-def sqla_cache(f):
-    the_cache = {}
-    def do_cache(*args):
-        args = tuple(args)
-        if args in the_cache: #session merge puts object into session
-            return session.merge(the_cache[args], load=False)
-        else:
-            result = f(*args)
-            the_cache[args] = result
-            return result
-    return do_cache
-
 def _sanitize_list(list):
     for item in list:
         _sanitize_amqp(item)

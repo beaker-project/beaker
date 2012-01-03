@@ -2663,7 +2663,6 @@ class Hypervisor(SystemObject):
         return [h.hypervisor for h in cls.query]
 
     @classmethod
-    @sqla_cache
     def by_name(cls, hvisor):
         return cls.query.filter_by(hypervisor=hvisor).one()
 
