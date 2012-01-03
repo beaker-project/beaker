@@ -78,6 +78,16 @@ class TaskStatus(DeclEnum):
     def max(cls):
         return max(cls, key=lambda s: s.severity)
 
+class CommandStatus(DeclEnum):
+
+    symbols = [
+        ('queued',    u'Queued',    dict()),
+        ('running',   u'Running',   dict()),
+        ('completed', u'Completed', dict()),
+        ('failed',    u'Failed',    dict()),
+        ('aborted',   u'Aborted',   dict()),
+    ]
+
 class TaskResult(DeclEnum):
 
     symbols = [
@@ -418,13 +428,6 @@ power_table = Table('power', metadata,
     mysql_engine='InnoDB',
 )
 
-command_status_table = Table('command_status', metadata,
-    Column('id', Integer, autoincrement=True,
-           nullable=False, primary_key=True),
-    Column('status', Unicode(255), nullable=False),
-    mysql_engine='InnoDB',
-)
-
 serial_table = Table('serial', metadata,
     Column('id', Integer, autoincrement=True,
            nullable=False, primary_key=True),
@@ -698,8 +701,7 @@ command_queue_table = Table('command_queue', metadata,
     Column('id', Integer, ForeignKey('activity.id'), primary_key=True),
     Column('system_id', Integer, ForeignKey('system.id',
            onupdate='CASCADE', ondelete='CASCADE'), nullable=False),
-    Column('status_id', Integer,
-           ForeignKey('command_status.id'), nullable=False),
+    Column('status', CommandStatus.db_type(), nullable=False),
     Column('task_id', String(255)),
     Column('updated', DateTime, default=datetime.utcnow),
     Column('callback', String(255)),
@@ -2466,7 +2468,7 @@ $SNIPPET("rhts_post")
             user = None
 
         if self.lab_controller and self.power:
-            status = CommandStatus.by_name(u'Queued')
+            status = CommandStatus.queued
             activity = CommandActivity(user, service, action, status, callback)
             self.command_queue.append(activity)
         else:
@@ -3011,21 +3013,6 @@ class Power(SystemObject):
     pass
 
 
-class CommandStatus(MappedObject):
-
-    def __init__(self, status=None):
-        super(CommandStatus, self).__init__()
-        self.status = status
-
-    def __repr__(self):
-        return self.status
-
-    @classmethod
-    @sqla_cache
-    def by_name(cls, name):
-        return cls.query.filter_by(status=name).one()
-
-
 class Serial(MappedObject):
     def __init__(self, name=None):
         super(Serial, self).__init__()
@@ -3303,8 +3290,8 @@ class CommandActivity(Activity):
 
     def log_to_system_history(self):
         sa = SystemActivity(self.user, self.service, self.action, u'Power', u'',
-                            self.new_value and self.status.status + ": " + self.new_value \
-                            or self.status.status)
+                            self.new_value and u'%s: %s' % (self.status, self.new_value) \
+                            or u'%s' % self.status)
         self.system.activity.append(sa)
 
 # note model
@@ -6128,7 +6115,6 @@ mapper(Power, power_table,
         properties = {'power_type':relation(PowerType,
                                            backref='power_control')
     })
-mapper(CommandStatus, command_status_table)
 
 mapper(Serial, serial_table)
 mapper(SerialType, serial_type_table)
@@ -6218,7 +6204,8 @@ mapper(DistroActivity, distro_activity_table, inherits=Activity,
 
 mapper(CommandActivity, command_queue_table, inherits=Activity,
        polymorphic_identity=u'command_activity',
-       properties={'status':relation(CommandStatus, extension=CallbackAttributeExtension()),
+       properties={'status': column_property(command_queue_table.c.status,
+                        extension=CallbackAttributeExtension()),
                    'system':relation(System, uselist=False),
                   })
 
@@ -6404,7 +6391,6 @@ def import_module(modname):
      return sys.modules[modname]
 
 def auto_power_cmd_handler(command, new_status):
-    if (new_status == CommandStatus.by_name(u'Failed') or \
-        new_status == CommandStatus.by_name(u'Aborted')) \
+    if new_status in (CommandStatus.failed, CommandStatus.aborted) \
        and command.system.open_reservation:
         command.system.open_reservation.recipe.abort("Power command failed")

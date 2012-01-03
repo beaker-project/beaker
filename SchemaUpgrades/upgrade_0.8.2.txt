@@ -386,3 +386,34 @@ and run beaker-init to create and populate the system_type table. Then:
         ADD CONSTRAINT system_type_id_fk
             FOREIGN KEY (type_id) REFERENCES system_type (id),
         DROP COLUMN type;
+
+
+Convert command_status to an ENUM
+---------------------------------
+
+TODO: merge these instructions with the ones above
+
+    ALTER TABLE command_queue
+        ADD COLUMN status ENUM ('Queued', 'Running', 'Completed', 'Failed', 'Aborted')
+            NOT NULL AFTER status_id;
+    UPDATE command_queue
+        INNER JOIN command_status ON command_queue.status_id = command_status.id
+        SET command_queue.status = command_status.status;
+    ALTER TABLE command_queue
+        DROP FOREIGN KEY command_queue_ibfk_2, -- foreign key for status_id
+        DROP COLUMN status_id;
+
+    DROP TABLE command_status;
+
+To roll back, first downgrade the beaker-server package to the desired version
+and run beaker-init to create and populate the command_status table. Then:
+
+    ALTER TABLE command_queue
+        ADD COLUMN status_id INT NULL AFTER status;
+    UPDATE command_queue SET status_id =
+        (SELECT id FROM command_status WHERE command_status.status = command_queue.status);
+    ALTER TABLE command_queue
+        MODIFY status_id INT NOT NULL,
+        ADD CONSTRAINT command_queue_status_id_fk
+            FOREIGN KEY (status_id) REFERENCES command_status (id),
+        DROP COLUMN status;
