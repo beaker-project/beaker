@@ -32,22 +32,22 @@ from turbogears import config
 from turbomail.control import interface
 from xmlrpclib import ProtocolError
 
-from os.path import dirname, exists, join
-from os import getcwd
-import bkr.server.scheduler
-from bkr.server.scheduler import add_onetime_task
 import socket
-from socket import gethostname
 import exceptions
 from datetime import datetime, timedelta
 import time
+import daemon
+import atexit
+import signal
+from lockfile import pidlockfile
+from daemon import pidfile
+import threading
 
 import logging
-#logging.basicConfig()
-#logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
-#logging.getLogger('sqlalchemy.orm.unitofwork').setLevel(logging.DEBUG)
 
 log = logging.getLogger("beakerd")
+running = True
+event = threading.Event()
 
 from optparse import OptionParser
 
@@ -659,123 +659,126 @@ def queued_commands(*args):
 
 @log_traceback(log)
 def new_recipes_loop(*args, **kwargs):
-    while True:
+    while running:
         if not new_recipes():
-            time.sleep(20)
+            event.wait()
+    log.debug("new recipes thread exiting")
 
 @log_traceback(log)
 def processed_recipesets_loop(*args, **kwargs):
-    while True:
+    while running:
         if not processed_recipesets():
-            time.sleep(20)
+            event.wait()
+    log.debug("processed recipesets thread exiting")
 
 @log_traceback(log)
 def command_queue_loop(*args, **kwargs):
-    while True:
+    while running:
         running_commands()
         queued_commands()
-        time.sleep(20)
+        event.wait()
+    log.debug("command queue thread exiting")
 
 @log_traceback(log)
-def main_loop():
-    while True:
+def main_recipes_loop(*args, **kwargs):
+    while running:
         dead_recipes()
         queued = queued_recipes()
         scheduled = scheduled_recipes()
         if not queued and not scheduled:
-            time.sleep(20)
+            event.wait()
+    log.debug("main recipes thread exiting")
 
 def schedule():
-    bkr.server.scheduler._start_scheduler()
+    global running
+    reload_config()
+
     if config.get('beaker.qpid_enabled') is True: 
        bb = ServerBeakerBus()
        bb.run()
-    log.debug("starting new recipes Thread")
-    # Create new_recipes Thread
-    add_onetime_task(action=new_recipes_loop,
-                      args=[lambda:datetime.now()])
-    log.debug("starting processed recipes Thread")
-    # Create processed_recipes Thread
-    add_onetime_task(action=processed_recipesets_loop,
-                      args=[lambda:datetime.now()],
-                      initialdelay=5)
-    log.debug("starting power commands Thread")
-    # Create command_queue Thread
-    add_onetime_task(action=command_queue_loop,
-                      args=[lambda:datetime.now()],
-                      initialdelay=10)
-    main_loop()
 
-def daemonize(daemon_func, daemon_pid_file=None, daemon_start_dir="/", daemon_out_log="/dev/null", daemon_err_log="/dev/null", *args, **kwargs):
-    """Robustly turn into a UNIX daemon, running in daemon_start_dir."""
+    log.debug("starting new recipes thread")
+    new_recipes_thread = threading.Thread(target=new_recipes_loop,
+                                          name="new_recipes")
+    new_recipes_thread.daemon = True
+    new_recipes_thread.start()
 
-    if daemon_pid_file and os.path.exists(daemon_pid_file):
-        try:
-            f = open(daemon_pid_file, "r")
-            pid = f.read()
-            f.close()
-        except:
-            pid = None
+    log.debug("starting processed_recipes thread")
+    processed_recipesets_thread = threading.Thread(target=processed_recipesets_loop,
+                                                   name="processed_recipesets")
+    processed_recipesets_thread.daemon = True
+    processed_recipesets_thread.start()
 
-        if pid:
-            try:
-                fn = os.path.join("/proc", pid, "cmdline")
-                f = open(fn, "r")
-                cmdline = f.read()
-                f.close()
-            except:
-                cmdline = None
+    log.debug("starting power commands thread")
+    command_queue_thread = threading.Thread(target=command_queue_loop,
+                                            name="command_queue")
+    command_queue_thread.daemon = True
+    command_queue_thread.start()
 
-        if cmdline and cmdline.find(sys.argv[0]) >=0:
-            sys.stderr.write("A proces is still running, pid: %s\n" % pid)
-            sys.exit(1)
+    log.debug("starting main recipes thread")
+    main_recipes_thread = threading.Thread(target=main_recipes_loop,
+                                           name="main_recipes")
+    main_recipes_thread.daemon = True
+    main_recipes_thread.start()
 
-    # first fork
     try:
-        if os.fork() > 0:
-            # exit from first parent
-            sys.exit(0)
-    except OSError, ex:
-        sys.stderr.write("fork #1 failed: (%d) %s\n" % (ex.errno, ex.strerror))
-        sys.exit(1)
+        while True:
+            time.sleep(20)
+            if threading.active_count() != 5:
+                log.critical("a thread has died, shutting down")
+                rc = 1
+                running = False
+                event.set()
+                break
+            event.set()
+            event.clear()
+    except (SystemExit, KeyboardInterrupt):
+       log.info("shutting down")
+       running = False
+       event.set()
+       rc = 0
 
-    # decouple from parent environment
-    os.setsid()
-    os.chdir(daemon_start_dir)
-    os.umask(0)
+    new_recipes_thread.join(10)
+    processed_recipesets_thread.join(10)
+    command_queue_thread.join(10)
+    main_recipes_thread.join(10)
 
-    # second fork
-    try:
-        pid = os.fork()
-        if pid > 0:
-            # write pid to pid_file
-            if daemon_pid_file is not None:
-                f = open(daemon_pid_file, "w")
-                f.write("%s" % pid)
-                f.close()
-            # exit from second parent
-            sys.exit(0)
-    except OSError, ex:
-        sys.stderr.write("fork #2 failed: (%d) %s\n" % (ex.errno, ex.strerror))
-        sys.exit(1)
+    sys.exit(rc)
 
-    # redirect stdin, stdout and stderr
-    stdin = open("/dev/null", "r")
-    stdout = open(daemon_out_log, "a+", 0)
-    stderr = open(daemon_err_log, "a+", 0)
-    os.dup2(stdin.fileno(), sys.stdin.fileno())
-    os.dup2(stdout.fileno(), sys.stdout.fileno())
-    os.dup2(stderr.fileno(), sys.stderr.fileno())
+@atexit.register
+def atexit():
+    interface.stop()
 
-    # run the daemon loop
-    daemon_func(*args, **kwargs)
-    sys.exit(0)
+def sighup_handler(signal, frame):
+    log.info("received SIGHUP, reloading")
+    reload_config()
+    log.info("configuration reloaded")
+
+def sigterm_handler(signal, frame):
+    raise SystemExit("received SIGTERM")
+
+def reload_config():
+    for (_, logger) in logging.root.manager.loggerDict.items():
+        if hasattr(logger, 'handlers'):
+            for handler in logger.handlers:
+                logger.removeHandler(handler)
+    for handler in logging._handlerList[:]:
+        handler.flush()
+        handler.close()
+    if interface.running:
+        interface.stop()
+
+    load_config(opts.configfile)
+    config.update({'identity.krb_auth_qpid_principal':
+                       config.get('identity.krb_auth_beakerd_principal'),
+                   'identity.krb_auth_qpid_keytab':
+                       config.get('identity.krb_auth_beakerd_keytab')})
+    interface.start(config)
 
 def main():
+    global opts
     parser = get_parser()
     opts, args = parser.parse_args()
-    setupdir = dirname(dirname(__file__))
-    curdir = getcwd()
 
     # First look on the command line for a desired config file,
     # if it's not on the command line, then look for 'setup.py'
@@ -786,20 +789,32 @@ def main():
     # config file called 'default.cfg' packaged in the egg.
     load_config(opts.configfile)
 
-    interface.start(config)
+    if not opts.foreground:
+        log.debug("Launching beakerd daemon")
+        pid_file = opts.pid_file
+        if pid_file is None:
+            pid_file = config.get("PID_FILE", "/var/run/beaker/beakerd.pid")
+        d = daemon.DaemonContext(pidfile=pidfile.TimeoutPIDLockFile(pid_file, acquire_timeout=0),
+                                 signal_map={signal.SIGHUP: sighup_handler,
+                                             signal.SIGTERM: sigterm_handler})
+        util_logger = logging.getLogger('bkr.server.util')
+        util_logger.disabled = True
+        for (_, logger) in logging.root.manager.loggerDict.items():
+            if hasattr(logger, 'handlers'):
+                for handler in logger.handlers:
+                    logger.removeHandler(handler)
+        for handler in logging._handlerList[:]:
+            handler.flush()
+            handler.close()
+        try:
+            d.open()
+        except pidlockfile.AlreadyLocked:
+            reload_config() # reopen logfiles
+            log.fatal("could not acquire lock on %s, exiting" % pid_file)
+            sys.stderr.write("could not acquire lock on %s" % pid_file)
+            sys.exit(1)
 
-    config.update({'identity.krb_auth_qpid_principal' : config.get('identity.krb_auth_beakerd_principal') })
-    config.update({'identity.krb_auth_qpid_keytab' : config.get('identity.krb_auth_beakerd_keytab') } )
-
-    pid_file = opts.pid_file
-    if pid_file is None:
-        pid_file = config.get("PID_FILE", "/var/run/beaker/beakerd.pid")
-
-
-    if opts.foreground:
-        schedule()
-    else:
-        daemonize(schedule, daemon_pid_file=pid_file)
+    schedule()
 
 if __name__ == "__main__":
     main()

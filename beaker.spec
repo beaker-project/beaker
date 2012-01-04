@@ -83,6 +83,7 @@ Requires:       python-xmltramp
 Requires:       python-lxml
 Requires:       python-ldap
 Requires:       python-rdflib >= 3.0.0
+Requires:       python-daemon
 Requires:       mod_wsgi
 Requires:       python-tgexpandingformwidget
 Requires:       httpd
