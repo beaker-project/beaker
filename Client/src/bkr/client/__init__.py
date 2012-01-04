@@ -236,6 +236,13 @@ class BeakerWorkflow(BeakerCommand):
             action="store_true",
             help="Be quiet, don't print warnings",
         )
+        self.parser.add_option(
+            "--suppress-install-task",
+            dest="suppress_install_task",
+            action="store_true",
+            default=False,
+            help="/distribution/install won't be added to recipe"
+        )
 
     def getArches(self, *args, **kwargs):
         """ Get all arches that apply to either this distro or family/osmajor """
@@ -361,7 +368,9 @@ class BeakerWorkflow(BeakerCommand):
                 recipe.addDistroRequires(distroRequires)
             if hostRequires:
                 recipe.addHostRequires(hostRequires)
-            if dict(name='/distribution/install', arches=[]) not \
+            add_install_task = not kwargs.get("suppress_install_task", False)
+            if add_install_task and \
+               dict(name='/distribution/install', arches=[]) not \
                in requestedTasks:
                 recipe.addTask('/distribution/install')
             if install:
