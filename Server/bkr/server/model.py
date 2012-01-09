@@ -1417,12 +1417,6 @@ class SystemObject(MappedObject):
         return cls.mapper.c.keys()
     get_fields = classmethod(get_fields)
 
-class SystemAdmin(MappedObject):
-    # XXX We should get rid of this class all together
-    # and just query on System.admins or Group.admin_systems
-    # Needs to be fixed in Group.can_admin_system()
-    pass
-
 class Group(MappedObject):
     """
     An ultra-simple group definition.
@@ -1440,9 +1434,17 @@ class Group(MappedObject):
             log.debug('can_admin_system called with no system_id')
             return False
         try:
-            self.query.join(['admin_systems']).filter(and_(SystemAdmin.system_id == system_id,SystemAdmin.group_id == self.group_id)).one()
-            return True 
-        except InvalidRequestError,e: 
+            user = identity.current.user
+        except AttributeError:
+            user = None
+        try:
+            system = System.by_id(system_id, user)
+        except NoResultFound:
+            log.debug('Unable to see system id %s' % system_id)
+            return False
+        if system in self.admin_systems:
+            return True
+        else:
             return False
 
     def __repr__(self):
@@ -6403,7 +6405,6 @@ Cpu.mapper = mapper(Cpu, cpu_table, properties={
     'system': relation(System),
 })
 mapper(Arch, arch_table)
-mapper(SystemAdmin, system_admin_map_table, primary_key=[system_admin_map_table.c.system_id, system_admin_map_table.c.group_id])
 mapper(Provision, provision_table,
        properties = {'provision_families':relation(ProvisionFamily,
             collection_class=attribute_mapped_collection('osmajor'),
