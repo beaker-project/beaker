@@ -165,39 +165,43 @@ class Distros(RPCRoot):
         return dict(distros=[(distro.install_name) for distro in Distro.query.filter(Distro.name.like('%s%%' % distro)).order_by('-date_created')])
     
     def _distros(self,distro,**kw):
-        return_dict = {} 
+        return_dict = {}
         if 'simplesearch' in kw:
             simplesearch = kw['simplesearch']
-            kw['distrosearch'] = [{'table' : 'Name',   
-                                   'operation' : 'contains', 
-                                   'value' : kw['simplesearch']}]                    
+            kw['distrosearch'] = [{'table' : 'Name',
+                                   'operation' : 'contains',
+                                   'value' : kw['simplesearch']}]
         else:
             simplesearch = None
 
-        return_dict.update({'simplesearch':simplesearch}) 
+        return_dict.update({'simplesearch':simplesearch})
         if kw.get("distrosearch"):
-            searchvalue = kw['distrosearch']  
+            searchvalue = kw['distrosearch']
             distros_found = self._distro_search(distro,**kw)
-            return_dict.update({'distros_found':distros_found})               
+            return_dict.update({'distros_found':distros_found})
             return_dict.update({'searchvalue':searchvalue})
         return return_dict
 
     def _distro_search(self,distro,**kw):
         distro_search = search_utility.Distro.search(distro)
         for search in kw['distrosearch']:
-            col = search['table'] 
+            col = search['table']
             distro_search.append_results(search['value'],col,search['operation'],**kw)
         return distro_search.return_results()
 
     @expose(template="bkr.server.templates.grid")
     @paginate('list',default_order='-date_created', limit=50)
     def index(self,*args,**kw):
-        return self.distros(distros=session.query(Distro).join('breed').join('arch').join(['osversion','osmajor']).join('lab_controller_assocs'),*args,**kw)
+        distro_q = session.query(Distro).join(Breed).join(Arch). \
+            join(OSVersion, OSMajor).filter(Distro.lab_controllers.any())
+        return self.distros(distros=distro_q, *args, **kw)
 
     @expose(template="bkr.server.templates.grid")
     @paginate('list',default_order='-date_created', limit=50)
     def name(self,*args,**kw):
-        return self.distros(distros=session.query(Distro).join('breed').join('arch').join(['osversion','osmajor']).join('lab_controller_assocs').filter(distro_table.c.name.like('%s' % kw['name'])),action='./name')
+        distro_q = session.query(Distro).join(Breed).join(Arch). \
+            join(OSVersion, OSMajor).filter(and_(Distro.lab_controllers.any(), Distro.name.like(kw['name'])))
+        return self.distros(distros=distro_q, action='./name')
 
     def distros(self, distros,action='.',*args, **kw):
         distros_return = self._distros(distros,**kw) 
