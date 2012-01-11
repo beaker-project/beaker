@@ -17,4 +17,6 @@
 
 rhts-run-simple-test $TEST/beakerd_stop "/sbin/service beakerd stop"
 rhts-run-simple-test $TEST/yum_install "yum install -y beaker-integration-tests$VERSION"
+rhts-run-simple-test $TEST/update_config "./update-config.sh"
+rhts-run-simple-test $TEST/httpd_reload "/sbin/service httpd reload"
 rhts-run-simple-test $TEST "nosetests -v $NOSEARGS"

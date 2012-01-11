@@ -29,7 +29,7 @@ BUILT_FILES=
 DOWNLOADED_FILES=selenium-server-standalone-$(SELENIUM_SERVER_VERSION).jar
 
 # data files, .c files, scripts anything needed to either compile the test and/or run it.
-FILES=$(METADATA) runtest.sh Makefile PURPOSE $(DOWNLOADED_FILES)
+FILES=$(METADATA) runtest.sh update-config.sh Makefile PURPOSE $(DOWNLOADED_FILES)
 
 run: $(FILES) build \
      /usr/local/share/selenium/selenium-server-standalone-$(SELENIUM_SERVER_VERSION).jar
