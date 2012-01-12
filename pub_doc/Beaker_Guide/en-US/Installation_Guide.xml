@@ -3,31 +3,34 @@
 ]>
 <chapter id="Installation">
 <title>Installation</title>
-<para>
-		The installation guide will teach you how to install Beaker into your system.
-		</para>
-		<section id="Installation-Install_Beaker">
-		<title>Install Beaker</title>
-		<para>To install Beaker packages (and dependencies) you'll need to get the repo file then copy it to your <emphasis>/etc/yum.repos.d/</emphasis> directory.</para>
-        <para>There are two main repos. One containing packages needed for installing the Beaker server and required components, another for packages needed to run the 
-        Beaker client. Basic tasks needed by Beaker can also be found <ulink url="http://repos.fedorapeople.org/repos/beaker/tasks">here</ulink>.
-        You can find the repo directory <ulink url="http://repos.fedorapeople.org/repos/beaker/">here</ulink>. Please download the repo file that suits your requirements.        
-        </para>
-
-		<section id="Installation-Install_Beaker-Disabling_Repos">
-		  <title>Disabling Repos</title>
-      <para>Disable other repos to ensure that packages are installed from the beaker repo. 
+  <para>
+    The installation guide will teach you how to install Beaker into your system.
+  </para>
+  <section id="Installation-Install_Beaker">
+    <title>Install Beaker</title>
+      <para>
+        To install Beaker packages (and dependencies) you'll need to get the
+        repo file then copy it to your <emphasis>/etc/yum.repos.d/</emphasis>
+        directory.
       </para>
-      <para>Install the dependencies 
-		  <screen>$ yum -y install rpm-build python-devel TurboGears python-TurboMail
+      <para>
+        There are two main repos. One containing packages needed for
+        installing the Beaker server and required components, another for packages needed to run the
+        Beaker client. Basic tasks needed by Beaker can also be found
+        <ulink url="http://repos.fedorapeople.org/repos/beaker/tasks">here</ulink>.
+        You can find the repo directory
+        <ulink url="http://repos.fedorapeople.org/repos/beaker/">here</ulink>.
+        Please download the repo file that suits your requirements.
+      </para>
+
+      <para>Install the dependencies.
+        <screen>$ yum -y install rpm-build python-devel TurboGears python-TurboMail
 $ yum -y install mod_wsgi python-decorator python-tgexpandingformwidget python-xmltramp
-		  </screen>
-		</para>
-		<para>Install Beaker server.
-		<screen>$ yum install beaker-server
-		  </screen>
-			</para>
-    </section>
+        </screen>
+      </para>
+      <para>Install Beaker server.
+        <screen>$ yum install beaker-server </screen>
+      </para>
     <section id="Installation-Install_Beaker-Install_DB">
     <title>Install DB</title>
     <para>
