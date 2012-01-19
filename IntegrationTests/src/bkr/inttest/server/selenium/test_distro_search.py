@@ -1,6 +1,7 @@
 #!/usr/bin/python
-from bkr.inttest.server.selenium import SeleniumTestCase
-from bkr.inttest import data_setup
+from bkr.inttest.server.selenium import SeleniumTestCase, WebDriverTestCase
+from bkr.inttest import data_setup, get_server_base
+from selenium.webdriver.support.ui import Select
 import unittest, time, re, os
 from turbogears.database import session
 
@@ -221,3 +222,33 @@ class Search(SeleniumTestCase):
     def tearDown(self):
         self.selenium.stop()
         self.assertEqual([], self.verificationErrors)
+
+class SearchOptionsTest(WebDriverTestCase):
+
+    def setUp(self):
+        self.browser = self.get_browser()
+
+    def tearDown(self):
+        self.browser.quit()
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=770109
+    def test_search_options_are_maintained_after_submitting(self):
+        b = self.browser
+        b.get(get_server_base() + 'distros/')
+        b.find_element_by_link_text('Toggle Search').click()
+        Select(b.find_element_by_name('distrosearch-0.table'))\
+                .select_by_visible_text('Arch')
+        Select(b.find_element_by_name('distrosearch-0.operation'))\
+                .select_by_visible_text('is not')
+        b.find_element_by_name('distrosearch-0.value').send_keys('x86_64')
+        b.find_element_by_name('distrosearch').submit()
+
+        self.assertEquals(Select(b.find_element_by_name('distrosearch-0.table'))
+                .first_selected_option.text,
+                'Arch')
+        self.assertEquals(Select(b.find_element_by_name('distrosearch-0.operation'))
+                .first_selected_option.text,
+                'is not')
+        self.assertEquals(b.find_element_by_name('distrosearch-0.value')
+                .get_attribute('value'),
+                'x86_64')
