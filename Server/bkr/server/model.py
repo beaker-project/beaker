@@ -4010,12 +4010,47 @@ class Job(TaskBase):
         return query.join('product').filter(product_query)
 
     @classmethod
-    def by_whiteboard(cls,desc):
+    def sanitise_job_ids(cls, job_ids):
+        """
+            sanitise_job_ids takes a list of job ids and returns the list
+            sans ids that are not 'valid' (i.e deleted jobs)
+        """
+        invalid_job_ids = [j.id for j in cls.marked_for_deletion()]
+        valid_job_ids = []
+        for job_id in job_ids:
+            if job_id not in invalid_job_ids:
+                valid_job_ids.append(job_id)
+        return valid_job_ids
+
+    @classmethod
+    def sanitise_jobs(cls, query):
+        """
+            This method will remove any jobs from a query that are
+            deemed to not be a 'valid' job
+        """
+        query = query.filter(and_(cls.to_delete==None, cls.deleted==None))
+        return query
+
+    @classmethod
+    def by_whiteboard(cls, desc, like=False, only_valid=False):
+        if type(desc) is list and len(desc) <= 1:
+            desc = desc.pop()
         if type(desc) is list:
-            res = Job.query.filter(Job.whiteboard.in_(desc))
+            if like:
+                if len(desc) > 1:
+                    raise ValueError('Cannot perform a like operation with multiple values')
+                else:
+                    query = Job.query.filter(Job.whiteboard.like('%%%s%%' % desc.pop()))
+            else:
+                query = Job.query.filter(Job.whiteboard.in_(desc))
         else:
-            res = Job.query.filter_by(whiteboard=desc)
-        return res.limit(cls.max_by_whiteboard)
+            if like:
+                query = Job.query.filter(Job.whiteboard.like('%%%s%%' % desc))
+            else:
+                query = Job.query.filter_by(whiteboard=desc)
+        if only_valid:
+            query = cls.sanitise_jobs(query)
+        return query
 
     @classmethod
     def provision_system_job(cls, distro_id, **kw):

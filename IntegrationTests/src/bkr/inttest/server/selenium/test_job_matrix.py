@@ -18,12 +18,75 @@ import logging
 import time
 import tempfile
 from turbogears.database import session
+from bkr.inttest.server.webdriver_utils import login
+from bkr.inttest.server.selenium import SeleniumTestCase, WebDriverTestCase
+from bkr.inttest import data_setup, get_server_base
 
-from bkr.inttest.server.selenium import SeleniumTestCase
-from bkr.inttest import data_setup
+class TestJobMatrixWebDriver(WebDriverTestCase):
+
+
+    def setUp(self):
+        self.job_whiteboard = data_setup.unique_name(u'foobarhi %s')
+        self.recipe_whiteboard = data_setup.unique_name(u'sdfjkljk%s')
+        self.passed_job = data_setup.create_completed_job(
+                whiteboard=self.job_whiteboard, result=u'Pass',
+                recipe_whiteboard=self.recipe_whiteboard,
+                distro=data_setup.create_distro(arch=u'i386'))
+        session.flush()
+        self.browser = self.get_browser()
+
+    def test_deleted_whiteboard_not_shown(self):
+        b = self.browser
+        owner = data_setup.create_user(password='password')
+        whiteboard = u'To be deleted %d' % int(time.time() * 1000)
+        self.passed_job.owner = owner
+        self.passed_job.whiteboard = whiteboard
+        session.flush()
+        login(b, user=owner.user_name, password='password')
+        b.get(get_server_base() + 'matrix')
+        whiteboard_options = b.find_element_by_xpath("//select[@name='whiteboard']").text
+
+        # Confirm the whitebaoard is there before we delete it
+        self.assert_(self.passed_job.whiteboard in whiteboard_options)
+
+        #Now delete the only job with that whiteboard
+        b.get(get_server_base() + 'jobs/%s' % self.passed_job.id)
+        b.find_element_by_id('delete_J:%s' % self.passed_job.id).click()
+        b.find_element_by_xpath("//button[@type='button']").click()
+
+        # Confirm it is no longer there
+        b.get(get_server_base() + 'matrix')
+        whiteboard_options = b.find_element_by_xpath("//select[@name='whiteboard']").text
+        self.assert_(self.passed_job.whiteboard not in whiteboard_options)
+
+    def test_deleted_job_results_not_shown(self):
+        b = self.browser
+        owner = data_setup.create_user(password='password')
+        self.passed_job.owner = owner 
+        session.flush()
+        login(b, user=owner.user_name, password='password')
+        b.get(get_server_base() + 'matrix')
+        b.find_element_by_xpath("//select[@name='whiteboard']/option[@value='%s']" % self.job_whiteboard).click()
+        b.find_element_by_xpath('//input[@value="Generate"]').click()
+        report_text = b.find_element_by_xpath("//div[@id='matrix-report']").text
+        self.assert_('Pass: 1' in report_text)
+
+        # Delete Job
+        b.get(get_server_base() + 'jobs/%s' % self.passed_job.id)
+        b.find_element_by_id('delete_J:%s' % self.passed_job.id).click()
+        b.find_element_by_xpath("//button[@type='button']").click()
+
+        # Assert it is no longer there
+        b.get(get_server_base() + 'matrix')
+        b.find_element_by_xpath("//select[@name='whiteboard']/option[@value='%s']" % self.job_whiteboard).click()
+        b.find_element_by_xpath('//input[@value="Generate"]').click()
+        report_text = b.find_element_by_xpath("//div[@id='matrix-report']").text
+        self.assert_('Pass: 1' not in report_text)
+
+    def tearDown(self):
+        b = self.browser.quit()
 
 class TestJobMatrix(SeleniumTestCase):
-    
     def setUp(self):
         self.job_whiteboard = u'DanC says hi %d' % int(time.time() * 1000)
         self.recipe_whiteboard = u'breakage lol \'#&^!<'
@@ -54,7 +117,6 @@ class TestJobMatrix(SeleniumTestCase):
         sel.type("remote_form_whiteboard_filter", self.job_whiteboard[:int(len(self.job_whiteboard) /2)])
         sel.click("remote_form_do_filter")
         self.wait_and_try(lambda: self.assert_(self.job_whiteboard in sel.get_text('//select[@id="remote_form_whiteboard"]')))
-        
 
     def test_generate_by_whiteboard(self):
         sel = self.selenium
