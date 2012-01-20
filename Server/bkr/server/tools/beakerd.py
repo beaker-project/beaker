@@ -30,11 +30,13 @@ from bkr.server.message_bus import ServerBeakerBus
 from turbogears.database import session
 from turbogears import config
 from turbomail.control import interface
+from xmlrpclib import ProtocolError
 
 from os.path import dirname, exists, join
 from os import getcwd
 import bkr.server.scheduler
 from bkr.server.scheduler import add_onetime_task
+import socket
 from socket import gethostname
 import exceptions
 from datetime import datetime, timedelta
@@ -572,6 +574,12 @@ def running_commands(*args):
                         cmd.status = CommandStatus.by_name(u'Aborted')
                         cmd.new_value = u'Timeout of %d seconds exceeded' % COMMAND_TIMEOUT
                         cmd.log_to_system_history()
+            except ProtocolError, err:
+                log.warning('Error (%d) querying power command (%d) for %s, will retry: %s' %
+                            (err.errcode, cmd.id, cmd.system, err.errmsg))
+            except socket.error, err:
+                log.warning('Socket error (%d) querying power command (%d) for %s, will retry: %s' %
+                            (err.errno, cmd.id, cmd.system, err.strerror))
             except Exception, msg:
                 log.error('Cobbler power exception processing command %d for machine %s: %s' %
                           (cmd.id, cmd.system, msg))
@@ -620,6 +628,12 @@ def queued_commands(*args):
                     cmd.task_id = cmd.system.remote.power(cmd.action)
                     cmd.updated = datetime.utcnow()
                     cmd.status = CommandStatus.by_name(u'Running')
+                except ProtocolError, err:
+                    log.warning('Error (%d) submitting power command (%d) for %s, will retry: %s' %
+                                (err.errcode, cmd.id, cmd.system, err.errmsg))
+                except socket.error, err:
+                    log.warning('Socket error (%d) submitting power command (%d) for %s, will retry: %s' %
+                                (err.errno, cmd.id, cmd.system, err.strerror))
                 except Exception, msg:
                     log.error('Cobbler power exception submitting \'%s\' command (%d) for machine %s: %s' %
                               (cmd.action, cmd.id, cmd.system, msg))
