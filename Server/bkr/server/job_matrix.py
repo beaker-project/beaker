@@ -6,7 +6,7 @@ from turbogears.database import session, metadata, mapper
 from kid import Element, SubElement
 from bkr.server.widgets import JobMatrixReport as JobMatrixWidget, MatrixDataGrid
 from bkr.server.helpers import make_link
-import model
+from bkr.server import model
 import logging
 log = logging.getLogger(__name__)
 
@@ -49,41 +49,32 @@ class JobMatrix:
         self.max_cols = 0
         self.job_ids = []
         matrix_options = {}
-        if 'whiteboard_filter' in kw:
-            filter = kw['whiteboard_filter']
-        else:
-            filter = None 
-
-        whiteboard = None
-        if 'whiteboard' in kw: # Let's deal with whiteboard as a list, just easier
-            whiteboard = type(kw['whiteboard']) == type([]) and kw['whiteboard'] or [kw['whiteboard']]
-
-        matrix_options['whiteboard_options'] = self.get_whiteboard_options(filter, selected=whiteboard)
-        if ('job_ids' in kw) or whiteboard: 
-            gen_results = self.generate(**kw) 
+        matrix_options['whiteboard_options'] = self.get_whiteboard_options(kw.get('filter'), selected=kw.get('whiteboard'))
+        if ('job_ids' in kw or 'whiteboard' in kw):
+            job_ids = []
+            if 'job_ids' in kw:
+                job_ids = [int(j) for j in kw['job_ids'].split()]
+                job_ids = model.Job.sanitise_job_ids(job_ids)
+            # Build the result grid
+            gen_results = self.generate(whiteboard=kw.get('whiteboard'),
+                job_ids=job_ids, toggle_nacks=kw.get('toggle_nacks'))
             matrix_options['grid'] = gen_results['grid']
-            matrix_options['list'] = gen_results['data'] 
-            if whiteboard: # Getting results by whiteboard
-                s = select([func.count(model.Job.id).label('job_count')], whereclause=model.Job.whiteboard.in_(whiteboard))
-                res = s.execute()
-                for r in res: #Should only loop once
-                    count = r.job_count
-                    if count > 20:
-                        flash(_('Your whiteboard contains %s jobs, only %s will be used' % (count, model.Job.max_by_whiteboard)))
-                jobs = model.Job.by_whiteboard(whiteboard) 
+            matrix_options['list'] = gen_results['data']
+            if 'whiteboard' in kw: # Getting results by whiteboard
+                jobs = model.Job.by_whiteboard(kw.get('whiteboard'), only_valid=True)
+                job_count = jobs.count()
+                if job_count > model.Job.max_by_whiteboard:
+                    flash(_('Your whiteboard contains %s jobs, only %s will be used' % (job_count, model.Job.max_by_whiteboard)))
+                jobs.limit(model.Job.max_by_whiteboard)
                 job_ids = [str(j.id) for j in jobs]
                 self.job_ids = job_ids
-                matrix_options['job_ids_vals'] = "\n".join(job_ids)
-            elif 'job_ids' in kw: #Getting results by job id
-                self.job_ids = kw['job_ids'].split()
-                matrix_options['job_ids_vals'] = kw['job_ids']
+                matrix_options['job_ids_vals'] = "\n".join([str(j) for j in job_ids])
+            elif job_ids: #Getting results by job id
+                matrix_options['job_ids_vals'] = '\n'.join([str(j) for j in job_ids])
             if 'toggle_nacks_on' in kw:
                 matrix_options['toggle_nacks_on'] = True
             else:
                 matrix_options['toggle_nacks_on'] = False
-
-            all_rs_queri = model.RecipeSet.query.join(['job']).filter(model.Job.id.in_(self.job_ids))
-            all_ids = [elem.id for elem in all_rs_queri]
         else:
             matrix_options['toggle_nacks_on'] = False
             matrix_options['grid'] = None
@@ -93,35 +84,34 @@ class JobMatrix:
     @expose(format='json')
     def get_whiteboard_options_json(self,filter):
         return_dict = {}
-        return_dict['options'] =  self.get_whiteboard_options(filter)
+        return_dict['options'] = self.get_whiteboard_options(filter)
         return return_dict
 
     def get_whiteboard_options(self,filter, selected=None):
         """
         get_whiteboard_options() returns all whiteboards from the job_table
-        if value is passed in for 'filter' it will perform an SQL 'like' operation 
+        if value is passed in for 'filter' it will perform an SQL 'like' operation
         against whiteboard
         """
         if selected is None:
             selected = []
-
-        if filter: 
-            where = model.job_table.c.whiteboard.like('%%%s%%' % filter)   
+        if filter:
+            query = model.Job.by_whiteboard(filter, like=True,
+                only_valid=True)
         else:
-            where = None
-        s1 = select([model.job_table.c.whiteboard],whereclause=where,
-                     group_by=[model.job_table.c.whiteboard,model.job_table.c.id],
-                     order_by=[model.job_table.c.id.desc()],distinct=True,limit=50) 
-        res = s1.execute()  
+            query = model.Job.sanitise_jobs(model.Job.query)
+        query = query.group_by([model.Job.whiteboard]). \
+            order_by(model.Job.id.desc()).limit(50)
+        whiteboards = query.values(model.Job.whiteboard)
         options = []
-        for r in res:
-            value = desc =  r[0]
-            option_list = [value, desc]
-            if r[0] in selected:
+        for whiteboard in whiteboards:
+            whiteboard = whiteboard[0]
+            option_list = [whiteboard, whiteboard]
+            if whiteboard in selected:
                 option_list.append({'selected' : 'selected' })
             options.append(option_list)
-        return options 
- 
+        return options
+
     def display_whiteboard_results(self,whiteboard,arch):
         """Return func pointer to display result box
 
@@ -163,39 +153,37 @@ class JobMatrix:
             getter=lambda x: x.task_name))
         return fields
 
-    def generate(self,**kw):
+    def generate(self, whiteboard, job_ids, toggle_nacks):
         """Return Grid and Data
 
         generate() returns a BeakerDataGrid and a dataset for it to operate on
 
         """
-        grid_data = self.generate_data(**kw) 
+        grid_data = self.generate_data(whiteboard, job_ids, toggle_nacks)
         grid = MatrixDataGrid(fields = self._job_grid_fields(self.arches_used.keys()))
         session.flush()
-        return {'grid' : grid, 'data' : grid_data }     
+        return {'grid' : grid, 'data' : grid_data}
 
-    def generate_data(self,**kw):
+    def generate_data(self, whiteboard, job_ids, toggle_nacks):
         """Return matrix details
 
         generate_data() returns a nested tuple which represents tasks->arches->whiteboards and their data objects
 
         """
-        jobs = []
         self.arches_used = {}
         self.whiteboards_used = {}
         whiteboard_data = {}
-        if 'whiteboard' in kw:
-            job_query = model.Job.by_whiteboard(kw['whiteboard'])
+        # If somehow both are passed, use the whiteboard
+        if whiteboard:
+            job_ids = []
+            job_query = model.Job.by_whiteboard(whiteboard, only_valid=True)
             for job in job_query:
-                jobs.append(job.id)
-        elif 'job_ids' in kw:
-            jobs = kw['job_ids'].split()
-        else:
-           pass
+                job_ids.append(job.id)
 
-        recipes = model.Recipe.query.join(['distro','arch']).join(['recipeset','job']).filter(model.RecipeSet.job_id.in_(jobs)).add_column(model.Arch.arch)
-        if 'toggle_nacks_on' in kw: #if we're here we are potentially trying to hide naked RS'
-            exclude_recipe_sets = model.Job.get_nacks(jobs)
+        recipes = model.Recipe.query.join(['distro','arch']).join(['recipeset','job']).filter(model.RecipeSet.job_id.in_(job_ids)).add_column(model.Arch.arch)
+        # if we're here we are potentially trying to hide naked RS'
+        if toggle_nacks:
+            exclude_recipe_sets = model.Job.get_nacks(job_ids)
             recipes = recipes.filter(not_(model.RecipeSet.id.in_(exclude_recipe_sets)))
         else: #Likely this is the initial page load for these Jobs. No modifying the nack db.
             exclude_recipe_sets = [] 
@@ -246,11 +234,11 @@ class JobMatrix:
         for arch_val,whiteboard_set in whiteboard_data.iteritems():
             for whiteboard_val in whiteboard_set:
                 if whiteboard_val is not None:
-                    my_and = [model.recipe_set_table.c.job_id.in_(jobs),
+                    my_and = [model.recipe_set_table.c.job_id.in_(job_ids),
                                    arch_alias.c.arch == bindparam('arch'), 
                                    recipe_table_alias.c.whiteboard == bindparam('recipe_whiteboard')]
                 else: 
-                    my_and = [model.recipe_set_table.c.job_id.in_(jobs),
+                    my_and = [model.recipe_set_table.c.job_id.in_(job_ids),
                                    arch_alias.c.arch == bindparam('arch'), 
                                    recipe_table_alias.c.whiteboard==None]
 
