@@ -324,6 +324,11 @@ class LabControllers(RPCRoot):
                 status='active')
             for w in watchdogs:
                 w.recipe.recipeset.job.cancel(msg='LabController %s has been deleted' % labcontroller.fqdn)
+            for distro in labcontroller._distros:
+                distro.distro.activity.append(DistroActivity(user=identity.current.user,
+                    service=u'XMLRPC', action=u'Removed', field_name=u'lab_controllers',
+                    old_value=labcontroller.fqdn, new_value=None))
+                session.delete(distro)
             labcontroller.disabled = True
             session.commit()
         finally:

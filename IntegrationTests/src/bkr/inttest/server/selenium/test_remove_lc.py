@@ -8,6 +8,7 @@ class RemoveLabController(SeleniumTestCase):
         self.system = data_setup.create_system()
         self.lc = data_setup.create_labcontroller(fqdn=u'1111')
         self.system.lab_controller = self.lc
+        self.distro = data_setup.create_distro()
         session.flush()
         self.selenium = self.get_selenium()
         self.selenium.start()
@@ -18,6 +19,9 @@ class RemoveLabController(SeleniumTestCase):
 
     def test_remove_and_add(self):
         sel = self.selenium
+
+        self.assert_(self.lc in self.distro.lab_controllers)
+
         #Remove
         sel.open("labcontrollers/")
         sel.wait_for_page_to_load('30000')
@@ -27,6 +31,10 @@ class RemoveLabController(SeleniumTestCase):
         self.failUnless(sel.is_text_present("exact:%s Removed" % self.lc))
         session.refresh(self.system)
         self.assert_(self.system.lab_controller is None)
+
+        session.refresh(self.distro)
+        self.assert_(self.lc not in self.distro.lab_controllers)
+
         #Re add
         sel.open("labcontrollers/")
         sel.wait_for_page_to_load('30000')
