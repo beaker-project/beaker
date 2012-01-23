@@ -341,6 +341,11 @@
                                         <listitem>
                                           <para>
                                             <application>kernel_options</application>
+                                            <itemizedlist>
+                                             <listitem>
+                                              <para><application>vnc</application> Setting this will do a vnc install</para>
+                                             </listitem>
+                                            </itemizedlist>
                                           </para>
                                         </listitem>
                                         <listitem>
@@ -351,11 +356,52 @@
                                         <listitem>
                                           <para>
                                             <application>ks_meta</application>
+                                            <itemizedlist>
+                                             <listitem>
+                                              <para><application>manual</application> minimal kickstart, should also use mode=vnc</para>
+                                             </listitem>
+                                             <listitem>
+                                              <para><application>mode=text|cmdline|graphical|vnc</application> Specify what mode to use for install, default is either text or cmdline</para>
+                                             </listitem>
+                                             <listitem>
+                                              <para><application>firewall=port:protocol&lt;,port:protocol&gt;</application> Default is firewall disabled, Example: firewall=imap:tcp,1234:ucp,47 </para>
+                                             </listitem>
+                                             <listitem>
+                                              <para><application>keyboard=us</application> Specify Keyboard, Default is us</para>
+                                             </listitem>
+                                             <listitem>
+                                              <para><application>lang=en_US.UTF-8</application> Specify install language, Default is en_US.UTF-8</para>
+                                             </listitem>
+                                             <listitem>
+                                              <para><application>password=&lt;encrypted&gt;</application> Override default password value, must be encrypted</para>
+                                             </listitem>
+                                             <listitem>
+                                              <para><application>selinux=--enforcing</application> Selinux is enabled by default, --disabled or --permissive are valid choices</para>
+                                             </listitem>
+                                             <listitem>
+                                              <para><application>timezone=America/New_York</application> TimeZone to use, default to America/New_York</para>
+                                             </listitem>
+                                             <listitem>
+                                              <para><application>scsidevices=qla2xxx,megaraid_mbox</application> Only load these scsi modules if set</para>
+                                             </listitem>
+                                             <listitem>
+                                              <para><application>ethdevices=tg3,e1000</application> Only load these network modules if set</para>
+                                             </listitem>
+                                             <listitem>
+                                              <para><application>!os_repos</application> If this option is specified it will omit os repos from the kickstart</para>
+                                             </listitem>
+                                             <listitem>
+                                              <para><application>!debug_repos</application> If this option is specified it will omit debuginfo repos from the kickstart</para>
+                                             </listitem>
+                                             <listitem>
+                                              <para><application>!optional_repos</application> If this option is specified it will omit optional repos from the kickstart</para>
+                                             </listitem>
+                                            </itemizedlist>
                                           </para>
                                         </listitem>
                                         <listitem>
                                           <para>
-                                            <application>role</application>In a Multihost environment, it could be either <application>SERVERS</application>, <application>CLIENT</application> or <application>STANDALONE</application>. If it is not important, it can be <application>None</application>. 
+                                            <application>role</application> In a Multihost environment, it could be either <application>SERVERS</application>, <application>CLIENT</application> or <application>STANDALONE</application>. If it is not important, it can be <application>None</application>. 
                                           </para>
                                         </listitem>
                                         <listitem>
