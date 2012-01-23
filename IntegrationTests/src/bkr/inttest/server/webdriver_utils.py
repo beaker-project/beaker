@@ -8,7 +8,9 @@ def login(browser, user=None, password=None):
         password = data_setup.ADMIN_PASSWORD
     browser.get(get_server_base())
     browser.find_element_by_link_text('Login').click()
+    browser.find_element_by_name('user_name').click()
     browser.find_element_by_name('user_name').send_keys(user)
+    browser.find_element_by_name('password').click()
     browser.find_element_by_name('password').send_keys(password)
     browser.find_element_by_name('login').click()
 
