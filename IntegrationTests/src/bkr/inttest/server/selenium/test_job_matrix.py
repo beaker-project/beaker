@@ -32,6 +32,7 @@ class TestJobMatrixWebDriver(WebDriverTestCase):
                 whiteboard=self.job_whiteboard, result=u'Pass',
                 recipe_whiteboard=self.recipe_whiteboard,
                 distro=data_setup.create_distro(arch=u'i386'))
+
         session.flush()
         self.browser = self.get_browser()
 
@@ -60,6 +61,15 @@ class TestJobMatrixWebDriver(WebDriverTestCase):
         self.assert_(self.passed_job.whiteboard not in whiteboard_options)
 
     def test_deleted_job_results_not_shown(self):
+        data_setup.create_completed_job(
+                whiteboard=self.job_whiteboard, result=u'Fail',
+                recipe_whiteboard=self.recipe_whiteboard,
+                distro=data_setup.create_distro(arch=u'i386'))
+        data_setup.create_completed_job(
+                whiteboard=self.job_whiteboard, result=u'Warn',
+                recipe_whiteboard=self.recipe_whiteboard,
+                distro=data_setup.create_distro(arch=u'i386'))
+        session.flush()
         b = self.browser
         owner = data_setup.create_user(password='password')
         self.passed_job.owner = owner 
