@@ -168,7 +168,7 @@ class ReserveSystem(TableForm):
 
 class ReserveWorkflow(Form): 
     javascript = [LocalJSLink('bkr', '/static/javascript/loader.js'),
-                  LocalJSLink('bkr', '/static/javascript/reserve_workflow_v4.js'),
+                  LocalJSLink('bkr', '/static/javascript/reserve_workflow_v5.js'),
                  ] 
     template="bkr.server.templates.reserve_workflow"
     css = [LocalCSSLink('bkr','/static/css/reserve_workflow.css')] 

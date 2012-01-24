@@ -31,7 +31,7 @@ from bkr.server.model import LabController, User, Group, Distro, Breed, Arch, \
         Device, TaskResult, TaskStatus, Job, RecipeSet, TaskPriority, \
         LabControllerDistro, Power, PowerType, TaskExcludeArch, TaskExcludeOSMajor, \
         Permission, RetentionTag, Product, Watchdog, Reservation, LogRecipe, \
-        LogRecipeTask, ExcludeOSMajor, ExcludeOSVersion, Hypervisor
+        LogRecipeTask, ExcludeOSMajor, ExcludeOSVersion, Hypervisor, DistroTag
 
 log = logging.getLogger(__name__)
 
@@ -70,7 +70,11 @@ def create_product(product_name=None):
     if product_name is None:
         product_name = unique_name(u'product%s')
     return Product.lazy_create(name=product_name)
-    
+
+def create_distro_tag(tag=None):
+    if tag is None:
+        tag = unique_name('tag%s')
+    return DistroTag.lazy_create(tag=tag)
 
 def create_labcontroller(fqdn=None, user=None):
     if fqdn is None:

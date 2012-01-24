@@ -14,6 +14,135 @@ def click_reserve_now(sel, system):
             'and preceding-sibling::td[7]/a/text() = "%s"]/a'
             % system.fqdn)
 
+
+class ReserveWorkflow(SeleniumTestCase):
+    def setUp(self):
+        self.lc = data_setup.create_labcontroller()
+        self.system = data_setup.create_system(arch=u'i386')
+        self.system2 = data_setup.create_system(arch=u'x86_64')
+        self.unique_distro_name = data_setup.unique_name('distro%s')
+        self.distro_i386 = data_setup.create_distro(arch=u'i386',name=self.unique_distro_name)
+        self.distro_x86_64= data_setup.create_distro(arch=u'x86_64', name=self.unique_distro_name)
+        self.distro_ia64 = data_setup.create_distro(arch=u'ia64')
+        # Distro install_name is sans arch when displayed with multi arch options
+        self.unique_distro_repr = re.sub(r'^(.+)\-(?:.+?)$',r'\1',self.distro_i386.install_name)
+
+        data_setup.create_task(name=u'/distribution/install')
+        data_setup.create_task(name=u'/distribution/reservesys')
+        self.system.lab_controller = self.lc
+        self.system.shared = True
+        self.system2.lab_controller = self.lc
+        self.system2.shared = True
+        session.flush()
+        self.selenium = self.get_selenium()
+        self.selenium.start()
+
+    def test_reserve_multiple_arch_got_distro(self):
+        self.login()
+        #Selecting just arch
+        sel = self.selenium
+        sel.open("reserveworkflow")
+        sel.wait_for_page_to_load('3000')
+        sel.add_selection("reserveworkflow_form_arch", "label=i386")
+        sel.add_selection("reserveworkflow_form_arch", "label=x86_64")
+        sel.select("reserveworkflow_form_tag", "label=None Selected")
+        self.wait_and_try(lambda: sel.is_text_present(self.unique_distro_repr))
+        sel.select("reserveworkflow_form_distro", "label=%s" % self.unique_distro_repr)
+        sel.click("reserveworkflow_form_auto_pick")
+        sel.wait_for_page_to_load('30000')
+        self.assertEquals(sel.get_title(), 'Reserve System Any System')
+        self.assert_(sel.is_text_present(self.distro_i386.install_name))
+        self.assert_(sel.is_text_present(self.distro_x86_64.install_name))
+      
+        # Arch and family
+        sel.open("reserveworkflow")
+        sel.wait_for_page_to_load('3000')
+        sel.add_selection("reserveworkflow_form_arch", "label=i386")
+        sel.add_selection("reserveworkflow_form_arch", "label=x86_64")
+        sel.select("reserveworkflow_form_distro_family", "label=%s" % self.distro_i386.osversion.osmajor)
+        sel.select("reserveworkflow_form_tag", "label=None Selected")
+        self.wait_and_try(lambda: sel.is_text_present(self.unique_distro_repr))
+        sel.select("reserveworkflow_form_distro", "label=%s" % self.unique_distro_repr)
+        sel.click("reserveworkflow_form_auto_pick")
+        sel.wait_for_page_to_load('3000')
+        self.assertEquals(sel.get_title(), 'Reserve System Any System')
+        self.assert_(sel.is_text_present(self.distro_i386.install_name))
+        self.assert_(sel.is_text_present(self.distro_x86_64.install_name))
+
+    def test_no_lab_controller_distro(self):
+        """ Test distros that have no lab controller are not shown"""
+        self.distro_i386.lab_controller_assocs[:] = []
+        session.flush()
+        self.login()
+        #Selecting multiple arch
+        sel = self.selenium
+        sel.open("reserveworkflow")
+        sel.wait_for_page_to_load('3000')
+        sel.add_selection("reserveworkflow_form_arch", "label=i386")
+        sel.add_selection("reserveworkflow_form_arch", "label=x86_64")
+        sel.select("reserveworkflow_form_tag", "label=None Selected")
+        self.assertRaises(AssertionError,  self.wait_for_condition, lambda: sel.is_text_present(self.unique_distro_repr) == True, wait_time=5)
+     
+        # Single arch
+        sel.open("reserveworkflow")
+        sel.wait_for_page_to_load('3000')
+        sel.add_selection("reserveworkflow_form_arch", "label=i386")
+        sel.select("reserveworkflow_form_tag", "label=None Selected")
+        self.assertRaises(AssertionError,  self.wait_for_condition, lambda: sel.is_text_present(self.distro_i386.install_name) == True, wait_time=5)
+
+    def test_reserve_multiple_arch_tag_got_distro(self):
+        tag = data_setup.create_distro_tag(tag=u'FOO')
+        self.distro_i386.tag = tag
+        self.distro_x86_64.tag = tag
+        session.flush()
+        self.login()
+        sel = self.selenium
+        sel.open("reserveworkflow")
+        sel.wait_for_page_to_load('3000')
+        sel.add_selection("reserveworkflow_form_arch", "label=i386")
+        sel.add_selection("reserveworkflow_form_arch", "label=x86_64")
+        sel.select("reserveworkflow_form_distro_family", "label=%s" % self.distro_i386.osversion.osmajor)
+        sel.select("reserveworkflow_form_tag", "label=FOO")
+        self.wait_and_try(lambda: sel.is_text_present(self.unique_distro_repr))
+
+
+    def test_reserve_single_arch(self):
+        self.login()
+        sel = self.selenium
+        sel.open("reserveworkflow")
+        sel.wait_for_page_to_load('3000')
+        sel.add_selection("reserveworkflow_form_arch", "label=i386")
+        sel.select("reserveworkflow_form_distro_family", "label=%s" % self.distro_i386.osversion.osmajor)
+        sel.select("reserveworkflow_form_tag", "label=None Selected")
+        self.wait_and_try(lambda: sel.is_text_present(self.distro_i386.install_name))
+        sel.select("reserveworkflow_form_distro", "label=%s" % self.distro_i386.install_name)
+        sel.click("reserveworkflow_form_auto_pick")
+        sel.wait_for_page_to_load('3000')
+        self.assertEquals(sel.get_title(), 'Reserve System Any System')
+        self.assert_(sel.is_text_present(self.distro_i386.install_name))
+
+    def test_multiple_no_distro(self):
+        self.login()
+        sel = self.selenium
+        sel.open("reserveworkflow")
+        sel.wait_for_page_to_load('3000')
+        sel.add_selection("reserveworkflow_form_arch", "label=ia64")
+        sel.add_selection("reserveworkflow_form_arch", "label=i386")
+        self.assertRaises(AssertionError,  self.wait_for_condition, lambda: sel.is_text_present(self.unique_distro_repr) == True, wait_time=5)
+
+        tag = data_setup.create_distro_tag(u'BAR')
+        self.distro_x86_64.tag = tag
+        session.flush()
+        sel = self.selenium
+        sel.open("reserveworkflow")
+        sel.wait_for_page_to_load('3000')
+        sel.select("reserveworkflow_form_tag", "label=BAR")
+        sel.add_selection("reserveworkflow_form_arch", "label=i386")
+        sel.add_selection("reserveworkflow_form_arch", "label=x86_64")
+        sel.select("reserveworkflow_form_distro_family", "label=%s" % self.distro_i386.osversion.osmajor)
+        self.assertRaises(AssertionError,  self.wait_for_condition, lambda: sel.is_text_present(self.unique_distro_repr) == True, wait_time=5)
+
+
 class ReserveSystem(SeleniumTestCase):
     def setUp(self):
         self.verificationErrors = []

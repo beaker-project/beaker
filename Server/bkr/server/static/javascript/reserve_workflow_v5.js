@@ -73,41 +73,40 @@ ReserveWorkflow.prototype.replaceArch = function(arg) {
 }
 
 ReserveWorkflow.prototype.system_available = function(arg) {
-    var distro_value = getElement(this.distro_id).value 
-    var arch_value = jQuery('#'+this.arch_id).val() 
+    var distro_value = getElement(this.distro_id).value
+    var arch_value = jQuery('#'+this.arch_id).val()
     var params = { 'tg_format' : 'json',
                    'tg_random' : new Date().getTime(),
-                   'distro_install_name' : distro_value,
                    'arches' : arch_value }
-       
+ 
     if (arch_value.length > 1) {
+        params['distro_name'] =  distro_value
         var d = loadJSONDoc(this.find_systems_many_distro_rpc + '?' + queryString(params));
-    } else { //If we have multiple arches we need to get our systems another way 
-        var d = loadJSONDoc(this.find_systems_one_distro_rpc + '?' + queryString(params)); 
+    } else {
+        params['distro_install_name'] =  distro_value
+        var d = loadJSONDoc(this.find_systems_one_distro_rpc + '?' + queryString(params));
     }
 
-    d.addCallback(this.show_auto_pick_warnings)                
+    d.addCallback(this.show_auto_pick_warnings)
 }
 
-ReserveWorkflow.prototype.show_auto_pick_warnings = function(result) {
-    count = result['count'] 
-    if (count < 1) {
-         getElement('reserve_error').setAttribute('style','display:inline') 
+ReserveWorkflow.prototype.show_auto_pick_warnings = function(results) {
+    var enough_systems = results['enough_systems']
+    //Turn off any existing warnings
+    getElement('reserve_error').setAttribute('style', 'display:none')
+    getElement('reserve_error_system').setAttribute('style', 'display:none')
+    if (!enough_systems) {
+         if ('error' in results) {
+             var elem = getElement('reserve_error');
+             elem.setAttribute('style','display:inline');
+             elem.textContent = results['error']
+         } else {
+             getElement('reserve_error_system').setAttribute('style','display:inline')
+         }
     } else {
-        var the_distro_ids = result['distro_id']
-        if (the_distro_ids instanceof Array) {
-         
-        } else {
-           the_distro_ids = [the_distro_ids]
-        }
-        var real_get_args = null
-        if (the_distro_ids.length == 1) {
-            real_get_args = 'distro_id='+the_distro_ids[0]
-        } else {
-            var joined_args = the_distro_ids.join('&distro_id=')
-            real_get_args = joined_args.replace(/^(.+)?&(.+)$/,"$2&distro_id=$1")
-        }
-         location.href=this.reserve_system_href + '?' + real_get_args
+        var distro_ids = results['distro_id']
+        var real_get_args = $.param({'distro_id': distro_ids}, true);
+        location.href=this.reserve_system_href + '?' + real_get_args
     }
 }
 
