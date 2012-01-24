@@ -15,8 +15,8 @@
 %endif
 
 Name:           beaker
-Version:        0.8.0
-Release:        23%{?dist}
+Version:        0.8.1
+Release:        1%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -345,6 +345,61 @@ fi
 %endif
 
 %changelog
+* Tue Jan 24 2012 Dan Callaghan <dcallagh@redhat.com> 0.8.1-1
+- 541295 Ability to delete system notes (rmancy@redhat.com)
+- 741860 Fix system search over multiple Key/Value search values
+  (rmancy@redhat.com)
+- 747328 Stop people from taking machines by surreptitious means
+  (rmancy@redhat.com)
+- 747767 fix 'None' values and missing rows in CSV install options export
+  (dcallagh@redhat.com)
+- 749441 set MySQL connection character set to utf8 (dcallagh@redhat.com)
+- 749441 limit MAC address field to 18 chars (dcallagh@redhat.com)
+- 736199 use testinfo.py from rhts (dcallagh@redhat.com)
+- 735913 use .textContent instead of $().text() in local_datetime.js
+  (dcallagh@redhat.com)
+- 743065 Reserve workflow now only shows distros that are attached to lab
+  controllers (rmancy@redhat.com)
+- 747086 Fixed 500 ISE when renaming systems not attached to an LC
+  (rmancy@redhat.com)
+- 751330 use joinedloads to avoid N^4 queries when rendering job results
+  (dcallagh@redhat.com)
+- 754872 beaker-repo-update: use repo url as repo id (dcallagh@redhat.com)
+- test for bug 741170: cannot submit jobs with xmlns (dcallagh@redhat.com)
+- 541280 Add password field to user profile for root password on provisioned
+  system (stl@redhat.com)
+- 743666 Add a callback to power commands (stl@redhat.com)
+- 743665 Check the strength of a user's root password if possible
+  (stl@redhat.com)
+- 645635 test that CSV export obeys system privacy (dcallagh@redhat.com)
+- 770109 fix typo in search bar template ('operations' -> 'operation')
+  (dcallagh@redhat.com)
+- 747614 Remove and disable readahead collector (mcsontos@redhat.com)
+- 765717 RFE make yum quiet when it pulls repos in %post for the first time
+  (bpeck@redhat.com)
+- 772538 Do not immediately abort power commands if communication with Cobbler
+  fails (stl@redhat.com)
+- 773049 Don't allow job matrix to show deleted jobs (rmancy@redhat.com)
+- 781568 Remove distro mapping when a lab controller is removed
+  (stl@redhat.com)
+- 769286 Fix distro search page to show correct count with sqla 0.6.8
+  (rmancy@redhat.com)
+- 771215 Matrix whiteboard now correctly shows tasks when clicking on results
+  (rmancy@redhat.com)
+- 771993 Fix the way that systemgroup admins are handled to work with sqla 0.6
+  (rmancy@redhat.com)
+- use ORM features for broken system detection (dcallagh@redhat.com)
+- reduce recipe.log_server to VARCHAR(255) (dcallagh@redhat.com)
+- fix use of tmpnam in unit tests (dcallagh@redhat.com)
+- clean up shipped logging configuration (dcallagh@redhat.com)
+- if HARNESSREPO is passed then pull in a newer harness (bpeck@redhat.com)
+- clean up lab controller logging (dcallagh@redhat.com)
+- integration tests now require python-requests (dcallagh@redhat.com)
+- clean up and simplify query on watchdogs page (dcallagh@redhat.com)
+- Consolidate the two inventory scripts (stl@redhat.com)
+- TaskStatus.max can benefit from caching (dcallagh@redhat.com)
+- add index to job.deleted and job.to_delete columns (dcallagh@redhat.com)
+
 * Wed Dec 21 2011 Bill Peck <bpeck@redhat.com> 0.8.0-23
 - anaconda doesn't handle nfs:// repos that are relative. (bpeck@redhat.com)
 
