@@ -93,8 +93,36 @@ class TestJobMatrixWebDriver(WebDriverTestCase):
         report_text = b.find_element_by_xpath("//div[@id='matrix-report']").text
         self.assert_('Pass: 1' not in report_text)
 
+    def test_single_job(self):
+        unique_whiteboard = data_setup.unique_name('whiteboard%s')
+        non_unique_whiteboard = data_setup.unique_name('whiteboard%s')
+        non_unique_rwhiteboard = data_setup.unique_name('rwhiteboard%s')
+        distro = data_setup.create_distro(arch=u'i386')
+        for i in range(0,9):
+            data_setup.create_completed_job(
+                    whiteboard=non_unique_whiteboard, result=u'Pass',
+                    recipe_whiteboard=non_unique_rwhiteboard,
+                    distro=distro)
+
+        single_job = data_setup.create_completed_job(
+                whiteboard=unique_whiteboard, result=u'Pass',
+                recipe_whiteboard=data_setup.unique_name('rwhiteboard%s'),
+                distro=distro)
+        session.flush()
+        b = self.browser
+        b.get(get_server_base() + 'matrix')
+        b.find_element_by_name('whiteboard_filter').send_keys(unique_whiteboard)
+        b.find_element_by_name('do_filter').click()
+        b.find_element_by_xpath("//select/option[@value='%s']" % unique_whiteboard).click()
+        b.find_element_by_xpath('//input[@value="Generate"]').click()
+        b.find_element_by_link_text('Pass: 1').click()
+        task_id = b.find_element_by_xpath('//table[position()=2]//tr[position()=2]/td').text
+        self.assertEqual(task_id,
+            single_job.recipesets[0].recipes[0].tasks[0].t_id)
+
     def tearDown(self):
         b = self.browser.quit()
+
 
 class TestJobMatrix(SeleniumTestCase):
     def setUp(self):

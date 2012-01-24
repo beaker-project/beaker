@@ -285,8 +285,10 @@ class Tasks(RPCRoot):
             except InvalidRequestError:
                 return "<div>Invalid data:<br>%r</br></div>" % kw
         if kw.get('job_id'):
-            tasks = tasks.join(['recipe','recipeset','job']).filter(Job.id.in_(kw.get('job_id')))
-            # build
+            job_id = kw.get('job_id')
+            if not isinstance(job_id, list):
+                job_id = [job_id]
+            tasks = tasks.join(['recipe','recipeset','job']).filter(Job.id.in_(job_id))
         if kw.get('system'):
             tasks = tasks.join(['recipe','system']).filter(System.fqdn.like('%%%s%%' % kw.get('system')))
         if kw.get('task'):
