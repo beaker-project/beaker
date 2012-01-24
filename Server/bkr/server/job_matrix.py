@@ -65,7 +65,7 @@ class JobMatrix:
                 job_count = jobs.count()
                 if job_count > model.Job.max_by_whiteboard:
                     flash(_('Your whiteboard contains %s jobs, only %s will be used' % (job_count, model.Job.max_by_whiteboard)))
-                jobs.limit(model.Job.max_by_whiteboard)
+                jobs = jobs.limit(model.Job.max_by_whiteboard)
                 job_ids = [str(j.id) for j in jobs]
                 self.job_ids = job_ids
                 matrix_options['job_ids_vals'] = "\n".join([str(j) for j in job_ids])
