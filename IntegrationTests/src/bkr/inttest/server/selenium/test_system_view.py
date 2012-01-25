@@ -572,6 +572,19 @@ class SystemViewTest(SeleniumTestCase):
         session.refresh(self.system)
         self.assertEqual(self.system.mac_address, bad_mac_address)
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=740321
+    def test_no_power_without_lc(self):
+        self.login()
+        sel = self.selenium
+        self.go_to_system_view()
+        self.assert_(sel.is_element_present(
+                '//input[@value="Power On System"]'))
+        sel.select('lab_controller_id', 'None')
+        sel.click('link=Save Changes')
+        sel.wait_for_page_to_load('30000')
+        self.assert_(sel.is_element_present(
+                '//span[text()="System is not configured for power support"]'))
+
 class SystemCcTest(SeleniumTestCase):
 
     def setUp(self):
