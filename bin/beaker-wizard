@@ -69,7 +69,7 @@ if not RegExpAuthor.match(GuessAuthorName):
     GuessAuthorName = "Your Name"
 
 # Commands
-GitCommand="cvs add".split()
+GitCommand="git add".split()
 
 # Constants
 MaxLengthSuggestedDesc = 50
@@ -234,6 +234,22 @@ def parentDir():
     # (useful if writing tests in the package/package-tests directory)
     dir = re.sub("-tests$", "", dir)
     return dir
+
+def addToGit(path):
+    """ Add a file or a directory to Git """
+
+    try:
+        process = subprocess.Popen(GitCommand + [path],
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE,)
+        out, err = process.communicate()
+        if process.wait():
+            print "Sorry, failed to add %s to git :-(" % path
+            print out, err
+            sys.exit(1)
+    except OSError:
+        print("Unable to run %s, is %s installed?"
+                % (" ".join(GitCommand), GitCommand[0]))
+        sys.exit(1)
 
 
 class Preferences:
@@ -434,9 +450,9 @@ class Help:
                     security test, no questions, no review, overwrite existing files
                     -> /CoreOS/gd/Security/CVE-2007-0455-gd-buffer-overrun
 
-                All of the previous examples assume you're in the package directory
-                (cd cvs/tests/perl). All the necessary directories and files are
-                created under this location.
+                All of the previous examples assume you're in the package tests
+                directory (e.g. cd git/tests/perl). All the necessary directories and
+                files are created under this location.
 
             TIP:
                 If you provide an option with a "?" you will be given a list of
@@ -667,7 +683,7 @@ class Options:
         groupCreate.add_option("-g", "--git",
             dest="git",
             action="store_true",
-            help="add created files to cvs (hopefully git soon :-)")
+            help="add created files to the git repository")
 
         # setup default to correctly display in help
         defaultEverything = defaultCommon = defaultNothing = ""
@@ -1697,17 +1713,25 @@ class Reproducers(MultipleChoice):
                     and attachment['isobsolete'] == 0:
                 print "Attachment", attachment['filename'],
                 try:
+                    filename = path + "/" + attachment['filename']
                     remote = self.options.bugzilla.openattachment(attachment['id'])
-                    local = open(path + "/" + attachment['filename'], 'w')
+                    local = open(filename, 'w')
                     local.write(remote.read())
                     remote.close()
                     local.close()
+
+                    # optionally add to the git repository
+                    if self.options.opt.git:
+                        addToGit(filename)
+                        addedToGit = ", added to git"
+                    else:
+                        addedToGit = ""
                 except:
                     print "download failed"
                     print "python-bugzilla-0.5 or higher required"
                     sys.exit(5)
                 else:
-                    print "downloaded"
+                    print "downloaded" + addedToGit
 
 
 class RunFor(MultipleChoice):
@@ -2264,30 +2288,13 @@ class Test(SingleChoice):
         if force or self.options.pref.firstRun or self.options.write():
             self.options.pref.save()
 
-    def addToGit(self, path):
-        """ Add a file or a directory to Git """
-
-        try:
-            process = subprocess.Popen(GitCommand + [path],
-                    stdout=subprocess.PIPE, stderr=subprocess.PIPE,)
-            out, err = process.communicate()
-            if process.wait():
-                print "Sorry, failed to add %s to cvs :-(" % path
-                print out, err
-                sys.exit(1)
-        except OSError:
-            print("Unable to run %s, is %s installed?"
-                    % (" ".join(GitCommand), GitCommand[0]))
-            sys.exit(1)
-
-    def createFile(self, filename, content):
+    def createFile(self, filename, content, mode=None):
         """ Create single test file with specified content """
         fullpath = self.relativePath() + "/" + filename
         addedToGit = ""
 
         # overwrite existing?
         if os.path.exists(fullpath):
-            existed = True
             sys.stdout.write(fullpath + " already exists, ")
             if self.options.force():
                 print "force on -> overwriting"
@@ -2297,8 +2304,6 @@ class Test(SingleChoice):
                 if not re.match("y", answer, re.I):
                     print "Ok skipping. Next time use -f if you want to overwrite files."
                     return
-        else:
-            existed = False
 
         # let's write it
         try:
@@ -2306,10 +2311,13 @@ class Test(SingleChoice):
             file.write(content.encode("utf-8"))
             file.close()
 
+            # change mode if provided
+            if mode: os.chmod(fullpath, mode)
+
             # and, optionally, add to Git
-            if self.options.opt.git and not existed:
-                self.addToGit(fullpath)
-                addedToGit = ", added to " + GitCommand[0]
+            if self.options.opt.git:
+                addToGit(fullpath)
+                addedToGit = ", added to git"
         except IOError:
             print "Cannot write to %s" % fullpath
             sys.exit(3)
@@ -2327,7 +2335,6 @@ class Test(SingleChoice):
         # set file vars
         test = self.testname.value()
         path = self.relativePath()
-        dirs = path.split("/")
         fullpath = self.fullPath()
         addedToGit = ""
 
@@ -2337,17 +2344,9 @@ class Test(SingleChoice):
             # nothing to do if already exists
             if os.path.isdir(path):
                 raise AlreadyExists
-
-            # for each subdirectory create and possibly add to Git
-            for dir in ["/".join(dirs[0:i+1]) for i in range(len(dirs))]:
-                # create the directory unless exists
-                if not os.path.isdir(dir):
-                    os.mkdir(dir)
-                    # and optionally add to cvs
-                    if self.options.opt.git:
-                        self.addToGit(dir)
-                        addedToGit = ", added to " + GitCommand[0]
-
+            # otherwise attempt to create the whole hiearchy
+            else:
+                os.makedirs(path)
         except OSError, e:
             print "Bad, cannot create test directory %s :-(" % path
             sys.exit(1)
@@ -2367,9 +2366,9 @@ class Test(SingleChoice):
             self.skeleton.getVimHeader() +
             comment(self.formatHeader("runtest.sh")) + "\n" +
             comment(self.license.get(), top = False) + "\n" +
-            self.skeleton.getRuntest(self)
+            self.skeleton.getRuntest(self),
+            mode=0755
             )
-        os.chmod(os.path.join(path, "runtest.sh"), 0755)
 
         # Makefile
         self.createFile("Makefile", content = self.formatMakefile())
