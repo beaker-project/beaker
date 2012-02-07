@@ -1658,40 +1658,13 @@ url --url=$tree
 #end raw""" % kickstart
 
                     kickfile = '/var/lib/cobbler/kickstarts/%s.ks' % self.system.fqdn
-        
-                    systemprofile = self.system.fqdn
-                    try:
-                        pid = self.remote.get_profile_handle(self.system.fqdn, 
-                                                             self.token)
-                    except:
-                        pid = self.remote.new_subprofile(self.token)
-                        # Set our custom profile comment to "ignore"
-                        # to keep osversion from touching it and adding
-                        # it as an installable profile in beaker.
-                        self.remote.modify_profile(pid,
-                                                   "comment",
-                                                   "ignore",
-                                                   self.token)
-                        self.remote.modify_profile(pid, 
-                                              "name",
-                                              self.system.fqdn,
-                                              self.token)
-                    if self.remote.read_or_write_kickstart_template(kickfile,
-                                                               False,
-                                                               kickstart,
-                                                               self.token):
-                        self.remote.modify_profile(pid, 
-                                              'kickstart', 
-                                              kickfile, 
-                                              self.token)
-                        self.remote.modify_profile(pid, 
-                                              'parent', 
-                                              profile, 
-                                              self.token)
-                        self.remote.save_profile(pid, 
-                                              self.token)
-                    else:
+                    if not self.remote.read_or_write_kickstart_template(kickfile,
+                            False, kickstart, self.token):
                         raise BX(_("Failed to save kickstart"))
+                    self.remote.modify_system(system_id, 'kickstart', kickfile, self.token)
+                else:
+                    self.remote.modify_system(system_id, 'kickstart', '', self.token)
+
                 self.remote.modify_system(system_id, 
                                      'profile', 
                                      systemprofile, 
