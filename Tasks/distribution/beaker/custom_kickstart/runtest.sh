@@ -18,7 +18,7 @@ export TEST_SYSTEM="virt-10"
 
 if $(echo $SERVERS $STANDALONE | grep -q $HOSTNAME) ; then
     if [ -z "$SERVERS" ]; then
-        SERVERS="$STANDALONE"
+        export SERVERS="$STANDALONE"
     fi
     # XXX should the setup task do this for us?
     rhts-run-simple-test $TEST/install-beaker-client "yum install -y beaker-client$VERSION"
