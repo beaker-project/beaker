@@ -56,7 +56,7 @@ $(METADATA): Makefile
 	@echo "License:      GPLv2" >> $(METADATA)
 	@echo "TestVersion:  $(TESTVERSION)" >> $(METADATA)
 	@echo "Description:  test Beaker jobs with custom kickstart" >> $(METADATA)
-	@echo "TestTime:     10m" >> $(METADATA)
+	@echo "TestTime:     1h" >> $(METADATA)
 	@echo "RunFor:       $(PACKAGE_NAME)" >> $(METADATA)
 	@echo "Requires:     $(PACKAGE_NAME)-client" >> $(METADATA)
 
