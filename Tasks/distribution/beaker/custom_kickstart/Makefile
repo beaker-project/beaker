@@ -32,7 +32,9 @@ export TEST=/$(TOPLEVEL_NAMESPACE)/$(PACKAGE_NAME)/$(RELATIVE_PATH)
 BUILT_FILES=
 
 # data files, .c files, scripts anything needed to either compile the test and/or run it.
-FILES=$(METADATA) runtest.sh Makefile PURPOSE
+FILES=$(METADATA) runtest.sh Makefile PURPOSE \
+	test_custom_kickstart.sh \
+	test_no_custom_kickstart.sh
 
 run: $(FILES) build
 	./runtest.sh
