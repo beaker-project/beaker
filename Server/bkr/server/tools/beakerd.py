@@ -582,11 +582,27 @@ def running_commands(*args):
     return True
 
 def queued_commands(*args):
+    # The following throttle code was put in place in an attempt to
+    # keep cobblerd from falling over.
+    #
+    # Integer value stating max number of commands running
+    MAX_RUNNING_COMMANDS = config.get("beaker.MAX_RUNNING_COMMANDS", 0)
     commands = CommandActivity.query\
                               .filter(CommandActivity.status==CommandStatus.by_name(u'Queued'))\
                               .order_by(CommandActivity.created.asc())
     if not commands.count():
-        return False
+        return
+    # Throttle total number of Running commands if set.
+    if MAX_RUNNING_COMMANDS != 0:
+        running_commands = CommandActivity.query\
+                         .filter(CommandActivity.status==CommandStatus.by_name(u'Running'))
+        if running_commands.count() >= MAX_RUNNING_COMMANDS:
+            log.debug('Throttling Commands: %s >= %s' % (running_commands.count(), 
+                                                        MAX_RUNNING_COMMANDS))
+            return
+        # limit is an int between 1 and MAX_RUNNING_COMMANDS
+        limit = MAX_RUNNING_COMMANDS - running_commands.count()
+        commands = commands.limit(limit > 0 and limit or 1)
     log.debug('Entering queued_commands routine')
     for cmd_id, in commands.values(CommandActivity.id):
         with session.begin():
@@ -625,7 +641,7 @@ def queued_commands(*args):
                     cmd.status = CommandStatus.by_name(u'Failed')
                     cmd.log_to_system_history()
     log.debug('Exiting queued_commands routine')
-    return True
+    return
 
 # These functions are run in separate threads, so we want to log any uncaught 
 # exceptions instead of letting them be written to stderr and lost to the ether

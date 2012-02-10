@@ -16,7 +16,7 @@
 
 Name:           beaker
 Version:        0.8.0
-Release:        23%{?dist}
+Release:        24%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -341,6 +341,10 @@ fi
 %endif
 
 %changelog
+* Tue Feb 07 2012 Bill Peck <bpeck@redhat.com> 0.8.0-24
+- 786352 Limit number of concurrent power commands (stl@redhat.com)
+- avoid creating subprofiles in Cobbler (dcallagh@redhat.com)
+
 * Wed Dec 21 2011 Bill Peck <bpeck@redhat.com> 0.8.0-23
 - anaconda doesn't handle nfs:// repos that are relative. (bpeck@redhat.com)
 
