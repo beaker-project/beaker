@@ -43,6 +43,7 @@ class StubCobbler(object):
         'kopts_post',
         'profile',
         'netboot-enabled',
+        'kickstart',
     ])
     ACCEPTED_POWER_ACTIONS = frozenset(['on', 'off', 'reboot'])
     ACCEPTED_PROFILE_KEYS = frozenset([
