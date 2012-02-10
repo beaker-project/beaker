@@ -5,6 +5,47 @@ import xmlrpclib
 from datetime import datetime
 from datetime import timedelta
 from cobbler import utils
+import urllib2
+import urlparse
+
+def url_exists(url):
+    try:
+        urllib2.urlopen(url)
+    except urllib2.URLError:
+        return False
+    except urllib2.HTTPError:
+        return False
+    except IOError, e:
+        # errno 21 is you tried to retrieve a directory.  Thats ok. We just
+        # want to ensure the path is valid so far.
+        if e.errno == 21:
+            pass
+        else:
+            raise
+    return True
+
+def check_uri(tree):
+    """ Make sure the tree is accessible, check that the server is up first.
+    """
+    url = urlparse.urlparse(tree)
+    server_url = '%s://%s' % (url[0], url[1])
+    tree_url = '%s%s' % (server_url, url[2])
+
+    if url_exists(server_url) and not url_exists(tree_url):
+        return True
+    return False
+
+def check_nfs(tree):
+    """ Make sure the tree is accessible, check that the server is up first.
+    """
+    (nfs_server, nfs_path) = tree[6:].split(':', 1)
+    server_path = os.path.join('/net', nfs_server)
+    if nfs_path.startswith('/'):
+        nfs_path = nfs_path[1:]
+    tree_path = os.path.join(server_path, nfs_path)
+    if os.path.exists(server_path) and not os.path.exists(tree_path):
+        return True
+    return False
 
 if __name__ == '__main__':
     cobbler = xmlrpclib.ServerProxy('http://localhost/cobbler_api')
@@ -13,9 +54,18 @@ if __name__ == '__main__':
     distros = cobbler.get_distros()
     rdistros = []
     for distro in distros:
-        if not os.path.exists(distro['kernel']):
-            rdistros.append(distro['name'])
-        elif len(sys.argv) > 1 and distro['name'].find(sys.argv[1]) != -1:
+        if 'tree' in distro['ks_meta']:
+            tree = distro['ks_meta']['tree']
+            if tree.startswith('nfs://'):
+                # Check nfs
+                if check_nfs(tree):
+                   rdistros.append(distro['name'])
+            else:
+                # use urllib
+                if check_uri(tree):
+                   rdistros.append(distro['name'])
+
+        if len(sys.argv) > 1 and distro['name'].find(sys.argv[1]) != -1:
             rdistros.append(distro['name'])
     # if all distros are expired then something is probably wrong.
     if len(distros) != len(rdistros):

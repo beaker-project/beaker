@@ -140,13 +140,13 @@ EOF
 #end if
 
 # Install old rhts commands
-yum -y --disablerepo=* --enablerepo=beaker-* install rhts-test-env-lab rhts-legacy
+yum -y install rhts-test-env-lab rhts-legacy
 ## If koan is available install it.  This allows for easy re-installs
-yum -y --disablerepo=* --enablerepo=beaker-* install koan
+yum -y install koan
 # Install new harness
-yum -y --disablerepo=* --enablerepo=beaker-* install beah
+yum -y install beah
 # This may fail if you are outside of Red Hat..
-yum -y --disablerepo=* --enablerepo=beaker-* install beakerlib-redhat
+yum -y install beakerlib-redhat
 
 cp /etc/beah_beaker.conf{,.default}
 cat << EOF > /etc/beah_beaker.conf

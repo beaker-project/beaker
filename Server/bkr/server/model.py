@@ -2369,7 +2369,8 @@ url --url=$tree
 
         if kickstart:
             # Newer Kickstarts need %end after each section.
-            if distro.osversion.osmajor.osmajor.startswith("Fedora"):
+            if distro.osversion.osmajor.osmajor.startswith("Fedora") or \
+               distro.osversion.osmajor.osmajor.startswith("RedHatEnterpriseLinux7"):
                 end = "%end"
             else:
                 end = ""
