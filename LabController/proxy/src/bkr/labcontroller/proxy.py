@@ -58,7 +58,7 @@ class ProxyHelper(object):
             TransportClass = retry_request_decorator(CookieTransport)
         self.hub = HubProxy(logger=logging.getLogger('kobo.client.HubProxy'), conf=self.conf,
                 transport=TransportClass(timeout=120), **kwargs)
-        self.server = self.conf.get("SERVER", "http://%s/beaker/logs" % gethostname())
+        self.log_base_url = "http://%s/beaker/logs" % self.conf.get("SERVER", gethostname())
         self.basepath = None
         self.upload = None
         if self.conf.get("CACHE", False):
@@ -89,7 +89,7 @@ class ProxyHelper(object):
                 recipe_id, name, offset, size)
         if self.conf.get("CACHE",False):
             if int(offset) == 0:
-                self.hub.recipes.register_file('%s/recipes/%s' % (self.server, recipe_id),
+                self.hub.recipes.register_file('%s/recipes/%s' % (self.log_base_url, recipe_id),
                                                                   recipe_id, path, name,
                                                '%s/recipes/%s' % (self.basepath, recipe_id))
             return self.upload('/recipes/%s/%s' % (recipe_id, path), 
@@ -430,7 +430,6 @@ class Monitor(ProxyHelper):
         self.watchdog = watchdog
         self.conf = obj.conf
         self.hub = obj.hub
-        self.server = obj.server
         self.upload = obj.upload
         self.basepath = obj.basepath
         logger.info("Initialize monitor for system: %s", self.watchdog['system'])
@@ -476,7 +475,7 @@ class Proxy(ProxyHelper):
                 task_id, name, offset, size)
         if self.conf.get("CACHE",False):
             if int(offset) == 0:
-                self.hub.recipes.tasks.register_file('%s/tasks/%s' % (self.server, task_id), 
+                self.hub.recipes.tasks.register_file('%s/tasks/%s' % (self.log_base_url, task_id), 
                                                      task_id, path, name, 
                                                      '%s/tasks/%s' % (self.basepath, task_id))
 
@@ -573,7 +572,7 @@ class Proxy(ProxyHelper):
                 result_id, name, offset, size)
         if self.conf.get("CACHE",False):
             if int(offset) == 0:
-                self.hub.recipes.tasks.register_result_file('%s/results/%s' % (self.server,result_id),
+                self.hub.recipes.tasks.register_result_file('%s/results/%s' % (self.log_base_url,result_id),
                                                             result_id, path, name,
                                                             '%s/results/%s' % (self.basepath, 
                                                                                result_id))
