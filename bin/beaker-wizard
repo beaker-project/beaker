@@ -1507,7 +1507,7 @@ class Bugs(MultipleChoice):
 
     def showItem(self, item):
         if RegExpBug.match(item):
-            return "bz" + item
+            return "BZ#" + item
         elif RegExpCVE.match(item):
             return "CVE-" + item
         else:
@@ -1649,7 +1649,7 @@ class Name(Inquisitor):
         """ Return test name (including bug/CVE number) """
         bug = self.bugs.getFirstBug()
         if bug and self.prefix.value() == "Yes":
-            return bug + "-" + self.data
+            return bug.replace('BZ#','bz') + "-" + self.data
         else:
             return self.data
 
