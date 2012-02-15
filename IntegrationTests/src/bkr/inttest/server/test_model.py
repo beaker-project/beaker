@@ -192,6 +192,13 @@ class TestJob(unittest.TestCase):
         session.flush()
         self.assertEquals(JobCc.query.filter_by(job_id=job.id).count(), 2)
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=784237
+    def test_mail_exception_doesnt_prevent_status_update(self):
+        job = data_setup.create_job()
+        job.cc.append(u'asdf')
+        data_setup.mark_job_running(job)
+        data_setup.mark_job_complete(job)
+
 class DistroByFilterTest(unittest.TestCase):
 
     def setUp(self):

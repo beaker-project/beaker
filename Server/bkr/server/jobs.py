@@ -20,6 +20,7 @@ from turbogears import controllers, expose, flash, widgets, validate, error_hand
 from turbogears import identity, redirect
 from cherrypy import request, response
 from kid import Element
+from formencode.api import Invalid
 from sqlalchemy.exceptions import InvalidRequestError
 from sqlalchemy.orm.exc import NoResultFound
 from bkr.server.widgets import myPaginateDataGrid, AckPanel, JobQuickSearch, \
@@ -363,8 +364,12 @@ class Jobs(RPCRoot):
         job = Job(whiteboard=unicode(xmljob.whiteboard), ttasks=0, owner=user)
         job.product = product
         job.retention_tag = tag
-
-        job.cc.extend(set(xmljob.iter_cc()))
+        email_validator = validators.Email(not_empty=True)
+        for addr in set(xmljob.iter_cc()):
+            try:
+                job.cc.append(email_validator.to_python(addr))
+            except Invalid, e:
+                raise BX(_('Invalid e-mail address %r in <cc/>: %s') % (addr, str(e)))
         for xmlrecipeSet in xmljob.iter_recipeSets():
             recipe_set = self._handle_recipe_set(xmlrecipeSet, user,
                     ignore_missing_tasks=ignore_missing_tasks)

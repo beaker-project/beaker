@@ -328,6 +328,39 @@ class NewJobTest(SeleniumTestCase):
         job = Job.query.filter(Job.owner == user).order_by(Job.id.desc()).first()
         self.assertEqual(job.cc, ['person@example.invalid'])
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=784237
+    def test_invalid_email_addresses_are_not_accepted_in_notify_cc(self):
+        self.login()
+        sel = self.selenium
+        sel.open('')
+        sel.click('link=New Job')
+        sel.wait_for_page_to_load('30000')
+        xml_file = tempfile.NamedTemporaryFile()
+        xml_file.write('''
+            <job>
+                <whiteboard>job with invalid notify cc addresses</whiteboard>
+                <notify>
+                    <cc>asdf</cc>
+                </notify>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
+                            <distro_name op="=" value="BlueShoeLinux5-5" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" role="STANDALONE"/>
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''')
+        xml_file.flush()
+        sel.type('jobs_filexml', xml_file.name)
+        sel.click('//input[@value="Submit Data"]')
+        sel.wait_for_page_to_load('30000')
+        sel.click('//input[@value="Queue"]')
+        sel.wait_for_page_to_load('30000')
+        self.assert_('Failed to import job' in sel.get_text('css=.flash'))
+
     # https://bugzilla.redhat.com/show_bug.cgi?id=741170
     # You will need a patched python-xmltramp for this test to pass.
     # Look for python-xmltramp-2.17-8.eso.1 or higher.

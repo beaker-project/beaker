@@ -31,10 +31,9 @@ log = logging.getLogger(__name__)
 
 def send_mail(sender, to, subject, body, **kwargs):
     from turbomail import MailNotEnabledException
-    message = turbomail.Message(sender, to, subject, **kwargs)
-    message.plain = body
     try:
-        #log.debug("Sending mail: %s" % message.plain)
+        message = turbomail.Message(sender, to, subject, **kwargs)
+        message.plain = body
         turbomail.send(message)
     except MailNotEnabledException:
         log.warning("TurboMail is not enabled!")
