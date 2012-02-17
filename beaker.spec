@@ -16,7 +16,7 @@
 
 Name:           beaker
 Version:        0.8.0
-Release:        24%{?dist}
+Release:        25%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -342,6 +342,9 @@ fi
 %endif
 
 %changelog
+* Fri Feb 17 2012 Bill Peck <bpeck@redhat.com> 0.8.0-25
+- Support for RHEL7 (bpeck@redhat.com)
+
 * Tue Feb 07 2012 Bill Peck <bpeck@redhat.com> 0.8.0-24
 - 786352 Limit number of concurrent power commands (stl@redhat.com)
 - avoid creating subprofiles in Cobbler (dcallagh@redhat.com)
