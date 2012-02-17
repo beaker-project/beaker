@@ -23,14 +23,20 @@ def make_scan_link(id):
     return make_link(url  = 'rescan?id=%s' % id,
                      text = 'Rescan (*)')
 
-def make_fake_link(name,id,text):
+def make_fake_link(name=None,id=None,text=None,attrs=None):
     # make something look like a href
     a  = Element('a')
     a.attrib['class'] = "list"
     a.attrib['style'] = "color:#22437f;cursor:pointer"
-    a.attrib['name'] = name
-    a.attrib['id'] = id
-    a.text = '%s ' % text
+    if name is not None:
+        a.attrib['name'] = name
+    if id is not None:
+        a.attrib['id'] = id
+    if text is not None:
+        a.text = '%s ' % text
+    if attrs is not None:
+        for k,v in attrs.items():
+            a.attrib[k] = v
     return a
 
 def _sanitize_list(list):

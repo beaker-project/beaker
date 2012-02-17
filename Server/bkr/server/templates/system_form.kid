@@ -99,7 +99,9 @@ $(document).ready(function(){
        </th>
        <td class="list">
         ${display_field_for("status")}
-        <a href="${tg.url('/report_problem/', system_id=id)}">(Report problem)</a>
+        <span py:if="not tg.identity.anonymous" py:strip="1">
+            ${system_actions.display(loan_options=options['loan'], report_problem_options=options['report_problem'])}
+        </span>
        </td>
        <th class="list">
         ${label_for('owner')}

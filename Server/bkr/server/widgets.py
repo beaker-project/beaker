@@ -22,6 +22,7 @@ from turbogears.widgets import (Form, TextField, SubmitButton, TextArea, Label,
 
 from bkr.server import model, search_utility
 from bkr.server.bexceptions import BeakerException
+from bkr.server.helpers import make_fake_link
 import logging
 log = logging.getLogger(__name__)
 
@@ -1298,6 +1299,14 @@ class SystemForm(Form):
 
     def update_params(self, d):
         super(SystemForm, self).update_params(d)
+        if d["options"].has_key("loan"):
+            d["loan"] = d["options"]["loan"]
+        if d["options"].has_key("report_problem"):
+            d["report_problem"] = d["options"]["report_problem"]
+        if d["options"].has_key("system_actions"):
+            d["system_actions"] = d["options"]["system_actions"]
+        if d["options"].has_key("system"):
+            d["system"] = d["options"]["system"]
         if d["options"].has_key("owner_change"):
             d["owner_change"] = d["options"]["owner_change"]
         if d["options"].has_key("user_change"):
@@ -1384,17 +1393,76 @@ class RecipeSetWidget(CompoundWidget):
         d['can_ack_nak'] = can_ack_nak
 
 
+class RecipeTaskActionWidget(RPC):
+    template = 'bkr.server.templates.action'
+    """
+    RecipeTaskActionWidget will display the appropriate actions for a task
+    """
+    def __init__(self, *args, **kw):
+        super(RecipeTaskActionWidget,self).__init__(*args, **kw)
+    
+    def display(self, task, *args, **params): 
+        params['task'] = task
+        return super(RecipeTaskActionWidget, self).display(*args, **params)
+
+
+class ReportProblemForm(RemoteForm):
+    template = 'bkr.server.templates.report_problem_form'
+    fields=[
+        TextArea(name='description', label='Description of problem',
+            validator=validators.NotEmpty())]
+    desc = 'Report Problem'
+    submit = Button(name='submit')
+    submit_text = 'Report'
+    member_widgets = ['submit']
+    params = ['system', 'recipe']
+    name = 'problem'
+    on_success = 'success(\'Your problem as been reported, Thankyou\')'
+    on_failure = 'failure(\'We were unable to report your problem at this time\')'
+ 
+    def update_params(self, d):
+        super(ReportProblemForm, self).update_params(d)
+        d['system'] = d['options']['system']
+        d['recipe'] = d['options'].get('recipe')
+        d['hidden_fields'] = []
+        d['hidden_fields'].append(HiddenField(name='system', attrs= {'value' : d['system'] }))
+        if d['recipe']:
+            d['hidden_fields'].append(HiddenField(name='recipe_id', attrs={'value' : d['recipe'].id}))
+        d['submit'].attrs.update({'onClick' :  "return ! system_action_remote_form_request('%s', %s, '%s');" % (
+            d['options']['name'], jsonify.encode(self.get_options(d)), d['action'])})
+
+
+class RecipeActionWidget(RecipeTaskActionWidget, CompoundWidget):
+    template = 'bkr.server.templates.recipe_action'
+    javascript = [LocalJSLink('bkr', '/static/javascript/util.js'), 
+        LocalJSLink('bkr', '/static/javascript/jquery-ui-1.7.3.custom.min.js'),]
+    css =  [LocalCSSLink('bkr','/static/css/smoothness/jquery-ui-1.7.3.custom.css')]
+    problem_form = ReportProblemForm()
+    params = ['report_problem_options', 'report_link']
+    member_widgets = ['problem_form']
+
+    def __init__(self, *args, **kw):
+        super(RecipeActionWidget, self).__init__(*args, **kw)
+
+    def display(self, task, **params):
+        if task.system:
+            params['report_link'] = make_fake_link(attrs={'onclick' : "show_field('report_problem_recipe','%s')" % self.problem_form.desc},
+                text='Report Problem with system')
+            params['report_problem_options'] = {'system' : task.system,
+                'recipe' : task, 'name' : 'report_problem_recipe',
+                'action' : '../system_action/report_system_problem'}
+        else:
+            params['report_link'] = None
+        return super(RecipeActionWidget,self).display(task, **params)
+
+
 class RecipeWidget(CompoundWidget):
     css = []
     template = "bkr.server.templates.recipe_widget"
     params = ['recipe']
     member_widgets = ['recipe_tasks_widget','action_widget']
+    action_widget = RecipeActionWidget()
     recipe_tasks_widget = RecipeTasksWidget()
-
-    def __init__(self, *args, **kw):
-        self.action_widget = RecipeActionWidget()
-        super(RecipeWidget,self).__init__(*args, **kw)
-    
 
 
 class ProductWidget(SingleSelectField, RPC):
@@ -1484,24 +1552,25 @@ class AlphaNavBar(Widget):
         self.letters = letters 
         self.keyword = keyword
 
-class ReportProblemForm(Form):
-    template = 'bkr.server.templates.report_problem_form'
-    name = 'report_problem'
-    fields=[
-        TextArea(name='problem_description', label=_(u'Description of problem'),
-                validator=validators.NotEmpty())
-    ]
-    hidden_fields=[
-        HiddenField(name='system_id'),
-        HiddenField(name='recipe_id')
-    ]
-    submit_text = _(u'Report problem')
-    params = ['system', 'recipe']
+
+class RequestLoan(RemoteForm):
+    template = 'bkr.server.templates.request_loan'
+    fields = [TextArea(name='message', label='Loan Request',
+        validator=validators.NotEmpty()),]
+    member_widgets=['submit']
+    desc = 'Request Loan'
+    submit = Button(name='submit')
+    submit_text = 'Request'
+    on_success = 'success(\'Your loan request has been sent succesfully\')'
+    on_failure = 'failure(\'We were unable to send you loan request at this time\')';
 
     def update_params(self, d):
-        super(ReportProblemForm, self).update_params(d)
+        super(RequestLoan, self).update_params(d)
         d['system'] = d['options']['system']
-        d['recipe'] = d['options'].get('recipe')
+        d['hidden_fields'] = [HiddenField(name='system', attrs = {'value' : d['system']})]
+        d['submit'].attrs.update({'onClick' : "return ! system_action_remote_form_request('%s', %s, '%s');" % (
+            d['options']['name'], jsonify.encode(self.get_options(d)), d['action'])})
+
 
 class JobWhiteboard(RPC, CompoundWidget):
     """
@@ -1566,32 +1635,13 @@ class LoanWidget(Widget):
         return super(LoanWidget, self).display(*args, **params)
 
 
-
-class RecipeTaskActionWidget(RPC):
-    template = 'bkr.server.templates.action'
-    """
-    RecipeTaskActionWidget will display the appropriate actions for a task
-    """
-    def __init__(self, *args, **kw):
-        super(RecipeTaskActionWidget,self).__init__(*args, **kw)
-    
-    def display(self, task, *args, **params): 
-        params['task'] = task
-        return super(RecipeTaskActionWidget, self).display(*args, **params)
-
-class RecipeActionWidget(RecipeTaskActionWidget):
-    template = 'bkr.server.templates.recipe_action'
-    params = ['show_report']
-
-    def __init__(self, *args, **kw):
-        super(RecipeActionWidget, self).__init__(*args, **kw)
-
-    def display(self, task, **params):
-        if task.system:
-            params['show_report'] = task.system.report_problem_href(recipe_id=task.id)
-        else:
-            params['show_report'] = None
-        return super(RecipeActionWidget,self).display(task, **params)
+class SystemActions(CompoundWidget):
+    template = 'bkr.server.templates.system_actions'
+    problem  = ReportProblemForm(name='problem')
+    loan = RequestLoan(name='loan')
+    member_widgets = ['problem', 'loan']
+    params = ['report_problem_options', 'loan_options']
+    name = 'system_actions'
 
 
 class TaskActionWidget(RPC):

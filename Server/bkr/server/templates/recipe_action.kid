@@ -2,8 +2,14 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xmlns:py="http://purl.org/kid/ns#">
 <div>
 <a class='list' href="${task.clone_link()}">Clone RecipeSet</a><br/>
-<div py:if="show_report is not None">
- <a style='class:list;' href="${show_report}">Report problem with system</a>
+<div py:if="report_link is not None and not tg.identity.anonymous" py:strip="1">
+    ${report_link}
+        <div id="${report_problem_options['name']}" style='display:none'>
+            ${problem_form.display(
+                options=report_problem_options,
+                name=report_problem_options['name'],
+                action=report_problem_options['action'])}
+        </div>
 </div>
 </div>
 

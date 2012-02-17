@@ -28,7 +28,6 @@ from bkr.server.util import absolute_url
 
 log = logging.getLogger(__name__)
 
-
 def send_mail(sender, to, subject, body, **kwargs):
     from turbomail import MailNotEnabledException
     try:
@@ -72,9 +71,35 @@ def job_notify(job, sender=None):
               headers=[('X-Beaker-Notification', 'job-completion'),
                        ('X-Beaker-Job-ID', job.id)])
 
+def _sender_details(user):
+    return u'%s (via Beaker) <%s>' % (user.display_name, user.email_address)
+
+def system_loan_request(system, message, requester, requestee_email):
+    sender = _sender_details(requester)
+    body = [_(u'A Beaker user has requested you loan them the system\n%s <%s>.\n'
+        'Here is a copy of their request:\n'
+        '%s\n Requested by: %s')
+        % (system.fqdn, absolute_url('/view/%s' % system.fqdn),
+        message, requester.display_name), '']
+
+    headers=[('X-Beaker-Notification', 'loan-request'),
+        ('X-Beaker-System', system.fqdn),
+        ('X-Lender', system.lender or ''),
+        ('X-Owner', system.owner),
+        ('X-Location', system.location or ''),
+        ('X-Lab-Controller', system.lab_controller or ''),
+        ('X-Vendor', system.vendor or ''),
+        ('X-Type', system.type)]
+
+    arch_headers = [('X-Arch', arch) for arch in system.arch]
+    headers.extend(arch_headers)
+    cc = [requester.email_address] + system.cc
+    send_mail(sender, requestee_email, _(u'Loan request for %s') % system.fqdn,
+        '\n'.join(body), cc=cc, headers=headers)
+
 def system_problem_report(system, description, recipe=None, reporter=None):
     if reporter is not None:
-        sender = u'%s (via Beaker) <%s>' % (reporter.display_name, reporter.email_address)
+        sender = _sender_details(reporter)
     else:
         sender = config.get('beaker_email')
     if not sender:

@@ -24,6 +24,7 @@ from bkr.server.reserve_workflow import ReserveWorkflow
 from bkr.server.retention_tags import RetentionTag as RetentionTagController
 from bkr.server.watchdog import Watchdogs
 from bkr.server.systems import SystemsController
+from bkr.server.system_action import SystemAction as SystemActionController
 from bkr.server.widgets import BeakerDataGrid, myPaginateDataGrid
 from bkr.server.widgets import LoanWidget
 from bkr.server.widgets import PowerTypeForm
@@ -43,6 +44,7 @@ from bkr.server.widgets import SystemProvision
 from bkr.server.widgets import SearchBar, SystemForm
 from bkr.server.widgets import SystemArches
 from bkr.server.widgets import TaskSearchForm
+from bkr.server.widgets import SystemActions
 from bkr.server.authentication import Auth
 from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.cobbler_utils import hash_to_string, string_to_hash
@@ -138,55 +140,6 @@ class Devices:
                     object_count = devices.count(),
                     list = devices)
 
-class ReportProblemController(object):
-
-    form_widget = ReportProblemForm()
-
-    @expose(template='bkr.server.templates.form-post')
-    @identity.require(identity.not_anonymous())
-    def index(self, system_id, recipe_id=None, problem_description=None, tg_errors=None):
-        """
-        Allows users to report a problem with a system to the system's owner.
-        """
-        try:
-            system = System.by_id(system_id, identity.current.user)
-        except InvalidRequestError:
-            flash(_(u'Unable to find system with id of %s' % system_id))
-            redirect('/')
-        recipe = None
-        if recipe_id is not None:
-            try:
-                recipe = Recipe.by_id(recipe_id)
-            except InvalidRequestError:
-                pass
-        return dict(
-            title=_(u'Report a problem with %s') % system.fqdn,
-            form=self.form_widget,
-            method='post',
-            action='submit',
-            value={'system_id': system_id, 'recipe_id': recipe_id},
-            options={'system': system, 'recipe': recipe}
-        )
-
-    @expose()
-    @error_handler(index)
-    @validate(form=form_widget)
-    @identity.require(identity.not_anonymous())
-    def submit(self, system_id, problem_description, recipe_id=None):
-        system = System.by_id(system_id, identity.current.user)
-        recipe = None
-        if recipe_id is not None:
-            try:
-                recipe = Recipe.by_id(recipe_id)
-            except InvalidRequestError:
-                pass
-        mail.system_problem_report(system, problem_description,
-                recipe, identity.current.user)
-        activity = SystemActivity(identity.current.user, u'WEBUI', u'Reported problem',
-                u'Status', None, problem_description)
-        system.activity.append(activity)
-        flash(_(u'Your problem report has been forwarded to the system owner'))
-        redirect('/view/%s' % system.fqdn)
 
 class Root(RPCRoot): 
     powertypes = PowerTypes()
@@ -214,7 +167,7 @@ class Root(RPCRoot):
     reserveworkflow = ReserveWorkflow()
     watchdogs = Watchdogs()
     retentiontag = RetentionTagController()
-    report_problem = ReportProblemController()
+    system_action = SystemActionController()
     systems = SystemsController()
 
     for entry_point in pkg_resources.iter_entry_points('bkr.controllers'):
@@ -294,6 +247,7 @@ class Root(RPCRoot):
     system_provision = SystemProvision(name='provision')
     arches_form = SystemArches(name='arches') 
     task_form = TaskSearchForm(name='tasks')
+    system_actions = SystemActions()
 
     @expose(format='json')
     def change_system_admin(self,system_id=None,group_id=None,cmd=None,**kw):
@@ -971,10 +925,17 @@ class Root(RPCRoot):
             can_admin = system.can_admin(user = identity.current.user)
         except AttributeError,e:
             can_admin = False
+
+        options['system_actions'] = self.system_actions
+        options['loan'] = {'system' : system.fqdn, 'name' : 'request_loan',
+            'action' : '../system_action/loan_request'}
+        options['report_problem'] = {'system' : system,
+            'name' : 'report_problem', 'action' : '../system_action/report_system_problem'}
+
         # If you have anything in your widgets 'javascript' variable,
         # do not return the widget here, the JS will not be loaded,
         # return it as an arg in return()
-        widgets = dict( 
+        widgets = dict(
                         labinfo   = self.labinfo_form,
                         details   = self.system_details,
                         exclude   = self.system_exclude,
@@ -982,7 +943,7 @@ class Root(RPCRoot):
                         notes     = self.system_notes,
                         groups    = self.system_groups,
                         install   = self.system_installoptions,
-                        arches    = self.arches_form 
+                        arches    = self.arches_form,
                       )
         if system.type != SystemType.virtual:
             widgets['provision'] = self.system_provision
@@ -1015,7 +976,7 @@ class Root(RPCRoot):
                                     arches    = '/save_arch',
                                     tasks     = '/tasks/do_search',
                                   ),
-            widgets_options = dict(power     = options,
+            widgets_options = dict(power  = options,
                                    power_history = system.command_queue[:10], # XXX filter to power commands
                                    history   = history_options or {},
                                    labinfo   = options,

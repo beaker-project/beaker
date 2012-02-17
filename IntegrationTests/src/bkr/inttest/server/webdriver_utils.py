@@ -2,6 +2,10 @@
 from selenium import webdriver
 from bkr.inttest import data_setup, get_server_base
 
+def logout(browser):
+    browser.get(get_server_base())
+    browser.find_element_by_link_text('Logout').click()
+
 def login(browser, user=None, password=None):
     if user is None and password is None:
         user = data_setup.ADMIN_USER
