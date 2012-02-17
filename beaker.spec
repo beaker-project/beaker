@@ -16,7 +16,7 @@
 
 Name:           beaker
 Version:        0.8.0
-Release:        25%{?dist}
+Release:        25.1%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -342,6 +342,9 @@ fi
 %endif
 
 %changelog
+* Fri Feb 17 2012 Bill Peck <bpeck@redhat.com> 0.8.0-25.1
+- bump release after pulling in do_POST commit 
+
 * Fri Feb 17 2012 Bill Peck <bpeck@redhat.com> 0.8.0-25
 - Support for RHEL7 (bpeck@redhat.com)
 
