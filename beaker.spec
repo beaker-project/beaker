@@ -345,6 +345,10 @@ fi
 * Fri Feb 17 2012 Bill Peck <bpeck@redhat.com> 0.8.0-25
 - Support for RHEL7 (bpeck@redhat.com)
 
+* Fri Feb 17 2012 Bill Peck <bpeck@redhat.com> 0.8.0-24.1
+- replacement for the real do_POST, to work around RHBZ#789790.
+  (bpeck@redhat.com)
+
 * Tue Feb 07 2012 Bill Peck <bpeck@redhat.com> 0.8.0-24
 - 786352 Limit number of concurrent power commands (stl@redhat.com)
 - avoid creating subprofiles in Cobbler (dcallagh@redhat.com)
