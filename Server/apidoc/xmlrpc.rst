@@ -100,6 +100,10 @@ Running jobs
 
 .. automethod:: jobs.delete_jobs
 
+.. automodule:: bkr.server.recipes
+
+.. automethod:: recipes.files
+
 .. currentmodule:: None
 
 .. function:: recipes.tasks.extend(task_id, kill_time)

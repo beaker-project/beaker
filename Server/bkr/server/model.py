@@ -29,7 +29,7 @@ from kid import Element
 from bkr.server.bexceptions import BeakerException, BX, CobblerTaskFailedException
 from bkr.server.enum import DeclEnum
 from bkr.server.helpers import *
-from bkr.server.util import unicode_truncate
+from bkr.server.util import unicode_truncate, absolute_url
 from bkr.server import mail
 import traceback
 from BasicAuthTransport import BasicAuthTransport
@@ -3486,6 +3486,7 @@ class Log(MappedObject):
                     tid      = '%s:%s' % (self.type, self.id),
                     filepath = self.parent.filepath,
                     basepath = self.basepath,
+                    url      = urlparse.urljoin(absolute_url('/'), self.log_url()),
                    )
 
     @classmethod 

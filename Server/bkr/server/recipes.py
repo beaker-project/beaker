@@ -106,7 +106,10 @@ class Recipes(RPCRoot):
     @identity.require(identity.not_anonymous())
     def files(self, recipe_id):
         """
-        Return an array of logs for this recipe
+        Return an array of logs for the given recipe.
+
+        :param recipe_id: id of recipe
+        :type recipe_id: integer
         """
         try:
             recipe = Recipe.by_id(recipe_id)
@@ -334,3 +337,6 @@ class Recipes(RPCRoot):
                     recipe_widget        = self.recipe_widget,
                     recipe_tasks_widget  = self.recipe_tasks_widget,
                     recipe               = recipe)
+
+# hack for Sphinx
+recipes = Recipes

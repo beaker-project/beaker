@@ -68,7 +68,7 @@ Requires:	%{name} = %{version}-%{release}
 Requires:       python-krbV
 Requires:       python-lxml
 Requires:       libxslt-python
-
+Requires:       libxml2-python
 
 %if %{with server}
 %package server

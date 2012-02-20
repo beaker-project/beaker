@@ -21,6 +21,7 @@ is installed on your system. See :manpage:`bkr(1)`.
    bkr-job-clone
    bkr-job-delete
    bkr-job-list
+   bkr-job-logs
    bkr-job-results
    bkr-job-submit
    bkr-job-watch
