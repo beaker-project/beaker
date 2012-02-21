@@ -20,6 +20,7 @@ import unittest
 import logging
 import re
 from turbogears.database import session
+from nose.plugins.skip import SkipTest
 
 from bkr.server.model import Job, TaskResult, RecipeTaskResult
 from bkr.inttest.server.selenium import SeleniumTestCase, WebDriverTestCase
@@ -173,6 +174,7 @@ class TestRecipeView(WebDriverTestCase):
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=751330
     def test_fetching_large_results_is_not_too_slow(self):
+        raise SkipTest('"slowness" is too subjective')
         tasks = [data_setup.create_task() for _ in range(700)]
         recipe = data_setup.create_recipe(task_list=tasks)
         pass_ = TaskResult.by_name(u'Pass')
