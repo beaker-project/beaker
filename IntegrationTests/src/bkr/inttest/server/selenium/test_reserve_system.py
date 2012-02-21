@@ -178,7 +178,7 @@ class ReserveSystem(SeleniumTestCase):
         def _get_reserve_val():
             sel.open("reserve_system?distro=%s&simplesearch=%s&search=Search" % (self.distro.install_name, self.system.fqdn))
             sel.wait_for_page_to_load('30000')
-            return sel.get_table("//table[@id='widget'].0.7")
+            return sel.get_text("//table[@id='widget']/tbody/tr[1]/td[8]")
 
 
         pass_ ='password'

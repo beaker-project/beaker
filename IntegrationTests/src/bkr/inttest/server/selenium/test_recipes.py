@@ -67,13 +67,13 @@ class TestRecipesDataGrid(SeleniumTestCase):
     def check_column_sort(self, column):
         sel = self.selenium
         sel.open('recipes/mine')
-        sel.click('//table[@id="widget"]/thead/th[%d]//a[@href]' % column)
+        sel.click('//table[@id="widget"]/thead//th[%d]//a[@href]' % column)
         sel.wait_for_page_to_load('30000')
         row_count = int(sel.get_xpath_count(
                 '//table[@id="widget"]/tbody/tr/td[%d]' % column))
         self.assertEquals(row_count, 24)
-        cell_values = [sel.get_table('widget.%d.%d' % (row, column - 1)) # zero-indexed
-                       for row in range(0, row_count)]
+        cell_values = [sel.get_text('//table[@id="widget"]/tbody/tr[%d]/td[%d]' % (row, column))
+                       for row in range(1, row_count + 1)]
         assert_sorted(cell_values)
 
     def test_can_sort_by_whiteboard(self):
@@ -99,14 +99,14 @@ class TestRecipesDataGrid(SeleniumTestCase):
         column = 1
         sel = self.selenium
         sel.open('recipes/mine')
-        sel.click('//table[@id="widget"]/thead/th[%d]//a[@href]' % column)
+        sel.click('//table[@id="widget"]/thead//th[%d]//a[@href]' % column)
         sel.wait_for_page_to_load('30000')
         row_count = int(sel.get_xpath_count(
                 '//table[@id="widget"]/tbody/tr/td[%d]' % column))
         self.assertEquals(row_count, 24)
         cell_values = []
-        for row in range(0, row_count):
-            raw_value = sel.get_table('widget.%d.%d' % (row, column - 1)) # zero-indexed
+        for row in range(1, row_count + 1):
+            raw_value = sel.get_text('//table[@id="widget"]/tbody/tr[%d]/td[%d]' % (row, column))
             m = re.match(r'R:(\d+)$', raw_value)
             assert m.group(1)
             cell_values.append(int(m.group(1)))
