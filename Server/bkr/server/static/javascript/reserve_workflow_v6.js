@@ -15,6 +15,7 @@ ReserveWorkflow = function (arch,distro_family,tag,distro,submit,auto_pick,arch_
     this.all_distro_familys = all_distro_familys
     this.all_tags = all_tags
     bindMethods(this)
+    this.deferred_get_distros = new Deferred();
 };
 
 ReserveWorkflow.prototype.set_remotes = function(distro_rpc,system_one_distro_rpc,system_many_distros_rpc,reserve_href) {
@@ -120,9 +121,11 @@ ReserveWorkflow.prototype.get_distros = function() {
                    'arch' : arch_value,
                    'distro_family' : distro_family_value,
                    'tag' : tag_value }
+    this.deferred_get_distros.cancel();
     AjaxLoader.prototype.add_loader(this.distro_id)
-    var d = loadJSONDoc(this.get_distros_rpc + '?' + queryString(params));
-    d.addCallback(this.replaceDistros)
+    var d = this.deferred_get_distros = loadJSONDoc(this.get_distros_rpc + '?' + queryString(params));
+    d.addCallback(this.replaceDistros);
+    d.addBoth(this.removeLoader);
 };
 
 ReserveWorkflow.prototype.replaceDistros = function(result) {  
@@ -142,8 +145,11 @@ ReserveWorkflow.prototype.replaceDistros = function(result) {
     }
 
     replaceChildNodes(this.distro_id, map(this.replaceOptions, result.options));
-    AjaxLoader.prototype.remove_loader(this.distro_id)
 }
+
+ReserveWorkflow.prototype.removeLoader = function () {
+    AjaxLoader.prototype.remove_loader(this.distro_id);
+};
 
 ReserveWorkflow.prototype.replaceOptions = function(arg) {
     option = OPTION({"value": arg}, arg)
