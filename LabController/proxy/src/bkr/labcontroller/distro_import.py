@@ -208,8 +208,11 @@ class ComposeInfoLegacy(ComposeInfoBase, Importer):
             if options.available_as:
                 options.available_as = os.path.join(options.available_as,
                                                     os_dir)
-            build = Build(os.path.join(self.parser.url, os_dir))
-            build.process(options, ks_meta)
+            try:
+                build = Build(os.path.join(self.parser.url, os_dir))
+                build.process(options, ks_meta)
+            except BX, err:
+                logging.warn(err)
 
 
 class ComposeInfo(ComposeInfoBase, Importer):
@@ -584,8 +587,11 @@ sources = Workstation/source/SRPMS
                 if options.available_as:
                     options.available_as = os.path.join(options.available_as,
                                                         os_dir)
-                build = Build(os.path.join(self.parser.url, os_dir))
-                build.process(options, ks_meta)
+                try:
+                    build = Build(os.path.join(self.parser.url, os_dir))
+                    build.process(options, ks_meta)
+                except BX, err:
+                    logging.warn(err)
 
 
 class TreeInfoBase(object):
@@ -1038,10 +1044,10 @@ def main():
                       default=False,
                       help="Add root=live: to kernel_options")
     parser.add_option("-a", "--available-as",
-                      default=None,
+                      default='',
                       help="Location to use as install path. Required if using file://")
     parser.add_option("--repo-available-as",
-                      default=None,
+                      default='',
                       help="Location to use as repo path. if not set and not using http:// no addon repos will be available for install")
     parser.add_option("--repo",
                       default=[],
