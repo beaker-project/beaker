@@ -16,7 +16,7 @@
 
 Name:           beaker
 Version:        0.8.0
-Release:        26%{?dist}
+Release:        27%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -342,6 +342,10 @@ fi
 %endif
 
 %changelog
+* Thu Feb 23 2012 Dan Callaghan <dcallagh@redhat.com> 0.8.0-27
+- Merge "replacement for the real do_POST, to work around RHBZ#789790" for real
+  this time (dcallagh@redhat.com)
+
 * Thu Feb 23 2012 Steven Lawrance <stl@redhat.com> 0.8.0-26
 - 796420 beaker-import should not abort on missing .treeinfo. print warning and
   continue (bpeck@redhat.com)
