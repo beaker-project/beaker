@@ -16,7 +16,7 @@
 
 Name:           beaker
 Version:        0.8.0
-Release:        27%{?dist}
+Release:        28%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -342,6 +342,12 @@ fi
 %endif
 
 %changelog
+* Thu Feb 23 2012 Bill Peck <bpeck@redhat.com> 0.8.0-28
+- 796621 "Kernel Options" not populated correctly if "=" character is included
+  inside parameter (bpeck@redhat.com)
+- 796647 move print_repos to rhts_post so that custom kickstarts pick this up.
+  (bpeck@redhat.com)
+
 * Thu Feb 23 2012 Dan Callaghan <dcallagh@redhat.com> 0.8.0-27
 - Merge "replacement for the real do_POST, to work around RHBZ#789790" for real
   this time (dcallagh@redhat.com)
