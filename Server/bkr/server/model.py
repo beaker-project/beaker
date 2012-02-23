@@ -2339,7 +2339,8 @@ url --url=$tree
             return False
 
         if identity.current.user.sshpubkeys:
-            end = distro and distro.osversion.osmajor.osmajor.startswith("Fedora")
+            end = distro and (distro.osversion.osmajor.osmajor.startswith("Fedora") or \
+                              distro.osversion.osmajor.osmajor.startswith("RedHatEnterpriseLinux7"))
             if not ks_appends:
                 ks_appends = []
             ks_appends = ks_appends + [identity.current.user.ssh_keys_ks(end)]

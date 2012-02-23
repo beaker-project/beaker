@@ -491,7 +491,8 @@ def scheduled_recipes(*args):
                     ks_meta = "%s partitions=%s" % (ks_meta, recipe.partitionsKSMeta)
                 user = recipe.recipeset.job.owner
                 if user.sshpubkeys:
-                    end = recipe.distro and recipe.distro.osversion.osmajor.osmajor.startswith("Fedora")
+                    end = recipe.distro and (recipe.distro.osversion.osmajor.osmajor.startswith("Fedora") or \
+                                             recipe.distro.osversion.osmajor.osmajor.startswith("RedHatEnterpriseLinux7"))
                     key_ks = [user.ssh_keys_ks(end)]
                 else:
                     key_ks = []
