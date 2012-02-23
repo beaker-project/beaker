@@ -60,6 +60,7 @@ popd
 #end if
 
 # Add Repos
+$SNIPPET('print_repos')
 #set potential_repos = ['os_repos','debug_repos','optional_repos', 'customrepos']
 #for potential_repo in $potential_repos
 #if $getVar($potential_repo,'') != ''
