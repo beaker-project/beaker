@@ -20,7 +20,5 @@ skip_if_unavailable=1
     #end if
 #end def
 #if $getVar("repos",[]) != []
-cat >> /etc/yum.repos.d/beaker-additional.repo <<EOF
-$print_repo("repos")
-EOF
+$print_repo("repos", anaconda=True)
 #end if
