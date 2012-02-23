@@ -16,7 +16,7 @@
 
 Name:           beaker
 Version:        0.8.0
-Release:        25.1%{?dist}
+Release:        26%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -342,6 +342,11 @@ fi
 %endif
 
 %changelog
+* Thu Feb 23 2012 Steven Lawrance <stl@redhat.com> 0.8.0-26
+- 796420 beaker-import should not abort on missing .treeinfo. print warning and
+  continue (bpeck@redhat.com)
+- 796403 Add an end tag to SSH keys ks_appends for RHEL7 (stl@redhat.com)
+
 * Fri Feb 17 2012 Bill Peck <bpeck@redhat.com> 0.8.0-25.1
 - bump release after pulling in do_POST commit 
 
