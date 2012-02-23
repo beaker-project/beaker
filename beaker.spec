@@ -323,6 +323,7 @@ fi
 %{_bindir}/%{name}-watchdog
 %{_bindir}/%{name}-transfer
 %{_bindir}/%{name}-osversion
+%{_bindir}/%{name}-import
 %doc LabController/README
 %config(noreplace) %{_sysconfdir}/httpd/conf.d/%{name}-lab-controller.conf
 %{_sysconfdir}/cron.hourly/cobbler_expire_distros
@@ -345,6 +346,29 @@ fi
 %endif
 
 %changelog
+* Thu Feb 23 2012 Dan Callaghan <dcallagh@redhat.com> 0.8.0-27
+- Merge "replacement for the real do_POST, to work around RHBZ#789790" for real
+  this time (dcallagh@redhat.com)
+
+* Thu Feb 23 2012 Steven Lawrance <stl@redhat.com> 0.8.0-26
+- 796420 beaker-import should not abort on missing .treeinfo. print warning and
+  continue (bpeck@redhat.com)
+- 796403 Add an end tag to SSH keys ks_appends for RHEL7 (stl@redhat.com)
+
+* Fri Feb 17 2012 Bill Peck <bpeck@redhat.com> 0.8.0-25.1
+- bump release after pulling in do_POST commit 
+
+* Fri Feb 17 2012 Bill Peck <bpeck@redhat.com> 0.8.0-25
+- Support for RHEL7 (bpeck@redhat.com)
+
+* Fri Feb 17 2012 Bill Peck <bpeck@redhat.com> 0.8.0-24.1
+- replacement for the real do_POST, to work around RHBZ#789790.
+  (bpeck@redhat.com)
+
+* Tue Feb 07 2012 Bill Peck <bpeck@redhat.com> 0.8.0-24
+- 786352 Limit number of concurrent power commands (stl@redhat.com)
+- avoid creating subprofiles in Cobbler (dcallagh@redhat.com)
+
 * Tue Jan 24 2012 Dan Callaghan <dcallagh@redhat.com> 0.8.1-1
 - 541295 Ability to delete system notes (rmancy@redhat.com)
 - 741860 Fix system search over multiple Key/Value search values

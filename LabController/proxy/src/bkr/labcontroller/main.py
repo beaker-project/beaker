@@ -26,6 +26,53 @@ set_except_hook()
 
 class XMLRPCRequestHandler(DocXMLRPCServer.DocXMLRPCRequestHandler):
     rpc_paths = ('/', '/RPC2', '/server')
+    def do_POST(self):
+        """
+        This is a replacement for the real do_POST, to work around RHBZ#789790.
+        """
+
+        # Check that the path is legal
+        if not self.is_rpc_path_valid():
+            self.report_404()
+            return
+
+        try:
+            data = self.rfile.read(int(self.headers["content-length"]))
+            if len(data) < int(self.headers["content-length"]):
+                self.connection.shutdown(1)
+                return
+
+            # In previous versions of SimpleXMLRPCServer, _dispatch
+            # could be overridden in this class, instead of in
+            # SimpleXMLRPCDispatcher. To maintain backwards compatibility,
+            # check to see if a subclass implements _dispatch and dispatch
+            # using that method if present.
+            response = self.server._marshaled_dispatch(
+                    data, getattr(self, '_dispatch', None)
+                )
+        except Exception, e: # This should only happen if the module is buggy
+            # internal error, report as HTTP server error
+            self.send_response(500)
+
+            # Send information about the exception if requested
+            if hasattr(self.server, '_send_traceback_header') and \
+                    self.server._send_traceback_header:
+                self.send_header("X-exception", str(e))
+                self.send_header("X-traceback", traceback.format_exc())
+
+            self.end_headers()
+        else:
+            # got a valid XML RPC response
+            self.send_response(200)
+            self.send_header("Content-type", "text/xml")
+            self.send_header("Content-length", str(len(response)))
+            self.end_headers()
+            self.wfile.write(response)
+
+            # shut down the connection
+            self.wfile.flush()
+            self.connection.shutdown(1)
+
             
 class ForkingXMLRPCServer (SocketServer.ForkingMixIn,
                            DocXMLRPCServer.DocXMLRPCServer):
