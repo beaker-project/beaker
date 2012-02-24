@@ -657,7 +657,7 @@ class RepeatTimer(Thread):
                     self.function(*self.args, **self.kwargs)
                 except Exception, e:
                     # Log it so we don't lose it
-                    logger.exception()
+                    logger.exception('Login Failed')
                     if self.stop_on_exception:
                         self.finished.clear()
                         raise
