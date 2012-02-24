@@ -402,7 +402,7 @@ fi
 - 770109 fix typo in search bar template ('operations' -> 'operation')
   (dcallagh@redhat.com)
 - 747614 Remove and disable readahead collector (mcsontos@redhat.com)
-- 765717 RFE make yum quiet when it pulls repos in %post for the first time
+- 765717 RFE make yum quiet when it pulls repos in %%post for the first time
   (bpeck@redhat.com)
 - 772538 Do not immediately abort power commands if communication with Cobbler
   fails (stl@redhat.com)
