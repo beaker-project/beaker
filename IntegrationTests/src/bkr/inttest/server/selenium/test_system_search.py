@@ -326,7 +326,8 @@ class HypervisorSearchTest(SeleniumTestCase):
         self.assertEqual(sel.get_title(), 'My Systems')
         row_count = int(sel.get_xpath_count('//table[@id="widget"]/tbody/tr'))
         self.assertEquals(row_count, 1)
-        self.assertEquals(sel.get_table('widget.0.0'), self.kvm.fqdn)
+        self.assertEquals(sel.get_text('//table[@id="widget"]/tbody/tr[1]/td[1]'),
+                self.kvm.fqdn)
 
     def test_search_hypervisor_is_not(self):
         sel = self.selenium
@@ -340,8 +341,10 @@ class HypervisorSearchTest(SeleniumTestCase):
         self.assertEqual(sel.get_title(), 'My Systems')
         row_count = int(sel.get_xpath_count('//table[@id="widget"]/tbody/tr'))
         self.assertEquals(row_count, 2)
-        self.assertEquals(sel.get_table('widget.0.0'), self.xen.fqdn)
-        self.assertEquals(sel.get_table('widget.1.0'), self.phys.fqdn)
+        self.assertEquals(sel.get_text('//table[@id="widget"]/tbody/tr[1]/td[1]'),
+                self.xen.fqdn)
+        self.assertEquals(sel.get_text('//table[@id="widget"]/tbody/tr[2]/td[1]'),
+                self.phys.fqdn)
 
     def test_search_hypervisor_is_blank(self):
         sel = self.selenium
@@ -355,4 +358,5 @@ class HypervisorSearchTest(SeleniumTestCase):
         self.assertEqual(sel.get_title(), 'My Systems')
         row_count = int(sel.get_xpath_count('//table[@id="widget"]/tbody/tr'))
         self.assertEquals(row_count, 1)
-        self.assertEquals(sel.get_table('widget.0.0'), self.phys.fqdn)
+        self.assertEquals(sel.get_text('//table[@id="widget"]/tbody/tr[1]/td[1]'),
+                self.phys.fqdn)

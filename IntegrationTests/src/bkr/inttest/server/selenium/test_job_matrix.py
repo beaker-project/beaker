@@ -209,32 +209,30 @@ class TestJobMatrix(SeleniumTestCase):
         sel.click('//input[@value="Generate"]')
         sel.wait_for_page_to_load('30000')
 
-        self.assertEqual(sel.get_table("//div[@class='dataTables_scrollHeadInner']/table[@class=' FixedColumns_Cloned'].0.0"), 'Task')
-        self.assertEqual(sel.get_table("//div[@class='dataTables_scrollHeadInner']/table.0.1"),
+        self.assertEqual(sel.get_text("//div[@class='dataTables_scrollHeadInner']/table[1]/thead/tr[1]/th[1]"), 'Task')
+        self.assertEqual(sel.get_text("//div[@class='dataTables_scrollHeadInner']/table[1]/thead/tr[1]/th[2]"),
             'i386')
-        self.assertEqual(sel.get_table("//div[@class='dataTables_scrollHeadInner']/table.0.2"),
+        self.assertEqual(sel.get_text("//div[@class='dataTables_scrollHeadInner']/table[1]/thead/tr[1]/th[3]"),
             'ia64')
-        self.assertEqual(sel.get_table("//div[@class='dataTables_scrollHeadInner']/table.0.3"),
+        self.assertEqual(sel.get_text("//div[@class='dataTables_scrollHeadInner']/table[1]/thead/tr[1]/th[4]"),
             'x86_64')
 
-        # get_table('matrix_datagrid') doesn't seem to return anything
-        # possibly because of elements inside table
         body = sel.get_text("//table[@id='matrix_datagrid']/tbody")
         self.assert_('Pass: 1' in body)
         self.assert_('Warn: 1' in body)
         self.assert_('Fail: 1' in body)
 
-        self.assertEqual(sel.get_table("//div[@class='dataTables_scrollHeadInner']/table.1.1"),
+        self.assertEqual(sel.get_text("//div[@class='dataTables_scrollHeadInner']/table[1]/thead/tr[2]/th[2]"),
             '%s' % self.recipe_whiteboard)
-        self.assertEqual(sel.get_table("//div[@class='dataTables_scrollHeadInner']/table.1.2"),
+        self.assertEqual(sel.get_text("//div[@class='dataTables_scrollHeadInner']/table[1]/thead/tr[2]/th[3]"),
             '%s' % self.recipe_whiteboard)
-        self.assertEqual(sel.get_table("//div[@class='dataTables_scrollHeadInner']/table.1.3"),
+        self.assertEqual(sel.get_text("//div[@class='dataTables_scrollHeadInner']/table[1]/thead/tr[2]/th[4]"),
             '%s' % self.recipe_whiteboard)
         sel.click('link=Pass: 1')
         sel.wait_for_page_to_load('30000')
         self.assertEqual(sel.get_title(), 'Executed Tasks')
         self.assertEqual(sel.get_value('whiteboard'), self.recipe_whiteboard)
-        self.assertEqual(sel.get_table('css=.list.1.0'),
+        self.assertEqual(sel.get_text('//table[@class="list"]/tbody/tr[2]/td[1]'),
                 self.passed_job.recipesets[0].recipes[0].tasks[0].t_id)
         sel.go_back()
         sel.wait_for_page_to_load('30000')
@@ -242,7 +240,7 @@ class TestJobMatrix(SeleniumTestCase):
         sel.wait_for_page_to_load('30000')
         self.assertEqual(sel.get_title(), 'Executed Tasks')
         self.assertEqual(sel.get_value('whiteboard'), self.recipe_whiteboard)
-        self.assertEqual(sel.get_table('css=.list.1.0'),
+        self.assertEqual(sel.get_text('//table[@class="list"]/tbody/tr[2]/td[1]'),
                 self.warned_job.recipesets[0].recipes[0].tasks[0].t_id)
         sel.go_back()
         sel.wait_for_page_to_load('30000')
@@ -251,5 +249,5 @@ class TestJobMatrix(SeleniumTestCase):
         sel.wait_for_page_to_load('30000')
         self.assertEqual(sel.get_title(), 'Executed Tasks')
         self.assertEqual(sel.get_value('whiteboard'), self.recipe_whiteboard)
-        self.assertEqual(sel.get_table('css=.list.1.0'),
+        self.assertEqual(sel.get_text('//table[@class="list"]/tbody/tr[2]/td[1]'),
                 self.failed_job.recipesets[0].recipes[0].tasks[0].t_id)

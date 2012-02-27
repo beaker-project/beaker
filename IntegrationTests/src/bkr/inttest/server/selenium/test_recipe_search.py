@@ -31,7 +31,8 @@ class SearchRecipes(SeleniumTestCase):
         # Test Queued and only Queued recipe is shown
         sel.click("//button[@value='Status-is-Queued']")
         sel.wait_for_page_to_load("30000")
-        self.assertEqual(sel.get_table("//table[@id='widget'].0.0"),'R:%s' % self.queued_job.recipesets[0].recipes[0].id)
+        self.assertEqual(sel.get_text("//table[@id='widget']/tbody/tr[1]/td[1]"),
+                'R:%s' % self.queued_job.recipesets[0].recipes[0].id)
         queued_table_text = sel.get_text("//table[@id='widget']")
         self.assert_('R:%s' % self.running_job.recipesets[0].recipes[0].id not in queued_table_text)
         self.assert_('R:%s' % self.completed_job.recipesets[0].recipes[0].id not in queued_table_text)
@@ -39,7 +40,8 @@ class SearchRecipes(SeleniumTestCase):
         # Test Running and only Running recipe is shown
         sel.click("//button[@value='Status-is-Running']")
         sel.wait_for_page_to_load("30000")
-        self.assertEqual(sel.get_table("//table[@id='widget'].0.0"),'R:%s' % self.running_job.recipesets[0].recipes[0].id)
+        self.assertEqual(sel.get_text("//table[@id='widget']/tbody/tr[1]/td[1]"),
+                'R:%s' % self.running_job.recipesets[0].recipes[0].id)
         running_table_text = sel.get_text("//table[@id='widget']")
         self.assert_('R:%s' % self.queued_job.recipesets[0].recipes[0].id not in running_table_text)
         self.assert_('R:%s' % self.completed_job.recipesets[0].recipes[0].id not in running_table_text)
@@ -47,7 +49,8 @@ class SearchRecipes(SeleniumTestCase):
         # Test Completed and only Completed recipe is shown
         sel.click("//button[@value='Status-is-Completed']")
         sel.wait_for_page_to_load("30000")
-        self.assertEqual(sel.get_table("//table[@id='widget'].0.0"),'R:%s' % self.completed_job.recipesets[0].recipes[0].id)
+        self.assertEqual(sel.get_text("//table[@id='widget']/tbody/tr[1]/td[1]"),
+                'R:%s' % self.completed_job.recipesets[0].recipes[0].id)
         completed_table_text = sel.get_text("//table[@id='widget']")
         self.assert_('R:%s' % self.running_job.recipesets[0].recipes[0].id not in completed_table_text)
         self.assert_('R:%s' % self.queued_job.recipesets[0].recipes[0].id not in completed_table_text)

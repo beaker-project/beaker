@@ -99,14 +99,14 @@ class TestSystemGridSorting(SeleniumTestCase):
 
     def check_column_sort(self, column):
         sel = self.selenium
-        sel.click('//table[@id="widget"]/thead/th[%d]//a[@href]' % column)
+        sel.click('//table[@id="widget"]/thead//th[%d]//a[@href]' % column)
         sel.wait_for_page_to_load('30000')
 
         cell_values = []
         while True:
             row_count = int(sel.get_xpath_count('//table[@id="widget"]/tbody/tr/td[%d]' % column))
-            cell_values += [sel.get_table('widget.%d.%d' % (row, column - 1)) # zero-indexed 
-                           for row in range(0, row_count)]
+            cell_values += [sel.get_text('//table[@id="widget"]/tbody/tr[%d]/td[%d]' % (row, column))
+                           for row in range(1, row_count + 1)]
             # Keeping scrolling through pages until we have seen at least two distinct cell values
             # (so that we can see that it is really sorted)
             if len(set(cell_values)) > 1:

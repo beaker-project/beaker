@@ -7,18 +7,18 @@ from bkr.server.model import User, DistroActivity, SystemActivity
 def is_activity_row_present(sel, via=u'testdata', object_=None, property_=None,
         action=None, old_value=None, new_value=None):
     row_count = int(sel.get_xpath_count('//table[@id="widget"]/tbody/tr'))
-    for row in range(row_count):
-        if via and via != sel.get_table('widget.%d.1' % row):
+    for row in range(1, row_count + 1):
+        if via and via != sel.get_text('//table[@id="widget"]/tbody/tr[%d]/td[2]' % row):
             continue
-        if object_ and object_ != sel.get_table('widget.%d.3' % row):
+        if object_ and object_ != sel.get_text('//table[@id="widget"]/tbody/tr[%d]/td[4]' % row):
             continue
-        if property_ and property_ != sel.get_table('widget.%d.4' % row):
+        if property_ and property_ != sel.get_text('//table[@id="widget"]/tbody/tr[%d]/td[5]' % row):
             continue
-        if action and action != sel.get_table('widget.%d.5' % row):
+        if action and action != sel.get_text('//table[@id="widget"]/tbody/tr[%d]/td[6]' % row):
             continue
-        if old_value and old_value != sel.get_table('widget.%d.6' % row):
+        if old_value and old_value != sel.get_text('//table[@id="widget"]/tbody/tr[%d]/td[7]' % row):
             continue
-        if new_value and new_value != sel.get_table('widget.%d.6' % row):
+        if new_value and new_value != sel.get_text('//table[@id="widget"]/tbody/tr[%d]/td[8]' % row):
             continue
         return True
     return False
