@@ -390,6 +390,7 @@ class SystemProvisionXmlRpcTest(XmlRpcTestCase):
                 'noapic runlevel=3',
                 kickstart)
         beakerd.queued_commands()
+        kickstart_filename = '/var/lib/cobbler/kickstarts/%s.ks' % system.fqdn
         self.assertEqual(self.stub_cobbler_thread.cobbler.systems[system.fqdn],
                 {'power_type': 'drac',
                  'power_address': 'nowhere.example.com',
@@ -399,12 +400,9 @@ class SystemProvisionXmlRpcTest(XmlRpcTestCase):
                  'ksmeta': {'method': 'nfs'},
                  'kopts': {'ksdevice': 'eth0', 'noapic': None, 'console': 'ttyS0'},
                  'kopts_post': {'noapic': None, 'runlevel': '3'},
-                 'profile': system.fqdn,
+                 'profile': self.distro.install_name,
+                 'kickstart': kickstart_filename,
                  'netboot-enabled': True})
-        kickstart_filename = '/var/lib/cobbler/kickstarts/%s.ks' % system.fqdn
-        self.assertEqual(self.stub_cobbler_thread.cobbler.profiles[system.fqdn],
-                {'kickstart': kickstart_filename,
-                 'parent': self.distro.install_name})
         self.assert_(kickstart in
                 self.stub_cobbler_thread.cobbler.kickstarts[kickstart_filename])
         self.assertEqual(
