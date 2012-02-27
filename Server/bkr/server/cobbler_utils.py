@@ -132,7 +132,7 @@ def string_to_hash(options,delim=" ",allow_multiples=True):
     new_dict = {}
     tokens = options.split(delim)
     for t in tokens:
-        tokens2 = t.split("=")
+        tokens2 = t.split("=", 1)
         if len(tokens2) == 1 and tokens2[0] != '':
             # this is a singleton option, no value
             tokens2.append(None)

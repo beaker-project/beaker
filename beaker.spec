@@ -346,6 +346,15 @@ fi
 %endif
 
 %changelog
+* Mon Feb 27 2012 Bill Peck <bpeck@redhat.com> 0.8.0-29
+- fix beaker-import to not crash when --root isn't used. (bpeck@redhat.com)
+
+* Thu Feb 23 2012 Bill Peck <bpeck@redhat.com> 0.8.0-28
+- 796621 "Kernel Options" not populated correctly if "=" character is included
+  inside parameter (bpeck@redhat.com)
+- 796647 move print_repos to rhts_post so that custom kickstarts pick this up.
+  (bpeck@redhat.com)
+
 * Thu Feb 23 2012 Dan Callaghan <dcallagh@redhat.com> 0.8.1-2
 - Merge hotfixes from release-0.8.0 branch
 

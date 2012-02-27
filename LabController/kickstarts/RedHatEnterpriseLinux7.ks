@@ -24,8 +24,7 @@ bootloader --location=mbr #slurp
 # Use text mode install
 $getVar('mode', 'text')
 $SNIPPET("network")
-$SNIPPET("print_repos")
-$print_repo("repos", anaconda=True)
+$SNIPPET("print_anaconda_repos")
 
 ## Firewall configuration
 ## firewall in kickstart metadata will enable the firewall
@@ -87,10 +86,6 @@ $SNIPPET("system_pre")
 
 
 %post --log=/dev/console
-$SNIPPET("print_repos")
-cat >> /etc/yum.repos.d/beaker-additional.repo << EOF
-$print_repo("repos")
-EOF
 $SNIPPET("rhts_post")
 $SNIPPET("RedHatEnterpriseLinux7_post")
 $SNIPPET("system_post")

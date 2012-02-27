@@ -611,6 +611,7 @@ class TreeInfoBase(object):
         self.kickbase = os.path.dirname(self.cobbler.settings.get('default_kickstart'))
         #self.kickbase = "/var/lib/cobbler/kickstarts"
         self.tree = dict()
+        self.tree['kernel_options'] = ''
         if self.options.available_as:
             url = self.options.available_as
         else:
