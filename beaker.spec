@@ -16,7 +16,7 @@
 
 Name:           beaker
 Version:        0.8.0
-Release:        28%{?dist}
+Release:        29%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -342,6 +342,9 @@ fi
 %endif
 
 %changelog
+* Mon Feb 27 2012 Bill Peck <bpeck@redhat.com> 0.8.0-29
+- fix beaker-import to not crash when --root isn't used. (bpeck@redhat.com)
+
 * Thu Feb 23 2012 Bill Peck <bpeck@redhat.com> 0.8.0-28
 - 796621 "Kernel Options" not populated correctly if "=" character is included
   inside parameter (bpeck@redhat.com)
