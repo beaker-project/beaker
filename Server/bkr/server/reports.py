@@ -259,8 +259,8 @@ class Reports(RPCRoot):
             group_clauses = []
             if -1 in group_id:
                 group_id.remove(-1)
-                group_clauses.append(System.groups == None)
-            group_clauses.extend(System.groups.any(group_id=x) for x in group_id)
+                group_clauses.append(System.group_assocs == None)
+            group_clauses.extend(System.group_assocs.any(group_id=x) for x in group_id)
             systems = systems.filter(or_(*group_clauses))
         if only_shared:
             systems = systems.filter(System.shared == True)

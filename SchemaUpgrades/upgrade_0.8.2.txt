@@ -1,3 +1,31 @@
+
+Merge system_admin_map into system_group (bug 797584)
+-----------------------------------------------------
+
+Run the following SQL:
+
+    ALTER TABLE system_group
+    ADD admin BOOL NOT NULL DEFAULT FALSE;
+
+    UPDATE system_group sg
+    INNER JOIN system_admin_map sa
+        ON sg.system_id = sa.system_id AND sg.group_id = sa.group_id
+    SET sg.admin = TRUE;
+
+    DROP TABLE system_admin_map;
+
+To roll back, first downgrade the beaker-server package and run beaker-init to
+recreate the system_admin_map table. Then run the following SQL to populate it:
+
+    INSERT INTO system_admin_map (system_id, group_id)
+    SELECT system_id, group_id
+    FROM system_group
+    WHERE admin = TRUE;
+
+    ALTER TABLE system_group
+    DROP admin;
+
+
 Convert task_status to an ENUM
 ------------------------------
 

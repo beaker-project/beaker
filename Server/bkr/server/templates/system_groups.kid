@@ -35,7 +35,8 @@
    </td>
   </tr>
   <?python row_color = "#f1f1f1" ?>
-  <tr class="list" bgcolor="${row_color}" py:for="group in groups">
+  <tr class="list" bgcolor="${row_color}" py:for="group_assoc in group_assocs">
+   <?python group = group_assoc.group ?>
    <td class="list">
     ${group.group_name}
    </td>
@@ -45,11 +46,11 @@
    <td class="list">  
    <span py:if="'admin' not in [group.group_name]">
 
-   <span py:if="group.can_admin_system(system_id)">
+   <span py:if="group_assoc.admin">
      <span id="admin_group_${group.group_id}">Yes&nbsp;<a py:if="'admin' in tg.identity.groups or can_admin" id="remove_admin_${group.group_id}" href="#">(Remove)</a></span>
      <span id="non_admin_group_${group.group_id}" style="display:none">No&nbsp;<a py:if="'admin' in tg.identity.groups or can_admin"  id="add_admin_${group.group_id}" href="#">(Add)</a></span>
    </span>
-   <span py:if="not group.can_admin_system(system_id)">
+   <span py:if="not group_assoc.admin">
      <span id="admin_group_${group.group_id}" style="display:none">Yes&nbsp;<a py:if="'admin' in tg.identity.groups or can_admin" id="remove_admin_${group.group_id}" href="#">(Remove)</a></span>
      <span id="non_admin_group_${group.group_id}" >No&nbsp;<a py:if="'admin' in tg.identity.groups or can_admin"  id="add_admin_${group.group_id}" href="#">(Add)</a></span>
    </span>

@@ -564,14 +564,7 @@ system_group_table = Table('system_group', metadata,
         onupdate='CASCADE', ondelete='CASCADE'), primary_key=True),
     Column('group_id', Integer, ForeignKey('tg_group.group_id',
         onupdate='CASCADE', ondelete='CASCADE'), primary_key=True),
-    mysql_engine='InnoDB',
-)
-
-system_admin_map_table = Table('system_admin_map', metadata, 
-    Column('system_id', Integer, ForeignKey('system.id',
-        onupdate='CASCADE', ondelete='CASCADE'), primary_key=True),
-    Column('group_id', Integer, ForeignKey('tg_group.group_id',
-        onupdate='CASCADE', ondelete='CASCADE'), primary_key=True),
+    Column('admin', Boolean, nullable=False, default=False),
     mysql_engine='InnoDB',
 )
 
@@ -1445,24 +1438,6 @@ class Group(MappedObject):
     def by_id(cls, id):
         return cls.query.filter_by(group_id=id).one()
 
-    def can_admin_system(self,system_id=None,*args,**kw):
-        if system_id is None:
-            log.debug('can_admin_system called with no system_id')
-            return False
-        try:
-            user = identity.current.user
-        except AttributeError:
-            user = None
-        try:
-            system = System.by_id(system_id, user)
-        except NoResultFound:
-            log.debug('Unable to see system id %s' % system_id)
-            return False
-        if system in self.admin_systems:
-            return True
-        else:
-            return False
-
     def __repr__(self):
         return self.display_name
 
@@ -1486,6 +1461,9 @@ class Group(MappedObject):
         except Exception, e: 
             log.error(e)
             return
+
+    systems = association_proxy('system_assocs', 'system',
+            creator=lambda system: SystemGroup(system=system))
 
 class System(SystemObject):
 
@@ -1828,7 +1806,7 @@ url --url=$tree
         query = query.filter(or_(and_(System.owner==user), 
                                 System.loaned == user,
                                 and_(System.shared==True, 
-                                     System.groups==None,
+                                     System.group_assocs==None,
                                     ),
                                 and_(System.shared==True,
                                      System.groups.any(Group.users.contains(user)),
@@ -1848,7 +1826,7 @@ url --url=$tree
     @classmethod
     def available_order(cls, user, systems=None):
         return cls.available_for_schedule(user,systems=systems).order_by(case([(System.owner==user, 1),
-                          (and_(System.owner!=user, System.groups.any()), 2)],
+                          (and_(System.owner!=user, System.group_assocs != None), 2)],
                               else_=3))
 
     @classmethod
@@ -1979,10 +1957,8 @@ url --url=$tree
 
         user_groups = user.groups
         if user_groups:
-            admins = self.query.filter(System.admins.any(
-                and_(Group.group_id.in_([g.group_id for g in user_groups]),
-                System.id == self.id )))
-            if admins.count():
+            if any(ga.admin and ga.group in user_groups
+                    for ga in self.group_assocs):
                 return True
 
         return False
@@ -2614,6 +2590,9 @@ $SNIPPET("rhts_post")
 
     cc = association_proxy('_system_ccs', 'email_address')
 
+    groups = association_proxy('group_assocs', 'group',
+            creator=lambda group: SystemGroup(group=group))
+
 class SystemStatusAttributeExtension(AttributeExtension):
 
     def set(self, state, child, oldchild, initiator):
@@ -2636,6 +2615,10 @@ class SystemCc(SystemObject):
     def __init__(self, email_address):
         super(SystemCc, self).__init__()
         self.email_address = email_address
+
+class SystemGroup(MappedObject):
+
+    pass
 
 class Hypervisor(SystemObject):
 
@@ -6333,9 +6316,12 @@ mapper(User, users_table,
 
 mapper(Group, groups_table,
     properties=dict(users=relation(User, uselist=True, secondary=user_group_table, backref='groups'),
-        systems=relation(System, secondary=system_group_table, backref='groups'),
-        admin_systems=relation(System, secondary=system_admin_map_table,
-            backref='admins')))
+    ))
+
+mapper(SystemGroup, system_group_table, properties={
+    'system': relation(System, backref=backref('group_assocs', cascade='all, delete-orphan')),
+    'group': relation(Group, backref=backref('system_assocs', cascade='all, delete-orphan')),
+})
 
 mapper(Permission, permissions_table,
         properties=dict(groups=relation(Group,

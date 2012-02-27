@@ -31,7 +31,8 @@ from bkr.server.model import LabController, User, Group, Distro, Breed, Arch, \
         Device, TaskResult, TaskStatus, Job, RecipeSet, TaskPriority, \
         LabControllerDistro, Power, PowerType, TaskExcludeArch, TaskExcludeOSMajor, \
         Permission, RetentionTag, Product, Watchdog, Reservation, LogRecipe, \
-        LogRecipeTask, ExcludeOSMajor, ExcludeOSVersion, Hypervisor, DistroTag
+        LogRecipeTask, ExcludeOSMajor, ExcludeOSVersion, Hypervisor, DistroTag, \
+        SystemGroup
 
 log = logging.getLogger(__name__)
 
@@ -134,8 +135,8 @@ def create_group(permissions=None):
 def add_user_to_group(user,group):
     user.groups.append(group)
 
-def add_group_to_system(system,group):
-    system.groups.append(group)
+def add_group_to_system(system, group, admin=False):
+    system.group_assocs.append(SystemGroup(group=group, admin=admin))
 
 def create_distro(name=None, breed=u'Dan',
         osmajor=u'DansAwesomeLinux6', osminor=u'9',

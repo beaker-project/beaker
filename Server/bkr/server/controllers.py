@@ -292,16 +292,19 @@ class Root(RPCRoot):
             return {'success' : 0}
 
         sys = System.by_id(system_id,identity.current.user)
-        if sys.is_admin() is None:
+        if not sys.is_admin():
             #Someone tried to be tricky...
             return {'success' : 0}
 
-        group = Group.by_id(group_id)
+        assoc = SystemGroup.query.filter(and_(
+                SystemGroup.system == sys, SystemGroup.group_id == group_id)).one()
+        if not assoc:
+            return {'success': 0}
         if cmd == 'add':
-            group.admin_systems.append(System.by_id(system_id,identity.current.user)) 
+            assoc.admin = True
             return { 'success' : 1 }
         if cmd == 'remove':
-            group.admin_systems.remove(System.by_id(system_id,identity.current.user))
+            assoc.admin = False
             return {'success' : 1 }
 
 
@@ -1005,7 +1008,7 @@ class Root(RPCRoot):
                                    notes     = dict(readonly = readonly,
                                                 notes = system.notes),
                                    groups    = dict(readonly = readonly,
-                                                groups = system.groups,
+                                                group_assocs = system.group_assocs,
                                                 system_id = system.id,
                                                 can_admin = can_admin),
                                    install   = dict(readonly = readonly,

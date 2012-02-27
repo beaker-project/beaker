@@ -1041,7 +1041,7 @@ class SystemGroups(Form):
     javascript = [LocalJSLink('bkr','/static/javascript/system_admin.js')]
     template = "bkr.server.templates.system_groups"
     member_widgets = ["id", "group"]
-    params = ['options', 'readonly', 'groups','can_admin']
+    params = ['options', 'readonly', 'group_assocs', 'can_admin']
     
     def __init__(self, *args, **kw):
         super(SystemGroups, self).__init__(*args, **kw)
@@ -1055,8 +1055,8 @@ class SystemGroups(Form):
         super(SystemGroups, self).update_params(d)
         if 'readonly' in d['options']:
             d['readonly'] = d['options']['readonly']
-        if 'groups' in d['options']:
-            d['groups'] = d['options']['groups']
+        if 'group_assocs' in d['options']:
+            d['group_assocs'] = d['options']['group_assocs']
         if 'system_id' in d['options']:
             d['system_id'] = d['options']['system_id']
         if 'can_admin' in d['options']:

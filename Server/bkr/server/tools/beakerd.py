@@ -360,7 +360,7 @@ def queued_recipes(*args):
             user = recipe.recipeset.job.owner
             if True: #FIXME if pools are defined add them here in the order requested.
                 systems = systems.order_by(case([(System.owner==user, 1),
-                          (and_(System.owner!=user, System.groups != None), 2)],
+                          (and_(System.owner!=user, System.group_assocs != None), 2)],
                               else_=3))
             if recipe.recipeset.lab_controller:
                 # First recipe of a recipeSet determines the lab_controller

@@ -234,9 +234,9 @@ class XmlGroup(ElementWrapper):
             # - '!=' - search for system which is member of any group
             # - '==' - search for system which is not member of any group
             if op == '__eq__':
-                query = System.groups == None
+                query = System.group_assocs == None
             else:
-                query = System.groups != None
+                query = System.group_assocs != None
         return (joins, query)
 
 

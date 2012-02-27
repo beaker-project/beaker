@@ -12,7 +12,7 @@ class SystemNoteTests(SeleniumTestCase):
         self.admin_group = data_setup.create_group()
         self.user = data_setup.create_user(password='password')
         self.admin_group.users.append(self.user)
-        self.system.admins.append(self.admin_group)
+        data_setup.add_group_to_system(self.system, self.admin_group, admin=True)
         self.nobody = data_setup.create_user(password='password')
         session.flush()
         self.selenium = self.get_selenium()

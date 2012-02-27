@@ -1,5 +1,5 @@
 
-from turbogears.database import session
+from bkr.server.model import session, SystemGroup
 from bkr.inttest import data_setup, get_server_base
 from bkr.inttest.server.selenium import WebDriverTestCase
 from selenium.webdriver.support.ui import WebDriverWait
@@ -12,6 +12,8 @@ class TestSystemGroups(WebDriverTestCase):
         self.system_owner = data_setup.create_user(password='password')
         self.system = data_setup.create_system(owner=self.system_owner)
         self.group = data_setup.create_group()
+        self.user_in_group = data_setup.create_user()
+        self.user_in_group.groups.append(self.group)
         session.flush()
         self.browser = self.get_browser()
         login(self.browser, user=self.system_owner.user_name, password='password')
@@ -36,6 +38,8 @@ class TestSystemGroups(WebDriverTestCase):
             system = self.system
         if not group:
             group = self.group
+        b.get(get_server_base() + 'view/%s' % system.fqdn)
+        b.find_element_by_link_text('Groups').click()
         b.find_element_by_link_text('Delete ( - )').click()
         self.assert_(is_text_present(b, '%s Removed' % group.display_name))
 
@@ -88,3 +92,15 @@ class TestSystemGroups(WebDriverTestCase):
         b.find_element_by_link_text('Groups').click()
         group_just_added = b.find_element_by_xpath('//form[@name="groups"]//table//tr[position()=last()]/td').text
         self.assert_(group_just_added == self.group.group_name)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=797584
+    def test_removing_group_removes_admin(self):
+        with session.begin():
+            self.system.group_assocs.append(
+                    SystemGroup(group=self.group, admin=True))
+            self.assert_(self.system.can_admin(self.user_in_group))
+        b = self.browser
+        self.delete_group_from_system(b)
+        with session.begin():
+            session.refresh(self.system)
+            self.assert_(not self.system.can_admin(self.user_in_group))

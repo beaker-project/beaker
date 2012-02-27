@@ -787,7 +787,7 @@ class System(SystemObject):
                           'Type'      : MyColumn(column=model.SystemType.type, col_type='string', relations='type'),
                           'PowerType' : MyColumn(column=model.PowerType.name, col_type='string', relations=['power','power_type']),
                           'LoanedTo'  : MyColumn(column=model.User.user_name,col_type='string',has_alias=True, relations='loaned'),
-                          'Group'     : MyColumn(column=model.Group.group_name, col_type='string',has_alias=True, relations ='groups')
+                          'Group'     : MyColumn(column=model.Group.group_name, col_type='string',has_alias=True, relations=['group_assocs', 'group'])
                          }  
     search_values_dict = {'Status'    : lambda: model.SystemStatus.get_all_status_name(),
                           'Type'      : lambda: model.SystemType.get_all_type_names(),
