@@ -9,9 +9,6 @@ from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.helpers import *
 from bkr.server.widgets import BeakerDataGrid, myPaginateDataGrid
 from bkr.server.admin_page import AdminPage
-from bkr.server.validators import GroupFormSchema
-
-
 import cherrypy
 
 # from bkr.server import json
@@ -20,6 +17,11 @@ import cherrypy
 #import model
 from model import *
 import string
+
+
+class GroupFormSchema(validators.Schema):
+    display_name = validators.UnicodeString(not_empty=True, max=256, strip=True)
+    group_name = validators.UnicodeString(not_empty=True, max=256, strip=True)
 
 
 class Groups(AdminPage):
