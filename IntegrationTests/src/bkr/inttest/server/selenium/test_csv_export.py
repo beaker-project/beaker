@@ -5,7 +5,8 @@ from turbogears.database import session
 from bkr.inttest import data_setup, get_server_base
 from bkr.inttest.server.selenium import WebDriverTestCase
 from bkr.inttest.server.webdriver_utils import login
-from bkr.server.model import Provision, ProvisionFamily, ProvisionFamilyUpdate
+from bkr.server.model import Provision, ProvisionFamily, ProvisionFamilyUpdate, \
+    ExcludeOSMajor
 import csv
 import requests
 
@@ -131,3 +132,17 @@ class CSVExportTest(WebDriverTestCase):
         csv_request = self.get_csv('system')
         self.assert_(not any(row['fqdn'] == secret_system.fqdn
                 for row in csv.DictReader(csv_request)))
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=785048
+    def test_export_exclude_options(self):
+        system = data_setup.create_system(arch=u'i386')
+        distro = data_setup.create_distro(arch=u'i386')
+        system.excluded_osmajor.append(
+            ExcludeOSMajor(osmajor=distro.osversion.osmajor, arch=distro.arch))
+        session.flush()
+        login(self.browser)
+        csv_request = self.get_csv('exclude')
+        csv_rows = [row for row in csv.DictReader(csv_request) if row['fqdn'] == system.fqdn]
+        self.assertEquals(csv_rows[0]['update'], '')
+        vals = csv_rows[0].values()
+        self.assert_(vals.count('None') == 0)
