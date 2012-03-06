@@ -3279,7 +3279,7 @@ class Distro(MappedObject):
         elif not systems:
             systems = System.query
         
-        return systems.join(join).filter(and_(
+        return systems.join(*join).filter(and_(
                 System.arch.contains(self.arch),
                 not_(System.excluded_osmajor.any(and_(
                         ExcludeOSMajor.osmajor == self.osversion.osmajor,
