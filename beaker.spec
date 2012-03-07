@@ -16,7 +16,7 @@
 
 Name:           beaker
 Version:        0.8.1
-Release:        3%{?dist}
+Release:        4%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -346,6 +346,9 @@ fi
 %endif
 
 %changelog
+* Thu Mar 08 2012 Raymond Mancy <rmancy@redhat.com> 0.8.1-4
+- 790293 Fix for Login thread dying on lab controller (rmancy@redhat.com)
+
 * Mon Feb 27 2012 Bill Peck <bpeck@redhat.com> 0.8.1-3
 - 796621 "Kernel Options" not populated correctly if "=" character is included
   inside parameter (bpeck@redhat.com)
