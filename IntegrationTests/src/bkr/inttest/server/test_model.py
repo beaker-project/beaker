@@ -118,7 +118,7 @@ class TestBrokenSystemDetection(unittest.TestCase):
         recipe = data_setup.create_recipe(distro=distro)
         data_setup.create_job_for_recipes([recipe])
         recipe.system = self.system
-        recipe.tasks[0].status = TaskStatus.by_name(u'Running')
+        recipe.tasks[0].status = TaskStatus.running
         recipe.update_status()
         session.flush()
         recipe.abort()

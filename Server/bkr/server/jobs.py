@@ -539,7 +539,7 @@ class Jobs(RPCRoot):
     @expose(template='bkr.server.templates.grid')
     @paginate('list',default_order='-id', limit=50)
     def index(self,*args,**kw): 
-        return self.jobs(jobs=session.query(Job).join('status').join('owner').outerjoin('result'),*args,**kw)
+        return self.jobs(jobs=session.query(Job).join('owner').outerjoin('result'),*args,**kw)
 
     @identity.require(identity.not_anonymous()) 
     @expose(template='bkr.server.templates.grid')
@@ -574,7 +574,7 @@ class Jobs(RPCRoot):
             widgets.PaginateDataGrid.Column(name='progress',
                 getter=lambda x: x.progress_bar, title='Progress',
                 options=dict(sortable=False)),
-		    widgets.PaginateDataGrid.Column(name='status.status',
+                    widgets.PaginateDataGrid.Column(name='status',
                 getter=lambda x:x.status, title='Status',
                 options=dict(sortable=True)),
 		    widgets.PaginateDataGrid.Column(name='result.result',

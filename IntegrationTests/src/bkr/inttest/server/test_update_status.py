@@ -53,8 +53,6 @@ class TestUpdateStatus(unittest.TestCase):
                 </recipeSet>
             </job>
             '''))
-        waiting = TaskStatus.by_name(u'Waiting')
-        aborted = TaskStatus.by_name(u'Aborted')
         job = self.controller.process_xmljob(xmljob, self.user)
         session.flush()
         for recipeset in job.recipesets:
@@ -68,23 +66,23 @@ class TestUpdateStatus(unittest.TestCase):
         job.recipesets[0].recipes[0].abort()
 
         # Verify that it and its children are aborted.
-        self.assertEquals(job.recipesets[0].recipes[0].status, aborted)
+        self.assertEquals(job.recipesets[0].recipes[0].status, TaskStatus.aborted)
         for task in job.recipesets[0].recipes[0].tasks:
-            self.assertEquals(task.status, aborted)
+            self.assertEquals(task.status, TaskStatus.aborted)
 
         # Verify that the second recipe and its children are still waiting.
-        self.assertEquals(job.recipesets[1].recipes[0].status, waiting)
+        self.assertEquals(job.recipesets[1].recipes[0].status, TaskStatus.waiting)
         for task in job.recipesets[1].recipes[0].tasks:
-            self.assertEquals(task.status, waiting)
+            self.assertEquals(task.status, TaskStatus.waiting)
 
         # Verify that the job still shows waiting.
-        self.assertEquals(job.status, waiting)
+        self.assertEquals(job.status, TaskStatus.waiting)
 
         # Abort the second recipe now.
         job.recipesets[1].recipes[0].abort()
 
         # Verify that the whole job shows aborted now.
-        self.assertEquals(job.status, aborted)
+        self.assertEquals(job.status, TaskStatus.aborted)
 
     def test_update_status_can_be_roundtripped_35508(self):
         complete_job_xml = pkg_resources.resource_string('bkr.inttest', 'job_35508.xml')
@@ -109,14 +107,16 @@ class TestUpdateStatus(unittest.TestCase):
         session.flush()
         
         # Verify that the original status and results match
-        self.assertEquals(xmljob.wrappedEl('status'), job.status.status)
+        self.assertEquals(TaskStatus.from_string(xmljob.wrappedEl('status')), job.status)
         self.assertEquals(xmljob.wrappedEl('result'), job.result.result)
         for i, recipeset in enumerate(xmljob.iter_recipeSets()):
             for j, recipe in enumerate(recipeset.iter_recipes()):
-                self.assertEquals(recipe.wrappedEl('status'), job.recipesets[i].recipes[j].status.status)
+                self.assertEquals(TaskStatus.from_string(recipe.wrappedEl('status')),
+                        job.recipesets[i].recipes[j].status)
                 self.assertEquals(recipe.wrappedEl('result'), job.recipesets[i].recipes[j].result.result)
                 for k, task in enumerate(recipe.iter_tasks()):
-                    self.assertEquals(task.status, job.recipesets[i].recipes[j].tasks[k].status.status)
+                    self.assertEquals(TaskStatus.from_string(task.status),
+                            job.recipesets[i].recipes[j].tasks[k].status)
                     self.assertEquals(task.result, job.recipesets[i].recipes[j].tasks[k].result.result)
 
         # No watchdog's should exist when the job is complete
@@ -145,14 +145,16 @@ class TestUpdateStatus(unittest.TestCase):
         session.flush()
         
         # Verify that the original status and results match
-        self.assertEquals(xmljob.wrappedEl('status'), job.status.status)
+        self.assertEquals(TaskStatus.from_string(xmljob.wrappedEl('status')), job.status)
         self.assertEquals(xmljob.wrappedEl('result'), job.result.result)
         for i, recipeset in enumerate(xmljob.iter_recipeSets()):
             for j, recipe in enumerate(recipeset.iter_recipes()):
-                self.assertEquals(recipe.wrappedEl('status'), job.recipesets[i].recipes[j].status.status)
+                self.assertEquals(TaskStatus.from_string(recipe.wrappedEl('status')),
+                        job.recipesets[i].recipes[j].status)
                 self.assertEquals(recipe.wrappedEl('result'), job.recipesets[i].recipes[j].result.result)
                 for k, task in enumerate(recipe.iter_tasks()):
-                    self.assertEquals(task.status, job.recipesets[i].recipes[j].tasks[k].status.status)
+                    self.assertEquals(TaskStatus.from_string(task.status),
+                            job.recipesets[i].recipes[j].tasks[k].status)
                     self.assertEquals(task.result, job.recipesets[i].recipes[j].tasks[k].result.result)
 
         # No watchdog's should exist when the job is complete

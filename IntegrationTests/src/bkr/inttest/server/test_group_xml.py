@@ -1,7 +1,7 @@
 import unittest
 import datetime
 from time import sleep
-from bkr.server.model import TaskStatus, Job, System, User
+from bkr.server.model import Job, System, User
 import sqlalchemy.orm
 from turbogears.database import session
 from bkr.inttest import data_setup

@@ -51,12 +51,12 @@ class TestLabController(unittest.TestCase):
         session.flush()
         beakerd.queued_recipes()
         recipeset = RecipeSet.by_id(self.job.recipesets[0].id)
-        self.assert_(recipeset.status < TaskStatus.by_name(u'Scheduled'))
+        self.assertEquals(recipeset.status, TaskStatus.queued)
 
     def test_enable_lab_controller(self):
         LabController.by_name(self.lc_fqdn).disabled = False
         session.flush()
         beakerd.queued_recipes()
         recipeset = RecipeSet.by_id(self.job.recipesets[0].id)
-        self.assertEquals(recipeset.status, TaskStatus.by_name(u'Scheduled'))
+        self.assertEquals(recipeset.status, TaskStatus.scheduled)
 

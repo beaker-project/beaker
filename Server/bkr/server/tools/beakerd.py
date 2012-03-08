@@ -78,8 +78,7 @@ def get_parser():
 
 
 def new_recipes(*args):
-    recipes = Recipe.query.filter(
-            Recipe.status==TaskStatus.by_name(u'New'))
+    recipes = Recipe.query.filter(Recipe.status == TaskStatus.new)
     if not recipes.count():
         return False
     log.debug("Entering new_recipes routine")
@@ -143,9 +142,7 @@ def new_recipes(*args):
     return True
 
 def processed_recipesets(*args):
-    recipesets = RecipeSet.query\
-                       .join(['status'])\
-                       .filter(RecipeSet.status==TaskStatus.by_name(u'Processed'))
+    recipesets = RecipeSet.query.filter(RecipeSet.status == TaskStatus.processed)
     if not recipesets.count():
         return False
     log.debug("Entering processed_recipes routine")
@@ -260,17 +257,16 @@ def processed_recipesets(*args):
 
 def dead_recipes(*args):
     recipes = Recipe.query\
-                    .join('status')\
                     .outerjoin(['systems'])\
                     .outerjoin(['distro',
                                 'lab_controller_assocs',
                                 'lab_controller'])\
                     .filter(
                          or_(
-                         and_(Recipe.status==TaskStatus.by_name(u'Queued'),
+                         and_(Recipe.status==TaskStatus.queued,
                               System.id==None,
                              ),
-                         and_(Recipe.status==TaskStatus.by_name(u'Queued'),
+                         and_(Recipe.status==TaskStatus.queued,
                               LabController.id==None,
                              ),
                             )
@@ -310,7 +306,7 @@ def queued_recipes(*args):
                             LabControllerDistro.lab_controller_id == LabController.id,
                             System.lab_controller_id == LabController.id)))\
                     .filter(
-                         and_(Recipe.status==TaskStatus.by_name(u'Queued'),
+                         and_(Recipe.status==TaskStatus.queued,
                               System.user==None,
                               System.status==automated,
                               LabController.disabled==False,
@@ -419,10 +415,8 @@ def scheduled_recipes(*args):
     if All recipes in a recipeSet are in Scheduled state then move them to
      Running.
     """
-    recipesets = RecipeSet.query.join(RecipeSet.recipes)\
-            .group_by(RecipeSet.id)\
-            .having(func.min(Recipe.status_id) ==
-                TaskStatus.by_name(u'Scheduled').id)
+    recipesets = RecipeSet.query.filter(not_(RecipeSet.recipes.any(
+            Recipe.status != TaskStatus.scheduled)))
     if not recipesets.count():
         return False
     log.debug("Entering scheduled_recipes routine")
@@ -434,7 +428,7 @@ def scheduled_recipes(*args):
             # Go through each recipe in the recipeSet
             for recipe in recipeset.recipes:
                 # If one of the recipes gets aborted then don't try and run
-                if recipe.status != TaskStatus.by_name(u'Scheduled'):
+                if recipe.status != TaskStatus.scheduled:
                     break
                 recipe.waiting()
 

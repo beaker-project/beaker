@@ -73,21 +73,21 @@ class TestBeakerd(unittest.TestCase):
 
     def test_01_invalid_system_distro_combo(self):
         beakerd.new_recipes()
-        self.assertEqual(Job.by_id(self.job1.id).status, TaskStatus.by_name(u'Aborted'))
-        self.assertEqual(Job.by_id(self.job2.id).status, TaskStatus.by_name(u'Processed'))
+        self.assertEqual(Job.by_id(self.job1.id).status, TaskStatus.aborted)
+        self.assertEqual(Job.by_id(self.job2.id).status, TaskStatus.processed)
 
 
     def test_02_dead_recipes(self):
         beakerd.new_recipes()
         beakerd.processed_recipesets()
-        self.assertEqual(Job.by_id(self.job2.id).status, TaskStatus.by_name(u'Queued'))
+        self.assertEqual(Job.by_id(self.job2.id).status, TaskStatus.queued)
         # Remove distro2 from lab1, should cause remaining recipe to abort.
         distro = Distro.by_id(self.distro2.id)
         for lab in distro.lab_controllers[:]:
             distro.lab_controllers.remove(lab)
         session.flush()
         beakerd.dead_recipes()
-        self.assertEqual(Job.by_id(self.job2.id).status, TaskStatus.by_name(u'Aborted'))
+        self.assertEqual(Job.by_id(self.job2.id).status, TaskStatus.aborted)
         
 
     @classmethod

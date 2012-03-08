@@ -16,53 +16,11 @@ class TestBeakerd(unittest.TestCase):
         self.stub_cobbler_thread.start()
         self.lab_controller = data_setup.create_labcontroller(
                 fqdn=u'localhost:%d' % self.stub_cobbler_thread.port)
+        data_setup.create_system(lab_controller=self.lab_controller,
+                shared=True)
 
     def tearDown(self):
         self.stub_cobbler_thread.stop()
-
-    def _check_job_status(self, jobs, status):
-        for j in jobs:
-            job = Job.by_id(j.id)
-            self.assertEqual(job.status,TaskStatus.by_name(status))
-
-    def _create_cached_status(self):
-        TaskStatus.by_name(u'Processed')
-        TaskStatus.by_name(u'Queued')
-
-    def test_cache_new_to_queued(self):
-        data_setup.create_system(lab_controller=self.lab_controller,
-                shared=True)
-        jobs = list()
-        distro = data_setup.create_distro()
-        for i in range(30):
-            job = data_setup.create_job(whiteboard=u'job_%s' % i, distro=distro)
-            jobs.append(job)
-        session.flush()
-        self._create_cached_status()
-
-        #We need to run our beakerd methods as threads to ensure
-        #that we have seperate sessions that create/read our cached object
-        class Do(threading.Thread):
-            def __init__(self,target,*args,**kw):
-                super(Do,self).__init__(*args,**kw)
-                self.target = target
-            def run(self, *args, **kw):
-                self.success = self.target()
-
-        thread_new_recipe = Do(target=beakerd.new_recipes)
-
-        thread_new_recipe.start()
-        thread_new_recipe.join()
-        self.assertTrue(thread_new_recipe.success)
-        session.expunge_all()
-        self._check_job_status(jobs, u'Processed')
-
-        thread_processed_recipe = Do(target=beakerd.processed_recipesets)
-        thread_processed_recipe.start()
-        thread_processed_recipe.join()
-        self.assertTrue(thread_processed_recipe.success)
-        session.expunge_all()
-        self._check_job_status(jobs, u'Queued')
 
     def test_loaned_machine_can_be_scheduled(self):
         user = data_setup.create_user()
@@ -80,7 +38,7 @@ class TestBeakerd(unittest.TestCase):
         session.expunge_all()
         beakerd.new_recipes()
         job = Job.query.get(job.id)
-        self.assertEqual(job.status, TaskStatus.by_name(u'Processed'))
+        self.assertEqual(job.status, TaskStatus.processed)
 
     def test_reservations_are_created(self):
         data_setup.create_task(name=u'/distribution/install')
@@ -102,7 +60,7 @@ class TestBeakerd(unittest.TestCase):
         job = Job.query.get(job.id)
         system = System.query.get(system.id)
         user = User.query.get(user.user_id)
-        self.assertEqual(job.status, TaskStatus.by_name(u'Scheduled'))
+        self.assertEqual(job.status, TaskStatus.scheduled)
         self.assertEqual(system.reservations[0].type, u'recipe')
         self.assertEqual(system.reservations[0].user, user)
         assert_datetime_within(system.reservations[0].start_time,
@@ -124,7 +82,7 @@ class TestBeakerd(unittest.TestCase):
         beakerd.new_recipes()
 
         job = Job.query.get(job.id)
-        self.assertEqual(job.status, TaskStatus.by_name(u'Processed'))
+        self.assertEqual(job.status, TaskStatus.processed)
 
     def test_or_lab_controller(self):
         data_setup.create_task(name=u'/distribution/install')
@@ -157,7 +115,7 @@ class TestBeakerd(unittest.TestCase):
         system1 = System.query.get(system1.id)
         system2 = System.query.get(system2.id)
         system3 = System.query.get(system3.id)
-        self.assertEqual(job.status, TaskStatus.by_name(u'Processed'))
+        self.assertEqual(job.status, TaskStatus.processed)
         candidate_systems = job.recipesets[0].recipes[0].systems
         self.assertEqual(len(candidate_systems), 2)
         self.assert_(system1 in candidate_systems)
@@ -178,7 +136,7 @@ class TestBeakerd(unittest.TestCase):
         session.expunge_all()
         beakerd.new_recipes()
         job = Job.query.get(job.id)
-        self.assertEqual(job.status, TaskStatus.by_name(u'Aborted'))
+        self.assertEqual(job.status, TaskStatus.aborted)
         return job.id
 
     def check_user_can_run_job_on_system(self, user, system):
@@ -196,7 +154,7 @@ class TestBeakerd(unittest.TestCase):
         session.expunge_all()
         beakerd.new_recipes()
         job = Job.query.get(job.id)
-        self.assertEqual(job.status, TaskStatus.by_name(u'Processed'))
+        self.assertEqual(job.status, TaskStatus.processed)
         return job.id
 
     def test_nonshared_system_not_owner(self):
@@ -277,10 +235,10 @@ class TestBeakerd(unittest.TestCase):
         job_id = self.check_user_can_run_job_on_system(loanee, system)
         beakerd.processed_recipesets()
         job = Job.query.get(job_id)
-        self.assertEqual(job.status, TaskStatus.by_name(u'Queued'))
+        self.assertEqual(job.status, TaskStatus.queued)
         beakerd.queued_recipes()
         job = Job.query.get(job_id)
-        self.assertEqual(job.status, TaskStatus.by_name(u'Scheduled'))
+        self.assertEqual(job.status, TaskStatus.scheduled)
         system = System.query.get(system.id)
         self.assertEqual(system.user.user_id, loanee.user_id)
 
@@ -301,12 +259,12 @@ class TestBeakerd(unittest.TestCase):
         job_id = self.check_user_can_run_job_on_system(owner, system)
         beakerd.processed_recipesets()
         job = Job.query.get(job_id)
-        self.assertEqual(job.status, TaskStatus.by_name(u'Queued'))
+        self.assertEqual(job.status, TaskStatus.queued)
         # Even though the system is free the job should stay queued while
         # the loan is in place.
         beakerd.queued_recipes()
         job = Job.query.get(job_id)
-        self.assertEqual(job.status, TaskStatus.by_name(u'Queued'))
+        self.assertEqual(job.status, TaskStatus.queued)
         system = System.query.get(system.id)
         self.assertEqual(system.user, None)
     
@@ -337,7 +295,7 @@ class TestBeakerd(unittest.TestCase):
                     r.system.lab_controller = self.lab_controller
             beakerd.scheduled_recipes()
             job = Job.by_id(job.id)
-            self.assertEqual(job.status, TaskStatus.by_name(u'Aborted'))
+            self.assertEqual(job.status, TaskStatus.aborted)
         finally:
             if not os.path.exists(harness_dir):
                 os.mkdir(harness_dir)
@@ -368,7 +326,7 @@ class TestBeakerd(unittest.TestCase):
                 r.system.lab_controller = self.lab_controller
         beakerd.scheduled_recipes()
         job = Job.by_id(job.id)
-        self.assertEqual(job.status, TaskStatus.by_name(u'Running'))
+        self.assertEqual(job.status, TaskStatus.running)
 
     def test_successful_recipe_start(self):
         distro = data_setup.create_distro()
@@ -390,7 +348,7 @@ class TestBeakerd(unittest.TestCase):
 
         session.expunge_all()
         job = Job.query.get(job.id)
-        self.assertEqual(job.status, TaskStatus.by_name(u'Running'))
+        self.assertEqual(job.status, TaskStatus.running)
         self.assertEqual(self.stub_cobbler_thread.cobbler\
                 .system_actions[system.fqdn], 'reboot')
 
@@ -488,9 +446,9 @@ class TestPowerFailures(unittest.TestCase):
 
         session.expunge_all()
         job = Job.query.get(job.id)
-        self.assertEqual(job.status, TaskStatus.by_name(u'Running'))
+        self.assertEqual(job.status, TaskStatus.running)
 
         beakerd.running_commands()
         job = Job.query.get(job.id)
         self.assertEqual(job.recipesets[0].recipes[0].status,
-                         TaskStatus.by_name(u'Aborted'))
+                         TaskStatus.aborted)

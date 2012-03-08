@@ -27,6 +27,7 @@ from xmlrpclib import ProtocolError
 import time
 from kid import Element
 from bkr.server.bexceptions import BeakerException, BX, CobblerTaskFailedException
+from bkr.server.enum import DeclEnum
 from bkr.server.helpers import *
 from bkr.server.util import unicode_truncate
 from bkr.server import mail
@@ -54,6 +55,28 @@ from xml.dom.minidom import Node, parseString
 
 import logging
 log = logging.getLogger(__name__)
+
+class TaskStatus(DeclEnum):
+
+    symbols = [
+        ('new',       u'New',       dict(severity=10, finished=False, queued=True)),
+        ('processed', u'Processed', dict(severity=20, finished=False, queued=True)),
+        ('queued',    u'Queued',    dict(severity=30, finished=False, queued=True)),
+        ('scheduled', u'Scheduled', dict(severity=40, finished=False, queued=True)),
+        # RUNNING and WAITING are transient states.  It will never be final.
+        #  But having it the lowest Severity will show a job as 
+        #  Running until it finishes with either Completed, Cancelled or 
+        #  Aborted.
+        ('waiting',   u'Waiting',   dict(severity=7, finished=False, queued=False)),
+        ('running',   u'Running',   dict(severity=5, finished=False, queued=False)),
+        ('completed', u'Completed', dict(severity=50, finished=True, queued=False)),
+        ('cancelled', u'Cancelled', dict(severity=60, finished=True, queued=False)),
+        ('aborted',   u'Aborted',   dict(severity=70, finished=True, queued=False)),
+    ]
+
+    @classmethod
+    def max(cls):
+        return max(cls, key=lambda s: s.severity)
 
 xmldoc = xml.dom.minidom.Document()
 
@@ -698,13 +721,6 @@ key_value_int_table = Table('key_value_int', metadata,
     mysql_engine='InnoDB',
 )
 
-task_status_table = Table('task_status',metadata,
-        Column('id', Integer, primary_key=True),
-        Column('status', Unicode(20)),
-        Column('severity', Integer),
-        mysql_engine='InnoDB',
-)
-
 task_result_table = Table('task_result',metadata,
         Column('id', Integer, primary_key=True),
         Column('result', Unicode(20)),
@@ -727,8 +743,8 @@ job_table = Table('job',metadata,
         Column('product_id', Integer, ForeignKey('product.id'),nullable=True),
         Column('result_id', Integer,
                 ForeignKey('task_result.id')),
-        Column('status_id', Integer,
-                ForeignKey('task_status.id'), default=select([task_status_table.c.id], limit=1).where(task_status_table.c.status==u'New').correlate(None)),
+        Column('status', TaskStatus.db_type(), nullable=False,
+                default=TaskStatus.new),
         Column('deleted', DateTime, default=None, index=True),
         Column('to_delete', DateTime, default=None, index=True),
         # Total tasks
@@ -760,8 +776,8 @@ recipe_set_table = Table('recipe_set',metadata,
         Column('queue_time',DateTime, nullable=False, default=datetime.utcnow),
         Column('result_id', Integer,
                 ForeignKey('task_result.id')),
-        Column('status_id', Integer,
-                ForeignKey('task_status.id'), default=select([task_status_table.c.id], limit=1).where(task_status_table.c.status==u'New').correlate(None)),
+        Column('status', TaskStatus.db_type(), nullable=False,
+                default=TaskStatus.new),
         Column('lab_controller_id', Integer,
                 ForeignKey('lab_controller.id')),
         # Total tasks
@@ -848,8 +864,8 @@ recipe_table = Table('recipe',metadata,
                 ForeignKey('system.id')),
         Column('result_id', Integer,
                 ForeignKey('task_result.id')),
-        Column('status_id', Integer,
-                ForeignKey('task_status.id'),default=select([task_status_table.c.id], limit=1).where(task_status_table.c.status==u'New').correlate(None)),
+        Column('status', TaskStatus.db_type(), nullable=False,
+                default=TaskStatus.new),
         Column('start_time',DateTime),
         Column('finish_time',DateTime),
         Column('_host_requires',UnicodeText()),
@@ -966,8 +982,8 @@ recipe_task_table =Table('recipe_task',metadata,
         Column('finish_time',DateTime),
         Column('result_id', Integer,
                 ForeignKey('task_result.id')),
-        Column('status_id', Integer,
-                ForeignKey('task_status.id'),default=select([task_status_table.c.id], limit=1).where(task_status_table.c.status==u'New').correlate(None)),
+        Column('status', TaskStatus.db_type(), nullable=False,
+                default=TaskStatus.new),
         Column('role', Unicode(255)),
         mysql_engine='InnoDB',
 )
@@ -2516,7 +2532,7 @@ $SNIPPET("rhts_post")
             .subquery()
         nonaborted_recipe_subquery = session.query(func.max(Recipe.finish_time))\
             .filter(and_(
-                Recipe.status != TaskStatus.by_name(u'Aborted'),
+                Recipe.status != TaskStatus.aborted,
                 Recipe.system == self))\
             .subquery()
         count = self.dyn_recipes.join(Recipe.distro)\
@@ -3500,41 +3516,6 @@ class TaskPriority(MappedObject):
     def by_id(cls,id):
       return cls.query.filter_by(id=id).one()
 
-class TaskStatus(MappedObject):
-
-    @classmethod
-    @sqla_cache
-    def max(cls):
-        return cls.query.order_by(TaskStatus.severity.desc()).first()
-
-    @classmethod
-    @sqla_cache
-    def by_name(cls, status_name):
-        return cls.query.filter_by(status=status_name).one()
-
-    @classmethod
-    def get_all(cls):
-        return [(0,"All")] + [(status.id, status.status) for status in cls.query]
-
-    @classmethod
-    def get_all_status(cls):
-        all = cls.query
-        return [elem.status for elem in all]
-
-    def __cmp__(self, other):
-        if hasattr(other,'severity'):
-            other = other.severity
-        if self.severity < other:
-            return -1
-        if self.severity == other:
-            return 0
-        if self.severity > other:
-            return 1
-
-    def __repr__(self):
-        return "%s" % (self.status)
-
-
 class TaskResult(MappedObject):
     @classmethod
     @sqla_cache
@@ -3706,24 +3687,13 @@ class TaskBase(MappedObject):
         """
         Simply state if the task is finished or not
         """
-        if self.status in [TaskStatus.by_name(u'Completed'),
-                           TaskStatus.by_name(u'Cancelled'),
-                           TaskStatus.by_name(u'Aborted')]:
-            return True
-        else:
-            return False
+        return self.status.finished
 
     def is_queued(self):
         """
         State if the task is queued
         """ 
-        if self.status in [TaskStatus.by_name(u'New'),
-                           TaskStatus.by_name(u'Processed'),
-                           TaskStatus.by_name(u'Queued'),
-                           TaskStatus.by_name(u'Scheduled')]:
-            return True
-        else:
-            return False 
+        return self.status.queued
 
     def is_failed(self):
         """ 
@@ -3833,7 +3803,7 @@ class Job(TaskBase):
         if not query:
             query = cls.query
         query = query.join(cls.recipesets, RecipeSet.recipes).filter(and_(Recipe.finish_time < datetime.utcnow() - delta,
-            cls.status_id.in_([TaskStatus.by_name(u'Completed').id,TaskStatus.by_name(u'Aborted').id,TaskStatus.by_name(u'Cancelled').id])))
+            cls.status.in_([status for status in TaskStatus if status.finished])))
         return query
 
     @classmethod
@@ -4074,7 +4044,7 @@ class Job(TaskBase):
                     valid_jobs.append(j)
             return valid_jobs
         elif query:
-            query = query.filter(cls.status_id.in_([TaskStatus.by_name('Completed').id, TaskStatus.by_name('Aborted').id, TaskStatus.by_name('Cancelled').id]))
+            query = query.filter(cls.status.in_([status for status in TaskStatus if status.finished]))
             query = query.filter(and_(Job.to_delete == None, Job.deleted == None))
             query = query.filter(Job.owner==identity.current.user)
             return query
@@ -4250,7 +4220,7 @@ class Job(TaskBase):
             self.wtasks += recipeset.wtasks
             self.ftasks += recipeset.ftasks
             self.ktasks += recipeset.ktasks
-            if recipeset.status < min_status:
+            if recipeset.status.severity < min_status.severity:
                 min_status = recipeset.status
             if recipeset.result > max_result:
                 max_result = recipeset.result
@@ -4487,12 +4457,6 @@ class RecipeSet(TaskBase):
             return TaskPriority.query.all()
         default_id = TaskPriority.default_priority().id
         return TaskPriority.query.filter(TaskPriority.id < default_id)
-        
-    @classmethod
-    def by_status(cls, status, query=None):
-        if not query:
-            query=cls.query
-        return query.join('status').filter(TaskStatus.status==status)
 
     @classmethod
     def by_tag(cls, tag, query=None):
@@ -4521,20 +4485,6 @@ class RecipeSet(TaskBase):
             queri = RecipeSet.query.outerjoin(['job']).filter(Job.id == job_id)
             return queri
         except: raise 
-     
-    @classmethod
-    def iter_recipeSets(self, status=u'Assigned'):
-        self.recipeSets = []
-        while True:
-            recipeSet = RecipeSet.by_status(status).join('priority')\
-                            .order_by(priority.c.priority)\
-                            .filter(not_(RecipeSet.id.in_(self.recipeSets)))\
-                            .first()
-            if recipeSet:
-                self.recipeSets.append(recipeSet.id)
-            else:
-                return
-            yield recipeSet
 
     def cancel(self, msg=None):
         """
@@ -4547,7 +4497,7 @@ class RecipeSet(TaskBase):
         """
         Method to cancel all recipes in this recipe set.
         """ 
-        self._change_status(TaskStatus.by_name(u'Cancelled'))
+        self._change_status(TaskStatus.cancelled)
         for recipe in self.recipes:
             recipe._cancel(msg)
 
@@ -4562,7 +4512,7 @@ class RecipeSet(TaskBase):
         """
         Method to abort all recipes in this recipe set.
         """
-        self._change_status(TaskStatus.by_name(u'Aborted'))
+        self._change_status(TaskStatus.aborted)
         for recipe in self.recipes:
             recipe._abort(msg)
 
@@ -4606,7 +4556,7 @@ class RecipeSet(TaskBase):
             self.wtasks += recipe.wtasks
             self.ftasks += recipe.ftasks
             self.ktasks += recipe.ktasks
-            if recipe.status < min_status:
+            if recipe.status.severity < min_status.severity:
                 min_status = recipe.status
             if recipe.result > max_result:
                 max_result = recipe.result
@@ -4971,8 +4921,8 @@ class Recipe(TaskBase):
         """
         if session.connection(Recipe).execute(recipe_table.update(
           and_(recipe_table.c.id==self.id,
-               recipe_table.c.status_id==TaskStatus.by_name(u'Processed').id)),
-          status_id=TaskStatus.by_name(u'Queued').id).rowcount == 1:
+               recipe_table.c.status==TaskStatus.processed)),
+          status=TaskStatus.queued).rowcount == 1:
             self._queue()
             self.update_status()
         else:
@@ -4991,8 +4941,8 @@ class Recipe(TaskBase):
         """
         if session.connection(Recipe).execute(recipe_table.update(
           and_(recipe_table.c.id==self.id,
-               recipe_table.c.status_id==TaskStatus.by_name(u'New').id)),
-          status_id=TaskStatus.by_name(u'Processed').id).rowcount == 1:
+               recipe_table.c.status==TaskStatus.new)),
+          status=TaskStatus.processed).rowcount == 1:
             self._process()
             self.update_status()
         else:
@@ -5047,8 +4997,8 @@ class Recipe(TaskBase):
         """
         if session.connection(Recipe).execute(recipe_table.update(
           and_(recipe_table.c.id==self.id,
-               recipe_table.c.status_id==TaskStatus.by_name(u'Queued').id)),
-          status_id=TaskStatus.by_name(u'Scheduled').id).rowcount == 1:
+               recipe_table.c.status==TaskStatus.queued)),
+          status=TaskStatus.scheduled).rowcount == 1:
             self._schedule()
             self.update_status()
         else:
@@ -5067,8 +5017,8 @@ class Recipe(TaskBase):
         """
         if session.connection(Recipe).execute(recipe_table.update(
           and_(recipe_table.c.id==self.id,
-               recipe_table.c.status_id==TaskStatus.by_name(u'Scheduled').id)),
-          status_id=TaskStatus.by_name(u'Waiting').id).rowcount == 1:
+               recipe_table.c.status==TaskStatus.scheduled)),
+          status=TaskStatus.waiting).rowcount == 1:
             self._waiting()
             self.update_status()
         else:
@@ -5092,7 +5042,7 @@ class Recipe(TaskBase):
         """
         Method to cancel all tasks in this recipe.
         """
-        self._change_status(TaskStatus.by_name(u'Cancelled'))
+        self._change_status(TaskStatus.cancelled)
         for task in self.tasks:
             task._cancel(msg)
 
@@ -5111,7 +5061,7 @@ class Recipe(TaskBase):
         """
         Method to abort all tasks in this recipe.
         """
-        self._change_status(TaskStatus.by_name(u'Aborted'))
+        self._change_status(TaskStatus.aborted)
         for task in self.tasks:
             task._abort(msg)
 
@@ -5166,7 +5116,7 @@ class Recipe(TaskBase):
                     self.ftasks += 1
                 if task.result == task_panic:
                     self.ktasks += 1
-            if task.status < min_status:
+            if task.status.severity < min_status.severity:
                 min_status = task.status
             if task.result > max_result:
                 max_result = task.result
@@ -5175,7 +5125,7 @@ class Recipe(TaskBase):
 
         # Record the start of this Recipe.
         if not self.start_time \
-           and self.status == TaskStatus.by_name(u'Running'):
+           and self.status == TaskStatus.running:
             self.start_time = datetime.utcnow()
 
         if self.start_time and not self.finish_time and self.is_finished():
@@ -5571,7 +5521,7 @@ class RecipeTask(TaskBase):
         """
         Moved from New -> Queued
         """
-        self._change_status(TaskStatus.by_name(u'Queued'))
+        self._change_status(TaskStatus.queued)
 
     def process(self):
         """
@@ -5584,7 +5534,7 @@ class RecipeTask(TaskBase):
         """
         Moved from Queued -> Processed
         """
-        self._change_status(TaskStatus.by_name(u'Processed'))
+        self._change_status(TaskStatus.processed)
 
     def schedule(self):
         """
@@ -5597,7 +5547,7 @@ class RecipeTask(TaskBase):
         """
         Moved from Processed -> Scheduled
         """
-        self._change_status(TaskStatus.by_name(u'Scheduled'))
+        self._change_status(TaskStatus.scheduled)
 
     def waiting(self):
         """
@@ -5610,7 +5560,7 @@ class RecipeTask(TaskBase):
         """
         Moved from Scheduled -> Waiting
         """
-        self._change_status(TaskStatus.by_name(u'Waiting'))
+        self._change_status(TaskStatus.waiting)
 
     def start(self, watchdog_override=None):
         """
@@ -5623,7 +5573,7 @@ class RecipeTask(TaskBase):
             raise BX(_('No watchdog exists for recipe %s' % self.recipe.id))
         if not self.start_time:
             self.start_time = datetime.utcnow()
-        self._change_status(TaskStatus.by_name(u'Running'))
+        self._change_status(TaskStatus.running)
         self.recipe.watchdog.recipetask = self
         if watchdog_override:
             self.recipe.watchdog.kill_time = watchdog_override
@@ -5664,7 +5614,7 @@ class RecipeTask(TaskBase):
             raise BX(_('recipe task %s was never started' % self.id))
         if self.start_time and not self.finish_time:
             self.finish_time = datetime.utcnow()
-        self._change_status(TaskStatus.by_name(u'Completed'))
+        self._change_status(TaskStatus.completed)
         self.update_status()
         return True
 
@@ -5679,7 +5629,7 @@ class RecipeTask(TaskBase):
         """
         Cancel this task
         """
-        return self._abort_cancel(u'Cancelled', msg)
+        return self._abort_cancel(TaskStatus.cancelled, msg)
 
     def abort(self, msg=None):
         """
@@ -5692,7 +5642,7 @@ class RecipeTask(TaskBase):
         """
         Abort this task
         """
-        return self._abort_cancel(u'Aborted', msg)
+        return self._abort_cancel(TaskStatus.aborted, msg)
     
     def _abort_cancel(self, status, msg=None):
         """
@@ -5704,7 +5654,7 @@ class RecipeTask(TaskBase):
         if not self.is_finished():
             if self.start_time:
                 self.finish_time = datetime.utcnow()
-            self._change_status(TaskStatus.by_name(status))
+            self._change_status(status)
             self.results.append(RecipeTaskResult(recipetask=self,
                                        path=u'/',
                                        result=TaskResult.by_name(u'Warn'),
@@ -6489,7 +6439,6 @@ mapper(Job, job_table,
                       'result':relation(TaskResult, uselist=False),
                       'retention_tag':relation(RetentionTag, uselist=False,backref='jobs'),
                       'product':relation(Product, uselist=False, backref='jobs'),
-                      'status':relation(TaskStatus, uselist=False),
                       '_job_ccs': relation(JobCc, backref='job')})
 
 mapper(JobCc, job_cc_table)
@@ -6506,7 +6455,6 @@ mapper(RecipeSet, recipe_set_table,
         properties = {'recipes':relation(Recipe, backref='recipeset'),
                       'priority':relation(TaskPriority, uselist=False),
                       'result':relation(TaskResult, uselist=False),
-                      'status':relation(TaskStatus, uselist=False),
                       'activity':relation(RecipeSetActivity,
                         order_by=[activity_table.c.created.desc(), activity_table.c.id.desc()],
                         backref='object'),
@@ -6543,7 +6491,6 @@ mapper(Recipe, recipe_table,
                       'repos':relation(RecipeRepo),
                       'rpms':relation(RecipeRpm, backref='recipe'),
                       'result':relation(TaskResult, uselist=False),
-                      'status':relation(TaskStatus, uselist=False),
                       'logs':relation(LogRecipe, backref='parent'),
                       '_roles':relation(RecipeRole),
                       'custom_packages':relation(TaskPackage,
@@ -6574,7 +6521,6 @@ mapper(RecipeTask, recipe_task_table,
                                            backref='recipetask'),
                       'task':relation(Task, uselist=False, backref='runs'),
                       'result':relation(TaskResult, uselist=False),
-                      'status':relation(TaskStatus, uselist=False),
                       '_roles':relation(RecipeTaskRole),
                       'logs':relation(LogRecipeTask, backref='parent'),
                       'watchdog':relation(Watchdog, uselist=False),
@@ -6600,7 +6546,6 @@ mapper(RecipeTaskResult, recipe_task_result_table,
                      }
       )
 mapper(TaskPriority, task_priority_table)
-mapper(TaskStatus, task_status_table)
 mapper(TaskResult, task_result_table)
 mapper(Reservation, reservation_table, properties={
         'user': relation(User, backref=backref('reservations',

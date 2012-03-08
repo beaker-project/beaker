@@ -171,8 +171,8 @@ class Users(AdminPage):
                  msg='Your account has been temporarily disabled'):
         # cancel all queued and running jobs
         jobs = Job.query.filter(and_(Job.owner==user,
-                                    or_(Job.status==TaskStatus.by_name(u'Queued'),
-                                        Job.status==TaskStatus.by_name(u'Running')
+                                    or_(Job.status==TaskStatus.queued,
+                                        Job.status==TaskStatus.running
                                            ),
                                        ),
                                   )

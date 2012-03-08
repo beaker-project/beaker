@@ -65,7 +65,7 @@ class TestRecipesDataGrid(SeleniumTestCase):
         cls.selenium.stop()
 
     # see https://bugzilla.redhat.com/show_bug.cgi?id=629147
-    def check_column_sort(self, column):
+    def check_column_sort(self, column, sort_key=None):
         sel = self.selenium
         sel.open('recipes/mine')
         sel.click('//table[@id="widget"]/thead//th[%d]//a[@href]' % column)
@@ -75,7 +75,7 @@ class TestRecipesDataGrid(SeleniumTestCase):
         self.assertEquals(row_count, 24)
         cell_values = [sel.get_text('//table[@id="widget"]/tbody/tr[%d]/td[%d]' % (row, column))
                        for row in range(1, row_count + 1)]
-        assert_sorted(cell_values)
+        assert_sorted(cell_values, key=sort_key)
 
     def test_can_sort_by_whiteboard(self):
         self.check_column_sort(2)
@@ -90,7 +90,9 @@ class TestRecipesDataGrid(SeleniumTestCase):
         self.check_column_sort(5)
 
     def test_can_sort_by_status(self):
-        self.check_column_sort(7)
+        order = ['New', 'Processed', 'Queued', 'Scheduled', 'Waiting',
+                'Running', 'Completed', 'Cancelled', 'Aborted']
+        self.check_column_sort(7, sort_key=lambda status: order.index(status))
 
     def test_can_sort_by_result(self):
         self.check_column_sort(8)

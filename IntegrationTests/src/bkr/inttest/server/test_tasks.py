@@ -3,7 +3,7 @@ import unittest
 import xmltramp
 import pkg_resources
 from turbogears.database import session
-from bkr.server.model import TaskStatus, RecipeSet
+from bkr.server.model import RecipeSet
 from bkr.server.jobxml import XmlJob
 from bkr.server.bexceptions import BX
 from bkr.inttest import data_setup

@@ -826,13 +826,12 @@ class Recipe(SystemObject):
                                 relations=[model.Recipe.distro, model.Distro.arch]),
                             'Distro' : MyColumn(col_type='string', column=model.Distro.name,
                                 relations=[model.Recipe.distro]),
-                            'Status' : MyColumn(col_type='string', column=model.TaskStatus.status,
-                                relations=[model.Recipe.status]),
+                            'Status' : MyColumn(col_type='string', column=model.Recipe.status),
                             'Result' : MyColumn(col_type='string', column=model.TaskResult.result,
                                 relations=[model.Recipe.result]),
                          }
 
-    search_values_dict = {'Status' : lambda: model.TaskStatus.get_all_status(),
+    search_values_dict = {'Status' : lambda: model.TaskStatus.values(),
                           'Result' : lambda: model.TaskResult.get_all_results()}
     
 
@@ -1175,13 +1174,13 @@ class Job(SystemObject):
     searchable_columns = {
                            'Id' : MyColumn(col_type='numeric',column=model.Job.id), 
                            'Owner' : MyColumn(col_type='string',column=model.User.email_address, relations='owner'),
-                           'Status' : MyColumn(col_type='string', column=model.TaskStatus.status, relations='status'),
+                           'Status' : MyColumn(col_type='string', column=model.Job.status),
                            'Result' : MyColumn(col_type='string',column=model.TaskResult.result, relations='result'),
                            'Whiteboard' : MyColumn(col_type='string', column=model.Job.whiteboard)
 
                          }
 
-    search_values_dict = {'Status' : lambda: model.TaskStatus.get_all_status(),
+    search_values_dict = {'Status' : lambda: model.TaskStatus.values(),
                           'Result' : lambda: model.TaskResult.get_all_results()}
                          
             

@@ -5,7 +5,6 @@ import turbogears as tg
 from turbojson import jsonify
 from turbogears.widgets.rpc import RPC
 from sqlalchemy import distinct
-import model
 import re
 import random
 import search_utility
@@ -21,7 +20,7 @@ from turbogears.widgets import (Form, TextField, SubmitButton, TextArea, Label,
                                 RepeatingFieldSet, SelectionField, WidgetsList,
                                 PasswordField)
 
-from bkr.server import search_utility
+from bkr.server import model, search_utility
 from bkr.server.bexceptions import BeakerException
 import logging
 log = logging.getLogger(__name__)
@@ -39,6 +38,18 @@ class Hostname(validators.Regex):
         # Hostnames are case-insensitive, so let's force it to lowercase here 
         # for consistency
         return super(Hostname, self)._to_python(value, state).lower()
+
+class ValidEnumValue(validators.FancyValidator):
+    def __init__(self, enum_type):
+        super(ValidEnumValue, self).__init__()
+        self.enum_type = enum_type
+    def _to_python(self, value, state):
+        try:
+            return self.enum_type.from_string(value)
+        except ValueError:
+            raise Invalid(self.message('invalid', state), value, state)
+    def _from_python(self, value, state):
+        return value.value
 
 class UtilJSON:
      @classmethod
@@ -753,8 +764,8 @@ class TaskSearchForm(RemoteForm):
               TextField(name='whiteboard', label=_(u'Recipe Whiteboard')),
               SingleSelectField(name='osmajor_id', label=_(u'Family'),validator=validators.Int(),
                                 options=model.OSMajor.get_all),
-              SingleSelectField(name='status_id', label=_(u'Status'),validator=validators.Int(),
-                                options=model.TaskStatus.get_all),
+              SingleSelectField(name='status', label=_(u'Status'), validator=ValidEnumValue(model.TaskStatus),
+                                options=lambda: [(None, 'All')] + [(status, status.value) for status in model.TaskStatus]),
               SingleSelectField(name='result_id', label=_(u'Result'),validator=validators.Int(),
                                 options=model.TaskResult.get_all),
              ]
