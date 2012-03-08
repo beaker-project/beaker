@@ -42,7 +42,7 @@ class ReserveWorkflow(SeleniumTestCase):
         #Selecting just arch
         sel = self.selenium
         sel.open("reserveworkflow")
-        sel.wait_for_page_to_load('3000')
+        sel.wait_for_page_to_load('30000')
         sel.add_selection("reserveworkflow_form_arch", "label=i386")
         sel.add_selection("reserveworkflow_form_arch", "label=x86_64")
         sel.select("reserveworkflow_form_tag", "label=None Selected")
@@ -56,7 +56,7 @@ class ReserveWorkflow(SeleniumTestCase):
       
         # Arch and family
         sel.open("reserveworkflow")
-        sel.wait_for_page_to_load('3000')
+        sel.wait_for_page_to_load('30000')
         sel.add_selection("reserveworkflow_form_arch", "label=i386")
         sel.add_selection("reserveworkflow_form_arch", "label=x86_64")
         sel.select("reserveworkflow_form_distro_family", "label=%s" % self.distro_i386.osversion.osmajor)
@@ -64,7 +64,7 @@ class ReserveWorkflow(SeleniumTestCase):
         self.wait_for_condition(lambda: sel.is_text_present(self.unique_distro_repr))
         sel.select("reserveworkflow_form_distro", "label=%s" % self.unique_distro_repr)
         sel.click("reserveworkflow_form_auto_pick")
-        sel.wait_for_page_to_load('3000')
+        sel.wait_for_page_to_load('30000')
         self.assertEquals(sel.get_title(), 'Reserve System Any System')
         self.assert_(sel.is_text_present(self.distro_i386.install_name))
         self.assert_(sel.is_text_present(self.distro_x86_64.install_name))
@@ -77,7 +77,7 @@ class ReserveWorkflow(SeleniumTestCase):
         #Selecting multiple arch
         sel = self.selenium
         sel.open("reserveworkflow")
-        sel.wait_for_page_to_load('3000')
+        sel.wait_for_page_to_load('30000')
         sel.add_selection("reserveworkflow_form_arch", "label=i386")
         sel.add_selection("reserveworkflow_form_arch", "label=x86_64")
         sel.select("reserveworkflow_form_tag", "label=None Selected")
@@ -85,7 +85,7 @@ class ReserveWorkflow(SeleniumTestCase):
      
         # Single arch
         sel.open("reserveworkflow")
-        sel.wait_for_page_to_load('3000')
+        sel.wait_for_page_to_load('30000')
         sel.add_selection("reserveworkflow_form_arch", "label=i386")
         sel.select("reserveworkflow_form_tag", "label=None Selected")
         self.assertRaises(AssertionError,  self.wait_for_condition, lambda: sel.is_text_present(self.distro_i386.install_name) == True, wait_time=5)
@@ -98,7 +98,7 @@ class ReserveWorkflow(SeleniumTestCase):
         self.login()
         sel = self.selenium
         sel.open("reserveworkflow")
-        sel.wait_for_page_to_load('3000')
+        sel.wait_for_page_to_load('30000')
         sel.add_selection("reserveworkflow_form_arch", "label=i386")
         sel.add_selection("reserveworkflow_form_arch", "label=x86_64")
         sel.select("reserveworkflow_form_distro_family", "label=%s" % self.distro_i386.osversion.osmajor)
@@ -110,14 +110,14 @@ class ReserveWorkflow(SeleniumTestCase):
         self.login()
         sel = self.selenium
         sel.open("reserveworkflow")
-        sel.wait_for_page_to_load('3000')
+        sel.wait_for_page_to_load('30000')
         sel.add_selection("reserveworkflow_form_arch", "label=i386")
         sel.select("reserveworkflow_form_distro_family", "label=%s" % self.distro_i386.osversion.osmajor)
         sel.select("reserveworkflow_form_tag", "label=None Selected")
         self.wait_for_condition(lambda: sel.is_text_present(self.distro_i386.install_name))
         sel.select("reserveworkflow_form_distro", "label=%s" % self.distro_i386.install_name)
         sel.click("reserveworkflow_form_auto_pick")
-        sel.wait_for_page_to_load('3000')
+        sel.wait_for_page_to_load('30000')
         self.assertEquals(sel.get_title(), 'Reserve System Any System')
         self.assert_(sel.is_text_present(self.distro_i386.install_name))
 
@@ -125,7 +125,7 @@ class ReserveWorkflow(SeleniumTestCase):
         self.login()
         sel = self.selenium
         sel.open("reserveworkflow")
-        sel.wait_for_page_to_load('3000')
+        sel.wait_for_page_to_load('30000')
         sel.add_selection("reserveworkflow_form_arch", "label=ia64")
         sel.add_selection("reserveworkflow_form_arch", "label=i386")
         self.assertRaises(AssertionError,  self.wait_for_condition, lambda: sel.is_text_present(self.unique_distro_repr) == True, wait_time=5)
@@ -135,7 +135,7 @@ class ReserveWorkflow(SeleniumTestCase):
         session.flush()
         sel = self.selenium
         sel.open("reserveworkflow")
-        sel.wait_for_page_to_load('3000')
+        sel.wait_for_page_to_load('30000')
         sel.select("reserveworkflow_form_tag", "label=BAR")
         sel.add_selection("reserveworkflow_form_arch", "label=i386")
         sel.add_selection("reserveworkflow_form_arch", "label=x86_64")
