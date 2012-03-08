@@ -202,7 +202,7 @@ class SearchOptionsTest(WebDriverTestCase):
         Select(b.find_element_by_name('distrosearch-0.operation'))\
                 .select_by_visible_text('is not')
         b.find_element_by_name('distrosearch-0.value').send_keys('x86_64')
-        b.find_element_by_name('distrosearch').submit()
+        b.find_element_by_xpath('//form[@name="distrosearch"]//input[@type="submit"]').click()
 
         self.assertEquals(Select(b.find_element_by_name('distrosearch-0.table'))
                 .first_selected_option.text,
