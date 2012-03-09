@@ -78,6 +78,20 @@ class TaskStatus(DeclEnum):
     def max(cls):
         return max(cls, key=lambda s: s.severity)
 
+class TaskResult(DeclEnum):
+
+    symbols = [
+        ('new',   u'New',   dict(severity=10)),
+        ('pass_', u'Pass',  dict(severity=20)),
+        ('warn',  u'Warn',  dict(severity=30)),
+        ('fail',  u'Fail',  dict(severity=40)),
+        ('panic', u'Panic', dict(severity=50)),
+    ]
+
+    @classmethod
+    def min(cls):
+        return min(cls, key=lambda r: r.severity)
+
 xmldoc = xml.dom.minidom.Document()
 
 def node(element, value):
@@ -714,13 +728,6 @@ key_value_int_table = Table('key_value_int', metadata,
     mysql_engine='InnoDB',
 )
 
-task_result_table = Table('task_result',metadata,
-        Column('id', Integer, primary_key=True),
-        Column('result', Unicode(20)),
-        Column('severity', Integer),
-        mysql_engine='InnoDB',
-)
-
 task_priority_table = Table('task_priority',metadata,
         Column('id', Integer, primary_key=True),
         Column('priority', Unicode(20)),
@@ -734,8 +741,8 @@ job_table = Table('job',metadata,
         Column('whiteboard',Unicode(2000)),
         Column('retention_tag_id', Integer, ForeignKey('retention_tag.id'), nullable=False),
         Column('product_id', Integer, ForeignKey('product.id'),nullable=True),
-        Column('result_id', Integer,
-                ForeignKey('task_result.id')),
+        Column('result', TaskResult.db_type(), nullable=False,
+                default=TaskResult.new),
         Column('status', TaskStatus.db_type(), nullable=False,
                 default=TaskStatus.new),
         Column('deleted', DateTime, default=None, index=True),
@@ -767,8 +774,8 @@ recipe_set_table = Table('recipe_set',metadata,
         Column('priority_id', Integer,
                 ForeignKey('task_priority.id'), default=select([task_priority_table.c.id], limit=1).where(task_priority_table.c.priority==u'Normal').correlate(None)),
         Column('queue_time',DateTime, nullable=False, default=datetime.utcnow),
-        Column('result_id', Integer,
-                ForeignKey('task_result.id')),
+        Column('result', TaskResult.db_type(), nullable=False,
+                default=TaskResult.new),
         Column('status', TaskStatus.db_type(), nullable=False,
                 default=TaskStatus.new),
         Column('lab_controller_id', Integer,
@@ -855,8 +862,8 @@ recipe_table = Table('recipe',metadata,
                 ForeignKey('distro.id')),
         Column('system_id', Integer,
                 ForeignKey('system.id')),
-        Column('result_id', Integer,
-                ForeignKey('task_result.id')),
+        Column('result', TaskResult.db_type(), nullable=False,
+                default=TaskResult.new),
         Column('status', TaskStatus.db_type(), nullable=False,
                 default=TaskStatus.new),
         Column('start_time',DateTime),
@@ -973,8 +980,8 @@ recipe_task_table =Table('recipe_task',metadata,
         Column('task_id', Integer, ForeignKey('task.id'), nullable=False),
         Column('start_time',DateTime),
         Column('finish_time',DateTime),
-        Column('result_id', Integer,
-                ForeignKey('task_result.id')),
+        Column('result', TaskResult.db_type(), nullable=False,
+                default=TaskResult.new),
         Column('status', TaskStatus.db_type(), nullable=False,
                 default=TaskStatus.new),
         Column('role', Unicode(255)),
@@ -1046,8 +1053,8 @@ recipe_task_result_table = Table('recipe_task_result',metadata,
         Column('recipe_task_id', Integer,
                 ForeignKey('recipe_task.id')),
         Column('path', Unicode(2048)),
-        Column('result_id', Integer,
-                ForeignKey('task_result.id')),
+        Column('result', TaskResult.db_type(), nullable=False,
+                default=TaskResult.new),
         Column('score', Numeric(10)),
         Column('log', UnicodeText()),
         Column('start_time',DateTime, default=datetime.utcnow),
@@ -3491,37 +3498,6 @@ class TaskPriority(MappedObject):
     def by_id(cls,id):
       return cls.query.filter_by(id=id).one()
 
-class TaskResult(MappedObject):
-    @classmethod
-    @sqla_cache
-    def by_name(cls, result_name):
-        return cls.query.filter_by(result=result_name).one()
-
-    @classmethod
-    def get_results(cls):
-        return [(result.id,result.result) for result in cls.query]
-
-    @classmethod
-    def get_all(cls):
-        return [(0,"All")] + [(result.id, result.result) for result in cls.query]
-
-    @classmethod
-    def get_all_results(cls):
-        return [elem.result for elem in cls.query]
-
-    def __cmp__(self, other):
-        if hasattr(other,'severity'):
-            other = other.severity
-        if self.severity < other:
-            return -1
-        if self.severity == other:
-            return 0
-        if self.severity > other:
-            return 1
-
-    def __repr__(self):
-        return "%s" % (self.result)
-
 class Log(MappedObject):
 
     MAX_ENTRIES_PER_DIRECTORY = 100
@@ -3674,9 +3650,9 @@ class TaskBase(MappedObject):
         """ 
         Return True if the task has failed
         """
-        if self.result in [TaskResult.by_name(u'Warn'),
-                           TaskResult.by_name(u'Fail'),
-                           TaskResult.by_name(u'Panic')]:
+        if self.result in [TaskResult.warn,
+                           TaskResult.fail,
+                           TaskResult.panic]:
             return True
         else:
             return False
@@ -4188,7 +4164,7 @@ class Job(TaskBase):
         self.wtasks = 0
         self.ftasks = 0
         self.ktasks = 0
-        max_result = None
+        max_result = TaskResult.min()
         min_status = TaskStatus.max()
         for recipeset in self.recipesets:
             self.ptasks += recipeset.ptasks
@@ -4197,7 +4173,7 @@ class Job(TaskBase):
             self.ktasks += recipeset.ktasks
             if recipeset.status.severity < min_status.severity:
                 min_status = recipeset.status
-            if recipeset.result > max_result:
+            if recipeset.result.severity > max_result.severity:
                 max_result = recipeset.result
         self._change_status(min_status)
         self.result = max_result
@@ -4524,7 +4500,7 @@ class RecipeSet(TaskBase):
         self.wtasks = 0
         self.ftasks = 0
         self.ktasks = 0
-        max_result = None
+        max_result = TaskResult.min()
         min_status = TaskStatus.max()
         for recipe in self.recipes:
             self.ptasks += recipe.ptasks
@@ -4533,7 +4509,7 @@ class RecipeSet(TaskBase):
             self.ktasks += recipe.ktasks
             if recipe.status.severity < min_status.severity:
                 min_status = recipe.status
-            if recipe.result > max_result:
+            if recipe.result.severity > max_result.severity:
                 max_result = recipe.result
         self._change_status(min_status)
         self.result = max_result
@@ -5070,30 +5046,26 @@ class Recipe(TaskBase):
         Update number of passes, failures, warns, panics..
         """
         self.ptasks = 0
-        task_pass = TaskResult.by_name(u'Pass')
         self.wtasks = 0
-        task_warn = TaskResult.by_name(u'Warn')
         self.ftasks = 0
-        task_fail = TaskResult.by_name(u'Fail')
         self.ktasks = 0
-        task_panic = TaskResult.by_name(u'Panic')
 
-        max_result = None
+        max_result = TaskResult.min()
         min_status = TaskStatus.max()
         # I think this loop could be replaced with some sql which would be more efficient.
         for task in self.tasks:
             if task.is_finished():
-                if task.result == task_pass:
+                if task.result == TaskResult.pass_:
                     self.ptasks += 1
-                if task.result == task_warn:
+                if task.result == TaskResult.warn:
                     self.wtasks += 1
-                if task.result == task_fail:
+                if task.result == TaskResult.fail:
                     self.ftasks += 1
-                if task.result == task_panic:
+                if task.result == TaskResult.panic:
                     self.ktasks += 1
             if task.status.severity < min_status.severity:
                 min_status = task.status
-            if task.result > max_result:
+            if task.result.severity > max_result.severity:
                 max_result = task.result
         self._change_status(min_status)
         self.result = max_result
@@ -5479,9 +5451,9 @@ class RecipeTask(TaskBase):
         """
         Update number of passes, failures, warns, panics..
         """
-        max_result = None
+        max_result = TaskResult.min()
         for result in self.results:
-            if result.result > max_result:
+            if result.result.severity > max_result.severity:
                 max_result = result.result
         self.result = max_result
 
@@ -5632,7 +5604,7 @@ class RecipeTask(TaskBase):
             self._change_status(status)
             self.results.append(RecipeTaskResult(recipetask=self,
                                        path=u'/',
-                                       result=TaskResult.by_name(u'Warn'),
+                                       result=TaskResult.warn,
                                        score=0,
                                        log=msg))
         return True
@@ -5641,25 +5613,25 @@ class RecipeTask(TaskBase):
         """
         Record a pass result 
         """
-        return self._result(u'Pass', path, score, summary)
+        return self._result(TaskResult.pass_, path, score, summary)
 
     def fail(self, path, score, summary):
         """
         Record a fail result 
         """
-        return self._result(u'Fail', path, score, summary)
+        return self._result(TaskResult.fail, path, score, summary)
 
     def warn(self, path, score, summary):
         """
         Record a warn result 
         """
-        return self._result(u'Warn', path, score, summary)
+        return self._result(TaskResult.warn, path, score, summary)
 
     def panic(self, path, score, summary):
         """
         Record a panic result 
         """
-        return self._result(u'Panic', path, score, summary)
+        return self._result(TaskResult.panic, path, score, summary)
 
     def _result(self, result, path, score, summary):
         """
@@ -5669,7 +5641,7 @@ class RecipeTask(TaskBase):
             raise BX(_('No watchdog exists for recipe %s' % self.recipe.id))
         recipeTaskResult = RecipeTaskResult(recipetask=self,
                                    path=path,
-                                   result=TaskResult.by_name(result),
+                                   result=result,
                                    score=score,
                                    log=summary)
         self.results.append(recipeTaskResult)
@@ -5898,7 +5870,7 @@ class RecipeTaskResult(TaskBase):
                     id              = "TR:%s" % self.id,
                     worker          = dict(name = "%s" % None),
                     state_label     = "%s" % self.result,
-                    state           = self.result.id,
+                    state           = self.result.value,
                     method          = "%s" % self.path,
                     result          = "%s" % self.result,
                     is_finished     = True,
@@ -6414,7 +6386,6 @@ mapper(TaskBugzilla, task_bugzilla_table)
 mapper(Job, job_table,
         properties = {'recipesets':relation(RecipeSet, backref='job'),
                       'owner':relation(User, uselist=False, backref='jobs'),
-                      'result':relation(TaskResult, uselist=False),
                       'retention_tag':relation(RetentionTag, uselist=False,backref='jobs'),
                       'product':relation(Product, uselist=False, backref='jobs'),
                       '_job_ccs': relation(JobCc, backref='job')})
@@ -6432,7 +6403,6 @@ mapper(Response,response_table)
 mapper(RecipeSet, recipe_set_table,
         properties = {'recipes':relation(Recipe, backref='recipeset'),
                       'priority':relation(TaskPriority, uselist=False),
-                      'result':relation(TaskResult, uselist=False),
                       'activity':relation(RecipeSetActivity,
                         order_by=[activity_table.c.created.desc(), activity_table.c.id.desc()],
                         backref='object'),
@@ -6468,7 +6438,6 @@ mapper(Recipe, recipe_table,
                                       backref='recipes'),
                       'repos':relation(RecipeRepo),
                       'rpms':relation(RecipeRpm, backref='recipe'),
-                      'result':relation(TaskResult, uselist=False),
                       'logs':relation(LogRecipe, backref='parent'),
                       '_roles':relation(RecipeRole),
                       'custom_packages':relation(TaskPackage,
@@ -6498,7 +6467,6 @@ mapper(RecipeTask, recipe_task_table,
                       'bugzillas':relation(RecipeTaskBugzilla, 
                                            backref='recipetask'),
                       'task':relation(Task, uselist=False, backref='runs'),
-                      'result':relation(TaskResult, uselist=False),
                       '_roles':relation(RecipeTaskRole),
                       'logs':relation(LogRecipeTask, backref='parent'),
                       'watchdog':relation(Watchdog, uselist=False),
@@ -6519,12 +6487,10 @@ mapper(RecipeTaskComment, recipe_task_comment_table,
 mapper(RecipeTaskBugzilla, recipe_task_bugzilla_table)
 mapper(RecipeTaskRpm, recipe_task_rpm_table)
 mapper(RecipeTaskResult, recipe_task_result_table,
-        properties = {'result':relation(TaskResult, uselist=False),
-                      'logs':relation(LogRecipeTaskResult, backref='parent'),
+        properties = {'logs':relation(LogRecipeTaskResult, backref='parent'),
                      }
       )
 mapper(TaskPriority, task_priority_table)
-mapper(TaskResult, task_result_table)
 mapper(Reservation, reservation_table, properties={
         'user': relation(User, backref=backref('reservations',
             order_by=[reservation_table.c.start_time.desc()])),

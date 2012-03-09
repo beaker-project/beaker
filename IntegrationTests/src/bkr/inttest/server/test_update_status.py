@@ -6,7 +6,7 @@ from turbogears.database import session
 from bkr.server.jobxml import XmlJob
 from bkr.server.bexceptions import BX
 from bkr.inttest import data_setup
-from bkr.server.model import TaskStatus, Watchdog, RecipeSet, Distro
+from bkr.server.model import TaskStatus, TaskResult, Watchdog, RecipeSet, Distro
 
 def watchdogs_for_job(job):
     return Watchdog.query.join(['recipe', 'recipeset', 'job'])\
@@ -108,16 +108,18 @@ class TestUpdateStatus(unittest.TestCase):
         
         # Verify that the original status and results match
         self.assertEquals(TaskStatus.from_string(xmljob.wrappedEl('status')), job.status)
-        self.assertEquals(xmljob.wrappedEl('result'), job.result.result)
+        self.assertEquals(TaskResult.from_string(xmljob.wrappedEl('result')), job.result)
         for i, recipeset in enumerate(xmljob.iter_recipeSets()):
             for j, recipe in enumerate(recipeset.iter_recipes()):
                 self.assertEquals(TaskStatus.from_string(recipe.wrappedEl('status')),
                         job.recipesets[i].recipes[j].status)
-                self.assertEquals(recipe.wrappedEl('result'), job.recipesets[i].recipes[j].result.result)
+                self.assertEquals(TaskResult.from_string(recipe.wrappedEl('result')),
+                        job.recipesets[i].recipes[j].result)
                 for k, task in enumerate(recipe.iter_tasks()):
                     self.assertEquals(TaskStatus.from_string(task.status),
                             job.recipesets[i].recipes[j].tasks[k].status)
-                    self.assertEquals(task.result, job.recipesets[i].recipes[j].tasks[k].result.result)
+                    self.assertEquals(TaskResult.from_string(task.result),
+                            job.recipesets[i].recipes[j].tasks[k].result)
 
         # No watchdog's should exist when the job is complete
         self.assertEquals(len(watchdogs_for_job(job)), 0)
@@ -146,16 +148,18 @@ class TestUpdateStatus(unittest.TestCase):
         
         # Verify that the original status and results match
         self.assertEquals(TaskStatus.from_string(xmljob.wrappedEl('status')), job.status)
-        self.assertEquals(xmljob.wrappedEl('result'), job.result.result)
+        self.assertEquals(TaskResult.from_string(xmljob.wrappedEl('result')), job.result)
         for i, recipeset in enumerate(xmljob.iter_recipeSets()):
             for j, recipe in enumerate(recipeset.iter_recipes()):
                 self.assertEquals(TaskStatus.from_string(recipe.wrappedEl('status')),
                         job.recipesets[i].recipes[j].status)
-                self.assertEquals(recipe.wrappedEl('result'), job.recipesets[i].recipes[j].result.result)
+                self.assertEquals(TaskResult.from_string(recipe.wrappedEl('result')),
+                        job.recipesets[i].recipes[j].result)
                 for k, task in enumerate(recipe.iter_tasks()):
                     self.assertEquals(TaskStatus.from_string(task.status),
                             job.recipesets[i].recipes[j].tasks[k].status)
-                    self.assertEquals(task.result, job.recipesets[i].recipes[j].tasks[k].result.result)
+                    self.assertEquals(TaskResult.from_string(task.result),
+                            job.recipesets[i].recipes[j].tasks[k].result)
 
         # No watchdog's should exist when the job is complete
         self.assertEquals(len(watchdogs_for_job(job)), 0)

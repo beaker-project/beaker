@@ -320,7 +320,7 @@ def create_completed_job(**kwargs):
     mark_job_complete(job, **kwargs)
     return job
 
-def mark_recipe_complete(recipe, result=u'Pass', system=None,
+def mark_recipe_complete(recipe, result=TaskResult.pass_, system=None,
         start_time=None, finish_time=None, **kwargs):
     if system is None:
         recipe.system = create_system(arch=recipe.arch)
@@ -336,8 +336,7 @@ def mark_recipe_complete(recipe, result=u'Pass', system=None,
         recipe_task.status = TaskStatus.running
     recipe.update_status()
     for recipe_task in recipe.tasks:
-        rtr = RecipeTaskResult(recipetask=recipe_task,
-                result=TaskResult.by_name(result))
+        rtr = RecipeTaskResult(recipetask=recipe_task, result=result)
         recipe_task.finish_time = finish_time or datetime.datetime.utcnow()
         recipe_task.status = TaskStatus.completed
         recipe_task.results.append(rtr)
@@ -381,7 +380,7 @@ def playback_task_results(task, xmltask):
     # Start task
     task.start()
     # Record Result
-    task._result(xmltask.result, u'/', 0, u'(%s)' % xmltask.result)
+    task._result(TaskResult.from_string(xmltask.result), u'/', 0, u'(%s)' % xmltask.result)
     # Stop task
     if xmltask.status == u'Aborted':
         task.abort()

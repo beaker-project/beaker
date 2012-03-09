@@ -126,3 +126,120 @@ and run beaker-init to create and populate the task_status table. Then:
         (SELECT id FROM task_status WHERE task_status.status = recipe_task.status);
     ALTER TABLE recipe_task
         DROP COLUMN status;
+
+
+Convert task_result to an ENUM
+------------------------------
+
+TODO: merge these instructions with task_status above
+
+    -- job table
+    ALTER TABLE job
+        ADD COLUMN result ENUM ('New', 'Pass', 'Warn', 'Fail', 'Panic')
+            NOT NULL DEFAULT 'New' AFTER result_id;
+    UPDATE job
+        INNER JOIN task_result ON job.result_id = task_result.id
+        SET job.result = task_result.result;
+    ALTER TABLE job
+        DROP FOREIGN KEY job_ibfk_3, -- foreign key for result_id
+        DROP COLUMN result_id;
+
+    -- recipe_set table
+    ALTER TABLE recipe_set
+        ADD COLUMN result ENUM ('New', 'Pass', 'Warn', 'Fail', 'Panic')
+            NOT NULL DEFAULT 'New' AFTER result_id;
+    UPDATE recipe_set
+        INNER JOIN task_result ON recipe_set.result_id = task_result.id
+        SET recipe_set.result = task_result.result;
+    ALTER TABLE recipe_set
+        DROP FOREIGN KEY recipe_set_ibfk_3, -- foreign key for result_id
+        DROP COLUMN result_id;
+
+    -- recipe table
+    ALTER TABLE recipe
+        ADD COLUMN result ENUM ('New', 'Pass', 'Warn', 'Fail', 'Panic')
+            NOT NULL DEFAULT 'New' AFTER result_id;
+    UPDATE recipe
+        INNER JOIN task_result ON recipe.result_id = task_result.id
+        SET recipe.result = task_result.result;
+    ALTER TABLE recipe
+        DROP FOREIGN KEY recipe_ibfk_5, -- foreign key for result_id
+        DROP COLUMN result_id;
+
+    -- recipe_task table
+    ALTER TABLE recipe_task
+        ADD COLUMN result ENUM ('New', 'Pass', 'Warn', 'Fail', 'Panic')
+            NOT NULL DEFAULT 'New' AFTER result_id;
+    UPDATE recipe_task
+        INNER JOIN task_result ON recipe_task.result_id = task_result.id
+        SET recipe_task.result = task_result.result;
+    ALTER TABLE recipe_task
+        DROP FOREIGN KEY recipe_task_ibfk_3, -- foreign key for result_id
+        DROP COLUMN result_id;
+
+    -- recipe_task_result table
+    ALTER TABLE recipe_task_result
+        ADD COLUMN result ENUM ('New', 'Pass', 'Warn', 'Fail', 'Panic')
+            NOT NULL DEFAULT 'New' AFTER result_id;
+    UPDATE recipe_task_result
+        INNER JOIN task_result ON recipe_task_result.result_id = task_result.id
+        SET recipe_task_result.result = task_result.result;
+    ALTER TABLE recipe_task_result
+        DROP FOREIGN KEY recipe_task_result_ibfk_2, -- foreign key for result_id
+        DROP COLUMN result_id;
+
+    -- clean up old table
+    DROP TABLE task_result;
+
+To roll back, first downgrade the beaker-server package to the desired version
+and run beaker-init to create and populate the task_result table. Then:
+
+    -- job table
+    ALTER TABLE job
+        ADD COLUMN result_id INT NOT NULL DEFAULT 1 AFTER result,
+        ADD CONSTRAINT job_result_id_fk
+            FOREIGN KEY (result_id) REFERENCES task_result (id);
+    UPDATE job SET result_id =
+        (SELECT id FROM task_result WHERE task_result.result = job.result);
+    ALTER TABLE job
+        DROP COLUMN result;
+
+    -- recipe_set table
+    ALTER TABLE recipe_set
+        ADD COLUMN result_id INT NOT NULL DEFAULT 1 AFTER result,
+        ADD CONSTRAINT recipe_set_result_id_fk
+            FOREIGN KEY (result_id) REFERENCES task_result (id);
+    UPDATE recipe_set SET result_id =
+        (SELECT id FROM task_result WHERE task_result.result = recipe_set.result);
+    ALTER TABLE recipe_set
+        DROP COLUMN result;
+
+    -- recipe table
+    ALTER TABLE recipe
+        ADD COLUMN result_id INT NOT NULL DEFAULT 1 AFTER result,
+        ADD CONSTRAINT recipe_result_id_fk
+            FOREIGN KEY (result_id) REFERENCES task_result (id);
+    UPDATE recipe SET result_id =
+        (SELECT id FROM task_result WHERE task_result.result = recipe.result);
+    ALTER TABLE recipe
+        DROP COLUMN result;
+
+    -- recipe_task table
+    ALTER TABLE recipe_task
+        ADD COLUMN result_id INT NOT NULL DEFAULT 1 AFTER result,
+        ADD CONSTRAINT recipe_task_result_id_fk
+            FOREIGN KEY (result_id) REFERENCES task_result (id);
+    UPDATE recipe_task SET result_id =
+        (SELECT id FROM task_result WHERE task_result.result = recipe_task.result);
+    ALTER TABLE recipe_task
+        DROP COLUMN result;
+
+    -- recipe_task_result table
+    ALTER TABLE recipe_task_result
+        ADD COLUMN result_id INT NOT NULL DEFAULT 1 AFTER result,
+        ADD CONSTRAINT recipe_task_result_result_id_fk
+            FOREIGN KEY (result_id) REFERENCES task_result (id);
+    UPDATE recipe_task_result SET result_id =
+        (SELECT id FROM task_result WHERE task_result.result = recipe_task_result.result);
+    ALTER TABLE recipe_task_result
+        DROP COLUMN result;

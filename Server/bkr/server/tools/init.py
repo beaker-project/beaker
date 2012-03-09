@@ -165,14 +165,6 @@ def init_db(user_name=None, password=None, user_display_name=None, user_email_ad
         high            = TaskPriority(priority=u'High')
         urgent          = TaskPriority(priority=u'Urgent')
 
-    #Setup Test Result
-    if TaskResult.query.count() == 0:
-        NEW       = TaskResult(result=u'New', severity=10)
-        PASS      = TaskResult(result=u'Pass', severity=20)
-        WARN      = TaskResult(result=u'Warn', severity=30)
-        FAIL      = TaskResult(result=u'Fail', severity=40)
-        PANIC     = TaskResult(result=u'Panic', severity=50)
-
     #Setup ack/nak reposnses
     if Response.query.count() == 0:
         ACK      = Response(response=u'ack')

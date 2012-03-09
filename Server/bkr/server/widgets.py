@@ -766,8 +766,8 @@ class TaskSearchForm(RemoteForm):
                                 options=model.OSMajor.get_all),
               SingleSelectField(name='status', label=_(u'Status'), validator=ValidEnumValue(model.TaskStatus),
                                 options=lambda: [(None, 'All')] + [(status, status.value) for status in model.TaskStatus]),
-              SingleSelectField(name='result_id', label=_(u'Result'),validator=validators.Int(),
-                                options=model.TaskResult.get_all),
+              SingleSelectField(name='result', label=_(u'Result'), validator=ValidEnumValue(model.TaskResult),
+                                options=lambda: [(None, 'All')] + [(result, result.value) for result in model.TaskResult]),
              ]
     before = 'task_search_before()'
     on_complete = 'task_search_complete()'

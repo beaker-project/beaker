@@ -264,7 +264,6 @@ class Recipes(RPCRoot):
     def index(self,*args,**kw):
         return self.recipes(recipes=session.query(MachineRecipe)
                 # need to join in case the user sorts by these related properties
-                .outerjoin(Recipe.result)
                 .outerjoin(Recipe.system)
                 .outerjoin(Recipe.distro, Distro.arch),
                 *args, **kw)
@@ -275,7 +274,6 @@ class Recipes(RPCRoot):
     def mine(self,*args,**kw):
         return self.recipes(recipes=MachineRecipe.mine(identity.current.user)
                 # need to join in case the user sorts by these related properties
-                .outerjoin(Recipe.result)
                 .outerjoin(Recipe.system)
                 .outerjoin(Recipe.distro, Distro.arch),
                 action='./mine', *args, **kw)
@@ -302,7 +300,7 @@ class Recipes(RPCRoot):
 		     widgets.PaginateDataGrid.Column(name='distro.install_name', getter=lambda x: x.distro and x.distro.link, title='Distro', options=dict(sortable=True)),
 		     widgets.PaginateDataGrid.Column(name='progress', getter=lambda x: x.progress_bar, title='Progress', options=dict(sortable=False)),
                      widgets.PaginateDataGrid.Column(name='status', getter=lambda x:x.status, title='Status', options=dict(sortable=True)),
-		     widgets.PaginateDataGrid.Column(name='result.result', getter=lambda x:x.result, title='Result', options=dict(sortable=True)),
+		     widgets.PaginateDataGrid.Column(name='result', getter=lambda x:x.result, title='Result', options=dict(sortable=True)),
                      widgets.PaginateDataGrid.Column(name='action', getter=lambda x:self.action_widget(task=x), title='Action', options=dict(sortable=False)),
                     ])
 

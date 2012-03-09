@@ -179,10 +179,9 @@ class TestRecipeView(WebDriverTestCase):
         raise SkipTest('"slowness" is too subjective')
         tasks = [data_setup.create_task() for _ in range(700)]
         recipe = data_setup.create_recipe(task_list=tasks)
-        pass_ = TaskResult.by_name(u'Pass')
         for rt in recipe.tasks:
             rt.results = [RecipeTaskResult(path=u'result_%d' % i,
-                    result=pass_, score=i) for i in range(10)]
+                    result=TaskResult.pass_, score=i) for i in range(10)]
         job = data_setup.create_job_for_recipes([recipe], owner=self.user)
         session.flush()
 

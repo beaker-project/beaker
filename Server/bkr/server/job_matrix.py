@@ -125,7 +125,7 @@ class JobMatrix:
                     dyn_objs = x.get_results(arch,whiteboard)
                     for d in dyn_objs: 
                         if d.arch == arch and d.whiteboard == whiteboard:
-                            return self.make_result_box(model.TaskResult.get_results(),d)
+                            return self.make_result_box(d)
                 except Exception, (e):
                     log.error('Error %s' % e)
         return f
@@ -199,16 +199,16 @@ class JobMatrix:
                     whiteboard_data[arch].append(recipe.whiteboard)
             else:
                 whiteboard_data[arch] = [recipe.whiteboard]
-        case0 = case([(model.task_result_table.c.result == u'New',1)],else_=0)
-        case1 = case([(model.task_result_table.c.result == u'Pass',1)],else_=0)
-        case2 = case([(model.task_result_table.c.result == u'Warn',1)],else_=0)
-        case3 = case([(model.task_result_table.c.result == u'Fail',1)],else_=0)
-        case4 = case([(model.task_result_table.c.result == u'Panic',1)],else_=0)
+        case0 = case([(model.recipe_task_table.c.result == u'New',1)],else_=0)
+        case1 = case([(model.recipe_task_table.c.result == u'Pass',1)],else_=0)
+        case2 = case([(model.recipe_task_table.c.result == u'Warn',1)],else_=0)
+        case3 = case([(model.recipe_task_table.c.result == u'Fail',1)],else_=0)
+        case4 = case([(model.recipe_task_table.c.result == u'Panic',1)],else_=0)
     
         arch_alias = model.arch_table.alias()
         recipe_table_alias = model.recipe_table.alias()
         my_select = [model.task_table.c.id.label('task_id'),
-                     model.task_result_table.c.id.label('result'),
+                     model.recipe_task_table.c.result,
                      recipe_table_alias.c.whiteboard,
                      arch_alias.c.arch,
                      arch_alias.c.id.label('arch_id'),
@@ -222,7 +222,6 @@ class JobMatrix:
                               join(model.distro_table, model.distro_table.c.id == recipe_table_alias.c.distro_id).
                               join(arch_alias, arch_alias.c.id == model.distro_table.c.arch_id).
                               join(model.recipe_task_table, model.recipe_task_table.c.recipe_id == recipe_table_alias.c.id).
-                              join(model.task_result_table,model.task_result_table.c.id == model.recipe_task_table.c.result_id).
                               join(model.task_table, model.task_table.c.id == model.recipe_task_table.c.task_id)]
                    
         #If this query starts to bog down and slow up, we could create a view for the inner select (s2)
@@ -305,33 +304,29 @@ class JobMatrix:
         """
         return url('/tasks/executed',
                 task=query_obj.task_name,
-                result_id=result,
+                result=result,
                 whiteboard=query_obj.whiteboard or '',
                 arch_id=query_obj.arch_id,
                 job_id=self.job_ids)
 
-    def make_result_box(self,returns,query_obj,result=None): 
+    def make_result_box(self, query_obj):
         """
-        make_result_box() takes a list of tuples containing a result id and result name, as well as
-        Query obj and returns DOM element representing a Task result. 
+        make_result_box() returns a DOM element representing a Task result.
         """
         elem = Element('div',{'class' : 'result-box'})
         
-        for item in returns:
-            result_text = item[1]
-            result_id = item[0]
-            how_many = getattr(query_obj,result_text,None)
+        for result in model.TaskResult:
+            how_many = getattr(query_obj, result.value, None)
             if how_many is not None and how_many > 0:            
-                result_text_lower = result_text.lower()
-                sub_span = SubElement(elem,'span', {'class':'rounded-side-pad %s' % result_text_lower}) 
+                sub_span = SubElement(elem,'span', {'class':'rounded-side-pad %s' % result.value.lower()})
                 SubElement(elem,'br') 
-                task_list_params = self._create_task_list_params(query_obj,result_id)
+                task_list_params = self._create_task_list_params(query_obj, result.value)
                 sub_link = SubElement(sub_span,
                                       'a', 
                                       {'style':'color:inherit;text-decoration:none'}, 
                                       href=task_list_params)
                                                
 
-                sub_link.text = '%s: %s' % (result_text,how_many)
+                sub_link.text = '%s: %s' % (result, how_many)
   
         return elem

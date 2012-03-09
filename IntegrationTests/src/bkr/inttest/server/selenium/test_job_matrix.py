@@ -18,6 +18,7 @@ import logging
 import time
 import tempfile
 from turbogears.database import session
+from bkr.server.model import TaskResult
 from bkr.inttest.server.webdriver_utils import login, is_text_present
 from bkr.inttest.server.selenium import SeleniumTestCase, WebDriverTestCase
 from bkr.inttest import data_setup, get_server_base
@@ -30,7 +31,7 @@ class TestJobMatrixWebDriver(WebDriverTestCase):
         self.job_whiteboard = data_setup.unique_name(u'foobarhi %s')
         self.recipe_whiteboard = data_setup.unique_name(u'sdfjkljk%s')
         self.passed_job = data_setup.create_completed_job(
-                whiteboard=self.job_whiteboard, result=u'Pass',
+                whiteboard=self.job_whiteboard, result=TaskResult.pass_,
                 recipe_whiteboard=self.recipe_whiteboard,
                 distro=data_setup.create_distro(arch=u'i386'))
 
@@ -79,11 +80,11 @@ class TestJobMatrixWebDriver(WebDriverTestCase):
 
     def test_deleted_job_results_not_shown(self):
         data_setup.create_completed_job(
-                whiteboard=self.job_whiteboard, result=u'Fail',
+                whiteboard=self.job_whiteboard, result=TaskResult.fail,
                 recipe_whiteboard=self.recipe_whiteboard,
                 distro=data_setup.create_distro(arch=u'i386'))
         data_setup.create_completed_job(
-                whiteboard=self.job_whiteboard, result=u'Warn',
+                whiteboard=self.job_whiteboard, result=TaskResult.warn,
                 recipe_whiteboard=self.recipe_whiteboard,
                 distro=data_setup.create_distro(arch=u'i386'))
         session.flush()
@@ -117,12 +118,12 @@ class TestJobMatrixWebDriver(WebDriverTestCase):
         distro = data_setup.create_distro(arch=u'i386')
         for i in range(0,9):
             data_setup.create_completed_job(
-                    whiteboard=non_unique_whiteboard, result=u'Pass',
+                    whiteboard=non_unique_whiteboard, result=TaskResult.pass_,
                     recipe_whiteboard=non_unique_rwhiteboard,
                     distro=distro)
 
         single_job = data_setup.create_completed_job(
-                whiteboard=unique_whiteboard, result=u'Pass',
+                whiteboard=unique_whiteboard, result=TaskResult.pass_,
                 recipe_whiteboard=data_setup.unique_name('rwhiteboard%s'),
                 distro=distro)
         session.flush()
@@ -140,22 +141,21 @@ class TestJobMatrixWebDriver(WebDriverTestCase):
     def tearDown(self):
         b = self.browser.quit()
 
-
 class TestJobMatrix(SeleniumTestCase):
     def setUp(self):
         self.job_whiteboard = u'DanC says hi %d' % int(time.time() * 1000)
         self.recipe_whiteboard = u'breakage lol \'#&^!<'
         self.job_whiteboard_2 = u'rmancy says bye %d' % int(time.time() * 1000)
         self.passed_job = data_setup.create_completed_job(
-                whiteboard=self.job_whiteboard, result=u'Pass',
+                whiteboard=self.job_whiteboard, result=TaskResult.pass_,
                 recipe_whiteboard=self.recipe_whiteboard,
                 distro=data_setup.create_distro(arch=u'i386'))
         self.warned_job = data_setup.create_completed_job(
-                whiteboard=self.job_whiteboard, result=u'Warn',
+                whiteboard=self.job_whiteboard, result=TaskResult.warn,
                 recipe_whiteboard=self.recipe_whiteboard,
                 distro=data_setup.create_distro(arch=u'ia64'))
         self.failed_job = data_setup.create_completed_job(
-                whiteboard=self.job_whiteboard, result=u'Fail',
+                whiteboard=self.job_whiteboard, result=TaskResult.fail,
                 recipe_whiteboard=self.recipe_whiteboard,
                 distro=data_setup.create_distro(arch=u'x86_64'))
         session.flush()
@@ -185,7 +185,7 @@ class TestJobMatrix(SeleniumTestCase):
         body = sel.get_text('//body')
         self.assert_('Pass: 1' in body)
         new_job = data_setup.create_completed_job(
-            whiteboard=self.job_whiteboard, result=u'Pass',
+            whiteboard=self.job_whiteboard, result=TaskResult.pass_,
             recipe_whiteboard=self.recipe_whiteboard,
             distro=data_setup.create_distro(arch=u'i386'))
         session.flush()
@@ -196,7 +196,7 @@ class TestJobMatrix(SeleniumTestCase):
 
         #Try with multiple whiteboards
         another_new_job = data_setup.create_completed_job(
-            whiteboard=self.job_whiteboard_2, result=u'Pass',
+            whiteboard=self.job_whiteboard_2, result=TaskResult.pass_,
             recipe_whiteboard=self.recipe_whiteboard,
             distro=data_setup.create_distro(arch=u'i386'))
         session.flush()
