@@ -18,9 +18,10 @@ import logging
 import time
 import tempfile
 from turbogears.database import session
-from bkr.inttest.server.webdriver_utils import login
+from bkr.inttest.server.webdriver_utils import login, is_text_present
 from bkr.inttest.server.selenium import SeleniumTestCase, WebDriverTestCase
 from bkr.inttest import data_setup, get_server_base
+from bkr.server.model import Job
 
 class TestJobMatrixWebDriver(WebDriverTestCase):
 
@@ -35,6 +36,22 @@ class TestJobMatrixWebDriver(WebDriverTestCase):
 
         session.flush()
         self.browser = self.get_browser()
+
+    def test_max_whiteboard(self):
+        max = Job.max_by_whiteboard
+        c = 0
+        whiteboard =u'whiteboard'
+        while c <= max:
+            data_setup.create_completed_job(whiteboard=whiteboard)
+            c += 1
+        session.flush()
+        b = self.browser
+        b.get(get_server_base() + 'matrix')
+        b.find_element_by_id('remote_form_whiteboard_filter').send_keys(whiteboard)
+        b.find_element_by_id('remote_form_do_filter').click()
+        b.find_element_by_xpath("//select[@name='whiteboard']/option[@value='%s']" % whiteboard).click()
+        b.find_element_by_xpath('//input[@value="Generate"]').click()
+        self.failUnless(is_text_present(b, "Your whiteboard contains %d jobs, only %s will be used" % (c, Job.max_by_whiteboard)))
 
     def test_deleted_whiteboard_not_shown(self):
         b = self.browser
