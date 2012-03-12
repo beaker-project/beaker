@@ -36,7 +36,7 @@ class ServerBeakerBus(BeakerBus):
 
     def __init__(self, *args, **kw):
         self.topic_exchange = tg_config.get('beaker.qpid_topic_exchange')
-        self.headers_exchange =  tg_config.get('beaker.qpid_headers_exchange')
+        self.direct_exchange = tg_config.get('beaker.qpid_direct_exchange')
         self.service_queue_name = tg_config.get('beaker.qpid_service_queue')
         self._broker = tg_config.get('beaker.qpid_broker')
         self.krb_auth = tg_config.get('beaker.qpid_krb_auth')
@@ -51,9 +51,9 @@ class ServerBeakerBus(BeakerBus):
             """
             msg_kw = {}
             msg_kw['content'] = {'watchdog' : watchdog, 'status' : status }
-            msg_kw['properties'] = { 'lc' : lc_fqdn }
+            msg_kw['subject'] = 'Watchdog.%s' % lc_fqdn
             msg = Message(**msg_kw)
-            snd = session.sender(self.headers_exchange)
+            snd = session.sender(self.topic_exchange)
             snd.send(msg)
             log.info('Sent msg %s' % msg)
 
@@ -111,29 +111,33 @@ class ServerBeakerBus(BeakerBus):
     def _create_service_receiver(self,ssn):
         log.debug('Creating service-queue receiver')
         queue_name= self.service_queue_name
-        try:
-            receiver = ssn.receiver(queue_name + '; { create: always, ' +
-                '      node: { type: queue, durable: True, ' +
-                ' x-declare: { auto-delete: False }, ' +
-                'x-bindings: [ {  queue: "' + queue_name + '", } ] } }')
-
-        except NotFound, e:
-            log.error(e)
+        receiver = ssn.receiver(queue_name + '; { create: receiver,  \
+                                node: { type: queue, durable: True, \
+                                x-declare: { auto-delete: False, exclusive: True, \
+                                arguments: { \'qpid.policy_type\': ring,  \
+                                             \'qpid.max_size\': 50000000 } }, \
+                                x-bindings: [ { exchange: "' + self.direct_exchange + '",\
+                                                queue: "' + queue_name + '", } ] } }')
         return receiver
 
 
     def _service_request_listener(self, ssn, *args, **kw):
+        try:
             receiver = self._create_service_receiver(ssn)
             #Start main workers
-            tpool = BkrThreadPool.create_and_run('service-queue', target_f=self._service_queue_worker, target_args=[])
-
+            tpool = BkrThreadPool.create_and_run('service-queue',
+                                                 target_f=self._service_queue_worker,
+                                                 target_args=[],)
             #Start single response worker
             send_response_t = Thread(target=self._send_service_response, args=(ssn,))
             send_response_t.setDaemon(False)
             send_response_t.start()
+        except Exception:
+            log.exception('service request listener cannot start')
+            raise
 
-            #Start single receiver
-            self._fetch_service_request(receiver, ssn, *args, **kw)
+        #Start single receiver
+        self._fetch_service_request(receiver, ssn, *args, **kw)
 
     def _send_service_response_logic(self, msg_kw, address, ssn):
         msg = Message(**msg_kw)

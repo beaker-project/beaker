@@ -35,7 +35,7 @@ class LabBeakerBus(BeakerBus):
     global conf
     __conf = conf
     topic_exchange = __conf.get('QPID_TOPIC_EXCHANGE')
-    headers_exchange = __conf.get('QPID_HEADERS_EXCHANGE')
+    direct_exchange = __conf.get('QPID_DIRECT_EXCHANGE')
     service_queue_name = __conf.get('QPID_SERVICE_QUEUE')
     _broker = __conf.get('QPID_BROKER')
     krb_auth = __conf.get('QPID_KRB_AUTH')
@@ -71,11 +71,13 @@ class LabBeakerBus(BeakerBus):
 
         queue_name = 'tmp.lab-watchdog' + str(datatypes.uuid4())
         log.debug('_watchdog listening for lc %s' % lc)
-        addr_string = queue_name + '; { create: always,  \
+        addr_string = queue_name + '; { create: receiver,  \
                 node: { type: queue, durable: False,  \
-                x-declare: { exclusive: True, auto-delete: True }, \
-                x-bindings :[{ exchange :"' + self.headers_exchange + '", queue: "' + queue_name +'", \
-                    arguments: { x-match: any, lc: "' + lc + '"}}]}}'
+                x-declare: { exclusive: True, auto-delete: True, \
+                             arguments: { \'qpid.policy_type\': ring, \
+                                          \'qpid.max_size\': 50000000 } }, \
+                x-bindings :[{ exchange :"' + self.topic_exchange + '", queue: "' + queue_name +'", \
+                               key: "Watchdog.' + lc +'"}]}}'
 
         receiver = session.receiver(addr_string)
 

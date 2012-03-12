@@ -1,7 +1,7 @@
 __all__ = [ "BeakerBus", "VALID_AMQP_TYPES"]
 
 import ConfigParser, os
-from bkr.common.helpers import curry
+from bkr.common.helpers import curry, RepeatTimer
 from bkr.common.bexceptions import BeakerException
 
 can_use_qpid = True
@@ -20,12 +20,16 @@ log = logging.getLogger(__name__)
 VALID_AMQP_TYPES=[list,dict,bool,int,long,float,unicode,dict,list,str,type(None)]
 _connection = None
 
+
 class BeakerBus(object):
 
+    # XXX Config file ?
     _reconnect = True
     _reconnect_interval = 5
     _auth_mgr = None
     _fetch_timeout=60
+    _auth_interval = 3600 * 4 # Four hours
+
 
     class RPCInterface:
 
@@ -63,6 +67,8 @@ class BeakerBus(object):
             if self.krb_auth:
                 connection_params[1].update({'sasl_mechanisms' : 'GSSAPI'})
                 self.do_krb_auth()
+                # krb auths have a set lifespan, ensure we stay authenticated
+                RepeatTimer(_auth_interval, self.do_krb_auth, stop_on_exception=False)
             _connection = Connection(*connection_params[0], **connection_params[1])
             try:
                 _connection.open()
@@ -82,7 +88,11 @@ class BeakerBus(object):
         reply_to_queue_name = 'tmp.beaker-receive' + str(datatypes.uuid4())
         reply_to_addr_string = reply_to_queue_name +'; { create:receiver, \
                 node: { type: queue, durable:False, \
-                x-declare: {exclusive: True, auto-delete:True } } }'
+                x-declare: {exclusive: True, auto-delete:True, \
+                            arguments: { \'qpid.policy_type\': ring, \
+                                         \'qpid.max_size\': 50000000 } }, \
+                x-bindings: [{ exchange: "' + self.direct_exchange + '", \
+                               queue: "' + reply_to_queue_name + '", } ] } }'
         new_receiver = session.receiver(reply_to_addr_string)
         msg = Message(reply_to=reply_to_queue_name)
         msg.properties['method'] = method

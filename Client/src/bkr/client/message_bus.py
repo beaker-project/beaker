@@ -11,6 +11,7 @@ except ImportError, e:
 class ClientBeakerBus(BeakerBus):
 
     topic_exchange = conf.get('QPID_TOPIC_EXCHANGE')
+    direct_exchange = conf.get('QPID_DIRECT_EXCHANGE')
     service_queue_name = conf.get('QPID_SERVICE_QUEUE')
 
     _broker = conf.get('QPID_BROKER')
@@ -51,7 +52,9 @@ class ClientBeakerBus(BeakerBus):
                 queue_name = 'tmp.beaker-events-client' + str(datatypes.uuid4())
                 addr_string = queue_name + '; { create: receiver,  \
                         node: { type: queue, durable: False,  \
-                    x-declare: { exclusive: True, auto-delete: True },  \
+                    x-declare: { exclusive: True, auto-delete: True, \
+                                 arguments: { \'qpid.policy_type\': ring, \
+                                              \'qpid.max_size\': 50000000 } },  \
                     x-bindings: [ {  exchange: "' + self.topic_exchange + '", queue: "' + queue_name + '", \
                                     key: "TaskUpdate.#.' + t_id + depth_string+'" } ] } }'
                 new_receiver = session.receiver(addr_string)
@@ -59,7 +62,7 @@ class ClientBeakerBus(BeakerBus):
             depth_string += '.*'
         try:
             while True:
-                message = session.next_receiver().fetch() 
+                message = session.next_receiver().fetch()
                 error = message.properties.get('error')
                 content = message.content
                 session.acknowledge()
