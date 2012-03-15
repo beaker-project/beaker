@@ -2,7 +2,7 @@
 from bkr.inttest.server.selenium import SeleniumTestCase, WebDriverTestCase
 from bkr.inttest.server.webdriver_utils import login, logout, is_text_present
 from bkr.inttest import data_setup, get_server_base
-from bkr.server.model import Arch, ExcludeOSMajor
+from bkr.server.model import Arch, ExcludeOSMajor, SystemType
 from selenium.webdriver.support.ui import Select
 import unittest, time, re, os
 from turbogears.database import session

@@ -17,7 +17,7 @@ class SystemReturnTest(SeleniumTestCase):
 
     def test_cant_return_sneakily(self):
         self.login() #login as admin
-        self.system.status = SystemStatus.by_name(u'Manual')
+        self.system.status = SystemStatus.manual
         session.flush()
         sel = self.selenium
         sel.open('view/%s' % self.system.fqdn)
