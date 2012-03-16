@@ -21,6 +21,7 @@ from turbogears.database import session
 from bkr.inttest.server.webdriver_utils import login
 from bkr.inttest.server.selenium import SeleniumTestCase, WebDriverTestCase
 from bkr.inttest import data_setup, get_server_base
+from bkr.server.model import Response, RecipeSetResponse
 
 class TestJobMatrixWebDriver(WebDriverTestCase):
 
@@ -89,6 +90,41 @@ class TestJobMatrixWebDriver(WebDriverTestCase):
         # Assert it is no longer there
         b.get(get_server_base() + 'matrix')
         b.find_element_by_xpath("//select[@name='whiteboard']/option[@value='%s']" % self.job_whiteboard).click()
+        b.find_element_by_xpath('//input[@value="Generate"]').click()
+        report_text = b.find_element_by_xpath("//div[@id='matrix-report']").text
+        self.assert_('Pass: 1' not in report_text)
+
+    def test_nacked_recipe_results_not_shown(self):
+        data_setup.create_completed_job(
+                whiteboard=self.job_whiteboard, result=u'Fail',
+                recipe_whiteboard=self.recipe_whiteboard,
+                distro=data_setup.create_distro(arch=u'i386'))
+        data_setup.create_completed_job(
+                whiteboard=self.job_whiteboard, result=u'Warn',
+                recipe_whiteboard=self.recipe_whiteboard,
+                distro=data_setup.create_distro(arch=u'i386'))
+        session.flush()
+        b = self.browser
+        owner = data_setup.create_user(password='password')
+        self.passed_job.owner = owner 
+        session.flush()
+        login(b, user=owner.user_name, password='password')
+        b.get(get_server_base() + 'matrix')
+        b.find_element_by_xpath("//select[@name='whiteboard']/option[@value='%s']" % self.job_whiteboard).click()
+        b.find_element_by_xpath("//input[@name='toggle_nacks_on']").click()
+        b.find_element_by_xpath('//input[@value="Generate"]').click()
+        report_text = b.find_element_by_xpath("//div[@id='matrix-report']").text
+        self.assert_('Pass: 1' in report_text)
+
+        # Nack Recipe
+        response = Response.by_response('nak')
+        self.passed_job.recipesets[0].nacked = RecipeSetResponse(response_id=response.id)
+        session.flush()
+
+        # Assert it is no longer there
+        b.get(get_server_base() + 'matrix')
+        b.find_element_by_xpath("//select[@name='whiteboard']/option[@value='%s']" % self.job_whiteboard).click()
+        b.find_element_by_xpath("//input[@name='toggle_nacks_on']").click()
         b.find_element_by_xpath('//input[@value="Generate"]').click()
         report_text = b.find_element_by_xpath("//div[@id='matrix-report']").text
         self.assert_('Pass: 1' not in report_text)
