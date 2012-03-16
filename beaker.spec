@@ -16,7 +16,7 @@
 
 Name:           beaker
 Version:        0.8.1
-Release:        4%{?dist}
+Release:        5%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -346,6 +346,14 @@ fi
 %endif
 
 %changelog
+* Fri Mar 16 2012 Bill Peck <bpeck@redhat.com> 0.8.1-5
+- 803713 Fix for job matrix result box not generating links with 'job_ids' when
+  being generated via job id box (rmancy@redhat.com)
+- More s390 fixes. (bpeck@redhat.com)
+- beaker-import will fail if no repos are found in .treeinfo.
+  (bpeck@redhat.com)
+- 804162 job matrix ignores hide naks (bpeck@redhat.com)
+
 * Thu Mar 08 2012 Raymond Mancy <rmancy@redhat.com> 0.8.1-4
 - 790293 Fix for Login thread dying on lab controller (rmancy@redhat.com)
 
