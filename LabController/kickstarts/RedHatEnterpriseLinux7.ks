@@ -1,3 +1,4 @@
+#set global end='%end'
 #if $varExists('sysprofile')
 #set listed_snippet_profiles = $getVar('sysprofile','').split(';')
 #for $snippet_profile in $listed_snippet_profiles
@@ -47,7 +48,14 @@ keyboard $getVar('keyboard', 'us')
 # System language
 lang $getVar('lang','en_US.UTF-8')
 $yum_repo_stanza
+#if $arch.startswith("s390"):
+
+#Disable reboot on s390 arch for now. Please re-enable for alpha2
+#reboot
+
+#else
 reboot
+#end if
 #Root password
 rootpw --iscrypted $getVar('password', $default_password_crypted)
 # SELinux configuration
