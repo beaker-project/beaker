@@ -70,6 +70,7 @@ class JobMatrix:
                 self.job_ids = job_ids
                 matrix_options['job_ids_vals'] = "\n".join([str(j) for j in job_ids])
             elif job_ids: #Getting results by job id
+                self.job_ids = job_ids
                 matrix_options['job_ids_vals'] = '\n'.join([str(j) for j in job_ids])
             if 'toggle_nacks_on' in kw:
                 matrix_options['toggle_nacks_on'] = True
