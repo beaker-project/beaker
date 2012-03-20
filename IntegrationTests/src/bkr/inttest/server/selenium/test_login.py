@@ -57,18 +57,18 @@ class LoginTest(SeleniumTestCase):
         sel.open('')
         sel.type('simplesearch', system.fqdn)
         sel.submit('systemsearch_simple')
-        sel.wait_for_page_to_load('3000')
+        sel.wait_for_page_to_load('30000')
         sel.click('link=%s' % system.fqdn)
-        sel.wait_for_page_to_load('3000')
+        sel.wait_for_page_to_load('30000')
         self.assertEquals(sel.get_title(), system.fqdn)
 
         # Click log in, and fill in details
         sel.click('link=Login')
-        sel.wait_for_page_to_load('3000')
+        sel.wait_for_page_to_load('30000')
         sel.type('user_name', self.user.user_name)
         sel.type('password', self.password)
         sel.click('login')
-        sel.wait_for_page_to_load('3000')
+        sel.wait_for_page_to_load('30000')
 
         # We should be back at the system page
         self.assertEquals(sel.get_title(), system.fqdn)
@@ -89,7 +89,7 @@ class LoginTest(SeleniumTestCase):
         sel.type('user_name', self.user.user_name)
         sel.type('password', self.password)
         sel.click('login')
-        sel.wait_for_page_to_load('3000')
+        sel.wait_for_page_to_load('30000')
         # Did it work?
         self.assertEquals(sel.get_title(), 'My Jobs')
 

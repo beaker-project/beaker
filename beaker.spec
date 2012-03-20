@@ -15,8 +15,8 @@
 %endif
 
 Name:           beaker
-Version:        0.8.0
-Release:        24%{?dist}
+Version:        0.8.1
+Release:        5%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -45,11 +45,10 @@ BuildRequires:  python-xmltramp
 BuildRequires:  python-lxml
 BuildRequires:  python-ldap
 BuildRequires:  python-TurboMail >= 3.0
-# This conditional is only a temporary hack to get builds going in dist-f14
-%if 0%{?rhel}
+BuildRequires:  cracklib-python
 BuildRequires:  python-concurrentloghandler
-%endif
 BuildRequires:  rpm-python
+BuildRequires:  rhts-python
 %endif
 
 # As above, these client dependencies are needed in build because of sphinx
@@ -93,6 +92,8 @@ Requires:       python-TurboMail >= 3.0
 Requires:	createrepo
 Requires:	yum-utils
 Requires:       python-concurrentloghandler
+Requires:       rhts-python
+Requires:       cracklib-python
 %endif
 
 
@@ -105,11 +106,12 @@ Requires:       %{name}-server = %{version}-%{release}
 Requires:       %{name}-client = %{version}-%{release}
 Requires:       %{name}-lab-controller = %{version}-%{release}
 Requires:       python-nose >= 0.10
-Requires:       python-selenium >= 2.0
+Requires:       python-selenium >= 2.12
 Requires:       kobo
 Requires:       java-1.6.0-openjdk
 Requires:       Xvfb
 Requires:       firefox
+Requires:       python-requests
 %endif
 
 
@@ -196,6 +198,8 @@ DESTDIR=$RPM_BUILD_ROOT make \
     install
 %if %{with labcontroller}
 ln -s RedHatEnterpriseLinux6.ks $RPM_BUILD_ROOT/%{_var}/lib/cobbler/kickstarts/redhat6.ks
+ln -s RedHatEnterpriseLinux6.ks $RPM_BUILD_ROOT/%{_var}/lib/cobbler/kickstarts/CentOS6.ks
+ln -s RedHatEnterpriseLinuxServer5.ks $RPM_BUILD_ROOT/%{_var}/lib/cobbler/kickstarts/CentOS5.ks
 ln -s Fedora.ks $RPM_BUILD_ROOT/%{_var}/lib/cobbler/kickstarts/Fedoradevelopment.ks
 %endif
 
@@ -319,6 +323,7 @@ fi
 %{_bindir}/%{name}-watchdog
 %{_bindir}/%{name}-transfer
 %{_bindir}/%{name}-osversion
+%{_bindir}/%{name}-import
 %doc LabController/README
 %config(noreplace) %{_sysconfdir}/httpd/conf.d/%{name}-lab-controller.conf
 %{_sysconfdir}/cron.hourly/cobbler_expire_distros
@@ -341,9 +346,113 @@ fi
 %endif
 
 %changelog
+* Fri Mar 16 2012 Bill Peck <bpeck@redhat.com> 0.8.1-5
+- 803713 Fix for job matrix result box not generating links with 'job_ids' when
+  being generated via job id box (rmancy@redhat.com)
+- More s390 fixes. (bpeck@redhat.com)
+- beaker-import will fail if no repos are found in .treeinfo.
+  (bpeck@redhat.com)
+- 804162 job matrix ignores hide naks (bpeck@redhat.com)
+
+* Thu Mar 08 2012 Raymond Mancy <rmancy@redhat.com> 0.8.1-4
+- 790293 Fix for Login thread dying on lab controller (rmancy@redhat.com)
+
+* Mon Feb 27 2012 Bill Peck <bpeck@redhat.com> 0.8.1-3
+- 796621 "Kernel Options" not populated correctly if "=" character is included
+  inside parameter (bpeck@redhat.com)
+- 796647 move print_repos to rhts_post so that custom kickstarts pick this up.
+  (bpeck@redhat.com)
+- fix beaker-import to not crash when --root isn't used. (bpeck@redhat.com)
+
+* Mon Feb 27 2012 Bill Peck <bpeck@redhat.com> 0.8.0-29
+- fix beaker-import to not crash when --root isn't used. (bpeck@redhat.com)
+
+* Thu Feb 23 2012 Bill Peck <bpeck@redhat.com> 0.8.0-28
+- 796621 "Kernel Options" not populated correctly if "=" character is included
+  inside parameter (bpeck@redhat.com)
+- 796647 move print_repos to rhts_post so that custom kickstarts pick this up.
+  (bpeck@redhat.com)
+
+* Thu Feb 23 2012 Dan Callaghan <dcallagh@redhat.com> 0.8.1-2
+- Merge hotfixes from release-0.8.0 branch
+
+* Thu Feb 23 2012 Dan Callaghan <dcallagh@redhat.com> 0.8.0-27
+- Merge "replacement for the real do_POST, to work around RHBZ#789790" for real
+  this time (dcallagh@redhat.com)
+
+* Thu Feb 23 2012 Steven Lawrance <stl@redhat.com> 0.8.0-26
+- 796420 beaker-import should not abort on missing .treeinfo. print warning and
+  continue (bpeck@redhat.com)
+- 796403 Add an end tag to SSH keys ks_appends for RHEL7 (stl@redhat.com)
+
+* Fri Feb 17 2012 Bill Peck <bpeck@redhat.com> 0.8.0-25.1
+- bump release after pulling in do_POST commit 
+
+* Fri Feb 17 2012 Bill Peck <bpeck@redhat.com> 0.8.0-25
+- Support for RHEL7 (bpeck@redhat.com)
+
+* Fri Feb 17 2012 Bill Peck <bpeck@redhat.com> 0.8.0-24.1
+- replacement for the real do_POST, to work around RHBZ#789790.
+  (bpeck@redhat.com)
+
 * Tue Feb 07 2012 Bill Peck <bpeck@redhat.com> 0.8.0-24
 - 786352 Limit number of concurrent power commands (stl@redhat.com)
 - avoid creating subprofiles in Cobbler (dcallagh@redhat.com)
+
+* Tue Jan 24 2012 Dan Callaghan <dcallagh@redhat.com> 0.8.1-1
+- 541295 Ability to delete system notes (rmancy@redhat.com)
+- 741860 Fix system search over multiple Key/Value search values
+  (rmancy@redhat.com)
+- 747328 Stop people from taking machines by surreptitious means
+  (rmancy@redhat.com)
+- 747767 fix 'None' values and missing rows in CSV install options export
+  (dcallagh@redhat.com)
+- 749441 set MySQL connection character set to utf8 (dcallagh@redhat.com)
+- 749441 limit MAC address field to 18 chars (dcallagh@redhat.com)
+- 736199 use testinfo.py from rhts (dcallagh@redhat.com)
+- 735913 use .textContent instead of $().text() in local_datetime.js
+  (dcallagh@redhat.com)
+- 743065 Reserve workflow now only shows distros that are attached to lab
+  controllers (rmancy@redhat.com)
+- 747086 Fixed 500 ISE when renaming systems not attached to an LC
+  (rmancy@redhat.com)
+- 751330 use joinedloads to avoid N^4 queries when rendering job results
+  (dcallagh@redhat.com)
+- 754872 beaker-repo-update: use repo url as repo id (dcallagh@redhat.com)
+- test for bug 741170: cannot submit jobs with xmlns (dcallagh@redhat.com)
+- 541280 Add password field to user profile for root password on provisioned
+  system (stl@redhat.com)
+- 743666 Add a callback to power commands (stl@redhat.com)
+- 743665 Check the strength of a user's root password if possible
+  (stl@redhat.com)
+- 645635 test that CSV export obeys system privacy (dcallagh@redhat.com)
+- 770109 fix typo in search bar template ('operations' -> 'operation')
+  (dcallagh@redhat.com)
+- 747614 Remove and disable readahead collector (mcsontos@redhat.com)
+- 765717 RFE make yum quiet when it pulls repos in %post for the first time
+  (bpeck@redhat.com)
+- 772538 Do not immediately abort power commands if communication with Cobbler
+  fails (stl@redhat.com)
+- 773049 Don't allow job matrix to show deleted jobs (rmancy@redhat.com)
+- 781568 Remove distro mapping when a lab controller is removed
+  (stl@redhat.com)
+- 769286 Fix distro search page to show correct count with sqla 0.6.8
+  (rmancy@redhat.com)
+- 771215 Matrix whiteboard now correctly shows tasks when clicking on results
+  (rmancy@redhat.com)
+- 771993 Fix the way that systemgroup admins are handled to work with sqla 0.6
+  (rmancy@redhat.com)
+- use ORM features for broken system detection (dcallagh@redhat.com)
+- reduce recipe.log_server to VARCHAR(255) (dcallagh@redhat.com)
+- fix use of tmpnam in unit tests (dcallagh@redhat.com)
+- clean up shipped logging configuration (dcallagh@redhat.com)
+- if HARNESSREPO is passed then pull in a newer harness (bpeck@redhat.com)
+- clean up lab controller logging (dcallagh@redhat.com)
+- integration tests now require python-requests (dcallagh@redhat.com)
+- clean up and simplify query on watchdogs page (dcallagh@redhat.com)
+- Consolidate the two inventory scripts (stl@redhat.com)
+- TaskStatus.max can benefit from caching (dcallagh@redhat.com)
+- add index to job.deleted and job.to_delete columns (dcallagh@redhat.com)
 
 * Wed Dec 21 2011 Bill Peck <bpeck@redhat.com> 0.8.0-23
 - anaconda doesn't handle nfs:// repos that are relative. (bpeck@redhat.com)
@@ -1278,7 +1387,7 @@ fi
 - can catch multiple exception classes, instead of repeating the except clause
   (dcallagh@redhat.com)
 - some additions to .gitignore (dcallagh@redhat.com)
-- use %(package_dir)s for static locations, so that we can run from a working
+- use %%(package_dir)s for static locations, so that we can run from a working
   copy or a system-wide install (dcallagh@redhat.com)
 - change selenium install location to /usr/local/share/selenium
   (dcallagh@redhat.com)
@@ -1481,7 +1590,7 @@ fi
 
 * Wed Aug 04 2010 Bill Peck <bpeck@redhat.com> 0.5.52-2
 - bump minor release (bpeck@redhat.com)
-- revert --default option on %packages.  Seems to ignore all remaining
+- revert --default option on %%packages.  Seems to ignore all remaining
   packages. (bpeck@redhat.com)
 
 * Tue Aug 03 2010 Bill Peck <bpeck@redhat.com> 0.5.52-1
@@ -1495,7 +1604,7 @@ fi
   can still pass in an  xml node too. (bpeck@redhat.com)
 - bz595642 - RecipeSets can now be cloned instead of Recipes. Also using
   RecipeSetWidget now (rmancy@redhat.com)
-- bz610259 - add the ability to provide %post...%end to kickstartd from job xml
+- bz610259 - add the ability to provide %%post...%%end to kickstartd from job xml
   (bpeck@redhat.com)
 - add whiteboard handlers (bpeck@redhat.com)
 - Add missing #slurp to bootloader line. (bpeck@redhat.com)
@@ -1618,8 +1727,8 @@ fi
 
 * Tue Jun 29 2010 Bill Peck <bpeck@redhat.com> - 0.5.46-0
 - bz608621 added sane defaults to bkr distro-list (limit 10)
-- use %packages --default for RHEL6 kickstart
-- bz607558 - relax check for %packages, before we stopped if we saw %post or %pre.
+- use %%packages --default for RHEL6 kickstart
+- bz607558 - relax check for %%packages, before we stopped if we saw %%post or %%pre.
 
 * Wed Jun 22 2010 Bill Peck <bpeck@redhat.com> - 0.5.45-1
 - fix string compare
@@ -1898,7 +2007,7 @@ fi
 - Fix for rt#58689 when importing anything but an nfs distro we get the location 
   of the repos wrong.
 - Fix bz#555551 - missing location for search and custom columns
-- Fix bz#559656 - unable to handle commented %packages in kickstart
+- Fix bz#559656 - unable to handle commented %%packages in kickstart
 - Merged AccountClosure code.
 * Tue Jan 26 2010 Bill Peck <bpeck@redhat.com> - 0.4.80-0
 - added support for variants being read from .treeinfo

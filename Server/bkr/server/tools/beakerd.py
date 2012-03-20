@@ -30,11 +30,13 @@ from bkr.server.message_bus import ServerBeakerBus
 from turbogears.database import session
 from turbogears import config
 from turbomail.control import interface
+from xmlrpclib import ProtocolError
 
 from os.path import dirname, exists, join
 from os import getcwd
 import bkr.server.scheduler
 from bkr.server.scheduler import add_onetime_task
+import socket
 from socket import gethostname
 import exceptions
 from datetime import datetime, timedelta
@@ -483,15 +485,18 @@ def scheduled_recipes(*args):
                                                        ":".join([p.package for p in recipe.packages]))
                 customrepos= "|".join(["%s,%s" % (r.name, r.url) for r in recipe.repos])
                 ks_meta = "%s customrepos=%s harnessrepo=%s taskrepo=%s" % (ks_meta, customrepos, harnessrepo, taskrepo)
+                user = recipe.recipeset.job.owner
+                if user.root_password:
+                    ks_meta = "password=%s %s" % (user.root_password, ks_meta)
                 # If ks_meta is defined from recipe pass it along.
                 # add it last to allow for overriding previous settings.
                 if recipe.ks_meta:
                     ks_meta = "%s %s" % (ks_meta, recipe.ks_meta)
                 if recipe.partitionsKSMeta:
                     ks_meta = "%s partitions=%s" % (ks_meta, recipe.partitionsKSMeta)
-                user = recipe.recipeset.job.owner
                 if user.sshpubkeys:
-                    end = recipe.distro and recipe.distro.osversion.osmajor.osmajor.startswith("Fedora")
+                    end = recipe.distro and (recipe.distro.osversion.osmajor.osmajor.startswith("Fedora") or \
+                                             recipe.distro.osversion.osmajor.osmajor.startswith("RedHatEnterpriseLinux7"))
                     key_ks = [user.ssh_keys_ks(end)]
                 else:
                     key_ks = []
@@ -570,6 +575,12 @@ def running_commands(*args):
                         cmd.status = CommandStatus.by_name(u'Aborted')
                         cmd.new_value = u'Timeout of %d seconds exceeded' % COMMAND_TIMEOUT
                         cmd.log_to_system_history()
+            except ProtocolError, err:
+                log.warning('Error (%d) querying power command (%d) for %s, will retry: %s' %
+                            (err.errcode, cmd.id, cmd.system, err.errmsg))
+            except socket.error, err:
+                log.warning('Socket error (%d) querying power command (%d) for %s, will retry: %s' %
+                            (err.errno, cmd.id, cmd.system, err.strerror))
             except Exception, msg:
                 log.error('Cobbler power exception processing command %d for machine %s: %s' %
                           (cmd.id, cmd.system, msg))
@@ -634,6 +645,12 @@ def queued_commands(*args):
                     cmd.task_id = cmd.system.remote.power(cmd.action)
                     cmd.updated = datetime.utcnow()
                     cmd.status = CommandStatus.by_name(u'Running')
+                except ProtocolError, err:
+                    log.warning('Error (%d) submitting power command (%d) for %s, will retry: %s' %
+                                (err.errcode, cmd.id, cmd.system, err.errmsg))
+                except socket.error, err:
+                    log.warning('Socket error (%d) submitting power command (%d) for %s, will retry: %s' %
+                                (err.errno, cmd.id, cmd.system, err.strerror))
                 except Exception, msg:
                     log.error('Cobbler power exception submitting \'%s\' command (%d) for machine %s: %s' %
                               (cmd.action, cmd.id, cmd.system, msg))

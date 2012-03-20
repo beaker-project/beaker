@@ -40,6 +40,10 @@ import shutil
 import urllib
 import urlparse
 import posixpath
+import crypt
+import random
+import string
+import cracklib
 
 from turbogears import identity
 
@@ -498,6 +502,8 @@ users_table = Table('tg_user', metadata,
     Column('email_address', Unicode(255), unique=True),
     Column('display_name', Unicode(255)),
     Column('password', Unicode(40)),
+    Column('root_password', String(255), nullable=True, default=None),
+    Column('rootpw_changed', DateTime, nullable=True, default=None),
     Column('created', DateTime, default=datetime.utcnow),
     Column('disabled', Boolean, nullable=False, default=False),
     Column('removed', DateTime, nullable=True, default=None),
@@ -645,6 +651,7 @@ command_queue_table = Table('command_queue', metadata,
            ForeignKey('command_status.id'), nullable=False),
     Column('task_id', String(255)),
     Column('updated', DateTime, default=datetime.utcnow),
+    Column('callback', String(255)),
     mysql_engine='InnoDB',
 )
 
@@ -657,6 +664,7 @@ note_table = Table('note', metadata,
     Column('user_id', Integer, ForeignKey('tg_user.user_id'), index=True),
     Column('created', DateTime, nullable=False, default=datetime.utcnow),
     Column('text',TEXT, nullable=False),
+    Column('deleted', DateTime, nullable=True, default=None),
     mysql_engine='InnoDB',
 )
 
@@ -721,8 +729,8 @@ job_table = Table('job',metadata,
                 ForeignKey('task_result.id')),
         Column('status_id', Integer,
                 ForeignKey('task_status.id'), default=select([task_status_table.c.id], limit=1).where(task_status_table.c.status==u'New').correlate(None)),
-        Column('deleted', DateTime, default=None),
-        Column('to_delete', DateTime, default=None),
+        Column('deleted', DateTime, default=None, index=True),
+        Column('to_delete', DateTime, default=None, index=True),
         # Total tasks
 	Column('ttasks', Integer, default=0),
         # Total Passing tasks
@@ -867,7 +875,7 @@ recipe_table = Table('recipe',metadata,
         Column('panic', Unicode(20)),
         Column('_partitions',UnicodeText()),
         Column('autopick_random', Boolean, default=False),
-	    Column('log_server', Unicode(256), index=True),
+        Column('log_server', Unicode(255), index=True),
         Column('reservation_id', Integer, ForeignKey('reservation.id'), default=None),
         mysql_engine='InnoDB',
 )
@@ -1282,6 +1290,25 @@ class User(MappedObject):
 
     password = property(_get_password, _set_password)
 
+    def _set_root_password(self, password):
+        "Set the password to be used for root on provisioned systems, hashing if necessary"
+        if password:
+            if len(password.split('$')) != 4:
+                salt = ''.join([random.choice(string.digits + string.ascii_letters)
+                                for i in range(8)])
+                self._root_password = crypt.crypt(cracklib.VeryFascistCheck(password), "$1$%s$" % salt)
+            else:
+                self._root_password = password
+            self.rootpw_changed = datetime.utcnow()
+        else:
+            self._root_password = None
+            self.rootpw_changed = None
+
+    def _get_root_password(self):
+        return self._root_password
+
+    root_password = property(_get_root_password, _set_root_password)
+
     def __repr__(self):
         return self.user_name
 
@@ -1390,12 +1417,6 @@ class SystemObject(MappedObject):
         return cls.mapper.c.keys()
     get_fields = classmethod(get_fields)
 
-class SystemAdmin(MappedObject):
-    # XXX We should get rid of this class all together
-    # and just query on System.admins or Group.admin_systems
-    # Needs to be fixed in Group.can_admin_system()
-    pass
-
 class Group(MappedObject):
     """
     An ultra-simple group definition.
@@ -1413,9 +1434,17 @@ class Group(MappedObject):
             log.debug('can_admin_system called with no system_id')
             return False
         try:
-            self.query.join(['admin_systems']).filter(and_(SystemAdmin.system_id == system_id,SystemAdmin.group_id == self.group_id)).one()
-            return True 
-        except InvalidRequestError,e: 
+            user = identity.current.user
+        except AttributeError:
+            user = None
+        try:
+            system = System.by_id(system_id, user)
+        except NoResultFound:
+            log.debug('Unable to see system id %s' % system_id)
+            return False
+        if system in self.admin_systems:
+            return True
+        else:
             return False
 
     def __repr__(self):
@@ -2339,7 +2368,8 @@ url --url=$tree
             return False
 
         if identity.current.user.sshpubkeys:
-            end = distro and distro.osversion.osmajor.osmajor.startswith("Fedora")
+            end = distro and (distro.osversion.osmajor.osmajor.startswith("Fedora") or \
+                              distro.osversion.osmajor.osmajor.startswith("RedHatEnterpriseLinux7"))
             if not ks_appends:
                 ks_appends = []
             ks_appends = ks_appends + [identity.current.user.ssh_keys_ks(end)]
@@ -2369,7 +2399,8 @@ url --url=$tree
 
         if kickstart:
             # Newer Kickstarts need %end after each section.
-            if distro.osversion.osmajor.osmajor.startswith("Fedora"):
+            if distro.osversion.osmajor.osmajor.startswith("Fedora") or \
+               distro.osversion.osmajor.osmajor.startswith("RedHatEnterpriseLinux7"):
                 end = "%end"
             else:
                 end = ""
@@ -2417,9 +2448,10 @@ $SNIPPET("rhts_post")
                               ks_appends=ks_appends,
                               **results)
         if self.power:
-            self.action_power(service=u'Scheduler', action=u'reboot')
+            self.action_power(service=u'Scheduler', action=u'reboot',
+                              callback="bkr.server.model.auto_power_cmd_handler")
 
-    def action_power(self, action=u'reboot', service=u'Scheduler'):
+    def action_power(self, action=u'reboot', service=u'Scheduler', callback=None):
         try:
             user = identity.current.user
         except:
@@ -2427,7 +2459,7 @@ $SNIPPET("rhts_post")
 
         if self.lab_controller and self.power:
             status = CommandStatus.by_name(u'Queued')
-            activity = CommandActivity(user, service, action, status)
+            activity = CommandActivity(user, service, action, status, callback)
             self.command_queue.append(activity)
         else:
             return False
@@ -2476,30 +2508,25 @@ $SNIPPET("rhts_post")
         # uninterrupted run of aborted recipes leading up to this one, with 
         # at least two different STABLE distros?
         # XXX this query is stupidly big, I need to do something about it
-        status_change_subquery = select([func.max(activity_table.c.created)],
-            from_obj=activity_table.join(system_activity_table))\
-            .where(and_(
-                system_activity_table.c.system_id == self.id,
-                activity_table.c.field_name == u'Status',
-                activity_table.c.action == u'Changed'))
-        system_added_subquery = select([system_table.c.date_added])\
-            .where(system_table.c.id == self.id)
-        nonaborted_recipe_subquery = select([func.max(recipe_table.c.finish_time)],
-            from_obj=recipe_table.join(system_table))\
-            .where(and_(
-                recipe_table.c.status_id != TaskStatus.by_name(u'Aborted').id,
-                recipe_table.c.system_id == self.id))
-        query = select([func.count(recipe_table.c.distro_id.distinct())],
-            from_obj=recipe_table.join(distro_table).join(distro_tag_map)
-                .join(system_table, onclause=recipe_table.c.system_id == system_table.c.id))\
-            .where(and_(
-                system_table.c.id == self.id,
-                distro_tag_map.c.distro_tag_id ==
-                    DistroTag.by_tag(reliable_distro_tag.decode('utf8')).id,
-                recipe_table.c.start_time >
-                    func.ifnull(status_change_subquery.as_scalar(), system_added_subquery.as_scalar()),
-                recipe_table.c.finish_time > nonaborted_recipe_subquery.as_scalar()))
-        if session.execute(query).scalar() >= 2:
+        status_change_subquery = session.query(func.max(SystemActivity.created))\
+            .filter(and_(
+                SystemActivity.system_id == self.id,
+                SystemActivity.field_name == u'Status',
+                SystemActivity.action == u'Changed'))\
+            .subquery()
+        nonaborted_recipe_subquery = session.query(func.max(Recipe.finish_time))\
+            .filter(and_(
+                Recipe.status != TaskStatus.by_name(u'Aborted'),
+                Recipe.system == self))\
+            .subquery()
+        count = self.dyn_recipes.join(Recipe.distro)\
+            .filter(and_(
+                Distro.tags.contains(reliable_distro_tag.decode('utf8')),
+                Recipe.start_time >
+                    func.ifnull(status_change_subquery.as_scalar(), self.date_added),
+                Recipe.finish_time > nonaborted_recipe_subquery.as_scalar()))\
+            .value(func.count(Distro.id.distinct()))
+        if count >= 2:
             # Broken!
             reason = unicode(_(u'System has a run of aborted recipes ' 
                     'with reliable distros'))
@@ -2950,7 +2977,7 @@ class Watchdog(MappedObject):
                 )
 
         if op and fop:
-            return cls.query.join('system').join(['recipe','recipeset']).filter(my_filter)
+            return cls.query.join(Watchdog.system).join(Watchdog.recipe, Recipe.recipeset).filter(my_filter)
                                                                                  
 
 class LabInfo(SystemObject):
@@ -3121,11 +3148,11 @@ def _create_tag(tag):
     return tag
 
 
-class Distro(MappedObject): 
+class Distro(MappedObject):
     # EXCLUDE_OVER_MULTIPLE_ARCHES holds text that we do not want in a multi arch install. We have PAE here,
-    # because  a PAE and non PAE i386 distro is indutinguishable from another, so it will return a PAE distro, if we are searching on
-    # i386 and say x86_64, even though clearly, it's not applicable to the later. This only applies to multiple arches 
-    _EXCLUDE_OVER_MULTIPLE_ARCHES = 'PAE'
+    # because  a PAE and non PAE i386 distro are indistinguishable from one another, so it will return a PAE distro, if we are searching on
+    # i386 and say x86_64, even though clearly, it's not applicable to the later. This only applies to multiple arches
+    EXCLUDE_OVER_MULTIPLE_ARCHES = 'PAE'
 
     def __init__(self, install_name=None):
         super(Distro, self).__init__()
@@ -3206,117 +3233,33 @@ class Distro(MappedObject):
                         )
                     )
         )
-    @classmethod
-    def _create_arch_distro_map(cls,*args,**kw):
-        """
-        multiple_distro_systems() will return a list of distro's that are applicable for a certain criteria.
-        The criteria can be
-        *arch
-        *osmajor
-        """
-        arch = kw.get('arch')
-        osmajor = kw.get('osmajor')
-        tag = kw.get('tag')
 
+    @classmethod
+    def distros_for_provision(self, arch=None, osmajor=None, tag=None, *args,**kw):
         if arch is None and osmajor is None:
-            log.error('Nothing has been passed into mulitple_distro_systems')
+            log.error('Need at least osmajor or arch to determine which distro to return')
             return
-         
-        if isinstance(arch,list):
-            local_arches = arch 
-        elif isinstance(arch,str):
-            local_arches = [arch]
-        
-        cache_locator = []
-        my_from = distro_table
-        my_and = [not_(distro_table.c.install_name.like('%%%s%%' % Distro._EXCLUDE_OVER_MULTIPLE_ARCHES))]
+        query = Distro.query.filter(Distro.lab_controller_assocs.any()).order_by(Distro.date_created.desc())
         if arch:
-            my_from = my_from.join(arch_table)
-        if osmajor:
-            my_from = my_from.join(osversion_table). \
-                                join(osmajor_table) 
-            my_and.append(osmajor_table.c.osmajor == osmajor)
-        if tag: 
-            my_from = my_from.join(distro_tag_map).join(distro_tag_table)
-            my_and.append(distro_tag_table.c.tag == tag) 
-        for var in (osmajor,tag) + tuple(sorted(local_arches)):
-            if var:
-                cache_locator.append(var)
-
-        #FIXME: It was probably silly of me to be creating class vars on the fly and caching values in them
-        # I should really create a more throughly thought out caching system
-        cache_location = "_".join(cache_locator)
-        the_cache = getattr(Distro,cache_location,None)
-        if the_cache: #phew, we don't have to do that big ugly slow query 
-            log.debug('Returning our cached items for %s' % cache_location)
-            return the_cache
-        current_derived = None
-        future_arch_cache = {}
-        for local_arch in local_arches:
-            my_derived = select([distro_table.c.name,distro_table.c.install_name,distro_table.c.id.label('distro_id'),distro_table.c.date_created],
-                                whereclause= and_(*my_and + [arch_table.c.arch == local_arch] ),
-                                from_obj=my_from).alias(local_arch)
-            
-            if current_derived is None:
-                current_derived = my_derived
-                first_derived = my_derived
-                s = select([my_derived.c.distro_id,my_derived.c.install_name,my_derived.c.date_created],from_obj=my_derived) 
+            if isinstance(arch,list):
+                arches = arch
+            elif isinstance(arch,(str,unicode)):
+                arches = [arch]
+            query = query.join(Distro.arch)
+            if len(arches) > 1:
+                # For multiple arches. Excludes some distros based on install name
+                query = query.filter(and_(~Distro.install_name. \
+                    like('%%%s%%' % Distro.EXCLUDE_OVER_MULTIPLE_ARCHES), Arch.arch.in_(arches))).\
+                    group_by(Distro.name,Distro.variant).having(func.count(Arch.arch)==len(arches))
             else:
-                try:
-                    current_derived = current_derived.join(my_derived,current_derived.c.name == my_derived.c.name)
-                except AttributeError:
-                    current_derived = current_derived.join(my_derived,first_derived.c.name == my_derived.c.name)
-            future_arch_cache[local_arch] = {} 
-     
-        s = current_derived.select(use_labels=True)     
-        result = s.execute() 
-        #The following dict should look something like this (for example only)
-        #
-        #{ 'i386' => { 'RHEL5.5-Server-20100318.nightly_nfs' : [125,date_create],
-        #              'RHEL5.5-Server-20100315.nightly_nfs' : [128,date_create] },
-        #  'x86_64' => { 'RHEL5.5-Server-20100318.nightly_nfs' : 126,
-        #                'RHEL5.5-Server-20100315.nightly_nfs' : 127},
-        #}
-        #        
-        for res in result:
-            for arch in local_arches:
-                cacheable_distro_install_name = res[current_derived.c['%s_install_name' % arch]]
-                if not  future_arch_cache[arch].get(cacheable_distro_install_name):#below we remove the arch from the end of the distro isntall_name, it's redundant
-                    future_arch_cache[arch][re.sub(r'^(.+)\-(.+?)$',r'\1',cacheable_distro_install_name)]  \
-                        =  [res[current_derived.c['%s_distro_id' % arch]],res[current_derived.c['%s_date_created' % arch]]]
-                else:
-                    continue
+                query = query.filter(Arch.arch == arches.pop())
+        if osmajor:
+            query = query.join(Distro.osversion, OSVersion.osmajor).filter(OSMajor.osmajor==osmajor)
+        if tag:
+            query = query.join(Distro._tags).filter(DistroTag.tag==tag)
+        return query.all()
 
-        if future_arch_cache:
-            setattr(Distro,cache_location,future_arch_cache)
-        return getattr(Distro,cache_location,None)
-
-    @classmethod
-    def multiple_systems_distro(self,*args,**kw):
-        _date_created_index = 1
-        _install_name_index = 0
-        arch_distro_map = self._create_arch_distro_map(**kw)
-        
-        try: 
-            arch_results = [[]] * len(arch_distro_map.keys()) #creates our initial 2D array
-        except AttributeError: #hmm, perhaps we don't have an arch_distros_map
-            log.debug('We have no entries for mutiple system distros')
-            return []
-       
-        for index,(arch,distro_ref) in enumerate(arch_distro_map.iteritems()): 
-            #sort it
-            arch_results[index] = sorted(distro_ref.keys(), 
-                                        lambda a,b: distro_ref[a][_date_created_index] > distro_ref[b][_date_created_index] and -1 or 1 ) 
-            if index > 0:
-                if arch_results[index-1] != arch_results[index]: #just a sanity check
-                    log.error('Not all arches have the same distros')
-        try:
-            results_to_return = arch_results.pop()
-            return results_to_return
-        except IndexError,e:
-            return []
-
-    def systems(self, user=None): 
+    def systems(self, user=None):
         """
         List of systems that support this distro
         Limit to only lab controllers which have the distro.
@@ -3443,9 +3386,10 @@ class DistroActivity(Activity):
         return "Distro: %s" % self.object.install_name
 
 class CommandActivity(Activity):
-    def __init__(self, user, service, action, status):
+    def __init__(self, user, service, action, status, callback=None):
         Activity.__init__(self, user, service, action, 'Command', '', '')
         self.status = status
+        self.callback = callback
 
     def object_name(self):
         return "Command: %s %s" % (self.object.fqdn, self.action)
@@ -3559,6 +3503,7 @@ class TaskPriority(MappedObject):
 class TaskStatus(MappedObject):
 
     @classmethod
+    @sqla_cache
     def max(cls):
         return cls.query.order_by(TaskStatus.severity.desc()).first()
 
@@ -3958,12 +3903,47 @@ class Job(TaskBase):
         return query.join('product').filter(product_query)
 
     @classmethod
-    def by_whiteboard(cls,desc):
+    def sanitise_job_ids(cls, job_ids):
+        """
+            sanitise_job_ids takes a list of job ids and returns the list
+            sans ids that are not 'valid' (i.e deleted jobs)
+        """
+        invalid_job_ids = [j.id for j in cls.marked_for_deletion()]
+        valid_job_ids = []
+        for job_id in job_ids:
+            if job_id not in invalid_job_ids:
+                valid_job_ids.append(job_id)
+        return valid_job_ids
+
+    @classmethod
+    def sanitise_jobs(cls, query):
+        """
+            This method will remove any jobs from a query that are
+            deemed to not be a 'valid' job
+        """
+        query = query.filter(and_(cls.to_delete==None, cls.deleted==None))
+        return query
+
+    @classmethod
+    def by_whiteboard(cls, desc, like=False, only_valid=False):
+        if type(desc) is list and len(desc) <= 1:
+            desc = desc.pop()
         if type(desc) is list:
-            res = Job.query.filter(Job.whiteboard.in_(desc))
+            if like:
+                if len(desc) > 1:
+                    raise ValueError('Cannot perform a like operation with multiple values')
+                else:
+                    query = Job.query.filter(Job.whiteboard.like('%%%s%%' % desc.pop()))
+            else:
+                query = Job.query.filter(Job.whiteboard.in_(desc))
         else:
-            res = Job.query.filter_by(whiteboard=desc)
-        return res.limit(cls.max_by_whiteboard)
+            if like:
+                query = Job.query.filter(Job.whiteboard.like('%%%s%%' % desc))
+            else:
+                query = Job.query.filter_by(whiteboard=desc)
+        if only_valid:
+            query = cls.sanitise_jobs(query)
+        return query
 
     @classmethod
     def provision_system_job(cls, distro_id, **kw):
@@ -4283,6 +4263,10 @@ class Job(TaskBase):
     def t_id(self):
         return "J:%s" % self.id
     t_id = property(t_id)
+
+    @property
+    def link(self):
+        return make_link(url='/jobs/%s' % self.id, text=self.t_id)
 
     def can_admin(self, user=None):
         """Returns True iff the given user can administer this Job."""
@@ -4706,7 +4690,7 @@ class Recipe(TaskBase):
 
     @property
     def servername(self):
-        return get('servername', socket.gethostname())
+        return get('tg.url_domain', get('servername', socket.getfqdn()))
 
     @property
     def harnesspath(self):
@@ -6212,6 +6196,19 @@ class SSHPubKey(MappedObject):
     def by_id(cls, id):
         return cls.query.filter_by(id=id).one()
 
+class CallbackAttributeExtension(AttributeExtension):
+    def set(self, state, value, oldvalue, initiator):
+        instance = state.obj()
+        if instance.callback:
+            try:
+                modname, _dot, funcname = instance.callback.rpartition(".")
+                module = import_module(modname)
+                cb = getattr(module, funcname)
+                cb(instance, value)
+            except Exception, e:
+                log.error("command callback failed: %s" % e)
+        return value
+
 
 # set up mappers between identity tables and classes
 SystemType.mapper = mapper(SystemType, system_type_table)
@@ -6250,7 +6247,7 @@ System.mapper = mapper(System, system_table,
                      'user':relation(User, uselist=False,
                           primaryjoin=system_table.c.user_id==users_table.c.user_id,foreign_keys=system_table.c.user_id),
                      'owner':relation(User, uselist=False,
-                          primaryjoin=system_table.c.owner_id==users_table.c.user_id,foreign_keys=system_table.c.owner_id), 
+                          primaryjoin=system_table.c.owner_id==users_table.c.user_id,foreign_keys=system_table.c.owner_id),
                      'lab_controller':relation(LabController, uselist=False,
                                                backref='systems'),
                      'notes':relation(Note,
@@ -6286,6 +6283,7 @@ System.mapper = mapper(System, system_table,
                                   system_status_duration_table.c.id.desc()]),
                      'dyn_status_durations': dynamic_loader(SystemStatusDuration),
                      'hypervisor':relation(Hypervisor, uselist=False),
+                     'dyn_recipes': dynamic_loader(Recipe),
                      })
 
 mapper(SystemCc, system_cc_table)
@@ -6298,7 +6296,6 @@ Cpu.mapper = mapper(Cpu, cpu_table, properties={
     'system': relation(System),
 })
 mapper(Arch, arch_table)
-mapper(SystemAdmin, system_admin_map_table, primary_key=[system_admin_map_table.c.system_id, system_admin_map_table.c.group_id])
 mapper(Provision, provision_table,
        properties = {'provision_families':relation(ProvisionFamily,
             collection_class=attribute_mapped_collection('osmajor'),
@@ -6388,6 +6385,7 @@ mapper(VisitIdentity, visit_identity_table, properties={
 mapper(User, users_table,
         properties={
       '_password' : users_table.c.password,
+      '_root_password' : users_table.c.root_password,
       'lab_controller' : relation(LabController, uselist=False),
 })
 
@@ -6429,7 +6427,7 @@ mapper(DistroActivity, distro_activity_table, inherits=Activity,
 
 mapper(CommandActivity, command_queue_table, inherits=Activity,
        polymorphic_identity=u'command_activity',
-       properties={'status':relation(CommandStatus),
+       properties={'status':relation(CommandStatus, extension=CallbackAttributeExtension()),
                    'system':relation(System, uselist=False),
                   })
 
@@ -6630,3 +6628,14 @@ def system_types():
         _system_types = SystemType.query.all()
     for system_type in _system_types:
         yield system_type
+
+# available in python 2.7+ importlib
+def import_module(modname):
+     __import__(modname)
+     return sys.modules[modname]
+
+def auto_power_cmd_handler(command, new_status):
+    if (new_status == CommandStatus.by_name(u'Failed') or \
+        new_status == CommandStatus.by_name(u'Aborted')) \
+       and command.system.open_reservation:
+        command.system.open_reservation.recipe.abort("Power command failed")

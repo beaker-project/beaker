@@ -28,9 +28,10 @@ from bkr.server.widgets import SearchBar
 from bkr.server.widgets import TaskActionWidget
 from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.helpers import make_link
-from bkr.server import testinfo
-from bkr.server.testinfo import ParserError, ParserWarning
+from rhts import testinfo
+from rhts.testinfo import ParserError, ParserWarning
 from sqlalchemy import exceptions
+from sqlalchemy.orm import joinedload, joinedload_all
 from subprocess import *
 
 import rpm
@@ -246,9 +247,13 @@ class Tasks(RPCRoot):
         return self._do_search(hidden=hidden, **kw)
 
     def _do_search(self, hidden={}, **kw):
-        tasks = RecipeTask.query.join(['recipe', 'recipeset','job']).filter(and_(Job.to_delete==None, Job.deleted==None))
+        tasks = RecipeTask.query\
+                .join(RecipeTask.recipe, Recipe.recipeset, RecipeSet.job)\
+                .filter(and_(Job.to_delete == None, Job.deleted == None))\
+                .options(joinedload(RecipeTask.task), joinedload(RecipeTask.logs),
+                    joinedload_all(RecipeTask.results, RecipeTaskResult.logs))
         if 'recipe_id' in kw: #most likely we are coming here from a LinkRemoteFunction in recipe_widgets
-            tasks = tasks.join(['recipe']).filter(Recipe.id == kw['recipe_id'])
+            tasks = tasks.filter(Recipe.id == kw['recipe_id'])
 
             hidden = dict(distro = 1,
                           osmajor = 1,
@@ -280,8 +285,10 @@ class Tasks(RPCRoot):
             except InvalidRequestError:
                 return "<div>Invalid data:<br>%r</br></div>" % kw
         if kw.get('job_id'):
-            tasks = tasks.join(['recipe','recipeset','job']).filter(Job.id.in_(kw.get('job_id')))
-            # build
+            job_id = kw.get('job_id')
+            if not isinstance(job_id, list):
+                job_id = [job_id]
+            tasks = tasks.join(['recipe','recipeset','job']).filter(Job.id.in_(job_id))
         if kw.get('system'):
             tasks = tasks.join(['recipe','system']).filter(System.fqdn.like('%%%s%%' % kw.get('system')))
         if kw.get('task'):

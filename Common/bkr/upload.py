@@ -73,7 +73,7 @@ class Uploader:
             if e.errno == errno.ENOENT and offset == 0:
                 pass
             else:
-                logger.warn('ENOENT and offset != 0 for %s' % fn)
+                logger.warn('attempted to append to nonexistent file: %s' % fn)
                 raise
         else:
             if not stat.S_ISREG(st.st_mode):

@@ -21,3 +21,4 @@ IntegrationTests/build
 IntegrationTests/setup.py
 *.diff
 selenium.log
+/Tasks/distribution/beaker/dogfood/selenium-server-standalone-2.12.0.jar

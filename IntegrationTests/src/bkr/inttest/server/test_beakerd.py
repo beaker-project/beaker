@@ -12,46 +12,10 @@ from bkr.server.tools import beakerd
 class TestBeakerd(unittest.TestCase):
 
     def setUp(self):
-        data_setup.create_test_env('min')
         self.stub_cobbler_thread = stub_cobbler.StubCobblerThread()
         self.stub_cobbler_thread.start()
-
-        # create users
-        self.user_1 = data_setup.create_user()
-        self.user_2 = data_setup.create_user()
-        self.user_3 = data_setup.create_user()
-
-        # create admin users
-        self.admin_1 = data_setup.create_user()
-        self.admin_1.groups.append(Group.by_name(u'admin'))
-        self.admin_2 = data_setup.create_user()
-        self.admin_2.groups.append(Group.by_name(u'admin'))
-
-        # create systems
-        self.system_1 = data_setup.create_system(shared=True)
-        self.system_2 = data_setup.create_system(shared=True)
-        self.system_3 = data_setup.create_system(shared=False,
-                                                 owner=self.user_3)
-        self.system_4 = data_setup.create_system(shared=False,
-                                                 owner=self.user_3)
-
-        # create group and add users/systems to it
-        self.group_1 = data_setup.create_group()
-        self.user_3.groups.append(self.group_1)
-        self.admin_2.groups.append(self.group_1)
-        self.system_2.groups.append(self.group_1)
-
-        # loan system_4 to user_1
-        self.system_4.loaned = self.user_1
-
         self.lab_controller = data_setup.create_labcontroller(
                 fqdn=u'localhost:%d' % self.stub_cobbler_thread.port)
-        self.system_1.lab_controller = self.lab_controller
-        self.system_2.lab_controller = self.lab_controller
-        self.system_3.lab_controller = self.lab_controller
-        self.system_4.lab_controller = self.lab_controller
-
-        session.flush()
 
     def tearDown(self):
         self.stub_cobbler_thread.stop()
@@ -66,6 +30,8 @@ class TestBeakerd(unittest.TestCase):
         TaskStatus.by_name(u'Queued')
 
     def test_cache_new_to_queued(self):
+        data_setup.create_system(lab_controller=self.lab_controller,
+                shared=True)
         jobs = list()
         distro = data_setup.create_distro()
         for i in range(30):
@@ -97,7 +63,6 @@ class TestBeakerd(unittest.TestCase):
         self.assertTrue(thread_processed_recipe.success)
         session.expunge_all()
         self._check_job_status(jobs, u'Queued')
-
 
     def test_loaned_machine_can_be_scheduled(self):
         user = data_setup.create_user()
@@ -199,186 +164,150 @@ class TestBeakerd(unittest.TestCase):
         self.assert_(system2 in candidate_systems)
         self.assert_(system3 not in candidate_systems)
 
-    def test_nonshared_system_3_user_1(self):
+    def check_user_cannot_run_job_on_system(self, user, system):
+        """
+        Asserts that the given user is not allowed to run a job against the 
+        given system, i.e. that it aborts due to no matching systems.
+        """
         distro = data_setup.create_distro()
-        job = data_setup.create_job(owner=self.user_1, distro=distro)
+        job = data_setup.create_job(owner=user, distro=distro)
         job.recipesets[0].recipes[0]._host_requires = (
                 '<hostRequires><hostname op="=" value="%s"/></hostRequires>'
-                % self.system_3.fqdn)
+                % system.fqdn)
         session.flush()
         session.expunge_all()
         beakerd.new_recipes()
         job = Job.query.get(job.id)
         self.assertEqual(job.status, TaskStatus.by_name(u'Aborted'))
+        return job.id
 
-    def test_nonshared_system_3_user_3(self):
+    def check_user_can_run_job_on_system(self, user, system):
+        """
+        Asserts that the given user *is* allowed to run a job against the given 
+        system, i.e. that it does not abort due to no matching systems. Inverse 
+        of the method above.
+        """
         distro = data_setup.create_distro()
-        job = data_setup.create_job(owner=self.user_3, distro=distro)
+        job = data_setup.create_job(owner=user, distro=distro)
         job.recipesets[0].recipes[0]._host_requires = (
                 '<hostRequires><hostname op="=" value="%s"/></hostRequires>'
-                % self.system_3.fqdn)
+                % system.fqdn)
         session.flush()
         session.expunge_all()
         beakerd.new_recipes()
         job = Job.query.get(job.id)
         self.assertEqual(job.status, TaskStatus.by_name(u'Processed'))
+        return job.id
 
-    def test_nonshared_system_3_admin_1(self):
-        distro = data_setup.create_distro()
-        job = data_setup.create_job(owner=self.admin_1, distro=distro)
-        job.recipesets[0].recipes[0]._host_requires = (
-                '<hostRequires><hostname op="=" value="%s"/></hostRequires>'
-                % self.system_3.fqdn)
-        session.flush()
-        session.expunge_all()
-        beakerd.new_recipes()
-        job = Job.query.get(job.id)
-        self.assertEqual(job.status, TaskStatus.by_name(u'Aborted'))
+    def test_nonshared_system_not_owner(self):
+        user = data_setup.create_user()
+        system = data_setup.create_system(lab_controller=self.lab_controller,
+                shared=False, owner=data_setup.create_user())
+        self.check_user_cannot_run_job_on_system(user, system)
 
-    def test_shared_system_1_user_1(self):
-        distro = data_setup.create_distro()
-        job = data_setup.create_job(owner=self.user_1, distro=distro)
-        job.recipesets[0].recipes[0]._host_requires = (
-                '<hostRequires><hostname op="=" value="%s"/></hostRequires>'
-                % self.system_1.fqdn)
-        session.flush()
-        session.expunge_all()
-        beakerd.new_recipes()
-        job = Job.query.get(job.id)
-        self.assertEqual(job.status, TaskStatus.by_name(u'Processed'))
+    def test_nonshared_system_owner(self):
+        user = data_setup.create_user()
+        system = data_setup.create_system(lab_controller=self.lab_controller,
+                shared=False, owner=user)
+        self.check_user_can_run_job_on_system(user, system)
 
-    def test_shared_system_1_admin_1(self):
-        distro = data_setup.create_distro()
-        job = data_setup.create_job(owner=self.admin_1, distro=distro)
-        job.recipesets[0].recipes[0]._host_requires = (
-                '<hostRequires><hostname op="=" value="%s"/></hostRequires>'
-                % self.system_1.fqdn)
-        session.flush()
-        session.expunge_all()
-        beakerd.new_recipes()
-        job = Job.query.get(job.id)
-        self.assertEqual(job.status, TaskStatus.by_name(u'Processed'))
+    def test_nonshared_system_admin(self):
+        admin = data_setup.create_admin()
+        system = data_setup.create_system(lab_controller=self.lab_controller,
+                shared=False)
+        self.check_user_cannot_run_job_on_system(admin, system)
 
-    def test_shared_group_system_2_user_1(self):
-        distro = data_setup.create_distro()
-        job = data_setup.create_job(owner=self.user_1, distro=distro)
-        job.recipesets[0].recipes[0]._host_requires = (
-                '<hostRequires><hostname op="=" value="%s"/></hostRequires>'
-                % self.system_2.fqdn)
-        session.flush()
-        session.expunge_all()
-        beakerd.new_recipes()
-        job = Job.query.get(job.id)
-        self.assertEqual(job.status, TaskStatus.by_name(u'Aborted'))
+    def test_shared_system_not_owner(self):
+        user = data_setup.create_user()
+        system = data_setup.create_system(lab_controller=self.lab_controller,
+                shared=True)
+        self.check_user_can_run_job_on_system(user, system)
 
-    def test_shared_group_system_2_user_3(self):
-        distro = data_setup.create_distro()
-        job = data_setup.create_job(owner=self.user_3, distro=distro)
-        job.recipesets[0].recipes[0]._host_requires = (
-                '<hostRequires><hostname op="=" value="%s"/></hostRequires>'
-                % self.system_2.fqdn)
-        session.flush()
-        session.expunge_all()
-        beakerd.new_recipes()
-        job = Job.query.get(job.id)
-        self.assertEqual(job.status, TaskStatus.by_name(u'Processed'))
+    def test_shared_system_admin(self):
+        admin = data_setup.create_admin()
+        system = data_setup.create_system(lab_controller=self.lab_controller,
+                shared=True)
+        self.check_user_can_run_job_on_system(admin, system)
 
-    def test_shared_group_system_2_admin_1(self):
-        distro = data_setup.create_distro()
-        job = data_setup.create_job(owner=self.admin_1, distro=distro)
-        job.recipesets[0].recipes[0]._host_requires = (
-                '<hostRequires><hostname op="=" value="%s"/></hostRequires>'
-                % self.system_2.fqdn)
-        session.flush()
-        session.expunge_all()
-        beakerd.new_recipes()
-        job = Job.query.get(job.id)
-        self.assertEqual(job.status, TaskStatus.by_name(u'Aborted'))
+    def test_shared_group_system_with_user_not_in_group(self):
+        user = data_setup.create_user()
+        group = data_setup.create_group()
+        system = data_setup.create_system(lab_controller=self.lab_controller,
+                shared=True)
+        system.groups.append(group)
+        self.check_user_cannot_run_job_on_system(user, system)
 
-    def test_shared_group_system_2_admin_2(self):
-        distro = data_setup.create_distro()
-        job = data_setup.create_job(owner=self.admin_2, distro=distro)
-        job.recipesets[0].recipes[0]._host_requires = (
-                '<hostRequires><hostname op="=" value="%s"/></hostRequires>'
-                % self.system_2.fqdn)
-        session.flush()
-        session.expunge_all()
-        beakerd.new_recipes()
-        job = Job.query.get(job.id)
-        self.assertEqual(job.status, TaskStatus.by_name(u'Processed'))
+    def test_shared_group_system_with_user_in_group(self):
+        group = data_setup.create_group()
+        user = data_setup.create_user()
+        user.groups.append(group)
+        system = data_setup.create_system(lab_controller=self.lab_controller,
+                shared=True)
+        system.groups.append(group)
+        self.check_user_can_run_job_on_system(user, system)
 
-    def test_loaned_system_4_admin_1(self):
-        distro = data_setup.create_distro()
-        job = data_setup.create_job(owner=self.admin_1, distro=distro)
-        job.recipesets[0].recipes[0]._host_requires = (
-                '<hostRequires><hostname op="=" value="%s"/></hostRequires>'
-                % self.system_4.fqdn)
-        session.flush()
-        session.expunge_all()
-        beakerd.new_recipes()
-        job = Job.query.get(job.id)
-        self.assertEqual(job.status, TaskStatus.by_name(u'Aborted'))
+    def test_shared_group_system_with_admin_not_in_group(self):
+        admin = data_setup.create_admin()
+        group = data_setup.create_group()
+        system = data_setup.create_system(lab_controller=self.lab_controller,
+                shared=True)
+        system.groups.append(group)
+        self.check_user_cannot_run_job_on_system(admin, system)
 
-    def test_loaned_system_4_user_1(self):
-        print "user = %s" % self.user_1
-        print "system = %s" % self.system_4
-        distro = data_setup.create_distro()
-        job = data_setup.create_job(owner=self.user_1, distro=distro)
-        job.recipesets[0].recipes[0]._host_requires = (
-                '<hostRequires><hostname op="=" value="%s"/></hostRequires>'
-                % self.system_4.fqdn)
-        session.flush()
-        session.expunge_all()
-        beakerd.new_recipes()
-        job = Job.query.get(job.id)
-        self.assertEqual(job.status, TaskStatus.by_name(u'Processed'))
+    def test_shared_group_system_with_admin_in_group(self):
+        group = data_setup.create_group()
+        admin = data_setup.create_admin()
+        admin.groups.append(group)
+        system = data_setup.create_system(lab_controller=self.lab_controller,
+                shared=True)
+        system.groups.append(group)
+        self.check_user_can_run_job_on_system(admin, system)
+
+    def test_loaned_system_with_admin(self):
+        loanee = data_setup.create_user()
+        system = data_setup.create_system(lab_controller=self.lab_controller,
+                loaned=loanee)
+        admin = data_setup.create_admin()
+        self.check_user_cannot_run_job_on_system(admin, system)
+
+    def test_loaned_system_with_loanee(self):
+        loanee = data_setup.create_user()
+        system = data_setup.create_system(lab_controller=self.lab_controller,
+                loaned=loanee)
+        job_id = self.check_user_can_run_job_on_system(loanee, system)
         beakerd.processed_recipesets()
-        job = Job.query.get(job.id)
+        job = Job.query.get(job_id)
         self.assertEqual(job.status, TaskStatus.by_name(u'Queued'))
         beakerd.queued_recipes()
-        job = Job.query.get(job.id)
+        job = Job.query.get(job_id)
         self.assertEqual(job.status, TaskStatus.by_name(u'Scheduled'))
-        system = System.query.get(self.system_4.id)
-        self.assertEqual(system.user.user_id, self.user_1.user_id)
-        # force the return of the system so that other tests will run 
-        # correctly.
-        system.user = None
-        session.flush()
+        system = System.query.get(system.id)
+        self.assertEqual(system.user.user_id, loanee.user_id)
 
-    def test_loaned_system_4_user_2(self):
-        distro = data_setup.create_distro()
-        job = data_setup.create_job(owner=self.user_2, distro=distro)
-        job.recipesets[0].recipes[0]._host_requires = (
-                '<hostRequires><hostname op="=" value="%s"/></hostRequires>'
-                % self.system_4.fqdn)
-        session.flush()
-        session.expunge_all()
-        beakerd.new_recipes()
-        job = Job.query.get(job.id)
-        self.assertEqual(job.status, TaskStatus.by_name(u'Aborted'))
+    def test_loaned_system_with_not_loanee(self):
+        loanee = data_setup.create_user()
+        system = data_setup.create_system(lab_controller=self.lab_controller,
+                loaned=loanee)
+        user = data_setup.create_user()
+        self.check_user_cannot_run_job_on_system(user, system)
 
-    def test_loaned_system_4_user_3(self):
-        distro = data_setup.create_distro()
-        job = data_setup.create_job(owner=self.user_3, distro=distro)
-        job.recipesets[0].recipes[0]._host_requires = (
-                '<hostRequires><hostname op="=" value="%s"/></hostRequires>'
-                % self.system_4.fqdn)
-        session.flush()
-        session.expunge_all()
-        # user_3 is the owner of the system so they have access, when the
+    def test_loaned_system_with_owner(self):
+        loanee = data_setup.create_user()
+        owner = data_setup.create_user()
+        system = data_setup.create_system(lab_controller=self.lab_controller,
+                owner=owner, loaned=loanee)
+        # owner of the system has access, when the
         # loan is returned their job will be able to run.
-        beakerd.new_recipes()
-        job = Job.query.get(job.id)
-        self.assertEqual(job.status, TaskStatus.by_name(u'Processed'))
+        job_id = self.check_user_can_run_job_on_system(owner, system)
         beakerd.processed_recipesets()
-        job = Job.query.get(job.id)
+        job = Job.query.get(job_id)
         self.assertEqual(job.status, TaskStatus.by_name(u'Queued'))
         # Even though the system is free the job should stay queued while
         # the loan is in place.
         beakerd.queued_recipes()
-        job = Job.query.get(job.id)
+        job = Job.query.get(job_id)
         self.assertEqual(job.status, TaskStatus.by_name(u'Queued'))
-        system = System.query.get(self.system_4.id)
+        system = System.query.get(system.id)
         self.assertEqual(system.user, None)
     
     def test_fail_harness_repo(self):
@@ -536,3 +465,32 @@ class TestPowerFailures(unittest.TestCase):
         system_activity = system.dyn_activity.filter(SystemActivity.field_name == u'Status').first()
         self.assertEqual(system_activity.old_value, u'Automated')
         self.assertEqual(system_activity.new_value, u'Broken')
+
+    def test_broken_power_aborts_recipe(self):
+        system = data_setup.create_system(fqdn = u'broken.dreams.example.org',
+                                          lab_controller = self.lab_controller,
+                                          status = SystemStatus.by_name(u'Automated'),
+                                          shared = True)
+        distro = data_setup.create_distro()
+        job = data_setup.create_job(distro=distro)
+        job.recipesets[0].recipes[0]._host_requires = (u"""
+            <hostRequires>
+                <hostname op="=" value="%s" />
+            </hostRequires>
+            """ % system.fqdn)
+        session.flush()
+
+        beakerd.new_recipes()
+        beakerd.processed_recipesets()
+        beakerd.queued_recipes()
+        beakerd.scheduled_recipes()
+        beakerd.queued_commands()
+
+        session.expunge_all()
+        job = Job.query.get(job.id)
+        self.assertEqual(job.status, TaskStatus.by_name(u'Running'))
+
+        beakerd.running_commands()
+        job = Job.query.get(job.id)
+        self.assertEqual(job.recipesets[0].recipes[0].status,
+                         TaskStatus.by_name(u'Aborted'))

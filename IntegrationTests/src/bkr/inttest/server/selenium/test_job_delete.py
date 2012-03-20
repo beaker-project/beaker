@@ -42,13 +42,13 @@ class JobDelete(SeleniumTestCase):
         sel.select("jobsearch_0_operation", "label=is")
         sel.type("jobsearch_0_value", "%s" % self.job_to_delete.id)
         sel.click("Search")
-        sel.wait_for_page_to_load('3000')
+        sel.wait_for_page_to_load('30000')
         sel.click("delete_J:%s" % self.job_to_delete.id)
         self.wait_and_try(lambda: self.failUnless(sel.is_text_present("Are you sure")))
         sel.click("//button[@type='button']")
         self.wait_and_try(lambda: self.assert_(self.job_to_delete.t_id not in sel.get_text('//body')))
         sel.open('recipes/%s' % self.recipe_to_delete.id)
-        sel.wait_for_page_to_load('3000')
+        sel.wait_for_page_to_load('30000')
         self.assert_('Invalid R:%s, has been deleted' % self.recipe_to_delete.id in sel.get_text('//body'))
 
     def job_delete_jobpage(self):
@@ -59,9 +59,9 @@ class JobDelete(SeleniumTestCase):
             pass
         self.login(user=self.user, password=self.password)
         sel.open('jobs/%s' % self.job_to_delete_2.id)
-        sel.wait_for_page_to_load('3000')
+        sel.wait_for_page_to_load('30000')
         sel.click("delete_J:%s" % self.job_to_delete_2.id)
-        self.wait_and_try(lambda: self.failUnless(sel.is_text_present("Are you sure you want to perform delete?")))
+        self.wait_and_try(lambda: self.failUnless(sel.is_text_present("Are you sure you want to delete this?")))
         self.wait_and_try(lambda: sel.click("//button[@type='button']"))
         self.wait_and_try(lambda: self.failUnless(sel.is_text_present("Succesfully deleted J:%s" % self.job_to_delete_2.id)))
  

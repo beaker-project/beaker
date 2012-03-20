@@ -61,10 +61,10 @@ from bkr.server import mail
 from decimal import Decimal
 import bkr.server.recipes
 import bkr.server.rdf
-import random
 import urllib
 from kid import Element
 import cherrypy
+from hashlib import md5
 import re
 import string
 import pkg_resources
@@ -224,15 +224,16 @@ class Root(RPCRoot):
     id         = widgets.HiddenField(name='id')
     submit     = widgets.SubmitButton(name='submit')
 
-    email      = widgets.TextField(name='email_address', label='Email Address') 
+    email      = widgets.TextField(name='email_address', label='Email Address')
+    root_password = widgets.TextField(name='root_password', label='Root Password')
     autoUsers  = widgets.AutoCompleteTextField(name='user',
                                            search_controller=url("/users/by_name"),
                                            search_param="input",
                                            result_name="matches")
-    
+
     prefs_form   = widgets.TableForm(
         'UserPrefs',
-        fields = [email],
+        fields = [email, root_password],
         action = 'save_prefs',
         submit_text = _(u'Change'),
     )
@@ -253,9 +254,9 @@ class Root(RPCRoot):
         action = 'save_data',
         submit_text = _(u'Change'),
         validator=OwnerFormValidatorSchema(),
-    )  
+    )
 
-    sshkey     = widgets.TextArea(name='ssh_pub_key', label='Public SSH Key') 
+    sshkey     = widgets.TextArea(name='ssh_pub_key', label='Public SSH Key')
 
     class SSHKeyAddFormValidatorSchema(validators.Schema):
         pubkey = validators.NotEmpty()
@@ -449,11 +450,26 @@ class Root(RPCRoot):
     @expose()
     @identity.require(identity.not_anonymous())
     def save_prefs(self, *args, **kw):
-        email = kw.get('email_address',None) 
+        email = kw.get('email_address', None) 
+        root_password = kw.get('root_password', None) 
+        changes = []
         
         if email and email != identity.current.user.email_address:
-            flash(_(u"Email Address Changed"))
+            changes.append("Email address changed")
             identity.current.user.email_address = email
+
+        if identity.current.user.root_password and not root_password:
+            identity.current.user.root_password = None
+            changes.append("Test host root password cleared")
+        elif root_password and root_password != identity.current.user.root_password:
+            try:
+                identity.current.user.root_password = root_password
+                changes.append("Test host root password hash changed")
+            except ValueError, msg:
+                changes.append("Root password not changed: %s" % msg)
+
+        if changes:
+            flash(_(u', '.join(changes)))
         redirect('/prefs')
 
     @expose()
@@ -893,7 +909,7 @@ class Root(RPCRoot):
             title = system.fqdn
             our_user = identity.current.user #simple optimisation
             currently_held = system.user == our_user
-            if system.can_admin(user=our_user): 
+            if system.can_admin(user=our_user):
                 options['owner_change_text'] = ' (Change)'
                 options['show_cc'] = True
             else:
@@ -1042,7 +1058,23 @@ class Root(RPCRoot):
             return self._view_system_as_rdf(fqdn, **kwargs)
         else:
             return self._view_system_as_html(fqdn, **kwargs)
-         
+
+    @cherrypy.expose
+    def delete_note(self, id=None):
+        id = int(id)
+        try:
+            system = System.query.join(System.notes).filter(Note.id == id).one()
+        except InvalidRequestError, e:
+            log.exception(e)
+            return ('0',)
+        if not system.can_admin(turbogears.identity.current.user):
+            log.error('User does not have the correct permission to delete this note')
+            return ('0',)
+        note = Note.query.filter_by(id=id).one()
+        note.deleted = datetime.utcnow()
+        session.flush()
+        return ('1',)
+
     @expose(template='bkr.server.templates.form')
     @identity.require(identity.not_anonymous())
     def loan_change(self, id, switch_user=False):
@@ -1153,25 +1185,28 @@ class Root(RPCRoot):
         msg = ""
         status = None
         activity = None
+        current_identity = identity.current.user
         try:
-            system = System.by_id(id,identity.current.user)
+            system = System.by_id(id, current_identity)
         except InvalidRequestError:
             flash( _(u"Unable to find system with id of %s" % id) )
             redirect("/")
-        if system.user:
+        if system.current_user(current_identity):
             try:
                 system.unreserve(service=u'WEBUI')
                 flash(_(u'Returned %s') % system.fqdn)
             except BeakerException, e:
                 log.exception('Failed to return')
                 flash(_(u'Failed to return %s: %s') % (system.fqdn, e))
-        else:
+        elif system.can_share(current_identity) and system.can_provision_now(current_identity):
             try:
                 system.reserve(service=u'WEBUI', reservation_type=u'manual')
                 flash(_(u'Reserved %s') % system.fqdn)
             except BeakerException, e:
                 log.exception('Failed to reserve')
                 flash(_(u'Failed to reserve %s: %s') % (system.fqdn, e))
+        else:
+            flash(_(u'You were unable to change the user for %s' % system.fqdn))
         redirect("/view/%s" % system.fqdn)
 
     system_cc_form = widgets.TableForm(
@@ -1470,7 +1505,7 @@ class Root(RPCRoot):
         system.vendor=kw['vendor']
         system.lender=kw['lender']
         system.hypervisor=kw['hypervisor']
-        if kw['fqdn'] != system.fqdn:
+        if kw['fqdn'] != system.fqdn and system.lab_controller:
             system.remote.remove()
         system.fqdn=kw['fqdn']
         system.status_reason = kw['status_reason']

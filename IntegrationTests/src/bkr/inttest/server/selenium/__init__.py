@@ -22,13 +22,13 @@ import re
 import logging
 import subprocess
 import time
-from selenium import selenium
+from selenium import selenium, webdriver
 import unittest
 import xmlrpclib
 from urlparse import urljoin
 import kobo.xmlrpc
 from datetime import datetime
-from bkr.inttest import get_server_base, Process
+from bkr.inttest import data_setup, get_server_base, Process
 from bkr.server.bexceptions import BX
 from time import sleep
 import pkg_resources
@@ -108,6 +108,14 @@ class SeleniumTestCase(unittest.TestCase):
             return True
         return False
 
+class WebDriverTestCase(unittest.TestCase):
+
+    @classmethod
+    def get_browser(cls):
+        b = webdriver.Firefox()
+        b.implicitly_wait(10) # XXX is this really what we want???
+        return b
+
 class XmlRpcTestCase(unittest.TestCase):
 
     @classmethod
@@ -139,7 +147,7 @@ def setup_package():
                 '-screen', '0', '1024x768x24']),
         Process('selenium-server', args=['java',
                 '-Djava.io.tmpdir=/tmp/selenium',
-                '-jar', '/usr/local/share/selenium/selenium-server-1.0.3/selenium-server.jar',
+                '-jar', '/usr/local/share/selenium/selenium-server-standalone-2.12.0.jar',
                 '-log', 'selenium.log'], env={'DISPLAY': ':4'},
                 listen_port=4444),
     ])
@@ -150,7 +158,9 @@ def setup_package():
         for process in processes:
             process.stop()
         raise
+    os.environ['DISPLAY'] = ':4' # for WebDriver
 
 def teardown_package():
+    del os.environ['DISPLAY']
     for process in processes:
         process.stop()

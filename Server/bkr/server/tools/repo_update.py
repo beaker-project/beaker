@@ -41,7 +41,7 @@ def usage():
 # This is a cutdown version of reposync.
 class RepoSyncer(yum.YumBase):
 
-    def __init__(self, repo_id, repo_url, output_dir):
+    def __init__(self, repo_url, output_dir):
         super(RepoSyncer, self).__init__()
         self.doConfigSetup(init_plugins=False)
         cachedir = yum.misc.getCacheDir()
@@ -49,6 +49,7 @@ class RepoSyncer(yum.YumBase):
         self.repos.setCacheDir(cachedir)
         self.conf.cachedir = cachedir
         self.repos.disableRepo('*')
+        repo_id = repo_url.replace('/', '-')
         self.add_enable_repo(repo_id, baseurls=[repo_url])
         self.output_dir = output_dir
 
@@ -83,8 +84,7 @@ def update_repos(baseurl, basepath):
         # urlgrabber < 3.9.1 doesn't handle unicode urls
         osmajor = unicode(osmajor).encode('utf8')
         dest = "%s/%s" % (basepath,osmajor)
-        syncer = RepoSyncer('beaker-repo-update-harness-%s' % osmajor,
-                urlparse.urljoin(baseurl, '%s/' % urllib.quote(osmajor)), dest)
+        syncer = RepoSyncer(urlparse.urljoin(baseurl, '%s/' % urllib.quote(osmajor)), dest)
         try:
             syncer.sync()
         except KeyboardInterrupt:

@@ -72,16 +72,19 @@ class SystemViewTest(SeleniumTestCase):
         self.selenium.stop()
         self.stub_cobbler_thread.stop()
 
-    def go_to_system_view(self):
+    def go_to_system_view(self, system=None):
+        if system is None:
+            system = self.system
         sel = self.selenium
         sel.open('')
-        sel.type('simplesearch', self.system.fqdn)
+        sel.wait_for_page_to_load('30000')
+        sel.type('simplesearch', system.fqdn)
         sel.click('search')
         sel.wait_for_page_to_load('30000')
         self.assertEqual(sel.get_title(), 'Systems')
-        sel.click('link=%s' % self.system.fqdn)
+        sel.click('link=%s' % system.fqdn)
         sel.wait_for_page_to_load('30000')
-        self.assertEqual(sel.get_title(), self.system.fqdn)
+        self.assertEqual(sel.get_title(), system.fqdn)
 
     def test_current_job(self):
         sel = self.selenium
@@ -127,6 +130,20 @@ class SystemViewTest(SeleniumTestCase):
         sel.wait_for_page_to_load('30000')
         self.assertEqual(self.selenium.get_title(),
                 'Notify CC list for %s' % self.system.fqdn)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=747086
+    def test_update_system_no_lc(self):
+        system = data_setup.create_system()
+        system.labcontroller = None
+        session.flush()
+        self.login()
+        sel = self.selenium
+        self.go_to_system_view(system=system)
+        new_fqdn = 'zx81.example.com'
+        sel.type('fqdn', new_fqdn)
+        sel.click('link=Save Changes')
+        sel.wait_for_page_to_load('30000')
+        self.assertEquals(sel.get_value('fqdn'), new_fqdn)
 
     def test_update_system(self):
         orig_date_modified = self.system.date_modified
@@ -515,8 +532,8 @@ class SystemViewTest(SeleniumTestCase):
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=664482
     def test_cannot_change_lab_controller_while_system_in_use(self):
-        data_setup.create_manual_reservation(self.system,
-                start=datetime.datetime.utcnow(), finish=None)
+        self.system.reserve(service=u'testdata', reservation_type=u'manual',
+                user=data_setup.create_user())
         session.flush()
         self.login()
         sel = self.selenium
@@ -542,6 +559,19 @@ class SystemViewTest(SeleniumTestCase):
         session.refresh(self.system)
         self.assertEqual(self.system.hypervisor, Hypervisor.by_name(u'KVM'))
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=749441
+    def test_mac_address_with_unicode(self):
+        bad_mac_address = u'aяяяяяяяяяяяяяяяяя'
+        self.login()
+        sel = self.selenium
+        self.go_to_system_view()
+        sel.type('mac_address', bad_mac_address)
+        sel.click('link=Save Changes')
+        sel.wait_for_page_to_load('30000')
+        self.assertEquals(sel.get_value('mac_address'), bad_mac_address)
+        session.refresh(self.system)
+        self.assertEqual(self.system.mac_address, bad_mac_address)
+
 class SystemCcTest(SeleniumTestCase):
 
     def setUp(self):
@@ -560,6 +590,7 @@ class SystemCcTest(SeleniumTestCase):
         session.flush()
         sel = self.selenium
         sel.open('cc_change?system_id=%s' % self.system.id)
+        sel.wait_for_page_to_load('30000')
         assert not sel.get_value('cc_cc_0_email_address'), 'should be empty'
         sel.type('cc_cc_0_email_address', 'roy.baty@pkd.com')
         sel.click('doclink') # why the hell is it called this?
@@ -582,6 +613,7 @@ class SystemCcTest(SeleniumTestCase):
         session.flush()
         sel = self.selenium
         sel.open('cc_change?system_id=%s' % self.system.id)
+        sel.wait_for_page_to_load('30000')
         sel.click('//tr[@id="cc_cc_1"]//a[text()="Remove (-)"]')
         #sel.click('//tr[@id="cc_cc_0"]//a[text()="Remove (-)"]')
         # The tg_expanding_widget javascript doesn't let us remove the last element,
@@ -604,6 +636,7 @@ class SystemCcTest(SeleniumTestCase):
         session.flush()
         sel = self.selenium
         sel.open('cc_change?system_id=%s' % self.system.id)
+        sel.wait_for_page_to_load('30000')
         sel.type('cc_cc_0_email_address', 'deckard@police.gov')
         sel.click('//input[@value="Change"]')
         sel.wait_for_page_to_load('30000')

@@ -2,7 +2,7 @@
 #
 # beaker-transfer:	Start the Beaker log transfer daemon
 #
-# chkconfig: 345 99 99
+# chkconfig: - 99 99
 # description:  This service handles rsyncing logs to their final destination
 #	
 #

@@ -19,7 +19,7 @@ class TestMOTD(SeleniumTestCase):
         f.close()
         sel = self.selenium
         sel.open('')
-        sel.wait_for_page_to_load('3000')
+        sel.wait_for_page_to_load('30000')
         body = sel.get_text('//body')
         self.assert_(the_motd in body)
 

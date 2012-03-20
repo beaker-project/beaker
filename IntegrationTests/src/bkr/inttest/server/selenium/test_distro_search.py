@@ -1,119 +1,113 @@
 #!/usr/bin/python
-from bkr.inttest.server.selenium import SeleniumTestCase
+from selenium.webdriver.support.ui import Select
+from bkr.server.model import LabControllerDistro
+from bkr.inttest.server.selenium import WebDriverTestCase
+from bkr.inttest.server.webdriver_utils import get_server_base, is_text_present
 from bkr.inttest import data_setup
-import unittest, time, re, os
 from turbogears.database import session
 
-class Search(SeleniumTestCase):
-    def setUp(self):
-        self.verificationErrors = []
-        self.selenium = self.get_selenium()
-        self.distro_one_name = u'nametest1'
-        self.distro_one_breed = u'breedtest1'
-        self.distro_one_osmajor = u'osmajortest1'
-        self.distro_one_osminor = u'1'
-        self.distro_one_virt = True
-        self.distro_one_arch = u'ia64'
-        self.distro_one_tags = None
+class Search(WebDriverTestCase):
+    
+    @classmethod
+    def setupClass(cls):
+        cls.distro_one_name = data_setup.unique_name(u'nametest%s')
+        cls.distro_one_breed = u'breedtest1'
+        cls.distro_one_osmajor = u'osmajortest1'
+        cls.distro_one_osminor = u'1'
+        cls.distro_one_virt = True
+        cls.distro_one_arch = u'ia64'
+        cls.distro_one_tags = None
 
-        self.distro_one = data_setup.create_distro(name=self.distro_one_name, breed=self.distro_one_breed,
-            osmajor=self.distro_one_osmajor, osminor = self.distro_one_osminor,
-            arch=self.distro_one_arch, virt=self.distro_one_virt,
-            tags =self.distro_one_tags)
+        cls.distro_one = data_setup.create_distro(name=cls.distro_one_name, breed=cls.distro_one_breed,
+            osmajor=cls.distro_one_osmajor, osminor = cls.distro_one_osminor,
+            arch=cls.distro_one_arch, virt=cls.distro_one_virt,
+            tags =cls.distro_one_tags)
 
 
-        self.distro_two_name = u'nametest2'
-        self.distro_two_breed = u'breedtest2'
-        self.distro_two_osmajor = u'osmajortest2'
-        self.distro_two_osminor = u'2'
-        self.distro_two_virt = True
-        self.distro_two_arch = u'i386'
-        self.distro_two_tags = None
+        cls.distro_two_name = data_setup.unique_name(u'nametest%s')
+        cls.distro_two_breed = u'breedtest2'
+        cls.distro_two_osmajor = u'osmajortest2'
+        cls.distro_two_osminor = u'2'
+        cls.distro_two_virt = True
+        cls.distro_two_arch = u'i386'
+        cls.distro_two_tags = None
 
-        self.distro_two = data_setup.create_distro(name=self.distro_two_name, breed=self.distro_two_breed,
-            osmajor=self.distro_two_osmajor, osminor = self.distro_two_osminor,
-            arch=self.distro_two_arch, virt=self.distro_two_virt,
-            tags =self.distro_two_tags)
+        cls.distro_two = data_setup.create_distro(name=cls.distro_two_name, breed=cls.distro_two_breed,
+            osmajor=cls.distro_two_osmajor, osminor = cls.distro_two_osminor,
+            arch=cls.distro_two_arch, virt=cls.distro_two_virt,
+            tags =cls.distro_two_tags)
 
-        self.distro_three_name = u'nametest3'
-        self.distro_three_breed = u'breedtest3'
-        self.distro_three_osmajor = u'osmajortest3'
-        self.distro_three_osminor = u'3'
-        self.distro_three_virt = False
-        self.distro_three_arch = u's390'
-        self.distro_three_tags = None
+        cls.distro_three_name = data_setup.unique_name(u'nametest%s')
+        cls.distro_three_breed = u'breedtest3'
+        cls.distro_three_osmajor = u'osmajortest3'
+        cls.distro_three_osminor = u'3'
+        cls.distro_three_virt = False
+        cls.distro_three_arch = u's390'
+        cls.distro_three_tags = None
 
-        self.distro_three = data_setup.create_distro(name=self.distro_three_name, breed=self.distro_three_breed,
-            osmajor=self.distro_three_osmajor, osminor = self.distro_three_osminor,
-            arch=self.distro_three_arch, virt=self.distro_three_virt,
-            tags =self.distro_three_tags)
+        cls.distro_three = data_setup.create_distro(name=cls.distro_three_name, breed=cls.distro_three_breed,
+            osmajor=cls.distro_three_osmajor, osminor = cls.distro_three_osminor,
+            arch=cls.distro_three_arch, virt=cls.distro_three_virt,
+            tags =cls.distro_three_tags)
         session.flush()
-        self.selenium.start()
+        cls.browser = cls.get_browser()
+
+    def test_correct_items_count(self):
+        lc_1 = data_setup.create_labcontroller()
+        lc_2 = data_setup.create_labcontroller()
+        distro_name = data_setup.unique_name(u'distroname%s')
+        distro_breed = data_setup.unique_name(u'distrobreed%s')
+        distro_osmajor = data_setup.unique_name(u'osmajor%s')
+        distro_osminor = u'2'
+        distro_virt = True
+        distro_arch = u'i386'
+        distro_tags = None
+
+        distro = data_setup.create_distro(name=distro_name, breed=distro_breed,
+            osmajor=distro_osmajor, osminor=distro_osminor,
+            arch=distro_arch, virt=distro_virt,
+            tags=distro_tags)
+        session.flush()
+        distro.lab_controller_assocs[:] = [LabControllerDistro(lab_controller=lc_1), LabControllerDistro(lab_controller=lc_2)]
+
+        b = self.browser
+        b.get(get_server_base() + 'distros')
+        b.find_element_by_name('simplesearch').send_keys(distro.name)
+        b.find_element_by_name('search').click()
+        self.assert_(is_text_present(b, 'Items found: 1'))
 
     def test_distro_search(self):
-        sel = self.selenium
-        sel = self.selenium
-
+        b = self.browser
         """
-        SimpleSearch 
+        SimpleSearch
         START
         """
-        sel.open("distros/")
-        sel.type("simplesearch", "%s" % self.distro_one.name)
-        sel.click("search")
-        sel.wait_for_page_to_load("30000")
-        try: 
-            self.failUnless(sel.is_text_present("%s" % self.distro_one.name))
-        except AssertionError, e: 
-            self.verificationErrors.append(\
-            unicode('1.Searching by %s, did not find %s' % \
-            (self.distro_one.name,self.distro_one.name)))
-
-        try: 
-            self.failUnless(not sel.is_text_present("%s" % self.distro_two.name))
-        except AssertionError, e: 
-            self.verificationErrors.append(\
-            unicode('2.Searching by %s, found %s' % \
-            (self.distro_one.name,self.distro_two.name)))
-
-        try:
-            self.failUnless(not sel.is_text_present("%s" % self.distro_three.name))
-        except AssertionError, e: 
-            self.verificationErrors.append(\
-            unicode('3.Searching by %s, found %s' % \
-            (self.distro_one.name,self.distro_three.name)))
-        """ 
+        b.get(get_server_base() + 'distros')
+        b.find_element_by_name('simplesearch').send_keys(self.distro_one.name)
+        b.find_element_by_name('search').click()
+        distro_search_result = \
+            b.find_element_by_xpath('//table[@id="widget"]').text
+        self.assert_(self.distro_one.name in distro_search_result)
+        self.assert_(self.distro_two.name not in distro_search_result)
+        self.assert_(self.distro_three.name not in distro_search_result)
+        """
         END
         """
-
         """
         Arch -> is -> ia64
         START
         """
-        sel.click("advancedsearch")
-        sel.select("distrosearch_0_table", "label=Arch")
-        sel.type("distrosearch_0_value", "%s" % self.distro_one_arch)
-        sel.click("Search")
-        sel.wait_for_page_to_load("30000")
-        try: 
-            self.failUnless(sel.is_text_present("%s" % self.distro_one.name))
-        except AssertionError, e:
-            self.verificationErrors.append( \
-            unicode('4.Searching by %s, did not find %s' % \
-            (self.distro_one_arch,self.distro_one.name)))
-
-        try: 
-            self.failUnless(not sel.is_text_present("%s" % self.distro_two.name))
-        except AssertionError, e: 
-            self.verificationErrors.append( \
-            unicode('5.Searching by %s, found %s' % \
-            (self.distro_one_arch,self.distro_two.name)))
-
-        try: 
-            self.failUnless(not sel.is_text_present("%s" % self.distro_three.name))
-        except AssertionError, e: self.verificationErrors.append( \
-            unicode('6.Searching by %s, did not find %s' % \
-            (self.distro_one_arch,self.distro_three.name)))
+        b.find_element_by_id('advancedsearch').click()
+        b.find_element_by_xpath("//select[@id='distrosearch_0_table']/option[@value='Arch']").click()
+        b.find_element_by_xpath("//select[@id='distrosearch_0_operation']/option[@value='is']").click()
+        b.find_element_by_xpath('//input[@id="distrosearch_0_value"]').clear()
+        b.find_element_by_xpath('//input[@id="distrosearch_0_value"]').send_keys(self.distro_one_arch)
+        b.find_element_by_name('Search').click()
+        distro_search_result_2 = \
+            b.find_element_by_xpath('//table[@id="widget"]').text
+        self.assert_(self.distro_one.name in distro_search_result_2)
+        self.assert_(self.distro_two.name not in distro_search_result_2)
+        self.assert_(self.distro_three.name not in distro_search_result_2)
         """
         END
         """
@@ -121,103 +115,101 @@ class Search(SeleniumTestCase):
         Arch -> is -> i386
         START
         """
-        sel.select("distrosearch_0_table", "label=Arch")
-        sel.select("distrosearch_0_operation", "label=is")
-        sel.type("distrosearch_0_value", "%s" % self.distro_two_arch)
-        sel.click("Search")
-        sel.wait_for_page_to_load("30000")
-        try:
-            self.failUnless(sel.is_text_present("%s" % self.distro_two.name))
-        except AssertionError, e:
-            self.verificationErrors.append(\
-            unicode('7.Searching by %s, did not find %s' % \
-            (self.distro_two_arch, self.distro_two.name)))
-
-        try:
-            self.failUnless(not sel.is_text_present("%s" % self.distro_one.name))
-        except AssertionError, e:
-            self.verificationErrors.append(\
-            unicode('8.Searching by %s, found %s' % \
-            (self.distro_two_arch, self.distro_one.name)))
-
-        try:
-            self.failUnless(not sel.is_text_present("%s" % self.distro_three.name))
-        except AssertionError, e:
-            self.verificationErrors.append(\
-            unicode('9.Searching by %s, found %s' % \
-            (self.distro_two_arch, self.distro_three.name)))
+        b.find_element_by_xpath("//select[@id='distrosearch_0_table']/option[@value='Arch']").click()
+        b.find_element_by_xpath("//select[@id='distrosearch_0_operation']/option[@value='is']").click()
+        b.find_element_by_name('distrosearch-0.value').clear()
+        b.find_element_by_name('distrosearch-0.value').send_keys(self.distro_two_arch)
+        b.find_element_by_name('Search').click()
+        distro_search_result_3 = \
+            b.find_element_by_xpath('//table[@id="widget"]').text
+        self.assert_(self.distro_two.name in distro_search_result_3) 
+        self.assert_(self.distro_one.name not in distro_search_result_3) 
+        self.assert_(self.distro_three.name not in distro_search_result_3) 
         """
         END
         """
-
         """
         Arch -> is not -> i386
+        START
         """
-        sel.select("distrosearch_0_table", "label=Arch")
-        sel.select("distrosearch_0_operation", "label=is not")
-        sel.type("distrosearch_0_value", "%s" % self.distro_two_arch)
-        sel.click("Search")
-        sel.wait_for_page_to_load("30000")
-        try: 
-            self.failUnless(sel.is_text_present("%s" % self.distro_one.name))
-        except AssertionError, e: 
-            self.verificationErrors.append(\
-            unicode('10.Searching by %s, did not find %s' % \
-            (self.distro_two_arch,self.distro_one.name)))
-
-        try: 
-            self.failUnless(sel.is_text_present("%s" % self.distro_three.name))
-        except AssertionError, e: self.verificationErrors.append(\
-            unicode('11.Searching by %s, did not find %s' % \
-            (self.distro_two_arch, self.distro_three.name)))
-
-        try: 
-            self.failUnless(not sel.is_text_present("%s" % self.distro_two.name))
-        except AssertionError, e: self.verificationErrors.append(\
-            unicode('12.Searching by %s, found %s' % \
-            (self.distro_two_arch, self.distro_two.name)))
+        b.find_element_by_xpath("//select[@id='distrosearch_0_table']/option[@value='Arch']").click()
+        b.find_element_by_xpath("//select[@id='distrosearch_0_operation']/option[@value='is not']").click()
+        b.find_element_by_name('distrosearch-0.value').clear()
+        b.find_element_by_name('distrosearch-0.value').send_keys(self.distro_two_arch)
+        b.find_element_by_name('Search').click()
+        distro_search_result_4 = \
+            b.find_element_by_xpath('//table[@id="widget"]').text
+        self.assert_(self.distro_one.name in distro_search_result_4)
+        self.assert_(self.distro_three.name in distro_search_result_4)
+        self.assert_(self.distro_two.name not in distro_search_result_4)
         """
         END
         """
         """
-        Breed -> is -> 
+        Breed -> is ->
+        START
         """
-        sel.select("distrosearch_0_table", "label=Breed")
-        sel.select("distrosearch_0_operation", "label=is")
-        sel.type("distrosearch_0_value", "%s" % self.distro_one.breed)
-        sel.click("Search") 
-        sel.wait_for_page_to_load("30000")
-        try: 
-            self.failUnless(sel.is_text_present("%s" % self.distro_one.name))
-        except AssertionError, e: self.verificationErrors.append(\
-            unicode('13.Failed to find %s when searching for Breed %s' % \
-            (self.distro_one.name, self.distro_one.breed)))
+        b.find_element_by_xpath("//select[@id='distrosearch_0_table']/option[@value='Breed']").click()
+        b.find_element_by_xpath("//select[@id='distrosearch_0_operation']/option[@value='is']").click()
+        b.find_element_by_name('distrosearch-0.value').clear()
+        b.find_element_by_name('distrosearch-0.value').send_keys('%s' % self.distro_one.breed)
+        b.find_element_by_name('Search').click()
+        distro_search_result_5 = \
+            b.find_element_by_xpath('//table[@id="widget"]').text
+        self.assert_(self.distro_one.name in distro_search_result_5)
+        self.assert_(self.distro_two.name not in distro_search_result_5)
+        self.assert_(self.distro_three.name not in distro_search_result_5)
+        """
+        END
+        """
+        """
+        Virt -> is -> True
+        START
+        """
+        b.find_element_by_xpath("//select[@id='distrosearch_0_table']/option[@value='Virt']").click()
+        b.find_element_by_xpath("//select[@id='distrosearch_0_operation']/option[@value='is']").click()
+        b.find_element_by_name('distrosearch-0.value').send_keys('True')
+        b.find_element_by_name('Search').click()
+        distro_search_result_6 = \
+            b.find_element_by_xpath('//table[@id="widget"]').text
+        self.assert_(self.distro_one.name in distro_search_result_6)
+        self.assert_(self.distro_two.name in distro_search_result_6)
+        self.assert_(self.distro_three.name not in distro_search_result_6)
+        """
+        END
+        """
 
-        try: 
-            self.failUnless(not sel.is_text_present("%s" % self.distro_two.name))
-        except AssertionError, e: self.verificationErrors.append(\
-            unicode('14.Found %s when searching for Breed %s' % \
-            (self.distro_two.name, self.distro_one.breed)))
+    @classmethod
+    def teardownClass(cls):
+        cls.browser.quit()
 
-        try: 
-            self.failUnless(not sel.is_text_present("%s" % self.distro_three.name))
-        except AssertionError, e: self.verificationErrors.append(\
-            unicode('15.Failed to find %s when searching for Breed %s' % \
-            (self.distro_three.name, self.distro_one.breed)))
-        #END
 
-        sel.select("distrosearch_0_table", "label=Virt")
-        sel.select("distrosearch_0_operation", "label=is")
-        sel.select("distrosearch_0_value", "label=True")
-        sel.click("Search")
-        sel.wait_for_page_to_load("30000")
-        try: self.failUnless(sel.is_text_present("%s" % self.distro_one.name))
-        except AssertionError, e: self.verificationErrors.append(str(e))
-        try: self.failUnless(sel.is_text_present("%s" % self.distro_two.name))
-        except AssertionError, e: self.verificationErrors.append(str(e))
-        try: self.failUnless(not sel.is_text_present("%s" % self.distro_three.name))
-        except AssertionError, e: self.verificationErrors.append(str(e))
+class SearchOptionsTest(WebDriverTestCase):
+
+    def setUp(self):
+        self.browser = self.get_browser()
 
     def tearDown(self):
-        self.selenium.stop()
-        self.assertEqual([], self.verificationErrors)
+        self.browser.quit()
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=770109
+    def test_search_options_are_maintained_after_submitting(self):
+        b = self.browser
+        b.get(get_server_base() + 'distros/')
+        b.find_element_by_link_text('Toggle Search').click()
+        Select(b.find_element_by_name('distrosearch-0.table'))\
+                .select_by_visible_text('Arch')
+        Select(b.find_element_by_name('distrosearch-0.operation'))\
+                .select_by_visible_text('is not')
+        b.find_element_by_name('distrosearch-0.value').send_keys('x86_64')
+        b.find_element_by_name('distrosearch').submit()
+
+        self.assertEquals(Select(b.find_element_by_name('distrosearch-0.table'))
+                .first_selected_option.text,
+                'Arch')
+        self.assertEquals(Select(b.find_element_by_name('distrosearch-0.operation'))
+                .first_selected_option.text,
+                'is not')
+        self.assertEquals(b.find_element_by_name('distrosearch-0.value')
+                .get_attribute('value'),
+                'x86_64')

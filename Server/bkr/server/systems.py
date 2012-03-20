@@ -138,10 +138,13 @@ class SystemsController(controllers.Controller):
             raise BX(_(u'Distro %s cannot be provisioned on %s')
                     % (distro.install_name, system.fqdn))
 
+        ks_meta = ks_meta or ''
+        if identity.current.user.root_password:
+            ks_meta = "password=%s %s" % (identity.current.user.root_password, ks_meta)
+
         # ensure system-specific defaults are used
         # (overriden by this method's arguments)
-        options = system.install_options(distro,
-                ks_meta=ks_meta or '',
+        options = system.install_options(distro, ks_meta=ks_meta,
                 kernel_options=kernel_options or '',
                 kernel_options_post=kernel_options_post or '')
         try:

@@ -109,7 +109,7 @@ class TestReportProblem(SeleniumTestCase):
         sel.type('user_name', problem_reporter.user_name)
         sel.type('password', 'password')
         sel.click('login')
-        sel.wait_for_page_to_load('3000')
+        sel.wait_for_page_to_load('30000')
         self.assertEqual(sel.get_title(), 'Report a problem with ncc1701e')
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=652334

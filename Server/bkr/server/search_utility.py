@@ -551,7 +551,7 @@ class SystemSearch(Search):
                 else:    
                     for relations in system_relations:
                         if isinstance(relations, list):
-                            self.queri = self.queri.outerjoin(relations,aliased=False)    
+                            self.queri = self.queri.outerjoin(relations,aliased=is_alias)
                         else:
                             self.queri = self.queri.outerjoin(system_relations,aliased=is_alias)
                             break     
@@ -1072,7 +1072,7 @@ class History(SystemObject):
                          }  
        
 class Key(SystemObject):
-    searchable_columns = {'Value': KeyColumn(relations=[['key_values_int'],['key_values_string']])}
+    searchable_columns = {'Value': KeyColumn(relations=[['key_values_int'],['key_values_string']], has_alias=True)}
     search = KeySearch
     
     @classmethod

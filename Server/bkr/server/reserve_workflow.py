@@ -89,59 +89,56 @@ class ReserveWorkflow:
     def get_distro_options(self,arch=None,distro_family=None,tag=None):
         """
         get_distro_options() will return all the distros for a given arch,
-        distro_family and tag
+        distro_family and tag. If there are multiple archs supplied, it will
+        return a list of distro names, otherwise distro install names
         """
         if arch is None or distro_family is None:
             return {'options' : [] }
-        arch = arch.split(',')  
-        if len(arch) > 1:
-            results = Distro.multiple_systems_distro(arch=arch,osmajor=distro_family,tag=tag) 
-            return {'options' : results }
-
-        distro = Distro.query.join(['osversion','osmajor']).join('arch')
-        my_and = [OSMajor.osmajor == distro_family]
-        if tag:
-                my_and.append(DistroTag.tag == tag)                       
-                distro = distro.join('_tags') 
-        arch = arch[0]
-        distro = distro.filter(Arch.arch == arch)
-
-        distro = distro.filter(and_(*my_and))
-        options = sorted([(elem.install_name,elem.date_created) for elem in distro], key = lambda e1: e1[1],reverse=True) #so we don't have to guess the install_name later
-        options = [elem[0] for elem in options]
-        return {'options': options} 
+        distros = Distro.distros_for_provision(arch=arch, osmajor=distro_family, tag=tag)
+        if not distros:
+            return {'options' : [] }
+        if isinstance(arch, list) and len(arch) > 1: #Multiple arch search
+            #Get a mangled version of the install_name (i.e without the arch on the end)
+            names = [re.sub(r'^(.+)\-(?:.+?)$',r'\1',d.install_name) for d in distros]
+        else:
+            #Only get install names
+            names = [d.install_name for d in distros]
+        return {'options' : names }
 
     @expose(allow_json=True)
-    def find_systems_for_multiple_distros(self,distro_install_name,arches=None,*args,**kw):
-        all_distro_names = list()
-        for arch in arches.split(','): 
-            all_distro_names.append('%s-%s' % (distro_install_name,arch))
-
-        systems_queries, distro_ids = [],[] 
-        for install_name in all_distro_names:
+    def find_systems_for_multiple_distros(self, distro_name, arches=None,*args,**kw):
+        if arches is None:
+            arches = []
+        distro_ids = []
+        for arch in arches:
+            distro_install_name = '%s-%s' % (distro_name,arch)
             try:
-                distro = Distro.query.filter(Distro.install_name == install_name).one()
+                distro = Distro.query.join(Distro.arch).filter(Distro.install_name == distro_install_name).one()
                 distro_ids.append(distro.id)
             except InvalidRequestError:
-                log.error(u'Could not find distro %s, continuing with other distros' % install_name)
-                continue
-            
+                log.error('Could not find distro %s' % distro_install_name)
+                return {'enough_systems' : 0, 'error' : 'There was an error retrieving distro %s, \
+                    please see your administrator.' % distro_install_name}
             systems_distro_query = distro.systems()
-            systems_available = System.available_for_schedule(identity.current.user,System.by_type(type='machine',systems=systems_distro_query)) 
-            systems_queries = systems_queries + systems_available.select()
+            systems_available = System.available_for_schedule(identity.current.user,
+                System.by_type(type='machine', systems=systems_distro_query))
+            if systems_available.count() < 1:
+                # Not enough systems
+                return {'enough_systems' : 0, 'distro_id':None}
 
-        return { 'count' : len(set(systems_queries)), 'distro_id' : distro_ids }
-              
-    @expose(allow_json=True) 
-    def find_systems_for_distro(self,distro_install_name,*args,**kw): 
-        try: 
+        return {'enough_systems':1, 'distro_id' : distro_ids}
+
+    @expose(allow_json=True)
+    def find_systems_for_distro(self, distro_install_name, *args,**kw):
+        try:
             distro = Distro.query.filter(Distro.install_name == distro_install_name).one()
         except InvalidRequestError,(e):
-            return { 'count' : 0 } 
-                 
-        #there seems to be a bug distro.systems 
-        #it seems to be auto correlateing the inner query when you pass it a user, not possible to manually correlate
-        #a Query object in 0.4  
+            return { 'enough_systems' : 0, 'error' : 'There was an error retrieving distro %s, \
+                please see your administrator' % distro_install_name}
+
         systems_distro_query = distro.systems()
-        avail_systems_distro_query = System.available_for_schedule(identity.current.user,System.by_type(type='machine',systems=systems_distro_query)) 
-        return {'count' : avail_systems_distro_query.count(), 'distro_id' : distro.id }
+        avail_systems_distro_query = System.available_for_schedule(identity.current.user,System.by_type(type='machine',systems=systems_distro_query))
+        enough_systems = 0
+        if avail_systems_distro_query.count() > 0:
+            enough_systems = 1
+        return {'enough_systems' : enough_systems, 'distro_id' : distro.id }

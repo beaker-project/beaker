@@ -26,15 +26,15 @@ class RetentionTagTest(SeleniumTestCase):
         except: pass
         sel = self.selenium
         sel.open('retentiontag/delete/%s' % default_tag.id)
-        sel.wait_for_page_to_load(3000)
+        sel.wait_for_page_to_load('30000')
         self.failUnless(sel.is_text_present("%s is not applicable for deletion" % default_tag.tag))
 
         sel.open('retentiontag/delete/%s' % tag_with_job.id)
-        sel.wait_for_page_to_load(3000)
+        sel.wait_for_page_to_load('30000')
         self.failUnless(sel.is_text_present("%s is not applicable for deletion" % tag_with_job.tag))
 
         sel.open('retentiontag/delete/%s' % non_default_tag.id)
-        sel.wait_for_page_to_load(3000)
+        sel.wait_for_page_to_load('30000')
         self.failUnless(sel.is_text_present("Succesfully deleted %s" % non_default_tag.tag))
 
     def test_tag_add(self):
@@ -66,7 +66,7 @@ class RetentionTagTest(SeleniumTestCase):
         self.failUnless(sel.is_text_present("OK"))
         self.failUnless(sel.is_text_present("%s" % tag_to_add))
         sel.click("link=%s" % tag_to_add)
-        sel.wait_for_page_to_load(3000)
+        sel.wait_for_page_to_load('30000')
         self.assertEqual("off", sel.get_value("Retention Tag_needs_product"))
 
         sel.open("retentiontag/admin")

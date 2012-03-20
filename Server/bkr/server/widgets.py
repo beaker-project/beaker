@@ -83,7 +83,7 @@ class LocalCSSLink(CSSLink):
 jquery = LocalJSLink('bkr', '/static/javascript/jquery-1.5.1.min.js',
         order=1) # needs to come after MochiKit
 
-local_datetime = LocalJSLink('bkr', '/static/javascript/local_datetime.js')
+local_datetime = LocalJSLink('bkr', '/static/javascript/local_datetime_v2.js')
 
 
 class PowerTypeForm(CompoundFormField):
@@ -168,7 +168,7 @@ class ReserveSystem(TableForm):
 
 class ReserveWorkflow(Form): 
     javascript = [LocalJSLink('bkr', '/static/javascript/loader.js'),
-                  LocalJSLink('bkr', '/static/javascript/reserve_workflow_v4.js'),
+                  LocalJSLink('bkr', '/static/javascript/reserve_workflow_v5.js'),
                  ] 
     template="bkr.server.templates.reserve_workflow"
     css = [LocalCSSLink('bkr','/static/css/reserve_workflow.css')] 
@@ -1275,7 +1275,8 @@ class SystemForm(Form):
                                       search_controller=url("/groups/by_name"),
                                       search_param="name",
                                       result_name="groups"),
-               TextField(name='mac_address', label=_(u'Mac Address')),
+               TextField(name='mac_address', label=_(u'Mac Address'),
+                         attrs={'maxlength': 18}, validator=validators.MaxLength(18)),
                TextField(name='cc', label=_(u'Notify CC')),
                SingleSelectField(name='hypervisor_id',
                                  label=_(u'Hypervisor'),
@@ -1619,6 +1620,7 @@ class JobActionWidget(RecipeTaskActionWidget):
     params = ['redirect_to']
     action = url('/jobs/delete_job_from_ui')
     javascript = [LocalJSLink('bkr', '/static/javascript/job_delete.js'),
+        LocalJSLink('bkr', '/static/javascript/util.js'),
         LocalJSLink('bkr', '/static/javascript/job_row_delete.js')]
 
     def __init__(self, *args, **kw):
@@ -1646,6 +1648,7 @@ class JobActionWidget(RecipeTaskActionWidget):
 class JobPageActionWidget(JobActionWidget):
     params = []
     javascript = [LocalJSLink('bkr', '/static/javascript/job_delete.js'),
+        LocalJSLink('bkr', '/static/javascript/util.js'),
         LocalJSLink('bkr', '/static/javascript/job_page_delete.js')]
 
     def __init__(self, *args, **kw):

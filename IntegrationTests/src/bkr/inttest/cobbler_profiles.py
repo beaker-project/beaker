@@ -4,6 +4,9 @@ from bkr.labcontroller.osversion import *
 
 class Options(object):
     def __init__(self):
+        self.only_beaker = False
+        self.skip_beaker = False
+        self.skip_jobs = False
         self.test_output_dir = pkg_resources.resource_filename(self.__module__,
                                'labcontroller/osversion_data')
 

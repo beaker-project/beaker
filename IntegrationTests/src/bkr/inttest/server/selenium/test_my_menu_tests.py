@@ -19,11 +19,11 @@ class Menu(SeleniumTestCase):
         try:
             sel.open("")
             sel.click("link=My Jobs")
-            sel.wait_for_page_to_load("3000")
+            sel.wait_for_page_to_load('30000')
             sel.click("link=My Recipes")
-            sel.wait_for_page_to_load("3000")
+            sel.wait_for_page_to_load('30000')
             sel.click("link=My Systems")
-            sel.wait_for_page_to_load("3000")
+            sel.wait_for_page_to_load('30000')
         except Exception, e: 
             self.verificationErrors.append(str(e))
          

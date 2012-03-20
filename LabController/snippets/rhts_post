@@ -10,6 +10,7 @@ $SNIPPET('koan_environment')
 $SNIPPET('redhat_register')
 # Enable post-install boot notification
 $SNIPPET('post_anamon')
+$SNIPPET('readahead_sysconfig')
 
 ## Turn on ntpd
 /sbin/chkconfig ntpdate on
@@ -60,6 +61,7 @@ popd
 #end if
 
 # Add Repos
+$SNIPPET('print_repos')
 #set potential_repos = ['os_repos','debug_repos','optional_repos', 'customrepos']
 #for potential_repo in $potential_repos
 #if $getVar($potential_repo,'') != ''
@@ -139,14 +141,18 @@ gpgcheck=0
 EOF
 #end if
 
+# fill the yum cache and redirect output to /dev/null
+# This speeds up yum because of a bug where it will update stdout too often.
+# http://lists.baseurl.org/pipermail/yum-devel/2011-December/008857.html
+yum check-update > /dev/null 2>&1 || true
 # Install old rhts commands
-yum -y --disablerepo=* --enablerepo=beaker-* install rhts-test-env-lab rhts-legacy
+yum -y install rhts-test-env-lab rhts-legacy
 ## If koan is available install it.  This allows for easy re-installs
-yum -y --disablerepo=* --enablerepo=beaker-* install koan
+yum -y install koan
 # Install new harness
-yum -y --disablerepo=* --enablerepo=beaker-* install beah
+yum -y install beah
 # This may fail if you are outside of Red Hat..
-yum -y --disablerepo=* --enablerepo=beaker-* install beakerlib-redhat
+yum -y install beakerlib-redhat
 
 cp /etc/beah_beaker.conf{,.default}
 cat << EOF > /etc/beah_beaker.conf

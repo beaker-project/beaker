@@ -24,6 +24,7 @@ import logging
 import time
 import datetime
 import xmlrpclib
+import crypt
 from turbogears.database import session
 
 from bkr.inttest.server.selenium import XmlRpcTestCase
@@ -466,6 +467,31 @@ class SystemProvisionXmlRpcTest(XmlRpcTestCase):
         snippet_filename = '/var/lib/cobbler/snippets/per_system/ks_appends/%s' % system.fqdn
         self.assert_('man@moon' in
                 self.stub_cobbler_thread.cobbler.snippets[snippet_filename])
+
+    def test_provision_root_password(self):
+        system = self.usable_system
+        user = system.user
+        user.root_password = 'gyfrinachol'
+        session.flush()
+        self.server.auth.login_password(user.user_name, 'password')
+        self.server.systems.provision(system.fqdn, self.distro.install_name,
+                'method=nfs', 'noapic', 'noapic runlevel=3', '')
+        self.assert_(crypt.crypt('gyfrinachol', user.root_password) ==
+                     self.stub_cobbler_thread.cobbler.systems[system.fqdn]['ksmeta']['password'])
+
+    def test_ssh_key_ksappend_has_end(self):
+        system = self.usable_system
+        user = system.user
+        user.sshpubkeys.append(SSHPubKey(u'ssh-rsa', u'AAAAxyz', u'abc@def'))
+        distro = data_setup.create_distro(name='RedHatEnterpriseLinux7.8.9', arch=u'i386',
+                                          osmajor=u'RedHatEnterpriseLinux7')
+        session.flush()
+        self.server.auth.login_password(user.user_name, 'password')
+        self.server.systems.provision(system.fqdn, distro.install_name)
+        beakerd.queued_commands()
+        snippet_filename = '/var/lib/cobbler/snippets/per_system/ks_appends/%s' % system.fqdn
+        print self.stub_cobbler_thread.cobbler.snippets[snippet_filename]
+        self.assert_('%end' in self.stub_cobbler_thread.cobbler.snippets[snippet_filename])
 
 class LegacyPushXmlRpcTest(XmlRpcTestCase):
 

@@ -28,6 +28,7 @@ setup(
             'beaker-watchdog = bkr.labcontroller.watchdog:main',
             'beaker-transfer = bkr.labcontroller.transfer:main',
             'beaker-osversion = bkr.labcontroller.osversion:main',
+            'beaker-import = bkr.labcontroller.distro_import:main',
         ),
     }
 )

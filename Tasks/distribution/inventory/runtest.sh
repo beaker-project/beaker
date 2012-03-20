@@ -38,7 +38,6 @@ rlJournalStart
     rlPhaseEnd
 
     rlPhaseStartTest
-	rlRun "./push-inventory.py --server $server -h $hostname"
 	rlRun "./pushInventory.py --server $server -h $hostname"
     rlPhaseEnd
 rlJournalPrintText

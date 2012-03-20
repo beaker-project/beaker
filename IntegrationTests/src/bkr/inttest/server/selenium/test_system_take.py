@@ -35,7 +35,7 @@ class SystemOwnerTake(SeleniumTestCase):
         sel.wait_for_page_to_load("30000")
         self.assert_(sel.is_text_present("(Take)"))
         sel.click("link=(Take)")
-        sel.wait_for_page_to_load("3000")
+        sel.wait_for_page_to_load('30000')
         self.assert_("Reserved %s" % self.manual_system.fqdn in sel.get_text('//body'))
 
 
@@ -101,7 +101,6 @@ class SystemGroupUserTake(SeleniumTestCase):
 
     def test_system_no_group(self):
         #Auto Machine
-        session.flush()
         sel = self.selenium
         sel.open("")
         sel.type("simplesearch", "%s" % self.automated_system.fqdn)
@@ -111,6 +110,12 @@ class SystemGroupUserTake(SeleniumTestCase):
         sel.wait_for_page_to_load("30000")
         try: self.failUnless(not sel.is_text_present("(Take)")) #Automated should not have Take for this user
         except AssertionError, e: self.verificationErrors.append('Take is present on automated machine with no groups')
+
+        # Test for https://bugzilla.redhat.com/show_bug.cgi?id=747328
+        sel.open('user_change?id=%s' % self.automated_system.id)
+        sel.wait_for_page_to_load("30000")
+        self.assert_('You were unable to change the user for %s' % self.automated_system.fqdn in sel.get_text('//body'))
+   
 
         #Manual machine
         #import pdb;pdb.set_trace()
@@ -137,6 +142,12 @@ class SystemGroupUserTake(SeleniumTestCase):
         sel.wait_for_page_to_load("30000")
         try: self.failUnless(not sel.is_text_present("(Take)")) #Should not be here
         except AssertionError, e: self.verificationErrors.append('Take is present on automated machine with group')
+
+        # Test for https://bugzilla.redhat.com/show_bug.cgi?id=747328
+        sel.open('user_change?id=%s' % self.automated_system.id)
+        sel.wait_for_page_to_load("30000")
+        self.assert_('You were unable to change the user for %s' % self.automated_system.fqdn in sel.get_text('//body'))
+
         try:
             self._do_schedule_provision(self.automated_system.fqdn,reraise=True) #Should not be able to provision either
         except AssertionError, e: #Hmm, this is actually a good thing!
@@ -157,6 +168,12 @@ class SystemGroupUserTake(SeleniumTestCase):
         sel.wait_for_page_to_load("30000")
         try: self.failUnless(not sel.is_text_present("(Take)")) #Should not be here
         except AssertionError, e: self.verificationErrors.append('Take is present on manual machine with group')
+
+        # Test for https://bugzilla.redhat.com/show_bug.cgi?id=747328
+        sel.open('user_change?id=%s' % self.manual_system.id)
+        sel.wait_for_page_to_load("30000")
+        self.assert_('You were unable to change the user for %s' % self.manual_system.fqdn in sel.get_text('//body'))
+
         try:
             self._do_schedule_provision(self.manual_system.fqdn, reraise=True) #Should not be able to provision either
         except AssertionError, e: #Hmm, this is actually a good thing!
@@ -185,6 +202,10 @@ class SystemGroupUserTake(SeleniumTestCase):
         except AssertionError, e: self.verificationErrors.\
             append('Take is available to automated machine with system group privs' )
 
+        # Test for https://bugzilla.redhat.com/show_bug.cgi?id=747328
+        sel.open('user_change?id=%s' % self.automated_system.id)
+        sel.wait_for_page_to_load("30000")
+        self.assert_('You were unable to change the user for %s' % self.automated_system.fqdn in sel.get_text('//body'))
 
         self.user.groups = [self.group]
         session.flush()

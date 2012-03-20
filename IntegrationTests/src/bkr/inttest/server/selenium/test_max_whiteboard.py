@@ -25,7 +25,7 @@ class MaxWhiteboard(SeleniumTestCase):
         sel.click("//option[@value='%s']" % self.whiteboard)
         sel.click("//input[@value='Generate']")
         sel.wait_for_page_to_load("30000")
-        self.failUnless(sel.is_text_present("exact:Pass: %s" % Job.max_by_whiteboard))
+        #self.failUnless(sel.is_text_present("exact:Pass: %s" % Job.max_by_whiteboard))
         self.failUnless(sel.is_text_present("Your whiteboard contains 21 jobs, only %s will be used" % Job.max_by_whiteboard))
 
     @classmethod

@@ -31,7 +31,7 @@ from bkr.server.model import LabController, User, Group, Distro, Breed, Arch, \
         Device, TaskResult, TaskStatus, Job, RecipeSet, TaskPriority, \
         LabControllerDistro, Power, PowerType, TaskExcludeArch, TaskExcludeOSMajor, \
         Permission, RetentionTag, Product, Watchdog, Reservation, LogRecipe, \
-        LogRecipeTask, ExcludeOSMajor, ExcludeOSVersion, Hypervisor
+        LogRecipeTask, ExcludeOSMajor, ExcludeOSVersion, Hypervisor, DistroTag
 
 log = logging.getLogger(__name__)
 
@@ -70,7 +70,11 @@ def create_product(product_name=None):
     if product_name is None:
         product_name = unique_name(u'product%s')
     return Product.lazy_create(name=product_name)
-    
+
+def create_distro_tag(tag=None):
+    if tag is None:
+        tag = unique_name('tag%s')
+    return DistroTag.lazy_create(tag=tag)
 
 def create_labcontroller(fqdn=None, user=None):
     if fqdn is None:
@@ -109,6 +113,11 @@ def create_user(user_name=None, password=None, display_name=None,
     if password:
         user.password = password
     log.debug('Created user %r', user)
+    return user
+
+def create_admin(**kwargs):
+    user = create_user(**kwargs)
+    user.groups.append(Group.by_name(u'admin'))
     return user
 
 def add_system_lab_controller(system,lc): 
@@ -254,18 +263,18 @@ def create_recipe(system=None, distro=None, task_list=None,
         recipe.logs = [LogRecipe(server=u'http://dummy-archive-server/beaker/recipe_path', filename=u'dummy.txt' )]
 
     if not server_log:
-        rt_log = LogRecipeTask(path=u'/tasks', filename=u'dummy.txt', basepath='/')
+        rt_log = lambda: LogRecipeTask(path=u'/tasks', filename=u'dummy.txt', basepath='/')
     else:
-        rt_log = LogRecipeTask(server=u'http://dummy-archive-server/beaker/recipe_path/tasks', filename=u'dummy.txt')
+        rt_log = lambda: LogRecipeTask(server=u'http://dummy-archive-server/beaker/recipe_path/tasks', filename=u'dummy.txt')
     if task_list: #don't specify a task_list and a task_name...
         for t in task_list:
             rt = RecipeTask(task=t)
-            rt.logs = [rt_log]
+            rt.logs = [rt_log()]
             recipe.tasks.append(rt)
 
     else:
         rt = RecipeTask(task=create_task(name=task_name))
-        rt.logs = [rt_log]
+        rt.logs = [rt_log()]
         recipe.tasks.append(rt)
     return recipe
 
@@ -342,9 +351,7 @@ def mark_job_complete(job, **kwargs):
     for recipe in job.all_recipes:
         mark_recipe_complete(recipe, **kwargs)
 
-def mark_job_waiting(job, user=None):
-    if user is None:
-        user = create_user()
+def mark_job_waiting(job):
     for recipeset in job.recipesets:
         for recipe in recipeset.recipes:
             recipe.process()
@@ -355,12 +362,14 @@ def mark_job_waiting(job, user=None):
                     reservation_type=u'recipe', recipe=recipe)
             recipe.watchdog = Watchdog(system=recipe.system)
             recipe.waiting()
+            log.debug('Marked %s as waiting with system %s', recipe.t_id, recipe.system)
 
-def mark_job_running(job, user=None):
-    mark_job_waiting(job, user=user)
+def mark_job_running(job):
+    mark_job_waiting(job)
     for recipe in job.all_recipes:
         for rt in recipe.tasks:
             rt.start()
+            log.debug('Started %s', rt.t_id)
 
 def mark_job_queued(job):
     for recipe in job.all_recipes:

@@ -9,10 +9,13 @@ body {
 	background-color: #d9d9d9;
 }
 
-
 a:link {
+
+	text-decoration: underline;
+    	cursor: pointer;
 	color: #22437F;
 }
+
 a:visited {
 	color: #48468f;
 }

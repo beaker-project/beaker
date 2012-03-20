@@ -17,12 +17,12 @@ class TaskByName(SeleniumTestCase):
         task_id = self.my_task.id
         task_name = self.my_task.name
         sel.open('tasks%s' % task_name)
-        sel.wait_for_page_to_load("3000")
+        sel.wait_for_page_to_load('30000')
         self.failUnless(sel.is_text_present("Tasks - %s" % task_name))
         data_from_name = sel.get_text("//body")
 
         sel.open('tasks/%s' % task_id)
-        sel.wait_for_page_to_load("3000")
+        sel.wait_for_page_to_load('30000')
         self.failUnless(sel.is_text_present("Tasks - %s" % task_name))
         data_from_id = sel.get_text("//body")
 

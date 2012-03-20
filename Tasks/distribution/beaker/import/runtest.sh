@@ -95,6 +95,10 @@ function Inventory()
     rhts-sync-block -s DONE -s ABORT $CLIENTS
     beaker-repo-update
     estatus_fail "**** Failed to run beaker-repo-update ****"
+    if [ -n "$HARNESSREPO" ]; then
+        beaker-repo-update --baseurl $HARNESSREPO
+        estatus_fail "**** Failed to run beaker-repo-update $HARNESSREPO ****"
+    fi
     result_pass 
 }
 

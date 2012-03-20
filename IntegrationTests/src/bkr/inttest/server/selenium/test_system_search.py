@@ -1,5 +1,5 @@
 #!/usr/bin/python
-from bkr.server.model import Numa, User
+from bkr.server.model import Numa, User, Key, Key_Value_String
 from bkr.inttest.server.selenium import SeleniumTestCase
 from bkr.inttest import data_setup
 import unittest, time, re, os, datetime
@@ -23,7 +23,7 @@ class SearchColumns(SeleniumTestCase):
     def test_group_column(self):
         sel = self.selenium
         sel.open('')
-        sel.wait_for_page_to_load('3000')
+        sel.wait_for_page_to_load('30000')
         sel.click("advancedsearch")
         sel.select("systemsearch_0_table", "label=System/Group")
         sel.select("systemsearch_0_operation", "label=is not")
@@ -31,14 +31,14 @@ class SearchColumns(SeleniumTestCase):
         sel.click("selectnone")
         sel.click("systemsearch_column_System/Group")
         sel.click("Search")
-        sel.wait_for_page_to_load("3000")
+        sel.wait_for_page_to_load('30000')
         self.assertEqual(sel.get_title(), 'Systems')
         self.failUnless(sel.is_text_present("%s" % self.system_with_group.groups[0].group_name))
 
     def test_numa_column(self):
         sel = self.selenium
         sel.open('')
-        sel.wait_for_page_to_load('3000')
+        sel.wait_for_page_to_load('30000')
         sel.click("advancedsearch")
         sel.select("systemsearch_0_table", "label=System/NumaNodes")
         sel.select("systemsearch_0_operation", "label=is not")
@@ -46,7 +46,7 @@ class SearchColumns(SeleniumTestCase):
         sel.click("selectnone")
         sel.click("systemsearch_column_System/NumaNodes")
         sel.click("Search")
-        sel.wait_for_page_to_load("3000")
+        sel.wait_for_page_to_load('30000')
         self.assertEqual(sel.get_title(), 'Systems')
         self.failUnless(sel.is_text_present(str(self.system_with_numa.numa)))
 
@@ -85,6 +85,10 @@ class Search(SeleniumTestCase):
         cls.system_one = data_setup.create_system(**cls.system_one_details)
         cls.system_one.loaned = data_setup.create_user()
         cls.system_one.numa = Numa(nodes=2)
+        cls.system_one.key_values_string.append(Key_Value_String(
+            Key.by_name(u'CPUMODEL'), 'foocodename'))
+        cls.system_one.key_values_string.append(Key_Value_String(
+            Key.by_name(u'HVM'), '1'))
 
         cls.system_two_details = { 'fqdn' : u'a2',
                                     'type' : u'Virtual',
@@ -237,6 +241,37 @@ class Search(SeleniumTestCase):
         except AssertionError, e: self.verificationErrors.append(str(21))
         try: self.failUnless(sel.is_text_present("%s" % self.system_three.fqdn))
         except AssertionError, e: self.verificationErrors.append(str(22))
+
+    def test_can_search_by_key_value(self):
+        sel = self.selenium
+        sel.open('')
+        sel.select("systemsearch_0_table", "label=Key/Value")
+        sel.select("systemsearch_0_keyvalue", "label=CPUMODEL")
+        sel.select("systemsearch_0_operation", "label=is")
+        sel.type("systemsearch_0_value", "foocodename")
+        sel.click("Search")
+        sel.wait_for_page_to_load("30000")
+        self.assertEqual(sel.get_title(), 'Systems')
+        self.failUnless(sel.is_text_present("%s" % self.system_one.fqdn))
+        self.failUnless(not sel.is_text_present("%s" % self.system_three.fqdn))
+        self.failUnless(not sel.is_text_present("%s" % self.system_three.fqdn))
+
+        sel.open('')
+        sel.select("systemsearch_0_table", "label=Key/Value")
+        sel.select("systemsearch_0_keyvalue", "label=HVM")
+        sel.select("systemsearch_0_operation", "label=is")
+        sel.type("systemsearch_0_value", "1")
+        sel.click("doclink")
+        sel.select("systemsearch_1_table", "label=Key/Value")
+        sel.select("systemsearch_1_keyvalue", "label=CPUMODEL")
+        sel.select("systemsearch_1_operation", "label=is")
+        sel.type("systemsearch_1_value", "foocodename")
+        sel.click("Search")
+        sel.wait_for_page_to_load("30000")
+        self.assertEqual(sel.get_title(), 'Systems')
+        self.failUnless(sel.is_text_present("%s" % self.system_one.fqdn))
+        self.failUnless(not sel.is_text_present("%s" % self.system_three.fqdn))
+        self.failUnless(not sel.is_text_present("%s" % self.system_three.fqdn))
 
     def test_can_search_by_numa_node_count(self):
         sel = self.selenium

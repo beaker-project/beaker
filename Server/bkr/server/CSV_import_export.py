@@ -73,15 +73,12 @@ class CSV(RPCRoot):
 
     @expose()
     @identity.require(identity.not_anonymous())
-    def action_export(self, csv_type, to_screen=False, *args, **kw):
+    def action_export(self, csv_type, *args, **kw):
         file = NamedTemporaryFile()
         log = self.to_csv(file, csv_type)
         file.seek(0)
 
-        if to_screen: #Used for testing contents of CSV
-            return serve_file(file.name, contentType="text/plain")
-        else:
-            return serve_file(file.name, contentType="text/csv",
+        return serve_file(file.name, contentType="text/csv",
                                      disposition="attachment",
                                      name="%s.csv" % csv_type)
 
@@ -167,7 +164,8 @@ class CSV(RPCRoot):
         for item in cls.query():
             for data in cls.to_datastruct(item):
                 data['csv_type'] = cls.csv_type
-                writer.writerow(data)
+                # XXX remove encoding in Python 3...
+                writer.writerow(dict((k, unicode(v).encode('utf8')) for k, v in data.iteritems()))
 
     @classmethod
     def from_csv(cls, system, data, log):
@@ -205,7 +203,6 @@ class CSV(RPCRoot):
 
         return True
 
-    @to_byte_string('utf8')
     def to_datastruct(self):
         datastruct = dict()
         for csv_key in self.csv_keys:
@@ -654,33 +651,32 @@ class CSV_Install(CSV):
         self.fqdn = install.system.fqdn
         self.arch = install.arch
 
-    @to_byte_string('utf8') 
     def to_datastruct(self):
         datastruct = dict(fqdn = self.fqdn,
                           arch = self.arch,
-                          family = None,
-                          update = None,
-                          ks_meta = self.install.ks_meta,
-                          kernel_options = self.install.kernel_options,
-                          kernel_options_post = self.install.kernel_options_post)
+                          family = '',
+                          update = '',
+                          ks_meta = self.install.ks_meta or '',
+                          kernel_options = self.install.kernel_options or '',
+                          kernel_options_post = self.install.kernel_options_post or '')
         yield datastruct
         if self.install.provision_families:
             for family in self.install.provision_families.keys():
                 prov_family = self.install.provision_families[family]
                 datastruct['family'] = family
-                datastruct['ks_meta'] = prov_family.ks_meta
-                datastruct['kernel_options'] = prov_family.kernel_options
-                datastruct['kernel_options_post'] = prov_family.kernel_options_post
+                datastruct['ks_meta'] = prov_family.ks_meta or ''
+                datastruct['kernel_options'] = prov_family.kernel_options or ''
+                datastruct['kernel_options_post'] = prov_family.kernel_options_post or ''
                 yield datastruct
                 if prov_family.provision_family_updates:
                     for update in prov_family.provision_family_updates.keys():
                         prov_update = prov_family.provision_family_updates[update]
                         datastruct['update'] = update.osminor
-                        datastruct['ks_meta'] = prov_update.ks_meta
-                        datastruct['kernel_options'] = prov_update.kernel_options
-                        datastruct['kernel_options_post'] = prov_update.kernel_options_post
+                        datastruct['ks_meta'] = prov_update.ks_meta or ''
+                        datastruct['kernel_options'] = prov_update.kernel_options or ''
+                        datastruct['kernel_options_post'] = prov_update.kernel_options_post or ''
                         yield datastruct
-                    datastruct['update'] = None
+                    datastruct['update'] = ''
         
 class CSV_KeyValue(CSV):
     csv_type = 'keyvalue'
