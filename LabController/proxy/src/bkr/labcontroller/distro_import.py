@@ -611,6 +611,7 @@ class TreeInfoBase(object):
         self.kickbase = os.path.dirname(self.cobbler.settings.get('default_kickstart'))
         #self.kickbase = "/var/lib/cobbler/kickstarts"
         self.tree = dict()
+        self.tree['kernel_options'] = ''
         if self.options.available_as:
             url = self.options.available_as
         else:
@@ -689,6 +690,7 @@ class TreeInfoBase(object):
             return ks_meta
         except (ConfigParser.NoSectionError, ConfigParser.NoOptionError), e:
             logging.debug('no addon repos for %s, %s' % (self.parser.url,e))
+            return dict()
 
     def sync_images(self):
         """
@@ -1004,6 +1006,7 @@ kernel = images/pxeboot/vmlinuz
             return ks_meta
         except (ConfigParser.NoSectionError, ConfigParser.NoOptionError), e:
             logging.debug('no addon repos for %s, %s' % (self.parser.url,e))
+            return dict()
 
     def get_kernel_path(self):
         return self.parser.get('images-%s' % self.tree['arch'],'kernel')

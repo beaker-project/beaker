@@ -57,7 +57,7 @@ class JobMatrix:
                 job_ids = model.Job.sanitise_job_ids(job_ids)
             # Build the result grid
             gen_results = self.generate(whiteboard=kw.get('whiteboard'),
-                job_ids=job_ids, toggle_nacks=kw.get('toggle_nacks'))
+                job_ids=job_ids, toggle_nacks=kw.get('toggle_nacks_on'))
             matrix_options['grid'] = gen_results['grid']
             matrix_options['list'] = gen_results['data']
             if 'whiteboard' in kw: # Getting results by whiteboard
@@ -70,6 +70,7 @@ class JobMatrix:
                 self.job_ids = job_ids
                 matrix_options['job_ids_vals'] = "\n".join([str(j) for j in job_ids])
             elif job_ids: #Getting results by job id
+                self.job_ids = job_ids
                 matrix_options['job_ids_vals'] = '\n'.join([str(j) for j in job_ids])
             if 'toggle_nacks_on' in kw:
                 matrix_options['toggle_nacks_on'] = True

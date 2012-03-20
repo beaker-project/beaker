@@ -1,3 +1,4 @@
+#set global end='%end'
 #if $varExists('sysprofile')
 #set listed_snippet_profiles = $getVar('sysprofile','').split(';')
 #for $snippet_profile in $listed_snippet_profiles
@@ -24,8 +25,7 @@ bootloader --location=mbr #slurp
 # Use text mode install
 $getVar('mode', 'text')
 $SNIPPET("network")
-$SNIPPET("print_repos")
-$print_repo("repos", anaconda=True)
+$SNIPPET("print_anaconda_repos")
 
 ## Firewall configuration
 ## firewall in kickstart metadata will enable the firewall
@@ -48,7 +48,14 @@ keyboard $getVar('keyboard', 'us')
 # System language
 lang $getVar('lang','en_US.UTF-8')
 $yum_repo_stanza
+#if $arch.startswith("s390"):
+
+#Disable reboot on s390 arch for now. Please re-enable for alpha2
+#reboot
+
+#else
 reboot
+#end if
 #Root password
 rootpw --iscrypted $getVar('password', $default_password_crypted)
 # SELinux configuration
@@ -87,10 +94,6 @@ $SNIPPET("system_pre")
 
 
 %post --log=/dev/console
-$SNIPPET("print_repos")
-cat >> /etc/yum.repos.d/beaker-additional.repo << EOF
-$print_repo("repos")
-EOF
 $SNIPPET("rhts_post")
 $SNIPPET("RedHatEnterpriseLinux7_post")
 $SNIPPET("system_post")

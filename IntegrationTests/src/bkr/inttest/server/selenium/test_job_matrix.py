@@ -22,7 +22,7 @@ from bkr.server.model import TaskResult
 from bkr.inttest.server.webdriver_utils import login, is_text_present
 from bkr.inttest.server.selenium import SeleniumTestCase, WebDriverTestCase
 from bkr.inttest import data_setup, get_server_base
-from bkr.server.model import Job
+from bkr.server.model import Job, Response, RecipeSetResponse
 
 class TestJobMatrixWebDriver(WebDriverTestCase):
 
@@ -90,7 +90,7 @@ class TestJobMatrixWebDriver(WebDriverTestCase):
         session.flush()
         b = self.browser
         owner = data_setup.create_user(password='password')
-        self.passed_job.owner = owner 
+        self.passed_job.owner = owner
         session.flush()
         login(b, user=owner.user_name, password='password')
         b.get(get_server_base() + 'matrix')
@@ -107,6 +107,41 @@ class TestJobMatrixWebDriver(WebDriverTestCase):
         # Assert it is no longer there
         b.get(get_server_base() + 'matrix')
         b.find_element_by_xpath("//select[@name='whiteboard']/option[@value='%s']" % self.job_whiteboard).click()
+        b.find_element_by_xpath('//input[@value="Generate"]').click()
+        report_text = b.find_element_by_xpath("//div[@id='matrix-report']").text
+        self.assert_('Pass: 1' not in report_text)
+
+    def test_nacked_recipe_results_not_shown(self):
+        data_setup.create_completed_job(
+                whiteboard=self.job_whiteboard, result=u'Fail',
+                recipe_whiteboard=self.recipe_whiteboard,
+                distro=data_setup.create_distro(arch=u'i386'))
+        data_setup.create_completed_job(
+                whiteboard=self.job_whiteboard, result=u'Warn',
+                recipe_whiteboard=self.recipe_whiteboard,
+                distro=data_setup.create_distro(arch=u'i386'))
+        session.flush()
+        b = self.browser
+        owner = data_setup.create_user(password='password')
+        self.passed_job.owner = owner 
+        session.flush()
+        login(b, user=owner.user_name, password='password')
+        b.get(get_server_base() + 'matrix')
+        b.find_element_by_xpath("//select[@name='whiteboard']/option[@value='%s']" % self.job_whiteboard).click()
+        b.find_element_by_xpath("//input[@name='toggle_nacks_on']").click()
+        b.find_element_by_xpath('//input[@value="Generate"]').click()
+        report_text = b.find_element_by_xpath("//div[@id='matrix-report']").text
+        self.assert_('Pass: 1' in report_text)
+
+        # Nack Recipe
+        response = Response.by_response('nak')
+        self.passed_job.recipesets[0].nacked = RecipeSetResponse(response_id=response.id)
+        session.flush()
+
+        # Assert it is no longer there
+        b.get(get_server_base() + 'matrix')
+        b.find_element_by_xpath("//select[@name='whiteboard']/option[@value='%s']" % self.job_whiteboard).click()
+        b.find_element_by_xpath("//input[@name='toggle_nacks_on']").click()
         b.find_element_by_xpath('//input[@value="Generate"]').click()
         report_text = b.find_element_by_xpath("//div[@id='matrix-report']").text
         self.assert_('Pass: 1' not in report_text)
@@ -131,12 +166,35 @@ class TestJobMatrixWebDriver(WebDriverTestCase):
         b.get(get_server_base() + 'matrix')
         b.find_element_by_name('whiteboard_filter').send_keys(unique_whiteboard)
         b.find_element_by_name('do_filter').click()
+        # With the following click() I often got a:
+        # "StaleElementReferenceException: Element not found in the cache -
+        # perhaps the page has changed since it was looked up"
+        # I could do the retry in a loop, but this is qicker and simpler
+        from time import sleep
+        sleep(2)
         b.find_element_by_xpath("//select/option[@value='%s']" % unique_whiteboard).click()
         b.find_element_by_xpath('//input[@value="Generate"]').click()
         b.find_element_by_link_text('Pass: 1').click()
         task_id = b.find_element_by_xpath('//table[position()=2]//tr[position()=2]/td').text
         self.assertEqual(task_id,
             single_job.recipesets[0].recipes[0].tasks[0].t_id)
+
+        # Test by job id
+        # See https://bugzilla.redhat.com/show_bug.cgi?id=803713
+        single_job_2 = data_setup.create_completed_job(
+                whiteboard=non_unique_whiteboard, result=u'Pass',
+                recipe_whiteboard=non_unique_rwhiteboard,
+                distro=distro)
+        session.flush()
+        b = self.browser
+        b.get(get_server_base() + 'matrix')
+        b.find_element_by_id('remote_form_job_ids').send_keys(str(single_job_2.id))
+        b.find_element_by_xpath('//input[@value="Generate"]').click()
+        b.find_element_by_link_text('Pass: 1').click()
+        # This gets the last element, which shold also be the first element
+        task_id = b.find_element_by_xpath('//table[position()=2]//tr[position()=(last() - 1)]/td').text
+        self.assertEqual(task_id,
+            single_job_2.recipesets[0].recipes[0].tasks[0].t_id)
 
     def tearDown(self):
         b = self.browser.quit()
