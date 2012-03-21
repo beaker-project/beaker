@@ -16,7 +16,7 @@
 
 Name:           beaker
 Version:        0.8.1
-Release:        5%{?dist}
+Release:        6%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -346,6 +346,9 @@ fi
 %endif
 
 %changelog
+* Wed Mar 21 2012 Raymond Mancy <rmancy@redhat.com> 0.8.1-6
+- Qpid changes (rmancy@redhat.com)
+
 * Fri Mar 16 2012 Bill Peck <bpeck@redhat.com> 0.8.1-5
 - 803713 Fix for job matrix result box not generating links with 'job_ids' when
   being generated via job id box (rmancy@redhat.com)
