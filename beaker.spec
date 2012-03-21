@@ -526,17 +526,31 @@ fi
 - beaker-osversion will die on inherited profiles (bpeck@redhat.com)
 
 * Wed Nov 02 2011 Raymond Mancy <rmancy@redhat.com> 0.8.0-6
-- upgrade to sqlalchemy 0.6, TurboGears 1.1, Python 2.6 for server and lab
-  controller (dcallagh@redhat.com)
+- fixes for integration tests
+
+* Fri Oct 28 2011 Bill Peck <bpeck@redhat.com> 0.8.0-5
+- fix warnings from osversion.trigger and remove osversion_data after
+  10 days
+
+* Fri Oct 28 2011 Bill Peck <bpeck@redhat.com> 0.8.0-4
 - 749242 removed log-delete deprecation error
-- 743852 Filter buttons in Recipe view not working (Queued, Running recipes)
-  (bpeck@redhat.com)
-- 718119 new osversion.trigger (bpeck@redhat.com)
-- 746683 bkr whoami command added (bpeck@redhat.com)
+
+* Thu Oct 27 2011 Bill Peck <bpeck@redhat.com> 0.8.0-3
+- add missing continue statements
+
+* Wed Oct 26 2011 Bill Peck <bpeck@redhat.com> 0.8.0-2
+- 718119 new osversion.trigger
+- 746683 bkr whoami command added
 
 * Tue Oct 18 2011 Dan Callaghan <dcallagh@redhat.com> 0.7.3-6
 - 746774 correctly handle multiple status changes within the same second
   (dcallagh@redhat.com)
+
+* Mon Oct 10 2011 Dan Callaghan <dcallagh@redhat.com> 0.8.0-1
+- upgrade to sqlalchemy 0.6, TurboGears 1.1, Python 2.6 for server and lab
+  controller (dcallagh@redhat.com)
+- 743852 Filter buttons in Recipe view not working (Queued, Running recipes)
+  (bpeck@redhat.com)
 
 * Fri Sep 30 2011 Raymond Mancy <rmancy@redhat.com> 0.7.3-5
 - 739893 - Client option to print xml of existing job
@@ -995,7 +1009,7 @@ fi
 - depend on our exact version of TurboGears (dcallagh@redhat.com)
 - show identity errors on the login form (dcallagh@redhat.com)
 
-* Wed Feb 23 2011 Raymond Mancy <rmancy@redhat.com>
+* Wed Feb 23 2011 Raymond Mancy <rmancy@redhat.com> 0.6.5-1
 - 678215 SQL instructions for replaceing '' with NULL for recipe.whiteboard
 (rmancy@redhat.com)
 - 676410 Fix matrix report view (rmancy@redhat.com)
@@ -1179,8 +1193,6 @@ fi
 * Wed Dec 01 2010 Raymond Mancy <rmancy@redhat.com> 0.5.63-2
 - Updated product-update to not print out debug msg (rmancy@redhat.com)
 
-* Wed Dec 01 2010 Raymond Mancy <rmancy@redhat.com>
-- Updated product-update to not print out debug msg (rmancy@redhat.com)
 * Tue Nov 30 2010 Bill Peck <bpeck@redhat.com> 0.5.63-1
 - Merge branch 'bz590951' into develop (bpeck@redhat.com)
 - add --cc command line option to workflows. (bpeck@redhat.com)
