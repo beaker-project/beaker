@@ -6,12 +6,11 @@ import ConfigParser
 import getopt
 from optparse import OptionParser
 import urllib2
-import urlgrabber
-import urlgrabber.progress
 import logging
 import socket
 import copy
 from bkr.common.bexceptions import BX
+import pprint
 
 def url_exists(url):
     try:
@@ -38,16 +37,7 @@ class SchedulerProxy(object):
                                            allow_none=True)
 
     def add_distro(self, profile):
-        try:
-            self.proxy.register_distro(profile['name'])
-        except xmlrpclib.Fault, e:
-            # This is a hack to work around a race condition in Distro.lazy_create.
-            # Remove this hack when that method is fixed.
-            if 'IntegrityError' in e.faultString:
-                pass
-            else:
-                raise
-        return self.proxy.add_distro(profile)
+        return self.proxy.add_distro_tree(profile)
 
     def run_distro_test_job(self, profile):
         if self.is_add_distro_cmd:
@@ -76,29 +66,6 @@ class SchedulerProxy(object):
         if os.path.exists(self.add_distro_cmd):
             return True
         return False
-
-
-class CobblerProxy(object):
-    def __init__(self, options):
-        from cobbler import utils
-        self.proxy = xmlrpclib.ServerProxy(options.lab)
-        #cobbler = xmlrpclib.ServerProxy('http://127.0.0.1/cobbler_api')
-        self.token = self.proxy.login("", utils.get_shared_secret())
-        self.settings = self.proxy.get_settings(self.token)
-
-    def add_distro(self, name, options):
-        return self.proxy.xapi_object_edit('distro',
-                                             name,
-                                             'add',
-                                             options,
-                                             self.token)
-
-    def add_profile(self, name, options):
-        return self.proxy.xapi_object_edit('profile',
-                                             name,
-                                             'add',
-                                             options,
-                                             self.token)
 
 
 class Parser(object):
@@ -145,8 +112,6 @@ class Tparser(Parser):
     infofile = '.treeinfo'
 
 class Importer(object):
-    _desc = "Importer"
-
     def __init__(self, parser):
         self.parser = parser
 
@@ -172,7 +137,6 @@ class ComposeInfoLegacy(ComposeInfoBase, Importer):
     arches = i386,x86_64,ia64,ppc64,s390,s390x
     name = RHEL4-U8
     """
-    _desc = "ComposeInfoLegacy"
     required = [dict(section='tree', key='name'),
                ]
     excluded = [dict(section='product', key='variants'),
@@ -197,22 +161,50 @@ class ComposeInfoLegacy(ComposeInfoBase, Importer):
             raise BX('%s no os_dir found: %s' % (base_path, e))
         return os.path.join(arch, os_dir)
 
-    def process(self, options):
+    def process(self, urls, options):
         self.options = options
         for arch in self.get_arches():
             os_dir = self.get_os_dir(arch)
-            ks_meta = dict()
+            full_os_dir = os.path.join(self.parser.url, os_dir)
             options = copy.deepcopy(self.options)
             if not options.name:
                 options.name = self.parser.get('tree', 'name')
-            if options.available_as:
-                options.available_as = os.path.join(options.available_as,
-                                                    os_dir)
+            urls_arch = [os.path.join(url, os_dir) for url in urls]
+            # find our repos, but relative from os_dir
+            repos = self.find_repos(full_os_dir, arch)
             try:
-                build = Build(os.path.join(self.parser.url, os_dir))
-                build.process(options, ks_meta)
+                build = Build(full_os_dir)
+                build.process(urls_arch, options, repos)
             except BX, err:
                 logging.warn(err)
+
+    def find_repos(self, repo_base, arch):
+        """
+        RHEL6 repos
+        ../../optional/<ARCH>/os/repodata
+        ../../optional/<ARCH>/debug/repodata
+        ../debug/repodata
+        """
+        repo_paths = [('debuginfo',
+                       'debug',
+                       '../debug'),
+                      ('optional-debuginfo',
+                       'debug',
+                       '../optional/%s/debug' % arch),
+                      ('optional',
+                       'optional',
+                       '../../optional/%s/os' % arch),
+                     ]
+        repos = []
+        for repo in repo_paths:
+            if url_exists(os.path.join(repo_base,repo[2],'repodata')):
+                repos.append(dict(
+                                  repoid=repo[0],
+                                  type=repo[1],
+                                  path=repo[2],
+                                 )
+                            )
+        return repos
 
 
 class ComposeInfo(ComposeInfoBase, Importer):
@@ -496,7 +488,6 @@ source_isos = Workstation/source/iso
 sources = Workstation/source/SRPMS
 
     """
-    _desc = "ComposeInfo"
     required = [dict(section='product', key='variants'),
                ]
     excluded = []
@@ -512,59 +503,44 @@ sources = Workstation/source/SRPMS
         """
         return self.parser.get('product', 'variants').split(',')
 
-    def find_repos(self, repo_base, variant, arch, ks_meta):
+    def find_repos(self, repo_base, rpath, variant, arch):
         """ Find all variant repos
         """
+        repos = []
         variants = self.parser.get('variant-%s' % (variant), 'variants')
         if variants:
             for sub_variant in variants.split(','):
-                ks_meta = self.find_repos(repo_base, sub_variant,
-                                          arch, ks_meta)
+                repos.extend(self.find_repos(repo_base, rpath, sub_variant,
+                                          arch))
 
         # Skip addon variants from .composeinfo, we pick these up from 
         # .treeinfo
-        if self.parser.get('variant-%s' % variant, 'type') == 'addon':
-            return ks_meta
+        repotype = self.parser.get('variant-%s' % variant, 'type', '')
+        if repotype == 'addon':
+            return repos
 
-        repo = self.parser.get('variant-%s.%s' % (variant, arch), 
+        repopath = self.parser.get('variant-%s.%s' % (variant, arch), 
                                'repository', None)
-        if repo:
-            ks_meta['repos'].append(variant)
-            ks_meta['repos_%s' % variant] = os.path.join(repo_base, repo)
+        if repopath:
+            repos.append(dict(
+                              repoid=variant,
+                              type=repotype,
+                              path=os.path.join(rpath,repopath),
+                             )
+                        )
 
-        return ks_meta
-
-    def find_debug(self, repo_base, variant, arch, ks_meta):
-        """ Find all debug repos, including ones belonging to optional
-        """
-        variants = self.parser.get('variant-%s' % (variant), 'variants')
-        if variants:
-            for sub_variant in variants.split(','):
-                ks_meta = self.find_debug(repo_base, sub_variant,
-                                          arch, ks_meta)
-
-        # Skip addon variants from .composeinfo, we pick these up from 
-        # .treeinfo
-        if self.parser.get('variant-%s' % variant, 'type') == 'addon':
-            return ks_meta
-
-        # Add debug to ks_meta['repos'] if not already there
-        if 'debug' not in ks_meta['repos']:
-            ks_meta['repos'].append('debug')
-        # Initialize repos_debug array if needed
-        if 'repos_debug' not in ks_meta:
-            ks_meta['repos_debug'] = []
-        
-        repo = self.parser.get('variant-%s.%s' % (variant, arch), 
+        debugrepopath = self.parser.get('variant-%s.%s' % (variant, arch), 
                                'debuginfo', None)
-        if repo:
-            variant = variant.replace('-','_')
-            ks_meta['repos_debug'].append(variant)
-            ks_meta['repos_debug_%s' % variant] = os.path.join(repo_base, repo)
+        if debugrepopath:
+            repos.append(dict(
+                              repoid='%s-debuginfo' % variant,
+                              type='debug',
+                              path=os.path.join(rpath,debugrepopath),
+                             )
+                        )
+        return repos
 
-        return ks_meta
-
-    def process(self, options):
+    def process(self, urls, options):
         self.options = options
 
         for variant in self.get_variants():
@@ -572,24 +548,20 @@ sources = Workstation/source/SRPMS
                 os_dir = self.parser.get('variant-%s.%s' %
                                               (variant, arch), 'os_dir')
                 options = copy.deepcopy(self.options)
-                ks_meta = dict(repos=[])
                 if not options.name:
                     options.name = self.parser.get('product', 'name')
 
-                # If repo_available_as is defined then populate additional
-                # repos
-                if options.repo_available_as:
-                    ks_meta = self.find_debug(options.repo_available_as,
-                                              variant, arch, ks_meta)
-                    ks_meta = self.find_repos(options.repo_available_as,
-                                              variant, arch, ks_meta)
-                    options.repo_available_as = os.path.join(options.repo_available_as, os_dir)
-                if options.available_as:
-                    options.available_as = os.path.join(options.available_as,
-                                                        os_dir)
+                # our current path relative to the os_dir "../.."
+                rpath = os.path.join(*['..' for i in range(1,
+                                                len(os_dir.split('/')))])
+
+                # find our repos, but relative from os_dir
+                repos = self.find_repos(self.parser.url, rpath, variant, arch)
+
+                urls_variant_arch = [os.path.join(url, os_dir) for url in urls]
                 try:
                     build = Build(os.path.join(self.parser.url, os_dir))
-                    build.process(options, ks_meta)
+                    build.process(urls_variant_arch, options, repos)
                 except BX, err:
                     logging.warn(err)
 
@@ -604,23 +576,38 @@ class TreeInfoBase(object):
                ]
     excluded = []
 
-    def process(self, options, profile_ks_meta=dict()):
+    def process(self, urls, options, repos=[]):
+        '''
+        distro_data = dict(
+                name='RHEL-6-U1',
+                arches=['i386', 'x86_64'], arch='x86_64',
+                osmajor='RedHatEnterpriseLinux6', osminor='1',
+                variant='Workstation', tree_build_time=1305067998.6483951,
+                urls=['nfs://example.invalid:/RHEL-6-Workstation/U1/x86_64/os/',
+                      'file:///net/example.invalid/RHEL-6-Workstation/U1/x86_64/os/',
+                      'http://example.invalid/RHEL-6-Workstation/U1/x86_64/os/'],
+                repos=[
+                    dict(repoid='Workstation', type='os', path=''),
+                    dict(repoid='ScalableFileSystem', type='addon', path='ScalableFileSystem/'),
+                    dict(repoid='optional', type='addon', path='../../optional/x86_64/os/'),
+                    dict(repoid='debuginfo', type='debug', path='../debug/'),
+                ],
+                images=[
+                    dict(type='kernel', path='images/pxeboot/vmlinuz'),
+                    dict(type='initrd', path='images/pxeboot/initrd.img'),
+                ])
+
+        '''
         self.options = options
-        self.cobbler = CobblerProxy(options)
         self.scheduler = SchedulerProxy(options)
-        self.kickbase = os.path.dirname(self.cobbler.settings.get('default_kickstart'))
-        #self.kickbase = "/var/lib/cobbler/kickstarts"
         self.tree = dict()
+        # Make sure all url's end with /
+        urls = [os.path.join(url,'') for url in urls]
+        self.tree['urls'] = urls
         self.tree['kernel_options'] = ''
-        if self.options.available_as:
-            url = self.options.available_as
-        else:
-            url = self.parser.url
-        self.tree['ks_meta'] = dict(tree=url)
-        self.tree['breed'] = 'redhat'
         family  = self.parser.get('general', 'family').replace(" ","")
         version = self.parser.get('general', 'version').replace("-",".")
-        self.tree['treename'] = self.options.name or \
+        self.tree['name'] = self.options.name or \
                                    self.parser.get('general', 'name', 
                                    '%s-%s' % (family,version)
                                                     )
@@ -631,10 +618,6 @@ class TreeInfoBase(object):
         self.tree['tags'] = list(set(self.options.tags).union(
                                     set(map(string.strip,
                                     labels and labels.split(',') or []))))
-        self.tree['name'] = '%s-%s-%s' % (self.tree['treename'],
-                                             self.tree['variant'],
-                                             self.tree['arch'],
-                                            )
         self.tree['osmajor'] = "%s%s" % (family, version.split('.')[0])
         if version.find('.') != -1:
             self.tree['osminor'] = version.split('.')[1]
@@ -644,24 +627,23 @@ class TreeInfoBase(object):
         arches = self.parser.get('general', 'arches','')
         self.tree['arches'] = map(string.strip,
                                      arches and arches.split(',') or [])
-        # if repo_availble_as is defined include addon repos
-        if self.options.repo_available_as:
-            profile_ks_meta = self.find_addon_repos(profile_ks_meta)
-        self.tree['profile_ks_meta'] = profile_ks_meta
+        self.tree['repos'] = repos + self.find_repos()
+
+        # Add install images
+        self.tree['images'] = []
+        self.tree['images'].append(dict(type='kernel',
+                                        path=self.get_kernel_path()))
+        self.tree['images'].append(dict(type='initrd',
+                                        path=self.get_initrd_path()))
 
         # if root option is specified then look for stage2
         if self.options.root:
             self.tree['kernel_options'] = 'root=live:%s' % os.path.join(
-                                         url,
+                                         self.parser.url,
                                          self.parser.get('stage2', 'mainimage')
                                                                        )
 
-        logging.debug('tree: %s' % self.tree)
-        try:
-            self.add_to_cobbler()
-            logging.info('%s added to cobbler.' % self.tree['name'])
-        except (xmlrpclib.Fault, socket.error), e:
-            raise BX('failed to add %s to cobbler: %s' % (self.tree['name'],e))
+        logging.debug('\n%s' % pprint.pformat(self.tree))
         try:
             self.add_to_beaker()
             logging.info('%s added to beaker.' % self.tree['name'])
@@ -671,117 +653,11 @@ class TreeInfoBase(object):
             logging.info('running jobs.')
             self.run_jobs()
 
-    def find_addon_repos(self, ks_meta):
-        """
-        using info from .treeinfo find addon repos
-        """
-        try:
-            # Initialize ks_meta['repos'] if needed
-            if 'repos' not in ks_meta:
-                ks_meta['repos'] = []
-            ks_meta['repos'].append('addons')
-            ks_meta['repos_addons'] = self.parser.get('variant-%s', 
-                                    self.tree['variant'], 'addons').split(',')
-            for addon in ks_meta['repos_addons']:
-                ks_meta['repos_addons_%s' % addon] = os.path.join(
-                                        self.options.repo_available_as,
-                                        self.parser.get('addon-%s' % addon, 'repository')
-                                                                 )
-            return ks_meta
-        except (ConfigParser.NoSectionError, ConfigParser.NoOptionError), e:
-            logging.debug('no addon repos for %s, %s' % (self.parser.url,e))
-            return dict()
-
-    def sync_images(self):
-        """
-        using info from .treeinfo pull down install images
-        """
-        kernel = self.get_kernel_path()
-        initrd = self.get_initrd_path()
-        directory = '%s/localmirror/%s' % (self.cobbler.settings['webdir'],
-                                           self.tree['name'])
-    
-        kernel_url='%s/%s' % (self.parser.url, kernel)
-        initrd_url='%s/%s' % (self.parser.url, initrd)
-    
-        if not os.path.exists(directory):
-            logging.debug('make directories: %s' % directory)
-            os.makedirs(directory)
-
-        if self.options.quiet:
-            prog_meter = None
-        else:
-            prog_meter = urlgrabber.progress.TextMeter()
-
-        try:
-            self.tree['kernel'] = urlgrabber.grabber.urlgrab(kernel_url,
-                                           filename='%s/%s' % (directory,
-                                                    os.path.basename(kernel_url)),
-                                           progress_obj=prog_meter)
-        except urlgrabber.grabber.URLGrabError, e:
-            raise BX(e)
-        try:
-            self.tree['initrd'] = urlgrabber.grabber.urlgrab(initrd_url,
-                                           filename='%s/%s' % (directory,
-                                                    os.path.basename(initrd_url)),
-                                           progress_obj=prog_meter)
-        except urlgrabber.grabber.URLGrabError, e:
-            raise BX(e)
-
-    def add_to_cobbler(self):
-        """
-        Add distro/profile to cobbler
-        """
-        self.sync_images()
-        if self.options.kickstart:
-            if os.path.exists(self.options.kickstart):
-                kickstart = self.options.kickstart
-            else:
-                raise BX('kickstart %s does not exist' % self.options.kickstart)
-        else:
-            kickstart = self.find_kickstart(
-                                            self.tree['arch'],
-                                            self.tree['osmajor'],
-                                            self.tree['osminor']
-                                           )
-        distro_options = dict(name = self.tree['name'],
-                              kernel = self.tree['kernel'],
-                              kernel_options = self.tree['kernel_options'],
-                              initrd = self.tree['initrd'],
-                              arch = self.tree['arch'],
-                              ks_meta = self.tree['ks_meta'],
-                             )
-        profile_options = dict(distro = self.tree['name'],
-                               name = self.tree['name'],
-                               kickstart = kickstart,
-                               ks_meta = self.tree['profile_ks_meta'],
-                               comment = 'ignore',
-                              )
-        self.cobbler.add_distro(self.tree['name'],
-                                             distro_options)
-        self.cobbler.add_profile(self.tree['name'],
-                                     profile_options)
-
     def add_to_beaker(self):
         self.scheduler.add_distro(self.tree)
 
     def run_jobs(self):
         self.scheduler.run_distro_test_job(self.tree)
-
-    def find_kickstart(self, arch, family, update):
-        flavor = family.strip('0123456789')
-        kickstarts = [
-               "%s/%s/%s.%s.ks" % (self.kickbase, arch, family, update),
-               "%s/%s/%s.ks" % (self.kickbase, arch, family),
-               "%s/%s/%s.ks" % (self.kickbase, arch, flavor),
-               "%s/%s.%s.ks" % (self.kickbase, family, update),
-               "%s/%s.ks" % (self.kickbase, family),
-               "%s/%s.ks" % (self.kickbase, flavor),
-        ]
-        for kickstart in kickstarts:
-            if os.path.exists(kickstart):
-                return kickstart
-        return self.cobbler.settings.get('default_kickstart')
 
 
 class TreeInfoLegacy(TreeInfoBase, Importer):
@@ -789,7 +665,6 @@ class TreeInfoLegacy(TreeInfoBase, Importer):
     This version of .treeinfo importer has a workaround for missing
     images-$arch sections.
     """
-    _desc = "TreeInfoLegacy"
     kernels = ['images/pxeboot/vmlinuz',
                'images/kernel.img',
                'ppc/ppc64/vmlinuz',
@@ -812,11 +687,9 @@ class TreeInfoLegacy(TreeInfoBase, Importer):
         for e in cls.excluded:
             if parser.get(e['section'], e['key'], None) != None:
                 return False
-        if parser.get('images-%s' % parser.get('general','arch'), 'kernel', '') != '':
+        if not parser.get('general', 'family').startswith("Red Hat Enterprise Linux"):
             return False
-        if parser.get('images-%s' % parser.get('general','arch'), 'initrd', '') != '':
-            return False
-        if parser.parser.has_option('general', 'addons'):
+        if int(parser.get('general', 'version').split('.')[0]) > 4:
             return False
         return parser
 
@@ -834,9 +707,221 @@ class TreeInfoLegacy(TreeInfoBase, Importer):
         except IndexError, e:
             raise BX('%s no kernel found: %s' % (self.parser.url, e))
 
+    def find_repos(self):
+        """
+        using info from .treeinfo and known locations
+
+        RHEL4 repos
+        ../repo-<VARIANT>-<ARCH>/repodata
+        ../repo-debug-<VARIANT>-<ARCH>/repodata
+        ../repo-srpm-<VARIANT>-<ARCH>/repodata
+        arch = ppc64 = ppc
+
+        RHEL3 repos
+        ../repo-<VARIANT>-<ARCH>/repodata
+        ../repo-debug-<VARIANT>-<ARCH>/repodata
+        ../repo-srpm-<VARIANT>-<ARCH>/repodata
+        arch = ppc64 = ppc
+        """
+
+        # ppc64 arch uses ppc for the repos
+        arch = self.tree['arch'].replace('ppc64','ppc')
+
+        repo_paths = [('%s-debuginfo' % self.tree['variant'],
+                       'debug',
+                       '../debug'),
+                      ('%s-debuginfo' % self.tree['variant'],
+                       'debug',
+                       '../repo-debug-%s-%s' % (self.tree['variant'],
+                                                arch)),
+                      ('%s-optional-debuginfo' % self.tree['variant'],
+                       'debug',
+                       '../optional/%s/debug' % arch),
+                      ('%s' % self.tree['variant'],
+                       'variant',
+                       '../repo-%s-%s' % (self.tree['variant'],
+                                          arch)),
+                      ('%s' % self.tree['variant'],
+                       'variant',
+                       '.'),
+                      ('%s-optional' % self.tree['variant'],
+                       'optional',
+                       '../../optional/%s/os' % arch),
+                      ('VT',
+                       'addon',
+                       'VT'),
+                      ('Server',
+                       'addon',
+                       'Server'),
+                      ('Cluster',
+                       'addon',
+                       'Cluster'),
+                      ('ClusterStorage',
+                       'addon',
+                       'ClusterStorage'),
+                      ('Client',
+                       'addon',
+                       'Client'),
+                      ('Workstation',
+                       'addon',
+                       'Workstation'),
+                     ]
+        repos = []
+        for repo in repo_paths:
+            if url_exists(os.path.join(self.parser.url,repo[2],'repodata')):
+                repos.append(dict(
+                                  repoid=repo[0],
+                                  type=repo[1],
+                                  path=repo[2],
+                                 )
+                            )
+        return repos
 
 
-class TreeInfo(TreeInfoBase, Importer):
+class TreeInfoRhel5(TreeInfoBase, Importer):
+    """
+[general]
+family = Red Hat Enterprise Linux Server
+timestamp = 1209596791.91
+totaldiscs = 1
+version = 5.2
+discnum = 1
+label = RELEASED
+packagedir = Server
+arch = ppc
+
+[images-ppc64]
+kernel = ppc/ppc64/vmlinuz
+initrd = ppc/ppc64/ramdisk.image.gz
+zimage = images/netboot/ppc64.img
+
+[stage2]
+instimage = images/minstg2.img
+mainimage = images/stage2.img
+
+    """
+    @classmethod
+    def is_importer_for(cls, url):
+        parser = Tparser()
+        if not parser.parse(url):
+            return False
+        for r in cls.required:
+            if parser.get(r['section'], r['key'], None) == None:
+                return False
+        for e in cls.excluded:
+            if parser.get(e['section'], e['key'], None) != None:
+                return False
+        if not parser.get('general', 'family').startswith("Red Hat Enterprise Linux"):
+            return False
+        if int(parser.get('general', 'version').split('.')[0]) != 5:
+            return False
+        return parser
+
+    def get_kernel_path(self):
+        return self.parser.get('images-%s' % self.tree['arch'].replace('ppc','ppc64'),'kernel')
+
+    def get_initrd_path(self):
+        return self.parser.get('images-%s' % self.tree['arch'].replace('ppc','ppc64'),'initrd')
+
+    def find_repos(self):
+        """
+        using info from known locations
+
+        RHEL5 repos
+        ../debug/repodata
+        ./Server
+        ./Cluster
+        ./ClusterStorage
+        ./VT
+        ./Client
+        ./Workstation
+        """
+
+        # ppc64 arch uses ppc for the repos
+        arch = self.tree['arch'].replace('ppc64','ppc')
+
+        repo_paths = [('VT',
+                       'addon',
+                       'VT'),
+                      ('Server',
+                       'addon',
+                       'Server'),
+                      ('Cluster',
+                       'addon',
+                       'Cluster'),
+                      ('ClusterStorage',
+                       'addon',
+                       'ClusterStorage'),
+                      ('Client',
+                       'addon',
+                       'Client'),
+                      ('Workstation',
+                       'addon',
+                       'Workstation'),
+                     ]
+        repos = []
+        for repo in repo_paths:
+            if url_exists(os.path.join(self.parser.url,repo[2],'repodata')):
+                repos.append(dict(
+                                  repoid=repo[0],
+                                  type=repo[1],
+                                  path=repo[2],
+                                 )
+                            )
+        return repos
+
+
+class TreeInfoFedora(TreeInfoBase, Importer):
+    """
+
+    """
+    @classmethod
+    def is_importer_for(cls, url):
+        parser = Tparser()
+        if not parser.parse(url):
+            return False
+        for r in cls.required:
+            if parser.get(r['section'], r['key'], None) == None:
+                return False
+        for e in cls.excluded:
+            if parser.get(e['section'], e['key'], None) != None:
+                return False
+        if not parser.get('general', 'family').startswith("Fedora"):
+            return False
+        return parser
+
+    def get_kernel_path(self):
+        return self.parser.get('images-%s' % self.tree['arch'].replace('ppc','ppc64'),'kernel')
+
+    def get_initrd_path(self):
+        return self.parser.get('images-%s' % self.tree['arch'].replace('ppc','ppc64'),'initrd')
+
+    def find_repos(self):
+        """
+        using info from known locations
+
+        """
+
+        # ppc64 arch uses ppc for the repos
+        arch = self.tree['arch'].replace('ppc64','ppc')
+
+        repo_paths = [('Fedora',
+                       'variant',
+                       '.'),
+                     ]
+        repos = []
+        for repo in repo_paths:
+            if url_exists(os.path.join(self.parser.url,repo[2],'repodata')):
+                repos.append(dict(
+                                  repoid=repo[0],
+                                  type=repo[1],
+                                  path=repo[2],
+                                 )
+                            )
+        return repos
+
+
+class TreeInfoRhel6(TreeInfoBase, Importer):
     """
 [addon-ScalableFileSystem]
 identity = ScalableFileSystem/ScalableFileSystem.cert
@@ -894,8 +979,6 @@ identity = LoadBalancer/LoadBalancer.cert
 name = Load Balancer
 repository = LoadBalancer
     """
-    _desc = "TreeInfo"
-
     @classmethod
     def is_importer_for(cls, url):
         parser = Tparser()
@@ -908,10 +991,12 @@ repository = LoadBalancer
             if parser.get(e['section'], e['key'], None) != None:
                 return False
         if parser.get('images-%s' % parser.get('general','arch'), 'kernel', '') == '':
-            False
+            return False
         if parser.get('images-%s' % parser.get('general','arch'), 'initrd', '') == '':
-            False
-        if parser.parser.has_option('general', 'addons'):
+            return False
+        if not parser.get('general', 'family').startswith("Red Hat Enterprise Linux"):
+            return False
+        if int(parser.get('general', 'version').split('.')[0]) != 6:
             return False
         return parser
 
@@ -921,8 +1006,44 @@ repository = LoadBalancer
     def get_initrd_path(self):
         return self.parser.get('images-%s' % self.tree['arch'],'initrd')
 
+    def find_repos(self):
+        """
+        using info from .treeinfo
+        """
 
-class TreeInfoRhel7(TreeInfoBase, Importer):
+        repos = []
+        try:
+            repopath = self.parser.get('variant-%s' % self.tree['variant'],
+                                       'repository')
+            # remove the /repodata from the entry, this should not be there
+            repopath = repopath.replace('/repodata','')
+            repos.append(dict(
+                              repoid=str(self.tree['variant']),
+                              type='variant',
+                              path=repopath,
+                             )
+                        )
+        except (ConfigParser.NoSectionError, ConfigParser.NoOptionError), e:
+            logging.debug('.treeinfo has no repository for variant %s, %s' % (self.parser.url,e))
+        try:
+            addons = self.parser.get('variant-%s' % self.tree['variant'],
+                                     'addons')
+            addons = addons and addons.split(',') or []
+            for addon in addons:
+                repopath = self.parser.get('addon-%s' % addon, 'repository', None)
+                if repopath:
+                    repos.append(dict(
+                                      repoid=addon,
+                                      type='addon',
+                                      path=repopath,
+                                     )
+                                )
+        except (ConfigParser.NoSectionError, ConfigParser.NoOptionError), e:
+            logging.debug('.treeinfo has no addon repos for %s, %s' % (self.parser.url,e))
+        return repos
+
+
+class TreeInfoRhel(TreeInfoBase, Importer):
     """
 [addon-HighAvailability]
 id = HighAvailability
@@ -968,8 +1089,6 @@ initrd = images/pxeboot/initrd.img
 kernel = images/pxeboot/vmlinuz
 
     """
-    _desc = "TreeInfoRhel7"
-
     @classmethod
     def is_importer_for(cls, url):
         parser = Tparser()
@@ -982,31 +1101,35 @@ kernel = images/pxeboot/vmlinuz
             if parser.get(e['section'], e['key'], None) != None:
                 return False
         if parser.get('images-%s' % parser.get('general','arch'), 'kernel', '') == '':
-            False
+            return False
         if parser.get('images-%s' % parser.get('general','arch'), 'initrd', '') == '':
-            False
+            return False
+        if not parser.get('general', 'family').startswith("Red Hat Enterprise Linux"):
+            return False
         if not parser.parser.has_option('general', 'addons'):
             return False
         return parser
 
-    def find_addon_repos(self, ks_meta):
+    def find_repos(self):
         """
         using info from .treeinfo find addon repos
         """
+        repos = []
         try:
-            ks_meta['repos'].append('addons')
             addons = self.parser.get('general', 'addons')
-            if addons:
-                ks_meta['repos_addons'] = addons.split(',')
-                for addon in ks_meta['repos_addons']:
-                    ks_meta['repos_addons_%s' % addon] = os.path.join(
-                                            self.options.repo_available_as,
-                                            self.parser.get('addon-%s' % addon, 'repository')
-                                                                     )
-            return ks_meta
+            addons = addons and addons.split(',') or []
+            for addon in addons:
+                repopath = self.parser.get('addon-%s' % addon, 'repository', None)
+                if repopath:
+                    repos.append(dict(
+                                      repoid=addon,
+                                      type='addon',
+                                      path=repopath,
+                                     )
+                                )
         except (ConfigParser.NoSectionError, ConfigParser.NoOptionError), e:
             logging.debug('no addon repos for %s, %s' % (self.parser.url,e))
-            return dict()
+        return repos
 
     def get_kernel_path(self):
         return self.parser.get('images-%s' % self.tree['arch'],'kernel')
@@ -1016,27 +1139,24 @@ kernel = images/pxeboot/vmlinuz
 
 
 def Build(url):
+    logging.info("Importing: %s", url)
     for cls in Importer.__subclasses__():
         parser = cls.is_importer_for(url)
         if parser != False:
-            logging.info("Importing: %s, using %s" % (url, cls._desc))
+            logging.debug("\tImporter %s Matches", cls.__name__)
             return cls(parser)
+        else:
+            logging.debug("\tImporter %s does not match", cls.__name__)
     raise BX('No valid importer found for %s' % url)
 
 def main():
     parser = OptionParser()
-    parser.add_option("-l", "--lab",
-                      default="http://127.0.0.1/cobbler_api",
-                      help="cobbler URI to use")
     parser.add_option("-c", "--add-distro-cmd",
                       default="/var/lib/beaker/addDistro.sh",
                       help="Command to run to add a new distro")
     parser.add_option("-n", "--name",
                       default=None,
                       help="Alternate name to use, otherwise we read it from .treeinfo")
-    parser.add_option("-k", "--kickstart",
-                      default=None,
-                      help="Alternate kickstart to use")
     parser.add_option("-t", "--tag",
                       default=[],
                       action="append",
@@ -1046,17 +1166,6 @@ def main():
                       action='store_true',
                       default=False,
                       help="Add root=live: to kernel_options")
-    parser.add_option("-a", "--available-as",
-                      default='',
-                      help="Location to use as install path. Required if using file://")
-    parser.add_option("--repo-available-as",
-                      default='',
-                      help="Location to use as repo path. if not set and not using http:// no addon repos will be available for install")
-    parser.add_option("--repo",
-                      default=[],
-                      dest="repos",
-                      action="append",
-                      help="full path to repo")
     parser.add_option("-r", "--run-jobs",
                       action='store_true',
                       default=False,
@@ -1070,7 +1179,7 @@ def main():
                       default=False,
                       help="less messages")
                       
-    (opts, args) = parser.parse_args()
+    (opts, urls) = parser.parse_args()
 
     LOG_FORMAT = '%(asctime)s - %(levelname)s - %(filename)s - ' \
         '%(funcName)s:%(lineno)s - %(message)s'
@@ -1089,27 +1198,28 @@ def main():
     logger.addHandler(stdout_handler)
     logger.setLevel(LOG_LEVEL)
 
-    if not args:
-        logging.critical('No location specified!')
+    if not urls:
+        logging.critical('No location(s) specified!')
         sys.exit(10)
-    url = args[0]
-    # If available_as is specified as http or ftp and we didn't
-    # specifiy repo-available-as then use available-as location
-    # to serve repos from.
-    if opts.available_as.startswith(('http','ftp')) and \
-       not opts.repo_available_as:
-        opts.repo_available_as = opts.available_as
-    # If the user didn't specify repo-available-as or available-as
-    # and url starts with http or ftp we can use that location 
-    # to serve repos from.  
-    if url.startswith(('http','ftp')) and not opts.repo_available_as:
-        opts.repo_available_as = url
-    if url.startswith('file://') and not opts.available_as:
-        logging.critical('file:// requires available-as option to be set!')
+    # primary method is what we use to import the distro, we look for 
+    #         .composeinfo or .treeinfo at that location.  Because of this
+    #         nfs can't be the primary install method.
+    primary_methods = ['http',
+                       'ftp',
+                      ]
+    primary = None
+    for url in urls:
+        method = url.split(':',1)[0]
+        if method in primary_methods:
+            primary = url
+            break
+    if primary == None:
+        logging.critical('missing a valid primary installer! %s, are valid install methods' % ' and '.join(primary_methods))
         sys.exit(20)
+
     try:
-        build = Build(url)
-        build.process(opts)
+        build = Build(primary)
+        build.process(urls, opts)
     except BX, err:
         logging.critical(err)
         sys.exit(30)
