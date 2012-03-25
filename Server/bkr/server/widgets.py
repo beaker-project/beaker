@@ -720,7 +720,7 @@ class PowerActionForm(Form):
     def update_params(self, d):
         super(PowerActionForm, self).update_params(d)
         if 'power' in d['value'] and 'lab_controller' in d['value']:
-            if d['value']['power']:
+            if d['value']['power'] and d['value']['lab_controller']:
                 d['enabled'] = True
 
     def display(self, value, *args, **kw):
