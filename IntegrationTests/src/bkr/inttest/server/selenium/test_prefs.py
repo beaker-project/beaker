@@ -6,70 +6,52 @@ import unittest, time, re, os
 from turbogears.database import session
 import crypt
 
-class UserPrefs(SeleniumTestCase):
+class UserPrefs(WebDriverTestCase):
+
     def setUp(self):
-        self.verificationErrors = []
-        self.selenium = self.get_selenium()
-        self.selenium.start()
+        self.browser = self.get_browser()
+        login(self.browser)
+        self.browser.get(get_server_base() + 'prefs')
+
         self.clear_password = 'gyfrinachol'
         self.hashed_password = '$1$NaCl$O34mAzBXtER6obhoIodu8.'
         self.simple_password = 's3cr3t'
 
+    def tearDown(self):
+        self.browser.quit()
+
     def test_set_plaintext_password(self):
-        sel = self.selenium
-        sel.open("")
-        self.login()
-        sel.click("link=Preferences")
-        sel.wait_for_page_to_load("30000")
-        sel.type("UserPrefs_root_password", "%s" % self.clear_password)
-        sel.click("//input[@value='Change']")
-        sel.wait_for_page_to_load("30000")
-        self.failUnless('root password hash changed' in sel.get_text('css=.flash'))
-        new_hash = sel.get_value('//input[@id="UserPrefs_root_password"]')
+        b = self.browser
+        e = b.find_element_by_name("root_password")
+        e.clear()
+        e.send_keys(self.clear_password)
+        b.find_element_by_id('UserPrefs').submit()
+        self.assert_(is_text_present(b, 'root password hash changed'))
+        new_hash = b.find_element_by_name('root_password').get_attribute('value')
         self.failUnless(new_hash)
         self.failUnless(crypt.crypt(self.clear_password, new_hash) == new_hash)
 
     def test_set_hashed_password(self):
-        sel = self.selenium
-        sel.open("")
-        self.login()
-        sel.click("link=Preferences")
-        sel.wait_for_page_to_load("30000")
-        sel.type("UserPrefs_root_password", "%s" % self.hashed_password)
-        sel.click("//input[@value='Change']")
-        sel.wait_for_page_to_load("30000")
-        self.failUnless('root password hash changed' in sel.get_text('css=.flash'))
-        new_hash = sel.get_value('//input[@id="UserPrefs_root_password"]')
+        b = self.browser
+        e = b.find_element_by_name("root_password")
+        e.clear()
+        e.send_keys(self.hashed_password)
+        b.find_element_by_id('UserPrefs').submit()
+        self.assert_(is_text_present(b, 'root password hash changed'))
+        new_hash = b.find_element_by_name('root_password').get_attribute('value')
         self.failUnless(crypt.crypt(self.clear_password, new_hash) == self.hashed_password)
 
     def test_dictionary_password_rejected(self):
-        sel = self.selenium
-        sel.open("")
-        self.login()
-        sel.click("link=Preferences")
-        sel.wait_for_page_to_load("30000")
-        sel.type("UserPrefs_root_password", "%s" % self.simple_password)
-        sel.click("//input[@value='Change']")
-        sel.wait_for_page_to_load("30000")
-        self.failUnless('Root password not changed' in sel.get_text('css=.flash'))
-
-    def tearDown(self):
-        self.selenium.stop()
-        self.assertEqual([], self.verificationErrors)
-
-class UserPrefsWD(WebDriverTestCase):
-
-    def setUp(self):
-        self.browser = self.get_browser()
-
-    def tearDown(self):
-        self.browser.quit()
+        b = self.browser
+        e = b.find_element_by_name("root_password")
+        e.clear()
+        e.send_keys(self.simple_password)
+        b.find_element_by_id('UserPrefs').submit()
+        self.assert_(is_text_present(b, 'Root password not changed'))
 
     def test_ssh_key_allows_whitespace_in_description(self):
-        key = 'ssh-rsa AAAAw00t this is my favourite key'
         b = self.browser
-        login(b)
-        b.get(get_server_base() + 'prefs')
+        key = 'ssh-rsa AAAAw00t this is my favourite key'
         b.find_element_by_name('ssh_pub_key').send_keys(key)
         b.find_element_by_id('SSH Public Key').submit()
         self.assert_(is_text_present(b, 'SSH public key added'))
