@@ -23,12 +23,12 @@ def system_utilisation(system, start, end):
             .filter(and_(SystemStatusDuration.start_time < end,
                 or_(SystemStatusDuration.finish_time >= start,
                     SystemStatusDuration.finish_time == None)))\
-            .order_by([SystemStatusDuration.start_time]).all()
+            .order_by(SystemStatusDuration.start_time).all()
     reservations = system.dyn_reservations\
             .filter(and_(Reservation.start_time < end,
                 or_(Reservation.finish_time >= start,
                     Reservation.finish_time == None)))\
-            .order_by([Reservation.start_time]).all()
+            .order_by(Reservation.start_time).all()
     prev_finish = start
     for reservation in reservations:
         # clamp reservation start and finish to be within the period
