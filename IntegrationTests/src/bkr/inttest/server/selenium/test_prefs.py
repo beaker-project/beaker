@@ -1,6 +1,7 @@
 #!/usr/bin/python
-from bkr.inttest.server.selenium import SeleniumTestCase
-from bkr.inttest import data_setup
+from bkr.inttest.server.selenium import SeleniumTestCase, WebDriverTestCase
+from bkr.inttest.server.webdriver_utils import login, logout, is_text_present
+from bkr.inttest import data_setup, get_server_base
 import unittest, time, re, os
 from turbogears.database import session
 import crypt
@@ -55,6 +56,23 @@ class UserPrefs(SeleniumTestCase):
     def tearDown(self):
         self.selenium.stop()
         self.assertEqual([], self.verificationErrors)
+
+class UserPrefsWD(WebDriverTestCase):
+
+    def setUp(self):
+        self.browser = self.get_browser()
+
+    def tearDown(self):
+        self.browser.quit()
+
+    def test_ssh_key_allows_whitespace_in_description(self):
+        key = 'ssh-rsa AAAAw00t this is my favourite key'
+        b = self.browser
+        login(b)
+        b.get(get_server_base() + 'prefs')
+        b.find_element_by_name('ssh_pub_key').send_keys(key)
+        b.find_element_by_id('SSH Public Key').submit()
+        self.assert_(is_text_present(b, 'SSH public key added'))
 
 if __name__ == "__main__":
     unittest.main()
