@@ -478,7 +478,7 @@ class Root(RPCRoot):
         pubkey = kw.get('ssh_pub_key', None) 
         
         try:
-            keytype, keyval, keyident = pubkey.split()
+            keytype, keyval, keyident = pubkey.split(None, 2)
         except ValueError:
             flash(_(u"Invalid SSH key"))
             redirect('/prefs')
