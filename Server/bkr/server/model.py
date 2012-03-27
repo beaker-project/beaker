@@ -392,7 +392,7 @@ device_table = Table('device', metadata,
     Column('subsys_device_id',String(255)),
     Column('subsys_vendor_id',String(255)),
     Column('bus',String(255)),
-    Column('driver',String(255)),
+    Column('driver', String(255), index=True),
     Column('description',String(255)),
     Column('device_class_id', Integer,
            ForeignKey('device_class.id'), nullable=False),
@@ -400,6 +400,7 @@ device_table = Table('device', metadata,
            default=datetime.utcnow, nullable=False),
     mysql_engine='InnoDB',
 )
+Index('ix_device_pciid', device_table.c.vendor_id, device_table.c.device_id)
 
 locked_table = Table('locked', metadata,
     Column('id', Integer, autoincrement=True,
@@ -2265,25 +2266,15 @@ url --url=$tree
     def updateDevices(self, deviceinfo):
         currentDevices = []
         for device in deviceinfo:
-            try:
-                mydevice = Device.query.filter_by(vendor_id = device['vendorID'],
+            device_class = DeviceClass.lazy_create(device_class=device['type'])
+            mydevice = Device.lazy_create(vendor_id = device['vendorID'],
                                    device_id = device['deviceID'],
                                    subsys_vendor_id = device['subsysVendorID'],
                                    subsys_device_id = device['subsysDeviceID'],
                                    bus = device['bus'],
                                    driver = device['driver'],
-                                   description = device['description']).one()
-            except InvalidRequestError:
-                mydevice = Device(vendor_id       = device['vendorID'],
-                                     device_id       = device['deviceID'],
-                                     subsys_vendor_id = device['subsysVendorID'],
-                                     subsys_device_id = device['subsysDeviceID'],
-                                     bus            = device['bus'],
-                                     driver         = device['driver'],
-                                     device_class   = device['type'],
-                                     description    = device['description'])
-                session.add(mydevice)
-                session.flush([mydevice])
+                                   device_class_id = device_class.id,
+                                   description = device['description'])
             if mydevice not in self.devices:
                 self.devices.append(mydevice)
                 self.activity.append(SystemActivity(
@@ -2994,24 +2985,7 @@ class DeviceClass(SystemObject):
 
 
 class Device(SystemObject):
-    def __init__(self, vendor_id=None, device_id=None, subsys_device_id=None, subsys_vendor_id=None, bus=None, driver=None, device_class=None, description=None):
-        super(Device, self).__init__()
-        if not device_class:
-            device_class = "NONE"
-        try:
-            dc = DeviceClass.query.filter_by(device_class = device_class).one()
-        except InvalidRequestError:
-            dc = DeviceClass(device_class = device_class)
-            session.add(dc)
-            session.flush([dc])
-        self.vendor_id = vendor_id
-        self.device_id = device_id
-        self.subsys_vendor_id = subsys_vendor_id
-        self.subsys_device_id = subsys_device_id
-        self.bus = bus
-        self.driver = driver
-        self.description = description
-        self.device_class = dc
+    pass
 
 
 class Locked(MappedObject):
@@ -3348,10 +3322,22 @@ class Note(MappedObject):
 
 
 class Key(SystemObject):
+
+    # Obsoleted keys are ones which have been replaced by real, structured 
+    # columns on the system table (and its related tables). We disallow users 
+    # from searching on these keys in the web UI, to encourage them to migrate 
+    # to the structured columns instead (and to avoid the costly queries that 
+    # sometimes result).
+    obsoleted_keys = [u'MODULE', u'PCIID']
+
     @classmethod
     def get_all_keys(cls):
-       all_keys = cls.query
-       return [key.key_name for key in all_keys]
+        """
+        This method's name is deceptive, it actually excludes "obsoleted" keys.
+        """
+        all_keys = cls.query
+        return [key.key_name for key in all_keys
+                if key.key_name not in cls.obsoleted_keys]
 
     @classmethod
     def by_name(cls, key_name):

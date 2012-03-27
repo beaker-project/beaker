@@ -279,6 +279,31 @@
       <element name="arch"><ref name="req"/></element>
       <element name="auto_prov"><ref name="req"/></element>
       <element name="hypervisor"><ref name="req"/></element>
+      <element name="device">
+        <a:documentation xml:lang="en">
+          Selects systems by device. If operator is ==, selects systems which
+          have at least one matching device. If operator is !=, selects systems
+          which have no matching devices.
+        </a:documentation>
+        <optional>
+          <attribute name="op">
+            <choice>
+              <value>!=</value>
+              <value>==</value>
+              <value>=</value>
+            </choice>
+          </attribute>
+        </optional>
+        <oneOrMore>
+          <attribute name="type" />
+          <attribute name="bus" />
+          <attribute name="driver" />
+          <attribute name="vendor_id" />
+          <attribute name="device_id" />
+          <attribute name="subsys_vendor_id" />
+          <attribute name="subsys_device_id" />
+        </oneOrMore>
+      </element>
       <element name="group">
         <ref name="equality_op"/>
         <attribute name="value"/>

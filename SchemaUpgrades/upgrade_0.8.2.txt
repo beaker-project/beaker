@@ -26,6 +26,22 @@ recreate the system_admin_map table. Then run the following SQL to populate it:
     DROP admin;
 
 
+Add indexes on device (bug 731615)
+----------------------------------
+
+Run the following SQL:
+
+    ALTER TABLE device
+        ADD INDEX ix_device_driver (driver),
+        ADD INDEX ix_device_pciid (vendor_id, device_id);
+
+To roll back:
+
+    ALTER TABLE device
+        DROP INDEX ix_device_driver,
+        DROP INDEX ix_device_pciid;
+
+
 Convert reference tables to enums
 ---------------------------------
 
