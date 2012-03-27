@@ -6,11 +6,12 @@ from turbogears import testutil
 from turbogears.database import session
 from bkr.server.jobxml import XmlJob
 from bkr.server.bexceptions import BX
-from bkr.inttest import data_setup
+from bkr.inttest import data_setup, with_transaction
 from bkr.server.model import Distro
 
 class TestJobsController(unittest.TestCase):
 
+    @with_transaction
     def setUp(self):
         from bkr.server.jobs import Jobs
         self.controller = Jobs()
@@ -20,7 +21,6 @@ class TestJobsController(unittest.TestCase):
             data_setup.create_distro(name=u'BlueShoeLinux5-5')
         data_setup.create_task(name=u'/distribution/install')
         data_setup.create_product(product_name=u'the_product')
-        session.flush()
 
     def tearDown(self):
         testutil.set_identity_user(None)
@@ -31,7 +31,8 @@ class TestJobsController(unittest.TestCase):
                 <whiteboard>job with norecipesets</whiteboard>
             </job>
             '''))
-        self.assertRaises(BX, lambda: self.controller.process_xmljob(xmljob, self.user))
+        with session.begin():
+            self.assertRaises(BX, lambda: self.controller.process_xmljob(xmljob, self.user))
 
     def test_uploading_job_with_invalid_hostRequires_raises_exception(self):
         session.begin()
@@ -64,6 +65,7 @@ class TestJobsController(unittest.TestCase):
         # so that this test doesn't have to go through the web layer...
         complete_job_xml = pkg_resources.resource_string('bkr.inttest', 'complete-job.xml')
         xmljob = XmlJob(xmltramp.parse(complete_job_xml))
-        job = testutil.call(self.controller.process_xmljob, xmljob, self.user)
+        with session.begin():
+            job = testutil.call(self.controller.process_xmljob, xmljob, self.user)
         roundtripped_xml = job.to_xml(clone=True).toprettyxml(indent='    ')
         self.assertEquals(roundtripped_xml, complete_job_xml)

@@ -17,6 +17,7 @@ def watchdogs_for_job(job):
 class TestUpdateStatus(unittest.TestCase):
 
     def setUp(self):
+        session.begin()
         from bkr.server.jobs import Jobs
         self.controller = Jobs()
         self.user = data_setup.create_user()
@@ -24,6 +25,10 @@ class TestUpdateStatus(unittest.TestCase):
             data_setup.create_distro(name=u'BlueShoeLinux5-5')
         data_setup.create_task(name=u'/distribution/install')
         session.flush()
+
+    def tearDown(self):
+        session.commit()
+        session.close()
 
     def test_abort_recipe_bubbles_status_to_job(self):
         xmljob = XmlJob(xmltramp.parse('''

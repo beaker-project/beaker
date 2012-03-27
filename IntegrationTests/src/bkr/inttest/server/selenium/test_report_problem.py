@@ -38,22 +38,22 @@ class TestReportProblem(SeleniumTestCase):
         self.mail_capture.stop()
 
     def test_can_report_problem(self):
-        system_owner = data_setup.create_user(
-                email_address=u'picard@starfleet.gov')
-        system = data_setup.create_system(fqdn=u'ncc1701d',
-                owner=system_owner)
-        lc = data_setup.create_labcontroller(u'testing_for_mail')
-        system.lab_controller = lc
-        lender = u'amd'
-        location = u'bne'
-        vendor = u'intel'
-        system.lender = lender
-        system.location = location
-        system.vendor = vendor
-        problem_reporter = data_setup.create_user(password=u'password',
-                display_name=u'Beverley Crusher',
-                email_address=u'crusher@starfleet.gov')
-        session.flush()
+        with session.begin():
+            system_owner = data_setup.create_user(
+                    email_address=u'picard@starfleet.gov')
+            system = data_setup.create_system(fqdn=u'ncc1701d',
+                    owner=system_owner)
+            lc = data_setup.create_labcontroller(u'testing_for_mail')
+            system.lab_controller = lc
+            lender = u'amd'
+            location = u'bne'
+            vendor = u'intel'
+            system.lender = lender
+            system.location = location
+            system.vendor = vendor
+            problem_reporter = data_setup.create_user(password=u'password',
+                    display_name=u'Beverley Crusher',
+                    email_address=u'crusher@starfleet.gov')
         self.login(user=problem_reporter.user_name, password='password')
         sel = self.selenium
         sel.open('report_problem?system_id=%s' % system.id)
@@ -95,9 +95,9 @@ class TestReportProblem(SeleniumTestCase):
                 % get_server_base())
 
     def test_reporting_problem_requires_login(self):
-        problem_reporter = data_setup.create_user(password=u'password')
-        system = data_setup.create_system(fqdn=u'ncc1701e')
-        session.flush()
+        with session.begin():
+            problem_reporter = data_setup.create_user(password=u'password')
+            system = data_setup.create_system(fqdn=u'ncc1701e')
         sel = self.selenium
         try:
             sel.open('report_problem?system_id=%s' % system.id,
@@ -114,8 +114,8 @@ class TestReportProblem(SeleniumTestCase):
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=652334
     def test_system_activity_entry_is_correctly_truncated(self):
-        system = data_setup.create_system()
-        session.flush()
+        with session.begin():
+            system = data_setup.create_system()
         self.login()
         sel = self.selenium
         sel.open('report_problem?system_id=%s' % system.id)
@@ -126,11 +126,11 @@ class TestReportProblem(SeleniumTestCase):
                 'Your problem report has been forwarded to the system owner')
 
     def test_reporter_and_system_cc_list_are_cced(self):
-        interested_party_email = u'interestedparty1@example.invalid'
-        system = data_setup.create_system()
-        system.cc = [interested_party_email]
-        problem_reporter = data_setup.create_user(password=u'assword')
-        session.flush()
+        with session.begin():
+            interested_party_email = u'interestedparty1@example.invalid'
+            system = data_setup.create_system()
+            system.cc = [interested_party_email]
+            problem_reporter = data_setup.create_user(password=u'assword')
         self.login(problem_reporter.user_name, u'assword')
         sel = self.selenium
         sel.open('report_problem?system_id=%s' % system.id)

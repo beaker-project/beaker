@@ -1,11 +1,12 @@
 
 import unittest
 from turbogears.database import session
-from bkr.inttest import data_setup
+from bkr.inttest import data_setup, with_transaction
 from bkr.inttest.client import run_client
 
 class ListLabcontrollersTest(unittest.TestCase):
 
+    @with_transaction
     def setUp(self):
         self.lc = data_setup.create_labcontroller()
 

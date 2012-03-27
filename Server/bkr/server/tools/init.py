@@ -40,6 +40,7 @@ def dummy():
 def init_db(user_name=None, password=None, user_display_name=None, user_email_address=None):
     get_engine()
     metadata.create_all()
+    session.begin()
 
     try:
         admin = Group.by_name(u'admin')
@@ -148,7 +149,8 @@ def init_db(user_name=None, password=None, user_display_name=None, user_email_ad
         rootpw_clear    = ConfigItem(name='root_password',
                                      description=u'Plaintext root password for provisioned systems')
 
-    session.flush()
+    session.commit()
+    session.close()
 
 def get_parser():
     usage = "usage: %prog [options]"

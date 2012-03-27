@@ -1,7 +1,7 @@
 #!/usr/bin/python
 from bkr.inttest.server.selenium import SeleniumTestCase, WebDriverTestCase
 from bkr.inttest.server.webdriver_utils import login, logout, is_text_present
-from bkr.inttest import data_setup, get_server_base
+from bkr.inttest import data_setup, get_server_base, with_transaction
 from bkr.server.model import Arch, ExcludeOSMajor, SystemType
 from selenium.webdriver.support.ui import Select
 import unittest, time, re, os
@@ -14,6 +14,8 @@ def go_to_reserve_systems(browser, distro):
     browser.find_element_by_link_text('Pick System').click()
 
 class ReserveWorkflow(SeleniumTestCase):
+
+    @with_transaction
     def setUp(self):
         self.lc = data_setup.create_labcontroller()
         self.system = data_setup.create_system(arch=u'i386')
@@ -31,7 +33,7 @@ class ReserveWorkflow(SeleniumTestCase):
         self.system.shared = True
         self.system2.lab_controller = self.lc
         self.system2.shared = True
-        session.flush()
+
         self.selenium = self.get_selenium()
         self.selenium.start()
 
@@ -69,8 +71,8 @@ class ReserveWorkflow(SeleniumTestCase):
 
     def test_no_lab_controller_distro(self):
         """ Test distros that have no lab controller are not shown"""
-        self.distro_i386.lab_controller_assocs[:] = []
-        session.flush()
+        with session.begin():
+            self.distro_i386.lab_controller_assocs[:] = []
         self.login()
         #Selecting multiple arch
         sel = self.selenium
@@ -89,10 +91,10 @@ class ReserveWorkflow(SeleniumTestCase):
         self.assertRaises(AssertionError,  self.wait_for_condition, lambda: sel.is_text_present(self.distro_i386.install_name) == True, wait_time=5)
 
     def test_reserve_multiple_arch_tag_got_distro(self):
-        tag = data_setup.create_distro_tag(tag=u'FOO')
-        self.distro_i386.tags.append(tag)
-        self.distro_x86_64.tags.append(tag)
-        session.flush()
+        with session.begin():
+            tag = data_setup.create_distro_tag(tag=u'FOO')
+            self.distro_i386.tags.append(tag)
+            self.distro_x86_64.tags.append(tag)
         self.login()
         sel = self.selenium
         sel.open("reserveworkflow")
@@ -128,9 +130,9 @@ class ReserveWorkflow(SeleniumTestCase):
         sel.add_selection("reserveworkflow_form_arch", "label=i386")
         self.assertRaises(AssertionError,  self.wait_for_condition, lambda: sel.is_text_present(self.unique_distro_repr) == True, wait_time=5)
 
-        tag = data_setup.create_distro_tag(u'BAR')
-        self.distro_x86_64.tag = tag
-        session.flush()
+        with session.begin():
+            tag = data_setup.create_distro_tag(u'BAR')
+            self.distro_x86_64.tag = tag
         sel = self.selenium
         sel.open("reserveworkflow")
         sel.wait_for_page_to_load('30000')

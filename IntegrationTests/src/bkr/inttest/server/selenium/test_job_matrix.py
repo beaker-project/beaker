@@ -21,12 +21,12 @@ from turbogears.database import session
 from bkr.server.model import TaskResult
 from bkr.inttest.server.webdriver_utils import login, is_text_present
 from bkr.inttest.server.selenium import SeleniumTestCase, WebDriverTestCase
-from bkr.inttest import data_setup, get_server_base
+from bkr.inttest import data_setup, get_server_base, with_transaction
 from bkr.server.model import Job, Response, RecipeSetResponse
 
 class TestJobMatrixWebDriver(WebDriverTestCase):
 
-
+    @with_transaction
     def setUp(self):
         self.job_whiteboard = data_setup.unique_name(u'foobarhi %s')
         self.recipe_whiteboard = data_setup.unique_name(u'sdfjkljk%s')
@@ -35,17 +35,16 @@ class TestJobMatrixWebDriver(WebDriverTestCase):
                 recipe_whiteboard=self.recipe_whiteboard,
                 distro=data_setup.create_distro(arch=u'i386'))
 
-        session.flush()
         self.browser = self.get_browser()
 
     def test_max_whiteboard(self):
         max = Job.max_by_whiteboard
         c = 0
         whiteboard =u'whiteboard'
-        while c <= max:
-            data_setup.create_completed_job(whiteboard=whiteboard)
-            c += 1
-        session.flush()
+        with session.begin():
+            while c <= max:
+                data_setup.create_completed_job(whiteboard=whiteboard)
+                c += 1
         b = self.browser
         b.get(get_server_base() + 'matrix')
         b.find_element_by_id('remote_form_whiteboard_filter').send_keys(whiteboard)
@@ -56,11 +55,11 @@ class TestJobMatrixWebDriver(WebDriverTestCase):
 
     def test_deleted_whiteboard_not_shown(self):
         b = self.browser
-        owner = data_setup.create_user(password='password')
-        whiteboard = u'To be deleted %d' % int(time.time() * 1000)
-        self.passed_job.owner = owner
-        self.passed_job.whiteboard = whiteboard
-        session.flush()
+        with session.begin():
+            owner = data_setup.create_user(password='password')
+            whiteboard = u'To be deleted %d' % int(time.time() * 1000)
+            self.passed_job.owner = owner
+            self.passed_job.whiteboard = whiteboard
         login(b, user=owner.user_name, password='password')
         b.get(get_server_base() + 'matrix')
         whiteboard_options = b.find_element_by_xpath("//select[@name='whiteboard']").text
@@ -79,19 +78,18 @@ class TestJobMatrixWebDriver(WebDriverTestCase):
         self.assert_(self.passed_job.whiteboard not in whiteboard_options)
 
     def test_deleted_job_results_not_shown(self):
-        data_setup.create_completed_job(
-                whiteboard=self.job_whiteboard, result=TaskResult.fail,
-                recipe_whiteboard=self.recipe_whiteboard,
-                distro=data_setup.create_distro(arch=u'i386'))
-        data_setup.create_completed_job(
-                whiteboard=self.job_whiteboard, result=TaskResult.warn,
-                recipe_whiteboard=self.recipe_whiteboard,
-                distro=data_setup.create_distro(arch=u'i386'))
-        session.flush()
+        with session.begin():
+            data_setup.create_completed_job(
+                    whiteboard=self.job_whiteboard, result=TaskResult.fail,
+                    recipe_whiteboard=self.recipe_whiteboard,
+                    distro=data_setup.create_distro(arch=u'i386'))
+            data_setup.create_completed_job(
+                    whiteboard=self.job_whiteboard, result=TaskResult.warn,
+                    recipe_whiteboard=self.recipe_whiteboard,
+                    distro=data_setup.create_distro(arch=u'i386'))
+            owner = data_setup.create_user(password='password')
+            self.passed_job.owner = owner
         b = self.browser
-        owner = data_setup.create_user(password='password')
-        self.passed_job.owner = owner
-        session.flush()
         login(b, user=owner.user_name, password='password')
         b.get(get_server_base() + 'matrix')
         b.find_element_by_xpath("//select[@name='whiteboard']/option[@value='%s']" % self.job_whiteboard).click()
@@ -112,19 +110,18 @@ class TestJobMatrixWebDriver(WebDriverTestCase):
         self.assert_('Pass: 1' not in report_text)
 
     def test_nacked_recipe_results_not_shown(self):
-        data_setup.create_completed_job(
-                whiteboard=self.job_whiteboard, result=u'Fail',
-                recipe_whiteboard=self.recipe_whiteboard,
-                distro=data_setup.create_distro(arch=u'i386'))
-        data_setup.create_completed_job(
-                whiteboard=self.job_whiteboard, result=u'Warn',
-                recipe_whiteboard=self.recipe_whiteboard,
-                distro=data_setup.create_distro(arch=u'i386'))
-        session.flush()
+        with session.begin():
+            data_setup.create_completed_job(
+                    whiteboard=self.job_whiteboard, result=u'Fail',
+                    recipe_whiteboard=self.recipe_whiteboard,
+                    distro=data_setup.create_distro(arch=u'i386'))
+            data_setup.create_completed_job(
+                    whiteboard=self.job_whiteboard, result=u'Warn',
+                    recipe_whiteboard=self.recipe_whiteboard,
+                    distro=data_setup.create_distro(arch=u'i386'))
+            owner = data_setup.create_user(password='password')
+            self.passed_job.owner = owner
         b = self.browser
-        owner = data_setup.create_user(password='password')
-        self.passed_job.owner = owner 
-        session.flush()
         login(b, user=owner.user_name, password='password')
         b.get(get_server_base() + 'matrix')
         b.find_element_by_xpath("//select[@name='whiteboard']/option[@value='%s']" % self.job_whiteboard).click()
@@ -134,9 +131,9 @@ class TestJobMatrixWebDriver(WebDriverTestCase):
         self.assert_('Pass: 1' in report_text)
 
         # Nack Recipe
-        response = Response.by_response('nak')
-        self.passed_job.recipesets[0].nacked = RecipeSetResponse(response_id=response.id)
-        session.flush()
+        with session.begin():
+            response = Response.by_response('nak')
+            self.passed_job.recipesets[0].nacked = RecipeSetResponse(response_id=response.id)
 
         # Assert it is no longer there
         b.get(get_server_base() + 'matrix')
@@ -147,21 +144,22 @@ class TestJobMatrixWebDriver(WebDriverTestCase):
         self.assert_('Pass: 1' not in report_text)
 
     def test_single_job(self):
-        unique_whiteboard = data_setup.unique_name('whiteboard%s')
-        non_unique_whiteboard = data_setup.unique_name('whiteboard%s')
-        non_unique_rwhiteboard = data_setup.unique_name('rwhiteboard%s')
-        distro = data_setup.create_distro(arch=u'i386')
-        for i in range(0,9):
-            data_setup.create_completed_job(
-                    whiteboard=non_unique_whiteboard, result=TaskResult.pass_,
-                    recipe_whiteboard=non_unique_rwhiteboard,
+        with session.begin():
+            unique_whiteboard = data_setup.unique_name('whiteboard%s')
+            non_unique_whiteboard = data_setup.unique_name('whiteboard%s')
+            non_unique_rwhiteboard = data_setup.unique_name('rwhiteboard%s')
+            distro = data_setup.create_distro(arch=u'i386')
+            for i in range(0,9):
+                data_setup.create_completed_job(
+                        whiteboard=non_unique_whiteboard, result=TaskResult.pass_,
+                        recipe_whiteboard=non_unique_rwhiteboard,
+                        distro=distro)
+
+            single_job = data_setup.create_completed_job(
+                    whiteboard=unique_whiteboard, result=TaskResult.pass_,
+                    recipe_whiteboard=data_setup.unique_name('rwhiteboard%s'),
                     distro=distro)
 
-        single_job = data_setup.create_completed_job(
-                whiteboard=unique_whiteboard, result=TaskResult.pass_,
-                recipe_whiteboard=data_setup.unique_name('rwhiteboard%s'),
-                distro=distro)
-        session.flush()
         b = self.browser
         b.get(get_server_base() + 'matrix')
         b.find_element_by_name('whiteboard_filter').send_keys(unique_whiteboard)
@@ -181,11 +179,11 @@ class TestJobMatrixWebDriver(WebDriverTestCase):
 
         # Test by job id
         # See https://bugzilla.redhat.com/show_bug.cgi?id=803713
-        single_job_2 = data_setup.create_completed_job(
-                whiteboard=non_unique_whiteboard, result=u'Pass',
-                recipe_whiteboard=non_unique_rwhiteboard,
-                distro=distro)
-        session.flush()
+        with session.begin():
+            single_job_2 = data_setup.create_completed_job(
+                    whiteboard=non_unique_whiteboard, result=u'Pass',
+                    recipe_whiteboard=non_unique_rwhiteboard,
+                    distro=distro)
         b = self.browser
         b.get(get_server_base() + 'matrix')
         b.find_element_by_id('remote_form_job_ids').send_keys(str(single_job_2.id))
@@ -200,6 +198,8 @@ class TestJobMatrixWebDriver(WebDriverTestCase):
         b = self.browser.quit()
 
 class TestJobMatrix(SeleniumTestCase):
+
+    @with_transaction
     def setUp(self):
         self.job_whiteboard = u'DanC says hi %d' % int(time.time() * 1000)
         self.recipe_whiteboard = u'breakage lol \'#&^!<'
@@ -216,7 +216,6 @@ class TestJobMatrix(SeleniumTestCase):
                 whiteboard=self.job_whiteboard, result=TaskResult.fail,
                 recipe_whiteboard=self.recipe_whiteboard,
                 distro=data_setup.create_distro(arch=u'x86_64'))
-        session.flush()
         self.selenium = self.get_selenium()
         self.selenium.start()
 
@@ -242,22 +241,22 @@ class TestJobMatrix(SeleniumTestCase):
         sel.wait_for_page_to_load('30000')
         body = sel.get_text('//body')
         self.assert_('Pass: 1' in body)
-        new_job = data_setup.create_completed_job(
-            whiteboard=self.job_whiteboard, result=TaskResult.pass_,
-            recipe_whiteboard=self.recipe_whiteboard,
-            distro=data_setup.create_distro(arch=u'i386'))
-        session.flush()
+        with session.begin():
+            new_job = data_setup.create_completed_job(
+                whiteboard=self.job_whiteboard, result=TaskResult.pass_,
+                recipe_whiteboard=self.recipe_whiteboard,
+                distro=data_setup.create_distro(arch=u'i386'))
         sel.click('//input[@value="Generate"]')
         sel.wait_for_page_to_load('30000')
         body_2 = sel.get_text('//body')
         self.assert_('Pass: 2' in body_2)
 
         #Try with multiple whiteboards
-        another_new_job = data_setup.create_completed_job(
-            whiteboard=self.job_whiteboard_2, result=TaskResult.pass_,
-            recipe_whiteboard=self.recipe_whiteboard,
-            distro=data_setup.create_distro(arch=u'i386'))
-        session.flush()
+        with session.begin():
+            another_new_job = data_setup.create_completed_job(
+                whiteboard=self.job_whiteboard_2, result=TaskResult.pass_,
+                recipe_whiteboard=self.recipe_whiteboard,
+                distro=data_setup.create_distro(arch=u'i386'))
         sel.open('matrix')
         sel.wait_for_page_to_load('30000')
         sel.add_selection("whiteboard", "label=%s" % self.job_whiteboard)

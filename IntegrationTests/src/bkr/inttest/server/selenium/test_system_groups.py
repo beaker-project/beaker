@@ -1,6 +1,6 @@
 
 from bkr.server.model import session, SystemGroup
-from bkr.inttest import data_setup, get_server_base
+from bkr.inttest import data_setup, get_server_base, with_transaction
 from bkr.inttest.server.selenium import WebDriverTestCase
 from selenium.webdriver.support.ui import WebDriverWait
 from bkr.inttest.server.webdriver_utils import login, is_text_present
@@ -9,12 +9,12 @@ from bkr.inttest.server.webdriver_utils import login, is_text_present
 class TestSystemGroups(WebDriverTestCase):
 
     def setUp(self):
-        self.system_owner = data_setup.create_user(password='password')
-        self.system = data_setup.create_system(owner=self.system_owner)
-        self.group = data_setup.create_group()
-        self.user_in_group = data_setup.create_user()
-        self.user_in_group.groups.append(self.group)
-        session.flush()
+        with session.begin():
+            self.system_owner = data_setup.create_user(password='password')
+            self.system = data_setup.create_system(owner=self.system_owner)
+            self.group = data_setup.create_group()
+            self.user_in_group = data_setup.create_user()
+            self.user_in_group.groups.append(self.group)
         self.browser = self.get_browser()
         login(self.browser, user=self.system_owner.user_name, password='password')
 

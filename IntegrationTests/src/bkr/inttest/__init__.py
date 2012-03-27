@@ -54,6 +54,16 @@ def get_server_base():
     return os.environ.get('BEAKER_SERVER_BASE_URL',
         'http://localhost:%s/' % turbogears.config.get('server.socket_port'))
 
+def with_transaction(func):
+    """
+    Runs the decorated function inside a transaction. Apply to setUp or other 
+    methods as needed.
+    """
+    def _decorated(*args, **kwargs):
+        with session.begin():
+            func(*args, **kwargs)
+    return _decorated
+
 def check_listen(port):
     """
     Returns True iff any process on the system is listening
@@ -149,9 +159,9 @@ def setup_package():
     from bkr.inttest import data_setup
     if not 'BEAKER_SKIP_INIT_DB' in os.environ:
         data_setup.setup_model()
+    with session.begin():
         data_setup.create_labcontroller() #always need a labcontroller
-    data_setup.create_distro()
-    session.flush()
+        data_setup.create_distro()
 
     if not os.path.exists(turbogears.config.get('basepath.rpms')):
         os.mkdir(turbogears.config.get('basepath.rpms'))

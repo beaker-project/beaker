@@ -27,6 +27,12 @@ from bkr.server.rdf import INV, describe_system
 
 class SystemRDFTest(unittest.TestCase):
 
+    def setUp(self):
+        session.begin()
+
+    def tearDown(self):
+        session.commit()
+
     def describe(self, system):
         g = Graph()
         describe_system(system, g)
