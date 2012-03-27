@@ -322,6 +322,7 @@ def create_completed_job(**kwargs):
 
 def mark_recipe_complete(recipe, result=TaskResult.pass_, system=None,
         start_time=None, finish_time=None, **kwargs):
+    assert result in TaskResult
     if system is None:
         recipe.system = create_system(arch=recipe.arch)
     else:

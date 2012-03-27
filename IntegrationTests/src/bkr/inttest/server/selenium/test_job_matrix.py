@@ -112,11 +112,11 @@ class TestJobMatrixWebDriver(WebDriverTestCase):
     def test_nacked_recipe_results_not_shown(self):
         with session.begin():
             data_setup.create_completed_job(
-                    whiteboard=self.job_whiteboard, result=u'Fail',
+                    whiteboard=self.job_whiteboard, result=TaskResult.fail,
                     recipe_whiteboard=self.recipe_whiteboard,
                     distro=data_setup.create_distro(arch=u'i386'))
             data_setup.create_completed_job(
-                    whiteboard=self.job_whiteboard, result=u'Warn',
+                    whiteboard=self.job_whiteboard, result=TaskResult.warn,
                     recipe_whiteboard=self.recipe_whiteboard,
                     distro=data_setup.create_distro(arch=u'i386'))
             owner = data_setup.create_user(password='password')
@@ -181,7 +181,7 @@ class TestJobMatrixWebDriver(WebDriverTestCase):
         # See https://bugzilla.redhat.com/show_bug.cgi?id=803713
         with session.begin():
             single_job_2 = data_setup.create_completed_job(
-                    whiteboard=non_unique_whiteboard, result=u'Pass',
+                    whiteboard=non_unique_whiteboard, result=TaskResult.pass_,
                     recipe_whiteboard=non_unique_rwhiteboard,
                     distro=distro)
         b = self.browser
