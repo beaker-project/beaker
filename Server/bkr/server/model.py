@@ -1383,6 +1383,21 @@ class User(MappedObject):
 
     root_password = property(_get_root_password, _set_root_password)
 
+    @property
+    def rootpw_expiry(self):
+        if not self._root_password:
+            return
+        validity = ConfigItem.by_name('root_password_validity').current_value()
+        if validity:
+            return self.rootpw_changed + timedelta(days=validity)
+
+    @property
+    def rootpw_expired(self):
+        if self.rootpw_expiry and self.rootpw_expiry < datetime.utcnow():
+            return True
+        else:
+            return False
+
     def __repr__(self):
         return self.user_name
 
@@ -2030,9 +2045,11 @@ url --url=$tree
         return False
 
     def can_provision_now(self,user=None):
-        if user is not None and self.loaned == user:
+        if user is None:
+            return False
+        elif self.loaned == user:
             return True
-        elif user is not None and self._user_in_systemgroup(user):
+        elif self._user_in_systemgroup(user):
             return True
         elif user is None:
             return False
@@ -2418,6 +2435,9 @@ url --url=$tree
                 return False
         except AttributeError, e: #Anonymous can't provision now
             return False
+
+        if identity.current.user.rootpw_expired:
+            raise BX(_('Your root password has expired, please change or clear it in order to submit jobs.'))
 
         if identity.current.user.sshpubkeys:
             end = distro and (distro.osversion.osmajor.osmajor.startswith("Fedora") or \
@@ -3801,6 +3821,9 @@ class Job(TaskBase):
             job.whiteboard = kw.get('whiteboard') 
         if not isinstance(distro_id,list):
             distro_id = [distro_id]
+
+        if job.owner.rootpw_expired:
+            raise BX(_(u"Your root password has expired, please change or clear it in order to submit jobs."))
 
         for id in distro_id: 
             try:

@@ -79,7 +79,7 @@ import sys
 import logging
 log = logging.getLogger("bkr.server.controllers")
 import breadcrumbs
-from datetime import datetime
+from datetime import datetime, timedelta
 
 def identity_failure_url(errors):
     if identity.current.anonymous:
@@ -228,6 +228,9 @@ class Root(RPCRoot):
 
     email      = widgets.TextField(name='email_address', label='Email Address')
     root_password = widgets.TextField(name='_root_password', label='Root Password')
+    rootpw_expiry = widgets.TextField(name='rootpw_expiry',
+                                      label='Root Password Expiry',
+                                      attrs={'disabled': True})
     autoUsers  = widgets.AutoCompleteTextField(name='user',
                                            search_controller=url("/users/by_name"),
                                            search_param="input",
@@ -235,7 +238,7 @@ class Root(RPCRoot):
 
     prefs_form   = widgets.TableForm(
         'UserPrefs',
-        fields = [email, root_password],
+        fields = [email, root_password, rootpw_expiry],
         action = 'save_prefs',
         submit_text = _(u'Change'),
     )
@@ -1636,7 +1639,11 @@ class Root(RPCRoot):
         except InvalidRequestError:
             flash( _(u"Unable to lookup distro for %s" % id) )
             redirect(u"/view/%s" % system.fqdn)
-    
+
+        if user.rootpw_expired:
+            flash( _(u"Your root password has expired, please change or clear it in order to submit jobs.") )
+            redirect(u"/view/%s" % system.fqdn)
+
         reserve_days = int(reserve_days)
         if reserve_days is None:#This should not happen
             log.debug('reserve_days has not been set in provision page, using default')
@@ -1684,7 +1691,11 @@ class Root(RPCRoot):
         except InvalidRequestError:
             flash( _(u"Unable to lookup distro for %s" % id) )
             redirect(u"/view/%s" % system.fqdn)
-         
+
+        if user.rootpw_expired:
+            flash( _(u"Your root password has expired, please change or clear it in order to submit jobs.") )
+            redirect(u"/view/%s" % system.fqdn)
+
         try:
             can_provision_now = system.can_provision_now(user) #Check perms
             if can_provision_now:

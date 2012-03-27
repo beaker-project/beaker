@@ -505,6 +505,23 @@ class SystemProvisionXmlRpcTest(XmlRpcTestCase):
         print self.stub_cobbler_thread.cobbler.snippets[snippet_filename]
         self.assert_('%end' in self.stub_cobbler_thread.cobbler.snippets[snippet_filename])
 
+    def test_provision_expired_user_root_password(self):
+        system = self.usable_system
+        user = system.user
+        with session.begin():
+            user.root_password = 'gyfrinachol'
+            user.rootpw_changed = datetime.datetime.utcnow() - datetime.timedelta(days=99)
+            ConfigItem.by_name('root_password_validity')\
+                      .set(90, user=User.by_user_name(data_setup.ADMIN_USER))
+        self.server.auth.login_password(user.user_name, 'password')
+        try:
+            self.server.systems.provision(system.fqdn, self.distro.install_name,
+                                          'method=nfs', 'noapic', 'noapic runlevel=3', '')
+            self.fail('should raise')
+        except xmlrpclib.Fault, e:
+            self.assert_('root password has expired' in e.faultString, e.faultString)
+
+
 class LegacyPushXmlRpcTest(XmlRpcTestCase):
 
     def setUp(self):
