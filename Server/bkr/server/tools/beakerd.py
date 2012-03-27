@@ -258,18 +258,15 @@ def processed_recipesets(*args):
 
 def dead_recipes(*args):
     recipes = Recipe.query\
-                    .outerjoin(['systems'])\
-                    .outerjoin(['distro',
-                                'lab_controller_assocs',
-                                'lab_controller'])\
+                    .outerjoin(Recipe.distro)\
                     .filter(
                          or_(
-                         and_(Recipe.status==TaskStatus.queued,
-                              System.id==None,
-                             ),
-                         and_(Recipe.status==TaskStatus.queued,
-                              LabController.id==None,
-                             ),
+                          and_(Recipe.status==TaskStatus.queued,
+                               not_(Recipe.systems.any()),
+                              ),
+                          and_(Recipe.status==TaskStatus.queued,
+                               not_(Distro.lab_controller_assocs.any()),
+                              )
                             )
                            )
 
