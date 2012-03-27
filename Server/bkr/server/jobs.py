@@ -357,6 +357,9 @@ class Jobs(RPCRoot):
 
     def process_xmljob(self, xmljob, user, ignore_missing_tasks=False):
 
+        if user.rootpw_expired:
+            raise BX(_('Your root password has expired, please change or clear it in order to submit jobs.'))
+
         job_retention = xmljob.get_xml_attr('retention_tag',unicode,None)
         job_product = xmljob.get_xml_attr('product',unicode,None)
         tag, product = self._process_job_tag_product(retention_tag=job_retention, product=job_product)

@@ -16,9 +16,7 @@
 </div>
 
 <h2>Root Password</h2>
-  <p>If your personal root password (above) is not set,
-     the Beaker default root password will be used for provisioned systems instead.</p>
-  <p py:if="rootpw">The current root password for provisioned systems is '<b>${rootpw}</b>'.</p>
+  <p py:if="rootpw">The current default root password for provisioned systems is '<b>${rootpw}</b>'.</p>
   <p py:if="not rootpw">There is currently no default password configured.</p>
 
 ${rootpw_grid.display(rootpw_values)}

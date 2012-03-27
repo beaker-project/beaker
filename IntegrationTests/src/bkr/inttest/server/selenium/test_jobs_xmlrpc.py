@@ -20,10 +20,11 @@
 import unittest
 import logging
 import xmlrpclib
+import datetime
 from turbogears.database import session
 from bkr.inttest.server.selenium import XmlRpcTestCase
 from bkr.inttest import data_setup
-from bkr.server.model import Job, Distro
+from bkr.server.model import Job, Distro, ConfigItem
 
 class JobUploadTest(XmlRpcTestCase):
 
@@ -35,7 +36,7 @@ class JobUploadTest(XmlRpcTestCase):
             data_setup.create_task(name=u'/distribution/reservesys')
             user = data_setup.create_user(password=u'password')
         self.server = self.get_server()
-        self.server.auth.login_password(user.user_name, 'password')
+        self.server.auth.login_password(self.user.user_name, 'password')
 
     def test_ignore_missing_tasks(self):
         job_tid = self.server.jobs.upload('''
@@ -93,3 +94,30 @@ class JobUploadTest(XmlRpcTestCase):
         except xmlrpclib.Fault, e:
             self.assert_('/asdf/notexist1, /asdf/notexist2, /asdf/notexist3'
                     in e.faultString)
+
+    def test_reject_expired_root_password(self):
+        ConfigItem.by_name('root_password_validity').set(90)
+        self.user.root_password = 'donttellanyone'
+        self.user.rootpw_changed = datetime.datetime.utcnow() - datetime.timedelta(days=99)
+        session.flush()
+        job_xml = '''
+            <job>
+                <whiteboard>job for user with expired password</whiteboard>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
+                            <distro_name op="=" value="BlueShoeLinux5-5" />
+                            <distro_arch op="=" value="i386" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                        <task name="/distribution/reservesys" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            '''
+        try:
+            self.server.jobs.upload(job_xml)
+            self.fail('should raise')
+        except xmlrpclib.Fault, e:
+            self.assert_('root password has expired' in e.faultString)
