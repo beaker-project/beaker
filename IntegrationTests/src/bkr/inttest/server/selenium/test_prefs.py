@@ -22,28 +22,28 @@ class UserPrefs(WebDriverTestCase):
 
     def test_set_plaintext_password(self):
         b = self.browser
-        e = b.find_element_by_name("root_password")
+        e = b.find_element_by_name("_root_password")
         e.clear()
         e.send_keys(self.clear_password)
         b.find_element_by_id('UserPrefs').submit()
         self.assert_(is_text_present(b, 'root password hash changed'))
-        new_hash = b.find_element_by_name('root_password').get_attribute('value')
+        new_hash = b.find_element_by_name('_root_password').get_attribute('value')
         self.failUnless(new_hash)
         self.failUnless(crypt.crypt(self.clear_password, new_hash) == new_hash)
 
     def test_set_hashed_password(self):
         b = self.browser
-        e = b.find_element_by_name("root_password")
+        e = b.find_element_by_name("_root_password")
         e.clear()
         e.send_keys(self.hashed_password)
         b.find_element_by_id('UserPrefs').submit()
         self.assert_(is_text_present(b, 'root password hash changed'))
-        new_hash = b.find_element_by_name('root_password').get_attribute('value')
+        new_hash = b.find_element_by_name('_root_password').get_attribute('value')
         self.failUnless(crypt.crypt(self.clear_password, new_hash) == self.hashed_password)
 
     def test_dictionary_password_rejected(self):
         b = self.browser
-        e = b.find_element_by_name("root_password")
+        e = b.find_element_by_name("_root_password")
         e.clear()
         e.send_keys(self.simple_password)
         b.find_element_by_id('UserPrefs').submit()

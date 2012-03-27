@@ -141,7 +141,13 @@ def init_db(user_name=None, password=None, user_display_name=None, user_email_ad
         ONETWENTYDAYS   = RetentionTag(tag=u'120days', needs_product=False, expire_in_days=120)
         ACTIVE          = RetentionTag(tag=u'active', needs_product=True)
         AUDIT           = RetentionTag(tag=u'audit', needs_product=True)
-        
+
+    try:
+        ConfigItem.by_name('root_password')
+    except NoResultFound:
+        rootpw_clear    = ConfigItem(name='root_password',
+                                     description=u'Plaintext root password for provisioned systems')
+
     session.flush()
 
 def get_parser():

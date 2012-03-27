@@ -10,6 +10,7 @@ from bkr.server.power import PowerTypes
 from bkr.server.keytypes import KeyTypes
 from bkr.server.CSV_import_export import CSV
 from bkr.server.group import Groups
+from bkr.server.configuration import Configuration
 from bkr.server.tag import Tags
 from bkr.server.osversion import OSVersions
 from bkr.server.distro_family import DistroFamily
@@ -23,7 +24,7 @@ from bkr.server.reserve_workflow import ReserveWorkflow
 from bkr.server.retention_tags import RetentionTag as RetentionTagController
 from bkr.server.watchdog import Watchdogs
 from bkr.server.systems import SystemsController
-from bkr.server.widgets import myPaginateDataGrid
+from bkr.server.widgets import BeakerDataGrid, myPaginateDataGrid
 from bkr.server.widgets import LoanWidget
 from bkr.server.widgets import PowerTypeForm
 from bkr.server.widgets import PowerForm
@@ -192,6 +193,7 @@ class Root(RPCRoot):
     keytypes = KeyTypes()
     devices = Devices()
     groups = Groups()
+    configuration = Configuration()
     tags = Tags()
     distrofamily = DistroFamily()
     osversions = OSVersions()
@@ -225,7 +227,7 @@ class Root(RPCRoot):
     submit     = widgets.SubmitButton(name='submit')
 
     email      = widgets.TextField(name='email_address', label='Email Address')
-    root_password = widgets.TextField(name='root_password', label='Root Password')
+    root_password = widgets.TextField(name='_root_password', label='Root Password')
     autoUsers  = widgets.AutoCompleteTextField(name='user',
                                            search_controller=url("/users/by_name"),
                                            search_param="input",
@@ -237,6 +239,11 @@ class Root(RPCRoot):
         action = 'save_prefs',
         submit_text = _(u'Change'),
     )
+
+    rootpw_grid = BeakerDataGrid(fields=[
+                    ('Root Password', lambda x: x.value),
+                    ('Effective from', lambda x: x.valid_from)
+                 ])
 
     loan_form     = widgets.TableForm(
         'Loan',
@@ -436,21 +443,33 @@ class Root(RPCRoot):
     @identity.require(identity.not_anonymous())
     def prefs(self, *args, **kw):
         user = identity.current.user
+
+        # Show all future root passwords, and the previous five
+        rootpw = ConfigItem.by_name('root_password')
+        rootpw_values = rootpw.values().filter(rootpw.value_class.valid_from > datetime.utcnow())\
+                       .order_by(rootpw.value_class.valid_from.desc()).all()\
+                      + rootpw.values().filter(rootpw.value_class.valid_from <= datetime.utcnow())\
+                       .order_by(rootpw.value_class.valid_from.desc())[:5]
+
         return dict(
-            title    = 'User Prefs',
-            forms    = [self.prefs_form, self.ssh_key_add_form],
-            widgets  = {},
-            action   = '/save_prefs',
-            ssh_keys = user.sshpubkeys,
-            value    = user,
-            options  = None)
+            title        = 'User Prefs',
+            prefs_form   = self.prefs_form,
+            ssh_key_form = self.ssh_key_add_form,
+            widgets      = {},
+            action       = '/save_prefs',
+            ssh_keys     = user.sshpubkeys,
+            value        = user,
+            rootpw       = rootpw.current_value(),
+            rootpw_grid  = self.rootpw_grid,
+            rootpw_values = rootpw_values,
+            options      = None)
 
 
     @expose()
     @identity.require(identity.not_anonymous())
     def save_prefs(self, *args, **kw):
         email = kw.get('email_address', None) 
-        root_password = kw.get('root_password', None) 
+        root_password = kw.get('_root_password', None)
         changes = []
         
         if email and email != identity.current.user.email_address:

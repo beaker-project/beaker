@@ -10,10 +10,20 @@
 
 <body class="flora">
 
-<div py:for="form in forms">
-  <p py:content="form(method='POST', action=tg.url(form.action), value=value, options=options)">Form goes here</p>
+<h2>Preferences</h2>
+<div>
+  <p py:content="prefs_form(method='POST', action=tg.url(prefs_form.action), value=value, options=options)">Form goes here</p>
 </div>
 
+<h2>Root Password</h2>
+  <p>If your personal root password (above) is not set,
+     the Beaker default root password will be used for provisioned systems instead.</p>
+  <p py:if="rootpw">The current root password for provisioned systems is '<b>${rootpw}</b>'.</p>
+  <p py:if="not rootpw">There is currently no default password configured.</p>
+
+${rootpw_grid.display(rootpw_values)}
+
+<h2>SSH Keys</h2>
 <div>
  <table class="list">
   <tr class="list">
@@ -48,5 +58,9 @@
  </table>
 </div>
 
+<div>
+  <p py:content="ssh_key_form(method='POST', action=tg.url(ssh_key_form.action), value=value, options=options)">Form goes here</p>
+
+</div>
 </body>
 </html>

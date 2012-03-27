@@ -32,7 +32,7 @@ from bkr.inttest.assertions import assert_datetime_within, \
         assert_durations_not_overlapping
 from bkr.inttest import data_setup, stub_cobbler
 from bkr.server.model import User, Cpu, Key, Key_Value_String, Key_Value_Int, \
-        System, SystemActivity, Provision, Hypervisor, SSHPubKey
+        System, SystemActivity, Provision, Hypervisor, SSHPubKey, ConfigItem
 from bkr.server.tools import beakerd
 
 class ReserveSystemXmlRpcTest(XmlRpcTestCase):
@@ -466,11 +466,22 @@ class SystemProvisionXmlRpcTest(XmlRpcTestCase):
         self.assert_('man@moon' in
                 self.stub_cobbler_thread.cobbler.snippets[snippet_filename])
 
-    def test_provision_root_password(self):
-        system = self.usable_system
-        user = system.user
-        user.root_password = 'gyfrinachol'
-        session.flush()
+    def test_provision_systemwide_root_password(self):
+        with session.begin():
+            system = self.usable_system
+            user = system.user
+            ConfigItem.by_name('root_password').set('terces', user=User.by_user_name(data_setup.ADMIN_USER))
+        self.server.auth.login_password(user.user_name, 'password')
+        self.server.systems.provision(system.fqdn, self.distro.install_name,
+                'method=nfs', 'noapic', 'noapic runlevel=3', '')
+        hashed_password = self.stub_cobbler_thread.cobbler.systems[system.fqdn]['ksmeta']['password']
+        self.assert_(crypt.crypt('terces', hashed_password) == hashed_password)
+
+    def test_provision_user_root_password(self):
+        with session.begin():
+            system = self.usable_system
+            user = system.user
+            user.root_password = 'gyfrinachol'
         self.server.auth.login_password(user.user_name, 'password')
         self.server.systems.provision(system.fqdn, self.distro.install_name,
                 'method=nfs', 'noapic', 'noapic runlevel=3', '')
