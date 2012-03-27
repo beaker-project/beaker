@@ -16,10 +16,8 @@ class Menu(SeleniumTestCase):
             self.logout()
         except:pass
 
-        self.BEAKER_LOGIN_USER = data_setup.create_user(password='password').user_name
-        self.BEAKER_LOGIN_PASSWORD = 'password'
-        data_setup.create_device(device_class="IDE")
-        session.flush()
+        with session.begin():
+            data_setup.create_device(device_class="IDE")
         self.login()
        
     def test_menulist(self):

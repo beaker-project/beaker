@@ -28,12 +28,12 @@ from bkr.server.model import Job, Distro
 class JobUploadTest(XmlRpcTestCase):
 
     def setUp(self):
-        if not Distro.by_name(u'BlueShoeLinux5-5'):
-            data_setup.create_distro(name=u'BlueShoeLinux5-5')
-        data_setup.create_task(name=u'/distribution/install')
-        data_setup.create_task(name=u'/distribution/reservesys')
-        user = data_setup.create_user(password=u'password')
-        session.flush()
+        with session.begin():
+            if not Distro.by_name(u'BlueShoeLinux5-5'):
+                data_setup.create_distro(name=u'BlueShoeLinux5-5')
+            data_setup.create_task(name=u'/distribution/install')
+            data_setup.create_task(name=u'/distribution/reservesys')
+            user = data_setup.create_user(password=u'password')
         self.server = self.get_server()
         self.server.auth.login_password(user.user_name, 'password')
 
@@ -57,13 +57,14 @@ class JobUploadTest(XmlRpcTestCase):
             True # ignore_missing_tasks
         )
         self.assert_(job_tid.startswith('J:'))
-        job = Job.by_id(int(job_tid[2:]))
-        self.assertEqual(job.ttasks, 2) # not 3
-        recipe = job.recipesets[0].recipes[0]
-        self.assertEqual(len(recipe.tasks), 2)
-        self.assertEqual(recipe.tasks[0].task.name, u'/distribution/install')
-        # /asdf/notexist is silently dropped
-        self.assertEqual(recipe.tasks[1].task.name, u'/distribution/reservesys')
+        with session.begin():
+            job = Job.by_id(int(job_tid[2:]))
+            self.assertEqual(job.ttasks, 2) # not 3
+            recipe = job.recipesets[0].recipes[0]
+            self.assertEqual(len(recipe.tasks), 2)
+            self.assertEqual(recipe.tasks[0].task.name, u'/distribution/install')
+            # /asdf/notexist is silently dropped
+            self.assertEqual(recipe.tasks[1].task.name, u'/distribution/reservesys')
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=601170
     def test_error_message_lists_all_invalid_tasks(self):

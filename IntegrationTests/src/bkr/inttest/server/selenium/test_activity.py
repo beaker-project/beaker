@@ -1,7 +1,7 @@
 
 from turbogears.database import session
 from bkr.inttest.server.selenium import SeleniumTestCase
-from bkr.inttest import data_setup
+from bkr.inttest import data_setup, with_transaction
 from bkr.server.model import User, DistroActivity, SystemActivity
 
 def is_activity_row_present(sel, via=u'testdata', object_=None, property_=None,
@@ -25,6 +25,7 @@ def is_activity_row_present(sel, via=u'testdata', object_=None, property_=None,
 
 class ActivityTest(SeleniumTestCase):
 
+    @with_transaction
     def setUp(self):
         self.distro = data_setup.create_distro()
         self.distro.activity.append(DistroActivity(
@@ -36,7 +37,6 @@ class ActivityTest(SeleniumTestCase):
                 user=User.by_user_name(data_setup.ADMIN_USER), service=u'testdata',
                 action=u'Nothing', field_name=u'Nonsense',
                 old_value=u'asdf', new_value=u'omgwtfbbq'))
-        session.flush()
         self.selenium = self.get_selenium()
         self.selenium.start()
 
