@@ -24,7 +24,7 @@ import datetime
 from turbogears.database import session
 from bkr.inttest.server.selenium import XmlRpcTestCase
 from bkr.inttest import data_setup
-from bkr.server.model import Job, Distro, ConfigItem
+from bkr.server.model import Job, Distro, ConfigItem, User
 
 class JobUploadTest(XmlRpcTestCase):
 
@@ -34,7 +34,7 @@ class JobUploadTest(XmlRpcTestCase):
                 data_setup.create_distro(name=u'BlueShoeLinux5-5')
             data_setup.create_task(name=u'/distribution/install')
             data_setup.create_task(name=u'/distribution/reservesys')
-            user = data_setup.create_user(password=u'password')
+            self.user = data_setup.create_user(password=u'password')
         self.server = self.get_server()
         self.server.auth.login_password(self.user.user_name, 'password')
 
@@ -96,10 +96,11 @@ class JobUploadTest(XmlRpcTestCase):
                     in e.faultString)
 
     def test_reject_expired_root_password(self):
-        ConfigItem.by_name('root_password_validity').set(90)
-        self.user.root_password = 'donttellanyone'
-        self.user.rootpw_changed = datetime.datetime.utcnow() - datetime.timedelta(days=99)
-        session.flush()
+        with session.begin():
+            ConfigItem.by_name('root_password_validity').set(90,
+                    user=User.by_user_name(data_setup.ADMIN_USER))
+            self.user.root_password = 'donttellanyone'
+            self.user.rootpw_changed = datetime.datetime.utcnow() - datetime.timedelta(days=99)
         job_xml = '''
             <job>
                 <whiteboard>job for user with expired password</whiteboard>

@@ -2,7 +2,7 @@
 from bkr.inttest.server.selenium import SeleniumTestCase
 from turbogears.database import session
 from bkr.inttest import data_setup, stub_cobbler
-from bkr.server.model import SSHPubKey, ConfigItem
+from bkr.server.model import SSHPubKey, ConfigItem, User
 import unittest
 import datetime
 
@@ -52,7 +52,8 @@ class SystemManualProvisionTest(SeleniumTestCase):
         user = system.user
         user.root_password = "MothersMaidenName"
         user.rootpw_changed = datetime.datetime.utcnow() - datetime.timedelta(days=35)
-        ConfigItem.by_name('root_password_validity').set(30)
+        ConfigItem.by_name('root_password_validity').set(30,
+                user=User.by_user_name(data_setup.ADMIN_USER))
         session.flush()
         sel.open("")
         sel.type("simplesearch", "%s" % system.fqdn)
