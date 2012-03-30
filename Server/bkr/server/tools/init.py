@@ -149,12 +149,6 @@ def init_db(user_name=None, password=None, user_display_name=None, user_email_ad
         rootpw_clear    = ConfigItem(name='root_password',
                                      description=u'Plaintext root password for provisioned systems')
     try:
-        ConfigItem.by_name('root_password_hash')
-    except NoResultFound:
-        rootpw_hash     = ConfigItem(name='root_password_hash',
-                                     description=u'Root password hash for provisioned systems',
-                                     readonly=True)
-    try:
         ConfigItem.by_name('root_password_validity')
     except NoResultFound:
         rootpw_validity = ConfigItem(name='root_password_validity',
