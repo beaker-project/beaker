@@ -68,7 +68,7 @@ class BeakerBus(object):
                 connection_params[1].update({'sasl_mechanisms' : 'GSSAPI'})
                 self.do_krb_auth()
                 # krb auths have a set lifespan, ensure we stay authenticated
-                RepeatTimer(_auth_interval, self.do_krb_auth, stop_on_exception=False)
+                RepeatTimer(self._auth_interval, self.do_krb_auth, stop_on_exception=False)
             _connection = Connection(*connection_params[0], **connection_params[1])
             try:
                 _connection.open()

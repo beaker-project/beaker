@@ -51,7 +51,7 @@ class ServerBeakerBus(BeakerBus):
             """
             msg_kw = {}
             msg_kw['content'] = {'watchdog' : watchdog, 'status' : status }
-            msg_kw['subject'] = 'Watchdog.%s' % lc_fqdn
+            msg_kw['subject'] = 'beaker.Watchdog.%s' % lc_fqdn
             msg = Message(**msg_kw)
             snd = session.sender(self.topic_exchange)
             snd.send(msg)
@@ -59,7 +59,7 @@ class ServerBeakerBus(BeakerBus):
 
     def task_update_sender(self, session, *args, **kw):
             """
-            Send msg on Bus with subject 'TaskUpdate.Jx.RSx.Rx.Tx' only as far as the current task.
+            Send msg on Bus with subject 'beaker.TaskUpdate.Jx.RSx.Rx.Tx' only as far as the current task.
             i.e if we're updating a Recipe the subject will not include any tasks
             """
             try:
@@ -70,7 +70,7 @@ class ServerBeakerBus(BeakerBus):
                 #FIXME need to create Job/RecipeSet/Recipe object from string here
                 sub_subject = ".".join(TaskBase.get_by_t_id(task_id).build_ancestors() + (task_id,))
                 msg_kw = {}
-                msg_kw['subject'] = 'TaskUpdate.%s' % sub_subject #FIXME append task_id, get if from the args/kw
+                msg_kw['subject'] = 'beaker.TaskUpdate.%s' % sub_subject #FIXME append task_id, get if from the args/kw
                 content = kw #FIXME perhaps we don't need all the elements of the dict?
                 msg_kw['content'] = content
                 msg = Message(**msg_kw) 

@@ -77,7 +77,7 @@ class LabBeakerBus(BeakerBus):
                              arguments: { \'qpid.policy_type\': ring, \
                                           \'qpid.max_size\': 50000000 } }, \
                 x-bindings :[{ exchange :"' + self.topic_exchange + '", queue: "' + queue_name +'", \
-                               key: "Watchdog.' + lc +'"}]}}'
+                               key: "beaker.Watchdog.' + lc +'"}]}}'
 
         receiver = session.receiver(addr_string)
 
