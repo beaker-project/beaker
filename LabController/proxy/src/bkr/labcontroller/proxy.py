@@ -57,7 +57,7 @@ class ProxyHelper(object):
         else:
             TransportClass = retry_request_decorator(CookieTransport)
         self.hub = HubProxy(logger=logging.getLogger('kobo.client.HubProxy'), conf=self.conf,
-                transport=TransportClass(timeout=120), **kwargs)
+                transport=TransportClass(timeout=120), auto_logout=False, **kwargs)
         self.log_base_url = "http://%s/beaker/logs" % self.conf.get("SERVER", gethostname())
         self.basepath = None
         self.upload = None

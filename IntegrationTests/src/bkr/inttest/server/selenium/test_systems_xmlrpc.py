@@ -25,6 +25,7 @@ import time
 import datetime
 import xmlrpclib
 import crypt
+from nose.plugins.skip import SkipTest
 from turbogears.database import session
 
 from bkr.inttest.server.selenium import XmlRpcTestCase
@@ -217,6 +218,7 @@ class SystemPowerXmlRpcTest(XmlRpcTestCase):
 
     @with_transaction
     def setUp(self):
+        raise SkipTest('Cobbler removal')
         self.stub_cobbler_thread = stub_cobbler.StubCobblerThread()
         self.stub_cobbler_thread.start()
         self.lab_controller = data_setup.create_labcontroller(
@@ -380,6 +382,7 @@ class SystemProvisionXmlRpcTest(XmlRpcTestCase):
         self.assert_(not self.stub_cobbler_thread.cobbler.system_actions)
 
     def test_provision(self):
+        raise SkipTest('Cobbler removal')
         kickstart = '''
             %%pre
             kickstart lol!
@@ -492,6 +495,7 @@ class SystemProvisionXmlRpcTest(XmlRpcTestCase):
                      self.stub_cobbler_thread.cobbler.systems[system.fqdn]['ksmeta']['password'])
 
     def test_ssh_key_ksappend_has_end(self):
+        raise SkipTest('Cobbler removal')
         system = self.usable_system
         user = system.user
         with session.begin():

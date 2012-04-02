@@ -1653,44 +1653,6 @@ class System(SystemObject):
                     self.system.activity.append(SystemActivity(self.system.user,service='Cobbler API',action='Task',field_name='', new_value='Fail: %s' % e))
                     raise
 
-
-                        
-            def power(self,action='reboot', wait=False):
-                system_id = self.get_system()
-                self.remote.modify_system(system_id, 'power_type', 
-                                              self.system.power.power_type.name,
-                                                   self.token)
-                self.remote.modify_system(system_id, 'power_address', 
-                                                self.system.power.power_address,
-                                                   self.token)
-                self.remote.modify_system(system_id, 'power_user', 
-                                                   self.system.power.power_user,
-                                                   self.token)
-                self.remote.modify_system(system_id, 'power_pass', 
-                                                 self.system.power.power_passwd,
-                                                   self.token)
-                self.remote.modify_system(system_id, 'power_id', 
-                                                   self.system.power.power_id,
-                                                   self.token)
-                self.remote.save_system(system_id, self.token)
-                if '%f' % self.version() >= '%f' % 1.7:
-                    try:
-                        task_id = self.remote.background_power_system(
-                                  dict(systems=[self.system.fqdn],power=action),
-                                                                     self.token)
-                        if wait:
-                            return self.wait_for_event(task_id)
-                        else:
-                            return task_id
-                    except xmlrpclib.Fault, msg:
-                        raise BX(_('Failed to %s system %s' % (action,self.system.fqdn)))
-                else:
-                    try:
-                        return self.remote.power_system(system_id, action, self.token)
-                    except xmlrpclib.Fault, msg:
-                        raise BX(_('Failed to %s system %s' % (action,self.system.fqdn)))
-                return False
-
             def provision(self, 
                           distro=None, 
                           kickstart=None,

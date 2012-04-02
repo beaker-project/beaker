@@ -69,3 +69,30 @@ class AddDistroXmlRpcTest(XmlRpcTestCase):
             self.assertEquals(distro.activity[0].action, u'Added')
             self.assertEquals(distro.activity[0].new_value, self.lc2.fqdn)
             del distro
+
+class CommandQueueXmlRpcTest(XmlRpcTestCase):
+
+    def setUp(self):
+        with session.begin():
+            self.lc = data_setup.create_labcontroller()
+            self.lc.user.password = u'logmein'
+        self.server = self.get_server()
+
+    def test_only_returns_one_command_per_system(self):
+        with session.begin():
+            system = data_setup.create_system(lab_controller=self.lc)
+            system.action_power(action='off', service=u'testdata')
+            system.action_power(action='on', service=u'testdata')
+        self.server.auth.login_password(self.lc.user.user_name, u'logmein')
+        commands = self.server.labcontrollers.get_queued_command_details()
+        self.assertEquals(len(commands), 1, commands)
+
+    def test_obeys_max_running_commands_limit(self):
+        with session.begin():
+            for _ in xrange(15):
+                system = data_setup.create_system(lab_controller=self.lc)
+                system.action_power(action=u'on', service=u'testdata')
+        self.server.auth.login_password(self.lc.user.user_name, u'logmein')
+        commands = self.server.labcontrollers.get_queued_command_details()
+        # 10 is the configured limit in server-test.cfg
+        self.assertEquals(len(commands), 10, commands)

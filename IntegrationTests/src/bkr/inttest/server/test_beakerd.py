@@ -1,5 +1,6 @@
 import unittest, datetime, os, threading
 from time import sleep
+from nose.plugins.skip import SkipTest
 from bkr.server.model import TaskStatus, Job, System, User, \
         Group, SystemStatus, SystemActivity, Recipe, LabController
 import sqlalchemy.orm
@@ -366,6 +367,7 @@ class TestBeakerd(unittest.TestCase):
         beakerd.processed_recipesets()
         beakerd.queued_recipes()
         beakerd.scheduled_recipes()
+        raise SkipTest('Cobbler removal')
         beakerd.queued_commands()
 
         with session.begin():
@@ -377,6 +379,7 @@ class TestBeakerd(unittest.TestCase):
 class TestPowerFailures(unittest.TestCase):
 
     def setUp(self):
+        raise SkipTest('Cobbler removal')
         self.stub_cobbler_thread = stub_cobbler.StubCobblerThread()
         self.stub_cobbler_thread.start()
         with session.begin():

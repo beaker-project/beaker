@@ -1,0 +1,14 @@
+#!/bin/sh
+set -e
+if which ether-wake >/dev/null 2>/dev/null ; then
+    ether-wake "$power_address"
+elif which powerwake >/dev/null 2>/dev/null ; then
+    powerwake "$power_address"
+elif which wakeonlan >/dev/null 2>/dev/null ; then
+    wakeonlan "$power_address"
+elif which etherwake >/dev/null 2>/dev/null ; then
+    etherwake "$power_address"
+else
+    echo "No suitable etherwake command found" >&2
+    exit 1
+fi

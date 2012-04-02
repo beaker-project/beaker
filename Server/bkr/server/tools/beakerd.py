@@ -527,130 +527,6 @@ def scheduled_recipes(*args):
     log.debug("Exiting scheduled_recipes routine")
     return True
 
-
-COMMAND_TIMEOUT = 600
-def running_commands(*args):
-    commands = CommandActivity.query\
-                              .filter(CommandActivity.status==CommandStatus.running)\
-                              .order_by(CommandActivity.updated.asc())
-    if not commands.count():
-        return False
-    log.debug('Entering running_commands routine')
-    for cmd_id, in commands.values(CommandActivity.id):
-        session.begin()
-        cmd = CommandActivity.query.get(cmd_id)
-        if not cmd:
-            log.error('Command %d get() failed. Deleted?' % (cmd_id))
-        else:
-            try:
-                for line in cmd.system.remote.get_event_log(cmd.task_id).split('\n'):
-                    if line.find("### TASK COMPLETE ###") != -1:
-                        log.info('Power %s command (%d) completed on machine: %s' %
-                                 (cmd.action, cmd.id, cmd.system))
-                        cmd.status = CommandStatus.completed
-                        cmd.log_to_system_history()
-                        break
-                    if line.find("### TASK FAILED ###") != -1:
-                        log.error('Cobbler power task %s (command %d) failed for machine: %s' %
-                                  (cmd.task_id, cmd.id, cmd.system))
-                        cmd.status = CommandStatus.failed
-                        cmd.new_value = u'Cobbler task failed'
-                        if cmd.system.status == SystemStatus.automated:
-                            cmd.system.mark_broken(reason='Cobbler power task failed')
-                        cmd.log_to_system_history()
-                        break
-                if (cmd.status == CommandStatus.running) and \
-                   (datetime.utcnow() >= cmd.updated + timedelta(seconds=COMMAND_TIMEOUT)):
-                        log.error('Cobbler power task %s (command %d) timed out on machine: %s' %
-                                  (cmd.task_id, cmd.id, cmd.system))
-                        cmd.status = CommandStatus.aborted
-                        cmd.new_value = u'Timeout of %d seconds exceeded' % COMMAND_TIMEOUT
-                        cmd.log_to_system_history()
-            except ProtocolError, err:
-                log.warning('Error (%d) querying power command (%d) for %s, will retry: %s' %
-                            (err.errcode, cmd.id, cmd.system, err.errmsg))
-            except socket.error, err:
-                log.warning('Socket error (%d) querying power command (%d) for %s, will retry: %s' %
-                            (err.errno, cmd.id, cmd.system, err.strerror))
-            except Exception, msg:
-                log.error('Cobbler power exception processing command %d for machine %s: %s' %
-                          (cmd.id, cmd.system, msg))
-                cmd.status = CommandStatus.failed
-                cmd.new_value = unicode(msg)
-                cmd.log_to_system_history()
-        session.commit()
-        session.close()
-    log.debug('Exiting running_commands routine')
-    return True
-
-def queued_commands(*args):
-    # The following throttle code was put in place in an attempt to
-    # keep cobblerd from falling over.
-    #
-    # Integer value stating max number of commands running
-    MAX_RUNNING_COMMANDS = config.get("beaker.MAX_RUNNING_COMMANDS", 0)
-    commands = CommandActivity.query\
-                              .filter(CommandActivity.status==CommandStatus.queued)\
-                              .order_by(CommandActivity.created.asc())
-    if not commands.count():
-        return
-    # Throttle total number of Running commands if set.
-    if MAX_RUNNING_COMMANDS != 0:
-        running_commands = CommandActivity.query\
-                         .filter(CommandActivity.status==CommandStatus.running)
-        if running_commands.count() >= MAX_RUNNING_COMMANDS:
-            log.debug('Throttling Commands: %s >= %s' % (running_commands.count(), 
-                                                        MAX_RUNNING_COMMANDS))
-            return
-        # limit is an int between 1 and MAX_RUNNING_COMMANDS
-        limit = MAX_RUNNING_COMMANDS - running_commands.count()
-        commands = commands.limit(limit > 0 and limit or 1)
-    log.debug('Entering queued_commands routine')
-    for cmd_id, in commands.values(CommandActivity.id):
-        with session.begin():
-            cmd = CommandActivity.query.get(cmd_id)
-            log.debug("cmd=%s" % cmd)
-            # if get() is given an invalid id it will return None.
-            # I'm not sure how this would happen since id came from the above
-            # query, maybe a race condition?
-            if not cmd:
-                log.error('Command %d get() failed. Deleted?', cmd_id)
-                continue
-            # Skip queued commands if something is already running on that system
-            if CommandActivity.query.filter(and_(CommandActivity.status==CommandStatus.running,
-                                                   CommandActivity.system==cmd.system))\
-                                    .count():
-                log.info('Skipping power %s (command %d), command already running on machine: %s' %
-                         (cmd.action, cmd.id, cmd.system))
-                continue
-            if not cmd.system.lab_controller or not cmd.system.power:
-                log.error('Command %d aborted, power control not available for machine: %s' %
-                          (cmd.id, cmd.system))
-                cmd.status = CommandStatus.aborted
-                cmd.new_value = u'Power control unavailable'
-                cmd.log_to_system_history()
-            else:
-                try:
-                    log.info('Executing power %s command (%d) on machine: %s' %
-                             (cmd.action, cmd.id, cmd.system))
-                    cmd.task_id = cmd.system.remote.power(cmd.action)
-                    cmd.updated = datetime.utcnow()
-                    cmd.status = CommandStatus.running
-                except ProtocolError, err:
-                    log.warning('Error (%d) submitting power command (%d) for %s, will retry: %s' %
-                                (err.errcode, cmd.id, cmd.system, err.errmsg))
-                except socket.error, err:
-                    log.warning('Socket error (%d) submitting power command (%d) for %s, will retry: %s' %
-                                (err.errno, cmd.id, cmd.system, err.strerror))
-                except Exception, msg:
-                    log.error('Cobbler power exception submitting \'%s\' command (%d) for machine %s: %s' %
-                              (cmd.action, cmd.id, cmd.system, msg))
-                    cmd.new_value = unicode(msg)
-                    cmd.status = CommandStatus.failed
-                    cmd.log_to_system_history()
-    log.debug('Exiting queued_commands routine')
-    return
-
 # These functions are run in separate threads, so we want to log any uncaught 
 # exceptions instead of letting them be written to stderr and lost to the ether
 
@@ -667,14 +543,6 @@ def processed_recipesets_loop(*args, **kwargs):
         if not processed_recipesets():
             event.wait()
     log.debug("processed recipesets thread exiting")
-
-@log_traceback(log)
-def command_queue_loop(*args, **kwargs):
-    while running:
-        running_commands()
-        queued_commands()
-        event.wait()
-    log.debug("command queue thread exiting")
 
 @log_traceback(log)
 def main_recipes_loop(*args, **kwargs):
@@ -706,12 +574,6 @@ def schedule():
     processed_recipesets_thread.daemon = True
     processed_recipesets_thread.start()
 
-    log.debug("starting power commands thread")
-    command_queue_thread = threading.Thread(target=command_queue_loop,
-                                            name="command_queue")
-    command_queue_thread.daemon = True
-    command_queue_thread.start()
-
     log.debug("starting main recipes thread")
     main_recipes_thread = threading.Thread(target=main_recipes_loop,
                                            name="main_recipes")
@@ -721,7 +583,7 @@ def schedule():
     try:
         while True:
             time.sleep(20)
-            if threading.active_count() != 5:
+            if threading.active_count() != 4:
                 log.critical("a thread has died, shutting down")
                 rc = 1
                 running = False

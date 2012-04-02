@@ -139,6 +139,7 @@ Requires:	python-setuptools
 Requires:	python-xmltramp
 Requires:       python-krbV
 Requires:       python-concurrentloghandler
+Requires:       python-gevent >= 1.0
 
 %package lab-controller-addDistro
 Summary:        addDistro scripts for Lab Controller
@@ -219,6 +220,7 @@ ln -s Fedora.ks $RPM_BUILD_ROOT/%{_var}/lib/cobbler/kickstarts/Fedoradevelopment
 /sbin/chkconfig --add beaker-proxy
 /sbin/chkconfig --add beaker-watchdog
 /sbin/chkconfig --add beaker-transfer
+/sbin/chkconfig --add beaker-provision
 %endif
 
 %if %{with server}
@@ -234,6 +236,7 @@ if [ "$1" -ge "1" ]; then
         /sbin/service beaker-proxy condrestart >/dev/null 2>&1 || :
         /sbin/service beaker-watchdog condrestart >/dev/null 2>&1 || :
         /sbin/service beaker-transfer condrestart >/dev/null 2>&1 || :
+        /sbin/service beaker-provision condrestart >/dev/null 2>&1 || :
 fi
 %endif
 
@@ -251,9 +254,11 @@ if [ "$1" -eq "0" ]; then
         /sbin/service beaker-proxy stop >/dev/null 2>&1 || :
         /sbin/service beaker-watchdog stop >/dev/null 2>&1 || :
         /sbin/service beaker-transfer stop >/dev/null 2>&1 || :
+        /sbin/service beaker-provision stop >/dev/null 2>&1 || :
         /sbin/chkconfig --del beaker-proxy || :
         /sbin/chkconfig --del beaker-watchdog || :
         /sbin/chkconfig --del beaker-transfer || :
+        /sbin/chkconfig --del beaker-provision || :
 fi
 %endif
 
@@ -318,6 +323,7 @@ fi
 %files lab-controller
 %defattr(-,root,root,-)
 %config(noreplace) %{_sysconfdir}/beaker/labcontroller.conf
+%{_sysconfdir}/beaker/power-scripts/
 %{python_sitelib}/bkr/labcontroller/
 %{python_sitelib}/bkr.labcontroller-%{version}-*
 %{python_sitelib}/bkr.labcontroller-%{version}-py%{pyver}.egg-info/
@@ -326,6 +332,7 @@ fi
 %{_bindir}/%{name}-transfer
 %{_bindir}/%{name}-osversion
 %{_bindir}/%{name}-import
+%{_bindir}/%{name}-provision
 %doc LabController/README
 %config(noreplace) %{_sysconfdir}/httpd/conf.d/%{name}-lab-controller.conf
 %{_sysconfdir}/cron.hourly/cobbler_expire_distros
@@ -338,6 +345,7 @@ fi
 %{_sysconfdir}/init.d/%{name}-proxy
 %{_sysconfdir}/init.d/%{name}-watchdog
 %{_sysconfdir}/init.d/%{name}-transfer
+%{_sysconfdir}/init.d/%{name}-provision
 %attr(-,apache,root) %dir %{_localstatedir}/run/%{name}-lab-controller
 %{_var}/lib/beaker/osversion_data
 
