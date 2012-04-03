@@ -92,6 +92,7 @@ class BeakerBus(object):
                             arguments: { \'qpid.policy_type\': ring, \
                                          \'qpid.max_size\': 50000000 } }, \
                 x-bindings: [{ exchange: "' + self.direct_exchange + '", \
+                               key: "' + reply_to_queue_name + '", \
                                queue: "' + reply_to_queue_name + '", } ] } }'
         new_receiver = session.receiver(reply_to_addr_string)
         msg = Message(reply_to=reply_to_queue_name)

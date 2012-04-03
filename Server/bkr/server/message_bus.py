@@ -141,7 +141,8 @@ class ServerBeakerBus(BeakerBus):
 
     def _send_service_response_logic(self, msg_kw, address, ssn):
         msg = Message(**msg_kw)
-        snd = ssn.sender(address)
+        msg.subject = address
+        snd = ssn.sender(self.direct_exchange)
         log.debug('Sent msg %s' %  msg_kw['content'])
         snd.send(msg)
 
