@@ -5,7 +5,7 @@ from turbogears import identity, redirect
 from cherrypy import request, response
 from kid import Element
 from bkr.server.xmlrpccontroller import RPCRoot
-from bkr.server.widgets import DistroTags, SearchBar, LabControllers
+from bkr.server.widgets import DistroTags, SearchBar
 from bkr.server.widgets import TaskSearchForm
 from bkr.server.widgets import myPaginateDataGrid
 from bkr.server.model import System
@@ -31,9 +31,7 @@ class Distros(RPCRoot):
     # For XMLRPC methods in this class.
     exposed = True
 
-    task_form = TaskSearchForm()
     tag_form = DistroTags(name='tags')
-    lc_form = LabControllers(name='lab_controllers')
 
     @expose(template="bkr.server.templates.distro")
     def view(self, id=None, *args, **kw):
@@ -43,36 +41,30 @@ class Distros(RPCRoot):
             flash(_(u"Invalid distro id %s" % id))
             redirect(".")
         is_admin = identity.current.user and identity.current.user.is_admin() or False
+        task_form = TaskSearchForm(hidden=dict(distro=True, osmajor_id=True))
         return dict(title       = 'Distro',
                     value       = distro,
                     value_task  = dict(distro_id = distro.id),
                     form        = self.tag_form,
-                    form_task   = self.task_form,
-                    form_lc     = self.lc_form,
+                    form_task   = task_form,
                     action      = './save_tag',
                     action_task = '/tasks/do_search',
                     options   = dict(tags = distro.tags,
-                                    readonly = not is_admin,
-                                    lab_controllers = distro.lab_controller_assocs,
-                                    hidden = dict(distro  = 1,
-                                                  osmajor = 1,
-                                                  arch    = 1)))
+                                    readonly = not is_admin))
 
     @expose()
-    def get_osmajors(self, active=None):
-       """ Return all osmajors, limit to active ones if requested.
-       """ 
-       osmajors = OSMajor.query
-       if active:
-           osmajors = osmajors.join(['osversion',
-                                     'distros',
-                                     'lab_controller_assocs',
-                                     'lab_controller']).\
-                               join(['osversion',
-                                     'distros',
-                                     '_tags']).\
-                               filter(DistroTag.tag.in_(active))
-       return [osmajor.osmajor for osmajor in osmajors]
+    def get_osmajors(self, tags=None):
+        """
+        Returns a list of all distro families. If *tags* is given, limits to
+        distros with at least one of the given tags.
+        """
+        osmajors = session.query(OSMajor.osmajor)
+        if tags:
+            osmajors = osmajors\
+                .join(OSMajor.osversion, OSVersion.distros, Distro.trees)\
+                .filter(DistroTree.lab_controller_assocs.any())\
+                .filter(Distro._tags.any(DistroTag.tag.in_(tags)))
+        return [osmajor for osmajor, in osmajors.distinct()]
 
     @expose()
     def get_osmajor(self, distro):
@@ -103,25 +95,6 @@ class Distros(RPCRoot):
             except InvalidRequestError:
                 raise BX(_('Invalid OSMajor: %s' % filter['osmajor']))
         return arches
-
-    @expose()
-    @identity.require(identity.in_group("admin"))
-    def lab_controller_remove(self, id=None, lab_controller=None, *args, **kw):
-        try:
-            distro = Distro.by_id(id)
-        except InvalidRequestError:
-            flash(_(u"Invalid distro id %s" % id))
-            redirect(".")
-        try:
-            lab = LabController.by_name(lab_controller)
-        except InvalidRequestError:
-            flash(_(u"Invalid Lab Controller %s" % lab_controller))
-            redirect(".")
-        if lab in distro.lab_controllers:
-            distro.lab_controllers.remove(lab)   
-            Activity(identity.current.user,'WEBUI','Removed LabController',distro.install_name,None,lab_controller)
-        flash(_(u"Deleted Lab %s" % lab_controller))
-        redirect("./view?id=%s" % id)
 
     @expose()
     @identity.require(identity.has_permission('tag_distro'))
@@ -159,11 +132,6 @@ class Distros(RPCRoot):
                     flash(_(u"Removed Tag %s" % tag))
         redirect("./view?id=%s" % id)
 
-    @expose(format='json')
-    def by_name(self, distro):
-        distro = distro.lower()
-        return dict(distros=[(distro.install_name) for distro in Distro.query.filter(Distro.name.like('%s%%' % distro)).order_by('-date_created')])
-    
     def _distros(self,distro,**kw):
         return_dict = {}
         if 'simplesearch' in kw:
@@ -192,15 +160,16 @@ class Distros(RPCRoot):
     @expose(template="bkr.server.templates.grid")
     @paginate('list',default_order='-date_created', limit=50)
     def index(self,*args,**kw):
-        distro_q = session.query(Distro).join(Breed).join(Arch). \
-            join(OSVersion, OSMajor).filter(Distro.lab_controllers.any())
+        distro_q = session.query(Distro).join(OSVersion, OSMajor)\
+                .filter(Distro.trees.any(DistroTree.lab_controller_assocs.any()))
         return self.distros(distros=distro_q, *args, **kw)
 
     @expose(template="bkr.server.templates.grid")
     @paginate('list',default_order='-date_created', limit=50)
     def name(self,*args,**kw):
-        distro_q = session.query(Distro).join(Breed).join(Arch). \
-            join(OSVersion, OSMajor).filter(and_(Distro.lab_controllers.any(), Distro.name.like(kw['name'])))
+        distro_q = session.query(Distro).join(OSVersion, OSMajor)\
+                .filter(Distro.trees.any(DistroTree.lab_controller_assocs.any()))\
+                .filter(Distro.name.like(kw['name']))
         return self.distros(distros=distro_q, action='./name')
 
     def distros(self, distros,action='.',*args, **kw):
@@ -219,27 +188,13 @@ class Distros(RPCRoot):
         distros_grid =  myPaginateDataGrid(fields=[
                                   myPaginateDataGrid.Column(name='id', getter=lambda x: make_link(url = '/distros/view?id=%s' % x.id, text = x.id), title='ID', options=dict(sortable=True)),
                                   myPaginateDataGrid.Column(name='name', getter=lambda x: x.name, title='Name', options=dict(sortable=True)),
-                                  myPaginateDataGrid.Column(name='breed.breed', getter=lambda x: x.breed, title='Breed', options=dict(sortable=True)),
                                   myPaginateDataGrid.Column(name='osversion.osmajor.osmajor', getter=lambda x: x.osversion.osmajor, title='OS Major Version', options=dict(sortable=True)),
                                   myPaginateDataGrid.Column(name='osversion.osminor', getter=lambda x: x.osversion.osminor, title='OS Minor Version', options=dict(sortable=True)),
-                                  myPaginateDataGrid.Column(name='variant', getter=lambda x: x.variant, title='Variant', options=dict(sortable=True)),
-                                  myPaginateDataGrid.Column(name='virt', getter=lambda x: x.virt, title='Virt', options=dict(sortable=True)),
-                                  myPaginateDataGrid.Column(name='arch.arch', getter=lambda x: x.arch, title='Arch', options=dict(sortable=True)),
                                   myPaginateDataGrid.Column(name='date_created',
                                     getter=lambda x: x.date_created,
                                     title='Date Created',
                                     options=dict(sortable=True, datetime=True)),
-                                  Utility.direct_column(title='Provision', getter=lambda x: _provision_system_link(x))
                               ])
-
-        def _provision_system_link(x):
-            div = Element('div')
-            div.append(make_link("/reserve_system?distro_id=%s" % (x.id,), "Pick System"))
-            div.append(Element('br'))
-            div.append(make_link("/reserveworkflow/reserve?distro_id=%s" % (x.id,), "Pick Any System"))
-            return div
-
-        
 
         if 'tag' in kw: 
             hidden_fields = [('tag',kw['tag'])]
@@ -265,6 +220,8 @@ class Distros(RPCRoot):
     @cherrypy.expose
     def filter(self, filter):
         """
+        .. seealso:: :meth:`distrotrees.filter`
+
         Returns a list of details for distros filtered by the given criteria.
 
         The *filter* argument must be an XML-RPC structure (dict) specifying 
@@ -279,85 +236,40 @@ class Distros(RPCRoot):
             'tags'
                 List of distro tags, for example ``['STABLE', 'RELEASED']``. All given 
                 tags must be present on the distro for it to match.
-            'arch'
-                Architecture name, for example ``'x86_64'``.
-            'treepath'
-                Tree path (on any lab controller). May include % SQL wildcards, for 
-                example ``'nfs://nfs.example.com:%'``.
-            'labcontroller'
-                FQDN of lab controller. Show distros in this lab controller only.
-                May include % SQL wildcards.
             'limit'
                 Integer limit to number of distros returned.
 
         The return value is an array with one element per distro (up to the 
-        maximum number of distros given by 'limit'). Each array element is an 
-        array containing the following distro details:
+        maximum number of distros given by 'limit'). Each element is an XML-RPC 
+        structure (dict) describing a distro.
 
-            (install name, name, arch, version, variant, '', 
-            supports virt?, list of tags, dict of (lab controller hostname -> 
-            tree path))
+        .. versionchanged:: 0.9
+           Some return columns were removed, because they no longer apply to 
+           distros in Beaker. Use the new :meth:`distrotrees.filter` method 
+           to fetch details of distro trees.
         """
         distros = session.query(Distro)
         name = filter.get('name', None)
         family = filter.get('family', None)
-        tags = filter.get('tags', [])
-        arch = filter.get('arch', None)
-        treepath = filter.get('treepath', None)
-        labcontroller = filter.get('labcontroller', None)
+        tags = filter.get('tags', None) or []
         limit = filter.get('limit', None)
-        if tags:
-            sqltags = []
-            distros = distros.join('_tags')
-            for tag in tags:
-                sqltags.append(distro_tag_table.c.tag==tag)
-            distros = distros.filter(and_(*sqltags))
+        for tag in tags:
+            distros = distros.filter(Distro._tags.any(DistroTag.tag == tag))
         if name:
-            distros = distros.filter(distro_table.c.name.like('%s' % name))
+            distros = distros.filter(Distro.name.like('%s' % name))
         if family:
-            distros = distros.join(['osversion','osmajor'])
-            distros = distros.filter(osmajor_table.c.osmajor=='%s' % family)
-        if arch:
-            distros = distros.join('arch')
-            distros = distros.filter(arch_table.c.arch=='%s' % arch)
-        if treepath:
-            distros = distros.filter(Distro.lab_controller_assocs.any(
-                    LabControllerDistro.tree_path.like('%s' % treepath)))
-        if labcontroller:
-            distros = distros.filter(exists([1],
-                    from_obj=[lab_controller_distro_map.join(lab_controller_table)])
-                    .where(LabControllerDistro.distro_id == Distro.id)
-                    .where(LabController.fqdn.like(labcontroller)))
+            distros = distros.join(Distro.osversion, OSVersion.osmajor)
+            distros = distros.filter(OSMajor.osmajor == '%s' % family)
         # we only want distros that are active in at least one lab controller
-        distros = distros.filter(Distro.lab_controller_assocs.any())
-        distros = distros.order_by(distro_table.c.date_created.desc())
+        distros = distros.filter(Distro.trees.any(DistroTree.lab_controller_assocs.any()))
+        distros = distros.order_by(Distro.date_created.desc())
         if limit:
             distros = distros[:limit]
-        return [(distro.install_name, distro.name, '%s' % distro.arch, '%s' % distro.osversion, distro.variant, '', distro.virt, ['%s' % tag for tag in distro.tags], dict([(lc.lab_controller.fqdn, lc.tree_path) for lc in distro.lab_controller_assocs])) for distro in distros]
-
-    #XMLRPC method for listing distros
-    @cherrypy.expose
-    def list(self, name, family, arch, tags, treepath):
-        distros = session.query(Distro)
-        if tags:
-            sqltags = []
-            distros = distros.join('_tags')
-            for tag in tags:
-                sqltags.append(distro_tag_table.c.tag==tag)
-            distros = distros.filter(and_(*sqltags))
-        if name:
-            distros = distros.filter(distro_table.c.name.like('%s' % name))
-        if family:
-            distros = distros.join(['osversion','osmajor'])
-            distros = distros.filter(osmajor_table.c.osmajor=='%s' % family)
-        if arch:
-            distros = distros.join('arch')
-            distros = distros.filter(arch_table.c.arch=='%s' % arch)
-        if treepath:
-            distros = distros.join('lab_controller_assocs')
-            distros = distros.filter(lab_controller_distro_map.c.tree_path.like('%s' % treepath))
-        distros = distros.order_by(distro_table.c.date_created.desc())
-        return [(distro.name, '%s' % distro.arch, '%s' % distro.osversion, distro.variant, distro.virt) for distro in distros]
+        return [{'distro_id': distro.id,
+                 'distro_name': distro.name,
+                 'distro_version': unicode(distro.osversion),
+                 'distro_tags': [unicode(tag) for tag in distro.tags],
+                } for distro in distros]
 
     @cherrypy.expose
     @identity.require(identity.not_anonymous())
@@ -398,65 +310,55 @@ class Distros(RPCRoot):
         # Check each Distro
         for distro in distros:
             if osversion != distro.osversion:
-                edited.append('%s' % distro.install_name)
-                Activity(identity.current.user,'XMLRPC','OSVersion',distro.install_name,'%s' % distro.osversion,'%s' % osversion)
+                edited.append('%s' % distro.name)
+                distro.activity.append(DistroActivity(user=identity.current.user,
+                        service=u'XMLRPC', field_name=u'osversion', action=u'Changed',
+                        old_value=unicode(distro.osversion),
+                        new_value=unicode(osversion)))
                 distro.osversion = osversion
         return edited
 
 
     @cherrypy.expose
     @identity.require(identity.has_permission('tag_distro'))
-    def tag(self, name, arch, tag):
+    def tag(self, name, tag):
         """
         Applies the given tag to all matching distros.
 
         :param name: distro name to filter by (may include SQL wildcards)
         :type name: string or nil
-        :param arch: arch name to filter by
-        :type arch: string or nil
         :param tag: tag to be applied
         :type tag: string
-        :returns: list of install names of distros which have been modified
-        """
-        return self._tag(name, arch, tag)
+        :returns: list of distro names which have been modified
 
-    def _tag(self, name, arch, tag):
+        .. versionchanged:: 0.9
+           Removed *arch* parameter. Tags apply to distros and not distro trees.
+        """
         added = []
-        distros = session.query(Distro)
-        if name:
-            distros = distros.filter(distro_table.c.name.like('%s' % name))
-        if arch:
-            distros = distros.join('arch')
-            distros = distros.filter(arch_table.c.arch=='%s' % arch)
+        distros = Distro.query.filter(Distro.name.like('%s' % name))
         for distro in distros:
             if tag not in distro.tags:
-                added.append('%s' % distro.install_name)
+                added.append('%s' % distro.name)
                 distro.activity.append(DistroActivity(
-                        user=identity.current.user, service=u'WEBUI',
+                        user=identity.current.user, service=u'XMLRPC',
                         action=u'Added', field_name=u'Tag',
                         old_value=None, new_value=tag))
                 distro.tags.append(tag)
-                session.flush([distro])
         return added
 
     @cherrypy.expose
     @identity.require(identity.has_permission('tag_distro'))
-    def untag(self, name, arch, tag):
+    def untag(self, name, tag):
         """
         Like :meth:`distros.tag` but the opposite.
         """
         removed = []
-        distros = session.query(Distro)
-        if name:
-            distros = distros.filter(distro_table.c.name.like('%s' % name))
-        if arch:
-            distros = distros.join('arch')
-            distros = distros.filter(arch_table.c.arch=='%s' % arch)
+        distros = Distro.query.filter(Distro.name.like('%s' % name))
         for distro in distros:
             if tag in distro.tags:
-                removed.append('%s' % distro.install_name)
+                removed.append('%s' % distro.name)
                 distro.activity.append(DistroActivity(
-                        user=identity.current.user, service=u'WEBUI',
+                        user=identity.current.user, service=u'XMLRPC',
                         action=u'Removed', field_name=u'Tag',
                         old_value=tag, new_value=None))
                 distro.tags.remove(tag)

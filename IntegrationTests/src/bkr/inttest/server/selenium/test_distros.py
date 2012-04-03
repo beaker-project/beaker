@@ -1,9 +1,9 @@
 
+from nose.plugins.skip import SkipTest
 import xmlrpclib
 from turbogears.database import session
 from bkr.inttest.server.selenium import SeleniumTestCase, XmlRpcTestCase
 from bkr.inttest import data_setup, stub_cobbler, with_transaction
-from bkr.server.model import LabControllerDistro
 
 def go_to_distro_view(sel, distro):
     sel.open('distros/view?id=%s' % distro.id)
@@ -12,6 +12,7 @@ class DistroRescanTest(SeleniumTestCase):
 
     @with_transaction
     def setUp(self):
+        raise SkipTest('Cobbler removal')
         self.stub_cobbler_thread = stub_cobbler.StubCobblerThread()
         self.stub_cobbler_thread.start()
         self.lab_controller = data_setup.create_labcontroller(
@@ -178,7 +179,7 @@ class DistroTaggingXmlRpcTest(XmlRpcTestCase):
     def test_can_add_tag_to_distro(self):
         self.server.auth.login_password(
                 data_setup.ADMIN_USER, data_setup.ADMIN_PASSWORD)
-        self.server.distros.tag(self.distro.name, None, 'HAPPY')
+        self.server.distros.tag(self.distro.name, 'HAPPY')
         with session.begin():
             session.refresh(self.distro)
             self.assert_(u'HAPPY' in self.distro.tags)
@@ -186,7 +187,7 @@ class DistroTaggingXmlRpcTest(XmlRpcTestCase):
     def test_can_remove_tag_from_distro(self):
         self.server.auth.login_password(
                 data_setup.ADMIN_USER, data_setup.ADMIN_PASSWORD)
-        self.server.distros.untag(self.distro.name, None, 'SAD')
+        self.server.distros.untag(self.distro.name, 'SAD')
         with session.begin():
             session.refresh(self.distro)
             self.assert_(u'SAD' not in self.distro.tags)
@@ -194,7 +195,7 @@ class DistroTaggingXmlRpcTest(XmlRpcTestCase):
     def test_non_admin_user_cannot_add_tag(self):
         self.server.auth.login_password(self.user.user_name, 'distro')
         try:
-            self.server.distros.tag(self.distro.name, None, 'HAPPY')
+            self.server.distros.tag(self.distro.name, 'HAPPY')
             self.fail('should raise')
         except xmlrpclib.Fault, e:
             self.assert_('IdentityFailure' in e.faultString)
@@ -202,7 +203,7 @@ class DistroTaggingXmlRpcTest(XmlRpcTestCase):
     def test_non_admin_user_cannot_remove_tag(self):
         self.server.auth.login_password(self.user.user_name, 'distro')
         try:
-            self.server.distros.untag(self.distro.name, None, 'SAD')
+            self.server.distros.untag(self.distro.name, 'SAD')
             self.fail('should raise')
         except xmlrpclib.Fault, e:
             self.assert_('IdentityFailure' in e.faultString)
@@ -210,12 +211,12 @@ class DistroTaggingXmlRpcTest(XmlRpcTestCase):
     def test_adding_tag_is_recorded_in_distro_activity(self):
         self.server.auth.login_password(
                 data_setup.ADMIN_USER, data_setup.ADMIN_PASSWORD)
-        self.server.distros.tag(self.distro.name, None, 'HAPPY')
+        self.server.distros.tag(self.distro.name, 'HAPPY')
         with session.begin():
             session.refresh(self.distro)
             activity = self.distro.activity[0]
             self.assertEquals(activity.field_name, u'Tag')
-            self.assertEquals(activity.service, u'WEBUI')
+            self.assertEquals(activity.service, u'XMLRPC')
             self.assertEquals(activity.action, u'Added')
             self.assertEquals(activity.old_value, None)
             self.assertEquals(activity.new_value, u'HAPPY')
@@ -223,31 +224,12 @@ class DistroTaggingXmlRpcTest(XmlRpcTestCase):
     def test_removing_tag_is_recorded_in_distro_activity(self):
         self.server.auth.login_password(
                 data_setup.ADMIN_USER, data_setup.ADMIN_PASSWORD)
-        self.server.distros.untag(self.distro.name, None, 'SAD')
+        self.server.distros.untag(self.distro.name, 'SAD')
         with session.begin():
             session.refresh(self.distro)
             activity = self.distro.activity[0]
             self.assertEquals(activity.field_name, u'Tag')
-            self.assertEquals(activity.service, u'WEBUI')
+            self.assertEquals(activity.service, u'XMLRPC')
             self.assertEquals(activity.action, u'Removed')
             self.assertEquals(activity.old_value, u'SAD')
             self.assertEquals(activity.new_value, None)
-
-class DistroFilterXmlRpcTest(XmlRpcTestCase):
-
-    def setUp(self):
-        self.server = self.get_server()
-
-    # https://bugzilla.redhat.com/show_bug.cgi?id=728022
-    def test_filtering_by_lab_controller(self):
-        with session.begin():
-            good_lc = data_setup.create_labcontroller()
-            bad_lc = data_setup.create_labcontroller()
-            distro_in = data_setup.create_distro()
-            distro_out = data_setup.create_distro()
-            session.flush() # grumble
-            distro_in.lab_controller_assocs[:] = [LabControllerDistro(lab_controller=good_lc)]
-            distro_out.lab_controller_assocs[:] = [LabControllerDistro(lab_controller=bad_lc)]
-        distros = self.server.distros.filter({'labcontroller': good_lc.fqdn})
-        self.assert_(distro_in.install_name in [d[0] for d in distros], distros)
-        self.assert_(distro_out.install_name not in [d[0] for d in distros], distros)

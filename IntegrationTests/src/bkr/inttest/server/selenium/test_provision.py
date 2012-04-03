@@ -1,4 +1,4 @@
-#!/usr/bin/python
+from nose.plugins.skip import SkipTest
 from bkr.inttest.server.selenium import SeleniumTestCase
 from turbogears.database import session
 from bkr.inttest import data_setup, stub_cobbler
@@ -9,6 +9,7 @@ import datetime
 class SystemManualProvisionTest(SeleniumTestCase):
 
     def setUp(self):
+        raise SkipTest('Cobbler removal')
         self.selenium = self.get_selenium()
         self.selenium.start()
         self.stub_cobbler_thread = stub_cobbler.StubCobblerThread()
@@ -16,7 +17,7 @@ class SystemManualProvisionTest(SeleniumTestCase):
             self.lab_controller = data_setup.create_labcontroller(
                     fqdn=u'localhost:%d' % self.stub_cobbler_thread.port)
             self.user = data_setup.create_user(password=u'password')
-            self.distro = data_setup.create_distro(arch=u'i386')
+            self.distro_tree = data_setup.create_distro_tree(arch=u'i386')
             self.system = data_setup.create_system(arch=u'i386',
                     owner=self.user, status=u'Manual', shared=True)
             self.system.lab_controller = self.lab_controller

@@ -30,7 +30,7 @@
    <th class="list" py:if="not hidden.has_key('rid')">Run ID</th>
    <th class="list" py:if="not hidden.has_key('task')">Task</th>
    <th class="list" py:if="hidden.has_key('task')">&nbsp;</th>
-   <th class="list" py:if="not hidden.has_key('distro')">Distro</th>
+   <th class="list" py:if="not hidden.has_key('distro')">Distro Tree</th>
    <th class="list" py:if="not hidden.has_key('arch')">Arch</th>
    <th class="list" py:if="not hidden.has_key('system')">System</th>
    <th class="list" py:if="not hidden.has_key('start')"><br>StartTime</br><br>[FinishTime]</br><br>[Duration]</br></th>
@@ -56,10 +56,10 @@
     </td>
     <td class="list task" py:if="hidden.has_key('task')">&nbsp;</td>
     <td class="list task" py:if="not hidden.has_key('distro')">
-     ${task.recipe.distro == None and ' ' or task.recipe.distro.link}
+     ${task.recipe.distro_tree == None and ' ' or task.recipe.distro_tree.link}
     </td>
     <td class="list task" py:if="not hidden.has_key('arch')">
-     ${task.recipe.distro.arch}
+     ${task.recipe.distro_tree.arch}
     </td>
     <td class="list task" py:if="not hidden.has_key('system')">
      ${task.recipe.system == None and ' ' or task.recipe.system.link}

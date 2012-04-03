@@ -106,11 +106,11 @@ $(document).ready(function() {
   </tr>
   <tr>
    <td class="title"><b>Distro</b></td>
-   <td class="value">${recipe.distro.link}</td>
+   <td class="value">${recipe.distro_tree.link}</td>
    <td class="title"><b>Arch</b></td>
    <td class="value">${recipe.arch}</td>
    <td class="title"><b>Family</b></td>
-   <td class="value">${recipe.distro.osversion}</td>
+   <td class="value">${recipe.distro_tree.distro.osversion}</td>
     <?py action_ = action_widget(task=recipe)?>
    <td py:if="action_" class="title"><b>Action(s)</b></td>
    <td py:if="action_" class="value">${action_}</td>

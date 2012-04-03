@@ -9,7 +9,7 @@ Untag Beaker distros
 Synopsis
 --------
 
-:program:`bkr distros-untag` [*options*] [--name=<name>] [--arch=<arch>] <tag>
+:program:`bkr distros-untag` [*options*] --name=<name> <tag>
 
 Description
 -----------
@@ -24,10 +24,6 @@ Options
 
    Limit to distros with the given name. <name> is interpreted as a SQL LIKE 
    pattern (the % character matches any substring).
-
-.. option:: --arch <arch>
-
-   Limit to distros for the given arch.
 
 Common :program:`bkr` options are described in the :ref:`Options 
 <common-options>` section of :manpage:`bkr(1)`.
@@ -86,11 +82,12 @@ class Distros_Untag(BeakerCommand):
         username = kwargs.pop("username", None)
         password = kwargs.pop("password", None)
         name = kwargs.pop("name", None)
-        arch = kwargs.pop("arch", None)
         tag = args[0]
+        if not name:
+            self.parser.error('If you really want to untag every distro in Beaker, use --name=%')
 
         self.set_hub(username, password)
-        distros = self.hub.distros.untag(name, arch, tag)
+        distros = self.hub.distros.untag(name, tag)
         print "Removed Tag %s from the following distros:" % tag
         print "------------------------------------------------------"
         for distro in distros:

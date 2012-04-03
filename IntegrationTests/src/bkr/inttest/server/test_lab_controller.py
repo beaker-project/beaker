@@ -18,7 +18,7 @@ class TestLabController(unittest.TestCase):
             lc = data_setup.create_labcontroller(fqdn=self.lc_fqdn)
             user = data_setup.create_user()
             system = data_setup.create_system(owner=user, lab_controller=lc)
-            distro = data_setup.create_distro()
+            distro_tree = data_setup.create_distro_tree()
             xmljob = XmlJob(xmltramp.parse('''
                 <job>
                     <whiteboard>job with invalid hostRequires</whiteboard>
@@ -37,7 +37,7 @@ class TestLabController(unittest.TestCase):
                         </recipe>
                     </recipeSet>
                 </job>
-                     ''' % (distro.name, self.lc_fqdn, system.fqdn)))
+                     ''' % (distro_tree.distro.name, self.lc_fqdn, system.fqdn)))
             controller = Jobs()
             data_setup.create_task(name=u'/distribution/install')
             session.flush()

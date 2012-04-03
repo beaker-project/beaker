@@ -29,7 +29,7 @@ Provision.prototype.theOnChange = function(event) {
     var params = {"tg_format"        : "json",
                   "tg_random"        : new Date().getTime(),
                   "system_id"        : this.systemfield.value,
-                  "distro_id"        : this.distrofield.value};
+                  "distro_tree_id"   : this.distrofield.value};
     var d = loadJSONDoc(this.controller + "?" + queryString(params));
     d.addCallback(this.replaceFields);
 }

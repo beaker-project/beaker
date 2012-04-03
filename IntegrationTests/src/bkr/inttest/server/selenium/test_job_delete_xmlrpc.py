@@ -14,12 +14,12 @@ class TestJobDelete(XmlRpcTestCase):
         with session.begin():
             cls.product_one = data_setup.create_product()
             cls.product_two = data_setup.create_product()
-            cls.distro = data_setup.create_distro(osmajor=u'customosmajor')
+            cls.distro_tree = data_setup.create_distro_tree(osmajor=u'customosmajor')
             cls.password = u'password'
             cls.user = data_setup.create_user(password=cls.password)
             cls.scratch_job = data_setup.create_completed_job(
                     retention_tag=u'scratch', owner=cls.user,
-                    product=cls.product_one, distro=cls.distro)
+                    product=cls.product_one, distro_tree=cls.distro_tree)
             cls.sixty_days_job = data_setup.create_completed_job(
                     retention_tag=u'60Days', product=cls.product_two,
                     owner=cls.user)
@@ -41,7 +41,7 @@ class TestJobDelete(XmlRpcTestCase):
             self.fail("Did not find %s when deleting by '%s'" % (self.scratch_job.t_id, self.product_one.name))
 
     def test_by_family(self):
-        output = self.server.jobs.delete_jobs([],None,None,self.scratch_job.recipesets[0].recipes[0].distro.osversion.osmajor.osmajor,True,None)
+        output = self.server.jobs.delete_jobs([],None,None,u'customosmajor',True,None)
         if self.sixty_days_job.t_id in output:
             self.fail("Found %s when deleting by family" % self.sixty_days_job.t_id)
         if self.scratch_job.t_id not in output:

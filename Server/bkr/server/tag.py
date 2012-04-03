@@ -28,39 +28,6 @@ class Tags(RPCRoot):
     # For XMLRPC methods in this class.
     exposed = True
 
-    #deprecated.
-    @expose(format='json')
-    def install_tag(self, distro, arch, *args, **kw):
-        return self._updateDistro(distro, arch)
-
-    @cherrypy.expose
-    def updateDistro(self, distro, arch):
-        tagged = self._updateDistro(distro,arch)
-        # xmlrpc doesn't like None, and older xmlrpc clients
-        # don't support allow_none=True.
-        return dict(installs=tagged['installs'] or '',
-                      stable=tagged['stable']   or '',
-                   )
-
-    def _updateDistro(self, distro, arch, *args, **kw):
-        tagged_stable = []
-        tagged_installs = Distros()._tag(distro, arch, 'INSTALLS')
-        if arch == 'ppc':
-            tagged_installs.extend(Distros()._tag(distro, 'ppc64', 'INSTALLS'))
-
-        # Tag Stable if we have all expected arches and they are all tagged INSTALLS
-        distro_obj = Distro.query.filter(distro_table.c.name.like(distro)).first()
-        if distro_obj:
-            for arch in distro_obj.osversion.arches:
-                if not Distro.query.filter(distro_table.c.name.like(distro)).join('arch').filter(arch_table.c.arch==arch.arch).count():
-                    break
-            else:
-                distros  = set(Distros().list(distro, None, None, None, None))
-                installs = set(Distros().list(distro, None, None, ['INSTALLS'], None))
-                if distros == installs:
-                    tagged_stable = Distros()._tag(distro, None, 'STABLE')
-        return dict(installs=tagged_installs, stable=tagged_stable)
-        
     @expose(format='json')
     def by_tag(self, tag, *args, **kw):
         tag = tag.lower()

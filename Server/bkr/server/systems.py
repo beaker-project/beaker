@@ -5,7 +5,7 @@ import datetime
 from sqlalchemy import and_
 from turbogears import expose, identity, controllers
 from bkr.server.bexceptions import BX
-from bkr.server.model import System, SystemActivity, SystemStatus, Distro
+from bkr.server.model import System, SystemActivity, SystemStatus, DistroTree
 from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.cobbler_utils import hash_to_string
 from turbogears.database import session
@@ -117,11 +117,11 @@ class SystemsController(controllers.Controller):
 
     @expose()
     @identity.require(identity.not_anonymous())
-    def provision(self, fqdn, distro_install_name, ks_meta=None,
+    def provision(self, fqdn, distro_tree_id, ks_meta=None,
             kernel_options=None, kernel_options_post=None, kickstart=None,
             reboot=True):
         """
-        Provisions a system with the given distro and options.
+        Provisions a system with the given distro tree and options.
 
         The *ks_meta*, *kernel_options*, and *kernel_options_post* arguments 
         override the default values configured for the system. For example, if 
@@ -130,8 +130,8 @@ class SystemsController(controllers.Controller):
         for *kernel_options*, the kernel options used will be
         'console=ttyS0 ksdevice=eth1'.
 
-        :param distro_install_name: install name of distro to be provisioned
-        :type distro_install_name: str
+        :param distro_tree_id: numeric id of distro tree to be provisioned
+        :type distro_tree_id: int
         :param ks_meta: kickstart options
         :type ks_meta: str
         :param kernel_options: kernel options for installation
@@ -147,6 +147,10 @@ class SystemsController(controllers.Controller):
 
         .. versionchanged:: 0.6.10
            System-specific kickstart/kernel options are now obeyed.
+
+        .. versionchanged:: 0.9
+           *distro_install_name* parameter is replaced with *distro_tree_id*. 
+           See :meth:`distrotrees.filter`.
         """
         system = System.by_fqdn(fqdn, identity.current.user)
         if not system.can_provision_now(identity.current.user):
@@ -154,12 +158,12 @@ class SystemsController(controllers.Controller):
                     % (identity.current.user.user_name, system.fqdn))
         if not system.user == identity.current.user:
             raise BX(_(u'Reserve a system before provisioning'))
-        distro = Distro.by_install_name(distro_install_name)
+        distro_tree = DistroTree.by_id(distro_tree_id)
 
-        # sanity check: does the distro apply to this system?
-        if distro.systems().filter(System.id == system.id).count() < 1:
-            raise BX(_(u'Distro %s cannot be provisioned on %s')
-                    % (distro.install_name, system.fqdn))
+        # sanity check: does the distro tree apply to this system?
+        if distro_tree.systems().filter(System.id == system.id).count() < 1:
+            raise BX(_(u'Distro tree %s cannot be provisioned on %s')
+                    % (distro_tree, system.fqdn))
 
         ks_meta = ks_meta or ''
         if identity.current.user.root_password:
@@ -167,23 +171,23 @@ class SystemsController(controllers.Controller):
 
         # ensure system-specific defaults are used
         # (overriden by this method's arguments)
-        options = system.install_options(distro, ks_meta=ks_meta,
+        options = system.install_options(distro_tree, ks_meta=ks_meta,
                 kernel_options=kernel_options or '',
                 kernel_options_post=kernel_options_post or '')
         try:
-            system.action_provision(distro=distro,
+            system.action_provision(distro_tree=distro_tree,
                     kickstart=kickstart, **options)
         except Exception, e:
             log.exception('Failed to provision')
             system.activity.append(SystemActivity(user=identity.current.user,
                     service=u'XMLRPC', action=u'Provision',
-                    field_name=u'Distro', old_value=u'',
-                    new_value=u'%s: %s' % (e, distro.install_name)))
+                    field_name=u'Distro Tree', old_value=u'',
+                    new_value=u'%s: %s' % (e, distro_tree)))
             raise
         system.activity.append(SystemActivity(user=identity.current.user,
                 service=u'XMLRPC', action=u'Provision',
-                field_name=u'Distro', old_value=u'',
-                new_value=u'Success: %s' % distro.install_name))
+                field_name=u'Distro Tree', old_value=u'',
+                new_value=u'Success: %s' % distro_tree))
 
         if reboot:
             system.action_power(action='reboot', service=u'XMLRPC')

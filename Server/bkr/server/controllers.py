@@ -17,6 +17,7 @@ from bkr.server.distro_family import DistroFamily
 from bkr.server.labcontroller import LabControllers
 from bkr.server.user import Users
 from bkr.server.distro import Distros
+from bkr.server.distrotrees import DistroTrees
 from bkr.server.activity import Activities
 from bkr.server.reports import Reports
 from bkr.server.job_matrix import JobMatrix
@@ -199,6 +200,7 @@ class Root(RPCRoot):
     osversions = OSVersions()
     labcontrollers = LabControllers()
     distros = Distros()
+    distrotrees = DistroTrees()
     activity = Activities()
     users = Users()
     arches = Arches()
@@ -391,16 +393,16 @@ class Root(RPCRoot):
         return dict(osversions = osversions)
     
     @expose(format='json')
-    def get_installoptions(self, system_id=None, distro_id=None):
+    def get_installoptions(self, system_id=None, distro_tree_id=None):
         try:
             system = System.by_id(system_id,identity.current.user)
-        except InvalidRequestError:
+        except NoResultFound:
             return dict(ks_meta=None)
         try:
-            distro = Distro.by_id(distro_id)
-        except InvalidRequestError:
+            distro_tree = DistroTree.by_id(distro_tree_id)
+        except NoResultFound:
             return dict(ks_meta=None)
-        install_options = system.install_options(distro)
+        install_options = system.install_options(distro_tree)
         ks_meta = hash_to_string(install_options['ks_meta'])
         kernel_options = hash_to_string(install_options['kernel_options'])
         kernel_options_post = hash_to_string(install_options['kernel_options_post'])
@@ -563,45 +565,39 @@ class Root(RPCRoot):
     @paginate('list',default_order='fqdn', limit=20)
     def reserve_system(self, *args,**kw):
         
-        def reserve_link(x,distro):
+        def reserve_link(x, distro_tree):
             if x.is_free():
-                return make_link("/reserveworkflow/reserve?system_id=%s&distro_id=%s" % (Utility.get_correct_system_column(x).id,distro), 'Reserve Now')
+                return make_link("/reserveworkflow/reserve?system_id=%s&distro_tree_id=%s"
+                        % (Utility.get_correct_system_column(x).id, distro_tree.id), 'Reserve Now')
             else:
-                return make_link("/reserveworkflow/reserve?system_id=%s&distro_id=%s" % (Utility.get_correct_system_column(x).id,distro), 'Queue Reservation')
+                return make_link("/reserveworkflow/reserve?system_id=%s&distro_tree_id=%s"
+                        % (Utility.get_correct_system_column(x).id, distro_tree.id), 'Queue Reservation')
         try:
-            try: 
-                distro_install_name = kw['distro'] #this should be the distro install_name, throw KeyError is expected and caught
-                distro = Distro.query.filter(Distro.install_name == distro_install_name).one()
-            except KeyError:
-                try: 
-                    distro_id = kw['distro_id']
-                    distro = Distro.query.filter(Distro.id == distro_id).one()
-                except KeyError:
-                    raise
-            avail_systems_distro_query = System.by_type(type=SystemType.machine,
-                    systems=distro.systems(user=identity.current.user))\
-                    .order_by(None)
-            warn = None
-            if avail_systems_distro_query.count() < 1: 
-                warn = 'No Systems compatible with distro %s' % distro.install_name
-          
-            getter = lambda x: reserve_link(x,distro.id)       
-            direct_column = Utility.direct_column(title='Action',getter=getter)     
-            return_dict = self._systems(systems=avail_systems_distro_query,
-                    title=u'Reserve Systems', direct_columns=[(8, direct_column)],
-                    *args, **kw)
-            return_dict['warn_msg'] = warn
-            return_dict['tg_template'] = "bkr.server.templates.reserve_grid"
-            return_dict['action'] = '/reserve_system'
-            return_dict['options']['extra_hiddens'] = {'distro' : distro.install_name} 
-            return return_dict
-        except KeyError, (e):
-            flash(_(u'Need a  valid distro to search on')) 
-            redirect(url('/reserveworkflow',**kw))              
-        except InvalidRequestError,(e):
-            flash(_(u'Invalid Distro given'))                 
-            redirect(url('/reserveworkflow',**kw))    
-          
+            distro_tree = DistroTree.by_id(kw['distro_tree_id'])
+        except KeyError:
+            flash(_(u'Need a  valid distro to search on'))
+            redirect(url('/reserveworkflow',**kw))
+        except NoResultFound:
+            flash(_(u'Invalid distro tree id %s') % kw['distro_tree_id'])
+            redirect(url('/reserveworkflow',**kw))
+        avail_systems_distro_query = System.by_type(type=SystemType.machine,
+                systems=distro_tree.systems(user=identity.current.user))\
+                .order_by(None)
+        warn = None
+        if avail_systems_distro_query.count() < 1:
+            warn = u'No Systems compatible with %s' % distro_tree
+
+        getter = lambda x: reserve_link(x, distro_tree)
+        direct_column = Utility.direct_column(title='Action',getter=getter)
+        return_dict = self._systems(systems=avail_systems_distro_query,
+                title=u'Reserve Systems', direct_columns=[(8, direct_column)],
+                *args, **kw)
+        return_dict['warn_msg'] = warn
+        return_dict['tg_template'] = "bkr.server.templates.reserve_grid"
+        return_dict['action'] = '/reserve_system'
+        return_dict['options']['extra_hiddens'] = {'distro_tree_id': distro_tree.id}
+        return return_dict
+
     def _history_search(self,activity,**kw):
         history_search = su.History.search(activity)
         for search in kw['historysearch']:
@@ -872,24 +868,6 @@ class Root(RPCRoot):
             value    = None,
             options  = options)
 
-    @expose(template="bkr.server.templates.form")
-    def test(self, fqdn=None, **kw):
-        try:
-            system = System.by_fqdn(fqdn,identity.current.user)
-        except InvalidRequestError:
-            flash( _(u"Unable to find %s" % fqdn) )
-            redirect("/")
-
-        return dict(
-            title   = "test",
-            system  = system,
-            form    = self.system_provision,
-            action  = '/save',
-            value   = system,
-            options = dict(readonly = False,
-                     lab_controller = system.lab_controller,
-                     prov_install = [(distro.id, distro.install_name) for distro in system.distros()]))
-
     @expose(template="bkr.server.templates.system")
     @paginate('history_data',limit=30,default_order='-created')
     def _view_system_as_html(self, fqdn=None, **kw):
@@ -962,7 +940,9 @@ class Root(RPCRoot):
             attrs = dict()
         options['readonly'] = readonly
 
-        options['reprovision_distro_id'] = [(distro.id, distro.install_name) for distro in system.distros()]
+        options['reprovision_distro_tree_id'] = [(dt.id, unicode(dt)) for dt in
+                system.distro_trees().order_by(Distro.name,
+                    DistroTree.variant, DistroTree.arch_id)]
         #Excluded Family options
         options['excluded_families'] = []
         for arch in system.arch:
@@ -1036,7 +1016,7 @@ class Root(RPCRoot):
                                                     will_provision = self.will_provision,
                                                     provision_now_rights = self.provision_now_rights,
                                                     lab_controller = system.lab_controller,
-                                                    prov_install = [(distro.id, distro.install_name) for distro in system.distros().order_by(distro_table.c.install_name)]),
+                                                    prov_install = [(dt.id, unicode(dt)) for dt in system.distro_trees().order_by(Distro.name, DistroTree.variant, DistroTree.arch_id)]),
                                    power_action = dict(is_user=is_user),
                                    arches    = dict(readonly = readonly,
                                                     arches = system.arch),
@@ -1330,18 +1310,17 @@ class Root(RPCRoot):
             flash( _(u"Unable to save Power for %s" % id) )
             redirect("/")
 
-        if kw.get('reprovision_distro_id'):
+        if kw.get('reprovision_distro_tree_id'):
             try:
-                reprovision_distro = Distro.by_id(kw['reprovision_distro_id'])
-            except InvalidRequestError:
-                reprovision_distro = None
-            if system.reprovision_distro and \
-              system.reprovision_distro != reprovision_distro:
-                system.activity.append(SystemActivity(identity.current.user, 'WEBUI', 'Changed', 'reprovision_distro', '%s' % system.reprovision_distro, '%s' % reprovision_distro ))
-                system.reprovision_distro = reprovision_distro
-            else:
-                system.activity.append(SystemActivity(identity.current.user, 'WEBUI', 'Changed', 'reprovision_distro', '%s' % system.reprovision_distro, '%s' % reprovision_distro ))
-                system.reprovision_distro = reprovision_distro
+                reprovision_distro_tree = DistroTree.by_id(kw['reprovision_distro_tree_id'])
+            except NoResultFound:
+                reprovision_distro_tree = None
+            system.activity.append(SystemActivity(user=identity.current.user,
+                    service='WEBUI', action='Changed',
+                    field_name='reprovision_distro_tree',
+                    old_value=unicode(system.reprovision_distro_tree),
+                    new_value=unicode(reprovision_distro_tree)))
+            system.reprovision_distro_tree = reprovision_distro_tree
 
         try:
             release_action = ReleaseAction.from_string(release_action)
@@ -1627,7 +1606,7 @@ class Root(RPCRoot):
     @expose()
     @identity.require(identity.not_anonymous())
     def schedule_provision(self,id, prov_install=None, ks_meta=None, koptions=None, koptions_post=None, reserve_days=None, **kw):
-        distro_id = prov_install
+        distro_tree_id = prov_install
         try:
             user = identity.current.user
             system = System.by_id(id,user)
@@ -1635,9 +1614,9 @@ class Root(RPCRoot):
             flash( _(u"Unable to save scheduled provision for %s" % id) )
             redirect("/")
         try:
-            distro = Distro.by_id(distro_id)
+            distro_tree = DistroTree.by_id(distro_tree_id)
         except InvalidRequestError:
-            flash( _(u"Unable to lookup distro for %s" % id) )
+            flash( _(u"Unable to lookup distro tree for %s") % distro_tree_id)
             redirect(u"/view/%s" % system.fqdn)
 
         if user.rootpw_expired:
@@ -1654,8 +1633,8 @@ class Root(RPCRoot):
                 reserve_days = SystemProvision.DEFAULT_RESERVE_DAYS
 
         reserve_time =  ((reserve_days * 24) * 60) * 60    
-        job_details = dict(whiteboard = 'Provision %s' % distro.name,
-                            distro_id = distro_id,
+        job_details = dict(whiteboard = u'Provision %s' % distro_tree,
+                            distro_tree_id = distro_tree.id,
                             system_id = id,
                             ks_meta = ks_meta,
                             koptions = koptions,
@@ -1679,7 +1658,7 @@ class Root(RPCRoot):
         We schedule a job which will provision a system. 
 
         """
-        distro_id = prov_install
+        distro_tree_id = prov_install
         try:
             user = identity.current.user
             system = System.by_id(id,user)
@@ -1687,14 +1666,16 @@ class Root(RPCRoot):
             flash( _(u"Unable to save scheduled provision for %s" % id) )
             redirect("/")
         try:
-            distro = Distro.by_id(distro_id)
+            distro_tree = DistroTree.by_id(distro_tree_id)
         except InvalidRequestError:
-            flash( _(u"Unable to lookup distro for %s" % id) )
+            flash(_(u"Unable to lookup distro tree for %s") % distro_tree_id)
             redirect(u"/view/%s" % system.fqdn)
 
         if user.rootpw_expired:
             flash( _(u"Your root password has expired, please change or clear it in order to submit jobs.") )
             redirect(u"/view/%s" % system.fqdn)
+
+        # XXX
 
         try:
             can_provision_now = system.can_provision_now(user) #Check perms
@@ -1717,7 +1698,7 @@ class Root(RPCRoot):
         if reboot:
             system.action_power(action='reboot', service='WEBUI')
 
-        flash(_(u"Successfully Provisioned %s with %s" % (system.fqdn,distro.install_name)))
+        flash(_(u"Successfully Provisioned %s with %s") % (system.fqdn, distro_tree))
         redirect("/view/%s" % system.fqdn)
 
     @expose()

@@ -45,23 +45,23 @@ class SystemViewTest(SeleniumTestCase):
                 fqdn=u'localhost:%d' % self.stub_cobbler_thread.port)
         self.system_owner = data_setup.create_user()
         self.unprivileged_user = data_setup.create_user(password=u'password')
-        self.distro = data_setup.create_distro()
+        self.distro_tree = data_setup.create_distro_tree()
         self.system = data_setup.create_system(owner=self.system_owner,
                 status=u'Automated', arch=u'i386')
         self.system.shared = True
-        self.system.provisions[self.distro.arch] = Provision(
-                arch=self.distro.arch, ks_meta=u'some_ks_meta_var=1',
+        self.system.provisions[self.distro_tree.arch] = Provision(
+                arch=self.distro_tree.arch, ks_meta=u'some_ks_meta_var=1',
                 kernel_options=u'some_kernel_option=1',
                 kernel_options_post=u'some_kernel_option=2')
-        self.system.provisions[self.distro.arch]\
-            .provision_families[self.distro.osversion.osmajor] = \
-                ProvisionFamily(osmajor=self.distro.osversion.osmajor,
+        self.system.provisions[self.distro_tree.arch]\
+            .provision_families[self.distro_tree.distro.osversion.osmajor] = \
+                ProvisionFamily(osmajor=self.distro_tree.distro.osversion.osmajor,
                     ks_meta=u'some_ks_meta_var=2', kernel_options=u'some_kernel_option=3',
                     kernel_options_post=u'some_kernel_option=4')
-        self.system.provisions[self.distro.arch]\
-            .provision_families[self.distro.osversion.osmajor]\
-            .provision_family_updates[self.distro.osversion] = \
-                ProvisionFamilyUpdate(osversion=self.distro.osversion,
+        self.system.provisions[self.distro_tree.arch]\
+            .provision_families[self.distro_tree.distro.osversion.osmajor]\
+            .provision_family_updates[self.distro_tree.distro.osversion] = \
+                ProvisionFamilyUpdate(osversion=self.distro_tree.distro.osversion,
                     ks_meta=u'some_ks_meta_var=3', kernel_options=u'some_kernel_option=5',
                     kernel_options_post=u'some_kernel_option=6')
         self.system.lab_controller = self.lab_controller
@@ -90,7 +90,8 @@ class SystemViewTest(SeleniumTestCase):
         sel = self.selenium
         self.login()
         with session.begin():
-            job = data_setup.create_job(owner=self.system.owner, distro=self.distro)
+            job = data_setup.create_job(owner=self.system.owner,
+                    distro_tree=self.distro_tree)
             job.recipesets[0].recipes[0]._host_requires = (
                     '<hostRequires><hostname op="=" value="%s"/></hostRequires>'
                     % self.system.fqdn)
@@ -454,7 +455,7 @@ class SystemViewTest(SeleniumTestCase):
         with session.begin():
             session.refresh(self.system)
             self.assert_(self.system.date_modified > orig_date_modified)
-            self.assert_(self.distro.arch not in self.system.provisions)
+            self.assert_(self.distro_tree.arch not in self.system.provisions)
 
     def test_update_labinfo(self):
         orig_date_modified = self.system.date_modified
@@ -527,7 +528,7 @@ class SystemViewTest(SeleniumTestCase):
         sel = self.selenium
         self.go_to_system_view()
         sel.click('//ul[@class="tabbernav"]//a[text()="Provision"]')
-        sel.select('prov_install', self.distro.install_name)
+        sel.select('prov_install', unicode(self.distro_tree))
         self.wait_and_try(self.check_install_options)
 
     def check_install_options(self):

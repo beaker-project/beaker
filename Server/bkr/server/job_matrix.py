@@ -80,7 +80,8 @@ class JobMatrix:
             matrix_options['toggle_nacks_on'] = False
             matrix_options['grid'] = None
        
-        return dict(widget=self.job_matrix_widget, widget_options=matrix_options, title="Job Matrix Report")
+        return dict(widget=self.job_matrix_widget, widget_options=matrix_options,
+                title="Job Matrix Report", value=None, widget_attrs={})
 
     @expose(format='json')
     def get_whiteboard_options_json(self,filter):
@@ -181,7 +182,10 @@ class JobMatrix:
             for job in job_query:
                 job_ids.append(job.id)
 
-        recipes = model.Recipe.query.join(['distro','arch']).join(['recipeset','job']).filter(model.RecipeSet.job_id.in_(job_ids)).add_column(model.Arch.arch)
+        recipes = model.Recipe.query.join(model.Recipe.distro_tree, model.DistroTree.arch)\
+                .join(model.Recipe.recipeset, model.RecipeSet.job)\
+                .filter(model.RecipeSet.job_id.in_(job_ids))\
+                .add_column(model.Arch.arch)
         # if we're here we are potentially trying to hide naked RS'
         if toggle_nacks:
             exclude_recipe_sets = model.Job.get_nacks(job_ids)
@@ -220,8 +224,8 @@ class JobMatrix:
                      case4.label('rc4'),]
                        
         my_from = [model.recipe_set_table.join(recipe_table_alias). 
-                              join(model.distro_table, model.distro_table.c.id == recipe_table_alias.c.distro_id).
-                              join(arch_alias, arch_alias.c.id == model.distro_table.c.arch_id).
+                              join(model.distro_tree_table, model.distro_tree_table.c.id == recipe_table_alias.c.distro_tree_id).
+                              join(arch_alias, arch_alias.c.id == model.distro_tree_table.c.arch_id).
                               join(model.recipe_task_table, model.recipe_task_table.c.recipe_id == recipe_table_alias.c.id).
                               join(model.task_table, model.task_table.c.id == model.recipe_task_table.c.task_id)]
                    

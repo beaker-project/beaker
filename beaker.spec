@@ -68,6 +68,9 @@ Requires:	%{name} = %{version}-%{release}
 Requires:       python-krbV
 Requires:       python-lxml
 Requires:       libxslt-python
+%if !(0%{?rhel} >= 6) || !(0%{?fedora} >= 14)
+Requires:       python-simplejson
+%endif
 Requires:       libxml2-python
 
 %if %{with server}

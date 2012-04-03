@@ -11,7 +11,7 @@ from sqlalchemy import (Table, Column, Index, ForeignKey, UniqueConstraint,
                         or_, and_, not_, select, case, func)
 
 from sqlalchemy.orm import relation, backref, synonym, dynamic_loader, \
-        query, object_mapper, mapper, column_property
+        query, object_mapper, mapper, column_property, contains_eager
 from sqlalchemy.orm.interfaces import AttributeExtension
 from sqlalchemy.sql import exists
 from sqlalchemy.sql.expression import join
@@ -147,6 +147,14 @@ class ReleaseAction(DeclEnum):
         ('reprovision', u'ReProvision', dict()),
     ]
 
+class ImageType(DeclEnum):
+
+    symbols = [
+        ('kernel', u'kernel', dict()),
+        ('initrd', u'initrd', dict()),
+        ('live', u'live', dict()),
+    ]
+
 xmldoc = xml.dom.minidom.Document()
 
 def node(element, value):
@@ -191,8 +199,8 @@ system_table = Table('system', metadata,
     Column('loan_id', Integer,
            ForeignKey('tg_user.user_id')),
     Column('release_action', ReleaseAction.db_type()),
-    Column('reprovision_distro_id', Integer,
-           ForeignKey('distro.id')),
+    Column('reprovision_distro_tree_id', Integer,
+           ForeignKey('distro_tree.id')),
     Column('hypervisor_id', Integer,
            ForeignKey('hypervisor.id')),
     mysql_engine='InnoDB',
@@ -446,33 +454,54 @@ install_table = Table('install', metadata,
     mysql_engine='InnoDB',
 )
 
-#RHEL4-U8-re20081015.nightly_http-AS-x86_64   	redhat 	x86_64
-#RHEL4-U8-re20081015.nightly_http-AS-x86_64   	redhat 	x86_64
-#RHEL4-U8-re20081015.nightly_nfs-AS-xen-x86_64 	redhat 	x86_64
-#RHEL4-U8-re20081015.nightly_nfs-AS-xen-x86_64 	redhat 	x86_64
-#RHEL5.3-Client-20081013.nightly_http-i386 	redhat 	i386
-#RHEL5.3-Client-20081013.nightly_http-x86_64 	redhat 	x86_64
-#RHEL5.3-Client-20081013.nightly_nfs-i386 	redhat 	i386
-#RHEL5.3-Client-20081013.nightly_nfs-x86_64 	redhat 	x86_64
-
 distro_table = Table('distro', metadata,
     Column('id', Integer, autoincrement=True,
            nullable=False, primary_key=True),
-    Column('install_name',Unicode(255), unique=True, nullable=False),
-    Column('name',Unicode(255)),
-    Column('breed_id', Integer, ForeignKey('breed.id')),
-    Column('osversion_id', Integer, ForeignKey('osversion.id')),
-    Column('arch_id', Integer, ForeignKey('arch.id')),
-    Column('variant',Unicode(25)),
-    Column('virt',Boolean),
-    Column('date_created',DateTime),
+    Column('name', Unicode(255), nullable=False, unique=True),
+    Column('osversion_id', Integer, ForeignKey('osversion.id'), nullable=False),
+    Column('date_created', DateTime, nullable=False, default=datetime.utcnow),
     mysql_engine='InnoDB',
 )
 
-lab_controller_distro_map = Table('distro_lab_controller_map', metadata,
-    Column('distro_id', Integer, ForeignKey('distro.id'), primary_key=True),
-    Column('lab_controller_id', Integer, ForeignKey('lab_controller.id'), primary_key=True),
-    Column('tree_path', String(1024)),
+distro_tree_table = Table('distro_tree', metadata,
+    Column('id', Integer, autoincrement=True,
+            nullable=False, primary_key=True),
+    Column('distro_id', Integer, ForeignKey('distro.id'), nullable=False),
+    Column('arch_id', Integer, ForeignKey('arch.id'), nullable=False),
+    Column('variant', Unicode(25)),
+    Column('date_created', DateTime, nullable=False, default=datetime.utcnow),
+    UniqueConstraint('distro_id', 'arch_id', 'variant'),
+    mysql_engine='InnoDB',
+)
+
+distro_tree_repo_table = Table('distro_tree_repo', metadata,
+    Column('distro_tree_id', Integer, ForeignKey('distro_tree.id'),
+            nullable=False, primary_key=True),
+    Column('repo_id', Unicode(255), nullable=False, primary_key=True),
+    Column('repo_type', Unicode(255), index=True),
+    Column('path', UnicodeText, nullable=False),
+    mysql_engine='InnoDB',
+)
+
+distro_tree_image_table = Table('distro_tree_image', metadata,
+    Column('distro_tree_id', Integer, ForeignKey('distro_tree.id'),
+            nullable=False, primary_key=True),
+    Column('image_type', ImageType.db_type(),
+            nullable=False, primary_key=True),
+    Column('path', UnicodeText, nullable=False),
+    mysql_engine='InnoDB',
+)
+
+distro_tree_lab_controller_map = Table('distro_tree_lab_controller_map', metadata,
+    Column('id', Integer, autoincrement=True,
+            nullable=False, primary_key=True),
+    Column('distro_tree_id', Integer, ForeignKey('distro_tree.id'),
+            nullable=False),
+    Column('lab_controller_id', Integer, ForeignKey('lab_controller.id'),
+            nullable=False),
+    # 255 chars is probably not enough, but MySQL index limitations leave us no choice
+    Column('url', Unicode(255), nullable=False),
+    UniqueConstraint('distro_tree_id', 'lab_controller_id', 'url'),
     mysql_engine='InnoDB',
 )
 
@@ -482,8 +511,6 @@ lab_controller_table = Table('lab_controller', metadata,
     Column('fqdn',Unicode(255), unique=True),
     Column('username',Unicode(255)),
     Column('password',Unicode(255)),
-    Column('distros_md5', String(40)),
-    Column('systems_md5', String(40)),
     Column('disabled', Boolean, nullable=False, default=False),
     Column('removed', DateTime, nullable=True, default=None),
     Column('user_id', Integer,
@@ -505,13 +532,6 @@ osversion_table = Table('osversion', metadata,
     Column('osmajor_id', Integer, ForeignKey('osmajor.id')),
     Column('osminor',Unicode(255)),
     UniqueConstraint('osmajor_id', 'osminor', name='osversion_uix_1'),
-    mysql_engine='InnoDB',
-)
-
-breed_table = Table('breed', metadata,
-    Column('id', Integer, autoincrement=True,
-           nullable=False, primary_key=True),
-    Column('breed',Unicode(255), unique=True),
     mysql_engine='InnoDB',
 )
 
@@ -697,6 +717,12 @@ distro_activity_table = Table('distro_activity', metadata,
     mysql_engine='InnoDB',
 )
 
+distro_tree_activity_table = Table('distro_tree_activity', metadata,
+    Column('id', Integer, ForeignKey('activity.id'), primary_key=True),
+    Column('distro_tree_id', Integer, ForeignKey('distro_tree.id')),
+    mysql_engine='InnoDB',
+)
+
 command_queue_table = Table('command_queue', metadata,
     Column('id', Integer, ForeignKey('activity.id'), primary_key=True),
     Column('system_id', Integer, ForeignKey('system.id',
@@ -874,8 +900,8 @@ recipe_table = Table('recipe',metadata,
         Column('id', Integer, primary_key=True),
         Column('recipe_set_id', Integer,
                 ForeignKey('recipe_set.id'), nullable=False),
-        Column('distro_id', Integer,
-                ForeignKey('distro.id')),
+        Column('distro_tree_id', Integer,
+                ForeignKey('distro_tree.id')),
         Column('system_id', Integer,
                 ForeignKey('system.id')),
         Column('result', TaskResult.db_type(), nullable=False,
@@ -1930,7 +1956,7 @@ url --url=$tree
         return (major,version)
     excluded_families=property(excluded_families)
 
-    def install_options(self, distro, ks_meta = '', kernel_options = '',
+    def install_options(self, distro_tree, ks_meta = '', kernel_options = '',
                            kernel_options_post = ''):
         """
         Return install options based on distro selected.
@@ -1942,16 +1968,16 @@ url --url=$tree
         results = dict(ks_meta = {},
                        kernel_options = {},
                        kernel_options_post = {})
-        if distro.arch in self.provisions:
-            pa = self.provisions[distro.arch]
+        if distro_tree.arch in self.provisions:
+            pa = self.provisions[distro_tree.arch]
             node = self.provision_to_dict(pa)
             consolidate(node,results)
-            if distro.osversion.osmajor in pa.provision_families:
-                pf = pa.provision_families[distro.osversion.osmajor]
+            if distro_tree.distro.osversion.osmajor in pa.provision_families:
+                pf = pa.provision_families[distro_tree.distro.osversion.osmajor]
                 node = self.provision_to_dict(pf)
                 consolidate(node,results)
-                if distro.osversion in pf.provision_family_updates:
-                    pfu = pf.provision_family_updates[distro.osversion]
+                if distro_tree.distro.osversion in pf.provision_family_updates:
+                    pfu = pf.provision_family_updates[distro_tree.distro.osversion]
                     node = self.provision_to_dict(pfu)
                     consolidate(node,results)
         consolidate(override,results)
@@ -2336,38 +2362,24 @@ url --url=$tree
                                              Arch.id==arch.id))
         return excluded
 
-    def distros(self):
+    def distro_trees(self):
         """
-        List of distros that support this system
+        List of distro trees that support this system
         """
-        distros = Distro.query.join(['arch','systems']).filter(
-              and_(System.id==self.id,
-                   System.lab_controller_id==LabController.id,
-                   lab_controller_distro_map.c.distro_id==Distro.id,
-                   lab_controller_distro_map.c.lab_controller_id==LabController.id,
-                not_(or_(Distro.id.in_(select([distro_table.c.id]).
-                  where(distro_table.c.arch_id==arch_table.c.id).
-                  where(arch_table.c.id==exclude_osmajor_table.c.arch_id).
-                  where(distro_table.c.osversion_id==osversion_table.c.id).
-                  where(osversion_table.c.osmajor_id==osmajor_table.c.id).
-                  where(osmajor_table.c.id==exclude_osmajor_table.c.osmajor_id).
-                  where(exclude_osmajor_table.c.system_id==system_table.c.id)
-                                      ),
-                         Distro.id.in_(select([distro_table.c.id]).
-                  where(distro_table.c.arch_id==arch_table.c.id).
-                  where(arch_table.c.id==exclude_osversion_table.c.arch_id).
-                  where(distro_table.c.osversion_id==osversion_table.c.id).
-                  where(osversion_table.c.id==
-                                        exclude_osversion_table.c.osversion_id).
-                  where(exclude_osversion_table.c.system_id==system_table.c.id)
-                                      )
-                        )
-                    )
-                  )
-        )
-        if self.type != SystemType.virtual:
-            distros = distros.filter(distro_table.c.virt==False)
-        return distros
+        return DistroTree.query\
+                .join(DistroTree.distro, Distro.osversion, OSVersion.osmajor)\
+                .options(contains_eager(DistroTree.distro, Distro.osversion, OSVersion.osmajor))\
+                .filter(DistroTree.lab_controller_assocs.any(
+                    LabControllerDistroTree.lab_controller == self.lab_controller))\
+                .filter(DistroTree.arch_id.in_([a.id for a in self.arch]))\
+                .filter(not_(OSMajor.excluded_osmajors.any(and_(
+                    ExcludeOSMajor.system == self,
+                    ExcludeOSMajor.arch_id == DistroTree.arch_id))
+                    .correlate(distro_tree_table)))\
+                .filter(not_(OSVersion.excluded_osversions.any(and_(
+                    ExcludeOSVersion.system == self,
+                    ExcludeOSVersion.arch_id == DistroTree.arch_id))
+                    .correlate(distro_tree_table)))
 
     def action_release(self):
         # Attempt to remove Netboot entry and turn off machine
@@ -2378,8 +2390,8 @@ url --url=$tree
             elif action == ReleaseAction.leave_on:
                 self.action_power(action=u'on')
             elif action == ReleaseAction.reprovision:
-                if self.reprovision_distro:
-                    self.action_auto_provision(distro=self.reprovision_distro)
+                if self.reprovision_distro_tree:
+                    self.action_auto_provision(distro=self.reprovision_distro_tree)
             else:
                 raise ValueError('Not a valid ReleaseAction: %r' % self.release_action)
         elif self.remote:
@@ -2553,13 +2565,13 @@ $SNIPPET("rhts_post")
                 Recipe.status != TaskStatus.aborted,
                 Recipe.system == self))\
             .subquery()
-        count = self.dyn_recipes.join(Recipe.distro)\
+        count = self.dyn_recipes.join(Recipe.distro_tree, DistroTree.distro)\
             .filter(and_(
                 Distro.tags.contains(reliable_distro_tag.decode('utf8')),
                 Recipe.start_time >
                     func.ifnull(status_change_subquery.as_scalar(), self.date_added),
                 Recipe.finish_time > nonaborted_recipe_subquery.as_scalar()))\
-            .value(func.count(Distro.id.distinct()))
+            .value(func.count(DistroTree.id.distinct()))
         if count >= 2:
             # Broken!
             reason = unicode(_(u'System has a run of aborted recipes ' 
@@ -2740,19 +2752,6 @@ class ExcludeOSVersion(SystemObject):
     pass
 
 
-class Breed(SystemObject):
-    def __init__(self, breed):
-        super(Breed, self).__init__()
-        self.breed = breed
-
-    @classmethod
-    def by_name(cls, breed):
-        return cls.query.filter_by(breed=breed).one()
-
-    def __repr__(self):
-        return self.breed
-
-
 class OSMajor(MappedObject):
     def __init__(self, osmajor):
         super(OSMajor, self).__init__()
@@ -2774,6 +2773,18 @@ class OSMajor(MappedObject):
     @classmethod
     def get_all(cls):
         return [(0,"All")] + [(major.id, major.osmajor) for major in cls.query]
+
+    @classmethod
+    def in_any_lab(cls, query=None):
+        if query is None:
+            query = cls.query
+        return query.filter(exists([1], from_obj=
+                distro_tree_lab_controller_map
+                    .join(distro_tree_table)
+                    .join(distro_table)
+                    .join(osversion_table))
+                .where(OSVersion.osmajor_id == OSMajor.id)
+                .correlate(osmajor_table))
 
     def tasks(self):
         """
@@ -2831,7 +2842,7 @@ class OSVersion(MappedObject):
     
 
 
-class LabControllerDistro(SystemObject):
+class LabControllerDistroTree(MappedObject):
     pass
 
 
@@ -2856,8 +2867,6 @@ class LabController(SystemObject):
         if valid:
             all = cls.query.filter_by(removed=None)
         return [(lc.id, lc.fqdn) for lc in all]
-
-    distros = association_proxy('_distros', 'distro')
 
 
 class Watchdog(MappedObject):
@@ -3066,18 +3075,6 @@ def _create_tag(tag):
 
 
 class Distro(MappedObject):
-    # EXCLUDE_OVER_MULTIPLE_ARCHES holds text that we do not want in a multi arch install. We have PAE here,
-    # because  a PAE and non PAE i386 distro are indistinguishable from one another, so it will return a PAE distro, if we are searching on
-    # i386 and say x86_64, even though clearly, it's not applicable to the later. This only applies to multiple arches
-    EXCLUDE_OVER_MULTIPLE_ARCHES = 'PAE'
-
-    def __init__(self, install_name=None):
-        super(Distro, self).__init__()
-        self.install_name = install_name
- 
-    @classmethod
-    def by_install_name(cls, install_name):
-        return cls.query.filter_by(install_name=install_name).one()
 
     @classmethod
     def by_name(cls, name):
@@ -3087,25 +3084,36 @@ class Distro(MappedObject):
     def by_id(cls, id):
         return cls.query.filter_by(id=id).one()
 
+    def __unicode__(self):
+        return self.name
+
+    def __repr__(self):
+        return '%s(name=%r)' % (self.__class__.__name__, self.name)
+
+    @property
+    def link(self):
+        return make_link(url = '/distros/view?id=%s' % self.id,
+                         text = self.name)
+
     tags = association_proxy('_tags', 'tag', creator=_create_tag)
+
+class DistroTree(MappedObject):
 
     @classmethod
     def by_filter(cls, filter):
         from bkr.server.needpropertyxml import apply_filter
-        # Join on lab_controller_assocs or we may get a distro that is not on any 
-        # lab controller anymore.
-        distros = Distro.query.join('lab_controller_assocs')
-        distros = apply_filter(filter, distros)
-        return distros.order_by('-date_created')
+        # Limit to distro trees which exist in at least one lab
+        query = cls.query.filter(DistroTree.lab_controller_assocs.any())
+        query = apply_filter(filter, query)
+        return query.order_by(DistroTree.date_created.desc())
 
     def to_xml(self, clone=False):
         """ Return xml describing this distro """
         fields = dict(
-                      distro_name    = 'name',
+                      distro_name    = ['distro', 'name'],
                       distro_arch    = ['arch','arch'],
                       distro_variant = 'variant',
-                      distro_virt    = 'virt',
-                      distro_family  = ['osversion','osmajor','osmajor'],
+                      distro_family  = ['distro', 'osversion','osmajor','osmajor'],
                      )
                       
         distro_requires = xmldoc.createElement('distroRequires')
@@ -3125,56 +3133,26 @@ class Distro(MappedObject):
         distro_requires.appendChild(xmland)
         return distro_requires
 
-    def systems_filter(self, user, filter, join=['lab_controller']):
+    def systems_filter(self, user, filter, only_in_lab=False):
         from bkr.server.needpropertyxml import apply_filter
         systems = System.query
         systems = apply_filter(filter, systems)
-        systems = self.all_systems(user, join, systems)
+        systems = self.all_systems(user, systems)
+        if only_in_lab:
+            systems = systems.join(System.lab_controller)\
+                    .filter(LabController._distro_trees.any(
+                    LabControllerDistroTree.distro_tree == self))
         return systems
 
     def tasks(self):
         """
         List of tasks that support this distro
         """
-        return Task.query.filter(
-                not_(or_(Task.id.in_(select([task_table.c.id]).
-                 where(task_table.c.id==task_exclude_arch_table.c.task_id).
-                 where(task_exclude_arch_table.c.arch_id==arch_table.c.id).
-                 where(arch_table.c.id==self.arch_id)
-                                      ),
-                         Task.id.in_(select([task_table.c.id]).
-                 where(task_table.c.id==task_exclude_osmajor_table.c.task_id).
-                 where(task_exclude_osmajor_table.c.osmajor_id==osmajor_table.c.id).
-                 where(osmajor_table.c.id==self.osversion.osmajor.id)
-                                      ),
-                        )
-                    )
-        )
-
-    @classmethod
-    def distros_for_provision(self, arch=None, osmajor=None, tag=None, *args,**kw):
-        if arch is None and osmajor is None:
-            log.error('Need at least osmajor or arch to determine which distro to return')
-            return
-        query = Distro.query.filter(Distro.lab_controller_assocs.any()).order_by(Distro.date_created.desc())
-        if arch:
-            if isinstance(arch,list):
-                arches = arch
-            elif isinstance(arch,(str,unicode)):
-                arches = [arch]
-            query = query.join(Distro.arch)
-            if len(arches) > 1:
-                # For multiple arches. Excludes some distros based on install name
-                query = query.filter(and_(~Distro.install_name. \
-                    like('%%%s%%' % Distro.EXCLUDE_OVER_MULTIPLE_ARCHES), Arch.arch.in_(arches))).\
-                    group_by(Distro.name,Distro.variant).having(func.count(Arch.arch)==len(arches))
-            else:
-                query = query.filter(Arch.arch == arches.pop())
-        if osmajor:
-            query = query.join(Distro.osversion, OSVersion.osmajor).filter(OSMajor.osmajor==osmajor)
-        if tag:
-            query = query.join(Distro._tags).filter(DistroTag.tag==tag)
-        return query.all()
+        return Task.query\
+                .filter(not_(Task.excluded_arch.any(
+                    TaskExcludeArch.arch == self.arch)))\
+                .filter(not_(Task.excluded_osmajor.any(
+                    TaskExcludeOSMajor.osmajor == self.distro.osversion.osmajor)))
 
     def systems(self, user=None):
         """
@@ -3182,13 +3160,14 @@ class Distro(MappedObject):
         Limit to only lab controllers which have the distro.
         Limit to what is available to user if user passed in.
         """
-        return self.all_systems(user, join=['lab_controller','_distros','distro']).filter( \
-                    Distro.install_name==self.install_name)
+        return self.all_systems(user).join(System.lab_controller)\
+                .filter(LabController._distro_trees.any(
+                    LabControllerDistroTree.distro_tree == self))
 
-    def all_systems(self, user=None, join=['lab_controller'], systems=None):
+    def all_systems(self, user=None, systems=None):
         """
-        List of systems that support this distro
-        Will return all possible systems even if the distro is not on the lab controller yet.
+        List of systems that support this distro tree.
+        Will return all possible systems even if the tree is not on the lab controller yet.
         Limit to what is available to user if user passed in.
         """
         if user:
@@ -3196,29 +3175,67 @@ class Distro(MappedObject):
         elif not systems:
             systems = System.query
         
-        return systems.join(*join).filter(and_(
+        return systems.filter(and_(
                 System.arch.contains(self.arch),
                 not_(System.excluded_osmajor.any(and_(
-                        ExcludeOSMajor.osmajor == self.osversion.osmajor,
+                        ExcludeOSMajor.osmajor == self.distro.osversion.osmajor,
                         ExcludeOSMajor.arch == self.arch))),
                 not_(System.excluded_osversion.any(and_(
-                        ExcludeOSVersion.osversion == self.osversion,
+                        ExcludeOSVersion.osversion == self.distro.osversion,
                         ExcludeOSVersion.arch == self.arch))),
                 ))
 
+    @property
     def link(self):
-        """ Returns a hyper link to this distro
-        """ 
-        return make_link(url = '/distros/view?id=%s' % self.id,
-                         text = self.install_name)
+        return make_link(url='/distrotrees/%s' % self.id, text=unicode(self))
 
-    link = property(link)
+    def __unicode__(self):
+        if self.variant:
+            return u'%s %s %s' % (self.distro, self.variant, self.arch)
+        else:
+            return u'%s %s' % (self.distro, self.arch)
+
+    def __str__(self):
+        return str(unicode(self))
 
     def __repr__(self):
-        return "%s" % self.name
+        return '%s(distro=%r, variant=%r, arch=%r)' % (
+                self.__class__.__name__, self.distro, self.variant, self.arch)
 
-    lab_controllers = association_proxy('lab_controller_assocs', 'lab_controller')
+    def url_in_lab(self, lab_controller, scheme=None):
+        # If scheme isn't given, we can use our own judgment. NFS is good.
+        if scheme is None:
+            urls = [lca.url for lca in self.lab_controller_assocs
+                    if lca.lab_controller == lab_controller]
+            if not urls:
+                return None
+            schemes = ['nfs', 'http', 'ftp']
+            return sorted(urls, key=lambda url: schemes.index(urlparse.urlparse(url).scheme))[0]
+        else:
+            urls = [lca.url for lca in self.lab_controller_assocs
+                    if lca.lab_controller == lab_controller
+                    and lca.url.startswith('%s:' % scheme)]
+            if not urls:
+                return None
+            return urls[0]
 
+    def repo_by_id(self, repoid):
+        for repo in self.repos:
+            if repo.repo_id == repoid:
+                return repo
+
+    def image_by_type(self, image_type):
+        for image in self.images:
+            if image.image_type == image_type:
+                return image
+
+class DistroTreeRepo(MappedObject):
+
+    pass
+
+class DistroTreeImage(MappedObject):
+
+    pass
 
 class DistroTag(MappedObject):
     def __init__(self, tag=None):
@@ -3241,6 +3258,12 @@ class DistroTag(MappedObject):
         A class method that can be used to search tags
         """
         return cls.query.filter(DistroTag.tag.like('%s%%' % tag))
+
+    @classmethod
+    def used(cls, query=None):
+        if query is None:
+            query = cls.query
+        return query.filter(DistroTag.distros.any())
 
 class Admin(MappedObject):
     def __init__(self,system_id,group_id):
@@ -3300,7 +3323,11 @@ class GroupActivity(Activity):
 
 class DistroActivity(Activity):
     def object_name(self):
-        return "Distro: %s" % self.object.install_name
+        return "Distro: %s" % self.object.name
+
+class DistroTreeActivity(Activity):
+    def object_name(self):
+        return u'DistroTree: %s' % self.object
 
 class CommandActivity(Activity):
     def __init__(self, user, service, action, status, callback=None):
@@ -3708,7 +3735,7 @@ class Job(TaskBase):
     def has_family(cls, family, query=None, **kw):
         if query is None:
             query = cls.query
-        query = query.join(cls.recipesets, RecipeSet.recipes, Recipe.distro, Distro.osversion, OSVersion.osmajor).filter(OSMajor.osmajor == family).reset_joinpoint()
+        query = query.join(cls.recipesets, RecipeSet.recipes, Recipe.distro_tree, DistroTree.distro, Distro.osversion, OSVersion.osmajor).filter(OSMajor.osmajor == family).reset_joinpoint()
         return query
 
     @classmethod
@@ -3776,27 +3803,27 @@ class Job(TaskBase):
         return query
 
     @classmethod
-    def provision_system_job(cls, distro_id, **kw):
+    def provision_system_job(cls, distro_tree_id, **kw):
         """ Create a new reserve job, if system_id is defined schedule it too """
         job = Job(ttasks=0, owner=identity.current.user, retention_tag=RetentionTag.get_default())
         if kw.get('whiteboard'):
             job.whiteboard = kw.get('whiteboard') 
-        if not isinstance(distro_id,list):
-            distro_id = [distro_id]
+        if not isinstance(distro_tree_id, list):
+            distro_tree_id = [distro_tree_id]
 
         if job.owner.rootpw_expired:
             raise BX(_(u"Your root password has expired, please change or clear it in order to submit jobs."))
 
-        for id in distro_id: 
+        for id in distro_tree_id:
             try:
-                distro = Distro.by_id(id)
+                distro_tree = DistroTree.by_id(id)
             except InvalidRequestError:
-                raise BX(u'Invalid Distro ID %s' % id)
+                raise BX(u'Invalid distro tree ID %s' % id)
             recipeSet = RecipeSet(ttasks=2)
             recipe = MachineRecipe(ttasks=2)
             # Inlcude the XML definition so that cloning this job will act as expected.
-            recipe.distro_requires = distro.to_xml().toxml()
-            recipe.distro = distro
+            recipe.distro_requires = distro_tree.to_xml().toxml()
+            recipe.distro_tree = distro_tree
             # Don't report panic's for reserve workflow.
             recipe.panic = 'ignore'
             if kw.get('system_id'):
@@ -4593,19 +4620,18 @@ class Recipe(TaskBase):
             return return_val
 
     def task_repo(self):
-        if self.distro:
-            return ("beaker-tasks","http://%s/repos/%s" % (self.servername, self.id))
+        return ("beaker-tasks","http://%s/repos/%s" % (self.servername, self.id))
 
 
     def harness_repo(self):
         """
         return repos needed for harness and task install
         """
-        if self.distro:
+        if self.distro_tree:
             if os.path.exists("%s/%s" % (self.harnesspath,
-                                            self.distro.osversion.osmajor)):
-                return ("beaker-harness", "http://%s/harness/%s/" % (self.servername,
-                                                               self.distro.osversion.osmajor))
+                                            self.distro_tree.distro.osversion.osmajor)):
+                return ("beaker-harness", "http://%s/harness/%s/"
+                        % (self.servername, self.distro_tree.distro.osversion.osmajor))
 
     def to_xml(self, recipe, clone=False, from_recipeset=False, from_machine=False):
         if not clone:
@@ -4631,12 +4657,11 @@ class Recipe(TaskBase):
             recipe.setAttribute("result", "%s" % self.result)
         if self.status and not clone:
             recipe.setAttribute("status", "%s" % self.status)
-        if self.distro and not clone:
-            recipe.setAttribute("distro", "%s" % self.distro.name)
-            recipe.setAttribute("install_name", "%s" % self.distro.install_name)
-            recipe.setAttribute("arch", "%s" % self.distro.arch)
-            recipe.setAttribute("family", "%s" % self.distro.osversion.osmajor)
-            recipe.setAttribute("variant", "%s" % self.distro.variant)
+        if self.distro_tree and not clone:
+            recipe.setAttribute("distro", "%s" % self.distro_tree.distro.name)
+            recipe.setAttribute("arch", "%s" % self.distro_tree.arch)
+            recipe.setAttribute("family", "%s" % self.distro_tree.distro.osversion.osmajor)
+            recipe.setAttribute("variant", "%s" % self.distro_tree.variant)
         watchdog = xmldoc.createElement("watchdog")
         if self.panic:
             watchdog.setAttribute("panic", "%s" % self.panic)
@@ -4711,8 +4736,8 @@ class Recipe(TaskBase):
     packages = property(_get_packages)
 
     def _get_arch(self):
-        if self.distro:
-            return self.distro.arch
+        if self.distro_tree:
+            return self.distro_tree.arch
 
     arch = property(_get_arch)
 
@@ -4917,7 +4942,7 @@ class Recipe(TaskBase):
         self.update_status()
         session.flush() # XXX bad
         if self.system is not None and \
-                get('beaker.reliable_distro_tag', None) in self.distro.tags:
+                get('beaker.reliable_distro_tag', None) in self.distro_tree.distro.tags:
             self.system.suspicious_abort()
 
     def _abort(self, msg=None):
@@ -5053,9 +5078,9 @@ class Recipe(TaskBase):
         """ Does the given task apply to this recipe?
             ie: not excluded for this distro family or arch.
         """
-        if self.distro.arch in [arch.arch for arch in task.excluded_arch]:
+        if self.distro_tree.arch in [arch.arch for arch in task.excluded_arch]:
             return False
-        if self.distro.osversion.osmajor in [osmajor.osmajor for osmajor in task.excluded_osmajor]:
+        if self.distro_tree.distro.osversion.osmajor in [osmajor.osmajor for osmajor in task.excluded_osmajor]:
             return False
         return True
 
@@ -5164,15 +5189,15 @@ class GuestRecipe(Recipe):
         recipe.setAttribute("guestargs", "%s" % self.guestargs)
         if self.system and not clone:
             recipe.setAttribute("mac_address", "%s" % self.system.mac_address)
-        if self.distro and self.system and not clone:
-            location = LabControllerDistro.query.filter(
-                            and_(
-                               LabControllerDistro.distro == self.distro,
-                               LabControllerDistro.lab_controller == self.system.lab_controller
-                                )
-                                                         ).first()
+        if self.distro_tree and self.system and not clone:
+            location = self.distro_tree.url_in_lab(self.system.lab_controller)
             if location:
-                recipe.setAttribute("location", "%s" % location.tree_path)
+                recipe.setAttribute("location", location)
+            for lca in self.distro_tree.lab_controller_assocs:
+                if lca.lab_controller == self.system.lab_controller:
+                    scheme = urlparse.urlparse(lca.url).scheme
+                    attr = '%s_location' % re.sub(r'[^a-z0-9]+', '_', scheme.lower())
+                    recipe.setAttribute(attr, lca.url)
         return Recipe.to_xml(self, recipe, clone, from_recipeset, from_machine)
 
     def _get_distro_requires(self):
@@ -5182,19 +5207,7 @@ class GuestRecipe(Recipe):
             drs = xmldoc.createElement("distroRequires")
         except xml.parsers.expat.ExpatError:
             drs = xmldoc.createElement("distroRequires")
-        # If no distro_virt is asked for default to Virt
-        if not drs.getElementsByTagName("distro_virt"):
-            distroRequires = xmldoc.createElement("distroRequires")
-            for dr in drs.getElementsByTagName("distroRequires"):
-                for child in dr.childNodes[:]:
-                    distroRequires.appendChild(child)
-            distro_virt = xmldoc.createElement("distro_virt")
-            distro_virt.setAttribute("op", "=")
-            distro_virt.setAttribute("value", "")
-            distroRequires.appendChild(distro_virt)
-            return distroRequires.toxml()
-        else:
-            return drs.toxml()
+        return drs.toxml()
 
     def _set_distro_requires(self, value):
         self._distro_requires = value
@@ -5214,20 +5227,7 @@ class MachineRecipe(Recipe):
         return Recipe.to_xml(self, recipe, clone, from_recipeset)
 
     def _get_distro_requires(self):
-        drs = xml.dom.minidom.parseString(self._distro_requires)
-        # If no distro_virt is asked for default to No Virt
-        if not drs.getElementsByTagName("distro_virt"):
-            distroRequires = xmldoc.createElement("distroRequires")
-            for dr in drs.getElementsByTagName("distroRequires"):
-                for child in dr.childNodes[:]:
-                    distroRequires.appendChild(child)
-            distro_virt = xmldoc.createElement("distro_virt")
-            distro_virt.setAttribute("op", "=")
-            distro_virt.setAttribute("value", "")
-            distroRequires.appendChild(distro_virt)
-            return distroRequires.toxml()
-        else:
-            return self._distro_requires
+        return self._distro_requires
 
     def _set_distro_requires(self, value):
         self._distro_requires = value
@@ -6134,7 +6134,7 @@ System.mapper = mapper(System, system_table,
                      'command_queue':relation(CommandActivity,
                         order_by=[activity_table.c.created.desc(), activity_table.c.id.desc()],
                         backref='object', cascade='all, delete, delete-orphan'),
-                     'reprovision_distro':relation(Distro, uselist=False),
+                     'reprovision_distro_tree':relation(DistroTree, uselist=False),
                       '_system_ccs': relation(SystemCc, backref='system',
                                       cascade="all, delete, delete-orphan"),
                      'reservations': relation(Reservation, backref='system',
@@ -6176,7 +6176,7 @@ mapper(ExcludeOSMajor, exclude_osmajor_table,
        properties = {'osmajor':relation(OSMajor, backref='excluded_osmajors'),
                      'arch':relation(Arch)})
 mapper(ExcludeOSVersion, exclude_osversion_table,
-       properties = {'osversion':relation(OSVersion),
+       properties = {'osversion':relation(OSVersion, backref='excluded_osversions'),
                      'arch':relation(Arch)})
 mapper(OSVersion, osversion_table,
        properties = {'osmajor':relation(OSMajor, uselist=False,
@@ -6208,32 +6208,43 @@ mapper(Power, power_table,
 mapper(Serial, serial_table)
 mapper(SerialType, serial_type_table)
 mapper(Install, install_table)
-mapper(LabControllerDistro, lab_controller_distro_map)
+
+mapper(LabControllerDistroTree, distro_tree_lab_controller_map)
 
 mapper(LabController, lab_controller_table,
-        properties = {'_distros':relation(LabControllerDistro, backref='lab_controller',
-                                          cascade='all, delete-orphan'),
+        properties = {'_distro_trees': relation(LabControllerDistroTree,
+                        backref='lab_controller', cascade='all, delete-orphan'),
                       'dyn_systems' : dynamic_loader(System),
                       'user'        : relation(User, uselist=False),
                      }
       )
-
 mapper(Distro, distro_table,
         properties = {'osversion':relation(OSVersion, uselist=False,
                                            backref='distros'),
-                      'breed':relation(Breed, backref='distros'),
-                      'arch':relation(Arch, backref='distros'),
                       '_tags':relation(DistroTag,
                                        secondary=distro_tag_map,
                                        backref='distros'),
-                      'lab_controller_assocs':relation(LabControllerDistro, backref='distro',
-                                                       cascade='all, delete-orphan'),
                       'activity': relation(DistroActivity,
                         order_by=[activity_table.c.created.desc(), activity_table.c.id.desc()],
                         backref='object',),
+                      'dyn_trees': dynamic_loader(DistroTree),
     })
-mapper(Breed, breed_table)
 mapper(DistroTag, distro_tag_table)
+mapper(DistroTree, distro_tree_table, properties={
+    'distro': relation(Distro, backref=backref('trees',
+        order_by=[distro_tree_table.c.variant, distro_tree_table.c.arch_id])),
+    'arch': relation(Arch, backref='distro_trees'),
+    'lab_controller_assocs': relation(LabControllerDistroTree,
+        backref='distro_tree', cascade='all, delete-orphan'),
+    'activity': relation(DistroTreeActivity, backref='object',
+        order_by=[activity_table.c.created.desc(), activity_table.c.id.desc()]),
+})
+mapper(DistroTreeRepo, distro_tree_repo_table, properties={
+    'distro_tree': relation(DistroTree, backref='repos'),
+})
+mapper(DistroTreeImage, distro_tree_image_table, properties={
+    'distro_tree': relation(DistroTree, backref='images'),
+})
 
 mapper(Visit, visits_table)
 
@@ -6290,6 +6301,9 @@ mapper(GroupActivity, group_activity_table, inherits=Activity,
 
 mapper(DistroActivity, distro_activity_table, inherits=Activity,
        polymorphic_identity=u'distro_activity')
+
+mapper(DistroTreeActivity, distro_tree_activity_table, inherits=Activity,
+       polymorphic_identity=u'distro_tree_activity')
 
 mapper(CommandActivity, command_queue_table, inherits=Activity,
        polymorphic_identity=u'command_activity',
@@ -6384,7 +6398,7 @@ mapper(LogRecipeTaskResult, log_recipe_task_result_table)
 
 mapper(Recipe, recipe_table,
         polymorphic_on=recipe_table.c.type, polymorphic_identity=u'recipe',
-        properties = {'distro':relation(Distro, uselist=False,
+        properties = {'distro_tree':relation(DistroTree, uselist=False,
                                         backref='recipes'),
                       'system':relation(System, uselist=False,
                                         backref='recipes'),

@@ -1,23 +1,23 @@
 # -*- coding: utf-8 -*-
 
 """
-Check Beaker distros for problems
-=================================
+Check Beaker distro trees for problems
+======================================
 
-.. program:: bkr distros-verify
+.. program:: bkr distro-trees-verify
 
 Synopsis
 --------
 
-| :program:`bkr distros-verify` [*options*]
+| :program:`bkr distro-trees-verify` [*options*]
 |       [--tag=<tag>] [--name=<name>] [--treepath=<url>] [--family=<family>] [--arch=<arch>]
 |       [--broken] [--limit=<number>]
 
 Description
 -----------
 
-Prints to stdout a list of matching distros in Beaker, along with a list of 
-labs (if any) which do not have the distro.
+Prints to stdout a list of matching distro trees in Beaker, along with a list 
+of labs (if any) which do not have the tree.
 
 Options
 -------
@@ -33,8 +33,8 @@ Options
 
 .. option:: --treepath <url>
 
-   Limit to distros with the given tree path. <url> is interpreted as a SQL LIKE 
-   pattern (the % character matches any substring).
+   Limit to distro trees with the given tree path. <url> is interpreted as 
+   a SQL LIKE pattern (the % character matches any substring).
 
 .. option:: --family <family>
 
@@ -43,11 +43,11 @@ Options
 
 .. option:: --arch <arch>
 
-   Limit to distros for the given arch.
+   Limit to distro trees for the given arch.
 
 .. option:: --broken
 
-   Limit to distros which are not present in every lab.
+   Limit to distro trees which are not present in every lab.
 
 .. option:: --limit <number>
 
@@ -63,10 +63,15 @@ Non-zero on error, otherwise zero.
 If no distros match the given criteria this is considered to be an error, and 
 the exit status will be 1.
 
+History
+-------
+
+Prior to version 0.9, this command was called :program:`bkr distros-verify`.
+
 See also
 --------
 
-:manpage:`bkr-distros-list(1)`, :manpage:`bkr(1)`
+:manpage:`bkr-distro-trees-list(1)`, :manpage:`bkr(1)`
 """
 
 
@@ -74,8 +79,8 @@ import sys
 from bkr.client import BeakerCommand
 
 
-class Distros_Verify(BeakerCommand):
-    """verify distros"""
+class Distro_Trees_Verify(BeakerCommand):
+    """Verify distro trees"""
     enabled = True
 
 
@@ -133,12 +138,15 @@ class Distros_Verify(BeakerCommand):
 
         self.set_hub(username, password)
         lab_controllers = set(self.hub.lab_controllers())
-        distros = self.hub.distros.filter(filter)
-        if distros:
-            for distro in distros:
-                broken = lab_controllers.difference(set(distro[8]))
+        trees = self.hub.distrotrees.filter(filter)
+        if trees:
+            for tree in trees:
+                available_lcs = set(lc for lc, url in tree['available'])
+                broken = lab_controllers.difference(available_lcs)
                 if not onlybroken or broken:
-                    print "%s Tags:%s" % (distro[0], distro[7])
+                    print '%s %s %s %s Tags:%s' % (tree['distro_tree_id'],
+                            tree['distro_name'], tree['variant'] or '',
+                            tree['arch'], ','.join(tree['distro_tags']))
                     if broken:
                         print "missing from labs %s" % list(broken)
         else:

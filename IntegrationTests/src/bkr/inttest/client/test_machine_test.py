@@ -12,6 +12,7 @@ class MachineTestTest(unittest.TestCase):
         data_setup.create_task(name=u'/distribution/install')
         data_setup.create_task(name=u'/distribution/inventory')
         self.distro = data_setup.create_distro(tags=[u'STABLE'])
+        data_setup.create_distro_tree(distro=self.distro)
 
     def test_machine_test(self):
         fqdn = 'system1.example.invalid'

@@ -15,6 +15,7 @@ import cherrypy
 import time
 import datetime
 import re
+import urlparse
 
 from BasicAuthTransport import BasicAuthTransport
 import xmlrpclib
@@ -100,25 +101,13 @@ class LabControllers(RPCRoot):
             luser.password = kw['lpassword']
         labcontroller.disabled = kw['disabled']
 
-        labcontroller.distros_md5 = '0.0'
-
         flash( _(u"%s saved" % labcontroller.fqdn) )
         redirect(".")
 
     @cherrypy.expose
     @identity.require(identity.in_group("lab_controller"))
-    def register_distro(self, install_name):
-        distro = Distro.lazy_create(install_name=install_name)
-        return distro.install_name
-
-    @cherrypy.expose
-    @identity.require(identity.in_group("lab_controller"))
-    def add_distro(self, new_distro):
+    def add_distro_tree(self, new_distro):
         lab_controller = identity.current.user.lab_controller
-
-        # Look up the distro by the install name
-        distro = Distro.by_install_name(new_distro['name'])
-        distro.name = new_distro['treename']
 
         # osmajor is required
         if 'osmajor' in new_distro:
@@ -128,7 +117,6 @@ class LabControllers(RPCRoot):
 
         if 'osminor' in new_distro:
             osversion = OSVersion.lazy_create(osmajor=osmajor, osminor=new_distro['osminor'])
-            distro.osversion = osversion
         else:
             return ''
 
@@ -136,17 +124,16 @@ class LabControllers(RPCRoot):
             for arch_name in new_distro['arches']:
                 try:
                    arch = Arch.by_name(arch_name)
-                   if arch not in distro.osversion.arches:
+                   if arch not in osversion.arches:
                        osversion.arches.append(arch)
-                except InvalidRequestError:
+                except NoResultFound:
                    pass
 
-        # If variant is specified in comment then use it.
-        if 'variant' in new_distro:
-            distro.variant = new_distro['variant']
-
-        if 'breed' in new_distro:
-            distro.breed = Breed.lazy_create(breed=new_distro['breed'])
+        distro = Distro.lazy_create(name=new_distro['name'], osversion=osversion)
+        arch = Arch.lazy_create(arch=new_distro['arch'])
+        variant = new_distro.get('variant')
+        distro_tree = DistroTree.lazy_create(distro=distro,
+                variant=variant, arch=arch)
 
         # Automatically tag the distro if tags exists
         if 'tags' in new_distro:
@@ -154,77 +141,71 @@ class LabControllers(RPCRoot):
                 if tag not in distro.tags:
                     distro.tags.append(tag)
 
-        arch = Arch.lazy_create(arch=new_distro['arch'])
-        distro.arch = arch
         if arch not in distro.osversion.arches:
             distro.osversion.arches.append(arch)
-        # XXX temporary hotfix
-        distro.virt = '-xen-' in new_distro['name']
-        distro.date_created = datetime.fromtimestamp(float(new_distro['tree_build_time']))
-        if distro not in lab_controller.distros:
-            lcd = LabControllerDistro()
-            lcd.distro = distro
-            if 'tree' in new_distro['ks_meta']:
-                lcd.tree_path = new_distro['ks_meta']['tree']
-            lab_controller._distros.append(lcd)
+        distro_tree.date_created = datetime.fromtimestamp(float(new_distro['tree_build_time']))
 
-        distro.activity.append(DistroActivity(user=identity.current.user,
-                service=u'XMLRPC', action=u'Added', field_name=u'lab_controllers',
-                old_value=None, new_value=lab_controller.fqdn))
+        if 'repos' in new_distro:
+            for repo in new_distro['repos']:
+                dtr = distro_tree.repo_by_id(repo['repoid'])
+                if dtr is None:
+                    dtr = DistroTreeRepo(repo_id=repo['repoid'])
+                    distro_tree.repos.append(dtr)
+                dtr.repo_type = repo['type']
+                dtr.path = repo['path']
 
-        return distro.install_name
+        if 'images' in new_distro:
+            for image in new_distro['images']:
+                try:
+                    image_type = ImageType.from_string(image['type'])
+                except ValueError:
+                    continue # ignore
+                dti = distro_tree.image_by_type(image_type)
+                if dti is None:
+                    dti = DistroTreeImage(image_type=image_type)
+                    distro_tree.images.append(dti)
+                dti.path = image['path']
+
+        new_urls_by_scheme = dict((urlparse.urlparse(url).scheme, url)
+                for url in new_distro['urls'])
+        if None in new_urls_by_scheme:
+            raise ValueError('URL %r is not absolute' % new_urls_by_scheme[None])
+        for lca in distro_tree.lab_controller_assocs:
+            if lca.lab_controller == lab_controller:
+                scheme = urlparse.urlparse(lca.url).scheme
+                new_url = new_urls_by_scheme.pop(scheme, None)
+                if new_url != None and lca.url != new_url:
+                    distro_tree.activity.append(DistroTreeActivity(
+                            user=identity.current.user, service=u'XMLRPC',
+                            action=u'Changed', field_name=u'lab_controller_assocs',
+                            old_value=u'%s %s' % (lca.lab_controller, lca.url),
+                            new_value=u'%s %s' % (lca.lab_controller, new_url)))
+                    lca.url = new_url
+        for url in new_urls_by_scheme.values():
+            distro_tree.lab_controller_assocs.append(LabControllerDistroTree(
+                    lab_controller=lab_controller, url=url))
+            distro_tree.activity.append(DistroTreeActivity(
+                    user=identity.current.user, service=u'XMLRPC',
+                    action=u'Added', field_name=u'lab_controller_assocs',
+                    old_value=None, new_value=u'%s %s' % (lab_controller, url)))
+
+        return distro_tree.id
 
     @cherrypy.expose
     @identity.require(identity.in_group("lab_controller"))
-    def removeDistro(self, old_distro):
-        distro = self._removeDistro(identity.current.user.lab_controller,
-                                  old_distro)
-        if distro:
-            activity = Activity(identity.current.user,'XMLRPC','Removed LabController',distro.install_name,None,identity.current.user.lab_controller.fqdn)
-            return distro.install_name
-        else:
-            return ""
-
-    @cherrypy.expose
-    def removeDistros(self, lab_controller_name, old_distros):
-        """
-        DEPRECATED
-        XMLRPC Push method for adding distros
-        """
-        distros = self._removeDistros(lab_controller_name, old_distros)
-        return [distro.install_name for distro in distros]
-
-    def _removeDistros(self, lab_controller_name, old_distros):
-        """
-        DEPRECATED
-        Internal Push method for adding distros
-        """
-        try:
-            lab_controller = LabController.by_name(lab_controller_name)
-        except InvalidRequestError:
-            raise "Invalid Lab Controller"
-        distros = []
-        for old_distro in old_distros:
-            distro = self._removeDistro(lab_controller, old_distro)
-            if distro:
-                activity = Activity(identity.current.user,'XMLRPC','Removed LabController',distro.install_name,None,lab_controller.fqdn)
-                distros.append(distro)
-        return distros
-
-    def _removeDistro(self, lab_controller, old_distro):
-        """
-        Push method for removing distro
-        """
-        try:
-            distro = Distro.by_install_name(old_distro)
-        except InvalidRequestError:
-            return None
-
-        if lab_controller in distro.lab_controllers:
-            distro.lab_controllers.remove(lab_controller)
-            return distro
-        else:
-            return None
+    def remove_distro_trees(self, distro_tree_ids):
+        lab_controller = identity.current.user.lab_controller
+        for distro_tree_id in distro_tree_ids:
+            distro_tree = DistroTree.by_id(distro_tree_id)
+            for lca in list(distro_tree.lab_controller_assocs):
+                if lca.lab_controller == lab_controller:
+                    distro_tree.lab_controller_assocs.remove(lca)
+                    distro_tree.activity.append(DistroTreeActivity(
+                            user=identity.current.user, service=u'XMLRPC',
+                            action=u'Removed', field_name=u'lab_controller_assocs',
+                            old_value=u'%s %s' % (lca.lab_controller, lca.url),
+                            new_value=None))
+        return True
 
     @cherrypy.expose
     @identity.require(identity.in_group('lab_controller'))
@@ -319,38 +300,6 @@ class LabControllers(RPCRoot):
         cmd.log_to_system_history()
         return True
 
-    @identity.require(identity.in_group("admin"))
-    @expose()
-    def rescan(self, **kw):
-        """ Rescan really only verifies that the distros exist on the 
-            lab-controller, if they don't it will remove them from our index.
-            It does not add any missing distros, those would need to be pushed
-            from the lab-controller.
-        """
-        if kw.get('id'):
-            labcontroller = LabController.by_id(kw['id'])
-            now = time.time()
-            url = "http://%s/cobbler_api" % labcontroller.fqdn
-            remote = bkr.timeout_xmlrpclib.ServerProxy(url)
-            try:
-                token = remote.login(labcontroller.username,
-                                 labcontroller.password)
-            except xmlrpclib.Fault, msg:
-                flash( _(u"Failed to login: %s" % msg))
-                
-            distros = [distro['name'] for distro in remote.get_distros()]
-
-            for i in xrange(len(labcontroller._distros)-1,-1,-1):
-                distro = labcontroller._distros[i].distro
-                if distro.install_name not in distros:
-                    activity = Activity(None,'XMLRPC','Removed','Distro',distro.install_name,None)
-                    session.delete(labcontroller._distros[i])
-                    
-            labcontroller.distros_md5 = now
-        else:
-            flash( _(u"No Lab Controller id passed!"))
-        redirect(".")
-
     def make_lc_remove_link(self, lc):
         if lc.removed is not None:
             return make_link(url  = 'unremove?id=%s' % lc.id,
@@ -361,12 +310,6 @@ class LabControllers(RPCRoot):
             a.attrib.update({'onclick' : "has_watchdog('%s')" % lc.id})
             return a
 
-    def make_lc_scan_link(self, lc):
-        if lc.removed:
-            return
-        return make_scan_link(lc.id)
-            
-            
     @identity.require(identity.in_group("admin"))
     @expose(template="bkr.server.templates.grid_add")
     @paginate('list', limit=50)
@@ -377,8 +320,6 @@ class LabControllers(RPCRoot):
                                   ('FQDN', lambda x: make_edit_link(x.fqdn,x.id)),
                                   ('Disabled', lambda x: x.disabled),
                                   ('Removed', lambda x: x.removed),
-                                  ('Timestamp', lambda x: x.distros_md5),
-                                  (' ', lambda x: self.make_lc_scan_link(x)),
                                   (' ', lambda x: self.make_lc_remove_link(x)),
                               ])
         return dict(title="Lab Controllers", 
@@ -418,11 +359,13 @@ class LabControllers(RPCRoot):
                 status='active')
             for w in watchdogs:
                 w.recipe.recipeset.job.cancel(msg='LabController %s has been deleted' % labcontroller.fqdn)
-            for distro in labcontroller._distros:
-                distro.distro.activity.append(DistroActivity(user=identity.current.user,
-                    service=u'XMLRPC', action=u'Removed', field_name=u'lab_controllers',
-                    old_value=labcontroller.fqdn, new_value=None))
-                session.delete(distro)
+            for lca in labcontroller._distro_trees:
+                lca.distro_tree.activity.append(DistroTreeActivity(
+                        user=identity.current.user, service=u'WEBUI',
+                        action=u'Removed', field_name=u'lab_controller_assocs',
+                        old_value=u'%s %s' % (lca.lab_controller, lca.url),
+                        new_value=None))
+                session.delete(lca)
             labcontroller.disabled = True
             session.commit()
         finally:

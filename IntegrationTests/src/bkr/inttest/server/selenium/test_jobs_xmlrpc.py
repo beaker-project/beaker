@@ -31,7 +31,7 @@ class JobUploadTest(XmlRpcTestCase):
     def setUp(self):
         with session.begin():
             if not Distro.by_name(u'BlueShoeLinux5-5'):
-                data_setup.create_distro(name=u'BlueShoeLinux5-5')
+                data_setup.create_distro_tree(distro_name=u'BlueShoeLinux5-5')
             data_setup.create_task(name=u'/distribution/install')
             data_setup.create_task(name=u'/distribution/reservesys')
             self.user = data_setup.create_user(password=u'password')

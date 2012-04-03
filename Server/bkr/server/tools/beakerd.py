@@ -86,30 +86,24 @@ def new_recipes(*args):
         session.begin()
         try:
             recipe = Recipe.by_id(recipe_id)
-            if recipe.distro:
+            if recipe.distro_tree:
                 recipe.systems = []
 
                 # Do the query twice. 
 
-                # First query verifies that the distro
+                # First query verifies that the distro tree
                 # exists in at least one lab that has a macthing system.
-                systems = recipe.distro.systems_filter(
+                systems = recipe.distro_tree.systems_filter(
                                             recipe.recipeset.job.owner,
                                             recipe.host_requires,
-                                            join=['lab_controller',
-                                                  '_distros',
-                                                  'distro'],
-                                                      )\
-                                       .filter(Distro.install_name==
-                                               recipe.distro.install_name)
+                                            only_in_lab=True)
                 # Second query picksup all possible systems so that as 
-                # distros appear in other labs those systems will be 
+                # trees appear in other labs those systems will be
                 # available.
-                all_systems = recipe.distro.systems_filter(
+                all_systems = recipe.distro_tree.systems_filter(
                                             recipe.recipeset.job.owner,
                                             recipe.host_requires,
-                                            join=['lab_controller'],
-                                                      )
+                                            only_in_lab=False)
                 # based on above queries, condition on systems but add
                 # all_systems.
                 if systems.count():
@@ -133,7 +127,7 @@ def new_recipes(*args):
                     log.info("recipe ID %s moved from New to Aborted" % recipe.id)
                     recipe.recipeset.abort(u'Recipe ID %s does not match any systems' % recipe.id)
             else:
-                recipe.recipeset.abort(u'Recipe ID %s does not have a distro' % recipe.id)
+                recipe.recipeset.abort(u'Recipe ID %s does not have a distro tree' % recipe.id)
             session.commit()
         except exceptions.Exception:
             session.rollback()
@@ -258,15 +252,15 @@ def processed_recipesets(*args):
 
 def dead_recipes(*args):
     recipes = Recipe.query\
-                    .outerjoin(Recipe.distro)\
+                    .outerjoin(Recipe.distro_tree)\
                     .filter(
                          or_(
-                          and_(Recipe.status==TaskStatus.queued,
-                               not_(Recipe.systems.any()),
-                              ),
-                          and_(Recipe.status==TaskStatus.queued,
-                               not_(Distro.lab_controller_assocs.any()),
-                              )
+                         and_(Recipe.status==TaskStatus.queued,
+                              not_(Recipe.systems.any()),
+                             ),
+                         and_(Recipe.status==TaskStatus.queued,
+                              not_(DistroTree.lab_controller_assocs.any()),
+                             ),
                             )
                            )
 
@@ -281,8 +275,8 @@ def dead_recipes(*args):
                 msg = u"R:%s does not match any systems, aborting." % recipe.id
                 log.info(msg)
                 recipe.recipeset.abort(msg)
-            if len(recipe.distro.lab_controller_assocs) == 0:
-                msg = u"R:%s does not have a valid distro, aborting." % recipe.id
+            if len(recipe.distro_tree.lab_controller_assocs) == 0:
+                msg = u"R:%s does not have a valid distro tree, aborting." % recipe.id
                 log.info(msg)
                 recipe.recipeset.abort(msg)
             session.commit()
@@ -297,10 +291,10 @@ def queued_recipes(*args):
     recipes = Recipe.query\
                     .join(Recipe.recipeset, RecipeSet.job)\
                     .join(Recipe.systems)\
-                    .join(Recipe.distro)\
-                    .join(Distro.lab_controller_assocs,
+                    .join(Recipe.distro_tree)\
+                    .join(DistroTree.lab_controller_assocs,
                         (LabController, and_(
-                            LabControllerDistro.lab_controller_id == LabController.id,
+                            LabControllerDistroTree.lab_controller_id == LabController.id,
                             System.lab_controller_id == LabController.id)))\
                     .filter(
                          and_(Recipe.status==TaskStatus.queued,
@@ -330,11 +324,10 @@ def queued_recipes(*args):
         try:
             recipe = Recipe.by_id(recipe_id)
             systems = recipe.dyn_systems\
-                       .join(System.lab_controller,
-                             LabController._distros,
-                             LabControllerDistro.distro)\
+                       .join(System.lab_controller)\
                        .filter(and_(System.user==None,
-                                  Distro.id==recipe.distro_id,
+                                  LabController._distro_trees.any(
+                                    LabControllerDistroTree.distro_tree == recipe.distro_tree),
                                   LabController.disabled==False,
                                   System.status==SystemStatus.automated,
                                   or_(
@@ -465,7 +458,7 @@ def scheduled_recipes(*args):
                 try:
                     recipe.tasks[0].start()
                 except exceptions.Exception, e:
-                    log.error("Failed to Start recipe %s, due to %s" % (recipe.id,e))
+                    log.exception("Failed to Start recipe %s", recipe.id)
                     recipe.recipeset.abort(u"Failed to provision recipeid %s, %s" %
                                                                              (
                                                                          recipe.id,
@@ -486,13 +479,13 @@ def scheduled_recipes(*args):
                 if recipe.partitionsKSMeta:
                     ks_meta = "%s partitions=%s" % (ks_meta, recipe.partitionsKSMeta)
                 if user.sshpubkeys:
-                    end = recipe.distro and (recipe.distro.osversion.osmajor.osmajor.startswith("Fedora") or \
-                                             recipe.distro.osversion.osmajor.osmajor.startswith("RedHatEnterpriseLinux7"))
+                    end = recipe.distro_tree and (recipe.distro_tree.distro.osversion.osmajor.osmajor.startswith("Fedora") or \
+                                             recipe.distro_tree.distro.osversion.osmajor.osmajor.startswith("RedHatEnterpriseLinux7"))
                     key_ks = [user.ssh_keys_ks(end)]
                 else:
                     key_ks = []
                 try:
-                    recipe.system.action_auto_provision(recipe.distro,
+                    recipe.system.action_auto_provision(recipe.distro_tree,
                                                      ks_meta,
                                                      recipe.kernel_options,
                                                      recipe.kernel_options_post,
@@ -502,18 +495,16 @@ def scheduled_recipes(*args):
                          SystemActivity(recipe.recipeset.job.owner, 
                                         u'Scheduler',
                                         u'Provision',
-                                        u'Distro',
+                                        u'Distro Tree',
                                         u'',
-                                        unicode(recipe.distro)))
+                                        unicode(recipe.distro_tree)))
                 except CobblerTaskFailedException, e:
                     log.error('Cobbler task failed for recipe %s: %s' % (recipe.id, e))
                     recipe.system.mark_broken(reason=str(e), recipe=recipe)
                     recipe.recipeset.abort(_(u'Cobbler task failed for recipe %s: %s')
                             % (recipe.id, e))
                 except Exception, e:
-                    log.error(u"Failed to provision recipeid %s, %s" % (
-                                                                         recipe.id,
-                                                                            e))
+                    log.exception("Failed to provision recipeid %s", recipe.id)
                     recipe.recipeset.abort(u"Failed to provision recipeid %s, %s" % 
                                                                              (
                                                                              recipe.id,

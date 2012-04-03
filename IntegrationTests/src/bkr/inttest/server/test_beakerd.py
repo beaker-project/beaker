@@ -1,4 +1,5 @@
 import unittest, datetime, os, threading
+from nose.plugins.skip import SkipTest
 from time import sleep
 from nose.plugins.skip import SkipTest
 from bkr.server.model import TaskStatus, Job, System, User, \
@@ -27,13 +28,12 @@ class TestBeakerd(unittest.TestCase):
     def test_loaned_machine_can_be_scheduled(self):
         with session.begin():
             user = data_setup.create_user()
-            distro = data_setup.create_distro()
             system = data_setup.create_system(status=u'Automated', shared=True,
                     lab_controller=self.lab_controller)
             # System has groups, which the user is not a member of, but is loaned to the user
             system.loaned = user
             data_setup.add_group_to_system(system, data_setup.create_group())
-            job = data_setup.create_job(owner=user, distro=distro)
+            job = data_setup.create_job(owner=user)
             job.recipesets[0].recipes[0]._host_requires = (
                     '<hostRequires><hostname op="=" value="%s"/></hostRequires>'
                     % system.fqdn)
@@ -46,10 +46,9 @@ class TestBeakerd(unittest.TestCase):
         with session.begin():
             data_setup.create_task(name=u'/distribution/install')
             user = data_setup.create_user()
-            distro = data_setup.create_distro()
             system = data_setup.create_system(owner=user, status=u'Automated',
                     shared=True, lab_controller=self.lab_controller)
-            job = data_setup.create_job(owner=user, distro=distro)
+            job = data_setup.create_job(owner=user)
             job.recipesets[0].recipes[0]._host_requires = (
                     '<hostRequires><and><hostname op="=" value="%s"/></and></hostRequires>'
                     % system.fqdn)
@@ -75,8 +74,7 @@ class TestBeakerd(unittest.TestCase):
         with session.begin():
             data_setup.create_task(name=u'/distribution/install')
             user = data_setup.create_user()
-            distro = data_setup.create_distro()
-            job = data_setup.create_job(owner=user, distro=distro)
+            job = data_setup.create_job(owner=user)
             job.recipesets[0].recipes[0]._host_requires = (
                     u'<hostRequires><and></and></hostRequires>')
 
@@ -93,14 +91,13 @@ class TestBeakerd(unittest.TestCase):
             lc1 = data_setup.create_labcontroller(u'lab1')
             lc2 = data_setup.create_labcontroller(u'lab2')
             lc3 = data_setup.create_labcontroller(u'lab3')
-            distro = data_setup.create_distro()
             system1 = data_setup.create_system(arch=u'i386', shared=True)
             system1.lab_controller = lc1
             system2 = data_setup.create_system(arch=u'i386', shared=True)
             system2.lab_controller = lc2
             system3 = data_setup.create_system(arch=u'i386', shared=True)
             system3.lab_controller = lc3
-            job = data_setup.create_job(owner=user, distro=distro)
+            job = data_setup.create_job(owner=user)
             job.recipesets[0].recipes[0]._host_requires = (u"""
                    <hostRequires>
                     <or>
@@ -109,14 +106,19 @@ class TestBeakerd(unittest.TestCase):
                     </or>
                    </hostRequires>
                    """)
+            session.flush()
+            job_id = job.id
+            system1_id = system1.id
+            system2_id = system2.id
+            system3_id = system3.id
 
         beakerd.new_recipes()
 
         with session.begin():
-            job = Job.query.get(job.id)
-            system1 = System.query.get(system1.id)
-            system2 = System.query.get(system2.id)
-            system3 = System.query.get(system3.id)
+            job = Job.query.get(job_id)
+            system1 = System.query.get(system1_id)
+            system2 = System.query.get(system2_id)
+            system3 = System.query.get(system3_id)
             self.assertEqual(job.status, TaskStatus.processed)
             candidate_systems = job.recipesets[0].recipes[0].systems
             self.assertEqual(len(candidate_systems), 2)
@@ -130,8 +132,7 @@ class TestBeakerd(unittest.TestCase):
         given system, i.e. that it aborts due to no matching systems.
         """
         with session.begin():
-            distro = data_setup.create_distro()
-            job = data_setup.create_job(owner=user, distro=distro)
+            job = data_setup.create_job(owner=user)
             job.recipesets[0].recipes[0]._host_requires = (
                     '<hostRequires><hostname op="=" value="%s"/></hostRequires>'
                     % system.fqdn)
@@ -148,8 +149,7 @@ class TestBeakerd(unittest.TestCase):
         of the method above.
         """
         with session.begin():
-            distro = data_setup.create_distro()
-            job = data_setup.create_job(owner=user, distro=distro)
+            job = data_setup.create_job(owner=user)
             job.recipesets[0].recipes[0]._host_requires = (
                     '<hostRequires><hostname op="=" value="%s"/></hostRequires>'
                     % system.fqdn)
@@ -291,17 +291,16 @@ class TestBeakerd(unittest.TestCase):
         with session.begin():
             data_setup.create_task(name=u'/distribution/install')
             user = data_setup.create_user()
-            distro = data_setup.create_distro()
             system = data_setup.create_system(owner=user, status=u'Automated', shared=True,
                     lab_controller=self.lab_controller)
-            job = data_setup.create_job(owner=user, distro=distro)
+            job = data_setup.create_job(owner=user)
             recipe = job.recipesets[0].recipes[0]
             recipe._host_requires = (
                     u'<hostRequires><and><hostname op="=" value="%s"/></and></hostRequires>'
                     % system.fqdn)
 
         harness_dir = '%s/%s' % (recipe.harnesspath, \
-            recipe.distro.osversion.osmajor)
+            recipe.distro_tree.distro.osversion.osmajor)
         try:
             if os.path.exists(harness_dir):
                 os.rmdir(harness_dir)
@@ -325,17 +324,16 @@ class TestBeakerd(unittest.TestCase):
         with session.begin():
             data_setup.create_task(name=u'/distribution/install')
             user = data_setup.create_user()
-            distro = data_setup.create_distro()
             system = data_setup.create_system(owner=user, status=u'Automated',
                     shared=True, lab_controller=self.lab_controller)
-            job = data_setup.create_job(owner=user, distro=distro)
+            job = data_setup.create_job(owner=user)
             recipe = job.recipesets[0].recipes[0]
             recipe._host_requires = (
                     '<hostRequires><and><hostname op="=" value="%s"/></and></hostRequires>'
                     % system.fqdn)
 
         harness_dir = '%s/%s' % (recipe.harnesspath, \
-            recipe.distro.osversion.osmajor)
+            recipe.distro_tree.distro.osversion.osmajor)
 
         if not os.path.exists(harness_dir):
             os.mkdir(harness_dir)
@@ -346,6 +344,7 @@ class TestBeakerd(unittest.TestCase):
             for r in Recipe.query:
                 if r.system:
                     r.system.lab_controller = self.lab_controller
+        raise SkipTest('Cobbler removal')
         beakerd.scheduled_recipes()
         with session.begin():
             job = Job.by_id(job.id)
@@ -353,10 +352,9 @@ class TestBeakerd(unittest.TestCase):
 
     def test_successful_recipe_start(self):
         with session.begin():
-            distro = data_setup.create_distro()
             system = data_setup.create_system(shared=True,
                     lab_controller=self.lab_controller)
-            job = data_setup.create_job(distro=distro)
+            job = data_setup.create_job()
             job.recipesets[0].recipes[0]._host_requires = (u"""
                 <hostRequires>
                     <hostname op="=" value="%s" />
@@ -366,6 +364,7 @@ class TestBeakerd(unittest.TestCase):
         beakerd.new_recipes()
         beakerd.processed_recipesets()
         beakerd.queued_recipes()
+        raise SkipTest('Cobbler removal')
         beakerd.scheduled_recipes()
         raise SkipTest('Cobbler removal')
         beakerd.queued_commands()
@@ -455,8 +454,7 @@ class TestPowerFailures(unittest.TestCase):
                                               lab_controller = self.lab_controller,
                                               status = SystemStatus.automated,
                                               shared = True)
-            distro = data_setup.create_distro()
-            job = data_setup.create_job(distro=distro)
+            job = data_setup.create_job()
             job.recipesets[0].recipes[0]._host_requires = (u"""
                 <hostRequires>
                     <hostname op="=" value="%s" />
@@ -466,6 +464,7 @@ class TestPowerFailures(unittest.TestCase):
         beakerd.new_recipes()
         beakerd.processed_recipesets()
         beakerd.queued_recipes()
+        raise SkipTest('Cobbler removal')
         beakerd.scheduled_recipes()
         beakerd.queued_commands()
 
