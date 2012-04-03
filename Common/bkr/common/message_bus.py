@@ -97,10 +97,10 @@ class BeakerBus(object):
         msg = Message(reply_to=reply_to_queue_name)
         msg.properties['method'] = method
         msg.properties['args'] = args
-        service_queue_name = self.service_queue_name
-        snd = session.sender(service_queue_name)
+        msg.subject = self.service_queue_name
+        snd = session.sender(self.direct_exchange)
         snd.send(msg)
-        log.debug('sent %s on to %s' % (msg, service_queue_name))
+        log.debug('sent %s on to %s' % (msg, self.service_queue_name))
         try:
             message_response = new_receiver.fetch(timeout=self._fetch_timeout)
         except exceptions.Empty:
